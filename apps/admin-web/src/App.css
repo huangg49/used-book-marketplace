@@ -105,10 +105,23 @@
   margin-bottom: 2rem;
 }
 
-.login-logo-white {
-  display: block;
-  height: 44px;
-  width: auto;
+.login-official-logo .brand-owl-box {
+  width: 48px;
+  height: 38px;
+}
+.login-official-logo .brand-owl-box img {
+  width: 220px;
+  left: -86px;
+  top: -66px;
+}
+.login-official-logo .brand-word-box {
+  width: 116px;
+  height: 40px;
+}
+.login-official-logo .brand-word-box img {
+  width: 368px;
+  left: -126px;
+  top: -182px;
 }
 
 .login-portal-tag {
@@ -518,26 +531,88 @@
   box-shadow: 2px 0 12px rgba(40, 25, 20, 0.03);
 }
 
+/* Official Brand Logo matching user-web */
+.brand-official-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.brand-owl-box,
+.brand-word-box {
+  display: block;
+  position: relative;
+  overflow: hidden;
+}
+
+.brand-owl-box {
+  width: 44px;
+  height: 35px;
+}
+
+.brand-owl-box img {
+  position: absolute;
+  width: 200px;
+  max-width: none;
+  left: -78px;
+  top: -60px;
+}
+
+.brand-word-box {
+  width: 105px;
+  height: 36px;
+}
+
+.brand-word-box img {
+  position: absolute;
+  width: 334px;
+  max-width: none;
+  left: -114px;
+  top: -165px;
+}
+
+/* Sidebar Brand Plaque with Wine background & Gold accent */
 .sidebar-brand {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.5rem 0.75rem 1.25rem;
-  border-bottom: 1px solid var(--rule);
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  background: var(--shop-wine, #5c0202);
+  border-radius: 14px;
   text-decoration: none;
+  border: 1px solid rgba(209, 170, 90, 0.35);
+  box-shadow: 0 4px 16px rgba(92, 2, 2, 0.16);
+  margin-bottom: 0.75rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.sidebar-brand img {
-  display: block;
-  object-fit: contain;
+.sidebar-brand:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(92, 2, 2, 0.24);
 }
 
-.sidebar-brand span {
-  color: var(--shop-wine);
-  font-size: 0.78rem;
+.sidebar-brand-subtitle {
+  color: var(--shop-cream, #fcf8db);
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sidebar-brand-subtitle::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
 }
 
 .workspace-nav {
@@ -680,6 +755,26 @@
 
 .mobile-topbar {
   display: none;
+  padding: 0.75rem 1rem;
+  background: var(--shop-wine, #5c0202);
+  color: var(--shop-cream, #fcf8db);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mobile-brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mobile-brand-wrap span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--shop-cream, #fcf8db);
+  opacity: 0.9;
 }
 
 .workspace {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
     FileSignature, 
     X, 
@@ -247,7 +248,7 @@ export function AcceptExchangeDialog({
     }
   };
 
-  return (
+  return createPortal(
     <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && !isBusy && onClose()}>
       <div className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="accept-contract-title">
         {/* Header */}
@@ -647,6 +648,7 @@ export function AcceptExchangeDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

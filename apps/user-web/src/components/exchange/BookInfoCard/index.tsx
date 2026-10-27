@@ -11,7 +11,6 @@ interface BookInfoCardProps {
 }
 
 export function BookInfoCard({ detail, compact = false }: BookInfoCardProps) {
-
     const receiveBooks = detail.receiveBooks;
     const giveBooks = detail.giveBooks;
 
@@ -31,152 +30,227 @@ export function BookInfoCard({ detail, compact = false }: BookInfoCardProps) {
 
     return (
         <div className={compact ? `${styles.card} ${styles.compact}` : styles.card}>
-            <h2 className={styles.cardTitle}>
-                <BookHeart className={styles.iconGold} /> Thông tin sách
-            </h2>
+            {/* Header */}
+            <div className={styles.cardHeader}>
+                <h2 className={styles.cardTitle}>
+                    <BookHeart className={styles.iconGold} size={20} />
+                    <span>Phiếu đề nghị đổi sách</span>
+                </h2>
+                <div className={styles.partnerSnippet}>
+                    <div className={styles.avatarMini}>
+                        {detail.partner.username.charAt(0).toUpperCase()}
+                    </div>
+                    <div className={styles.partnerSnippetText}>
+                        <span className={styles.partnerSnippetRole}>Đối tác</span>
+                        <strong className={styles.partnerSnippetName}>@{detail.partner.username}</strong>
+                    </div>
+                    {(detail.partner.rating !== undefined || detail.partner.transactionCount !== undefined) && (
+                        <div className={styles.partnerSnippetStats}>
+                            <Star className={styles.iconStar} size={13} fill="currentColor" />
+                            <span>{detail.partner.rating?.toFixed(1) ?? '—'}</span>
+                        </div>
+                    )}
+                </div>
+            </div>
 
-            <div className={styles.booksArea}>
-                <div className={styles.receiveCol}>
-                    <span className={styles.pillReceive}>
-                        Sách bạn nhận{receiveBooks.length > 1 ? ` (${receiveBooks.length} cuốn · Tổng ${formatVnd(totalReceivePrice)})` : ''}
-                    </span>
-                    <div className={styles.bookListFlex}>
-                        {receiveBooks.map(book => (
-                            <div key={book.id} className={styles.bookItemRow}>
-                                <div className={styles.coverLarge}>
+            {/* Books Comparison Showcase */}
+            <div className={styles.booksShowcase}>
+                {/* Sách nhận */}
+                <div className={styles.receiveSection}>
+                    <div className={styles.sectionHeaderLine}>
+                        <span className={styles.pillReceive}>
+                            Sách bạn nhận ({receiveBooks.length} cuốn{totalReceivePrice > 0 ? ` · ${formatVnd(totalReceivePrice)}` : ''})
+                        </span>
+                    </div>
+                    <div className={styles.booksList}>
+                        {receiveBooks.map((book) => (
+                            <div key={book.id} className={styles.bookCard}>
+                                <div className={styles.coverWrapper}>
                                     <BookCover title={book.title} coverUrl={book.coverUrl} index={0} />
                                 </div>
-                                <div className={styles.bookInfo}>
+                                <div className={styles.bookMeta}>
                                     <h3 className={styles.bookTitle}>{book.title}</h3>
                                     <p className={styles.bookAuthor}>{book.author}</p>
-                                    <p className={styles.bookCondition}>Tình trạng: {conditions[book.condition as keyof typeof conditions] ?? book.condition ?? 'Chưa có thông tin'}</p>
-                                    <p className={styles.bookPrice}>
-                                        Giá trị: <strong>{book.price ? formatVnd(book.price) : '—'}</strong>
-                                    </p>
+                                    <div className={styles.tagsRow}>
+                                        <span className={styles.conditionTag}>
+                                            {conditions[book.condition as keyof typeof conditions] ?? book.condition ?? 'Đã qua sử dụng'}
+                                        </span>
+                                        <span className={styles.priceTag}>
+                                            {book.price ? formatVnd(book.price) : '—'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                <div className={styles.exchangeIconWrapper}>
-                    <div className={styles.exchangeIconCircle}>
-                        <Repeat size={24} />
+                {/* Swap Connector */}
+                <div className={styles.swapBridge}>
+                    <div className={styles.swapBridgeLine} />
+                    <div className={styles.swapBridgeBadge}>
+                        <Repeat size={14} className={styles.swapBridgeIcon} />
+                        <span>Đổi lấy {giveBooks.length} cuốn sách của bạn</span>
                     </div>
+                    <div className={styles.swapBridgeLine} />
                 </div>
 
-                <div className={styles.giveCol}>
-                    <span className={styles.pillGive}>
-                        Sách bạn giao ({giveBooks.length} cuốn{giveBooks.length > 1 ? ` · Tổng ${formatVnd(totalGivePrice)}` : ''})
-                    </span>
-                    <div className={styles.bookListFlex}>
-                        {giveBooks.map(book => (
-                            <div key={book.id} className={styles.bookItemRowGive}>
-                                <div className={styles.bookInfoGive}>
+                {/* Sách giao */}
+                <div className={styles.giveSection}>
+                    <div className={styles.sectionHeaderLine}>
+                        <span className={styles.pillGive}>
+                            Sách bạn giao ({giveBooks.length} cuốn{totalGivePrice > 0 ? ` · ${formatVnd(totalGivePrice)}` : ''})
+                        </span>
+                    </div>
+                    <div className={styles.booksList}>
+                        {giveBooks.map((book) => (
+                            <div key={book.id} className={styles.bookCard}>
+                                <div className={styles.coverWrapper}>
+                                    <BookCover title={book.title} coverUrl={book.coverUrl} index={0} />
+                                </div>
+                                <div className={styles.bookMeta}>
                                     <h3 className={styles.bookTitle}>{book.title}</h3>
                                     <p className={styles.bookAuthor}>{book.author}</p>
-                                    <p className={styles.bookCondition}>Tình trạng: {conditions[book.condition as keyof typeof conditions] ?? book.condition ?? 'Chưa có thông tin'}</p>
-                                    <p className={styles.bookPrice}>
-                                        Giá trị: <strong>{book.price ? formatVnd(book.price) : '—'}</strong>
-                                    </p>
-                                </div>
-                                <div className={styles.coverSmall}>
-                                    <BookCover title={book.title} coverUrl={book.coverUrl} index={0} />
+                                    <div className={styles.tagsRow}>
+                                        <span className={styles.conditionTag}>
+                                            {conditions[book.condition as keyof typeof conditions] ?? book.condition ?? 'Đã qua sử dụng'}
+                                        </span>
+                                        <span className={styles.priceTag}>
+                                            {book.price ? formatVnd(book.price) : '—'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+
+                {/* Value balance summary bar */}
+                <div className={styles.balanceBanner}>
+                    <div className={styles.balanceInfo}>
+                        <span className={styles.balanceLabel}>Cân bằng giá trị sách</span>
+                        <span className={styles.balanceDetail}>
+                            Nhận {formatVnd(totalReceivePrice)} ↔ Giao {formatVnd(totalGivePrice)}
+                        </span>
+                    </div>
+                    <div className={styles.balancePill}>
+                        <strong>{moneyText}</strong>
                     </div>
                 </div>
             </div>
 
-            <div className={styles.detailsGrid}>
-                <div className={styles.partnerRow}>
-                    <div className={styles.partnerInfo}>
-                        <div className={styles.avatar}>
-                            {detail.partner.username.charAt(0).toUpperCase()}
+            {/* Financial & Escrow Bento Section */}
+            <div className={styles.bentoSection}>
+                <h3 className={styles.sectionHeading}>
+                    <ShieldCheck size={16} className={styles.iconGold} />
+                    <span>Thỏa thuận tài chính & Bảo chứng</span>
+                </h3>
+                <div className={styles.bentoGrid}>
+                    <div className={styles.bentoTile}>
+                        <div className={styles.bentoTileHeader}>
+                            <ShieldCheck size={15} className={styles.iconGoldSmall} />
+                            <span>Tiền cọc bảo chứng</span>
                         </div>
-                        <div>
-                            <p className={styles.partnerLabel}>Đối tác trao đổi</p>
-                            <p className={styles.partnerName}>{detail.partner.username}</p>
+                        <div className={styles.bentoTileValue}>
+                            {detail.viewerFundingAmount ? formatVnd(detail.viewerFundingAmount) : '100% giá trị sách đối tác'}
+                        </div>
+                        <div className={styles.bentoTileNote}>
+                            Hoàn lại 100% vào ví khi hoàn tất giao dịch an toàn (POL-14)
                         </div>
                     </div>
-                    {(detail.partner.rating !== undefined || detail.partner.transactionCount !== undefined) && <div className={styles.partnerStats}>
-                        <div className={styles.starRow}>
-                            <Star className={styles.iconStar} size={14} fill="currentColor" />
-                            <span className={styles.ratingValue}>{detail.partner.rating?.toFixed(1) ?? 'Chưa có đánh giá'}</span>
+
+                    <div className={styles.bentoTile}>
+                        <div className={styles.bentoTileHeader}>
+                            <Banknote size={15} className={styles.iconGoldSmall} />
+                            <span>Bù chênh lệch</span>
                         </div>
-                        {detail.partner.transactionCount !== undefined && <p className={styles.tradeCount}>{detail.partner.transactionCount} giao dịch</p>}
-                    </div>}
+                        <div className={styles.bentoTileValue}>
+                            {moneyText}
+                        </div>
+                        <div className={styles.bentoTileNote}>
+                            Thanh toán từ số dư ví khi xác nhận đặt cọc
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Shipping & Delivery Addresses Bento Section */}
+            <div className={styles.bentoSection}>
+                <h3 className={styles.sectionHeading}>
+                    <Truck size={16} className={styles.iconGold} />
+                    <span>Phương thức & Địa chỉ giao nhận</span>
+                </h3>
+
+                <div className={styles.shippingModeCallout}>
+                    <Truck size={18} className={styles.shippingCalloutIcon} />
+                    <div className={styles.shippingCalloutText}>
+                        <strong>Giao nhận độc lập 2 chiều qua bưu tá</strong>
+                        <p>Mỗi bên tự đóng gói và tự trả cước chiều gửi của mình (0 đ cấn trừ sàn)</p>
+                    </div>
                 </div>
 
-                <div className={styles.detailItem}>
-                    <p className={styles.detailLabel}>Phương thức giao nhận</p>
-                    <p className={styles.detailValueFlex}>
-                        <Truck className={styles.iconGoldSmall} size={16} />
-                        <span>Xem phương thức và tiến độ trong phần Giao nhận</span>
-                    </p>
-                </div>
-
-                <div className={styles.detailItem}>
-                    <p className={styles.detailLabel}>Cước phí vận chuyển</p>
-                    <p className={styles.detailValueFlex}>
-                        <Banknote className={styles.iconGoldSmall} size={16} />
-                        <span>Mỗi bên tự chi trả chiều gửi của mình (0 đ cấn trừ sàn)</span>
-                    </p>
-                </div>
-
-                <div className={styles.detailItem}>
-                    <p className={styles.detailLabel}>Bù chênh lệch</p>
-                    <p className={styles.detailValue}>{moneyText}</p>
-                </div>
-
-                <div className={styles.detailItem}>
-                    <p className={styles.detailLabel}>Tiền cọc bảo chứng</p>
-                    <p className={styles.detailValueFlex}>
-                        <ShieldCheck className={styles.iconGoldSmall} size={16} />
-                        <span>{detail.viewerFundingAmount ? formatVnd(detail.viewerFundingAmount) : '100% giá trị sách đối tác'} (Hoàn lại khi hoàn tất)</span>
-                    </p>
-                </div>
-
-                <div className={styles.detailItem}>
-                    <p className={styles.detailLabel}>Địa chỉ nhận sách của bạn</p>
-                    <p className={styles.detailValueFlex}>
-                        <MapPin className={styles.iconGoldSmall} size={16} />
-                        <span>
+                <div className={styles.addressesGrid}>
+                    <div className={styles.addressCard}>
+                        <div className={styles.addressCardHeader}>
+                            <div className={styles.addressCardTitleGroup}>
+                                <MapPin size={14} className={styles.iconGoldSmall} />
+                                <span>Địa chỉ nhận của bạn</span>
+                            </div>
+                            <span className={detail.viewerAddress ? styles.badgeReady : styles.badgeWaiting}>
+                                {detail.viewerAddress ? '✓ Đã sẵn sàng' : 'Chưa chọn'}
+                            </span>
+                        </div>
+                        <div className={styles.addressCardBody}>
                             {detail.viewerAddress ? (
                                 <>
-                                    <strong>{detail.viewerAddress.recipientName}</strong> · {detail.viewerAddress.phone} · {detail.viewerAddress.detail}
+                                    <p className={styles.addressName}>
+                                        <strong>{detail.viewerAddress.recipientName}</strong> · {detail.viewerAddress.phone}
+                                    </p>
+                                    <p className={styles.addressDetail}>{detail.viewerAddress.detail}</p>
                                 </>
                             ) : (
-                                <span style={{ color: 'var(--shop-muted)' }}>Chưa thiết lập (chọn qua nút Đề xuất lại hoặc Chấp nhận)</span>
+                                <p className={styles.addressPlaceholder}>
+                                    Chưa thiết lập (chọn qua nút Đề xuất lại hoặc Chấp nhận)
+                                </p>
                             )}
-                        </span>
-                    </p>
-                </div>
+                        </div>
+                    </div>
 
-                <div className={styles.detailItem}>
-                    <p className={styles.detailLabel}>Địa chỉ nhận sách của đối tác</p>
-                    <p className={styles.detailValueFlex}>
-                        <MapPin className={styles.iconGoldSmall} size={16} />
-                        <span>
+                    <div className={styles.addressCard}>
+                        <div className={styles.addressCardHeader}>
+                            <div className={styles.addressCardTitleGroup}>
+                                <MapPin size={14} className={styles.iconGoldSmall} />
+                                <span>Địa chỉ nhận của đối tác</span>
+                            </div>
+                            <span className={detail.partnerAddress ? styles.badgeReady : styles.badgeWaiting}>
+                                {detail.partnerAddress ? '✓ Đã cập nhật' : '⏳ Chờ cập nhật'}
+                            </span>
+                        </div>
+                        <div className={styles.addressCardBody}>
                             {detail.partnerAddress ? (
                                 <>
-                                    <strong>{detail.partnerAddress.recipientName}</strong> · {detail.partnerAddress.phone} · {detail.partnerAddress.detail}
+                                    <p className={styles.addressName}>
+                                        <strong>{detail.partnerAddress.recipientName}</strong> · {detail.partnerAddress.phone}
+                                    </p>
+                                    <p className={styles.addressDetail}>{detail.partnerAddress.detail}</p>
                                 </>
                             ) : (
-                                <span style={{ color: 'var(--shop-muted)' }}>Chờ đối tác cập nhật</span>
+                                <p className={styles.addressPlaceholder}>
+                                    Chờ @{detail.partner.username} cập nhật khi chấp nhận
+                                </p>
                             )}
-                        </span>
-                    </p>
-                </div>
-
-                {detail.initialMessage && (
-                    <div className={styles.messageItem}>
-                        <p className={styles.detailLabel}>Lời nhắn kèm theo</p>
-                        <p className={styles.messageContent}>"{detail.initialMessage}"</p>
+                        </div>
                     </div>
-                )}
+                </div>
             </div>
+
+            {/* Initial Message (if provided) */}
+            {detail.initialMessage && (
+                <div className={styles.messageBox}>
+                    <span className={styles.messageLabel}>Lời nhắn kèm đề nghị:</span>
+                    <p className={styles.messageText}>"{detail.initialMessage}"</p>
+                </div>
+            )}
         </div>
     );
 }

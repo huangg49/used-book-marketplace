@@ -1,26 +1,28 @@
 .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(42, 38, 34, 0.65);
-    backdrop-filter: blur(3px);
+    background: rgba(42, 38, 34, 0.7);
+    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
-    padding: 16px;
+    z-index: 10000;
+    padding: 24px 16px;
+    overflow-y: auto;
 }
 
 .modal {
     background: #fff;
     width: 100%;
     max-width: 680px;
-    border-radius: 6px;
+    border-radius: 8px;
     border: 1px solid var(--line);
-    box-shadow: 0 16px 40px rgba(42, 38, 34, 0.25);
+    box-shadow: 0 20px 48px rgba(42, 38, 34, 0.3);
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    max-height: 90vh;
+    max-height: calc(100vh - 48px);
+    margin: auto;
     animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

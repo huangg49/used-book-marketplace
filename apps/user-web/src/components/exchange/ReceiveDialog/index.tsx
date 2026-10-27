@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { BookCheck, AlertTriangle } from 'lucide-react';
 import styles from './ReceiveDialog.module.css';
 
@@ -29,7 +30,7 @@ export function ReceiveDialog({ isOpen, onClose, onConfirm, isBusy, bookTitle }:
         }
     };
 
-    return (
+    return createPortal(
         <div className={styles.overlay} onClick={isBusy ? undefined : onClose} role="dialog" aria-modal="true">
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.header}>
@@ -94,6 +95,7 @@ export function ReceiveDialog({ isOpen, onClose, onConfirm, isBusy, bookTitle }:
                     </button>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

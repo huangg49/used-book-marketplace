@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Truck, PackageCheck, AlertCircle, MapPin, Calendar, Building2 } from 'lucide-react';
 import { CARRIERS, type CarrierCode, type ShipmentData, createCarrierShipment } from '../../../services/exchangeShipment';
 import styles from './ShipmentDialog.module.css';
@@ -100,7 +101,7 @@ export function ShipmentDialog(props: ShipmentDialogProps) {
         }
     };
 
-    return (
+    return createPortal(
         <div className={styles.overlay} onClick={isBusy ? undefined : onClose} role="dialog" aria-modal="true">
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.header}>
@@ -313,6 +314,7 @@ export function ShipmentDialog(props: ShipmentDialogProps) {
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
