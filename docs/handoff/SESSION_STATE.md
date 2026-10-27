@@ -1,5 +1,24 @@
 # Điểm lưu hiện tại — 27/10/2026
 
+## Tái thiết kế giao diện sàn đấu giá (`/auctions`) — Phong cách Warm Paper Editorial — 27/10/2026
+
+- Nhánh `feat/web-auction-select-from-shelf`.
+- **Cải tiến giao diện theo yêu cầu**:
+  - Xóa bỏ hoàn toàn khối banner màu đỏ rượu vang (`--shop-wine`) to đùng choán hết màn hình ở đầu trang đấu giá.
+  - Tái thiết kế Hero sàn đấu giá theo phong cách Vintage Bookshop & Editorial Warm-Paper:
+    - Nền ngà ấm áp (`#faf7f2`), điểm xuyết ánh sáng vàng hổ phách dịu mắt và viền chỉ mỏng trang nhã.
+    - Huy hiệu "Sàn đấu giá sách Lật Lại" có đèn pulse xanh chuyển động tinh tế.
+    - Tiêu đề nghệ thuật sắc nét, phân cấp typographic chuẩn mực, bổ sung 3 điểm bảo chứng uy tín (Kiểm định tại điểm, Phiên mở 24 giờ, Giao nhận an tâm).
+    - Cặp nút hành động cao cấp: Nút chính "Đấu giá sách của bạn" vàng cát rạng rỡ và nút "Khám phá các phiên" cuộn mượt.
+    - Thẻ Spotlight Showcase bên phải hiển thị card phiên nổi bật (hoặc fallback card phong cách nghệ thuật ấm áp) bo góc 16px, đổ bóng mềm đa tầng, không còn cảm giác nặng nề bí bách.
+  - Cải tiến phần hướng dẫn tham gia thành hộp "3 bước tham gia sàn đấu giá Lật Lại" mượt mà, trực quan.
+  - Làm mới thanh công cụ lọc (Toolbar) và section heading với số lượng phiên dạng badge, đèn pulse trực tiếp.
+  - Đổi primer của `AuctionEntrance` từ màu đỏ rượu sang màu kem đồng bộ, loại bỏ hoàn toàn hiện tượng chớp khung đỏ khi tải trang.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web test`: 31 files / 231 tests PASS.
+  - Trình duyệt đã kiểm chứng giao diện mới thực tế, ghi hình và chụp ảnh xác nhận.
+
 ## Chọn sách trực tiếp từ kệ để đấu giá & Nhập giá trị khai báo trên trang mở phiên — 27/10/2026
 
 - Nhánh `feat/web-auction-select-from-shelf` từ `feat/web-search-transition-animations` (`6219b1b`).
