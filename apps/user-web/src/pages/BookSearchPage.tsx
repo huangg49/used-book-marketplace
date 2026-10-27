@@ -11,6 +11,8 @@ import {
   Menu,
 } from "lucide-react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
+import Lenis from "lenis";
+import "lenis/dist/lenis.css";
 import { HomeBookCard } from "../components/HomeBookCard";
 import { CatalogSort } from "../components/CatalogSort";
 import { FilterSelect } from "../components/FilterSelect";
@@ -391,6 +393,36 @@ export function BookSearchPage() {
   const [settledSearch, setSettledSearch] = useState(searchTerm);
   const [composing, setComposing] = useState(false);
   const searchPending = searchTerm !== settledSearch || composing;
+
+  const lenisRef = useRef<Lenis | null>(null);
+
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.15,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: "vertical",
+      gestureOrientation: "vertical",
+      smoothWheel: true,
+      wheelMultiplier: 0.9,
+      touchMultiplier: 1.5,
+      infinite: false,
+    });
+    lenisRef.current = lenis;
+
+    let rafId: number;
+    function raf(time: number) {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    }
+    rafId = requestAnimationFrame(raf);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      lenis.destroy();
+      lenisRef.current = null;
+    };
+  }, []);
+
   useEffect(() => {
     if (searchTerm === settledSearch) return;
     const timer = window.setTimeout(() => setSettledSearch(searchTerm), 300);
@@ -492,6 +524,20 @@ export function BookSearchPage() {
 
   const pageNumber = pageHistory.length + 1;
 
+  function scrollToCatalogHeading() {
+    if (lenisRef.current) {
+      lenisRef.current.scrollTo("#catalog-results", {
+        offset: -20,
+        duration: 1.0,
+      });
+    } else {
+      const heading = document.getElementById("catalog-results");
+      heading?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    const heading = document.getElementById("catalog-results");
+    heading?.focus({ preventScroll: true });
+  }
+
   function handleNextPage() {
     if (!result.data?.nextCursor) return;
     const currentCursor = params.get("cursor") || "";
@@ -500,11 +546,7 @@ export function BookSearchPage() {
     const next = new URLSearchParams(params);
     next.set("cursor", result.data.nextCursor);
     setParams(next);
-    requestAnimationFrame(() => {
-      const heading = document.getElementById("catalog-results");
-      heading?.scrollIntoView({ behavior: "smooth", block: "start" });
-      heading?.focus({ preventScroll: true });
-    });
+    requestAnimationFrame(() => scrollToCatalogHeading());
   }
 
   function handlePrevPage() {
@@ -522,11 +564,7 @@ export function BookSearchPage() {
       next.delete("cursor");
     }
     setParams(next);
-    requestAnimationFrame(() => {
-      const heading = document.getElementById("catalog-results");
-      heading?.scrollIntoView({ behavior: "smooth", block: "start" });
-      heading?.focus({ preventScroll: true });
-    });
+    requestAnimationFrame(() => scrollToCatalogHeading());
   }
 
   function handleFirstPage() {
@@ -535,11 +573,7 @@ export function BookSearchPage() {
     const next = new URLSearchParams(params);
     next.delete("cursor");
     setParams(next);
-    requestAnimationFrame(() => {
-      const heading = document.getElementById("catalog-results");
-      heading?.scrollIntoView({ behavior: "smooth", block: "start" });
-      heading?.focus({ preventScroll: true });
-    });
+    requestAnimationFrame(() => scrollToCatalogHeading());
   }
 
   function update(key: string, value: string, replace = false) {
@@ -596,15 +630,15 @@ export function BookSearchPage() {
     setParams(next);
     closeFilters();
     if (shouldScroll) {
-      requestAnimationFrame(() => {
-        const heading = document.getElementById("catalog-results");
-        heading?.focus({ preventScroll: true });
-        heading?.scrollIntoView({ block: "start" });
-      });
+      requestAnimationFrame(() => scrollToCatalogHeading());
     }
   }
   useEffect(() => {
-    if (!filterOpen) return;
+    if (!filterOpen) {
+      lenisRef.current?.start();
+      return;
+    }
+    lenisRef.current?.stop();
     const unlockScroll = lockPageScroll();
     const media = window.matchMedia("(min-width: 901px)");
     const closeOnDesktop = () => {
@@ -616,6 +650,7 @@ export function BookSearchPage() {
     media.addEventListener("change", closeOnDesktop);
     return () => {
       unlockScroll();
+      lenisRef.current?.start();
       media.removeEventListener("change", closeOnDesktop);
     };
   }, [filterOpen]);
@@ -1048,6 +1083,7 @@ export function BookSearchPage() {
       </div>
       <dialog
         ref={dialog}
+        data-lenis-prevent
         className={styles.filterDialog}
         aria-labelledby="filter-dialog-title"
         onClose={() => setFilterOpen(false)}
