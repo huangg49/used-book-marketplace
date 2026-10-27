@@ -1872,7 +1872,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Seller ACTIVE verified MEMBER. Approved, Visible, Available listing of channel Auction (ADR 0042) with current Sale revision; Marketplace listings return 409 InvalidState. In one transaction snapshots revision/start/step/buyNow, takes the exclusive commitment and one point slot (capacity checked under the point lock). Self drop-off within 72 hours; at most two unfinished intakes/auctions per seller (POL-41). */
+        /** @description Seller ACTIVE verified unrestricted MEMBER. ADR 0048 accepts the caller's single-book Marketplace listing (Sale, Both or Exchange), as well as legacy Auction listings. The current revision must be submitted and approved, its catalog book Confirmed and all linked photos Ready; the listing must be Visible, Available and published, with no active commitment. Bundles are refused. The immutable channel and listing content are not converted. In one transaction snapshots revision/start/step/buyNow and the protective declared value, takes the exclusive commitment and one point slot (capacity checked under the point lock). Self drop-off within 72 hours; at most two unfinished intakes/auctions per seller (POL-41). */
         post: operations["createAuctionIntake"];
         delete?: never;
         options?: never;
@@ -5010,6 +5010,7 @@ export interface components {
             /** @enum {integer} */
             step: 10000 | 50000;
             buyNowPrice: number | null;
+            /** @description Protective value snapshotted at intake (ADR 0048). Does not change the shelf price or set a bid. If omitted for compatibility, uses the revision salePrice, then exchangeValue, then startPrice. Never recalculated from later bids. */
             declaredValue?: number;
         };
         AuctionVersionCommand: {

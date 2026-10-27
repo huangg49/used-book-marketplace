@@ -61,7 +61,7 @@ auction dùng UC-AU01–05 rồi quay về UC-H05–07 và Order settlement/disp
 | AC-H22 | FR-T04 | Hai allocations cạnh tranh quỹ cuối: không chi vượt nguồn; phần chưa trả không Closed, point Paused nhận mới; carrier bồi thường muộn đối soát lossReference |
 | AC-H23 | FR-H11, FR-T03 | Claim hợp lệ và handover/settlement cùng lúc: khóa xác định kết quả; claim thắng trước chặn release, không bỏ quyền vì đã bấm chấp nhận report |
 | AC-H24 | FR-H01, FR-H04 | Đổi địa chỉ/điểm/phương thức sau chốt không âm thầm sửa phí; before pickup hủy/tạo lại an toàn, after custody qua hỗ trợ |
-| AC-AU01 | FR-AU01, FR-AU02 | Listing Sale mới tạo intake; chưa nhận hoặc report không Pass không mở; Both/Exchange/tự kiểm tra bị chặn |
+| AC-AU01 | FR-AU01, FR-AU02 | ADR0048: sách lẻ Marketplace Sale/Both/Exchange đủ điều kiện hoặc Auction cũ được intake, giữ nguyên channel/revision/giá; bundle/khác chủ/ảnh chưa sẵn sàng/catalog chưa Confirmed/bài không đủ điều kiện bị chặn. Chưa nhận hoặc report không Pass không mở; tự kiểm tra bị chặn |
 | AC-AU02 | FR-AU01, FR-H05 | Auction intake cạnh tranh checkout/Exchange: một commitment; không gap khi chuyển sang Order; không bán thường khi đang auction |
 | AC-AU03 | FR-AU03, FR-AU04 | start200k, step50k, A Auto400k, B250/350/450k → giá200/300/400/450k; leader A/A/A/B |
 | AC-AU04 | FR-AU03, FR-AU04 | Một manual300k → giá300k; một Auto400k → giá200k; manual nhảy nhiều bước không bị đổi thành bid thấp hơn |

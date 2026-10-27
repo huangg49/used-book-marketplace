@@ -1,5 +1,25 @@
 # Điểm lưu hiện tại — 27/10/2026
 
+## Sách từ kệ gửi đấu giá — owner chốt27/10/2026
+
+- Owner duyệt giữ luồng chọn sách từ kệ, gồm Both; [ADR0048](../adr/0048-auction-intake-from-shelf.md)
+  thống nhất SRS/phụ lục/acceptance/OpenAPI0.54.0 với Marketplace Sale/Both/Exchange
+  và nguồn Auction cũ. Giữ channel/revision/giá, không nhân bản sách. Khôi phục
+  predicate catalog Confirmed/current approval/Ready photos/owner; bắt buộc
+  Available/không commitment Active, chặn bundle đúng tại revision. Public reads
+  loại context AuctionIntake/PointOrder, kể cả còn hội thoại thương lượng cũ.
+- Test mới kiểm ba mode/snapshot/replay/key-body/stale/double intent/cancel,
+  nguồn không đủ điều kiện và cuộc đua intake–Order thường. PASS toàn82auction
+  E2E (gồm ca từng fail và carrier timeout),62Order E2E;39listing-read liên quan
+  PASS/40không chọn bằng test filter. API208unit/lint/typecheck/build, contract
+  generate/check/routes180operations/27controllers, docs/diff PASS. Warning lint
+  cũ còn; không đổi test timeout. QA DB riêng/storage fake, không reset DB chính.
+- API và cả hai worker đã restart cùng source; ready/login/CORS/queues/overview
+  7+30 đều200. Không migration/đổi env/client UI; native/live storage/CI remote/
+  human review NOT RUN. Lưu commit local riêng sau base8be9979, chưa push; gate
+  READINESS giữ nguyên. Vấn đề test eligibility ghi ở lần merge bên dưới đã giải
+  quyết theo quyết định owner, không còn là blocker của gói này.
+
 ## Đồng bộ Admin với main —27/10/2026
 
 - Nhánh `codex/admin-ui-refactor`: checkpoint local `dc2b21c` giữ191file thay đổi

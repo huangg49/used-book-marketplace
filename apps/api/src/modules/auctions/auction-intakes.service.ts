@@ -297,26 +297,15 @@ export class AuctionIntakesService {
           const [eligible] = await tx.c.listings
             .aggregate([
               { $match: { _id: l._id } },
+              ...publicEligibleStages(l.channel),
               {
                 $match: {
-                  moderation: 'Approved',
-                  visibility: 'Visible',
                   trade: 'Available',
-                  deletedAt: null,
-                  publishedAt: { $ne: null },
-                  bundle: { $exists: false },
+                  'active.0': { $exists: false },
+                  // The manifest belongs to the accepted revision, not Listing.
+                  'r.bundle': null,
                 },
               },
-              {
-                $lookup: {
-                  from: 'listing_revisions',
-                  localField: 'currentRevisionId',
-                  foreignField: '_id',
-                  as: 'r',
-                },
-              },
-              { $unwind: '$r' },
-              { $match: { 'r.submittedAt': { $ne: null } } },
               { $project: { _id: 1 } },
             ])
             .toArray();

@@ -31,7 +31,8 @@ import {
 // publicEligible). These are current eligibility checks, not a historical
 // approval badge. Output documents carry r (revision), b (book), u (owner),
 // rm (photo links) and m (photos). Marketplace reads never see Auction
-// listings (ADR 0042); only auction intake asks for the Auction channel.
+// listings (ADR 0042). ADR 0048 intake reuses this predicate for the source's
+// immutable channel, then additionally requires Available and a single book.
 export function publicEligibleStages(
   channel: ListingChannel = 'Marketplace',
 ): Document[] {
@@ -86,14 +87,17 @@ export function publicEligibleStages(
         from: 'workflow_contexts',
         localField: 'active.currentContextId',
         foreignField: '_id',
-        pipeline: [{ $match: { kind: 'Order' } }, { $limit: 1 }],
-        as: 'activeOrderContext',
+        pipeline: [{ $limit: 1 }],
+        as: 'activeContext',
       },
     },
+    // A pre-existing negotiation must not keep an auction-held book on the
+    // marketplace, including after the commitment transfers to its PointOrder.
+    { $match: { 'activeContext.kind': { $nin: ['AuctionIntake', 'PointOrder'] } } },
     {
       $lookup: {
         from: 'direct_orders',
-        localField: 'activeOrderContext.orderId',
+        localField: 'activeContext.orderId',
         foreignField: '_id',
         pipeline: [
           {
