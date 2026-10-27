@@ -1,5 +1,29 @@
 # Điểm lưu hiện tại — 27/10/2026
 
+## Hiệu ứng chuyển trang, cuộn quán tính Lenis & Morphing phóng ảnh bìa (Tao Tajima) — 27/10/2026
+
+- Nhánh `feat/web-search-transition-animations` từ `origin/main` (`a463041`).
+- Thực hiện chuỗi cải tiến chuyển động và trải nghiệm thị giác theo yêu cầu người dùng:
+  - **Trang tìm sách (`/books`)**:
+    - Tích hợp `AnimatePresence mode="wait"` với hiệu ứng chuyển trang `pageVariants` (trượt đa hướng mượt mà kết hợp làm mờ và độ sâu 3D scale nhẹ) khi lật trang hoặc đổi bộ lọc.
+    - Bộ điều hướng phân trang đầy đủ: nút "Trang trước", nút "Về trang đầu", nút "Trang tiếp theo", huy hiệu chỉ số trang `Trang {page}`.
+    - Bộ lọc tab hình thức (Tất cả / Bán / Trao đổi / Đấu giá) có thanh chỉ thị nổi hoạt họa `activeModeIndicator` (`layoutId="activeFilterTab"`).
+    - Bộ lọc tags/chips có hiệu ứng xuất hiện/biến mất mềm mại với `AnimatePresence`.
+    - Lưới skeleton shimmer card hiển thị khi đang tìm kiếm / tải dữ liệu.
+  - **Cuộn quán tính mượt mà (Smooth Momentum Inertia Scrolling)**:
+    - Cài đặt thư viện `lenis` (`^1.3.27`), xây dựng hook [useSmoothScroll.ts](../../apps/user-web/src/hooks/useSmoothScroll.ts).
+    - Áp dụng toàn cục qua [AppRouteLayout.tsx](../../apps/user-web/src/app/AppRouteLayout.tsx) cho trang chủ (`/`), tìm kiếm (`/books`), tài khoản cá nhân (`/account`, `/profile`) và các trang thuộc ứng dụng; điều tiết vuốt chuột 60fps/120fps có độ trễ quán tính mượt mà.
+    - Tự động dừng (`lenis.stop()`) khi mở dialog/modal hoặc khi vào không gian hội thoại chat (`/chat`), tự động cuộn mượt về đầu trang kết quả (`#catalog-results`) khi bấm chuyển trang.
+  - **Hiệu ứng phóng to ảnh bìa morphing kiểu Tao Tajima (Shared Element Transition)**:
+    - Áp dụng trên [BookCard.tsx](../../apps/user-web/src/components/BookCard.tsx) và [BookDetailPage.tsx](../../apps/user-web/src/pages/BookDetailPage.tsx).
+    - Sử dụng `motion.img` với `layoutId="book-cover-{id}"` cùng bộ thông số lò xo vật lý (`stiffness: 340, damping: 32, mass: 0.85`).
+    - Truyền `location.state.listing` qua navigation và nạp làm `initialData` cho `useQuery` để ảnh bìa hiển thị ngay frame đầu tiên, kích hoạt hoạt ảnh phóng to mượt mà không bị giật hay đợi fetch API; khi bấm quay lại trang tìm kiếm ("Về kệ sách"), ảnh bìa tự động co về đúng vị trí thẻ ban đầu.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web test`: 31 files / 231 tests PASS.
+  - `pnpm --filter @used-books/user-web build`: PASS.
+  - Kiểm thử trực tiếp trên trình duyệt Chromium: Cuộn mượt Lenis, phân trang slide & blur, click thẻ sách bung mở ảnh bìa vào trang chi tiết và thu lại hoàn toàn mượt mà.
+
 ## Sửa ảnh bản sách bị cắt trên Member web — 27/10/2026
 
 - Nhánh `fix/web-listing-photo-fit`, base main `a463041`; gói commit
