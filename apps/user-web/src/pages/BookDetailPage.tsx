@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowUpRight, MapPin, MessageCircle, BookOpen, ClipboardCheck, Languages, CalendarDays, Building2, Hash, Layers3 } from "lucide-react";
+import { motion } from "framer-motion";
 import { ListingGallery } from "../components/ListingGallery";
 import { conditions } from "../lib/listing-labels";
 import { useSession } from "../hooks/useSession";
@@ -11,7 +12,7 @@ import { formatVnd, ROUTES } from "../lib/routes";
 import {
   getPurchaseConversations,
 } from "../services/purchase-conversations";
-import { getPublicListing } from "../services/public-listings";
+import { getPublicListing, type PublicListing } from "../services/public-listings";
 import styles from "./BookDetailPage.module.css";
 import {
   categoryFor,
@@ -30,6 +31,7 @@ export function BookDetailPage() {
   const detail = useQuery({
     queryKey: ["public-listing", id],
     queryFn: () => getPublicListing(id),
+    initialData: () => (location.state?.listing?.id === id ? (location.state.listing as PublicListing) : undefined),
     enabled: valid,
     refetchOnMount: "always",
     retry: false,
@@ -125,7 +127,9 @@ export function BookDetailPage() {
   function requestPurchase() { navigate(`/chat/start/${book.id}?intent=Negotiation`); }
   return (
     <div className={styles.page}>
-      {back}
+      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        {back}
+      </motion.div>
       {detail.isError && (
         <div role="alert" className={styles.refreshError}>
           Chưa cập nhật được thông tin mới nhất.{" "}
@@ -136,7 +140,12 @@ export function BookDetailPage() {
       )}
       <div className={styles.grid}>
         <ListingGallery key={book.id + book.revisionId} book={book} />
-        <article className={styles.content}>
+        <motion.article
+          className={styles.content}
+          initial={{ opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+        >
           <h1>{listingTitle(book)}</h1>
           <BundleManifest bundle={book.bundle} />
           <p className={styles.author}>
@@ -270,7 +279,7 @@ export function BookDetailPage() {
               ) : null}
             </section>
           )}
-        </article>
+        </motion.article>
       </div>
       <div className={styles.sellerRow}>
         <section className={styles.sellerCard} aria-label="Thông tin người đăng">

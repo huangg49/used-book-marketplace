@@ -2,6 +2,7 @@ import { listingTitle } from "../lib/book-bundle";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { BookOpen, ChevronRight, MapPin, Tag, UserRound } from "lucide-react";
+import { motion } from "framer-motion";
 import { WishlistButton } from "./WishlistButton";
 import { CardFitText } from "./CardFitText";
 import { ROUTES, formatVnd } from "../lib/routes";
@@ -36,7 +37,14 @@ export function ListingPhoto({
   return (
     <div ref={ref} className={styles.photoFrame}>
       {url && !failed ? (
-        <img
+        <motion.img
+          layoutId={photoIndex === 0 ? `book-cover-${book.id}` : undefined}
+          transition={{
+            type: "spring",
+            stiffness: 340,
+            damping: 32,
+            mass: 0.85,
+          }}
           src={url}
           alt={alt || "Bìa sách " + listingTitle(book)}
           loading={eager ? "eager" : "lazy"}
@@ -82,8 +90,8 @@ export function BookCard({ book, compact = false }: BookCardProps) {
   const location = useLocation();
   const returnState =
     location.pathname === ROUTES.search
-      ? { catalogReturn: location.pathname + location.search }
-      : undefined;
+      ? { catalogReturn: location.pathname + location.search, listing: book }
+      : { listing: book };
   return (
     <article className={[styles.card, compact ? styles.compact : ""].join(" ")}>
       <div className={styles.cover}>
