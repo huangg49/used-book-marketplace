@@ -1,6 +1,6 @@
 import { listingTitle } from "../lib/book-bundle";
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useViewTransitionState } from "react-router-dom";
 import { BookOpen, ChevronRight, MapPin, Tag, UserRound } from "lucide-react";
 import { WishlistButton } from "./WishlistButton";
 import { CardFitText } from "./CardFitText";
@@ -10,6 +10,7 @@ import styles from "./BookCard.module.css";
 import { conditions } from "../lib/listing-labels";
 import { usePublicListingPhoto } from "../hooks/usePublicListingPhoto";
 import { useNearViewport } from "../hooks/useNearViewport";
+import "./BookTransition.css";
 
 export function ListingPhoto({
   book,
@@ -80,16 +81,25 @@ export interface BookCardProps {
 }
 export function BookCard({ book, compact = false }: BookCardProps) {
   const location = useLocation();
+  const detailUrl = ROUTES.bookDetail(book.id);
+  const isTransitioningTo = useViewTransitionState(detailUrl);
+  const isReturningTo = location.state?.morphBookId === book.id;
+  const isMorphActive = isTransitioningTo || isReturningTo;
+
   const returnState =
     location.pathname === ROUTES.search
-      ? { catalogReturn: location.pathname + location.search }
-      : undefined;
+      ? { catalogReturn: location.pathname + location.search, listing: book, morphBookId: book.id }
+      : { listing: book, morphBookId: book.id };
   return (
-    <article className={[styles.card, compact ? styles.compact : ""].join(" ")}>
-      <div className={styles.cover}>
+    <article
+      className={[styles.card, compact ? styles.compact : ""].join(" ")}
+      data-book-morph-card={isMorphActive ? "true" : undefined}
+    >
+      <div className={styles.cover} data-book-cover="true">
         <ListingPhoto book={book} />
         <Link
-          to={ROUTES.bookDetail(book.id)}
+          to={detailUrl}
+          viewTransition
           state={returnState}
           className={styles.coverLink}
           aria-label={"Xem chi tiết " + listingTitle(book)}
@@ -117,7 +127,8 @@ export function BookCard({ book, compact = false }: BookCardProps) {
       <div className={styles.meta}>
         <h3>
           <Link
-            to={ROUTES.bookDetail(book.id)}
+            to={detailUrl}
+            viewTransition
             state={returnState}
             title={listingTitle(book)}
           >

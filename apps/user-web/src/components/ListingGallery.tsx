@@ -53,7 +53,7 @@ export function ListingGallery({ book }: { book: PublicListing }) {
   }
   return (
     <section className={styles.gallery} aria-label="Ảnh bản sách">
-      <div className={styles.photo}>
+      <div className={styles.photo} data-book-cover="true">
         <ListingPhoto
           key={book.id + current}
           book={book}
