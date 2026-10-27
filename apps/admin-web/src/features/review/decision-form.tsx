@@ -24,6 +24,7 @@ export function DecisionForm({
   onPending,
   removal = false,
   bundle = false,
+  onRecorded,
 }: {
   kind: Kind;
   id: string;
@@ -36,6 +37,7 @@ export function DecisionForm({
   onPending: (value: boolean) => void;
   removal?: boolean;
   bundle?: boolean;
+  onRecorded?: (intent: Intent) => void;
 }) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [reason, setReason] = useState("");
@@ -45,7 +47,7 @@ export function DecisionForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>();
   const [reasonError, setReasonError] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState<"recorded" | "reconciled" | null>(null);
   const [intent, setIntent] = useState<Intent>();
   const dialog = useRef<HTMLDialogElement>(null);
   const leaveDialog = useRef<HTMLDialogElement>(null);
@@ -89,10 +91,11 @@ export function DecisionForm({
     window.addEventListener("beforeunload", guard);
     return () => window.removeEventListener("beforeunload", guard);
   }, [dirty]);
-  const locked = disabled || busy || !!intent || done;
+  const locked = disabled || busy || !!intent || !!done;
   const ready =
     canApprove &&
-    (kind === "catalog-requests" || (checked.size === (bundle ? 7 : 6) && photosReady));
+    (kind === "catalog-requests" ||
+      (checked.size === (bundle ? 7 : 6) && photosReady));
   const select = (decision: typeof choice) => {
     if (
       (decision === "Reject" || decision === "Remove") &&
@@ -130,7 +133,9 @@ export function DecisionForm({
                   ...base,
                   decision: choice,
                   checklist: {
-                    ...(bundle ? { bundleContentsVerified: true as const } : {}),
+                    ...(bundle
+                      ? { bundleContentsVerified: true as const }
+                      : {}),
                     catalogMatches: true,
                     photosClear: true,
                     conditionDisclosed: true,
@@ -148,7 +153,10 @@ export function DecisionForm({
     setError(undefined);
     try {
       await executeIntent(active, session.request.bind(session), reconcile);
-      setDone(true);
+      onRecorded?.(active);
+      setDone(
+        active.acknowledged && !active.stopped ? "recorded" : "reconciled",
+      );
       setReason("");
       setChecked(new Set());
       setIntent(undefined);
@@ -175,23 +183,25 @@ export function DecisionForm({
       {kind === "listings" && !removal && (
         <fieldset disabled={locked}>
           <legend>Kiểm tra trước khi duyệt</legend>
-          {Object.entries(checks).filter(([key]) => bundle || key !== 'bundleContentsVerified').map(([key, label]) => (
-            <label className="check" key={key}>
-              <input
-                type="checkbox"
-                checked={checked.has(key)}
-                onChange={(event) =>
-                  setChecked((previous) => {
-                    const next = new Set(previous);
-                    if (event.target.checked) next.add(key);
-                    else next.delete(key);
-                    return next;
-                  })
-                }
-              />
-              {label}
-            </label>
-          ))}
+          {Object.entries(checks)
+            .filter(([key]) => bundle || key !== "bundleContentsVerified")
+            .map(([key, label]) => (
+              <label className="check" key={key}>
+                <input
+                  type="checkbox"
+                  checked={checked.has(key)}
+                  onChange={(event) =>
+                    setChecked((previous) => {
+                      const next = new Set(previous);
+                      if (event.target.checked) next.add(key);
+                      else next.delete(key);
+                      return next;
+                    })
+                  }
+                />
+                {label}
+              </label>
+            ))}
         </fieldset>
       )}
       {kind === "listings" && !removal && !photosReady && !done && (
@@ -242,7 +252,7 @@ export function DecisionForm({
         </Notice>
       )}
       {done ? (
-        <Notice tone={intent?.stopped ? "info" : "success"}>
+        <Notice tone={done === "recorded" ? "success" : "info"}>
           Đã đối chiếu kết quả với máy chủ. Trạng thái mới nhất hiển thị trong
           hồ sơ.
         </Notice>

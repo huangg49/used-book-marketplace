@@ -1,0 +1,17 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-10-26",
+  "reference": "Approved vector-like 3D style study from this conversation; SpendSense supplied as earlier style reference.",
+  "assets": [
+    {
+      "file": "meadow-latlai-v3.png",
+      "transparent_background": false,
+      "prompt": "Use case: precise-object-edit / stylized-concept. Input image is the EDIT TARGET, the previously approved illustrated scene. Deliver ONLY the landscape background layer for a Lật Lại used-book marketplace login banner. Remove ALL books, bookmark, stars and floating foreground objects, cleanly reconstructing the unobstructed hills and clouds behind them. Preserve the smooth clean vector-like illustrated 3D art direction, soft rounded hills, pillowy clouds, flowing layered foreground grass shapes and composition. Adjust palette a little toward Lật Lại brand: warm paper ivory #fbf5e8 dominant sky and right side instead of saturated lemon yellow; gentle champagne light and pale dusty rose warmth; grassy hills in restrained sage and deep olive green, some distant warm dusty burgundy/blush terrain echoes of brand wine #5c0202. Keep it luminous, elegant and fresh, NOT a dark red scene or autumn desert. Rich wine burgundy is a supporting accent not the whole landscape. No yellow-green cast over the whole scene. Left half retains the landscape depth, right half remains mostly quiet warm ivory for a real HTML login form. Broad smooth illustrated gradient surfaces, no realistic blades of grass, no material texture, no photographic lighting. No typography, logo, UI, books, props, glitter or stars. Landscape 3:2. This will be an independent background asset under floating separate book elements."
+    },
+    {
+      "file": "books-floating-v3.png",
+      "transparent_background": true,
+      "prompt": "Use case: background-extraction. Input image is the EDIT TARGET. Extract ONLY the floating book cluster from the supplied illustration into one independent high-resolution RGBA transparent-background element. Preserve the exact approved look, arrangement, perspective and clean smooth vector-like stylized 3D rendering: one large open rounded wine-burgundy hardcover in front, thick warm cream pages fanning upward, its golden ribbon bookmark, and the small green closed book floating just behind at upper right. Keep all books fully visible, centered with comfortable transparent padding. Remove the entire landscape, sky, hills, clouds, stars and all other objects. Actual transparent alpha everywhere outside the books and ribbon; no matte, no checkerboard painted into pixels, no background color, no surrounding haze or floor shadow. Fine antialiased silhouette edges. Rounded broad smooth color shapes, no grain, no leather/fabric or realistic paper texture. Keep burgundy close to the Lật Lại wine-red family #5c0202 with lighter illustrated highlights, cream pages and small forest-green companion book. No text or logo. Square canvas, books fill about 85 percent. The asset will be overlaid and animated independently above a separate background."
+    }
+  ]
+}

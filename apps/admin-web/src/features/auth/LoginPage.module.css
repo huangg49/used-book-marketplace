@@ -1,0 +1,95 @@
+.root {
+  --books-width: 46%;
+  --books-left: 12%;
+  --books-top: 52%;
+  --badge-size: clamp(110px, 10vw, 180px);
+  --badge-left: 8%;
+  --badge-top: 23%;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 60% 40%;
+  min-height: 100svh;
+  overflow: hidden;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  font-family: "Be Vietnam Pro", sans-serif;
+}
+.background { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; object-position: left center; pointer-events: none; }
+.root::after { content: ""; position: absolute; inset: 0 0 0 56%; z-index: -1; background: linear-gradient(90deg, transparent, var(--shop-paper) 45%); pointer-events: none; }
+.story { position: relative; display: flex; flex-direction: column; justify-content: space-between; min-height: 750px; padding: 36px 48px; }
+.brand { position: relative; z-index: 3; display: inline-flex; align-items: center; width: max-content; min-height: 44px; text-decoration: none; }
+.logo { display: block; width: 187px; height: 43px; overflow: visible; }
+.books { position: absolute; width: var(--books-width); height: auto; max-width: 720px; left: var(--books-left); top: var(--books-top); transform: translateY(-50%); pointer-events: none; filter: drop-shadow(0 20px 20px #28191418); }
+.badge { position: absolute; z-index: 1; left: var(--badge-left); top: var(--badge-top); width: var(--badge-size); aspect-ratio: 1; transform: perspective(650px) rotateX(16deg) rotateY(-19deg) rotateZ(-17deg); pointer-events: none; filter: drop-shadow(10px 24px 18px #5c020224); }
+.badgeFace { position: absolute; inset: 0; padding: 10%; border-radius: 25%; background: linear-gradient(135deg, #fffdf3 4%, #f7dd9e 56%, #ddb36c); box-shadow: inset 2px 3px 3px #ffffffd9, inset -3px -4px 5px #a7793559, 2px 3px 0 #d4a65e, 4px 6px 0 #c5934b, 6px 9px 1px #a57435, 7px 12px 2px #875822; }
+.badgeRecess { position: relative; display: grid; place-items: center; width: 100%; height: 100%; border-radius: 20%; background: linear-gradient(140deg, #ead19a, #fff2cf 65%); box-shadow: inset 2px 3px 5px #9b692f66, inset -2px -2px 3px #fffef1, 0 1px 1px #fff9e7; }
+.badgeMark { display: block; width: 76%; height: auto; transform: translateY(-2px); overflow: visible; filter: drop-shadow(1px 1px 0 #781a13) drop-shadow(1px 2px 0 #400000) drop-shadow(1px 4px 2px #5c020238); }
+.badgeGlint { position: absolute; right: 10%; top: 12%; width: 7%; height: 7%; border-radius: 50%; background: #fff9e7; box-shadow: 0 1px 2px #a779354d; }
+.copy { position: relative; z-index: 2; margin-top: 530px; max-width: 27rem; color: var(--shop-paper); text-shadow: 0 2px 18px #28191490; }
+.copy .copyTitle { margin: 0 0 10px; font-size: clamp(28px, 2.6vw, 42px); font-weight: 700; line-height: 1.3; letter-spacing: -.035em; text-wrap: balance; }
+.copy p { margin: 0; font-size: 14px; line-height: 1.8; }
+.formSide { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding: 40px clamp(28px, 4vw, 80px) 40px 24px; }
+.stack { position: relative; isolation: isolate; width: 100%; max-width: 480px; margin-block: auto; align-self: center; }
+.backSheet, .middleSheet { position: absolute; inset: 0; z-index: -2; border-radius: 3px; background: #e0cfb4; transform: translate(3px, 7px) rotate(2.2deg); box-shadow: 0 12px 24px #21000040; pointer-events: none; }
+.middleSheet { z-index: -1; background: #f0e2ca; transform: translate(2px, 3px) rotate(.9deg); }
+/* Match User AuthLayout's paper and LoginPage's type/control proportions. */
+.paper { position: relative; display: flex; flex-direction: column; padding: 26px 32px 24px; background: #fffaf0 url("/login-art/ivory-paper.webp") repeat; background-size: 512px; color: var(--shop-ink); border-radius: 3px; border-top: 6px solid var(--shop-wine); box-shadow: 0 2px 4px #21000040, 0 24px 60px #21000066; }
+.paperHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1px solid var(--shop-line); }
+.paperBrand { display: block; position: relative; width: 154px; height: 38px; flex-shrink: 0; }
+.paperBrand .logo { position: absolute; left: 0; top: 0; transform: scale(.8); transform-origin: left top; }
+.kind { margin: 0; max-width: 110px; color: var(--shop-muted); font-size: .6875rem; line-height: 1.6; text-align: right; }
+.paper h1 { margin: 0 0 8px; color: var(--shop-wine); font: 800 32px/1.2 "Auth Bricolage", "Be Vietnam Pro", sans-serif; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.lede { margin: 0 0 20px; color: var(--shop-muted); font-size: .8125rem; line-height: 1.8; }
+.field + .field { margin-top: 18px; }
+.field label { display: block; font-size: .8125rem; line-height: 1.7; font-weight: 700; color: var(--shop-ink); }
+.field label span { font-size: .6875rem; font-weight: 400; color: var(--shop-muted); }
+.root .field input { display: block; width: 100%; min-width: 0; min-height: 46px; padding: 9px 2px; border: 0; border-bottom: 1.5px solid var(--shop-control); border-radius: 0; background: transparent; color: var(--shop-ink); font: 400 1rem/1.6 "Be Vietnam Pro", sans-serif; box-shadow: none; caret-color: var(--shop-wine); }
+.field input::placeholder { color: var(--shop-muted); opacity: 1; }
+.root .field input:focus { outline: none; border-bottom-color: var(--shop-wine); box-shadow: 0 1px 0 var(--shop-wine); }
+.password { position: relative; }
+.root .password input { padding-right: 46px; }
+.reveal { position: absolute; right: 0; top: 0; display: grid; place-items: center; width: 44px; min-height: 46px; padding: 0; border: 0; background: transparent; color: var(--shop-wine); }
+.root .submit { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 48px; margin-top: 22px; padding: 12px 18px; border: 0; border-radius: 4px; background: var(--shop-wine); color: var(--shop-cream); font: 700 .875rem/1.7 "Be Vietnam Pro", sans-serif; box-shadow: none; transition: background-color 150ms ease-out; }
+.root .submit:hover:not(:disabled) { background: var(--shop-wine-hover); transform: none; box-shadow: none; }
+.root .submit:disabled { opacity: .65; cursor: wait; }
+.root .reveal:disabled { opacity: .65; cursor: wait; }
+.root .submit :global(.animate-spin) { animation: loginSpin 1s linear infinite !important; }
+@keyframes loginSpin { to { transform: rotate(360deg); } }
+.error { margin-top: 14px; overflow-wrap: anywhere; }
+.error :global(.notice) { margin: 0; font-size: .8125rem; }
+.accessNote { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin: 16px 0 0; padding-top: 10px; border-top: 1px dashed var(--shop-line); color: var(--shop-muted); font-size: .75rem; line-height: 1.8; }
+.accessNote svg { flex-shrink: 0; }
+@media (min-width: 1700px) { .root { --books-width: 45%; --books-left: 13%; } .story { min-height: 100svh; } }
+@media (min-width: 761px) and (max-height: 800px) {
+  .paper { padding-block: 22px 14px; }
+  .paperHeader { padding-bottom: 10px; margin-bottom: 12px; }
+  .lede { margin-bottom: 12px; }
+  .field + .field { margin-top: 10px; }
+  .root .submit { margin-top: 14px; }
+}
+@media (max-width: 1000px) {
+  .root { grid-template-columns: 53% 47%; --books-width: 47%; --books-left: 5%; --badge-left: 4%; --badge-top: 24%; --badge-size: 110px; }
+  .story { padding-inline: 28px; }
+  .formSide { padding-inline: 14px 24px; }
+  .copy .copyTitle { font-size: 30px; }
+}
+@media (max-width: 760px) {
+  .root { grid-template-columns: 1fr; --books-width: min(68%, 360px); --books-left: 27%; --badge-size: 90px; --badge-left: 8%; --badge-top: 116px; }
+  .background { height: 450px; }
+  .root::after { inset: 300px 0 auto; height: 150px; background: linear-gradient(transparent, var(--shop-paper)); }
+  .story { min-height: 420px; padding: max(22px, env(safe-area-inset-top)) 24px 22px; }
+  .brand .logo { width: 158px; height: auto; }
+  .books { top: 215px; }
+  .copy { margin-top: 270px; max-width: 100%; color: var(--shop-wine); text-shadow: none; }
+  .copy .copyTitle { font-size: 27px; margin-bottom: 4px; }
+  .copy p { font-size: 12px; }
+  .formSide { padding: 28px 20px max(24px, env(safe-area-inset-bottom)); }
+  .stack { max-width: 420px; }
+  .paper { padding: 22px 24px 20px; }
+  .paperHeader { gap: 6px; padding-bottom: 14px; margin-bottom: 20px; }
+  .kind { max-width: 100px; font-size: .625rem; }
+  .paper h1 { font-size: 29px; }
+}
+@media (max-width: 400px) { .field label span { display: none; } .paper h1 { font-size: 27px; } }
+@media (max-width: 360px) { .paper { padding-inline: 20px; } .paperBrand { width: 135px; height: 34px; } .paperBrand .logo { transform: scale(.7); } }

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.51.0
+  version: 0.52.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
     implemented. Participant agreement workspaces with mutually confirmed mode/price proposals and linked Exchange history are implemented. Exact Order conversations can be opened by their ACTIVE Buyer or Seller, including BuyNow and historical Orders. Member private address book and versioned demo service-area directory are
@@ -2099,6 +2099,54 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/VersionCommand"
+  /operations/moderation-overview:
+    get:
+      operationId: getModerationOverview
+      tags: [Listing review]
+      summary: Exact moderation counts and daily revision activity
+      description: >-
+        ACTIVE STAFF/ADMIN only. Snapshot-consistent read, no pagination. Days are
+        calendar days in Asia/Ho_Chi_Minh including today through serverTime.
+        Submitted counts revision submissions, decisions count recorded decisions
+        on their own decidedAt dates; resubmissions count again. Historical activity
+        remains counted when a listing is later removed. Pending listings exclude
+        deleted/Removed and require a submitted current revision, matching the queue.
+        Pending counts are current, independent of the selected period. Catalog
+        counts are null for STAFF without ADMIN and never queried for that caller.
+        No reviewer identity, reasons, money or member details are exposed.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: days
+          required: false
+          schema:
+            type: integer
+            enum: [7, 30]
+            default: 7
+      responses:
+        "200":
+          description: Calendar series, with zero-filled days and exact current pending counts.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModerationOverview"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /operations/listings:
     get:
       operationId: listListingReviewQueue
@@ -15757,6 +15805,46 @@ components:
         validFrom:
           type: string
           format: date-time
+    ModerationOverview:
+      type: object
+      additionalProperties: false
+      required: [days, timezone, startAt, serverTime, pending, daily]
+      properties:
+        days:
+          type: integer
+          enum: [7, 30]
+        timezone:
+          type: string
+          const: Asia/Ho_Chi_Minh
+        startAt:
+          type: string
+          format: date-time
+        serverTime:
+          type: string
+          format: date-time
+        pending:
+          type: object
+          additionalProperties: false
+          required: [listings, catalog]
+          properties:
+            listings: { type: integer, minimum: 0 }
+            catalog: { type: [integer, "null"], minimum: 0 }
+        daily:
+          type: array
+          minItems: 7
+          maxItems: 30
+          items:
+            type: object
+            additionalProperties: false
+            required: [date, listingSubmitted, listingApproved, listingRejected, catalogSubmitted, catalogConfirmed, catalogRejected]
+            properties:
+              date: { type: string, format: date }
+              listingSubmitted: { type: integer, minimum: 0 }
+              listingApproved: { type: integer, minimum: 0 }
+              listingRejected: { type: integer, minimum: 0 }
+              catalogSubmitted: { type: [integer, "null"], minimum: 0 }
+              catalogConfirmed: { type: [integer, "null"], minimum: 0 }
+              catalogRejected: { type: [integer, "null"], minimum: 0 }
     OperationsPoint:
       type: object
       additionalProperties: false

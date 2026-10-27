@@ -1,0 +1,56 @@
+.sky {
+  position: relative; isolation: isolate; overflow: hidden; min-width: 0;
+  min-height: 280px; border-radius: 12px; background: var(--cover-peach, #f6d4bd);
+  color: var(--shop-wine);
+}
+.scene { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.scene img { position: absolute; display: block; object-fit: contain; }
+.scene img[hidden] { display: none; }
+.scene .backdrop { inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cloudBack { width: 30%; right: -7%; top: 26%; opacity: .65; animation: cloudDrift 17s ease-in-out -7s infinite alternate !important; }
+.balloonFlight { position: absolute; width: 28%; height: 53%; left: 49%; top: 29%; transform-origin: 50% 30%; animation: balloonFloat 9s ease-in-out -2s infinite !important; }
+.scene .canopy { left: 0; top: 0; width: 100%; height: 74%; }
+.cargo { position: absolute; width: 42%; height: 30%; top: 70%; left: 29%; transform-origin: 50% 0; animation: cargoSway 6s ease-in-out -1s infinite alternate !important; }
+.scene .basket { inset: 0; width: 100%; height: 100%; }
+.scene .books { width: 75%; height: 45%; left: 12%; bottom: 20%; }
+.kite { width: 13%; height: 26%; left: 13%; top: 48%; transform-origin: 50% 80%; animation: kiteSway 7s ease-in-out -4s infinite alternate !important; }
+.birdFlight { position: absolute; width: 13%; aspect-ratio: 1.5; right: 5%; top: 54%; animation: birdGlide 10s ease-in-out -3s infinite !important; }
+.scene .birdBody { inset: 0; width: 100%; height: 100%; }
+.scene .wing { width: 45%; left: 24%; top: 34%; transform-origin: 93% 7%; animation: wingBeat 1.8s ease-in-out -.3s infinite !important; }
+.planeFlight { position: absolute; width: 15%; aspect-ratio: 1.6; left: 27%; top: 69%; animation: planeGlide 13s ease-in-out -5s infinite !important; }
+.plane { inset: 0; width: 100%; height: 100%; }
+.feather { width: 7%; height: 13%; right: 16%; top: 69%; animation: featherFall 11s ease-in-out -4s infinite !important; }
+.distantBalloon { position: absolute; width: 8%; height: 17%; left: 33%; top: 42%; opacity: .65; animation: balloonFloat 13s ease-in-out -6s infinite !important; }
+.scene .distantCanopy { width: 100%; height: 77%; top: 0; }
+.scene .distantBasket { width: 40%; height: 31%; left: 30%; top: 71%; }
+.cloudLeft { width: 44%; left: -9%; bottom: 13%; animation: cloudDrift 19s ease-in-out -2s infinite alternate !important; }
+.cloudRight { width: 37%; right: -9%; bottom: 13%; animation: cloudDrift 15s ease-in-out -10s infinite alternate-reverse !important; }
+.spark, .sparkTwo { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: var(--shop-yellow); animation: glimmer 8s ease-in-out infinite !important; }
+.spark { left: 39%; top: 54%; }
+.sparkTwo { right: 16%; top: 74%; animation-delay: -4s !important; }
+.sky .label { position: relative; margin: 20px 64px 0 20px; color: inherit; font-size: .875rem; font-weight: 600; line-height: 1.5; }
+.sky .label small { display: block; margin: 4px 0 0; color: inherit; font-size: .75rem; font-weight: 400; }
+.sky .value { position: relative; margin: 8px 64px 0 20px; color: inherit; overflow-wrap: anywhere; }
+.sky .caption { position: absolute; bottom: 12px; left: 12px; right: 12px; margin: 0; color: inherit; font-size: .75rem; font-weight: 500; line-height: 1.6; text-align: center; }
+.pause { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px; color: inherit; background: var(--shop-paper); cursor: pointer; }
+.pause:hover:enabled { background: var(--shop-yellow); }
+.pause:disabled { opacity: .6; cursor: default; }
+.pause:focus-visible { outline: 2px solid var(--shop-wine); outline-offset: -4px; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* Keep authored motion under the owner's OS preference policy; manual and
+   lifecycle pause always wins over all individual animation clocks. */
+.sky .scene * { animation-play-state: paused !important; }
+.sky[data-sky-playing="true"] .scene * { animation-play-state: running !important; }
+@keyframes cloudDrift { from { transform: translateX(-5px); } to { transform: translateX(5px); } }
+@keyframes balloonFloat { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translate(2px,-7px) rotate(2deg); } }
+@keyframes cargoSway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+@keyframes kiteSway { from { transform: translateY(0) rotate(-7deg); } to { transform: translate(4px,-5px) rotate(6deg); } }
+@keyframes birdGlide { 0%,100% { transform: translate(0,0) rotate(0); } 50% { transform: translate(-12px,-9px) rotate(-5deg); } }
+@keyframes wingBeat { 0%,100% { transform: rotate(-8deg) scaleY(.7); } 50% { transform: rotate(30deg) scaleY(1); } }
+@keyframes planeGlide { 0%,100% { transform: translate(0,0) rotate(-3deg); } 50% { transform: translate(12px,-9px) rotate(5deg); } }
+@keyframes glimmer { 0%,100% { opacity: .15; transform: translateY(0); } 50% { opacity: .8; transform: translateY(-6px); } }
+@keyframes featherFall { 0%,100% { transform: translate(0,0) rotate(-15deg); } 50% { transform: translate(-6px,7px) rotate(15deg); } }
+@media (max-width: 720px) {
+  .sky .label small { display: block; margin-left: 0; }
+  .sky .value { align-self: auto; font-size: 3rem; }
+}

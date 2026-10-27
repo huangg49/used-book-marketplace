@@ -2,10 +2,10 @@ name: API CI
 
 on:
   pull_request:
-    paths: ["apps/api/**", "packages/api-contract/**", "scripts/check-api-routes.mjs", "infra/docker-compose.mongo-test.yml", "infra/mongo/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/api-ci.yml"]
+    paths: ["apps/api/**", "apps/admin-web/tests/dashboard-api.mjs", "apps/admin-web/tests/test-api.mjs", "packages/api-contract/**", "scripts/check-api-routes.mjs", "infra/docker-compose.mongo-test.yml", "infra/mongo/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/api-ci.yml"]
   push:
     branches: [main]
-    paths: ["apps/api/**", "packages/api-contract/**", "scripts/check-api-routes.mjs", "infra/docker-compose.mongo-test.yml", "infra/mongo/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/api-ci.yml"]
+    paths: ["apps/api/**", "apps/admin-web/tests/dashboard-api.mjs", "apps/admin-web/tests/test-api.mjs", "packages/api-contract/**", "scripts/check-api-routes.mjs", "infra/docker-compose.mongo-test.yml", "infra/mongo/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/api-ci.yml"]
 
 jobs:
   api:
@@ -51,6 +51,7 @@ jobs:
       - run: pnpm test:api:mongo
       - run: pnpm test:api:e2e
       - run: pnpm --filter @used-books/api build
+      - run: pnpm --filter @used-books/admin-web test:dashboard:api
       - name: Mongo QA diagnostics on failure
         if: failure()
         run: |

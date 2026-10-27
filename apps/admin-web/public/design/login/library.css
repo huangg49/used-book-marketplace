@@ -1,0 +1,107 @@
+/* Visual source: user-web AuthLayout.module.css + LoginPage.module.css.
+   The Member app is read-only in this task. Only the Admin preview uses this port. */
+@font-face {
+  font-family: "Auth Bricolage";
+  src: url("/fonts/auth/BricolageGrotesque.ttf") format("truetype");
+  font-weight: 200 800;
+  font-display: swap;
+}
+.meadow-form { --auth-title: "Auth Bricolage", "Be Vietnam Pro", sans-serif; gap: 28px; }
+.library-stack { position: relative; isolation: isolate; width: 100%; max-width: 480px; margin-block: auto; align-self: center; }
+.library-back-sheet, .library-middle-sheet {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  background: #e0cfb4;
+  transform: translate(3px, 7px) rotate(2.2deg);
+  box-shadow: 0 12px 24px #21000040;
+  pointer-events: none;
+  z-index: -2;
+}
+.library-middle-sheet { background: #f0e2ca; transform: translate(2px, 3px) rotate(.9deg); z-index: -1; }
+.meadow-form .sign-in {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+  min-height: clamp(590px, calc(100dvh - 104px), 660px);
+  margin: 0;
+  padding: 26px 32px 18px;
+  background: #fffaf0 url("/login-art/ivory-paper.webp") repeat;
+  background-size: 512px;
+  color: var(--ink);
+  border: 0;
+  border-top: 6px solid var(--wine);
+  border-radius: 3px;
+  box-shadow: 0 2px 4px #21000040, 0 24px 60px #21000066;
+}
+.library-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
+.library-brand { display: block; width: 154px; height: 38px; position: relative; flex-shrink: 0; }
+.library-brand .meadow-flat-logo { position: absolute; left: 0; top: 0; transform: scale(.8); transform-origin: left top; }
+.library-kind { margin: 0; max-width: 110px; color: var(--muted); font-size: .6875rem; line-height: 1.6; text-align: right; }
+.meadow-form .form-intro { padding: 0; margin-bottom: 20px; border: 0; }
+.meadow-form .form-intro h1 { max-width: none; margin: 0 0 8px; font: 800 32px/1.2 var(--auth-title); letter-spacing: -.025em; color: var(--wine); text-wrap: initial; overflow-wrap: anywhere; }
+.meadow-form .form-intro p { max-width: none; margin: 0; color: var(--muted); font-size: .8125rem; line-height: 1.8; }
+.meadow-form .field { margin: 0; }
+.meadow-form .field + .field { margin-top: 18px; }
+.meadow-form .field label { display: block; margin: 0; font-size: .8125rem; line-height: 1.7; font-weight: 700; color: var(--ink); }
+.meadow-form .field:focus-within label { color: var(--ink); }
+.meadow-form .field label span { font-size: .6875rem; font-weight: 400; color: var(--muted); }
+.meadow-form .field input {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 9px 2px;
+  border: 0;
+  border-bottom: 1.5px solid var(--control);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 400 1rem/1.6 "Be Vietnam Pro", sans-serif;
+  box-shadow: none;
+  transition: none;
+}
+.meadow-form .field input::placeholder { color: var(--muted); font-size: 1rem; }
+.meadow-form .field input:focus { outline: none; border-bottom-color: var(--wine); box-shadow: 0 1px 0 var(--wine); background: transparent; }
+.meadow-form .field input[aria-invalid=true] { border-bottom-color: var(--error); }
+.meadow-form .password-field input { padding-right: 46px; }
+.meadow-form .reveal { right: 0; top: 0; width: 44px; min-width: 44px; height: 46px; min-height: 46px; border: 0; border-radius: 0; background: transparent; color: var(--wine); }
+.meadow-form .reveal svg { width: 19px; height: 19px; opacity: 1; }
+.meadow-form .reveal:hover, .meadow-form .reveal:active { background: transparent; }
+.meadow-form .field-error { margin: 6px 0 0; color: var(--error); font-size: .75rem; line-height: 1.7; }
+.meadow-form .submit { justify-content: center; gap: 12px; min-height: 48px; margin-top: 22px; padding: 12px 18px; border: 0; border-radius: 4px; background: var(--wine); color: var(--cream); font: 700 .875rem/1.7 "Be Vietnam Pro", sans-serif; box-shadow: none; transition: background-color 150ms ease-out; }
+.meadow-form .submit svg { width: 18px; height: 18px; transform: none; transition: none; }
+.meadow-form .submit:active { transform: none; box-shadow: none; }
+.meadow-form .submit:hover:not(:disabled) { background: var(--wine-hover); box-shadow: none; }
+.meadow-form .submit:hover svg, .meadow-form .submit:focus-visible svg { transform: none; }
+.meadow-form .submit:disabled { opacity: .65; cursor: wait; }
+.meadow-form .session-note { justify-content: center; flex-wrap: wrap; margin: 16px 0 0; padding-top: 10px; border-top: 1px dashed var(--line); color: var(--muted); font-size: .75rem; line-height: 1.8; }
+.meadow-form .session-note svg { width: 14px; height: 14px; }
+.meadow-form footer.library-footer { width: auto; max-width: none; align-self: auto; margin-top: auto; padding-top: 14px; color: var(--muted); font-size: .6875rem; line-height: 1.8; text-align: center; }
+.meadow-form > footer { max-width: 480px; }
+.meadow-form .form-notice { margin: 14px 0 0; padding: 0; border-radius: 0; background: transparent; color: var(--ink); font-size: .8125rem; line-height: 1.8; }
+@media (min-width: 761px) and (max-height: 800px) {
+  .meadow-form .sign-in { padding-block: 22px 14px; }
+  .library-header { padding-bottom: 10px; margin-bottom: 12px; }
+  .meadow-form .form-intro { margin-bottom: 12px; }
+  .meadow-form .field + .field { margin-top: 10px; }
+  .meadow-form .submit { margin-top: 14px; }
+  .meadow-form footer.library-footer { padding-top: 8px; }
+}
+@media (max-width: 1000px) and (min-width: 761px) { .meadow-form { padding-left: 14px; padding-right: 24px; } }
+@media (max-width: 760px) {
+  .meadow-form { padding: 28px 20px 24px; gap: 22px; }
+  .library-stack { max-width: 420px; }
+  .meadow-form .sign-in { min-height: 0; max-width: none; padding: 22px 24px 16px; }
+  .library-header { gap: 6px; padding-bottom: 14px; margin-bottom: 20px; }
+  .library-kind { max-width: 100px; font-size: .625rem; }
+  .meadow-form .form-intro h1 { font-size: 29px; }
+  .meadow-form footer.library-footer { margin-top: 26px; }
+}
+@media (max-width: 400px) { .meadow-form .field label span { display: none; } .meadow-form .form-intro h1 { font-size: 27px; } }
+@media (max-width: 360px) {
+  .meadow-form .sign-in { padding-inline: 20px; }
+  .library-brand { width: 135px; height: 34px; }
+  .library-brand .meadow-flat-logo { transform: scale(.7); }
+}

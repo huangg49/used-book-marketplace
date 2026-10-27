@@ -1,14 +1,27 @@
 import { dateText } from "../../core/format";
-import { useCallback, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useOutletContext, useParams } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useOutletContext,
+  useParams,
+} from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
-import { canReviewCatalog, session } from "../../core/session";
+import { canReview, canReviewCatalog, session } from "../../core/session";
 import { Button, ErrorNotice, Notice } from "../../core/ui";
 import { catalog, labels, listing, type Kind } from "./contracts";
 import { BookReference, ContentView, History, MetadataView } from "./readers";
 import { DecisionForm } from "./decision-form";
 import { PriceAssistView } from "./price-assist-view";
+import { DecisionRecord } from "./DecisionRecord";
+import { NextReview } from "./NextReview";
+import { reviewReturnPath } from "./review-navigation";
+import {
+  matchesRecordedDecision,
+  recordedDecision,
+  type RecordedDecision,
+} from "./decision-feedback";
 
 export function Detail() {
   const { kind, id } = useParams();
@@ -17,7 +30,8 @@ export function Detail() {
     !id ||
     !/^[a-f0-9-]{36}$/.test(id) ||
     (kind !== "listings" && kind !== "catalog-requests") ||
-    (kind === "catalog-requests" && !canReviewCatalog(user))
+    (kind === "catalog-requests" && !canReviewCatalog(user)) ||
+    (kind === "listings" && !canReview(user))
   )
     return <p>Hồ sơ không hợp lệ hoặc bạn không có quyền xem.</p>;
   return (
@@ -34,10 +48,14 @@ function DetailContent({
   user: CurrentUser;
 }) {
   const queryClient = useQueryClient();
+  const location = useLocation();
   const [photos, setPhotos] = useState<Record<string, boolean>>({});
   const [reset, setReset] = useState(0);
   const [bookReady, setBookReady] = useState(false);
   const [pendingCommand, setPendingCommand] = useState(false);
+  const [recorded, setRecorded] = useState<RecordedDecision | null>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const recordHeader = useRef<HTMLElement>(null);
   const onPhotoReady = useCallback(
     (mediaId: string, ready: boolean) =>
       setPhotos((previous) =>
@@ -61,11 +79,18 @@ function DetailContent({
     gcTime: 0,
   });
   const value = result.data;
+  const loadedId = value?.id;
+  useLayoutEffect(() => {
+    if (!loadedId) return;
+    recordHeader.current?.scrollIntoView({ block: "start", behavior: "instant" });
+    heading.current?.focus({ preventScroll: true });
+  }, [loadedId]);
   async function reconcile() {
     const fresh = await result.refetch();
     if (fresh.error) throw fresh.error;
     await queryClient.invalidateQueries({ queryKey: ["queue"] });
     await queryClient.invalidateQueries({ queryKey: ["revisions", id] });
+    await queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   }
   const isListing = value && "state" in value;
   const status = value
@@ -79,6 +104,15 @@ function DetailContent({
     value &&
     ("ownerId" in value ? value.ownerId : value.requesterId) === user.id;
   const pending = status === "Pending" || status === "PendingReview";
+  const decisionRecord =
+    value &&
+    ("state" in value
+      ? value.latestDecision?.revisionId === value.currentRevision.id
+        ? value.latestDecision
+        : null
+      : value.decisions.find(
+          (decision) => decision.revisionId === value.currentRevision.id,
+        ));
   const decisionAllowed =
     pending &&
     !self &&
@@ -88,7 +122,7 @@ function DetailContent({
         !value.state.deletedAt));
   return (
     <>
-      <Link className="back-link" to={`/review/${kind}`}>
+      <Link className="back-link" to={reviewReturnPath(kind, location.state)}>
         ← Về danh sách
       </Link>
       {result.isLoading && <p role="status">Đang mở hồ sơ…</p>}
@@ -101,19 +135,15 @@ function DetailContent({
       )}
       {value && (
         <>
-          <header className="detail-heading">
+          <header className="detail-heading" ref={recordHeader}>
             <div>
-              <p className="eyebrow">
-                {kind === "listings" ? "Hồ sơ bài đăng" : "Hồ sơ đầu sách"} /{" "}
-                {id.slice(0, 8)}
-              </p>
-              <h1>
+              <h1 ref={heading} tabIndex={-1}>
                 {"state" in value
-                  ? "Đọc kỹ một bản sách."
+                  ? "Hồ sơ bài đăng"
                   : value.currentRevision.metadata.title}
               </h1>
               <p>
-                Bản gửi {value.currentRevision.number} ·{" "}
+                #{id.slice(0, 8)} · Bản gửi {value.currentRevision.number} ·{" "}
                 {dateText(value.currentRevision.submittedAt)}
               </p>
             </div>
@@ -147,23 +177,6 @@ function DetailContent({
                   />
                   {value.priceAssist && (
                     <PriceAssistView value={value.priceAssist} />
-                  )}
-                  {value.latestDecision && (
-                    <Notice
-                      tone={
-                        value.latestDecision.decision === "Approve"
-                          ? "success"
-                          : "warning"
-                      }
-                    >
-                      <strong>
-                        {labels[value.latestDecision.decision]} ·{" "}
-                        {dateText(value.latestDecision.decidedAt)}
-                      </strong>
-                      {value.latestDecision.reason && (
-                        <p className="prose">{value.latestDecision.reason}</p>
-                      )}
-                    </Notice>
                   )}
                   <History
                     listingId={id}
@@ -205,18 +218,29 @@ function DetailContent({
               <p className="record-id">Mã hồ sơ: {id}</p>
             </div>
             <div>
+              {decisionRecord && (
+                <DecisionRecord
+                  {...decisionRecord}
+                  animate={matchesRecordedDecision(value, recorded)}
+                />
+              )}
               {self && (
                 <Notice tone="warning">
                   Bạn là người gửi hồ sơ này. Cần một người kiểm duyệt khác
                   quyết định.
                 </Notice>
               )}
-              {!pending && (
-                <Notice>
-                  Hồ sơ đã có kết quả.{" "}
-                  {status === "Approved" &&
-                    "Bài đăng chỉ hiện trên kệ khi còn khả dụng và tài khoản người đăng đủ điều kiện."}
-                </Notice>
+              {!pending &&
+                (status === "Approved" ? (
+                  <p className="muted">
+                    Bài đăng chỉ hiện trên kệ khi còn khả dụng và tài khoản
+                    người đăng đủ điều kiện.
+                  </p>
+                ) : !decisionRecord ? (
+                  <Notice>Hồ sơ đã có kết quả.</Notice>
+                ) : null)}
+              {!pending && !self && (
+                <NextReview kind={kind} currentId={id} reviewerId={user.id} />
               )}
               {(decisionAllowed ||
                 (isListing &&
@@ -226,7 +250,9 @@ function DetailContent({
                   value.state.trade === "Available" &&
                   !value.state.deletedAt)) && (
                 <DecisionForm
-                  bundle={'state' in value && !!value.currentRevision.content.bundle}
+                  bundle={
+                    "state" in value && !!value.currentRevision.content.bundle
+                  }
                   key={`${value.version}/${value.currentRevision.id}/${reset}`}
                   kind={kind}
                   removal={!pending}
@@ -249,6 +275,9 @@ function DetailContent({
                   disabled={result.isError || result.isFetching}
                   reconcile={reconcile}
                   onPending={setPendingCommand}
+                  onRecorded={(intent) =>
+                    setRecorded(recordedDecision(intent, kind, id))
+                  }
                 />
               )}
               <details className="reload-help">

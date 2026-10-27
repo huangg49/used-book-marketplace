@@ -841,6 +841,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/moderation-overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exact moderation counts and daily revision activity
+         * @description ACTIVE STAFF/ADMIN only. Snapshot-consistent read, no pagination. Days are calendar days in Asia/Ho_Chi_Minh including today through serverTime. Submitted counts revision submissions, decisions count recorded decisions on their own decidedAt dates; resubmissions count again. Historical activity remains counted when a listing is later removed. Pending listings exclude deleted/Removed and require a submitted current revision, matching the queue. Pending counts are current, independent of the selected period. Catalog counts are null for STAFF without ADMIN and never queried for that caller. No reviewer identity, reasons, money or member details are exposed.
+         */
+        get: operations["getModerationOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/listings": {
         parameters: {
             query?: never;
@@ -5242,6 +5262,30 @@ export interface components {
             /** Format: date-time */
             validFrom: string;
         };
+        ModerationOverview: {
+            /** @enum {integer} */
+            days: 7 | 30;
+            /** @constant */
+            timezone: "Asia/Ho_Chi_Minh";
+            /** Format: date-time */
+            startAt: string;
+            /** Format: date-time */
+            serverTime: string;
+            pending: {
+                listings: number;
+                catalog: number | null;
+            };
+            daily: {
+                /** Format: date */
+                date: string;
+                listingSubmitted: number;
+                listingApproved: number;
+                listingRejected: number;
+                catalogSubmitted: number | null;
+                catalogConfirmed: number | null;
+                catalogRejected: number | null;
+            }[];
+        };
         OperationsPoint: {
             /** Format: uuid */
             id: string;
@@ -7135,6 +7179,35 @@ export interface operations {
             404: components["responses"]["ListingError"];
             409: components["responses"]["ListingError"];
             422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getModerationOverview: {
+        parameters: {
+            query?: {
+                days?: 7 | 30;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Calendar series, with zero-filled days and exact current pending counts. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationOverview"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];

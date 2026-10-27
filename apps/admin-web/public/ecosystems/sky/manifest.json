@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "generator": "built-in image_gen",
+  "assets": [
+    {
+      "id": "sky",
+      "file": "sky.webp",
+      "width": 1000,
+      "height": 667,
+      "bytes": 18108,
+      "transparent": false
+    },
+    {
+      "id": "cloud",
+      "file": "cloud.webp",
+      "width": 460,
+      "height": 174,
+      "bytes": 11568,
+      "transparent": true
+    },
+    {
+      "id": "balloon",
+      "file": "balloon.webp",
+      "width": 480,
+      "height": 577,
+      "bytes": 28386,
+      "transparent": true
+    },
+    {
+      "id": "basket",
+      "file": "basket.webp",
+      "width": 360,
+      "height": 744,
+      "bytes": 36348,
+      "transparent": true
+    },
+    {
+      "id": "books",
+      "file": "books.webp",
+      "width": 320,
+      "height": 360,
+      "bytes": 21286,
+      "transparent": true
+    },
+    {
+      "id": "paper-plane",
+      "file": "paper-plane.webp",
+      "width": 300,
+      "height": 160,
+      "bytes": 9504,
+      "transparent": true
+    },
+    {
+      "id": "kite",
+      "file": "kite.webp",
+      "width": 260,
+      "height": 445,
+      "bytes": 18420,
+      "transparent": true
+    }
+  ]
+}

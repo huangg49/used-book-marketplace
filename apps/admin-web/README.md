@@ -28,7 +28,22 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
+pnpm bundle:check
 ```
+
+`build` also checks the production manifest with
+[`admin-bundle.mjs`](../../scripts/admin-bundle.mjs): all ten page modules must
+remain deferred, the complete startup JavaScript graph must stay within500kB,
+and no JavaScript chunk may exceed300kB (decimal bytes, before compression).
+The report counts shared imports/modulepreloads once and reports CSS, gzip estimates,
+total JavaScript and each page's additional assets separately. It does not measure
+browser timing or Core Web Vitals. Run the checker tests from the repository root
+with `node --test scripts/admin-bundle.test.mjs`.
+
+Page modules load inside the existing authenticated workspace. A local Suspense/
+error boundary keeps navigation outside the pending or failed page. Reload is an
+explicit action and requires sign-in again; no automatic reload, token persistence,
+service worker, command replay or permission change was added.
 
 For the HTTP/MongoDB browser suite, start the QA replica set and set
 `MONGO_TEST_URL` as described in [START_HERE](../../docs/handoff/START_HERE.md).

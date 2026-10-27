@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { dateText } from "../../core/format";
-import { Button, ErrorNotice, Notice } from "../../core/ui";
+import { Button, Notice } from "../../core/ui";
+import { ListFeedback } from "../../core/list-feedback";
 import type { Finish } from "./action-panel";
 import type { ActionContext, QueuePanel, Row } from "./queue-panel";
 
 export function OperationsQueue({
-  number,
   title,
   intro,
   order,
@@ -51,7 +51,6 @@ export function OperationsQueue({
   return (
     <>
       <header className="page-heading">
-        <p className="eyebrow">Điểm và đấu giá / {number}</p>
         <h1>{title}</h1>
         <p className="intro">{intro}</p>
       </header>
@@ -67,7 +66,7 @@ export function OperationsQueue({
       {extra?.({ onFinish: finish, onPending: setPending, reconcile })}
       <p className="muted">
         {order}{" "}
-        {result.isSuccess &&
+        {result.data !== undefined &&
           `Đang hiển thị ${rows.length} ${unit}.${serverTime ? ` Cập nhật ${dateText(serverTime)}.` : ""}`}
       </p>
       {notice && (
@@ -75,18 +74,7 @@ export function OperationsQueue({
           <Notice tone={notice.tone}>{notice.text}</Notice>
         </div>
       )}
-      {result.isLoading && (
-        <p className="empty" role="status">
-          Đang tải hồ sơ…
-        </p>
-      )}
-      {result.error && (
-        <ErrorNotice
-          error={result.error}
-          retry={() => void result.refetch()}
-          busy={result.isFetching}
-        />
-      )}
+      <ListFeedback result={result} loadingText="Đang tải hồ sơ…" retryDisabled={pending} />
       {result.isSuccess && rows.length === 0 && (
         <div className="empty">
           <span className="folio">—</span>

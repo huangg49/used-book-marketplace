@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lật lại · Phòng thử chuyển động</title>
+  <link rel="stylesheet" href="./motion.css"><script src="./motion.js" defer></script>
+</head>
+<body>
+  <main>
+    <header class="masthead">
+      <svg class="brand" viewBox="0 0 187 43" role="img" aria-label="Lật lại">
+        <defs><filter id="brand-ink" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 .360784 0 0 0 0 .007843 0 0 0 0 .007843 1.59375 0 0 0 -.575"/></filter></defs>
+        <svg width="52" height="42" viewBox="0 0 52 42" overflow="hidden"><image href="/brand/logo-original.png" x="-94" y="-72" width="240" height="240" filter="url(#brand-ink)"/></svg>
+        <svg x="61" width="126" height="43" viewBox="0 0 126 43" overflow="hidden"><image href="/brand/logo-original.png" x="-137" y="-198" width="400" height="400" filter="url(#brand-ink)"/></svg>
+      </svg>
+      <p>Phòng thử chuyển động · Admin</p>
+    </header>
+    <div class="intro"><h1>Chất giấy.<br>Chuyển động có chủ ý.</h1><p>Ba hướng để bàn làm việc có cá tính Lật lại. Chọn một hướng rồi bấm thử; mọi chuyển động chỉ chạy khi bạn tương tác.</p></div>
+    <div class="lab">
+      <div class="stage" aria-label="Khu vực xem thử">
+        <label class="mobile-picker">Chọn chuyển động<select id="mobile-scene"><option value="page">Sang trang giấy</option><option value="ink">Nét mực liền mạch</option><option value="depth">Phiếu giấy có chiều sâu</option></select></label>
+        <section class="scene" id="scene-page" aria-label="Thử chuyển trang">
+          <div class="paper-stack"><div class="paper" id="page-paper">
+            <div class="paper-top"><span>LẬT LẠI</span><span>Phiếu thử chuyển động</span></div>
+            <h2 id="page-heading">Từ hàng chờ.</h2><p id="page-copy">Mỗi lần mở hồ sơ là một trang giấy tiếp nối.</p>
+            <div class="paper-lines" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="paper-bottom">Chuyển cảnh thử nghiệm <span aria-hidden="true">→</span></div>
+            <div id="page-edge" class="page-edge" aria-hidden="true"></div>
+          </div></div>
+        </section>
+        <section class="scene" id="scene-ink" aria-label="Thử nét mực chuyển trạng thái" hidden>
+          <div class="ink-paper"><div class="paper-top"><span>LẬT LẠI</span><span>Nghiên cứu nét mực</span></div><h2>Một nét, liền mạch.</h2><p>Hình học minh họa chuyển động; không có dữ liệu vận hành.</p>
+            <svg viewBox="0 0 500 205" role="img" aria-label="Nét mực hình học chuyển giữa hai hình dạng">
+              <path class="guide" d="M20 45H480M20 105H480M20 165H480"/>
+              <path id="ink-path" class="ink-path" d="M20 150L80 140L140 150L200 80L260 100L320 50L380 80L440 45L480 55"/>
+            </svg><div class="paper-bottom">Giữ liền mạch khi đổi trạng thái</div>
+          </div>
+        </section>
+        <section class="scene" id="scene-depth" aria-label="Thử chiều sâu phiếu giấy" hidden>
+          <div class="depth-space"><div class="depth-paper" id="depth-paper">
+            <div class="paper-top"><span>LẬT LẠI</span><span>Phiếu tương tác mẫu</span></div><div class="bookmark" aria-hidden="true"></div>
+            <h2>Một chút<br>trọng lượng.</h2><p>Rê chuột trên phiếu. Trên điện thoại hoặc bàn phím, dùng nút thử.</p>
+            <div class="paper-lines" aria-hidden="true"><span></span><span></span></div><div class="paper-bottom">Chỉ bề mặt giấy chuyển động</div>
+          </div></div>
+        </section>
+        <div class="actions"><button id="play" type="button">Thử chuyển trang <span aria-hidden="true">→</span></button><button id="stop" type="button">Dừng hiệu ứng</button></div>
+        <p id="feedback" class="feedback" role="status">Sẵn sàng. Không có thao tác nào gửi tới backend.</p>
+        <p class="stage-note">Bản thử độc lập · chưa áp dụng vào Admin</p>
+      </div>
+      <aside class="controls" aria-label="Điều khiển bản thử">
+        <fieldset><legend>Chọn cảm giác muốn thử</legend>
+          <label><input type="radio" name="scene" value="page" checked><span><strong>Sang trang giấy</strong><small>Chuyển khu vực có một đường mép giấy đi qua, nội dung vẫn đọc được.</small></span></label>
+          <label><input type="radio" name="scene" value="ink"><span><strong>Nét mực liền mạch</strong><small>Thay vì vẽ lại từ đầu, đường nét chuyển êm sang hình dạng mới.</small></span></label>
+          <label><input type="radio" name="scene" value="depth"><span><strong>Phiếu giấy có chiều sâu</strong><small>Nghiêng rất nhẹ theo tay; khi rời chuột, phiếu trở về vị trí cũ.</small></span></label>
+        </fieldset>
+        <dl class="spec"><div><dt>Nhịp thử</dt><dd id="duration">360 ms</dd></div><div><dt>Khi áp dụng</dt><dd id="placement">Mở danh sách → hồ sơ</dd></div></dl>
+      </aside>
+    </div>
+    <footer>Giữ logo, sắc đỏ rượu và giấy kem. Không thay đổi dữ liệu, sidebar hay luồng kiểm duyệt.</footer>
+  </main>
+</body>
+</html>

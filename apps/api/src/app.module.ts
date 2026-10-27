@@ -20,6 +20,7 @@ import { PurchasesModule } from './modules/purchases/purchases.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { ExchangesModule } from './modules/exchanges/exchanges.module.js';
 import { ReviewsModule } from './modules/reviews/reviews.module.js';
+import { OperationsDashboardModule } from './modules/operations-dashboard/operations-dashboard.module.js';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module.js';
     NotificationsModule,
     ExchangesModule,
     ReviewsModule,
+    OperationsDashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService],

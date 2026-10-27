@@ -1,0 +1,758 @@
+.shell {
+  --rail-width: 80px;
+  --sidebar-width: 280px;
+  display: grid;
+  grid-template-columns: var(--rail-width) minmax(0, 1fr);
+  min-height: 100dvh;
+  background: var(--desk-ground);
+  transition: grid-template-columns 220ms var(--ease-spring);
+}
+.shell[data-pinned="true"] {
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+}
+.sidebar,
+.drawer {
+  --nav-ground: var(--shop-wine);
+  --nav-text: var(--shop-cream);
+  --nav-muted: #e3c6b6;
+  --nav-line: #9e5750;
+  --nav-hover: var(--shop-wine-hover);
+  --nav-focus: var(--shop-yellow);
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-width);
+  padding: 16px 12px 12px;
+  background: var(--nav-ground);
+  color: var(--nav-text);
+  font-family: "Be Vietnam Pro", sans-serif;
+}
+.sidebar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 100dvh;
+  align-self: start;
+  width: var(--rail-width);
+  border-right: 1px solid var(--nav-ground);
+  transition:
+    width 220ms var(--ease-spring),
+    box-shadow 220ms var(--ease-spring);
+}
+.sidebar[data-expanded="true"] {
+  width: var(--sidebar-width);
+}
+.sidebar[data-peeking="true"] {
+  box-shadow: 12px 0 28px #28191414;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 0 4px 12px;
+  border-bottom: 1px solid var(--nav-line);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: none;
+  overflow: hidden;
+}
+.markViewport {
+  display: block;
+  position: relative;
+  width: 138px;
+  height: 34px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.logo {
+  display: block;
+  width: 187px;
+  height: 43px;
+  max-width: none;
+  transform: scale(0.72);
+  transform-origin: left top;
+}
+.iconButton {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--nav-text, var(--shop-wine));
+}
+.iconButton:hover {
+  background: var(--nav-hover, var(--shop-shelf));
+}
+.sidebar :is(a, button):focus-visible,
+.drawer :is(a, button):focus-visible {
+  outline: 2px solid var(--nav-focus);
+  outline-offset: 2px;
+}
+.sidebar ::selection,
+.drawer ::selection {
+  background: var(--shop-cream);
+  color: var(--shop-wine);
+}
+.scrollArea {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  padding-block: 8px;
+}
+.scrollArea::-webkit-scrollbar,
+.logoutError::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.navigation {
+  display: grid;
+  gap: 4px;
+}
+.group {
+  min-width: 0;
+}
+.groupItems {
+  display: grid;
+  gap: 2px;
+}
+.groupItems[hidden] {
+  display: none !important;
+}
+.groupTitle {
+  margin: 8px 0 4px;
+  padding: 0 12px;
+  color: var(--nav-muted);
+  font:
+    700 12px/1.6 "Be Vietnam Pro",
+    sans-serif;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.groupTitle[data-disclosure="true"] {
+  margin: 4px 0 2px;
+  padding: 0;
+}
+.groupToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--nav-muted);
+  font: inherit;
+  text-align: left;
+}
+.groupToggle:hover {
+  background: var(--nav-hover);
+  color: var(--nav-text);
+}
+.groupToggle > span {
+  flex: 1;
+  min-width: 0;
+}
+.groupIcon {
+  display: none;
+  flex-shrink: 0;
+}
+.chevron {
+  flex-shrink: 0;
+  transition: transform 180ms var(--ease-spring);
+}
+.groupToggle[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+.link,
+.upcoming {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--nav-text);
+  font-size: 13px;
+  line-height: 1.6;
+  font-weight: 400;
+  text-decoration: none;
+  transition:
+    background 160ms ease-out,
+    color 160ms ease-out;
+}
+.link > svg,
+.upcoming > svg {
+  flex-shrink: 0;
+  color: var(--nav-muted);
+}
+.link:hover {
+  background: var(--nav-hover);
+  color: var(--nav-text);
+}
+.link:hover > svg {
+  color: var(--nav-text);
+}
+.link[aria-current="page"] {
+  background: var(--shop-cream);
+  color: var(--shop-wine);
+  font-weight: 700;
+}
+.link[aria-current="page"] > svg {
+  color: var(--shop-wine);
+}
+.link[aria-current="page"]:hover {
+  background: var(--shop-paper);
+  color: var(--shop-wine);
+}
+.link[aria-disabled="true"] {
+  cursor: wait;
+  opacity: 0.65;
+}
+.linkLabel {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition:
+    opacity 180ms ease-out,
+    transform 180ms var(--ease-spring);
+}
+.badge {
+  display: block;
+  margin-left: auto;
+  flex-shrink: 0;
+  max-width: 100%;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--nav-hover);
+  color: var(--nav-text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.link[aria-current="page"] .badge {
+  background: var(--shop-paper);
+  color: var(--shop-wine);
+}
+.upcoming {
+  min-height: 32px;
+  margin-top: 4px;
+  padding-block: 6px;
+  color: var(--nav-muted);
+  cursor: default;
+  font-size: 12px;
+}
+.soon {
+  margin-left: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.menuState {
+  margin: 14px 12px;
+  color: var(--nav-muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.account {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--nav-line);
+}
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-inline: 4px;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--shop-cream);
+  color: var(--shop-wine);
+  font-size: 13px;
+  font-weight: 700;
+}
+.accountDetails {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.accountDetails strong {
+  overflow: hidden;
+  color: var(--nav-text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.6;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.accountDetails > span {
+  color: var(--nav-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.account .logout {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-height: 44px;
+  min-width: 0;
+  width: 44px;
+  padding: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--nav-text);
+  font:
+    700 12px/1.6 "Be Vietnam Pro",
+    sans-serif;
+  box-shadow: none;
+}
+.account .logout:hover:not(:disabled) {
+  background: var(--nav-hover);
+  box-shadow: none;
+  transform: none;
+}
+.logout > svg {
+  flex-shrink: 0;
+}
+.account .logout:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+.logoutError {
+  grid-column: 1 / -1;
+  max-height: 25dvh;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  scrollbar-width: none;
+}
+.logoutError :global(.notice) {
+  margin: 0;
+  font-size: 12px;
+}
+.account :global(.animate-spin) {
+  animation: navSpin 1s linear infinite !important;
+}
+@keyframes navSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.sidebar[data-expanded="false"] .header {
+  flex-direction: column;
+  gap: 0;
+  padding-inline: 0;
+  padding-bottom: 8px;
+}
+.sidebar[data-expanded="false"] .brand {
+  justify-content: center;
+  padding-inline: 0;
+}
+.sidebar[data-expanded="false"] .markViewport {
+  width: 38px;
+}
+.sidebar[data-expanded="false"] .accountDetails,
+.sidebar[data-expanded="false"] .soon,
+.sidebar[data-expanded="false"] .badge,
+.sidebar[data-expanded="false"] .menuState {
+  display: none;
+}
+.sidebar[data-expanded="false"] .groupTitle {
+  position: relative;
+  height: 19.2px;
+  padding-inline: 16px;
+}
+.sidebar[data-expanded="false"] .groupTitle::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 50%;
+  height: 1px;
+  background: var(--nav-line);
+}
+.sidebar[data-expanded="false"] .groupTitle span {
+  opacity: 0;
+}
+.sidebar[data-expanded="false"] .groupTitle[data-disclosure="true"] {
+  height: 44px;
+  margin: 4px 0 2px;
+  padding: 0;
+}
+.sidebar[data-expanded="false"] .groupTitle[data-disclosure="true"]::after {
+  content: none;
+}
+.sidebar[data-expanded="false"] .groupToggle {
+  justify-content: center;
+  gap: 0;
+}
+.sidebar[data-expanded="false"] .groupToggle span {
+  width: 0;
+  flex: 0;
+  overflow: hidden;
+}
+.sidebar[data-expanded="false"] .groupIcon {
+  display: block;
+}
+.sidebar[data-expanded="false"] .chevron {
+  display: none;
+}
+.group[data-titled="false"] .groupTitle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+}
+.sidebar[data-expanded="false"] .linkLabel {
+  width: 0;
+  opacity: 0;
+  transform: translateX(-5px);
+}
+.sidebar[data-expanded="false"] .link,
+.sidebar[data-expanded="false"] .upcoming {
+  gap: 0;
+  padding-inline: 18px;
+}
+.sidebar[data-expanded="false"] .account {
+  grid-template-columns: 1fr;
+}
+.sidebar[data-expanded="false"] .identity {
+  display: none;
+}
+.sidebar[data-expanded="false"] .logout {
+  grid-column: 1;
+  justify-self: center;
+  padding-inline: 0;
+}
+.mobileHeader {
+  display: none;
+}
+.commandButton {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  margin: 10px 0 2px;
+  padding: 10px 12px;
+  flex-shrink: 0;
+  border: 1px solid var(--nav-line);
+  border-radius: 6px;
+  background: var(--nav-ground);
+  color: var(--nav-muted);
+  text-align: left;
+}
+.commandButton > svg {
+  flex-shrink: 0;
+  color: var(--nav-text);
+}
+.commandLabel {
+  min-width: 0;
+  flex: 1;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.commandButton kbd {
+  font:
+    400 0.625rem/1.6 "Be Vietnam Pro",
+    sans-serif;
+  white-space: nowrap;
+}
+.commandButton:hover {
+  background: var(--nav-hover);
+  color: var(--nav-text);
+  border-color: var(--nav-muted);
+}
+.sidebar[data-expanded="false"] .commandButton {
+  justify-content: center;
+  padding-inline: 0;
+}
+.sidebar[data-expanded="false"] .commandLabel,
+.sidebar[data-expanded="false"] .commandButton kbd {
+  display: none;
+}
+.preferencesButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  width: 100%;
+  min-height: 48px;
+  margin: 4px 0 8px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--nav-text);
+  text-align: left;
+}
+.preferencesButton:hover {
+  background: var(--nav-hover);
+}
+.preferencesButton > svg {
+  flex-shrink: 0;
+}
+.preferencesLabel {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.preferencesLabel small {
+  color: var(--nav-muted);
+  font-size: 11px;
+}
+.sidebar[data-expanded="false"] .preferencesLabel {
+  display: none;
+}
+.sidebar[data-expanded="false"] .preferencesButton {
+  justify-content: center;
+  gap: 0;
+  padding-inline: 0;
+}
+.preferencesPanel {
+  position: fixed;
+  inset: auto auto 76px 12px;
+  width: min(340px, calc(100vw - 24px));
+  max-height: calc(100dvh - 100px);
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--shop-line);
+  border-radius: 6px;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  font-family: "Be Vietnam Pro", sans-serif;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.preferencesPanel::-webkit-scrollbar {
+  display: none;
+}
+.preferencesHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.preferencesHeader h2 {
+  margin: 0;
+  color: var(--shop-wine);
+  font-size: 17px;
+  line-height: 1.5;
+}
+.preferencesClose {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--shop-wine);
+}
+.preferencesClose:hover {
+  background: var(--shop-shelf);
+}
+.preferencesOptions {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.preferencesOptions legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--shop-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.preferenceOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 64px;
+  padding: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.preferenceOption:hover,
+.preferenceOption:has(input:checked) {
+  background: var(--shop-shelf);
+}
+.preferenceOption input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--shop-wine);
+}
+.preferenceOption > span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.preferenceOption strong {
+  color: var(--shop-wine);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.preferenceOption small,
+.preferencesHint {
+  color: var(--shop-muted);
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.preferencesHint {
+  margin: 12px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--shop-line);
+}
+.preferencesPanel :is(button, input):focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .shell,
+  .sidebar {
+    transition-duration: 220ms !important;
+  }
+  .linkLabel {
+    transition-duration: 180ms !important;
+  }
+}
+.mobileActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.drawer {
+  position: fixed;
+  inset: 0 auto 0 0;
+  margin: 0;
+  height: 100dvh;
+  max-height: none;
+  max-width: calc(100vw - 24px);
+  border: 0;
+  overflow: hidden;
+  box-shadow: 16px 0 48px #28191433;
+}
+.drawer:not([open]) {
+  display: none;
+}
+.drawer[open] {
+  display: flex;
+  animation: drawerIn 240ms var(--ease-spring) both !important;
+}
+.drawer::backdrop {
+  background: #28191466;
+}
+@keyframes drawerIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+@media (max-width: 720px) {
+  .shell,
+  .shell[data-pinned="true"] {
+    display: block;
+  }
+  .mobileHeader {
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 68px;
+    padding: max(10px, env(safe-area-inset-top)) 20px 10px;
+    border-bottom: 1px solid var(--shop-line);
+    background: var(--shop-paper);
+  }
+  .mobileBrand {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    max-width: 154px;
+    height: 38px;
+    overflow: hidden;
+  }
+  .menuButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--shop-shelf);
+    color: var(--shop-wine);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .drawer {
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+  .drawer .linkLabel {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+  .drawer .upcoming {
+    flex-wrap: wrap;
+  }
+  .drawer .soon {
+    margin-left: 32px;
+  }
+  .drawer .groupTitle {
+    white-space: normal;
+  }
+}

@@ -1,0 +1,83 @@
+.record {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  padding: 26px 28px;
+  margin: 0 0 24px;
+  border: 1px solid var(--shop-line);
+  background: var(--shop-paper) url("/login-art/ivory-paper.webp") repeat;
+  background-size: 420px auto;
+  scroll-margin: 88px 0 24px;
+}
+.stamp {
+  display: grid;
+  justify-items: center;
+  flex: 0 0 auto;
+  gap: 8px;
+  width: 164px;
+  max-width: 100%;
+  padding: 14px 8px;
+  border: 2px solid currentColor;
+  outline: 1px solid currentColor;
+  outline-offset: -6px;
+  color: var(--shop-wine);
+  transform: rotate(-7deg);
+  text-align: center;
+}
+.stamp span {
+  font-size: 0.6875rem;
+  line-height: 1.6;
+  letter-spacing: 0.04em;
+}
+.stamp strong {
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: 1.25rem;
+  line-height: 1.25;
+  font-weight: 800;
+}
+.content {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.label {
+  margin: 0 0 8px;
+  color: var(--shop-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+.outcome {
+  margin: 0 0 6px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+.content time,
+.reference {
+  color: var(--shop-muted);
+  font-size: 0.75rem;
+  line-height: 1.8;
+}
+.reason {
+  margin: 12px 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  font-size: 0.875rem;
+  line-height: 1.8;
+}
+.reference {
+  margin: 7px 0 0;
+}
+@media (max-width: 960px) {
+  .record {
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 24px;
+  }
+}
+@media (max-width: 420px) {
+  .record {
+    padding: 22px 18px;
+  }
+}

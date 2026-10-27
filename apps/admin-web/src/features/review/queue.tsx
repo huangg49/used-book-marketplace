@@ -1,5 +1,5 @@
 import { dateText, money } from "../../core/format";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import {
   Link,
   useOutletContext,
@@ -7,10 +7,10 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
-import { canReviewCatalog, session } from "../../core/session";
-import { Button, CursorPagination, ErrorNotice } from "../../core/ui";
+import { canReview, canReviewCatalog, session } from "../../core/session";
+import { Button, CursorPagination } from "../../core/ui";
+import { ListFeedback } from "../../core/list-feedback";
 import {
-  book,
   catalog,
   labels,
   listing,
@@ -19,13 +19,16 @@ import {
   type Listing,
   type Catalog,
 } from "./contracts";
+import { ListingTitle } from "./ListingTitle";
+import { reviewQueuePath } from "./review-navigation";
 
 export function Queue() {
   const { kind = "listings" } = useParams();
   const user = useOutletContext<CurrentUser>();
   if (
     (kind !== "listings" && kind !== "catalog-requests") ||
-    (kind === "catalog-requests" && !canReviewCatalog(user))
+    (kind === "catalog-requests" && !canReviewCatalog(user)) ||
+    (kind === "listings" && !canReview(user))
   )
     return <p>Không có quyền xem khu vực này.</p>;
   return <QueueContent key={kind} kind={kind} />;
@@ -56,13 +59,10 @@ function QueueContent({ kind }: { kind: Kind }) {
   return (
     <>
       <header className="page-heading">
-        <p className="eyebrow">
-          Bàn kiểm duyệt / {kind === "listings" ? "01" : "02"}
-        </p>
         <h1>
           {kind === "listings"
-            ? "Trước khi sách chuyền tay."
-            : "Bắt đầu từ đúng đầu sách."}
+            ? "Bài đăng sách"
+            : "Yêu cầu đầu sách"}
         </h1>
         <p className="intro">
           {kind === "listings"
@@ -76,7 +76,7 @@ function QueueContent({ kind }: { kind: Kind }) {
             <Button
               key={value}
               aria-pressed={status === value}
-              onClick={() => setParams({ status: value })}
+              onClick={() => { if (status !== value) setParams({ status: value }); }}
             >
               {labels[value]}
             </Button>
@@ -91,18 +91,7 @@ function QueueContent({ kind }: { kind: Kind }) {
         {result.data &&
           `Đang hiển thị ${items.length} hồ sơ. Cập nhật ${dateText(result.data.pages[0].serverTime)}.`}
       </p>
-      {result.isLoading && (
-        <p className="empty" role="status">
-          Đang tải hồ sơ…
-        </p>
-      )}
-      {result.error && (
-        <ErrorNotice
-          error={result.error}
-          retry={() => void result.refetch()}
-          busy={result.isFetching}
-        />
-      )}
+      <ListFeedback result={result} loadingText="Đang tải hồ sơ…" />
       {result.isSuccess && items.length === 0 && (
         <div className="empty">
           <span className="folio">—</span>
@@ -131,7 +120,10 @@ function QueueContent({ kind }: { kind: Kind }) {
                 </span>
               </div>
               <h2>
-                <Link to={`/review/${kind}/${item.id}`}>
+                <Link
+                  to={`/review/${kind}/${item.id}`}
+                  state={{ reviewReturnTo: reviewQueuePath(kind, status) }}
+                >
                   {"state" in item ? (
                     <ListingTitle value={item} />
                   ) : (
@@ -148,10 +140,13 @@ function QueueContent({ kind }: { kind: Kind }) {
                   )}
                   {item.currentRevision.content.exchangeValue != null && (
                     <span>
-                      Giá trị đổi: {money(item.currentRevision.content.exchangeValue)}
+                      Giá trị đổi:{" "}
+                      {money(item.currentRevision.content.exchangeValue)}
                     </span>
                   )}
-                  <span>{item.currentRevision.content.mediaIds.length} ảnh</span>
+                  <span>
+                    {item.currentRevision.content.mediaIds.length} ảnh
+                  </span>
                 </div>
               ) : (
                 <p className="muted">
@@ -164,6 +159,7 @@ function QueueContent({ kind }: { kind: Kind }) {
             <Link
               className="read-link"
               to={`/review/${kind}/${item.id}`}
+              state={{ reviewReturnTo: reviewQueuePath(kind, status) }}
               aria-label={`Đọc hồ sơ ${index + 1}`}
             >
               Đọc hồ sơ <span aria-hidden="true">↗</span>
@@ -175,32 +171,11 @@ function QueueContent({ kind }: { kind: Kind }) {
         pageCount={result.data?.pages.length ?? 0}
         hasNextPage={result.hasNextPage}
         isFetchingNextPage={result.isFetchingNextPage}
-        onNextPage={() => void result.fetchNextPage()}
+        isFetching={result.isFetching}
+        error={result.isFetchNextPageError ? result.error : undefined}
+        onNextPage={() => void result.fetchNextPage({ cancelRefetch: false })}
         nextLabel="Xem thêm hồ sơ"
       />
-    </>
-  );
-}
-function ListingTitle({ value }: { value: Listing }) {
-  const result = useQuery({
-    queryKey: ["book-title", value.currentRevision.content.bookId],
-    enabled:
-      value.catalogStatus === "Confirmed" &&
-      !!value.currentRevision.content.bookId,
-    queryFn: () =>
-      session.request(
-        `/catalog/books/${value.currentRevision.content.bookId}`,
-        book,
-      ),
-    staleTime: Infinity,
-  });
-  return (
-    <>
-      {value.currentRevision.content.bundle?.title || result.data?.title ||
-        (value.catalogStatus === "Confirmed"
-          ? "Bài đăng sách"
-          : "Sách chờ xác nhận đầu sách")}{" "}
-      <span className="short-id">/ {value.id.slice(0, 8)}</span>
     </>
   );
 }

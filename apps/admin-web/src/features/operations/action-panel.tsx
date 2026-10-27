@@ -35,6 +35,9 @@ export function ActionPanel<R = CommandReceipt>({
   reconcile,
   onFinish,
   onPending,
+  refusalText = "Thao tác chưa được thực hiện. Danh sách đã tải lại theo trạng thái mới nhất.",
+  refusalRecoveryText = "Thao tác chưa được chấp nhận. Tải trạng thái mới nhất để kiểm tra.",
+  refusalRecoveryLabel = "Tải kết quả mới nhất",
 }: {
   label: string;
   title: string;
@@ -53,6 +56,9 @@ export function ActionPanel<R = CommandReceipt>({
   reconcile: () => Promise<unknown>;
   onFinish: Finish;
   onPending: (pending: boolean) => void;
+  refusalText?: string;
+  refusalRecoveryText?: string;
+  refusalRecoveryLabel?: string;
 }) {
   const [intent, setIntent] = useState<Intent>();
   const [busy, setBusy] = useState(false);
@@ -127,7 +133,7 @@ export function ActionPanel<R = CommandReceipt>({
         // A definite refusal, now reconciled with the latest queue.
         onFinish({
           tone: "info",
-          text: "Thao tác chưa được thực hiện. Danh sách đã tải lại theo trạng thái mới nhất.",
+          text: refusalText,
         });
         return;
       }
@@ -157,16 +163,14 @@ export function ActionPanel<R = CommandReceipt>({
           {intent.acknowledged
             ? "Máy chủ đã ghi nhận thao tác. Cần tải lại kết quả."
             : intent.stopped
-              ? "Thao tác chưa được chấp nhận. Tải trạng thái mới nhất để kiểm tra."
+              ? refusalRecoveryText
               : "Chưa biết máy chủ đã nhận thao tác hay chưa. Thử lại đúng yêu cầu này trước khi rời đi."}
           <Button
             ref={recoveryButton}
             busy={busy}
             onClick={() => void send(intent)}
           >
-            {intent.acknowledged || intent.stopped
-              ? "Tải kết quả mới nhất"
-              : "Thử lại thao tác vừa gửi"}
+            {intent.stopped ? refusalRecoveryLabel : intent.acknowledged ? "Tải kết quả mới nhất" : "Thử lại thao tác vừa gửi"}
           </Button>
         </Notice>
       ) : (

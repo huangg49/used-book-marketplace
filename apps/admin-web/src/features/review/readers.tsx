@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { session } from "../../core/session";
 import { Button, CursorPagination, ErrorNotice, Notice } from "../../core/ui";
+import { ListFeedback } from "../../core/list-feedback";
 import {
   book,
   catalog,
@@ -378,14 +379,7 @@ export function History({
   return (
     <section className="section history">
       <h3>Lịch sử đã gửi</h3>
-      {result.isLoading && <p role="status">Đang tải lịch sử…</p>}
-      {result.error && (
-        <ErrorNotice
-          error={result.error}
-          retry={() => void result.refetch()}
-          busy={result.isFetching}
-        />
-      )}
+      <ListFeedback result={result} loadingText="Đang tải lịch sử…" />
       {result.data?.pages
         .flatMap((page) => page.items)
         .map((item) => (
@@ -407,7 +401,9 @@ export function History({
         pageCount={result.data?.pages.length ?? 0}
         hasNextPage={result.hasNextPage}
         isFetchingNextPage={result.isFetchingNextPage}
-        onNextPage={() => void result.fetchNextPage()}
+        isFetching={result.isFetching}
+        error={result.isFetchNextPageError ? result.error : undefined}
+        onNextPage={() => void result.fetchNextPage({ cancelRefetch: false })}
         nextLabel="Xem thêm lịch sử"
       />
     </section>

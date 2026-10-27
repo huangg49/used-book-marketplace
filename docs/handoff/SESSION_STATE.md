@@ -1,4 +1,509 @@
-# Điểm lưu hiện tại — 26/10/2026
+# Điểm lưu hiện tại — 27/10/2026
+
+## Admin — giao diện và luồng kiểm duyệt hiện tại —26/10/2026
+
+- Owner yêu cầu dropdown Loại hồ sơ thanh lịch hơn27/10 và làm rõ cần đổi menu
+  xổ xuống: ScopeFilter thay native select bằng combobox/listbox riêng, giữ
+  underline trigger, menu paper/bóng mềm, option44px, selected wine/cream/tick.
+  Arrow/Home/End/typeahead có dấu/không dấu, Enter/Space/Tab commit; Esc/click
+  ngoài hủy candidate. Pointer chọn/refocus, blur/visibility/unmount cleanup,
+  tự mở phía trên khi thiếu chỗ, mobile menu căn trái. CUA desktop/mobile320
+  kiểm chọn chuột, End/Enter, Home/Tab, Esc/click ngoài không đổi value, gõ d
+  tìm Đầu sách; menu không tràn,3options44px. PASS5tests overview, lint/typecheck/
+  build/budget/docs/diff. Không thay API/quyền; screen reader thật NOT RUN.
+
+- Owner yêu cầu bỏ hover rung/nghiêng toàn workboard27/10: gỡ usePaperDepth và
+  lớp nền transform riêng tại Dashboard, giữ nền wine/bóng tĩnh. Hai link Bài đăng
+  sách/Đầu sách giữ khối vàng3D. CUA xác nhận card transform none, face focus
+  vẫn nâng6px/nghiêng3°; lint/typecheck/build/budget và docs/diff PASS.
+  Follow-up: hai cụm nét SVG hình học gợi lớp trang sách tại góc phải, cream24%/
+  yellow38%, aria-hidden/pointer-events none, không animation. CUA desktop và
+  mobile320 xác nhận chữ thoáng/không tràn, card transform none; lint/build PASS.
+
+- Owner yêu cầu đổi chim trời/làm phong phú đại dương27/10:9cutout mới riêng/
+  144014byte WebP; sky dùng chim xanh thân/cánh, lông vũ, khí cầu xa tái dùng;
+  ocean4cá vàng/xanh,2san hô/sò/ốc,14bọt trong rim/highlight bằng cached64px
+  geometric sprite.33drawcalls/frame cap30fps/DPR2, gate/pause/cleanup giữ.
+  Vùng caption đáy thoáng, số/API/DB/rừng không đổi. PASS44tests/9files,
+  lint/typecheck/build/budget, detector scoped[]/Taste0fail0warn; docs/diff.
+  CUA1440 và320 xem đủ chi tiết, pause hai cảnh/đổi30giữ/Enterresume, không
+  trànmobile. [Chi tiết/provenance](../design/ADMIN_ECOSYSTEM_DETAILS.md).
+  Ready/login/CORS/queues/overview7+30 đều200. Nhánh/base/local work giữ nguyên,
+  chưa commit/push, READINESS không đổi. FPS/GPU/cross-browser NOT RUN.
+  CUA850×900 xác nhận đủ chi tiết/đáy chữ thoáng; đi review/Back khởi tạo lại
+  scene. Ảnh final `.tmp/ecosystem-v2/dashboard.png`, asset/prompt9ảnh lưu repo.
+
+- Owner duyệt rừng và yêu cầu làm ô cuối27/10, quyền browser đã bật lại:
+  SkyMetric thay text-only Lượt gửi duyệt,9asset (7mới143620byte +thân/cánh chim
+  dùng chung), khí cầu/giỏ sách/mây/diều/máy bay/chim chuyển động riêng. Tổng
+  submitted7/30/ngày/null/zero từ API giữ nguyên. Trích ecosystem-playback chung
+  với rừng, key/pause độc lập; lifecycle/cleanup/async guard/retry giữ. Gridphone
+  một cột12px, desktop3thẻ. PASS42tests/9files, lint/typecheck/build/budget;
+  Taste lint0fail/0warn, detector1advisory separator wine cũ. CUA desktop1440 và
+  phone320 xem đủ ảnh/không tràn, pause11elements trời/rừng vẫn chạy, đổi30giữ
+  pause/Enterresume. Chi tiết [sky metric](../design/ADMIN_SKY_METRIC.md).
+  API/Admin bị dừng trước QA, đã bật lại supervisor+workers/Vite5173, Mongo
+  healthy; ready/login/CORS/queues/7+30 đều200. Không claim sửa rootcause; không
+  seed/migration/API/READINESS change. Local work/nhánhbase giữ, chưa commit/push.
+  Tablet850×900 không tràn ngang, đi review/Back về đủ scene; ảnh kiểm desktop
+  lưu `.tmp/sky-v1/dashboard.png`. FPS/GPU/comfort dài hạn/cross-browser NOT RUN.
+
+- Owner duyệt bể cá/làm tiếp và yêu cầu thêm asset27/10: đã gắn cảnh rừng nhỏ
+  vào ô Lượt đã xử lý,9asset rời/189026byte WebP (nền/cây/cáo+đuôi/chim+cánh/
+  bướm/fern/nấm),3đốm sáng CSS. Số processed/kỳ7/30/null/zero từ API giữ nguyên;
+  cảnh trang trí không encode hồ sơ. CSS motion lệch nhịp + pause44px, lifecycle
+  viewport/visibility/focus/pagehide/cleanup, asset decode guard/retry riêng.
+  PASS40tests/8files, lint/typecheck/build/budget; Taste lint0fail/0warn,
+  detector1advisory separator wine cũ giữ nguyên. CUA desktop xem đủ ảnh,
+  dừng14moving elements, Enter resume, giữ pause khi đổi30ngày; xem giới hạn
+  tại [forest metric](../design/ADMIN_FOREST_METRIC.md). API/DB/READINESS không
+  đổi, local work trước bảo toàn; codex/admin-ui-refactor/base d3b19e5 chưa push.
+  CUA320×780 không tràn ngang/850×900 đủ cảnh và chữ; đi review/Back scene trở
+  lại, desktop1440×1000 giữ số liệu thật. FPS/GPU/cross-browser NOT RUN.
+
+- Owner duyệt áp bể cá vào code27/10: đã gắn một bể v2 ở metric Hồ sơ đang chờ
+  trên Dashboard, giữ hai metric còn lại; số pending thật/null/zero/quyền catalog
+  từ API. Cá trang trí cố định, asset6WebP dùng chung. Runtime nằm trong feature
+  Dashboard, study public giữ như reference; pause44px, viewport/visibility/blur/
+  pagehide gates, Back/StrictMode async guard/cleanup, fallback tĩnh giữ số thật.
+  Responsive1440/850/320: tablet dùng bể ngang sau hai metric nhỏ. PASS37tests/
+  7files, lint/typecheck/build/budget, docs/diff; detector1advisory màu wine cũ,
+  Taste lint0fail/0warn. Browser đã dùng được: CUA desktop/tablet/mobile, pause
+  click/Enter/Space, giữ pause đổi30ngày, đi/Back; không tràn320. Chi tiết và
+  giới hạn [aquarium study](../design/ADMIN_AQUARIUM_STUDY.md). Đã bật lại Mongo/
+  API supervisor+workers và Admin5173 để owner xem; ready/login/CORS/queues/7+30
+  đều200. Không seed/reset/đổi API/migration; READINESS giữ nguyên. Local work
+  trên codex/admin-ui-refactor/base d3b19e5 bảo toàn, chưa commit/push.
+  Owner yêu cầu chữ hợp đại dương: riêng AquariumMetric dùng ink #164b56,
+  phụ #315c62 (ghi DESIGN), title14px/600, số cùng xanh biển sâu; icon/focus
+  đồng tông. Giữ nội dung nghiệp vụ và API. PASS lint/typecheck/build/budget,
+  detector scoped[]; contrast tính trên mint/nước mẫu/chân cát: chính≥6.03:1,
+  phụ≥4.62:1 (không là đo mọi pixel animation). CUA kiểm desktop/mobile.
+  Follow-up: caption Bài đăng sách và đầu sách căn giữa trên chân cát,
+  bottom12px; tablet căn giữa đúng vùng bể bên phải, mobile vẫn đủ inset.
+  CSS scoped, giữ số/API/motion; build/budget và detector scoped[] PASS.
+
+- Owner tạm ngắt để về nhà27/10: đã gửi Ctrl+C đúng console API supervisor24688
+  và Admin Vite11776. API/Nest watcher/media worker/order worker đã dừng, lock
+  `.tmp/dev-api.lock` được launcher tự gỡ. Mongo main Docker đã stop có grace30s;
+  QA đã dừng từ trước, không container nào còn chạy. Không listener tại3000/
+  3009/3010/3011/5173/5174/27017/57017/8081/8082/19006 khi xác nhận. Không down/
+  remove volume/reset/seed/xóa code/env/asset; local work trên nhánh
+  `codex/admin-ui-refactor` vẫn chưa commit/push. Bể cá v2/source/6asset và các
+  kiểm chứng bên dưới đã lưu. Khi tiếp tục, bật Mongo/API/Admin theo START_HERE,
+  kiểm ready/login rồi mở `/design/aquarium/index.html`; browser QA còn chờ quyền.
+
+- Owner yêu cầu thử một bể cá27/10; sau đó sửa hướng cá sang vector-like phẳng/
+  cute, bỏ cá chi tiết v1. Có bản riêng `/design/aquarium/index.html`, chưa gắn
+  Dashboard/API. Built-in image_gen6asset tách thân/đuôi/hai cây/đá/nước, WebP
+  tổng177342byte, alpha5cutout; [study/prompt/asset](../design/ADMIN_AQUARIUM_STUDY.md).
+  Canvas fish route/yaw/tail riêng, cây root sway/bọt/call fish/Pause/Resume/card
+  size; visibility/viewport/blur/pagehide cleanup + stale generation/Back boot.
+  PASS6logic/lifecycle tests, syntax/HTTP entry/font checks và Admin lint/typecheck/
+  build/budget/docs/diff. Detector1lượt8findings: radius/type đổi về ramp;
+  full-bleed Canvas/cream giữ có chủ ý, không gọi detector sạch. Offline frames
+  kiểm ghép/alpha ở1000×650/400×320, không là UI screenshot. Browser QA NOT RUN:
+  CUA vẫn disabled trong Work settings, không bypass. Không thêm dependency/
+  seed/DB/server QA; READINESS giữ nguyên, local work trước bảo toàn/chưa push.
+
+- Owner yêu cầu polish cụm nút đầu Dashboard27/10:7/30 dạng text/underline wine,
+  bỏ ô đỏ đặc; refresh paper/border mảnh/no shadow/icon16stroke1.5. Target44px,
+  focus rõ, busy chỉ một spinner; giữ query/aria-pressed/refetch/disabled. Scoped
+  CSS + conditional icon, không sửa Button chung/API. Browser QA NOT RUN do quyền
+  trình duyệt trong Work settings vẫn tắt; không coi source CSS là render PASS.
+  PASS26tests Dashboard/4file, lint/typecheck/build/budget/docs/diff. Detector
+  một advisory màu separator wine cũ, giữ chủ ý brand; chưa commit/push.
+
+- Owner yêu cầu polish bảng tìm nhanh27/10: search bỏ outer outline và override
+  focus border/shadow của input chung bằng selector scoped, còn underline1px;
+  optionFace3D vàng/nâng4px/nghiêng2°/260ms/cạnh4px, title wine, phụ ink khi chọn,
+  caption≥12px. Li/hitbox/combobox/listbox giữ nguyên; pointer/keyboard cùng
+  aria-selected để một mục nổi. Press1px/100ms, không loop/dependency/API mới.
+  Browser QA mới NOT RUN do Work settings tắt quyền; không dùng evidence lịch
+  sử để gọi bản mới đã QA. PASS41tests navigation/3file, lint/typecheck/build/
+  budget/docs/diff. Detector1warning border-top dialog4px: radius thực0, giữ
+  mép giấy wine cũ, không gọi detector sạch. Nhánh/base/local work giữ nguyên.
+
+- Owner yêu cầu thiết kế lại cụm dưới Dashboard27/10: empty shelf paper/logo/
+  CTA có thứ bậc; việc tại điểm và sức chứa dùng mặt giấy chung, hàng link/icon/
+  số0 trung tính. PointCapacity SVG vạch chia giữ tỷ lệ heldSlots/capacity thật,
+  zero/over-capacity/large capacity không bịa số, tối đa40divisions. Giữ API/
+  session/quyền và motion gói trước. Admin162tests/21files, lint/typecheck/build/
+  budget PASS; layout assessment độc lập từ screenshot/source, detector layout
+  trước/sau sửa[] nhưng không là visual acceptance. Browser vẫn disabled trong Work
+  settings; QA render/responsive/keyboard sau sửa NOT RUN. Không bật QA stack,
+  main ready/login/queues/7+30 đều200. Chưa commit/push; READINESS giữ nguyên.
+  Sau đó owner yêu cầu hover3D rõ hơn: hàng công việc + Quản lý điểm wine/cream,
+  inner face nâng6px/nghiêngX3°/perspective900px/260ms, cạnh dày6px+bóng mềm;
+  press lún1px/100ms. Face gồm chữ/icon, anchor hitbox đứng yên/pointer-events
+  trên face none; bo2px, bỏ underline/arrow shift.
+  Fine pointer hover, focus-visible và active press; capacity record giữ chỉ đọc.
+  CSS scoped + wrapper visual, không thêm dependency hoặc đổi API. PASS26tests
+  Dashboard/4file, lint/typecheck/build/budget/docs/diff; detector1advisory cho
+  wine separator cũ #9e5750 giữ chủ ý brand. Không thêm test phản chiếu CSS;
+  browser QA vẫn NOT RUN do Work settings tắt quyền.
+  Owner yêu cầu riêng workboard đỏ: hai link Bài đăng sách/Đầu sách dùng khối
+  vàng shop-yellow/chữ wine/cạnh vàng sẫm, chung actionFace3D; giữ số/route/quyền
+  và hitbox. Chỉ truyền màu riêng workLinks, không đổi các hàng đỏ trước đó.
+  Owner yêu cầu thêm mảng màu: riêng capacity đổi mint55%/paper45%, caption/
+  divider pha ink/mint; số wine giữ nguyên. Scoped CSS, không đổi các
+  vùng khác/dữ liệu/trạng thái. PASS lint/typecheck/build/budget/docs/diff;
+  contrast tính từ sRGB mix: phụ6.16:1/wine11.33:1, chưa là measured render.
+  Detector1advisory separator wine cũ; browser QA NOT RUN vì quyền đang tắt.
+  Owner yêu cầu CTA hợp nền mint: riêng Quản lý điểm đổi exchange-ink #254337
+  (DESIGN palette), mặt hover xanh/cạnh đậm/chữ cream/focus xanh, giữ motion3D
+  và hitbox. PASS lint/typecheck/build/budget/docs/diff; contrast sRGB cream trên
+  xanh10.11:1, xanh trên mint8.55:1 (chưa đo render). Số liệu/CTA các vùng khác
+  không đổi; browser QA vẫn NOT RUN.
+
+- Owner yêu cầu nghiên cứu animation/effect27/10. [Motion study](../design/ADMIN_MOTION_STUDY.md)
+  đối chiếu NN/G/Carbon và inventory source: chart draw/kệ turn/stamp/sidebar đã
+  có, không giới thiệu lại là mới. Đề xuất chart continuity, page edge navigation,
+  paper depth/feedback. Có phòng thử riêng `/design/motion/index.html`, ba cảnh
+  hình học/phiếu, không số liệu/ảnh sách giả, không API hay Admin runtime mutation.
+  Public design files dùng font/logo/palette hiện có, CSS/WAAPI/rAF, Play/Stop và
+  desktop radio/mobile select. Sau đó owner duyệt và đã gắn ba hiệu ứng vào Admin:
+  route edge320ms sau Suspense resolve, skip initial/POP/query và guard-cancel;
+  chart morph380ms cùng ngày/scale, domain mới hiện nét đúng320ms, không replay
+  unchanged refetch/resize; paper depth chỉ lớp nền workboard/preview, max1.5°/2°,
+  nâng4px/pointer hoặc2px/keyboard, không dời click targets. Boundary hủy khi
+  hidden/offscreen/blur/pagehide/unmount; chart snap final thật. Không thêm API/
+  migration/dependency, giữ receipt/stamp/sidebar/session. Admin159tests/20file,
+  lint/typecheck/build/budget PASS; CUA QA1440/320 rapid7/30/scope/keyboard/Back/
+  dirty draft ở lại/preview return focus/không tràn đã thử. Detector1lượt4advisory:
+  hai shadow mới đổi token, hai giá trị cũ giữ; không gọi detector sạch.
+  Xác nhận browser cuối sau shadow-token/StrictMode-origin bị chặn do local
+  browser use đã tắt trong Work settings; không vượt quyền. QA fixture đã close/
+  xóa đúng DB/users/roles, Vite5174/Mongo QA stop,3009/3010/5174/57017 không listen.
+  Viewport/tab QA chưa reset/đóng bằng CUA do quyền tắt; tab temporary không giữ.
+  JS syntax/CUA1280+320 đã thử; FPS/comfort dài hạn/cross-browser NOT RUN. Detector
+  exit1 có chữ nhỏ/font alias đã sửa; cream là brand exception, không rescan.
+  Local work chưa commit/push; READINESS không đổi.
+- Owner duyệt Dashboard có biểu đồ7/30ngày thật27/10: [thiết kế/semantics](../features/ADMIN_DASHBOARD.md).
+  Đã thay lưới8panel bằng dải3số, line chart nhịp kiểm duyệt, workboard wine,
+  kệ có empty gọn, việc tại điểm dạng hàng và capacity bars. Giữ sidebar/login/
+  nghiệp vụ. Charts SVG native, bảng số liệu/day controls; filter trong figure chỉ
+  lọc chart, dải tổng vẫn toàn scope quyền. UI không tải users/fund/auction để lấp chỗ.
+  OpenAPI0.52.0 GET moderation-overview và generated types; service snapshot read
+  recheck current Active reviewer, catalog=null/không query cho Staff thiếu Admin,
+  zero-fill ngày TP.HCM, revision submissions/decision timestamps, pending exact
+  không dựa pagination. Migration0037 thêm3date index, đã áp dụng local chính;
+  không reset/seed/validator/quyền collection mới. API/workers đã restart cùng code,
+  supervisor24688, log `.tmp/admin-start/api-dashboard.*.log`; Admin5173/main API
+  ready/login/CORS/2queue/overview7+30 đều200. Phiên kiểm tra script đã logout.
+  Sau final build, watcher lại mất HTTP như lỗi runtime đã ghi trước; supervisor
+  tự recovery1/3. Verify sau recovery lại ready/login/CORS/2queue/7+30 đều200;
+  không coi lỗi watcher nền đã được sửa tận gốc bởi gói Dashboard này.
+  PASS API7unit/HTTP-Mongo auth+calendar+range+resubmit+removed-history/current-role,
+  Admin151unit/19file, lint/typecheck/build/budget và contract/routes178/27. API lint
+  exit0 còn warning cũ. CUA QA1440/320:7/30/filter/table30/keyboardday, không tràn,
+  mobile metrics thẳng cột; Staff không catalog/capacity. Detector1advisory màu
+  wine separator đã dùng sidebar. QA tab đóng/reset viewport, DB/users/roles đã
+  xóa qua fixture.close, API3009/images3010/Vite5174/QA57017 đã dừng. Artifact
+  `.tmp/dashboard-redesign/` là fixture/storage fake; DB ứng dụng chính giữ nguyên.
+  CI thêm test:dashboard:api, remoteCI/full browser harness/fault UI/zoom200%/
+  screen-reader speech/load test NOT RUN. READINESS giữ nguyên; chưa commit/push.
+- Owner duyệt [sidebar comfort](../design/ADMIN_SIDEBAR_COMFORT.md), đã triển khai
+  local27/10: mặc định mở cố định, Thu gọn không tự mở, Auto opt-in400/300ms;
+  native popover3radio/cuối sidebar, nút đầu mở cố định↔thu gọn. Preference
+  version/mode localStorage, fallback khi sai/bị chặn; không chứa token/PII/API.
+  Giữ focus/popup, Escape suppress, route/viewport/visibility/blur/unmount cleanup;
+  giữ đỏ/kem và motion.128test cũ+18test mới PASS, lint/typecheck/build/budget PASS.
+  CUA1280desktop: click/keyboard/hover trễ/Escape không bật lại, preview mainX80,
+  reload/login giữ Thu gọn, route/back giữ Auto, CtrlK chỉ1dialog.320mobile:
+  popover→Escape→drawer→Escape/focus/scroll;1280×500 panel top24/bottom424.
+  Full browser harness/zoom200%/human comfort test NOT RUN; detector1advisory
+  easing cũ. Không đổi READINESS, chưa commit/push. Bản đang mở dùng Mở cố định.
+- Owner yêu cầu thử sidebar nổi bật27/10: sidebar/rail/drawer đỏ rượu, chữ/logo
+  kem, active kem/chữ đỏ, hover wine-hover và focus vàng. Giữ bố cục280/80px,
+  disclosure/mobile dialog và scrollbar ẩn; BrandMark thêm tone cream chỉ nơi này.
+  CUA1280/390: rail80px, active/focus, drawer Escape trả focus, không tràn ngang;
+  tương phản chữ13.37:1/phụ8.89:1, lint/typecheck/build/bundle budget PASS.
+  Detector một advisory ease-spring cũ, không đổi motion. Chưa commit/push.
+- Owner yêu cầu bật lại27/10: Mongo healthy, API supervisor + media/order workers
+  và Admin đã chạy nền trở lại. Ready/Admin entry/login/CORS và2queue đọc trả200;
+  phiên kiểm tra đã logout. Admin `http://localhost:5173/`, API3000. Giữ code/env/
+  dữ liệu hiện có, không migrate/seed/pull; tiếp tục UI theo phạm vi owner đã giao.
+  Log runtime `.tmp/admin-start/*-live.*.log`, evidence `verification.json`.
+- Lần dừng trước đó27/10 để nghỉ: đã gửi Ctrl+C đúng API supervisor/Vite;
+  API/Nest watcher, media/order workers và Admin đã dừng, lock API được launcher
+  gỡ. Docker main Mongo và QA stop (không down/remove volume). Không còn listener
+  ở3000/3009/3010/3011/5173/5174/27017/57017 hoặc Expo8081/8082/19006 khi kiểm.
+  Giữ nguyên code/env/dữ liệu, local work vẫn chưa commit/push. Khi bật lại theo
+  START_HERE, kiểm ready/login: trước dừng supervisor từng báo mất HTTP và recovery
+  lần1/3; không coi trạng thái runtime cũ bên dưới là hiện đang chạy.
+- Cùng nhánh `codex/admin-ui-refactor`, base `d3b19e5`; giữ các gói local trước.
+  Owner hoãn gói nghiệm thu nghiệp vụ, chuyển sang đánh giá và sửa UI bằng skills.
+  Impeccable critique2agent độc lập A/B + Taste/Pro Max:26/40 trước sửa; snapshot
+  `.impeccable/critique/2026-10-26T16-28-59Z__apps-admin-web-src.md`, không tự chấm
+  điểm sau.5priority đã xử lý: density, paper surfaces, directory contrast/columns,
+  task headings,44px targets/shared spinner. Không đổi API/session/quyền/checklist.
+- UI polish: workspace/header/queue/empty gọn; giấy/ruled records thay card trắng/
+  bóng lặp. Directory header contrast5.08:1, ngày/giờ TP.HCM phân cấp, status nowrap,
+  filter inline và note chỉ đọc. Review link trên phiếu đưa lên trước facts;
+  description/UUID và rows overview có native disclosure, giữ dữ liệu/link đầy đủ.
+  Detail≤1080px1cột. Giữ kệ/sidebar/logo/motion đã duyệt; loader900ms có keyframes
+  và owner reduced-motion override. CUA1280: review link y402–451, bảng Users y305,
+  row75.6px;320filter/Enter/preview/Back/disclosure và860detail1cột không tràn.
+  Screenshot `.tmp/admin-ui-polish/after-*.png` là dữ liệu QA, storage fake.
+  PASS128unit/lint/typecheck/build/budget; full browser harness tên H1/disclosure
+  chỉ cập nhật/syntax, NOT RUN. Detector trước47findings/exit1(validJSON), scan
+  scoped sau sửa[]; không so sánh counts khác phạm vi hoặc gọi overlay/human PASS.
+  Snapshot priority được đóng sau lượt polish; các gate READINESS không đổi.
+  Target slug apps-admin-web-src; ignore list không có, A/B dùng tab mới riêng.
+  Snapshot write/trend đọc thành công; temp body đã xóa. CUA chạy background,
+  không overlay do evaluate chỉ đọc. Tab parent/reviewer đóng, viewport reset;
+  server visual QA/API3009/images3010/Vite5174 và QA57017 đã dừng, DB/users/roles
+  fixture đã xóa qua close. MainAPI3000/Admin5173 health/login/CORS/queue200.
+- Các gói trước tiếp tục được giữ:
+  Hoàn thiện ý tưởng thứ3 owner duyệt: CommandPalette native dialog, giấy kem/
+  đỏ rượu/logo gốc, vào220ms. Nút sidebar/rail và header mobile; `Ctrl+K`/`Cmd+K`
+  mở/đóng, tìm có/không dấu (Đ/NFD/case/đa từ), ↑↓ vòng chọn và Enter mở route,
+  Escape/backdrop/nút đóng, focus ô tìm và return, scroll lock/cleanup.
+- Lệnh sinh từ navigationGroups theo profile thật, không thêm quyền/menu Report
+  hoặc lệnh ghi dữ liệu/logout. Không API/dependency/history/token store mới.
+  Profile lỗi/logout/inactive thì không mở palette; bỏ shortcut repeat/IME/
+  Alt/Shift và không chồng lên dialog khác. Combo/listbox aria-activedescendant,
+  thông báo số kết quả, zero-result có clear và Enter không làm gì.
+- Đóng palette trước Router navigate để leave blocker cũ xử lý. CUA QA đã thử
+  tìm “nguoi dung”→Enter→users; Up vòng về cuối; zero-result/clear; chọn route
+  khi reason đang soạn→cảnh báo→ở lại giữ reason và focus textarea. Ctrl+K trong
+  cảnh báo không mở palette; Escape từ trigger trả focus/scroll. Mobile320×780
+  không tràn, header search và drawer→palette chỉ1modal, đóng trả overflow.
+  Staff thật chỉ5lệnh, tìm người dùng trả0. Không dùng DB ứng dụng chính.
+- Vòng hoàn thiện vận hành: Queue truyền bộ lọc hợp lệ vào detail; Back chỉ nhận
+  path cùng kind/status được whitelist, không nhận redirect từ history tùy ý.
+  NextReview sau hồ sơ có kết quả lấy20hồ sơ Pending thật, giữ thứ tự server,
+  bỏ hồ sơ chính reviewer gửi, không tự quyết định hoặc chuyển trang. Nếu id
+  hiện tại quay lại hàng chờ thì yêu cầu tải lại; cursor còn không báo hết toàn
+  bộ. Loading/error/stale/empty riêng. ListingTitle dùng chung Queue/NextReview;
+  không đọc private catalog Pending cho Staff. Queue refresh lỗi nói rõ dữ liệu cũ.
+- CUA QA3listing: duyệt→mở hồ sơ tiếp, checklist mới0ô; back giữ PendingReview,
+  mở từ Approved→Back vẫn Approved. Link next vẫn qua leave guard, ở lại giữ lý
+  do chưa gửi. Sửa vị trí cuộn/focus: id mới tải xong đưa header vào màn hình và
+  focus H1; cùng id refetch không giành focus của ACK stamp. Mobile320×780 không
+  tràn, header mới ở y88 tránh thanh mobile. Screenshot `.tmp/admin-review-flow/`.
+- Hoàn thiện danh sách: directory dùng URL q/status/role đã whitelist, giữ search
+  nháp khi đổi select/refetch, Back/Forward phục hồi query đã áp dụng, có clear và
+  refresh riêng. Không remount input khi áp query. ListFeedback dùng chung directory/
+  review queue/history/OperationsQueue: refresh lỗi giữ snapshot và nói rõ stale,
+  empty chỉ khi thành công; retry operations khóa theo pending. CursorPagination
+  giữ số trang khi hết, lỗi trang2 có retry riêng; fetchNextPage cancelRefetch:false
+  và disabled khi đang fetch. Không thêm API/filter nghiệp vụ/token store.
+- CUA QA mới:30user trong DB riêng `_test`, lọc3trường/Back/Forward/draft khi đổi
+  select; giả lập lỗi trang2 giữ20hàng→retry thành24hàng không trùng. Catalog refresh
+  lỗi giữ2hồ sơ; intake lỗi ban đầu không báo rỗng→retry thành rỗng hợp lệ. Desktop
+  không tràn ngang. Browser ban đầu bị tắt giữa QA; sau owner bật lại, production
+  QA31user/3listing đã thử Enter giữ focus, refresh503 giữ20hàng/draft, retry/clear,
+  320px/root text135% không tràn. Sửa2option mặc định thành “Tất cả” vì chữ bị cắt
+  dưới label trạng thái/vai trò. CSS scale chỉ trong QA, đã trả lại; không đổi máy.
+  Screenshot `.tmp/admin-production-qa/`; full harness filter/draft/Back chưa chạy.
+- Tối ưu build:13route component lazy ở module scope,10module trang (4point queue
+  chung module); shell/Login/session/profile giữ eager. PageFrame quanh Outlet sau
+  auth/profile, giữ LeaveGuard; status loading, local error boundary reset pathname
+  (filter không remount), error H1 focus và reload thủ công/cần đăng nhập lại.
+  Không auto reload/command replay/token store/motion change.
+- Đo build Node24.22.1/pnpm11.19.0/Vite8.3.0: startup static JS654823→490129byte
+  (-25.15%), gzip193062→151331byte (-21.62%); lớn nhất256999byte. Tổng app JS
+  664771byte/gzip212603byte do chia file, không coi là giảm toàn app hoặc đo tốc độ.
+  Build có manifest và budget500000byte startup/300000byte mỗi chunk,10module phải
+  dynamic; checker tính graph static có shared/cycle,6test riêng. Admin CI thêm test/
+  checker/path filter; remote CI chưa chạy. CUA production QA sau bật quyền:10module
+  mở thành công bằng Admin/Staff và Test Operator; points chunk hold→loading→503→
+  error H1 focus, sidebar còn, về Dashboard giữ phiên, reload đòi login rồi tải
+  points được ở phiên mới. Review draft/leave/ở lại giữ nội dung; không gửi quyết
+  định/sự kiện. Đây là mounting/recovery, không mọi mutation. Full harness/Web Vitals
+  NOT RUN. QA riêng dùng rs-test57017/DB*_test, storage fake, không mainDB.
+  Production preview HTTP smoke29asset200/byte khớp/Content-Type đúng/deep link HTML/
+  không preload trang PASS; không là DOM execution. Preview5174 đã dừng; API3000/
+  Admin5173 login/CORS/2queue200. Before/after JSON ở `.tmp/admin-bundle/`.
+- PASS128unit/17file (thêm4ca page feedback; trước124unit) và6Node checker,
+  Admin lint/typecheck/build,
+  docs/diff/browser syntax theo gói. Browser harness thêm Ctrl+K/find/Enter/Escape
+  và dirty-form blocker; full harness NOT RUN. Detector1lần: warning viền/bo góc
+  là false positive (`border-radius:0`),2advisory ở CSS sidebar cũ giữ nguyên.
+  Detector NextReview/detail/queue mới1lần không findings; vòng list feedback/
+  directory/consumers1lần không findings; PageFrame1lần không findings; không thay cho QA.
+  Build không còn warning chunk>500kB. Screenshot palette `.tmp/admin-commands/`.
+- QA production fixture close/xóa DB/users/roles riêng, proxy3011/API3009/images3010/
+  static5174 dừng, QA57017 stop. Tab3/4/5 tạo trong vòng này đóng, viewport reset.
+  Runtime main cũ không còn listener sau khi owner mở lại quyền: đã bật API supervisor
+  và Vite bằng Start-Process Hidden, logs `.tmp/admin-start/*-live.*.log`; health,
+  login/CORS/2queue200. Tab Admin mới localhost5173 sẵn sàng, không đăng nhập hộ.
+  READINESS không đổi; chưa
+  commit/push/PR. Gói3bước UI và vòng kiểm duyệt đã code/kiểm phạm vi trên, chờ
+  owner nghiệm thu. Ưu tiên tiếp theo owner: xem bản UI đã polish và điều chỉnh
+  giao diện còn cần; gói nghiệm thu nghiệp vụ/full browser suite tạm hoãn theo
+  owner, không tự chuyển lại sang gói đó khi được yêu cầu tiếp tục UI.
+
+## Admin “wow” bước2 — lật phiếu và dấu xác nhận —26/10/2026
+
+- Cùng nhánh `codex/admin-ui-refactor`, base `d3b19e5`; giữ các gói local.
+  `core/paper-motion` dùng WAAPI cho phiếu380ms khi chọn sách và dấu460ms sau
+  ACK/reconcile. Không loop/dependency; hủy khi đổi nhanh/unmount/ẩn tab/rời
+  viewport, cleanup idempotent. Nội dung/focus/submit không chờ motion kết thúc;
+  thiếu WAAPI vẫn đọc/thao tác được. Giữ motion theo chính sách owner.
+- DecisionRecord ở cột quyết định dùng giấy/đỏ rượu và ngày giờ thật. Chỉ animate
+  khi receipt parsed khớp entity/revision/action/new version và projection đã
+  đối chiếu đúng quyết định. Lịch sử tĩnh; Reject/Remove/refused/lost ACK chưa
+  replay không kích hoạt dấu duyệt. Callback sau executeIntent vẫn tới parent
+  khi form remount do version đổi; giữ key/body/version/recovery/checklist.
+  Reconcile làm mới Dashboard. Refusal đã reconcile dùng Notice trung tính.
+- CUA lần này hoạt động. QA riêng3009/5174/DB `_test` trên57017: xác nhận catalog
+  và duyệt listing thật, kết quả nhận focus, mở lại dấu tĩnh; đổi sách có transform
+  3D thực;320px không tràn ngang. Sửa focus mobile bị về BODY: dùng layout effect
+  sau commit, thử lại Enter→ARTICLE và Back→đúng nút sách PASS. Sửa chữ ở cột hẹp
+  và scroll-margin tránh header. Screenshot QA trong `.tmp/admin-motion-v2/`.
+- PASS79unit/12file;1HTTP/Mongo QA mới chứng minh commit/lost ACK/replay cùng key
+  chỉ1listing_decision và chỉ bật stamp sau đối chiếu;5test không liên quan filter.
+  Browser harness thêm assertion lost ACK/409 không stamp, ACK có stamp/focus;
+  full harness NOT RUN. Storage QA fake qua Sharp thật, không là live Supabase.
+  Detector1lần có1font advisory, đã tăng cỡ chữ stamp. Lint/typecheck/build,
+  docs/diff/browser syntax kiểm theo gói. Build còn warning chunk>500kB cũ.
+- QA fixture close/xóa DB/users/roles riêng; tabQA đóng, viewport reset, QA57017
+  stop sau test. API/Admin local giữ chạy. Không sửa DB chính/contract/quyền/
+  transaction; READINESS không đổi. Chưa commit/push/PR. Bước3: bảng lệnh `Ctrl+K`.
+
+## Admin “wow” bước1 — kệ sách chờ duyệt —26/10/2026
+
+- Nhánh `codex/admin-ui-refactor`, base `d3b19e5`; giữ các gói Login/Sidebar/API
+  và backend fix local. Owner duyệt cả3ý tưởng nhưng yêu cầu làm từng bước.
+  Hoàn thiện bước1: PendingShelf đầu Dashboard,6hồ sơ đầu thật, gáy/trang CSS,
+  nền kem và phiếu giấy/texture/font Login. Chọn sách xem nhanh, mở detail để
+  kiểm duyệt theo checklist cũ; không thêm endpoint/dependency/ảnh gen/demo data.
+- Metadata/media theo quyền API, gộp reference trùng; Staff không đọc Pending
+  catalog request, TEST_OPERATOR không mount shelf. Title không suy từ mô tả;
+  bộ sách ghi tình trạng từng cuốn/nguyên bộ và giá có nhãn. Ảnh contain/retry,
+  loading/error/empty/stale riêng; giữ selection theo id khi refetch. Compact
+  một pane với nút quay lại/focus return; motion hover/chọn220ms theo owner.
+- PASS70unit/10file (10ca shelf),2HTTP/Mongo QA Dashboard/shelf/ảnh/quyền;3test
+  simulator không liên quan bị filter, không nhận là chạy lại5test. Fixture tự
+  xóa DB/users/roles `_test`, QA57017 đã stop. Ảnh QA fake storage qua Sharp thật;
+  không là live Supabase. Admin lint/typecheck/build và browser syntax PASS.
+  Cảnh báo chunk>500kB còn có từ trước (JS khoảng636kB/189kB gzip).
+- Impeccable detector chạy1lần:1warning viền phiếu bo góc và3font advisories;
+  đã bỏ radius phiếu và chỉnh các cỡ chữ được chỉ ra. Không chạy đua detector.
+  Browser CUA báo disabled; visual/mobile/keyboard thực tế NOT RUN. Harness đã
+  thêm ca ảnh lỗi/retry/chọn Enter/Back focus/320px/chữ lớn để chạy khi khả dụng.
+- Kiểm main local chỉ đọc: queue PendingReview trả200và0hồ sơ nên UI hiện kệ
+  trống; không seed/thay DB chính để làm demo. API/Admin tiếp tục chạy. Chưa
+  commit/push/PR; READINESS không đổi. Bước tiếp sau owner xem bước1: hiệu ứng
+  lật phiếu/đóng dấu có ACK, rồi mới bảng lệnh `Ctrl+K`.
+
+## Backend Windows bị ngắt và kiểm tra dung lượng —26/10/2026
+
+- Cùng nhánh `codex/admin-ui-refactor`, base `d3b19e5`; giữ các gói Admin local.
+  Log có `kill ENOSYS` trong Nest shutdown; Nest watcher và worker còn sống khi
+  HTTP 3000 đã mất. Dùng `useProcessExit` trên Windows sau khi chạy đủ lifecycle
+  hooks; launcher giám sát kết nối sau ready và phục hồi API/worker tối đa ba lần
+  khi mất HTTP liên tục45giây. HTTP503 và reload ngắn không kích hoạt restart.
+- PASS:17test launcher,193test API (gồm child process Windows chạy shutdown hook
+  thật), API lint/typecheck/build, contract types/routes177operations. Lint còn
+  warning cũ. Thử dừng riêng HTTP child: watcher vẫn sống, launcher phát hiện và
+  tự khởi động lại; sau đó ready/login Admin/CORS/hai queue kiểm duyệt đều200.
+  Reload sau thay đổi nội dung source cũng biên dịch0lỗi, đổi PID HTTP child và
+  login/queue200, không còn ENOSYS trong log mới. Probe ban đầu chỉ đổi mtime/
+  ghi lại byte giống hệt không tạo rebuild, nên không tính PASS cho probe đó.
+  Không sửa contract/quyền/transaction/migration; không reset/seed DB chính.
+- Audit phát hiện khoảng116MiB trong sáu thư mục cache/build tạm đã lập danh sách
+  tại `.tmp/admin-start/cleanup-preflight.json`, thêm backup patch/ảnh gen cũ có
+  thể rà tiếp. Docker không có build cache/image dư đáng kể (image đang dùng).
+  CLEANUP BLOCKED: automatic approval review từ chối cả lệnh dọn có kiểm root
+  và lệnh chỉ rõ sáu đường dẫn, lý do duy nhất `blocked by policy`. Chưa xóa
+  file/thư mục nào; giữ env, DB, source, backup và asset production nguyên vẹn.
+- API/Admin để chạy sau kiểm tra cuối; READINESS không đổi. Chưa commit/push/PR.
+
+## Nối API vận hành vào Admin —26/10/2026
+
+- Nhánh `codex/admin-ui-refactor`, base `d3b19e5`, giữ toàn bộ Login/Sidebar local.
+  [Bảng API/màn hình](../features/ADMIN_API_CONNECTIONS.md) đối chiếu39thao tác/
+  37path operations. Review/users/intake/inspection/evidence/auction/point-order/
+  points/incident/fund/escalations đã có adapter; bổ sung3simulator event còn thiếu
+  cho ACTIVE TEST_OPERATOR tại `/simulator/events/:kind`.
+- Dashboard thật thay mock: nguồn theo capability, count trong trang/dấu `+`
+  theo cursor, quỹ từ API, loading/error/empty/stale riêng. Bỏ biểu đồ tự suy
+  diễn/LIVE giả và badge Mock trên nav. Thêm guard deep-link listing/users trước
+  query; schemas user dùng chung. Không thêm API/migration hoặc đổi quyền server.
+- Form simulator xác nhận qua ActionPanel, parse receipt đúng loại, eventId/key/
+  body giữ nguyên khi mất phản hồi, input khóa tới kết quả dứt điểm; chỉ nhập
+  event mới sau action rõ ràng. Không cộng balance tại client. Cấu hình simulator
+  vẫn ở server; không đổi env/seed hoặc cấp thêm role cho tài khoản dev.
+- PASS: Admin lint/build(typecheck),60unit/9file;4HTTP/MongoDB integration trong
+  database QA `_test` riêng trên57017. Xác nhận Dashboard theo3role,403 Admin/
+  Staff trên3adapter, carrier valid envelope404 nếu target không tồn tại, topup
+  QA commit/lost-ack/retry chỉ1bút toán5000VND. Fixture tự xóa DB/users/roles,
+  storage fake; không thao tác dữ liệu chính. Docs/diff/browser script syntax PASS.
+- Browser CUA vẫn disabled; full Admin UI/confirm/retry/carrier happy path/visual
+  NOT RUN. Report/doanh thu/taxonomy CRUD/khóa hoặc đổi role không có API tương
+  ứng, không dựng thao tác giả. API/Admin dev để chạy; READINESS không đổi.
+  Chưa commit/push/PR. Bước tiếp: owner kiểm các màn theo role và nghiệm thu UI.
+
+## Sidebar Admin theo nhận diện Lật Lại —26/10/2026
+
+- Cùng nhánh `codex/admin-ui-refactor`, base `d3b19e5`; bảo toàn gói Login local.
+  Theo mẫu sidebar owner gửi, triển khai WorkspaceShell/CSS module ở
+  `apps/admin-web/src/features/navigation/`: nền kem, logo cú/chữ gốc, active đỏ
+  rượu, nhóm chức năng theo profile, tài khoản bằng tên/initial/role thật. Dùng
+  React/router/lucide/CSS có sẵn, không thêm motion/Tailwind/Tabler/dependency.
+- Desktop ghim280px/rail80px, hover/focus mở tạm; mobile≤720px native dialog có
+  Menu/X/Escape/backdrop, focus return/scroll lock và cleanup. Menu đóng theo
+  location key đã được Router nhận, giữ leave guard; logout callback/session
+  và lỗi giữ nguyên, lỗi chuyển vào account để đọc được trong drawer.
+  Theo screenshot/phản hồi owner: gộp logo/pin cùng hàng, bỏ caption header và
+  heading dư của Dashboard/Quản lý, giảm khoảng cách/menu44px; account/logout
+  chung hàng, active nền giấy đậm/chữ wine. Không hiển thị scrollbar (Firefox/
+  WebKit), vẫn giữ wheel/Tab để không cắt mục khi màn quá thấp hoặc chữ lớn.
+  Mobile/màn cao≤720px/tài khoản>9link dùng nhóm bấm mở, một nhóm tại một thời
+  điểm, ưu tiên nhóm của route hiện tại; Dashboard/directory luôn truy cập được.
+- Menu dùng helper quyền hiện có, không đổi quyền API/route. ADMIN không tự có
+  intake/collection của STAFF hoặc simulator của TEST_OPERATOR. Mock/Report
+  chưa triển khai vẫn ghi rõ. BrandMark tách từ Login dùng chung, không đổi
+  asset hay hình học logo. App.tsx chỉ compose; bỏ CSS sidebar/mobile nav cũ.
+- PASS: lint, typecheck qua build,40unit/6file (10ca mới về menu theo quyền/SSR),
+  browser script syntax, HTTP module/asset/API ready/login, docs/diff check.
+  Build còn cảnh báo chunk JS lớn đã có. Browser CUA vẫn disabled khi thử lại;
+  visual/hover/focus/Tab/Escape/dialog và browser harness NOT RUN. Harness đã
+  cập nhật ca desktop rail, menu vừa khung/không scrollbar, nhóm mở ở640px cao
+  và drawer320px/chữ lớn; các ca browser chưa chạy, không hạ assertion cũ.
+- Chưa commit/push/PR. API/Admin vẫn chạy; READINESS không đổi. Tiếp theo owner
+  xem sidebar sau đăng nhập; browser/human nghiệm thu khi công cụ khả dụng.
+
+## Login Admin đã triển khai — 26/10/2026
+
+- Nhánh `codex/admin-ui-refactor`, base `d3b19e5`. Owner đã duyệt prototype
+  đồi sách và yêu cầu triển khai Login thật. `apps/admin-web/src/features/auth/`
+  chứa LoginPage/CSS module, App.tsx chỉ compose; đã bỏ function Login và491dòng
+  CSS cũ dành riêng cho màn đăng nhập khỏi App.css. Không đổi dashboard/Member/
+  mobile/API/contract hoặc luật phân quyền.
+- Login thật tại `http://localhost:5173/`: nền kem/olive/đỏ hồng, sách PNG alpha
+  và huy hiệu cú3D là các lớp riêng; logo góc trên phẳng lấy đúng ảnh gốc. Phiếu
+  dùng texture/font Bricolage giống User (SHA256 trùng), ba lớp giấy, viền đỏ6px,
+  header logo/Thẻ vận hành và input gạch chân. Theo owner, đã bỏ dòng workspace,
+  nhắc phiên ở ngoài và slogan footer; card không còn min-height, tự ôm nội dung
+  và vẫn nở khi có lỗi/chữ lớn. Phần phiếu được căn giữa cột phải. Runtime assets
+  trong `apps/admin-web/public/login-art/`; prompt ở README/preview.
+- Giữ session-client memory-only, autofill/FormData, root→dashboard và protected
+  deep link như cũ. Input giữ khi lỗi, sửa input xóa lỗi cũ; submit có khóa đồng
+  bộ chống gửi trùng, busy khóa input/reveal/nút và có spinner/text xử lý; eye
+  reveal có aria-pressed. Dùng ErrorNotice hiện có. Không hiển thị credential
+  seed trên trang Login mới; không đổi mật khẩu/env/session transport.
+- PASS trên Node24.22.1/pnpm11.19.0: lint,30unit/5file, typecheck qua build,
+  Vite build; HTTP200/MIME cho app/module/ảnh/font/texture; docs và diff check.
+  Cảnh báo chunk JS>500kB đã có từ app hiện tại. Browser CUA thử lại vẫn báo
+  disabled trong Work settings: desktop/mobile/keyboard/autofill và UI login
+  lỗi/busy/thành công NOT RUN. Không chạy browser harness/DB QA khi bị chặn;
+  unit capability gates không được nhận thành kiểm thử Login DOM.
+- Prototype A/B/C, meadow và hướng1 vẫn được giữ ở `public/design/login/`;
+  form ở các HTML vẫn mock. Evidence/tooling local ở `.tmp/admin-login-concepts/`.
+  Admin5173/API3000/worker để chạy cho owner. Khi mở phiên admin đã áp migration
+  0035/0036 đúng quy trình và bootstrap roles; không reset/reseed dữ liệu.
+  Lúc17:47 owner báo không login: API không còn listener3000 dù Nest watch còn
+  chạy. Đã dừng đúng watcher của launcher cũ và khởi động lại toàn nhóm API/
+  worker;17:48 ready200, Admin login200/CORS đúng5173 và hai queue200, logout
+  session kiểm tra204. Không đổi env/mật khẩu/DB; log `.tmp/admin-start/api-restart.log`.
+  Chưa commit/push/PR gói Admin. READINESS giữ nguyên. Tiếp theo: owner kiểm
+  Login thật và nghiệm thu giao diện; browser automation khi khả dụng cần kiểm
+  lỗi credential, pending/retry, reveal/Tab, root/deep-link,320px và chữ lớn.
 
 ## Đã tích hợp bộ sách vào main — 26/10/2026
 
