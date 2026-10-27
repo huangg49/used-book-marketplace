@@ -123,8 +123,11 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: "/dashboard", element: <DashboardPage /> },
-      { path: "/review/:kind", element: <Queue /> },
-      { path: "/review/:kind/:id", element: <Detail /> },
+      {
+        path: "/review/:kind",
+        element: <Queue />,
+        children: [{ path: ":id", element: <Detail /> }],
+      },
       { path: "/users", element: <UserDirectory /> },
       { path: "/operations/intakes", element: <IntakeQueue /> },
       { path: "/operations/collections", element: <CollectionQueue /> },

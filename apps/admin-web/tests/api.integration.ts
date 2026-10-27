@@ -6,7 +6,14 @@ import type { CurrentUser } from "@used-books/session-client";
 import { createCommand, runCommand, type Request } from "../src/core/command";
 import { dashboardSources } from "../src/features/dashboard/sources";
 import { shelfReference } from "../src/features/dashboard/shelf-model";
-import { catalog, mediaRead, listing } from "../src/features/review/contracts";
+import {
+  catalog,
+  mediaRead,
+  listing,
+  pageOf,
+  revision,
+} from "../src/features/review/contracts";
+import { compareRevisions } from "../src/features/review/revision-diff";
 import {
   createIntent,
   executeIntent,
@@ -137,6 +144,63 @@ describe("Admin adapters against isolated HTTP/MongoDB", () => {
       expect(operatorRead.status).toBe(403);
       expect((await fetch(base + path)).status).toBe(401);
     }
+  });
+  it("compares immutable submitted revisions over the real API and denies non-reviewers", async () => {
+    const request = requestFor(admin.accessToken);
+    const id = fixture.listings[0];
+    const before = await request(`/operations/listings/${id}`, listing);
+    await fixture.api(
+      `/operations/listings/${id}/decision`,
+      admin.accessToken,
+      {
+        expectedVersion: before.version,
+        revisionId: before.currentRevision.id,
+        decision: "Reject",
+        reason: "Dữ liệu kiểm thử: bổ sung mô tả vết gấp ở bìa.",
+      },
+    );
+    const rejected = await fixture.api(
+      `/me/listings/${id}`,
+      fixture.member.accessToken,
+    );
+    const saved = await fixture.api(
+      `/listings/${id}/draft`,
+      fixture.member.accessToken,
+      {
+        expectedVersion: rejected.version,
+        content: {
+          ...rejected.currentRevision.content,
+          notes: "Đã bổ sung vết gấp ở bìa.",
+          salePrice: 95000,
+        },
+      },
+      "PUT",
+    );
+    await fixture.api(`/listings/${id}/submit`, fixture.member.accessToken, {
+      expectedVersion: saved.version,
+      ownershipDeclared: true,
+    });
+    const current = await request(`/operations/listings/${id}`, listing);
+    const path = `/operations/listings/${id}/revisions?limit=10`;
+    for (const reviewer of [admin, staff]) {
+      const history = await requestFor(reviewer.accessToken)(
+        path,
+        pageOf(revision),
+      );
+      const old = history.items.find(
+        (r) => r.id === before.currentRevision.id,
+      )!;
+      expect(old.content).toEqual(before.currentRevision.content);
+      expect(current.currentRevision.number).toBe(2);
+      expect(
+        compareRevisions(old, current.currentRevision)
+          .filter((r) => r.changed)
+          .map((r) => r.label),
+      ).toEqual(["Giá bán", "Ghi chú / đánh dấu"]);
+    }
+    await expect(
+      requestFor(operator.accessToken)(path, pageOf(revision)),
+    ).rejects.toMatchObject({ status: 403 });
   });
   it("only enables the approval stamp after a lost-ack command is replayed and reconciled with its actual revision", async () => {
     const request = requestFor(admin.accessToken);

@@ -11,6 +11,7 @@ import {
   validReason,
   type Intent,
 } from "./decision-command";
+import styles from "./ReviewWorkspace.module.css";
 
 export function DecisionForm({
   kind,
@@ -171,7 +172,9 @@ export function DecisionForm({
   return (
     <aside className="decision-panel" aria-label="Quyết định kiểm duyệt">
       <p className="eyebrow">
-        {removal ? "Xử lý bài vi phạm" : "Kết luận cho bản gửi này"}
+        {removal
+          ? "Xử lý bài vi phạm"
+          : `Phiếu quyết định · ${revisionId.slice(0, 8)}`}
       </p>
       <h3>
         {removal ? "Gỡ bài phải có lý do." : "Mỗi dấu duyệt, một lần đọc kỹ."}
@@ -180,6 +183,14 @@ export function DecisionForm({
         Đối chiếu thông tin được cung cấp. Không dùng kết quả duyệt để cam kết
         sách chính hãng.
       </p>
+      {kind === "listings" && !removal && (
+        <div className={styles.progress} aria-live="polite">
+          <span>Đã đối chiếu</span>
+          <strong>
+            {checked.size} / {bundle ? 7 : 6} mục
+          </strong>
+        </div>
+      )}
       {kind === "listings" && !removal && (
         <fieldset disabled={locked}>
           <legend>Kiểm tra trước khi duyệt</legend>

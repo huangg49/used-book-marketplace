@@ -20,6 +20,7 @@ const withCredentials = (url, database, user, secret) => {
 export async function createTestApi({
   corsOrigin = origin,
   listingCount = 3,
+  photoBytes,
 } = {}) {
   const rootUrl = process.env.MONGO_TEST_URL;
   if (!rootUrl)
@@ -214,7 +215,7 @@ export async function createTestApi({
       exchangeValue: 150000,
       mediaIds: [],
     };
-    const photo = await req("sharp")({
+    const photo = photoBytes ?? await req("sharp")({
       create: { width: 400, height: 500, channels: 3, background: "#58685E" },
     })
       .png()

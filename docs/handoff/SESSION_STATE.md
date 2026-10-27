@@ -1,5 +1,22 @@
 # Điểm lưu hiện tại — 27/10/2026
 
+## Bàn kiểm duyệt Admin hai vùng — 27/10/2026
+
+- `codex/admin-ui-refactor`, base `729a442`; gói commit subject
+  `feat(admin): build a continuous book moderation desk`. Hàng chờ cạnh hồ sơ,
+  giữ filter/scroll; gallery zoom/phím; đối chiếu revision thật và ảnh theo từng
+  bản; phiếu giữ dữ liệu qua đổi tab, gắn đúng current revision/version/retry.
+  Mobile có mở hàng chờ/đi tới phiếu, tránh header che focus. Dùng token brand,
+  không đổi API/schema/env/seed hoặc client của teammate.
+- PASS Admin194tests/lint/typecheck/build/bundle; HTTP/Mongo QA riêng7tests.
+  CUA desktop/mobile đã thử ảnh, so sánh, guard, duyệt/từ chối/catalog confirm,
+  next/filter/scroll954px, reload bản gửi mới và lỗi mạng giữ danh sách. Storage
+  fake; browser automation toàn suite/large text/screen reader/native/remote CI/
+  human review NOT RUN. [Evidence và giới hạn](../features/OPERATIONS_REVIEW_REPORT.md#bàn-đọc-hai-vùng--27102026).
+- Chưa push/PR/merge; READINESS không đổi. QA database/users/roles được dọn bằng
+  fixture, chỉ dừng dịch vụ QA của lượt này. Bước tiếp: nhóm review UI/nghiệp vụ
+  với hồ sơ thật, chạy browser suite đầy đủ trước tích hợp.
+
 ## Sách từ kệ gửi đấu giá — owner chốt27/10/2026
 
 - Owner duyệt giữ luồng chọn sách từ kệ, gồm Both; [ADR0048](../adr/0048-auction-intake-from-shelf.md)

@@ -102,7 +102,7 @@ try {
       .getByRole("link", { name: "Bài đăng sách", exact: true })
       .click();
     await p
-      .locator(`a[href='/review/listings/${fixture.listings[index]}']`)
+      .locator(`a[href='/review/listings/${fixture.listings[index]}?status=PendingReview']`)
       .first()
       .click();
     await p.getByLabel("Lý do từ chối", { exact: true }).waitFor();
@@ -273,7 +273,7 @@ try {
   await p.addStyleTag({ content: "html{font-size:16px !important}" });
   await p.getByRole("link", { name: "Đầu sách", exact: true }).click();
   await p
-    .locator(`a[href='/review/catalog-requests/${fixture.catalogId}']`)
+    .locator(`a[href='/review/catalog-requests/${fixture.catalogId}?status=Pending']`)
     .first()
     .click();
   await click(p, "Xác nhận đầu sách");
@@ -294,6 +294,10 @@ try {
   await click(p, "Xem lớn ảnh 1");
   await p.getByRole("dialog").waitFor();
   await focused(p.getByRole("button", { name: "Đóng ảnh 1", exact: true }));
+  await click(p, "Phóng lớn ảnh");
+  assert.equal(await p.getByRole("status").filter({hasText:"125%"}).count(), 1);
+  await p.keyboard.press("0");
+  assert.equal(await p.getByRole("status").filter({hasText:"100%"}).count(), 1);
   await p.keyboard.press("Escape");
   await focused(p.getByRole("button", { name: "Xem lớn ảnh 1", exact: true }));
   assert.equal(await p.locator("dialog[open]").count(), 0);
@@ -422,6 +426,20 @@ try {
   await openListing(p, 1);
   await p.locator(".status-label").filter({ hasText: "Chờ duyệt" }).waitFor();
   await p.getByText("Đã bổ sung ảnh rõ phần trang bị gạch chân.").waitFor();
+  await p.getByLabel("Lý do từ chối", { exact: true }).fill("Bản nháp lý do vẫn ở đây.");
+  await p.getByRole("checkbox").first().check();
+  await click(p, "Đối chiếu bản gửi");
+  await p.getByText("Điều gì đã thay đổi?", {exact:true}).waitFor();
+  await p.getByText("1 mục thay đổi", {exact:true}).waitFor();
+  const revisionPicker = p.getByRole("combobox", {name:"Bản đối chiếu",exact:true});
+  await revisionPicker.click();
+  await p.getByRole("listbox", {name:"Bản đối chiếu",exact:true}).waitFor();
+  await revisionPicker.press("Escape");
+  await focused(revisionPicker);
+  await click(p, "Nội dung & ảnh");
+  assert.equal(await p.getByLabel("Lý do từ chối",{exact:true}).inputValue(),"Bản nháp lý do vẫn ở đây.");
+  assert.equal(await p.getByRole("checkbox",{checked:true}).count(),1);
+  await p.getByLabel("Lý do từ chối",{exact:true}).fill("");
   for (const checkbox of await p.getByRole("checkbox").all())
     await checkbox.check();
   await click(p, "Duyệt bài đăng");
@@ -524,7 +542,7 @@ try {
   // Catalog rejection, pagination and independent-review guard.
   await p.getByRole("link", { name: "Đầu sách", exact: true }).click();
   await p
-    .locator(`a[href='/review/catalog-requests/${fixture.extraId}']`)
+    .locator(`a[href='/review/catalog-requests/${fixture.extraId}?status=Pending']`)
     .first()
     .click();
   await p
@@ -558,7 +576,7 @@ try {
   await p.locator(".queue-row").nth(21).waitFor();
   assert.equal(await p.locator(".queue-row").count(), 22);
   await p
-    .locator(`a[href='/review/catalog-requests/${self.entityId}']`)
+    .locator(`a[href='/review/catalog-requests/${self.entityId}?status=Pending']`)
     .first()
     .click();
   await p.getByText("Bạn là người gửi hồ sơ này.", { exact: false }).waitFor();
@@ -579,7 +597,7 @@ try {
     .click();
   await click(p, "Đã duyệt");
   await p
-    .locator(`a[href='/review/listings/${fixture.listings[0]}']`)
+    .locator(`a[href='/review/listings/${fixture.listings[0]}?status=Approved']`)
     .first()
     .click();
   await removal.getByLabel("Lý do gỡ bài", { exact: true }).fill("short");

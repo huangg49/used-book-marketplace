@@ -63,6 +63,26 @@ local fake storage and real Sharp, and cleans up after itself. Set
 [verification](../../docs/features/OPERATIONS_REVIEW_REPORT.md),
 [ADR 0010](../../docs/adr/0010-operations-review-client.md).
 
+The moderation desk keeps the queue beside the selected dossier at the same
+`/review/:kind/:id` routes. Queue links carry the active status; loaded rows and
+numeric scroll positions are retained within the current user session. On narrow
+screens, **Mở hàng chờ** exposes the queue and **Đi tới phiếu quyết định** moves
+focus to the decision sheet without hiding it behind the mobile header.
+
+- In the queue, Up/Down and Home/End move focus between loaded dossiers; Enter
+  opens one. Previous/next links use the normal unsent-change guard.
+- The photo viewer supports previous/next arrows, zoom from 100–300%, reset with
+  `0`, and Escape to close. It identifies the submitted revision, restores focus
+  and releases its scroll lock on close/unmount. A signed URL alone never makes
+  an image ready for approval.
+- Listing revisions can be compared by choosing two loaded submissions. Text,
+  prices, condition declarations, ordered media, bundle contents and delivery
+  selection are compared; historical photos load only on explicit expansion.
+  Catalog requests have no historical metadata API, so the UI does not invent one.
+- Switching evidence tabs preserves the decision draft. An explicit dossier
+  reload starts a new check; the decision remains bound to the current revision,
+  expected version and original retry intent.
+
 Public shelf, disputes, finance, audit search, simulator/point/auction workflows
 and production deployment remain future increments. Moderation does not certify
 physical authenticity or deliver outbox notifications.

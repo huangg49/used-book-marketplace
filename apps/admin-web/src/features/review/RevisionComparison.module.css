@@ -1,0 +1,227 @@
+.compare {
+  min-width: 0;
+  font-size: 13px;
+}
+.heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--shop-wine);
+}
+.heading h3 {
+  font-size: 20px;
+  margin: 0;
+  color: var(--shop-ink);
+}
+.compare > p {
+  color: var(--shop-muted);
+  line-height: 1.8;
+  margin: 12px 0 24px;
+}
+.selectors {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr);
+  gap: 12px;
+  align-items: end;
+  padding: 18px;
+  background: var(--shop-shelf);
+  border-radius: 3px;
+}
+.selectors > svg {
+  margin-bottom: 13px;
+  color: var(--shop-muted);
+}
+.picker {
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--shop-muted);
+}
+.picker > button {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--shop-paper);
+  padding: 10px;
+  border: 1px solid var(--shop-control);
+  border-radius: 3px;
+  color: var(--shop-ink);
+  font:
+    600 12px "Be Vietnam Pro",
+    sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+.picker > button > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.picker > button > svg {
+  flex-shrink: 0;
+}
+.picker > button[aria-expanded="true"] {
+  border-color: var(--shop-wine);
+}
+.picker ul {
+  position: absolute;
+  top: calc(100% + 6px);
+  z-index: 8;
+  left: 0;
+  right: 0;
+  min-width: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  padding: 6px;
+  margin: 0;
+  background: var(--shop-paper);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--shop-ink) 20%, transparent);
+  border-radius: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--shop-control) 70%, transparent)
+    transparent;
+}
+.picker ul[data-side="top"] {
+  top: auto;
+  bottom: calc(100% - 14px);
+}
+.picker li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px;
+  color: var(--shop-muted);
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 2px;
+}
+.picker li[data-active="true"] {
+  background: color-mix(in srgb, var(--shop-shelf) 76%, var(--shop-yellow));
+  color: var(--shop-wine);
+}
+.picker li[aria-selected="true"] {
+  color: var(--shop-wine);
+  font-weight: 600;
+}
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 18px 0;
+  color: var(--shop-wine);
+}
+.summary label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 12px;
+  color: var(--shop-muted);
+}
+.summary input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--shop-wine);
+}
+.columnHead,
+.row {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.65fr) repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.columnHead {
+  padding: 12px;
+  background: color-mix(in srgb, var(--shop-shelf) 76%, var(--shop-yellow));
+  color: var(--shop-muted);
+  font-weight: 600;
+  font-size: 11px;
+}
+.columnHead small {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.7;
+  margin-top: 6px;
+}
+.row {
+  padding: 16px 12px;
+  border-bottom: 1px solid var(--shop-line);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.row > strong {
+  font-size: 11px;
+  color: var(--shop-muted);
+}
+.row > div {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.row > div > span {
+  display: none;
+}
+.changed > div:last-child {
+  color: var(--shop-wine);
+  font-weight: 500;
+}
+.empty {
+  padding: 26px 18px;
+  color: var(--shop-muted);
+  background: var(--shop-shelf);
+  line-height: 1.8;
+}
+.photos {
+  padding: 24px 0;
+}
+.photoColumns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.photoColumns h4 {
+  font-size: 12px;
+  color: var(--shop-muted);
+}
+@media (max-width: 600px) {
+  .columnHead {
+    display: none;
+  }
+  .row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    padding: 18px 0;
+  }
+  .row > strong {
+    grid-column: 1 / -1;
+  }
+  .row > div > span {
+    display: block;
+    color: var(--shop-muted);
+    font-size: 10px;
+    margin-bottom: 6px;
+    font-weight: 400;
+  }
+  .photoColumns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .selectors {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 12px;
+    gap: 8px;
+  }
+  .selectors > svg {
+    display: none;
+  }
+}

@@ -500,61 +500,6 @@
   color: var(--shop-wine);
 }
 
-.photos {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  margin-top: 1.25rem;
-}
-
-.photo-button {
-  padding: 0.65rem;
-  border: 1px solid var(--shop-line);
-  border-radius: 10px;
-  background: var(--shop-shelf);
-  display: block;
-  width: 100%;
-  min-height: 160px;
-  transition: all 160ms ease;
-}
-
-.photo-button:hover {
-  border-color: var(--shop-wine);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-}
-
-.photo-button img {
-  display: block;
-  width: 100%;
-  height: 220px;
-  object-fit: contain;
-  border-radius: 6px;
-  filter: drop-shadow(0 6px 8px rgba(40, 25, 20, 0.12));
-}
-
-.photo figcaption {
-  font-size: 0.75rem;
-  margin-top: 0.5rem;
-  color: var(--shop-muted);
-  text-align: center;
-}
-
-.image-dialog {
-  max-width: min(1100px, calc(100% - 24px));
-  padding: 1.5rem;
-  border-radius: 16px;
-  background: var(--shop-paper);
-}
-
-.image-dialog img {
-  display: block;
-  max-height: 75dvh;
-  object-fit: contain;
-  margin: 1rem auto 0;
-  border-radius: 8px;
-}
-
 .decision-panel {
   background: var(--shop-paper);
   padding: 1.25rem;
@@ -1027,12 +972,6 @@
   .decision-panel {
     position: static;
     padding: 1.25rem;
-  }
-  .photos {
-    gap: 0.75rem;
-  }
-  .photo-button img {
-    height: 160px;
   }
   .workspace-footer {
     padding: 1.25rem 1rem;

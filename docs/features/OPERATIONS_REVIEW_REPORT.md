@@ -3,6 +3,42 @@
 Ngày: 27/09/2026. Phạm vi: web Staff/Admin sử dụng API thật theo OpenAPI 0.6.0.
 Quyết định kiến trúc: [ADR 0010](../adr/0010-operations-review-client.md).
 
+## Bàn đọc hai vùng — 27/10/2026
+
+Source: `codex/admin-ui-refactor`, sau base `729a442`; commit gói có subject
+`feat(admin): build a continuous book moderation desk`. Các phần bên dưới mục này
+là báo cáo baseline27/09, không thay thế trạng thái/gate hiện hành trong handoff.
+
+- Hàng chờ và hồ sơ chung một màn: giữ status trong URL, cache theo người dùng,
+  vị trí cuộn dạng số trong memory, nút Trước/Tiếp và bàn phím chọn hàng. Mobile
+  có nút mở hàng chờ và đi tới phiếu, offset tránh header che focus.
+- Gallery riêng: thumbnail, ảnh lớn, zoom100–300%, chuyển ảnh/phím, nhận diện bản
+  gửi, Escape/focus return/scroll-lock cleanup. Read lỗi/ảnh lỗi/URL mới chưa load
+  đều vô hiệu hóa readiness; không persist signed URL hay nội dung riêng.
+- Đối chiếu hai bản gửi từ endpoint revisions có cursor: nội dung/giá/điều kiện,
+  thay ảnh cùng số lượng hoặc đổi thứ tự, bộ sách và lựa chọn giao nhận. Ảnh bản
+  cũ chỉ tải khi mở. Chọn bản cũ không đổi revision của phiếu quyết định. Không
+  dựng lịch sử metadata catalog ngoài contract. Không đổi API/session/command.
+- PASS Admin194unit/component/model tests, lint/typecheck/build và bundle budget
+  (startup JS497289bytes,10page modules vẫn deferred). HTTP/Mongo riêng7tests:
+  thêm đối chiếu revision bất biến/Admin–Staff và từ chối TEST_OPERATOR; giữ các
+  ca lost ACK/replay/reconcile đã có. Storage local fake/Sharp thật, không phải
+  bằng chứng Supabase live. Không migration hoặc thay seed/password/env chính.
+- CUA trên IAB Windows: desktop1440×1000,390×844,320×800 không tràn ngang; gallery
+  zoom/đổi ảnh/focus/scroll lock; dropdown phím/Escape; đổi tab giữ checklist/lý
+  do; guard rời hồ sơ; duyệt/từ chối/catalog confirm thật trên QA; next/reset;
+  quay lại đúng filter; scroll954px được phục hồi954px. Gửi lại trong lúc mở cũ
+  rồi reload đọc đúng bản3 và so sánh2→3. Tắt QA API rồi refresh giữ5hồ sơ và nút
+  retry. Console không có lỗi trước ca network fault chủ động.
+- Pro Max/Taste/Impeccable dùng trong brand hiện có. Detector một lượt36advisory
+  (35literal color,1font19px); đổi về token brand/color-mix và type20px. Review
+  source/browser bởi một agent, không là critique độc lập hay human review.
+- Suite tự động `tests/browser.mjs` đã cập nhật selector URL và ca mới, **NOT RUN**
+  trong phiên này; CUA thủ công ở trên không được báo thành suite tự động PASS.
+  Screen reader/chữ lớn/Safari/Firefox/native/CI remote/human review NOT RUN.
+  READINESS giữ nguyên. Ảnh QA trong `.tmp/review-workspace/` (Git ignore).
+
+
 ## Đã triển khai
 
 - Đăng nhập, đọc quyền hiện tại, xoay token và đăng xuất thu hồi phiên. Token chỉ

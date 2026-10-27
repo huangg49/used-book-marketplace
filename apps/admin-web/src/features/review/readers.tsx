@@ -1,10 +1,11 @@
+import { ReviewGallery } from "./ReviewGallery";
 import { dateText, money } from "../../core/format";
 import {
   categoryPath,
   languageLabel,
   facetDefinitions,
 } from "@used-books/api-contract/catalog-taxonomy";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { session } from "../../core/session";
 import { Button, CursorPagination, ErrorNotice, Notice } from "../../core/ui";
@@ -13,7 +14,6 @@ import {
   book,
   catalog,
   labels,
-  mediaRead,
   pageOf,
   revision,
   type Metadata,
@@ -133,109 +133,6 @@ export function BookReference({
     </section>
   );
 }
-export function Photo({
-  listingId,
-  id,
-  index,
-  onReady,
-}: {
-  listingId: string;
-  id: string;
-  index: number;
-  onReady?: (id: string, ready: boolean) => void;
-}) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const [loaded, setLoaded] = useState("");
-  const [failed, setFailed] = useState("");
-  const result = useQuery({
-    queryKey: ["review-media", listingId, id],
-    queryFn: () =>
-      session.request(
-        `/operations/listings/${listingId}/media/${id}/read`,
-        mediaRead,
-      ),
-    staleTime: 60_000,
-    refetchInterval: 90_000,
-  });
-  const url = result.data?.url;
-  const ready = !!url && loaded === url && failed !== url && !result.isError;
-  useEffect(() => {
-    onReady?.(id, ready);
-    return () => onReady?.(id, false);
-  }, [id, ready, onReady]);
-  useEffect(() => {
-    if (!ready) dialog.current?.close();
-  }, [ready]);
-  return (
-    <figure className="photo">
-      {result.isLoading && <p role="status">Đang lấy ảnh {index + 1}…</p>}
-      {result.error ? (
-        <ErrorNotice
-          error={result.error}
-          retry={() => void result.refetch()}
-          busy={result.isFetching}
-        />
-      ) : (
-        url && (
-          <>
-            {failed !== url && (
-              <button
-                className="photo-button"
-                type="button"
-                onClick={() => dialog.current?.showModal()}
-                disabled={!ready}
-                aria-label={`Xem lớn ảnh ${index + 1}`}
-              >
-                <img
-                  src={url}
-                  alt={`Ảnh ${index + 1} do người đăng cung cấp`}
-                  referrerPolicy="no-referrer"
-                  onLoad={() => setLoaded(url)}
-                  onError={() => setFailed(url)}
-                />
-              </button>
-            )}
-            {failed === url && (
-              <Notice tone="error">
-                Ảnh chưa tải được.{" "}
-                <Button
-                  busy={result.isFetching}
-                  onClick={() => {
-                    setFailed("");
-                    setLoaded("");
-                    void result.refetch();
-                  }}
-                >
-                  Tải lại ảnh {index + 1}
-                </Button>
-              </Notice>
-            )}
-            <dialog
-              ref={dialog}
-              className="image-dialog"
-              aria-label={`Xem lớn ảnh ${index + 1}`}
-            >
-              <Button autoFocus onClick={() => dialog.current?.close()}>
-                Đóng ảnh {index + 1}
-              </Button>
-              {ready && (
-                <img
-                  src={url}
-                  alt={`Chi tiết ảnh ${index + 1}`}
-                  referrerPolicy="no-referrer"
-                />
-              )}
-            </dialog>
-          </>
-        )
-      )}
-      <figcaption>
-        Ảnh {String(index + 1).padStart(2, "0")}
-        {index === 0 ? " · Ảnh đầu" : ""}
-      </figcaption>
-    </figure>
-  );
-}
 const yesNo = (value: boolean | null) =>
   value === null ? "Chưa khai báo" : value ? "Có" : "Không";
 export function ContentView({
@@ -250,32 +147,27 @@ export function ContentView({
   const c = value.content;
   return (
     <>
-      {value.content.bundle && <section className="section" aria-label="Danh sách bộ sách">
-        <h3>{value.content.bundle.title} · Bộ {value.content.bundle.items.length} cuốn</h3>
-        <p>Bán, giao và trả nguyên bộ. Đối chiếu ảnh toàn bộ bộ sách với từng cuốn/tập bên dưới.</p>
-        <ol>{value.content.bundle.items.map((item, index) => <li key={index}>
-          <strong>{item.label}</strong> · {labels[item.condition]}{item.notes && <p>{item.notes}</p>}
-        </li>)}</ol>
-      </section>}
+      {value.content.bundle && (
+        <section className="section" aria-label="Danh sách bộ sách">
+          <h3>
+            {value.content.bundle.title} · Bộ{" "}
+            {value.content.bundle.items.length} cuốn
+          </h3>
+          <p>
+            Bán, giao và trả nguyên bộ. Đối chiếu ảnh toàn bộ bộ sách với từng
+            cuốn/tập bên dưới.
+          </p>
+          <ol>
+            {value.content.bundle.items.map((item, index) => (
+              <li key={index}>
+                <strong>{item.label}</strong> · {labels[item.condition]}
+                {item.notes && <p>{item.notes}</p>}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
-      <section className="section">
-        <h3>Lựa chọn giao nhận</h3>
-        {value.fulfillmentStatus === "Current" ? (
-          <p>
-            Giao trực tiếp · TP.HCM · vùng mô phỏng. Địa chỉ riêng không hiển
-            thị cho người duyệt.
-          </p>
-        ) : value.fulfillmentStatus === "NeedsUpdate" ? (
-          <Notice tone="warning">
-            Nơi gửi đã thay đổi hoặc bị xóa. Chưa thể duyệt bài; yêu cầu người
-            đăng cập nhật qua bản sửa.
-          </Notice>
-        ) : (
-          <p>
-            Chưa khai báo nơi gửi. Có thể duyệt nội dung; giao dịch chưa mở.
-          </p>
-        )}
-      </section>
       <section className="section">
         <div className="section-heading">
           <h3>Ảnh người đăng gửi</h3>
@@ -285,17 +177,13 @@ export function ContentView({
           Xem rõ từng ảnh để đối chiếu. Ảnh cung cấp không chứng minh sách chính
           hãng hay quyền sở hữu.
         </p>
-        <div className="photos">
-          {c.mediaIds.map((id, index) => (
-            <Photo
-              key={id}
-              id={id}
-              index={index}
-              listingId={listingId}
-              onReady={onPhotoReady}
-            />
-          ))}
-        </div>
+        <ReviewGallery
+          key={value.id}
+          listingId={listingId}
+          ids={c.mediaIds}
+          revisionNumber={value.number}
+          onReady={onPhotoReady}
+        />
       </section>
       <section className="section">
         <h3>Tình trạng bản sách</h3>
@@ -351,6 +239,24 @@ export function ContentView({
             <dd className="price">{money(c.exchangeValue)}</dd>
           </div>
         </dl>
+      </section>
+      <section className="section">
+        <h3>Lựa chọn giao nhận</h3>
+        {value.fulfillmentStatus === "Current" ? (
+          <p>
+            Giao trực tiếp · TP.HCM · vùng mô phỏng. Địa chỉ riêng không hiển
+            thị cho người duyệt.
+          </p>
+        ) : value.fulfillmentStatus === "NeedsUpdate" ? (
+          <Notice tone="warning">
+            Nơi gửi đã thay đổi hoặc bị xóa. Chưa thể duyệt bài; yêu cầu người
+            đăng cập nhật qua bản sửa.
+          </Notice>
+        ) : (
+          <p>
+            Chưa khai báo nơi gửi. Có thể duyệt nội dung; giao dịch chưa mở.
+          </p>
+        )}
       </section>
       <p className="muted">
         Người đăng khai báo quyền đăng sách:{" "}
