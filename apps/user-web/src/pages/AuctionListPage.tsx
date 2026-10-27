@@ -82,11 +82,6 @@ export function AuctionListPage() {
         {/* Compact, Elegant Page Header */}
         <header className={styles.pageHeader}>
           <div className={styles.headerText}>
-            <div className={styles.kicker}>
-              <Gavel size={14} className={styles.kickerIcon} aria-hidden="true" />
-              <span>Sàn đấu giá sách Lật Lại</span>
-              <span className={styles.livePulseDot} aria-hidden="true" />
-            </div>
             <h1 className={styles.pageTitle}>Đấu giá sách cũ</h1>
             <p className={styles.pageSubtitle}>
               Mỗi bản sách đều được kiểm định tình trạng tại điểm trước khi mở phiên. Người đọc tự do trả giá trong 24 giờ, nhận sách trực tiếp tại điểm giao nhận TP.HCM.
