@@ -58,10 +58,11 @@ Giá bán và giá trị đổi luôn có nhãn phân biệt. Tên sách dài ph
 không thu nhỏ font tự động chỉ để vừa một hàng. Dữ liệu cần quyết định không
 bị cắt bằng dấu ba chấm mà không có cách xem đầy đủ.
 
-Ngoại lệ owner22/10/2026 cho card Home/Search của Member web: cố định chiều cao,
-đo và giảm cỡ chữ theo vùng nội dung khi cần, giữ ngưỡng nhỏ nhất theo rem. Tên quá
-dài tại ngưỡng này được rút gọn kèm nguyên văn trong tooltip/accessibility và
-đường xem sách/nguồn. Không làm mất số tiền; không áp ngoại lệ này sang RN.
+Ngoại lệ owner27/10/2026 cho card Home/Search của Member web: tên sách, tác giả và
+khu vực giữ một dòng, dùng dấu “…” khi vượt chiều rộng, không tự giảm cỡ chữ.
+Giữ nguyên văn trong DOM/accessibility/tooltip và đường xem sách/nguồn. Giá vẫn
+được fit đầy đủ trong vùng riêng, không cắt mất số tiền. Quyết định này thay phần
+auto-shrink tên/tác giả/khu vực của22/10; không áp ngoại lệ này sang RN.
 
 Giọng văn ấm, ngắn, cụ thể. Lỗi nói điều gì chưa làm được và bước tiếp theo;
 không đổ lỗi cho người dùng. Thuật ngữ nội bộ như DTO, endpoint, SRS, exception
