@@ -13,6 +13,7 @@ import { session } from "../../core/session";
 import { Button, ErrorNotice } from "../../core/ui";
 import { mediaRead } from "./contracts";
 import { reviewImageReady } from "./media-readiness";
+import { playTaskMotion } from "../../core/task-motion";
 import styles from "./ReviewGallery.module.css";
 
 export function ReviewGallery({
@@ -36,6 +37,25 @@ export function ReviewGallery({
   const root = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
   const viewport = useRef<HTMLDivElement>(null);
+  const imageMotions = useRef<
+    Partial<Record<"preview" | "viewer", () => void>>
+  >({});
+  function revealImage(image: HTMLImageElement, target: "preview" | "viewer") {
+    imageMotions.current[target]?.();
+    imageMotions.current[target] = playTaskMotion(
+      image,
+      [{ opacity: 0.55 }, { opacity: 1 }],
+      180,
+    );
+  }
+  useEffect(() => {
+    const motions = imageMotions.current;
+    return () => {
+      Object.values(motions).forEach((stop) => stop?.());
+      delete motions.preview;
+      delete motions.viewer;
+    };
+  }, [active, open]);
   const queries = useQueries({
     queries: ids.map((id) => ({
       queryKey: ["review-media", listingId, id],
@@ -111,9 +131,11 @@ export function ReviewGallery({
           }}
         >
           <img
+            key={current.url}
             src={current.url}
             alt={`Ảnh ${active + 1} do người đăng cung cấp`}
             referrerPolicy="no-referrer"
+            onLoad={(event) => revealImage(event.currentTarget, "preview")}
             onError={() =>
               setFailed((old) => ({ ...old, [ids[active]]: current.url }))
             }
@@ -256,10 +278,12 @@ export function ReviewGallery({
         >
           {current && ready[active] && (
             <img
+              key={current.url}
               src={current.url}
               alt={`Chi tiết ảnh ${active + 1}`}
               referrerPolicy="no-referrer"
               style={{ width: `${zoom}%` }}
+              onLoad={(event) => revealImage(event.currentTarget, "viewer")}
               onError={() =>
                 setFailed((old) => ({ ...old, [ids[active]]: current.url }))
               }

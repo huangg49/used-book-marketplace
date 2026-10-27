@@ -130,6 +130,10 @@
 .groupItems[hidden] {
   display: none !important;
 }
+.groupTitle[data-disclosure="true"] + .groupItems:not([hidden]) {
+  animation: group-ink 180ms ease-out !important;
+}
+@keyframes group-ink { from { opacity: .45; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
 .groupTitle {
   margin: 8px 0 4px;
   padding: 0 12px;

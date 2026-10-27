@@ -1,4 +1,6 @@
 import { ErrorNotice } from "./ui";
+import { useRef } from "react";
+import { useVisibleMotion } from "./task-motion";
 
 type ListResult = {
   data: unknown;
@@ -22,10 +24,27 @@ export function ListFeedback({
   retryDisabled?: boolean;
 }) {
   const retained = result.data !== undefined;
+  const root = useRef<HTMLDivElement>(null);
+  useVisibleMotion(
+    root,
+    result.isPending ||
+      (retained && result.isFetching && !result.isFetchingNextPage),
+  );
   return (
-    <>
+    <div ref={root} className="list-feedback">
       {result.isPending && (
-        <p className="empty" role="status">{loadingText}</p>
+        <div className="list-loading" role="status">
+          <p>{loadingText}</p>
+          <div className="list-skeleton" aria-hidden="true">
+            {[0, 1, 2].map((n) => (
+              <div key={n}>
+                <i />
+                <span />
+                <span />
+              </div>
+            ))}
+          </div>
+        </div>
       )}
       {result.error != null && !result.isFetchNextPageError && (
         <>
@@ -42,9 +61,18 @@ export function ListFeedback({
           )}
         </>
       )}
-      {retained && result.isFetching && !result.isFetchingNextPage && (
-        <p className="muted" role="status">Đang cập nhật danh sách…</p>
+      {retained && (
+        <div
+          className="refresh-status"
+          data-busy={result.isFetching && !result.isFetchingNextPage}
+        >
+          <p className="muted" role="status">
+            {result.isFetching && !result.isFetchingNextPage
+              ? "Đang cập nhật danh sách…"
+              : ""}
+          </p>
+        </div>
       )}
-    </>
+    </div>
   );
 }

@@ -3,6 +3,57 @@
 Ngày: 27/09/2026. Phạm vi: web Staff/Admin sử dụng API thật theo OpenAPI 0.6.0.
 Quyết định kiến trúc: [ADR 0010](../adr/0010-operations-review-client.md).
 
+## Chuyển động tác vụ — 27/10/2026
+
+Source: `codex/admin-ui-refactor`, base `b544117`; commit subject
+`feat(admin): unify task motion across operations workspace`. Áp theo phương án
+motion owner đã duyệt, dùng Pro Max/Taste/Impeccable trong nhận diện hiện có.
+
+- `MotionPanel` mở220ms/đóng140ms và đổi chiều cao khi chuyển tab điểm. Chỉ giữ
+  khung giấy rỗng khi đóng, gỡ form sống ngay; focus/input được ưu tiên và đổi
+  tác vụ nhanh hủy animation trước. ResizeObserver chỉ đọc, cập nhật ở frame kế
+  tiếp để tránh vòng resize của phiếu lồng nhau. Không dùng animation kết thúc
+  để quyết định submit, quyền, state hoặc thời điểm unmount form.
+- Hàng chờ Review/Operations và bảng người dùng chỉ animate hàng thêm/di chuyển/
+  revision thay đổi. Polling không đổi không phát lại toàn danh sách; tối đa6hàng
+  mới fade180ms. Skeleton3hàng ở lần tải đầu; refresh có chỗ trạng thái cố định,
+  giữ dữ liệu và recovery hiện có. Loading loop dừng khi ẩn/mất focus/offscreen.
+- Kết quả Operations xuất hiện gần hàng vừa xử lý sau ACK và reconciliation,
+  được focus một lần cho từng outcome; polling dời hàng không giành focus lại.
+  Không đổi immutable key/body/version hoặc nhánh unknown/reconcile/retry.
+- PaperSelect ở hai filter người dùng có Enter/phím mũi tên/Home/End/typeahead,
+  Escape/Tab, ngoài vùng và blur; popup đóng inert, có exit trên browser hỗ trợ
+  discrete transitions. Giữ draft tìm kiếm khi đổi filter. Native select trong
+  form nghiệp vụ vẫn giữ tương tác nền tảng, không thay toàn bộ field semantics.
+- Gallery fade ảnh mới sau load và zoom bằng nút180ms; không giữ ảnh cũ dưới
+  nhãn mới hoặc thay readiness. Dialog có progressive exit140ms, đóng native
+  trả focus ngay. Login/empty/menu có một lần xuất hiện nhẹ; không thêm vòng lặp
+  Dashboard, giữ ba cảnh đã duyệt, workboard đứng yên và depth trên hai liên kết.
+  Chính sách motion owner11/10 được giữ bằng override trong phạm vi component.
+- PASS Admin202unit/component/model tests, lint/typecheck/build; bundle startup
+  JS497519/500000bytes,10page modules deferred. Không thêm package/lockfile;
+  CSS/WAAPI và helper chỉ tải theo feature. HTTP/Mongo riêng7tests PASS gồm
+  lost ACK/replay/reconcile/quyền/revision. Storage QA fake, không là live bucket.
+  Detector chạy một lượt13target UI, trả0finding; không thay thế kiểm thị giác.
+- CUA IAB Windows1440×1000: dropdown phím/Escape/typeahead chọn Staff, giữ từ khóa
+  chưa submit; popup đóng inert/display none. Quản lý điểm đổi tab chỉ một form,
+  hủy xác nhận giữ lựa chọn, lưu tên/trạng thái QA nhận biên nhận đúng hàng và
+  focus. Pure Staff nhận sách QA → Received với kệQA-01; thử mở/đóng liên tiếp,
+  lỗi mã kệ trống focus field, biên nhận sau ACK và0editor trong panel đóng.
+  Mobile390×844 mở phiếu kiểm tra không tràn ngang; phát hiện padding lồng làm
+  nội dung hẹp và đã mở rộng phiếu sang cả hàng trong bản sửa cuối.
+- Log QA có ResizeObserver warning khi đổi tab; deferred writes và regression
+  test đã bổ sung. **Browser confirmation sau sửa resize/mobile NOT RUN** vì
+  quyền browser bị tắt giữa lượt. Gallery fade/zoom mới, native dialog exit,
+  hidden-tab/viewport playback và full browser suite chưa được xác nhận lại.
+  Chưa đo FPS/INP/CPU, chưa audit screen reader/chữ lớn/Safari/Firefox/native,
+  remote CI hoặc human review. Không coi source tests là bằng chứng mượt máy thật.
+
+Fixture tự dọn database/users/roles riêng sau QA; dừng API/Vite/Mongo QA của lượt
+này, giữ main API/Admin đang chạy. Không sửa seed/env/database chính/backend,
+không push/PR/merge, không đóng gate READINESS. Khi browser được bật lại, xác nhận
+những ca còn thiếu ở trên trước review tích hợp.
+
 ## Bàn đọc hai vùng — 27/10/2026
 
 Source: `codex/admin-ui-refactor`, sau base `729a442`; commit gói có subject

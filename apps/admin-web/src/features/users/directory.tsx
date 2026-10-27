@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useListMotion } from "../../core/task-motion";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useOutletContext, useSearchParams } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
@@ -11,6 +12,7 @@ import { dateText } from "../../core/format";
 import { canReviewCatalog, session } from "../../core/session";
 import { Button, CursorPagination, Notice } from "../../core/ui";
 import { ListFeedback } from "../../core/list-feedback";
+import { PaperSelect } from "../../core/PaperSelect";
 import {
   directoryRequest,
   directoryRoles,
@@ -29,7 +31,11 @@ const roleLabel: Record<User["roles"][number], string> = {
 export function UserDirectory() {
   const user = useOutletContext<CurrentUser>();
   if (!canReviewCatalog(user))
-    return <Notice tone="warning">Chỉ quản trị viên đang hoạt động được tra cứu tài khoản.</Notice>;
+    return (
+      <Notice tone="warning">
+        Chỉ quản trị viên đang hoạt động được tra cứu tài khoản.
+      </Notice>
+    );
   return <UserDirectoryContent />;
 }
 function UserDirectoryContent() {
@@ -48,6 +54,13 @@ function UserDirectoryContent() {
     getNextPageParam: (last) => last.nextCursor,
   });
   const items = result.data?.pages.flatMap((value) => value.items) ?? [];
+  const rows = useRef<HTMLTableSectionElement>(null);
+  useListMotion(
+    rows,
+    items
+      .map((item) => `${item.id}/${item.status}/${item.roles.join()}`)
+      .join("|"),
+  );
   return (
     <>
       <header className="page-heading">
@@ -59,13 +72,17 @@ function UserDirectoryContent() {
       <DirectoryFilterForm filters={filters} apply={applyFilters} />
       <div className="queue-toolbar">
         <p className="muted" role="status">
-          {result.data && `Đang hiển thị ${items.length} người dùng. Cập nhật ${dateText(result.data.pages[0].serverTime)}.`}
+          {result.data &&
+            `Đang hiển thị ${items.length} người dùng. Cập nhật ${dateText(result.data.pages[0].serverTime)}.`}
         </p>
         <Button busy={result.isFetching} onClick={() => void result.refetch()}>
           Cập nhật danh sách
         </Button>
       </div>
-      <ListFeedback result={result} loadingText="Đang tải danh sách người dùng…" />
+      <ListFeedback
+        result={result}
+        loadingText="Đang tải danh sách người dùng…"
+      />
       {result.isSuccess && !items.length && (
         <div className="empty">
           <p className="folio">—</p>
@@ -86,21 +103,38 @@ function UserDirectoryContent() {
                 <th scope="col">Tạo lúc</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody ref={rows}>
               {items.map((item) => (
-                <tr key={item.id}>
+                <tr
+                  key={item.id}
+                  data-motion-key={item.id}
+                  data-motion-revision={`${item.status}/${item.roles.join()}`}
+                >
                   <th scope="row">
                     <span>{item.displayName}</span>
                     <small>{item.email}</small>
                   </th>
                   <td>
-                    <span className={`user-status status-${item.status.toLowerCase()}`}>
+                    <span
+                      className={`user-status status-${item.status.toLowerCase()}`}
+                    >
                       {statusLabel[item.status]}
                     </span>
                   </td>
-                  <td>{item.roles.map((value) => roleLabel[value]).join(" · ") || "—"}</td>
-                  <td>{item.emailVerifiedAt ? <DirectoryTime value={item.emailVerifiedAt} /> : "Chưa xác minh"}</td>
-                  <td><DirectoryTime value={item.createdAt} /></td>
+                  <td>
+                    {item.roles.map((value) => roleLabel[value]).join(" · ") ||
+                      "—"}
+                  </td>
+                  <td>
+                    {item.emailVerifiedAt ? (
+                      <DirectoryTime value={item.emailVerifiedAt} />
+                    ) : (
+                      "Chưa xác minh"
+                    )}
+                  </td>
+                  <td>
+                    <DirectoryTime value={item.createdAt} />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -109,8 +143,8 @@ function UserDirectoryContent() {
       )}
       {result.data && (
         <p className="directory-scope muted">
-          Danh sách chỉ dùng để tra cứu, không hiển thị mật khẩu, phiên đăng nhập,
-          địa chỉ hoặc số dư.
+          Danh sách chỉ dùng để tra cứu, không hiển thị mật khẩu, phiên đăng
+          nhập, địa chỉ hoặc số dư.
         </p>
       )}
       <CursorPagination
@@ -127,10 +161,16 @@ function UserDirectoryContent() {
 }
 
 const directoryDate = new Intl.DateTimeFormat("vi-VN", {
-  day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Ho_Chi_Minh",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: "Asia/Ho_Chi_Minh",
 });
 const directoryClock = new Intl.DateTimeFormat("vi-VN", {
-  hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Ho_Chi_Minh",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+  timeZone: "Asia/Ho_Chi_Minh",
 });
 function DirectoryTime({ value }: { value: string }) {
   const date = new Date(value);
@@ -175,28 +215,18 @@ function DirectoryFilterForm({
           placeholder="Ví dụ: minh hoặc minh@example.com"
         />
       </label>
-      <label className="field">
-        Trạng thái
-        <select
-          value={filters.status}
-          onChange={(event) => apply({ ...filters, status: event.target.value })}
-        >
-          {directoryStatuses.map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
-      </label>
-      <label className="field">
-        Vai trò
-        <select
-          value={filters.role}
-          onChange={(event) => apply({ ...filters, role: event.target.value })}
-        >
-          {directoryRoles.map(([value, label]) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
-      </label>
+      <PaperSelect
+        label="Trạng thái"
+        value={filters.status}
+        choices={directoryStatuses}
+        onChange={(status) => apply({ ...filters, status })}
+      />
+      <PaperSelect
+        label="Vai trò"
+        value={filters.role}
+        choices={directoryRoles}
+        onChange={(role) => apply({ ...filters, role })}
+      />
       <div className="directory-filter-actions">
         <Button type="submit">Tìm kiếm</Button>
         <Button

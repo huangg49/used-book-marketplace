@@ -57,6 +57,9 @@
 .root .submit :global(.animate-spin) { animation: loginSpin 1s linear infinite !important; }
 @keyframes loginSpin { to { transform: rotate(360deg); } }
 .error { margin-top: 14px; overflow-wrap: anywhere; }
+.paper { animation: paper-arrival 300ms cubic-bezier(.16,1,.3,1) both !important; }
+.paper:focus-within { animation: none !important; }
+@keyframes paper-arrival { from { opacity: .7; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 .error :global(.notice) { margin: 0; font-size: .8125rem; }
 .accessNote { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin: 16px 0 0; padding-top: 10px; border-top: 1px dashed var(--shop-line); color: var(--shop-muted); font-size: .75rem; line-height: 1.8; }
 .accessNote svg { flex-shrink: 0; }

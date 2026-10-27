@@ -26,7 +26,9 @@ describe("list recovery feedback", () => {
   });
   it("does not offer a full-list retry for a next-page error", () => {
     const html = renderToStaticMarkup(<ListFeedback result={{ ...idle, data: {}, error: new Error("offline"), isFetchNextPageError: true }} loadingText="Đang tải…" />);
-    expect(html).toBe("");
+    expect(html).not.toContain('role="alert"');
+    expect(html).not.toContain("Thử tải lại");
+    expect(html).not.toContain("Đang cập nhật danh sách…");
   });
   it("prevents retry during a pending operation", () => {
     const html = renderToStaticMarkup(<ListFeedback result={{ ...idle, error: new Error("offline") }} loadingText="Đang tải…" retryDisabled />);

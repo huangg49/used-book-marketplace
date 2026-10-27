@@ -20,6 +20,7 @@ import type { CurrentUser } from "@used-books/session-client";
 import { canReview, canReviewCatalog, session } from "../../core/session";
 import { Button, CursorPagination } from "../../core/ui";
 import { ListFeedback } from "../../core/list-feedback";
+import { useListMotion } from "../../core/task-motion";
 import {
   catalog,
   labels,
@@ -51,6 +52,7 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
   const selectedId = useMatch("/review/:kind/:id")?.params.id;
   const [showQueue, setShowQueue] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const rowsRef = useRef<HTMLDivElement>(null);
   const [params, setParams] = useSearchParams();
   const filters =
     kind === "listings"
@@ -75,6 +77,7 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
   });
   const items =
     result.data?.pages.flatMap<Listing | Catalog>((page) => page.items) || [];
+  useListMotion(rowsRef,items.map(item=>`${item.id}:${item.version}`).join("/"));
   useLayoutEffect(() => {
     if (listRef.current)
       listRef.current.scrollTop = queueScroll.get(positionKey) ?? 0;
@@ -155,6 +158,7 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
             )}
             <div
               className="queue-list"
+              ref={rowsRef}
               onKeyDown={(event) => {
                 if (
                   event.altKey ||
@@ -199,6 +203,8 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                 <article
                   className={`queue-row ${selectedId === item.id ? styles.selected : ""}`}
                   key={item.id}
+                  data-motion-key={item.id}
+                  data-motion-revision={item.version}
                 >
                   <span className="row-number">
                     {String(index + 1).padStart(2, "0")}

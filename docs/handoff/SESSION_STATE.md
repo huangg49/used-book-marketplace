@@ -1,5 +1,25 @@
 # Điểm lưu hiện tại — 27/10/2026
 
+## Chuyển động tác vụ Admin/Staff — 27/10/2026
+
+- `codex/admin-ui-refactor`, base `b544117`; commit subject
+  `feat(admin): unify task motion across operations workspace`. Phiếu mở/đóng,
+  đổi tab điểm, skeleton/refresh giữ hàng, chuyển động theo thay đổi từng hàng,
+  biên nhận cạnh tác vụ; dropdown giấy bộ lọc người dùng, ảnh/zoom và chi tiết
+  login/empty/menu. CSS/WAAPI, không thêm dependency hoặc sửa API/client khác.
+  Giữ cảnh Dashboard, workboard đứng yên, sidebar modes/delay và command intent.
+- PASS Admin202tests, lint/typecheck/build/bundle (startup JS497519/500000bytes),
+  HTTP/Mongo QA7tests; detector13target không finding. CUA IAB desktop1440×1000
+  đã thử filter phím/draft, đổi tab/hủy xác nhận/lưu điểm và Staff nhận sách thật
+  trên QA; mở/đóng nhanh và lỗi form. Mobile390×844 không tràn ngang nhưng thấy
+  phiếu hẹp, đã sửa padding. Log có ResizeObserver warning; sửa bằng deferred
+  write ngoài observer, có regression test. Quyền browser bị tắt trước xác nhận
+  lại hai sửa cuối và gallery; không báo browser PASS cho phần chưa xem.
+- QA database/users/roles đã dọn; chỉ dừng QA API/Vite/Mongo, main API ready và
+  Admin5173 trả200. Chưa push/PR/merge, READINESS giữ nguyên. Bước tiếp: bật quyền
+  browser và xác nhận gallery, popup exit, mobile cuối, resize warning/hidden-tab;
+  chưa đo FPS/INP hoặc chạy full browser suite/human review. [Chi tiết](../features/OPERATIONS_REVIEW_REPORT.md#chuyển-động-tác-vụ--27102026).
+
 ## Bàn kiểm duyệt Admin hai vùng — 27/10/2026
 
 - `codex/admin-ui-refactor`, base `729a442`; gói commit subject

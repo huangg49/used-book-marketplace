@@ -25,6 +25,7 @@ import { LeaveGuard } from "./core/leave-guard";
 import { LoginPage } from "./features/auth/LoginPage";
 import { WorkspaceShell } from "./features/navigation/WorkspaceShell";
 import "./App.css";
+import "./task-surfaces.css";
 
 // Stable lazy components: profile refreshes and URL filter changes must not
 // recreate page types or remount unsent forms. These imports run only when the
