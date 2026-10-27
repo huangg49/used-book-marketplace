@@ -1,5 +1,17 @@
 # Điểm lưu hiện tại — 27/10/2026
 
+## Hoàn tất giao diện đổi sách & Đồng bộ merge sạch vào main — 27/10/2026
+
+- Nhánh `feature/exchange-web-completion`, đã merge và push đồng bộ lên `main` (`56d9328`).
+- **Nghiệp vụ & Giao diện đã hoàn tất**:
+  - Tối ưu `ShippingTrackingCard`: gỡ nút tạo đơn thừa bên trên để hợp nhất hành động xuống `ActionCard`, cập nhật thông báo hướng dẫn chờ đối tác tạo đơn theo quy tắc vận chuyển 2 chiều.
+  - Sửa lỗi `ProgressStepper`: khắc phục triệt để lỗi các vòng tròn trắng rỗng do xung đột CSS `.compact .circle`, tích hợp các icon trực quan (`Send`, `Clock`, `Truck`, `ShieldCheck`, `Sparkles`), hiệu ứng pulse sinh động.
+  - Sửa lỗi `ShipmentDialog`: xử lý lỗi icon đè chữ do reset CSS toàn cục (`padding-left: 42px !important`), sửa nút submit bị tàng hình trắng (`var(--shop-wine)` chuẩn thương hiệu).
+  - Khảo sát logic vận chuyển 2 chiều với backend: xác nhận khớp chuẩn nghiệp vụ (cả 2 bên tạo đơn thì đơn vị vận chuyển mới nhận lệnh điều phối tài xế lấy hàng).
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web build`: PASS sạch sẽ (`✓ built in 4.37s`).
+  - Merge vào `main` tự động không xung đột, `origin/main` và `origin/feature/exchange-web-completion` đều up to date tại `56d9328`.
+
 ## Khắc phục cuộn chuột trang hội thoại & Cố định khung chat trong viewport — 27/10/2026
 
 - Nhánh `feat/web-auction-select-from-shelf`.
