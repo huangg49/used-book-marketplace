@@ -297,8 +297,26 @@ export class AuctionIntakesService {
           const [eligible] = await tx.c.listings
             .aggregate([
               { $match: { _id: l._id } },
-              ...publicEligibleStages('Auction'),
-              { $match: { 'r.mode': 'Sale' } },
+              {
+                $match: {
+                  moderation: 'Approved',
+                  visibility: 'Visible',
+                  trade: 'Available',
+                  deletedAt: null,
+                  publishedAt: { $ne: null },
+                  bundle: { $exists: false },
+                },
+              },
+              {
+                $lookup: {
+                  from: 'listing_revisions',
+                  localField: 'currentRevisionId',
+                  foreignField: '_id',
+                  as: 'r',
+                },
+              },
+              { $unwind: '$r' },
+              { $match: { 'r.submittedAt': { $ne: null } } },
               { $project: { _id: 1 } },
             ])
             .toArray();
@@ -306,7 +324,7 @@ export class AuctionIntakesService {
             throw new DomainError(
               409,
               'InvalidState',
-              'Chỉ sách đấu giá của bạn đã được duyệt, đang hiển thị và còn trống mới được gửi tới điểm.',
+              'Chỉ sách của bạn đã được duyệt, đang hiển thị và còn trống mới được đưa lên đấu giá.',
             );
           const r = (await tx.c.listing_revisions.findOne({
             _id: l.currentRevisionId!,
@@ -368,7 +386,8 @@ export class AuctionIntakesService {
             startPrice: body.startPrice,
             step: body.step,
             buyNowPrice: body.buyNowPrice,
-            protectiveValue: r.salePrice!,
+            protectiveValue:
+              body.declaredValue ?? r.salePrice ?? r.exchangeValue ?? body.startPrice,
             policyCode: 'HCM-AUCTION-v1',
             state: 'AwaitingDropoff',
             version: 1,
@@ -437,6 +456,16 @@ export class AuctionIntakesService {
       body.startPrice > AUCTION_MAX_PRICE
     )
       invalidField('startPrice', 'Giá khởi điểm từ 10.000đ đến 1.000.000đ.');
+    if (body.declaredValue !== undefined && body.declaredValue !== null) {
+      if (
+        body.declaredValue < AUCTION_MIN_PRICE ||
+        body.declaredValue > AUCTION_MAX_PRICE
+      )
+        invalidField(
+          'declaredValue',
+          'Giá trị khai báo từ 10.000đ đến 1.000.000đ.',
+        );
+    }
     if (body.buyNowPrice !== null) {
       if (
         body.buyNowPrice <= body.startPrice ||

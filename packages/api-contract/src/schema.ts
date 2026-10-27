@@ -4990,6 +4990,7 @@ export interface components {
             /** @enum {integer} */
             step: 10000 | 50000;
             buyNowPrice: number | null;
+            declaredValue?: number;
         };
         AuctionVersionCommand: {
             expectedVersion: number;

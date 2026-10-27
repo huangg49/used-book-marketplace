@@ -1,6 +1,30 @@
 # Điểm lưu hiện tại — 27/10/2026
 
-## Hiệu ứng chuyển trang, cuộn quán tính Lenis & Morphing phóng ảnh bìa (Tao Tajima) — 27/10/2026
+## Chọn sách trực tiếp từ kệ để đấu giá & Nhập giá trị khai báo trên trang mở phiên — 27/10/2026
+
+- Nhánh `feat/web-auction-select-from-shelf` từ `feat/web-search-transition-animations` (`6219b1b`).
+- **Nghiệp vụ**:
+  - Loại bỏ bước bắt buộc phải tạo sách riêng thuộc kênh `channel: Auction` mới được mở phiên đấu giá.
+  - Cho phép người bán chọn trực tiếp bất kỳ cuốn sách nào đã được duyệt từ kệ sách của mình (`Approved`, `Visible`, `Available`, không bundle) để đưa lên sàn đấu giá.
+  - Chuyển trường nhập **Giá trị khai báo (Giá trị bảo vệ sách)** trực tiếp ra trang mở phiên đấu giá (`/auctions/new`), mặc định gợi ý theo giá niêm yết/trao đổi trên kệ của cuốn sách được chọn và cho phép người bán tùy chỉnh (từ 10.000đ đến 1.000.000đ).
+  - Đảm bảo ràng buộc nghiệp vụ (invariants): Ngay khi gửi yêu cầu tiếp nhận đấu giá (`createAuctionIntake`), bài đăng trên kệ được chuyển sang trạng thái `Reserved` với `exclusive_commitments` loại `AuctionIntake`. Nhờ đó, cuốn sách sẽ **ngay lập tức ẩn khỏi tất cả kệ sách công khai và tìm kiếm marketplace** cho tới khi kết thúc phiên hoặc được thu hồi về kệ nếu bị hủy.
+- **Contract & Implementation**:
+  - `packages/api-contract/openapi.yaml` & `src/schema.ts`: Bổ sung trường tùy chọn `declaredValue` (integer, min 10000, max 1000000) vào `CreateAuctionIntake`. Chạy `pnpm contract:generate` và `pnpm contract:check` PASS.
+  - `apps/api/src/modules/auctions/auction-intakes.service.ts`: Nới lỏng truy vấn bài đăng hợp lệ: chấp nhận bài đăng `Approved`, `Visible`, `Available` của người gọi không giới hạn channel `Auction`. Tính `protectiveValue` từ `body.declaredValue ?? r.salePrice ?? r.exchangeValue ?? body.startPrice`. Validate khoảng giá trị khai báo 10k - 1M trong `validatePrices`.
+  - `apps/user-web/src/lib/owner-listing-labels.ts`: Cập nhật `auctionEligible` chấp nhận bài đăng hợp lệ trên kệ của người bán.
+  - `apps/user-web/src/services/auctions.ts`: Thêm `declaredValue?: number | null` vào `CreateIntakeBody` và kiểm tra lỗi trong `intakePriceErrors`.
+  - `apps/user-web/src/pages/CreateAuctionPage.tsx`:
+    - Truy vấn toàn bộ sách của người bán trên kệ bằng `getMyListings(undefined, undefined, 50)`.
+    - Thẻ chọn sách hiển thị giá niêm yết trên kệ (`salePrice` hoặc `exchangeValue`).
+    - Thêm ô nhập `PriceInput` cho "Giá trị khai báo (Giá trị bảo vệ)" tại Bước 3, tự động cập nhật gợi ý giá khởi điểm và vé xem trước phiếu đấu giá.
+    - Cập nhật văn bản giải thích và hộp thoại xác nhận về việc sách sẽ tạm ngừng hiển thị trên thị trường công khai.
+- **Kiểm tra**:
+  - `pnpm contract:check`: PASS.
+  - `pnpm --filter @used-books/api typecheck`: PASS.
+  - `pnpm --filter @used-books/user-web typecheck`: PASS.
+  - `pnpm --filter @used-books/api test auction`: 6 files / 42 tests PASS.
+  - `pnpm --filter @used-books/user-web test`: 31 files / 231 tests PASS.
+
 
 - Nhánh `feat/web-search-transition-animations` từ `origin/main` (`6541705`).
 - Thực hiện chuỗi cải tiến chuyển động và trải nghiệm thị giác theo yêu cầu người dùng:

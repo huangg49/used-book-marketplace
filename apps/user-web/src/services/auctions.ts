@@ -225,6 +225,7 @@ export function listHandoverPoints() {
 export type CreateIntakeBody = {
   listingId: string; expectedListingVersion: number; pointId: string
   startPrice: number; step: 10000 | 50000; buyNowPrice: number | null
+  declaredValue?: number | null
 }
 export function createAuctionIntake(body: CreateIntakeBody, key: string) {
   return command('/auction-intakes', key, body)
@@ -232,13 +233,22 @@ export function createAuctionIntake(body: CreateIntakeBody, key: string) {
 export const AUCTION_MIN_PRICE = 10_000
 
 /** Client mirror of the server's POL-39 checks; the server stays authoritative. */
-export function intakePriceErrors(startPrice: number | null, step: number, buyNowPrice: number | null) {
-  const errors: { startPrice?: string; buyNowPrice?: string } = {}
+export function intakePriceErrors(
+  startPrice: number | null,
+  step: number,
+  buyNowPrice: number | null,
+  declaredValue?: number | null,
+) {
+  const errors: { startPrice?: string; buyNowPrice?: string; declaredValue?: string } = {}
   if (!startPrice) errors.startPrice = 'Nhập giá khởi điểm.'
   else if (startPrice < AUCTION_MIN_PRICE || startPrice > AUCTION_MAX_PRICE) errors.startPrice = 'Giá khởi điểm từ 10.000đ đến 1.000.000đ.'
-  else if (buyNowPrice !== null) {
-    if (buyNowPrice <= startPrice || buyNowPrice > AUCTION_MAX_PRICE) errors.buyNowPrice = 'Giá mua ngay phải lớn hơn giá khởi điểm và không quá 1.000.000đ.'
-    else if ((buyNowPrice - startPrice) % step !== 0) {
+  if (declaredValue !== undefined) {
+    if (!declaredValue) errors.declaredValue = 'Nhập giá trị khai báo của sách.'
+    else if (declaredValue < AUCTION_MIN_PRICE || declaredValue > AUCTION_MAX_PRICE) errors.declaredValue = 'Giá trị khai báo từ 10.000đ đến 1.000.000đ.'
+  }
+  if (buyNowPrice !== null) {
+    if (buyNowPrice <= (startPrice ?? 0) || buyNowPrice > AUCTION_MAX_PRICE) errors.buyNowPrice = 'Giá mua ngay phải lớn hơn giá khởi điểm và không quá 1.000.000đ.'
+    else if (startPrice && (buyNowPrice - startPrice) % step !== 0) {
       const up = Math.min(startPrice + Math.ceil((buyNowPrice - startPrice) / step) * step, AUCTION_MAX_PRICE)
       errors.buyNowPrice = `Giá mua ngay phải bằng giá khởi điểm cộng một số bước giá. Thử ${up.toLocaleString('vi-VN')}đ.`
     }
