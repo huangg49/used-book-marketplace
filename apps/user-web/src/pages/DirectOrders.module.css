@@ -27,20 +27,6 @@
   flex-wrap: wrap;
 }
 
-.headerKicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: 9999px;
-  background: #fdf6ec;
-  border: 1px solid #fed7aa;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #9a3412;
-  margin-bottom: 8px;
-}
-
 .dashboardTitle {
   margin: 0 0 6px;
   font-family: var(--shop-display, Anton, sans-serif);

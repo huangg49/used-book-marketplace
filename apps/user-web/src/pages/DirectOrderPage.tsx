@@ -96,10 +96,6 @@ export function DirectOrderListPage() {
       {/* Page Header */}
       <header className={styles.dashboardHeader}>
         <div>
-          <div className={styles.headerKicker}>
-            <ShoppingBag size={14} aria-hidden="true" />
-            <span>Quản lý giao dịch</span>
-          </div>
           <h1 className={styles.dashboardTitle}>Đơn hàng của tôi</h1>
           <p className={styles.dashboardSubtitle}>
             Theo dõi tiến trình các đơn mua và đơn bán sách, phương thức giao nhận và xác minh hoàn tất.
