@@ -1,5 +1,23 @@
 # Điểm lưu hiện tại — 27/10/2026
 
+## Sửa ảnh bản sách bị cắt trên Member web — 27/10/2026
+
+- Nhánh `fix/web-listing-photo-fit`, base main `a463041`; gói commit
+  `fix(web): preserve full listing photos in cards and galleries`. Owner giao
+  push/tạo PR và kiểm CI; kết quả remote theo PR của nhánh, không tự merge.
+- Component `ListingPhoto` dùng chung cho Home/Search, chi tiết, ảnh lớn và các
+  consumer chuyển từ `object-fit: cover` sang `contain`; thêm khoảng đệm riêng
+  cho card để giữ bìa khỏi nhãn tình trạng/hiệu ứng hover, giữ motion hiện có.
+- Đối chiếu chỉ đọc ảnh Doraemon gốc với ảnh tải qua public API/storage thật:
+  cả hai350×553px, đúng tỷ lệ; không cần đăng lại ảnh hoặc sửa pipeline upload.
+- PASS: user-web build/typecheck,231unit/31file, lint (6warning cũ), CSS mới đã
+  được Vite phục vụ; diff check. Detector có4advisory radius14px vốn có.
+- Browser visual desktop/mobile NOT RUN: Computer Use tự chặn vì không xác định
+  chắc URL Chrome trên Windows. Dùng ảnh người dùng cung cấp và source để chẩn
+  đoán; không nhận là browser/native/human PASS. Engine báo config/surface brief
+  cũ, giữ ngoài phạm vi; READINESS không đổi. Tiếp theo: xem Home/Search, chi tiết
+  và ảnh lớn trên desktop/mobile; chưa kiểm được ảnh ngang bằng browser.
+
 ## Seller tự đăng/hẹn phiên, mua ngay sau bid — 27/10/2026
 
 - Nhánh `feature/seller-scheduled-auctions` từ main `d3b19e5`; chưa push/PR.
