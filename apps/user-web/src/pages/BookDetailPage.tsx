@@ -14,6 +14,7 @@ import {
 } from "../services/purchase-conversations";
 import { getPublicListing, type PublicListing } from "../services/public-listings";
 import styles from "./BookDetailPage.module.css";
+import "../components/BookTransition.css";
 import {
   categoryFor,
   categoryPath,
@@ -51,7 +52,12 @@ export function BookDetailPage() {
       ? catalogReturn
       : ROUTES.search;
   const back = (
-    <Link className={styles.back} to={returnTo}>
+    <Link
+      className={styles.back}
+      to={returnTo}
+      viewTransition
+      state={{ morphBookId: id }}
+    >
       <ArrowLeft size={17} aria-hidden="true" /> Về kệ sách
     </Link>
   );
@@ -126,7 +132,7 @@ export function BookDetailPage() {
     buyerOrderConversation ?? sellerOrderConversation ?? activeConversation;
   function requestPurchase() { navigate(`/chat/start/${book.id}?intent=Negotiation`); }
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-book-detail="true">
       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
         {back}
       </motion.div>
