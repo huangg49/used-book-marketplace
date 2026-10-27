@@ -1,5 +1,27 @@
 # Điểm lưu hiện tại — 27/10/2026
 
+## Tái thiết kế giao diện Đơn hàng của tôi (`/orders`) & Tích hợp vào không gian Hồ sơ tài khoản (`DashboardLayout`) — 27/10/2026
+
+- Nhánh `feat/web-auction-select-from-shelf`.
+- **Tích hợp vào DashboardLayout (Hồ sơ cá nhân)**:
+  - Chuyển route `/orders` từ `MainLayout` độc lập vào danh sách children của `DashboardLayout` trong `apps/user-web/src/app/router.tsx`.
+  - Giúp người dùng khi truy cập hoặc nhấn mục "Đơn hàng của tôi" từ menu tài khoản sẽ thấy trọn vẹn sidebar quản lý cá nhân (Tổng quan, Hồ sơ của tôi, Ví của tôi, Đơn hàng của tôi, Kệ sách của tôi, Đấu giá của tôi, Đề nghị đổi sách, Thông báo), tab "Đơn hàng của tôi" tự động highlight kích hoạt đồng bộ.
+- **Tái thiết kế giao diện hiện đại & thẩm mỹ Warm-Paper Editorial**:
+  - Gỡ bỏ layout thô sơ kiểu text đơn điệu ("Xem đơn c9cedc72", các dòng chữ xám không phong cách).
+  - Thiết kế Page Header chuyên nghiệp: Huy hiệu "Quản lý giao dịch", tiêu đề nghệ thuật, tổng số đơn hàng dạng badge đếm số lượng.
+  - Bộ lọc kép thông minh:
+    - Tabs vai trò giao dịch: "Tất cả", "Đơn mua" (icon giỏ hàng + đếm số), "Đơn bán" (icon gian hàng + đếm số).
+    - Status chips: "Tất cả trạng thái", "Đang xử lý", "Hoàn tất", "Đã hủy / hết hạn".
+  - Thẻ đơn hàng (Order Cards) chuẩn mực:
+    - Header thẻ: Tag vai trò với màu sắc định danh riêng ("Bạn mua" sắc xanh lá trang nhã, "Bạn bán" sắc hổ phách ấm áp), mã đơn dạng tag rút gọn `#c9cedc72`, ngày tạo kèm icon lịch, badge trạng thái giao dịch (CheckCircle2 xanh khi hoàn tất, Clock khi đang xử lý, XCircle khi đã hủy).
+    - Body thẻ: Thumbnail icon sách nghệ thuật, tên cuốn sách in hoa chữ đậm, dòng diễn giải hướng dẫn giai đoạn giao dịch tương ứng (chờ thanh toán, đang chuẩn bị sách, đang vận chuyển, chờ nghiệm thu giao nhận).
+    - Nút CTA chuyển hướng: "Chi tiết & Hội thoại" dẫn thẳng vào `/chat/orders/:id` với hover state mượt mà.
+  - Trạng thái rỗng (Empty State) và đang tải (Skeleton Shimmer) thẩm mỹ, có liên kết "Tìm sách để mua" và "Đăng bán sách của bạn".
+  - Nút "Xem thêm đơn hàng cũ hơn" phục vụ phân trang vô hạn (`infiniteQuery`).
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web test`: 31 files / 231 tests PASS.
+
 ## Tối giản giao diện trang Đấu giá (`/auctions`) — Xóa bỏ hoàn toàn Hero Banner — 27/10/2026
 
 - Nhánh `feat/web-auction-select-from-shelf`.
