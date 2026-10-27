@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { MODEL_OUTPUT_SCHEMA } from './output-check.js';
+import { NvidiaChatError, nvidiaChat } from './nvidia-chat.js';
 
 export type ModelFailure = 'Timeout' | 'InvalidOutput' | 'ProviderError' | 'Refusal';
 
@@ -265,6 +266,40 @@ export class GeminiPriceModel extends PriceModel {
   }
 }
 
+export interface NvidiaOptions {
+  apiKey: string;
+  model: string;
+  timeoutMs: number;
+  baseUrl?: string;
+  fetcher?: typeof fetch;
+}
+
+export const NVIDIA_DEFAULT_MODEL = 'nvidia/nemotron-3.5-lightning-30b-a3b';
+
+// NVIDIA NIM (Nemotron). Reasoning is switched off in nvidia-chat.ts so the
+// bounded token budget goes to the JSON answer.
+export class NvidiaPriceModel extends PriceModel {
+  readonly model: string;
+  constructor(private readonly options: NvidiaOptions) {
+    super();
+    this.model = options.model;
+  }
+  async draft(system: string, user: string): Promise<ModelDraft> {
+    try {
+      return await nvidiaChat(
+        this.options,
+        system,
+        user,
+        MODEL_OUTPUT_SCHEMA as unknown as Record<string, unknown>,
+      );
+    } catch (e) {
+      if (e instanceof NvidiaChatError)
+        throw new PriceModelError(e.kind, e.message, e.usage);
+      throw new PriceModelError('ProviderError', 'Provider call failed');
+    }
+  }
+}
+
 // Builds the configured provider; null without a key (or, for the API, when
 // the feature flag is off).
 export function priceModelFromConfig(
@@ -276,6 +311,13 @@ export function priceModelFromConfig(
     return null;
   const provider = get('PRICE_ASSIST_PROVIDER') || 'anthropic';
   const timeoutMs = Number(get('PRICE_ASSIST_TIMEOUT_MS') || 20_000);
+  if (provider === 'nvidia')
+    return new NvidiaPriceModel({
+      apiKey,
+      model: get('PRICE_ASSIST_MODEL') || NVIDIA_DEFAULT_MODEL,
+      timeoutMs,
+      baseUrl: get('NVIDIA_BASE_URL') || undefined,
+    });
   if (provider === 'gemini')
     return new GeminiPriceModel({
       apiKey,
@@ -294,6 +336,9 @@ export function priceModelFromConfig(
 // USD per million tokens (input, output); tokens x rate = micro-USD.
 // Gemini rows are paid-tier list prices as last known; confirm on Google's
 // pricing page or set PRICE_ASSIST_INPUT/OUTPUT_USD_PER_MTOK.
+// NVIDIA rows are not list prices (the build.nvidia.com trial is credit
+// based); they are deliberately high so the budget never under-counts. Set
+// the override for a paid NIM plan.
 // gemini-3.8-flash: the list price from 2027-01-01 (0.75/3.75 until then), so
 // the budget cap never under-counts. 2.5 models are closed to new API users.
 const KNOWN_RATES: Record<string, [number, number]> = {
@@ -304,6 +349,8 @@ const KNOWN_RATES: Record<string, [number, number]> = {
   'gemini-2.5-flash': [0.3, 2.5],
   'gemini-2.5-flash-lite': [0.1, 0.4],
   'gemini-2.5-pro': [1.25, 10],
+  [NVIDIA_DEFAULT_MODEL]: [0.5, 2],
+  'nvidia/nemotron-3.5-super-vl-120b-a12b': [1, 4],
 };
 export function rateFor(
   model: string,

@@ -1,0 +1,175 @@
+{
+  "summary": {
+    "source": "cover-scan",
+    "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+    "fallback": null,
+    "ranAt": "2026-10-27T14:06:29.938Z",
+    "cases": 4,
+    "scoredCases": 4,
+    "titleExact": "3/4",
+    "titleIgnoringAccents": "3/4",
+    "authorsFound": "2/3",
+    "isbnFound": "NOT SCORED",
+    "wrongIsbn": 0,
+    "needsMoreData": 0,
+    "failed": 1,
+    "latencyMs": {
+      "p50": 1593,
+      "p95": 25333
+    },
+    "tokens": {
+      "input": 3189,
+      "output": 323
+    },
+    "costUsd": 0.004481,
+    "meetsAdr0048": "NOT EVIDENCE (cover-scan, 4 scored cases)",
+    "skipped": []
+  },
+  "results": [
+    {
+      "id": "doraemon-01-ja",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "ドラえもん",
+        "authors": [
+          "藤子・F・不二雄"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "ドラえもん",
+        "authors": [
+          "藤子・F・不二雄"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "ja",
+        "edition": "第1巻",
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bìa sau và trang bản quyền để đọc nhà xuất bản, năm xuất bản, ISBN"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1587,
+      "tokens": {
+        "input": 735,
+        "output": 97
+      }
+    },
+    {
+      "id": "hp6-hoang-tu-lai",
+      "photos": 1,
+      "scored": true,
+      "status": "Failed",
+      "failure": "Timeout",
+      "usedFallback": false,
+      "expected": {
+        "title": "Harry Potter và Hoàng Tử Lai",
+        "authors": [
+          "J. K. Rowling"
+        ],
+        "isbn": null
+      },
+      "read": null,
+      "missing": [],
+      "titleExact": false,
+      "titleIgnoringAccents": false,
+      "authorsFound": false,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "latencyMs": 25333,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      }
+    },
+    {
+      "id": "hp1-hon-da-phu-thuy",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Harry Potter và Hòn Đá Phù Thủy",
+        "authors": [
+          "J.K. Rowling"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Harry Potter và Hòn Đá Phù Thủy",
+        "authors": [
+          "J. K. Rowling"
+        ],
+        "publisher": "NHÀ XUẤT BẢN TRẺ",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": "In lần thứ 53",
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc ISBN và năm xuất bản"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 2200,
+      "tokens": {
+        "input": 1211,
+        "output": 110
+      }
+    },
+    {
+      "id": "alice-xu-so-than-tien",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Alice ở xứ sở thần tiên",
+        "authors": [],
+        "isbn": null
+      },
+      "read": {
+        "title": "Alice ở xứ sở thần tiên",
+        "authors": [],
+        "publisher": "NHÀ XUẤT BẢN TRẺ",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp gáy sách để đọc thông tin tác giả và nhà xuất bản",
+        "Chụp trang bản quyền để đọc ISBN, năm xuất bản, lần tái bản"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": null,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1593,
+      "tokens": {
+        "input": 1243,
+        "output": 116
+      }
+    }
+  ]
+}

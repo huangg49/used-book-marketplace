@@ -60,6 +60,11 @@ function metadata(r: CatalogRevisionDoc): Wire['CatalogMetadata'] {
     isbn: r.isbn,
   };
 }
+// Public projection of one revision, shared with photo autofill matches.
+export const publicBookOf = (id: string, r: CatalogRevisionDoc): Wire['PublicBook'] => ({
+  id,
+  ...metadata(r),
+});
 function privateBook(b: Book): Wire['PrivateCatalogRequest'] {
   const current = b.currentRevision!;
   return {
@@ -389,7 +394,7 @@ export class CatalogService {
         _id: b.currentRevisionId,
       }));
     if (!b || !r) throw notFound();
-    return { id: b._id, ...metadata(r) };
+    return publicBookOf(b._id, r);
   }
   async publicList(
     query: Record<string, string | number>,
