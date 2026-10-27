@@ -1332,22 +1332,41 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       const seller = await actor(), l = await saleListing(seller, 'Sale', 'Marketplace');
       const listing = (await db.c.listings.findOne({ _id: l.id }))!;
       const revision = (await db.c.listing_revisions.findOne({ _id: listing.currentRevisionId! }))!;
-      if (reason === 'hidden') await db.c.listings.updateOne({ _id: l.id }, { $set: { visibility: 'Hidden' } });
-      if (reason === 'draft') await db.c.listings.updateOne({ _id: l.id }, { $set: { moderation: 'Draft' } });
-      if (reason === 'sold') await db.c.listings.updateOne({ _id: l.id }, { $set: { trade: 'Sold' } });
-      if (reason === 'unpublished') await db.c.listings.updateOne({ _id: l.id }, { $set: { publishedAt: null } });
-      if (reason === 'catalog') await db.c.catalog_books.updateOne({ _id: revision.bookId! }, { $set: { status: 'Pending' } });
-      if (reason === 'photos') await db.c.revision_media.deleteMany({ revisionId: revision._id });
-      if (reason === 'bundle') await db.c.listing_revisions.updateOne({ _id: revision._id }, { $set: { bundle: {
-        title: 'Hai tập nguyên bộ', wholeOnly: true, exclusiveOwnershipDeclared: true,
-        items: [{ label: 'Tập 1', condition: 'Good', notes: '' }, { label: 'Tập 2', condition: 'Good', notes: '' }],
-      } } });
-      const refused = await cmd('post', '/auction-intakes', intakeBody(l), seller).expect(409);
-      expect(refused.body.code).toBe('InvalidState');
-      expect(await db.c.auction_intakes.countDocuments({ listingId: l.id })).toBe(0);
-      expect(await db.c.exclusive_commitments.countDocuments({ listingId: l.id })).toBe(0);
-      expect(await db.c.point_slots.countDocuments({ listingId: l.id })).toBe(0);
-      expect((await db.c.listings.findOne({ _id: l.id }))?.version).toBe(l.version);
+      const catalog = (await db.c.catalog_books.findOne({ _id: revision.bookId! }))!;
+      const photos = await db.c.revision_media.find({ revisionId: revision._id }).toArray();
+      try {
+        if (reason === 'hidden') await db.c.listings.updateOne({ _id: l.id }, { $set: { visibility: 'Hidden' } });
+        if (reason === 'draft') await db.c.listings.updateOne({ _id: l.id }, { $set: { moderation: 'Draft' } });
+        if (reason === 'sold') await db.c.listings.updateOne({ _id: l.id }, { $set: { trade: 'Sold' } });
+        if (reason === 'unpublished') await db.c.listings.updateOne({ _id: l.id }, { $set: { publishedAt: null } });
+        if (reason === 'catalog') await db.c.catalog_books.updateOne({ _id: revision.bookId! }, { $set: { status: 'Pending' } });
+        if (reason === 'photos') await db.c.revision_media.deleteMany({ revisionId: revision._id });
+        if (reason === 'bundle') await db.c.listing_revisions.updateOne({ _id: revision._id }, { $set: { bundle: {
+          title: 'Hai tập nguyên bộ', wholeOnly: true, exclusiveOwnershipDeclared: true,
+          items: [{ label: 'Tập 1', condition: 'Good', notes: '' }, { label: 'Tập 2', condition: 'Good', notes: '' }],
+        } } });
+        const refused = await cmd('post', '/auction-intakes', intakeBody(l), seller).expect(409);
+        expect(refused.body.code).toBe('InvalidState');
+        expect(await db.c.auction_intakes.countDocuments({ listingId: l.id })).toBe(0);
+        expect(await db.c.exclusive_commitments.countDocuments({ listingId: l.id })).toBe(0);
+        expect(await db.c.point_slots.countDocuments({ listingId: l.id })).toBe(0);
+        expect((await db.c.listings.findOne({ _id: l.id }))?.version).toBe(l.version);
+      } finally {
+        // These negative probes deliberately bypass the write protocol. Restore
+        // only their injected state so later whole-DB integrity sweeps stay valid.
+        await db.c.listings.updateOne({ _id: l.id }, { $set: {
+          visibility: listing.visibility, moderation: listing.moderation,
+          trade: listing.trade, publishedAt: listing.publishedAt,
+        } });
+        if (reason === 'catalog') await db.c.catalog_books.updateOne(
+          { _id: catalog._id }, { $set: { status: catalog.status } },
+        );
+        if (reason === 'photos' && photos.length) await db.c.revision_media.insertMany(photos);
+        if (reason === 'bundle') await db.c.listing_revisions.updateOne(
+          { _id: revision._id }, revision.bundle === undefined
+            ? { $unset: { bundle: '' } } : { $set: { bundle: revision.bundle } },
+        );
+      }
     },
   );
 

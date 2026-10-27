@@ -92,8 +92,8 @@ try {
     email = "admin@operations.test",
   ) => {
     await p.goto(origin + route);
-    await p.getByLabel("Email", { exact: true }).fill(email);
-    await p.getByLabel("Mật khẩu", { exact: true }).fill(password);
+    await p.getByRole("textbox", { name: "Email", exact: true }).fill(email);
+    await p.getByLabel(/^Mật khẩu(?:\s|$)/).fill(password);
     await click(p, "Đăng nhập");
     await p.waitForURL(origin + (route === "/" ? "/dashboard" : route));
   };
@@ -116,7 +116,7 @@ try {
   });
   await login(p, "/");
   await p
-    .getByRole("heading", { name: "Bàn vận hành.", exact: true })
+    .getByRole("heading", { name: /^Tổng quan\.?$/, exact: true })
     .waitFor();
   await p.keyboard.press("Control+k");
   const commandDialog = p.getByRole("dialog", { name: "Đi tới đâu?", exact: true });
@@ -132,9 +132,11 @@ try {
   await directorySearch.press("Enter");
   await p.waitForURL((url) => url.searchParams.get("q") === "staff@");
   await focused(directorySearch);
-  await p.getByRole("combobox", { name: "Trạng thái", exact: true }).selectOption("ACTIVE");
+  await p.getByRole("combobox", { name: "Trạng thái", exact: true }).click();
+  await p.getByRole("option", { name: "Đang hoạt động", exact: true }).click();
   await p.waitForURL((url) => url.searchParams.get("status") === "ACTIVE");
-  await p.getByRole("combobox", { name: "Vai trò", exact: true }).selectOption("STAFF");
+  await p.getByRole("combobox", { name: "Vai trò", exact: true }).click();
+  await p.getByRole("option", { name: "Nhân viên", exact: true }).click();
   await p.waitForURL((url) => url.searchParams.get("role") === "STAFF");
   await p.getByText("staff@operations.test", { exact: true }).waitFor();
   await directorySearch.fill("Từ khóa chưa gửi");
@@ -148,6 +150,7 @@ try {
   await click(p, "Thử tải lại");
   await p.getByText(/Đang giữ danh sách lần tải trước/).waitFor({ state: "hidden" });
   await p.getByRole("link", { name: "Dashboard", exact: true }).click();
+  await p.getByRole("heading", { name: /^Tổng quan\.?$/, exact: true }).waitFor();
   await p.goBack();
   await p.getByRole("heading", { name: "Người dùng", level: 1 }).waitFor();
   assert.equal(await directorySearch.inputValue(), "staff@");
@@ -164,9 +167,14 @@ try {
   await click(p, "Thu gọn thanh điều hướng");
   await p.waitForFunction(() => document.querySelector('aside[aria-label="Điều hướng quản trị"]').getBoundingClientRect().width <= 81);
   await p.getByRole("link", { name: "Bài đăng sách", exact: true }).focus();
-  await p.getByRole("button", { name: "Ghim thanh điều hướng mở", exact: true }).waitFor();
+  // Explicit collapsed mode must stay compact on keyboard focus. Auto preview is opt-in.
+  assert(await p.locator('aside[aria-label="Điều hướng quản trị"]').evaluate(node => node.getBoundingClientRect().width <= 81));
+  await click(p, "Hiển thị thanh điều hướng");
+  await p.getByRole("radio", { name: "Tự mở khi rê chuột", exact: true }).check();
+  await click(p, "Đóng tùy chọn thanh điều hướng");
+  await p.getByRole("link", { name: "Bài đăng sách", exact: true }).focus();
   await p.waitForFunction(() => document.querySelector('aside[aria-label="Điều hướng quản trị"]').getBoundingClientRect().width >= 279);
-  await click(p, "Ghim thanh điều hướng mở");
+  await click(p, "Mở cố định thanh điều hướng");
   assert(await p.locator("#admin-navigation-panel").evaluate(node => getComputedStyle(node).scrollbarWidth === "none"), "Sidebar must not show a scrollbar");
   assert(await p.locator("#admin-navigation-panel").evaluate(node => node.scrollHeight <= node.clientHeight + 1), "Default Admin menu must fit at desktop height");
   await p.setViewportSize({ width: 1440, height: 640 });
@@ -237,7 +245,7 @@ try {
   await p.keyboard.press("Enter");
   await focused(p.locator("#main"));
   await p.keyboard.press("Tab");
-  await focused(p.getByRole("button", { name: "Chờ duyệt", exact: true }));
+  await focused(p.getByRole("button", { name: "Cập nhật danh sách", exact: true }));
   await p.setViewportSize({ width: 320, height: 780 });
   await p.addStyleTag({ content: "html{font-size:21.6px !important}" });
   const mobileMenu = p.getByRole("button", { name: "Mở thanh điều hướng", exact: true });
@@ -423,6 +431,10 @@ try {
     fixture.member.accessToken,
     { expectedVersion: corrected.version, ownershipDeclared: true },
   );
+  // An external member submission does not invalidate this browser cache. Refresh
+  // the persistent queue explicitly instead of racing its 30-second poll deadline.
+  await p.getByRole("link", { name: "Bài đăng sách", exact: true }).click();
+  await click(p, "Cập nhật danh sách");
   await openListing(p, 1);
   await p.locator(".status-label").filter({ hasText: "Chờ duyệt" }).waitFor();
   await p.getByText("Đã bổ sung ảnh rõ phần trang bị gạch chân.").waitFor();
@@ -586,9 +598,13 @@ try {
       .count(),
     0,
   );
-  assert.equal(
-    await p.evaluate(() => localStorage.length + sessionStorage.length),
-    0,
+  assert.deepEqual(
+    await p.evaluate(() => ({
+      local: Object.keys(localStorage).map(key => [key, localStorage.getItem(key)]),
+      session: Object.keys(sessionStorage),
+    })),
+    { local: [["latlai.admin.sidebar.v1", JSON.stringify({ version: 1, mode: "expanded" })]], session: [] },
+    "Only the explicit sidebar preference may persist; credentials stay in memory",
   );
   // Independent removal of an approved listing, including a lost acknowledgement.
   const removal = p;
@@ -665,6 +681,10 @@ try {
     .getByRole("button", { name: "Đăng nhập", exact: true })
     .waitFor({ timeout: 45000 });
   assert.equal(refreshes, 1);
+  // This fixture has already exercised several independent logins. Throttling
+  // has dedicated API coverage; reset only this disposable database for the
+  // final lazy-module recovery scenario.
+  await fixture.db.collection("login_attempts").deleteMany({});
   const unavailable = await page();
   await unavailable.route("**/src/features/operations/points.tsx*", route => route.abort("failed"));
   await login(unavailable, "/operations/points");
@@ -674,7 +694,7 @@ try {
   await focused(loadError);
   assert(await unavailable.getByRole("button", { name: "Đăng xuất", exact: true }).isVisible(), "A failed page must retain the authenticated workspace");
   await unavailable.getByRole("link", { name: "Về tổng quan", exact: true }).click();
-  await unavailable.getByRole("heading", { name: "Bàn vận hành.", exact: true }).waitFor();
+  await unavailable.getByRole("heading", { name: /^Tổng quan\.?$/, exact: true }).waitFor();
   await unavailable.close();
   assert.deepEqual(pageErrors, []);
   console.log(
@@ -692,7 +712,7 @@ try {
         .catch(() => {});
   }
   console.error(
-    error instanceof Error ? error.message : "Browser verification failed",
+    error instanceof Error ? error.stack : "Browser verification failed",
   );
   process.exitCode = 1;
 } finally {

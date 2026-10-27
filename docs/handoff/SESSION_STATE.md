@@ -8,8 +8,22 @@
   của nhóm; giữ logo chính thức trong BrandMark và chuyển fix tên sách Pending
   của main sang ListingTitle đã tách. Không đổi READINESS hoặc tự đóng gate.
 - Sau resolve: Admin219tests/typecheck/lint/build PASS; thêm hai ca cache tên sách
-  Confirmed/Pending không lẫn reference. Remote CI và merge còn chờ, theo dõi
-  kết quả cuối tại PR của nhánh này; chưa ghi nhận human review.
+  Confirmed/Pending không lẫn reference. PR [#77](https://github.com/huangg49/used-book-marketplace/pull/77)
+  đã push tại `465f1fa`, chưa merge; chưa ghi nhận human review.
+- Owner yêu cầu tạm dừng tối 27/10 vì usage, tiếp tục kiểm CI rồi merge vào phiên sau;
+  đồng thời rà các PR còn mở trước khi cân nhắc tích hợp từng PR.
+- CI PR head:7/10job PASS; Operations browser FAIL do locator/expectation cũ,
+  API E2E743PASS/2FAIL do fixture âm cố tình làm sai dữ liệu nhưng chưa khôi phục,
+  User web listing-cache browser FAIL vì tổng lượt ký ảnh10→15. Chưa bỏ qua lỗi.
+- Local chưa commit: `apps/admin-web/tests/browser.mjs` cập nhật thao tác form,
+  dropdown, sidebar, focus/route và chỉ cho lưu preference không chứa token;
+  suite đã tới ca lazy-page error nhưng login bị rate limit (fixture cần reset
+  login_attempts riêng trước ca cuối). `apps/api/test/auctions.e2e-spec.ts` thêm
+  finally khôi phục fixture âm; typecheck PASS, lượt chạy liên suite bị dừng,
+  chưa tính PASS. Cần kiểm lại diff và chạy đủ CI trên head mới trước merge.
+- Sau integration còn PASS local: API208unit/typecheck/lint/build,
+  contract0.54/180routes, User web238tests/typecheck/build, bundle+dev24tests,
+  docs451md/2815links. Không đụng DB local chính hoặc thay gate READINESS.
 
 ## Cache/polling Dashboard — 27/10/2026
 
