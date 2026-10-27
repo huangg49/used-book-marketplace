@@ -271,6 +271,11 @@ export function ConversationScreen({ id }: ConversationScreenProps) {
         ) : (
           <ChatMessagesPanel
             room={room}
+            listing={listingQuery.data}
+            onRefresh={() => {
+              void conversationQuery.refetch();
+              void listingQuery.refetch();
+            }}
             onRefreshEvents={() => void conversationQuery.refetch()}
           />
         )}

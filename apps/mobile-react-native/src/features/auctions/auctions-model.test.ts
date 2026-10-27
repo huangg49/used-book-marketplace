@@ -6,7 +6,13 @@ import {
   createAuctionCommand,
   createOrderCommand,
   auctionEligible,
+  canReschedule,
+  createScheduleCommand,
+  durationAllowed,
   intakePriceErrors,
+  isOpen,
+  isScheduled,
+  startChoices,
   receiptMessage,
   standingOf,
 } from "./auctions-model";
@@ -140,5 +146,48 @@ describe("seller intake (POL-39, FR-AU01)", () => {
     expect(auctionEligible(listing({ mode: "Both" }))).toBe(false);
     expect(auctionEligible(listing({ trade: "Reserved" }))).toBe(false);
     expect(auctionEligible(listing({ visibility: "Hidden" }))).toBe(false);
+  });
+});
+
+describe("ADR 0047 scheduled auctions", () => {
+  const start = Date.parse("2026-10-13T00:00:00Z");
+  it("is scheduled before startAt and open only between start and end", () => {
+    const a = auction({ bidderCount: 0, currentPrice: null });
+    expect(isScheduled(a, start - 1)).toBe(true);
+    expect(isOpen(a, start - 1)).toBe(false);
+    expect(isOpen(a, start)).toBe(true);
+    expect(isOpen(a, Date.parse(a.endAt))).toBe(false);
+  });
+  it("lets the seller edit only before bids, Buy Now and five edits", () => {
+    const fresh = auction({ bidderCount: 0, currentPrice: null, version: 1, scheduleRevision: 0 });
+    expect(canReschedule(fresh, start - 1)).toBe(true);
+    expect(canReschedule(fresh, start + 1)).toBe(true);
+    expect(canReschedule({ ...fresh, bidderCount: 1 }, start)).toBe(false);
+    expect(canReschedule({ ...fresh, buyNowAt: "2026-10-13T01:00:00Z" }, start)).toBe(false);
+    expect(canReschedule({ ...fresh, scheduleRevision: 5 }, start)).toBe(false);
+    expect(canReschedule({ ...fresh, version: undefined }, start)).toBe(false);
+  });
+  it("offers start choices inside the 5-minute lead and 7-day horizon", () => {
+    const choices = startChoices(start);
+    expect(choices[0]).toEqual({ label: "Mở ngay", at: null });
+    for (const c of choices.slice(1)) {
+      expect(c.at!).toBeGreaterThanOrEqual(start + 5 * 60_000);
+      expect(c.at!).toBeLessThanOrEqual(start + 7 * 24 * 3_600_000);
+    }
+  });
+  it("keeps a live auction open at least one more hour", () => {
+    expect(durationAllowed(3, start, start + 2 * 3_600_000)).toBe(true);
+    expect(durationAllowed(2, start, start + 2 * 3_600_000)).toBe(false);
+  });
+  it("freezes publish and reschedule requests", () => {
+    const body = { expectedVersion: 4, startAt: null, durationHours: 24 };
+    expect(createScheduleCommand({ kind: "publish", intakeId: "i" }, body, "k")).toEqual({
+      path: "/auction-intakes/i/publish",
+      body: JSON.stringify(body),
+      key: "k",
+    });
+    expect(createScheduleCommand({ kind: "reschedule", auctionId: "a" }, body, "k").path).toBe(
+      "/auctions/a/schedule",
+    );
   });
 });

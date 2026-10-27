@@ -1,4 +1,609 @@
-# Điểm lưu hiện tại — 20/10/2026
+# Điểm lưu hiện tại — 27/10/2026
+
+## Seller tự đăng/hẹn phiên, mua ngay sau bid — 27/10/2026
+
+- Nhánh `feature/seller-scheduled-auctions` từ main `d3b19e5`; chưa push/PR.
+  Owner cho ngoại lệ gate riêng gói này ([ADR0047](../adr/0047-seller-scheduled-auctions.md)).
+- API: `publishAuction` (seller, intake Passed, mở ngay hoặc hẹn 5 phút–7 ngày,
+  1–168 giờ), `rescheduleAuction` (trước bid đầu/mua ngay, tối đa 5 lần; đang mở
+  chỉ đổi thời lượng, còn ≥1 giờ). Phase Scheduled/Live/Ended suy từ giờ server,
+  không worker mở phiên; bid/Auto/mua ngay trước startAt → 409 `AuctionNotStarted`.
+  Mua ngay vẫn tùy chọn khi tạo; còn dùng sau bid khi giá < giá mua ngay, chưa ai
+  dùng và người gọi không đang dẫn. Staff `openAuction` giữ lại nhưng deprecated.
+- Migration mới `0037-seller-scheduled-auctions` (plannedEndAt/publishedAt/
+  publishedBy/scheduleRevision, backfill startAt+24h, index state+startAt). Nhóm
+  cần chạy migrate trước khi chạy API; chưa áp lên DB chính. Contract 0.52.0.
+- Client: user-web (đăng/đổi giờ, mục Sắp mở, chi tiết phiên hẹn giờ), RN (sheet
+  đăng/đổi giờ, Sắp mở), admin-web (bỏ nút Staff mở phiên, hiện giờ hẹn).
+- Kiểm tra local: API unit, Mongo suite 48 PASS, auction HTTP 70/71 (test giao
+  hàng ADR0044 timeout 15s khi chạy cả file, PASS khi chạy riêng), contract/routes
+  PASS; user-web 231, admin 30, RN auction 14 PASS; browser Chromium với API fixture
+  `_test` và route mock cho màn seller. NOT RUN: CI remote, thiết bị native,
+  test validator raw cho 0037, human review.
+
+
+## Đã tích hợp bộ sách vào main — 26/10/2026
+
+- [PR67](https://github.com/huangg49/used-book-marketplace/pull/67) đã squash merge
+  vào main tại `9a07475` sau8/8nhóm CI PASS trên đúng head `a1e3036`. Local main
+  đã fast-forward và đối chiếu tree trùng với nhánh feature trước khi ghi checkpoint.
+  Phần skill pin và toàn bộ công việc bundle/tối ưu web đã được giữ trong Git.
+- Leader cho phép gói tích hợp này không cần thành viên khác review trong phiên
+  26/10. Đây là ngoại lệ theo chỉ thị owner; không là human review PASS, không sửa
+  quy định chung TEAMWORK/ADR0046 hoặc các gate release trong READINESS.
+- CI remote PASS: docs, admin-web, user-web, operations/public shelf, demo,
+  React Native, Flutter và API. API có192unit +54Mongo +723HTTP/end-to-end tests;
+  user-web231unit/31file cùng các browser workflow; admin30unit, session27unit.
+  Web/RN export và Flutter CI không thay nghiệm thu thiết bị Android/iOS.
+- CI đã phát hiện và sửa: hai tiêu đề sách ở BuyNow→Chat (chỉ mount một identity
+  theo breakpoint960px); selector menu tài khoản/ví cũ sau main redesign; tên tài
+  khoản làm tràn floating navbar ở1024/1366px/chữ130%. Giữ các assertion về tiền,
+  retry, kích thước chạm và containment. CI browser sau sửa đã đạt, kể cả ví.
+  Chromium install chậm được retry riêng workflow trên cùng head; không đổi source
+  hoặc hạ điều kiện kiểm tra để đạt CI. Kết quả chi tiết nằm trong PR67/check links.
+- QA local đã dừng; không deploy hoặc áp migration lên DB chính, không đổi env
+  hay client mobile. Browser local của Work đang tắt nên lượt navbar cuối xác nhận
+  bằng CI browser, không nhận là CUA local PASS. Native device/live Supabase/VNPay
+  và nghiệm thu người thật vẫn là các phạm vi riêng chưa đóng.
+- Tiếp theo: nhóm nhận main, kiểm env và chạy migration mới theo quy trình setup
+  trước khi chạy API; không reset dữ liệu chính. Tài liệu nghiệp vụ/giới hạn và
+  checklist vật lý ở [ADR0046](../adr/0046-whole-book-bundles.md). Evidence local
+  và backup trước commit còn trong `.tmp/publish/` và `.tmp/main-sync/`.
+
+
+## Đồng bộ main và giữ phần bán nguyên bộ — 26/10/2026
+
+### Lượt2: PR66 và giao diện tìm sách
+
+- Fetch mới có14commit; fast-forward feature branch và local `main` từ `8e4fb79`
+  tới `9d0af9c`. Hai file có thay đổi trùng (BookSearchPage/checkpoint) ghép3way
+  tự động thành công, không có conflict cần giải tay. Bảo toàn131path staged và
+  công việc unstaged/untracked; backup206file/index/patches ở
+  `.tmp/main-sync/2026-10-26T05-44-29-424Z/`.
+- Giữ lá thu, bộ lọc thu gọn/mở lại, lưới5cột, khung ảnh3:4 và containment ảnh
+  hội thoại từ main; giữ debounce/IME/Enter, capability bundle và toàn bộ bản vá
+  local từ lượt1. Sửa6link relative sai trong phần checkpoint mới từ upstream.
+- PASS:231unit/31file, build/typecheck và lint user-web (6warning cũ); docs/diff
+  check. Browser CUA với catalog preview có sẵn: thu gọn/mở lại bộ lọc, tìm Naruto
+  bằng Enter nhận3kết quả, kiểm lưới/ảnh và lá thu. Evidence ở
+  `.tmp/main-sync/second/`; preview không là real API/storage/bundle browser PASS.
+- Docker đang tắt: không khởi động Docker hoặc DB chính, không chạy API/Mongo/
+  native gate không đổi. Server preview5188 và tab QA đã đóng. Fetch đối chiếu cuối
+  không có commit mới; HEAD/local main đều `9d0af9c`. Chưa commit/push/PR;
+  READINESS giữ nguyên.
+
+### Lượt1: PR64/65 và tương thích bộ sách
+
+- Theo yêu cầu owner, fetch `origin/main`: thêm33commit từ `901c7bb` tới
+  `8e4fb79` (PR64/65). Fast-forward nhánh đang làm `codex/whole-book-bundles`
+  và local `main` tới cùng mốc; không pull đè working tree. Bản sao SHA256 của
+  199file local, index gốc và binary patches nằm trong
+  `.tmp/main-sync/2026-10-26T03-42-42-272Z/`; pointer `latest.txt` cùng thư mục cha.
+- Đã xử lý5conflict: router, OwnerListingRow, DashboardMyBooks, my-listings tests
+  và checkpoint này. Giữ UI dashboard/profile/sidebar/grid-list, sticky filters,
+  route sửa bài đã duyệt và ẩn/hiện/gỡ bài từ main; giữ lazy routes, tối ưu web,
+  skills và toàn bộ công việc bundle local. Không có unmerged path; tập131path
+  staged ban đầu được giữ, phần feature vẫn unstaged. Đối chiếu191file ngoài
+  vùng tích hợp:189file nguyên byte và2file vẫn được xóa như bản gốc.
+- Trang sửa bài mới giữ/deep-copy đầy đủ manifest, sửa từng cuốn, tính tình trạng
+  thấp nhất, chỉ Sale/giá cả bộ và cam kết toàn bộ sách. Snapshot nội dung/ảnh
+  không đổi khi retry; mất phản hồi khóa form, giữ runner/key/body/version để
+  kiểm lại đúng lệnh. Sửa lỗi đã tái hiện: router chặn chính chuyển trang sau
+  submit thành công vì `setDone` chưa commit; ref đánh dấu hoàn tất trước navigate.
+  Grid/list/dashboard dùng tên bộ, số cuốn và giá cả bộ; thống kê đếm cuốn vật lý.
+- PASS:231unit/31file user-web, build/typecheck, lint (6warning đã có), contract
+  check và177route/26controller. Main không đổi API/contract/dependency lock;
+  không chạy lại gate API/Mongo/native đã có khi source liên quan không đổi.
+  Build vẫn cảnh báo chunk lớn. Impeccable context và detector một lượt4target:
+  một advisory màu `#9b1c1c` vốn có ở trang edit từ main, không đổi palette ngoài
+  phạm vi. UI giữ brand/main layout theo ProMax + Taste + Impeccable.
+- Browser CUA trên real API/Mongo QA riêng, Sharp thật/storage fake: sửa bộ thành
+  tập1và4, tình trạng Worn/giá175.000đ; giả lập503 sau commit, form khóa và retry
+  cùng key/hash; DB xác nhận đúng manifest/giá và chỉ một revision mới. Lượt xác
+  nhận sau bản vá chuyển trang về `/my-books?moderation=PendingReview`, thông báo
+  thành công và đúng hai bộ; kiểm danh sách/lưới và viewport390×844. Evidence/log/
+  ảnh nằm ở `.tmp/main-sync/`. Không nhận là đã chạy toàn bộ browser suite.
+- QA đã close graceful, xác minh DB fixture không còn, users/roles đều0; dừng đúng
+  Mongo QA của lượt này, các port QA đã đóng, viewport reset/tab QA đóng. DB/env
+  chính, Docker Desktop và client mobile không đổi. READINESS giữ nguyên; human
+  review/remote CI/live storage/native chưa nghiệm thu. Chưa tạo commit/push/PR;
+  máy còn thiếu Git author identity. Bước tiếp: người trong nhóm review diff tích
+  hợp và bundle theo ADR0046 trước khi commit/đẩy nhánh trong quyền được giao.
+
+## Hoàn thiện xác nhận mua bộ và chuyển sang hội thoại
+
+- Owner yêu cầu hoàn thiện theo tiêu chuẩn cao sau gói25/10. Tiếp tục nhánh
+  `codex/whole-book-bundles`, base `901c7bb`; bảo toàn index skill và các tối ưu
+  web trước đó. Chưa commit/push/PR/merge; máy vẫn thiếu Git author identity.
+- Xác nhận Buyer gắn với listing/revision; đổi danh sách tập phải xác nhận lại.
+  Mỗi lần gửi giữ bản sao nội dung cho cả lúc chờ, mất phản hồi và đã có quote.
+  Mua ngay và thương lượng hiển thị đúng bản đã xác nhận, giữ key/body/version
+  khi retry. Đổi listing, hội thoại hoặc người dùng sẽ tạo phạm vi state riêng.
+  Chỉ cho tải lại nội dung sau lỗi đã có kết quả rõ; không bỏ lệnh chưa biết kết
+  quả. Form/địa chỉ được giữ; lỗi không khẳng định máy chủ chưa ghi khi mất ACK.
+- Đã tái hiện2cảnh báo React trên phiên QA sạch, không HMR: `Navigate` ở bước
+  Order→Chat nhận object state mới mỗi render trong lúc lazy route đang tải.
+  Giữ identity state ổn định; lượt lạnh sau sửa có0cảnh báo này. Browser regression
+  `tests/order-chat-workspace.mjs` giờ thu cả cảnh báo này vào lỗi của suite.
+- PASS: user-web build/typecheck/lint và198unit/28file, gồm6ca identity/snapshot và
+  manifest không đổi khi mất phản hồi ở7bước catalog/listing/media/upload/finalize/
+  draft/submit. API typecheck/lint và60HTTP/Mongo Order tests, gồm4ca mới: hủy,
+  hết hạn giữ bộ, hết hạn quote, Seller thay manifest làm quote cũ mất hiệu lực.
+  Kiểm cả mở lại nguyên bộ, snapshot,0tiền giữ/journal cho đơn chưa thanh toán.
+  Lint chỉ còn warning ngoài phạm vi từ trước; cảnh báo chunk lớn vẫn giữ.
+- Browser CUA dùng real API/Mongo QA riêng, Sharp thật và storage fake: tài khoản
+  Buyer/Seller QA, hủy→mở bán cả bộ; sửa manifest→409→tải lại→bỏ tick; chặn lấy
+  quote khi chưa tick lại; mất ACK sau commit→retry cùng key/body/revision.
+  Ba nhóm replay được đối chiếu hash; đã kiểm ở cả Mua ngay và thương lượng.
+  Order sau xác nhận lại giữ đúng hai tập/ghi chú/giá mới. Phiếu390×844 có document
+  width375px, không tràn ngang; thông báo lỗi/nút recovery vẫn dùng được.
+- Impeccable context/harden và detector một lượt3target trả[]; giữ component,
+  brand/motion hiện có theo ProMax/Taste/Impeccable. Log/ảnh/verification local ở
+  `.tmp/bundle-hardening/`. Browser là các ca CUA thực tế, không nhận toàn bộ
+  Playwright suite đã chạy. Không chạy lại gate API/Mongo/native nguồn không đổi.
+- [ADR0046](../adr/0046-whole-book-bundles.md) có bảng cho người trong nhóm review
+  implementation và tình huống vật lý. Human review/remote CI/live storage/VNPay/
+  native vẫn chưa nghiệm thu; không mở Delivered/inspection/refund/settlement.
+  READINESS, contract, migration và DB chính không đổi ở lượt này. QA đã dừng,
+  DB browser/users/roles đã dọn và viewport reset; Docker Desktop giữ nguyên.
+
+## Hiệu ứng Lá Vàng Mùa Thu Rơi (User Web - Trang Tìm Sách) — 26/10/2026
+
+- Nhánh `feat/web-edit-approved-listing`.
+- Theo yêu cầu mới nhất của người dùng: Gỡ bỏ bản đồ minh họa thung lũng (ruộng bậc thang, máy bay, mây, suối), chỉ giữ lại duy nhất hiệu ứng hoạt họa lá thu rơi tự nhiên trên trang tìm sách `/books` ([BookSearchPage.tsx](../../apps/user-web/src/pages/BookSearchPage.tsx)):
+  - Áp dụng sắc màu vàng lá thu Hà Nội (`#fcf5df` đến `#ead098` với vầng sáng nắng ấm `radial-gradient`), gợi nhớ nắng thu mật ong và thảm lá vàng sấu già trên phố Phan Đình Phùng.
+  - Tích hợp trực tiếp `<AutumnLeavesCanvas />` vào khung nhìn cố định `.leavesWrapper` (`position: fixed; inset: 0; pointer-events: none; z-index: 0;`).
+  - 42 lá cây mùa thu (lá phong đỏ, sồi già, bạch dương) bay chao liệng 3D mượt mà trên nền trang tìm kiếm, không che khuất hay gây rối mắt đối với các bộ lọc, thanh tìm kiếm và thẻ sách.
+  - Triệt tiêu hoàn toàn dải hở trắng trên footer: Bổ sung `ROUTES.search` vào điều kiện `homeFooter` trong [MainLayout.tsx](../../apps/user-web/src/layouts/MainLayout.tsx) để loại bỏ khoảng cách `margin-top: 72px` của footer, giúp nền vàng lá thu Hà Nội tiếp giáp liền mạch, mượt mà vào chân trang đỏ rượu `#5c0202`.
+  - Chuẩn hóa khung ảnh bìa sách dạng dọc tỷ lệ 3:4 tràn viền (Full Cover Edge-to-Edge) trong [BookCard.module.css](../../apps/user-web/src/components/BookCard.module.css): Thay thế khung ngang 180px cũ bằng `aspect-ratio: 3 / 4; width: 100%; height: auto; padding: 0;`, ảnh bìa chuyển sang `object-fit: cover; width: 100%; height: 100%;` lấp đầy 100% khung dọc, loại bỏ hoàn toàn viền trống hai bên.
+  - Điều chỉnh ràng buộc hiển thị 5 thẻ bài đăng/hàng trên desktop trong [BookSearchPage.module.css](../../apps/user-web/src/pages/BookSearchPage.module.css): Mở rộng container `.catalog` `max-width: 1600px; padding: 24px 32px 0;`, cấu hình lưới `.grid` thành `grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 24px 16px;`, điều chỉnh đệm nút `.view` trong `BookCard.module.css` để giữ độ thoáng và cân xứng thẩm mỹ, bổ sung breakpoint tablet 2 cột linh hoạt.
+  - **Nút thu gọn bộ lọc 3 dấu gạch & Animation gom vô gom ra (Collapsible Animated Filter Sidebar)**:
+    - Bổ sung nút 3 dấu gạch (`Menu` icon) ở góc phải tiêu đề "Bộ lọc sách" (`.collapseSidebarBtn`) trong panel bên trái để người dùng thu gọn sidebar khi muốn tập trung xem sách.
+    - Căn chỉnh thẳng hàng thanh tiêu đề bộ lọc: xóa bỏ các rule CSS `.sidebar h2` bị lặp, dùng `align-items: center; user-select: none;` để icon badge bên trái, tiêu đề "Bộ lọc sách" và nút 3 gạch bên phải nằm trên đúng 1 trục ngang, loại bỏ hoàn toàn hiện tượng lệch hàng và vệt bôi đen lật màu chữ.
+    - Đổi icon bộ lọc thành icon chiếc phễu đặc (`Filter` từ `lucide-react` với `fill="currentColor"`): đồng bộ icon phễu trên header bộ lọc, nút vuông mở lại bên cạnh thanh tìm kiếm, thanh lọc nổi (sticky filter) và nút bộ lọc mobile.
+    - Sửa lỗi tràn ảnh bìa trong danh sách hội thoại: giới hạn `position: absolute; inset: 0;` cho `.cover > .photoFrame` trong [BookCard.module.css](../../apps/user-web/src/components/BookCard.module.css), đặt kích thước khung và `overflow: hidden` cho `.cardCover` trong [Conversation.module.css](../../apps/user-web/src/components/conversation/Conversation.module.css) để ảnh bìa sách trong các thẻ trao đổi/hội thoại không bị văng đè lên giữa thẻ.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web test`: 27 test files / 201 tests PASS.
+  - `pnpm --filter @used-books/user-web lint`: PASS (0 errors).
+
+## Chức năng Chỉnh sửa bài đăng đã duyệt (User Web) — 25/10/2026
+
+- Nhánh `feat/web-edit-approved-listing`, base từ nhánh `feat/web-profile-overview-redesign`.
+- **Nghiệp vụ thực hiện (Kế hoạch A - Tuân thủ SRS §7.2 / ADR 0012)**:
+  - Cho phép người bán chỉnh sửa bài đăng đã được duyệt (`Approved`, `Available`, không phải `Removed`, không phải kênh `Auction`).
+  - Khi gửi bản sửa, hệ thống gọi `POST /listings/{id}/revision` (`reviseApprovedListing`), tạo một revision mới ở trạng thái `PendingReview` và tạm ngừng hiển thị trên kệ công khai cho đến khi quản trị viên phê duyệt lại.
+  - **Khóa danh tính sách (Book Identity Lock)**: Khóa cố định trường `bookId` (tên sách, tác giả) trên giao diện theo bài gốc; người bán muốn đổi sách khác phải đăng bài mới (giới hạn bảo vệ phía UI theo Plan A; API server-side lock sẽ được bổ sung sau nếu có chỉ thị cập nhật contract/ADR).
+  - Cho phép sửa: tình trạng sách, mô tả chi tiết, hình thức (Bán/Đổi/Cả hai), giá bán (10.000đ – 1.000.000đ theo LS-D06), giá trị đổi, địa chỉ gửi sách (`HCM-DEMO-v1`), quản lý 1–8 ảnh thật (giữ ảnh cũ, upload ảnh mới qua `upload`, chọn ảnh bìa) và cam kết quyền sở hữu.
+  - **Chức năng Tạm ẩn / Mở lại (`setListingVisibility`) & Chống spam (Anti-spam Cooldown)**:
+    - Người bán có thể tạm ẩn bài đăng (`visibility: 'Hidden'`) để tạm ngưng hiển thị trên kệ công khai và mở lại (`Visible`) bất cứ lúc nào mà không cần quản trị viên duyệt lại (tuân thủ ADR 0012).
+    - **Cơ chế chống spam**: Tích hợp hook `useActionCooldown` (thời gian đệm 4 giây) và bộ điều khiển `createCooldownController`. Khi người dùng bấm Tạm ẩn / Hiện lại, nút sẽ lập tức bị vô hiệu hóa trong lúc gọi API (`isBusy`) và tiếp tục khóa đếm ngược hiển thị thời gian còn lại trực quan trên nút (ví dụ: `Hiện lại (4s)`, `Tạm ẩn (3s)`). Ngăn chặn hoàn toàn tình trạng spam click liên tục gây lỗi 409 Conflict hoặc nghẽn server. Áp dụng đồng bộ trên cả `OwnerListingRow.tsx` (Grid & List) và `EditListingPage.tsx` (Thẻ quản lý ấn phẩm).
+    - **Giao diện nhận diện bài tạm ẩn (Hidden Visual State)**: Khi bài đăng ở trạng thái `Hidden`, toàn bộ thẻ và ảnh bìa tự động xám mờ (`grayscale(0.85) brightness(0.9)`), trung tâm ảnh bìa xuất hiện huy hiệu nổi mờ kính tối `hiddenBadgeCenter` với biểu tượng `EyeOff` cùng chữ `ĐANG ẨN` rõ nét; nút thao tác "Hiện lại" được đổi nền kem ấm nổi bật giúp người bán dễ dàng nhận biết và mở lại bài khi cần.
+  - **Chức năng Xóa bài đăng (`archiveListing`)**: Cho phép người bán gỡ vĩnh viễn bài đăng (`POST /listings/{id}/archive`, soft-delete `deletedAt`), kiểm tra điều kiện `trade === 'Available'`, không cho xóa khi sách đang có giao dịch (`Reserved`) hoặc đã hoàn tất (`Sold`/`Exchanged`).
+  - **Idempotency & Retry**: Tái sử dụng cùng `Idempotency-Key` và runner nếu gặp lỗi mạng rớt phản hồi, không tạo revision thứ hai; giữ nguyên version mong đợi khi có lỗi xung đột.
+- **Giao diện & Thành phần đã xây dựng**:
+  - `apps/user-web/src/hooks/useActionCooldown.ts` & `.test.ts`: Hook và controller đếm ngược cooldown chống spam, quản lý vòng đời timer an toàn khi component unmount.
+  - `apps/user-web/src/lib/owner-listing-edit.ts`: Kiểm tra điều kiện sửa `editApprovedBlock`, `canEditApproved`, quyền ẩn `canToggleVisibility`, quyền xóa `canArchiveListing`, validation độ dài code-points, giá, cờ tình trạng sách, build revision content.
+  - `apps/user-web/src/services/listing-revision.ts` & `my-listings.ts`: Service upload ảnh mới, gửi revision, thay đổi `setListingVisibility`, và lưu trữ/xóa bài `archiveListing` với `Idempotency-Key`.
+  - `apps/user-web/src/pages/EditListingPage.tsx` & `.module.css`: Thiết kế lại giao diện theo phong cách sang trọng Lật lại (thẻ hồ sơ ấn phẩm 3D, thẻ chọn hình thức dạng viên thuốc, lưới chọn tình trạng 4 mức độ, bộ câu hỏi chuyển đổi Có/Không, khung quản lý trạng thái Tạm ẩn/Xóa bài, thanh nút hành động dính chân trang thu hẹp căn giữa).
+  - Tuyến đường `/my-books/:listingId/edit` đăng ký dưới `DashboardLayout` trong `router.tsx` và helper `ROUTES.myBookEdit`.
+  - Cập nhật `OwnerListingRow.tsx`: Thêm nút "Tạm ẩn" / "Hiện lại" và nút "Xóa bài" kèm modal xác nhận an toàn `ConfirmDialog` trên cả hai chế độ xem Grid và List.
+  - `MyBooksPage.tsx`: Bổ sung banner thông báo thành công sau khi gửi bản sửa và tự động điều hướng về bộ lọc `Chờ duyệt` (`PendingReview`).
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web test`: 27 test files / 201 tests PASS (trong đó 3 tests cho `useActionCooldown` controller, 20 tests validation U1–U8, 3 tests idempotency/revision U9–U11, 2 tests visibility/archive API calls, và 2 tests quy tắc canToggleVisibility/canArchiveListing).
+  - `pnpm --filter @used-books/user-web lint`: 0 errors (6 cảnh báo hook cũ không liên quan).
+  - E2E E1–E12: Chưa chạy (NOT RUN - yêu cầu Mongo replica set riêng với `*_test` database theo quy định AGENTS.md, không chạy harness ghi đè DB chính).
+
+
+## Dashboard và kệ sách từ main — 25/10/2026
+
+- Nhánh `feat/web-profile-overview-redesign`, base từ `origin/main` (`901c7bb6`).
+- **Sidebar cá nhân**: Tạo khung độc lập không viền thô, nút thu gọn 3 gạch (hamburger) chuyển đổi chiều rộng 68px/240px mượt mà với spring physics của `framer-motion`, tuân thủ chính sách chuyển động (giữ animation).
+- **Thống kê tổng quan (DashboardStats)**: Xen kẽ nền Đỏ rượu `#5c0202` và Trắng ngà `#ffffff` thẩm mỹ, số dư khả dụng và giá trị kệ sách làm thẻ điểm nhấn (hero cards). Khắc phục query limit từ 100 thành 50 theo OpenAPI contract `/me/listings`, lọc đúng 4 cuốn sách đã duyệt (`Approved`) và hiển thị huy hiệu vàng ánh kim nổi bật.
+- **Khối Đấu giá của bạn (DashboardAuctionFocus)**: Thay thế khối bản nháp bằng tính năng theo dõi phiên và xem lịch sử đấu giá, kết nối API `listMyAuctions`, lọc 3 trạng thái Đang diễn ra / Cần thanh toán / Tất cả phiên; di chuyển vị trí xuống dưới khung Dòng tiền và trên Kệ sách.
+- **Kệ sách của tôi (MyBooksPage)**: Bổ sung bộ chuyển đổi Grid/List, thiết kế lại khung giá bán và giá trao đổi thành 2 thẻ tách biệt làm nổi bật giá trị, hiển thị ảnh bìa full khung 100%.
+- **Kiểm tra**: `pnpm --filter @used-books/user-web typecheck` PASS; 24 test files / 172 tests PASS.
+
+## Bán nguyên bộ sách — owner đã duyệt25/10/2026
+
+- Nhánh `codex/whole-book-bundles`, base `901c7bb`; giữ nguyên gói skill đang
+  stage và tối ưu web từ24/10. Chưa commit vì Git author identity của máy mới
+  chưa có; không push/PR/merge/deploy. [ADR0046](../adr/0046-whole-book-bundles.md)
+  và SRS1.1 ghi ngoại lệ một listing có thể chứa bộ2–50cuốn.
+- Seller chọn Sách lẻ/Bộ sách, tạo khoảng tập rồi sửa danh sách, tình trạng và
+  lỗi từng cuốn; giá cho cả bộ, tình trạng chung theo cuốn thấp nhất. Kệ riêng,
+  card công khai, chi tiết, phiếu mua, đơn hàng và hội thoại dùng tên bộ. Một bộ
+  là một listing/commitment/Order item, không bán/trả một phần, Exchange hay Auction.
+  Không sửa client RN/Flutter của teammate và không mở gate giao nhận/settlement.
+- OpenAPI0.51.0/types được generate; manifest được chốt theo revision và Order
+  snapshot. Public shelf/detail opt-in `bundleSupport=whole-v1`, quote mua bộ
+  cần `acknowledgeWholeBundle:true`, reviewer cần `bundleContentsVerified:true`.
+  Client cũ không thấy bộ trên kệ hoặc vô tình mua bằng quote không xác nhận.
+  Price assist sách lẻ từ chối bộ và bỏ giá nguyên bộ khỏi asking-price evidence.
+- Migration mới0035/0036 thêm validator manifest/checklist và text tìm tên bộ/tập;
+  chưa áp dụng lên DB local chính. Không sửa migration đã áp dụng, không đổi env
+  hoặc mật khẩu seed. Sau khi lấy code này, chạy migration theo setup repo trước
+  khi dùng bộ sách với DB chính. Cùng hiện vật bị khai báo trong nhiều tin độc lập
+  chưa được tự nhận diện; hiện dùng cam kết Seller, không tuyên bố chống trùng vật lý.
+- PASS Node24.22.1/pnpm11.19.0: contract generate/check/routes177operations/
+  26controllers; API build/typecheck/lint,192unit/25file; web build/typecheck,
+  186unit/27file và lint; admin build/typecheck,30unit/5file và lint. Còn6warning
+  web cũ, warning API cũ và cảnh báo chunk lớn; không nâng ngưỡng để che.
+- API HTTP/Mongo:147ca trong listing-review/orders/price-assist đạt qua lượt kiểm
+  cuối của từng file; gồm owner/stale/replay, legacy drop, Unicode tên tập trùng,
+  validator từ chối mode/wholeOnly/duplicate/condition sai, thiếu checklist/Buyer
+  acknowledgment, hai Buyer tranh một bộ và snapshot chính xác. Mongo suite48PASS,
+  6SKIP (PostgreSQL import/primary election thiếu dịch vụ tương ứng). Một ca mới
+  từng giả định Mongo `$toLower` hỗ trợ full Unicode; đã tách đúng trách nhiệm:
+  service kiểm Unicode/NFC, DB kiểm trim/ASCII case; unit và HTTP kiểm tên `TẬP`.
+- Browser thật dùng API/Nest và Mongo replica set QA riêng `_test`, Sharp thật,
+  storage fake. Đã đăng bộ3tập từ web, duyệt bằng checklist đủ7ô, kiểm kệ riêng/
+  công khai, chặn báo giá khi chưa xác nhận, lấy quote và tạo đơn chưa thanh toán;
+  đơn/hội thoại giữ đủ3tập và ghi chú tập2. Desktop và390×844 không tràn ngang ở
+  phiếu mua. Impeccable detector chạy một lần trên3target trả[]; dùng ProMax,
+  Taste và Impeccable trong phạm vi UI đã duyệt. Ảnh/log local tại
+  `.tmp/whole-book-bundles/` và `.tmp/bundle-*.log` (ignore).
+- Log Vite của phiên QA có2cảnh báo React `Maximum update depth exceeded` lúc
+  chuyển tạo đơn sang hội thoại; luồng vẫn hoàn tất và manifest đọc đúng. Chưa
+  xác định component hay tái hiện với phiên không HMR; không nhận clean-console
+  PASS và không tự quy lỗi này cho bundle hoặc source cũ khi chưa có baseline.
+  Vấn đề này đã được tái hiện và xử lý trong gói26/10 ở trên.
+- Live Supabase/VNPay, thanh toán/giao nhận thật, native và human acceptance/
+  remote CI NOT RUN; READINESS không đổi. QA đã dừng bằng cleanup fixture, DB
+  browser/users/roles đã dọn; Mongo QA khởi động riêng được dừng. Docker Desktop
+  đã chạy sẵn ở lượt25/10 nên để nguyên. API/web/worker/DB chính vẫn đang dừng.
+
+## Kết thúc phiên24/10/2026
+
+- Cuối phiên theo yêu cầu owner: đã dừng API/watch, worker media/orders, Vite,
+  Mongo container và Docker Desktop; xác nhận không còn process runtime project
+  hoặc listener ở3000/5173/5174/5186/5187/5196/27017/57217/6379. Xóa riêng lock API
+  cũ sau khi xác minh PID chủ đã dừng. Code/index, env, Mongo volume và QA evidence
+  giữ nguyên; thay đổi chưa commit vì thiếu Git author identity. Bật lại Docker
+  Desktop rồi chạy `pnpm dev:api` và `pnpm --filter @used-books/user-web dev`
+  ở hai terminal, dùng pnpm11.19.0 theo repo. Không dùng PID cũ để vận hành phiên mới.
+
+## Tối ưu tải Member web — 24/10/2026
+
+- Owner giao tối ưu phần đã có, chỉ Member web; nhánh
+  `codex/web-loading-optimization`, base `901c7bb`. Gói skill từ lượt trước được
+  giữ riêng ở index; commit local chưa tạo vì máy mới thiếu Git author identity.
+- Router tải code/CSS theo màn bằng route lazy, giữ Home và shell/overlay dùng
+  chung. AuthLayout vẫn giữ nháp/animation khi đổi thẻ; VNPay return gate giữ vị
+  trí trước Dashboard auth. Không đổi API/session/command, DB hoặc client mobile.
+- Có fallback cho direct link, thông báo chờ sau200ms giữ màn hiện tại và cleanup
+  khi hủy điều hướng. File tải lỗi có nút full reload, giữ nguyên query/hash;
+  kiểm browser bắt được anchor cùng hash không reload nên đã dùng button.
+- Đo toàn bộ JS/CSS ban đầu từ HTML production, gồm modulepreload: JS1.419.483→
+  810.832byte (−43%), CSS437.696→130.894byte (−70%); gzip JS409.626→251.422,
+  CSS76.190→25.472byte. Không nhận là bằng chứng LCP/INP hoặc thiết bị yếu đạt.
+- PASS Node24.22.1/pnpm11.19.0: web build/typecheck,174unit/25file, lint với6warning
+  cũ; Impeccable detector một lượt[] và docs/diff check. Hai test mới kiểm direct
+  lazy loading và recovery không lộ lỗi kỹ thuật. Cảnh báo chunk>500k còn ở entry/
+  auth-flight; không tăng ngưỡng để che cảnh báo.
+- Browser production QA riêng5186: Home không tải trước các page chunk; Search/
+  Auction chậm6/12s giữ màn cũ; hủy điều hướng gỡ thông báo; Back, auth đổi thẻ,
+  callback ví guest và lỗi503→reload đúng query/hash đạt. Xem desktop/390×844 và
+  ảnh gốc tại `.tmp/web-loading-optimization/`. Nháp sau Back vẫn có giá trị trong
+  AX; công cụ che email/password nên không xác nhận so sánh byte-for-byte.
+- QA chỉ mô phỏng delay/lỗi asset, đọc public API local; không đăng nhập/gửi form,
+  tạo giao dịch hoặc ghi/xóa DB/bucket. Full E2E, real VNPay, native/human/remote
+  CI NOT RUN; READINESS giữ nguyên. Chưa push/PR/merge/deploy.
+- Lượt tiếp theo bỏ ConfigProvider/theme/locale Ant Design khỏi root và CSS import
+  Material Symbols Google. Audit cả static/dynamic import từ entry:161file reachable,
+  không có consumer Ant Design ngoài provider/theme hoặc Material Symbols đang chạy.
+  Giữ package và component cũ chưa dùng; QueryClientProvider/session giữ nguyên.
+- Production ban đầu sau lượt này: JS709.954byte/gzip213.746 (giảm thêm12%, tổng50%
+  so với trước tối ưu); CSS130.780byte/gzip25.381 (tổng giảm70%). Entry còn407,74kB;
+  auth-flight551,36kB còn cảnh báo. Không còn CSS import Google icon font.
+- Build/typecheck, lint6warning cũ và174unit/25file PASS sau thay đổi. Browser production
+  kiểm Home/Search desktop, bộ lọc390×844 mở/Escape trả focus và menu→login đạt;
+  font/kích thước tiêu đề Home khớp trước/sau. Detector9finding trong global CSS đã có
+  từ trước (6advisory màu/radius,3warning font); provider không có finding mới.
+  Evidence/ảnh tại `.tmp/web-unused-dependencies/`; phạm vi NOT RUN như trên.
+- Owner giao làm tiếp: CardFitText dùng chung ResizeObserver/MutationObserver,
+  listener resize/font và một RAF queue; chỉ refit slot đổi kích thước, gộp tín hiệu
+  trùng và hủy subscription/RAF khi unmount. Giữ thuật toán fit/minimum/clamp,
+  CSS/card geometry và motion. Test100slot xác nhận1bộ observer/listener thay100bộ.
+- PASS build/typecheck,180unit/26file (6ca mới: batch/targeted resize/unmount/
+  teardown/font readiness/remount), lint6warning cũ, detector[] và docs/diff check.
+  Browser Vite DEV với catalog preview có nhãn:20card/86slot, nội dung/kích thước/
+  font/clamp khớp baseline trước sửa tại content width1265px và375px (viewport390),
+  Home→Back khớp sau remount. Không nhận là đo FPS/INP hoặc native PASS.
+  Preview production không bật catalog mẫu; không seed DB để QA. Baseline được
+  phục vụ riêng bằng source override trong `.tmp/card-text-observers/`, evidence
+  ở cùng thư mục; lần đo khác viewport bị loại, chỉ so khi cùng độ rộng thực.
+- Search giữ input/URL tức thời, chờ300ms trước request khi gõ; Enter/nút tìm flush
+  ngay, composition chặn tìm giữa lúc nhập. Khi đang chờ không hiện kết quả/cache
+  dưới từ khóa khác; cleanup timer khi đổi từ khóa/unmount. Không đổi API/session.
+- Browser fixture riêng5186/5187, cùng chuỗi `harrypotter`:11request→1; Enter/nút tìm
+  có request sau77/95ms. Filter+query, Back, clear, unmount cancel,503→retry giữ từ
+  khóa và feedback chậm ở390×844 PASS. Build/typecheck,180unit/26file, lint6warning
+  cũ, detector[] và docs/diff PASS. Evidence `.tmp/catalog-search-debounce/`;
+  fixture không DB, OS IME thật/full E2E/native/remote CI NOT RUN; gate giữ nguyên.
+
+## Thay skill UI theo yêu cầu owner — 24/10/2026
+
+- Nhánh `codex/replace-ui-skills`, base `901c7bb` (main/PR63). Theo owner, bỏ
+  `latlai-ui` và adapter Claude; thêm `ui-ux-pro-max` từ nextlevelbuilder tại
+  `d14efff8ed1f` và Taste v2 `design-taste-frontend` từ Leonxlnx tại `6010f91a9935`.
+- Hai skill nằm trong repo, có scripts/data/references, LICENSE và lock commit/hash;
+  adapter Claude dùng nguồn chung. Chỉ thích nghi metadata/preamble, helper path
+  UI/UX Pro Max và whitespace đã ghi; không cài các biến thể Taste khác.
+- [UI workflow](../design/UI_SKILLS.md) giữ ưu tiên brief/brand/API/session/motion
+  owner11/10, chọn đúng client; cập nhật AGENTS/AI_WORKFLOW/tiếp nhận và bỏ liên
+  kết skill cũ. Impeccable chỉ đổi binding preamble/metadata/lock, giữ body/engine.
+- Owner xác nhận từ nay UI web kết hợp Pro Max + Taste + Impeccable; đã ghi vào
+  AGENTS/workflow, chọn reference/helper theo phạm vi thay vì mở rộng gói UI.
+- Kiểm helper UX/React search và Taste draw offline đạt; docs check5cặp adapter,
+  validator skill, verify vendor/hash và diff whitespace được kiểm trước bàn giao.
+  Không đổi UI/API/DB/app mobile hoặc READINESS; không chạy lại native/browser/E2E.
+  Chưa commit/push/PR/merge; bộ skill mới cần được host nạp từ lượt tiếp theo.
+
+## Sửa User Web CI của PR62 — 23/10/2026
+
+- Owner yêu cầu sửa/push lại [PR62](https://github.com/huangg49/used-book-marketplace/pull/62),
+  nhánh `codex/inline-card-location`, base sửa `61c300e`. Log job119974383142
+  dừng ở seller-order vì tìm heading cũ sau khi chuyển đơn sang workspace chat.
+- Cập nhật seller-order/BuyNow theo region Chi tiết đơn hàng, heading/trạng thái/
+  thanh toán hiện hành. ID đơn lấy từ receipt; kiểm đúng room/participants, một
+  room OrderCreated không terms/quote cho BuyNow. Giữ ca mất ACK cùng key/body,
+  thiếu tiền, hold/ledger, thông báo và shipment; không đổi source nghiệp vụ.
+- Wallet kiểm banner với số dư API xác nhận0→50.000→90.000 và hai nút thao tác;
+  giữ callback không session không lộ dữ liệu. Thêm fixture Order Chat hiện có
+  vào CI và upload evidence khi lỗi; không bỏ check hay tăng timeout để né lỗi.
+- PASS Node24.21.0/pnpm11.19.0: browser seller-order/BuyNow/exchange/wallet với
+  Mongo QA riêng57217/database `_test`; Order Chat fixture không DB; web lint
+  (6warning cũ), syntax/diff/docs check. Log `.tmp/ci-fix-*.log`; provider/storage/
+  carrier mô phỏng, không phải giao dịch VNPay hay native thật. QA được dừng sau
+  kiểm tra; DB/env và FE5174/API3000 của app giữ nguyên.
+- Commit `fix(ci): align browser regressions with order chat and wallet`.
+  Local PASS không thay remote CI; kiểm check của head mới trực tiếp trên PR62
+  trước merge. READINESS/human review giữ nguyên; gói này chỉ sửa test/CI/handoff.
+
+## Hợp nhất main và gỡ xung đột — 23/10/2026
+
+- Theo owner, merge `origin/main` tại `60e1cf01` vào `codex/inline-card-location`
+  từ `3f5b6eae`, giữ lịch sử đã push. Bốn conflict: public listing projection,
+  user-web scripts, contract version và checkpoint; giữ cả hai phía.
+- Giữ card464/504px, metadata một hàng, wallet/Order Chat và wishlist; đồng thời
+  nhận lazy-photo/cache/expiry và tối ưu listing từ main. Projection đọc metadata,
+  origin/zone theo lô trong cùng snapshot; không đọc contact, không bỏ current
+  address-version check hoặc lọc Marketplace/Auction. Thêm7 unit regression.
+- Contract hợp nhất0.50.0, regenerate types;177operation/26controller khớp. Đổi
+  Order Chat ADR0042→[0045](../adr/0045-order-conversation-workspace.md), giữ0042
+  auction của main. Giữ cả checkpoint teammate và READINESS mới từ main.
+  Chuẩn hóa ba dòng trống EOF có sẵn ở source RN upstream, không đổi hành vi.
+- PASS API lint/typecheck/183unit/build; web lint/typecheck/172unit/build;
+  session-client27unit; RN typecheck/156unit, admin typecheck/30unit. RN chỉ tạo
+  lại cache route `.expo/types` bị ignore bằng helper Expo cài sẵn. Browser cache
+  ảnh, Order Chat và35ca card desktop/mobile130% đạt; fixture không ghi DB.
+- HTTP/Mongo QA riêng57217/database `_test`: ba suite Orders/listing-review/
+  auction-listings đạt136/137; một race100request chỉ có1/2lượt thành công kỳ vọng
+  dưới contention, chạy riêng lại đạt (1PASS/54filtered), không sửa code/test.
+  Hai suite listing/auction đạt trọn vẹn; log `.tmp/inline-merge-quota-rerun.log`.
+  Container QA riêng được dừng sau kiểm tra, không dùng DB app cho harness.
+- `pnpm db:migrate` áp dụng đúng ba migration main0032–0034 còn thiếu;45migration
+  current, không đổi checksum cũ, reset/seed/bootstrap hay cấu hình. Khởi động lại
+  launcher API/worker sau build; API readiness3000 và FE5174 trả200. Log local
+  `.tmp/merge-main-runtime/`. Docs/diff check đạt; human/native/provider/remote CI
+  chưa chạy. Không đổi gate ngoài READINESS đã có trên main; chưa merge vào main.
+  Merge commit: `merge: resolve main conflicts for wallet chat and book cards`.
+
+## Xuất bản gói ví, đơn hàng/chat và card — 23/10/2026
+
+- Owner đã duyệt kết quả và yêu cầu chia commit/push. Tám commit chức năng từ
+  `c52a7705` đến `a314f539` đã tách theo ví, Order/Chat, vùng/card và các bước
+  tinh chỉnh card; đã push lên `origin/codex/inline-card-location` và đặt upstream.
+  Base chung là `6d063ee5`; remote main đã tiến tới `60e1cf01` sau fetch, chưa
+  tích hợp vào nhánh này. Chưa tạo PR/merge/deploy; quyền push không đổi gate review.
+- Kiểm phạm vi file trước push: không có env/tmp/dump/khóa được track trong gói;
+  working tree sạch, diff --check đạt. Checks chức năng giữ evidence ở các mốc
+  bên dưới; không chạy lại source tests cho bước xuất bản không đổi code.
+  Commit bàn giao này: `docs(handoff): record published member web changes`;
+  docs:check/diff --check được chạy cho tài liệu. READINESS giữ nguyên.
+
+## Tác giả và vị trí trên một hàng card — 22/10/2026
+
+- Theo owner: bỏ nhãn “Khu vực” khỏi phần nhìn, giữ nhãn cho screen reader;
+  tác giả và pin/địa điểm cùng một hàng, icon/chữ căn giữa trong vùng24px.
+  Chữ dài tự co rồi ellipsis, có tooltip đầy đủ; preview vẫn ghi đúng là không
+  có vị trí vật lý. Giữ card464/504px,4cột desktop, khung giá76px và CTA44px.
+- Nhánh `codex/inline-card-location`, base `99f0020`; subject
+  `style(web): align book author and location on one row`.
+- PASS web lint/build (gồm TypeScript), browser fixture35ca: Search1440/1280/390/
+  320 chữ130%, Home live/preview desktop/mobile, nhãn không hiện, icon/giá trị cùng
+  tâm hàng, chữ một dòng, tooltip và chiều cao không đổi. Đã xem ảnh desktop/mobile;
+  evidence `.tmp/inline-card-metadata-qa/`. Detector layout một lượt[];
+  docs:check/diff --check đạt;6warning lint/chunk cũ. Chỉ markup/CSS/docs, không
+  chạy lại unit/API/DB/native/provider/human/remote CI; READINESS giữ nguyên.
+  FE5174/API3000 vẫn chạy. Chưa push/PR/merge/deploy.
+
+## Card theo ảnh tham chiếu, chạy BE/FE — 22/10/2026
+
+- Theo ảnh owner: card paper border1px/bo20px, ảnh thật đầy đủ trên nền archival
+  desk có sẵn, chip mint và trái tim44px; tiêu đề toàn chiều ngang, tác giả/khu
+  vực hai bên, ô giá riêng và nút wine48px. Giữ4cột desktop/1cột điện thoại,
+  giá bán/đổi, trạng thái, retry ảnh và motion240ms kể cả reduced-motion.
+- Trái tim dùng API wishlist Member có sẵn, guest đi login rồi về sách; preview
+  không giả vị trí/nút lưu. Query phân trang theo owner; không báo lưu trước ACK,
+  giữ PUT/DELETE khi mất ACK, hủy read cũ và kiểm owner trước cập nhật cache.
+  Không đổi API/contract/persistence.
+- Nhánh `codex/book-card-reference-style`, base `505e256`; subject
+  `feat(web): match book cards to the reference design`.
+- PASS web lint/typecheck/168unit/build, docs:check và diff --check; browser fixture46ca gồm desktop1440/1280,
+  mobile390/320 chữ130%, Home/Search/preview, ảnh lỗi, guest, wishlist read lỗi,
+  mất ACK save/remove, stale read và đổi owner/non-Member. Đã xem ảnh fixture và
+  card live; live7bài/4cột, mobile không tràn, motion240ms, readiness200.
+  Evidence `.tmp/book-card-reference-qa/`. Detector một lượt có3advisory14px
+  radius được dùng theo ảnh và đã ghi DESIGN;6warning lint/chunk cũ.
+- Chạy đủ lệnh owner: frozen install/setup/Mongo wait/bootstrap/migrate/seed,
+  tất cả exit0; giữ env, mật khẩu/tài khoản và dữ liệu cũ. BE `pnpm dev:api`
+  launcher9132 cùng API/media/order workers; FE `pnpm dev:user` launcher24608.
+  http://localhost:5174 và API `/api/v1/health/ready` cổng3000 trả200; CORS đúng.
+  Log/PID tại `.tmp/dev-card-startup/`. Không chạy API E2E/native/live provider/
+  human/remote CI; READINESS giữ nguyên; chưa push/PR/merge/deploy.
+
+## Card sách rõ thông tin và khu vực — 22/10/2026
+
+- Owner chọn bìa ở trên; dưới chia hai phần bằng nhau: tên/tác giả trái,
+  khu vực/giá phải. Card Home/Search có border riêng, tiêu đề xuống dòng đầy đủ,
+  giữ giá bán/giá trị đổi, trạng thái, retry ảnh và link. Grid tối thiểu280px,
+  một card mỗi hàng điện thoại; dùng chung `BookCard`/`HomeBookCard`.
+- Contract0.47.0 thêm optional `fulfillment.locality {code,label}` từ vùng của
+  origin hiện hành, giữ envelopeTP.HCM cũ. Không lộ contact/address references;
+  origin thiếu/stale/deleted không bị đoán khu vực. Cập nhật ADR0015/0039,
+  không migration/đổi dữ liệu. Preview ghi rõ vị trí không áp dụng.
+- Nhánh `codex/book-card-details`, base `2e746a5`; subject
+  `feat(catalog): show bordered book cards with real locations`.
+- PASS Node24.21.0/pnpm11.19.0: API/web lint/typecheck/build, API150/web156unit,
+  contract check/routes173;16 origin E2E trên Mongo QA `_test` (60 ca không liên
+  quan bỏ qua), gồm cả3vùng, redaction và origin đổi/xóa. Browser fixture51ca riêng
+  kiểm Home/Search, desktop và320/390px chữ130%, hai cột/border/tên dài/ảnh lỗi/
+  links/hover/focus. Ảnh có nhãn mô phỏng ở `.tmp/book-card-details-qa/`.
+- Detector một lượt có advisory màu/radius/background có sẵn ngoài phần đổi;
+  API11/web6 warning lint/chunk cũ. Native/live storage/human/remote CI NOT RUN.
+  QA57017 đã dừng, giữ app Mongo/cấu hình/dữ liệu; dev API nạp lại source mới.
+  Readiness200; public read hiện7bài:4TP.HCM,3chưa có origin hợp lệ nên không đoán vùng.
+  READINESS không đổi; chưa push/PR/merge/deploy.
+
+## Xem đơn trong Chat — 22/10/2026
+
+- Theo owner, **Đơn hàng của tôi → Xem đơn** mở workspace Chat: toàn bộ thông tin
+  và thao tác Order ở trái, nhắn tin đúng đối tác ở phải. Mobile chuyển Đơn hàng/
+  Hội thoại mà giữ nháp và ý định. `OrderDetails` dùng chung controller thanh toán,
+  hủy và giao nhận; giữ snapshot riêng, lịch sử thương lượng và retry key/body/version.
+- API/contract0.46.0 thêm `conversationId` trong Order read và lệnh mở hội thoại
+  đúng Order. Giữ phòng Negotiated; BuyNow/Order lịch sử chưa có link tạo phòng
+  OrderCreated riêng, không đổi tiền/sách/trạng thái. [ADR0045](../adr/0045-order-conversation-workspace.md),
+  không cần migration mới; quyền participant/ACTIVE/session được kiểm trước replay.
+- Nhánh `codex/order-chat-workspace`, base `c52a770`; subject
+  `feat(orders): open order details in the chat workspace`.
+- PASS Node24.21.0/pnpm11.19.0: API lint/typecheck/build/150unit;6 E2E mới trên
+  Mongo QA `_test` (49 ca không liên quan bỏ qua), gồm từ chối/replay/race barrier;
+  contract check/routes173operation; web lint/typecheck/build/156unit, browser
+  order-chat mới và regression Chat cũ. Xem desktop/320/390px chữ130%; kiểm mất ACK
+  mở phòng/pay/cancel, message dedupe, ảnh đóng gói/vận đơn, cache403 và nháp.
+- Browser dùng API/Socket.IO fixture riêng; API E2E dùng Mongo thật/storage fake.
+  Ảnh có nhãn mô phỏng tại `.tmp/order-chat-workspace-qa/`; detector một lượt[];
+  API11/web6 warning lint và cảnh báo chunk cũ. Review AI đã sửa nguy cơ mất intent
+  khi đổi trang; không thay human review/native/live provider/remote CI.
+- Dev API/worker đã khởi động lại từ launcher hiện có do watcher không còn listener;
+  readiness200, web5174 HMR. Giữ cấu hình/DB app; không migrate/reset/seed.
+  READINESS giữ nguyên; chưa push/PR/merge/deploy.
+
+## Khung số dư và thao tác ví — 22/10/2026
+
+- Member web `/wallet`: gom tiêu đề, số dư khả dụng từ API và hai nút Nạp/Rút
+  vào khung wine–cream bo12px, dùng lại minh họa của phần Tổng quan theo ảnh owner.
+  Giữ popup `PurchaseDialog`, lịch sử và logic VNPay; rút vẫn chỉ là preview.
+- Nhánh `codex/wallet-balance-banner`, base `6d063ee`; subject
+  `style(web): group wallet balance and actions in branded banner`.
+- PASS Node24.21.0/pnpm11.19.0: web lint/typecheck/156unit/build; Chromium fixture
+  1366/900/768/390/320px, chữ130%, số dư0/tối đa, loading/lỗi/retry/cache/403,
+  focus/Escape, hai popup và giữ số tiền. Đã xem desktop/mobile; ảnh và kết quả
+  local tại `.tmp/wallet-balance-banner-qa/`, có nhãn dữ liệu mô phỏng.
+- Sáu warning lint và cảnh báo chunk cũ; detector một lượt chỉ advisory font1.2rem có sẵn.
+  Browser mock toàn bộ API, không gửi command ví/đụng DB. Không chạy lại API/Mongo,
+  native/live VNPay/human/remote CI; READINESS giữ nguyên. Chưa push/PR/merge/deploy.
+
+## Tích hợp tối ưu listing và hỗ trợ demo — 22/10/2026
+
+- Chủ dự án yêu cầu push và merge 4 commit local; nhánh
+  `codex/listing-media-backend-performance`, đồng bộ `origin/main` tại `a67cb0b`.
+  [PR #61](https://github.com/huangg49/used-book-marketplace/pull/61).
+- Gói gồm: tùy chọn bỏ limiter login chỉ trong development (mặc định tắt), tên
+  người đăng cạnh tên sách trên web/RN, cache ảnh theo hạn gốc + lazy viewport
+  phía client, batch ký ảnh/bounded RAM cache + bulk metadata query phía API.
+  Giữ kiểm tra eligibility trước/sau URL, fresh Detail và snapshot/cursor.
+  Không đổi contract, schema/migration hoặc DB demo; không commit cấu hình riêng.
+- Bằng chứng đo trước/sau, phạm vi cache và giới hạn cold load ở
+  [bước 1](LISTING_LOAD_PERFORMANCE_2026_10_20.md),
+  [bước 2](LISTING_MEDIA_BACKEND_PERFORMANCE_2026_10_20.md).
+  Tra tài khoản theo [người đăng](DEMO_ACCOUNTS.md).
+- Sau đồng bộ main, sửa lint của chat/đổi sách RN bằng AppModal/AppTextInput và
+  token màu có sẵn; fixture VNPay bổ sung expiresAt/serverTime đúng contract.
+  Không thay endpoint/hành vi giao dịch của PR #60.
+- CI Mongo lỗi từ runner Ubuntu mới: MongoDB 8.0 từ chối kernel >=6.19
+  ([SERVER-121912](https://jira.mongodb.org/browse/SERVER-121912)). Runner 24.04 mới
+  cũng gặp lỗi, nên ghim 4 job Mongo về ubuntu-22.04 (kernel 6.8); thêm log khi lỗi.
+  Không sửa image/DB local; cần nâng lại runner trước khi 22.04 hết hỗ trợ.
+  User Web CI chạy thêm browser regression cache ảnh.
+- Navbar có layer transform ổn định để viền không đổi rasterization khi WebGL
+  rèm bị ẩn/gỡ; giữ nguyên tiêu chí pixel <=1, thời lượng và cleanup motion.
+- Importer PG xử lý đúng cặp reference locality F2h → ADR0039, giữ DEMO-C native;
+  mọi drift khác vẫn từ chối, không ghi nguồn PG. PASS 5 ca import trên PG/Mongo
+  QA riêng, gồm ledger/ảnh/lịch sử và từ chối drift nguồn/đích.
+- Web/RN từ chối URL đã hết hạn ngay khi nhận để có retry thay vì loading mãi.
+  Browser fixture chờ đúng h1/URL Detail và phản hồi ảnh trước khi nhảy đồng hồ;
+  vẫn kiểm request bị 404 và không hiện lại ảnh cũ.
+- Đồng bộ browser journeys với detail/editor và chat thống nhất trên main: cuộn
+  đến ảnh lazy, picker ảnh bìa, nhãn khai báo/khu vực, điều hướng qua tab tài khoản.
+  Giữ kiểm replay/lost-response và kiểm eligibility. Login quay lại chat của chính
+  chủ bài trả về Detail, không gửi yêu cầu tự chat. Header RN giữ vùng bấm 48 px,
+  accordion tình trạng công bố trạng thái mở/đóng cho công cụ hỗ trợ.
+- CI full E2E phát hiện fixture đấu giá ngoài vùng chưa phục hồi; đã thêm finally.
+  Kiểm packaging chấp nhận lịch sử hợp lệ ở Inspection/Completed, vẫn kiểm đủ
+  receipt/audit/outbox và chặn intent mới. PASS local 30 carrier + 41 wallet E2E,
+  có kiểm ảnh lịch sử sau nhận sách/quyết toán và từ chối intent sau đó.
+- DraftCoverPhoto nhận trạng thái xử lý từ editor, chỉ ký khi Ready và đang xem;
+  trả lại trạng thái ảnh và nút retry khi lỗi read/tải ảnh/hết hạn. Không thay picker
+  hay upload contract; browser vẫn kiểm lỗi ảnh, retry và chọn ảnh bằng filechooser.
+  PASS thêm 62 auction E2E trên DB QA riêng; fixture ngoài vùng đã phục hồi.
+- PASS local trên Node 24.19.0/pnpm 11.19.0: API typecheck/lint/build/176 unit;
+  web typecheck/lint/build/160 unit; shared session 27 unit; RN typecheck/lint/
+  156 unit và Expo web export (CLI báo force-exit sau export thành công).
+  Contract/routes 176 operation/26 controller và docs check PASS.
+- PASS 188 E2E gồm auth/listing-review/media/packaging/auctions trên QA57017,
+  database riêng `latlai_integration_publish_test`, không đụng DB/bucket demo.
+  Các 500 fault-injection trong log là ca kiểm rollback, không phải suite fail.
+- Browser PASS: cache ảnh tại 1440/390 px (Detail/Back không ký lại, expiry/denial/
+  retry, Detail vẫn cập nhật trạng thái); auction stage giữ pixel/geometry navbar,
+  mobile/resize/Back/fallback/cleanup. Đã xem ảnh. Artifact mới giữ trong
+  `.tmp/integration-publish-20261022/`, không ghi đè evidence đã commit.
+- Full User Web browser PASS: Home/Search/Detail responsive, login return/owner,
+  đăng sách/chỉnh sửa, ảnh, stale address và replay; lost-response chat chỉ tạo
+  một hội thoại. RN public/address/listing browser PASS: cuộn đến thông báo nằm
+  ngoài viewport trước khi kiểm visible; chờ HTTP trả đúng version địa chỉ và
+  flush layout sau khi tiến đồng hồ mô phỏng. Giữ toàn bộ ca dữ liệu lỗi/replay.
+  Remote final-head và trạng thái tích hợp theo PR #61.
+- Seller-order và Buy-now browser PASS: hai bên, quote/address, thiếu tiền bị từ
+  chối, lost ACK tạo/thanh toán cùng key/body, đúng một hold; ảnh đóng gói, gửi và
+  pickup mô phỏng InTransit. Exchange browser đi qua chat thống nhất (seller duyệt
+  hình thức, buyer chọn sách/địa chỉ), lost ACK giữ key/body, inbox mở lại đúng một
+  phiếu, accept/cancel, từ chối funding và 403 ẩn phiếu; desktop/mobile PASS.
+- Wallet browser PASS: lịch sử thật/filter/pagination/retry, QueryDR lỗi/thử lại/
+  credit, lost ACK cùng key/body, hạn server đúng 5 phút, hủy và replay hết hạn
+  không thêm ledger/history. Chờ checkout release và các query/invalidation sau
+  credit xong trước fixture trang nhỏ (networkidle cũ không đủ); thêm chẩn đoán
+  số hàng/cursor khi lỗi. Provider và deadline QA mô phỏng,
+  không là chứng nhận thanh toán VNPay thật.
+- Đã push; kết quả CI và trạng thái tích hợp theo PR #61. Human review độc lập và
+  native Android/iOS acceptance NOT RUN; yêu cầu merge của chủ dự án không là
+  chứng nhận những gate này. READINESS giữ nguyên, không mở gói tối ưu bước 3.
+
+## Hoàn thiện Trao đổi sách (Exchange): hiển thị sách khi cọc, ảnh bìa trực quan & hủy đơn hoàn cọc (FR-X11) — 20/10/2026
+
+- Nhánh `feat/rn-exchange-fix-and-deposit-cancellation`, base `feat/rn-chat-inbox-and-order-flow` (đã merge `origin/main` mới nhất).
+- Phạm vi hoàn thành:
+  1. Fix lỗi 404 & hiển thị `@Người đề nghị` khi sách chuyển sang trạng thái chờ cọc (`AcceptedAwaitingFunding`):
+     - Trong `public-listing.service.ts`: bổ sung lookup sang collection `exchanges` để cho phép các sách ở trạng thái `Reserved` thuộc tiến trình trao đổi vẫn được truy vấn công khai (tên sách, ảnh bìa, tác giả, giá trị cọc đối soát).
+  2. Sửa nhãn hiển thị tiêu đề và đối tác trong `ExchangeProposalCard`:
+     - Khung 1 luôn là `SÁCH CỦA BẠN GỬI ĐI`, khung 2 luôn là `SÁCH BẠN NHẬN VỀ (TỪ @<Tên đối tác>)`.
+     - Kích hoạt hiển thị ảnh bìa thực tế (`active={true}`) trong cả `ExchangeProposalCard` và `ExchangeComposeScreen`.
+  3. Bổ sung tính năng Hủy giao dịch trao đổi & hoàn cọc 100% (FR-X11 trong SRS 1.1):
+     - Thêm nút và popup xác nhận `Hủy giao dịch trao đổi` vào giai đoạn `AcceptedAwaitingFunding` trong `exchange-actions-card.tsx`.
+     - Cho phép người dùng chủ động rút lui trước khi gửi sách: hoàn trả 100% tiền cọc về ví ngay tức thì và mở lại trạng thái `Available` trên kệ sách cho cả 2 bên.
+  4. Đồng bộ nhánh chính `origin/main`:
+     - Tích hợp 4 migration MongoDB mới (`0032-vnpay-topup-expiry`, `0032-auction-only-listings`, `0033-buy-now-challenge`, `0034-auction-delivery`).
+     - Áp dụng migration vào replica set MongoDB local thành công.
+     - Cập nhật hợp đồng `TopupIntent` (thêm `Cancelled`, `expiresAt`, `serverTime`) và `PublicAuctionSummary` trong mobile app.
+- Kiểm tra xác thực:
+  - API Backend: `pnpm --filter @used-books/api typecheck` ➔ PASS (0 lỗi).
+  - Mobile React Native: `pnpm --filter @used-books/mobile-react-native typecheck` ➔ PASS (0 lỗi).
+  - Health check: `GET http://localhost:3000/api/v1/health` ➔ `{"status":"ok","service":"used-book-api"}`.
+- Git: Đã push nhánh lên remote `origin/feat/rn-exchange-fix-and-deposit-cancellation`.
 
 ## Giao sách thắng đấu giá từ điểm (ADR 0044) — 20/10/2026
 

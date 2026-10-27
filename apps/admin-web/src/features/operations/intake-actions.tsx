@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { money } from "../../core/format";
 import { ActionPanel } from "./action-panel";
 import { reclaimLabels, type Intake } from "./contracts";
 import type { ActionContext } from "./queue-panel";
@@ -74,34 +73,6 @@ export function IntakeReceive({ item, ...context }: Props) {
       interpret={() => ({
         tone: "success",
         text: `Đã nhận “${item.title}” vào kệ ${code}. Hãy kiểm tra tình trạng sách.`,
-        close: true,
-      })}
-    />
-  );
-}
-
-export function IntakeOpen({ item, ...context }: Props) {
-  return (
-    <ActionPanel
-      {...context}
-      label="Mở phiên đấu giá"
-      title="Mở phiên 24 giờ."
-      intro={`Giá khởi điểm ${money(item.startPrice)}, bước giá ${money(item.step)}${item.buyNowPrice !== null ? `, mua ngay ${money(item.buyNowPrice)}` : ", không có giá mua ngay"}. Giá do người bán chọn khi gửi và không đổi được.`}
-      submitLabel="Mở phiên ngay"
-      confirmTitle="Mở phiên đấu giá?"
-      confirmBody={
-        <p>
-          Phiên bắt đầu ngay theo giờ máy chủ và kết thúc sau đúng 24 giờ, không
-          gia hạn. Sau khi mở, chỉ quản trị viên có thể hủy phiên khi có sự cố.
-        </p>
-      }
-      build={() => ({
-        path: `${base(item)}/open`,
-        body: { expectedVersion: item.version },
-      })}
-      interpret={() => ({
-        tone: "success",
-        text: `Đã mở phiên cho “${item.title}”.`,
         close: true,
       })}
     />

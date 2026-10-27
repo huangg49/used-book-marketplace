@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { session } from "../lib/session";
+import { bundleSchema } from '../lib/book-bundle';
 
 const paymentOrderSchema = z.object({
   id: z.string().uuid(),
@@ -67,6 +68,7 @@ const contact = z.object({
   detail: z.string(),
 });
 const orderDetails = paymentOrderSchema.extend({
+  conversationId: z.string().uuid().nullable(),
   purchaseMode: z.enum(["BuyNow", "Negotiated"]).optional(),
   serverTime: z.string(),
   createdAt: z.string(),
@@ -80,6 +82,7 @@ const orderDetails = paymentOrderSchema.extend({
   ownAddress: contact,
   shippingAddress: contact.nullable(),
   item: z.object({
+    bundle: bundleSchema.nullable().optional(),
     listingId: z.string().uuid(),
     metadata: z.object({ title: z.string() }),
     condition: z.string(),
@@ -91,6 +94,17 @@ const orderDetails = paymentOrderSchema.extend({
 export type DirectOrder = z.infer<typeof orderDetails>;
 export function getOrder(orderId: string) {
   return session.request(`/me/orders/${orderId}`, orderDetails);
+}
+export function openOrderConversation(orderId: string, key: string) {
+  return session.request(
+    `/orders/${orderId}/conversation`,
+    z.object({ entityId: z.string().uuid() }),
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body: JSON.stringify({}),
+    },
+  );
 }
 export function cancelOrder(
   orderId: string,

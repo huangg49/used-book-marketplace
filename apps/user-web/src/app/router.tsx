@@ -1,70 +1,45 @@
-import { StartConversationPage } from '../pages/StartConversationPage';
-import { BuyNowPage } from '../pages/BuyNowPage';
-import { DirectOrderPage, DirectOrderListPage } from '../pages/DirectOrderPage';
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import HomePage from '../pages/HomePage';
-import { BookSearchPage } from '../pages/BookSearchPage';
-import { BookDetailPage } from '../pages/BookDetailPage';
-import { SellBookPage } from '../pages/SellBookPage';
-import { ChatPage } from '../pages/ChatPage';
-import { CheckoutPage } from '../pages/CheckoutPage';
-import { WalletPage } from '../pages/WalletPage';
 import { VNPayReturnGate } from '../pages/VNPayReturnGate';
-import { ProfilePage } from '../pages/ProfilePage';
-import { MyBooksPage } from '../pages/MyBooksPage';
-import { AccountOverviewPage } from '../pages/AccountOverviewPage';
-import { LoginPage } from '../pages/LoginPage';
-import { RegisterPage } from '../pages/RegisterPage';
-import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
-import { AuthLayout } from '../layouts/AuthLayout';
 import { NotFoundPage } from '../pages/NotFoundPage';
-import ExchangePage from '../pages/ExchangePage';
-import ExchangeComposePage from '../pages/ExchangeComposePage';
-import ExchangeMinePage from '../pages/ExchangeMinePage';
-import { ExchangeDetailPage } from '../pages/ExchangeDetailPage';
-import { AuctionListPage } from '../pages/AuctionListPage';
-import { MyAuctionsPage } from '../pages/MyAuctionsPage';
-import { AuctionDetailPage } from '../pages/AuctionDetailPage';
-import { CreateAuctionPage } from '../pages/CreateAuctionPage';
-import { NotificationsPage } from '../pages/NotificationsPage';
-import { PaperStormLayout } from '../components/auth/PaperStormLayout';
-import { DriverPage } from '../pages/DriverPage';
+import { AppRouteLayout } from './AppRouteLayout';
+import { RouteError, RoutePending } from './RouteFeedback';
+
+const chatRoute = () => import('../pages/ChatPage').then(({ ChatPage }) => ({ Component: ChatPage }));
+const orderConversationRoute = () => import('../pages/OrderConversationPage')
+  .then(({ OrderConversationPage }) => ({ Component: OrderConversationPage }));
 
 export const router = createBrowserRouter([
   {
-    element: <PaperStormLayout />,
+    element: <AppRouteLayout />,
+    HydrateFallback: RoutePending,
+    ErrorBoundary: RouteError,
     children: [
       {
         element: <MainLayout />,
-        errorElement: (
-          <main style={{ padding: '2rem' }}>
-            <h1>Đã có lỗi xảy ra</h1>
-            <p>
-              <a href="/">Về trang chủ</a>
-            </p>
-          </main>
-        ),
+        ErrorBoundary: RouteError,
         children: [
           { index: true, element: <HomePage /> },
-          { path: '/books', element: <BookSearchPage /> },
-          { path: '/books/:id', element: <BookDetailPage /> },
-          { path: '/chat', element: <ChatPage /> },
-          { path: '/chat/:roomId', element: <ChatPage /> },
-          { path: '/chat/start/:listingId', element: <StartConversationPage /> },
-          { path: '/checkout/:listingId', element: <CheckoutPage /> },
-          { path: '/buy-now/:listingId', element: <BuyNowPage /> },
-          { path: '/orders', element: <DirectOrderListPage /> },
-          { path: '/orders/:orderId', element: <DirectOrderPage /> },
-          { path: '/exchange', element: <ExchangePage /> },
-          { path: '/exchange/new', element: <ExchangeComposePage /> },
-          { path: '/exchange/mine', element: <ExchangeMinePage /> },
-          { path: '/exchange/:id', element: <ExchangeDetailPage /> },
-          { path: '/auctions', element: <AuctionListPage /> },
-          { path: '/auctions/new', element: <CreateAuctionPage /> },
-          { path: '/auctions/:id', element: <AuctionDetailPage /> },
-          { path: '/notifications', element: <NotificationsPage /> },
+          { path: '/books', lazy: () => import('../pages/BookSearchPage').then(m => ({ Component: m.BookSearchPage })) },
+          { path: '/books/:id', lazy: () => import('../pages/BookDetailPage').then(m => ({ Component: m.BookDetailPage })) },
+          { path: '/chat', lazy: chatRoute },
+          { path: '/chat/orders/:orderId', lazy: orderConversationRoute },
+          { path: '/chat/:roomId', lazy: chatRoute },
+          { path: '/chat/start/:listingId', lazy: () => import('../pages/StartConversationPage').then(m => ({ Component: m.StartConversationPage })) },
+          { path: '/checkout/:listingId', lazy: () => import('../pages/CheckoutPage').then(m => ({ Component: m.CheckoutPage })) },
+          { path: '/buy-now/:listingId', lazy: () => import('../pages/BuyNowPage').then(m => ({ Component: m.BuyNowPage })) },
+          { path: '/orders', lazy: () => import('../pages/DirectOrderPage').then(m => ({ Component: m.DirectOrderListPage })) },
+          { path: '/orders/:orderId', lazy: orderConversationRoute },
+          { path: '/exchange', lazy: () => import('../pages/ExchangePage').then(m => ({ Component: m.default })) },
+          { path: '/exchange/new', lazy: () => import('../pages/ExchangeComposePage').then(m => ({ Component: m.default })) },
+          { path: '/exchange/mine', lazy: () => import('../pages/ExchangeMinePage').then(m => ({ Component: m.default })) },
+          { path: '/exchange/:id', lazy: () => import('../pages/ExchangeDetailPage').then(m => ({ Component: m.ExchangeDetailPage })) },
+          { path: '/auctions', lazy: () => import('../pages/AuctionListPage').then(m => ({ Component: m.AuctionListPage })) },
+          { path: '/auctions/new', lazy: () => import('../pages/CreateAuctionPage').then(m => ({ Component: m.CreateAuctionPage })) },
+          { path: '/auctions/:id', lazy: () => import('../pages/AuctionDetailPage').then(m => ({ Component: m.AuctionDetailPage })) },
+          { path: '/notifications', lazy: () => import('../pages/NotificationsPage').then(m => ({ Component: m.NotificationsPage })) },
         ],
       },
       // Dashboard routes — dùng DashboardLayout
@@ -74,30 +49,31 @@ export const router = createBrowserRouter([
           {
             element: <DashboardLayout />,
             children: [
-              { path: '/account', element: <AccountOverviewPage /> },
-              { path: '/wallet', element: <WalletPage /> },
-              { path: '/profile', element: <ProfilePage /> },
-              { path: '/my-books', element: <MyBooksPage /> },
-              { path: '/my-auctions', element: <MyAuctionsPage /> },
+              { path: '/account', lazy: () => import('../pages/AccountOverviewPage').then(m => ({ Component: m.AccountOverviewPage })) },
+              { path: '/wallet', lazy: () => import('../pages/WalletPage').then(m => ({ Component: m.WalletPage })) },
+              { path: '/profile', lazy: () => import('../pages/ProfilePage').then(m => ({ Component: m.ProfilePage })) },
+              { path: '/my-books', lazy: () => import('../pages/MyBooksPage').then(m => ({ Component: m.MyBooksPage })) },
+              { path: '/my-books/:listingId/edit', lazy: () => import('../pages/EditListingPage').then(m => ({ Component: m.EditListingPage })) },
+              { path: '/my-auctions', lazy: () => import('../pages/MyAuctionsPage').then(m => ({ Component: m.MyAuctionsPage })) },
             ],
           },
         ],
       },
       // Auth sheets share one persistent paper stack and memory-only input draft.
       {
-        element: <AuthLayout />,
+        lazy: () => import('../layouts/AuthLayout').then(m => ({ Component: m.AuthLayout })),
         children: [
-          { path: '/login', element: <LoginPage /> },
-          { path: '/register', element: <RegisterPage /> },
-          { path: '/forgot-password', element: <ForgotPasswordPage /> },
+          { path: '/login', lazy: () => import('../pages/LoginPage').then(m => ({ Component: m.LoginPage })) },
+          { path: '/register', lazy: () => import('../pages/RegisterPage').then(m => ({ Component: m.RegisterPage })) },
+          { path: '/forgot-password', lazy: () => import('../pages/ForgotPasswordPage').then(m => ({ Component: m.ForgotPasswordPage })) },
         ],
       },
       // Fullscreen routes — không dùng MainLayout
       {
         element: <Outlet />,
         children: [
-          { path: '/sell', element: <SellBookPage /> },
-          { path: '/driver', element: <DriverPage /> },
+          { path: '/sell', lazy: () => import('../pages/SellBookPage').then(m => ({ Component: m.SellBookPage })) },
+          { path: '/driver', lazy: () => import('../pages/DriverPage').then(m => ({ Component: m.DriverPage })) },
         ],
       },
       // Catch-all

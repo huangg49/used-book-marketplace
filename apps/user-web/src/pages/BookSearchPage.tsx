@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
   Search,
-  SlidersHorizontal,
+  Filter,
   X,
   ArrowRight,
-  RotateCcw,
+  Menu,
 } from "lucide-react";
 import { HomeBookCard } from "../components/HomeBookCard";
 import { CatalogSort } from "../components/CatalogSort";
@@ -28,6 +28,8 @@ import {
   type Attributes,
 } from "@used-books/api-contract/catalog-taxonomy";
 import { catalogQueryKeys, readAttributes } from "../lib/catalog-filters";
+import { observeHeaderScroll } from "../lib/header-scroll";
+import { AutumnLeavesCanvas } from "../components/autumn/AutumnLeavesCanvas";
 import styles from "./BookSearchPage.module.css";
 
 const modes = [
@@ -85,14 +87,22 @@ function FilterForm({
 }: {
   initial: FilterValues;
   id: string;
-  onApply: (values: FilterValues) => void;
+  onApply: (values: FilterValues, shouldScroll?: boolean) => void;
   mode: string;
 }) {
   const [draft, setDraft] = useState(initial);
   const invalid = invalidFilters(draft);
+
+  function updateDraft(next: FilterValues, autoApply = false) {
+    setDraft(next);
+    if (autoApply && !invalidFilters(next)) {
+      onApply(next, false);
+    }
+  }
+
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (!invalid) onApply(draft);
+    if (!invalid) onApply(draft, true);
   }
   function clearGroup(
     event: React.MouseEvent<HTMLButtonElement>,
@@ -103,7 +113,7 @@ function FilterForm({
       .closest("fieldset")
       ?.querySelector<HTMLElement>("input, select")
       ?.focus();
-    setDraft(next);
+    updateDraft(next, true);
   }
   function range(kind: "SalePrice" | "ExchangeValue", title: string) {
     const minKey = kind === "SalePrice" ? "minSalePrice" : "minExchangeValue";
@@ -116,7 +126,6 @@ function FilterForm({
       >
         <legend>
           <span id={`${id}-${kind}-label`}>
-            {title} (₫)
             {(draft[minKey] || draft[maxKey]) && <small>Đã chọn khoảng</small>}
           </span>
           {(draft[minKey] || draft[maxKey]) && (
@@ -141,6 +150,17 @@ function FilterForm({
               placeholder="10.000"
               value={draft[minKey]}
               onChange={(e) => setDraft({ ...draft, [minKey]: e.target.value })}
+              onBlur={() => {
+                if (!error && (draft[minKey] !== initial[minKey] || draft[maxKey] !== initial[maxKey])) {
+                  updateDraft(draft, true);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (!error) updateDraft(draft, true);
+                }
+              }}
               aria-invalid={error}
               aria-describedby={error ? id + "-" + kind + "-error" : undefined}
             />
@@ -153,6 +173,17 @@ function FilterForm({
               placeholder="1.000.000"
               value={draft[maxKey]}
               onChange={(e) => setDraft({ ...draft, [maxKey]: e.target.value })}
+              onBlur={() => {
+                if (!error && (draft[minKey] !== initial[minKey] || draft[maxKey] !== initial[maxKey])) {
+                  updateDraft(draft, true);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (!error) updateDraft(draft, true);
+                }
+              }}
               aria-invalid={error}
               aria-describedby={error ? id + "-" + kind + "-error" : undefined}
             />
@@ -166,7 +197,7 @@ function FilterForm({
               aria-pressed={!draft[minKey] && draft[maxKey] === String(price)}
               aria-label={`${title} tối đa ${formatVnd(price)}`}
               onClick={() =>
-                setDraft({ ...draft, [minKey]: "", [maxKey]: String(price) })
+                updateDraft({ ...draft, [minKey]: "", [maxKey]: String(price) }, true)
               }
             >
               ≤ {price / 1000}k
@@ -194,7 +225,7 @@ function FilterForm({
             clearable
             renderSelect={(props) => <FilterSelect {...props} />}
             value={draft}
-            onChange={(value) => setDraft({ ...draft, ...value })}
+            onChange={(value) => updateDraft({ ...draft, ...value }, true)}
           />
         </div>
         <fieldset
@@ -230,7 +261,7 @@ function FilterForm({
                     name={`${id}-condition`}
                     value={value}
                     checked={draft.condition === value}
-                    onChange={() => setDraft({ ...draft, condition: value })}
+                    onChange={() => updateDraft({ ...draft, condition: value }, true)}
                   />
                   <span>{label}</span>
                 </label>
@@ -238,20 +269,25 @@ function FilterForm({
             )}
           </div>
         </fieldset>
-        {mode !== "Exchange" && range("SalePrice", "Giá bán")}
+        {mode !== "Exchange" && (
+          <details className={styles.extraBudget}>
+            <summary>Khoảng giá bán</summary>
+            {range("SalePrice", "Giá bán")}
+          </details>
+        )}
         {mode === "Exchange"
           ? range("ExchangeValue", "Giá trị đổi")
           : mode !== "Sale" && (
-              <details className={styles.extraBudget}>
-                <summary>Khoảng giá trị đổi</summary>
-                {range("ExchangeValue", "Giá trị đổi")}
-                <p className={styles.filterHint}>
-                  Nếu chọn cả hai khoảng tiền, sách cần đáp ứng cả hai.
-                </p>
-              </details>
-            )}
+            <details className={styles.extraBudget}>
+              <summary>Khoảng giá trị đổi</summary>
+              {range("ExchangeValue", "Giá trị đổi")}
+              <p className={styles.filterHint}>
+                Nếu chọn cả hai khoảng tiền, sách cần đáp ứng cả hai.
+              </p>
+            </details>
+          )}
         <fieldset
-          className={styles.filterGroup}
+          className={`${styles.filterGroup} ${styles.languageFilter}`}
           aria-labelledby={`${id}-language-label`}
         >
           <legend>
@@ -275,7 +311,7 @@ function FilterForm({
             id={`${id}-language`}
             label="Ngôn ngữ của sách"
             value={draft.language}
-            onChange={(language) => setDraft({ ...draft, language })}
+            onChange={(language) => updateDraft({ ...draft, language }, true)}
             options={[
               { value: "", label: "Tất cả ngôn ngữ" },
               ...languageOptions.map((option) => ({
@@ -319,6 +355,15 @@ function FilterForm({
 
 export function BookSearchPage() {
   const [params, setParams] = useSearchParams();
+  const searchTerm = params.get("q") || "";
+  const [settledSearch, setSettledSearch] = useState(searchTerm);
+  const [composing, setComposing] = useState(false);
+  const searchPending = searchTerm !== settledSearch || composing;
+  useEffect(() => {
+    if (searchTerm === settledSearch) return;
+    const timer = window.setTimeout(() => setSettledSearch(searchTerm), 300);
+    return () => window.clearTimeout(timer);
+  }, [searchTerm, settledSearch]);
   const preview = isCatalogPreview(`?${params}`);
   const sidebar = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -338,8 +383,34 @@ export function BookSearchPage() {
       window.removeEventListener("resize", check);
     };
   }, []);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("latlai_catalog_filter_collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("latlai_catalog_filter_collapsed", String(next));
+      } catch { }
+      return next;
+    });
+  };
+
   const dialog = useRef<HTMLDialogElement>(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [floating, setFloating] = useState(() => typeof window !== "undefined" && window.scrollY > 48);
+  useLayoutEffect(
+    () =>
+      observeHeaderScroll((next) => {
+        setFloating(next);
+      }),
+    [],
+  );
   const query = new URLSearchParams();
   for (const key of queryKeys) {
     const value = params.get(key);
@@ -371,9 +442,10 @@ export function BookSearchPage() {
   const result = useQuery({
     queryKey: ["catalog-search", taxonomyVersion, preview, query.toString()],
     queryFn: () => getSearchShelf(query, preview),
-    enabled: !priceInvalid,
+    enabled: !priceInvalid && !searchPending,
     retry: false,
-    staleTime: 0,
+    staleTime: 30_000,
+    gcTime: 300_000,
   });
   const filterKey = JSON.stringify(initial);
   function update(key: string, value: string, replace = false) {
@@ -401,6 +473,7 @@ export function BookSearchPage() {
   function clear() {
     const next = new URLSearchParams();
     if (params.get("q")) next.set("q", params.get("q")!);
+    if (params.get("mode")) next.set("mode", params.get("mode")!);
     if (params.has("data")) next.set("data", params.get("data")!);
     setParams(next);
   }
@@ -408,7 +481,7 @@ export function BookSearchPage() {
     dialog.current?.close();
     setFilterOpen(false);
   }
-  function apply(values: FilterValues) {
+  function apply(values: FilterValues, shouldScroll = false) {
     const next = new URLSearchParams(params);
     next.delete("cursor");
     next.delete("category");
@@ -422,11 +495,13 @@ export function BookSearchPage() {
     });
     setParams(next);
     closeFilters();
-    requestAnimationFrame(() => {
-      const heading = document.getElementById("catalog-results");
-      heading?.focus({ preventScroll: true });
-      heading?.scrollIntoView({ block: "start" });
-    });
+    if (shouldScroll) {
+      requestAnimationFrame(() => {
+        const heading = document.getElementById("catalog-results");
+        heading?.focus({ preventScroll: true });
+        heading?.scrollIntoView({ block: "start" });
+      });
+    }
   }
   useEffect(() => {
     if (!filterOpen) return;
@@ -447,21 +522,21 @@ export function BookSearchPage() {
   const chips = [
     ...(initial.categoryId
       ? [
-          {
-            key: "categoryId",
-            label: categoryFor(initial.categoryId)?.label || initial.categoryId,
-          },
-        ]
+        {
+          key: "categoryId",
+          label: categoryFor(initial.categoryId)?.label || initial.categoryId,
+        },
+      ]
       : []),
     ...(initial.language
       ? [
-          {
-            key: "language",
-            label:
-              languageOptions.find((o) => o.id === initial.language)?.label ||
-              initial.language,
-          },
-        ]
+        {
+          key: "language",
+          label:
+            languageOptions.find((o) => o.id === initial.language)?.label ||
+            initial.language,
+        },
+      ]
       : []),
     ...(initial.series ? [{ key: "series", label: initial.series }] : []),
     ...facetsFor(initial.categoryId, initial.attributes, "search").flatMap(
@@ -476,97 +551,183 @@ export function BookSearchPage() {
     ...(["minExchangeValue", "maxExchangeValue"] as const).flatMap((key) =>
       initial[key]
         ? [
-            {
-              key,
-              label:
-                (key.startsWith("min") ? "Đổi từ " : "Đổi đến ") +
-                formatVnd(Number(initial[key])),
-            },
-          ]
+          {
+            key,
+            label:
+              (key.startsWith("min") ? "Đổi từ " : "Đổi đến ") +
+              formatVnd(Number(initial[key])),
+          },
+        ]
         : [],
     ),
     ...(params.get("condition")
       ? [
-          {
-            key: "condition",
-            label:
-              conditions[params.get("condition") as keyof typeof conditions] ||
-              params.get("condition")!,
-          },
-        ]
+        {
+          key: "condition",
+          label:
+            conditions[params.get("condition") as keyof typeof conditions] ||
+            params.get("condition")!,
+        },
+      ]
       : []),
     ...(params.get("minSalePrice")
       ? [
-          {
-            key: "minSalePrice",
-            label: `Từ ${priceInvalid ? initial.minSalePrice : formatVnd(Number(initial.minSalePrice))}`,
-          },
-        ]
+        {
+          key: "minSalePrice",
+          label: `Từ ${priceInvalid ? initial.minSalePrice : formatVnd(Number(initial.minSalePrice))}`,
+        },
+      ]
       : []),
     ...(params.get("maxSalePrice")
       ? [
-          {
-            key: "maxSalePrice",
-            label: `Đến ${priceInvalid ? initial.maxSalePrice : formatVnd(Number(initial.maxSalePrice))}`,
-          },
-        ]
+        {
+          key: "maxSalePrice",
+          label: `Đến ${priceInvalid ? initial.maxSalePrice : formatVnd(Number(initial.maxSalePrice))}`,
+        },
+      ]
       : []),
   ];
   const filtered = chips.length > 0 || params.has("mode") || params.has("sort");
+  function removeChip(chip: (typeof chips)[number]) {
+    if (chip.key === "facets" && "facet" in chip && "value" in chip) {
+      const attributes = { ...initial.attributes };
+      const key = String(chip.facet);
+      attributes[key] = (attributes[key] || []).filter((v) => v !== chip.value);
+      if (!attributes[key]?.length) delete attributes[key];
+      const compatible = compatibleAttributes(initial.categoryId, attributes, "search");
+      update("facets", Object.keys(compatible).length ? JSON.stringify(compatible) : "");
+    } else update(chip.key, "");
+  }
   return (
     <div className={styles.page}>
-      <section className={styles.searchHead} aria-labelledby="search-title">
-        <div className={styles.headInner}>
-          <div className={styles.headingRow}>
-            <h1 id="search-title" tabIndex={-1}>
-              TÌM SÁCH<span>.</span>
-            </h1>
-            <p>Một cuốn đã đọc. Một câu chuyện để đọc tiếp.</p>
-          </div>
-          <form
-            role="search"
-            className={styles.search}
-            onSubmit={(event) => {
-              event.preventDefault();
-              update("q", (params.get("q") || "").trim());
-            }}
+      <div className={styles.leavesWrapper} aria-hidden="true">
+        <AutumnLeavesCanvas />
+      </div>
+      {chips.length > 0 && (
+        <>
+          <div
+            className={styles.stickyFilterBar}
+            data-floating={floating}
+            role="region"
+            aria-label="Bộ lọc đang áp dụng"
           >
-            <Search size={21} aria-hidden="true" />
-            <label htmlFor="catalog-search" className="sr-only">
-              Tìm sách
-            </label>
-            <input
-              id="catalog-search"
-              type="search"
-              placeholder="Tên sách, tác giả hoặc ISBN…"
-              value={params.get("q") || ""}
-              onChange={(event) => update("q", event.target.value, true)}
-            />
-            <button type="submit">
-              Tìm sách <ArrowRight size={17} aria-hidden="true" />
-            </button>
-          </form>
-        </div>
-      </section>
-      <div className={styles.catalog}>
-        <aside
-          ref={sidebar}
-          className={styles.sidebar}
-          aria-label="Bộ lọc sách"
+            <div className={styles.stickyFilterInner}>
+              <div className={styles.stickyFilterLead}>
+                <Filter size={14} fill="currentColor" aria-hidden="true" />
+                <span>Đang lọc:</span>
+              </div>
+              <div className={styles.stickyChipsScroll}>
+                {chips.map((chip) => (
+                  <button
+                    type="button"
+                    key={
+                      chip.key === "facets" && "facet" in chip && "value" in chip
+                        ? `${chip.facet}-${chip.value}`
+                        : chip.key
+                    }
+                    className={styles.stickyChip}
+                    aria-label={`Bỏ lọc ${chip.label}`}
+                    onClick={() => removeChip(chip)}
+                  >
+                    <span>{chip.label}</span>
+                    <X size={13} aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className={styles.stickyClearAll}
+                onClick={clear}
+              >
+                Xóa tất cả
+              </button>
+            </div>
+          </div>
+          <div className={styles.stickyFilterSpacer} aria-hidden="true" />
+        </>
+      )}
+      <div
+        className={styles.catalog}
+        data-sidebar-collapsed={isSidebarCollapsed}
+      >
+        <div
+          className={styles.sidebarWrapper}
+          aria-hidden={isSidebarCollapsed}
         >
-          <h2>
-            <SlidersHorizontal size={18} aria-hidden="true" />
-            Bộ lọc sách
-          </h2>
-          <FilterForm
-            key={filterKey}
-            initial={initial}
-            id="desktop"
-            onApply={apply}
-            mode={params.get("mode") || ""}
-          />
-        </aside>
+          <aside
+            ref={sidebar}
+            className={styles.sidebar}
+            aria-label="Bộ lọc sách"
+          >
+            <div className={styles.sidebarHeader}>
+              <h2>
+                <Filter size={18} fill="currentColor" aria-hidden="true" />
+                Bộ lọc sách
+              </h2>
+              <button
+                type="button"
+                className={styles.collapseSidebarBtn}
+                onClick={toggleSidebar}
+                aria-label="Thu gọn bộ lọc sách"
+                title="Thu gọn bộ lọc"
+              >
+                <Menu size={18} aria-hidden="true" />
+              </button>
+            </div>
+            <FilterForm
+              key={filterKey}
+              initial={initial}
+              id="desktop"
+              onApply={apply}
+              mode={params.get("mode") || ""}
+            />
+          </aside>
+        </div>
         <section className={styles.results} aria-labelledby="catalog-results">
+          <div className={styles.searchBar}>
+            {isSidebarCollapsed && (
+              <button
+                type="button"
+                className={styles.expandSidebarBtn}
+                onClick={toggleSidebar}
+                aria-label={`Mở bộ lọc sách${chips.length > 0 ? ` (${chips.length} đang chọn)` : ""}`}
+                title="Mở bộ lọc sách"
+              >
+                <Filter size={18} fill="currentColor" aria-hidden="true" />
+                {chips.length > 0 && (
+                  <span className={styles.expandFilterBadge}>{chips.length}</span>
+                )}
+              </button>
+            )}
+            <form
+              role="search"
+              className={styles.search}
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (composing) return;
+                const value = searchTerm.trim();
+                setSettledSearch(value);
+                update("q", value);
+              }}
+            >
+              <Search size={21} aria-hidden="true" />
+              <label htmlFor="catalog-search" className="sr-only">
+                Tìm sách
+              </label>
+              <input
+                id="catalog-search"
+                type="search"
+                placeholder="Tên sách, tác giả hoặc ISBN…"
+                value={searchTerm}
+                onChange={(event) => update("q", event.target.value, true)}
+                onCompositionStart={() => setComposing(true)}
+                onCompositionEnd={() => setComposing(false)}
+              />
+              <button type="submit">
+                Tìm sách <ArrowRight size={17} aria-hidden="true" />
+              </button>
+            </form>
+          </div>
           <div
             className={styles.modeRow}
             role="group"
@@ -593,10 +754,10 @@ export function BookSearchPage() {
               <p>
                 {priceInvalid
                   ? "Kiểm tra lại bộ lọc đã chọn."
-                  : result.isFetching
+                  : result.isFetching || searchPending
                     ? "Đang tìm sách…"
                     : result.data
-                      ? `${result.data.items.length} ${preview ? "sách xem trước" : "cuốn"} trên trang này`
+                      ? `${result.data.items.length} ${preview ? "sách xem trước" : "tin đăng"} trên trang này`
                       : "Ảnh, tình trạng và giá của từng bản sách."}
               </p>
               {preview && (
@@ -614,7 +775,7 @@ export function BookSearchPage() {
                   setFilterOpen(true);
                 }}
               >
-                <SlidersHorizontal size={17} aria-hidden="true" />
+                <Filter size={17} fill="currentColor" aria-hidden="true" />
                 Bộ lọc{chips.length > 0 && <span>{chips.length}</span>}
               </button>
               <CatalogSort
@@ -624,56 +785,7 @@ export function BookSearchPage() {
               />
             </div>
           </div>
-          {filtered && (
-            <div
-              className={styles.activeFilters}
-              aria-label="Bộ lọc đang áp dụng"
-            >
-              {chips.map((chip) => (
-                <button
-                  type="button"
-                  key={
-                    chip.key === "facets" && "facet" in chip && "value" in chip
-                      ? `${chip.facet}-${chip.value}`
-                      : chip.key
-                  }
-                  aria-label={`Bỏ lọc ${chip.label}`}
-                  onClick={() => {
-                    if (
-                      chip.key === "facets" &&
-                      "facet" in chip &&
-                      "value" in chip
-                    ) {
-                      const attributes = { ...initial.attributes };
-                      const key = String(chip.facet);
-                      attributes[key] = (attributes[key] || []).filter(
-                        (v) => v !== chip.value,
-                      );
-                      if (!attributes[key]?.length) delete attributes[key];
-                      const compatible = compatibleAttributes(
-                        initial.categoryId,
-                        attributes,
-                        "search",
-                      );
-                      update(
-                        "facets",
-                        Object.keys(compatible).length
-                          ? JSON.stringify(compatible)
-                          : "",
-                      );
-                    } else update(chip.key, "");
-                  }}
-                >
-                  {chip.label}
-                  <X size={14} aria-hidden="true" />
-                </button>
-              ))}
-              <button type="button" className={styles.clear} onClick={clear}>
-                <RotateCcw size={14} aria-hidden="true" />
-                Xóa bộ lọc
-              </button>
-            </div>
-          )}
+
           {priceInvalid ? (
             <div className={styles.state} role="alert">
               <h3>Bộ lọc chưa hợp lệ</h3>
@@ -686,14 +798,14 @@ export function BookSearchPage() {
               </button>
             </div>
           ) : (
-            <div aria-busy={result.isFetching}>
-              {result.isPending && (
+            <div aria-busy={result.isFetching || searchPending}>
+              {(result.isPending || searchPending) && (
                 <div className={styles.loading} role="status">
                   <span />
                   Đang tải kệ sách…
                 </div>
               )}
-              {result.isError && (
+              {!searchPending && result.isError && (
                 <div className={styles.state} role="alert">
                   <h3>Chưa tải được kệ sách</h3>
                   <p>
@@ -711,7 +823,7 @@ export function BookSearchPage() {
                   </button>
                 </div>
               )}
-              {!result.isError && result.data?.items.length === 0 && (
+              {!searchPending && !result.isError && result.data?.items.length === 0 && (
                 <div className={styles.empty}>
                   <img
                     src="/illustrations/penguins/buy.png"
@@ -730,11 +842,11 @@ export function BookSearchPage() {
                 </div>
               )}
               <div className={styles.grid}>
-                {result.data?.items.map((book, index) => (
+                {!searchPending && result.data?.items.map((book, index) => (
                   <HomeBookCard key={book.id} book={book} index={index} />
                 ))}
               </div>
-              {(params.has("cursor") || result.data?.nextCursor) && (
+              {!searchPending && (params.has("cursor") || result.data?.nextCursor) && (
                 <nav className={styles.pagination} aria-label="Phân trang sách">
                   {params.has("cursor") && (
                     <button

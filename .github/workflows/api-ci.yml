@@ -9,7 +9,9 @@ on:
 
 jobs:
   api:
-    runs-on: ubuntu-latest
+    # MongoDB 8.0 cannot start on kernel 6.19+ (also present in new 24.04 images).
+    # https://jira.mongodb.org/browse/SERVER-121912
+    runs-on: ubuntu-22.04
     services:
       # Only the source of the one-time PostgreSQL -> MongoDB import test
       # (test/mongo/postgres-import.mongo-spec.ts). The API never connects to it.
@@ -49,3 +51,8 @@ jobs:
       - run: pnpm test:api:mongo
       - run: pnpm test:api:e2e
       - run: pnpm --filter @used-books/api build
+      - name: Mongo QA diagnostics on failure
+        if: failure()
+        run: |
+          docker compose -f infra/docker-compose.mongo-test.yml --profile failover ps -a
+          docker compose -f infra/docker-compose.mongo-test.yml --profile failover logs --no-color --tail=100

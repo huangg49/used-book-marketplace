@@ -2,7 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 vi.mock("./api", () => ({ session: { request: vi.fn() } }));
 import { session } from "./api";
-import { getMyBookIdentity, getMyListings } from "./my-listings";
+import {
+  myListingSchema,
+  getMyBookIdentity,
+  getMyListings,
+  getMyListing,
+  setListingVisibility,
+  archiveListing,
+} from "./my-listings";
 
 const request = vi.mocked(session.request);
 beforeEach(() => {
@@ -10,6 +17,15 @@ beforeEach(() => {
 });
 
 describe("owner shelf reads", () => {
+  it("keeps the exact bundle manifest when parsing an owner shelf row", () => {
+    const bundle = { title: "Bộ tập 1 và 3", wholeOnly: true, exclusiveOwnershipDeclared: true,
+      items: [{ label: "Tập 1", condition: "Good", notes: "" }, { label: "Tập 3", condition: "Fair", notes: "Thiếu tập 2 giữa bộ." }] };
+    expect(myListingSchema.parse({
+      id: "10000000-0000-4000-8000-000000000001", version: 1,
+      state: { moderation: "Approved", visibility: "Visible", trade: "Available" },
+      currentRevision: { id: "10000000-0000-4000-8000-000000000002", content: { bundle } },
+    }).currentRevision.content.bundle).toEqual(bundle);
+  });
   it("bounds the overview read without changing the default full shelf size", async () => {
     request.mockResolvedValue({ items: [], nextCursor: "more" });
     await getMyListings(undefined, undefined, 4);
@@ -68,4 +84,31 @@ describe("owner shelf reads", () => {
     });
     expect(request.mock.calls[0]![0]).toBe("/catalog/books/confirmed-id");
   });
+  it("requests a single listing by id with the owner listing schema", async () => {
+    request.mockResolvedValue({ id: "list-1", version: 1 });
+    await getMyListing("list-1");
+    expect(request.mock.calls[0]![0]).toBe("/me/listings/list-1");
+  });
+  it("puts visibility with expected version and idempotency key", async () => {
+    request.mockResolvedValue({ entityId: "list-1", version: 2 });
+    await setListingVisibility("list-1", 1, "Hidden", "test-key");
+    const [path, , init] = request.mock.calls[0]!;
+    expect(path).toBe("/listings/list-1/visibility");
+    expect(init?.method).toBe("PUT");
+    expect(init?.headers).toEqual({ "Idempotency-Key": "test-key" });
+    expect(JSON.parse(String(init?.body))).toEqual({
+      expectedVersion: 1,
+      visibility: "Hidden",
+    });
+  });
+  it("posts archive with expected version and idempotency key", async () => {
+    request.mockResolvedValue({ entityId: "list-1", version: 2 });
+    await archiveListing("list-1", 1, "test-key");
+    const [path, , init] = request.mock.calls[0]!;
+    expect(path).toBe("/listings/list-1/archive");
+    expect(init?.method).toBe("POST");
+    expect(init?.headers).toEqual({ "Idempotency-Key": "test-key" });
+    expect(JSON.parse(String(init?.body))).toEqual({ expectedVersion: 1 });
+  });
 });
+

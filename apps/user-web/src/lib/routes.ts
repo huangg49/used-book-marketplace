@@ -13,6 +13,7 @@ export const ROUTES = {
   wallet: '/wallet',
   profile: '/profile',
   myBooks: '/my-books',
+  myBookEdit: (listingId: string): string => `/my-books/${listingId}/edit`,
   exchange: '/exchange',
   exchangeCompose: (bookId: string): string => `/exchange/new?book=${bookId}`,
   exchangeMine: '/exchange/mine',

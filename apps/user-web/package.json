@@ -24,7 +24,9 @@
     "test:account:browser": "node tests/account-overview.mjs",
     "test:auction-stage:browser": "node tests/auction-stage.mjs",
     "test:auth-motion:browser": "node tests/auth-auction-arrival.mjs",
-    "test:chat:browser": "node tests/chat-guidance.mjs"
+    "test:chat:browser": "node tests/chat-guidance.mjs",
+    "test:order-chat:browser": "node tests/order-chat-workspace.mjs",
+    "test:listing-cache:browser": "node tests/listing-cache.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

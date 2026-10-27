@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { session } from "./api";
+import { bundleSchema } from "../lib/book-bundle";
 
 const mediaReadSchema = z.object({
   id: z.string().uuid(),
@@ -36,6 +37,7 @@ export const myListingSchema = z
         bookId: z.string().nullable().optional(),
         content: z
           .object({
+            bundle: bundleSchema.nullable().optional(),
             bookId: z.string().nullable().optional(),
             title: z.string().nullable().optional(), // In case it's in content
             author: z.string().nullable().optional(),
@@ -74,6 +76,41 @@ export function getMyListings(
   if (cursor) query.set("cursor", cursor);
   return session.request(`/me/listings?${query}`, myListingPageSchema);
 }
+
+export function getMyListing(id: string) {
+  return session.request(`/me/listings/${id}`, myListingSchema);
+}
+
+const mutationReceiptSchema = z.object({
+  entityId: z.string().uuid(),
+  version: z.number().int(),
+});
+
+export function setListingVisibility(
+  listingId: string,
+  expectedVersion: number,
+  visibility: "Visible" | "Hidden",
+  idempotencyKey: string = crypto.randomUUID(),
+) {
+  return session.request(`/listings/${listingId}/visibility`, mutationReceiptSchema, {
+    method: "PUT",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify({ expectedVersion, visibility }),
+  });
+}
+
+export function archiveListing(
+  listingId: string,
+  expectedVersion: number,
+  idempotencyKey: string = crypto.randomUUID(),
+) {
+  return session.request(`/listings/${listingId}/archive`, mutationReceiptSchema, {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify({ expectedVersion }),
+  });
+}
+
 
 const bookIdentitySchema = z.object({
   title: z.string(),

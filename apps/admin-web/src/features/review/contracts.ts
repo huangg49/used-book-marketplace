@@ -56,6 +56,10 @@ export const catalog = z.object({
   updatedAt: time,
 }) satisfies z.ZodType<Schema["PrivateCatalogRequest"]>;
 const contentBase = z.object({
+  bundle: z.object({
+    title: z.string(), wholeOnly: z.literal(true), exclusiveOwnershipDeclared: z.literal(true),
+    items: z.array(z.object({label: z.string(), condition: z.enum(['LikeNew','Good','Fair','Worn']), notes: z.string()})).min(2).max(50),
+  }).nullable().optional(),
   fulfillment: z
     .object({
       originAddressId: uuid,
@@ -200,6 +204,7 @@ export type Metadata = z.infer<typeof metadata>;
 export type Kind = "listings" | "catalog-requests";
 export type DecisionBody = Schema["DecideCatalog"] | Schema["DecideListing"];
 export const checks = {
+  bundleContentsVerified: 'Đã đối chiếu đủ các cuốn/tập và ảnh toàn bộ bộ sách',
   catalogMatches: "Ảnh và thông tin khớp với đầu sách",
   photosClear: "Ảnh đủ rõ để xem tình trạng",
   conditionDisclosed: "Tình trạng và khuyết điểm được mô tả",

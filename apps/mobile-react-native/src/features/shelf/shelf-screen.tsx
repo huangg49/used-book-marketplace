@@ -86,8 +86,8 @@ export function ShelfScreen() {
         publicPage,
       ),
     enabled: active,
-    staleTime: 0,
-    gcTime: 120_000,
+    staleTime: 30_000,
+    gcTime: 300_000,
     refetchInterval: active ? 30_000 : false,
     retry: false,
   });

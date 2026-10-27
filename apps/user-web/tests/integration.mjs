@@ -107,10 +107,13 @@ try {
     .getByRole("link", { name: "Xem sách", exact: true })
     .first()
     .waitFor();
+  // Covers below the Home hero now request signing only near the viewport.
+  await p.getByRole("link", { name: "Xem sách", exact: true }).first().scrollIntoViewIfNeeded();
   await p
     .getByRole("img", { name: /^Bìa sách/ })
     .first()
     .waitFor();
+  await p.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
   await p.screenshot({
     path: path.join(artifacts, "home-desktop.png"),
     fullPage: true,
@@ -120,7 +123,7 @@ try {
   await button("Tìm sách").click();
   await p.getByText("Chưa có cuốn sách nào phù hợp.").waitFor();
   await p.getByLabel("Tìm sách", { exact: true }).fill("");
-  await p.getByText("13 cuốn trên trang này").waitFor();
+  await p.getByText("13 tin đăng trên trang này").waitFor();
   assert.equal(await button("Trang tiếp theo").count(), 0);
   await p.getByRole("radio", { name: "Cũ nhiều", exact: true }).click();
   await button("Áp dụng").click();
@@ -131,7 +134,7 @@ try {
     .click();
   await button("Áp dụng").click();
   await p.waitForURL((url) => !url.searchParams.has("condition"));
-  await p.getByText("13 cuốn trên trang này").waitFor();
+  await p.getByText("13 tin đăng trên trang này").waitFor();
   await button("Đổi sách").click();
   await p
     .getByRole("link", { name: "Xem sách", exact: true })
@@ -240,11 +243,12 @@ try {
   await button("Chat với người bán").click();
   await p.waitForURL("**/login?returnUrl=*");
   const returnPath = new URL(p.url()).searchParams.get("returnUrl");
-  assert.match(returnPath, /^\/books\//);
+  assert.equal(returnPath, `/chat/start/${fixture.listings[0]}?intent=Negotiation`);
   await p.getByLabel(/^Email/).fill("member@operations.test");
   await p.getByLabel(/^Mật khẩu/).fill(password);
   await button("Đăng nhập").click();
-  await p.waitForURL(origin + returnPath);
+  // Returning to one's own listing must not create a self-conversation.
+  await p.waitForURL(`${origin}/books/${fixture.listings[0]}`);
   await p
     .getByRole("heading", { name: "Đây là bài đăng của bạn", exact: true })
     .waitFor();
@@ -981,7 +985,7 @@ try {
     posted.currentRevision.content.fulfillment.method,
     "DirectDelivery",
   );
-  // Another authenticated Member reserves a real fixture listing. The server
+  // Another authenticated Member opens chat for a real fixture listing. The server
   // commits the first request but its response is lost; retry must replay it.
   await p.goto(origin + "/login");
   await p.getByLabel(/^Email/).fill("admin@operations.test");
@@ -994,14 +998,6 @@ try {
     .getAttribute("href");
   const selectedListing = selectedPath.split("/").at(-1);
   await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
-  await button("Chat với người bán").click();
-  const dialog = p.getByRole("dialog");
-  await dialog.waitFor();
-  await p.screenshot({
-    path: path.join(artifacts, "purchase-dialog-390-130.png"),
-    fullPage: true,
-    animations: "disabled",
-  });
   const reserveAttempts = [];
   let reserveLost = false;
   await p.route(
@@ -1018,10 +1014,15 @@ try {
       } else await route.continue();
     },
   );
-  await dialog.getByRole("button", { name: "Mở chat", exact: true }).click();
-  await dialog.getByRole("alert").waitFor();
-  await dialog.getByRole("button", { name: "Mở chat", exact: true }).click();
-  await p.waitForURL("**/chat/*");
+  await button("Chat với người bán").click();
+  await p.getByRole("heading", { name: "Chưa mở được cuộc trao đổi", exact: true }).waitFor();
+  await p.screenshot({
+    path: path.join(artifacts, "chat-start-retry-390-130.png"),
+    fullPage: true,
+    animations: "disabled",
+  });
+  await button("Thử lại").click();
+  await p.waitForURL((url) => /^\/chat\/[a-f0-9-]+$/.test(url.pathname));
   assert.equal(reserveAttempts.length, 2);
   assert.equal(reserveAttempts[0].key, reserveAttempts[1].key);
   assert.equal(reserveAttempts[0].body, reserveAttempts[1].body);

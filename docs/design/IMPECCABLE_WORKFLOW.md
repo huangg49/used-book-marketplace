@@ -62,8 +62,10 @@ session; đổi platform/target cần xác nhận context phù hợp, không đ�
 1. SRS/ADR/OpenAPI và quyền gói quyết định nghiệp vụ/hành vi.
 2. [PRODUCT](../../PRODUCT.md) chứa audience/tác vụ/platform và sự thật sản phẩm.
 3. [DESIGN](../../DESIGN.md) là brief UI mới; `docs/DESIGN.md` giữ UI-1 lịch sử.
-4. [latlai-ui](../../.agents/skills/latlai-ui/SKILL.md) giữ conventions/consumer/QA.
-5. Impeccable bổ sung phương pháp thiết kế; Taste là reference, chưa cài bộ cạnh tranh.
+4. [UI skills workflow](UI_SKILLS.md) giữ conventions/consumer/QA và chọn
+   UI/UX Pro Max hoặc Taste phù hợp phạm vi.
+5. Impeccable bổ sung phương pháp thiết kế; Taste và UI/UX Pro Max đã cài theo
+   yêu cầu24/10, dùng các revision đã khóa, không tự thay brief đã duyệt.
 
 Thẩm mỹ defaults không tự cho phép thêm framework/UI library, thay session,
 claim/rating, fake API hay bỏ gate. Grid/card/font quen thuộc có thể đúng tác vụ.
@@ -73,12 +75,13 @@ sang Compose/SwiftUI hoặc áp yêu cầu font OS đè brief đã duyệt.
 ## Dùng trong chat
 
 ```text
-$latlai-ui và $impeccable critique apps/user-web/src/pages/BookSearchPage.tsx.
+$impeccable critique apps/user-web/src/pages/BookSearchPage.tsx.
 Người dùng cần tìm/lọc và mở đúng sách. Đọc PRODUCT.md/DESIGN.md.
 Đánh giá source + màn thật; chưa sửa code. Giữ API/query/session hiện có.
 ```
 
-Claude dùng `/latlai-ui` và `/impeccable ...`. Chọn playbook theo vấn đề:
+Claude dùng `/impeccable ...`; dùng `/ui-ux-pro-max` cho UX/stack hoặc
+`/design-taste-frontend` cho art direction web khi cần. Chọn playbook theo vấn đề:
 critique (UX), clarify (câu chữ), typeset (font), layout/distill (bố cục),
 adapt (thiết bị), audit (kỹ thuật), polish (hoàn thiện sau thay đổi).
 Lệnh chat không phải lệnh shell; engine hỗ trợ context/detect/storage/helper.
@@ -108,7 +111,7 @@ Node24.19.0/pnpm11.19.0 trên Windows x64: vendor64 file PASS, engine-probe0.1.1
 PASS từ cache; cache cố ý hỏng bị từ chối trước execution rồi phục hồi/probe PASS.
 Context web đã nạp; RN target resolve `adaptive` và nhận Android/iOS references.
 Skill validator chạy Python `-X utf8` PASS (mặc định cp932 lỗi decode; không sửa
-file để né lỗi). `docs:check` kiểm bốn adapter/cửa vào và local links; không kiểm
+file để né lỗi). `docs:check` kiểm các adapter/cửa vào và local links; không kiểm
 host tự discover. Catalog của phiên này đã hiện skill `impeccable` sau cập nhật.
 
 Detector ba TSX exit0,0 findings; browser/source vẫn tìm thấy lỗi UX/API. Không

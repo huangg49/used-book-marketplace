@@ -1,14 +1,15 @@
+import { listingTitle } from "../lib/book-bundle";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, ArrowUpRight } from "lucide-react";
+import { BookOpen, ChevronRight, MapPin, Tag, UserRound } from "lucide-react";
+import { WishlistButton } from "./WishlistButton";
+import { CardFitText } from "./CardFitText";
 import { ROUTES, formatVnd } from "../lib/routes";
-import {
-  getPublicPhoto,
-  type PublicListing,
-} from "../services/public-listings";
+import { type PublicListing } from "../services/public-listings";
 import styles from "./BookCard.module.css";
 import { conditions } from "../lib/listing-labels";
+import { usePublicListingPhoto } from "../hooks/usePublicListingPhoto";
+import { useNearViewport } from "../hooks/useNearViewport";
 
 export function ListingPhoto({
   book,
@@ -23,47 +24,51 @@ export function ListingPhoto({
 }) {
   const photoId = book.photos[photoIndex]?.id;
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const photo = useQuery({
-    queryKey: ["public-listing-photo", book.id, book.revisionId, photoId],
-    queryFn: () => getPublicPhoto(book.id, photoId!),
-    enabled: !!photoId,
-    staleTime: 0,
-    retry: false,
-  });
-  const url = photo.data?.url;
+  const { ref, active } = useNearViewport(eager);
+  const photo = usePublicListingPhoto(
+    book.id,
+    book.revisionId,
+    photoId,
+    active,
+  );
+  const url = photo.url;
   const failed = photo.isError || (!!url && failedUrl === url);
-  if (url && !failed)
-    return (
-      <img
-        src={url}
-        alt={alt || "Bìa sách " + book.book.title}
-        loading={eager ? "eager" : "lazy"}
-        onError={() => setFailedUrl(url)}
-        className={styles.image}
-      />
-    );
   return (
-    <div className={styles.fallback}>
-      <BookOpen size={30} aria-hidden="true" />
-      <span>
-        {failed
-          ? "Chưa tải được ảnh"
-          : photoId
-            ? "Đang tải ảnh…"
-            : "Chưa có ảnh bìa"}
-      </span>
-      {failed && (
-        <button
-          type="button"
-          disabled={photo.isFetching}
-          onClick={() => {
-            setFailedUrl(null);
-            void photo.refetch();
-          }}
-          aria-label={"Tải lại ảnh " + book.book.title}
-        >
-          Tải lại ảnh
-        </button>
+    <div ref={ref} className={styles.photoFrame}>
+      {url && !failed ? (
+        <img
+          src={url}
+          alt={alt || "Bìa sách " + listingTitle(book)}
+          loading={eager ? "eager" : "lazy"}
+          fetchPriority={eager ? "high" : "auto"}
+          decoding="async"
+          onError={() => setFailedUrl(url)}
+          className={styles.image}
+        />
+      ) : (
+        <div className={styles.fallback}>
+          <BookOpen size={30} aria-hidden="true" />
+          <span>
+            {failed
+              ? "Chưa tải được ảnh"
+              : photoId
+                ? "Đang tải ảnh…"
+                : "Chưa có ảnh bìa"}
+          </span>
+          {failed && (
+            <button
+              type="button"
+              disabled={photo.isFetching}
+              onClick={() => {
+                setFailedUrl(null);
+                void photo.refetch();
+              }}
+              aria-label={"Tải lại ảnh " + listingTitle(book)}
+            >
+              Tải lại ảnh
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -73,7 +78,7 @@ export interface BookCardProps {
   index: number;
   compact?: boolean;
 }
-export function BookCard({ book, index, compact = false }: BookCardProps) {
+export function BookCard({ book, compact = false }: BookCardProps) {
   const location = useLocation();
   const returnState =
     location.pathname === ROUTES.search
@@ -81,14 +86,24 @@ export function BookCard({ book, index, compact = false }: BookCardProps) {
       : undefined;
   return (
     <article className={[styles.card, compact ? styles.compact : ""].join(" ")}>
-      <div className={[styles.cover, styles["ground" + (index % 4)]].join(" ")}>
+      <div className={styles.cover}>
         <ListingPhoto book={book} />
         <Link
           to={ROUTES.bookDetail(book.id)}
           state={returnState}
           className={styles.coverLink}
-          aria-label={"Xem chi tiết " + book.book.title}
+          aria-label={"Xem chi tiết " + listingTitle(book)}
         />
+        <WishlistButton listingId={book.id} title={listingTitle(book)} />
+        <span className={styles.condition}>
+          <BookOpen size={15} aria-hidden="true" />
+          {book.bundle ? `Bộ ${book.bundle.items.length} cuốn` : conditions[book.condition]} ·{" "}
+          {book.mode === "Sale"
+            ? book.bundle ? "Bán nguyên bộ" : "Bán"
+            : book.mode === "Exchange"
+              ? "Đổi"
+              : "Bán hoặc đổi"}
+        </span>
         {book.purchaseAvailability.status !== "Available" && (
           <span className={styles.held}>
             {book.purchaseAvailability.status === "AwaitingPayment"
@@ -100,37 +115,54 @@ export function BookCard({ book, index, compact = false }: BookCardProps) {
         )}
       </div>
       <div className={styles.meta}>
-        <p className={styles.condition}>
-          {conditions[book.condition]} ·{" "}
-          {book.mode === "Sale"
-            ? "Bán"
-            : book.mode === "Exchange"
-              ? "Đổi"
-              : "Bán hoặc đổi"}
-        </p>
         <h3>
           <Link
             to={ROUTES.bookDetail(book.id)}
             state={returnState}
-            title={compact ? book.book.title : undefined}
+            title={listingTitle(book)}
           >
-            {book.book.title}
+            <CardFitText>{listingTitle(book)}</CardFitText>
           </Link>
         </h3>
-        <p className={styles.author}>
-          {book.book.authors.join(", ") || "Chưa rõ tác giả"}
-        </p>
+        <div className={styles.information}>
+          <p className={styles.author}>
+            <UserRound size={18} aria-hidden="true" />
+            <span className="sr-only">Tác giả: </span>
+            <CardFitText minimumRem={0.6875}>
+              {book.book.authors.join(", ") || "Chưa rõ tác giả"}
+            </CardFitText>
+          </p>
+          <p className={styles.location}>
+            <MapPin size={18} aria-hidden="true" />
+            <span className="sr-only">Khu vực: </span>
+            <strong className={styles.region}>
+              <CardFitText minimumRem={0.6875}>
+                {book.fulfillment?.locality?.label || "Chưa có khu vực"}
+              </CardFitText>
+            </strong>
+          </p>
+        </div>
         <div className={styles.prices}>
           {book.salePrice !== null && (
             <p>
-              <span>Giá bán</span>
-              <strong>{formatVnd(book.salePrice)}</strong>
+              <Tag size={24} aria-hidden="true" />
+              <span>
+                <span className={styles.fieldLabel}>{book.bundle ? "Giá cả bộ" : "Giá bán"}</span>
+                <strong className={styles.amount}>
+                  <CardFitText>{formatVnd(book.salePrice)}</CardFitText>
+                </strong>
+              </span>
             </p>
           )}
           {book.exchangeValue !== null && (
             <p>
-              <span>Giá trị đổi</span>
-              <strong>{formatVnd(book.exchangeValue)}</strong>
+              <Tag size={24} aria-hidden="true" />
+              <span>
+                <span className={styles.fieldLabel}>Giá trị đổi</span>
+                <strong className={styles.amount}>
+                  <CardFitText>{formatVnd(book.exchangeValue)}</CardFitText>
+                </strong>
+              </span>
             </p>
           )}
         </div>
@@ -139,7 +171,8 @@ export function BookCard({ book, index, compact = false }: BookCardProps) {
           to={ROUTES.bookDetail(book.id)}
           state={returnState}
         >
-          Xem sách <ArrowUpRight size={16} aria-hidden="true" />
+          <BookOpen size={18} aria-hidden="true" /> Xem sách{" "}
+          <ChevronRight size={19} aria-hidden="true" />
         </Link>
       </div>
     </article>

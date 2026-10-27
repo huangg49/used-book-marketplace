@@ -1,4 +1,5 @@
 import { ConversationAgreementsService } from '../purchases/conversation-agreements.service.js';
+import { PurchasesService } from '../purchases/purchases.service.js';
 import { orderContext } from '../reservations/workflow-context.js';
 import { Injectable } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
@@ -89,6 +90,7 @@ export type Order = NonNullable<Awaited<ReturnType<typeof loadOrder>>>;
 export class OrdersService {
   constructor(
     private readonly agreements: ConversationAgreementsService,
+    private readonly purchases: PurchasesService,
     private readonly commands: MongoCommandService,
     private readonly quotes: QuotesService,
     private readonly listings: ListingCommitmentPolicy,
@@ -154,6 +156,35 @@ export class OrdersService {
   }
   buyNow(context: CommandContext, body: Wire['CreateDirectOrder']) {
     return this.createPurchase(context, { mode: 'BuyNow', body });
+  }
+  openConversation(context: CommandContext, id: string, body: Wire['OpenOrderConversation']) {
+    return this.commands.runPurchaseConversation(context, 'openOrderConversation', id, body, {
+      discover: async tx => {
+        const order = await this.own(tx, id, context.auth.user.id);
+        return [order.buyerId, order.sellerId];
+      },
+      authorize: async (tx, actor) => {
+        member(actor);
+        requireActive(actor);
+        return this.own(tx, id, actor._id);
+      },
+      mutate: async (tx, actor, before) => {
+        await tx.lock('direct_orders', [before._id]);
+        const order = await this.own(tx, before._id, actor._id);
+        const item = this.input.body('OrderItemSnapshot', order.context!.items[0].snapshot);
+        const now = await this.decision(tx, context.auth);
+        const { row, created } = await this.purchases.forOrder(tx, {
+          orderId: order._id, buyerId: order.buyerId, sellerId: order.sellerId,
+          listingId: item.listingId, listingVersion: order.quote.listingVersion, now,
+        });
+        return {
+          entityType: 'PurchaseConversation' as const, entityId: row._id,
+          listingId: row.listingId, version: row.version, state: row.status,
+          expiresAt: row.expiresAt, decidedAt: now,
+          event: created ? 'OrderConversationOpened' : 'OrderConversationReused',
+        };
+      },
+    });
   }
   private createPurchase(
     context: CommandContext,
@@ -315,6 +346,7 @@ export class OrdersService {
             .find({ revisionId: r._id }, { sort: { position: 1 } })
             .toArray();
           const item: Wire['OrderItemSnapshot'] = {
+            ...(r.bundle ? { bundle: r.bundle } : {}),
             listingId: l._id,
             listingRevisionId: r._id,
             catalogRevisionId: b._id,
@@ -1379,6 +1411,10 @@ export class OrdersService {
               }
             : null,
           contextId: o.context!._id,
+          conversationId: (await tx.c.purchase_conversations.findOne({
+            orderId: o._id, buyerId: o.buyerId, sellerId: o.sellerId,
+            listingId: item.listingId,
+          }))?._id ?? null,
           version: o.version,
           state: o.state as Wire['PrivateUnpaidOrder']['state'],
           role,

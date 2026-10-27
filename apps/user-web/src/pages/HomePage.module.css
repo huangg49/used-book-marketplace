@@ -1011,7 +1011,7 @@
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 24px 16px;
 }
 .more {
@@ -1148,7 +1148,7 @@
 }
 .exchangeGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 20px;
 }
 .exchangeBooks .state,
@@ -1425,12 +1425,10 @@
     transition-duration: 200ms !important;
   }
 }
-@media (min-width: 1600px) {
-  .grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-}
 @media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
   .posting {
     width: calc(100% - 210px);
     flex-wrap: wrap;
@@ -1438,9 +1436,6 @@
   .closingFox {
     width: 290px;
     height: 350px;
-  }
-  .grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   .exchangeSection {
     grid-template-columns: 1fr;
@@ -1473,6 +1468,9 @@
   }
 }
 @media (max-width: 850px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .marketplace {
     padding: 0 24px 40px;
   }
@@ -1482,12 +1480,6 @@
     padding: 40px 24px 24px;
   }
   .quickLinks {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .exchangeGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .budgetBanners {
@@ -1591,8 +1583,10 @@
   }
   .grid,
   .exchangeGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 24px 16px;
+  }
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
   }
   .budgetBanners {
     gap: 16px;
@@ -1771,6 +1765,12 @@
     width: 100%;
     justify-self: center;
     gap: 24px 20px;
+  }
+}
+@media (max-width: 360px) {
+  .shelf,
+  .exchangeSection {
+    padding-inline: 8px;
   }
 }
 @media (max-width: 600px) {

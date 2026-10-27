@@ -70,6 +70,11 @@ const navbarContinuity = async page => {
  // Chromium can round antialiasing of the mobile menu's curved 1px border by
  // one channel unit when another composited layer is toggled (observed 18px).
  // No meaningful pixel or geometry difference is allowed; record actual delta.
+ if(a.length!==b.length||maxDifference>1){
+   await writeFile(path.join(evidence,'navbar-before.png'),before);
+   await writeFile(path.join(evidence,'navbar-after.png'),after);
+   await writeFile(path.join(evidence,'navbar-difference.json'),JSON.stringify({bounds,curtain,maxDifference,changedChannels},null,2));
+ }
  assert.equal(a.length,b.length);assert.ok(maxDifference<=1,'curtain must not obscure navbar pixels');
  navbarSamples.push({width:bounds.width,height:bounds.height,curtainTop:curtain.y,maxChannelDifference:maxDifference,changedChannels});
  assert.equal(await page.evaluate(()=>{

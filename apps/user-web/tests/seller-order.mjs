@@ -405,14 +405,29 @@ try {
   await sellerPage
     .getByRole("button", { name: "Tạo đơn cho người mua này", exact: true })
     .click();
-  await replayed;
+  const createReceipt = await (await replayed).json();
+  assert.equal(createReceipt.entityType, "Order");
   assert.equal(createAttempts.length, 2);
   assert.deepEqual(createAttempts[0], createAttempts[1]);
-  await buyerPage.getByRole("heading", { name: "Đơn đang chờ bạn thanh toán", exact: true }).waitFor();
+  const buyerOrderDetails = buyerPage.getByRole("region", {
+    name: "Chi tiết đơn hàng",
+    exact: true,
+  });
+  await buyerPage.waitForURL(`**/chat/${conversationId}`);
+  await buyerOrderDetails.getByRole("heading", { name: "Đơn mua sách", exact: true }).waitFor();
+  await buyerOrderDetails.getByRole("status").filter({ hasText: /^Chờ thanh toán$/ }).waitFor();
   const order = await fixture.db
     .collection("direct_orders")
     .findOne({ buyerId: buyer.user.id });
   assert(order);
+  assert.equal(order._id, createReceipt.entityId);
+  await buyerPage.getByRole("heading", {
+    level: 1, name: fixture.metadata.title, exact: true,
+  }).waitFor();
+  assert.equal(
+    (await fixture.api(`/me/orders/${order._id}`, buyer.accessToken)).conversationId,
+    conversationId,
+  );
   assert.equal(
     await fixture.db
       .collection("direct_orders")
@@ -440,10 +455,10 @@ try {
     path: path.join(artifacts, "buyer-payment-mobile.png"),
     fullPage: true,
   });
-  await buyerPage
-    .getByRole("button", { name: "Xác nhận và thanh toán", exact: true })
+  await buyerOrderDetails
+    .getByRole("button", { name: /^Thanh toán 120\.000\s*₫$/ })
     .click();
-  await buyerPage
+  await buyerOrderDetails
     .getByRole("alert")
     .filter({ hasText: "Kiểm tra số dư ví" })
     .waitFor();
@@ -456,11 +471,11 @@ try {
     "AwaitingPayment",
   );
   await fundBuyer(150000);
-  await buyerPage
-    .getByRole("button", { name: "Xác nhận và thanh toán", exact: true })
+  await buyerOrderDetails
+    .getByRole("button", { name: /^Thanh toán 120\.000\s*₫$/ })
     .click();
-  await buyerPage
-    .getByRole("heading", { name: "Chờ người bán xác nhận", exact: true })
+  await buyerOrderDetails
+    .getByRole("status").filter({ hasText: /^Chờ người bán xác nhận$/ })
     .waitFor();
   const wallet = await fixture.api("/me/wallet", buyer.accessToken);
   assert.equal(wallet.transactionHeld, 120000);

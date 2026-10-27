@@ -12,7 +12,7 @@ import { useAuctionLive } from '../hooks/useAuctionLive'
 import { useSession } from '../hooks/useSession'
 import { formatVnd, ROUTES } from '../lib/routes'
 import {
-  AUCTION_MAX_PRICE, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation,
+  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation,
   getMyPointOrder, getPointOrderDeliveryQuote, payPointOrder, placeBid, setAutoBid, withdrawIntake, type DeliveryChoice, type MyIntake,
   type AuctionParticipation, type AuctionState, type AuctionSummary,
 } from '../services/auctions'
@@ -25,6 +25,7 @@ import { useAuctionChangeMotion } from '../hooks/useAuctionMotion'
 import { rowFrames, standingFrames } from '../lib/auction-motion'
 import { commandError } from '../lib/auction-errors'
 import { PointOrderSteps } from './AuctionPointOrder'
+import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
 
 const HOUR = 3_600_000
 // Only a won or bought auction has a final price; a held or cancelled one does not.
@@ -106,6 +107,9 @@ export function AuctionDetailPage() {
   })
   const sellerIntake = intakes.data?.items.find((i) => i.auctionId === id) ?? null
   const remaining = useCountdown(detail.data?.auction.endAt, detail.data?.serverTime)
+  // ADR 0047: before startAt the auction is listed but takes no bids yet.
+  const untilStart = useCountdown(detail.data?.auction.startAt, detail.data?.serverTime)
+  const scheduled = !!detail.data && auctionPhase(detail.data.auction, detail.data.serverTime) === 'Scheduled' && untilStart > 0
   const refresh = () => Promise.all([
     queryClient.invalidateQueries({ queryKey: ['my-auction-intakes'] }),
     queryClient.invalidateQueries({ queryKey: ['auction', id] }),
@@ -113,6 +117,14 @@ export function AuctionDetailPage() {
     queryClient.invalidateQueries({ queryKey: ['auctions'] }),
   ])
   const ended = remaining === 0 && detail.data?.auction.state === 'Active'
+  const starting = !!detail.data && detail.data.auction.phase === 'Scheduled' && untilStart === 0
+  useEffect(() => {
+    // Giờ mở đã tới trên đồng hồ máy chủ: đọc lại để nhận trạng thái đang mở.
+    if (!starting) return
+    const timer = window.setTimeout(() => void refresh(), 1000)
+    return () => window.clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [starting])
   useEffect(() => {
     // Hết giờ trên đồng hồ máy chủ: đọc lại để thấy kết quả khi worker chốt phiên.
     if (!ended) return
@@ -135,7 +147,7 @@ export function AuctionDetailPage() {
   if (!detail.data) return <div className={styles.state}>Đang mở phiên đấu giá…</div>
 
   const { auction, history, leaderAlias } = detail.data
-  const open = auction.state === 'Active' && remaining > 0
+  const open = auction.state === 'Active' && remaining > 0 && !scheduled
   const participationStale = participation.isError && participation.data !== undefined && outcomeUnknown(participation.error)
   const me = participation.isError && !participationStale ? null : participation.data ?? null
   const hasBids = auction.bidderCount > 0
@@ -144,7 +156,7 @@ export function AuctionDetailPage() {
     : CLOSED_PRICE[auction.state] ?? 'Giá cuối'
 
   let action
-  if (sellerIntake) action = <SellerPanel auction={auction} intake={sellerIntake} open={open} onChanged={refresh} />
+  if (sellerIntake) action = <SellerPanel auction={auction} intake={sellerIntake} open={open} scheduled={scheduled} serverTime={detail.data.serverTime} onChanged={refresh} />
   else if (me?.won) action = <WinnerPanel me={me} auction={auction} onChanged={refresh} />
   else if (auction.state === 'OnHold')
     action = (
@@ -154,6 +166,16 @@ export function AuctionDetailPage() {
           Quản trị viên đang xem xét vì người bán hoặc người đang dẫn giá không còn đủ điều kiện. Lượt trả giá được giữ
           nguyên, chưa có người thắng và không có khoản tiền nào bị trừ.
         </span>
+      </div>
+    )
+  else if (scheduled)
+    action = (
+      <div className={styles.notice}>
+        <strong>Phiên chưa mở</strong>
+        <p>
+          Người bán hẹn mở phiên lúc {when(auction.startAt)}. Khi phiên mở, bạn có thể trả giá
+          {auction.buyNowPrice !== null ? ` hoặc mua ngay với ${formatVnd(auction.buyNowPrice)}` : ''}.
+        </p>
       </div>
     )
   else if (!open)
@@ -204,13 +226,15 @@ export function AuctionDetailPage() {
           {!!auction.book?.authors.length && <p className={styles.authors}>{auction.book.authors.join(', ')}</p>}
           <span className={`${styles.status} ${open ? '' : styles.statusClosed}`}>
             {open ? <Gavel size={14} aria-hidden="true" /> : null}
-            {ended ? 'Đã hết giờ, đang chốt kết quả' : STATE_LABEL[auction.state]}
+            {scheduled ? 'Sắp mở' : ended ? 'Đã hết giờ, đang chốt kết quả' : STATE_LABEL[auction.state]}
           </span>
           {auction.book && <span className={styles.inspected}><ShieldCheck size={15} aria-hidden="true" /> Đã kiểm tra tại điểm giao nhận</span>}
         </header>
 
         <aside className={styles.side} aria-label="Trả giá">
-          <Countdown ms={remaining} open={open} endAt={auction.endAt} live={pushing} state={auction.state} />
+          {scheduled
+            ? <div className={styles.timerCard}><span className={styles.timerClosed}>Mở lúc {when(auction.startAt)} · còn {formatRemaining(untilStart)}</span></div>
+            : <Countdown ms={remaining} open={open} endAt={auction.endAt} live={pushing} state={auction.state} />}
           <section className={styles.bidCard}>
             <p className={styles.priceLabel}>{priceLabel}</p>
             <p className={styles.price} aria-live="polite" aria-atomic="true"><span className="sr-only">{priceLabel}: </span><AuctionPrice auctionId={auction.id} amount={auction.currentPrice ?? auction.startPrice} /></p>
@@ -227,7 +251,7 @@ export function AuctionDetailPage() {
 
         <div className={styles.body}>
           <BookCondition book={auction.book ?? null} />
-          <SessionFacts auction={auction} remaining={remaining} open={open} />
+          <SessionFacts auction={auction} remaining={remaining} open={open} scheduled={scheduled} untilStart={untilStart} />
 
           <BidHistory auctionId={auction.id} history={history} leaderAlias={leaderAlias} myAlias={me?.alias ?? null} badge={TOP_BADGE[auction.state] ?? null} startPrice={auction.startPrice} />
 
@@ -308,9 +332,9 @@ const day = (iso: string) => new Date(iso).toLocaleDateString('vi-VN', { weekday
 
 // Prices as tiles, the session window as a track (progress from the server-aligned
 // countdown, never the device clock), and the pickup point as its own callout.
-function SessionFacts({ auction, remaining, open }: { auction: AuctionSummary; remaining: number; open: boolean }) {
+function SessionFacts({ auction, remaining, open, scheduled, untilStart }: { auction: AuctionSummary; remaining: number; open: boolean; scheduled: boolean; untilStart: number }) {
   const span = Date.parse(auction.endAt) - Date.parse(auction.startAt)
-  const progress = !open ? 100 : span > 0 ? Math.min(100, Math.max(0, (1 - remaining / span) * 100)) : 0
+  const progress = scheduled ? 0 : !open ? 100 : span > 0 ? Math.min(100, Math.max(0, (1 - remaining / span) * 100)) : 0
   return (
     <section className={styles.sessionCard} aria-labelledby="auction-session-title">
       <h2 id="auction-session-title">Thông tin phiên</h2>
@@ -319,10 +343,10 @@ function SessionFacts({ auction, remaining, open }: { auction: AuctionSummary; r
         <div><dt>Bước giá</dt><dd>+{formatVnd(auction.step)}</dd></div>
         <div className={auction.buyNowPrice !== null ? styles.tileAccent : undefined}>
           <dt>Mua ngay</dt>
-          {/* The API withholds buy-now after the first bid or once closed, so null is not "never offered". */}
+          {/* ADR 0047: the API withholds Buy Now once the price reaches it, after it was used or once closed. */}
           <dd>
             {auction.buyNowPrice !== null ? formatVnd(auction.buyNowPrice) : auction.bidderCount > 0 || !open ? 'Không còn' : 'Không áp dụng'}
-            {auction.buyNowPrice === null && (auction.bidderCount > 0 || !open) && <small>Chỉ có trước lượt trả giá đầu tiên</small>}
+            {auction.buyNowPrice === null && (auction.bidderCount > 0 || !open) && <small>Giá đã chạm mức mua ngay, đã có người mua ngay hoặc phiên không áp dụng</small>}
           </dd>
         </div>
       </dl>
@@ -334,7 +358,8 @@ function SessionFacts({ auction, remaining, open }: { auction: AuctionSummary; r
         <div className={styles.track} role="progressbar" aria-label="Thời gian phiên đã trôi qua" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
           <span style={{ width: `${progress}%` }} />
         </div>
-        <p className={styles.windowNote} role={open && auction.buyNowAt ? 'status' : undefined}>{!open ? 'Phiên đã đóng'
+        <p className={styles.windowNote} role={open && auction.buyNowAt ? 'status' : undefined}>{scheduled ? `Mở sau ${formatRemaining(untilStart)} · phiên kéo dài ${Math.round(span / HOUR)} giờ`
+          : !open ? 'Phiên đã đóng'
           : auction.buyNowAt ? `Đã có người chọn mua ngay · còn ${formatRemaining(remaining)} để trả cao hơn; hết giờ, người dẫn đầu thắng`
             : `Còn ${formatRemaining(remaining)} · phiên kéo dài ${Math.round(span / HOUR)} giờ`}</p>
       </div>
@@ -617,9 +642,9 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
         onConfirm={(maxAmount) => run({ kind: 'Auto', amount: maxAmount })}
       />
 
-      {auction.buyNowPrice !== null && !unknown && (
+      {auction.buyNowPrice !== null && !unknown && !leading && (
         <div className={styles.buyNow}>
-          <span>Mua ngay <strong>{formatVnd(auction.buyNowPrice)}</strong><small>Chỉ có trước lượt trả giá đầu tiên. Sau khi bấm, người khác còn 60 giây để trả cao hơn.</small></span>
+          <span>Mua ngay <strong>{formatVnd(auction.buyNowPrice)}</strong><small>Còn dùng được khi giá hiện tại thấp hơn giá mua ngay. Sau khi bấm, người khác còn 60 giây để trả cao hơn.</small></span>
           <button type="button" className={styles.secondary} disabled={busy} onClick={() => setConfirming({ kind: 'BuyNow', amount: auction.buyNowPrice! })}>
             Mua ngay
           </button>
@@ -679,13 +704,19 @@ const SELLER_STATE: Partial<Record<AuctionState, string>> = {
 
 // FR-AU02: the seller follows their own auction and may withdraw it only
 // before the first bid; the server rechecks that under the auction lock.
-function SellerPanel({ auction, intake, open, onChanged }: { auction: AuctionSummary; intake: MyIntake; open: boolean; onChanged: () => Promise<unknown> }) {
+function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged }: {
+  auction: AuctionSummary; intake: MyIntake; open: boolean; scheduled: boolean; serverTime: string; onChanged: () => Promise<unknown>
+}) {
   const intent = useIntentKey()
   const [confirming, setConfirming] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [unknown, setUnknown] = useState(false)
-  const canWithdraw = open && auction.bidderCount === 0
+  const canWithdraw = (open || scheduled) && auction.bidderCount === 0
+  // ADR 0047: the time can change only before the first bid and any Buy Now.
+  const canEdit = canWithdraw && !auction.buyNowAt && auction.version != null
+    && (auction.scheduleRevision ?? 0) < AUCTION_MAX_SCHEDULE_EDITS
   const withdraw = async () => {
     const key = intent.keyFor(`withdraw:${intake.id}:${intake.version}`)
     let pending = false
@@ -707,18 +738,35 @@ function SellerPanel({ auction, intake, open, onChanged }: { auction: AuctionSum
       <div className={`${styles.standing} ${styles.standingLead}`}>
         <strong>Đây là phiên của bạn</strong>
         <span>
-          {open
+          {scheduled
+            ? `Phiên hẹn mở lúc ${when(auction.startAt)}. Trước lượt trả giá đầu tiên, bạn có thể đổi thời gian hoặc rút phiên.`
+            : open
             ? auction.bidderCount === 0
-              ? 'Chưa có lượt trả giá. Bạn có thể rút phiên trước lượt trả giá đầu tiên.'
+              ? 'Chưa có lượt trả giá. Bạn có thể đổi thời lượng hoặc rút phiên trước lượt trả giá đầu tiên.'
               : `Đã có ${auction.bidderCount} người trả giá nên phiên không thể rút. Người bán không tham gia trả giá.`
             : SELLER_STATE[auction.state] ?? STATE_LABEL[auction.state]}
         </span>
       </div>
       {error && <p role="alert" className={styles.fieldError}>{error}</p>}
+      {canEdit && !unknown && (
+        <button type="button" className={styles.secondaryBlock} disabled={busy} onClick={() => setEditing(true)}>
+          Đổi thời gian phiên
+        </button>
+      )}
       {(canWithdraw || unknown) && (
         <button type="button" className={styles.secondaryBlock} disabled={busy} onClick={() => (unknown ? void withdraw() : setConfirming(true))}>
           {unknown ? 'Thử lại rút phiên' : 'Rút phiên'}
         </button>
+      )}
+      {canEdit && (
+        <ScheduleAuctionDialog
+          isOpen={editing}
+          onClose={() => setEditing(false)}
+          onDone={onChanged}
+          title={auction.title}
+          serverTime={serverTime}
+          target={{ kind: 'reschedule', auctionId: auction.id, version: auction.version!, live: !scheduled, startAt: auction.startAt, endAt: auction.endAt }}
+        />
       )}
       <ConfirmDialog
         isOpen={confirming}

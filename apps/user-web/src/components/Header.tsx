@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Menu, MessageCircle, Plus, Wallet, X } from "lucide-react";
+import { Menu, MessageCircle, Plus, X } from "lucide-react";
 import { ROUTES, searchUrl } from "../lib/routes";
 import { observeHeaderScroll } from "../lib/header-scroll";
 import { useSession } from "../hooks/useSession";
@@ -126,24 +126,14 @@ export function Header({
           </nav>
           <div className={styles.headerActions}>
             {state.status === "authenticated" && (
-              <>
-                <NavLink
-                  to={ROUTES.wallet}
-                  className={styles.iconAction}
-                  aria-label="Ví của tôi"
-                  title="Ví của tôi"
-                >
-                  <Wallet size={20} aria-hidden="true" />
-                </NavLink>
-                <NavLink
-                  to={ROUTES.chat()}
-                  className={styles.iconAction}
-                  aria-label="Chat, hội thoại của bạn"
-                  title="Chat"
-                >
-                  <MessageCircle size={20} aria-hidden="true" />
-                </NavLink>
-              </>
+              <NavLink
+                to={ROUTES.chat()}
+                className={styles.iconAction}
+                aria-label="Chat, hội thoại của bạn"
+                title="Chat"
+              >
+                <MessageCircle size={20} aria-hidden="true" />
+              </NavLink>
             )}
             {state.status === "authenticated" && <NotificationBell />}
             {state.status === "authenticated" ? (

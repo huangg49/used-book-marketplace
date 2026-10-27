@@ -7,7 +7,9 @@ import type {
   ListingDoc,
   ListingMediaDoc,
   ListingRevisionDoc,
+  MemberAddressDoc,
   RevisionMediaDoc,
+  ServiceLocalityDoc,
   UserDoc,
 } from '../../database/mongo/documents.js';
 import { MongoService } from '../../database/mongo/mongo.service.js';
@@ -98,8 +100,13 @@ export function publicEligibleStages(
             $match: {
               state: {
                 $in: [
-                  'AwaitingPayment', 'PendingSellerConfirmation', 'SettlementPending',
-                  'Preparing', 'InTransit', 'ResolutionPending', 'Inspection',
+                  'AwaitingPayment',
+                  'PendingSellerConfirmation',
+                  'SettlementPending',
+                  'Preparing',
+                  'InTransit',
+                  'ResolutionPending',
+                  'Inspection',
                 ],
               },
             },
@@ -107,6 +114,48 @@ export function publicEligibleStages(
           { $limit: 1 },
         ],
         as: 'activeOrder',
+      },
+    },
+    {
+      $lookup: {
+        from: 'exchanges',
+        let: { listingId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  {
+                    $or: [
+                      { $eq: ['$initiatorListingId', '$$listingId'] },
+                      {
+                        $in: [
+                          '$$listingId',
+                          { $ifNull: ['$initiatorListingIds', []] },
+                        ],
+                      },
+                      { $eq: ['$recipientListingId', '$$listingId'] },
+                    ],
+                  },
+                  {
+                    $in: [
+                      '$status',
+                      [
+                        'AcceptedAwaitingFunding',
+                        'Preparing',
+                        'InTransit',
+                        'Delivered',
+                        'ResolutionPending',
+                      ],
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+          { $limit: 1 },
+        ],
+        as: 'activeExchange',
       },
     },
     {
@@ -121,6 +170,7 @@ export function publicEligibleStages(
                   $or: [
                     { $gt: [{ $size: '$purchase' }, 0] },
                     { $gt: [{ $size: '$activeOrder' }, 0] },
+                    { $gt: [{ $size: '$activeExchange' }, 0] },
                   ],
                 },
               ],
@@ -217,6 +267,15 @@ type Eligible = ListingDoc & {
   m: ListingMediaDoc[];
   purchase: { expiresAt: Date }[];
   activeOrder: { paidAt: Date | null; paymentDeadline: Date }[];
+  activeExchange?: { status: string }[];
+};
+type ProjectionSources = {
+  metadata: CatalogRevisionDoc;
+  origin: Pick<
+    MemberAddressDoc,
+    'version' | 'serviceAreaCode' | 'localityCode'
+  > | null;
+  locality: Pick<ServiceLocalityDoc, 'code' | 'label'> | null;
 };
 
 @Injectable()
@@ -230,32 +289,63 @@ export class PublicListingService {
   private async projection(
     tx: Tx,
     l: Eligible,
+    sources?: ProjectionSources,
   ): Promise<Wire['PublicListing']> {
     const r = l.r,
       b = l.b;
-    const metadata = (await tx.c.catalog_revisions.findOne({
-      _id: b.currentRevisionId!,
-    })) as CatalogRevisionDoc;
-    const origin = r.originAddressId
-      ? await tx.c.member_addresses.findOne({ _id: r.originAddressId })
-      : null;
+    const metadata = sources
+      ? sources.metadata
+      : ((await tx.c.catalog_revisions.findOne({
+          _id: b.currentRevisionId!,
+        })) as CatalogRevisionDoc);
+    const origin = sources
+      ? sources.origin
+      : r.originAddressId
+        ? await tx.c.member_addresses.findOne(
+            { _id: r.originAddressId },
+            {
+              projection: {
+                _id: 1,
+                version: 1,
+                serviceAreaCode: 1,
+                localityCode: 1,
+              },
+            },
+          )
+        : null;
+    const originIsCurrent =
+      originStatus({
+        ...r,
+        originCurrentVersion: origin?.version ?? null,
+      }) === 'Current';
+    // Only publish the directory's coarse zone for the selected address version.
+    // An edited/deleted origin must not move an already published book's location.
+    const locality =
+      originIsCurrent && origin
+        ? sources
+          ? sources.locality
+          : await tx.c.service_localities.findOne(
+              { _id: `${origin.serviceAreaCode}:${origin.localityCode}` },
+              { projection: { _id: 1, code: 1, label: 1 } },
+            )
+        : null;
     const photos = [...l.rm]
       .sort((x, y) => x.position - y.position)
       .map((link) => l.m.find((m) => m._id === link.mediaId)!);
     const content = {
-      fulfillment:
-        originStatus({
-          ...r,
-          originCurrentVersion: origin?.version ?? null,
-        }) === 'Current'
-          ? {
-              serviceAreaCode: 'HCM-DEMO-v1' as const,
-              name: 'TP.HCM' as const,
-              demoOnly: true as const,
-              method: 'DirectDelivery' as const,
-            }
-          : null,
+      fulfillment: originIsCurrent
+        ? {
+            serviceAreaCode: 'HCM-DEMO-v1' as const,
+            name: 'TP.HCM' as const,
+            demoOnly: true as const,
+            method: 'DirectDelivery' as const,
+            ...(locality
+              ? { locality: { code: locality.code, label: locality.label } }
+              : {}),
+          }
+        : null,
       id: l._id,
+      ...(r.bundle ? { bundle: r.bundle } : {}),
       revisionId: r._id,
       version: l.version,
       book: {
@@ -293,16 +383,21 @@ export class PublicListingService {
           ? l.activeOrder[0]
             ? {
                 status: l.activeOrder[0].paidAt
-                  ? 'InTransaction' as const
-                  : 'AwaitingPayment' as const,
+                  ? ('InTransaction' as const)
+                  : ('AwaitingPayment' as const),
                 expiresAt: l.activeOrder[0].paidAt
                   ? null
                   : l.activeOrder[0].paymentDeadline.toISOString(),
               }
-            : {
-              status: 'InNegotiation' as const,
-              expiresAt: l.purchase[0]?.expiresAt?.toISOString() ?? null,
-            }
+            : l.activeExchange && l.activeExchange.length > 0
+              ? {
+                  status: 'InTransaction' as const,
+                  expiresAt: null,
+                }
+              : {
+                  status: 'InNegotiation' as const,
+                  expiresAt: l.purchase[0]?.expiresAt?.toISOString() ?? null,
+                }
           : { status: 'Available' as const, expiresAt: null },
     };
     // Submitted/approved invariants enforce the selected mode's price requirements.
@@ -351,6 +446,7 @@ export class PublicListingService {
     const classification = catalogFilters(query);
     const scope = {
       operation: 'listPublicListings',
+      bundleSupport: query.bundleSupport ?? null,
       q,
       isbn,
       bookId: String(query.bookId ?? '').toLowerCase(),
@@ -364,11 +460,13 @@ export class PublicListingService {
       ...classification,
     };
     const match: Record<string, unknown> = {};
+    if (query.bundleSupport !== 'whole-v1') match['r.bundle'] = null;
     const and: Record<string, unknown>[] = [];
     if (q)
       and.push({
         $or: [
           { 'b.searchText': { $regex: regexLiteral(q) } },
+          { 'r.bundleSearchText': { $regex: regexLiteral(q) } },
           ...(isbn ? [{ 'b.confirmedIsbn': isbn }] : []),
         ],
       });
@@ -410,16 +508,95 @@ export class PublicListingService {
           cursor: query.cursor as string | undefined,
         },
       );
+      if (!page.ids.length)
+        return {
+          items: [],
+          nextCursor: page.nextCursor,
+          serverTime: page.serverTime,
+        };
       const rows = await tx.c.listings
         .aggregate<Eligible>([
-          ...publicEligibleStages(),
           { $match: { _id: { $in: page.ids } } },
+          ...publicEligibleStages(),
         ])
         .toArray();
+      // Bounded metadata, origin and coarse-zone reads in this same snapshot,
+      // instead of three reads per listing. Never load private contact fields.
+      // Do not parallelize operations on the MongoDB transaction session.
+      const metadataRows = await tx.c.catalog_revisions
+        .find({
+          _id: {
+            $in: [...new Set(rows.map((row) => row.b.currentRevisionId!))],
+          },
+        })
+        .toArray();
+      const originRows = await tx.c.member_addresses
+        .find(
+          {
+            _id: {
+              $in: [
+                ...new Set(
+                  rows.flatMap((row) =>
+                    row.r.originAddressId ? [row.r.originAddressId] : [],
+                  ),
+                ),
+              ],
+            },
+          },
+          {
+            projection: {
+              _id: 1,
+              version: 1,
+              serviceAreaCode: 1,
+              localityCode: 1,
+            },
+          },
+        )
+        .toArray();
+      const metadataById = new Map(metadataRows.map((row) => [row._id, row]));
+      const originsById = new Map(originRows.map((row) => [row._id, row]));
+      const localityIds = [
+        ...new Set(
+          rows.flatMap((row) => {
+            const origin = row.r.originAddressId
+              ? originsById.get(row.r.originAddressId)
+              : null;
+            return origin && origin.version === row.r.originAddressVersion
+              ? [`${origin.serviceAreaCode}:${origin.localityCode}`]
+              : [];
+          }),
+        ),
+      ];
+      const localityRows = localityIds.length
+        ? await tx.c.service_localities
+            .find(
+              { _id: { $in: localityIds } },
+              { projection: { _id: 1, code: 1, label: 1 } },
+            )
+            .toArray()
+        : [];
+      const localitiesById = new Map(localityRows.map((row) => [row._id, row]));
+      const byId = new Map(rows.map((row) => [row._id, row]));
       const items = [];
       for (const id of page.ids) {
-        const row = rows.find((l) => l._id === id);
-        if (row) items.push(await this.projection(tx, row));
+        const row = byId.get(id);
+        if (!row) continue;
+        const metadata = metadataById.get(row.b.currentRevisionId!);
+        if (!metadata) throw notFound();
+        const origin = row.r.originAddressId
+          ? (originsById.get(row.r.originAddressId) ?? null)
+          : null;
+        items.push(
+          await this.projection(tx, row, {
+            metadata,
+            origin,
+            locality: origin
+              ? (localitiesById.get(
+                  `${origin.serviceAreaCode}:${origin.localityCode}`,
+                ) ?? null)
+              : null,
+          }),
+        );
       }
       return {
         items,
@@ -428,12 +605,13 @@ export class PublicListingService {
       };
     });
   }
-  detail(id: string): Promise<Wire['PublicListing']> {
+  detail(id: string, bundleSupport = false): Promise<Wire['PublicListing']> {
     return this.mongo.tx(async (tx) => {
       const [row] = await tx.c.listings
         .aggregate<Eligible>([
           { $match: { _id: id } },
           ...publicEligibleStages(),
+          ...(!bundleSupport ? [{ $match: { 'r.bundle': null } }] : []),
         ])
         .toArray();
       if (!row) throw notFound();

@@ -1,14 +1,15 @@
 import React, { useState } from "react";
-import { FlatList, Pressable, StyleSheet, View } from "react-native";
+import { FlatList, Pressable, StatusBar, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   AppText,
   Button,
   Icon,
   Notice,
-  Screen,
   StatePanel,
+  TopNavbar,
   presentError,
   space,
   stitchTokens,
@@ -21,10 +22,12 @@ import {
   type Exchange,
 } from "./contracts";
 import { formatVnd } from "../../core/ui/format";
+import { MemberNavigation } from "../navigation/member-navigation";
 
 export function MyExchangesScreen() {
   const { client, state } = useSession();
   const foreground = useForeground();
+  const insets = useSafeAreaInsets();
   const currentUserId = state.status === "authenticated" ? state.user.id : null;
 
   const [activeTab, setActiveTab] = useState<"all" | "pending" | "active" | "completed">("all");
@@ -38,16 +41,32 @@ export function MyExchangesScreen() {
 
   if (state.status !== "authenticated") {
     return (
-      <Screen appearance="browse">
-        <StatePanel
-          title="Yêu cầu đăng nhập"
-          message="Vui lòng đăng nhập để xem các giao dịch trao đổi sách của bạn."
-          action={{
-            label: "Đăng nhập",
-            onPress: () => router.push("/account"),
-          }}
+      <View style={styles.screenRoot}>
+        <StatusBar barStyle="light-content" />
+        <TopNavbar
+          subtitle="TRAO ĐỔI SÁCH"
+          onNotificationsPress={() => router.push("/")}
+          onMessagesPress={() => router.push("/chat-inbox")}
         />
-      </Screen>
+        <View style={{ flex: 1, justifyContent: "center" }}>
+          <StatePanel
+            title="Yêu cầu đăng nhập"
+            message="Vui lòng đăng nhập để xem các giao dịch trao đổi sách của bạn."
+            action={{
+              label: "Đăng nhập",
+              onPress: () => router.push("/account"),
+            }}
+          />
+        </View>
+        <View
+          style={[
+            styles.footerContainer,
+            { paddingBottom: Math.max(insets.bottom, 8) },
+          ]}
+        >
+          <MemberNavigation current="/account" />
+        </View>
+      </View>
     );
   }
 
@@ -65,29 +84,31 @@ export function MyExchangesScreen() {
   });
 
   return (
-    <Screen
-      appearance="browse"
-      header={
-        <View style={styles.header}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Quay lại"
-            onPress={() => {
-              if (router.canGoBack()) router.back();
-              else router.replace("/account");
-            }}
-            style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
-          >
-            <Icon name="back" size={20} color={stitchTokens.wineDark} />
-            <AppText style={styles.backLabel}>Tài khoản</AppText>
-          </Pressable>
+    <View style={styles.screenRoot}>
+      <StatusBar barStyle="light-content" />
+      <TopNavbar
+        subtitle="TRAO ĐỔI SÁCH"
+        onNotificationsPress={() => router.push("/")}
+        onMessagesPress={() => router.push("/chat-inbox")}
+      />
+      <View style={styles.header}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Quay lại"
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace("/account");
+          }}
+          style={({ pressed }) => [styles.backBtn, pressed && styles.pressed]}
+        >
+          <Icon name="back" size={20} color={stitchTokens.wineDark} />
+          <AppText style={styles.backLabel}>Tài khoản</AppText>
+        </Pressable>
 
-          <AppText style={styles.headerTitle}>Trao đổi sách của tôi</AppText>
+        <AppText style={styles.headerTitle}>Trao đổi sách của tôi</AppText>
 
-          <View style={{ width: 40 }} />
-        </View>
-      }
-    >
+        <View style={{ width: 40 }} />
+      </View>
       <View style={styles.container}>
         {/* Filter Tabs */}
         <View style={styles.tabsRow}>
@@ -224,11 +245,28 @@ export function MyExchangesScreen() {
           }}
         />
       </View>
-    </Screen>
+      <View
+        style={[
+          styles.footerContainer,
+          { paddingBottom: Math.max(insets.bottom, 8) },
+        ]}
+      >
+        <MemberNavigation current="/account" />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screenRoot: {
+    flex: 1,
+    backgroundColor: stitchTokens.creamBg,
+  },
+  footerContainer: {
+    backgroundColor: stitchTokens.whiteSurface,
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.peachBorder,
+  },
   header: {
     height: 54,
     paddingHorizontal: space.lg,

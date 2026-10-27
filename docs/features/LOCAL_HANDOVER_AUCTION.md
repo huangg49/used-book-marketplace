@@ -17,7 +17,7 @@ thời hạn và quy tắc biên dưới đây là baseline triển khai do nhó
 | DEC-03 | Hai điểm HCM-DEMO-01 và HCM-DEMO-02 do Admin quản lý; Staff được phân công theo điểm. Không có đối tác, chia doanh thu hoặc chuyển sách giữa hai điểm. |
 | DEC-04 | Một giao dịch ViaPoint dùng đúng một điểm chung. SelfDropoff/CarrierInbound và SelfCollect/CarrierOutbound là các lựa chọn độc lập của từng người. |
 | DEC-05 | Kiểm tra tình trạng/đối chiếu mô tả có biên bản; không chứng nhận chính hãng, quyền sở hữu hoặc tính hợp pháp của bản in bằng một lần duyệt ảnh. |
-| DEC-06 | Đấu giá là chức năng phụ có phạm vi bắt buộc tối thiểu ở bản 1.1: một cuốn/phiên, giá mua ngay trước bid đầu (mở 60 giây cho người khác trả cao hơn, ADR 0043), Auto có trần, hết phiên tạo một Order. |
+| DEC-06 | Đấu giá là chức năng phụ có phạm vi bắt buộc tối thiểu ở bản 1.1: một cuốn/phiên, giá mua ngay tùy chọn, còn dùng được sau bid khi giá hiện tại thấp hơn (mở 60 giây cho người khác trả cao hơn, ADR 0043/0047), Auto có trần, hết phiên tạo một Order. |
 | DEC-07 | Đấu giá dùng listing riêng kênh Auction do luồng đấu giá tạo (mode Sale, salePrice là giá trị khai báo), không lấy listing của sàn mua/đổi; listing Auction không lên kệ, không mua/đổi/báo giá ([ADR 0042](../adr/0042-auction-only-listings.md), 19/10/2026). Sách phải được điểm nhận và đạt kiểm tra trước khi mở phiên. |
 | DEC-08 | Giữ cọc Exchange 100% giá trị sách dự kiến nhận cho cả hai phương thức ở bản đầu. Điểm giữ sách không tự miễn cọc; thay đổi tỷ lệ là policy tương lai. |
 | DEC-09 | Không tiền thật/carrier thật. Có thể diễn tập tiếp nhận sách thật tại bàn được phép dùng; tọa độ/địa chỉ mô phỏng không được trình bày như cơ sở đã hoạt động. |
@@ -46,7 +46,7 @@ phương thức, payer và phí khi giao kết; cấu hình mới không đổi 
 | POL-35 | point_service_fee | Kiểm tra và giữ sách: 0đ ở demo. Quá hạn không tự phát sinh phí lưu kho. Chi phí vận hành mô phỏng do nền tảng chịu. |
 | POL-36 | per_carrier_leg_fee | 30.000đ/chặng được chọn, self dropoff/collect 0đ. POL-22 vẫn là ship một chiều Order trực tiếp. Đây không phải báo giá thị trường. |
 | POL-37 | collection_code | Mã ngẫu nhiên 6 số, hiệu lực 10 phút, gắn người nhận + sách + điểm; 5 lần sai/15 phút/handover, không ghi raw mã vào log |
-| POL-38 | auction_duration | 24 giờ từ khi mở; không lên lịch tương lai, không gia hạn phút cuối, giờ server quyết định |
+| POL-38 | auction_duration | Seller chọn 1–168 giờ (mặc định 24), mở ngay hoặc hẹn trong 7 ngày ([ADR 0047](../adr/0047-seller-scheduled-auctions.md)); không gia hạn phút cuối, giờ server quyết định |
 | POL-39 | auction_prices | 10.000–1.000.000đ; bước giá 10.000đ hoặc 50.000đ do Seller chọn trước mở; start, bid, max và buy-now cùng lưới `start + n × step` |
 | POL-40 | winner_payment | 24 giờ (cả khi thắng nhờ BuyNow sau cửa sổ 60 giây, ADR 0043); Order BuyNowPending cũ giữ hạn 15 phút POL-01; không tự chuyển người đứng thứ hai |
 | POL-41 | auction_limits | Tối đa 2 intake/auction chưa kết thúc của Seller; 5 phiên người dùng đang có cam kết bid chưa giải phóng; 30 lệnh bid/Auto mỗi phút/tài khoản |
@@ -250,7 +250,9 @@ mở mua/đổi thường trong intake hoặc auction; có phiên cũ PaymentExp
 đăng lại phải return về OwnerConfirmed rồi tạo yêu cầu mới ở bản đầu.
 
 FR-AU02: sách ReceivedAtPoint + inspection Pass đúng revision + Seller ACTIVE,
-Staff độc lập mới mở phiên; startAt=serverNow, endAt=startAt+24 giờ. Hết intake/
+Seller tự đăng phiên (từ 27/10/2026, [ADR 0047](../adr/0047-seller-scheduled-auctions.md)): mở ngay hoặc hẹn
+startAt trong 7 ngày, thời lượng 1–168 giờ, đổi thời gian được trước bid đầu.
+Staff open 24 giờ chỉ còn là thao tác vận hành cũ. Hết intake/
 inspection chưa Pass: không tự mở, chuyển xử lý trả sách. Seller có thể hủy trước
 mở và chưa có bid; sau mở nhưng chưa bid cũng được đóng Cancelled rồi trả sách.
 Sau bid đầu Seller không tự rút/đổi giá/kéo dài phiên. Admin độc lập hủy có lý do
@@ -283,7 +285,7 @@ nếu đã bị vượt, đánh dấu inactive. Bật lại là cam kết mới 
 Hành động tắt không làm giảm giá, không hồi sinh bidder đã bị vượt. UI phải giải
 thích tắt Auto không hủy nghĩa vụ đang dẫn. Retry cùng key không đổi thứ tự ưu tiên.
 
-FR-AU06: BuyNow chỉ trước bid hợp lệ đầu tiên. Request BuyNow và bid cùng đến được
+FR-AU06: BuyNow tùy chọn; từ 27/10/2026 (ADR 0047) còn dùng được sau bid khi phiên đang mở, chưa ai mua ngay và giá hiện tại thấp hơn giá mua ngay; người đang dẫn không dùng. Request BuyNow và bid cùng đến được
 phân xử atomically; đúng một bên thắng. Từ 19/10/2026 ([ADR 0043](../adr/0043-buy-now-challenge-window.md)):
 BuyNow là cam kết trả đúng giá buyNow, người bấm dẫn đầu, tắt BuyNow và phiên kết
 thúc tại min(endAt gốc, lúc BuyNow + 60 giây). Trong 60 giây người khác vẫn trả giá

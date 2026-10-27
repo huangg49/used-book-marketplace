@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import { Controller, Get, INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { hash } from 'argon2';
 import request from 'supertest';
 import { Ajv2020 } from 'ajv/dist/2020.js';
@@ -112,6 +113,27 @@ describe('authentication with MongoDB', () => {
       .get('/api/v1/health/ready')
       .expect(200);
     validates('HealthResponse', ready.body);
+  });
+
+  it('allows repeated demo logins but still rejects wrong passwords and disabled users', async () => {
+    const config = app.get(ConfigService);
+    const previousEnv = config.get('NODE_ENV');
+    const previousOverride = config.get('LOGIN_RATE_LIMIT_DISABLED');
+    config.set('NODE_ENV', 'development');
+    config.set('LOGIN_RATE_LIMIT_DISABLED', 'true');
+    try {
+      for (let i = 0; i < 8; i++) await login().expect(200);
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({ email, password: 'Wrong-demo-password-42' })
+        .expect(401);
+      await db.setStatus(userId, 'DISABLED');
+      await login().expect(401);
+      expect(await db.c.login_attempts.countDocuments()).toBe(0);
+    } finally {
+      config.set('NODE_ENV', previousEnv);
+      config.set('LOGIN_RATE_LIMIT_DISABLED', previousOverride);
+    }
   });
 
   it('protects new endpoints by default and rejects expired or wrong-audience JWTs', async () => {

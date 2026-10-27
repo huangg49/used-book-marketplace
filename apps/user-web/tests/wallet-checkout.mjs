@@ -38,6 +38,7 @@ Object.assign(process.env, {
 let fixture, server, browser, page;
 const topupResponses = [];
 const browserMessages = [];
+const historyReads = [];
 const realFetch = globalThis.fetch;
 let queryMode = "pending";
 const checkoutAmounts = new Map();
@@ -161,26 +162,30 @@ try {
     .getByRole("heading", { name: "Ví của tôi", exact: true })
     .waitFor();
   const header = page.locator("header").first();
-  const walletIcon = header.getByRole("link", {
-    name: "Ví của tôi",
-    exact: true,
-  });
   const chatIcon = header.getByRole("link", {
     name: "Chat, hội thoại của bạn",
     exact: true,
   });
-  assert.equal((await walletIcon.textContent()).trim(), "");
   assert.equal((await chatIcon.textContent()).trim(), "");
-  assert.equal(await walletIcon.getAttribute("href"), "/wallet");
-  const walletBounds = await walletIcon.boundingBox();
   const chatBounds = await chatIcon.boundingBox();
-  assert.ok(walletBounds.width >= 44 && walletBounds.height >= 44);
-  assert.ok(walletBounds.x + walletBounds.width <= chatBounds.x);
-  await page.getByRole("button", { name: "Tài khoản", exact: true }).click();
-  await page
-    .getByRole("navigation", { name: "Tài khoản cá nhân", exact: true })
-    .getByRole("link", { name: "Ví của tôi", exact: true })
-    .click();
+  assert.ok(chatBounds.width >= 44 && chatBounds.height >= 44);
+  // Main's account redesign moved the wallet entry into the account/mobile menu.
+  async function openWalletNavigation() {
+    const account = header.getByRole("button", { name: /^Tài khoản của .+$/, exact: true });
+    const desktop = await account.isVisible();
+    await (desktop ? account : header.getByRole("button", { name: "Mở menu", exact: true })).click();
+    const navigation = page.getByRole("navigation", {
+      name: desktop ? "Tài khoản cá nhân" : "Điều hướng trên điện thoại", exact: true,
+    });
+    const entry = navigation.getByRole("link", { name: "Ví của tôi", exact: true });
+    await entry.waitFor();
+    assert.equal(await entry.getAttribute("href"), "/wallet");
+    const bounds = await entry.boundingBox();
+    assert.ok(bounds.width >= 44 && bounds.height >= 44);
+    return { entry, close: () => desktop ? account.click() : header.getByRole("button", { name: "Đóng menu", exact: true }).click() };
+  }
+  const walletNavigation = await openWalletNavigation();
+  await walletNavigation.entry.click();
   await page
     .getByRole("heading", { name: "Ví của tôi", exact: true })
     .waitFor();
@@ -250,9 +255,25 @@ try {
       .count(),
     0,
   );
+  const walletBanner = page.locator("header").filter({
+    has: page.getByRole("heading", { name: "Ví của tôi", exact: true }),
+  });
+  async function expectAvailableBalance(amount) {
+    await walletBanner.getByText("Số dư khả dụng", { exact: true }).waitFor();
+    await walletBanner.getByText(
+      new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+        maximumFractionDigits: 0,
+      }).format(amount),
+      { exact: true },
+    ).waitFor();
+  }
+  await expectAvailableBalance(0);
   assert.equal(
-    await page.getByText("Số dư khả dụng", { exact: true }).count(),
-    0,
+    await walletBanner.getByRole("group", { name: "Thao tác ví", exact: true })
+      .getByRole("button").count(),
+    2,
   );
   assert.equal(
     await page.getByText("Đang giữ cho giao dịch", { exact: true }).count(),
@@ -461,6 +482,7 @@ try {
     (await fixture.api("/me/wallet", fixture.member.accessToken)).available,
     50000,
   );
+  await expectAvailableBalance(50000);
   // A successful Return closes only the payment tab, preserves the wallet
   // session and automatically shows the confirmed credit without another login.
   await openTopup();
@@ -489,6 +511,21 @@ try {
     (await fixture.api("/me/wallet", fixture.member.accessToken)).available,
     90000,
   );
+  await expectAvailableBalance(90000);
+  // The settled payment has two query observers (result + owned checkout).
+  // Wait for checkout release and its actual invalidations, not the page's
+  // already-fired networkidle navigation event, before the pagination fixture.
+  await page.waitForFunction(async () => {
+    const { queryClient } = await import("/src/lib/session.ts");
+    const cache = queryClient.getQueryCache();
+    const owned = cache.findAll({ queryKey: ["wallet-checkout"] })
+      .filter((query) => query.queryKey[2]);
+    const reads = cache.getAll().filter((query) =>
+      ["wallet-summary", "wallet-history", "wallet-checkout", "topup", "topups"].includes(query.queryKey[0]),
+    );
+    return owned.every((query) => query.getObserversCount() === 0) &&
+      reads.every((query) => query.state.fetchStatus === "idle");
+  });
   // Small real API pages exercise pagination and retries without fabricated rows.
   let failNextPage = true;
   let failRefundRead = true;
@@ -518,6 +555,14 @@ try {
     }
     url.searchParams.set("limit", "1");
     const response = await route.fetch({ url: url.toString() });
+    const body = await response.json();
+    historyReads.push({
+      type: url.searchParams.get("type"),
+      cursor: url.searchParams.has("cursor"),
+      status: response.status(),
+      items: body.items?.length,
+      next: !!body.nextCursor,
+    });
     await route.fulfill({ response });
   });
   await page
@@ -578,7 +623,9 @@ try {
       document.documentElement.style.fontSize = "130%";
       window.scrollTo(0, 0);
     });
-    assert.equal(await walletIcon.isVisible(), true);
+    const walletNavigation = await openWalletNavigation();
+    assert.equal(await walletNavigation.entry.isVisible(), true);
+    await walletNavigation.close();
     assert.equal(await chatIcon.isVisible(), true);
     assert.ok(
       await page.evaluate(
@@ -678,13 +725,13 @@ try {
     ),
   );
   await page.setViewportSize({ width: 1366, height: 900 });
-  await page.getByRole("button", { name: "Tài khoản", exact: true }).click();
+  await page.getByRole("button", { name: /^Tài khoản của .+$/, exact: true }).click();
   await page
     .getByRole("navigation", { name: "Tài khoản cá nhân", exact: true })
     .getByRole("link", { name: "Tổng quan", exact: true })
     .click();
   await page
-    .getByRole("region", { name: "Ví mô phỏng", exact: true })
+    .getByRole("region", { name: "Số dư khả dụng", exact: true })
     .getByText(/90\.000/)
     .waitFor();
   assert.equal(await page.getByLabel(/^Email/).count(), 0);
@@ -1001,7 +1048,7 @@ try {
   await topupDialog.getByRole("button", { name: "Đóng popup" }).click();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: wallet action dialogs, withdrawal preview minimum with no command, keyboard focus/escape/close, preserved amounts, 320/390px dialogs at 130% type; icon wallet/chat navigation, account wallet entry, real history filters/pagination/retry; blocked provider tab creates no intent, provider has no opener, original tab stays signed in through Return, forged Return denied, QueryDR outage/retry/credit, lost-ACK modal-close same-key retry; signed checkout deadline exactly five minutes, live mobile countdown, server cancellation while provider tab stays open and an older request is selected, reload preserves server deadline, expired lost-ACK receipt cannot reopen provider, cancelled requests unlock new topup and produce no ledger/history entry; real API/Mongo with accelerated disposable fixture deadlines, fake provider navigation and signed QueryDR responses.",
+    "PASS: wallet banner shows server-confirmed balance and both actions, wallet action dialogs, withdrawal preview minimum with no command, keyboard focus/escape/close, preserved amounts, 320/390px dialogs at 130% type; icon chat navigation, account/mobile wallet entry, real history filters/pagination/retry; blocked provider tab creates no intent, provider has no opener, original tab stays signed in through Return, forged Return denied, QueryDR outage/retry/credit, lost-ACK modal-close same-key retry; signed checkout deadline exactly five minutes, live mobile countdown, server cancellation while provider tab stays open and an older request is selected, reload preserves server deadline, expired lost-ACK receipt cannot reopen provider, cancelled requests unlock new topup and produce no ledger/history entry; real API/Mongo with accelerated disposable fixture deadlines, fake provider navigation and signed QueryDR responses.",
   );
 } catch (error) {
   await page
@@ -1030,6 +1077,7 @@ try {
     );
   }
   console.log("QA latest topup responses:", topupResponses.slice(-12));
+  console.log("QA history page responses:", historyReads.slice(-16));
   console.log("QA browser warnings/errors/HMR:", browserMessages.slice(-16));
   if (fixture) {
     console.log(

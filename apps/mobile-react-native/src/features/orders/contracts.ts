@@ -102,4 +102,3 @@ export function buyNowError(cause: unknown): string {
   if (cause instanceof Error && cause.message) return cause.message;
   return "Không thể hoàn tất giao dịch. Vui lòng kiểm tra lại.";
 }
-

@@ -6,75 +6,187 @@
 .back {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-height: 44px;
+  padding: 10px 16px 10px 12px;
+  margin-bottom: 24px;
+  border: 1px solid #e7d5c2;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #fffaf2, #f4e8d8);
   color: var(--shop-wine);
   font-size: 0.85rem;
+  font-weight: 700;
   text-decoration: none;
-  margin-bottom: 24px;
+  box-shadow: 0 3px 10px rgb(50 24 12 / 5%);
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 .back:hover {
-  text-decoration: underline;
+  background: #f1dfca;
+  border-color: #cfae91;
+  box-shadow: 0 5px 14px rgb(50 24 12 / 10%);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+.back:focus-visible {
+  outline: 3px solid #cfae91;
+  outline-offset: 3px;
 }
 .grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-  gap: 56px;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 32px;
   align-items: start;
 }
 .content {
   min-width: 0;
+  padding: 28px;
+  border: 1px solid #eee4d6;
+  border-radius: 12px;
+  background: #fffdf8;
+  box-shadow: 0 4px 14px rgb(50 24 12 / 6%);
 }
 .content h1 {
-  font: 700 clamp(1.75rem, 2.5vw, 2.125rem)/1.4 var(--shop-body);
-  margin: 0 0 12px;
+  font: 700 clamp(1.75rem, 2.5vw, 2.125rem)/1.25 var(--shop-body);
+  margin: 0 0 8px;
   letter-spacing: -0.03em;
   overflow-wrap: anywhere;
 }
 .author {
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: var(--shop-muted);
-  line-height: 1.8;
-  margin: 0 0 20px;
+  line-height: 1.7;
+  margin: 0 0 14px;
   overflow-wrap: anywhere;
 }
 .labels {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-bottom: 18px;
+}
+.sellerIdentity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0 0 16px;
+  font-size: 0.8rem;
+  line-height: 1.7;
+  color: var(--shop-muted);
+}
+.sellerRow {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 32px;
+}
+.sellerCard {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 18px;
+  padding: 14px;
+  border: 1px solid #eee4d6;
+  border-radius: 9px;
+  background: #fffaf1;
+}
+.sellerAvatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: #ead8c1;
+  color: var(--shop-wine);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.sellerCardInfo {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.sellerCardEyebrow,
+.sellerCardMeta {
+  color: var(--shop-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+.sellerCardInfo strong {
+  color: var(--shop-wine);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+.ownerLabel {
+  font-size: 0.75rem;
+  color: var(--shop-wine);
 }
 .labels span {
-  font-size: 0.75rem;
-  line-height: 1.6;
-  padding: 7px 12px;
-  border-radius: 6px;
-  background: #efe3cf;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  padding: 6px 10px;
+  border-radius: 5px;
+  background: #f3ecdf;
   color: #5b3428;
 }
 .prices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20px 40px;
-  margin: 24px 0;
-  padding: 22px 0;
-  border-block: 1px solid var(--shop-line);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   font-variant-numeric: tabular-nums;
 }
-.prices p {
-  margin: 0;
-  display: grid;
-  gap: 8px;
+.priceCard,
+.exchangePriceCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 16px 14px;
+  border-radius: 10px;
 }
-.prices span {
-  font-size: 0.8rem;
-  color: var(--shop-muted);
+.priceCard {
+  border: 1px solid #e7c7b9;
+  background: linear-gradient(145deg, #fff3ed, #fffaf5);
+}
+.exchangePriceCard {
+  border: 1px solid #c7ddcf;
+  background: linear-gradient(145deg, #edf7ef, #f8fcf8);
+}
+.priceLabel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  color: #87513f;
+}
+.exchangePriceCard .priceLabel {
+  color: #326c4c;
 }
 .prices strong {
-  font-size: 1.5rem;
+  font-size: clamp(1.15rem, 2vw, 1.5rem);
+  line-height: 1.3;
   color: var(--shop-wine);
+  overflow-wrap: anywhere;
+}
+.exchangePriceCard strong {
+  color: #246342;
+}
+.priceHint {
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--shop-muted);
 }
 .purchase {
-  padding-bottom: 24px;
+  padding: 0 0 18px;
+  margin: 0 0 18px;
   border-bottom: 1px solid var(--shop-line);
 }
 .content h2,
@@ -85,35 +197,132 @@
   overflow-wrap: anywhere;
 }
 .purchase p {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--shop-muted);
-  line-height: 1.9;
+  line-height: 1.75;
   max-width: 60ch;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 .primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
   background: var(--shop-wine);
   color: var(--shop-cream);
-  font: 700 0.9rem/1.6 var(--shop-body);
+  font: 700 0.85rem/1.5 var(--shop-body);
   border: 0;
-  border-radius: 8px;
-  min-height: 50px;
-  padding: 12px 24px;
+  border-radius: 5px;
+  min-height: 46px;
+  padding: 11px 18px;
   text-decoration: none;
   width: 100%;
 }
+.actionRow {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+.actionRow > .primary {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: 10px;
+}
 .primary:hover:not(:disabled) {
   background: #7c2320;
+}
+.purchase > .secondary {
+  margin-top: 10px;
 }
 .primary:disabled {
   opacity: 0.55;
 }
 .details {
   min-width: 0;
+  padding: 24px;
+  border: 1px solid #eee4d6;
+  border-radius: 14px;
+  background: #fffdf8;
+  box-shadow: 0 4px 14px rgb(50 24 12 / 4%);
+}
+.detailsHeading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #eee4d6;
+}
+.detailsIcon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: #f5e7d4;
+  color: var(--shop-wine);
+}
+.detailsHeading h2 {
+  margin: 0;
+  color: var(--shop-wine);
+  font-size: 1.05rem;
+}
+.detailsHeading p {
+  margin: 3px 0 0;
+  color: var(--shop-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+.conditionGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+.conditionItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 13px 12px;
+  border: 1px solid #eee4d6;
+  border-radius: 10px;
+  background: #fffaf2;
+}
+.conditionMark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #f3e8d8;
+  color: #7b3024;
+}
+.conditionItem > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.conditionItem > div > span {
+  color: var(--shop-muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.conditionItem strong {
+  color: #39251f;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+.conditionItem .conditionGood {
+  color: #28734c;
+}
+.conditionItem .conditionWarning {
+  color: #a34b20;
 }
 .detailsGrid {
   display: grid;
@@ -142,6 +351,9 @@
   line-height: 1.8;
 }
 .details dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--shop-muted);
 }
 .details dd {
@@ -224,17 +436,33 @@
 }
 @media (max-width: 720px) {
   .page {
-    padding: 20px 20px 0;
+    padding: 20px 16px 0;
   }
   .grid {
     grid-template-columns: 1fr;
-    gap: 24px;
+    gap: 20px;
+  }
+  .sellerRow {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .sellerCard {
+    grid-column: 1;
+  }
+  .content {
+    padding: 20px 16px;
   }
   .detailsGrid {
     grid-template-columns: 1fr;
-    gap: 32px;
+    gap: 20px;
     margin-top: 32px;
     padding-top: 28px;
+  }
+  .details {
+    padding: 18px 14px;
+  }
+  .conditionGrid {
+    grid-template-columns: 1fr;
   }
   .content h1 {
     font-size: 1.65rem;

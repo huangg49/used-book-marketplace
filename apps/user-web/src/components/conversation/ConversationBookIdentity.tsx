@@ -9,9 +9,11 @@ import styles from "../../pages/ChatPage.module.css";
 export function ConversationBookIdentity({
   listingId,
   status,
+  title,
 }: {
   listingId?: string;
   status: ReactNode;
+  title?: string;
 }) {
   const book = useQuery({
     queryKey: ["public-listing", listingId],
@@ -31,7 +33,7 @@ export function ConversationBookIdentity({
         <h1 data-conversation-title>
           {listingId ? (
             <Link to={`/books/${listingId}`}>
-              {book.data?.book.title ??
+              {title ?? book.data?.bundle?.title ?? book.data?.book.title ??
                 (book.isLoading
                   ? "Đang tải cuốn sách…"
                   : "Cuộc trao đổi về sách")}

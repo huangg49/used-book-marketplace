@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.49.0
+  version: 0.52.0
   description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
     public shelf/detail/media and approved editing/visibility/archive/removal commands are
-    implemented. Participant agreement workspaces with mutually confirmed mode/price proposals and linked Exchange history are implemented. Member private address book and versioned demo service-area directory are
+    implemented. Participant agreement workspaces with mutually confirmed mode/price proposals and linked Exchange history are implemented. Exact Order conversations can be opened by their ACTIVE Buyer or Seller, including BuyNow and historical Orders. Member private address book and versioned demo service-area directory are
     implemented. Revision-bound delivery origins and private DirectDelivery sale estimates are
     implemented. Quotes do not reserve books. Unpaid DirectDelivery Order create/read/cancel and
     internal expiry with exclusive commitments are implemented. Simulated wallet ledger, private
@@ -958,6 +958,13 @@ paths:
       security: []
       parameters:
         - in: query
+          name: bundleSupport
+          required: false
+          description: Opt in to whole-bundle listings; absent clients receive single books only.
+          schema:
+            type: string
+            enum: [whole-v1]
+        - in: query
           name: categoryId
           required: false
           schema:
@@ -1174,6 +1181,13 @@ paths:
       x-implementation-status: implemented
       security: []
       parameters:
+        - in: query
+          name: bundleSupport
+          required: false
+          description: Opt in to whole-bundle listings; absent clients receive single books only.
+          schema:
+            type: string
+            enum: [whole-v1]
         - in: path
           name: listingId
           required: true
@@ -3797,6 +3811,51 @@ paths:
         "503":
           $ref: "#/components/responses/ListingError"
       x-locked-access: existing-obligations
+  /orders/{orderId}/conversation:
+    post:
+      operationId: openOrderConversation
+      tags: [Orders, Purchase conversations]
+      summary: Open the exact Order's participant conversation
+      x-implementation-status: implemented
+      description: ACTIVE MEMBER Buyer or Seller only. Reuses the conversation already linked to this
+        Order, preserving its messages and terms. If none exists, creates a separate OrderCreated
+        conversation from the Order's frozen participants and item. Does not change the Order,
+        listing, quote, prices, commitment or ledger. No financial expectedVersion is required;
+        opening a conversation is serialized by the Order lock. Same key and empty body replay
+        the receipt after current participant, role, account and session checks. No LOCKED access.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OpenOrderConversation" }
+      responses:
+        "200":
+          description: Existing or newly created Order participant conversation.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+            Idempotency-Replayed:
+              schema: { type: string, enum: ["true", "false"] }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseConversationReceipt" }
+        "400": { $ref: "#/components/responses/ListingError" }
+        "401": { $ref: "#/components/responses/ListingError" }
+        "403": { $ref: "#/components/responses/ListingError" }
+        "404": { $ref: "#/components/responses/ListingError" }
+        "409": { $ref: "#/components/responses/ListingError" }
+        "422": { $ref: "#/components/responses/ListingError" }
+        "503": { $ref: "#/components/responses/ListingError" }
   /orders/{orderId}/cancel:
     post:
       operationId: cancelUnpaidOrder
@@ -5642,6 +5701,144 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /auction-intakes/{intakeId}/publish:
+    post:
+      operationId: publishAuction
+      tags:
+        - Auctions
+      description: "ADR 0047. Owner MEMBER publishes a Passed (inspected) intake while ACTIVE and
+        unrestricted and while the listing revision is unchanged. startAt null starts now; otherwise
+        startAt is 5 minutes to 7 days ahead. durationHours is 1-168. The auction is stored Active;
+        before startAt its phase is Scheduled and bids/Auto/Buy Now return 409 AuctionNotStarted."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: intakeId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PublishAuction"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}/schedule:
+    post:
+      operationId: rescheduleAuction
+      tags:
+        - Auctions
+      description: "ADR 0047. Seller edits the time of an Active auction before the first bid and
+        before any Buy Now, at most 5 times. Scheduled: startAt (null = now) and durationHours. Live:
+        only durationHours (end = startAt + duration, at least 1 hour from now); startAt must be null.
+        expectedVersion is the auction version."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RescheduleAuction"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /operations/auction-intakes:
     get:
       operationId: listPointAuctionIntakes
@@ -5821,8 +6018,10 @@ paths:
       operationId: openAuction
       tags:
         - Auctions
-      description: "Assigned independent STAFF opens a Passed intake while the seller is still ACTIVE:
-        startAt is server time, endAt is 24 hours later, no scheduling or extension."
+      deprecated: true
+      description: "Superseded by publishAuction (ADR 0047), kept for operations tooling. Assigned
+        independent STAFF opens a Passed intake while the seller is still ACTIVE: startAt is server
+        time and the auction runs 24 hours."
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -6195,10 +6394,15 @@ paths:
       operationId: listAuctions
       tags:
         - Auctions
-      description: Public. Active auctions ending soonest first (max 50). Shows price and anonymous bidder
-        count; ceilings are never exposed.
+      description: Public. phase=live (default) lists started Active auctions ending soonest first;
+        phase=upcoming lists scheduled ones starting soonest first (ADR 0047). Max 50. Shows price and
+        anonymous bidder count; ceilings are never exposed.
       x-implementation-status: implemented
       security: []
+      parameters:
+        - in: query
+          name: phase
+          schema: { type: string, enum: [live, upcoming], default: live }
       responses:
         "200":
           description: Successful read.
@@ -6829,7 +7033,7 @@ paths:
           schema: { type: string, maxLength: 2048 }
         - in: query
           name: view
-          schema: { type: string, enum: [all, active, payment, selling], default: all }
+          schema: { type: string, enum: [all, active, upcoming, payment, selling], default: all }
       responses:
         "200":
           description: Caller-owned auction activity.
@@ -8095,8 +8299,9 @@ paths:
       operationId: buyAuctionNow
       tags:
         - Auctions
-      description: Only before the first valid bid; decided under the same auction lock as bids so exactly
-        one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer
+      description: ADR 0047 — offered while the auction is live, Buy Now has not been used and the current
+        price is below the Buy Now price, also after bids; the current leader cannot use it. Decided
+        under the same auction lock as bids so exactly one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer
         offered and the auction ends at min(endAt, now + 60 s). Others may outbid from Buy Now price +
         step in that window; the normal close then forms the winner's Order (24-hour payment). The
         receipt reports state Active and no orderId. Auctions already BuyNowPending keep their
@@ -10137,9 +10342,56 @@ components:
         updatedAt:
           type: string
           format: date-time
+    BookBundle:
+      type: object
+      additionalProperties: false
+      required: [title, wholeOnly, exclusiveOwnershipDeclared, items]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 300
+        wholeOnly:
+          type: boolean
+          const: true
+        exclusiveOwnershipDeclared:
+          type: boolean
+          const: true
+        items:
+          type: array
+          minItems: 2
+          maxItems: 50
+          uniqueItems: true
+          items:
+            type: object
+            additionalProperties: false
+            required: [label, condition, notes]
+            properties:
+              label:
+                type: string
+                minLength: 1
+                maxLength: 200
+              condition:
+                $ref: "#/components/schemas/BookCondition"
+              notes:
+                type: string
+                maxLength: 500
+      description: Whole-only physical lot; exact component labels must be nonblank and unique after normalization. All items are sold, reserved, shipped and returned together. No separate component sale, Auction or Exchange. Catalog series does not imply a bundle.
     DraftContent:
       type: object
       additionalProperties: false
+      allOf:
+        - if:
+            required: [bundle]
+            properties:
+              bundle:
+                type: object
+          then:
+            properties:
+              mode:
+                const: Sale
+              exchangeValue:
+                type: "null"
       required:
         - bookId
         - mode
@@ -10156,6 +10408,11 @@ components:
         - exchangeValue
         - mediaIds
       properties:
+        bundle:
+          anyOf:
+            - $ref: "#/components/schemas/BookBundle"
+            - type: "null"
+          description: Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return.
         bookId:
           anyOf:
             - type: string
@@ -10257,6 +10514,18 @@ components:
     SubmittedContent:
       type: object
       additionalProperties: false
+      allOf:
+        - if:
+            required: [bundle]
+            properties:
+              bundle:
+                type: object
+          then:
+            properties:
+              mode:
+                const: Sale
+              exchangeValue:
+                type: "null"
       required:
         - bookId
         - mode
@@ -10273,6 +10542,11 @@ components:
         - exchangeValue
         - mediaIds
       properties:
+        bundle:
+          anyOf:
+            - $ref: "#/components/schemas/BookBundle"
+            - type: "null"
+          description: Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return.
         bookId:
           type: string
           format: uuid
@@ -10576,6 +10850,11 @@ components:
         - fulfillment
         - purchaseAvailability
       properties:
+        bundle:
+          anyOf:
+            - $ref: "#/components/schemas/BookBundle"
+            - type: "null"
+          description: Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return.
         id:
           type: string
           format: uuid
@@ -10710,6 +10989,10 @@ components:
         their payment deadline, never participant identities. InNegotiation is retained for legacy
         conversation reservations. No new checkout or conversation can start until Available.
         Never serialize a private listing then filter on the client.
+    OpenOrderConversation:
+      type: object
+      additionalProperties: false
+      description: No client-supplied participant, listing, price or version; all linkage comes from the frozen Order.
     CreatePurchaseConversation:
       type: object
       additionalProperties: false
@@ -11478,6 +11761,10 @@ components:
         - pricingValid
         - contentAppropriate
       properties:
+        bundleContentsVerified:
+          type: boolean
+          const: true
+          description: Required true to approve a bundle after inspecting its manifest and whole-lot photos.
         catalogMatches:
           type: boolean
           const: true
@@ -11853,6 +12140,7 @@ components:
         - SESSION_EXPIRED
         - BidTooLow
         - AuctionClosed
+        - AuctionNotStarted
     ListingApiError:
       type: object
       additionalProperties: false
@@ -12130,8 +12418,24 @@ components:
         method:
           type: string
           const: DirectDelivery
-      description: Safe delivery preference only, not a quote or enabled checkout. Never contains an
-        address ID, version, locality or contact details.
+        locality:
+          type: object
+          additionalProperties: false
+          required: [code, label]
+          properties:
+            code:
+              type: string
+              minLength: 1
+              maxLength: 40
+            label:
+              type: string
+              minLength: 1
+              maxLength: 120
+          description: Coarse book circulation zone from the configured directory, resolved only
+            while the published revision's selected origin address version is current.
+      description: Safe delivery preference and optional coarse book circulation zone only, not
+        a quote or enabled checkout. The name remains the legacy TP.HCM envelope; use locality.label
+        for the actual zone when present. Never contains an address ID, version or contact details.
     CreateSaleQuote:
       type: object
       additionalProperties: false
@@ -12142,6 +12446,10 @@ components:
         - expectedDestinationAddressVersion
         - method
       properties:
+        acknowledgeWholeBundle:
+          type: boolean
+          const: true
+          description: Required true when quoting a whole bundle; expected listing/revision pins the complete manifest.
         expectedListingVersion:
           type: integer
           minimum: 1
@@ -12399,6 +12707,11 @@ components:
         - description
         - mediaIds
       properties:
+        bundle:
+          anyOf:
+            - $ref: "#/components/schemas/BookBundle"
+            - type: "null"
+          description: Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return.
         listingId:
           type: string
           format: uuid
@@ -12600,6 +12913,7 @@ components:
       required:
         - id
         - contextId
+        - conversationId
         - version
         - state
         - role
@@ -12638,6 +12952,10 @@ components:
         - completedAt
         - canConfirmReceipt
       properties:
+        conversationId:
+          type: [string, "null"]
+          format: uuid
+          description: The conversation linked to this exact Order, or null before it is opened. Does not grant chat access to LOCKED accounts.
         purchaseMode:
           type: string
           enum: [Negotiated, BuyNow]
@@ -14762,6 +15080,52 @@ components:
           type: integer
           minimum: 1
           maximum: 2147483647
+    PublishAuction:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - startAt
+        - durationHours
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+          description: Intake version.
+        startAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Null starts now; otherwise 5 minutes to 7 days ahead.
+        durationHours:
+          type: integer
+          minimum: 1
+          maximum: 168
+    RescheduleAuction:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - startAt
+        - durationHours
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+          description: Auction version.
+        startAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: Scheduled only; null starts now. Must be null once live.
+        durationHours:
+          type: integer
+          minimum: 1
+          maximum: 168
     ReceiveAuctionIntake:
       type: object
       additionalProperties: false
@@ -15186,6 +15550,24 @@ components:
         id:
           type: string
           format: uuid
+        phase:
+          type: string
+          enum:
+            - Scheduled
+            - Live
+            - Ended
+          description: ADR 0047. Derived from server time; Scheduled before startAt. Optional for older
+            servers.
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+          description: Auction version for the seller's rescheduleAuction. Optional for older servers.
+        scheduleRevision:
+          type: integer
+          minimum: 0
+          maximum: 5
+          description: Number of seller time edits. Optional for older servers.
         buyNowAt:
           type:
             - string
@@ -15224,7 +15606,8 @@ components:
             - "null"
           minimum: 10000
           maximum: 1000000
-          description: Null once the first valid bid exists or the auction is not Active.
+          description: ADR 0047. Shown while Buy Now is offered (scheduled, or live with the price below
+            it and Buy Now unused); null otherwise.
         currentPrice:
           type:
             - integer
@@ -15517,6 +15900,13 @@ components:
           type: integer
           minimum: 1
           maximum: 2147483647
+        phase:
+          type: string
+          enum:
+            - Scheduled
+            - Live
+            - Ended
+          description: ADR 0047. Optional for older servers.
         title:
           type: string
         state:

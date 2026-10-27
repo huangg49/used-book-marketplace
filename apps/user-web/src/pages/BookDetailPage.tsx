@@ -1,7 +1,9 @@
+import { BundleManifest } from "../components/BookBundle";
+import { listingTitle } from "../lib/book-bundle";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowUpRight, MapPin, MessageCircle } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, MapPin, MessageCircle, BookOpen, ClipboardCheck, Languages, CalendarDays, Building2, Hash, Layers3 } from "lucide-react";
 import { ListingGallery } from "../components/ListingGallery";
 import { conditions } from "../lib/listing-labels";
 import { useSession } from "../hooks/useSession";
@@ -135,10 +137,12 @@ export function BookDetailPage() {
       <div className={styles.grid}>
         <ListingGallery key={book.id + book.revisionId} book={book} />
         <article className={styles.content}>
-          <h1>{book.book.title}</h1>
+          <h1>{listingTitle(book)}</h1>
+          <BundleManifest bundle={book.bundle} />
           <p className={styles.author}>
-            {book.book.authors.join(", ") || "Chưa rõ tác giả"}
+            Tác giả: {book.book.authors.join(", ") || "Chưa rõ tác giả"}
           </p>
+
           <div className={styles.labels}>
             <span>{conditions[book.condition]}</span>
             <span>
@@ -158,16 +162,18 @@ export function BookDetailPage() {
           </div>
           <div className={styles.prices}>
             {book.salePrice !== null && (
-              <p>
-                <span>Giá bán</span>
+              <div className={styles.priceCard}>
+                <span className={styles.priceLabel}>{book.bundle ? "GIÁ CẢ BỘ" : "GIÁ BÁN"}</span>
                 <strong>{formatVnd(book.salePrice)}</strong>
-              </p>
+                <span className={styles.priceHint}>Thanh toán bằng tiền</span>
+              </div>
             )}
             {book.exchangeValue !== null && (
-              <p>
-                <span>Giá trị đổi</span>
+              <div className={styles.exchangePriceCard}>
+                <span className={styles.priceLabel}>GIÁ TRỊ ĐỔI</span>
                 <strong>{formatVnd(book.exchangeValue)}</strong>
-              </p>
+                <span className={styles.priceHint}>Dùng để tính tiền bù</span>
+              </div>
             )}
           </div>
           {book.salePrice !== null && (
@@ -181,7 +187,7 @@ export function BookDetailPage() {
                   ? "Đây là bài đăng của bạn"
                   : held
                     ? heldLabel
-                    : "Muốn đọc cuốn này?"}
+                    : book.bundle ? "Muốn đọc bộ này?" : "Muốn đọc cuốn này?"}
               </h2>
               <p>
                 {buyerOrderConversation
@@ -194,9 +200,16 @@ export function BookDetailPage() {
                     ? "Bản sách này đã có đơn giữ chỗ. Bạn vẫn có thể xem bài đăng nhưng chưa thể đặt mua."
                     : "Mua ngay theo giá niêm yết, không cần trao đổi. Bạn cũng có thể nhắn người bán nếu muốn thương lượng; chat chưa giữ sách."}
               </p>
-              {!isOwner && !held && (
-                <Link className={styles.primary} to={`/buy-now/${book.id}`}>Mua ngay <ArrowUpRight size={18} aria-hidden="true" /></Link>
-              )}
+              <div className={styles.actionRow}>
+                {!isOwner && !held && (
+                  <Link className={styles.primary} to={`/buy-now/${book.id}`}>{book.bundle ? "Mua cả bộ" : "Mua ngay"} <ArrowUpRight size={18} aria-hidden="true" /></Link>
+                )}
+                {["Exchange", "Both"].includes(book.mode) && !isOwner && !held && (
+                  <Link className={styles.primary} to={`/chat/start/${book.id}?intent=Exchange`}>
+                    Gửi đề nghị đổi sách <ArrowUpRight size={18} aria-hidden="true" />
+                  </Link>
+                )}
+              </div>
               {held && !orderConversation && state.status === 'authenticated' && (
                 <Link className={styles.secondary} to="/orders">Xem đơn hàng của tôi</Link>
               )}
@@ -247,61 +260,77 @@ export function BookDetailPage() {
                 <Link className={styles.primary} to={ROUTES.exchangeMine}>
                   Trao đổi của tôi
                 </Link>
-              ) : (
-                !held && (
-                  <Link
-                    className={styles.primary}
-                    to={
-                      state.status === "authenticated"
-                        ? `/chat/start/${book.id}?intent=Exchange`
-                        : `/chat/start/${book.id}?intent=Exchange`
-                    }
-                  >
-                    Gửi đề nghị đổi sách{" "}
-                    <ArrowUpRight size={18} aria-hidden="true" />
-                  </Link>
-                )
-              )}
+              ) : book.salePrice === null && !held ? (
+                <Link
+                  className={styles.primary}
+                  to={`/chat/start/${book.id}?intent=Exchange`}
+                >
+                  Gửi đề nghị đổi sách <ArrowUpRight size={18} aria-hidden="true" />
+                </Link>
+              ) : null}
             </section>
           )}
         </article>
       </div>
+      <div className={styles.sellerRow}>
+        <section className={styles.sellerCard} aria-label="Thông tin người đăng">
+          <div className={styles.sellerAvatar} aria-hidden="true">
+            {book.seller.displayName.trim().slice(0, 1).toLocaleUpperCase("vi-VN") || "?"}
+          </div>
+          <div className={styles.sellerCardInfo}>
+            <span className={styles.sellerCardEyebrow}>Người đăng sách</span>
+            <strong>{book.seller.displayName}</strong>
+            <span className={styles.sellerCardMeta}>
+              {isOwner ? "Đây là bài đăng của bạn" : "Thông tin người bán"}
+            </span>
+          </div>
+          {isOwner && <span className={styles.ownerLabel}>Bạn</span>}
+        </section>
+      </div>
       <div className={styles.detailsGrid}>
         <section className={styles.details}>
-          <h2>Tình trạng bản sách</h2>
+          <div className={styles.detailsHeading}>
+            <span className={styles.detailsIcon}><ClipboardCheck size={19} aria-hidden="true" /></span>
+            <div>
+              <h2>Tình trạng sách</h2>
+              <p>Chi tiết thực tế của bản sách này</p>
+            </div>
+          </div>
           <p className={styles.description}>
             {book.description || "Người đăng chưa có mô tả thêm."}
           </p>
-          <dl>
-            <div>
-              <dt>Ruột sách</dt>
-              <dd>{book.pages || "Chưa ghi rõ"}</dd>
+          <div className={styles.conditionGrid}>
+            <div className={styles.conditionItem}>
+              <span className={styles.conditionMark}><BookOpen size={16} aria-hidden="true" /></span>
+              <div><span>Ruột sách</span><strong>{book.pages || "Chưa ghi rõ"}</strong></div>
             </div>
-            <div>
-              <dt>Trang thiếu</dt>
-              <dd>
-                {book.hasMissingPages
-                  ? "Có trang thiếu — xem mô tả ruột sách."
-                  : "Không có trang thiếu theo người đăng."}
-              </dd>
+            <div className={styles.conditionItem}>
+              <span className={styles.conditionMark}><ClipboardCheck size={16} aria-hidden="true" /></span>
+              <div><span>Trang thiếu</span><strong className={book.hasMissingPages ? styles.conditionWarning : styles.conditionGood}>{book.hasMissingPages ? "Có trang thiếu" : "Không có trang thiếu"}</strong></div>
             </div>
-            <div>
-              <dt>Bìa và gáy</dt>
-              <dd>{book.coverNote || "Chưa ghi rõ"}</dd>
+            <div className={styles.conditionItem}>
+              <span className={styles.conditionMark}><Layers3 size={16} aria-hidden="true" /></span>
+              <div><span>Bìa và gáy</span><strong>{book.coverNote || "Chưa ghi rõ"}</strong></div>
             </div>
-            <div>
-              <dt>Ghi chú, đánh dấu</dt>
-              <dd>{book.notes || "Chưa ghi rõ"}</dd>
+            <div className={styles.conditionItem}>
+              <span className={styles.conditionMark}><BookOpen size={16} aria-hidden="true" /></span>
+              <div><span>Ghi chú, đánh dấu</span><strong>{book.notes || "Chưa ghi rõ"}</strong></div>
             </div>
-            <div>
-              <dt>Phụ kiện</dt>
-              <dd>{book.accessories || "Chưa ghi rõ"}</dd>
+            <div className={styles.conditionItem}>
+              <span className={styles.conditionMark}><ClipboardCheck size={16} aria-hidden="true" /></span>
+              <div><span>Phụ kiện</span><strong>{book.accessories || "Chưa ghi rõ"}</strong></div>
             </div>
-          </dl>
+          </div>
         </section>
         <div>
           <section className={styles.details}>
-            <h2>Thông tin sách</h2>
+            <div className={styles.detailsHeading}>
+              <span className={styles.detailsIcon}><BookOpen size={19} aria-hidden="true" /></span>
+              <div>
+                <h2>{book.bundle ? "Đầu sách đại diện" : "Thông tin sách"}</h2>
+                <p>{book.bundle ? "Phân loại theo đầu sách đại diện. Các cuốn thực tế được ghi trong danh sách bộ sách ở trên." : "Thông tin xuất bản và phân loại"}</p>
+              </div>
+            </div>
             <dl>
               <div>
                 <dt>Danh mục</dt>
@@ -379,37 +408,37 @@ export function BookDetailPage() {
                 </div>
               ))}
               <div>
-                <dt>Ngôn ngữ</dt>
+                <dt><Languages size={14} aria-hidden="true" /> Ngôn ngữ</dt>
                 <dd>{languageLabel(book.book.language)}</dd>
               </div>
               {book.book.publisher && (
                 <div>
-                  <dt>Nhà xuất bản</dt>
+                  <dt><Building2 size={14} aria-hidden="true" /> Nhà xuất bản</dt>
                   <dd>{book.book.publisher}</dd>
                 </div>
               )}
               {book.book.publicationYear && (
                 <div>
-                  <dt>Năm xuất bản</dt>
+                  <dt><CalendarDays size={14} aria-hidden="true" /> Năm xuất bản</dt>
                   <dd>{book.book.publicationYear}</dd>
                 </div>
               )}
               {book.book.edition && (
                 <div>
-                  <dt>Ấn bản</dt>
+                  <dt><Layers3 size={14} aria-hidden="true" /> Ấn bản</dt>
                   <dd>{book.book.edition}</dd>
                 </div>
               )}
               {book.book.isbn && (
                 <div>
-                  <dt>ISBN</dt>
+                  <dt><Hash size={14} aria-hidden="true" /> ISBN</dt>
                   <dd>{book.book.isbn}</dd>
                 </div>
               )}
             </dl>
           </section>
           <section className={styles.seller}>
-            <h2>Người đăng: {book.seller.displayName}</h2>
+            <h2>Giao nhận và lưu ý</h2>
             <p>
               <MapPin size={16} aria-hidden="true" />
               {book.fulfillment

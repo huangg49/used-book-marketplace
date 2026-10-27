@@ -49,7 +49,7 @@ export default function MainLayout() {
       </main>
       {!isChat && (
         <footer
-          className={`${styles.footer} ${location.pathname === ROUTES.home ? styles.homeFooter : ""}`}
+          className={`${styles.footer} ${location.pathname === ROUTES.home || location.pathname === ROUTES.search ? styles.homeFooter : ""}`}
         >
           <div className={styles.footerInner}>
             <div>

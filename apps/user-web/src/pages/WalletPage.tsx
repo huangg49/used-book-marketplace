@@ -49,6 +49,8 @@ export function WalletPage() {
     queryFn: getWalletSummary,
     enabled: !!ownerId,
   });
+  const summaryForbidden =
+    summary.error instanceof ApiError && summary.error.status === 403;
   const history = useQuery({
     queryKey: ["topups", ownerId],
     queryFn: getTopups,
@@ -332,26 +334,71 @@ export function WalletPage() {
   }
   return (
     <section className={styles.page}>
-      <h1>Ví của tôi</h1>
-      <div className={styles.actions} role="group" aria-label="Thao tác ví">
-        <button
-          type="button"
-          className={styles.primary}
-          aria-haspopup="dialog"
-          onClick={() => setDialog("topup")}
-        >
-          <ArrowDownToLine size={20} aria-hidden="true" />
-          Nạp tiền
-        </button>
-        <button
-          type="button"
-          aria-haspopup="dialog"
-          onClick={() => setDialog("withdrawal")}
-        >
-          <ArrowUpFromLine size={20} aria-hidden="true" />
-          Rút tiền
-        </button>
-      </div>
+      <header className={styles.balanceBanner}>
+        <div className={styles.balanceCopy}>
+          <h1>Ví của tôi</h1>
+          {summary.isPending ? (
+            <p className={styles.balanceMessage} role="status">
+              Đang tải số dư…
+            </p>
+          ) : (
+            <>
+              {summary.data && !summaryForbidden && (
+                <dl className={styles.balance}>
+                  <dt>Số dư khả dụng</dt>
+                  <dd>{formatVnd(summary.data.available)}</dd>
+                </dl>
+              )}
+              {summary.isError && (
+                <div className={styles.balanceMessage} role="alert">
+                  <p>
+                    {summaryForbidden
+                      ? "Tài khoản hiện chưa được phép xem số dư ví."
+                      : "Chưa cập nhật được số dư ví."}
+                  </p>
+                  {!summaryForbidden && (
+                    <button
+                      type="button"
+                      disabled={summary.isFetching}
+                      onClick={() => void summary.refetch()}
+                    >
+                      {summary.isFetching ? "Đang thử lại…" : "Thử lại"}
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+          <div className={styles.actions} role="group" aria-label="Thao tác ví">
+            <button
+              type="button"
+              className={styles.primary}
+              aria-haspopup="dialog"
+              onClick={() => setDialog("topup")}
+            >
+              <ArrowDownToLine size={20} aria-hidden="true" />
+              Nạp tiền
+            </button>
+            <button
+              type="button"
+              aria-haspopup="dialog"
+              onClick={() => setDialog("withdrawal")}
+            >
+              <ArrowUpFromLine size={20} aria-hidden="true" />
+              Rút tiền
+            </button>
+          </div>
+        </div>
+        <img
+          className={styles.balanceArt}
+          src="/illustrations/penguins/post.png"
+          width="256"
+          height="256"
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+        />
+      </header>
       {paymentOpen && !awaitingPayment && (
         <p role="status">
           Hoàn tất thanh toán trong tab VNPay. Tab ví này sẽ cập nhật khi bạn

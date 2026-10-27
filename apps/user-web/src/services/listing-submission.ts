@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { session } from "./api";
 import type { Attributes } from "@used-books/api-contract/catalog-taxonomy";
+import type { BookBundle } from '../lib/book-bundle';
 
 const receipt = z.object({
   entityId: z.string().uuid(),
@@ -17,14 +18,14 @@ const ticket = z.object({
 });
 const wait = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
-type Remember = <T>(
+export type Remember = <T>(
   stage: string,
   run: (idempotencyKey: string) => Promise<T>,
 ) => Promise<T>;
 
 // One in-memory attempt keeps acknowledged stages and the key of a lost response.
 // A retry resumes this attempt instead of creating another catalog request/draft.
-function rememberCommands(): Remember {
+export function rememberCommands(): Remember {
   const stages = new Map<string, { key: string; result?: Promise<unknown> }>();
   return <T>(stage: string, run: (idempotencyKey: string) => Promise<T>) => {
     let entry = stages.get(stage);
@@ -42,6 +43,7 @@ function rememberCommands(): Remember {
 }
 
 export type ListingInput = {
+  bundle?: BookBundle | null;
   channel?: "Auction";
   title: string;
   author: string;
@@ -72,7 +74,7 @@ export type ListingInput = {
   } | null;
 };
 
-async function upload(
+export async function upload(
   listingId: string,
   expectedVersion: number,
   file: File,
@@ -141,6 +143,7 @@ export function createListingSubmission(value: ListingInput) {
   const input = {
     ...value,
     attributes: structuredClone(value.attributes ?? {}),
+    bundle: value.bundle ? structuredClone(value.bundle) : null,
     files: [...value.files],
   };
   const remember = rememberCommands();
@@ -218,6 +221,7 @@ export function createListingSubmission(value: ListingInput) {
           expectedVersion: draft.version,
           content: {
             bookId: catalog.entityId,
+            ...(input.bundle ? { bundle: input.bundle } : {}),
             mode: input.mode,
             condition: input.condition,
             pages: input.pages,

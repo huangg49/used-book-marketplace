@@ -13,6 +13,7 @@ import type {
 import { MongoService } from '../src/database/mongo/mongo.service.js';
 import { onTransactionRetry } from '../src/database/mongo/transaction.js';
 import { MediaStorage } from '../src/modules/media/media-storage.js';
+import { SignedReadCache } from '../src/modules/media/signed-read-cache.js';
 import { MongoCommandService } from '../src/modules/commands/mongo-command.service.js';
 import { MongoPageService } from '../src/modules/commands/mongo-page.service.js';
 import { checkListing } from '../src/modules/listings/listing-projection.js';
@@ -25,15 +26,32 @@ import {
 } from '@used-books/api-contract/catalog-taxonomy';
 
 // Storage signing is deliberately faked. HTTP, authorization and MongoDB are real.
+const signBatch = vi.fn(
+  async (keys: string[]) =>
+    new Map(
+      keys.map((key) => [
+        key,
+        {
+          url: 'https://storage.test/' + key,
+          expiresAt: new Date(Date.now() + 120000).toISOString(),
+        },
+      ]),
+    ),
+);
+const signedCache = new SignedReadCache(
+  signBatch,
+  () => new Error('Synthetic storage unavailable'),
+);
 const storage = {
   beforeSign: undefined as (() => Promise<void>) | undefined,
   async check() {},
   async signedRead(key: string) {
+    const result = await signedCache.read(key);
     await this.beforeSign?.();
-    return {
-      url: 'https://storage.test/' + key,
-      expiresAt: new Date(Date.now() + 120000).toISOString(),
-    };
+    return result;
+  },
+  onModuleDestroy() {
+    signedCache.close();
   },
 };
 
@@ -655,6 +673,49 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
       events: (await outbox(id, ['decideListing'])).length,
     };
   }
+  it('preserves a whole bundle through save/replay/review and gates legacy public reads', async () => {
+    const original = await complete();
+    const bundle = {title:'Naruto — tập 1 và 3',wholeOnly:true,exclusiveOwnershipDeclared:true,
+      items:[{label:'Tập 1',condition:'Good',notes:''},{label:'Tập 3',condition:'Good',notes:'Thiếu tập 2 giữa bộ; chỉ bán hai cuốn được liệt kê.'}]};
+    const body = {expectedVersion:original.version,content:{...original.content,bundle}};
+    const key=randomUUID();
+    const saved=(await put(original.entityId,body,m1,key).expect(200)).body;
+    expect((await put(original.entityId,body,m1,key).expect(200)).body).toEqual(saved);
+    await put(original.entityId,{...body,expectedVersion:saved.version},m2).expect(404);
+    await put(original.entityId,{expectedVersion:saved.version,content:original.content},m1).expect(422);
+    await put(original.entityId,{...body,expectedVersion:original.version},m1).expect(409);
+    // Vietnamese case folding and NFC equivalence are enforced by the service;
+    // Mongo's $toLower only guarantees ASCII case folding.
+    await put(original.entityId,{...body,expectedVersion:saved.version,content:{...body.content,
+      bundle:{...bundle,items:[bundle.items[0],{...bundle.items[1],label:' TẬP 1 '}]},
+    }},m1).expect(422);
+    const sent=(await submit(saved).expect(200)).body;
+    await decide(sent).expect(422);
+    const approved=(await post(`/operations/listings/${original.entityId}/decision`,{
+      expectedVersion:sent.version,revisionId:sent.revisionId,decision:'Approve',
+      checklist:{...checklist,bundleContentsVerified:true},
+    },staff).expect(200)).body;
+    expect(approved.state.moderation).toBe('Approved');
+    await get(`/listings/${original.entityId}`).expect(404);
+    const detail=(await get(`/listings/${original.entityId}?bundleSupport=whole-v1`).expect(200)).body;
+    validates('PublicListing',detail);
+    expect(detail.bundle).toEqual(bundle);
+    // Mongo validators remain a backstop even outside the HTTP input parser.
+    for (const invalid of [
+      { mode: 'Both', exchangeValue: 150000 },
+      { 'bundle.wholeOnly': false },
+      { 'bundle.items.1.label': ' tập 1 ' },
+      { 'bundle.items.1.condition': 'Worn' },
+    ]) await expect(db.c.listing_revisions.updateOne(
+      { _id: detail.revisionId }, { $set: invalid } as any,
+    ), JSON.stringify(invalid)).rejects.toMatchObject({ code: 121 });
+    expect((await db.c.listing_revisions.findOne({ _id: detail.revisionId }))!.bundle).toEqual(bundle);
+    const legacy=(await get(`/listings?bookId=${original.content.bookId}`).expect(200)).body;
+    expect(legacy.items.some((row: any)=>row.id===original.entityId)).toBe(false);
+    const capable=(await get(`/listings?bundleSupport=whole-v1&q=Naruto`).expect(200)).body;
+    expect(capable.items.some((row: any)=>row.id===original.entityId)).toBe(true);
+  });
+
   it('freezes saved content, exposes the submitted queue, approves once with audit/outbox and replay', async () => {
     const l = await complete();
     await get(`/operations/listings/${l.entityId}`, staff).expect(404);
@@ -1880,34 +1941,53 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
       }
       await get(`/listings/${l.entityId}`).expect(404);
     });
-    it('does not return a signed URL when owner eligibility is revoked during signing', async () => {
-      const owner = await reader(),
-        l = await published(owner);
-      let entered!: () => void, release!: () => void;
-      const signing = new Promise<void>((resolve) => {
-          entered = resolve;
-        }),
-        gate = new Promise<void>((resolve) => {
-          release = resolve;
-        });
-      storage.beforeSign = async () => {
-        entered();
-        await gate;
-      };
-      const response = get(
-        `/listings/${l.entityId}/media/${l.image.id}/read`,
-      ).then((r) => r);
-      try {
-        await signing;
-        await db.removeRole(owner.id, 'MEMBER');
-        release();
-        expect((await response).status).toBe(404);
-      } finally {
-        release();
-        storage.beforeSign = undefined;
-        await response;
-      }
+    it('reuses the storage grant without reusing eligibility after a listing is hidden', async () => {
+      const l = await published();
+      const path = `/listings/${l.entityId}/media/${l.image.id}/read`;
+      const first = await get(path).expect(200);
+      const signedCount = signBatch.mock.calls.length;
+      const second = await get(path).expect(200);
+      expect(second.body).toEqual(first.body);
+      expect(signBatch.mock.calls.length).toBe(signedCount);
+      await changeListing(l.entityId, { visibility: 'Hidden' });
+      await get(path).expect(404);
+      expect(signBatch.mock.calls.length).toBe(signedCount);
     });
+    it.each([false, true])(
+      'does not return a signed URL when owner eligibility is revoked during signing (cached: %s)',
+      async (cached) => {
+        const owner = await reader(),
+          l = await published(owner);
+        if (cached)
+          await get(`/listings/${l.entityId}/media/${l.image.id}/read`).expect(
+            200,
+          );
+        let entered!: () => void, release!: () => void;
+        const signing = new Promise<void>((resolve) => {
+            entered = resolve;
+          }),
+          gate = new Promise<void>((resolve) => {
+            release = resolve;
+          });
+        storage.beforeSign = async () => {
+          entered();
+          await gate;
+        };
+        const response = get(
+          `/listings/${l.entityId}/media/${l.image.id}/read`,
+        ).then((r) => r);
+        try {
+          await signing;
+          await db.removeRole(owner.id, 'MEMBER');
+          release();
+          expect((await response).status).toBe(404);
+        } finally {
+          release();
+          storage.beforeSign = undefined;
+          await response;
+        }
+      },
+    );
   });
   describe('revision-bound delivery origins', () => {
     const contact = {
@@ -1920,13 +2000,13 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
     async function addressBook(owner: Reader) {
       return (await get('/me/addresses', owner).expect(200)).body;
     }
-    async function origin(owner: Reader) {
+    async function origin(owner: Reader, localityCode = contact.localityCode) {
       const b = await addressBook(owner);
       const r = await post(
         '/me/addresses',
         {
           expectedBookVersion: b.version,
-          address: contact,
+          address: { ...contact, localityCode },
           makeDefault: false,
         },
         owner,
@@ -1960,9 +2040,12 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
         })
         .expect(200);
     }
-    async function configured(owner: Reader) {
+    async function configured(
+      owner: Reader,
+      localityCode = contact.localityCode,
+    ) {
       const l = await complete(owner),
-        fulfillment = await origin(owner);
+        fulfillment = await origin(owner, localityCode);
       const content = { ...l.content, fulfillment };
       const r = await put(
         l.entityId,
@@ -2032,6 +2115,7 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
         name: 'TP.HCM',
         demoOnly: true,
         method: 'DirectDelivery',
+        locality: { code: 'DEMO-A', label: 'TP.HCM' },
       });
       const views = [
         pub,
@@ -2065,6 +2149,69 @@ describe('listing submission and moderation through HTTP with MongoDB', () => {
           .fulfillment,
       ).toBeNull();
     });
+    it.each([
+      ['DEMO-A', 'TP.HCM'],
+      ['DEMO-B', 'Bình Dương'],
+      ['DEMO-C', 'Vũng Tàu'],
+    ])(
+      'publishes the actual origin zone %s in detail and shelf without contact data',
+      async (code, label) => {
+        const owner = await reader(),
+          l = await configured(owner, code),
+          sent = (await submit(l, owner).expect(200)).body;
+        await decide(sent).expect(200);
+        const detail = (await get(`/listings/${l.entityId}`).expect(200)).body;
+        const shelf = (
+          await get('/listings').query({ bookId: l.book.entityId }).expect(200)
+        ).body;
+        validates('PublicListing', detail);
+        validates('PublicListingPage', shelf);
+        const card = shelf.items.find((item: any) => item.id === l.entityId);
+        expect(card).toBeDefined();
+        for (const view of [detail, card]) {
+          expect(view.fulfillment).toEqual({
+            serviceAreaCode: 'HCM-DEMO-v1',
+            name: 'TP.HCM',
+            demoOnly: true,
+            method: 'DirectDelivery',
+            locality: { code, label },
+          });
+          for (const secret of [
+            contact.recipientName,
+            contact.phone,
+            contact.detail,
+            l.fulfillment.originAddressId,
+          ])
+            expect(JSON.stringify(view)).not.toContain(secret);
+        }
+
+        const book = await addressBook(owner);
+        await request(app.getHttpServer())
+          .put(`/api/v1/me/addresses/${l.fulfillment.originAddressId}`)
+          .set('Authorization', `Bearer ${owner.token}`)
+          .set('Idempotency-Key', randomUUID())
+          .send({
+            expectedBookVersion: book.version,
+            address: {
+              ...contact,
+              localityCode: code === 'DEMO-C' ? 'DEMO-A' : 'DEMO-C',
+            },
+            makeDefault: false,
+          })
+          .expect(200);
+        // The current address has moved; a frozen publication must not claim its new zone.
+        expect(
+          (await get(`/listings/${l.entityId}`).expect(200)).body.fulfillment,
+        ).toBeNull();
+        expect(
+          (
+            await get('/listings')
+              .query({ bookId: l.book.entityId })
+              .expect(200)
+          ).body.items.find((item: any) => item.id === l.entityId).fulfillment,
+        ).toBeNull();
+      },
+    );
     it('does not invalidate origins for default changes, unrelated addresses or no-op contact saves', async () => {
       const owner = await reader(),
         l = await configured(owner),

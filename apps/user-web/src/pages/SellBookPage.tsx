@@ -45,6 +45,8 @@ import {
 import { PurchaseDialog } from "../components/PurchaseDialog";
 import purchaseStyles from "./PurchaseFlow.module.css";
 import styles from "./SellBookPage.module.css";
+import { BundleEditor, BundleManifest } from '../components/BookBundle';
+import { bundleCondition, bundleError, type BookBundle } from '../lib/book-bundle';
 
 const addressBookSchema = z.object({
   version: z.number().int().nonnegative(),
@@ -85,6 +87,7 @@ export function SellBookPage() {
   const [selectedBook, setSelectedBook] = useState<PickedBook | null>(null);
   const [entryMode, setEntryMode] = useState<"catalog" | "manual">("catalog");
   const [step, setStep] = useState(1);
+  const [bundle, setBundle] = useState<BookBundle | null>(null);
   const [checkedSteps, setCheckedSteps] = useState<number[]>([]);
   const [touched, setTouched] = useState<string[]>([]);
   const [ownershipDeclared, setOwnershipDeclared] = useState(false);
@@ -203,7 +206,7 @@ export function SellBookPage() {
   }
   const dirty =
     step !== 6 &&
-    (classification.categoryId !== "" ||
+    (bundle !== null || classification.categoryId !== "" ||
       language !== "vi" ||
       imageFiles.length > 0 ||
       ownershipDeclared ||
@@ -328,6 +331,7 @@ export function SellBookPage() {
         /^0\d{9}$/.test(originForm.phone.trim()) &&
         originForm.detail.trim().length >= 5);
     const missing = [
+      bundle && bundleError(bundle),
       formData.readable === false && "nội dung đọc rõ để đủ điều kiện đăng",
       formData.missingEssentialContent === true &&
         "đủ nội dung trọng yếu để đủ điều kiện đăng",
@@ -425,6 +429,7 @@ export function SellBookPage() {
       submission.current ??= createListingSubmission({
         ...(auction ? { channel: "Auction" as const } : {}),
         title: formData.title,
+        ...(bundle ? { bundle } : {}),
         author: formData.author,
         category:
           categoryFor(classification.categoryId)?.label ||
@@ -473,7 +478,7 @@ export function SellBookPage() {
     "Thông tin sách",
     "Ảnh bản sách",
     "Tình trạng",
-    auction ? "Giá trị khai báo" : "Bán hoặc đổi",
+    auction ? "Giá trị khai báo" : bundle ? "Giá cả bộ" : "Bán hoặc đổi",
     "Kiểm tra",
   ];
   const textFields = [
@@ -509,6 +514,7 @@ export function SellBookPage() {
     focusAfterRender("heading");
   }
   function stepError(forStep: number) {
+    if (forStep === 1 && bundle && bundleError(bundle)) return bundleError(bundle);
     let message: string | undefined;
     if (
       forStep === 1 &&
@@ -597,6 +603,7 @@ export function SellBookPage() {
     );
   }
   const fieldErrors: Record<string, string | undefined> = {
+    bundle: bundle ? bundleError(bundle) : undefined,
     title: !formData.title.trim() ? "Nhập tên sách như trên bìa." : undefined,
     author: !formData.author.trim()
       ? "Nhập tên tác giả như trên bìa."
@@ -745,7 +752,7 @@ export function SellBookPage() {
   const preview = (
     <section className={styles.preview} aria-label="Bản xem trước bài đăng">
       <div className={styles.previewHeading}>
-        <h2>Cuốn sách của bạn</h2>
+        <h2>{bundle ? "Bộ sách của bạn" : "Cuốn sách của bạn"}</h2>
         <span>Bản nháp</span>
       </div>
       <div className={styles.previewMedia}>
@@ -762,7 +769,7 @@ export function SellBookPage() {
             >
               <img
                 src={formData.images[0]}
-                alt={`Ảnh bìa ${formData.title || "bản sách"}`}
+                alt={`Ảnh bìa ${bundle?.title || formData.title || "bản sách"}`}
               />
             </button>
           ) : (
@@ -792,7 +799,8 @@ export function SellBookPage() {
           </div>
         )}
       </div>
-      <h3>{formData.title || "Cuốn nào sẽ đi tiếp?"}</h3>
+      <h3>{bundle?.title || formData.title || "Cuốn nào sẽ đi tiếp?"}</h3>
+      {bundle && <p>Bộ {bundle.items.length} cuốn · Bán nguyên bộ</p>}
       <p>
         {formData.author || "Tên sách và tác giả sẽ hiện ở đây khi bạn điền."}
       </p>
@@ -812,7 +820,7 @@ export function SellBookPage() {
         <dl>
           {formData.mode !== "Exchange" && (
             <div>
-              <dt>{auction ? "Giá trị khai báo" : "Giá bán"}</dt>
+              <dt>{auction ? "Giá trị khai báo" : bundle ? "Giá cả bộ" : "Giá bán"}</dt>
               <dd
                 className={
                   !validPrice(formData.salePrice)
@@ -961,10 +969,11 @@ export function SellBookPage() {
         {step === 6 ? (
           <ListingSubmissionConfirmation
             auction={auction}
-            title={formData.title}
+            title={bundle?.title || formData.title}
             onPostAnother={() => {
               formData.images.forEach((url) => URL.revokeObjectURL(url));
               submission.current = null;
+              setBundle(null);
               setClassification({
                 categoryId: "",
                 attributes: {},
@@ -1105,6 +1114,21 @@ export function SellBookPage() {
                     >
                       {step === 1 && (
                         <>
+                          {!auction && <>
+                            <div className={styles.entryChoice} role="group" aria-label="Sách lẻ hoặc bộ sách">
+                              <button type="button" aria-pressed={!bundle} onClick={() => setBundle(null)}>Sách lẻ</button>
+                              <button type="button" aria-pressed={!!bundle} onClick={() => {
+                                if (bundle) return;
+                                setBundle(previous => previous || { title: '', wholeOnly: true, exclusiveOwnershipDeclared: true,
+                                  items: [{ label: '', condition: 'Good', notes: '' }, { label: '', condition: 'Good', notes: '' }] });
+                                setFormData(previous => ({ ...previous, mode: 'Sale', exchangeValue: '', condition: 'Good' }));
+                              }}>Bộ sách</button>
+                            </div>
+                            {bundle && <BundleEditor value={bundle} error={shownError('bundle')} onChange={next => {
+                              setBundle(next);
+                              setFormData(previous => ({ ...previous, condition: bundleCondition(next), mode: 'Sale', exchangeValue: '' }));
+                            }} />}
+                          </>}
                           {!selectedBook && (
                             <div
                               className={styles.entryChoice}
@@ -1310,8 +1334,7 @@ export function SellBookPage() {
                       {step === 2 && (
                         <>
                           <p className={styles.help}>
-                            Chọn ảnh bìa ở bên trái. Thêm ảnh gáy, ruột sách và
-                            phần đã qua sử dụng ở bên phải.
+                            {bundle ? "Chọn ảnh thấy rõ toàn bộ các cuốn trong bộ. Thêm ảnh gáy, ruột và lỗi của từng cuốn ở bên phải." : "Chọn ảnh bìa ở bên trái. Thêm ảnh gáy, ruột sách và phần đã qua sử dụng ở bên phải."}
                           </p>
                           <div
                             className={styles.photos}
@@ -1507,6 +1530,7 @@ export function SellBookPage() {
                             </label>
                             <select
                               id="condition"
+                              disabled={!!bundle}
                               value={formData.condition}
                               onChange={(event) =>
                                 setFormData((previous) => ({
@@ -1523,6 +1547,7 @@ export function SellBookPage() {
                                 ),
                               )}
                             </select>
+                            {bundle && <p>Tình trạng chung theo cuốn có tình trạng thấp nhất. Chỉnh từng cuốn ở bước Thông tin sách.</p>}
                           </div>
                           <div className={styles.conditionFields}>
                             {textFields.map(([key, label, hint]) => (
@@ -1628,7 +1653,7 @@ export function SellBookPage() {
                               hư hỏng hoặc thất lạc tại điểm giao nhận. Đây không
                               phải giá bán; giá khởi điểm đặt khi gửi đấu giá.
                             </p>
-                          ) : (
+                          ) : bundle ? <p className={styles.help}>Bộ {bundle.items.length} cuốn được bán cùng nhau. Người mua nhận toàn bộ danh sách đã ghi ở bước Thông tin sách.</p> : (
                           <fieldset className={styles.mode}>
                             <legend>Bạn muốn bán hay đổi?</legend>
                             <div className={styles.modeOptions}>
@@ -1663,6 +1688,7 @@ export function SellBookPage() {
                           <p className={styles.help}>
                             {auction
                               ? "Giá trị khai báo tính bằng VNĐ, từ 10.000đ đến 1.000.000đ."
+                              : bundle ? "Giá cho cả bộ, từ 10.000đ đến 1.000.000đ. Không bán tách từng cuốn."
                               : "Giá bán và giá trị đổi đều tính bằng VNĐ, từ 10.000đ đến 1.000.000đ."}
                           </p>
                           {needsOrigin && (
@@ -1867,7 +1893,7 @@ export function SellBookPage() {
                             [
                               [
                                 "salePrice",
-                                auction ? "Giá trị khai báo" : "Giá bán",
+                                auction ? "Giá trị khai báo" : bundle ? "Giá cả bộ" : "Giá bán",
                                 formData.mode !== "Exchange",
                               ],
                               [
@@ -1901,6 +1927,7 @@ export function SellBookPage() {
                       )}
                       {step === 5 && (
                         <>
+                          <BundleManifest bundle={bundle} />
                           <div className={styles.reviewHeading}>
                             <h3>Thông tin đầu sách</h3>
                             {reviewEdit(1)}
@@ -2004,7 +2031,7 @@ export function SellBookPage() {
                             ))}
                           </dl>
                           <div className={styles.reviewHeading}>
-                            <h3>{auction ? "Giá trị khai báo" : "Bán hoặc đổi"}</h3>
+                            <h3>{auction ? "Giá trị khai báo" : bundle ? "Giá cả bộ" : "Bán hoặc đổi"}</h3>
                             {reviewEdit(4)}
                           </div>
                           <dl className={styles.reviewFacts}>
@@ -2022,7 +2049,7 @@ export function SellBookPage() {
                             </div>
                             {formData.mode !== "Exchange" && (
                               <div>
-                                <dt>{auction ? "Giá trị khai báo" : "Giá bán"}</dt>
+                                <dt>{auction ? "Giá trị khai báo" : bundle ? "Giá cả bộ" : "Giá bán"}</dt>
                                 <dd>
                                   {validPrice(formData.salePrice)
                                     ? formatVnd(Number(formData.salePrice))
@@ -2082,8 +2109,7 @@ export function SellBookPage() {
                                 setOwnershipDeclared(event.target.checked)
                               }
                             />
-                            Tôi có quyền sở hữu và đăng bán hoặc trao đổi cuốn
-                            sách này.
+                            {bundle ? 'Tôi sở hữu toàn bộ các cuốn trong bộ và không đăng bán chúng đồng thời ở tin khác.' : 'Tôi có quyền sở hữu và đăng bán hoặc trao đổi cuốn sách này.'}
                           </label>
                           {fieldFeedback("ownership")}
                         </>

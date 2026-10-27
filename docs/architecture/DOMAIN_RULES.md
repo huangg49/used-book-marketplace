@@ -8,6 +8,12 @@ và [READINESS](../handoff/READINESS.md) để đối chiếu implementation/evi
 cơ chế persistence PostgreSQL trong báo cáo cũ; vẫn giữ invariant nghiệp vụ.
 Đọc các phần liên quan nhiệm vụ và ADR/feature được dẫn, không tải cả lịch sử.
 
+Bộ sách Marketplace theo [ADR0046](../adr/0046-whole-book-bundles.md) là một lô
+Sale gồm2–50cuốn, một giá/commitment/Order item cho cả bộ. Manifest trên revision
+và snapshot là danh sách hiện vật; catalog chỉ là đầu sách đại diện. Buyer phải
+xác nhận nguyên bộ, reviewer đối chiếu đủ cuốn/tập; không mua/trả từng phần hoặc
+dùng bộ cho Exchange/Auction. Không thay đổi gate giao nhận/settlement bên dưới.
+
 Trước mở rộng giao dịch, đọc [ADR 0007](../adr/0007-hcm-handover-auction-scope.md),
 [local transaction design](../features/LOCAL_TRANSACTION_DESIGN.md) và
 [acceptance](../features/LOCAL_TRANSACTION_ACCEPTANCE.md). Auction intake/bidding/close, Order ViaPoint/pay/report/code/handover và source
@@ -25,7 +31,7 @@ before drop-off, drop-off expiry or Staff reclaim. Staff steps need STAFF + curr
 point assignment and independence; ADMIN alone cannot receive/inspect/open/reclaim.
 Proxy rules live in the pure `auction-engine.ts`; keep ceilings out of public reads,
 receipts, audit and outbox. Every auction command locks the auction document and
-decides with server time after locks; `endAt` is final (no extension). A win or Buy
+decides with server time after locks; `endAt` is final once bid on (no extension). ADR 0047: the seller publishes a Passed intake now or scheduled (phase derived from `startAt`, no worker opens auctions) and may edit the time only before the first bid; Buy Now stays offered after bids while below the price. A win or Buy
 Now forms a ViaPoint Order (`point_orders`, migration 0009) and transfers the
 commitment without releasing it; payment locks auction → Order → ledger and moves
 buyerTotal into the Order hold. Collection (migration 0010): report decision 72 h,
@@ -90,6 +96,13 @@ Exchange còn mở, phải hủy đúng luồng trước khi chuyển hình th�
 để đổi một Order đã tạo hoặc một Exchange đã nhận. Chat participant ACTIVE tiếp
 tục sau OrderCreated, không mở quyền mới cho LOCKED. Giữ lịch sử cũ và đọc chung
 các message source đã liên kết, không copy message hoặc tạo reservation từ chat.
+
+[ADR0045](../adr/0045-order-conversation-workspace.md) đưa Xem đơn vào cùng
+workspace. Chỉ tái sử dụng hội thoại đã gắn đúng Order; Mua ngay/Order lịch sử
+chưa có link tạo phòng OrderCreated riêng dưới khóa Order và command executor.
+Không ghép theo listing/đối tác, không sao chép địa chỉ quote vào phòng mới,
+không chuyển trạng thái tiền/sách khi mở chat. Quyền ACTIVE/participant/session
+hiện tại được kiểm trước replay; ExistingObligation không cấp quyền chat.
 
 ## Seller acceptance và pickup review
 

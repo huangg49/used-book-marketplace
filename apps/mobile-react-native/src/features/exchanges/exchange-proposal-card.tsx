@@ -25,9 +25,14 @@ export function ExchangeProposalCard({
   const myListing = isInitiator ? initiatorListing : recipientListing;
   const partnerListing = isInitiator ? recipientListing : initiatorListing;
 
-  const partnerName = isInitiator
-    ? recipientListing?.seller.displayName ?? "Đối tác"
-    : initiatorListing?.seller.displayName ?? "Người đề nghị";
+  const partnerAddressName = isInitiator
+    ? exchange.recipientAddress?.recipientName
+    : exchange.initiatorAddress?.recipientName;
+
+  const partnerName =
+    partnerListing?.seller.displayName ??
+    partnerAddressName ??
+    (isInitiator ? "Đối tác" : "Đối tác đề nghị");
 
   // Financial calculations
   const diff = exchange.diffAmount;
@@ -77,18 +82,10 @@ export function ExchangeProposalCard({
 
       {/* 2. Book Exchange Matchup Cards */}
       <View style={styles.booksComparison}>
-        {/* Your Book */}
+        {/* Your Book (Sách của bạn gửi đi) */}
         <View style={styles.bookSideCard}>
           <View style={styles.sideHeader}>
-            <AppText style={styles.sideBadge}>
-              {isInitiator
-                ? (exchange.initiatorListingIds && exchange.initiatorListingIds.length > 1
-                    ? `SÁCH BẠN GỬI ĐI (${exchange.initiatorListingIds.length} CUỐN)`
-                    : "SÁCH CỦA BẠN GỬI ĐI")
-                : (exchange.initiatorListingIds && exchange.initiatorListingIds.length > 1
-                    ? `SÁCH BẠN NHẬN VỀ (${exchange.initiatorListingIds.length} CUỐN)`
-                    : "SÁCH BẠN NHẬN VỀ")}
-            </AppText>
+            <AppText style={styles.sideBadge}>SÁCH CỦA BẠN GỬI ĐI</AppText>
           </View>
           <View style={styles.bookInfoRow}>
             <View style={styles.photoBox}>
@@ -98,7 +95,7 @@ export function ExchangeProposalCard({
                   revisionId={myListing.revisionId}
                   mediaId={myListing.photos[0].id}
                   label="Bìa sách bạn gửi"
-                  active={false}
+                  active={true}
                   compact
                 />
               ) : (
@@ -149,7 +146,7 @@ export function ExchangeProposalCard({
                   revisionId={partnerListing.revisionId}
                   mediaId={partnerListing.photos[0].id}
                   label="Bìa sách bạn nhận"
-                  active={false}
+                  active={true}
                   compact
                 />
               ) : (

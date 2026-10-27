@@ -1354,6 +1354,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orders/{orderId}/conversation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open the exact Order's participant conversation
+         * @description ACTIVE MEMBER Buyer or Seller only. Reuses the conversation already linked to this Order, preserving its messages and terms. If none exists, creates a separate OrderCreated conversation from the Order's frozen participants and item. Does not change the Order, listing, quote, prices, commitment or ledger. No financial expectedVersion is required; opening a conversation is serialized by the Order lock. Same key and empty body replay the receipt after current participant, role, account and session checks. No LOCKED access.
+         */
+        post: operations["openOrderConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orders/{orderId}/cancel": {
         parameters: {
             query?: never;
@@ -1891,6 +1911,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auction-intakes/{intakeId}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0047. Owner MEMBER publishes a Passed (inspected) intake while ACTIVE and unrestricted and while the listing revision is unchanged. startAt null starts now; otherwise startAt is 5 minutes to 7 days ahead. durationHours is 1-168. The auction is stored Active; before startAt its phase is Scheduled and bids/Auto/Buy Now return 409 AuctionNotStarted. */
+        post: operations["publishAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0047. Seller edits the time of an Active auction before the first bid and before any Buy Now, at most 5 times. Scheduled: startAt (null = now) and durationHours. Live: only durationHours (end = startAt + duration, at least 1 hour from now); startAt must be null. expectedVersion is the auction version. */
+        post: operations["rescheduleAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/auction-intakes": {
         parameters: {
             query?: never;
@@ -1951,7 +2005,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Assigned independent STAFF opens a Passed intake while the seller is still ACTIVE: startAt is server time, endAt is 24 hours later, no scheduling or extension. */
+        /**
+         * @deprecated
+         * @description Superseded by publishAuction (ADR 0047), kept for operations tooling. Assigned independent STAFF opens a Passed intake while the seller is still ACTIVE: startAt is server time and the auction runs 24 hours.
+         */
         post: operations["openAuction"];
         delete?: never;
         options?: never;
@@ -2051,7 +2108,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Public. Active auctions ending soonest first (max 50). Shows price and anonymous bidder count; ceilings are never exposed. */
+        /** @description Public. phase=live (default) lists started Active auctions ending soonest first; phase=upcoming lists scheduled ones starting soonest first (ADR 0047). Max 50. Shows price and anonymous bidder count; ceilings are never exposed. */
         get: operations["listAuctions"];
         put?: never;
         post?: never;
@@ -2599,7 +2656,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Only before the first valid bid; decided under the same auction lock as bids so exactly one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer offered and the auction ends at min(endAt, now + 60 s). Others may outbid from Buy Now price + step in that window; the normal close then forms the winner's Order (24-hour payment). The receipt reports state Active and no orderId. Auctions already BuyNowPending keep their 15-minute Order. */
+        /** @description ADR 0047 — offered while the auction is live, Buy Now has not been used and the current price is below the Buy Now price, also after bids; the current leader cannot use it. Decided under the same auction lock as bids so exactly one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer offered and the auction ends at min(endAt, now + 60 s). Others may outbid from Buy Now price + step in that window; the normal close then forms the winner's Order (24-hour payment). The receipt reports state Active and no orderId. Auctions already BuyNowPending keep their 15-minute Order. */
         post: operations["buyAuctionNow"];
         delete?: never;
         options?: never;
@@ -3182,8 +3239,23 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        /** @description Whole-only physical lot; exact component labels must be nonblank and unique after normalization. All items are sold, reserved, shipped and returned together. No separate component sale, Auction or Exchange. Catalog series does not imply a bundle. */
+        BookBundle: {
+            title: string;
+            /** @constant */
+            wholeOnly: true;
+            /** @constant */
+            exclusiveOwnershipDeclared: true;
+            items: {
+                label: string;
+                condition: components["schemas"]["BookCondition"];
+                notes: string;
+            }[];
+        };
         /** @description Full replacement, not a patch. Incomplete text is allowed. Selected values must be valid; inactive mode prices must be null (both null if mode is null). mediaIds are ordered and must belong to this listing. Uploads may be Processing in a draft, but must be Ready at submission. */
-        DraftContent: {
+        DraftContent: ({
+            /** @description Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return. */
+            bundle?: components["schemas"]["BookBundle"] | null;
             bookId: string | null;
             mode: components["schemas"]["ListingMode"] | null;
             condition: components["schemas"]["BookCondition"] | null;
@@ -3200,7 +3272,7 @@ export interface components {
             mediaIds: string[];
             /** @description Optional while a draft is incomplete; required before submitting a Sale or Both listing. Omitted preserves the existing choice on replacement; null explicitly clears it. Configured origins must be current at save, submission and approval. No checkout is enabled. */
             fulfillment?: components["schemas"]["ListingFulfillment"] | null;
-        } & ({
+        } & unknown) & ({
             /** @constant */
             mode?: "Sale";
             exchangeValue?: null;
@@ -3217,7 +3289,9 @@ export interface components {
             exchangeValue?: null;
         });
         /** @description All text trimmed before validation. At submit the server validates the saved draft against this schema, ownership declaration, Ready media and accessible catalog. A Pending catalog may wait in the queue; approval requires Confirmed. */
-        SubmittedContent: {
+        SubmittedContent: ({
+            /** @description Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return. */
+            bundle?: components["schemas"]["BookBundle"] | null;
             /** Format: uuid */
             bookId: string;
             mode: components["schemas"]["ListingMode"];
@@ -3237,7 +3311,7 @@ export interface components {
             mediaIds: string[];
             /** @description Optional for legacy compatibility. Omitted preserves the existing choice on replacement; null explicitly clears it. Configured origins must be current at save, submission and approval. No checkout is enabled. */
             fulfillment?: components["schemas"]["ListingFulfillment"] | null;
-        } & ({
+        } & unknown) & ({
             /** @constant */
             mode?: "Sale";
             salePrice?: number;
@@ -3316,6 +3390,8 @@ export interface components {
         };
         /** @description Only current Approved + Visible + Available/Reserved + nondeleted listings whose verified ACTIVE owner has MEMBER role, Confirmed catalog and Ready media. Reserved direct-sale Orders remain visible with AwaitingPayment until payment commits, then InTransaction. Unpaid reservations expose only their payment deadline, never participant identities. InNegotiation is retained for legacy conversation reservations. No new checkout or conversation can start until Available. Never serialize a private listing then filter on the client. */
         PublicListing: {
+            /** @description Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return. */
+            bundle?: components["schemas"]["BookBundle"] | null;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -3370,6 +3446,8 @@ export interface components {
             salePrice?: number;
             exchangeValue?: number;
         });
+        /** @description No client-supplied participant, listing, price or version; all linkage comes from the frozen Order. */
+        OpenOrderConversation: Record<string, never>;
         CreatePurchaseConversation: {
             /**
              * @description Opt into the unified agreement workspace; Exchange on a Both listing requests seller confirmation. Sale-only rejects Exchange intent; Exchange-only rejects Negotiation intent.
@@ -3716,6 +3794,11 @@ export interface components {
             reason: string;
         };
         ReviewChecklist: {
+            /**
+             * @description Required true to approve a bundle after inspecting its manifest and whole-lot photos.
+             * @constant
+             */
+            bundleContentsVerified?: true;
             /** @constant */
             catalogMatches: true;
             /** @constant */
@@ -3831,7 +3914,7 @@ export interface components {
             serverTime: string;
         };
         /** @enum {string} */
-        ListingErrorCode: "VALIDATION_ERROR" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "RATE_LIMITED" | "UNAVAILABLE" | "INTERNAL_ERROR" | "AccountIneligible" | "SelfReviewForbidden" | "CatalogDuplicate" | "CatalogNotConfirmed" | "ListingLimitReached" | "ListingInvalid" | "VersionConflict" | "InvalidState" | "IdempotencyConflict" | "MediaNotReady" | "MediaQuotaExceeded" | "UploadIncomplete" | "UploadExpired" | "PayloadTooLarge" | "UnsupportedMediaType" | "SESSION_EXPIRED" | "BidTooLow" | "AuctionClosed";
+        ListingErrorCode: "VALIDATION_ERROR" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "RATE_LIMITED" | "UNAVAILABLE" | "INTERNAL_ERROR" | "AccountIneligible" | "SelfReviewForbidden" | "CatalogDuplicate" | "CatalogNotConfirmed" | "ListingLimitReached" | "ListingInvalid" | "VersionConflict" | "InvalidState" | "IdempotencyConflict" | "MediaNotReady" | "MediaQuotaExceeded" | "UploadIncomplete" | "UploadExpired" | "PayloadTooLarge" | "UnsupportedMediaType" | "SESSION_EXPIRED" | "BidTooLow" | "AuctionClosed" | "AuctionNotStarted";
         ListingApiError: {
             statusCode: number;
             code: components["schemas"]["ListingErrorCode"];
@@ -3913,7 +3996,7 @@ export interface components {
             /** @constant */
             method: "DirectDelivery";
         };
-        /** @description Safe delivery preference only, not a quote or enabled checkout. Never contains an address ID, version, locality or contact details. */
+        /** @description Safe delivery preference and optional coarse book circulation zone only, not a quote or enabled checkout. The name remains the legacy TP.HCM envelope; use locality.label for the actual zone when present. Never contains an address ID, version or contact details. */
         PublicFulfillment: {
             /** @constant */
             serviceAreaCode: "HCM-DEMO-v1";
@@ -3923,8 +4006,18 @@ export interface components {
             demoOnly: true;
             /** @constant */
             method: "DirectDelivery";
+            /** @description Coarse book circulation zone from the configured directory, resolved only while the published revision's selected origin address version is current. */
+            locality?: {
+                code: string;
+                label: string;
+            };
         };
         CreateSaleQuote: {
+            /**
+             * @description Required true when quoting a whole bundle; expected listing/revision pins the complete manifest.
+             * @constant
+             */
+            acknowledgeWholeBundle?: true;
             expectedListingVersion: number;
             /** Format: uuid */
             expectedListingRevisionId: string;
@@ -4017,6 +4110,8 @@ export interface components {
             detail: string;
         };
         OrderItemSnapshot: {
+            /** @description Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return. */
+            bundle?: components["schemas"]["BookBundle"] | null;
             /** Format: uuid */
             listingId: string;
             /** Format: uuid */
@@ -4094,6 +4189,11 @@ export interface components {
         };
         /** @description Private DirectDelivery Order including funding, pre-confirmation refund, seller acceptance and overdue pickup review. Historical schema name retained. shippingAddress is the frozen buyer destination, disclosed only to the accepted Seller. Review is an unresolved task, never proof of custody, strike or refund. Shipment registration is available through its separate endpoint; independent pickup simulation can advance InTransit or open carrierReview/ResolutionPending. Review resolution handlers remain planned. */
         PrivateUnpaidOrder: {
+            /**
+             * Format: uuid
+             * @description The conversation linked to this exact Order, or null before it is opened. Does not grant chat access to LOCKED accounts.
+             */
+            conversationId: string | null;
             /**
              * @description Absent on historical agreement snapshots means Negotiated. BuyNow uses listed price and commits seller preparation at payment.
              * @enum {string}
@@ -4894,6 +4994,26 @@ export interface components {
         AuctionVersionCommand: {
             expectedVersion: number;
         };
+        PublishAuction: {
+            /** @description Intake version. */
+            expectedVersion: number;
+            /**
+             * Format: date-time
+             * @description Null starts now; otherwise 5 minutes to 7 days ahead.
+             */
+            startAt: string | null;
+            durationHours: number;
+        };
+        RescheduleAuction: {
+            /** @description Auction version. */
+            expectedVersion: number;
+            /**
+             * Format: date-time
+             * @description Scheduled only; null starts now. Must be null once live.
+             */
+            startAt: string | null;
+            durationHours: number;
+        };
         ReceiveAuctionIntake: {
             expectedVersion: number;
             shelfCode: string;
@@ -5048,6 +5168,15 @@ export interface components {
             /** Format: uuid */
             id: string;
             /**
+             * @description ADR 0047. Derived from server time; Scheduled before startAt. Optional for older servers.
+             * @enum {string}
+             */
+            phase?: "Scheduled" | "Live" | "Ended";
+            /** @description Auction version for the seller's rescheduleAuction. Optional for older servers. */
+            version?: number;
+            /** @description Number of seller time edits. Optional for older servers. */
+            scheduleRevision?: number;
+            /**
              * Format: date-time
              * @description ADR 0043. When Buy Now opened the 60-second window; endAt already holds the shortened end. Null without Buy Now. Optional for older servers.
              */
@@ -5060,7 +5189,7 @@ export interface components {
             startPrice: number;
             /** @enum {integer} */
             step: 10000 | 50000;
-            /** @description Null once the first valid bid exists or the auction is not Active. */
+            /** @description ADR 0047. Shown while Buy Now is offered (scheduled, or live with the price below it and Buy Now unused); null otherwise. */
             buyNowPrice: number | null;
             currentPrice: number | null;
             /** @description Null when bidding is closed. */
@@ -5151,6 +5280,11 @@ export interface components {
             /** Format: uuid */
             id: string;
             version: number;
+            /**
+             * @description ADR 0047. Optional for older servers.
+             * @enum {string}
+             */
+            phase?: "Scheduled" | "Live" | "Ended";
             title: string;
             /** @enum {string} */
             state: "Active" | "OnHold";
@@ -6317,6 +6451,8 @@ export interface operations {
     listPublicListings: {
         parameters: {
             query?: {
+                /** @description Opt in to whole-bundle listings; absent clients receive single books only. */
+                bundleSupport?: "whole-v1";
                 /** @description Includes descendants. Legacy known category labels resolve read-only; unknown legacy categories remain unclassified. */
                 categoryId?: components["schemas"]["CatalogCategoryId"];
                 /** @description Primary language of the edition, not the language being learned. */
@@ -6407,7 +6543,10 @@ export interface operations {
     };
     getPublicListing: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Opt in to whole-bundle listings; absent clients receive single books only. */
+                bundleSupport?: "whole-v1";
+            };
             header?: never;
             path: {
                 listingId: string;
@@ -8150,6 +8289,43 @@ export interface operations {
             503: components["responses"]["ListingError"];
         };
     };
+    openOrderConversation: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenOrderConversation"];
+            };
+        };
+        responses: {
+            /** @description Existing or newly created Order participant conversation. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseConversationReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
     cancelUnpaidOrder: {
         parameters: {
             query?: never;
@@ -9284,6 +9460,86 @@ export interface operations {
             503: components["responses"]["ListingError"];
         };
     };
+    publishAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                intakeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishAuction"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    rescheduleAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RescheduleAuction"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
     listPointAuctionIntakes: {
         parameters: {
             query?: never;
@@ -9626,7 +9882,9 @@ export interface operations {
     };
     listAuctions: {
         parameters: {
-            query?: never;
+            query?: {
+                phase?: "live" | "upcoming";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -10046,7 +10304,7 @@ export interface operations {
             query?: {
                 limit?: number;
                 cursor?: string;
-                view?: "all" | "active" | "payment" | "selling";
+                view?: "all" | "active" | "upcoming" | "payment" | "selling";
             };
             header?: never;
             path?: never;

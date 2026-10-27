@@ -32,6 +32,7 @@ import {
   state,
 } from './listing-projection.js';
 import { requireChannelContent } from './listing-channel.js';
+import { validateBundle } from './book-bundle.js';
 
 export const lowerIds = (ids: string[]) => ids.map((id) => id.toLowerCase());
 
@@ -83,6 +84,7 @@ export class ListingDraftsService {
         requireActive(actor);
         const channel = body.channel ?? 'Marketplace';
         requireChannelContent(channel, body.content);
+        validateBundle(body.content);
         const origin = await this.fulfillment.prepare(
           tx,
           actor._id,
@@ -151,6 +153,7 @@ export class ListingDraftsService {
       mutate: async (tx, actor, before) => {
         requireActive(actor);
         requireChannelContent(before.channel, body.content);
+        validateBundle(body.content, before.currentRevision!);
         const origin = await this.fulfillment.prepare(
           tx,
           actor._id,

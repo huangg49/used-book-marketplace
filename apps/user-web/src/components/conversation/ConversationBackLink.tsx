@@ -4,12 +4,13 @@ import { ArrowLeft } from "lucide-react";
 export function ConversationBackLink({ className }: { className?: string }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const fromOrders = location.state?.chatFromOrders === true;
   return (
     <Link
       className={className}
-      to="/chat"
+      to={fromOrders ? "/orders" : "/chat"}
       viewTransition
-      aria-label="Về danh sách hội thoại"
+      aria-label={fromOrders ? "Về đơn hàng của tôi" : "Về danh sách hội thoại"}
       onClick={(event) => {
         if (
           location.state?.chatFromInbox === true &&
@@ -25,7 +26,7 @@ export function ConversationBackLink({ className }: { className?: string }) {
       }}
     >
       <ArrowLeft size={18} aria-hidden="true" />
-      Hội thoại của bạn
+      {fromOrders ? "Đơn hàng của tôi" : "Hội thoại của bạn"}
     </Link>
   );
 }

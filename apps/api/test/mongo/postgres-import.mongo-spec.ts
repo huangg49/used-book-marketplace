@@ -9,6 +9,7 @@ import {
 } from '../../src/database/mongo/import/postgres-import.js';
 import { OPENING_JOURNAL_ID } from '../../src/database/mongo/migrations/0002-reference-data.js';
 import { LISTING_FEE_CLEARING_ID } from '../../src/database/mongo/migrations/0022-vnpay-wallet-listing-fees.js';
+import { bookCirculationRegions } from '../../src/database/mongo/migrations/0030-book-circulation-regions.js';
 import { prepareDatabase, testUrl } from './harness.js';
 import { postgresOrderFixture } from './postgres-order-fixture.js';
 import { runTransaction } from '../../src/database/mongo/transaction.js';
@@ -162,6 +163,43 @@ describe.skipIf(!pgUrl)('PostgreSQL import', () => {
     await mongo?.close();
   });
 
+  it('refuses unexpected locality drift without importing any business data', async () => {
+    const localities = mongo.db().collection('service_localities');
+    const id = 'HCM-DEMO-v1:DEMO-A';
+    const original = await localities.findOne({ _id: id as never });
+    const before = await readSnapshot(source);
+    try {
+      await localities.updateOne({ _id: id as never }, { $set: { label: 'Unexpected drift' } });
+      await expect(importPostgres(source, mongo, mongo.db())).rejects.toThrow(
+        'Reference data service_localities differs',
+      );
+      expect(await mongo.db().collection('users').countDocuments()).toBe(0);
+      expect(await readSnapshot(source)).toEqual(before);
+    } finally {
+      await localities.replaceOne({ _id: id as never }, original!);
+    }
+  });
+
+  it('refuses unknown source locality labels instead of normalizing arbitrary edits', async () => {
+    const { rows: [original] } = await source.query<{ label: string }>(
+      "SELECT label FROM service_localities WHERE area_code='HCM-DEMO-v1' AND code='DEMO-A'",
+    );
+    try {
+      await source.query(
+        "UPDATE service_localities SET label='Unexpected source drift' WHERE area_code='HCM-DEMO-v1' AND code='DEMO-A'",
+      );
+      await expect(importPostgres(source, mongo, mongo.db())).rejects.toThrow(
+        'Reference data service_localities differs',
+      );
+      expect(await mongo.db().collection('users').countDocuments()).toBe(0);
+    } finally {
+      await source.query(
+        "UPDATE service_localities SET label=$1 WHERE area_code='HCM-DEMO-v1' AND code='DEMO-A'",
+        [original.label],
+      );
+    }
+  });
+
   it('imports every table with matching counts, hashes and integrity', async () => {
     const before = await readSnapshot(source);
     const feeAccount = await mongo
@@ -175,6 +213,9 @@ describe.skipIf(!pgUrl)('PostgreSQL import', () => {
       currency: 'VND',
     });
     const report = await importPostgres(source, mongo, mongo.db());
+    expect(await mongo.db().collection('service_localities').find().sort({ _id: 1 }).toArray())
+      .toEqual(bookCirculationRegions);
+    expect(report.collections.service_localities).toMatchObject({ rows: 2, documents: 2 });
     expect(
       await mongo
         .db()

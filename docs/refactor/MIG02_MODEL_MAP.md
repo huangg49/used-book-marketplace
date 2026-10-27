@@ -208,3 +208,17 @@ id is the real Exchange id; event/link/Exchange creation share one transaction.
 Terms reference the accepted listing revision, never overwrite listing prices or
 Order snapshots. Current roles include the three collections with their access
 classes; existing database user passwords must not change during this addition.
+
+## Whole book bundles (ADR0046, migrations0035/0036)
+
+`listing_revisions.bundle` is optional/null for old single-book revisions; when
+present it embeds the whole-only title and exact2–50 component labels, conditions
+and notes. `bundleSearchText` is derived search text. `checkListing`/service
+validation enforces Unicode-normalized unique labels, worst aggregate condition,
+Sale/Marketplace eligibility and explicit manifest replacement. Mongo validators
+backstop shape, count, whole-only flags, Sale, condition and trim/ASCII-case
+duplicates; full Vietnamese case folding/NFC remains in the writer/checker.
+The immutable `listing_decisions` approval for a bundle adds the seventh true
+check `bundleContentsVerified`. Order item snapshots embed the full manifest from
+the locked revision. A bundle remains one workflow item and one commitment;
+component inventory/partial purchase/partial return identities are not introduced.

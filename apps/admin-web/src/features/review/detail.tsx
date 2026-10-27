@@ -226,6 +226,7 @@ function DetailContent({
                   value.state.trade === "Available" &&
                   !value.state.deletedAt)) && (
                 <DecisionForm
+                  bundle={'state' in value && !!value.currentRevision.content.bundle}
                   key={`${value.version}/${value.currentRevision.id}/${reset}`}
                   kind={kind}
                   removal={!pending}

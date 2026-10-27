@@ -929,3 +929,46 @@ routine workflow, phase trail and consent explanations live in “Cách giao d�
 That disclosure starts expanded for expired conversations, missing fulfillment or
 an expired/missing previously sent quote. Proposal, stale-price and mutation
 errors remain directly visible. The action footer stays aligned with chat Send.
+
+22/10/2026: the owner joined **Xem đơn** to this workspace under
+[ADR0045](docs/adr/0045-order-conversation-workspace.md). A created Order replaces
+the left agreement with its private snapshot, payment and existing fulfillment
+controls for the actual participant; chat/history remain at right. Embedded
+payment precedes secondary detail, and mobile switches mounted “Đơn hàng” and
+“Hội thoại” panels. BuyNow keeps its checkout and receives a separate exact-order
+conversation when needed. Existing negotiated history is preserved; opening the
+workspace does not send a message or change transaction state. See the current
+Chat surface brief for routing, retry and permissions.
+
+22/10/2026 card reference update supersedes the earlier title/price split. Home/
+Search use a paper card with20px corners and a1px shop-line boundary. A180px
+compact desktop cover stage reuses the archival-desk artwork as decoration behind
+the real, contained listing photograph;14px cover/chip corners follow the owner's
+reference. A mint condition/mode chip sits at bottom left, availability at top
+left and a44px wishlist heart at top right. The title spans the width;
+author and actual coarse region share two equal columns below. The location
+label is omitted visually: author and pin/location stay on one centered
+horizontal line, shrinking or ellipsizing within24px text slots with full tooltips.
+The location's accessible label remains. A separate pale
+shelf price panel labels sale/exchange amounts; the full-width wine “Xem sách”
+action is at least44px high. Compact padding remains10px. Main Home/Search keep
+four desktop columns, adaptive tablet columns and one phone column; mobile
+cover stages are220px. The secondary Exchange shelf retains its280px minimum.
+The owner's compact-height follow-up sets each card to464px desktop/tablet and504px
+on phones, independent of title, authors, price mode or image state. The cover,
+52px information row,76px price panel and44px action reserve stable space;
+the title uses the remaining space. Text is measured after content/size/font
+changes and shrinks only when needed. The compact price panel uses labelled
+inline rows without repeated tag icons when both prices exist, keeping amounts
+complete while avoiding the earlier oversized single-price panel. Title/price
+use a12px-at-default-font floor,
+author/region11px, all scaled from rem. Exceptionally long text clamps after that
+floor, with full accessible text, native tooltip and the existing detail/source
+link; prices remain complete. This scoped owner instruction supersedes the prior
+unbounded wrapping recipe, without changing RN text rules or shelf columns.
+Preserve image retry, detail/source links and240ms hover/focus motion even with
+the OS reduced-motion preference. Wishlist uses the existing authenticated Member
+API, confirms state after acknowledgment and retries the same intended action
+after an unknown result. Guests return through login; previews have no wishlist.
+Missing location stays explicit, and preview catalog cards have no physical zone.
+Public location follows ADR0039; the legacy service-area name is not a book zone.

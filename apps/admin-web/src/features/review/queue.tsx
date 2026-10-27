@@ -197,7 +197,8 @@ function ListingTitle({ value }: { value: Listing }) {
   });
   return (
     <>
-      {result.data?.title ||
+      {value.currentRevision.content.bundle?.title ||
+        result.data?.title ||
         (isConfirmed
           ? "Bài đăng sách"
           : "Sách chờ xác nhận đầu sách")}{" "}

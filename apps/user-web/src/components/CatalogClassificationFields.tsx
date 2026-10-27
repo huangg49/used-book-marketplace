@@ -143,6 +143,7 @@ export function CatalogClassificationFields({
         </div>
         {secondaryField}
       </div>
+      <div className={category ? styles.categoryDetails : undefined}>
       {!!root?.children.length && (
         <div className={styles.subcategory}>
           <label htmlFor={`${id}-subcategory`}>Nhóm sách</label>
@@ -339,6 +340,7 @@ export function CatalogClassificationFields({
           {!editing && <small>Tìm theo tên bộ truyện đầy đủ.</small>}
         </div>
       )}
+      </div>
     </div>
   );
 }

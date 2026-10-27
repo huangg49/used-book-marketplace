@@ -207,6 +207,8 @@ export type AuctionOperation =
   | 'submitAuctionIntakeEvidence'
   | 'decideAuctionIntakeEvidence'
   | 'openAuction'
+  | 'publishAuction'
+  | 'rescheduleAuction'
   | 'reclaimAuctionIntake'
   | 'cancelAuction'
   | 'placeAuctionBid'
@@ -454,6 +456,7 @@ export class MongoCommandService {
     context: CommandContext,
     operation:
       | 'createPurchaseConversation'
+      | 'openOrderConversation'
       | 'attachPurchaseConversationQuote'
       | 'proposeConversationTerms'
       | 'respondConversationTerms',

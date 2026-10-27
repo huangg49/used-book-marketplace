@@ -27,7 +27,7 @@ import {
   IntakeInspect,
   InspectionReports,
 } from "./inspection";
-import { IntakeOpen, IntakeReceive, IntakeReclaim } from "./intake-actions";
+import { IntakeReceive, IntakeReclaim } from "./intake-actions";
 import { Forbidden, OperationsQueue } from "./queue-frame";
 import { ResolutionDecision } from "./resolution-actions";
 import { refetchWhileClosed, useQueuePanel, type Row } from "./queue-panel";
@@ -81,11 +81,7 @@ function intakeAction(item: Intake, userId: string): Row["action"] {
         label: "Kiểm tra",
         render: (context) => <IntakeInspect item={item} {...context} />,
       };
-    case "Passed":
-      return {
-        label: "Mở phiên",
-        render: (context) => <IntakeOpen item={item} {...context} />,
-      };
+    // ADR 0047: the seller publishes a Passed book; Staff no longer open it.
     case "ReclaimRequired":
       return {
         label: "Trả sách",
@@ -278,7 +274,9 @@ function AuctionQueueContent() {
         status:
           item.state === "OnHold"
             ? "Tạm giữ, chờ quyết định"
-            : `Kết thúc ${dateText(item.endAt)}`,
+            : item.phase === "Scheduled"
+              ? `Hẹn mở ${dateText(item.startAt)} · kết thúc ${dateText(item.endAt)}`
+              : `Kết thúc ${dateText(item.endAt)}`,
         meta: [item.pointName, `${item.bidderCount} người trả giá`],
         title: item.title,
         detail: `Giá hiện tại ${money(item.currentPrice ?? item.startPrice)} · bước ${money(item.step)}`,

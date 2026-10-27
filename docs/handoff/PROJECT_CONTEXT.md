@@ -433,7 +433,8 @@ hoặc chạy script lịch sử. Đây là việc tồn đọng đã ghi, khôn
 1. Kiểm Git và đọc AGENTS, context, SESSION_STATE, READINESS; giữ local work.
 2. Nhận nhiệm vụ cụ thể và acceptance từ chủ dự án. Nếu chưa được giao feature,
    có thể giải thích/lập kế hoạch, không tự mở CONTINUATION_PLAN thành quyền code.
-3. Chọn skill repo: [UI](../../.agents/skills/latlai-ui/SKILL.md),
+3. Chọn skill repo: [UI workflow](../design/UI_SKILLS.md) (UI/UX Pro Max, Taste,
+   Impeccable),
    [API/Mongo](../../.agents/skills/latlai-api-mongo/SKILL.md),
    [verify/handoff](../../.agents/skills/latlai-verify-handoff/SKILL.md).
 4. Đi từ inventory → contract → controller/service/client → test/ADR phần liên
