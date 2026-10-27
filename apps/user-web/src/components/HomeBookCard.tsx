@@ -19,12 +19,12 @@ export function HomeBookCard({
   const [failed, setFailed] = useState(false);
   if (!("preview" in book))
     return (
-      <BookCardMotion>
+      <BookCardMotion index={index}>
         <BookCard book={book} index={index} compact />
       </BookCardMotion>
     );
   return (
-    <BookCardMotion>
+    <BookCardMotion index={index}>
       <article
         className={`${styles.card} ${styles.compact}`}
         data-catalog-preview="true"
