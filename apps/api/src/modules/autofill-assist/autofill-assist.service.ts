@@ -368,7 +368,10 @@ export class AutofillAssistService {
       }
     }
     if (title && out.length < MAX_MATCHES) {
-      const wanted = new Set(authors.map((a) => normalizeSearch(a)));
+      // Spacing and initials punctuation differ between covers and the
+      // catalog ("新海 誠" / "新海誠", "J. K." / "J.K."); case and accents too.
+      const authorKey = (a: string) => normalizeSearch(a).replace(/[\s.·・-]+/g, '');
+      const wanted = new Set(authors.map(authorKey));
       const books = await c.catalog_books
         .find({ titleKey: titleKey(title), status: { $in: ['Confirmed', 'Pending'] } })
         .limit(20)
@@ -377,7 +380,7 @@ export class AutofillAssistService {
       for (const b of books) {
         const r = revs.get(b.currentRevisionId ?? '');
         if (!r || !visible(b)) continue;
-        if (wanted.size && !r.authors.some((a) => wanted.has(normalizeSearch(a)))) continue;
+        if (wanted.size && !r.authors.some((a) => wanted.has(authorKey(a)))) continue;
         add(b, r, 'TitleAuthor');
       }
     }

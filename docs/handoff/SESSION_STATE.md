@@ -32,6 +32,9 @@
   giới hạn 5 bài) và địa chỉ gửi thử “QA Người gửi”.
 - **4 bìa thật dạng scan** (ADR 0048 §6): 4/4 tên, 3/3 tác giả, 0 ISBN bịa; sửa lời dặn
   để ngôn ngữ theo chữ in (Doraemon → `ja`) và đọc dòng tái bản in nghiêng.
+- **20 bìa dựng hình** (ADR 0048 §6): 17/19 tên, 17/19 tác giả, 0 ISBN bịa; lỗi chính là
+  dấu trên chữ nhỏ và một NXB đọc sai thành NXB khác. Sửa: chữ toàn hoa → kiểu thường,
+  khớp tác giả bỏ khoảng trắng/dấu chấm (e2e `autofill` 8/8).
 - **NOT RUN**: ảnh chụp điện thoại thật (ngưỡng ADR 0048 §5) — chụp 20–30 cuốn rồi chạy
   `pnpm --filter @used-books/api eval:autofill --dir <thư mục> --init`, điền `cases.json`,
   chạy lại không `--init`. RN chưa có UI điền từ ảnh.

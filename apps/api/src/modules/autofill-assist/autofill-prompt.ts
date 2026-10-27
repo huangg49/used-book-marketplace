@@ -6,6 +6,8 @@ Trả về DUY NHẤT một đối tượng JSON, không giải thích, đúng c
 {"title": string|null, "authors": string[], "publisher": string|null, "publicationYear": integer|null,
  "language": string|null, "edition": string|null, "isbn": string|null, "missing": string[]}
 - title: tên sách đúng chính tả và dấu như in; không kèm khẩu hiệu quảng cáo.
+- Chữ in TOÀN CHỮ HOA thì viết lại kiểu chữ thường như tên sách/tên người thông dụng, giữ đúng
+  từng chữ và dấu (ví dụ "PROJECT HAIL MARY" → "Project Hail Mary", "TÔ HOÀI" → "Tô Hoài").
 - authors: tên tác giả, không kèm "Tác giả:", không gồm người dịch/minh họa.
 - publisher: nhà xuất bản như in (ví dụ "NXB Trẻ"); không phải công ty phát hành nếu có cả hai.
 - language: mã ngôn ngữ của chữ in trên sách, ví dụ "vi" tiếng Việt, "en" tiếng Anh, "ja" tiếng Nhật,

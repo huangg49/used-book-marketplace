@@ -77,7 +77,10 @@ const strict = (s: string) =>
   s.normalize('NFC').toLowerCase().replace(/[\p{P}\p{S}]+/gu, ' ').replace(/\s+/g, ' ').trim();
 const loose = (s: string) =>
   strict(s).normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd');
-const digits = (s: string | null | undefined) => (s ?? '').replace(/[^0-9X]/gi, '').toUpperCase();
+// Same author rule as the catalog match: spacing and initials punctuation
+// ("新海 誠" / "新海誠", "J. K." / "J.K.") are not misreads.
+const name = (s: string) => strict(s).replace(/[\s·・-]+/g, '');
+const digits =(s: string | null | undefined) => (s ?? '').replace(/[^0-9X]/gi, '').toUpperCase();
 
 const results = [];
 let spentMicro = 0;
@@ -144,7 +147,7 @@ for (const c of file.cases) {
     titleExact: scored && title ? strict(title) === strict(c.expected.title) : scored ? false : null,
     titleIgnoringAccents: scored && title ? loose(title) === loose(c.expected.title) : scored ? false : null,
     authorsFound: scored && c.expected.authors?.length
-      ? c.expected.authors.every((a) => (fields?.authors ?? []).some((r) => strict(r) === strict(a)))
+      ? c.expected.authors.every((a) => (fields?.authors ?? []).some((r) => name(r) === name(a)))
       : null,
     // A wrong ISBN is any read ISBN that differs from the printed one, or any
     // ISBN read off a book whose case says none is printed.

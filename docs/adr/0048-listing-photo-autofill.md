@@ -107,4 +107,17 @@ theo điều khoản công bố — cần chủ dự án kiểm lại khi lên p
   `ja`, HP6 đọc đúng lần tái bản 3/3 lần, 2,0–3,3 s; một lần HP6 timeout 25 s do provider
   chậm (lần khác 1,6–4,4 s). NXB có khi trả nguyên chữ hoa như in (“NHÀ XUẤT BẢN TRẺ”).
   Bìa scan phẳng, sạch hơn ảnh chụp điện thoại: **không là bằng chứng §5**.
+- **20 bìa dựng hình** (27/10, `source: synthetic`, hai lưới 5×2 người giao việc gửi, cắt
+  từng bìa ~210×340 px; có lỗi in cố ý như “The Midnight Hibrary”): tiếng Anh, Việt, Nhật,
+  Hàn; 17/19 tên đúng cả dấu, 18/19 bỏ dấu, 17/19 tác giả, 0 ISBN bịa, ngôn ngữ đúng
+  20/20, p50 1,1 s. Sai: “Hibrary” bị model “sửa” thành “Library” (dùng hiểu biết ngoài
+  dù lời dặn cấm); dấu trên chữ nhỏ/kiểu cách (“Dế” → “Đế/Đề”, “Mặc” → “Mạc”, “Trọng” →
+  “Trong”); NXB chữ rất nhỏ “Nhà xuất bản Trẻ” đọc thành “Nhà Xuất Bản Dân Trí” — **một
+  NXB có thật nhưng sai**, người bán phải kiểm trước khi “Dùng”. Phóng to ảnh nhỏ 4× trước
+  khi gửi làm kết quả kém hơn (13/19) nên không áp dụng.
+- Sửa sau đợt này: lời dặn viết lại chữ in toàn hoa thành kiểu thường (trước đó “PROJECT
+  HAIL MARY”, “FRANK HERBERT” đi thẳng vào yêu cầu danh mục), không giảm độ đúng; đối
+  chiếu danh mục so tác giả bỏ khoảng trắng/dấu chấm (“新海 誠”/“新海誠”, “J. K.”/“J.K.”),
+  vốn đã bỏ hoa/thường và dấu — nên “Đề Mèn” hay “Tống Mạc” vẫn khớp đúng đầu sách
+  trong danh mục (e2e mới).
 - **NOT RUN**: ảnh chụp điện thoại thật (ngưỡng §5, ≥ 20 cuốn).

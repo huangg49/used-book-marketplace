@@ -1,0 +1,822 @@
+{
+  "summary": {
+    "source": "synthetic",
+    "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+    "fallback": null,
+    "ranAt": "2026-10-27T14:20:59.894Z",
+    "cases": 20,
+    "scoredCases": 19,
+    "titleExact": "17/19",
+    "titleIgnoringAccents": "18/19",
+    "authorsFound": "17/19",
+    "isbnFound": "NOT SCORED",
+    "wrongIsbn": 0,
+    "needsMoreData": 0,
+    "failed": 0,
+    "latencyMs": {
+      "p50": 1083,
+      "p95": 7758
+    },
+    "tokens": {
+      "input": 16327,
+      "output": 1676
+    },
+    "costUsd": 0.023031,
+    "meetsAdr0048": "NOT EVIDENCE (synthetic, 19 scored cases)",
+    "skipped": []
+  },
+  "results": [
+    {
+      "id": "a01-midnight-hibrary",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "The Midnight Hibrary",
+        "authors": [
+          "Matt Haig"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "The Midnight Library",
+        "authors": [
+          "Matt Haig"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "en",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc nhà xuất bản, năm xuất bản và ISBN"
+      ],
+      "titleExact": false,
+      "titleIgnoringAccents": false,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1431,
+      "tokens": {
+        "input": 816,
+        "output": 83
+      }
+    },
+    {
+      "id": "a02-atomic-habits",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Atomic Habits",
+        "authors": [
+          "James Clear"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Atomic Habits",
+        "authors": [
+          "James Clear"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "en",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp gáy sách để đọc nhà xuất bản và năm xuất bản",
+        "Chụp trang bản quyền để đọc ISBN và thông tin in ấn"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1117,
+      "tokens": {
+        "input": 816,
+        "output": 100
+      }
+    },
+    {
+      "id": "a03-dune",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Dune",
+        "authors": [
+          "Frank Herbert"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Dune",
+        "authors": [
+          "Frank Herbert"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "en",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc nhà xuất bản, năm xuất bản và ISBN"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 851,
+      "tokens": {
+        "input": 816,
+        "output": 81
+      }
+    },
+    {
+      "id": "a04-mockingbird",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "To Kill a Mockingbird",
+        "authors": [
+          "Harper Lee"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "To Kill a Mockingbird",
+        "authors": [
+          "Harper Lee"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "en",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc nhà xuất bản, năm xuất bản và ISBN"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 4097,
+      "tokens": {
+        "input": 816,
+        "output": 86
+      }
+    },
+    {
+      "id": "a05-1984",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "1984",
+        "authors": [
+          "George Orwell"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "1984",
+        "authors": [
+          "George Orwell"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "en",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp trang bản quyền để đọc nhà xuất bản, năm xuất bản và ISBN"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1096,
+      "tokens": {
+        "input": 816,
+        "output": 83
+      }
+    },
+    {
+      "id": "a06-normal-people",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Normal People",
+        "authors": [
+          "Sally Rooney"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Normal People",
+        "authors": [
+          "Sally Rooney"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "en",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp trang bản quyền để đọc nhà xuất bản, năm xuất bản và ISBN"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 895,
+      "tokens": {
+        "input": 816,
+        "output": 81
+      }
+    },
+    {
+      "id": "a07-great-gatsby",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "The Great Gatsby",
+        "authors": [
+          "F. Scott Fitzgerald"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "The Great Gatsby",
+        "authors": [
+          "F. Scott Fitzgerald"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "en",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc nhà xuất bản, năm xuất bản và ISBN"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1005,
+      "tokens": {
+        "input": 816,
+        "output": 85
+      }
+    },
+    {
+      "id": "a08-fourth-wing",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Fourth Wing",
+        "authors": [
+          "Rebecca Yarros"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Fourth Wing",
+        "authors": [
+          "Rebecca Yarros"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "en",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp trang bản quyền để đọc nhà xuất bản, năm xuất bản và ISBN"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 992,
+      "tokens": {
+        "input": 816,
+        "output": 83
+      }
+    },
+    {
+      "id": "a09-project-hail-mary",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Project Hail Mary",
+        "authors": [
+          "Andy Weir"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Project Hail Mary",
+        "authors": [
+          "Andy Weir"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "en",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp trang bản quyền để đọc nhà xuất bản, năm xuất bản và ISBN"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1053,
+      "tokens": {
+        "input": 816,
+        "output": 82
+      }
+    },
+    {
+      "id": "a10-evelyn-hugo",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "The Seven Husbands of Evelyn Hugo",
+        "authors": [
+          "Taylor Jenkins Reid"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "The Seven Husbands of Evelyn Hugo",
+        "authors": [
+          "Taylor Jenkins Reid"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "en",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp gáy sách để đọc nhà xuất bản và năm xuất bản",
+        "Chụp trang bản quyền để đọc ISBN và thông tin in"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1013,
+      "tokens": {
+        "input": 816,
+        "output": 102
+      }
+    },
+    {
+      "id": "b01-alchemist",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "The Alchemist",
+        "authors": [
+          "Paulo Coelho"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "The Alchemist",
+        "authors": [
+          "Paulo Coelho"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "en",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc nhà xuất bản, năm xuất bản và ISBN"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 2720,
+      "tokens": {
+        "input": 823,
+        "output": 85
+      }
+    },
+    {
+      "id": "b02-de-men",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Dế Mèn phiêu lưu ký",
+        "authors": [
+          "Tô Hoài"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Đế Mèn phiêu lưu ký",
+        "authors": [
+          "Tô Hoài"
+        ],
+        "publisher": "Nhà xuất bản Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "titleExact": false,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 2016,
+      "tokens": {
+        "input": 819,
+        "output": 74
+      }
+    },
+    {
+      "id": "b03-kimi-no-na-wa",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "君の名は。",
+        "authors": [
+          "新海誠"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "君の名は。",
+        "authors": [
+          "新海 誠"
+        ],
+        "publisher": "角川文庫",
+        "publicationYear": null,
+        "language": "ja",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 937,
+      "tokens": {
+        "input": 816,
+        "output": 71
+      }
+    },
+    {
+      "id": "b04-haru-haru",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "하루하루가 소중해",
+        "authors": [
+          "김소영"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "하루하루가 소중해",
+        "authors": [
+          "김소영"
+        ],
+        "publisher": "북로앤스",
+        "publicationYear": null,
+        "language": "ko",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc ISBN và năm xuất bản"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 4043,
+      "tokens": {
+        "input": 829,
+        "output": 89
+      }
+    },
+    {
+      "id": "b05-atomic-habits",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Atomic Habits",
+        "authors": [
+          "James Clear"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Atomic Habits",
+        "authors": [
+          "James Clear"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "en",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 7758,
+      "tokens": {
+        "input": 816,
+        "output": 62
+      }
+    },
+    {
+      "id": "b06-1984",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "1984",
+        "authors": [
+          "George Orwell"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "1984",
+        "authors": [
+          "George Orwell"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "en",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp trang bản quyền để đọc nhà xuất bản, năm xuất bản và ISBN"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 9751,
+      "tokens": {
+        "input": 809,
+        "output": 83
+      }
+    },
+    {
+      "id": "b07-bach-da-hanh",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Bạch Dạ Hành",
+        "authors": [
+          "Tống Mặc"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Bạch Dạ Hành",
+        "authors": [
+          "Tống Mạc"
+        ],
+        "publisher": "Nhà Xuất Bản Văn Học",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc ISBN và năm xuất bản"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": false,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1024,
+      "tokens": {
+        "input": 807,
+        "output": 91
+      }
+    },
+    {
+      "id": "b08-little-prince",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "The Little Prince",
+        "authors": [
+          "Antoine de Saint-Exupéry"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "The Little Prince",
+        "authors": [
+          "Antoine de Saint-Exupéry"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "en",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp trang bản quyền để đọc nhà xuất bản, năm xuất bản và ISBN"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1083,
+      "tokens": {
+        "input": 816,
+        "output": 87
+      }
+    },
+    {
+      "id": "b09-garbled-ja",
+      "photos": 1,
+      "scored": false,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "",
+        "authors": [],
+        "isbn": null
+      },
+      "read": {
+        "title": "きみも私があの時、あなたを好きだったら",
+        "authors": [
+          "川口俊和"
+        ],
+        "publisher": "スターツ出版文庫",
+        "publicationYear": null,
+        "language": "ja",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc ISBN và năm xuất bản"
+      ],
+      "titleExact": null,
+      "titleIgnoringAccents": null,
+      "authorsFound": null,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1098,
+      "tokens": {
+        "input": 816,
+        "output": 92
+      }
+    },
+    {
+      "id": "b10-nguoi-may-tam",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Người Máy Tám",
+        "authors": [
+          "Vũ Trọng Phụng"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Người Máy Tám",
+        "authors": [
+          "Vũ Trong Phụng"
+        ],
+        "publisher": "Nhà Xuất Bản Dân Trí",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": false,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 948,
+      "tokens": {
+        "input": 816,
+        "output": 76
+      }
+    }
+  ]
+}

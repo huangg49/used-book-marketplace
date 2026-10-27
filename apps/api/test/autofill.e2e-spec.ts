@@ -296,6 +296,22 @@ describe('photo autofill through HTTP with MongoDB', () => {
     expect(fake.calls.map((c) => c.fallback)).toEqual([false, true]);
   });
 
+  it('matches the catalog despite a misread accent, capitals and different name spacing', async () => {
+    const l = await listing();
+    // Live reads gave "Đề Mèn" for "Dế Mèn", all-caps titles and "新海 誠" for "新海誠".
+    fake.output = {
+      title: bookTitle.toUpperCase().replace('BIẾC', 'BIỆC'),
+      authors: ['NGUYỄN NHẬTÁNH'],
+      isbn: null,
+    };
+    const res = await ask(l.id, [l.photo], m1).expect(200);
+    expect(res.body.matches).toHaveLength(1);
+    expect(res.body.matches[0]).toMatchObject({ book: { id: bookId }, matchedBy: 'TitleAuthor' });
+    fake.output = { title: bookTitle, authors: ['Nguyễn Văn Khác'], isbn: null };
+    const other = await ask(l.id, [await photo(l.id)], m1).expect(200);
+    expect(other.body.matches).toEqual([]);
+  });
+
   it('limits calls per listing per minute and allows one request in flight per member', async () => {
     const l = await listing();
     for (let i = 0; i < 3; i++) {
