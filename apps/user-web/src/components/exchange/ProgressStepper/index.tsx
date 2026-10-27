@@ -1,4 +1,4 @@
-import { Check, Truck, X } from 'lucide-react';
+import { Check, Truck, X, Clock, ShieldCheck, Sparkles, Send } from 'lucide-react';
 import type { ExchangeStatus } from '../../../lib/mock/exchangeMine';
 import styles from './ProgressStepper.module.css';
 
@@ -20,7 +20,7 @@ export function ProgressStepper({ status, compact = false, failedAtStep, closedB
         { id: 5, label: 'Hoàn tất', shortLabel: 'Hoàn tất' }
     ];
 
-    let currentStepIndex = 0;
+    let currentStepIndex = 1;
     if (status === 'PENDING') currentStepIndex = 2; // Waiting for accept
     else if (status === 'FUNDING') currentStepIndex = 2;
     else if (status === 'WAITING_YOU_SEND') currentStepIndex = 3;
@@ -120,9 +120,17 @@ export function ProgressStepper({ status, compact = false, failedAtStep, closedB
                                 
                                 <div className={`${styles.circle} ${styles[`circle_${state}`]}`}>
                                     {state === 'completed' && <Check className={styles.iconCheck} />}
-                                    {state === 'current' && stepNumber === 3 && <Truck className={styles.iconTruck} />}
+                                    {state === 'current' && (
+                                        <>
+                                            {stepNumber === 1 && <Send className={styles.iconStep} />}
+                                            {stepNumber === 2 && <Clock className={styles.iconStep} />}
+                                            {stepNumber === 3 && <Truck className={styles.iconTruck} />}
+                                            {stepNumber === 4 && <ShieldCheck className={styles.iconStep} />}
+                                            {stepNumber === 5 && <Sparkles className={styles.iconStep} />}
+                                        </>
+                                    )}
                                     {state === 'failed' && <X className={styles.iconFailed} />}
-                                    {state !== 'completed' && state !== 'failed' && !(state === 'current' && stepNumber === 3) && (
+                                    {state === 'upcoming' && (
                                         <span className={styles.stepNum}>{stepNumber}</span>
                                     )}
                                 </div>

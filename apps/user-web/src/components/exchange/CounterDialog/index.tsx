@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { RefreshCw, AlertCircle, ArrowLeftRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
@@ -216,7 +217,7 @@ export function CounterDialog({
   const defaultRecipientName = defaultAddr?.recipientName || '';
   const defaultPhone = defaultAddr?.phone || '';
 
-  return (
+  return createPortal(
     <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="counter-title">
         <div className={styles.header}>
@@ -409,6 +410,7 @@ export function CounterDialog({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

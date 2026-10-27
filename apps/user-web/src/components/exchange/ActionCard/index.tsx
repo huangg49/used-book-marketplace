@@ -139,8 +139,8 @@ export function ActionCard(props: Props) {
       ? new Date(detail.shippingDeadline).toLocaleString("vi-VN")
       : null;
     instructions = detail.viewerShipping.sentAt
-      ? `Bạn đã xác nhận gửi. Đang chờ đối tác gửi sách.${deadlineStr ? ` Hạn gửi: ${deadlineStr}.` : ""}`
-      : `Hai bên đã đặt cọc. Hãy đóng gói sách cẩn thận và xác nhận sau khi gửi.${deadlineStr ? ` Hạn chót gửi sách: ${deadlineStr} (72 giờ).` : ""}`;
+      ? `Bạn đã tạo đơn vận chuyển thành công. Đang chờ đối tác tạo đơn để bưu tá cùng đến lấy sách ở cả hai đầu.${deadlineStr ? ` Hạn gửi: ${deadlineStr}.` : ""}`
+      : `Hai bên đã đặt cọc. Hãy đóng gói sách cẩn thận và bấm tạo đơn vận chuyển.${deadlineStr ? ` Hạn chót gửi sách: ${deadlineStr} (72 giờ).` : ""}`;
     if (!detail.viewerShipping.sentAt) actions.push("sent");
   } else if (detail.status === "WAITING_YOU_CONFIRM") {
     instructions = detail.viewerShipping.receivedAt

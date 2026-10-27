@@ -1,163 +1,567 @@
 .container {
-    background: #fff;
-    padding: 24px;
-    border: 1px solid var(--line);
-    border-radius: 2px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    background: #ffffff;
+    border: 1.5px solid var(--shop-line, #ebd9c8);
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 4px 18px rgba(40, 25, 20, 0.04);
     margin-bottom: 24px;
+    container-type: inline-size;
 }
 
 @media (min-width: 768px) {
     .container {
-        padding: 28px;
+        padding: 26px;
     }
 }
 
+/* Card Header */
 .cardHeader {
     display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 20px;
-    border-bottom: 1px solid var(--line);
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--shop-line, #ebd9c8);
     padding-bottom: 16px;
 }
 
-.titleIcon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: rgba(176, 141, 87, 0.12);
-    color: var(--gold-strong);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.titleIconGroup {
     flex-shrink: 0;
 }
 
-.cardTitle {
-    font-family: var(--font-serif);
-    font-size: 20px;
+.titleIcon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(176, 141, 87, 0.16), rgba(92, 2, 2, 0.08));
+    border: 1px solid rgba(176, 141, 87, 0.35);
+    color: var(--shop-wine, #5c0202);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.titleInfo {
+    flex: 1;
+    min-width: 0;
+}
+
+.categoryBadge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10px;
     font-weight: 700;
-    color: var(--ink);
-    margin: 0 0 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--gold-strong, #9b7942);
+    background: rgba(176, 141, 87, 0.12);
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+}
+
+.cardTitle {
+    font-family: var(--shop-body, 'Be Vietnam Pro', sans-serif);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--shop-ink, #281914);
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
 }
 
 .cardSubtitle {
-    font-size: 13px;
-    color: var(--leather);
+    font-size: 0.825rem;
+    color: var(--shop-muted, #716157);
     margin: 0;
+    line-height: 1.5;
+}
+
+/* Overview Status Banner */
+.overviewStatusBanner {
+    margin-bottom: 18px;
+}
+
+.statusPillLarge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 0.825rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.statusCompleted {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+}
+
+.statusShipping {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e40af;
+}
+
+.statusPartial {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+}
+
+.statusWaiting {
+    background: #fbf8f3;
+    border: 1px solid #ebd9c8;
+    color: var(--shop-muted, #716157);
 }
 
 .bothSentBanner {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
-    padding: 12px 16px;
-    background: rgba(22, 101, 52, 0.08);
-    border: 1px solid rgba(22, 101, 52, 0.25);
-    border-radius: 4px;
-    margin-bottom: 20px;
-    font-size: 13px;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 10px;
+    margin-bottom: 18px;
+    font-size: 0.825rem;
     color: #166534;
     line-height: 1.5;
+}
+
+.bothSentBanner strong {
+    display: block;
+    margin-bottom: 2px;
+    color: #14532d;
+    font-size: 0.875rem;
+}
+
+.bothSentBanner p {
+    margin: 0;
 }
 
 .bannerIcon {
     color: #15803d;
     flex-shrink: 0;
-    margin-top: 1px;
+    margin-top: 2px;
 }
 
+.webhookAlert {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #ecfdf5;
+    border: 1px solid #6ee7b7;
+    border-radius: 8px;
+    font-size: 0.825rem;
+    color: #065f46;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+/* Legs Flow & Grid */
 .legsGrid {
-    display: grid;
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 16px;
     margin-bottom: 20px;
 }
 
-@media (min-width: 768px) {
+@container (min-width: 680px) {
     .legsGrid {
+        display: grid;
         grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        align-items: stretch;
+    }
+
+    .flowConnector {
+        display: none;
     }
 }
 
+.flowConnector {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: -4px 0;
+}
+
+.connectorLine {
+    flex: 1;
+    height: 1px;
+    background: #ebd9c8;
+}
+
+.connectorBadge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--shop-muted, #716157);
+    background: #faf6f0;
+    border: 1px solid #ebd9c8;
+    padding: 3px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+/* Leg Card */
 .legCard {
-    background: var(--paper);
-    border: 1px solid var(--line);
-    border-radius: 4px;
+    background: #fffcf8;
+    border: 1.5px solid #ebd9c8;
+    border-radius: 12px;
     padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 14px;
+    position: relative;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.legCardOutgoing {
+    border-top: 3px solid #b08d57;
+}
+
+.legCardIncoming {
+    border-top: 3px solid #0d9488;
 }
 
 .legCardSent {
-    border-color: rgba(176, 141, 87, 0.4);
-    background: #fff;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    background: #ffffff;
+    box-shadow: 0 2px 10px rgba(40, 25, 20, 0.03);
 }
 
+/* Leg Header */
 .legHeader {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 10px;
-    border-bottom: 1px solid var(--line);
+    flex-direction: column;
+    gap: 8px;
+    border-bottom: 1px solid #f0e6dc;
     padding-bottom: 12px;
+}
+
+@container (min-width: 380px) {
+    .legHeader {
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: space-between;
+    }
 }
 
 .legTitleGroup {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
 }
 
-.legIcon {
-    color: var(--gold-strong);
+.directionPill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 6px;
+    align-self: flex-start;
+}
+
+.pillOutgoing {
+    background: #fdf6ec;
+    color: #9a6014;
+    border: 1px solid #fed7aa;
+}
+
+.pillIncoming {
+    background: #f0fdfa;
+    color: #0f766e;
+    border: 1px solid #99f6e4;
+}
+
+.directionIcon {
     flex-shrink: 0;
 }
 
 .legTitle {
-    font-size: 14px;
+    font-size: 0.95rem;
     font-weight: 700;
-    color: var(--ink);
+    color: var(--shop-ink, #281914);
     margin: 0;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.legStatusWrap {
+    flex-shrink: 0;
 }
 
 .badgeSuccess {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     font-size: 11px;
     font-weight: 700;
     color: #15803d;
     background: #dcfce7;
+    border: 1px solid #86efac;
     padding: 3px 8px;
     border-radius: 999px;
     white-space: nowrap;
 }
 
 .badgeShipping {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     font-size: 11px;
     font-weight: 700;
-    color: #1e40af;
+    color: #1d4ed8;
     background: #dbeafe;
+    border: 1px solid #93c5fd;
     padding: 3px 8px;
     border-radius: 999px;
     white-space: nowrap;
 }
 
 .badgePending {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     font-size: 11px;
     font-weight: 600;
     color: #854d0e;
     background: #fef9c3;
+    border: 1px solid #fde047;
     padding: 3px 8px;
     border-radius: 999px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
     white-space: nowrap;
 }
 
+/* Books summary box */
+.bookSummaryBox {
+    background: #fcf9f5;
+    border: 1px solid #eedecf;
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.bookSummaryTitle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--shop-muted, #716157);
+}
+
+.bookChipList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.bookChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #ffffff;
+    border: 1px solid #ebd9c8;
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 11px;
+    color: var(--shop-ink, #281914);
+}
+
+.bookChipTitle {
+    font-weight: 600;
+}
+
+.bookChipCondition {
+    font-size: 10px;
+    color: #0369a1;
+    background: #e0f2fe;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+/* 3-Step Mini Stepper */
+.stepperContainer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #ffffff;
+    border: 1px solid #f0e6dc;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin: 2px 0;
+}
+
+.stepperStep {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.stepMarker {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    transition: all 0.2s ease;
+}
+
+.stepCompleted .stepMarker {
+    background: #15803d;
+    color: #ffffff;
+}
+
+.stepActive .stepMarker {
+    background: #fef08a;
+    border: 2px solid #ca8a04;
+    color: #854d0e;
+}
+
+.markerDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ca8a04;
+}
+
+.stepPending .stepMarker {
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    color: #9ca3af;
+}
+
+.stepLabel {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--shop-muted, #716157);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.stepCompleted .stepLabel {
+    color: #15803d;
+    font-weight: 700;
+}
+
+.stepActive .stepLabel {
+    color: #92400e;
+    font-weight: 700;
+}
+
+.stepperLine {
+    flex: 1;
+    height: 2px;
+    background: #e5e7eb;
+    margin: 0 4px 16px;
+}
+
+.lineCompleted {
+    background: #22c55e;
+}
+
+/* Leg Body */
 .legBody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Destination Address Card */
+.destinationAddressBox {
+    background: #faf6f0;
+    border: 1px solid #ebd9c8;
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+.destHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.destLabel {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--shop-muted, #716157);
+}
+
+.copyAddressBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 4px;
+    border: 1px solid #d9cbbd;
+    background: #ffffff;
+    color: var(--shop-ink, #281914);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.copyAddressBtn:hover {
+    background: #f4eddf;
+}
+
+.destText {
+    font-size: 0.825rem;
+    line-height: 1.45;
+}
+
+.destRecipient {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 2px;
+}
+
+.recipientName {
+    font-weight: 700;
+    color: var(--shop-ink, #281914);
+}
+
+.recipientPhone {
+    font-weight: 600;
+    color: var(--shop-muted, #716157);
+    font-size: 11px;
+}
+
+.addressLine {
+    color: var(--shop-ink, #281914);
+}
+
+/* Shipment Details Box */
+.shipmentDetailsBox {
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -169,7 +573,7 @@
     gap: 2px;
 }
 
-@media (min-width: 480px) {
+@container (min-width: 360px) {
     .infoRow {
         flex-direction: row;
         align-items: center;
@@ -178,14 +582,14 @@
 }
 
 .infoLabel {
-    font-size: 12px;
-    color: var(--ink-muted);
+    font-size: 11px;
+    color: var(--shop-muted, #716157);
 }
 
 .infoValue {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
-    color: var(--ink);
+    color: var(--shop-ink, #281914);
     display: flex;
     align-items: center;
     gap: 6px;
@@ -194,15 +598,15 @@
 .infoValueLocation {
     font-size: 12px;
     font-weight: 600;
-    color: var(--ink);
+    color: var(--shop-ink, #281914);
     display: flex;
     align-items: center;
     gap: 6px;
 }
 
 .infoMuted {
-    font-size: 12px;
-    color: var(--ink-muted);
+    font-size: 11px;
+    color: var(--shop-muted, #716157);
     font-style: italic;
 }
 
@@ -210,9 +614,11 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    font-size: 12px;
-    color: var(--gold-strong);
-    background: rgba(176, 141, 87, 0.1);
+    font-size: 11px;
+    font-weight: 600;
+    color: #9a6014;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
     padding: 2px 8px;
     border-radius: 4px;
 }
@@ -221,22 +627,42 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 600;
     color: #0369a1;
     background: #e0f2fe;
+    border: 1px solid #bae6fd;
     padding: 2px 8px;
     border-radius: 4px;
 }
 
+.meetupDetails {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+/* Tracking Code Box */
 .trackingBox {
-    background: var(--paper);
-    border: 1px dashed var(--line);
-    border-radius: 4px;
+    background: #ffffff;
+    border: 1.5px dashed #ebd9c8;
+    border-radius: 8px;
     padding: 10px 12px;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
     gap: 8px;
+}
+
+@container (min-width: 360px) {
+    .trackingBox {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
 }
 
 .trackingMain {
@@ -250,14 +676,14 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: var(--ink-muted);
+    color: var(--shop-muted, #716157);
 }
 
 .trackingNumber {
-    font-family: monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-size: 14px;
     font-weight: 700;
-    color: var(--ink);
+    color: var(--shop-ink, #281914);
     letter-spacing: 0.05em;
 }
 
@@ -265,6 +691,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    flex-wrap: wrap;
 }
 
 .copyBtn,
@@ -275,21 +702,21 @@
     padding: 5px 9px;
     font-size: 11px;
     font-weight: 600;
-    border-radius: 3px;
+    border-radius: 6px;
     cursor: pointer;
     text-decoration: none;
     transition: all 0.15s ease;
 }
 
 .copyBtn {
-    background: #fff;
-    border: 1px solid var(--line);
-    color: var(--ink);
+    background: #ffffff;
+    border: 1px solid #d9cbbd;
+    color: var(--shop-ink, #281914);
 }
 
 .copyBtn:hover {
-    background: var(--paper);
-    border-color: var(--leather);
+    background: #f4eddf;
+    border-color: #8e7564;
 }
 
 .iconGreen {
@@ -297,116 +724,27 @@
 }
 
 .trackLink {
-    background: var(--gold-strong);
-    border: 1px solid var(--gold-strong);
-    color: #fff;
+    background: var(--shop-wine, #5c0202);
+    border: 1px solid var(--shop-wine, #5c0202);
+    color: #ffffff;
 }
 
 .trackLink:hover {
-    background: #9b7942;
-    border-color: #9b7942;
+    background: var(--shop-wine-hover, #7c2320);
+    border-color: var(--shop-wine-hover, #7c2320);
 }
 
-.carrierHotline {
-    font-size: 11px;
-    color: var(--ink-muted);
-}
-
-.notesBox {
-    background: rgba(0, 0, 0, 0.02);
-    border-left: 2px solid var(--gold-strong);
-    padding: 6px 10px;
-    border-radius: 0 4px 4px 0;
-}
-
-.notesLabel {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--ink-muted);
-    display: block;
-    margin-bottom: 2px;
-}
-
-.notesContent {
-    font-size: 12px;
-    font-style: italic;
-    color: var(--leather);
-    margin: 0;
-}
-
-.emptyLegNotice {
-    padding: 12px;
-    background: rgba(0, 0, 0, 0.02);
-    border-radius: 4px;
-    font-size: 12px;
-    color: var(--leather);
-    line-height: 1.5;
-}
-
-.emptyLegNotice p {
-    margin: 0;
-}
-
-.rulesCallout {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 12px 14px;
-    background: rgba(176, 141, 87, 0.06);
-    border: 1px solid rgba(176, 141, 87, 0.2);
-    border-radius: 4px;
-}
-
-.infoCalloutIcon {
-    color: var(--gold-strong);
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-
-.rulesCalloutText {
-    font-size: 12px;
-    color: var(--ink);
-    line-height: 1.5;
-}
-
-.destinationAddressBox {
-    background: #fdfaf6;
-    border: 1px dashed rgba(176, 141, 87, 0.4);
-    border-radius: 4px;
-    padding: 10px 12px;
-    font-size: 12px;
-    line-height: 1.4;
-}
-
-.destHeader {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--leather);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    margin-bottom: 4px;
-}
-
-.destText {
-    margin: 0;
-    color: var(--ink);
-}
-
+/* Barcode Box */
 .barcodeBox {
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 4px;
+    background: #ffffff;
+    border: 1px solid #eedecf;
+    border-radius: 8px;
     padding: 10px 14px;
-    margin-top: 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.02);
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.02);
 }
 
 .barcodeHeader {
@@ -416,19 +754,19 @@
     align-items: center;
     font-size: 10px;
     font-weight: 700;
-    color: var(--ink-muted);
+    color: var(--shop-muted, #716157);
     letter-spacing: 0.5px;
 }
 
 .barcodeTag {
     font-size: 10px;
     font-weight: 700;
-    color: var(--ink-muted);
+    color: var(--shop-muted, #716157);
 }
 
 .carrierTag {
-    color: var(--gold-strong);
-    background: rgba(176, 141, 87, 0.1);
+    color: var(--gold-strong, #9b7942);
+    background: rgba(176, 141, 87, 0.12);
     padding: 1px 6px;
     border-radius: 3px;
     font-weight: 600;
@@ -436,7 +774,7 @@
 
 .barcodeGraphic {
     width: 100%;
-    max-width: 240px;
+    max-width: 260px;
     height: 38px;
     display: flex;
     align-items: center;
@@ -450,22 +788,22 @@
 }
 
 .barcodeCode {
-    font-family: monospace;
-    font-size: 13px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 3px;
-    color: var(--ink);
+    color: var(--shop-ink, #281914);
 }
 
+/* Webhook simulator */
 .webhookBox {
-    background: rgba(234, 179, 8, 0.08);
-    border: 1px dashed rgba(202, 138, 4, 0.4);
-    border-radius: 4px;
+    background: #fefce8;
+    border: 1px dashed #ca8a04;
+    border-radius: 8px;
     padding: 10px 12px;
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin-top: 8px;
 }
 
 .webhookBtn {
@@ -475,11 +813,11 @@
     gap: 6px;
     padding: 7px 12px;
     background: #ca8a04;
-    color: #fff;
+    color: #ffffff;
     border: none;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 600;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
     cursor: pointer;
     transition: background 0.15s ease;
 }
@@ -498,22 +836,144 @@
 }
 
 .webhookDesc {
-    font-size: 11px;
+    font-size: 10px;
     color: #854d0e;
     margin: 0;
     line-height: 1.4;
 }
 
-.webhookAlert {
+.carrierHotline {
+    font-size: 11px;
+    color: var(--shop-muted, #716157);
+}
+
+.carrierHotline strong {
+    color: var(--shop-ink, #281914);
+}
+
+.notesBox {
+    background: #fdfaf6;
+    border-left: 3px solid #b08d57;
+    padding: 6px 10px;
+    border-radius: 0 6px 6px 0;
+}
+
+.notesLabel {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--shop-muted, #716157);
+    display: block;
+    margin-bottom: 2px;
+}
+
+.notesContent {
+    font-size: 11px;
+    font-style: italic;
+    color: var(--shop-ink, #281914);
+    margin: 0;
+}
+
+.receiveReminderBox {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.receiveReminderBox p {
+    font-size: 11px;
+    color: #166534;
+    line-height: 1.4;
+    margin: 0;
+}
+
+/* Empty leg notice */
+.emptyLegNotice {
+    padding: 14px;
+    background: #faf6f0;
+    border: 1px dashed #d9cbbd;
+    border-radius: 8px;
+}
+
+.emptyNoticeContent {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.emptyNoticeHeader {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
-    background: #dcfce7;
-    border: 1px solid #86efac;
-    border-radius: 4px;
-    font-size: 13px;
-    color: #166534;
-    margin-bottom: 16px;
-    font-weight: 500;
+    gap: 6px;
+    font-size: 0.825rem;
+    font-weight: 700;
+    color: var(--shop-ink, #281914);
+}
+
+.emptyNoticeIcon {
+    color: var(--shop-wine, #5c0202);
+    flex-shrink: 0;
+}
+
+.emptyNoticeContent p {
+    margin: 0;
+    font-size: 0.825rem;
+    color: var(--shop-muted, #716157);
+    line-height: 1.5;
+}
+
+.emptyNoticeContent p strong {
+    color: var(--shop-ink, #281914);
+}
+
+/* Escrow & POL-14 Rules Callout */
+.rulesCallout {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(176, 141, 87, 0.08), rgba(92, 2, 2, 0.04));
+    border: 1px solid rgba(176, 141, 87, 0.25);
+    border-radius: 10px;
+}
+
+.rulesShieldIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(176, 141, 87, 0.15);
+    color: var(--gold-strong, #9b7942);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.rulesCalloutText {
+    flex: 1;
+    min-width: 0;
+}
+
+.rulesTitle {
+    font-family: var(--shop-body, 'Be Vietnam Pro', sans-serif);
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--shop-ink, #281914);
+    margin: 0 0 4px;
+}
+
+.rulesDesc {
+    font-size: 0.775rem;
+    color: var(--shop-muted, #716157);
+    line-height: 1.55;
+    margin: 0;
+}
+
+.rulesDesc strong {
+    color: var(--shop-ink, #281914);
 }

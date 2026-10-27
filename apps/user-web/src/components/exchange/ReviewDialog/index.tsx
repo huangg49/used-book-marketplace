@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Star, X } from 'lucide-react';
 import type { CreateExchangeReviewInput } from '../../../services/reviews';
 import styles from './ReviewDialog.module.css';
@@ -64,7 +65,7 @@ export function ReviewDialog({
         }
     };
 
-    return (
+    return createPortal(
         <div className={styles.overlay} onClick={isBusy ? undefined : onClose} role="dialog" aria-modal="true">
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.header}>
@@ -198,6 +199,7 @@ export function ReviewDialog({
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }
