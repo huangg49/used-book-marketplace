@@ -15070,6 +15070,10 @@ components:
             - "null"
           minimum: 10000
           maximum: 1000000
+        declaredValue:
+          type: integer
+          minimum: 10000
+          maximum: 1000000
     AuctionVersionCommand:
       type: object
       additionalProperties: false

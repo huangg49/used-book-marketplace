@@ -343,6 +343,7 @@ function ChatRoom({
       <div
         className={`${sheet.workspace} ${sheet.openBook} ${styles.paperSpread} ${styles.dossierSpread}`}
         data-panel={panel}
+        data-lenis-prevent="true"
       >
         <aside className={sheet.sheet} aria-label={room.orderId ? "Thông tin đơn hàng" : "Phiếu thỏa thuận"}>
           {!compactHeader && <header className={`${sheet.sheetHeading} ${styles.dossierHeader}`}>
@@ -355,6 +356,7 @@ function ChatRoom({
             role="region"
             aria-label={room.orderId ? "Nội dung đơn hàng" : "Nội dung phiếu thỏa thuận"}
             tabIndex={0}
+            data-lenis-prevent="true"
           >
             {room.orderId ? (
               <OrderDetails key={room.orderId} orderId={room.orderId} embedded />
@@ -774,6 +776,7 @@ function ChatRoom({
             className={styles.messages}
             aria-label="Tin nhắn trong hội thoại"
             aria-live="polite"
+            data-lenis-prevent="true"
           >
             {history.isLoading && (
               <p className={styles.state}>Đang tải tin nhắn…</p>
@@ -1071,6 +1074,7 @@ export function ChatPage() {
     <div
       className={styles.root}
       data-room-selected={!!roomId}
+      data-lenis-prevent={!!roomId || undefined}
       data-chat-morph-inbox={(!roomId && transitioning) || undefined}
     >
       {!roomId ? (

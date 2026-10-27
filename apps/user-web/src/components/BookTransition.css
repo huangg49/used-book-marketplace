@@ -1,0 +1,63 @@
+/* Book Detail Morph Transition (Tao Tajima / Chat style) */
+
+/* Snapshot only Book content. Navigation and the autumn background stay live. */
+:root:has([data-book-morph-card="true"]),
+:root:has([data-book-detail="true"]) {
+  view-transition-name: none;
+  --book-morph-duration: 440ms;
+}
+
+:root:has([data-book-direction="exit"]) {
+  --book-morph-duration: 360ms;
+}
+
+/* Morph the book cover from the card directly into the detail hero */
+[data-book-morph-card="true"] [data-book-cover],
+[data-book-detail="true"] [data-book-cover] {
+  view-transition-name: book-cover;
+}
+
+/* Transition group for the expanding book cover */
+::view-transition-group(book-cover) {
+  animation-duration: var(--book-morph-duration, 440ms) !important;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  border-radius: 16px;
+  box-shadow:
+    0 24px 54px -12px rgba(40, 25, 20, 0.32),
+    0 6px 18px rgba(40, 25, 20, 0.12);
+  z-index: 100;
+}
+
+::view-transition-old(book-cover),
+::view-transition-new(book-cover) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  mix-blend-mode: normal;
+  animation-duration: var(--book-morph-duration, 440ms) !important;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+::view-transition-old(book-cover) {
+  animation: book-cover-out 120ms ease-out both;
+}
+
+::view-transition-new(book-cover) {
+  animation: book-cover-in 260ms ease-out both;
+}
+
+@keyframes book-cover-out {
+  to {
+    opacity: 0.2;
+  }
+}
+
+@keyframes book-cover-in {
+  from {
+    opacity: 0.8;
+  }
+  to {
+    opacity: 1;
+  }
+}

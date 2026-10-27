@@ -443,6 +443,7 @@
   gap: 24px;
   border-bottom: 1px solid var(--shop-line);
   flex-wrap: wrap;
+  position: relative;
 }
 
 .modeRow button {
@@ -454,22 +455,29 @@
   font-size: 0.8125rem;
   font-weight: 700;
   position: relative;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 180ms ease;
 }
 
 .modeRow button[aria-pressed="true"] {
   color: var(--shop-wine);
 }
 
-.modeRow button[aria-pressed="true"]::after {
-  content: "";
-  position: absolute;
-  height: 3px;
-  background: var(--shop-wine);
-  inset: auto 0 -1px;
-}
-
 .modeRow button:hover {
   color: var(--shop-wine);
+}
+
+.modeActiveIndicator {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--shop-wine);
+  border-radius: 3px 3px 0 0;
 }
 
 .toolbar {
@@ -688,10 +696,70 @@
   }
 }
 
+.gridContainer {
+  position: relative;
+  width: 100%;
+  min-height: 280px;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 24px 16px;
+}
+
+.skeletonGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 24px 16px;
+  margin-bottom: 24px;
+}
+
+.skeletonCard {
+  border-radius: 20px;
+  border: 1px solid rgba(107, 25, 23, 0.08);
+  background: rgba(255, 253, 248, 0.72);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(67, 17, 14, 0.04);
+}
+
+.skeletonCover {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #ede2cf 0%, #f7efe1 50%, #ede2cf 100%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
+}
+
+.skeletonTextLine {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #ede2cf 0%, #f7efe1 50%, #ede2cf 100%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
+}
+
+.skeletonPrice {
+  height: 22px;
+  width: 50%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #e8d7be 0%, #f4e8d5 50%, #e8d7be 100%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
+  margin-top: auto;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .state,
@@ -738,6 +806,7 @@
   border-radius: 7px;
   font-size: 0.8125rem;
   font-weight: 700;
+  cursor: pointer;
 }
 
 .state button:hover,
@@ -751,15 +820,50 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  align-items: center;
   gap: 12px;
-  margin-top: 32px;
+  margin-top: 36px;
+  padding: 16px;
+  background: rgba(255, 253, 248, 0.72);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(107, 25, 23, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(40, 25, 20, 0.05);
 }
 
 .pagination button {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+.pageIndicatorBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 20px;
+  border-radius: 999px;
+  background: rgba(107, 25, 23, 0.08);
+  border: 1px solid rgba(107, 25, 23, 0.16);
+  color: var(--shop-wine);
+  font-weight: 700;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 8px rgba(107, 25, 23, 0.04);
+}
+
+.paginationNextBtn {
+  background: linear-gradient(135deg, #6b1917 0%, #4a0d0c 100%) !important;
+  color: #fff9f0 !important;
+  border-color: #4a0d0c !important;
+  box-shadow: 0 4px 14px rgba(107, 25, 23, 0.22);
+}
+
+.paginationNextBtn:hover {
+  background: linear-gradient(135deg, #7c2320 0%, #59100e 100%) !important;
+  box-shadow: 0 6px 18px rgba(107, 25, 23, 0.3);
 }
 
 .error,

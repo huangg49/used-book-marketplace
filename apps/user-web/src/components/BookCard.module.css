@@ -83,10 +83,14 @@
   border-radius: 14px;
   transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+.containImage {
+  object-fit: contain !important;
+}
 .cover > .photoFrame {
   position: absolute;
   inset: 0;
 }
+
 .photoFrame {
   position: relative;
   width: 100%;
@@ -189,12 +193,13 @@
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) 52px 76px 44px;
+  grid-template-rows: minmax(52px, 1fr) 52px 76px 44px;
   gap: 8px;
   flex: 1;
   padding: 10px 4px 0;
 }
 .meta h3 {
+  min-width: 0;
   min-height: 0;
   font: 700 1.125rem/1.45 var(--shop-body);
   margin: 0;
@@ -209,6 +214,16 @@
 }
 .meta h3 a:hover {
   text-decoration: underline;
+}
+.ellipsis {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.author > .ellipsis {
+  flex: 1;
 }
 .information {
   min-height: 0;

@@ -53,11 +53,15 @@ export function ListingGallery({ book }: { book: PublicListing }) {
   }
   return (
     <section className={styles.gallery} aria-label="Ảnh bản sách">
-      <div className={styles.photo}>
+      <div
+        className={`${styles.photo} ${current > 0 ? styles.supportPhotoStage : ""}`}
+        data-book-cover={current === 0 ? "true" : undefined}
+      >
         <ListingPhoto
           key={book.id + current}
           book={book}
           photoIndex={current}
+          fit={current === 0 ? "cover" : "contain"}
           eager
           alt={`Ảnh ${current + 1} của ${listingTitle(book)}`}
         />

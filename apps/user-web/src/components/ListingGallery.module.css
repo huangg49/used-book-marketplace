@@ -5,32 +5,52 @@
 }
 .photo {
   position: relative;
-  height: clamp(360px, 52vh, 480px);
-  padding: 32px 32px 64px;
+  width: 100%;
+  max-width: 460px;
+  aspect-ratio: 3 / 4;
+  height: auto;
+  padding: 0;
   background: #efe3cf;
-  border-radius: 12px;
+  border-radius: 16px;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow:
+    0 16px 36px -8px rgba(40, 25, 20, 0.22),
+    0 4px 14px rgba(40, 25, 20, 0.08);
+  border: 1px solid rgba(231, 213, 194, 0.8);
+}
+.supportPhotoStage {
+  background: #efe3cf;
+}
+.supportPhotoStage img {
+  object-fit: contain !important;
 }
 .expand {
   position: absolute;
-  bottom: 12px;
-  right: 12px;
+  bottom: 14px;
+  right: 14px;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 44px;
-  padding: 10px 14px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--shop-paper);
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.92);
+  backdrop-filter: blur(8px);
   color: var(--shop-wine);
   font-size: 0.75rem;
   font-weight: 700;
+  box-shadow: 0 4px 14px rgba(40, 25, 20, 0.16);
+  transition: background 160ms ease, transform 160ms ease;
+  cursor: pointer;
 }
 .expand:hover {
-  background: var(--shop-cream);
+  background: #ffffff;
+  transform: translateY(-1px);
 }
 .thumbnails {
   display: flex;
@@ -129,13 +149,22 @@
   background: #efe3cf;
 }
 .largePhoto {
-  height: min(65dvh, 680px);
+  height: min(75dvh, 720px);
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #efe3cf;
-  padding: 20px;
-  border-radius: 8px;
+  padding: 0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.largePhoto img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 .viewerFoot {
   display: flex;
@@ -157,20 +186,18 @@
 }
 @media (max-width: 1000px) {
   .photo {
-    height: 420px;
-    padding: 24px 24px 64px;
+    max-width: 380px;
   }
 }
 @media (max-width: 720px) {
   .gallery {
     position: static;
-    max-width: 480px;
+    max-width: 400px;
     width: 100%;
-    margin: auto;
+    margin: 0 auto;
   }
   .photo {
-    height: 340px;
-    padding: 24px 24px 64px;
+    max-width: 100%;
   }
   .viewer {
     width: calc(100% - 20px);
@@ -179,7 +206,7 @@
   }
   .largePhoto {
     height: 60dvh;
-    padding: 14px;
+    padding: 0;
   }
   .viewerFoot {
     gap: 8px;

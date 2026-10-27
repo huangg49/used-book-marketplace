@@ -1,5 +1,142 @@
 # Điểm lưu hiện tại — 27/10/2026
 
+## Khắc phục cuộn chuột trang hội thoại & Cố định khung chat trong viewport — 27/10/2026
+
+- Nhánh `feat/web-auction-select-from-shelf`.
+- **Khắc phục hiện tượng đơ/chặn cuộn chuột**:
+  - Gỡ bỏ hoàn toàn `lenis.stop()` khi vào các trang chat/hội thoại đơn hàng trong `useSmoothScroll.ts`. Thay vào đó, tự động giải phóng/hủy instance Lenis (`lenis.destroy()`) trên các tuyến `/chat/*` và `/orders/*` để trình duyệt giữ 100% cơ chế cuộn chuột tự nhiên (native 60fps/120fps), ngăn ngừa `<html>` bị gắn class `.lenis-stopped` gây `overflow: clip`.
+  - Bổ sung `data-lenis-prevent="true"` trên container hội thoại, cột phiếu đơn hàng `dossierBody` và danh sách tin nhắn `messages`.
+- **Cố định khung làm việc hội thoại trong màn hình (Viewport-fitted Workspace)**:
+  - `.root[data-room-selected="true"]`: thiết lập `height: calc(100dvh - 84px)`, vừa vặn hoàn hảo bên dưới navbar mà không gây cuộn trang ngoài.
+  - Khung sách mở `openBook`/`dossierSpread` chiếm trọn vẹn chiều cao 100% của container.
+  - Cột trái: Tinh gọn banner sách `.dossierHeader` (ảnh bìa ~54x74px, tiêu đề, tác giả, trạng thái gọn gàng); phần thân `.dossierBody` cuộn độc lập mượt mà.
+  - Cột phải: Header đối tác chat cố định ở đầu cột; danh sách tin nhắn `.messages` cuộn tự nhiên; khung soạn tin nhắn `.composer` cùng nút gửi tin nhắn được ghim cố định ở đáy khung hình, không bị đẩy khuất khỏi màn hình.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web test`: 32 files / 233 tests PASS.
+
+## Tái thiết kế giao diện Đơn hàng của tôi (`/orders`) & Tích hợp vào không gian Hồ sơ tài khoản (`DashboardLayout`) — 27/10/2026
+
+- Nhánh `feat/web-auction-select-from-shelf`.
+- **Tích hợp vào DashboardLayout (Hồ sơ cá nhân)**:
+  - Chuyển route `/orders` từ `MainLayout` độc lập vào danh sách children của `DashboardLayout` trong `apps/user-web/src/app/router.tsx`.
+  - Giúp người dùng khi truy cập hoặc nhấn mục "Đơn hàng của tôi" từ menu tài khoản sẽ thấy trọn vẹn sidebar quản lý cá nhân (Tổng quan, Hồ sơ của tôi, Ví của tôi, Đơn hàng của tôi, Kệ sách của tôi, Đấu giá của tôi, Đề nghị đổi sách, Thông báo), tab "Đơn hàng của tôi" tự động highlight kích hoạt đồng bộ.
+- **Tái thiết kế giao diện hiện đại & thẩm mỹ Warm-Paper Editorial**:
+  - Gỡ bỏ layout thô sơ kiểu text đơn điệu ("Xem đơn c9cedc72", các dòng chữ xám không phong cách).
+  - Thiết kế Page Header chuyên nghiệp: Huy hiệu "Quản lý giao dịch", tiêu đề nghệ thuật, tổng số đơn hàng dạng badge đếm số lượng.
+  - Bộ lọc kép thông minh:
+    - Tabs vai trò giao dịch: "Tất cả", "Đơn mua" (icon giỏ hàng + đếm số), "Đơn bán" (icon gian hàng + đếm số).
+    - Status chips: "Tất cả trạng thái", "Đang xử lý", "Hoàn tất", "Đã hủy / hết hạn".
+  - Thẻ đơn hàng (Order Cards) chuẩn mực:
+    - Header thẻ: Tag vai trò với màu sắc định danh riêng ("Bạn mua" sắc xanh lá trang nhã, "Bạn bán" sắc hổ phách ấm áp), mã đơn dạng tag rút gọn `#c9cedc72`, ngày tạo kèm icon lịch, badge trạng thái giao dịch (CheckCircle2 xanh khi hoàn tất, Clock khi đang xử lý, XCircle khi đã hủy).
+    - Body thẻ: Thumbnail icon sách nghệ thuật, tên cuốn sách in hoa chữ đậm, dòng diễn giải hướng dẫn giai đoạn giao dịch tương ứng (chờ thanh toán, đang chuẩn bị sách, đang vận chuyển, chờ nghiệm thu giao nhận).
+    - Nút CTA chuyển hướng: "Chi tiết & Hội thoại" dẫn thẳng vào `/chat/orders/:id` với hover state mượt mà.
+  - Trạng thái rỗng (Empty State) và đang tải (Skeleton Shimmer) thẩm mỹ, có liên kết "Tìm sách để mua" và "Đăng bán sách của bạn".
+  - Nút "Xem thêm đơn hàng cũ hơn" phục vụ phân trang vô hạn (`infiniteQuery`).
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web test`: 31 files / 231 tests PASS.
+
+## Tối giản giao diện trang Đấu giá (`/auctions`) — Xóa bỏ hoàn toàn Hero Banner — 27/10/2026
+
+- Nhánh `feat/web-auction-select-from-shelf`.
+- **Cải tiến giao diện**:
+  - Gỡ bỏ hoàn toàn component `AuctionHero` và `AuctionEntrance` khỏi trang đấu giá theo yêu cầu người dùng, loại bỏ triệt để mọi khối banner choán diện tích ở đầu trang.
+  - Xây dựng Page Header mỏng nhẹ, tinh tế (chỉ cao ~100px): tiêu đề "Đấu giá sách cũ", phụ đề ngắn gọn, nút CTA vàng "Đấu giá sách của bạn" và liên kết "Đấu giá của tôi" được căn lề phải gọn gàng.
+  - Người dùng khi vào trang `/auctions` có thể ngay lập tức nhìn thấy hướng dẫn 3 bước, bộ lọc và danh sách phiên đang mở mà không cần cuộn trang.
+  - Đảm bảo tính nhất quán thẩm mỹ với các trang `/books` và `/exchange`.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web test`: 31 files / 231 tests PASS.
+  - Trình duyệt đã kiểm chứng thực tế và chụp ảnh xác nhận.
+
+## Tái thiết kế giao diện sàn đấu giá (`/auctions`) — Phong cách Warm Paper Editorial — 27/10/2026
+
+- Nhánh `feat/web-auction-select-from-shelf`.
+- **Cải tiến giao diện theo yêu cầu**:
+  - Xóa bỏ hoàn toàn khối banner màu đỏ rượu vang (`--shop-wine`) to đùng choán hết màn hình ở đầu trang đấu giá.
+  - Tái thiết kế Hero sàn đấu giá theo phong cách Vintage Bookshop & Editorial Warm-Paper:
+    - Nền ngà ấm áp (`#faf7f2`), điểm xuyết ánh sáng vàng hổ phách dịu mắt và viền chỉ mỏng trang nhã.
+    - Huy hiệu "Sàn đấu giá sách Lật Lại" có đèn pulse xanh chuyển động tinh tế.
+    - Tiêu đề nghệ thuật sắc nét, phân cấp typographic chuẩn mực, bổ sung 3 điểm bảo chứng uy tín (Kiểm định tại điểm, Phiên mở 24 giờ, Giao nhận an tâm).
+    - Cặp nút hành động cao cấp: Nút chính "Đấu giá sách của bạn" vàng cát rạng rỡ và nút "Khám phá các phiên" cuộn mượt.
+    - Thẻ Spotlight Showcase bên phải hiển thị card phiên nổi bật (hoặc fallback card phong cách nghệ thuật ấm áp) bo góc 16px, đổ bóng mềm đa tầng, không còn cảm giác nặng nề bí bách.
+  - Cải tiến phần hướng dẫn tham gia thành hộp "3 bước tham gia sàn đấu giá Lật Lại" mượt mà, trực quan.
+  - Làm mới thanh công cụ lọc (Toolbar) và section heading với số lượng phiên dạng badge, đèn pulse trực tiếp.
+  - Đổi primer của `AuctionEntrance` từ màu đỏ rượu sang màu kem đồng bộ, loại bỏ hoàn toàn hiện tượng chớp khung đỏ khi tải trang.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web test`: 31 files / 231 tests PASS.
+  - Trình duyệt đã kiểm chứng giao diện mới thực tế, ghi hình và chụp ảnh xác nhận.
+
+## Chọn sách trực tiếp từ kệ để đấu giá & Nhập giá trị khai báo trên trang mở phiên — 27/10/2026
+
+- Nhánh `feat/web-auction-select-from-shelf` từ `feat/web-search-transition-animations` (`6219b1b`).
+- **Nghiệp vụ**:
+  - Loại bỏ bước bắt buộc phải tạo sách riêng thuộc kênh `channel: Auction` mới được mở phiên đấu giá.
+  - Cho phép người bán chọn trực tiếp bất kỳ cuốn sách nào đã được duyệt từ kệ sách của mình (`Approved`, `Visible`, `Available`, không bundle) để đưa lên sàn đấu giá.
+  - Chuyển trường nhập **Giá trị khai báo (Giá trị bảo vệ sách)** trực tiếp ra trang mở phiên đấu giá (`/auctions/new`), mặc định gợi ý theo giá niêm yết/trao đổi trên kệ của cuốn sách được chọn và cho phép người bán tùy chỉnh (từ 10.000đ đến 1.000.000đ).
+  - Đảm bảo ràng buộc nghiệp vụ (invariants): Ngay khi gửi yêu cầu tiếp nhận đấu giá (`createAuctionIntake`), bài đăng trên kệ được chuyển sang trạng thái `Reserved` với `exclusive_commitments` loại `AuctionIntake`. Nhờ đó, cuốn sách sẽ **ngay lập tức ẩn khỏi tất cả kệ sách công khai và tìm kiếm marketplace** cho tới khi kết thúc phiên hoặc được thu hồi về kệ nếu bị hủy.
+- **Contract & Implementation**:
+  - `packages/api-contract/openapi.yaml` & `src/schema.ts`: Bổ sung trường tùy chọn `declaredValue` (integer, min 10000, max 1000000) vào `CreateAuctionIntake`. Chạy `pnpm contract:generate` và `pnpm contract:check` PASS.
+  - `apps/api/src/modules/auctions/auction-intakes.service.ts`: Nới lỏng truy vấn bài đăng hợp lệ: chấp nhận bài đăng `Approved`, `Visible`, `Available` của người gọi không giới hạn channel `Auction`. Tính `protectiveValue` từ `body.declaredValue ?? r.salePrice ?? r.exchangeValue ?? body.startPrice`. Validate khoảng giá trị khai báo 10k - 1M trong `validatePrices`.
+  - `apps/user-web/src/lib/owner-listing-labels.ts`: Cập nhật `auctionEligible` chấp nhận bài đăng hợp lệ trên kệ của người bán.
+  - `apps/user-web/src/services/auctions.ts`: Thêm `declaredValue?: number | null` vào `CreateIntakeBody` và kiểm tra lỗi trong `intakePriceErrors`.
+  - `apps/user-web/src/pages/CreateAuctionPage.tsx`:
+    - Truy vấn toàn bộ sách của người bán trên kệ bằng `getMyListings(undefined, undefined, 50)`.
+    - Thẻ chọn sách hiển thị giá niêm yết trên kệ (`salePrice` hoặc `exchangeValue`).
+    - Thêm ô nhập `PriceInput` cho "Giá trị khai báo (Giá trị bảo vệ)" tại Bước 3, tự động cập nhật gợi ý giá khởi điểm và vé xem trước phiếu đấu giá.
+    - Cập nhật văn bản giải thích và hộp thoại xác nhận về việc sách sẽ tạm ngừng hiển thị trên thị trường công khai.
+- **Kiểm tra**:
+  - `pnpm contract:check`: PASS.
+  - `pnpm --filter @used-books/api typecheck`: PASS.
+  - `pnpm --filter @used-books/user-web typecheck`: PASS.
+  - `pnpm --filter @used-books/api test auction`: 6 files / 42 tests PASS.
+  - `pnpm --filter @used-books/user-web test`: 31 files / 231 tests PASS.
+
+
+- Nhánh `feat/web-search-transition-animations` từ `origin/main` (`6541705`).
+- Thực hiện chuỗi cải tiến chuyển động và trải nghiệm thị giác theo yêu cầu người dùng:
+  - **Trang tìm sách (`/books`)**:
+    - Tích hợp `AnimatePresence mode="wait"` với hiệu ứng chuyển trang `pageVariants` (trượt đa hướng mượt mà kết hợp làm mờ và độ sâu 3D scale nhẹ) khi lật trang hoặc đổi bộ lọc.
+    - Bộ điều hướng phân trang đầy đủ: nút "Trang trước", nút "Về trang đầu", nút "Trang tiếp theo", huy hiệu chỉ số trang `Trang {page}`.
+    - Bộ lọc tab hình thức (Tất cả / Bán / Trao đổi / Đấu giá) có thanh chỉ thị nổi hoạt họa `activeModeIndicator` (`layoutId="activeFilterTab"`).
+    - Bộ lọc tags/chips có hiệu ứng xuất hiện/biến mất mềm mại với `AnimatePresence`.
+    - Lưới skeleton shimmer card hiển thị khi đang tìm kiếm / tải dữ liệu.
+  - **Cuộn quán tính mượt mà (Smooth Momentum Inertia Scrolling)**:
+    - Cài đặt thư viện `lenis` (`^1.3.27`), xây dựng hook [useSmoothScroll.ts](../../apps/user-web/src/hooks/useSmoothScroll.ts).
+    - Áp dụng toàn cục qua [AppRouteLayout.tsx](../../apps/user-web/src/app/AppRouteLayout.tsx) cho trang chủ (`/`), tìm kiếm (`/books`), tài khoản cá nhân (`/account`, `/profile`) và các trang thuộc ứng dụng; điều tiết vuốt chuột 60fps/120fps có độ trễ quán tính mượt mà.
+    - Tự động dừng (`lenis.stop()`) khi mở dialog/modal hoặc khi vào không gian hội thoại chat (`/chat`), tự động cuộn mượt về đầu trang kết quả (`#catalog-results`) khi bấm chuyển trang.
+  - **Hiệu ứng phóng to ảnh bìa chuyển cảnh chuẩn Chat (View Transition API & Tao Tajima)**:
+    - Xây dựng [BookTransition.css](../../apps/user-web/src/components/BookTransition.css) đồng bộ với kiến trúc chuyển cảnh của phòng Chat (`ConversationTransition.css`).
+    - Gắn `viewTransition` trực tiếp lên liên kết `<Link to={detailUrl} viewTransition>` tại [BookCard.tsx](../../apps/user-web/src/components/BookCard.tsx) và nút quay lại `Về kệ sách` tại [BookDetailPage.tsx](../../apps/user-web/src/pages/BookDetailPage.tsx).
+    - Sử dụng `useViewTransitionState` từ `react-router-dom` kích hoạt `data-book-morph-card="true"` đúng thẻ được bấm, gán `view-transition-name: book-cover` trên cả thẻ danh sách và [ListingGallery.tsx](../../apps/user-web/src/components/ListingGallery.tsx).
+    - Trình duyệt tự động phóng to (zoom/morph) mượt mà có gia tốc GPU `cubic-bezier(0.16, 1, 0.3, 1)` trong 440ms, nền và thanh điều hướng giữ cố định; khi bấm quay lại trang tìm kiếm, bìa sách thu nhỏ mượt mà đáp về đúng thẻ ban đầu.
+    - Chuẩn hóa khung ảnh trang chi tiết trong [ListingGallery.module.css](../../apps/user-web/src/components/ListingGallery.module.css) và [BookDetailPage.module.css](../../apps/user-web/src/pages/BookDetailPage.module.css) thành khung dọc tỷ lệ chuẩn sách 3:4, loại bỏ hoàn toàn đệm hộp cũ giúp ảnh hiển thị tràn viền full khung (Edge-to-Edge) sắc nét.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web test`: 31 files / 231 tests PASS.
+  - `pnpm --filter @used-books/user-web build`: PASS.
+  - Trình duyệt Chromium ghi nhận hoạt ảnh View Transition phóng to và thu nhỏ 100% mượt mà, console 0 lỗi.
+
+## Sửa ảnh bản sách bị cắt trên Member web — 27/10/2026
+
+- Nhánh `fix/web-listing-photo-fit`, base main `a463041`; gói commit
+  `fix(web): preserve full listing photos in cards and galleries`. Owner giao
+  push/tạo PR và kiểm CI; kết quả remote theo PR của nhánh, không tự merge.
+- Component `ListingPhoto` dùng chung cho Home/Search, chi tiết, ảnh lớn và các
+  consumer chuyển từ `object-fit: cover` sang `contain`; thêm khoảng đệm riêng
+  cho card để giữ bìa khỏi nhãn tình trạng/hiệu ứng hover, giữ motion hiện có.
+- Đối chiếu chỉ đọc ảnh Doraemon gốc với ảnh tải qua public API/storage thật:
+  cả hai350×553px, đúng tỷ lệ; không cần đăng lại ảnh hoặc sửa pipeline upload.
+- PASS: user-web build/typecheck,231unit/31file, lint (6warning cũ), CSS mới đã
+  được Vite phục vụ; diff check. Detector có4advisory radius14px vốn có.
+- Browser visual desktop/mobile NOT RUN: Computer Use tự chặn vì không xác định
+  chắc URL Chrome trên Windows. Dùng ảnh người dùng cung cấp và source để chẩn
+  đoán; không nhận là browser/native/human PASS. Engine báo config/surface brief
+  cũ, giữ ngoài phạm vi; READINESS không đổi. Tiếp theo: xem Home/Search, chi tiết
+  và ảnh lớn trên desktop/mobile; chưa kiểm được ảnh ngang bằng browser.
+
 ## Seller tự đăng/hẹn phiên, mua ngay sau bid — 27/10/2026
 
 - Nhánh `feature/seller-scheduled-auctions` từ main `d3b19e5`; chưa push/PR.
