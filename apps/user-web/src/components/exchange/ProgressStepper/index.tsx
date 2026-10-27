@@ -35,12 +35,17 @@ export function ProgressStepper({ status, compact = false, failedAtStep, closedB
         currentStepIndex = failedAtStep;
     }
 
+    const progressPct = (Math.max(0, currentStepIndex - 1) / (steps.length - 1)) * 100;
+
     return (
         <div className={compact ? `${styles.stepperContainer} ${styles.compact}` : styles.stepperContainer}>
             <div className={styles.lineBg} aria-hidden="true" />
             <div 
                 className={styles.lineProgress} 
-                style={{ width: `${(Math.max(0, currentStepIndex - 1) / (steps.length - 1)) * 100}%` }} 
+                style={{ 
+                    ['--progress-pct' as string]: `${progressPct}%`,
+                    width: `${progressPct}%`
+                } as React.CSSProperties} 
                 aria-hidden="true" 
             />
 

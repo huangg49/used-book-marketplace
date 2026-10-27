@@ -189,7 +189,7 @@ export function ExchangeDetailPage({ exchangeId, embedded = false }: { exchangeI
 
             <div className={styles.stepperCard}>
                 <ProgressStepper
-                    compact
+                    compact={embedded}
                     status={detail.status}
                     failedAtStep={detail.failedAtStep}
                     closedBy={detail.closedBy}
@@ -213,7 +213,7 @@ export function ExchangeDetailPage({ exchangeId, embedded = false }: { exchangeI
             <div className={embedded ? styles.embeddedGrid : `${styles.gridContainer} ${conversation.workspace}`} data-panel={panel}>
                 <div className={embedded ? styles.mainCol : `${styles.mainCol} ${styles.legacySheet} ${conversation.sheet}`}>
                     {!embedded && <div className={conversation.sheetHeading}><h2>Phiếu thỏa thuận</h2><span>Đổi sách · {statusText}</span></div>}
-                    <BookInfoCard detail={detail} compact />
+                    <BookInfoCard detail={detail} compact={embedded} />
                     <ShippingTrackingCard detail={detail} onRefresh={invalidate} />
                     <section id="exchange-actions" className={styles.actionSection} aria-label="Hành động của bạn" tabIndex={-1}>
                     <ActionCard

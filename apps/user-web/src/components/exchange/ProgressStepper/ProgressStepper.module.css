@@ -22,15 +22,11 @@
     left: 0;
     top: 50%;
     transform: translateY(-50%);
+    width: var(--progress-pct, 0%);
     height: 2px;
     background: var(--gold);
     z-index: 0;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-    .lineProgress {
-        transition: width 1s ease-in-out;
-    }
+    transition: width 0.6s ease-in-out, height 0.6s ease-in-out;
 }
 
 .stepList {
@@ -129,10 +125,10 @@
     }
     .lineProgress {
         width: 2px !important;
+        height: var(--progress-pct, 0%);
         top: 0;
         left: 20px;
         transform: none;
-        /* Note: style height based on current step index */
     }
     .stepList {
         flex-direction: column;
