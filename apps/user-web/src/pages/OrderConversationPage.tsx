@@ -59,7 +59,7 @@ function OpenOrderRoom({ orderId, ownerId, active }: { orderId: string; ownerId:
   if (active && roomId && !order.isError)
     return <Navigate replace to={`/chat/${roomId}`} state={orderRoomNavigationState} />;
   return (
-    <section className={styles.root} data-room-selected="true">
+    <section className={styles.root} data-room-selected="true" data-lenis-prevent="true">
       <Link className={styles.back} to="/orders">Đơn hàng của tôi</Link>
       <h1>Đơn hàng và hội thoại</h1>
       {!active ? (

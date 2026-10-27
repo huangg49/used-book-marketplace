@@ -6,8 +6,8 @@
   overflow: hidden;
   isolation: isolate;
   pointer-events: none;
-  /* Opaque primer conceals the page until the first textured frame is ready. */
-  background: var(--shop-wine);
+  /* Warm paper primer harmonizes with the new elegant page entrance */
+  background: #faf7f2;
 }
 .entrance[data-state='opening'] { background: transparent; }
 .entrance[hidden] { display: none; }

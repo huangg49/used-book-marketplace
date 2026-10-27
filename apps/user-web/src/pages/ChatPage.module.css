@@ -17,10 +17,17 @@
 }
 .root[data-room-selected="true"] {
   width: calc(100% - 48px);
-  margin: 24px auto 32px;
-  padding: 28px 32px 32px;
-  border-radius: 12px;
+  max-width: 1440px;
+  height: calc(100dvh - 84px);
+  max-height: calc(100dvh - 84px);
+  margin: 10px auto 14px;
+  padding: 14px 20px 16px;
+  border-radius: 14px;
   background: var(--shop-shelf);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 .root[data-room-selected="false"],
 .guest {
@@ -71,6 +78,11 @@
 }
 .room {
   min-width: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .pendingRoom {
   padding: 24px;
@@ -86,7 +98,8 @@
   display: flex;
   gap: 20px;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
 }
 .roomHeader .back {
   width: auto;
@@ -634,39 +647,52 @@
   grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
   gap: 0;
   padding: 0;
-  height: clamp(720px, calc(100dvh - 180px), 960px);
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(40, 25, 20, 0.08);
 }
 .dossierSpread .dossierHeader,
 .mobileBookHeader {
   background: var(--shop-wine);
   color: var(--shop-cream);
   border: 0;
-  padding: 24px;
+  padding: 14px 20px;
+  flex-shrink: 0;
 }
 .paperSpread .dossierHeader {
-  display: flow-root;
-  min-height: 168px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: auto;
 }
 .dossierHeader .cover,
 .mobileBookHeader .cover {
-  float: left;
-  width: 80px;
-  min-height: 104px;
-  margin: 0 20px 12px 0;
+  width: 54px;
+  min-height: 74px;
+  margin: 0;
+  float: none;
+  flex-shrink: 0;
 }
 .dossierHeader .bookHeading,
 .mobileBookHeader .bookHeading {
+  flex: 1;
+  min-width: 0;
   overflow-wrap: anywhere;
 }
 .dossierHeader .cover img,
 .mobileBookHeader .cover img {
-  max-height: 120px;
-  filter: drop-shadow(0 6px 8px #28191440);
+  max-height: 78px;
+  filter: drop-shadow(0 4px 6px rgba(40, 25, 20, 0.25));
+  border-radius: 6px;
 }
 .dossierHeader .cover > div,
 .mobileBookHeader .cover > div {
-  min-height: 104px;
-  padding: 8px;
+  min-height: 74px;
+  padding: 6px;
   background: var(--shop-wine-hover);
   color: var(--shop-cream);
 }
@@ -682,21 +708,28 @@
 }
 .dossierHeader .bookHeading h1,
 .mobileBookHeader .bookHeading h1 {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   color: var(--shop-cream);
   line-height: 1.3;
+  margin: 0;
 }
 .dossierHeader :is(.bookAuthor, .roomStatus),
 .mobileBookHeader :is(.bookAuthor, .roomStatus) {
-  color: var(--shop-cream);
-  margin-top: 8px;
+  color: rgba(255, 252, 245, 0.88);
+  font-size: 0.8125rem;
+  margin-top: 4px;
 }
 .dossierSpread .dossierBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
   display: flex;
   flex-direction: column;
   row-gap: 12px;
-  padding: 0 24px;
+  padding: 16px 20px;
   scrollbar-gutter: stable;
+  scrollbar-width: thin;
 }
 .dossierBody > * {
   flex-shrink: 0;
@@ -706,15 +739,37 @@
   margin-top: auto;
 }
 .dossierSpread .nextStep {
-  padding: 20px 24px 24px;
+  padding: 16px 20px 20px;
 }
 .paperSpread.dossierSpread > .dossierChat {
-  padding: 24px;
+  padding: 0;
   background: var(--conversation-chat-surface);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
-.dossierSpread .dossierChatHeading,
+.dossierSpread .dossierChatHeading {
+  background: var(--conversation-chat-surface);
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--shop-line);
+  flex-shrink: 0;
+}
+.paperSpread.dossierSpread .messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding: 16px 20px;
+  scrollbar-width: thin;
+}
 .dossierSpread .composer {
   background: var(--conversation-chat-surface);
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--shop-line);
+  flex-shrink: 0;
+  margin-top: auto;
 }
 .dossierHeader :is(a, button):focus-visible,
 .mobileBookHeader :is(a, button):focus-visible {
