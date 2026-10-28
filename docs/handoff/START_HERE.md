@@ -1,7 +1,7 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
 Cập nhật28/10/2026 theo source tích hợp `7d92012` và các gói Member/review local đang
-bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.57.0** (191operations/29controllers); registry có52
+bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.58.0** (191operations/29controllers); registry có52
 migration MongoDB (đến0040), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.

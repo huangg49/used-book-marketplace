@@ -131,6 +131,14 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+.sample {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.875rem;
+  line-height: 1.8;
+  font-weight: 400;
+  color: var(--shop-muted);
+}
 .lanes {
   display: flex;
   flex-wrap: wrap;

@@ -157,6 +157,62 @@ try {
       { $set: { createdAt: old, editDeadline: new Date(+old + 48 * 3600000) } },
     );
 
+  // A buyer receives a partner-only score from their seller. The same profile
+  // now has two partner scores but just one book score, through real review APIs.
+  const direct = randomUUID(),
+    complete = new Date(Date.now() - 6 * 86400000),
+    delivered = new Date(+complete - 72 * 3600000),
+    created = new Date(+delivered - 3600000),
+    paid = new Date(+created + 1000);
+  await fixture.db
+    .collection("direct_orders")
+    .insertOne({
+      _id: direct,
+      buyerId: b,
+      sellerId: a,
+      quoteId: randomUUID(),
+      version: 6,
+      state: "Completed",
+      createdAt: created,
+      paymentDeadline: new Date(+created + 1800000),
+      closedAt: complete,
+      paidAt: paid,
+      sellerConfirmationDeadline: new Date(+paid + 48 * 3600000),
+      cancellationRequestedAt: null,
+      cancellationReason: null,
+      deliveredAt: delivered,
+      inspectionDeadline: complete,
+      completedAt: complete,
+      lockSeq: 0,
+    });
+  const directUrl = `/transactions/DirectOrder/${direct}/reviews`;
+  await fixture.api(directUrl, fixture.member.accessToken, {
+    partnerRating: 3,
+    comment: "QA: nhận sách đúng hẹn.",
+  });
+  await fixture.api(directUrl, peer.accessToken, {
+    bookRating: 2,
+    partnerRating: 4,
+    comment: "QA: chất lượng bản sách đã nhận.",
+  });
+  await fixture.db
+    .collection("transaction_reviews")
+    .updateMany(
+      { transactionId: direct },
+      { $set: { createdAt: old, editDeadline: new Date(+old + 48 * 3600000) } },
+    );
+  const emptyMember = randomUUID(),
+    memberDoc = await fixture.db.collection("users").findOne({ _id: a });
+  assert.ok(memberDoc);
+  await fixture.db
+    .collection("users")
+    .insertOne({
+      ...memberDoc,
+      _id: emptyMember,
+      emailNormalized: `${emptyMember}@operations.test`,
+      displayName: "Thành viên QA chưa có đánh giá",
+    });
+
   webServer = await serve("user-web", 5184);
   adminServer = await serve("admin-web", 5174);
   const dist = path.join(root, "apps/mobile-react-native/dist");
@@ -336,9 +392,35 @@ try {
       exact: true,
     })
     .waitFor();
-  await capture(pub, "public-reputation-390", 390);
+  const partnerFact = pub
+    .locator("dl > div")
+    .filter({ has: pub.getByText("Điểm đối tác", { exact: true }) });
+  const bookFact = pub
+    .locator("dl > div")
+    .filter({
+      has: pub.getByText("Chất lượng sách đã cung cấp", { exact: true }),
+    });
+  await partnerFact.getByText("Từ 2 đánh giá", { exact: true }).waitFor();
+  await bookFact.getByText("Từ 1 đánh giá", { exact: true }).waitFor();
+  assert.match(await partnerFact.innerText(), /4\.0\/5/);
+  assert.match(await bookFact.innerText(), /4\.0\/5/);
+  for (const width of [1440, 768, 390, 320])
+    await capture(pub, `public-reputation-${width}`, width);
   const before = await fixture.api(`/members/${b}/reputation`);
-  assert.equal(before.reviewCount, 1);
+  assert.equal(before.reviewCount, 2);
+  assert.equal(before.partnerRatingCount, 2);
+  assert.equal(before.bookRatingCount, 1);
+  await pub.goto(web + `/members/${emptyMember}`);
+  await pub.getByText("Chưa có đánh giá công khai.", { exact: true }).waitFor();
+  assert.equal(await pub.getByText("Chưa có điểm", { exact: false }).count(), 2);
+  assert.equal(
+    await pub.getByText("Từ 0 đánh giá", { exact: true }).count(),
+    2,
+  );
+  assert.equal(await pub.getByText("0.0/5", { exact: true }).count(), 0);
+  await capture(pub, "public-reputation-empty-390", 390);
+  await pub.goto(web + `/members/${b}`);
+  await bookFact.getByText("Từ 1 đánh giá", { exact: true }).waitFor();
 
   const adminContext = await browser.newContext({
       viewport: { width: 1440, height: 900 },
@@ -369,7 +451,15 @@ try {
     .getByRole("button", { name: "Ghi nhận quyết định", exact: true })
     .click();
   await record.getByText("Đã ghi nhận quyết định.", { exact: true }).waitFor();
-  assert.equal((await fixture.api(`/members/${b}/reputation`)).reviewCount, 0);
+  const hiddenProfile = await fixture.api(`/members/${b}/reputation`);
+  assert.equal(hiddenProfile.reviewCount, 1);
+  assert.equal(hiddenProfile.partnerRatingCount, 1);
+  assert.equal(hiddenProfile.bookRatingCount, 0);
+  assert.equal(hiddenProfile.bookRating, null);
+  await pub.reload();
+  await bookFact.getByText("Từ 0 đánh giá", { exact: true }).waitFor();
+  await bookFact.getByText("Chưa có điểm", { exact: false }).waitFor();
+  await partnerFact.getByText("Từ 1 đánh giá", { exact: true }).waitFor();
   await record
     .getByRole("combobox", { name: /^Quyết định/ })
     .selectOption("Restore");
@@ -397,8 +487,8 @@ try {
     }),
     np = await nativeContext.newPage();
   np.setDefaultTimeout(15000);
-  p.setDefaultNavigationTimeout(15000);
-  p.on("pageerror", (e) => errors.push(e.message));
+  np.setDefaultNavigationTimeout(15000);
+  np.on("pageerror", (e) => errors.push(e.message));
   await np.goto(rn + "/account");
   await np
     .getByLabel("Email", { exact: true })
@@ -437,13 +527,29 @@ try {
       exact: true,
     })
     .waitFor();
-  await capture(np, "rn-reputation-320", 320);
+  await np.getByText("Từ 2 đánh giá", { exact: true }).waitFor();
+  await np.getByText("Từ 1 đánh giá", { exact: true }).waitFor();
+  for (const width of [390, 320])
+    await capture(np, `rn-reputation-${width}`, width);
+  await np.evaluate(() => {
+    for (const el of document.querySelectorAll('[dir="auto"]')) {
+      const c = getComputedStyle(el);
+      el.style.fontSize = `${parseFloat(c.fontSize) * 1.3}px`;
+      el.style.lineHeight = `${parseFloat(c.lineHeight) * 1.3}px`;
+    }
+  });
+  await capture(np, "rn-reputation-large-320", 320);
+  await np.goto(rn + `/reputation?id=${emptyMember}`);
+  await np.getByText("Chưa có đánh giá công khai", { exact: true }).waitFor();
+  assert.equal(await np.getByText("Chưa có điểm", { exact: false }).count(), 2);
+  assert.equal(await np.getByText("Từ 0 đánh giá", { exact: true }).count(), 2);
+  await capture(np, "rn-reputation-empty-320", 320);
   assert.deepEqual(
     errors.filter((s) => !s.includes("Minified React error #418")),
     [],
   );
   console.log(
-    "PASS review browser: Member web create/lost-ACK/same intent/edit/rejection retention/delete; public reputation; independent Staff hide/restore/aggregate; RN create/profile; desktop/tablet/320px. Synthetic Completed QA, fake storage, native unverified.",
+    "PASS review browser: Member web create/lost-ACK/same intent/edit/rejection retention/delete; public reputation separate score counts/empty/hidden; independent Staff hide/restore/aggregate; RN create/profile; desktop/tablet/320px. Synthetic Completed QA, fake storage, native unverified.",
   );
 } catch (error) {
   for (const context of browser?.contexts() ?? [])

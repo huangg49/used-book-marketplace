@@ -6041,7 +6041,13 @@ export interface components {
             completedTransactions: number;
             verifiedViolations: number;
             reviewCount: number;
+            /** @description Number of valid public partner scores used by partnerRating; equals reviewCount. */
+            partnerRatingCount: number;
+            /** @description Number of non-null book scores used by bookRating. Seller reviews of buyers do not contribute a book score. */
+            bookRatingCount: number;
+            /** @description Arithmetic mean of valid public partner scores, or null when partnerRatingCount is zero. */
             partnerRating: number | null;
+            /** @description Arithmetic mean of valid public ratings of physical books supplied by this member, or null when bookRatingCount is zero. Not a rating of the literary work. */
             bookRating: number | null;
             items: components["schemas"]["ExchangeReviewItem"][];
             nextCursor: string | null;

@@ -49,16 +49,22 @@ export function MemberReputationPage() {
               <dt>Điểm đối tác</dt>
               <dd>
                 {data.partnerRating === null
-                  ? "Chưa có"
+                  ? "Chưa có điểm"
                   : `${data.partnerRating.toFixed(1)}/5`}
+                <span className={styles.sample}>
+                  Từ {data.partnerRatingCount} đánh giá
+                </span>
               </dd>
             </div>
             <div>
-              <dt>Điểm sách nhận</dt>
+              <dt>Chất lượng sách đã cung cấp</dt>
               <dd>
                 {data.bookRating === null
-                  ? "Chưa có"
+                  ? "Chưa có điểm"
                   : `${data.bookRating.toFixed(1)}/5`}
+                <span className={styles.sample}>
+                  Từ {data.bookRatingCount} đánh giá
+                </span>
               </dd>
             </div>
             <div>
@@ -67,9 +73,15 @@ export function MemberReputationPage() {
             </div>
           </dl>
           <p className={styles.intro}>
-            Điểm tính từ {data.reviewCount} đánh giá công khai hợp lệ. Đánh giá
-            chưa công bố, đã xóa hoặc bị ẩn không được tính. Khiếu nại chưa kết
-            luận không phải vi phạm.
+            Mỗi điểm là trung bình cộng từ số đánh giá ghi kèm. Điểm đối tác
+            phản ánh cách giao dịch; điểm sách phản ánh chất lượng sách thành
+            viên đã cung cấp, không chấm nội dung tác phẩm. Số lượt chấm sách có
+            thể ít hơn số lượt chấm đối tác.
+          </p>
+          <p className={styles.intro}>
+            Chỉ tính đánh giá đã công bố, chưa bị ẩn hoặc xóa. Số giao dịch hoàn
+            tất không phải số lượt đánh giá. Khiếu nại chưa kết luận không phải
+            vi phạm.
           </p>
           {data.reviewCount === 0 && <p>Chưa có đánh giá công khai.</p>}
           {result.data?.pages

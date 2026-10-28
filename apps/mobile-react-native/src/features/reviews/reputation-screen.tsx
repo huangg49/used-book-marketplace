@@ -63,23 +63,37 @@ export function ReputationScreen() {
             {data.displayName}
           </AppText>
           <AppText>Giao dịch hoàn tất: {data.completedTransactions}</AppText>
-          <AppText>
-            Điểm đối tác:{" "}
-            {data.partnerRating === null
-              ? "Chưa có"
-              : `${data.partnerRating.toFixed(1)}/5`}
-          </AppText>
-          <AppText>
-            Điểm sách nhận:{" "}
-            {data.bookRating === null
-              ? "Chưa có"
-              : `${data.bookRating.toFixed(1)}/5`}
-          </AppText>
+          <View style={{ gap: space.sm }}>
+            <AppText>
+              Điểm đối tác:{" "}
+              {data.partnerRating === null
+                ? "Chưa có điểm"
+                : `${data.partnerRating.toFixed(1)}/5`}
+            </AppText>
+            <AppText kind="small">
+              Từ {data.partnerRatingCount} đánh giá
+            </AppText>
+          </View>
+          <View style={{ gap: space.sm }}>
+            <AppText>
+              Chất lượng sách đã cung cấp:{" "}
+              {data.bookRating === null
+                ? "Chưa có điểm"
+                : `${data.bookRating.toFixed(1)}/5`}
+            </AppText>
+            <AppText kind="small">Từ {data.bookRatingCount} đánh giá</AppText>
+          </View>
           <AppText>Vi phạm đã xác minh: {data.verifiedViolations}</AppText>
           <AppText kind="small">
-            Điểm tính từ {data.reviewCount} đánh giá công khai hợp lệ. Khiếu nại
-            chưa kết luận không phải vi phạm. Review chưa công bố, bị ẩn hoặc đã
-            xóa không được tính.
+            Mỗi điểm là trung bình cộng từ số đánh giá ghi kèm. Điểm đối tác
+            phản ánh cách giao dịch; điểm sách phản ánh chất lượng sách thành
+            viên đã cung cấp, không chấm nội dung tác phẩm. Số lượt chấm sách có
+            thể ít hơn số lượt chấm đối tác.
+          </AppText>
+          <AppText kind="small">
+            Chỉ tính đánh giá đã công bố, chưa bị ẩn hoặc xóa. Số giao dịch hoàn
+            tất không phải số lượt đánh giá. Khiếu nại chưa kết luận không phải
+            vi phạm.
           </AppText>
           {data.reviewCount === 0 ? (
             <StatePanel wine title="Chưa có đánh giá công khai" />

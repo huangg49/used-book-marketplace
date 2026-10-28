@@ -1,5 +1,27 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## Minh bạch điểm và số mẫu — 28/10/2026
+
+- Owner duyệt bổ sung trình bày uy tín. Nhánh `codex/reputation-rating-transparency`,
+  base `0c9ce87`; commit subject `fix(reputation): show sample counts for each rating`.
+- Contract0.58/191operations/29controllers: thêm partnerRatingCount/bookRatingCount
+  trong cùng aggregation tính mean; reviewCount giữ nguyên. Mẫu sách bỏ các
+  Seller-to-Buyer review không có điểm sách. Không đổi công thức hoặc nghiệp vụ.
+- Web/RN hiện số mẫu cạnh từng điểm, nhãn “Chất lượng sách đã cung cấp”, giải
+  thích điểm sách/đối tác/trung bình và count0/mean null. Cập nhật ADR0052 về
+  vận hành cần nhóm chốt; điểm thấp không tự là vi phạm. Chưa có appeal/chống
+  thông đồng mới. [Evidence/ảnh0.58](../features/TRANSACTION_REVIEWS_REPORT.md).
+- PASS API225 (không4ca GHN), review HTTP/Mongo9 với assertions mẫu khác nhau,
+  hidden/deleted/pending/restore/pagination; session29, web251/RN161; contract/
+  routes, API/web/RN lint/typecheck, Admin typecheck, API/web build/RN export.
+  Browser QA web1440/768/390/320, RN web390/320/chữ130%, empty và số mẫu2/1 PASS.
+  Docs/diff check PASS. Không chạy lại gate schema/import/failover/settlement
+  không bị đổi; không suy browser là native/human PASS. READINESS giữ nguyên.
+- Không migration mới, không đổi GHN/carrier/Driver hoặc DB chính. QA đã dừng;
+  Mongo chính vẫn dừng. Chỉ commit local, chưa push/PR/merge/deploy. Khi tích
+  hợp nâng API0.58 trước hoặc cùng client mới và review cả chuỗi local phụ thuộc.
+
+
 ## Review hai chiều và uy tín — 28/10/2026
 
 - Owner duyệt gói thay thế Forum. Nhánh `codex/transaction-reviews-reputation`,

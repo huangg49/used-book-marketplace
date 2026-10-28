@@ -145,12 +145,20 @@ export class ReviewQueries {
           ...reviewPublicationPipeline(now),
         ];
       const [totals] = await tx.c.transaction_reviews
-        .aggregate<{ count: number; partner: number; book: number | null }>([
+        .aggregate<{
+          count: number;
+          bookCount: number;
+          partner: number;
+          book: number | null;
+        }>([
           ...pipeline,
           {
             $group: {
               _id: null,
               count: { $sum: 1 },
+              bookCount: {
+                $sum: { $cond: [{ $ne: ['$bookRating', null] }, 1, 0] },
+              },
               partner: { $avg: '$partnerRating' },
               book: { $avg: '$bookRating' },
             },
@@ -197,6 +205,8 @@ export class ReviewQueries {
           userId: id,
         }),
         reviewCount: totals?.count ?? 0,
+        partnerRatingCount: totals?.count ?? 0,
+        bookRatingCount: totals?.bookCount ?? 0,
         partnerRating: totals?.partner ?? null,
         bookRating: totals?.book ?? null,
         items: page.ids.flatMap((id) => {

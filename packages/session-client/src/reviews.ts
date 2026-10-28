@@ -77,6 +77,8 @@ export const memberReputationSchema = z.object({
   completedTransactions: z.number().int(),
   verifiedViolations: z.number().int(),
   reviewCount: z.number().int(),
+  partnerRatingCount: z.number().int().nonnegative(),
+  bookRatingCount: z.number().int().nonnegative(),
   partnerRating: z.number().nullable(),
   bookRating: z.number().nullable(),
   items: z.array(transactionReviewSchema),

@@ -162,9 +162,12 @@ describe('Transaction reviews lifecycle — real Mongo HTTP', () => {
     await post(url, input, outsider).expect(404);
     await post(url, input, b).expect(200);
     expect((await get(url, a).expect(200)).body.partnerReview).toBeNull();
-    expect(
-      (await get(`/members/${a.id}/reputation`).expect(200)).body.reviewCount,
-    ).toBe(0);
+    const blind = (await get(`/members/${a.id}/reputation`).expect(200)).body;
+    expect(blind.reviewCount).toBe(0);
+    expect(blind.partnerRatingCount).toBe(0);
+    expect(blind.bookRatingCount).toBe(0);
+    expect(blind.partnerRating).toBeNull();
+    expect(blind.bookRating).toBeNull();
     const pending = (
       await get('/operations/transaction-reviews?limit=50', staff).expect(200)
     ).body.items;
@@ -214,6 +217,13 @@ describe('Transaction reviews lifecycle — real Mongo HTTP', () => {
       3,
     );
     expect((await get(url, a)).body.canReview).toBe(false);
+    await post(url, input, b).expect(200);
+    await age(id);
+    const deleted = (await get(`/members/${b.id}/reputation`).expect(200)).body;
+    expect(deleted.partnerRatingCount).toBe(0);
+    expect(deleted.bookRatingCount).toBe(0);
+    expect(deleted.partnerRating).toBeNull();
+    expect(deleted.bookRating).toBeNull();
     await db.setStatus(a.id, 'RESTRICTED');
     await post(`/transaction-reviews/${r.id}/delete`, body, a, key).expect(403);
   });
@@ -231,6 +241,8 @@ describe('Transaction reviews lifecycle — real Mongo HTTP', () => {
     expect(partner.id).toBe(ra.id);
     const profile = (await get(`/members/${b.id}/reputation`).expect(200)).body;
     expect(profile.reviewCount).toBe(1);
+    expect(profile.partnerRatingCount).toBe(1);
+    expect(profile.bookRatingCount).toBe(1);
     expect(profile.partnerRating).toBe(5);
     expect(profile.completedTransactions).toBe(1);
     expect(profile.verifiedViolations).toBe(0);
@@ -319,7 +331,10 @@ describe('Transaction reviews lifecycle — real Mongo HTTP', () => {
     ).expect(200);
     const hidden = (await get(`/members/${b.id}/reputation`)).body;
     expect(hidden.reviewCount).toBe(0);
+    expect(hidden.partnerRatingCount).toBe(0);
+    expect(hidden.bookRatingCount).toBe(0);
     expect(hidden.partnerRating).toBeNull();
+    expect(hidden.bookRating).toBeNull();
     const operations = (
       await get('/operations/transaction-reviews?limit=50', staff)
     ).body.items.find((r: any) => r.review.id === ra.id);
@@ -567,6 +582,63 @@ describe('Transaction reviews lifecycle — real Mongo HTTP', () => {
     const profile = (await get(`/members/${a.id}/reputation`).expect(200)).body;
     expect(profile.completedTransactions).toBe(2);
     expect(profile.reviewCount).toBe(2);
+    expect(profile.partnerRatingCount).toBe(2);
+    expect(profile.bookRatingCount).toBe(0);
     expect(profile.bookRating).toBeNull();
+    // Seller-to-buyer reviews have no book score. One Exchange review adds a
+    // third partner score but only the first book score, even on a 1-item page.
+    const ex = await exchange(),
+      url = `/transactions/Exchange/${ex}/reviews`;
+    await post(url, input, a).expect(200);
+    const bookReview = (
+      await post(url, { ...input, bookRating: 2, partnerRating: 2 }, b).expect(
+        200,
+      )
+    ).body;
+    await age(ex);
+    const mixed = (await get(`/members/${a.id}/reputation?limit=1`).expect(200))
+      .body;
+    expect(mixed.items).toHaveLength(1);
+    expect(mixed.reviewCount).toBe(3);
+    expect(mixed.partnerRatingCount).toBe(3);
+    expect(mixed.bookRatingCount).toBe(1);
+    expect(mixed.partnerRating).toBeCloseTo(10 / 3);
+    expect(mixed.bookRating).toBe(2);
+    const supplied = (await get(`/members/${b.id}/reputation`).expect(200))
+      .body;
+    expect(supplied.bookRatingCount).toBe(3);
+    expect(supplied.bookRating).toBe(4);
+    const moderator = await user(['STAFF']);
+    const hidden = (
+      await post(
+        `/operations/transaction-reviews/${bookReview.id}/decision`,
+        {
+          expectedVersion: bookReview.version,
+          decision: 'Hide',
+          reason: 'QA kiểm tra tập mẫu điểm sách',
+        },
+        moderator,
+      ).expect(200)
+    ).body;
+    const withoutBook = (await get(`/members/${a.id}/reputation`).expect(200))
+      .body;
+    expect(withoutBook.partnerRatingCount).toBe(2);
+    expect(withoutBook.partnerRating).toBe(4);
+    expect(withoutBook.bookRatingCount).toBe(0);
+    expect(withoutBook.bookRating).toBeNull();
+    await post(
+      `/operations/transaction-reviews/${bookReview.id}/decision`,
+      {
+        expectedVersion: hidden.version,
+        decision: 'Restore',
+        reason: 'QA khôi phục tập mẫu',
+      },
+      moderator,
+    ).expect(200);
+    const restored = (await get(`/members/${a.id}/reputation`).expect(200))
+      .body;
+    expect(restored.partnerRatingCount).toBe(3);
+    expect(restored.bookRatingCount).toBe(1);
+    expect(restored.bookRating).toBe(2);
   });
 });

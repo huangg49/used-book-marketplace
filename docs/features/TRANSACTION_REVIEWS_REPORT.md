@@ -1,11 +1,51 @@
 # Đánh giá giao dịch và uy tín — 28/10/2026
 
-Gói owner duyệt thay thế Forum, triển khai local trên
+Gói nền0.57 owner duyệt thay thế Forum, commit `0c9ce87`, triển khai local trên
 `codex/transaction-reviews-reputation`, base `4f09c17`. Commit subject:
 `feat(reviews): complete transaction reviews and member reputation`.
 Theo [ADR0052](../adr/0052-transaction-reviews-and-reputation.md),
 FR-R01–R05/FR-A08, AC-42–AC-43. Đây là evidence kỹ thuật, chưa là ký nghiệm thu
 người thật hoặc bản đã tích hợp lên main. Flutter vẫn scaffold.
+
+## Bổ sung minh bạch điểm0.58 — 28/10/2026
+
+Nhánh `codex/reputation-rating-transparency`, base `0c9ce87`; commit subject
+`fix(reputation): show sample counts for each rating`. Owner duyệt hiển thị số
+mẫu riêng, làm rõ nhãn/công thức/empty; giữ nghiệp vụ và các gate hiện tại.
+
+- Contract0.58, vẫn191operations/29controllers. Thêm `partnerRatingCount` và
+  `bookRatingCount`; aggregate tính số mẫu ngay cùng `$group` đang tính mean,
+  cùng predicate public/hidden/deleted và snapshot. Không thêm query đếm rời,
+  counter tích lũy, migration hoặc thay trọng số. `reviewCount` giữ nguyên.
+- Web/RN hiển thị từng số mẫu sát điểm, “Chất lượng sách đã cung cấp”, giải
+  thích trung bình cộng và phân biệt chất lượng bản sách với nội dung tác phẩm.
+  Count0/mean null hiển thị “Chưa có điểm”, không biến thành0/5. Điểm đối tác và
+  điểm sách có thể có mẫu khác nhau; số giao dịch hoàn tất không thay số mẫu.
+- PASS: API unit225 (vẫn loại riêng4 ca carrier-adapter gọi GHN), review HTTP/
+  Mongo9 với assertions mới cho3mẫu đối tác/1mẫu sách, seller-only null, pending,
+  tombstone, hide/restore và limit1 vẫn trả tổng mẫu toàn tập. Session29,
+  User-web251/RN161 unit; API/web/RN lint/typecheck, Admin typecheck, API/web build,
+  RN web export và contract/generated/routes PASS. API/web còn warnings cũ/chunk.
+- Browser real API/Mongo QA + storage fake PASS: số mẫu2/1 cạnh từng điểm,
+  hồ sơ trống0/null trên web/RN, hide làm mẫu sách về0 mà vẫn giữ mẫu đối tác,
+  các regression gửi/sửa/xóa/replay/history trước đó. Web1440/768/390/320,
+  RN web390/320 và chữ130% đã xem; detector một lần0findings. Browser không
+  là native/human acceptance. Flutter không đổi; không chạm GHN/DB chính.
+- Không chạy lại Mongo schema/import/failover hoặc54ca Exchange/obligations
+  vì không đổi validator/migration/auth/command/settlement. Bằng chứng gói nền
+  bên dưới được giữ đúng source, không cộng thành kết quả mới của các gate đó.
+- Quy tắc vận hành cần nhóm chốt ở [ADR0052](../adr/0052-transaction-reviews-and-reputation.md#quy-tắc-vận-hành-cần-chốt-trước-dùng-thực-tế).
+  Điểm thấp tự nó không là vi phạm; không tuyên bố đã có appeal/chống thông đồng.
+  Khi tích hợp cần API0.58 trước hoặc cùng client mới; không fallback mẫu sách
+  sang tổng reviewCount. Không có migration bổ sung trong gói này.
+
+Ảnh QA0.58: [desktop](../ui/evidence/transaction-reviews/reputation-desktop.png),
+[web390](../ui/evidence/transaction-reviews/public-profile.png),
+[empty](../ui/evidence/transaction-reviews/reputation-empty.png),
+[RN web chữ130%](../ui/evidence/transaction-reviews/reputation-rn-large-320.png).
+QA đã dừng sau kiểm, Mongo chính vẫn dừng; chỉ commit local, chưa push/PR/merge.
+
+## Gói nền0.57 tại0c9ce87
 
 ## Phần đã nối
 

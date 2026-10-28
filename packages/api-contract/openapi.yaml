@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.57.0
+  version: 0.58.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -18263,6 +18263,8 @@ components:
         - completedTransactions
         - verifiedViolations
         - reviewCount
+        - partnerRatingCount
+        - bookRatingCount
         - partnerRating
         - bookRating
         - items
@@ -18283,11 +18285,21 @@ components:
         reviewCount:
           type: integer
           minimum: 0
+        partnerRatingCount:
+          type: integer
+          minimum: 0
+          description: Number of valid public partner scores used by partnerRating; equals reviewCount.
+        bookRatingCount:
+          type: integer
+          minimum: 0
+          description: Number of non-null book scores used by bookRating. Seller reviews of buyers do not contribute a book score.
         partnerRating:
+          description: Arithmetic mean of valid public partner scores, or null when partnerRatingCount is zero.
           anyOf:
             - type: number
             - type: "null"
         bookRating:
+          description: Arithmetic mean of valid public ratings of physical books supplied by this member, or null when bookRatingCount is zero. Not a rating of the literary work.
           anyOf:
             - type: number
             - type: "null"

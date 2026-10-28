@@ -61,6 +61,34 @@ không mở completion/settlement hoặc thay GHN/carrier/Driver.
   Không suy vi phạm từ claim đang mở; không tạo badge/trust score tổng hợp.
   Chưa có điểm trả null, hiển thị “Chưa có”, không biến thành0/5.
 
+## Bổ sung0.58: minh bạch số mẫu — 28/10/2026
+
+Owner duyệt hoàn thiện cách trình bày điểm sau gói0.57. Reputation trả thêm
+`partnerRatingCount` và `bookRatingCount` từ cùng tập public hợp lệ đang tính
+trung bình. `reviewCount` giữ tương thích và bằng `partnerRatingCount`;
+`bookRatingCount` chỉ đếm review có bookRating, không dùng tổng chung hoặc số
+item trên trang. Sửa một review/revision không tạo thêm mẫu; ẩn/xóa loại khỏi
+cả trung bình và mẫu tương ứng. Không có mẫu thì count0, mean null.
+
+Web/RN ghi số mẫu cạnh từng điểm; nhãn public là “Chất lượng sách đã cung cấp”.
+Điểm này phản ánh bản sách thành viên cung cấp trong giao dịch, không là chấm
+nội dung tác phẩm hoặc số cuốn. Mỗi review có trọng số ngang nhau, theo giao
+dịch; không đổi công thức, window, permission, migration hoặc settlement.
+Client mới cần API0.58 trước hoặc cùng lúc triển khai; không suy số mẫu sách từ
+reviewCount nếu gặp API cũ.
+
+## Quy tắc vận hành cần chốt trước dùng thực tế
+
+FR-R05 cho ẩn nội dung vi phạm có lý do. Điểm thấp hoặc nhận xét bất lợi tự nó
+không chứng minh vi phạm. Giữ ý kiến đánh giá hợp lệ, kể cả khi người được đánh
+giá không đồng ý; việc có claim chưa kết luận cũng không tự hạ chỉ số vi phạm.
+
+Nhóm cần thống nhất tiêu chí nội dung vi phạm, người tiếp nhận phản ánh, căn cứ
+và cách thông báo quyết định khi có phản đối. Công cụ hiện có là hide/restore,
+reply chờ duyệt, evidence hold và revision/audit; chưa có report/appeal workflow
+riêng cho review hoặc tự phát hiện thông đồng nhiều tài khoản. Đây là các phần
+vận hành chưa được nghiệm thu, không được đánh dấu xong từ test của số mẫu.
+
 ## Kiểm chứng và giới hạn
 
 Các ca cần có: actor/participant/role/revoke trước replay, sai key/body,

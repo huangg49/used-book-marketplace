@@ -84,6 +84,11 @@ khai là tombstone, evidence-held không được sửa/xóa. Một reply của 
 duyệt; pending/hidden reply không lộ cho tác giả review/Guest. Hàng đợi và lịch
 sử đều phân trang, cursor ký và ràng buộc actor/resource. Điểm tổng chỉ từ
 review public hợp lệ, không cộng revision; vi phạm chỉ từ kết luận đã xác minh.
+Contract0.58 trả `partnerRatingCount`/`bookRatingCount` cùng tập và điều kiện
+với trung bình; tổng reviewCount bằng mẫu đối tác, không thay mẫu điểm sách.
+Book score là chất lượng sách thành viên đã cung cấp; không có mẫu là null/0
+(mean/count), không hiển thị0/5. Cả trung bình và số mẫu tính trên toàn bộ tập
+hợp lệ, không phụ thuộc số item của trang hiện tại.
 Chi tiết implementation/evidence ở [báo cáo](../features/TRANSACTION_REVIEWS_REPORT.md).
 Không thay READINESS, không cấp ExistingObligation cho review, không thay GHN.
 
