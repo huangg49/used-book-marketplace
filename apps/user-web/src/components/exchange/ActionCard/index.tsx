@@ -67,7 +67,7 @@ const labels: Record<Action, string> = {
   sent: "Tạo đơn vận chuyển",
   received: "Xác nhận đã nhận sách",
   retry: "Thử lại thao tác trước",
-  complete: "Đã nhận hàng",
+  complete: "✨ Xác nhận hài lòng & Nghiệm thu sách",
   dispute: "Báo sự cố / Khiếu nại",
 };
 
@@ -162,14 +162,14 @@ export function ActionCard(props: Props) {
       : null;
     if (detail.viewerCompletedAt) {
       instructions =
-        `Bạn đã xác nhận đã nhận hàng. Đang chờ đối tác xác nhận nhận hàng hoặc hết 48 giờ kiểm tra để hoàn tất giao dịch.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
+        `Bạn đã xác nhận nghiệm thu sách đạt yêu cầu. Đang chờ đối tác xác nhận hoặc hết 48 giờ kiểm tra để hoàn tất giao dịch.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
     } else if (detail.partnerCompletedAt) {
       instructions =
-        `Đối tác đã bấm đã nhận hàng! Bạn có thể kiểm tra sách kỹ lưỡng. Nếu hài lòng, hãy bấm 'Đã nhận hàng' để tất toán sớm và nhận lại cọc ngay.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
+        `Đối tác đã bấm xác nhận nghiệm thu sách! Bạn có thể kiểm tra sách kỹ lưỡng. Nếu hoàn toàn hài lòng, hãy bấm 'Xác nhận hài lòng & Nghiệm thu sách' để tất toán sớm và giải phóng cọc ngay.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
       actions.push("complete");
     } else {
       instructions =
-        `Hai bên đều đã nhận được sách! Giao dịch đang trong khoảng đệm kiểm tra 48 giờ.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""} Bạn có thể kiểm tra sách kỹ lưỡng. Nếu hài lòng, hãy bấm 'Đã nhận hàng' để tất toán sớm và giải phóng cọc ngay.`;
+        `Hai bên đều đã nhận được sách! Giao dịch đang trong khoảng đệm kiểm tra 48 giờ.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""} Bạn có thể kiểm tra sách kỹ lưỡng. Nếu hoàn toàn hài lòng, hãy bấm 'Xác nhận hài lòng & Nghiệm thu sách' để tất toán sớm và giải phóng cọc ngay.`;
       actions.push("complete");
     }
     actions.push("dispute");
@@ -469,7 +469,13 @@ export function ActionCard(props: Props) {
         isOpen={!!action}
         onClose={() => setAction(undefined)}
         title={action ? labels[action] : ""}
-        confirmText={action === "dispute" ? "Gửi khiếu nại" : (action ? labels[action] : "Xác nhận")}
+        confirmText={
+          action === "dispute"
+            ? "Gửi khiếu nại"
+            : action === "complete"
+              ? "Xác nhận nghiệm thu"
+              : action ? labels[action] : "Xác nhận"
+        }
         isBusy={busy}
         isDanger={action === "cancel" || action === "reject" || action === "dispute"}
         onConfirm={() => void confirm()}
@@ -482,7 +488,7 @@ export function ActionCard(props: Props) {
               : action === "retry"
                 ? "Gửi lại đúng mã và nội dung của thao tác trước để xác nhận kết quả."
                 : action === "complete"
-                  ? "Bạn xác nhận sách nhận được đúng tình trạng thỏa thuận và hài lòng với chất lượng? Khi cả hai bên cùng xác nhận đã nhận hàng (hoặc hết hạn 48h kiểm tra), giao dịch sẽ hoàn tất và tiền cọc bảo chứng sẽ được giải phóng ngay."
+                  ? "Bạn xác nhận sách nhận được đúng tình trạng thỏa thuận và hoàn toàn hài lòng với chất lượng? Khi cả hai bên cùng xác nhận nghiệm thu (hoặc hết hạn 48h kiểm tra), giao dịch sẽ hoàn tất và tiền cọc bảo chứng sẽ được giải phóng ngay."
                   : action === "dispute"
                     ? "Nếu sách có vấn đề nghiêm trọng (hư hỏng nặng, rách nát, sách giả, không đúng cam kết hoặc đối tác không gửi hàng), bạn có thể gửi khiếu nại để tạm dừng tất toán tự động và chuyển sang trạng thái chờ giải quyết để bảo vệ quyền lợi."
                     : "Kiểm tra thông tin trước khi xác nhận thao tác này."}

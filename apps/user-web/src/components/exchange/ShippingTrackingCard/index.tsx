@@ -575,7 +575,7 @@ export function ShippingTrackingCard({ detail, onRefresh }: ShippingTrackingCard
                 <div className={styles.rulesCalloutText}>
                     <h5 className={styles.rulesTitle}>Bảo chứng an toàn giao dịch Lật Lại (POL-14)</h5>
                     <p className={styles.rulesDesc}>
-                        Toàn bộ số tiền đặt cọc <strong>({detail.viewerFundingAmount ? `${detail.viewerFundingAmount.toLocaleString('vi-VN')} đ` : 'cọc bảo chứng'})</strong> và tiền bù chênh lệch đang được hệ thống giữ an toàn trong quỹ ký quỹ (escrow). Sau khi cả hai bên xác nhận nhận sách, hệ thống sẽ mở khoảng đệm kiểm tra hàng <strong>48 giờ</strong>. Bạn có thể bấm "Đã nhận hàng" để hoàn tất sớm, hoặc hệ thống sẽ tự động hoàn tất và trả lại tiền cọc khi hết hạn kiểm tra.
+                        Toàn bộ số tiền đặt cọc <strong>({detail.viewerFundingAmount ? `${detail.viewerFundingAmount.toLocaleString('vi-VN')} đ` : 'cọc bảo chứng'})</strong> và tiền bù chênh lệch đang được hệ thống giữ an toàn trong quỹ ký quỹ (escrow). Sau khi cả hai bên xác nhận nhận sách, hệ thống sẽ mở khoảng đệm kiểm tra hàng <strong>48 giờ</strong>. Bạn có thể bấm "Xác nhận hài lòng & Nghiệm thu sách" để hoàn tất sớm, hoặc hệ thống sẽ tự động hoàn tất và trả lại tiền cọc khi hết hạn kiểm tra.
                     </p>
                 </div>
             </div>
