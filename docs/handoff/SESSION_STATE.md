@@ -1,4 +1,42 @@
-# Điểm lưu hiện tại — 28/10/2026
+# Điểm lưu hiện tại — 29/10/2026
+
+## Kiểm chứng Android native và sửa lỗi — 28–29/10/2026
+
+- Owner duyệt bước tiếp; nhánh `codex/native-journey-verification`, base990a9a2;
+  commit subject `fix(native): stabilize startup and verify member journeys`.
+  [Môi trường, finding và ma trận native](../ui/NATIVE_JOURNEYS_2026_10_28.md).
+- Fetch có main mới `aed674f` với Exchange RN/GHN của nhóm. Giữ nguyên chuỗi
+  local, chưa tích hợp; kết quả gói kiểm RN990a9a2, không là kiểm main mới.
+- Emulator Android17/API37 x86_64, QA Mongo riêng; không thay GHN/carrier/Driver,
+  contract0.59/API/migration hoặc mở gate delivery/settlement.
+- Build/install đầu PASS nhưng có cold-launch SIGSEGV ở MountingCoordinator.
+  Đã backport upstream screens PR4413 qua pnpm patch4file, giữ version4.26.2;
+  rebuild/cài APK sau vá PASS;20/20coldstarts bằng `test:native:startup` có hash
+  APK/màn thật và chặn mapping/device ngoài QA. Không chứng minh hết race/native.
+- Sửa Account route khi restore unavailable phải có retry, không rơi vào login;
+  NavigationBar reselect từ màn con về root. Native đã thử guest search/detail/
+  gallery/Back, login return-book/save, Guide, restore offline/retry cùng buyer,
+  logout/reopen/đổi seller, work→exact Order→accept mất ACK→cùng key/body retry.
+  Mongo có1accept receipt/1payment vàPreparing; keyboard/leave guard giữ form,
+  account/guide OSfont1.3. Có ảnh/JSON đã chọn trong báo cáo, không credential.
+- Tìm/sửa fixture pilot7bài vượt quota5/owner: chia owner QA, không sửa quota,
+  seed catalog/media/listing/review vẫn qua API. Dataset mới7bài/2owner/max5 đã
+  READY; journal lỗi cũ giữ local. Unit reset3PASS; API paging51bài/11owner/max5,
+  50+1 PASS sau resume cùng journal qua một EPERM tạm thời, không là native PASS.
+- Dataset đơn QA thật có AwaitingPayment/PendingSellerConfirmation/Preparing,
+  ledger reconciliation PASS; không shipment. RN161/lint/typecheck/export PASS;
+  runner/journal/helper15PASS; browser MemberRNweb+work-inbox2suitePASS, tổng
+  PARTIAL đúng vì6suite khácNOT_RUN. Docs/diff checks theo báo cáo.
+- TalkBack service/focus quan sát được một phần; audio/traversal đầy đủ, human,
+  ARM/iOS/native toàn bộ Exchange/review vẫn NOT_RUN, READINESS giữPARTIAL/OPEN.
+  Emulator gặp host-renderer context errors lúc thửnight; không nhận dark-mode
+  PASS. Đã restart cùngAVD softwareGPU chỉ để restore font/night/IME/accessibility,
+  bỏ reverse và tắt đúng emulator/QA/Metro/API/proxy/Gradle của gói. Mongo chính
+  vẫn dừng, không reset/seed/migrate. Chỉ commit local; chưa push/PR/merge/deploy.
+- Remote00:26VN29/10: PRmở0, RN CI mainaed674f FAILlint ở gói Exchange mới
+  (TextInput import/màu/quote JSX);4workflow main khác vừa đọc success. Local
+  PASS không sửa CI main. Bước tiếp review/tích hợp chuỗi với main mới và registry
+  migration có chủ đích, giữ GHN ngoài quyền gói; human/TalkBack đầy đủ còn mở.
 
 ## Kiểm chứng hành trình và sửa lỗi tìm được — 28/10/2026
 

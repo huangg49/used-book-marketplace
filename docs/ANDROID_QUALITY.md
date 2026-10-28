@@ -16,6 +16,20 @@ Những kết quả lịch sử bên dưới giữ nguyên phạm vi/ngày; chư
 React Native là client ưu tiên. Export web, APK debug và kiểm thử trên điện thoại
 là ba bằng chứng khác nhau; không dùng kết quả này thay cho kết quả kia.
 
+28/10/2026: source local có patch pnpm cho screens4.26.2 backport
+[upstream4413](https://github.com/software-mansion/react-native-screens/pull/4413)
+để xử lý race mounting delegate đã gặp khi cold launch. Sau `pnpm install
+--frozen-lockfile` phải rebuild/cài APK; Metro/hot reload không cập nhật C++.
+Không tự nâng SDK hoặc bỏ patch nếu chưa đối chiếu version chứa fix và native
+checks. [Nguồn, ma trận native và giới hạn](ui/NATIVE_JOURNEYS_2026_10_28.md).
+
+Hồi quy cold launch trên emulator QA đã có APK/Metro/API sẵn và reverse đúng:
+`pnpm test:native:startup <tên-run> --device emulator-5554 --count 20`.
+Lệnh force-stop app debug mỗi lượt, xác minh APK hash và màn Home native;
+refuse thiết bị thật/mapping API chính. Đóng popup Expo dev-menu lần đầu trước
+khi chạy. JSON `.tmp/native-startup/result.json` không lưu XML/credential;
+PASS startup không thay các ca native khác hoặc TalkBack/human/ARM/iOS.
+
 Vòng handoff hiện hành dùng [21 ca native và phiếu kết quả](handoff/NATIVE_ACCEPTANCE.md).
 Tài liệu đó phân biệt mất kết nối API với debug APK chưa nạp được JS khi Metro
 offline; không coi checklist được viết sẵn là đã chạy trên thiết bị.

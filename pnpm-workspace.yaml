@@ -18,3 +18,6 @@ allowBuilds:
   msgpackr-extract: true
   sharp: true
   unrs-resolver: true
+
+patchedDependencies:
+  react-native-screens@4.26.2: patches/react-native-screens@4.26.2.patch

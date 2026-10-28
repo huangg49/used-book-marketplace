@@ -99,7 +99,9 @@ export function NavigationBar<Key extends string>({
             onFocus={() => setFocused(destination.key)}
             onBlur={() => setFocused(undefined)}
             onPress={() => {
-              if (!selected) onSelect(destination.key);
+              // A selected section may contain a child screen (e.g. an Order
+              // under Account). Reselect still lets its owner return to root.
+              onSelect(destination.key);
             }}
             style={({ pressed }) => ({
               flex: 1,

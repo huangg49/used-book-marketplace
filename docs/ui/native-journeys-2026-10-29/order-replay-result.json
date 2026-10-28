@@ -1,0 +1,10 @@
+{
+  "result": "PASS",
+  "state": "Preparing",
+  "acceptReceipts": 1,
+  "paymentJournals": 1,
+  "traceCount": 2,
+  "sameKeyAndBody": true,
+  "firstResponseLostAfter200": true,
+  "native": "Seller WorkInbox -> exact Order -> accept -> lost response -> retry"
+}

@@ -481,6 +481,10 @@ try {
     (await api(`/me/orders/${orders[1]}`, seller.accessToken)).state,
     "SettlementPending",
   );
+  // A section highlighted on a child screen must still navigate to its root.
+  await n.getByRole("tab", { name: "Tài khoản", exact: true }).click();
+  await n.getByRole("heading", { name: "Việc của tôi", exact: true }).waitFor();
+  await button(n, new RegExp(orders[1].slice(0, 8))).click();
   await button(n, "Về danh sách đơn trực tiếp").click();
   await button(n, "Tải thêm đơn").click();
   await n.getByText(/Đã tải 40 đơn/).waitFor();
