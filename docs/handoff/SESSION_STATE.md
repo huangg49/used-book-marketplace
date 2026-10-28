@@ -1,5 +1,22 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## Khắc phục tràn viền hộp thoại tạo đơn vận chuyển trên Web (ShipmentDialog) — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Nguyên nhân**:
+  - Hộp thoại "Tạo đơn vận chuyển" (`ShipmentDialog`) khi xuất hiện thêm banner thành công của GHN và ô textarea ghi chú thì tổng chiều cao tự nhiên vượt quá chiều cao viewport của màn hình laptop (~720-760px).
+  - Khung `.modal` thiếu giới hạn `max-height: calc(100vh - 48px)` và cấu trúc `display: flex; flex-direction: column`, đồng thời form không có vùng cuộn độc lập khiến hai nút hành động đáy `[Hủy]` và `[Tạo đơn vận chuyển]` bị đẩy tràn xuống dưới mép màn hình.
+- **Giải pháp tối ưu**:
+  - Giới hạn `.modal`: `max-height: calc(100vh - 48px)`, `display: flex`, `flex-direction: column`.
+  - Tách vùng nội dung form thành `.body` cuộn riêng biệt: `overflow-y: auto`, `flex: 1`, tích hợp thanh cuộn tinh tế tiệp màu phong cách giấy ấm Lật Lại.
+  - Cố định thanh tiêu đề (`.header`) và thanh hành động đáy (`.actions`) luôn luôn hiển thị 100% trên màn hình dù người dùng nhập ghi chú dài bao nhiêu.
+  - Bổ sung nút đóng `[X]` tiện lợi ở góc phải tiêu đề modal.
+  - Giới hạn `min-height: 52px; max-height: 120px` cho `.textarea` ghi chú.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web build`: PASS (Vite build hoàn tất không lỗi).
+  - Git commit: `9a2d769`.
+
 ## Tích hợp thêm & lưu địa chỉ nhận mới trực tiếp trong hộp thoại đồng ý đổi sách (AcceptModal) — 28/10/2026
 
 - Nhánh `feature/exchange-rn-completion`.
