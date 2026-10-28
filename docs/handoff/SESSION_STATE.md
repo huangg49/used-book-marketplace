@@ -1,5 +1,21 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## Đồng bộ nhãn và thông báo Nghiệm thu sách (Inspecting) trên Web thống nhất với Mobile — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Vấn đề đồng bộ**:
+  - Ở giai đoạn đồng kiểm 48h (`INSPECTING`), hai bên đã nhận được sách và đang kiểm tra chất lượng thực tế.
+  - Trên Web trước đó, nút hành động chính ghi là `"Đã nhận hàng"` (dễ gây nhầm lẫn vì người dùng đã bấm nhận hàng từ bước trước đó).
+- **Cải tiến đồng bộ**:
+  - Cập nhật nhãn nút chính trong `ActionCard`: đổi từ `complete: "Đã nhận hàng"` thành `complete: "✨ Xác nhận hài lòng & Nghiệm thu sách"`.
+  - Cập nhật câu hướng dẫn ở trạng thái `INSPECTING` và mô tả chính sách bảo chứng POL-14 trong `ShippingTrackingCard`: hướng dẫn người dùng bấm *"Xác nhận hài lòng & Nghiệm thu sách"* để tất toán sớm và giải phóng tiền cọc.
+  - Tiêu đề và nút xác nhận trong `ConfirmDialog` đổi thành *"Xác nhận nghiệm thu"*.
+  - Tinh chỉnh CSS `.btnPrimary, .btnSecondary, .btnDanger` (`white-space: normal; line-height: 1.35;`) để nút xuống dòng linh hoạt và cân đối trên mọi độ phân giải.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web build`: PASS (Vite built in 7.00s).
+  - Git commit: `bce40cb`.
+
 ## Đồng bộ tính năng Tích hợp GHN Open API tự động tạo mã vận đơn trên Mobile (ShipModal) — 28/10/2026
 
 - Nhánh `feature/exchange-rn-completion`.
