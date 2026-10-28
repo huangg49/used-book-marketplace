@@ -4,6 +4,7 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
 import { chromium } from "playwright";
+import { expect as expectBrowser } from "playwright/test";
 import { createTestApi, root, origin, base, password } from "./test-api.mjs";
 const require = createRequire(import.meta.url);
 const artifacts = path.join(root, "apps/admin-web/test-results");
@@ -75,8 +76,9 @@ try {
   };
   const click = (p, name) =>
     p.getByRole("button", { name, exact: true }).click();
-  const focused = async (locator) =>
-    assert(await locator.evaluate((node) => node === document.activeElement), `Expected focus: ${locator}`);
+  // Modal effects/native focus restoration may finish after visibility on CI.
+  // Keep the actual focus requirement with a bounded, retrying DOM assertion.
+  const focused = (locator) => expectBrowser(locator).toBeFocused({ timeout: 2000 });
   const shot = async (p, name) => {
     await p.evaluate(() => document.fonts.ready);
     assert.equal(
