@@ -1,5 +1,31 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## Kết nối máy chủ Android Emulator & Kiểm thử trực tiếp luồng trao đổi trên thiết bị thực tế — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Khắc phục kết nối mạng Android Emulator đến Backend API (`localhost:3000`)**:
+  - Thiết lập chuyển tiếp cổng qua bridge: `adb reverse tcp:3000 tcp:3000`.
+  - Cấu hình chuẩn trong `apps/mobile-react-native/.env`: `EXPO_PUBLIC_API_BASE_URL_ANDROID=http://10.0.2.2:3000/api/v1` (hỗ trợ router ảo Android).
+  - Khắc phục lỗi `LOGIN_RATE_LIMIT_DISABLED=true` trong `apps/api/.env` và dọn dẹp bộ đếm `login_attempts` trong MongoDB để tránh nghẽn đăng nhập khi test cục bộ.
+- **Tối ưu đăng nhập & trải nghiệm nhà phát triển**:
+  - Bổ sung cụm phím tắt đăng nhập nhanh 1 chạm khi ở chế độ `__DEV__` trên màn hình đăng nhập: `[Nguyễn Đại]` (tài khoản đã có lịch sử trao đổi), `[Nguyễn Tú]` (đối tác trao đổi), `[Member Seed]`.
+- **Khắc phục hiển thị danh sách sách trong phiếu đề nghị (`ExchangeProposalCard`)**:
+  - Bổ sung cơ chế fallback nhân bản số lượng sách dựa trên `initiatorListingIds` và `recipientListingId` khi các bài đăng đã hoàn tất giao dịch (`trade: Exchanged` không còn xuất hiện trên public catalog API), tránh hiển thị vô tận "Đang tải thông tin sách...".
+- **Kiểm thử trực tiếp trên Android Emulator (`Medium_Phone_API_36.1:5554`)**:
+  - Trang chủ tải mượt mà dữ liệu catalog thực tế từ MongoDB (Đấu giá, danh mục tuyển chọn, sách mới).
+  - Màn hình Tài khoản hiển thị chuẩn xác thông tin Nguyễn Đại (Bạn đọc uy tín 4.9), số dư ví lưu ký Lật Lại (1.790.000 đ), tạm giữ Escrow (120.000 đ), đơn hàng trung chuyển và mục "Đề nghị trao đổi".
+  - Mở danh sách đơn trao đổi `Trao đổi sách của tôi` với các bộ lọc `[Tất cả]`, `[Chờ phản hồi]`, `[Đang giao dịch]`, `[Lịch sử]`.
+  - Kiểm tra đơn trao đổi thực tế `#702C6D4A`:
+    - Thanh tiến trình 6 mốc `Bước 6/6: Hoàn tất` (xanh lá rực rỡ).
+    - Thẻ biên nhận tất toán tự động `ExchangeSettlementCard` (+115.000 đ ký quỹ hoàn về ví, -30.000 đ bù chênh lệch).
+    - Thẻ so khớp sách gửi & nhận `ExchangeProposalCard` cùng địa chỉ giao nhận của 2 bên.
+    - Thẻ vận chuyển 2 chiều độc lập `ExchangeShippingCard` với mã vận đơn GHN.
+    - Tab `Trò chuyện` với lịch sử điều khoản trao đổi `[Đề xuất lại điều khoản]` và trạng thái chỉ đọc sau khi kết thúc.
+- **Kiểm tra tự động**:
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/mobile-react-native test`: 24 test files / 163 tests PASS 100%.
+  - Git commits: `08559c2`.
+
 ## Hoàn thiện toàn diện luồng trao đổi sách trên Mobile React Native & Thiết kế trải nghiệm di động xúc giác cao cấp — 28/10/2026
 
 - Nhánh `feature/exchange-rn-completion`.
