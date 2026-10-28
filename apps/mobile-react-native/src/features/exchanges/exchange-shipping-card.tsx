@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import * as Clipboard from "expo-clipboard";
 import { AppText, Icon, radius, space, stitchTokens } from "../../core/ui";
 import { formatVnd } from "../../core/ui/format";
 import type { Exchange } from "./contracts";
@@ -72,16 +71,25 @@ export function ExchangeShippingCard({
 
   const copyToClipboard = async (text: string, type: "code" | "address") => {
     try {
-      await Clipboard.setStringAsync(text);
-      if (type === "code") {
-        setCopiedCode(text);
-        setTimeout(() => setCopiedCode(null), 2500);
-      } else {
-        setCopiedAddress(text);
-        setTimeout(() => setCopiedAddress(null), 2500);
+      const Clipboard = await import("expo-clipboard");
+      if (Clipboard?.setStringAsync) {
+        await Clipboard.setStringAsync(text);
       }
     } catch {
-      // Graceful fallback
+      try {
+        if (typeof navigator !== "undefined" && navigator?.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+        }
+      } catch {
+        // Safe fallback
+      }
+    }
+    if (type === "code") {
+      setCopiedCode(text);
+      setTimeout(() => setCopiedCode(null), 2500);
+    } else {
+      setCopiedAddress(text);
+      setTimeout(() => setCopiedAddress(null), 2500);
     }
   };
 
