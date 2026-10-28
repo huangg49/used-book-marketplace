@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Star, MessageSquarePlus, Clock, CheckCircle2 } from 'lucide-react';
+import { Star, Clock, CheckCircle2 } from 'lucide-react';
 import type { ExchangeDetail } from '../../../lib/mock/exchangeDetail';
 import {
     getExchangeReviews,
@@ -144,17 +144,6 @@ export function ReviewCard({ detail }: ReviewCardProps) {
                         </p>
                     </div>
                 </div>
-
-                {canReview && (
-                    <button
-                        type="button"
-                        className={styles.btnWriteReview}
-                        onClick={() => setDialogOpen(true)}
-                    >
-                        <MessageSquarePlus size={16} />
-                        Đánh giá đối tác
-                    </button>
-                )}
             </div>
 
             {/* Prompt banner if eligible and hasn't reviewed yet */}
@@ -171,7 +160,8 @@ export function ReviewCard({ detail }: ReviewCardProps) {
                         className={styles.btnWriteReview}
                         onClick={() => setDialogOpen(true)}
                     >
-                        Viết đánh giá
+                        <Star size={16} fill="currentColor" />
+                        Viết đánh giá đối tác
                     </button>
                 </div>
             )}

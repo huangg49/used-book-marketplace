@@ -90,95 +90,97 @@ export function ReviewDialog({
                 </div>
 
                 <form onSubmit={handleSubmit} className={styles.form}>
-                    {/* Book Condition Rating */}
-                    <div className={styles.ratingGroup}>
-                        <div className={styles.ratingHeader}>
-                            <span className={styles.ratingLabel}>Chất lượng sách nhận được</span>
-                            <span className={styles.ratingHint}>{RATING_LABELS[bookRating]}</span>
-                        </div>
-                        <div className={styles.starsRow}>
-                            {[1, 2, 3, 4, 5].map((star) => (
-                                <button
-                                    key={star}
-                                    type="button"
-                                    className={`${styles.starBtn} ${star <= bookRating ? styles.starActive : ''}`}
-                                    onClick={() => setBookRating(star)}
-                                    disabled={isBusy}
-                                    title={`${star} sao`}
-                                >
-                                    <Star size={26} fill={star <= bookRating ? 'currentColor' : 'none'} />
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Partner Attitude Rating */}
-                    <div className={styles.ratingGroup}>
-                        <div className={styles.ratingHeader}>
-                            <span className={styles.ratingLabel}>Độ uy tín & thái độ của đối tác</span>
-                            <span className={styles.ratingHint}>{RATING_LABELS[partnerRating]}</span>
-                        </div>
-                        <div className={styles.starsRow}>
-                            {[1, 2, 3, 4, 5].map((star) => (
-                                <button
-                                    key={star}
-                                    type="button"
-                                    className={`${styles.starBtn} ${star <= partnerRating ? styles.starActive : ''}`}
-                                    onClick={() => setPartnerRating(star)}
-                                    disabled={isBusy}
-                                    title={`${star} sao`}
-                                >
-                                    <Star size={26} fill={star <= partnerRating ? 'currentColor' : 'none'} />
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Tags selector */}
-                    <div className={styles.tagsGroup}>
-                        <label className={styles.fieldLabel}>Điểm nổi bật của giao dịch</label>
-                        <div className={styles.tagsGrid}>
-                            {SUGGESTED_TAGS.map((tag) => {
-                                const active = selectedTags.includes(tag);
-                                return (
+                    <div className={styles.body}>
+                        {/* Book Condition Rating */}
+                        <div className={styles.ratingGroup}>
+                            <div className={styles.ratingHeader}>
+                                <span className={styles.ratingLabel}>Chất lượng sách nhận được</span>
+                                <span className={styles.ratingHint}>{RATING_LABELS[bookRating]}</span>
+                            </div>
+                            <div className={styles.starsRow}>
+                                {[1, 2, 3, 4, 5].map((star) => (
                                     <button
-                                        key={tag}
+                                        key={star}
                                         type="button"
-                                        className={`${styles.tagPill} ${active ? styles.tagPillActive : ''}`}
-                                        onClick={() => toggleTag(tag)}
+                                        className={`${styles.starBtn} ${star <= bookRating ? styles.starActive : ''}`}
+                                        onClick={() => setBookRating(star)}
                                         disabled={isBusy}
+                                        title={`${star} sao`}
                                     >
-                                        {active ? '✓ ' : '+ '}
-                                        {tag}
+                                        <Star size={26} fill={star <= bookRating ? 'currentColor' : 'none'} />
                                     </button>
-                                );
-                            })}
+                                ))}
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Comment */}
-                    <div className={styles.commentGroup}>
-                        <label htmlFor="reviewComment" className={styles.fieldLabel}>
-                            Nhận xét chi tiết (tùy chọn)
-                        </label>
-                        <textarea
-                            id="reviewComment"
-                            rows={3}
-                            maxLength={1000}
-                            className={styles.textarea}
-                            placeholder="Ví dụ: Đối tác gửi sách rất nhanh, sách được bọc xốp cẩn thận không bị gập mép. Rất mong có dịp trao đổi thêm lần sau!"
-                            value={comment}
-                            onChange={(e) => setComment(e.target.value)}
-                            disabled={isBusy}
-                        />
-                        <span className={styles.charCount}>{comment.length}/1000</span>
-                    </div>
-
-                    {error && (
-                        <div className={styles.errorMessage} role="alert">
-                            {error}
+                        {/* Partner Attitude Rating */}
+                        <div className={styles.ratingGroup}>
+                            <div className={styles.ratingHeader}>
+                                <span className={styles.ratingLabel}>Độ uy tín & thái độ của đối tác</span>
+                                <span className={styles.ratingHint}>{RATING_LABELS[partnerRating]}</span>
+                            </div>
+                            <div className={styles.starsRow}>
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        type="button"
+                                        className={`${styles.starBtn} ${star <= partnerRating ? styles.starActive : ''}`}
+                                        onClick={() => setPartnerRating(star)}
+                                        disabled={isBusy}
+                                        title={`${star} sao`}
+                                    >
+                                        <Star size={26} fill={star <= partnerRating ? 'currentColor' : 'none'} />
+                                    </button>
+                                ))}
+                            </div>
                         </div>
-                    )}
+
+                        {/* Tags selector */}
+                        <div className={styles.tagsGroup}>
+                            <label className={styles.fieldLabel}>Điểm nổi bật của giao dịch</label>
+                            <div className={styles.tagsGrid}>
+                                {SUGGESTED_TAGS.map((tag) => {
+                                    const active = selectedTags.includes(tag);
+                                    return (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            className={`${styles.tagPill} ${active ? styles.tagPillActive : ''}`}
+                                            onClick={() => toggleTag(tag)}
+                                            disabled={isBusy}
+                                        >
+                                            {active ? '✓ ' : '+ '}
+                                            {tag}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Comment */}
+                        <div className={styles.commentGroup}>
+                            <label htmlFor="reviewComment" className={styles.fieldLabel}>
+                                Nhận xét chi tiết (tùy chọn)
+                            </label>
+                            <textarea
+                                id="reviewComment"
+                                rows={3}
+                                maxLength={1000}
+                                className={styles.textarea}
+                                placeholder="Ví dụ: Đối tác gửi sách rất nhanh, sách được bọc xốp cẩn thận không bị gập mép. Rất mong có dịp trao đổi thêm lần sau!"
+                                value={comment}
+                                onChange={(e) => setComment(e.target.value)}
+                                disabled={isBusy}
+                            />
+                            <span className={styles.charCount}>{comment.length}/1000</span>
+                        </div>
+
+                        {error && (
+                            <div className={styles.errorMessage} role="alert">
+                                {error}
+                            </div>
+                        )}
+                    </div>
 
                     <div className={styles.actions}>
                         <button
