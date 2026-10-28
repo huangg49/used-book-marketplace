@@ -719,6 +719,29 @@ export interface PriceAssistUsageDoc {
   costMicroUsd: number;
   expiresAt: Date;
 }
+// Photo autofill request (ADR 0048, migration 0038). Advisory text fields only.
+export interface AutofillSuggestionDoc {
+  _id: string;
+  ownerId: string;
+  listingId: string;
+  mediaIds: string[];
+  inputFingerprint: string;
+  requestKey: string;
+  requestHash: string;
+  status: 'Pending' | 'Suggested' | 'NeedsMoreData' | 'Failed';
+  failure: 'Timeout' | 'InvalidOutput' | 'ProviderError' | 'Refusal' | null;
+  // API projection (without id/cached) for replay of a stored answer.
+  response: Record<string, unknown> | null;
+  model: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  costMicroUsd: number | null;
+  latencyMs: number | null;
+  createdAt: Date;
+  expiresAt: Date;
+  updatedAt: Date;
+  lockSeq: number;
+}
 export interface MigrationDoc {
   _id: string; // migration id
   checksum: string;

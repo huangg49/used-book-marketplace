@@ -1,4 +1,4 @@
-# ADR 0048: Send an approved shelf book to auction without duplicating it
+# ADR 0049: Send an approved shelf book to auction without duplicating it
 
 27/10/2026. The owner approved retaining the shelf-selection flow introduced on
 main, explicitly including books offered for both sale and exchange (`Both`).

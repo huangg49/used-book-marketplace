@@ -37,6 +37,7 @@ import { exchangeMessageSpecs } from '../../src/database/mongo/migrations/0023-e
 import { inspectionEvidenceCollectionSpecs } from '../../src/database/mongo/migrations/0023-inspection-evidence.js';
 import { pointIncidentCollectionSpecs } from '../../src/database/mongo/migrations/0024-point-incidents.js';
 import { auctionDeliveryCollectionSpecs } from '../../src/database/mongo/migrations/0034-auction-delivery.js';
+import { listingAutofillSpecs } from '../../src/database/mongo/migrations/0038-listing-autofill.js';
 import { transactionReviewSpecs } from '../../src/database/mongo/migrations/0025-exchange-reviews.js';
 import {
   currentCollections,
@@ -121,7 +122,9 @@ describe('migrations', () => {
         auctionDeliveryCollectionSpecs.length -
         // Exchange chat messages & reviews are Mongo-native.
         exchangeMessageSpecs.length -
-        transactionReviewSpecs.length +
+        transactionReviewSpecs.length -
+        // ADR 0048 photo autofill suggestions are Mongo-native.
+        listingAutofillSpecs.length +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });

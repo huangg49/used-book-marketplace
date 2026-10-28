@@ -1,4 +1,8 @@
-import { validateAccountMail, validateEnvironment } from './environment.js';
+import {
+  validateAccountMail,
+  validateEnvironment,
+  validatePriceAssist,
+} from './environment.js';
 
 describe('account email config', () => {
   const key = 'test-mail-key-only-00000000000000000000000';
@@ -90,5 +94,33 @@ describe('environment validation', () => {
     expect(() => validateEnvironment({ ...valid, PORT: '70000' })).toThrow(
       'PORT',
     );
+  });
+});
+
+describe('price assistant provider config', () => {
+  it('accepts nvidia with a publisher-prefixed default model', () => {
+    const out = validatePriceAssist({ PRICE_ASSIST_PROVIDER: 'nvidia' });
+    expect(out.PRICE_ASSIST_MODEL).toBe('nvidia/nemotron-3.5-lightning-30b-a3b');
+    expect(
+      validatePriceAssist({
+        PRICE_ASSIST_PROVIDER: 'nvidia',
+        PRICE_ASSIST_MODEL: 'meta/llama-4-maverick-17b-128e-instruct',
+        NVIDIA_BASE_URL: 'https://nim.example/v1/',
+      }),
+    ).toMatchObject({ NVIDIA_BASE_URL: 'https://nim.example/v1' });
+  });
+  it('rejects unknown providers, prefixed ids for other providers and non-https NIM URLs', () => {
+    expect(() => validatePriceAssist({ PRICE_ASSIST_PROVIDER: 'openai' })).toThrow(
+      'PRICE_ASSIST_PROVIDER',
+    );
+    expect(() =>
+      validatePriceAssist({ PRICE_ASSIST_MODEL: 'nvidia/nemotron' }),
+    ).toThrow('PRICE_ASSIST_MODEL');
+    expect(() =>
+      validatePriceAssist({ PRICE_ASSIST_PROVIDER: 'nvidia', PRICE_ASSIST_MODEL: 'no-prefix' }),
+    ).toThrow('PRICE_ASSIST_MODEL');
+    expect(() =>
+      validatePriceAssist({ PRICE_ASSIST_PROVIDER: 'nvidia', NVIDIA_BASE_URL: 'http://nim.local' }),
+    ).toThrow('NVIDIA_BASE_URL');
   });
 });

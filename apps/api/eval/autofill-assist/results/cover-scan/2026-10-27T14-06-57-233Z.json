@@ -1,0 +1,70 @@
+{
+  "summary": {
+    "source": "cover-scan",
+    "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+    "fallback": null,
+    "ranAt": "2026-10-27T14:06:57.233Z",
+    "cases": 1,
+    "scoredCases": 1,
+    "titleExact": "1/1",
+    "titleIgnoringAccents": "1/1",
+    "authorsFound": "1/1",
+    "isbnFound": "NOT SCORED",
+    "wrongIsbn": 0,
+    "needsMoreData": 0,
+    "failed": 0,
+    "latencyMs": {
+      "p50": 2006,
+      "p95": 2006
+    },
+    "tokens": {
+      "input": 1211,
+      "output": 101
+    },
+    "costUsd": 0.001615,
+    "meetsAdr0048": "NOT EVIDENCE (cover-scan, 1 scored cases)",
+    "skipped": []
+  },
+  "results": [
+    {
+      "id": "hp6-hoang-tu-lai",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Harry Potter và Hoàng Tử Lai",
+        "authors": [
+          "J. K. Rowling"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Harry Potter và Hoàng Tử Lai",
+        "authors": [
+          "J. K. Rowling"
+        ],
+        "publisher": "Nhà Xuất Bản Trẻ",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": "Tái bản lần thứ 23",
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc ISBN và năm xuất bản"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 2006,
+      "tokens": {
+        "input": 1211,
+        "output": 101
+      }
+    }
+  ]
+}

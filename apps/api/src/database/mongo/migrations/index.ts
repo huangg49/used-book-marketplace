@@ -22,6 +22,10 @@ import {
   withSellerScheduledAuctions,
 } from './0037-seller-scheduled-auctions.js';
 import {
+  listingAutofillMigration,
+  listingAutofillSpecs,
+} from './0038-listing-autofill.js';
+import {
   exchangeCollectionSpecs,
   exchangesMigration,
 } from './0016-exchanges.js';
@@ -285,6 +289,7 @@ export const migrations: Migration[] = [
   bundleReviewSearchMigration,
   sellerScheduledAuctionsMigration,
   moderationOverviewIndexesMigration,
+  listingAutofillMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -363,4 +368,5 @@ export const currentCollections = (): CollectionSpec[] => [
   ...inspectionEvidenceCollectionSpecs,
   ...pointIncidentCollectionSpecs,
   ...auctionDeliveryCollectionSpecs,
+  ...listingAutofillSpecs,
 ];

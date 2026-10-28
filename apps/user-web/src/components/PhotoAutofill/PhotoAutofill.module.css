@@ -1,0 +1,247 @@
+.panel {
+  /* Not global on the sell page; values from DESIGN.md. */
+  --shop-shelf: #f4eddf;
+  --shop-wine-hover: #7c2320;
+  --sell-action-hover: #7a140c;
+  display: grid;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px dashed var(--shop-control);
+  border-radius: 8px;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+}
+.head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--shop-wine);
+}
+.head h3 {
+  margin: 0;
+  font-size: 1.0625rem;
+  letter-spacing: -0.01em;
+}
+.help,
+.note {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.8;
+  color: var(--shop-muted);
+}
+.photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.thumb {
+  position: relative;
+  margin: 0;
+  width: 76px;
+  height: 100px;
+  border: 1px solid var(--shop-line);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--shop-shelf);
+}
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--shop-ink);
+  color: var(--shop-paper);
+  cursor: pointer;
+}
+.add {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  width: 76px;
+  height: 100px;
+  border: 1px dashed var(--shop-control);
+  border-radius: 6px;
+  color: var(--shop-wine);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 170ms ease-out;
+}
+.add:hover {
+  background: var(--shop-shelf);
+}
+.add:focus-within {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 2px;
+}
+.add[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+.read,
+.useAll,
+.matches button,
+.fields button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--shop-wine);
+  border-radius: 8px;
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 170ms ease-out;
+}
+.read:hover:not(:disabled),
+.useAll:hover:not(:disabled),
+.matches button:hover:not(:disabled),
+.fields button:hover:not(:disabled) {
+  background: var(--sell-action-hover, var(--shop-wine-hover));
+}
+.useAll,
+.fields button {
+  background: transparent;
+  color: var(--shop-wine);
+}
+.fields button:hover:not(:disabled),
+.useAll:hover:not(:disabled) {
+  color: var(--shop-cream);
+}
+.read:disabled,
+.useAll:disabled,
+.matches button:disabled,
+.fields button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.error {
+  margin: 0;
+  color: var(--shop-error);
+  font-size: 0.8125rem;
+  line-height: 1.8;
+}
+.result {
+  display: grid;
+  gap: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--shop-line);
+}
+.stamp {
+  justify-self: start;
+  margin: 0;
+  padding: 2px 10px;
+  border: 1px solid var(--shop-wine);
+  border-radius: 4px;
+  color: var(--shop-wine);
+  font-size: 0.75rem;
+  font-weight: 700;
+  transform: rotate(-1deg);
+}
+.matches h4 {
+  margin: 0 0 8px;
+  font-size: 0.875rem;
+}
+.matches ul,
+.missing {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.matches li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  background: var(--shop-cream);
+}
+.matches li > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.matches strong {
+  overflow-wrap: anywhere;
+}
+.matches span,
+.matches small {
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+.fields {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+.fields > div {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) 1fr auto;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 6px 0;
+  border-bottom: 1px dotted var(--shop-line);
+}
+.fields dt {
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+}
+.fields dd {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.fields button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 36px;
+  padding: 0 12px;
+}
+.useAll {
+  justify-self: start;
+}
+.missing li {
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+}
+.missing li::before {
+  content: "→ ";
+  color: var(--shop-wine);
+}
+@media (max-width: 520px) {
+  .panel {
+    padding: 16px;
+  }
+  .fields > div {
+    grid-template-columns: 1fr auto;
+  }
+  .fields dt {
+    grid-column: 1 / -1;
+  }
+}

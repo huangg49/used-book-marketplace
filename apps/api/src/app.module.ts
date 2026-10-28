@@ -5,6 +5,7 @@ import { AppService } from './app.service.js';
 import { DatabaseModule } from './database/database.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { CatalogModule } from './modules/catalog/catalog.module.js';
+import { AutofillAssistModule } from './modules/autofill-assist/autofill-assist.module.js';
 import { ListingsModule } from './modules/listings/listings.module.js';
 import { validateEnvironment } from './config/environment.js';
 import { MediaModule } from './modules/media/media.module.js';
@@ -29,6 +30,7 @@ import { OperationsDashboardModule } from './modules/operations-dashboard/operat
     AuthModule,
     CatalogModule,
     ListingsModule,
+    AutofillAssistModule,
     MediaModule,
     AddressesModule,
     QuotesModule,

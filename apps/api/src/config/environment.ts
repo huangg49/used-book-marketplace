@@ -41,10 +41,12 @@ export function validateEnvironment(env: Record<string, unknown>) {
   if (simulatorSecret && nodeEnv === 'production')
     throw new Error('Payment simulator must be disabled in production.');
   const priceAssist = validatePriceAssist(env);
+  const autofill = validateAutofill(env);
   const accountMail = validateAccountMail(env, nodeEnv, secret);
   return {
     ...env,
     ...priceAssist,
+    ...autofill,
     ...accountMail,
     MONGODB_URL: mongoUrl,
     JWT_ACCESS_SECRET: secret,
@@ -163,14 +165,21 @@ export function validatePriceAssist(env: Record<string, unknown>) {
   if (apiKey && apiKey.startsWith('replace-'))
     throw new Error('PRICE_ASSIST_API_KEY still holds the example value.');
   const provider = String(env.PRICE_ASSIST_PROVIDER || 'anthropic');
-  if (!['anthropic', 'gemini'].includes(provider))
-    throw new Error('PRICE_ASSIST_PROVIDER must be anthropic or gemini.');
+  if (!['anthropic', 'gemini', 'nvidia'].includes(provider))
+    throw new Error('PRICE_ASSIST_PROVIDER must be anthropic, gemini or nvidia.');
   const model = String(
-    env.PRICE_ASSIST_MODEL ||
-      (provider === 'gemini' ? 'gemini-3.8-flash' : 'claude-opus-5-5'),
+    env.PRICE_ASSIST_MODEL || DEFAULT_PRICE_MODELS[provider],
   );
-  if (!/^[a-z0-9][a-z0-9.-]{2,79}$/.test(model))
+  // NVIDIA ids carry a publisher prefix (nvidia/..., meta/...).
+  const modelPattern =
+    provider === 'nvidia'
+      ? /^[a-z0-9][a-z0-9_.-]{1,39}\/[a-z0-9][a-z0-9_.-]{1,79}$/
+      : /^[a-z0-9][a-z0-9.-]{2,79}$/;
+  if (!modelPattern.test(model))
     throw new Error('PRICE_ASSIST_MODEL is invalid.');
+  const nvidiaBase = String(env.NVIDIA_BASE_URL ?? '');
+  if (nvidiaBase && !/^https:\/\/[^\s/]+(\/[^\s]*)?$/.test(nvidiaBase))
+    throw new Error('NVIDIA_BASE_URL must be an https URL.');
   const effort = String(env.PRICE_ASSIST_EFFORT || 'low');
   if (!['low', 'medium', 'high', 'none'].includes(effort))
     throw new Error('PRICE_ASSIST_EFFORT must be low, medium, high or none.');
@@ -196,6 +205,7 @@ export function validatePriceAssist(env: Record<string, unknown>) {
     PRICE_ASSIST_PROVIDER: provider,
     PRICE_ASSIST_MODEL: model,
     PRICE_ASSIST_EFFORT: effort,
+    NVIDIA_BASE_URL: nvidiaBase.replace(/\/+$/, ''),
     PRICE_ASSIST_TIMEOUT_MS: intIn(env.PRICE_ASSIST_TIMEOUT_MS, 20_000, 2_000, 60_000, 'PRICE_ASSIST_TIMEOUT_MS'),
     PRICE_ASSIST_USER_DAILY_LIMIT: intIn(env.PRICE_ASSIST_USER_DAILY_LIMIT, 20, 1, 500, 'PRICE_ASSIST_USER_DAILY_LIMIT'),
     PRICE_ASSIST_DAILY_BUDGET_USD: budget,
@@ -206,6 +216,39 @@ export function validatePriceAssist(env: Record<string, unknown>) {
     PRICE_LOOKUP_TTL_DAYS: intIn(env.PRICE_LOOKUP_TTL_DAYS, 30, 1, 180, 'PRICE_LOOKUP_TTL_DAYS'),
     PRICE_LOOKUP_DAILY_LIMIT: intIn(env.PRICE_LOOKUP_DAILY_LIMIT, 50, 1, 1000, 'PRICE_LOOKUP_DAILY_LIMIT'),
     PRICE_LOOKUP_SEARCH_USD: searchUsd,
+  };
+}
+
+const DEFAULT_PRICE_MODELS: Record<string, string> = {
+  anthropic: 'claude-opus-5-5',
+  gemini: 'gemini-3.8-flash',
+  nvidia: 'nvidia/nemotron-3.5-lightning-30b-a3b',
+};
+
+const NVIDIA_MODEL = /^[a-z0-9][a-z0-9_.-]{1,39}\/[a-z0-9][a-z0-9_.-]{1,79}$/;
+
+// Photo autofill (ADR 0048): NVIDIA NIM vision model, off unless enabled. The
+// key is read only by the API process; cost counts toward the shared daily
+// price-assist budget.
+export function validateAutofill(env: Record<string, unknown>) {
+  const enabled = String(env.AUTOFILL_ENABLED ?? 'false');
+  if (!['true', 'false'].includes(enabled))
+    throw new Error('AUTOFILL_ENABLED must be true or false.');
+  const apiKey = String(env.AUTOFILL_API_KEY ?? '');
+  if (apiKey.startsWith('replace-'))
+    throw new Error('AUTOFILL_API_KEY still holds the example value.');
+  const model = String(env.AUTOFILL_MODEL || 'nvidia/nemotron-3.5-super-vl-120b-a12b');
+  if (!NVIDIA_MODEL.test(model)) throw new Error('AUTOFILL_MODEL is invalid.');
+  const fallback = String(env.AUTOFILL_FALLBACK_MODEL ?? '');
+  if (fallback && (!NVIDIA_MODEL.test(fallback) || fallback === model))
+    throw new Error('AUTOFILL_FALLBACK_MODEL is invalid.');
+  return {
+    AUTOFILL_ENABLED: enabled,
+    AUTOFILL_API_KEY: apiKey,
+    AUTOFILL_MODEL: model,
+    AUTOFILL_FALLBACK_MODEL: fallback,
+    AUTOFILL_TIMEOUT_MS: intIn(env.AUTOFILL_TIMEOUT_MS, 25_000, 2_000, 60_000, 'AUTOFILL_TIMEOUT_MS'),
+    AUTOFILL_USER_DAILY_LIMIT: intIn(env.AUTOFILL_USER_DAILY_LIMIT, 10, 1, 200, 'AUTOFILL_USER_DAILY_LIMIT'),
   };
 }
 

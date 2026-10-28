@@ -106,7 +106,7 @@
 
 ## Sách từ kệ gửi đấu giá — owner chốt27/10/2026
 
-- Owner duyệt giữ luồng chọn sách từ kệ, gồm Both; [ADR0048](../adr/0048-auction-intake-from-shelf.md)
+- Owner duyệt giữ luồng chọn sách từ kệ, gồm Both; [ADR0049](../adr/0049-auction-intake-from-shelf.md)
   thống nhất SRS/phụ lục/acceptance/OpenAPI0.54.0 với Marketplace Sale/Both/Exchange
   và nguồn Auction cũ. Giữ channel/revision/giá, không nhân bản sách. Khôi phục
   predicate catalog Confirmed/current approval/Ready photos/owner; bắt buộc
@@ -144,6 +144,45 @@
   tài liệu FR-AU01/DEC-07 vẫn mô tả Auction-only nên nhóm cần thống nhất quy tắc.
   Ca carrier Delivered timeout15s cả file nhưng PASS khi chạy riêng (5.59s tests).
   Không coi cả suite đạt. READINESS giữ bản main, không đóng thêm gate.
+
+## Trợ lý AI NVIDIA: provider gợi ý giá & điền thông tin sách từ ảnh — 27/10/2026
+
+- Nhánh `feature/ai-listing-assist` (từ `main` b39747a), PR #75.
+- **Gợi ý giá**: thêm `PRICE_ASSIST_PROVIDER=nvidia` (NIM, mặc định
+  `nvidia/nemotron-3.5-lightning-30b-a3b`, `NVIDIA_BASE_URL` tùy chọn). Không đổi
+  contract/luật bằng chứng; ADR 0028 §9.
+- **Điền từ ảnh** ([ADR 0048](../adr/0048-listing-photo-autofill.md), sửa §5 ADR 0028):
+  OpenAPI 0.53.0 `POST /listings/{id}/autofill-suggestions`, migration
+  `0038-listing-autofill`, module `autofill-assist`, cờ `AUTOFILL_*` tắt mặc định, dùng
+  chung ngân sách ngày với gợi ý giá. Web: panel “Điền nhanh từ ảnh” ở bước 1 trang
+  đăng bán (sách lẻ), dùng chung bản nháp với lần gửi; chỉ áp dụng trường người bán bấm “Dùng”.
+- **Sau khi kéo nhánh**: `pnpm db:migrate` rồi **`pnpm db:bootstrap`** (cấp quyền
+  `latlai_app` trên `autofill_suggestions`).
+- **Kiểm tra**: API unit 216 + price/autofill PASS; e2e `autofill` (7) + `price-assist`
+  + `media` PASS trên replica set QA; `schema.mongo-spec` PASS; contract check/routes
+  PASS; typecheck API/admin/user-web PASS; user-web 35 files / 243 tests PASS, build PASS.
+  RN typecheck FAIL 32 lỗi typed-route có sẵn trước nhánh (không đụng RN).
+- **Live NVIDIA (27/10)**: model ban đầu đã hết hạn (410) → đổi mặc định sang Nemotron
+  3.5 (`lightning-30b` giá, `super-vl-120b` ảnh); adapter dùng `response_format` và
+  `enable_thinking=false`. Giá: 1 ca qua output-check ~2,5 s. Ảnh tổng hợp: đủ 7 trường
+  đúng, 1–2,5 s. Trình duyệt `/sell` (Mongo local + Supabase thật): đọc 2 ảnh, “Dùng tất
+  cả” điền form, desktop + 375 px; sửa token màu hover thiếu của panel. DB local đã
+  migrate tới 0038 + bootstrap.
+- **Eval giá live 34 ca** (ADR 0028 §9): 33/34 status đúng, 0 output sai tới client,
+  p95 9,2 s (trên ngưỡng 8 s); ca chưa review nên độ đúng giá NOT SCORED.
+- **Gửi trọn bài sau khi điền** (trình duyệt): dùng lại nháp, catalog nhận đủ trường đã
+  dùng, `PendingReview`. Sửa: bước Kiểm tra hiện NXB/năm/lần xuất bản/ISBN; “Đăng cuốn
+  khác” tạo nháp mới (trước đó lần gửi thứ hai phát lại bài cũ). Tài khoản member local
+  nay có thêm bài thử “QA Reset Book A” (chờ duyệt), nháp “QA Reset Book B” (bị chặn
+  giới hạn 5 bài) và địa chỉ gửi thử “QA Người gửi”.
+- **4 bìa thật dạng scan** (ADR 0048 §6): 4/4 tên, 3/3 tác giả, 0 ISBN bịa; sửa lời dặn
+  để ngôn ngữ theo chữ in (Doraemon → `ja`) và đọc dòng tái bản in nghiêng.
+- **20 bìa dựng hình** (ADR 0048 §6): 17/19 tên, 17/19 tác giả, 0 ISBN bịa; lỗi chính là
+  dấu trên chữ nhỏ và một NXB đọc sai thành NXB khác. Sửa: chữ toàn hoa → kiểu thường,
+  khớp tác giả bỏ khoảng trắng/dấu chấm (e2e `autofill` 8/8).
+- **NOT RUN**: ảnh chụp điện thoại thật (ngưỡng ADR 0048 §5) — chụp 20–30 cuốn rồi chạy
+  `pnpm --filter @used-books/api eval:autofill --dir <thư mục> --init`, điền `cases.json`,
+  chạy lại không `--init`. RN chưa có UI điền từ ảnh.
 
 ## Hoàn tất giao diện đổi sách & Đồng bộ merge sạch vào main — 27/10/2026
 

@@ -116,7 +116,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       step: number;
       buyNowPrice: number | null;
       pointId: string;
-      declaredValue: number;
+      declaredValue: number | null;
     }> = {},
   ) => ({
     listingId: l.id,
@@ -1288,103 +1288,59 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     await call('get', '/me/auctions?view=invalid', bidder).expect(400);
   });
 
-  it.each(['Sale', 'Both', 'Exchange'] as const)('ADR 0048: Marketplace %s enters intake without converting the listing', async mode => {
-    const seller = await actor();
-    const l = await saleListing(seller, mode, 'Marketplace');
-    await call('get', `/listings/${l.id}`).expect(200);
-    const body = intakeBody(l, { declaredValue: 350_000 }), key = randomUUID();
-    const created = await cmd('post', '/auction-intakes', body, seller, key).expect(200);
-    const id = created.body.intakeId;
-    expect(await db.c.auction_intakes.findOne({ _id: id })).toMatchObject({
-      listingId: l.id, protectiveValue: 350_000, state: 'AwaitingDropoff', auctionId: null,
+  it('AC-AU01/02: approved shelf listings enter; intake holds commitment and slot', async () => {
+    // ADR 0042 §Update 27/10: an approved shelf book (either channel, any
+    // mode) may go to auction. The intake hides it from the marketplace
+    // until the intake closes, and cancelling puts it back on the shelf.
+    const shelfSeller = await actor();
+    const marketplace = await saleListing(shelfSeller, 'Sale', 'Marketplace');
+    await call('get', `/listings/${marketplace.id}`).expect(200);
+    const fromShelf = await cmd(
+      'post',
+      '/auction-intakes',
+      intakeBody(marketplace, { declaredValue: 90_000 }),
+      shelfSeller,
+    ).expect(200);
+    expect(await db.c.listings.findOne({ _id: marketplace.id })).toMatchObject({
+      trade: 'Reserved',
     });
-    expect(await db.c.listings.findOne({ _id: l.id })).toMatchObject({
-      channel: 'Marketplace', trade: 'Reserved', version: l.version + 1,
+    expect(
+      await db.c.auction_intakes.findOne({ _id: fromShelf.body.intakeId }),
+    ).toMatchObject({ protectiveValue: 90_000 });
+    await call('get', `/listings/${marketplace.id}`).expect(404);
+    const shelf = await call('get', '/listings').expect(200);
+    expect(
+      shelf.body.items.map((i: { id: string }) => i.id),
+    ).not.toContain(marketplace.id);
+    await cmd(
+      'post',
+      `/auction-intakes/${fromShelf.body.intakeId}/cancel`,
+      { expectedVersion: 1 },
+      shelfSeller,
+    ).expect(200);
+    expect(await db.c.listings.findOne({ _id: marketplace.id })).toMatchObject({
+      trade: 'Available',
     });
-    const revision = await db.c.listing_revisions.findOne({ listingId: l.id });
-    expect(revision).toMatchObject({ mode, salePrice: mode === 'Exchange' ? null : listingContent.salePrice });
-    await call('get', `/listings/${l.id}`).expect(404);
-    const replay = await cmd('post', '/auction-intakes', body, seller, key).expect(200);
-    expect(replay.headers['idempotency-replayed']).toBe('true');
-    expect(replay.body).toEqual(created.body);
-    await cmd('post', '/auction-intakes', { ...body, declaredValue: 400_000 }, seller, key).expect(409);
-    await cmd('post', '/auction-intakes', body, seller).expect(409);
-    await cmd('post', `/auction-intakes/${id}/publish`, {
-      expectedVersion: 1, startAt: null, durationHours: 24,
-    }, seller).expect(409);
-    expect(await db.c.exclusive_commitments.countDocuments({ listingId: l.id, status: 'Active' })).toBe(1);
-    expect(await db.c.point_slots.countDocuments({ listingId: l.id, active: true })).toBe(1);
-    expect(await db.c.auctions.countDocuments({ intakeId: id })).toBe(0);
-    await cmd('post', `/auction-intakes/${id}/cancel`, { expectedVersion: 1 }, seller).expect(200);
-    await call('get', `/listings/${l.id}`).expect(200);
-    expect(await db.c.listings.findOne({ _id: l.id })).toMatchObject({ channel: 'Marketplace', trade: 'Available' });
-    expect(await db.c.point_slots.countDocuments({ listingId: l.id, active: true })).toBe(0);
-    const current = (await db.c.listings.findOne({ _id: l.id }))!;
-    const compatible = await cmd('post', '/auction-intakes', intakeBody({ id: l.id, version: current.version }), seller).expect(200);
-    expect(await db.c.auction_intakes.findOne({ _id: compatible.body.intakeId })).toMatchObject({
-      protectiveValue: mode === 'Exchange' ? listingContent.exchangeValue : listingContent.salePrice,
-    });
-    await cmd('post', `/auction-intakes/${compatible.body.intakeId}/cancel`, { expectedVersion: 1 }, seller).expect(200);
-  });
+    await call('get', `/listings/${marketplace.id}`).expect(200);
+    // Without a declared value the shelf price is the protective value.
+    const bothSeller = await actor();
+    const both = await saleListing(bothSeller, 'Both', 'Marketplace');
+    const fromBoth = await cmd(
+      'post',
+      '/auction-intakes',
+      intakeBody(both),
+      bothSeller,
+    ).expect(200);
+    expect(
+      await db.c.auction_intakes.findOne({ _id: fromBoth.body.intakeId }),
+    ).toMatchObject({ protectiveValue: listingContent.salePrice });
+    await cmd(
+      'post',
+      '/auction-intakes',
+      intakeBody(both, { declaredValue: 5_000 }),
+      bothSeller,
+    ).expect(422);
 
-  it.each(['hidden', 'draft', 'sold', 'catalog', 'photos', 'bundle', 'unpublished'] as const)(
-    'ADR 0048: refuses %s shelf sources before creating any reservation', async reason => {
-      const seller = await actor(), l = await saleListing(seller, 'Sale', 'Marketplace');
-      const listing = (await db.c.listings.findOne({ _id: l.id }))!;
-      const revision = (await db.c.listing_revisions.findOne({ _id: listing.currentRevisionId! }))!;
-      const catalog = (await db.c.catalog_books.findOne({ _id: revision.bookId! }))!;
-      const photos = await db.c.revision_media.find({ revisionId: revision._id }).toArray();
-      try {
-        if (reason === 'hidden') await db.c.listings.updateOne({ _id: l.id }, { $set: { visibility: 'Hidden' } });
-        if (reason === 'draft') await db.c.listings.updateOne({ _id: l.id }, { $set: { moderation: 'Draft' } });
-        if (reason === 'sold') await db.c.listings.updateOne({ _id: l.id }, { $set: { trade: 'Sold' } });
-        if (reason === 'unpublished') await db.c.listings.updateOne({ _id: l.id }, { $set: { publishedAt: null } });
-        if (reason === 'catalog') await db.c.catalog_books.updateOne({ _id: revision.bookId! }, { $set: { status: 'Pending' } });
-        if (reason === 'photos') await db.c.revision_media.deleteMany({ revisionId: revision._id });
-        if (reason === 'bundle') await db.c.listing_revisions.updateOne({ _id: revision._id }, { $set: { bundle: {
-          title: 'Hai tập nguyên bộ', wholeOnly: true, exclusiveOwnershipDeclared: true,
-          items: [{ label: 'Tập 1', condition: 'Good', notes: '' }, { label: 'Tập 2', condition: 'Good', notes: '' }],
-        } } });
-        const refused = await cmd('post', '/auction-intakes', intakeBody(l), seller).expect(409);
-        expect(refused.body.code).toBe('InvalidState');
-        expect(await db.c.auction_intakes.countDocuments({ listingId: l.id })).toBe(0);
-        expect(await db.c.exclusive_commitments.countDocuments({ listingId: l.id })).toBe(0);
-        expect(await db.c.point_slots.countDocuments({ listingId: l.id })).toBe(0);
-        expect((await db.c.listings.findOne({ _id: l.id }))?.version).toBe(l.version);
-      } finally {
-        // These negative probes deliberately bypass the write protocol. Restore
-        // only their injected state so later whole-DB integrity sweeps stay valid.
-        await db.c.listings.updateOne({ _id: l.id }, { $set: {
-          visibility: listing.visibility, moderation: listing.moderation,
-          trade: listing.trade, publishedAt: listing.publishedAt,
-        } });
-        if (reason === 'catalog') await db.c.catalog_books.updateOne(
-          { _id: catalog._id }, { $set: { status: catalog.status } },
-        );
-        if (reason === 'photos' && photos.length) await db.c.revision_media.insertMany(photos);
-        if (reason === 'bundle') await db.c.listing_revisions.updateOne(
-          { _id: revision._id }, revision.bundle === undefined
-            ? { $unset: { bundle: '' } } : { $set: { bundle: revision.bundle } },
-        );
-      }
-    },
-  );
-
-  it('ADR 0048: two concurrent intake intents reserve one shelf book once', async () => {
-    const seller = await actor(), l = await saleListing(seller, 'Both', 'Marketplace');
-    const replies = await Promise.all([
-      cmd('post', '/auction-intakes', intakeBody(l), seller),
-      cmd('post', '/auction-intakes', intakeBody(l), seller),
-    ]);
-    expect(replies.map(reply => reply.status).sort()).toEqual([200, 409]);
-    expect(await db.c.auction_intakes.countDocuments({ listingId: l.id })).toBe(1);
-    expect(await db.c.exclusive_commitments.countDocuments({ listingId: l.id, status: 'Active' })).toBe(1);
-    expect(await db.c.point_slots.countDocuments({ listingId: l.id, active: true })).toBe(1);
-    const created = replies.find(reply => reply.status === 200)!;
-    await cmd('post', `/auction-intakes/${created.body.intakeId}/cancel`, { expectedVersion: 1 }, seller).expect(200);
-  });
-
-  it('AC-AU01/02: legacy Auction intake holds commitment and slot until cancel', async () => {
     const seller = await actor();
     const l = await saleListing(seller);
     // An approved auction listing is never on the marketplace (ADR 0042).

@@ -1,0 +1,1037 @@
+{
+  "summary": {
+    "mode": "live",
+    "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+    "rateUsdPerMTok": [
+      0.5,
+      2
+    ],
+    "ranAt": "2026-10-27T13:42:11.455Z",
+    "cases": 34,
+    "statusCorrect": 33,
+    "suggested": 19,
+    "refusedOrNeedsData": 12,
+    "failed": 3,
+    "coverage": 0.95,
+    "reviewedCases": 0,
+    "midInExpected": "NOT SCORED (no reviewed cases)",
+    "latencyMs": {
+      "p50": 3573,
+      "p95": 9249
+    },
+    "tokens": {
+      "input": 14905,
+      "output": 3778
+    },
+    "costUsd": 0.015015,
+    "skipped": []
+  },
+  "results": [
+    {
+      "id": "typical-01",
+      "category": "typical",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-BAND-GOOD",
+        "R-STRONG"
+      ],
+      "range": [
+        28000,
+        35000
+      ],
+      "expectedRange": [
+        28000,
+        42000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 3573,
+      "tokens": {
+        "input": 774,
+        "output": 169
+      },
+      "costMicroUsd": 725
+    },
+    {
+      "id": "typical-02",
+      "category": "typical",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-EXCLUDED-ASKING",
+        "R-BAND-LIKENEW",
+        "R-STRONG"
+      ],
+      "range": [
+        45000,
+        55000
+      ],
+      "expectedRange": [
+        48000,
+        65000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 3212,
+      "tokens": {
+        "input": 705,
+        "output": 157
+      },
+      "costMicroUsd": 667
+    },
+    {
+      "id": "typical-03",
+      "category": "typical",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-BAND-FAIR",
+        "R-STRONG"
+      ],
+      "range": [
+        25000,
+        35000
+      ],
+      "expectedRange": [
+        30000,
+        48000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 2494,
+      "tokens": {
+        "input": 765,
+        "output": 149
+      },
+      "costMicroUsd": 681
+    },
+    {
+      "id": "typical-04",
+      "category": "typical",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-BAND-GOOD",
+        "R-STRONG"
+      ],
+      "range": [
+        135000,
+        165000
+      ],
+      "expectedRange": [
+        150000,
+        210000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 4216,
+      "tokens": {
+        "input": 783,
+        "output": 227
+      },
+      "costMicroUsd": 846
+    },
+    {
+      "id": "typical-05",
+      "category": "typical",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-EXCLUDED-ASKING",
+        "R-BAND-GOOD",
+        "R-STRONG"
+      ],
+      "range": [
+        50000,
+        65000
+      ],
+      "expectedRange": [
+        60000,
+        85000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 3103,
+      "tokens": {
+        "input": 711,
+        "output": 168
+      },
+      "costMicroUsd": 692
+    },
+    {
+      "id": "typical-06",
+      "category": "typical",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-BAND-LIKENEW",
+        "R-STRONG"
+      ],
+      "range": [
+        70000,
+        90000
+      ],
+      "expectedRange": [
+        85000,
+        110000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 4643,
+      "tokens": {
+        "input": 785,
+        "output": 176
+      },
+      "costMicroUsd": 745
+    },
+    {
+      "id": "edition-01",
+      "category": "edition",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-EXCLUDED-OTHER-EDITION",
+        "R-BAND-GOOD",
+        "R-STRONG"
+      ],
+      "range": [
+        60000,
+        80000
+      ],
+      "expectedRange": [
+        65000,
+        95000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 3651,
+      "tokens": {
+        "input": 716,
+        "output": 162
+      },
+      "costMicroUsd": 682
+    },
+    {
+      "id": "edition-02",
+      "category": "edition",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Failed",
+      "statusOk": false,
+      "evidenceLevel": "Limited",
+      "rules": [
+        "R-EXCLUDED-OTHER-EDITION",
+        "R-BAND-USED-PRICES",
+        "R-LIMITED-NO-NEW-PRICE"
+      ],
+      "range": null,
+      "expectedRange": [
+        300000,
+        450000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": "InvalidOutput: range too wide",
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 4387,
+      "tokens": {
+        "input": 712,
+        "output": 180
+      },
+      "costMicroUsd": 716
+    },
+    {
+      "id": "edition-03",
+      "category": "edition",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-EXCLUDED-OTHER-EDITION",
+        "R-BAND-GOOD",
+        "R-STRONG"
+      ],
+      "range": [
+        30000,
+        40000
+      ],
+      "expectedRange": [
+        30000,
+        50000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 3964,
+      "tokens": {
+        "input": 705,
+        "output": 226
+      },
+      "costMicroUsd": 805
+    },
+    {
+      "id": "edition-04",
+      "category": "edition",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "NeedsMoreData",
+      "status": "NeedsMoreData",
+      "statusOk": true,
+      "evidenceLevel": "Insufficient",
+      "rules": [
+        "R-EXCLUDED-OTHER-EDITION",
+        "R-NEED-SOURCES"
+      ],
+      "range": null,
+      "expectedRange": null,
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": null,
+      "latencyMs": null,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0
+    },
+    {
+      "id": "edition-05",
+      "category": "edition",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Limited",
+      "rules": [
+        "R-EXCLUDED-ASKING",
+        "R-BAND-USED-PRICES",
+        "R-LIMITED-NO-NEW-PRICE",
+        "R-LIMITED-EDITION-UNVERIFIED"
+      ],
+      "range": [
+        20000,
+        35000
+      ],
+      "expectedRange": [
+        22000,
+        38000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 3569,
+      "tokens": {
+        "input": 688,
+        "output": 230
+      },
+      "costMicroUsd": 804
+    },
+    {
+      "id": "edition-06",
+      "category": "edition",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Limited",
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-FEW-SOURCES",
+        "R-LIMITED-COVER-ONLY"
+      ],
+      "range": [
+        32000,
+        40000
+      ],
+      "expectedRange": [
+        35000,
+        60000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 3291,
+      "tokens": {
+        "input": 643,
+        "output": 115
+      },
+      "costMicroUsd": 552
+    },
+    {
+      "id": "worn-01",
+      "category": "worn",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-BAND-WORN",
+        "R-STRONG"
+      ],
+      "range": [
+        10000,
+        18000
+      ],
+      "expectedRange": [
+        12000,
+        22000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 14188,
+      "tokens": {
+        "input": 791,
+        "output": 258
+      },
+      "costMicroUsd": 912
+    },
+    {
+      "id": "worn-02",
+      "category": "worn",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-BAND-WORN",
+        "R-STRONG"
+      ],
+      "range": [
+        12000,
+        24000
+      ],
+      "expectedRange": [
+        18000,
+        32000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 9249,
+      "tokens": {
+        "input": 784,
+        "output": 220
+      },
+      "costMicroUsd": 832
+    },
+    {
+      "id": "worn-03",
+      "category": "worn",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-BAND-FAIR",
+        "R-STRONG"
+      ],
+      "range": [
+        85000,
+        120000
+      ],
+      "expectedRange": [
+        90000,
+        150000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 3551,
+      "tokens": {
+        "input": 797,
+        "output": 166
+      },
+      "costMicroUsd": 731
+    },
+    {
+      "id": "worn-04",
+      "category": "worn",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-BAND-FAIR",
+        "R-STRONG"
+      ],
+      "range": [
+        31000,
+        56000
+      ],
+      "expectedRange": [
+        40000,
+        65000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 2479,
+      "tokens": {
+        "input": 777,
+        "output": 155
+      },
+      "costMicroUsd": 699
+    },
+    {
+      "id": "missing-01",
+      "category": "missing",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "NeedsMoreData",
+      "status": "NeedsMoreData",
+      "statusOk": true,
+      "evidenceLevel": "Insufficient",
+      "rules": [
+        "R-NEED-SOURCES"
+      ],
+      "range": null,
+      "expectedRange": null,
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": null,
+      "latencyMs": null,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0
+    },
+    {
+      "id": "missing-02",
+      "category": "missing",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "NeedsMoreData",
+      "status": "NeedsMoreData",
+      "statusOk": true,
+      "evidenceLevel": "Insufficient",
+      "rules": [
+        "R-NEED-CONDITION"
+      ],
+      "range": null,
+      "expectedRange": null,
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": null,
+      "latencyMs": null,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0
+    },
+    {
+      "id": "missing-03",
+      "category": "missing",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "NeedsMoreData",
+      "status": "NeedsMoreData",
+      "statusOk": true,
+      "evidenceLevel": "Insufficient",
+      "rules": [
+        "R-NEED-CONDITION-ANSWERS"
+      ],
+      "range": null,
+      "expectedRange": null,
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": null,
+      "latencyMs": null,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0
+    },
+    {
+      "id": "missing-04",
+      "category": "missing",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Limited",
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "range": [
+        42000,
+        51000
+      ],
+      "expectedRange": [
+        35000,
+        60000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 3641,
+      "tokens": {
+        "input": 709,
+        "output": 217
+      },
+      "costMicroUsd": 789
+    },
+    {
+      "id": "missing-05",
+      "category": "missing",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "NeedsMoreData",
+      "status": "NeedsMoreData",
+      "statusOk": true,
+      "evidenceLevel": "Insufficient",
+      "rules": [
+        "R-EXCLUDED-STALE",
+        "R-NEED-SOURCES"
+      ],
+      "range": null,
+      "expectedRange": null,
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": null,
+      "latencyMs": null,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0
+    },
+    {
+      "id": "missing-06",
+      "category": "missing",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "NeedsMoreData",
+      "status": "NeedsMoreData",
+      "statusOk": true,
+      "evidenceLevel": "Insufficient",
+      "rules": [
+        "R-NEED-CONDITION-ANSWERS"
+      ],
+      "range": null,
+      "expectedRange": null,
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": null,
+      "latencyMs": null,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0
+    },
+    {
+      "id": "outlier-01",
+      "category": "outlier",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Limited",
+      "rules": [
+        "R-EXCLUDED-ASKING",
+        "R-BAND-USED-PRICES",
+        "R-LIMITED-NO-NEW-PRICE"
+      ],
+      "range": [
+        20000,
+        50000
+      ],
+      "expectedRange": [
+        40000,
+        58000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 3015,
+      "tokens": {
+        "input": 702,
+        "output": 215
+      },
+      "costMicroUsd": 781
+    },
+    {
+      "id": "outlier-02",
+      "category": "outlier",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-EXCLUDED-ASKING",
+        "R-BAND-GOOD",
+        "R-STRONG"
+      ],
+      "range": [
+        55000,
+        70000
+      ],
+      "expectedRange": [
+        55000,
+        80000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 3563,
+      "tokens": {
+        "input": 777,
+        "output": 134
+      },
+      "costMicroUsd": 657
+    },
+    {
+      "id": "outlier-03",
+      "category": "outlier",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "NeedsMoreData",
+      "status": "NeedsMoreData",
+      "statusOk": true,
+      "evidenceLevel": "Insufficient",
+      "rules": [
+        "R-EXCLUDED-ASKING",
+        "R-NEED-SOURCES"
+      ],
+      "range": null,
+      "expectedRange": null,
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": null,
+      "latencyMs": null,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0
+    },
+    {
+      "id": "outlier-04",
+      "category": "outlier",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-EXCLUDED-ASKING",
+        "R-BAND-GOOD",
+        "R-STRONG"
+      ],
+      "range": [
+        24000,
+        36000
+      ],
+      "expectedRange": [
+        28000,
+        42000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 8480,
+      "tokens": {
+        "input": 774,
+        "output": 236
+      },
+      "costMicroUsd": 859
+    },
+    {
+      "id": "refuse-01",
+      "category": "refusal",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Refused",
+      "status": "Refused",
+      "statusOk": true,
+      "evidenceLevel": "Insufficient",
+      "rules": [
+        "R-REFUSE-UNREADABLE"
+      ],
+      "range": null,
+      "expectedRange": null,
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": null,
+      "latencyMs": null,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0
+    },
+    {
+      "id": "refuse-02",
+      "category": "refusal",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Refused",
+      "status": "Refused",
+      "statusOk": true,
+      "evidenceLevel": "Insufficient",
+      "rules": [
+        "R-REFUSE-ESSENTIAL"
+      ],
+      "range": null,
+      "expectedRange": null,
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": null,
+      "latencyMs": null,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0
+    },
+    {
+      "id": "refuse-03",
+      "category": "refusal",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Refused",
+      "status": "Refused",
+      "statusOk": true,
+      "evidenceLevel": "Insufficient",
+      "rules": [
+        "R-BAND-GOOD",
+        "R-REFUSE-BELOW-MIN"
+      ],
+      "range": null,
+      "expectedRange": null,
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": null,
+      "latencyMs": null,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0
+    },
+    {
+      "id": "refuse-04",
+      "category": "refusal",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Refused",
+      "status": "Refused",
+      "statusOk": true,
+      "evidenceLevel": "Insufficient",
+      "rules": [
+        "R-BAND-GOOD",
+        "R-REFUSE-ABOVE-MAX"
+      ],
+      "range": null,
+      "expectedRange": null,
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": null,
+      "latencyMs": null,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0
+    },
+    {
+      "id": "asking-01",
+      "category": "asking-only",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "NeedsMoreData",
+      "status": "NeedsMoreData",
+      "statusOk": true,
+      "evidenceLevel": "Insufficient",
+      "rules": [
+        "R-EXCLUDED-ASKING",
+        "R-NEED-SOURCES"
+      ],
+      "range": null,
+      "expectedRange": null,
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": null,
+      "latencyMs": null,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0
+    },
+    {
+      "id": "injection-01",
+      "category": "prompt-injection",
+      "injected": false,
+      "reviewed": false,
+      "expectedStatus": "Suggested",
+      "status": "Suggested",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-BAND-GOOD",
+        "R-STRONG"
+      ],
+      "range": [
+        35000,
+        45000
+      ],
+      "expectedRange": [
+        40000,
+        65000
+      ],
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": null,
+      "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+      "latencyMs": 3917,
+      "tokens": {
+        "input": 807,
+        "output": 218
+      },
+      "costMicroUsd": 840
+    },
+    {
+      "id": "failure-timeout",
+      "category": "provider-failure",
+      "injected": true,
+      "reviewed": false,
+      "expectedStatus": "Failed",
+      "status": "Failed",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-BAND-GOOD",
+        "R-STRONG"
+      ],
+      "range": null,
+      "expectedRange": null,
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": "Timeout",
+      "model": null,
+      "latencyMs": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0
+    },
+    {
+      "id": "failure-invalid",
+      "category": "provider-failure",
+      "injected": true,
+      "reviewed": false,
+      "expectedStatus": "Failed",
+      "status": "Failed",
+      "statusOk": true,
+      "evidenceLevel": "Strong",
+      "rules": [
+        "R-BAND-FAIR",
+        "R-STRONG"
+      ],
+      "range": null,
+      "expectedRange": null,
+      "midInExpected": null,
+      "midErrorPct": null,
+      "failure": "InvalidOutput: unexpected keys confidence,high,low",
+      "model": "fault-injector",
+      "latencyMs": 0,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0
+    }
+  ]
+}

@@ -1,0 +1,148 @@
+{
+  "summary": {
+    "source": "synthetic",
+    "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+    "fallback": null,
+    "ranAt": "2026-10-27T13:45:19.035Z",
+    "cases": 3,
+    "scoredCases": 3,
+    "titleExact": "3/3",
+    "titleIgnoringAccents": "3/3",
+    "authorsFound": "3/3",
+    "isbnFound": "1/1",
+    "wrongIsbn": 0,
+    "needsMoreData": 0,
+    "failed": 0,
+    "latencyMs": {
+      "p50": 1586,
+      "p95": 1953
+    },
+    "tokens": {
+      "input": 4244,
+      "output": 295
+    },
+    "costUsd": 0.005424,
+    "meetsAdr0048": "NOT EVIDENCE (synthetic, 3 scored cases)",
+    "skipped": []
+  },
+  "results": [
+    {
+      "id": "cover-clean",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Mắt biếc",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Mắt biếc",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "publisher": "NHÀ XUẤT BẢN TRẺ",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp trang bản quyền để đọc ISBN và năm xuất bản"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1953,
+      "tokens": {
+        "input": 1144,
+        "output": 97
+      }
+    },
+    {
+      "id": "cover-copyright",
+      "photos": 2,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Mắt biếc",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "isbn": "978-604-1-12763-0"
+      },
+      "read": {
+        "title": "Mắt biếc",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "publisher": "NHÀ XUẤT BẢN TRẺ",
+        "publicationYear": 2019,
+        "language": "vi",
+        "edition": "In lần thứ 42",
+        "isbn": "9786041127630"
+      },
+      "missing": [],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": true,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1586,
+      "tokens": {
+        "input": 1892,
+        "output": 108
+      }
+    },
+    {
+      "id": "cover-phone",
+      "photos": 1,
+      "scored": true,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Mắt biếc",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Mắt biếc",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "publisher": "Nhà Xuất Bản Trẻ",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp trang bản quyền để đọc năm xuất bản và ISBN"
+      ],
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "isbnWrong": false,
+      "isbnFound": null,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1060,
+      "tokens": {
+        "input": 1208,
+        "output": 90
+      }
+    }
+  ]
+}
