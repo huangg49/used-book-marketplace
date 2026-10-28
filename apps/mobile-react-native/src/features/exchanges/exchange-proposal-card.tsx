@@ -24,24 +24,24 @@ export function ExchangeProposalCard({
 }: ExchangeProposalCardProps) {
   const statusInfo = mapExchangeStatusInfo(exchange.status, isInitiator);
 
+  const initiatorListingCount =
+    exchange.initiatorListingIds && exchange.initiatorListingIds.length > 0
+      ? exchange.initiatorListingIds.length
+      : 1;
+
   const initiatorBookList: (Listing | null)[] =
     initiatorListings && initiatorListings.length > 0
       ? initiatorListings
       : initiatorListing
         ? [initiatorListing]
-        : [];
+        : new Array(initiatorListingCount).fill(null);
 
-  const myBooks = isInitiator
-    ? initiatorBookList
-    : recipientListing
-      ? [recipientListing]
-      : [];
+  const recipientBookList: (Listing | null)[] = recipientListing
+    ? [recipientListing]
+    : [null];
 
-  const partnerBooks = isInitiator
-    ? recipientListing
-      ? [recipientListing]
-      : []
-    : initiatorBookList;
+  const myBooks = isInitiator ? initiatorBookList : recipientBookList;
+  const partnerBooks = isInitiator ? recipientBookList : initiatorBookList;
 
   const partnerListingPrimary = isInitiator
     ? recipientListing
@@ -147,14 +147,26 @@ export function ExchangeProposalCard({
                         </AppText>
                       </>
                     ) : (
-                      <AppText style={styles.loadingBook}>Đang tải thông tin sách...</AppText>
+                      <>
+                        <AppText style={styles.bookTitle} numberOfLines={2}>
+                          Sách gửi trao đổi #{idx + 1}
+                        </AppText>
+                        <AppText style={styles.bookAuthors} numberOfLines={1}>
+                          {exchange.status === "Completed"
+                            ? "Đã giao nhận hoàn tất"
+                            : "Sách trong thỏa thuận trao đổi"}
+                        </AppText>
+                        <AppText style={styles.bookValue}>
+                          {exchange.status === "Completed"
+                            ? "Đã đối soát lưu ký"
+                            : "Chi tiết trong hồ sơ"}
+                        </AppText>
+                      </>
                     )}
                   </View>
                 </View>
               ))
-            ) : (
-              <AppText style={styles.loadingBook}>Đang tải thông tin sách...</AppText>
-            )}
+            ) : null}
           </View>
         </View>
 
@@ -210,14 +222,26 @@ export function ExchangeProposalCard({
                         </AppText>
                       </>
                     ) : (
-                      <AppText style={styles.loadingBook}>Đang tải thông tin sách...</AppText>
+                      <>
+                        <AppText style={styles.bookTitle} numberOfLines={2}>
+                          Sách nhận từ đối tác #{idx + 1}
+                        </AppText>
+                        <AppText style={styles.bookAuthors} numberOfLines={1}>
+                          {exchange.status === "Completed"
+                            ? "Đã giao dịch hoàn tất"
+                            : "Sách trao đổi đối ứng"}
+                        </AppText>
+                        <AppText style={styles.bookValue}>
+                          {exchange.status === "Completed"
+                            ? "Đã tất toán lưu ký"
+                            : "Chi tiết trong hồ sơ"}
+                        </AppText>
+                      </>
                     )}
                   </View>
                 </View>
               ))
-            ) : (
-              <AppText style={styles.loadingBook}>Đang tải thông tin sách...</AppText>
-            )}
+            ) : null}
           </View>
         </View>
       </View>

@@ -307,6 +307,113 @@ export function LoginScreen({
             </AppText>
           </Pressable>
         </View>
+
+        {__DEV__ && (
+          <View
+            style={{
+              marginTop: 6,
+              paddingTop: 8,
+              borderTopWidth: 1,
+              borderTopColor: stitchTokens.canvasWhite,
+              gap: 6,
+            }}
+          >
+            <AppText
+              kind="small"
+              style={{
+                fontSize: 10,
+                color: stitchTokens.deepCocoa,
+                textAlign: "center",
+              }}
+            >
+              Tài khoản thử nghiệm nhanh (DEV):
+            </AppText>
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                gap: 6,
+                justifyContent: "center",
+              }}
+            >
+              <Pressable
+                onPress={() => {
+                  setEmail("nguyendai@latlai.local");
+                  setPassword("LatLai-Local-2026!");
+                }}
+                style={{
+                  backgroundColor: stitchTokens.lemonLight,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderRadius: 6,
+                  borderWidth: 1,
+                  borderColor: stitchTokens.lemonBg,
+                }}
+              >
+                <AppText
+                  kind="small"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: "600",
+                    color: stitchTokens.wine,
+                  }}
+                >
+                  Nguyễn Đại
+                </AppText>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setEmail("nguyentu@latlai.local");
+                  setPassword("LatLai-Local-2026!");
+                }}
+                style={{
+                  backgroundColor: stitchTokens.lemonLight,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderRadius: 6,
+                  borderWidth: 1,
+                  borderColor: stitchTokens.lemonBg,
+                }}
+              >
+                <AppText
+                  kind="small"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: "600",
+                    color: stitchTokens.wine,
+                  }}
+                >
+                  Nguyễn Tú
+                </AppText>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setEmail("member@latlai.local");
+                  setPassword("LatLai-Local-2026!");
+                }}
+                style={{
+                  backgroundColor: stitchTokens.lemonLight,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderRadius: 6,
+                  borderWidth: 1,
+                  borderColor: stitchTokens.lemonBg,
+                }}
+              >
+                <AppText
+                  kind="small"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: "600",
+                    color: stitchTokens.wine,
+                  }}
+                >
+                  Member Seed
+                </AppText>
+              </Pressable>
+            </View>
+          </View>
+        )}
       </View>
     </Screen>
   );
