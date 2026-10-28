@@ -191,7 +191,12 @@ try {
   await login(recipient, "admin@operations.test", chatPath);
   await recipient.getByRole("button", { name: "Chấp nhận hình thức", exact: true }).click();
   const offer = page.getByRole("region", { name: "Chọn sách đem đổi", exact: true });
-  await offer.getByRole("checkbox").first().check();
+  // The redesigned card exposes a native checkbox for keyboard interaction;
+  // its decorative circle intentionally receives pointer hits inside the label.
+  const bookChoice = offer.getByRole("checkbox").first();
+  await bookChoice.focus();
+  await bookChoice.press("Space");
+  assert.equal(await bookChoice.isChecked(), true);
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await capture(page, "exchange-compose-desktop.png");
   await page.setViewportSize({ width: 390, height: 844 });
@@ -229,11 +234,13 @@ try {
       await route.fulfill({ status: 503, json: { code: "Unavailable", message: "QA response loss" } });
     } else await route.fulfill({ response });
   });
-  await offer.getByRole("button", { name: "Gửi đề nghị đổi sách", exact: true }).click();
+  await offer.getByRole("button", { name: /^Gửi đề nghị đổi sách \(\d+ cuốn\)$/, exact: true }).click();
   await offer.getByRole("alert").waitFor();
   assert.equal(await offer.getByRole("checkbox").first().isChecked(), true);
   assert.equal(await offer.getByRole("checkbox").first().isDisabled(), true);
-  await offer.getByRole("button", { name: "Thử lại đề nghị trước", exact: true }).click();
+  const retryOffer = offer.getByRole("button", { name: "Thử lại đề nghị trước", exact: true });
+  assert.equal(await retryOffer.isEnabled(), true, "An uncertain proposal locks edits but must allow replay");
+  await retryOffer.click();
   holdRefresh = false;
   await page.unroute("**/api/v1/me/purchase-conversations**");
   await page.getByRole("button", { name: "Hủy đề nghị", exact: true }).waitFor();
@@ -296,7 +303,7 @@ try {
     .getByRole("button", { name: "Hủy đề nghị", exact: true })
     .click();
   await cancelled;
-  await recipient.getByText("Các đề nghị đổi sách trong cuộc trao đổi", { exact: true }).click();
+  await recipient.getByText(/^Lịch sử các đề nghị đổi sách \(\d+ lần\)$/, { exact: true }).click();
   await recipient.getByRole("button", { name: /^Xem đề nghị lần 1/ }).click();
   await recipient.getByText("Đề nghị đã bị hủy.", { exact: true }).waitFor();
   const final = await fixture.api(
@@ -322,7 +329,7 @@ try {
     .locator(`a[href="${chatPath}"]`)
     .first()
     .click();
-  await page.getByText("Các đề nghị đổi sách trong cuộc trao đổi", { exact: true }).click();
+  await page.getByText(/^Lịch sử các đề nghị đổi sách \(\d+ lần\)$/, { exact: true }).click();
   await page.getByRole("button", { name: /^Xem đề nghị lần 1/ }).click();
   await page
     .getByRole("heading", {

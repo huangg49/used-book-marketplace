@@ -33,7 +33,14 @@
   snapshot AbortError/InvalidStateError không thành unhandled rejection;
   giữ nguyên animation và callback/finished errors, không nuốt lỗi ứng dụng.
   Có unit kiểm snapshot fallback, unsupported browser và callback errors;
-  User web lint/typecheck/test/build PASS. CI Operations trên head3df9df9 PASS.
+  User web lint/typecheck/test/build PASS (248tests). CI Operations trên head3df9df9 PASS.
+- Kiểm tiếp User web đơn bán/mua ngay/đổi/ví trên Edge+Mongo QA riêng: đều PASS.
+  Sửa retry đề nghị đổi sách nằm ngoài fieldset bị khóa khi uncertain (vẫn khóa
+  sách/địa chỉ và giữ nguyên key/body/version), mở lịch sử khi chỉ có một đề nghị
+  đã hủy. Browser regression kiểm lost-ACK chỉ tạo một exchange, replay cùng
+  intent, lỗi funding giữ dialog, đọc403 ẩn dữ liệu; wallet kiểm QueryDR outage,
+  callback giả, expiry và ledger không phát sinh khi hủy. Không đổi API/tiền/quyền.
+  CI của head cuối và merge vẫn theo PR77; READINESS không đổi.
 
 ## Cache/polling Dashboard — 27/10/2026
 
