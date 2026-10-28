@@ -1,5 +1,21 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## Đồng bộ kích thước đối xứng 2 nút bấm trong thẻ tất toán (ExchangeSettlementCard) — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Nguyên nhân lệch kích thước**: Component `<Button>` mặc định có `paddingHorizontal: 20` khiến nhãn dài "Khám phá sách khác" bị rớt dòng thành 2 dòng (chiều cao ~68px), trong khi "Kiểm tra số dư Ví" chỉ chiếm 1 dòng (chiều cao 48px), dẫn đến mất cân xứng chiều dọc và thẩm mỹ.
+- **Giải pháp tối ưu**:
+  - Chuyển sang dùng `<Pressable>` trực tiếp với style `actionBtn` chuyên dụng: `flex: 1`, `minHeight: 48`, `paddingHorizontal: 8`, `paddingVertical: 12`, `borderRadius: 12`.
+  - Thiết lập hàng chứa `actionsRow: { flexDirection: "row", gap: 10, alignItems: "stretch" }` để ép buộc 2 nút luôn luôn có chiều cao tuyệt đối bằng nhau.
+  - Khống chế `numberOfLines={1}` với `fontSize: 13, fontWeight: "700"` đảm bảo nhãn hiển thị gọn gàng trên 1 dòng duy nhất trên mọi màn hình di động.
+  - Bổ sung icon trực quan tinh tế: `wallet` (cho Ví) và `search` (cho Khám phá sách).
+  - Tích hợp hiệu ứng xúc giác cao cấp `pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] }`.
+- **Kiểm tra**:
+  - Đã chụp ảnh màn hình xác nhận trực quan trên Android Emulator (`Medium_Phone_API_36.1:5554`): Cả 2 nút hiển thị đồng bộ, cân xứng 100%, thẳng hàng và thẩm mỹ.
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/mobile-react-native test`: 24 test files / 163 tests PASS.
+  - Git commit: `976df6c`.
+
 ## Kết nối máy chủ Android Emulator & Kiểm thử trực tiếp luồng trao đổi trên thiết bị thực tế — 28/10/2026
 
 - Nhánh `feature/exchange-rn-completion`.
