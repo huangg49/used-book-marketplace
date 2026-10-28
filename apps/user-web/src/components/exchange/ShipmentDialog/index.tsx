@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Truck, PackageCheck, AlertCircle, MapPin, Calendar, Building2 } from 'lucide-react';
+import { Truck, PackageCheck, AlertCircle, MapPin, Calendar, Building2, X } from 'lucide-react';
 import { CARRIERS, type CarrierCode, type ShipmentData, createCarrierShipment } from '../../../services/exchangeShipment';
 import styles from './ShipmentDialog.module.css';
 
@@ -105,16 +105,28 @@ export function ShipmentDialog(props: ShipmentDialogProps) {
         <div className={styles.overlay} onClick={isBusy ? undefined : onClose} role="dialog" aria-modal="true">
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.header}>
-                    <div className={styles.headerIcon}>
-                        <Truck size={24} />
+                    <div className={styles.headerContent}>
+                        <div className={styles.headerIcon}>
+                            <Truck size={24} />
+                        </div>
+                        <div>
+                            <h2 className={styles.title}>Tạo đơn vận chuyển</h2>
+                            <p className={styles.subtitle}>Cung cấp thông tin vận đơn hoặc lịch hẹn để đối tác theo dõi</p>
+                        </div>
                     </div>
-                    <div>
-                        <h2 className={styles.title}>Tạo đơn vận chuyển</h2>
-                        <p className={styles.subtitle}>Cung cấp thông tin vận đơn hoặc lịch hẹn để đối tác theo dõi</p>
-                    </div>
+                    <button
+                        type="button"
+                        className={styles.closeBtn}
+                        onClick={isBusy ? undefined : onClose}
+                        aria-label="Đóng"
+                        disabled={isBusy}
+                    >
+                        <X size={20} />
+                    </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className={styles.form}>
+                    <div className={styles.body}>
                     {/* Method Selector */}
                     <div className={styles.methodGroup}>
                         <label className={styles.fieldLabel}>Phương thức giao nhận</label>
@@ -294,6 +306,7 @@ export function ShipmentDialog(props: ShipmentDialogProps) {
                             {error}
                         </div>
                     )}
+                    </div>
 
                     <div className={styles.actions}>
                         <button
