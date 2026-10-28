@@ -1,5 +1,25 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## Tích hợp thêm & lưu địa chỉ nhận mới trực tiếp trong hộp thoại đồng ý đổi sách (AcceptModal) — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Trải nghiệm UX tối ưu**:
+  - Trước đây: Modal "Xác nhận đồng ý đổi sách" chỉ hiển thị danh sách các địa chỉ đã lưu có sẵn (nếu người dùng chưa có hoặc muốn gửi về địa chỉ khác thì phải bấm nút rời màn hình sang sổ địa chỉ, làm gián đoạn luồng duyệt đổi sách).
+  - Cải tiến:
+    - **Chế độ chọn địa chỉ có sẵn**: Danh sách địa chỉ được đưa vào khung `ScrollView` khống chế `maxHeight: 200` có thanh cuộn mượt mà, kèm nhãn `[Mặc định]` vàng hổ phách tinh tế. Bên dưới danh sách có nút `[＋ Thêm địa chỉ nhận mới]` nổi bật và link phụ `Sổ địa chỉ ↗`.
+    - **Chế độ thêm địa chỉ mới trực tiếp (Inline Address Creation)**: Khi bấm `[＋ Thêm địa chỉ nhận mới]` (hoặc khi tài khoản chưa có địa chỉ nào), modal mở ngay form nhập liệu tinh giản:
+      - Họ và tên người nhận (`recipientName`)
+      - Số điện thoại 10 chữ số (`phone`)
+      - Khu vực phục vụ dạng chip bấm chọn trực quan (`DEMO-A`, `DEMO-B`, `DEMO-C` đồng bộ từ `/service-areas`)
+      - Địa chỉ chi tiết (`detail`)
+      - Xác thực hợp lệ client-side (`validateAddress`) kèm hiển thị lỗi `<Notice tone="error">` nếu sai định dạng.
+      - Nút `[Lưu & Chọn địa chỉ]` thực hiện lưu tức thì lên máy chủ (`POST /me/addresses` chuẩn Idempotency-Key), tự động chọn địa chỉ vừa tạo và đưa người dùng trở lại danh sách với địa chỉ mới đã được highlight sẵn sàng để bấm `[Đồng ý đổi sách]`.
+    - Có nút `[← Chọn từ đã lưu]` để quay lại danh sách bất kỳ lúc nào nếu người dùng đổi ý.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/mobile-react-native test`: 24 test files / 163 tests PASS 100%.
+  - Git commit: `c75e45d`.
+
 ## Tinh chỉnh cân xứng thanh nhập tin nhắn và nút gửi trong hộp thoại chat (ExchangeChatBox) — 28/10/2026
 
 - Nhánh `feature/exchange-rn-completion`.
