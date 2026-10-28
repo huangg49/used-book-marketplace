@@ -2,12 +2,17 @@ import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { memberWork } from "../lib/member-journeys";
+import { ROUTES } from "../lib/routes";
 import styles from "./MemberWorkspace.module.css";
 import { WorkInbox } from "../components/WorkInbox";
 export function AccountOverviewPage() {
   const auth = useSession();
   if (auth.status !== "authenticated") return null;
   const { user } = auth;
+  const isLocked = user.status === "LOCKED";
+  const availableWork = isLocked
+    ? memberWork.filter(item => item.to !== ROUTES.chat())
+    : memberWork;
   return (
     <div className={styles.page} key={user.id}>
       <header>
@@ -33,7 +38,7 @@ export function AccountOverviewPage() {
           <h2 id="work-continue">Tiếp tục giao dịch</h2>
           <p>Đơn trực tiếp, trao đổi và đơn đấu giá có nơi theo dõi riêng.</p>
           <ul className={styles.links}>
-            {memberWork.map((item) => (
+            {availableWork.map((item) => (
               <li key={item.to}>
                 <Link to={item.to}>
                   <span>
@@ -60,7 +65,7 @@ export function AccountOverviewPage() {
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
             </li>
-            <li>
+            {!isLocked && <li>
               <Link to="/my-books">
                 <span>
                   <strong>Kệ sách của tôi</strong>
@@ -70,7 +75,7 @@ export function AccountOverviewPage() {
                 </span>
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
-            </li>
+            </li>}
             {user.status === "ACTIVE" && user.roles.includes("MEMBER") && (
               <li>
                 <Link to="/sell">
@@ -91,7 +96,7 @@ export function AccountOverviewPage() {
         <h2 id="work-account">Thông tin và đánh giá</h2>
         <nav className={styles.actions} aria-label="Thông tin cá nhân">
           <Link to="/wallet">Ví của tôi</Link>
-          <Link to="/reviews">Đánh giá của tôi</Link>
+          {!isLocked && <Link to="/reviews">Đánh giá của tôi</Link>}
           <Link to={`/members/${user.id}`}>Hồ sơ uy tín của tôi</Link>
           <Link to="/profile">Thông tin tài khoản</Link>
           <Link to="/notifications">Thông báo</Link>

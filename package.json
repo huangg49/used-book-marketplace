@@ -40,6 +40,8 @@
     "test:public:browser": "node scripts/test-public-shelf.mjs",
     "test:reviews:browser": "node scripts/test-transaction-reviews.mjs",
     "test:journeys:browser": "node scripts/test-transaction-reviews.mjs",
+    "test:journey-gate": "node scripts/test-journey-gate.mjs",
+    "test:journey-gate:unit": "node --test scripts/test-journey-gate.test.mjs",
     "dev:api": "node scripts/dev-api.mjs",
     "dev:media": "pnpm --filter @used-books/api worker:media",
     "dev:admin": "pnpm --filter @used-books/admin-web dev",

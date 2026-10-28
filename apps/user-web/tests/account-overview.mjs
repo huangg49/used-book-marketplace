@@ -107,6 +107,9 @@ try {
   await page.getByRole('button',{name:'Đăng xuất',exact:true}).first().click();
   await page.goto(origin+'/account');await login();await main.getByRole('status').filter({hasText:'hạn chế hoặc khóa'}).waitFor();
   assert.equal(await main.getByRole('link',{name:/^Đăng sách mới/}).count(),0);
+  for(const name of [/^Kệ sách của tôi/,/^Trò chuyện/,/^Đánh giá của tôi/])assert.equal(await main.getByRole('link',{name}).count(),0,'LOCKED hub must not advertise a denied destination');
+  await main.getByRole('link',{name:'Ví của tôi',exact:true}).waitFor();
+  await main.getByRole('link',{name:'Hồ sơ uy tín của tôi',exact:true}).waitFor();
   await main.getByRole('link',{name:/^Đơn mua\/bán trực tiếp/}).waitFor();await capture('locked-task-hub',390);
   assert.deepEqual(pageErrors,[]);
   console.log('PASS account task hub: live isolated session/profile/wallet reads, keyboard menu and guide, responsive1440/768/390/320, LOCKED entry clarity. Native NOT RUN.');

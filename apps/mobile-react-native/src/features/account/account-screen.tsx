@@ -36,6 +36,7 @@ export function AccountScreen() {
   const notifications = useNotifications(client, !!owner);
   const user =
     profile.data ?? (state.status === "authenticated" ? state.user : undefined);
+  const isLocked = user?.status === "LOCKED";
   async function logout() {
     if (busy) return;
     setBusy(true);
@@ -90,8 +91,9 @@ export function AccountScreen() {
         ) : null}
         {user && user.status !== "ACTIVE" ? (
           <Notice tone="warning">
-            Tài khoản đang bị hạn chế hoặc khóa. Các nghĩa vụ trong giao dịch cũ
-            vẫn phụ thuộc quyền hiện tại; bạn không được mở giao dịch mới.
+            {isLocked
+              ? "Tài khoản đang bị khóa. Bạn vẫn có thể xem ví và thực hiện các nghĩa vụ được phép trong giao dịch cũ."
+              : "Tài khoản đang bị hạn chế một số hoạt động. Các nghĩa vụ trong giao dịch cũ vẫn phụ thuộc quyền hiện tại; bạn không được mở giao dịch mới."}
           </Notice>
         ) : null}
         {user?.roles.includes("MEMBER") && <WorkInbox key={user.id} ownerId={user.id} status={user.status} />}
@@ -120,12 +122,12 @@ export function AccountScreen() {
             icon="gavel"
             onPress={() => router.push("/my-auctions")}
           />
-          <ActionRow
+          {!isLocked && <ActionRow
             title="Trò chuyện"
             description="Thương lượng và trao đổi trong đúng hội thoại giao dịch."
             icon="message"
             onPress={() => router.push("/chat-inbox")}
-          />
+          />}
         </View>
         <View>
           <AppText kind="heading" accessibilityRole="header">
@@ -137,12 +139,12 @@ export function AccountScreen() {
             icon="search"
             onPress={() => router.push("/search")}
           />
-          <ActionRow
+          {!isLocked && <ActionRow
             title="Kệ sách của tôi"
             description="Bản nháp, bài chờ duyệt, bài cần sửa và sách đang hiển thị. Chọn tạo bản nháp để đăng sách mới."
             icon="book"
             onPress={() => router.push("/drafts")}
-          />
+          />}
         </View>
         <View style={{ gap: space.md }}>
           <AppText kind="heading" accessibilityRole="header">
@@ -154,24 +156,24 @@ export function AccountScreen() {
             title="Ví của tôi"
             onPress={() => router.push("/wallet")}
           />
-          <Button
+          {!isLocked && <Button
             wine
             secondary
             title="Địa chỉ của tôi"
             onPress={() => router.push("/addresses")}
-          />
-          <Button
+          />}
+          {!isLocked && <Button
             wine
             secondary
             title="Sách yêu thích"
             onPress={() => router.push("/wishlist")}
-          />
-          <Button
+          />}
+          {!isLocked && <Button
             wine
             secondary
             title="Đánh giá giao dịch & hồ sơ uy tín"
             onPress={() => router.push("/reviews")}
-          />
+          />}
           <AppText kind="small">
             Số dư và trạng thái thật được hiển thị trong từng mục. Chỉ đánh giá
             được giao dịch đã hoàn tất và đủ điều kiện.

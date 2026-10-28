@@ -114,7 +114,7 @@ Các đường dẫn trong bảng tính từ root repo.
 | UI dùng chung | `apps/mobile-react-native/src/core/ui/`; `packages/brand/v1.1/` | `/ui` và `/design` chỉ bật khi `EXPO_PUBLIC_DESIGN_PREVIEW=1`; dữ liệu mẫu không là API |
 | Hành trình/điều hướng | Web AccountOverviewPage/MemberGuidePage; RN account/guide; Admin WorkspaceStart | [Bản đồ và checklist nhóm](../ui/JOURNEY_CLARITY_2026_10_28.md), `pnpm test:journeys:browser` |
 | Operations | `apps/admin-web/src/features/{review,reviews}/` và `src/core/` | ADR 0010; `apps/admin-web/tests/browser.mjs` |
-| User web | `apps/user-web/src/app/router.tsx`, `src/pages/`, `src/services/` | Listing/purchase/auction/inbox/exchange dùng API thật; exchange chat/report còn deferred; review chung đã có. `tests/integration.mjs` và `tests/exchange-integration.mjs` dùng QA riêng |
+| User web | `apps/user-web/src/app/router.tsx`, `src/pages/`, `src/services/` | Listing/purchase/auction/inbox/exchange/review dùng API thật. ExchangeDetailPage đã gọi messages/reportIssue; xử lý tranh chấp còn giới hạn như bảng Exchange ở trên. `tests/integration.mjs` và `tests/exchange-integration.mjs` dùng QA riêng |
 | Catalog/listing | `apps/api/src/modules/catalog/`, `listings/` | ADR 0005–0006/0009/0011–0012; catalog/listing/media E2E |
 | Ảnh listing | `apps/api/src/modules/media/`; `src/media-worker.ts` | ADR 0008; `media.e2e-spec.ts`; tests dùng storage fake có nhãn |
 | Địa chỉ/báo giá | `apps/api/src/modules/addresses/`, `quotes/`; listing fulfillment | ADR 0014–0016; addresses/quotes E2E |
@@ -213,6 +213,14 @@ pnpm --filter @used-books/admin-web test:browser
 Để kiểm thử RN web, đặt `EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:3009/api/v1`
 và `EXPO_PUBLIC_DESIGN_PREVIEW=1` trong **môi trường terminal QA** khi chạy
 `pnpm --filter @used-books/mobile-react-native export:web`, rồi `pnpm test:public:browser`.
+
+Gói kiểm chứng nhiều hành trình có lệnh `pnpm test:journey-gate` (8 suite browser,
+chạy tuần tự vì dùng chung port/cache). Xem [chuẩn bị, ma trận và giới hạn](../ui/JOURNEY_VERIFICATION_2026_10_28.md).
+Runner từ chối Mongo ngoài localhost:57017/`*_test`/`rs-test`, kiểm artifact API/RN
+và QA API base của RN; không tự build, khởi động hay seed DB. Chạy `--list` để
+xem từng phạm vi; `--only=chat,exchange` ghi các suite khác NOT_RUN và tổng PARTIAL.
+Kết quả máy nằm ở `.tmp/journey-gate/result.json`; PASS này không đóng READINESS
+hoặc thay kiểm chứng native, storage thật và người dùng thử từ entry.
 Runner kiểm cả catalog `/ui`, vì vậy bản export này cần bật cờ preview.
 Không ghi đè `.env` RN của người đang dùng app.
 Runner quản lý fixture API port 3009, ảnh 3010 và web 8087; không chiếm các port đó

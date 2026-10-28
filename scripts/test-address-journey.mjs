@@ -13,7 +13,7 @@ export async function addressJourney(p, fixture, artifacts) {
     }
     return route.continue();
   });
-  await click("Sổ địa chỉ");
+  await click("Địa chỉ của tôi");
   await click("Tải lại sổ địa chỉ");
   await p.unroute("**/api/v1/me/addresses");
   await p.getByText("Chưa có địa chỉ nào", { exact: true }).waitFor();
@@ -139,10 +139,10 @@ export async function addressJourney(p, fixture, artifacts) {
   assert.equal(b.items[0].recipientName, "Bạn đọc thứ hai");
   await p.unroute("**/api/v1/me/addresses/*/archive");
   await click("Quay lại");
-  await click("Sổ địa chỉ");
+  await click("Địa chỉ của tôi");
   await p.getByText("Bạn đọc thứ hai", { exact: true }).waitFor();
   await click("Quay lại");
-  await click("Sách của tôi");
+  await click("Kệ sách của tôi");
   await p.setViewportSize({ width: 390, height: 844 });
   console.log(
     "PASS address book RN web: validation, create lost-ack replay, second/default, stale edit retained, delete lost-ack replay/default promotion, reopen, 320px large text. Real HTTP/MongoDB, demo locality data; native unverified.",

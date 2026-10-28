@@ -1,5 +1,31 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## Kiểm chứng hành trình và sửa lỗi tìm được — 28/10/2026
+
+- Owner duyệt gói kiểm chứng hành trình hiện có; nhánh
+  `codex/journey-verification`, base `7a7c217`, commit subject
+  `fix(journeys): verify cross-app flows and restore mobile chat panels`.
+- Sửa lỗi ChatPage mobile chọn Đơn hàng nhưng composer vẫn hiện do CSS
+  specificity; giữ draft/motion. Account web/RN ẩn lối tắt bị API chặn với LOCKED,
+  giữ ví và giao dịch cũ; RN tách thông báo restriction. Không đổi quyền server,
+  API/contract0.59, migration/tiền hoặc GHN/carrier/Driver.
+- Thêm `pnpm test:journey-gate`:8suite browser chạy tuần tự, QA URL/artifact
+  preflight, kết quả PASS/FAIL/NOT_RUN/BLOCKED/PARTIAL theo từng phạm vi. Chạy
+  subset không thành PASS toàn gói. Sửa harness chat/RN theo entry thực tế,
+  giữ ca lỗi/replay và assertion LOCKED; START_HERE sửa mô tả Exchange chat/report.
+  [Ma trận, cách chạy và giới hạn](../ui/JOURNEY_VERIFICATION_2026_10_28.md).
+- PASS: browser tổng8/8 exit0 sau fix Account; auction HTTP/Mongo17,
+  55filtered chủ đích không chạy carrier;
+  safety runner4; web251/RN161 unit, lint/typecheck/web build/RN export, account
+  web browser. Detector Account0findings, Chat CSS còn1advisory radius cũ ngoài
+  diff; docs/checker5/diff check PASS. JSON `.tmp/journey-gate/result.json` ghi
+  từng scope/sourceHead/dirty/time/exit; browser/storage fake không là native/live.
+- Native/TalkBack/ARM/iOS, human UX/review và browser auction thật qua cả ba
+  vai trò chưa có evidence mới. Flutter scaffold; READINESS giữ nguyên.
+- QA riêng đã dừng; Mongo chính không start/reset/seed/migrate. Chỉ commit local,
+  chưa push/PR/merge/deploy. Main remote `7d92012`, PR mở0, năm workflow main
+  vừa đọc completed/success tại SHA đó, không là CI cho chuỗi local.
+
 ## Việc đang chờ từ state thật và workflow nối hành trình — 28/10/2026
 
 - Owner duyệt gói nối việc cụ thể vào Việc của tôi và tiếp tục sau gián đoạn.
@@ -26,6 +52,8 @@
   và switch đã lệch UI hiện tại (source chat đó không đổi). Không nhận PASS chat
   tổng; giữ kịch bản cũ ngoài ba trường quyền Order để không che finding. Owner
   chat cần cập nhật harness và chạy lại trước nghiệm thu toàn luồng.
+  Finding đã xử lý trong gói kiểm chứng ở đầu file; giữ FAIL ở đây theo mốc cũ,
+  kết quả mới và CSS bug xem báo cáo gói kiểm chứng.
 - Native thiết bị/TalkBack/ARM/iOS, human UX và review tiền/quyền vẫn OPEN/NOT RUN.
   Flutter scaffold, READINESS và phạm vi sau F2h giữ nguyên. Không chạy lại gate
   import/failover/schema không bị đổi. API0.59 cần đi trước hoặc cùng client;
