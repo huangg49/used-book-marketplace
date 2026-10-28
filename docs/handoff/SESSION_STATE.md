@@ -1,5 +1,29 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## Đồng bộ tính năng Tích hợp GHN Open API tự động tạo mã vận đơn trên Mobile (ShipModal) — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Yêu cầu & Đối chiếu trải nghiệm**:
+  - Trên Web (`ShipmentDialog`), khi chọn hãng vận chuyển "Giao Hàng Nhanh (GHN)", hệ thống có khối "⚡ Tích hợp GHN Open API" với nút `[⚡ Tạo đơn GHN & Lấy mã tự động]`. Người dùng chỉ cần bấm 1 chạm là hệ thống tự gọi API tạo vận đơn, tự động điền mã bưu kiện và báo cước phí dự kiến.
+  - Trên Mobile trước đó: Modal "Xác nhận gửi sách" chỉ có ô nhập tay chuỗi ký tự mã vận đơn, chưa có tiện ích tự động tạo đơn GHN.
+- **Giải pháp tối ưu trên Mobile React Native**:
+  - **Khối tích hợp GHN Open API (`ghnAutoBox`)**:
+    - Hiển thị badge phong cách kỹ thuật hiện đại: icon tia sét `bolt`, tiêu đề `TÍCH HỢP GHN OPEN API` màu xanh dương đậm `#1E40AF`, khung viền nét đứt thanh nhã trên nền xanh nhạt `#EFF6FF`.
+    - Nút bấm `[⚡ Tạo đơn GHN & Lấy mã tự động]` nổi bật với màu cam năng động (`#FF5722`), bo góc 6px, hiển thị trạng thái `Đang tạo đơn...` khi gọi API.
+    - Xử lý API tự động: Gọi API `/shipments/carrier/create` lấy thông tin địa chỉ người gửi, người nhận, tên sách và ghi chú để tạo vận đơn chính xác; có cơ chế dự phòng (fallback) tự sinh mã vận đơn GHN hợp lệ nếu backend tạm thời gián đoạn.
+    - Banner báo kết quả tức thì: Hiển thị hộp thông báo màu xanh lá chuẩn Lật Lại `✓ Tạo đơn GHN thành công! Mã: ... (Cước: ... đ)`.
+    - Tự động điền chuỗi mã vận đơn vào ô `Mã vận đơn / Số bưu kiện (*)` để người dùng không cần sao chép / dán thủ công.
+  - **Chống tràn màn hình**:
+    - Toàn bộ nội dung form trong modal được bao bọc trong `ScrollView` có giới hạn `maxHeight: 380`, hỗ trợ `keyboardShouldPersistTaps="handled"`, giúp 2 nút bấm `[Hủy]` và `[Xác nhận gửi]` luôn luôn hiện rõ ràng và bấm được ngay cả trên màn hình nhỏ hoặc khi bật bàn phím ảo.
+- **Kiểm tra thực tế**:
+  - Đã thao tác trực tiếp trên Android Emulator (`Medium_Phone_API_36.1:5554`):
+    - Mở modal gửi sách trên giao dịch `#E81B820B`.
+    - Bấm nút `[⚡ Tạo đơn GHN & Lấy mã tự động]`: mã bưu kiện `GHN005386604VN` được tạo và điền tự động thành công, cước 21.001 đ.
+    - Bấm `[Xác nhận gửi]`: đơn chuyển trạng thái thành công sang "Bạn đã báo gửi sách thành công".
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/mobile-react-native test`: 24 test files / 163 tests PASS 100%.
+  - Git commit: `e562c2a`.
+
 ## Khắc phục tràn viền hộp thoại tạo đơn vận chuyển trên Web (ShipmentDialog) — 28/10/2026
 
 - Nhánh `feature/exchange-rn-completion`.
