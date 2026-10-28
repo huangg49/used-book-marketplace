@@ -28,6 +28,11 @@ process cùng source. Không dùng Prisma/db:generate/SQL runtime từ hướng 
 
 ## Phạm vi
 
+Điều chỉnh28/10/2026: Forum/Cộng đồng sách đã bỏ theo
+[ADR0051](../../docs/adr/0051-remove-forum-from-project-scope.md), không còn là
+backend cần triển khai. Các dòng inventory dưới đây vẫn thuộc source09/10;
+đối chiếu START_HERE/SESSION_STATE trước khi chọn việc mới.
+
 - Catalog/listing/revision/media/review/shelf, address/origin/quote và wishlist.
 - DirectDelivery tới F2h: unpaid/payment/seller acceptance/packaging/label/
   independent pickup/InTransit/overdue review; không là completed purchase.
@@ -38,7 +43,7 @@ process cùng source. Không dùng Prisma/db:generate/SQL runtime từ hướng 
   source có inspection claim/return/settlement, chưa có evidence đóng release gate.
 - `/auctions` Socket.IO public read-only và durable auction inbox; các mutation
   auction vẫn qua REST. Price assist/online lookup tắt mặc định, eval/provider còn gap.
-- Register/reset/admin lock workflows, Exchange/forum và nhiều operations UI
+- Register/reset/admin lock workflows, Exchange và nhiều operations UI
   còn thiếu; không suy từ SRS hoặc mock UI là backend đã hiện thực.
 
 ## Quy tắc và kiểm tra

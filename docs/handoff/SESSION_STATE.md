@@ -1,5 +1,27 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## Quyết định bỏ Forum — 28/10/2026
+
+- Nhóm quyết định bỏ Forum/Cộng đồng sách; owner yêu cầu cập nhật docs và đề
+  xuất gói khác. [ADR0051](../adr/0051-remove-forum-from-project-scope.md) ghi
+  Accepted về scope; SRS1.1 loại FR-F01–FR-F06/AC-44, phần Forum trong BR/UC/UI/
+  model/milestone liên quan. Giữ mã truy vết, không tính là backlog hoặc gate.
+- Chat, wishlist/matching, thông báo, review, kiểm duyệt listing/catalog giữ
+  yêu cầu riêng. Snapshot SRS1.0/diagram/HTML/ZIP giữ nguyên; xem
+  [ghi chú deliverables](../deliverables/README.md). Cửa vào AGENTS/PRODUCT/
+  START_HERE/docs và context/kế hoạch cũ đã dẫn scope mới.
+- Nhánh `codex/docs-remove-forum-scope`, base `f288a73`; commit subject
+  `docs(scope): remove forum from current project requirements`.
+  Chỉ docs; không đổi code/contract/migration/READINESS, không khởi động dịch vụ,
+  không chạm GHN/carrier/Driver hoặc DB. Docs check/diff check PASS; không chạy
+  lại test sản phẩm vì runtime không đổi. Chỉ commit local, chưa push/PR/merge.
+- Đề xuất thay thế, **chưa được giao triển khai**: hoàn thiện review hai chiều
+  và uy tín theo FR-R01–R05/FR-A08. Source hiện chỉ có GET/POST Exchange review,
+  reveal khi hai bên đã gửi hoặc hết hạn gửi; còn lệch điều kiện hết quyền sửa
+  FR-R03 và thiếu vòng đời sửa/xóa/revision/kiểm duyệt/phản hồi/aggregate. Phương
+  án khác: profile và quản trị tài khoản (API operations/users hiện chỉ GET).
+  Không mở completion/settlement hoặc tự nhận human acceptance để làm các gói đó.
+
 ## UX frontend Member — 28/10/2026
 
 - Owner yêu cầu rà soát/cải thiện frontend; giữ nguyên GHN/carrier/Driver.

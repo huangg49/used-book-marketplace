@@ -1,5 +1,10 @@
 # Architecture
 
+Phạm vi cập nhật28/10/2026: Forum/Cộng đồng sách đã bị nhóm loại khỏi dự án theo
+[ADR0051](../adr/0051-remove-forum-from-project-scope.md), không phải workflow chờ
+triển khai. Inventory09/10 bên dưới giữ mốc lịch sử; xem START_HERE/SESSION_STATE
+cho implementation hiện hành của các miền khác.
+
 Cập nhật09/10/2026 theo main `da59199`. Modular monolith NestJS dùng chung API
 cho RN/Expo web, React/Vite user-web và admin; Flutter hiện là scaffold.
 Yêu cầu mục tiêu: [SRS1.1](../SRS_V1_1.md) và [phụ lục TP.HCM](../features/LOCAL_HANDOVER_AUCTION.md).

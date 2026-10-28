@@ -22,6 +22,8 @@
   keys remain compatible. Two simulated managed points remain at TP.HCM; optional
   ViaPoint for ordinary sales/exchanges, mandatory intake/inspection before auction.
   Yêu cầu được chấp nhận không có nghĩa workflow đã triển khai. Giữ snapshot v1.0.
+- Nhóm bỏ Forum/Cộng đồng sách ngày28/10/2026 theo [ADR0051](docs/adr/0051-remove-forum-from-project-scope.md).
+  FR-F01–FR-F06/AC-44 ngoài phạm vi, không là backlog. Chat, wishlist và đánh giá giữ yêu cầu riêng.
 - ADR là quyết định kiến trúc; OpenAPI là contract; code/tests/evidence mô tả phần
   đã hiện thực tại source được ghi. Báo cáo có ngày và HISTORY không là trạng thái mới nhất.
 - Runtime MongoDB, [ADR 0027](docs/adr/0027-mongodb-persistence-protocol.md).

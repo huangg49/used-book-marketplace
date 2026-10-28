@@ -5,6 +5,8 @@ bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.56.0**; registry
 migration MongoDB (đến0039), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
+Phạm vi28/10: nhóm **bỏ Forum/Cộng đồng sách** theo [ADR0051](../adr/0051-remove-forum-from-project-scope.md).
+FR-F01–FR-F06/AC-44 không còn là backlog; không bỏ chat/wishlist/thông báo/review.
 [Cutover máy chủ dự án](LOCAL_MONGO_CUTOVER_2026_09_30.md) đã có; máy mới làm theo
 [TEAM_WINDOWS](TEAM_WINDOWS.md), không lấy config/backup của người khác.
 

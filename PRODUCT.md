@@ -43,6 +43,9 @@ RN là Member client ưu tiên, Expo web chia sẻ RN; React/Vite user-web và a
 
 ## Capabilities and Constraints
 
+- Nhóm bỏ Forum/Cộng đồng sách ngày28/10/2026 theo [ADR0051](docs/adr/0051-remove-forum-from-project-scope.md).
+  Không thiết kế/triển khai topic, bình luận hoặc kiểm duyệt Forum; chat giao dịch,
+  wishlist/matching, thông báo và đánh giá vẫn theo SRS riêng.
 - DirectDelivery tới F2h. Auction ViaPoint có completion code nhưng review/release
   vẫn có gate. [READINESS](docs/handoff/READINESS.md) là nguồn gate.
 - Theo [ADR0037](docs/adr/0037-seller-selected-purchase-orders.md), chat không giữ

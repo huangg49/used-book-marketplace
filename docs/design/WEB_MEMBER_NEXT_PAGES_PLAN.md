@@ -1,5 +1,10 @@
 # Kế hoạch thiết kế các trang Member web tiếp theo
 
+Điều chỉnh28/10/2026: nhóm bỏ Forum/Cộng đồng sách theo
+[ADR0051](../adr/0051-remove-forum-from-project-scope.md); không còn trong kế hoạch
+Member web. Các nhóm còn lại phải đối chiếu source/checkpoint mới, không lấy
+inventory route10/10 dưới đây làm trạng thái hiện tại.
+
 Lập10/10/2026 từ nguồn `b27047e`; chủ dự án đã duyệt triển khai.
 Cập nhật11/10: Tìm sách, Chi tiết, Đăng sách và kệ Tài khoản đã triển khai, hoàn tất review/canonical;
 các nhóm bên dưới vẫn là kế hoạch, không phải nghiệm thu toàn bộ.
@@ -121,9 +126,9 @@ không dựng form đăng ký giả. Review độc lập SHIP; giới hạn ở 
 
 ## 7. Phần SRS còn lại — bản thiết kế theo dependency
 
-SRS12.1 còn hồ sơ công khai, wishlist, giỏ/checkout, Order/giao nhận, ví,
-khiếu nại/review và forum. Chưa có route tương ứng trong router Member web hiện
-tại; cần inventory endpoint và quyền cho từng luồng trước implementation.
+Kế hoạch10/10 từng liệt kê hồ sơ công khai, wishlist, giỏ/checkout, Order/giao
+nhận, ví và khiếu nại/review. Không suy các nhóm này đều còn thiếu: cần kiểm
+router/contract/source hiện tại trước implementation. Forum đã bỏ theo ADR0051.
 Xếp sau sáu nhóm trên, lập flow + trạng thái + nội dung trước; triển khai trong
 gói được giao và gate hiện hành. Staff/admin/simulator không gộp vào Member web.
 
