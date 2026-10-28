@@ -1,5 +1,23 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## Tối ưu giao diện Đánh giá trên Web (Loại bỏ nút trùng lặp & Cố định thanh gửi đánh giá) — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Vấn đề ghi nhận**:
+  1. *Trùng lặp 2 nút cùng chức năng*: Trên thẻ `ReviewCard` có đồng thời nút `"Đánh giá đối tác"` ở góc phải tiêu đề và nút `"Viết đánh giá"` trong banner kêu gọi, gây dư thừa và không đồng nhất với bản mobile.
+  2. *Nút "Gửi đánh giá" bị khuất trong modal*: Trong `ReviewDialog`, khung nội dung form quá dài và thanh hành động `.actions` (`[Hủy]` và `[Gửi đánh giá]`) nằm ở cuối luồng cuộn bên trong form. Khi màn hình có chiều cao giới hạn (~720-768px), form bị tràn mép và nút "Gửi đánh giá" bị che khuất xuống dưới mép modal.
+- **Giải pháp tối ưu**:
+  1. *Loại bỏ nút dư thừa*: Bỏ nút ở header `ReviewCard`, chỉ giữ lại duy nhất 1 nút kêu gọi hành động nổi bật trong banner `promptBanner`: `[ ⭐ Viết đánh giá đối tác ]` (đồng bộ hoàn toàn với bản mobile).
+  2. *Cố định thanh hành động đáy trong modal*:
+     - Thiết lập cấu trúc Flexbox cho `.modal`: `max-height: calc(100vh - 48px); display: flex; flex-direction: column`.
+     - Vùng nhập liệu `.body` (chấm sao, chọn tag, ghi chú) có thanh cuộn riêng `flex: 1; overflow-y: auto`.
+     - Thanh hành động đáy `.actions` được ghim cố định (`flex-shrink: 0`) với nền `#faf8f5`, luôn luôn hiển thị 100% đầy đủ cả 2 nút `[Hủy]` và `[Gửi đánh giá]` trên mọi độ phân giải.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web build`: PASS (Vite built in 5.43s).
+  - Kiểm tra giao diện trực tiếp trên trình duyệt (`http://localhost:5174/exchange/e81b820b-902b-4bab-a09c-c2c8957abb3e`): ảnh chụp màn hình xác nhận giao diện chuẩn, chỉ còn 1 nút CTA và hộp thoại đánh giá hiện đầy đủ cả 2 nút đáy.
+  - Git commit: `9f8d713`.
+
 ## Sửa lỗi gửi đánh giá giao dịch đổi sách (MongoDB Validator & In-modal Error Notice) — 28/10/2026
 
 - Nhánh `feature/exchange-rn-completion`.
