@@ -1,5 +1,46 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## Nhất quán Exchange và dữ liệu Member — 28/10/2026
+
+- Owner duyệt khảo sát toàn dự án và sửa theo ưu tiên, sau đó yêu cầu giữ nguyên
+  GHN/carrier/driver chờ nhóm quyết định. Nhánh `codex/exchange-member-consistency`,
+  base `7d92012`; không sửa adapter, route/schema carrier hoặc gọi GHN thật.
+- [ADR0050](../adr/0050-exchange-inspection-and-existing-obligations.md): mỗi bên
+  Exchange có72h kiểm tra riêng, không tất toán sớm từ hai acknowledgement;
+  còn dấu tranh chấp thì không quyết toán hoặc ghi đè hồ sơ, projection vẫn báo
+  ResolutionPending. Giữ version/key/body/replay và kiểm participant trước replay.
+  LOCKED/RESTRICTED xử lý nghĩa vụ Exchange cũ; point-order read/report/code/claim
+  có ExistingObligation ở handler, không mở payment/giao dịch mới.
+- Contract0.56/181operations/28controllers; migration0039 thêm validator/deadline
+  và backfill active từ receivedAt, giữ hạn legacy dài hơn, terminal history,
+  version/ledger/checksum cũ. Chưa apply trên DB chính. Khi tích hợp phải dừng
+  worker cũ, migrate rồi khởi động API/worker cùng source; không reset hoặc seed.
+- RN bỏ sản phẩm/ảnh/auction/notification/voucher mẫu trên route thật, dùng ảnh
+  đúng intake, countdown theo server và search phân trang server; giữ loading/
+  empty/error/retry. Banner không quảng cáo giảm giá/thẩm định không có căn cứ.
+  Web/RN hiển thị hạn cá nhân và không hứa acknowledgement giải ngân sớm.
+- PASS local: contract/generated/routes, API/RN/User-web typecheck+lint (API/web
+  còn warnings), API/User-web build, RN web export. API unit220 (loại riêng4 ca
+  carrier-adapter có gọi GHN), session27, RN161, User-web248; Mongo schema25;
+  Exchange+obligations54. Auction/auth suites đã PASS trong lượt rộng; lỗi thiếu
+  contract annotation claim ở obligations đã sửa và rerun suite liên quan PASS.
+  Ba regression dispute/projection/expiry trên source cuối cũng PASS riêng.
+  Có HTTP/Mongo race dispute-vs-worker thật và migration/idempotency/LOCKED/revoke
+  regressions. Không gọi toàn bộ API E2E là PASS từ các lượt scoped này.
+- Browser real HTTP/Mongo QA + storage fake: RN shelf/detail/search/empty/error/
+  retry/pagination13/large-text320 và listing/address journey PASS; Member web
+  Exchange create/accept/cancel/lost-ACK/funding-error/403 desktop/mobile PASS.
+  Android build BLOCKED thiếu Ninja>=1.12; native/TalkBack/ARM/iOS/live provider/
+  human review và remote CI của nhánh này NOT RUN. CI10/10 tại7d92012 là baseline.
+  READINESS không đổi; full dispute/return/funded mutual cancellation/ordinary
+  ViaPoint và DirectDelivery vượtF2h vẫn cần scope/gate riêng.
+- Chỉ QA57017, đã dừng sau kiểm; không migrate/seed/chạy worker trên Mongo chính. Commit local;
+  chưa push/PR/merge/deploy. Bước tiếp: nhóm review tiền/quyền và quyết định phần
+  GHN đã hoãn, chuẩn bị toolchain native trước nghiệm thu tương ứng.
+
+Các mục dưới là checkpoint của từng gói tại ngày/source được ghi; không thay
+trạng thái hiện hành ở mục trên hoặc gate READINESS.
+
 ## Tích hợp gói Admin vào main — 28/10/2026
 
 - Owner yêu cầu tiếp tục push/CI/merge. PR [#77](https://github.com/huangg49/used-book-marketplace/pull/77),

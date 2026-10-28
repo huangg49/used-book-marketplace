@@ -387,6 +387,30 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     );
   const claimText =
     'Sách bị ố vàng và thiếu trang 120–128 so với biên bản kiểm tra tại điểm';
+  it('LOCKED buyers retain paid point-order reads, report/code/claim duties and cannot pay again', async () => {
+    const o = await paidOrder();
+    await db.setStatus(o.winner.id, 'LOCKED');
+    const paid = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+    const acceptAt = new Date(paid.paidAt!.getTime() + 60_000);
+    await request(app.getHttpServer()).get(`/api/v1/me/point-orders/${o.orderId}`)
+      .set('Authorization', `Bearer ${o.winner.token}`).expect(200);
+    await payOrder(o.orderId, o.winner).expect(403);
+    await accepted(o, acceptAt);
+    const at = openAt(acceptAt);
+    const issued = await issueCode(o, new Date(at.getTime() - 60_000));
+    pinClock(at);
+    await handover(o.orderId, issued.body.code, staff).expect(200);
+    vi.restoreAllMocks();
+    const row = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+    pinClock(new Date(at.getTime() + 60_000));
+    const claimKey = randomUUID();
+    const claim = { expectedVersion: row.version, description: claimText };
+    await orderPost(o.orderId, 'claim', claim, o.winner, claimKey).expect(200);
+    await orderPost(o.orderId, 'claim', claim, o.winner, claimKey).expect(200);
+    vi.restoreAllMocks();
+    await db.c.auth_sessions.updateOne({ _id: o.winner.sessionId }, { $set: { revokedAt: new Date() } });
+    await orderPost(o.orderId, 'claim', claim, o.winner, claimKey).expect(401);
+  });
   const reconciled = async () =>
     (
       await app

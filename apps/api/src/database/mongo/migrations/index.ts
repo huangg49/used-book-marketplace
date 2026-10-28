@@ -175,6 +175,7 @@ import {
   withExchangePhase6Changes,
 } from './0031-exchange-multi-book.js';
 import { vnpayTopupExpiryMigration, withVNPayExpiry } from './0032-vnpay-topup-expiry.js';
+import { exchangeInspectionDeadlinesMigration, withExchangeInspectionDeadlines } from './0039-exchange-inspection-deadlines.js';
 
 export interface Migration {
   id: string;
@@ -290,6 +291,7 @@ export const migrations: Migration[] = [
   sellerScheduledAuctionsMigration,
   moderationOverviewIndexesMigration,
   listingAutofillMigration,
+  exchangeInspectionDeadlinesMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -359,7 +361,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withExchangePhase3Changes)
     .map(withExchangePhase4Changes)
     .map(withExchangePhase5Changes)
-    .map(withExchangePhase6Changes),
+    .map(withExchangePhase6Changes)
+    .map(withExchangeInspectionDeadlines),
   ...directDeliveryCompletionSpecs,
   ...paymentSpecs.map(withVNPayExpiry),
   ...exchangeMessageSpecs,

@@ -63,6 +63,7 @@ export function AuctionCover({
       accessibilityLabel={`Ảnh bìa ${label}`}
       style={styles.image}
       resizeMode="cover"
+      onError={() => { if (photo.data) setExpired(photo.data.expiresAt); }}
     />
   );
 }

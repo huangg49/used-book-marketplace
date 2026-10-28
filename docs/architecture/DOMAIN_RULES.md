@@ -53,6 +53,20 @@ claim/resolution/return retain holds until their valid outcome. This does not
 close READINESS. Never manually release money/book/slot to bypass the protocol;
 review source and gate before changing or extending completion.
 
+## Exchange hiện hành — deadline và nghĩa vụ cũ
+
+[ADR0050](../adr/0050-exchange-inspection-and-existing-obligations.md) đối chiếu
+source28/10 với POL-08/FR-X08/X09/BR-18: mỗi bên có72h từ lần nhận hợp lệ; common
+inspectionDeadline là hạn muộn hơn khi cả hai nhận. Xác nhận hài lòng chỉ ghi nhận,
+không giải phóng cọc sớm. Settlement phải kiểm cả hai hạn và toàn bộ dấu tranh
+chấp dưới transaction; không tin mỗi state Delivered. Migration0039 không sửa
+ledger/checksum/migration cũ; nâng API và worker cùng phiên bản, dừng worker cũ
+trong lúc migrate. GHN/carrier/driver giữ nguyên chờ nhóm quyết định theo owner.
+LOCKED/RESTRICTED chỉ được đọc/thực hiện nghĩa vụ Exchange đã có, không proposal/
+accept/counter/fund mới; point-order read/report/code/claim theo ExistingObligation.
+Các mô tả implementation theo phiên bản cũ bên dưới là lịch sử từng increment,
+không thay contract hiện hành hoặc READINESS.
+
 ## Commitment và unpaid Order
 
 For commitment/checkout work, also read ADR 0013, `docs/features/COMMITMENT_DESIGN.md`,

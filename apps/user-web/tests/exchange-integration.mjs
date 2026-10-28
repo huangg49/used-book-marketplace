@@ -22,7 +22,7 @@ const { createServer } = await import(
 const origin = "http://127.0.0.1:5184";
 process.env.VITE_API_BASE_URL = base;
 process.env.AUTH_MAIL_PROVIDER = "local";
-const evidence = path.join(root, ".impeccable/review/integration-main");
+const evidence = path.join(root, "apps/user-web/test-results/exchange");
 await mkdir(evidence, { recursive: true });
 let fixture, server, browser;
 try {

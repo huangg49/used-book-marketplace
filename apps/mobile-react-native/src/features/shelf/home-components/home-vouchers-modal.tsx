@@ -1,127 +1,28 @@
-import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
-import { AppModal, Button, Icon, stitchTokens  } from "../../../core/ui";
-import { VOUCHERS_LIST, type CuratedVoucher } from "../home-mock-data";
+import { AppModal, Button, Icon, StatePanel, stitchTokens } from "../../../core/ui";
 
 export interface HomeVouchersModalProps {
   readonly visible: boolean;
   readonly onClose: () => void;
 }
 
-export function HomeVouchersModal({
-  visible,
-  onClose,
-}: HomeVouchersModalProps) {
-  const [collectedCodes, setCollectedCodes] = useState<Record<string, boolean>>(
-    {},
-  );
-
-  const toggleCollect = (code: string) => {
-    setCollectedCodes((prev) => ({
-      ...prev,
-      [code]: !prev[code],
-    }));
-  };
-
-  return (
-    <AppModal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <View style={styles.scrim}>
-        <Pressable
-          style={styles.backdrop}
-          onPress={onClose}
-          accessibilityLabel="Đóng kho voucher"
-        />
-        <View style={styles.sheetContainer}>
-          {/* Header */}
-          <View style={styles.sheetHeader}>
-            <View style={styles.headerLeft}>
-              <Icon name="ticket" size={22} color={stitchTokens.wine} />
-              <AppText kind="bookHeading" style={styles.headerTitle}>
-                Kho Voucher Sưu Tầm
-              </AppText>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Đóng"
-              onPress={onClose}
-              hitSlop={8}
-              style={styles.closeBtn}
-            >
-              <Icon name="close" size={20} color={stitchTokens.stoneMuted} />
-            </Pressable>
+export function HomeVouchersModal({ visible, onClose }: HomeVouchersModalProps) {
+  return <AppModal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <View style={styles.scrim}>
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel="Đóng ưu đãi" />
+      <View style={styles.sheetContainer}>
+        <View style={styles.sheetHeader}>
+          <View style={styles.headerLeft}>
+            <Icon name="ticket" size={22} color={stitchTokens.wine} />
+            <AppText kind="bookHeading" style={styles.headerTitle}>Ưu đãi</AppText>
           </View>
-
-          {/* Vouchers List */}
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContent}
-          >
-            {VOUCHERS_LIST.map((voucher: CuratedVoucher) => {
-              const isCollected = !!collectedCodes[voucher.code];
-              return (
-                <View key={voucher.id} style={styles.voucherCard}>
-                  {/* Left coupon cutout */}
-                  <View style={styles.cutoutLeft} />
-
-                  <View style={styles.voucherBody}>
-                    <View style={styles.voucherInfo}>
-                      <View style={styles.codeRow}>
-                        <AppText kind="small" style={styles.codeText}>
-                          {voucher.code}
-                        </AppText>
-                        <AppText kind="small" style={styles.expiryText}>
-                          {voucher.expiry}
-                        </AppText>
-                      </View>
-                      <AppText kind="bold" style={styles.voucherTitle}>
-                        {voucher.title}
-                      </AppText>
-                      <AppText kind="small" style={styles.voucherDesc}>
-                        {voucher.description}
-                      </AppText>
-                    </View>
-
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`${isCollected ? "Đã lưu mã" : "Lưu mã"} ${voucher.code}`}
-                      onPress={() => toggleCollect(voucher.code)}
-                      style={[
-                        styles.collectBtn,
-                        isCollected ? styles.btnCollected : styles.btnActive,
-                      ]}
-                    >
-                      <AppText
-                        kind="small"
-                        style={[
-                          styles.collectBtnText,
-                          isCollected
-                            ? styles.btnTextCollected
-                            : styles.btnTextActive,
-                        ]}
-                      >
-                        {isCollected ? "Đã lưu" : "Lưu mã"}
-                      </AppText>
-                    </Pressable>
-                  </View>
-                </View>
-              );
-            })}
-          </ScrollView>
-
-          {/* Bottom Button */}
-          <View style={styles.bottomArea}>
-            <Button title="Hoàn tất" onPress={onClose} />
-          </View>
+          <Button title="Đóng" secondary onPress={onClose} />
         </View>
+        <StatePanel title="Chưa có ưu đãi áp dụng" message="Lật lại chưa hỗ trợ mã giảm giá cho giao dịch hiện tại." />
       </View>
-    </AppModal>
-  );
+    </View>
+  </AppModal>;
 }
 
 const styles = StyleSheet.create({

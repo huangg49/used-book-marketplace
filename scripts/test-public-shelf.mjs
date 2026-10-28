@@ -6,6 +6,7 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { listingJourney } from "./test-listing-journey.mjs";
 import { addressJourney } from "./test-address-journey.mjs";
+import { memberDataJourney } from "../apps/mobile-react-native/tests/member-data.mjs";
 import {
   createTestApi,
   root,
@@ -108,6 +109,7 @@ try {
       ? { channel: process.env.PLAYWRIGHT_CHANNEL }
       : {}),
   });
+  await memberDataJourney(browser, origin, artifacts);
   const p = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await p.clock.install();
   const errors = [],

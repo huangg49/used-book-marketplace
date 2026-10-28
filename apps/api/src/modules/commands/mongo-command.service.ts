@@ -271,6 +271,11 @@ const EXISTING_OBLIGATION_OPERATIONS = [
   'rejectPointOrderReport',
   'requestCollectionCode',
   'claimPointOrder',
+  'cancelExchange',
+  'shipExchange',
+  'receiveExchange',
+  'completeExchange',
+  'disputeExchange',
 ];
 const KEY_LOCK_TTL_MS = 7 * 24 * 3_600_000;
 const sessionExpired = (

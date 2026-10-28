@@ -1227,6 +1227,8 @@ export interface ExchangeDoc extends Lockable {
   recipientShippedAt: Date | null;
   initiatorReceivedAt: Date | null;
   recipientReceivedAt: Date | null;
+  initiatorInspectionDeadline?: Date | null;
+  recipientInspectionDeadline?: Date | null;
   inspectionDeadline: Date | null;
   completedAt: Date | null;
   initiatorCompletedAt?: Date | null;

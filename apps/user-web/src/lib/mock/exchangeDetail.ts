@@ -34,6 +34,8 @@ export interface ExchangeDetail {
   viewerShipping: ShippingConfirm;
   partnerShipping: ShippingConfirm;
   inspectionDeadline?: string;
+  viewerInspectionDeadline?: string;
+  partnerInspectionDeadline?: string;
   completedAt?: string;
   viewerCompletedAt?: string;
   partnerCompletedAt?: string;

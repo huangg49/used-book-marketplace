@@ -2850,7 +2850,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Participant confirms they have received the other book. */
+        /** @description Participant receipt pins their own 72-hour inspection deadline. The other participant retains a separate deadline. */
         post: operations["receiveExchange"];
         delete?: never;
         options?: never;
@@ -2867,7 +2867,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Participant confirms satisfaction during the inspection window to complete the exchange early. */
+        /** @description Participant acknowledgement only; it never waives either 72-hour inspection window. Settlement requires both deadlines elapsed and no dispute. */
         post: operations["completeExchange"];
         delete?: never;
         options?: never;
@@ -5668,6 +5668,13 @@ export interface components {
             initiatorReceivedAt?: string | null;
             recipientReceivedAt?: string | null;
             proposalExpiresAt?: string | null;
+            /**
+             * Format: date-time
+             * @description Pinned inspection deadline, at least 72 hours after this participant receives the other book; longer legacy windows are preserved.
+             */
+            initiatorInspectionDeadline?: string | null;
+            /** Format: date-time */
+            recipientInspectionDeadline?: string | null;
             inspectionDeadline?: string | null;
             completedAt?: string | null;
             initiatorCompletedAt?: string | null;

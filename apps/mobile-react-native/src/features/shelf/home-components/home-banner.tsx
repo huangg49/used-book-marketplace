@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Image, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { Icon, stitchTokens } from "../../../core/ui";
 
@@ -9,22 +9,18 @@ export interface HomeBannerProps {
 
 const BANNERS = [
   {
-    id: "banner-1",
-    tag: "Cuối Tuần Hoài Niệm",
-    title: "Phiên Chợ Sách Cũ TP.HCM",
-    subtitle: "Đồng giá từ 29k • Giảm đến 50% kỳ thư",
-    cta: "Khám phá ngay",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBCPA40o2VI0MCvsnyEV7Am43FaD_aFuiE45kzUCm0zjLairQk9p2v5sY6LfjBT4nCLG6LMTXTCidRV2mCel1P-eaMUs-MMGffh4Ot0tC7KlSFEmie2qW5VQ75WdFKe2ppy6OCFh5bBiRbuhx8r5fGPZf-okPvoCvK-l7eYUcgL5uZVTP4emnNilUKCUJ3AmCTFbZcfHMQP6AbiKMoMj8HRISzh_QgY-Sol4XJUSxCsxWjpvVi92JNZzA",
+    id: "discover",
+    tag: "Chuyền tay sách cũ",
+    title: "Tìm cuốn sách tiếp theo",
+    subtitle: "Xem ảnh và mô tả của từng bản sách",
+    cta: "Khám phá sách",
   },
   {
-    id: "banner-2",
-    tag: "Đấu Giá Kỳ Thư",
-    title: "Bản In Đầu Tiên 1930 - 1954",
-    subtitle: "Thẩm định 100% tại ViaPoint Quận 1",
-    cta: "Xem danh sách",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAxeQlbXMk95s5TrwA3De-vaAu7UE6qefn1VRGBinxuGMr_IGdfQ2Z5x2RG2V2jAs2QWkLO_hGdU-jk__XTMFRoa0G9eMD3rpvbkfJShYIaKTw902TrOH4wWQv71-A9sNa37dV123cvj_PONJa8NoK3ZDZc3uxZHV-7pNzW7ohFUeTvqJah_OCxSlmZM-lLVufIOfz-I7Lo6vyiNPZvVY4Ye3NE85zOrCO2J7Zau1G73QilI-s878kqwA",
+    id: "circulation",
+    tag: "Sách còn một hành trình",
+    title: "Mua bán hoặc trao đổi",
+    subtitle: "Chọn hình thức phù hợp với bản sách",
+    cta: "Xem kệ sách",
   },
 ];
 
@@ -58,12 +54,12 @@ export function HomeBanner({ onExplorePress }: HomeBannerProps) {
             </View>
 
             {/* Title */}
-            <AppText kind="heading" style={styles.bannerTitle} numberOfLines={1}>
+            <AppText kind="heading" style={styles.bannerTitle}>
               {currentBanner.title}
             </AppText>
 
             {/* Subtitle */}
-            <AppText kind="small" style={styles.bannerSubtitle} numberOfLines={1}>
+            <AppText kind="small" style={styles.bannerSubtitle}>
               {currentBanner.subtitle}
             </AppText>
 
@@ -80,12 +76,7 @@ export function HomeBanner({ onExplorePress }: HomeBannerProps) {
           {/* Book Image Showcase */}
           <View style={styles.imageContainer}>
             <View style={styles.glowAura} />
-            <Image
-              source={{ uri: currentBanner.image }}
-              style={styles.bookCoverImage}
-              resizeMode="cover"
-              accessibilityLabel="Hình ảnh bìa sách nổi bật"
-            />
+            <Icon name="book" size={64} color={stitchTokens.wineDark} />
           </View>
         </View>
 

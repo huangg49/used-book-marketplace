@@ -210,6 +210,13 @@ export function ExchangeActionsCard({
         <AppText style={styles.title}>Hành động tiếp theo</AppText>
       </View>
 
+      {(isInitiator ? exchange.initiatorInspectionDeadline : exchange.recipientInspectionDeadline) ? (
+        <Notice tone="info">
+          Hạn kiểm tra sách của bạn: {new Date((isInitiator ? exchange.initiatorInspectionDeadline : exchange.recipientInspectionDeadline)!).toLocaleString("vi-VN")}.
+          Tiền cọc tiếp tục được giữ đến khi cả hai hạn kết thúc và không có tranh chấp.
+        </Notice>
+      ) : null}
+
       {actionError ? (
         <View style={{ marginTop: space.sm, marginBottom: space.xs }}>
           <Notice tone="error">{actionError}</Notice>
@@ -370,7 +377,7 @@ export function ExchangeActionsCard({
             <View style={styles.successNote}>
               <Icon name="check" size={16} color={stitchTokens.likeNewGreen} />
               <AppText style={styles.successNoteText}>
-                Bạn đã nhận được sách! Đơn hàng sẽ hoàn tất sau thời gian đồng kiểm 48h.
+                Bạn có 72 giờ kiểm tra từ lúc nhận sách. Cọc vẫn được giữ đến khi cả hai hạn kết thúc và không có tranh chấp.
               </AppText>
             </View>
           ) : (
@@ -401,7 +408,7 @@ export function ExchangeActionsCard({
         <View style={styles.actionsBox}>
           <View style={styles.buttonGroup}>
             <AppText style={styles.hintText}>
-              Sách đã được giao. Hai bên có 48 giờ để kiểm tra tình trạng sách trước khi hệ thống tự động tất toán hoàn cọc.
+              Mỗi bên có 72 giờ kiểm tra tính từ lúc nhận sách. Chỉ tất toán khi cả hai hạn kết thúc và không có tranh chấp.
             </AppText>
             <Button
               title="Báo cáo khiếu nại sách"
@@ -424,7 +431,7 @@ export function ExchangeActionsCard({
               Lý do: {exchange.disputeReason || "Phát sinh khiếu nại trong giao nhận hoặc đồng kiểm."}
             </AppText>
             <AppText style={styles.disputeHint}>
-              Quy trình tự động tất toán 48 giờ đã được tạm dừng và tiền cọc được đóng băng bảo vệ. Ban quản trị Lật Lại đang tiếp nhận hỗ trợ hai bên.
+              Quy trình tự động tất toán 72 giờ đã được tạm dừng và tiền cọc được đóng băng bảo vệ. Ban quản trị Lật Lại đang tiếp nhận hỗ trợ hai bên.
             </AppText>
           </View>
         </View>
@@ -498,7 +505,7 @@ export function ExchangeActionsCard({
       <ConfirmDialog
         visible={confirmDisputeOpen}
         title="Báo cáo khiếu nại giao dịch?"
-        message="Quy trình tất toán 48h sẽ tạm dừng ngay lập tức và tiền cọc được giữ an toàn. Bạn có chắc muốn gửi khiếu nại cho đơn hàng này?"
+        message="Quy trình tất toán 72h sẽ tạm dừng ngay lập tức và tiền cọc được giữ an toàn. Bạn có chắc muốn gửi khiếu nại cho đơn hàng này?"
         confirmLabel="Gửi khiếu nại ngay"
         destructive
         onCancel={() => setConfirmDisputeOpen(false)}

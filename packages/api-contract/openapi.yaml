@@ -1,40 +1,21 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.55.0
-  description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
-    public shelf/detail/media and approved editing/visibility/archive/removal commands are
-    implemented. Participant agreement workspaces with mutually confirmed mode/price proposals and linked Exchange history are implemented. Exact Order conversations can be opened by their ACTIVE Buyer or Seller, including BuyNow and historical Orders. Member private address book and versioned demo service-area directory are
-    implemented. Revision-bound delivery origins and private DirectDelivery sale estimates are
-    implemented. Quotes do not reserve books. Unpaid DirectDelivery Order create/read/cancel and
-    internal expiry with exclusive commitments are implemented. Simulated wallet ledger, private
-    topup/history and TEST_OPERATOR payment events are implemented. LOCKED access covers profile,
-    participant Order reads/media/unpaid cancellation/paid refund requests and private wallet/topup
-    history; other authenticated operations deny LOCKED by default. New payment remains denied for
-    LOCKED accounts. Order wallet funding, pre-confirmation cancellation/rejection, deadline and
-    durable full refund workers are implemented. Seller acceptance, fixed pickup deadline and
-    durable overdue verification tasks are implemented. Case resolution, sale settlement, withdrawal
-    and checkout/wallet UI remain planned. Private Order packaging image intents, bounded verified
-    binary uploads and audited participant previews are implemented. Packaging evidence does not
-    prove pickup or authenticity. DirectDelivery outbound shipment registration and private
-    participant reads are implemented; LabelCreated never proves carrier pickup. Authenticated
-    independent TEST_OPERATOR pickup simulation is implemented: timely pickup moves Order InTransit,
-    late/conflicting evidence opens sticky carrier review without moving money or stock. Delivery,
-    resolution and settlement remain planned. Delivery overdue worker and Buyer non-receipt
-    reporting after the pinned delivery deadline are implemented. They open or supplement a durable
-    delivery review and retain full Order hold/commitment. Delivered, inspection, dispute
-    adjudication and settlement remain planned. Owner-only advisory sale-price suggestions from
-    sourced price references are implemented behind a server flag; they never set or verify a
-    price. Bounded auctions (ADR 0030) are implemented from Sale intake at two simulated HCM points
-    through Staff receipt/inspection, proxy bidding with private Auto ceilings, Buy Now before the
-    first bid and server-time close. A win or Buy Now forms a ViaPoint Order that the buyer pays
-    from the simulated wallet into an Order hold; unpaid Orders expire to reclaim. The buyer then
-    accepts or rejects the point condition report, requests a one-time collection code and
-    assigned Staff record the handover, which starts the 72-hour inspection window. Rejected or
-    overdue Orders wait for an independent Admin to refund the hold or reopen collection. During
-    the inspection window the buyer may file one claim; an Admin dismisses it or requires the book
-    back, and the Staff-received return refunds the hold. Unclaimed Orders settle after the window
-    (seller P - C, platform C) and the listing becomes Sold."
+  version: 0.56.0
+  description: >-
+    Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
+    includes OTP/account recovery and rotating sessions. Catalog/listing/media,
+    whole-sale bundles, addresses, agreement/chat/Orders, wallet simulator and
+    VNPay sandbox, Exchange and bounded auctions/point operations are implemented.
+    Exchange receipt pins a separate 72-hour inspection deadline for each side;
+    acknowledgement never waives either deadline. Settlement retains all funds
+    while any dispute evidence remains. Eligible existing-obligation handlers
+    permit LOCKED participants; new funding/trades remain denied. DirectDelivery
+    receipt/inspection/settlement source exists, but release and post-F2h readiness
+    gates remain open. Full dispute adjudication/return, ordinary ViaPoint and
+    withdrawal remain incomplete. This contract describes source capabilities,
+    not production readiness or full client/native acceptance. GHN/carrier routes
+    retain their current behavior pending the owner's team decision.
 servers:
   - url: http://localhost:3000/api/v1
 tags:
@@ -7504,6 +7485,7 @@ paths:
   /me/point-orders/{orderId}:
     get:
       operationId: getMyPointOrder
+      x-locked-access: existing-obligations
       tags:
         - Auctions
       description: Buyer or seller of a ViaPoint Order formed by an auction; others receive 404. Shows
@@ -7678,6 +7660,7 @@ paths:
   /point-orders/{orderId}/accept-report:
     post:
       operationId: acceptPointOrderReport
+      x-locked-access: existing-obligations
       tags:
         - Auctions
       description: Buyer only, within 72 hours of payment (POL-32). Accepts the condition report of the
@@ -7746,6 +7729,7 @@ paths:
   /point-orders/{orderId}/reject-report:
     post:
       operationId: rejectPointOrderReport
+      x-locked-access: existing-obligations
       tags:
         - Auctions
       description: Buyer only, before accepting. Opens ResolutionPending with the reason; the book stays
@@ -7813,6 +7797,7 @@ paths:
   /point-orders/{orderId}/claim:
     post:
       operationId: claimPointOrder
+      x-locked-access: existing-obligations
       tags:
         - Auctions
       description: "Buyer only, in Inspection before the inspection deadline (a LOCKED account may
@@ -7882,6 +7867,7 @@ paths:
   /point-orders/{orderId}/collection-code:
     post:
       operationId: requestCollectionCode
+      x-locked-access: existing-obligations
       tags:
         - Auctions
       description: Buyer only, after accepting and before the collection deadline. Issues a 6-digit code
@@ -8533,6 +8519,7 @@ paths:
           $ref: "#/components/responses/ListingError"
     get:
       operationId: listExchanges
+      x-locked-access: existing-obligations
       tags:
         - Exchanges
       description: Returns a list of exchanges for the current user.
@@ -8552,6 +8539,7 @@ paths:
   /exchanges/{id}:
     get:
       operationId: getExchange
+      x-locked-access: existing-obligations
       tags:
         - Exchanges
       description: Returns details of a specific exchange.
@@ -8714,6 +8702,7 @@ paths:
   /exchanges/{id}/cancel:
     post:
       operationId: cancelExchange
+      x-locked-access: existing-obligations
       tags:
         - Exchanges
       description: Initiator cancels the exchange proposal.
@@ -8806,6 +8795,7 @@ paths:
   /exchanges/{id}/ship:
     post:
       operationId: shipExchange
+      x-locked-access: existing-obligations
       tags:
         - Exchanges
       description: Participant confirms they have shipped their book.
@@ -8852,9 +8842,10 @@ paths:
   /exchanges/{id}/receive:
     post:
       operationId: receiveExchange
+      x-locked-access: existing-obligations
+      description: Participant receipt pins their own 72-hour inspection deadline. The other participant retains a separate deadline.
       tags:
         - Exchanges
-      description: Participant confirms they have received the other book.
       security:
         - bearerAuth: []
       parameters:
@@ -8898,9 +8889,10 @@ paths:
   /exchanges/{id}/complete:
     post:
       operationId: completeExchange
+      x-locked-access: existing-obligations
+      description: Participant acknowledgement only; it never waives either 72-hour inspection window. Settlement requires both deadlines elapsed and no dispute.
       tags:
         - Exchanges
-      description: Participant confirms satisfaction during the inspection window to complete the exchange early.
       security:
         - bearerAuth: []
       parameters:
@@ -8940,6 +8932,7 @@ paths:
   /exchanges/{id}/dispute:
     post:
       operationId: disputeExchange
+      x-locked-access: existing-obligations
       tags:
         - Exchanges
       description: Participant opens a dispute during delivery or inspection window, halting auto-settlement.
@@ -17115,6 +17108,13 @@ components:
             - type: string
               format: date-time
             - type: "null"
+        initiatorInspectionDeadline:
+          type: [string, "null"]
+          format: date-time
+          description: Pinned inspection deadline, at least 72 hours after this participant receives the other book; longer legacy windows are preserved.
+        recipientInspectionDeadline:
+          type: [string, "null"]
+          format: date-time
         inspectionDeadline:
           anyOf:
             - type: string

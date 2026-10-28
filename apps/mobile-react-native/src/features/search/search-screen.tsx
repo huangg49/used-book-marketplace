@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   categories,
@@ -33,7 +33,8 @@ import {
   stitchTokens,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
-import { publicPage, type Listing } from "../shelf/contracts";
+import { publicPage } from "../shelf/contracts";
+import type { z } from "zod";
 import {
   initialFilters,
   queryString,
@@ -41,7 +42,6 @@ import {
 } from "../shelf/filters";
 import { SearchBookCard } from "./search-book-card";
 import { PublicPhoto } from "../shelf/public-photo";
-import { FALLBACK_LISTINGS } from "../shelf/home-mock-data";
 import { HomeNotificationsModal } from "../shelf/home-components/home-notifications-modal";
 import { useNotifications } from "../notifications/notifications-model";
 import { useListingWishlist } from "../wishlist";
@@ -51,7 +51,7 @@ const MODE_TABS = [
   { id: "Sale", title: "Mua sách" },
   { id: "Exchange", title: "Đổi sách" },
   { id: "Both", title: "Bán hoặc đổi" },
-  { id: "Rare", title: "Sách hiếm Sài Gòn" },
+  { id: "Rare", title: "Sách như mới" },
 ] as const;
 
 const CONDITIONS = [
@@ -263,11 +263,13 @@ export function SearchScreen() {
   const query = queryString(appliedFilters);
 
   // Real TanStack API Query
-  const result = useQuery({
+  const result = useInfiniteQuery({
     queryKey: ["public-search", query],
-    queryFn: () =>
+    initialPageParam: "",
+    getNextPageParam: (lastPage: z.infer<typeof publicPage>) => lastPage.nextCursor ?? undefined,
+    queryFn: ({ pageParam }) =>
       client.publicRequest(
-        `/listings?${query}`,
+        `/listings?${query}${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ""}`,
         publicPage,
       ),
     enabled: active,
@@ -276,194 +278,9 @@ export function SearchScreen() {
     retry: false,
   });
 
-  // Combined real + fallback listings with interactive filtering
-  const displayItems = useMemo(() => {
-    const serverItems = result.data?.items ?? [];
-    let list: (Listing & {
-      coverUrl?: string;
-      badgeLabel?: string;
-      tags?: string[];
-      salesCount?: number;
-      location?: string;
-    })[] = [];
-
-    if (serverItems.length > 0) {
-      list = [...serverItems];
-    } else {
-      list = [...FALLBACK_LISTINGS];
-    }
-
-    // Filter by search text
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter(
-        (item) =>
-          item.book.title.toLowerCase().includes(q) ||
-          item.book.authors.some((a) => a.toLowerCase().includes(q)) ||
-          item.book.category.toLowerCase().includes(q),
-      );
-    }
-
-    // Filter by mode
-    if (selectedMode === "Sale") {
-      list = list.filter((item) => item.mode === "Sale" || item.mode === "Both");
-    } else if (selectedMode === "Exchange") {
-      list = list.filter(
-        (item) => item.mode === "Exchange" || item.mode === "Both",
-      );
-    } else if (selectedMode === "Both") {
-      list = list.filter((item) => item.mode === "Both");
-    } else if (selectedMode === "Rare") {
-      list = list.filter((item) => item.condition === "LikeNew");
-    }
-
-    // Filter by condition
-    if (selectedCondition && selectedMode !== "Rare") {
-      list = list.filter((item) => item.condition === selectedCondition);
-    }
-
-    // Filter by Category
-    if (activeCategoryId) {
-      const catObj = categoryFor(activeCategoryId);
-      const catLabel = catObj?.label.toLowerCase();
-      if (catLabel) {
-        list = list.filter((item) => {
-          const itemCat = item.book.category.toLowerCase();
-          return (
-            itemCat.includes(catLabel) ||
-            (item.book as Record<string, unknown>).categoryId ===
-              activeCategoryId
-          );
-        });
-      }
-    }
-
-    // Filter by Series
-    if (selectedSeries.trim()) {
-      const s = selectedSeries.trim().toLowerCase();
-      list = list.filter((item) => {
-        const itemTitle = item.book.title.toLowerCase();
-        const itemSeries =
-          typeof (item.book as Record<string, unknown>).series === "string"
-            ? (
-                (item.book as Record<string, unknown>).series as string
-              ).toLowerCase()
-            : "";
-        return itemTitle.includes(s) || itemSeries.includes(s);
-      });
-    }
-
-    // Filter by dynamic facets
-    const activeFacetEntries = Object.entries(selectedAttributes);
-    if (activeFacetEntries.length > 0) {
-      list = list.filter((item) => {
-        const textToSearch = [
-          item.book.title,
-          item.book.category,
-          item.book.edition,
-          ...(item.tags ?? []),
-        ]
-          .join(" ")
-          .toLowerCase();
-
-        return activeFacetEntries.every(([facetId, optionIds]) => {
-          const facetDef = dynamicFacets.find((f) => f.id === facetId);
-          if (!facetDef) return true;
-          return optionIds.some((optId) => {
-            const opt = facetDef.options.find((o) => o.id === optId);
-            if (!opt) return true;
-            return (
-              textToSearch.includes(opt.label.toLowerCase()) ||
-              textToSearch.includes(opt.id.toLowerCase())
-            );
-          });
-        });
-      });
-    }
-
-    // Filter by min and max sale price
-    if (minPrice || maxPrice) {
-      const min = minPrice ? Number(minPrice.replace(/\D/g, "")) : 0;
-      const max = maxPrice ? Number(maxPrice.replace(/\D/g, "")) : Infinity;
-      if (!Number.isNaN(min) && !Number.isNaN(max)) {
-        list = list.filter((item) => {
-          const p = item.salePrice || item.exchangeValue || 0;
-          return p >= min && p <= max;
-        });
-      }
-    }
-
-    // Filter by Exchange Value (Khoảng giá trị đổi)
-    if (minExchangeValue || maxExchangeValue) {
-      const minEx = minExchangeValue
-        ? Number(minExchangeValue.replace(/\D/g, ""))
-        : 0;
-      const maxEx = maxExchangeValue
-        ? Number(maxExchangeValue.replace(/\D/g, ""))
-        : Infinity;
-      if (!Number.isNaN(minEx) && !Number.isNaN(maxEx)) {
-        list = list.filter((item) => {
-          const p = item.exchangeValue || 0;
-          return p >= minEx && p <= maxEx;
-        });
-      }
-    }
-
-    // Filter by Language (Ngôn ngữ của sách)
-    if (selectedLanguage) {
-      list = list.filter((item) => item.book.language === selectedLanguage);
-    }
-
-    // Sort items
-    if (currentSort.id === "salePriceAsc") {
-      list.sort(
-        (a, b) =>
-          (a.salePrice ?? a.exchangeValue ?? 0) -
-          (b.salePrice ?? b.exchangeValue ?? 0),
-      );
-    } else if (currentSort.id === "salePriceDesc") {
-      list.sort(
-        (a, b) =>
-          (b.salePrice ?? b.exchangeValue ?? 0) -
-          (a.salePrice ?? a.exchangeValue ?? 0),
-      );
-    } else if (currentSort.id === "exchangeValueAsc") {
-      list.sort(
-        (a, b) =>
-          (a.exchangeValue ?? a.salePrice ?? 0) -
-          (b.exchangeValue ?? b.salePrice ?? 0),
-      );
-    } else if (currentSort.id === "exchangeValueDesc") {
-      list.sort(
-        (a, b) =>
-          (b.exchangeValue ?? b.salePrice ?? 0) -
-          (a.exchangeValue ?? a.salePrice ?? 0),
-      );
-    } else {
-      list.sort(
-        (a, b) =>
-          new Date(b.publishedAt).getTime() -
-          new Date(a.publishedAt).getTime(),
-      );
-    }
-
-    return list;
-  }, [
-    result.data?.items,
-    search,
-    selectedMode,
-    selectedCondition,
-    activeCategoryId,
-    selectedSeries,
-    selectedAttributes,
-    dynamicFacets,
-    minPrice,
-    maxPrice,
-    minExchangeValue,
-    maxExchangeValue,
-    selectedLanguage,
-    currentSort,
-  ]);
+  // The server owns eligibility, filtering, order and pagination. An empty
+  // response must stay empty, including while loading or recovering from errors.
+  const displayItems = result.data?.pages.flatMap(page => page.items) ?? [];
 
   const handleResetFilters = () => {
     setSelectedMode("");
@@ -1527,7 +1344,13 @@ export function SearchScreen() {
 
         {/* 4. 2-Column Book Grid */}
         <View style={styles.gridSection}>
-          {displayItems.length === 0 ? (
+          {result.isPending ? <StatePanel loading title="Đang tìm sách…" /> : null}
+          {result.isError ? <StatePanel
+            title="Chưa tải được kết quả tìm kiếm"
+            message={displayItems.length ? "Danh sách đang giữ kết quả đã tải. Thử lại để cập nhật." : "Kiểm tra kết nối rồi thử lại. Bộ lọc của bạn vẫn được giữ."}
+            action={{ label: "Thử lại", onPress: () => void result.refetch() }}
+          /> : null}
+          {!result.isPending && !result.isError && displayItems.length === 0 ? (
             <View style={styles.emptyContainer}>
               <StatePanel
                 icon="book"
@@ -1584,16 +1407,20 @@ export function SearchScreen() {
                 {displayItems.length} cuốn
               </AppText>
 
-              {visibleCount < displayItems.length ? (
+              {visibleCount < displayItems.length || result.hasNextPage ? (
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Xem thêm sách xưa và trao đổi"
-                  onPress={() => setVisibleCount((prev) => prev + 4)}
+                  disabled={result.isFetchingNextPage}
+                  onPress={() => {
+                    if (visibleCount >= displayItems.length && result.hasNextPage) void result.fetchNextPage();
+                    setVisibleCount((prev) => prev + 4);
+                  }}
                   style={styles.loadMoreBtn}
                 >
                   <Icon name="arrow" size={16} color={stitchTokens.wine} />
                   <AppText kind="bold" style={styles.loadMoreBtnText}>
-                    Xem thêm sách xưa & trao đổi
+                    {result.isFetchingNextPage ? "Đang tải thêm…" : "Xem thêm sách"}
                   </AppText>
                 </Pressable>
               ) : (

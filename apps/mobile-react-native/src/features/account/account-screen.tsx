@@ -36,7 +36,7 @@ import { ordersPageSchema } from "../orders/contracts";
 
 
 const roleLabels: Record<string, string> = {
-  MEMBER: "Bạn đọc uy tín",
+  MEMBER: "Thành viên",
   STAFF: "Thư tịch viên (Nhân viên)",
   ADMIN: "Quản trị thư xã",
   TEST_OPERATOR: "Kiểm thử viên",
