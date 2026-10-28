@@ -1,5 +1,24 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## Tinh chỉnh cân xứng thanh nhập tin nhắn và nút gửi trong hộp thoại chat (ExchangeChatBox) — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Nguyên nhân mất cân đối**:
+  - Component `<TextField>` từ form chung bọc một lớp `<View style={{ gap: space.xs }}>` và style `layout.input`, khiến ô nhập có chiều cao tự nhiên ~48-50px và góc bo 10px.
+  - Nút gửi (`sendBtn`) lại bị cố định kích thước `40x40px`, dẫn đến lệch chiều cao và tâm thẳng đứng so với ô nhập tin nhắn; icon mũi tên nhỏ và màu nút khi vô hiệu hóa bị xỉn nâu.
+- **Giải pháp tối ưu**:
+  - Thay thế `<TextField>` bằng `<TextInput>` trực tiếp đặt trong `<View style={styles.inputContainer}>` có `minHeight: 44`, `borderRadius: 14`, viền `1.2px` màu `peachBorder`, nền giấy `parchment`.
+  - Đồng bộ nút gửi `sendBtn`: cố định kích thước `44x44px` (tỉ lệ 1:1 chuẩn xác với ô nhập), bo góc `14px` đồng bộ.
+  - Căn đáy hoàn hảo: `inputBar: { alignItems: "flex-end", gap: 10, paddingVertical: 10 }` đảm bảo khi gõ 1 dòng hay nhiều dòng thì nút gửi luôn nằm ở đáy hàng ngang tắp.
+  - Nâng cấp trạng thái phản hồi trực quan:
+    - Khi chưa nhập chữ: Nút gửi nền parchment tiệp màu, viền peachBorder, icon mũi tên xám mờ nhẹ.
+    - Khi có chữ: Nút gửi chuyển màu đỏ vang (`wineDark`), icon mũi tên trắng nổi bật (`size={19}, strokeWidth={2.2}`), đổ bóng nhẹ cao cấp.
+- **Kiểm tra**:
+  - Đã chụp ảnh màn hình và thử gõ chữ trực tiếp trên Android Emulator: Cả 2 thành phần khớp 100% về chiều cao 44px, bo góc 14px và căn chỉnh thẳng hàng tuyệt đối.
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/mobile-react-native test`: 24 test files / 163 tests PASS.
+  - Git commit: `e91858d`.
+
 ## Đồng bộ kích thước đối xứng 2 nút bấm trong thẻ tất toán (ExchangeSettlementCard) — 28/10/2026
 
 - Nhánh `feature/exchange-rn-completion`.
