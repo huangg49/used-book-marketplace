@@ -1,19 +1,35 @@
 # Điểm lưu hiện tại — 28/10/2026
 
-## Hoàn thiện toàn diện luồng trao đổi sách trên Mobile React Native — 28/10/2026
+## Hoàn thiện toàn diện luồng trao đổi sách trên Mobile React Native & Thiết kế trải nghiệm di động xúc giác cao cấp — 28/10/2026
 
 - Nhánh `feature/exchange-rn-completion`.
-- **Nghiệp vụ & Tính năng bổ sung hoàn chỉnh**:
-  - **Nghiệm thu sớm & Tất toán (`POST /exchanges/:id/complete`)**: Bổ sung nút "Xác nhận hài lòng & Nghiệm thu sách" khi đơn ở trạng thái `Delivered`, cho phép 2 bên hoàn tất nghiệm thu và tất toán giải phóng cọc ngay mà không cần đợi cron job sau 48h.
-  - **Đánh giá sau giao dịch (`Review`)**: Tích hợp luồng đánh giá theo chuẩn POL-18 (168h sau `Completed`), bổ sung schema contract `exchangeReviewsResponseSchema`, `createExchangeReviewSchema`; xây dựng `ReviewModal` chấm sao trực quan cho sách (1-5 sao) và đối tác (1-5 sao), chọn tags đặc trưng và viết nhận xét chi tiết, hiển thị đánh giá 2 chiều ngay trên thẻ hoàn tất.
-  - **Khai báo vận đơn & Theo dõi vận chuyển 2 chiều (`Shipment`)**: Thay thế nút gửi sách hardcode `direct` bằng modal chọn phương thức bưu cục (GHN, GHTK, ViettelPost, VNPost, Khác) hoặc gặp trực tiếp, nhập mã vận đơn (`trackingCode`), ghi chú kiện hàng; hiển thị thẻ "Vận chuyển 2 chiều" với đầy đủ mã bưu kiện, trạng thái gửi, ngày giờ và hướng dẫn tra cứu của cả 2 bên.
-  - **Đồng ý đổi kèm chọn địa chỉ nhận hàng (`AcceptExchangeModal`)**: Cho phép người nhận (recipient) chọn địa chỉ nhận hàng từ sổ địa chỉ cá nhân (`/me/addresses`) khi bấm đồng ý, truyền đúng `deliveryAddressId` vào `acceptExchange`.
-  - **Hỗ trợ hiển thị đổi nhiều sách (`Multi-book`)**: Nâng cấp `ExchangeDetailScreen` dùng `useQueries` tải toàn bộ danh sách sách được gom để đổi (`initiatorListingIds`), hiển thị đầy đủ bìa, tên sách, tác giả và giá trị quy đổi của từng cuốn trên `ExchangeProposalCard`.
-  - **Kiểm tra và cảnh báo số dư ví khi Cọc bảo chứng**: Kết nối query `/me/wallet`, hiển thị chi tiết số tiền cọc cần nạp và số dư ví khả dụng hiện tại; tự động cảnh báo số tiền còn thiếu kèm nút tắt "Nạp tiền vào ví ngay ↗" dẫn sang `/wallet` nếu không đủ số dư.
+- **Tương đương 100% tính năng & thành phần từ web (`apps/user-web`), tái thiết kế tối ưu công thái học di động**:
+  - **Thanh tiến trình 6 mốc giao dịch (`ExchangeProgressStepper`)**:
+    - Chuyển đổi toàn bộ logic của `ProgressStepper` từ web sang dạng mốc bấm thu nhỏ cho màn hình dọc (Đề xuất -> Đặt cọc -> Gửi sách -> Vận chuyển -> Đồng kiểm -> Hoàn tất).
+    - Vạch tiến trình lấp đầy phần trăm sinh động, các vòng tròn mốc với icon đặc thù (Check, Bag, Truck, Shield, Celebration, X), huy hiệu đếm bước (`Bước X/6`), badge trạng thái nổi bật và hộp thông điệp hướng dẫn ngữ cảnh (`stageDescription`).
+  - **Thẻ theo dõi bưu kiện 2 chiều độc lập (`ExchangeShippingCard`)**:
+    - Mô phỏng trọn vẹn `ShippingTrackingCard` trên web với 2 phiếu chiều đi & chiều về riêng biệt (`Chiều đi · Bạn gửi sách` vs `Chiều về · Bạn nhận sách`).
+    - Mini 3-step track cho từng bưu kiện: Đã tạo đơn -> Vận chuyển -> Nhận hàng & đồng kiểm.
+    - Hộp địa chỉ nhận hàng của đối tác và của bản thân với **nút bấm 1 chạm sao chép địa chỉ** (`expo-clipboard`) có phản hồi tức thì `Đã chép ✓` giúp dễ dàng paste vào app GHN/GHTK/ViettelPost.
+    - Phiếu vận đơn điện tử mô phỏng **mã vạch bưu cục (electronic airway barcode)**, mã vận đơn monospace to rõ cùng nút **Sao chép mã vận đơn 1 chạm**.
+    - Thẻ bảo chứng ký quỹ POL-14 (Escrow Callout Card) với icon khiên bảo vệ giải thích rõ cơ chế đóng băng cọc trên Ledger và khoảng đệm đồng kiểm 48h.
+  - **Biên nhận tài chính tất toán tự động (`ExchangeSettlementCard`)**:
+    - Xuất hiện khi giao dịch chuyển sang `Completed`, hiển thị dạng biên nhận tài chính sang trọng viền xanh lá với huy hiệu chúc mừng.
+    - 3 mục kiểm toán rõ ràng: Ký quỹ hoàn lại 100% về ví (+X đ), Khoản bù chênh lệch kết chuyển hoàn tất, Trạng thái cả 2 sách đã chuyển sang `Exchanged`.
+    - Phím tắt hành động: "Kiểm tra số dư Ví" (sang `/wallet`) và "Khám phá sách khác" (về trang chủ).
+  - **Thẻ nhận xét & đánh giá 2 chiều (`ExchangeReviewsCard`)**:
+    - Hiển thị nhận xét của bản thân (chấm sao sách 1-5, chấm sao đối tác 1-5, chips tag đặc thù `✓ Sách đúng mô tả`, comment) và nhận xét của đối tác.
+    - Cơ chế bảo mật đánh giá giấu mặt FR-R03: hiển thị thông báo quyền riêng tư khi đối tác chưa gửi đánh giá (chỉ tiết lộ khi cả 2 cùng gửi hoặc sau 7 ngày).
+    - Cảnh báo thời hạn đánh giá POL-18 (168 giờ).
+  - **Mẹo an toàn khi trao đổi sách (`ExchangeSafetyTips`)**:
+    - Hộp Accordion thông minh có thể mở rộng / thu gọn 4 quy tắc vàng: chụp ảnh trước khi gửi, bọc sách chống sốc, giữ mã vận đơn bưu tá, đồng kiểm 48h.
+  - **Sắp xếp bố cục di động tối ưu nhịp điệu trải nghiệm**:
+    - Tab "Phiếu trao đổi" phân tầng rõ ràng từ trên xuống dưới: Stepper tổng quan -> Biên nhận tất toán (khi xong) -> Phiếu so khớp sách & khoản bù -> Thẻ vận chuyển 2 chiều -> Bảng hành động tiếp theo -> Mẹo an toàn.
 - **Kiểm tra**:
   - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 lỗi).
-  - `pnpm --filter @used-books/mobile-react-native test`: 24 test files / 162 tests PASS sạch sẽ.
-  - Git commit: `a388d0b`.
+  - `pnpm --filter @used-books/mobile-react-native test`: 24 test files / 163 tests PASS.
+  - Git commits: `a388d0b`, `76b3dc9`, `649898b`.
+
 
 ## Hoàn tất giao diện đổi sách & Đồng bộ merge sạch vào main — 27/10/2026
 
