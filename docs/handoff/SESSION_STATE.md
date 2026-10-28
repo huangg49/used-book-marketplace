@@ -12,11 +12,14 @@
      - Thiết lập cấu trúc Flexbox cho `.modal`: `max-height: calc(100vh - 48px); display: flex; flex-direction: column`.
      - Vùng nhập liệu `.body` (chấm sao, chọn tag, ghi chú) có thanh cuộn riêng `flex: 1; overflow-y: auto`.
      - Thanh hành động đáy `.actions` được ghim cố định (`flex-shrink: 0`) với nền `#faf8f5`, luôn luôn hiển thị 100% đầy đủ cả 2 nút `[Hủy]` và `[Gửi đánh giá]` trên mọi độ phân giải.
+  3. *Nâng cấp màu sắc & độ tương phản cho nút "Gửi đánh giá"*:
+     - Thay thế màu vàng đất cũ (`var(--gold-strong)`) bị tối và mờ bằng gam đỏ vang trứ danh của Lật Lại `var(--shop-wine, #7d1f1f)`.
+     - Chữ trắng đậm `font-weight: 700`, đổ bóng mềm `box-shadow: 0 2px 6px rgba(125, 31, 31, 0.25)` và hiệu ứng hover nổi `translateY(-1px)`, giúp nút vô cùng rõ nét và nổi bật.
 - **Kiểm tra**:
   - `pnpm --filter @used-books/user-web exec tsc --noEmit`: PASS (0 lỗi).
-  - `pnpm --filter @used-books/user-web build`: PASS (Vite built in 5.43s).
-  - Kiểm tra giao diện trực tiếp trên trình duyệt (`http://localhost:5174/exchange/e81b820b-902b-4bab-a09c-c2c8957abb3e`): ảnh chụp màn hình xác nhận giao diện chuẩn, chỉ còn 1 nút CTA và hộp thoại đánh giá hiện đầy đủ cả 2 nút đáy.
-  - Git commit: `9f8d713`.
+  - `pnpm --filter @used-books/user-web build`: PASS.
+  - Kiểm tra giao diện trực tiếp trên trình duyệt (`http://localhost:5174/exchange/e81b820b-902b-4bab-a09c-c2c8957abb3e`): ảnh chụp màn hình xác nhận nút [Gửi đánh giá] và [⭐ Viết đánh giá đối tác] có độ tương phản cao, sắc nét, đẹp mắt.
+  - Git commits: `9f8d713`, `f0cde50`.
 
 ## Sửa lỗi gửi đánh giá giao dịch đổi sách (MongoDB Validator & In-modal Error Notice) — 28/10/2026
 
