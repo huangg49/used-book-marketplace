@@ -20,7 +20,7 @@ import {
   sellerScheduledAuctionsMigration,
   withSellerScheduledAuctions,
 } from './0037-seller-scheduled-auctions.js';
-import { transactionReviewValidatorFixMigration } from './0038-transaction-review-validator-fix.js';
+import { transactionReviewValidatorFixMigration } from './0039-transaction-review-validator-fix.js';
 import {
   exchangeCollectionSpecs,
   exchangesMigration,
