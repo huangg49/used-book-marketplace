@@ -7,6 +7,7 @@ import { canResolve, session } from "../../core/session";
 import { Button, ErrorNotice } from "../../core/ui";
 import { ActionPanel } from "./action-panel";
 import { Field } from "./field";
+import { MotionPanel } from "../../core/MotionPanel";
 import {
   operationsPointList,
   pointReceipt,
@@ -55,31 +56,34 @@ function PointsContent() {
       result={result}
       serverTime={result.data?.serverTime}
       panel={panel}
-      extra={(context) =>
-        creating ? (
-          <div className="row-panel">
-            <PointCreate
-              {...context}
-              onFinish={(outcome) => {
-                setCreating(false);
-                context.onFinish(outcome);
+      extra={(context) => (
+        <>
+          <MotionPanel open={creating} className="row-panel">
+            {creating && (
+              <PointCreate
+                {...context}
+                onFinish={(outcome) => {
+                  setCreating(false);
+                  context.onFinish(outcome);
+                }}
+                onClose={() => setCreating(false)}
+              />
+            )}
+          </MotionPanel>
+          {!creating && (
+            <Button
+              disabled={panel.pending}
+              onClick={() => {
+                panel.setOpen(undefined);
+                panel.setNotice(undefined);
+                setCreating(true);
               }}
-              onClose={() => setCreating(false)}
-            />
-          </div>
-        ) : (
-          <Button
-            disabled={panel.pending}
-            onClick={() => {
-              panel.setOpen(undefined);
-              panel.setNotice(undefined);
-              setCreating(true);
-            }}
-          >
-            Thêm điểm
-          </Button>
-        )
-      }
+            >
+              Thêm điểm
+            </Button>
+          )}
+        </>
+      )}
       rows={(result.data?.items ?? []).map((point) => ({
         id: point.id,
         status: pointStatusLabels[point.status],
@@ -136,9 +140,11 @@ function PointManage(props: Props) {
           </Button>
         ))}
       </div>
-      {tab === "edit" && <PointEdit {...props} />}
-      {tab === "assign" && <PointAssign {...props} />}
-      {tab === "end" && <PointUnassign {...props} />}
+      <MotionPanel open motionKey={tab}>
+        {tab === "edit" && <PointEdit {...props} />}
+        {tab === "assign" && <PointAssign {...props} />}
+        {tab === "end" && <PointUnassign {...props} />}
+      </MotionPanel>
     </>
   );
 }

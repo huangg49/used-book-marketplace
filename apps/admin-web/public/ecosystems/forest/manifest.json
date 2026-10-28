@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "generator": "built-in image_gen",
+  "assets": [
+    {
+      "id": "forest",
+      "file": "forest.webp",
+      "width": 1000,
+      "height": 667,
+      "bytes": 13580,
+      "transparent": false
+    },
+    {
+      "id": "tree",
+      "file": "tree.webp",
+      "width": 440,
+      "height": 495,
+      "bytes": 26710,
+      "transparent": true
+    },
+    {
+      "id": "fox-body",
+      "file": "fox-body.webp",
+      "width": 440,
+      "height": 594,
+      "bytes": 40772,
+      "transparent": true
+    },
+    {
+      "id": "fox-tail",
+      "file": "fox-tail.webp",
+      "width": 380,
+      "height": 376,
+      "bytes": 15568,
+      "transparent": true
+    },
+    {
+      "id": "bird-body",
+      "file": "bird-body.webp",
+      "width": 260,
+      "height": 177,
+      "bytes": 10314,
+      "transparent": true
+    },
+    {
+      "id": "bird-wing",
+      "file": "bird-wing.webp",
+      "width": 180,
+      "height": 146,
+      "bytes": 6918,
+      "transparent": true
+    },
+    {
+      "id": "butterfly",
+      "file": "butterfly.webp",
+      "width": 220,
+      "height": 149,
+      "bytes": 10632,
+      "transparent": true
+    },
+    {
+      "id": "fern",
+      "file": "fern.webp",
+      "width": 320,
+      "height": 436,
+      "bytes": 46098,
+      "transparent": true
+    },
+    {
+      "id": "mushrooms",
+      "file": "mushrooms.webp",
+      "width": 280,
+      "height": 229,
+      "bytes": 18434,
+      "transparent": true
+    }
+  ]
+}

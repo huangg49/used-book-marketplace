@@ -23,6 +23,13 @@ Real carrier/Exchange đầy đủ còn thiếu.
 
 ## Đấu giá và điểm mô phỏng
 
+Owner duyệt27/10 theo [ADR0049](../adr/0049-auction-intake-from-shelf.md): nhận
+sách lẻ đủ điều kiện từ kệ Marketplace (Sale/Both/Exchange), giữ nguồn Auction
+cũ, không đổi channel/mode/giá; không bộ sách. Dùng predicate catalog/ảnh/owner/
+revision chuẩn rồi bắt buộc Available và không commitment Active dưới lock.
+AuctionIntake/PointOrder giữ sách ngoài public marketplace kể cả còn hội thoại
+thương lượng cũ. Giá trị khai báo snapshot không tự cấp quyền bồi thường.
+
 Bounded auctions started in OpenAPI 0.27.0 (migrations 0008–0011); current contract
 is 0.30.0 with completion/business-rule/inbox increments. Read ADR 0030 and
 `docs/features/AUCTION_BACKEND_REPORT.md`. Intake shares the exclusive commitment with

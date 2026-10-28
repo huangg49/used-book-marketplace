@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "generator": "built-in image_gen",
+  "assets": [
+    {
+      "id": "sky",
+      "sourceFilename": "exec-74b6f6c3-ae75-4f25-a31e-180e41910dbf.png",
+      "sourceSha256": "f6c5a5b48421e3d65ff990b8540903e3db3fb1735fb25976b1ad65848f2f08fb",
+      "prompt": "Background ONLY for a cute flat vector-cartoon miniature SKY ecosystem in a professional dashboard card. Warm pale peach morning sky #f6e8da, subtle very broad flat pale apricot atmospheric shapes, bottom 18 percent filled with a wide bank of overlapping rounded cream clouds #fffcf5 and pale peach #f6d4bd, some smaller distant flat clouds only near the lower horizon. Top 65 percent is very quiet nearly uniform light peach empty sky, especially upper left for readable numbers. Smooth simple filled shapes, clean flat 2D picture-book illustration matching cute minimal fox and aquarium assets. Landscape 3:2 edge to edge opaque composition. NO sun rays, no animals, no balloons, no books, no aircraft, no foreground objects, no text, no logo, no border, no texture, no grain, no realistic shading, no lighting, no 3D, no glow, no cast shadows."
+    },
+    {
+      "id": "cloud",
+      "sourceFilename": "exec-52ef90de-a7ec-4b04-91fc-651b22f6dc63.png",
+      "sourceSha256": "d136d6be08d14eb4c60e0203dbc1eb6a80945d581623c0df25d372d1ac4ca298",
+      "prompt": "ONE isolated wide fluffy CLOUD asset on a genuinely transparent background. Cute minimal flat 2D vector-cartoon picture-book style. Three or four large softly rounded lobes with a broad mostly level rounded bottom, one cream filled silhouette #fffcf5 with one pale peach lower shape #f6d4bd. Clean smooth edges, very sparse large solid color areas. Entire cloud visible with generous alpha padding, wide landscape composition. No texture, no grain, no gradients, no lighting, no 3D, no glow, no drop shadow, no outlines, no face, no rain, no objects, no text, no logo. One cloud only."
+    },
+    {
+      "id": "balloon",
+      "sourceFilename": "exec-0f26fc6c-8bf0-4a5a-908c-7f3be0adaf1c.png",
+      "sourceSha256": "4407fa31f205bd6aed292c3f5c9d7b32fb339b2a893838887b7ae936634f9f17",
+      "prompt": "ONE HOT AIR BALLOON ENVELOPE ONLY isolated on genuine transparent background. Very cute flat 2D vector-cartoon picture-book illustration matching a minimal seated orange fox holding a book. Large rounded pear-shaped canopy with three broad vertical curved panels: burgundy wine #7c2320 on outer sides, warm coral #f68b51 and pale cream #fffcf5 in middle, small golden band #f4cb67 across lower neck. Full rounded top and narrow bottom connector visible. ENVELOPE ONLY: NO basket, no ropes, no flame, no passengers, no surroundings. Balloon will attach to a separate hanging book basket. Deliberately minimal, only a few smooth large solid shapes; no seams, no fabric texture, no folds, no gradient, no light, no 3D, no shadow, no glow, no outlines. Portrait composition, generous transparent padding, no text, no logo."
+    },
+    {
+      "id": "basket",
+      "sourceFilename": "exec-ab90d886-eea4-41db-a44b-097810120fae.png",
+      "sourceSha256": "5abdae52cdf131d0a15db65612496d1589b8f0fc91b90a3b874dc6e3617dbed6",
+      "prompt": "ONE SMALL HOT AIR BALLOON BASKET asset isolated on genuine transparent background. Cute flat vector-cartoon picture-book style. A small rounded trapezoid basket in flat warm tan #c69b70 with one darker brown base shape, four sparse wide vertical slats at most. Two simple thin warm-brown suspension ropes go upward from the top corners, terminate cleanly at the top of the asset so another separate balloon envelope can be attached. Basket empty with an open top and short front face, no interior black hole. Basket and ropes ONLY, no canopy, no balloon fabric, no books, no people, no animals, no ground. Smooth large simple shapes, no gradients, no texture, no lighting, no 3D, no glow, no shadow, no outlines except thin functional ropes, no text. Entire asset visible centered, transparent padding, portrait composition."
+    },
+    {
+      "id": "books",
+      "sourceFilename": "exec-6a9f4b2a-1fcd-4a16-a779-2947bbd545bc.png",
+      "sourceSha256": "0dfd4343e1bc62ec8893d3bdf5556e871d924c3eb5efdaff86d62f38a3d541fc",
+      "prompt": "ONE small group of THREE cute closed BOOKS standing upright and leaning gently together, isolated on genuine transparent background. Flat 2D vector-cartoon picture-book illustration, extremely simple large solid shapes matching a cute fox holding a book. Covers burgundy wine #5c0202, muted mint #71a88c and golden yellow #f4cb67; thin cream page blocks #fffcf5, one simple tiny rectangular spine label on the middle book. Books partly front-facing, staggered heights, will be placed inside a hot air balloon basket. No lettering, no title, no symbols, no hands, no characters, no basket, no ground. Clean smooth edges, no outlines, no detailed pages, no grain, no texture, no gradient, no lighting, no 3D, no cast shadows, no glow. Entire group visible with transparent padding, square composition."
+    },
+    {
+      "id": "paper-plane",
+      "sourceFilename": "exec-aa4908c9-cfd2-4396-8327-c0a0b94251ed.png",
+      "sourceSha256": "96751630ad746d55cd3d76779e8f7ffeb13d2268929aec54536f6dd80cdf6a0c",
+      "prompt": "ONE adorable simple folded PAPER AIRPLANE on a genuine transparent background. Clean flat vector-cartoon picture-book style, cream #fffcf5 upper wing, muted warm peach #f6d4bd folded inner triangle, one narrow burgundy #7c2320 fold accent. Pointing toward upper RIGHT, clear familiar paper airplane silhouette in side three-quarter view, just 3 or 4 large solid shapes. Friendly softly tipped geometric folds, no face, no text, no logo, no motion trail, no background. Entire airplane visible with alpha padding, landscape composition. No outlines, no texture, no grain, no shading, no gradients, no lighting, no 3D, no glow, no shadow."
+    },
+    {
+      "id": "kite",
+      "sourceFilename": "exec-c64b230b-c812-486b-b836-3f5da2114531.png",
+      "sourceSha256": "c26a3e2ea273196543bd09441f1f0d7ed2724269320dad49ca75a16d9e107507",
+      "prompt": "ONE small cute DIAMOND KITE with a short curved ribbon tail isolated on genuine transparent background. Simple flat 2D vector-cartoon picture-book asset. Four large solid diamond panels alternating muted mint #71a88c, cream #fffcf5 and gold #f4cb67, two thin simple dark-sage crossing spars. Short softly curved tail with exactly two little rounded coral #f68b51 bows. Tilted gently right, entire kite and tail visible with generous alpha padding in portrait composition. No person, no hand, no long string across the canvas, no ground, no scenery, no text. Very few clean smooth filled shapes, no texture, no grain, no gradient, no lighting, no 3D, no glow, no shadow, no decorative outlines."
+    }
+  ]
+}

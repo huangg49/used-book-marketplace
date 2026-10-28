@@ -28,7 +28,41 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
+pnpm bundle:check
 ```
+
+`build` also checks the production manifest with
+[`admin-bundle.mjs`](../../scripts/admin-bundle.mjs): the authenticated workspace
+and all ten page modules must remain deferred, the complete startup JavaScript graph must stay within500kB,
+and no JavaScript chunk may exceed300kB (decimal bytes, before compression).
+The report counts shared imports/modulepreloads once and reports CSS, gzip estimates,
+total JavaScript and each page's additional assets separately. It does not measure
+browser timing or Core Web Vitals. Run the checker tests from the repository root
+with `node --test scripts/admin-bundle.test.mjs`.
+
+Login loads without the workspace shell or TanStack Query runtime. After login,
+the deferred workspace loads its query provider, checks `/auth/me`, and only then
+renders the requested page. Deep links and the existing role gates stay intact.
+The cache binding starts with the current identity (the module may load after
+login); logout/identity loss/account changes synchronously clear queries and
+mutations and cancel in-flight reads. Tokens remain in the same memory-only
+session client. React's renderer has its own chunk; it is still included in the
+complete startup budget. No dependency or budget increase is required.
+
+Page modules load inside the authenticated workspace. A local Suspense/
+error boundary keeps navigation outside the pending or failed page. Reload is an
+explicit action and requires sign-in again; no automatic reload, token persistence,
+service worker, command replay or permission change was added.
+
+Dashboard sources and both 7/30-day periods share a cache namespace scoped by
+account, status and normalized roles. Fresh snapshots are reused for30seconds;
+the next poll stays anchored to the last successful response, including after
+a fresh remount. Background polling stays disabled. Profile/permission polling
+keeps its independent policy. After command acknowledgement, reconciliation
+marks all Dashboard snapshots stale without starting extra reads or altering
+the command's recovery flow. Manual **Cập nhật** refreshes active queries once
+and expires cached inactive periods; failed reads retain the last data and its
+existing warning/retry UI.
 
 For the HTTP/MongoDB browser suite, start the QA replica set and set
 `MONGO_TEST_URL` as described in [START_HERE](../../docs/handoff/START_HERE.md).
@@ -47,6 +81,26 @@ local fake storage and real Sharp, and cleans up after itself. Set
 `PLAYWRIGHT_CHANNEL=msedge` to use installed Edge instead. Details and limitations:
 [verification](../../docs/features/OPERATIONS_REVIEW_REPORT.md),
 [ADR 0010](../../docs/adr/0010-operations-review-client.md).
+
+The moderation desk keeps the queue beside the selected dossier at the same
+`/review/:kind/:id` routes. Queue links carry the active status; loaded rows and
+numeric scroll positions are retained within the current user session. On narrow
+screens, **Mở hàng chờ** exposes the queue and **Đi tới phiếu quyết định** moves
+focus to the decision sheet without hiding it behind the mobile header.
+
+- In the queue, Up/Down and Home/End move focus between loaded dossiers; Enter
+  opens one. Previous/next links use the normal unsent-change guard.
+- The photo viewer supports previous/next arrows, zoom from 100–300%, reset with
+  `0`, and Escape to close. It identifies the submitted revision, restores focus
+  and releases its scroll lock on close/unmount. A signed URL alone never makes
+  an image ready for approval.
+- Listing revisions can be compared by choosing two loaded submissions. Text,
+  prices, condition declarations, ordered media, bundle contents and delivery
+  selection are compared; historical photos load only on explicit expansion.
+  Catalog requests have no historical metadata API, so the UI does not invent one.
+- Switching evidence tabs preserves the decision draft. An explicit dossier
+  reload starts a new check; the decision remains bound to the current revision,
+  expected version and original retry intent.
 
 Public shelf, disputes, finance, audit search, simulator/point/auction workflows
 and production deployment remain future increments. Moderation does not certify

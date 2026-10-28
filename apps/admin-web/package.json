@@ -5,11 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node ../../scripts/admin-bundle.mjs",
+    "bundle:check": "node ../../scripts/admin-bundle.mjs",
     "lint": "oxlint",
     "typecheck": "tsc -b --pretty false",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:api": "vitest run --config vitest.config.integration.ts",
+    "test:dashboard:api": "node tests/dashboard-api.mjs",
     "test:browser": "node tests/browser.mjs"
   },
   "dependencies": {

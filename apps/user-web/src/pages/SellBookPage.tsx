@@ -25,7 +25,19 @@ import { lockPageScroll } from "../lib/page-scroll";
 import galleryStyles from "../components/ListingGallery.module.css";
 import { useSession } from "../hooks/useSession";
 import { session as apiSession } from "../lib/session";
-import { createListingSubmission } from "../services/listing-submission";
+import {
+  createDraftAttempt,
+  createListingSubmission,
+} from "../services/listing-submission";
+import {
+  autofillFactRows,
+  type AutofillFacts,
+} from "../services/listing-autofill";
+import {
+  PhotoAutofill,
+  type AutofillField,
+  type AutofillFields,
+} from "../components/PhotoAutofill";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
 import {
@@ -84,6 +96,10 @@ export function SellBookPage() {
   const [searchParams] = useSearchParams();
   const auction = searchParams.get("channel") === "Auction";
   const submission = useRef<ReturnType<typeof createListingSubmission>>(null);
+  // One server draft shared by photo autofill and submission (ADR 0048).
+  const [draftAttempt, setDraftAttempt] = useState(createDraftAttempt);
+  // Catalog-request facts the seller accepted from photo autofill.
+  const [autofillFacts, setAutofillFacts] = useState<AutofillFacts>({});
   const [classification, setClassification] = useState<ClassificationValue>({
     categoryId: "",
     attributes: {},
@@ -189,6 +205,40 @@ export function SellBookPage() {
     },
     [],
   );
+  function chooseBook(book: PickedBook) {
+    setSelectedBook(book);
+    setFormData((previous) => ({
+      ...previous,
+      title: book.title,
+      author: book.authors.join(" · "),
+    }));
+    setClassification({
+      categoryId: book.categoryId || categoryFor(book.category)?.id || "",
+      attributes: book.attributes || {},
+      series: book.series || "",
+    });
+    setLanguage(book.language);
+    focusAfterRender("selected-book");
+  }
+  function applyAutofillField(field: AutofillField, fields: AutofillFields) {
+    if (field === "title" || field === "authors") {
+      setEntryMode("manual");
+      setFormData((previous) => ({
+        ...previous,
+        ...(field === "title" && fields.title ? { title: fields.title } : {}),
+        ...(field === "authors" && fields.authors.length
+          ? { author: fields.authors.join(", ") }
+          : {}),
+      }));
+      return;
+    }
+    if (field === "language") {
+      if (fields.language && languageOptions.some((option) => option.id === fields.language))
+        setLanguage(fields.language);
+      return;
+    }
+    setAutofillFacts((previous) => ({ ...previous, [field]: fields[field] }));
+  }
   function focusAfterRender(
     target:
       | "heading"
@@ -576,6 +626,7 @@ export function SellBookPage() {
       }
       submission.current ??= createListingSubmission({
         ...(auction ? { channel: "Auction" as const } : {}),
+        ...(selectedBook ? {} : autofillFacts),
         title: formData.title,
         ...(bundle ? { bundle } : {}),
         author: formData.author,
@@ -609,7 +660,7 @@ export function SellBookPage() {
               method: "DirectDelivery",
             }
           : null,
-      });
+      }, draftAttempt);
       setHasAttempt(true);
       await submission.current();
       setStep(6);
@@ -1128,6 +1179,9 @@ export function SellBookPage() {
             onPostAnother={() => {
               formData.images.forEach((url) => URL.revokeObjectURL(url));
               submission.current = null;
+              // A fresh draft: the old stage keys would replay the sent listing.
+              setDraftAttempt(createDraftAttempt());
+              setAutofillFacts({});
               setBundle(null);
               setClassification({
                 categoryId: "",
@@ -1310,6 +1364,15 @@ export function SellBookPage() {
                               </button>
                             </div>
                           )}
+                          {!selectedBook && !bundle && (
+                            <PhotoAutofill
+                              attempt={draftAttempt}
+                              channel={auction ? "Auction" : undefined}
+                              disabled={submitting || hasAttempt}
+                              onUseField={applyAutofillField}
+                              onPickBook={(match) => chooseBook(match.book)}
+                            />
+                          )}
                           <div
                             id="sell-book-entry"
                             className={styles.bookEntry}
@@ -1319,24 +1382,7 @@ export function SellBookPage() {
                                 <CatalogBookPicker
                                   compact
                                   label="Tìm cuốn sách trong thư viện"
-                                  onSelect={(book) => {
-                                    setSelectedBook(book);
-                                    setFormData((previous) => ({
-                                      ...previous,
-                                      title: book.title,
-                                      author: book.authors.join(" · "),
-                                    }));
-                                    setClassification({
-                                      categoryId:
-                                        book.categoryId ||
-                                        categoryFor(book.category)?.id ||
-                                        "",
-                                      attributes: book.attributes || {},
-                                      series: book.series || "",
-                                    });
-                                    setLanguage(book.language);
-                                    focusAfterRender("selected-book");
-                                  }}
+                                  onSelect={chooseBook}
                                 />
                                 <p className={styles.help}>
                                   Chọn đúng đầu sách để điền sẵn tên, tác giả và
@@ -2369,6 +2415,7 @@ export function SellBookPage() {
                               ...(classification.series
                                 ? [["Bộ truyện", classification.series]]
                                 : []),
+                              ...(selectedBook ? [] : autofillFactRows(autofillFacts)),
                               ...facetsFor(
                                 classification.categoryId,
                                 classification.attributes,

@@ -1,0 +1,132 @@
+.select {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+}
+.select > span {
+  color: var(--shop-muted);
+  font-size: 12px;
+}
+.select > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 44px;
+  width: 100%;
+  padding: 10px 13px;
+  border: 1px solid var(--shop-line);
+  border-radius: 3px;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 140ms ease-out,
+    background-color 140ms ease-out;
+}
+.select > button:hover,
+.select > button[aria-expanded="true"] {
+  border-color: var(--shop-control);
+  background: var(--shop-shelf);
+}
+.select > button:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+.select > button > svg {
+  flex-shrink: 0;
+  color: var(--shop-wine);
+  transition: transform 180ms ease-out;
+}
+.select > button[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+.select ul {
+  display: none;
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  min-width: 100%;
+  max-height: min(260px, 50dvh);
+  overflow: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--shop-line);
+  border-top: 2px solid var(--shop-wine);
+  border-radius: 3px;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  box-shadow: 0 12px 25px color-mix(in srgb, var(--shop-ink) 14%, transparent);
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity 140ms ease-out,
+    transform 140ms ease-out,
+    display 140ms allow-discrete;
+}
+.select ul[data-side="top"] {
+  top: auto;
+  bottom: calc(100% - 18px);
+  transform: translateY(4px);
+}
+.select ul[data-open="true"] {
+  display: block;
+  opacity: 1;
+  transform: none;
+}
+.select ul[data-open="false"] {
+  pointer-events: none;
+}
+.select li {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition:
+    background-color 100ms ease-out,
+    color 100ms ease-out;
+}
+.select li[data-active="true"] {
+  color: var(--shop-wine);
+  background: var(--shop-shelf);
+}
+.select li[aria-selected="true"] {
+  font-weight: 600;
+  color: var(--shop-wine);
+}
+.select li > svg {
+  flex-shrink: 0;
+}
+@starting-style {
+  .select ul[data-open="true"] {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  .select ul[data-side="top"][data-open="true"] {
+    transform: translateY(4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .select > button,
+  .select ul {
+    transition-duration: 140ms !important;
+  }
+  .select > button > svg {
+    transition-duration: 180ms !important;
+  }
+  .select li {
+    transition-duration: 100ms !important;
+  }
+}

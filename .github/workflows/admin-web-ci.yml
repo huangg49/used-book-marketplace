@@ -2,10 +2,10 @@ name: Admin Web CI
 
 on:
   pull_request:
-    paths: ["apps/admin-web/**", "packages/api-contract/**", "pnpm-lock.yaml", "pnpm-workspace.yaml"]
+    paths: ["apps/admin-web/**", "packages/api-contract/**", "scripts/admin-bundle*.mjs", ".github/workflows/admin-web-ci.yml", "pnpm-lock.yaml", "pnpm-workspace.yaml"]
   push:
     branches: [main]
-    paths: ["apps/admin-web/**", "packages/api-contract/**", "pnpm-lock.yaml", "pnpm-workspace.yaml"]
+    paths: ["apps/admin-web/**", "packages/api-contract/**", "scripts/admin-bundle*.mjs", ".github/workflows/admin-web-ci.yml", "pnpm-lock.yaml", "pnpm-workspace.yaml"]
 
 jobs:
   admin-web:
@@ -22,4 +22,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @used-books/admin-web lint
       - run: pnpm --filter @used-books/admin-web typecheck
+      - run: pnpm --filter @used-books/admin-web test
+      - run: node --test scripts/admin-bundle.test.mjs
       - run: pnpm --filter @used-books/admin-web build

@@ -65,6 +65,19 @@ const loadedCover = (page) =>
       (image) => image.complete && image.naturalWidth > 0,
     ),
   );
+// The result grid slides in (BookSearchPage `pageVariants`, 380 ms). Clicking
+// a card mid-slide makes Playwright retry with a forced scroll, which brings
+// the next row near the viewport and correctly signs its covers.
+const settledShelf = (page) =>
+  page.waitForFunction(() => {
+    const grid = document.querySelector('[class*="gridContainer"]');
+    if (!grid) return false;
+    const style = getComputedStyle(grid);
+    return (
+      style.opacity === "1" &&
+      ["none", "matrix(1, 0, 0, 1, 0, 0)"].includes(style.transform)
+    );
+  });
 let server, browser;
 const results = [];
 
@@ -172,6 +185,7 @@ async function fixtures(width) {
       firstReads > 0 && firstReads < 20,
       "offscreen covers should not all request signing",
     );
+    await settledShelf(page);
     const beforeDetail = photoReads.length;
     await page.locator("article h3 a").first().click();
     await page.waitForURL(`${origin}/books/${listings[0].id}`);
@@ -308,7 +322,7 @@ async function benchmark(label) {
 }
 
 try {
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}) });
   const index = process.argv.indexOf("--baseline");
   if (index >= 0) {
     const ref = process.argv[index + 1];

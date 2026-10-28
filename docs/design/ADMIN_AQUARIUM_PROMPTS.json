@@ -1,0 +1,43 @@
+{
+  "version": 2,
+  "generator": "built-in image_gen",
+  "note": "Flat cute vector-like direction after owner rejected detailed fish v1. Originals remain under the image generator's default directory; deployed files are individual WebP derivatives.",
+  "assets": [
+    {
+      "id": "fish-body",
+      "sourceFilename": "exec-2edb5738-84de-43ad-851e-563e49fd6bbc.png",
+      "sourceSha256": "0c184fb0feb1bfa513d4bef4ed72ae10c97ccd06418c8ecee1ae8c92f27eaf25",
+      "prompt": "ONE simple flat vector-cartoon goldfish BODY asset, isolated on a genuinely transparent background.\nStyle: very cute minimal 2D vector sticker, clean smooth Bézier-like silhouettes, 3 to 5 solid color shapes, completely flat fills. NOT a rendered fish. No gradients, no texture, no paper grain, no shading, no scales, no highlights, no glow, no shadow, no realistic anatomy.\nFacing RIGHT in side profile. Plump small oval golden-yellow body #f4cb67, tiny dark-wine circular dot eye #5c0202, tiny curved smiling mouth, one simple peach/coral oval cheek, one small flat orange pectoral fin, a small simple orange dorsal fin, an optional small cream belly shape. Calm friendly expression. Cute and deliberately very simple, like a polished preschool picture-book vector. Large open areas of solid color.\nBODY ONLY: the large caudal tail is a separate animation asset and must NOT appear here. At the far left the golden body tapers to a short flat narrow rounded tail-root. That tail-root is a closed solid shape, not a hole or an opening. Do not depict a cut surface.\nCentered in a wide landscape composition, generous empty alpha padding around the entire silhouette. One fish body only. No tail, no environment, no particles, no outlines around the whole animal, no border, no text, no logo. Output transparent PNG, crisp clean alpha edges."
+    },
+    {
+      "id": "tail",
+      "sourceFilename": "exec-e1ce8077-c586-4a1a-b358-17218f8e72bc.png",
+      "sourceSha256": "bcb5b807febdd8fd20030547e2ecdf2eff94b79ba4698843309c8e3b926d0f7f",
+      "prompt": "Using the reference ONLY for the fish's color and simple flat cartoon style, create ONE separate goldfish caudal TAIL FIN asset. Do NOT include any fish body, head, eye, or pectoral fin. This is the independent tail that will attach at the left end of that referenced right-facing body. Tail root/hinge at the RIGHT, a short rounded narrow GOLDEN connector at the rightmost tip, expanding toward LEFT into a broad cute rounded fan with two gently scalloped lobes. Simple filled 2D vector shapes, coral-orange outer silhouette #f68b51, golden inner patch #f4cb67, at most one darker orange shape. No fin-ray lines, no texture, no scales, no photorealism, no gradients, no lighting, no glow, no shadow, no outline. Transparent background, generous alpha padding, entire tail uncut, centered in square composition. It must match the minimal cute fish, not add detail."
+    },
+    {
+      "id": "ribbon-plant",
+      "sourceFilename": "exec-569e282b-2411-4521-8364-9c3478c934cb.png",
+      "sourceSha256": "6565f51a1233e686ce051f5353dde5131437d108f6d8c1bfae2ef09b6b086acb",
+      "prompt": "Create ONE isolated aquatic RIBBON PLANT asset for a very cute flat vector-cartoon aquarium. Five tall flowing broad ribbon leaves rise from a single compact root at bottom center. Leaves gently curve in different directions but form one coherent upright plant with full clean rounded ends. Palette limited to dark sage green #467c65, mint #b6dac5 and medium green #71a88c. Large simple 2D flat filled shapes, clean smooth vector-like edges, preschool picture-book sophistication. No texture, no grain, no shading, no gradient, no lighting, no glow, no drop shadow, no outlines, no details inside leaves. No fish, no rocks, no pot, no ground, no text. Portrait composition with generous transparent padding, true transparent background. One plant only, ready to sway by pivoting around its bottom root."
+    },
+    {
+      "id": "broad-plant",
+      "sourceFilename": "exec-93c21131-9011-47a9-aa89-cc4fb95d5153.png",
+      "sourceSha256": "c7fdf3cdf67352f68a1541f3461331c6ce827c661ee26653f46df5ac9701d209",
+      "prompt": "Create ONE small flat vector-cartoon aquatic BROAD-LEAF PLANT asset on a genuine transparent background. A single plant of three slender dark sage stems with 7 or 8 simple smooth rounded oval leaves, leafy branching silhouette, common root at bottom center. Dark green #467c65 stems and alternating medium sage #71a88c / mint #b6dac5 leaf shapes. Only a few large simple solid shapes, like an elegant very cute preschool picture-book vector asset. FLAT 2D color, no gradients, no shading, no grain, no realism, no glow, no cast shadow, no outlines, no leaf veins or interior detail. Entire plant visible with generous alpha padding in portrait composition. No pot, no ground, no fish, no rock, no text, no other objects."
+    },
+    {
+      "id": "pebbles",
+      "sourceFilename": "exec-81dad2cf-0fd6-42f5-8c89-61640c4c5527.png",
+      "sourceSha256": "0a64e61565b0bf4fa3bb6f1f969dd6483260f07bfdd0470234bca336094e58c8",
+      "prompt": "Create ONE isolated little cluster of two smooth rounded aquarium PEBBLES for a cute minimal flat 2D vector aquarium. One larger softly rounded asymmetric sage stone with one smaller warm ivory stone tucked against its lower right. Use just three solid matte color regions: sage #86b9a4, muted deep sage #61967f and warm cream #fcf8db. Clean broad simple silhouettes, very minimal children's picture-book/vector icon style. No gradients, no texture, no realistic rendering, no shine, no glow, no drop shadow, no outline, no cracks or speckles. No plants, no fish, no sand, no bubble, no text, no frame. Centered on a true transparent background with generous padding. Landscape composition, full objects uncut."
+    },
+    {
+      "id": "water",
+      "sourceFilename": "exec-dc3363a2-4ce8-45dd-8ab3-f85f6de3dafb.png",
+      "sourceSha256": "ecac6750aba5ca47c1f73d66c62d9c06e7590f1ada907a601bafc533540417e5",
+      "prompt": "Create a flat 2D vector-cartoon aquarium WATER BACKGROUND plate only for a cute minimal aquarium UI illustration. Wide landscape composition 3:2. Soft muted mint and pale jade water, largely calm empty space in the upper 75%, a few broad simple flat translucent lighter turquoise water shapes, a very gentle broad light shaft from upper right. Bottom 15% is one simple low warm ivory sand dune with one slightly darker pale sand shape. Clean large geometric-organic color fields, vector-style editorial illustration, NO rendering or realism, no texture, no grain, no glow, no shadow, no complex caustics. Palette mint #b6dac5, pale aqua #dceee6, jade #86b9a4, sand #fcf8db. No fish, no plants, no rocks, no bubbles, no glass container, no UI frame, no text, no logo. This background is designed to have separate fish and plants layered over it in code. Fill the full image with the illustrated water and sand."
+    }
+  ]
+}

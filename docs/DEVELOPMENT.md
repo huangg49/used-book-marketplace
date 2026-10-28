@@ -98,6 +98,13 @@ Thiếu storage thì login/xem dữ liệu vẫn chạy, upload chưa sẵn sàn
   root `MONGO_PORT` và đồng bộ port của ba `MONGODB_*` URL API; giữ project/volume/DB.
 - API không ready: xem log `[api]`; kiểm cấu hình DB/migration bằng
   `pnpm doctor:local`. Không reset hoặc seed lại để ép chạy.
+- Launcher tiếp tục kiểm kết nối HTTP sau khi API ready. Nếu HTTP mất liên tục
+  45 giây (kể cả Nest watcher còn sống), launcher dừng cây tiến trình của mình
+  rồi khởi động lại API và hai worker, tối đa ba lần trong một phiên. Khoảng
+  reload ngắn hoặc HTTP 503 do DB chưa ready không kích hoạt restart. Lỗi build/
+  startup và worker thoát vẫn dừng launcher để xem log; không tự migrate/seed.
+  Windows dùng tùy chọn Nest `useProcessExit` sau shutdown hooks để tránh
+  `kill ENOSYS` khi Node không hỗ trợ gửi lại tín hiệu POSIX.
 - Sau khi sửa code worker: Ctrl+C và chạy lại `pnpm dev:api`; API có watch,
   worker hiện không hot reload. Không bật thêm `dev:media`/`dev:orders` khi bundle
   dev đã chạy hai worker này. Các lệnh riêng giữ cho debug có chủ đích.

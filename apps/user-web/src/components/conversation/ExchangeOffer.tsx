@@ -351,6 +351,7 @@ export function ExchangeOffer({
           </Link>
         </div>
       ) : (
+        <>
         <fieldset className={styles.fieldset} disabled={busy || uncertain}>
           {mine.data.length > 4 && (
             <div className={styles.searchBox}>
@@ -606,6 +607,7 @@ export function ExchangeOffer({
             )}
           </div>
 
+        </fieldset>
           <p className={styles.helpText}>
             Gửi đề nghị chưa giữ sách. Hệ thống sẽ giữ tiền cọc bảo chứng và tiền
             bù sau khi hai bên chốt trao đổi.
@@ -625,7 +627,7 @@ export function ExchangeOffer({
                   ? `Gửi đề nghị đổi sách (${chosen.length} cuốn)`
                   : "Chọn sách đem đổi để tiếp tục"}
           </button>
-        </fieldset>
+        </>
       )}
 
       {error && (

@@ -20,6 +20,8 @@ const withCredentials = (url, database, user, secret) => {
 export async function createTestApi({
   corsOrigin = origin,
   listingCount = 3,
+  photoBytes,
+  onResponse,
 } = {}) {
   const rootUrl = process.env.MONGO_TEST_URL;
   if (!rootUrl)
@@ -132,6 +134,18 @@ export async function createTestApi({
       .compile();
     app = module.createNestApplication();
     configureApp(app, { docs: false, logRequests: false });
+    // Opt-in QA counters never receive headers, tokens, bodies or response data.
+    if (onResponse)
+      app.use((request, response, next) => {
+        response.once("finish", () =>
+          onResponse({
+            method: request.method,
+            path: request.path,
+            status: response.statusCode,
+          }),
+        );
+        next();
+      });
     await app.listen(3009, "127.0.0.1");
     for (const [email, roles] of [
       ["member@operations.test", ["MEMBER"]],
@@ -214,11 +228,13 @@ export async function createTestApi({
       exchangeValue: 150000,
       mediaIds: [],
     };
-    const photo = await req("sharp")({
-      create: { width: 400, height: 500, channels: 3, background: "#58685E" },
-    })
-      .png()
-      .toBuffer();
+    const photo =
+      photoBytes ??
+      (await req("sharp")({
+        create: { width: 400, height: 500, channels: 3, background: "#58685E" },
+      })
+        .png()
+        .toBuffer());
     const listings = [];
     if (listingCount > 5) {
       // Multiple owners can only select a catalog already confirmed by review.

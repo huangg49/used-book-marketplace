@@ -16,6 +16,8 @@ import {
   readEnvironment,
   redactOutput,
   waitForApi,
+  watchApiConnection,
+  ApiConnectionLostError,
 } from "./dev-runtime.mjs";
 import { metroOptions } from "./dev-rn.mjs";
 
@@ -244,6 +246,68 @@ test("ready preflight waits for success, supports cancellation and never accepts
   const pending = waitForApi(port, abort.signal);
   abort.abort();
   await pending;
+});
+
+test("HTTP watchdog detects a dead listener even when a compiler process remains alive", async (t) => {
+  const server = createServer((_request, response) => response.end());
+  await new Promise((done) => server.listen(0, "127.0.0.1", done));
+  const port = server.address().port;
+  await new Promise((done) => server.close(done));
+  const log = capture();
+  const group = new ProcessGroup({
+    output: log.stream,
+    errorOutput: log.stream,
+  });
+  t.after(() => group.stop());
+  group.start("compiler-fixture", process.execPath, [
+    "-e",
+    "setInterval(()=>{},1000)",
+  ]);
+  await assert.rejects(
+    watchApiConnection(port, group.abort.signal, {
+      outageMs: 100,
+      intervalMs: 20,
+    }),
+    ApiConnectionLostError,
+  );
+  assert.equal(group.abort.signal.aborted, false, "Compiler was still running");
+  await group.stop();
+});
+
+test("HTTP watchdog tolerates a reload, resets its outage timer, accepts 503 and cancels promptly", async (t) => {
+  let refuse = false;
+  let probes = 0;
+  const server = createServer((request, response) => {
+    probes++;
+    if (refuse) request.socket.destroy();
+    else response.writeHead(503).end();
+  });
+  await new Promise((done) => server.listen(0, "127.0.0.1", done));
+  t.after(() => new Promise((done) => server.close(done)));
+  const controller = new AbortController();
+  t.after(() => controller.abort());
+  const pending = watchApiConnection(server.address().port, controller.signal, {
+    outageMs: 500,
+    intervalMs: 20,
+  });
+  // Attach immediately so an unexpected rejection is never left unhandled.
+  let failure;
+  const settled = pending.catch((error) => {
+    failure = error;
+  });
+  await until(() => probes >= 2);
+  refuse = true;
+  await pause(120);
+  refuse = false;
+  const before = probes;
+  await until(() => probes >= before + 2);
+  refuse = true;
+  await pause(120);
+  refuse = false;
+  await pause(550);
+  controller.abort();
+  await settled;
+  assert.equal(failure, undefined);
 });
 
 test("lock prevents a second runner and release only removes its own token", async (t) => {

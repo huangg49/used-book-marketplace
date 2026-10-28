@@ -1,0 +1,360 @@
+.dialog {
+  width: min(640px, calc(100vw - 32px));
+  max-width: none;
+  max-height: min(720px, calc(100dvh - 48px));
+  padding: 0;
+  margin: auto;
+  border: 1px solid var(--shop-line);
+  border-top: 4px solid var(--shop-wine);
+  border-radius: 0;
+  background: var(--shop-paper) url("/login-art/ivory-paper.webp") repeat;
+  background-size: 420px auto;
+  color: var(--shop-ink);
+  box-shadow: 0 24px 80px #28191438;
+  overflow: hidden;
+}
+.dialog:not([open]) {
+  display: none;
+}
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+  animation: commandEnter 220ms var(--ease-smooth) both !important;
+}
+.dialog::backdrop {
+  background: #28191466;
+}
+@keyframes commandEnter {
+  from {
+    opacity: 0.7;
+    transform: translateY(-10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 26px 20px;
+  flex-shrink: 0;
+}
+.brand {
+  display: block;
+  width: 34px;
+  height: 30px;
+  flex: 0 0 auto;
+}
+.overline {
+  margin: 0 0 4px;
+  color: var(--shop-muted);
+  font-size: 0.75rem;
+  line-height: 1.7;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.header h2 {
+  margin: 0;
+  font:
+    650 1.875rem/1.15 "Auth Bricolage",
+    "Be Vietnam Pro",
+    sans-serif;
+  letter-spacing: -0.04em;
+}
+.close {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  margin-left: auto;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  color: var(--shop-muted);
+}
+.close:hover {
+  background: var(--shop-shelf);
+  color: var(--shop-wine);
+}
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  margin: 0 26px;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid var(--shop-line);
+  color: var(--shop-wine);
+}
+.search::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 1px;
+  background: var(--shop-wine);
+  pointer-events: none;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 180ms cubic-bezier(.16,1,.3,1) !important;
+}
+.search > svg {
+  flex-shrink: 0;
+}
+.dialog .search input[type="text"] {
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  border-radius: 0;
+  background: transparent;
+  font:
+    400 1rem/1.6 "Be Vietnam Pro",
+    sans-serif;
+  box-shadow: none;
+  caret-color: var(--shop-wine);
+}
+.dialog .search input[type="text"]:is(:focus, :focus-visible) {
+  border: 0;
+  outline: none;
+  box-shadow: none;
+}
+.search:focus-within {
+  outline: none;
+  box-shadow: none;
+}
+.search:focus-within::after { transform: scaleX(1); }
+.dialog .search input::placeholder {
+  color: var(--shop-muted);
+  opacity: 1;
+}
+.resultHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 16px 26px 10px;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  line-height: 1.8;
+  color: var(--shop-muted);
+}
+.resultHeading > span:last-child {
+  font-variant-numeric: tabular-nums;
+}
+.results {
+  min-height: 0;
+  list-style: none;
+  margin: 0;
+  padding: 8px 14px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--shop-line) transparent;
+  scroll-padding-block: 10px;
+}
+.option {
+  position: relative;
+  perspective: 900px;
+  min-height: 88px;
+  margin: 8px 0;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  --option-lift: 0px;
+  --option-tilt: 0deg;
+  --option-depth: 0px;
+  --option-ink: 0;
+}
+.optionFace {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 88px;
+  padding: 12px;
+  border-radius: 2px;
+  pointer-events: none;
+  transform-origin: center bottom;
+  transform: translateY(var(--option-lift)) rotateX(var(--option-tilt));
+  transition: transform 260ms cubic-bezier(.16,1,.3,1) !important;
+}
+.optionFace::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--shop-yellow);
+  box-shadow: 0 var(--option-depth) 0 color-mix(in srgb, var(--shop-yellow) 75%, var(--shop-wine)), var(--shadow-md);
+  opacity: var(--option-ink);
+  transition: opacity 180ms cubic-bezier(.16,1,.3,1), box-shadow 260ms cubic-bezier(.16,1,.3,1) !important;
+}
+.option[aria-selected="true"] {
+  --option-lift: -4px;
+  --option-tilt: 2deg;
+  --option-depth: 4px;
+  --option-ink: 1;
+}
+.option[aria-selected="true"] :is(.number, .current, .description, .group) { color: var(--shop-ink); }
+/* Existing pointer selection and keyboard cursor share aria-selected. Keeping
+   one visual state avoids highlighting a stale hovered row after ArrowDown. */
+.option:active { --option-lift: -1px; --option-tilt: 0deg; --option-depth: 1px; --option-ink: 1; }
+.option:active :is(.number, .current, .description, .group) { color: var(--shop-ink); }
+.option:active .arrow { color: var(--shop-wine); }
+.option:active .optionFace { transition-duration: 100ms !important; }
+.option :is(strong, .number, .current, .description, .group, .arrow) {
+  transition: color 180ms cubic-bezier(.16,1,.3,1) !important;
+}
+.number {
+  flex: 0 0 20px;
+  align-self: flex-start;
+  margin-top: 2px;
+  font-size: 0.75rem;
+  line-height: 1.8;
+  color: var(--shop-muted);
+  font-variant-numeric: tabular-nums;
+}
+.optionText {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.optionTop {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+}
+.option strong {
+  color: var(--shop-wine);
+  font: 650 1rem/1.5 "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+}
+.option[aria-selected="true"] strong,
+.option[aria-selected="true"] .arrow {
+  color: var(--shop-wine);
+}
+.current {
+  font-size: 0.75rem;
+  color: var(--shop-muted);
+}
+.description {
+  font-size: 0.75rem;
+  line-height: 1.7;
+  color: var(--shop-muted);
+  overflow-wrap: anywhere;
+}
+.group {
+  font-size: 0.75rem;
+  line-height: 1.7;
+  color: var(--shop-muted);
+}
+.arrow {
+  flex-shrink: 0;
+  color: var(--shop-control);
+}
+.footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  flex-shrink: 0;
+  padding: 12px 26px;
+  border-top: 1px solid var(--shop-line);
+  color: var(--shop-muted);
+  font-size: 0.75rem;
+  line-height: 1.8;
+}
+.footer > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.footer kbd {
+  padding: 1px 5px;
+  margin-left: 7px;
+  border: 1px solid var(--shop-line);
+  border-radius: 3px;
+  font: inherit;
+}
+.empty {
+  padding: 24px 26px 32px;
+  text-align: center;
+  overflow-y: auto;
+}
+.empty > svg {
+  color: var(--shop-control);
+}
+.empty h3 {
+  margin: 12px 0 8px;
+  font-size: 1rem;
+  line-height: 1.7;
+}
+.empty p {
+  margin: 0 0 14px;
+  font-size: 0.8125rem;
+  color: var(--shop-muted);
+  line-height: 1.8;
+}
+.empty button {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--shop-line);
+  background: var(--shop-paper);
+  border-radius: 3px;
+  color: var(--shop-wine);
+  font-size: 0.8125rem;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - 24px);
+  }
+  .header {
+    padding: 18px 16px 16px;
+    gap: 10px;
+  }
+  .header h2 {
+    font-size: 1.625rem;
+  }
+  .brand {
+    width: 28px;
+  }
+  .search {
+    margin-inline: 16px;
+    gap: 8px;
+  }
+  .resultHeading,
+  .footer {
+    padding-inline: 16px;
+  }
+  .results {
+    padding-inline: 6px;
+  }
+  .optionFace {
+    gap: 8px;
+  }
+  .number {
+    flex-basis: 16px;
+  }
+}

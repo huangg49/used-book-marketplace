@@ -125,3 +125,34 @@ Nhánh `codex/bao-price-assist-gemini`, OpenAPI 0.23.0, migration `0006`, `0007`
   cứ, tình trạng người bán khai lúc xin gợi ý, đã dùng hay không, giá chọn, nguồn.
 - Gemini thử lại một lần khi 503/429 nếu còn ≥ 8 s; lỗi provider ghi log WARN kèm lý do
   ngắn của Google.
+
+## 9. Cập nhật provider NVIDIA (27/10/2026)
+
+Nhánh `feature/ai-listing-assist`. Không đổi contract, migration hay luật bằng chứng.
+
+- `PRICE_ASSIST_PROVIDER=nvidia` gọi NVIDIA NIM qua API chat tương thích OpenAI
+  (`integrate.api.nvidia.com/v1`, hoặc `NVIDIA_BASE_URL` https cho NIM tự host). Key
+  `nvapi-…` chỉ ở header `Authorization`; không retry, timeout bằng AbortController.
+- Model mặc định `nvidia/nemotron-3.5-lightning-30b-a3b`. Tắt suy luận bằng
+  `chat_template_kwargs.enable_thinking=false` (Nemotron 3.x mặc định suy luận vào
+  `reasoning_content`, hết token và để `content` rỗng); output ràng buộc bằng
+  `response_format: json_schema` (API hosted từ chối `nvext.guided_json` với 400) và vẫn
+  qua `output-check.ts`. Thẻ `<think>` hoặc code fence bị bỏ trước khi parse.
+- Đơn giá NVIDIA trong `KNOWN_RATES` là ước lượng cao để ngân sách không đếm thiếu
+  (bản dùng thử build.nvidia.com tính theo credit); gói trả phí đặt
+  `PRICE_ASSIST_INPUT/OUTPUT_USD_PER_MTOK`.
+- Tra giá trực tuyến (ADR 0029) vẫn chỉ chạy với Gemini; với `nvidia` thì
+  `PriceFinder` là null như với `anthropic`.
+- Live 27/10/2026: hai model Nemotron 1.x/VL v1 ban đầu đã hết hạn 26/08/2026 (410),
+  nhiều model trong `/v1/models` trả 404 “not found for account”. Với model mới, một
+  ca Mắt biếc (Good, giá bìa 110.000 đ, biên tập 55.000 đ, biên 44–66k) cho khoảng
+  48–58k và 48–60k, qua `output-check`, ~2,3–2,8 s, ~725/160 token.
+- **Eval 34 ca live 27/10/2026** (`eval:price --live`, kết quả
+  `apps/api/eval/price-assist/results/2026-10-27T13-42-11-455Z.json`): 33/34 đúng status;
+  đủ 8 ca từ chối/thiếu dữ liệu đúng luật; coverage 19/20; ca `edition-02` (bản hiếm,
+  kỳ vọng 300–450k) model trả khoảng quá rộng và bị `output-check` chặn → `Failed`,
+  0 output sai tới client; p50 3,6 s, **p95 9,2 s (trên ngưỡng 8 s đề xuất ở §7.4)**, hai
+  ca 14,2 s và 9,2 s; 14.905/3.778 token, ~0,015 USD theo đơn giá ước lượng. Bộ ca chưa
+  được người thật review nên `midInExpected` **NOT SCORED**; chấm tham khảo trên khoảng
+  nháp: điểm giữa nằm trong khoảng kỳ vọng 16/19 (lệch thấp: `typical-05`, `typical-06`,
+  `outlier-01`).

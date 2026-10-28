@@ -1,14 +1,32 @@
 import { dateText } from "../../core/format";
-import { useCallback, useState } from "react";
+import { invalidateDashboard } from "../../core/dashboard-cache";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useOutletContext, useParams } from "react-router-dom";
+import { ArrowDownToLine } from "lucide-react";
+import {
+  Link,
+  useLocation,
+  useOutletContext,
+  useParams,
+} from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
-import { canReviewCatalog, session } from "../../core/session";
+import { canReview, canReviewCatalog, session } from "../../core/session";
 import { Button, ErrorNotice, Notice } from "../../core/ui";
 import { catalog, labels, listing, type Kind } from "./contracts";
 import { BookReference, ContentView, History, MetadataView } from "./readers";
 import { DecisionForm } from "./decision-form";
 import { PriceAssistView } from "./price-assist-view";
+import { DecisionRecord } from "./DecisionRecord";
+import { NextReview } from "./NextReview";
+import { reviewReturnPath } from "./review-navigation";
+import { ListingTitle } from "./ListingTitle";
+import { RevisionComparison } from "./RevisionComparison";
+import styles from "./ReviewWorkspace.module.css";
+import {
+  matchesRecordedDecision,
+  recordedDecision,
+  type RecordedDecision,
+} from "./decision-feedback";
 
 export function Detail() {
   const { kind, id } = useParams();
@@ -17,7 +35,8 @@ export function Detail() {
     !id ||
     !/^[a-f0-9-]{36}$/.test(id) ||
     (kind !== "listings" && kind !== "catalog-requests") ||
-    (kind === "catalog-requests" && !canReviewCatalog(user))
+    (kind === "catalog-requests" && !canReviewCatalog(user)) ||
+    (kind === "listings" && !canReview(user))
   )
     return <p>Hồ sơ không hợp lệ hoặc bạn không có quyền xem.</p>;
   return (
@@ -34,10 +53,19 @@ function DetailContent({
   user: CurrentUser;
 }) {
   const queryClient = useQueryClient();
+  const location = useLocation();
   const [photos, setPhotos] = useState<Record<string, boolean>>({});
   const [reset, setReset] = useState(0);
   const [bookReady, setBookReady] = useState(false);
   const [pendingCommand, setPendingCommand] = useState(false);
+  const [recorded, setRecorded] = useState<RecordedDecision | null>(null);
+  const [view, setView] = useState<"content" | "compare" | "history">(
+    "content",
+  );
+  const [comparisonOpened, setComparisonOpened] = useState(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const recordHeader = useRef<HTMLElement>(null);
+  const decisionArea = useRef<HTMLDivElement>(null);
   const onPhotoReady = useCallback(
     (mediaId: string, ready: boolean) =>
       setPhotos((previous) =>
@@ -61,7 +89,17 @@ function DetailContent({
     gcTime: 0,
   });
   const value = result.data;
+  const loadedId = value?.id;
+  useLayoutEffect(() => {
+    if (!loadedId) return;
+    recordHeader.current?.scrollIntoView({
+      block: "start",
+      behavior: "instant",
+    });
+    heading.current?.focus({ preventScroll: true });
+  }, [loadedId]);
   async function reconcile() {
+    await invalidateDashboard(queryClient);
     const fresh = await result.refetch();
     if (fresh.error) throw fresh.error;
     await queryClient.invalidateQueries({ queryKey: ["queue"] });
@@ -79,6 +117,15 @@ function DetailContent({
     value &&
     ("ownerId" in value ? value.ownerId : value.requesterId) === user.id;
   const pending = status === "Pending" || status === "PendingReview";
+  const decisionRecord =
+    value &&
+    ("state" in value
+      ? value.latestDecision?.revisionId === value.currentRevision.id
+        ? value.latestDecision
+        : null
+      : value.decisions.find(
+          (decision) => decision.revisionId === value.currentRevision.id,
+        ));
   const decisionAllowed =
     pending &&
     !self &&
@@ -87,8 +134,8 @@ function DetailContent({
         value.state.visibility !== "Removed" &&
         !value.state.deletedAt));
   return (
-    <>
-      <Link className="back-link" to={`/review/${kind}`}>
+    <div className={styles.detail}>
+      <Link className="back-link" to={reviewReturnPath(kind, location.state)}>
         ← Về danh sách
       </Link>
       {result.isLoading && <p role="status">Đang mở hồ sơ…</p>}
@@ -101,79 +148,126 @@ function DetailContent({
       )}
       {value && (
         <>
-          <header className="detail-heading">
+          <header className="detail-heading" ref={recordHeader}>
             <div>
-              <p className="eyebrow">
-                {kind === "listings" ? "Hồ sơ bài đăng" : "Hồ sơ đầu sách"} /{" "}
-                {id.slice(0, 8)}
-              </p>
-              <h1>
+              <h2 className={styles.recordTitle} ref={heading} tabIndex={-1}>
                 {"state" in value
-                  ? "Đọc kỹ một bản sách."
+                  ? "Hồ sơ bài đăng"
                   : value.currentRevision.metadata.title}
-              </h1>
+              </h2>
               <p>
-                Bản gửi {value.currentRevision.number} ·{" "}
+                #{id.slice(0, 8)} · Bản gửi {value.currentRevision.number} ·{" "}
                 {dateText(value.currentRevision.submittedAt)}
               </p>
+              {"state" in value && (
+                <h3 className={styles.bookName}>
+                  <ListingTitle value={value} />
+                </h3>
+              )}
             </div>
             <span className="status-label">{labels[status] || status}</span>
           </header>
           <div className="detail-layout">
-            <div className="reading-column">
+            <div className={`reading-column ${styles.evidence}`}>
+              {"state" in value && (
+                <nav className={styles.evidenceNav} aria-label="Nội dung hồ sơ">
+                  <Button
+                    aria-pressed={view === "content"}
+                    onClick={() => setView("content")}
+                  >
+                    Nội dung & ảnh
+                  </Button>
+                  <Button
+                    aria-pressed={view === "compare"}
+                    onClick={() => {
+                      setView("compare");
+                      setComparisonOpened(true);
+                    }}
+                  >
+                    Đối chiếu bản gửi
+                  </Button>
+                  <Button
+                    aria-pressed={view === "history"}
+                    onClick={() => setView("history")}
+                  >
+                    Lịch sử
+                  </Button>
+                  <Button
+                    className={styles.jumpDecision}
+                    aria-label="Đi tới phiếu quyết định"
+                    title="Đi tới phiếu quyết định"
+                    onClick={() => {
+                      decisionArea.current?.scrollIntoView({
+                        block: "start",
+                        behavior: "instant",
+                      });
+                      decisionArea.current?.focus({ preventScroll: true });
+                    }}
+                  >
+                    <ArrowDownToLine size={17} aria-hidden="true" />
+                  </Button>
+                </nav>
+              )}
               {"state" in value ? (
                 <>
-                  {value.channel === "Auction" && (
-                    <Notice>
-                      <strong>Sách đấu giá</strong>
-                      <p className="prose">
-                        Bài này không lên kệ mua/đổi. Giá là giá trị khai báo
-                        (mức bồi thường tối đa), không phải giá bán. Sau khi
-                        duyệt, sách còn được kiểm tra tại điểm trước khi mở
-                        phiên.
-                      </p>
-                    </Notice>
-                  )}
-                  <BookReference
-                    id={value.currentRevision.content.bookId}
-                    confirmed={value.catalogStatus === "Confirmed"}
-                    admin={canReviewCatalog(user)}
-                    onReady={setBookReady}
-                  />
-                  <ContentView
-                    value={value.currentRevision}
-                    listingId={id}
-                    onPhotoReady={onPhotoReady}
-                  />
-                  {value.priceAssist && (
-                    <PriceAssistView value={value.priceAssist} />
-                  )}
-                  {value.latestDecision && (
-                    <Notice
-                      tone={
-                        value.latestDecision.decision === "Approve"
-                          ? "success"
-                          : "warning"
-                      }
-                    >
-                      <strong>
-                        {labels[value.latestDecision.decision]} ·{" "}
-                        {dateText(value.latestDecision.decidedAt)}
-                      </strong>
-                      {value.latestDecision.reason && (
-                        <p className="prose">{value.latestDecision.reason}</p>
-                      )}
-                    </Notice>
-                  )}
-                  <History
-                    listingId={id}
-                    currentId={value.currentRevision.id}
-                  />
-                  {value.removalReason && (
-                    <Notice tone="warning">
-                      <strong>Lý do gỡ bài</strong>
-                      <p className="prose">{value.removalReason}</p>
-                    </Notice>
+                  <div
+                    className={styles.evidencePanel}
+                    hidden={view !== "content"}
+                  >
+                    {value.channel === "Auction" && (
+                      <Notice>
+                        <strong>Sách đấu giá</strong>
+                        <p className="prose">
+                          Bài này không lên kệ mua/đổi. Giá là giá trị khai báo
+                          (mức bồi thường tối đa), không phải giá bán. Sau khi
+                          duyệt, sách còn được kiểm tra tại điểm trước khi mở
+                          phiên.
+                        </p>
+                      </Notice>
+                    )}
+                    <ContentView
+                      value={value.currentRevision}
+                      listingId={id}
+                      onPhotoReady={onPhotoReady}
+                    />
+                    <details className={styles.reference}>
+                      <summary>Đối chiếu thông tin đầu sách</summary>
+                      <BookReference
+                        id={value.currentRevision.content.bookId}
+                        confirmed={value.catalogStatus === "Confirmed"}
+                        admin={canReviewCatalog(user)}
+                        onReady={setBookReady}
+                      />
+                    </details>
+                    {value.priceAssist && (
+                      <PriceAssistView value={value.priceAssist} />
+                    )}
+                    {value.removalReason && (
+                      <Notice tone="warning">
+                        <strong>Lý do gỡ bài</strong>
+                        <p className="prose">{value.removalReason}</p>
+                      </Notice>
+                    )}
+                  </div>
+                  <div
+                    className={styles.evidencePanel}
+                    hidden={view !== "compare"}
+                  >
+                    {comparisonOpened && (
+                      <RevisionComparison
+                        key={value.currentRevision.id}
+                        listingId={id}
+                        current={value.currentRevision}
+                      />
+                    )}
+                  </div>
+                  {view === "history" && (
+                    <div className={styles.evidencePanel}>
+                      <History
+                        listingId={id}
+                        currentId={value.currentRevision.id}
+                      />
+                    </div>
                   )}
                 </>
               ) : (
@@ -204,19 +298,30 @@ function DetailContent({
               )}
               <p className="record-id">Mã hồ sơ: {id}</p>
             </div>
-            <div>
+            <div className={styles.decision} ref={decisionArea} tabIndex={-1}>
+              {decisionRecord && (
+                <DecisionRecord
+                  {...decisionRecord}
+                  animate={matchesRecordedDecision(value, recorded)}
+                />
+              )}
               {self && (
                 <Notice tone="warning">
                   Bạn là người gửi hồ sơ này. Cần một người kiểm duyệt khác
                   quyết định.
                 </Notice>
               )}
-              {!pending && (
-                <Notice>
-                  Hồ sơ đã có kết quả.{" "}
-                  {status === "Approved" &&
-                    "Bài đăng chỉ hiện trên kệ khi còn khả dụng và tài khoản người đăng đủ điều kiện."}
-                </Notice>
+              {!pending &&
+                (status === "Approved" ? (
+                  <p className="muted">
+                    Bài đăng chỉ hiện trên kệ khi còn khả dụng và tài khoản
+                    người đăng đủ điều kiện.
+                  </p>
+                ) : !decisionRecord ? (
+                  <Notice>Hồ sơ đã có kết quả.</Notice>
+                ) : null)}
+              {!pending && !self && (
+                <NextReview kind={kind} currentId={id} reviewerId={user.id} />
               )}
               {(decisionAllowed ||
                 (isListing &&
@@ -226,7 +331,9 @@ function DetailContent({
                   value.state.trade === "Available" &&
                   !value.state.deletedAt)) && (
                 <DecisionForm
-                  bundle={'state' in value && !!value.currentRevision.content.bundle}
+                  bundle={
+                    "state" in value && !!value.currentRevision.content.bundle
+                  }
                   key={`${value.version}/${value.currentRevision.id}/${reset}`}
                   kind={kind}
                   removal={!pending}
@@ -249,6 +356,9 @@ function DetailContent({
                   disabled={result.isError || result.isFetching}
                   reconcile={reconcile}
                   onPending={setPendingCommand}
+                  onRecorded={(intent) =>
+                    setRecorded(recordedDecision(intent, kind, id))
+                  }
                 />
               )}
               <details className="reload-help">
@@ -279,6 +389,6 @@ function DetailContent({
           </div>
         </>
       )}
-    </>
+    </div>
   );
 }

@@ -1,5 +1,11 @@
 # ADR 0042: Auction books use their own auction-only listing
 
+27/10/2026 follow-up: [ADR 0049](0049-auction-intake-from-shelf.md) supersedes
+the intake source restriction below: an approved single Marketplace book may
+also enter intake, without changing its channel. Immutable channels and the
+exclusion of Auction listings from marketplace commands/reads remain in force.
+The original decision below records the19/10 behavior.
+
 19/10/2026. Owner request: when a Member sends a book to auction, the auction
 flow creates and uses its own listing. It no longer picks an approved
 marketplace listing. This supersedes the "listing Sale Approved/Visible/Available"
@@ -61,3 +67,33 @@ rejection for marketplace listings and success for approved auction listings;
 the five-slot cap across channels; replay with the same key/body; and the
 migration backfill. Web/RN cover creating an auction draft from the send-to-
 auction flow, review status, and sending an approved auction listing.
+
+## Update 27/10/2026: shelf books may also go to auction
+
+Commit `0bda2ff` (branch `feat/web-auction-select-from-shelf`, merged in PR #73)
+let sellers pick an approved book from their own shelf on `/auctions/new`
+instead of creating a separate auction listing. It changed the code but not this
+ADR or the auction e2e test. On 27/10 the person running this package chose to
+keep that behaviour; this section records it. It is not an owner request like
+the original decision above, so the owner should still confirm it.
+
+- `CreateAuctionIntake` accepts a listing owned by the caller that is Approved,
+  Visible, Available, published, not a bundle and has a submitted revision, on
+  **either channel and in any mode** (`Sale`, `Exchange`, `Both`). Other
+  listings still return 409 `InvalidState`.
+- Optional `declaredValue` (10.000–1.000.000 đ) sets the protective value. If
+  it is omitted, the value falls back to the listing's `salePrice`, then
+  `exchangeValue`, then the start price.
+- The intake reserves the shelf listing with an `AuctionIntake` exclusive
+  commitment. Public shelf, search and detail reads only show Reserved listings
+  held by a purchase, order or exchange, so the book leaves the marketplace
+  while the intake is open. Cancelling before drop-off puts it back on the
+  shelf as Available.
+- `Auction`-channel listings are unchanged: they still never appear in
+  marketplace reads or commands, and the auction-listing flow still works.
+
+Not covered by this update: the old eligibility filter also required Ready
+photos, and the new one does not check them. Unsold, payment-expired and
+reclaimed intakes for a marketplace listing are expected to return it to the
+shelf, but only the cancel path is tested
+(`auctions.e2e-spec.ts` AC-AU01/02).

@@ -1,6 +1,7 @@
 import { conversationAgreementsMigration, conversationAgreementSpecs } from './0032-conversation-agreements.js';
 import { wholeBookBundlesMigration, withBookBundles } from './0035-whole-book-bundles.js';
 import { bundleReviewSearchMigration, withBundleReviewSearch } from './0036-bundle-review-search.js';
+import { moderationOverviewIndexesMigration, withModerationIndexes } from './0037-moderation-overview-indexes.js';
 import { buyNowNotificationsMigration, withBuyNowNotifications } from './0029-buy-now-notifications.js';
 import { bookCirculationRegionsMigration } from './0030-book-circulation-regions.js';
 import {
@@ -21,6 +22,10 @@ import {
   withSellerScheduledAuctions,
 } from './0037-seller-scheduled-auctions.js';
 import { transactionReviewValidatorFixMigration } from './0039-transaction-review-validator-fix.js';
+import {
+  listingAutofillMigration,
+  listingAutofillSpecs,
+} from './0038-listing-autofill.js';
 import {
   exchangeCollectionSpecs,
   exchangesMigration,
@@ -284,6 +289,8 @@ export const migrations: Migration[] = [
   wholeBookBundlesMigration,
   bundleReviewSearchMigration,
   sellerScheduledAuctionsMigration,
+  moderationOverviewIndexesMigration,
+  listingAutofillMigration,
   transactionReviewValidatorFixMigration,
 ];
 
@@ -313,7 +320,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withVNPayExpiry)
     .map(withListingChannel)
     .map(withBookBundles)
-    .map(withBundleReviewSearch),
+    .map(withBundleReviewSearch)
+    .map(withModerationIndexes),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape),
@@ -362,4 +370,5 @@ export const currentCollections = (): CollectionSpec[] => [
   ...inspectionEvidenceCollectionSpecs,
   ...pointIncidentCollectionSpecs,
   ...auctionDeliveryCollectionSpecs,
+  ...listingAutofillSpecs,
 ];
