@@ -38,6 +38,7 @@
     "infra:mongo:test:stop": "docker compose -f infra/docker-compose.mongo-test.yml --profile failover stop",
     "test:api:mongo": "pnpm --filter @used-books/api test:mongo",
     "test:public:browser": "node scripts/test-public-shelf.mjs",
+    "test:reviews:browser": "node scripts/test-transaction-reviews.mjs",
     "dev:api": "node scripts/dev-api.mjs",
     "dev:media": "pnpm --filter @used-books/api worker:media",
     "dev:admin": "pnpm --filter @used-books/admin-web dev",

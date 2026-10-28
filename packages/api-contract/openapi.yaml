@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.56.0
+  version: 0.57.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -9224,16 +9224,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExchangeReviewsResponse"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
     post:
       operationId: createExchangeReview
       tags:
         - Reviews
-      description: Submit review for a completed exchange (FR-R01, FR-R02).
+      description: Submit review for a completed exchange (FR-R01, FR-R02). Idempotency-Key is required; retry the same body/key after uncertain ACK. Deploy clients together with API 0.57.
       security:
         - bearerAuth: []
       parameters:
         - in: path
           name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
           required: true
           schema:
             type: string
@@ -9251,6 +9267,496 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExchangeReviewItem"
+          headers:
+            Idempotency-Replayed:
+              description: Whether this receipt was replayed for the same authorized intent.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+  /transactions/{type}/{id}/reviews:
+    get:
+      operationId: getTransactionReviews
+      tags:
+        - Reviews
+      description: Participant-only reviews. Peer content is hidden until both edit windows expire and both submitted, or the submission window and every submitted edit window expire. Deleted submissions remain tombstones.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: type
+          required: true
+          schema:
+            type: string
+            enum:
+              - Exchange
+              - DirectOrder
+              - PointOrder
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionReviewsResponse"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createTransactionReview
+      tags:
+        - Reviews
+      description: Completed transactions only; 168h submission window. Author gets 48h from first submission; one review per participant even after deletion. Seller must omit bookRating for an Order. Retry the same key/body after uncertain ACK.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: type
+          required: true
+          schema:
+            type: string
+            enum:
+              - Exchange
+              - DirectOrder
+              - PointOrder
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTransactionReview"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewItem"
+          headers:
+            Idempotency-Replayed:
+              description: Whether this receipt was replayed for the same authorized intent.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+  /transaction-reviews/{reviewId}/edit:
+    post:
+      operationId: editTransactionReview
+      tags:
+        - Reviews
+      description: Current authorization and ownership before replay. Versioned immutable intent. Edit/delete only before the original 48h deadline; legacy disclosed and evidence-held records are locked. One moderated reply by target after publication.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditTransactionReview"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewItem"
+          headers:
+            Idempotency-Replayed:
+              description: Whether this receipt was replayed for the same authorized intent.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+  /transaction-reviews/{reviewId}/delete:
+    post:
+      operationId: deleteTransactionReview
+      tags:
+        - Reviews
+      description: Current authorization and ownership before replay. Versioned immutable intent. Edit/delete only before the original 48h deadline; legacy disclosed and evidence-held records are locked. One moderated reply by target after publication.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewVersion"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewItem"
+          headers:
+            Idempotency-Replayed:
+              description: Whether this receipt was replayed for the same authorized intent.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+  /transaction-reviews/{reviewId}/reply:
+    post:
+      operationId: replyTransactionReview
+      tags:
+        - Reviews
+      description: Current authorization and ownership before replay. Versioned immutable intent. Edit/delete only before the original 48h deadline; legacy disclosed and evidence-held records are locked. One moderated reply by target after publication.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplyTransactionReview"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewItem"
+          headers:
+            Idempotency-Replayed:
+              description: Whether this receipt was replayed for the same authorized intent.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+  /me/review-transactions:
+    get:
+      operationId: listMyReviewTransactions
+      tags:
+        - Reviews
+      description: Completed transactions for the current participant, ordered by completion time/id. No new transaction or settlement is performed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: cursor
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum:
+              - Exchange
+              - DirectOrder
+              - PointOrder
+            default: Exchange
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewTransactionsPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+  /members/{id}/reputation:
+    get:
+      operationId: getMemberReputation
+      tags:
+        - Reviews
+      description: Public published valid reviews only. Completion counts, partner/book means and verified violation count are independent. Empty means are null. Pending claims are never counted as violations.
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: cursor
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberReputation"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+  /operations/transaction-reviews:
+    get:
+      operationId: listOperationsTransactionReviews
+      tags:
+        - Reviews
+      description: "STAFF/ADMIN: published reviews only, excluding own transactions. Immutable revision history included for moderation; no access to prepublication peer reviews."
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: cursor
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsReviewPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+  /operations/transaction-reviews/{reviewId}/revisions:
+    get:
+      operationId: listTransactionReviewRevisions
+      tags:
+        - Reviews
+      description: STAFF/ADMIN independent of both participants. Published review only; immutable revisions newest first with actor/review-scoped signed pagination.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: cursor
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewRevisionPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+  /operations/transaction-reviews/{reviewId}/decision:
+    post:
+      operationId: moderateTransactionReview
+      tags:
+        - Reviews
+      description: Independent active STAFF/ADMIN only. Reason required. Hide/restore review; approve/hide pending reply; preserve/release evidence. Retain revisions and audit; no settlement or balance changes.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModerateTransactionReview"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewItem"
+          headers:
+            Idempotency-Replayed:
+              description: Whether this receipt was replayed for the same authorized intent.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -17430,24 +17936,150 @@ components:
           maximum: 5
         tags:
           type: array
+          maxItems: 10
+          uniqueItems: true
           items:
             type: string
+            minLength: 1
+            maxLength: 60
         comment:
           type: string
+          maxLength: 1000
+    CreateTransactionReview:
+      type: object
+      additionalProperties: false
+      required:
+        - partnerRating
+      properties:
+        bookRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        partnerRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        tags:
+          type: array
+          maxItems: 10
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 60
+        comment:
+          type: string
+          maxLength: 1000
+    EditTransactionReview:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - partnerRating
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        bookRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        partnerRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        tags:
+          type: array
+          maxItems: 10
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 60
+        comment:
+          type: string
+          maxLength: 1000
+    ReviewVersion:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+    ReplyTransactionReview:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - text
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1000
+    ModerateTransactionReview:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - decision
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        decision:
+          type: string
+          enum:
+            - Hide
+            - Restore
+            - ApproveReply
+            - HideReply
+            - HoldEvidence
+            - ReleaseEvidence
+        reason:
+          type: string
+          minLength: 3
           maxLength: 1000
     ExchangeReviewItem:
       type: object
       additionalProperties: false
       required:
         - id
-        - exchangeId
+        - transactionType
+        - transactionId
         - authorId
+        - authorName
         - targetUserId
         - bookRating
         - partnerRating
+        - tags
+        - comment
+        - version
+        - status
         - createdAt
+        - updatedAt
+        - editDeadline
+        - publishedAt
+        - evidenceHeld
+        - legacyDisclosed
+        - reply
       properties:
         id:
+          type: string
+          format: uuid
+        transactionType:
+          type: string
+          enum:
+            - Exchange
+            - DirectOrder
+            - PointOrder
+        transactionId:
           type: string
           format: uuid
         exchangeId:
@@ -17462,37 +18094,111 @@ components:
           type: string
           format: uuid
         bookRating:
-          type: integer
-          minimum: 1
-          maximum: 5
+          anyOf:
+            - type: integer
+              minimum: 1
+              maximum: 5
+            - type: "null"
         partnerRating:
           type: integer
           minimum: 1
           maximum: 5
         tags:
           type: array
+          maxItems: 10
+          uniqueItems: true
           items:
             type: string
+            minLength: 1
+            maxLength: 60
         comment:
           type: string
+          maxLength: 1000
+        version:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum:
+            - Pending
+            - Published
+            - Hidden
+            - Deleted
         createdAt:
           type: string
           format: date-time
         updatedAt:
           type: string
           format: date-time
-    ExchangeReviewsResponse:
+        editDeadline:
+          type: string
+          format: date-time
+        publishedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        evidenceHeld:
+          type: boolean
+        legacyDisclosed:
+          type: boolean
+        reply:
+          anyOf:
+            - type: object
+              additionalProperties: false
+              required:
+                - text
+                - status
+                - createdAt
+              properties:
+                text:
+                  type: string
+                  maxLength: 1000
+                status:
+                  type: string
+                  enum:
+                    - Pending
+                    - Approved
+                    - Hidden
+                createdAt:
+                  type: string
+                  format: date-time
+            - type: "null"
+    TransactionReviewsResponse:
       type: object
       additionalProperties: false
       required:
         - canReview
+        - canEdit
+        - canDelete
+        - canReply
+        - bookRatingRequired
+        - deadline
+        - serverTime
+        - myReview
+        - partnerReview
+        - partnerId
       properties:
+        partnerId:
+          type: string
+          format: uuid
         canReview:
           type: boolean
+        canEdit:
+          type: boolean
+        canDelete:
+          type: boolean
+        canReply:
+          type: boolean
+        bookRatingRequired:
+          type: boolean
         deadline:
-          type:
-            - string
-            - "null"
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        serverTime:
+          type: string
           format: date-time
         myReview:
           anyOf:
@@ -17502,3 +18208,182 @@ components:
           anyOf:
             - $ref: "#/components/schemas/ExchangeReviewItem"
             - type: "null"
+    ExchangeReviewsResponse:
+      $ref: "#/components/schemas/TransactionReviewsResponse"
+    ReviewTransactionsPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - transactionType
+              - transactionId
+              - completedAt
+              - partnerId
+              - partnerName
+            properties:
+              transactionType:
+                type: string
+                enum:
+                  - Exchange
+                  - DirectOrder
+                  - PointOrder
+              transactionId:
+                type: string
+                format: uuid
+              completedAt:
+                type: string
+                format: date-time
+              partnerId:
+                type: string
+                format: uuid
+              partnerName:
+                type: string
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: "null"
+        serverTime:
+          type: string
+          format: date-time
+    MemberReputation:
+      type: object
+      additionalProperties: false
+      required:
+        - userId
+        - displayName
+        - completedTransactions
+        - verifiedViolations
+        - reviewCount
+        - partnerRating
+        - bookRating
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        completedTransactions:
+          type: integer
+          minimum: 0
+        verifiedViolations:
+          type: integer
+          minimum: 0
+        reviewCount:
+          type: integer
+          minimum: 0
+        partnerRating:
+          anyOf:
+            - type: number
+            - type: "null"
+        bookRating:
+          anyOf:
+            - type: number
+            - type: "null"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExchangeReviewItem"
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: "null"
+        serverTime:
+          type: string
+          format: date-time
+    OperationsReviewPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - review
+              - revisions
+              - nextRevisionCursor
+            properties:
+              review:
+                $ref: "#/components/schemas/ExchangeReviewItem"
+              revisions:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReviewRevisionItem"
+              nextRevisionCursor:
+                anyOf:
+                  - type: string
+                  - type: "null"
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: "null"
+        serverTime:
+          type: string
+          format: date-time
+    ReviewRevisionItem:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - action
+        - actorId
+        - at
+        - snapshot
+        - reason
+      properties:
+        version:
+          type: integer
+          minimum: 1
+        action:
+          type: string
+        actorId:
+          anyOf:
+            - type: string
+              format: uuid
+            - type: "null"
+        at:
+          type: string
+          format: date-time
+        snapshot:
+          type: object
+          additionalProperties: true
+        reason:
+          anyOf:
+            - type: string
+            - type: "null"
+    ReviewRevisionPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewRevisionItem"
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: "null"
+        serverTime:
+          type: string
+          format: date-time

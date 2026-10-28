@@ -162,10 +162,7 @@ import {
   exchangeNotificationsMigration,
   withExchangeNotificationChanges,
 } from './0024-exchange-notifications.js';
-import {
-  exchangeReviewsMigration,
-  transactionReviewSpecs,
-} from './0025-exchange-reviews.js';
+import { exchangeReviewsMigration } from './0025-exchange-reviews.js';
 import {
   exchangeMutualCompletionMigration,
   withExchangePhase5Changes,
@@ -176,6 +173,11 @@ import {
 } from './0031-exchange-multi-book.js';
 import { vnpayTopupExpiryMigration, withVNPayExpiry } from './0032-vnpay-topup-expiry.js';
 import { exchangeInspectionDeadlinesMigration, withExchangeInspectionDeadlines } from './0039-exchange-inspection-deadlines.js';
+import {
+  transactionReviewLifecycleMigration,
+  reviewLifecycleSpecs,
+  withReviewCommandTarget,
+} from './0040-transaction-review-lifecycle.js';
 
 export interface Migration {
   id: string;
@@ -292,6 +294,7 @@ export const migrations: Migration[] = [
   moderationOverviewIndexesMigration,
   listingAutofillMigration,
   exchangeInspectionDeadlinesMigration,
+  transactionReviewLifecycleMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -321,7 +324,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withListingChannel)
     .map(withBookBundles)
     .map(withBundleReviewSearch)
-    .map(withModerationIndexes),
+    .map(withModerationIndexes)
+    .map(withReviewCommandTarget),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape),
@@ -367,7 +371,7 @@ export const currentCollections = (): CollectionSpec[] => [
   ...paymentSpecs.map(withVNPayExpiry),
   ...exchangeMessageSpecs,
   ...conversationAgreementSpecs,
-  ...transactionReviewSpecs,
+  ...reviewLifecycleSpecs,
   ...inspectionEvidenceCollectionSpecs,
   ...pointIncidentCollectionSpecs,
   ...auctionDeliveryCollectionSpecs,

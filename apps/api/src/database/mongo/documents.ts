@@ -224,6 +224,7 @@ export interface ListingDecisionDoc {
 // Exactly one target field is set; `principal` is the idempotency identity:
 // `user:<actorId>` or `system:<systemActor>`.
 export interface MutationReceiptDoc {
+  reviewId?: string | null;
   _id: string;
   principal: string;
   actorId: string | null;
@@ -244,6 +245,7 @@ export interface MutationReceiptDoc {
   committedAt: Date;
 }
 export interface AuditEventDoc {
+  reviewId?: string | null;
   _id: string;
   actorId: string | null;
   systemActor: SystemActor | null;
@@ -1329,16 +1331,33 @@ export interface ExchangeMessageDoc {
 
 export interface TransactionReviewDoc extends Lockable {
   _id: string;
-  transactionType: 'Exchange' | 'Order';
+  transactionType: 'Exchange' | 'DirectOrder' | 'PointOrder';
   transactionId: string;
   authorId: string;
   authorName: string;
   targetUserId: string;
-  bookRating: number;
+  bookRating: number | null;
   partnerRating: number;
   tags: string[];
   comment: string;
   publishedAt: Date | null;
+  version: number;
+  editDeadline: Date;
+  deletedAt: Date | null;
+  hiddenAt: Date | null;
+  evidenceHeld: boolean;
+  legacyDisclosed: boolean;
+  reply: { text: string; status: 'Pending' | 'Approved' | 'Hidden'; createdAt: Date } | null;
   createdAt: Date;
   updatedAt: Date;
+}
+export interface ReviewRevisionDoc {
+  _id: string;
+  reviewId: string;
+  version: number;
+  action: string;
+  actorId: string | null;
+  at: Date;
+  snapshot: Json;
+  reason: string | null;
 }

@@ -479,6 +479,7 @@ export function AccountScreen() {
 
 
 
+            <Button wine secondary title="Đánh giá giao dịch & hồ sơ uy tín" onPress={()=>router.push('/reviews')}/>
             {/* 6. Mục Cần Phản Hồi Ngay (Pending Exchanges / Shipments) */}
             <View style={{ gap: 10 }}>
               <View

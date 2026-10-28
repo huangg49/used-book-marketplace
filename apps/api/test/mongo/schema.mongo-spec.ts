@@ -1,4 +1,5 @@
 import { buyNowNotificationsMigration } from '../../src/database/mongo/migrations/0029-buy-now-notifications.js';
+import { reviewLifecycleSpecs } from '../../src/database/mongo/migrations/0040-transaction-review-lifecycle.js';
 import { randomUUID } from 'node:crypto';
 import { MongoClient, MongoServerError, type Db } from 'mongodb';
 import { COLLECTION_NAMES } from '../../src/database/mongo/collections.js';
@@ -38,7 +39,6 @@ import { inspectionEvidenceCollectionSpecs } from '../../src/database/mongo/migr
 import { pointIncidentCollectionSpecs } from '../../src/database/mongo/migrations/0024-point-incidents.js';
 import { auctionDeliveryCollectionSpecs } from '../../src/database/mongo/migrations/0034-auction-delivery.js';
 import { listingAutofillSpecs } from '../../src/database/mongo/migrations/0038-listing-autofill.js';
-import { transactionReviewSpecs } from '../../src/database/mongo/migrations/0025-exchange-reviews.js';
 import {
   currentCollections,
   migrations,
@@ -122,11 +122,30 @@ describe('migrations', () => {
         auctionDeliveryCollectionSpecs.length -
         // Exchange chat messages & reviews are Mongo-native.
         exchangeMessageSpecs.length -
-        transactionReviewSpecs.length -
+        reviewLifecycleSpecs.length -
         // ADR 0048 photo autofill suggestions are Mongo-native.
         listingAutofillSpecs.length +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
+  });
+
+  it('upgrades legacy reviews without rewriting content/disclosure history or prior checksums', async () => {
+    const db=root.db(`review_upgrade_${randomUUID().replaceAll('-','')}_test`);
+    const upgrade=migrations.find(m=>m.id==='0040-transaction-review-lifecycle')!;
+    const createdAt=new Date(),id=randomUUID();
+    try {
+      await migrate(root,db,migrations.filter(m=>m.id!==upgrade.id));
+      const legacy={_id:id,transactionType:'Exchange',transactionId:randomUUID(),authorId:randomUUID(),authorName:'QA legacy reader',targetUserId:randomUUID(),bookRating:4,partnerRating:5,tags:[],comment:'Legacy content retained.',publishedAt:createdAt,createdAt,updatedAt:createdAt,lockSeq:0};
+      await db.collection('transaction_reviews').insertOne(legacy as never);
+      const prior=await db.collection('_migrations').find().toArray();
+      expect(await migrate(root,db)).toEqual([upgrade.id]);
+      const current=await db.collection('transaction_reviews').findOne({_id:id as never});
+      expect(current).toMatchObject({...legacy,version:1,legacyDisclosed:true,evidenceHeld:false,deletedAt:null,hiddenAt:null,reply:null,editDeadline:new Date(+createdAt+48*3_600_000)});
+      await upgrade.up(db,root);
+      expect(await db.collection('review_revisions').countDocuments({reviewId:id})).toBe(1);
+      expect((await db.collection('review_revisions').findOne({reviewId:id}))?.snapshot.comment).toBe(legacy.comment);
+      for(const migration of prior)expect(await db.collection('_migrations').findOne({_id:migration._id})).toEqual(migration);
+    } finally { await db.dropDatabase(); }
   });
 
   it('upgrades circulation labels without rewriting address keys or applied checksums', async () => {
@@ -1000,6 +1019,17 @@ describe('least-privilege application user', () => {
     await rejectsUnauthorized(
       appDb.collection('ledger_entries').deleteMany({}),
     );
+    const revisionId = randomUUID();
+    await appDb.collection('review_revisions').insertOne({
+      _id: revisionId, reviewId: randomUUID(), version: 1, action: 'QA',
+      actorId: null, at: now(), snapshot: {}, reason: null,
+    } as never);
+    await rejectsUnauthorized(appDb.collection('review_revisions').updateOne(
+      { _id: revisionId as never }, { $set: { reason: 'rewrite' } },
+    ));
+    await rejectsUnauthorized(appDb.collection('review_revisions').deleteOne(
+      { _id: revisionId as never },
+    ));
     await rejectsUnauthorized(
       appDb
         .collection('wallet_accounts')

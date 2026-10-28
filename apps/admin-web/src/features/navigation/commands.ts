@@ -9,6 +9,7 @@ export type WorkspaceCommand = {
   keywords: string;
 };
 const details: Record<string, [string, string]> = {
+  '/transaction-reviews':['Kiểm duyệt đánh giá và phản hồi sau công bố','review danh gia uy tin phan hoi bang chung'],
   "/dashboard": [
     "Kệ sách chờ duyệt và các khu vực vận hành",
     "tong quan ban bien tap ke sach home",

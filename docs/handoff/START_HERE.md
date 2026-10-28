@@ -1,8 +1,8 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
-Cập nhật28/10/2026 theo source tích hợp `7d92012` và gói nhất quán Member đang
-bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.56.0**; registry có51
-migration MongoDB (đến0039), không suy từ tiền tố file lớn nhất. Migration
+Cập nhật28/10/2026 theo source tích hợp `7d92012` và các gói Member/review local đang
+bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.57.0** (191operations/29controllers); registry có52
+migration MongoDB (đến0040), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
 Phạm vi28/10: nhóm **bỏ Forum/Cộng đồng sách** theo [ADR0051](../adr/0051-remove-forum-from-project-scope.md).
@@ -29,6 +29,7 @@ chưa có API/session hoặc parity với RN.
 | Exchange | Proposal/counter/accept/fund/ship/receive/dispute/expiry/settlement, messages/reviews; web/RN thật | Hạn72h riêng và acknowledgement theo ADR0050; dispute resolution/ordinary ViaPoint/funded mutual cancellation chưa đầy đủ |
 | Auction/điểm | Intake/inspection/evidence, publish/schedule, bid/Auto/BuyNow, PointOrder/pay/code/handover, claim/return/settlement/incidents | Chỉ các ngoại lệ đã ghi được cấp phạm vi; source không là full acceptance |
 | Ví | Ledger/holds/history, topup simulator/VNPay sandbox/IPN/QueryDR/expiry | Chưa có withdrawal/payout production hoặc đối soát rút tiền đầy đủ |
+| Review/uy tín | Exchange/DirectOrder/PointOrder Completed, sửa/xóa48h, bảo mật hai chiều, reply chờ duyệt, Staff/Admin, public aggregate; web/RN | [ADR0052](../adr/0052-transaction-reviews-and-reputation.md), [evidence](../features/TRANSACTION_REVIEWS_REPORT.md); không tự mở completion/settlement hoặc native/human gate |
 | AI | Price assist và autofill ảnh ADR0048; autofill đã nối Member web | Cần cấu hình/hạn mức và kiểm provider/ảnh thật riêng; không suy mock test là live PASS |
 
 [ADR0050](../adr/0050-exchange-inspection-and-existing-obligations.md) sửa deadline
@@ -110,8 +111,8 @@ Các đường dẫn trong bảng tính từ root repo.
 | Phiên/token | `packages/session-client/src/session-client.ts`; `apps/api/src/modules/auth/` | ADR 0003/0019; session tests; `auth.e2e-spec.ts`, `obligations.e2e-spec.ts` |
 | Màn hình RN | `apps/mobile-react-native/src/app/` → `src/features/{shelf,account,auth,drafts,addresses}` | [UI rules](../design/UI_CODING_RULES.md), [components](../design/UI_COMPONENTS.md) |
 | UI dùng chung | `apps/mobile-react-native/src/core/ui/`; `packages/brand/v1.1/` | `/ui` và `/design` chỉ bật khi `EXPO_PUBLIC_DESIGN_PREVIEW=1`; dữ liệu mẫu không là API |
-| Operations | `apps/admin-web/src/features/review/` và `src/core/` | ADR 0010; `apps/admin-web/tests/browser.mjs` |
-| User web | `apps/user-web/src/app/router.tsx`, `src/pages/`, `src/services/` | Listing/purchase/auction/inbox/exchange dùng API thật; exchange chat/report/review deferred. `tests/integration.mjs` và `tests/exchange-integration.mjs` dùng QA riêng |
+| Operations | `apps/admin-web/src/features/{review,reviews}/` và `src/core/` | ADR 0010; `apps/admin-web/tests/browser.mjs` |
+| User web | `apps/user-web/src/app/router.tsx`, `src/pages/`, `src/services/` | Listing/purchase/auction/inbox/exchange dùng API thật; exchange chat/report còn deferred; review chung đã có. `tests/integration.mjs` và `tests/exchange-integration.mjs` dùng QA riêng |
 | Catalog/listing | `apps/api/src/modules/catalog/`, `listings/` | ADR 0005–0006/0009/0011–0012; catalog/listing/media E2E |
 | Ảnh listing | `apps/api/src/modules/media/`; `src/media-worker.ts` | ADR 0008; `media.e2e-spec.ts`; tests dùng storage fake có nhãn |
 | Địa chỉ/báo giá | `apps/api/src/modules/addresses/`, `quotes/`; listing fulfillment | ADR 0014–0016; addresses/quotes E2E |
@@ -123,6 +124,7 @@ Các đường dẫn trong bảng tính từ root repo.
 | Auction/point Order | `modules/auctions/` và migration0008–0013 | ADR0030, auctions.e2e; settlement source không tự đóng READINESS |
 | Live/inbox | `auction.gateway.ts`, `auction-live.service.ts`, `modules/notifications/` | ADR0031/32; mutation REST, ceiling private; migration0015 |
 | Wishlist/price assist | `modules/wishlist/`, `price-assist/` | Wishlist API/RN; ADR0028/29 và PRICE_ASSIST_REPORT, cờ tắt mặc định |
+| Review/uy tín | `modules/reviews/`, migration0040; web `src/features/reviews/`, RN `src/features/reviews/`, Admin `src/features/reviews/` | [ADR0052](../adr/0052-transaction-reviews-and-reputation.md); `transaction-reviews.e2e-spec.ts`, `pnpm test:reviews:browser` (API build + RN export dùng URL QA trước chạy) |
 | Schema/DB bất biến | `apps/api/src/database/mongo/` (migrations, `transaction.ts`), `*-invariants`/`check*` trong module, `src/integrity/` | Validator/index/quyền/kiểm lúc commit là một phần logic ([bản đồ](../refactor/MIG02_MODEL_MAP.md)); `prisma/migrations/` chỉ là lịch sử PostgreSQL cho import |
 
 Tên schema/receipt lịch sử có thể vẫn chứa `Unpaid` dù projection hỗ trợ paid Order.

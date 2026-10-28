@@ -1,5 +1,41 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## Review hai chiều và uy tín — 28/10/2026
+
+- Owner duyệt gói thay thế Forum. Nhánh `codex/transaction-reviews-reputation`,
+  base `4f09c17`; commit subject `feat(reviews): complete transaction reviews and member reputation`.
+  Bảo toàn ba commit local trước đó. [ADR0052](../adr/0052-transaction-reviews-and-reputation.md),
+  [source/evidence và hướng tích hợp](../features/TRANSACTION_REVIEWS_REPORT.md).
+- Hoàn thiện review Exchange/DirectOrder/PointOrder Completed: hạn gửi168h,
+  sửa/xóa48h, bảo mật tới khi hết quyền sửa, đúng vai trò chấm điểm; tombstone,
+  revision bất biến, một reply chờ duyệt, Staff/Admin độc lập với lý do và
+  version/key. Hồ sơ public tách completed/điểm/vi phạm xác minh. Không đổi tiền,
+  completion hoặc GHN/carrier/Driver; fixture Completed không đóng gate F2h.
+- Member web/RN có danh sách giao dịch, gửi/sửa/xóa/reply và profile; Admin/Staff
+  có queue/decision/history phân trang. Intent memory-only cùng SessionClient,
+  mất ACK giữ key/body/version; lỗi xác định giữ bản nháp. Dùng workflow UI ba
+  skill theo brand; Flutter vẫn scaffold, không có parity mới.
+- Contract0.57/191operations/29controllers; migration0040 thêm lifecycle và
+  `review_revisions`, registry52 migrations/91collections. Legacy giữ nội dung/
+  disclosure và baseline revision, khóa sửa nếu từng hiển thị. Migration mới
+  giữ VNPay expiry receipt union; không sửa migration/checksum cũ. Chưa áp lên
+  Mongo chính; khi tích hợp dừng process cũ, migrate/bootstrap role rồi nâng
+  API/worker/client cùng source. Legacy Exchange POST nay cần Idempotency-Key.
+- PASS: API unit225 (không chạy4 ca carrier-adapter gọi GHN), Mongo49/SKIP6
+  import/election thiếu môi trường riêng, schema cuối26, review HTTP/Mongo9,
+  hồi quy Exchange+obligations54, session29, User-web251/RN161/Admin219. Contract/
+  routes/typecheck/lint/build và RN export PASS; API/web còn warnings cũ/chunk.
+  Browser HTTP/Mongo QA + storage fake: web lost-ACK/draft/edit/delete, Guest
+  reputation, Staff hide/restore/aggregate/history pagination, RN create/profile,
+  1440/768/390/320 và RN web chữ130%. [Ảnh QA](../features/TRANSACTION_REVIEWS_REPORT.md).
+- Native thiết bị/TalkBack/ARM/iOS/live provider/human permission/UX acceptance
+  NOT RUN; READINESS giữ nguyên. Remote fetch: main vẫn `7d92012`, PR mở0,
+  User Web/API/Docs workflow main completed/success; không là CI của gói local.
+- Đã dừng QA sau kiểm; Mongo chính vẫn dừng, không seed/migrate/reset DB chính.
+  Chỉ commit local; chưa push/PR/merge/deploy. Bước tiếp: review cả chuỗi local,
+  chốt cửa sổ cập nhật client/API và nghiệm thu native/người thật đúng gate.
+
+
 ## Quyết định bỏ Forum — 28/10/2026
 
 - Nhóm quyết định bỏ Forum/Cộng đồng sách; owner yêu cầu cập nhật docs và đề
@@ -15,12 +51,9 @@
   Chỉ docs; không đổi code/contract/migration/READINESS, không khởi động dịch vụ,
   không chạm GHN/carrier/Driver hoặc DB. Docs check/diff check PASS; không chạy
   lại test sản phẩm vì runtime không đổi. Chỉ commit local, chưa push/PR/merge.
-- Đề xuất thay thế, **chưa được giao triển khai**: hoàn thiện review hai chiều
-  và uy tín theo FR-R01–R05/FR-A08. Source hiện chỉ có GET/POST Exchange review,
-  reveal khi hai bên đã gửi hoặc hết hạn gửi; còn lệch điều kiện hết quyền sửa
-  FR-R03 và thiếu vòng đời sửa/xóa/revision/kiểm duyệt/phản hồi/aggregate. Phương
-  án khác: profile và quản trị tài khoản (API operations/users hiện chỉ GET).
-  Không mở completion/settlement hoặc tự nhận human acceptance để làm các gói đó.
+- Đề xuất review/uy tín FR-R01–R05/FR-A08 sau đó đã được owner duyệt;
+  implementation/evidence xem mục review phía trên. Không mở completion/
+  settlement hoặc tự nhận human acceptance để làm gói này.
 
 ## UX frontend Member — 28/10/2026
 

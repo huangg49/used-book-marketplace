@@ -67,6 +67,26 @@ accept/counter/fund mới; point-order read/report/code/claim theo ExistingOblig
 Các mô tả implementation theo phiên bản cũ bên dưới là lịch sử từng increment,
 không thay contract hiện hành hoặc READINESS.
 
+## Đánh giá giao dịch và uy tín
+
+[ADR0052](../adr/0052-transaction-reviews-and-reputation.md), contract0.57:
+`Exchange`/`DirectOrder`/`PointOrder` phải Completed với mốc hoàn tất hợp lệ;
+review không thực hiện completion/settlement. Mỗi participant một lần tạo, kể
+cả đã xóa. Hạn gửi168h; sửa/xóa48h từ lần đầu, không gia hạn. Buyer/Exchange
+chấm sách và đối tác; Seller Order chỉ chấm đối tác. Chỉ công bố khi hai bên đã
+gửi và hết cả hai hạn sửa, hoặc hết hạn gửi lẫn mọi hạn sửa đã phát sinh.
+Legacy đã có publishedAt được khóa sửa/xóa; public reads vẫn recheck deadline.
+
+Mutation Member ACTIVE và current participant/author/target trước replay, giữ
+key/body/version khi mất phản hồi. Staff/Admin ACTIVE độc lập chỉ đọc/moderate
+sau publication; reason/version/key bắt buộc. Revision append-only; xóa công
+khai là tombstone, evidence-held không được sửa/xóa. Một reply của target, chờ
+duyệt; pending/hidden reply không lộ cho tác giả review/Guest. Hàng đợi và lịch
+sử đều phân trang, cursor ký và ràng buộc actor/resource. Điểm tổng chỉ từ
+review public hợp lệ, không cộng revision; vi phạm chỉ từ kết luận đã xác minh.
+Chi tiết implementation/evidence ở [báo cáo](../features/TRANSACTION_REVIEWS_REPORT.md).
+Không thay READINESS, không cấp ExistingObligation cho review, không thay GHN.
+
 ## Commitment và unpaid Order
 
 For commitment/checkout work, also read ADR 0013, `docs/features/COMMITMENT_DESIGN.md`,

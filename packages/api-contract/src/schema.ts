@@ -3022,8 +3022,162 @@ export interface paths {
         /** @description Get reviews for an exchange transaction. */
         get: operations["getExchangeReviews"];
         put?: never;
-        /** @description Submit review for a completed exchange (FR-R01, FR-R02). */
+        /** @description Submit review for a completed exchange (FR-R01, FR-R02). Idempotency-Key is required; retry the same body/key after uncertain ACK. Deploy clients together with API 0.57. */
         post: operations["createExchangeReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transactions/{type}/{id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Participant-only reviews. Peer content is hidden until both edit windows expire and both submitted, or the submission window and every submitted edit window expire. Deleted submissions remain tombstones. */
+        get: operations["getTransactionReviews"];
+        put?: never;
+        /** @description Completed transactions only; 168h submission window. Author gets 48h from first submission; one review per participant even after deletion. Seller must omit bookRating for an Order. Retry the same key/body after uncertain ACK. */
+        post: operations["createTransactionReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transaction-reviews/{reviewId}/edit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Current authorization and ownership before replay. Versioned immutable intent. Edit/delete only before the original 48h deadline; legacy disclosed and evidence-held records are locked. One moderated reply by target after publication. */
+        post: operations["editTransactionReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transaction-reviews/{reviewId}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Current authorization and ownership before replay. Versioned immutable intent. Edit/delete only before the original 48h deadline; legacy disclosed and evidence-held records are locked. One moderated reply by target after publication. */
+        post: operations["deleteTransactionReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transaction-reviews/{reviewId}/reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Current authorization and ownership before replay. Versioned immutable intent. Edit/delete only before the original 48h deadline; legacy disclosed and evidence-held records are locked. One moderated reply by target after publication. */
+        post: operations["replyTransactionReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/review-transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Completed transactions for the current participant, ordered by completion time/id. No new transaction or settlement is performed. */
+        get: operations["listMyReviewTransactions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/members/{id}/reputation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Public published valid reviews only. Completion counts, partner/book means and verified violation count are independent. Empty means are null. Pending claims are never counted as violations. */
+        get: operations["getMemberReputation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/transaction-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description STAFF/ADMIN: published reviews only, excluding own transactions. Immutable revision history included for moderation; no access to prepublication peer reviews. */
+        get: operations["listOperationsTransactionReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/transaction-reviews/{reviewId}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description STAFF/ADMIN independent of both participants. Published review only; immutable revisions newest first with actor/review-scoped signed pagination. */
+        get: operations["listTransactionReviewRevisions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/transaction-reviews/{reviewId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Independent active STAFF/ADMIN only. Reason required. Hide/restore review; approve/hide pending reply; preserve/release evidence. Retain revisions and audit; no settlement or balance changes. */
+        post: operations["moderateTransactionReview"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5785,31 +5939,141 @@ export interface components {
             tags?: string[];
             comment?: string;
         };
-        ExchangeReviewItem: {
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            exchangeId: string;
-            /** Format: uuid */
-            authorId: string;
-            authorName?: string;
-            /** Format: uuid */
-            targetUserId: string;
-            bookRating: number;
+        CreateTransactionReview: {
+            bookRating?: number;
             partnerRating: number;
             tags?: string[];
             comment?: string;
+        };
+        EditTransactionReview: {
+            expectedVersion: number;
+            bookRating?: number;
+            partnerRating: number;
+            tags?: string[];
+            comment?: string;
+        };
+        ReviewVersion: {
+            expectedVersion: number;
+        };
+        ReplyTransactionReview: {
+            expectedVersion: number;
+            text: string;
+        };
+        ModerateTransactionReview: {
+            expectedVersion: number;
+            /** @enum {string} */
+            decision: "Hide" | "Restore" | "ApproveReply" | "HideReply" | "HoldEvidence" | "ReleaseEvidence";
+            reason: string;
+        };
+        ExchangeReviewItem: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            transactionType: "Exchange" | "DirectOrder" | "PointOrder";
+            /** Format: uuid */
+            transactionId: string;
+            /** Format: uuid */
+            exchangeId?: string;
+            /** Format: uuid */
+            authorId: string;
+            authorName: string;
+            /** Format: uuid */
+            targetUserId: string;
+            bookRating: number | null;
+            partnerRating: number;
+            tags: string[];
+            comment: string;
+            version: number;
+            /** @enum {string} */
+            status: "Pending" | "Published" | "Hidden" | "Deleted";
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
-            updatedAt?: string;
-        };
-        ExchangeReviewsResponse: {
-            canReview: boolean;
+            updatedAt: string;
             /** Format: date-time */
-            deadline?: string | null;
-            myReview?: components["schemas"]["ExchangeReviewItem"] | null;
-            partnerReview?: components["schemas"]["ExchangeReviewItem"] | null;
+            editDeadline: string;
+            publishedAt: string | null;
+            evidenceHeld: boolean;
+            legacyDisclosed: boolean;
+            reply: {
+                text: string;
+                /** @enum {string} */
+                status: "Pending" | "Approved" | "Hidden";
+                /** Format: date-time */
+                createdAt: string;
+            } | null;
+        };
+        TransactionReviewsResponse: {
+            /** Format: uuid */
+            partnerId: string;
+            canReview: boolean;
+            canEdit: boolean;
+            canDelete: boolean;
+            canReply: boolean;
+            bookRatingRequired: boolean;
+            deadline: string | null;
+            /** Format: date-time */
+            serverTime: string;
+            myReview: components["schemas"]["ExchangeReviewItem"] | null;
+            partnerReview: components["schemas"]["ExchangeReviewItem"] | null;
+        };
+        ExchangeReviewsResponse: components["schemas"]["TransactionReviewsResponse"];
+        ReviewTransactionsPage: {
+            items: {
+                /** @enum {string} */
+                transactionType: "Exchange" | "DirectOrder" | "PointOrder";
+                /** Format: uuid */
+                transactionId: string;
+                /** Format: date-time */
+                completedAt: string;
+                /** Format: uuid */
+                partnerId: string;
+                partnerName: string;
+            }[];
+            nextCursor: string | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        MemberReputation: {
+            /** Format: uuid */
+            userId: string;
+            displayName: string;
+            completedTransactions: number;
+            verifiedViolations: number;
+            reviewCount: number;
+            partnerRating: number | null;
+            bookRating: number | null;
+            items: components["schemas"]["ExchangeReviewItem"][];
+            nextCursor: string | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        OperationsReviewPage: {
+            items: {
+                review: components["schemas"]["ExchangeReviewItem"];
+                revisions: components["schemas"]["ReviewRevisionItem"][];
+                nextRevisionCursor: string | null;
+            }[];
+            nextCursor: string | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        ReviewRevisionItem: {
+            version: number;
+            action: string;
+            actorId: string | null;
+            /** Format: date-time */
+            at: string;
+            snapshot: {
+                [key: string]: unknown;
+            };
+            reason: string | null;
+        };
+        ReviewRevisionPage: {
+            items: components["schemas"]["ReviewRevisionItem"][];
+            nextCursor: string | null;
+            /** Format: date-time */
+            serverTime: string;
         };
     };
     responses: {
@@ -11927,12 +12191,19 @@ export interface operations {
                     "application/json": components["schemas"]["ExchangeReviewsResponse"];
                 };
             };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
         };
     };
     createExchangeReview: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
             path: {
                 id: string;
             };
@@ -11947,12 +12218,346 @@ export interface operations {
             /** @description Created */
             201: {
                 headers: {
+                    /** @description Whether this receipt was replayed for the same authorized intent. */
+                    "Idempotency-Replayed"?: boolean;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ExchangeReviewItem"];
                 };
             };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+        };
+    };
+    getTransactionReviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                type: "Exchange" | "DirectOrder" | "PointOrder";
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionReviewsResponse"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    createTransactionReview: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                type: "Exchange" | "DirectOrder" | "PointOrder";
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTransactionReview"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Whether this receipt was replayed for the same authorized intent. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeReviewItem"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+        };
+    };
+    editTransactionReview: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                reviewId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EditTransactionReview"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Whether this receipt was replayed for the same authorized intent. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeReviewItem"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+        };
+    };
+    deleteTransactionReview: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                reviewId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewVersion"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Whether this receipt was replayed for the same authorized intent. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeReviewItem"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+        };
+    };
+    replyTransactionReview: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                reviewId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReplyTransactionReview"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Whether this receipt was replayed for the same authorized intent. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeReviewItem"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+        };
+    };
+    listMyReviewTransactions: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+                type?: "Exchange" | "DirectOrder" | "PointOrder";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewTransactionsPage"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    getMemberReputation: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberReputation"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    listOperationsTransactionReviews: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsReviewPage"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    listTransactionReviewRevisions: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                reviewId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewRevisionPage"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    moderateTransactionReview: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                reviewId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModerateTransactionReview"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Whether this receipt was replayed for the same authorized intent. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeReviewItem"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
         };
     };
 }
