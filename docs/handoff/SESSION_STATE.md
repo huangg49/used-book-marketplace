@@ -19,8 +19,14 @@
   contract/check/routes, docs452md/2818links. APIunit mặc định timeout fixture
   shutdown Windows khi chạy nhiều worker; riêng test đó PASS, không sửa timeout.
 - Remote CI phải chạy lại trên head mới trước merge; kết quả cuối theo PR77.
-  Lượt API E2E local liên suite vẫn đang kiểm, chưa tính PASS. Human review chưa
-  được ghi nhận; READINESS giữ nguyên, không coi merge là đóng gate release.
+  Local E2E liên suite auction+carrier:100PASS/1timeout15s tại carrier integrity,
+  không coi cả lượt đạt. Human review chưa ghi nhận; READINESS giữ nguyên.
+- Sửa thêm hai harness theo source main: chờ response của bộ lọc cuối trước ca
+  offline Admin (tránh abort first-load), cập nhật test đấu giá theo yêu cầu đã
+  bỏ Hero/Entrance ngày27/10. Giữ test paper-login, Back, cleanup/fallback,
+  filter/cache-price/loading/empty/error/photo failure và responsive desktop/mobile.
+  Admin browser, User auth-motion và compact auction browser đều PASS local.
+  CI trên head cuối và kết quả merge theo PR77; không coi merge là đóng gate release.
 
 ## Cache/polling Dashboard — 27/10/2026
 

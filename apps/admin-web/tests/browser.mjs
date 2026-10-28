@@ -135,10 +135,22 @@ try {
   await p.getByRole("combobox", { name: "Trạng thái", exact: true }).click();
   await p.getByRole("option", { name: "Đang hoạt động", exact: true }).click();
   await p.waitForURL((url) => url.searchParams.get("status") === "ACTIVE");
+  const finalDirectoryResponse = p.waitForResponse(response => {
+    const url = new URL(response.url());
+    return url.pathname.endsWith("/operations/users") && url.searchParams.get("q") === "staff@" &&
+      url.searchParams.get("status") === "ACTIVE" && url.searchParams.get("role") === "STAFF" && response.status() === 200;
+  });
   await p.getByRole("combobox", { name: "Vai trò", exact: true }).click();
   await p.getByRole("option", { name: "Nhân viên", exact: true }).click();
   await p.waitForURL((url) => url.searchParams.get("role") === "STAFF");
+  await (await finalDirectoryResponse).finished();
   await p.getByText("staff@operations.test", { exact: true }).waitFor();
+  // The previous filter may show the same row. Wait for the final query to
+  // settle before aborting requests: this scenario tests a retained-page refresh.
+  await p.waitForFunction(() => {
+    const refresh = [...document.querySelectorAll('button')].find(node => node.textContent === 'Cập nhật danh sách');
+    return refresh && !refresh.disabled;
+  });
   await directorySearch.fill("Từ khóa chưa gửi");
   const failDirectory = (route) => route.abort("failed");
   await p.route("**/operations/users?*", failDirectory);

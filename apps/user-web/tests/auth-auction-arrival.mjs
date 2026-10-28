@@ -21,7 +21,7 @@ const errors = [], checks = []
 try {
   server = await createServer({ root: appRoot, server: { host: '127.0.0.1', port: 5197, strictPort: true } })
   await server.listen()
-  browser = await chromium.launch({ headless: true })
+  browser = await chromium.launch({ headless: true, ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}) })
   const viewports = [['desktop', { width: 1366, height: 768 }], ['mobile', { width: 390, height: 844 }]];
   if (process.env.AUTH_MOTION_VIDEO) viewports.push(['user-465', { width: 465, height: 628 }]);
   for (const [name, viewport] of viewports) {
@@ -176,11 +176,13 @@ try {
     if (name === 'mobile') await page.getByRole('banner').getByRole('button', { name: /menu|điều hướng/i }).click()
     await page.getByRole('navigation', { name: name === 'mobile' ? 'Điều hướng trên điện thoại' : 'Điều hướng chính', exact: true })
       .getByRole('link', { name: 'Đấu giá', exact: true }).click()
-    await page.waitForFunction(() => document.querySelector('[data-auction-entrance]')?.dataset.state === 'opening')
-    checks.push(`${name}: rejected Login preserves draft; successful Login paper only, query/hash retained, focus/scroll restored; filter no curtain; subsequent navbar visit opens curtain`)
+    await page.getByRole('heading', { level: 1, name: 'Đấu giá sách cũ' }).waitFor()
+    assert.equal(await page.locator('[data-auction-entrance]').count(), 0, 'approved compact auction page has no curtain')
+    checks.push(`${name}: rejected Login preserves draft; successful Login paper only, query/hash retained, focus/scroll restored; filter no curtain; subsequent navbar visit keeps compact auction page`)
     await page.reload()
-    await page.waitForFunction(() => document.querySelector('[data-auction-entrance]')?.dataset.state === 'opening')
-    checks.push(`${name}: direct reload opens curtain`)
+    await page.getByRole('heading', { level: 1, name: 'Đấu giá sách cũ' }).waitFor()
+    assert.equal(await page.locator('[data-auction-entrance]').count(), 0, 'approved compact auction page has no curtain')
+    checks.push(`${name}: direct reload keeps compact auction page`)
     // Leaving during the harmless tail must still clear every decoration.
     await page.goto(`${origin}/login?returnUrl=%2Fauctions`)
     await page.getByRole('textbox', { name: /Email/ }).fill('reader@example.test')
@@ -261,7 +263,7 @@ try {
   if (lastPage && !lastPage.isClosed()) {
     await lastPage.screenshot({ path: path.join(evidence, 'failure.png') })
     console.error(JSON.stringify({ url: lastPage.url(), headings: await lastPage.locator('h1').allTextContents(), errors,
-      navigation: await lastPage.locator('header').innerText() }))
+      navigation: await lastPage.getByRole('banner').innerText() }))
   }
   throw error
 } finally { await browser?.close(); await server?.close() }
