@@ -20,6 +20,7 @@ import {
   sellerScheduledAuctionsMigration,
   withSellerScheduledAuctions,
 } from './0037-seller-scheduled-auctions.js';
+import { transactionReviewValidatorFixMigration } from './0038-transaction-review-validator-fix.js';
 import {
   exchangeCollectionSpecs,
   exchangesMigration,
@@ -283,6 +284,7 @@ export const migrations: Migration[] = [
   wholeBookBundlesMigration,
   bundleReviewSearchMigration,
   sellerScheduledAuctionsMigration,
+  transactionReviewValidatorFixMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>

@@ -111,6 +111,7 @@ export function ExchangeActionsCard({
 
   // Review state
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
   const [reviewBookRating, setReviewBookRating] = useState(5);
   const [reviewPartnerRating, setReviewPartnerRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -382,9 +383,14 @@ export function ExchangeActionsCard({
       }),
     onSuccess: () => {
       setReviewModalOpen(false);
+      setReviewError(null);
       invalidate();
     },
-    onError: (err) => setActionError(presentError(err).message),
+    onError: (err) => {
+      const msg = presentError(err).message;
+      setReviewError(msg);
+      setActionError(msg);
+    },
   });
 
   const isBusy =
@@ -876,7 +882,10 @@ export function ExchangeActionsCard({
           reviewsData={reviewsQuery.data}
           isLoading={reviewsQuery.isLoading}
           partnerName={isInitiator ? "Đối tác" : "Đối tác đề nghị"}
-          onOpenReviewModal={() => setReviewModalOpen(true)}
+          onOpenReviewModal={() => {
+            setReviewError(null);
+            setReviewModalOpen(true);
+          }}
         />
       )}
 
@@ -1685,6 +1694,12 @@ export function ExchangeActionsCard({
                 <Icon name="close" size={20} color={stitchTokens.darkWood} />
               </Pressable>
             </View>
+
+            {reviewError ? (
+              <View style={{ marginBottom: space.sm }}>
+                <Notice tone="error">{reviewError}</Notice>
+              </View>
+            ) : null}
 
             {/* Rating sách */}
             <View style={styles.inputSection}>
