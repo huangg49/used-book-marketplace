@@ -728,12 +728,10 @@ try {
   await page.getByRole("button", { name: /^Tài khoản của .+$/, exact: true }).click();
   await page
     .getByRole("navigation", { name: "Tài khoản cá nhân", exact: true })
-    .getByRole("link", { name: "Tổng quan", exact: true })
+    .getByRole("link", { name: "Việc của tôi", exact: true })
     .click();
-  await page
-    .getByRole("region", { name: "Số dư khả dụng", exact: true })
-    .getByText(/90\.000/)
-    .waitFor();
+  await page.locator('#account-content').getByRole('link',{name:'Ví của tôi',exact:true}).click();
+  await page.locator('dl > div').filter({has:page.getByText('Số dư khả dụng',{exact:true})}).getByText(/90\.000/).waitFor();
   assert.equal(await page.getByLabel(/^Email/).count(), 0);
   // A callback tab without the original wallet never exposes wallet data or
   // inherits credentials; the fallback login URL contains only the intent ID.

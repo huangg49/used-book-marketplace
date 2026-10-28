@@ -111,6 +111,7 @@ Các đường dẫn trong bảng tính từ root repo.
 | Phiên/token | `packages/session-client/src/session-client.ts`; `apps/api/src/modules/auth/` | ADR 0003/0019; session tests; `auth.e2e-spec.ts`, `obligations.e2e-spec.ts` |
 | Màn hình RN | `apps/mobile-react-native/src/app/` → `src/features/{shelf,account,auth,drafts,addresses}` | [UI rules](../design/UI_CODING_RULES.md), [components](../design/UI_COMPONENTS.md) |
 | UI dùng chung | `apps/mobile-react-native/src/core/ui/`; `packages/brand/v1.1/` | `/ui` và `/design` chỉ bật khi `EXPO_PUBLIC_DESIGN_PREVIEW=1`; dữ liệu mẫu không là API |
+| Hành trình/điều hướng | Web AccountOverviewPage/MemberGuidePage; RN account/guide; Admin WorkspaceStart | [Bản đồ và checklist nhóm](../ui/JOURNEY_CLARITY_2026_10_28.md), `pnpm test:journeys:browser` |
 | Operations | `apps/admin-web/src/features/{review,reviews}/` và `src/core/` | ADR 0010; `apps/admin-web/tests/browser.mjs` |
 | User web | `apps/user-web/src/app/router.tsx`, `src/pages/`, `src/services/` | Listing/purchase/auction/inbox/exchange dùng API thật; exchange chat/report còn deferred; review chung đã có. `tests/integration.mjs` và `tests/exchange-integration.mjs` dùng QA riêng |
 | Catalog/listing | `apps/api/src/modules/catalog/`, `listings/` | ADR 0005–0006/0009/0011–0012; catalog/listing/media E2E |

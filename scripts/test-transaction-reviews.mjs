@@ -164,27 +164,25 @@ try {
     delivered = new Date(+complete - 72 * 3600000),
     created = new Date(+delivered - 3600000),
     paid = new Date(+created + 1000);
-  await fixture.db
-    .collection("direct_orders")
-    .insertOne({
-      _id: direct,
-      buyerId: b,
-      sellerId: a,
-      quoteId: randomUUID(),
-      version: 6,
-      state: "Completed",
-      createdAt: created,
-      paymentDeadline: new Date(+created + 1800000),
-      closedAt: complete,
-      paidAt: paid,
-      sellerConfirmationDeadline: new Date(+paid + 48 * 3600000),
-      cancellationRequestedAt: null,
-      cancellationReason: null,
-      deliveredAt: delivered,
-      inspectionDeadline: complete,
-      completedAt: complete,
-      lockSeq: 0,
-    });
+  await fixture.db.collection("direct_orders").insertOne({
+    _id: direct,
+    buyerId: b,
+    sellerId: a,
+    quoteId: randomUUID(),
+    version: 6,
+    state: "Completed",
+    createdAt: created,
+    paymentDeadline: new Date(+created + 1800000),
+    closedAt: complete,
+    paidAt: paid,
+    sellerConfirmationDeadline: new Date(+paid + 48 * 3600000),
+    cancellationRequestedAt: null,
+    cancellationReason: null,
+    deliveredAt: delivered,
+    inspectionDeadline: complete,
+    completedAt: complete,
+    lockSeq: 0,
+  });
   const directUrl = `/transactions/DirectOrder/${direct}/reviews`;
   await fixture.api(directUrl, fixture.member.accessToken, {
     partnerRating: 3,
@@ -204,14 +202,12 @@ try {
   const emptyMember = randomUUID(),
     memberDoc = await fixture.db.collection("users").findOne({ _id: a });
   assert.ok(memberDoc);
-  await fixture.db
-    .collection("users")
-    .insertOne({
-      ...memberDoc,
-      _id: emptyMember,
-      emailNormalized: `${emptyMember}@operations.test`,
-      displayName: "Thành viên QA chưa có đánh giá",
-    });
+  await fixture.db.collection("users").insertOne({
+    ...memberDoc,
+    _id: emptyMember,
+    emailNormalized: `${emptyMember}@operations.test`,
+    displayName: "Thành viên QA chưa có đánh giá",
+  });
 
   webServer = await serve("user-web", 5184);
   adminServer = await serve("admin-web", 5174);
@@ -255,10 +251,57 @@ try {
   p.setDefaultTimeout(15000);
   p.setDefaultNavigationTimeout(15000);
   p.on("pageerror", (e) => errors.push(e.message));
-  await p.goto(web + "/login?returnUrl=%2Freviews");
+  await p.goto(web + "/login?returnUrl=%2Faccount");
   await p.getByLabel(/^Email/).fill("member@operations.test");
   await p.getByLabel(/^Mật khẩu/).fill(password);
   await button(p, "Đăng nhập").click();
+  await p.waitForURL(web + "/account");
+  await p.getByRole("heading", { name: "Việc của tôi", exact: true }).waitFor();
+  assert.equal(await p.getByText("★ 4.9", { exact: false }).count(), 0);
+  await p
+    .getByRole("link", { name: "Cách mua, bán, đổi và đấu giá", exact: true })
+    .click();
+  await p
+    .getByRole("heading", { name: "Bắt đầu với Lật lại", exact: true })
+    .waitFor();
+  for (const [title, action, path] of [
+    ["Tôi muốn mua sách", "Tìm sách để mua", "/books?mode=Sale"],
+    ["Tôi muốn bán sách", "Đăng sách để bán", "/sell"],
+    ["Tôi muốn đổi sách", "Tìm sách để đổi", "/books?mode=Exchange"],
+    ["Tôi muốn tham gia đấu giá", "Xem phiên đấu giá", "/auctions"],
+  ]) {
+    await p
+      .getByRole("navigation", { name: "Bạn muốn làm gì?" })
+      .getByRole("link", { name: title, exact: true })
+      .click();
+    await p.getByRole("heading", { name: title, exact: true }).waitFor();
+    assert.equal(
+      await p
+        .getByRole("link", { name: action, exact: true })
+        .getAttribute("href"),
+      path,
+    );
+  }
+  await p.getByRole("link", { name: "Về việc của tôi", exact: true }).click();
+  for (const width of [1440, 768, 390, 320])
+    await capture(p, `member-workspace-${width}`, width);
+  await p.getByRole("link", { name: /^Đơn mua\/bán trực tiếp/ }).click();
+  await p
+    .getByRole("link", {
+      name: "Đơn thắng đấu giá ở Đấu giá của tôi",
+      exact: true,
+    })
+    .waitFor();
+  await p
+    .getByRole("link", { name: "Xem hoặc viết đánh giá", exact: true })
+    .click();
+  await p.waitForURL(web + `/reviews?type=DirectOrder&transaction=${direct}`);
+  await p
+    .getByRole("heading", { name: "Đánh giá của bạn", exact: true })
+    .waitFor();
+  await p
+    .getByRole("link", { name: "Về các giao dịch cần đánh giá", exact: true })
+    .click();
   await p.waitForURL(web + "/reviews");
   await p
     .getByRole("heading", { name: "Đánh giá của tôi", exact: true })
@@ -386,6 +429,18 @@ try {
   const publicContext = await browser.newContext(),
     pub = await publicContext.newPage();
   pub.on("pageerror", (e) => errors.push(e.message));
+  await pub.goto(web + "/");
+  await pub
+    .getByRole("link", {
+      name: "Chưa biết bắt đầu? Xem cách mua, bán, đổi và đấu giá.",
+      exact: true,
+    })
+    .click();
+  await pub
+    .getByRole("heading", { name: "Bắt đầu với Lật lại", exact: true })
+    .waitFor();
+  for (const width of [1440, 390, 320])
+    await capture(pub, `member-guide-${width}`, width);
   await pub.goto(web + `/members/${b}`);
   await pub
     .getByText("QA công khai: sách đúng mô tả, trao đổi rõ ràng.", {
@@ -395,11 +450,9 @@ try {
   const partnerFact = pub
     .locator("dl > div")
     .filter({ has: pub.getByText("Điểm đối tác", { exact: true }) });
-  const bookFact = pub
-    .locator("dl > div")
-    .filter({
-      has: pub.getByText("Chất lượng sách đã cung cấp", { exact: true }),
-    });
+  const bookFact = pub.locator("dl > div").filter({
+    has: pub.getByText("Chất lượng sách đã cung cấp", { exact: true }),
+  });
   await partnerFact.getByText("Từ 2 đánh giá", { exact: true }).waitFor();
   await bookFact.getByText("Từ 1 đánh giá", { exact: true }).waitFor();
   assert.match(await partnerFact.innerText(), /4\.0\/5/);
@@ -412,7 +465,10 @@ try {
   assert.equal(before.bookRatingCount, 1);
   await pub.goto(web + `/members/${emptyMember}`);
   await pub.getByText("Chưa có đánh giá công khai.", { exact: true }).waitFor();
-  assert.equal(await pub.getByText("Chưa có điểm", { exact: false }).count(), 2);
+  assert.equal(
+    await pub.getByText("Chưa có điểm", { exact: false }).count(),
+    2,
+  );
   assert.equal(
     await pub.getByText("Từ 0 đánh giá", { exact: true }).count(),
     2,
@@ -436,6 +492,36 @@ try {
   await ops
     .getByRole("heading", { name: "Đánh giá giao dịch", exact: true })
     .waitFor();
+  await ops
+    .getByRole("link", { name: "Dashboard", exact: true })
+    .first()
+    .click();
+  const workGuide = ops.locator("details").filter({
+    has: ops.getByText("Chưa biết bắt đầu ở đâu?", { exact: true }),
+  });
+  await workGuide.locator("summary").click();
+  await workGuide
+    .getByRole("link", { name: "Nhận sách đấu giá", exact: true })
+    .waitFor();
+  assert.equal(
+    await workGuide
+      .getByRole("link", { name: "Xử lý đơn tại điểm", exact: true })
+      .count(),
+    0,
+  );
+  assert.equal(
+    await workGuide
+      .getByRole("link", { name: "Đầu sách", exact: true })
+      .count(),
+    0,
+  );
+  for (const width of [1440, 390])
+    await capture(ops, `staff-work-guide-${width}`, width);
+  await ops.setViewportSize({ width: 1440, height: 900 });
+  await ops
+    .getByRole("link", { name: "Đánh giá giao dịch", exact: true })
+    .first()
+    .click();
   const record = ops.locator("section").filter({
     has: ops.getByText("QA công khai: sách đúng mô tả, trao đổi rõ ràng.", {
       exact: true,
@@ -482,6 +568,52 @@ try {
   for (const width of [1440, 390])
     await capture(ops, `operations-reviews-${width}`, width);
 
+  // Admin-only is deliberately different from Staff: role alone does not
+  // grant intake/collection actions at a point.
+  await fixture.db
+    .collection("users")
+    .updateOne(
+      { _id: b },
+      {
+        $set: {
+          roles: [{ role: "ADMIN", grantedAt: new Date() }],
+          updatedAt: new Date(),
+        },
+        $inc: { lockSeq: 1 },
+      },
+    );
+  const managerContext = await browser.newContext({
+      viewport: { width: 1440, height: 900 },
+    }),
+    manager = await managerContext.newPage();
+  manager.setDefaultTimeout(15000);
+  manager.on("pageerror", (e) => errors.push(e.message));
+  await manager.goto(adminOrigin + "/dashboard");
+  await manager
+    .getByRole("textbox", { name: "Email", exact: true })
+    .fill("admin@operations.test");
+  await manager.getByLabel(/^Mật khẩu(?:\s|$)/).fill(password);
+  await button(manager, "Đăng nhập").click();
+  const managerGuide = manager
+    .locator("details")
+    .filter({
+      has: manager.getByText("Chưa biết bắt đầu ở đâu?", { exact: true }),
+    });
+  await managerGuide.locator("summary").click();
+  await managerGuide
+    .getByRole("link", { name: "Xử lý đơn tại điểm", exact: true })
+    .waitFor();
+  await managerGuide
+    .getByRole("link", { name: "Đầu sách", exact: true })
+    .waitFor();
+  assert.equal(
+    await managerGuide
+      .getByRole("link", { name: "Nhận sách đấu giá", exact: true })
+      .count(),
+    0,
+  );
+  await capture(manager, "admin-work-guide-1440", 1440);
+  await capture(manager, "admin-work-guide-390", 390);
   const nativeContext = await browser.newContext({
       viewport: { width: 390, height: 844 },
     }),
@@ -497,6 +629,36 @@ try {
   await np.getByLabel("Mật khẩu", { exact: true }).last().fill(password);
   await button(np, "Đăng nhập").click();
   await button(np, "Đánh giá giao dịch & hồ sơ uy tín").waitFor();
+  await np
+    .getByRole("heading", { name: "Việc của tôi", exact: true })
+    .waitFor();
+  assert.equal(await np.getByText("4.9", { exact: false }).count(), 0);
+  for (const width of [390, 320])
+    await capture(np, `rn-workspace-${width}`, width);
+  await np.evaluate(() => {
+    for (const el of document.querySelectorAll('[dir="auto"]')) {
+      const c = getComputedStyle(el);
+      el.style.fontSize = `${parseFloat(c.fontSize) * 1.3}px`;
+      el.style.lineHeight = `${parseFloat(c.lineHeight) * 1.3}px`;
+    }
+  });
+  await capture(np, "rn-workspace-large-320", 320);
+  await button(np, "Cách mua, bán, đổi và đấu giá").click();
+  await np
+    .getByRole("heading", { name: "Bắt đầu với Lật lại", exact: true })
+    .waitFor();
+  await button(np, "Đổi sách").click();
+  await button(np, "Tìm sách để đổi").click();
+  await np.waitForURL(/\/search\?mode=Exchange$/);
+  await np.goBack();
+  await button(np, "Bán sách").click();
+  await capture(np, "rn-guide-320", 320);
+  await button(np, "Về việc của tôi").click();
+  await button(np, "Đơn mua/bán trực tiếp").click();
+  await button(np, "Mở đấu giá của tôi").waitFor();
+  await button(np, "Xem hoặc viết đánh giá").click();
+  await np.getByText("QA: nhận sách đúng hẹn.", { exact: true }).waitFor();
+  await np.getByRole("button", { name: "Về tài khoản", exact: true }).click();
   await button(np, "Đánh giá giao dịch & hồ sơ uy tín").click();
   await np
     .getByRole("button", { name: new RegExp(native.slice(0, 8).toUpperCase()) })
@@ -549,7 +711,7 @@ try {
     [],
   );
   console.log(
-    "PASS review browser: Member web create/lost-ACK/same intent/edit/rejection retention/delete; public reputation separate score counts/empty/hidden; independent Staff hide/restore/aggregate; RN create/profile; desktop/tablet/320px. Synthetic Completed QA, fake storage, native unverified.",
+    "PASS review browser: Member web create/lost-ACK/same intent/edit/rejection retention/delete; Member task hub/guide/DirectOrder-to-review/Staff wayfinding; public reputation separate score counts/empty/hidden; independent Staff hide/restore/aggregate; RN create/profile; desktop/tablet/320px. Synthetic Completed QA, fake storage, native unverified.",
   );
 } catch (error) {
   for (const context of browser?.contexts() ?? [])

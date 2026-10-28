@@ -68,6 +68,7 @@ export default function MainLayout() {
               <Link to={searchUrl({ mode: "Exchange" })}>
                 Xem sách để đổi <ArrowUpRight size={18} aria-hidden="true" />
               </Link>
+              <Link to="/guide">Bắt đầu với Lật lại <ArrowUpRight size={18} aria-hidden="true" /></Link>
               <Link to={ROUTES.sell}>
                 Đăng sách của bạn <ArrowUpRight size={18} aria-hidden="true" />
               </Link>

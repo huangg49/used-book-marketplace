@@ -13,6 +13,7 @@ import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import {
   AppText,
+  Button,
   ConfirmDialog,
   Icon,
   Notice,
@@ -271,6 +272,7 @@ export function OrdersScreen() {
 
         {/* Card Actions */}
         <View style={styles.cardActions}>
+          {item.state==='Completed'?<Button wine secondary title="Xem hoặc viết đánh giá" onPress={()=>router.push({pathname:'/reviews',params:{type:'DirectOrder',id:item.id}})}/>:null}
           {item.listingId && (
             <Pressable
               accessibilityRole="button"
@@ -369,6 +371,7 @@ export function OrdersScreen() {
       footerAppearance="navigation"
     >
       <View style={styles.container}>
+        <View style={{padding:space.md,gap:space.sm}}><AppText kind="small">Đây là đơn mua/bán trực tiếp. Sách thắng đấu giá được theo dõi riêng.</AppText><Button wine secondary title="Mở đấu giá của tôi" onPress={()=>router.push('/my-auctions')}/><Button wine secondary title="Cách mua sách" onPress={()=>router.push({pathname:'/guide',params:{task:'buy'}})}/></View>
         {/* Error Notice */}
         {actionError ? (
           <View style={{ paddingHorizontal: space.md, paddingTop: space.xs }}>
@@ -686,6 +689,7 @@ const styles = StyleSheet.create({
   },
   cardActions: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "flex-end",
     gap: space.xs,

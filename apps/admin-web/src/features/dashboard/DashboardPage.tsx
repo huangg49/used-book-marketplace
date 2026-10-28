@@ -1,3 +1,4 @@
+import { WorkspaceStart } from "./WorkspaceStart";
 import { useState } from "react";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { refreshDashboard } from "../../core/dashboard-cache";
@@ -130,6 +131,7 @@ export function DashboardPage() {
           </Button>
         </div>
       </header>
+      <WorkspaceStart user={user}/>
       {canReview(user) && (
         <>
           {overview.isError && (

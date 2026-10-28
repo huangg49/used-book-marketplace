@@ -1,5 +1,27 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## Nối hành trình Member và vận hành — 28/10/2026
+
+- Owner yêu cầu cải thiện UX phân mảnh, xác nhận cả hai phía Member và Staff/
+  Admin. Nhánh `codex/member-journey-clarity`, base `46acb26`; commit subject
+  `fix(ux): connect member journeys and role-based workspace guidance`.
+- Web/RN account thành Việc của tôi, phân nhóm theo mục đích và nơi tiếp tục;
+  bỏ widget/đơn/điểm4.9 mẫu. Guide công khai4luồng có entry/action/kết quả;
+  phân biệt đơn trực tiếp/đơn đấu giá, nối Completed tới review, hướng dẫn
+  trạng thái web không gọi nhầm state đang xử lý là kết thúc. Staff/Admin có
+  hướng dẫn tại dashboard từ navigationGroups theo role hiện tại, không thêm quyền.
+- [Bản đồ, source, evidence và checklist nhóm](../ui/JOURNEY_CLARITY_2026_10_28.md).
+  PASS web251/RN161/Admin219 unit, ba app typecheck/lint, web/Admin build/RN
+  export. Browser HTTP/Mongo QA riêng + storage fake: task hub/guide/đơn→review,
+  hồi quy review, Staff/ADMIN-only guidance; account keyboard/LOCKED/profile/
+  wallet; web1440/768/390/320 và RN web chữ130%. Detector/docs/diff check PASS.
+- Không đổi API/contract0.58/migration/tiền hoặc GHN/carrier/Driver; không chạy
+  lại gate không ảnh hưởng. Native/TalkBack/ARM/iOS/human UX NOT RUN; Flutter
+  scaffold và READINESS không đổi. QA đã dừng; Mongo chính không start/reset/
+  seed. Chỉ commit local, chưa push/PR/merge/deploy. Bước tiếp: teammate thử từng
+  hành trình từ entry theo checklist, review chuỗi local trước tích hợp.
+
+
 ## Minh bạch điểm và số mẫu — 28/10/2026
 
 - Owner duyệt bổ sung trình bày uy tín. Nhánh `codex/reputation-rating-transparency`,

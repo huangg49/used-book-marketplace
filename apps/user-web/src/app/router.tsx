@@ -38,6 +38,7 @@ export const router = createBrowserRouter([
           { path: '/auctions', lazy: () => import('../pages/AuctionListPage').then(m => ({ Component: m.AuctionListPage })) },
           { path: '/auctions/new', lazy: () => import('../pages/CreateAuctionPage').then(m => ({ Component: m.CreateAuctionPage })) },
           { path: '/auctions/:id', lazy: () => import('../pages/AuctionDetailPage').then(m => ({ Component: m.AuctionDetailPage })) },
+          { path: '/guide', lazy: () => import('../pages/MemberGuidePage').then(m => ({ Component: m.MemberGuidePage })) },
           { path: '/notifications', lazy: () => import('../pages/NotificationsPage').then(m => ({ Component: m.NotificationsPage })) },
           { path: '/members/:id', lazy: () => import('../pages/MemberReputationPage').then(m => ({ Component: m.MemberReputationPage })) },
         ],

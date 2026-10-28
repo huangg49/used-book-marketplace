@@ -280,6 +280,7 @@ export function LoginScreen({
           }}
         />
 
+        <Button wine secondary title="Cách dùng Lật lại" onPress={()=>router.push('/guide')}/>
         {/* Switch to Register */}
         <View
           style={{

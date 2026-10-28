@@ -332,6 +332,7 @@ export function ExchangeDetailScreen() {
             recipientListing={recipientListingQuery.data}
           />
 
+          {exchange.status==='Completed'?<Button wine secondary title="Xem hoặc viết đánh giá" onPress={()=>router.push({pathname:'/reviews',params:{type:'Exchange',id:exchange.id}})}/>:null}
           {/* HÀNH ĐỘNG TIẾP THEO (Accept, Reject, Cancel, Fund, Ship, Receive) */}
           <ExchangeActionsCard
             exchange={exchange}

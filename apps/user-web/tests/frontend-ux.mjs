@@ -9,7 +9,7 @@ export async function frontendUxJourney(page, evidence, chatPath) {
     // exceed the fixture's production login limit and obscure the UI checks.
     await page.getByRole("button", { name: /^Tài khoản của/ }).click();
     await page.getByRole("navigation", { name: "Tài khoản cá nhân", exact: true })
-      .getByRole("link", { name: "Đề nghị đổi sách", exact: true }).click();
+      .getByRole("link", { name: "Trao đổi của tôi", exact: true }).click();
     const sent = page.getByRole("tab", { name: /^Đề nghị đã gửi/ });
     await sent.waitFor();
     await page.locator('[role="tabpanel"] a[href^="/exchange/"]:visible').first().waitFor();

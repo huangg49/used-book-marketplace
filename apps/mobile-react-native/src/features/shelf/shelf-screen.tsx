@@ -126,6 +126,7 @@ export function ShelfScreen() {
           }}
         />
 
+        <View style={{paddingHorizontal:space.lg}}><Button wine secondary title="Bắt đầu với Lật lại" onPress={()=>router.push('/guide')}/></View>
         {/* 2. Quick Action 4 Shortcuts */}
         <HomeShortcuts
           onAuctionPress={() => router.navigate("/auctions")}
