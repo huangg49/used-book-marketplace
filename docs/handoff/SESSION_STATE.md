@@ -27,6 +27,13 @@
   filter/cache-price/loading/empty/error/photo failure và responsive desktop/mobile.
   Admin browser, User auth-motion và compact auction browser đều PASS local.
   CI trên head cuối và kết quả merge theo PR77; không coi merge là đóng gate release.
+- User web harness ảnh đã khớp editor giữ ảnh gốc và preview dùng crop3:4,
+  vẫn kiểm bảo toàn ảnh phụ, xóa/thay/max8/viewer/upload/ACK replay. Full browser
+  suite PASS local. Bổ sung observer cho native ViewTransition.ready để lỗi
+  snapshot AbortError/InvalidStateError không thành unhandled rejection;
+  giữ nguyên animation và callback/finished errors, không nuốt lỗi ứng dụng.
+  Có unit kiểm snapshot fallback, unsupported browser và callback errors;
+  User web lint/typecheck/test/build PASS. CI Operations trên head3df9df9 PASS.
 
 ## Cache/polling Dashboard — 27/10/2026
 

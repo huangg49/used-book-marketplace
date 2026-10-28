@@ -4,6 +4,9 @@ import { RouterProvider } from 'react-router-dom';
 import { Providers } from './app/providers';
 import { router } from './app/router';
 import './styles/global.css';
+import { installViewTransitionFallback } from './lib/view-transition-fallback';
+
+installViewTransitionFallback(document);
 
 // Khởi động session từ token đã lưu (memory-only trên browser)
 import { session } from './lib/session';
