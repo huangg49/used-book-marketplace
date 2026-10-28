@@ -1,5 +1,24 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## Sửa lỗi gửi đánh giá giao dịch đổi sách (MongoDB Validator & In-modal Error Notice) — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Nguyên nhân "Bấm gửi đánh giá không phản hồi"**:
+  1. *Backend MongoDB Validator*: Collection `transaction_reviews` bị lưu sai mảng lồng `enum: [ [ "Exchange", "Order" ] ]` thay vì `enum: [ "Exchange", "Order" ]` từ migration cũ. Khi backend gọi `insertOne`, MongoDB trả về `MongoServerError: Document failed validation` khiến API trả mã lỗi HTTP 500 (`INTERNAL_ERROR`).
+  2. *Mobile UX Error Feedback*: Trong `apps/mobile-react-native/src/features/exchanges/exchange-actions-card.tsx`, khi `reviewMutation` gặp lỗi, `onError` chỉ cập nhật `actionError` (nằm ở card nền phía sau backdrop). Bên trong `ReviewModal` không có khung `<Notice tone="error">` nào hiển thị, dẫn tới việc nút quay xong thì dừng lại mà không báo lỗi cho người dùng.
+- **Giải pháp xử lý triệt để**:
+  1. **Tạo migration MongoDB `0038-transaction-review-validator-fix.ts`**:
+     - Cập nhật chuẩn `collMod` cho collection `transaction_reviews` với enum chuẩn `['Exchange', 'Order']`.
+     - Chạy migration thành công: `Applied 1 migration(s)`.
+  2. **Cải tiến UX ReviewModal trên Mobile**:
+     - Bổ sung state `reviewError` và hiển thị `<Notice tone="error">` trực tiếp ngay dưới tiêu đề modal khi có bất kỳ lỗi nào xảy ra.
+     - Tự động xóa lỗi khi mở lại modal hoặc gửi thành công.
+- **Kiểm tra**:
+  - Gửi đánh giá thực tế từ tài khoản Nguyen Dai (`bookRating: 5`, `partnerRating: 5`, tags, comment: `'ngu'`): API trả về HTTP 201 Created thành công!
+  - `GET /exchanges/:id/reviews` trả về đúng `myReview` của Nguyen Dai, tuân thủ nguyên tắc Blind Review (FR-R03/POL-18).
+  - TypeScript check: PASS 100% cả API và Mobile.
+  - Git commit: `1e2ac7f`.
+
 ## Đồng bộ nhãn và thông báo Nghiệm thu sách (Inspecting) trên Web thống nhất với Mobile — 28/10/2026
 
 - Nhánh `feature/exchange-rn-completion`.
