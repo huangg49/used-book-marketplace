@@ -1,4 +1,19 @@
-# Điểm lưu hiện tại — 27/10/2026
+# Điểm lưu hiện tại — 28/10/2026
+
+## Hoàn thiện toàn diện luồng trao đổi sách trên Mobile React Native — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Nghiệp vụ & Tính năng bổ sung hoàn chỉnh**:
+  - **Nghiệm thu sớm & Tất toán (`POST /exchanges/:id/complete`)**: Bổ sung nút "Xác nhận hài lòng & Nghiệm thu sách" khi đơn ở trạng thái `Delivered`, cho phép 2 bên hoàn tất nghiệm thu và tất toán giải phóng cọc ngay mà không cần đợi cron job sau 48h.
+  - **Đánh giá sau giao dịch (`Review`)**: Tích hợp luồng đánh giá theo chuẩn POL-18 (168h sau `Completed`), bổ sung schema contract `exchangeReviewsResponseSchema`, `createExchangeReviewSchema`; xây dựng `ReviewModal` chấm sao trực quan cho sách (1-5 sao) và đối tác (1-5 sao), chọn tags đặc trưng và viết nhận xét chi tiết, hiển thị đánh giá 2 chiều ngay trên thẻ hoàn tất.
+  - **Khai báo vận đơn & Theo dõi vận chuyển 2 chiều (`Shipment`)**: Thay thế nút gửi sách hardcode `direct` bằng modal chọn phương thức bưu cục (GHN, GHTK, ViettelPost, VNPost, Khác) hoặc gặp trực tiếp, nhập mã vận đơn (`trackingCode`), ghi chú kiện hàng; hiển thị thẻ "Vận chuyển 2 chiều" với đầy đủ mã bưu kiện, trạng thái gửi, ngày giờ và hướng dẫn tra cứu của cả 2 bên.
+  - **Đồng ý đổi kèm chọn địa chỉ nhận hàng (`AcceptExchangeModal`)**: Cho phép người nhận (recipient) chọn địa chỉ nhận hàng từ sổ địa chỉ cá nhân (`/me/addresses`) khi bấm đồng ý, truyền đúng `deliveryAddressId` vào `acceptExchange`.
+  - **Hỗ trợ hiển thị đổi nhiều sách (`Multi-book`)**: Nâng cấp `ExchangeDetailScreen` dùng `useQueries` tải toàn bộ danh sách sách được gom để đổi (`initiatorListingIds`), hiển thị đầy đủ bìa, tên sách, tác giả và giá trị quy đổi của từng cuốn trên `ExchangeProposalCard`.
+  - **Kiểm tra và cảnh báo số dư ví khi Cọc bảo chứng**: Kết nối query `/me/wallet`, hiển thị chi tiết số tiền cọc cần nạp và số dư ví khả dụng hiện tại; tự động cảnh báo số tiền còn thiếu kèm nút tắt "Nạp tiền vào ví ngay ↗" dẫn sang `/wallet` nếu không đủ số dư.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/mobile-react-native test`: 24 test files / 162 tests PASS sạch sẽ.
+  - Git commit: `a388d0b`.
 
 ## Hoàn tất giao diện đổi sách & Đồng bộ merge sạch vào main — 27/10/2026
 
