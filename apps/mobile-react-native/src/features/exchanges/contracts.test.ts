@@ -111,4 +111,3 @@ describe("exchangeSchema", () => {
     expect(mapExchangeStatusInfo("ResolutionPending", true).stepIndex).toBe(-1);
   });
 });
-
