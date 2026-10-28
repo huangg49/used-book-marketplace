@@ -103,5 +103,13 @@ describe("exchangeSchema", () => {
     };
     expect(exchangeReviewsResponseSchema.safeParse(validResponse).success).toBe(true);
   });
+
+  it("handles Preparing, InTransit, Delivered, and ResolutionPending statuses", () => {
+    expect(mapExchangeStatusInfo("Preparing", true).stepIndex).toBe(2);
+    expect(mapExchangeStatusInfo("InTransit", true).stepIndex).toBe(3);
+    expect(mapExchangeStatusInfo("Delivered", true).stepIndex).toBe(4);
+    expect(mapExchangeStatusInfo("ResolutionPending", true).stepIndex).toBe(-1);
+  });
 });
+
 

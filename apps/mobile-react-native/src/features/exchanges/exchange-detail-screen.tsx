@@ -29,6 +29,10 @@ import { exchangeSchema } from "./contracts";
 import { publicListing } from "../shelf/contracts";
 import { ExchangeProposalCard } from "./exchange-proposal-card";
 import { ExchangeActionsCard } from "./exchange-actions-card";
+import { ExchangeProgressStepper } from "./exchange-progress-stepper";
+import { ExchangeShippingCard } from "./exchange-shipping-card";
+import { ExchangeSettlementCard } from "./exchange-settlement-card";
+import { ExchangeSafetyTips } from "./exchange-safety-tips";
 import { ExchangeChatBox } from "./exchange-chat-box";
 import { MemberNavigation } from "../navigation/member-navigation";
 
@@ -333,7 +337,22 @@ export function ExchangeDetailScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* PHẦN TRÊN: ĐƠN TRAO ĐỔI (Proposal & Books Matching) */}
+          {/* 1. TIẾN TRÌNH CÁC BƯỚC TRAO ĐỔI (Progress Stepper) */}
+          <ExchangeProgressStepper
+            status={exchange.status}
+            isInitiator={isInitiator}
+            cancelReason={exchange.cancelReason}
+            rejectionReason={exchange.rejectionReason}
+            viewerRole={isInitiator ? "proposer" : "recipient"}
+          />
+
+          {/* 2. BIÊN NHẬN TẤT TOÁN TỰ ĐỘNG (Settlement Card khi Completed) */}
+          <ExchangeSettlementCard
+            exchange={exchange}
+            isInitiator={isInitiator}
+          />
+
+          {/* 3. PHIẾU ĐỀ NGHỊ ĐỔI SÁCH (Books Matching & Financial Diff) */}
           <ExchangeProposalCard
             exchange={exchange}
             isInitiator={isInitiator}
@@ -342,11 +361,21 @@ export function ExchangeDetailScreen() {
             recipientListing={recipientListingQuery.data}
           />
 
-          {/* HÀNH ĐỘNG TIẾP THEO (Accept, Reject, Cancel, Fund, Ship, Receive) */}
+          {/* 4. TIẾN TRÌNH GIAO NHẬN 2 CHIỀU ĐỘC LẬP (Shipping Tracking 2-Way) */}
+          <ExchangeShippingCard
+            exchange={exchange}
+            isInitiator={isInitiator}
+            partnerName={partnerName}
+          />
+
+          {/* 5. BẢNG HÀNH ĐỘNG TIẾP THEO (Accept, Reject, Counter, Fund, Ship, Receive, Complete, Dispute) */}
           <ExchangeActionsCard
             exchange={exchange}
             isInitiator={isInitiator}
           />
+
+          {/* 6. MẸO AN TOÀN KHI TRAO ĐỔI SÁCH (Safety Tips) */}
+          <ExchangeSafetyTips />
         </ScrollView>
       ) : (
         <View style={styles.chatContainer}>

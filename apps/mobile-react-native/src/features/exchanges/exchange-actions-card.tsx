@@ -21,6 +21,7 @@ import {
   exchangeReviewsResponseSchema,
   type CreateExchangeReview,
 } from "./contracts";
+import { ExchangeReviewsCard } from "./exchange-reviews-card";
 import { addressBook } from "../addresses/contracts";
 import { walletSummary } from "../wallet/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -718,111 +719,13 @@ export function ExchangeActionsCard({
 
       {/* State: COMPLETED (WITH REVIEWS) */}
       {exchange.status === "Completed" && (
-        <View style={styles.completedSection}>
-          <View style={styles.completedBox}>
-            <Icon name="check" size={20} color={stitchTokens.likeNewGreen} />
-            <View style={{ flex: 1 }}>
-              <AppText style={styles.completedTitle}>
-                Trao đổi hoàn tất thành công!
-              </AppText>
-              <AppText style={styles.completedSub}>
-                Cọc bảo chứng đã được tất toán hoàn trả về ví hai bên an toàn.
-              </AppText>
-            </View>
-          </View>
-
-          {/* Reviews Card Section */}
-          <View style={styles.reviewContainer}>
-            <View style={styles.reviewHeaderRow}>
-              <Icon name="star" size={16} color={stitchTokens.goldBronze} filled />
-              <AppText style={styles.reviewHeaderTitle}>Đánh giá giao dịch</AppText>
-            </View>
-
-            {reviewsQuery.data?.myReview ? (
-              <View style={styles.myReviewBox}>
-                <AppText style={styles.reviewSubTitle}>Đánh giá của bạn:</AppText>
-                <View style={styles.starsRow}>
-                  <AppText style={styles.starMetricLabel}>Chất lượng sách:</AppText>
-                  <View style={styles.starsDisplay}>
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Icon
-                        key={s}
-                        name="star"
-                        size={14}
-                        color={stitchTokens.goldBronze}
-                        filled={s <= reviewsQuery.data!.myReview!.bookRating}
-                      />
-                    ))}
-                  </View>
-                </View>
-                <View style={styles.starsRow}>
-                  <AppText style={styles.starMetricLabel}>Độ uy tín đối tác:</AppText>
-                  <View style={styles.starsDisplay}>
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Icon
-                        key={s}
-                        name="star"
-                        size={14}
-                        color={stitchTokens.goldBronze}
-                        filled={s <= reviewsQuery.data!.myReview!.partnerRating}
-                      />
-                    ))}
-                  </View>
-                </View>
-                {reviewsQuery.data.myReview.tags?.length ? (
-                  <View style={styles.tagsDisplayRow}>
-                    {reviewsQuery.data.myReview.tags.map((t) => (
-                      <View key={t} style={styles.tagBadge}>
-                        <AppText style={styles.tagBadgeText}>{t}</AppText>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
-                {reviewsQuery.data.myReview.comment ? (
-                  <AppText style={styles.commentText}>
-                    "{reviewsQuery.data.myReview.comment}"
-                  </AppText>
-                ) : null}
-              </View>
-            ) : reviewsQuery.data?.canReview ? (
-              <View style={styles.reviewPromptBox}>
-                <AppText style={styles.reviewPromptText}>
-                  Bạn có 7 ngày để đánh giá độ chuẩn xác của sách và sự uy tín của đối tác.
-                </AppText>
-                <Button
-                  title="⭐ Viết đánh giá giao dịch"
-                  wine
-                  onPress={() => setReviewModalOpen(true)}
-                />
-              </View>
-            ) : null}
-
-            {reviewsQuery.data?.partnerReview && (
-              <View style={styles.partnerReviewBox}>
-                <AppText style={styles.reviewSubTitle}>Đánh giá từ đối tác:</AppText>
-                <View style={styles.starsRow}>
-                  <AppText style={styles.starMetricLabel}>Chấm điểm sách của bạn:</AppText>
-                  <View style={styles.starsDisplay}>
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Icon
-                        key={s}
-                        name="star"
-                        size={14}
-                        color={stitchTokens.goldBronze}
-                        filled={s <= reviewsQuery.data!.partnerReview!.bookRating}
-                      />
-                    ))}
-                  </View>
-                </View>
-                {reviewsQuery.data.partnerReview.comment ? (
-                  <AppText style={styles.commentText}>
-                    "{reviewsQuery.data.partnerReview.comment}"
-                  </AppText>
-                ) : null}
-              </View>
-            )}
-          </View>
-        </View>
+        <ExchangeReviewsCard
+          exchange={exchange}
+          reviewsData={reviewsQuery.data}
+          isLoading={reviewsQuery.isLoading}
+          partnerName={isInitiator ? "Đối tác" : "Đối tác đề nghị"}
+          onOpenReviewModal={() => setReviewModalOpen(true)}
+        />
       )}
 
       {/* State: CANCELLED */}
