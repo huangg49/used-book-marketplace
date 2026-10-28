@@ -10,7 +10,7 @@ import { useSession } from '../hooks/useSession'
 import { formatRemaining, outcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import {
   AUCTION_MAX_SCHEDULE_EDITS, EVIDENCE_MIN_LENGTH, auctionPhase, getMyAuctionIntakes, listHandoverPoints, listMyAuctions,
-  submitIntakeEvidence, withdrawIntake, type MyAuctionItem, type MyIntake,
+  submitIntakeEvidence, withdrawIntake, getMyAuctionIntake, type MyAuctionItem, type MyIntake,
 } from '../services/auctions'
 import { ROUTES, formatVnd } from '../lib/routes'
 import styles from './MyAuctionsPage.module.css'
@@ -235,7 +235,7 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
   return (
     <li className={styles.intake}>
       <div>
-        <span className={styles.intakeState}>{INTAKE_STATES[intake.state]}</span>
+        <span className={styles.intakeState}>{INTAKE_STATES[intake.state] ?? intake.state}</span>
         <h3>{intake.title}</h3>
         <p>
           <MapPin size={13} aria-hidden="true" /> {pointName ?? 'Điểm đã chọn'}
@@ -287,41 +287,95 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
   )
 }
 
-function SellerIntakes({ enabled }: { enabled: boolean }) {
-  const queryClient = useQueryClient()
-  const intakes = useQuery({ queryKey: ['my-auction-intakes'], queryFn: getMyAuctionIntakes, enabled, retry: false, refetchInterval: 30_000 })
-  const points = useQuery({ queryKey: ['handover-points'], queryFn: listHandoverPoints, enabled, retry: false, staleTime: 60_000 })
-  if (!enabled || intakes.isPending) return null
-  if (intakes.isError)
+function SellerIntakes({
+  enabled,
+  userId,
+}: {
+  enabled: boolean;
+  userId: string | undefined;
+}) {
+  const [params, setParams] = useSearchParams();
+  const focusId = params.get("intakeId");
+  const queryClient = useQueryClient();
+  const focus = useQuery({
+    queryKey: ["my-auction-intakes", userId, "focus", focusId],
+    queryFn: () => getMyAuctionIntake(focusId!),
+    enabled: enabled && !!focusId,
+    retry: false,
+    refetchInterval: 30_000,
+  });
+  const intakes = useQuery({
+    queryKey: ["my-auction-intakes", userId],
+    queryFn: getMyAuctionIntakes,
+    enabled: enabled && !focusId,
+    retry: false,
+    refetchInterval: 30_000,
+  });
+  const points = useQuery({
+    queryKey: ["handover-points"],
+    queryFn: listHandoverPoints,
+    enabled,
+    retry: false,
+    staleTime: 60_000,
+  });
+  if (!enabled) return null;
+  const current = focusId ? focus : intakes;
+  if (current.isPending) return <p role="status">Đang mở lần gửi sách…</p>;
+  if (current.isError)
     return (
       <div className={styles.refreshError} role="alert">
         <p>Chưa tải được sách đang chờ mở phiên.</p>
-        <button type="button" onClick={() => void intakes.refetch()}><RefreshCw size={16} aria-hidden="true" /> Thử lại</button>
+        <button type="button" onClick={() => void current.refetch()}>
+          <RefreshCw size={16} aria-hidden="true" /> Thử lại
+        </button>
+        {focusId && <Link to="/my-auctions">Về danh sách đấu giá</Link>}
       </div>
-    )
-  const waiting = intakes.data.items.filter((i) => i.state in INTAKE_STATES)
-  const refresh = () => Promise.all([
-    queryClient.invalidateQueries({ queryKey: ['my-auction-intakes'] }),
-    queryClient.invalidateQueries({ queryKey: ['my-auctions'] }),
-    queryClient.invalidateQueries({ queryKey: ['my-listings'] }),
-  ])
+    );
+  const waiting = focusId
+    ? focus.data
+      ? [focus.data]
+      : []
+    : (intakes.data?.items ?? []).filter((i) => i.state in INTAKE_STATES);
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["my-auction-intakes"] }),
+      queryClient.invalidateQueries({ queryKey: ["my-auctions"] }),
+      queryClient.invalidateQueries({ queryKey: ["my-listings"] }),
+    ]);
   return (
     <section className={styles.intakes} aria-labelledby="intakes-title">
       <div className={styles.intakesHead}>
         <h2 id="intakes-title">Sách chờ đăng phiên</h2>
-        <Link to={ROUTES.auctionCreate()}><Plus size={15} aria-hidden="true" /> Đưa sách lên đấu giá</Link>
+        {focusId && (
+          <button type="button" onClick={() => setParams({})}>
+            Xem tất cả lần gửi
+          </button>
+        )}
+        <Link to={ROUTES.auctionCreate()}>
+          <Plus size={15} aria-hidden="true" /> Đưa sách lên đấu giá
+        </Link>
       </div>
       {waiting.length ? (
         <ul>
           {waiting.map((i) => (
-            <IntakeRow key={i.id} intake={i} pointName={points.data?.items.find((p) => p.id === i.pointId)?.name} onChanged={refresh} />
+            <IntakeRow
+              key={i.id}
+              intake={i}
+              pointName={
+                points.data?.items.find((p) => p.id === i.pointId)?.name
+              }
+              onChanged={refresh}
+            />
           ))}
         </ul>
       ) : (
-        <p className={styles.intakesEmpty}>Chưa có sách nào đang chờ. Chọn một cuốn đang bán trên kệ để đưa lên đấu giá.</p>
+        <p className={styles.intakesEmpty}>
+          Chưa có sách nào đang chờ. Chọn một cuốn đang bán trên kệ để đưa lên
+          đấu giá.
+        </p>
       )}
     </section>
-  )
+  );
 }
 
 export function MyAuctionsPage() {
@@ -374,7 +428,7 @@ export function MyAuctionsPage() {
           </button>
         ))}
       </nav>
-      <SellerIntakes enabled={!!userId && (view === 'all' || view === 'selling') && !cursor} />
+      <SellerIntakes userId={userId} enabled={!!userId && (view === 'all' || view === 'selling') && !cursor} />
       <div className={styles.results} aria-busy={query.isFetching}>
         {query.isPending && <p role="status">Đang tải các phiên của bạn…</p>}
         {query.isError && (

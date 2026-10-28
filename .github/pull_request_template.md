@@ -18,6 +18,12 @@ than checking boxes for work not performed.
 | | | |
 
 For UI: platform/device, observed behavior, screenshots/video and remaining native checks.
+For a cross-module UI journey, record the actual route from entry, not only the new screen:
+
+| Role | Entry/button | Preconditions/state | Command/result | Next step/Back |
+| --- | --- | --- | --- | --- |
+| | | | | |
+
 For permissions/session/transactions: relevant denial, replay and race cases.
 Docs/instructions: docs:check. Note contract/generated types or migration changes.
 

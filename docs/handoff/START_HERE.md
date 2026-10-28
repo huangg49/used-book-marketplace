@@ -1,7 +1,7 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
 Cập nhật28/10/2026 theo source tích hợp `7d92012` và các gói Member/review local đang
-bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.58.0** (191operations/29controllers); registry có52
+bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.59.0** (193operations/30controllers); registry có52
 migration MongoDB (đến0040), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
@@ -30,6 +30,7 @@ chưa có API/session hoặc parity với RN.
 | Auction/điểm | Intake/inspection/evidence, publish/schedule, bid/Auto/BuyNow, PointOrder/pay/code/handover, claim/return/settlement/incidents | Chỉ các ngoại lệ đã ghi được cấp phạm vi; source không là full acceptance |
 | Ví | Ledger/holds/history, topup simulator/VNPay sandbox/IPN/QueryDR/expiry | Chưa có withdrawal/payout production hoặc đối soát rút tiền đầy đủ |
 | Review/uy tín | Exchange/DirectOrder/PointOrder Completed, sửa/xóa48h, bảo mật hai chiều, reply chờ duyệt, Staff/Admin, public aggregate; web/RN | [ADR0052](../adr/0052-transaction-reviews-and-reputation.md), [evidence](../features/TRANSACTION_REVIEWS_REPORT.md); không tự mở completion/settlement hoặc native/human gate |
+| Việc đang chờ | Web/RN năm nhóm việc từ state thật, link đúng hồ sơ, RN đơn tải tiếp; Staff/Admin duyệt bài/đầu sách | [ADR0053](../adr/0053-state-derived-work-inbox.md), [evidence/phạm vi](../ui/WORK_INBOX_2026_10_28.md); không là tổng nghĩa vụ toàn sản phẩm, các bàn điểm/review vẫn riêng |
 | AI | Price assist và autofill ảnh ADR0048; autofill đã nối Member web | Cần cấu hình/hạn mức và kiểm provider/ảnh thật riêng; không suy mock test là live PASS |
 
 [ADR0050](../adr/0050-exchange-inspection-and-existing-obligations.md) sửa deadline

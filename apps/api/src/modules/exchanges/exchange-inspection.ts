@@ -62,18 +62,26 @@ export function inspectionMaySettle(exchange: ExchangeDoc, now: Date) {
 
 // Candidate discovery uses the same legacy fallback as commit-time decisions;
 // stale common deadlines must not fill a bounded batch with ineligible rows.
+export const participantInspectionDeadlineExpression = (
+  side: 'initiator' | 'recipient',
+) => ({
+  $cond: [
+    { $ne: [`$${side}ReceivedAt`, null] },
+    {
+      $ifNull: [
+        `$${side}InspectionDeadline`,
+        {
+          $max: [
+            { $add: [`$${side}ReceivedAt`, EXCHANGE_INSPECTION_MS] },
+            '$inspectionDeadline',
+          ],
+        },
+      ],
+    },
+    null,
+  ],
+});
 export function dueExchangeInspections(now: Date) {
-  const perSide = (side: string) => ({
-    $ifNull: [
-      `$${side}InspectionDeadline`,
-      {
-        $max: [
-          { $add: [`$${side}ReceivedAt`, EXCHANGE_INSPECTION_MS] },
-          '$inspectionDeadline',
-        ],
-      },
-    ],
-  });
   return {
     status: 'Delivered' as const,
     initiatorReceivedAt: { $ne: null },
@@ -82,7 +90,15 @@ export function dueExchangeInspections(now: Date) {
     disputedBy: null,
     disputeReason: null,
     $expr: {
-      $lte: [{ $max: [perSide('initiator'), perSide('recipient')] }, now],
+      $lte: [
+        {
+          $max: [
+            participantInspectionDeadlineExpression('initiator'),
+            participantInspectionDeadlineExpression('recipient'),
+          ],
+        },
+        now,
+      ],
     },
   };
 }

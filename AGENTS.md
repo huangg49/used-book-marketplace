@@ -42,6 +42,7 @@
 | UI RN/web/admin/Flutter | [UI skills workflow](docs/design/UI_SKILLS.md), [UI/UX Pro Max](.agents/skills/ui-ux-pro-max/SKILL.md) cho UX/stack; [Taste](.agents/skills/design-taste-frontend/SKILL.md) cho thiết kế web; [brief hiện hành](DESIGN.md), UI rules/components; [Impeccable workflow](docs/design/IMPECCABLE_WORKFLOW.md) khi design/critique/refine |
 | API, permission, session, persistence | [Skill API/Mongo](.agents/skills/latlai-api-mongo/SKILL.md), phần liên quan trong [DOMAIN_RULES](docs/architecture/DOMAIN_RULES.md) và ADR/feature được dẫn |
 | Review hoặc hoàn tất một gói | [Skill verify/handoff](.agents/skills/latlai-verify-handoff/SKILL.md), [CONTRIBUTING](CONTRIBUTING.md), [TEAMWORK](docs/TEAMWORK.md) |
+| Luồng phân mảnh hoặc UI đi qua nhiều module/vai trò | [Skill nối hành trình](.agents/skills/latlai-journey-integration/SKILL.md); dùng cùng skill UI/API liên quan, kiểm từ entry tới kết quả và bước tiếp |
 
 Skills là quy trình theo nhiệm vụ, không thay SRS/ADR và không mở rộng quyền thao tác.
 Không cần đọc mọi skill hoặc mọi báo cáo trong một lần sửa nhỏ.

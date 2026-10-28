@@ -1,5 +1,42 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## Việc đang chờ từ state thật và workflow nối hành trình — 28/10/2026
+
+- Owner duyệt gói nối việc cụ thể vào Việc của tôi và tiếp tục sau gián đoạn.
+  Nhánh `codex/actionable-work-inbox`, base `4b50db6`; commit subject
+  `feat(work-inbox): connect current obligations and exact member actions`.
+- Web/RN có năm nhóm việc từ nguồn thật, lý do/hạn/bên đang chờ và link hồ sơ.
+  RN đơn tải tiếp qua50 và có focus riêng; web/RN trả lời đơn bán qua API có sẵn,
+  intent giữ action/version/key qua mất ACK và navigation. Staff/Admin có hồ sơ
+  duyệt bài/đầu sách đúng quyền, loại self-review; bàn điểm/review vẫn riêng.
+- Contract0.59.0:193operations/30controllers, hai GET; không migration mới,
+  không sửa tiền/expiry/state machine hoặc GHN/carrier/Driver. LOCKED chỉ đọc
+  lane giao dịch, không Listings/AuctionIntakes. Empty/error/cursor theo phạm vi.
+  Thêm skill `latlai-journey-integration` và adapter Claude, nối AGENTS/workflow/
+  TEAMWORK/UI_SKILLS/PR template; giữ nguyên ba skill UI upstream.
+- [Nguồn, ma trận hành trình, evidence và giới hạn](../ui/WORK_INBOX_2026_10_28.md),
+  [ADR0053](../adr/0053-state-derived-work-inbox.md). PASS API232 unit (loại
+  carrier-adapter), HTTP/Mongo work8 + obligations21 + Exchange33; session42;
+  web251/RN161/Admin219. Typecheck/lint bốn app, API/web/Admin build, RN web
+  export, contract/routes, detector0findings, docs/checker và skill validator PASS.
+  Browser QA HTTP/Mongo+storage fake: accept/reject, lost ACK rồi quay lại,
+  hơn50đơn, focus intake ngoài50, lỗi/quyền và Staff/Admin; hồi quy Order/chat,
+  account bàn phím/wallet/profile/LOCKED. Chi tiết nền tảng ở báo cáo.
+- Hồi quy mở rộng `test:chat:browser` còn FAIL ở selector/kỳ vọng ExchangeOffer
+  và switch đã lệch UI hiện tại (source chat đó không đổi). Không nhận PASS chat
+  tổng; giữ kịch bản cũ ngoài ba trường quyền Order để không che finding. Owner
+  chat cần cập nhật harness và chạy lại trước nghiệm thu toàn luồng.
+- Native thiết bị/TalkBack/ARM/iOS, human UX và review tiền/quyền vẫn OPEN/NOT RUN.
+  Flutter scaffold, READINESS và phạm vi sau F2h giữ nguyên. Không chạy lại gate
+  import/failover/schema không bị đổi. API0.59 cần đi trước hoặc cùng client;
+  migration0040 vẫn là dependency của chuỗi review local trước đó.
+- QA đã dừng sau kiểm; Mongo chính không khởi động/reset/seed/migrate.
+  Fetch: main vẫn `7d92012`, PR mở0; bốn workflow main đọc được completed/success
+  tại SHA đó, không là CI của nhánh local này. Bảo toàn nhánh teammate vừa fetch,
+  không tự đồng bộ working tree. Chỉ commit local; chưa push/PR/merge/deploy.
+  Bước tiếp: review chuỗi local theo TEAMWORK, rồi teammate thử từ entry mà không
+  được chỉ từng nút trước khi tích hợp.
+
 ## Nối hành trình Member và vận hành — 28/10/2026
 
 - Owner yêu cầu cải thiện UX phân mảnh, xác nhận cả hai phía Member và Staff/

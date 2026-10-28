@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.58.0
+  version: 0.59.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -35,6 +35,80 @@ tags:
   - name: Auctions
   - name: Reviews
 paths:
+  /me/work-items:
+    get:
+      operationId: listMyWorkItems
+      x-locked-access: existing-obligations
+      tags: [Work inbox]
+      description: >-
+        Current participant obligations and unfinished books. LOCKED can read DirectOrders, Exchanges and AuctionOrders only. Other lanes return 403. No commands or funds are changed. Signed per-lane keyset cursor is bound to actor and lane.
+        Unexpired dated work first, undated work next, overdue work awaiting source update last.
+        Within a group ordered by relevant deadline or creation time/id; live pages may change.
+        Action means attention is needed, not authorization to execute a command.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: lane
+          schema:
+            type: string
+            enum: [DirectOrders, Exchanges, Listings, AuctionIntakes, AuctionOrders]
+            default: DirectOrders
+        - in: query
+          name: cursor
+          schema: {type: string, maxLength: 1000}
+        - in: query
+          name: limit
+          schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+      responses:
+        "200":
+          description: Current source state at serverTime. Empty applies only to this lane, not all project obligations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkItemsPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+  /operations/work-items:
+    get:
+      operationId: listOperationsWorkItems
+      tags: [Work inbox]
+      description: >-
+        Current independent moderation work. Active STAFF or ADMIN for ListingReview, active ADMIN for CatalogReview. Excludes own submissions. Point operations remain in their assigned queues; this is not an all-operations count. Signed per-lane keyset cursor is bound to actor and lane.
+        Ordered by submission or creation time/id; live pages may change.
+        Action means attention is needed, not authorization to execute a command.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: lane
+          schema:
+            type: string
+            enum: [ListingReview, CatalogReview]
+            default: ListingReview
+        - in: query
+          name: cursor
+          schema: {type: string, maxLength: 1000}
+        - in: query
+          name: limit
+          schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+      responses:
+        "200":
+          description: Current source state at serverTime. Empty applies only to this lane, not all project obligations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkItemsPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
   /health:
     get:
       operationId: getHealth
@@ -9795,6 +9869,36 @@ components:
           schema:
             $ref: "#/components/schemas/ListingApiError"
   schemas:
+    WorkItem:
+      type: object
+      additionalProperties: false
+      required: [id, target, targetId, sourceState, version, title, reason, attention, dueAt]
+      properties:
+        id: {type: string, format: uuid}
+        target:
+          type: string
+          enum: [DirectOrder, Exchange, Listing, AuctionIntake, Auction, ListingReview, CatalogReview]
+        targetId: {type: string, format: uuid}
+        sourceState: {type: string}
+        version: {type: integer, minimum: 1}
+        title: {type: string}
+        reason: {type: string}
+        attention: {type: string, enum: [Action, Waiting, Blocked]}
+        dueAt: {type: [string, "null"], format: date-time}
+    WorkItemsPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor, serverTime, lane]
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items: {$ref: "#/components/schemas/WorkItem"}
+        nextCursor: {type: [string, "null"]}
+        serverTime: {type: string, format: date-time}
+        lane:
+          type: string
+          enum: [DirectOrders, Exchanges, Listings, AuctionIntakes, AuctionOrders, ListingReview, CatalogReview]
     HealthResponse:
       type: object
       additionalProperties: false

@@ -16,6 +16,7 @@ import {
   payOrder,
 } from "../services/orders";
 import { OrderShipping } from "./OrderShipping";
+import { OrderResponse } from "../components/OrderResponse";
 import styles from "./DirectOrders.module.css";
 
 /** One order controller shared by the standalone page and the conversation sheet. */
@@ -271,6 +272,7 @@ function AuthenticatedOrderDetails({
               <p>Đồng hồ và trạng thái được kiểm tra tại máy chủ khi bạn thanh toán.</p>
             </section>
           )}
+          {o.role === 'Seller' && <OrderResponse key={o.id} order={o} onChanged={() => order.refetch()} />}
           {o.preparation && (
             <section className={styles.section}>
               <h3>{o.role === "Seller" ? "Chuẩn bị và bàn giao sách" : "Theo dõi gửi sách"}</h3>

@@ -15,8 +15,8 @@ quy tắc; test và review kiểm chứng kết quả, không bảo đảm tuy�
 
 | Công cụ | Cửa vào và cách kiểm tra |
 | --- | --- |
-| Codex | `AGENTS.md`; năm skill ở `.agents/skills/`. Dùng `$ui-ux-pro-max`, `$design-taste-frontend`, `$impeccable`, `$latlai-api-mongo` hoặc `$latlai-verify-handoff` khi cần gọi rõ tên. Kiểm tra danh sách skill của phiên; mở lại phiên nếu chưa nhận thay đổi. |
-| Claude Code | `CLAUDE.md` import `AGENTS.md`; `.claude/skills/` chứa năm adapter cùng tên. Kiểm tra `/context` và danh sách `/`; gọi `/ui-ux-pro-max` cho UX/stack, `/design-taste-frontend` cho thiết kế web, `/impeccable` khi critique/polish trong phạm vi đã giao. |
+| Codex | `AGENTS.md`; sáu skill ở `.agents/skills/`. Dùng `$ui-ux-pro-max`, `$design-taste-frontend`, `$impeccable`, `$latlai-api-mongo`, `$latlai-journey-integration` hoặc `$latlai-verify-handoff` khi cần gọi rõ tên. Kiểm tra danh sách skill của phiên; mở lại phiên nếu chưa nhận thay đổi. |
+| Claude Code | `CLAUDE.md` import `AGENTS.md`; `.claude/skills/` chứa sáu adapter cùng tên. Kiểm tra `/context` và danh sách `/`; gọi `/ui-ux-pro-max` cho UX/stack, `/design-taste-frontend` cho thiết kế web, `/impeccable` khi critique/polish, `/latlai-journey-integration` để nối hành trình trong phạm vi đã giao. |
 | Công cụ khác | Yêu cầu đọc `AGENTS.md`, rồi mở trực tiếp `SKILL.md` liên quan. Không mặc định nó tự nhận tên file hoặc cú pháp của Codex/Claude. |
 
 Chỉ file được commit và có trên nhánh người nhận mới đi theo clone/pull. Skill cá

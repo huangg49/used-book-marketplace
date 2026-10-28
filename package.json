@@ -46,6 +46,7 @@
     "dev:rn": "node scripts/dev-rn.mjs",
     "dev:user": "pnpm --filter @used-books/user-web dev",
     "test:dev": "node --test scripts/dev-*.test.mjs",
+    "test:work-inbox:browser": "node scripts/test-work-inbox.mjs",
     "build": "pnpm -r --if-present run build",
     "lint": "pnpm -r --if-present run lint",
     "typecheck": "pnpm -r --if-present run typecheck",

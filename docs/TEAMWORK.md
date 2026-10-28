@@ -44,7 +44,10 @@ Keep weekly tags such as `review-1`, `review-2`, and `demo-2026-10-15`. Every ta
 ## Bàn giao một hành trình sử dụng
 
 Chia người theo chức năng vẫn được; mỗi phần cần chỉ rõ cách nối vào sản phẩm.
-Dùng [bản đồ luồng và checklist](ui/JOURNEY_CLARITY_2026_10_28.md) khi bàn giao UI:
+Dùng [bản đồ luồng và checklist](ui/JOURNEY_CLARITY_2026_10_28.md) và
+[workflow nối hành trình](../.agents/skills/latlai-journey-integration/SKILL.md)
+khi bàn giao UI xuyên module. Mỗi issue/PR ghi vai trò → entry → điều kiện →
+command/kết quả → bước tiếp; chốt người tích hợp ở các giao điểm:
 
 - Ghi vai trò sử dụng và màn hình/nút đi vào, không chỉ URL của màn vừa viết.
 - Ghi điều kiện, thông báo khi bị chặn, nơi xem kết quả và bước tiếp theo.

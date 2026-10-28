@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { memberWork } from "../lib/member-journeys";
 import styles from "./MemberWorkspace.module.css";
+import { WorkInbox } from "../components/WorkInbox";
 export function AccountOverviewPage() {
   const auth = useSession();
   if (auth.status !== "authenticated") return null;
@@ -26,6 +27,7 @@ export function AccountOverviewPage() {
           quyền hiện tại.
         </p>
       )}
+      {user.roles.includes("MEMBER") && <WorkInbox key={user.id} ownerId={user.id} status={user.status} />}
       <div className={styles.columns}>
         <section aria-labelledby="work-continue">
           <h2 id="work-continue">Tiếp tục giao dịch</h2>

@@ -1,5 +1,39 @@
 // Generated from openapi.yaml. Run pnpm contract:generate.
 export interface paths {
+    "/me/work-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Current participant obligations and unfinished books. LOCKED can read DirectOrders, Exchanges and AuctionOrders only. Other lanes return 403. No commands or funds are changed. Signed per-lane keyset cursor is bound to actor and lane. Unexpired dated work first, undated work next, overdue work awaiting source update last. Within a group ordered by relevant deadline or creation time/id; live pages may change. Action means attention is needed, not authorization to execute a command. */
+        get: operations["listMyWorkItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/work-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Current independent moderation work. Active STAFF or ADMIN for ListingReview, active ADMIN for CatalogReview. Excludes own submissions. Point operations remain in their assigned queues; this is not an all-operations count. Signed per-lane keyset cursor is bound to actor and lane. Ordered by submission or creation time/id; live pages may change. Action means attention is needed, not authorization to execute a command. */
+        get: operations["listOperationsWorkItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -3188,6 +3222,30 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        WorkItem: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            target: "DirectOrder" | "Exchange" | "Listing" | "AuctionIntake" | "Auction" | "ListingReview" | "CatalogReview";
+            /** Format: uuid */
+            targetId: string;
+            sourceState: string;
+            version: number;
+            title: string;
+            reason: string;
+            /** @enum {string} */
+            attention: "Action" | "Waiting" | "Blocked";
+            /** Format: date-time */
+            dueAt: string | null;
+        };
+        WorkItemsPage: {
+            items: components["schemas"]["WorkItem"][];
+            nextCursor: string | null;
+            /** Format: date-time */
+            serverTime: string;
+            /** @enum {string} */
+            lane: "DirectOrders" | "Exchanges" | "Listings" | "AuctionIntakes" | "AuctionOrders" | "ListingReview" | "CatalogReview";
+        };
         HealthResponse: {
             /** @constant */
             status: "ok";
@@ -6117,6 +6175,60 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    listMyWorkItems: {
+        parameters: {
+            query?: {
+                lane?: "DirectOrders" | "Exchanges" | "Listings" | "AuctionIntakes" | "AuctionOrders";
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current source state at serverTime. Empty applies only to this lane, not all project obligations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkItemsPage"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
+    listOperationsWorkItems: {
+        parameters: {
+            query?: {
+                lane?: "ListingReview" | "CatalogReview";
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current source state at serverTime. Empty applies only to this lane, not all project obligations. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkItemsPage"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+        };
+    };
     getHealth: {
         parameters: {
             query?: never;

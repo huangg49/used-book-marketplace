@@ -19,6 +19,7 @@ import {
 import { MemberNavigation } from "../navigation/member-navigation";
 import { useNotifications } from "../notifications/notifications-model";
 import { HomeNotificationsModal } from "../shelf/home-components/home-notifications-modal";
+import { WorkInbox } from "./work-inbox";
 export function AccountScreen() {
   const { client, state } = useSession(),
     foreground = useForeground();
@@ -93,6 +94,7 @@ export function AccountScreen() {
             vẫn phụ thuộc quyền hiện tại; bạn không được mở giao dịch mới.
           </Notice>
         ) : null}
+        {user?.roles.includes("MEMBER") && <WorkInbox key={user.id} ownerId={user.id} status={user.status} />}
         <View>
           <AppText kind="heading" accessibilityRole="header">
             Tiếp tục giao dịch
