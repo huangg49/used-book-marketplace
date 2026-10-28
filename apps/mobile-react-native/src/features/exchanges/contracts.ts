@@ -105,6 +105,41 @@ export const exchangeReceiptSchema = z
   })
   .passthrough();
 
+export const exchangeReviewItemSchema = z.object({
+  id: uuid,
+  exchangeId: uuid,
+  authorId: uuid,
+  authorName: z.string().optional(),
+  targetUserId: uuid,
+  bookRating: z.number().int().min(1).max(5),
+  partnerRating: z.number().int().min(1).max(5),
+  tags: z.array(z.string()).optional(),
+  comment: z.string().nullable().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string().optional(),
+});
+
+export type ExchangeReviewItem = z.infer<typeof exchangeReviewItemSchema>;
+
+export const exchangeReviewsResponseSchema = z.object({
+  canReview: z.boolean(),
+  deadline: z.string().nullable().optional(),
+  myReview: exchangeReviewItemSchema.nullable().optional(),
+  partnerReview: exchangeReviewItemSchema.nullable().optional(),
+});
+
+export type ExchangeReviewsResponse = z.infer<typeof exchangeReviewsResponseSchema>;
+
+export const createExchangeReviewSchema = z.object({
+  bookRating: z.number().int().min(1).max(5),
+  partnerRating: z.number().int().min(1).max(5),
+  tags: z.array(z.string()).optional(),
+  comment: z.string().optional(),
+});
+
+export type CreateExchangeReview = z.infer<typeof createExchangeReviewSchema>;
+
+
 export function mapExchangeStatusInfo(
   status: ExchangeStatus,
   isInitiator: boolean,

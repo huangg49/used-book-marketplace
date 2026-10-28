@@ -1,16 +1,52 @@
 import React, { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import { router } from "expo-router";
 import { z } from "zod";
 import * as Crypto from "expo-crypto";
-import { AppModal, AppText, AppTextInput, Button, ConfirmDialog, Icon, Notice, presentError, space, stitchTokens } from "../../core/ui";
+import {
+  AppModal,
+  AppText,
+  AppTextInput,
+  Button,
+  ConfirmDialog,
+  Icon,
+  Notice,
+  presentError,
+  space,
+  stitchTokens,
+} from "../../core/ui";
+import { formatVnd } from "../../core/ui/format";
 import type { Exchange } from "./contracts";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  exchangeReviewsResponseSchema,
+  type CreateExchangeReview,
+} from "./contracts";
+import { addressBook } from "../addresses/contracts";
+import { walletSummary } from "../wallet/contracts";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
 
 interface ExchangeActionsCardProps {
   exchange: Exchange;
   isInitiator: boolean;
 }
+
+const REVIEW_TAGS_PRESET = [
+  "Sách đúng mô tả",
+  "Đóng gói cẩn thận",
+  "Giao dịch nhanh",
+  "Thân thiện",
+  "Sách mới đẹp",
+  "Đúng hẹn",
+];
+
+const CARRIER_OPTIONS = [
+  { code: "GHN", name: "Giao Hàng Nhanh (GHN)" },
+  { code: "GHTK", name: "Giao Hàng Tiết Kiệm (GHTK)" },
+  { code: "VIETTEL", name: "ViettelPost" },
+  { code: "VNPOST", name: "VNPost / Bưu điện" },
+  { code: "OTHER", name: "Khác" },
+];
 
 export function ExchangeActionsCard({
   exchange,
@@ -21,11 +57,15 @@ export function ExchangeActionsCard({
   const queryClient = useQueryClient();
 
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
-  const [confirmAcceptOpen, setConfirmAcceptOpen] = useState(false);
   const [confirmRejectOpen, setConfirmRejectOpen] = useState(false);
   const [confirmDisputeOpen, setConfirmDisputeOpen] = useState(false);
+  const [confirmCompleteOpen, setConfirmCompleteOpen] = useState(false);
   const [disputeReason, setDisputeReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Accept with address selector
+  const [acceptModalOpen, setAcceptModalOpen] = useState(false);
+  const [selectedAcceptAddressId, setSelectedAcceptAddressId] = useState<string | null>(null);
 
   // Counter offer state
   const [counterModalOpen, setCounterModalOpen] = useState(false);
@@ -42,12 +82,66 @@ export function ExchangeActionsCard({
   );
   const [counterNote, setCounterNote] = useState("");
 
+  // Shipment state
+  const [shipModalOpen, setShipModalOpen] = useState(false);
+  const [shipMethod, setShipMethod] = useState<"carrier" | "direct">("carrier");
+  const [shipCarrierCode, setShipCarrierCode] = useState<string>("GHN");
+  const [shipCustomCarrier, setShipCustomCarrier] = useState("");
+  const [shipTrackingCode, setShipTrackingCode] = useState("");
+  const [shipMeetupLocation, setShipMeetupLocation] = useState("");
+  const [shipNotes, setShipNotes] = useState("");
+  const [shipFormError, setShipFormError] = useState<string | null>(null);
+
+  // Review state
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewBookRating, setReviewBookRating] = useState(5);
+  const [reviewPartnerRating, setReviewPartnerRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [selectedReviewTags, setSelectedReviewTags] = useState<string[]>([
+    "Sách đúng mô tả",
+    "Đóng gói cẩn thận",
+  ]);
+
+  // Queries
+  const walletQuery = useQuery({
+    queryKey: ["wallet", currentUserId],
+    queryFn: () => client.request("/me/wallet", walletSummary),
+    enabled:
+      state.status === "authenticated" &&
+      exchange.status === "AcceptedAwaitingFunding",
+  });
+
+  const addressesQuery = useQuery({
+    queryKey: ["my-addresses", currentUserId],
+    queryFn: () => client.request("/me/addresses", addressBook),
+    enabled:
+      state.status === "authenticated" &&
+      !isInitiator &&
+      exchange.status === "Proposed",
+  });
+
+  const reviewsQuery = useQuery({
+    queryKey: ["exchange-reviews", exchange.id],
+    queryFn: () =>
+      client.request(
+        `/exchanges/${exchange.id}/reviews`,
+        exchangeReviewsResponseSchema
+      ),
+    enabled: state.status === "authenticated" && exchange.status === "Completed",
+    refetchInterval: 10000,
+  });
+
   const invalidate = () => {
     setActionError(null);
     void queryClient.invalidateQueries({ queryKey: ["exchange", exchange.id] });
     void queryClient.invalidateQueries({ queryKey: ["my-exchanges"] });
-    void queryClient.invalidateQueries({ queryKey: ["exchange-messages", exchange.id] });
+    void queryClient.invalidateQueries({
+      queryKey: ["exchange-messages", exchange.id],
+    });
     void queryClient.invalidateQueries({ queryKey: ["wallet"] });
+    void queryClient.invalidateQueries({
+      queryKey: ["exchange-reviews", exchange.id],
+    });
   };
 
   const cancelMutation = useMutation({
@@ -62,13 +156,19 @@ export function ExchangeActionsCard({
   });
 
   const acceptMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (deliveryAddressId?: string | null) =>
       client.request(`/exchanges/${exchange.id}/accept`, z.unknown(), {
         method: "POST",
         headers: { "Idempotency-Key": Crypto.randomUUID() },
-        body: JSON.stringify({ revision: exchange.revision }),
+        body: JSON.stringify({
+          revision: exchange.revision,
+          ...(deliveryAddressId ? { deliveryAddressId } : {}),
+        }),
       }),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      setAcceptModalOpen(false);
+      invalidate();
+    },
     onError: (err) => setActionError(presentError(err).message),
   });
 
@@ -93,10 +193,16 @@ export function ExchangeActionsCard({
 
       if (counterSide === "me") {
         diffPayer = isInitiator ? "initiator" : "recipient";
-        diffAmount = Math.max(0, parseInt(counterAmountStr.replace(/\D/g, ""), 10) || 0);
+        diffAmount = Math.max(
+          0,
+          parseInt(counterAmountStr.replace(/\D/g, ""), 10) || 0
+        );
       } else if (counterSide === "partner") {
         diffPayer = isInitiator ? "recipient" : "initiator";
-        diffAmount = Math.max(0, parseInt(counterAmountStr.replace(/\D/g, ""), 10) || 0);
+        diffAmount = Math.max(
+          0,
+          parseInt(counterAmountStr.replace(/\D/g, ""), 10) || 0
+        );
       }
 
       return client.request(`/exchanges/${exchange.id}/counter`, z.unknown(), {
@@ -128,22 +234,43 @@ export function ExchangeActionsCard({
   });
 
   const shipMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (data: {
+      method: "carrier" | "direct";
+      carrierCode?: string;
+      carrierName?: string;
+      trackingCode?: string;
+      meetupLocation?: string;
+      notes?: string;
+    }) =>
       client.request(`/exchanges/${exchange.id}/ship`, z.unknown(), {
         method: "POST",
         headers: { "Idempotency-Key": Crypto.randomUUID() },
         body: JSON.stringify({
           expectedVersion: exchange.revision,
-          method: "direct",
+          ...data,
         }),
       }),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      setShipModalOpen(false);
+      invalidate();
+    },
     onError: (err) => setActionError(presentError(err).message),
   });
 
   const receiveMutation = useMutation({
     mutationFn: () =>
       client.request(`/exchanges/${exchange.id}/receive`, z.unknown(), {
+        method: "POST",
+        headers: { "Idempotency-Key": Crypto.randomUUID() },
+        body: JSON.stringify({ expectedVersion: exchange.revision }),
+      }),
+    onSuccess: invalidate,
+    onError: (err) => setActionError(presentError(err).message),
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: () =>
+      client.request(`/exchanges/${exchange.id}/complete`, z.unknown(), {
         method: "POST",
         headers: { "Idempotency-Key": Crypto.randomUUID() },
         body: JSON.stringify({ expectedVersion: exchange.revision }),
@@ -169,6 +296,19 @@ export function ExchangeActionsCard({
     onError: (err) => setActionError(presentError(err).message),
   });
 
+  const reviewMutation = useMutation({
+    mutationFn: (body: CreateExchangeReview) =>
+      client.request(`/exchanges/${exchange.id}/reviews`, z.unknown(), {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      setReviewModalOpen(false);
+      invalidate();
+    },
+    onError: (err) => setActionError(presentError(err).message),
+  });
+
   const isBusy =
     cancelMutation.isPending ||
     acceptMutation.isPending ||
@@ -177,7 +317,9 @@ export function ExchangeActionsCard({
     fundMutation.isPending ||
     shipMutation.isPending ||
     receiveMutation.isPending ||
-    disputeMutation.isPending;
+    completeMutation.isPending ||
+    disputeMutation.isPending ||
+    reviewMutation.isPending;
 
   const isFundedByMe = isInitiator
     ? Boolean(exchange.initiatorFundedAt)
@@ -191,6 +333,10 @@ export function ExchangeActionsCard({
     ? Boolean(exchange.initiatorReceivedAt)
     : Boolean(exchange.recipientReceivedAt);
 
+  const isCompletedByMe = isInitiator
+    ? Boolean(exchange.initiatorCompletedAt)
+    : Boolean(exchange.recipientCompletedAt);
+
   const isAwaitingMyResponse = exchange.lastProposedById
     ? exchange.lastProposedById !== currentUserId
     : !isInitiator;
@@ -198,10 +344,78 @@ export function ExchangeActionsCard({
   const diffPayerLabel =
     exchange.diffAmount === 0 || !exchange.diffPayerId
       ? "Đổi ngang giá (không bù tiền)"
-      : ((isInitiator && exchange.diffPayerId === exchange.initiatorId) ||
-         (!isInitiator && exchange.diffPayerId === exchange.recipientId))
-        ? `Bạn bù thêm ${exchange.diffAmount.toLocaleString("vi-VN")} ₫`
-        : `Đối tác bù thêm ${exchange.diffAmount.toLocaleString("vi-VN")} ₫`;
+      : (isInitiator && exchange.diffPayerId === exchange.initiatorId) ||
+        (!isInitiator && exchange.diffPayerId === exchange.recipientId)
+      ? `Bạn bù thêm ${exchange.diffAmount.toLocaleString("vi-VN")} ₫`
+      : `Đối tác bù thêm ${exchange.diffAmount.toLocaleString("vi-VN")} ₫`;
+
+  // Financial deposit calculation
+  const baseDeposit = isInitiator
+    ? exchange.initiatorDeposit
+    : exchange.recipientDeposit;
+  const diffRequired =
+    exchange.diffPayerId === currentUserId ? exchange.diffAmount : 0;
+  const amountToPay = baseDeposit + diffRequired;
+  const walletAvailable = walletQuery.data?.available ?? 0;
+  const hasInsufficientFunds =
+    exchange.status === "AcceptedAwaitingFunding" &&
+    !isFundedByMe &&
+    walletQuery.data != null &&
+    walletAvailable < amountToPay;
+
+  const defaultAddressId =
+    addressesQuery.data?.items?.find((a) => a.isDefault)?.id ??
+    addressesQuery.data?.items?.[0]?.id ??
+    null;
+  const effectiveAcceptAddressId = selectedAcceptAddressId ?? defaultAddressId;
+
+  const toggleReviewTag = (tag: string) => {
+    setSelectedReviewTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleShipSubmit = () => {
+    setShipFormError(null);
+    if (shipMethod === "carrier") {
+      if (!shipTrackingCode.trim()) {
+        setShipFormError("Vui lòng nhập mã vận đơn từ bưu cục hoặc ứng dụng giao hàng.");
+        return;
+      }
+      const selectedOption = CARRIER_OPTIONS.find((c) => c.code === shipCarrierCode);
+      const carrierName =
+        shipCarrierCode === "OTHER"
+          ? shipCustomCarrier.trim() || "Đơn vị vận chuyển khác"
+          : selectedOption?.name ?? shipCarrierCode;
+
+      shipMutation.mutate({
+        method: "carrier",
+        carrierCode: shipCarrierCode,
+        carrierName,
+        trackingCode: shipTrackingCode.trim(),
+        notes: shipNotes.trim() || undefined,
+      });
+    } else {
+      if (!shipMeetupLocation.trim()) {
+        setShipFormError("Vui lòng nhập địa điểm hẹn gặp để bàn giao sách.");
+        return;
+      }
+      shipMutation.mutate({
+        method: "direct",
+        meetupLocation: shipMeetupLocation.trim(),
+        notes: shipNotes.trim() || undefined,
+      });
+    }
+  };
+
+  const handleReviewSubmit = () => {
+    reviewMutation.mutate({
+      bookRating: reviewBookRating,
+      partnerRating: reviewPartnerRating,
+      tags: selectedReviewTags,
+      comment: reviewComment.trim() || undefined,
+    });
+  };
 
   return (
     <View style={styles.card}>
@@ -224,7 +438,8 @@ export function ExchangeActionsCard({
               <View style={styles.proposalNoticeBox}>
                 <Icon name="tag" size={14} color={stitchTokens.wineDark} />
                 <AppText style={styles.proposalNoticeText}>
-                  Mức bù hiện tại: <AppText style={{ fontWeight: "700" }}>{diffPayerLabel}</AppText>
+                  Mức bù hiện tại:{" "}
+                  <AppText style={{ fontWeight: "700" }}>{diffPayerLabel}</AppText>
                 </AppText>
               </View>
               <AppText style={styles.hintText}>
@@ -244,7 +459,7 @@ export function ExchangeActionsCard({
                     title="Đồng ý đổi"
                     wine
                     busy={isBusy}
-                    onPress={() => setConfirmAcceptOpen(true)}
+                    onPress={() => setAcceptModalOpen(true)}
                   />
                 </View>
               </View>
@@ -260,7 +475,8 @@ export function ExchangeActionsCard({
               <View style={styles.proposalNoticeBox}>
                 <Icon name="tag" size={14} color={stitchTokens.wineDark} />
                 <AppText style={styles.proposalNoticeText}>
-                  Mức bù bạn đề xuất: <AppText style={{ fontWeight: "700" }}>{diffPayerLabel}</AppText>
+                  Mức bù bạn đề xuất:{" "}
+                  <AppText style={{ fontWeight: "700" }}>{diffPayerLabel}</AppText>
                 </AppText>
               </View>
               <AppText style={styles.hintText}>
@@ -292,11 +508,11 @@ export function ExchangeActionsCard({
               <View style={styles.successNote}>
                 <Icon name="check" size={16} color={stitchTokens.likeNewGreen} />
                 <AppText style={styles.successNoteText}>
-                  Bạn đã hoàn tất đặt cọc bảo chứng. Đang chờ đối tác cọc để chuyển sang giai đoạn gửi sách.
+                  Bạn đã hoàn tất đặt cọc bảo chứng ({formatVnd(amountToPay)}). Đang chờ đối tác cọc để chuyển sang giai đoạn gửi sách.
                 </AppText>
               </View>
               <AppText style={styles.hintText}>
-                Nếu đối tác không cọc hoặc bạn muốn dừng giao dịch trước khi bắt đầu gửi sách, bạn vẫn có thể hủy. Tiền cọc sẽ được hoàn lại 100% về ví.
+                Nếu đối tác không cọc hoặc bạn muốn dừng giao dịch trước khi bắt đầu gửi sách, bạn vẫn có thể hủy. Tiền cọc sẽ được hoàn lại 100% về ví ngay lập tức.
               </AppText>
               <Button
                 title="Hủy giao dịch trao đổi"
@@ -308,13 +524,52 @@ export function ExchangeActionsCard({
             </View>
           ) : (
             <View style={styles.buttonGroup}>
+              {/* Wallet funding summary box */}
+              <View style={styles.fundingSummaryCard}>
+                <View style={styles.fundingSummaryRow}>
+                  <AppText style={styles.fundingSummaryLabel}>Tiền cọc cần nạp:</AppText>
+                  <AppText style={styles.fundingSummaryAmount}>
+                    {formatVnd(amountToPay)}
+                  </AppText>
+                </View>
+                <View style={styles.fundingSummaryRow}>
+                  <AppText style={styles.fundingSummarySubLabel}>
+                    Số dư ví khả dụng:
+                  </AppText>
+                  <AppText style={styles.fundingSummaryWallet}>
+                    {formatVnd(walletAvailable)}
+                  </AppText>
+                </View>
+              </View>
+
+              {hasInsufficientFunds && (
+                <View style={styles.insufficientBox}>
+                  <Notice tone="error">
+                    Số dư ví của bạn không đủ để đặt cọc (còn thiếu{" "}
+                    {formatVnd(amountToPay - walletAvailable)}). Vui lòng nạp thêm tiền
+                    vào ví để tiếp tục.
+                  </Notice>
+                  <Button
+                    title="Nạp tiền vào ví ngay ↗"
+                    secondary
+                    onPress={() => router.push("/wallet")}
+                  />
+                </View>
+              )}
+
               <AppText style={styles.hintText}>
-                Cả hai bên đã đồng thuận. Hãy đặt cọc bảo chứng từ số dư ví để kích hoạt quy trình giao nhận. Nếu đổi ý, bạn có thể hủy giao dịch.
+                Cả hai bên đã đồng thuận. Hãy đặt cọc bảo chứng từ số dư ví để kích hoạt quy trình giao nhận. Tiền cọc được khóa an toàn trên hệ thống.
               </AppText>
+
               <Button
-                title="Đặt cọc bảo chứng ngay"
+                title={
+                  fundMutation.isPending
+                    ? "Đang xử lý đặt cọc..."
+                    : `Đặt cọc bảo chứng ngay (${formatVnd(amountToPay)})`
+                }
                 wine
                 busy={isBusy}
+                disabled={hasInsufficientFunds || isBusy}
                 onPress={() => fundMutation.mutate()}
               />
               <Button
@@ -335,7 +590,8 @@ export function ExchangeActionsCard({
             <View style={styles.deadlineContainer}>
               <Icon name="clock" size={14} color={stitchTokens.wineDark} />
               <AppText style={styles.deadlineText}>
-                Hạn chót gửi sách: {new Date(exchange.shippingDeadline).toLocaleString("vi-VN")} (72 giờ)
+                Hạn chót gửi sách:{" "}
+                {new Date(exchange.shippingDeadline).toLocaleString("vi-VN")} (72 giờ)
               </AppText>
             </View>
           )}
@@ -344,19 +600,22 @@ export function ExchangeActionsCard({
             <View style={styles.successNote}>
               <Icon name="check" size={16} color={stitchTokens.likeNewGreen} />
               <AppText style={styles.successNoteText}>
-                Bạn đã báo gửi sách thành công. Vui lòng giữ mã vận đơn hoặc liên hệ đối tác qua khung chat dưới.
+                Bạn đã báo gửi sách thành công. Mã vận đơn đã được lưu trên hệ thống để đối tác cùng theo dõi.
               </AppText>
             </View>
           ) : (
             <View style={styles.buttonGroup}>
               <AppText style={styles.hintText}>
-                Hãy đóng gói cẩn thận và gửi sách đến địa chỉ của đối tác theo thỏa thuận. Quá 72h không gửi đơn sẽ bị hủy hoặc chuyển sang khiếu nại.
+                Cả hai bên đã hoàn tất đặt cọc. Hãy đóng gói cẩn thận và gửi sách đến địa chỉ của đối tác theo thỏa thuận, sau đó cập nhật mã vận đơn dưới đây.
               </AppText>
               <Button
-                title="Xác nhận tôi đã gửi sách"
+                title="📦 Báo gửi sách & Nhập mã vận đơn"
                 wine
                 busy={isBusy}
-                onPress={() => shipMutation.mutate()}
+                onPress={() => {
+                  setShipFormError(null);
+                  setShipModalOpen(true);
+                }}
               />
             </View>
           )}
@@ -370,13 +629,13 @@ export function ExchangeActionsCard({
             <View style={styles.successNote}>
               <Icon name="check" size={16} color={stitchTokens.likeNewGreen} />
               <AppText style={styles.successNoteText}>
-                Bạn đã nhận được sách! Đơn hàng sẽ hoàn tất sau thời gian đồng kiểm 48h.
+                Bạn đã nhận được sách! Hãy kiểm tra kỹ các trang và chất lượng sách.
               </AppText>
             </View>
           ) : (
             <View style={styles.buttonGroup}>
               <AppText style={styles.hintText}>
-                Sách đang trên đường giao đến bạn. Khi nhận sách và kiểm tra đúng mô tả, hãy bấm nút dưới.
+                Sách đang trên đường giao đến bạn. Khi nhận sách và kiểm tra đúng mô tả, hãy bấm nút xác nhận dưới đây.
               </AppText>
               <Button
                 title="Tôi đã nhận được sách an toàn"
@@ -396,21 +655,46 @@ export function ExchangeActionsCard({
         </View>
       )}
 
-      {/* State: DELIVERED (INSPECTING OR DISPUTE) */}
+      {/* State: DELIVERED (INSPECTING, COMPLETE EARLY OR DISPUTE) */}
       {exchange.status === "Delivered" && (
         <View style={styles.actionsBox}>
-          <View style={styles.buttonGroup}>
-            <AppText style={styles.hintText}>
-              Sách đã được giao. Hai bên có 48 giờ để kiểm tra tình trạng sách trước khi hệ thống tự động tất toán hoàn cọc.
-            </AppText>
-            <Button
-              title="Báo cáo khiếu nại sách"
-              secondary
-              wine
-              busy={isBusy}
-              onPress={() => setConfirmDisputeOpen(true)}
-            />
-          </View>
+          {exchange.inspectionDeadline && (
+            <View style={styles.deadlineContainer}>
+              <Icon name="clock" size={14} color={stitchTokens.wineDark} />
+              <AppText style={styles.deadlineText}>
+                Thời hạn đồng kiểm sách:{" "}
+                {new Date(exchange.inspectionDeadline).toLocaleString("vi-VN")} (48 giờ)
+              </AppText>
+            </View>
+          )}
+
+          {isCompletedByMe ? (
+            <View style={styles.successNote}>
+              <Icon name="check" size={16} color={stitchTokens.likeNewGreen} />
+              <AppText style={styles.successNoteText}>
+                Bạn đã xác nhận nghiệm thu sách đạt yêu cầu. Đơn hàng sẽ hoàn tất ngay khi đối tác cũng xác nhận hoặc sau khi hết hạn 48 giờ.
+              </AppText>
+            </View>
+          ) : (
+            <View style={styles.buttonGroup}>
+              <AppText style={styles.hintText}>
+                Cả hai bên đều đã nhận được sách. Bạn có 48 giờ để kiểm tra thực tế. Nếu hoàn toàn hài lòng, bạn có thể bấm xác nhận nghiệm thu để tất toán và hoàn cọc ngay.
+              </AppText>
+              <Button
+                title="✨ Xác nhận hài lòng & Nghiệm thu sách"
+                wine
+                busy={isBusy}
+                onPress={() => setConfirmCompleteOpen(true)}
+              />
+              <Button
+                title="Báo cáo khiếu nại sách"
+                secondary
+                wine
+                busy={isBusy}
+                onPress={() => setConfirmDisputeOpen(true)}
+              />
+            </View>
+          )}
         </View>
       )}
 
@@ -421,7 +705,9 @@ export function ExchangeActionsCard({
           <View style={{ flex: 1, gap: 4 }}>
             <AppText style={styles.disputeTitle}>Đang giải quyết khiếu nại</AppText>
             <AppText style={styles.disputeReason}>
-              Lý do: {exchange.disputeReason || "Phát sinh khiếu nại trong giao nhận hoặc đồng kiểm."}
+              Lý do:{" "}
+              {exchange.disputeReason ||
+                "Phát sinh khiếu nại trong giao nhận hoặc đồng kiểm."}
             </AppText>
             <AppText style={styles.disputeHint}>
               Quy trình tự động tất toán 48 giờ đã được tạm dừng và tiền cọc được đóng băng bảo vệ. Ban quản trị Lật Lại đang tiếp nhận hỗ trợ hai bên.
@@ -430,15 +716,111 @@ export function ExchangeActionsCard({
         </View>
       )}
 
-      {/* State: COMPLETED */}
+      {/* State: COMPLETED (WITH REVIEWS) */}
       {exchange.status === "Completed" && (
-        <View style={styles.completedBox}>
-          <Icon name="check" size={20} color={stitchTokens.likeNewGreen} />
-          <View style={{ flex: 1 }}>
-            <AppText style={styles.completedTitle}>Trao đổi hoàn tất thành công!</AppText>
-            <AppText style={styles.completedSub}>
-              Cọc bảo chứng đã được hoàn trả về ví hai bên an toàn.
-            </AppText>
+        <View style={styles.completedSection}>
+          <View style={styles.completedBox}>
+            <Icon name="check" size={20} color={stitchTokens.likeNewGreen} />
+            <View style={{ flex: 1 }}>
+              <AppText style={styles.completedTitle}>
+                Trao đổi hoàn tất thành công!
+              </AppText>
+              <AppText style={styles.completedSub}>
+                Cọc bảo chứng đã được tất toán hoàn trả về ví hai bên an toàn.
+              </AppText>
+            </View>
+          </View>
+
+          {/* Reviews Card Section */}
+          <View style={styles.reviewContainer}>
+            <View style={styles.reviewHeaderRow}>
+              <Icon name="star" size={16} color={stitchTokens.goldBronze} filled />
+              <AppText style={styles.reviewHeaderTitle}>Đánh giá giao dịch</AppText>
+            </View>
+
+            {reviewsQuery.data?.myReview ? (
+              <View style={styles.myReviewBox}>
+                <AppText style={styles.reviewSubTitle}>Đánh giá của bạn:</AppText>
+                <View style={styles.starsRow}>
+                  <AppText style={styles.starMetricLabel}>Chất lượng sách:</AppText>
+                  <View style={styles.starsDisplay}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Icon
+                        key={s}
+                        name="star"
+                        size={14}
+                        color={stitchTokens.goldBronze}
+                        filled={s <= reviewsQuery.data!.myReview!.bookRating}
+                      />
+                    ))}
+                  </View>
+                </View>
+                <View style={styles.starsRow}>
+                  <AppText style={styles.starMetricLabel}>Độ uy tín đối tác:</AppText>
+                  <View style={styles.starsDisplay}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Icon
+                        key={s}
+                        name="star"
+                        size={14}
+                        color={stitchTokens.goldBronze}
+                        filled={s <= reviewsQuery.data!.myReview!.partnerRating}
+                      />
+                    ))}
+                  </View>
+                </View>
+                {reviewsQuery.data.myReview.tags?.length ? (
+                  <View style={styles.tagsDisplayRow}>
+                    {reviewsQuery.data.myReview.tags.map((t) => (
+                      <View key={t} style={styles.tagBadge}>
+                        <AppText style={styles.tagBadgeText}>{t}</AppText>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+                {reviewsQuery.data.myReview.comment ? (
+                  <AppText style={styles.commentText}>
+                    "{reviewsQuery.data.myReview.comment}"
+                  </AppText>
+                ) : null}
+              </View>
+            ) : reviewsQuery.data?.canReview ? (
+              <View style={styles.reviewPromptBox}>
+                <AppText style={styles.reviewPromptText}>
+                  Bạn có 7 ngày để đánh giá độ chuẩn xác của sách và sự uy tín của đối tác.
+                </AppText>
+                <Button
+                  title="⭐ Viết đánh giá giao dịch"
+                  wine
+                  onPress={() => setReviewModalOpen(true)}
+                />
+              </View>
+            ) : null}
+
+            {reviewsQuery.data?.partnerReview && (
+              <View style={styles.partnerReviewBox}>
+                <AppText style={styles.reviewSubTitle}>Đánh giá từ đối tác:</AppText>
+                <View style={styles.starsRow}>
+                  <AppText style={styles.starMetricLabel}>Chấm điểm sách của bạn:</AppText>
+                  <View style={styles.starsDisplay}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Icon
+                        key={s}
+                        name="star"
+                        size={14}
+                        color={stitchTokens.goldBronze}
+                        filled={s <= reviewsQuery.data!.partnerReview!.bookRating}
+                      />
+                    ))}
+                  </View>
+                </View>
+                {reviewsQuery.data.partnerReview.comment ? (
+                  <AppText style={styles.commentText}>
+                    "{reviewsQuery.data.partnerReview.comment}"
+                  </AppText>
+                ) : null}
+              </View>
+            )}
           </View>
         </View>
       )}
@@ -472,18 +854,6 @@ export function ExchangeActionsCard({
       />
 
       <ConfirmDialog
-        visible={confirmAcceptOpen}
-        title="Đồng ý trao đổi sách?"
-        message="Khi đồng ý, bạn và đối tác sẽ tiến hành đặt cọc bảo chứng và giao nhận sách theo địa chỉ đã chọn."
-        confirmLabel="Đồng ý ngay"
-        onCancel={() => setConfirmAcceptOpen(false)}
-        onConfirm={() => {
-          setConfirmAcceptOpen(false);
-          acceptMutation.mutate();
-        }}
-      />
-
-      <ConfirmDialog
         visible={confirmRejectOpen}
         title="Từ chối đề nghị?"
         message="Từ chối đề nghị hoán đổi này từ đối tác."
@@ -496,6 +866,18 @@ export function ExchangeActionsCard({
       />
 
       <ConfirmDialog
+        visible={confirmCompleteOpen}
+        title="Nghiệm thu sách hoàn tất?"
+        message="Bạn xác nhận sách đã nhận hoàn toàn khớp với mô tả và đồng ý tất toán hoàn cọc ngay lập tức?"
+        confirmLabel="Xác nhận nghiệm thu ngay"
+        onCancel={() => setConfirmCompleteOpen(false)}
+        onConfirm={() => {
+          setConfirmCompleteOpen(false);
+          completeMutation.mutate();
+        }}
+      />
+
+      <ConfirmDialog
         visible={confirmDisputeOpen}
         title="Báo cáo khiếu nại giao dịch?"
         message="Quy trình tất toán 48h sẽ tạm dừng ngay lập tức và tiền cọc được giữ an toàn. Bạn có chắc muốn gửi khiếu nại cho đơn hàng này?"
@@ -504,11 +886,111 @@ export function ExchangeActionsCard({
         onCancel={() => setConfirmDisputeOpen(false)}
         onConfirm={() => {
           setConfirmDisputeOpen(false);
-          disputeMutation.mutate(disputeReason.trim() || "Sách không đúng như mô tả khi nhận");
+          disputeMutation.mutate(
+            disputeReason.trim() || "Sách không đúng như mô tả khi nhận"
+          );
         }}
       />
 
-      {/* Modal Đề xuất lại mức bù tiền */}
+      {/* Modal 1: Đồng ý đổi sách kèm chọn địa chỉ nhận */}
+      <AppModal
+        visible={acceptModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAcceptModalOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Icon name="check" size={18} color={stitchTokens.wineDark} />
+                <AppText style={styles.modalTitle}>Xác nhận đồng ý đổi sách</AppText>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Đóng modal"
+                onPress={() => setAcceptModalOpen(false)}
+              >
+                <Icon name="close" size={20} color={stitchTokens.darkWood} />
+              </Pressable>
+            </View>
+
+            <AppText style={styles.modalSub}>
+              Khi đồng ý, bài đăng của bạn sẽ tạm khóa khỏi sàn để chuẩn bị giao dịch. Vui lòng chọn địa chỉ để đối tác gửi sách cho bạn:
+            </AppText>
+
+            {/* Address Selection */}
+            {addressesQuery.data?.items?.length ? (
+              <View style={{ gap: 8 }}>
+                {addressesQuery.data.items.map((addr) => {
+                  const isSelected = addr.id === effectiveAcceptAddressId;
+                  return (
+                    <Pressable
+                      key={addr.id}
+                      style={[
+                        styles.sideOptionItem,
+                        isSelected && styles.sideOptionItemActive,
+                      ]}
+                      onPress={() => setSelectedAcceptAddressId(addr.id)}
+                    >
+                      <View
+                        style={[
+                          styles.radioCircle,
+                          isSelected && styles.radioCircleActive,
+                        ]}
+                      />
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <AppText style={styles.sideOptionTitle}>
+                          {addr.recipientName} ({addr.phone})
+                        </AppText>
+                        <AppText style={styles.sideOptionDesc} numberOfLines={2}>
+                          {addr.detail}
+                        </AppText>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.addressEmptyBox}>
+                <AppText style={styles.addressEmptyText}>
+                  Bạn chưa lưu địa chỉ nhận hàng nào.
+                </AppText>
+                <Button
+                  title="Thêm địa chỉ trong sổ địa chỉ ↗"
+                  secondary
+                  onPress={() => {
+                    setAcceptModalOpen(false);
+                    router.push("/addresses");
+                  }}
+                />
+              </View>
+            )}
+
+            <View style={styles.modalActionRow}>
+              <View style={{ flex: 1 }}>
+                <Button
+                  title="Hủy"
+                  secondary
+                  onPress={() => setAcceptModalOpen(false)}
+                />
+              </View>
+              <View style={{ flex: 1.5 }}>
+                <Button
+                  title="Đồng ý đổi sách"
+                  wine
+                  busy={acceptMutation.isPending}
+                  onPress={() =>
+                    acceptMutation.mutate(effectiveAcceptAddressId)
+                  }
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </AppModal>
+
+      {/* Modal 2: Đề xuất lại mức bù tiền */}
       <AppModal
         visible={counterModalOpen}
         transparent
@@ -555,7 +1037,9 @@ export function ExchangeActionsCard({
                 />
                 <View style={{ flex: 1 }}>
                   <AppText style={styles.sideOptionTitle}>Đổi ngang giá</AppText>
-                  <AppText style={styles.sideOptionDesc}>Hai bên bằng giá, không ai bù tiền</AppText>
+                  <AppText style={styles.sideOptionDesc}>
+                    Hai bên bằng giá, không ai bù tiền
+                  </AppText>
                 </View>
               </Pressable>
 
@@ -573,8 +1057,12 @@ export function ExchangeActionsCard({
                   ]}
                 />
                 <View style={{ flex: 1 }}>
-                  <AppText style={styles.sideOptionTitle}>Tôi sẽ bù thêm tiền cho đối tác</AppText>
-                  <AppText style={styles.sideOptionDesc}>Sách của đối tác có giá trị cao hơn</AppText>
+                  <AppText style={styles.sideOptionTitle}>
+                    Tôi sẽ bù thêm tiền cho đối tác
+                  </AppText>
+                  <AppText style={styles.sideOptionDesc}>
+                    Sách của đối tác có giá trị cao hơn
+                  </AppText>
                 </View>
               </Pressable>
 
@@ -592,8 +1080,12 @@ export function ExchangeActionsCard({
                   ]}
                 />
                 <View style={{ flex: 1 }}>
-                  <AppText style={styles.sideOptionTitle}>Đối tác sẽ bù thêm tiền cho tôi</AppText>
-                  <AppText style={styles.sideOptionDesc}>Sách của tôi có giá trị cao hơn</AppText>
+                  <AppText style={styles.sideOptionTitle}>
+                    Đối tác sẽ bù thêm tiền cho tôi
+                  </AppText>
+                  <AppText style={styles.sideOptionDesc}>
+                    Sách của tôi có giá trị cao hơn
+                  </AppText>
                 </View>
               </Pressable>
             </View>
@@ -601,13 +1093,17 @@ export function ExchangeActionsCard({
             {/* Nhập số tiền nếu không phải 'none' */}
             {counterSide !== "none" && (
               <View style={styles.inputSection}>
-                <AppText style={styles.inputLabel}>Số tiền bù chênh lệch (VNĐ):</AppText>
+                <AppText style={styles.inputLabel}>
+                  Số tiền bù chênh lệch (VNĐ):
+                </AppText>
                 <AppTextInput
                   accessibilityLabel="Số tiền bù chênh lệch"
                   style={styles.amountInput}
                   keyboardType="numeric"
                   value={counterAmountStr}
-                  onChangeText={(val) => setCounterAmountStr(val.replace(/\D/g, ""))}
+                  onChangeText={(val) =>
+                    setCounterAmountStr(val.replace(/\D/g, ""))
+                  }
                   placeholder="Ví dụ: 10000"
                   placeholderTextColor={stitchTokens.subtleGray}
                 />
@@ -630,7 +1126,9 @@ export function ExchangeActionsCard({
 
             {/* Lời nhắn kèm theo */}
             <View style={styles.inputSection}>
-              <AppText style={styles.inputLabel}>Lời nhắn cho đối tác (tùy chọn):</AppText>
+              <AppText style={styles.inputLabel}>
+                Lời nhắn cho đối tác (tùy chọn):
+              </AppText>
               <AppTextInput
                 accessibilityLabel="Lời nhắn cho đối tác"
                 style={styles.noteInput}
@@ -658,6 +1156,351 @@ export function ExchangeActionsCard({
                   wine
                   busy={counterMutation.isPending}
                   onPress={() => counterMutation.mutate()}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </AppModal>
+
+      {/* Modal 3: Báo gửi sách & Cập nhật vận đơn */}
+      <AppModal
+        visible={shipModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShipModalOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Icon name="truck" size={18} color={stitchTokens.wineDark} />
+                <AppText style={styles.modalTitle}>Xác nhận gửi sách</AppText>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Đóng modal"
+                onPress={() => setShipModalOpen(false)}
+              >
+                <Icon name="close" size={20} color={stitchTokens.darkWood} />
+              </Pressable>
+            </View>
+
+            {shipFormError ? (
+              <Notice tone="error">{shipFormError}</Notice>
+            ) : null}
+
+            {/* Method switch */}
+            <View style={styles.methodTabRow}>
+              <Pressable
+                style={[
+                  styles.methodTabItem,
+                  shipMethod === "carrier" && styles.methodTabItemActive,
+                ]}
+                onPress={() => setShipMethod("carrier")}
+              >
+                <Icon
+                  name="truck"
+                  size={14}
+                  color={
+                    shipMethod === "carrier"
+                      ? stitchTokens.wineDark
+                      : stitchTokens.subtleGray
+                  }
+                />
+                <AppText
+                  style={[
+                    styles.methodTabText,
+                    shipMethod === "carrier" && styles.methodTabTextActive,
+                  ]}
+                >
+                  Gửi qua bưu cục
+                </AppText>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  styles.methodTabItem,
+                  shipMethod === "direct" && styles.methodTabItemActive,
+                ]}
+                onPress={() => setShipMethod("direct")}
+              >
+                <Icon
+                  name="pin"
+                  size={14}
+                  color={
+                    shipMethod === "direct"
+                      ? stitchTokens.wineDark
+                      : stitchTokens.subtleGray
+                  }
+                />
+                <AppText
+                  style={[
+                    styles.methodTabText,
+                    shipMethod === "direct" && styles.methodTabTextActive,
+                  ]}
+                >
+                  Gặp mặt trực tiếp
+                </AppText>
+              </Pressable>
+            </View>
+
+            {shipMethod === "carrier" ? (
+              <View style={{ gap: 10 }}>
+                {/* Chọn hãng vận chuyển */}
+                <View style={styles.inputSection}>
+                  <AppText style={styles.inputLabel}>Đơn vị vận chuyển:</AppText>
+                  <View style={styles.presetRow}>
+                    {CARRIER_OPTIONS.map((c) => (
+                      <Pressable
+                        key={c.code}
+                        style={[
+                          styles.presetChip,
+                          shipCarrierCode === c.code && styles.presetChipActive,
+                        ]}
+                        onPress={() => setShipCarrierCode(c.code)}
+                      >
+                        <AppText
+                          style={[
+                            styles.presetChipText,
+                            shipCarrierCode === c.code &&
+                              styles.presetChipTextActive,
+                          ]}
+                        >
+                          {c.name}
+                        </AppText>
+                      </Pressable>
+                    ))}
+                  </View>
+                </View>
+
+                {shipCarrierCode === "OTHER" && (
+                  <View style={styles.inputSection}>
+                    <AppText style={styles.inputLabel}>Tên đơn vị vận chuyển:</AppText>
+                    <AppTextInput
+                      style={styles.amountInput}
+                      value={shipCustomCarrier}
+                      onChangeText={setShipCustomCarrier}
+                      placeholder="Ví dụ: Ninja Van, J&T Express..."
+                      placeholderTextColor={stitchTokens.subtleGray}
+                    />
+                  </View>
+                )}
+
+                {/* Mã vận đơn */}
+                <View style={styles.inputSection}>
+                  <AppText style={styles.inputLabel}>
+                    Mã vận đơn / Số bưu kiện (*):
+                  </AppText>
+                  <AppTextInput
+                    accessibilityLabel="Mã vận đơn"
+                    style={styles.amountInput}
+                    value={shipTrackingCode}
+                    onChangeText={setShipTrackingCode}
+                    placeholder="Ví dụ: GHN8892183..."
+                    placeholderTextColor={stitchTokens.subtleGray}
+                    autoCapitalize="characters"
+                  />
+                </View>
+
+                {/* Ghi chú */}
+                <View style={styles.inputSection}>
+                  <AppText style={styles.inputLabel}>Ghi chú gửi hàng (tùy chọn):</AppText>
+                  <AppTextInput
+                    style={styles.noteInput}
+                    value={shipNotes}
+                    onChangeText={setShipNotes}
+                    placeholder="Ví dụ: Đã gửi kiện hàng, dự kiến 2 ngày tới..."
+                    placeholderTextColor={stitchTokens.subtleGray}
+                    maxLength={200}
+                  />
+                </View>
+              </View>
+            ) : (
+              <View style={{ gap: 10 }}>
+                {/* Meetup location */}
+                <View style={styles.inputSection}>
+                  <AppText style={styles.inputLabel}>Địa điểm hẹn gặp (*):</AppText>
+                  <AppTextInput
+                    accessibilityLabel="Địa điểm hẹn gặp"
+                    style={styles.amountInput}
+                    value={shipMeetupLocation}
+                    onChangeText={setShipMeetupLocation}
+                    placeholder="Ví dụ: Đường sách Nguyễn Văn Bình, Q.1"
+                    placeholderTextColor={stitchTokens.subtleGray}
+                  />
+                </View>
+
+                {/* Meetup notes */}
+                <View style={styles.inputSection}>
+                  <AppText style={styles.inputLabel}>Thời gian & ghi chú hẹn:</AppText>
+                  <AppTextInput
+                    style={styles.noteInput}
+                    value={shipNotes}
+                    onChangeText={setShipNotes}
+                    placeholder="Ví dụ: Hẹn bạn chiều thứ 7 lúc 15h..."
+                    placeholderTextColor={stitchTokens.subtleGray}
+                    maxLength={200}
+                  />
+                </View>
+              </View>
+            )}
+
+            <View style={styles.modalActionRow}>
+              <View style={{ flex: 1 }}>
+                <Button
+                  title="Hủy"
+                  secondary
+                  onPress={() => setShipModalOpen(false)}
+                />
+              </View>
+              <View style={{ flex: 1.5 }}>
+                <Button
+                  title="Xác nhận gửi"
+                  wine
+                  busy={shipMutation.isPending}
+                  onPress={handleShipSubmit}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </AppModal>
+
+      {/* Modal 4: Đánh giá giao dịch (ReviewModal) */}
+      <AppModal
+        visible={reviewModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReviewModalOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Icon name="star" size={18} color={stitchTokens.goldBronze} filled />
+                <AppText style={styles.modalTitle}>Đánh giá giao dịch đổi sách</AppText>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Đóng modal"
+                onPress={() => setReviewModalOpen(false)}
+              >
+                <Icon name="close" size={20} color={stitchTokens.darkWood} />
+              </Pressable>
+            </View>
+
+            {/* Rating sách */}
+            <View style={styles.inputSection}>
+              <AppText style={styles.inputLabel}>
+                Chất lượng sách bạn nhận ({reviewBookRating}/5 sao):
+              </AppText>
+              <View style={styles.interactiveStarsRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Pressable
+                    key={star}
+                    onPress={() => setReviewBookRating(star)}
+                    style={styles.starTouchItem}
+                  >
+                    <Icon
+                      name="star"
+                      size={28}
+                      color={
+                        star <= reviewBookRating
+                          ? stitchTokens.goldBronze
+                          : stitchTokens.peachBorder
+                      }
+                      filled={star <= reviewBookRating}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Rating đối tác */}
+            <View style={styles.inputSection}>
+              <AppText style={styles.inputLabel}>
+                Độ uy tín & thái độ của đối tác ({reviewPartnerRating}/5 sao):
+              </AppText>
+              <View style={styles.interactiveStarsRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Pressable
+                    key={star}
+                    onPress={() => setReviewPartnerRating(star)}
+                    style={styles.starTouchItem}
+                  >
+                    <Icon
+                      name="star"
+                      size={28}
+                      color={
+                        star <= reviewPartnerRating
+                          ? stitchTokens.goldBronze
+                          : stitchTokens.peachBorder
+                      }
+                      filled={star <= reviewPartnerRating}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Preset Tags */}
+            <View style={styles.inputSection}>
+              <AppText style={styles.inputLabel}>Điểm nổi bật:</AppText>
+              <View style={styles.presetRow}>
+                {REVIEW_TAGS_PRESET.map((tag) => {
+                  const isSelected = selectedReviewTags.includes(tag);
+                  return (
+                    <Pressable
+                      key={tag}
+                      style={[
+                        styles.presetChip,
+                        isSelected && styles.presetChipActive,
+                      ]}
+                      onPress={() => toggleReviewTag(tag)}
+                    >
+                      <AppText
+                        style={[
+                          styles.presetChipText,
+                          isSelected && styles.presetChipTextActive,
+                        ]}
+                      >
+                        {tag}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Comment */}
+            <View style={styles.inputSection}>
+              <AppText style={styles.inputLabel}>Nhận xét thêm (tùy chọn):</AppText>
+              <AppTextInput
+                style={styles.noteInput}
+                value={reviewComment}
+                onChangeText={setReviewComment}
+                placeholder="Chia sẻ trải nghiệm đổi sách của bạn..."
+                placeholderTextColor={stitchTokens.subtleGray}
+                maxLength={400}
+                multiline
+              />
+            </View>
+
+            <View style={styles.modalActionRow}>
+              <View style={{ flex: 1 }}>
+                <Button
+                  title="Để sau"
+                  secondary
+                  onPress={() => setReviewModalOpen(false)}
+                />
+              </View>
+              <View style={{ flex: 1.5 }}>
+                <Button
+                  title="Gửi đánh giá"
+                  wine
+                  busy={reviewMutation.isPending}
+                  onPress={handleReviewSubmit}
                 />
               </View>
             </View>
@@ -725,6 +1568,41 @@ const styles = StyleSheet.create({
     color: stitchTokens.darkWood,
     lineHeight: 18,
   },
+  fundingSummaryCard: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    gap: 6,
+  },
+  fundingSummaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  fundingSummaryLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  fundingSummaryAmount: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: stitchTokens.wineDark,
+  },
+  fundingSummarySubLabel: {
+    fontSize: 12,
+    color: stitchTokens.roseBrown,
+  },
+  fundingSummaryWallet: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.likeNewGreen,
+  },
+  insufficientBox: {
+    gap: 8,
+  },
   deadlineContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -782,6 +1660,9 @@ const styles = StyleSheet.create({
     color: stitchTokens.likeNewGreen,
     lineHeight: 16,
   },
+  completedSection: {
+    gap: 12,
+  },
   completedBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -800,6 +1681,93 @@ const styles = StyleSheet.create({
   completedSub: {
     fontSize: 11,
     color: stitchTokens.darkWood,
+    marginTop: 2,
+  },
+  reviewContainer: {
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    gap: 8,
+  },
+  reviewHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  reviewHeaderTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: stitchTokens.wineDark,
+  },
+  reviewPromptBox: {
+    gap: 8,
+    paddingTop: 4,
+  },
+  reviewPromptText: {
+    fontSize: 12,
+    color: stitchTokens.darkWood,
+    lineHeight: 16,
+  },
+  myReviewBox: {
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorderAlpha40,
+    gap: 5,
+  },
+  partnerReviewBox: {
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorderAlpha40,
+    gap: 5,
+    marginTop: 4,
+  },
+  reviewSubTitle: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.roseBrown,
+    textTransform: "uppercase",
+  },
+  starsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  starMetricLabel: {
+    fontSize: 12,
+    color: stitchTokens.darkWood,
+  },
+  starsDisplay: {
+    flexDirection: "row",
+    gap: 3,
+  },
+  tagsDisplayRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+    marginTop: 3,
+  },
+  tagBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: stitchTokens.terracottaSoft,
+  },
+  tagBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  commentText: {
+    fontSize: 12,
+    color: stitchTokens.darkWood,
+    fontStyle: "italic",
+    lineHeight: 16,
     marginTop: 2,
   },
   cancelledBox: {
@@ -908,13 +1876,13 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.peachBorder,
     borderRadius: 10,
     paddingHorizontal: 12,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
     color: stitchTokens.wineDark,
     backgroundColor: stitchTokens.whiteSurface,
   },
   noteInput: {
-    minHeight: 60,
+    minHeight: 50,
     borderWidth: 1.5,
     borderColor: stitchTokens.peachBorder,
     borderRadius: 10,
@@ -928,20 +1896,75 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 6,
     flexWrap: "wrap",
-    marginTop: 4,
   },
   presetChip: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
     borderRadius: 8,
     backgroundColor: stitchTokens.creamBg,
     borderWidth: 1,
     borderColor: stitchTokens.peachBorder,
   },
+  presetChipActive: {
+    backgroundColor: stitchTokens.wineDark,
+    borderColor: stitchTokens.wineDark,
+  },
   presetChipText: {
     fontSize: 11,
     fontWeight: "700",
     color: stitchTokens.wineDark,
+  },
+  presetChipTextActive: {
+    color: stitchTokens.white,
+  },
+  methodTabRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  methodTabItem: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorderAlpha40,
+  },
+  methodTabItemActive: {
+    backgroundColor: stitchTokens.terracottaSoft,
+    borderColor: stitchTokens.wineMid,
+  },
+  methodTabText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.darkWood,
+  },
+  methodTabTextActive: {
+    color: stitchTokens.wineDark,
+    fontWeight: "800",
+  },
+  interactiveStarsRow: {
+    flexDirection: "row",
+    gap: 12,
+    justifyContent: "center",
+    paddingVertical: 4,
+  },
+  starTouchItem: {
+    padding: 4,
+  },
+  addressEmptyBox: {
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.parchment,
+    gap: 8,
+    alignItems: "center",
+  },
+  addressEmptyText: {
+    fontSize: 12,
+    color: stitchTokens.subtleGray,
   },
   modalActionRow: {
     flexDirection: "row",

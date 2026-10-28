@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import {
   AppText,
   Button,
@@ -55,15 +55,24 @@ export function ExchangeDetailScreen() {
   const exchange = exchangeQuery.data;
 
   // 2. Fetch Initiator & Recipient Public Listings to get cover photos and metadata
-  const primaryInitiatorId =
-    exchange?.initiatorListingIds?.[0] ?? exchange?.initiatorListingId;
+  const initiatorListingIds =
+    exchange?.initiatorListingIds && exchange.initiatorListingIds.length > 0
+      ? exchange.initiatorListingIds
+      : exchange?.initiatorListingId
+        ? [exchange.initiatorListingId]
+        : [];
 
-  const initiatorListingQuery = useQuery({
-    queryKey: ["public-listing", primaryInitiatorId],
-    queryFn: () => client.publicRequest(`/listings/${primaryInitiatorId}`, publicListing),
-    enabled: Boolean(primaryInitiatorId) && foreground,
-    staleTime: 60000,
+  const initiatorListingQueries = useQueries({
+    queries: initiatorListingIds.map((lid) => ({
+      queryKey: ["public-listing", lid],
+      queryFn: () => client.publicRequest(`/listings/${lid}`, publicListing),
+      enabled: Boolean(lid) && foreground,
+      staleTime: 60000,
+    })),
   });
+
+  const initiatorListings = initiatorListingQueries.map((q) => q.data ?? null);
+  const primaryInitiatorListing = initiatorListings[0] ?? null;
 
   const recipientListingQuery = useQuery({
     queryKey: ["public-listing", exchange?.recipientListingId],
@@ -214,7 +223,7 @@ export function ExchangeDetailScreen() {
     : exchange.initiatorAddress?.recipientName;
   const partnerName = isInitiator
     ? recipientListingQuery.data?.seller.displayName ?? partnerAddressName ?? "Đối tác"
-    : initiatorListingQuery.data?.seller.displayName ?? partnerAddressName ?? "Đối tác trao đổi";
+    : primaryInitiatorListing?.seller.displayName ?? partnerAddressName ?? "Đối tác trao đổi";
 
   const isReadOnly = ["Completed", "Cancelled"].includes(exchange.status);
 
@@ -328,7 +337,8 @@ export function ExchangeDetailScreen() {
           <ExchangeProposalCard
             exchange={exchange}
             isInitiator={isInitiator}
-            initiatorListing={initiatorListingQuery.data}
+            initiatorListings={initiatorListings}
+            initiatorListing={primaryInitiatorListing}
             recipientListing={recipientListingQuery.data}
           />
 
