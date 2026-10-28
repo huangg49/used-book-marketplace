@@ -35,6 +35,7 @@ export default function MainLayout() {
       <Header freezeScroll={chatTransition} />
       <main
         id="main-content"
+        tabIndex={-1}
         className={styles.main}
         data-chat={isChat || undefined}
         data-exchange={

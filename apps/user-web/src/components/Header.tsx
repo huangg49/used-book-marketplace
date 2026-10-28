@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { Menu, MessageCircle, Plus, X } from "lucide-react";
 import { ROUTES, searchUrl } from "../lib/routes";
 import { observeHeaderScroll } from "../lib/header-scroll";
+import { memberNavigationSection } from "../lib/member-navigation";
 import { useSession } from "../hooks/useSession";
 import { AccountMenu } from "./AccountMenu";
 import { accountNavigation } from "../lib/account-navigation";
@@ -12,9 +13,9 @@ import { CategoryNavigation, MobileCategories } from "./CategoryNavigation";
 import styles from "../layouts/MainLayout.module.css";
 
 const links = [
-  { label: "Tìm sách", to: ROUTES.search },
-  { label: "Đổi sách", to: searchUrl({ mode: "Exchange" }) },
-  { label: "Đấu giá", to: ROUTES.auctions },
+  { id: "books", label: "Tìm sách", to: ROUTES.search },
+  { id: "exchange", label: "Đổi sách", to: searchUrl({ mode: "Exchange" }) },
+  { id: "auction", label: "Đấu giá", to: ROUTES.auctions },
 ];
 export function Logo() {
   return (
@@ -40,6 +41,7 @@ export function Header({
   freezeScroll?: boolean;
 }) {
   const location = useLocation();
+  const headerRef = useRef<HTMLElement>(null);
   const categoryArrival = useRef(false);
   const [floating, setFloating] = useState(() => window.scrollY > 48);
   const [collapsing, setCollapsing] = useState(false);
@@ -84,12 +86,25 @@ export function Header({
       }
     };
     window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
+    const outside = (event: PointerEvent) => {
+      if (!headerRef.current?.contains(event.target as Node)) setMenuPath(null);
+    };
+    const focusOutside = (event: FocusEvent) => {
+      if (!headerRef.current?.contains(event.target as Node)) setMenuPath(null);
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("focusin", focusOutside);
+    return () => {
+      window.removeEventListener("keydown", close);
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("focusin", focusOutside);
+    };
   }, [menuOpen]);
-  const active = (to: string) => location.pathname + location.search === to;
+  const currentSection = memberNavigationSection(location.pathname, location.search);
   return (
     <div className={styles.headerSlot} data-member-header-slot>
       <header
+        ref={headerRef}
         className={styles.header}
         data-floating={floating}
         data-menu-open={menuOpen}
@@ -118,7 +133,7 @@ export function Header({
               <Link
                 key={item.to}
                 to={item.to}
-                aria-current={active(item.to) ? "page" : undefined}
+                aria-current={currentSection === item.id ? "page" : undefined}
               >
                 {item.label}
               </Link>
@@ -180,7 +195,7 @@ export function Header({
               <Link
                 key={item.to}
                 to={item.to}
-                aria-current={active(item.to) ? "page" : undefined}
+                aria-current={currentSection === item.id ? "page" : undefined}
               >
                 {item.label}
               </Link>

@@ -1,5 +1,27 @@
 # Điểm lưu hiện tại — 28/10/2026
 
+## UX frontend Member — 28/10/2026
+
+- Owner yêu cầu rà soát/cải thiện frontend; giữ nguyên GHN/carrier/Driver.
+  Nhánh `codex/frontend-ux-consistency`, base local `68f40fb`, commit subject
+  `fix(frontend): improve member navigation and exchange usability`.
+- Web: Header giữ mục hiện tại qua query/filter, menu đóng Escape/focus/outside;
+  trang trao đổi dùng typography/palette hiện hành, tên sách dài có chỗ, layout
+  tablet/mobile, tab keyboard Home/End/Arrow, nhãn inspection/hủy/hết hạn đúng và
+  empty/error/retry rõ. Copy thông báo bao quát sách/giao dịch.
+- RN: bỏ mic giả, reset cả query+filter, đồng bộ LikeNew, chip wrap, input16px/
+  control chính48dp; StatePanel wine có ví dụ `/ui`. TopNavbar giữ action48dp
+  ở320px; thanh dưới giữ tên mục ở chữ lớn và bỏ badge đấu giá cố định.
+- PASS: User-web251/RN161 unit, hai app typecheck+lint (web warning cũ), web build
+  (chunk warning) và RN export. Browser web UX1440/768/390/320/chữ lớn + Exchange
+  regressions; RN web search/reset/filters/320px130%/nav và toàn public-shelf/
+  listing/address journey trên HTTP/Mongo QA, storage fake. Docs/diff check PASS.
+- [Phạm vi, evidence và việc tiếp](../ui/FRONTEND_UX_2026_10_28.md). Admin/Staff
+  rà source, không sửa workspace; Flutter xác nhận scaffold. Native/TalkBack/
+  ARM/iOS/human review và remote CI commit mới NOT RUN; READINESS không đổi.
+  Không đổi API/contract/migration/tiền. Chỉ commit local, chưa push/PR/merge.
+  QA đã dừng sau kiểm; Mongo chính giữ nguyên, không seed/migrate/start worker.
+
 ## Nhất quán Exchange và dữ liệu Member — 28/10/2026
 
 - Owner duyệt khảo sát toàn dự án và sửa theo ưu tiên, sau đó yêu cầu giữ nguyên

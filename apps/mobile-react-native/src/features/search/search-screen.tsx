@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   Keyboard,
   Pressable,
   ScrollView,
@@ -399,14 +398,14 @@ export function SearchScreen() {
             ? "Đổi sách"
             : selectedMode === "Both"
               ? "Bán hoặc đổi"
-              : "Sách hiếm";
+              : "Sách như mới";
       chips.push({
         key: "mode",
         label: modeLabel,
         onRemove: () => setSelectedMode(""),
       });
     }
-    if (selectedCondition) {
+    if (selectedCondition && selectedMode !== "Rare") {
       const cond = CONDITIONS.find((c) => c.id === selectedCondition);
       if (cond && cond.id) {
         chips.push({
@@ -477,20 +476,6 @@ export function SearchScreen() {
     handleToggleFacetOption,
   ]);
 
-  const handleVoiceSearch = () => {
-    Alert.alert(
-      "Tìm Kiếm Bằng Giọng Nói",
-      "Đang lắng nghe: 'Tìm các tác phẩm của Nguyễn Tuân hoặc Thạch Lam xuất bản trước 1954'...",
-      [
-        {
-          text: "Áp dụng từ khóa",
-          onPress: () => setSearch("Thạch Lam"),
-        },
-        { text: "Đóng", style: "cancel" },
-      ],
-    );
-  };
-
   const handleOpenBook = (id: string) => {
     router.push({ pathname: "./book", params: { id } });
   };
@@ -501,7 +486,7 @@ export function SearchScreen() {
   );
   const filterCount =
     Number(!!selectedMode) +
-    Number(!!selectedCondition) +
+    Number(!!selectedCondition && selectedMode !== "Rare") +
     Number(Boolean(minPrice || maxPrice)) +
     Number(Boolean(minExchangeValue || maxExchangeValue)) +
     Number(!!selectedLanguage) +
@@ -539,7 +524,7 @@ export function SearchScreen() {
               returnKeyType="search"
               style={styles.searchInput}
               accessibilityLabel="Ô tìm kiếm sách"
-              autoFocus
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
             {search.length > 0 ? (
               <Pressable
@@ -552,16 +537,6 @@ export function SearchScreen() {
                 <Icon name="close" size={16} color={stitchTokens.stoneMuted} />
               </Pressable>
             ) : null}
-            <View style={styles.searchDivider} />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Tìm kiếm giọng nói"
-              onPress={handleVoiceSearch}
-              hitSlop={8}
-              style={styles.micBtn}
-            >
-              <Icon name="mic" size={18} color={stitchTokens.wine} />
-            </Pressable>
           </View>
 
           {/* Horizontal Mode Tabs */}
@@ -578,7 +553,10 @@ export function SearchScreen() {
                   accessibilityRole="tab"
                   accessibilityLabel={`Chế độ: ${tab.title}`}
                   accessibilityState={{ selected: isSelected }}
-                  onPress={() => setSelectedMode(tab.id)}
+                  onPress={() => {
+                    setSelectedMode(tab.id);
+                    if (tab.id === "Rare") setSelectedCondition("");
+                  }}
                   style={[
                     styles.modeTab,
                     isSelected
@@ -607,17 +585,16 @@ export function SearchScreen() {
         <View style={styles.summaryBar}>
           <View style={styles.summaryLeft}>
             <Icon name="explore" size={16} color={stitchTokens.wine} />
-            <AppText kind="small" style={styles.summaryText}>
-              Tìm thấy{" "}
-              <AppText kind="bold" style={styles.summaryCount}>
-                {displayItems.length}
-              </AppText>{" "}
-              cuốn tại TP.HCM
+            <AppText kind="small" style={styles.summaryText} accessibilityLiveRegion="polite">
+              {result.isPending ? "Đang tìm sách…" : result.isError
+                ? "Chưa cập nhật được kết quả"
+                : `Đã tải ${displayItems.length} cuốn${result.hasNextPage ? " · Còn kết quả" : ""}`}
             </AppText>
           </View>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Mở bộ lọc (${filterCount})`}
+            accessibilityLabel={`${filterPanelOpen ? "Đóng" : "Mở"} bộ lọc (${filterCount})`}
+            accessibilityState={{ expanded: filterPanelOpen }}
             onPress={() => setFilterPanelOpen((prev) => !prev)}
             style={[
               styles.filterToggleBtn,
@@ -940,15 +917,17 @@ export function SearchScreen() {
               </View>
               <View style={styles.conditionChoicesWrap}>
                 {CONDITIONS.map((cond) => {
-                  const isSelected = selectedCondition === cond.id;
+                  const isSelected = (selectedMode === "Rare" ? "LikeNew" : selectedCondition) === cond.id;
                   return (
                     <Pressable
                       key={cond.id || "all"}
                       accessibilityRole="button"
                       accessibilityLabel={`Tình trạng: ${cond.title}`}
-                      onPress={() =>
-                        setSelectedCondition(isSelected ? "" : cond.id)
-                      }
+                      accessibilityState={{ selected: isSelected }}
+                      onPress={() => {
+                        if (selectedMode === "Rare") setSelectedMode("");
+                        setSelectedCondition(isSelected ? "" : cond.id);
+                      }}
                       style={[
                         styles.choicePill,
                         isSelected
@@ -1308,11 +1287,7 @@ export function SearchScreen() {
         {/* Active Filter Chips Bar (Giống hệt Web khi có bộ lọc được kích hoạt) */}
         {activeChips.length > 0 ? (
           <View style={styles.activeFiltersRow}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.activeChipsScroll}
-            >
+            <View style={styles.activeChipsScroll}>
               {activeChips.map((chip) => (
                 <Pressable
                   key={chip.key}
@@ -1338,27 +1313,29 @@ export function SearchScreen() {
                   Xóa bộ lọc
                 </AppText>
               </Pressable>
-            </ScrollView>
+            </View>
           </View>
         ) : null}
 
         {/* 4. 2-Column Book Grid */}
         <View style={styles.gridSection}>
-          {result.isPending ? <StatePanel loading title="Đang tìm sách…" /> : null}
+          {result.isPending ? <StatePanel wine loading title="Đang tìm sách…" /> : null}
           {result.isError ? <StatePanel
+            wine
             title="Chưa tải được kết quả tìm kiếm"
             message={displayItems.length ? "Danh sách đang giữ kết quả đã tải. Thử lại để cập nhật." : "Kiểm tra kết nối rồi thử lại. Bộ lọc của bạn vẫn được giữ."}
-            action={{ label: "Thử lại", onPress: () => void result.refetch() }}
+            action={{ label: "Thử lại", onPress: () => void result.refetch(), busy: result.isFetching }}
           /> : null}
           {!result.isPending && !result.isError && displayItems.length === 0 ? (
             <View style={styles.emptyContainer}>
               <StatePanel
+                wine
                 icon="book"
                 title="Không tìm thấy cuốn sách phù hợp"
-                message="Hãy thử thay đổi từ khóa tìm kiếm hoặc bấm 'Đặt lại' bộ lọc."
+                message="Thử từ khóa ngắn hơn hoặc đặt lại từ khóa và bộ lọc để xem các sách khác."
                 action={{
                   label: "Đặt lại tiêu chí",
-                  onPress: handleResetFilters,
+                  onPress: () => { setSearch(""); handleResetFilters(); },
                 }}
               />
             </View>
@@ -1841,7 +1818,7 @@ const styles = StyleSheet.create({
   searchBarBox: {
     flexDirection: "row",
     alignItems: "center",
-    height: 44,
+    minHeight: 52,
     backgroundColor: stitchTokens.white,
     borderRadius: 12,
     paddingHorizontal: 12,
@@ -1855,23 +1832,17 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    height: "100%",
-    fontSize: 13,
+    minHeight: 48,
+    fontSize: 16,
     color: stitchTokens.charcoalBrown,
     paddingHorizontal: 8,
     fontFamily: "BeRegular",
   },
   clearBtn: {
-    padding: 4,
-  },
-  searchDivider: {
-    width: 1,
-    height: 18,
-    backgroundColor: stitchTokens.sandBorder,
-    marginHorizontal: 6,
-  },
-  micBtn: {
-    padding: 4,
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
   },
   modeTabsScroll: {
     paddingTop: 10,
@@ -1879,6 +1850,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   modeTab: {
+    minHeight: 48,
+    justifyContent: "center",
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 16,
@@ -1891,7 +1864,7 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.canvasMuted,
   },
   modeTabText: {
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: "600",
   },
   modeTabTextSelected: {
@@ -1902,6 +1875,8 @@ const styles = StyleSheet.create({
   },
   summaryBar: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 14,
@@ -1911,16 +1886,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    flexShrink: 1,
   },
   summaryText: {
-    fontSize: 12,
+    fontSize: 14,
+    flexShrink: 1,
     color: stitchTokens.mediumMuted,
   },
-  summaryCount: {
-    color: stitchTokens.wine,
-    fontSize: 12,
-  },
   filterToggleBtn: {
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
@@ -1936,7 +1910,7 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.wine,
   },
   filterToggleText: {
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: "600",
     color: stitchTokens.charcoalBrown,
   },
@@ -1951,6 +1925,7 @@ const styles = StyleSheet.create({
   },
   sortBar: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "flex-end",
     paddingHorizontal: 14,
@@ -1963,6 +1938,8 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   sortDropdownTrigger: {
+    minHeight: 48,
+    maxWidth: "100%",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -1980,7 +1957,8 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.wine,
   },
   sortDropdownTriggerText: {
-    fontSize: 13,
+    fontSize: 14,
+    flexShrink: 1,
     color: stitchTokens.charcoalBrown,
     fontWeight: "600",
   },
@@ -2240,11 +2218,14 @@ const styles = StyleSheet.create({
   },
   activeChipsScroll: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     gap: 6,
     paddingVertical: 2,
   },
   activeChip: {
+    minHeight: 48,
+    maxWidth: "100%",
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
@@ -2256,11 +2237,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   activeChipText: {
-    fontSize: 11,
+    fontSize: 14,
+    flexShrink: 1,
     color: stitchTokens.wine,
     fontWeight: "600",
   },
   clearAllChip: {
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
@@ -2270,7 +2253,7 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.creamMuted,
   },
   clearAllChipText: {
-    fontSize: 11,
+    fontSize: 14,
     color: stitchTokens.brownMuted,
     fontWeight: "500",
   },

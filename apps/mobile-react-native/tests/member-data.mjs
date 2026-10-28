@@ -27,6 +27,31 @@ export async function memberDataJourney(browser, origin, artifacts) {
       path: path.join(artifacts, "search-empty-real-390.png"),
       fullPage: true,
     });
+    assert.equal(await page.getByRole("button", { name: "Tìm kiếm giọng nói", exact: true }).count(), 0);
+    await page.getByRole("button", { name: "Đặt lại tiêu chí", exact: true }).click();
+    assert.equal(await page.getByRole("textbox", { name: "Ô tìm kiếm sách" }).inputValue(), "");
+    await page.getByRole("button", { name: /^Xem sách:/ }).first().waitFor();
+
+    await page.getByRole("tab", { name: "Chế độ: Sách như mới", exact: true }).click();
+    await page.getByRole("button", { name: "Bỏ lọc Sách như mới", exact: true }).waitFor();
+    await page.setViewportSize({ width: 320, height: 900 });
+    await page.evaluate(() => {
+      const entries = [...document.querySelectorAll('[dir="auto"],input')].map(node => [node, parseFloat(getComputedStyle(node).fontSize)]);
+      for (const [node, size] of entries) node.style.fontSize = `${size * 1.3}px`;
+    });
+    const chip = page.getByRole("button", { name: "Bỏ lọc Sách như mới", exact: true });
+    const chipBox = await chip.boundingBox();
+    assert.ok(chipBox.height >= 48 && chipBox.x >= 0 && chipBox.x + chipBox.width <= 321);
+    for (const name of ["Thông báo", "Tin nhắn"]) {
+      const box = await page.getByRole("button", { name, exact: true }).boundingBox();
+      assert.ok(box.width >= 48 && box.height >= 48 && box.x >= 0 && box.x + box.width <= 321, `${name} remains reachable at 320px`);
+    }
+    const accountLabel = page.getByRole("tab", { name: "Tài khoản", exact: true }).getByText("Tài khoản", { exact: true });
+    assert.ok(await accountLabel.evaluate(node => node.getBoundingClientRect().height <= parseFloat(getComputedStyle(node).lineHeight) * 2 + 2), "account label keeps whole words on at most two lines at 130%");
+    await page.screenshot({ path: path.join(artifacts, "search-filters-320.png"), fullPage: true });
+    await page.getByRole("button", { name: "Xóa toàn bộ bộ lọc", exact: true }).click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload();
 
     await page.route("**/api/v1/listings?**", (route) => route.abort("failed"));
     await page.goto(`${origin}/search?q=QA-fault-empty-20261028`);

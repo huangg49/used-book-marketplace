@@ -47,7 +47,7 @@ export function NotificationsPage() {
           <p>
             {auth.status === "authenticated"
               ? unread == null
-                ? "Cập nhật từ những phiên đấu giá của bạn."
+                ? "Cập nhật về sách và giao dịch của bạn."
                 : unread
                   ? `${unread} thông báo chưa đọc`
                   : "Bạn đã đọc hết thông báo."
@@ -103,7 +103,7 @@ export function NotificationsPage() {
               <Bell size={32} aria-hidden="true" />
               <h2>Chưa có thông báo</h2>
               <p>
-                Khi có thay đổi ở phiên đấu giá của bạn, thông báo sẽ xuất hiện
+                Khi có cập nhật về sách hoặc giao dịch của bạn, thông báo sẽ xuất hiện
                 ở đây.
               </p>
               <Link to="/auctions">

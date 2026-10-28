@@ -332,6 +332,12 @@ export function UiCatalogScreen() {
                 }}
               />
             )}
+            <StatePanel
+              wine
+              title="Không tìm thấy cuốn sách phù hợp"
+              message="Ví dụ phản hồi theo màu cửa hàng cho màn tìm sách."
+              action={{ label: "Đặt lại tiêu chí mẫu", onPress: () => setNotice("Đã đặt lại tiêu chí mẫu.") }}
+            />
           </>
         ) : section === "Hộp thoại" ? (
           <>
