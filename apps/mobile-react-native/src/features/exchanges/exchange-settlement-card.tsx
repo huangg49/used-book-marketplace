@@ -1,7 +1,7 @@
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
-import { AppText, Button, Icon, radius, space, stitchTokens } from "../../core/ui";
+import { AppText, Icon, space, stitchTokens } from "../../core/ui";
 import { formatVnd } from "../../core/ui/format";
 import type { Exchange } from "./contracts";
 
@@ -109,22 +109,39 @@ export function ExchangeSettlementCard({
         </View>
       </View>
 
-      {/* 3. Action Buttons */}
+      {/* 3. Action Buttons - Perfectly Symmetrical Equal-Height */}
       <View style={styles.actionsRow}>
-        <View style={{ flex: 1 }}>
-          <Button
-            title="Kiểm tra số dư Ví"
-            wine
-            onPress={() => router.push("/wallet")}
-          />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Button
-            title="Khám phá sách khác"
-            secondary
-            onPress={() => router.push("/")}
-          />
-        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Kiểm tra số dư Ví"
+          onPress={() => router.push("/wallet")}
+          style={({ pressed }) => [
+            styles.actionBtn,
+            styles.actionBtnPrimary,
+            pressed && styles.btnPressed,
+          ]}
+        >
+          <Icon name="wallet" size={16} color={stitchTokens.lemonBg} />
+          <AppText style={styles.actionBtnPrimaryText} numberOfLines={1}>
+            Kiểm tra số dư Ví
+          </AppText>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Khám phá sách khác"
+          onPress={() => router.push("/")}
+          style={({ pressed }) => [
+            styles.actionBtn,
+            styles.actionBtnSecondary,
+            pressed && styles.btnPressed,
+          ]}
+        >
+          <Icon name="search" size={16} color={stitchTokens.wineDark} />
+          <AppText style={styles.actionBtnSecondaryText} numberOfLines={1}>
+            Khám phá sách khác
+          </AppText>
+        </Pressable>
       </View>
     </View>
   );
@@ -215,5 +232,51 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: "row",
     gap: 10,
+    alignItems: "stretch",
+  },
+  actionBtn: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 12,
+  },
+  actionBtnPrimary: {
+    backgroundColor: stitchTokens.wineDark,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  actionBtnPrimaryText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.whiteSurface,
+    textAlign: "center",
+  },
+  actionBtnSecondary: {
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.peachBorder,
+    shadowColor: stitchTokens.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  actionBtnSecondaryText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+    textAlign: "center",
+  },
+  btnPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
   },
 });
