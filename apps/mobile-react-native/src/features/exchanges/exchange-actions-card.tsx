@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { z } from "zod";
 import * as Crypto from "expo-crypto";
@@ -22,7 +22,14 @@ import {
   type CreateExchangeReview,
 } from "./contracts";
 import { ExchangeReviewsCard } from "./exchange-reviews-card";
-import { addressBook } from "../addresses/contracts";
+import {
+  addressBook,
+  addressReceipt,
+  cleanAddress,
+  directory,
+  validateAddress,
+  type AddressInput,
+} from "../addresses/contracts";
 import { walletSummary } from "../wallet/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
@@ -64,9 +71,16 @@ export function ExchangeActionsCard({
   const [disputeReason, setDisputeReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Accept with address selector
+  // Accept with address selector & inline address creation
   const [acceptModalOpen, setAcceptModalOpen] = useState(false);
   const [selectedAcceptAddressId, setSelectedAcceptAddressId] = useState<string | null>(null);
+  const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
+  const [newRecipientName, setNewRecipientName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newLocalityCode, setNewLocalityCode] = useState("");
+  const [newDetail, setNewDetail] = useState("");
+  const [addressFormError, setAddressFormError] = useState<string | null>(null);
+  const [isCreatingAddress, setIsCreatingAddress] = useState(false);
 
   // Counter offer state
   const [counterModalOpen, setCounterModalOpen] = useState(false);
@@ -121,6 +135,65 @@ export function ExchangeActionsCard({
       exchange.status === "Proposed",
   });
 
+  const areasQuery = useQuery({
+    queryKey: ["service-areas"],
+    queryFn: () => client.request("/service-areas", directory),
+    enabled: state.status === "authenticated" && acceptModalOpen,
+  });
+
+  const handleSaveNewAddress = async () => {
+    setAddressFormError(null);
+    const validLocalities =
+      areasQuery.data?.localities?.map((l) => l.code) ?? ["DEMO-A", "DEMO-B", "DEMO-C"];
+    const chosenLocality = newLocalityCode || validLocalities[0] || "DEMO-A";
+
+    const candidate: AddressInput = {
+      recipientName: newRecipientName,
+      phone: newPhone,
+      serviceAreaCode: "HCM-DEMO-v1",
+      localityCode: chosenLocality,
+      detail: newDetail,
+    };
+
+    const issues = validateAddress(candidate, validLocalities);
+    if (Object.keys(issues).length > 0) {
+      const firstKey = Object.keys(issues)[0] as keyof typeof issues;
+      setAddressFormError(issues[firstKey] ?? "Vui lòng kiểm tra lại thông tin địa chỉ.");
+      return;
+    }
+
+    setIsCreatingAddress(true);
+    try {
+      const receipt = await client.request("/me/addresses", addressReceipt, {
+        method: "POST",
+        headers: { "Idempotency-Key": Crypto.randomUUID() },
+        body: JSON.stringify({
+          expectedBookVersion: addressesQuery.data?.version ?? 0,
+          address: cleanAddress(candidate),
+          makeDefault: !(addressesQuery.data?.items?.length),
+        }),
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["my-addresses", currentUserId],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["address-book"],
+      });
+
+      setSelectedAcceptAddressId(receipt.addressId);
+      setIsAddingNewAddress(false);
+      setNewRecipientName("");
+      setNewPhone("");
+      setNewDetail("");
+      setAddressFormError(null);
+    } catch (err) {
+      setAddressFormError(presentError(err).message);
+    } finally {
+      setIsCreatingAddress(false);
+    }
+  };
+
   const reviewsQuery = useQuery({
     queryKey: ["exchange-reviews", exchange.id],
     queryFn: () =>
@@ -168,6 +241,7 @@ export function ExchangeActionsCard({
       }),
     onSuccess: () => {
       setAcceptModalOpen(false);
+      setIsAddingNewAddress(false);
       invalidate();
     },
     onError: (err) => setActionError(presentError(err).message),
@@ -460,7 +534,15 @@ export function ExchangeActionsCard({
                     title="Đồng ý đổi"
                     wine
                     busy={isBusy}
-                    onPress={() => setAcceptModalOpen(true)}
+                    onPress={() => {
+                      setAddressFormError(null);
+                      if (!addressesQuery.data?.items?.length) {
+                        setIsAddingNewAddress(true);
+                      } else {
+                        setIsAddingNewAddress(false);
+                      }
+                      setAcceptModalOpen(true);
+                    }}
                   />
                 </View>
               </View>
@@ -822,73 +904,262 @@ export function ExchangeActionsCard({
               Khi đồng ý, bài đăng của bạn sẽ tạm khóa khỏi sàn để chuẩn bị giao dịch. Vui lòng chọn địa chỉ để đối tác gửi sách cho bạn:
             </AppText>
 
-            {/* Address Selection */}
-            {addressesQuery.data?.items?.length ? (
-              <View style={{ gap: 8 }}>
-                {addressesQuery.data.items.map((addr) => {
-                  const isSelected = addr.id === effectiveAcceptAddressId;
-                  return (
-                    <Pressable
-                      key={addr.id}
-                      style={[
-                        styles.sideOptionItem,
-                        isSelected && styles.sideOptionItemActive,
-                      ]}
-                      onPress={() => setSelectedAcceptAddressId(addr.id)}
-                    >
-                      <View
+            {/* Address Selection or Inline Address Creation */}
+            {!isAddingNewAddress && addressesQuery.data?.items?.length ? (
+              <View style={{ gap: 10 }}>
+                <ScrollView
+                  style={styles.addressListScroll}
+                  contentContainerStyle={{ gap: 8 }}
+                  showsVerticalScrollIndicator
+                  nestedScrollEnabled
+                >
+                  {addressesQuery.data.items.map((addr) => {
+                    const isSelected = addr.id === effectiveAcceptAddressId;
+                    return (
+                      <Pressable
+                        key={addr.id}
                         style={[
-                          styles.radioCircle,
-                          isSelected && styles.radioCircleActive,
+                          styles.sideOptionItem,
+                          isSelected && styles.sideOptionItemActive,
                         ]}
-                      />
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <AppText style={styles.sideOptionTitle}>
-                          {addr.recipientName} ({addr.phone})
-                        </AppText>
-                        <AppText style={styles.sideOptionDesc} numberOfLines={2}>
-                          {addr.detail}
-                        </AppText>
-                      </View>
-                    </Pressable>
-                  );
-                })}
+                        onPress={() => setSelectedAcceptAddressId(addr.id)}
+                      >
+                        <View
+                          style={[
+                            styles.radioCircle,
+                            isSelected && styles.radioCircleActive,
+                          ]}
+                        />
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                          >
+                            <AppText style={styles.sideOptionTitle}>
+                              {addr.recipientName} ({addr.phone})
+                            </AppText>
+                            {addr.isDefault ? (
+                              <View style={styles.defaultBadge}>
+                                <AppText style={styles.defaultBadgeText}>
+                                  Mặc định
+                                </AppText>
+                              </View>
+                            ) : null}
+                          </View>
+                          <AppText style={styles.sideOptionDesc} numberOfLines={2}>
+                            {addr.detail}
+                          </AppText>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+
+                <View style={styles.addressHelperRow}>
+                  <Pressable
+                    style={styles.addNewAddressBtn}
+                    onPress={() => {
+                      setIsAddingNewAddress(true);
+                      setAddressFormError(null);
+                    }}
+                  >
+                    <Icon name="plus" size={14} color={stitchTokens.wineDark} />
+                    <AppText style={styles.addNewAddressBtnText}>
+                      Thêm địa chỉ nhận mới
+                    </AppText>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      setAcceptModalOpen(false);
+                      router.push("/addresses");
+                    }}
+                  >
+                    <AppText style={styles.manageAddressLink}>
+                      Sổ địa chỉ ↗
+                    </AppText>
+                  </Pressable>
+                </View>
+
+                <View style={styles.modalActionRow}>
+                  <View style={{ flex: 1 }}>
+                    <Button
+                      title="Hủy"
+                      secondary
+                      onPress={() => setAcceptModalOpen(false)}
+                    />
+                  </View>
+                  <View style={{ flex: 1.5 }}>
+                    <Button
+                      title="Đồng ý đổi sách"
+                      wine
+                      disabled={!effectiveAcceptAddressId}
+                      busy={acceptMutation.isPending}
+                      onPress={() =>
+                        acceptMutation.mutate(effectiveAcceptAddressId)
+                      }
+                    />
+                  </View>
+                </View>
               </View>
             ) : (
-              <View style={styles.addressEmptyBox}>
-                <AppText style={styles.addressEmptyText}>
-                  Bạn chưa lưu địa chỉ nhận hàng nào.
-                </AppText>
-                <Button
-                  title="Thêm địa chỉ trong sổ địa chỉ ↗"
-                  secondary
-                  onPress={() => {
-                    setAcceptModalOpen(false);
-                    router.push("/addresses");
-                  }}
-                />
+              <View style={{ gap: 10 }}>
+                <View style={styles.newAddressHeaderRow}>
+                  <View
+                    style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                  >
+                    <Icon name="pin" size={15} color={stitchTokens.wineDark} />
+                    <AppText style={styles.newAddressSectionTitle}>
+                      {addressesQuery.data?.items?.length
+                        ? "Thêm địa chỉ nhận mới"
+                        : "Nhập địa chỉ nhận sách"}
+                    </AppText>
+                  </View>
+                  {addressesQuery.data?.items?.length ? (
+                    <Pressable
+                      onPress={() => {
+                        setIsAddingNewAddress(false);
+                        setAddressFormError(null);
+                      }}
+                      hitSlop={8}
+                    >
+                      <AppText style={styles.backToListLink}>
+                        ← Chọn từ đã lưu
+                      </AppText>
+                    </Pressable>
+                  ) : null}
+                </View>
+
+                <ScrollView
+                  style={styles.addressFormScroll}
+                  contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+                  showsVerticalScrollIndicator
+                  nestedScrollEnabled
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <View style={styles.formGroup}>
+                    <AppText style={styles.formLabel}>
+                      Họ và tên người nhận *
+                    </AppText>
+                    <AppTextInput
+                      style={styles.singleLineInput}
+                      value={newRecipientName}
+                      onChangeText={setNewRecipientName}
+                      placeholder="Ví dụ: Nguyễn Văn A"
+                      placeholderTextColor={stitchTokens.subtleGray}
+                      maxLength={100}
+                    />
+                  </View>
+
+                  <View style={styles.formGroup}>
+                    <AppText style={styles.formLabel}>
+                      Số điện thoại (10 số) *
+                    </AppText>
+                    <AppTextInput
+                      style={styles.singleLineInput}
+                      value={newPhone}
+                      onChangeText={setNewPhone}
+                      placeholder="0901234567"
+                      placeholderTextColor={stitchTokens.subtleGray}
+                      keyboardType="phone-pad"
+                      maxLength={15}
+                    />
+                  </View>
+
+                  <View style={styles.formGroup}>
+                    <AppText style={styles.formLabel}>
+                      Khu vực phục vụ *
+                    </AppText>
+                    <View style={styles.localityChipsRow}>
+                      {(areasQuery.data?.localities?.length
+                        ? areasQuery.data.localities
+                        : [
+                            { code: "DEMO-A", label: "Quận 1, 3, 5, 10" },
+                            { code: "DEMO-B", label: "Bình Thạnh, Phú Nhuận" },
+                          ]
+                      ).map((loc) => {
+                        const isLocSelected =
+                          (newLocalityCode ||
+                            areasQuery.data?.localities?.[0]?.code ||
+                            "DEMO-A") === loc.code;
+                        return (
+                          <Pressable
+                            key={loc.code}
+                            style={[
+                              styles.localityChip,
+                              isLocSelected && styles.localityChipActive,
+                            ]}
+                            onPress={() => setNewLocalityCode(loc.code)}
+                          >
+                            <AppText
+                              style={[
+                                styles.localityChipText,
+                                isLocSelected && styles.localityChipTextActive,
+                              ]}
+                            >
+                              {loc.label}
+                            </AppText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  <View style={styles.formGroup}>
+                    <AppText style={styles.formLabel}>
+                      Địa chỉ chi tiết (số nhà, tên đường, phường) *
+                    </AppText>
+                    <AppTextInput
+                      style={styles.detailInput}
+                      value={newDetail}
+                      onChangeText={setNewDetail}
+                      placeholder="Số 123 đường ABC, Phường X..."
+                      placeholderTextColor={stitchTokens.subtleGray}
+                      maxLength={300}
+                    />
+                  </View>
+
+                  {addressFormError ? (
+                    <View style={{ marginTop: 2 }}>
+                      <Notice tone="error">{addressFormError}</Notice>
+                    </View>
+                  ) : null}
+                </ScrollView>
+
+                <View style={styles.modalActionRow}>
+                  {addressesQuery.data?.items?.length ? (
+                    <View style={{ flex: 1 }}>
+                      <Button
+                        title="Quay lại"
+                        secondary
+                        onPress={() => {
+                          setIsAddingNewAddress(false);
+                          setAddressFormError(null);
+                        }}
+                      />
+                    </View>
+                  ) : (
+                    <View style={{ flex: 1 }}>
+                      <Button
+                        title="Hủy"
+                        secondary
+                        onPress={() => setAcceptModalOpen(false)}
+                      />
+                    </View>
+                  )}
+                  <View style={{ flex: 1.5 }}>
+                    <Button
+                      title="Lưu & Chọn địa chỉ"
+                      wine
+                      busy={isCreatingAddress}
+                      onPress={handleSaveNewAddress}
+                    />
+                  </View>
+                </View>
               </View>
             )}
-
-            <View style={styles.modalActionRow}>
-              <View style={{ flex: 1 }}>
-                <Button
-                  title="Hủy"
-                  secondary
-                  onPress={() => setAcceptModalOpen(false)}
-                />
-              </View>
-              <View style={{ flex: 1.5 }}>
-                <Button
-                  title="Đồng ý đổi sách"
-                  wine
-                  busy={acceptMutation.isPending}
-                  onPress={() =>
-                    acceptMutation.mutate(effectiveAcceptAddressId)
-                  }
-                />
-              </View>
-            </View>
           </View>
         </View>
       </AppModal>
@@ -1873,5 +2144,127 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginTop: 6,
+  },
+  addressListScroll: {
+    maxHeight: 200,
+  },
+  addressFormScroll: {
+    maxHeight: 250,
+  },
+  defaultBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+    backgroundColor: stitchTokens.amberBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+  },
+  defaultBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  addressHelperRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+    paddingHorizontal: 2,
+  },
+  addNewAddressBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: stitchTokens.creamBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+  },
+  addNewAddressBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  manageAddressLink: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.wineDark,
+    textDecorationLine: "underline",
+  },
+  newAddressHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: stitchTokens.peachBorder,
+  },
+  newAddressSectionTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: stitchTokens.wineDark,
+  },
+  backToListLink: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.wineDark,
+  },
+  formGroup: {
+    gap: 4,
+  },
+  formLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  singleLineInput: {
+    height: 38,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    fontSize: 13,
+    color: stitchTokens.wineDark,
+    backgroundColor: stitchTokens.whiteSurface,
+  },
+  detailInput: {
+    height: 48,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12,
+    color: stitchTokens.wineDark,
+    backgroundColor: stitchTokens.whiteSurface,
+    textAlignVertical: "top",
+  },
+  localityChipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  localityChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: stitchTokens.creamBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+  },
+  localityChipActive: {
+    backgroundColor: stitchTokens.wineDark,
+    borderColor: stitchTokens.wineDark,
+  },
+  localityChipText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: stitchTokens.wineDark,
+  },
+  localityChipTextActive: {
+    color: stitchTokens.white,
+    fontWeight: "700",
   },
 });
