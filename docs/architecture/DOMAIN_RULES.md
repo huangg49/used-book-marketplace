@@ -23,7 +23,7 @@ Real carrier/Exchange đầy đủ còn thiếu.
 
 ## Đấu giá và điểm mô phỏng
 
-Owner duyệt27/10 theo [ADR0048](../adr/0048-auction-intake-from-shelf.md): nhận
+Owner duyệt27/10 theo [ADR0049](../adr/0049-auction-intake-from-shelf.md): nhận
 sách lẻ đủ điều kiện từ kệ Marketplace (Sale/Both/Exchange), giữ nguồn Auction
 cũ, không đổi channel/mode/giá; không bộ sách. Dùng predicate catalog/ảnh/owner/
 revision chuẩn rồi bắt buộc Available và không commitment Active dưới lock.

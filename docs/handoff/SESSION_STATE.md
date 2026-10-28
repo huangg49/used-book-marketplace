@@ -1,29 +1,26 @@
-# Điểm lưu hiện tại — 27/10/2026
+# Điểm lưu hiện tại — 28/10/2026
 
-## Tích hợp gói Admin vào main — 27/10/2026
+## Tích hợp gói Admin vào main — 28/10/2026
 
-- Owner yêu cầu push, kiểm CI/CD và merge. Nhánh `codex/dashboard-query-performance`
-  ghép `origin/main` tại `5fe3a70`; backup local tại
-  `codex/admin-before-main-integration-20261027`. Giữ toàn bộ thay đổi User web
-  của nhóm; giữ logo chính thức trong BrandMark và chuyển fix tên sách Pending
-  của main sang ListingTitle đã tách. Không đổi READINESS hoặc tự đóng gate.
-- Sau resolve: Admin219tests/typecheck/lint/build PASS; thêm hai ca cache tên sách
-  Confirmed/Pending không lẫn reference. PR [#77](https://github.com/huangg49/used-book-marketplace/pull/77)
-  đã push tại `465f1fa`, chưa merge; chưa ghi nhận human review.
-- Owner yêu cầu tạm dừng tối 27/10 vì usage, tiếp tục kiểm CI rồi merge vào phiên sau;
-  đồng thời rà các PR còn mở trước khi cân nhắc tích hợp từng PR.
-- CI PR head:7/10job PASS; Operations browser FAIL do locator/expectation cũ,
-  API E2E743PASS/2FAIL do fixture âm cố tình làm sai dữ liệu nhưng chưa khôi phục,
-  User web listing-cache browser FAIL vì tổng lượt ký ảnh10→15. Chưa bỏ qua lỗi.
-- Local chưa commit: `apps/admin-web/tests/browser.mjs` cập nhật thao tác form,
-  dropdown, sidebar, focus/route và chỉ cho lưu preference không chứa token;
-  suite đã tới ca lazy-page error nhưng login bị rate limit (fixture cần reset
-  login_attempts riêng trước ca cuối). `apps/api/test/auctions.e2e-spec.ts` thêm
-  finally khôi phục fixture âm; typecheck PASS, lượt chạy liên suite bị dừng,
-  chưa tính PASS. Cần kiểm lại diff và chạy đủ CI trên head mới trước merge.
-- Sau integration còn PASS local: API208unit/typecheck/lint/build,
-  contract0.54/180routes, User web238tests/typecheck/build, bundle+dev24tests,
-  docs451md/2815links. Không đụng DB local chính hoặc thay gate READINESS.
+- Owner yêu cầu tiếp tục push/CI/merge. PR [#77](https://github.com/huangg49/used-book-marketplace/pull/77),
+  nhánh `codex/dashboard-query-performance`, đã ghép main tại `4db4d3b`.
+  PR75/76/78 đã được nhóm merge; tại lúc kiểm tra chỉ còn PR77 mở.
+- Giữ phần AI autofill và fix shelf/cache ảnh của main. ADR gửi sách từ kệ đổi
+  sang [0049](../adr/0049-auction-intake-from-shelf.md), tránh trùng ADR0048 autofill.
+  Ghép migration0037 indexes+0038 autofill, contract0.55/181routes/28controllers;
+  YAML/generated đã đồng bộ, không sửa migration cũ.
+- Sửa browser harness theo form/dropdown/sidebar đã chốt, giữ ca keyboard,
+  lost-ACK/replay/409/role/session; chỉ cho persist lựa chọn sidebar, không token.
+  Fixture cuối reset login_attempts trong DB QA riêng để kiểm lỗi lazy import.
+  Negative auction probes khôi phục trạng thái gốc trong finally trước integrity sweep.
+- PASS local sau ghép: Admin219tests/lint/typecheck/build và full browser suite
+  trên Edge desktop/mobile/large text, API lint/typecheck/build+224unit với
+  `vitest run --maxWorkers=2`, User web listing-cache desktop1440/mobile390,
+  contract/check/routes, docs452md/2818links. APIunit mặc định timeout fixture
+  shutdown Windows khi chạy nhiều worker; riêng test đó PASS, không sửa timeout.
+- Remote CI phải chạy lại trên head mới trước merge; kết quả cuối theo PR77.
+  Lượt API E2E local liên suite vẫn đang kiểm, chưa tính PASS. Human review chưa
+  được ghi nhận; READINESS giữ nguyên, không coi merge là đóng gate release.
 
 ## Cache/polling Dashboard — 27/10/2026
 
