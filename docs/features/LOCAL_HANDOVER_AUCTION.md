@@ -18,7 +18,7 @@ thời hạn và quy tắc biên dưới đây là baseline triển khai do nhó
 | DEC-04 | Một giao dịch ViaPoint dùng đúng một điểm chung. SelfDropoff/CarrierInbound và SelfCollect/CarrierOutbound là các lựa chọn độc lập của từng người. |
 | DEC-05 | Kiểm tra tình trạng/đối chiếu mô tả có biên bản; không chứng nhận chính hãng, quyền sở hữu hoặc tính hợp pháp của bản in bằng một lần duyệt ảnh. |
 | DEC-06 | Đấu giá là chức năng phụ có phạm vi bắt buộc tối thiểu ở bản 1.1: một cuốn/phiên, giá mua ngay tùy chọn, còn dùng được sau bid khi giá hiện tại thấp hơn (mở 60 giây cho người khác trả cao hơn, ADR 0043/0047), Auto có trần, hết phiên tạo một Order. |
-| DEC-07 | Đấu giá dùng listing riêng kênh Auction do luồng đấu giá tạo (mode Sale, salePrice là giá trị khai báo), không lấy listing của sàn mua/đổi; listing Auction không lên kệ, không mua/đổi/báo giá ([ADR 0042](../adr/0042-auction-only-listings.md), 19/10/2026). Sách phải được điểm nhận và đạt kiểm tra trước khi mở phiên. |
+| DEC-07 | Owner duyệt27/10: chọn sách lẻ đã duyệt từ kệ Marketplace (Sale/Both/Exchange) để gửi đấu giá, dùng nguyên listing/channel/revision; vẫn nhận nguồn Auction cũ. Bộ sách không được đưa đấu giá. Khi giữ cho intake/phiên/PointOrder, sách rời kệ công khai và không nhận giao dịch song song; sách phải được điểm nhận và kiểm tra Pass trước mở phiên ([ADR 0049](../adr/0049-auction-intake-from-shelf.md)). Channel Auction vẫn không lên kệ mua/đổi (ADR 0042). |
 | DEC-08 | Giữ cọc Exchange 100% giá trị sách dự kiến nhận cho cả hai phương thức ở bản đầu. Điểm giữ sách không tự miễn cọc; thay đổi tỷ lệ là policy tương lai. |
 | DEC-09 | Không tiền thật/carrier thật. Có thể diễn tập tiếp nhận sách thật tại bàn được phép dùng; tọa độ/địa chỉ mô phỏng không được trình bày như cơ sở đã hoạt động. |
 
@@ -222,7 +222,9 @@ FR-T04: incident phải tồn tại ngay cả khi chưa có Order (auction intak
 thấy receipt và kênh yêu cầu xử lý. Mất/hỏng được xác minh trong custody AtPoint do
 nền tảng chịu theo giá trị bảo vệ snapshot: Sale dùng salePrice đã duyệt lúc intake,
 Exchange dùng exchangeValue. Với đấu giá đã bán, dùng giá Order; trước đó dùng
-salePrice snapshot, không dùng max bid bí mật hay giá mua ngay để tự nâng bồi thường.
+protectiveValue snapshot lúc intake (declaredValue, hoặc fallback salePrice/
+exchangeValue/startPrice cho client cũ theo ADR0049), không dùng max bid bí mật
+hay giá mua ngay để tự nâng bồi thường.
 Giá bảo vệ công khai cho người gửi trước intake; không là cam kết giá thị trường.
 
 Nguồn bồi thường là quỹ mô phỏng POL-42; Buyer nhận lại P/ship chưa phát sinh từ
@@ -242,9 +244,13 @@ Quá hạn không đến lấy không đồng nghĩa bỏ quyền sở hữu; kh
 
 ## 6. Đấu giá và Auto
 
-FR-AU01: Seller tạo AuctionIntake trên listing kênh Auction của mình (ADR 0042) đã
-Approved/Visible/Available; listing kênh Marketplace bị từ chối,
-snapshot revision/start/step/buyNow/point/policy; start và buyNow nằm POL-16, buyNow
+FR-AU01: Seller ACTIVE, xác minh email và không bị hạn chế tạo AuctionIntake trên
+listing sách lẻ Marketplace của mình (Sale/Both/Exchange), hoặc nguồn Auction cũ
+theo [ADR0049](../adr/0049-auction-intake-from-shelf.md). Recheck dưới lock:
+Approved/Visible/Available/published, revision đã nộp và được duyệt, catalog
+Confirmed, ảnh Ready, không bộ sách hay commitment Active. Không đổi channel/
+mode/giá niêm yết. Snapshot revision/giá trị khai báo/start/step/buyNow/point/policy;
+start và buyNow nằm POL-16, buyNow
 nếu có lớn hơn start. Trong cùng transaction, giữ độc quyền listing và slot. Không
 mở mua/đổi thường trong intake hoặc auction; có phiên cũ PaymentExpired/Unsold muốn
 đăng lại phải return về OwnerConfirmed rồi tạo yêu cầu mới ở bản đầu.

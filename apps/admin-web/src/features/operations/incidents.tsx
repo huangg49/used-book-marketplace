@@ -6,6 +6,7 @@ import { dateText, money } from "../../core/format";
 import { canOperatePoint, canResolve, session } from "../../core/session";
 import { Button, ErrorNotice } from "../../core/ui";
 import { ActionPanel } from "./action-panel";
+import { MotionPanel } from "../../core/MotionPanel";
 import {
   incidentFund,
   incidentKindLabels,
@@ -59,32 +60,35 @@ function IncidentsContent({ user }: { user: CurrentUser }) {
         result={result}
         serverTime={result.data?.serverTime}
         panel={panel}
-        extra={(context) =>
-          opening ? (
-            <div className="row-panel">
-              <IncidentOpen
-                {...context}
-                admin={admin}
-                onFinish={(outcome) => {
-                  setOpening(false);
-                  context.onFinish(outcome);
+        extra={(context) => (
+          <>
+            <MotionPanel open={opening} className="row-panel">
+              {opening && (
+                <IncidentOpen
+                  {...context}
+                  admin={admin}
+                  onFinish={(outcome) => {
+                    setOpening(false);
+                    context.onFinish(outcome);
+                  }}
+                  onClose={() => setOpening(false)}
+                />
+              )}
+            </MotionPanel>
+            {!opening && (
+              <Button
+                disabled={panel.pending}
+                onClick={() => {
+                  panel.setOpen(undefined);
+                  panel.setNotice(undefined);
+                  setOpening(true);
                 }}
-                onClose={() => setOpening(false)}
-              />
-            </div>
-          ) : (
-            <Button
-              disabled={panel.pending}
-              onClick={() => {
-                panel.setOpen(undefined);
-                panel.setNotice(undefined);
-                setOpening(true);
-              }}
-            >
-              Báo sự cố
-            </Button>
-          )
-        }
+              >
+                Báo sự cố
+              </Button>
+            )}
+          </>
+        )}
         rows={(result.data?.items ?? []).map((item) => ({
           id: item.id,
           status: incidentStateLabels[item.state],

@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "generator": "built-in image_gen",
+  "assets": [
+    {
+      "id": "blue-bird-body",
+      "sourceFilename": "exec-b611c40b-2f38-4827-9da3-a32d0e1e1e24.png",
+      "sourceSha256": "c09b60a2bde463365926697c0f296553d3e8fbf0cf7a7688520a6ce47059496c",
+      "prompt": "ONE adorable small BLUE SWALLOW bird BODY ONLY asset, isolated on genuinely transparent background. Cute minimal flat 2D vector-cartoon picture-book style, smooth sparse large solid color shapes. Side profile facing RIGHT. Plump round powder-blue body #7cbbd0, cream belly #fffcf5, darker teal-blue short forked tail at LEFT #315c62, one dark teal DOT eye, one tiny warm coral triangular beak #f68b51, tiny coral cheek. Deliberately simple cute cartoon, not naturalistic. NO WING: it is a separate animation asset. Plain blue middle of body for attaching wing. Entire body and forked tail visible with transparent padding. No feet, no feathers or detailed lines, no outline, no gradient, no lighting, no 3D, no glow, no shadow, no grain, no texture, no environment, no text, no logo."
+    },
+    {
+      "id": "blue-bird-wing",
+      "sourceFilename": "exec-376e8042-72a2-46fb-b627-29d47294836c.png",
+      "sourceSha256": "158466ef0f3456c9332eef93c9b89045adbfacad8d73ccc7eb6258fc20176878",
+      "prompt": "ONE separate BLUE SWALLOW WING asset isolated on a genuine transparent background. Flat 2D vector-cartoon picture-book style. Single simple rounded teardrop-shaped wing pointing DOWN-LEFT, narrow hinge at TOP-RIGHT. Muted teal-blue #467e97 outer shape with one small powder-blue #7cbbd0 inset. Smooth clean solid-color shapes, cute and extremely simple, broad soft rounded end. This independent wing will attach to a small right-facing blue swallow. NO bird body, no eye, no beak, no feather lines, no texture, no gradient, no lighting, no 3D, no glow, no shadow, no outline, no ground, no text. Entire wing visible with transparent padding."
+    },
+    {
+      "id": "feather",
+      "sourceFilename": "exec-7af8861e-a083-4ae2-bf01-3dc52af23070.png",
+      "sourceSha256": "bc95065f44086ab76c34c7253810e34f034022db169135cb7b5684a817770c91",
+      "prompt": "ONE little floating BIRD FEATHER asset on genuine transparent background. Cute minimal flat vector-cartoon picture-book style. Soft rounded elongated feather, tilted from upper-right to lower-left, powder-blue #7cbbd0 silhouette with a cream #fffcf5 simple half-shape and one thin teal #315c62 central shaft. Smooth filled shapes, no barbs or fine detail. Graceful small curved silhouette, entire feather visible with generous alpha padding. No bird, no text, no logo, no environment, no outlines other than the thin shaft, no texture, no grain, no gradients, no glow, no shadow, no lighting, no 3D."
+    },
+    {
+      "id": "blue-fish-body",
+      "sourceFilename": "exec-24aac490-d3c4-4a1d-a8d7-e21bac7f8b6d.png",
+      "sourceSha256": "f98704f07ba584591c1c30196b06d023671c5e296cfa7dbf158c1246a2571554",
+      "prompt": "ONE very cute minimal BLUE REEF FISH BODY ONLY asset isolated on genuinely transparent background. Flat 2D vector-cartoon picture-book style matching an adorable goldfish with dot eye, deliberately simple smooth solid-color shapes. Side profile facing RIGHT. Plump rounded blue oval body #7cbbd0, one broad teal-blue patch #467e97 near back, cream belly #fffcf5, one tiny dark teal DOT eye #164b56, one tiny curved smile, one coral-pink cheek #f6d4bd, small simple teal dorsal fin and one tiny flat pectoral fin. NO CAUDAL TAIL: tail is a separate animation asset. Body tapers to a short narrow closed rounded tail-root at the LEFT. Entire body visible with transparent padding. No scales, no stripes, no fin rays, no realism, no gradients, no lighting, no shading, no 3D, no glow, no shadows, no outlines, no texture, no ground, no text, no logo."
+    },
+    {
+      "id": "blue-fish-tail",
+      "sourceFilename": "exec-5beab184-c715-4752-9665-a8fbdf36c10c.png",
+      "sourceSha256": "bd3c1842644100d9c19c73e18c5005daae7d5aeb93e703750fc8027127491f20",
+      "prompt": "ONE separate cute BLUE REEF FISH CAUDAL TAIL asset isolated on genuine transparent background. Simple flat 2D vector-cartoon picture-book style. Narrow rounded powder-blue connector #7cbbd0 at RIGHTMOST tip, expands toward LEFT into a broad soft rounded fan with two gently scalloped lobes. Teal-blue #467e97 outer filled silhouette and one powder-blue #7cbbd0 inner patch, exactly two or three simple large solid shapes. Hinge at RIGHT tip attaches to a right-facing plump blue fish. No fin rays or interior lines, no texture, no gradients, no lighting, no shading, no 3D, no glow, no shadows, no outline. NO fish body, no head, no eye, no scenery, no text. Entire tail visible with generous alpha padding."
+    },
+    {
+      "id": "fan-coral",
+      "sourceFilename": "exec-b12664b3-fc58-4382-90fb-9737d4734ee9.png",
+      "sourceSha256": "0a59dad6680a5b25f4249603859267ab7800881f94af39f70879ff54b24887b4",
+      "prompt": "ONE small FAN CORAL asset isolated on genuine transparent background, cute flat 2D vector-cartoon picture-book style for an aquarium. Warm peach-pink #e9a6a0 and coral #f68b51, broad compact fan silhouette with seven or eight simple rounded branching fingers rising from one small rooted base at bottom center, branches deliberately thick and sparse, no fine lace or network. Large smooth solid filled shapes, clean simple silhouette, adorable and elegant. Entire upright coral visible with transparent padding, portrait composition. No fish, no rocks, no ground, no pot, no text. No gradient, no texture, no grain, no realism, no glow, no shading, no 3D, no drop shadow, no outlines."
+    },
+    {
+      "id": "branch-coral",
+      "sourceFilename": "exec-6b903f47-c0a9-4319-a239-9b2c3a36a749.png",
+      "sourceSha256": "98a1b35f7302f88c9121c8a5c2f2de5e43dd9ceac11f54538e03e2abe4d09c64",
+      "prompt": "ONE small rounded BRANCH CORAL asset on genuine transparent background. Cute very simple flat 2D vector-cartoon picture-book aquarium asset. Three main thick curved golden-yellow stems #f4cb67 with five or six rounded fork tips, small warm peach underside patches #f6d4bd. Upright compact branching coral rooted at a common bottom center. Only a few clean smooth filled shapes, full coral visible with transparent padding, no intricate branches, no fine texture or polyp dots. No fish, no rocks, no ground, no pot, no text. No gradients, no lighting, no 3D, no glow, no shadows, no outline, no grain, no realistic detail."
+    },
+    {
+      "id": "shell",
+      "sourceFilename": "exec-d1c8b1bb-fd21-409b-a375-d087f248b0a5.png",
+      "sourceSha256": "45d0f69565ed87bc8e282d950163d0d5964bfdd34f386a78657cdcbfaabcdd67",
+      "prompt": "ONE cute little SCALLOP SEASHELL asset isolated on genuine transparent background. Flat minimal 2D vector-cartoon picture-book illustration. Pale peach #f6d4bd rounded fan shell with softly scalloped top edge, tiny cream hinge at lower center, only three broad warm coral #e9a6a0 curved radial bands. Front three-quarter view but entirely flat solid-color shapes, plump friendly simplified silhouette, no pearl, no face. Entire shell visible with generous transparent padding. No sand, no water, no other shells, no animals, no text. No texture, no fine ribs, no grain, no outline, no gradients, no lighting, no 3D, no glow, no shadow."
+    },
+    {
+      "id": "sea-snail",
+      "sourceFilename": "exec-c9e23377-79cd-44a6-b860-35b6a3447cf7.png",
+      "sourceSha256": "161404b9ef947d9716d9456b016315b2e368d4e9eabb4775a6976239c833a3c9",
+      "prompt": "ONE adorable small SEA SNAIL asset isolated on genuine transparent background. Very cute minimal flat 2D vector-cartoon picture-book style, facing RIGHT in side profile. Soft pale mint #b6dac5 small rounded crawling body, one plump warm golden #f4cb67 spiral shell with ONE broad peach #f68b51 simple spiral curve, two tiny rounded antennae and dot eyes in dark teal #164b56, tiny gentle smile. Simple large smooth filled shapes, deliberately preschool picture-book cute, no anatomical detail, no patterns. Entire snail visible with generous alpha padding in landscape composition. No ground, no water, no plants, no text. No gradients, no shading, no realism, no lighting, no 3D, no glow, no drop shadow, no texture, no grain, no outlines around body."
+    }
+  ]
+}

@@ -75,7 +75,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
   // ADR 0042: auctions use the seller's own Auction-channel listing.
   async function saleListing(
     owner: Actor,
-    mode: 'Sale' | 'Both' = 'Sale',
+    mode: 'Sale' | 'Both' | 'Exchange' = 'Sale',
     channel: 'Auction' | 'Marketplace' = 'Auction',
   ) {
     const book = await fixtures.book(owner.id, reviewer.id);
@@ -88,10 +88,9 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
             $set:
               mode === 'Sale'
                 ? { mode: 'Sale', exchangeValue: null }
-                : {
-                    mode: listingContent.mode,
-                    exchangeValue: listingContent.exchangeValue,
-                  },
+                : mode === 'Exchange'
+                  ? { mode: 'Exchange', salePrice: null, exchangeValue: listingContent.exchangeValue }
+                  : { mode: 'Both', exchangeValue: listingContent.exchangeValue },
           },
         ),
       { listing: l.id },

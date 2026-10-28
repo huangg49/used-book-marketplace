@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "generator": "built-in image_gen",
+  "assets": [
+    {
+      "id": "forest",
+      "sourceFilename": "exec-e14890c3-5749-4ee3-a074-840c8818b87e.png",
+      "sourceSha256": "22b3ee2aab44c33e504d453d169bbb0cc47b6771b74fc3bdb8addc5825a6655d",
+      "prompt": "Create a background-only illustration for a cute calm miniature forest inside a dashboard card, flat 2D vector-cartoon picture-book style matching a minimal aquarium illustration. Pale warm cream-green sky #edf1d9 occupying the upper 58 percent, very faint rounded distant sage tree silhouettes low on the horizon, two large simple rolling moss-green meadow shapes in the lower half, soft golden pale clearing #ece5b8 across the bottom 15 percent. Clean smooth solid-color shapes, sparse and sophisticated, no detailed foliage, no outlines, no texture, no grain, no lighting, no 3D, no glow, no gradients. Entire top left half is completely empty quiet light sky for readable metric text. Ground is broad uncluttered and level enough for placing an animal later. NO animals, no foreground trees, no books, no flowers, no insects, no typography, no logo, no border. Landscape 3:2 illustration, edge to edge opaque background."
+    },
+    {
+      "id": "tree",
+      "sourceFilename": "exec-b7d0c663-21ce-4520-acaa-fd422ac0f374.png",
+      "sourceSha256": "356d459a5416a2114cc62d926af78d663c5c29d7aa111d22346701cc7ba2a466",
+      "prompt": "ONE individual cute flat vector-cartoon forest TREE asset isolated on a genuinely transparent background. Rounded friendly broadleaf tree, simple short warm-brown tapered trunk and only three overlapping puffy rounded green canopy masses in #467c65 #71a88c #b6dac5. Clean smooth 2D silhouette, large flat solid-color areas, very minimal preschool picture-book elegance matching a cute flat cartoon aquarium. Full upright tree entirely visible centered with generous alpha padding, bottom trunk root is the pivot for gentle sway. NO tiny leaves, no veins, no texture, no grain, no outline, no gradients, no lighting, no 3D, no shadow, no glow, no ground, no grass, no animals, no text, no logo. One tree only."
+    },
+    {
+      "id": "fox-body",
+      "sourceFilename": "exec-75333169-897e-4894-b2f9-f8e78451e983.png",
+      "sourceSha256": "cebb55cdea1ecee34dfd8e880c1f5445dbd9ac230eca43e026bf78e7aa5d5363",
+      "prompt": "ONE very cute simple flat vector-cartoon FOX BODY asset on a genuinely transparent background. A small plump seated orange fox in front three-quarter view gently cuddling one closed tiny burgundy book against its cream belly. Fox orange #f68b51, cream face/cheeks/belly #fffcf5, two little triangular rounded ears with small wine interiors, two dark-wine DOT eyes, a tiny simple dark nose, calm friendly expression, stubby paws and feet. At most 8 to 10 smooth large solid filled shapes, polished minimal preschool picture-book vector, deliberately sparse and adorable, no fur details. BODY ONLY: fox tail is a SEPARATE animation asset and must not appear. Entire body, ears and feet fully visible with generous alpha padding in square composition. No tail, no ground, no environment, no text on book, no typography, no outlines, no texture, no grain, no gradient, no shading, no lighting, no 3D, no glow, no shadow."
+    },
+    {
+      "id": "fox-tail",
+      "sourceFilename": "exec-ea352d1f-ef49-4e02-9fad-b53d5fd4afc3.png",
+      "sourceSha256": "f4b131adf71236345d856da1ece6bad8855c24c07c8d99494717c3690957e24d",
+      "prompt": "ONE separate cute flat vector-cartoon FOX TAIL asset on a genuinely transparent background. A plump curled bushy orange tail #f68b51 with one large cream tip #fffcf5, exactly two smooth solid filled shapes. Tail root is the narrow LEFTMOST bottom connector, tail curves gently upward and RIGHT into a big soft rounded comma silhouette, cream tip at the upper-right end. This separate tail will sit behind a seated small orange fox and pivot at its lower-left root. Entire tail uncut with generous alpha padding, square composition. Very simple preschool picture-book vector shape, no strokes, no fur lines, no texture, no gradient, no lighting, no 3D, no glow, no shadow, no fox body, no eyes, no animal head, no ground, no environment, no text, no logo."
+    },
+    {
+      "id": "bird-body",
+      "sourceFilename": "exec-4fa385a0-d0e1-47f5-bc7e-156cb1286324.png",
+      "sourceSha256": "c122daf56e6649f54886b4bbc241d909a9f5c6ec2339d74144f596d2b3673f61",
+      "prompt": "ONE cute tiny songbird BODY ONLY, isolated on genuine transparent background. Simple flat 2D vector-cartoon picture-book asset, very sparse smooth filled shapes matching an adorable flat fox and goldfish. Facing RIGHT in side profile: round golden-yellow body #f4cb67, cream small belly #fffcf5, one dark-wine dot eye, small peach triangular beak, one short simple orange tail on LEFT, two tiny brown feet. NO WING: wing is a separate animation layer; leave the center of body a plain golden oval. Only 5 to 7 solid shapes, no feather lines, no texture, no grain, no outlines, no shading, no gradients, no lighting, no 3D, no shadow, no glow. Entire bird visible in landscape composition with transparent padding. No branch, no ground, no text, no logo."
+    },
+    {
+      "id": "bird-wing",
+      "sourceFilename": "exec-739f3245-1b17-47c6-bd24-eae81c9b1e0d.png",
+      "sourceSha256": "bb154982b4a0b7775591edfb2c3686c3727bbcef33522cb4ba7ecd97324fa13d",
+      "prompt": "ONE isolated little cartoon BIRD WING asset, on a genuine transparent background. A single simple warm coral-orange #f68b51 smooth rounded teardrop-shaped wing, pointing DOWN-LEFT, narrow root at TOP-RIGHT, broad rounded end at lower-left. At most one small golden patch #f4cb67. Flat 2D solid filled shapes, cute very minimal preschool picture-book vector style. NO bird body, no eyes, no feathers or internal lines, no strokes, no texture, no grain, no gradient, no lighting, no 3D, no glow, no shadow, no ground, no text. Entire single wing uncut, generous transparent padding, square composition."
+    },
+    {
+      "id": "butterfly",
+      "sourceFilename": "exec-042bc2bc-f0c6-43e2-abfb-56537533a274.png",
+      "sourceSha256": "9013ac483c617149ef85a1643ad8bcdca4952099282f8c357cf77bdb41346520",
+      "prompt": "ONE very cute simple butterfly isolated on genuine transparent background, front view with open wings. Flat 2D vector-cartoon picture-book style. Four rounded pale peach #f6d4bd wing lobes with two small coral #f68b51 oval patches, tiny dark warm-brown vertical body and two tiny curved antennae. Symmetrical simple silhouette, no intricate wing veins, no tiny spots, no outlines around wings. Large flat solid-color shapes, clean smooth edges, intentionally minimal and adorable. No texture, no grain, no gradients, no lighting, no 3D, no glow, no shadow, no flowers, no other insects, no environment, no text. Entire butterfly visible centered with alpha padding."
+    },
+    {
+      "id": "fern",
+      "sourceFilename": "exec-b5b233b2-f55c-436e-8c93-e0e72d9df946.png",
+      "sourceSha256": "2b0ba7d6a903f3a2ed73f762a09f3bb920a52fceddb2cea0b6cb899077bfd5c9",
+      "prompt": "ONE small cute forest FERN PLANT asset on genuine transparent background. Three gently arching fronds rising from one common bottom root, each frond with only 5 or 6 broad rounded leaflets. Flat simple solid green shapes in #467c65 #71a88c and #b6dac5, clean smooth vector-cartoon picture-book style matching a minimal fox and aquarium plant. Leaflets large and sparse, friendly rounded tips. No leaf veins, no texture, no grain, no outlines, no gradients, no lighting, no 3D, no shadow, no glow, no pot, no ground, no animals, no text. One plant only, full upright plant visible with transparent padding, portrait composition."
+    },
+    {
+      "id": "mushrooms",
+      "sourceFilename": "exec-deaba35c-b1d0-49c7-b658-05dd86916011.png",
+      "sourceSha256": "756625ad3f8ee2cb5b6b3e635367cc68b3ce91b2c64b0282602216274ed8f110",
+      "prompt": "ONE compact group of exactly THREE cute simple woodland mushrooms, isolated on genuine transparent background. One taller rounded rust-coral cap #f68b51 with two large cream spots, two smaller golden-yellow caps #f4cb67 with one cream spot each, short cream stems #fffcf5 and tiny warm-brown bottom shapes. Very simple flat 2D vector-cartoon preschool picture-book asset, chunky rounded smooth silhouettes, sparse flat filled colors. No gills, no facial features, no texture, no grain, no outlines, no gradients, no lighting, no 3D, no shadows, no glow, no ground, no grass, no animals, no text. All three grouped at one common baseline, entire group centered with transparent padding."
+    }
+  ]
+}

@@ -3,6 +3,206 @@
 Ngày: 27/09/2026. Phạm vi: web Staff/Admin sử dụng API thật theo OpenAPI 0.6.0.
 Quyết định kiến trúc: [ADR 0010](../adr/0010-operations-review-client.md).
 
+## Cache/polling Dashboard — 27/10/2026
+
+Source: `codex/dashboard-query-performance`, base `26db9fc`; commit subject
+`perf(admin): reuse fresh dashboard queries and reconcile all metrics`.
+
+- Nguồn Dashboard và overview7/30 chuyển sang cùng prefix cache, scope gồm user,
+  status và roles đã chuẩn hóa thứ tự. Dùng lại snapshot còn mới30s khi remount/
+  đổi period, dùng cơ chế dedup GET đang chạy của TanStack. Polling bám thời điểm
+  tải thành công để remount sát hạn không kéo thêm30s; read lỗi quay về cadence30s,
+  không retry nhanh. Giữ background polling disabled, profile/auth policy riêng,
+  gcTime/session memory-only và tất cả capability checks/API schemas hiện có.
+- `Detail.reconcile` và callback reconciliation chung trong `ActionPanel` đánh
+  dấu toàn bộ nguồn+period stale trước GET đối chiếu, không refetch Dashboard ở
+  đó. ACK nhưng GET lỗi vẫn giữ receipt và chỉ đọc lại; lost ACK không tự đánh
+  dấu thành công, retry giữ nguyên serialized body/key/version. Không đợi API
+  Dashboard để hoàn thành command. Refusal recovery chỉ làm stale snapshot.
+- Manual refresh làm stale cả period chưa chọn và chỉ refetch active queries,
+  dùng lại GET đang chạy. Giữ last-success data/warning/retry khi lỗi. Không thay
+  đổi ảnh/animation/layout hoặc tự thêm server cache/Redis/index/migration.
+
+Đếm response HTTP thật bằng callback tùy chọn của fixture QA; callback chỉ nhận
+method/path/status, không headers/tokens/body/response data. Production build
+trên IAB, API/storage local fake, replica set/database riêng `_test`. Baseline
+production từ gói26db9fc và bản mới dùng cùng fixture, cùng tài khoản Admin+Staff:
+
+| Ca browser | Baseline | Bản mới |
+| --- | ---: | ---: |
+| GET bổ sung của6nguồn Dashboard qua3lượt nhanh Dashboard→Users→Dashboard, dưới30s | 18 | 0 |
+| Overview GET bổ sung trong cùng3lượt | 0 | 0 |
+| Manual Cập nhật ở Dashboard | Không đo lại | 7: mỗi6nguồn và overview hiện tại đúng1lần |
+
+Đây là request tiết kiệm trong kịch bản đã đo, không là phần trăm giảm mọi mạng
+hoặc latency/CPU benchmark. Request của directory/profile/media không nằm trong
+số18→0; Admin đơn vai trò có tập nguồn khác.
+
+- Sau làm nóng cả7/30, từ chối1bài QA: processed3→4, pending6→5 ở cả hai period
+  khi trở về Dashboard. Sửa sức chứa điểm QA20→22, rồi xác nhận lại23 qua callback
+  ActionPanel chung: Dashboard nhận23 ngay. Manual refresh không bị freshness
+  chặn. Dừng QA API rồi refresh: vẫn hiển thị processed4/pending5/capacity23,
+  hiện lỗi và thông báo dữ liệu cũ, nút retry/update còn dùng được.
+- PASS Admin217unit/component/model tests (thêm8ca: remount TTL/deadline, dedup,
+  period/manual refresh, error retention/recovery, account/role scope, stale
+  marker không GET thừa, lost ACK+GET lỗi giữ intent); lint/typecheck/build.
+  PASS7HTTP/Mongo integration tests hiện có cho quyền/replay/reconciliation;
+  không thay chúng bằng browser observation. Detector một lượt3target JSX trả0.
+  Startup JS431763/500000bytes, largest218840/300000; workspace+10pages deferred.
+- Browser production kiểm các đường ở trên; thay đổi cuối về deadline polling
+  sát30s kiểm bằng cache/model test, chưa đo timer thực trong browser. Hidden-tab/
+  focus timer/large-volume query plans/INP/FPS/full browser automation/chunk fault/
+  screen reader/native/CI remote/human review NOT RUN. Không đóng gate READINESS.
+  Ảnh `.tmp/dashboard-cache/verified.png`, `offline.png` và response counters nằm
+  trong Git ignore; không commit thông tin phiên hay database.
+
+Fixture tự dọn DB/users/roles, dừng API/preview/Mongo QA; giữ main API/Admin để
+tiếp tục. Hai thư mục build QA trong `.tmp/dashboard-cache-qa-dist` và
+`.tmp/admin-startup-qa-dist` còn giữ: bước xóa bị automatic approval policy chặn
+(`blocked by policy`, không có lý do chi tiết); không thử vòng qua chặn này.
+Không đổi backend/schema/contract/env/dependency/client teammate;
+chưa push/PR/merge. Bước tiếp là đo query plan và latency với fixture lớn trước
+khi cân nhắc tối ưu truy vấn hoặc thêm index mới.
+
+## Tối ưu tải đầu Admin — 27/10/2026
+
+Source: `codex/admin-startup-performance`, base `17aac90`; commit subject
+`perf(admin): defer authenticated workspace until login`. Đây là bước đầu gói
+hiệu năng/ổn định owner duyệt; chưa phải hoàn tất tối ưu API hoặc runtime dev.
+
+| Production manifest, cùng Node24.22.1/pnpm11.19.0 | Trước | Sau |
+| --- | ---: | ---: |
+| JavaScript khởi động, toàn graph static/modulepreload | 497519bytes | 431696bytes (-13,2%) |
+| Gzip ước tính của graph khởi động | 153762bytes | 133169bytes (-13,4%) |
+| CSS khởi động | 55102bytes | 33550bytes (-39,1%) |
+| Chunk JS lớn nhất | 263511bytes | 218840bytes |
+| Tổng JS mọi chunk | 740174bytes | 743261bytes (+0,4%) |
+
+- Shell, command palette, sidebar preferences và TanStack Query tải cùng
+  `AuthenticatedWorkspace` sau login. `/auth/me` và capability gate vẫn đứng
+  trước Outlet;10module trang vẫn lazy, không remount form theo profile refresh.
+  Tách QueryClient khỏi module session, không tạo token store/client thứ hai.
+  Đăng ký cache bắt đầu từ identity lúc import; giữ data qua refresh cùng người,
+  xóa queries/mutations khi logout/đổi/mất identity, hủy reads đang chạy để phản
+  hồi muộn của A không nạp lại cache của B. HMR dispose hủy subscription/cache.
+- React/ReactDOM/Scheduler có chunk riêng theo API `rolldownOptions` của Vite8;
+  regex hỗ trợ cả Windows/Unix. Checker vẫn cộng runtime này vào startup, giữ
+  giới hạn500kB startup/300kB mỗi file và bắt lỗi nếu workspace thành eager.
+  Không nới budget, đổi dependency/lockfile/schema/API/env hoặc client teammate.
+- PASS Admin209unit/component/model tests (thêm7ca cache identity/unsubscribe/
+  cancel late response);7test checker gồm default boundary+eager regression;
+  lint/typecheck/build;27session-client tests;7HTTP/Mongo QA tests bao gồm quyền/replay/reconciliation.
+  Detector một lượt2target JSX trả0finding. Fixture dùng DB riêng `_test`,
+  storage local fake/Sharp thật; không dùng kết quả này làm evidence live bucket.
+- CUA IAB Windows chạy **production build**, API base3009 chỉ trong thư mục build
+  QA `.tmp/`, preview5175. Inventory trước login chỉ có entry/rolldown-runtime/
+  react-runtime; sau login mới có AuthenticatedWorkspace/query/queue modules.
+  Deep link vào hàng chờ giữ đúng URL. Đọc hồ sơ3ảnh, zoom150% (transition180ms),
+  đổi ảnh đúng nhãn/reset100%, Escape trả focus và bỏ scroll lock. Sang directory
+  lọc Staff được2hàng; logout/login pure Staff giữ URL nhưng chỉ hiện cảnh báo
+  quyền,0hàng directory và không menu Admin; logout/reload chỉ còn login.
+- Responsive: desktop1440×1000 và mobile390×844; phiếu Staff rộng314px/padding12px,
+  không tràn ngang. Mở/đóng nhanh, đổi lại Admin rồi chuyển3tab quản lý điểm:
+  chỉ1form sống, không input của tab trước; console không warning/error trong
+  lượt này. Xác nhận các sửa gallery/mobile/ResizeObserver từ gói motion trước;
+  chưa xác nhận hidden-tab playback hay đo frame/CPU/INP/LCP. Ảnh minh họa QA ở
+  `.tmp/admin-startup/desktop.png`, `mobile.png` (Git ignore).
+
+Giảm mã trước login bằng cách dời công việc sau auth; tổng JS tăng nhẹ do các
+boundary/chunk. Chưa đo Core Web Vitals hoặc kết luận app nhanh hơn một tỷ lệ
+thời gian cụ thể. Full browser automation/chunk network fault/throttled network/
+screen reader/Safari/Firefox/native/CI remote/human review NOT RUN. QA tự dọn
+database/users/roles; dừng API/preview/Mongo riêng, bật lại main API/worker/Admin.
+READINESS không đổi, chưa push/PR/merge. Bước tiếp: baseline request/latency/query
+plan Dashboard; chưa tự thêm cache dữ liệu quyền hoặc sửa nghiệp vụ để giảm tải.
+
+## Chuyển động tác vụ — 27/10/2026
+
+Source: `codex/admin-ui-refactor`, base `b544117`; commit subject
+`feat(admin): unify task motion across operations workspace`. Áp theo phương án
+motion owner đã duyệt, dùng Pro Max/Taste/Impeccable trong nhận diện hiện có.
+
+- `MotionPanel` mở220ms/đóng140ms và đổi chiều cao khi chuyển tab điểm. Chỉ giữ
+  khung giấy rỗng khi đóng, gỡ form sống ngay; focus/input được ưu tiên và đổi
+  tác vụ nhanh hủy animation trước. ResizeObserver chỉ đọc, cập nhật ở frame kế
+  tiếp để tránh vòng resize của phiếu lồng nhau. Không dùng animation kết thúc
+  để quyết định submit, quyền, state hoặc thời điểm unmount form.
+- Hàng chờ Review/Operations và bảng người dùng chỉ animate hàng thêm/di chuyển/
+  revision thay đổi. Polling không đổi không phát lại toàn danh sách; tối đa6hàng
+  mới fade180ms. Skeleton3hàng ở lần tải đầu; refresh có chỗ trạng thái cố định,
+  giữ dữ liệu và recovery hiện có. Loading loop dừng khi ẩn/mất focus/offscreen.
+- Kết quả Operations xuất hiện gần hàng vừa xử lý sau ACK và reconciliation,
+  được focus một lần cho từng outcome; polling dời hàng không giành focus lại.
+  Không đổi immutable key/body/version hoặc nhánh unknown/reconcile/retry.
+- PaperSelect ở hai filter người dùng có Enter/phím mũi tên/Home/End/typeahead,
+  Escape/Tab, ngoài vùng và blur; popup đóng inert, có exit trên browser hỗ trợ
+  discrete transitions. Giữ draft tìm kiếm khi đổi filter. Native select trong
+  form nghiệp vụ vẫn giữ tương tác nền tảng, không thay toàn bộ field semantics.
+- Gallery fade ảnh mới sau load và zoom bằng nút180ms; không giữ ảnh cũ dưới
+  nhãn mới hoặc thay readiness. Dialog có progressive exit140ms, đóng native
+  trả focus ngay. Login/empty/menu có một lần xuất hiện nhẹ; không thêm vòng lặp
+  Dashboard, giữ ba cảnh đã duyệt, workboard đứng yên và depth trên hai liên kết.
+  Chính sách motion owner11/10 được giữ bằng override trong phạm vi component.
+- PASS Admin202unit/component/model tests, lint/typecheck/build; bundle startup
+  JS497519/500000bytes,10page modules deferred. Không thêm package/lockfile;
+  CSS/WAAPI và helper chỉ tải theo feature. HTTP/Mongo riêng7tests PASS gồm
+  lost ACK/replay/reconcile/quyền/revision. Storage QA fake, không là live bucket.
+  Detector chạy một lượt13target UI, trả0finding; không thay thế kiểm thị giác.
+- CUA IAB Windows1440×1000: dropdown phím/Escape/typeahead chọn Staff, giữ từ khóa
+  chưa submit; popup đóng inert/display none. Quản lý điểm đổi tab chỉ một form,
+  hủy xác nhận giữ lựa chọn, lưu tên/trạng thái QA nhận biên nhận đúng hàng và
+  focus. Pure Staff nhận sách QA → Received với kệQA-01; thử mở/đóng liên tiếp,
+  lỗi mã kệ trống focus field, biên nhận sau ACK và0editor trong panel đóng.
+  Mobile390×844 mở phiếu kiểm tra không tràn ngang; phát hiện padding lồng làm
+  nội dung hẹp và đã mở rộng phiếu sang cả hàng trong bản sửa cuối.
+- Log QA có ResizeObserver warning khi đổi tab; deferred writes và regression
+  test đã bổ sung. **Browser confirmation sau sửa resize/mobile NOT RUN** vì
+  quyền browser bị tắt giữa lượt. Gallery fade/zoom mới, native dialog exit,
+  hidden-tab/viewport playback và full browser suite chưa được xác nhận lại.
+  Chưa đo FPS/INP/CPU, chưa audit screen reader/chữ lớn/Safari/Firefox/native,
+  remote CI hoặc human review. Không coi source tests là bằng chứng mượt máy thật.
+
+Fixture tự dọn database/users/roles riêng sau QA; dừng API/Vite/Mongo QA của lượt
+này, giữ main API/Admin đang chạy. Không sửa seed/env/database chính/backend,
+không push/PR/merge, không đóng gate READINESS. Khi browser được bật lại, xác nhận
+những ca còn thiếu ở trên trước review tích hợp.
+
+## Bàn đọc hai vùng — 27/10/2026
+
+Source: `codex/admin-ui-refactor`, sau base `729a442`; commit gói có subject
+`feat(admin): build a continuous book moderation desk`. Các phần bên dưới mục này
+là báo cáo baseline27/09, không thay thế trạng thái/gate hiện hành trong handoff.
+
+- Hàng chờ và hồ sơ chung một màn: giữ status trong URL, cache theo người dùng,
+  vị trí cuộn dạng số trong memory, nút Trước/Tiếp và bàn phím chọn hàng. Mobile
+  có nút mở hàng chờ và đi tới phiếu, offset tránh header che focus.
+- Gallery riêng: thumbnail, ảnh lớn, zoom100–300%, chuyển ảnh/phím, nhận diện bản
+  gửi, Escape/focus return/scroll-lock cleanup. Read lỗi/ảnh lỗi/URL mới chưa load
+  đều vô hiệu hóa readiness; không persist signed URL hay nội dung riêng.
+- Đối chiếu hai bản gửi từ endpoint revisions có cursor: nội dung/giá/điều kiện,
+  thay ảnh cùng số lượng hoặc đổi thứ tự, bộ sách và lựa chọn giao nhận. Ảnh bản
+  cũ chỉ tải khi mở. Chọn bản cũ không đổi revision của phiếu quyết định. Không
+  dựng lịch sử metadata catalog ngoài contract. Không đổi API/session/command.
+- PASS Admin194unit/component/model tests, lint/typecheck/build và bundle budget
+  (startup JS497289bytes,10page modules vẫn deferred). HTTP/Mongo riêng7tests:
+  thêm đối chiếu revision bất biến/Admin–Staff và từ chối TEST_OPERATOR; giữ các
+  ca lost ACK/replay/reconcile đã có. Storage local fake/Sharp thật, không phải
+  bằng chứng Supabase live. Không migration hoặc thay seed/password/env chính.
+- CUA trên IAB Windows: desktop1440×1000,390×844,320×800 không tràn ngang; gallery
+  zoom/đổi ảnh/focus/scroll lock; dropdown phím/Escape; đổi tab giữ checklist/lý
+  do; guard rời hồ sơ; duyệt/từ chối/catalog confirm thật trên QA; next/reset;
+  quay lại đúng filter; scroll954px được phục hồi954px. Gửi lại trong lúc mở cũ
+  rồi reload đọc đúng bản3 và so sánh2→3. Tắt QA API rồi refresh giữ5hồ sơ và nút
+  retry. Console không có lỗi trước ca network fault chủ động.
+- Pro Max/Taste/Impeccable dùng trong brand hiện có. Detector một lượt36advisory
+  (35literal color,1font19px); đổi về token brand/color-mix và type20px. Review
+  source/browser bởi một agent, không là critique độc lập hay human review.
+- Suite tự động `tests/browser.mjs` đã cập nhật selector URL và ca mới, **NOT RUN**
+  trong phiên này; CUA thủ công ở trên không được báo thành suite tự động PASS.
+  Screen reader/chữ lớn/Safari/Firefox/native/CI remote/human review NOT RUN.
+  READINESS giữ nguyên. Ảnh QA trong `.tmp/review-workspace/` (Git ignore).
+
+
 ## Đã triển khai
 
 - Đăng nhập, đọc quyền hiện tại, xoay token và đăng xuất thu hồi phiên. Token chỉ

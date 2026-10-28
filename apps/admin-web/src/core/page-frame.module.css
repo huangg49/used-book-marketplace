@@ -1,0 +1,16 @@
+.surface {
+  position: relative;
+  min-width: 0;
+}
+.edge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 36px;
+  height: min(300px, 42vh);
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--shop-paper) 55%, var(--shop-line) 58%, transparent 62%);
+  transform-origin: left center;
+}

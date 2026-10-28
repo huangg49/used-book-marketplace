@@ -861,6 +861,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/moderation-overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exact moderation counts and daily revision activity
+         * @description ACTIVE STAFF/ADMIN only. Snapshot-consistent read, no pagination. Days are calendar days in Asia/Ho_Chi_Minh including today through serverTime. Submitted counts revision submissions, decisions count recorded decisions on their own decidedAt dates; resubmissions count again. Historical activity remains counted when a listing is later removed. Pending listings exclude deleted/Removed and require a submitted current revision, matching the queue. Pending counts are current, independent of the selected period. Catalog counts are null for STAFF without ADMIN and never queried for that caller. No reviewer identity, reasons, money or member details are exposed.
+         */
+        get: operations["getModerationOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/listings": {
         parameters: {
             query?: never;
@@ -1872,7 +1892,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Seller ACTIVE verified MEMBER. Approved, Visible, Available listing of channel Auction (ADR 0042) with current Sale revision; Marketplace listings return 409 InvalidState. In one transaction snapshots revision/start/step/buyNow, takes the exclusive commitment and one point slot (capacity checked under the point lock). Self drop-off within 72 hours; at most two unfinished intakes/auctions per seller (POL-41). */
+        /** @description Seller ACTIVE verified unrestricted MEMBER. ADR 0049 accepts the caller's single-book Marketplace listing (Sale, Both or Exchange), as well as legacy Auction listings. The current revision must be submitted and approved, its catalog book Confirmed and all linked photos Ready; the listing must be Visible, Available and published, with no active commitment. Bundles are refused. The immutable channel and listing content are not converted. In one transaction snapshots revision/start/step/buyNow and the protective declared value, takes the exclusive commitment and one point slot (capacity checked under the point lock). Self drop-off within 72 hours; at most two unfinished intakes/auctions per seller (POL-41). */
         post: operations["createAuctionIntake"];
         delete?: never;
         options?: never;
@@ -5053,6 +5073,7 @@ export interface components {
             /** @enum {integer} */
             step: 10000 | 50000;
             buyNowPrice: number | null;
+            /** @description Protective value snapshotted at intake (ADR 0049). Does not change the shelf price or set a bid. If omitted for compatibility, uses the revision salePrice, then exchangeValue, then startPrice. Never recalculated from later bids. */
             declaredValue?: number;
         };
         AuctionVersionCommand: {
@@ -5376,6 +5397,30 @@ export interface components {
             displayName: string;
             /** Format: date-time */
             validFrom: string;
+        };
+        ModerationOverview: {
+            /** @enum {integer} */
+            days: 7 | 30;
+            /** @constant */
+            timezone: "Asia/Ho_Chi_Minh";
+            /** Format: date-time */
+            startAt: string;
+            /** Format: date-time */
+            serverTime: string;
+            pending: {
+                listings: number;
+                catalog: number | null;
+            };
+            daily: {
+                /** Format: date */
+                date: string;
+                listingSubmitted: number;
+                listingApproved: number;
+                listingRejected: number;
+                catalogSubmitted: number | null;
+                catalogConfirmed: number | null;
+                catalogRejected: number | null;
+            }[];
         };
         OperationsPoint: {
             /** Format: uuid */
@@ -7309,6 +7354,35 @@ export interface operations {
             404: components["responses"]["ListingError"];
             409: components["responses"]["ListingError"];
             422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getModerationOverview: {
+        parameters: {
+            query?: {
+                days?: 7 | 30;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Calendar series, with zero-filled days and exact current pending counts. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModerationOverview"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];

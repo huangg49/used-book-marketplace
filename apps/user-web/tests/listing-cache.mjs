@@ -322,7 +322,7 @@ async function benchmark(label) {
 }
 
 try {
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}) });
   const index = process.argv.indexOf("--baseline");
   if (index >= 0) {
     const ref = process.argv[index + 1];

@@ -41,23 +41,41 @@ export function CursorPagination({
   pageCount,
   hasNextPage,
   isFetchingNextPage,
+  isFetching,
+  error,
   onNextPage,
   nextLabel,
 }: {
   pageCount: number;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
+  isFetching: boolean;
+  error?: unknown;
   onNextPage: () => void;
   nextLabel: string;
 }) {
-  if (!hasNextPage) return null;
+  if (!pageCount) return null;
   return (
-    <nav className="cursor-pagination" aria-label="Phân trang">
-      <p aria-live="polite">Đã tải {pageCount} trang.</p>
-      <Button busy={isFetchingNextPage} onClick={onNextPage}>
-        {nextLabel}
-      </Button>
-    </nav>
+    <div>
+      {error != null && (
+        <>
+          <ErrorNotice error={error} />
+          <p className="muted" role="status">
+            Chưa tải được trang tiếp theo. Danh sách đã tải vẫn được giữ.
+          </p>
+        </>
+      )}
+      <nav className="cursor-pagination" aria-label="Phân trang">
+        <p aria-live="polite">
+          Đã tải {pageCount} trang.{!hasNextPage && error == null ? " Đã tải hết danh sách." : ""}
+        </p>
+        {hasNextPage && (
+          <Button busy={isFetchingNextPage} disabled={isFetching} onClick={onNextPage}>
+            {error != null ? "Thử tải thêm" : nextLabel}
+          </Button>
+        )}
+      </nav>
+    </div>
   );
 }
 
@@ -184,7 +202,8 @@ export function LoadingSpinner({ text = "Đang tải dữ liệu…" }: { text?:
     >
       <Loader2
         size={32}
-        style={{ color: "var(--shop-wine)", animation: "spin 1s linear infinite" }}
+        className="admin-loading-spinner"
+        style={{ color: "var(--shop-wine)" }}
         aria-hidden="true"
       />
       <p style={{ margin: 0, fontSize: "0.9rem" }}>{text}</p>

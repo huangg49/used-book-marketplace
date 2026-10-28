@@ -32,6 +32,7 @@ import { Gate } from './helpers/mongo-gate.js';
 import { MongoFixtures } from './helpers/mongo-fixtures.js';
 import { AuthService } from '../src/modules/auth/auth.service.js';
 import { PurchasesService } from '../src/modules/purchases/purchases.service.js';
+import { HANDOVER_POINT_A } from '../src/database/mongo/migrations/auction-constants.js';
 
 // Storage signing is deliberately faked. HTTP, authorization and MongoDB are real.
 const storage = {
@@ -583,6 +584,61 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       }),
     };
   }
+  async function cleanupAuctionIntake(id: string, seller: Reader) {
+    const intake = (await db.c.auction_intakes.findOne({ _id: id }))!;
+    await post(`/auction-intakes/${id}/cancel`, { expectedVersion: 1 }, seller).expect(200);
+    const commitments = await db.c.exclusive_commitments.find({ currentContextId: intake.contextId }).toArray();
+    await db.c.commitment_events.deleteMany({ commitmentId: { $in: commitments.map(item => item._id) } });
+    await db.c.exclusive_commitments.deleteMany({ currentContextId: intake.contextId });
+    await db.c.point_slots.deleteMany({ contextId: intake.contextId });
+    await db.c.workflow_items.deleteMany({ contextId: intake.contextId });
+    await db.c.workflow_contexts.deleteOne({ _id: intake.contextId });
+    await db.c.auction_intakes.deleteOne({ _id: id });
+  }
+
+  it('ADR 0048: an old negotiation cannot expose or buy a book held for auction', async () => {
+    const p = await prepared();
+    const created = await post('/auction-intakes', {
+      listingId: p.f.l.entityId, expectedListingVersion: p.f.l.version,
+      pointId: HANDOVER_POINT_A, startPrice: 200_000, step: 50_000,
+      buyNowPrice: null, declaredValue: 250_000,
+    }, p.f.seller).expect(200);
+    try {
+      await get(`/listings/${p.f.l.entityId}`).expect(404);
+      await create(p).expect(409);
+      expect(await db.c.direct_orders.countDocuments({ sellerId: p.f.seller.id })).toBe(0);
+      expect(await db.c.exclusive_commitments.countDocuments({ listingId: p.f.l.entityId, status: 'Active' })).toBe(1);
+    } finally {
+      await cleanupAuctionIntake(created.body.intakeId, p.f.seller);
+    }
+    await get(`/listings/${p.f.l.entityId}`).expect(200);
+  });
+
+  it('ADR 0048: auction intake and a normal Order compete for one shelf commitment', async () => {
+    const p = await prepared();
+    const listingId = p.f.l.entityId;
+    const replies = await Promise.all([
+      create(p),
+      post('/auction-intakes', {
+        listingId, expectedListingVersion: p.f.l.version, pointId: HANDOVER_POINT_A,
+        startPrice: 200_000, step: 50_000, buyNowPrice: null, declaredValue: 250_000,
+      }, p.f.seller),
+    ]);
+    try {
+      expect(replies.map(reply => reply.status).sort()).toEqual([200, 409]);
+      expect(await db.c.exclusive_commitments.countDocuments({ listingId, status: 'Active' })).toBe(1);
+      expect(await db.c.direct_orders.countDocuments({ sellerId: p.f.seller.id })).toBe(replies[0].status === 200 ? 1 : 0);
+      expect(await db.c.auction_intakes.countDocuments({ listingId })).toBe(replies[1].status === 200 ? 1 : 0);
+      expect((await db.c.listings.findOne({ _id: listingId }))?.trade).toBe('Reserved');
+      if (replies[1].status === 200) await get(`/listings/${listingId}`).expect(404);
+    } finally {
+      if (replies[0].status === 200) await cancel(replies[0].body.entityId, p.f.buyer).expect(200);
+      if (replies[1].status === 200) {
+        await cleanupAuctionIntake(replies[1].body.intakeId, p.f.seller);
+      }
+    }
+  });
+
   it('requires whole-bundle acknowledgment and reserves one immutable lot under competing Buyers', async () => {
     const bundle: Wire['BookBundle']={title:'Hai tập mua nguyên bộ',wholeOnly:true,exclusiveOwnershipDeclared:true,
       items:[{label:'Tập 1',condition:'Good',notes:''},{label:'Tập 2',condition:'Good',notes:'Bìa sờn nhẹ'}]};

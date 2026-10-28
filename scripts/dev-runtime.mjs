@@ -6,6 +6,7 @@ import { createServer, createConnection } from "node:net";
 import { parseEnv, promisify } from "node:util";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { setTimeout as delay } from "node:timers/promises";
 
 export const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -482,4 +483,44 @@ export async function waitForApi(port, signal, { timeoutMs = 120_000 } = {}) {
     throw new Error(
       "API chưa sẵn sàng sau 120 giây. Kiểm log [api], tài khoản MongoDB và migration; launcher không tự migrate/seed.",
     );
+}
+
+export class ApiConnectionLostError extends Error {}
+
+// Nest's watch process can remain alive after its HTTP child exits. Allow normal
+// compilation downtime; an HTTP 503 still proves the listener is alive (DB outage
+// must not cause an endless series of process restarts).
+export async function watchApiConnection(
+  port,
+  signal,
+  { outageMs = 45_000, intervalMs = 5000, requestTimeoutMs = 1500 } = {},
+) {
+  let unavailableSince;
+  while (!signal.aborted) {
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${port}/api/v1/health/ready`,
+        {
+          signal: AbortSignal.any([
+            signal,
+            AbortSignal.timeout(requestTimeoutMs),
+          ]),
+        },
+      );
+      await response.body?.cancel();
+      unavailableSince = undefined;
+    } catch {
+      if (signal.aborted) return;
+      unavailableSince ??= performance.now();
+      if (performance.now() - unavailableSince >= outageMs)
+        throw new ApiConnectionLostError(
+          "API mất kết nối liên tục; Nest watcher có thể còn chạy nhưng HTTP đã dừng.",
+        );
+    }
+    try {
+      await delay(intervalMs, undefined, { signal });
+    } catch (error) {
+      if (!signal.aborted) throw error;
+    }
+  }
 }

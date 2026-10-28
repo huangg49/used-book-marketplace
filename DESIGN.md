@@ -17,6 +17,8 @@ colors:
   shop-shelf: "#f4eddf"
   conversation-chat-surface: "#ffffff"
   shop-exchange-ink: "#254337"
+  admin-aquarium-ink: "#164b56"
+  admin-aquarium-secondary: "#315c62"
   auction-hero-shadow: "#28191466"
   cover-sand: "#f0e2ca"
   cover-sage: "#d9e7dc"

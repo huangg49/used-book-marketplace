@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "generator": "built-in image_gen",
+  "assets": [
+    {
+      "id": "blue-bird-body",
+      "file": "blue-bird-body.webp",
+      "width": 320,
+      "height": 191,
+      "bytes": 11428,
+      "transparent": true
+    },
+    {
+      "id": "blue-bird-wing",
+      "file": "blue-bird-wing.webp",
+      "width": 200,
+      "height": 154,
+      "bytes": 6938,
+      "transparent": true
+    },
+    {
+      "id": "feather",
+      "file": "feather.webp",
+      "width": 220,
+      "height": 230,
+      "bytes": 10454,
+      "transparent": true
+    },
+    {
+      "id": "blue-fish-body",
+      "file": "blue-fish-body.webp",
+      "width": 420,
+      "height": 270,
+      "bytes": 15706,
+      "transparent": true
+    },
+    {
+      "id": "blue-fish-tail",
+      "file": "blue-fish-tail.webp",
+      "width": 260,
+      "height": 223,
+      "bytes": 10680,
+      "transparent": true
+    },
+    {
+      "id": "fan-coral",
+      "file": "fan-coral.webp",
+      "width": 340,
+      "height": 368,
+      "bytes": 38106,
+      "transparent": true
+    },
+    {
+      "id": "branch-coral",
+      "file": "branch-coral.webp",
+      "width": 320,
+      "height": 292,
+      "bytes": 23586,
+      "transparent": true
+    },
+    {
+      "id": "shell",
+      "file": "shell.webp",
+      "width": 280,
+      "height": 230,
+      "bytes": 12264,
+      "transparent": true
+    },
+    {
+      "id": "sea-snail",
+      "file": "sea-snail.webp",
+      "width": 300,
+      "height": 173,
+      "bytes": 14852,
+      "transparent": true
+    }
+  ]
+}

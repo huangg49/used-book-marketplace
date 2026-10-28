@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lật lại · Bể cá nhỏ</title>
+  <link rel="stylesheet" href="./aquarium.css">
+  <script type="module" src="./aquarium.mjs"></script>
+</head>
+<body>
+  <main>
+    <header class="masthead">
+      <a href="/dashboard" class="brand-link" aria-label="Lật lại · Về Dashboard">
+        <svg class="brand" viewBox="0 0 187 43" role="img" aria-label="Lật lại">
+          <defs><filter id="brand-ink" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 .360784 0 0 0 0 .007843 0 0 0 0 .007843 1.59375 0 0 0 -.575"/></filter></defs>
+          <svg width="52" height="42" viewBox="0 0 52 42" overflow="hidden"><image href="/brand/logo-original.png" x="-94" y="-72" width="240" height="240" filter="url(#brand-ink)"/></svg>
+          <svg x="61" width="126" height="43" viewBox="0 0 126 43" overflow="hidden"><image href="/brand/logo-original.png" x="-137" y="-198" width="400" height="400" filter="url(#brand-ink)"/></svg>
+        </svg>
+      </a>
+      <a href="/dashboard" class="back-link">Về bàn quản trị <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></a>
+    </header>
+    <header class="intro">
+      <h1>Một khoảng xanh nhỏ<span>.</span></h1>
+      <p>Một bể cá cho bàn làm việc Lật lại. Nét vẽ đơn giản, vài người bạn nhỏ và chuyển động vừa đủ để thấy nước đang sống.</p>
+    </header>
+    <section class="study" aria-labelledby="preview-title">
+      <div class="study-heading">
+        <h2 id="preview-title">Bể cá thử nghiệm</h2>
+        <button type="button" id="size-toggle" class="quiet-button" aria-pressed="false" disabled>Xem cỡ thẻ Dashboard</button>
+      </div>
+      <div class="preview-wrap" id="preview-wrap">
+        <div class="aquarium" id="aquarium" aria-describedby="scene-description">
+          <div class="static-scene" aria-hidden="true">
+            <img src="./assets/water.webp" alt="" class="static-water">
+            <img src="./assets/ribbon-plant.webp" alt="" class="static-plant">
+            <div class="static-fish"><img src="./assets/tail.webp" alt="" class="static-tail"><img src="./assets/fish-body.webp" alt="" class="static-body"></div>
+          </div>
+          <canvas id="water-canvas" aria-hidden="true"></canvas>
+          <div class="metric-copy">
+            <h3>Hồ sơ đang chờ</h3>
+            <span class="metric-value" aria-label="Chưa nối số liệu">—</span>
+            <p>Chưa nối số liệu</p>
+          </div>
+          <p class="water-note" aria-hidden="true">Chạm nhẹ vào nước để gọi cá</p>
+        </div>
+      </div>
+      <p id="scene-description" class="sr-only">Minh họa cá vàng trong nước xanh mint, cây thủy sinh và đá cuội. Khi chạy chuyển động, cá quẫy đuôi riêng, cây đung đưa và bọt nước nổi chậm. Số cá không đại diện cho số hồ sơ. Dùng nút bên dưới để gọi cá hoặc tạm dừng.</p>
+      <div class="scene-controls">
+        <div class="control-buttons">
+          <button type="button" id="pause" class="primary-button" aria-pressed="false" disabled>Tạm dừng</button>
+          <button type="button" id="call-fish" class="quiet-button" disabled>Gọi cá lại gần</button>
+        </div>
+        <p id="scene-status" role="status" aria-live="polite">Đang chuẩn bị bể cá…</p>
+      </div>
+    </section>
+    <section class="asset-section" aria-labelledby="assets-title">
+      <header><h2 id="assets-title">Từng mảnh, một thế giới.</h2><p>6 asset tách riêng. Chọn hình để mở file gốc dùng trong bản thử.</p></header>
+      <ul class="asset-grid">
+        <li><a href="./assets/fish-body.webp"><div class="asset-image"><img src="./assets/fish-body.webp" alt="Thân cá vàng hoạt hình, không có đuôi" loading="lazy"></div><strong>Thân cá</strong><span>fish-body.webp</span></a></li>
+        <li><a href="./assets/tail.webp"><div class="asset-image"><img src="./assets/tail.webp" alt="Đuôi cá hình quạt màu cam vàng" loading="lazy"></div><strong>Đuôi cá</strong><span>tail.webp</span></a></li>
+        <li><a href="./assets/ribbon-plant.webp"><div class="asset-image"><img src="./assets/ribbon-plant.webp" alt="Rong dải xanh nhiều lá dài" loading="lazy"></div><strong>Rong dải</strong><span>ribbon-plant.webp</span></a></li>
+        <li><a href="./assets/broad-plant.webp"><div class="asset-image"><img src="./assets/broad-plant.webp" alt="Cây thủy sinh lá tròn màu xanh" loading="lazy"></div><strong>Cây lá tròn</strong><span>broad-plant.webp</span></a></li>
+        <li><a href="./assets/pebbles.webp"><div class="asset-image"><img src="./assets/pebbles.webp" alt="Hai viên đá cuội xanh và ngà" loading="lazy"></div><strong>Đá cuội</strong><span>pebbles.webp</span></a></li>
+        <li><a href="./assets/water.webp"><div class="asset-image"><img src="./assets/water.webp" alt="Nền nước mint và cát ngà, không có cá hoặc cây" loading="lazy"></div><strong>Nền nước</strong><span>water.webp</span></a></li>
+      </ul>
+    </section>
+    <footer class="page-footer"><p>Bản thử độc lập. Dashboard và dữ liệu vận hành chưa thay đổi.</p><a href="./assets/manifest.json">Danh sách asset</a></footer>
+  </main>
+</body>
+</html>

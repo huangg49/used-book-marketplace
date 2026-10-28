@@ -552,3 +552,246 @@ retry; mutation errors stay inline. Guests get the existing login route with a
 book return URL. Non-Members/inactive accounts cannot mutate, and catalog previews
 have no heart. `ListingPhoto` keeps its reusable loading/missing/error/retry states
 for detail, checkout and conversation consumers. RN `/ui` remains unchanged.
+
+## Admin — Dashboard biểu đồ —27/10/2026
+
+Owner duyệt thống kê thật7/30ngày. [Thiết kế và semantics](../features/ADMIN_DASHBOARD.md):
+dải3số, line chart gửi duyệt/đã xử lý với nét khác nhau, workboard wine có link
+queue, kệ sách giữ tương tác/empty gọn, việc tại điểm dạng hàng và capacity bars.
+Không còn8panel ngang cấp hoặc tải users/fund/auction chỉ để lấp Dashboard.
+Chart có filter riêng, readout ngày/nút44px/bảng số liệu; mobile metrics thành
+hàng và plot đo width thực. Borderworkboard #9e5750/text phụ #e3c6b6 dùng cùng
+tonal wine/cream với sidebar. Các đoạn Dashboard26/10 bên dưới là evidence cũ,
+không thay phần mô tả27/10 này. Không đổi session/API quyết định hoặc gate.
+
+## Admin — WorkspaceShell và BrandMark —26/10/2026
+
+[WorkspaceShell](../../apps/admin-web/src/features/navigation/WorkspaceShell.tsx)
+nhận profile đã tải, tên tài khoản, trạng thái/lỗi logout và callback logout của
+Workspace; children giữ main/Outlet/LeaveGuard và footer hiện có. Owner thử hướng
+27/10: sidebar/drawer nền đỏ rượu, chữ/logo kem; active nền kem/chữ đỏ, hover đỏ
+nhạt hơn, focus vàng. Token nav chỉ trong sidebar/drawer, header mobile vẫn nền
+giấy. Không thêm thư viện từ ví dụ sidebar tham khảo.
+
+- Desktop: sidebar280px mở cố định mặc định hoặc rail80px. Owner duyệt27/10
+  [ba chế độ](ADMIN_SIDEBAR_COMFORT.md): Mở cố định/Thu gọn/Tự mở khi rê chuột.
+  Thu gọn không tự mở khi hover/focus; Auto mới mở tạm400ms, rời300ms, giữ khi
+  có focus và Escape đóng/không tự bật lại dưới chuột. Preview không reflow main.
+  Nút đầu đổi mở cố định↔thu gọn; native popover cuối sidebar chọn mode, dùng
+  radio/keyboard/Escape. localStorage chỉ chứa version/mode, lỗi ghi báo giữ
+  trong phiên; không lưu session/token. Route/mobile không ghi đè preference.
+  Nút mở/thu gọn có nhãn và trạng thái; link luôn có tên
+  accessible/title, giữ aria-current ở cả route chi tiết con. Header logo/pin
+  cùng hàng, Dashboard/Quản lý không thêm heading thị giác; account/logout chung
+  hàng cuối, chữ dài có ellipsis và tooltip đầy đủ. Active dùng nền giấy/chữ wine.
+  Nav và lỗi logout không hiện scrollbar ở Firefox/WebKit; giữ wheel/Tab ở khung
+  quá nhỏ để không cắt chức năng. Màn cao≤720px, mobile hoặc>9link chuyển sang
+  disclosure theo nhóm (một nhóm mở), ưu tiên nhóm chứa route hiện tại; Dashboard
+  và directory không bị gập. Các nút tương tác vẫn có target44px.
+- Mobile≤720px: nút Menu mở native dialog; Escape/X/backdrop đóng, native focus
+  containment/return, khóa scroll nền và cleanup khi đổi viewport/unmount.
+  Dialog chỉ đóng theo location key sau khi Router nhận điều hướng, giữ guard
+  rời form hiện có; không đóng ngay khi click link đang bị guard từ chối.
+- [navigationGroups](../../apps/admin-web/src/features/navigation/navigation.ts)
+  dùng các capability helper hiện có, không suy ADMIN thành STAFF/TEST_OPERATOR.
+  Không có menu protected trước profile hợp lệ hoặc cho tài khoản inactive.
+  Dashboard đã nối source API theo quyền, không còn nhãn Mock; Report vẫn
+  disabled/Sắp triển khai vì chưa có endpoint báo cáo. Xem
+  [bảng API Admin](../features/ADMIN_API_CONNECTIONS.md).
+- Logout vẫn do Workspace gọi session, giữ guard. Lỗi logout hiển thị ở account
+  để đọc được trong mobile dialog; lỗi buộc rail mở cho tới khi retry xóa lỗi.
+
+[BrandMark](../../apps/admin-web/src/core/brand-mark.tsx) dùng chung Login/Sidebar,
+nhận `className` để định cỡ, `wordmark` để hiện cả chữ và `tone="cream"` cho nền đỏ
+(mặc định `wine` giữ Login/header mobile). Nó crop/filter ảnh gốc
+`public/brand/logo-original.png`, không vẽ lại logo; SVG aria-hidden nên link/button
+chứa nó phải cung cấp accessible name. Không tạo token store hoặc endpoint mới.
+
+Kiểm tra hiện tại:60unit gồm10ca menu theo quyền/SSR,4HTTP/MongoDB integration
+cho gói nối API và lint/typecheck/build PASS. Browser
+harness đã thêm thu gọn/focus/ghim và drawer320px/chữ lớn/Escape/focus return/
+đóng sau chuyển trang; thêm menu vừa khung/không scrollbar và disclosure ở640px
+cao. Chỉ syntax check, chưa chạy do browser automation bị tắt.
+Visual/keyboard thực tế và human review chưa được nhận thành PASS.
+
+## Admin — lượt hoàn thiện giao diện —26/10/2026
+
+Owner yêu cầu ưu tiên giao diện, hoãn gói nghiệm thu nghiệp vụ. Hai đánh giá độc lập
+theo Impeccable + Taste/Pro Max đã xem Dashboard/queue/detail/directory/empty page;
+[critique](../../.impeccable/critique/2026-10-26T16-28-59Z__apps-admin-web-src.md)
+ghi26/40 heuristic trước sửa, không tự chấm điểm sau hoặc coi là human review.
+
+- Page H1/toolbar gọn, hàng queue là record có divider; dùng bề mặt giấy và giảm
+  shadow/card chrome. Queue/detail dẫn bằng tên tác vụ; header không lặp số chương.
+  Ở≤1080px detail chuyển1cột, decision panel không sticky. Empty state gọn hơn,
+  vẫn giữ assignment guidance. Không đổi quyền/API hoặc nội dung checklist.
+- Directory filter thẳng hàng, không card riêng; bảng fixed columns/min52.5rem với
+  scroll nội bộ trên mobile. Status ngắn không xuống dòng; ngày và giờ có phân cấp
+  rõ theo TP.HCM, vẫn có datetime/title đầy đủ. Header muted trên shelf đạt5.08:1
+  (trước4.06:1). Scope chỉ đọc là chú thích, không một Notice lớn lặp lại.
+- Kệ sách giữ logo/motion/ảnh và full title. Link mở review đặt trước facts; mô tả
+  và UUID ở native details theo selected id, không mất dữ liệu hoặc đổi action.
+  Dashboard card phụ dùng disclosure để đọc rows, count/cursor/updated/link vẫn
+  hiện ngay. Fund có số tiền không bị gắn empty list chỉ vì rows rỗng.
+- Shared loader có `admin-busy-spin`; loaded CSS đã thấy keyframes/rule900ms và
+  component override giữ motion theo owner khi reduced-motion. Tabs/read/back
+  targets tối thiểu44px. Không tuyên bố đã đo FPS hoặc screen-reader speech.
+
+CUA QA1280×720: nút review khoảng y402–451, bảng Users bắt đầu khoảng y305, hàng
+thường75.6px (trước khoảng104px); không tràn ngang.320×780: Enter giữ focus, filter
+1cột, mở/đóng mô tả/mã, chọn sách/Back và disclosure rows hoạt động.860px: detail
+1cột. Screenshot `.tmp/admin-ui-polish/after-*.png`, dữ liệu QA/storage fake.
+128unit/lint/typecheck/build/budget PASS; full browser harness chỉ cập nhật tên H1
+và thao tác disclosure/syntax, NOT RUN. Detector trước có47findings (nhiều ngoại lệ
+brand/false positive, exit1 dù JSON đầy đủ), scan mục tiêu sau sửa1lần trả[];
+khác phạm vi nên không là so sánh điểm. Không overlay vì evaluate chỉ đọc.
+
+## Admin — tải mã theo trang —26/10/2026
+
+`App.tsx` giữ các React.lazy component ở cấp module cho10module trang;4queue tại
+điểm cùng một module. Login/WorkspaceShell/session/profile vẫn trong graph ban đầu.
+Chỉ mount Outlet sau khi authenticated và profile đủ quyền như trước; từng feature
+tiếp tục kiểm quyền riêng. Không preload toàn bộ trang protected khi mở Login.
+
+[PageFrame](../../apps/admin-web/src/core/page-frame.tsx) đặt trong LeaveGuard
+Provider, quanh Outlet: Suspense có status “Đang mở trang…”, error boundary chỉ
+thay vùng nội dung và reset theo pathname. Đổi query filter không remount form.
+Lỗi không in exception; H1 nhận focus khi mounted, có reload chủ động kèm giải thích
+cần đăng nhập lại và Link về Dashboard khi ở route khác. Không auto reload/retry
+command, không thay animation hoặc session storage. CUA production QA đã mở10module
+bằng Admin/Staff và Test Operator đúng profile; giữ points chunk ở server thấy
+loading, trả503 thấy error H1 focus, sidebar còn và về Dashboard không mất phiên.
+Reload chủ động yêu cầu login như thiết kế; phiên mới mở points thành công. Form
+review có draft vẫn qua leave dialog/ở lại giữ nội dung. Đây là kiểm mounting/
+navigation/recovery, không nghiệm thu mọi mutation. SSR4ca chỉ chứng minh markup.
+
+Build manifest/budget có kiểm đồ thị static (kể cả shared/modulepreload), không chỉ
+đo file entry. Source và giới hạn tại
+[admin-bundle](../../scripts/admin-bundle.mjs);6ca checker kiểm chu kỳ/shared import,
+trang bị eager/mất dependency và2giới hạn độc lập. Xem số đo/giới hạn trong
+[bảng tích hợp Admin](../features/ADMIN_API_CONNECTIONS.md).
+
+## Admin — bộ lọc và phục hồi danh sách —26/10/2026
+
+[UserDirectory](../../apps/admin-web/src/features/users/directory.tsx) lấy bộ lọc
+đã áp dụng từ URL (`q`, `status`, `role`); helper
+[directory-filters](../../apps/admin-web/src/features/users/directory-filters.ts)
+whitelist status/role, trim/giới hạn100ký tự và encode query/cursor. Chỉ cursor từ
+response được gửi tiếp, không tin `cursor`/`limit` trên URL trang. Đổi bộ lọc dùng
+query key riêng, không ghép trang thuộc bộ lọc cũ. Từ khóa đang soạn riêng với q
+đã tìm; đổi select/refetch không xóa bản nháp. Không remount input khi submit;
+Back/Forward phục hồi query đã áp dụng. Có nút xóa bộ lọc và cập nhật riêng.
+
+[ListFeedback](../../apps/admin-web/src/core/list-feedback.tsx) dùng cho directory,
+review queue, revision history và OperationsQueue. Loading/refetch/error có
+thông báo riêng; refresh lỗi giữ danh sách cũ và nói rõ chưa cập nhật. Empty chỉ
+hiện khi request thành công. Retry của OperationsQueue bị khóa khi command pending.
+`CursorPagination` giữ số trang khi hết cursor, phân biệt lỗi trang tiếp theo với
+refresh lỗi; nút “Thử tải thêm” gọi lại fetchNextPage bằng cursor hiện có, không
+xóa các trang đã đọc. Không tải thêm khi một fetch khác đang chạy; cả3consumer dùng
+`cancelRefetch:false`. Footer wrap ở khung hẹp, filter3cột/1cột theo breakpoint cũ.
+
+PASS124unit/16file (thêm16ca URL/recovery/pagination). CUA QA desktop trên DB riêng:
+lọc3trường/Back/Forward, giữ draft khi đổi select, lỗi trang2 giữ20hàng và retry
+thành24hàng không trùng, queue refresh lỗi giữ2hồ sơ, operations lỗi ban đầu không
+báo rỗng và retry thành rỗng hợp lệ. Browser bị tắt trong Work settings giữa QA:
+mobile/chữ lớn, draft khi refresh lỗi và focus sau submit ban đầu NOT RUN. Khi owner
+bật lại quyền, CUA production QA đã xác nhận Enter giữ input focus, refresh503 giữ
+20hàng và draft, retry/clear hoạt động,320×780 không tràn và root font135% vẫn thao
+tác được. Hai option rỗng đổi thành “Tất cả” dưới label trạng thái/vai trò để không
+cắt chữ ở khung hẹp. Chỉ override root font trong CSS QA; không đổi font máy/app.
+Screenshot `.tmp/admin-production-qa/users-mobile-large.png`. Full harness NOT RUN;
+không lấy CUA có chọn ca làm bằng chứng toàn suite hoặc native.
+
+## Admin — tiếp tục hàng chờ và ngữ cảnh danh sách —26/10/2026
+
+[NextReview](../../apps/admin-web/src/features/review/NextReview.tsx) đặt sau kết
+quả detail đã xử lý; chỉ đọc cùng pending queue limit20. Nút mở detail kế tiếp,
+không gửi quyết định hoặc tự navigate. Loading/error/stale/empty khác nhau, còn
+cursor thì không kết luận toàn bộ queue rỗng. Tên listing dùng chung
+[ListingTitle](../../apps/admin-web/src/features/review/ListingTitle.tsx) với Queue;
+bundle lấy tên khai báo, single Confirmed đọc public book, còn lại label rõ ràng.
+
+[review-navigation](../../apps/admin-web/src/features/review/review-navigation.ts)
+whitelist return path cùng kind/status; Queue truyền bằng Router state để Back
+giữ bộ lọc. NextReview mở pending context, bỏ self-review và báo khi current id
+đã gửi lại. Detail id mới đưa header/H1 vào viewport/focus sau dữ liệu sẵn sàng;
+cùng id refetch không chuyển focus. Existing leave guard vẫn kiểm reason/checks/
+pending intent khi bấm Next. CUA QA desktop/mobile đã thử approval→Next→Back,
+Approved filter, checklist reset, dirty form cancel, focus và không tràn320px.
+
+## Admin — bảng lệnh nhanh —26/10/2026
+
+[CommandPalette](../../apps/admin-web/src/features/navigation/CommandPalette.tsx)
+dùng native dialog và combobox/listbox qua aria-activedescendant; phím ↑↓/Enter,
+Escape/backdrop/đóng, native focus trap/return. Ô tìm nhận focus sau showModal.
+WorkspaceShell có nút sidebar (rail chỉ icon), header mobile và shortcut
+`Ctrl+K`/`Cmd+K`; bỏ repeat/IME/Alt/Shift, không mở trên modal khác. Profile chưa
+có/lỗi/logout/inactive thì không mở. Body scroll được khôi phục khi cleanup.
+
+[commands](../../apps/admin-web/src/features/navigation/commands.ts) lấy đúng
+navigationGroups, gắn mô tả/alias theo route hiện có. Tìm NFD/không dấu/Đ/case/
+đa từ, ưu tiên label, thứ tự ổn định; không lưu query/history hoặc gọi API tìm.
+Result chỉ điều hướng, không quyết định/ghi dữ liệu. Palette đóng trước navigate;
+leave guard cũ tiếp tục chặn khi hồ sơ chưa gửi. Không persist quyền/token mới.
+
+CUA QA desktop1280×720 và320×780: hotkey, search/arrow/Enter, zero-result, Escape
+focus, dirty reason/blocker/ở lại, không chồng modal, drawer→palette/scroll restore,
+Staff5lệnh và denied alias trả0. PASS92unit/13file; full browser harness chưa chạy.
+
+Tinh chỉnh27/10 theo screenshot owner: input text override rõ scoped border/
+outline/box-shadow focus chung; chỉ một underline1px ở search wrapper, focus
+accent180ms và caret wine. Option thêm face trình bày3D nâng4px/nghiêng2°/260ms,
+cạnh vàng4px/bóng mềm; press lún1px/100ms. Anchor selection vẫn trên li role=option,
+hitbox cố định, face pointer-events:none. Pointer cursor và ↑↓ dùng duy nhất
+aria-selected để không hai khối nổi khi keyboard đổi mà chuột còn đứng trên mục
+cũ. Tiêu đề Auth Bricolage/wine, nền chọn vàng/chữ phụ ink; caption tối thiểu12px.
+Không đổi filter/role/IME/Enter/close/focus/session hay thêm dependency/listener.
+Browser runtime QA mới NOT RUN vì local browser use trong Work settings vẫn tắt;
+evidence CUA26/10 ở trên là lịch sử, không thay QA của bản27/10.
+PASS41tests navigation/3files, lint/typecheck/build/bundle budget/docs/diff.
+Detector1warning tại border-top4px của dialog hiện có: radius của dialog là0,
+không phải thẻ bo góc như mô tả heuristic; giữ mép giấy wine đã duyệt, không
+rescan để đuổi zero finding. Không thêm test chỉ phản chiếu CSS.
+
+## Admin — chuyển phiếu và kết quả kiểm duyệt —26/10/2026
+
+[usePaperMotion/playPaperMotion](../../apps/admin-web/src/core/paper-motion.ts)
+nhận ref, trigger và loại `turn`/`stamp`. WAAPI animate transform/opacity380/460ms,
+không loop; cleanup hủy animation/observer/listener khi đổi trigger/unmount/
+visibility/offscreen. Cleanup cũ không xóa marker của animation mới. Không dùng
+animationend để mở khóa dữ liệu/control. Giữ motion theo chính sách owner;
+thiếu WAAPI/ngoài viewport hiện ngay trạng thái cuối.
+
+[DecisionRecord](../../apps/admin-web/src/features/review/DecisionRecord.tsx)
+hiện kết quả trong cột quyết định. Dấu lịch sử tĩnh; `animate` chỉ khi
+[decision-feedback](../../apps/admin-web/src/features/review/decision-feedback.ts)
+đối chiếu ACK/entity/revision/action/version với projection mới. Focus vào kết quả
+sau ACK, scroll nearest có margin tránh header, độc lập motion. Reject không có
+dấu duyệt; không bỏ checklist/idempotency. CUA QA desktop1280×720 và320×780 đã
+thử catalog/listing approval, mở lại, chuyển nhanh, Enter/Back focus, không tràn.
+Đã sửa focus PendingShelf bằng layout effect sau commit thay rAF; full browser
+harness chưa chạy. Ca lost-ack mới có HTTP/Mongo QA, conflict/replay có unit test.
+
+## Admin — kệ sách chờ duyệt —26/10/2026
+
+[PendingShelf](../../apps/admin-web/src/features/dashboard/PendingShelf.tsx) nằm
+đầu Dashboard cho ACTIVE Admin/Staff theo nguồn listing hiện có. Cụm sách dùng
+ảnh đầu thật (contain, không crop), gáy/trang/bóng CSS nhẹ, nền kem và phiếu giấy
+dùng lại texture/font Login. Không thêm ảnh gen, dependency hoặc sample runtime.
+
+- Tối đa6hồ sơ đầu trên20hồ sơ đã tải, giữ thứ tự cũ nhất trước/dấu `+` theo cursor.
+  Metadata lookup được gộp theo reference; cache ảnh và đầu sách dùng chung với
+  màn chi tiết. Cả hai chỉ mount khi source listing được cấp quyền.
+- Chọn bằng button44px+/Tab/Enter, `aria-pressed`/`aria-controls`; title đầy đủ có
+  ở accessible name, tooltip và phiếu. Selection giữ theo id qua refresh; khi id
+  rời danh sách thì chọn hồ sơ đầu còn lại và thông báo. Không tự giành focus khi
+  refresh; compact theo container≤880px mở một pane, Back trả focus nút sách.
+- Loading/rỗng/lỗi/refetch lỗi tách biệt. Lỗi giữ snapshot cũ; ảnh thiếu hoặc lỗi
+  dùng placeholder/retry. Phiếu chỉ xem nhanh và dẫn tới detail để đối chiếu đủ ảnh;
+  không thêm nút duyệt tắt hoặc bỏ checklist. Role/price/bundle theo API thật.
+- Hover/chọn chuyển động220ms, không loop; giữ motion theo chính sách owner.
+  Bước1 chỉ kệ/chọn/xem nhanh. Lật phiếu/đóng dấu và bảng lệnh `Ctrl+K` còn chờ.
+- PASS70unit/10file,2HTTP/Mongo QA cho Dashboard/ảnh/quyền, lint/typecheck/build.
+  Browser harness bổ sung ảnh lỗi/retry, chọn bằng Enter, mobile Back/focus và
+ 320px/chữ lớn; chỉ syntax check vì browser bị tắt. Visual/focus thực tế NOT RUN.

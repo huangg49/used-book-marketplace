@@ -307,7 +307,7 @@ try {
     buffer: fixture.photo,
   });
   const thumbnails = p.getByRole("img", {
-    name: /^(Ảnh bìa bản sách|Ảnh phụ \d+)$/,
+    name: /^(Ảnh bìa (?:bản sách|gốc đã chọn)|Ảnh phụ \d+)$/,
   });
   const selectedPhotos = p.getByRole("group", {
     name: "Ảnh bản sách",
@@ -358,7 +358,7 @@ try {
     .first()
     .waitFor();
   await coverFileInput.setInputFiles(photo("qa-new-cover.png"));
-  await p.getByRole("img", { name: "Ảnh bìa bản sách", exact: true }).waitFor();
+  await p.getByRole("img", { name: /^Ảnh bìa (?:bản sách|gốc đã chọn)$/, exact: true }).waitFor();
   assert.deepEqual(
     await supportGroup
       .locator("img")
@@ -366,16 +366,17 @@ try {
     supportsBefore,
   );
   const oldCover = await p
-    .getByRole("img", { name: "Ảnh bìa bản sách", exact: true })
+    .getByRole("img", { name: /^Ảnh bìa (?:bản sách|gốc đã chọn)$/, exact: true })
     .getAttribute("src");
   const coverReplacePromise = p.waitForEvent("filechooser");
   await button("Thay ảnh bìa").click();
   const coverReplace = await coverReplacePromise;
   assert.equal(coverReplace.isMultiple(), false);
   await coverReplace.setFiles(photo("qa-replaced-cover.png"));
+  await p.waitForFunction(previous => document.querySelector('[alt="Ảnh bìa gốc đã chọn"]')?.getAttribute("src") !== previous, oldCover);
   assert.notEqual(
     await p
-      .getByRole("img", { name: "Ảnh bìa bản sách", exact: true })
+      .getByRole("img", { name: /^Ảnh bìa (?:bản sách|gốc đã chọn)$/, exact: true })
       .getAttribute("src"),
     oldCover,
   );
@@ -567,6 +568,7 @@ try {
     [initialPreviews[0], initialPreviews[2]],
   );
   // Draft thumbnails follow photo edits and open a read-only detail viewer.
+  let croppedPreview;
   const draftViewer = p.getByRole("dialog", {
     name: "Ảnh bản sách của bạn",
     exact: true,
@@ -583,11 +585,22 @@ try {
       name: "Ảnh thu nhỏ bản nháp",
       exact: true,
     });
+    const renderedCover = miniatures.locator("img").first();
+    await renderedCover.waitFor();
+    if (!croppedPreview) {
+      croppedPreview = await renderedCover.getAttribute("src");
+      assert.notEqual(croppedPreview, initialPreviews[0], "Draft uses the cropped cover, while the editor retains the original");
+      const ratio = await renderedCover.evaluate(async image => {
+        await image.decode();
+        return image.naturalWidth / image.naturalHeight;
+      });
+      assert.ok(Math.abs(ratio - 3 / 4) < 0.005, "Draft cover has the approved portrait crop");
+    }
     assert.deepEqual(
       await miniatures
         .locator("img")
         .evaluateAll((nodes) => nodes.map((node) => node.src)),
-      [initialPreviews[0], initialPreviews[2]],
+      [croppedPreview, initialPreviews[2]],
     );
     const miniButtons = miniatures.getByRole("button");
     assert.equal(await miniButtons.count(), 2);
@@ -623,7 +636,7 @@ try {
       .click();
     assert.equal(
       await draftViewer.locator("img").getAttribute("src"),
-      initialPreviews[0],
+      croppedPreview,
     );
     await p.keyboard.press("ArrowRight");
     assert.equal(
@@ -658,7 +671,7 @@ try {
     await draftViewer.waitFor();
     assert.equal(
       await draftViewer.locator("img").getAttribute("src"),
-      initialPreviews[0],
+      croppedPreview,
     );
     await draftViewer
       .getByRole("button", { name: "Đóng ảnh chi tiết", exact: true })

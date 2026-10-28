@@ -1,5 +1,11 @@
 # ADR 0042: Auction books use their own auction-only listing
 
+27/10/2026 follow-up: [ADR 0049](0049-auction-intake-from-shelf.md) supersedes
+the intake source restriction below: an approved single Marketplace book may
+also enter intake, without changing its channel. Immutable channels and the
+exclusion of Auction listings from marketplace commands/reads remain in force.
+The original decision below records the19/10 behavior.
+
 19/10/2026. Owner request: when a Member sends a book to auction, the auction
 flow creates and uses its own listing. It no longer picks an approved
 marketplace listing. This supersedes the "listing Sale Approved/Visible/Available"

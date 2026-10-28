@@ -145,6 +145,22 @@ button:disabled {
   opacity: 0.55;
 }
 
+@keyframes admin-busy-spin {
+  to { transform: rotate(360deg); }
+}
+.button .animate-spin,
+.admin-loading-spinner {
+  animation: admin-busy-spin 900ms linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .button .animate-spin,
+  .admin-loading-spinner {
+    animation: admin-busy-spin 900ms linear infinite !important;
+    animation-duration: 900ms !important;
+    animation-iteration-count: infinite !important;
+  }
+}
+
 img {
   max-width: 100%;
 }
@@ -351,6 +367,7 @@ textarea[aria-invalid="true"] {
 /* Pagination */
 .cursor-pagination {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;

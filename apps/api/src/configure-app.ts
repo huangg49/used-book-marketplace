@@ -15,7 +15,11 @@ export function configureApp(
   const config = app.get(ConfigService);
   const logger = new Logger('HTTP');
   app.setGlobalPrefix('api/v1');
-  app.enableShutdownHooks();
+  // Windows cannot re-raise every POSIX signal after Nest finishes its hooks.
+  // Keep normal signal exit semantics on POSIX.
+  app.enableShutdownHooks(undefined, {
+    useProcessExit: process.platform === 'win32',
+  });
   app.enableCors({
     exposedHeaders: ['X-Request-Id', 'Idempotency-Replayed', 'Retry-After'],
     origin: config

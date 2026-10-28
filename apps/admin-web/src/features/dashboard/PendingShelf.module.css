@@ -1,0 +1,654 @@
+.desk {
+  container-type: inline-size;
+  min-width: 0;
+  color: var(--shop-ink);
+}
+.emptyCompact {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  padding: 24px 28px;
+  border: 1px solid var(--shop-line);
+  border-radius: 4px;
+  background: var(--shop-paper) url("/login-art/ivory-paper.webp") repeat;
+  background-size: 420px auto;
+}
+.emptySeal {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 72px;
+  border: 1px solid var(--shop-control);
+  border-radius: 2px;
+  transform: rotate(-5deg);
+}
+.emptySealMark { width: 40px; height: 34px; }
+.emptyCopy { min-width: 0; }
+.emptyCompact h3 {
+  margin: 0;
+  font: 650 1.5rem/1.3 "Auth Bricolage", sans-serif;
+  letter-spacing: -.02em;
+}
+.emptyCompact p {
+  margin: 8px 0 0;
+  max-width: 48ch;
+  font-size: .8125rem;
+  line-height: 1.8;
+  color: var(--shop-muted);
+}
+.emptyActions {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  padding-left: 28px;
+  border-left: 1px dashed var(--shop-line);
+}
+.emptyActions > a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 44px;
+  color: var(--shop-wine);
+  font-size: .8125rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.emptyActions > a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.emptyActions .emptyRefresh {
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--shop-muted);
+  font-size: .75rem;
+  font-weight: 500;
+}
+.emptyActions .emptyRefresh:hover:enabled { color: var(--shop-wine); text-decoration: underline; }
+@container (max-width: 760px) {
+  .emptyCompact { grid-template-columns: auto minmax(0, 1fr); gap: 16px; padding: 24px; }
+  .emptyActions { grid-column: 2; padding: 8px 0 0; border-left: 0; }
+}
+@container (max-width: 420px) {
+  .emptyCompact { gap: 16px 12px; padding: 20px 16px; }
+  .emptySeal { width: 48px; height: 58px; }
+  .emptySealMark { width: 32px; height: 28px; }
+  .emptyCompact h3 { font-size: 1.25rem; }
+  .emptyActions { grid-column: 1 / -1; border-top: 1px dashed var(--shop-line); }
+  .emptyActions > a { width: 100%; gap: 12px; }
+}
+.heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 16px;
+}
+.heading h2 {
+  margin: 0;
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: clamp(1.375rem, 2vw, 1.75rem);
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.03em;
+}
+.heading h2 > span {
+  color: var(--shop-wine);
+}
+.all {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 44px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.all:hover {
+  text-decoration: underline;
+}
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+.stage {
+  min-width: 0;
+  padding: 18px 22px 16px;
+  border: 1px solid var(--shop-line);
+  background: var(--shop-shelf);
+  border-radius: 4px;
+}
+.stageHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  border-bottom: 1px solid var(--shop-line);
+  padding-bottom: 12px;
+  color: var(--shop-muted);
+  font-size: 0.75rem;
+}
+.count {
+  color: var(--shop-wine);
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.count > span {
+  color: var(--shop-muted);
+  font:
+    0.75rem/1.6 "Be Vietnam Pro",
+    sans-serif;
+}
+.books {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  list-style: none;
+  padding: 18px 0 14px;
+  margin: 0;
+}
+.books li {
+  min-width: 0;
+}
+.bookButton {
+  --shelf-compact: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 6px 2px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--shop-ink);
+  text-align: left;
+}
+.bookObject {
+  position: relative;
+  display: block;
+  width: min(100%, 104px);
+  aspect-ratio: 3 / 4;
+  transform: rotate(var(--book-lean));
+  transform-origin: bottom center;
+  transition:
+    transform 220ms var(--ease-smooth),
+    box-shadow 220ms ease;
+  box-shadow: 3px 7px 9px -5px
+    color-mix(in srgb, var(--shop-ink) 40%, transparent);
+}
+.bookObject::after {
+  content: "";
+  position: absolute;
+  inset: 4px -4px 3px auto;
+  width: 4px;
+  border: 1px solid var(--shop-line);
+  border-left: 0;
+  background: var(--shop-paper);
+  pointer-events: none;
+  z-index: -1;
+}
+.cover {
+  position: relative;
+  isolation: isolate;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 1px solid color-mix(in srgb, var(--shop-ink) 18%, transparent);
+  border-radius: 2px 3px 3px 2px;
+  background: var(--shop-paper);
+  overflow: hidden;
+}
+.cover::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 4px;
+  width: 2px;
+  border-left: 1px solid color-mix(in srgb, var(--shop-paper) 50%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--shop-ink) 10%, transparent);
+  pointer-events: none;
+}
+.cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: var(--shop-paper);
+}
+.coverFallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 10px;
+  padding: 12px;
+  text-align: center;
+  color: var(--shop-muted);
+}
+.coverFallback span {
+  font-size: 0.6875rem;
+  line-height: 1.6;
+}
+.bundle {
+  position: absolute;
+  right: -5px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 5px;
+  border: 1px solid var(--shop-line);
+  border-radius: 2px;
+  color: var(--shop-ink);
+  background: var(--shop-paper);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+}
+.bookLabel {
+  display: flex;
+  align-items: baseline;
+  width: 100%;
+  gap: 5px;
+  margin-top: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.ordinal {
+  flex: 0 0 auto;
+  color: var(--shop-muted);
+  font-weight: 400;
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+.bookLabel > span:last-child {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.selectionMark {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid transparent;
+  font-size: 0.6875rem;
+  line-height: 1.8;
+  color: var(--shop-muted);
+}
+.bookButton[aria-pressed="true"] .selectionMark {
+  border-color: var(--shop-wine);
+  color: var(--shop-wine);
+  font-weight: 700;
+}
+.bookButton[aria-pressed="true"] .bookObject {
+  transform: translateY(-4px) rotate(0);
+  box-shadow: 3px 10px 12px -5px
+    color-mix(in srgb, var(--shop-ink) 45%, transparent);
+}
+@media (hover: hover) {
+  .bookButton:hover .bookObject {
+    transform: translateY(-5px) rotate(0);
+  }
+}
+.bookButton:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 5px;
+}
+.stageFooter {
+  display: grid;
+  gap: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--shop-line);
+  color: var(--shop-muted);
+  font-size: 0.6875rem;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.sheet {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  padding: 18px 22px;
+  border-radius: 0;
+}
+.sheetPaper {
+  border: 1px solid var(--shop-line);
+  border-top: 4px solid var(--shop-wine);
+  background: var(--shop-paper) url("/login-art/ivory-paper.webp") repeat;
+  background-size: 420px auto;
+  box-shadow: var(--shadow-md);
+}
+.sheet:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 7px;
+}
+.sheetHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--shop-line);
+  color: var(--shop-muted);
+  font-size: 0.6875rem;
+  line-height: 1.8;
+  letter-spacing: 0.075em;
+}
+.sheetHeader > span:last-child {
+  letter-spacing: 0;
+}
+.status {
+  margin: 12px 0 8px;
+  color: var(--shop-wine);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.8;
+}
+.title {
+  margin: 0;
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: clamp(1.25rem, 1.8vw, 1.5rem);
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+}
+.authors {
+  margin: 6px 0 12px;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 20px;
+  margin: 14px 0 10px;
+  font-size: 0.75rem;
+  line-height: 1.8;
+}
+.facts > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--shop-line);
+}
+.facts dt {
+  color: var(--shop-muted);
+}
+.facts dd {
+  margin: 0;
+  text-align: left;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.description {
+  margin: 12px 0;
+  font-size: 0.8125rem;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.sheetAction {
+  margin-top: 12px;
+}
+.review {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 46px;
+  padding: 12px 16px;
+  border: 1px solid var(--shop-wine);
+  border-radius: 3px;
+  background: var(--shop-wine);
+  color: var(--shop-paper);
+  font-size: 0.8125rem;
+  line-height: 1.8;
+  font-weight: 700;
+  text-decoration: none;
+}
+.review:hover {
+  background: var(--shop-wine-hover);
+  color: var(--shop-paper);
+}
+.sheetAction p,
+.referenceNote {
+  margin: 9px 0 0;
+  color: var(--shop-muted);
+  font-size: 0.6875rem;
+  line-height: 1.8;
+}
+.recordId {
+  display: block;
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--shop-line);
+  color: var(--shop-muted);
+  font-size: 0.6875rem;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.previewNotes summary {
+  min-height: 44px;
+  padding: 10px 0;
+  color: var(--shop-wine);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.scope {
+  margin: 12px 0 0;
+  color: var(--shop-muted);
+  font-size: 0.75rem;
+  line-height: 1.8;
+}
+.error {
+  margin-bottom: 20px;
+}
+.error > p {
+  font-size: 0.8125rem;
+  color: var(--shop-muted);
+}
+.emptyStage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  padding: 18px 0;
+  text-align: center;
+  color: var(--shop-muted);
+}
+.emptyStage h3 {
+  margin: 16px 0 6px;
+  font-family: "Auth Bricolage", sans-serif;
+  font-size: 1.625rem;
+  color: var(--shop-ink);
+}
+.emptyStage p {
+  margin: 0 0 22px;
+  font-size: 0.8125rem;
+  line-height: 1.9;
+}
+.emptyStage :global(.button) {
+  font-size: 0.8125rem;
+}
+.emptySheet {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 220px;
+}
+.emptySheet > span {
+  align-self: start;
+  padding: 5px 9px;
+  border: 1px solid var(--shop-wine);
+  color: var(--shop-wine);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  transform: rotate(-5deg);
+}
+.emptyBrand {
+  display: block;
+  width: 110px;
+  height: auto;
+}
+.emptySheet h3 {
+  margin: 25px 0 10px;
+  max-width: 240px;
+  font-family: "Auth Bricolage", sans-serif;
+  font-size: 1.75rem;
+  line-height: 1.3;
+  letter-spacing: -0.03em;
+}
+.emptySheet p {
+  margin: 0 0 24px;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  line-height: 1.9;
+}
+.emptySheet a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+.loading {
+  min-height: 360px;
+  display: grid;
+  place-content: center;
+  gap: 20px;
+  text-align: center;
+  border: 1px solid var(--shop-line);
+  background: var(--shop-shelf);
+}
+.loading p {
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+}
+.skeletons {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 16px;
+}
+.skeletons > span {
+  display: block;
+  width: 54px;
+  height: 84px;
+  border: 1px solid var(--shop-line);
+  background: var(--shop-paper);
+}
+.skeletons > span:nth-child(2) {
+  height: 96px;
+  transform: rotate(4deg);
+}
+.back {
+  display: none !important;
+}
+@container (max-width: 880px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .bookObject {
+    width: min(100%, 108px);
+  }
+  .books {
+    column-gap: 28px;
+  }
+  .bookButton {
+    --shelf-compact: 1;
+  }
+  .sheet {
+    display: none;
+  }
+  .layout[data-preview="true"] .sheet {
+    display: block;
+  }
+  .layout[data-preview="true"] .stage {
+    display: none;
+  }
+  .back {
+    display: inline-flex !important;
+    margin-bottom: 18px;
+  }
+}
+@container (max-width: 420px) {
+  .stage {
+    padding: 18px 16px 16px;
+  }
+  .books {
+    gap: 16px 12px;
+  }
+  .sheet {
+    padding: 20px 18px;
+  }
+  .heading {
+    align-items: start;
+  }
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .facts > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+  }
+  .facts dd {
+    text-align: left;
+  }
+}
+@container (max-width: 300px) {
+  .books {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* Owner motion policy: preserve the authored hover/selection even when the
+   system preference would otherwise disable transitions in the shared CSS. */
+@media (prefers-reduced-motion: reduce) {
+  .desk .bookObject {
+    transition:
+      transform 220ms var(--ease-smooth),
+      box-shadow 220ms ease !important;
+  }
+}
+
+.cover img[data-loaded="false"] {
+  opacity: 0;
+}
+.selectionNotice {
+  padding: 10px 14px;
+  border-left: 2px solid var(--shop-wine);
+  font-size: 0.8125rem;
+  line-height: 1.8;
+}
+.photoError {
+  margin: 16px 0;
+  font-size: 0.8125rem;
+}
+.photoError p {
+  margin-bottom: 8px;
+}

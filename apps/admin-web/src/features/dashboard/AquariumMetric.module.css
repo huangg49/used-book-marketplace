@@ -1,0 +1,52 @@
+.tank {
+  --aquarium-ink: #164b56;
+  --aquarium-secondary: #315c62;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 280px;
+  border-radius: 12px;
+  background: var(--shop-mint);
+  color: var(--aquarium-ink);
+}
+.scene, .still, .scene canvas, .water { position: absolute; inset: 0; width: 100%; height: 100%; }
+.scene { z-index: -1; pointer-events: none; }
+.scene canvas { display: block; opacity: 0; }
+.scene[data-aquarium-ready="true"] canvas { opacity: 1; }
+.scene[data-aquarium-ready="true"] .still { visibility: hidden; }
+.water { object-fit: cover; }
+.plant { position: absolute; width: 23%; height: 44%; left: 0; bottom: 10%; object-fit: contain; }
+.fish { position: absolute; width: 19%; aspect-ratio: 1.4; left: 62%; top: 52%; }
+.body { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.tail { position: absolute; left: -29%; top: 25%; width: 32%; height: 50%; object-fit: contain; }
+.coral { position: absolute; width: 17%; height: 24%; left: 8%; bottom: 14%; object-fit: contain; }
+.branchCoral { position: absolute; width: 15%; height: 23%; right: 5%; bottom: 14%; object-fit: contain; }
+.shell { position: absolute; width: 9%; height: 9%; left: 31%; bottom: 10%; object-fit: contain; }
+.snail { position: absolute; width: 10%; height: 10%; right: 27%; bottom: 11%; object-fit: contain; }
+.tank .label { position: relative; margin: 20px 64px 0 20px; color: var(--aquarium-ink); font-size: .875rem; font-weight: 600; line-height: 1.5; }
+.tank .label small { display: block; margin: 4px 0 0; color: var(--aquarium-secondary); font-size: .75rem; font-weight: 400; }
+.tank .value { position: relative; margin: 8px 64px 0 20px; color: var(--aquarium-ink); overflow-wrap: anywhere; }
+.tank .caption { position: absolute; bottom: 12px; left: 16px; right: 16px; margin: 0; color: var(--aquarium-ink); font-size: .75rem; font-weight: 500; line-height: 1.6; text-align: center; }
+.tank { display: flex; flex-direction: column; }
+.pause {
+  position: absolute; top: 8px; right: 8px; display: grid; place-items: center;
+  width: 44px; height: 44px; padding: 0; border: 0; border-radius: 8px;
+  background: var(--shop-paper); color: var(--aquarium-ink);
+  cursor: pointer; transition: background-color 180ms ease-out !important;
+}
+.pause:hover:enabled { background: var(--shop-yellow); }
+.pause:disabled { opacity: .6; cursor: default; }
+.pause:focus-visible { outline: 2px solid var(--aquarium-ink); outline-offset: -4px; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (min-width: 721px) and (max-width: 1100px) {
+  .tank { min-height: 240px; }
+  .scene { left: 36%; width: 64%; }
+  .tank .label, .tank .value { max-width: calc(36% - 32px); }
+  .tank .caption { left: calc(36% + 12px); right: 12px; }
+}
+@media (max-width: 720px) {
+  .tank { min-height: 280px; }
+  .tank .label small { display: block; margin-left: 0; }
+  .tank .value { align-self: auto; font-size: 3rem; }
+  .tank .caption { font-size: .75rem; }
+}

@@ -379,7 +379,8 @@ function ChatRoom({
                 frozen={!!orderAttempt.current}
               />
             )}
-            {!!room.terms?.exchangeIds.length && room.terms.exchangeIds.length > 1 && (
+            {!!room.terms?.exchangeIds.length &&
+              (room.terms.exchangeIds.length > 1 || !room.terms.activeExchangeId) && (
               <details className={sheet.exchangeHistory}>
                 <summary>Lịch sử các đề nghị đổi sách ({room.terms.exchangeIds.length} lần)</summary>
                 {room.terms.exchangeIds.map((id, i) => (

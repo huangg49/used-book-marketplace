@@ -1,0 +1,60 @@
+{
+  "version": 2,
+  "generator": "built-in image_gen",
+  "assets": [
+    {
+      "id": "fish-body",
+      "name": "Thân cá",
+      "file": "fish-body.webp",
+      "width": 512,
+      "height": 347,
+      "bytes": 21614,
+      "transparent": true
+    },
+    {
+      "id": "tail",
+      "name": "Đuôi cá",
+      "file": "tail.webp",
+      "width": 320,
+      "height": 327,
+      "bytes": 15880,
+      "transparent": true
+    },
+    {
+      "id": "ribbon-plant",
+      "name": "Rong dải",
+      "file": "ribbon-plant.webp",
+      "width": 360,
+      "height": 531,
+      "bytes": 44252,
+      "transparent": true
+    },
+    {
+      "id": "broad-plant",
+      "name": "Cây lá tròn",
+      "file": "broad-plant.webp",
+      "width": 360,
+      "height": 710,
+      "bytes": 52426,
+      "transparent": true
+    },
+    {
+      "id": "pebbles",
+      "name": "Đá cuội",
+      "file": "pebbles.webp",
+      "width": 400,
+      "height": 262,
+      "bytes": 14546,
+      "transparent": true
+    },
+    {
+      "id": "water",
+      "name": "Nền nước",
+      "file": "water.webp",
+      "width": 1200,
+      "height": 800,
+      "bytes": 28624,
+      "transparent": false
+    }
+  ]
+}

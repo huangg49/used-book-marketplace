@@ -1,12 +1,22 @@
-import { useCallback, useEffect, useRef, type ReactNode } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { dateText } from "../../core/format";
-import { Button, ErrorNotice, Notice } from "../../core/ui";
+import { Button, Notice } from "../../core/ui";
+import { ListFeedback } from "../../core/list-feedback";
 import type { Finish } from "./action-panel";
 import type { ActionContext, QueuePanel, Row } from "./queue-panel";
+import { MotionPanel } from "../../core/MotionPanel";
+import { useListMotion, useTaskArrival } from "../../core/task-motion";
+import styles from "../../core/task-motion.module.css";
 
 export function OperationsQueue({
-  number,
   title,
   intro,
   order,
@@ -33,12 +43,25 @@ export function OperationsQueue({
   extra?: (context: ActionContext) => ReactNode;
 }) {
   const { open, setOpen, pending, setPending, notice, setNotice } = panel;
-  const noticeRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (notice) noticeRef.current?.focus();
-  }, [notice]);
+  const [receiptIndex, setReceiptIndex] = useState<number>();
+  const presented = useRef<unknown>(undefined);
+  const presentNotice = useCallback((value: unknown, element: HTMLElement) => {
+    // Polling can move the receipt to another surviving row without a new ACK.
+    if (presented.current === value) return;
+    presented.current = value;
+    element.focus({ preventScroll: true });
+    element.scrollIntoView({ block: "nearest", behavior: "instant" });
+  }, []);
+  const list = useRef<HTMLDivElement>(null);
+  useListMotion(
+    list,
+    rows
+      .map((row) => `${row.id}:${row.status}:${row.meta.join("/")}`)
+      .join("|"),
+  );
   const finish = useCallback<Finish>(
     (outcome) => {
+      setReceiptIndex(undefined);
       setOpen(undefined);
       setNotice(outcome);
     },
@@ -51,7 +74,6 @@ export function OperationsQueue({
   return (
     <>
       <header className="page-heading">
-        <p className="eyebrow">Điểm và đấu giá / {number}</p>
         <h1>{title}</h1>
         <p className="intro">{intro}</p>
       </header>
@@ -67,26 +89,17 @@ export function OperationsQueue({
       {extra?.({ onFinish: finish, onPending: setPending, reconcile })}
       <p className="muted">
         {order}{" "}
-        {result.isSuccess &&
+        {result.data !== undefined &&
           `Đang hiển thị ${rows.length} ${unit}.${serverTime ? ` Cập nhật ${dateText(serverTime)}.` : ""}`}
       </p>
-      {notice && (
-        <div ref={noticeRef} tabIndex={-1}>
-          <Notice tone={notice.tone}>{notice.text}</Notice>
-        </div>
+      {notice && receiptIndex === undefined && (
+        <OperationReceipt value={notice} present={presentNotice} />
       )}
-      {result.isLoading && (
-        <p className="empty" role="status">
-          Đang tải hồ sơ…
-        </p>
-      )}
-      {result.error && (
-        <ErrorNotice
-          error={result.error}
-          retry={() => void result.refetch()}
-          busy={result.isFetching}
-        />
-      )}
+      <ListFeedback
+        result={result}
+        loadingText="Đang tải hồ sơ…"
+        retryDisabled={pending}
+      />
       {result.isSuccess && rows.length === 0 && (
         <div className="empty">
           <span className="folio">—</span>
@@ -94,58 +107,108 @@ export function OperationsQueue({
           <p>{empty.body}</p>
         </div>
       )}
-      <div className="queue-list">
+      <div className="queue-list" ref={list}>
         {rows.map((row, index) => {
           const expanded = open === row.id;
           const panelId = `action-${row.id}`;
           return (
-            <article className="queue-row" key={row.id}>
-              <span className="row-number">
-                {String(index + 1).padStart(2, "0")}
-              </span>
-              <div>
-                <div className="row-meta">
-                  <span>{row.status}</span>
-                  {row.meta.map((value) => (
-                    <span key={value}>{value}</span>
-                  ))}
-                </div>
-                <h2>
-                  {row.title || "Chưa có tên sách"}{" "}
-                  <span className="short-id">/ {row.id.slice(0, 8)}</span>
-                </h2>
-                {row.detail && <div className="muted">{row.detail}</div>}
-              </div>
-              {row.action ? (
-                <Button
-                  className="row-action"
-                  aria-expanded={expanded}
-                  aria-controls={expanded ? panelId : undefined}
-                  disabled={pending}
-                  onClick={() => {
-                    setNotice(undefined);
-                    setOpen(expanded ? undefined : row.id);
-                  }}
-                >
-                  {expanded ? "Đóng" : row.action.label}
-                </Button>
-              ) : (
-                <span />
+            <Fragment key={row.id}>
+              {notice && receiptIndex === index && (
+                <OperationReceipt value={notice} present={presentNotice} />
               )}
-              {expanded && row.action && (
-                <div id={panelId} className="row-panel">
-                  {row.action.render({
-                    onFinish: finish,
-                    onPending: setPending,
-                    reconcile,
-                  })}
+              <article
+                className="queue-row"
+                data-motion-key={row.id}
+                data-motion-revision={`${row.status}/${row.meta.join("/")}`}
+              >
+                <span className="row-number">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <div>
+                  <div className="row-meta">
+                    <span>{row.status}</span>
+                    {row.meta.map((value) => (
+                      <span key={value}>{value}</span>
+                    ))}
+                  </div>
+                  <h2>
+                    {row.title || "Chưa có tên sách"}{" "}
+                    <span className="short-id">/ {row.id.slice(0, 8)}</span>
+                  </h2>
+                  {row.detail && <div className="muted">{row.detail}</div>}
                 </div>
-              )}
-            </article>
+                {row.action ? (
+                  <Button
+                    className="row-action"
+                    aria-expanded={expanded}
+                    aria-controls={expanded ? panelId : undefined}
+                    disabled={pending}
+                    onClick={() => {
+                      setNotice(undefined);
+                      setOpen(expanded ? undefined : row.id);
+                    }}
+                  >
+                    {expanded ? "Đóng" : row.action.label}
+                  </Button>
+                ) : (
+                  <span />
+                )}
+                {row.action && (
+                  <MotionPanel
+                    open={expanded}
+                    id={panelId}
+                    className="row-panel"
+                  >
+                    {expanded &&
+                      row.action.render({
+                        onFinish: (outcome) => {
+                          setReceiptIndex(index);
+                          setOpen(undefined);
+                          setNotice(outcome);
+                        },
+                        onPending: setPending,
+                        reconcile,
+                      })}
+                  </MotionPanel>
+                )}
+              </article>
+            </Fragment>
           );
         })}
+        {notice &&
+          receiptIndex !== undefined &&
+          receiptIndex >= rows.length && (
+            <OperationReceipt value={notice} present={presentNotice} />
+          )}
       </div>
     </>
+  );
+}
+
+function OperationReceipt({
+  value,
+  present,
+}: {
+  value: { tone: "success" | "info" | "warning"; text: string };
+  present: (value: unknown, element: HTMLElement) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useTaskArrival(ref, value.text);
+  useEffect(() => {
+    if (ref.current) present(value, ref.current);
+  }, [value, present]);
+  return (
+    <div
+      ref={ref}
+      className={styles.receipt}
+      tabIndex={-1}
+      aria-label="Kết quả thao tác"
+    >
+      <span className={styles.receiptLabel}>
+        {value.tone === "success" ? "Kết quả đã ghi nhận" : "Kết quả đối chiếu"}
+      </span>
+      <Notice tone={value.tone}>{value.text}</Notice>
+    </div>
   );
 }
 
