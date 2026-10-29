@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "observations": [
+    {
+      "id": "replace-with-observation-id",
+      "bookKey": "replace-with-stable-edition-key",
+      "kind": "OnlineRetail",
+      "amountVnd": null,
+      "priceMeaning": "current-retail-price",
+      "condition": null,
+      "sourceId": null,
+      "sourceLabel": "",
+      "observedAt": null,
+      "editionMatch": "unknown",
+      "identityEvidence": {},
+      "availability": "unknown",
+      "rightsNote": "",
+      "status": "blocked",
+      "humanReviewed": false,
+      "issues": ["TEMPLATE ONLY: no price has been observed"]
+    }
+  ]
+}

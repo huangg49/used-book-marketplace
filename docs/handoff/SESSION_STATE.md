@@ -1,5 +1,21 @@
 # Điểm lưu hiện tại — 29/10/2026
 
+## Chuẩn bị giao data cho Gemini — 29/10/2026
+
+- Owner giao Gemini thu thập data, yêu cầu Codex chuẩn bị folder/prompt. Nhánh
+  `codex/listing-ai-data-handoff`, basefc9ce22; commit subject
+  `docs(ai): prepare Gemini data collection handoff`.
+- [Hướng dẫn và prompt](../../qa-data/listing-ai/README.md), output local ở
+  `qa-data/listing-ai/incoming/` đã tạo các thư mục. Template catalog/nguồn/giá/
+  eval bám code; đầu ra raw/ảnh ignored, không tự import/commit hoặc gọi AI.
+- Mục tiêu25ấn bản, ít nhất20ảnh cover-scan và15cuốn có2nguồn giá độc lập khi
+  có thể xác minh; thiếu phải ghi PARTIAL, không bịa. Phân biệt nguồn retail/
+  cover/human reference, ISBN catalog với chữ nhìn thấy trên ảnh; human review
+  và real-camera vẫn NOT_RUN, READINESS giữ nguyên. Hiện chưa có data thu thập.
+- Chỉ docs/template; kiểm JSON, link/ignore và diff; không chạy lại API/native/
+  DB/QA. Fetch origin giữ mainaed674f, base12ahead/0behind; không pull/reset.
+  Bước tiếp Gemini chỉ ghi incoming rồi Codex đọc HANDOFF, kiểm nguồn và QA riêng.
+
 ## Trợ lý đăng sách web/RN — 29/10/2026
 
 - Owner giao hoàn thiện AI hiện có; nhánh `codex/listing-ai-journey`, base04a9361,

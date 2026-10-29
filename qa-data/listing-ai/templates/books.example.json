@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "books": [
+    {
+      "bookKey": "replace-with-stable-edition-key",
+      "status": "blocked",
+      "metadata": {
+        "title": "",
+        "authors": [],
+        "publisher": null,
+        "publicationYear": null,
+        "language": null,
+        "edition": null,
+        "isbn": null
+      },
+      "isbnStatus": "unknown",
+      "sourceIds": [],
+      "fieldEvidence": {},
+      "images": [
+        {
+          "path": null,
+          "sourceId": null,
+          "role": "front-cover",
+          "sourceType": "cover-scan",
+          "sha256": null,
+          "byteSize": null,
+          "width": null,
+          "height": null,
+          "rightsStatus": "unknown"
+        }
+      ],
+      "verification": {
+        "method": "not-yet-checked",
+        "humanReviewed": false,
+        "reviewedBy": null,
+        "reviewedAt": null
+      },
+      "issues": ["TEMPLATE ONLY: replace placeholders; not ready for import"]
+    }
+  ]
+}

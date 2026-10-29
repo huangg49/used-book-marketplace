@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "replace-with-source-id",
+      "url": "",
+      "publisherOrSeller": "",
+      "sourceType": "publisher",
+      "independenceGroup": "",
+      "accessedAt": null,
+      "accessStatus": "not-checked",
+      "factsObserved": [],
+      "evidenceLocator": null,
+      "rightsNote": "unknown; no license has been verified"
+    }
+  ]
+}
