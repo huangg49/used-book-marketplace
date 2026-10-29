@@ -1,5 +1,25 @@
 # Điểm lưu hiện tại — 29/10/2026
 
+## Review data Gemini — 29/10/2026
+
+- Owner chuyển bàn giao Gemini để kiểm; nhánh `codex/listing-ai-data-review`,
+  basee62473f, commit subject `docs(ai): review Gemini dataset and request corrections`.
+  [Review/finding](../../qa-data/listing-ai/REVIEW_2026_10_29.md),
+  [prompt sửa](../../qa-data/listing-ai/GEMINI_REWORK.md),
+  [evidence đã chọn](../../qa-data/listing-ai/review-2026-10-29/evidence.json).
+- Kết luận NEEDS_REWORK, không import/nghiệm thu. 25JPEG decode/hash/size khớp,
+  24hash độc lập,14ISBN đúng checksum và có trên nguồn NXB. 40URL HTTP200 nhưng
+  2Tiki là redirect chưa xác minh sản phẩm. 14cuốn hai group tự khai gồm likely;
+  thêm exact còn12, chưa là12cuốn nghiệm thu. 76field thiếu dẫn chứng,0case nhiều
+  tác giả, metadata năm/ISBN/edition/stock và thời điểm thu thập có mâu thuẫn.
+- Baseline validator tái lập16PASS/0FAIL/1BLOCKED/1NOT_RUN trên bản sao. Bốn
+  negative probes chứng minh giá âm/ngày tương lai/photos thiếu/cờ review và
+  import sai không bị bắt; ISBN sai cóFAIL vẫnexit0. Script còn hạ ngưỡng15→14.
+  Report/raw gốc không sửa; không chạy script downloader/importer/app/DB/AI.
+- Human/real-camera NOT_RUN, READINESS không đổi. Chỉ docs/evidence kỹ thuật,
+  ảnh/raw giữ ignored. Bước tiếp owner chuyển GEMINI_REWORK, Gemini sửa incoming
+  có snapshot/changelog, Codex đối chiếu lại; không tự gửi message agent khác.
+
 ## Chuẩn bị giao data cho Gemini — 29/10/2026
 
 - Owner giao Gemini thu thập data, yêu cầu Codex chuẩn bị folder/prompt. Nhánh

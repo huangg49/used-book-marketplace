@@ -1,0 +1,2229 @@
+{
+  "status": "NEEDS_REWORK",
+  "date": "2026-10-29",
+  "timezone": "Asia/Saigon",
+  "sourceHead": "e62473f",
+  "scope": "Read-only original incoming; isolated validator probes. No app/DB/import/live AI/GHN calls. Not human acceptance.",
+  "offlineCounts": {
+    "books": 25,
+    "images": 25,
+    "uniqueImageHashes": 24,
+    "observations": 40,
+    "sources": 40,
+    "reportedReadySources": 14,
+    "readyExactTwoSourceBooks": 12,
+    "realCameraCases": 0,
+    "importCandidates": 0
+  },
+  "allImagesDecodedAndMatchedDeclaredSizeDimensionsHash": true,
+  "uniqueImageHashes": 24,
+  "observedIsbnsChecksumAndPublisherSourceMatched": 14,
+  "multipleAuthorBooks": 0,
+  "missingFieldEvidence": {
+    "illustrators": 1,
+    "language": 25,
+    "edition": 19,
+    "authors": 9,
+    "publisher": 6,
+    "publicationYear": 15,
+    "translators": 1
+  },
+  "offlineIssues": [
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "de-men-bm-kd-2023",
+      "detail": "illustrators"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "de-men-bm-kd-2023",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "de-men-bm-kd-2023",
+      "detail": "edition"
+    },
+    {
+      "code": "INFERRED_GROUND_TRUTH",
+      "id": "de-men-bm-kd-2023",
+      "detail": {
+        "field": "publicationYear",
+        "locator": "ước tính từ tags 2026 variant; edition ghi nhận tái bản gần nhất"
+      }
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "de-men-bc-kd-2022",
+      "detail": "authors"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "de-men-bc-kd-2022",
+      "detail": "publisher"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "de-men-bc-kd-2022",
+      "detail": "publicationYear"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "de-men-bc-kd-2022",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "hoang-tu-be-kd-2022",
+      "detail": "publicationYear"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "hoang-tu-be-kd-2022",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "hoang-tu-be-kd-2022",
+      "detail": "edition"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "hoang-tu-be-nhanam-2025",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "hoang-tu-be-nhanam-2025",
+      "detail": "edition"
+    },
+    {
+      "code": "ISBN_ABSENCE_NEEDS_BOOK_EVIDENCE",
+      "id": "hoang-tu-be-nhanam-2025",
+      "detail": "Absence from a web page does not establish absence from the book"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "khong-gia-dinh-kd-2022",
+      "detail": "publicationYear"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "khong-gia-dinh-kd-2022",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "khong-gia-dinh-kd-2022",
+      "detail": "edition"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "ong-gia-bien-ca-kd-2025",
+      "detail": "authors"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "ong-gia-bien-ca-kd-2025",
+      "detail": "publicationYear"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "ong-gia-bien-ca-kd-2025",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "ong-gia-bien-ca-kd-2025",
+      "detail": "edition"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "dat-rung-phuong-nam-kd-2026",
+      "detail": "authors"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "dat-rung-phuong-nam-kd-2026",
+      "detail": "publicationYear"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "dat-rung-phuong-nam-kd-2026",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "kinh-van-hoa-kd-2019",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "kinh-van-hoa-kd-2019",
+      "detail": "edition"
+    },
+    {
+      "code": "INFERRED_GROUND_TRUTH",
+      "id": "kinh-van-hoa-kd-2019",
+      "detail": {
+        "field": "publicationYear",
+        "locator": "tên file ảnh chứa tb2019"
+      }
+    },
+    {
+      "code": "ISBN_ABSENCE_NEEDS_BOOK_EVIDENCE",
+      "id": "kinh-van-hoa-kd-2019",
+      "detail": "Absence from a web page does not establish absence from the book"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "doraemon-t1-kd-2023",
+      "detail": "publisher"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "doraemon-t1-kd-2023",
+      "detail": "publicationYear"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "doraemon-t1-kd-2023",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "doraemon-t1-kd-2023",
+      "detail": "edition"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "doraemon-t2-kd-2023",
+      "detail": "authors"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "doraemon-t2-kd-2023",
+      "detail": "publisher"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "doraemon-t2-kd-2023",
+      "detail": "publicationYear"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "doraemon-t2-kd-2023",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "doraemon-t2-kd-2023",
+      "detail": "edition"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "so-do-nhanam-2021",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "so-do-nhanam-2021",
+      "detail": "edition"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "cay-cam-ngot-nhanam-2024",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "cay-cam-ngot-nhanam-2024",
+      "detail": "edition"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "chien-binh-cau-vong-nhanam-2022",
+      "detail": "publicationYear"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "chien-binh-cau-vong-nhanam-2022",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "chien-binh-cau-vong-nhanam-2022",
+      "detail": "edition"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "tuoi-tre-dang-gia-nhanam-2021",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "tuoi-tre-dang-gia-nhanam-2021",
+      "detail": "edition"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "mat-biec-tre-bm-2022",
+      "detail": "publicationYear"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "mat-biec-tre-bm-2022",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "mat-biec-tre-bm-2022",
+      "detail": "edition"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "mat-biec-tre-td-2019",
+      "detail": "authors"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "mat-biec-tre-td-2019",
+      "detail": "publicationYear"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "mat-biec-tre-td-2019",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "mat-biec-tre-td-2019",
+      "detail": "edition"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "cho-toi-xin-ve-tre-2018",
+      "detail": "authors"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "cho-toi-xin-ve-tre-2018",
+      "detail": "publicationYear"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "cho-toi-xin-ve-tre-2018",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "cho-toi-xin-ve-tre-2018",
+      "detail": "edition"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "nha-gia-kim-nhanam-tb79k",
+      "detail": "publicationYear"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "nha-gia-kim-nhanam-tb79k",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "nha-gia-kim-nhanam-tb79k",
+      "detail": "edition"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "nha-gia-kim-nhanam-tb95k",
+      "detail": "authors"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "nha-gia-kim-nhanam-tb95k",
+      "detail": "translators"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "nha-gia-kim-nhanam-tb95k",
+      "detail": "publisher"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "nha-gia-kim-nhanam-tb95k",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "rung-nauy-nhanam-2024",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "rung-nauy-nhanam-2024",
+      "detail": "edition"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "song-mon-nhanam-2022",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "song-mon-nhanam-2022",
+      "detail": "edition"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "tat-den-kd-2021",
+      "detail": "publicationYear"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "tat-den-kd-2021",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "tat-den-kd-2021",
+      "detail": "edition"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "truyen-kieu-kd-sc-2024",
+      "detail": "authors"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "truyen-kieu-kd-sc-2024",
+      "detail": "publisher"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "truyen-kieu-kd-sc-2024",
+      "detail": "publicationYear"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "truyen-kieu-kd-sc-2024",
+      "detail": "language"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "truyen-kieu-kd-vhtn-2021",
+      "detail": "authors"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "truyen-kieu-kd-vhtn-2021",
+      "detail": "publisher"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "truyen-kieu-kd-vhtn-2021",
+      "detail": "publicationYear"
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "truyen-kieu-kd-vhtn-2021",
+      "detail": "language"
+    },
+    {
+      "code": "INFERRED_GROUND_TRUTH",
+      "id": "truyen-kieu-kd-vhtn-2021",
+      "detail": {
+        "field": "edition",
+        "locator": "tên file ảnh van-hoc-trong-nha-truong-truyen-kieu; giá 40.000đ – khác bản sách tranh 235.000đ"
+      }
+    },
+    {
+      "code": "MISSING_FIELD_EVIDENCE",
+      "id": "dac-nhan-tam-nhanam-tb108k",
+      "detail": "language"
+    },
+    {
+      "code": "PRICE_NONEXACT_READY",
+      "id": "obs-01-tiki",
+      "detail": "likely"
+    },
+    {
+      "code": "PRICE_NONEXACT_READY",
+      "id": "obs-18-tiki",
+      "detail": "likely"
+    }
+  ],
+  "duplicateImages": [
+    [
+      "84028e4d0f1f21f50a9ae932c5ccab134aa44d367a73cd7a6677a01a51151768",
+      [
+        "nha-gia-kim-nhanam-tb79k",
+        "nha-gia-kim-nhanam-tb95k"
+      ]
+    ]
+  ],
+  "timestampAudit": {
+    "referenceUtc": "2026-10-29T03:38:11Z",
+    "claimedEnd": "2026-10-29T03:30:00Z",
+    "afterClaimedEnd": 29,
+    "afterReference": 27,
+    "latest": "2026-10-29T04:40:00Z",
+    "originalReportTimestamp": "2026-10-29T03:27:57.765Z"
+  },
+  "validatorProbes": {
+    "ranAt": "2026-10-29T03:34:56.334Z",
+    "isolatedCopy": true,
+    "originalReportUnchanged": true,
+    "results": [
+      {
+        "scenario": "baseline",
+        "exitCode": 0,
+        "summary": {
+          "totalChecks": 18,
+          "passed": 16,
+          "failed": 0,
+          "blocked": 1,
+          "notRun": 1
+        },
+        "notableChecks": [
+          {
+            "name": "isbn:checksum-verification",
+            "status": "PASS",
+            "metrics": {
+              "observed": 14,
+              "valid": 14,
+              "invalid": 0
+            }
+          },
+          {
+            "name": "pricing:independent-observations",
+            "status": "PASS",
+            "metrics": {
+              "booksWithTwoOrMoreObs": 15,
+              "booksWithTwoOrMoreIndependentObs": 14,
+              "target": 15
+            }
+          },
+          {
+            "name": "lane:real-camera",
+            "status": "NOT_RUN",
+            "metrics": {
+              "casesCount": 0,
+              "status": "NOT_RUN"
+            }
+          },
+          {
+            "name": "pricing:import-candidates",
+            "status": "PASS",
+            "metrics": {
+              "candidatesCount": 0
+            }
+          }
+        ]
+      },
+      {
+        "scenario": "invalid-isbn",
+        "exitCode": 0,
+        "summary": {
+          "totalChecks": 18,
+          "passed": 15,
+          "failed": 1,
+          "blocked": 1,
+          "notRun": 1
+        },
+        "notableChecks": [
+          {
+            "name": "isbn:checksum-verification",
+            "status": "FAIL",
+            "metrics": {
+              "observed": 14,
+              "valid": 13,
+              "invalid": 1
+            }
+          },
+          {
+            "name": "pricing:independent-observations",
+            "status": "PASS",
+            "metrics": {
+              "booksWithTwoOrMoreObs": 15,
+              "booksWithTwoOrMoreIndependentObs": 14,
+              "target": 15
+            }
+          },
+          {
+            "name": "lane:real-camera",
+            "status": "NOT_RUN",
+            "metrics": {
+              "casesCount": 0,
+              "status": "NOT_RUN"
+            }
+          },
+          {
+            "name": "pricing:import-candidates",
+            "status": "PASS",
+            "metrics": {
+              "candidatesCount": 0
+            }
+          }
+        ]
+      },
+      {
+        "scenario": "impossible-price-and-date",
+        "exitCode": 0,
+        "summary": {
+          "totalChecks": 18,
+          "passed": 16,
+          "failed": 0,
+          "blocked": 1,
+          "notRun": 1
+        },
+        "notableChecks": [
+          {
+            "name": "isbn:checksum-verification",
+            "status": "PASS",
+            "metrics": {
+              "observed": 14,
+              "valid": 14,
+              "invalid": 0
+            }
+          },
+          {
+            "name": "pricing:independent-observations",
+            "status": "PASS",
+            "metrics": {
+              "booksWithTwoOrMoreObs": 15,
+              "booksWithTwoOrMoreIndependentObs": 14,
+              "target": 15
+            }
+          },
+          {
+            "name": "lane:real-camera",
+            "status": "NOT_RUN",
+            "metrics": {
+              "casesCount": 0,
+              "status": "NOT_RUN"
+            }
+          },
+          {
+            "name": "pricing:import-candidates",
+            "status": "PASS",
+            "metrics": {
+              "candidatesCount": 0
+            }
+          }
+        ]
+      },
+      {
+        "scenario": "missing-case-image",
+        "exitCode": 0,
+        "summary": {
+          "totalChecks": 18,
+          "passed": 16,
+          "failed": 0,
+          "blocked": 1,
+          "notRun": 1
+        },
+        "notableChecks": [
+          {
+            "name": "isbn:checksum-verification",
+            "status": "PASS",
+            "metrics": {
+              "observed": 14,
+              "valid": 14,
+              "invalid": 0
+            }
+          },
+          {
+            "name": "pricing:independent-observations",
+            "status": "PASS",
+            "metrics": {
+              "booksWithTwoOrMoreObs": 15,
+              "booksWithTwoOrMoreIndependentObs": 14,
+              "target": 15
+            }
+          },
+          {
+            "name": "lane:real-camera",
+            "status": "NOT_RUN",
+            "metrics": {
+              "casesCount": 0,
+              "status": "NOT_RUN"
+            }
+          },
+          {
+            "name": "pricing:import-candidates",
+            "status": "PASS",
+            "metrics": {
+              "candidatesCount": 0
+            }
+          }
+        ]
+      },
+      {
+        "scenario": "nonempty-import-and-fake-real-camera-review",
+        "exitCode": 0,
+        "summary": {
+          "totalChecks": 18,
+          "passed": 16,
+          "failed": 0,
+          "blocked": 1,
+          "notRun": 1
+        },
+        "notableChecks": [
+          {
+            "name": "isbn:checksum-verification",
+            "status": "PASS",
+            "metrics": {
+              "observed": 14,
+              "valid": 14,
+              "invalid": 0
+            }
+          },
+          {
+            "name": "pricing:independent-observations",
+            "status": "PASS",
+            "metrics": {
+              "booksWithTwoOrMoreObs": 15,
+              "booksWithTwoOrMoreIndependentObs": 14,
+              "target": 15
+            }
+          },
+          {
+            "name": "lane:real-camera",
+            "status": "NOT_RUN",
+            "metrics": {
+              "casesCount": 1,
+              "status": "NOT_RUN"
+            }
+          },
+          {
+            "name": "pricing:import-candidates",
+            "status": "PASS",
+            "metrics": {
+              "candidatesCount": 1
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "httpProbe": {
+    "ranAt": "2026-10-29T03:34:08.734Z",
+    "all40Returned200": true,
+    "warning": "HTTP200 is not proof of a usable product page or matching edition; fresh state does not establish historical state.",
+    "sources": [
+      {
+        "id": "src-kd-de-men-bc",
+        "url": "https://www.nxbkimdong.com.vn/de-men-phieu-luu-ky-bia-cung-26",
+        "http": 200,
+        "title": "Dế Mèn phiêu lưu ký | Nhà xuất bản Kim Đồng",
+        "bytes": 363420
+      },
+      {
+        "id": "src-kd-de-men-bm",
+        "url": "https://www.nxbkimdong.com.vn/de-men-phieu-luu-ky-truong-qua-26",
+        "http": 200,
+        "title": "Dế Mèn phiêu lưu ký | Nhà xuất bản Kim Đồng",
+        "bytes": 360331
+      },
+      {
+        "id": "src-kd-dora1",
+        "url": "https://www.nxbkimdong.com.vn/45-chuong-mo-dau-bo-truyen-ngan-doraemon-tap-1-26",
+        "http": 200,
+        "title": "45 chương mở đầu bộ truyện ngắn Doraemon - Tập 1 | Nhà xuất bản Kim Đồng",
+        "bytes": 302184
+      },
+      {
+        "id": "src-kd-dora2",
+        "url": "https://www.nxbkimdong.com.vn/45-chuong-mo-dau-bo-truyen-ngan-doraemon-tap-2-26",
+        "http": 200,
+        "title": "45 chương mở đầu bộ truyện ngắn Doraemon - Tập 2 | Nhà xuất bản Kim Đồng",
+        "bytes": 295643
+      },
+      {
+        "id": "src-kd-drpn",
+        "url": "https://www.nxbkimdong.com.vn/dat-rung-phuong-nam-26",
+        "http": 200,
+        "title": "Đất rừng phương Nam | Nhà xuất bản Kim Đồng",
+        "bytes": 305156
+      },
+      {
+        "id": "src-kd-htb",
+        "url": "https://www.nxbkimdong.com.vn/hoang-tu-be-2026",
+        "http": 200,
+        "title": "Hoàng tử bé | Nhà xuất bản Kim Đồng",
+        "bytes": 359859
+      },
+      {
+        "id": "src-kd-kgd",
+        "url": "https://www.nxbkimdong.com.vn/khong-gia-dinh-26",
+        "http": 200,
+        "title": "Không gia đình | Nhà xuất bản Kim Đồng",
+        "bytes": 361308
+      },
+      {
+        "id": "src-kd-kieu-sc",
+        "url": "https://www.nxbkimdong.com.vn/truyen-kieu-2",
+        "http": 200,
+        "title": "Truyện Kiều | Nhà xuất bản Kim Đồng",
+        "bytes": 314266
+      },
+      {
+        "id": "src-kd-kieu-vhtn",
+        "url": "https://www.nxbkimdong.com.vn/truyen-kieu",
+        "http": 200,
+        "title": "Truyện Kiều | Nhà xuất bản Kim Đồng",
+        "bytes": 296231
+      },
+      {
+        "id": "src-kd-kvh",
+        "url": "https://www.nxbkimdong.com.vn/tap-le-kinh-van-hoa",
+        "http": 200,
+        "title": "(Tập lẻ) Kính vạn hoa | Nhà xuất bản Kim Đồng",
+        "bytes": 393200
+      },
+      {
+        "id": "src-kd-ogbc",
+        "url": "https://www.nxbkimdong.com.vn/ong-gia-va-bien-ca-26",
+        "http": 200,
+        "title": "Ông già và biển cả | Nhà xuất bản Kim Đồng",
+        "bytes": 359506
+      },
+      {
+        "id": "src-kd-tatden",
+        "url": "https://www.nxbkimdong.com.vn/tat-den",
+        "http": 200,
+        "title": "Tắt đèn | Nhà xuất bản Kim Đồng",
+        "bytes": 302467
+      },
+      {
+        "id": "src-nhanam-cbcv",
+        "url": "https://nhanam.vn/chien-binh-cau-vong-andrea-hirata-tb-135-000",
+        "http": 200,
+        "title": "CHIẾN BINH CẦU VỒNG (Tái Bản 2025)",
+        "bytes": 362118
+      },
+      {
+        "id": "src-nhanam-ccn",
+        "url": "https://nhanam.vn/cay-cam-ngot-cua-toi-tb-125-000",
+        "http": 200,
+        "title": "Cây cam ngọt của tôi (TB 125.000)",
+        "bytes": 356357
+      },
+      {
+        "id": "src-nhanam-dnt",
+        "url": "https://nhanam.vn/dac-nhan-tam-tb-108-000",
+        "http": 200,
+        "title": "Đắc nhân tâm (TB 108.000)",
+        "bytes": 352424
+      },
+      {
+        "id": "src-nhanam-htb",
+        "url": "https://nhanam.vn/hoang-tu-be-tb-86-000",
+        "http": 200,
+        "title": "HOÀNG TỬ BÉ (TB 2025)",
+        "bytes": 362643
+      },
+      {
+        "id": "src-nhanam-ngk-79k",
+        "url": "https://nhanam.vn/nha-gia-kim-tb-79-000-1",
+        "http": 200,
+        "title": "Nhà giả kim (TB 79.000)",
+        "bytes": 357136
+      },
+      {
+        "id": "src-nhanam-ngk-95k",
+        "url": "https://nhanam.vn/nha-gia-kim-tb-95-000",
+        "http": 200,
+        "title": "Nhà giả kim (TB 2026)",
+        "bytes": 360997
+      },
+      {
+        "id": "src-nhanam-rnn",
+        "url": "https://nhanam.vn/sach-rung-na-uy-tb-2024-haruki-murakami-nha-nam",
+        "http": 200,
+        "title": "Rừng Nauy (TB 180.000)",
+        "bytes": 360505
+      },
+      {
+        "id": "src-nhanam-sm",
+        "url": "https://nhanam.vn/song-mon-danh-tac",
+        "http": 200,
+        "title": "SỐNG MÒN",
+        "bytes": 355123
+      },
+      {
+        "id": "src-nhanam-sodo",
+        "url": "https://nhanam.vn/so-do-danh-tac-tb-86-000",
+        "http": 200,
+        "title": "SỐ ĐỎ (DANH TÁC)",
+        "bytes": 353132
+      },
+      {
+        "id": "src-nhanam-ttdg",
+        "url": "https://nhanam.vn/tuoi-tre-dang-gia-bao-nhieu-tb-90-000",
+        "http": 200,
+        "title": "Tuổi trẻ đáng giá bao nhiêu (TB 90.000)",
+        "bytes": 354928
+      },
+      {
+        "id": "src-nxbtre-ctxv",
+        "url": "https://www.nxbtre.com.vn/sach/cho-toi-xin-mot-ve-di-tuoi-tho-44594.html",
+        "http": 200,
+        "title": "Cho Tôi Xin Một Vé Đi Tuổi Thơ",
+        "bytes": 75349
+      },
+      {
+        "id": "src-nxbtre-mb-bm",
+        "url": "https://www.nxbtre.com.vn/sach/mat-biec-146386.html",
+        "http": 200,
+        "title": "Mắt Biếc",
+        "bytes": 92027
+      },
+      {
+        "id": "src-nxbtre-mb-td",
+        "url": "https://www.nxbtre.com.vn/sach/mat-biec-truyen-dai-54984.html",
+        "http": 200,
+        "title": "Mắt Biếc (truyện Dài)",
+        "bytes": 72857
+      },
+      {
+        "id": "src-tiki-cbcv",
+        "url": "https://tiki.vn/chien-binh-cau-vong-p242101983.html",
+        "http": 200,
+        "title": "Mua Sách - Chiến binh cầu vồng (TB 2020) - Nhã nam tại HỆ THỐNG NHÀ SÁCH ABC",
+        "bytes": 228999
+      },
+      {
+        "id": "src-tiki-ccn",
+        "url": "https://tiki.vn/cay-cam-ngot-cua-toi-p262067403.html",
+        "http": 200,
+        "title": "Mua Cây Cam Ngọt Của Tôi - Nhã Nam tại Nhà Sách Vĩnh Thụy",
+        "bytes": 226948
+      },
+      {
+        "id": "src-tiki-ctxv",
+        "url": "https://tiki.vn/cho-toi-xin-mot-ve-di-tuoi-tho-p275322627.html",
+        "http": 200,
+        "title": "Mua Cho Tôi Xin Một Vé Đi Tuổi Thơ (NXB Trẻ) tại HỆ THỐNG NHÀ SÁCH ABC",
+        "bytes": 230432
+      },
+      {
+        "id": "src-tiki-de-men-kd",
+        "url": "https://tiki.vn/p272305312.html",
+        "http": 200,
+        "bytes": 102894
+      },
+      {
+        "id": "src-tiki-drpn",
+        "url": "https://tiki.vn/dat-rung-phuong-nam-p278023623.html",
+        "http": 200,
+        "title": "Mua Sách - Đất Rừng Phương Nam ( Bìa Cứng ) - Kỉ niệm 100 Năm ngày sinh nhà văn Đoàn Giỏi - Kim Đồng tại Bamboo Books",
+        "bytes": 235243
+      },
+      {
+        "id": "src-tiki-htb-kd",
+        "url": "https://tiki.vn/sach-hoang-tu-be-nxb-kim-dong-p122901564.html",
+        "http": 200,
+        "title": "Mua Sách - Hoàng Tử Bé - NXB Kim Đồng tại Bamboo Books",
+        "bytes": 227496
+      },
+      {
+        "id": "src-tiki-kgd",
+        "url": "https://tiki.vn/sach-khong-gia-dinh-nxb-kim-dong-p122908929.html",
+        "http": 200,
+        "title": "Mua Sách - Không Gia Đình - NXB Kim Đồng tại Bamboo Books",
+        "bytes": 225099
+      },
+      {
+        "id": "src-tiki-kvh",
+        "url": "https://tiki.vn/kinh-van-hoa-p278961256.html",
+        "http": 200,
+        "title": "Mua KÍNH VẠN HOA BOXSET LẺ - Bộ Kỉ Niệm 30 Năm - Nguyễn Nhật Ánh - NXB Kim Đồng - Boxset 7 tại BÌNH BÁN BOOK",
+        "bytes": 243839
+      },
+      {
+        "id": "src-tiki-mb",
+        "url": "https://tiki.vn/mat-biec-p275322110.html",
+        "http": 200,
+        "title": "Mua Mắt biếc - Nguyễn Nhật Ánh (NXB Trẻ) tại HỆ THỐNG NHÀ SÁCH ABC",
+        "bytes": 226938
+      },
+      {
+        "id": "src-tiki-mb-bm",
+        "url": "https://tiki.vn/p186286190.html",
+        "http": 200,
+        "bytes": 102894
+      },
+      {
+        "id": "src-tiki-ngk",
+        "url": "https://tiki.vn/nha-gia-kim-p378448.html",
+        "http": 200,
+        "title": "Mua Sách Nhà Giả Kim tại NHBook",
+        "bytes": 233789
+      },
+      {
+        "id": "src-tiki-rnn",
+        "url": "https://tiki.vn/rung-nauy-p279104356.html",
+        "http": 200,
+        "title": "Mua RỪNG NAUY – Murakami Haruki – Trịnh Lữ dịch – Nhã Nam tại BÌNH BÁN BOOK",
+        "bytes": 226370
+      },
+      {
+        "id": "src-tiki-sm",
+        "url": "https://tiki.vn/song-mon-p167429540.html",
+        "http": 200,
+        "title": "Mua Sống Mòn - Nam Cao tại HỆ THỐNG NHÀ SÁCH ABC",
+        "bytes": 225712
+      },
+      {
+        "id": "src-tiki-sodo",
+        "url": "https://tiki.vn/so-do-p249053465.html",
+        "http": 200,
+        "title": "Mua Sách Số đỏ (Việt Nam danh tác) - Nhã Nam - BẢN QUYỀN tại info book",
+        "bytes": 226321
+      },
+      {
+        "id": "src-tiki-ttdg",
+        "url": "https://tiki.vn/tuoi-tre-dang-gia-bao-nhieu-p551563.html",
+        "http": 200,
+        "title": "Mua Sách Tuổi Trẻ Đáng Giá Bao Nhiêu tại Bamboo Books",
+        "bytes": 233012
+      }
+    ]
+  },
+  "freshStructuredFacts": {
+    "ranAt": "2026-10-29T03:37:45.822Z",
+    "rows": [
+      {
+        "id": "src-kd-de-men-bm",
+        "url": "https://www.nxbkimdong.com.vn/de-men-phieu-luu-ky-truong-qua-26",
+        "title": "Dế Mèn phiêu lưu ký | Nhà xuất bản Kim Đồng",
+        "claimed": [
+          {
+            "id": "obs-01-kd",
+            "bookKey": "de-men-bm-kd-2023",
+            "amount": 54000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "54.000₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": "978-604-2-03661-0",
+        "variants": [
+          {
+            "id": 221502067,
+            "title": "Default Title",
+            "sku": "6261412630004",
+            "price": 54000,
+            "available": true
+          }
+        ],
+        "products": []
+      },
+      {
+        "id": "src-tiki-de-men-kd",
+        "url": "https://tiki.vn/p272305312.html",
+        "title": "",
+        "claimed": [
+          {
+            "id": "obs-01-tiki",
+            "bookKey": "de-men-bm-kd-2023",
+            "amount": 50000,
+            "editionMatch": "likely",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": null,
+        "availability": null,
+        "isbn": null,
+        "nextPage": "/RedirectProductPage",
+        "products": []
+      },
+      {
+        "id": "src-kd-de-men-bc",
+        "url": "https://www.nxbkimdong.com.vn/de-men-phieu-luu-ky-bia-cung-26",
+        "title": "Dế Mèn phiêu lưu ký | Nhà xuất bản Kim Đồng",
+        "claimed": [
+          {
+            "id": "obs-02-kd",
+            "bookKey": "de-men-bc-kd-2022",
+            "amount": 135000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "135.000₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": "978-604-2-13519-1",
+        "variants": [
+          {
+            "id": 211712624,
+            "title": "Default Title",
+            "sku": "6261412630003",
+            "price": 135000,
+            "available": true
+          }
+        ],
+        "products": []
+      },
+      {
+        "id": "src-kd-htb",
+        "url": "https://www.nxbkimdong.com.vn/hoang-tu-be-2026",
+        "title": "Hoàng tử bé | Nhà xuất bản Kim Đồng",
+        "claimed": [
+          {
+            "id": "obs-03-kd",
+            "bookKey": "hoang-tu-be-kd-2022",
+            "amount": 31500,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "31.500₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": "978-604-2-35413-4",
+        "variants": [
+          {
+            "id": 209033360,
+            "title": "Default Title",
+            "sku": "6262101440006",
+            "price": 31500,
+            "available": true
+          }
+        ],
+        "products": []
+      },
+      {
+        "id": "src-tiki-htb-kd",
+        "url": "https://tiki.vn/sach-hoang-tu-be-nxb-kim-dong-p122901564.html",
+        "title": "Mua Sách - Hoàng Tử Bé - NXB Kim Đồng tại Bamboo Books",
+        "claimed": [
+          {
+            "id": "obs-03-tiki",
+            "bookKey": "hoang-tu-be-kd-2022",
+            "amount": 35000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": null,
+        "availability": null,
+        "isbn": null,
+        "nextPage": "/ProductPage",
+        "products": [
+          {
+            "name": "Sách - Hoàng Tử Bé - NXB Kim Đồng",
+            "sku": "5692409032244",
+            "offers": {
+              "price": 35000,
+              "priceCurrency": "VND",
+              "availability": "https://schema.org/InStock",
+              "seller": {
+                "@type": "Organization",
+                "name": "Bamboo Books",
+                "url": "https://tiki.vn/cua-hang/bamboo-books"
+              },
+              "url": "https://tiki.vn/sach-hoang-tu-be-nxb-kim-dong-p122901564.html"
+            }
+          }
+        ]
+      },
+      {
+        "id": "src-nhanam-htb",
+        "url": "https://nhanam.vn/hoang-tu-be-tb-86-000",
+        "title": "HOÀNG TỬ BÉ (TB 2025)",
+        "claimed": [
+          {
+            "id": "obs-04-nhanam",
+            "bookKey": "hoang-tu-be-nhanam-2025",
+            "amount": 68800,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "68.800₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": null,
+        "products": []
+      },
+      {
+        "id": "src-kd-kgd",
+        "url": "https://www.nxbkimdong.com.vn/khong-gia-dinh-26",
+        "title": "Không gia đình | Nhà xuất bản Kim Đồng",
+        "claimed": [
+          {
+            "id": "obs-05-kd",
+            "bookKey": "khong-gia-dinh-kd-2022",
+            "amount": 135000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "135.000₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": "978-604-2-24743-6",
+        "variants": [
+          {
+            "id": 207444024,
+            "title": "Default Title",
+            "sku": "6262101440005",
+            "price": 135000,
+            "available": true
+          }
+        ],
+        "products": []
+      },
+      {
+        "id": "src-tiki-kgd",
+        "url": "https://tiki.vn/sach-khong-gia-dinh-nxb-kim-dong-p122908929.html",
+        "title": "Mua Sách - Không Gia Đình - NXB Kim Đồng tại Bamboo Books",
+        "claimed": [
+          {
+            "id": "obs-05-tiki",
+            "bookKey": "khong-gia-dinh-kd-2022",
+            "amount": 150000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": null,
+        "availability": null,
+        "isbn": null,
+        "nextPage": "/ProductPage",
+        "products": [
+          {
+            "name": "Sách - Không Gia Đình - NXB Kim Đồng",
+            "sku": "5401412170539",
+            "offers": {
+              "price": 150000,
+              "priceCurrency": "VND",
+              "availability": "https://schema.org/InStock",
+              "seller": {
+                "@type": "Organization",
+                "name": "Bamboo Books",
+                "url": "https://tiki.vn/cua-hang/bamboo-books"
+              },
+              "url": "https://tiki.vn/sach-khong-gia-dinh-nxb-kim-dong-p122908929.html"
+            }
+          }
+        ]
+      },
+      {
+        "id": "src-kd-ogbc",
+        "url": "https://www.nxbkimdong.com.vn/ong-gia-va-bien-ca-26",
+        "title": "Ông già và biển cả | Nhà xuất bản Kim Đồng",
+        "claimed": [
+          {
+            "id": "obs-06-kd",
+            "bookKey": "ong-gia-bien-ca-kd-2025",
+            "amount": 40500,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "40.500₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": "978-604-2-31254-7",
+        "variants": [
+          {
+            "id": 213392933,
+            "title": "Default Title",
+            "sku": "6262101440018",
+            "price": 40500,
+            "available": true
+          }
+        ],
+        "products": []
+      },
+      {
+        "id": "src-kd-drpn",
+        "url": "https://www.nxbkimdong.com.vn/dat-rung-phuong-nam-26",
+        "title": "Đất rừng phương Nam | Nhà xuất bản Kim Đồng",
+        "claimed": [
+          {
+            "id": "obs-07-kd",
+            "bookKey": "dat-rung-phuong-nam-kd-2026",
+            "amount": 225000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "225.000₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": "978-604-2-24736-8",
+        "variants": [
+          {
+            "id": 221667078,
+            "title": "Default Title",
+            "sku": "6261110540009",
+            "price": 225000,
+            "available": true
+          }
+        ],
+        "products": []
+      },
+      {
+        "id": "src-tiki-drpn",
+        "url": "https://tiki.vn/dat-rung-phuong-nam-p278023623.html",
+        "title": "Mua Sách - Đất Rừng Phương Nam ( Bìa Cứng ) - Kỉ niệm 100 Năm ngày sinh nhà văn Đoàn Giỏi - Kim Đồng tại Bamboo Books",
+        "claimed": [
+          {
+            "id": "obs-07-tiki",
+            "bookKey": "dat-rung-phuong-nam-kd-2026",
+            "amount": 250000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": null,
+        "availability": null,
+        "isbn": null,
+        "nextPage": "/ProductPage",
+        "products": [
+          {
+            "name": "Sách - Đất Rừng Phương Nam ( Bìa Cứng ) - Kỉ niệm 100 Năm ngày sinh nhà văn Đoàn Giỏi - Kim Đồng",
+            "sku": "3788937748997",
+            "offers": {
+              "price": 250000,
+              "priceCurrency": "VND",
+              "availability": "https://schema.org/InStock",
+              "seller": {
+                "@type": "Organization",
+                "name": "Bamboo Books",
+                "url": "https://tiki.vn/cua-hang/bamboo-books"
+              },
+              "url": "https://tiki.vn/sach-dat-rung-phuong-nam-bia-cung-ki-niem-100-nam-ngay-sinh-nha-van-doan-gioi-kim-dong-p278023623.html"
+            }
+          }
+        ]
+      },
+      {
+        "id": "src-kd-kvh",
+        "url": "https://www.nxbkimdong.com.vn/tap-le-kinh-van-hoa",
+        "title": "(Tập lẻ) Kính vạn hoa | Nhà xuất bản Kim Đồng",
+        "claimed": [
+          {
+            "id": "obs-08-kd",
+            "bookKey": "kinh-van-hoa-kd-2019",
+            "amount": 121500,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "121.500₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": null,
+        "variants": [
+          {
+            "id": 213437866,
+            "title": "Tập 01 (2025)",
+            "sku": "6251106390001",
+            "price": 121500,
+            "available": true
+          },
+          {
+            "id": 220030402,
+            "title": "Tập 01 (2026)",
+            "sku": "6261106390001",
+            "price": 121500,
+            "available": true
+          },
+          {
+            "id": 213437867,
+            "title": "Tập 02 (2025)",
+            "sku": "6251106390002",
+            "price": 121500,
+            "available": true
+          },
+          {
+            "id": 213437869,
+            "title": "Tập 03 (2025)",
+            "sku": "6251106390003",
+            "price": 121500,
+            "available": true
+          },
+          {
+            "id": 213437868,
+            "title": "Tập 04 (2025)",
+            "sku": "6251106390004",
+            "price": 121500,
+            "available": true
+          },
+          {
+            "id": 179209786,
+            "title": "Tập 05",
+            "sku": "6231106390005",
+            "price": 121500,
+            "available": true
+          },
+          {
+            "id": 179209787,
+            "title": "Tập 06",
+            "sku": "6241106390006",
+            "price": 121500,
+            "available": true
+          },
+          {
+            "id": 179209788,
+            "title": "Tập 7 (2024)",
+            "sku": "6241106390007",
+            "price": 121500,
+            "available": true
+          },
+          {
+            "id": 179209789,
+            "title": "Tập 8 (2024)",
+            "sku": "6241106390008",
+            "price": 121500,
+            "available": true
+          },
+          {
+            "id": 179209790,
+            "title": "Tập 09",
+            "sku": "6241106390009",
+            "price": 121500,
+            "available": true
+          },
+          {
+            "id": 222875471,
+            "title": "Tập 09 (2026)",
+            "sku": "6261106390009",
+            "price": 121500,
+            "available": true
+          }
+        ],
+        "products": []
+      },
+      {
+        "id": "src-tiki-kvh",
+        "url": "https://tiki.vn/kinh-van-hoa-p278961256.html",
+        "title": "Mua KÍNH VẠN HOA BOXSET LẺ - Bộ Kỉ Niệm 30 Năm - Nguyễn Nhật Ánh - NXB Kim Đồng - Boxset 7 tại BÌNH BÁN BOOK",
+        "claimed": [
+          {
+            "id": "obs-08-tiki",
+            "bookKey": "kinh-van-hoa-kd-2019",
+            "amount": 250000,
+            "editionMatch": "unknown",
+            "status": "blocked",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": null,
+        "availability": null,
+        "isbn": null,
+        "nextPage": "/ProductPage",
+        "products": [
+          {
+            "name": "KÍNH VẠN HOA BOXSET LẺ - Bộ Kỉ Niệm 30 Năm - Nguyễn Nhật Ánh - NXB Kim Đồng ",
+            "sku": "1008865533638",
+            "offers": {
+              "price": 250000,
+              "priceCurrency": "VND",
+              "availability": "https://schema.org/InStock",
+              "seller": {
+                "@type": "Organization",
+                "name": "BÌNH BÁN BOOK",
+                "url": "https://tiki.vn/cua-hang/binh-ban-book"
+              },
+              "url": "https://tiki.vn/kinh-van-hoa-boxset-le-bo-ki-niem-30-nam-nguyen-nhat-anh-nxb-kim-dong-p278961256.html"
+            }
+          }
+        ]
+      },
+      {
+        "id": "src-kd-dora1",
+        "url": "https://www.nxbkimdong.com.vn/45-chuong-mo-dau-bo-truyen-ngan-doraemon-tap-1-26",
+        "title": "45 chương mở đầu bộ truyện ngắn Doraemon - Tập 1 | Nhà xuất bản Kim Đồng",
+        "claimed": [
+          {
+            "id": "obs-09-kd",
+            "bookKey": "doraemon-t1-kd-2023",
+            "amount": 49500,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "49.500₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": "978-604-2-04299-4",
+        "variants": [
+          {
+            "id": 203166302,
+            "title": "Default Title",
+            "sku": "6262207100001",
+            "price": 49500,
+            "available": true
+          }
+        ],
+        "products": []
+      },
+      {
+        "id": "src-kd-dora2",
+        "url": "https://www.nxbkimdong.com.vn/45-chuong-mo-dau-bo-truyen-ngan-doraemon-tap-2-26",
+        "title": "45 chương mở đầu bộ truyện ngắn Doraemon - Tập 2 | Nhà xuất bản Kim Đồng",
+        "claimed": [
+          {
+            "id": "obs-10-kd",
+            "bookKey": "doraemon-t2-kd-2023",
+            "amount": 49500,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "49.500₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": "978-604-2-04300-7",
+        "variants": [
+          {
+            "id": 233135614,
+            "title": "Default Title",
+            "sku": "6262207100002",
+            "price": 49500,
+            "available": true
+          }
+        ],
+        "products": []
+      },
+      {
+        "id": "src-nhanam-sodo",
+        "url": "https://nhanam.vn/so-do-danh-tac-tb-86-000",
+        "title": "SỐ ĐỎ (DANH TÁC)",
+        "claimed": [
+          {
+            "id": "obs-11-nhanam",
+            "bookKey": "so-do-nhanam-2021",
+            "amount": 86000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "86.000₫",
+        "availability": "http://schema.org/OutOfStock",
+        "isbn": null,
+        "products": []
+      },
+      {
+        "id": "src-tiki-sodo",
+        "url": "https://tiki.vn/so-do-p249053465.html",
+        "title": "Mua Sách Số đỏ (Việt Nam danh tác) - Nhã Nam - BẢN QUYỀN tại info book",
+        "claimed": [
+          {
+            "id": "obs-11-tiki",
+            "bookKey": "so-do-nhanam-2021",
+            "amount": 86000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": null,
+        "availability": null,
+        "isbn": null,
+        "nextPage": "/ProductPage",
+        "products": [
+          {
+            "name": "Sách Số đỏ (Việt Nam danh tác) - Nhã Nam - BẢN QUYỀN",
+            "sku": "6786832375956",
+            "offers": {
+              "price": 86000,
+              "priceCurrency": "VND",
+              "availability": "https://schema.org/InStock",
+              "seller": {
+                "@type": "Organization",
+                "name": "info book",
+                "url": "https://tiki.vn/cua-hang/info-book"
+              },
+              "url": "https://tiki.vn/sach-so-do-viet-nam-danh-tac-nha-nam-ban-quyen-p249053465.html"
+            }
+          }
+        ]
+      },
+      {
+        "id": "src-nhanam-ccn",
+        "url": "https://nhanam.vn/cay-cam-ngot-cua-toi-tb-125-000",
+        "title": "Cây cam ngọt của tôi (TB 125.000)",
+        "claimed": [
+          {
+            "id": "obs-12-nhanam",
+            "bookKey": "cay-cam-ngot-nhanam-2024",
+            "amount": 100000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "100.000₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": null,
+        "products": []
+      },
+      {
+        "id": "src-tiki-ccn",
+        "url": "https://tiki.vn/cay-cam-ngot-cua-toi-p262067403.html",
+        "title": "Mua Cây Cam Ngọt Của Tôi - Nhã Nam tại Nhà Sách Vĩnh Thụy",
+        "claimed": [
+          {
+            "id": "obs-12-tiki",
+            "bookKey": "cay-cam-ngot-nhanam-2024",
+            "amount": 125000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": null,
+        "availability": null,
+        "isbn": null,
+        "nextPage": "/ProductPage",
+        "products": [
+          {
+            "name": "Cây Cam Ngọt Của Tôi - Nhã Nam",
+            "sku": "2747518801523",
+            "offers": {
+              "price": 125000,
+              "priceCurrency": "VND",
+              "availability": "https://schema.org/InStock",
+              "seller": {
+                "@type": "Organization",
+                "name": "Nhà Sách Vĩnh Thụy",
+                "url": "https://tiki.vn/cua-hang/nha-sach-vinh-thuy"
+              },
+              "url": "https://tiki.vn/cay-cam-ngot-cua-toi-nha-nam-p262067403.html"
+            }
+          }
+        ]
+      },
+      {
+        "id": "src-nhanam-cbcv",
+        "url": "https://nhanam.vn/chien-binh-cau-vong-andrea-hirata-tb-135-000",
+        "title": "CHIẾN BINH CẦU VỒNG (Tái Bản 2025)",
+        "claimed": [
+          {
+            "id": "obs-13-nhanam",
+            "bookKey": "chien-binh-cau-vong-nhanam-2022",
+            "amount": 108000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "108.000₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": null,
+        "products": []
+      },
+      {
+        "id": "src-tiki-cbcv",
+        "url": "https://tiki.vn/chien-binh-cau-vong-p242101983.html",
+        "title": "Mua Sách - Chiến binh cầu vồng (TB 2020) - Nhã nam tại HỆ THỐNG NHÀ SÁCH ABC",
+        "claimed": [
+          {
+            "id": "obs-13-tiki",
+            "bookKey": "chien-binh-cau-vong-nhanam-2022",
+            "amount": 135000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": null,
+        "availability": null,
+        "isbn": null,
+        "nextPage": "/ProductPage",
+        "products": [
+          {
+            "name": "Sách - Chiến binh cầu vồng (TB 2020) - Nhã nam",
+            "sku": "6827224180118",
+            "offers": {
+              "price": 135000,
+              "priceCurrency": "VND",
+              "availability": "https://schema.org/InStock",
+              "seller": {
+                "@type": "Organization",
+                "name": "HỆ THỐNG NHÀ SÁCH ABC",
+                "url": "https://tiki.vn/cua-hang/he-thong-nha-sach-abc"
+              },
+              "url": "https://tiki.vn/sach-chien-binh-cau-vong-tb-2020-p242101983.html"
+            }
+          }
+        ]
+      },
+      {
+        "id": "src-nhanam-ttdg",
+        "url": "https://nhanam.vn/tuoi-tre-dang-gia-bao-nhieu-tb-90-000",
+        "title": "Tuổi trẻ đáng giá bao nhiêu (TB 90.000)",
+        "claimed": [
+          {
+            "id": "obs-14-nhanam",
+            "bookKey": "tuoi-tre-dang-gia-nhanam-2021",
+            "amount": 90000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "90.000₫",
+        "availability": "http://schema.org/OutOfStock",
+        "isbn": null,
+        "products": []
+      },
+      {
+        "id": "src-tiki-ttdg",
+        "url": "https://tiki.vn/tuoi-tre-dang-gia-bao-nhieu-p551563.html",
+        "title": "Mua Sách Tuổi Trẻ Đáng Giá Bao Nhiêu tại Bamboo Books",
+        "claimed": [
+          {
+            "id": "obs-14-tiki",
+            "bookKey": "tuoi-tre-dang-gia-nhanam-2021",
+            "amount": 90000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": null,
+        "availability": null,
+        "isbn": null,
+        "nextPage": "/ProductPage",
+        "products": [
+          {
+            "name": "Sách Tuổi Trẻ Đáng Giá Bao Nhiêu",
+            "sku": "7137266015333",
+            "offers": {
+              "price": 90000,
+              "priceCurrency": "VND",
+              "availability": "https://schema.org/InStock",
+              "seller": {
+                "@type": "Organization",
+                "name": "Bamboo Books",
+                "url": "https://tiki.vn/cua-hang/bamboo-books"
+              },
+              "url": "https://tiki.vn/sach-tuoi-tre-dang-gia-bao-nhieu-p551563.html"
+            }
+          }
+        ]
+      },
+      {
+        "id": "src-nxbtre-mb-bm",
+        "url": "https://www.nxbtre.com.vn/sach/mat-biec-146386.html",
+        "title": "Mắt Biếc",
+        "claimed": [
+          {
+            "id": "obs-15-tre",
+            "bookKey": "mat-biec-tre-bm-2022",
+            "amount": 43000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "43,000 ",
+        "availability": null,
+        "isbn": "978-604-1-20033-3",
+        "products": []
+      },
+      {
+        "id": "src-tiki-mb-bm",
+        "url": "https://tiki.vn/p186286190.html",
+        "title": "",
+        "claimed": [
+          {
+            "id": "obs-15-tiki",
+            "bookKey": "mat-biec-tre-bm-2022",
+            "amount": 36000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": null,
+        "availability": null,
+        "isbn": null,
+        "nextPage": "/RedirectProductPage",
+        "products": []
+      },
+      {
+        "id": "src-nxbtre-mb-td",
+        "url": "https://www.nxbtre.com.vn/sach/mat-biec-truyen-dai-54984.html",
+        "title": "Mắt Biếc (truyện Dài)",
+        "claimed": [
+          {
+            "id": "obs-16-tre",
+            "bookKey": "mat-biec-tre-td-2019",
+            "amount": 110000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "110,000 ",
+        "availability": null,
+        "isbn": "978-604-1-14078-3",
+        "products": []
+      },
+      {
+        "id": "src-tiki-mb",
+        "url": "https://tiki.vn/mat-biec-p275322110.html",
+        "title": "Mua Mắt biếc - Nguyễn Nhật Ánh (NXB Trẻ) tại HỆ THỐNG NHÀ SÁCH ABC",
+        "claimed": [
+          {
+            "id": "obs-16-tiki",
+            "bookKey": "mat-biec-tre-td-2019",
+            "amount": 110000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": null,
+        "availability": null,
+        "isbn": null,
+        "nextPage": "/ProductPage",
+        "products": [
+          {
+            "name": "Mắt biếc - Nguyễn Nhật Ánh (NXB Trẻ)",
+            "sku": "9689096854151",
+            "offers": {
+              "price": 110000,
+              "priceCurrency": "VND",
+              "availability": "https://schema.org/InStock",
+              "seller": {
+                "@type": "Organization",
+                "name": "HỆ THỐNG NHÀ SÁCH ABC",
+                "url": "https://tiki.vn/cua-hang/he-thong-nha-sach-abc"
+              },
+              "url": "https://tiki.vn/mat-biec-nguyen-nhat-anh-nxb-tre-p275322110.html"
+            }
+          }
+        ]
+      },
+      {
+        "id": "src-nxbtre-ctxv",
+        "url": "https://www.nxbtre.com.vn/sach/cho-toi-xin-mot-ve-di-tuoi-tho-44594.html",
+        "title": "Cho Tôi Xin Một Vé Đi Tuổi Thơ",
+        "claimed": [
+          {
+            "id": "obs-17-tre",
+            "bookKey": "cho-toi-xin-ve-tre-2018",
+            "amount": 80000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "80,000 ",
+        "availability": null,
+        "isbn": "978-604-1-00475-7",
+        "products": []
+      },
+      {
+        "id": "src-tiki-ctxv",
+        "url": "https://tiki.vn/cho-toi-xin-mot-ve-di-tuoi-tho-p275322627.html",
+        "title": "Mua Cho Tôi Xin Một Vé Đi Tuổi Thơ (NXB Trẻ) tại HỆ THỐNG NHÀ SÁCH ABC",
+        "claimed": [
+          {
+            "id": "obs-17-tiki",
+            "bookKey": "cho-toi-xin-ve-tre-2018",
+            "amount": 90000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": null,
+        "availability": null,
+        "isbn": null,
+        "nextPage": "/ProductPage",
+        "products": [
+          {
+            "name": "Cho Tôi Xin Một Vé Đi Tuổi Thơ (NXB Trẻ)",
+            "sku": "2546385382472",
+            "offers": {
+              "price": 90000,
+              "priceCurrency": "VND",
+              "availability": "https://schema.org/InStock",
+              "seller": {
+                "@type": "Organization",
+                "name": "HỆ THỐNG NHÀ SÁCH ABC",
+                "url": "https://tiki.vn/cua-hang/he-thong-nha-sach-abc"
+              },
+              "url": "https://tiki.vn/cho-toi-xin-mot-ve-di-tuoi-tho-nxb-tre-p275322627.html"
+            }
+          }
+        ]
+      },
+      {
+        "id": "src-nhanam-ngk-79k",
+        "url": "https://nhanam.vn/nha-gia-kim-tb-79-000-1",
+        "title": "Nhà giả kim (TB 79.000)",
+        "claimed": [
+          {
+            "id": "obs-18-nhanam",
+            "bookKey": "nha-gia-kim-nhanam-tb79k",
+            "amount": 63200,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "63.200₫",
+        "availability": "http://schema.org/OutOfStock",
+        "isbn": null,
+        "products": []
+      },
+      {
+        "id": "src-tiki-ngk",
+        "url": "https://tiki.vn/nha-gia-kim-p378448.html",
+        "title": "Mua Sách Nhà Giả Kim tại NHBook",
+        "claimed": [
+          {
+            "id": "obs-18-tiki",
+            "bookKey": "nha-gia-kim-nhanam-tb79k",
+            "amount": 86000,
+            "editionMatch": "likely",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": null,
+        "availability": null,
+        "isbn": null,
+        "nextPage": "/ProductPage",
+        "products": [
+          {
+            "name": "Sách Nhà Giả Kim",
+            "sku": "9226586327909",
+            "offers": {
+              "price": 86000,
+              "priceCurrency": "VND",
+              "availability": "https://schema.org/InStock",
+              "seller": {
+                "@type": "Organization",
+                "name": "NHBook",
+                "url": "https://tiki.vn/cua-hang/nhbook"
+              },
+              "url": "https://tiki.vn/sach-nha-gia-kim-p378448.html"
+            }
+          }
+        ]
+      },
+      {
+        "id": "src-nhanam-ngk-95k",
+        "url": "https://nhanam.vn/nha-gia-kim-tb-95-000",
+        "title": "Nhà giả kim (TB 2026)",
+        "claimed": [
+          {
+            "id": "obs-19-nhanam",
+            "bookKey": "nha-gia-kim-nhanam-tb95k",
+            "amount": 76000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "76.000₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": null,
+        "products": []
+      },
+      {
+        "id": "src-nhanam-rnn",
+        "url": "https://nhanam.vn/sach-rung-na-uy-tb-2024-haruki-murakami-nha-nam",
+        "title": "Rừng Nauy (TB 180.000)",
+        "claimed": [
+          {
+            "id": "obs-20-nhanam",
+            "bookKey": "rung-nauy-nhanam-2024",
+            "amount": 144000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "144.000₫",
+        "availability": "http://schema.org/OutOfStock",
+        "isbn": null,
+        "products": []
+      },
+      {
+        "id": "src-tiki-rnn",
+        "url": "https://tiki.vn/rung-nauy-p279104356.html",
+        "title": "Mua RỪNG NAUY – Murakami Haruki – Trịnh Lữ dịch – Nhã Nam tại BÌNH BÁN BOOK",
+        "claimed": [
+          {
+            "id": "obs-20-tiki",
+            "bookKey": "rung-nauy-nhanam-2024",
+            "amount": 171000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": null,
+        "availability": null,
+        "isbn": null,
+        "nextPage": "/ProductPage",
+        "products": [
+          {
+            "name": "RỪNG NAUY – Murakami Haruki – Trịnh Lữ dịch – Nhã Nam",
+            "sku": "2761553285234",
+            "offers": {
+              "price": 171000,
+              "priceCurrency": "VND",
+              "availability": "https://schema.org/InStock",
+              "seller": {
+                "@type": "Organization",
+                "name": "BÌNH BÁN BOOK",
+                "url": "https://tiki.vn/cua-hang/binh-ban-book"
+              },
+              "url": "https://tiki.vn/rung-nauy-murakami-haruki-trinh-lu-dich-nha-nam-p279104356.html"
+            }
+          }
+        ]
+      },
+      {
+        "id": "src-nhanam-sm",
+        "url": "https://nhanam.vn/song-mon-danh-tac",
+        "title": "SỐNG MÒN",
+        "claimed": [
+          {
+            "id": "obs-21-nhanam",
+            "bookKey": "song-mon-nhanam-2022",
+            "amount": 109000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "109.000₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": null,
+        "products": []
+      },
+      {
+        "id": "src-tiki-sm",
+        "url": "https://tiki.vn/song-mon-p167429540.html",
+        "title": "Mua Sống Mòn - Nam Cao tại HỆ THỐNG NHÀ SÁCH ABC",
+        "claimed": [
+          {
+            "id": "obs-21-tiki",
+            "bookKey": "song-mon-nhanam-2022",
+            "amount": 109000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": null,
+        "availability": null,
+        "isbn": null,
+        "nextPage": "/ProductPage",
+        "products": [
+          {
+            "name": "Sống Mòn - Nam Cao",
+            "sku": "2333127469612",
+            "offers": {
+              "price": 109000,
+              "priceCurrency": "VND",
+              "availability": "https://schema.org/InStock",
+              "seller": {
+                "@type": "Organization",
+                "name": "HỆ THỐNG NHÀ SÁCH ABC",
+                "url": "https://tiki.vn/cua-hang/he-thong-nha-sach-abc"
+              },
+              "url": "https://tiki.vn/song-mon-nam-cao-p167429540.html"
+            }
+          }
+        ]
+      },
+      {
+        "id": "src-kd-tatden",
+        "url": "https://www.nxbkimdong.com.vn/tat-den",
+        "title": "Tắt đèn | Nhà xuất bản Kim Đồng",
+        "claimed": [
+          {
+            "id": "obs-22-kd",
+            "bookKey": "tat-den-kd-2021",
+            "amount": 45000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "45.000₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": "978-604-2-24778-8",
+        "variants": [
+          {
+            "id": 172052631,
+            "title": "Default Title",
+            "sku": "5251112500035",
+            "price": 45000,
+            "available": true
+          }
+        ],
+        "products": []
+      },
+      {
+        "id": "src-kd-kieu-sc",
+        "url": "https://www.nxbkimdong.com.vn/truyen-kieu-2",
+        "title": "Truyện Kiều | Nhà xuất bản Kim Đồng",
+        "claimed": [
+          {
+            "id": "obs-23-kd",
+            "bookKey": "truyen-kieu-kd-sc-2024",
+            "amount": 211500,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "211.500₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": "978-604-2-39350-8",
+        "variants": [
+          {
+            "id": 177239606,
+            "title": "Sách",
+            "sku": "5251400010127",
+            "price": 211500,
+            "available": true
+          },
+          {
+            "id": 180797734,
+            "title": "Sách tặng kèm Bộ Postcard",
+            "sku": "5251400010127W",
+            "price": 211500,
+            "available": false
+          }
+        ],
+        "products": []
+      },
+      {
+        "id": "src-kd-kieu-vhtn",
+        "url": "https://www.nxbkimdong.com.vn/truyen-kieu",
+        "title": "Truyện Kiều | Nhà xuất bản Kim Đồng",
+        "claimed": [
+          {
+            "id": "obs-24-kd",
+            "bookKey": "truyen-kieu-kd-vhtn-2021",
+            "amount": 36000,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "36.000₫",
+        "availability": "http://schema.org/InStock",
+        "isbn": "978-604-2-25496-0",
+        "variants": [
+          {
+            "id": 172053730,
+            "title": "Default Title",
+            "sku": "6251112500004",
+            "price": 36000,
+            "available": true
+          }
+        ],
+        "products": []
+      },
+      {
+        "id": "src-nhanam-dnt",
+        "url": "https://nhanam.vn/dac-nhan-tam-tb-108-000",
+        "title": "Đắc nhân tâm (TB 108.000)",
+        "claimed": [
+          {
+            "id": "obs-25-nhanam",
+            "bookKey": "dac-nhan-tam-nhanam-tb108k",
+            "amount": 86400,
+            "editionMatch": "exact",
+            "status": "ready",
+            "availability": "in-stock"
+          }
+        ],
+        "mainPrice": "86.400₫",
+        "availability": "http://schema.org/OutOfStock",
+        "isbn": null,
+        "products": []
+      }
+    ]
+  },
+  "inputFiles": [
+    {
+      "path": "HANDOFF.md",
+      "sha256": "9a0e59663b0800e85431c36c49369b7dd91cce98f58b0f23299f67c8023bbe9b",
+      "bytes": 13898
+    },
+    {
+      "path": "validation/report.json",
+      "sha256": "9814fd462d5177d089fa14df40e9b55616d2452df2240cf65f7a021a7f055694",
+      "bytes": 6672
+    },
+    {
+      "path": "validation/run-checks.mjs",
+      "sha256": "3a68af38a41c54996c75e3f51d6dc176fdd3051ea3a83d6f3f07610e817b1378",
+      "bytes": 11022
+    },
+    {
+      "path": "validation/test-fetch.mjs",
+      "sha256": "f5b7b183df8a46a929947f2e31b3add00e28e7e72077d961bdfd27b872d85c64",
+      "bytes": 7577
+    },
+    {
+      "path": "catalog/books.json",
+      "sha256": "1bda5570e8f7d19695eff61e061d3a3e0a7dd46953b7bdb95abc3e4471ee31f8",
+      "bytes": 48689
+    },
+    {
+      "path": "prices/observations.json",
+      "sha256": "4aeeb443daa17c8f9f7c1650250364292f1017fca32386fdeee6cd6b7a15370e",
+      "bytes": 25854
+    },
+    {
+      "path": "prices/import-candidates.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "bytes": 3
+    },
+    {
+      "path": "provenance/sources.json",
+      "sha256": "b1171cd106cbc7176e380e8e3bf8114197587b926a368cbf678f4543a15d783f",
+      "bytes": 14573
+    },
+    {
+      "path": "autofill/cover-scan/cases.json",
+      "sha256": "8c4adb4a2e8a4cdafcf47fb404a317f1625f79b167da5fb88347f3e4886c513b",
+      "bytes": 7980
+    },
+    {
+      "path": "autofill/real-camera/cases.json",
+      "sha256": "927cde5d5439505bcf42656ea6fce0c113eb4b95b42801f038d85faf9e73bc8e",
+      "bytes": 45
+    }
+  ],
+  "limits": [
+    "No real-camera corpus",
+    "No human review",
+    "No paid model evaluation",
+    "No import or OnlineRetail relabeling",
+    "Raw HTML and book images not committed",
+    "12 exact two-group books are self-declared labels, not 12 verified acceptance cases"
+  ]
+}
