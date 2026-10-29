@@ -1,28 +1,31 @@
 # Điểm lưu hiện tại — 29/10/2026
 
-## Kiểm AI bằng corpus và hành trình — 29/10/2026
+## Kiểm AI, rà đáp án và sàng lọc model — 29/10/2026
 
-- Owner duyệt gói kiểm tiếp; nhánh `codex/listing-ai-real-corpus-qa`, base2412523,
-  commit subject `test(ai): measure real covers and verify listing recovery`.
-  [Báo cáo/source/checks/cách chạy](../features/LISTING_AI_CORPUS_2026_10_29.md).
-- NVIDIA thật: 24 bìa scan, 13/24 tên có dấu, 18/24 đủ tác giả, 0 ISBN bịa.
-  Mọi ảnh expected ISBN=null nên chưa kiểm đọc số có mặt. p50=1424/p95=2254ms
-  gồm xử lý ảnh local/model, không HTTP. Thử prompt bố cục thêm24case không tăng
-  điểm nên giữ prompt/model sản phẩm. Tổng51call (48ảnh+3giá), dự toán0,075979USD.
-- Giá giữ OnlineRetail/ready/exact/in-stock, không import:23Limited/1thiếu nguồn/
-  1quarantine;3output qua bounds/ref. Định giá sách cũ NOT_SCORED vì không có
-  đáp án human/CompletedSale. Coverage11/15; real-camera/human/native còn mở.
-- Browser web/RNweb PASS từ entry với bìa thật/output AI phát lại, API/Mongo/Sharp
-  thật, giá tổng hợp/storage fake: giữ key/body khi mất ACK, terminal replay,
-  xác nhận trước ghi đè, cùng nháp→PendingReview; chậm khóa nút/giữ input,
-  thiếu nguồn không gọi AI. Không là native hoặc live-storage acceptance.
-- PASS41data/CLItests +3eval unit, API typecheck/lint eval, docs/diff. Eval thêm
-  preflight/options/path/decode/hash/author precision và failed/skip exit1.
-  Không đổi UI/API0.61/migration/READINESS hoặc GHN. Chỉ commit local, chưa
-  push/PR/merge/deploy. QA còn0database, không listener của gói; đã dừng replica
-  set QA, Mongo chính vẫn dừng. Không import/reset/seed/migrate DB chính.
-- Bước tiếp: review đáp án, ảnh điện thoại/ISBN và so model trên holdout trước
-  đổi cấu hình. Giữ người bán kiểm từng trường; không nghiệm thu model từ tốc độ.
+- Owner duyệt bước tiếp; nhánh `codex/listing-ai-model-comparison`, base12f108d,
+  plan chốt tại79e21b3 trước call; commit subject
+  `test(ai): guard model comparison and retain untouched holdout`.
+  [Báo cáo/evidence/cách chạy](../features/LISTING_AI_CORPUS_2026_10_29.md).
+- Lượt trước12f108d:24scan đạt13/24tên,18/24đủ tác giả,0ISBNbịa trên ảnh không
+  có ISBN; prompt thử không tăng điểm nên giữ sản phẩm. Browser web/RNweb PASS
+  với bìa thật/output phát lại; dữ liệu/CLI41tests, eval3tests. Không native/human.
+- Rà lại24ảnh bằng AI, giữ đáp án cũ và ghi các điểm chữ nhỏ/canonical cần người
+  thật kiểm. Thu12work/hash khác từ2feed NXB/phát hành;11bìa/1mockup. Đáp án và
+  alias chốt trước output, reviewed=false; không chia bộ đã xem thành holdout.
+- Sàng lọc6ca khó: Nemotron6phản hồi,0tên/4tác giả; Gemma4 timeout6/6ở25giây;
+  Gemma3 lỗi6/6,1chẩn đoán HTTP404. Không suy chất lượng OCR từ lỗi provider.
+  Tổng19call; phần có usage dự toán0,008424USD,13lượt lỗi không usage chưa biết
+  phí. Plan tối đa42call/0,30USD dự toán, không là trần hóa đơn cứng.
+- Không ứng viên đạt vòng đầu nên holdout12case giữ0call/NOT_RUN. Không hạ gate
+  hoặc đổi model/env/prompt sản phẩm. Người thật/ảnh điện thoại/ISBN có mặt vẫn
+  chưa kiểm; READINESS giữ nguyên. Bước tiếp xác minh endpoint VLM khả dụng bằng
+  vòng phát triển mới, sau đó mới mở bộ12; không dùng holdout để chọn prompt.
+- Runner kiểm plan/ảnh/hash/đáp án trước paid call, journal Pending chặn replay
+  bất định; resume18row y hệt/0call mới, mở holdout khi thiếu winner bị chặn.
+  PASS15unit (12comparison+3quality), API typecheck/lint eval, docs/diff. Không
+  chạy lại app/browser/DB vì source sản phẩm không đổi; không GHN/contract/
+  migration/import. Mongo chính và QA vẫn dừng. Chỉ commit local, chưa push/PR/
+  merge/deploy. Ảnh/PDF/feed mới local ignored; không thay review người thật.
 
 ## Hoàn thiện data AI sau bàn giao Gemini — 29/10/2026
 

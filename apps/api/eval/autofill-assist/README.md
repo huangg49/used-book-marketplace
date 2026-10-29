@@ -36,3 +36,16 @@ trong file đó. Không so p50 mới trực tiếp với report cũ có cả x�
 
 Ảnh và kết quả thô có thể chứa thông tin riêng; chỉ đưa bản đã rà soát vào Git.
 Script tạo câu trả lời/metric, không tự đóng READINESS hoặc thay người nghiệm thu.
+
+## So model có bộ đối chứng riêng
+
+`pnpm eval:compare --phase screen|holdout` dùng
+[plan đã chốt](../../../../qa-data/listing-ai/comparison-plan.json) và journal
+local `.tmp/listing-ai-model-selection/comparison.json`. Không sửa `.env` hoặc
+prompt phục vụ. Chỉ chạy khi có quyền gọi AI trả phí; plan tối đa42call, dự toán
+0,30USD không là trần hóa đơn cứng, lỗi không usage chưa được định giá.
+
+Lượt29/10: Gemma3 trả lỗi endpoint, Gemma4 timeout; không ứng viên thắng nên
+12case mới giữ NOT_RUN, không đổi model sản phẩm. [Báo cáo/evidence](../../../../docs/features/LISTING_AI_CORPUS_2026_10_29.md).
+Đây là kiểm khả dụng trước so chất lượng, không kết luận OCR ứng viên kém từ
+HTTP404/timeout. Không dùng bộ cũ đã xem làm holdout hoặc đổi ngưỡng sau output.

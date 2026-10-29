@@ -62,3 +62,10 @@ Sau build API, `node qa-data/listing-ai/evaluate-prices.mjs` chỉ đọc corpus
 không DB/provider; thêm `--live` mới gọi tối đa3lượt với budget token dự toán0,02USD.
 Không thêm flag nếu chưa có quyền trả phí. Bộ map giữ OnlineRetail và loại
 likely/out-of-stock/blocked; không import hoặc cho mức Strong từ retail-only.
+
+[Plan so model](comparison-plan.json) đóng băng6case phát triển và12work/hash
+mới trước khi gọi AI; không là human review. Runner `eval:compare` ở API chỉ mở
+holdout khi có ứng viên thắng, giữ journal và ngân sách chung của lượt kiểm.
+Lượt đầu bị chặn bởi endpoint/timeout của ứng viên, nên12case mới chưa gọi;
+ảnh/feed còn local ignored và quyền dùng chưa duyệt. Không xóa lịch sử lỗi hoặc
+đổi nhãn ảnh thành real-camera để làm gate đạt. Chi tiết ở báo cáo được dẫn trên.

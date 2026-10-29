@@ -1,5 +1,83 @@
 # Kiểm AI bằng bìa sách thật — 29/10/2026
 
+## Lượt tiếp: rà đáp án và sàng lọc model
+
+Nhánh `codex/listing-ai-model-comparison`, base12f108d. Chốt
+[plan/case/gate](../../qa-data/listing-ai/comparison-plan.json) tại commit79e21b3
+**trước** các lượt gọi model mới; [evidence](listing-ai-corpus-2026-10-29/model-comparison.json).
+Kết luận hiện tại: **BLOCKED_PROVIDER_COMPATIBILITY**, chưa có ứng viên đủ điều
+kiện mở lượt holdout hoặc đổi model sản phẩm. Không hạ tiêu chí vì model lỗi.
+
+- Rà lại cả24ảnh cũ trực tiếp bằng Codex, giữ đáp án/kết quả cũ. Phân biệt tên
+  catalog với chữ in và số tập; ghi điểm cần người thật kiểm ở byline chữ nhỏ
+  Tuổi trẻ đáng giá/Lược sử. Đây là review bằng AI, **chưa có review độc lập
+  của người thật**, không đổi `reviewed=false` hoặc nhận là nghiệm thu.
+- Thu12đầu sách khác từ feed Nhã Nam/Kim Đồng, giữ bytes/hash/URL/đáp án trước
+  output. Có11ảnh bìa sản phẩm và1mockup marketing; đều không là ảnh điện thoại.
+  Tác giả/biên kịch khác người dịch/minh họa/hiệu đính; ca chỉ in “Nhiều tác
+  giả” không chấm tên từng người. Các cách ghi tên hợp lệ được chốt trong plan,
+  vẫn giữ riêng số tên đúng theo canonical để không giấu lợi ích từ alias.
+- Không biến24case đã chạy thành holdout bằng cách chia lại. Bộ12mới chưa có
+  call model, còn nguyên để dùng cho lượt đối chứng sau; không tuyên bố model
+  chưa từng thấy tác phẩm trong dữ liệu huấn luyện của provider.
+
+[Danh mục qua API NVIDIA](https://docs.api.nvidia.com/nim/reference/llm-apis) liệt
+kê84model lúc kiểm, gồm cả hai ứng viên; điều đó không chứng minh endpoint gọi
+được. Chọn Gemma4 và Gemma3 trong cùng provider/key server. Tài liệu chính thức
+[Gemma4](https://build.nvidia.com/google/gemma-4-31b-it/modelcard) mô tả text/image;
+Llama3.2Vision không chọn vì [phạm vi ngôn ngữ image+text được công bố chỉ có
+English](https://docs.api.nvidia.com/nim/reference/meta-llama-3_2-90b-vision-instruct).
+Không cài model local, thêm provider hoặc đưa key sang dịch vụ khác.
+
+| Model / 6case phát triển khó | Phản hồi đọc được | Kết quả / quyết định |
+| --- | ---: | --- |
+| Nemotron hiện tại | 6/6 | 0/6tên,4/6tác giả; p50=1384/p95=2128ms. Đây là6ca từng sai được chọn để sàng lọc, không phải chất lượng chung24case bị giảm |
+| Gemma4 31B | 0/6 | 6Timeout ở25giây. Không có output để chấm khả năng OCR; không phù hợp đường gọi demo hiện tại |
+| Gemma3 12B | 0/6 | 6ProviderError;1chẩn đoán có kiểm soát xác nhận HTTP404/NotFound. Chưa xác định được khả năng OCR |
+
+18call sàng lọc +1call chẩn đoán, không gọi lại ca lỗi để tìm kết quả đẹp. Tổng
+phần có usage dự toán0,008424USD;13lượt lỗi/timeout không có usage, nên **không
+biết tổng phí thực tế**, không coi các lượt này là miễn phí. Trần42call và ngân
+sách token dự toán0,30USD là giới hạn của plan, không phải trần hóa đơn cứng.
+Không thêm lượt gọi khi không có ứng viên đạt.
+
+Gate lựa chọn: chỉ dùng6case phát triển; ứng viên cần tăng ít nhất2tên và không
+lỗi/ISBN sai. Gate đối chứng sau đó cần ít nhất10/12tên, tăng ít nhất2so với
+baseline cùng12case, tác giả không giảm,0lỗi/ISBN sai,p95≤8giây. Không model nào
+qua vòng đầu, nên **holdout NOT_RUN**. Ngay cả khi các ngưỡng so sánh sau này đạt,
+người thật/ảnh điện thoại/ISBN có mặt vẫn là gate riêng, READINESS không đổi.
+
+[Runner](../../apps/api/eval/autofill-assist/compare.ts) dùng ảnh qua cùng
+derivative/shrink, prompt hiện hành, không fallback/retry; xen kẽ model trên
+từng case, cùng scope latency. Kiểm plan, trùng work/title/hash, đáp án, đường
+dẫn vật lý, hash ảnh và giải mã trước gọi. Journal ghi Pending trước network;
+có Pending không tự replay. Resume giữ18row giống hệt và0call mới; thử mở
+holdout bị chặn trước provider. Report phân biệt lỗi kỹ thuật và số phản hồi
+chấm được; gate thiếu/budget/row trùng không thể thành khuyến nghị PASS.
+
+PASS15unit (12so sánh +3quality), API typecheck và lint eval, docs/diff. Không
+chạy lại browser/native/DB vì không đổi source sản phẩm. Mongo chính và QA đều
+giữ dừng; không GHN, import, migration, đổi env/prompt/model/API/UI hoặc remote
+integration. Ảnh/PDF/feed mới vẫn local ignored; chỉ metadata/plan/evidence vào Git.
+
+Chạy từ `apps/api` khi được phép gọi provider:
+
+```sh
+pnpm eval:compare --phase screen
+# Chỉ mở nếu journal có ứng viên thắng vòng phát triển:
+pnpm eval:compare --phase holdout
+```
+
+Journal ở `.tmp/listing-ai-model-selection/comparison.json`; cần raw ảnh đúng
+hash trong `qa-data/listing-ai/incoming/model-comparison/`. Đổi plan/prompt sẽ
+bị chặn khi dùng journal cũ; không xóa journal để ép gọi lại. Sau khi xử lý
+khả dụng endpoint, cần plan/lượt phát triển mới, giữ lịch sử lỗi và chưa dùng
+holdout để chỉnh prompt. Bước kế tiếp cụ thể là xác minh một endpoint VLM chạy
+ổn định trong NVIDIA, rồi mới mở bộ12case đã giữ; vẫn cần dữ liệu điện thoại
+và người duyệt đáp án để nghiệm thu.
+
+## Lượt đầu: corpus và hành trình
+
 Owner duyệt kiểm model và hành trình đăng bán. Nhánh
 `codex/listing-ai-real-corpus-qa`, base `2412523`; gói chỉ thay bộ eval/QA và tài
 liệu. Không thay prompt/model đang phục vụ, API0.61, migration hoặc UI sản phẩm.
