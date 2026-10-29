@@ -28,6 +28,8 @@ export function scoreAutofill(
     title = fields?.title;
   const expectedIsbn = digits(expected.isbn),
     readIsbn = digits(fields?.isbn);
+  const expectedAuthors = expected.authors?.map(name);
+  const readAuthors = fields?.authors ?? [];
   const field = (
     key: 'publisher' | 'publicationYear' | 'edition' | 'language',
   ) => {
@@ -50,6 +52,14 @@ export function scoreAutofill(
       ? expected.authors.every((author) =>
           fields?.authors.some((read) => name(read) === name(author)),
         )
+      : null,
+    authorsExact: expectedAuthors
+      ? expectedAuthors.every((author) =>
+          readAuthors.some((read) => name(read) === author),
+        ) && readAuthors.every((read) => expectedAuthors.includes(name(read)))
+      : null,
+    unexpectedAuthors: expectedAuthors
+      ? readAuthors.filter((read) => !expectedAuthors.includes(name(read)))
       : null,
     isbnWrong:
       'isbn' in expected ? !!readIsbn && readIsbn !== expectedIsbn : null,

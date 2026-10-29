@@ -5,7 +5,14 @@ import { pathToFileURL } from "node:url";
 import path from "node:path";
 import { createServer as httpServer } from "node:http";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { createAiQa, qaMetadata } from "./listing-ai-qa.mjs";
+import {
+  createAiQa,
+  qaMetadata as syntheticMetadata,
+} from "./listing-ai-qa.mjs";
+import {
+  validateDataset,
+  insideFile,
+} from "../qa-data/listing-ai/validator.mjs";
 import { root, password } from "../apps/admin-web/tests/test-api.mjs";
 const require = createRequire(
   new URL("../apps/admin-web/package.json", import.meta.url),
@@ -20,6 +27,54 @@ const { createServer } = await import(
 const web = "http://127.0.0.1:5184",
   rn = "http://127.0.0.1:8087";
 const artifacts = path.join(root, ".tmp/listing-ai-journey");
+// Opt-in: validated local cover scan + recorded live output. No paid calls in browser QA.
+let sample = null;
+if (process.env.LISTING_AI_CORPUS_RESULT) {
+  const dir = path.join(root, "qa-data/listing-ai/incoming");
+  const checked = await validateDataset({ dir });
+  assert.equal(checked.technicalStatus, "PASS");
+  const cases = JSON.parse(
+    await readFile(path.join(dir, "autofill/cover-scan/cases.json"), "utf8"),
+  );
+  const c = cases.cases.find((c) => c.id === "case-khong-gia-dinh-kd-2022");
+  const run = JSON.parse(
+    await readFile(process.env.LISTING_AI_CORPUS_RESULT, "utf8"),
+  );
+  const row = run.results.find((row) => row.id === c?.id);
+  assert.equal(run.summary.source, "cover-scan");
+  assert.equal(row?.titleExact, true);
+  assert.equal(row?.authorsFound, true);
+  assert.deepEqual(
+    row.expected,
+    c.expected,
+    "Recorded output must refer to the current case answers",
+  );
+  const books = JSON.parse(
+    await readFile(path.join(dir, "catalog/books.json"), "utf8"),
+  );
+  const book = books.books.find((book) => book.bookKey === c.bookKey);
+  sample = {
+    metadata: {
+      ...Object.fromEntries(
+        [
+          "title",
+          "authors",
+          "publisher",
+          "publicationYear",
+          "language",
+          "edition",
+          "isbn",
+        ].map((key) => [key, book.metadata[key]]),
+      ),
+      category: "Văn học",
+    },
+    read: row.read,
+    photo: await readFile(
+      await insideFile(dir, path.join("autofill/cover-scan", c.photos[0])),
+    ),
+  };
+}
+const qaMetadata = sample?.metadata ?? syntheticMetadata;
 await mkdir(artifacts, { recursive: true });
 let fixture, server, rnServer, browser;
 const errors = [],
@@ -73,7 +128,7 @@ function loseFirst(p, suffix) {
   };
 }
 try {
-  fixture = await createAiQa();
+  fixture = await createAiQa({ sample });
   await fixture.api("/me/addresses", fixture.member.accessToken, {
     expectedBookVersion: 0,
     makeDefault: true,
@@ -140,13 +195,11 @@ try {
   const photoPanel = p.locator(
     'section[aria-labelledby="photo-autofill-title"]',
   );
-  await photoPanel
-    .locator('input[type="file"]')
-    .setInputFiles({
-      name: "qa-cover.png",
-      mimeType: "image/png",
-      buffer: fixture.photo,
-    });
+  await photoPanel.locator('input[type="file"]').setInputFiles({
+    name: "qa-cover.png",
+    mimeType: "image/png",
+    buffer: fixture.photo,
+  });
   const lostPhoto = loseFirst(p, "autofill-suggestions");
   await lostPhoto.install();
   // Process the real upload queue once finalize has committed.
@@ -201,7 +254,11 @@ try {
   const coverFinalize = p.waitForResponse(
     (r) => r.url().endsWith("/finalize") && r.request().method() === "POST",
   );
+  fixture.delays.price = 1500;
   await button(p, "Xem gợi ý giá bán").click();
+  await button(p, "Đang lấy gợi ý…").waitFor();
+  assert.equal(await button(p, "Đang lấy gợi ý…").isDisabled(), true);
+  assert.equal(await p.locator("#salePrice").inputValue(), "125000");
   await coverFinalize;
   await fixture.processMedia();
   const pricePanel = p.locator('section[aria-labelledby="price-assist-title"]');
@@ -215,6 +272,7 @@ try {
   assert.equal(fixture.counters.price, 1);
   assert.deepEqual(lostPrice.calls[0], lostPrice.calls[1]);
   await lostPrice.uninstall();
+  fixture.delays.price = 0;
   await pricePanel
     .getByRole("button", { name: /^Dùng / })
     .first()
@@ -245,11 +303,9 @@ try {
     .first()
     .click();
   await button(p, "Thêm nơi gửi sách").click();
-  const originDialog = p
-    .getByRole("dialog")
-    .filter({
-      has: p.getByRole("heading", { name: "Nơi gửi sách", exact: true }),
-    });
+  const originDialog = p.getByRole("dialog").filter({
+    has: p.getByRole("heading", { name: "Nơi gửi sách", exact: true }),
+  });
   await originDialog.locator("select").first().selectOption({ index: 1 });
   await button(originDialog, "Dùng nơi gửi này").click();
   await button(p, "Tiếp tục").click();
@@ -378,6 +434,26 @@ try {
   for (const width of [390, 320]) {
     await capture(np, `rn-price-${width}`, width);
   }
+  // Isolate missing-source behavior after a new explicit input, avoiding cache.
+  await fixture.db
+    .collection("price_references")
+    .deleteMany({ bookId: fixture.catalogId });
+  await button(np, "Trước").click();
+  await np
+    .getByLabel("Bìa và gáy sách", { exact: true })
+    .fill("Bìa QA thay đổi; không có nguồn giá.");
+  await button(np, "Tiếp theo").click();
+  const beforeMissing = fixture.counters.price;
+  await button(np, "Xem lại gợi ý giá").click();
+  await np.getByText(/Chưa có dữ liệu giá có nguồn/).waitFor();
+  assert.equal(fixture.counters.price, beforeMissing);
+  assert.equal(
+    await np.getByLabel("Giá bán (đồng)", { exact: true }).inputValue(),
+    "125000",
+  );
+  checkpoints.push(
+    "Slow price call disables duplicate request and preserves typed price; missing sources never call AI and keep manual price (RN web)",
+  );
   assert.deepEqual(
     errors.filter((error) => !error.includes("Minified React error #418")),
     [],
@@ -387,7 +463,9 @@ try {
     JSON.stringify(
       {
         status: "PASS",
-        source: "real API/Mongo/Sharp; fake AI/storage",
+        source: sample
+          ? "real cover scan/API/Mongo/Sharp; replayed live output; synthetic QA prices; fake storage"
+          : "real API/Mongo/Sharp; fake AI/storage",
         checkpoints,
         timings,
         native: "NOT_RUN",

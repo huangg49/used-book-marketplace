@@ -29,13 +29,23 @@ export const qaMetadata = {
 export async function createAiQa({
   live = false,
   corsOrigin = "http://127.0.0.1:5184,http://127.0.0.1:8087",
+  sample = null,
 } = {}) {
   requireQaMongo(process.env.MONGO_TEST_URL);
+  if (sample && live)
+    throw new Error(
+      "Corpus journey replays a recorded output; live calls belong to the bounded evaluator.",
+    );
+  const metadata = sample?.metadata ?? qaMetadata;
   const { PriceModelError } = await load("modules/price-assist/price-model.js");
   const svg = `<svg width="600" height="800" xmlns="http://www.w3.org/2000/svg"><rect width="600" height="800" fill="white"/><g fill="black" font-family="sans-serif" text-anchor="middle"><text x="300" y="180" font-size="65">QA BOOK</text><text x="300" y="300" font-size="40">QA Author</text><text x="300" y="500" font-size="32">QA Publisher</text><text x="300" y="560" font-size="32">2024</text><text x="300" y="620" font-size="32">QA Edition</text></g></svg>`;
-  const photo = await require("sharp")(Buffer.from(svg)).png().toBuffer();
+  // Normalize the scan to PNG for the existing upload fixture's declared MIME.
+  const photo = await require("sharp")(sample?.photo ?? Buffer.from(svg))
+    .png()
+    .toBuffer();
   const counters = { price: 0, autofill: 0 };
   const modes = { price: "ok", autofill: "ok" };
+  const delays = { price: 0, autofill: 0 };
   let actualPrice, actualAutofill;
   if (live) {
     // Read only server AI keys into memory; never serialize/log env or tokens.
@@ -63,6 +73,8 @@ export async function createAiQa({
     model: actualPrice?.model ?? "qa/fake-price",
     async draft(system, user) {
       counters.price++;
+      if (delays.price)
+        await new Promise((resolve) => setTimeout(resolve, delays.price));
       if (modes.price === "timeout")
         throw new PriceModelError("Timeout", "QA injected timeout");
       if (actualPrice) return actualPrice.draft(system, user);
@@ -92,14 +104,16 @@ export async function createAiQa({
     fallback: null,
     async read(...args) {
       counters.autofill++;
+      if (delays.autofill)
+        await new Promise((resolve) => setTimeout(resolve, delays.autofill));
       if (modes.autofill === "timeout")
         throw new PriceModelError("Timeout", "QA injected timeout");
       if (actualAutofill) return actualAutofill.read(...args);
       return {
-        output: {
-          title: qaMetadata.title,
-          authors: qaMetadata.authors,
-          publisher: qaMetadata.publisher,
+        output: sample?.read ?? {
+          title: metadata.title,
+          authors: metadata.authors,
+          publisher: metadata.publisher,
           publicationYear: 2024,
           language: "en",
           edition: qaMetadata.edition,
@@ -116,7 +130,7 @@ export async function createAiQa({
     corsOrigin,
     listingCount: 0,
     photoBytes: photo,
-    catalogMetadata: qaMetadata,
+    catalogMetadata: metadata,
     aiModels: { price, autofill },
   });
   try {
@@ -162,6 +176,7 @@ export async function createAiQa({
       ...fixture,
       counters,
       modes,
+      delays,
       base,
       async draftWithPhoto() {
         const draft = await fixture.api(

@@ -1,5 +1,29 @@
 # Điểm lưu hiện tại — 29/10/2026
 
+## Kiểm AI bằng corpus và hành trình — 29/10/2026
+
+- Owner duyệt gói kiểm tiếp; nhánh `codex/listing-ai-real-corpus-qa`, base2412523,
+  commit subject `test(ai): measure real covers and verify listing recovery`.
+  [Báo cáo/source/checks/cách chạy](../features/LISTING_AI_CORPUS_2026_10_29.md).
+- NVIDIA thật: 24 bìa scan, 13/24 tên có dấu, 18/24 đủ tác giả, 0 ISBN bịa.
+  Mọi ảnh expected ISBN=null nên chưa kiểm đọc số có mặt. p50=1424/p95=2254ms
+  gồm xử lý ảnh local/model, không HTTP. Thử prompt bố cục thêm24case không tăng
+  điểm nên giữ prompt/model sản phẩm. Tổng51call (48ảnh+3giá), dự toán0,075979USD.
+- Giá giữ OnlineRetail/ready/exact/in-stock, không import:23Limited/1thiếu nguồn/
+  1quarantine;3output qua bounds/ref. Định giá sách cũ NOT_SCORED vì không có
+  đáp án human/CompletedSale. Coverage11/15; real-camera/human/native còn mở.
+- Browser web/RNweb PASS từ entry với bìa thật/output AI phát lại, API/Mongo/Sharp
+  thật, giá tổng hợp/storage fake: giữ key/body khi mất ACK, terminal replay,
+  xác nhận trước ghi đè, cùng nháp→PendingReview; chậm khóa nút/giữ input,
+  thiếu nguồn không gọi AI. Không là native hoặc live-storage acceptance.
+- PASS41data/CLItests +3eval unit, API typecheck/lint eval, docs/diff. Eval thêm
+  preflight/options/path/decode/hash/author precision và failed/skip exit1.
+  Không đổi UI/API0.61/migration/READINESS hoặc GHN. Chỉ commit local, chưa
+  push/PR/merge/deploy. QA còn0database, không listener của gói; đã dừng replica
+  set QA, Mongo chính vẫn dừng. Không import/reset/seed/migrate DB chính.
+- Bước tiếp: review đáp án, ảnh điện thoại/ISBN và so model trên holdout trước
+  đổi cấu hình. Giữ người bán kiểm từng trường; không nghiệm thu model từ tốc độ.
+
 ## Hoàn thiện data AI sau bàn giao Gemini — 29/10/2026
 
 - Owner giao Codex làm nốt; nhánh `codex/listing-ai-data-finalization`, base271d99c,

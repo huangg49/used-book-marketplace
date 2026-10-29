@@ -41,7 +41,7 @@ trả exit1. Exit0 nghĩa technical PASS, **không** thay coverage/acceptance re
 Human review, real-camera quality và model evaluation luôn NOT_RUN ở bộ kiểm
 offline này; nó không tự xác minh ý nghĩa locator, quyền dùng hoặc ấn bản ngoài web.
 
-Đây là gói **chuẩn bị data**: không gọi AI trả phí, chạy app, import/seed/migrate,
+Gói **chuẩn bị data** không gọi AI trả phí, chạy app, import/seed/migrate,
 đụng GHN hoặc thay source/contract. Không thay
 [READINESS](../../docs/handoff/READINESS.md). Chất lượng ảnh chụp thật vẫn NOT_RUN
 nếu không có corpus điện thoại do người có quyền cung cấp và kiểm đáp án.
@@ -49,3 +49,16 @@ nếu không có corpus điện thoại do người có quyền cung cấp và k
 Sau bàn giao, Codex kiểm lại manifest → ảnh/edition → nguồn giá → chạy QA riêng.
 `price-refs:import` hiện cần kết nối DB kể cả dry run, nên **không chạy** trong gói
 thu thập này. OnlineRetail chưa phải kind import được; không đổi nhãn để ép nhập.
+
+## Kiểm model và hành trình sau chuẩn bị
+
+[Gói kiểm riêng29/10](../../docs/features/LISTING_AI_CORPUS_2026_10_29.md) đã gọi
+model với24ảnh scan:13/24tên,18/24tác giả,0ISBN bịa trên ảnh không có ISBN. Không
+cải thiện khi thử prompt bố cục nên giữ prompt sản phẩm. Browser web/RNweb PASS
+với một bìa và output phát lại; chưa là native/human/real-camera acceptance.
+
+`pnpm data:listing-ai:test` hiện gồm29validator +12CLI/preflight, không gọi paid AI.
+Sau build API, `node qa-data/listing-ai/evaluate-prices.mjs` chỉ đọc corpus/rule,
+không DB/provider; thêm `--live` mới gọi tối đa3lượt với budget token dự toán0,02USD.
+Không thêm flag nếu chưa có quyền trả phí. Bộ map giữ OnlineRetail và loại
+likely/out-of-stock/blocked; không import hoặc cho mức Strong từ retail-only.

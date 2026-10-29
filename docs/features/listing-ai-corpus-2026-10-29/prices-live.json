@@ -1,0 +1,587 @@
+{
+  "summary": {
+    "ranAt": "2026-10-29T05:21:39.700Z",
+    "mode": "live-3-call-maximum",
+    "source": "Unreviewed public retail observations; hypothetical Good copy; no DB/import/storage",
+    "model": "nvidia/nemotron-3.5-lightning-30b-a3b",
+    "providerCalls": 3,
+    "maxCalls": 3,
+    "maxUsd": 0.02,
+    "costUsd": 0.001909,
+    "billingLimit": "Token estimate only; failures without usage unpriced; not a hard billing cap.",
+    "counts": {
+      "Proceed": 23,
+      "NeedsMoreData": 1,
+      "QUARANTINED": 1
+    },
+    "priceAccuracy": "NOT_SCORED: no reviewed used-copy valuation or completed sale",
+    "humanReview": "NOT_RUN",
+    "readinessGateChanged": false
+  },
+  "rows": [
+    {
+      "bookKey": "de-men-bm-kd-2023",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 22000,
+        "high": 32000
+      },
+      "acceptedObservationIds": [
+        "obs-01-kd"
+      ],
+      "rejectedObservationIds": [
+        "obs-01-tiki"
+      ],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-FEW-SOURCES",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": true,
+      "answer": {
+        "low": 22000,
+        "high": 28000,
+        "factors": [
+          {
+            "text": "Giá bán online 54.000 VND cho bản mới (s1).",
+            "sourceRefs": [
+              "s1"
+            ]
+          },
+          {
+            "text": "Bản sách Good: giá trị giảm đáng kể so với bản mới.",
+            "sourceRefs": [
+              "condition"
+            ]
+          }
+        ],
+        "missing": [
+          "Thông tin số lượng bản đã bán (completed sale) để xác định giá thực tế.",
+          "Chi tiết về độ mòn cụ thể của bản sách (vết gấp, viết chấm).",
+          "Thời gian lưu giữ bản sách ảnh hưởng đến giá trị."
+        ]
+      },
+      "modelStatus": "VALID_BOUNDED_OUTPUT",
+      "latencyMs": 4749,
+      "tokens": {
+        "input": 662,
+        "output": 173
+      }
+    },
+    {
+      "bookKey": "de-men-bc-kd-2022",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 54000,
+        "high": 81000
+      },
+      "acceptedObservationIds": [
+        "obs-02-kd"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-FEW-SOURCES",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": true,
+      "answer": {
+        "low": 54000,
+        "high": 70000,
+        "factors": [
+          {
+            "text": "Giá sách mới 135.000 VND (s1) điều chỉnh xuống cho trạng thái sách Good.",
+            "sourceRefs": [
+              "s1",
+              "condition"
+            ]
+          }
+        ],
+        "missing": []
+      },
+      "modelStatus": "VALID_BOUNDED_OUTPUT",
+      "latencyMs": 2075,
+      "tokens": {
+        "input": 665,
+        "output": 87
+      }
+    },
+    {
+      "bookKey": "hoang-tu-be-kd-2022",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 13000,
+        "high": 20000
+      },
+      "acceptedObservationIds": [
+        "obs-03-kd",
+        "obs-03-tiki"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": true,
+      "answer": {
+        "low": 13000,
+        "high": 18000,
+        "factors": [
+          {
+            "text": "Bản sách Good: nhiều trang mòn, bìa hơi chipping, nội dung đọc được nhưng giá trị thấp hơn bản mới.",
+            "sourceRefs": [
+              "condition"
+            ]
+          },
+          {
+            "text": "Giá bản mới OnlineRetail s1: 31 500 VND, làm tham chiếu trên cùng cho bản Good.",
+            "sourceRefs": [
+              "s1"
+            ]
+          }
+        ],
+        "missing": [
+          "Thông tin số lượng trang và kích thước bản in",
+          "Chi tiết về mức độ mòn bìa và nội dung",
+          "Lịch sử mua bán CompletedSale tương tự"
+        ]
+      },
+      "modelStatus": "VALID_BOUNDED_OUTPUT",
+      "latencyMs": 6088,
+      "tokens": {
+        "input": 726,
+        "output": 181
+      }
+    },
+    {
+      "bookKey": "hoang-tu-be-nhanam-2025",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 28000,
+        "high": 41000
+      },
+      "acceptedObservationIds": [
+        "obs-04-nhanam"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-FEW-SOURCES",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "khong-gia-dinh-kd-2022",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 57000,
+        "high": 86000
+      },
+      "acceptedObservationIds": [
+        "obs-05-kd",
+        "obs-05-tiki"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "ong-gia-bien-ca-kd-2025",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 16000,
+        "high": 24000
+      },
+      "acceptedObservationIds": [
+        "obs-06-kd"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-FEW-SOURCES",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "dat-rung-phuong-nam-kd-2026",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 95000,
+        "high": 143000
+      },
+      "acceptedObservationIds": [
+        "obs-07-kd",
+        "obs-07-tiki"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "kinh-van-hoa-kd-2019",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 49000,
+        "high": 73000
+      },
+      "acceptedObservationIds": [
+        "obs-08-kd"
+      ],
+      "rejectedObservationIds": [
+        "obs-08-tiki"
+      ],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-FEW-SOURCES",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "doraemon-t1-kd-2023",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 20000,
+        "high": 30000
+      },
+      "acceptedObservationIds": [
+        "obs-09-kd"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-FEW-SOURCES",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "doraemon-t2-kd-2023",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 20000,
+        "high": 30000
+      },
+      "acceptedObservationIds": [
+        "obs-10-kd"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-FEW-SOURCES",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "so-do-nhanam-2021",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 34000,
+        "high": 52000
+      },
+      "acceptedObservationIds": [
+        "obs-11-nhanam",
+        "obs-11-tiki"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "cay-cam-ngot-nhanam-2024",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 45000,
+        "high": 68000
+      },
+      "acceptedObservationIds": [
+        "obs-12-nhanam",
+        "obs-12-tiki"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "chien-binh-cau-vong-nhanam-2022",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 43000,
+        "high": 65000
+      },
+      "acceptedObservationIds": [
+        "obs-13-nhanam"
+      ],
+      "rejectedObservationIds": [
+        "obs-13-tiki"
+      ],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-FEW-SOURCES",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "tuoi-tre-dang-gia-nhanam-2021",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 36000,
+        "high": 54000
+      },
+      "acceptedObservationIds": [
+        "obs-14-nhanam",
+        "obs-14-tiki"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "mat-biec-tre-bm-2022",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 16000,
+        "high": 24000
+      },
+      "acceptedObservationIds": [
+        "obs-15-tre",
+        "obs-15-tiki"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "mat-biec-tre-td-2019",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 44000,
+        "high": 66000
+      },
+      "acceptedObservationIds": [
+        "obs-16-tre",
+        "obs-16-tiki"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "cho-toi-xin-ve-tre-2018",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 34000,
+        "high": 51000
+      },
+      "acceptedObservationIds": [
+        "obs-17-tre",
+        "obs-17-tiki"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "nha-gia-kim-nhanam-tb79k",
+      "status": "NeedsMoreData",
+      "level": "Insufficient",
+      "bounds": null,
+      "acceptedObservationIds": [],
+      "rejectedObservationIds": [
+        "obs-18-nhanam",
+        "obs-18-tiki"
+      ],
+      "rules": [
+        "R-NEED-SOURCES"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "nha-gia-kim-nhanam-tb95k",
+      "status": "QUARANTINED",
+      "providerCalled": false
+    },
+    {
+      "bookKey": "rung-nauy-nhanam-2024",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 63000,
+        "high": 95000
+      },
+      "acceptedObservationIds": [
+        "obs-20-nhanam",
+        "obs-20-tiki"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "song-mon-nhanam-2022",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 44000,
+        "high": 65000
+      },
+      "acceptedObservationIds": [
+        "obs-21-nhanam",
+        "obs-21-tiki"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "tat-den-kd-2021",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 18000,
+        "high": 27000
+      },
+      "acceptedObservationIds": [
+        "obs-22-kd"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-FEW-SOURCES",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "truyen-kieu-kd-sc-2024",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 85000,
+        "high": 127000
+      },
+      "acceptedObservationIds": [
+        "obs-23-kd"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-FEW-SOURCES",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "truyen-kieu-kd-vhtn-2021",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 14000,
+        "high": 22000
+      },
+      "acceptedObservationIds": [
+        "obs-24-kd"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-FEW-SOURCES",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    },
+    {
+      "bookKey": "luoc-su-nuoc-viet-kd-2024",
+      "status": "Proceed",
+      "level": "Limited",
+      "bounds": {
+        "low": 50000,
+        "high": 76000
+      },
+      "acceptedObservationIds": [
+        "obs-25-kd"
+      ],
+      "rejectedObservationIds": [],
+      "rules": [
+        "R-BAND-GOOD",
+        "R-LIMITED-FEW-SOURCES",
+        "R-LIMITED-COVER-ONLY",
+        "R-LIMITED-CATALOG-PENDING"
+      ],
+      "providerCalled": false
+    }
+  ]
+}

@@ -31,6 +31,26 @@ describe('reviewed real-camera AI evaluation', () => {
       publisherExact: null,
     });
   });
+  it('distinguishes finding all authors from inventing additional authors', () => {
+    expect(
+      scoreAutofill(expected, {
+        ...fields,
+        authors: [...fields.authors, 'Người dịch'],
+      }),
+    ).toMatchObject({
+      authorsFound: true,
+      authorsExact: false,
+      unexpectedAuthors: ['Người dịch'],
+    });
+    expect(
+      scoreAutofill({ title: 'Book', authors: [] }, { ...fields, authors: [] }),
+    ).toMatchObject({
+      authorsFound: null,
+      authorsExact: true,
+      unexpectedAuthors: [],
+    });
+    expect(scoreAutofill({ title: 'Book' }, fields).authorsExact).toBeNull();
+  });
   const rows = Array.from({ length: 20 }, (_, i) => ({
     id: `case-${i}`,
     bookKey: `book-${i}`,

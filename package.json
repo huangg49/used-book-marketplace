@@ -46,7 +46,7 @@
     "test:listing-ai:browser": "node scripts/test-listing-ai-journey.mjs",
     "benchmark:listing-ai": "node scripts/benchmark-listing-ai.mjs",
     "data:listing-ai:check": "node qa-data/listing-ai/validate.mjs",
-    "data:listing-ai:test": "node --test qa-data/listing-ai/validator.test.mjs",
+    "data:listing-ai:test": "node --test qa-data/listing-ai/validator.test.mjs qa-data/listing-ai/eval-cli.test.mjs",
     "test:native:startup": "node scripts/test-native-startup.mjs",
     "dev:api": "node scripts/dev-api.mjs",
     "dev:media": "pnpm --filter @used-books/api worker:media",
