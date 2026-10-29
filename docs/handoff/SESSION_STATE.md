@@ -1,5 +1,36 @@
 # Điểm lưu hiện tại — 29/10/2026
 
+## Tích hợp chuỗi Member/review/listing AI qua PR79 — 29/10/2026
+
+- Owner giao kiểm main mới, pull local trước push và merge an toàn toàn chuỗi đã
+  hoàn thiện. [PR79](https://github.com/huangg49/used-book-marketplace/pull/79),
+  nhánh `codex/listing-assist-fast-paths`; code head53f44e9, base remote
+  aed674fdd06c11b136b2ea9e42aeaf5736a9eb2f. Đã fetch/prune, pull main --ff-only
+  và đối chiếu origin/main vào nhánh trước push; không có code mới/conflict.
+- Chuỗi23commit code trước checkpoint này,356file: Member web/RN, đánh giá/uy tín,
+  việc cần làm, hành trình đấu giá và trợ lý đăng sách. Forum đã bỏ theo ADR0051.
+  Audit không phát hiện secret-shaped value/private env/ghi chú game cá nhân;
+  không sửa GHN/carrier/Driver hoặc migration cũ.
+- PASS trên code head: frozen install, lint/typecheck/test/build; API286unit,
+  session59/web253/RN164/Admin219, offline data41; contract0.63/196operations/
+  30controllers/generated types, docs/check/diff. Mongo schema27 và4browser
+  được chọn (reviews/work-inbox/auction-journey/listing-ai) PASS trên QA riêng.
+  Gate tổng báo PARTIAL vì6suite không chọn, không gọi cả10suite PASS. Browser
+  dùng storage/AI fake, không là native/live-provider/human acceptance.
+- Full API E2E và CI/review/merge được ghi theo head thực tế trong PR79; xem PR
+  để lấy kết quả hiện tại. Baseline mainaed674f có RN CI đỏ do lint; nhánh sửa
+  các lỗi đó và lint local đạt. Không lấy CI baseline thay kết quả PR.
+- Owner đã cho quyền thực hiện merge gói này; yêu cầu đó không được ghi thành
+  review source độc lập. Human UX/quyền/native và các gate READINESS giữ nguyên;
+  không đổi branch protection hoặc ghi AI review thành human review.
+- Contract từ0.55 lên0.63; rollout cần API/web/RN/Admin cùng phiên bản. Thêm5
+  migration0039-exchange-inspection-deadlines,0040-lifecycle,0041-reconciliation,
+  0042-catalog-recovery,0043-source-origin; giữ0039-validator-fix của main và
+  checksum cũ. Dừng API/worker cũ, backup theo runbook, bootstrap role và migrate
+  trước chạy source mới. Chưa migrate/import/reset/seed DB chính, chưa deploy.
+- Các mục bên dưới là checkpoint từng gói trước tích hợp; câu “chưa push/merge”
+  trong đó mô tả đúng thời điểm ghi, không thay trạng thái PR79 trên GitHub.
+
 ## AI listing: ISBN/giá tham chiếu trước AI và nguồn độc lập — 29/10/2026
 
 - Owner duyệt nâng chất lượng/tốc độ/UX hai tính năng đã có; nhánh
