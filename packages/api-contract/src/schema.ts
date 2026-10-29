@@ -835,6 +835,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/listings/{listingId}/catalog-matches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Find catalog candidates from seller-corrected book hints without calling AI
+         * @description Read-only search for an ACTIVE MEMBER who owns an editable single-book listing. Does not persist hints, select a book, create a catalog request, charge AI quota or call a model. Confirmed books and the caller's own Pending requests only. Approximate candidates require explicit seller verification. ISBN or explicit volume conflicts are excluded. Results are ranked within bounded prefix searches, not an exhaustive search of the catalog; truncated=true means additional candidates were not ranked. No Idempotency-Key is required.
+         */
+        post: operations["findListingCatalogMatches"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/listings/{listingId}/autofill-suggestions": {
         parameters: {
             query?: never;
@@ -3989,6 +4009,21 @@ export interface components {
             edition: string | null;
             /** @description ISBN-13 with a valid checksum (ISBN-10 converted); does not prove the title. */
             isbn: string | null;
+        };
+        ListingCatalogMatch: {
+            book: components["schemas"]["PublicBook"];
+            /** @enum {string} */
+            matchedBy: "Isbn" | "TitleAuthor" | "SimilarTitle" | "SwappedText";
+            /** @description Only the caller's own Pending catalog request can be included. */
+            pending: boolean;
+            warnings: ("CheckEdition" | "AuthorDiffers" | "PublisherDiffers" | "YearDiffers" | "LanguageDiffers" | "VolumeUnclear")[];
+        };
+        ListingCatalogMatches: {
+            items: components["schemas"]["ListingCatalogMatch"][];
+            /** @description Some prefix candidate windows or the ranked result list exceeded their bound. */
+            truncated: boolean;
+            /** Format: date-time */
+            serverTime: string;
         };
         AutofillMatch: {
             book: components["schemas"]["PublicBook"];
@@ -7630,6 +7665,39 @@ export interface operations {
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];
+        };
+    };
+    findListingCatalogMatches: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutofillFields"];
+            };
+        };
+        responses: {
+            /** @description Current catalog candidates; no listing or catalog mutation */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListingCatalogMatches"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
         };
     };
     requestAutofillSuggestion: {

@@ -1,36 +1,39 @@
 # Điểm lưu hiện tại — 29/10/2026
 
-## AI listing: chẩn đoán endpoint và giữ bộ đối chứng — 29/10/2026
+## AI listing: phục hồi tìm đầu sách sau OCR — 29/10/2026
 
-- Owner giao bước xác minh endpoint; nhánh `codex/listing-ai-endpoint-verification`,
-  basec59d8cf; plan4call chốt tại3ee7bda. Commit subject
-  `test(ai): verify NVIDIA endpoints with bounded diagnostic journal`.
-  [Báo cáo/evidence/lệnh đọc lại](../features/LISTING_AI_CORPUS_2026_10_29.md).
-- Lượt16:04–16:06VN: Gemma4 timeout text tối giản15s, ảnh trước chữ/title25s và
-  ảnh trước chữ/chỉ dẫn đầy đủ một user25s, không nhận HTTP headers. Nemotron
-  cùng ảnh/key/origin trả200 trong2130ms nhưng vẫn sai Dế→Đế. Chưa xác định gốc
-  lỗi provider hoặc chất lượng Gemma4; không quy lỗi riêng cho ảnh/system role.
-- Tổng4call; phần có usage dự toán0,001711USD,3timeout chưa biết phí. Abort ở
-  client không là provider cancellation. Không gọi Gemma3/route đoán thêm hoặc
-  lặp6ca lỗi; bộ12holdout vẫn0call, ảnh điện thoại/ISBN có mặt/human chưa kiểm.
-- Runner có report chỉ đọc, allowlist endpoint/model, không redirect/retry,
-  journal Pending/atomic save; resume journal y hệt/0call thêm. Report/resume
-  exit1 đúng BLOCKED_CANDIDATE. PASS28unit (13endpoint+12comparison+3quality),
-  API typecheck/lint eval, docs/diff. Không đổi env/model/prompt/UI/API/contract/
-  migration/READINESS; không GHN/import/DB. Kiểm cuối Docker daemon không truy
-  cập được; không khởi động Docker, không có listener QA của gói. Trạng thái
-  container chưa đọc lại được, mốc trước là stopped. Chỉ commit local, chưa
-  push/PR/merge/deploy.
-- Lượt trước c59d8cf/79e21b3: rà24ảnh bằng AI, giữ reviewed=false; thu12work/hash
-  mới, chốt đáp án/alias trước output. Sàng lọc6ca khó: Nemotron0/6tên,4/6tác
-  giả; Gemma4 timeout6/6, Gemma3 lỗi6/6+1HTTP404.19call, phần biết usage0,008424USD,
-  13lỗi không usage. Bộ12chưa mở, không chia bộ đã xem thành holdout.
-- Lượt12f108d:24scan13/24tên/18/24tác giả,0ISBNbịa trên ảnh ISBNnull; prompt thử
-  không tăng điểm nên giữ sản phẩm. Browser web/RNweb PASS với bìa thật/output
-  phát lại; data/CLI41tests,eval3tests. Không native/human/live-storage acceptance.
-- Gói chẩn đoán hoàn tất. Chỉ mở vòng phát triển/đối chứng mới khi có evidence
-  endpoint ứng viên trả đầy đủ trong hạn chờ; giữ12case, không kéo timeout hoặc
-  xóa journal để chạy lặp. Khả dụng không thay quality/human/real-camera gate.
+- Owner duyệt gói phát triển sản phẩm; nhánh `codex/listing-catalog-recovery`,
+  base48a3150; commit subject `feat(listings): recover catalog matches after imperfect OCR`.
+  [Báo cáo/source/evidence](../features/LISTING_CATALOG_RECOVERY_2026_10_29.md),
+  [ADR0055](../adr/0055-listing-catalog-recovery.md).
+- API đọc catalog riêng, auth hiện tại/owner/ACTIVE/editable single listing;
+  Confirmed hoặc own Pending. Indexed windows có giới hạn, fuzzy/swapped title,
+  ràng buộc ISBN/số tập và nhãn mơ hồ; không sửa AI receipt hoặc trừ quota.
+  Web/RN tự đối chiếu sau đọc ảnh, sửa từ khóa/tìm lại không gọi AI, khóa kết
+  quả cũ khi sửa/lỗi, hiển thị ấn bản và xác nhận chọn, không tự ghi đè form.
+- Contract0.62/194operations/30controllers, registry55 đến0042. Migration mới
+  backfill recoveryKeys/index, writer/seed/legacy transform dùng cùng derivation;
+  không sửa checksum cũ. Chỉ áp dụng QA; DB chính chưa migrate. Trước bật source
+  mới, dừng API/worker rồi `pnpm db:migrate`, không reset/reseed.
+- Offline phát lại24scan đã xem: matcher cũ đúng ấn bản15/24, mới top1=18/24,
+  top3=22/24, top5=22/24,9ca nhiều ứng viên. Đây là catalog retrieval, không là
+  tăng OCR accuracy/holdout/human acceptance. Không gọi model/đọc12holdout.
+- PASS API277unit +1legacy transform, shared55/web253/RN164, HTTP recovery8 và
+  hồi quy Autofill/catalog28, Mongo schema27; contract/routes/typecheck toàn
+  workspace có script/API build/web build/RN export. Browser web và RN web
+  real API/Mongo/Sharp +fake AI/storage: giữ input/lost ACK, tìm lại/confirm,
+  web submit một PendingReview trên cùng nháp; web320/390/768/1440/RNweb320/390.
+  Xem ảnh giao diện; detector5target0finding. Native/human/real-camera/live
+  storage/live PostgreSQL import NOT_RUN; READINESS giữ nguyên.
+- QA replica57017/rs-test được bật riêng, browser tự dọn DB; cuối phiên dọn DB
+  test của gói và dừng QA. Mongo chính vẫn Exited, không chạy seed/import/main
+  migration; không sửa GHN/carrier/Driver/env. Chỉ commit local, chưa push/PR/
+  merge/deploy, remote CI chưa kiểm gói mới. Teammate work được giữ nguyên.
+- Chẩn đoán trước48a3150: Nemotron endpoint trả200 nhưng còn đọc sai, Gemma4
+  timeout3ca không headers; không đổi model/prompt.12holdout vẫn0call, reviewed
+  vẫnfalse. [Lịch sử số liệu/journal](../features/LISTING_AI_CORPUS_2026_10_29.md).
+  Bước tiếp review tích hợp/native/human; chỉ mở model comparison/holdout theo
+  kế hoạch riêng sau khi có endpoint ứng viên khả dụng.
 
 ## Hoàn thiện data AI sau bàn giao Gemini — 29/10/2026
 

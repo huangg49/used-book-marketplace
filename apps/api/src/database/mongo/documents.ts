@@ -71,6 +71,8 @@ export interface CatalogBookDoc extends Lockable {
   searchText: string;
   // Normalized title of the current revision (migration 0003).
   titleKey: string;
+  // Indexed derived prefixes; optional only for compatibility with legacy import fixtures.
+  recoveryKeys?: string[];
   createdAt: Date;
   updatedAt: Date;
 }

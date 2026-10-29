@@ -21,6 +21,8 @@ import {
 } from "../../core/ui";
 import type { Media } from "./contracts";
 
+import { CatalogRecoveryPanel } from "./catalog-recovery-panel";
+
 type Fields = AutofillSuggestion["fields"];
 export function PhotoAutofillPanel({
   listingId,
@@ -177,42 +179,13 @@ export function PhotoAutofillPanel({
           Ảnh để đọc đã thay đổi. Đọc lại để dùng gợi ý cho bộ ảnh hiện tại.
         </Notice>
       ) : null}
+      {result || error ? <CatalogRecoveryPanel key={result?.value.id ?? listingId} listingId={listingId} suggestion={result?.value ?? null} disabled={locked} onSelectBook={onSelectBook} /> : null}
       {result ? (
         <View style={{ gap: space.sm }}>
           <AppText kind="bold">Gợi ý từ ảnh — kiểm tra lại</AppText>
           {result.value.cached ? (
             <AppText kind="small">Kết quả đã lưu cho cùng bộ ảnh.</AppText>
           ) : null}
-          {result.value.matches.map((match) => (
-            <View key={match.book.id} style={{ gap: space.xs }}>
-              <AppText kind="bold">{match.book.title}</AppText>
-              <AppText kind="small">
-                {[
-                  match.book.authors.join("; "),
-                  match.book.publisher,
-                  match.book.publicationYear,
-                  match.book.edition,
-                  match.book.isbn && `ISBN ${match.book.isbn}`,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </AppText>
-              <AppText kind="small">
-                {match.matchedBy === "Isbn"
-                  ? "Khớp theo ISBN"
-                  : "Khớp tên và tác giả"}
-                {match.pending
-                  ? " · Yêu cầu danh mục của bạn đang chờ duyệt"
-                  : " · Đầu sách đã xác nhận"}
-              </AppText>
-              <Button
-                secondary
-                title={`Chọn đầu sách: ${match.book.title}`}
-                disabled={locked}
-                onPress={() => onSelectBook(match.book.id)}
-              />
-            </View>
-          ))}
           {result.value.matches.length > 0 ? (
             <Button
               secondary

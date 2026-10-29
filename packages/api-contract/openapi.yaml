@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.61.0
+  version: 0.62.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -2020,6 +2020,53 @@ paths:
         "500":
           $ref: "#/components/responses/ListingError"
         "503":
+          $ref: "#/components/responses/ListingError"
+  /listings/{listingId}/catalog-matches:
+    post:
+      operationId: findListingCatalogMatches
+      tags: [Listings]
+      summary: Find catalog candidates from seller-corrected book hints without calling AI
+      description: >-
+        Read-only search for an ACTIVE MEMBER who owns an editable single-book listing.
+        Does not persist hints, select a book, create a catalog request, charge AI quota or call a model.
+        Confirmed books and the caller's own Pending requests only. Approximate candidates require
+        explicit seller verification. ISBN or explicit volume conflicts are excluded.
+        Results are ranked within bounded prefix searches, not an exhaustive search of the catalog;
+        truncated=true means additional candidates were not ranked. No Idempotency-Key is required.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: listingId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AutofillFields"
+      responses:
+        "200":
+          description: Current catalog candidates; no listing or catalog mutation
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListingCatalogMatches"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
           $ref: "#/components/responses/ListingError"
   /listings/{listingId}/autofill-suggestions:
     post:
@@ -12317,6 +12364,42 @@ components:
               pattern: ^97[89][0-9]{10}$
             - type: "null"
           description: ISBN-13 with a valid checksum (ISBN-10 converted); does not prove the title.
+    ListingCatalogMatch:
+      type: object
+      additionalProperties: false
+      required: [book, matchedBy, pending, warnings]
+      properties:
+        book:
+          $ref: "#/components/schemas/PublicBook"
+        matchedBy:
+          type: string
+          enum: [Isbn, TitleAuthor, SimilarTitle, SwappedText]
+        pending:
+          type: boolean
+          description: Only the caller's own Pending catalog request can be included.
+        warnings:
+          type: array
+          uniqueItems: true
+          maxItems: 6
+          items:
+            type: string
+            enum: [CheckEdition, AuthorDiffers, PublisherDiffers, YearDiffers, LanguageDiffers, VolumeUnclear]
+    ListingCatalogMatches:
+      type: object
+      additionalProperties: false
+      required: [items, truncated, serverTime]
+      properties:
+        items:
+          type: array
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/ListingCatalogMatch"
+        truncated:
+          type: boolean
+          description: Some prefix candidate windows or the ranked result list exceeded their bound.
+        serverTime:
+          type: string
+          format: date-time
     AutofillMatch:
       type: object
       additionalProperties: false

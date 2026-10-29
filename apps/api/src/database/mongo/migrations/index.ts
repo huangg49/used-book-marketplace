@@ -1,5 +1,6 @@
 import { transactionReviewValidatorFixMigration } from './0039-transaction-review-validator-fix.js';
 import { reviewValidatorReconciliationMigration } from './0041-review-validator-reconciliation.js';
+import { catalogRecoveryMigration, withCatalogRecovery } from './0042-catalog-recovery-index.js';
 import { conversationAgreementsMigration, conversationAgreementSpecs } from './0032-conversation-agreements.js';
 import { wholeBookBundlesMigration, withBookBundles } from './0035-whole-book-bundles.js';
 import { bundleReviewSearchMigration, withBundleReviewSearch } from './0036-bundle-review-search.js';
@@ -299,6 +300,7 @@ export const migrations: Migration[] = [
   exchangeInspectionDeadlinesMigration,
   transactionReviewLifecycleMigration,
   reviewValidatorReconciliationMigration,
+  catalogRecoveryMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -329,7 +331,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withBookBundles)
     .map(withBundleReviewSearch)
     .map(withModerationIndexes)
-    .map(withReviewCommandTarget),
+    .map(withReviewCommandTarget)
+    .map(withCatalogRecovery),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape),

@@ -227,7 +227,61 @@ try {
   await button(p, "Dùng gợi ý đã chọn").click();
   assert.equal(await p.locator("#title").inputValue(), qaMetadata.title);
   await button(photoPanel, "Dùng ảnh đầu làm bìa bản sách").click();
-  await button(photoPanel, "Chọn đầu sách này").click();
+  await button(photoPanel, `Chọn đầu sách: ${qaMetadata.title}`).waitFor();
+  const aiBeforeRecovery = fixture.counters.autofill;
+  await photoPanel
+    .getByLabel("Tên sách để tìm", { exact: true })
+    .fill(qaMetadata.title + "x");
+  assert.equal(
+    await button(photoPanel, `Chọn đầu sách: ${qaMetadata.title}`).isDisabled(),
+    true,
+  );
+  // A failed catalog request preserves edited hints and keeps old matches locked.
+  const catalogFailure = (route) => route.abort("failed");
+  await p.route("**/catalog-matches", catalogFailure);
+  await button(photoPanel, "Tìm lại trong danh mục").click();
+  await photoPanel.getByText(/Chưa tìm được danh mục/).waitFor();
+  assert.equal(
+    await photoPanel
+      .getByLabel("Tên sách để tìm", { exact: true })
+      .inputValue(),
+    qaMetadata.title + "x",
+  );
+  assert.equal(
+    await button(photoPanel, `Chọn đầu sách: ${qaMetadata.title}`).isDisabled(),
+    true,
+  );
+  await p.unroute("**/catalog-matches", catalogFailure);
+  await photoPanel
+    .getByLabel("Tên sách để tìm", { exact: true })
+    .fill(qaMetadata.title);
+  await Promise.all([
+    p.waitForResponse(
+      (r) => r.url().endsWith("/catalog-matches") && r.status() === 200,
+    ),
+    photoPanel.getByLabel("Tên sách để tìm", { exact: true }).press("Enter"),
+  ]);
+  await button(photoPanel, `Chọn đầu sách: ${qaMetadata.title}`).waitFor();
+  assert.equal(await p.locator("#title").inputValue(), qaMetadata.title);
+  for (const width of [1440, 768, 390, 320]) {
+    await photoPanel
+      .getByRole("heading", { name: "Chọn đúng đầu sách" })
+      .scrollIntoViewIfNeeded();
+    await capture(p, `web-catalog-${width}`, width);
+    await button(
+      photoPanel,
+      `Chọn đầu sách: ${qaMetadata.title}`,
+    ).scrollIntoViewIfNeeded();
+    await capture(p, `web-catalog-choice-${width}`, width);
+  }
+  await button(photoPanel, `Chọn đầu sách: ${qaMetadata.title}`).click();
+  await button(p.getByRole("dialog"), "Hủy").click();
+  await button(photoPanel, `Chọn đầu sách: ${qaMetadata.title}`).click();
+  await button(p, "Xác nhận chọn đầu sách").click();
+  assert.equal(fixture.counters.autofill, aiBeforeRecovery);
+  checkpoints.push(
+    "Catalog recovery: failed request retains hints, edited hints lock old choices, Enter searches without submitting, cancel/confirm selection, no extra model call, web 320/390/768/1440",
+  );
   await button(p, "Tiếp tục").click();
   await p.locator("#cover-file").waitFor({ state: "attached" });
   await button(p, "Tiếp tục").click();
@@ -381,6 +435,17 @@ try {
   assert.notEqual(rnPhoto.calls[1].key, rnPhoto.calls[2].key);
   assert.equal(fixture.counters.autofill, beforePhoto + 2);
   await rnPhoto.uninstall();
+  const rnBeforeRecovery = fixture.counters.autofill;
+  await np
+    .getByLabel("Tên sách để tìm", { exact: true })
+    .fill(qaMetadata.title);
+  await Promise.all([
+    np.waitForResponse(
+      (r) => r.url().endsWith("/catalog-matches") && r.status() === 200,
+    ),
+    button(np, "Tìm lại trong danh mục").click(),
+  ]);
+  assert.equal(fixture.counters.autofill, rnBeforeRecovery);
   for (const width of [390, 320]) {
     await button(
       np,
@@ -389,6 +454,7 @@ try {
     await capture(np, `rn-photo-${width}`, width);
   }
   await button(np, `Chọn đầu sách: ${qaMetadata.title}`).click();
+  await button(np, "Xác nhận chọn đầu sách").click();
   await button(np, "Tiếp theo").click();
   await np.getByText("Ảnh đã sẵn sàng", { exact: true }).waitFor();
   await button(np, "Tiếp theo").click();

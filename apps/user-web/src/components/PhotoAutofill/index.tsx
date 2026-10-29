@@ -3,11 +3,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Check, ScanText, X } from "lucide-react";
 import {
   createAutofillRequest,
-  type AutofillMatch,
   type AutofillSuggestion,
 } from "../../services/listing-autofill";
 import type { DraftAttempt } from "../../services/listing-submission";
 import styles from "./PhotoAutofill.module.css";
+import type { CatalogMatch } from "@used-books/session-client";
+import { CatalogRecovery } from './CatalogRecovery';
 
 export type AutofillField =
   | "title"
@@ -55,7 +56,7 @@ export function PhotoAutofill({
   channel?: "Auction";
   disabled?: boolean;
   onUseField: (field: AutofillField, fields: Fields) => void;
-  onPickBook: (match: AutofillMatch) => void;
+  onPickBook: (match: CatalogMatch) => void;
 }) {
   const ask = useMemo(
     () => createAutofillRequest(attempt, channel),
@@ -231,6 +232,7 @@ export function PhotoAutofill({
           Ảnh để đọc đã thay đổi. Đọc lại trước khi dùng gợi ý.
         </p>
       ) : null}
+      {result || error ? <CatalogRecovery key={result?.id ?? attempt.id} attempt={attempt} channel={channel} suggestion={result} disabled={!!disabled || reading || stale} onPickBook={onPickBook} /> : null}
       <ConfirmDialog
         isOpen={replace.length > 0}
         onClose={() => setReplace([])}
@@ -247,44 +249,6 @@ export function PhotoAutofill({
           <p className={styles.stamp}>
             Gợi ý từ ảnh — kiểm tra lại trước khi đăng
           </p>
-          {result.matches.length > 0 && (
-            <div className={styles.matches}>
-              <h4>Có trong thư viện</h4>
-              <ul>
-                {result.matches.map((match) => (
-                  <li key={match.book.id}>
-                    <div>
-                      <strong>{match.book.title}</strong>
-                      <span>
-                        {[
-                          match.book.authors.join(", "),
-                          match.book.publisher,
-                          match.book.publicationYear,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </span>
-                      <small>
-                        {match.matchedBy === "Isbn"
-                          ? "Khớp ISBN"
-                          : "Khớp tên và tác giả"}
-                        {match.pending
-                          ? " · yêu cầu của bạn đang chờ duyệt"
-                          : ""}
-                      </small>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onPickBook(match)}
-                      disabled={disabled || reading || stale}
-                    >
-                      Chọn đầu sách này
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
           {readable.length > 0 ? (
             <dl className={styles.fields}>
               {readable.map((key) => {
