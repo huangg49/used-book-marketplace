@@ -20,6 +20,14 @@
 - Full API E2E và CI/review/merge được ghi theo head thực tế trong PR79; xem PR
   để lấy kết quả hiện tại. Baseline mainaed674f có RN CI đỏ do lint; nhánh sửa
   các lỗi đó và lint local đạt. Không lấy CI baseline thay kết quả PR.
+- Vòng full local37suite/786ca phát hiện784PASS/2FAIL do fixture ISBN sót và
+  test hàng chờ global giả định chỉ1record. Đã dọn đúng fixture của2suite, giữ
+  negative ISBN assertion và kiểm hàng chờ qua nhiều trang với21bài độc lập,
+  vẫn loại self/Draft/Rejected/Removed. Ba suite chạy cùng nhau27/27PASS.
+  CI User Web phát hiện selector test ví sai (`dl > div` trong khi dt/dd là con
+  trực tiếp); ảnh/API/UI đều90.000đ. Sửa locator, giữ kiểm số dư/ledger/phiên;
+  full wallet browser local PASS. Không sửa production logic tiền hoặc quyền;
+  full CI trên head sau sửa là kết quả quyết định tích hợp.
 - Owner đã cho quyền thực hiện merge gói này; yêu cầu đó không được ghi thành
   review source độc lập. Human UX/quyền/native và các gate READINESS giữ nguyên;
   không đổi branch protection hoặc ghi AI review thành human review.

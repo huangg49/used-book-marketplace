@@ -281,9 +281,15 @@ describe('work inbox — HTTP and Mongo snapshot', () => {
       admin = await user(['ADMIN', 'MEMBER']),
       tester = await user(['TEST_OPERATOR']);
     const id = await listing(a.id, 'PendingReview');
-    await listing(staff.id, 'PendingReview');
-    await listing(a.id, 'Rejected');
-    await listing(a.id, 'Draft');
+    const self = await listing(staff.id, 'PendingReview');
+    const rejected = await listing(a.id, 'Rejected');
+    const draft = await listing(a.id, 'Draft');
+    // The real moderation queue is global and paginated. Other suites/users
+    // can legitimately have pending work; do not assume this is its only row.
+    const unrelated = await user();
+    const expected = [id];
+    for (let i = 0; i < 21; i++)
+      expected.push(await listing(unrelated.id, 'PendingReview'));
     const removed = await listing(a.id, 'PendingReview');
     await db.c.listings.updateOne(
       { _id: removed },
@@ -294,9 +300,27 @@ describe('work inbox — HTTP and Mongo snapshot', () => {
         },
       },
     );
-    const page = await get('/operations/work-items', staff).expect(200);
-    validates('WorkItemsPage', page.body);
-    expect(page.body.items.map((i: { id: string }) => i.id)).toEqual([id]);
+    const seen = new Set<string>();
+    let cursor: string | null = null;
+    let pages = 0;
+    do {
+      const page: { body: Wire['WorkItemsPage'] } = await get(
+        '/operations/work-items?limit=20' +
+          (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''),
+        staff,
+      ).expect(200);
+      validates('WorkItemsPage', page.body);
+      for (const item of page.body.items) {
+        expect(seen.has(item.id)).toBe(false);
+        seen.add(item.id);
+      }
+      cursor = page.body.nextCursor;
+      expect(++pages).toBeLessThan(50);
+    } while (cursor);
+    expect(pages).toBeGreaterThan(1);
+    expect([...seen]).toEqual(expect.arrayContaining(expected));
+    for (const excluded of [self, rejected, draft, removed])
+      expect(seen.has(excluded)).toBe(false);
     await get('/operations/work-items', a).expect(403);
     await get('/operations/work-items', tester).expect(403);
     await get('/operations/work-items?lane=CatalogReview', staff).expect(403);

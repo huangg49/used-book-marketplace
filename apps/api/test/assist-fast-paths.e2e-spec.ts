@@ -217,7 +217,39 @@ describe('listing fast paths HTTP/Mongo with real barcode decoder and fake stora
   }, 60000);
   afterAll(async () => {
     await app?.close();
-    await db?.close();
+    if (!db) return;
+    try {
+      // This suite shares the E2E database. Its confirmed ISBN must not remain
+      // visible to later catalog searches after this suite has finished.
+      const users = [owner, other, staff, admin, restricted].flatMap((u) =>
+        u ? [u.id] : [],
+      );
+      const books = bookId ? [bookId] : [];
+      const listings = (
+        await db.c.listings.find({ ownerId: { $in: users } }).toArray()
+      ).map((row) => row._id);
+      const revisions = (
+        await db.c.catalog_revisions.find({ bookId: { $in: books } }).toArray()
+      ).map((row) => row._id);
+      const audits = (
+        await db.c.audit_events.find({ actorId: { $in: users } }).toArray()
+      ).map((row) => row._id);
+      await db.c.outbox_events.deleteMany({ auditId: { $in: audits } });
+      await db.c.audit_events.deleteMany({ _id: { $in: audits } });
+      await db.c.mutation_receipts.deleteMany({ actorId: { $in: users } });
+      await db.c.price_references.deleteMany({ bookId: { $in: books } });
+      await db.c.catalog_decisions.deleteMany({
+        revisionId: { $in: revisions },
+      });
+      await db.c.catalog_revisions.deleteMany({ bookId: { $in: books } });
+      await db.c.catalog_books.deleteMany({ _id: { $in: books } });
+      await db.c.listing_media.deleteMany({ listingId: { $in: listings } });
+      await db.c.listing_revisions.deleteMany({ listingId: { $in: listings } });
+      await db.c.listings.deleteMany({ _id: { $in: listings } });
+      await db.removeUsers(users);
+    } finally {
+      await db.close();
+    }
   });
   it('returns a matching catalog from real EAN-13 without AI or quota, and does not mutate the draft', async () => {
     const before = await db.c.listings.findOne({ _id: listingId });
@@ -460,8 +492,13 @@ describe('listing fast paths HTTP/Mongo with real barcode decoder and fake stora
     };
     try {
       const dry = await run([entry, entry]);
-      expect(dry.code).toBe(0); expect(dry.stdout).toContain("1 new");
-      expect(await db.c.price_references.countDocuments({ sourceLabel: entry.sourceLabel })).toBe(0);
+      expect(dry.code).toBe(0);
+      expect(dry.stdout).toContain('1 new');
+      expect(
+        await db.c.price_references.countDocuments({
+          sourceLabel: entry.sourceLabel,
+        }),
+      ).toBe(0);
       expect((await run([entry], true)).code).toBe(0);
       const before = await db.c.price_references.findOne({
         sourceLabel: entry.sourceLabel,

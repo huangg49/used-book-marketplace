@@ -151,7 +151,29 @@ describe('listing catalog recovery: real HTTP/Mongo, no provider', () => {
   }, 60000);
   afterAll(async () => {
     await app?.close();
-    await db?.close();
+    if (!db) return;
+    try {
+      const revisions = (
+        await db.c.catalog_revisions.find({ bookId: { $in: books } }).toArray()
+      ).map((row) => row._id);
+      const audits = (
+        await db.c.audit_events.find({ actorId: { $in: users } }).toArray()
+      ).map((row) => row._id);
+      await db.c.outbox_events.deleteMany({ auditId: { $in: audits } });
+      await db.c.audit_events.deleteMany({ _id: { $in: audits } });
+      await db.c.mutation_receipts.deleteMany({ actorId: { $in: users } });
+      await db.c.catalog_decisions.deleteMany({
+        revisionId: { $in: revisions },
+      });
+      await db.c.catalog_revisions.deleteMany({ bookId: { $in: books } });
+      await db.c.catalog_books.deleteMany({ _id: { $in: books } });
+      const listings = listingId ? [listingId] : [];
+      await db.c.listing_revisions.deleteMany({ listingId: { $in: listings } });
+      await db.c.listings.deleteMany({ _id: { $in: listings } });
+      await db.removeUsers(users);
+    } finally {
+      await db.close();
+    }
   });
   it('returns ranked fuzzy candidates but never another member Pending request', async () => {
     const r = await find(
@@ -341,6 +363,7 @@ describe('listing catalog recovery: real HTTP/Mongo, no provider', () => {
         revision: { ...revision, _id: revisionId, bookId: id, title },
       };
     });
+    books.push(...rows.map((r) => r.book._id));
     await db.c.catalog_books.insertMany(rows.map((r) => r.book));
     await db.c.catalog_revisions.insertMany(rows.map((r) => r.revision));
     const r = await find(hints('Overflow incompatible target')).expect(200);
