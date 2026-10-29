@@ -1,7 +1,8 @@
+import { createAssistRequest } from "@used-books/session-client";
 import { z } from "zod";
 import { session } from "./api";
 import type { Attributes } from "@used-books/api-contract/catalog-taxonomy";
-import type { BookBundle } from '../lib/book-bundle';
+import type { BookBundle } from "../lib/book-bundle";
 
 const receipt = z.object({
   entityId: z.string().uuid(),
@@ -46,13 +47,22 @@ export function rememberCommands(): Remember {
 // the same stage keys resume the same draft, and a file already uploaded to
 // it is reused instead of creating a second media reservation.
 export type DraftAttempt = {
+  id: string;
+  ask: ReturnType<typeof createAssistRequest>;
   remember: Remember;
   uploaded: Map<File, string>;
   index: WeakMap<File, number>;
   next: number;
 };
 export function createDraftAttempt(): DraftAttempt {
-  return { remember: rememberCommands(), uploaded: new Map(), index: new WeakMap(), next: 0 };
+  return {
+    id: crypto.randomUUID(),
+    ask: createAssistRequest(session, () => crypto.randomUUID()),
+    remember: rememberCommands(),
+    uploaded: new Map(),
+    index: new WeakMap(),
+    next: 0,
+  };
 }
 
 export function ensureDraft(attempt: DraftAttempt, channel?: "Auction") {
@@ -97,12 +107,19 @@ export async function uploadOnce(
     index = attempt.next++;
     attempt.index.set(file, index);
   }
-  const id = await upload(draft.entityId, draft.version, file, attempt.remember, index);
+  const id = await upload(
+    draft.entityId,
+    draft.version,
+    file,
+    attempt.remember,
+    index,
+  );
   attempt.uploaded.set(file, id);
   return id;
 }
 
 export type ListingInput = {
+  priceAssist?: { suggestionId: string; applied: boolean };
   bundle?: BookBundle | null;
   channel?: "Auction";
   title: string;
@@ -204,12 +221,64 @@ export async function upload(
   throw new Error("Ảnh đang xử lý, hãy thử gửi lại sau ít phút.");
 }
 
+export type CatalogInput = Pick<
+  ListingInput,
+  | "bookId"
+  | "title"
+  | "author"
+  | "publisher"
+  | "publicationYear"
+  | "language"
+  | "edition"
+  | "category"
+  | "categoryId"
+  | "attributes"
+  | "series"
+  | "isbn"
+>;
+export async function ensureCatalog(
+  attempt: DraftAttempt,
+  input: CatalogInput,
+) {
+  if (input.bookId) return { entityId: input.bookId };
+  const body = JSON.stringify({
+    metadata: {
+      title: input.title.trim(),
+      authors: input.author
+        .split(";")
+        .map((author) => author.trim())
+        .filter(Boolean),
+      publisher: input.publisher ?? null,
+      publicationYear: input.publicationYear ?? null,
+      language: input.language || "vi",
+      edition: input.edition ?? null,
+      category: input.category.trim() || "Khác",
+      ...(input.categoryId
+        ? {
+            categoryId: input.categoryId,
+            attributes: input.attributes,
+            series: input.series?.trim() || null,
+          }
+        : {}),
+      isbn: input.isbn ?? null,
+    },
+  });
+  return attempt.remember(`catalog:${body}`, (key) =>
+    session.request("/catalog/requests", receipt, {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body,
+    }),
+  );
+}
+
 export function createListingSubmission(
   value: ListingInput,
   attempt: DraftAttempt = createDraftAttempt(),
 ) {
   const input = {
     ...value,
+    ...(value.priceAssist ? { priceAssist: { ...value.priceAssist } } : {}),
     attributes: structuredClone(value.attributes ?? {}),
     bundle: value.bundle ? structuredClone(value.bundle) : null,
     files: [...value.files],
@@ -217,33 +286,7 @@ export function createListingSubmission(
   const { remember } = attempt;
   return async () => {
     if (!input.files.length) throw new Error("Cần ít nhất một ảnh sách.");
-    const catalog = input.bookId
-      ? { entityId: input.bookId }
-      : await remember("catalog", (key) =>
-          session.request("/catalog/requests", receipt, {
-            method: "POST",
-            headers: { "Idempotency-Key": key },
-            body: JSON.stringify({
-              metadata: {
-                title: input.title.trim(),
-                authors: [input.author.trim()],
-                publisher: input.publisher ?? null,
-                publicationYear: input.publicationYear ?? null,
-                language: input.language || "vi",
-                edition: input.edition ?? null,
-                category: input.category.trim() || "Khác",
-                ...(input.categoryId
-                  ? {
-                      categoryId: input.categoryId,
-                      attributes: input.attributes,
-                      series: input.series?.trim() || null,
-                    }
-                  : {}),
-                isbn: input.isbn ?? null,
-              },
-            }),
-          }),
-        );
+    const catalog = await ensureCatalog(attempt, input);
     const draft = await ensureDraft(attempt, input.channel);
     const mediaIds: string[] = [];
     for (const file of input.files.slice(0, 8))
@@ -254,6 +297,7 @@ export function createListingSubmission(
         headers: { "Idempotency-Key": key },
         body: JSON.stringify({
           expectedVersion: draft.version,
+          ...(input.priceAssist ? { priceAssist: input.priceAssist } : {}),
           content: {
             bookId: catalog.entityId,
             ...(input.bundle ? { bundle: input.bundle } : {}),

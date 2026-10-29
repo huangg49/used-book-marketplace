@@ -1,3 +1,4 @@
+import { AssistTimings } from './assist-timings.js';
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomUUID } from 'node:crypto';
@@ -58,6 +59,7 @@ const rateLimited = (message: string) =>
   new DomainError(429, 'RATE_LIMITED', message);
 const unavailable = (message: string) =>
   new DomainError(503, 'UNAVAILABLE', message);
+const failed = (message: string) => new DomainError(503, 'AI_ASSIST_FAILED', message);
 const failureCopy: Record<ModelFailure, string> = {
   Timeout:
     'Trợ lý gợi ý giá phản hồi quá lâu. Bạn vẫn có thể tự nhập giá hoặc thử lại sau.',
@@ -118,6 +120,7 @@ export class PriceAssistService {
     listingId: string,
     requestKey: string,
     body: Wire['PriceSuggestionRequest'],
+    timings = new AssistTimings(),
   ): Promise<Wire['PriceSuggestion']> {
     const input: PriceInput = {
       bookId: body.bookId.toLowerCase(),
@@ -132,7 +135,7 @@ export class PriceAssistService {
       .digest('hex');
     // Authorization, rules, cache lookup and quota reservation commit together;
     // the provider call happens after commit (no side effects in a retried tx).
-    const prepared = await this.commands.read<Prepared>(auth, async (tx, actor) => {
+    const prepared = await timings.measure('prepare', () => this.commands.read<Prepared>(auth, async (tx, actor) => {
       member(actor);
       requireActive(actor);
       // Replay by key first, after current authorization (the user lock above
@@ -151,7 +154,7 @@ export class PriceAssistService {
         if (replay.status === 'Pending')
           throw rateLimited('Gợi ý này đang được tạo. Thử lại sau giây lát.');
         if (replay.status === 'Failed')
-          throw unavailable(failureCopy[replay.failure ?? 'ProviderError']);
+          throw failed(failureCopy[replay.failure ?? 'ProviderError']);
         return { kind: 'done', doc: replay, cached: true };
       }
       const listing = await tx.c.listings.findOne({ _id: listingId });
@@ -308,22 +311,22 @@ export class PriceAssistService {
         response: null,
       });
       return { kind: 'call', id, input, book, evidence, fp, now, day };
-    });
+    }));
     if (prepared.kind === 'done') return toWire(prepared.doc, prepared.cached);
-    return this.complete(prepared);
+    return timings.measure('complete', () => this.complete(prepared, timings));
   }
 
-  private async complete(p: Extract<Prepared, { kind: 'call' }>) {
+  private async complete(p: Extract<Prepared, { kind: 'call' }>, timings: AssistTimings) {
     const started = Date.now();
     let failure: ModelFailure | null = null;
     let usage = { inputTokens: 0, outputTokens: 0 };
     let checked: ReturnType<typeof checkOutput> | null = null;
     let modelId = this.model!.model;
     try {
-      const draft = await this.model!.draft(
+      const draft = await timings.measure('model', () => this.model!.draft(
         SYSTEM_PROMPT,
         buildUserPrompt(p.input, p.book, p.evidence),
-      );
+      ));
       usage = { inputTokens: draft.inputTokens, outputTokens: draft.outputTokens };
       modelId = draft.model;
       checked = checkOutput(draft.output, p.evidence);
@@ -339,7 +342,6 @@ export class PriceAssistService {
           suggestionId: p.id,
           model: modelId,
           failure,
-          detail: e instanceof Error ? e.message.slice(0, 400) : 'unknown',
         }),
       );
     }
@@ -373,7 +375,7 @@ export class PriceAssistService {
         );
       return { ...current, ...set } as PriceSuggestionDoc;
     });
-    if (failure) throw unavailable(failureCopy[failure]);
+    if (failure) throw failed(failureCopy[failure]);
     return toWire(doc, false);
   }
 

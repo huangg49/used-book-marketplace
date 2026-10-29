@@ -1,3 +1,5 @@
+import { PhotoAutofillPanel } from "./photo-autofill-panel";
+import type { Media } from "./contracts";
 import { useEffect, useRef, useState } from "react";
 import {
   Platform,
@@ -110,7 +112,11 @@ export function BookIdentity({
           >
             Chưa chọn đầu sách
           </AppText>
-          <AppText kind="small" color={stitchTokens.roseBrown} style={{ fontSize: 10 }}>
+          <AppText
+            kind="small"
+            color={stitchTokens.roseBrown}
+            style={{ fontSize: 10 }}
+          >
             Chưa gán catalog
           </AppText>
         </View>
@@ -235,7 +241,11 @@ export function BookIdentity({
               ĐÃ KHỚP CATALOG
             </AppText>
           </View>
-          <AppText kind="small" color={stitchTokens.subtleGray} style={{ fontSize: 10 }}>
+          <AppText
+            kind="small"
+            color={stitchTokens.subtleGray}
+            style={{ fontSize: 10 }}
+          >
             {`#BK-${id.slice(0, 6).toUpperCase()}`}
           </AppText>
         </View>
@@ -259,9 +269,7 @@ export function BookIdentity({
           {metaText}
         </AppText>
       </View>
-      {onEdit ? (
-        <Button secondary title="Đổi sách" onPress={onEdit} />
-      ) : null}
+      {onEdit ? <Button secondary title="Đổi sách" onPress={onEdit} /> : null}
     </View>
   );
 }
@@ -280,7 +288,9 @@ export function CatalogPicker({
   disabled,
   onSelect,
   onDirtyChange,
+  assistPhotos,
 }: {
+  assistPhotos?: { listingId: string; photos: Media[]; add: () => void };
   selected: string | null;
   disabled: boolean;
   onSelect: (id: string) => void;
@@ -309,7 +319,7 @@ export function CatalogPicker({
     null,
   );
   const busyRef = useRef(false);
-  const [, setRetryPending] = useState(false);
+  const [retryPending, setRetryPending] = useState(false);
   useEffect(() => {
     const timer = setTimeout(() => setTerm(search.trim()), 350);
     return () => clearTimeout(timer);
@@ -335,7 +345,9 @@ export function CatalogPicker({
         (!classification.categoryId && !form.category.trim()) ||
         !form.language.trim()
       ) {
-        setError("Điền tên sách, tác giả, chọn danh mục và ngôn ngữ trước khi gửi.");
+        setError(
+          "Điền tên sách, tác giả, chọn danh mục và ngôn ngữ trước khi gửi.",
+        );
         return;
       }
       if (classification.categoryId) {
@@ -372,7 +384,8 @@ export function CatalogPicker({
         category: (selectedCat?.label ?? form.category.trim()) || "Khác",
         ...(classification.categoryId
           ? {
-              categoryId: classification.categoryId as components["schemas"]["CatalogMetadata"]["categoryId"],
+              categoryId:
+                classification.categoryId as components["schemas"]["CatalogMetadata"]["categoryId"],
               attributes: classification.attributes,
               series: classification.series?.trim() || null,
             }
@@ -430,6 +443,29 @@ export function CatalogPicker({
   return (
     <View style={{ gap: space.md }}>
       <BookIdentity id={selected} />
+      {!selected && assistPhotos ? (
+        <PhotoAutofillPanel
+          listingId={assistPhotos.listingId}
+          photos={assistPhotos.photos}
+          disabled={disabled || busy || retryPending}
+          onAddPhoto={assistPhotos.add}
+          currentValue={(field) => form[field]}
+          onSelectBook={(id) => {
+            onSelect(id);
+            onDirtyChange(false);
+          }}
+          onUseField={(field, values) => {
+            const value = values[field];
+            if (value == null) return;
+            setEntryMode("manual");
+            onDirtyChange(true);
+            setForm((prev) => ({
+              ...prev,
+              [field]: Array.isArray(value) ? value.join("; ") : String(value),
+            }));
+          }}
+        />
+      ) : null}
       {!disabled ? (
         <>
           {/* Sub-tabs: [ 📖 Tìm sách có sẵn ]   [ ✏️ Tự nhập thông tin ] */}
@@ -444,7 +480,11 @@ export function CatalogPicker({
               <Icon
                 name="book"
                 size={16}
-                color={entryMode === "catalog" ? stitchTokens.wine : stitchTokens.warmUmber}
+                color={
+                  entryMode === "catalog"
+                    ? stitchTokens.wine
+                    : stitchTokens.warmUmber
+                }
               />
               <AppText
                 style={[
@@ -466,7 +506,11 @@ export function CatalogPicker({
               <Icon
                 name="pen"
                 size={16}
-                color={entryMode === "manual" ? stitchTokens.wine : stitchTokens.warmUmber}
+                color={
+                  entryMode === "manual"
+                    ? stitchTokens.wine
+                    : stitchTokens.warmUmber
+                }
               />
               <AppText
                 style={[
@@ -481,22 +525,24 @@ export function CatalogPicker({
 
           {entryMode === "catalog" ? (
             <View style={{ gap: space.md }}>
-              <AppText kind="bold" style={{ fontSize: 15, color: stitchTokens.darkWood }}>
+              <AppText
+                kind="bold"
+                style={{ fontSize: 15, color: stitchTokens.darkWood }}
+              >
                 Tìm cuốn sách trong thư viện
               </AppText>
 
               {/* Big prominent search bar */}
               <View
-                style={[
-                  styles.searchBar,
-                  isFocused && styles.searchBarFocused,
-                ]}
+                style={[styles.searchBar, isFocused && styles.searchBarFocused]}
               >
                 <View style={styles.searchIconContainer}>
                   <Icon
                     name="search"
                     size={22}
-                    color={isFocused ? stitchTokens.wine : stitchTokens.warmUmber}
+                    color={
+                      isFocused ? stitchTokens.wine : stitchTokens.warmUmber
+                    }
                   />
                 </View>
                 <AppTextInput
@@ -516,7 +562,11 @@ export function CatalogPicker({
                     hitSlop={10}
                     style={styles.searchClearBtn}
                   >
-                    <Icon name="close" size={14} color={stitchTokens.warmUmber} />
+                    <Icon
+                      name="close"
+                      size={14}
+                      color={stitchTokens.warmUmber}
+                    />
                   </Pressable>
                 ) : null}
               </View>
@@ -542,11 +592,20 @@ export function CatalogPicker({
                   !found.error &&
                   found.data?.pages[0]?.items.length === 0 ? (
                     <View style={{ gap: 4 }}>
-                      <AppText kind="small" color={stitchTokens.espresso} style={{ fontSize: 13 }}>
+                      <AppText
+                        kind="small"
+                        color={stitchTokens.espresso}
+                        style={{ fontSize: 13 }}
+                      >
                         Chưa tìm thấy. Bạn có thể chọn Tự nhập thông tin.
                       </AppText>
-                      <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontSize: 12 }}>
-                        Chọn đúng đầu sách để điền sẵn tên, tác giả và phân loại.
+                      <AppText
+                        kind="small"
+                        color={stitchTokens.slateWarm}
+                        style={{ fontSize: 12 }}
+                      >
+                        Chọn đúng đầu sách để điền sẵn tên, tác giả và phân
+                        loại.
                       </AppText>
                       <Pressable
                         onPress={() => setEntryMode("manual")}
@@ -610,7 +669,11 @@ export function CatalogPicker({
                 </>
               ) : (
                 <View style={{ gap: 4 }}>
-                  <AppText kind="small" color={stitchTokens.slateWarm} style={{ fontSize: 12 }}>
+                  <AppText
+                    kind="small"
+                    color={stitchTokens.slateWarm}
+                    style={{ fontSize: 12 }}
+                  >
                     Chọn đúng đầu sách để điền sẵn tên, tác giả và phân loại.
                   </AppText>
                   <Pressable
@@ -651,11 +714,15 @@ export function CatalogPicker({
           ) : (
             /* Mode 2: Tự nhập thông tin */
             <View style={{ gap: space.md }}>
-              <AppText kind="bold" style={{ fontSize: 15, color: stitchTokens.darkWood }}>
+              <AppText
+                kind="bold"
+                style={{ fontSize: 15, color: stitchTokens.darkWood }}
+              >
                 Tự nhập thông tin sách
               </AppText>
               <AppText color={stitchTokens.warmUmber} style={{ fontSize: 13 }}>
-                Ghi tên sách và tác giả đúng như trên bìa. Thông tin sẽ được dùng để gán cho ấn bản của bạn.
+                Ghi tên sách và tác giả đúng như trên bìa. Thông tin sẽ được
+                dùng để gán cho ấn bản của bạn.
               </AppText>
 
               {error ? <Notice tone="error">{error}</Notice> : null}
@@ -684,10 +751,18 @@ export function CatalogPicker({
 
               {/* Category Picker */}
               <View style={{ gap: space.xs }}>
-                <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 13 }}>
+                <AppText
+                  kind="bold"
+                  color={stitchTokens.wineDark}
+                  style={{ fontSize: 13 }}
+                >
                   Danh mục sách *
                 </AppText>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
+                >
                   {categories.map((cat) => {
                     const isSelected = classification.categoryId === cat.id;
                     return (
@@ -695,7 +770,11 @@ export function CatalogPicker({
                         key={cat.id}
                         onPress={() => {
                           onDirtyChange(true);
-                          const newAttrs = compatibleAttributes(cat.id, classification.attributes, "metadata");
+                          const newAttrs = compatibleAttributes(
+                            cat.id,
+                            classification.attributes,
+                            "metadata",
+                          );
                           setClassification((c) => ({
                             ...c,
                             categoryId: cat.id,
@@ -708,14 +787,22 @@ export function CatalogPicker({
                           paddingHorizontal: 12,
                           paddingVertical: 7,
                           borderRadius: 20,
-                          backgroundColor: isSelected ? stitchTokens.wine : stitchTokens.parchment,
+                          backgroundColor: isSelected
+                            ? stitchTokens.wine
+                            : stitchTokens.parchment,
                           borderWidth: 1,
-                          borderColor: isSelected ? stitchTokens.wine : stitchTokens.peachBorder,
+                          borderColor: isSelected
+                            ? stitchTokens.wine
+                            : stitchTokens.peachBorder,
                         }}
                       >
                         <AppText
                           kind="bold"
-                          color={isSelected ? stitchTokens.white : stitchTokens.darkWood}
+                          color={
+                            isSelected
+                              ? stitchTokens.white
+                              : stitchTokens.darkWood
+                          }
                           style={{ fontSize: 12 }}
                         >
                           {cat.label}
@@ -743,14 +830,29 @@ export function CatalogPicker({
               {/* Dynamic Facets / Attributes for selected category */}
               {classification.categoryId ? (
                 <View style={{ gap: space.sm }}>
-                  {facetsFor(classification.categoryId, classification.attributes, "metadata").map((facet) => {
-                    const selectedValues = classification.attributes[facet.id] ?? [];
+                  {facetsFor(
+                    classification.categoryId,
+                    classification.attributes,
+                    "metadata",
+                  ).map((facet) => {
+                    const selectedValues =
+                      classification.attributes[facet.id] ?? [];
                     return (
                       <View key={facet.id} style={{ gap: space.xs }}>
-                        <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 12 }}>
+                        <AppText
+                          kind="bold"
+                          color={stitchTokens.wineDark}
+                          style={{ fontSize: 12 }}
+                        >
                           {facet.label}
                         </AppText>
-                        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            flexWrap: "wrap",
+                            gap: 6,
+                          }}
+                        >
                           {facet.options.map((opt) => {
                             const isChosen = selectedValues.includes(opt.id);
                             return (
@@ -761,25 +863,45 @@ export function CatalogPicker({
                                   const nextAttrs = {
                                     ...classification.attributes,
                                     [facet.id]: isChosen
-                                      ? selectedValues.filter((v) => v !== opt.id)
+                                      ? selectedValues.filter(
+                                          (v) => v !== opt.id,
+                                        )
                                       : [...selectedValues, opt.id],
                                   };
-                                  const sanitized = compatibleAttributes(classification.categoryId, nextAttrs, "metadata");
-                                  setClassification((c) => ({ ...c, attributes: sanitized }));
+                                  const sanitized = compatibleAttributes(
+                                    classification.categoryId,
+                                    nextAttrs,
+                                    "metadata",
+                                  );
+                                  setClassification((c) => ({
+                                    ...c,
+                                    attributes: sanitized,
+                                  }));
                                 }}
                                 style={{
                                   paddingHorizontal: 10,
                                   paddingVertical: 5,
                                   borderRadius: 14,
-                                  backgroundColor: isChosen ? stitchTokens.roseWarmSurface : stitchTokens.warmIvory,
+                                  backgroundColor: isChosen
+                                    ? stitchTokens.roseWarmSurface
+                                    : stitchTokens.warmIvory,
                                   borderWidth: 1,
-                                  borderColor: isChosen ? stitchTokens.wine : stitchTokens.borderWarm,
+                                  borderColor: isChosen
+                                    ? stitchTokens.wine
+                                    : stitchTokens.borderWarm,
                                 }}
                               >
                                 <AppText
                                   kind="small"
-                                  color={isChosen ? stitchTokens.wine : stitchTokens.subtleGray}
-                                  style={{ fontSize: 11, fontWeight: isChosen ? "700" : "500" }}
+                                  color={
+                                    isChosen
+                                      ? stitchTokens.wine
+                                      : stitchTokens.subtleGray
+                                  }
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: isChosen ? "700" : "500",
+                                  }}
                                 >
                                   {opt.label}
                                 </AppText>
@@ -795,10 +917,18 @@ export function CatalogPicker({
 
               {/* Language Picker */}
               <View style={{ gap: space.xs }}>
-                <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 13 }}>
+                <AppText
+                  kind="bold"
+                  color={stitchTokens.wineDark}
+                  style={{ fontSize: 13 }}
+                >
                   Ngôn ngữ sách *
                 </AppText>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
+                >
                   {languageOptions.map((lang) => {
                     const isSelected = form.language === lang.id;
                     return (
@@ -812,15 +942,26 @@ export function CatalogPicker({
                           paddingHorizontal: 12,
                           paddingVertical: 6,
                           borderRadius: 16,
-                          backgroundColor: isSelected ? stitchTokens.wine : stitchTokens.parchment,
+                          backgroundColor: isSelected
+                            ? stitchTokens.wine
+                            : stitchTokens.parchment,
                           borderWidth: 1,
-                          borderColor: isSelected ? stitchTokens.wine : stitchTokens.peachBorder,
+                          borderColor: isSelected
+                            ? stitchTokens.wine
+                            : stitchTokens.peachBorder,
                         }}
                       >
                         <AppText
                           kind="small"
-                          color={isSelected ? stitchTokens.white : stitchTokens.darkWood}
-                          style={{ fontSize: 11, fontWeight: isSelected ? "700" : "500" }}
+                          color={
+                            isSelected
+                              ? stitchTokens.white
+                              : stitchTokens.darkWood
+                          }
+                          style={{
+                            fontSize: 11,
+                            fontWeight: isSelected ? "700" : "500",
+                          }}
                         >
                           {lang.label}
                         </AppText>

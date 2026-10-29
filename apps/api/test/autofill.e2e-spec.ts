@@ -276,8 +276,13 @@ describe('photo autofill through HTTP with MongoDB', () => {
     const l = await listing();
     const key = randomUUID();
     fake.mode = 'timeout';
-    await ask(l.id, [l.photo], m1, key).expect(503);
-    await ask(l.id, [l.photo], m1, key).expect(503);
+    const failedResponse = await ask(l.id, [l.photo], m1, key).expect(503);
+    expect(failedResponse.body.code).toBe('AI_ASSIST_FAILED');
+    expect(failedResponse.headers['server-timing']).toMatch(/ai_images;dur=/);
+    expect(failedResponse.headers['server-timing']).toMatch(/ai_model;dur=/);
+    const replay = await ask(l.id, [l.photo], m1, key).expect(503);
+    expect(replay.body.code).toBe('AI_ASSIST_FAILED');
+    expect(replay.headers['server-timing']).not.toMatch(/ai_model;dur=/);
     expect(fake.calls).toHaveLength(1);
     const failed = await db.c.autofill_suggestions.findOne({ ownerId: m1.id, requestKey: key });
     expect(failed).toMatchObject({ status: 'Failed', failure: 'Timeout', response: null });

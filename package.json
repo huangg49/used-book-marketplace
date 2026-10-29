@@ -43,6 +43,8 @@
     "test:journeys:browser": "node scripts/test-transaction-reviews.mjs",
     "test:journey-gate": "node scripts/test-journey-gate.mjs",
     "test:journey-gate:unit": "node --test scripts/test-journey-gate.test.mjs",
+    "test:listing-ai:browser": "node scripts/test-listing-ai-journey.mjs",
+    "benchmark:listing-ai": "node scripts/benchmark-listing-ai.mjs",
     "test:native:startup": "node scripts/test-native-startup.mjs",
     "dev:api": "node scripts/dev-api.mjs",
     "dev:media": "pnpm --filter @used-books/api worker:media",

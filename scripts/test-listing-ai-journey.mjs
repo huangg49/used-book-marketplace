@@ -1,0 +1,413 @@
+// Browser integration on QA only. Real API/Mongo/Sharp, explicitly FAKE AI and storage.
+import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
+import path from "node:path";
+import { createServer as httpServer } from "node:http";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createAiQa, qaMetadata } from "./listing-ai-qa.mjs";
+import { root, password } from "../apps/admin-web/tests/test-api.mjs";
+const require = createRequire(
+  new URL("../apps/admin-web/package.json", import.meta.url),
+);
+const webRequire = createRequire(
+  new URL("../apps/user-web/package.json", import.meta.url),
+);
+const { chromium } = require("playwright");
+const { createServer } = await import(
+  pathToFileURL(webRequire.resolve("vite")).href
+);
+const web = "http://127.0.0.1:5184",
+  rn = "http://127.0.0.1:8087";
+const artifacts = path.join(root, ".tmp/listing-ai-journey");
+await mkdir(artifacts, { recursive: true });
+let fixture, server, rnServer, browser;
+const errors = [],
+  checkpoints = [],
+  timings = [];
+const button = (p, name) => p.getByRole("button", { name, exact: true });
+async function capture(p, name, width) {
+  await p.setViewportSize({ width, height: 900 });
+  await p.evaluate(async () => {
+    await document.fonts.ready;
+  });
+  // Let the existing authored entry motion settle; keep motion enabled.
+  await p.waitForTimeout(800);
+  assert.ok(
+    await p.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+    `${name} page overflow`,
+  );
+  await p.screenshot({
+    path: path.join(artifacts, `${name}.png`),
+    fullPage: false,
+  });
+}
+function loseFirst(p, suffix) {
+  const calls = [];
+  let lose = true;
+  const handler = async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    calls.push({
+      key: route.request().headers()["idempotency-key"],
+      body: route.request().postData(),
+    });
+    const response = await route.fetch();
+    if (response.headers()["server-timing"])
+      timings.push({
+        scope: suffix,
+        http: response.status(),
+        stages: response.headers()["server-timing"],
+      });
+    if (lose) {
+      lose = false;
+      return route.abort("failed");
+    }
+    await route.fulfill({ response });
+  };
+  return {
+    calls,
+    install: () => p.route(`**/${suffix}`, handler),
+    uninstall: () => p.unroute(`**/${suffix}`, handler),
+  };
+}
+try {
+  fixture = await createAiQa();
+  await fixture.api("/me/addresses", fixture.member.accessToken, {
+    expectedBookVersion: 0,
+    makeDefault: true,
+    address: {
+      recipientName: "QA Seller",
+      phone: "0900123456",
+      serviceAreaCode: "HCM-DEMO-v1",
+      localityCode: "DEMO-A",
+      detail: "Synthetic QA origin",
+    },
+  });
+  process.env.VITE_API_BASE_URL = fixture.base;
+  server = await createServer({
+    root: path.join(root, "apps/user-web"),
+    server: { host: "127.0.0.1", port: 5184, strictPort: true },
+    logLevel: "error",
+  });
+  await server.listen();
+  const dist = path.join(root, "apps/mobile-react-native/dist");
+  rnServer = httpServer(async (request, response) => {
+    try {
+      const pathname = decodeURIComponent(new URL(request.url, rn).pathname);
+      if (pathname.split("/").some((part) => part.startsWith(".")))
+        return response.writeHead(404).end();
+      let file = path.resolve(
+        dist,
+        `.${pathname === "/" ? "/index.html" : pathname}`,
+      );
+      if (!file.startsWith(dist + path.sep))
+        return response.writeHead(403).end();
+      if (!path.extname(file)) file += ".html";
+      const mime = {
+        ".html": "text/html",
+        ".js": "text/javascript",
+        ".css": "text/css",
+        ".ttf": "font/ttf",
+        ".png": "image/png",
+        ".svg": "image/svg+xml",
+        ".json": "application/json",
+      };
+      response
+        .writeHead(200, {
+          "Content-Type":
+            mime[path.extname(file)] ?? "application/octet-stream",
+          "Cache-Control": "no-store",
+        })
+        .end(await readFile(file));
+    } catch {
+      response.writeHead(404).end();
+    }
+  });
+  await new Promise((resolve) => rnServer.listen(8087, "127.0.0.1", resolve));
+  browser = await chromium.launch({ headless: true });
+  const p = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  p.setDefaultTimeout(20000);
+  p.on("pageerror", (e) => errors.push(e.message));
+  await p.goto(web + "/login?returnUrl=%2Fsell");
+  await p.getByLabel(/^Email/).fill("member@operations.test");
+  await p.getByLabel(/^Mật khẩu/).fill(password);
+  await button(p, "Đăng nhập").click();
+  await p.waitForURL(web + "/sell");
+  await button(p, "Tự nhập thông tin").click();
+  await p.locator("#title").fill("Giữ tên đang nhập");
+  const photoPanel = p.locator(
+    'section[aria-labelledby="photo-autofill-title"]',
+  );
+  await photoPanel
+    .locator('input[type="file"]')
+    .setInputFiles({
+      name: "qa-cover.png",
+      mimeType: "image/png",
+      buffer: fixture.photo,
+    });
+  const lostPhoto = loseFirst(p, "autofill-suggestions");
+  await lostPhoto.install();
+  // Process the real upload queue once finalize has committed.
+  const finalize = p.waitForResponse(
+    (r) => r.url().endsWith("/finalize") && r.request().method() === "POST",
+  );
+  await button(photoPanel, "Đọc thông tin").click();
+  await finalize;
+  await fixture.processMedia();
+  await photoPanel.getByRole("alert").waitFor();
+  await button(photoPanel, "Đọc thông tin").click();
+  await button(photoPanel, "Dùng Tên sách").waitFor();
+  assert.equal(fixture.counters.autofill, 1);
+  assert.equal(lostPhoto.calls.length, 2);
+  assert.deepEqual(lostPhoto.calls[0], lostPhoto.calls[1]);
+  await lostPhoto.uninstall();
+  await button(photoPanel, "Dùng Tên sách").click();
+  await p
+    .getByRole("dialog")
+    .filter({
+      has: p.getByRole("heading", { name: "Thay thông tin đang nhập?" }),
+    })
+    .waitFor();
+  assert.equal(await p.locator("#title").inputValue(), "Giữ tên đang nhập");
+  await button(p, "Dùng gợi ý đã chọn").click();
+  assert.equal(await p.locator("#title").inputValue(), qaMetadata.title);
+  await button(photoPanel, "Dùng ảnh đầu làm bìa bản sách").click();
+  await button(photoPanel, "Chọn đầu sách này").click();
+  await button(p, "Tiếp tục").click();
+  await p.locator("#cover-file").waitFor({ state: "attached" });
+  await button(p, "Tiếp tục").click();
+  for (const key of [
+    "pages",
+    "coverNote",
+    "notes",
+    "accessories",
+    "description",
+  ])
+    await p
+      .locator(`#${key}`)
+      .fill(`QA ${key}: mô tả bản sách tổng hợp dùng riêng cho kiểm thử.`);
+  for (const [key, index] of [
+    ["readable", 0],
+    ["hasMissingPages", 1],
+    ["missingEssentialContent", 1],
+  ])
+    await p.locator(`input[name="${key}"]`).nth(index).locator("..").click();
+  await button(p, "Tiếp tục").click();
+  await p.locator("#salePrice").fill("125000");
+  const lostPrice = loseFirst(p, "price-suggestions");
+  await lostPrice.install();
+  const coverFinalize = p.waitForResponse(
+    (r) => r.url().endsWith("/finalize") && r.request().method() === "POST",
+  );
+  await button(p, "Xem gợi ý giá bán").click();
+  await coverFinalize;
+  await fixture.processMedia();
+  const pricePanel = p.locator('section[aria-labelledby="price-assist-title"]');
+  await pricePanel.getByRole("alert").waitFor();
+  assert.equal(await p.locator("#salePrice").inputValue(), "125000");
+  await button(p, "Xem lại gợi ý giá").click();
+  await pricePanel
+    .getByRole("button", { name: /^Dùng / })
+    .first()
+    .waitFor();
+  assert.equal(fixture.counters.price, 1);
+  assert.deepEqual(lostPrice.calls[0], lostPrice.calls[1]);
+  await lostPrice.uninstall();
+  await pricePanel
+    .getByRole("button", { name: /^Dùng / })
+    .first()
+    .click();
+  assert.equal(await p.locator("#salePrice").inputValue(), "125000");
+  await button(p, "Dùng giá gợi ý").click();
+  assert.equal(await p.locator("#salePrice").inputValue(), "40000");
+  await pricePanel.locator("summary").click();
+  for (const width of [1440, 768, 390, 320]) {
+    await pricePanel.scrollIntoViewIfNeeded();
+    await capture(p, `web-price-${width}`, width);
+  }
+  checkpoints.push(
+    "web: photo and price lost ACK each retain key/body; one provider call; explicit overwrite confirmations; responsive source evidence",
+  );
+  await button(p, "Quay lại").click();
+  await p.locator("#coverNote").fill("QA tình trạng đã thay đổi.");
+  await button(p, "Tiếp tục").click();
+  await pricePanel.getByText(/Gợi ý cũ không được áp dụng/).waitFor();
+  assert.equal(await p.locator("#salePrice").inputValue(), "40000");
+  await button(p, "Xem lại gợi ý giá").click();
+  await pricePanel
+    .getByRole("button", { name: /^Dùng / })
+    .first()
+    .waitFor();
+  await pricePanel
+    .getByRole("button", { name: /^Dùng / })
+    .first()
+    .click();
+  await button(p, "Thêm nơi gửi sách").click();
+  const originDialog = p
+    .getByRole("dialog")
+    .filter({
+      has: p.getByRole("heading", { name: "Nơi gửi sách", exact: true }),
+    });
+  await originDialog.locator("select").first().selectOption({ index: 1 });
+  await button(originDialog, "Dùng nơi gửi này").click();
+  await button(p, "Tiếp tục").click();
+  await p.getByRole("heading", { name: "Kiểm tra", exact: true }).waitFor();
+  await p.locator("#ownership").locator("..").click();
+  const submitted = p.waitForResponse(
+    (response) =>
+      response.url().endsWith("/submit") &&
+      response.request().method() === "POST",
+  );
+  await button(p, "Gửi duyệt").click();
+  assert.equal((await submitted).status(), 200);
+  const outcome = await fixture.db
+    .collection("price_suggestions")
+    .findOne({ "outcome.applied": true });
+  assert.ok(outcome);
+  assert.equal(outcome.outcome.chosenSalePrice, 40000);
+  const listing = await fixture.db
+    .collection("listings")
+    .findOne({ _id: outcome.listingId });
+  assert.equal(listing.moderation, "PendingReview");
+  assert.equal(await fixture.db.collection("listings").countDocuments(), 1);
+  checkpoints.push(
+    "web: same draft through AI, price evidence and real submit; one PendingReview listing; stored applied price 40000; changed condition invalidates prior suggestion",
+  );
+  const np = await browser.newPage({ viewport: { width: 390, height: 900 } });
+  np.setDefaultTimeout(20000);
+  np.on("pageerror", (e) => errors.push(e.message));
+  await np.goto(rn + "/account");
+  await np
+    .getByLabel("Email", { exact: true })
+    .last()
+    .fill("member@operations.test");
+  await np.getByLabel("Mật khẩu", { exact: true }).last().fill(password);
+  await button(np, "Đăng nhập").click();
+  await button(np, "Kệ sách của tôi").click();
+  await button(np, "+ Đăng Sách Mới Ngay").click();
+  await np.getByText("Điền nhanh từ ảnh", { exact: true }).waitFor();
+  const chooser = np.waitForEvent("filechooser");
+  await button(np, "Thêm ảnh để đọc").click();
+  await (
+    await chooser
+  ).setFiles({
+    name: "qa-rn.png",
+    mimeType: "image/png",
+    buffer: fixture.photo,
+  });
+  await np.getByText(/Ảnh đã tải lên/).waitFor();
+  await fixture.processMedia();
+  await button(np, "Đọc thông tin từ ảnh").waitFor({ state: "visible" });
+  await np.waitForFunction(() =>
+    [...document.querySelectorAll('button,[role="button"]')].some(
+      (el) =>
+        el.textContent === "Đọc thông tin từ ảnh" &&
+        el.getAttribute("aria-disabled") !== "true",
+    ),
+  );
+  // A lost 503 is uncertain. First retry must replay it; only the explicit
+  // terminal code allows a new key. The third click may call the model again.
+  const rnPhoto = loseFirst(np, "autofill-suggestions");
+  await rnPhoto.install();
+  const beforePhoto = fixture.counters.autofill;
+  fixture.modes.autofill = "timeout";
+  await button(np, "Đọc thông tin từ ảnh").click();
+  await np.getByText(/Chưa đọc được ảnh/).waitFor();
+  fixture.modes.autofill = "ok";
+  await button(np, "Đọc thông tin từ ảnh").click();
+  await np.getByText(/Chưa đọc được ảnh/).waitFor();
+  await button(np, "Đọc thông tin từ ảnh").click();
+  await button(np, `Chọn đầu sách: ${qaMetadata.title}`).waitFor();
+  assert.equal(rnPhoto.calls.length, 3);
+  assert.deepEqual(rnPhoto.calls[0], rnPhoto.calls[1]);
+  assert.notEqual(rnPhoto.calls[1].key, rnPhoto.calls[2].key);
+  assert.equal(fixture.counters.autofill, beforePhoto + 2);
+  await rnPhoto.uninstall();
+  for (const width of [390, 320]) {
+    await button(
+      np,
+      `Chọn đầu sách: ${qaMetadata.title}`,
+    ).scrollIntoViewIfNeeded();
+    await capture(np, `rn-photo-${width}`, width);
+  }
+  await button(np, `Chọn đầu sách: ${qaMetadata.title}`).click();
+  await button(np, "Tiếp theo").click();
+  await np.getByText("Ảnh đã sẵn sàng", { exact: true }).waitFor();
+  await button(np, "Tiếp theo").click();
+  await np.getByText("Tốt (Good)", { exact: true }).click();
+  for (const [label, value] of [
+    ["Ruột sách và trang thiếu", "Đủ trang QA"],
+    ["Bìa và gáy sách", "Bìa QA"],
+    ["Ghi chú và đánh dấu", "Không có"],
+    ["Phụ kiện đi kèm", "Không có"],
+    [
+      "Vài dòng gửi người đọc sau (Mô tả chung)",
+      "Mô tả QA tổng hợp, không phải một bài đăng thực tế.",
+    ],
+  ])
+    await np.getByLabel(label, { exact: true }).fill(value);
+  await np.getByText("Có, còn đọc rõ", { exact: true }).click();
+  await np.getByText("Không thiếu trang", { exact: true }).click();
+  await np.getByText("Không thiếu nội dung chính", { exact: true }).click();
+  await button(np, "Tiếp theo").click();
+  await np.getByRole("button", { name: /^Bán trực tiếp/ }).click();
+  await np.getByLabel("Giá bán (đồng)", { exact: true }).fill("125000");
+  const rnPrice = loseFirst(np, "price-suggestions");
+  await rnPrice.install();
+  const beforePrice = fixture.counters.price;
+  await button(np, "Xem gợi ý giá").click();
+  await np.getByText(/Chưa kết nối được máy chủ/).waitFor();
+  assert.equal(
+    await np.getByLabel("Giá bán (đồng)", { exact: true }).inputValue(),
+    "125000",
+  );
+  await button(np, "Xem lại gợi ý giá").click();
+  await np
+    .getByText(/40.000/)
+    .first()
+    .waitFor();
+  assert.equal(rnPrice.calls.length, 2);
+  assert.deepEqual(rnPrice.calls[0], rnPrice.calls[1]);
+  assert.equal(fixture.counters.price, beforePrice + 1);
+  await rnPrice.uninstall();
+  checkpoints.push(
+    "RN web: account to draft, real photo/Sharp, lost terminal response replay then explicit new intent; catalog choice and same photo at next step; price lost ACK keeps key/body and typed price",
+  );
+  for (const width of [390, 320]) {
+    await capture(np, `rn-price-${width}`, width);
+  }
+  assert.deepEqual(
+    errors.filter((error) => !error.includes("Minified React error #418")),
+    [],
+  );
+  await writeFile(
+    path.join(artifacts, "result.json"),
+    JSON.stringify(
+      {
+        status: "PASS",
+        source: "real API/Mongo/Sharp; fake AI/storage",
+        checkpoints,
+        timings,
+        native: "NOT_RUN",
+        realCameraQuality: "NOT_RUN: no dataset supplied",
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  console.log("PASS AI listing journey:", checkpoints.join("; "));
+} catch (error) {
+  for (const [index, context] of (browser?.contexts() ?? []).entries())
+    for (const p of context.pages())
+      await p
+        .screenshot({ path: path.join(artifacts, `failure-${index}.png`) })
+        .catch(() => {});
+  throw error;
+} finally {
+  await browser?.close();
+  await server?.close();
+  if (rnServer) await new Promise((resolve) => rnServer.close(resolve));
+  await fixture?.close();
+}

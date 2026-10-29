@@ -386,7 +386,9 @@ describe('price suggestions through HTTP with MongoDB', () => {
     const l = await listing();
     fake.mode = 'invalid';
     const bad = await ask(l.entityId, m1, { condition: 'LikeNew' }).expect(503);
-    expect(bad.body.code).toBe('UNAVAILABLE');
+    expect(bad.body.code).toBe('AI_ASSIST_FAILED');
+    expect(bad.headers['server-timing']).toMatch(/ai_model;dur=/);
+    expect(bad.headers['server-timing']).toMatch(/ai_total;dur=/);
     fake.mode = 'timeout';
     await ask(l.entityId, m1, { condition: 'Worn' }).expect(503);
     const failed = await db.c.price_suggestions

@@ -1,3 +1,4 @@
+import { scoreAutofill, qualityGate, type ExpectedAutofill } from './quality.js';
 import 'dotenv/config';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
@@ -27,10 +28,11 @@ const arg = (name: string) => (args.includes(name) ? args[args.indexOf(name) + 1
 const dir = arg('--dir') ? resolve(arg('--dir')!) : null;
 const only = arg('--only');
 const maxUsd = Number(arg('--max-usd') ?? 0.5);
+if (!Number.isFinite(maxUsd) || maxUsd <= 0) throw new Error('--max-usd must be a finite positive number.');
 if (!dir || !existsSync(dir)) throw new Error('Pass --dir <folder with photos>.');
 
-type Expected = { title: string; authors?: string[]; isbn?: string | null };
-type Case = { id: string; photos: string[]; expected: Expected };
+type Expected = ExpectedAutofill;
+type Case = { id: string; bookKey?: string; reviewed?: boolean; photos: string[]; expected: Expected };
 // cover-scan: real published covers, but flat scans rather than phone photos.
 type CaseFile = { source: 'real-camera' | 'cover-scan' | 'synthetic' | 'unknown'; cases: Case[] };
 const casesPath = join(dir, 'cases.json');
@@ -42,6 +44,7 @@ if (args.includes('--init')) {
     source: 'unknown',
     cases: photos.map((f) => ({
       id: f.slice(0, -extname(f).length),
+      bookKey: '', reviewed: false,
       photos: [f],
       expected: { title: '', authors: [], isbn: null },
     })),
@@ -70,17 +73,6 @@ async function asProvided(path: string) {
   });
   return shrinkForModel(derivative);
 }
-
-// Case, spacing and punctuation never decide a match; diacritics do, except
-// in the loose score that shows how many misses are only accents.
-const strict = (s: string) =>
-  s.normalize('NFC').toLowerCase().replace(/[\p{P}\p{S}]+/gu, ' ').replace(/\s+/g, ' ').trim();
-const loose = (s: string) =>
-  strict(s).normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd');
-// Same author rule as the catalog match: spacing and initials punctuation
-// ("新海 誠" / "新海誠", "J. K." / "J.K.") are not misreads.
-const name = (s: string) => strict(s).replace(/[\s·・-]+/g, '');
-const digits =(s: string | null | undefined) => (s ?? '').replace(/[^0-9X]/gi, '').toUpperCase();
 
 const results = [];
 let spentMicro = 0;
@@ -130,29 +122,19 @@ for (const c of file.cases) {
   }
   const latencyMs = Date.now() - started;
   const fields = checked?.fields ?? null;
-  const scored = !!c.expected.title;
   const title = fields?.title ?? null;
-  const expectedIsbn = digits(c.expected.isbn);
-  const readIsbn = digits(fields?.isbn);
+
   results.push({
     id: c.id,
     photos: c.photos.length,
-    scored,
     status: failure ? 'Failed' : title ? 'Suggested' : 'NeedsMoreData',
     failure,
     usedFallback,
     expected: c.expected,
     read: fields,
     missing: checked?.missing ?? [],
-    titleExact: scored && title ? strict(title) === strict(c.expected.title) : scored ? false : null,
-    titleIgnoringAccents: scored && title ? loose(title) === loose(c.expected.title) : scored ? false : null,
-    authorsFound: scored && c.expected.authors?.length
-      ? c.expected.authors.every((a) => (fields?.authors ?? []).some((r) => name(r) === name(a)))
-      : null,
-    // A wrong ISBN is any read ISBN that differs from the printed one, or any
-    // ISBN read off a book whose case says none is printed.
-    isbnWrong: scored && readIsbn ? readIsbn !== expectedIsbn : false,
-    isbnFound: scored && expectedIsbn ? readIsbn === expectedIsbn : null,
+    ...scoreAutofill(c.expected, fields),
+    bookKey: c.bookKey, reviewed: c.reviewed === true,
     model: modelId,
     latencyMs,
     tokens,
@@ -177,6 +159,10 @@ const summary = {
   scoredCases: scored.length,
   titleExact: ratio(titleRight, scored.length),
   titleIgnoringAccents: ratio(scored.filter((r) => r.titleIgnoringAccents).length, scored.length),
+  ...Object.fromEntries(['publisherExact', 'publicationYearExact', 'editionExact', 'languageExact'].map(key => {
+    const judged = scored.filter(row => row[key as keyof typeof row] !== null);
+    return [key, ratio(judged.filter(row => row[key as keyof typeof row] === true).length, judged.length)];
+  })),
   authorsFound: ratio(scored.filter((r) => r.authorsFound).length, scored.filter((r) => r.authorsFound !== null).length),
   isbnFound: ratio(scored.filter((r) => r.isbnFound).length, scored.filter((r) => r.isbnFound !== null).length),
   wrongIsbn,
@@ -189,10 +175,7 @@ const summary = {
   },
   costUsd: spentMicro / 1e6,
   // ADR 0048 §5 counts only real phone photos, 20 or more books.
-  meetsAdr0048:
-    file.source !== 'real-camera' || scored.length < 20
-      ? `NOT EVIDENCE (${file.source}, ${scored.length} scored cases)`
-      : titleRight / scored.length >= 0.8 && wrongIsbn === 0,
+  meetsAdr0048: qualityGate(file.source, results),
   skipped: results.filter((r) => 'skipped' in r).map((r) => r.id),
 };
 console.log(JSON.stringify(summary, null, 2));

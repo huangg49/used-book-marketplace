@@ -1,7 +1,7 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
 Cập nhật29/10/2026 theo main `aed674f` đã ghép cùng các gói Member/review/auction local
-bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.60.0** (193operations/30controllers); registry có54
+bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.61.0** (193operations/30controllers); registry có54
 migration MongoDB (đến0041), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
@@ -31,7 +31,7 @@ chưa có API/session hoặc parity với RN.
 | Ví | Ledger/holds/history, topup simulator/VNPay sandbox/IPN/QueryDR/expiry | Chưa có withdrawal/payout production hoặc đối soát rút tiền đầy đủ |
 | Review/uy tín | Exchange/DirectOrder/PointOrder Completed, sửa/xóa48h, bảo mật hai chiều, reply chờ duyệt, Staff/Admin, public aggregate; web/RN | [ADR0052](../adr/0052-transaction-reviews-and-reputation.md), [evidence](../features/TRANSACTION_REVIEWS_REPORT.md); không tự mở completion/settlement hoặc native/human gate |
 | Việc đang chờ | Web/RN năm nhóm việc từ state thật, link đúng hồ sơ, RN đơn tải tiếp; Staff/Admin duyệt bài/đầu sách | [ADR0053](../adr/0053-state-derived-work-inbox.md), [evidence/phạm vi](../ui/WORK_INBOX_2026_10_28.md); không là tổng nghĩa vụ toàn sản phẩm, các bàn điểm/review vẫn riêng |
-| AI | Price assist và autofill ảnh ADR0048; autofill đã nối Member web | Cần cấu hình/hạn mức và kiểm provider/ảnh thật riêng; không suy mock test là live PASS |
+| AI | Đọc ảnh + gợi ý giá nối Member web/RN theo ADR0054 | [Phạm vi/evidence](../features/LISTING_AI_JOURNEY_2026_10_29.md); NVIDIA thật đã đo trên dữ liệu tổng hợp, chất lượng ảnh thật/native vẫn chưa nghiệm thu |
 
 [ADR0050](../adr/0050-exchange-inspection-and-existing-obligations.md) sửa deadline
 Exchange và quyền nghĩa vụ cũ. GHN/carrier/driver được owner yêu cầu giữ nguyên
@@ -220,7 +220,7 @@ pnpm --filter @used-books/admin-web test:browser
 và `EXPO_PUBLIC_DESIGN_PREVIEW=1` trong **môi trường terminal QA** khi chạy
 `pnpm --filter @used-books/mobile-react-native export:web`, rồi `pnpm test:public:browser`.
 
-Gói kiểm chứng nhiều hành trình có lệnh `pnpm test:journey-gate` (8 suite browser,
+Gói kiểm chứng nhiều hành trình có lệnh `pnpm test:journey-gate` (10 suite browser,
 chạy tuần tự vì dùng chung port/cache). Xem [chuẩn bị, ma trận và giới hạn](../ui/JOURNEY_VERIFICATION_2026_10_28.md).
 Runner từ chối Mongo ngoài localhost:57017/`*_test`/`rs-test`, kiểm artifact API/RN
 và QA API base của RN; không tự build, khởi động hay seed DB. Chạy `--list` để
@@ -232,6 +232,10 @@ Không ghi đè `.env` RN của người đang dùng app.
 Runner quản lý fixture API port 3009, ảnh 3010 và web 8087; không chiếm các port đó
 bằng process khác. Phải export lại với URL app trước khi dùng bundle cho demo khác.
 Web regression không thay kiểm tra native, và fake storage không là bằng chứng Supabase.
+Suite `--only=listing-ai` dùng AI/storage fake, real API/Mongo/Sharp và kiểm
+mất ACK/retry/gửi duyệt cùng nháp. `pnpm benchmark:listing-ai --samples=1` cũng
+mặc định fake; thêm `--live` mới gọi NVIDIA với ảnh/nguồn giá tổng hợp, tối đa5
+lượt mỗi tính năng. Xem [cách chạy và giới hạn](../features/LISTING_AI_JOURNEY_2026_10_29.md).
 Thay biểu tượng launcher/splash: chạy `pnpm brand:app-icons` để sinh PNG từ SVG logo
 gốc, rồi build lại APK. Hot reload JS không cập nhật tài nguyên native.
 

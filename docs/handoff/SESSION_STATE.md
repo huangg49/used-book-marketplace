@@ -1,5 +1,34 @@
 # Điểm lưu hiện tại — 29/10/2026
 
+## Trợ lý đăng sách web/RN — 29/10/2026
+
+- Owner giao hoàn thiện AI hiện có; nhánh `codex/listing-ai-journey`, base04a9361,
+  commit subject `feat(listings): connect AI assistance across web and native`.
+  [Phạm vi, evidence và cách chạy](../features/LISTING_AI_JOURNEY_2026_10_29.md),
+  [ADR0054](../adr/0054-cross-client-listing-ai.md).
+- RN nối đọc ảnh Ready/chọn catalog/từng trường có xác nhận thay; web nối giá
+  có nguồn vào cùng nháp, dùng ảnh đọc làm bìa qua crop bình thường. Shared
+  intent giữ key/body qua mất ACK, chỉ mã lỗi terminal mới cho intent mới.
+  Contract0.61/193operations/30controllers, registry54 không migration; timing
+  cố định an toàn, không đổi luật nguồn giá/quota/transaction/tiền.
+- PASS shared52/web253/RN164/Admin219/API243unit, AIHTTP20, typecheck/lint/build
+  liên quan/RN export, contract/routes và runner4. Browser listing-ai PASS từ
+  entry: mất ACK web/RN, failed replay, giữ input, xác nhận thay và một submit;
+  real API/Mongo/Sharp, fake AI/storage. Operations browser hồi quy PASS. Runner
+  lượt cuối chỉ listing-ai nên tổng PARTIAL/9NOT_RUN. Detector7target một
+  advisory font22px ngoài ramp, còn lint warning cũ ngoài diff.
+- NVIDIA thật10call/ảnh và giá QA tổng hợp: ảnh p50=1126/p95=10971ms, giá
+  p50=5146/p95=9801ms (n=5mỗi loại); dự toán0,011268USD, không là hóa đơn hoặc
+  SLA/chất lượng sách thật. Nhóm chưa có corpus20–30cuốn, quality NOT_RUN;
+  đã có template/eval chặn thiếu đáp án, lặp cuốn và chạy thiếu budget.
+- Metro startup bị automatic approval review từ chối “blocked by policy”;
+  không nghiệm thu native mới. Emulator đã dừng; human/live storage/ảnh thật
+  vẫn mở, READINESS giữ nguyên. GHN/carrier/Driver không đổi/gọi thật; Mongo
+  chính vẫn dừng, không start/reset/seed/migrate. Chỉ commit local, chưa push/
+  PR/merge/deploy. Bước tiếp review contract/client và kiểm native/corpus thật.
+- Dọn namespace E2E và user/role QA; kiểm còn0database QA, dừng replica set QA,
+  không còn listener3009/3010/5184/8087/8081. Mongo chính vẫn Exited.
+
 ## Đồng bộ main vào chuỗi local — 29/10/2026
 
 - Owner yêu cầu fetch/pull và fix conflict. Working tree sạch tại856600f, giữ

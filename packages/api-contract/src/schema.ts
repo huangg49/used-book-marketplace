@@ -4208,8 +4208,11 @@ export interface components {
             /** Format: date-time */
             serverTime: string;
         };
-        /** @enum {string} */
-        ListingErrorCode: "VALIDATION_ERROR" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "RATE_LIMITED" | "UNAVAILABLE" | "INTERNAL_ERROR" | "AccountIneligible" | "SelfReviewForbidden" | "CatalogDuplicate" | "CatalogNotConfirmed" | "ListingLimitReached" | "ListingInvalid" | "VersionConflict" | "InvalidState" | "IdempotencyConflict" | "MediaNotReady" | "MediaQuotaExceeded" | "UploadIncomplete" | "UploadExpired" | "PayloadTooLarge" | "UnsupportedMediaType" | "SESSION_EXPIRED" | "BidTooLow" | "AuctionClosed" | "AuctionNotStarted";
+        /**
+         * @description AI_ASSIST_FAILED means an advisory request has a persisted terminal failure; a deliberate new request may use a new key. Network errors and UNAVAILABLE are uncertain and must retain their original key/body.
+         * @enum {string}
+         */
+        ListingErrorCode: "VALIDATION_ERROR" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "RATE_LIMITED" | "UNAVAILABLE" | "AI_ASSIST_FAILED" | "INTERNAL_ERROR" | "AccountIneligible" | "SelfReviewForbidden" | "CatalogDuplicate" | "CatalogNotConfirmed" | "ListingLimitReached" | "ListingInvalid" | "VersionConflict" | "InvalidState" | "IdempotencyConflict" | "MediaNotReady" | "MediaQuotaExceeded" | "UploadIncomplete" | "UploadExpired" | "PayloadTooLarge" | "UnsupportedMediaType" | "SESSION_EXPIRED" | "BidTooLow" | "AuctionClosed" | "AuctionNotStarted";
         ListingApiError: {
             statusCode: number;
             code: components["schemas"]["ListingErrorCode"];
@@ -7610,6 +7613,8 @@ export interface operations {
             200: {
                 headers: {
                     "Cache-Control"?: "no-store";
+                    /** @description Fixed AI stage durations in milliseconds; no user content or identifiers. ai_complete includes image/model/catalog/persistence time; stages can overlap and must not be summed. */
+                    "Server-Timing"?: string;
                     [name: string]: unknown;
                 };
                 content: {
@@ -7649,6 +7654,8 @@ export interface operations {
             200: {
                 headers: {
                     "Cache-Control"?: "no-store";
+                    /** @description Fixed AI stage durations in milliseconds; no user content or identifiers. ai_complete includes image/model/catalog/persistence time; stages can overlap and must not be summed. */
+                    "Server-Timing"?: string;
                     [name: string]: unknown;
                 };
                 content: {

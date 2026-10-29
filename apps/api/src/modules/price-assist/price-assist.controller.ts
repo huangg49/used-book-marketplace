@@ -1,4 +1,15 @@
-import { Body, Controller, Header, HttpCode, Param, Post, Req } from '@nestjs/common';
+import { AssistTimings } from './assist-timings.js';
+import type { Response } from 'express';
+import {
+  Body,
+  Controller,
+  Header,
+  HttpCode,
+  Param,
+  Post,
+  Req,
+  Res,
+} from '@nestjs/common';
 import type { AuthenticatedRequest } from '../auth/auth.guard.js';
 import { Roles } from '../auth/roles.guard.js';
 import { ContractInput } from '../commands/contract-input.service.js';
@@ -15,16 +26,23 @@ export class PriceAssistController {
   @Post('listings/:listingId/price-suggestions')
   @HttpCode(200)
   @Header('Cache-Control', 'no-store')
-  suggest(
+  async suggest(
     @Param('listingId') listingId: string,
     @Body() body: unknown,
     @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.service.suggest(
-      req.auth,
-      this.input.uuid(listingId),
-      this.input.uuid(req.headers['idempotency-key']),
-      this.input.body('PriceSuggestionRequest', body),
-    );
+    const timings = new AssistTimings();
+    try {
+      return await this.service.suggest(
+        req.auth,
+        this.input.uuid(listingId),
+        this.input.uuid(req.headers['idempotency-key']),
+        this.input.body('PriceSuggestionRequest', body),
+        timings,
+      );
+    } finally {
+      res.setHeader('Server-Timing', timings.header());
+    }
   }
 }

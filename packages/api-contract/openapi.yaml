@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.60.0
+  version: 0.61.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -1995,6 +1995,10 @@ paths:
               schema:
                 type: string
                 const: no-store
+            Server-Timing:
+              description: Fixed AI stage durations in milliseconds; no user content or identifiers. ai_complete includes image/model/catalog/persistence time; stages can overlap and must not be summed.
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -2067,6 +2071,10 @@ paths:
               schema:
                 type: string
                 const: no-store
+            Server-Timing:
+              description: Fixed AI stage durations in milliseconds; no user content or identifiers. ai_complete includes image/model/catalog/persistence time; stages can overlap and must not be summed.
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -13001,6 +13009,7 @@ components:
           type: string
           format: date-time
     ListingErrorCode:
+      description: AI_ASSIST_FAILED means an advisory request has a persisted terminal failure; a deliberate new request may use a new key. Network errors and UNAVAILABLE are uncertain and must retain their original key/body.
       type: string
       enum:
         - VALIDATION_ERROR
@@ -13009,6 +13018,7 @@ components:
         - NOT_FOUND
         - RATE_LIMITED
         - UNAVAILABLE
+        - AI_ASSIST_FAILED
         - INTERNAL_ERROR
         - AccountIneligible
         - SelfReviewForbidden

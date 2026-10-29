@@ -1,3 +1,4 @@
+import { ConfirmDialog } from "../ConfirmDialog";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Check, ScanText, X } from "lucide-react";
 import {
@@ -45,25 +46,39 @@ export function PhotoAutofill({
   disabled,
   onUseField,
   onPickBook,
+  currentValue,
+  onUseCover,
 }: {
+  onUseCover?: (file: File) => void;
+  currentValue?: (field: AutofillField) => string;
   attempt: DraftAttempt;
   channel?: "Auction";
   disabled?: boolean;
   onUseField: (field: AutofillField, fields: Fields) => void;
   onPickBook: (match: AutofillMatch) => void;
 }) {
-  const ask = useMemo(() => createAutofillRequest(attempt, channel), [attempt, channel]);
+  const ask = useMemo(
+    () => createAutofillRequest(attempt, channel),
+    [attempt, channel],
+  );
   const [files, setFiles] = useState<{ file: File; url: string }[]>([]);
   const [reading, setReading] = useState(false);
   const [error, setError] = useState<string>();
   const [result, setResult] = useState<AutofillSuggestion | null>(null);
   const [used, setUsed] = useState<AutofillField[]>([]);
+  const [replace, setReplace] = useState<AutofillField[]>([]);
+  const [resultPhotos, setResultPhotos] = useState<File[]>([]);
+  const stale =
+    !!result &&
+    (files.length !== resultPhotos.length ||
+      files.some((item, index) => item.file !== resultPhotos[index]));
   const filesRef = useRef(files);
   useEffect(() => {
     filesRef.current = files;
   }, [files]);
   useEffect(
-    () => () => filesRef.current.forEach((item) => URL.revokeObjectURL(item.url)),
+    () => () =>
+      filesRef.current.forEach((item) => URL.revokeObjectURL(item.url)),
     [],
   );
 
@@ -104,6 +119,7 @@ export function PhotoAutofill({
     try {
       const next = await ask(files.map((item) => item.file));
       setResult(next);
+      setResultPhotos(files.map((item) => item.file));
       setUsed([]);
     } catch (e) {
       setError(
@@ -116,11 +132,23 @@ export function PhotoAutofill({
     }
   }
   function use(field: AutofillField) {
-    if (!result) return;
+    if (!result || stale || disabled || reading) return;
     onUseField(field, result.fields);
     setUsed((previous) => [...new Set([...previous, field])]);
   }
-  const readable = result ? ORDER.filter((key) => shown(result.fields, key)) : [];
+  function chooseFields(fields: AutofillField[]) {
+    if (!result || stale || disabled || reading) return;
+    const changed = fields.filter(
+      (field) =>
+        currentValue?.(field)?.trim() &&
+        currentValue(field).trim() !== shown(result.fields, field),
+    );
+    if (changed.length) setReplace(fields);
+    else fields.forEach(use);
+  }
+  const readable = result
+    ? ORDER.filter((key) => shown(result.fields, key))
+    : [];
 
   return (
     <section className={styles.panel} aria-labelledby="photo-autofill-title">
@@ -129,8 +157,8 @@ export function PhotoAutofill({
         <h3 id="photo-autofill-title">Điền nhanh từ ảnh</h3>
       </div>
       <p className={styles.help}>
-        Chụp bìa trước, gáy hoặc trang bản quyền. Trợ lý chỉ đọc chữ in trên sách;
-        bạn kiểm tra và chọn từng thông tin.
+        Chụp bìa trước, gáy hoặc trang bản quyền. Trợ lý chỉ đọc chữ in trên
+        sách; bạn kiểm tra và chọn từng thông tin.
       </p>
       <div className={styles.photos}>
         {files.map((item, index) => (
@@ -162,6 +190,16 @@ export function PhotoAutofill({
           </label>
         )}
       </div>
+      {onUseCover && files[0] ? (
+        <button
+          type="button"
+          className={styles.useAll}
+          disabled={disabled || reading}
+          onClick={() => onUseCover(files[0]!.file)}
+        >
+          Dùng ảnh đầu làm bìa bản sách
+        </button>
+      ) : null}
       <div className={styles.actions}>
         <button
           type="button"
@@ -172,19 +210,43 @@ export function PhotoAutofill({
         >
           {reading ? "Đang đọc…" : result ? "Đọc lại" : "Đọc thông tin"}
         </button>
-        <span className={styles.note}>Tối đa {MAX_PHOTOS} ảnh · không gửi thông tin tài khoản</span>
+        <span className={styles.note}>
+          Tối đa {MAX_PHOTOS} ảnh · không gửi thông tin tài khoản
+        </span>
       </div>
       <p className="sr-only" role="status">
-        {reading ? "Đang tải ảnh và đọc chữ trên sách." : result ? "Đã đọc xong ảnh." : ""}
+        {reading
+          ? "Đang tải ảnh và đọc chữ trên sách."
+          : result
+            ? "Đã đọc xong ảnh."
+            : ""}
       </p>
       {error && (
         <p className={styles.error} role="alert">
           {error}
         </p>
       )}
+      {stale ? (
+        <p role="status" className={styles.help}>
+          Ảnh để đọc đã thay đổi. Đọc lại trước khi dùng gợi ý.
+        </p>
+      ) : null}
+      <ConfirmDialog
+        isOpen={replace.length > 0}
+        onClose={() => setReplace([])}
+        title="Thay thông tin đang nhập?"
+        description={`Các thông tin được chọn có thể thay nội dung hiện tại: ${replace.map((field) => LABELS[field]).join(", ")}.`}
+        confirmText="Dùng gợi ý đã chọn"
+        onConfirm={() => {
+          replace.forEach(use);
+          setReplace([]);
+        }}
+      />
       {result && (
         <div className={styles.result}>
-          <p className={styles.stamp}>Gợi ý từ ảnh — kiểm tra lại trước khi đăng</p>
+          <p className={styles.stamp}>
+            Gợi ý từ ảnh — kiểm tra lại trước khi đăng
+          </p>
           {result.matches.length > 0 && (
             <div className={styles.matches}>
               <h4>Có trong thư viện</h4>
@@ -203,14 +265,18 @@ export function PhotoAutofill({
                           .join(" · ")}
                       </span>
                       <small>
-                        {match.matchedBy === "Isbn" ? "Khớp ISBN" : "Khớp tên và tác giả"}
-                        {match.pending ? " · yêu cầu của bạn đang chờ duyệt" : ""}
+                        {match.matchedBy === "Isbn"
+                          ? "Khớp ISBN"
+                          : "Khớp tên và tác giả"}
+                        {match.pending
+                          ? " · yêu cầu của bạn đang chờ duyệt"
+                          : ""}
                       </small>
                     </div>
                     <button
                       type="button"
                       onClick={() => onPickBook(match)}
-                      disabled={disabled}
+                      disabled={disabled || reading || stale}
                     >
                       Chọn đầu sách này
                     </button>
@@ -229,9 +295,11 @@ export function PhotoAutofill({
                     <dd>{shown(result.fields, key)}</dd>
                     <button
                       type="button"
-                      onClick={() => use(key)}
-                      disabled={disabled || done}
-                      aria-label={done ? `Đã dùng ${LABELS[key]}` : `Dùng ${LABELS[key]}`}
+                      onClick={() => chooseFields([key])}
+                      disabled={disabled || reading || stale || done}
+                      aria-label={
+                        done ? `Đã dùng ${LABELS[key]}` : `Dùng ${LABELS[key]}`
+                      }
                     >
                       {done ? <Check size={16} aria-hidden="true" /> : null}
                       {done ? "Đã dùng" : "Dùng"}
@@ -245,8 +313,13 @@ export function PhotoAutofill({
             <button
               type="button"
               className={styles.useAll}
-              onClick={() => readable.forEach(use)}
-              disabled={disabled || readable.every((key) => used.includes(key))}
+              onClick={() => chooseFields(readable)}
+              disabled={
+                disabled ||
+                reading ||
+                stale ||
+                readable.every((key) => used.includes(key))
+              }
             >
               Dùng tất cả thông tin đọc được
             </button>

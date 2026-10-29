@@ -1,3 +1,4 @@
+import { createAssistRequest } from "@used-books/session-client";
 import { useEffect, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, View, type ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -159,6 +160,7 @@ export function DraftEditor({
   // Price suggestion lives here so it survives step changes
   const [assist, setAssist] = useState<AssistState>({ status: "idle" });
   const assistToken = useRef(0);
+  const [askAssist] = useState(() => createAssistRequest(client, Crypto.randomUUID));
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const go = (value: number) => {
@@ -292,16 +294,7 @@ export function DraftEditor({
     const token = ++assistToken.current;
     setAssist((s) => startLoading(s, assistKey, token));
     try {
-      const result = await client.request(
-        `/listings/${base.id}/price-suggestions`,
-        priceSuggestion,
-        {
-          method: "POST",
-          headers: { "Idempotency-Key": Crypto.randomUUID() },
-          body: JSON.stringify(input),
-        },
-        30000,
-      );
+      const result = await askAssist(`/listings/${base.id}/price-suggestions`, priceSuggestion, input, 30000);
       setAssist((s) => finishLoading(s, token, base.id, result));
     } catch (e) {
       setAssist((s) => failLoading(s, token, assistError(e)));
@@ -798,6 +791,7 @@ export function DraftEditor({
           ) : (
             <>
               <CatalogPicker
+                assistPhotos={{ listingId: base.id, photos: photoList.filter(p => form.mediaIds.includes(p.id)), add: () => void send(false) }}
                 selected={form.bookId}
                 onDirtyChange={setCatalogDirty}
                 disabled={locked}

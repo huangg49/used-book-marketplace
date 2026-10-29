@@ -46,13 +46,20 @@ const suggestion = (over: Partial<PriceSuggestion> = {}): PriceSuggestion => ({
   missing: [],
   dataAsOf: null,
   generatedAt: "2026-10-05T00:00:00.000Z",
-  expiresAt: "2026-10-06T00:00:00.000Z",
+  expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
   model: "m",
   cached: false,
   ...over,
 });
 
 describe("price suggestion client rules", () => {
+  it("never attaches an expired suggestion decision to a save", () => {
+    const key = suggestionKey(listing, form);
+    const value: AssistState = { status: "ready", key, suggestion: suggestion({ expiresAt: new Date(Date.now()-1).toISOString() }), appliedPrice: 40000 };
+    expect(isStale(value, key)).toBe(true);
+    expect(decisionFor(value, key, form)).toBeUndefined();
+  });
+
   it("sends only book and condition fields, joining condition notes", () => {
     expect(suggestionInput(form)).toEqual({
       bookId: book,
