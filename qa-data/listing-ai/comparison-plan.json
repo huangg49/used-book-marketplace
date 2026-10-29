@@ -1,0 +1,571 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-29T05:38:41.866Z",
+  "base": "12f108d",
+  "provider": "nvidia",
+  "prompt": "unchanged AUTOFILL_SYSTEM/AUTOFILL_USER",
+  "models": {
+    "baseline": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+    "candidates": [
+      "google/gemma-4-31b-it",
+      "google/gemma-3-12b-it"
+    ]
+  },
+  "budget": {
+    "maxEstimatedUsd": 0.3,
+    "maxCalls": 42,
+    "timeoutMs": 25000
+  },
+  "selection": {
+    "developmentOnly": true,
+    "order": [
+      "titleExact desc",
+      "authorsExact desc",
+      "p95 asc",
+      "model ID asc"
+    ],
+    "minimumTitleGain": 2
+  },
+  "promotion": {
+    "holdoutCases": 12,
+    "minimumCorrectTitles": 10,
+    "minimumTitleGain": 2,
+    "noAuthorRegression": true,
+    "maxWrongIsbn": 0,
+    "maxFailures": 0,
+    "maxP95Ms": 8000,
+    "requiresHumanRealCameraBeforeAcceptance": true
+  },
+  "limits": [
+    "Answer review is AI only, not independent human acceptance",
+    "New work identities and hashes, no original24 in holdout",
+    "Two publisher product feeds, convenience sample; not representative phone photos",
+    "All ISBN absent: no positive ISBN read coverage",
+    "One marketing mockup,11 product covers",
+    "Alternative title spellings frozen before model outputs",
+    "No prompt tuning after holdout; additional tuning needs new holdout"
+  ],
+  "screen": [
+    {
+      "id": "case-de-men-bm-kd-2023",
+      "bookKey": "de-men-bm-kd-2023",
+      "reviewed": false,
+      "photos": [
+        {
+          "path": "screen/images/de-men-bm-kd-2023.jpg",
+          "sha256": "0d63447a7b9a1e0550cbc9d8a34ac8cbd495a3e8d917fc87b0c50305eaf98d84"
+        }
+      ],
+      "expected": {
+        "title": "Dế Mèn phiêu lưu ký",
+        "authors": [
+          "Tô Hoài"
+        ],
+        "isbn": null
+      },
+      "source": "cover-scan",
+      "workKey": "de-men-bm-kd-2023",
+      "titleAlternatives": [],
+      "annotation": {
+        "method": "Codex visual re-read; old exposed development data, not holdout or human review"
+      }
+    },
+    {
+      "id": "case-ong-gia-bien-ca-kd-2025",
+      "bookKey": "ong-gia-bien-ca-kd-2025",
+      "reviewed": false,
+      "photos": [
+        {
+          "path": "screen/images/ong-gia-bien-ca-kd-2025.jpg",
+          "sha256": "095542eacdedd070b88356ba0a3f01ed76e1b40d97eec0a78e337671cf0f49f0"
+        }
+      ],
+      "expected": {
+        "title": "Ông già và biển cả",
+        "authors": [
+          "Ernest Hemingway"
+        ],
+        "isbn": null
+      },
+      "source": "cover-scan",
+      "workKey": "ong-gia-bien-ca-kd-2025",
+      "titleAlternatives": [],
+      "annotation": {
+        "method": "Codex visual re-read; old exposed development data, not holdout or human review"
+      }
+    },
+    {
+      "id": "case-so-do-nhanam-2021",
+      "bookKey": "so-do-nhanam-2021",
+      "reviewed": false,
+      "photos": [
+        {
+          "path": "screen/images/so-do-nhanam-2021.jpg",
+          "sha256": "2695d92ee16f33725f2cf52b3ca418ac1331f3897cf93ad8cedfce689dea7e92"
+        }
+      ],
+      "expected": {
+        "title": "Số đỏ",
+        "authors": [
+          "Vũ Trọng Phụng"
+        ],
+        "isbn": null
+      },
+      "source": "cover-scan",
+      "workKey": "so-do-nhanam-2021",
+      "titleAlternatives": [],
+      "annotation": {
+        "method": "Codex visual re-read; old exposed development data, not holdout or human review"
+      }
+    },
+    {
+      "id": "case-mat-biec-tre-bm-2022",
+      "bookKey": "mat-biec-tre-bm-2022",
+      "reviewed": false,
+      "photos": [
+        {
+          "path": "screen/images/mat-biec-tre-bm-2022.jpg",
+          "sha256": "60bf9f15622d4a11cd0a7a0afe1e119bbd4e0ccc3ce8712a3db693f1fafce33d"
+        }
+      ],
+      "expected": {
+        "title": "Mắt biếc",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "isbn": null
+      },
+      "source": "cover-scan",
+      "workKey": "mat-biec-tre-bm-2022",
+      "titleAlternatives": [],
+      "annotation": {
+        "method": "Codex visual re-read; old exposed development data, not holdout or human review"
+      }
+    },
+    {
+      "id": "case-chien-binh-cau-vong-nhanam-2022",
+      "bookKey": "chien-binh-cau-vong-nhanam-2022",
+      "reviewed": false,
+      "photos": [
+        {
+          "path": "screen/images/chien-binh-cau-vong-nhanam-2022.jpg",
+          "sha256": "f94b70efb5820a337b15ca8263d618e239a1b77b089ead055c757548d6c37284"
+        }
+      ],
+      "expected": {
+        "title": "Chiến binh cầu vồng",
+        "authors": [
+          "Andrea Hirata"
+        ],
+        "isbn": null
+      },
+      "source": "cover-scan",
+      "workKey": "chien-binh-cau-vong-nhanam-2022",
+      "titleAlternatives": [],
+      "annotation": {
+        "method": "Codex visual re-read; old exposed development data, not holdout or human review"
+      }
+    },
+    {
+      "id": "case-tat-den-kd-2021",
+      "bookKey": "tat-den-kd-2021",
+      "reviewed": false,
+      "photos": [
+        {
+          "path": "screen/images/tat-den-kd-2021.jpg",
+          "sha256": "a443d8abfcf4da126a3b6b3ebe0cab7f3d480f693400fd982b43ca340ab1e142"
+        }
+      ],
+      "expected": {
+        "title": "Tắt đèn",
+        "authors": [
+          "Ngô Tất Tố"
+        ],
+        "isbn": null
+      },
+      "source": "cover-scan",
+      "workKey": "tat-den-kd-2021",
+      "titleAlternatives": [],
+      "annotation": {
+        "method": "Codex visual re-read; old exposed development data, not holdout or human review"
+      }
+    }
+  ],
+  "holdout": [
+    {
+      "id": "nhanam-93989769",
+      "bookKey": "nhanam-93989769",
+      "workKey": "cuoc-song-dieu-ky-cua-loai-vat-noi-coi-khac",
+      "source": "cover-scan",
+      "photos": [
+        {
+          "path": "holdout/images/nhanam-93989769.png",
+          "sha256": "a153932b90043c743b8c9efa956dbffcbc3f08ec23f313f38ea18de3c8a5200e"
+        }
+      ],
+      "expected": {
+        "title": "Cuộc sống diệu kỳ của loài vật nơi cõi khác",
+        "authors": [
+          "Karen A. Anderson"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "titleAlternatives": [],
+      "sourceUrl": "https://nhanam.vn/cuoc-song-dieu-ky-cua-loai-vat-noi-coi-khac",
+      "imageUrl": "https://bizweb.dktcdn.net/100/625/048/products/anh-website-43.png?v=1792383576470",
+      "rights": "unknown",
+      "annotation": {
+        "method": "Codex visual transcription before comparison, not human review",
+        "titleEvidence": "Visible cover title; excludes price, marketing badges, publisher; preserves identifying volume",
+        "authorsEvidence": "Visible author byline; excludes translator",
+        "isbnEvidence": "No printed ISBN visible in supplied front image",
+        "imageType": "publisher product cover"
+      }
+    },
+    {
+      "id": "nhanam-93909256",
+      "bookKey": "nhanam-93909256",
+      "workKey": "khoa-hoc-ve-tap-khang-luc-435-000",
+      "source": "cover-scan",
+      "photos": [
+        {
+          "path": "holdout/images/nhanam-93909256.webp",
+          "sha256": "189411bc2af07cb38756e6b8ac03713ed293b9c75781414baef6939086840156"
+        }
+      ],
+      "expected": {
+        "title": "Khoa học về tập kháng lực",
+        "authors": [
+          "Austin Current"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "titleAlternatives": [],
+      "sourceUrl": "https://nhanam.vn/khoa-hoc-ve-tap-khang-luc-435-000",
+      "imageUrl": "https://bizweb.dktcdn.net/100/625/048/products/khoahocvetapkhanglucconvert01.webp?v=1791800754657",
+      "rights": "unknown",
+      "annotation": {
+        "method": "Codex visual transcription before comparison, not human review",
+        "titleEvidence": "Visible cover title; excludes price, marketing badges, publisher; preserves identifying volume",
+        "authorsEvidence": "Visible author byline; excludes translator",
+        "isbnEvidence": "No printed ISBN visible in supplied front image",
+        "imageType": "publisher product cover"
+      }
+    },
+    {
+      "id": "nhanam-93678712",
+      "bookKey": "nhanam-93678712",
+      "workKey": "lolita-tb-185-000",
+      "source": "cover-scan",
+      "photos": [
+        {
+          "path": "holdout/images/nhanam-93678712.webp",
+          "sha256": "079ea5bccaadf095282a4a1145fff8440d5c38d0bcaf02bb19449bf04116f997"
+        }
+      ],
+      "expected": {
+        "title": "Lolita",
+        "authors": [
+          "Vladimir Nabokov"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "titleAlternatives": [],
+      "sourceUrl": "https://nhanam.vn/lolita-tb-185-000",
+      "imageUrl": "https://bizweb.dktcdn.net/100/625/048/products/lolitanew-dfe0d52a-c10f-4362-a3cf-83c9526a78ce-a2c6953b-8481-4dc3-8512-fbf7a524bbaa.webp?v=1791729872663",
+      "rights": "unknown",
+      "annotation": {
+        "method": "Codex visual transcription before comparison, not human review",
+        "titleEvidence": "Visible cover title; excludes price, marketing badges, publisher; preserves identifying volume",
+        "authorsEvidence": "Visible author byline; excludes translator",
+        "isbnEvidence": "No printed ISBN visible in supplied front image",
+        "imageType": "publisher product cover"
+      }
+    },
+    {
+      "id": "nhanam-93413956",
+      "bookKey": "nhanam-93413956",
+      "workKey": "tup-leu-bac-tom-205-000d",
+      "source": "cover-scan",
+      "photos": [
+        {
+          "path": "holdout/images/nhanam-93413956.jpg",
+          "sha256": "7b36312b802a000ea3d3fec7ccb7d74e28b27d49b8db4262ab4df510a7f958a3"
+        }
+      ],
+      "expected": {
+        "title": "Túp lều bác Tôm",
+        "authors": [
+          "Harriet Beecher Stowe"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "titleAlternatives": [],
+      "sourceUrl": "https://nhanam.vn/tup-leu-bac-tom-205-000d",
+      "imageUrl": "https://bizweb.dktcdn.net/100/625/048/products/tupleubactom01-e7689e70-ca16-4138-8861-bad1eebd5c28.webp?v=1791431984523",
+      "rights": "unknown",
+      "annotation": {
+        "method": "Codex visual transcription before comparison, not human review",
+        "titleEvidence": "Visible cover title; excludes price, marketing badges, publisher; preserves identifying volume",
+        "authorsEvidence": "Visible author byline; excludes translator",
+        "isbnEvidence": "No printed ISBN visible in supplied front image",
+        "imageType": "publisher product cover"
+      }
+    },
+    {
+      "id": "nhanam-93392980",
+      "bookKey": "nhanam-93392980",
+      "workKey": "huong-vi-pho-co-ha-noi",
+      "source": "cover-scan",
+      "photos": [
+        {
+          "path": "holdout/images/nhanam-93392980.webp",
+          "sha256": "9e831a73b922a8fd6df1650050d523673cce34e2189fb17c2a0c01f00a66693b"
+        }
+      ],
+      "expected": {
+        "title": "Hương vị phố cổ Hà Nội",
+        "isbn": null
+      },
+      "reviewed": false,
+      "titleAlternatives": [],
+      "sourceUrl": "https://nhanam.vn/huong-vi-pho-co-ha-noi",
+      "imageUrl": "https://bizweb.dktcdn.net/100/625/048/products/anh-sp-website-t9-2026-02.webp?v=1791364759870",
+      "rights": "unknown",
+      "annotation": {
+        "method": "Codex visual transcription before comparison, not human review",
+        "titleEvidence": "Visible cover title; excludes price, marketing badges, publisher; preserves identifying volume",
+        "authorsEvidence": "Only generic Nhiều tác giả visible; authors not scored",
+        "isbnEvidence": "No printed ISBN visible in supplied front image",
+        "imageType": "publisher marketing mockup"
+      }
+    },
+    {
+      "id": "nhanam-93148141",
+      "bookKey": "nhanam-93148141",
+      "workKey": "thien-nga-va-doi-1",
+      "source": "cover-scan",
+      "photos": [
+        {
+          "path": "holdout/images/nhanam-93148141.jpg",
+          "sha256": "f70d76989e7819aae7ba9f04bb799d0e542991d8085fcf4432f211cc7c14266c"
+        }
+      ],
+      "expected": {
+        "title": "Thiên nga và dơi",
+        "authors": [
+          "Higashino Keigo"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "titleAlternatives": [],
+      "sourceUrl": "https://nhanam.vn/thien-nga-va-doi-1",
+      "imageUrl": "https://bizweb.dktcdn.net/100/625/048/products/thienngavadoi01-f23b8dda-f7ca-49b5-90d8-8b8790aa7e14.jpg?v=1791357332973",
+      "rights": "unknown",
+      "annotation": {
+        "method": "Codex visual transcription before comparison, not human review",
+        "titleEvidence": "Visible cover title; excludes price, marketing badges, publisher; preserves identifying volume",
+        "authorsEvidence": "Visible author byline; excludes translator",
+        "isbnEvidence": "No printed ISBN visible in supplied front image",
+        "imageType": "publisher product cover"
+      }
+    },
+    {
+      "id": "kimdong-95420175",
+      "bookKey": "kimdong-95420175",
+      "workKey": "co-mot-con-cho-bay-qua-noc-nha",
+      "source": "cover-scan",
+      "photos": [
+        {
+          "path": "holdout/images/kimdong-95420175.jpg",
+          "sha256": "7879d44e5387089b6391d3c31d70fd37fa7a764b7d14eaba856a01a75541a6ad"
+        }
+      ],
+      "expected": {
+        "title": "Có một con chó bay qua nóc nhà",
+        "authors": [
+          "Trần Đức Tiến"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "titleAlternatives": [],
+      "sourceUrl": "https://nxbkimdong.com.vn/co-mot-con-cho-bay-qua-noc-nha",
+      "imageUrl": "https://bizweb.dktcdn.net/100/576/749/products/cc50771a-ae36-4d35-b246-e7586369a2fa.jpg?v=1793181336253",
+      "rights": "unknown",
+      "annotation": {
+        "method": "Codex visual transcription before comparison, not human review",
+        "titleEvidence": "Visible cover title; excludes price, marketing badges, publisher; preserves identifying volume",
+        "authorsEvidence": "Trần Đức Tiến; Kim Duẩn is marked minh họa",
+        "isbnEvidence": "No printed ISBN visible in supplied front image",
+        "imageType": "publisher product cover"
+      }
+    },
+    {
+      "id": "kimdong-95414680",
+      "bookKey": "kimdong-95414680",
+      "workKey": "ao-tuong-ve-su-ban-ron-su-ban-ron-va-khoi-luong-cong-viec-thuc-ra-khong-lien-quan-nhieu-den-nhau",
+      "source": "cover-scan",
+      "photos": [
+        {
+          "path": "holdout/images/kimdong-95414680.jpg",
+          "sha256": "c155dd522786aaae2063ce8d1e29d0c18eb20f8a0a7199a0da0ace62d656212b"
+        }
+      ],
+      "expected": {
+        "title": "Ảo tưởng về sự bận rộn",
+        "authors": [
+          "Toyodome Natsumi"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "titleAlternatives": [
+        "Ảo tưởng về sự bận rộn - Sự bận rộn và khối lượng công việc thực ra không liên quan nhiều đến nhau"
+      ],
+      "sourceUrl": "https://nxbkimdong.com.vn/ao-tuong-ve-su-ban-ron-su-ban-ron-va-khoi-luong-cong-viec-thuc-ra-khong-lien-quan-nhieu-den-nhau",
+      "imageUrl": "https://bizweb.dktcdn.net/100/576/749/products/5cd29274-62f2-4b73-962e-8899019264e8.jpg?v=1793180998497",
+      "rights": "unknown",
+      "annotation": {
+        "method": "Codex visual transcription before comparison, not human review",
+        "titleEvidence": "Visible cover title; excludes price, marketing badges, publisher; preserves identifying volume",
+        "authorsEvidence": "Visible author byline; excludes translator",
+        "isbnEvidence": "No printed ISBN visible in supplied front image",
+        "imageType": "publisher product cover"
+      }
+    },
+    {
+      "id": "kimdong-95162724",
+      "bookKey": "kimdong-95162724",
+      "workKey": "hanh-trinh-yeu-thuong-noi-dai-nhat-ki-thien-nhan-2",
+      "source": "cover-scan",
+      "photos": [
+        {
+          "path": "holdout/images/kimdong-95162724.jpg",
+          "sha256": "c64e34f8184c7448659cce52434cc65ac608180831aedf87f46daaac94d26d7d"
+        }
+      ],
+      "expected": {
+        "title": "Hành trình yêu thương nối dài - Nhật kí Thiện Nhân 2",
+        "authors": [
+          "Trần Mai Anh"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "titleAlternatives": [],
+      "sourceUrl": "https://nxbkimdong.com.vn/hanh-trinh-yeu-thuong-noi-dai-nhat-ki-thien-nhan-2",
+      "imageUrl": "https://bizweb.dktcdn.net/100/576/749/products/99d1b553-ec47-4b37-a7e1-1cf7fcea325a.jpg?v=1793014624000",
+      "rights": "unknown",
+      "annotation": {
+        "method": "Codex visual transcription before comparison, not human review",
+        "titleEvidence": "Visible cover title; excludes price, marketing badges, publisher; preserves identifying volume",
+        "authorsEvidence": "Visible author byline; excludes translator",
+        "isbnEvidence": "No printed ISBN visible in supplied front image",
+        "imageType": "publisher product cover"
+      }
+    },
+    {
+      "id": "kimdong-94836035",
+      "bookKey": "kimdong-94836035",
+      "workKey": "nhung-la-thu-nho-gio-gui-ai-do-26",
+      "source": "cover-scan",
+      "photos": [
+        {
+          "path": "holdout/images/kimdong-94836035.jpg",
+          "sha256": "a0996cc7feb2b783c7433de7ccb2db2940e5875415655a285ea80a0218feb488"
+        }
+      ],
+      "expected": {
+        "title": "Những lá thư nhờ gió gửi ai đó",
+        "authors": [
+          "Toon Tellegen"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "titleAlternatives": [],
+      "sourceUrl": "https://nxbkimdong.com.vn/nhung-la-thu-nho-gio-gui-ai-do-26",
+      "imageUrl": "https://bizweb.dktcdn.net/100/576/749/products/nhung-la-thu-nho-gio-gui-ai-do-tb-2025-51aeedf51f7a49739fe7f4cf049a70d7-ca3a57f6-2c21-488a-ab83-0a2047c4b09b.jpg?v=1792730989403",
+      "rights": "unknown",
+      "annotation": {
+        "method": "Codex visual transcription before comparison, not human review",
+        "titleEvidence": "Visible cover title; excludes price, marketing badges, publisher; preserves identifying volume",
+        "authorsEvidence": "Toon Tellegen; excludes Jessica Ahlberg minh họa and Huy Toàn dịch",
+        "isbnEvidence": "No printed ISBN visible in supplied front image",
+        "imageType": "publisher product cover"
+      }
+    },
+    {
+      "id": "kimdong-94713250",
+      "bookKey": "kimdong-94713250",
+      "workKey": "cac-trieu-dai-viet-nam",
+      "source": "cover-scan",
+      "photos": [
+        {
+          "path": "holdout/images/kimdong-94713250.jpg",
+          "sha256": "69a2b3e437d3ce9d3806812e087723e3ed554ed1dc2dec408a9fc8485f4b6c32"
+        }
+      ],
+      "expected": {
+        "title": "Các triều đại Việt Nam",
+        "authors": [
+          "Quỳnh Cư",
+          "Đỗ Đức Hùng"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "titleAlternatives": [],
+      "sourceUrl": "https://nxbkimdong.com.vn/cac-trieu-dai-viet-nam",
+      "imageUrl": "https://bizweb.dktcdn.net/100/576/749/products/e0528a58-3d84-4347-bb3d-d77d1dcf41d8.jpg?v=1792578380387",
+      "rights": "unknown",
+      "annotation": {
+        "method": "Codex visual transcription before comparison, not human review",
+        "titleEvidence": "Visible cover title; excludes price, marketing badges, publisher; preserves identifying volume",
+        "authorsEvidence": "Quỳnh Cư and Đỗ Đức Hùng; excludes Hoàng Phong Hà hiệu đính",
+        "isbnEvidence": "No printed ISBN visible in supplied front image",
+        "imageType": "publisher product cover"
+      }
+    },
+    {
+      "id": "kimdong-94764407",
+      "bookKey": "kimdong-94764407",
+      "workKey": "tham-tu-lung-danh-conan-hoat-hinh-mau-tau-ngam-sat-mau-den-tap-2-26",
+      "source": "cover-scan",
+      "photos": [
+        {
+          "path": "holdout/images/kimdong-94764407.jpg",
+          "sha256": "cb773153a79f42929e79069269dcb71a9e72dbc858e4e6d30eca8663ad329236"
+        }
+      ],
+      "expected": {
+        "title": "Thám tử lừng danh Conan - Tàu ngầm sắt màu đen - Tập 2",
+        "authors": [
+          "Gosho Aoyama",
+          "Takeharu Sakurai"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "titleAlternatives": [
+        "Thám tử lừng danh Conan - Hoạt hình màu - Tàu ngầm sắt màu đen - Tập 2"
+      ],
+      "sourceUrl": "https://nxbkimdong.com.vn/tham-tu-lung-danh-conan-hoat-hinh-mau-tau-ngam-sat-mau-den-tap-2-26",
+      "imageUrl": "https://bizweb.dktcdn.net/100/576/749/products/fec01aef-6d40-408f-a03e-e3f705425165-dbca0fb7-8a7e-4ba3-b7a3-536c777df73f.jpg?v=1792652177793",
+      "rights": "unknown",
+      "annotation": {
+        "method": "Codex visual transcription before comparison, not human review",
+        "titleEvidence": "Visible cover title; excludes price, marketing badges, publisher; preserves identifying volume",
+        "authorsEvidence": "Nguyên tác Gosho Aoyama; kịch bản Takeharu Sakurai; excludes translator",
+        "isbnEvidence": "No printed ISBN visible in supplied front image",
+        "imageType": "publisher product cover"
+      }
+    }
+  ]
+}
