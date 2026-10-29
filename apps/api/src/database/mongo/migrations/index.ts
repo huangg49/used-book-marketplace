@@ -1,3 +1,5 @@
+import { transactionReviewValidatorFixMigration } from './0039-transaction-review-validator-fix.js';
+import { reviewValidatorReconciliationMigration } from './0041-review-validator-reconciliation.js';
 import { conversationAgreementsMigration, conversationAgreementSpecs } from './0032-conversation-agreements.js';
 import { wholeBookBundlesMigration, withBookBundles } from './0035-whole-book-bundles.js';
 import { bundleReviewSearchMigration, withBundleReviewSearch } from './0036-bundle-review-search.js';
@@ -293,8 +295,10 @@ export const migrations: Migration[] = [
   sellerScheduledAuctionsMigration,
   moderationOverviewIndexesMigration,
   listingAutofillMigration,
+  transactionReviewValidatorFixMigration,
   exchangeInspectionDeadlinesMigration,
   transactionReviewLifecycleMigration,
+  reviewValidatorReconciliationMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>

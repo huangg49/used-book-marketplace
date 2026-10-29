@@ -23,7 +23,7 @@ export function SettlementCard({ detail }: SettlementCardProps) {
                 <div className={styles.bannerText}>
                     <h3 className={styles.title}>Giao dịch Trao đổi Hoàn tất Thành công!</h3>
                     <p className={styles.subtitle}>
-                        Cả hai bên đã nhận và nghiệm thu sách. Hệ thống đã tự động tất toán ký quỹ và dòng tiền.
+                        Thời hạn kiểm tra của cả hai bên đã kết thúc. Hệ thống đã tất toán ký quỹ và dòng tiền.
                     </p>
                 </div>
             </div>

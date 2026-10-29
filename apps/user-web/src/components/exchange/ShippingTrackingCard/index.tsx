@@ -253,7 +253,7 @@ export function ShippingTrackingCard({ detail, onRefresh }: ShippingTrackingCard
                             {isReceived ? <Check size={11} strokeWidth={3} /> : 3}
                         </div>
                         <span className={styles.stepLabel}>
-                            {isOutgoing ? 'Đối tác đã nhận' : 'Đồng kiểm 48h'}
+                            {isOutgoing ? 'Đối tác đã nhận' : 'Đồng kiểm 72h'}
                         </span>
                     </div>
                 </div>
@@ -530,7 +530,7 @@ export function ShippingTrackingCard({ detail, onRefresh }: ShippingTrackingCard
                     <div>
                         <strong>Cả 2 gói sách đang trên đường giao nhận!</strong>
                         <p>
-                            Khi bạn nhận được bưu phẩm từ bưu tá, hãy mở kiểm tra kỹ tình trạng sách và bấm <em>"Xác nhận đã nhận sách"</em> ở bảng thao tác bên dưới để mở thời gian đồng kiểm 48 giờ.
+                            Khi bạn nhận được bưu phẩm từ bưu tá, hãy mở kiểm tra kỹ tình trạng sách và bấm <em>"Xác nhận đã nhận sách"</em> ở bảng thao tác bên dưới để mở thời gian đồng kiểm 72 giờ.
                         </p>
                     </div>
                 </div>
@@ -575,7 +575,7 @@ export function ShippingTrackingCard({ detail, onRefresh }: ShippingTrackingCard
                 <div className={styles.rulesCalloutText}>
                     <h5 className={styles.rulesTitle}>Bảo chứng an toàn giao dịch Lật Lại (POL-14)</h5>
                     <p className={styles.rulesDesc}>
-                        Toàn bộ số tiền đặt cọc <strong>({detail.viewerFundingAmount ? `${detail.viewerFundingAmount.toLocaleString('vi-VN')} đ` : 'cọc bảo chứng'})</strong> và tiền bù chênh lệch đang được hệ thống giữ an toàn trong quỹ ký quỹ (escrow). Sau khi cả hai bên xác nhận nhận sách, hệ thống sẽ mở khoảng đệm kiểm tra hàng <strong>48 giờ</strong>. Bạn có thể bấm "Đã nhận hàng" để hoàn tất sớm, hoặc hệ thống sẽ tự động hoàn tất và trả lại tiền cọc khi hết hạn kiểm tra.
+                        Toàn bộ số tiền đặt cọc <strong>({detail.viewerFundingAmount ? `${detail.viewerFundingAmount.toLocaleString('vi-VN')} đ` : 'cọc bảo chứng'})</strong> và tiền bù chênh lệch đang được hệ thống giữ an toàn trong quỹ ký quỹ (escrow). Mỗi bên có <strong>72 giờ</strong> kiểm tra từ lúc xác nhận nhận sách. Xác nhận đã kiểm tra không hoàn cọc sớm; hệ thống chỉ tất toán sau cả hai hạn nếu không có tranh chấp.
                     </p>
                 </div>
             </div>

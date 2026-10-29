@@ -10,6 +10,7 @@ import type { Listing } from "../shelf/contracts";
 interface ExchangeProposalCardProps {
   exchange: Exchange;
   isInitiator: boolean;
+  initiatorListings?: (Listing | null)[] | null;
   initiatorListing?: Listing | null;
   recipientListing?: Listing | null;
 }
@@ -17,20 +18,41 @@ interface ExchangeProposalCardProps {
 export function ExchangeProposalCard({
   exchange,
   isInitiator,
+  initiatorListings,
   initiatorListing,
   recipientListing,
 }: ExchangeProposalCardProps) {
   const statusInfo = mapExchangeStatusInfo(exchange.status, isInitiator);
 
-  const myListing = isInitiator ? initiatorListing : recipientListing;
-  const partnerListing = isInitiator ? recipientListing : initiatorListing;
+  const initiatorListingCount =
+    exchange.initiatorListingIds && exchange.initiatorListingIds.length > 0
+      ? exchange.initiatorListingIds.length
+      : 1;
+
+  const initiatorBookList: (Listing | null)[] =
+    initiatorListings && initiatorListings.length > 0
+      ? initiatorListings
+      : initiatorListing
+        ? [initiatorListing]
+        : new Array(initiatorListingCount).fill(null);
+
+  const recipientBookList: (Listing | null)[] = recipientListing
+    ? [recipientListing]
+    : [null];
+
+  const myBooks = isInitiator ? initiatorBookList : recipientBookList;
+  const partnerBooks = isInitiator ? recipientBookList : initiatorBookList;
+
+  const partnerListingPrimary = isInitiator
+    ? recipientListing
+    : initiatorListing ?? initiatorListings?.[0];
 
   const partnerAddressName = isInitiator
     ? exchange.recipientAddress?.recipientName
     : exchange.initiatorAddress?.recipientName;
 
   const partnerName =
-    partnerListing?.seller.displayName ??
+    partnerListingPrimary?.seller.displayName ??
     partnerAddressName ??
     (isInitiator ? "Đối tác" : "Đối tác đề nghị");
 
@@ -82,45 +104,69 @@ export function ExchangeProposalCard({
 
       {/* 2. Book Exchange Matchup Cards */}
       <View style={styles.booksComparison}>
-        {/* Your Book (Sách của bạn gửi đi) */}
+        {/* Your Books (Sách của bạn gửi đi) */}
         <View style={styles.bookSideCard}>
           <View style={styles.sideHeader}>
-            <AppText style={styles.sideBadge}>SÁCH CỦA BẠN GỬI ĐI</AppText>
+            <AppText style={styles.sideBadge}>
+              {myBooks.length > 1
+                ? `SÁCH BẠN GỬI ĐI (${myBooks.length} CUỐN)`
+                : "SÁCH CỦA BẠN GỬI ĐI"}
+            </AppText>
           </View>
-          <View style={styles.bookInfoRow}>
-            <View style={styles.photoBox}>
-              {myListing?.photos[0] ? (
-                <PublicPhoto
-                  listingId={myListing.id}
-                  revisionId={myListing.revisionId}
-                  mediaId={myListing.photos[0].id}
-                  label="Bìa sách bạn gửi"
-                  active={true}
-                  compact
-                />
-              ) : (
-                <View style={styles.photoPlaceholder}>
-                  <Icon name="book" size={24} color={stitchTokens.roseBrown} />
+          <View style={{ gap: 8 }}>
+            {myBooks.length > 0 ? (
+              myBooks.map((item, idx) => (
+                <View key={item?.id ?? `my-${idx}`} style={styles.bookInfoRow}>
+                  <View style={styles.photoBox}>
+                    {item?.photos?.[0] ? (
+                      <PublicPhoto
+                        listingId={item.id}
+                        revisionId={item.revisionId}
+                        mediaId={item.photos[0].id}
+                        label="Bìa sách bạn gửi"
+                        active={true}
+                        compact
+                      />
+                    ) : (
+                      <View style={styles.photoPlaceholder}>
+                        <Icon name="book" size={24} color={stitchTokens.roseBrown} />
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.bookTextCol}>
+                    {item ? (
+                      <>
+                        <AppText style={styles.bookTitle} numberOfLines={2}>
+                          {item.book.title}
+                        </AppText>
+                        <AppText style={styles.bookAuthors} numberOfLines={1}>
+                          {item.book.authors.join(", ")}
+                        </AppText>
+                        <AppText style={styles.bookValue}>
+                          Giá trị: {formatVnd(item.exchangeValue ?? item.salePrice ?? 0)}
+                        </AppText>
+                      </>
+                    ) : (
+                      <>
+                        <AppText style={styles.bookTitle} numberOfLines={2}>
+                          Sách gửi trao đổi #{idx + 1}
+                        </AppText>
+                        <AppText style={styles.bookAuthors} numberOfLines={1}>
+                          {exchange.status === "Completed"
+                            ? "Đã giao nhận hoàn tất"
+                            : "Sách trong thỏa thuận trao đổi"}
+                        </AppText>
+                        <AppText style={styles.bookValue}>
+                          {exchange.status === "Completed"
+                            ? "Đã đối soát lưu ký"
+                            : "Chi tiết trong hồ sơ"}
+                        </AppText>
+                      </>
+                    )}
+                  </View>
                 </View>
-              )}
-            </View>
-            <View style={styles.bookTextCol}>
-              {myListing ? (
-                <>
-                  <AppText style={styles.bookTitle} numberOfLines={2}>
-                    {myListing.book.title}
-                  </AppText>
-                  <AppText style={styles.bookAuthors} numberOfLines={1}>
-                    {myListing.book.authors.join(", ")}
-                  </AppText>
-                  <AppText style={styles.bookValue}>
-                    Giá trị: {formatVnd(myListing.exchangeValue ?? myListing.salePrice ?? 0)}
-                  </AppText>
-                </>
-              ) : (
-                <AppText style={styles.loadingBook}>Đang tải thông tin sách...</AppText>
-              )}
-            </View>
+              ))
+            ) : null}
           </View>
         </View>
 
@@ -133,45 +179,69 @@ export function ExchangeProposalCard({
           <View style={styles.swapLine} />
         </View>
 
-        {/* Partner Book */}
+        {/* Partner Books */}
         <View style={styles.bookSideCard}>
           <View style={styles.sideHeader}>
-            <AppText style={styles.sideBadgePartner}>SÁCH BẠN NHẬN VỀ (TỪ @{partnerName})</AppText>
+            <AppText style={styles.sideBadgePartner}>
+              {partnerBooks.length > 1
+                ? `SÁCH BẠN NHẬN VỀ (${partnerBooks.length} CUỐN TỪ @${partnerName})`
+                : `SÁCH BẠN NHẬN VỀ (TỪ @${partnerName})`}
+            </AppText>
           </View>
-          <View style={styles.bookInfoRow}>
-            <View style={styles.photoBox}>
-              {partnerListing?.photos[0] ? (
-                <PublicPhoto
-                  listingId={partnerListing.id}
-                  revisionId={partnerListing.revisionId}
-                  mediaId={partnerListing.photos[0].id}
-                  label="Bìa sách bạn nhận"
-                  active={true}
-                  compact
-                />
-              ) : (
-                <View style={styles.photoPlaceholder}>
-                  <Icon name="book" size={24} color={stitchTokens.roseBrown} />
+          <View style={{ gap: 8 }}>
+            {partnerBooks.length > 0 ? (
+              partnerBooks.map((item, idx) => (
+                <View key={item?.id ?? `partner-${idx}`} style={styles.bookInfoRow}>
+                  <View style={styles.photoBox}>
+                    {item?.photos?.[0] ? (
+                      <PublicPhoto
+                        listingId={item.id}
+                        revisionId={item.revisionId}
+                        mediaId={item.photos[0].id}
+                        label="Bìa sách bạn nhận"
+                        active={true}
+                        compact
+                      />
+                    ) : (
+                      <View style={styles.photoPlaceholder}>
+                        <Icon name="book" size={24} color={stitchTokens.roseBrown} />
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.bookTextCol}>
+                    {item ? (
+                      <>
+                        <AppText style={styles.bookTitle} numberOfLines={2}>
+                          {item.book.title}
+                        </AppText>
+                        <AppText style={styles.bookAuthors} numberOfLines={1}>
+                          {item.book.authors.join(", ")}
+                        </AppText>
+                        <AppText style={styles.bookValue}>
+                          Giá trị: {formatVnd(item.exchangeValue ?? item.salePrice ?? 0)}
+                        </AppText>
+                      </>
+                    ) : (
+                      <>
+                        <AppText style={styles.bookTitle} numberOfLines={2}>
+                          Sách nhận từ đối tác #{idx + 1}
+                        </AppText>
+                        <AppText style={styles.bookAuthors} numberOfLines={1}>
+                          {exchange.status === "Completed"
+                            ? "Đã giao dịch hoàn tất"
+                            : "Sách trao đổi đối ứng"}
+                        </AppText>
+                        <AppText style={styles.bookValue}>
+                          {exchange.status === "Completed"
+                            ? "Đã tất toán lưu ký"
+                            : "Chi tiết trong hồ sơ"}
+                        </AppText>
+                      </>
+                    )}
+                  </View>
                 </View>
-              )}
-            </View>
-            <View style={styles.bookTextCol}>
-              {partnerListing ? (
-                <>
-                  <AppText style={styles.bookTitle} numberOfLines={2}>
-                    {partnerListing.book.title}
-                  </AppText>
-                  <AppText style={styles.bookAuthors} numberOfLines={1}>
-                    {partnerListing.book.authors.join(", ")}
-                  </AppText>
-                  <AppText style={styles.bookValue}>
-                    Giá trị: {formatVnd(partnerListing.exchangeValue ?? partnerListing.salePrice ?? 0)}
-                  </AppText>
-                </>
-              ) : (
-                <AppText style={styles.loadingBook}>Đang tải thông tin sách...</AppText>
-              )}
-            </View>
+              ))
+            ) : null}
           </View>
         </View>
       </View>
@@ -205,7 +275,7 @@ export function ExchangeProposalCard({
               {myAddress.recipientName} ({myAddress.phone}) — {myAddress.detail}
             </AppText>
           ) : (
-            <AppText style={styles.addressMissing}>Chưa cấu hình địa chỉ</AppText>
+            <AppText style={styles.addressMissing}>Chưa cấu hình địa chỉ nhận hàng</AppText>
           )}
         </View>
 
@@ -221,6 +291,7 @@ export function ExchangeProposalCard({
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   card: {
@@ -420,6 +491,118 @@ const styles = StyleSheet.create({
   addressMissing: {
     fontSize: 11,
     color: stitchTokens.crimson,
+    fontStyle: "italic",
+  },
+  shipmentSection: {
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.peachBorder,
+    gap: 10,
+  },
+  shipmentHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: stitchTokens.peachBorderAlpha40,
+  },
+  shipmentHeaderTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: stitchTokens.wineDark,
+  },
+  shipmentCard: {
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorderAlpha40,
+    gap: 6,
+  },
+  shipmentTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  shipmentRole: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.roseBrown,
+    textTransform: "uppercase",
+  },
+  shipmentStatusPill: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  shipmentStatusSent: {
+    backgroundColor: stitchTokens.likeNewGreenBg,
+  },
+  shipmentStatusWaiting: {
+    backgroundColor: stitchTokens.amberBg,
+  },
+  shipmentStatusText: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  shipmentStatusTextSent: {
+    color: stitchTokens.likeNewGreen,
+  },
+  shipmentStatusTextWaiting: {
+    color: stitchTokens.goldBronze,
+  },
+  shipmentDetails: {
+    gap: 3,
+  },
+  shipmentMethodText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.darkWood,
+  },
+  trackingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginVertical: 2,
+  },
+  trackingLabel: {
+    fontSize: 11,
+    color: stitchTokens.darkWood,
+  },
+  trackingBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: stitchTokens.terracottaSoft,
+  },
+  trackingCodeText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: stitchTokens.wineDark,
+    letterSpacing: 0.5,
+  },
+  shipmentDetailText: {
+    fontSize: 11,
+    color: stitchTokens.darkWood,
+    lineHeight: 15,
+  },
+  shipmentNotesText: {
+    fontSize: 11,
+    color: stitchTokens.subtleGray,
+    fontStyle: "italic",
+    lineHeight: 15,
+  },
+  shipmentDateText: {
+    fontSize: 10,
+    color: stitchTokens.roseBrown,
+    marginTop: 2,
+  },
+  shipmentPendingText: {
+    fontSize: 11,
+    color: stitchTokens.subtleGray,
     fontStyle: "italic",
   },
 });

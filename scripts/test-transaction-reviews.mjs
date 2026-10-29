@@ -663,6 +663,15 @@ try {
   await np
     .getByRole("button", { name: new RegExp(native.slice(0, 8).toUpperCase()) })
     .click();
+  // Main's Exchange UI must enter the shared lifecycle, never the legacy modal.
+  await button(np, "Về tài khoản").click();
+  await button(np, "Trao đổi của tôi").click();
+  await button(np, `Mở đơn trao đổi #${native.slice(0, 8)}`).click();
+  await button(np, "Xem hoặc viết đánh giá").waitFor();
+  assert.equal(await button(np, "Xem hoặc viết đánh giá").count(), 1);
+  await capture(np, "rn-exchange-review-entry-320", 320);
+  await button(np, "Xem hoặc viết đánh giá").click();
+  await np.waitForURL(new RegExp(`/reviews\\?type=Exchange&id=${native}$`));
   await button(np, "Viết đánh giá").click();
   await np.getByRole("button", { name: "5/5", exact: true }).first().click();
   await np.getByRole("button", { name: "4/5", exact: true }).last().click();

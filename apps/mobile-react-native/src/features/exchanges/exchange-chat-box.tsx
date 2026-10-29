@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AppText, Icon, TextField, space, stitchTokens } from "../../core/ui";
+import { AppText, AppTextInput, Icon, space, stitchTokens } from "../../core/ui";
 import { useSession } from "../../core/session/session-provider";
 import {
   exchangeMessagePageSchema,
@@ -199,14 +199,17 @@ export function ExchangeChatBox({
           keyboardVerticalOffset={12}
         >
           <View style={styles.inputBar}>
-            <TextField
-              style={styles.textInput}
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder="Nhắn tin về việc đổi sách..."
-              multiline
-              maxLength={1000}
-            />
+            <View style={styles.inputContainer}>
+              <AppTextInput
+                style={styles.textInput}
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="Nhắn tin về việc đổi sách..."
+                placeholderTextColor={stitchTokens.subtleGray}
+                multiline
+                maxLength={1000}
+              />
+            </View>
 
             <Pressable
               accessibilityRole="button"
@@ -215,15 +218,32 @@ export function ExchangeChatBox({
               disabled={!inputText.trim() || sendMutation.isPending}
               style={({ pressed }) => [
                 styles.sendBtn,
-                (!inputText.trim() || sendMutation.isPending) &&
-                  styles.sendBtnDisabled,
+                inputText.trim()
+                  ? styles.sendBtnActive
+                  : styles.sendBtnDisabled,
                 pressed && styles.pressed,
               ]}
             >
               {sendMutation.isPending ? (
-                <ActivityIndicator size="small" color={stitchTokens.white} />
+                <ActivityIndicator
+                  size="small"
+                  color={
+                    inputText.trim()
+                      ? stitchTokens.whiteSurface
+                      : stitchTokens.wineDark
+                  }
+                />
               ) : (
-                <Icon name="arrow" size={17} color={stitchTokens.white} />
+                <Icon
+                  name="arrow"
+                  size={19}
+                  color={
+                    inputText.trim()
+                      ? stitchTokens.whiteSurface
+                      : stitchTokens.subtleGray
+                  }
+                  strokeWidth={2.2}
+                />
               )}
             </Pressable>
           </View>
@@ -402,37 +422,55 @@ const styles = StyleSheet.create({
   },
   inputBar: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+    alignItems: "flex-end",
+    gap: 10,
     paddingHorizontal: space.md,
     paddingVertical: 10,
     backgroundColor: stitchTokens.whiteSurface,
     borderTopWidth: 1,
     borderTopColor: stitchTokens.peachBorder,
   },
+  inputContainer: {
+    flex: 1,
+    minHeight: 44,
+    maxHeight: 110,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1.2,
+    borderColor: stitchTokens.peachBorder,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === "ios" ? 4 : 2,
+    justifyContent: "center",
+  },
   textInput: {
     flex: 1,
-    minHeight: 40,
-    maxHeight: 88,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: stitchTokens.parchment,
-    borderWidth: 1,
-    borderColor: stitchTokens.peachBorderAlpha40,
-    fontSize: 13,
+    fontSize: 14,
+    lineHeight: 20,
     color: stitchTokens.wineDark,
+    paddingVertical: Platform.OS === "ios" ? 8 : 6,
+    paddingHorizontal: 0,
+    textAlignVertical: "center",
   },
   sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: stitchTokens.wineDark,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
+  sendBtnActive: {
+    backgroundColor: stitchTokens.wineDark,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 3,
+  },
   sendBtnDisabled: {
-    opacity: 0.45,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1.2,
+    borderColor: stitchTokens.peachBorder,
+    opacity: 0.75,
   },
   readOnlyBanner: {
     padding: 10,

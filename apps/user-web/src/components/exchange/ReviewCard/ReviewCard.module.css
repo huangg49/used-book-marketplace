@@ -51,20 +51,24 @@
 .btnWriteReview {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    background: var(--gold-strong);
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    font-size: 13px;
-    font-weight: 600;
+    gap: 8px;
+    padding: 10px 20px;
+    background: var(--shop-wine, #7d1f1f);
+    color: #ffffff;
+    border: 1.5px solid var(--shop-wine, #7d1f1f);
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
     cursor: pointer;
-    transition: background 0.15s ease;
+    box-shadow: 0 2px 6px rgba(125, 31, 31, 0.2);
+    transition: all 0.15s ease;
 }
 
 .btnWriteReview:hover {
-    background: #9b7942;
+    background: #5c0202;
+    border-color: #5c0202;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(125, 31, 31, 0.3);
 }
 
 .promptBanner {

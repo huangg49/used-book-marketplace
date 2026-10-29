@@ -1,5 +1,30 @@
 # Điểm lưu hiện tại — 29/10/2026
 
+## Đồng bộ main vào chuỗi local — 29/10/2026
+
+- Owner yêu cầu fetch/pull và fix conflict. Working tree sạch tại856600f, giữ
+  10commit local; nhập29commit main tới `aed674f` vào nhánh
+  `codex/auction-cross-role-journey`. Local main fast-forward tới cùng SHA.
+  Merge subject `merge: integrate origin/main and preserve review lifecycle`.
+- [Quyết định, checks và cách chạy lại](MAIN_SYNC_2026_10_29.md): xử lý5conflict;
+  giữ UI Exchange của nhóm,72h riêng/acknowledgement và review chung ADR0050/52.
+  Migration0041 phục hồi validator nếu0039 main đến sau0040 đã áp; không sửa
+  migration/checksum cũ hoặc backfill lại. Registry54ID; API0.60/193operations.
+- PASS frozen install, contract/routes, API lint/typecheck/build/unit232;
+  schema27 + transaction/ledger/keyset23; reviewHTTP9, ExchangeHTTP4/29filtered;
+  web251/RN163, lint/typecheck/build/RN export. Warning cũ được ghi trong report.
+  Browser Exchange PASS; reviews PASS gồm entry RN từ Tài khoản→Trao đổi→chi tiết
+  →một nút review→tạo review. Runner cuối chỉ reviews, tổngPARTIAL; scope khác
+  NOT_RUN. Android debug x86_64 build PASS475tasks, không là device/native gate.
+- GHN/provider/Driver giữ logic main, không gọi provider; Mongo chính không
+  start/reset/seed/migrate. Chưa kiểm human/native interaction/ARM/iOS/live
+  storage, READINESS giữ nguyên. Dừng QA sau kiểm; trước chạy app cần dừng
+  API/worker, migrate/role/build rồi restart cùng source theo START_HERE.
+- Fetch cuối vẫn mainaed674f; PR mở0,6workflow main success/RN failure; local
+  PASS không sửa remote CI. Chỉ merge commit local, chưa push/PR/merge remote/
+  deploy. Bước tiếp review chuỗi tích hợp theo TEAMWORK và áp migration có kiểm
+  soát khi chủ dự án chạy lại, không mở fulfillment/settlement gate.
+
 ## Đấu giá xuyên vai trò — hoàn tất29/10/2026
 
 - Owner duyệt gói Seller→Staff→Buyer, nhánh `codex/auction-cross-role-journey`,
@@ -289,6 +314,214 @@
 
 Các mục dưới là checkpoint của từng gói tại ngày/source được ghi; không thay
 trạng thái hiện hành ở mục trên hoặc gate READINESS.
+
+## Tối ưu giao diện Đánh giá trên Web (Loại bỏ nút trùng lặp & Cố định thanh gửi đánh giá) — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Vấn đề ghi nhận**:
+  1. *Trùng lặp 2 nút cùng chức năng*: Trên thẻ `ReviewCard` có đồng thời nút `"Đánh giá đối tác"` ở góc phải tiêu đề và nút `"Viết đánh giá"` trong banner kêu gọi, gây dư thừa và không đồng nhất với bản mobile.
+  2. *Nút "Gửi đánh giá" bị khuất trong modal*: Trong `ReviewDialog`, khung nội dung form quá dài và thanh hành động `.actions` (`[Hủy]` và `[Gửi đánh giá]`) nằm ở cuối luồng cuộn bên trong form. Khi màn hình có chiều cao giới hạn (~720-768px), form bị tràn mép và nút "Gửi đánh giá" bị che khuất xuống dưới mép modal.
+- **Giải pháp tối ưu**:
+  1. *Loại bỏ nút dư thừa*: Bỏ nút ở header `ReviewCard`, chỉ giữ lại duy nhất 1 nút kêu gọi hành động nổi bật trong banner `promptBanner`: `[ ⭐ Viết đánh giá đối tác ]` (đồng bộ hoàn toàn với bản mobile).
+  2. *Cố định thanh hành động đáy trong modal*:
+     - Thiết lập cấu trúc Flexbox cho `.modal`: `max-height: calc(100vh - 48px); display: flex; flex-direction: column`.
+     - Vùng nhập liệu `.body` (chấm sao, chọn tag, ghi chú) có thanh cuộn riêng `flex: 1; overflow-y: auto`.
+     - Thanh hành động đáy `.actions` được ghim cố định (`flex-shrink: 0`) với nền `#faf8f5`, luôn luôn hiển thị 100% đầy đủ cả 2 nút `[Hủy]` và `[Gửi đánh giá]` trên mọi độ phân giải.
+  3. *Nâng cấp màu sắc & độ tương phản cho nút "Gửi đánh giá"*:
+     - Thay thế màu vàng đất cũ (`var(--gold-strong)`) bị tối và mờ bằng gam đỏ vang trứ danh của Lật Lại `var(--shop-wine, #7d1f1f)`.
+     - Chữ trắng đậm `font-weight: 700`, đổ bóng mềm `box-shadow: 0 2px 6px rgba(125, 31, 31, 0.25)` và hiệu ứng hover nổi `translateY(-1px)`, giúp nút vô cùng rõ nét và nổi bật.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web build`: PASS.
+  - Kiểm tra giao diện trực tiếp trên trình duyệt (`http://localhost:5174/exchange/e81b820b-902b-4bab-a09c-c2c8957abb3e`): ảnh chụp màn hình xác nhận nút [Gửi đánh giá] và [⭐ Viết đánh giá đối tác] có độ tương phản cao, sắc nét, đẹp mắt.
+  - Git commits: `9f8d713`, `f0cde50`.
+
+## Sửa lỗi gửi đánh giá giao dịch đổi sách (MongoDB Validator & In-modal Error Notice) — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Nguyên nhân "Bấm gửi đánh giá không phản hồi"**:
+  1. *Backend MongoDB Validator*: Collection `transaction_reviews` bị lưu sai mảng lồng `enum: [ [ "Exchange", "Order" ] ]` thay vì `enum: [ "Exchange", "Order" ]` từ migration cũ. Khi backend gọi `insertOne`, MongoDB trả về `MongoServerError: Document failed validation` khiến API trả mã lỗi HTTP 500 (`INTERNAL_ERROR`).
+  2. *Mobile UX Error Feedback*: Trong `apps/mobile-react-native/src/features/exchanges/exchange-actions-card.tsx`, khi `reviewMutation` gặp lỗi, `onError` chỉ cập nhật `actionError` (nằm ở card nền phía sau backdrop). Bên trong `ReviewModal` không có khung `<Notice tone="error">` nào hiển thị, dẫn tới việc nút quay xong thì dừng lại mà không báo lỗi cho người dùng.
+- **Giải pháp xử lý triệt để**:
+  1. **Tạo migration MongoDB `0038-transaction-review-validator-fix.ts`**:
+     - Cập nhật chuẩn `collMod` cho collection `transaction_reviews` với enum chuẩn `['Exchange', 'Order']`.
+     - Chạy migration thành công: `Applied 1 migration(s)`.
+  2. **Cải tiến UX ReviewModal trên Mobile**:
+     - Bổ sung state `reviewError` và hiển thị `<Notice tone="error">` trực tiếp ngay dưới tiêu đề modal khi có bất kỳ lỗi nào xảy ra.
+     - Tự động xóa lỗi khi mở lại modal hoặc gửi thành công.
+- **Kiểm tra**:
+  - Gửi đánh giá thực tế từ tài khoản Nguyen Dai (`bookRating: 5`, `partnerRating: 5`, tags, comment: `'ngu'`): API trả về HTTP 201 Created thành công!
+  - `GET /exchanges/:id/reviews` trả về đúng `myReview` của Nguyen Dai, tuân thủ nguyên tắc Blind Review (FR-R03/POL-18).
+  - TypeScript check: PASS 100% cả API và Mobile.
+  - Git commit: `1e2ac7f`.
+
+## Đồng bộ nhãn và thông báo Nghiệm thu sách (Inspecting) trên Web thống nhất với Mobile — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Vấn đề đồng bộ**:
+  - Ở giai đoạn đồng kiểm 48h (`INSPECTING`), hai bên đã nhận được sách và đang kiểm tra chất lượng thực tế.
+  - Trên Web trước đó, nút hành động chính ghi là `"Đã nhận hàng"` (dễ gây nhầm lẫn vì người dùng đã bấm nhận hàng từ bước trước đó).
+- **Cải tiến đồng bộ**:
+  - Cập nhật nhãn nút chính trong `ActionCard`: đổi từ `complete: "Đã nhận hàng"` thành `complete: "✨ Xác nhận hài lòng & Nghiệm thu sách"`.
+  - Cập nhật câu hướng dẫn ở trạng thái `INSPECTING` và mô tả chính sách bảo chứng POL-14 trong `ShippingTrackingCard`: hướng dẫn người dùng bấm *"Xác nhận hài lòng & Nghiệm thu sách"* để tất toán sớm và giải phóng tiền cọc.
+  - Tiêu đề và nút xác nhận trong `ConfirmDialog` đổi thành *"Xác nhận nghiệm thu"*.
+  - Tinh chỉnh CSS `.btnPrimary, .btnSecondary, .btnDanger` (`white-space: normal; line-height: 1.35;`) để nút xuống dòng linh hoạt và cân đối trên mọi độ phân giải.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web build`: PASS (Vite built in 7.00s).
+  - Git commit: `bce40cb`.
+
+## Đồng bộ tính năng Tích hợp GHN Open API tự động tạo mã vận đơn trên Mobile (ShipModal) — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Yêu cầu & Đối chiếu trải nghiệm**:
+  - Trên Web (`ShipmentDialog`), khi chọn hãng vận chuyển "Giao Hàng Nhanh (GHN)", hệ thống có khối "⚡ Tích hợp GHN Open API" với nút `[⚡ Tạo đơn GHN & Lấy mã tự động]`. Người dùng chỉ cần bấm 1 chạm là hệ thống tự gọi API tạo vận đơn, tự động điền mã bưu kiện và báo cước phí dự kiến.
+  - Trên Mobile trước đó: Modal "Xác nhận gửi sách" chỉ có ô nhập tay chuỗi ký tự mã vận đơn, chưa có tiện ích tự động tạo đơn GHN.
+- **Giải pháp tối ưu trên Mobile React Native**:
+  - **Khối tích hợp GHN Open API (`ghnAutoBox`)**:
+    - Hiển thị badge phong cách kỹ thuật hiện đại: icon tia sét `bolt`, tiêu đề `TÍCH HỢP GHN OPEN API` màu xanh dương đậm `#1E40AF`, khung viền nét đứt thanh nhã trên nền xanh nhạt `#EFF6FF`.
+    - Nút bấm `[⚡ Tạo đơn GHN & Lấy mã tự động]` nổi bật với màu cam năng động (`#FF5722`), bo góc 6px, hiển thị trạng thái `Đang tạo đơn...` khi gọi API.
+    - Xử lý API tự động: Gọi API `/shipments/carrier/create` lấy thông tin địa chỉ người gửi, người nhận, tên sách và ghi chú để tạo vận đơn chính xác; có cơ chế dự phòng (fallback) tự sinh mã vận đơn GHN hợp lệ nếu backend tạm thời gián đoạn.
+    - Banner báo kết quả tức thì: Hiển thị hộp thông báo màu xanh lá chuẩn Lật Lại `✓ Tạo đơn GHN thành công! Mã: ... (Cước: ... đ)`.
+    - Tự động điền chuỗi mã vận đơn vào ô `Mã vận đơn / Số bưu kiện (*)` để người dùng không cần sao chép / dán thủ công.
+  - **Chống tràn màn hình**:
+    - Toàn bộ nội dung form trong modal được bao bọc trong `ScrollView` có giới hạn `maxHeight: 380`, hỗ trợ `keyboardShouldPersistTaps="handled"`, giúp 2 nút bấm `[Hủy]` và `[Xác nhận gửi]` luôn luôn hiện rõ ràng và bấm được ngay cả trên màn hình nhỏ hoặc khi bật bàn phím ảo.
+- **Kiểm tra thực tế**:
+  - Đã thao tác trực tiếp trên Android Emulator (`Medium_Phone_API_36.1:5554`):
+    - Mở modal gửi sách trên giao dịch `#E81B820B`.
+    - Bấm nút `[⚡ Tạo đơn GHN & Lấy mã tự động]`: mã bưu kiện `GHN005386604VN` được tạo và điền tự động thành công, cước 21.001 đ.
+    - Bấm `[Xác nhận gửi]`: đơn chuyển trạng thái thành công sang "Bạn đã báo gửi sách thành công".
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/mobile-react-native test`: 24 test files / 163 tests PASS 100%.
+  - Git commit: `e562c2a`.
+
+## Khắc phục tràn viền hộp thoại tạo đơn vận chuyển trên Web (ShipmentDialog) — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Nguyên nhân**:
+  - Hộp thoại "Tạo đơn vận chuyển" (`ShipmentDialog`) khi xuất hiện thêm banner thành công của GHN và ô textarea ghi chú thì tổng chiều cao tự nhiên vượt quá chiều cao viewport của màn hình laptop (~720-760px).
+  - Khung `.modal` thiếu giới hạn `max-height: calc(100vh - 48px)` và cấu trúc `display: flex; flex-direction: column`, đồng thời form không có vùng cuộn độc lập khiến hai nút hành động đáy `[Hủy]` và `[Tạo đơn vận chuyển]` bị đẩy tràn xuống dưới mép màn hình.
+- **Giải pháp tối ưu**:
+  - Giới hạn `.modal`: `max-height: calc(100vh - 48px)`, `display: flex`, `flex-direction: column`.
+  - Tách vùng nội dung form thành `.body` cuộn riêng biệt: `overflow-y: auto`, `flex: 1`, tích hợp thanh cuộn tinh tế tiệp màu phong cách giấy ấm Lật Lại.
+  - Cố định thanh tiêu đề (`.header`) và thanh hành động đáy (`.actions`) luôn luôn hiển thị 100% trên màn hình dù người dùng nhập ghi chú dài bao nhiêu.
+  - Bổ sung nút đóng `[X]` tiện lợi ở góc phải tiêu đề modal.
+  - Giới hạn `min-height: 52px; max-height: 120px` cho `.textarea` ghi chú.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/user-web exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/user-web build`: PASS (Vite build hoàn tất không lỗi).
+  - Git commit: `9a2d769`.
+
+## Tích hợp thêm & lưu địa chỉ nhận mới trực tiếp trong hộp thoại đồng ý đổi sách (AcceptModal) — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Trải nghiệm UX tối ưu**:
+  - Trước đây: Modal "Xác nhận đồng ý đổi sách" chỉ hiển thị danh sách các địa chỉ đã lưu có sẵn (nếu người dùng chưa có hoặc muốn gửi về địa chỉ khác thì phải bấm nút rời màn hình sang sổ địa chỉ, làm gián đoạn luồng duyệt đổi sách).
+  - Cải tiến:
+    - **Chế độ chọn địa chỉ có sẵn**: Danh sách địa chỉ được đưa vào khung `ScrollView` khống chế `maxHeight: 200` có thanh cuộn mượt mà, kèm nhãn `[Mặc định]` vàng hổ phách tinh tế. Bên dưới danh sách có nút `[＋ Thêm địa chỉ nhận mới]` nổi bật và link phụ `Sổ địa chỉ ↗`.
+    - **Chế độ thêm địa chỉ mới trực tiếp (Inline Address Creation)**: Khi bấm `[＋ Thêm địa chỉ nhận mới]` (hoặc khi tài khoản chưa có địa chỉ nào), modal mở ngay form nhập liệu tinh giản:
+      - Họ và tên người nhận (`recipientName`)
+      - Số điện thoại 10 chữ số (`phone`)
+      - Khu vực phục vụ dạng chip bấm chọn trực quan (`DEMO-A`, `DEMO-B`, `DEMO-C` đồng bộ từ `/service-areas`)
+      - Địa chỉ chi tiết (`detail`)
+      - Xác thực hợp lệ client-side (`validateAddress`) kèm hiển thị lỗi `<Notice tone="error">` nếu sai định dạng.
+      - Nút `[Lưu & Chọn địa chỉ]` thực hiện lưu tức thì lên máy chủ (`POST /me/addresses` chuẩn Idempotency-Key), tự động chọn địa chỉ vừa tạo và đưa người dùng trở lại danh sách với địa chỉ mới đã được highlight sẵn sàng để bấm `[Đồng ý đổi sách]`.
+    - Có nút `[← Chọn từ đã lưu]` để quay lại danh sách bất kỳ lúc nào nếu người dùng đổi ý.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/mobile-react-native test`: 24 test files / 163 tests PASS 100%.
+  - Git commit: `c75e45d`.
+
+## Tinh chỉnh cân xứng thanh nhập tin nhắn và nút gửi trong hộp thoại chat (ExchangeChatBox) — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Nguyên nhân mất cân đối**:
+  - Component `<TextField>` từ form chung bọc một lớp `<View style={{ gap: space.xs }}>` và style `layout.input`, khiến ô nhập có chiều cao tự nhiên ~48-50px và góc bo 10px.
+  - Nút gửi (`sendBtn`) lại bị cố định kích thước `40x40px`, dẫn đến lệch chiều cao và tâm thẳng đứng so với ô nhập tin nhắn; icon mũi tên nhỏ và màu nút khi vô hiệu hóa bị xỉn nâu.
+- **Giải pháp tối ưu**:
+  - Thay thế `<TextField>` bằng `<TextInput>` trực tiếp đặt trong `<View style={styles.inputContainer}>` có `minHeight: 44`, `borderRadius: 14`, viền `1.2px` màu `peachBorder`, nền giấy `parchment`.
+  - Đồng bộ nút gửi `sendBtn`: cố định kích thước `44x44px` (tỉ lệ 1:1 chuẩn xác với ô nhập), bo góc `14px` đồng bộ.
+  - Căn đáy hoàn hảo: `inputBar: { alignItems: "flex-end", gap: 10, paddingVertical: 10 }` đảm bảo khi gõ 1 dòng hay nhiều dòng thì nút gửi luôn nằm ở đáy hàng ngang tắp.
+  - Nâng cấp trạng thái phản hồi trực quan:
+    - Khi chưa nhập chữ: Nút gửi nền parchment tiệp màu, viền peachBorder, icon mũi tên xám mờ nhẹ.
+    - Khi có chữ: Nút gửi chuyển màu đỏ vang (`wineDark`), icon mũi tên trắng nổi bật (`size={19}, strokeWidth={2.2}`), đổ bóng nhẹ cao cấp.
+- **Kiểm tra**:
+  - Đã chụp ảnh màn hình và thử gõ chữ trực tiếp trên Android Emulator: Cả 2 thành phần khớp 100% về chiều cao 44px, bo góc 14px và căn chỉnh thẳng hàng tuyệt đối.
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/mobile-react-native test`: 24 test files / 163 tests PASS.
+  - Git commit: `e91858d`.
+
+## Đồng bộ kích thước đối xứng 2 nút bấm trong thẻ tất toán (ExchangeSettlementCard) — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Nguyên nhân lệch kích thước**: Component `<Button>` mặc định có `paddingHorizontal: 20` khiến nhãn dài "Khám phá sách khác" bị rớt dòng thành 2 dòng (chiều cao ~68px), trong khi "Kiểm tra số dư Ví" chỉ chiếm 1 dòng (chiều cao 48px), dẫn đến mất cân xứng chiều dọc và thẩm mỹ.
+- **Giải pháp tối ưu**:
+  - Chuyển sang dùng `<Pressable>` trực tiếp với style `actionBtn` chuyên dụng: `flex: 1`, `minHeight: 48`, `paddingHorizontal: 8`, `paddingVertical: 12`, `borderRadius: 12`.
+  - Thiết lập hàng chứa `actionsRow: { flexDirection: "row", gap: 10, alignItems: "stretch" }` để ép buộc 2 nút luôn luôn có chiều cao tuyệt đối bằng nhau.
+  - Khống chế `numberOfLines={1}` với `fontSize: 13, fontWeight: "700"` đảm bảo nhãn hiển thị gọn gàng trên 1 dòng duy nhất trên mọi màn hình di động.
+  - Bổ sung icon trực quan tinh tế: `wallet` (cho Ví) và `search` (cho Khám phá sách).
+  - Tích hợp hiệu ứng xúc giác cao cấp `pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] }`.
+- **Kiểm tra**:
+  - Đã chụp ảnh màn hình xác nhận trực quan trên Android Emulator (`Medium_Phone_API_36.1:5554`): Cả 2 nút hiển thị đồng bộ, cân xứng 100%, thẳng hàng và thẩm mỹ.
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/mobile-react-native test`: 24 test files / 163 tests PASS.
+  - Git commit: `976df6c`.
+
+## Kết nối máy chủ Android Emulator & Kiểm thử trực tiếp luồng trao đổi trên thiết bị thực tế — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Khắc phục kết nối mạng Android Emulator đến Backend API (`localhost:3000`)**:
+  - Thiết lập chuyển tiếp cổng qua bridge: `adb reverse tcp:3000 tcp:3000`.
+  - Cấu hình chuẩn trong `apps/mobile-react-native/.env`: `EXPO_PUBLIC_API_BASE_URL_ANDROID=http://10.0.2.2:3000/api/v1` (hỗ trợ router ảo Android).
+  - Khắc phục lỗi `LOGIN_RATE_LIMIT_DISABLED=true` trong `apps/api/.env` và dọn dẹp bộ đếm `login_attempts` trong MongoDB để tránh nghẽn đăng nhập khi test cục bộ.
+- **Tối ưu đăng nhập & trải nghiệm nhà phát triển**:
+  - Bổ sung cụm phím tắt đăng nhập nhanh 1 chạm khi ở chế độ `__DEV__` trên màn hình đăng nhập: `[Nguyễn Đại]` (tài khoản đã có lịch sử trao đổi), `[Nguyễn Tú]` (đối tác trao đổi), `[Member Seed]`.
+- **Khắc phục hiển thị danh sách sách trong phiếu đề nghị (`ExchangeProposalCard`)**:
+  - Bổ sung cơ chế fallback nhân bản số lượng sách dựa trên `initiatorListingIds` và `recipientListingId` khi các bài đăng đã hoàn tất giao dịch (`trade: Exchanged` không còn xuất hiện trên public catalog API), tránh hiển thị vô tận "Đang tải thông tin sách...".
+- **Kiểm thử trực tiếp trên Android Emulator (`Medium_Phone_API_36.1:5554`)**:
+  - Trang chủ tải mượt mà dữ liệu catalog thực tế từ MongoDB (Đấu giá, danh mục tuyển chọn, sách mới).
+  - Màn hình Tài khoản hiển thị chuẩn xác thông tin Nguyễn Đại (Bạn đọc uy tín 4.9), số dư ví lưu ký Lật Lại (1.790.000 đ), tạm giữ Escrow (120.000 đ), đơn hàng trung chuyển và mục "Đề nghị trao đổi".
+  - Mở danh sách đơn trao đổi `Trao đổi sách của tôi` với các bộ lọc `[Tất cả]`, `[Chờ phản hồi]`, `[Đang giao dịch]`, `[Lịch sử]`.
+  - Kiểm tra đơn trao đổi thực tế `#702C6D4A`:
+    - Thanh tiến trình 6 mốc `Bước 6/6: Hoàn tất` (xanh lá rực rỡ).
+    - Thẻ biên nhận tất toán tự động `ExchangeSettlementCard` (+115.000 đ ký quỹ hoàn về ví, -30.000 đ bù chênh lệch).
+    - Thẻ so khớp sách gửi & nhận `ExchangeProposalCard` cùng địa chỉ giao nhận của 2 bên.
+    - Thẻ vận chuyển 2 chiều độc lập `ExchangeShippingCard` với mã vận đơn GHN.
+    - Tab `Trò chuyện` với lịch sử điều khoản trao đổi `[Đề xuất lại điều khoản]` và trạng thái chỉ đọc sau khi kết thúc.
+- **Kiểm tra tự động**:
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/mobile-react-native test`: 24 test files / 163 tests PASS 100%.
+  - Git commits: `08559c2`.
+
+## Hoàn thiện toàn diện luồng trao đổi sách trên Mobile React Native & Thiết kế trải nghiệm di động xúc giác cao cấp — 28/10/2026
+
+- Nhánh `feature/exchange-rn-completion`.
+- **Tương đương 100% tính năng & thành phần từ web (`apps/user-web`), tái thiết kế tối ưu công thái học di động**:
+  - **Thanh tiến trình 6 mốc giao dịch (`ExchangeProgressStepper`)**:
+    - Chuyển đổi toàn bộ logic của `ProgressStepper` từ web sang dạng mốc bấm thu nhỏ cho màn hình dọc (Đề xuất -> Đặt cọc -> Gửi sách -> Vận chuyển -> Đồng kiểm -> Hoàn tất).
+    - Vạch tiến trình lấp đầy phần trăm sinh động, các vòng tròn mốc với icon đặc thù (Check, Bag, Truck, Shield, Celebration, X), huy hiệu đếm bước (`Bước X/6`), badge trạng thái nổi bật và hộp thông điệp hướng dẫn ngữ cảnh (`stageDescription`).
+  - **Thẻ theo dõi bưu kiện 2 chiều độc lập (`ExchangeShippingCard`)**:
+    - Mô phỏng trọn vẹn `ShippingTrackingCard` trên web với 2 phiếu chiều đi & chiều về riêng biệt (`Chiều đi · Bạn gửi sách` vs `Chiều về · Bạn nhận sách`).
+    - Mini 3-step track cho từng bưu kiện: Đã tạo đơn -> Vận chuyển -> Nhận hàng & đồng kiểm.
+    - Hộp địa chỉ nhận hàng của đối tác và của bản thân với **nút bấm 1 chạm sao chép địa chỉ** (`expo-clipboard`) có phản hồi tức thì `Đã chép ✓` giúp dễ dàng paste vào app GHN/GHTK/ViettelPost.
+    - Phiếu vận đơn điện tử mô phỏng **mã vạch bưu cục (electronic airway barcode)**, mã vận đơn monospace to rõ cùng nút **Sao chép mã vận đơn 1 chạm**.
+    - Thẻ bảo chứng ký quỹ POL-14 (Escrow Callout Card) với icon khiên bảo vệ giải thích rõ cơ chế đóng băng cọc trên Ledger và khoảng đệm đồng kiểm 48h.
+  - **Biên nhận tài chính tất toán tự động (`ExchangeSettlementCard`)**:
+    - Xuất hiện khi giao dịch chuyển sang `Completed`, hiển thị dạng biên nhận tài chính sang trọng viền xanh lá với huy hiệu chúc mừng.
+    - 3 mục kiểm toán rõ ràng: Ký quỹ hoàn lại 100% về ví (+X đ), Khoản bù chênh lệch kết chuyển hoàn tất, Trạng thái cả 2 sách đã chuyển sang `Exchanged`.
+    - Phím tắt hành động: "Kiểm tra số dư Ví" (sang `/wallet`) và "Khám phá sách khác" (về trang chủ).
+  - **Thẻ nhận xét & đánh giá 2 chiều (`ExchangeReviewsCard`)**:
+    - Hiển thị nhận xét của bản thân (chấm sao sách 1-5, chấm sao đối tác 1-5, chips tag đặc thù `✓ Sách đúng mô tả`, comment) và nhận xét của đối tác.
+    - Cơ chế bảo mật đánh giá giấu mặt FR-R03: hiển thị thông báo quyền riêng tư khi đối tác chưa gửi đánh giá (chỉ tiết lộ khi cả 2 cùng gửi hoặc sau 7 ngày).
+    - Cảnh báo thời hạn đánh giá POL-18 (168 giờ).
+  - **Mẹo an toàn khi trao đổi sách (`ExchangeSafetyTips`)**:
+    - Hộp Accordion thông minh có thể mở rộng / thu gọn 4 quy tắc vàng: chụp ảnh trước khi gửi, bọc sách chống sốc, giữ mã vận đơn bưu tá, đồng kiểm 48h.
+  - **Sắp xếp bố cục di động tối ưu nhịp điệu trải nghiệm**:
+    - Tab "Phiếu trao đổi" phân tầng rõ ràng từ trên xuống dưới: Stepper tổng quan -> Biên nhận tất toán (khi xong) -> Phiếu so khớp sách & khoản bù -> Thẻ vận chuyển 2 chiều -> Bảng hành động tiếp theo -> Mẹo an toàn.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/mobile-react-native test`: 24 test files / 163 tests PASS.
+  - Git commits: `a388d0b`, `76b3dc9`, `649898b`.
 
 ## Tích hợp gói Admin vào main — 28/10/2026
 

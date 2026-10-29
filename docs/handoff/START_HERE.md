@@ -1,8 +1,8 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
-Cập nhật29/10/2026 theo source tích hợp `7d92012` và các gói Member/review/auction local
-bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.60.0** (193operations/30controllers); registry có52
-migration MongoDB (đến0040), không suy từ tiền tố file lớn nhất. Migration
+Cập nhật29/10/2026 theo main `aed674f` đã ghép cùng các gói Member/review/auction local
+bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.60.0** (193operations/30controllers); registry có54
+migration MongoDB (đến0041), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
 Phạm vi28/10: nhóm **bỏ Forum/Cộng đồng sách** theo [ADR0051](../adr/0051-remove-forum-from-project-scope.md).
@@ -72,6 +72,11 @@ khởi động khi còn migration chưa áp dụng. Dữ liệu PostgreSQL cũ c
 [runbook cutover](../refactor/MIG06_CUTOVER_RUNBOOK.md).
 DB đang có: khi migration thêm collection, chạy `db:migrate` rồi `db:bootstrap`
 theo ADR để cập nhật app role, không reset/reseed dữ liệu.
+
+Khi nhận bản ghép main29/10: dừng API/worker trước migration. Giữ nguyên cả hai
+0039 (khác full ID); 0041 phục hồi validator review hiện hành nếu 0039 của main
+đến sau khi máy đã áp dụng0040. Không sửa checksum, chạy lại backfill0040 hoặc
+reset DB. Xem [bằng chứng tích hợp](MAIN_SYNC_2026_10_29.md).
 
 Seed chỉ cho local, không tự đổi mật khẩu account đã tồn tại. Xem tài khoản mẫu ở
 [hướng dẫn RN](../REACT_NATIVE_START.md); mật khẩu theo cấu hình local của người nhận.

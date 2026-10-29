@@ -86,7 +86,8 @@
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
-    white-space: nowrap;
+    white-space: normal;
+    line-height: 1.35;
     text-align: center;
     text-decoration: none;
     min-height: 44px;

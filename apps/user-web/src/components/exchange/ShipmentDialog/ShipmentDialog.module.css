@@ -14,10 +14,13 @@
 .modal {
     background: #fff;
     width: 100%;
-    max-width: 540px;
-    border-radius: 6px;
-    border: 1px solid var(--line);
-    box-shadow: 0 12px 32px rgba(42, 38, 34, 0.2);
+    max-width: 560px;
+    max-height: calc(100vh - 48px);
+    border-radius: 8px;
+    border: 1px solid var(--line, #ebd9c8);
+    box-shadow: 0 16px 40px rgba(42, 38, 34, 0.25);
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
     margin: auto;
     animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -37,10 +40,18 @@
 .header {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 16px;
-    padding: 24px 24px 20px;
-    background: var(--paper);
-    border-bottom: 1px solid var(--line);
+    padding: 18px 24px;
+    background: var(--paper, #fdfbf7);
+    border-bottom: 1px solid var(--line, #ebd9c8);
+    flex-shrink: 0;
+}
+
+.headerContent {
+    display: flex;
+    align-items: center;
+    gap: 14px;
 }
 
 .headerIcon {
@@ -53,6 +64,24 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+}
+
+.closeBtn {
+    background: transparent;
+    border: none;
+    color: var(--shop-muted, #716157);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
+
+.closeBtn:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--shop-ink, #281914);
 }
 
 .title {
@@ -70,10 +99,35 @@
 }
 
 .form {
-    padding: 24px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+}
+
+.body {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+.body::-webkit-scrollbar {
+    width: 6px;
+}
+.body::-webkit-scrollbar-track {
+    background: transparent;
+}
+.body::-webkit-scrollbar-thumb {
+    background: #d8c7b8;
+    border-radius: 3px;
+}
+.body::-webkit-scrollbar-thumb:hover {
+    background: #bfa895;
 }
 
 .methodGroup {
@@ -204,6 +258,8 @@
 
 .textarea {
     padding: 10px 12px;
+    min-height: 52px;
+    max-height: 120px;
     resize: vertical;
 }
 
@@ -261,9 +317,10 @@
     align-items: center;
     justify-content: flex-end;
     gap: 12px;
-    margin-top: 8px;
-    padding-top: 16px;
+    padding: 14px 24px;
+    background: var(--paper, #fdfbf7);
     border-top: 1px solid var(--shop-line, #ebd9c8);
+    flex-shrink: 0;
 }
 
 .btnSecondary {

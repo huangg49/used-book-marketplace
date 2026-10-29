@@ -76,4 +76,38 @@ describe("exchangeSchema", () => {
       expect(parsed.data.disputeReason).toBe("Sách bị rách trang");
     }
   });
+
+  it("validates exchange review payloads safely", async () => {
+    const { exchangeReviewsResponseSchema, createExchangeReviewSchema } = await import("./contracts");
+    const validCreate = {
+      bookRating: 5,
+      partnerRating: 5,
+      tags: ["Sách đúng mô tả", "Đóng gói cẩn thận"],
+      comment: "Rất hài lòng!",
+    };
+    expect(createExchangeReviewSchema.safeParse(validCreate).success).toBe(true);
+
+    const validResponse = {
+      canReview: true,
+      deadline: "2026-10-25T10:00:00.000Z",
+      myReview: {
+        id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11",
+        exchangeId: "b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12",
+        authorId: "c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13",
+        targetUserId: "d0eebc99-9c0b-4ef8-bb6d-6bb9bd380a14",
+        bookRating: 4,
+        partnerRating: 5,
+        createdAt: "2026-10-20T10:00:00.000Z",
+      },
+      partnerReview: null,
+    };
+    expect(exchangeReviewsResponseSchema.safeParse(validResponse).success).toBe(true);
+  });
+
+  it("handles Preparing, InTransit, Delivered, and ResolutionPending statuses", () => {
+    expect(mapExchangeStatusInfo("Preparing", true).stepIndex).toBe(2);
+    expect(mapExchangeStatusInfo("InTransit", true).stepIndex).toBe(3);
+    expect(mapExchangeStatusInfo("Delivered", true).stepIndex).toBe(4);
+    expect(mapExchangeStatusInfo("ResolutionPending", true).stepIndex).toBe(-1);
+  });
 });

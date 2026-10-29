@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import {
   AppText,
   Button,
@@ -29,6 +29,10 @@ import { exchangeSchema } from "./contracts";
 import { publicListing } from "../shelf/contracts";
 import { ExchangeProposalCard } from "./exchange-proposal-card";
 import { ExchangeActionsCard } from "./exchange-actions-card";
+import { ExchangeProgressStepper } from "./exchange-progress-stepper";
+import { ExchangeShippingCard } from "./exchange-shipping-card";
+import { ExchangeSettlementCard } from "./exchange-settlement-card";
+import { ExchangeSafetyTips } from "./exchange-safety-tips";
 import { ExchangeChatBox } from "./exchange-chat-box";
 import { MemberNavigation } from "../navigation/member-navigation";
 
@@ -55,15 +59,24 @@ export function ExchangeDetailScreen() {
   const exchange = exchangeQuery.data;
 
   // 2. Fetch Initiator & Recipient Public Listings to get cover photos and metadata
-  const primaryInitiatorId =
-    exchange?.initiatorListingIds?.[0] ?? exchange?.initiatorListingId;
+  const initiatorListingIds =
+    exchange?.initiatorListingIds && exchange.initiatorListingIds.length > 0
+      ? exchange.initiatorListingIds
+      : exchange?.initiatorListingId
+        ? [exchange.initiatorListingId]
+        : [];
 
-  const initiatorListingQuery = useQuery({
-    queryKey: ["public-listing", primaryInitiatorId],
-    queryFn: () => client.publicRequest(`/listings/${primaryInitiatorId}`, publicListing),
-    enabled: Boolean(primaryInitiatorId) && foreground,
-    staleTime: 60000,
+  const initiatorListingQueries = useQueries({
+    queries: initiatorListingIds.map((lid) => ({
+      queryKey: ["public-listing", lid],
+      queryFn: () => client.publicRequest(`/listings/${lid}`, publicListing),
+      enabled: Boolean(lid) && foreground,
+      staleTime: 60000,
+    })),
   });
+
+  const initiatorListings = initiatorListingQueries.map((q) => q.data ?? null);
+  const primaryInitiatorListing = initiatorListings[0] ?? null;
 
   const recipientListingQuery = useQuery({
     queryKey: ["public-listing", exchange?.recipientListingId],
@@ -214,7 +227,7 @@ export function ExchangeDetailScreen() {
     : exchange.initiatorAddress?.recipientName;
   const partnerName = isInitiator
     ? recipientListingQuery.data?.seller.displayName ?? partnerAddressName ?? "Đối tác"
-    : initiatorListingQuery.data?.seller.displayName ?? partnerAddressName ?? "Đối tác trao đổi";
+    : primaryInitiatorListing?.seller.displayName ?? partnerAddressName ?? "Đối tác trao đổi";
 
   const isReadOnly = ["Completed", "Cancelled"].includes(exchange.status);
 
@@ -324,20 +337,45 @@ export function ExchangeDetailScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* PHẦN TRÊN: ĐƠN TRAO ĐỔI (Proposal & Books Matching) */}
+          {/* 1. TIẾN TRÌNH CÁC BƯỚC TRAO ĐỔI (Progress Stepper) */}
+          <ExchangeProgressStepper
+            status={exchange.status}
+            isInitiator={isInitiator}
+            cancelReason={exchange.cancelReason}
+            rejectionReason={exchange.rejectionReason}
+            viewerRole={isInitiator ? "proposer" : "recipient"}
+          />
+
+          {/* 2. BIÊN NHẬN TẤT TOÁN TỰ ĐỘNG (Settlement Card khi Completed) */}
+          <ExchangeSettlementCard
+            exchange={exchange}
+            isInitiator={isInitiator}
+          />
+
+          {/* 3. PHIẾU ĐỀ NGHỊ ĐỔI SÁCH (Books Matching & Financial Diff) */}
           <ExchangeProposalCard
             exchange={exchange}
             isInitiator={isInitiator}
-            initiatorListing={initiatorListingQuery.data}
+            initiatorListings={initiatorListings}
+            initiatorListing={primaryInitiatorListing}
             recipientListing={recipientListingQuery.data}
           />
 
-          {exchange.status==='Completed'?<Button wine secondary title="Xem hoặc viết đánh giá" onPress={()=>router.push({pathname:'/reviews',params:{type:'Exchange',id:exchange.id}})}/>:null}
-          {/* HÀNH ĐỘNG TIẾP THEO (Accept, Reject, Cancel, Fund, Ship, Receive) */}
+          {/* 4. TIẾN TRÌNH GIAO NHẬN 2 CHIỀU ĐỘC LẬP (Shipping Tracking 2-Way) */}
+          <ExchangeShippingCard
+            exchange={exchange}
+            isInitiator={isInitiator}
+            partnerName={partnerName}
+          />
+
+          {/* 5. BẢNG HÀNH ĐỘNG TIẾP THEO (Accept, Reject, Counter, Fund, Ship, Receive, Complete, Dispute) */}
           <ExchangeActionsCard
             exchange={exchange}
             isInitiator={isInitiator}
           />
+
+          {/* 6. MẸO AN TOÀN KHI TRAO ĐỔI SÁCH (Safety Tips) */}
+          <ExchangeSafetyTips />
         </ScrollView>
       ) : (
         <View style={styles.chatContainer}>

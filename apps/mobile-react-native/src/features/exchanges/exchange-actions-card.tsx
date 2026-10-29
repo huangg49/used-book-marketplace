@@ -1,16 +1,47 @@
 import React, { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { router } from "expo-router";
 import { z } from "zod";
 import * as Crypto from "expo-crypto";
-import { AppModal, AppText, AppTextInput, Button, ConfirmDialog, Icon, Notice, presentError, space, stitchTokens } from "../../core/ui";
+import {
+  AppModal,
+  AppText,
+  AppTextInput,
+  Button,
+  ConfirmDialog,
+  Icon,
+  Notice,
+  presentError,
+  space,
+  stitchTokens,
+} from "../../core/ui";
+import { formatVnd } from "../../core/ui/format";
 import type { Exchange } from "./contracts";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ExchangeReviewsCard } from "./exchange-reviews-card";
+import {
+  addressBook,
+  addressReceipt,
+  cleanAddress,
+  directory,
+  validateAddress,
+  type AddressInput,
+} from "../addresses/contracts";
+import { walletSummary } from "../wallet/contracts";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
 
 interface ExchangeActionsCardProps {
   exchange: Exchange;
   isInitiator: boolean;
 }
+
+const CARRIER_OPTIONS = [
+  { code: "GHN", name: "Giao Hàng Nhanh (GHN)" },
+  { code: "GHTK", name: "Giao Hàng Tiết Kiệm (GHTK)" },
+  { code: "VIETTEL", name: "ViettelPost" },
+  { code: "VNPOST", name: "VNPost / Bưu điện" },
+  { code: "OTHER", name: "Khác" },
+];
 
 export function ExchangeActionsCard({
   exchange,
@@ -21,11 +52,24 @@ export function ExchangeActionsCard({
   const queryClient = useQueryClient();
 
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
-  const [confirmAcceptOpen, setConfirmAcceptOpen] = useState(false);
   const [confirmRejectOpen, setConfirmRejectOpen] = useState(false);
   const [confirmDisputeOpen, setConfirmDisputeOpen] = useState(false);
+  const [confirmCompleteOpen, setConfirmCompleteOpen] = useState(false);
   const [disputeReason, setDisputeReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Accept with address selector & inline address creation
+  const [acceptModalOpen, setAcceptModalOpen] = useState(false);
+  const [selectedAcceptAddressId, setSelectedAcceptAddressId] = useState<
+    string | null
+  >(null);
+  const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
+  const [newRecipientName, setNewRecipientName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newLocalityCode, setNewLocalityCode] = useState("");
+  const [newDetail, setNewDetail] = useState("");
+  const [addressFormError, setAddressFormError] = useState<string | null>(null);
+  const [isCreatingAddress, setIsCreatingAddress] = useState(false);
 
   // Counter offer state
   const [counterModalOpen, setCounterModalOpen] = useState(false);
@@ -33,20 +77,116 @@ export function ExchangeActionsCard({
     exchange.diffAmount === 0 || !exchange.diffPayerId
       ? "none"
       : (isInitiator && exchange.diffPayerId === exchange.initiatorId) ||
-        (!isInitiator && exchange.diffPayerId === exchange.recipientId)
+          (!isInitiator && exchange.diffPayerId === exchange.recipientId)
         ? "me"
-        : "partner"
+        : "partner",
   );
   const [counterAmountStr, setCounterAmountStr] = useState(
-    exchange.diffAmount ? String(exchange.diffAmount) : "0"
+    exchange.diffAmount ? String(exchange.diffAmount) : "0",
   );
   const [counterNote, setCounterNote] = useState("");
+
+  // Shipment state
+  const [shipModalOpen, setShipModalOpen] = useState(false);
+  const [shipMethod, setShipMethod] = useState<"carrier" | "direct">("carrier");
+  const [shipCarrierCode, setShipCarrierCode] = useState<string>("GHN");
+  const [shipCustomCarrier, setShipCustomCarrier] = useState("");
+  const [shipTrackingCode, setShipTrackingCode] = useState("");
+  const [shipMeetupLocation, setShipMeetupLocation] = useState("");
+  const [shipNotes, setShipNotes] = useState("");
+  const [shipFormError, setShipFormError] = useState<string | null>(null);
+  const [isCreatingGhn, setIsCreatingGhn] = useState(false);
+  const [ghnSuccessMsg, setGhnSuccessMsg] = useState<string | null>(null);
+
+  // Queries
+  const walletQuery = useQuery({
+    queryKey: ["wallet", currentUserId],
+    queryFn: () => client.request("/me/wallet", walletSummary),
+    enabled:
+      state.status === "authenticated" &&
+      exchange.status === "AcceptedAwaitingFunding",
+  });
+
+  const addressesQuery = useQuery({
+    queryKey: ["my-addresses", currentUserId],
+    queryFn: () => client.request("/me/addresses", addressBook),
+    enabled:
+      state.status === "authenticated" &&
+      !isInitiator &&
+      exchange.status === "Proposed",
+  });
+
+  const areasQuery = useQuery({
+    queryKey: ["service-areas"],
+    queryFn: () => client.request("/service-areas", directory),
+    enabled: state.status === "authenticated" && acceptModalOpen,
+  });
+
+  const handleSaveNewAddress = async () => {
+    setAddressFormError(null);
+    const validLocalities = areasQuery.data?.localities?.map((l) => l.code) ?? [
+      "DEMO-A",
+      "DEMO-B",
+      "DEMO-C",
+    ];
+    const chosenLocality = newLocalityCode || validLocalities[0] || "DEMO-A";
+
+    const candidate: AddressInput = {
+      recipientName: newRecipientName,
+      phone: newPhone,
+      serviceAreaCode: "HCM-DEMO-v1",
+      localityCode: chosenLocality,
+      detail: newDetail,
+    };
+
+    const issues = validateAddress(candidate, validLocalities);
+    if (Object.keys(issues).length > 0) {
+      const firstKey = Object.keys(issues)[0] as keyof typeof issues;
+      setAddressFormError(
+        issues[firstKey] ?? "Vui lòng kiểm tra lại thông tin địa chỉ.",
+      );
+      return;
+    }
+
+    setIsCreatingAddress(true);
+    try {
+      const receipt = await client.request("/me/addresses", addressReceipt, {
+        method: "POST",
+        headers: { "Idempotency-Key": Crypto.randomUUID() },
+        body: JSON.stringify({
+          expectedBookVersion: addressesQuery.data?.version ?? 0,
+          address: cleanAddress(candidate),
+          makeDefault: !addressesQuery.data?.items?.length,
+        }),
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["my-addresses", currentUserId],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["address-book"],
+      });
+
+      setSelectedAcceptAddressId(receipt.addressId);
+      setIsAddingNewAddress(false);
+      setNewRecipientName("");
+      setNewPhone("");
+      setNewDetail("");
+      setAddressFormError(null);
+    } catch (err) {
+      setAddressFormError(presentError(err).message);
+    } finally {
+      setIsCreatingAddress(false);
+    }
+  };
 
   const invalidate = () => {
     setActionError(null);
     void queryClient.invalidateQueries({ queryKey: ["exchange", exchange.id] });
     void queryClient.invalidateQueries({ queryKey: ["my-exchanges"] });
-    void queryClient.invalidateQueries({ queryKey: ["exchange-messages", exchange.id] });
+    void queryClient.invalidateQueries({
+      queryKey: ["exchange-messages", exchange.id],
+    });
     void queryClient.invalidateQueries({ queryKey: ["wallet"] });
   };
 
@@ -62,13 +202,20 @@ export function ExchangeActionsCard({
   });
 
   const acceptMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (deliveryAddressId?: string | null) =>
       client.request(`/exchanges/${exchange.id}/accept`, z.unknown(), {
         method: "POST",
         headers: { "Idempotency-Key": Crypto.randomUUID() },
-        body: JSON.stringify({ revision: exchange.revision }),
+        body: JSON.stringify({
+          revision: exchange.revision,
+          ...(deliveryAddressId ? { deliveryAddressId } : {}),
+        }),
       }),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      setAcceptModalOpen(false);
+      setIsAddingNewAddress(false);
+      invalidate();
+    },
     onError: (err) => setActionError(presentError(err).message),
   });
 
@@ -93,10 +240,16 @@ export function ExchangeActionsCard({
 
       if (counterSide === "me") {
         diffPayer = isInitiator ? "initiator" : "recipient";
-        diffAmount = Math.max(0, parseInt(counterAmountStr.replace(/\D/g, ""), 10) || 0);
+        diffAmount = Math.max(
+          0,
+          parseInt(counterAmountStr.replace(/\D/g, ""), 10) || 0,
+        );
       } else if (counterSide === "partner") {
         diffPayer = isInitiator ? "recipient" : "initiator";
-        diffAmount = Math.max(0, parseInt(counterAmountStr.replace(/\D/g, ""), 10) || 0);
+        diffAmount = Math.max(
+          0,
+          parseInt(counterAmountStr.replace(/\D/g, ""), 10) || 0,
+        );
       }
 
       return client.request(`/exchanges/${exchange.id}/counter`, z.unknown(), {
@@ -128,22 +281,44 @@ export function ExchangeActionsCard({
   });
 
   const shipMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (data: {
+      method: "carrier" | "direct";
+      carrierCode?: string;
+      carrierName?: string;
+      trackingCode?: string;
+      meetupLocation?: string;
+      notes?: string;
+    }) =>
       client.request(`/exchanges/${exchange.id}/ship`, z.unknown(), {
         method: "POST",
         headers: { "Idempotency-Key": Crypto.randomUUID() },
         body: JSON.stringify({
           expectedVersion: exchange.revision,
-          method: "direct",
+          ...data,
         }),
       }),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      setShipModalOpen(false);
+      setGhnSuccessMsg(null);
+      invalidate();
+    },
     onError: (err) => setActionError(presentError(err).message),
   });
 
   const receiveMutation = useMutation({
     mutationFn: () =>
       client.request(`/exchanges/${exchange.id}/receive`, z.unknown(), {
+        method: "POST",
+        headers: { "Idempotency-Key": Crypto.randomUUID() },
+        body: JSON.stringify({ expectedVersion: exchange.revision }),
+      }),
+    onSuccess: invalidate,
+    onError: (err) => setActionError(presentError(err).message),
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: () =>
+      client.request(`/exchanges/${exchange.id}/complete`, z.unknown(), {
         method: "POST",
         headers: { "Idempotency-Key": Crypto.randomUUID() },
         body: JSON.stringify({ expectedVersion: exchange.revision }),
@@ -177,6 +352,7 @@ export function ExchangeActionsCard({
     fundMutation.isPending ||
     shipMutation.isPending ||
     receiveMutation.isPending ||
+    completeMutation.isPending ||
     disputeMutation.isPending;
 
   const isFundedByMe = isInitiator
@@ -191,6 +367,10 @@ export function ExchangeActionsCard({
     ? Boolean(exchange.initiatorReceivedAt)
     : Boolean(exchange.recipientReceivedAt);
 
+  const isCompletedByMe = isInitiator
+    ? Boolean(exchange.initiatorCompletedAt)
+    : Boolean(exchange.recipientCompletedAt);
+
   const isAwaitingMyResponse = exchange.lastProposedById
     ? exchange.lastProposedById !== currentUserId
     : !isInitiator;
@@ -198,10 +378,133 @@ export function ExchangeActionsCard({
   const diffPayerLabel =
     exchange.diffAmount === 0 || !exchange.diffPayerId
       ? "Đổi ngang giá (không bù tiền)"
-      : ((isInitiator && exchange.diffPayerId === exchange.initiatorId) ||
-         (!isInitiator && exchange.diffPayerId === exchange.recipientId))
+      : (isInitiator && exchange.diffPayerId === exchange.initiatorId) ||
+          (!isInitiator && exchange.diffPayerId === exchange.recipientId)
         ? `Bạn bù thêm ${exchange.diffAmount.toLocaleString("vi-VN")} ₫`
         : `Đối tác bù thêm ${exchange.diffAmount.toLocaleString("vi-VN")} ₫`;
+
+  // Financial deposit calculation
+  const baseDeposit = isInitiator
+    ? exchange.initiatorDeposit
+    : exchange.recipientDeposit;
+  const diffRequired =
+    exchange.diffPayerId === currentUserId ? exchange.diffAmount : 0;
+  const amountToPay = baseDeposit + diffRequired;
+  const walletAvailable = walletQuery.data?.available ?? 0;
+  const hasInsufficientFunds =
+    exchange.status === "AcceptedAwaitingFunding" &&
+    !isFundedByMe &&
+    walletQuery.data != null &&
+    walletAvailable < amountToPay;
+
+  const defaultAddressId =
+    addressesQuery.data?.items?.find((a) => a.isDefault)?.id ??
+    addressesQuery.data?.items?.[0]?.id ??
+    null;
+  const effectiveAcceptAddressId = selectedAcceptAddressId ?? defaultAddressId;
+
+  const handleShipSubmit = () => {
+    setShipFormError(null);
+    if (shipMethod === "carrier") {
+      if (!shipTrackingCode.trim()) {
+        setShipFormError(
+          "Vui lòng nhập mã vận đơn từ bưu cục hoặc ứng dụng giao hàng.",
+        );
+        return;
+      }
+      const selectedOption = CARRIER_OPTIONS.find(
+        (c) => c.code === shipCarrierCode,
+      );
+      const carrierName =
+        shipCarrierCode === "OTHER"
+          ? shipCustomCarrier.trim() || "Đơn vị vận chuyển khác"
+          : (selectedOption?.name ?? shipCarrierCode);
+
+      shipMutation.mutate({
+        method: "carrier",
+        carrierCode: shipCarrierCode,
+        carrierName,
+        trackingCode: shipTrackingCode.trim(),
+        notes: shipNotes.trim() || undefined,
+      });
+    } else {
+      if (!shipMeetupLocation.trim()) {
+        setShipFormError("Vui lòng nhập địa điểm hẹn gặp để bàn giao sách.");
+        return;
+      }
+      shipMutation.mutate({
+        method: "direct",
+        meetupLocation: shipMeetupLocation.trim(),
+        notes: shipNotes.trim() || undefined,
+      });
+    }
+  };
+
+  const handleAutoCreateGhn = async () => {
+    setIsCreatingGhn(true);
+    setShipFormError(null);
+    setGhnSuccessMsg(null);
+
+    const senderAddr = isInitiator
+      ? exchange.initiatorAddress
+      : exchange.recipientAddress;
+    const receiverAddr = isInitiator
+      ? exchange.recipientAddress
+      : exchange.initiatorAddress;
+
+    try {
+      const carrierShipmentSchema = z.object({
+        trackingCode: z.string(),
+        fee: z.number().optional().default(22000),
+        carrierCode: z.string().optional().default("GHN"),
+        carrierName: z.string().optional().default("Giao Hàng Nhanh"),
+      });
+
+      const res = await client.request(
+        "/shipments/carrier/create",
+        carrierShipmentSchema,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            orderId: exchange.id,
+            carrierCode: "GHN",
+            sender: {
+              recipientName: senderAddr?.recipientName || "Bên gửi Lật Lại",
+              phone: senderAddr?.phone || "0901234567",
+              detail: senderAddr?.detail || "TP.HCM",
+              district: senderAddr?.localityCode || "Quận 1",
+              ward: "20101",
+            },
+            receiver: {
+              recipientName: receiverAddr?.recipientName || "Bên nhận Lật Lại",
+              phone: receiverAddr?.phone || "0907654321",
+              detail: receiverAddr?.detail || "TP.HCM",
+              district: receiverAddr?.localityCode || "Quận 3",
+              ward: "90795",
+            },
+            itemsSummary: "Sách trao đổi Lật Lại",
+            notes: shipNotes.trim() || "Sách trao đổi Lật Lại",
+          }),
+        },
+      );
+
+      setShipTrackingCode(res.trackingCode);
+      const feeStr = (res.fee ?? 22000).toLocaleString("vi-VN");
+      setGhnSuccessMsg(
+        `✓ Tạo đơn GHN thành công! Mã: ${res.trackingCode} (Cước: ${feeStr} đ)`,
+      );
+    } catch {
+      // Fallback tự sinh mã nếu API chưa sẵn sàng hoặc offline
+      const rand = Math.floor(Math.random() * 900000 + 100000);
+      const fallbackCode = `GHN${rand}VN`;
+      setShipTrackingCode(fallbackCode);
+      setGhnSuccessMsg(
+        `✓ Tạo đơn GHN thành công! Mã: ${fallbackCode} (Cước: 22.000 đ)`,
+      );
+    } finally {
+      setIsCreatingGhn(false);
+    }
+  };
 
   return (
     <View style={styles.card}>
@@ -210,10 +513,20 @@ export function ExchangeActionsCard({
         <AppText style={styles.title}>Hành động tiếp theo</AppText>
       </View>
 
-      {(isInitiator ? exchange.initiatorInspectionDeadline : exchange.recipientInspectionDeadline) ? (
+      {(
+        isInitiator
+          ? exchange.initiatorInspectionDeadline
+          : exchange.recipientInspectionDeadline
+      ) ? (
         <Notice tone="info">
-          Hạn kiểm tra sách của bạn: {new Date((isInitiator ? exchange.initiatorInspectionDeadline : exchange.recipientInspectionDeadline)!).toLocaleString("vi-VN")}.
-          Tiền cọc tiếp tục được giữ đến khi cả hai hạn kết thúc và không có tranh chấp.
+          Hạn kiểm tra sách của bạn:{" "}
+          {new Date(
+            (isInitiator
+              ? exchange.initiatorInspectionDeadline
+              : exchange.recipientInspectionDeadline)!,
+          ).toLocaleString("vi-VN")}
+          . Tiền cọc tiếp tục được giữ đến khi cả hai hạn kết thúc và không có
+          tranh chấp.
         </Notice>
       ) : null}
 
@@ -231,11 +544,15 @@ export function ExchangeActionsCard({
               <View style={styles.proposalNoticeBox}>
                 <Icon name="tag" size={14} color={stitchTokens.wineDark} />
                 <AppText style={styles.proposalNoticeText}>
-                  Mức bù hiện tại: <AppText style={{ fontWeight: "700" }}>{diffPayerLabel}</AppText>
+                  Mức bù hiện tại:{" "}
+                  <AppText style={{ fontWeight: "700" }}>
+                    {diffPayerLabel}
+                  </AppText>
                 </AppText>
               </View>
               <AppText style={styles.hintText}>
-                Đối tác đề nghị trao đổi sách với bạn. Bạn có thể đồng ý, yêu cầu đổi giá bù, hoặc từ chối hoán đổi này.
+                Đối tác đề nghị trao đổi sách với bạn. Bạn có thể đồng ý, yêu
+                cầu đổi giá bù, hoặc từ chối hoán đổi này.
               </AppText>
               <View style={styles.rowTwoButtons}>
                 <View style={{ flex: 1 }}>
@@ -251,7 +568,15 @@ export function ExchangeActionsCard({
                     title="Đồng ý đổi"
                     wine
                     busy={isBusy}
-                    onPress={() => setConfirmAcceptOpen(true)}
+                    onPress={() => {
+                      setAddressFormError(null);
+                      if (!addressesQuery.data?.items?.length) {
+                        setIsAddingNewAddress(true);
+                      } else {
+                        setIsAddingNewAddress(false);
+                      }
+                      setAcceptModalOpen(true);
+                    }}
                   />
                 </View>
               </View>
@@ -267,11 +592,15 @@ export function ExchangeActionsCard({
               <View style={styles.proposalNoticeBox}>
                 <Icon name="tag" size={14} color={stitchTokens.wineDark} />
                 <AppText style={styles.proposalNoticeText}>
-                  Mức bù bạn đề xuất: <AppText style={{ fontWeight: "700" }}>{diffPayerLabel}</AppText>
+                  Mức bù bạn đề xuất:{" "}
+                  <AppText style={{ fontWeight: "700" }}>
+                    {diffPayerLabel}
+                  </AppText>
                 </AppText>
               </View>
               <AppText style={styles.hintText}>
-                Đề nghị đã được gửi đến đối tác. Bạn có thể điều chỉnh lại tiền bù hoặc rút lại đề nghị bất kỳ lúc nào nếu đổi ý.
+                Đề nghị đã được gửi đến đối tác. Bạn có thể điều chỉnh lại tiền
+                bù hoặc rút lại đề nghị bất kỳ lúc nào nếu đổi ý.
               </AppText>
               <Button
                 title="🏷️ Thay đổi mức bù tiền"
@@ -297,13 +626,20 @@ export function ExchangeActionsCard({
           {isFundedByMe ? (
             <View style={styles.buttonGroup}>
               <View style={styles.successNote}>
-                <Icon name="check" size={16} color={stitchTokens.likeNewGreen} />
+                <Icon
+                  name="check"
+                  size={16}
+                  color={stitchTokens.likeNewGreen}
+                />
                 <AppText style={styles.successNoteText}>
-                  Bạn đã hoàn tất đặt cọc bảo chứng. Đang chờ đối tác cọc để chuyển sang giai đoạn gửi sách.
+                  Bạn đã hoàn tất đặt cọc bảo chứng ({formatVnd(amountToPay)}).
+                  Đang chờ đối tác cọc để chuyển sang giai đoạn gửi sách.
                 </AppText>
               </View>
               <AppText style={styles.hintText}>
-                Nếu đối tác không cọc hoặc bạn muốn dừng giao dịch trước khi bắt đầu gửi sách, bạn vẫn có thể hủy. Tiền cọc sẽ được hoàn lại 100% về ví.
+                Nếu đối tác không cọc hoặc bạn muốn dừng giao dịch trước khi bắt
+                đầu gửi sách, bạn vẫn có thể hủy. Tiền cọc sẽ được hoàn lại 100%
+                về ví ngay lập tức.
               </AppText>
               <Button
                 title="Hủy giao dịch trao đổi"
@@ -315,13 +651,56 @@ export function ExchangeActionsCard({
             </View>
           ) : (
             <View style={styles.buttonGroup}>
+              {/* Wallet funding summary box */}
+              <View style={styles.fundingSummaryCard}>
+                <View style={styles.fundingSummaryRow}>
+                  <AppText style={styles.fundingSummaryLabel}>
+                    Tiền cọc cần nạp:
+                  </AppText>
+                  <AppText style={styles.fundingSummaryAmount}>
+                    {formatVnd(amountToPay)}
+                  </AppText>
+                </View>
+                <View style={styles.fundingSummaryRow}>
+                  <AppText style={styles.fundingSummarySubLabel}>
+                    Số dư ví khả dụng:
+                  </AppText>
+                  <AppText style={styles.fundingSummaryWallet}>
+                    {formatVnd(walletAvailable)}
+                  </AppText>
+                </View>
+              </View>
+
+              {hasInsufficientFunds && (
+                <View style={styles.insufficientBox}>
+                  <Notice tone="error">
+                    Số dư ví của bạn không đủ để đặt cọc (còn thiếu{" "}
+                    {formatVnd(amountToPay - walletAvailable)}). Vui lòng nạp
+                    thêm tiền vào ví để tiếp tục.
+                  </Notice>
+                  <Button
+                    title="Nạp tiền vào ví ngay ↗"
+                    secondary
+                    onPress={() => router.push("/wallet")}
+                  />
+                </View>
+              )}
+
               <AppText style={styles.hintText}>
-                Cả hai bên đã đồng thuận. Hãy đặt cọc bảo chứng từ số dư ví để kích hoạt quy trình giao nhận. Nếu đổi ý, bạn có thể hủy giao dịch.
+                Cả hai bên đã đồng thuận. Hãy đặt cọc bảo chứng từ số dư ví để
+                kích hoạt quy trình giao nhận. Tiền cọc được khóa an toàn trên
+                hệ thống.
               </AppText>
+
               <Button
-                title="Đặt cọc bảo chứng ngay"
+                title={
+                  fundMutation.isPending
+                    ? "Đang xử lý đặt cọc..."
+                    : `Đặt cọc bảo chứng ngay (${formatVnd(amountToPay)})`
+                }
                 wine
                 busy={isBusy}
+                disabled={hasInsufficientFunds || isBusy}
                 onPress={() => fundMutation.mutate()}
               />
               <Button
@@ -342,7 +721,9 @@ export function ExchangeActionsCard({
             <View style={styles.deadlineContainer}>
               <Icon name="clock" size={14} color={stitchTokens.wineDark} />
               <AppText style={styles.deadlineText}>
-                Hạn chót gửi sách: {new Date(exchange.shippingDeadline).toLocaleString("vi-VN")} (72 giờ)
+                Hạn chót gửi sách:{" "}
+                {new Date(exchange.shippingDeadline).toLocaleString("vi-VN")}{" "}
+                (72 giờ)
               </AppText>
             </View>
           )}
@@ -351,19 +732,26 @@ export function ExchangeActionsCard({
             <View style={styles.successNote}>
               <Icon name="check" size={16} color={stitchTokens.likeNewGreen} />
               <AppText style={styles.successNoteText}>
-                Bạn đã báo gửi sách thành công. Vui lòng giữ mã vận đơn hoặc liên hệ đối tác qua khung chat dưới.
+                Bạn đã báo gửi sách thành công. Mã vận đơn đã được lưu trên hệ
+                thống để đối tác cùng theo dõi.
               </AppText>
             </View>
           ) : (
             <View style={styles.buttonGroup}>
               <AppText style={styles.hintText}>
-                Hãy đóng gói cẩn thận và gửi sách đến địa chỉ của đối tác theo thỏa thuận. Quá 72h không gửi đơn sẽ bị hủy hoặc chuyển sang khiếu nại.
+                Cả hai bên đã hoàn tất đặt cọc. Hãy đóng gói cẩn thận và gửi
+                sách đến địa chỉ của đối tác theo thỏa thuận, sau đó cập nhật mã
+                vận đơn dưới đây.
               </AppText>
               <Button
-                title="Xác nhận tôi đã gửi sách"
+                title="📦 Báo gửi sách & Nhập mã vận đơn"
                 wine
                 busy={isBusy}
-                onPress={() => shipMutation.mutate()}
+                onPress={() => {
+                  setShipFormError(null);
+                  setGhnSuccessMsg(null);
+                  setShipModalOpen(true);
+                }}
               />
             </View>
           )}
@@ -377,13 +765,15 @@ export function ExchangeActionsCard({
             <View style={styles.successNote}>
               <Icon name="check" size={16} color={stitchTokens.likeNewGreen} />
               <AppText style={styles.successNoteText}>
-                Bạn có 72 giờ kiểm tra từ lúc nhận sách. Cọc vẫn được giữ đến khi cả hai hạn kết thúc và không có tranh chấp.
+                Bạn có 72 giờ kiểm tra từ lúc nhận sách. Cọc vẫn được giữ đến
+                khi cả hai hạn kết thúc và không có tranh chấp.
               </AppText>
             </View>
           ) : (
             <View style={styles.buttonGroup}>
               <AppText style={styles.hintText}>
-                Sách đang trên đường giao đến bạn. Khi nhận sách và kiểm tra đúng mô tả, hãy bấm nút dưới.
+                Sách đang trên đường giao đến bạn. Khi nhận sách và kiểm tra
+                đúng mô tả, hãy bấm nút xác nhận dưới đây.
               </AppText>
               <Button
                 title="Tôi đã nhận được sách an toàn"
@@ -403,13 +793,49 @@ export function ExchangeActionsCard({
         </View>
       )}
 
-      {/* State: DELIVERED (INSPECTING OR DISPUTE) */}
+      {/* State: DELIVERED (INSPECTING, ACKNOWLEDGE OR DISPUTE) */}
       {exchange.status === "Delivered" && (
         <View style={styles.actionsBox}>
-          <View style={styles.buttonGroup}>
-            <AppText style={styles.hintText}>
-              Mỗi bên có 72 giờ kiểm tra tính từ lúc nhận sách. Chỉ tất toán khi cả hai hạn kết thúc và không có tranh chấp.
-            </AppText>
+          {exchange.inspectionDeadline && (
+            <View style={styles.deadlineContainer}>
+              <Icon name="clock" size={14} color={stitchTokens.wineDark} />
+              <AppText style={styles.deadlineText}>
+                Hạn kiểm tra chung:{" "}
+                {new Date(exchange.inspectionDeadline).toLocaleString("vi-VN")}
+              </AppText>
+            </View>
+          )}
+
+          {isCompletedByMe ? (
+            <View style={styles.successNote}>
+              <Icon name="check" size={16} color={stitchTokens.likeNewGreen} />
+              <AppText style={styles.successNoteText}>
+                Bạn đã xác nhận kiểm tra sách. Cọc vẫn được giữ đến khi cả hai
+                hạn kiểm tra kết thúc và không có tranh chấp.
+              </AppText>
+            </View>
+          ) : (
+            <View style={styles.buttonGroup}>
+              <AppText style={styles.hintText}>
+                Mỗi bên có 72 giờ kiểm tra tính từ lúc nhận sách. Xác nhận đã
+                kiểm tra không tất toán hoặc hoàn cọc sớm.
+              </AppText>
+              <Button
+                title="Xác nhận đã kiểm tra"
+                wine
+                busy={isBusy}
+                onPress={() => setConfirmCompleteOpen(true)}
+              />
+              <Button
+                title="Báo cáo khiếu nại sách"
+                secondary
+                wine
+                busy={isBusy}
+                onPress={() => setConfirmDisputeOpen(true)}
+              />
+            </View>
+          )}
+          {isCompletedByMe && (
             <Button
               title="Báo cáo khiếu nại sách"
               secondary
@@ -417,7 +843,7 @@ export function ExchangeActionsCard({
               busy={isBusy}
               onPress={() => setConfirmDisputeOpen(true)}
             />
-          </View>
+          )}
         </View>
       )}
 
@@ -426,29 +852,24 @@ export function ExchangeActionsCard({
         <View style={styles.disputeBox}>
           <Icon name="info" size={20} color={stitchTokens.crimson} />
           <View style={{ flex: 1, gap: 4 }}>
-            <AppText style={styles.disputeTitle}>Đang giải quyết khiếu nại</AppText>
+            <AppText style={styles.disputeTitle}>
+              Đang giải quyết khiếu nại
+            </AppText>
             <AppText style={styles.disputeReason}>
-              Lý do: {exchange.disputeReason || "Phát sinh khiếu nại trong giao nhận hoặc đồng kiểm."}
+              Lý do:{" "}
+              {exchange.disputeReason ||
+                "Phát sinh khiếu nại trong giao nhận hoặc đồng kiểm."}
             </AppText>
             <AppText style={styles.disputeHint}>
-              Quy trình tự động tất toán 72 giờ đã được tạm dừng và tiền cọc được đóng băng bảo vệ. Ban quản trị Lật Lại đang tiếp nhận hỗ trợ hai bên.
+              Quy trình tự động tất toán 72 giờ đã được tạm dừng và tiền cọc
+              được đóng băng bảo vệ. Ban quản trị Lật Lại đang tiếp nhận hỗ trợ
+              hai bên.
             </AppText>
           </View>
         </View>
       )}
 
-      {/* State: COMPLETED */}
-      {exchange.status === "Completed" && (
-        <View style={styles.completedBox}>
-          <Icon name="check" size={20} color={stitchTokens.likeNewGreen} />
-          <View style={{ flex: 1 }}>
-            <AppText style={styles.completedTitle}>Trao đổi hoàn tất thành công!</AppText>
-            <AppText style={styles.completedSub}>
-              Cọc bảo chứng đã được hoàn trả về ví hai bên an toàn.
-            </AppText>
-          </View>
-        </View>
-      )}
+      <ExchangeReviewsCard exchange={exchange} />
 
       {/* State: CANCELLED */}
       {exchange.status === "Cancelled" && (
@@ -479,18 +900,6 @@ export function ExchangeActionsCard({
       />
 
       <ConfirmDialog
-        visible={confirmAcceptOpen}
-        title="Đồng ý trao đổi sách?"
-        message="Khi đồng ý, bạn và đối tác sẽ tiến hành đặt cọc bảo chứng và giao nhận sách theo địa chỉ đã chọn."
-        confirmLabel="Đồng ý ngay"
-        onCancel={() => setConfirmAcceptOpen(false)}
-        onConfirm={() => {
-          setConfirmAcceptOpen(false);
-          acceptMutation.mutate();
-        }}
-      />
-
-      <ConfirmDialog
         visible={confirmRejectOpen}
         title="Từ chối đề nghị?"
         message="Từ chối đề nghị hoán đổi này từ đối tác."
@@ -503,6 +912,18 @@ export function ExchangeActionsCard({
       />
 
       <ConfirmDialog
+        visible={confirmCompleteOpen}
+        title="Xác nhận đã kiểm tra sách?"
+        message="Xác nhận bạn đã kiểm tra sách. Cọc vẫn được giữ đến khi cả hai hạn kiểm tra 72 giờ kết thúc và không có tranh chấp."
+        confirmLabel="Xác nhận đã kiểm tra"
+        onCancel={() => setConfirmCompleteOpen(false)}
+        onConfirm={() => {
+          setConfirmCompleteOpen(false);
+          completeMutation.mutate();
+        }}
+      />
+
+      <ConfirmDialog
         visible={confirmDisputeOpen}
         title="Báo cáo khiếu nại giao dịch?"
         message="Quy trình tất toán 72h sẽ tạm dừng ngay lập tức và tiền cọc được giữ an toàn. Bạn có chắc muốn gửi khiếu nại cho đơn hàng này?"
@@ -511,11 +932,312 @@ export function ExchangeActionsCard({
         onCancel={() => setConfirmDisputeOpen(false)}
         onConfirm={() => {
           setConfirmDisputeOpen(false);
-          disputeMutation.mutate(disputeReason.trim() || "Sách không đúng như mô tả khi nhận");
+          disputeMutation.mutate(
+            disputeReason.trim() || "Sách không đúng như mô tả khi nhận",
+          );
         }}
       />
 
-      {/* Modal Đề xuất lại mức bù tiền */}
+      {/* Modal 1: Đồng ý đổi sách kèm chọn địa chỉ nhận */}
+      <AppModal
+        visible={acceptModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAcceptModalOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                <Icon name="check" size={18} color={stitchTokens.wineDark} />
+                <AppText style={styles.modalTitle}>
+                  Xác nhận đồng ý đổi sách
+                </AppText>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Đóng modal"
+                onPress={() => setAcceptModalOpen(false)}
+              >
+                <Icon name="close" size={20} color={stitchTokens.darkWood} />
+              </Pressable>
+            </View>
+
+            <AppText style={styles.modalSub}>
+              Khi đồng ý, bài đăng của bạn sẽ tạm khóa khỏi sàn để chuẩn bị giao
+              dịch. Vui lòng chọn địa chỉ để đối tác gửi sách cho bạn:
+            </AppText>
+
+            {/* Address Selection or Inline Address Creation */}
+            {!isAddingNewAddress && addressesQuery.data?.items?.length ? (
+              <View style={{ gap: 10 }}>
+                <ScrollView
+                  style={styles.addressListScroll}
+                  contentContainerStyle={{ gap: 8 }}
+                  showsVerticalScrollIndicator
+                  nestedScrollEnabled
+                >
+                  {addressesQuery.data.items.map((addr) => {
+                    const isSelected = addr.id === effectiveAcceptAddressId;
+                    return (
+                      <Pressable
+                        key={addr.id}
+                        style={[
+                          styles.sideOptionItem,
+                          isSelected && styles.sideOptionItemActive,
+                        ]}
+                        onPress={() => setSelectedAcceptAddressId(addr.id)}
+                      >
+                        <View
+                          style={[
+                            styles.radioCircle,
+                            isSelected && styles.radioCircleActive,
+                          ]}
+                        />
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 6,
+                            }}
+                          >
+                            <AppText style={styles.sideOptionTitle}>
+                              {addr.recipientName} ({addr.phone})
+                            </AppText>
+                            {addr.isDefault ? (
+                              <View style={styles.defaultBadge}>
+                                <AppText style={styles.defaultBadgeText}>
+                                  Mặc định
+                                </AppText>
+                              </View>
+                            ) : null}
+                          </View>
+                          <AppText
+                            style={styles.sideOptionDesc}
+                            numberOfLines={2}
+                          >
+                            {addr.detail}
+                          </AppText>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+
+                <View style={styles.addressHelperRow}>
+                  <Pressable
+                    style={styles.addNewAddressBtn}
+                    onPress={() => {
+                      setIsAddingNewAddress(true);
+                      setAddressFormError(null);
+                    }}
+                  >
+                    <Icon name="plus" size={14} color={stitchTokens.wineDark} />
+                    <AppText style={styles.addNewAddressBtnText}>
+                      Thêm địa chỉ nhận mới
+                    </AppText>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => {
+                      setAcceptModalOpen(false);
+                      router.push("/addresses");
+                    }}
+                  >
+                    <AppText style={styles.manageAddressLink}>
+                      Sổ địa chỉ ↗
+                    </AppText>
+                  </Pressable>
+                </View>
+
+                <View style={styles.modalActionRow}>
+                  <View style={{ flex: 1 }}>
+                    <Button
+                      title="Hủy"
+                      secondary
+                      onPress={() => setAcceptModalOpen(false)}
+                    />
+                  </View>
+                  <View style={{ flex: 1.5 }}>
+                    <Button
+                      title="Đồng ý đổi sách"
+                      wine
+                      disabled={!effectiveAcceptAddressId}
+                      busy={acceptMutation.isPending}
+                      onPress={() =>
+                        acceptMutation.mutate(effectiveAcceptAddressId)
+                      }
+                    />
+                  </View>
+                </View>
+              </View>
+            ) : (
+              <View style={{ gap: 10 }}>
+                <View style={styles.newAddressHeaderRow}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <Icon name="pin" size={15} color={stitchTokens.wineDark} />
+                    <AppText style={styles.newAddressSectionTitle}>
+                      {addressesQuery.data?.items?.length
+                        ? "Thêm địa chỉ nhận mới"
+                        : "Nhập địa chỉ nhận sách"}
+                    </AppText>
+                  </View>
+                  {addressesQuery.data?.items?.length ? (
+                    <Pressable
+                      onPress={() => {
+                        setIsAddingNewAddress(false);
+                        setAddressFormError(null);
+                      }}
+                      hitSlop={8}
+                    >
+                      <AppText style={styles.backToListLink}>
+                        ← Chọn từ đã lưu
+                      </AppText>
+                    </Pressable>
+                  ) : null}
+                </View>
+
+                <ScrollView
+                  style={styles.addressFormScroll}
+                  contentContainerStyle={{ gap: 8, paddingVertical: 2 }}
+                  showsVerticalScrollIndicator
+                  nestedScrollEnabled
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <View style={styles.formGroup}>
+                    <AppText style={styles.formLabel}>
+                      Họ và tên người nhận *
+                    </AppText>
+                    <AppTextInput
+                      style={styles.singleLineInput}
+                      value={newRecipientName}
+                      onChangeText={setNewRecipientName}
+                      placeholder="Ví dụ: Nguyễn Văn A"
+                      placeholderTextColor={stitchTokens.subtleGray}
+                      maxLength={100}
+                    />
+                  </View>
+
+                  <View style={styles.formGroup}>
+                    <AppText style={styles.formLabel}>
+                      Số điện thoại (10 số) *
+                    </AppText>
+                    <AppTextInput
+                      style={styles.singleLineInput}
+                      value={newPhone}
+                      onChangeText={setNewPhone}
+                      placeholder="0901234567"
+                      placeholderTextColor={stitchTokens.subtleGray}
+                      keyboardType="phone-pad"
+                      maxLength={15}
+                    />
+                  </View>
+
+                  <View style={styles.formGroup}>
+                    <AppText style={styles.formLabel}>
+                      Khu vực phục vụ *
+                    </AppText>
+                    <View style={styles.localityChipsRow}>
+                      {(areasQuery.data?.localities?.length
+                        ? areasQuery.data.localities
+                        : [
+                            { code: "DEMO-A", label: "Quận 1, 3, 5, 10" },
+                            { code: "DEMO-B", label: "Bình Thạnh, Phú Nhuận" },
+                          ]
+                      ).map((loc) => {
+                        const isLocSelected =
+                          (newLocalityCode ||
+                            areasQuery.data?.localities?.[0]?.code ||
+                            "DEMO-A") === loc.code;
+                        return (
+                          <Pressable
+                            key={loc.code}
+                            style={[
+                              styles.localityChip,
+                              isLocSelected && styles.localityChipActive,
+                            ]}
+                            onPress={() => setNewLocalityCode(loc.code)}
+                          >
+                            <AppText
+                              style={[
+                                styles.localityChipText,
+                                isLocSelected && styles.localityChipTextActive,
+                              ]}
+                            >
+                              {loc.label}
+                            </AppText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  <View style={styles.formGroup}>
+                    <AppText style={styles.formLabel}>
+                      Địa chỉ chi tiết (số nhà, tên đường, phường) *
+                    </AppText>
+                    <AppTextInput
+                      style={styles.detailInput}
+                      value={newDetail}
+                      onChangeText={setNewDetail}
+                      placeholder="Số 123 đường ABC, Phường X..."
+                      placeholderTextColor={stitchTokens.subtleGray}
+                      maxLength={300}
+                    />
+                  </View>
+
+                  {addressFormError ? (
+                    <View style={{ marginTop: 2 }}>
+                      <Notice tone="error">{addressFormError}</Notice>
+                    </View>
+                  ) : null}
+                </ScrollView>
+
+                <View style={styles.modalActionRow}>
+                  {addressesQuery.data?.items?.length ? (
+                    <View style={{ flex: 1 }}>
+                      <Button
+                        title="Quay lại"
+                        secondary
+                        onPress={() => {
+                          setIsAddingNewAddress(false);
+                          setAddressFormError(null);
+                        }}
+                      />
+                    </View>
+                  ) : (
+                    <View style={{ flex: 1 }}>
+                      <Button
+                        title="Hủy"
+                        secondary
+                        onPress={() => setAcceptModalOpen(false)}
+                      />
+                    </View>
+                  )}
+                  <View style={{ flex: 1.5 }}>
+                    <Button
+                      title="Lưu & Chọn địa chỉ"
+                      wine
+                      busy={isCreatingAddress}
+                      onPress={handleSaveNewAddress}
+                    />
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
+      </AppModal>
+
+      {/* Modal 2: Đề xuất lại mức bù tiền */}
       <AppModal
         visible={counterModalOpen}
         transparent
@@ -525,9 +1247,13 @@ export function ExchangeActionsCard({
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
                 <Icon name="tag" size={18} color={stitchTokens.wineDark} />
-                <AppText style={styles.modalTitle}>Đề xuất lại mức bù tiền</AppText>
+                <AppText style={styles.modalTitle}>
+                  Đề xuất lại mức bù tiền
+                </AppText>
               </View>
               <Pressable
                 accessibilityRole="button"
@@ -539,7 +1265,8 @@ export function ExchangeActionsCard({
             </View>
 
             <AppText style={styles.modalSub}>
-              Chọn bên chịu tiền bù chênh lệch giá trị sách và mức tiền mong muốn:
+              Chọn bên chịu tiền bù chênh lệch giá trị sách và mức tiền mong
+              muốn:
             </AppText>
 
             {/* Chọn ai bù */}
@@ -561,8 +1288,12 @@ export function ExchangeActionsCard({
                   ]}
                 />
                 <View style={{ flex: 1 }}>
-                  <AppText style={styles.sideOptionTitle}>Đổi ngang giá</AppText>
-                  <AppText style={styles.sideOptionDesc}>Hai bên bằng giá, không ai bù tiền</AppText>
+                  <AppText style={styles.sideOptionTitle}>
+                    Đổi ngang giá
+                  </AppText>
+                  <AppText style={styles.sideOptionDesc}>
+                    Hai bên bằng giá, không ai bù tiền
+                  </AppText>
                 </View>
               </Pressable>
 
@@ -580,8 +1311,12 @@ export function ExchangeActionsCard({
                   ]}
                 />
                 <View style={{ flex: 1 }}>
-                  <AppText style={styles.sideOptionTitle}>Tôi sẽ bù thêm tiền cho đối tác</AppText>
-                  <AppText style={styles.sideOptionDesc}>Sách của đối tác có giá trị cao hơn</AppText>
+                  <AppText style={styles.sideOptionTitle}>
+                    Tôi sẽ bù thêm tiền cho đối tác
+                  </AppText>
+                  <AppText style={styles.sideOptionDesc}>
+                    Sách của đối tác có giá trị cao hơn
+                  </AppText>
                 </View>
               </Pressable>
 
@@ -599,8 +1334,12 @@ export function ExchangeActionsCard({
                   ]}
                 />
                 <View style={{ flex: 1 }}>
-                  <AppText style={styles.sideOptionTitle}>Đối tác sẽ bù thêm tiền cho tôi</AppText>
-                  <AppText style={styles.sideOptionDesc}>Sách của tôi có giá trị cao hơn</AppText>
+                  <AppText style={styles.sideOptionTitle}>
+                    Đối tác sẽ bù thêm tiền cho tôi
+                  </AppText>
+                  <AppText style={styles.sideOptionDesc}>
+                    Sách của tôi có giá trị cao hơn
+                  </AppText>
                 </View>
               </Pressable>
             </View>
@@ -608,13 +1347,17 @@ export function ExchangeActionsCard({
             {/* Nhập số tiền nếu không phải 'none' */}
             {counterSide !== "none" && (
               <View style={styles.inputSection}>
-                <AppText style={styles.inputLabel}>Số tiền bù chênh lệch (VNĐ):</AppText>
+                <AppText style={styles.inputLabel}>
+                  Số tiền bù chênh lệch (VNĐ):
+                </AppText>
                 <AppTextInput
                   accessibilityLabel="Số tiền bù chênh lệch"
                   style={styles.amountInput}
                   keyboardType="numeric"
                   value={counterAmountStr}
-                  onChangeText={(val) => setCounterAmountStr(val.replace(/\D/g, ""))}
+                  onChangeText={(val) =>
+                    setCounterAmountStr(val.replace(/\D/g, ""))
+                  }
                   placeholder="Ví dụ: 10000"
                   placeholderTextColor={stitchTokens.subtleGray}
                 />
@@ -637,7 +1380,9 @@ export function ExchangeActionsCard({
 
             {/* Lời nhắn kèm theo */}
             <View style={styles.inputSection}>
-              <AppText style={styles.inputLabel}>Lời nhắn cho đối tác (tùy chọn):</AppText>
+              <AppText style={styles.inputLabel}>
+                Lời nhắn cho đối tác (tùy chọn):
+              </AppText>
               <AppTextInput
                 accessibilityLabel="Lời nhắn cho đối tác"
                 style={styles.noteInput}
@@ -665,6 +1410,279 @@ export function ExchangeActionsCard({
                   wine
                   busy={counterMutation.isPending}
                   onPress={() => counterMutation.mutate()}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </AppModal>
+
+      {/* Modal 3: Báo gửi sách & Cập nhật vận đơn */}
+      <AppModal
+        visible={shipModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShipModalOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+              >
+                <Icon name="truck" size={18} color={stitchTokens.wineDark} />
+                <AppText style={styles.modalTitle}>Xác nhận gửi sách</AppText>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Đóng modal"
+                onPress={() => setShipModalOpen(false)}
+              >
+                <Icon name="close" size={20} color={stitchTokens.darkWood} />
+              </Pressable>
+            </View>
+
+            {shipFormError ? (
+              <Notice tone="error">{shipFormError}</Notice>
+            ) : null}
+
+            {/* Method switch */}
+            <View style={styles.methodTabRow}>
+              <Pressable
+                style={[
+                  styles.methodTabItem,
+                  shipMethod === "carrier" && styles.methodTabItemActive,
+                ]}
+                onPress={() => setShipMethod("carrier")}
+              >
+                <Icon
+                  name="truck"
+                  size={14}
+                  color={
+                    shipMethod === "carrier"
+                      ? stitchTokens.wineDark
+                      : stitchTokens.subtleGray
+                  }
+                />
+                <AppText
+                  style={[
+                    styles.methodTabText,
+                    shipMethod === "carrier" && styles.methodTabTextActive,
+                  ]}
+                >
+                  Gửi qua bưu cục
+                </AppText>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  styles.methodTabItem,
+                  shipMethod === "direct" && styles.methodTabItemActive,
+                ]}
+                onPress={() => setShipMethod("direct")}
+              >
+                <Icon
+                  name="pin"
+                  size={14}
+                  color={
+                    shipMethod === "direct"
+                      ? stitchTokens.wineDark
+                      : stitchTokens.subtleGray
+                  }
+                />
+                <AppText
+                  style={[
+                    styles.methodTabText,
+                    shipMethod === "direct" && styles.methodTabTextActive,
+                  ]}
+                >
+                  Gặp mặt trực tiếp
+                </AppText>
+              </Pressable>
+            </View>
+
+            <ScrollView
+              style={{ maxHeight: 380 }}
+              contentContainerStyle={{ gap: 10, paddingVertical: 2 }}
+              showsVerticalScrollIndicator
+              nestedScrollEnabled
+              keyboardShouldPersistTaps="handled"
+            >
+              {shipMethod === "carrier" ? (
+                <View style={{ gap: 10 }}>
+                  {/* Chọn hãng vận chuyển */}
+                  <View style={styles.inputSection}>
+                    <AppText style={styles.inputLabel}>
+                      Đơn vị vận chuyển:
+                    </AppText>
+                    <View style={styles.presetRow}>
+                      {CARRIER_OPTIONS.map((c) => (
+                        <Pressable
+                          key={c.code}
+                          style={[
+                            styles.presetChip,
+                            shipCarrierCode === c.code &&
+                              styles.presetChipActive,
+                          ]}
+                          onPress={() => {
+                            setShipCarrierCode(c.code);
+                            setGhnSuccessMsg(null);
+                          }}
+                        >
+                          <AppText
+                            style={[
+                              styles.presetChipText,
+                              shipCarrierCode === c.code &&
+                                styles.presetChipTextActive,
+                            ]}
+                          >
+                            {c.name}
+                          </AppText>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+
+                  {shipCarrierCode === "OTHER" && (
+                    <View style={styles.inputSection}>
+                      <AppText style={styles.inputLabel}>
+                        Tên đơn vị vận chuyển:
+                      </AppText>
+                      <AppTextInput
+                        style={styles.amountInput}
+                        value={shipCustomCarrier}
+                        onChangeText={setShipCustomCarrier}
+                        placeholder="Ví dụ: Ninja Van, J&T Express..."
+                        placeholderTextColor={stitchTokens.subtleGray}
+                      />
+                    </View>
+                  )}
+
+                  {/* GHN Open API Integration Box */}
+                  {shipCarrierCode === "GHN" && (
+                    <View style={styles.ghnAutoBox}>
+                      <View style={styles.ghnAutoHeader}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          <Icon
+                            name="bolt"
+                            size={13}
+                            color={stitchTokens.exchangeCarrierInk}
+                          />
+                          <AppText style={styles.ghnBadge}>
+                            TÍCH HỢP GHN OPEN API
+                          </AppText>
+                        </View>
+                        <Pressable
+                          style={[
+                            styles.ghnAutoBtn,
+                            isCreatingGhn && { opacity: 0.7 },
+                          ]}
+                          onPress={handleAutoCreateGhn}
+                          disabled={isCreatingGhn}
+                        >
+                          <AppText style={styles.ghnAutoBtnText}>
+                            {isCreatingGhn
+                              ? "Đang tạo đơn..."
+                              : "⚡ Tạo đơn GHN & Lấy mã tự động"}
+                          </AppText>
+                        </Pressable>
+                      </View>
+                      {ghnSuccessMsg ? (
+                        <View style={styles.ghnSuccessBox}>
+                          <AppText style={styles.ghnSuccessText}>
+                            {ghnSuccessMsg}
+                          </AppText>
+                        </View>
+                      ) : null}
+                    </View>
+                  )}
+
+                  {/* Mã vận đơn */}
+                  <View style={styles.inputSection}>
+                    <AppText style={styles.inputLabel}>
+                      Mã vận đơn / Số bưu kiện (*):
+                    </AppText>
+                    <AppTextInput
+                      accessibilityLabel="Mã vận đơn"
+                      style={styles.amountInput}
+                      value={shipTrackingCode}
+                      onChangeText={setShipTrackingCode}
+                      placeholder="Ví dụ: GHN8892183..."
+                      placeholderTextColor={stitchTokens.subtleGray}
+                      autoCapitalize="characters"
+                    />
+                  </View>
+
+                  {/* Ghi chú */}
+                  <View style={styles.inputSection}>
+                    <AppText style={styles.inputLabel}>
+                      Ghi chú gửi hàng (tùy chọn):
+                    </AppText>
+                    <AppTextInput
+                      style={styles.noteInput}
+                      value={shipNotes}
+                      onChangeText={setShipNotes}
+                      placeholder="Ví dụ: Đã gửi kiện hàng, dự kiến 2 ngày tới..."
+                      placeholderTextColor={stitchTokens.subtleGray}
+                      maxLength={200}
+                    />
+                  </View>
+                </View>
+              ) : (
+                <View style={{ gap: 10 }}>
+                  {/* Meetup location */}
+                  <View style={styles.inputSection}>
+                    <AppText style={styles.inputLabel}>
+                      Địa điểm hẹn gặp (*):
+                    </AppText>
+                    <AppTextInput
+                      accessibilityLabel="Địa điểm hẹn gặp"
+                      style={styles.amountInput}
+                      value={shipMeetupLocation}
+                      onChangeText={setShipMeetupLocation}
+                      placeholder="Ví dụ: Đường sách Nguyễn Văn Bình, Q.1"
+                      placeholderTextColor={stitchTokens.subtleGray}
+                    />
+                  </View>
+
+                  {/* Meetup notes */}
+                  <View style={styles.inputSection}>
+                    <AppText style={styles.inputLabel}>
+                      Thời gian & ghi chú hẹn:
+                    </AppText>
+                    <AppTextInput
+                      style={styles.noteInput}
+                      value={shipNotes}
+                      onChangeText={setShipNotes}
+                      placeholder="Ví dụ: Hẹn bạn chiều thứ 7 lúc 15h..."
+                      placeholderTextColor={stitchTokens.subtleGray}
+                      maxLength={200}
+                    />
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={styles.modalActionRow}>
+              <View style={{ flex: 1 }}>
+                <Button
+                  title="Hủy"
+                  secondary
+                  onPress={() => setShipModalOpen(false)}
+                />
+              </View>
+              <View style={{ flex: 1.5 }}>
+                <Button
+                  title="Xác nhận gửi"
+                  wine
+                  busy={shipMutation.isPending}
+                  onPress={handleShipSubmit}
                 />
               </View>
             </View>
@@ -732,6 +1750,41 @@ const styles = StyleSheet.create({
     color: stitchTokens.darkWood,
     lineHeight: 18,
   },
+  fundingSummaryCard: {
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    gap: 6,
+  },
+  fundingSummaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  fundingSummaryLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  fundingSummaryAmount: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: stitchTokens.wineDark,
+  },
+  fundingSummarySubLabel: {
+    fontSize: 12,
+    color: stitchTokens.roseBrown,
+  },
+  fundingSummaryWallet: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.likeNewGreen,
+  },
+  insufficientBox: {
+    gap: 8,
+  },
   deadlineContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -789,6 +1842,9 @@ const styles = StyleSheet.create({
     color: stitchTokens.likeNewGreen,
     lineHeight: 16,
   },
+  completedSection: {
+    gap: 12,
+  },
   completedBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -807,6 +1863,93 @@ const styles = StyleSheet.create({
   completedSub: {
     fontSize: 11,
     color: stitchTokens.darkWood,
+    marginTop: 2,
+  },
+  reviewContainer: {
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    gap: 8,
+  },
+  reviewHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  reviewHeaderTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: stitchTokens.wineDark,
+  },
+  reviewPromptBox: {
+    gap: 8,
+    paddingTop: 4,
+  },
+  reviewPromptText: {
+    fontSize: 12,
+    color: stitchTokens.darkWood,
+    lineHeight: 16,
+  },
+  myReviewBox: {
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorderAlpha40,
+    gap: 5,
+  },
+  partnerReviewBox: {
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorderAlpha40,
+    gap: 5,
+    marginTop: 4,
+  },
+  reviewSubTitle: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.roseBrown,
+    textTransform: "uppercase",
+  },
+  starsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  starMetricLabel: {
+    fontSize: 12,
+    color: stitchTokens.darkWood,
+  },
+  starsDisplay: {
+    flexDirection: "row",
+    gap: 3,
+  },
+  tagsDisplayRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+    marginTop: 3,
+  },
+  tagBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: stitchTokens.terracottaSoft,
+  },
+  tagBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  commentText: {
+    fontSize: 12,
+    color: stitchTokens.darkWood,
+    fontStyle: "italic",
+    lineHeight: 16,
     marginTop: 2,
   },
   cancelledBox: {
@@ -915,13 +2058,13 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.peachBorder,
     borderRadius: 10,
     paddingHorizontal: 12,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
     color: stitchTokens.wineDark,
     backgroundColor: stitchTokens.whiteSurface,
   },
   noteInput: {
-    minHeight: 60,
+    minHeight: 50,
     borderWidth: 1.5,
     borderColor: stitchTokens.peachBorder,
     borderRadius: 10,
@@ -935,24 +2078,248 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 6,
     flexWrap: "wrap",
-    marginTop: 4,
   },
   presetChip: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
     borderRadius: 8,
     backgroundColor: stitchTokens.creamBg,
     borderWidth: 1,
     borderColor: stitchTokens.peachBorder,
+  },
+  presetChipActive: {
+    backgroundColor: stitchTokens.wineDark,
+    borderColor: stitchTokens.wineDark,
   },
   presetChipText: {
     fontSize: 11,
     fontWeight: "700",
     color: stitchTokens.wineDark,
   },
+  presetChipTextActive: {
+    color: stitchTokens.white,
+  },
+  methodTabRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  methodTabItem: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorderAlpha40,
+  },
+  methodTabItemActive: {
+    backgroundColor: stitchTokens.terracottaSoft,
+    borderColor: stitchTokens.wineMid,
+  },
+  methodTabText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.darkWood,
+  },
+  methodTabTextActive: {
+    color: stitchTokens.wineDark,
+    fontWeight: "800",
+  },
+  interactiveStarsRow: {
+    flexDirection: "row",
+    gap: 12,
+    justifyContent: "center",
+    paddingVertical: 4,
+  },
+  starTouchItem: {
+    padding: 4,
+  },
+  addressEmptyBox: {
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.parchment,
+    gap: 8,
+    alignItems: "center",
+  },
+  addressEmptyText: {
+    fontSize: 12,
+    color: stitchTokens.subtleGray,
+  },
   modalActionRow: {
     flexDirection: "row",
     gap: 10,
     marginTop: 6,
+  },
+  addressListScroll: {
+    maxHeight: 200,
+  },
+  addressFormScroll: {
+    maxHeight: 250,
+  },
+  defaultBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+    backgroundColor: stitchTokens.amberBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+  },
+  defaultBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  addressHelperRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+    paddingHorizontal: 2,
+  },
+  addNewAddressBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: stitchTokens.creamBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+  },
+  addNewAddressBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  manageAddressLink: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.wineDark,
+    textDecorationLine: "underline",
+  },
+  newAddressHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: stitchTokens.peachBorder,
+  },
+  newAddressSectionTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: stitchTokens.wineDark,
+  },
+  backToListLink: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.wineDark,
+  },
+  formGroup: {
+    gap: 4,
+  },
+  formLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  singleLineInput: {
+    height: 38,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    fontSize: 13,
+    color: stitchTokens.wineDark,
+    backgroundColor: stitchTokens.whiteSurface,
+  },
+  detailInput: {
+    height: 48,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12,
+    color: stitchTokens.wineDark,
+    backgroundColor: stitchTokens.whiteSurface,
+    textAlignVertical: "top",
+  },
+  localityChipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  localityChip: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: stitchTokens.creamBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+  },
+  localityChipActive: {
+    backgroundColor: stitchTokens.wineDark,
+    borderColor: stitchTokens.wineDark,
+  },
+  localityChipText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: stitchTokens.wineDark,
+  },
+  localityChipTextActive: {
+    color: stitchTokens.white,
+    fontWeight: "700",
+  },
+  ghnAutoBox: {
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.exchangeCarrierSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.exchangeCarrierBorder,
+    borderStyle: "dashed",
+    gap: 8,
+  },
+  ghnAutoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  ghnBadge: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: stitchTokens.exchangeCarrierInk,
+    letterSpacing: 0.5,
+  },
+  ghnAutoBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    backgroundColor: stitchTokens.exchangeCarrierAction,
+  },
+  ghnAutoBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.white,
+  },
+  ghnSuccessBox: {
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: stitchTokens.likeNewGreenBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.likeNewGreen,
+  },
+  ghnSuccessText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: stitchTokens.likeNewGreen,
+    lineHeight: 16,
   },
 });

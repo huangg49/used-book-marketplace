@@ -483,7 +483,13 @@ export function ActionCard(props: Props) {
         isOpen={!!action}
         onClose={() => setAction(undefined)}
         title={action ? labels[action] : ""}
-        confirmText={action === "dispute" ? "Gửi khiếu nại" : (action ? labels[action] : "Xác nhận")}
+        confirmText={
+          action === "dispute"
+            ? "Gửi khiếu nại"
+            : action === "complete"
+              ? "Xác nhận nghiệm thu"
+              : action ? labels[action] : "Xác nhận"
+        }
         isBusy={busy}
         isDanger={action === "cancel" || action === "reject" || action === "dispute"}
         onConfirm={() => void confirm()}
