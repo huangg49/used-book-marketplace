@@ -1,24 +1,26 @@
 # Điểm lưu hiện tại — 29/10/2026
 
-## Review data Gemini — 29/10/2026
+## Review data Gemini và phúc tra v2 — 29/10/2026
 
-- Owner chuyển bàn giao Gemini để kiểm; nhánh `codex/listing-ai-data-review`,
-  basee62473f, commit subject `docs(ai): review Gemini dataset and request corrections`.
+- Owner chuyển bàn giao Gemini/v2 để kiểm; nhánh `codex/listing-ai-data-review`.
+  Phúc tra base0de9cf5, commit subject
+  `docs(ai): verify dataset rework and isolate remaining gaps`.
   [Review/finding](../../qa-data/listing-ai/REVIEW_2026_10_29.md),
-  [prompt sửa](../../qa-data/listing-ai/GEMINI_REWORK.md),
-  [evidence đã chọn](../../qa-data/listing-ai/review-2026-10-29/evidence.json).
-- Kết luận NEEDS_REWORK, không import/nghiệm thu. 25JPEG decode/hash/size khớp,
-  24hash độc lập,14ISBN đúng checksum và có trên nguồn NXB. 40URL HTTP200 nhưng
-  2Tiki là redirect chưa xác minh sản phẩm. 14cuốn hai group tự khai gồm likely;
-  thêm exact còn12, chưa là12cuốn nghiệm thu. 76field thiếu dẫn chứng,0case nhiều
-  tác giả, metadata năm/ISBN/edition/stock và thời điểm thu thập có mâu thuẫn.
-- Baseline validator tái lập16PASS/0FAIL/1BLOCKED/1NOT_RUN trên bản sao. Bốn
-  negative probes chứng minh giá âm/ngày tương lai/photos thiếu/cờ review và
-  import sai không bị bắt; ISBN sai cóFAIL vẫnexit0. Script còn hạ ngưỡng15→14.
-  Report/raw gốc không sửa; không chạy script downloader/importer/app/DB/AI.
-- Human/real-camera NOT_RUN, READINESS không đổi. Chỉ docs/evidence kỹ thuật,
-  ảnh/raw giữ ignored. Bước tiếp owner chuyển GEMINI_REWORK, Gemini sửa incoming
-  có snapshot/changelog, Codex đối chiếu lại; không tự gửi message agent khác.
+  [prompt sửa còn lại](../../qa-data/listing-ai/GEMINI_REWORK_V3.md),
+  [evidence v2](../../qa-data/listing-ai/review-2026-10-29/rework-v2-evidence.json).
+- V2 giữ NEEDS_REWORK_PARTIAL, không import/nghiệm thu. 25JPEG Sharp decode và
+  metadata/hash khớp,24hash độc lập,15ISBN có nguồn NXB,1sách nhiều tác giả,
+  0field thiếu locator về hình thức. Tiki canonical đã cóProduct/Offer;11/15cuốn
+  exact theo nhãn, chưa là11cuốn nghiệm thu. 9file snapshot cốt lõi khớp digest.
+- Tái lập baseline22PASS/0FAIL/1PARTIAL/1BLOCKED/1NOT_RUN và9/9negative Gemini
+  trên bản sao. 8probe bổ sung còn lọt: JPEG23byte không scan, sai size/dimension,
+  sibling path escape, source của fieldEvidence thiếu, ngàykhôngtồn tại, review
+  flags thiếu, timestampnguồn tươnglai, casequarantine vẫnactive. Raw11file giữ
+  nguyên. Case95k còn trong file.cases nên runner vẫn chạy; năm Lược sử2024 chưa
+  thấy bằng chứng. Không coi mọi finding đãRESOLVED như changelog Gemini.
+- Human/real-camera NOT_RUN, READINESS không đổi. Chỉ docs/evidence, ảnh/raw
+  ignored; không chạy app/DB/AI/GHN, không gửi message agent khác. Bước tiếp
+  sửa checker/corpus/locator theo promptv3;11/15 và gate khác có thể giữPARTIAL.
 
 ## Chuẩn bị giao data cho Gemini — 29/10/2026
 

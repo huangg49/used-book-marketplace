@@ -4,6 +4,9 @@ Thư mục đã chuẩn bị cho Gemini/Antigravity ngày 29/10/2026.
 Repo base `fc9ce22`, nhánh chuẩn bị `codex/listing-ai-data-handoff`.
 
 - [Prompt giao việc đầy đủ](GEMINI_PROMPT.md): đưa nguyên file cho Gemini đọc.
+- Đã có hai lượt review: [kết quả hiện tại](REVIEW_2026_10_29.md) và
+  [prompt sửa phần còn lại sau v2](GEMINI_REWORK_V3.md). Không suy report exit0
+  thành nghiệm thu; data vẫn NEEDS_REWORK_PARTIAL.
 - [Mẫu catalog](templates/books.example.json),
   [mẫu quan sát giá](templates/price-observations.example.json),
   [mẫu nguồn](templates/sources.example.json),
