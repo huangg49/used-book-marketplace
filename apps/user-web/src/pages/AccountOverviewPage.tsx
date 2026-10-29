@@ -4,6 +4,7 @@ import { DashboardStats } from "./profile/components/DashboardStats";
 import { DashboardLiveAuctions } from "./profile/components/DashboardLiveAuctions";
 import { DashboardCashflow } from "./profile/components/DashboardCashflow";
 import { DashboardAuctionFocus } from "./profile/components/DashboardAuctionFocus";
+import { DashboardExchangeFocus } from "./profile/components/DashboardExchangeFocus";
 import { DashboardMyBooks } from "./profile/components/DashboardMyBooks";
 import { DashboardOrders } from "./profile/components/DashboardOrders";
 
@@ -33,10 +34,13 @@ export function AccountOverviewPage() {
       {/* 5. Auction Focus & History (Đấu giá của bạn & Xem lịch sử đấu giá) */}
       <DashboardAuctionFocus ownerId={user.id} />
 
-      {/* 6. My Books (Kệ sách của tôi - Filter tabs & Equal-Height Archival Cards) */}
+      {/* 6. Exchange Focus & Progress (Trao đổi sách của bạn) */}
+      <DashboardExchangeFocus />
+
+      {/* 7. My Books (Kệ sách của tôi - Filter tabs & Equal-Height Archival Cards) */}
       <DashboardMyBooks ownerId={user.id} />
 
-      {/* 7. Orders Timeline Tracker (5-Step Horizontal/Vertical Transport Progress) */}
+      {/* 8. Orders Timeline Tracker (5-Step Horizontal/Vertical Transport Progress) */}
       <DashboardOrders />
     </div>
   );

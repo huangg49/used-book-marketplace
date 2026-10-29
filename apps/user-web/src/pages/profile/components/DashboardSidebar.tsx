@@ -1,11 +1,13 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Bell, LogOut, ChevronDown, Menu } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { accountNavigation } from "../../../lib/account-navigation";
 import { ROUTES } from "../../../lib/routes";
 import { useAccountLogout } from "../../../hooks/useAccountLogout";
 import { useSession } from "../../../hooks/useSession";
+import { listNotifications } from "../../../services/notifications";
 import styles from "../../../layouts/DashboardLayout.module.css";
 
 interface DashboardSidebarProps {
@@ -22,6 +24,14 @@ export function DashboardSidebar({
   const [menuPath, setMenuPath] = useState<string | null>(null);
   const menuOpen = menuPath === location.key;
   const { busy, error, logout } = useAccountLogout();
+
+  const notificationsQuery = useQuery({
+    queryKey: ["notifications", "page"],
+    queryFn: () => listNotifications(undefined, 1),
+    enabled: auth.status === "authenticated",
+    staleTime: 30_000,
+  });
+  const unreadCount = notificationsQuery.data?.unreadCount ?? 0;
 
   const userInitial =
     auth.status === "authenticated"
@@ -144,7 +154,7 @@ export function DashboardSidebar({
           <NavLink
             to={ROUTES.notifications}
             end
-            title={collapsed ? "Thông báo" : undefined}
+            title={collapsed ? (unreadCount > 0 ? `Thông báo (${unreadCount} mới)` : "Thông báo") : undefined}
           >
             <motion.div
               className={styles.navLinkContent}
@@ -152,19 +162,29 @@ export function DashboardSidebar({
               whileTap={{ scale: 0.97 }}
               transition={{ type: "spring", stiffness: 450, damping: 25 }}
             >
-              <Bell size={18} aria-hidden="true" className={styles.navIcon} />
+              <div className="relative inline-flex items-center justify-center">
+                <Bell size={18} aria-hidden="true" className={styles.navIcon} />
+                {collapsed && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#5c0202] border border-white" />
+                )}
+              </div>
               <AnimatePresence initial={false}>
                 {!collapsed && (
-                  <motion.span
+                  <motion.div
                     key="notifications"
                     initial={{ opacity: 0, width: 0, x: -8 }}
                     animate={{ opacity: 1, width: "auto", x: 0 }}
                     exit={{ opacity: 0, width: 0, x: -8 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className={styles.navLabel}
+                    className="flex items-center justify-between flex-1 gap-2 min-w-0"
                   >
-                    Thông báo
-                  </motion.span>
+                    <span className={styles.navLabel}>Thông báo</span>
+                    {unreadCount > 0 && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#5c0202] text-white tabular-nums flex-shrink-0">
+                        {unreadCount}
+                      </span>
+                    )}
+                  </motion.div>
                 )}
               </AnimatePresence>
             </motion.div>

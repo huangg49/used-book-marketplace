@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Camera, Check, ScanText, X } from "lucide-react";
+import { Camera, Check, ChevronDown, ScanText, Sparkles, X } from "lucide-react";
 import {
   createAutofillRequest,
   type AutofillMatch,
@@ -53,12 +53,16 @@ export function PhotoAutofill({
   onPickBook: (match: AutofillMatch) => void;
 }) {
   const ask = useMemo(() => createAutofillRequest(attempt, channel), [attempt, channel]);
+  const [open, setOpen] = useState(false);
   const [files, setFiles] = useState<{ file: File; url: string }[]>([]);
   const [reading, setReading] = useState(false);
   const [error, setError] = useState<string>();
   const [result, setResult] = useState<AutofillSuggestion | null>(null);
   const [used, setUsed] = useState<AutofillField[]>([]);
   const filesRef = useRef(files);
+
+  const isOpen = open || files.length > 0 || !!result;
+
   useEffect(() => {
     filesRef.current = files;
   }, [files]);
@@ -90,13 +94,16 @@ export function PhotoAutofill({
       ...previous,
       ...picked.map((file) => ({ file, url: URL.createObjectURL(file) })),
     ]);
+    setOpen(true);
   }
+
   function remove(index: number) {
     setFiles((previous) => {
       URL.revokeObjectURL(previous[index]!.url);
       return previous.filter((_, i) => i !== index);
     });
   }
+
   async function read() {
     if (reading || !files.length) return;
     setReading(true);
@@ -105,6 +112,7 @@ export function PhotoAutofill({
       const next = await ask(files.map((item) => item.file));
       setResult(next);
       setUsed([]);
+      setOpen(true);
     } catch (e) {
       setError(
         e instanceof Error && e.message
@@ -115,151 +123,197 @@ export function PhotoAutofill({
       setReading(false);
     }
   }
+
   function use(field: AutofillField) {
     if (!result) return;
     onUseField(field, result.fields);
     setUsed((previous) => [...new Set([...previous, field])]);
   }
+
   const readable = result ? ORDER.filter((key) => shown(result.fields, key)) : [];
 
   return (
     <section className={styles.panel} aria-labelledby="photo-autofill-title">
-      <div className={styles.head}>
-        <ScanText size={20} aria-hidden="true" />
-        <h3 id="photo-autofill-title">Điền nhanh từ ảnh</h3>
-      </div>
-      <p className={styles.help}>
-        Chụp bìa trước, gáy hoặc trang bản quyền. Trợ lý chỉ đọc chữ in trên sách;
-        bạn kiểm tra và chọn từng thông tin.
-      </p>
-      <div className={styles.photos}>
-        {files.map((item, index) => (
-          <figure key={item.url} className={styles.thumb}>
-            <img src={item.url} alt={`Ảnh để đọc ${index + 1}`} />
-            <button
-              type="button"
-              className={styles.remove}
-              onClick={() => remove(index)}
-              disabled={disabled || reading}
-              aria-label={`Bỏ ảnh để đọc ${index + 1}`}
-            >
-              <X size={14} aria-hidden="true" />
-            </button>
-          </figure>
-        ))}
-        {files.length < MAX_PHOTOS && (
-          <label className={styles.add} aria-disabled={disabled || reading}>
-            <Camera size={18} aria-hidden="true" />
-            <span>{files.length ? "Thêm ảnh" : "Chọn ảnh"}</span>
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              onChange={choose}
-              disabled={disabled || reading}
-              className="sr-only"
-            />
-          </label>
-        )}
-      </div>
-      <div className={styles.actions}>
-        <button
-          type="button"
-          className={styles.read}
-          onClick={() => void read()}
-          disabled={disabled || reading || !files.length}
-          aria-busy={reading}
-        >
-          {reading ? "Đang đọc…" : result ? "Đọc lại" : "Đọc thông tin"}
-        </button>
-        <span className={styles.note}>Tối đa {MAX_PHOTOS} ảnh · không gửi thông tin tài khoản</span>
-      </div>
-      <p className="sr-only" role="status">
-        {reading ? "Đang tải ảnh và đọc chữ trên sách." : result ? "Đã đọc xong ảnh." : ""}
-      </p>
-      {error && (
-        <p className={styles.error} role="alert">
-          {error}
+      {/* Accordion / Dropdown Toggle Header */}
+      <button
+        type="button"
+        className={styles.toggle}
+        onClick={() => setOpen((prev) => !prev)}
+        aria-expanded={isOpen}
+        aria-controls="photo-autofill-content"
+      >
+        <div className={styles.toggleLeft}>
+          <ScanText size={20} className={styles.headIcon} aria-hidden="true" />
+          <h3 id="photo-autofill-title">Điền nhanh từ ảnh</h3>
+          <span className={styles.aiBadge}>
+            <Sparkles size={12} aria-hidden="true" />
+            <span>Trợ lý AI</span>
+          </span>
+        </div>
+        <div className={styles.toggleRight}>
+          <span className={styles.toggleHint}>
+            {files.length > 0
+              ? `${files.length} ảnh đã chọn`
+              : isOpen
+              ? "Thu gọn"
+              : "Mở trợ lý ảnh"}
+          </span>
+          <ChevronDown
+            size={18}
+            className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ""}`}
+            aria-hidden="true"
+          />
+        </div>
+      </button>
+
+      {/* Dropdown Body: Center-aligned information */}
+      <div
+        id="photo-autofill-content"
+        className={`${styles.content} ${isOpen ? styles.contentOpen : styles.contentClosed}`}
+      >
+        <p className={styles.help}>
+          Chụp bìa trước, gáy hoặc trang bản quyền. Trợ lý chỉ đọc chữ in trên sách;
+          bạn kiểm tra và chọn từng thông tin.
         </p>
-      )}
-      {result && (
-        <div className={styles.result}>
-          <p className={styles.stamp}>Gợi ý từ ảnh — kiểm tra lại trước khi đăng</p>
-          {result.matches.length > 0 && (
-            <div className={styles.matches}>
-              <h4>Có trong thư viện</h4>
-              <ul>
-                {result.matches.map((match) => (
-                  <li key={match.book.id}>
-                    <div>
-                      <strong>{match.book.title}</strong>
-                      <span>
-                        {[
-                          match.book.authors.join(", "),
-                          match.book.publisher,
-                          match.book.publicationYear,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </span>
-                      <small>
-                        {match.matchedBy === "Isbn" ? "Khớp ISBN" : "Khớp tên và tác giả"}
-                        {match.pending ? " · yêu cầu của bạn đang chờ duyệt" : ""}
-                      </small>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onPickBook(match)}
-                      disabled={disabled}
-                    >
-                      Chọn đầu sách này
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {readable.length > 0 ? (
-            <dl className={styles.fields}>
-              {readable.map((key) => {
-                const done = used.includes(key);
-                return (
-                  <div key={key}>
-                    <dt>{LABELS[key]}</dt>
-                    <dd>{shown(result.fields, key)}</dd>
-                    <button
-                      type="button"
-                      onClick={() => use(key)}
-                      disabled={disabled || done}
-                      aria-label={done ? `Đã dùng ${LABELS[key]}` : `Dùng ${LABELS[key]}`}
-                    >
-                      {done ? <Check size={16} aria-hidden="true" /> : null}
-                      {done ? "Đã dùng" : "Dùng"}
-                    </button>
-                  </div>
-                );
-              })}
-            </dl>
-          ) : null}
-          {readable.length > 1 && (
-            <button
-              type="button"
-              className={styles.useAll}
-              onClick={() => readable.forEach(use)}
-              disabled={disabled || readable.every((key) => used.includes(key))}
-            >
-              Dùng tất cả thông tin đọc được
-            </button>
-          )}
-          {result.missing.length > 0 && (
-            <ul className={styles.missing}>
-              {result.missing.map((hint) => (
-                <li key={hint}>{hint}</li>
-              ))}
-            </ul>
+
+        {/* Center-aligned Photos upload area */}
+        <div className={styles.photos}>
+          {files.map((item, index) => (
+            <figure key={item.url} className={styles.thumb}>
+              <img src={item.url} alt={`Ảnh để đọc ${index + 1}`} />
+              <button
+                type="button"
+                className={styles.remove}
+                onClick={() => remove(index)}
+                disabled={disabled || reading}
+                aria-label={`Bỏ ảnh để đọc ${index + 1}`}
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            </figure>
+          ))}
+          {files.length < MAX_PHOTOS && (
+            <label className={styles.add} aria-disabled={disabled || reading}>
+              <Camera size={20} aria-hidden="true" />
+              <span>{files.length ? "Thêm ảnh" : "Chọn ảnh"}</span>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                onChange={choose}
+                disabled={disabled || reading}
+                className="sr-only"
+              />
+            </label>
           )}
         </div>
-      )}
+
+        {/* Center-aligned Actions */}
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className={styles.read}
+            onClick={() => void read()}
+            disabled={disabled || reading || !files.length}
+            aria-busy={reading}
+          >
+            {reading ? "Đang đọc…" : result ? "Đọc lại ảnh" : "Đọc thông tin"}
+          </button>
+          <span className={styles.note}>
+            Tối đa {MAX_PHOTOS} ảnh · không gửi thông tin tài khoản
+          </span>
+        </div>
+
+        <p className="sr-only" role="status">
+          {reading ? "Đang tải ảnh và đọc chữ trên sách." : result ? "Đã đọc xong ảnh." : ""}
+        </p>
+
+        {error && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
+
+        {/* Center-aligned AI Results */}
+        {result && (
+          <div className={styles.result}>
+            <p className={styles.stamp}>Gợi ý từ ảnh — kiểm tra lại trước khi đăng</p>
+            {result.matches.length > 0 && (
+              <div className={styles.matches}>
+                <h4>Có trong thư viện</h4>
+                <ul>
+                  {result.matches.map((match) => (
+                    <li key={match.book.id}>
+                      <div>
+                        <strong>{match.book.title}</strong>
+                        <span>
+                          {[
+                            match.book.authors.join(", "),
+                            match.book.publisher,
+                            match.book.publicationYear,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                        <small>
+                          {match.matchedBy === "Isbn" ? "Khớp ISBN" : "Khớp tên và tác giả"}
+                          {match.pending ? " · yêu cầu của bạn đang chờ duyệt" : ""}
+                        </small>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onPickBook(match)}
+                        disabled={disabled}
+                      >
+                        Chọn đầu sách này
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {readable.length > 0 ? (
+              <dl className={styles.fields}>
+                {readable.map((key) => {
+                  const done = used.includes(key);
+                  return (
+                    <div key={key}>
+                      <dt>{LABELS[key]}</dt>
+                      <dd>{shown(result.fields, key)}</dd>
+                      <button
+                        type="button"
+                        onClick={() => use(key)}
+                        disabled={disabled || done}
+                        aria-label={done ? `Đã dùng ${LABELS[key]}` : `Dùng ${LABELS[key]}`}
+                      >
+                        {done ? <Check size={16} aria-hidden="true" /> : null}
+                        {done ? "Đã dùng" : "Dùng"}
+                      </button>
+                    </div>
+                  );
+                })}
+              </dl>
+            ) : null}
+            {readable.length > 1 && (
+              <button
+                type="button"
+                className={styles.useAll}
+                onClick={() => readable.forEach(use)}
+                disabled={disabled || readable.every((key) => used.includes(key))}
+              >
+                Dùng tất cả thông tin đọc được
+              </button>
+            )}
+            {result.missing.length > 0 && (
+              <ul className={styles.missing}>
+                {result.missing.map((hint) => (
+                  <li key={hint}>{hint}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
