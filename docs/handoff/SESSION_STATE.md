@@ -28,6 +28,11 @@
   trực tiếp); ảnh/API/UI đều90.000đ. Sửa locator, giữ kiểm số dư/ledger/phiên;
   full wallet browser local PASS. Không sửa production logic tiền hoặc quyền;
   full CI trên head sau sửa là kết quả quyết định tích hợp.
+- CI tiếp theo785/786API E2E đạt, còn ca importer vì test gọi dist trước bước
+  build trên fresh checkout. Chuyển subprocess sang source qua tsx như script
+  importer công khai, kiểm cả khi artifact CLI không tồn tại; không tăng timeout
+  hoặc bỏ kiểm dry-run/apply/replay/atomic rollback. Ba suite27/27PASS khi giữ
+  artifact CLI ngoài đường chạy, sau đó khôi phục artifact local.
 - Owner đã cho quyền thực hiện merge gói này; yêu cầu đó không được ghi thành
   review source độc lập. Human UX/quyền/native và các gate READINESS giữ nguyên;
   không đổi branch protection hoặc ghi AI review thành human review.

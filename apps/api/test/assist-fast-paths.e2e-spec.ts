@@ -476,7 +476,9 @@ describe('listing fast paths HTTP/Mongo with real barcode decoder and fake stora
         const result = await promisify(execFile)(
           process.execPath,
           [
-            resolve('dist/price-refs-import.js'),
+            '--import',
+            'tsx',
+            resolve('src/price-refs-import.ts'),
             file,
             ...(apply ? ['--apply'] : []),
           ],
