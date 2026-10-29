@@ -770,29 +770,63 @@ export function BookSearchPage() {
         className={styles.catalog}
         data-sidebar-collapsed={isSidebarCollapsed}
       >
-        <div
+        <motion.div
           className={styles.sidebarWrapper}
           aria-hidden={isSidebarCollapsed}
+          initial={false}
+          animate={{
+            width: isSidebarCollapsed ? 0 : 264,
+            opacity: isSidebarCollapsed ? 0 : 1,
+            marginRight: isSidebarCollapsed ? 0 : 28,
+          }}
+          transition={{
+            duration: 0.36,
+            ease: [0.25, 1, 0.5, 1],
+            opacity: {
+              duration: isSidebarCollapsed ? 0.24 : 0.32,
+              delay: isSidebarCollapsed ? 0.08 : 0,
+            },
+          }}
+          style={{
+            pointerEvents: isSidebarCollapsed ? "none" : "auto",
+          }}
         >
-          <aside
+          <motion.aside
             ref={sidebar}
             className={styles.sidebar}
             aria-label="Bộ lọc sách"
+            initial={false}
+            animate={{
+              x: isSidebarCollapsed ? -80 : 0,
+              opacity: isSidebarCollapsed ? 0 : 1,
+              scale: isSidebarCollapsed ? 0.95 : 1,
+            }}
+            transition={{
+              duration: 0.36,
+              ease: [0.25, 1, 0.5, 1],
+              opacity: {
+                duration: isSidebarCollapsed ? 0.24 : 0.32,
+                delay: isSidebarCollapsed ? 0.08 : 0,
+              },
+            }}
           >
             <div className={styles.sidebarHeader}>
               <h2>
                 <Filter size={18} fill="currentColor" aria-hidden="true" />
                 Bộ lọc sách
               </h2>
-              <button
+              <motion.button
                 type="button"
                 className={styles.collapseSidebarBtn}
                 onClick={toggleSidebar}
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 aria-label="Thu gọn bộ lọc sách"
                 title="Thu gọn bộ lọc"
               >
                 <Menu size={18} aria-hidden="true" />
-              </button>
+              </motion.button>
             </div>
             <FilterForm
               key={filterKey}
@@ -801,24 +835,33 @@ export function BookSearchPage() {
               onApply={apply}
               mode={params.get("mode") || ""}
             />
-          </aside>
-        </div>
+          </motion.aside>
+        </motion.div>
         <section className={styles.results} aria-labelledby="catalog-results">
           <div className={styles.searchBar}>
-            {isSidebarCollapsed && (
-              <button
-                type="button"
-                className={styles.expandSidebarBtn}
-                onClick={toggleSidebar}
-                aria-label={`Mở bộ lọc sách${chips.length > 0 ? ` (${chips.length} đang chọn)` : ""}`}
-                title="Mở bộ lọc sách"
-              >
-                <Filter size={18} fill="currentColor" aria-hidden="true" />
-                {chips.length > 0 && (
-                  <span className={styles.expandFilterBadge}>{chips.length}</span>
-                )}
-              </button>
-            )}
+            <AnimatePresence initial={false}>
+              {isSidebarCollapsed && (
+                <motion.button
+                  type="button"
+                  key="expand-filter-btn"
+                  className={styles.expandSidebarBtn}
+                  onClick={toggleSidebar}
+                  initial={{ opacity: 0, scale: 0.75, width: 0, marginRight: 0 }}
+                  animate={{ opacity: 1, scale: 1, width: 52, marginRight: 12 }}
+                  exit={{ opacity: 0, scale: 0.75, width: 0, marginRight: 0 }}
+                  transition={{ duration: 0.3, ease: [0.25, 1, 0.5, 1] }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  aria-label={`Mở bộ lọc sách${chips.length > 0 ? ` (${chips.length} đang chọn)` : ""}`}
+                  title="Mở bộ lọc sách"
+                >
+                  <Filter size={18} fill="currentColor" aria-hidden="true" />
+                  {chips.length > 0 && (
+                    <span className={styles.expandFilterBadge}>{chips.length}</span>
+                  )}
+                </motion.button>
+              )}
+            </AnimatePresence>
             <form
               role="search"
               className={styles.search}

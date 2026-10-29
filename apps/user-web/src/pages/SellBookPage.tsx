@@ -19,6 +19,7 @@ import {
   BookOpen,
   ImagePlus,
   PencilLine,
+  Sparkles,
   X,
 } from "lucide-react";
 import { Header } from "../layouts/MainLayout";
@@ -976,6 +977,141 @@ export function SellBookPage() {
   const visibleSubmitError = validationFailure
     ? stepError(step) || (step === 5 ? fieldErrors.ownership : undefined)
     : submitError;
+
+  const progressFields = useMemo(() => {
+    const list: { key: string; label: string; valid: boolean }[] = [];
+
+    if (bundle) {
+      list.push({
+        key: "bundle",
+        label: "Thông tin bộ sách",
+        valid: !bundleError(bundle),
+      });
+    } else {
+      list.push({
+        key: "title",
+        label: "Tên sách",
+        valid: Boolean(formData.title.trim()),
+      });
+      list.push({
+        key: "author",
+        label: "Tác giả",
+        valid: Boolean(formData.author.trim()),
+      });
+      list.push({
+        key: "category",
+        label: "Danh mục sách",
+        valid: Boolean(
+          selectedBook ||
+            (classification.categoryId &&
+              classificationErrors(
+                classification.categoryId,
+                classification.attributes,
+              ).length === 0),
+        ),
+      });
+    }
+
+    // Step 2: Ảnh bản sách
+    list.push({
+      key: "images",
+      label: "Ảnh bìa bản sách",
+      valid: hasCoverPhoto,
+    });
+
+    // Step 3: Tình trạng
+    list.push({
+      key: "condition",
+      label: "Tình trạng sách",
+      valid: Boolean(formData.condition),
+    });
+    list.push({
+      key: "pages",
+      label: "Ruột sách",
+      valid: Boolean(formData.pages.trim()),
+    });
+    list.push({
+      key: "coverNote",
+      label: "Bìa và gáy",
+      valid: Boolean(formData.coverNote.trim()),
+    });
+    list.push({
+      key: "notes",
+      label: "Ghi chú, đánh dấu",
+      valid: Boolean(formData.notes.trim()),
+    });
+    list.push({
+      key: "accessories",
+      label: "Phụ kiện",
+      valid: Boolean(formData.accessories.trim()),
+    });
+    list.push({
+      key: "description",
+      label: "Mô tả chung",
+      valid: formData.description.trim().length >= 30,
+    });
+    list.push({
+      key: "readable",
+      label: "Nội dung đọc rõ",
+      valid: formData.readable === true,
+    });
+    list.push({
+      key: "hasMissingPages",
+      label: "Không thiếu trang",
+      valid: formData.hasMissingPages !== null,
+    });
+    list.push({
+      key: "missingEssentialContent",
+      label: "Đủ nội dung trọng yếu",
+      valid: formData.missingEssentialContent === false,
+    });
+
+    // Step 4: Giá / Luân chuyển
+    if (formData.mode !== "Exchange") {
+      list.push({
+        key: "salePrice",
+        label: "Giá bán",
+        valid: validPrice(formData.salePrice),
+      });
+    }
+    if (formData.mode !== "Sale") {
+      list.push({
+        key: "exchangeValue",
+        label: "Giá trị đổi",
+        valid: validPrice(formData.exchangeValue),
+      });
+    }
+    if (needsOrigin) {
+      list.push({
+        key: "originAddress",
+        label: "Nơi gửi sách",
+        valid: hasValidOriginAddress(),
+      });
+    }
+
+    // Step 5: Cam kết quyền sở hữu
+    list.push({
+      key: "ownership",
+      label: "Cam kết quyền sở hữu",
+      valid: ownershipDeclared,
+    });
+
+    return list;
+  }, [
+    bundle,
+    formData,
+    selectedBook,
+    classification,
+    hasCoverPhoto,
+    needsOrigin,
+    ownershipDeclared,
+  ]);
+
+  const validFieldsCount = progressFields.filter((f) => f.valid).length;
+  const totalFieldsCount = progressFields.length;
+  const formProgressPercent = Math.round(
+    (validFieldsCount / totalFieldsCount) * 100,
+  );
   const previewIndex =
     previewImage === null ? -1 : formData.images.indexOf(previewImage);
   function photoLabel(index: number) {
@@ -1297,6 +1433,44 @@ export function SellBookPage() {
                 ))}
               </ol>
             </nav>
+            <div
+              className={styles.progressBarCard}
+              role="region"
+              aria-label="Tiến độ điền thông tin sách"
+            >
+              <div className={styles.progressBarHeader}>
+                <div className={styles.progressBarLead}>
+                  <Sparkles size={16} className={styles.progressSparkleIcon} aria-hidden="true" />
+                  <span className={styles.progressBarTitle}>Tiến độ điền thông tin</span>
+                  {formProgressPercent === 100 && (
+                    <span className={styles.progressCompleteBadge}>Hoàn thành 100%</span>
+                  )}
+                </div>
+                <div className={styles.progressBarStats}>
+                  <span className={styles.progressBarCount}>
+                    <strong>{validFieldsCount}</strong>/{totalFieldsCount} khung hợp lệ
+                  </span>
+                  <span className={styles.progressBarPercent}>
+                    {formProgressPercent}%
+                  </span>
+                </div>
+              </div>
+              <div
+                className={styles.progressTrack}
+                role="progressbar"
+                aria-valuenow={formProgressPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Tiến độ hoàn thiện: ${formProgressPercent}% (${validFieldsCount} trên ${totalFieldsCount} khung điền)`}
+              >
+                <div
+                  className={styles.progressFill}
+                  style={{ width: `${formProgressPercent}%` }}
+                >
+                  <div className={styles.progressShimmer} aria-hidden="true" />
+                </div>
+              </div>
+            </div>
             <div className={styles.workspace}>
               <aside
                 className={styles.desktopPreview}

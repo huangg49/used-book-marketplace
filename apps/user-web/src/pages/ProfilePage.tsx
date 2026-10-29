@@ -1,5 +1,5 @@
 import { Link, Navigate, useLocation } from "react-router-dom";
-import { ArrowRight, Library, KeyRound } from "lucide-react";
+import { ArrowRight, Library, KeyRound, ArrowLeftRight, Bell } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { ROUTES } from "../lib/routes";
 import styles from "./ProfilePage.module.css";
@@ -63,6 +63,20 @@ export function ProfilePage() {
         <Library size={20} aria-hidden="true" />
         <span>
           Quản lý sách đã đăng trong <strong>Kệ sách của tôi</strong>
+        </span>
+        <ArrowRight size={18} aria-hidden="true" />
+      </Link>
+      <Link className={styles.shelfLink} to={ROUTES.exchangeMine}>
+        <ArrowLeftRight size={20} aria-hidden="true" />
+        <span>
+          Theo dõi các lời đề nghị trong <strong>Trao đổi của tôi</strong>
+        </span>
+        <ArrowRight size={18} aria-hidden="true" />
+      </Link>
+      <Link className={styles.shelfLink} to={ROUTES.notifications}>
+        <Bell size={20} aria-hidden="true" />
+        <span>
+          Xem thông báo và cập nhật mới trong <strong>Thông báo của tôi</strong>
         </span>
         <ArrowRight size={18} aria-hidden="true" />
       </Link>

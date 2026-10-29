@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
-import { Plus, Wallet, Library, AlertTriangle, ShieldCheck } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Plus, Wallet, Library, AlertTriangle, ShieldCheck, Bell } from "lucide-react";
 import { ROUTES } from "../../../lib/routes";
+import { listNotifications } from "../../../services/notifications";
 
 interface DashboardUser {
   id: string;
@@ -16,6 +18,13 @@ interface DashboardGreetingProps {
 export function DashboardGreeting({ user }: DashboardGreetingProps) {
   const isLocked = user.status === "LOCKED";
   const isActive = user.status === "ACTIVE";
+
+  const notificationsQuery = useQuery({
+    queryKey: ["notifications", "page"],
+    queryFn: () => listNotifications(undefined, 1),
+    staleTime: 30_000,
+  });
+  const unreadCount = notificationsQuery.data?.unreadCount ?? 0;
 
   return (
     <section className="relative bg-surface-container-low rounded-xl p-space-lg md:p-space-xl overflow-hidden shadow-sm border border-outline-variant/30">
@@ -48,6 +57,17 @@ export function DashboardGreeting({ user }: DashboardGreetingProps) {
                 {isLocked ? "Tài khoản đang khóa giao dịch mới" : "Tài khoản đang hạn chế giao dịch mới"}
               </span>
             )}
+            <Link
+              to={ROUTES.notifications}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded font-label-sm text-label-sm uppercase tracking-wider font-semibold transition-colors ${
+                unreadCount > 0
+                  ? "bg-[#fbe9e7] text-[#bf360c] border border-[#ffccbc] hover:bg-[#ffccbc]/60"
+                  : "bg-surface-container-high text-on-surface-variant hover:text-primary"
+              }`}
+            >
+              <Bell size={13} className={unreadCount > 0 ? "text-[#bf360c] animate-bounce" : ""} />
+              <span>{unreadCount > 0 ? `${unreadCount} thông báo mới` : "Thông báo"}</span>
+            </Link>
           </div>
 
           <h1 tabIndex={-1} className="font-bold text-2xl md:text-3xl text-primary tracking-normal mt-1 outline-none">
