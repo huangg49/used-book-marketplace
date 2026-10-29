@@ -8,7 +8,7 @@ import {
 } from "./listing-submission";
 
 const { request } = vi.hoisted(() => ({ request: vi.fn() }));
-vi.mock("./api", () => ({ session: { request } }));
+vi.mock("./api", () => ({ session: { request, getSnapshot: () => ({ status: "authenticated", user: { id: "qa-member" } }) } }));
 const draft = "20000000-0000-4000-8000-000000000002";
 const media = "20000000-0000-4000-8000-000000000003";
 const suggestion = {
@@ -62,7 +62,7 @@ describe("photo autofill request", () => {
     };
     await expect(ask([file])).rejects.toThrow("network");
     autofillAnswer = () => {
-      throw new ApiError(503, "UNAVAILABLE", "Đọc ảnh mất quá lâu.");
+      throw new ApiError(503, "AI_ASSIST_FAILED", "Đọc ảnh mất quá lâu.");
     };
     await expect(ask([file])).rejects.toThrow("Đọc ảnh mất quá lâu.");
     autofillAnswer = () => suggestion;

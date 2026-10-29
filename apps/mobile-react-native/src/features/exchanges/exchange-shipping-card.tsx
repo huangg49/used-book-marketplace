@@ -383,7 +383,7 @@ export function ExchangeShippingCard({
 
             {myShipment.notes ? (
               <AppText style={styles.notesText}>
-                Ghi chú: "{myShipment.notes}"
+                Ghi chú: {myShipment.notes}
               </AppText>
             ) : null}
           </View>
@@ -391,7 +391,7 @@ export function ExchangeShippingCard({
           <View style={styles.emptyNoticeBox}>
             <Icon name="bag" size={16} color={stitchTokens.wineDark} />
             <AppText style={styles.emptyNoticeText}>
-              Bạn chưa tạo đơn gửi sách. Hãy đóng gói sách cẩn thận và bấm "Tạo đơn vận chuyển" ở bảng thao tác bên dưới.
+              Bạn chưa tạo đơn gửi sách. Hãy đóng gói sách cẩn thận và bấm “Tạo đơn vận chuyển” ở bảng thao tác bên dưới.
             </AppText>
           </View>
         )}
@@ -503,7 +503,7 @@ export function ExchangeShippingCard({
                 }
               />
             </View>
-            <AppText style={styles.miniStepLabel}>Đồng kiểm 48h</AppText>
+            <AppText style={styles.miniStepLabel}>Đồng kiểm 72h</AppText>
           </View>
         </View>
 
@@ -652,7 +652,7 @@ export function ExchangeShippingCard({
             Bảo chứng an toàn giao dịch Lật Lại (POL-14)
           </AppText>
           <AppText style={styles.escrowDesc}>
-            Toàn bộ tiền cọc bảo chứng ({formatVnd(isInitiator ? exchange.initiatorDeposit : exchange.recipientDeposit)}) và tiền bù đang được tạm khóa an toàn trên Ledger. Sau khi cả hai bên xác nhận nhận sách, hệ thống kích hoạt khoảng đệm kiểm tra 48 giờ trước khi tất toán.
+            Toàn bộ tiền cọc bảo chứng ({formatVnd(isInitiator ? exchange.initiatorDeposit : exchange.recipientDeposit)}) và tiền bù đang được tạm khóa an toàn trên Ledger. Mỗi bên có 72 giờ kiểm tra từ lúc xác nhận nhận sách. Chỉ tất toán sau cả hai hạn nếu không có tranh chấp.
           </AppText>
         </View>
       </View>

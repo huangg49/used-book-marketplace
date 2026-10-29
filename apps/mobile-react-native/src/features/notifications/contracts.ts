@@ -14,7 +14,7 @@ export const memberNotification = z.object({
     "AuctionPaid",
     "OrderBuyNowPaid",
     "ExchangeProposed", "ExchangeAccepted", "ExchangeFunded", "ExchangeShipped",
-    "ExchangeReceived", "ExchangeCompleted", "ExchangeCancelled", "ExchangeRejected",
+    "ExchangeReceived", "ExchangeCompleted", "ExchangeCancelled", "ExchangeRejected", "ExchangeDisputed",
   ]),
   title: z.string(),
   body: z.string(),

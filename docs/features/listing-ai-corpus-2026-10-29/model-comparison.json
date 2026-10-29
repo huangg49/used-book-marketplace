@@ -1,0 +1,1154 @@
+{
+  "at": "2026-10-29T05:48:51.563Z",
+  "base": "12f108d",
+  "planCommit": "79e21b3",
+  "planSha256": "1801c63b9111b01b3e4f0aba92d2e74a9a3dd3762bd25e2c615c0ebb83dfbc2a",
+  "resultStatus": "BLOCKED_PROVIDER_COMPATIBILITY",
+  "productModelChanged": false,
+  "networkCalls": 19,
+  "usageKnownEstimatedUsd": 0.008424,
+  "unpricedFailures": 13,
+  "costLimit": "Failed/time-out calls without usage are unpriced; sum is not total billing or a hard cap",
+  "screenRows": [
+    {
+      "phase": "screen",
+      "id": "case-de-men-bm-kd-2023",
+      "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "status": "Suggested",
+      "failure": null,
+      "latencyMs": 2128,
+      "tokens": {
+        "input": 1343,
+        "output": 92
+      },
+      "costMicroUsd": 1711,
+      "fields": {
+        "title": "Đế Mèn Phiêu Lưu Ký",
+        "authors": [
+          "Tô Hoài"
+        ],
+        "publisher": "Nhà xuất bản Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": true,
+        "authorsFound": true,
+        "authorsExact": true,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-de-men-bm-kd-2023",
+      "model": "google/gemma-4-31b-it",
+      "status": "Failed",
+      "failure": "Timeout",
+      "latencyMs": 25011,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0,
+      "fields": null,
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": false,
+        "authorsFound": false,
+        "authorsExact": false,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-de-men-bm-kd-2023",
+      "model": "google/gemma-3-12b-it",
+      "status": "Failed",
+      "failure": "ProviderError",
+      "latencyMs": 594,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0,
+      "fields": null,
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": false,
+        "authorsFound": false,
+        "authorsExact": false,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-ong-gia-bien-ca-kd-2025",
+      "model": "google/gemma-3-12b-it",
+      "status": "Failed",
+      "failure": "ProviderError",
+      "latencyMs": 716,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0,
+      "fields": null,
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": false,
+        "authorsFound": false,
+        "authorsExact": false,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-ong-gia-bien-ca-kd-2025",
+      "model": "google/gemma-4-31b-it",
+      "status": "Failed",
+      "failure": "Timeout",
+      "latencyMs": 25011,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0,
+      "fields": null,
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": false,
+        "authorsFound": false,
+        "authorsExact": false,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-ong-gia-bien-ca-kd-2025",
+      "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "status": "Suggested",
+      "failure": null,
+      "latencyMs": 1858,
+      "tokens": {
+        "input": 1247,
+        "output": 89
+      },
+      "costMicroUsd": 1603,
+      "fields": {
+        "title": "Ông già và biển cá",
+        "authors": [
+          "Ernest Hemingway"
+        ],
+        "publisher": "Nhà xuất bản Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": true,
+        "authorsFound": true,
+        "authorsExact": true,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-so-do-nhanam-2021",
+      "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "status": "Suggested",
+      "failure": null,
+      "latencyMs": 1163,
+      "tokens": {
+        "input": 809,
+        "output": 98
+      },
+      "costMicroUsd": 1201,
+      "fields": {
+        "title": "Vũ trong phùng",
+        "authors": [],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": false,
+        "authorsFound": false,
+        "authorsExact": false,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-so-do-nhanam-2021",
+      "model": "google/gemma-4-31b-it",
+      "status": "Failed",
+      "failure": "Timeout",
+      "latencyMs": 25010,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0,
+      "fields": null,
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": false,
+        "authorsFound": false,
+        "authorsExact": false,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-so-do-nhanam-2021",
+      "model": "google/gemma-3-12b-it",
+      "status": "Failed",
+      "failure": "ProviderError",
+      "latencyMs": 491,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0,
+      "fields": null,
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": false,
+        "authorsFound": false,
+        "authorsExact": false,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-mat-biec-tre-bm-2022",
+      "model": "google/gemma-3-12b-it",
+      "status": "Failed",
+      "failure": "ProviderError",
+      "latencyMs": 497,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0,
+      "fields": null,
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": false,
+        "authorsFound": false,
+        "authorsExact": false,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-mat-biec-tre-bm-2022",
+      "model": "google/gemma-4-31b-it",
+      "status": "Failed",
+      "failure": "Timeout",
+      "latencyMs": 25015,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0,
+      "fields": null,
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": false,
+        "authorsFound": false,
+        "authorsExact": false,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-mat-biec-tre-bm-2022",
+      "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "status": "Suggested",
+      "failure": null,
+      "latencyMs": 1249,
+      "tokens": {
+        "input": 823,
+        "output": 93
+      },
+      "costMicroUsd": 1195,
+      "fields": {
+        "title": "nguyên nhất ánh",
+        "authors": [
+          "mát biếc"
+        ],
+        "publisher": "NHÀ XUẤT BẢN TRẺ",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": "truyện dài in lần thứ 50",
+        "isbn": null
+      },
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": false,
+        "authorsFound": false,
+        "authorsExact": false,
+        "unexpectedAuthors": [
+          "mát biếc"
+        ],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-chien-binh-cau-vong-nhanam-2022",
+      "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "status": "Suggested",
+      "failure": null,
+      "latencyMs": 1384,
+      "tokens": {
+        "input": 823,
+        "output": 89
+      },
+      "costMicroUsd": 1179,
+      "fields": {
+        "title": "Chiếc bình cầu vồng",
+        "authors": [
+          "Andrea Hirata"
+        ],
+        "publisher": "NXB Trẻ",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": false,
+        "authorsFound": true,
+        "authorsExact": true,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-chien-binh-cau-vong-nhanam-2022",
+      "model": "google/gemma-4-31b-it",
+      "status": "Failed",
+      "failure": "Timeout",
+      "latencyMs": 25013,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0,
+      "fields": null,
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": false,
+        "authorsFound": false,
+        "authorsExact": false,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-chien-binh-cau-vong-nhanam-2022",
+      "model": "google/gemma-3-12b-it",
+      "status": "Failed",
+      "failure": "ProviderError",
+      "latencyMs": 498,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0,
+      "fields": null,
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": false,
+        "authorsFound": false,
+        "authorsExact": false,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-tat-den-kd-2021",
+      "model": "google/gemma-3-12b-it",
+      "status": "Failed",
+      "failure": "ProviderError",
+      "latencyMs": 242,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0,
+      "fields": null,
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": false,
+        "authorsFound": false,
+        "authorsExact": false,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-tat-den-kd-2021",
+      "model": "google/gemma-4-31b-it",
+      "status": "Failed",
+      "failure": "Timeout",
+      "latencyMs": 25017,
+      "tokens": {
+        "input": 0,
+        "output": 0
+      },
+      "costMicroUsd": 0,
+      "fields": null,
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": false,
+        "authorsFound": false,
+        "authorsExact": false,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    },
+    {
+      "phase": "screen",
+      "id": "case-tat-den-kd-2021",
+      "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "status": "Suggested",
+      "failure": null,
+      "latencyMs": 2001,
+      "tokens": {
+        "input": 1247,
+        "output": 72
+      },
+      "costMicroUsd": 1535,
+      "fields": {
+        "title": "Tất đèn",
+        "authors": [
+          "Ngô Tất Tố"
+        ],
+        "publisher": "Nhà xuất bản Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "score": {
+        "scored": true,
+        "titleExact": false,
+        "titleIgnoringAccents": true,
+        "authorsFound": true,
+        "authorsExact": true,
+        "unexpectedAuthors": [],
+        "isbnWrong": false,
+        "isbnFound": null,
+        "publisherExact": null,
+        "publicationYearExact": null,
+        "editionExact": null,
+        "languageExact": null,
+        "canonicalTitleExact": false,
+        "matchedTitleAlternative": null
+      }
+    }
+  ],
+  "summary": {
+    "phase": "screen",
+    "selected": null,
+    "knownEstimatedCostUsd": 0.008424,
+    "unpricedFailures": 12,
+    "calls": 18,
+    "costLimit": "Repository conservative token estimates, not a hard billing cap; errors without usage unpriced",
+    "latencyScope": "Same prepared image pipeline; provider and output check only, not HTTP/upload",
+    "screen": [
+      {
+        "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+        "complete": true,
+        "expectedCases": 6,
+        "attempted": 6,
+        "successfulResponses": 6,
+        "unpricedFailures": 0,
+        "titleExact": 0,
+        "canonicalTitleExact": 0,
+        "authorsScored": 6,
+        "authorsExact": 4,
+        "wrongIsbn": 0,
+        "failures": 0,
+        "latencyMs": {
+          "p50": 1384,
+          "p95": 2128
+        },
+        "costUsd": 0.008424
+      },
+      {
+        "model": "google/gemma-4-31b-it",
+        "complete": true,
+        "expectedCases": 6,
+        "attempted": 6,
+        "successfulResponses": 0,
+        "unpricedFailures": 6,
+        "titleExact": 0,
+        "canonicalTitleExact": 0,
+        "authorsScored": 6,
+        "authorsExact": 0,
+        "wrongIsbn": 0,
+        "failures": 6,
+        "latencyMs": {
+          "p50": 25011,
+          "p95": 25017
+        },
+        "costUsd": 0
+      },
+      {
+        "model": "google/gemma-3-12b-it",
+        "complete": true,
+        "expectedCases": 6,
+        "attempted": 6,
+        "successfulResponses": 0,
+        "unpricedFailures": 6,
+        "titleExact": 0,
+        "canonicalTitleExact": 0,
+        "authorsScored": 6,
+        "authorsExact": 0,
+        "wrongIsbn": 0,
+        "failures": 6,
+        "latencyMs": {
+          "p50": 497,
+          "p95": 716
+        },
+        "costUsd": 0
+      }
+    ],
+    "holdout": [
+      {
+        "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+        "complete": false,
+        "expectedCases": 12,
+        "attempted": 0,
+        "successfulResponses": 0,
+        "unpricedFailures": 0,
+        "titleExact": 0,
+        "canonicalTitleExact": 0,
+        "authorsScored": 0,
+        "authorsExact": 0,
+        "wrongIsbn": 0,
+        "failures": 0,
+        "latencyMs": {
+          "p50": null,
+          "p95": null
+        },
+        "costUsd": 0
+      }
+    ],
+    "decision": {
+      "recommended": false,
+      "reason": "No qualifying development candidate",
+      "acceptance": "NOT_RUN: human real-camera evidence required"
+    },
+    "realCamera": "NOT_RUN",
+    "humanReview": "NOT_RUN",
+    "positiveIsbn": "NOT_RUN"
+  },
+  "diagnostic": {
+    "at": "2026-10-29T05:45:09.873Z",
+    "model": "google/gemma-3-12b-it",
+    "networkCalls": 1,
+    "book": "development de-men-bm",
+    "usageKnown": false,
+    "httpStatus": 404,
+    "hints": {
+      "system": false,
+      "role": false,
+      "image": false,
+      "deprecated": false,
+      "not found": true,
+      "unsupported": false,
+      "chat_template_kwargs": false,
+      "base64": false,
+      "only user": false,
+      "invalid": false,
+      "model": false
+    },
+    "responseKeys": [
+      "status",
+      "title",
+      "detail"
+    ],
+    "failure": "ProviderError"
+  },
+  "modelInventory": {
+    "at": "2026-10-29T05:33:21.456Z",
+    "count": 84,
+    "comparedIds": [
+      "nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "google/gemma-4-31b-it",
+      "google/gemma-3-12b-it"
+    ],
+    "allWereListed": true,
+    "note": "Catalog listing is not evidence of a usable inference endpoint"
+  },
+  "holdout": {
+    "cases": 12,
+    "modelCalls": 0,
+    "seenByComparisonModels": false,
+    "note": "Project evaluation holdout, no claim about provider pretraining data",
+    "sourceTypes": "11 publisher product covers;1 marketing mockup",
+    "humanReview": false,
+    "positiveIsbn": "NOT_RUN"
+  },
+  "resume": {
+    "rowCountBefore": 18,
+    "rowCountAfter": 18,
+    "rowsIdentical": true,
+    "additionalModelCalls": 0,
+    "holdoutRefusedWithoutWinner": true
+  },
+  "audit": [
+    {
+      "id": "case-de-men-bm-kd-2023",
+      "photoSha256": "0d63447a7b9a1e0550cbc9d8a34ac8cbd495a3e8d917fc87b0c50305eaf98d84",
+      "expected": {
+        "title": "Dế Mèn phiêu lưu ký",
+        "authors": [
+          "Tô Hoài"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-de-men-bc-kd-2022",
+      "photoSha256": "b2a5fc9143719c362149be07f7a1f0cf7f3c2c65617d1a01df911d0429ca7d22",
+      "expected": {
+        "title": "Dế Mèn phiêu lưu ký",
+        "authors": [
+          "Tô Hoài"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-hoang-tu-be-kd-2022",
+      "photoSha256": "822baee88ffec9ad5501dffb0029e39a6df2669afb410d5bc45887ad7592256e",
+      "expected": {
+        "title": "Hoàng tử bé",
+        "authors": [
+          "Antoine de Saint-Exupéry"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-hoang-tu-be-nhanam-2025",
+      "photoSha256": "9a4af9c609e1779cc6018167c7dd35599c769dd1cc476bb447906e9def68d235",
+      "expected": {
+        "title": "Hoàng tử bé",
+        "authors": [
+          "Antoine de Saint-Exupéry"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-khong-gia-dinh-kd-2022",
+      "photoSha256": "248864deaa8c1823a621e2fa501b3279df1605a5d746b09a132b2f27960413f9",
+      "expected": {
+        "title": "Không gia đình",
+        "authors": [
+          "Hector Malot"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-ong-gia-bien-ca-kd-2025",
+      "photoSha256": "095542eacdedd070b88356ba0a3f01ed76e1b40d97eec0a78e337671cf0f49f0",
+      "expected": {
+        "title": "Ông già và biển cả",
+        "authors": [
+          "Ernest Hemingway"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-dat-rung-phuong-nam-kd-2026",
+      "photoSha256": "a1682a7517172dfc2c0bec0065a957ff681fb63be0cbeeafe7c3341e4544d2e0",
+      "expected": {
+        "title": "Đất rừng phương Nam",
+        "authors": [
+          "Đoàn Giỏi"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-kinh-van-hoa-kd-2019",
+      "photoSha256": "d9c8a68fb1088d6507819d591b0187dc462c8d9ab5516c98dd98dd40de430097",
+      "expected": {
+        "title": "Kính vạn hoa - Tập 1",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Volume is visible; expected title canonicalizes title/volume ordering rather than literal line order. Do not relax scoring after outputs.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-doraemon-t1-kd-2023",
+      "photoSha256": "24ca25545d91337ba017d1abf85f8a48852b424e316ea061f2a4c4e2774e5ea7",
+      "expected": {
+        "title": "45 chương mở đầu bộ truyện ngắn Doraemon - Tập 1",
+        "authors": [
+          "Fujiko F. Fujio"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Volume is visible; expected title canonicalizes title/volume ordering rather than literal line order. Do not relax scoring after outputs.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-doraemon-t2-kd-2023",
+      "photoSha256": "cb3ea4b4e68ae6907946ed72ad3c97d783d2df542b33ddb67e92da5afd5a38b2",
+      "expected": {
+        "title": "45 chương mở đầu bộ truyện ngắn Doraemon - Tập 2",
+        "authors": [
+          "Fujiko F. Fujio"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Volume is visible; expected title canonicalizes title/volume ordering rather than literal line order. Do not relax scoring after outputs.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-so-do-nhanam-2021",
+      "photoSha256": "2695d92ee16f33725f2cf52b3ca418ac1331f3897cf93ad8cedfce689dea7e92",
+      "expected": {
+        "title": "Số đỏ",
+        "authors": [
+          "Vũ Trọng Phụng"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-cay-cam-ngot-nhanam-2024",
+      "photoSha256": "42453ab1127b1f4064e9bf99072d54560691937f8f91f842a6be015d089eeaa5",
+      "expected": {
+        "title": "Cây cam ngọt của tôi",
+        "authors": [
+          "José Mauro de Vasconcelos"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-chien-binh-cau-vong-nhanam-2022",
+      "photoSha256": "f94b70efb5820a337b15ca8263d618e239a1b77b089ead055c757548d6c37284",
+      "expected": {
+        "title": "Chiến binh cầu vồng",
+        "authors": [
+          "Andrea Hirata"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-tuoi-tre-dang-gia-nhanam-2021",
+      "photoSha256": "fb2242779092904da3be15b06209a18f9f9e3a40562c3b028986dee2b42092a7",
+      "expected": {
+        "title": "Tuổi trẻ đáng giá bao nhiêu?",
+        "authors": [
+          "Rosie Nguyễn"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Author byline accent is small in this JPEG; keep existing answer and flag for human confirmation.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-mat-biec-tre-bm-2022",
+      "photoSha256": "60bf9f15622d4a11cd0a7a0afe1e119bbd4e0ccc3ce8712a3db693f1fafce33d",
+      "expected": {
+        "title": "Mắt biếc",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-mat-biec-tre-td-2019",
+      "photoSha256": "a9718a0367ccb8a42af69e55d9570182991f76ba5216590ba50a572be1e5cf21",
+      "expected": {
+        "title": "Mắt biếc",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-cho-toi-xin-ve-tre-2018",
+      "photoSha256": "16218948065a601edf4e9c3a2b72e031ca418f22967169d641654314b1de528d",
+      "expected": {
+        "title": "Cho tôi xin một vé đi tuổi thơ",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-nha-gia-kim-nhanam-tb79k",
+      "photoSha256": "84028e4d0f1f21f50a9ae932c5ccab134aa44d367a73cd7a6677a01a51151768",
+      "expected": {
+        "title": "Nhà giả kim",
+        "authors": [
+          "Paulo Coelho"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-rung-nauy-nhanam-2024",
+      "photoSha256": "6193f88e109b47e6e0d6579437dda7abd637c8a4fe6528b34d37267b9dd2e84f",
+      "expected": {
+        "title": "Rừng Na Uy",
+        "authors": [
+          "Haruki Murakami"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-song-mon-nhanam-2022",
+      "photoSha256": "37579edc09ce381a39ed122cc5bad39c149eeee539b4a1a344b57a50ad8df811",
+      "expected": {
+        "title": "Sống mòn",
+        "authors": [
+          "Nam Cao"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-tat-den-kd-2021",
+      "photoSha256": "a443d8abfcf4da126a3b6b3ebe0cab7f3d480f693400fd982b43ca340ab1e142",
+      "expected": {
+        "title": "Tắt đèn",
+        "authors": [
+          "Ngô Tất Tố"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-truyen-kieu-kd-sc-2024",
+      "photoSha256": "d320c2c3dc96f599db28399a9e3cc5a9be96a62adc42c3e84a00a1a8f4dc9a09",
+      "expected": {
+        "title": "Truyện Kiều",
+        "authors": [
+          "Nguyễn Du"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-truyen-kieu-kd-vhtn-2021",
+      "photoSha256": "cdf4182fd993431d48988cb20b7d2eeda2dd3f94a956ee9d0e0e582ff93c142f",
+      "expected": {
+        "title": "Truyện Kiều",
+        "authors": [
+          "Nguyễn Du"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Printed title and author role inspected; preserve existing answer.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    },
+    {
+      "id": "case-luoc-su-nuoc-viet-kd-2024",
+      "photoSha256": "7fc7d3b588294bf39560a52a9b1040b6e29f979e5f11595950daae7819f290ee",
+      "expected": {
+        "title": "Lược sử nước Việt bằng tranh",
+        "authors": [
+          "Hiếu Minh",
+          "Huyền Trang"
+        ],
+        "isbn": null
+      },
+      "reviewed": false,
+      "method": "Codex visual source re-read, not independent human review",
+      "observation": "Writer/illustrator/editor labels are small; keep existing answer and flag for human confirmation.",
+      "isbnScope": "No ISBN visible on supplied front image; says nothing about unseen back/copyright page"
+    }
+  ],
+  "limits": [
+    "No independent human reviewer",
+    "No physical phone photos",
+    "No positive ISBN image",
+    "No holdout model output collected because no candidate qualified",
+    "Cannot compare candidate OCR quality from HTTP failures/timeouts",
+    "Main DB/GHN/UI/contract unchanged, no deployment"
+  ],
+  "verification": {
+    "comparisonAndQualityUnit": {
+      "pass": 15,
+      "fail": 0,
+      "skip": 0
+    },
+    "apiTypecheck": "PASS",
+    "evalLint": "PASS",
+    "docsAndLinks": "PASS",
+    "browserNativeDatabase": "NOT_RUN: no product code change",
+    "readinessChanged": false,
+    "environmentChanged": false
+  },
+  "sourceHashes": {
+    "apps/api/eval/autofill-assist/compare.ts": "bcedc8da68d0f137a9c106347f5282ad096128178d688d2f5c0e735eb51231f0",
+    "apps/api/eval/autofill-assist/comparison.ts": "52d56df9c03b306fdeca8cfe2075f414dd914c3d7bc55369ab0a485b187b637d",
+    "apps/api/eval/autofill-assist/comparison.spec.ts": "e59fe76b04a7d569d01187e5193424f015a6c8945cc16e41682f04b01bb74006"
+  }
+}

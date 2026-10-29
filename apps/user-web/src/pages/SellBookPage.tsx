@@ -1,3 +1,7 @@
+import { clearAiPriceAttribution, type PriceReferenceState, assistError, decisionFor, failLoading, finishLoading, startLoading, suggestionInput, type AssistForm, type AssistState } from "@used-books/session-client";
+import { PriceAssistPanel } from "../components/PriceAssistPanel";
+import { createListingPriceRequest, type PricePhase } from "../services/listing-price-assist";
+import type { CatalogInput } from "../services/listing-submission";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
@@ -180,6 +184,36 @@ export function SellBookPage() {
     salePrice: "",
     exchangeValue: "",
   });
+  const [assist, setAssist] = useState<AssistState>({ status: "idle" });
+  const [priceReference, setPriceReference] = useState<PriceReferenceState>(null);
+  const [pricePhase, setPricePhase] = useState<PricePhase>("catalog");
+  const priceToken = useRef(0), priceBusy = useRef(false);
+  const requestPrice = useMemo(() => createListingPriceRequest(draftAttempt), [draftAttempt]);
+  const assistScope = draftAttempt.id;
+  const assistForm: AssistForm = {
+    bookId: selectedBook?.id ?? null, condition: formData.condition as AssistForm["condition"],
+    readable: formData.readable, hasMissingPages: formData.hasMissingPages, missingEssentialContent: formData.missingEssentialContent,
+    pages: formData.pages, coverNote: formData.coverNote, notes: formData.notes,
+    salePrice: formData.salePrice, mode: formData.mode as AssistForm["mode"],
+  };
+  const assistCatalog: CatalogInput = {
+    ...autofillFacts, bookId: selectedBook?.id, title: formData.title, author: formData.author,
+    category: categoryFor(classification.categoryId)?.label || selectedBook?.category || "Khác",
+    categoryId: classification.categoryId, attributes: classification.attributes, series: classification.series, language,
+  };
+  const assistKey = JSON.stringify([assistScope, assistCatalog, suggestionInput(assistForm), imageFiles.map(file => [file.name, file.size, file.lastModified, file.type])]);
+  async function askWebPrice() {
+    if (priceBusy.current || submitting || hasAttempt || auction || bundle || formData.mode === "Exchange") return;
+    priceBusy.current = true;
+    const token = ++priceToken.current;
+    setAssist(prev => startLoading(prev, assistKey, token));
+    try {
+      const answer = await requestPrice(assistForm, assistCatalog, [...imageFiles], setPricePhase, value => { if (priceToken.current === token) setPriceReference({ key: assistKey, value }); });
+      setAssist(prev => finishLoading(prev, token, answer.listingId, answer.suggestion));
+    } catch (error) {
+      setAssist(prev => failLoading(prev, token, assistError(error)));
+    } finally { priceBusy.current = false; }
+  }
   const needsOrigin = !auction && formData.mode !== "Exchange";
 
   const heading = useRef<HTMLHeadingElement>(null);
@@ -228,7 +262,7 @@ export function SellBookPage() {
         ...previous,
         ...(field === "title" && fields.title ? { title: fields.title } : {}),
         ...(field === "authors" && fields.authors.length
-          ? { author: fields.authors.join(", ") }
+          ? { author: fields.authors.join("; ") }
           : {}),
       }));
       return;
@@ -434,8 +468,10 @@ export function SellBookPage() {
     replaceAt?: number,
   ) => {
     const selected = Array.from(e.target.files ?? []);
-    // Reset even after rejection so selecting the same batch fires change again.
     e.target.value = "";
+    addSelectedImages(selected, kind, replaceAt);
+  };
+  const addSelectedImages = (selected: File[], kind: "cover" | "support", replaceAt?: number) => {
     if (!selected.length || hasAttempt || submitting) return;
     const remaining =
       kind === "cover" || replaceAt !== undefined
@@ -629,6 +665,7 @@ export function SellBookPage() {
         ...(auction ? { channel: "Auction" as const } : {}),
         ...(selectedBook ? {} : autofillFacts),
         title: formData.title,
+        priceAssist: decisionFor(assist, assistKey, assistForm),
         ...(bundle ? { bundle } : {}),
         author: formData.author,
         category:
@@ -1540,6 +1577,8 @@ export function SellBookPage() {
                           )}
                           {!selectedBook && !bundle && (
                             <PhotoAutofill
+                              onUseCover={file => addSelectedImages([file], "cover")}
+                              currentValue={field => field === "title" ? formData.title : field === "authors" ? formData.author : field === "language" ? language : String(autofillFacts[field] ?? "")}
                               attempt={draftAttempt}
                               channel={auction ? "Auction" : undefined}
                               disabled={submitting || hasAttempt}
@@ -2755,6 +2794,12 @@ export function SellBookPage() {
                         </>
                       )}
                     </fieldset>
+                    {!auction && !bundle && formData.mode !== "Exchange" ? <div hidden={step !== 4}>
+                      <PriceAssistPanel reference={priceReference} onApplyReference={amount => { setFormData(f => ({ ...f, salePrice: String(amount) })); setAssist(clearAiPriceAttribution); }} state={assist} currentKey={assistKey} currentPrice={formData.salePrice} phase={pricePhase} disabled={submitting || hasAttempt} hasPhoto={imageFiles.length > 0} needsCatalog={!selectedBook} onAsk={() => void askWebPrice()} onApply={amount => {
+                        setFormData(prev => ({ ...prev, salePrice: String(amount) }));
+                        setAssist(prev => prev.status === "ready" && prev.key === assistKey ? { ...prev, appliedPrice: amount } : prev);
+                      }} />
+                    </div> : null}
                     {visibleSubmitError && (
                       <div
                         role="alert"

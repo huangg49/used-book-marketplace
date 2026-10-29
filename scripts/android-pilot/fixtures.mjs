@@ -37,29 +37,29 @@ export async function actorHttp(config, sandbox, actors = ["buyer"]) {
 }
 
 // Fixture identity provisioning only, as in createSandbox; all catalog/listing/media writes use API commands.
-async function pagingSellers(config, directory) {
-  const file = path.join(directory, "private-paging-sellers.json");
+async function fixtureSellers(config, directory, count) {
+  const file = path.join(directory, "private-fixture-sellers.json");
   let extra;
   try {
     extra = JSON.parse(await readFile(file, "utf8"));
   } catch (error) {
     if (error.code !== "ENOENT") throw error;
-    extra = Array.from({ length: 2 }, (_, n) => ({
+    extra = Array.from({ length: count - 1 }, (_, n) => ({
       id: randomUUID(),
-      email: `paging-seller-${n}-${config.id}@latlai.demo.test`,
+      email: `fixture-seller-${n}-${config.id}@latlai.demo.test`,
       password: randomBytes(24).toString("hex"),
     }));
     await writeJson(file, extra);
   }
   assert(
-    extra.length === 2 &&
+    extra.length === count - 1 &&
       extra.every(
         (a, n) =>
           /^[0-9a-f-]{36}$/.test(a.id) &&
-          a.email === `paging-seller-${n}-${config.id}@latlai.demo.test` &&
+          a.email === `fixture-seller-${n}-${config.id}@latlai.demo.test` &&
           /^[a-f0-9]{48}$/.test(a.password),
       ),
-    "Invalid private paging identities.",
+    "Invalid private fixture identities; preserve this dataset's original size.",
   );
   const url = process.env.MONGO_TEST_URL || QA_URL;
   validateTarget(url);
@@ -67,7 +67,7 @@ async function pagingSellers(config, directory) {
   try {
     assert(
       (await client.db("admin").command({ hello: 1 })).setName === "rs-test",
-      "Paging identity provisioning requires rs-test.",
+      "Fixture identity provisioning requires rs-test.",
     );
     const db = client.db(config.database);
     for (const [n, account] of extra.entries()) {
@@ -78,7 +78,7 @@ async function pagingSellers(config, directory) {
           $setOnInsert: {
             _id: account.id,
             emailNormalized: account.email,
-            displayName: `DỮ LIỆU QA — người bán phân trang ${n + 2}`,
+            displayName: `DỮ LIỆU QA — người bán ${n + 2}`,
             passwordHash: await require("argon2").hash(account.password),
             status: "ACTIVE",
             emailVerifiedAt: now,
@@ -89,6 +89,28 @@ async function pagingSellers(config, directory) {
           },
         },
         { upsert: true },
+      );
+      // Identity/session fixtures only. Never turn off login throttling to seed
+      // many owners. Native participants still sign in through the real UI/API.
+      const sessionId = randomUUID();
+      await db.collection("auth_sessions").insertOne({
+        _id: sessionId,
+        userId: account.id,
+        refreshTokenHash: randomBytes(32).toString("hex"),
+        expiresAt: new Date(now.getTime() + 30 * 60_000),
+        revokedAt: null,
+        createdAt: now,
+        lockSeq: 0,
+      });
+      const jwt = new (require("@nestjs/jwt").JwtService)({ secret: config.jwt });
+      account.fixtureToken = await jwt.signAsync(
+        { sub: account.id, sid: sessionId },
+        {
+          algorithm: "HS256",
+          expiresIn: 900,
+          issuer: "lat-lai-api",
+          audience: "lat-lai-clients",
+        },
       );
     }
   } finally {
@@ -247,11 +269,16 @@ export async function prepareFixtures(config, directory, sandbox, paging) {
       ]),
     );
   const fixtures = [];
-  const sellers = paging
-    ? await pagingSellers(config, directory)
-    : [config.accounts.seller];
+  // The same five-active-listing policy applies to every fixture owner. Do not
+  // fake Approved rows or increase the production quota to fit a QA dataset.
+  const sellers = await fixtureSellers(
+    config,
+    directory,
+    Math.ceil(definitions.length / 5),
+  );
   let sellerIndex = 0,
-    uploads = 0;
+    uploads = 0,
+    activeListings = 0;
   for (const [
     slug,
     title,
@@ -262,24 +289,21 @@ export async function prepareFixtures(config, directory, sandbox, paging) {
     exchangeValue,
     photoCount,
   ] of definitions) {
-    if (uploads + photoCount > 20) {
+    if (activeListings === 5 || uploads + photoCount > 20) {
       sellerIndex++;
       uploads = 0;
+      activeListings = 0;
     }
     const seller = sellers[sellerIndex];
-    assert(seller, "Dataset exceeds its provisioned sellers' upload quota.");
-    if (sellerIndex > 0 && uploads === 0) {
-      sandbox.tokens.seller = (
-        await http("/auth/login", {
-          method: "POST",
-          body: { email: seller.email, password: seller.password },
-        })
-      ).accessToken;
+    assert(seller, "Dataset exceeds its provisioned sellers' listing/upload quota.");
+    if (sellerIndex > 0 && activeListings === 0) {
+      sandbox.tokens.seller = seller.fixtureToken;
       assert(
         (await http("/auth/me", { actor: "seller" })).id === seller.id,
-        "Paging seller identity differs.",
+        "Fixture seller identity differs.",
       );
     }
+    activeListings++;
     uploads += photoCount;
     const catalog = await command(
       `${slug}.catalog`,
@@ -459,8 +483,10 @@ export async function prepareFixtures(config, directory, sandbox, paging) {
     );
     const detail = await http(`/listings/${id}`);
     assert(
-      detail.id === id && detail.photos.length === photoCount,
-      "Public QA listing/photo projection differs.",
+      detail.id === id &&
+        detail.photos.length === photoCount &&
+        detail.seller.id === seller.id,
+      "Public QA listing/photo/owner projection differs.",
     );
     fixtures.push({
       slug,

@@ -1,0 +1,60 @@
+.inbox {
+  min-width: 0;
+  border-block: 1px solid var(--shop-line);
+  padding-block: 20px;
+}
+.heading,
+.inbox li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.inbox h2 {
+  font-size: 1.25rem;
+  margin: 0;
+}
+.inbox h3 {
+  font-size: 0.9375rem;
+  margin: 0 0 6px;
+  overflow-wrap: anywhere;
+}
+.inbox p {
+  max-width: 70ch;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: var(--shop-muted);
+}
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block: 12px;
+}
+.filters button[aria-pressed="true"] {
+  color: var(--shop-paper);
+  background: var(--shop-wine);
+}
+.inbox ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+}
+.inbox li {
+  padding-block: 16px;
+  border-bottom: 1px solid var(--shop-line);
+}
+.inbox li > div {
+  flex: 1 1 260px;
+}
+.inbox li p {
+  margin: 0;
+}
+.inbox a {
+  color: var(--shop-wine);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  text-underline-offset: 4px;
+}

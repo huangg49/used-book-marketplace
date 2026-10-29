@@ -1,5 +1,10 @@
 # Context bàn giao Lật lại cho AI/chat mới
 
+> Điều chỉnh scope28/10/2026: nhóm đã bỏ Forum/Cộng đồng sách theo
+> [ADR0051](../adr/0051-remove-forum-from-project-scope.md). Những chỗ nêu Forum
+> trong snapshot09/10 dưới đây là lịch sử, không là yêu cầu/backlog hiện hành.
+> Chat, wishlist/matching, thông báo và đánh giá vẫn theo SRS riêng.
+
 Snapshot **09/10/2026**, sau khi pull `main` từ `5badc90` lên **`da59199`**.
 Bản này tổng hợp yêu cầu, code và bằng chứng lưu trong repo để tiếp nhận công việc;
 không thay SRS/ADR/contract, không tự cấp quyền mở feature, merge hoặc deploy.

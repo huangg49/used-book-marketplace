@@ -1,0 +1,59 @@
+{
+  "status": "PASS",
+  "source": "real cover scan/API/Mongo/Sharp; replayed live output; synthetic QA prices; fake storage",
+  "checkpoints": [
+    "web: photo and price lost ACK each retain key/body; one provider call; explicit overwrite confirmations; responsive source evidence",
+    "web: same draft through AI, price evidence and real submit; one PendingReview listing; stored applied price 40000; changed condition invalidates prior suggestion",
+    "RN web: account to draft, real photo/Sharp, lost terminal response replay then explicit new intent; catalog choice and same photo at next step; price lost ACK keeps key/body and typed price",
+    "Slow price call disables duplicate request and preserves typed price; missing sources never call AI and keep manual price (RN web)"
+  ],
+  "timings": [
+    {
+      "scope": "autofill-suggestions",
+      "http": 200,
+      "stages": "ai_prepare;dur=25.0, ai_images;dur=81.4, ai_model;dur=0.1, ai_catalog;dur=5.2, ai_complete;dur=96.1, ai_total;dur=122.4"
+    },
+    {
+      "scope": "autofill-suggestions",
+      "http": 200,
+      "stages": "ai_prepare;dur=9.4, ai_total;dur=9.5"
+    },
+    {
+      "scope": "price-suggestions",
+      "http": 200,
+      "stages": "ai_prepare;dur=29.5, ai_model;dur=1506.7, ai_complete;dur=1517.3, ai_total;dur=1549.4"
+    },
+    {
+      "scope": "price-suggestions",
+      "http": 200,
+      "stages": "ai_prepare;dur=8.6, ai_total;dur=8.7"
+    },
+    {
+      "scope": "autofill-suggestions",
+      "http": 503,
+      "stages": "ai_prepare;dur=23.5, ai_images;dur=74.7, ai_model;dur=0.1, ai_complete;dur=85.9, ai_total;dur=109.5"
+    },
+    {
+      "scope": "autofill-suggestions",
+      "http": 503,
+      "stages": "ai_prepare;dur=8.1, ai_total;dur=8.2"
+    },
+    {
+      "scope": "autofill-suggestions",
+      "http": 200,
+      "stages": "ai_prepare;dur=26.3, ai_images;dur=84.3, ai_model;dur=0.0, ai_catalog;dur=4.3, ai_complete;dur=98.3, ai_total;dur=124.8"
+    },
+    {
+      "scope": "price-suggestions",
+      "http": 200,
+      "stages": "ai_prepare;dur=34.7, ai_model;dur=0.1, ai_complete;dur=8.7, ai_total;dur=43.4"
+    },
+    {
+      "scope": "price-suggestions",
+      "http": 200,
+      "stages": "ai_prepare;dur=8.1, ai_total;dur=8.2"
+    }
+  ],
+  "native": "NOT_RUN",
+  "realCameraQuality": "NOT_RUN: no dataset supplied"
+}

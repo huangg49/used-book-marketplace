@@ -1,0 +1,197 @@
+{
+  "at": "2026-10-29T09:08:47.738Z",
+  "base": "c59d8cf",
+  "branch": "codex/listing-ai-endpoint-verification",
+  "planCommit": "3ee7bda",
+  "planSha256": "5cc44af45cfa4a219b06f0fbfc5dc3f6fc29a82087dc4e5224e038430dd8a9d5",
+  "status": "BLOCKED_CANDIDATE",
+  "journal": {
+    "planHash": "5cc44af45cfa4a219b06f0fbfc5dc3f6fc29a82087dc4e5224e038430dd8a9d5",
+    "photoSha256": "0d63447a7b9a1e0550cbc9d8a34ac8cbd495a3e8d917fc87b0c50305eaf98d84",
+    "endpoint": "https://integrate.api.nvidia.com/v1/chat/completions",
+    "startedAt": "2026-10-29T09:04:41.125Z",
+    "rows": [
+      {
+        "id": "gemma4-text-minimal",
+        "requestHash": "fc436828696fc856a13bdc8c3378128e75383718eb6eb0e6a6e0814473bfa5d8",
+        "state": "Complete",
+        "result": {
+          "status": "Timeout",
+          "httpStatus": null,
+          "headersMs": null,
+          "latencyMs": 15018,
+          "usageKnown": false,
+          "tokens": null,
+          "fields": null,
+          "title": null,
+          "channelEnvelope": false
+        },
+        "costMicroUsd": 0
+      },
+      {
+        "id": "gemma4-image-first-minimal",
+        "requestHash": "45b1a1c2da9783a2f036fb6276de30e8703bf9488528311f7aaf5e5031e4675b",
+        "state": "Complete",
+        "result": {
+          "status": "Timeout",
+          "httpStatus": null,
+          "headersMs": null,
+          "latencyMs": 25008,
+          "usageKnown": false,
+          "tokens": null,
+          "fields": null,
+          "title": null,
+          "channelEnvelope": false
+        },
+        "costMicroUsd": 0
+      },
+      {
+        "id": "gemma4-image-first-single-user",
+        "requestHash": "2fc4f82bbe89eddb4d47433e7cd1bfae5cd679a85229f04a68b8bb518ef74695",
+        "state": "Complete",
+        "result": {
+          "status": "Timeout",
+          "httpStatus": null,
+          "headersMs": null,
+          "latencyMs": 25011,
+          "usageKnown": false,
+          "tokens": null,
+          "fields": null,
+          "title": null,
+          "channelEnvelope": false
+        },
+        "costMicroUsd": 0
+      },
+      {
+        "id": "nemotron-production-control",
+        "requestHash": "b3f1106160202d1f1c6404ea8d0a7f893131896104590b5690a74ee75f9b4abc",
+        "state": "Complete",
+        "result": {
+          "usageKnown": true,
+          "tokens": {
+            "input": 1343,
+            "output": 92
+          },
+          "fields": {
+            "title": "Đế Mèn Phiêu Lưu Ký",
+            "authors": [
+              "Tô Hoài"
+            ],
+            "publisher": "Nhà xuất bản Kim Đồng",
+            "publicationYear": null,
+            "language": "vi",
+            "edition": null,
+            "isbn": null
+          },
+          "title": "Đế Mèn Phiêu Lưu Ký",
+          "channelEnvelope": false,
+          "status": "Available",
+          "httpStatus": 200,
+          "headersMs": 2128,
+          "latencyMs": 2130
+        },
+        "costMicroUsd": 1711
+      }
+    ]
+  },
+  "requestDescriptions": [
+    {
+      "id": "gemma4-text-minimal",
+      "model": "google/gemma-4-31b-it",
+      "profile": "text-control",
+      "timeoutMs": 15000,
+      "maxTokens": 64,
+      "temperature": 0.2,
+      "thinking": false
+    },
+    {
+      "id": "gemma4-image-first-minimal",
+      "model": "google/gemma-4-31b-it",
+      "profile": "image-control",
+      "timeoutMs": 25000,
+      "maxTokens": 256,
+      "temperature": 0.2,
+      "thinking": false
+    },
+    {
+      "id": "gemma4-image-first-single-user",
+      "model": "google/gemma-4-31b-it",
+      "profile": "single-user-autofill",
+      "timeoutMs": 25000,
+      "maxTokens": 1200,
+      "temperature": 0.2,
+      "thinking": false
+    },
+    {
+      "id": "nemotron-production-control",
+      "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "profile": "production-autofill",
+      "timeoutMs": 25000,
+      "maxTokens": 1200,
+      "temperature": 0.2,
+      "thinking": false
+    }
+  ],
+  "networkCalls": 4,
+  "knownEstimatedUsd": 0.001711,
+  "unpricedCalls": 3,
+  "costLimit": "Client timeout does not prove provider cancellation. Missing usage is unknown cost, not zero billing. Token estimate is not invoice/hard cap.",
+  "scope": {
+    "holdoutCalls": 0,
+    "newImages": 0,
+    "sourceDevelopmentCase": "case-de-men-bm-kd-2023",
+    "productConfigChanged": false,
+    "apiContractChanged": false,
+    "databaseUsed": false,
+    "ghnTouched": false
+  },
+  "conclusion": {
+    "observed": "Gemma4 produced no HTTP response headers before deadlines even for text-only; image-first/single-user did not resolve it. Nemotron returnedHTTP200 under the same origin/key configuration.",
+    "inference": "The observations do not support an image-only/request-role explanation or a total shared network/key outage. Per-model access, service routing, queueing or capacity remain unverified.",
+    "notProven": [
+      "Gemma4 OCR quality",
+      "Provider root cause",
+      "General SLA",
+      "Free aborted calls",
+      "Model ready for production"
+    ],
+    "action": "Retain current model, preserve unqueried holdout; do not repeat paid screen or relax timeout/quality gates without new provider evidence."
+  },
+  "resume": {
+    "journalIdentical": true,
+    "additionalCalls": 0,
+    "reportExit": 1,
+    "liveResumeExit": 1,
+    "lockRemoved": true
+  },
+  "officialSources": [
+    {
+      "url": "https://docs.api.nvidia.com/nim/reference/google-gemma-4-31b-it-infer",
+      "supports": "Same POST endpoint, inline image content parts, thinking flag, 202 support documented"
+    },
+    {
+      "url": "https://build.nvidia.com/google/gemma-4-31b-it/modelcard",
+      "supports": "Image-before-text recommended; no change to production pipeline made"
+    }
+  ],
+  "verification": {
+    "tests": 28,
+    "fail": 0,
+    "skip": 0,
+    "typecheck": "PASS",
+    "evalLint": "PASS",
+    "docs": "PASS:478Markdown/3032relative links",
+    "diff": "PASS",
+    "environment": {
+      "docker": "UNAVAILABLE: daemon pipe absent at final read-only check; previous checkpoint stopped; not started by this task",
+      "qaAppListeners": [],
+      "databaseActions": 0,
+      "probeLockExists": false
+    }
+  },
+  "sourceHashes": {
+    "apps/api/eval/autofill-assist/endpoint-probe.ts": "fb995c5ba13d8cb5ee1f37fad188cf4d273ef663cf6b44b6cb91c677f96f4699",
+    "apps/api/eval/autofill-assist/endpoint-probe.spec.ts": "27940839629b680d92cbb620e23eb1cd1d089409100449d83952ddbfb2adef54",
+    "apps/api/eval/autofill-assist/probe-endpoints.ts": "9b85c252dc259297df9c4b8656b458621204d2099daef2bf0b6e8787c12f3865"
+  }
+}

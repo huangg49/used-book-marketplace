@@ -5,6 +5,7 @@ import { Roles } from '../auth/roles.guard.js';
 import { commandContext, commandResponse } from '../commands/command-http.js';
 import { ContractInput } from '../commands/contract-input.service.js';
 import { ExchangesService } from './exchanges.service.js';
+import { ExistingObligation } from '../auth/obligations.decorator.js';
 
 @Controller('exchanges')
 export class ExchangesController {
@@ -27,12 +28,14 @@ export class ExchangesController {
   }
 
   @Get()
+  @ExistingObligation()
   @Roles('MEMBER')
   list(@Req() req: AuthenticatedRequest) {
     return this.exchanges.list(req.auth);
   }
 
   @Get(':id')
+  @ExistingObligation()
   @Roles('MEMBER')
   getExchange(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.exchanges.getExchange(req.auth, this.input.uuid(id));
@@ -106,6 +109,7 @@ export class ExchangesController {
   }
 
   @Post(':id/cancel')
+  @ExistingObligation()
   @Roles('MEMBER')
   @HttpCode(200)
   cancelExchange(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
@@ -134,6 +138,7 @@ export class ExchangesController {
   }
 
   @Post(':id/ship')
+  @ExistingObligation()
   @Roles('MEMBER')
   @HttpCode(200)
   shipExchange(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
@@ -148,6 +153,7 @@ export class ExchangesController {
   }
 
   @Post(':id/receive')
+  @ExistingObligation()
   @Roles('MEMBER')
   @HttpCode(200)
   receiveExchange(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
@@ -162,6 +168,7 @@ export class ExchangesController {
   }
 
   @Post(':id/complete')
+  @ExistingObligation()
   @Roles('MEMBER')
   @HttpCode(200)
   completeExchange(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
@@ -176,6 +183,7 @@ export class ExchangesController {
   }
 
   @Post(':id/dispute')
+  @ExistingObligation()
   @Roles('MEMBER')
   @HttpCode(200)
   disputeExchange(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {

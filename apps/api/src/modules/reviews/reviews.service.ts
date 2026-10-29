@@ -1,181 +1,334 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import type {
-  ExchangeDoc,
-  TransactionReviewDoc,
-} from '../../database/mongo/documents.js';
-import { MongoService } from '../../database/mongo/mongo.service.js';
+import type { TransactionReviewDoc as Review } from '../../database/mongo/documents.js';
 import {
+  MongoCommandService,
   member,
-  requireActive,
+  reviewer,
   type Actor,
+  type CommandContext,
+  type Tx,
 } from '../commands/mongo-command.service.js';
 import {
   DomainError,
   conflict,
+  invalidField,
   invalidState,
   notFound,
+  type Wire,
 } from '../commands/domain-error.js';
-import type { components } from '@used-books/api-contract';
-
-type CreateReviewInput = components['schemas']['CreateExchangeReview'];
-type ReviewItem = components['schemas']['ExchangeReviewItem'];
-type ReviewsResponse = components['schemas']['ExchangeReviewsResponse'];
+import {
+  publicationTime,
+  reviewIsEditable,
+  reviewIsPublic,
+  REVIEW_EDIT_MS,
+  REVIEW_SUBMISSION_MS,
+  REVIEW_TYPES,
+  type ReviewType,
+} from './review-policy.js';
+import {
+  reviewTransaction,
+  reviewGroup,
+  reviewItem,
+  reviewRevision,
+} from './review-record.js';
 
 @Injectable()
 export class ReviewsService {
-  private readonly logger = new Logger(ReviewsService.name);
-
-  constructor(private readonly mongo: MongoService) {}
-
-  private toItem(doc: TransactionReviewDoc): ReviewItem {
+  constructor(private readonly commands: MongoCommandService) {}
+  type(value: string): ReviewType {
+    if (!REVIEW_TYPES.includes(value as ReviewType))
+      invalidField('type', 'Loại giao dịch không hợp lệ.');
+    return value as ReviewType;
+  }
+  get(
+    auth: Actor,
+    type: ReviewType,
+    id: string,
+  ): Promise<Wire['TransactionReviewsResponse']> {
+    return this.commands.read(auth, async (tx, actor) => {
+      member(actor);
+      const transaction = await reviewTransaction(tx, type, id, actor._id);
+      const rows = await reviewGroup(tx, type, id),
+        now = await tx.now();
+      const publication = publicationTime(transaction.completedAt, rows);
+      const mine = rows.find((r) => r.authorId === actor._id),
+        peer = rows.find((r) => r.authorId !== actor._id);
+      const deadline = transaction.completedAt
+        ? new Date(transaction.completedAt.getTime() + REVIEW_SUBMISSION_MS)
+        : null;
+      return {
+        canReview:
+          actor.status === 'ACTIVE' && !!deadline && now < deadline && !mine,
+        canEdit:
+          actor.status === 'ACTIVE' && !!mine && reviewIsEditable(mine, now),
+        canDelete:
+          actor.status === 'ACTIVE' && !!mine && reviewIsEditable(mine, now),
+        canReply:
+          actor.status === 'ACTIVE' &&
+          !!peer &&
+          reviewIsPublic(peer, publication, now) &&
+          !peer.reply,
+        partnerId: transaction.partnerId,
+        bookRatingRequired: transaction.bookRatingRequired,
+        deadline: deadline?.toISOString() ?? null,
+        serverTime: now.toISOString(),
+        myReview: mine ? reviewItem(mine, publication, now, true, false) : null,
+        // Target sees their pending reply, but no third party sees it until approved.
+        partnerReview:
+          peer && reviewIsPublic(peer, publication, now)
+            ? reviewItem(peer, publication, now, true)
+            : null,
+      };
+    });
+  }
+  getExchangeReviews(auth: Actor, id: string) {
+    return this.get(auth, 'Exchange', id);
+  }
+  private scores(body: Wire['CreateTransactionReview'], required: boolean) {
+    if (required && body.bookRating === undefined)
+      invalidField('bookRating', 'Cần đánh giá chất lượng sách nhận được.');
+    if (!required && body.bookRating !== undefined)
+      invalidField(
+        'bookRating',
+        'Người bán chỉ đánh giá đối tác trong đơn mua.',
+      );
     return {
-      id: doc._id,
-      exchangeId: doc.transactionId,
-      authorId: doc.authorId,
-      authorName: doc.authorName,
-      targetUserId: doc.targetUserId,
-      bookRating: doc.bookRating,
-      partnerRating: doc.partnerRating,
-      tags: doc.tags,
-      comment: doc.comment,
-      createdAt: doc.createdAt.toISOString(),
-      updatedAt: doc.updatedAt.toISOString(),
+      bookRating: required ? body.bookRating! : null,
+      partnerRating: body.partnerRating,
+      tags: body.tags ?? [],
+      comment: (body.comment ?? '').trim(),
     };
   }
-
-  async getExchangeReviews(auth: Actor, exchangeId: string): Promise<ReviewsResponse> {
-    if (!auth.user.roles.includes('MEMBER')) {
-      throw new DomainError(403, 'FORBIDDEN', 'Tài khoản cần quyền thành viên.');
-    }
-    const userId = auth.user.id;
-
-    return this.mongo.tx(async (tx) => {
-      const exchange = await tx.c.exchanges.findOne({ _id: exchangeId });
-      if (!exchange) throw notFound();
-
-      if (exchange.initiatorId !== userId && exchange.recipientId !== userId) {
-        throw notFound();
-      }
-
-      const isCompleted = exchange.status === 'Completed';
-      const deadline = exchange.completedAt
-        ? new Date(exchange.completedAt.getTime() + 168 * 3_600_000) // 168h per POL-18
-        : null;
-      const now = await tx.now();
-      const withinDeadline = deadline ? now <= deadline : false;
-
-      const myReview = await tx.c.transaction_reviews.findOne({
-        transactionId: exchangeId,
-        authorId: userId,
-      });
-
-      const partnerId =
-        userId === exchange.initiatorId
-          ? exchange.recipientId
-          : exchange.initiatorId;
-
-      const partnerReview = await tx.c.transaction_reviews.findOne({
-        transactionId: exchangeId,
-        authorId: partnerId,
-      });
-
-      const canReview = isCompleted && withinDeadline && !myReview;
-
-      // FR-R03: Only reveal partner review when both have submitted, or when deadline has passed
-      const partnerRevealed =
-        Boolean(partnerReview) &&
-        (Boolean(myReview) || (deadline !== null && now > deadline));
-
-      return {
-        canReview,
-        deadline: deadline?.toISOString() ?? null,
-        myReview: myReview ? this.toItem(myReview) : null,
-        partnerReview: partnerRevealed && partnerReview ? this.toItem(partnerReview) : null,
-      };
-    });
+  create(
+    context: CommandContext,
+    type: ReviewType,
+    id: string,
+    body: Wire['CreateTransactionReview'],
+  ) {
+    return this.commands.runReview(
+      context,
+      'createTransactionReview',
+      `${type}:${id}`,
+      body,
+      {
+        authorize: async (tx, actor) => {
+          member(actor, true);
+          return reviewTransaction(tx, type, id, actor._id);
+        },
+        mutate: async (tx, actor) => {
+          const transaction = await reviewTransaction(
+            tx,
+            type,
+            id,
+            actor._id,
+            true,
+          );
+          const now = await tx.now();
+          if (
+            !transaction.completedAt ||
+            now >=
+              new Date(transaction.completedAt.getTime() + REVIEW_SUBMISSION_MS)
+          )
+            throw invalidState();
+          if (
+            await tx.c.transaction_reviews.findOne({
+              transactionType: type,
+              transactionId: id,
+              authorId: actor._id,
+            })
+          )
+            throw conflict();
+          const r: Review = {
+            _id: randomUUID(),
+            transactionType: type,
+            transactionId: id,
+            authorId: actor._id,
+            authorName: actor.displayName,
+            targetUserId: transaction.partnerId,
+            ...this.scores(body, transaction.bookRatingRequired),
+            version: 1,
+            editDeadline: new Date(now.getTime() + REVIEW_EDIT_MS),
+            deletedAt: null,
+            hiddenAt: null,
+            evidenceHeld: false,
+            legacyDisclosed: false,
+            reply: null,
+            publishedAt: null,
+            createdAt: now,
+            updatedAt: now,
+            lockSeq: 0,
+          };
+          await tx.c.transaction_reviews.insertOne(r);
+          await reviewRevision(tx, r, 'Create', actor._id, null, now);
+          return {
+            entityType: 'TransactionReview' as const,
+            entityId: r._id,
+            version: r.version,
+            state: 'Pending',
+            decidedAt: now,
+            review: reviewItem(r, null, now, true),
+          };
+        },
+      },
+    );
   }
-
-  async createExchangeReview(
-    auth: Actor,
-    exchangeId: string,
-    body: CreateReviewInput,
-  ): Promise<ReviewItem> {
-    if (!auth.user.roles.includes('MEMBER')) {
-      throw new DomainError(403, 'FORBIDDEN', 'Tài khoản cần quyền thành viên.');
-    }
-    if (auth.user.status !== 'ACTIVE') {
-      throw new DomainError(403, 'AccountIneligible', 'Tài khoản chưa sẵn sàng.');
-    }
-    const userId = auth.user.id;
-
-    return this.mongo.tx(async (tx) => {
-      await tx.lock('exchanges', [exchangeId]);
-      const exchange = await tx.c.exchanges.findOne({ _id: exchangeId });
-      if (!exchange) throw notFound();
-
-      if (exchange.initiatorId !== userId && exchange.recipientId !== userId) {
-        throw notFound();
-      }
-
-      // FR-R01: Must be Completed and within POL-18 (168 hours)
-      if (exchange.status !== 'Completed') {
-        throw invalidState();
-      }
-
-      const now = await tx.now();
-      const deadline = exchange.completedAt
-        ? new Date(exchange.completedAt.getTime() + 168 * 3_600_000)
-        : null;
-
-      if (!deadline || now > deadline) {
-        throw invalidState();
-      }
-
-      // Each participant can submit at most 1 review (FR-R01)
-      const existing = await tx.c.transaction_reviews.findOne({
-        transactionId: exchangeId,
-        authorId: userId,
-      });
-      if (existing) {
-        throw conflict();
-      }
-
-      const targetUserId =
-        userId === exchange.initiatorId
-          ? exchange.recipientId
-          : exchange.initiatorId;
-
-      const author = await tx.c.users.findOne({ _id: userId });
-      const authorName = author?.displayName || auth.user.displayName || 'Người dùng';
-
-      const bookRating = Math.max(1, Math.min(5, Math.floor(body.bookRating)));
-      const partnerRating = Math.max(1, Math.min(5, Math.floor(body.partnerRating)));
-
-      const reviewDoc: TransactionReviewDoc = {
-        _id: randomUUID(),
-        transactionType: 'Exchange',
-        transactionId: exchangeId,
-        authorId: userId,
-        authorName,
-        targetUserId,
-        bookRating,
-        partnerRating,
-        tags: Array.isArray(body.tags) ? body.tags.slice(0, 10).map((t) => String(t).slice(0, 60)) : [],
-        comment: (body.comment || '').trim().slice(0, 1000),
-        publishedAt: now,
-        createdAt: now,
-        updatedAt: now,
-        lockSeq: 0,
-      };
-
-      await tx.c.transaction_reviews.insertOne(reviewDoc);
-
-      this.logger.log(
-        `[ReviewsService] Created review ${reviewDoc._id} for Exchange ${exchangeId} by ${userId} targeting ${targetUserId}`,
+  createExchangeReview(
+    context: CommandContext,
+    id: string,
+    body: Wire['CreateExchangeReview'],
+  ) {
+    return this.create(context, 'Exchange', id, body);
+  }
+  private async authorizeReview(
+    tx: Tx,
+    id: string,
+    actorId: string,
+    moderate = false,
+  ) {
+    const r = await tx.c.transaction_reviews.findOne({ _id: id });
+    if (!r || (!moderate && ![r.authorId, r.targetUserId].includes(actorId)))
+      throw notFound();
+    if (moderate && [r.authorId, r.targetUserId].includes(actorId))
+      throw new DomainError(
+        403,
+        'FORBIDDEN',
+        'Không được xử lý đánh giá của giao dịch mình tham gia.',
       );
-
-      return this.toItem(reviewDoc);
-    });
+    return r;
+  }
+  change(
+    context: CommandContext,
+    id: string,
+    action: 'edit' | 'delete' | 'reply' | 'moderate',
+    body:
+      | Wire['EditTransactionReview']
+      | Wire['ReviewVersion']
+      | Wire['ReplyTransactionReview']
+      | Wire['ModerateTransactionReview'],
+  ) {
+    return this.commands.runReview(
+      context,
+      `${action}TransactionReview`,
+      id,
+      body,
+      {
+        authorize: async (tx, actor) => {
+          if (action === 'moderate') reviewer(actor);
+          else member(actor, true);
+          const r = await this.authorizeReview(
+            tx,
+            id,
+            actor._id,
+            action === 'moderate',
+          );
+          if (
+            action === 'reply'
+              ? r.targetUserId !== actor._id
+              : action !== 'moderate' && r.authorId !== actor._id
+          )
+            throw notFound();
+          return r;
+        },
+        mutate: async (tx, actor, current) => {
+          const transaction = await reviewTransaction(
+            tx,
+            current.transactionType,
+            current.transactionId,
+            current.authorId,
+            true,
+          );
+          await tx.lock('transaction_reviews', [id]);
+          const r = (await tx.c.transaction_reviews.findOne({ _id: id }))!;
+          if (r.version !== body.expectedVersion) throw conflict();
+          const rows = await reviewGroup(
+              tx,
+              r.transactionType,
+              r.transactionId,
+            ),
+            now = await tx.now();
+          const publication = publicationTime(transaction.completedAt, rows);
+          let reason: string | null = null;
+          if (action === 'edit' || action === 'delete') {
+            if (!reviewIsEditable(r, now)) throw invalidState();
+            if (action === 'edit')
+              Object.assign(
+                r,
+                this.scores(
+                  body as Wire['EditTransactionReview'],
+                  transaction.bookRatingRequired,
+                ),
+              );
+            else r.deletedAt = now;
+          } else if (action === 'reply') {
+            if (!reviewIsPublic(r, publication, now) || r.reply)
+              throw invalidState();
+            const text = (body as Wire['ReplyTransactionReview']).text.trim();
+            if (!text)
+              invalidField(
+                'text',
+                'Phản hồi không được chỉ chứa khoảng trắng.',
+              );
+            r.reply = { text, status: 'Pending', createdAt: now };
+          } else {
+            if (!publication || now < publication) throw notFound();
+            const command = body as Wire['ModerateTransactionReview'];
+            reason = command.reason.trim();
+            if (reason.length < 3)
+              invalidField('reason', 'Lý do cần ít nhất 3 ký tự có nội dung.');
+            switch (command.decision) {
+              case 'Hide':
+                r.hiddenAt = now;
+                break;
+              case 'Restore':
+                if (r.deletedAt) throw invalidState();
+                r.hiddenAt = null;
+                break;
+              case 'HoldEvidence':
+                r.evidenceHeld = true;
+                break;
+              case 'ReleaseEvidence':
+                r.evidenceHeld = false;
+                break;
+              case 'ApproveReply':
+                if (!r.reply) throw invalidState();
+                r.reply.status = 'Approved';
+                break;
+              case 'HideReply':
+                if (!r.reply) throw invalidState();
+                r.reply.status = 'Hidden';
+                break;
+            }
+          }
+          r.version++;
+          r.updatedAt = now;
+          const { _id: _ignoredId, ...fields } = r;
+          await tx.c.transaction_reviews.updateOne(
+            { _id: id },
+            { $set: fields },
+          );
+          await reviewRevision(
+            tx,
+            r,
+            action === 'moderate'
+              ? (body as Wire['ModerateTransactionReview']).decision
+              : action,
+            actor._id,
+            reason,
+            now,
+          );
+          const item = reviewItem(r, publication, now, true);
+          return {
+            entityType: 'TransactionReview' as const,
+            entityId: id,
+            version: r.version,
+            state: item.status,
+            decidedAt: now,
+            review: item,
+            ...(reason ? { reason } : {}),
+          };
+        },
+      },
+    );
   }
 }

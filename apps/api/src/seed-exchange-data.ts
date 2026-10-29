@@ -5,6 +5,7 @@ import { hash } from 'argon2';
 import { bindCollections } from './database/mongo/collections.js';
 import { CLEARING_ACCOUNT_ID } from './database/mongo/migrations/0002-reference-data.js';
 import { titleKey } from './database/mongo/migrations/0003-catalog-title-key.js';
+import { recoveryKeys } from './common/catalog-recovery-keys.js';
 
 if (!['development', 'test'].includes(process.env.NODE_ENV ?? ''))
   throw new Error('Seed requires NODE_ENV=development or test.');
@@ -406,6 +407,7 @@ async function seed() {
         confirmedIsbn: null,
         searchText: `${bookDef.title} ${bookDef.authors.join(' ')} ${bookDef.category}`,
         titleKey: titleKey(bookDef.title),
+        recoveryKeys: recoveryKeys(bookDef.title, bookDef.authors),
         createdAt: now,
         updatedAt: now,
         lockSeq: 0,

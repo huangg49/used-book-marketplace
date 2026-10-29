@@ -84,7 +84,7 @@ export function AuctionSearchBar({
                 </View>
               </View>
               <AppText kind="small" style={styles.sellerBannerSubtitle}>
-                Ký gửi trạm giao nhận • Staff kiểm tra • Mở sàn 24h
+                Gửi sách tại điểm • Nhân viên kiểm tra • Bạn chọn lịch phiên
               </AppText>
             </View>
           </View>

@@ -51,7 +51,7 @@ export function ProgressStepper({ status, compact = false, failedAtStep, closedB
         statusBadgeText = 'Đang giao nhận';
         statusBadgeType = 'active';
     } else if (status === 'INSPECTING') {
-        statusBadgeText = '48h kiểm tra';
+        statusBadgeText = '72h kiểm tra';
         statusBadgeType = 'active';
     } else if (status === 'COMPLETED') {
         statusBadgeText = 'Đã hoàn tất';

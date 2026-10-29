@@ -5,9 +5,10 @@ import { useSession } from "../core/session/session-provider";
 import { LoginScreen } from "../features/auth/login-screen";
 import { AccountScreen } from "../features/account/account-screen";
 import { BrandLogo, Screen, StatePanel } from "../core/ui";
+import { MemberNavigation } from "../features/navigation/member-navigation";
 
 export default function Index() {
-  const { state } = useSession();
+  const { state, client } = useSession();
   const params = useLocalSearchParams<{ returnBook?: string | string[] }>();
   const bookId = returnBookId(params.returnBook);
 
@@ -33,6 +34,26 @@ export default function Index() {
       <Screen>
         <BrandLogo />
         <StatePanel loading title="Đang tải…" />
+      </Screen>
+    );
+  }
+
+  if (state.status === "unavailable") {
+    return (
+      <Screen
+        footer={<MemberNavigation current="/account" />}
+        footerAppearance="navigation"
+      >
+        <BrandLogo />
+        <StatePanel
+          wine
+          title="Chưa khôi phục được phiên đăng nhập"
+          message={state.message}
+          action={{
+            label: "Thử kết nối lại",
+            onPress: () => void client.restore(),
+          }}
+        />
       </Screen>
     );
   }

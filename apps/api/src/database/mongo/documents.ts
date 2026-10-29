@@ -71,6 +71,8 @@ export interface CatalogBookDoc extends Lockable {
   searchText: string;
   // Normalized title of the current revision (migration 0003).
   titleKey: string;
+  // Indexed derived prefixes; optional only for compatibility with legacy import fixtures.
+  recoveryKeys?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -224,6 +226,7 @@ export interface ListingDecisionDoc {
 // Exactly one target field is set; `principal` is the idempotency identity:
 // `user:<actorId>` or `system:<systemActor>`.
 export interface MutationReceiptDoc {
+  reviewId?: string | null;
   _id: string;
   principal: string;
   actorId: string | null;
@@ -244,6 +247,7 @@ export interface MutationReceiptDoc {
   committedAt: Date;
 }
 export interface AuditEventDoc {
+  reviewId?: string | null;
   _id: string;
   actorId: string | null;
   systemActor: SystemActor | null;
@@ -657,6 +661,7 @@ export type PriceSourceKind =
   | 'OnlineRetail';
 // Curated, sourced price facts. Written only by the migrator-role import tool.
 export interface PriceReferenceDoc {
+  sourceGroup?: string | null;
   _id: string;
   bookId: string;
   isbn: string | null;
@@ -1227,6 +1232,8 @@ export interface ExchangeDoc extends Lockable {
   recipientShippedAt: Date | null;
   initiatorReceivedAt: Date | null;
   recipientReceivedAt: Date | null;
+  initiatorInspectionDeadline?: Date | null;
+  recipientInspectionDeadline?: Date | null;
   inspectionDeadline: Date | null;
   completedAt: Date | null;
   initiatorCompletedAt?: Date | null;
@@ -1327,16 +1334,33 @@ export interface ExchangeMessageDoc {
 
 export interface TransactionReviewDoc extends Lockable {
   _id: string;
-  transactionType: 'Exchange' | 'Order';
+  transactionType: 'Exchange' | 'DirectOrder' | 'PointOrder';
   transactionId: string;
   authorId: string;
   authorName: string;
   targetUserId: string;
-  bookRating: number;
+  bookRating: number | null;
   partnerRating: number;
   tags: string[];
   comment: string;
   publishedAt: Date | null;
+  version: number;
+  editDeadline: Date;
+  deletedAt: Date | null;
+  hiddenAt: Date | null;
+  evidenceHeld: boolean;
+  legacyDisclosed: boolean;
+  reply: { text: string; status: 'Pending' | 'Approved' | 'Hidden'; createdAt: Date } | null;
   createdAt: Date;
   updatedAt: Date;
+}
+export interface ReviewRevisionDoc {
+  _id: string;
+  reviewId: string;
+  version: number;
+  action: string;
+  actorId: string | null;
+  at: Date;
+  snapshot: Json;
+  reason: string | null;
 }

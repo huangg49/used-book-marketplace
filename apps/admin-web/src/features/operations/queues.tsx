@@ -102,7 +102,7 @@ function IntakeQueueContent({ userId }: { userId: string }) {
     <OperationsQueue
       number="01"
       title="Sách gửi đấu giá."
-      intro="Nhận sách người bán mang tới, kiểm tra tình trạng theo bài đã duyệt rồi mở phiên hoặc trả lại sách."
+      intro="Nhận sách người bán mang tới và kiểm tra tình trạng theo bài đã duyệt. Nếu đạt, người bán tự đăng hoặc hẹn phiên; nếu không đạt, xử lý trả sách."
       order="Xếp theo lần gửi, cũ nhất trước."
       result={result}
       panel={panel}

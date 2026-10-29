@@ -1,5 +1,9 @@
 # Tài liệu Lật lại
 
+**Phạm vi28/10/2026:** nhóm đã bỏ Forum/Cộng đồng sách theo
+[ADR0051](adr/0051-remove-forum-from-project-scope.md); xem [SRS1.1](SRS_V1_1.md)
+đã điều chỉnh. [Deliverables v1.0](deliverables/README.md) giữ lịch sử, không là backlog Forum.
+
 ## Đọc theo việc cần làm
 
 | Bạn cần | Tài liệu chính |

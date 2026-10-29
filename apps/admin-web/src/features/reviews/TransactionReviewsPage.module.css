@@ -1,0 +1,41 @@
+.record {
+  padding-block: 28px;
+  border-bottom: 1px solid var(--line);
+  max-width: 960px;
+  overflow-wrap: anywhere;
+}
+.record h2 {
+  font-size: 1.25rem;
+}
+.text {
+  white-space: pre-wrap;
+  line-height: 1.8;
+}
+.form {
+  max-width: 640px;
+  display: grid;
+  gap: 16px;
+  padding-block: 20px;
+}
+.form label {
+  display: grid;
+  gap: 8px;
+  font-weight: 700;
+}
+.form :is(textarea, select) {
+  font: inherit;
+  min-height: 48px;
+  width: 100%;
+}
+.form textarea {
+  resize: vertical;
+}
+.revision {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+.record summary {
+  min-height: 48px;
+  padding-block: 12px;
+  cursor: pointer;
+}

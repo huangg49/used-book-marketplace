@@ -480,7 +480,7 @@ try {
     .getByRole("button", { name: /^Tài khoản của .+$/, exact: true })
     .click();
   await sellerPage
-    .getByRole("link", { name: "Đơn hàng của tôi", exact: true })
+    .getByRole("link", { name: "Đơn trực tiếp", exact: true })
     .click();
   const shipmentUrl = `**/api/v1/me/orders/${orderId}/shipment`;
   let shipmentUnavailable = false;

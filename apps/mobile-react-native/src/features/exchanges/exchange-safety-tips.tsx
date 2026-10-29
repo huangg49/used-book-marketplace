@@ -24,7 +24,7 @@ const TIPS = [
   {
     id: "shield",
     icon: "shield" as const,
-    title: "Đồng kiểm 48 giờ:",
+    title: "Đồng kiểm 72 giờ:",
     desc: "Chỉ bấm xác nhận khi đã nhận và kiểm tra sách thực tế. Dùng nút 'Báo sự cố' nếu sách không đúng mô tả.",
   },
 ];

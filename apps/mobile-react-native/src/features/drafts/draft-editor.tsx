@@ -1,3 +1,4 @@
+import { clearAiPriceAttribution, findPriceReference, createAssistRequest, type PriceReferenceState } from "@used-books/session-client";
 import { useEffect, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, View, type ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -157,8 +158,10 @@ export function DraftEditor({
   const insets = useSafeAreaInsets();
 
   // Price suggestion lives here so it survives step changes
+  const [priceReference, setPriceReference] = useState<PriceReferenceState>(null);
   const [assist, setAssist] = useState<AssistState>({ status: "idle" });
   const assistToken = useRef(0);
+  const [askAssist] = useState(() => createAssistRequest(client, Crypto.randomUUID));
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const go = (value: number) => {
@@ -292,16 +295,8 @@ export function DraftEditor({
     const token = ++assistToken.current;
     setAssist((s) => startLoading(s, assistKey, token));
     try {
-      const result = await client.request(
-        `/listings/${base.id}/price-suggestions`,
-        priceSuggestion,
-        {
-          method: "POST",
-          headers: { "Idempotency-Key": Crypto.randomUUID() },
-          body: JSON.stringify(input),
-        },
-        30000,
-      );
+      try { const value = await findPriceReference(client, base.id, input); if (assistToken.current === token) setPriceReference({ key: assistKey, value }); } catch { /* Keep the existing AI/manual recovery. */ }
+      const result = await askAssist(`/listings/${base.id}/price-suggestions`, priceSuggestion, input, 30000);
       setAssist((s) => finishLoading(s, token, base.id, result));
     } catch (e) {
       setAssist((s) => failLoading(s, token, assistError(e)));
@@ -798,6 +793,7 @@ export function DraftEditor({
           ) : (
             <>
               <CatalogPicker
+                assistPhotos={{ listingId: base.id, photos: photoList.filter(p => form.mediaIds.includes(p.id)), add: () => void send(false) }}
                 selected={form.bookId}
                 onDirtyChange={setCatalogDirty}
                 disabled={locked}
@@ -1302,6 +1298,8 @@ export function DraftEditor({
 
           {editable && !auction && (form.mode === "Sale" || form.mode === "Both") ? (
             <PriceSuggestionPanel
+              reference={priceReference}
+              onApplyReference={amount => { setForm(f => ({ ...f, salePrice: String(amount) })); setAssist(clearAiPriceAttribution); }}
               form={form}
               state={assist}
               currentKey={assistKey}

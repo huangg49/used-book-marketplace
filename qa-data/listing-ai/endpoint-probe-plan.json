@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "base": "c59d8cf",
+  "purpose": "Separate endpoint availability, image acceptance and production prompt compatibility before reopening development comparisons",
+  "endpoint": "https://integrate.api.nvidia.com/v1/chat/completions",
+  "officialReference": "https://docs.api.nvidia.com/nim/reference/google-gemma-4-31b-it-infer",
+  "imageGuidance": "https://build.nvidia.com/google/gemma-4-31b-it/modelcard",
+  "developmentCaseId": "case-de-men-bm-kd-2023",
+  "maxCalls": 4,
+  "maxKnownEstimatedUsd": 0.05,
+  "unknownUsagePolicy": "Count every attempted call, stop at the fixed call count; do not assume errors without usage are free",
+  "probes": [
+    {
+      "id": "gemma4-text-minimal",
+      "model": "google/gemma-4-31b-it",
+      "profile": "text-control",
+      "timeoutMs": 15000,
+      "maxTokens": 64
+    },
+    {
+      "id": "gemma4-image-first-minimal",
+      "model": "google/gemma-4-31b-it",
+      "profile": "image-control",
+      "timeoutMs": 25000,
+      "maxTokens": 256
+    },
+    {
+      "id": "gemma4-image-first-single-user",
+      "model": "google/gemma-4-31b-it",
+      "profile": "single-user-autofill",
+      "timeoutMs": 25000,
+      "maxTokens": 1200
+    },
+    {
+      "id": "nemotron-production-control",
+      "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "profile": "production-autofill",
+      "timeoutMs": 25000,
+      "maxTokens": 1200
+    }
+  ],
+  "limits": [
+    "Only one already exposed development image; zero holdout calls",
+    "No automatic POST retry, no new endpoint or provider, no product configuration change",
+    "A diagnostic response is not a quality or latency acceptance",
+    "If no complete autofill response is available, do not reopen holdout or repeat the six-case failed screen",
+    "Gemma3 already returned404; do not guess alternate routes and send credentials there"
+  ]
+}

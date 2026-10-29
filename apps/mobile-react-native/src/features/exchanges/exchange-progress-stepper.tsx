@@ -75,10 +75,10 @@ export function ExchangeProgressStepper({
 
     case "Delivered":
       currentStepIndex = 5;
-      statusBadgeText = "Đồng kiểm 48h";
+      statusBadgeText = "Đồng kiểm 72h";
       statusBadgeBg = stitchTokens.likeNewGreenBg;
       statusBadgeColor = stitchTokens.likeNewGreen;
-      stageDescription = "Sách đã giao. Hai bên có 48 giờ đồng kiểm chất lượng trước khi tất toán.";
+      stageDescription = "Mỗi bên có 72 giờ kiểm tra từ lúc nhận sách. Chỉ tất toán sau cả hai hạn nếu không có tranh chấp.";
       break;
 
     case "Completed":

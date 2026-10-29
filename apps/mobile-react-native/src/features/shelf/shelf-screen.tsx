@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Keyboard, ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -33,7 +33,6 @@ import { HomeCategoryTabs } from "./home-components/home-category-tabs";
 import { HomeVouchersModal } from "./home-components/home-vouchers-modal";
 import { HomeInspectionModal } from "./home-components/home-inspection-modal";
 import { HomeNotificationsModal } from "./home-components/home-notifications-modal";
-import { FALLBACK_AUCTIONS, type LiveAuctionItem } from "./home-mock-data";
 import { usePublicAuctions } from "../auctions/auctions-model";
 import { useNotifications } from "../notifications/notifications-model";
 
@@ -57,26 +56,10 @@ export function ShelfScreen() {
 
   const auctionsQuery = usePublicAuctions(client);
 
-  const liveAuctions: readonly LiveAuctionItem[] = useMemo(() => {
-    if (auctionsQuery.data?.items && auctionsQuery.data.items.length > 0) {
-      return auctionsQuery.data.items.map((auc, idx) => ({
-        id: auc.id,
-        listingId: auc.listingId,
-        title: auc.title,
-        currentBid: auc.currentPrice ?? auc.startPrice,
-        startPrice: auc.startPrice,
-        bidderCount: auc.bidderCount,
-        endAt: auc.endAt,
-        statusText: `${auc.bidderCount} lượt đấu`,
-        coverUrl:
-          FALLBACK_AUCTIONS[idx % FALLBACK_AUCTIONS.length]?.coverUrl ??
-          FALLBACK_AUCTIONS[0]!.coverUrl,
-        conditionLabel: auc.pointName ? `Trạm ${auc.pointName}` : "Đang đấu giá",
-        buyNowPrice: auc.buyNowPrice,
-      }));
-    }
-    return FALLBACK_AUCTIONS;
-  }, [auctionsQuery.data]);
+  const liveAuctions = auctionsQuery.data?.items.filter(auction =>
+    auction.state === "Active" && Date.parse(auction.startAt) <= Date.parse(auctionsQuery.data!.serverTime) &&
+    Date.parse(auction.endAt) > Date.parse(auctionsQuery.data!.serverTime),
+  ) ?? [];
 
   const result = useQuery({
     queryKey: ["public-shelf", query, cursor],
@@ -143,6 +126,7 @@ export function ShelfScreen() {
           }}
         />
 
+        <View style={{paddingHorizontal:space.lg}}><Button wine secondary title="Bắt đầu với Lật lại" onPress={()=>router.push('/guide')}/></View>
         {/* 2. Quick Action 4 Shortcuts */}
         <HomeShortcuts
           onAuctionPress={() => router.navigate("/auctions")}
@@ -156,6 +140,10 @@ export function ShelfScreen() {
         {/* 3. Live Book Auctions Section */}
         <HomeFlashDeals
           items={liveAuctions}
+          serverTime={auctionsQuery.data?.serverTime}
+          loading={auctionsQuery.isPending}
+          error={!!auctionsQuery.error}
+          onRetry={() => void auctionsQuery.refetch()}
           onOpenAuction={handleOpenAuction}
           onSeeAllPress={() => {
             router.navigate("/auctions");

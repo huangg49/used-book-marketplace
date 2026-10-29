@@ -21,7 +21,6 @@ const destinations = [
     href: "/auctions",
     title: "Đấu giá",
     icon: "gavel" as const,
-    badge: true,
   },
   { href: "/account", title: "Tài khoản", icon: "person" as const },
 ] as const;
@@ -61,7 +60,6 @@ export function MemberNavigation({
         accessibilityLabel: item.title,
         icon: item.icon,
         primaryAction: "primaryAction" in item ? item.primaryAction : false,
-        badge: "badge" in item ? item.badge : false,
       }))}
       onSelect={(href) => handleSelect(href as MemberDestinationHref)}
     />

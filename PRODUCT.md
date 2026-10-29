@@ -43,6 +43,9 @@ RN là Member client ưu tiên, Expo web chia sẻ RN; React/Vite user-web và a
 
 ## Capabilities and Constraints
 
+- Nhóm bỏ Forum/Cộng đồng sách ngày28/10/2026 theo [ADR0051](docs/adr/0051-remove-forum-from-project-scope.md).
+  Không thiết kế/triển khai topic, bình luận hoặc kiểm duyệt Forum; chat giao dịch,
+  wishlist/matching, thông báo và đánh giá vẫn theo SRS riêng.
 - DirectDelivery tới F2h. Auction ViaPoint có completion code nhưng review/release
   vẫn có gate. [READINESS](docs/handoff/READINESS.md) là nguồn gate.
 - Theo [ADR0037](docs/adr/0037-seller-selected-purchase-orders.md), chat không giữ
@@ -52,7 +55,7 @@ RN là Member client ưu tiên, Expo web chia sẻ RN; React/Vite user-web và a
 - Mua ngay DirectDelivery theo [ADR0038](docs/adr/0038-direct-buy-now-orders.md):
   Buyer tự đặt giá niêm yết không chat; payment vào Preparing, Seller không duyệt lại.
   Web có trang đơn riêng; chưa mở gate completion hoặc UI Mua ngay native.
-- Exchange user-web dùng API thật; register/profile/admin dashboard còn scaffold;
+- Exchange, register và Admin dashboard đã có API thật; profile chủ yếu đọc;
   không lấy giao diện làm bằng chứng API đã triển khai.
 - Phân chia mục tiêu đã duyệt: mobile ưu tiên tìm/xem/lưu sách, chụp ảnh/đăng bài,
   chat/thông báo và tác vụ giao dịch thường xuyên; web thuận tiện cho mô tả dài,

@@ -1,19 +1,13 @@
 import React, { useMemo, useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 import { router } from "expo-router";
-import * as Crypto from "expo-crypto";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import {
   AppText,
-  ConfirmDialog,
+  Button,
   Icon,
   Notice,
   Screen,
@@ -24,21 +18,19 @@ import {
 import { MemberNavigation } from "../navigation/member-navigation";
 import {
   ORDER_STATE_CONFIG,
-  buyNowError,
-  orderReceiptSchema,
   ordersPageSchema,
   type OrderListItem,
 } from "./contracts";
-import { BuyNowModal } from "./buy-now-modal";
 import { PublicPhoto } from "../shelf/public-photo";
 import { publicListing } from "../shelf/contracts";
 
-type TabKey = "all" | "awaiting_payment" | "processing" | "completed" | "cancelled";
+type TabKey =
+  "all" | "awaiting_payment" | "processing" | "completed" | "cancelled";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "all", label: "Tất cả" },
   { key: "awaiting_payment", label: "Chờ thanh toán" },
-  { key: "processing", label: "Đang giao" },
+  { key: "processing", label: "Đang xử lý" },
   { key: "completed", label: "Hoàn tất" },
   { key: "cancelled", label: "Đã hủy" },
 ];
@@ -96,29 +88,32 @@ function OrderBookCover({
 export function OrdersScreen() {
   const { client, state } = useSession();
   const foreground = useForeground();
-  const cache = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<TabKey>("all");
-  const [selectedPayOrderId, setSelectedPayOrderId] = useState<string | null>(null);
-  const [selectedPayOrderTitle, setSelectedPayOrderTitle] = useState<string>("");
-  const [cancelCandidate, setCancelCandidate] = useState<OrderListItem | null>(null);
-  const [actionBusy, setActionBusy] = useState(false);
-  const [actionError, setActionError] = useState("");
-
-  const ordersQuery = useQuery({
-    queryKey: ["my-orders"],
-    queryFn: () => client.request("/me/orders?limit=50", ordersPageSchema),
+  const ownerId = state.status === "authenticated" ? state.user.id : null;
+  const ordersQuery = useInfiniteQuery({
+    queryKey: ["my-orders", ownerId],
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam }) =>
+      client.request(
+        `/me/orders?limit=20${pageParam ? "&cursor=" + encodeURIComponent(pageParam) : ""}`,
+        ordersPageSchema,
+      ),
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
     enabled: foreground && state.status === "authenticated",
     staleTime: 5_000,
   });
 
   const allOrders = useMemo(
-    () => ordersQuery.data?.items ?? [],
-    [ordersQuery.data?.items],
+    () => ordersQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [ordersQuery.data?.pages],
   );
 
   const awaitingCount = useMemo(
-    () => allOrders.filter((o) => o.state === "AwaitingPayment" && o.role === "Buyer").length,
+    () =>
+      allOrders.filter(
+        (o) => o.state === "AwaitingPayment" && o.role === "Buyer",
+      ).length,
     [allOrders],
   );
 
@@ -149,33 +144,6 @@ export function OrdersScreen() {
     }
   }, [allOrders, activeTab]);
 
-  async function handleConfirmCancel() {
-    if (!cancelCandidate || actionBusy) return;
-    setActionBusy(true);
-    setActionError("");
-    try {
-      await client.request(
-        `/orders/${cancelCandidate.id}/cancel`,
-        orderReceiptSchema,
-        {
-          method: "POST",
-          headers: { "Idempotency-Key": Crypto.randomUUID() },
-          body: JSON.stringify({
-            expectedVersion: cancelCandidate.version,
-          }),
-        },
-      );
-      setCancelCandidate(null);
-      void ordersQuery.refetch();
-      void cache.invalidateQueries({ queryKey: ["public-listing"] });
-      void cache.invalidateQueries({ queryKey: ["wallet"] });
-    } catch (err) {
-      setActionError(buyNowError(err));
-    } finally {
-      setActionBusy(false);
-    }
-  }
-
   function renderStatusBadge(orderState: string) {
     const config = ORDER_STATE_CONFIG[orderState] ?? {
       label: orderState,
@@ -205,12 +173,7 @@ export function OrdersScreen() {
     }
 
     return (
-      <View
-        style={[
-          styles.statusBadge,
-          { backgroundColor: bg, borderColor },
-        ]}
-      >
+      <View style={[styles.statusBadge, { backgroundColor: bg, borderColor }]}>
         <AppText
           kind="small"
           style={[styles.statusBadgeText, { color: textColor }]}
@@ -222,7 +185,8 @@ export function OrdersScreen() {
   }
 
   function renderOrderItem({ item }: { item: OrderListItem }) {
-    const isAwaiting = item.state === "AwaitingPayment" && item.role === "Buyer";
+    const isAwaiting =
+      item.state === "AwaitingPayment" && item.role === "Buyer";
 
     return (
       <View style={styles.orderCard}>
@@ -246,11 +210,7 @@ export function OrdersScreen() {
         <View style={styles.cardBody}>
           <OrderBookCover listingId={item.listingId} title={item.title} />
           <View style={styles.bookInfo}>
-            <AppText
-              kind="bold"
-              numberOfLines={2}
-              style={styles.bookTitle}
-            >
+            <AppText kind="bold" numberOfLines={2} style={styles.bookTitle}>
               {item.title || "Ấn bản sách"}
             </AppText>
             <AppText kind="small" style={styles.orderDate}>
@@ -264,13 +224,37 @@ export function OrdersScreen() {
           <View style={styles.awaitingNotice}>
             <Icon name="clock" size={14} color={stitchTokens.orangeDeep} />
             <AppText kind="small" style={styles.awaitingNoticeText}>
-              Đang giữ sách 15 phút. Vui lòng thanh toán để xác nhận đơn.
+              Hạn thanh toán nằm trong chi tiết đơn. Mở đơn để kiểm tra quyền và
+              thời gian còn lại.
             </AppText>
           </View>
         )}
 
         {/* Card Actions */}
         <View style={styles.cardActions}>
+          <Button
+            wine
+            secondary
+            title={
+              isAwaiting ? "Xem để thanh toán hoặc hủy" : "Mở chi tiết đơn"
+            }
+            onPress={() =>
+              router.push({ pathname: "/orders", params: { orderId: item.id } })
+            }
+          />
+          {item.state === "Completed" ? (
+            <Button
+              wine
+              secondary
+              title="Xem hoặc viết đánh giá"
+              onPress={() =>
+                router.push({
+                  pathname: "/reviews",
+                  params: { type: "DirectOrder", id: item.id },
+                })
+              }
+            />
+          ) : null}
           {item.listingId && (
             <Pressable
               accessibilityRole="button"
@@ -290,42 +274,6 @@ export function OrdersScreen() {
                 Xem sách
               </AppText>
             </Pressable>
-          )}
-
-          {isAwaiting && (
-            <>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Hủy giữ đơn hàng"
-                style={({ pressed }) => [
-                  styles.cancelBtn,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() => setCancelCandidate(item)}
-              >
-                <AppText kind="small" style={styles.cancelBtnText}>
-                  Hủy đơn
-                </AppText>
-              </Pressable>
-
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Thanh toán ngay bằng ví"
-                style={({ pressed }) => [
-                  styles.payBtn,
-                  pressed && styles.pressed,
-                ]}
-                onPress={() => {
-                  setSelectedPayOrderId(item.id);
-                  setSelectedPayOrderTitle(item.title || "Ấn bản sách");
-                }}
-              >
-                <Icon name="wallet" size={14} color={stitchTokens.white} />
-                <AppText kind="bold" style={styles.payBtnText}>
-                  Thanh toán ngay
-                </AppText>
-              </Pressable>
-            </>
           )}
         </View>
       </View>
@@ -369,13 +317,26 @@ export function OrdersScreen() {
       footerAppearance="navigation"
     >
       <View style={styles.container}>
-        {/* Error Notice */}
-        {actionError ? (
-          <View style={{ paddingHorizontal: space.md, paddingTop: space.xs }}>
-            <Notice tone="error">{actionError}</Notice>
-          </View>
-        ) : null}
-
+        <View style={{ padding: space.md, gap: space.sm }}>
+          <AppText kind="small">
+            Đây là đơn mua/bán trực tiếp. Sách thắng đấu giá được theo dõi
+            riêng.
+          </AppText>
+          <Button
+            wine
+            secondary
+            title="Mở đấu giá của tôi"
+            onPress={() => router.push("/my-auctions")}
+          />
+          <Button
+            wine
+            secondary
+            title="Cách mua sách"
+            onPress={() =>
+              router.push({ pathname: "/guide", params: { task: "buy" } })
+            }
+          />
+        </View>
         {/* Filter Tabs */}
         <View style={styles.tabsWrapper}>
           <ScrollView
@@ -385,24 +346,19 @@ export function OrdersScreen() {
           >
             {TABS.map((tab) => {
               const isActive = activeTab === tab.key;
-              const showBadge = tab.key === "awaiting_payment" && awaitingCount > 0;
+              const showBadge =
+                tab.key === "awaiting_payment" && awaitingCount > 0;
               return (
                 <Pressable
                   key={tab.key}
                   accessibilityRole="tab"
                   accessibilityLabel={tab.label}
                   onPress={() => setActiveTab(tab.key)}
-                  style={[
-                    styles.tabItem,
-                    isActive && styles.tabItemActive,
-                  ]}
+                  style={[styles.tabItem, isActive && styles.tabItemActive]}
                 >
                   <AppText
                     kind="bold"
-                    style={[
-                      styles.tabText,
-                      isActive && styles.tabTextActive,
-                    ]}
+                    style={[styles.tabText, isActive && styles.tabTextActive]}
                   >
                     {tab.label}
                   </AppText>
@@ -421,19 +377,41 @@ export function OrdersScreen() {
 
         {/* Orders List */}
         {ordersQuery.isPending ? (
-          <View style={{ flex: 1, justifyContent: "center", paddingVertical: 60 }}>
+          <View
+            style={{ flex: 1, justifyContent: "center", paddingVertical: 60 }}
+          >
             <StatePanel loading title="Đang tải danh sách đơn hàng…" />
           </View>
+        ) : ordersQuery.error && allOrders.length === 0 ? (
+          <StatePanel
+            title="Chưa tải được đơn hàng"
+            message="Chưa thể kết luận bạn không có đơn. Kiểm tra kết nối rồi thử lại."
+            action={{
+              label: "Thử lại",
+              onPress: () => void ordersQuery.refetch(),
+            }}
+          />
         ) : filteredOrders.length === 0 ? (
-          <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: space.lg, paddingVertical: 60 }}>
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              paddingHorizontal: space.lg,
+              paddingVertical: 60,
+            }}
+          >
             <StatePanel
-              title="Chưa có đơn hàng nào"
+              title={
+                ordersQuery.hasNextPage
+                  ? "Chưa thấy đơn trong phần đã tải"
+                  : "Chưa có đơn hàng trong nhóm này"
+              }
               message={
                 activeTab === "awaiting_payment"
-                  ? "Bạn không có đơn hàng nào đang chờ thanh toán."
+                  ? "Bộ lọc áp dụng trên các đơn đã tải. Tải tiếp nếu còn trang để xem đầy đủ."
                   : activeTab === "processing"
-                    ? "Bạn không có đơn hàng nào đang giao dịch."
-                    : "Bạn chưa có đơn hàng nào trong danh mục này."
+                    ? "Bộ lọc áp dụng trên các đơn đã tải. Tải tiếp nếu còn trang để xem đầy đủ."
+                    : "Chọn nhóm khác hoặc tải tiếp những đơn còn lại."
               }
             />
           </View>
@@ -446,35 +424,31 @@ export function OrdersScreen() {
             ))}
           </View>
         )}
+        {ordersQuery.error && allOrders.length > 0 && (
+          <Notice tone="error">
+            Chưa cập nhật được danh sách. Các đơn đang hiển thị thuộc lần tải
+            trước.
+          </Notice>
+        )}
+        {ordersQuery.hasNextPage && (
+          <Button
+            wine
+            busy={ordersQuery.isFetching}
+            title={
+              ordersQuery.isFetchNextPageError
+                ? "Thử tải tiếp đơn"
+                : "Tải thêm đơn"
+            }
+            onPress={() => void ordersQuery.fetchNextPage()}
+          />
+        )}
+        {allOrders.length > 0 && (
+          <AppText kind="small">
+            Đã tải {allOrders.length} đơn. Số chờ trả và bộ lọc chỉ tính phần đã
+            tải.
+          </AppText>
+        )}
       </View>
-
-
-      {/* Pay Order Modal */}
-      {selectedPayOrderId && (
-        <BuyNowModal
-          visible={Boolean(selectedPayOrderId)}
-          initialOrderId={selectedPayOrderId}
-          initialBookTitle={selectedPayOrderTitle}
-          onClose={() => {
-            setSelectedPayOrderId(null);
-            void ordersQuery.refetch();
-          }}
-          onSuccess={() => {
-            setSelectedPayOrderId(null);
-            void ordersQuery.refetch();
-          }}
-        />
-      )}
-
-      {/* Confirm Cancel Dialog */}
-      <ConfirmDialog
-        visible={Boolean(cancelCandidate)}
-        title="Hủy đơn giữ sách?"
-        message={`Bạn có chắc chắn muốn hủy đơn hàng #${cancelCandidate?.id.slice(0, 8).toUpperCase()}? Sách sẽ được mở lại công khai cho các bạn đọc khác.`}
-        confirmLabel={actionBusy ? "Đang hủy…" : "Xác nhận hủy đơn"}
-        onConfirm={() => void handleConfirmCancel()}
-        onCancel={() => setCancelCandidate(null)}
-      />
     </Screen>
   );
 }
@@ -686,6 +660,7 @@ const styles = StyleSheet.create({
   },
   cardActions: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "flex-end",
     gap: space.xs,

@@ -1,3 +1,5 @@
+import { PriceReferencePanel } from './price-reference-panel';
+import type { PriceReferenceState } from '@used-books/session-client';
 import { useState } from "react";
 import { Linking, View } from "react-native";
 import {
@@ -31,6 +33,7 @@ export function PriceSuggestionPanel({
   currentKey,
   disabled,
   hasPhoto,
+  reference, onApplyReference,
   onAsk,
   onApply,
 }: {
@@ -40,6 +43,8 @@ export function PriceSuggestionPanel({
   disabled: boolean;
   // The server prices only a photographed copy; asking earlier is pointless.
   hasPhoto: boolean;
+  reference?: PriceReferenceState;
+  onApplyReference?: (amount: number) => void;
   onAsk: () => void;
   onApply: (amount: number) => void;
 }) {
@@ -101,6 +106,7 @@ export function PriceSuggestionPanel({
         disabled={disabled || !form.bookId || !hasPhoto || loading}
         onPress={onAsk}
       />
+      <PriceReferencePanel state={reference ?? null} currentKey={currentKey} disabled={disabled || !hasPhoto || !form.bookId} onApply={amount => onApplyReference?.(amount)} aiReady={!!ready} />
       {ready && ready.status !== "Suggested" ? (
         <Notice tone="info">
           {ready.status === "Refused"

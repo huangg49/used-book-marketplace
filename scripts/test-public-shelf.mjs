@@ -6,6 +6,7 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { listingJourney } from "./test-listing-journey.mjs";
 import { addressJourney } from "./test-address-journey.mjs";
+import { memberDataJourney } from "../apps/mobile-react-native/tests/member-data.mjs";
 import {
   createTestApi,
   root,
@@ -108,6 +109,7 @@ try {
       ? { channel: process.env.PLAYWRIGHT_CHANNEL }
       : {}),
   });
+  await memberDataJourney(browser, origin, artifacts);
   const p = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await p.clock.install();
   const errors = [],
@@ -255,7 +257,7 @@ try {
   await p.getByLabel("Email", { exact: true }).last().fill("member@operations.test");
   await p.getByLabel("Mật khẩu", { exact: true }).last().fill(password);
   await click("Đăng nhập");
-  await p.getByRole("button", { name: "Sách của tôi", exact: true }).waitFor();
+  await p.getByRole("button", { name: "Kệ sách của tôi", exact: true }).waitFor();
   await p.screenshot({ path: path.join(artifacts, "account-390.png") });
   await p.getByRole("tab", { name: "Trang chủ", exact: true }).click();
   await p
@@ -269,7 +271,7 @@ try {
   );
   // Continue through owner lifecycle using RN controls and real versioned commands.
   await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
-  await click("Sách của tôi");
+  await click("Kệ sách của tôi");
   // DraftsScreen now uses the per-listing action label ("Xem sách" for an
   // approved listing) instead of the legacy "Quản lý sách 1" label.
   const ownerBookAction = p.getByRole("button", {
@@ -386,7 +388,7 @@ try {
   await p.getByLabel("Mật khẩu", { exact: true }).last().fill(password);
   await click("Đăng nhập");
   await p
-    .getByText("Tài khoản đang bị hạn chế một số hoạt động.", { exact: true })
+    .getByText(/^Tài khoản đang bị hạn chế một số hoạt động\./)
     .waitFor();
   await p.screenshot({
     path: path.join(artifacts, "account-restricted-390.png"),
@@ -395,12 +397,28 @@ try {
   await fixture.setUserStatus(fixture.member.user.id, "LOCKED");
   await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
   await p.getByText(/Tài khoản đang bị khóa/).last().waitFor();
+  for (const name of ["Trò chuyện", "Sách yêu thích", "Đánh giá giao dịch & hồ sơ uy tín"]) {
+    assert.equal(await p.getByRole("button", { name, exact: true }).count(), 0,
+      "LOCKED account must not advertise a denied destination");
+  }
+  await p.getByRole("button", { name: "Ví của tôi", exact: true }).waitFor();
+  await p.getByRole("button", { name: "Đơn mua/bán trực tiếp", exact: true }).waitFor();
+  const locked = await fixture.api("/auth/login", null, { email: "member@operations.test", password });
+  for (const route of ["/me/listings", "/me/addresses", "/me/review-transactions"]) {
+    const response = await fetch(`http://127.0.0.1:3009/api/v1${route}`, {
+      headers: { Authorization: `Bearer ${locked.accessToken}` },
+    });
+    assert.equal(response.status, 403, `LOCKED destination must remain denied: ${route}`);
+  }
+  assert.equal((await fetch("http://127.0.0.1:3009/api/v1/me/wallet", {
+    headers: { Authorization: `Bearer ${locked.accessToken}` },
+  })).status, 200, "LOCKED wallet read remains available");
   assert.equal(
-    await p.getByRole("button", { name: "Sách của tôi", exact: true }).count(),
+    await p.getByRole("button", { name: "Kệ sách của tôi", exact: true }).count(),
     0,
   );
   assert.equal(
-    await p.getByRole("button", { name: "Sổ địa chỉ", exact: true }).count(),
+    await p.getByRole("button", { name: "Địa chỉ của tôi", exact: true }).count(),
     0,
   );
   await p.screenshot({ path: path.join(artifacts, "account-locked-390.png") });

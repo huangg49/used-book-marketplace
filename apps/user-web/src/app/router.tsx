@@ -37,6 +37,8 @@ export const router = createBrowserRouter([
           { path: '/auctions', lazy: () => import('../pages/AuctionListPage').then(m => ({ Component: m.AuctionListPage })) },
           { path: '/auctions/new', lazy: () => import('../pages/CreateAuctionPage').then(m => ({ Component: m.CreateAuctionPage })) },
           { path: '/auctions/:id', lazy: () => import('../pages/AuctionDetailPage').then(m => ({ Component: m.AuctionDetailPage })) },
+          { path: '/guide', lazy: () => import('../pages/MemberGuidePage').then(m => ({ Component: m.MemberGuidePage })) },
+          { path: '/members/:id', lazy: () => import('../pages/MemberReputationPage').then(m => ({ Component: m.MemberReputationPage })) },
         ],
       },
       // Dashboard routes — dùng DashboardLayout
@@ -47,6 +49,7 @@ export const router = createBrowserRouter([
             element: <DashboardLayout />,
             children: [
               { path: '/account', lazy: () => import('../pages/AccountOverviewPage').then(m => ({ Component: m.AccountOverviewPage })) },
+              { path: '/reviews', lazy: () => import('../pages/ReviewsPage').then(m => ({ Component: m.ReviewsPage })) },
               { path: '/wallet', lazy: () => import('../pages/WalletPage').then(m => ({ Component: m.WalletPage })) },
               { path: '/profile', lazy: () => import('../pages/ProfilePage').then(m => ({ Component: m.ProfilePage })) },
               { path: '/orders', lazy: () => import('../pages/DirectOrderPage').then(m => ({ Component: m.DirectOrderListPage })) },

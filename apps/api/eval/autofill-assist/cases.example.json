@@ -1,0 +1,20 @@
+{
+  "source": "unknown",
+  "cases": [
+    {
+      "id": "book-01",
+      "bookKey": "",
+      "reviewed": false,
+      "photos": ["book-01-cover.jpg", "book-01-copyright.jpg"],
+      "expected": {
+        "title": "",
+        "authors": [],
+        "isbn": null,
+        "publisher": null,
+        "publicationYear": null,
+        "edition": null,
+        "language": "vi"
+      }
+    }
+  ]
+}

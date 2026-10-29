@@ -1,0 +1,3 @@
+10-28 23:41:50.416  6178  6392 F libc    : Fatal signal 11 (SIGSEGV), code 128 (SI_KERNEL), fault addr 0x0 in tid 6392 (mqt_v_js), pid 6178 (bilereactnative)
+10-28 23:41:52.378  6415  6415 F DEBUG   :       #00 pc 00000000010f0152  [APK]!libreactnative.so (offset 0x34ac000) (facebook::react::MountingCoordinator::pullTransaction(bool) const+706) (BuildId: 0ee9df273e73129b6847c18499325cfe1dd7dfd3)
+10-28 23:41:52.378  6415  6415 F DEBUG   :       #01 pc 0000000000c2c41f  [APK]!libreactnative.so (offset 0x34ac000) (facebook::react::FabricUIManagerBinding::schedulerDidFinishTransaction(std::__ndk1::shared_ptr<facebook::react::MountingCoordinator const> const&)+95) (BuildId: 0ee9df273e73129b6847c18499325cfe1dd7dfd3)

@@ -41,6 +41,8 @@ function getStatusInfo(status: string) {
       return { text: "Chờ đặt cọc", pillClass: styles.statusActive, Icon: Clock };
     case "RESOLUTION_PENDING":
       return { text: "Cần xử lý", pillClass: styles.statusActive, Icon: AlertCircle };
+    case "INSPECTING":
+      return { text: "Đang kiểm tra sách", pillClass: styles.statusActive, Icon: Clock };
     case "PENDING":
       return { text: "Chờ phản hồi", pillClass: styles.statusPending, Icon: Clock };
     case "REJECTED":

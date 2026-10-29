@@ -1,0 +1,133 @@
+{
+  "mode": "live-NVIDIA",
+  "source": "synthetic",
+  "ranAt": "2026-10-29T01:39:12.608Z",
+  "sourceHead": "04a93617b0c79556240741b74332f58a15a3a167",
+  "dirty": true,
+  "samplesRequested": 5,
+  "samplesRun": 5,
+  "results": {
+    "photo": {
+      "success": 5,
+      "failures": 0,
+      "freshHttpP50Ms": 1126,
+      "freshHttpP95Ms": 10971
+    },
+    "price": {
+      "success": 5,
+      "failures": 0,
+      "freshHttpP50Ms": 5146,
+      "freshHttpP95Ms": 9801
+    }
+  },
+  "estimatedCostUsd": 0.011268,
+  "providerCalls": {
+    "price": 5,
+    "autofill": 5
+  },
+  "qualityAcceptance": "NOT_RUN: no reviewed real-camera corpus; this is a synthetic transport/latency probe, fake storage",
+  "rows": [
+    {
+      "sample": 1,
+      "uploadAndProcessMs": 156,
+      "photo": {
+        "http": 200,
+        "elapsedMs": 1484,
+        "serverTiming": "ai_prepare;dur=14.3, ai_images;dur=31.8, ai_model;dur=1421.9, ai_catalog;dur=3.1, ai_complete;dur=1462.9, ai_total;dur=1478.3",
+        "status": "Suggested",
+        "cached": false
+      },
+      "price": {
+        "http": 200,
+        "elapsedMs": 5146,
+        "serverTiming": "ai_prepare;dur=23.3, ai_model;dur=5109.7, ai_complete;dur=5116.8, ai_total;dur=5142.6",
+        "status": "Suggested",
+        "cached": false
+      },
+      "replay": {
+        "http": 200,
+        "elapsedMs": 9,
+        "serverTiming": "ai_prepare;dur=5.3, ai_total;dur=5.3",
+        "status": "Suggested",
+        "cached": true
+      },
+      "pipelineMs": 6795
+    },
+    {
+      "sample": 2,
+      "uploadAndProcessMs": 132,
+      "photo": {
+        "http": 200,
+        "elapsedMs": 888,
+        "serverTiming": "ai_prepare;dur=12.9, ai_images;dur=25.2, ai_model;dur=836.8, ai_catalog;dur=3.9, ai_complete;dur=872.0, ai_total;dur=884.9",
+        "status": "Suggested",
+        "cached": false
+      },
+      "price": {
+        "http": 200,
+        "elapsedMs": 9801,
+        "serverTiming": "ai_prepare;dur=37.6, ai_model;dur=9748.2, ai_complete;dur=9758.5, ai_total;dur=9796.3",
+        "status": "Suggested",
+        "cached": false
+      },
+      "pipelineMs": 10821
+    },
+    {
+      "sample": 3,
+      "uploadAndProcessMs": 133,
+      "photo": {
+        "http": 200,
+        "elapsedMs": 1126,
+        "serverTiming": "ai_prepare;dur=13.8, ai_images;dur=27.4, ai_model;dur=1074.3, ai_catalog;dur=3.4, ai_complete;dur=1109.9, ai_total;dur=1123.8",
+        "status": "Suggested",
+        "cached": false
+      },
+      "price": {
+        "http": 200,
+        "elapsedMs": 3241,
+        "serverTiming": "ai_prepare;dur=20.7, ai_model;dur=3211.8, ai_complete;dur=3218.1, ai_total;dur=3238.9",
+        "status": "Suggested",
+        "cached": false
+      },
+      "pipelineMs": 4501
+    },
+    {
+      "sample": 4,
+      "uploadAndProcessMs": 138,
+      "photo": {
+        "http": 200,
+        "elapsedMs": 913,
+        "serverTiming": "ai_prepare;dur=12.6, ai_images;dur=26.9, ai_model;dur=863.0, ai_catalog;dur=3.0, ai_complete;dur=898.2, ai_total;dur=910.9",
+        "status": "Suggested",
+        "cached": false
+      },
+      "price": {
+        "http": 200,
+        "elapsedMs": 2927,
+        "serverTiming": "ai_prepare;dur=19.1, ai_model;dur=2896.0, ai_complete;dur=2904.9, ai_total;dur=2924.2",
+        "status": "Suggested",
+        "cached": false
+      },
+      "pipelineMs": 3978
+    },
+    {
+      "sample": 5,
+      "uploadAndProcessMs": 150,
+      "photo": {
+        "http": 200,
+        "elapsedMs": 10971,
+        "serverTiming": "ai_prepare;dur=13.6, ai_images;dur=27.2, ai_model;dur=10919.8, ai_catalog;dur=2.5, ai_complete;dur=10954.4, ai_total;dur=10968.1",
+        "status": "Suggested",
+        "cached": false
+      },
+      "price": {
+        "http": 200,
+        "elapsedMs": 5430,
+        "serverTiming": "ai_prepare;dur=18.6, ai_model;dur=5395.3, ai_complete;dur=5407.2, ai_total;dur=5425.9",
+        "status": "Suggested",
+        "cached": false
+      },
+      "pipelineMs": 16550
+    }
+  ]
+}

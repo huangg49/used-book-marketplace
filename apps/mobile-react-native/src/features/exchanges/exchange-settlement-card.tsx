@@ -56,7 +56,7 @@ export function ExchangeSettlementCard({
             Giao dịch Trao đổi Hoàn tất Thành công!
           </AppText>
           <AppText style={styles.subtitle}>
-            Cả hai bên đã nhận và nghiệm thu sách. Hệ thống đã tự động tất toán ký quỹ và kết chuyển dòng tiền.
+            Thời hạn kiểm tra của cả hai bên đã kết thúc. Hệ thống đã tất toán ký quỹ và kết chuyển dòng tiền.
           </AppText>
         </View>
       </View>

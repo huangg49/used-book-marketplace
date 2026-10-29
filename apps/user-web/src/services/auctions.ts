@@ -191,8 +191,8 @@ const myIntakeSchema = z.object({
 })
 export type IntakeState = z.infer<typeof intakeState>
 export type MyIntake = z.infer<typeof myIntakeSchema>
-export function getMyAuctionIntakes() {
-  return session.request('/me/auction-intakes', z.object({ items: z.array(myIntakeSchema) }))
+export function getMyAuctionIntakes(auctionId?: string) {
+  return session.request('/me/auction-intakes' + (auctionId ? `?auctionId=${encodeURIComponent(auctionId)}` : ''), z.object({ items: z.array(myIntakeSchema) }))
 }
 const intakeReceiptSchema = z.object({ id: z.string().uuid(), entityType: z.string(), state: z.string(), version: z.number().int() })
 /** FR-AU02: withdraw before the first bid; the server rechecks under the auction lock. */

@@ -22,6 +22,8 @@
   keys remain compatible. Two simulated managed points remain at TP.HCM; optional
   ViaPoint for ordinary sales/exchanges, mandatory intake/inspection before auction.
   Yêu cầu được chấp nhận không có nghĩa workflow đã triển khai. Giữ snapshot v1.0.
+- Nhóm bỏ Forum/Cộng đồng sách ngày28/10/2026 theo [ADR0051](docs/adr/0051-remove-forum-from-project-scope.md).
+  FR-F01–FR-F06/AC-44 ngoài phạm vi, không là backlog. Chat, wishlist và đánh giá giữ yêu cầu riêng.
 - ADR là quyết định kiến trúc; OpenAPI là contract; code/tests/evidence mô tả phần
   đã hiện thực tại source được ghi. Báo cáo có ngày và HISTORY không là trạng thái mới nhất.
 - Runtime MongoDB, [ADR 0027](docs/adr/0027-mongodb-persistence-protocol.md).
@@ -40,6 +42,7 @@
 | UI RN/web/admin/Flutter | [UI skills workflow](docs/design/UI_SKILLS.md), [UI/UX Pro Max](.agents/skills/ui-ux-pro-max/SKILL.md) cho UX/stack; [Taste](.agents/skills/design-taste-frontend/SKILL.md) cho thiết kế web; [brief hiện hành](DESIGN.md), UI rules/components; [Impeccable workflow](docs/design/IMPECCABLE_WORKFLOW.md) khi design/critique/refine |
 | API, permission, session, persistence | [Skill API/Mongo](.agents/skills/latlai-api-mongo/SKILL.md), phần liên quan trong [DOMAIN_RULES](docs/architecture/DOMAIN_RULES.md) và ADR/feature được dẫn |
 | Review hoặc hoàn tất một gói | [Skill verify/handoff](.agents/skills/latlai-verify-handoff/SKILL.md), [CONTRIBUTING](CONTRIBUTING.md), [TEAMWORK](docs/TEAMWORK.md) |
+| Luồng phân mảnh hoặc UI đi qua nhiều module/vai trò | [Skill nối hành trình](.agents/skills/latlai-journey-integration/SKILL.md); dùng cùng skill UI/API liên quan, kiểm từ entry tới kết quả và bước tiếp |
 
 Skills là quy trình theo nhiệm vụ, không thay SRS/ADR và không mở rộng quyền thao tác.
 Không cần đọc mọi skill hoặc mọi báo cáo trong một lần sửa nhỏ.

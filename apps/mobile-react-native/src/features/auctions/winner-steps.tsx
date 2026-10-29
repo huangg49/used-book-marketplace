@@ -66,7 +66,7 @@ function useRemaining(deadline: string | null, serverTime: string | undefined) {
   return ms;
 }
 
-export function WinnerSteps({ orderId, boughtNow }: { orderId: string; boughtNow: boolean }) {
+export function WinnerSteps({ orderId, boughtNow, paused = false }: { orderId: string; boughtNow: boolean; paused?: boolean }) {
   const { client } = useSession();
   const foreground = useForeground();
   const queryClient = useQueryClient();
@@ -172,7 +172,7 @@ export function WinnerSteps({ orderId, boughtNow }: { orderId: string; boughtNow
         </>
       )}
       <ConfirmDialog
-        visible={!!confirm}
+        visible={!!confirm && !paused}
         title={confirm?.title ?? ""}
         message={confirm?.message ?? ""}
         confirmLabel={confirm?.label ?? ""}

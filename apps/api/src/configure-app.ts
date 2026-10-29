@@ -21,7 +21,7 @@ export function configureApp(
     useProcessExit: process.platform === 'win32',
   });
   app.enableCors({
-    exposedHeaders: ['X-Request-Id', 'Idempotency-Replayed', 'Retry-After'],
+    exposedHeaders: ['X-Request-Id', 'Idempotency-Replayed', 'Retry-After', 'Server-Timing'],
     origin: config
       .get<string>(
         'CORS_ORIGINS',

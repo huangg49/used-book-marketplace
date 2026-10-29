@@ -1,0 +1,81 @@
+{
+  "startedAt": "2026-10-29T00:20:22.621Z",
+  "status": "PARTIAL",
+  "sourceHead": "3bfe70a300ca64ee56b013e9766c641fc72208f7",
+  "dirty": true,
+  "artifactLimit": "Existence/QA-base preflight only. Build/export freshness requires the documented preparation commands.",
+  "limits": [
+    "No GHN/carrier/Driver",
+    "No main DB",
+    "Fake storage",
+    "No native/human acceptance",
+    "No READINESS gate closure",
+    "Auction UI fixtures are not real cross-role auction evidence"
+  ],
+  "suites": [
+    {
+      "id": "chat",
+      "scope": "Web; intercepted HTTP + isolated Socket.IO; no application DB",
+      "selected": false,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "seller-order",
+      "scope": "Web; real HTTP/Mongo; order creation/payment; stops before fulfillment; fake storage",
+      "selected": false,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "exchange",
+      "scope": "Web; real HTTP/Mongo; proposal/accept/cancel/funding denial; fake storage",
+      "selected": false,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "operations",
+      "scope": "Staff/Admin web; real HTTP/Mongo; catalog/listing moderation/session; fake storage",
+      "selected": true,
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 56896
+    },
+    {
+      "id": "member-rn-web",
+      "scope": "RN web export; real HTTP/Mongo; shelf/listing/media/address/member data; fake storage; not native",
+      "selected": false,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "reviews",
+      "scope": "Web/RN web/Staff; real HTTP/Mongo; synthetic Completed fixtures; fake storage; no fulfillment claim",
+      "selected": false,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "work-inbox",
+      "scope": "Web/RN web/Staff/Admin; real HTTP/Mongo; commands + synthetic paging/intakes; fake storage",
+      "selected": true,
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 19048
+    },
+    {
+      "id": "auction-ui",
+      "scope": "Web auction interface/motion; intercepted fixtures; not cross-role intake/auction fulfillment",
+      "selected": false,
+      "status": "NOT_RUN"
+    },
+    {
+      "id": "auction-journey",
+      "scope": "Member/Staff web + RN web; real intake/inspection/publish/bid/Buy Now/worker/payment; fake storage; stops at payment hold",
+      "selected": true,
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "durationMs": 97226
+    }
+  ],
+  "finishedAt": "2026-10-29T00:23:15.858Z"
+}
