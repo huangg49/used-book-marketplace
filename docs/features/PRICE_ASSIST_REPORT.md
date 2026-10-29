@@ -1,5 +1,12 @@
 # Trợ lý gợi ý giá — báo cáo triển khai
 
+
+Cập nhật29/10/2026: source mới có khoảng tham chiếu read-only trước AI và chuẩn hóa
+nguồn độc lập. [Gói hiện hành/evidence](LISTING_ASSIST_FAST_PATHS_2026_10_29.md),
+[ADR0056](../adr/0056-listing-assist-fast-paths.md). Các số liệu bên dưới giữ mốc
+lịch sử. Import nguồn không website cần sourceGroup tổ chức đã xác minh; nhãn khác
+nhau không còn chứng minh độc lập. Chưa migrate/import vào DB chính.
+
 05/10/2026 · nhánh `codex/bao-listing-price-assist` từ `main` `efc6f09` · thiết kế
 [ADR 0028](../adr/0028-listing-price-assistant.md) (Proposed). Giao việc gốc: gói
 “Bảo — Đăng sách và AI gợi ý giá”.
@@ -113,7 +120,8 @@ pnpm --filter @used-books/api price-refs:import path/to/refs.json
 
 Mặc định chạy thử; thêm `--apply` để ghi. Dùng `MONGODB_MIGRATOR_URL`. Mỗi mục:
 `bookId` hoặc `isbn` (đã xác nhận), `kind` CoverPrice|EditorialReference|CompletedSale,
-`amount`, `condition` (tùy chọn), `sourceLabel`, `sourceUrl` https (tùy chọn),
+`amount`, `condition` (tùy chọn), `sourceLabel`, `sourceUrl` https hoặc `sourceGroup`
+tổ chức đã xác minh (cần ít nhất một định danh nguồn),
 `observedAt` YYYY-MM-DD, `enteredBy`, `rightsNote`. Lỗi bất kỳ mục nào → không ghi gì.
 Chạy lại không tạo trùng. Chỉ commit file nguồn khi chủ dự án xác nhận quyền sử dụng.
 
@@ -128,7 +136,8 @@ không dùng được, 429 hạn mức/đang có yêu cầu, 503 trợ lý khôn
 ## Giới hạn đã biết
 
 - Không có giá giao dịch hoàn tất; “giá rao” không phải giá đã bán.
-- Nhãn nguồn dùng để đếm nguồn độc lập; hai nhãn khác nhau cùng một nơi sẽ bị đếm hai.
+- Đã xử lý29/10: nguồn độc lập dùng domain/tổ chức, nhãn không đủ chứng minh. Legacy
+  thiếu định danh vẫn Limited; không tự suy mapping. Xem ADR0056 và gói đường nhanh.
 - Giá rao nội bộ không lọc theo tình trạng tài khoản người bán khác (kệ có lọc).
 - Mất app (process death) trên Android vẫn mất form chưa lưu — có từ trước, chưa sửa.
 - `price_suggestions` chưa có chính sách xóa.

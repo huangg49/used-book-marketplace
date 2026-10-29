@@ -1,0 +1,582 @@
+{
+  "status": "NEEDS_REWORK_PARTIAL",
+  "ranAt": "2026-10-29T04:07:11.785Z",
+  "sourceHead": "0de9cf5",
+  "date": "2026-10-29",
+  "timezone": "Asia/Saigon",
+  "scope": "Re-review of Gemini v2. Original input unchanged; all mutations in isolated .tmp sandbox. No app/DB/import/GHN/paid AI calls. Not human acceptance.",
+  "snapshotComparison": [
+    {
+      "path": "HANDOFF.md",
+      "present": true,
+      "sha256Matches": true
+    },
+    {
+      "path": "validation/report.json",
+      "present": true,
+      "sha256Matches": true
+    },
+    {
+      "path": "validation/run-checks.mjs",
+      "present": true,
+      "sha256Matches": true
+    },
+    {
+      "path": "validation/test-fetch.mjs",
+      "present": false
+    },
+    {
+      "path": "catalog/books.json",
+      "present": true,
+      "sha256Matches": true
+    },
+    {
+      "path": "prices/observations.json",
+      "present": true,
+      "sha256Matches": true
+    },
+    {
+      "path": "prices/import-candidates.json",
+      "present": true,
+      "sha256Matches": true
+    },
+    {
+      "path": "provenance/sources.json",
+      "present": true,
+      "sha256Matches": true
+    },
+    {
+      "path": "autofill/cover-scan/cases.json",
+      "present": true,
+      "sha256Matches": true
+    },
+    {
+      "path": "autofill/real-camera/cases.json",
+      "present": true,
+      "sha256Matches": true
+    }
+  ],
+  "inputDigests": [
+    {
+      "path": "HANDOFF.md",
+      "bytes": 12441,
+      "sha256": "3e9e137ff18660d7a59cdb495442ef21ad619b8adf76fdaa643409b701ee896a"
+    },
+    {
+      "path": "REWORK_CHANGELOG.md",
+      "bytes": 12712,
+      "sha256": "01c06fbb45c5b150053f0feb4fb04b558b7b4a4fafdf6845f74568368451a893"
+    },
+    {
+      "path": "validation/report.json",
+      "bytes": 9750,
+      "sha256": "042361bec498aefcaf99538f9577a59bc5124f1fad265376af9b446cfa36955e"
+    },
+    {
+      "path": "validation/run-checks.mjs",
+      "bytes": 22750,
+      "sha256": "5a12fa438e6df7ea0437bd327aff2cfc43428bf69b656bb375d588bfdd60763a"
+    },
+    {
+      "path": "validation/run-negative-tests.mjs",
+      "bytes": 7725,
+      "sha256": "2fd4825b164ee47bdc29b5f932019214525bed26ed4486206c3a1249c27ed404"
+    },
+    {
+      "path": "catalog/books.json",
+      "bytes": 59451,
+      "sha256": "7a57e64982f2dd60c45af83c1117c697a9b6400f14a9bbfbaff4a838fbbe92a8"
+    },
+    {
+      "path": "prices/observations.json",
+      "bytes": 27387,
+      "sha256": "2db0e1d025f20f8ea28dcd8246b3ac7e5654532a505c54c0ddc191a79cd021db"
+    },
+    {
+      "path": "prices/import-candidates.json",
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "provenance/sources.json",
+      "bytes": 14894,
+      "sha256": "9ee27afa5f926150f44e6934a839f2b58b381151f09affda3eaddb037975d459"
+    },
+    {
+      "path": "autofill/cover-scan/cases.json",
+      "bytes": 8935,
+      "sha256": "b3fa2e286be8fe85bf33fb67e8497106a1076b5842050cce6c2077a3af08c8f6"
+    },
+    {
+      "path": "autofill/real-camera/cases.json",
+      "bytes": 45,
+      "sha256": "927cde5d5439505bcf42656ea6fce0c113eb4b95b42801f038d85faf9e73bc8e"
+    }
+  ],
+  "offlineCounts": {
+    "books": 25,
+    "images": 25,
+    "uniqueImageHashes": 24,
+    "observations": 40,
+    "sources": 40,
+    "reportedReadySources": 14,
+    "readyExactTwoSourceBooks": 11,
+    "realCameraCases": 0,
+    "importCandidates": 0
+  },
+  "allImagesDecodedWithSharpAndMatchedMetadata": true,
+  "imageDecoderNote": "Real v2 images pass Sharp. The synthetic 23-byte marker-only file in the probe does not.",
+  "multipleAuthorBooks": [
+    {
+      "bookKey": "luoc-su-nuoc-viet-kd-2024",
+      "authors": [
+        "Hiếu Minh",
+        "Huyền Trang"
+      ]
+    }
+  ],
+  "isbnSourceCheck": [
+    {
+      "bookKey": "de-men-bm-kd-2023",
+      "isbn": "9786042036610",
+      "sourceMatched": true
+    },
+    {
+      "bookKey": "de-men-bc-kd-2022",
+      "isbn": "9786042135191",
+      "sourceMatched": true
+    },
+    {
+      "bookKey": "hoang-tu-be-kd-2022",
+      "isbn": "9786042354134",
+      "sourceMatched": true
+    },
+    {
+      "bookKey": "khong-gia-dinh-kd-2022",
+      "isbn": "9786042247436",
+      "sourceMatched": true
+    },
+    {
+      "bookKey": "ong-gia-bien-ca-kd-2025",
+      "isbn": "9786042312547",
+      "sourceMatched": true
+    },
+    {
+      "bookKey": "dat-rung-phuong-nam-kd-2026",
+      "isbn": "9786042247368",
+      "sourceMatched": true
+    },
+    {
+      "bookKey": "doraemon-t1-kd-2023",
+      "isbn": "9786042042994",
+      "sourceMatched": true
+    },
+    {
+      "bookKey": "doraemon-t2-kd-2023",
+      "isbn": "9786042043007",
+      "sourceMatched": true
+    },
+    {
+      "bookKey": "mat-biec-tre-bm-2022",
+      "isbn": "9786041200333",
+      "sourceMatched": true
+    },
+    {
+      "bookKey": "mat-biec-tre-td-2019",
+      "isbn": "9786041140783",
+      "sourceMatched": true
+    },
+    {
+      "bookKey": "cho-toi-xin-ve-tre-2018",
+      "isbn": "9786041004757",
+      "sourceMatched": true
+    },
+    {
+      "bookKey": "tat-den-kd-2021",
+      "isbn": "9786042247788",
+      "sourceMatched": true
+    },
+    {
+      "bookKey": "truyen-kieu-kd-sc-2024",
+      "isbn": "9786042393508",
+      "sourceMatched": true
+    },
+    {
+      "bookKey": "truyen-kieu-kd-vhtn-2021",
+      "isbn": "9786042254960",
+      "sourceMatched": true
+    },
+    {
+      "bookKey": "luoc-su-nuoc-viet-kd-2024",
+      "isbn": "9786042362573",
+      "sourceMatched": true
+    }
+  ],
+  "missingFieldEvidenceFormat": {},
+  "sourceTimestampValues": [
+    "2026-10-29T03:50:00Z"
+  ],
+  "activeBlockedCases": [
+    {
+      "id": "case-nha-gia-kim-nhanam-tb95k",
+      "bookKey": "nha-gia-kim-nhanam-tb95k"
+    }
+  ],
+  "evalRunner": {
+    "path": "apps/api/eval/autofill-assist/run.ts",
+    "line": 79,
+    "behavior": "Iterates file.cases, without checking catalog.status or issue quarantine labels; no eval executed."
+  },
+  "baseline": {
+    "summary": {
+      "totalChecks": 25,
+      "passed": 22,
+      "failed": 0,
+      "partial": 1,
+      "blocked": 1,
+      "notRun": 1
+    },
+    "overallStatus": "NEEDS_REWORK_PARTIAL",
+    "exitCode": 0
+  },
+  "geminiNegativeSuite": {
+    "exitCode": 0,
+    "lines": [
+      "[PASS] ISBN sai checksum: exit code = 1 (expected 1), detected isbn:checksum-verification = true",
+      "[PASS] Giá âm (-50000): exit code = 1 (expected 1), detected pricing:sanity-and-dates = true",
+      "[PASS] Ngày quan sát tương lai (2099-01-01): exit code = 1 (expected 1), detected pricing:sanity-and-dates = true",
+      "[PASS] Ảnh case thiếu (photos trỏ file không tồn tại): exit code = 1 (expected 1), detected cases:photos-existence-and-realpath = true",
+      "[PASS] Ảnh hỏng (corrupted JPEG / truncated bytes): exit code = 1 (expected 1), detected images:presence-decoding-hashes = true",
+      "[PASS] ID trùng (duplicate bookKey): exit code = 1 (expected 1), detected uniqueness:bookKeys = true",
+      "[PASS] SourceId tham chiếu không tồn tại: exit code = 1 (expected 1), detected integrity:books-sources-crossref = true",
+      "[PASS] reviewed=true trong real-camera lane: exit code = 1 (expected 1), detected invariants:no-fake-human-review = true",
+      "[PASS] Phần tử không hợp lệ trong import-candidates.json: exit code = 1 (expected 1), detected pricing:import-candidates = true",
+      "Negative tests result: 9/9 PASSED"
+    ]
+  },
+  "independentProbes": [
+    {
+      "scenario": "baseline",
+      "exitCode": 0,
+      "overallStatus": "NEEDS_REWORK_PARTIAL",
+      "summary": {
+        "totalChecks": 25,
+        "passed": 22,
+        "failed": 0,
+        "partial": 1,
+        "blocked": 1,
+        "notRun": 1
+      },
+      "failedChecks": [],
+      "imageCheck": {
+        "name": "images:presence-decoding-hashes",
+        "status": "PASS",
+        "details": "Verified 25 images on disk: 0 hash mismatches, 0 decode failures, 0 path traversals",
+        "metrics": {
+          "totalImages": 25,
+          "hashMismatches": 0,
+          "decodeFailures": 0,
+          "pathTraversalFailures": 0
+        }
+      }
+    },
+    {
+      "scenario": "jpeg-frame-only-no-scan",
+      "exitCode": 0,
+      "overallStatus": "NEEDS_REWORK_PARTIAL",
+      "summary": {
+        "totalChecks": 25,
+        "passed": 22,
+        "failed": 0,
+        "partial": 1,
+        "blocked": 1,
+        "notRun": 1
+      },
+      "oracle": "Sharp rejected: Input buffer has corrupt header: VipsJpeg: Invalid JPEG file structure: missing SOS marker\nVipsJpeg: Invalid JPEG file structure: missing SOS marker\nVipsJpeg: Invalid JPEG file structure: missing SOS marker",
+      "failedChecks": [],
+      "imageCheck": {
+        "name": "images:presence-decoding-hashes",
+        "status": "PASS",
+        "details": "Verified 25 images on disk: 0 hash mismatches, 0 decode failures, 0 path traversals",
+        "metrics": {
+          "totalImages": 25,
+          "hashMismatches": 0,
+          "decodeFailures": 0,
+          "pathTraversalFailures": 0
+        }
+      }
+    },
+    {
+      "scenario": "dimension-and-size-mismatch",
+      "exitCode": 0,
+      "overallStatus": "NEEDS_REWORK_PARTIAL",
+      "summary": {
+        "totalChecks": 25,
+        "passed": 22,
+        "failed": 0,
+        "partial": 1,
+        "blocked": 1,
+        "notRun": 1
+      },
+      "failedChecks": [],
+      "imageCheck": {
+        "name": "images:presence-decoding-hashes",
+        "status": "PASS",
+        "details": "Verified 25 images on disk: 0 hash mismatches, 0 decode failures, 0 path traversals",
+        "metrics": {
+          "totalImages": 25,
+          "hashMismatches": 0,
+          "decodeFailures": 0,
+          "pathTraversalFailures": 0
+        }
+      }
+    },
+    {
+      "scenario": "missing-field-evidence-source",
+      "exitCode": 0,
+      "overallStatus": "NEEDS_REWORK_PARTIAL",
+      "summary": {
+        "totalChecks": 25,
+        "passed": 22,
+        "failed": 0,
+        "partial": 1,
+        "blocked": 1,
+        "notRun": 1
+      },
+      "failedChecks": [],
+      "imageCheck": {
+        "name": "images:presence-decoding-hashes",
+        "status": "PASS",
+        "details": "Verified 25 images on disk: 0 hash mismatches, 0 decode failures, 0 path traversals",
+        "metrics": {
+          "totalImages": 25,
+          "hashMismatches": 0,
+          "decodeFailures": 0,
+          "pathTraversalFailures": 0
+        }
+      }
+    },
+    {
+      "scenario": "sibling-prefix-path-escape",
+      "exitCode": 0,
+      "overallStatus": "NEEDS_REWORK_PARTIAL",
+      "summary": {
+        "totalChecks": 25,
+        "passed": 22,
+        "failed": 0,
+        "partial": 1,
+        "blocked": 1,
+        "notRun": 1
+      },
+      "failedChecks": [],
+      "imageCheck": {
+        "name": "images:presence-decoding-hashes",
+        "status": "PASS",
+        "details": "Verified 25 images on disk: 0 hash mismatches, 0 decode failures, 0 path traversals",
+        "metrics": {
+          "totalImages": 25,
+          "hashMismatches": 0,
+          "decodeFailures": 0,
+          "pathTraversalFailures": 0
+        }
+      }
+    },
+    {
+      "scenario": "impossible-calendar-date",
+      "exitCode": 0,
+      "overallStatus": "NEEDS_REWORK_PARTIAL",
+      "summary": {
+        "totalChecks": 25,
+        "passed": 22,
+        "failed": 0,
+        "partial": 1,
+        "blocked": 1,
+        "notRun": 1
+      },
+      "failedChecks": [],
+      "imageCheck": {
+        "name": "images:presence-decoding-hashes",
+        "status": "PASS",
+        "details": "Verified 25 images on disk: 0 hash mismatches, 0 decode failures, 0 path traversals",
+        "metrics": {
+          "totalImages": 25,
+          "hashMismatches": 0,
+          "decodeFailures": 0,
+          "pathTraversalFailures": 0
+        }
+      }
+    },
+    {
+      "scenario": "active-quarantine-case",
+      "exitCode": 0,
+      "overallStatus": "NEEDS_REWORK_PARTIAL",
+      "summary": {
+        "totalChecks": 25,
+        "passed": 22,
+        "failed": 0,
+        "partial": 1,
+        "blocked": 1,
+        "notRun": 1
+      },
+      "failedChecks": [],
+      "imageCheck": {
+        "name": "images:presence-decoding-hashes",
+        "status": "PASS",
+        "details": "Verified 25 images on disk: 0 hash mismatches, 0 decode failures, 0 path traversals",
+        "metrics": {
+          "totalImages": 25,
+          "hashMismatches": 0,
+          "decodeFailures": 0,
+          "pathTraversalFailures": 0
+        }
+      }
+    },
+    {
+      "scenario": "missing-review-flags",
+      "exitCode": 0,
+      "overallStatus": "NEEDS_REWORK_PARTIAL",
+      "summary": {
+        "totalChecks": 25,
+        "passed": 22,
+        "failed": 0,
+        "partial": 1,
+        "blocked": 1,
+        "notRun": 1
+      },
+      "failedChecks": [],
+      "imageCheck": {
+        "name": "images:presence-decoding-hashes",
+        "status": "PASS",
+        "details": "Verified 25 images on disk: 0 hash mismatches, 0 decode failures, 0 path traversals",
+        "metrics": {
+          "totalImages": 25,
+          "hashMismatches": 0,
+          "decodeFailures": 0,
+          "pathTraversalFailures": 0
+        }
+      }
+    },
+    {
+      "scenario": "future-source-timestamp",
+      "exitCode": 0,
+      "overallStatus": "NEEDS_REWORK_PARTIAL",
+      "summary": {
+        "totalChecks": 25,
+        "passed": 22,
+        "failed": 0,
+        "partial": 1,
+        "blocked": 1,
+        "notRun": 1
+      },
+      "failedChecks": [],
+      "imageCheck": {
+        "name": "images:presence-decoding-hashes",
+        "status": "PASS",
+        "details": "Verified 25 images on disk: 0 hash mismatches, 0 decode failures, 0 path traversals",
+        "metrics": {
+          "totalImages": 25,
+          "hashMismatches": 0,
+          "decodeFailures": 0,
+          "pathTraversalFailures": 0
+        }
+      }
+    }
+  ],
+  "originalInputUnchanged": true,
+  "httpSnapshot": {
+    "ranAt": "2026-10-29T04:01:58.147Z",
+    "total": 40,
+    "http200": 40
+  },
+  "freshSourceFacts": [
+    {
+      "id": "src-tiki-de-men-kd",
+      "url": "https://tiki.vn/de-men-phieu-luu-ky-nha-xuat-ban-kim-dong-p272305312.html",
+      "title": "Mua Dế Mèn Phiêu Lưu Ký (Nhà Xuất Bản Kim Đồng) tại Bảo Châu Books",
+      "isbn": null,
+      "mainPrice": null,
+      "availability": null,
+      "page": "/ProductPage",
+      "product": null,
+      "products": [
+        {
+          "name": "Dế Mèn Phiêu Lưu Ký (Nhà Xuất Bản Kim Đồng)",
+          "price": 50000,
+          "availability": "https://schema.org/InStock",
+          "seller": {
+            "@type": "Organization",
+            "name": "Bảo Châu Books",
+            "url": "https://tiki.vn/cua-hang/bao-chau-books"
+          }
+        }
+      ]
+    },
+    {
+      "id": "src-tiki-mb-bm",
+      "url": "https://tiki.vn/sach-mat-biec-tai-ban-2022-p186286190.html",
+      "title": "Mua Sách Mắt Biếc (Tái Bản 2022) tại Tiki Trading",
+      "isbn": null,
+      "mainPrice": null,
+      "availability": null,
+      "page": "/ProductPage",
+      "product": null,
+      "products": [
+        {
+          "name": "Sách Mắt Biếc (Tái Bản 2022)",
+          "price": 36000,
+          "availability": "https://schema.org/InStock",
+          "seller": {
+            "@type": "Organization",
+            "name": "Tiki Trading",
+            "url": "https://tiki.vn/cua-hang/tiki-trading"
+          }
+        }
+      ]
+    },
+    {
+      "id": "src-nhanam-ngk-79k",
+      "url": "https://nhanam.vn/nha-gia-kim-tb-79-000-1",
+      "title": "Nhà giả kim (TB 79.000)",
+      "isbn": null,
+      "mainPrice": "63.200₫",
+      "availability": "http://schema.org/OutOfStock",
+      "product": null,
+      "products": []
+    },
+    {
+      "id": "src-kd-lsnv",
+      "url": "https://www.nxbkimdong.com.vn/luoc-su-nuoc-viet-bang-tranh-26",
+      "title": "Lược sử nước Việt bằng tranh | Nhà xuất bản Kim Đồng",
+      "isbn": "978-604-2-36257-3",
+      "mainPrice": "126.000₫",
+      "availability": "http://schema.org/InStock",
+      "product": {
+        "name": "Lược sử nước Việt bằng tranh",
+        "content": "ISBN: 978-604-2-36257-3 Tác giả: Tạ Huy Long Dương Trung Quốc Hiếu Minh Huyền Trang Đối tượng: Nhi đồng (6 – 11) Khuôn Khổ: 30x18 cm Số trang: 96 Định dạng: bìa mềm Trọng lượng: 370 gram Dòng sử Việt trôi xuôi từ thượng nguồn lịch sử, thuở cha Lạc Long Quân kết duyên cùng mẹ Âu Cơ. Từ quá khứ xa xưa đẫm màu huyền tích, nước Việt đã trải qua xiết bao biến cố thăng trầm. Những dấu chân cha ông từ ngày mở nước vẫn còn lưu lại trong thẳm sâu tâm hồn dân tộc. Và ta hãy tìm xem, những bóng dáng nào của ngày hôm qua vẫn còn thấp thoáng trong dòng chảy hôm nay…",
+        "variants": [
+          {
+            "id": 223831152,
+            "title": "Default Title",
+            "sku": "6261400010064",
+            "price": 126000,
+            "available": true
+          }
+        ],
+        "images": [
+          {
+            "src": "https://bizweb.dktcdn.net/100/576/749/products/2022-9bce13b2eb77495aac1e9cb283e8f00a-e26da399f58347d6be7e8f58faa2f422-a06a6742315a4b25ab7da2612fac0eab-542bdaac-7371-4823-8d3a-8754ea5f0164.jpg?v=1787717393853"
+          }
+        ]
+      },
+      "products": []
+    }
+  ],
+  "remainingLimits": [
+    "11/15 exact two-group books based on input labels, not all independently verified editions",
+    "Unknown image rights",
+    "No real-camera corpus",
+    "No human review",
+    "No paid model evaluation",
+    "Claimed source fieldEvidence presence is not verified semantic correctness"
+  ]
+}

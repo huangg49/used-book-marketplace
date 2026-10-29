@@ -75,6 +75,9 @@ const orderDetails = paymentOrderSchema.extend({
   paidAt: z.string().nullable(),
   moneyHeld: z.number(),
   canCancel: z.boolean(),
+  sellerAcceptanceEnabled: z.boolean(),
+  canReject: z.boolean(),
+  sellerConfirmationDeadline: z.string().nullable(),
   shipmentRegistrationEnabled: z.boolean(),
   preparation: z
     .object({ acceptedAt: z.string(), pickupDeadline: z.string() })

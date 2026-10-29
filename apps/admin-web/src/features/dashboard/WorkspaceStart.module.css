@@ -1,0 +1,43 @@
+.guide {
+  border-block: 1px solid var(--line);
+  padding: 20px 0;
+  margin-bottom: 24px;
+}
+.guide summary {
+  min-height: 48px;
+  display: list-item;
+  cursor: pointer;
+  font-weight: 700;
+  padding-block: 12px;
+}
+.guide p {
+  max-width: 70ch;
+  line-height: 1.8;
+}
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 24px;
+}
+.groups h2 {
+  font-size: 1.125rem;
+}
+.groups ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.groups li {
+  border-bottom: 1px solid var(--line);
+  padding-block: 12px;
+}
+.groups a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  font-weight: 700;
+}
+.guide :focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 4px;
+}

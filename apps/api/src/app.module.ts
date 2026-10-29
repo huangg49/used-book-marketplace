@@ -22,6 +22,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { ExchangesModule } from './modules/exchanges/exchanges.module.js';
 import { ReviewsModule } from './modules/reviews/reviews.module.js';
 import { OperationsDashboardModule } from './modules/operations-dashboard/operations-dashboard.module.js';
+import { WorkInboxModule } from './modules/work-inbox/work-inbox.module.js';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { OperationsDashboardModule } from './modules/operations-dashboard/operat
     ExchangesModule,
     ReviewsModule,
     OperationsDashboardModule,
+    WorkInboxModule,
   ],
   controllers: [AppController],
   providers: [AppService],

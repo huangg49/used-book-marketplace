@@ -82,9 +82,9 @@ describe('price evidence rules', () => {
       input,
       book,
       [
-        src('a', 90_000, { kind: 'CoverPrice', label: 'Kim Đồng' }),
-        src('b', 60_000, { label: 'Biên tập A' }),
-        src('d', 58_000, { label: 'Biên tập B' }),
+        src('a', 90_000, { kind: 'CoverPrice', label: 'Kim Đồng', sourceGroup: 'publisher-kimdong' }),
+        src('b', 60_000, { label: 'Biên tập A', sourceGroup: 'editor-a' }),
+        src('d', 58_000, { label: 'Biên tập B', sourceGroup: 'editor-b' }),
         src('c', 5_000, { kind: 'InternalAsking', label: 'Giá rao trên Lật lại' }),
       ],
       now,

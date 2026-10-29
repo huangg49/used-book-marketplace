@@ -22,6 +22,8 @@ export async function createTestApi({
   listingCount = 3,
   photoBytes,
   onResponse,
+  aiModels,
+  catalogMetadata,
 } = {}) {
   const rootUrl = process.env.MONGO_TEST_URL;
   if (!rootUrl)
@@ -47,6 +49,14 @@ export async function createTestApi({
     LISTING_SUBMISSION_FEE_VND: process.env.LISTING_SUBMISSION_FEE_VND ?? "0",
     ORDER_CHECKOUT_MODE: process.env.ORDER_CHECKOUT_MODE ?? "Unpaid",
     CORS_ORIGINS: corsOrigin,
+    // AI is opt-in and uses injected QA adapters; normal browser suites never call a provider.
+    PRICE_ASSIST_ENABLED: aiModels ? "true" : "false",
+    AUTOFILL_ENABLED: aiModels ? "true" : "false",
+    PRICE_ASSIST_PROVIDER: "nvidia",
+    PRICE_LOOKUP_ENABLED: "false",
+    PRICE_ASSIST_INPUT_USD_PER_MTOK: "1",
+    PRICE_ASSIST_OUTPUT_USD_PER_MTOK: "1",
+    PRICE_ASSIST_DAILY_BUDGET_USD: "0.10",
     SUPABASE_URL: "",
     SUPABASE_STORAGE_KEY: "",
   });
@@ -56,10 +66,31 @@ export async function createTestApi({
   const { bootstrapRoles } = await load("database/mongo/roles.js"),
     { migrate } = await load("database/mongo/migrate.js");
   const admin = new MongoClient(rootUrl);
-  let app, migrator, images;
+  let app, migrator, images, requestsIdle;
+  let activeRequests = 0;
   const close = async () => {
     try {
-      await app?.close();
+      // Nest destroys Mongo providers before closing its HTTP adapter. Drain
+      // accepted reads first so a final browser poll cannot outlive Mongo.
+      const http = app?.getHttpServer();
+      try {
+        if (http?.listening)
+          await new Promise((resolve, reject) =>
+            http.close((error) => (error ? reject(error) : resolve())),
+          );
+        // Aborting a browser connection need not cancel its async guard/read.
+        // Wait for the actual response end, not just for the socket to close.
+        if (activeRequests)
+          await new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+              requestsIdle = undefined;
+              reject(new Error("QA requests did not drain before teardown."));
+            }, 10000);
+            requestsIdle = () => { clearTimeout(timer); resolve(); };
+          });
+      } finally {
+        await app?.close();
+      }
     } finally {
       try {
         if (images?.listening)
@@ -128,12 +159,30 @@ export async function createTestApi({
       { MediaStorage } = await load("modules/media/media-storage.js"),
       { MediaWorker } = await load("modules/media/media-worker.service.js"),
       { configureApp } = await load("configure-app.js");
-    const module = await Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(MediaStorage)
-      .useValue(storage)
-      .compile();
+    const builder = Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(MediaStorage).useValue(storage);
+    if (aiModels) {
+      const { PriceModel } = await load("modules/price-assist/price-model.js");
+      const { AutofillModel } = await load("modules/autofill-assist/autofill-model.js");
+      builder.overrideProvider(PriceModel).useValue(aiModels.price);
+      builder.overrideProvider(AutofillModel).useValue(aiModels.autofill);
+    }
+    const module = await builder.compile();
     app = module.createNestApplication();
     configureApp(app, { docs: false, logRequests: false });
+    app.use((_request, response, next) => {
+      activeRequests++;
+      let ended = false;
+      const end = response.end;
+      response.end = function (...args) {
+        try { return end.apply(this, args); }
+        finally {
+          if (!ended) { ended = true; activeRequests--; }
+          if (!activeRequests) requestsIdle?.();
+        }
+      };
+      next();
+    });
     // Opt-in QA counters never receive headers, tokens, bodies or response data.
     if (onResponse)
       app.use((request, response, next) => {
@@ -205,9 +254,8 @@ export async function createTestApi({
       category: "Văn học",
       isbn: null,
     };
-    const catalog = await api("/catalog/requests", member.accessToken, {
-      metadata,
-    });
+    if (catalogMetadata) Object.assign(metadata, catalogMetadata);
+    const catalog = await api("/catalog/requests", member.accessToken, { metadata });
     const extra = await api("/catalog/requests", member.accessToken, {
       metadata: { ...metadata, title: "Đầu sách cần bổ sung thông tin" },
     });
@@ -328,6 +376,11 @@ export async function createTestApi({
       listings,
       photo,
       processMedia: () => app.get(MediaWorker).tick(),
+      // Explicit QA sweep, never a background timer or a production worker.
+      processAuctions: async () => {
+        const { AuctionWorker } = await load("modules/auctions/auction-worker.service.js");
+        return app.get(AuctionWorker).tick();
+      },
     };
   } catch (error) {
     await close();

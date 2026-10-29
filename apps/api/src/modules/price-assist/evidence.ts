@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { canonicalJson } from '../../common/canonical-json.js';
 import type { Wire } from '../commands/domain-error.js';
+import { originGroups, sourceAliases } from './source-origin.js';
 
 // Deterministic evidence rules (ADR 0028). Refusal, missing data and the
 // evidence level are decided here; the model may only draft a range inside
@@ -26,7 +27,10 @@ export const CONDITION_BANDS = {
 } as const satisfies Record<Condition, readonly [number, number]>;
 // Sources that state a new-book price; the band is applied to their median.
 // Staff-entered cover prices win over prices found online when both exist.
-const NEW_PRICE_KINDS: ReadonlySet<SourceKind> = new Set(['CoverPrice', 'OnlineRetail']);
+const NEW_PRICE_KINDS: ReadonlySet<SourceKind> = new Set([
+  'CoverPrice',
+  'OnlineRetail',
+]);
 
 export type Condition = Wire['BookCondition'];
 export type SourceKind = Wire['PriceSourceKind'];
@@ -52,6 +56,7 @@ export interface BookFacts {
   confirmed: boolean;
 }
 export interface RawSource {
+  sourceGroup?: string | null;
   id: string;
   kind: SourceKind;
   amount: number;
@@ -90,12 +95,9 @@ export function sanitizeNote(note: string): string {
 const median = (values: number[]) => {
   const sorted = [...values].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2
-    ? sorted[mid]
-    : (sorted[mid - 1] + sorted[mid]) / 2;
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 };
-const roundTo = (value: number, step = 1000) =>
-  Math.round(value / step) * step;
+const roundTo = (value: number, step = 1000) => Math.round(value / step) * step;
 
 // What the rules need to know about the listing besides the request body.
 export interface ListingFacts {
@@ -120,10 +122,13 @@ export function evaluate(
         a.id.localeCompare(b.id),
     )
     .slice(0, MAX_SOURCES);
+  const groups = originGroups(ordered);
   const sources: Source[] = ordered.map((s, i) => {
     const months = (now.getTime() - s.observedAt.getTime()) / MONTH_MS;
     const otherEdition =
-      !!s.isbn && !!book.isbn && s.isbn.toUpperCase() !== book.isbn.toUpperCase();
+      !!s.isbn &&
+      !!book.isbn &&
+      s.isbn.toUpperCase() !== book.isbn.toUpperCase();
     const stale =
       months >
       (s.kind === 'CoverPrice'
@@ -133,6 +138,7 @@ export function evaluate(
           : STALE_MONTHS.other);
     return {
       ref: `s${i + 1}`,
+      originGroup: groups[i],
       kind: s.kind,
       label: s.label,
       amount: s.amount,
@@ -150,6 +156,25 @@ export function evaluate(
             : null,
     };
   });
+  const seen = new Map<string, Source>();
+  for (const source of sources) {
+    if (source.excluded || !source.originGroup) continue;
+    const family = NEW_PRICE_KINDS.has(source.kind) ? 'new' : 'used';
+    const key = `${source.originGroup}:${family}`;
+    const previous = seen.get(key);
+    // Preserve ADR0028: curated cover prices win over online shop prices.
+    if (
+      previous &&
+      source.kind === 'CoverPrice' &&
+      previous.kind === 'OnlineRetail'
+    ) {
+      previous.excluded = 'DuplicateSource';
+      seen.set(key, source);
+    } else if (previous) source.excluded = 'DuplicateSource';
+    else seen.set(key, source);
+  }
+  if (sources.some((s) => s.excluded === 'DuplicateSource'))
+    rules.push('R-EXCLUDED-DUPLICATE-SOURCE');
   // Outliers are judged only when enough sources remain to have a centre.
   const kept = sources.filter((s) => !s.excluded);
   if (kept.length >= 3) {
@@ -159,7 +184,8 @@ export function evaluate(
   }
   if (sources.some((s) => s.excluded === 'OtherEdition'))
     rules.push('R-EXCLUDED-OTHER-EDITION');
-  if (sources.some((s) => s.excluded === 'Stale')) rules.push('R-EXCLUDED-STALE');
+  if (sources.some((s) => s.excluded === 'Stale'))
+    rules.push('R-EXCLUDED-STALE');
   if (sources.some((s) => s.excluded === 'Outlier'))
     rules.push('R-EXCLUDED-OUTLIER');
   if (sources.some((s) => s.excluded === 'AskingPrice'))
@@ -187,9 +213,7 @@ export function evaluate(
   if (input.readable === false) rules.push('R-REFUSE-UNREADABLE');
   if (input.missingEssentialContent === true) rules.push('R-REFUSE-ESSENTIAL');
   if (rules.some((r) => r.startsWith('R-REFUSE'))) {
-    missing.push(
-      'Sách không còn đọc rõ hoặc thiếu nội dung trọng yếu.',
-    );
+    missing.push('Sách không còn đọc rõ hoặc thiếu nội dung trọng yếu.');
     return answer('Refused', 'Insufficient');
   }
   if (!listing.hasPhoto) {
@@ -215,8 +239,8 @@ export function evaluate(
       listing.lookupPending
         ? 'Đang tìm giá trên các nhà sách trực tuyến; thử lại sau ít phút.'
         : sources.some((s) => s.excluded === 'AskingPrice')
-        ? 'Chỉ có giá rao của người bán khác; chưa có giá có nguồn để so sánh.'
-        : 'Chưa có dữ liệu giá có nguồn cho đầu sách này.',
+          ? 'Chỉ có giá rao của người bán khác; chưa có giá có nguồn để so sánh.'
+          : 'Chưa có dữ liệu giá có nguồn cho đầu sách này.',
     );
   }
   if (missing.length) return answer('NeedsMoreData', 'Insufficient');
@@ -229,7 +253,9 @@ export function evaluate(
   if (newPrices.length) {
     const band = CONDITION_BANDS[bandCondition(input)];
     const staff = newPrices.filter((s) => s.kind === 'CoverPrice');
-    const reference = median((staff.length ? staff : newPrices).map((s) => s.amount));
+    const reference = median(
+      (staff.length ? staff : newPrices).map((s) => s.amount),
+    );
     rules.push(`R-BAND-${bandCondition(input).toUpperCase()}`);
     low = Math.max(SALE_MIN, roundTo(reference * band[0]));
     high = Math.min(SALE_MAX, roundTo(reference * band[1]));
@@ -252,13 +278,19 @@ export function evaluate(
     return answer('Refused', 'Insufficient');
   }
 
-  const independent = new Set(used.map((s) => s.label.trim().toLowerCase()));
+  const independent = new Set(
+    used.flatMap((s) => (s.originGroup ? [s.originGroup] : [])),
+  );
   const fresh =
     now.getTime() - used[0].observedAt.getTime() <= FRESH_MONTHS * MONTH_MS;
   const editionUnverified = !book.isbn && !book.edition;
   // Strong needs a new-book price to band from and a used-copy price from
   // an independent source to place the range inside it.
   let strong = true;
+  if (used.some((s) => !s.originGroup)) {
+    rules.push('R-LIMITED-SOURCE-ORIGIN');
+    strong = false;
+  }
   if (used.length < 2 || independent.size < 2) {
     rules.push('R-LIMITED-FEW-SOURCES');
     strong = false;
@@ -314,6 +346,8 @@ export function fingerprint(
             condition: s.condition,
             observedAt: s.observedAt.toISOString(),
             isbn: s.isbn,
+            sourceGroup: s.sourceGroup ?? null,
+            originAliases: sourceAliases(s),
           }))
           .sort((a, b) => a.id.localeCompare(b.id)),
       }),

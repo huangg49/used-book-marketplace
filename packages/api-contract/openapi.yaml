@@ -1,40 +1,21 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.55.0
-  description: "Auth/profile, catalog, owner drafts/media, listing submission/moderation and eligible
-    public shelf/detail/media and approved editing/visibility/archive/removal commands are
-    implemented. Participant agreement workspaces with mutually confirmed mode/price proposals and linked Exchange history are implemented. Exact Order conversations can be opened by their ACTIVE Buyer or Seller, including BuyNow and historical Orders. Member private address book and versioned demo service-area directory are
-    implemented. Revision-bound delivery origins and private DirectDelivery sale estimates are
-    implemented. Quotes do not reserve books. Unpaid DirectDelivery Order create/read/cancel and
-    internal expiry with exclusive commitments are implemented. Simulated wallet ledger, private
-    topup/history and TEST_OPERATOR payment events are implemented. LOCKED access covers profile,
-    participant Order reads/media/unpaid cancellation/paid refund requests and private wallet/topup
-    history; other authenticated operations deny LOCKED by default. New payment remains denied for
-    LOCKED accounts. Order wallet funding, pre-confirmation cancellation/rejection, deadline and
-    durable full refund workers are implemented. Seller acceptance, fixed pickup deadline and
-    durable overdue verification tasks are implemented. Case resolution, sale settlement, withdrawal
-    and checkout/wallet UI remain planned. Private Order packaging image intents, bounded verified
-    binary uploads and audited participant previews are implemented. Packaging evidence does not
-    prove pickup or authenticity. DirectDelivery outbound shipment registration and private
-    participant reads are implemented; LabelCreated never proves carrier pickup. Authenticated
-    independent TEST_OPERATOR pickup simulation is implemented: timely pickup moves Order InTransit,
-    late/conflicting evidence opens sticky carrier review without moving money or stock. Delivery,
-    resolution and settlement remain planned. Delivery overdue worker and Buyer non-receipt
-    reporting after the pinned delivery deadline are implemented. They open or supplement a durable
-    delivery review and retain full Order hold/commitment. Delivered, inspection, dispute
-    adjudication and settlement remain planned. Owner-only advisory sale-price suggestions from
-    sourced price references are implemented behind a server flag; they never set or verify a
-    price. Bounded auctions (ADR 0030) are implemented from Sale intake at two simulated HCM points
-    through Staff receipt/inspection, proxy bidding with private Auto ceilings, Buy Now before the
-    first bid and server-time close. A win or Buy Now forms a ViaPoint Order that the buyer pays
-    from the simulated wallet into an Order hold; unpaid Orders expire to reclaim. The buyer then
-    accepts or rejects the point condition report, requests a one-time collection code and
-    assigned Staff record the handover, which starts the 72-hour inspection window. Rejected or
-    overdue Orders wait for an independent Admin to refund the hold or reopen collection. During
-    the inspection window the buyer may file one claim; an Admin dismisses it or requires the book
-    back, and the Staff-received return refunds the hold. Unclaimed Orders settle after the window
-    (seller P - C, platform C) and the listing becomes Sold."
+  version: 0.63.0
+  description: >-
+    Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
+    includes OTP/account recovery and rotating sessions. Catalog/listing/media,
+    whole-sale bundles, addresses, agreement/chat/Orders, wallet simulator and
+    VNPay sandbox, Exchange and bounded auctions/point operations are implemented.
+    Exchange receipt pins a separate 72-hour inspection deadline for each side;
+    acknowledgement never waives either deadline. Settlement retains all funds
+    while any dispute evidence remains. Eligible existing-obligation handlers
+    permit LOCKED participants; new funding/trades remain denied. DirectDelivery
+    receipt/inspection/settlement source exists, but release and post-F2h readiness
+    gates remain open. Full dispute adjudication/return, ordinary ViaPoint and
+    withdrawal remain incomplete. This contract describes source capabilities,
+    not production readiness or full client/native acceptance. GHN/carrier routes
+    retain their current behavior pending the owner's team decision.
 servers:
   - url: http://localhost:3000/api/v1
 tags:
@@ -54,6 +35,80 @@ tags:
   - name: Auctions
   - name: Reviews
 paths:
+  /me/work-items:
+    get:
+      operationId: listMyWorkItems
+      x-locked-access: existing-obligations
+      tags: [Work inbox]
+      description: >-
+        Current participant obligations and unfinished books. LOCKED can read DirectOrders, Exchanges and AuctionOrders only. Other lanes return 403. No commands or funds are changed. Signed per-lane keyset cursor is bound to actor and lane.
+        Unexpired dated work first, undated work next, overdue work awaiting source update last.
+        Within a group ordered by relevant deadline or creation time/id; live pages may change.
+        Action means attention is needed, not authorization to execute a command.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: lane
+          schema:
+            type: string
+            enum: [DirectOrders, Exchanges, Listings, AuctionIntakes, AuctionOrders]
+            default: DirectOrders
+        - in: query
+          name: cursor
+          schema: {type: string, maxLength: 1000}
+        - in: query
+          name: limit
+          schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+      responses:
+        "200":
+          description: Current source state at serverTime. Empty applies only to this lane, not all project obligations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkItemsPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+  /operations/work-items:
+    get:
+      operationId: listOperationsWorkItems
+      tags: [Work inbox]
+      description: >-
+        Current independent moderation work. Active STAFF or ADMIN for ListingReview, active ADMIN for CatalogReview. Excludes own submissions. Point operations remain in their assigned queues; this is not an all-operations count. Signed per-lane keyset cursor is bound to actor and lane.
+        Ordered by submission or creation time/id; live pages may change.
+        Action means attention is needed, not authorization to execute a command.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: lane
+          schema:
+            type: string
+            enum: [ListingReview, CatalogReview]
+            default: ListingReview
+        - in: query
+          name: cursor
+          schema: {type: string, maxLength: 1000}
+        - in: query
+          name: limit
+          schema: {type: integer, minimum: 1, maximum: 50, default: 20}
+      responses:
+        "200":
+          description: Current source state at serverTime. Empty applies only to this lane, not all project obligations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkItemsPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
   /health:
     get:
       operationId: getHealth
@@ -1940,6 +1995,10 @@ paths:
               schema:
                 type: string
                 const: no-store
+            Server-Timing:
+              description: Fixed AI stage durations in milliseconds; no user content or identifiers. ai_complete includes image/model/catalog/persistence time; stages can overlap and must not be summed.
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -1961,6 +2020,145 @@ paths:
         "500":
           $ref: "#/components/responses/ListingError"
         "503":
+          $ref: "#/components/responses/ListingError"
+  /listings/{listingId}/isbn-matches:
+    post:
+      operationId: findListingIsbnMatches
+      tags: [Listings]
+      summary: Decode book EAN-13 locally before AI; no model, quota or listing mutation
+      description: Read-only; current ACTIVE MEMBER owner of an editable single-book listing. No Idempotency-Key required. Results are advisory and must never be recorded as an AI suggestion decision.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: listingId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AutofillSuggestionRequest"
+      responses:
+        "200":
+          description: Current advisory result without model call
+          headers:
+            Server-Timing:
+              schema: { type: string }
+              description: Fixed stage name and duration only; no identifiers or image content.
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListingIsbnMatches"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /listings/{listingId}/price-reference:
+    post:
+      operationId: getListingPriceReference
+      tags: [Listings]
+      summary: Read a rule-calculated price reference without AI, quota or persistence
+      description: Read-only; current ACTIVE MEMBER owner of an editable single-book listing. No Idempotency-Key required. Results are advisory and must never be recorded as an AI suggestion decision.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: listingId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PriceSuggestionRequest"
+      responses:
+        "200":
+          description: Current advisory result without model call
+          headers:
+            Server-Timing:
+              schema: { type: string }
+              description: Fixed stage name and duration only; no identifiers or image content.
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListingPriceReference"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /listings/{listingId}/catalog-matches:
+    post:
+      operationId: findListingCatalogMatches
+      tags: [Listings]
+      summary: Find catalog candidates from seller-corrected book hints without calling AI
+      description: >-
+        Read-only search for an ACTIVE MEMBER who owns an editable single-book listing.
+        Does not persist hints, select a book, create a catalog request, charge AI quota or call a model.
+        Confirmed books and the caller's own Pending requests only. Approximate candidates require
+        explicit seller verification. ISBN or explicit volume conflicts are excluded.
+        Results are ranked within bounded prefix searches, not an exhaustive search of the catalog;
+        truncated=true means additional candidates were not ranked. No Idempotency-Key is required.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: listingId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AutofillFields"
+      responses:
+        "200":
+          description: Current catalog candidates; no listing or catalog mutation
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListingCatalogMatches"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
           $ref: "#/components/responses/ListingError"
   /listings/{listingId}/autofill-suggestions:
     post:
@@ -2012,6 +2210,10 @@ paths:
               schema:
                 type: string
                 const: no-store
+            Server-Timing:
+              description: Fixed AI stage durations in milliseconds; no user content or identifiers. ai_complete includes image/model/catalog/persistence time; stages can overlap and must not be summed.
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -5674,11 +5876,19 @@ paths:
       operationId: listMyAuctionIntakes
       tags:
         - Auctions
-      description: Seller view of own intakes, newest first (max 50). Shelf code and Staff identities are
-        not exposed.
+      description: Seller view of own intakes, newest first (max 50). Optional auctionId filters
+        within the current caller's intakes before the limit, so an older auction remains identifiable.
+        Another seller's or an unknown auction returns an empty list. Shelf code and Staff identities are not exposed.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: auctionId
+          required: false
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: Successful read.
@@ -7504,6 +7714,7 @@ paths:
   /me/point-orders/{orderId}:
     get:
       operationId: getMyPointOrder
+      x-locked-access: existing-obligations
       tags:
         - Auctions
       description: Buyer or seller of a ViaPoint Order formed by an auction; others receive 404. Shows
@@ -7678,6 +7889,7 @@ paths:
   /point-orders/{orderId}/accept-report:
     post:
       operationId: acceptPointOrderReport
+      x-locked-access: existing-obligations
       tags:
         - Auctions
       description: Buyer only, within 72 hours of payment (POL-32). Accepts the condition report of the
@@ -7746,6 +7958,7 @@ paths:
   /point-orders/{orderId}/reject-report:
     post:
       operationId: rejectPointOrderReport
+      x-locked-access: existing-obligations
       tags:
         - Auctions
       description: Buyer only, before accepting. Opens ResolutionPending with the reason; the book stays
@@ -7813,6 +8026,7 @@ paths:
   /point-orders/{orderId}/claim:
     post:
       operationId: claimPointOrder
+      x-locked-access: existing-obligations
       tags:
         - Auctions
       description: "Buyer only, in Inspection before the inspection deadline (a LOCKED account may
@@ -7882,6 +8096,7 @@ paths:
   /point-orders/{orderId}/collection-code:
     post:
       operationId: requestCollectionCode
+      x-locked-access: existing-obligations
       tags:
         - Auctions
       description: Buyer only, after accepting and before the collection deadline. Issues a 6-digit code
@@ -8533,6 +8748,7 @@ paths:
           $ref: "#/components/responses/ListingError"
     get:
       operationId: listExchanges
+      x-locked-access: existing-obligations
       tags:
         - Exchanges
       description: Returns a list of exchanges for the current user.
@@ -8552,6 +8768,7 @@ paths:
   /exchanges/{id}:
     get:
       operationId: getExchange
+      x-locked-access: existing-obligations
       tags:
         - Exchanges
       description: Returns details of a specific exchange.
@@ -8714,6 +8931,7 @@ paths:
   /exchanges/{id}/cancel:
     post:
       operationId: cancelExchange
+      x-locked-access: existing-obligations
       tags:
         - Exchanges
       description: Initiator cancels the exchange proposal.
@@ -8806,6 +9024,7 @@ paths:
   /exchanges/{id}/ship:
     post:
       operationId: shipExchange
+      x-locked-access: existing-obligations
       tags:
         - Exchanges
       description: Participant confirms they have shipped their book.
@@ -8852,9 +9071,10 @@ paths:
   /exchanges/{id}/receive:
     post:
       operationId: receiveExchange
+      x-locked-access: existing-obligations
+      description: Participant receipt pins their own 72-hour inspection deadline. The other participant retains a separate deadline.
       tags:
         - Exchanges
-      description: Participant confirms they have received the other book.
       security:
         - bearerAuth: []
       parameters:
@@ -8898,9 +9118,10 @@ paths:
   /exchanges/{id}/complete:
     post:
       operationId: completeExchange
+      x-locked-access: existing-obligations
+      description: Participant acknowledgement only; it never waives either 72-hour inspection window. Settlement requires both deadlines elapsed and no dispute.
       tags:
         - Exchanges
-      description: Participant confirms satisfaction during the inspection window to complete the exchange early.
       security:
         - bearerAuth: []
       parameters:
@@ -8940,6 +9161,7 @@ paths:
   /exchanges/{id}/dispute:
     post:
       operationId: disputeExchange
+      x-locked-access: existing-obligations
       tags:
         - Exchanges
       description: Participant opens a dispute during delivery or inspection window, halting auto-settlement.
@@ -9231,16 +9453,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExchangeReviewsResponse"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
     post:
       operationId: createExchangeReview
       tags:
         - Reviews
-      description: Submit review for a completed exchange (FR-R01, FR-R02).
+      description: Submit review for a completed exchange (FR-R01, FR-R02). Idempotency-Key is required; retry the same body/key after uncertain ACK. Deploy clients together with API 0.57.
       security:
         - bearerAuth: []
       parameters:
         - in: path
           name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
           required: true
           schema:
             type: string
@@ -9258,6 +9496,496 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExchangeReviewItem"
+          headers:
+            Idempotency-Replayed:
+              description: Whether this receipt was replayed for the same authorized intent.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+  /transactions/{type}/{id}/reviews:
+    get:
+      operationId: getTransactionReviews
+      tags:
+        - Reviews
+      description: Participant-only reviews. Peer content is hidden until both edit windows expire and both submitted, or the submission window and every submitted edit window expire. Deleted submissions remain tombstones.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: type
+          required: true
+          schema:
+            type: string
+            enum:
+              - Exchange
+              - DirectOrder
+              - PointOrder
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionReviewsResponse"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: createTransactionReview
+      tags:
+        - Reviews
+      description: Completed transactions only; 168h submission window. Author gets 48h from first submission; one review per participant even after deletion. Seller must omit bookRating for an Order. Retry the same key/body after uncertain ACK.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: type
+          required: true
+          schema:
+            type: string
+            enum:
+              - Exchange
+              - DirectOrder
+              - PointOrder
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTransactionReview"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewItem"
+          headers:
+            Idempotency-Replayed:
+              description: Whether this receipt was replayed for the same authorized intent.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+  /transaction-reviews/{reviewId}/edit:
+    post:
+      operationId: editTransactionReview
+      tags:
+        - Reviews
+      description: Current authorization and ownership before replay. Versioned immutable intent. Edit/delete only before the original 48h deadline; legacy disclosed and evidence-held records are locked. One moderated reply by target after publication.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditTransactionReview"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewItem"
+          headers:
+            Idempotency-Replayed:
+              description: Whether this receipt was replayed for the same authorized intent.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+  /transaction-reviews/{reviewId}/delete:
+    post:
+      operationId: deleteTransactionReview
+      tags:
+        - Reviews
+      description: Current authorization and ownership before replay. Versioned immutable intent. Edit/delete only before the original 48h deadline; legacy disclosed and evidence-held records are locked. One moderated reply by target after publication.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewVersion"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewItem"
+          headers:
+            Idempotency-Replayed:
+              description: Whether this receipt was replayed for the same authorized intent.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+  /transaction-reviews/{reviewId}/reply:
+    post:
+      operationId: replyTransactionReview
+      tags:
+        - Reviews
+      description: Current authorization and ownership before replay. Versioned immutable intent. Edit/delete only before the original 48h deadline; legacy disclosed and evidence-held records are locked. One moderated reply by target after publication.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplyTransactionReview"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewItem"
+          headers:
+            Idempotency-Replayed:
+              description: Whether this receipt was replayed for the same authorized intent.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+  /me/review-transactions:
+    get:
+      operationId: listMyReviewTransactions
+      tags:
+        - Reviews
+      description: Completed transactions for the current participant, ordered by completion time/id. No new transaction or settlement is performed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: cursor
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum:
+              - Exchange
+              - DirectOrder
+              - PointOrder
+            default: Exchange
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewTransactionsPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+  /members/{id}/reputation:
+    get:
+      operationId: getMemberReputation
+      tags:
+        - Reviews
+      description: Public published valid reviews only. Completion counts, partner/book means and verified violation count are independent. Empty means are null. Pending claims are never counted as violations.
+      security: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: cursor
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberReputation"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+  /operations/transaction-reviews:
+    get:
+      operationId: listOperationsTransactionReviews
+      tags:
+        - Reviews
+      description: "STAFF/ADMIN: published reviews only, excluding own transactions. Immutable revision history included for moderation; no access to prepublication peer reviews."
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: cursor
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsReviewPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+  /operations/transaction-reviews/{reviewId}/revisions:
+    get:
+      operationId: listTransactionReviewRevisions
+      tags:
+        - Reviews
+      description: STAFF/ADMIN independent of both participants. Published review only; immutable revisions newest first with actor/review-scoped signed pagination.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: cursor
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewRevisionPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+  /operations/transaction-reviews/{reviewId}/decision:
+    post:
+      operationId: moderateTransactionReview
+      tags:
+        - Reviews
+      description: Independent active STAFF/ADMIN only. Reason required. Hide/restore review; approve/hide pending reply; preserve/release evidence. Retain revisions and audit; no settlement or balance changes.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModerateTransactionReview"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewItem"
+          headers:
+            Idempotency-Replayed:
+              description: Whether this receipt was replayed for the same authorized intent.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -9296,6 +10024,36 @@ components:
           schema:
             $ref: "#/components/schemas/ListingApiError"
   schemas:
+    WorkItem:
+      type: object
+      additionalProperties: false
+      required: [id, target, targetId, sourceState, version, title, reason, attention, dueAt]
+      properties:
+        id: {type: string, format: uuid}
+        target:
+          type: string
+          enum: [DirectOrder, Exchange, Listing, AuctionIntake, Auction, ListingReview, CatalogReview]
+        targetId: {type: string, format: uuid}
+        sourceState: {type: string}
+        version: {type: integer, minimum: 1}
+        title: {type: string}
+        reason: {type: string}
+        attention: {type: string, enum: [Action, Waiting, Blocked]}
+        dueAt: {type: [string, "null"], format: date-time}
+    WorkItemsPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor, serverTime, lane]
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items: {$ref: "#/components/schemas/WorkItem"}
+        nextCursor: {type: [string, "null"]}
+        serverTime: {type: string, format: date-time}
+        lane:
+          type: string
+          enum: [DirectOrders, Exchanges, Listings, AuctionIntakes, AuctionOrders, ListingReview, CatalogReview]
     HealthResponse:
       type: object
       additionalProperties: false
@@ -11698,6 +12456,95 @@ components:
               pattern: ^97[89][0-9]{10}$
             - type: "null"
           description: ISBN-13 with a valid checksum (ISBN-10 converted); does not prove the title.
+    ListingIsbnMatches:
+      type: object
+      additionalProperties: false
+      required: [listingId, status, isbns, catalog, serverTime]
+      properties:
+        listingId: { type: string, format: uuid }
+        status: { type: string, enum: [Found, NotFound, Ambiguous, Unavailable] }
+        isbns:
+          type: array
+          uniqueItems: true
+          maxItems: 6
+          items: { type: string, pattern: '^97[89][0-9]{10}$' }
+        catalog:
+          anyOf:
+            - $ref: "#/components/schemas/ListingCatalogMatches"
+            - type: "null"
+        serverTime: { type: string, format: date-time }
+    ListingPriceReference:
+      type: object
+      additionalProperties: false
+      required: [listingId, bookId, inputFingerprint, status, evidenceLevel, rules, range, sources, missing, dataAsOf, generatedAt, expiresAt]
+      properties:
+        listingId: { type: string, format: uuid }
+        bookId: { type: string, format: uuid }
+        inputFingerprint: { type: string, pattern: '^[0-9a-f]{64}$' }
+        status: { type: string, enum: [Ready, NeedsMoreData, Refused] }
+        evidenceLevel:
+          $ref: "#/components/schemas/PriceEvidenceLevel"
+        rules:
+          type: array
+          maxItems: 16
+          items: { type: string }
+        range:
+          anyOf:
+            - type: object
+              additionalProperties: false
+              required: [low, high]
+              properties:
+                low: { type: integer, minimum: 10000, maximum: 1000000 }
+                high: { type: integer, minimum: 10000, maximum: 1000000 }
+            - type: "null"
+        sources:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/PriceSource"
+        missing:
+          type: array
+          maxItems: 6
+          items: { type: string }
+        dataAsOf: { type: [string, "null"], format: date-time }
+        generatedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+    ListingCatalogMatch:
+      type: object
+      additionalProperties: false
+      required: [book, matchedBy, pending, warnings]
+      properties:
+        book:
+          $ref: "#/components/schemas/PublicBook"
+        matchedBy:
+          type: string
+          enum: [Isbn, TitleAuthor, SimilarTitle, SwappedText]
+        pending:
+          type: boolean
+          description: Only the caller's own Pending catalog request can be included.
+        warnings:
+          type: array
+          uniqueItems: true
+          maxItems: 6
+          items:
+            type: string
+            enum: [CheckEdition, AuthorDiffers, PublisherDiffers, YearDiffers, LanguageDiffers, VolumeUnclear]
+    ListingCatalogMatches:
+      type: object
+      additionalProperties: false
+      required: [items, truncated, serverTime]
+      properties:
+        items:
+          type: array
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/ListingCatalogMatch"
+        truncated:
+          type: boolean
+          description: Some prefix candidate windows or the ranked result list exceeded their bound.
+        serverTime:
+          type: string
+          format: date-time
     AutofillMatch:
       type: object
       additionalProperties: false
@@ -11843,6 +12690,9 @@ components:
         - url
         - excluded
       properties:
+        originGroup:
+          type: [string, "null"]
+          description: Canonical source organization or site; null means independence is unverified. Legacy cached answers may omit this.
         ref:
           type: string
           pattern: ^s[0-9]{1,2}$
@@ -11877,6 +12727,7 @@ components:
                 - Stale
                 - OtherEdition
                 - AskingPrice
+                - DuplicateSource
             - type: "null"
           description: Why this source was shown but not used; null when used. AskingPrice marks
             other sellers' asking prices, which are shown for reference but never set the range.
@@ -11938,7 +12789,7 @@ components:
           $ref: "#/components/schemas/PriceEvidenceLevel"
         rules:
           type: array
-          maxItems: 12
+          maxItems: 16
           items:
             type: string
             pattern: ^[A-Z0-9-]{2,40}$
@@ -12390,6 +13241,7 @@ components:
           type: string
           format: date-time
     ListingErrorCode:
+      description: AI_ASSIST_FAILED means an advisory request has a persisted terminal failure; a deliberate new request may use a new key. Network errors and UNAVAILABLE are uncertain and must retain their original key/body.
       type: string
       enum:
         - VALIDATION_ERROR
@@ -12398,6 +13250,7 @@ components:
         - NOT_FOUND
         - RATE_LIMITED
         - UNAVAILABLE
+        - AI_ASSIST_FAILED
         - INTERNAL_ERROR
         - AccountIneligible
         - SelfReviewForbidden
@@ -17115,6 +17968,13 @@ components:
             - type: string
               format: date-time
             - type: "null"
+        initiatorInspectionDeadline:
+          type: [string, "null"]
+          format: date-time
+          description: Pinned inspection deadline, at least 72 hours after this participant receives the other book; longer legacy windows are preserved.
+        recipientInspectionDeadline:
+          type: [string, "null"]
+          format: date-time
         inspectionDeadline:
           anyOf:
             - type: string
@@ -17430,24 +18290,150 @@ components:
           maximum: 5
         tags:
           type: array
+          maxItems: 10
+          uniqueItems: true
           items:
             type: string
+            minLength: 1
+            maxLength: 60
         comment:
           type: string
+          maxLength: 1000
+    CreateTransactionReview:
+      type: object
+      additionalProperties: false
+      required:
+        - partnerRating
+      properties:
+        bookRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        partnerRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        tags:
+          type: array
+          maxItems: 10
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 60
+        comment:
+          type: string
+          maxLength: 1000
+    EditTransactionReview:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - partnerRating
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        bookRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        partnerRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        tags:
+          type: array
+          maxItems: 10
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+            maxLength: 60
+        comment:
+          type: string
+          maxLength: 1000
+    ReviewVersion:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+    ReplyTransactionReview:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - text
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        text:
+          type: string
+          minLength: 1
+          maxLength: 1000
+    ModerateTransactionReview:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - decision
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        decision:
+          type: string
+          enum:
+            - Hide
+            - Restore
+            - ApproveReply
+            - HideReply
+            - HoldEvidence
+            - ReleaseEvidence
+        reason:
+          type: string
+          minLength: 3
           maxLength: 1000
     ExchangeReviewItem:
       type: object
       additionalProperties: false
       required:
         - id
-        - exchangeId
+        - transactionType
+        - transactionId
         - authorId
+        - authorName
         - targetUserId
         - bookRating
         - partnerRating
+        - tags
+        - comment
+        - version
+        - status
         - createdAt
+        - updatedAt
+        - editDeadline
+        - publishedAt
+        - evidenceHeld
+        - legacyDisclosed
+        - reply
       properties:
         id:
+          type: string
+          format: uuid
+        transactionType:
+          type: string
+          enum:
+            - Exchange
+            - DirectOrder
+            - PointOrder
+        transactionId:
           type: string
           format: uuid
         exchangeId:
@@ -17462,37 +18448,111 @@ components:
           type: string
           format: uuid
         bookRating:
-          type: integer
-          minimum: 1
-          maximum: 5
+          anyOf:
+            - type: integer
+              minimum: 1
+              maximum: 5
+            - type: "null"
         partnerRating:
           type: integer
           minimum: 1
           maximum: 5
         tags:
           type: array
+          maxItems: 10
+          uniqueItems: true
           items:
             type: string
+            minLength: 1
+            maxLength: 60
         comment:
           type: string
+          maxLength: 1000
+        version:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum:
+            - Pending
+            - Published
+            - Hidden
+            - Deleted
         createdAt:
           type: string
           format: date-time
         updatedAt:
           type: string
           format: date-time
-    ExchangeReviewsResponse:
+        editDeadline:
+          type: string
+          format: date-time
+        publishedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        evidenceHeld:
+          type: boolean
+        legacyDisclosed:
+          type: boolean
+        reply:
+          anyOf:
+            - type: object
+              additionalProperties: false
+              required:
+                - text
+                - status
+                - createdAt
+              properties:
+                text:
+                  type: string
+                  maxLength: 1000
+                status:
+                  type: string
+                  enum:
+                    - Pending
+                    - Approved
+                    - Hidden
+                createdAt:
+                  type: string
+                  format: date-time
+            - type: "null"
+    TransactionReviewsResponse:
       type: object
       additionalProperties: false
       required:
         - canReview
+        - canEdit
+        - canDelete
+        - canReply
+        - bookRatingRequired
+        - deadline
+        - serverTime
+        - myReview
+        - partnerReview
+        - partnerId
       properties:
+        partnerId:
+          type: string
+          format: uuid
         canReview:
           type: boolean
+        canEdit:
+          type: boolean
+        canDelete:
+          type: boolean
+        canReply:
+          type: boolean
+        bookRatingRequired:
+          type: boolean
         deadline:
-          type:
-            - string
-            - "null"
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        serverTime:
+          type: string
           format: date-time
         myReview:
           anyOf:
@@ -17502,3 +18562,194 @@ components:
           anyOf:
             - $ref: "#/components/schemas/ExchangeReviewItem"
             - type: "null"
+    ExchangeReviewsResponse:
+      $ref: "#/components/schemas/TransactionReviewsResponse"
+    ReviewTransactionsPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - transactionType
+              - transactionId
+              - completedAt
+              - partnerId
+              - partnerName
+            properties:
+              transactionType:
+                type: string
+                enum:
+                  - Exchange
+                  - DirectOrder
+                  - PointOrder
+              transactionId:
+                type: string
+                format: uuid
+              completedAt:
+                type: string
+                format: date-time
+              partnerId:
+                type: string
+                format: uuid
+              partnerName:
+                type: string
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: "null"
+        serverTime:
+          type: string
+          format: date-time
+    MemberReputation:
+      type: object
+      additionalProperties: false
+      required:
+        - userId
+        - displayName
+        - completedTransactions
+        - verifiedViolations
+        - reviewCount
+        - partnerRatingCount
+        - bookRatingCount
+        - partnerRating
+        - bookRating
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        userId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        completedTransactions:
+          type: integer
+          minimum: 0
+        verifiedViolations:
+          type: integer
+          minimum: 0
+        reviewCount:
+          type: integer
+          minimum: 0
+        partnerRatingCount:
+          type: integer
+          minimum: 0
+          description: Number of valid public partner scores used by partnerRating; equals reviewCount.
+        bookRatingCount:
+          type: integer
+          minimum: 0
+          description: Number of non-null book scores used by bookRating. Seller reviews of buyers do not contribute a book score.
+        partnerRating:
+          description: Arithmetic mean of valid public partner scores, or null when partnerRatingCount is zero.
+          anyOf:
+            - type: number
+            - type: "null"
+        bookRating:
+          description: Arithmetic mean of valid public ratings of physical books supplied by this member, or null when bookRatingCount is zero. Not a rating of the literary work.
+          anyOf:
+            - type: number
+            - type: "null"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExchangeReviewItem"
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: "null"
+        serverTime:
+          type: string
+          format: date-time
+    OperationsReviewPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - review
+              - revisions
+              - nextRevisionCursor
+            properties:
+              review:
+                $ref: "#/components/schemas/ExchangeReviewItem"
+              revisions:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReviewRevisionItem"
+              nextRevisionCursor:
+                anyOf:
+                  - type: string
+                  - type: "null"
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: "null"
+        serverTime:
+          type: string
+          format: date-time
+    ReviewRevisionItem:
+      type: object
+      additionalProperties: false
+      required:
+        - version
+        - action
+        - actorId
+        - at
+        - snapshot
+        - reason
+      properties:
+        version:
+          type: integer
+          minimum: 1
+        action:
+          type: string
+        actorId:
+          anyOf:
+            - type: string
+              format: uuid
+            - type: "null"
+        at:
+          type: string
+          format: date-time
+        snapshot:
+          type: object
+          additionalProperties: true
+        reason:
+          anyOf:
+            - type: string
+            - type: "null"
+    ReviewRevisionPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewRevisionItem"
+        nextCursor:
+          anyOf:
+            - type: string
+            - type: "null"
+        serverTime:
+          type: string
+          format: date-time

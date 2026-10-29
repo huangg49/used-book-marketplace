@@ -54,7 +54,7 @@ export function ReceiveDialog({ isOpen, onClose, onConfirm, isBusy, bookTitle }:
                     <div className={styles.warningBox}>
                         <AlertTriangle size={20} className={styles.warningIcon} />
                         <div className={styles.warningText}>
-                            <strong>Lưu ý:</strong> Khi cả hai bên đều xác nhận đã nhận sách, giao dịch sẽ bước vào <strong>khoảng đệm kiểm tra 48 giờ</strong>. Bạn có 48 giờ để đọc thử và kiểm tra tình trạng thực tế của sách trước khi hệ thống hoàn tất và tất toán cọc.
+                            <strong>Lưu ý:</strong> Bạn có <strong>72 giờ kiểm tra từ lúc xác nhận nhận sách</strong>. Cọc được giữ đến khi cả hai hạn kiểm tra kết thúc và không có tranh chấp; xác nhận đã kiểm tra không hoàn cọc sớm.
                         </div>
                     </div>
 

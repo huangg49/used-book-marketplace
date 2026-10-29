@@ -68,6 +68,9 @@ let ensureLost = true, payLost = true, cancelLost = true, shipmentLost = true, m
 let browser, vite, http, io;
 
 const detail = (order, role) => ({ ...order, role,
+  sellerAcceptanceEnabled: role === "Seller" && order.state === "PendingSellerConfirmation",
+  canReject: role === "Seller" && order.state === "PendingSellerConfirmation",
+  sellerConfirmationDeadline: order.state === "PendingSellerConfirmation" ? future() : null,
   paymentEnabled: role === "Buyer" && order.state === "AwaitingPayment",
   canCancel: role === "Buyer" && order.state === "AwaitingPayment",
   shipmentRegistrationEnabled: role === "Seller" && order.state === "Preparing",

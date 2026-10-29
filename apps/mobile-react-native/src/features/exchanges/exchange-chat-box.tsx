@@ -6,11 +6,10 @@ import {
   Platform,
   Pressable,
   StyleSheet,
-  TextInput,
   View,
 } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AppText, Icon, space, stitchTokens } from "../../core/ui";
+import { AppText, AppTextInput, Icon, space, stitchTokens } from "../../core/ui";
 import { useSession } from "../../core/session/session-provider";
 import {
   exchangeMessagePageSchema,
@@ -201,7 +200,7 @@ export function ExchangeChatBox({
         >
           <View style={styles.inputBar}>
             <View style={styles.inputContainer}>
-              <TextInput
+              <AppTextInput
                 style={styles.textInput}
                 value={inputText}
                 onChangeText={setInputText}

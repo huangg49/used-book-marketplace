@@ -1,0 +1,138 @@
+{
+  "status": "PASS",
+  "startedAt": "2026-10-28T16:57:48.278Z",
+  "count": 20,
+  "trials": [
+    {
+      "launch": 1,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 8051
+    },
+    {
+      "launch": 2,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 7959
+    },
+    {
+      "launch": 3,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 7941
+    },
+    {
+      "launch": 4,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 7947
+    },
+    {
+      "launch": 5,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 7936
+    },
+    {
+      "launch": 6,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 8143
+    },
+    {
+      "launch": 7,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 7990
+    },
+    {
+      "launch": 8,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 7951
+    },
+    {
+      "launch": 9,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 7921
+    },
+    {
+      "launch": 10,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 7984
+    },
+    {
+      "launch": 11,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 7948
+    },
+    {
+      "launch": 12,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 7943
+    },
+    {
+      "launch": 13,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 7879
+    },
+    {
+      "launch": 14,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 7937
+    },
+    {
+      "launch": 15,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 7950
+    },
+    {
+      "launch": 16,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 8001
+    },
+    {
+      "launch": 17,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 8005
+    },
+    {
+      "launch": 18,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 8005
+    },
+    {
+      "launch": 19,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 7958
+    },
+    {
+      "launch": 20,
+      "nativeHomeVisible": true,
+      "newNativeFatalSignal": false,
+      "elapsedMs": 7968
+    }
+  ],
+  "sourceHead": "990a9a241381bba8c92fdb7b43c9f0e2c13f5795",
+  "dirty": true,
+  "limits": [
+    "Debug x86_64 emulator",
+    "Native UI/launch only; not full journeys",
+    "Fake storage",
+    "No TalkBack audio/human/ARM/iOS acceptance",
+    "No READINESS closure"
+  ],
+  "apkSha256": "2c42e44aca3672e7539536eb6c177e897bebb2b804b1af2fdc5f1990d877a963",
+  "finishedAt": "2026-10-28T17:00:28.150Z"
+}

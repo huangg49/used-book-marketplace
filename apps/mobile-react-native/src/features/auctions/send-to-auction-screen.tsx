@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import * as Crypto from "expo-crypto";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
@@ -57,6 +57,16 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const { client } = useSession();
   const foreground = useForeground();
   const queryClient = useQueryClient();
+  const params = useLocalSearchParams<{ intakeId?: string }>();
+  const focusId =
+    typeof params.intakeId === "string" ? params.intakeId : undefined;
+  const focus = useQuery({
+    queryKey: ["my-auction-intakes", userId, "focus", focusId],
+    queryFn: () => client.request(`/me/auction-intakes/${focusId}`, myIntake),
+    enabled: foreground && !!focusId,
+    retry: false,
+    refetchInterval: foreground ? 30_000 : false,
+  });
 
   // 1. Real Queries. ADR 0042: auctions use the seller's own Auction listings,
   // never marketplace listings.
@@ -64,7 +74,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
     queryKey: ["my-listings", userId, "auction"],
     queryFn: () =>
       client.request("/me/listings?channel=Auction&limit=50", draftPage),
-    enabled: foreground,
+    enabled: foreground && !focusId,
     staleTime: 0,
   });
 
@@ -72,7 +82,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const createKey = useRef<string | null>(null);
   const editing = useQuery({
-    queryKey: ["draft", editingId],
+    queryKey: ["draft", userId, editingId],
     queryFn: () => client.request(`/me/listings/${editingId}`, privateDraft),
     enabled: !!editingId,
     refetchOnWindowFocus: false,
@@ -107,7 +117,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const intakes = useQuery({
     queryKey: ["my-auction-intakes", userId],
     queryFn: () => client.request("/me/auction-intakes", myIntakes),
-    enabled: foreground,
+    enabled: foreground && !focusId,
   });
 
   const auctionListings = listings.data?.items ?? [];
@@ -141,20 +151,29 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   // Evidence submission state
   const [evidenceMap, setEvidenceMap] = useState<Record<string, string>>({});
   const [evidenceTarget, setEvidenceTarget] = useState<MyIntake | null>(null);
-  const [evidenceError, setEvidenceError] = useState<{ id: string; text: string } | null>(null);
+  const [evidenceError, setEvidenceError] = useState<{
+    id: string;
+    text: string;
+  } | null>(null);
 
   // Selected entities & derived errors
   const selectedListing = eligibleListings.find((l) => l.id === listingId);
   const selectedPoint = openPoints.find((p) => p.id === pointId);
   const startPrice = digits(start);
   const buyNowPrice = buyNowOn ? digits(buyNow) : null;
-  const priceErrors = intakePriceErrors(startPrice, step, buyNowOn ? buyNowPrice ?? 0 : null);
+  const priceErrors = intakePriceErrors(
+    startPrice,
+    step,
+    buyNowOn ? (buyNowPrice ?? 0) : null,
+  );
 
   const formError = !selectedListing
     ? "Vui lòng chọn một sách đấu giá đã được duyệt."
-    : !selectedPoint || selectedPoint.availableSlots < 1 || selectedPoint.status !== "Active"
+    : !selectedPoint ||
+        selectedPoint.availableSlots < 1 ||
+        selectedPoint.status !== "Active"
       ? "Vui lòng chọn trạm tiếp nhận còn chỗ tại TP.HCM."
-      : priceErrors.startPrice ?? priceErrors.buyNowPrice ?? null;
+      : (priceErrors.startPrice ?? priceErrors.buyNowPrice ?? null);
 
   const locked = busy || Boolean(pending);
 
@@ -190,7 +209,9 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
       setConfirming(false);
       setWithdrawTarget(null);
       setEvidenceTarget(null);
-      void queryClient.invalidateQueries({ queryKey: ["my-auction-intakes", userId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["my-auction-intakes", userId],
+      });
       void queryClient.invalidateQueries({ queryKey: ["my-listings", userId] });
       void queryClient.invalidateQueries({ queryKey: ["handover-points"] });
     }
@@ -265,7 +286,11 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
 
   if (editingId && editing.data)
     return (
-      <DraftEditor key={editingId} initial={editing.data} onBack={closeEditor} />
+      <DraftEditor
+        key={editingId}
+        initial={editing.data}
+        onBack={closeEditor}
+      />
     );
 
   if (editingId)
@@ -296,16 +321,38 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
       footerAppearance="navigation"
     >
       {/* 1. Header with back and title */}
-      <SendToAuctionHeader
-        onBack={() => router.replace("/auctions")}
-      />
+      <SendToAuctionHeader onBack={() => router.replace("/auctions")} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        {focusId && (
+          <View style={{ gap: 12 }}>
+            <AppText kind="heading">Lần gửi #{focusId.slice(0, 8)}</AppText>
+            {focus.isPending && (
+              <StatePanel loading title="Đang mở lần gửi sách…" />
+            )}
+            {focus.error && (
+              <StatePanel
+                title="Chưa mở được lần gửi"
+                message="Không kết luận hồ sơ đã mất. Kiểm tra kết nối hoặc quyền hiện tại rồi thử lại."
+                action={{
+                  label: "Thử lại",
+                  onPress: () => void focus.refetch(),
+                }}
+              />
+            )}
+            <Button
+              wine
+              secondary
+              title="Xem tất cả lần gửi"
+              onPress={() => router.replace("/send-to-auction")}
+            />
+          </View>
+        )}
         {/* 2. Top Policy Banner */}
-        <SendToAuctionPolicy />
+        {!focusId && <SendToAuctionPolicy />}
 
         {/* 3. Status Notices (Success & Error & Retry) */}
         <SendToAuctionNotices
@@ -318,114 +365,144 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
         />
 
         {/* 4. Section 1: Book Picker */}
-        <SendToAuctionBookPicker
-          eligibleListings={eligibleListings}
-          unfinishedListings={unfinishedListings}
-          selectedListingId={listingId}
-          onSelectListing={(id) => {
-            setListingId(id);
-            setTouched(false);
-          }}
-          onOpenListing={setEditingId}
-          onCreateListing={() => createListing.mutate()}
-          creating={createListing.isPending}
-          createError={
-            createListing.error
-              ? "Chưa tạo được sách đấu giá. Thử lại; yêu cầu cũ sẽ không bị tạo trùng."
-              : null
-          }
-          loadError={listings.isError}
-          onRetryLoad={() => void listings.refetch()}
-          disabled={locked}
-          isLoading={listings.isPending}
-        />
+        {!focusId && (
+          <>
+            <SendToAuctionBookPicker
+              eligibleListings={eligibleListings}
+              unfinishedListings={unfinishedListings}
+              selectedListingId={listingId}
+              onSelectListing={(id) => {
+                setListingId(id);
+                setTouched(false);
+              }}
+              onOpenListing={setEditingId}
+              onCreateListing={() => createListing.mutate()}
+              creating={createListing.isPending}
+              createError={
+                createListing.error
+                  ? "Chưa tạo được sách đấu giá. Thử lại; yêu cầu cũ sẽ không bị tạo trùng."
+                  : null
+              }
+              loadError={listings.isError}
+              onRetryLoad={() => void listings.refetch()}
+              disabled={locked}
+              isLoading={listings.isPending}
+            />
 
-        {/* 5. Section 2: Handover Point Picker */}
-        <SendToAuctionPointPicker
-          points={openPoints}
-          selectedPointId={pointId}
-          onSelectPoint={(id) => {
-            setPointId(id);
-            setTouched(false);
-          }}
-          disabled={locked}
-          isLoading={points.isPending}
-        />
+            {/* 5. Section 2: Handover Point Picker */}
+            <SendToAuctionPointPicker
+              points={openPoints}
+              selectedPointId={pointId}
+              onSelectPoint={(id) => {
+                setPointId(id);
+                setTouched(false);
+              }}
+              disabled={locked}
+              isLoading={points.isPending}
+            />
 
-        {/* 6. Section 3: Pricing Settings */}
-        <SendToAuctionPricing
-          step={step}
-          onSelectStep={setStep}
-          startPriceText={start}
-          onChangeStartPriceText={setStart}
-          startPriceError={touched ? priceErrors.startPrice : undefined}
-          buyNowOn={buyNowOn}
-          onToggleBuyNow={setBuyNowOn}
-          buyNowPriceText={buyNow}
-          onChangeBuyNowPriceText={setBuyNow}
-          buyNowPriceError={touched ? priceErrors.buyNowPrice : undefined}
-          disabled={locked}
-        />
+            {/* 6. Section 3: Pricing Settings */}
+            <SendToAuctionPricing
+              step={step}
+              onSelectStep={setStep}
+              startPriceText={start}
+              onChangeStartPriceText={setStart}
+              startPriceError={touched ? priceErrors.startPrice : undefined}
+              buyNowOn={buyNowOn}
+              onToggleBuyNow={setBuyNowOn}
+              buyNowPriceText={buyNow}
+              onChangeBuyNowPriceText={setBuyNow}
+              buyNowPriceError={touched ? priceErrors.buyNowPrice : undefined}
+              disabled={locked}
+            />
 
-        {/* Form Validation Alert */}
-        {touched && Boolean(formError) && (
-          <View style={styles.formErrorNotice}>
-            <Icon name="info" size={16} color={stitchTokens.flashRed} />
-            <AppText kind="small" style={styles.formErrorNoticeText}>
-              {formError}
-            </AppText>
-          </View>
+            {/* Form Validation Alert */}
+            {touched && Boolean(formError) && (
+              <View style={styles.formErrorNotice}>
+                <Icon name="info" size={16} color={stitchTokens.flashRed} />
+                <AppText kind="small" style={styles.formErrorNoticeText}>
+                  {formError}
+                </AppText>
+              </View>
+            )}
+
+            {/* 7. Primary Action Button */}
+            <View style={styles.actionButtonContainer}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Xem lại và gửi sách đấu giá"
+                disabled={locked}
+                onPress={handleStartSubmit}
+                style={({ pressed }) => [
+                  styles.primarySubmitBtn,
+                  pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] },
+                  locked && { opacity: 0.6 },
+                ]}
+              >
+                <Icon name="gavel" size={18} color={stitchTokens.gold} />
+                <AppText kind="bold" style={styles.primarySubmitBtnText}>
+                  Xem lại và gửi sách đấu giá
+                </AppText>
+              </Pressable>
+
+              <AppText style={styles.legalDisclaimerText}>
+                Bằng việc gửi sách, bạn đồng ý với Quy chế ký gửi & thẩm định
+                của Lật Lại
+              </AppText>
+            </View>
+          </>
         )}
-
-        {/* 7. Primary Action Button */}
-        <View style={styles.actionButtonContainer}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Xem lại và gửi sách đấu giá"
-            disabled={locked}
-            onPress={handleStartSubmit}
-            style={({ pressed }) => [
-              styles.primarySubmitBtn,
-              pressed && { opacity: 0.9, transform: [{ scale: 0.99 }] },
-              locked && { opacity: 0.6 },
-            ]}
-          >
-            <Icon name="gavel" size={18} color={stitchTokens.gold} />
-            <AppText kind="bold" style={styles.primarySubmitBtnText}>
-              Xem lại và gửi sách đấu giá
-            </AppText>
-          </Pressable>
-
-          <AppText style={styles.legalDisclaimerText}>
-            Bằng việc gửi sách, bạn đồng ý với Quy chế ký gửi & thẩm định của Lật Lại
-          </AppText>
-        </View>
-
         {/* 8. Section 4: Active Consignments Tracking */}
-        <SendToAuctionActiveIntakes
-          intakes={intakes.data?.items ?? []}
-          isLoading={intakes.isPending}
-          onWithdraw={(item) => setWithdrawTarget(item)}
-          onPublish={(item) => setPublishTarget(item)}
-          onSubmitEvidence={handleRequestSubmitEvidence}
-          evidenceTextMap={evidenceMap}
-          onChangeEvidenceText={(id, text) =>
-            setEvidenceMap((prev) => ({ ...prev, [id]: text }))
-          }
-          evidenceError={evidenceError}
-          disabled={locked}
-        />
+        {(!focusId || (!focus.error && focus.data)) && (
+          <SendToAuctionActiveIntakes
+            intakes={
+              focusId
+                ? focus.data && !focus.error
+                  ? [focus.data]
+                  : []
+                : (intakes.data?.items ?? [])
+            }
+            isLoading={focusId ? focus.isPending : intakes.isPending}
+            onWithdraw={(item) => setWithdrawTarget(item)}
+            onPublish={(item) => setPublishTarget(item)}
+            onOpenAuction={(id) => router.push({ pathname: "/auction", params: { id } })}
+            includeClosed={!!focusId}
+            onSubmitEvidence={handleRequestSubmitEvidence}
+            evidenceTextMap={evidenceMap}
+            onChangeEvidenceText={(id, text) =>
+              setEvidenceMap((prev) => ({ ...prev, [id]: text }))
+            }
+            evidenceError={evidenceError}
+            disabled={locked}
+          />
+        )}
       </ScrollView>
 
       <ScheduleAuctionSheet
-        key={publishTarget ? `${publishTarget.id}:${publishTarget.version}` : "none"}
+        key={
+          publishTarget
+            ? `${publishTarget.id}:${publishTarget.version}`
+            : "none"
+        }
         visible={!!publishTarget}
         title={publishTarget?.title ?? ""}
-        target={publishTarget ? { kind: "publish", intakeId: publishTarget.id, version: publishTarget.version } : null}
+        target={
+          publishTarget
+            ? {
+                kind: "publish",
+                intakeId: publishTarget.id,
+                version: publishTarget.version,
+              }
+            : null
+        }
         onClose={() => setPublishTarget(null)}
         onDone={() => {
-          void queryClient.invalidateQueries({ queryKey: ["my-auction-intakes", userId] });
-          void queryClient.invalidateQueries({ queryKey: ["my-auctions", userId] });
+          void queryClient.invalidateQueries({
+            queryKey: ["my-auction-intakes", userId],
+          });
+          void queryClient.invalidateQueries({
+            queryKey: ["my-auctions", userId],
+          });
           void queryClient.invalidateQueries({ queryKey: ["public-auctions"] });
         }}
       />

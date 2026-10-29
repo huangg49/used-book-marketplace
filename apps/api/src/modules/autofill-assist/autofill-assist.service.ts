@@ -1,3 +1,4 @@
+import { AssistTimings } from '../price-assist/assist-timings.js';
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomUUID } from 'node:crypto';
@@ -51,6 +52,7 @@ const rateLimited = (message: string) =>
   new DomainError(429, 'RATE_LIMITED', message);
 const unavailable = (message: string) =>
   new DomainError(503, 'UNAVAILABLE', message);
+const failed = (message: string) => new DomainError(503, 'AI_ASSIST_FAILED', message);
 const failureCopy: Record<ModelFailure, string> = {
   Timeout: 'Đọc ảnh mất quá lâu. Bạn vẫn có thể tự nhập thông tin sách hoặc thử lại sau.',
   InvalidOutput:
@@ -97,6 +99,7 @@ export class AutofillAssistService {
     listingId: string,
     requestKey: string,
     body: Wire['AutofillSuggestionRequest'],
+    timings = new AssistTimings(),
   ): Promise<Wire['AutofillSuggestion']> {
     const mediaIds = body.mediaIds.map((id) => id.toLowerCase());
     if (new Set(mediaIds).size !== mediaIds.length)
@@ -106,7 +109,7 @@ export class AutofillAssistService {
       .digest('hex');
     // Authorization, cache lookup and quota reservation commit together; the
     // photo read and provider call happen after commit.
-    const prepared = await this.commands.read<Prepared>(auth, async (tx, actor) => {
+    const prepared = await timings.measure('prepare', () => this.commands.read<Prepared>(auth, async (tx, actor) => {
       member(actor);
       requireActive(actor);
       const replay = await tx.c.autofill_suggestions.findOne({
@@ -123,7 +126,7 @@ export class AutofillAssistService {
         if (replay.status === 'Pending')
           throw rateLimited('Ảnh đang được đọc. Thử lại sau giây lát.');
         if (replay.status === 'Failed')
-          throw unavailable(failureCopy[replay.failure ?? 'ProviderError']);
+          throw failed(failureCopy[replay.failure ?? 'ProviderError']);
         return { kind: 'done', doc: replay, cached: true };
       }
       const listing = await tx.c.listings.findOne({ _id: listingId });
@@ -239,12 +242,12 @@ export class AutofillAssistService {
         keys: ordered.map((m) => m.derivativeKey!),
         day,
       };
-    });
+    }));
     if (prepared.kind === 'done') return toWire(prepared.doc, prepared.cached);
-    return this.complete(prepared);
+    return timings.measure('complete', () => this.complete(prepared, timings));
   }
 
-  private async complete(p: Extract<Prepared, { kind: 'call' }>) {
+  private async complete(p: Extract<Prepared, { kind: 'call' }>, timings: AssistTimings) {
     const model = this.model!;
     const started = Date.now();
     let failure: ModelFailure | null = null;
@@ -255,7 +258,7 @@ export class AutofillAssistService {
     const attempt = async (images: string[], useFallback: boolean) => {
       const id = useFallback ? model.fallback! : model.model;
       try {
-        const draft = await model.read(AUTOFILL_SYSTEM, AUTOFILL_USER, images, useFallback);
+        const draft = await timings.measure('model', () => model.read(AUTOFILL_SYSTEM, AUTOFILL_USER, images, useFallback));
         usage.inputTokens += draft.inputTokens;
         usage.outputTokens += draft.outputTokens;
         cost += costMicroUsd(rateFor(id, null), draft.inputTokens, draft.outputTokens);
@@ -271,7 +274,7 @@ export class AutofillAssistService {
       }
     };
     try {
-      const images = await Promise.all(p.keys.map((k) => this.images!.dataUrl(k)));
+      const images = await timings.measure('images', () => Promise.all(p.keys.map((k) => this.images!.dataUrl(k))));
       let first: CheckedAutofill | null = null;
       try {
         first = await attempt(images, false);
@@ -299,11 +302,10 @@ export class AutofillAssistService {
           autofillId: p.id,
           model: modelId,
           failure,
-          detail: e instanceof Error ? e.message.slice(0, 400) : 'unknown',
         }),
       );
     }
-    const matches = checked ? await this.matches(checked, p.ownerId) : [];
+    const matches = checked ? await timings.measure('catalog', () => this.matches(checked!, p.ownerId)) : [];
     const latencyMs = Date.now() - started;
     const doc = await this.mongo.tx(async (tx) => {
       await tx.lock('autofill_suggestions', [p.id]);
@@ -326,7 +328,7 @@ export class AutofillAssistService {
         await tx.c.price_assist_usage.updateOne({ _id: key }, { $inc: { costMicroUsd: cost } });
       return { ...current, ...set } as AutofillSuggestionDoc;
     });
-    if (!checked) throw unavailable(failureCopy[failure ?? 'ProviderError']);
+    if (!checked) throw failed(failureCopy[failure ?? 'ProviderError']);
     return toWire(doc, false);
   }
 

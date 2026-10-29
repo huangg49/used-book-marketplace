@@ -1,7 +1,7 @@
 import { useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useSession } from '../hooks/useSession'
-import { ArrowLeftRight, X, Star, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeftRight, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { ROUTES, formatVnd } from '../lib/routes'
 import { getExchangeTransactions, getExchangeCounts } from '../services/exchange'
 import type { ExchangeItem, ExchangeTab, ExchangeBook } from '../lib/mock/exchangeMine'
@@ -19,6 +19,7 @@ function getStatusInfo(status: string) {
     switch (status) {
         case 'FUNDING': return { text: 'Chờ đặt cọc', class: styles.statusActive }
         case 'RESOLUTION_PENDING': return { text: 'Đang cần xử lý', class: styles.statusActive }
+        case 'INSPECTING': return { text: 'Đang kiểm tra sách', class: styles.statusActive }
         // Sent / Received
         case 'PENDING': return { text: 'Chờ phản hồi', class: styles.statusPending }
         case 'REJECTED': return { text: 'Bị từ chối', class: styles.statusRejected }
@@ -53,7 +54,7 @@ export default function ExchangeMinePage() {
     const actor = auth.status === 'authenticated' ? auth.user.id : undefined
 
     const rawTab = searchParams.get('tab')
-    const currentTab: ExchangeTab = rawTab && rawTab in TAB_MAPPINGS ? rawTab as ExchangeTab : 'sent'
+    const currentTab: ExchangeTab = rawTab && Object.hasOwn(TAB_MAPPINGS, rawTab) ? rawTab as ExchangeTab : 'sent'
     const rawPage = Number(searchParams.get('page') ?? 1)
     const currentPage = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1
 
@@ -63,7 +64,7 @@ export default function ExchangeMinePage() {
         enabled: !!actor
     })
 
-    const { data: listData, isLoading, isError, refetch } = useQuery({
+    const { data: listData, isLoading, isError, isFetching, refetch } = useQuery({
         queryKey: ['exchangeTransactions', actor, currentTab, currentPage],
         queryFn: () => getExchangeTransactions(currentTab, currentPage),
         enabled: !!actor
@@ -78,23 +79,21 @@ export default function ExchangeMinePage() {
     }
 
     const handleTabKeyDown = (e: React.KeyboardEvent, tabKeys: ExchangeTab[], currentIndex: number) => {
-        if (e.key === 'ArrowRight') {
-            e.preventDefault()
-            const next = tabKeys[(currentIndex + 1) % tabKeys.length]
-            setTab(next)
-        } else if (e.key === 'ArrowLeft') {
-            e.preventDefault()
-            const prev = tabKeys[(currentIndex - 1 + tabKeys.length) % tabKeys.length]
-            setTab(prev)
-        }
+        const index = e.key === 'ArrowRight' ? (currentIndex + 1) % tabKeys.length
+            : e.key === 'ArrowLeft' ? (currentIndex - 1 + tabKeys.length) % tabKeys.length
+            : e.key === 'Home' ? 0 : e.key === 'End' ? tabKeys.length - 1 : undefined
+        if (index === undefined) return
+        e.preventDefault()
+        setTab(tabKeys[index])
+        document.getElementById(`tab-${tabKeys[index]}`)?.focus()
     }
 
     if (!actor) return <div className={styles.container}><h1 className={styles.pageTitle}>Trao đổi của tôi</h1><p>{auth.status === 'loading' ? 'Đang kiểm tra đăng nhập…' : 'Đăng nhập để xem trao đổi của bạn.'}</p>{auth.status !== 'loading' && <Link className={styles.btnAction} to="/login?returnUrl=%2Fexchange%2Fmine">Đăng nhập</Link>}</div>
     return (
         <div className={styles.container}>
             <div className={styles.header}>
-                <h1 className={styles.pageTitle}>Trao Đổi Của Tôi</h1>
-                <p className={styles.pageSubtitle}>Quản lý những cuộc hành trình mới của những trang sách. Theo dõi các lời đề nghị, đang thực hiện và lịch sử trao đổi của bạn.</p>
+                <h1 className={styles.pageTitle}>Trao đổi của tôi</h1>
+                <p className={styles.pageSubtitle}>Theo dõi đề nghị đã gửi, phản hồi từ người khác và tiến trình đổi sách của bạn.</p>
             </div>
 
             <div 
@@ -108,6 +107,7 @@ export default function ExchangeMinePage() {
                     return (
                         <button
                             key={tab}
+                            type="button"
                             role="tab"
                             aria-selected={isActive}
                             aria-controls={`panel-${tab}`}
@@ -129,26 +129,33 @@ export default function ExchangeMinePage() {
                 id={`panel-${currentTab}`} 
                 aria-labelledby={`tab-${currentTab}`}
                 aria-live="polite"
+                aria-busy={isFetching}
             >
                 {isLoading && (
-                    <div className={styles.loading}>Đang tải dữ liệu...</div>
+                    <div className={styles.loading} role="status">Đang tải trao đổi…</div>
                 )}
 
                 {isError && (
-                    <div className={styles.error}>
-                        <p>Đã xảy ra lỗi khi tải dữ liệu.</p>
-                        <button onClick={() => refetch()} className={styles.btnAction} style={{ width: 'auto', marginTop: 16 }}>Thử lại</button>
+                    <div className={styles.error} role="alert">
+                        <h2>Chưa tải được trao đổi</h2>
+                        <p>Kiểm tra kết nối rồi thử lại. Mục bạn đang xem vẫn được giữ.</p>
+                        <button type="button" disabled={isFetching} onClick={() => void refetch()} className={styles.btnAction} style={{ width: 'auto', marginTop: 16 }}>{isFetching ? 'Đang tải lại…' : 'Thử lại'}</button>
                     </div>
                 )}
 
                 {!isLoading && !isError && listData && listData.data.length === 0 && (
                     <div className={styles.emptyState}>
-                        <h3 className={styles.emptyStateTitle}>
+                        <ArrowLeftRight size={32} aria-hidden="true" />
+                        <h2 className={styles.emptyStateTitle}>
                             {currentTab === 'sent' && 'Bạn chưa gửi đề nghị nào'}
                             {currentTab === 'received' && 'Chưa có đề nghị nào gửi đến bạn'}
                             {currentTab === 'active' && 'Không có giao dịch nào đang thực hiện'}
                             {currentTab === 'done' && 'Chưa có giao dịch nào hoàn tất'}
-                        </h3>
+                        </h2>
+                        <p>{currentTab === 'sent' ? 'Tìm một cuốn bạn muốn đọc rồi gửi đề nghị từ trang sách.'
+                            : currentTab === 'received' ? 'Khi có người muốn đổi sách với bạn, đề nghị sẽ xuất hiện ở đây.'
+                            : currentTab === 'active' ? 'Các trao đổi được chấp nhận sẽ xuất hiện ở đây để bạn theo dõi.'
+                            : 'Các trao đổi hoàn tất sẽ được lưu ở đây.'}</p>
                         {currentTab === 'sent' && (
                             <Link to={ROUTES.exchange} className={styles.emptyStateBtn}>Tìm sách để trao đổi</Link>
                         )}
@@ -272,16 +279,10 @@ function ExchangeCard({ item }: { item: ExchangeItem }) {
                         {item.partner.username.charAt(0)}
                     </div>
                     <div>
-                        <p className={styles.username}>@{item.partner.username}</p>
-                        <div className={styles.rating}>
-                            <Star size={12} fill="currentColor" strokeWidth={0} />
-                            <span className={styles.ratingValue}>
-                                {item.partner.rating ? `(${item.partner.rating.toFixed(1).replace('.', ',')})` : '(Chưa có đánh giá)'}
-                            </span>
-                        </div>
+                        <p className={styles.username}>{item.partner.username}</p>
                     </div>
                 </div>
-                <p className={styles.dateText}>GỬI: {formatDate(item.createdAt)}</p>
+                <p className={styles.dateText}>Tạo ngày {formatDate(item.createdAt)}</p>
             </div>
 
             {/* Middle */}
@@ -297,7 +298,7 @@ function ExchangeCard({ item }: { item: ExchangeItem }) {
                         )}
                     </div>
                     {isRejected ? (
-                        <div className={styles.exchangeIconLabel}>Bị từ chối</div>
+                        <div className={styles.exchangeIconLabel}>{statusInfo.text}</div>
                     ) : (
                         <div className={styles.exchangeIconLabel}>
                             {item.moneyCompensationType === 'user_pays' && (

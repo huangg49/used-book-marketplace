@@ -43,11 +43,13 @@ import {
   type AuctionCommand,
   type AuctionCommandKind,
 } from "./auctions-model";
-import type {
-  AuctionState,
-  Participation,
-  PublicAuction,
-  PublicAuctionSummary,
+import {
+  myIntakes,
+  type MyIntake,
+  type AuctionState,
+  type Participation,
+  type PublicAuction,
+  type PublicAuctionSummary,
 } from "./contracts";
 import { WinnerSteps } from "./winner-steps";
 
@@ -126,6 +128,13 @@ export function AuctionScreen({ id }: { id: string }) {
     retry: false,
     refetchInterval: foreground && detail.data?.auction.state === "Active" ? 5_000 : false,
   });
+  const ownIntakes = useQuery({
+    queryKey: ["my-auction-intakes", member, "auction", id],
+    queryFn: () => client.request(`/me/auction-intakes?auctionId=${encodeURIComponent(id)}`, myIntakes),
+    enabled: valid && foreground && !!member,
+    retry: false,
+    staleTime: 0,
+  });
   const now = useServerNow(detail.data?.serverTime, foreground);
   const unavailable =
     !valid || (detail.error instanceof ApiError && detail.error.status === 404);
@@ -169,8 +178,13 @@ export function AuctionScreen({ id }: { id: string }) {
               me={me.data ?? null}
               meLoading={!!member && me.isPending}
               signedIn={!!member}
+              ownerIntake={ownIntakes.data?.items.find((item) => item.auctionId === id) ?? null}
+              ownerLoading={!!member && ownIntakes.isPending}
+              ownerError={!!member && ownIntakes.isError}
+              ownerKnown={ownIntakes.data !== undefined}
+              retryOwner={() => void ownIntakes.refetch()}
               refresh={async () => {
-                await Promise.all([detail.refetch(), member ? me.refetch() : undefined]);
+                await Promise.all([detail.refetch(), member ? me.refetch() : undefined, member ? ownIntakes.refetch() : undefined]);
               }}
             />
           )}
@@ -186,6 +200,11 @@ function AuctionBody({
   me,
   meLoading,
   signedIn,
+  ownerIntake,
+  ownerLoading,
+  ownerError,
+  ownerKnown,
+  retryOwner,
   refresh,
 }: {
   data: PublicAuction;
@@ -193,6 +212,11 @@ function AuctionBody({
   me: Participation | null;
   meLoading: boolean;
   signedIn: boolean;
+  ownerIntake: MyIntake | null;
+  ownerLoading: boolean;
+  ownerError: boolean;
+  ownerKnown: boolean;
+  retryOwner: () => void;
   refresh: () => Promise<unknown>;
 }) {
   const { auction, history, leaderAlias } = data;
@@ -239,9 +263,30 @@ function AuctionBody({
           {`Đã có người chọn mua ngay. Còn ${formatRemaining(Date.parse(auction.endAt) - now)} để trả cao hơn; hết giờ, người dẫn đầu thắng phiên.`}
         </Notice>
       ) : null}
-      {me?.won ? (
+      {ownerError && (
+        <StatePanel title="Chưa kiểm tra được vai trò của bạn" message="Tải lại trước khi thực hiện thao tác trong phiên." action={{ label: "Thử lại kiểm tra vai trò", onPress: retryOwner }} />
+      )}
+      {/* Keep frozen command state mounted, with every control hidden during
+          ownership recovery, including keyboard/accessibility interaction. */}
+      <View style={ownerError ? { display: "none" } : undefined}>
+      {ownerLoading ? (
+        <StatePanel loading title="Đang kiểm tra vai trò của bạn trong phiên" />
+      ) : signedIn && !ownerKnown ? null : ownerIntake ? (
+        <View style={{ gap: space.sm }}>
+          <Notice>
+            <AppText kind="bold">Đây là phiên của bạn</AppText>{"\n"}
+            {scheduled
+              ? `Phiên hẹn mở lúc ${time(auction.startAt)}. Bạn có thể đổi thời gian trong Phiên của tôi khi chưa có lượt trả giá.`
+              : open && auction.bidderCount === 0
+                ? "Chưa có lượt trả giá. Bạn có thể đổi thời gian trong Phiên của tôi. Người bán không tham gia trả giá."
+                : `${STATE_LABEL[auction.state]}. Người bán theo dõi kết quả và không tham gia trả giá.`}
+          </Notice>
+          <Button wine secondary title="Xem hồ sơ gửi sách" onPress={() => router.push({ pathname: "/send-to-auction", params: { intakeId: ownerIntake.id } })} />
+          <Button wine secondary title="Phiên của tôi" onPress={() => router.push("/my-auctions")} />
+        </View>
+      ) : me?.won ? (
         me.orderId ? (
-          <WinnerSteps orderId={me.orderId} boughtNow={me.boughtNow} />
+          <WinnerSteps orderId={me.orderId} boughtNow={me.boughtNow} paused={ownerError} />
         ) : (
           <Notice tone="success">Đơn nhận sách đang được tạo. Trang sẽ tự cập nhật.</Notice>
         )
@@ -250,7 +295,7 @@ function AuctionBody({
           meLoading ? (
             <StatePanel loading title="Đang tải lượt trả giá của bạn" />
           ) : (
-            <BidPanel auction={auction} me={me} refresh={refresh} />
+            <BidPanel auction={auction} me={me} refresh={refresh} paused={ownerError} />
           )
         ) : (
           <Button title="Đăng nhập để trả giá" onPress={() => router.push("/account")} />
@@ -266,6 +311,7 @@ function AuctionBody({
             : "Phiên không còn nhận trả giá."}
         </Notice>
       )}
+      </View>
       <History history={history} state={auction.state} leaderAlias={leaderAlias} myAlias={me?.alias ?? null} startPrice={auction.startPrice} />
     </View>
   );
@@ -275,10 +321,12 @@ function BidPanel({
   auction,
   me,
   refresh,
+  paused,
 }: {
   auction: PublicAuctionSummary;
   me: Participation | null;
   refresh: () => Promise<unknown>;
+  paused: boolean;
 }) {
   const { client, state } = useSession();
   const queryClient = useQueryClient();
@@ -444,7 +492,7 @@ function BidPanel({
         </View>
       )}
       <ConfirmDialog
-        visible={!!copy}
+        visible={!!copy && !paused}
         title={copy?.title ?? ""}
         message={copy?.message ?? ""}
         confirmLabel={copy?.confirm ?? ""}

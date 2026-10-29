@@ -24,6 +24,11 @@ native RN/Flutter; UI native kết hợp Pro Max và Impeccable theo nền tản
 
 ## Bối cảnh dự án ưu tiên hơn mặc định upstream
 
+Với hành trình phân mảnh hoặc đi qua nhiều module/vai trò, dùng thêm
+[latlai-journey-integration](../../.agents/skills/latlai-journey-integration/SKILL.md)
+để nối entry, quyền/state, kết quả và bước tiếp. Ba skill UI không thay quy trình
+nghiệp vụ và tích hợp này. Không cần cài thêm skill từ Internet cho gói hiện tại.
+
 Đọc [AGENTS](../../AGENTS.md), [PRODUCT](../../PRODUCT.md), [DESIGN](../../DESIGN.md),
 [UI rules](UI_CODING_RULES.md), [components](UI_COMPONENTS.md) và
 [brand](../../packages/brand/v1.1/README.md) trước khi sửa UI. SRS/ADR/OpenAPI và

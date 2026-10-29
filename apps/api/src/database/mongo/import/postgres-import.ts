@@ -7,6 +7,7 @@ import {
   type IntegrityReport,
 } from '../../../integrity/integrity.js';
 import { titleKey } from '../migrations/0003-catalog-title-key.js';
+import { recoveryKeys } from '../../../common/catalog-recovery-keys.js';
 import { PLATFORM_COMMISSION_ACCOUNT_ID } from '../migrations/auction-constants.js';
 import { LISTING_FEE_CLEARING_ID } from '../migrations/0022-vnpay-wallet-listing-fees.js';
 import { bookCirculationRegions } from '../migrations/0030-book-circulation-regions.js';
@@ -780,6 +781,11 @@ export function toDocuments(snapshot: Snapshot): Record<string, Document[]> {
   );
   for (const book of out.catalog_books)
     book.titleKey = titleKey(revisions.get(book.currentRevisionId) ?? '');
+  const recoveryRevisions = new Map(out.catalog_revisions.map(r => [r._id, r]));
+  for (const book of out.catalog_books) {
+    const r = recoveryRevisions.get(book.currentRevisionId);
+    book.recoveryKeys = r ? recoveryKeys(String(r.title), r.authors as string[]) : [];
+  }
   // PostgreSQL had marketplace listings only (ADR 0042).
   for (const listing of out.listings) listing.channel = 'Marketplace';
   for (const receipt of out.mutation_receipts)

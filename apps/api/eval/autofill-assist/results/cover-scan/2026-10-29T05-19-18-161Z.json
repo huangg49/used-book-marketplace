@@ -1,0 +1,1195 @@
+{
+  "summary": {
+    "source": "cover-scan",
+    "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+    "fallback": null,
+    "promptSha256": "aa13daf1b6324a7ec2120e03e467df11c2b4fcd96ea2982e0fa4db7aad520836",
+    "casesSha256": "87416089e11df0ceb968803637bfd93020b63ed67fc969cb54a21c0397a3f599",
+    "selectedCaseIds": [
+      "case-de-men-bm-kd-2023",
+      "case-de-men-bc-kd-2022",
+      "case-hoang-tu-be-kd-2022",
+      "case-hoang-tu-be-nhanam-2025",
+      "case-khong-gia-dinh-kd-2022",
+      "case-ong-gia-bien-ca-kd-2025",
+      "case-dat-rung-phuong-nam-kd-2026",
+      "case-kinh-van-hoa-kd-2019",
+      "case-doraemon-t1-kd-2023",
+      "case-doraemon-t2-kd-2023",
+      "case-so-do-nhanam-2021",
+      "case-cay-cam-ngot-nhanam-2024",
+      "case-chien-binh-cau-vong-nhanam-2022",
+      "case-tuoi-tre-dang-gia-nhanam-2021",
+      "case-mat-biec-tre-bm-2022",
+      "case-mat-biec-tre-td-2019",
+      "case-cho-toi-xin-ve-tre-2018",
+      "case-nha-gia-kim-nhanam-tb79k",
+      "case-rung-nauy-nhanam-2024",
+      "case-song-mon-nhanam-2022",
+      "case-tat-den-kd-2021",
+      "case-truyen-kieu-kd-sc-2024",
+      "case-truyen-kieu-kd-vhtn-2021",
+      "case-luoc-su-nuoc-viet-kd-2024"
+    ],
+    "budgetUsd": 0.1,
+    "ranAt": "2026-10-29T05:19:18.161Z",
+    "cases": 24,
+    "scoredCases": 24,
+    "titleExact": "13/24",
+    "titleIgnoringAccents": "17/24",
+    "publisherExact": "NOT SCORED",
+    "publicationYearExact": "NOT SCORED",
+    "editionExact": "NOT SCORED",
+    "languageExact": "NOT SCORED",
+    "authorsFound": "18/24",
+    "authorsExact": "18/24",
+    "casesWithUnexpectedAuthors": 4,
+    "isbnFound": "NOT SCORED",
+    "wrongIsbn": 0,
+    "needsMoreData": 0,
+    "failed": 0,
+    "latencyMs": {
+      "p50": 1216,
+      "p95": 3493
+    },
+    "tokens": {
+      "input": 32077,
+      "output": 1936
+    },
+    "costUsd": 0.039821,
+    "billingLimit": "Token estimate only; failures without provider usage are unpriced. Not a hard billing cap.",
+    "latencyScope": "Prepared images; provider and output checking only. Not upload/HTTP latency.",
+    "meetsAdr0048": "NOT EVIDENCE: images are not real-camera",
+    "skipped": []
+  },
+  "results": [
+    {
+      "id": "case-de-men-bm-kd-2023",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Dế Mèn phiêu lưu ký",
+        "authors": [
+          "Tô Hoài"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Đế Mèn Phiêu Lưu Ký",
+        "authors": [
+          "Tô Hoài"
+        ],
+        "publisher": "Nhà xuất bản Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "scored": true,
+      "titleExact": false,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "de-men-bm-kd-2023",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1955,
+      "tokens": {
+        "input": 1599,
+        "output": 75
+      }
+    },
+    {
+      "id": "case-de-men-bc-kd-2022",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Dế Mèn phiêu lưu ký",
+        "authors": [
+          "Tô Hoài"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Đề Mèn phiêu lưu ký",
+        "authors": [
+          "Tô Hoài"
+        ],
+        "publisher": "Nhà xuất bản Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "scored": true,
+      "titleExact": false,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "de-men-bc-kd-2022",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1818,
+      "tokens": {
+        "input": 1567,
+        "output": 74
+      }
+    },
+    {
+      "id": "case-hoang-tu-be-kd-2022",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Hoàng tử bé",
+        "authors": [
+          "Antoine de Saint-Exupéry"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Hoàng Tử Bé",
+        "authors": [
+          "Antoine de Saint-Exupéry"
+        ],
+        "publisher": "Nhà xuất bản Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "scored": true,
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "hoang-tu-be-kd-2022",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1459,
+      "tokens": {
+        "input": 1503,
+        "output": 75
+      }
+    },
+    {
+      "id": "case-hoang-tu-be-nhanam-2025",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Hoàng tử bé",
+        "authors": [
+          "Antoine de Saint-Exupéry"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Hoàng Tử Bé",
+        "authors": [
+          "Antoine de Saint-Exupéry"
+        ],
+        "publisher": "NXB Trẻ",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc ISBN và năm xuất bản"
+      ],
+      "scored": true,
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "hoang-tu-be-nhanam-2025",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1023,
+      "tokens": {
+        "input": 1072,
+        "output": 91
+      }
+    },
+    {
+      "id": "case-khong-gia-dinh-kd-2022",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Không gia đình",
+        "authors": [
+          "Hector Malot"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Không gia đình",
+        "authors": [
+          "Hector Malot"
+        ],
+        "publisher": "Nhà xuất bản Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "scored": true,
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "khong-gia-dinh-kd-2022",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1370,
+      "tokens": {
+        "input": 1503,
+        "output": 70
+      }
+    },
+    {
+      "id": "case-ong-gia-bien-ca-kd-2025",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Ông già và biển cả",
+        "authors": [
+          "Ernest Hemingway"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Ông già và biển cá",
+        "authors": [
+          "Ernest Hemingway"
+        ],
+        "publisher": "Nhà xuất bản Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc ISBN và năm xuất bản"
+      ],
+      "scored": true,
+      "titleExact": false,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "ong-gia-bien-ca-kd-2025",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 3493,
+      "tokens": {
+        "input": 1503,
+        "output": 89
+      }
+    },
+    {
+      "id": "case-dat-rung-phuong-nam-kd-2026",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Đất rừng phương Nam",
+        "authors": [
+          "Đoàn Giỏi"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Đất rừng phương Nam",
+        "authors": [
+          "Đoàn Giới"
+        ],
+        "publisher": "Nhà xuất bản Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "scored": true,
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": false,
+      "authorsExact": false,
+      "unexpectedAuthors": [
+        "Đoàn Giới"
+      ],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "dat-rung-phuong-nam-kd-2026",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1108,
+      "tokens": {
+        "input": 1503,
+        "output": 78
+      }
+    },
+    {
+      "id": "case-kinh-van-hoa-kd-2019",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Kính vạn hoa - Tập 1",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Kính vạn hoa",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "publisher": "Nhà xuất bản Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "scored": true,
+      "titleExact": false,
+      "titleIgnoringAccents": false,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "kinh-van-hoa-kd-2019",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1077,
+      "tokens": {
+        "input": 1503,
+        "output": 73
+      }
+    },
+    {
+      "id": "case-doraemon-t1-kd-2023",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "45 chương mở đầu bộ truyện ngắn Doraemon - Tập 1",
+        "authors": [
+          "Fujiko F. Fujio"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Doraemon",
+        "authors": [
+          "Fujiko F Fujio"
+        ],
+        "publisher": "Nhà xuất bản Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "scored": true,
+      "titleExact": false,
+      "titleIgnoringAccents": false,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "doraemon-t1-kd-2023",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1216,
+      "tokens": {
+        "input": 1599,
+        "output": 71
+      }
+    },
+    {
+      "id": "case-doraemon-t2-kd-2023",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "45 chương mở đầu bộ truyện ngắn Doraemon - Tập 2",
+        "authors": [
+          "Fujiko F. Fujio"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Doraemon Chọn lọc",
+        "authors": [
+          "Fujiko F Fujio"
+        ],
+        "publisher": "Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "scored": true,
+      "titleExact": false,
+      "titleIgnoringAccents": false,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "doraemon-t2-kd-2023",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1062,
+      "tokens": {
+        "input": 1567,
+        "output": 71
+      }
+    },
+    {
+      "id": "case-so-do-nhanam-2021",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Số đỏ",
+        "authors": [
+          "Vũ Trọng Phụng"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Vũ trong phùng",
+        "authors": [],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bìa sau hoặc gáy để đọc tác giả và nhà xuất bản",
+        "Chụp rõ trang bản quyền để đọc ISBN và năm xuất bản"
+      ],
+      "scored": true,
+      "titleExact": false,
+      "titleIgnoringAccents": false,
+      "authorsFound": false,
+      "authorsExact": false,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "so-do-nhanam-2021",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1172,
+      "tokens": {
+        "input": 1065,
+        "output": 107
+      }
+    },
+    {
+      "id": "case-cay-cam-ngot-nhanam-2024",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Cây cam ngọt của tôi",
+        "authors": [
+          "José Mauro de Vasconcelos"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Cây cam ngọt của tôi",
+        "authors": [
+          "José Mauro de Vasconcelos"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc nhà xuất bản, năm xuất bản và ISBN"
+      ],
+      "scored": true,
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "cay-cam-ngot-nhanam-2024",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1062,
+      "tokens": {
+        "input": 1079,
+        "output": 92
+      }
+    },
+    {
+      "id": "case-chien-binh-cau-vong-nhanam-2022",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Chiến binh cầu vồng",
+        "authors": [
+          "Andrea Hirata"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Chiếc bình cầu vồng",
+        "authors": [
+          "Andrea Hirata"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc nhà xuất bản, năm xuất bản và ISBN"
+      ],
+      "scored": true,
+      "titleExact": false,
+      "titleIgnoringAccents": false,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "chien-binh-cau-vong-nhanam-2022",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 4321,
+      "tokens": {
+        "input": 1079,
+        "output": 88
+      }
+    },
+    {
+      "id": "case-tuoi-tre-dang-gia-nhanam-2021",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Tuổi trẻ đáng giá bao nhiêu?",
+        "authors": [
+          "Rosie Nguyễn"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Tuổi trẻ đáng giá bao nhiêu?",
+        "authors": [
+          "Rosie Nguyen"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc nhà xuất bản và ISBN"
+      ],
+      "scored": true,
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": false,
+      "authorsExact": false,
+      "unexpectedAuthors": [
+        "Rosie Nguyen"
+      ],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "tuoi-tre-dang-gia-nhanam-2021",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 2526,
+      "tokens": {
+        "input": 1079,
+        "output": 85
+      }
+    },
+    {
+      "id": "case-mat-biec-tre-bm-2022",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Mắt biếc",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "nguyên nhất ánh",
+        "authors": [
+          "mát biếc"
+        ],
+        "publisher": "NHÀ XUẤT BẢN TRẺ",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "scored": true,
+      "titleExact": false,
+      "titleIgnoringAccents": false,
+      "authorsFound": false,
+      "authorsExact": false,
+      "unexpectedAuthors": [
+        "mát biếc"
+      ],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "mat-biec-tre-bm-2022",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1021,
+      "tokens": {
+        "input": 1079,
+        "output": 84
+      }
+    },
+    {
+      "id": "case-mat-biec-tre-td-2019",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Mắt biếc",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "nguyên nhất ánh mắt biếc",
+        "authors": [
+          "truyện dài"
+        ],
+        "publisher": "NHÀ XUẤT BẢN TRẺ",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": "in lần thứ 44",
+        "isbn": null
+      },
+      "missing": [],
+      "scored": true,
+      "titleExact": false,
+      "titleIgnoringAccents": false,
+      "authorsFound": false,
+      "authorsExact": false,
+      "unexpectedAuthors": [
+        "truyện dài"
+      ],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "mat-biec-tre-td-2019",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1887,
+      "tokens": {
+        "input": 1471,
+        "output": 88
+      }
+    },
+    {
+      "id": "case-cho-toi-xin-ve-tre-2018",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Cho tôi xin một vé đi tuổi thơ",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Cho tôi xin một vé đi tuổi thơ",
+        "authors": [
+          "Nguyễn Nhật Ánh"
+        ],
+        "publisher": "Nhà Xuất Bản Trẻ",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": "In lần thứ 65",
+        "isbn": null
+      },
+      "missing": [],
+      "scored": true,
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "cho-toi-xin-ve-tre-2018",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1167,
+      "tokens": {
+        "input": 1471,
+        "output": 83
+      }
+    },
+    {
+      "id": "case-nha-gia-kim-nhanam-tb79k",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Nhà giả kim",
+        "authors": [
+          "Paulo Coelho"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Nhà Giả Kim",
+        "authors": [
+          "Paulo Coelho"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp trang bản quyền để đọc nhà xuất bản, năm xuất bản và ISBN"
+      ],
+      "scored": true,
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "nha-gia-kim-nhanam-tb79k",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1284,
+      "tokens": {
+        "input": 1079,
+        "output": 85
+      }
+    },
+    {
+      "id": "case-rung-nauy-nhanam-2024",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Rừng Na Uy",
+        "authors": [
+          "Haruki Murakami"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Rừng Na Uy",
+        "authors": [
+          "Haruki Murakami"
+        ],
+        "publisher": "Nhà Xuất Bản Hội Nhà Văn",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "scored": true,
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "rung-nauy-nhanam-2024",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1245,
+      "tokens": {
+        "input": 1072,
+        "output": 73
+      }
+    },
+    {
+      "id": "case-song-mon-nhanam-2022",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Sống mòn",
+        "authors": [
+          "Nam Cao"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Sống Mòn",
+        "authors": [
+          "Nam Cao"
+        ],
+        "publisher": null,
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc nhà xuất bản, năm xuất bản và ISBN"
+      ],
+      "scored": true,
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "song-mon-nhanam-2022",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1026,
+      "tokens": {
+        "input": 1065,
+        "output": 83
+      }
+    },
+    {
+      "id": "case-tat-den-kd-2021",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Tắt đèn",
+        "authors": [
+          "Ngô Tất Tố"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Tất đèn",
+        "authors": [
+          "Ngô Tất Tố"
+        ],
+        "publisher": "Nhà xuất bản Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [
+        "Chụp rõ trang bản quyền để đọc ISBN và năm xuất bản"
+      ],
+      "scored": true,
+      "titleExact": false,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "tat-den-kd-2021",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1356,
+      "tokens": {
+        "input": 1503,
+        "output": 89
+      }
+    },
+    {
+      "id": "case-truyen-kieu-kd-sc-2024",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Truyện Kiều",
+        "authors": [
+          "Nguyễn Du"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Truyện Kiều",
+        "authors": [
+          "Nguyễn Du"
+        ],
+        "publisher": "Nhà xuất bản Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "scored": true,
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "truyen-kieu-kd-sc-2024",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1075,
+      "tokens": {
+        "input": 1439,
+        "output": 72
+      }
+    },
+    {
+      "id": "case-truyen-kieu-kd-vhtn-2021",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Truyện Kiều",
+        "authors": [
+          "Nguyễn Du"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Truyện Kiều",
+        "authors": [
+          "Nguyễn Du"
+        ],
+        "publisher": "Nhà xuất bản Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "scored": true,
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": true,
+      "authorsExact": true,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "truyen-kieu-kd-vhtn-2021",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1285,
+      "tokens": {
+        "input": 1503,
+        "output": 72
+      }
+    },
+    {
+      "id": "case-luoc-su-nuoc-viet-kd-2024",
+      "photos": 1,
+      "status": "Suggested",
+      "failure": null,
+      "usedFallback": false,
+      "expected": {
+        "title": "Lược sử nước Việt bằng tranh",
+        "authors": [
+          "Hiếu Minh",
+          "Huyền Trang"
+        ],
+        "isbn": null
+      },
+      "read": {
+        "title": "Lược sử nước Việt bằng tranh",
+        "authors": [],
+        "publisher": "Nhà xuất bản Kim Đồng",
+        "publicationYear": null,
+        "language": "vi",
+        "edition": null,
+        "isbn": null
+      },
+      "missing": [],
+      "scored": true,
+      "titleExact": true,
+      "titleIgnoringAccents": true,
+      "authorsFound": false,
+      "authorsExact": false,
+      "unexpectedAuthors": [],
+      "isbnWrong": false,
+      "isbnFound": null,
+      "publisherExact": null,
+      "publicationYearExact": null,
+      "editionExact": null,
+      "languageExact": null,
+      "bookKey": "luoc-su-nuoc-viet-kd-2024",
+      "reviewed": false,
+      "model": "private/nvidia/nemotron-3.5-super-120b-a12b",
+      "latencyMs": 1018,
+      "tokens": {
+        "input": 1174,
+        "output": 68
+      }
+    }
+  ]
+}

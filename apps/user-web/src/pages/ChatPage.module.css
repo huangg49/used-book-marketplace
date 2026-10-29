@@ -793,6 +793,11 @@
     border-left: 0;
     padding: 20px;
   }
+  /* The dossier flex rule must not override the selected mobile panel. Keep
+     the mounted composer/draft, but hide it with the rest of the chat pane. */
+  .paperSpread.dossierSpread[data-panel="sheet"] > .dossierChat {
+    display: none;
+  }
   .dossierSpread .dossierBody {
     padding-inline: 20px;
     scrollbar-gutter: auto;

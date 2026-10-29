@@ -13,6 +13,7 @@ export function navigationGroups(user: CurrentUser | undefined): NavigationGroup
   ] }];
   if (canReview(user)) {
     const items: NavigationItem[] = [{ label: "Bài đăng sách", to: "/review/listings", icon: "books" }];
+    items.push({label:'Đánh giá giao dịch',to:'/transaction-reviews',icon:'books'});
     if (canReviewCatalog(user)) items.push({ label: "Đầu sách", to: "/review/catalog-requests", icon: "catalog" });
     groups.push({ id: "review", label: "Kiểm duyệt", items });
   }

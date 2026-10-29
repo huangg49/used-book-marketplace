@@ -29,7 +29,8 @@ Nếu quota/login429 hoặc lỗi chưa chắc kết quả, dừng và giữ jou
 key/body/version để ép thành công, không xóa counters. Login limiter5 lần/cửa sổ
 15 phút dùng chung IP; status không đăng nhập. Chờ cửa sổ tự hết trước retry.
 
-Dataset pilot có7 bài đăng: Gatsby65.000đ/giá trị đổi80.000đ, một Gatsby150.000đ
+Dataset pilot có7 bài đăng (runner29/10 chia2seller, tối đa5bài/owner theo quota
+hiện hành): Gatsby65.000đ/giá trị đổi80.000đ, một Gatsby150.000đ
 để so ngân sách100.000đ, Sale/Exchange/Both, Gatsby3 ảnh, một bản thiếu phụ lục
 nhưng nội dung chính đọc được. Mọi giá/tình trạng đều mô phỏng và có nhãn QA.
 Buyer bắt đầu chưa lưu sách. Dataset `--paging` dành riêng kiểm kỹ thuật, không
@@ -103,7 +104,9 @@ tmpfs: sau khi container restart dữ liệu mất, phải dùng tên mới; gi�
 pnpm qa:android serve paging-r01 --paging
 ```
 
-Runner tạo51 listing qua API,3 người bán QA để tuân quota20 upload/người/giờ;
+Runner tạo51 listing qua API,11 người bán QA để tuân quota5bài active/owner và
+20upload/người/giờ. Seller bổ sung dùng session fixture trong QA riêng, không
+tắt limiter hoặc sửa quota; người thử đăng nhập thật qua UI. Xem [kiểm lại](NATIVE_JOURNEYS_2026_10_28.md).
 ảnh nhỏ giữ ngân sách50MB. Wishlist **seller Member QA đầu tiên** có51 mục,
 Gatsby được lưu đầu nên nằm cuối thứ tự thời gian. API kiểm50 mục đầu không có
 Gatsby, trang2 có đúng Gatsby. Không phải thao tác database để bịa trạng thái.

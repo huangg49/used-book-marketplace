@@ -279,7 +279,7 @@ export function CreateAuctionPage() {
           <ul>
             <li>Sách tạm ẩn khỏi chợ công khai để giữ chỗ</li>
             <li>Sách được nhân viên kiểm tra tại điểm trước khi mở phiên</li>
-            <li>Phiên 24 giờ, người thắng nhận sách tại điểm</li>
+            <li>Bạn chọn mở ngay hoặc hẹn giờ, thời lượng 1–168 giờ</li>
           </ul>
         </div>
       </section>
@@ -374,7 +374,7 @@ export function CreateAuctionPage() {
               hint={declaredValue !== null ? `Gợi ý theo giá trị khai báo ${formatVnd(declaredValue)}. Giá khởi điểm hợp lý thu hút nhiều người trả giá hơn.` : 'Lượt trả giá đầu tiên bằng đúng giá khởi điểm.'} />
             <label className={styles.toggle}>
               <input type="checkbox" checked={buyNowOn} disabled={locked} onChange={() => { setBuyNowOn(!buyNowOn); if (!buyNowOn && buyNowPrice === null && buyNowChips[1]) setBuyNowPrice(buyNowChips[1]) }} />
-              <span><strong>Cho phép mua ngay</strong><span>Người đọc có thể chốt sách ngay bằng giá này trước lượt trả giá đầu tiên.</span></span>
+              <span><strong>Cho phép mua ngay</strong><span>Còn dùng được sau lượt trả giá nếu giá hiện tại thấp hơn giá mua ngay. Khi bấm, người khác còn 60 giây để trả cao hơn.</span></span>
             </label>
             {buyNowOn && <>
               <PriceInput id="auction-buy-now" label="Giá mua ngay" value={buyNowPrice} step={step} min={(startPrice ?? AUCTION_MIN_PRICE - step) + step} disabled={locked}
@@ -418,7 +418,7 @@ export function CreateAuctionPage() {
             <ol className={styles.timeline}>
               <li className={styles.timelineNow}><Store size={15} aria-hidden="true" /><span><strong>Gửi sách trong {DROPOFF_HOURS} giờ</strong>{point ? point.name : 'Tại điểm bạn chọn'}</span></li>
               <li><Check size={15} aria-hidden="true" /><span><strong>Nhân viên kiểm tra</strong>Sách khớp mô tả mới được mở phiên</span></li>
-              <li><Gavel size={15} aria-hidden="true" /><span><strong>Phiên mở 24 giờ</strong>Bạn rút được phiên trước lượt trả giá đầu</span></li>
+              <li><Gavel size={15} aria-hidden="true" /><span><strong>Bạn chọn lịch mở phiên</strong>Sau khi sách đạt kiểm tra, mở ngay hoặc hẹn giờ; thời lượng 1–168 giờ</span></li>
               <li><ArrowRight size={15} aria-hidden="true" /><span><strong>Người thắng thanh toán</strong>Trong 24 giờ, rồi nhận sách tại điểm</span></li>
             </ol>
           </div>

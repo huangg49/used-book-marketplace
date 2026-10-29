@@ -91,7 +91,7 @@ export function AuctionDetailPage() {
     refetchInterval: (query) => live(query.state.data),
   })
   const participation = useQuery({
-    queryKey: ['auction-participation', id],
+    queryKey: ['auction-participation', id, authed ? session.user.id : undefined],
     queryFn: async () => {
       try { return await getMyParticipation(id) } catch (error) {
         if (error instanceof ApiError && error.status === 404) return null // chưa tham gia phiên này
@@ -103,7 +103,8 @@ export function AuctionDetailPage() {
   })
   // Public reads never name the seller; the caller's own intakes do.
   const intakes = useQuery({
-    queryKey: ['my-auction-intakes'], queryFn: getMyAuctionIntakes, enabled: valid && authed, retry: false, staleTime: 30_000,
+    queryKey: ['my-auction-intakes', authed ? session.user.id : undefined, 'auction', id],
+    queryFn: () => getMyAuctionIntakes(id), enabled: valid && authed, retry: false, staleTime: 0,
   })
   const sellerIntake = intakes.data?.items.find((i) => i.auctionId === id) ?? null
   const remaining = useCountdown(detail.data?.auction.endAt, detail.data?.serverTime)
@@ -156,8 +157,10 @@ export function AuctionDetailPage() {
     : CLOSED_PRICE[auction.state] ?? 'Giá cuối'
 
   let action
-  if (sellerIntake) action = <SellerPanel auction={auction} intake={sellerIntake} open={open} scheduled={scheduled} serverTime={detail.data.serverTime} onChanged={refresh} />
-  else if (me?.won) action = <WinnerPanel me={me} auction={auction} onChanged={refresh} />
+  if (authed && intakes.isPending) action = <p role="status">Đang kiểm tra vai trò của bạn trong phiên…</p>
+  else if (authed && intakes.isError && !intakes.data) action = null
+  else if (sellerIntake) action = <SellerPanel auction={auction} intake={sellerIntake} open={open} scheduled={scheduled} serverTime={detail.data.serverTime} onChanged={refresh} paused={intakes.isError} />
+  else if (me?.won) action = <WinnerPanel me={me} auction={auction} onChanged={refresh} paused={intakes.isError} />
   else if (auction.state === 'OnHold')
     action = (
       <div className={`${styles.standing} ${styles.standingOut}`}>
@@ -207,7 +210,7 @@ export function AuctionDetailPage() {
         <button type="button" className={styles.secondaryBlock} onClick={() => void participation.refetch()}>Thử lại</button>
       </div>
     )
-  else action = <BidPanel auction={auction} me={me} onChanged={refresh} />
+  else action = <BidPanel auction={auction} me={me} onChanged={refresh} paused={intakes.isError} />
 
   return (
     <div className={styles.page}>
@@ -245,7 +248,15 @@ export function AuctionDetailPage() {
               bước giá {formatVnd(auction.step)}
             </p>
             {participationStale && <p className={styles.fieldError} role="alert">Chưa làm mới được lượt trả giá của bạn. Mức đã hiển thị là lần tải gần nhất. <button type="button" className={styles.linkButton} onClick={() => void participation.refetch()}>Thử cập nhật lại lượt giá</button></p>}
-            {action}
+            {authed && intakes.isError && (
+              <div className={styles.notice} role="alert">
+                <p>Chưa kiểm tra được vai trò của bạn trong phiên. Tải lại trước khi thực hiện thao tác.</p>
+                <button type="button" className={styles.secondaryBlock} onClick={() => void intakes.refetch()}>Thử lại kiểm tra vai trò</button>
+              </div>
+            )}
+            {/* Preserve an unresolved command's key/body while role recovery
+                hides its controls. Recovery must not remount the command. */}
+            <div hidden={authed && intakes.isError}>{action}</div>
           </section>
         </aside>
 
@@ -473,7 +484,7 @@ function AmountField({ id, label, value, onChange, disabled, hint, error }: {
   )
 }
 
-function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: AuctionParticipation | null; onChanged: () => Promise<unknown> }) {
+function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary; me: AuctionParticipation | null; onChanged: () => Promise<unknown>; paused: boolean }) {
   const leading = me?.leading ?? false
   const step = auction.step
   const minimumBid = auction.minimumBid ?? AUCTION_MAX_PRICE + step
@@ -629,6 +640,7 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
 
       <AutoBidDialog
         isOpen={autoDialog}
+        paused={paused}
         onClose={() => setAutoDialog(false)}
         title={auction.title}
         pointName={auction.pointName}
@@ -653,7 +665,7 @@ function BidPanel({ auction, me, onChanged }: { auction: AuctionSummary; me: Auc
 
       {dialog && (
         <ConfirmDialog
-          isOpen
+          isOpen={!paused}
           onClose={() => !busy && setConfirming(null)}
           title={dialog.title}
           description={dialog.description}
@@ -704,8 +716,8 @@ const SELLER_STATE: Partial<Record<AuctionState, string>> = {
 
 // FR-AU02: the seller follows their own auction and may withdraw it only
 // before the first bid; the server rechecks that under the auction lock.
-function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged }: {
-  auction: AuctionSummary; intake: MyIntake; open: boolean; scheduled: boolean; serverTime: string; onChanged: () => Promise<unknown>
+function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged, paused }: {
+  auction: AuctionSummary; intake: MyIntake; open: boolean; scheduled: boolean; serverTime: string; onChanged: () => Promise<unknown>; paused: boolean
 }) {
   const intent = useIntentKey()
   const [confirming, setConfirming] = useState(false)
@@ -761,6 +773,7 @@ function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged }
       {canEdit && (
         <ScheduleAuctionDialog
           isOpen={editing}
+          paused={paused}
           onClose={() => setEditing(false)}
           onDone={onChanged}
           title={auction.title}
@@ -769,7 +782,7 @@ function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged }
         />
       )}
       <ConfirmDialog
-        isOpen={confirming}
+        isOpen={confirming && !paused}
         onClose={() => !busy && setConfirming(false)}
         title="Rút phiên đấu giá?"
         description={`Phiên đóng ngay và sách được trả lại cho bạn tại ${auction.pointName}. Chỉ rút được khi chưa có lượt trả giá; nếu có người vừa trả giá, yêu cầu sẽ bị từ chối.`}
@@ -782,7 +795,7 @@ function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged }
   )
 }
 
-function WinnerPanel({ me, auction, onChanged }: { me: AuctionParticipation; auction: AuctionSummary; onChanged: () => Promise<unknown> }) {
+function WinnerPanel({ me, auction, onChanged, paused }: { me: AuctionParticipation; auction: AuctionSummary; onChanged: () => Promise<unknown>; paused: boolean }) {
   const queryClient = useQueryClient()
   const order = useQuery({
     queryKey: ['point-order', me.orderId], queryFn: () => getMyPointOrder(me.orderId!), enabled: !!me.orderId, retry: false, staleTime: 0,
@@ -913,7 +926,7 @@ function WinnerPanel({ me, auction, onChanged }: { me: AuctionParticipation; auc
       </button>
       <p className={styles.fieldHint}>Giá chốt {formatVnd(me.finalPrice ?? auction.currentPrice ?? o.amounts.bookPrice)}. Không nhận thanh toán một phần.</p>
       <ConfirmDialog
-        isOpen={confirming}
+        isOpen={confirming && !paused}
         onClose={() => !busy && setConfirming(false)}
         title={`Thanh toán ${formatVnd(total ?? o.amounts.bookPrice)} từ ví?`}
         description={delivery

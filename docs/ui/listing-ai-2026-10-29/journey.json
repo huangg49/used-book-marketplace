@@ -1,0 +1,58 @@
+{
+  "status": "PASS",
+  "source": "real API/Mongo/Sharp; fake AI/storage",
+  "checkpoints": [
+    "web: photo and price lost ACK each retain key/body; one provider call; explicit overwrite confirmations; responsive source evidence",
+    "web: same draft through AI, price evidence and real submit; one PendingReview listing; stored applied price 40000; changed condition invalidates prior suggestion",
+    "RN web: account to draft, real photo/Sharp, lost terminal response replay then explicit new intent; catalog choice and same photo at next step; price lost ACK keeps key/body and typed price"
+  ],
+  "timings": [
+    {
+      "scope": "autofill-suggestions",
+      "http": 200,
+      "stages": "ai_prepare;dur=16.2, ai_images;dur=30.0, ai_model;dur=0.2, ai_catalog;dur=4.5, ai_complete;dur=41.8, ai_total;dur=59.3"
+    },
+    {
+      "scope": "autofill-suggestions",
+      "http": 200,
+      "stages": "ai_prepare;dur=6.6, ai_total;dur=6.7"
+    },
+    {
+      "scope": "price-suggestions",
+      "http": 200,
+      "stages": "ai_prepare;dur=27.7, ai_model;dur=0.2, ai_complete;dur=6.9, ai_total;dur=37.3"
+    },
+    {
+      "scope": "price-suggestions",
+      "http": 200,
+      "stages": "ai_prepare;dur=6.7, ai_total;dur=6.8"
+    },
+    {
+      "scope": "autofill-suggestions",
+      "http": 503,
+      "stages": "ai_prepare;dur=15.3, ai_images;dur=24.8, ai_model;dur=0.1, ai_complete;dur=31.5, ai_total;dur=46.8"
+    },
+    {
+      "scope": "autofill-suggestions",
+      "http": 503,
+      "stages": "ai_prepare;dur=6.3, ai_total;dur=6.4"
+    },
+    {
+      "scope": "autofill-suggestions",
+      "http": 200,
+      "stages": "ai_prepare;dur=16.6, ai_images;dur=32.7, ai_model;dur=0.0, ai_catalog;dur=2.9, ai_complete;dur=40.8, ai_total;dur=57.5"
+    },
+    {
+      "scope": "price-suggestions",
+      "http": 200,
+      "stages": "ai_prepare;dur=19.4, ai_model;dur=0.1, ai_complete;dur=5.0, ai_total;dur=24.4"
+    },
+    {
+      "scope": "price-suggestions",
+      "http": 200,
+      "stages": "ai_prepare;dur=6.0, ai_total;dur=6.1"
+    }
+  ],
+  "native": "NOT_RUN",
+  "realCameraQuality": "NOT_RUN: no dataset supplied"
+}

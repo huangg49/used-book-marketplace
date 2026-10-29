@@ -3,6 +3,13 @@ import path from "node:path";
 import { existsSync } from "node:fs";
 import { assert } from "./fixtures.mjs";
 
+export function blankPilotInput(label, text) {
+  const placeholders = label === "Email"
+    ? ["ban@example.com", "nguyentuan@latlai.vn"]
+    : label === "Mật khẩu" ? ["Nhập mật khẩu", "Nhập mật khẩu của bạn"] : [];
+  return ["Email", "Mật khẩu"].includes(label) && (!text || placeholders.includes(text));
+}
+
 export function fillLogin(config, serial, actor = "buyer") {
   assert(["buyer", "seller"].includes(actor), "Use a QA Member identity.");
   assert(
@@ -47,12 +54,15 @@ export function fillLogin(config, serial, actor = "buyer") {
       ),
     );
   };
+  const current = nodes();
+  const loginInputs = current.filter(
+    (n) => n.package === "com.huangg49.mobilereactnative" && n.class.includes("EditText"),
+  );
   assert(
-    nodes().some(
-      (n) =>
-        n.package === "com.huangg49.mobilereactnative" &&
-        (n.text === "Đăng nhập để lưu sách" || n.text === "Chào bạn trở lại"),
-    ),
+    loginInputs.length === 2 &&
+      ["Email", "Mật khẩu"].every(label => loginInputs.some(n => n["content-desc"] === label)) &&
+      current.some(n => n.package === "com.huangg49.mobilereactnative" &&
+        (n.text === "Đăng nhập" || n["content-desc"] === "Đăng nhập")),
     "Open the Lật lại login form first.",
   );
   for (const [label, value] of [
@@ -63,10 +73,7 @@ export function fillLogin(config, serial, actor = "buyer") {
       (n) => n.class.includes("EditText") && n["content-desc"] === label,
     );
     assert(
-      inputs.length === 1 &&
-        (!inputs[0].text ||
-          inputs[0].text ===
-            (label === "Email" ? "ban@example.com" : "Nhập mật khẩu")),
+      inputs.length === 1 && blankPilotInput(label, inputs[0].text),
       "Use a fresh blank QA login form.",
     );
     const bounds = inputs[0].bounds.match(/\d+/g).map(Number);

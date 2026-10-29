@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
-import { AppTextInput as TextInput, Icon, formatVnd, stitchTokens } from "../../../core/ui";
+import { AppTextInput as TextInput, Button, Icon, formatVnd, stitchTokens } from "../../../core/ui";
 import type { MyIntake } from "../contracts";
 import { withdrawable, EVIDENCE_MIN_LENGTH } from "../auctions-model";
 
@@ -10,6 +10,8 @@ export interface SendToAuctionActiveIntakesProps {
   readonly onWithdraw: (intake: MyIntake) => void;
   // ADR 0047: the seller publishes a Passed book now or at a later time.
   readonly onPublish: (intake: MyIntake) => void;
+  readonly onOpenAuction: (auctionId: string) => void;
+  readonly includeClosed?: boolean;
   readonly onSubmitEvidence: (intake: MyIntake, note: string) => void;
   readonly evidenceTextMap: Record<string, string>;
   readonly onChangeEvidenceText: (id: string, text: string) => void;
@@ -25,11 +27,25 @@ const formatDateTime = (iso: string) =>
     month: "2-digit",
   });
 
+const intakeLabels: Record<MyIntake["state"], string> = {
+  AwaitingDropoff: "Chờ bạn mang sách tới",
+  Received: "Điểm đã nhận, chờ kiểm tra",
+  NeedsEvidence: "Cần bổ sung bằng chứng",
+  Passed: "Đạt kiểm tra, sẵn sàng đăng phiên",
+  Auctioning: "Đã tạo phiên đấu giá",
+  Sold: "Người thắng đã thanh toán",
+  ReclaimRequired: "Mời bạn tới nhận lại sách",
+  Reclaimed: "Bạn đã nhận lại sách",
+  Cancelled: "Đã hủy lần gửi sách",
+};
+
 export function SendToAuctionActiveIntakes({
   intakes,
   isLoading = false,
   onWithdraw,
   onPublish,
+  onOpenAuction,
+  includeClosed = false,
   onSubmitEvidence,
   evidenceTextMap,
   onChangeEvidenceText,
@@ -37,7 +53,7 @@ export function SendToAuctionActiveIntakes({
   disabled = false,
 }: SendToAuctionActiveIntakesProps) {
   // Filter active intakes that are not completed/reclaimed
-  const activeList = intakes.filter((i) => i.state !== "Cancelled" && i.state !== "Reclaimed");
+  const activeList = intakes.filter((i) => includeClosed || (i.state !== "Cancelled" && i.state !== "Reclaimed"));
 
   return (
     <View style={styles.sectionContainer}>
@@ -127,17 +143,7 @@ export function SendToAuctionActiveIntakes({
                         item.state === "Passed" && { color: stitchTokens.verifiedGreen },
                       ]}
                     >
-                      {item.state === "AwaitingDropoff"
-                        ? "Chờ bạn mang sách tới"
-                        : item.state === "Received"
-                          ? "Điểm đã nhận, chờ kiểm tra"
-                          : item.state === "NeedsEvidence"
-                            ? "Cần bổ sung bằng chứng"
-                            : item.state === "Passed"
-                              ? "Đạt kiểm tra, sẵn sàng đăng phiên"
-                              : item.state === "Auctioning"
-                                ? "Đang đấu giá"
-                                : "Mời bạn tới nhận lại sách"}
+                      {intakeLabels[item.state]}
                     </AppText>
                   </View>
 
@@ -176,7 +182,7 @@ export function SendToAuctionActiveIntakes({
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                       <Icon name="info" size={13} color={stitchTokens.wineDark} />
                       <AppText kind="bold" style={styles.examinerTitle}>
-                        Ghi chú từ giám định viên tại trạm:
+                        Ghi chú kiểm tra tại điểm:
                       </AppText>
                     </View>
                     <AppText style={styles.examinerNoteText}>{item.inspectionNote}</AppText>
@@ -242,6 +248,15 @@ export function SendToAuctionActiveIntakes({
                   </View>
                 )}
 
+                {item.auctionId && (
+                  <Button
+                    wine
+                    secondary
+                    title="Xem phiên đấu giá"
+                    disabled={disabled}
+                    onPress={() => onOpenAuction(item.auctionId!)}
+                  />
+                )}
                 {/* 5. Publish (Passed) and Withdraw (Rút sách) */}
                 {isWithdrawable && (
                   <View style={styles.cardActionsRow}>

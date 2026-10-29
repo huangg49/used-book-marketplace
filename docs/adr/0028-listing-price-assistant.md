@@ -1,6 +1,9 @@
 # ADR 0028: Trợ lý gợi ý giá bán khi đăng sách
 
-**Status: Proposed — đã triển khai sau cờ tắt mặc định, chờ chủ dự án duyệt.** 05/10/2026.
+**Status ban đầu: Proposed — triển khai sau cờ tắt mặc định.** 05/10/2026.
+Cập nhật29/10/2026: owner duyệt gói trợ lý đăng sách xuyên client theo
+[ADR0054](0054-cross-client-listing-ai.md). Quyền triển khai/cấu hình local này
+không thay evidence nghiệm thu chất lượng, nguồn giá demo hoặc release gate §7.
 Nhánh `codex/bao-listing-price-assist`. OpenAPI 0.22.0, migration `0005-price-assist`.
 SRS 1.1 §75 loại “định giá thị trường tự động” khỏi phạm vi; tài liệu này là đề xuất
 mở rộng, **không** sửa SRS. Chủ dự án quyết định nguồn dữ liệu, provider và ngưỡng đạt

@@ -67,7 +67,7 @@ const labels: Record<Action, string> = {
   sent: "Tạo đơn vận chuyển",
   received: "Xác nhận đã nhận sách",
   retry: "Thử lại thao tác trước",
-  complete: "✨ Xác nhận hài lòng & Nghiệm thu sách",
+  complete: "Xác nhận đã kiểm tra",
   dispute: "Báo sự cố / Khiếu nại",
 };
 
@@ -144,13 +144,13 @@ export function ActionCard(props: Props) {
     if (!detail.viewerShipping.sentAt) actions.push("sent");
   } else if (detail.status === "WAITING_YOU_CONFIRM") {
     instructions = detail.viewerShipping.receivedAt
-      ? "Bạn đã xác nhận nhận sách. Đang chờ đối tác xác nhận nhận sách để bước vào giai đoạn kiểm tra sách (48 giờ)."
+      ? "Bạn đã nhận sách và có 72 giờ để kiểm tra từ thời điểm nhận. Đối tác có hạn kiểm tra riêng; khoản cọc vẫn được giữ."
       : "Hai bên đã gửi sách. Chỉ xác nhận khi bạn đã nhận bưu phẩm và kiểm tra kỹ sách.";
     if (!detail.viewerShipping.receivedAt) actions.push("received");
     actions.push("dispute");
   } else if (detail.status === "DELIVERING") {
     instructions = detail.viewerShipping.receivedAt
-      ? "Bạn đã xác nhận nhận sách. Đang chờ đối tác xác nhận nhận sách để bước vào giai đoạn kiểm tra sách (48 giờ)."
+      ? "Bạn đã nhận sách và có 72 giờ để kiểm tra từ thời điểm nhận. Đối tác có hạn kiểm tra riêng; khoản cọc vẫn được giữ."
       : "Sách đang được vận chuyển. Theo dõi bưu gửi tại thẻ Tiến trình giao nhận.";
     if (!detail.viewerShipping.receivedAt && detail.partnerShipping.sentAt) {
       actions.push("received");
@@ -162,14 +162,14 @@ export function ActionCard(props: Props) {
       : null;
     if (detail.viewerCompletedAt) {
       instructions =
-        `Bạn đã xác nhận nghiệm thu sách đạt yêu cầu. Đang chờ đối tác xác nhận hoặc hết 48 giờ kiểm tra để hoàn tất giao dịch.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
+        `Bạn đã xác nhận kiểm tra sách. Tiền cọc vẫn được giữ đến khi cả hai hạn kiểm tra 72 giờ kết thúc và không có tranh chấp.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
     } else if (detail.partnerCompletedAt) {
       instructions =
-        `Đối tác đã bấm xác nhận nghiệm thu sách! Bạn có thể kiểm tra sách kỹ lưỡng. Nếu hoàn toàn hài lòng, hãy bấm 'Xác nhận hài lòng & Nghiệm thu sách' để tất toán sớm và giải phóng cọc ngay.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
+        `Đối tác đã xác nhận kiểm tra sách. Bạn vẫn có đủ 72 giờ từ lúc nhận để đối chiếu tình trạng. Xác nhận kiểm tra không rút ngắn hạn hoặc giải phóng cọc sớm.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
       actions.push("complete");
     } else {
       instructions =
-        `Hai bên đều đã nhận được sách! Giao dịch đang trong khoảng đệm kiểm tra 48 giờ.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""} Bạn có thể kiểm tra sách kỹ lưỡng. Nếu hoàn toàn hài lòng, hãy bấm 'Xác nhận hài lòng & Nghiệm thu sách' để tất toán sớm và giải phóng cọc ngay.`;
+        `Hai bên đã nhận sách. Mỗi bên có 72 giờ kiểm tra tính từ lúc nhận.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""} Bạn có thể kiểm tra sách kỹ lưỡng. Bạn có thể xác nhận đã kiểm tra; cọc chỉ được giải phóng khi cả hai hạn kết thúc và không có tranh chấp.`;
       actions.push("complete");
     }
     actions.push("dispute");
@@ -299,6 +299,20 @@ export function ActionCard(props: Props) {
       <div className={styles.calloutBox}>
         <p className={styles.instructions}>{instructions}</p>
       </div>
+      {detail.viewerInspectionDeadline && (
+        <p className={styles.deadlineRow}>
+          Hạn kiểm tra sách của bạn: <time dateTime={detail.viewerInspectionDeadline}>
+            {new Date(detail.viewerInspectionDeadline).toLocaleString("vi-VN")}
+          </time>
+        </p>
+      )}
+      {detail.partnerInspectionDeadline && (
+        <p className={styles.deadlineRow}>
+          Hạn kiểm tra của đối tác: <time dateTime={detail.partnerInspectionDeadline}>
+            {new Date(detail.partnerInspectionDeadline).toLocaleString("vi-VN")}
+          </time>
+        </p>
+      )}
       {detail.status === "FUNDING" && detail.fundingDeadline && (
         <p className={styles.deadlineRow}>
           <Clock size={14} className={styles.iconGold} />
@@ -329,7 +343,7 @@ export function ActionCard(props: Props) {
         <p className={styles.deadlineRow}>
           <Clock size={14} className={styles.iconGold} />
           <span>
-            Hạn kiểm tra sách (48h):{" "}
+            Hạn kết thúc kiểm tra của cả hai bên:{" "}
             <time dateTime={detail.inspectionDeadline}>
               {new Date(detail.inspectionDeadline).toLocaleString("vi-VN")}
             </time>
@@ -488,7 +502,7 @@ export function ActionCard(props: Props) {
               : action === "retry"
                 ? "Gửi lại đúng mã và nội dung của thao tác trước để xác nhận kết quả."
                 : action === "complete"
-                  ? "Bạn xác nhận sách nhận được đúng tình trạng thỏa thuận và hoàn toàn hài lòng với chất lượng? Khi cả hai bên cùng xác nhận nghiệm thu (hoặc hết hạn 48h kiểm tra), giao dịch sẽ hoàn tất và tiền cọc bảo chứng sẽ được giải phóng ngay."
+                  ? "Bạn xác nhận đã kiểm tra sách? Xác nhận này không rút ngắn hạn khiếu nại. Tiền cọc tiếp tục được giữ đến khi cả hai hạn kiểm tra 72 giờ kết thúc và không có tranh chấp."
                   : action === "dispute"
                     ? "Nếu sách có vấn đề nghiêm trọng (hư hỏng nặng, rách nát, sách giả, không đúng cam kết hoặc đối tác không gửi hàng), bạn có thể gửi khiếu nại để tạm dừng tất toán tự động và chuyển sang trạng thái chờ giải quyết để bảo vệ quyền lợi."
                     : "Kiểm tra thông tin trước khi xác nhận thao tác này."}

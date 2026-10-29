@@ -48,7 +48,8 @@ export class ApiExceptionFilter implements ExceptionFilter {
           method: request.method,
           path: request.path,
           status,
-          error: exception instanceof Error ? exception.message : 'Unknown error',
+          error:
+            exception instanceof Error ? exception.message : 'Unknown error',
           stack: exception instanceof Error ? exception.stack : undefined,
         }),
       );
@@ -56,7 +57,11 @@ export class ApiExceptionFilter implements ExceptionFilter {
     response.status(status).json({
       statusCode: status,
       code:
-        typeof detail.code === 'string' && status < 500
+        typeof detail.code === 'string' &&
+        (status < 500 ||
+          (status === 503 &&
+            exception instanceof DomainError &&
+            detail.code === 'AI_ASSIST_FAILED'))
           ? detail.code
           : (codes[status] ?? 'INTERNAL_ERROR'),
       message,

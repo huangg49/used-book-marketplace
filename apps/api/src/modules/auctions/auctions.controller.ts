@@ -13,6 +13,7 @@ import {
 import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../auth/auth.guard.js';
 import { Public } from '../auth/public.decorator.js';
+import { ExistingObligation } from '../auth/obligations.decorator.js';
 import { Roles } from '../auth/roles.guard.js';
 import { commandContext, commandResponse } from '../commands/command-http.js';
 import { ContractInput } from '../commands/contract-input.service.js';
@@ -47,6 +48,7 @@ export class AuctionsController {
   }
 
   @Post('point-orders/:orderId/accept-report')
+  @ExistingObligation()
   @Roles('MEMBER')
   @HttpCode(200)
   acceptReport(
@@ -65,6 +67,7 @@ export class AuctionsController {
     );
   }
   @Post('point-orders/:orderId/reject-report')
+  @ExistingObligation()
   @Roles('MEMBER')
   @HttpCode(200)
   rejectReport(
@@ -83,6 +86,7 @@ export class AuctionsController {
     );
   }
   @Post('point-orders/:orderId/collection-code')
+  @ExistingObligation()
   @Roles('MEMBER')
   @HttpCode(200)
   collectionCode(
@@ -102,6 +106,7 @@ export class AuctionsController {
   }
 
   @Get('me/point-orders/:orderId')
+  @ExistingObligation()
   @Roles('MEMBER')
   readOrder(@Param('orderId') id: string, @Req() req: AuthenticatedRequest) {
     return this.orders.read(req.auth, this.input.uuid(id));
@@ -141,6 +146,7 @@ export class AuctionsController {
   }
 
   @Post('point-orders/:orderId/claim')
+  @ExistingObligation()
   @Roles('MEMBER')
   @HttpCode(200)
   claim(
@@ -183,8 +189,12 @@ export class AuctionsController {
   }
   @Get('me/auction-intakes')
   @Roles('MEMBER')
-  listMine(@Req() req: AuthenticatedRequest) {
-    return this.intakes.listMine(req.auth);
+  listMine(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
+    const input = this.input.query('listMyAuctionIntakes', query);
+    return this.intakes.listMine(
+      req.auth,
+      input.auctionId === undefined ? undefined : this.input.uuid(input.auctionId),
+    );
   }
   @Get('me/auction-intakes/:intakeId')
   @Roles('MEMBER')

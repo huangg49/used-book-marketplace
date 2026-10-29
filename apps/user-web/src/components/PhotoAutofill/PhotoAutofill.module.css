@@ -11,6 +11,74 @@
   background: var(--shop-paper);
   color: var(--shop-ink);
 }
+.recovery {
+  display: grid;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--shop-line);
+}
+.recovery h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+.searchFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.searchFields label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.875rem;
+}
+.searchFields input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  box-sizing: border-box;
+  border: 1px solid var(--shop-control);
+  border-radius: 6px;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  padding: 8px 10px;
+  font: inherit;
+}
+.searchFields input:focus-visible,
+.recovery button:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+.candidates {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.candidates li {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid var(--shop-line);
+  padding-top: 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.candidates p {
+  margin: 0;
+  line-height: 1.7;
+  font-size: 0.875rem;
+}
+.candidates button {
+  white-space: normal;
+  max-width: 100%;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+@media (max-width: 520px) {
+  .searchFields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .head {
   display: flex;
   align-items: center;
@@ -244,4 +312,24 @@
   .fields dt {
     grid-column: 1 / -1;
   }
+}
+
+.searchControls:not(details) {
+  display: grid;
+  gap: 12px;
+}
+details.searchControls > summary {
+  min-height: 44px;
+  padding: 8px 0;
+  box-sizing: border-box;
+  cursor: pointer;
+  color: var(--shop-wine);
+  font-size: 0.875rem;
+}
+details.searchControls[open] > :not(summary) {
+  margin-top: 12px;
+}
+details.searchControls > summary:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
 }

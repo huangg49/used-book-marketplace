@@ -117,6 +117,7 @@ export interface CollectionTypes {
   exchanges: D.ExchangeDoc;
   exchange_messages: D.ExchangeMessageDoc;
   transaction_reviews: D.TransactionReviewDoc;
+  review_revisions: D.ReviewRevisionDoc;
 }
 export type CollectionName = keyof CollectionTypes;
 
@@ -288,6 +289,7 @@ const NAMES: CollectionName[] = [
   'exchanges',
   'exchange_messages',
   'transaction_reviews',
+  'review_revisions',
 ];
 export const COLLECTION_NAMES: readonly CollectionName[] = NAMES;
 

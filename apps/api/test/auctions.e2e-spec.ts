@@ -387,6 +387,30 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     );
   const claimText =
     'Sách bị ố vàng và thiếu trang 120–128 so với biên bản kiểm tra tại điểm';
+  it('LOCKED buyers retain paid point-order reads, report/code/claim duties and cannot pay again', async () => {
+    const o = await paidOrder();
+    await db.setStatus(o.winner.id, 'LOCKED');
+    const paid = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+    const acceptAt = new Date(paid.paidAt!.getTime() + 60_000);
+    await request(app.getHttpServer()).get(`/api/v1/me/point-orders/${o.orderId}`)
+      .set('Authorization', `Bearer ${o.winner.token}`).expect(200);
+    await payOrder(o.orderId, o.winner).expect(403);
+    await accepted(o, acceptAt);
+    const at = openAt(acceptAt);
+    const issued = await issueCode(o, new Date(at.getTime() - 60_000));
+    pinClock(at);
+    await handover(o.orderId, issued.body.code, staff).expect(200);
+    vi.restoreAllMocks();
+    const row = (await db.c.point_orders.findOne({ _id: o.orderId }))!;
+    pinClock(new Date(at.getTime() + 60_000));
+    const claimKey = randomUUID();
+    const claim = { expectedVersion: row.version, description: claimText };
+    await orderPost(o.orderId, 'claim', claim, o.winner, claimKey).expect(200);
+    await orderPost(o.orderId, 'claim', claim, o.winner, claimKey).expect(200);
+    vi.restoreAllMocks();
+    await db.c.auth_sessions.updateOne({ _id: o.winner.sessionId }, { $set: { revokedAt: new Date() } });
+    await orderPost(o.orderId, 'claim', claim, o.winner, claimKey).expect(401);
+  });
   const reconciled = async () =>
     (
       await app
@@ -1286,6 +1310,40 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     expect(payable.body.items[0].needsPayment).toBe(true);
     expect(payable.body.items[0].won).toBe(true);
     await call('get', '/me/auctions?view=invalid', bidder).expect(400);
+  });
+
+  it('owner auction lookup filters before the recent-intake limit and rechecks current authorization', async () => {
+    const first = await passedIntake();
+    const opened = await publish(first.intakeId, first.seller).expect(200);
+    const auctionId = opened.body.auctionId as string;
+    const historyListing = await saleListing(first.seller);
+    // Real commands create the history: no final-state fixture or raised limit.
+    for (let n = 0; n < 50; n++) {
+      const current = (await db.c.listings.findOne({ _id: historyListing.id }))!;
+      const next = await cmd('post', '/auction-intakes', intakeBody({ id: current._id, version: current.version }), first.seller).expect(200);
+      await cmd('post', `/auction-intakes/${next.body.intakeId}/cancel`, { expectedVersion: 1 }, first.seller).expect(200);
+    }
+    const recent = await call('get', '/me/auction-intakes', first.seller).expect(200);
+    expect(recent.body.items).toHaveLength(50);
+    expect(recent.body.items.some((i: { id: string }) => i.id === first.intakeId)).toBe(false);
+    const route = `/me/auction-intakes?auctionId=${auctionId}`;
+    const focused = await call('get', route, first.seller).expect(200);
+    validates('AuctionIntakeList', focused.body);
+    expect(focused.body.items).toHaveLength(1);
+    expect(focused.body.items[0]).toMatchObject({ id: first.intakeId, auctionId });
+    // The existing shared response requires the field but redacts it to null.
+    expect(focused.body.items[0].shelfCode).toBeNull();
+    expect(focused.body.items[0]).not.toHaveProperty('inspectorId');
+    expect((await call('get', route, await actor()).expect(200)).body.items).toEqual([]);
+    expect((await call('get', `/me/auction-intakes?auctionId=${randomUUID()}`, first.seller).expect(200)).body.items).toEqual([]);
+    await call('get', route).expect(401);
+    await call('get', route, staff).expect(403);
+    await call('get', '/me/auction-intakes?auctionId=not-a-uuid', first.seller).expect(400);
+    await db.c.users.updateOne({ _id: first.seller.id }, { $set: { status: 'LOCKED', updatedAt: new Date() }, $inc: { lockSeq: 1 } });
+    await call('get', route, first.seller).expect(403);
+    await db.c.users.updateOne({ _id: first.seller.id }, { $set: { status: 'ACTIVE', updatedAt: new Date() }, $inc: { lockSeq: 1 } });
+    await db.c.auth_sessions.updateOne({ _id: first.seller.sessionId }, { $set: { revokedAt: new Date() }, $inc: { lockSeq: 1 } });
+    await call('get', route, first.seller).expect(401);
   });
 
   it('AC-AU01/02: approved shelf listings enter; intake holds commitment and slot', async () => {

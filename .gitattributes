@@ -8,3 +8,5 @@
 *.pptx binary
 *.docx binary
 *.pdf binary
+# Unified diffs require a single-space prefix on empty context lines.
+patches/*.patch whitespace=-blank-at-eol

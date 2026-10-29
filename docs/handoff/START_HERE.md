@@ -1,49 +1,44 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
-Auth follow-up11/10/2026 trên `codex/auth-brevo-otp`: OpenAPI0.33.0,
-migration0018, OTP6 số cho đăng ký/reset; Brevo hoặc hộp thư local, link cũ còn hỗ trợ. Xem
-[ACCOUNT_AUTH](../features/ACCOUNT_AUTH.md) để migrate/bootstrap quyền mới,
-cấu hình origin/CORS và mở `pnpm auth:mailbox`. Snapshot main bên dưới giữ ngày
-nguồn; trạng thái bàn giao hiện tại nằm trong SESSION_STATE.
-
-Cập nhật09/10/2026 theo main `da59199`: contract **0.30.0**,15 migration MongoDB;
-17 migration PostgreSQL là lịch sử chỉ đọc phục vụ import. DirectDelivery tới F2h;
-ViaPoint đấu giá có source completion nhưng gate release/review còn mở.
-[Cutover máy chủ dự án](LOCAL_MONGO_CUTOVER_2026_09_30.md) đã xong; teammate dùng
-database riêng theo [TEAM_WINDOWS](TEAM_WINDOWS.md), không lấy config/backup của máy này.
-
-Việc đang làm ở [SESSION_STATE](SESSION_STATE.md), gate phát hành ở [READINESS](READINESS.md).
-Mốc PostgreSQL/checkpoint28/09 và [REBUILD](REBUILD.md) là bằng chứng lịch sử, không
-phải hướng dẫn runtime hiện tại. Dùng [prompt tiếp nhận](NEXT_SESSION_PROMPT.md)
-nếu nối tiếp công việc bằng agent. Main đã merge không đồng nghĩa full native/review đạt.
+Cập nhật29/10/2026 theo main `aed674f` đã ghép cùng các gói Member/review/auction local
+bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.63.0** (196operations/30controllers); registry có56
+migration MongoDB (đến0043), không suy từ tiền tố file lớn nhất. Migration
+PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
+Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
+Phạm vi28/10: nhóm **bỏ Forum/Cộng đồng sách** theo [ADR0051](../adr/0051-remove-forum-from-project-scope.md).
+FR-F01–FR-F06/AC-44 không còn là backlog; không bỏ chat/wishlist/thông báo/review.
+[Cutover máy chủ dự án](LOCAL_MONGO_CUTOVER_2026_09_30.md) đã có; máy mới làm theo
+[TEAM_WINDOWS](TEAM_WINDOWS.md), không lấy config/backup của người khác.
 
 ## 1. Hiểu đúng bản đang nhận
 
-React Native là client Member ưu tiên. Operations web phục vụ duyệt catalog/listing.
-`apps/user-web` React/Vite riêng đã có, có listing/purchase chat/auction/inbox;
-Expo web vẫn chia sẻ feature với RN. Không tạo thêm client để sửa một màn hình.
-Flutter còn là khung riêng, không có tính năng ngang RN. API dùng chung NestJS và
-MongoDB 8 (replica set, [ADR 0027](../adr/0027-mongodb-persistence-protocol.md); đã
-chuyển từ PostgreSQL theo [kế hoạch](../refactor/MONGODB_PLAN.md)); ảnh riêng tư dùng
-Supabase Storage, xử lý bằng Sharp. Hai worker hiện tại chạy thành process riêng và
-dùng hàng đợi/trạng thái bền vững trong MongoDB.
-Redis/BullMQ có dependency/hạ tầng nhưng không là nguồn số dư hoặc bộ chạy hai worker này.
+NestJS dùng MongoDB8 replica set theo [ADR0027](../adr/0027-mongodb-persistence-protocol.md).
+Supabase private storage + Sharp phục vụ ảnh. Hai process worker riêng xử lý
+media và deadline/transaction qua Mongo; Redis/BullMQ không chạy hai worker này.
+RN là Member client ưu tiên, Expo web chia sẻ source. `apps/user-web` React/Vite
+là client Member riêng, `apps/admin-web` cho vận hành. Flutter chỉ có màn scaffold,
+chưa có API/session hoặc parity với RN.
 
-| Phần | Đã có | Chưa có ở mốc này |
+| Phần | Source đã có | Giới hạn/nghiệm thu còn thiếu |
 |---|---|---|
-| Phiên đăng nhập | Login/profile/refresh/logout; RN và web dùng chung session client | Đăng ký, xác minh email, quên mật khẩu, quản lý mọi phiên |
-| Catalog/listing | Catalog request/review; nháp, ảnh, gửi duyệt, sửa bài duyệt, ẩn/mở/lưu trữ, gỡ bởi reviewer; RN và operations có màn hình | Native acceptance đầy đủ cho picker/upload và toàn hành trình |
-| Kệ công khai | RN và user-web tìm/lọc/phân trang/chi tiết/ảnh; user-web mở purchase chat | Checkout mua hoàn chỉnh, đổi thật |
-| Địa chỉ/nơi gửi | Sổ địa chỉ RN/API, origin gắn revision, vùng HCM-DEMO-v1 | Vùng địa lý thật, điểm giao hoạt động thật |
-| Order DirectDelivery | Báo giá → giữ sách → thanh toán → seller nhận đơn → ảnh đóng gói/vận đơn → pickup/InTransit | Checkout/Order/shipment UI đầu-cuối; RN ví chỉ đọc opt-in đã có |
-| Tiền/ngoại lệ | Ví/nạp mô phỏng, giữ P+S; hủy/hoàn trước seller nhận; review quá hạn pickup/giao và báo chưa nhận | Trả người bán, rút tiền, xử lý kết thúc review/tranh chấp, nhận hàng/kiểm tra 72h |
-| Purchase chat | Sale/Both Reserved24h, participant chat, expiry | Không tạo Order/hold/payment hoặc mua hoàn tất |
-| Auction/ViaPoint | Intake/Staff/slot/bid/Auto/BuyNow/Order/pay/report/code/handover, source claim/return/settlement; auction web/live/inbox | Gate completion còn mở; carrier legs/ordinary ViaPoint/point admin và UI sau pay chưa đầy đủ |
-| Exchange | Thiết kế SRS + web mock | Backend/workflow thật và parity client |
+| Auth/session | Login/me/refresh/logout, đăng ký/xác minh/reset bằng link/OTP; shared SessionClient | Sửa profile/email/avatar, quản lý mọi phiên và Admin khóa/mở account chưa đầy đủ |
+| Catalog/listing | Request/review, draft/media/revision, gửi duyệt, chỉnh/ẩn/mở/archive; Sale nguyên bộ theo ADR0046 | Merge catalog/banner management và native acceptance toàn hành trình còn thiếu |
+| Member web/RN | Search/detail/wishlist, đăng sách, chat/Order, Exchange, auction/inbox, ví; dùng API thật | Export/browser không thay nghiệm thu native; RN phải giữ empty/error và ảnh đúng nguồn |
+| Địa chỉ | Sổ địa chỉ và snapshot origin/destination; TP.HCM, Bình Dương, Vũng Tàu theo ADR0039 | Mã demo không là dữ liệu địa giới chính thức hoặc điểm hoạt động thật |
+| DirectDelivery | Quote/Order/pay/accept/packaging/shipment/pickup/review; source có receipt/Inspection72h/settlement | READINESS vẫn F2h; chưa có claim/return/adjudication hoàn chỉnh, không tự mở rộng completion |
+| Exchange | Proposal/counter/accept/fund/ship/receive/dispute/expiry/settlement, messages/reviews; web/RN thật | Hạn72h riêng và acknowledgement theo ADR0050; dispute resolution/ordinary ViaPoint/funded mutual cancellation chưa đầy đủ |
+| Auction/điểm | Intake/inspection/evidence, publish/schedule, bid/Auto/BuyNow, PointOrder/pay/code/handover, claim/return/settlement/incidents | Chỉ các ngoại lệ đã ghi được cấp phạm vi; source không là full acceptance |
+| Ví | Ledger/holds/history, topup simulator/VNPay sandbox/IPN/QueryDR/expiry | Chưa có withdrawal/payout production hoặc đối soát rút tiền đầy đủ |
+| Review/uy tín | Exchange/DirectOrder/PointOrder Completed, sửa/xóa48h, bảo mật hai chiều, reply chờ duyệt, Staff/Admin, public aggregate; web/RN | [ADR0052](../adr/0052-transaction-reviews-and-reputation.md), [evidence](../features/TRANSACTION_REVIEWS_REPORT.md); không tự mở completion/settlement hoặc native/human gate |
+| Việc đang chờ | Web/RN năm nhóm việc từ state thật, link đúng hồ sơ, RN đơn tải tiếp; Staff/Admin duyệt bài/đầu sách | [ADR0053](../adr/0053-state-derived-work-inbox.md), [evidence/phạm vi](../ui/WORK_INBOX_2026_10_28.md); không là tổng nghĩa vụ toàn sản phẩm, các bàn điểm/review vẫn riêng |
+| AI | Web/RN: ISBN trước model, đọc ảnh, tìm catalog và khoảng giá tham chiếu trước phân tích AI | [Luồng AI](../features/LISTING_AI_JOURNEY_2026_10_29.md), [catalog recovery](../features/LISTING_CATALOG_RECOVERY_2026_10_29.md), [đường nhanh/evidence](../features/LISTING_ASSIST_FAST_PATHS_2026_10_29.md); chất lượng ảnh điện thoại/native/human chưa nghiệm thu |
 
-Phạm vi nghiệp vụ chuẩn: [SRS 1.1](../SRS_V1_1.md) và
-[phụ lục TP.HCM](../features/LOCAL_HANDOVER_AUCTION.md). Tài liệu yêu cầu mô tả đích
-đến, không chứng minh tính năng đã có. Giữ nguyên các snapshot v1.0.
+[ADR0050](../adr/0050-exchange-inspection-and-existing-obligations.md) sửa deadline
+Exchange và quyền nghĩa vụ cũ. GHN/carrier/driver được owner yêu cầu giữ nguyên
+chờ nhóm quyết định; không coi các route đó đã được nghiệm thu bảo mật.
+Nghiệp vụ chuẩn là [SRS1.1](../SRS_V1_1.md), [phụ lục](../features/LOCAL_HANDOVER_AUCTION.md)
+và ADR hiện hành. Checkpoint có ngày trong SESSION_STATE/report là lịch sử nguồn,
+không thay contract/code/tests mới hoặc gate.
 
 ## 2. Dựng môi trường mới
 
@@ -77,6 +72,21 @@ khởi động khi còn migration chưa áp dụng. Dữ liệu PostgreSQL cũ c
 [runbook cutover](../refactor/MIG06_CUTOVER_RUNBOOK.md).
 DB đang có: khi migration thêm collection, chạy `db:migrate` rồi `db:bootstrap`
 theo ADR để cập nhật app role, không reset/reseed dữ liệu.
+
+Khi nhận bản ghép main29/10: dừng API/worker trước migration. Giữ nguyên cả hai
+0039 (khác full ID); 0041 phục hồi validator review hiện hành nếu 0039 của main
+đến sau khi máy đã áp dụng0040. Không sửa checksum, chạy lại backfill0040 hoặc
+reset DB. Xem [bằng chứng tích hợp](MAIN_SYNC_2026_10_29.md).
+
+Gói catalog recovery thêm0042: dừng API/worker rồi chạy `pnpm db:migrate` trước
+source mới. Backfill projection/index từ current catalog revision, không đổi
+business version; không seed lại. Không thêm collection/quyền. Mới kiểm trong QA,
+chưa áp dụng DB chính; [ADR0055](../adr/0055-listing-catalog-recovery.md).
+
+Gói đường nhanh thêm0043/sourceGroup: dừng API/worker và migrate, cập nhật web/RN/
+Admin cùng enum DuplicateSource. Không backfill nguồn từ nhãn; legacy thiếu nguồn
+gốc giữ Limited khi đánh giá mới. Import mặc định dry-run, nguồn không website
+cần ID tổ chức do biên tập xác minh; [ADR0056](../adr/0056-listing-assist-fast-paths.md).
 
 Seed chỉ cho local, không tự đổi mật khẩu account đã tồn tại. Xem tài khoản mẫu ở
 [hướng dẫn RN](../REACT_NATIVE_START.md); mật khẩu theo cấu hình local của người nhận.
@@ -117,8 +127,9 @@ Các đường dẫn trong bảng tính từ root repo.
 | Phiên/token | `packages/session-client/src/session-client.ts`; `apps/api/src/modules/auth/` | ADR 0003/0019; session tests; `auth.e2e-spec.ts`, `obligations.e2e-spec.ts` |
 | Màn hình RN | `apps/mobile-react-native/src/app/` → `src/features/{shelf,account,auth,drafts,addresses}` | [UI rules](../design/UI_CODING_RULES.md), [components](../design/UI_COMPONENTS.md) |
 | UI dùng chung | `apps/mobile-react-native/src/core/ui/`; `packages/brand/v1.1/` | `/ui` và `/design` chỉ bật khi `EXPO_PUBLIC_DESIGN_PREVIEW=1`; dữ liệu mẫu không là API |
-| Operations | `apps/admin-web/src/features/review/` và `src/core/` | ADR 0010; `apps/admin-web/tests/browser.mjs` |
-| User web | `apps/user-web/src/app/router.tsx`, `src/pages/`, `src/services/` | Listing/purchase/auction/inbox/exchange dùng API thật; exchange chat/report/review deferred. `tests/integration.mjs` và `tests/exchange-integration.mjs` dùng QA riêng |
+| Hành trình/điều hướng | Web AccountOverviewPage/MemberGuidePage; RN account/guide; Admin WorkspaceStart | [Bản đồ và checklist nhóm](../ui/JOURNEY_CLARITY_2026_10_28.md), `pnpm test:journeys:browser` |
+| Operations | `apps/admin-web/src/features/{review,reviews}/` và `src/core/` | ADR 0010; `apps/admin-web/tests/browser.mjs` |
+| User web | `apps/user-web/src/app/router.tsx`, `src/pages/`, `src/services/` | Listing/purchase/auction/inbox/exchange/review dùng API thật. ExchangeDetailPage đã gọi messages/reportIssue; xử lý tranh chấp còn giới hạn như bảng Exchange ở trên. `tests/integration.mjs` và `tests/exchange-integration.mjs` dùng QA riêng |
 | Catalog/listing | `apps/api/src/modules/catalog/`, `listings/` | ADR 0005–0006/0009/0011–0012; catalog/listing/media E2E |
 | Ảnh listing | `apps/api/src/modules/media/`; `src/media-worker.ts` | ADR 0008; `media.e2e-spec.ts`; tests dùng storage fake có nhãn |
 | Địa chỉ/báo giá | `apps/api/src/modules/addresses/`, `quotes/`; listing fulfillment | ADR 0014–0016; addresses/quotes E2E |
@@ -128,8 +139,10 @@ Các đường dẫn trong bảng tính từ root repo.
 | Delivery overdue | `orders/orders.service.ts`, `order-expiry.service.ts`; `src/order-worker.ts` | ADR 0025; `delivery-overdue.e2e-spec.ts` |
 | Purchase chat | `modules/purchases/`, purchase listing projection; user-web ChatPage | Migration0014; giữ24h không là checkout Order; `/purchase-chat` auth riêng |
 | Auction/point Order | `modules/auctions/` và migration0008–0013 | ADR0030, auctions.e2e; settlement source không tự đóng READINESS |
+| Hành trình đấu giá xuyên vai trò | Web Create/My/DetailAuction, RN auction/send-to-auction, Admin operations/intakes | [QA real API](../ui/AUCTION_JOURNEY_2026_10_29.md), `pnpm test:auctions:browser`; API0.60 đi cùng client; dừng ở payment hold |
 | Live/inbox | `auction.gateway.ts`, `auction-live.service.ts`, `modules/notifications/` | ADR0031/32; mutation REST, ceiling private; migration0015 |
 | Wishlist/price assist | `modules/wishlist/`, `price-assist/` | Wishlist API/RN; ADR0028/29 và PRICE_ASSIST_REPORT, cờ tắt mặc định |
+| Review/uy tín | `modules/reviews/`, migration0040; web `src/features/reviews/`, RN `src/features/reviews/`, Admin `src/features/reviews/` | [ADR0052](../adr/0052-transaction-reviews-and-reputation.md); `transaction-reviews.e2e-spec.ts`, `pnpm test:reviews:browser` (API build + RN export dùng URL QA trước chạy) |
 | Schema/DB bất biến | `apps/api/src/database/mongo/` (migrations, `transaction.ts`), `*-invariants`/`check*` trong module, `src/integrity/` | Validator/index/quyền/kiểm lúc commit là một phần logic ([bản đồ](../refactor/MIG02_MODEL_MAP.md)); `prisma/migrations/` chỉ là lịch sử PostgreSQL cho import |
 
 Tên schema/receipt lịch sử có thể vẫn chứa `Unpaid` dù projection hỗ trợ paid Order.
@@ -216,11 +229,23 @@ pnpm --filter @used-books/admin-web test:browser
 Để kiểm thử RN web, đặt `EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:3009/api/v1`
 và `EXPO_PUBLIC_DESIGN_PREVIEW=1` trong **môi trường terminal QA** khi chạy
 `pnpm --filter @used-books/mobile-react-native export:web`, rồi `pnpm test:public:browser`.
+
+Gói kiểm chứng nhiều hành trình có lệnh `pnpm test:journey-gate` (10 suite browser,
+chạy tuần tự vì dùng chung port/cache). Xem [chuẩn bị, ma trận và giới hạn](../ui/JOURNEY_VERIFICATION_2026_10_28.md).
+Runner từ chối Mongo ngoài localhost:57017/`*_test`/`rs-test`, kiểm artifact API/RN
+và QA API base của RN; không tự build, khởi động hay seed DB. Chạy `--list` để
+xem từng phạm vi; `--only=chat,exchange` ghi các suite khác NOT_RUN và tổng PARTIAL.
+Kết quả máy nằm ở `.tmp/journey-gate/result.json`; PASS này không đóng READINESS
+hoặc thay kiểm chứng native, storage thật và người dùng thử từ entry.
 Runner kiểm cả catalog `/ui`, vì vậy bản export này cần bật cờ preview.
 Không ghi đè `.env` RN của người đang dùng app.
 Runner quản lý fixture API port 3009, ảnh 3010 và web 8087; không chiếm các port đó
 bằng process khác. Phải export lại với URL app trước khi dùng bundle cho demo khác.
 Web regression không thay kiểm tra native, và fake storage không là bằng chứng Supabase.
+Suite `--only=listing-ai` dùng AI/storage fake, real API/Mongo/Sharp và kiểm
+mất ACK/retry/gửi duyệt cùng nháp. `pnpm benchmark:listing-ai --samples=1` cũng
+mặc định fake; thêm `--live` mới gọi NVIDIA với ảnh/nguồn giá tổng hợp, tối đa5
+lượt mỗi tính năng. Xem [cách chạy và giới hạn](../features/LISTING_AI_JOURNEY_2026_10_29.md).
 Thay biểu tượng launcher/splash: chạy `pnpm brand:app-icons` để sinh PNG từ SVG logo
 gốc, rồi build lại APK. Hot reload JS không cập nhật tài nguyên native.
 
@@ -237,7 +262,7 @@ kết quả mong đợi và cách xử lý lỗi mà không bỏ quy tắc nghi�
 4. Có thể demo API Order riêng bằng Swagger và dữ liệu thử, nhưng dừng tại InTransit
    hoặc review ở lane DirectDelivery; không gọi đó là mua hoàn chỉnh. Auction web/
    purchase chat có luồng thật từng phần; completion ViaPoint chưa đóng gate.
-   Ví/topup/pickup đều là mô phỏng, Exchange/register/profile vẫn có scaffold.
+   Ví/topup/pickup là mô phỏng; Exchange/register đã có API thật, profile còn giới hạn.
 5. Nếu chưa cấu hình storage hoặc catalog chưa duyệt, trình bày đúng trạng thái bị chặn.
    Limiter hiện chặn sau 5 login/account/IP/15 phút, tính cả lần đúng; tránh đăng nhập
    lặp liên tục khi demo team. Không tắt limiter hoặc xóa counters trên DB app để né.

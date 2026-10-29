@@ -29,13 +29,20 @@ import { BookIdentity } from "./catalog-picker";
 import { DraftCoverPhoto } from "./draft-cover-photo";
 import { executeLifecycle, lifecycleIntent } from "./lifecycle-command";
 import { MemberNavigation } from "../navigation/member-navigation";
+import { useLocalSearchParams, router } from "expo-router";
+import { ApiError } from "@used-books/session-client";
 
 export function DraftsScreen() {
   const { client, state } = useSession(),
     cache = useQueryClient();
   const foreground = useForeground();
+  const params = useLocalSearchParams<{ listingId?: string }>();
+  const linkedId =
+    typeof params.listingId === "string" ? params.listingId : null;
+  const ownerId = state.status === "authenticated" ? state.user.id : null;
   const [filter, setFilter] = useState("");
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selection, setSelected] = useState<string | null>(null);
+  const selected = selection ?? linkedId;
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string;
     version: number;
@@ -45,7 +52,7 @@ export function DraftsScreen() {
   const createKey = useRef<string | null>(null);
 
   const drafts = useInfiniteQuery({
-    queryKey: ["drafts", filter],
+    queryKey: ["drafts", ownerId, filter],
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) =>
       client.request(
@@ -60,14 +67,15 @@ export function DraftsScreen() {
   });
 
   const allDrafts = useQuery({
-    queryKey: ["drafts-metrics"],
-    queryFn: () => client.request("/me/listings?channel=Marketplace&limit=50", draftPage),
+    queryKey: ["drafts-metrics", ownerId],
+    queryFn: () =>
+      client.request("/me/listings?channel=Marketplace&limit=50", draftPage),
     enabled: foreground,
     refetchInterval: foreground ? 15000 : false,
   });
 
   const detail = useQuery({
-    queryKey: ["draft", selected],
+    queryKey: ["draft", ownerId, selected],
     queryFn: () => client.request(`/me/listings/${selected}`, privateDraft),
     enabled: !!selected,
     refetchOnWindowFocus: false,
@@ -90,16 +98,20 @@ export function DraftsScreen() {
     },
   });
 
-  if (selected && detail.data)
+  const inaccessible =
+    detail.error instanceof ApiError &&
+    [401, 403, 404].includes(detail.error.status);
+  if (selected && detail.data && !inaccessible)
     return (
       <DraftEditor
         key={selected}
         initial={detail.data}
         onBack={() => {
           setSelected(null);
+          if (linkedId) router.replace("/drafts");
           void cache.invalidateQueries({ queryKey: ["drafts"] });
           void cache.invalidateQueries({ queryKey: ["drafts-metrics"] });
-          void cache.removeQueries({ queryKey: ["draft", selected] });
+          void cache.removeQueries({ queryKey: ["draft", ownerId, selected] });
         }}
       />
     );
@@ -120,7 +132,10 @@ export function DraftsScreen() {
           title="Về danh sách"
           wine
           secondary
-          onPress={() => setSelected(null)}
+          onPress={() => {
+            setSelected(null);
+            if (linkedId) router.replace("/drafts");
+          }}
         />
       </Screen>
     );
@@ -197,8 +212,6 @@ export function DraftsScreen() {
             TỦ SÁCH CỦA TÔI · QUẢN LÝ BÀI ĐĂNG
           </AppText>
         </View>
-
-
       </View>
 
       {/* Bento Stats & Quick Action Hero */}
@@ -261,7 +274,9 @@ export function DraftsScreen() {
               justifyContent: "center",
             }}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
+            >
               <View
                 style={{
                   width: 6,
@@ -300,7 +315,9 @@ export function DraftsScreen() {
               justifyContent: "center",
             }}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
+            >
               <View
                 style={{
                   width: 6,
@@ -339,7 +356,9 @@ export function DraftsScreen() {
               justifyContent: "center",
             }}
           >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 3 }}
+            >
               <View
                 style={{
                   width: 6,
@@ -445,8 +464,13 @@ export function DraftsScreen() {
           <AppText kind="bold" color={stitchTokens.wineDark}>
             Chưa có bài đăng nào trong mục này
           </AppText>
-          <AppText kind="small" color={stitchTokens.roseBrown} style={{ textAlign: "center" }}>
-            Các ấn bản bạn tạo, gửi duyệt hoặc đang niêm yết sẽ xuất hiện tại đây.
+          <AppText
+            kind="small"
+            color={stitchTokens.roseBrown}
+            style={{ textAlign: "center" }}
+          >
+            Các ấn bản bạn tạo, gửi duyệt hoặc đang niêm yết sẽ xuất hiện tại
+            đây.
           </AppText>
         </View>
       ) : null}
@@ -500,7 +524,10 @@ export function DraftsScreen() {
                     ) : undefined
                   }
                   titleNode={
-                    <BookIdentity id={d.currentRevision.content.bookId} compact />
+                    <BookIdentity
+                      id={d.currentRevision.content.bookId}
+                      compact
+                    />
                   }
                   actionTitle={actionTitle}
                   onActionPress={() => setSelected(d.id)}

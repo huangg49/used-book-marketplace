@@ -1,5 +1,6 @@
 // Real merged Nest API, disposable QA DB; local fake storage, no production email.
 import assert from "node:assert/strict";
+import { frontendUxJourney } from "./frontend-ux.mjs";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
@@ -22,7 +23,7 @@ const { createServer } = await import(
 const origin = "http://127.0.0.1:5184";
 process.env.VITE_API_BASE_URL = base;
 process.env.AUTH_MAIL_PROVIDER = "local";
-const evidence = path.join(root, ".impeccable/review/integration-main");
+const evidence = path.join(root, "apps/user-web/test-results/exchange");
 await mkdir(evidence, { recursive: true });
 let fixture, server, browser;
 try {
@@ -156,14 +157,14 @@ try {
     });
     await page.screenshot({ path: path.join(evidence, name), fullPage: true });
   }
-  async function login(page, email, returnPath) {
+  async function login(page, email, returnPath, arrivalPath = returnPath) {
     await page.goto(
       `${origin}/login?returnUrl=${encodeURIComponent(returnPath)}`,
     );
     await page.getByLabel(/^Email/).fill(email);
     await page.getByLabel(/^Mật khẩu/).fill(password);
     await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
-    await page.waitForURL(origin + returnPath);
+    await page.waitForURL(origin + arrivalPath);
   }
   // The current entry is the shared conversation sheet. Both members need a
   // real saved receiving address before choosing books, as required by the API.
@@ -249,6 +250,7 @@ try {
   const exchanges = await fixture.api("/exchanges", fixture.member.accessToken);
   assert.equal(exchanges.items.length, 1);
   const id = exchanges.items[0].id;
+  await frontendUxJourney(page, evidence, chatPath);
   const current = await fixture.api(`/me/purchase-conversations/${conversationId}`, fixture.member.accessToken);
   assert.equal(current.terms.activeExchangeId, id);
   // Re-enter through the inbox after the ambiguous result was resolved. The
@@ -257,7 +259,9 @@ try {
   await page.locator(`a[href="${chatPath}"]`).first().click();
   await page.getByRole("button", { name: "Hủy đề nghị", exact: true }).waitFor();
   await capture(page, "exchange-proposal-desktop.png");
-  await login(page, "member@operations.test", `/exchange/${id}`);
+  // A legacy Exchange URL redirects to the shared conversation; wait for its
+  // stable destination rather than racing the intermediate route.
+  await login(page, "member@operations.test", `/exchange/${id}`, chatPath);
   await page.waitForURL(origin + chatPath);
   await page.getByRole("button", { name: "Hủy đề nghị", exact: true }).waitFor();
   // Keep the recipient's existing session; polling reflects the real proposal.
