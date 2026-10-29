@@ -1,26 +1,27 @@
 # Điểm lưu hiện tại — 29/10/2026
 
-## Review data Gemini và phúc tra v2 — 29/10/2026
+## Hoàn thiện data AI sau bàn giao Gemini — 29/10/2026
 
-- Owner chuyển bàn giao Gemini/v2 để kiểm; nhánh `codex/listing-ai-data-review`.
-  Phúc tra base0de9cf5, commit subject
-  `docs(ai): verify dataset rework and isolate remaining gaps`.
+- Owner giao Codex làm nốt; nhánh `codex/listing-ai-data-finalization`, base271d99c,
+  commit subject `fix(qa): finalize listing AI dataset validation and corpus`.
   [Review/finding](../../qa-data/listing-ai/REVIEW_2026_10_29.md),
-  [prompt sửa còn lại](../../qa-data/listing-ai/GEMINI_REWORK_V3.md),
-  [evidence v2](../../qa-data/listing-ai/review-2026-10-29/rework-v2-evidence.json).
-- V2 giữ NEEDS_REWORK_PARTIAL, không import/nghiệm thu. 25JPEG Sharp decode và
-  metadata/hash khớp,24hash độc lập,15ISBN có nguồn NXB,1sách nhiều tác giả,
-  0field thiếu locator về hình thức. Tiki canonical đã cóProduct/Offer;11/15cuốn
-  exact theo nhãn, chưa là11cuốn nghiệm thu. 9file snapshot cốt lõi khớp digest.
-- Tái lập baseline22PASS/0FAIL/1PARTIAL/1BLOCKED/1NOT_RUN và9/9negative Gemini
-  trên bản sao. 8probe bổ sung còn lọt: JPEG23byte không scan, sai size/dimension,
-  sibling path escape, source của fieldEvidence thiếu, ngàykhôngtồn tại, review
-  flags thiếu, timestampnguồn tươnglai, casequarantine vẫnactive. Raw11file giữ
-  nguyên. Case95k còn trong file.cases nên runner vẫn chạy; năm Lược sử2024 chưa
-  thấy bằng chứng. Không coi mọi finding đãRESOLVED như changelog Gemini.
-- Human/real-camera NOT_RUN, READINESS không đổi. Chỉ docs/evidence, ảnh/raw
-  ignored; không chạy app/DB/AI/GHN, không gửi message agent khác. Bước tiếp
-  sửa checker/corpus/locator theo promptv3;11/15 và gate khác có thể giữPARTIAL.
+  [bộ kiểm/cách chạy](../../qa-data/listing-ai/README.md),
+  [evidence cuối](../../qa-data/listing-ai/review-2026-10-29/finalization-evidence.json).
+- Lúc nhận đã có v3dang dở: giữ12file snapshot/hash và mọi ảnh trước sửa. Bộ
+  kiểm chuẩn được lưu Git, Sharp raster decode/Zod schema/realpath trước đọc,
+  source/date/review flags/ownership và active/quarantine;2runner local là wrapper.
+  PASS29tests fixture tổng hợp độc lập và CLI/dataset, technicalPASS/0finding.
+- Data local ignored:25raw/25ảnh không đổi bytes,24active/hash,1quarantine95k,
+  15ISBN,1case nhiều tác giả. Bỏ năm chưa chắc còn trongedition, Lược sửyearnull;
+  đối chiếu3năm in Trẻ bằng bảng nguồn, giữIDlegacy.11/15nguồn giá vẫnPARTIAL,
+  không biến likely/out-of-stock/blocked thành nguồn đạt.0importcandidates.
+- Đọc40URL:37HTTP200 mới có timestamp/hash;3Trẻ timeout dùng snapshotreviewv2
+  có nhãn riêng, không gọi40nguồn mớiPASS. Human/real-camera/live-model NOT_RUN,
+  quyền ảnhunknown, READINESS không đổi. Không chạy app/DB/AI/GHN; Mongo chính
+  vẫn dừng. Docs/diffchecks; chỉ commitlocal, chưa push/PR/merge/deploy.
+- Gói sửa kỹ thuật hoàn tất. Dùng `pnpm data:listing-ai:test` và
+  `pnpm data:listing-ai:check --write-report`; bước kế tiếp là review dữ liệu/
+  corpus thực trong QA có quyền riêng, không cần thêm vòng chuyển Gemini.
 
 ## Chuẩn bị giao data cho Gemini — 29/10/2026
 

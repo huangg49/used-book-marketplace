@@ -4,9 +4,9 @@ Thư mục đã chuẩn bị cho Gemini/Antigravity ngày 29/10/2026.
 Repo base `fc9ce22`, nhánh chuẩn bị `codex/listing-ai-data-handoff`.
 
 - [Prompt giao việc đầy đủ](GEMINI_PROMPT.md): đưa nguyên file cho Gemini đọc.
-- Đã có hai lượt review: [kết quả hiện tại](REVIEW_2026_10_29.md) và
-  [prompt sửa phần còn lại sau v2](GEMINI_REWORK_V3.md). Không suy report exit0
-  thành nghiệm thu; data vẫn NEEDS_REWORK_PARTIAL.
+- Codex đã hoàn thiện bộ kiểm và gói local sau v3: [kết quả hiện tại](REVIEW_2026_10_29.md).
+  Technical PASS; coverage11/15 và nghiệm thu vẫn PARTIAL. Các prompt Gemini là
+  lịch sử giao việc; không cần chuyển qua agent khác để sửa checker nữa.
 - [Mẫu catalog](templates/books.example.json),
   [mẫu quan sát giá](templates/price-observations.example.json),
   [mẫu nguồn](templates/sources.example.json),
@@ -23,6 +23,23 @@ C:\Users\DESKTOP\Documents\WDP391\used-book-marketplace\qa-data\listing-ai\incom
 Hướng dẫn/template được lưu Git. Dữ liệu thu thập/ảnh trong incoming được ignore,
 chưa phải tài sản đã duyệt để commit hoặc đưa vào DB. Chia sẻ qua Git chỉ sau khi
 rà soát nguồn/quyền dùng/dữ liệu riêng; không dùng env/token trong gói này.
+
+## Bộ kiểm dùng lại
+
+```sh
+pnpm data:listing-ai:test
+pnpm data:listing-ai:check
+pnpm data:listing-ai:check --write-report
+```
+
+[Validator](validator.mjs) dùng Sharp/Zod đã cài ở API/session-client, không thêm
+dependency. [Tests](validator.test.mjs) tự sinh fixture và xóa đúng thư mục tạm có
+guard; chạy được khi chưa có incoming private. [CLI](validate.mjs) mặc định chỉ
+đọc, `--write-report` mới ghi incoming/validation/report.json; `--dir=<folder>`
+chọn corpus khác cùng schema. JSON, paths/image bytes/schema/date/reference sai
+trả exit1. Exit0 nghĩa technical PASS, **không** thay coverage/acceptance report.
+Human review, real-camera quality và model evaluation luôn NOT_RUN ở bộ kiểm
+offline này; nó không tự xác minh ý nghĩa locator, quyền dùng hoặc ấn bản ngoài web.
 
 Đây là gói **chuẩn bị data**: không gọi AI trả phí, chạy app, import/seed/migrate,
 đụng GHN hoặc thay source/contract. Không thay
