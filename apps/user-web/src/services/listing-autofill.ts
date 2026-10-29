@@ -1,7 +1,9 @@
 import {
   autofillSuggestion,
+  findIsbnMatches,
   type AutofillSuggestion,
 } from "@used-books/session-client";
+import { session } from './api';
 import {
   ensureDraft,
   uploadOnce,
@@ -55,5 +57,14 @@ export function createAutofillRequest(
       autofillSuggestion,
       { mediaIds },
     );
+  };
+}
+
+export function createIsbnLookup(attempt: DraftAttempt, channel?: 'Auction') {
+  return async (files: File[]) => {
+    if (!files.length || files.length > 3) throw new Error('Chọn từ 1 đến 3 ảnh để tìm ISBN.');
+    const draft = await ensureDraft(attempt, channel), ids: string[] = [];
+    for (const file of files) ids.push(await uploadOnce(attempt, draft, file));
+    return findIsbnMatches(session, draft.entityId, ids);
   };
 }

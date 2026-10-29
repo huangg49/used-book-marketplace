@@ -8,6 +8,8 @@ import { AutofillAssistService } from './autofill-assist.service.js';
 import { AutofillImages, StorageAutofillImages } from './autofill-images.js';
 import { AutofillModel, autofillModelFromConfig } from './autofill-model.js';
 import { CatalogRecoveryService } from './catalog-recovery.service.js';
+import { IsbnMatchesService } from './isbn-matches.service.js';
+import { IsbnBarcodeReader } from './isbn-barcode-reader.js';
 
 const reader = (config: ConfigService) => (key: string) => {
   const value = config.get<unknown>(key);
@@ -21,6 +23,8 @@ const reader = (config: ConfigService) => (key: string) => {
   providers: [
     AutofillAssistService,
     CatalogRecoveryService,
+    IsbnMatchesService,
+    IsbnBarcodeReader,
     {
       provide: AutofillModel,
       inject: [ConfigService],

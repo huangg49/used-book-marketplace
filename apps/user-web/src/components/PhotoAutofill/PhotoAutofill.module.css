@@ -313,3 +313,23 @@
     grid-column: 1 / -1;
   }
 }
+
+.searchControls:not(details) {
+  display: grid;
+  gap: 12px;
+}
+details.searchControls > summary {
+  min-height: 44px;
+  padding: 8px 0;
+  box-sizing: border-box;
+  cursor: pointer;
+  color: var(--shop-wine);
+  font-size: 0.875rem;
+}
+details.searchControls[open] > :not(summary) {
+  margin-top: 12px;
+}
+details.searchControls > summary:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
+}

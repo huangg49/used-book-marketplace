@@ -1,8 +1,8 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
 Cập nhật29/10/2026 theo main `aed674f` đã ghép cùng các gói Member/review/auction local
-bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.62.0** (194operations/30controllers); registry có55
-migration MongoDB (đến0042), không suy từ tiền tố file lớn nhất. Migration
+bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.63.0** (196operations/30controllers); registry có56
+migration MongoDB (đến0043), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
 Phạm vi28/10: nhóm **bỏ Forum/Cộng đồng sách** theo [ADR0051](../adr/0051-remove-forum-from-project-scope.md).
@@ -31,7 +31,7 @@ chưa có API/session hoặc parity với RN.
 | Ví | Ledger/holds/history, topup simulator/VNPay sandbox/IPN/QueryDR/expiry | Chưa có withdrawal/payout production hoặc đối soát rút tiền đầy đủ |
 | Review/uy tín | Exchange/DirectOrder/PointOrder Completed, sửa/xóa48h, bảo mật hai chiều, reply chờ duyệt, Staff/Admin, public aggregate; web/RN | [ADR0052](../adr/0052-transaction-reviews-and-reputation.md), [evidence](../features/TRANSACTION_REVIEWS_REPORT.md); không tự mở completion/settlement hoặc native/human gate |
 | Việc đang chờ | Web/RN năm nhóm việc từ state thật, link đúng hồ sơ, RN đơn tải tiếp; Staff/Admin duyệt bài/đầu sách | [ADR0053](../adr/0053-state-derived-work-inbox.md), [evidence/phạm vi](../ui/WORK_INBOX_2026_10_28.md); không là tổng nghĩa vụ toàn sản phẩm, các bàn điểm/review vẫn riêng |
-| AI | Đọc ảnh + gợi ý giá nối Member web/RN; tìm lại catalog khi OCR sai theo ADR0055 | [Luồng AI](../features/LISTING_AI_JOURNEY_2026_10_29.md), [catalog recovery/evidence](../features/LISTING_CATALOG_RECOVERY_2026_10_29.md); chất lượng ảnh điện thoại/native/human chưa nghiệm thu |
+| AI | Web/RN: ISBN trước model, đọc ảnh, tìm catalog và khoảng giá tham chiếu trước phân tích AI | [Luồng AI](../features/LISTING_AI_JOURNEY_2026_10_29.md), [catalog recovery](../features/LISTING_CATALOG_RECOVERY_2026_10_29.md), [đường nhanh/evidence](../features/LISTING_ASSIST_FAST_PATHS_2026_10_29.md); chất lượng ảnh điện thoại/native/human chưa nghiệm thu |
 
 [ADR0050](../adr/0050-exchange-inspection-and-existing-obligations.md) sửa deadline
 Exchange và quyền nghĩa vụ cũ. GHN/carrier/driver được owner yêu cầu giữ nguyên
@@ -82,6 +82,11 @@ Gói catalog recovery thêm0042: dừng API/worker rồi chạy `pnpm db:migrate
 source mới. Backfill projection/index từ current catalog revision, không đổi
 business version; không seed lại. Không thêm collection/quyền. Mới kiểm trong QA,
 chưa áp dụng DB chính; [ADR0055](../adr/0055-listing-catalog-recovery.md).
+
+Gói đường nhanh thêm0043/sourceGroup: dừng API/worker và migrate, cập nhật web/RN/
+Admin cùng enum DuplicateSource. Không backfill nguồn từ nhãn; legacy thiếu nguồn
+gốc giữ Limited khi đánh giá mới. Import mặc định dry-run, nguồn không website
+cần ID tổ chức do biên tập xác minh; [ADR0056](../adr/0056-listing-assist-fast-paths.md).
 
 Seed chỉ cho local, không tự đổi mật khẩu account đã tồn tại. Xem tài khoản mẫu ở
 [hướng dẫn RN](../REACT_NATIVE_START.md); mật khẩu theo cấu hình local của người nhận.

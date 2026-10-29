@@ -6,3 +6,4 @@ export * from "./work-inbox";
 export * from "./order-response";
 export * from "./listing-assist";
 export * from "./catalog-recovery";
+export * from "./assist-fast-paths";

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.62.0
+  version: 0.63.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -2018,6 +2018,98 @@ paths:
         "429":
           $ref: "#/components/responses/ListingError"
         "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /listings/{listingId}/isbn-matches:
+    post:
+      operationId: findListingIsbnMatches
+      tags: [Listings]
+      summary: Decode book EAN-13 locally before AI; no model, quota or listing mutation
+      description: Read-only; current ACTIVE MEMBER owner of an editable single-book listing. No Idempotency-Key required. Results are advisory and must never be recorded as an AI suggestion decision.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: listingId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AutofillSuggestionRequest"
+      responses:
+        "200":
+          description: Current advisory result without model call
+          headers:
+            Server-Timing:
+              schema: { type: string }
+              description: Fixed stage name and duration only; no identifiers or image content.
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListingIsbnMatches"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /listings/{listingId}/price-reference:
+    post:
+      operationId: getListingPriceReference
+      tags: [Listings]
+      summary: Read a rule-calculated price reference without AI, quota or persistence
+      description: Read-only; current ACTIVE MEMBER owner of an editable single-book listing. No Idempotency-Key required. Results are advisory and must never be recorded as an AI suggestion decision.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: listingId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PriceSuggestionRequest"
+      responses:
+        "200":
+          description: Current advisory result without model call
+          headers:
+            Server-Timing:
+              schema: { type: string }
+              description: Fixed stage name and duration only; no identifiers or image content.
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListingPriceReference"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
@@ -12364,6 +12456,59 @@ components:
               pattern: ^97[89][0-9]{10}$
             - type: "null"
           description: ISBN-13 with a valid checksum (ISBN-10 converted); does not prove the title.
+    ListingIsbnMatches:
+      type: object
+      additionalProperties: false
+      required: [listingId, status, isbns, catalog, serverTime]
+      properties:
+        listingId: { type: string, format: uuid }
+        status: { type: string, enum: [Found, NotFound, Ambiguous, Unavailable] }
+        isbns:
+          type: array
+          uniqueItems: true
+          maxItems: 6
+          items: { type: string, pattern: '^97[89][0-9]{10}$' }
+        catalog:
+          anyOf:
+            - $ref: "#/components/schemas/ListingCatalogMatches"
+            - type: "null"
+        serverTime: { type: string, format: date-time }
+    ListingPriceReference:
+      type: object
+      additionalProperties: false
+      required: [listingId, bookId, inputFingerprint, status, evidenceLevel, rules, range, sources, missing, dataAsOf, generatedAt, expiresAt]
+      properties:
+        listingId: { type: string, format: uuid }
+        bookId: { type: string, format: uuid }
+        inputFingerprint: { type: string, pattern: '^[0-9a-f]{64}$' }
+        status: { type: string, enum: [Ready, NeedsMoreData, Refused] }
+        evidenceLevel:
+          $ref: "#/components/schemas/PriceEvidenceLevel"
+        rules:
+          type: array
+          maxItems: 16
+          items: { type: string }
+        range:
+          anyOf:
+            - type: object
+              additionalProperties: false
+              required: [low, high]
+              properties:
+                low: { type: integer, minimum: 10000, maximum: 1000000 }
+                high: { type: integer, minimum: 10000, maximum: 1000000 }
+            - type: "null"
+        sources:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/PriceSource"
+        missing:
+          type: array
+          maxItems: 6
+          items: { type: string }
+        dataAsOf: { type: [string, "null"], format: date-time }
+        generatedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
     ListingCatalogMatch:
       type: object
       additionalProperties: false
@@ -12545,6 +12690,9 @@ components:
         - url
         - excluded
       properties:
+        originGroup:
+          type: [string, "null"]
+          description: Canonical source organization or site; null means independence is unverified. Legacy cached answers may omit this.
         ref:
           type: string
           pattern: ^s[0-9]{1,2}$
@@ -12579,6 +12727,7 @@ components:
                 - Stale
                 - OtherEdition
                 - AskingPrice
+                - DuplicateSource
             - type: "null"
           description: Why this source was shown but not used; null when used. AskingPrice marks
             other sellers' asking prices, which are shown for reference but never set the range.
@@ -12640,7 +12789,7 @@ components:
           $ref: "#/components/schemas/PriceEvidenceLevel"
         rules:
           type: array
-          maxItems: 12
+          maxItems: 16
           items:
             type: string
             pattern: ^[A-Z0-9-]{2,40}$

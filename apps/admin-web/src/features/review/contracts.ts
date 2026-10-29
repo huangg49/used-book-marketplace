@@ -143,8 +143,9 @@ export const priceAssistReview = z.object({
       condition: z.enum(["LikeNew", "Good", "Fair", "Worn"]).nullable(),
       observedAt: time,
       url: z.string().nullable(),
+      originGroup: z.string().nullable().optional(),
       excluded: z
-        .enum(["Outlier", "Stale", "OtherEdition", "AskingPrice"])
+        .enum(["Outlier", "Stale", "OtherEdition", "AskingPrice", "DuplicateSource"])
         .nullable(),
     }),
   ),

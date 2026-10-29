@@ -1,3 +1,5 @@
+import { findPriceReference, type PriceReference } from '@used-books/session-client';
+import { session } from './api';
 import {
   priceSuggestion,
   suggestionInput,
@@ -18,6 +20,7 @@ export function createListingPriceRequest(attempt: DraftAttempt) {
     catalog: CatalogInput,
     files: File[],
     phase: (value: PricePhase) => void,
+    onReference?: (value: PriceReference) => void,
   ) => {
     if (!files.length)
       throw new Error("Thêm ít nhất một ảnh bản sách trước khi gợi ý giá.");
@@ -29,6 +32,9 @@ export function createListingPriceRequest(attempt: DraftAttempt) {
     // A single Ready photo is sufficient evidence to request a suggestion.
     // Final submission reuses it and uploads the remaining selected photos.
     await uploadOnce(attempt, draft, files[0]!);
+    if (onReference) {
+      try { onReference(await findPriceReference(session, draft.entityId, { ...input, bookId: book.entityId })); } catch { /* AI/manual entry remain available if the fast reference cannot be read. */ }
+    }
     phase("model");
     return {
       listingId: draft.entityId,

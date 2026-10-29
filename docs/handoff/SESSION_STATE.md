@@ -1,39 +1,44 @@
 # Điểm lưu hiện tại — 29/10/2026
 
-## AI listing: phục hồi tìm đầu sách sau OCR — 29/10/2026
+## AI listing: ISBN/giá tham chiếu trước AI và nguồn độc lập — 29/10/2026
 
-- Owner duyệt gói phát triển sản phẩm; nhánh `codex/listing-catalog-recovery`,
-  base48a3150; commit subject `feat(listings): recover catalog matches after imperfect OCR`.
-  [Báo cáo/source/evidence](../features/LISTING_CATALOG_RECOVERY_2026_10_29.md),
-  [ADR0055](../adr/0055-listing-catalog-recovery.md).
-- API đọc catalog riêng, auth hiện tại/owner/ACTIVE/editable single listing;
-  Confirmed hoặc own Pending. Indexed windows có giới hạn, fuzzy/swapped title,
-  ràng buộc ISBN/số tập và nhãn mơ hồ; không sửa AI receipt hoặc trừ quota.
-  Web/RN tự đối chiếu sau đọc ảnh, sửa từ khóa/tìm lại không gọi AI, khóa kết
-  quả cũ khi sửa/lỗi, hiển thị ấn bản và xác nhận chọn, không tự ghi đè form.
-- Contract0.62/194operations/30controllers, registry55 đến0042. Migration mới
-  backfill recoveryKeys/index, writer/seed/legacy transform dùng cùng derivation;
-  không sửa checksum cũ. Chỉ áp dụng QA; DB chính chưa migrate. Trước bật source
-  mới, dừng API/worker rồi `pnpm db:migrate`, không reset/reseed.
-- Offline phát lại24scan đã xem: matcher cũ đúng ấn bản15/24, mới top1=18/24,
-  top3=22/24, top5=22/24,9ca nhiều ứng viên. Đây là catalog retrieval, không là
-  tăng OCR accuracy/holdout/human acceptance. Không gọi model/đọc12holdout.
-- PASS API277unit +1legacy transform, shared55/web253/RN164, HTTP recovery8 và
-  hồi quy Autofill/catalog28, Mongo schema27; contract/routes/typecheck toàn
-  workspace có script/API build/web build/RN export. Browser web và RN web
-  real API/Mongo/Sharp +fake AI/storage: giữ input/lost ACK, tìm lại/confirm,
-  web submit một PendingReview trên cùng nháp; web320/390/768/1440/RNweb320/390.
-  Xem ảnh giao diện; detector5target0finding. Native/human/real-camera/live
-  storage/live PostgreSQL import NOT_RUN; READINESS giữ nguyên.
-- QA replica57017/rs-test được bật riêng, browser tự dọn DB; cuối phiên dọn DB
-  test của gói và dừng QA. Mongo chính vẫn Exited, không chạy seed/import/main
-  migration; không sửa GHN/carrier/Driver/env. Chỉ commit local, chưa push/PR/
-  merge/deploy, remote CI chưa kiểm gói mới. Teammate work được giữ nguyên.
-- Chẩn đoán trước48a3150: Nemotron endpoint trả200 nhưng còn đọc sai, Gemma4
-  timeout3ca không headers; không đổi model/prompt.12holdout vẫn0call, reviewed
-  vẫnfalse. [Lịch sử số liệu/journal](../features/LISTING_AI_CORPUS_2026_10_29.md).
-  Bước tiếp review tích hợp/native/human; chỉ mở model comparison/holdout theo
-  kế hoạch riêng sau khi có endpoint ứng viên khả dụng.
+- Owner duyệt nâng chất lượng/tốc độ/UX hai tính năng đã có; nhánh
+  `codex/listing-assist-fast-paths`, base9f93bae; commit subject
+  `feat(listings): add ISBN and price reference fast paths`.
+  [Báo cáo/evidence/tái lập](../features/LISTING_ASSIST_FAST_PATHS_2026_10_29.md),
+  [ADR0056](../adr/0056-listing-assist-fast-paths.md).
+- Web/RN quét EAN-13 local trước model; khớp catalog thì xác nhận chọn, chưa AI/
+  quota. Nhiều ISBN phải chọn mã; không khớp/decoder unavailable còn AI/nhập tay.
+  Worker có giới hạn pixel/heap/deadline,2scan/process, cache/coalescing2phút;
+  auth/media được kiểm lại sau đọc ảnh. Ý định đọc AI giữ qua mất ACK cùng bộ ảnh.
+- Read-only price-reference có rule range/ngày/nguồn, không gọi model/lookup/
+  quota/receipt. UI cho xác nhận mức tham chiếu trong lúc AI chờ/lỗi, ghi rõ cách
+  tính. AI về không tự đổi giá, tham chiếu là giá thủ công; clearing attribution
+  bao gồm previous suggestion đang refresh để replay không gắn nhầm applied=true.
+- Nguồn độc lập theo tổ chức + registrable domain (PSL), không dùng nhãn hiển thị;
+  dedup nhóm giá mới/cũ, giữ ưu tiên giá bìa biên tập. Không biết nguồn gốc thì
+  Limited, không tự điền mapping. Import dry-run/apply/replay kiểm calendar date,
+  thêm mapping còn thiếu theo facts khớp; xung đột abort toàn batch trong transaction.
+- Contract0.63/196operations/30controllers, registry56 đến0043 optional sourceGroup.
+  Chỉ QA đã migrate/import tổng hợp. DB chính chưa migrate/import; trước source
+  mới dừng API/worker rồi migrate, cập nhật web/RN/Admin cùng enum, không seed/reset.
+- PASS API286unit/shared59/web253/RN164/Admin219; HTTP mới11 +hồi quy28, Mongo
+  schema27; typecheck workspace có script, API/web build/RN web export, contract/
+  routes/lint liên quan. Browser web/RNweb real API/Mongo/Sharp/ZXing worker với
+  fake AI/storage: ISBN0model/quota, giá tham chiếu khi AI pending, một submit
+  PendingReview với reference là manual/applied=false, lost ACK/input/source
+  changes. Web320/390/768/1440/RNweb320/390, ảnh được xem; detector8target0finding.
+- Không paid model call, không dùng24scan/12holdout để tuning; native/real-camera/
+  live storage/human acceptance NOT_RUN trong gói, READINESS giữ nguyên. Owner cho
+  biết teammate đã thử tính năng gốc ổn; đây là gói nâng cấp và kiểm hồi quy.
+  QA DB/users/roles được dọn, QA dừng; Mongo chính vẫn Exited. Không GHN/carrier/
+  Driver/env/model/prompt; chỉ commitlocal, chưa push/PR/CI remote/merge/deploy.
+- Gói trước9f93bae: [catalog recovery](../features/LISTING_CATALOG_RECOVERY_2026_10_29.md),
+  offline24scan cũ đúng ấn bản15/24 →top3=22/24 (không là OCR/human acceptance).
+  Chẩn đoán48a3150: [journal](../features/LISTING_AI_CORPUS_2026_10_29.md),
+  Nemotron còn đọc sai, Gemma4 timeout;12holdout0call. Không sửa lịch sử này.
+- Bước tiếp: review tích hợp theo TEAMWORK, kiểm client/ảnh thực tế trong phạm vi
+  đã giao; chỉ mở model comparison theo kế hoạch riêng khi có endpoint khả dụng.
 
 ## Hoàn thiện data AI sau bàn giao Gemini — 29/10/2026
 

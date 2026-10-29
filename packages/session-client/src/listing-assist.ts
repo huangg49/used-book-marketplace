@@ -35,8 +35,9 @@ const source = z.object({
   condition: bookCondition.nullable(),
   observedAt: z.string(),
   url: z.string().nullable(),
+  originGroup: z.string().nullable().optional(),
   excluded: z
-    .enum(["Outlier", "Stale", "OtherEdition", "AskingPrice"])
+    .enum(["Outlier", "Stale", "OtherEdition", "AskingPrice", "DuplicateSource"])
     .nullable(),
 });
 export const priceSuggestion = z.object({
@@ -221,6 +222,7 @@ export const excludedLabel = {
   Stale: "không dùng: dữ liệu cũ",
   OtherEdition: "không dùng: ấn bản khác",
   AskingPrice: "chỉ để tham khảo, không dùng tính khoảng giá",
+  DuplicateSource: "không dùng: trùng nguồn gốc với quan sát đã chọn",
 } as const;
 
 const autofillBook = z.object({

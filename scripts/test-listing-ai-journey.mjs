@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
 import { createServer as httpServer } from "node:http";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import {
   createAiQa,
   qaMetadata as syntheticMetadata,
@@ -27,6 +27,7 @@ const { createServer } = await import(
 const web = "http://127.0.0.1:5184",
   rn = "http://127.0.0.1:8087";
 const artifacts = path.join(root, ".tmp/listing-ai-journey");
+const fastPaths = process.env.LISTING_AI_FAST_PATHS === "1";
 // Opt-in: validated local cover scan + recorded live output. No paid calls in browser QA.
 let sample = null;
 if (process.env.LISTING_AI_CORPUS_RESULT) {
@@ -74,13 +75,40 @@ if (process.env.LISTING_AI_CORPUS_RESULT) {
     ),
   };
 }
+if (fastPaths) {
+  assert.equal(
+    sample,
+    null,
+    "Fast-path synthetic fixtures must not replace a corpus replay",
+  );
+  const { isbnImage } = await import("../apps/api/test/helpers/isbn-image.ts");
+  const metadata = { ...syntheticMetadata, isbn: "9786041234567" };
+  sample = {
+    metadata,
+    photo: await isbnImage(),
+    read: { ...metadata, category: undefined, missing: [] },
+  };
+}
 const qaMetadata = sample?.metadata ?? syntheticMetadata;
 await mkdir(artifacts, { recursive: true });
+// An interrupted or failed run must never leave an older PASS as its result.
+await rm(path.join(artifacts, "result.json"), { force: true });
 let fixture, server, rnServer, browser;
 const errors = [],
   checkpoints = [],
   timings = [];
 const button = (p, name) => p.getByRole("button", { name, exact: true });
+function collectFastTimings(page) {
+  page.on("response", (response) => {
+    const scope = response.url().split("/").pop();
+    if (["isbn-matches", "price-reference"].includes(scope))
+      timings.push({
+        scope,
+        http: response.status(),
+        stages: response.headers()["server-timing"] ?? null,
+      });
+  });
+}
 async function capture(p, name, width) {
   await p.setViewportSize({ width, height: 900 });
   await p.evaluate(async () => {
@@ -99,7 +127,7 @@ async function capture(p, name, width) {
     fullPage: false,
   });
 }
-function loseFirst(p, suffix) {
+function loseFirst(p, suffix, beforeReply) {
   const calls = [];
   let lose = true;
   const handler = async (route) => {
@@ -109,6 +137,7 @@ function loseFirst(p, suffix) {
       body: route.request().postData(),
     });
     const response = await route.fetch();
+    await beforeReply?.();
     if (response.headers()["server-timing"])
       timings.push({
         scope: suffix,
@@ -184,6 +213,7 @@ try {
   browser = await chromium.launch({ headless: true });
   const p = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   p.setDefaultTimeout(20000);
+  collectFastTimings(p);
   p.on("pageerror", (e) => errors.push(e.message));
   await p.goto(web + "/login?returnUrl=%2Fsell");
   await p.getByLabel(/^Email/).fill("member@operations.test");
@@ -209,6 +239,29 @@ try {
   await button(photoPanel, "Đọc thông tin").click();
   await finalize;
   await fixture.processMedia();
+  if (fastPaths) {
+    await photoPanel
+      .getByRole("heading", { name: "Đối chiếu từ mã vạch ISBN" })
+      .waitFor();
+    assert.equal(fixture.counters.autofill, 0);
+    assert.equal(
+      await fixture.db.collection("price_assist_usage").countDocuments(),
+      0,
+    );
+    await button(photoPanel, `Chọn đầu sách: ${qaMetadata.title}`).click();
+    assert.equal(await p.locator("#title").inputValue(), "Giữ tên đang nhập");
+    await button(p.getByRole("dialog"), "Hủy").click();
+    for (const width of [1440, 768, 390, 320]) {
+      await photoPanel
+        .getByRole("heading", { name: "Đối chiếu từ mã vạch ISBN" })
+        .scrollIntoViewIfNeeded();
+      await capture(p, `web-isbn-fast-${width}`, width);
+    }
+    await button(photoPanel, "Đọc chữ bằng AI").click();
+    checkpoints.push(
+      "Web ISBN: real EAN-13/Sharp/worker to catalog with zero model/quota, explicit confirmation/cancel, then optional AI intent",
+    );
+  }
   await photoPanel.getByRole("alert").waitFor();
   await button(photoPanel, "Đọc thông tin").click();
   await button(photoPanel, "Dùng Tên sách").waitFor();
@@ -303,7 +356,13 @@ try {
     await p.locator(`input[name="${key}"]`).nth(index).locator("..").click();
   await button(p, "Tiếp tục").click();
   await p.locator("#salePrice").fill("125000");
-  const lostPrice = loseFirst(p, "price-suggestions");
+  let releasePriceProof;
+  const priceProof = fastPaths
+    ? new Promise((resolve) => {
+        releasePriceProof = resolve;
+      })
+    : Promise.resolve();
+  const lostPrice = loseFirst(p, "price-suggestions", () => priceProof);
   await lostPrice.install();
   const coverFinalize = p.waitForResponse(
     (r) => r.url().endsWith("/finalize") && r.request().method() === "POST",
@@ -316,6 +375,25 @@ try {
   await coverFinalize;
   await fixture.processMedia();
   const pricePanel = p.locator('section[aria-labelledby="price-assist-title"]');
+  if (fastPaths) {
+    const ref = pricePanel.getByLabel("Giá tham chiếu theo quy tắc");
+    for (const width of [1440, 390, 320]) {
+      await ref.scrollIntoViewIfNeeded();
+      await capture(p, `web-reference-pending-${width}`, width);
+    }
+    await ref
+      .getByRole("button", { name: /^Chọn mức tham chiếu/ })
+      .first()
+      .click();
+    assert.equal(await p.locator("#salePrice").inputValue(), "125000");
+    await button(p, "Dùng giá tham chiếu").click();
+    assert.equal(await p.locator("#salePrice").inputValue(), "40000");
+    await p.locator("#salePrice").fill("125000");
+    releasePriceProof?.();
+    checkpoints.push(
+      "Rule reference arrives before AI, confirms explicit manual price, never overwrites user price when AI later completes",
+    );
+  }
   await pricePanel.getByRole("alert").waitFor();
   assert.equal(await p.locator("#salePrice").inputValue(), "125000");
   await button(p, "Xem lại gợi ý giá").click();
@@ -334,7 +412,7 @@ try {
   assert.equal(await p.locator("#salePrice").inputValue(), "125000");
   await button(p, "Dùng giá gợi ý").click();
   assert.equal(await p.locator("#salePrice").inputValue(), "40000");
-  await pricePanel.locator("summary").click();
+  await pricePanel.getByText(/^Nguồn giá và nguồn bị loại/).click();
   for (const width of [1440, 768, 390, 320]) {
     await pricePanel.scrollIntoViewIfNeeded();
     await capture(p, `web-price-${width}`, width);
@@ -356,6 +434,16 @@ try {
     .getByRole("button", { name: /^Dùng / })
     .first()
     .click();
+  if (fastPaths) {
+    await pricePanel
+      .getByText("Khoảng tham chiếu theo quy tắc", { exact: true })
+      .click();
+    await pricePanel
+      .getByRole("button", { name: /^Chọn mức tham chiếu/ })
+      .first()
+      .click();
+    await button(p, "Dùng giá tham chiếu").click();
+  }
   await button(p, "Thêm nơi gửi sách").click();
   const originDialog = p.getByRole("dialog").filter({
     has: p.getByRole("heading", { name: "Nơi gửi sách", exact: true }),
@@ -374,7 +462,7 @@ try {
   assert.equal((await submitted).status(), 200);
   const outcome = await fixture.db
     .collection("price_suggestions")
-    .findOne({ "outcome.applied": true });
+    .findOne({ "outcome.applied": !fastPaths });
   assert.ok(outcome);
   assert.equal(outcome.outcome.chosenSalePrice, 40000);
   const listing = await fixture.db
@@ -383,10 +471,13 @@ try {
   assert.equal(listing.moderation, "PendingReview");
   assert.equal(await fixture.db.collection("listings").countDocuments(), 1);
   checkpoints.push(
-    "web: same draft through AI, price evidence and real submit; one PendingReview listing; stored applied price 40000; changed condition invalidates prior suggestion",
+    fastPaths
+      ? "web: same draft to one PendingReview; selected rule reference stored as manual price 40000 with outcome.applied=false"
+      : "web: same draft through AI, price evidence and real submit; one PendingReview listing; stored applied price 40000; changed condition invalidates prior suggestion",
   );
   const np = await browser.newPage({ viewport: { width: 390, height: 900 } });
   np.setDefaultTimeout(20000);
+  collectFastTimings(np);
   np.on("pageerror", (e) => errors.push(e.message));
   await np.goto(rn + "/account");
   await np
@@ -424,6 +515,14 @@ try {
   const beforePhoto = fixture.counters.autofill;
   fixture.modes.autofill = "timeout";
   await button(np, "Đọc thông tin từ ảnh").click();
+  if (fastPaths) {
+    await np.getByText("Đối chiếu từ mã vạch ISBN", { exact: true }).waitFor();
+    assert.equal(fixture.counters.autofill, beforePhoto);
+    await button(np, "Đọc chữ bằng AI").click();
+    checkpoints.push(
+      "RN web ISBN: catalog result without a model call; optional AI preserves the original retry intent",
+    );
+  }
   await np.getByText(/Chưa đọc được ảnh/).waitFor();
   fixture.modes.autofill = "ok";
   await button(np, "Đọc thông tin từ ảnh").click();
@@ -476,10 +575,41 @@ try {
   await button(np, "Tiếp theo").click();
   await np.getByRole("button", { name: /^Bán trực tiếp/ }).click();
   await np.getByLabel("Giá bán (đồng)", { exact: true }).fill("125000");
-  const rnPrice = loseFirst(np, "price-suggestions");
+  let releaseRnProof;
+  const rnProof = fastPaths
+    ? new Promise((resolve) => {
+        releaseRnProof = resolve;
+      })
+    : Promise.resolve();
+  const rnPrice = loseFirst(np, "price-suggestions", () => rnProof);
   await rnPrice.install();
   const beforePrice = fixture.counters.price;
   await button(np, "Xem gợi ý giá").click();
+  if (fastPaths) {
+    await np
+      .getByRole("button", { name: /^Chọn mức tham chiếu/ })
+      .first()
+      .scrollIntoViewIfNeeded();
+    await capture(np, "rn-reference-pending-390", 390);
+    await np
+      .getByRole("button", { name: /^Chọn mức tham chiếu/ })
+      .first()
+      .click();
+    assert.equal(
+      await np.getByLabel("Giá bán (đồng)", { exact: true }).inputValue(),
+      "125000",
+    );
+    await button(np, "Dùng giá tham chiếu").click();
+    assert.equal(
+      await np.getByLabel("Giá bán (đồng)", { exact: true }).inputValue(),
+      "40000",
+    );
+    await np.getByLabel("Giá bán (đồng)", { exact: true }).fill("125000");
+    releaseRnProof?.();
+    checkpoints.push(
+      "RN web rule reference can be explicitly chosen while the AI response is pending; later AI does not overwrite the typed price",
+    );
+  }
   await np.getByText(/Chưa kết nối được máy chủ/).waitFor();
   assert.equal(
     await np.getByLabel("Giá bán (đồng)", { exact: true }).inputValue(),
@@ -487,7 +617,7 @@ try {
   );
   await button(np, "Xem lại gợi ý giá").click();
   await np
-    .getByText(/40.000/)
+    .getByRole("button", { name: /^Dùng / })
     .first()
     .waitFor();
   assert.equal(rnPrice.calls.length, 2);
@@ -511,7 +641,10 @@ try {
   await button(np, "Tiếp theo").click();
   const beforeMissing = fixture.counters.price;
   await button(np, "Xem lại gợi ý giá").click();
-  await np.getByText(/Chưa có dữ liệu giá có nguồn/).waitFor();
+  await np
+    .getByText(/Chưa có dữ liệu giá có nguồn/)
+    .first()
+    .waitFor();
   assert.equal(fixture.counters.price, beforeMissing);
   assert.equal(
     await np.getByLabel("Giá bán (đồng)", { exact: true }).inputValue(),
@@ -529,9 +662,11 @@ try {
     JSON.stringify(
       {
         status: "PASS",
-        source: sample
-          ? "real cover scan/API/Mongo/Sharp; replayed live output; synthetic QA prices; fake storage"
-          : "real API/Mongo/Sharp; fake AI/storage",
+        source: fastPaths
+          ? "synthetic EAN-13; real local decoder/API/Mongo/Sharp; fake AI/storage; synthetic prices"
+          : sample
+            ? "real cover scan/API/Mongo/Sharp; replayed live output; synthetic QA prices; fake storage"
+            : "real API/Mongo/Sharp; fake AI/storage",
         checkpoints,
         timings,
         native: "NOT_RUN",

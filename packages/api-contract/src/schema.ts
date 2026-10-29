@@ -835,6 +835,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/listings/{listingId}/isbn-matches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decode book EAN-13 locally before AI; no model, quota or listing mutation
+         * @description Read-only; current ACTIVE MEMBER owner of an editable single-book listing. No Idempotency-Key required. Results are advisory and must never be recorded as an AI suggestion decision.
+         */
+        post: operations["findListingIsbnMatches"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/listings/{listingId}/price-reference": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read a rule-calculated price reference without AI, quota or persistence
+         * @description Read-only; current ACTIVE MEMBER owner of an editable single-book listing. No Idempotency-Key required. Results are advisory and must never be recorded as an AI suggestion decision.
+         */
+        post: operations["getListingPriceReference"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/listings/{listingId}/catalog-matches": {
         parameters: {
             query?: never;
@@ -4010,6 +4050,39 @@ export interface components {
             /** @description ISBN-13 with a valid checksum (ISBN-10 converted); does not prove the title. */
             isbn: string | null;
         };
+        ListingIsbnMatches: {
+            /** Format: uuid */
+            listingId: string;
+            /** @enum {string} */
+            status: "Found" | "NotFound" | "Ambiguous" | "Unavailable";
+            isbns: string[];
+            catalog: components["schemas"]["ListingCatalogMatches"] | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        ListingPriceReference: {
+            /** Format: uuid */
+            listingId: string;
+            /** Format: uuid */
+            bookId: string;
+            inputFingerprint: string;
+            /** @enum {string} */
+            status: "Ready" | "NeedsMoreData" | "Refused";
+            evidenceLevel: components["schemas"]["PriceEvidenceLevel"];
+            rules: string[];
+            range: {
+                low: number;
+                high: number;
+            } | null;
+            sources: components["schemas"]["PriceSource"][];
+            missing: string[];
+            /** Format: date-time */
+            dataAsOf: string | null;
+            /** Format: date-time */
+            generatedAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
         ListingCatalogMatch: {
             book: components["schemas"]["PublicBook"];
             /** @enum {string} */
@@ -4070,6 +4143,8 @@ export interface components {
          */
         PriceSourceKind: "CoverPrice" | "EditorialReference" | "InternalAsking" | "CompletedSale" | "OnlineRetail";
         PriceSource: {
+            /** @description Canonical source organization or site; null means independence is unverified. Legacy cached answers may omit this. */
+            originGroup?: string | null;
             ref: string;
             kind: components["schemas"]["PriceSourceKind"];
             label: string;
@@ -4079,7 +4154,7 @@ export interface components {
             observedAt: string;
             url: string | null;
             /** @description Why this source was shown but not used; null when used. AskingPrice marks other sellers' asking prices, which are shown for reference but never set the range. */
-            excluded: ("Outlier" | "Stale" | "OtherEdition" | "AskingPrice") | null;
+            excluded: ("Outlier" | "Stale" | "OtherEdition" | "AskingPrice" | "DuplicateSource") | null;
         };
         PriceFactor: {
             text: string;
@@ -7664,6 +7739,78 @@ export interface operations {
             422: components["responses"]["ListingError"];
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    findListingIsbnMatches: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutofillSuggestionRequest"];
+            };
+        };
+        responses: {
+            /** @description Current advisory result without model call */
+            200: {
+                headers: {
+                    /** @description Fixed stage name and duration only; no identifiers or image content. */
+                    "Server-Timing"?: string;
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListingIsbnMatches"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getListingPriceReference: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PriceSuggestionRequest"];
+            };
+        };
+        responses: {
+            /** @description Current advisory result without model call */
+            200: {
+                headers: {
+                    /** @description Fixed stage name and duration only; no identifiers or image content. */
+                    "Server-Timing"?: string;
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListingPriceReference"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];
         };
     };

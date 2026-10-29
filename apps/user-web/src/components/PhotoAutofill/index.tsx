@@ -3,11 +3,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Camera, Check, ScanText, X } from "lucide-react";
 import {
   createAutofillRequest,
+  createIsbnLookup,
   type AutofillSuggestion,
 } from "../../services/listing-autofill";
 import type { DraftAttempt } from "../../services/listing-submission";
 import styles from "./PhotoAutofill.module.css";
-import type { CatalogMatch } from "@used-books/session-client";
+import type { CatalogMatch, IsbnMatches } from "@used-books/session-client";
 import { CatalogRecovery } from './CatalogRecovery';
 
 export type AutofillField =
@@ -63,6 +64,13 @@ export function PhotoAutofill({
     [attempt, channel],
   );
   const [files, setFiles] = useState<{ file: File; url: string }[]>([]);
+  const lookupIsbn = useMemo(() => createIsbnLookup(attempt, channel), [attempt, channel]);
+  const [barcode, setBarcode] = useState<IsbnMatches | null>(null);
+  const [barcodeIsbn, setBarcodeIsbn] = useState('');
+  const [barcodePhotos, setBarcodePhotos] = useState<File[]>([]);
+  const [readPhase, setReadPhase] = useState('');
+  const forcedAiPhotos = useRef<File[] | null>(null);
+  const barcodeStale = files.length !== barcodePhotos.length || files.some((p, i) => p.file !== barcodePhotos[i]);
   const [reading, setReading] = useState(false);
   const [error, setError] = useState<string>();
   const [result, setResult] = useState<AutofillSuggestion | null>(null);
@@ -113,11 +121,21 @@ export function PhotoAutofill({
       return previous.filter((_, i) => i !== index);
     });
   }
-  async function read() {
+  async function read(forceAi = false) {
     if (reading || !files.length) return;
     setReading(true);
     setError(undefined);
     try {
+      if (forceAi) forcedAiPhotos.current = files.map(item => item.file);
+      const sameForcedPhotos = forcedAiPhotos.current?.length === files.length && files.every((item, i) => item.file === forcedAiPhotos.current?.[i]);
+      if (!forceAi && !sameForcedPhotos) {
+        setReadPhase('Đang tìm mã vạch ISBN trên ảnh…');
+        const found = await lookupIsbn(files.map(item => item.file));
+        if (found.status === 'Ambiguous' || (found.status === 'Found' && found.catalog?.items.length)) {
+          setBarcode(found); setBarcodeIsbn(found.isbns.length === 1 ? found.isbns[0]! : ''); setBarcodePhotos(files.map(item => item.file)); setResult(null); return;
+        }
+      }
+      setBarcode(null); setReadPhase('Đang đọc thông tin bằng AI…');
       const next = await ask(files.map((item) => item.file));
       setResult(next);
       setResultPhotos(files.map((item) => item.file));
@@ -161,6 +179,15 @@ export function PhotoAutofill({
         Chụp bìa trước, gáy hoặc trang bản quyền. Trợ lý chỉ đọc chữ in trên
         sách; bạn kiểm tra và chọn từng thông tin.
       </p>
+      {reading ? <p role="status">{readPhase}</p> : null}
+      {barcode ? <div className={styles.recovery}>
+        <h4>Đối chiếu từ mã vạch ISBN</h4>
+        <p className={styles.help}>Thông tin đầu sách được lấy từ danh mục. Lượt đối chiếu này không gọi AI. Kiểm tra cuốn sách trước khi xác nhận chọn.</p>
+        {barcodeStale ? <p role="status">Ảnh đã đổi. Đọc lại trước khi chọn kết quả ISBN.</p> : null}
+        {barcode.status === 'Ambiguous' ? <><p>Có nhiều ISBN trên các ảnh. Chọn mã thuộc cuốn sách đang đăng.</p>{barcode.isbns.map(isbn => <button className={styles.useAll} type="button" key={isbn} disabled={disabled || reading || barcodeStale} onClick={() => setBarcodeIsbn(isbn)}>Đối chiếu ISBN {isbn}</button>)}</> : null}
+        {barcodeIsbn ? <CatalogRecovery key={barcodeIsbn} compact attempt={attempt} channel={channel} suggestion={null} initialHints={{ title: null, authors: [], isbn: barcodeIsbn, publisher: null, publicationYear: null, language: null, edition: null }} disabled={!!disabled || reading || barcodeStale} onPickBook={onPickBook} /> : null}
+        <button type="button" className={styles.useAll} disabled={disabled || reading || barcodeStale} onClick={() => void read(true)}>Đọc chữ bằng AI</button>
+      </div> : null}
       <div className={styles.photos}>
         {files.map((item, index) => (
           <figure key={item.url} className={styles.thumb}>

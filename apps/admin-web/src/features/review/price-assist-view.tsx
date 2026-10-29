@@ -53,7 +53,7 @@ export function PriceAssistView({ value }: { value: PriceAssistReview }) {
           {value.sources.map((s) => (
             <li key={s.ref} className={s.excluded ? "muted" : undefined}>
               {s.label} · {sourceKind[s.kind]} · {money(s.amount)} · {dateText(s.observedAt)}
-              {s.excluded ? " · không dùng tính khoảng giá" : ""}
+              {s.excluded === 'DuplicateSource' ? ' · trùng nguồn gốc, không dùng tính khoảng giá' : s.excluded ? " · không dùng tính khoảng giá" : ""}
               {s.url && (
                 <>
                   {" · "}

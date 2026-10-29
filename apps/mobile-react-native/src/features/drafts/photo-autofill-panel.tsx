@@ -3,6 +3,8 @@ import { View } from "react-native";
 import * as Crypto from "expo-crypto";
 import {
   autofillLabels,
+  findIsbnMatches,
+  type IsbnMatches,
   autofillSuggestion,
   autofillValue,
   createAssistRequest,
@@ -67,18 +69,32 @@ export function PhotoAutofillPanel({
     value: AutofillSuggestion;
   } | null>(null);
   const [error, setError] = useState("");
+  const [barcode, setBarcode] = useState<{ signature: string; value: IsbnMatches } | null>(null);
+  const [barcodeIsbn, setBarcodeIsbn] = useState('');
+  const [readPhase, setReadPhase] = useState('');
+  const forcedAiSignature = useRef<string | null>(null);
   const [replace, setReplace] = useState<AutofillField | null>(null);
   const [showFields, setShowFields] = useState(false);
   const [used, setUsed] = useState<AutofillField[]>([]);
   const stale = !!result && result.signature !== signature;
   const locked = disabled || busy || stale;
-  async function read() {
+  async function read(forceAi = false) {
     if (disabled || busyRef.current || !ids.length) return;
     busyRef.current = true;
     setBusy(true);
     setError("");
     const at = signature;
     try {
+      if (forceAi) forcedAiSignature.current = at;
+      if (!forceAi && forcedAiSignature.current !== at) {
+        setReadPhase('Đang tìm mã vạch ISBN trên ảnh…');
+        const found = await findIsbnMatches(client, listingId, ids);
+        if (!active.current || latest.current !== at) return;
+        if (found.status === 'Ambiguous' || (found.status === 'Found' && found.catalog?.items.length)) {
+          setBarcode({ signature: at, value: found }); setBarcodeIsbn(found.isbns.length === 1 ? found.isbns[0]! : ''); setResult(null); return;
+        }
+      }
+      setBarcode(null); setReadPhase('Đang đọc thông tin bằng AI…');
       const value = await ask(
         `/listings/${listingId}/autofill-suggestions`,
         autofillSuggestion,
@@ -124,6 +140,15 @@ export function PhotoAutofillPanel({
         Chọn ảnh bìa, gáy hoặc trang bản quyền. Bạn kiểm tra và chọn từng thông
         tin trước khi dùng.
       </AppText>
+      {busy ? <AppText accessibilityLiveRegion="polite">{readPhase}</AppText> : null}
+      {barcode ? <View style={{ gap: space.sm }}>
+        <AppText kind="bold">Đối chiếu từ mã vạch ISBN</AppText>
+        <AppText kind="small">Thông tin đầu sách được lấy từ danh mục. Lượt đối chiếu này không gọi AI. Kiểm tra cuốn sách trước khi xác nhận chọn.</AppText>
+        {barcode.signature !== signature ? <Notice tone="warning">Ảnh đã đổi. Đọc lại trước khi chọn kết quả ISBN.</Notice> : null}
+        {barcode.value.status === 'Ambiguous' ? <><AppText>Có nhiều ISBN trên các ảnh. Chọn mã thuộc cuốn sách đang đăng.</AppText>{barcode.value.isbns.map(isbn => <Button secondary key={isbn} title={`Đối chiếu ISBN ${isbn}`} disabled={disabled || busy || barcode.signature !== signature} onPress={() => setBarcodeIsbn(isbn)} />)}</> : null}
+        {barcodeIsbn ? <CatalogRecoveryPanel key={barcodeIsbn} compact listingId={listingId} suggestion={null} initialHints={{ title: null, authors: [], isbn: barcodeIsbn, publisher: null, publicationYear: null, language: null, edition: null }} disabled={disabled || busy || barcode.signature !== signature} onSelectBook={onSelectBook} /> : null}
+        <Button secondary title="Đọc chữ bằng AI" disabled={disabled || busy || barcode.signature !== signature} onPress={() => void read(true)} />
+      </View> : null}
       {ready.length ? (
         <View style={{ gap: space.sm }}>
           <AppText kind="label">Ảnh để đọc — tối đa 3</AppText>

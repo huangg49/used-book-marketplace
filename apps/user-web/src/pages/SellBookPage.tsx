@@ -1,4 +1,4 @@
-import { assistError, decisionFor, failLoading, finishLoading, startLoading, suggestionInput, type AssistForm, type AssistState } from "@used-books/session-client";
+import { clearAiPriceAttribution, type PriceReferenceState, assistError, decisionFor, failLoading, finishLoading, startLoading, suggestionInput, type AssistForm, type AssistState } from "@used-books/session-client";
 import { PriceAssistPanel } from "../components/PriceAssistPanel";
 import { createListingPriceRequest, type PricePhase } from "../services/listing-price-assist";
 import type { CatalogInput } from "../services/listing-submission";
@@ -184,6 +184,7 @@ export function SellBookPage() {
     exchangeValue: "",
   });
   const [assist, setAssist] = useState<AssistState>({ status: "idle" });
+  const [priceReference, setPriceReference] = useState<PriceReferenceState>(null);
   const [pricePhase, setPricePhase] = useState<PricePhase>("catalog");
   const priceToken = useRef(0), priceBusy = useRef(false);
   const requestPrice = useMemo(() => createListingPriceRequest(draftAttempt), [draftAttempt]);
@@ -206,7 +207,7 @@ export function SellBookPage() {
     const token = ++priceToken.current;
     setAssist(prev => startLoading(prev, assistKey, token));
     try {
-      const answer = await requestPrice(assistForm, assistCatalog, [...imageFiles], setPricePhase);
+      const answer = await requestPrice(assistForm, assistCatalog, [...imageFiles], setPricePhase, value => { if (priceToken.current === token) setPriceReference({ key: assistKey, value }); });
       setAssist(prev => finishLoading(prev, token, answer.listingId, answer.suggestion));
     } catch (error) {
       setAssist(prev => failLoading(prev, token, assistError(error)));
@@ -2620,7 +2621,7 @@ export function SellBookPage() {
                       )}
                     </fieldset>
                     {!auction && !bundle && formData.mode !== "Exchange" ? <div hidden={step !== 4}>
-                      <PriceAssistPanel state={assist} currentKey={assistKey} currentPrice={formData.salePrice} phase={pricePhase} disabled={submitting || hasAttempt} hasPhoto={imageFiles.length > 0} needsCatalog={!selectedBook} onAsk={() => void askWebPrice()} onApply={amount => {
+                      <PriceAssistPanel reference={priceReference} onApplyReference={amount => { setFormData(f => ({ ...f, salePrice: String(amount) })); setAssist(clearAiPriceAttribution); }} state={assist} currentKey={assistKey} currentPrice={formData.salePrice} phase={pricePhase} disabled={submitting || hasAttempt} hasPhoto={imageFiles.length > 0} needsCatalog={!selectedBook} onAsk={() => void askWebPrice()} onApply={amount => {
                         setFormData(prev => ({ ...prev, salePrice: String(amount) }));
                         setAssist(prev => prev.status === "ready" && prev.key === assistKey ? { ...prev, appliedPrice: amount } : prev);
                       }} />

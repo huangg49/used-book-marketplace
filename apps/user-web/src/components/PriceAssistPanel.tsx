@@ -1,3 +1,5 @@
+import { PriceReferencePanel } from './PriceReferencePanel';
+import type { PriceReferenceState } from '@used-books/session-client';
 import { useState } from "react";
 import {
   evidenceLabel,
@@ -24,6 +26,7 @@ export function PriceAssistPanel({
   disabled,
   hasPhoto,
   needsCatalog,
+  reference, onApplyReference,
   onAsk,
   onApply,
 }: {
@@ -34,6 +37,8 @@ export function PriceAssistPanel({
   disabled: boolean;
   hasPhoto: boolean;
   needsCatalog: boolean;
+  reference?: PriceReferenceState;
+  onApplyReference?: (amount: number) => void;
   onAsk: () => void;
   onApply: (amount: number) => void;
 }) {
@@ -96,6 +101,7 @@ export function PriceAssistPanel({
       {ready?.message ? (
         <p role="alert">{ready.message} Gợi ý trước vẫn được giữ.</p>
       ) : null}
+      <PriceReferencePanel state={reference ?? null} currentKey={currentKey} disabled={disabled || !hasPhoto} onApply={amount => onApplyReference?.(amount)} aiReady={!!value && !loading && !stale} />
       {value ? (
         <div className={styles.answer}>
           <p className={styles.evidence}>

@@ -661,6 +661,7 @@ export type PriceSourceKind =
   | 'OnlineRetail';
 // Curated, sourced price facts. Written only by the migrator-role import tool.
 export interface PriceReferenceDoc {
+  sourceGroup?: string | null;
   _id: string;
   bookId: string;
   isbn: string | null;
