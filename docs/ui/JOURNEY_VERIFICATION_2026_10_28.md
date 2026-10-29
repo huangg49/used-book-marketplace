@@ -1,5 +1,8 @@
 # Kiểm chứng các hành trình hiện có — 28/10/2026
 
+Mốc lịch sử: runner ở gói này có8suite. [Gói đấu giá29/10](AUCTION_JOURNEY_2026_10_29.md)
+thêm suite real API thành9; giữ kết quả8/8 bên dưới đúng source/ngày của nó.
+
 Gói được owner duyệt để kiểm chứng và sửa lỗi của chuỗi UX/Việc của tôi hiện có.
 Nhánh `codex/journey-verification`, base `7a7c217`; commit subject
 `fix(journeys): verify cross-app flows and restore mobile chat panels`.

@@ -14,6 +14,7 @@ export const suites = [
   { id: 'reviews', script: 'scripts/test-transaction-reviews.mjs', mongo: true, rn: true, scope: 'Web/RN web/Staff; real HTTP/Mongo; synthetic Completed fixtures; fake storage; no fulfillment claim' },
   { id: 'work-inbox', script: 'scripts/test-work-inbox.mjs', mongo: true, rn: true, scope: 'Web/RN web/Staff/Admin; real HTTP/Mongo; commands + synthetic paging/intakes; fake storage' },
   { id: 'auction-ui', script: 'apps/user-web/tests/auction-stage.mjs', scope: 'Web auction interface/motion; intercepted fixtures; not cross-role intake/auction fulfillment' },
+  { id: 'auction-journey', script: 'scripts/test-auction-journey.mjs', mongo: true, rn: true, scope: 'Member/Staff web + RN web; real intake/inspection/publish/bid/Buy Now/worker/payment; fake storage; stops at payment hold' },
 ];
 
 export function selectSuites(args) {
@@ -49,7 +50,7 @@ export function overallStatus(rows) {
   return rows.every(row => row.status === 'PASS') ? 'PASS' : 'PARTIAL';
 }
 
-async function rnUsesQaApi(directory) {
+export async function rnUsesQaApi(directory) {
   for (const item of await readdir(directory, { withFileTypes: true })) {
     const target = path.join(directory, item.name);
     if (item.isDirectory() && await rnUsesQaApi(target)) return true;

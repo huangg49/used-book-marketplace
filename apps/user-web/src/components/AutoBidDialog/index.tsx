@@ -8,6 +8,7 @@ import { playAuctionMotion, sheetFrames } from '../../lib/auction-motion'
 
 interface AutoBidDialogProps {
   isOpen: boolean
+  paused?: boolean
   onClose: () => void
   title: string
   pointName: string
@@ -36,30 +37,33 @@ function amountError(amount: number | null, floor: number, start: number, step: 
 
 /** Hộp thoại hai bước: nhập mức tối đa, rồi xác nhận ở màn hình sau. */
 export function AutoBidDialog(props: AutoBidDialogProps) {
-  const { isOpen, onClose, title, pointName, currentPrice, startPrice, step, floor, currentMax, busy, submissionError, onConfirm } = props
+  const { isOpen, paused = false, onClose, title, pointName, currentPrice, startPrice, step, floor, currentMax, busy, submissionError, onConfirm } = props
   const ref = useRef<HTMLDialogElement>(null)
+  const prepared = useRef(false)
   const confirmationHeading = useRef<HTMLHeadingElement>(null)
   const ids = useId()
   const [value, setValue] = useState<number | null>(floor)
   const [stage, setStage] = useState<'form' | 'confirm'>('form')
   const error = amountError(value, floor, startPrice, step)
-  useEffect(() => isOpen ? lockPageScroll() : undefined, [isOpen])
+  useEffect(() => isOpen && !paused ? lockPageScroll() : undefined, [isOpen, paused])
   useLayoutEffect(() => {
-    if (isOpen && stage === 'confirm') confirmationHeading.current?.focus()
-    else if (isOpen && stage === 'form' && ref.current?.open) ref.current.querySelector<HTMLInputElement>('input')?.focus()
-  }, [isOpen, stage])
+    if (isOpen && !paused && stage === 'confirm') confirmationHeading.current?.focus()
+    else if (isOpen && !paused && stage === 'form' && ref.current?.open) ref.current.querySelector<HTMLInputElement>('input')?.focus()
+  }, [isOpen, paused, stage])
 
   useEffect(() => {
     const dialog = ref.current
     if (!dialog) return
-    if (isOpen && !dialog.open) {
-      setValue(floor); setStage('form'); dialog.showModal()
+    if (!isOpen) prepared.current = false
+    if (isOpen && !paused && !dialog.open) {
+      if (!prepared.current) { setValue(floor); setStage('form'); prepared.current = true }
+      dialog.showModal()
       return playAuctionMotion(dialog, sheetFrames, 220)
     }
-    if (!isOpen && dialog.open) { dialog.close(); setStage('form') }
-    // Mở lại luôn bắt đầu từ mức tối thiểu mới nhất.
+    if ((!isOpen || paused) && dialog.open) dialog.close()
+    // A real reopen starts at the latest floor; role recovery keeps the draft.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen])
+  }, [isOpen, paused])
 
   useEffect(() => {
     const dialog = ref.current

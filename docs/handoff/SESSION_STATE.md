@@ -1,5 +1,30 @@
 # Điểm lưu hiện tại — 29/10/2026
 
+## Đấu giá xuyên vai trò — hoàn tất29/10/2026
+
+- Owner duyệt gói Seller→Staff→Buyer, nhánh `codex/auction-cross-role-journey`,
+  base3bfe70a; [phạm vi và ma trận](../ui/AUCTION_JOURNEY_2026_10_29.md).
+  Commit subject `fix(auctions): connect cross-role journeys and verify payment replay`.
+- Source: exact intake→auction link/nhãn state web/RN, nhận diện Seller bằng
+  private lookup trước control, copy lịch1–168h/Buy Now60giây/kiểm tra tình trạng.
+  API0.60 thêm query auctionId cho GET own-intakes,193operations/30controllers;
+  không migration/money/state-machine hoặc GHN/carrier/Driver.
+- Browser QA PASS14checkpoint: UI Seller/Staff/Buyer, năm intent replay,
+  50 lịch sử create/cancel thật, một Order/một hold300k; ví available200k/held300k
+  từ funding500k. Giữ intent qua lỗi đọc role, giữ lịch/mức Auto khi modal tạm ẩn.
+- PASS API232unit (trừ carrier-adapter), owner lookup HTTP/Mongo1ca (72filtered),
+  web251/RN161/Admin219; lint/typecheck/build liên quan/RN export, contract/routes,
+  runner4, detector7target0findings, docs/diff. Browser cuối operations/work-inbox/
+  auction-journey3suitePASS, tổngPARTIAL vì6NOT_RUN; auction-ui fixture đạt ở lượt
+  trước với source list không đổi. Native diff mới/human vẫn NOT_RUN/OPEN.
+- Fixture QA dừng nhận HTTP/đợi handler trước đóng Mongo để không cắt GET đang
+  chạy; cleanup cuối0DB/browser-user/portQA, services/QA đã dừng. Mongo chính vẫn
+  Exited, không start/reset/seed/migrate. READINESS giữ nguyên.
+- Remote07:11VN29/10: mainaed674f/PRmở0; RN CI mainFAIL,4workflow main khác vừa
+  đọc success. Chưa tích hợp chuỗi local/registry của nhóm, không tự nhập GHN.
+  Chỉ commit local, chưa push/PR/merge/deploy. Bước tiếp review/tích hợp API0.60
+  cùng client theo TEAMWORK, rồi native/human từ entry; không mở fulfillment.
+
 ## Kiểm chứng Android native và sửa lỗi — 28–29/10/2026
 
 - Owner duyệt bước tiếp; nhánh `codex/native-journey-verification`, base990a9a2;

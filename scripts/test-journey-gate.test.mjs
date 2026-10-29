@@ -3,7 +3,7 @@ import test from 'node:test';
 import { overallStatus, requireQaMongo, selectSuites, suites } from './test-journey-gate.mjs';
 
 test('the fixed suite allowlist excludes carrier/fulfillment suites and preserves serial order', () => {
-  assert.equal(selectSuites([]).length, 8);
+  assert.equal(selectSuites([]).length, 9);
   assert.deepEqual(selectSuites(['--only=operations,chat']).map(s => s.id), ['chat', 'operations']);
   assert.deepEqual(selectSuites(['--list']), []);
   assert.ok(suites.every(s => !/buy-now|carrier-adapter|transit/.test(s.script)));

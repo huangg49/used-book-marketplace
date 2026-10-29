@@ -1040,9 +1040,25 @@ export class AuctionIntakesService {
       })),
     };
   }
-  listMine(auth: Actor): Promise<Wire['AuctionIntakeList']> {
+  listMine(auth: Actor, auctionId?: string): Promise<Wire['AuctionIntakeList']> {
     return this.commands.read(auth, async (tx, actor) => {
       member(actor);
+      if (auctionId) {
+        // Exact primary-key lookups avoid scanning an owner's unbounded closed
+        // history, and neither lookup can return another seller's intake.
+        const auction = await tx.c.auctions.findOne({
+          _id: auctionId,
+          sellerId: actor._id,
+        });
+        const intake = auction
+          ? await tx.c.auction_intakes.findOne({
+              _id: auction.intakeId,
+              sellerId: actor._id,
+              auctionId,
+            })
+          : null;
+        return { items: intake ? [await this.project(tx, intake, false)] : [] };
+      }
       const rows = await tx.c.auction_intakes
         .find({ sellerId: actor._id }, { sort: { createdAt: -1 }, limit: 50 })
         .toArray();

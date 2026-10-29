@@ -1,7 +1,7 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
-Cập nhật28/10/2026 theo source tích hợp `7d92012` và các gói Member/review local đang
-bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.59.0** (193operations/30controllers); registry có52
+Cập nhật29/10/2026 theo source tích hợp `7d92012` và các gói Member/review/auction local
+bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.60.0** (193operations/30controllers); registry có52
 migration MongoDB (đến0040), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
@@ -124,6 +124,7 @@ Các đường dẫn trong bảng tính từ root repo.
 | Delivery overdue | `orders/orders.service.ts`, `order-expiry.service.ts`; `src/order-worker.ts` | ADR 0025; `delivery-overdue.e2e-spec.ts` |
 | Purchase chat | `modules/purchases/`, purchase listing projection; user-web ChatPage | Migration0014; giữ24h không là checkout Order; `/purchase-chat` auth riêng |
 | Auction/point Order | `modules/auctions/` và migration0008–0013 | ADR0030, auctions.e2e; settlement source không tự đóng READINESS |
+| Hành trình đấu giá xuyên vai trò | Web Create/My/DetailAuction, RN auction/send-to-auction, Admin operations/intakes | [QA real API](../ui/AUCTION_JOURNEY_2026_10_29.md), `pnpm test:auctions:browser`; API0.60 đi cùng client; dừng ở payment hold |
 | Live/inbox | `auction.gateway.ts`, `auction-live.service.ts`, `modules/notifications/` | ADR0031/32; mutation REST, ceiling private; migration0015 |
 | Wishlist/price assist | `modules/wishlist/`, `price-assist/` | Wishlist API/RN; ADR0028/29 và PRICE_ASSIST_REPORT, cờ tắt mặc định |
 | Review/uy tín | `modules/reviews/`, migration0040; web `src/features/reviews/`, RN `src/features/reviews/`, Admin `src/features/reviews/` | [ADR0052](../adr/0052-transaction-reviews-and-reputation.md); `transaction-reviews.e2e-spec.ts`, `pnpm test:reviews:browser` (API build + RN export dùng URL QA trước chạy) |

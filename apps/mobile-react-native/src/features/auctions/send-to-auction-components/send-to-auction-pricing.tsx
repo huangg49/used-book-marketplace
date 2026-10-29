@@ -67,7 +67,7 @@ export function SendToAuctionPricing({
         <View style={styles.headerRight}>
           <View style={styles.durationPill}>
             <AppText kind="small" style={styles.durationPillText}>
-              24 giờ
+              1–168 giờ
             </AppText>
           </View>
           <View style={styles.chevronWrapper}>
@@ -176,7 +176,7 @@ export function SendToAuctionPricing({
               Cho phép mua ngay
             </AppText>
             <AppText kind="small" style={styles.buyNowSubtitle}>
-              Áp dụng trước khi có lượt trả giá đầu tiên
+              Còn dùng được sau lượt trả giá khi giá hiện tại thấp hơn giá mua ngay. Người khác có 60 giây để trả cao hơn.
             </AppText>
           </View>
           <Switch

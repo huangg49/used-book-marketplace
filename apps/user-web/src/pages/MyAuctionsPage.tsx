@@ -128,12 +128,17 @@ function AuctionRow({
 }
 
 // Intakes before a session opens, plus books waiting to be collected back.
-const INTAKE_STATES: Partial<Record<MyIntake['state'], string>> = {
+const WAITING_INTAKE_STATES = new Set<MyIntake['state']>(['AwaitingDropoff', 'Received', 'NeedsEvidence', 'Passed', 'ReclaimRequired'])
+const INTAKE_STATES: Record<MyIntake['state'], string> = {
   AwaitingDropoff: 'Chờ bạn mang sách tới điểm',
   Received: 'Điểm đã nhận sách, chờ kiểm tra',
   NeedsEvidence: 'Điểm cần bạn bổ sung bằng chứng',
   Passed: 'Đã qua kiểm tra, bạn có thể đăng phiên',
   ReclaimRequired: 'Mời bạn tới điểm nhận lại sách',
+  Auctioning: 'Đã tạo phiên đấu giá',
+  Sold: 'Người thắng đã thanh toán',
+  Cancelled: 'Đã hủy lần gửi sách',
+  Reclaimed: 'Bạn đã nhận lại sách',
 }
 const RECLAIM: Record<string, string> = {
   SellerCancelled: 'Bạn đã rút sách khỏi đấu giá.',
@@ -235,7 +240,7 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
   return (
     <li className={styles.intake}>
       <div>
-        <span className={styles.intakeState}>{INTAKE_STATES[intake.state] ?? intake.state}</span>
+        <span className={styles.intakeState}>{INTAKE_STATES[intake.state]}</span>
         <h3>{intake.title}</h3>
         <p>
           <MapPin size={13} aria-hidden="true" /> {pointName ?? 'Điểm đã chọn'}
@@ -245,12 +250,14 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
           <p>{RECLAIM[intake.reclaimReason] ?? 'Sách cần được nhận lại.'}{intake.inspectionNote ? ` Ghi chú kiểm tra: ${intake.inspectionNote}` : ''}</p>
         )}
         {intake.state === 'NeedsEvidence' && <EvidenceForm intake={intake} onChanged={onChanged} />}
+        {intake.auctionId && <p>Mở phiên để xem lịch, trạng thái và kết quả đấu giá.</p>}
         {error && <p className={styles.urgent} role="alert">{error}</p>}
       </div>
       <div className={styles.intakeSide}>
         <span>Khởi điểm</span>
         <strong>{formatVnd(intake.startPrice)}</strong>
         <span>Bước {formatVnd(intake.step)}{intake.buyNowPrice !== null ? ` · mua ngay ${formatVnd(intake.buyNowPrice)}` : ''}</span>
+        {intake.auctionId && <Link to={ROUTES.auctionDetail(intake.auctionId)}>Xem phiên đấu giá <ArrowRight size={16} aria-hidden="true" /></Link>}
         {intake.state === 'Passed' && (
           <button type="button" className={styles.publish} disabled={busy} onClick={() => setPublishing(true)}>
             Đăng phiên
@@ -306,7 +313,7 @@ function SellerIntakes({
   });
   const intakes = useQuery({
     queryKey: ["my-auction-intakes", userId],
-    queryFn: getMyAuctionIntakes,
+    queryFn: () => getMyAuctionIntakes(),
     enabled: enabled && !focusId,
     retry: false,
     refetchInterval: 30_000,
@@ -335,7 +342,7 @@ function SellerIntakes({
     ? focus.data
       ? [focus.data]
       : []
-    : (intakes.data?.items ?? []).filter((i) => i.state in INTAKE_STATES);
+    : (intakes.data?.items ?? []).filter((i) => WAITING_INTAKE_STATES.has(i.state));
   const refresh = () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: ["my-auction-intakes"] }),
@@ -345,7 +352,7 @@ function SellerIntakes({
   return (
     <section className={styles.intakes} aria-labelledby="intakes-title">
       <div className={styles.intakesHead}>
-        <h2 id="intakes-title">Sách chờ đăng phiên</h2>
+        <h2 id="intakes-title">{focusId ? 'Lần gửi sách của bạn' : 'Sách chờ đăng phiên'}</h2>
         {focusId && (
           <button type="button" onClick={() => setParams({})}>
             Xem tất cả lần gửi

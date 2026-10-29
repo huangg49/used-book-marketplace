@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.59.0
+  version: 0.60.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -5729,11 +5729,19 @@ paths:
       operationId: listMyAuctionIntakes
       tags:
         - Auctions
-      description: Seller view of own intakes, newest first (max 50). Shelf code and Staff identities are
-        not exposed.
+      description: Seller view of own intakes, newest first (max 50). Optional auctionId filters
+        within the current caller's intakes before the limit, so an older auction remains identifiable.
+        Another seller's or an unknown auction returns an empty list. Shelf code and Staff identities are not exposed.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: auctionId
+          required: false
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: Successful read.

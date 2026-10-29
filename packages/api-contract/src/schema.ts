@@ -1941,7 +1941,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Seller view of own intakes, newest first (max 50). Shelf code and Staff identities are not exposed. */
+        /** @description Seller view of own intakes, newest first (max 50). Optional auctionId filters within the current caller's intakes before the limit, so an older auction remains identifiable. Another seller's or an unknown auction returns an empty list. Shelf code and Staff identities are not exposed. */
         get: operations["listMyAuctionIntakes"];
         put?: never;
         post?: never;
@@ -9926,7 +9926,9 @@ export interface operations {
     };
     listMyAuctionIntakes: {
         parameters: {
-            query?: never;
+            query?: {
+                auctionId?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

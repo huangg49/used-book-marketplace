@@ -189,8 +189,12 @@ export class AuctionsController {
   }
   @Get('me/auction-intakes')
   @Roles('MEMBER')
-  listMine(@Req() req: AuthenticatedRequest) {
-    return this.intakes.listMine(req.auth);
+  listMine(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
+    const input = this.input.query('listMyAuctionIntakes', query);
+    return this.intakes.listMine(
+      req.auth,
+      input.auctionId === undefined ? undefined : this.input.uuid(input.auctionId),
+    );
   }
   @Get('me/auction-intakes/:intakeId')
   @Roles('MEMBER')

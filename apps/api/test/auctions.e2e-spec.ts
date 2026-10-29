@@ -1312,6 +1312,40 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     await call('get', '/me/auctions?view=invalid', bidder).expect(400);
   });
 
+  it('owner auction lookup filters before the recent-intake limit and rechecks current authorization', async () => {
+    const first = await passedIntake();
+    const opened = await publish(first.intakeId, first.seller).expect(200);
+    const auctionId = opened.body.auctionId as string;
+    const historyListing = await saleListing(first.seller);
+    // Real commands create the history: no final-state fixture or raised limit.
+    for (let n = 0; n < 50; n++) {
+      const current = (await db.c.listings.findOne({ _id: historyListing.id }))!;
+      const next = await cmd('post', '/auction-intakes', intakeBody({ id: current._id, version: current.version }), first.seller).expect(200);
+      await cmd('post', `/auction-intakes/${next.body.intakeId}/cancel`, { expectedVersion: 1 }, first.seller).expect(200);
+    }
+    const recent = await call('get', '/me/auction-intakes', first.seller).expect(200);
+    expect(recent.body.items).toHaveLength(50);
+    expect(recent.body.items.some((i: { id: string }) => i.id === first.intakeId)).toBe(false);
+    const route = `/me/auction-intakes?auctionId=${auctionId}`;
+    const focused = await call('get', route, first.seller).expect(200);
+    validates('AuctionIntakeList', focused.body);
+    expect(focused.body.items).toHaveLength(1);
+    expect(focused.body.items[0]).toMatchObject({ id: first.intakeId, auctionId });
+    // The existing shared response requires the field but redacts it to null.
+    expect(focused.body.items[0].shelfCode).toBeNull();
+    expect(focused.body.items[0]).not.toHaveProperty('inspectorId');
+    expect((await call('get', route, await actor()).expect(200)).body.items).toEqual([]);
+    expect((await call('get', `/me/auction-intakes?auctionId=${randomUUID()}`, first.seller).expect(200)).body.items).toEqual([]);
+    await call('get', route).expect(401);
+    await call('get', route, staff).expect(403);
+    await call('get', '/me/auction-intakes?auctionId=not-a-uuid', first.seller).expect(400);
+    await db.c.users.updateOne({ _id: first.seller.id }, { $set: { status: 'LOCKED', updatedAt: new Date() }, $inc: { lockSeq: 1 } });
+    await call('get', route, first.seller).expect(403);
+    await db.c.users.updateOne({ _id: first.seller.id }, { $set: { status: 'ACTIVE', updatedAt: new Date() }, $inc: { lockSeq: 1 } });
+    await db.c.auth_sessions.updateOne({ _id: first.seller.sessionId }, { $set: { revokedAt: new Date() }, $inc: { lockSeq: 1 } });
+    await call('get', route, first.seller).expect(401);
+  });
+
   it('AC-AU01/02: approved shelf listings enter; intake holds commitment and slot', async () => {
     // ADR 0042 §Update 27/10: an approved shelf book (either channel, any
     // mode) may go to auction. The intake hides it from the marketplace

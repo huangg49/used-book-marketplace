@@ -343,15 +343,6 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
                 }}
               />
             )}
-            {focus.data &&
-              ["Cancelled", "Reclaimed", "Sold", "Auctioning"].includes(
-                focus.data.state,
-              ) && (
-                <AppText>
-                  Trạng thái hiện tại: {focus.data.state}. Lần gửi không còn ở
-                  bước nhắc việc trước đó.
-                </AppText>
-              )}
             <Button
               wine
               secondary
@@ -474,6 +465,8 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
             isLoading={focusId ? focus.isPending : intakes.isPending}
             onWithdraw={(item) => setWithdrawTarget(item)}
             onPublish={(item) => setPublishTarget(item)}
+            onOpenAuction={(id) => router.push({ pathname: "/auction", params: { id } })}
+            includeClosed={!!focusId}
             onSubmitEvidence={handleRequestSubmitEvidence}
             evidenceTextMap={evidenceMap}
             onChangeEvidenceText={(id, text) =>

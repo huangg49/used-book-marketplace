@@ -1,0 +1,92 @@
+{
+  "status": "PASS",
+  "startedAt": "2026-10-29T00:21:38.971Z",
+  "sourceHead": "3bfe70a300ca64ee56b013e9766c641fc72208f7",
+  "dirty": true,
+  "checks": [
+    {
+      "name": "QA actors/catalog/listings/point assignments prepared; no transaction states seeded",
+      "status": "PASS"
+    },
+    {
+      "name": "Seller shelf entry -> create intake with lost ACK -> one intake -> tracking",
+      "status": "PASS"
+    },
+    {
+      "name": "Assigned Staff receives book and records actual checklist Pass via UI",
+      "status": "PASS"
+    },
+    {
+      "name": "Exact intake -> scheduled publish/replay -> one auction -> seller opens now; premature bid/stale edit refused",
+      "status": "PASS"
+    },
+    {
+      "name": "RN web focused intake names the state and opens the exact real auction; not native acceptance",
+      "status": "PASS"
+    },
+    {
+      "name": "Web and RN ownership-read failure never becomes permission to self-bid; retry restores seller controls",
+      "status": "PASS"
+    },
+    {
+      "name": "Schedule and Auto drafts survive ownership revalidation failure; paused dialogs release recovery controls",
+      "status": "PASS"
+    },
+    {
+      "name": "Manual bid lost ACK keeps intent; Buy Now after bid opens real 60-second window; prohibited actors/edits refused",
+      "status": "PASS"
+    },
+    {
+      "name": "Fifty real create/cancel intakes do not hide the old auction owner; web/RN never offer self bidding",
+      "status": "PASS"
+    },
+    {
+      "name": "End-time refusal before sweep; two worker ticks yield one order; winner payment entry/deadline/ownership",
+      "status": "PASS"
+    },
+    {
+      "name": "Insufficient funds changes no ledger; payment replay holds money once and retains custody slot; stops before report acceptance",
+      "status": "PASS"
+    },
+    {
+      "name": "Focused intake failure stays an error; retry reopens the exact target",
+      "status": "PASS"
+    },
+    {
+      "name": "NeedsEvidence API setup -> seller UI answer/replay -> requester forbidden -> independent Staff Pass -> publish available",
+      "status": "PASS"
+    },
+    {
+      "name": "Cancelled intake remains readable at exact web/RN focus with no stale actions and no active commitment",
+      "status": "PASS"
+    }
+  ],
+  "limits": [
+    "Chromium web; not native",
+    "Fake storage and simulator funding",
+    "Real server time; no direct auction/order state fixture",
+    "No GHN/carrier/Driver or fulfillment/settlement",
+    "No human review or READINESS closure"
+  ],
+  "replay": {
+    "intake": 2,
+    "publish": 2,
+    "bid": 2,
+    "payment": 2,
+    "evidence": 2,
+    "allSameIntentVerified": true
+  },
+  "money": {
+    "pointOrdersForAuction": 1,
+    "paymentJournals": 1,
+    "finalPointOrderState": "Fulfilling",
+    "custodySlotRetained": true,
+    "walletAvailable": 200000,
+    "walletHeld": 300000
+  },
+  "cleanup": "PASS",
+  "finishedAt": "2026-10-29T00:23:15.825Z",
+  "browserRuntimeErrors": 0,
+  "cancelledQaReads": 1,
+  "routeErrors": []
+}

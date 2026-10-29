@@ -28,8 +28,8 @@ const STEPS = [
   },
   {
     step: '02',
-    title: 'Trả giá minh bạch 24 giờ',
-    body: 'Trả giá theo bước hoặc chốt mua ngay nếu người bán cho phép. Mức tự động bảo mật tuyệt đối, không giữ tiền trước.',
+    title: 'Trả giá theo lịch phiên',
+    body: 'Người bán chọn thời lượng 1–168 giờ. Trả giá theo bước hoặc chọn mua ngay nếu còn khả dụng; mức tự động chỉ mình bạn xem được, trả giá không giữ tiền trong ví.',
     icon: Gavel,
   },
   {

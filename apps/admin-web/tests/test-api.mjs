@@ -56,10 +56,31 @@ export async function createTestApi({
   const { bootstrapRoles } = await load("database/mongo/roles.js"),
     { migrate } = await load("database/mongo/migrate.js");
   const admin = new MongoClient(rootUrl);
-  let app, migrator, images;
+  let app, migrator, images, requestsIdle;
+  let activeRequests = 0;
   const close = async () => {
     try {
-      await app?.close();
+      // Nest destroys Mongo providers before closing its HTTP adapter. Drain
+      // accepted reads first so a final browser poll cannot outlive Mongo.
+      const http = app?.getHttpServer();
+      try {
+        if (http?.listening)
+          await new Promise((resolve, reject) =>
+            http.close((error) => (error ? reject(error) : resolve())),
+          );
+        // Aborting a browser connection need not cancel its async guard/read.
+        // Wait for the actual response end, not just for the socket to close.
+        if (activeRequests)
+          await new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+              requestsIdle = undefined;
+              reject(new Error("QA requests did not drain before teardown."));
+            }, 10000);
+            requestsIdle = () => { clearTimeout(timer); resolve(); };
+          });
+      } finally {
+        await app?.close();
+      }
     } finally {
       try {
         if (images?.listening)
@@ -134,6 +155,19 @@ export async function createTestApi({
       .compile();
     app = module.createNestApplication();
     configureApp(app, { docs: false, logRequests: false });
+    app.use((_request, response, next) => {
+      activeRequests++;
+      let ended = false;
+      const end = response.end;
+      response.end = function (...args) {
+        try { return end.apply(this, args); }
+        finally {
+          if (!ended) { ended = true; activeRequests--; }
+          if (!activeRequests) requestsIdle?.();
+        }
+      };
+      next();
+    });
     // Opt-in QA counters never receive headers, tokens, bodies or response data.
     if (onResponse)
       app.use((request, response, next) => {
@@ -328,6 +362,11 @@ export async function createTestApi({
       listings,
       photo,
       processMedia: () => app.get(MediaWorker).tick(),
+      // Explicit QA sweep, never a background timer or a production worker.
+      processAuctions: async () => {
+        const { AuctionWorker } = await load("modules/auctions/auction-worker.service.js");
+        return app.get(AuctionWorker).tick();
+      },
     };
   } catch (error) {
     await close();
