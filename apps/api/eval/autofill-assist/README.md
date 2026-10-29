@@ -49,3 +49,18 @@ Lượt29/10: Gemma3 trả lỗi endpoint, Gemma4 timeout; không ứng viên th
 12case mới giữ NOT_RUN, không đổi model sản phẩm. [Báo cáo/evidence](../../../../docs/features/LISTING_AI_CORPUS_2026_10_29.md).
 Đây là kiểm khả dụng trước so chất lượng, không kết luận OCR ứng viên kém từ
 HTTP404/timeout. Không dùng bộ cũ đã xem làm holdout hoặc đổi ngưỡng sau output.
+
+## Xác minh endpoint trước khi gọi cả bộ
+
+`pnpm eval:endpoints --report` chỉ đọc journal local, không cần key/ảnh và không
+gọi provider. `--live` dành cho lượt đã được phép gọi trả phí, theo
+[plan4call](../../../../qa-data/listing-ai/endpoint-probe-plan.json): endpoint
+allowlist NVIDIA, ảnh phát triển cũ, không holdout/retry/fallback hoặc sửa env.
+Journal `.tmp/listing-ai-endpoint-verification/probe.json` giữ call đã thử và
+chặn Pending bất định; không xóa để ép gọi lại. Report exit1 cho incomplete hoặc
+blocked; READY_FOR_DEVELOPMENT_ONLY cũng chưa là nghiệm thu chất lượng/native.
+
+Lượt29/10: Gemma4 timeout cả text tối giản và ảnh trước chữ; Nemotron cùng đường
+gọi/key trả200. Giữ model sản phẩm,12holdout chưa dùng. Phần có usage dự toán
+0,001711USD;3timeout chưa biết phí. Chi tiết ở báo cáo đã dẫn, không suy endpoint
+liệt kê trong inventory là khả dụng hoặc lỗi timeout là chất lượng OCR thấp.

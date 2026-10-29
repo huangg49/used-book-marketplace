@@ -38,6 +38,7 @@
     "eval:price": "tsx eval/price-assist/run.ts",
     "eval:autofill": "tsx eval/autofill-assist/run.ts",
     "eval:compare": "tsx eval/autofill-assist/compare.ts",
+    "eval:endpoints": "tsx eval/autofill-assist/probe-endpoints.ts",
     "mongo:check": "node dist/mongo-check.js",
     "mongo:import-postgres": "tsx src/mongo-import-postgres.ts"
   },

@@ -1,31 +1,36 @@
 # Điểm lưu hiện tại — 29/10/2026
 
-## Kiểm AI, rà đáp án và sàng lọc model — 29/10/2026
+## AI listing: chẩn đoán endpoint và giữ bộ đối chứng — 29/10/2026
 
-- Owner duyệt bước tiếp; nhánh `codex/listing-ai-model-comparison`, base12f108d,
-  plan chốt tại79e21b3 trước call; commit subject
-  `test(ai): guard model comparison and retain untouched holdout`.
-  [Báo cáo/evidence/cách chạy](../features/LISTING_AI_CORPUS_2026_10_29.md).
-- Lượt trước12f108d:24scan đạt13/24tên,18/24đủ tác giả,0ISBNbịa trên ảnh không
-  có ISBN; prompt thử không tăng điểm nên giữ sản phẩm. Browser web/RNweb PASS
-  với bìa thật/output phát lại; dữ liệu/CLI41tests, eval3tests. Không native/human.
-- Rà lại24ảnh bằng AI, giữ đáp án cũ và ghi các điểm chữ nhỏ/canonical cần người
-  thật kiểm. Thu12work/hash khác từ2feed NXB/phát hành;11bìa/1mockup. Đáp án và
-  alias chốt trước output, reviewed=false; không chia bộ đã xem thành holdout.
-- Sàng lọc6ca khó: Nemotron6phản hồi,0tên/4tác giả; Gemma4 timeout6/6ở25giây;
-  Gemma3 lỗi6/6,1chẩn đoán HTTP404. Không suy chất lượng OCR từ lỗi provider.
-  Tổng19call; phần có usage dự toán0,008424USD,13lượt lỗi không usage chưa biết
-  phí. Plan tối đa42call/0,30USD dự toán, không là trần hóa đơn cứng.
-- Không ứng viên đạt vòng đầu nên holdout12case giữ0call/NOT_RUN. Không hạ gate
-  hoặc đổi model/env/prompt sản phẩm. Người thật/ảnh điện thoại/ISBN có mặt vẫn
-  chưa kiểm; READINESS giữ nguyên. Bước tiếp xác minh endpoint VLM khả dụng bằng
-  vòng phát triển mới, sau đó mới mở bộ12; không dùng holdout để chọn prompt.
-- Runner kiểm plan/ảnh/hash/đáp án trước paid call, journal Pending chặn replay
-  bất định; resume18row y hệt/0call mới, mở holdout khi thiếu winner bị chặn.
-  PASS15unit (12comparison+3quality), API typecheck/lint eval, docs/diff. Không
-  chạy lại app/browser/DB vì source sản phẩm không đổi; không GHN/contract/
-  migration/import. Mongo chính và QA vẫn dừng. Chỉ commit local, chưa push/PR/
-  merge/deploy. Ảnh/PDF/feed mới local ignored; không thay review người thật.
+- Owner giao bước xác minh endpoint; nhánh `codex/listing-ai-endpoint-verification`,
+  basec59d8cf; plan4call chốt tại3ee7bda. Commit subject
+  `test(ai): verify NVIDIA endpoints with bounded diagnostic journal`.
+  [Báo cáo/evidence/lệnh đọc lại](../features/LISTING_AI_CORPUS_2026_10_29.md).
+- Lượt16:04–16:06VN: Gemma4 timeout text tối giản15s, ảnh trước chữ/title25s và
+  ảnh trước chữ/chỉ dẫn đầy đủ một user25s, không nhận HTTP headers. Nemotron
+  cùng ảnh/key/origin trả200 trong2130ms nhưng vẫn sai Dế→Đế. Chưa xác định gốc
+  lỗi provider hoặc chất lượng Gemma4; không quy lỗi riêng cho ảnh/system role.
+- Tổng4call; phần có usage dự toán0,001711USD,3timeout chưa biết phí. Abort ở
+  client không là provider cancellation. Không gọi Gemma3/route đoán thêm hoặc
+  lặp6ca lỗi; bộ12holdout vẫn0call, ảnh điện thoại/ISBN có mặt/human chưa kiểm.
+- Runner có report chỉ đọc, allowlist endpoint/model, không redirect/retry,
+  journal Pending/atomic save; resume journal y hệt/0call thêm. Report/resume
+  exit1 đúng BLOCKED_CANDIDATE. PASS28unit (13endpoint+12comparison+3quality),
+  API typecheck/lint eval, docs/diff. Không đổi env/model/prompt/UI/API/contract/
+  migration/READINESS; không GHN/import/DB. Kiểm cuối Docker daemon không truy
+  cập được; không khởi động Docker, không có listener QA của gói. Trạng thái
+  container chưa đọc lại được, mốc trước là stopped. Chỉ commit local, chưa
+  push/PR/merge/deploy.
+- Lượt trước c59d8cf/79e21b3: rà24ảnh bằng AI, giữ reviewed=false; thu12work/hash
+  mới, chốt đáp án/alias trước output. Sàng lọc6ca khó: Nemotron0/6tên,4/6tác
+  giả; Gemma4 timeout6/6, Gemma3 lỗi6/6+1HTTP404.19call, phần biết usage0,008424USD,
+  13lỗi không usage. Bộ12chưa mở, không chia bộ đã xem thành holdout.
+- Lượt12f108d:24scan13/24tên/18/24tác giả,0ISBNbịa trên ảnh ISBNnull; prompt thử
+  không tăng điểm nên giữ sản phẩm. Browser web/RNweb PASS với bìa thật/output
+  phát lại; data/CLI41tests,eval3tests. Không native/human/live-storage acceptance.
+- Gói chẩn đoán hoàn tất. Chỉ mở vòng phát triển/đối chứng mới khi có evidence
+  endpoint ứng viên trả đầy đủ trong hạn chờ; giữ12case, không kéo timeout hoặc
+  xóa journal để chạy lặp. Khả dụng không thay quality/human/real-camera gate.
 
 ## Hoàn thiện data AI sau bàn giao Gemini — 29/10/2026
 

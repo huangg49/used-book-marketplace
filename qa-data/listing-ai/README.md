@@ -69,3 +69,10 @@ holdout khi có ứng viên thắng, giữ journal và ngân sách chung của l
 Lượt đầu bị chặn bởi endpoint/timeout của ứng viên, nên12case mới chưa gọi;
 ảnh/feed còn local ignored và quyền dùng chưa duyệt. Không xóa lịch sử lỗi hoặc
 đổi nhãn ảnh thành real-camera để làm gate đạt. Chi tiết ở báo cáo được dẫn trên.
+
+[Plan chẩn đoán endpoint](endpoint-probe-plan.json) chốt riêng tối đa4call,
+không dùng holdout. `pnpm --filter @used-books/api eval:endpoints --report` chỉ
+đọc journal, không phát sinh phí; `--live` chỉ dùng khi có quyền gọi trả phí.
+Lượt29/10 xác nhận Gemma4 timeout cả text/ảnh, Nemotron trả200 cùng đường gọi;
+không đổi model, bộ12case vẫn0call. Giữ journal và lịch sử; không chạy lại
+benchmark khi chưa có bằng chứng mới về endpoint.

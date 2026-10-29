@@ -1,5 +1,69 @@
 # Kiểm AI bằng bìa sách thật — 29/10/2026
 
+## Lượt mới nhất: xác minh endpoint — 29/10, 16:04–16:06 VN
+
+Nhánh `codex/listing-ai-endpoint-verification`, basec59d8cf. Owner giao bước
+xác minh endpoint trước mở đối chứng. [Plan4call](../../qa-data/listing-ai/endpoint-probe-plan.json)
+chốt tại3ee7bda trước network; [evidence](listing-ai-corpus-2026-10-29/endpoint-verification.json).
+Kết quả **BLOCKED_CANDIDATE**: chưa có model mới đủ khả dụng trong cấu hình thử.
+Gói chẩn đoán đã xong; giữ nguyên model, env và prompt sản phẩm.
+
+Đối chiếu [API chính thức Gemma4](https://docs.api.nvidia.com/nim/reference/google-gemma-4-31b-it-infer)
+xác nhận `POST https://integrate.api.nvidia.com/v1/chat/completions` đúng đường
+dẫn. [Model card](https://build.nvidia.com/google/gemma-4-31b-it/modelcard) khuyến
+nghị đặt ảnh trước chữ; lượt này thử riêng cách gọi đó, không đổi ảnh hoặc đáp
+án. Không đoán route khác để gửi key. Gemma3 đã404 ở lượt trước nên không gọi lại.
+
+| Chẩn đoán đã chốt | Kết quả quan sát |
+| --- | --- |
+| Gemma4, chỉ text, tối đa64token | Timeout15.018ms, chưa nhận HTTP headers |
+| Gemma4, ảnh trước chữ, chỉ yêu cầu title, tối đa256token | Timeout25.008ms, chưa nhận HTTP headers |
+| Gemma4, ảnh trước chữ, toàn bộ chỉ dẫn ở một user turn, tối đa1200token | Timeout25.011ms, chưa nhận HTTP headers |
+| Nemotron, cách gọi sản phẩm hiện tại, cùng ảnh/key/origin, tối đa1200token | HTTP200; headers2128ms, hoàn tất2130ms; trả đủ cấu trúc nhưng vẫn đọc “Đế” thay “Dế” |
+
+Cùng temperature0,2, thinking=false, không retry/fallback. Chỉ dùng1bìa Dế Mèn
+đã lộ trong bộ phát triển; **0call trên12case đối chứng**. Phần có usage dự toán
+0,001711USD;3timeout không có usage nên **chưa biết tổng phí**. Abort ở client
+không chứng minh provider đã hủy xử lý hoặc không tính phí. 4call/0,05USD dự toán
+là giới hạn chẩn đoán, không phải trần hóa đơn.
+
+Suy luận có giới hạn: timeout cả text tối giản không ủng hộ việc quy lỗi riêng
+cho ảnh/phần thu nhỏ hoặc system role. Nemotron thành công giúp loại trừ tình
+huống toàn bộ đường mạng/key chung đều không dùng được tại thời điểm thử; chưa
+loại trừ quyền theo model, hàng đợi, route/capacity phía provider. Chưa nhận
+headers của Gemma4 nên không thấy HTTP202 để poll; không tự POST lại. **Nguyên
+nhân phía provider chưa xác minh**, chưa có output để chấm chất lượng Gemma4.
+
+Đã thêm [runner chẩn đoán](../../apps/api/eval/autofill-assist/probe-endpoints.ts)
+và [helper](../../apps/api/eval/autofill-assist/endpoint-probe.ts): allowlist đúng
+origin/model, không theo redirect, lưu hash thay request/key/ảnh, khóa journal,
+ghi Pending trước call, atomic save và chặn replay bất định. Kết quả tách HTTP,
+headers/time, usage biết/chưa biết và lỗi output; lỗi không biến thành PASS.
+Parser hỗ trợ channel envelope chỉ ở diagnostic helper, **production parser giữ
+nguyên** vì chưa có bằng chứng response thực tế cần đổi.
+
+```sh
+# Từ apps/api; chỉ đọc journal, không cần key/ảnh và không gọi provider:
+pnpm eval:endpoints --report
+# Khi đã được phép gọi AI: tối đa4call theo plan và dùng lại journal hiện có:
+pnpm eval:endpoints --live
+```
+
+`--report` và resume `--live` hiện exit1 đúng với BLOCKED_CANDIDATE; resume giữ
+journal y hệt,0call mới. `--report` thiếu journal báo lỗi, không tự gọi AI. Không
+xóa journal để chạy lặp trả phí. Lần chạy đầu trước bổ sung exit status đã ghi
+đủ dữ liệu; exit0 lịch sử của lệnh đầu không là endpoint PASS.
+
+PASS28unit (13endpoint+12comparison+3quality), API typecheck/lint eval, docs/diff.
+Không cần chạy lại UI/DB vì source sản phẩm không đổi; không thao tác DB/GHN/
+import/migration/contract hoặc remote integration. Kiểm cuối Docker daemon không
+truy cập được, nên chưa đọc lại trạng thái container (mốc trước stopped); không
+khởi động Docker và không có listener QA của gói. Human/real-camera/
+ISBN có mặt và READINESS giữ trạng thái cũ. Bước mở so sánh tiếp cần **bằng
+chứng endpoint ứng viên trả được phản hồi đầy đủ trong hạn chờ**, rồi mới chốt
+vòng phát triển mới; chưa đủ điều kiện dùng12case đối chứng. Không kéo dài
+timeout/đổi provider hoặc chạy lặp benchmark chỉ để nhận một kết quả thành công.
+
 ## Lượt tiếp: rà đáp án và sàng lọc model
 
 Nhánh `codex/listing-ai-model-comparison`, base12f108d. Chốt
