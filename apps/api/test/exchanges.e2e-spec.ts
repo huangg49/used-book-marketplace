@@ -1709,6 +1709,168 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       const rec = await reconcile();
       expect(rec.balanced).toBe(true);
     });
+
+    it('POL-23: limits open proposals to 5 and blocks duplicate proposals for same listing pair', async () => {
+      // 1. User1 has 1 book, User2 has 5 books (within ACTIVE_LISTING_LIMIT = 5), User3 has 1 book
+      const l1 = await createApprovedListing(user1, 100000, 'Both');
+      const u2Listings = [];
+      for (let i = 0; i < 5; i++) {
+        u2Listings.push(await createApprovedListing(user2, 100000, 'Both'));
+      }
+      const user3 = await reader();
+      const l3 = await createApprovedListing(user3, 100000, 'Both');
+
+      // Proposal 1: user1 proposes l1 <-> u2Listings[0]
+      const p1 = await post(
+        '/exchanges',
+        {
+          initiatorListingId: l1.listingId,
+          recipientListingId: u2Listings[0].listingId,
+        },
+        user1,
+      ).expect(201);
+      expect(p1.body.status).toBe('Proposed');
+
+      // Duplicate proposal for exact same pair -> rejected 409
+      const dupRes = await post(
+        '/exchanges',
+        {
+          initiatorListingId: l1.listingId,
+          recipientListingId: u2Listings[0].listingId,
+        },
+        user1,
+      ).expect(409);
+      expect(dupRes.body.code).toBe('InvalidState');
+
+      // Reverse duplicate proposal (user2 tries to propose for user1's listing that is already part of p1) -> rejected 409
+      const revDupRes = await post(
+        '/exchanges',
+        {
+          initiatorListingId: u2Listings[0].listingId,
+          recipientListingId: l1.listingId,
+        },
+        user2,
+      ).expect(409);
+      expect(revDupRes.body.code).toBe('InvalidState');
+
+      // Create proposals 2, 3, 4, 5 for user1
+      await post(
+        '/exchanges',
+        { initiatorListingId: l1.listingId, recipientListingId: u2Listings[1].listingId },
+        user1,
+      ).expect(201);
+      await post(
+        '/exchanges',
+        { initiatorListingId: l1.listingId, recipientListingId: u2Listings[2].listingId },
+        user1,
+      ).expect(201);
+      await post(
+        '/exchanges',
+        { initiatorListingId: l1.listingId, recipientListingId: u2Listings[3].listingId },
+        user1,
+      ).expect(201);
+      await post(
+        '/exchanges',
+        { initiatorListingId: l1.listingId, recipientListingId: u2Listings[4].listingId },
+        user1,
+      ).expect(201);
+
+      // Proposal 6 exceeds the 5-open-proposal limit (POL-23) -> rejected 409
+      const limitRes = await post(
+        '/exchanges',
+        {
+          initiatorListingId: l1.listingId,
+          recipientListingId: l3.listingId,
+        },
+        user1,
+      ).expect(409);
+      expect(limitRes.body.code).toBe('InvalidState');
+      expect(limitRes.body.message).toContain('POL-23');
+    });
+
+    it('POL-07: Transit Overdue Worker escalates InTransit to ResolutionPending when 240h delivery window expires', async () => {
+      const l1 = await createApprovedListing(user1, 100000, 'Both');
+      const l2 = await createApprovedListing(user2, 100000, 'Both');
+
+      const created = (
+        await post(
+          '/exchanges',
+          { initiatorListingId: l1.listingId, recipientListingId: l2.listingId },
+          user1,
+        ).expect(201)
+      ).body;
+
+      await post(`/exchanges/${created.id}/accept`, { revision: 1 }, user2).expect(200);
+      await post(`/exchanges/${created.id}/funding`, {}, user1).expect(200);
+      const funded2 = (
+        await post(`/exchanges/${created.id}/funding`, {}, user2).expect(200)
+      ).body;
+
+      // Both ship -> status enters InTransit
+      const ship1 = (
+        await post(
+          `/exchanges/${created.id}/ship`,
+          {
+            expectedVersion: funded2.revision,
+            method: 'carrier',
+            carrierCode: 'GHN',
+            carrierName: 'Giao Hàng Nhanh',
+            trackingCode: 'GHN-TRANSIT-1',
+          },
+          user1,
+        ).expect(200)
+      ).body;
+
+      const inTransitRes = (
+        await post(
+          `/exchanges/${created.id}/ship`,
+          {
+            expectedVersion: ship1.revision,
+            method: 'carrier',
+            carrierCode: 'GHN',
+            carrierName: 'Giao Hàng Nhanh',
+            trackingCode: 'GHN-TRANSIT-2',
+          },
+          user2,
+        ).expect(200)
+      ).body;
+
+      expect(inTransitRes.status).toBe('InTransit');
+
+      // User1 marks received, but User2 never confirms receipt!
+      const user1Received = (
+        await post(`/exchanges/${created.id}/receive`, { expectedVersion: inTransitRes.revision }, user1).expect(200)
+      ).body;
+      expect(user1Received.status).toBe('InTransit');
+      expect(user1Received.initiatorReceivedAt).toBeDefined();
+      expect(user1Received.recipientReceivedAt).toBeNull();
+
+      // At 239h (before 240h transit overdue threshold) -> worker does NOT touch InTransit exchange
+      const at239h = new Date(new Date(inTransitRes.recipientShippedAt).getTime() + 239 * 3_600_000);
+      await worker.tick(at239h);
+
+      const stillInTransit = await db.c.exchanges.findOne({ _id: created.id });
+      expect(stillInTransit?.status).toBe('InTransit');
+      expect(stillInTransit?.disputedAt).toBeNull();
+
+      // At 241h (after 240h threshold per POL-07) -> worker escalates to ResolutionPending
+      const at241h = new Date(new Date(inTransitRes.recipientShippedAt).getTime() + 241 * 3_600_000);
+      const sweep241 = await worker.tick(at241h);
+      expect(sweep241.processed).toBe(1);
+
+      const escalatedDoc = await db.c.exchanges.findOne({ _id: created.id });
+      expect(escalatedDoc?.status).toBe('ResolutionPending');
+      expect(escalatedDoc?.disputedBy).toBe('System');
+      expect(escalatedDoc?.disputeReason).toContain('POL-07');
+      expect(escalatedDoc?.disputeReason).toContain('240');
+
+      // Second tick is idempotent
+      const sweepIdempotent = await worker.tick(at241h);
+      expect(sweepIdempotent.processed).toBe(0);
+
+      const rec = await reconcile();
+      expect(rec.balanced).toBe(true);
+    });
   });
 });
 

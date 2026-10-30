@@ -20,11 +20,11 @@ export const conflict = () =>
     'VersionConflict',
     'Nội dung đã thay đổi. Hãy tải lại trước khi lưu.',
   );
-export const invalidState = () =>
+export const invalidState = (message?: string) =>
   new DomainError(
     409,
     'InvalidState',
-    'Trạng thái hiện tại không cho phép thao tác này.',
+    message ?? 'Trạng thái hiện tại không cho phép thao tác này.',
   );
 export function invalidField(
   path: string,

@@ -337,7 +337,53 @@ export class ExchangesService {
           requireActive(actor);
           const conversation = body.conversationId ? await this.agreements.prepareExchange(tx, body.conversationId, body.expectedConversationVersion!, actor._id, recipientListing._id, recipientListing.ownerId) : null;
           if (recipientListing.ownerId === actor._id) {
-            throw invalidState();
+            throw invalidState('Không thể tự tạo đề xuất trao đổi với chính mình.');
+          }
+
+          // POL-23: Giới hạn tối đa 5 đề xuất Proposed mỗi tài khoản
+          const maxOpenProposals = Number(
+            this.config.get('EXCHANGE_MAX_OPEN_PROPOSALS') ?? 5,
+          );
+          const openProposalsCount = await tx.c.exchanges.countDocuments({
+            initiatorId: actor._id,
+            status: 'Proposed',
+          });
+          if (openProposalsCount >= maxOpenProposals) {
+            throw invalidState(
+              `Bạn đã đạt giới hạn tối đa ${maxOpenProposals} đề xuất trao đổi đang mở (POL-23). Hãy chờ phản hồi hoặc hủy bớt đề xuất cũ.`,
+            );
+          }
+
+          // POL-23: Chỉ 1 đề xuất mở cho cùng cặp listing
+          const existingSamePair = await tx.c.exchanges.findOne({
+            initiatorId: actor._id,
+            status: 'Proposed',
+            recipientListingId: recipientListing._id,
+            $or: [
+              { initiatorListingId: { $in: initiatorListingIds } },
+              { initiatorListingIds: { $in: initiatorListingIds } },
+            ],
+          });
+          if (existingSamePair) {
+            throw invalidState(
+              'Bạn đã có một đề xuất trao đổi đang chờ xử lý cho cuốn sách này (POL-23).',
+            );
+          }
+
+          const reverseSamePair = await tx.c.exchanges.findOne({
+            initiatorId: recipientListing.ownerId,
+            recipientId: actor._id,
+            status: 'Proposed',
+            recipientListingId: { $in: initiatorListingIds },
+            $or: [
+              { initiatorListingId: recipientListing._id },
+              { initiatorListingIds: recipientListing._id },
+            ],
+          });
+          if (reverseSamePair) {
+            throw invalidState(
+              'Đối tác đã gửi một đề xuất trao đổi cho cuốn sách này đang chờ bạn phản hồi (POL-23).',
+            );
           }
 
           for (const initListing of initiatorListings) {
@@ -1713,6 +1759,80 @@ export class ExchangesService {
       this.logger.log(
         JSON.stringify({
           event: 'exchangeShippingExpiredOneSent',
+          exchangeId: exchange._id,
+          status: 'ResolutionPending',
+          disputeReason,
+        }),
+      );
+
+      return { exchange: this.view(next), escalated: true };
+    });
+  }
+
+  async expireTransit(id: string, nowOverride?: Date) {
+    return this.mongo.tx(async (tx) => {
+      await tx.lock('exchanges', [id]);
+      const exchange = await tx.c.exchanges.findOne({ _id: id });
+      if (!exchange) return null;
+
+      if (exchange.status !== 'InTransit') {
+        return null;
+      }
+
+      const overdueHours = Number(
+        this.config.get('EXCHANGE_DELIVERY_OVERDUE_HOURS') ?? 240,
+      );
+      const overdueMs = overdueHours * 3_600_000;
+      const now = nowOverride ?? (await tx.now());
+
+      const initLegOverdue =
+        Boolean(exchange.initiatorShippedAt) &&
+        !exchange.recipientReceivedAt &&
+        now.getTime() - exchange.initiatorShippedAt!.getTime() >= overdueMs;
+
+      const recipLegOverdue =
+        Boolean(exchange.recipientShippedAt) &&
+        !exchange.initiatorReceivedAt &&
+        now.getTime() - exchange.recipientShippedAt!.getTime() >= overdueMs;
+
+      if (!initLegOverdue && !recipLegOverdue) {
+        return null;
+      }
+
+      const overdueSides: string[] = [];
+      if (initLegOverdue) overdueSides.push('chiều Người khởi tạo gửi');
+      if (recipLegOverdue) overdueSides.push('chiều Người nhận gửi');
+
+      const disputeReason = `Quá hạn vận chuyển (${overdueHours} giờ): ${overdueSides.join(' và ')} chưa được xác nhận đã nhận hàng. Hệ thống tự động mở điều tra vận chuyển (POL-07).`;
+
+      const next = await tx.c.exchanges.findOneAndUpdate(
+        { _id: exchange._id, revision: exchange.revision, status: 'InTransit' },
+        {
+          $set: {
+            status: 'ResolutionPending',
+            disputedAt: now,
+            disputeReason,
+            disputedBy: 'System',
+            updatedAt: now,
+          },
+          $inc: { revision: 1 },
+        },
+        { returnDocument: 'after' },
+      );
+      if (!next) return null;
+
+      await notifyExchange(
+        tx,
+        next,
+        'ExchangeDisputed',
+        [next.initiatorId, next.recipientId],
+        now,
+        { reason: disputeReason },
+      );
+
+      this.logger.log(
+        JSON.stringify({
+          event: 'exchangeTransitOverdue',
           exchangeId: exchange._id,
           status: 'ResolutionPending',
           disputeReason,

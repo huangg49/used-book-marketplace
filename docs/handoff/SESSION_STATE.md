@@ -1,4 +1,29 @@
-# Điểm lưu hiện tại — 28/10/2026
+# Điểm lưu hiện tại — 30/10/2026
+
+## Hoàn thiện ràng buộc đề xuất (POL-23) & Worker quá hạn vận chuyển (POL-07) trong luồng trao đổi sách — 30/10/2026
+
+- Nhánh `feature/exchange-policy-and-transit-worker`.
+- **Nội dung thực hiện**:
+  1. **Kiểm soát đề xuất mở theo POL-23 (`open_exchange_limit`)**:
+     - Trong `ExchangesService.create()`:
+       - Giới hạn tối đa 5 đề xuất `Proposed` đang mở cho mỗi tài khoản (`EXCHANGE_MAX_OPEN_PROPOSALS`, mặc định 5). Vượt quá giới hạn sẽ trả lỗi `409 InvalidState` với thông điệp rõ ràng theo POL-23.
+       - Chặn đề xuất trùng lặp cho cùng một cặp listing: Ngăn việc gửi nhiều đề xuất cho cùng cuốn sách đối tác từ cùng các cuốn sách của mình.
+       - Chặn đề xuất đối ứng trùng lặp (reverse duplicate): Nếu đối tác đã gửi một đề xuất đang chờ phản hồi cho những cuốn sách này, hệ thống yêu cầu phản hồi đề xuất đó thay vì tạo mới.
+  2. **Worker quét quá hạn vận chuyển 240 giờ theo POL-07 (`delivery_overdue_hours`)**:
+     - Bổ sung method `expireTransit(id, nowOverride)` trong `ExchangesService`.
+     - Bổ sung Branch 5 trong `ExchangeExpiryWorker.tick()`:
+       - Quét các giao dịch đổi sách ở trạng thái `InTransit` có bưu phẩm đã gửi quá 240 giờ (10 ngày, cấu hình qua `EXCHANGE_DELIVERY_OVERDUE_HOURS`) mà một trong hai bên chưa được xác nhận đã nhận hàng.
+       - Tự động chuyển trạng thái đơn sang `ResolutionPending`, thiết lập `disputedBy: 'System'` và ghi nhận `disputeReason` mở điều tra vận chuyển theo chuẩn POL-07.
+       - Gửi thông báo sự kiện `ExchangeDisputed` cho cả hai bên tham gia giao dịch.
+       - Đảm bảo tính idempotent: quét lặp lại không gây lỗi hay phát sinh bút toán trùng lặp.
+  3. **Bổ sung ca kiểm thử E2E tương ứng**:
+     - Bổ sung 2 ca kiểm thử mới trong `apps/api/test/exchanges.e2e-spec.ts`:
+       - `POL-23: limits open proposals to 5 and blocks duplicate proposals for same listing pair`.
+       - `POL-07: Transit Overdue Worker escalates InTransit to ResolutionPending when 240h delivery window expires`.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/api exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/api exec oxlint src/`: PASS (0 lỗi).
+  - E2E Tests trên QA replica set cô lập (`rs-test`): `vitest run --config ./vitest.config.e2e.ts test/exchanges.e2e-spec.ts` -> 29/29 tests PASS 100% (thời gian chạy ~50s).
 
 ## Tối ưu giao diện Đánh giá trên Web (Loại bỏ nút trùng lặp & Cố định thanh gửi đánh giá) — 28/10/2026
 
