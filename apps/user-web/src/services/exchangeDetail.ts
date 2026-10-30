@@ -109,6 +109,8 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
         undefined,
     },
     inspectionDeadline: ex.inspectionDeadline ?? undefined,
+    viewerInspectionDeadline: (initiator ? ex.initiatorInspectionDeadline : ex.recipientInspectionDeadline) ?? undefined,
+    partnerInspectionDeadline: (initiator ? ex.recipientInspectionDeadline : ex.initiatorInspectionDeadline) ?? undefined,
     completedAt: ex.completedAt ?? undefined,
     viewerCompletedAt:
       (initiator ? ex.initiatorCompletedAt : ex.recipientCompletedAt) ??

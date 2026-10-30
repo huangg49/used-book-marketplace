@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { recoveryKeys } from '../../common/catalog-recovery-keys.js';
 import { MongoServerError } from 'mongodb';
 import type {
   CatalogBookDoc,
@@ -159,6 +160,8 @@ export async function checkCatalog(tx: Tx, bookId: string) {
     throw new Error('Confirmed ISBN does not match reviewed revision');
   if (b.titleKey !== titleKey(r.title))
     throw new Error('Catalog sort key does not match current revision');
+  if (b.recoveryKeys && JSON.stringify(b.recoveryKeys) !== JSON.stringify(recoveryKeys(r.title, r.authors)))
+    throw new Error('Catalog recovery keys do not match current revision');
 }
 
 @Injectable()
@@ -226,6 +229,7 @@ export class CatalogService {
             body.metadata.title + ' ' + body.metadata.authors.join(' '),
           ),
           titleKey: titleKey(body.metadata.title),
+          recoveryKeys: recoveryKeys(body.metadata.title, body.metadata.authors),
           createdAt: now,
           updatedAt: new Date(),
           lockSeq: 0,
@@ -280,6 +284,7 @@ export class CatalogService {
                 body.metadata.title + ' ' + body.metadata.authors.join(' '),
               ),
               titleKey: titleKey(body.metadata.title),
+              recoveryKeys: recoveryKeys(body.metadata.title, body.metadata.authors),
             },
             $inc: { version: 1 },
           },

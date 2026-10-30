@@ -12,6 +12,8 @@ export default function MainLayout() {
   const location = useLocation();
   const isChat =
     location.pathname === "/chat" || location.pathname.startsWith("/chat/");
+  const isChatRoom =
+    location.pathname.startsWith("/chat/") && location.pathname !== "/chat";
   const chatTransition = useConversationTransition("/chat");
   useEffect(() => {
     if (isChat) return;
@@ -35,8 +37,10 @@ export default function MainLayout() {
       <Header freezeScroll={chatTransition} />
       <main
         id="main-content"
+        tabIndex={-1}
         className={styles.main}
         data-chat={isChat || undefined}
+        data-chat-room={isChatRoom || undefined}
         data-exchange={
           location.pathname === "/exchange" ||
           location.pathname.startsWith("/exchange/") ||
@@ -67,6 +71,7 @@ export default function MainLayout() {
               <Link to={searchUrl({ mode: "Exchange" })}>
                 Xem sách để đổi <ArrowUpRight size={18} aria-hidden="true" />
               </Link>
+              <Link to="/guide">Bắt đầu với Lật lại <ArrowUpRight size={18} aria-hidden="true" /></Link>
               <Link to={ROUTES.sell}>
                 Đăng sách của bạn <ArrowUpRight size={18} aria-hidden="true" />
               </Link>

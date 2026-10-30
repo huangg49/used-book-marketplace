@@ -1,3 +1,4 @@
+import { AssistTimings } from './assist-timings.js';
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash, randomUUID } from 'node:crypto';
@@ -58,6 +59,8 @@ const rateLimited = (message: string) =>
   new DomainError(429, 'RATE_LIMITED', message);
 const unavailable = (message: string) =>
   new DomainError(503, 'UNAVAILABLE', message);
+const failed = (message: string) =>
+  new DomainError(503, 'AI_ASSIST_FAILED', message);
 const failureCopy: Record<ModelFailure, string> = {
   Timeout:
     'Trợ lý gợi ý giá phản hồi quá lâu. Bạn vẫn có thể tự nhập giá hoặc thử lại sau.',
@@ -113,11 +116,71 @@ export class PriceAssistService {
     );
   }
 
+  reference(
+    auth: Actor,
+    listingId: string,
+    body: Wire['PriceSuggestionRequest'],
+  ): Promise<Wire['ListingPriceReference']> {
+    return this.commands.read(auth, async (tx, actor) => {
+      member(actor);
+      requireActive(actor);
+      const listing = await tx.c.listings.findOne({ _id: listingId });
+      if (!listing || listing.ownerId !== actor._id || listing.deletedAt)
+        throw notFound();
+      if (
+        !['Draft', 'Rejected', 'Approved'].includes(listing.moderation) ||
+        listing.visibility === 'Removed' ||
+        listing.trade !== 'Available'
+      )
+        throw invalidState();
+      const revision = listing.currentRevisionId
+        ? await tx.c.listing_revisions.findOne({
+            _id: listing.currentRevisionId,
+          })
+        : null;
+      if (revision?.bundle) throw invalidState();
+      const input: PriceInput = {
+        ...body,
+        bookId: body.bookId.toLowerCase(),
+        conditionNote: body.conditionNote ?? '',
+      };
+      const book = await this.book(tx, input.bookId, actor._id),
+        raw = await this.sources(tx, book, actor._id);
+      const now = await tx.now();
+      const facts = {
+        hasPhoto:
+          (await tx.c.listing_media.countDocuments(
+            { listingId, status: 'Ready', purgedAt: null },
+            { limit: 1 },
+          )) > 0,
+      };
+      const evidence = evaluate(input, book, raw, now, facts);
+      return {
+        listingId,
+        bookId: input.bookId,
+        inputFingerprint: fingerprint(input, raw, facts),
+        status: evidence.status === 'Proceed' ? 'Ready' : evidence.status,
+        evidenceLevel: evidence.level,
+        rules: evidence.rules,
+        range: evidence.bounds,
+        sources: evidence.sources.map((s) => ({
+          ...s,
+          observedAt: s.observedAt.toISOString(),
+        })),
+        missing: evidence.missing,
+        dataAsOf: evidence.dataAsOf?.toISOString() ?? null,
+        generatedAt: now.toISOString(),
+        expiresAt: new Date(+now + 5 * 60_000).toISOString(),
+      };
+    });
+  }
+
   async suggest(
     auth: Actor,
     listingId: string,
     requestKey: string,
     body: Wire['PriceSuggestionRequest'],
+    timings = new AssistTimings(),
   ): Promise<Wire['PriceSuggestion']> {
     const input: PriceInput = {
       bookId: body.bookId.toLowerCase(),
@@ -132,199 +195,215 @@ export class PriceAssistService {
       .digest('hex');
     // Authorization, rules, cache lookup and quota reservation commit together;
     // the provider call happens after commit (no side effects in a retried tx).
-    const prepared = await this.commands.read<Prepared>(auth, async (tx, actor) => {
-      member(actor);
-      requireActive(actor);
-      // Replay by key first, after current authorization (the user lock above
-      // serializes concurrent requests that share a key).
-      const replay = await tx.c.price_suggestions.findOne({
-        ownerId: actor._id,
-        requestKey,
-      });
-      if (replay) {
-        if (replay.requestHash !== requestHash)
-          throw new DomainError(
-            409,
-            'IdempotencyConflict',
-            'Mã yêu cầu đã được dùng cho nội dung khác.',
-          );
-        if (replay.status === 'Pending')
-          throw rateLimited('Gợi ý này đang được tạo. Thử lại sau giây lát.');
-        if (replay.status === 'Failed')
-          throw unavailable(failureCopy[replay.failure ?? 'ProviderError']);
-        return { kind: 'done', doc: replay, cached: true };
-      }
-      const listing = await tx.c.listings.findOne({ _id: listingId });
-      if (!listing || listing.ownerId !== actor._id || listing.deletedAt)
-        throw notFound();
-      const draftEditable =
-        ['Draft', 'Rejected'].includes(listing.moderation) &&
-        listing.visibility !== 'Removed' &&
-        listing.trade === 'Available';
-      const approvedEditable =
-        listing.moderation === 'Approved' &&
-        listing.visibility !== 'Removed' &&
-        listing.trade === 'Available';
-      if (!draftEditable && !approvedEditable) throw invalidState();
-      const currentRevision = listing.currentRevisionId ? await tx.c.listing_revisions.findOne({ _id: listing.currentRevisionId }) : null;
-      if (currentRevision?.bundle) throw invalidState();
-      const book = await this.book(tx, input.bookId, actor._id);
-      const raw = await this.sources(tx, book, actor._id);
-      const now = await tx.now();
-      // A copy with no uploaded photo is not priced: the condition would be
-      // the seller's word only (submission also needs 1-8 Ready photos).
-      // Confirmed books get a background online price lookup when due; while
-      // it runs, "no data" reads as "still searching" (ADR 0029).
-      const lookup =
-        this.lookups && book.confirmed
-          ? await this.lookups.ensure(book, now)
-          : { running: false };
-      const listingFacts = {
-        hasPhoto:
-          (await tx.c.listing_media.countDocuments(
-            { listingId, status: 'Ready', purgedAt: null },
-            { limit: 1 },
-          )) > 0,
-        lookupPending: lookup.running,
-      };
-      const evidence = evaluate(input, book, raw, now, listingFacts);
-      const fp = fingerprint(input, raw, listingFacts);
-      const cached = await tx.c.price_suggestions.findOne(
-        {
-          listingId,
-          inputFingerprint: fp,
-          status: { $in: ['Suggested', 'NeedsMoreData', 'Refused'] },
-          expiresAt: { $gt: now },
-        },
-        { sort: { createdAt: -1 } },
-      );
-      const id = randomUUID();
-      const base = {
-        _id: id,
-        ownerId: actor._id,
-        listingId,
-        bookId: input.bookId,
-        inputFingerprint: fp,
-        requestKey,
-        requestHash,
-        input: {
-          bookId: input.bookId,
-          condition: input.condition,
-          readable: input.readable,
-          hasMissingPages: input.hasMissingPages,
-          missingEssentialContent: input.missingEssentialContent,
-        },
-        failure: null,
-        evidenceLevel: evidence.level,
-        rangeLow: null,
-        rangeHigh: null,
-        model: null,
-        inputTokens: null,
-        outputTokens: null,
-        costMicroUsd: null,
-        latencyMs: null,
-        outcome: null,
-        createdAt: now,
-        expiresAt: new Date(now.getTime() + SUGGESTION_TTL_MS),
-        updatedAt: now,
-        lockSeq: 0,
-      };
-      if (cached) {
-        // Same input already answered: store this key's own record so a
-        // replay of this key is stable, and return the earlier answer.
-        const doc: PriceSuggestionDoc = {
-          ...cached,
+    const prepared = await timings.measure('prepare', () =>
+      this.commands.read<Prepared>(auth, async (tx, actor) => {
+        member(actor);
+        requireActive(actor);
+        // Replay by key first, after current authorization (the user lock above
+        // serializes concurrent requests that share a key).
+        const replay = await tx.c.price_suggestions.findOne({
+          ownerId: actor._id,
+          requestKey,
+        });
+        if (replay) {
+          if (replay.requestHash !== requestHash)
+            throw new DomainError(
+              409,
+              'IdempotencyConflict',
+              'Mã yêu cầu đã được dùng cho nội dung khác.',
+            );
+          if (replay.status === 'Pending')
+            throw rateLimited('Gợi ý này đang được tạo. Thử lại sau giây lát.');
+          if (replay.status === 'Failed')
+            throw failed(failureCopy[replay.failure ?? 'ProviderError']);
+          return { kind: 'done', doc: replay, cached: true };
+        }
+        const listing = await tx.c.listings.findOne({ _id: listingId });
+        if (!listing || listing.ownerId !== actor._id || listing.deletedAt)
+          throw notFound();
+        const draftEditable =
+          ['Draft', 'Rejected'].includes(listing.moderation) &&
+          listing.visibility !== 'Removed' &&
+          listing.trade === 'Available';
+        const approvedEditable =
+          listing.moderation === 'Approved' &&
+          listing.visibility !== 'Removed' &&
+          listing.trade === 'Available';
+        if (!draftEditable && !approvedEditable) throw invalidState();
+        const currentRevision = listing.currentRevisionId
+          ? await tx.c.listing_revisions.findOne({
+              _id: listing.currentRevisionId,
+            })
+          : null;
+        if (currentRevision?.bundle) throw invalidState();
+        const book = await this.book(tx, input.bookId, actor._id);
+        const raw = await this.sources(tx, book, actor._id);
+        const now = await tx.now();
+        // A copy with no uploaded photo is not priced: the condition would be
+        // the seller's word only (submission also needs 1-8 Ready photos).
+        // Confirmed books get a background online price lookup when due; while
+        // it runs, "no data" reads as "still searching" (ADR 0029).
+        const lookup =
+          this.lookups && book.confirmed
+            ? await this.lookups.ensure(book, now)
+            : { running: false };
+        const listingFacts = {
+          hasPhoto:
+            (await tx.c.listing_media.countDocuments(
+              { listingId, status: 'Ready', purgedAt: null },
+              { limit: 1 },
+            )) > 0,
+          lookupPending: lookup.running,
+        };
+        const evidence = evaluate(input, book, raw, now, listingFacts);
+        const fp = fingerprint(input, raw, listingFacts);
+        const cached = await tx.c.price_suggestions.findOne(
+          {
+            listingId,
+            inputFingerprint: fp,
+            status: { $in: ['Suggested', 'NeedsMoreData', 'Refused'] },
+            expiresAt: { $gt: now },
+          },
+          { sort: { createdAt: -1 } },
+        );
+        const id = randomUUID();
+        const base = {
           _id: id,
+          ownerId: actor._id,
+          listingId,
+          bookId: input.bookId,
+          inputFingerprint: fp,
           requestKey,
           requestHash,
-          outcome: null,
-          // No provider call for this record (keeps rate/cost counters exact).
+          input: {
+            bookId: input.bookId,
+            condition: input.condition,
+            readable: input.readable,
+            hasMissingPages: input.hasMissingPages,
+            missingEssentialContent: input.missingEssentialContent,
+          },
+          failure: null,
+          evidenceLevel: evidence.level,
+          rangeLow: null,
+          rangeHigh: null,
           model: null,
           inputTokens: null,
           outputTokens: null,
           costMicroUsd: null,
           latencyMs: null,
+          outcome: null,
           createdAt: now,
+          expiresAt: new Date(now.getTime() + SUGGESTION_TTL_MS),
           updatedAt: now,
           lockSeq: 0,
         };
-        await tx.c.price_suggestions.insertOne(doc);
-        return { kind: 'done', doc, cached: true };
-      }
-      if (evidence.status !== 'Proceed') {
-        const doc: PriceSuggestionDoc = {
+        if (cached) {
+          // Same input already answered: store this key's own record so a
+          // replay of this key is stable, and return the earlier answer.
+          const doc: PriceSuggestionDoc = {
+            ...cached,
+            _id: id,
+            requestKey,
+            requestHash,
+            outcome: null,
+            // No provider call for this record (keeps rate/cost counters exact).
+            model: null,
+            inputTokens: null,
+            outputTokens: null,
+            costMicroUsd: null,
+            latencyMs: null,
+            createdAt: now,
+            updatedAt: now,
+            lockSeq: 0,
+          };
+          await tx.c.price_suggestions.insertOne(doc);
+          return { kind: 'done', doc, cached: true };
+        }
+        if (evidence.status !== 'Proceed') {
+          const doc: PriceSuggestionDoc = {
+            ...base,
+            status: evidence.status,
+            response: wireBody(base, evidence, evidence.status, null, null),
+          };
+          await tx.c.price_suggestions.insertOne(doc);
+          return { kind: 'done', doc, cached: false };
+        }
+        if (!this.model)
+          throw unavailable(
+            'Trợ lý gợi ý giá đang tắt. Bạn vẫn có thể tự nhập giá bán.',
+          );
+        // One in-flight call per member (the user lock above serializes this check).
+        const inFlight = await tx.c.price_suggestions.findOne({
+          ownerId: actor._id,
+          status: 'Pending',
+          createdAt: { $gt: new Date(now.getTime() - this.timeoutMs - 5_000) },
+        });
+        if (inFlight)
+          throw rateLimited('Đang tạo một gợi ý khác. Thử lại sau giây lát.');
+        const recent = await tx.c.price_suggestions.countDocuments({
+          listingId,
+          model: { $ne: null },
+          createdAt: { $gt: new Date(now.getTime() - LISTING_WINDOW_MS) },
+        });
+        if (recent >= LISTING_WINDOW_CALLS)
+          throw rateLimited(
+            'Bạn vừa yêu cầu nhiều gợi ý. Thử lại sau một phút.',
+          );
+        const day = now.toISOString().slice(0, 10);
+        const expiresAt = new Date(Date.parse(day) + 2 * DAY_MS);
+        const global = await tx.c.price_assist_usage.findOne({
+          _id: `global:${day}`,
+        });
+        if ((global?.costMicroUsd ?? 0) >= this.budgetMicroUsd)
+          throw unavailable(
+            'Trợ lý gợi ý giá đã dùng hết hạn mức hôm nay. Bạn vẫn có thể tự nhập giá bán.',
+          );
+        const user = await tx.c.price_assist_usage.findOneAndUpdate(
+          { _id: `user:${actor._id}:${day}` },
+          { $inc: { calls: 1 }, $setOnInsert: { costMicroUsd: 0, expiresAt } },
+          { upsert: true, returnDocument: 'after' },
+        );
+        if ((user?.calls ?? 0) > this.userDailyLimit)
+          throw rateLimited(
+            'Bạn đã dùng hết lượt gợi ý giá hôm nay. Bạn vẫn có thể tự nhập giá bán.',
+          );
+        await tx.c.price_assist_usage.updateOne(
+          { _id: `global:${day}` },
+          { $inc: { calls: 1 }, $setOnInsert: { costMicroUsd: 0, expiresAt } },
+          { upsert: true },
+        );
+        await tx.c.price_suggestions.insertOne({
           ...base,
-          status: evidence.status,
-          response: wireBody(base, evidence, evidence.status, null, null),
-        };
-        await tx.c.price_suggestions.insertOne(doc);
-        return { kind: 'done', doc, cached: false };
-      }
-      if (!this.model)
-        throw unavailable(
-          'Trợ lý gợi ý giá đang tắt. Bạn vẫn có thể tự nhập giá bán.',
-        );
-      // One in-flight call per member (the user lock above serializes this check).
-      const inFlight = await tx.c.price_suggestions.findOne({
-        ownerId: actor._id,
-        status: 'Pending',
-        createdAt: { $gt: new Date(now.getTime() - this.timeoutMs - 5_000) },
-      });
-      if (inFlight)
-        throw rateLimited('Đang tạo một gợi ý khác. Thử lại sau giây lát.');
-      const recent = await tx.c.price_suggestions.countDocuments({
-        listingId,
-        model: { $ne: null },
-        createdAt: { $gt: new Date(now.getTime() - LISTING_WINDOW_MS) },
-      });
-      if (recent >= LISTING_WINDOW_CALLS)
-        throw rateLimited('Bạn vừa yêu cầu nhiều gợi ý. Thử lại sau một phút.');
-      const day = now.toISOString().slice(0, 10);
-      const expiresAt = new Date(Date.parse(day) + 2 * DAY_MS);
-      const global = await tx.c.price_assist_usage.findOne({
-        _id: `global:${day}`,
-      });
-      if ((global?.costMicroUsd ?? 0) >= this.budgetMicroUsd)
-        throw unavailable(
-          'Trợ lý gợi ý giá đã dùng hết hạn mức hôm nay. Bạn vẫn có thể tự nhập giá bán.',
-        );
-      const user = await tx.c.price_assist_usage.findOneAndUpdate(
-        { _id: `user:${actor._id}:${day}` },
-        { $inc: { calls: 1 }, $setOnInsert: { costMicroUsd: 0, expiresAt } },
-        { upsert: true, returnDocument: 'after' },
-      );
-      if ((user?.calls ?? 0) > this.userDailyLimit)
-        throw rateLimited(
-          'Bạn đã dùng hết lượt gợi ý giá hôm nay. Bạn vẫn có thể tự nhập giá bán.',
-        );
-      await tx.c.price_assist_usage.updateOne(
-        { _id: `global:${day}` },
-        { $inc: { calls: 1 }, $setOnInsert: { costMicroUsd: 0, expiresAt } },
-        { upsert: true },
-      );
-      await tx.c.price_suggestions.insertOne({
-        ...base,
-        status: 'Pending',
-        response: null,
-      });
-      return { kind: 'call', id, input, book, evidence, fp, now, day };
-    });
+          status: 'Pending',
+          response: null,
+        });
+        return { kind: 'call', id, input, book, evidence, fp, now, day };
+      }),
+    );
     if (prepared.kind === 'done') return toWire(prepared.doc, prepared.cached);
-    return this.complete(prepared);
+    return timings.measure('complete', () => this.complete(prepared, timings));
   }
 
-  private async complete(p: Extract<Prepared, { kind: 'call' }>) {
+  private async complete(
+    p: Extract<Prepared, { kind: 'call' }>,
+    timings: AssistTimings,
+  ) {
     const started = Date.now();
     let failure: ModelFailure | null = null;
     let usage = { inputTokens: 0, outputTokens: 0 };
     let checked: ReturnType<typeof checkOutput> | null = null;
     let modelId = this.model!.model;
     try {
-      const draft = await this.model!.draft(
-        SYSTEM_PROMPT,
-        buildUserPrompt(p.input, p.book, p.evidence),
+      const draft = await timings.measure('model', () =>
+        this.model!.draft(
+          SYSTEM_PROMPT,
+          buildUserPrompt(p.input, p.book, p.evidence),
+        ),
       );
-      usage = { inputTokens: draft.inputTokens, outputTokens: draft.outputTokens };
+      usage = {
+        inputTokens: draft.inputTokens,
+        outputTokens: draft.outputTokens,
+      };
       modelId = draft.model;
       checked = checkOutput(draft.output, p.evidence);
     } catch (e) {
@@ -339,12 +418,15 @@ export class PriceAssistService {
           suggestionId: p.id,
           model: modelId,
           failure,
-          detail: e instanceof Error ? e.message.slice(0, 400) : 'unknown',
         }),
       );
     }
     const latencyMs = Date.now() - started;
-    const cost = costMicroUsd(this.rate(), usage.inputTokens, usage.outputTokens);
+    const cost = costMicroUsd(
+      this.rate(),
+      usage.inputTokens,
+      usage.outputTokens,
+    );
     const doc = await this.mongo.tx(async (tx) => {
       await tx.lock('price_suggestions', [p.id]);
       const current = await tx.c.price_suggestions.findOne({ _id: p.id });
@@ -373,12 +455,16 @@ export class PriceAssistService {
         );
       return { ...current, ...set } as PriceSuggestionDoc;
     });
-    if (failure) throw unavailable(failureCopy[failure]);
+    if (failure) throw failed(failureCopy[failure]);
     return toWire(doc, false);
   }
 
   // Same visibility rule as listing drafts: confirmed, or the owner's pending request.
-  private async book(tx: Tx, bookId: string, ownerId: string): Promise<BookFacts> {
+  private async book(
+    tx: Tx,
+    bookId: string,
+    ownerId: string,
+  ): Promise<BookFacts> {
     const book = await tx.c.catalog_books.findOne({ _id: bookId });
     if (
       !book ||
@@ -386,8 +472,14 @@ export class PriceAssistService {
       (book.status !== 'Confirmed' &&
         !(book.status === 'Pending' && book.requesterId === ownerId))
     )
-      invalidField('/bookId', 'Chọn một đầu sách có trong danh mục.', 'Unavailable');
-    const r = await tx.c.catalog_revisions.findOne({ _id: book!.currentRevisionId! });
+      invalidField(
+        '/bookId',
+        'Chọn một đầu sách có trong danh mục.',
+        'Unavailable',
+      );
+    const r = await tx.c.catalog_revisions.findOne({
+      _id: book!.currentRevisionId!,
+    });
     if (!r) throw notFound();
     return {
       id: bookId,
@@ -415,6 +507,7 @@ export class PriceAssistService {
       amount: r.amount,
       condition: r.condition,
       label: r.sourceLabel,
+      sourceGroup: r.sourceGroup ?? null,
       url: r.sourceUrl,
       observedAt: r.observedAt,
       isbn: r.isbn,
@@ -532,7 +625,10 @@ export class PriceAssistService {
 }
 
 function wireBody(
-  base: Pick<PriceSuggestionDoc, 'listingId' | 'bookId' | 'inputFingerprint' | 'createdAt' | 'expiresAt'>,
+  base: Pick<
+    PriceSuggestionDoc,
+    'listingId' | 'bookId' | 'inputFingerprint' | 'createdAt' | 'expiresAt'
+  >,
   evidence: Evidence,
   status: Wire['PriceSuggestionStatus'],
   checked: ReturnType<typeof checkOutput> | null,
@@ -592,7 +688,10 @@ export async function priceAssistForRevision(
   };
 }
 
-function toWire(doc: PriceSuggestionDoc, cached: boolean): Wire['PriceSuggestion'] {
+function toWire(
+  doc: PriceSuggestionDoc,
+  cached: boolean,
+): Wire['PriceSuggestion'] {
   return {
     ...(doc.response as Omit<Wire['PriceSuggestion'], 'id' | 'cached'>),
     id: doc._id,

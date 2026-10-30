@@ -235,6 +235,7 @@ export type AuctionOperation =
   | 'dispatchPointOrder'
   | 'recordPointDelivery';
 type CommandChange =
+  | ReviewChange
   | PointChange
   | AuctionChange
   | PurchaseConversationChange
@@ -247,6 +248,16 @@ type CommandChange =
   | PackagingChange
   | ShipmentChange
   | CarrierChange;
+export type ReviewChange = {
+  entityType: 'TransactionReview';
+  entityId: string;
+  version: number;
+  state: string;
+  decidedAt: Date;
+  review: Wire['ExchangeReviewItem'];
+  reason?: string;
+  event?: string;
+};
 type Options<C, D> = {
   discover?: (tx: Tx) => Promise<string[]>;
   authorize: (tx: Tx, actor: CurrentActor) => Promise<C>;
@@ -280,6 +291,11 @@ const EXISTING_OBLIGATION_OPERATIONS = [
   'rejectPointOrderReport',
   'requestCollectionCode',
   'claimPointOrder',
+  'cancelExchange',
+  'shipExchange',
+  'receiveExchange',
+  'completeExchange',
+  'disputeExchange',
 ];
 const KEY_LOCK_TTL_MS = 7 * 24 * 3_600_000;
 const sessionExpired = (
@@ -289,6 +305,15 @@ const sessionExpired = (
 @Injectable()
 export class MongoCommandService {
   constructor(private readonly mongo: MongoService) {}
+  runReview<C>(
+    context: CommandContext,
+    operation: string,
+    target: string,
+    body: unknown,
+    options: Options<C, ReviewChange>,
+  ) {
+    return this.execute(context, operation, target, body, options, (change) => change.review);
+  }
 
   // Locks the acting user, any other affected users and the session, then
   // reads current eligibility. Every writer of users/sessions conflicts with
@@ -986,7 +1011,8 @@ export class MongoCommandService {
         change.entityType === 'HandoverPoint' ||
         change.entityType === 'PointAssignment' ||
         change.entityType === 'PointIncident' ||
-        change.entityType === 'PurchaseConversation'
+        change.entityType === 'PurchaseConversation' ||
+        change.entityType === 'TransactionReview'
           ? change.decidedAt
           : new Date();
       const receipt = project(change, id, serverTime);
@@ -1000,7 +1026,9 @@ export class MongoCommandService {
         topupId: null as string | null,
         pointId: null as string | null,
       };
-      if (
+      if (change.entityType === 'TransactionReview')
+        Object.assign(targets, { reviewId: change.entityId });
+      else if (
         change.entityType === 'HandoverPoint' ||
         change.entityType === 'PointAssignment' ||
         change.entityType === 'PointIncident'
@@ -1114,6 +1142,12 @@ export class MongoCommandService {
 
 function auditAfter(change: CommandChange): Json {
   switch (change.entityType) {
+    case 'TransactionReview':
+      return {
+        entityId: change.entityId,
+        version: change.version,
+        state: change.state,
+      };
     case 'HandoverPoint':
     case 'PointAssignment':
     case 'PointIncident':

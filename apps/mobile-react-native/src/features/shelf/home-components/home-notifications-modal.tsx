@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ActivityIndicator,
   Pressable,
   ScrollView,
@@ -6,17 +6,12 @@ import { ActivityIndicator,
   View,
 } from "react-native";
 import { AppText } from "../../../core/ui/text";
-import { AppModal, Button, Icon, stitchTokens  } from "../../../core/ui";
+import { AppModal, Button, Icon, StatePanel, stitchTokens  } from "../../../core/ui";
 import { useSession } from "../../../core/session/session-provider";
 import {
   useNotifications,
   useMarkNotificationsRead,
 } from "../../notifications/notifications-model";
-import {
-  INITIAL_NOTIFICATIONS,
-  type HomeNotificationItem,
-} from "../home-mock-data";
-
 export interface HomeNotificationsModalProps {
   readonly visible: boolean;
   readonly onClose: () => void;
@@ -50,44 +45,13 @@ export function HomeNotificationsModal({
   const query = useNotifications(client, isAuthenticated);
   const markRead = useMarkNotificationsRead(client);
 
-  // Local state fallback for mock when not authenticated or offline
-  const [localMockNotifications, setLocalMockNotifications] = useState<
-    readonly HomeNotificationItem[]
-  >(INITIAL_NOTIFICATIONS);
-
-  // Merge & normalize items
-  const displayItems = useMemo(() => {
-    if (isAuthenticated && query.data?.items) {
-      return query.data.items.map((it) => ({
-        id: it.id,
-        title: it.title,
-        message: it.body,
-        time: formatNotificationTime(it.createdAt),
-        read: Boolean(it.readAt),
-        type: "auction" as const,
-      }));
-    }
-    return localMockNotifications;
-  }, [isAuthenticated, query.data, localMockNotifications]);
-
-  const handleMarkAllRead = () => {
-    if (isAuthenticated) {
-      markRead.mutate({ all: true });
-    } else {
-      setLocalMockNotifications((prev) =>
-        prev.map((item) => ({ ...item, read: true })),
-      );
-    }
-  };
-
-  const handleItemPress = (itemId: string, isRead: boolean) => {
-    if (isAuthenticated && !isRead) {
-      markRead.mutate({ ids: [itemId] });
-    } else if (!isAuthenticated) {
-      setLocalMockNotifications((prev) =>
-        prev.map((it) => (it.id === itemId ? { ...it, read: true } : it)),
-      );
-    }
+  const displayItems = useMemo(() => isAuthenticated ? (query.data?.items ?? []).map(it => ({
+    id: it.id, title: it.title, message: it.body,
+    time: formatNotificationTime(it.createdAt), read: Boolean(it.readAt),
+  })) : [], [isAuthenticated, query.data]);
+  const handleMarkAllRead = () => { if (isAuthenticated) markRead.mutate({ all: true }); };
+  const handleItemPress = (id: string, read: boolean) => {
+    if (isAuthenticated && !read) markRead.mutate({ ids: [id] });
   };
 
   return (
@@ -124,7 +88,7 @@ export function HomeNotificationsModal({
                 accessibilityRole="button"
                 accessibilityLabel="Đánh dấu tất cả đã đọc"
                 onPress={handleMarkAllRead}
-                disabled={markRead.isPending}
+                disabled={!isAuthenticated || !displayItems.length || markRead.isPending}
                 style={styles.markReadBtn}
               >
                 {markRead.isPending ? (
@@ -161,7 +125,10 @@ export function HomeNotificationsModal({
               </View>
             ) : null}
 
-            {isAuthenticated && !query.isPending && displayItems.length === 0 ? (
+            {!isAuthenticated ? <StatePanel title="Đăng nhập để xem thông báo" message="Hộp thư chỉ hiển thị thông báo dành cho tài khoản của bạn." /> : null}
+            {isAuthenticated && query.isError ? <StatePanel title="Chưa tải được thông báo" action={{ label: "Thử lại", onPress: () => void query.refetch() }} /> : null}
+            {markRead.isError ? <StatePanel title="Chưa đánh dấu đã đọc" action={{ label: "Thử lại", onPress: () => markRead.mutate(markRead.variables!) }} /> : null}
+            {isAuthenticated && !query.isPending && !query.isError && displayItems.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <View style={styles.emptyIconCircle}>
                   <Icon name="bell" size={26} color={stitchTokens.coolMuted} />
@@ -188,23 +155,11 @@ export function HomeNotificationsModal({
                 <View
                   style={[
                     styles.iconCircle,
-                    item.type === "order"
-                      ? styles.iconOrder
-                      : item.type === "auction"
-                        ? styles.iconAuction
-                        : styles.iconDefault,
+                    styles.iconDefault,
                   ]}
                 >
                   <Icon
-                    name={
-                      item.type === "order"
-                        ? "truck"
-                        : item.type === "auction"
-                          ? "gavel"
-                          : item.type === "voucher"
-                            ? "ticket"
-                            : "info"
-                    }
+                    name="bell"
                     size={16}
                     color={stitchTokens.white}
                   />

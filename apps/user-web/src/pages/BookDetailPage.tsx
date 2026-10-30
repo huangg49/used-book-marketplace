@@ -380,6 +380,7 @@ export function BookDetailPage() {
           <div className={styles.sellerCardInfo}>
             <span className={styles.sellerCardEyebrow}>Người đăng sách</span>
             <strong>{book.seller.displayName}</strong>
+            <Link to={`/members/${book.seller.id}`}>Xem hồ sơ uy tín</Link>
             <span className={styles.sellerCardMeta}>
               {isOwner ? "Đây là bài đăng của bạn" : "Thông tin người bán"}
             </span>

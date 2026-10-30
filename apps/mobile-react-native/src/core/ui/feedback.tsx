@@ -56,12 +56,14 @@ export function StatePanel({
   message,
   icon = "book",
   loading = false,
+  wine = false,
   action,
 }: {
   title: string;
   message?: string;
   icon?: IconName;
   loading?: boolean;
+  wine?: boolean;
   action?: { label: string; onPress: () => void; busy?: boolean };
 }) {
   return (
@@ -73,12 +75,13 @@ export function StatePanel({
       }}
     >
       {loading ? (
-        <ActivityIndicator accessibilityLabel={title} color={colors.forest} />
+        <ActivityIndicator accessibilityLabel={title} color={wine ? stitchTokens.wine : colors.forest} />
       ) : (
-        <Icon name={icon} size={34} />
+        <Icon name={icon} size={34} color={wine ? stitchTokens.wine : colors.forest} />
       )}
       <AppText
         kind="heading"
+        color={wine ? stitchTokens.charcoalBrown : colors.ink}
         accessibilityRole="header"
         style={{ textAlign: "center" }}
       >
@@ -92,6 +95,7 @@ export function StatePanel({
       {action ? (
         <Button
           title={action.label}
+          wine={wine}
           busy={action.busy}
           onPress={action.onPress}
         />

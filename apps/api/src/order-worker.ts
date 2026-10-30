@@ -6,6 +6,7 @@ import { AuctionWorker } from './modules/auctions/auction-worker.service.js';
 import { PurchaseExpiryWorker } from './modules/purchases/purchase-expiry.service.js';
 import { ExchangeExpiryWorker } from './modules/exchanges/exchange-expiry.service.js';
 import { WalletExpiryWorker } from './modules/wallet/wallet-expiry.service.js';
+import { ReviewQueries } from './modules/reviews/review-queries.service.js';
 
 const AUCTION_CLOSE_INTERVAL_MS = 5000;
 const app = await NestFactory.createApplicationContext(AppModule, {
@@ -16,6 +17,8 @@ const auctions = app.get(AuctionWorker);
 const purchases = app.get(PurchaseExpiryWorker);
 const exchangeExpiry = app.get(ExchangeExpiryWorker);
 const walletExpiry = app.get(WalletExpiryWorker);
+const reviews = app.get(ReviewQueries);
+let nextReviewSweep = 0;
 let stopping = false;
 process.on('SIGINT', () => {
   stopping = true;
@@ -26,6 +29,16 @@ process.on('SIGTERM', () => {
 try {
   while (!stopping) {
     const start = Date.now();
+    if (start >= nextReviewSweep) {
+      try {
+        const result = await reviews.publishDue();
+        console.log(JSON.stringify({ event: 'reviewPublicationSweep', ...result }));
+        nextReviewSweep = Date.now() + 60_000;
+      } catch {
+        console.error('Review publication sweep failed; retrying next cycle.');
+        if (process.argv.includes('--once')) process.exitCode = 1;
+      }
+    }
     try {
       const result = await walletExpiry.tick();
       if (process.argv.includes('--once') && result.failed)

@@ -38,6 +38,8 @@
     "price-refs:import": "tsx src/price-refs-import.ts",
     "eval:price": "tsx eval/price-assist/run.ts",
     "eval:autofill": "tsx eval/autofill-assist/run.ts",
+    "eval:compare": "tsx eval/autofill-assist/compare.ts",
+    "eval:endpoints": "tsx eval/autofill-assist/probe-endpoints.ts",
     "mongo:check": "node dist/mongo-check.js",
     "mongo:import-postgres": "tsx src/mongo-import-postgres.ts"
   },
@@ -54,6 +56,7 @@
     "@nestjs/websockets": "^12.0.3",
     "@supabase/storage-js": "^2.117.2",
     "@used-books/api-contract": "workspace:*",
+    "@zxing/library": "0.23.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "argon2": "^0.45.1",
@@ -69,6 +72,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "sharp": "^0.35.4",
+    "tldts": "7.4.19",
     "yaml": "^2.9.1"
   },
   "devDependencies": {

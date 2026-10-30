@@ -47,6 +47,8 @@ export const exchangeSchema = z.object({
   initiatorReceivedAt: date,
   recipientReceivedAt: date,
   inspectionDeadline: date,
+  initiatorInspectionDeadline: date,
+  recipientInspectionDeadline: date,
   disputedAt: date,
   disputeReason: z.string().nullable().optional(),
   disputedBy: z.string().nullable().optional(),

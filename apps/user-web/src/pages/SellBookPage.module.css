@@ -64,10 +64,132 @@
   position: relative;
   isolation: isolate;
   padding: 6px;
-  margin-bottom: 32px;
+  margin-bottom: 12px;
   background: var(--shop-paper);
   border-radius: 12px;
   box-shadow: 0 5px 18px #2819140a;
+}
+
+.progressBarCard {
+  margin-bottom: 28px;
+  padding: 12px 18px 14px;
+  background: var(--shop-paper);
+  border-radius: 12px;
+  border: 1px solid rgba(107, 25, 23, 0.09);
+  box-shadow: 0 4px 14px rgba(40, 25, 20, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.progressBarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.progressBarLead {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progressSparkleIcon {
+  color: var(--shop-wine, #7d1f1f);
+  flex-shrink: 0;
+}
+
+.progressBarTitle {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--shop-ink, #281914);
+  letter-spacing: -0.01em;
+}
+
+.progressCompleteBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: rgba(33, 115, 70, 0.12);
+  color: #1e6b40;
+  border: 1px solid rgba(33, 115, 70, 0.2);
+}
+
+.progressBarStats {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progressBarCount {
+  font-size: 0.75rem;
+  color: var(--shop-muted, #726258);
+}
+
+.progressBarCount strong {
+  color: var(--shop-wine, #7d1f1f);
+  font-weight: 700;
+}
+
+.progressBarPercent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(107, 25, 23, 0.08);
+  color: var(--shop-wine, #7d1f1f);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.progressTrack {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  background: #ede2cf;
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.progressFill {
+  position: relative;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6b1917 0%, #9e2a2b 50%, #d45b42 100%);
+  transition: width 380ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 8px rgba(158, 42, 43, 0.35);
+  overflow: hidden;
+}
+
+.progressShimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: loadingShimmer 2.2s infinite linear;
+}
+
+@keyframes loadingShimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 .steps ol {
   list-style: none;
@@ -113,11 +235,62 @@
   border-radius: 50%;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .steps [aria-current] .stepNumber {
   background: var(--shop-cream);
   color: var(--shop-wine);
   border-color: var(--shop-cream);
+}
+
+/* Step States: Complete (Tick) & Error (X) */
+.stepNumberComplete {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+  color: #059669 !important;
+  border: 1.5px solid #34d399 !important;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.22);
+}
+
+.stepComplete:hover .stepNumberComplete {
+  transform: scale(1.1);
+  box-shadow: 0 4px 10px rgba(5, 150, 105, 0.32);
+}
+
+.stepStatusComplete {
+  color: #059669 !important;
+  font-weight: 600;
+}
+
+.stepNumberError {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%) !important;
+  color: #dc2626 !important;
+  border: 1.5px solid #f87171 !important;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.22);
+}
+
+.stepHasError:hover .stepNumberError {
+  transform: scale(1.1);
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.32);
+}
+
+.stepStatusError {
+  color: #dc2626 !important;
+  font-weight: 600;
+}
+
+/* When the step is current (on dark red background) */
+.steps [aria-current] .stepNumberComplete {
+  background: #ffffff !important;
+  color: #059669 !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.28);
+}
+
+.steps [aria-current] .stepNumberError {
+  background: #ffffff !important;
+  color: #dc2626 !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.28);
 }
 .steps p {
   font-size: 0.75rem;
@@ -1108,7 +1281,11 @@
   .steps {
     position: relative;
     padding: 6px;
+    margin-bottom: 10px;
+  }
+  .progressBarCard {
     margin-bottom: 20px;
+    padding: 10px 14px 12px;
   }
   .steps ol {
     grid-template-columns: repeat(5, minmax(0, 1fr));

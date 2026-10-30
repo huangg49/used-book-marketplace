@@ -1,0 +1,587 @@
+{
+  "ranAt": "2026-10-29T04:32:04.187Z",
+  "sourceBase": "271d99c",
+  "branch": "codex/listing-ai-data-finalization",
+  "scope": "Finish dataset technical validation and curation; no app/contract/DB/import/GHN or paid model calls.",
+  "report": {
+    "version": 1,
+    "ranAt": "2026-10-29T04:30:50.312Z",
+    "technicalStatus": "PASS",
+    "overallStatus": "TECHNICAL_PASS_ACCEPTANCE_PARTIAL",
+    "exitCode": 0,
+    "coverageStatus": "PARTIAL",
+    "acceptance": {
+      "humanReview": "NOT_RUN",
+      "realCameraQuality": "NOT_RUN",
+      "liveModel": "NOT_RUN",
+      "readinessGateChanged": false
+    },
+    "metrics": {
+      "activeUniqueHashes": 24,
+      "rawBooks": 25,
+      "ready": 21,
+      "partial": 3,
+      "blocked": 1,
+      "manifestImages": 25,
+      "observedIsbns": 15,
+      "multiAuthorBooks": 1,
+      "activeCoverCases": 24,
+      "quarantineCases": 1,
+      "realCameraCases": 0,
+      "observations": 40,
+      "sources": 40,
+      "twoSourceBooks": 11,
+      "qualifyingBookKeys": [
+        "hoang-tu-be-kd-2022",
+        "khong-gia-dinh-kd-2022",
+        "dat-rung-phuong-nam-kd-2026",
+        "so-do-nhanam-2021",
+        "cay-cam-ngot-nhanam-2024",
+        "tuoi-tre-dang-gia-nhanam-2021",
+        "mat-biec-tre-bm-2022",
+        "mat-biec-tre-td-2019",
+        "cho-toi-xin-ve-tre-2018",
+        "rung-nauy-nhanam-2024",
+        "song-mon-nhanam-2022"
+      ],
+      "importCandidates": 0,
+      "unknownImageRights": 25
+    },
+    "checks": [
+      {
+        "name": "schema:catalog/books.json",
+        "status": "PASS"
+      },
+      {
+        "name": "schema:provenance/sources.json",
+        "status": "PASS"
+      },
+      {
+        "name": "schema:prices/observations.json",
+        "status": "PASS"
+      },
+      {
+        "name": "schema:prices/import-candidates.json",
+        "status": "PASS"
+      },
+      {
+        "name": "schema:autofill/cover-scan/cases.json",
+        "status": "PASS"
+      },
+      {
+        "name": "schema:autofill/cover-scan/quarantine-cases.json",
+        "status": "PASS"
+      },
+      {
+        "name": "schema:autofill/real-camera/cases.json",
+        "status": "PASS"
+      },
+      {
+        "name": "unique-identities",
+        "status": "PASS",
+        "findings": 0
+      },
+      {
+        "name": "metadata-and-references",
+        "status": "PASS",
+        "findings": 0
+      },
+      {
+        "name": "sources-and-price-dates",
+        "status": "PASS",
+        "findings": 0
+      },
+      {
+        "name": "images-raster-hash-size-dimensions",
+        "status": "PASS",
+        "findings": 0
+      },
+      {
+        "name": "active-corpus-and-quarantine",
+        "status": "PASS",
+        "findings": 0
+      },
+      {
+        "name": "coverage:raw-books",
+        "status": "PASS",
+        "actual": 25,
+        "target": 25
+      },
+      {
+        "name": "coverage:vietnamese-books",
+        "status": "PASS",
+        "actual": 25,
+        "target": 18
+      },
+      {
+        "name": "coverage:active-cover-cases",
+        "status": "PASS",
+        "actual": 24,
+        "target": 20
+      },
+      {
+        "name": "coverage:multi-author",
+        "status": "PASS",
+        "actual": 1,
+        "target": 1
+      },
+      {
+        "name": "coverage:two-independent-price-groups",
+        "status": "PARTIAL",
+        "actual": 11,
+        "target": 15
+      }
+    ],
+    "findings": [],
+    "inputDigests": [
+      {
+        "file": "catalog/books.json",
+        "sha256": "7a699a218f900932b37885f10ae5086a0edce5523ce6b6ba2a4ce9dd65bb22e3",
+        "byteSize": 58483
+      },
+      {
+        "file": "provenance/sources.json",
+        "sha256": "03845f741d7f4541b06a32b4ab42b9cf2cfabf0ba9ac49d1fe7d7a68db8e6bf5",
+        "byteSize": 19779
+      },
+      {
+        "file": "prices/observations.json",
+        "sha256": "2db0e1d025f20f8ea28dcd8246b3ac7e5654532a505c54c0ddc191a79cd021db",
+        "byteSize": 27387
+      },
+      {
+        "file": "prices/import-candidates.json",
+        "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "byteSize": 3
+      },
+      {
+        "file": "autofill/cover-scan/cases.json",
+        "sha256": "87416089e11df0ceb968803637bfd93020b63ed67fc969cb54a21c0397a3f599",
+        "byteSize": 8587
+      },
+      {
+        "file": "autofill/cover-scan/quarantine-cases.json",
+        "sha256": "5f784edb4139b4aa3a5016cbf72042646d255c2e4cfff9e2fd0cbffd447dd0e0",
+        "byteSize": 751
+      },
+      {
+        "file": "autofill/real-camera/cases.json",
+        "sha256": "927cde5d5439505bcf42656ea6fce0c113eb4b95b42801f038d85faf9e73bc8e",
+        "byteSize": 45
+      },
+      {
+        "file": "autofill/cover-scan/images/de-men-bm-kd-2023/front.jpg",
+        "sha256": "0d63447a7b9a1e0550cbc9d8a34ac8cbd495a3e8d917fc87b0c50305eaf98d84",
+        "byteSize": 159668
+      },
+      {
+        "file": "autofill/cover-scan/images/de-men-bc-kd-2022/front.jpg",
+        "sha256": "b2a5fc9143719c362149be07f7a1f0cf7f3c2c65617d1a01df911d0429ca7d22",
+        "byteSize": 301673
+      },
+      {
+        "file": "autofill/cover-scan/images/hoang-tu-be-kd-2022/front.jpg",
+        "sha256": "822baee88ffec9ad5501dffb0029e39a6df2669afb410d5bc45887ad7592256e",
+        "byteSize": 143341
+      },
+      {
+        "file": "autofill/cover-scan/images/hoang-tu-be-nhanam-tb2025/front.jpg",
+        "sha256": "9a4af9c609e1779cc6018167c7dd35599c769dd1cc476bb447906e9def68d235",
+        "byteSize": 92660
+      },
+      {
+        "file": "autofill/cover-scan/images/khong-gia-dinh-kd-2022/front.jpg",
+        "sha256": "248864deaa8c1823a621e2fa501b3279df1605a5d746b09a132b2f27960413f9",
+        "byteSize": 221082
+      },
+      {
+        "file": "autofill/cover-scan/images/ong-gia-bien-ca-kd-2025/front.jpg",
+        "sha256": "095542eacdedd070b88356ba0a3f01ed76e1b40d97eec0a78e337671cf0f49f0",
+        "byteSize": 308891
+      },
+      {
+        "file": "autofill/cover-scan/images/dat-rung-phuong-nam-kd-2026/front.jpg",
+        "sha256": "a1682a7517172dfc2c0bec0065a957ff681fb63be0cbeeafe7c3341e4544d2e0",
+        "byteSize": 1792214
+      },
+      {
+        "file": "autofill/cover-scan/images/kinh-van-hoa-kd-2019/front.jpg",
+        "sha256": "d9c8a68fb1088d6507819d591b0187dc462c8d9ab5516c98dd98dd40de430097",
+        "byteSize": 49468
+      },
+      {
+        "file": "autofill/cover-scan/images/doraemon-t1-kd-2023/front.jpg",
+        "sha256": "24ca25545d91337ba017d1abf85f8a48852b424e316ea061f2a4c4e2774e5ea7",
+        "byteSize": 92694
+      },
+      {
+        "file": "autofill/cover-scan/images/doraemon-t2-kd-2023/front.jpg",
+        "sha256": "cb3ea4b4e68ae6907946ed72ad3c97d783d2df542b33ddb67e92da5afd5a38b2",
+        "byteSize": 118079
+      },
+      {
+        "file": "autofill/cover-scan/images/so-do-nhanam-2021/front.jpg",
+        "sha256": "2695d92ee16f33725f2cf52b3ca418ac1331f3897cf93ad8cedfce689dea7e92",
+        "byteSize": 171314
+      },
+      {
+        "file": "autofill/cover-scan/images/cay-cam-ngot-nhanam-2024/front.jpg",
+        "sha256": "42453ab1127b1f4064e9bf99072d54560691937f8f91f842a6be015d089eeaa5",
+        "byteSize": 141888
+      },
+      {
+        "file": "autofill/cover-scan/images/chien-binh-cau-vong-nhanam-2022/front.jpg",
+        "sha256": "f94b70efb5820a337b15ca8263d618e239a1b77b089ead055c757548d6c37284",
+        "byteSize": 173609
+      },
+      {
+        "file": "autofill/cover-scan/images/tuoi-tre-dang-gia-nhanam-2021/front.jpg",
+        "sha256": "fb2242779092904da3be15b06209a18f9f9e3a40562c3b028986dee2b42092a7",
+        "byteSize": 190580
+      },
+      {
+        "file": "autofill/cover-scan/images/mat-biec-tre-bm-2022/front.jpg",
+        "sha256": "60bf9f15622d4a11cd0a7a0afe1e119bbd4e0ccc3ce8712a3db693f1fafce33d",
+        "byteSize": 66413
+      },
+      {
+        "file": "autofill/cover-scan/images/mat-biec-tre-td-2019/front.jpg",
+        "sha256": "a9718a0367ccb8a42af69e55d9570182991f76ba5216590ba50a572be1e5cf21",
+        "byteSize": 515475
+      },
+      {
+        "file": "autofill/cover-scan/images/cho-toi-xin-ve-tre-2018/front.jpg",
+        "sha256": "16218948065a601edf4e9c3a2b72e031ca418f22967169d641654314b1de528d",
+        "byteSize": 530295
+      },
+      {
+        "file": "autofill/cover-scan/images/nha-gia-kim-nhanam-tb79k/front.jpg",
+        "sha256": "84028e4d0f1f21f50a9ae932c5ccab134aa44d367a73cd7a6677a01a51151768",
+        "byteSize": 280547
+      },
+      {
+        "file": "autofill/cover-scan/images/nha-gia-kim-nhanam-tb95k/front.jpg",
+        "sha256": "84028e4d0f1f21f50a9ae932c5ccab134aa44d367a73cd7a6677a01a51151768",
+        "byteSize": 280547
+      },
+      {
+        "file": "autofill/cover-scan/images/rung-nauy-nhanam-2024/front.jpg",
+        "sha256": "6193f88e109b47e6e0d6579437dda7abd637c8a4fe6528b34d37267b9dd2e84f",
+        "byteSize": 142836
+      },
+      {
+        "file": "autofill/cover-scan/images/song-mon-nhanam-2022/front.jpg",
+        "sha256": "37579edc09ce381a39ed122cc5bad39c149eeee539b4a1a344b57a50ad8df811",
+        "byteSize": 183466
+      },
+      {
+        "file": "autofill/cover-scan/images/tat-den-kd-2021/front.jpg",
+        "sha256": "a443d8abfcf4da126a3b6b3ebe0cab7f3d480f693400fd982b43ca340ab1e142",
+        "byteSize": 166188
+      },
+      {
+        "file": "autofill/cover-scan/images/truyen-kieu-kd-sc-2024/front.jpg",
+        "sha256": "d320c2c3dc96f599db28399a9e3cc5a9be96a62adc42c3e84a00a1a8f4dc9a09",
+        "byteSize": 323837
+      },
+      {
+        "file": "autofill/cover-scan/images/truyen-kieu-kd-vhtn-2021/front.jpg",
+        "sha256": "cdf4182fd993431d48988cb20b7d2eeda2dd3f94a956ee9d0e0e582ff93c142f",
+        "byteSize": 176931
+      },
+      {
+        "file": "autofill/cover-scan/images/luoc-su-nuoc-viet-kd-2024/front.jpg",
+        "sha256": "7fc7d3b588294bf39560a52a9b1040b6e29f979e5f11595950daae7819f290ee",
+        "byteSize": 250792
+      }
+    ],
+    "limits": [
+      "Offline structural verification, not semantic source verification or human acceptance.",
+      "No DB/import/provider calls. Price groups and edition labels require source review."
+    ]
+  },
+  "tests": {
+    "command": "pnpm data:listing-ai:test",
+    "passed": 29,
+    "failed": 0,
+    "skipped": 0,
+    "fixture": "Synthetic JPEG and metadata generated in guarded temporary workspace directories; no private corpus dependency",
+    "logSha256": "2c78a4f71a188eb3e98edf04c39cb7f5f6fdf1facace92b9c12aecda91f50ef5"
+  },
+  "compatibilityCommand": "node qa-data/listing-ai/incoming/validation/run-checks.mjs",
+  "preservation": {
+    "snapshotFiles": 12,
+    "snapshot": "incoming/revisions/codex-before-finalization-2026-10-29",
+    "all25ImageBytesUnchanged": true,
+    "images": [
+      {
+        "path": "autofill/cover-scan/images/de-men-bm-kd-2023/front.jpg",
+        "sha256": "0d63447a7b9a1e0550cbc9d8a34ac8cbd495a3e8d917fc87b0c50305eaf98d84",
+        "beforeSha256": "0d63447a7b9a1e0550cbc9d8a34ac8cbd495a3e8d917fc87b0c50305eaf98d84"
+      },
+      {
+        "path": "autofill/cover-scan/images/de-men-bc-kd-2022/front.jpg",
+        "sha256": "b2a5fc9143719c362149be07f7a1f0cf7f3c2c65617d1a01df911d0429ca7d22",
+        "beforeSha256": "b2a5fc9143719c362149be07f7a1f0cf7f3c2c65617d1a01df911d0429ca7d22"
+      },
+      {
+        "path": "autofill/cover-scan/images/hoang-tu-be-kd-2022/front.jpg",
+        "sha256": "822baee88ffec9ad5501dffb0029e39a6df2669afb410d5bc45887ad7592256e",
+        "beforeSha256": "822baee88ffec9ad5501dffb0029e39a6df2669afb410d5bc45887ad7592256e"
+      },
+      {
+        "path": "autofill/cover-scan/images/hoang-tu-be-nhanam-tb2025/front.jpg",
+        "sha256": "9a4af9c609e1779cc6018167c7dd35599c769dd1cc476bb447906e9def68d235",
+        "beforeSha256": "9a4af9c609e1779cc6018167c7dd35599c769dd1cc476bb447906e9def68d235"
+      },
+      {
+        "path": "autofill/cover-scan/images/khong-gia-dinh-kd-2022/front.jpg",
+        "sha256": "248864deaa8c1823a621e2fa501b3279df1605a5d746b09a132b2f27960413f9",
+        "beforeSha256": "248864deaa8c1823a621e2fa501b3279df1605a5d746b09a132b2f27960413f9"
+      },
+      {
+        "path": "autofill/cover-scan/images/ong-gia-bien-ca-kd-2025/front.jpg",
+        "sha256": "095542eacdedd070b88356ba0a3f01ed76e1b40d97eec0a78e337671cf0f49f0",
+        "beforeSha256": "095542eacdedd070b88356ba0a3f01ed76e1b40d97eec0a78e337671cf0f49f0"
+      },
+      {
+        "path": "autofill/cover-scan/images/dat-rung-phuong-nam-kd-2026/front.jpg",
+        "sha256": "a1682a7517172dfc2c0bec0065a957ff681fb63be0cbeeafe7c3341e4544d2e0",
+        "beforeSha256": "a1682a7517172dfc2c0bec0065a957ff681fb63be0cbeeafe7c3341e4544d2e0"
+      },
+      {
+        "path": "autofill/cover-scan/images/kinh-van-hoa-kd-2019/front.jpg",
+        "sha256": "d9c8a68fb1088d6507819d591b0187dc462c8d9ab5516c98dd98dd40de430097",
+        "beforeSha256": "d9c8a68fb1088d6507819d591b0187dc462c8d9ab5516c98dd98dd40de430097"
+      },
+      {
+        "path": "autofill/cover-scan/images/doraemon-t1-kd-2023/front.jpg",
+        "sha256": "24ca25545d91337ba017d1abf85f8a48852b424e316ea061f2a4c4e2774e5ea7",
+        "beforeSha256": "24ca25545d91337ba017d1abf85f8a48852b424e316ea061f2a4c4e2774e5ea7"
+      },
+      {
+        "path": "autofill/cover-scan/images/doraemon-t2-kd-2023/front.jpg",
+        "sha256": "cb3ea4b4e68ae6907946ed72ad3c97d783d2df542b33ddb67e92da5afd5a38b2",
+        "beforeSha256": "cb3ea4b4e68ae6907946ed72ad3c97d783d2df542b33ddb67e92da5afd5a38b2"
+      },
+      {
+        "path": "autofill/cover-scan/images/so-do-nhanam-2021/front.jpg",
+        "sha256": "2695d92ee16f33725f2cf52b3ca418ac1331f3897cf93ad8cedfce689dea7e92",
+        "beforeSha256": "2695d92ee16f33725f2cf52b3ca418ac1331f3897cf93ad8cedfce689dea7e92"
+      },
+      {
+        "path": "autofill/cover-scan/images/cay-cam-ngot-nhanam-2024/front.jpg",
+        "sha256": "42453ab1127b1f4064e9bf99072d54560691937f8f91f842a6be015d089eeaa5",
+        "beforeSha256": "42453ab1127b1f4064e9bf99072d54560691937f8f91f842a6be015d089eeaa5"
+      },
+      {
+        "path": "autofill/cover-scan/images/chien-binh-cau-vong-nhanam-2022/front.jpg",
+        "sha256": "f94b70efb5820a337b15ca8263d618e239a1b77b089ead055c757548d6c37284",
+        "beforeSha256": "f94b70efb5820a337b15ca8263d618e239a1b77b089ead055c757548d6c37284"
+      },
+      {
+        "path": "autofill/cover-scan/images/tuoi-tre-dang-gia-nhanam-2021/front.jpg",
+        "sha256": "fb2242779092904da3be15b06209a18f9f9e3a40562c3b028986dee2b42092a7",
+        "beforeSha256": "fb2242779092904da3be15b06209a18f9f9e3a40562c3b028986dee2b42092a7"
+      },
+      {
+        "path": "autofill/cover-scan/images/mat-biec-tre-bm-2022/front.jpg",
+        "sha256": "60bf9f15622d4a11cd0a7a0afe1e119bbd4e0ccc3ce8712a3db693f1fafce33d",
+        "beforeSha256": "60bf9f15622d4a11cd0a7a0afe1e119bbd4e0ccc3ce8712a3db693f1fafce33d"
+      },
+      {
+        "path": "autofill/cover-scan/images/mat-biec-tre-td-2019/front.jpg",
+        "sha256": "a9718a0367ccb8a42af69e55d9570182991f76ba5216590ba50a572be1e5cf21",
+        "beforeSha256": "a9718a0367ccb8a42af69e55d9570182991f76ba5216590ba50a572be1e5cf21"
+      },
+      {
+        "path": "autofill/cover-scan/images/cho-toi-xin-ve-tre-2018/front.jpg",
+        "sha256": "16218948065a601edf4e9c3a2b72e031ca418f22967169d641654314b1de528d",
+        "beforeSha256": "16218948065a601edf4e9c3a2b72e031ca418f22967169d641654314b1de528d"
+      },
+      {
+        "path": "autofill/cover-scan/images/nha-gia-kim-nhanam-tb79k/front.jpg",
+        "sha256": "84028e4d0f1f21f50a9ae932c5ccab134aa44d367a73cd7a6677a01a51151768",
+        "beforeSha256": "84028e4d0f1f21f50a9ae932c5ccab134aa44d367a73cd7a6677a01a51151768"
+      },
+      {
+        "path": "autofill/cover-scan/images/nha-gia-kim-nhanam-tb95k/front.jpg",
+        "sha256": "84028e4d0f1f21f50a9ae932c5ccab134aa44d367a73cd7a6677a01a51151768",
+        "beforeSha256": "84028e4d0f1f21f50a9ae932c5ccab134aa44d367a73cd7a6677a01a51151768"
+      },
+      {
+        "path": "autofill/cover-scan/images/rung-nauy-nhanam-2024/front.jpg",
+        "sha256": "6193f88e109b47e6e0d6579437dda7abd637c8a4fe6528b34d37267b9dd2e84f",
+        "beforeSha256": "6193f88e109b47e6e0d6579437dda7abd637c8a4fe6528b34d37267b9dd2e84f"
+      },
+      {
+        "path": "autofill/cover-scan/images/song-mon-nhanam-2022/front.jpg",
+        "sha256": "37579edc09ce381a39ed122cc5bad39c149eeee539b4a1a344b57a50ad8df811",
+        "beforeSha256": "37579edc09ce381a39ed122cc5bad39c149eeee539b4a1a344b57a50ad8df811"
+      },
+      {
+        "path": "autofill/cover-scan/images/tat-den-kd-2021/front.jpg",
+        "sha256": "a443d8abfcf4da126a3b6b3ebe0cab7f3d480f693400fd982b43ca340ab1e142",
+        "beforeSha256": "a443d8abfcf4da126a3b6b3ebe0cab7f3d480f693400fd982b43ca340ab1e142"
+      },
+      {
+        "path": "autofill/cover-scan/images/truyen-kieu-kd-sc-2024/front.jpg",
+        "sha256": "d320c2c3dc96f599db28399a9e3cc5a9be96a62adc42c3e84a00a1a8f4dc9a09",
+        "beforeSha256": "d320c2c3dc96f599db28399a9e3cc5a9be96a62adc42c3e84a00a1a8f4dc9a09"
+      },
+      {
+        "path": "autofill/cover-scan/images/truyen-kieu-kd-vhtn-2021/front.jpg",
+        "sha256": "cdf4182fd993431d48988cb20b7d2eeda2dd3f94a956ee9d0e0e582ff93c142f",
+        "beforeSha256": "cdf4182fd993431d48988cb20b7d2eeda2dd3f94a956ee9d0e0e582ff93c142f"
+      },
+      {
+        "path": "autofill/cover-scan/images/luoc-su-nuoc-viet-kd-2024/front.jpg",
+        "sha256": "7fc7d3b588294bf39560a52a9b1040b6e29f979e5f11595950daae7819f290ee",
+        "beforeSha256": "7fc7d3b588294bf39560a52a9b1040b6e29f979e5f11595950daae7819f290ee"
+      }
+    ]
+  },
+  "metadataEdits": [
+    {
+      "bookKey": "de-men-bc-kd-2022",
+      "field": "illustrators",
+      "before": [],
+      "after": [
+        "Tạ Huy Long"
+      ]
+    },
+    {
+      "bookKey": "de-men-bc-kd-2022",
+      "field": "edition",
+      "before": "Bìa cứng – tái bản 2022",
+      "after": "Bìa cứng – minh họa Tạ Huy Long"
+    },
+    {
+      "bookKey": "hoang-tu-be-kd-2022",
+      "field": "edition",
+      "before": "Tủ sách các nền văn học thế giới – tái bản 2022",
+      "after": "Bản Kim Đồng – dịch Nguyễn Thành Long"
+    },
+    {
+      "bookKey": "hoang-tu-be-nhanam-2025",
+      "field": "publicationYear",
+      "before": 2020,
+      "after": null
+    },
+    {
+      "bookKey": "khong-gia-dinh-kd-2022",
+      "field": "edition",
+      "before": "Tái bản 2022 – bìa mềm",
+      "after": "Bìa mềm – dịch Huỳnh Lý"
+    },
+    {
+      "bookKey": "ong-gia-bien-ca-kd-2025",
+      "field": "edition",
+      "before": "Tác phẩm chọn lọc văn học Mỹ – tái bản 2025",
+      "after": "Tác phẩm chọn lọc văn học Mỹ – dịch Lê Huy Bắc"
+    },
+    {
+      "bookKey": "dat-rung-phuong-nam-kd-2026",
+      "field": "edition",
+      "before": "Kỷ niệm 100 năm ngày sinh nhà văn Đoàn Giỏi – bìa cứng, 2026",
+      "after": "Bìa cứng – kỷ niệm 100 năm ngày sinh Đoàn Giỏi"
+    },
+    {
+      "bookKey": "mat-biec-tre-td-2019",
+      "field": "publicationYear",
+      "before": null,
+      "after": 2019
+    },
+    {
+      "bookKey": "cho-toi-xin-ve-tre-2018",
+      "field": "publicationYear",
+      "before": null,
+      "after": 2018
+    },
+    {
+      "bookKey": "truyen-kieu-kd-sc-2024",
+      "field": "illustrators",
+      "before": [],
+      "after": [
+        "Nguyễn Công Hoan"
+      ]
+    },
+    {
+      "bookKey": "truyen-kieu-kd-sc-2024",
+      "field": "edition",
+      "before": "Sách tranh – tái bản 2024",
+      "after": "Sách tranh minh họa Nguyễn Công Hoan – bìa cứng"
+    }
+  ],
+  "code": [
+    {
+      "file": "qa-data/listing-ai/validator.mjs",
+      "sha256": "2f7b59ba44954307c75d2a84fc56d15330fa11786b51452b1828c87e26496608"
+    },
+    {
+      "file": "qa-data/listing-ai/validate.mjs",
+      "sha256": "ec558cd914670005c14b65a06b5c0f231096be19bdde460e7089007a9e198145"
+    },
+    {
+      "file": "qa-data/listing-ai/validator.test.mjs",
+      "sha256": "7aa35705eb00bae47f9f47182fe894610eadb8660d40c8025e8a7ed5227f5bb0"
+    }
+  ],
+  "sourceVerification": {
+    "traceFile": "incoming/provenance/codex-source-check.json",
+    "traceSha256": "341757433fca60888a1bb81e06b0b76bec855cb8010f5e96c0da0722919725ae",
+    "attempted": 40,
+    "freshHttp200": 37,
+    "timeouts": [
+      {
+        "id": "src-nxbtre-ctxv",
+        "url": "https://www.nxbtre.com.vn/sach/cho-toi-xin-mot-ve-di-tuoi-tho-44594.html",
+        "error": "TimeoutError",
+        "cachedFallback": {
+          "from": "Codex review v2",
+          "batchCompletedAt": "2026-10-29T04:01:58.147Z",
+          "sha256": "c4b2c528c53831df3a9dca2871b70a8adf3602ffdb3ef3cd710c3b0707334cdd",
+          "lastAttempt": "Timeout; not reverified live"
+        }
+      },
+      {
+        "id": "src-nxbtre-mb-bm",
+        "url": "https://www.nxbtre.com.vn/sach/mat-biec-146386.html",
+        "error": "TimeoutError",
+        "cachedFallback": {
+          "from": "Codex review v2",
+          "batchCompletedAt": "2026-10-29T04:01:58.147Z",
+          "sha256": "7e09a791f481415b50f726aaddc2cc3c02c41e861f2126e1d5606e3484c7c1ad",
+          "lastAttempt": "Timeout; not reverified live"
+        }
+      },
+      {
+        "id": "src-nxbtre-mb-td",
+        "url": "https://www.nxbtre.com.vn/sach/mat-biec-truyen-dai-54984.html",
+        "error": "TimeoutError",
+        "cachedFallback": {
+          "from": "Codex review v2",
+          "batchCompletedAt": "2026-10-29T04:01:58.147Z",
+          "sha256": "5afc0f68c396afc85ac141c07824dad123dd964bdcbd4dcfb261da3b3bcbe110",
+          "lastAttempt": "Timeout; not reverified live"
+        }
+      }
+    ],
+    "limits": [
+      "37 fresh HTTP200, three timeouts with cached prior review evidence, not 40 fresh verifications",
+      "HTTP200 is not proof of matching edition",
+      "11/15 is based on curated labels and independent groups, not human acceptance",
+      "No raw HTML or images published"
+    ]
+  },
+  "notRun": [
+    "Human ground-truth review",
+    "Real-camera corpus/quality gate",
+    "Live NVIDIA/model evaluation",
+    "Database import/migrations",
+    "Native UI and remote CI for this data-only change"
+  ],
+  "readinessGateChanged": false,
+  "rawDataAndImagesIgnored": true,
+  "localCommitOnly": true
+}

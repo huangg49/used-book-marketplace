@@ -1,36 +1,38 @@
-import { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
-import { Icon, formatVnd, stitchTokens } from "../../../core/ui";
-import {
-  type LiveAuctionItem,
-  FALLBACK_AUCTIONS,
-} from "../home-mock-data";
+import { Icon, StatePanel, formatVnd, stitchTokens } from "../../../core/ui";
+import type { PublicAuctionSummary } from "../../auctions/contracts";
+import { AuctionCover } from "../../auctions/components/auction-cover";
+import { formatRemaining } from "../../auctions/auctions-model";
+import { useForeground } from "../../../core/hooks/use-foreground";
 
 export interface HomeLiveAuctionsProps {
-  readonly items?: readonly LiveAuctionItem[];
+  readonly items: readonly PublicAuctionSummary[];
+  readonly serverTime?: string;
+  readonly loading?: boolean;
+  readonly error?: boolean;
+  readonly onRetry?: () => void;
   readonly onOpenAuction: (auctionId: string) => void;
   readonly onSeeAllPress: () => void;
 }
 
 export function HomeLiveAuctions({
-  items = FALLBACK_AUCTIONS,
+  items, serverTime, loading, error, onRetry,
   onOpenAuction,
   onSeeAllPress,
 }: HomeLiveAuctionsProps) {
-  // Live ticking countdown timer
-  const [secondsLeft, setSecondsLeft] = useState(6322); // ~ 1h 45m 22s
-
+  const active = useForeground();
+  const anchor = useRef<{ source: string; local: number } | null>(null);
+  const [clock, setClock] = useState({ source: serverTime, now: serverTime ? Date.parse(serverTime) : 0 });
   useEffect(() => {
-    const timer = setInterval(() => {
-      setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 7200));
-    }, 1000);
+    if (!active || !serverTime || !items.length) return;
+    if (anchor.current?.source !== serverTime) anchor.current = { source: serverTime, local: Date.now() };
+    const local = anchor.current.local;
+    const timer = setInterval(() => setClock({ source: serverTime, now: Date.parse(serverTime) + Math.max(0, Date.now() - local) }), 1000);
     return () => clearInterval(timer);
-  }, []);
-
-  const hours = String(Math.floor(secondsLeft / 3600)).padStart(2, "0");
-  const minutes = String(Math.floor((secondsLeft % 3600) / 60)).padStart(2, "0");
-  const seconds = String(secondsLeft % 60).padStart(2, "0");
+  }, [active, serverTime, items.length]);
+  const now = clock.source === serverTime ? clock.now : (serverTime ? Date.parse(serverTime) : 0);
 
   return (
     <View style={styles.container}>
@@ -44,38 +46,14 @@ export function HomeLiveAuctions({
             <AppText kind="heading" style={styles.titleText}>
               ĐẤU GIÁ TRỰC TIẾP
             </AppText>
-            <View style={styles.liveTag}>
+            {items.length > 0 ? <View style={styles.liveTag}>
               <View style={styles.livePulseDot} />
               <AppText kind="small" style={styles.liveTagText}>
                 LIVE
               </AppText>
-            </View>
+            </View> : null}
           </View>
 
-          {/* Countdown timer pills */}
-          <View style={styles.countdownBox}>
-            <View style={styles.pill}>
-              <AppText kind="small" style={styles.pillText}>
-                {hours}
-              </AppText>
-            </View>
-            <AppText kind="small" style={styles.separator}>
-              :
-            </AppText>
-            <View style={styles.pill}>
-              <AppText kind="small" style={styles.pillText}>
-                {minutes}
-              </AppText>
-            </View>
-            <AppText kind="small" style={styles.separator}>
-              :
-            </AppText>
-            <View style={styles.pill}>
-              <AppText kind="small" style={styles.pillText}>
-                {seconds}
-              </AppText>
-            </View>
-          </View>
         </View>
 
         {/* See All CTA */}
@@ -92,6 +70,9 @@ export function HomeLiveAuctions({
         </Pressable>
       </View>
 
+      {loading && !items.length ? <StatePanel loading title="Đang tải phiên đấu giá…" /> : null}
+      {error ? <StatePanel title="Chưa tải được phiên đấu giá" action={onRetry ? { label: "Thử lại", onPress: onRetry } : undefined} /> : null}
+      {!loading && !error && !items.length ? <StatePanel title="Chưa có phiên đang diễn ra" message="Bạn có thể xem các phiên sắp mở trong mục Đấu giá." /> : null}
       {/* Horizontal Cards Scroll */}
       <ScrollView
         horizontal
@@ -105,7 +86,7 @@ export function HomeLiveAuctions({
             <Pressable
               key={item.id}
               accessibilityRole="button"
-              accessibilityLabel={`${item.title}. Giá dẫn đầu ${formatVnd(item.currentBid)}`}
+              accessibilityLabel={`${item.title}. Giá dẫn đầu ${formatVnd((item.currentPrice ?? item.startPrice))}`}
               disabled={!real}
               onPress={real ? () => onOpenAuction(item.id) : undefined}
               style={({ pressed }) => [
@@ -115,26 +96,13 @@ export function HomeLiveAuctions({
             >
               {/* Cover with Auction Badge */}
               <View style={styles.coverWrapper}>
-                <Image
-                  source={{ uri: item.coverUrl }}
-                  style={styles.coverImage}
-                  resizeMode="cover"
-                />
-
-                {/* Top Rare/Condition Badge */}
-                {item.conditionLabel ? (
-                  <View style={styles.conditionBadge}>
-                    <AppText kind="small" style={styles.conditionText}>
-                      {item.conditionLabel}
-                    </AppText>
-                  </View>
-                ) : null}
+                <AuctionCover auctionId={item.id} mediaId={item.book?.photos[0]?.id} label={item.title} />
 
                 {/* Live Gavel Overlay Badge */}
                 <View style={styles.bidCountBadge}>
                   <Icon name="flame" size={10} color={stitchTokens.white} />
                   <AppText kind="small" style={styles.bidCountText}>
-                    {item.statusText}
+                    {item.bidderCount} lượt đấu
                   </AppText>
                 </View>
               </View>
@@ -146,7 +114,7 @@ export function HomeLiveAuctions({
                     Dẫn giá:
                   </AppText>
                   <AppText kind="shelfPrice" style={styles.dealPrice}>
-                    {formatVnd(item.currentBid)}
+                    {formatVnd((item.currentPrice ?? item.startPrice))}
                   </AppText>
                 </View>
 
@@ -160,11 +128,14 @@ export function HomeLiveAuctions({
                   </AppText>
                 )}
 
+                <AppText kind="small" style={styles.startPriceText}>
+                  {now >= Date.parse(item.endAt) ? "Đã kết thúc" : `Còn ${formatRemaining(Date.parse(item.endAt) - now)}`}
+                </AppText>
                 {/* Auction Bid Action Pill */}
                 <View style={styles.actionPillBg}>
                   <Icon name="gavel" size={11} color={stitchTokens.white} />
                   <AppText kind="small" style={styles.actionPillText}>
-                    Trả giá ngay
+                    Xem phiên đấu giá
                   </AppText>
                 </View>
               </View>

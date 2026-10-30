@@ -1,0 +1,92 @@
+{
+  "date": "2026-10-29",
+  "branch": "codex/listing-assist-fast-paths",
+  "base": "9f93bae",
+  "commitSubject": "feat(listings): add ISBN and price reference fast paths",
+  "status": "PASS",
+  "source": "synthetic EAN-13; real local decoder/API/Mongo/Sharp; fake AI/storage; synthetic prices",
+  "limitations": "One local Chromium journey, synthetic barcode/prices, fake AI/storage. Server stages exclude upload/network/render time; not a provider benchmark, production SLA, native or real-camera acceptance.",
+  "checks": {
+    "apiUnit": 286,
+    "sessionClient": 59,
+    "userWeb": 253,
+    "reactNative": 164,
+    "adminWeb": 219,
+    "newHttp": 11,
+    "regressionHttp": 28,
+    "mongoSchema": 27,
+    "finalHttpRecheck": "11 new + 12 price (overlap, not extra coverage)"
+  },
+  "checkpoints": [
+    "Web ISBN: real EAN-13/Sharp/worker to catalog with zero model/quota, explicit confirmation/cancel, then optional AI intent",
+    "Catalog recovery: failed request retains hints, edited hints lock old choices, Enter searches without submitting, cancel/confirm selection, no extra model call, web 320/390/768/1440",
+    "Rule reference arrives before AI, confirms explicit manual price, never overwrites user price when AI later completes",
+    "web: photo and price lost ACK each retain key/body; one provider call; explicit overwrite confirmations; responsive source evidence",
+    "web: same draft to one PendingReview; selected rule reference stored as manual price 40000 with outcome.applied=false",
+    "RN web ISBN: catalog result without a model call; optional AI preserves the original retry intent",
+    "RN web rule reference can be explicitly chosen while the AI response is pending; later AI does not overwrite the typed price",
+    "RN web: account to draft, real photo/Sharp, lost terminal response replay then explicit new intent; catalog choice and same photo at next step; price lost ACK keeps key/body and typed price",
+    "Slow price call disables duplicate request and preserves typed price; missing sources never call AI and keep manual price (RN web)"
+  ],
+  "timings": [
+    {
+      "scope": "isbn-matches",
+      "http": 200,
+      "stages": "isbn_local;dur=80.4"
+    },
+    {
+      "scope": "price-reference",
+      "http": 200,
+      "stages": "price_reference;dur=16.4"
+    },
+    {
+      "scope": "price-reference",
+      "http": 200,
+      "stages": "price_reference;dur=11.9"
+    },
+    {
+      "scope": "price-reference",
+      "http": 200,
+      "stages": "price_reference;dur=13.7"
+    },
+    {
+      "scope": "isbn-matches",
+      "http": 200,
+      "stages": "isbn_local;dur=76.8"
+    },
+    {
+      "scope": "price-reference",
+      "http": 200,
+      "stages": "price_reference;dur=12.2"
+    },
+    {
+      "scope": "price-reference",
+      "http": 200,
+      "stages": "price_reference;dur=12.5"
+    },
+    {
+      "scope": "price-reference",
+      "http": 200,
+      "stages": "price_reference;dur=11.9"
+    }
+  ],
+  "summary": {
+    "isbn-matches": {
+      "samples": 2,
+      "minMs": 76.8,
+      "maxMs": 80.4
+    },
+    "price-reference": {
+      "samples": 6,
+      "minMs": 11.9,
+      "maxMs": 16.4
+    }
+  },
+  "native": "NOT_RUN",
+  "realCamera": "NOT_RUN",
+  "liveProvider": "NOT_RUN",
+  "liveStorage": "NOT_RUN",
+  "humanAcceptance": "NOT_RUN",
+  "readiness": "UNCHANGED",
+  "mainDatabase": "NOT_MIGRATED_OR_IMPORTED"
+}

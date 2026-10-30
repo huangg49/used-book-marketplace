@@ -15,6 +15,7 @@ export function navigationGroups(user: CurrentUser | undefined): NavigationGroup
     const items: NavigationItem[] = [
       { label: "Bài đăng sách", to: "/review/listings", icon: "books" },
       { label: "Khiếu nại trao đổi", to: "/operations/exchange-disputes", icon: "resolution" },
+      { label: "Đánh giá giao dịch", to: "/transaction-reviews", icon: "books" },
     ];
     if (canReviewCatalog(user)) items.push({ label: "Đầu sách", to: "/review/catalog-requests", icon: "catalog" });
     groups.push({ id: "review", label: "Kiểm duyệt", items });

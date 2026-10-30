@@ -36,7 +36,7 @@ const specs = baselineCollections
   .map(withListingExchangePreferences);
 
 export const listingExchangePreferencesMigration = {
-  id: '0042-listing-exchange-preferences',
+  id: '0046-listing-exchange-preferences',
   definition: {
     collections: specs,
     purpose: 'Support exchange preferences on listing revisions for smart bilateral matching',

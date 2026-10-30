@@ -1,57 +1,33 @@
-import { z } from 'zod';
-import { session } from './api';
-
-export const exchangeReviewItemSchema = z.object({
-    id: z.string().uuid(),
-    exchangeId: z.string().uuid(),
-    authorId: z.string().uuid(),
-    authorName: z.string().optional(),
-    targetUserId: z.string().uuid(),
-    bookRating: z.number().int().min(1).max(5),
-    partnerRating: z.number().int().min(1).max(5),
-    tags: z.array(z.string()).default([]),
-    comment: z.string().default(''),
-    createdAt: z.string(),
-    updatedAt: z.string().optional(),
-});
-
-export type ExchangeReviewItem = z.infer<typeof exchangeReviewItemSchema>;
-
-export const exchangeReviewsResponseSchema = z.object({
-    canReview: z.boolean(),
-    deadline: z.string().nullable().optional(),
-    myReview: exchangeReviewItemSchema.nullable().optional(),
-    partnerReview: exchangeReviewItemSchema.nullable().optional(),
-});
-
-export type ExchangeReviewsResponse = z.infer<typeof exchangeReviewsResponseSchema>;
-
+import {
+  transactionReviewSchema,
+  transactionReviewsSchema,
+  sendReviewIntent,
+} from "@used-books/session-client";
+import { session } from "./api";
+export const exchangeReviewItemSchema = transactionReviewSchema;
+export const exchangeReviewsResponseSchema = transactionReviewsSchema;
+export type { TransactionReview as ExchangeReviewItem } from "@used-books/session-client";
 export interface CreateExchangeReviewInput {
-    bookRating: number;
-    partnerRating: number;
-    tags?: string[];
-    comment?: string;
+  bookRating: number;
+  partnerRating: number;
+  tags?: string[];
+  comment?: string;
 }
-
-export async function getExchangeReviews(exchangeId: string): Promise<ExchangeReviewsResponse> {
-    return session.request(
-        `/exchanges/${encodeURIComponent(exchangeId)}/reviews`,
-        exchangeReviewsResponseSchema,
-        { method: 'GET' }
-    );
+export function getExchangeReviews(id: string) {
+  return session.request(
+    `/exchanges/${encodeURIComponent(id)}/reviews`,
+    transactionReviewsSchema,
+  );
 }
-
-export async function createExchangeReview(
-    exchangeId: string,
-    data: CreateExchangeReviewInput
-): Promise<ExchangeReviewItem> {
-    return session.request(
-        `/exchanges/${encodeURIComponent(exchangeId)}/reviews`,
-        exchangeReviewItemSchema,
-        {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        }
-    );
+export function createExchangeReview(
+  id: string,
+  body: CreateExchangeReviewInput,
+) {
+  return sendReviewIntent(
+    session,
+    `reviews:${id}`,
+    `/exchanges/${encodeURIComponent(id)}/reviews`,
+    body,
+    () => crypto.randomUUID(),
+  );
 }

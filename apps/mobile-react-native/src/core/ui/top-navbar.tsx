@@ -1,4 +1,4 @@
-import { type StyleProp, Pressable, StyleSheet, View, type ViewStyle } from "react-native";
+import { type StyleProp, Pressable, StyleSheet, View, useWindowDimensions, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { WebBrandLogo } from "./brand-logo";
@@ -37,6 +37,7 @@ export function TopNavbar({
   style,
 }: TopNavbarProps) {
   const insets = useSafeAreaInsets();
+  const { width, fontScale } = useWindowDimensions();
   const { client, state } = useSession();
   const userId = state.status === "authenticated" ? state.user.id : undefined;
 
@@ -108,7 +109,7 @@ export function TopNavbar({
           ]}
         >
           <WebBrandLogo scale={0.78} />
-          {subtitle ? (
+          {subtitle && width >= 480 && fontScale < 1.3 ? (
             <>
               <View style={styles.divider} />
               <AppText
@@ -195,6 +196,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   brandGroup: {
+    minHeight: 48,
+    flexShrink: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -211,9 +214,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "rgba(255, 255, 255, 0.14)",
     alignItems: "center",
     justifyContent: "center",

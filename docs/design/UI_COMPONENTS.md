@@ -41,7 +41,7 @@ khác cờ song song. Với bản xuất sẵn, từ root chạy `node scripts/p
 | `SearchField`   | Tìm kiếm có icon và xóa từ khóa                                                               | Label có nghĩa, query và handler                                                  |
 | `Checkbox`      | Checked/disabled và nhãn xuống dòng                                                           | State/handler bên ngoài                                                           |
 | `Notice`        | info/success/warning/error, live region, dismiss tùy chọn                                     | Nội dung đã kiểm soát; thời điểm hiện/ẩn                                          |
-| `StatePanel`    | Loading, rỗng, lỗi vùng nội dung                                                              | Title/message/icon, action có label/handler/busy                                  |
+| `StatePanel`    | Loading, rỗng, lỗi vùng nội dung; `wine` cho vùng cửa hàng mới, mặc định giữ palette cũ          | Title/message/icon, action có label/handler/busy; ví dụ cả hai palette ở `/ui`      |
 | `Sheet`         | Modal có tên, safe area, scroll, close, Back/Escape, tránh bàn phím                           | Visible, onClose, children; `dismissible`, `backdropDismiss`, `footer` không cuộn |
 | `ConfirmDialog` | Câu hỏi có hậu quả, quay lại/confirm, lỗi tại chỗ                                             | Handler, visible/busy/error; không tự đóng khi handler chạy                       |
 | `Screen`        | Safe area, keyboard avoidance, scroll, max width, footer                                      | Nội dung; không lồng trong một Screen khác                                        |
@@ -251,8 +251,11 @@ không dùng placeholder làm nhãn. Các trường không truyền vẫn lấy 
 (key/title/icon, accessibilityLabel tùy chọn), `current` và `onSelect`; không đọc session hoặc tự điều hướng.
 Nền xanh rừng được cấp bởi `Screen footerAppearance="navigation"`, nằm ngoài
 ScrollView. Mục chọn có nền surface/bo8, icon và nhãn rừng; mục còn lại màu giấy.
-Nhãn `navigationLabel` BeBold12/18 được xuống dòng; “Sách tôi” giữ tên accessible
-“Sách của tôi”, đệm ngang4px giúp ba nhãn gọn ở130%. Không ép font nhỏ/cắt nhãn.
+Nhãn `navigationLabel` BeBold12/18 được xuống dòng. Cập nhật28/10: bỏ đệm ngang
+và gap giữa các đích để năm mục còn chỗ ở320px/chữ130%; không ép font nhỏ/cắt nhãn.
+Nút đăng sách có cùng vai trò chữ và focus; badge Member chỉ thêm khi có dữ liệu,
+không đặt chấm cố định cho đấu giá. `TopNavbar` giữ nút thông báo/chat48dp và
+chỉ hiện subtitle từ480dp, fontScale<1,3 để không đẩy hành động khỏi màn hẹp.
 Các vùng chạm chia đều theo
 số đích thật, không khóa chiều cao hoặc cắt nhãn. Focus dùng viền rừng trên nền
 kem, lá non trên nền xanh. `/ui` nhóm Điều hướng có mẫu đổi chọn và thử chữ lớn.

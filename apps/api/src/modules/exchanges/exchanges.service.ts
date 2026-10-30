@@ -31,6 +31,7 @@ import { requireMarketplace } from '../listings/listing-channel.js';
 import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.service.js';
 import { LedgerService } from '../wallet/ledger.service.js';
 import { notifyExchange } from './exchange-notifications.js';
+import { EXCHANGE_INSPECTION_MS, hasExchangeDispute, inspectionDeadlines, inspectionMaySettle } from './exchange-inspection.js';
 
 @Injectable()
 export class ExchangesService {
@@ -206,6 +207,7 @@ export class ExchangesService {
   }
 
   private view(row: ExchangeDoc): Wire['Exchange'] {
+    const deadlines = inspectionDeadlines(row);
     return {
       id: row._id,
       initiatorId: row.initiatorId,
@@ -213,7 +215,8 @@ export class ExchangesService {
       initiatorListingId: row.initiatorListingId,
       initiatorListingIds: row.initiatorListingIds ?? [row.initiatorListingId],
       recipientListingId: row.recipientListingId,
-      status: row.status as Wire['ExchangeStatus'],
+      status: (hasExchangeDispute(row) && !['Completed', 'Cancelled'].includes(row.status)
+        ? 'ResolutionPending' : row.status) as Wire['ExchangeStatus'],
       revision: row.revision,
       initiatorDeposit: row.initiatorDeposit,
       recipientDeposit: row.recipientDeposit,
@@ -231,7 +234,9 @@ export class ExchangesService {
       recipientShippedAt: row.recipientShippedAt?.toISOString() ?? null,
       initiatorReceivedAt: row.initiatorReceivedAt?.toISOString() ?? null,
       recipientReceivedAt: row.recipientReceivedAt?.toISOString() ?? null,
-      inspectionDeadline: row.inspectionDeadline?.toISOString() ?? null,
+      initiatorInspectionDeadline: deadlines.initiator?.toISOString() ?? null,
+      recipientInspectionDeadline: deadlines.recipient?.toISOString() ?? null,
+      inspectionDeadline: deadlines.all?.toISOString() ?? null,
       completedAt: row.completedAt?.toISOString() ?? null,
       initiatorCompletedAt: row.initiatorCompletedAt?.toISOString() ?? null,
       recipientCompletedAt: row.recipientCompletedAt?.toISOString() ?? null,
@@ -552,7 +557,8 @@ export class ExchangesService {
   }
 
   list(auth: Actor) {
-    return this.commands.read(auth, async (tx, actor) => {
+    return this.commands.readObligation(auth, async (tx, actor) => {
+      member(actor);
       const rows = await tx.c.exchanges
         .find(
           { $or: [{ initiatorId: actor._id }, { recipientId: actor._id }] },
@@ -564,7 +570,8 @@ export class ExchangesService {
   }
 
   getExchange(auth: Actor, id: string) {
-    return this.commands.read(auth, async (tx, actor) => {
+    return this.commands.readObligation(auth, async (tx, actor) => {
+      member(actor);
       const row = await this.exchange(tx, id);
       this.participant(row, actor._id);
       return this.view(row);
@@ -1027,10 +1034,12 @@ export class ExchangesService {
       },
       authorize: async (tx, actor) => {
         member(actor);
-        return this.exchange(tx, id);
+        const current = await this.exchange(tx, id);
+        this.participant(current, actor._id);
+        return current;
       },
       mutate: async (tx, actor, initialExchange) => {
-        requireActive(actor);
+        member(actor);
         this.participant(initialExchange, actor._id);
 
         await tx.lock('exchanges', [initialExchange._id]);
@@ -1052,6 +1061,7 @@ export class ExchangesService {
           actor._id === exchange.initiatorId ? 'Initiator' : 'Recipient';
 
         if (exchange.status === 'Proposed') {
+          requireActive(actor);
           if (exchange.initiatorId !== actor._id) throw conflict();
           const next = await this.cancelInternal(tx, exchange, {
             reason: 'CancelledByUser',
@@ -1346,10 +1356,12 @@ export class ExchangesService {
       },
       authorize: async (tx, actor) => {
         member(actor);
-        return this.exchange(tx, id);
+        const current = await this.exchange(tx, id);
+        this.participant(current, actor._id);
+        return current;
       },
       mutate: async (tx, actor, exchange) => {
-        requireActive(actor);
+        member(actor);
         this.participant(exchange, actor._id);
 
         if (
@@ -1438,10 +1450,12 @@ export class ExchangesService {
       },
       authorize: async (tx, actor) => {
         member(actor);
-        return this.exchange(tx, id);
+        const current = await this.exchange(tx, id);
+        this.participant(current, actor._id);
+        return current;
       },
       mutate: async (tx, actor, exchange) => {
-        requireActive(actor);
+        member(actor);
         this.participant(exchange, actor._id);
 
         if (
@@ -1463,6 +1477,9 @@ export class ExchangesService {
         const setFields: Record<string, unknown> = { updatedAt: now };
         if (isInitiator) setFields.initiatorReceivedAt = now;
         else setFields.recipientReceivedAt = now;
+        const deadline = new Date(now.getTime() + EXCHANGE_INSPECTION_MS);
+        if (isInitiator) setFields.initiatorInspectionDeadline = deadline;
+        else setFields.recipientInspectionDeadline = deadline;
 
         const willBeBothReceived =
           (isInitiator
@@ -1470,13 +1487,8 @@ export class ExchangesService {
             : exchange.initiatorReceivedAt) != null;
 
         if (willBeBothReceived) {
-          const inspectionHours = Number(
-            this.config.get('EXCHANGE_INSPECTION_HOURS') ?? 48,
-          );
           setFields.status = 'Delivered';
-          setFields.inspectionDeadline = new Date(
-            now.getTime() + inspectionHours * 3_600_000,
-          );
+          setFields.inspectionDeadline = inspectionDeadlines({ ...exchange, ...setFields } as ExchangeDoc).all;
         }
 
         const next = await tx.c.exchanges.findOneAndUpdate(
@@ -1515,10 +1527,12 @@ export class ExchangesService {
       },
       authorize: async (tx, actor) => {
         member(actor);
-        return this.exchange(tx, id);
+        const current = await this.exchange(tx, id);
+        this.participant(current, actor._id);
+        return current;
       },
       mutate: async (tx, actor, initialExchange) => {
-        requireActive(actor);
+        member(actor);
         this.participant(initialExchange, actor._id);
 
         await tx.lock('exchanges', [initialExchange._id]);
@@ -1526,6 +1540,7 @@ export class ExchangesService {
 
         if (
           exchange.status !== 'Delivered' ||
+          hasExchangeDispute(exchange) ||
           !exchange.initiatorReceivedAt ||
           !exchange.recipientReceivedAt
         ) {
@@ -1551,10 +1566,12 @@ export class ExchangesService {
           setFields.recipientCompletedAt = now;
         }
 
-        const willBeBothCompleted =
+        const bothAcknowledged =
           (isInitiator
             ? exchange.recipientCompletedAt
             : exchange.initiatorCompletedAt) != null;
+        // Acknowledgement never waives either participant's inspection window.
+        const willBeBothCompleted = bothAcknowledged && inspectionMaySettle(exchange, now);
 
         if (willBeBothCompleted) {
           setFields.status = 'Completed';
@@ -1625,11 +1642,7 @@ export class ExchangesService {
 
       const now = nowOverride ?? (await tx.now());
       if (
-        exchange.status !== 'Delivered' ||
-        !exchange.initiatorReceivedAt ||
-        !exchange.recipientReceivedAt ||
-        !exchange.inspectionDeadline ||
-        exchange.inspectionDeadline > now
+        !inspectionMaySettle(exchange, now)
       ) {
         return null;
       }
@@ -1772,16 +1785,18 @@ export class ExchangesService {
         },
         authorize: async (tx, actor) => {
           member(actor);
-          return this.exchange(tx, id);
+          const current = await this.exchange(tx, id);
+        this.participant(current, actor._id);
+        return current;
         },
         mutate: async (tx, actor, initialExchange) => {
-          requireActive(actor);
+          member(actor);
           this.participant(initialExchange, actor._id);
 
           await tx.lock('exchanges', [initialExchange._id]);
           const exchange = await this.exchange(tx, initialExchange._id);
 
-          if (!['InTransit', 'Delivered'].includes(exchange.status)) {
+          if (!['InTransit', 'Delivered'].includes(exchange.status) || hasExchangeDispute(exchange)) {
             throw invalidState();
           }
           if (exchange.revision !== body.expectedVersion) {
@@ -1789,6 +1804,10 @@ export class ExchangesService {
           }
 
           const now = await tx.now();
+          const deadline = actor._id === exchange.initiatorId
+            ? inspectionDeadlines(exchange).initiator
+            : inspectionDeadlines(exchange).recipient;
+          if (deadline && now >= deadline) throw invalidState();
           const next = await tx.c.exchanges.findOneAndUpdate(
             { _id: exchange._id, revision: exchange.revision },
             {
@@ -1831,8 +1850,7 @@ export class ExchangesService {
             JSON.stringify({
               event: 'exchangeDisputed',
               exchangeId: exchange._id,
-              disputedBy: actor._id,
-              reason: body.reason.trim(),
+              status: 'ResolutionPending',
             }),
           );
 

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MongoService } from '../../database/mongo/mongo.service.js';
 import { ExchangesService } from './exchanges.service.js';
+import { dueExchangeInspections } from './exchange-inspection.js';
 
 @Injectable()
 export class ExchangeExpiryWorker {
@@ -106,12 +107,7 @@ export class ExchangeExpiryWorker {
     // ── Branch 3: Inspection deadline expired (Delivered -> Completed) ───────
     const inspectionCandidates = await this.mongo.c.exchanges
       .find(
-        {
-          status: 'Delivered',
-          initiatorReceivedAt: { $ne: null },
-          recipientReceivedAt: { $ne: null },
-          inspectionDeadline: { $lte: now },
-        },
+        dueExchangeInspections(now),
         {
           sort: { inspectionDeadline: 1, _id: 1 },
           limit: batchSize,
@@ -252,12 +248,7 @@ export class ExchangeExpiryWorker {
       proposalExpiresAt: { $lte: now },
     });
 
-    const remainingInspections = await this.mongo.c.exchanges.countDocuments({
-      status: 'Delivered',
-      initiatorReceivedAt: { $ne: null },
-      recipientReceivedAt: { $ne: null },
-      inspectionDeadline: { $lte: now },
-    });
+    const remainingInspections = await this.mongo.c.exchanges.countDocuments(dueExchangeInspections(now));
 
     const remainingShipping = await this.mongo.c.exchanges.countDocuments({
       status: 'Preparing',

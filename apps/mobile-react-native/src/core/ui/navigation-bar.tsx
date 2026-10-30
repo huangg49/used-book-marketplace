@@ -26,7 +26,7 @@ export function NavigationBar<Key extends string>({
 }) {
   const [focused, setFocused] = useState<Key>();
   return (
-    <View style={{ flexDirection: "row", alignItems: "flex-end", gap: space.xs }}>
+    <View style={{ flexDirection: "row", alignItems: "flex-end" }}>
       {destinations.map((destination) => {
         const selected = destination.key === current;
         if (destination.primaryAction) {
@@ -37,9 +37,16 @@ export function NavigationBar<Key extends string>({
               accessibilityLabel={
                 destination.accessibilityLabel ?? destination.title
               }
+              onFocus={() => setFocused(destination.key)}
+              onBlur={() => setFocused(undefined)}
               onPress={() => onSelect(destination.key)}
               style={({ pressed }) => ({
                 flex: 1,
+                minWidth: 0,
+                minHeight: metrics.control,
+                borderWidth: 2,
+                borderColor: focused === destination.key ? colorRoles.navigationFocus : "transparent",
+                borderRadius: radius.control,
                 alignItems: "center",
                 justifyContent: "center",
                 paddingBottom: space.xs,
@@ -69,7 +76,7 @@ export function NavigationBar<Key extends string>({
               <AppText
                 kind="navigationLabel"
                 color={stitchTokens.wine}
-                style={{ textAlign: "center", fontSize: 11 }}
+                style={{ textAlign: "center", alignSelf: "stretch" }}
               >
                 {destination.title}
               </AppText>
@@ -92,7 +99,9 @@ export function NavigationBar<Key extends string>({
             onFocus={() => setFocused(destination.key)}
             onBlur={() => setFocused(undefined)}
             onPress={() => {
-              if (!selected) onSelect(destination.key);
+              // A selected section may contain a child screen (e.g. an Order
+              // under Account). Reselect still lets its owner return to root.
+              onSelect(destination.key);
             }}
             style={({ pressed }) => ({
               flex: 1,
@@ -101,7 +110,7 @@ export function NavigationBar<Key extends string>({
               alignItems: "center",
               justifyContent: "center",
               gap: space.xs,
-              paddingHorizontal: space.xs,
+              paddingHorizontal: 0,
               paddingVertical: space.sm,
               borderRadius: radius.control,
               borderWidth: 2,

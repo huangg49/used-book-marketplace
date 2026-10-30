@@ -47,20 +47,20 @@ export function SendToAuctionPolicy({ defaultExpanded = true }: SendToAuctionPol
       {expanded && (
         <>
           <AppText style={styles.descText}>
-            Mang sách tới điểm tiếp nhận trong <AppText kind="bold" style={styles.boldSpan}>72 giờ</AppText>. Nhân viên kiểm tra tình trạng thực tế theo sách đấu giá đã duyệt; đạt tiêu chuẩn thì mở phiên đấu giá 24 giờ. Không đạt hoặc không có người mua, bạn nhận lại sách tại điểm.
+            Mang sách tới điểm tiếp nhận trong <AppText kind="bold" style={styles.boldSpan}>72 giờ</AppText>. Nhân viên kiểm tra tình trạng theo bài đã duyệt. Nếu đạt, bạn chọn mở ngay hoặc hẹn phiên, thời lượng 1–168 giờ. Không đạt hoặc không có người mua, bạn nhận lại sách tại điểm.
           </AppText>
 
           <View style={styles.footerRow}>
             <View style={styles.featurePill}>
               <Icon name="clock" size={13} color={stitchTokens.subtleGray} />
               <AppText kind="small" style={styles.featureText}>
-                Thời gian giám định: 4–8h
+                Kiểm tra theo bảng kiểm
               </AppText>
             </View>
             <View style={styles.featurePill}>
               <Icon name="shield" size={13} color={stitchTokens.subtleGray} />
               <AppText kind="small" style={styles.featureText}>
-                Niêm phong bảo quản
+                Không chứng nhận chính hãng
               </AppText>
             </View>
           </View>
@@ -119,6 +119,8 @@ const styles = StyleSheet.create({
   },
   footerRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     alignItems: "center",
     justifyContent: "space-between",
     paddingTop: 6,
@@ -127,10 +129,12 @@ const styles = StyleSheet.create({
   },
   featurePill: {
     flexDirection: "row",
+    flexShrink: 1,
     alignItems: "center",
     gap: 5,
   },
   featureText: {
+    flexShrink: 1,
     fontSize: 11,
     color: stitchTokens.subtleGray,
   },

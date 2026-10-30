@@ -84,7 +84,7 @@ export const ORDER_STATE_CONFIG: Record<
   InTransit: { label: "Đang giao hàng", tone: "info" },
   Inspection: { label: "Đang kiểm định sách", tone: "info" },
   ResolutionPending: { label: "Đang xác minh", tone: "warning" },
-  SettlementPending: { label: "Chờ đối soát", tone: "info" },
+  SettlementPending: { label: "Đang xử lý hoàn tiền", tone: "info" },
   Completed: { label: "Giao dịch thành công", tone: "success" },
   Cancelled: { label: "Đã hủy đơn", tone: "neutral" },
   PaymentExpired: { label: "Quá hạn thanh toán", tone: "danger" },

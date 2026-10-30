@@ -70,7 +70,7 @@ export function HomeShortcuts({
     },
     {
       id: "sc-rare",
-      title: "Ấn Bản Hiếm",
+      title: "Sách Như Mới",
       icon: "diamond",
       iconColor: stitchTokens.goldBronze,
       bgColor: stitchTokens.lemonLight,

@@ -98,7 +98,7 @@ export function DirectOrderListPage() {
         <div>
           <h1 className={styles.dashboardTitle}>Đơn hàng của tôi</h1>
           <p className={styles.dashboardSubtitle}>
-            Theo dõi tiến trình các đơn mua và đơn bán sách, phương thức giao nhận và xác minh hoàn tất.
+            Đây là đơn mua/bán trực tiếp. Mở chi tiết để xem bước tiếp theo và thời hạn của từng đơn.
           </p>
         </div>
 
@@ -110,6 +110,7 @@ export function DirectOrderListPage() {
         )}
       </header>
 
+      <nav className={styles.filterBar} aria-label="Loại giao dịch"><Link to="/my-auctions">Đơn thắng đấu giá ở Đấu giá của tôi</Link><Link to="/exchange/mine">Trao đổi của tôi</Link><Link to="/guide?task=buy">Cách mua sách</Link></nav>
       {auth.status !== "authenticated" ? (
         <div className={styles.loginCard}>
           <ShoppingBag size={40} aria-hidden="true" />
@@ -311,23 +312,20 @@ export function DirectOrderListPage() {
                         {o.title || "Bản sách Lật Lại"}
                       </h2>
                       <p className={styles.bookGuidance}>
-                        {o.state === "ResolutionPending"
-                          ? "Đang xác minh giao nhận giữa hai bên. Vui lòng xác nhận khi đã nhận đúng sách."
-                          : o.state === "Preparing"
-                          ? isBuyer
-                            ? "Người bán đang chuẩn bị đóng gói và gửi sách cho bạn."
-                            : "Vui lòng đóng gói và gửi sách theo đúng lịch hẹn."
-                          : o.state === "InTransit"
-                          ? "Sách đang trên đường vận chuyển tới địa chỉ nhận."
-                          : o.state === "AwaitingPayment"
-                          ? "Đơn hàng đang chờ thanh toán qua ví."
-                          : isCompleted
-                          ? "Giao dịch đã hoàn tất thành công. Cảm ơn bạn đã đồng hành cùng Lật Lại!"
-                          : "Đơn hàng đã kết thúc."}
+                        {o.state==='AwaitingPayment' ? (isBuyer?'Kiểm tra tổng tiền và hạn trong chi tiết rồi thanh toán bằng ví.':'Đang chờ người mua thanh toán; mở chi tiết để xem thời hạn.')
+                          :o.state==='PendingSellerConfirmation'?(isBuyer?'Đã thanh toán, đang chờ người bán xác nhận. Theo dõi hạn trong chi tiết.':'Người mua đã thanh toán. Mở chi tiết để xem và phản hồi đơn.')
+                          :o.state==='Preparing'?(isBuyer?'Người bán đang chuẩn bị sách. Theo dõi tiến trình trong chi tiết.':'Chuẩn bị sách và làm theo bước được phép trong chi tiết đơn.')
+                          :o.state==='InTransit'?'Theo dõi thông tin vận chuyển trong chi tiết đơn.'
+                          :['Inspection','Delivered'].includes(o.state)?'Đọc thời hạn kiểm tra và hướng dẫn xử lý nếu sách có vấn đề trong chi tiết.'
+                          :o.state==='ResolutionPending'?'Đang xử lý vướng mắc. Mở hồ sơ để xem yêu cầu bổ sung; không tạo thanh toán mới thay thế.'
+                          :o.state==='SettlementPending'?'Đang xử lý quyết toán. Theo dõi trạng thái, chưa tự kết luận tiền đã được giải phóng.'
+                          :isCompleted?'Đã hoàn tất. Bạn có thể xem hoặc viết đánh giá nếu còn đủ điều kiện.'
+                          :['Cancelled','PaymentExpired','ClosedAfterResolution'].includes(o.state)?'Đơn đã kết thúc. Mở chi tiết để xem lý do và kết quả.'
+                          :'Mở chi tiết để xem trạng thái hiện tại và thao tác được phép.'}
                       </p>
                     </div>
 
-                    <div className={styles.cardActions}>
+                    <div className={styles.cardActions}>{isCompleted&&<Link className={styles.viewDetailsBtn} to={`/reviews?type=DirectOrder&transaction=${o.id}`}>Xem hoặc viết đánh giá</Link>}
                       <Link
                         className={styles.viewDetailsBtn}
                         to={`/chat/orders/${o.id}`}

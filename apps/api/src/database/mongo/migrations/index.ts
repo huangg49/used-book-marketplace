@@ -1,3 +1,7 @@
+import { transactionReviewValidatorFixMigration } from './0039-transaction-review-validator-fix.js';
+import { reviewValidatorReconciliationMigration } from './0041-review-validator-reconciliation.js';
+import { catalogRecoveryMigration, withCatalogRecovery } from './0042-catalog-recovery-index.js';
+import { priceSourceOriginMigration, withPriceSourceOrigin } from './0043-price-source-origin.js';
 import { conversationAgreementsMigration, conversationAgreementSpecs } from './0032-conversation-agreements.js';
 import { wholeBookBundlesMigration, withBookBundles } from './0035-whole-book-bundles.js';
 import { bundleReviewSearchMigration, withBundleReviewSearch } from './0036-bundle-review-search.js';
@@ -21,19 +25,18 @@ import {
   sellerScheduledAuctionsMigration,
   withSellerScheduledAuctions,
 } from './0037-seller-scheduled-auctions.js';
-import { transactionReviewValidatorFixMigration } from './0039-transaction-review-validator-fix.js';
 import {
   exchangeDisputeResolutionMigration,
   withExchangeDisputeResolution,
-} from './0040-exchange-dispute-resolution.js';
+} from './0044-exchange-dispute-resolution.js';
 import {
   exchangeMutualCancellationMigration,
   withExchangeMutualCancellation,
-} from './0041-exchange-mutual-cancellation.js';
+} from './0045-exchange-mutual-cancellation.js';
 import {
   listingExchangePreferencesMigration,
   withListingExchangePreferences,
-} from './0042-listing-exchange-preferences.js';
+} from './0046-listing-exchange-preferences.js';
 import {
   listingAutofillMigration,
   listingAutofillSpecs,
@@ -175,10 +178,7 @@ import {
   exchangeNotificationsMigration,
   withExchangeNotificationChanges,
 } from './0024-exchange-notifications.js';
-import {
-  exchangeReviewsMigration,
-  transactionReviewSpecs,
-} from './0025-exchange-reviews.js';
+import { exchangeReviewsMigration } from './0025-exchange-reviews.js';
 import {
   exchangeMutualCompletionMigration,
   withExchangePhase5Changes,
@@ -188,6 +188,12 @@ import {
   withExchangePhase6Changes,
 } from './0031-exchange-multi-book.js';
 import { vnpayTopupExpiryMigration, withVNPayExpiry } from './0032-vnpay-topup-expiry.js';
+import { exchangeInspectionDeadlinesMigration, withExchangeInspectionDeadlines } from './0039-exchange-inspection-deadlines.js';
+import {
+  transactionReviewLifecycleMigration,
+  reviewLifecycleSpecs,
+  withReviewCommandTarget,
+} from './0040-transaction-review-lifecycle.js';
 
 export interface Migration {
   id: string;
@@ -304,6 +310,11 @@ export const migrations: Migration[] = [
   moderationOverviewIndexesMigration,
   listingAutofillMigration,
   transactionReviewValidatorFixMigration,
+  exchangeInspectionDeadlinesMigration,
+  transactionReviewLifecycleMigration,
+  reviewValidatorReconciliationMigration,
+  catalogRecoveryMigration,
+  priceSourceOriginMigration,
   exchangeDisputeResolutionMigration,
   exchangeMutualCancellationMigration,
   listingExchangePreferencesMigration,
@@ -336,13 +347,15 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withListingChannel)
     .map(withBookBundles)
     .map(withBundleReviewSearch)
-    .map(withListingExchangePreferences)
-    .map(withModerationIndexes),
+    .map(withModerationIndexes)
+    .map(withReviewCommandTarget)
+    .map(withCatalogRecovery)
+    .map(withListingExchangePreferences),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape),
   wishlistSpec,
-  ...priceAssistSpecsV2,
+  ...priceAssistSpecsV2.map(withPriceSourceOrigin),
   ...onlinePriceSpecs,
   ...auctionCollectionSpecs
     .map(withPointOrderChanges)
@@ -378,13 +391,14 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withExchangePhase4Changes)
     .map(withExchangePhase5Changes)
     .map(withExchangePhase6Changes)
+    .map(withExchangeInspectionDeadlines)
     .map(withExchangeDisputeResolution)
     .map(withExchangeMutualCancellation),
   ...directDeliveryCompletionSpecs,
   ...paymentSpecs.map(withVNPayExpiry),
   ...exchangeMessageSpecs,
   ...conversationAgreementSpecs,
-  ...transactionReviewSpecs,
+  ...reviewLifecycleSpecs,
   ...inspectionEvidenceCollectionSpecs,
   ...pointIncidentCollectionSpecs,
   ...auctionDeliveryCollectionSpecs,

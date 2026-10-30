@@ -1,0 +1,458 @@
+{
+  "kind": "OFFLINE_EXPOSED_CATALOG_REPLAY",
+  "limitations": "Unreviewed cover scans; all active corpus books modeled Confirmed. Baseline capped set hit (old DB order unspecified), not top1 comparison. No OCR improvement, real-camera/native/human acceptance or holdout evaluation.",
+  "sourceSha256": [
+    {
+      "path": "apps/api/eval/autofill-assist/results/cover-scan/2026-10-29T05-17-26-738Z.json",
+      "sha256": "41e9fcfbbaec43696ad3a961657249d0ddbda8b73038ba1eea9fbe136f108ef2"
+    },
+    {
+      "path": "qa-data/listing-ai/incoming/catalog/books.json",
+      "sha256": "7a699a218f900932b37885f10ae5086a0edce5523ce6b6ba2a4ce9dd65bb22e3"
+    },
+    {
+      "path": "qa-data/listing-ai/incoming/autofill/cover-scan/cases.json",
+      "sha256": "87416089e11df0ceb968803637bfd93020b63ed67fc969cb54a21c0397a3f599"
+    }
+  ],
+  "summary": {
+    "cases": 24,
+    "beforeFound": 15,
+    "afterTop1": 18,
+    "afterTop3": 22,
+    "afterTop5": 22,
+    "ambiguous": 9
+  },
+  "rows": [
+    {
+      "caseId": "case-de-men-bm-kd-2023",
+      "target": "de-men-bm-kd-2023",
+      "before": [
+        "de-men-bc-kd-2022",
+        "de-men-bm-kd-2023"
+      ],
+      "after": [
+        "de-men-bc-kd-2022",
+        "de-men-bm-kd-2023"
+      ],
+      "beforeFound": true,
+      "top1": false,
+      "top3": true,
+      "top5": true,
+      "ambiguous": true,
+      "reasons": [
+        "TitleAuthor",
+        "TitleAuthor"
+      ]
+    },
+    {
+      "caseId": "case-de-men-bc-kd-2022",
+      "target": "de-men-bc-kd-2022",
+      "before": [
+        "de-men-bc-kd-2022",
+        "de-men-bm-kd-2023"
+      ],
+      "after": [
+        "de-men-bc-kd-2022",
+        "de-men-bm-kd-2023"
+      ],
+      "beforeFound": true,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": true,
+      "reasons": [
+        "TitleAuthor",
+        "TitleAuthor"
+      ]
+    },
+    {
+      "caseId": "case-hoang-tu-be-kd-2022",
+      "target": "hoang-tu-be-kd-2022",
+      "before": [
+        "hoang-tu-be-kd-2022",
+        "hoang-tu-be-nhanam-2025"
+      ],
+      "after": [
+        "hoang-tu-be-kd-2022",
+        "hoang-tu-be-nhanam-2025"
+      ],
+      "beforeFound": true,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": true,
+      "reasons": [
+        "TitleAuthor",
+        "TitleAuthor"
+      ]
+    },
+    {
+      "caseId": "case-hoang-tu-be-nhanam-2025",
+      "target": "hoang-tu-be-nhanam-2025",
+      "before": [
+        "hoang-tu-be-kd-2022",
+        "hoang-tu-be-nhanam-2025"
+      ],
+      "after": [
+        "hoang-tu-be-kd-2022",
+        "hoang-tu-be-nhanam-2025"
+      ],
+      "beforeFound": true,
+      "top1": false,
+      "top3": true,
+      "top5": true,
+      "ambiguous": true,
+      "reasons": [
+        "TitleAuthor",
+        "TitleAuthor"
+      ]
+    },
+    {
+      "caseId": "case-khong-gia-dinh-kd-2022",
+      "target": "khong-gia-dinh-kd-2022",
+      "before": [
+        "khong-gia-dinh-kd-2022"
+      ],
+      "after": [
+        "khong-gia-dinh-kd-2022"
+      ],
+      "beforeFound": true,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": false,
+      "reasons": [
+        "TitleAuthor"
+      ]
+    },
+    {
+      "caseId": "case-ong-gia-bien-ca-kd-2025",
+      "target": "ong-gia-bien-ca-kd-2025",
+      "before": [
+        "ong-gia-bien-ca-kd-2025"
+      ],
+      "after": [
+        "ong-gia-bien-ca-kd-2025"
+      ],
+      "beforeFound": true,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": false,
+      "reasons": [
+        "TitleAuthor"
+      ]
+    },
+    {
+      "caseId": "case-dat-rung-phuong-nam-kd-2026",
+      "target": "dat-rung-phuong-nam-kd-2026",
+      "before": [
+        "dat-rung-phuong-nam-kd-2026"
+      ],
+      "after": [
+        "dat-rung-phuong-nam-kd-2026"
+      ],
+      "beforeFound": true,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": false,
+      "reasons": [
+        "TitleAuthor"
+      ]
+    },
+    {
+      "caseId": "case-kinh-van-hoa-kd-2019",
+      "target": "kinh-van-hoa-kd-2019",
+      "before": [],
+      "after": [
+        "kinh-van-hoa-kd-2019"
+      ],
+      "beforeFound": false,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": false,
+      "reasons": [
+        "SimilarTitle"
+      ]
+    },
+    {
+      "caseId": "case-doraemon-t1-kd-2023",
+      "target": "doraemon-t1-kd-2023",
+      "before": [],
+      "after": [
+        "doraemon-t1-kd-2023",
+        "doraemon-t2-kd-2023"
+      ],
+      "beforeFound": false,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": true,
+      "reasons": [
+        "SimilarTitle",
+        "SimilarTitle"
+      ]
+    },
+    {
+      "caseId": "case-doraemon-t2-kd-2023",
+      "target": "doraemon-t2-kd-2023",
+      "before": [],
+      "after": [],
+      "beforeFound": false,
+      "top1": false,
+      "top3": false,
+      "top5": false,
+      "ambiguous": false,
+      "reasons": []
+    },
+    {
+      "caseId": "case-so-do-nhanam-2021",
+      "target": "so-do-nhanam-2021",
+      "before": [],
+      "after": [],
+      "beforeFound": false,
+      "top1": false,
+      "top3": false,
+      "top5": false,
+      "ambiguous": false,
+      "reasons": []
+    },
+    {
+      "caseId": "case-cay-cam-ngot-nhanam-2024",
+      "target": "cay-cam-ngot-nhanam-2024",
+      "before": [
+        "cay-cam-ngot-nhanam-2024"
+      ],
+      "after": [
+        "cay-cam-ngot-nhanam-2024"
+      ],
+      "beforeFound": true,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": false,
+      "reasons": [
+        "TitleAuthor"
+      ]
+    },
+    {
+      "caseId": "case-chien-binh-cau-vong-nhanam-2022",
+      "target": "chien-binh-cau-vong-nhanam-2022",
+      "before": [],
+      "after": [
+        "chien-binh-cau-vong-nhanam-2022"
+      ],
+      "beforeFound": false,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": false,
+      "reasons": [
+        "SimilarTitle"
+      ]
+    },
+    {
+      "caseId": "case-tuoi-tre-dang-gia-nhanam-2021",
+      "target": "tuoi-tre-dang-gia-nhanam-2021",
+      "before": [],
+      "after": [
+        "tuoi-tre-dang-gia-nhanam-2021"
+      ],
+      "beforeFound": false,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": false,
+      "reasons": [
+        "TitleAuthor"
+      ]
+    },
+    {
+      "caseId": "case-mat-biec-tre-bm-2022",
+      "target": "mat-biec-tre-bm-2022",
+      "before": [],
+      "after": [
+        "mat-biec-tre-bm-2022",
+        "mat-biec-tre-td-2019"
+      ],
+      "beforeFound": false,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": true,
+      "reasons": [
+        "SwappedText",
+        "SwappedText"
+      ]
+    },
+    {
+      "caseId": "case-mat-biec-tre-td-2019",
+      "target": "mat-biec-tre-td-2019",
+      "before": [],
+      "after": [
+        "mat-biec-tre-bm-2022",
+        "mat-biec-tre-td-2019"
+      ],
+      "beforeFound": false,
+      "top1": false,
+      "top3": true,
+      "top5": true,
+      "ambiguous": true,
+      "reasons": [
+        "SwappedText",
+        "SwappedText"
+      ]
+    },
+    {
+      "caseId": "case-cho-toi-xin-ve-tre-2018",
+      "target": "cho-toi-xin-ve-tre-2018",
+      "before": [
+        "cho-toi-xin-ve-tre-2018"
+      ],
+      "after": [
+        "cho-toi-xin-ve-tre-2018"
+      ],
+      "beforeFound": true,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": false,
+      "reasons": [
+        "TitleAuthor"
+      ]
+    },
+    {
+      "caseId": "case-nha-gia-kim-nhanam-tb79k",
+      "target": "nha-gia-kim-nhanam-tb79k",
+      "before": [
+        "nha-gia-kim-nhanam-tb79k"
+      ],
+      "after": [
+        "nha-gia-kim-nhanam-tb79k"
+      ],
+      "beforeFound": true,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": false,
+      "reasons": [
+        "TitleAuthor"
+      ]
+    },
+    {
+      "caseId": "case-rung-nauy-nhanam-2024",
+      "target": "rung-nauy-nhanam-2024",
+      "before": [],
+      "after": [
+        "rung-nauy-nhanam-2024"
+      ],
+      "beforeFound": false,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": false,
+      "reasons": [
+        "SimilarTitle"
+      ]
+    },
+    {
+      "caseId": "case-song-mon-nhanam-2022",
+      "target": "song-mon-nhanam-2022",
+      "before": [
+        "song-mon-nhanam-2022"
+      ],
+      "after": [
+        "song-mon-nhanam-2022"
+      ],
+      "beforeFound": true,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": false,
+      "reasons": [
+        "TitleAuthor"
+      ]
+    },
+    {
+      "caseId": "case-tat-den-kd-2021",
+      "target": "tat-den-kd-2021",
+      "before": [
+        "tat-den-kd-2021"
+      ],
+      "after": [
+        "tat-den-kd-2021"
+      ],
+      "beforeFound": true,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": false,
+      "reasons": [
+        "TitleAuthor"
+      ]
+    },
+    {
+      "caseId": "case-truyen-kieu-kd-sc-2024",
+      "target": "truyen-kieu-kd-sc-2024",
+      "before": [
+        "truyen-kieu-kd-sc-2024",
+        "truyen-kieu-kd-vhtn-2021"
+      ],
+      "after": [
+        "truyen-kieu-kd-sc-2024",
+        "truyen-kieu-kd-vhtn-2021"
+      ],
+      "beforeFound": true,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": true,
+      "reasons": [
+        "TitleAuthor",
+        "TitleAuthor"
+      ]
+    },
+    {
+      "caseId": "case-truyen-kieu-kd-vhtn-2021",
+      "target": "truyen-kieu-kd-vhtn-2021",
+      "before": [
+        "truyen-kieu-kd-sc-2024",
+        "truyen-kieu-kd-vhtn-2021"
+      ],
+      "after": [
+        "truyen-kieu-kd-sc-2024",
+        "truyen-kieu-kd-vhtn-2021"
+      ],
+      "beforeFound": true,
+      "top1": false,
+      "top3": true,
+      "top5": true,
+      "ambiguous": true,
+      "reasons": [
+        "TitleAuthor",
+        "TitleAuthor"
+      ]
+    },
+    {
+      "caseId": "case-luoc-su-nuoc-viet-kd-2024",
+      "target": "luoc-su-nuoc-viet-kd-2024",
+      "before": [
+        "luoc-su-nuoc-viet-kd-2024"
+      ],
+      "after": [
+        "luoc-su-nuoc-viet-kd-2024"
+      ],
+      "beforeFound": true,
+      "top1": true,
+      "top3": true,
+      "top5": true,
+      "ambiguous": false,
+      "reasons": [
+        "SimilarTitle"
+      ]
+    }
+  ]
+}

@@ -1,4 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
+import { clearAiPriceAttribution, type PriceReferenceState, assistError, decisionFor, failLoading, finishLoading, startLoading, suggestionInput, type AssistForm, type AssistState } from "@used-books/session-client";
+import { PriceAssistPanel } from "../components/PriceAssistPanel";
+import { createListingPriceRequest, type PricePhase } from "../services/listing-price-assist";
+import type { CatalogInput } from "../services/listing-submission";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import {
@@ -15,6 +19,7 @@ import {
   BookOpen,
   ImagePlus,
   PencilLine,
+  Sparkles,
   X,
 } from "lucide-react";
 import { Header } from "../layouts/MainLayout";
@@ -182,6 +187,36 @@ export function SellBookPage() {
     targetAuthor: "",
     targetDescription: "",
   });
+  const [assist, setAssist] = useState<AssistState>({ status: "idle" });
+  const [priceReference, setPriceReference] = useState<PriceReferenceState>(null);
+  const [pricePhase, setPricePhase] = useState<PricePhase>("catalog");
+  const priceToken = useRef(0), priceBusy = useRef(false);
+  const requestPrice = useMemo(() => createListingPriceRequest(draftAttempt), [draftAttempt]);
+  const assistScope = draftAttempt.id;
+  const assistForm: AssistForm = {
+    bookId: selectedBook?.id ?? null, condition: formData.condition as AssistForm["condition"],
+    readable: formData.readable, hasMissingPages: formData.hasMissingPages, missingEssentialContent: formData.missingEssentialContent,
+    pages: formData.pages, coverNote: formData.coverNote, notes: formData.notes,
+    salePrice: formData.salePrice, mode: formData.mode as AssistForm["mode"],
+  };
+  const assistCatalog: CatalogInput = {
+    ...autofillFacts, bookId: selectedBook?.id, title: formData.title, author: formData.author,
+    category: categoryFor(classification.categoryId)?.label || selectedBook?.category || "Khác",
+    categoryId: classification.categoryId, attributes: classification.attributes, series: classification.series, language,
+  };
+  const assistKey = JSON.stringify([assistScope, assistCatalog, suggestionInput(assistForm), imageFiles.map(file => [file.name, file.size, file.lastModified, file.type])]);
+  async function askWebPrice() {
+    if (priceBusy.current || submitting || hasAttempt || auction || bundle || formData.mode === "Exchange") return;
+    priceBusy.current = true;
+    const token = ++priceToken.current;
+    setAssist(prev => startLoading(prev, assistKey, token));
+    try {
+      const answer = await requestPrice(assistForm, assistCatalog, [...imageFiles], setPricePhase, value => { if (priceToken.current === token) setPriceReference({ key: assistKey, value }); });
+      setAssist(prev => finishLoading(prev, token, answer.listingId, answer.suggestion));
+    } catch (error) {
+      setAssist(prev => failLoading(prev, token, assistError(error)));
+    } finally { priceBusy.current = false; }
+  }
   const needsOrigin = !auction && formData.mode !== "Exchange";
 
   const heading = useRef<HTMLHeadingElement>(null);
@@ -230,7 +265,7 @@ export function SellBookPage() {
         ...previous,
         ...(field === "title" && fields.title ? { title: fields.title } : {}),
         ...(field === "authors" && fields.authors.length
-          ? { author: fields.authors.join(", ") }
+          ? { author: fields.authors.join("; ") }
           : {}),
       }));
       return;
@@ -436,8 +471,10 @@ export function SellBookPage() {
     replaceAt?: number,
   ) => {
     const selected = Array.from(e.target.files ?? []);
-    // Reset even after rejection so selecting the same batch fires change again.
     e.target.value = "";
+    addSelectedImages(selected, kind, replaceAt);
+  };
+  const addSelectedImages = (selected: File[], kind: "cover" | "support", replaceAt?: number) => {
     if (!selected.length || hasAttempt || submitting) return;
     const remaining =
       kind === "cover" || replaceAt !== undefined
@@ -631,6 +668,7 @@ export function SellBookPage() {
         ...(auction ? { channel: "Auction" as const } : {}),
         ...(selectedBook ? {} : autofillFacts),
         title: formData.title,
+        priceAssist: decisionFor(assist, assistKey, assistForm),
         ...(bundle ? { bundle } : {}),
         author: formData.author,
         category:
@@ -930,13 +968,17 @@ export function SellBookPage() {
       : ownershipDeclared && [1, 2, 3, 4].every((number) => !stepError(number));
   }
   function statusForStep(value: number) {
-    return value === step
-      ? "Đang chỉnh"
-      : completeStep(value)
-        ? "Đủ thông tin"
-        : checkedSteps.includes(value)
-          ? "Cần bổ sung"
-          : "Chưa hoàn thành";
+    if (value === step) return "Đang chỉnh";
+    if (completeStep(value)) return "Đủ thông tin";
+    if (
+      checkedSteps.includes(value) ||
+      hasAttempt ||
+      validationFailure ||
+      (value < step && Boolean(stepError(value)))
+    ) {
+      return "Thiếu thông tin";
+    }
+    return "Chưa hoàn thành";
   }
   const stepFields: string[] =
     step === 1
@@ -954,6 +996,141 @@ export function SellBookPage() {
   const visibleSubmitError = validationFailure
     ? stepError(step) || (step === 5 ? fieldErrors.ownership : undefined)
     : submitError;
+
+  const progressFields = useMemo(() => {
+    const list: { key: string; label: string; valid: boolean }[] = [];
+
+    if (bundle) {
+      list.push({
+        key: "bundle",
+        label: "Thông tin bộ sách",
+        valid: !bundleError(bundle),
+      });
+    } else {
+      list.push({
+        key: "title",
+        label: "Tên sách",
+        valid: Boolean(formData.title.trim()),
+      });
+      list.push({
+        key: "author",
+        label: "Tác giả",
+        valid: Boolean(formData.author.trim()),
+      });
+      list.push({
+        key: "category",
+        label: "Danh mục sách",
+        valid: Boolean(
+          selectedBook ||
+            (classification.categoryId &&
+              classificationErrors(
+                classification.categoryId,
+                classification.attributes,
+              ).length === 0),
+        ),
+      });
+    }
+
+    // Step 2: Ảnh bản sách
+    list.push({
+      key: "images",
+      label: "Ảnh bìa bản sách",
+      valid: hasCoverPhoto,
+    });
+
+    // Step 3: Tình trạng
+    list.push({
+      key: "condition",
+      label: "Tình trạng sách",
+      valid: Boolean(formData.condition),
+    });
+    list.push({
+      key: "pages",
+      label: "Ruột sách",
+      valid: Boolean(formData.pages.trim()),
+    });
+    list.push({
+      key: "coverNote",
+      label: "Bìa và gáy",
+      valid: Boolean(formData.coverNote.trim()),
+    });
+    list.push({
+      key: "notes",
+      label: "Ghi chú, đánh dấu",
+      valid: Boolean(formData.notes.trim()),
+    });
+    list.push({
+      key: "accessories",
+      label: "Phụ kiện",
+      valid: Boolean(formData.accessories.trim()),
+    });
+    list.push({
+      key: "description",
+      label: "Mô tả chung",
+      valid: formData.description.trim().length >= 30,
+    });
+    list.push({
+      key: "readable",
+      label: "Nội dung đọc rõ",
+      valid: formData.readable === true,
+    });
+    list.push({
+      key: "hasMissingPages",
+      label: "Không thiếu trang",
+      valid: formData.hasMissingPages !== null,
+    });
+    list.push({
+      key: "missingEssentialContent",
+      label: "Đủ nội dung trọng yếu",
+      valid: formData.missingEssentialContent === false,
+    });
+
+    // Step 4: Giá / Luân chuyển
+    if (formData.mode !== "Exchange") {
+      list.push({
+        key: "salePrice",
+        label: "Giá bán",
+        valid: validPrice(formData.salePrice),
+      });
+    }
+    if (formData.mode !== "Sale") {
+      list.push({
+        key: "exchangeValue",
+        label: "Giá trị đổi",
+        valid: validPrice(formData.exchangeValue),
+      });
+    }
+    if (needsOrigin) {
+      list.push({
+        key: "originAddress",
+        label: "Nơi gửi sách",
+        valid: hasValidOriginAddress(),
+      });
+    }
+
+    // Step 5: Cam kết quyền sở hữu
+    list.push({
+      key: "ownership",
+      label: "Cam kết quyền sở hữu",
+      valid: ownershipDeclared,
+    });
+
+    return list;
+  }, [
+    bundle,
+    formData,
+    selectedBook,
+    classification,
+    hasCoverPhoto,
+    needsOrigin,
+    ownershipDeclared,
+  ]);
+
+  const validFieldsCount = progressFields.filter((f) => f.valid).length;
+  const totalFieldsCount = progressFields.length;
+  const formProgressPercent = Math.round(
+    (validFieldsCount / totalFieldsCount) * 100,
+  );
   const previewIndex =
     previewImage === null ? -1 : formData.images.indexOf(previewImage);
   function photoLabel(index: number) {
@@ -1250,31 +1427,112 @@ export function SellBookPage() {
                 aria-hidden="true"
               />
               <ol>
-                {steps.map((label, index) => (
-                  <li key={label}>
-                    <button
-                      type="button"
-                      aria-current={step === index + 1 ? "step" : undefined}
-                      disabled={submitting}
-                      aria-label={`${index + 1}. ${label}, ${statusForStep(index + 1).toLowerCase()}`}
-                      onClick={() => changeStep(index + 1)}
-                    >
-                      <span className={styles.stepNumber}>
-                        {completeStep(index + 1) ? (
-                          <Check size={16} aria-hidden="true" />
-                        ) : (
-                          index + 1
-                        )}
-                      </span>
-                      <span className={styles.stepLabel}>
-                        {label}
-                        <small>{statusForStep(index + 1)}</small>
-                      </span>
-                    </button>
-                  </li>
-                ))}
+                {steps.map((label, index) => {
+                  const stepNum = index + 1;
+                  const isCurrent = step === stepNum;
+                  const isComplete = completeStep(stepNum);
+                  const isError =
+                    !isComplete &&
+                    (checkedSteps.includes(stepNum) ||
+                      hasAttempt ||
+                      validationFailure ||
+                      (stepNum < step && Boolean(stepError(stepNum))));
+
+                  return (
+                    <li key={label}>
+                      <button
+                        type="button"
+                        aria-current={isCurrent ? "step" : undefined}
+                        disabled={submitting}
+                        aria-label={`${stepNum}. ${label}, ${statusForStep(stepNum).toLowerCase()}`}
+                        onClick={() => changeStep(stepNum)}
+                        className={
+                          isCurrent
+                            ? styles.stepCurrent
+                            : isComplete
+                            ? styles.stepComplete
+                            : isError
+                            ? styles.stepHasError
+                            : ""
+                        }
+                      >
+                        <span
+                          className={`${styles.stepNumber} ${
+                            isComplete
+                              ? styles.stepNumberComplete
+                              : isError
+                              ? styles.stepNumberError
+                              : ""
+                          }`}
+                        >
+                          {isComplete ? (
+                            <Check size={15} strokeWidth={2.8} aria-hidden="true" />
+                          ) : isError ? (
+                            <X size={15} strokeWidth={2.8} aria-hidden="true" />
+                          ) : (
+                            stepNum
+                          )}
+                        </span>
+                        <span className={styles.stepLabel}>
+                          {label}
+                          <small
+                            className={
+                              isCurrent
+                                ? ""
+                                : isComplete
+                                ? styles.stepStatusComplete
+                                : isError
+                                ? styles.stepStatusError
+                                : ""
+                            }
+                          >
+                            {statusForStep(stepNum)}
+                          </small>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
               </ol>
             </nav>
+            <div
+              className={styles.progressBarCard}
+              role="region"
+              aria-label="Tiến độ điền thông tin sách"
+            >
+              <div className={styles.progressBarHeader}>
+                <div className={styles.progressBarLead}>
+                  <Sparkles size={16} className={styles.progressSparkleIcon} aria-hidden="true" />
+                  <span className={styles.progressBarTitle}>Tiến độ điền thông tin</span>
+                  {formProgressPercent === 100 && (
+                    <span className={styles.progressCompleteBadge}>Hoàn thành 100%</span>
+                  )}
+                </div>
+                <div className={styles.progressBarStats}>
+                  <span className={styles.progressBarCount}>
+                    <strong>{validFieldsCount}</strong>/{totalFieldsCount} khung hợp lệ
+                  </span>
+                  <span className={styles.progressBarPercent}>
+                    {formProgressPercent}%
+                  </span>
+                </div>
+              </div>
+              <div
+                className={styles.progressTrack}
+                role="progressbar"
+                aria-valuenow={formProgressPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Tiến độ hoàn thiện: ${formProgressPercent}% (${validFieldsCount} trên ${totalFieldsCount} khung điền)`}
+              >
+                <div
+                  className={styles.progressFill}
+                  style={{ width: `${formProgressPercent}%` }}
+                >
+                  <div className={styles.progressShimmer} aria-hidden="true" />
+                </div>
+              </div>
+            </div>
             <div className={styles.workspace}>
               <aside
                 className={styles.desktopPreview}
@@ -1381,6 +1639,8 @@ export function SellBookPage() {
                           )}
                           {!selectedBook && !bundle && (
                             <PhotoAutofill
+                              onUseCover={file => addSelectedImages([file], "cover")}
+                              currentValue={field => field === "title" ? formData.title : field === "authors" ? formData.author : field === "language" ? language : String(autofillFacts[field] ?? "")}
                               attempt={draftAttempt}
                               channel={auction ? "Auction" : undefined}
                               disabled={submitting || hasAttempt}
@@ -2676,6 +2936,12 @@ export function SellBookPage() {
                         </>
                       )}
                     </fieldset>
+                    {!auction && !bundle && formData.mode !== "Exchange" ? <div hidden={step !== 4}>
+                      <PriceAssistPanel reference={priceReference} onApplyReference={amount => { setFormData(f => ({ ...f, salePrice: String(amount) })); setAssist(clearAiPriceAttribution); }} state={assist} currentKey={assistKey} currentPrice={formData.salePrice} phase={pricePhase} disabled={submitting || hasAttempt} hasPhoto={imageFiles.length > 0} needsCatalog={!selectedBook} onAsk={() => void askWebPrice()} onApply={amount => {
+                        setFormData(prev => ({ ...prev, salePrice: String(amount) }));
+                        setAssist(prev => prev.status === "ready" && prev.key === assistKey ? { ...prev, appliedPrice: amount } : prev);
+                      }} />
+                    </div> : null}
                     {visibleSubmitError && (
                       <div
                         role="alert"

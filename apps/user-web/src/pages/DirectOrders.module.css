@@ -689,3 +689,1116 @@
     gap: 24px;
   }
 }
+
+/* --------------------------------------------------------------------------
+   2-COLUMN SPLIT: "Thông tin sách" (Left) & "Thủ tục đơn hàng" (Right)
+   -------------------------------------------------------------------------- */
+
+.orderTwoColumns {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.25fr);
+  gap: 16px;
+  align-items: start;
+  width: 100%;
+}
+
+.bookInfoCard,
+.orderProceduresCard {
+  background: #ffffff;
+  border: 1px solid rgba(217, 203, 189, 0.75);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 4px 14px rgba(40, 25, 20, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -16px -16px 14px -16px;
+  padding: 11px 16px;
+  background: linear-gradient(165deg, #690b0b 0%, #450202 100%);
+  border-radius: 13px 13px 0 0;
+  border-bottom: 1px solid #4a0808;
+  color: #fff8ee;
+  box-shadow: 0 2px 8px rgba(72, 15, 13, 0.15);
+}
+
+.cardHeaderIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff8ee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.cardSubtitle {
+  margin: 2px 0 0;
+  font-size: 0.8125rem;
+  color: rgba(255, 248, 238, 0.82);
+  line-height: 1.4;
+}
+
+.cardContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Book Profile Row */
+.bookProfileRow {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.bookCoverWrapper {
+  width: 68px;
+  min-width: 68px;
+  height: 94px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f4eee5;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(217, 203, 189, 0.8);
+}
+
+.bookCoverWrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.placeholderCover {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a89a8c;
+  background: #fbf7f0;
+}
+
+.bookProfileMeta {
+  flex: 1;
+  min-width: 0;
+}
+
+.bookTitle {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--shop-ink, #281914);
+  overflow-wrap: anywhere;
+}
+
+.bookAuthor {
+  margin: 0 0 6px;
+  font-size: 0.8125rem;
+  color: var(--shop-muted, #716157);
+}
+
+.conditionRow {
+  margin-bottom: 6px;
+}
+
+.conditionTag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #f4eee5;
+  color: #5c0202;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid #ebd9c8;
+}
+
+.viewListingLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #5c0202;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.viewListingLink:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
+.bundleSection {
+  background: #faf7f2;
+  border-radius: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(217, 203, 189, 0.6);
+}
+
+/* Detailed Spec List */
+.specList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #faf7f2;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  border: 1px solid rgba(217, 203, 189, 0.5);
+}
+
+.specItem {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.specLabel {
+  color: var(--shop-muted, #716157);
+  font-weight: 500;
+}
+
+.specVal {
+  color: var(--shop-ink, #281914);
+  font-weight: 600;
+  text-align: right;
+}
+
+.descriptionBlock {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(217, 203, 189, 0.7);
+}
+
+.descriptionText {
+  margin: 4px 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: #4a3b32;
+  white-space: pre-wrap;
+}
+
+/* Payment & Escrow Box */
+.paymentCard {
+  background: #fdfbf9;
+  border: 1px solid rgba(217, 203, 189, 0.75);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.paymentCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(217, 203, 189, 0.5);
+}
+
+.paymentHeading {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--shop-ink, #281914);
+}
+
+.paymentModeBadge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #ede3d4;
+  color: #5c0202;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.paymentDl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.paymentRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+  color: var(--shop-muted, #716157);
+}
+
+.paymentRow dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--shop-ink, #281914);
+}
+
+.paymentTotalRow {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(217, 203, 189, 0.7);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #5c0202;
+}
+
+.paymentTotalRow dd {
+  color: #5c0202;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.escrowNotice {
+  margin-top: 12px;
+}
+
+.escrowPaid {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: #f0f8f3;
+  border: 1px solid #c2e5cc;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #176531;
+}
+
+.escrowIconPaid {
+  color: #176531;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.escrowUnpaid {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: #fff9ed;
+  border: 1px solid #f9df9e;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #8c6b16;
+}
+
+.escrowIconUnpaid {
+  color: #8c6b16;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.escrowTitle {
+  margin: 0 0 2px;
+  font-weight: 700;
+  font-size: 0.8125rem;
+}
+
+.escrowSubtitle {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+/* Address Box */
+.addressBox {
+  padding: 12px 14px;
+  background: #faf7f2;
+  border-radius: 10px;
+  border: 1px solid rgba(217, 203, 189, 0.6);
+  font-size: 0.8125rem;
+}
+
+.addressBoxHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--shop-ink, #281914);
+  margin-bottom: 6px;
+  font-size: 0.8125rem;
+}
+
+.addressContact {
+  margin: 0 0 2px;
+  color: var(--shop-ink, #281914);
+}
+
+.addressDetail {
+  margin: 0;
+  color: var(--shop-muted, #716157);
+  line-height: 1.45;
+}
+
+/* --------------------------------------------------------------------------
+   RIGHT CARD: "Thủ tục đơn hàng"
+   -------------------------------------------------------------------------- */
+
+.proceduresHeaderInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.proceduresTitleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.orderStatusPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.statusPillActive {
+  background: #e6f0fa;
+  color: #175496;
+  border: 1px solid #bcd7f5;
+}
+
+.statusPillCompleted {
+  background: #eaf6ee;
+  color: #176531;
+  border: 1px solid #bce6c7;
+}
+
+.statusPillWarning {
+  background: #fff6e6;
+  color: #945209;
+  border: 1px solid #f9df9e;
+}
+
+.statusPillCancelled {
+  background: #faecea;
+  color: #9e1f18;
+  border: 1px solid #f5cfcb;
+}
+
+.statusPillInspection {
+  background: #f4ecf8;
+  color: #632285;
+  border: 1px solid #e1c8e9;
+}
+
+.statusPillDefault {
+  background: #f4eee5;
+  color: #615246;
+  border: 1px solid #ebd9c8;
+}
+
+.orderCodeBadge {
+  font-family: monospace;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* Stepper Timeline */
+.stepperContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  padding: 10px 4px 6px;
+  margin-bottom: 4px;
+}
+
+.stepperContainer::before {
+  content: "";
+  position: absolute;
+  top: 23px;
+  left: 24px;
+  right: 24px;
+  height: 2px;
+  background: #e6ded4;
+  z-index: 1;
+}
+
+.stepItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  gap: 6px;
+}
+
+.stepCircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #f4eee5;
+  color: #8c7b6e;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px #d9cbbd;
+  transition: all 0.2s ease;
+}
+
+.stepCompleted .stepCircle {
+  background: #1e6b36;
+  color: #ffffff;
+  box-shadow: 0 0 0 1px #1e6b36;
+}
+
+.stepCurrent .stepCircle {
+  background: #5c0202;
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(92, 2, 2, 0.22);
+}
+
+.stepLabel {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #8c7b6e;
+  white-space: nowrap;
+}
+
+.stepCurrent .stepLabel {
+  color: #5c0202;
+  font-weight: 700;
+}
+
+.stepCompleted .stepLabel {
+  color: #1e6b36;
+}
+
+/* Active Procedure Operations Box */
+.activeProcedureBox {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.procedureSection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.procedureNoticeWarning {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border-radius: 10px;
+  background: #fff9ee;
+  border: 1px solid #f7df9a;
+  color: #875109;
+}
+
+.procedureNoticeWarning h4,
+.procedureNoticeInfo h4,
+.procedureNoticeSuccess h4 {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.procedureNoticeWarning p,
+.procedureNoticeInfo p,
+.procedureNoticeSuccess p {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.procedureNoticeInfo {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border-radius: 10px;
+  background: #f0f7fd;
+  border: 1px solid #c2defa;
+  color: #145091;
+}
+
+.procedureNoticeSuccess {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border-radius: 10px;
+  background: #f0f9f3;
+  border: 1px solid #c1ebd0;
+  color: #156633;
+}
+
+.actionButtonGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.primaryActionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  background: #5c0202;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  border: 0;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(92, 2, 2, 0.24);
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.primaryActionBtn:hover:not(:disabled) {
+  background: #450202;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(92, 2, 2, 0.32);
+}
+
+.primaryActionBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.secondaryActionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  background: transparent;
+  color: #5c0202;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  border: 1px solid rgba(92, 2, 2, 0.3);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.secondaryActionBtn:hover:not(:disabled) {
+  background: #fcf4f4;
+  border-color: #5c0202;
+}
+
+.secondaryActionBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.walletHint {
+  margin: 4px 0 0;
+  font-size: 0.8125rem;
+  color: var(--shop-muted, #716157);
+  line-height: 1.5;
+}
+
+.walletHint a {
+  color: #5c0202;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.preparationBox {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.deadlineBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fdf6ec;
+  border: 1px solid #fadfa8;
+  color: #8c5b08;
+  font-size: 0.8125rem;
+}
+
+.shippingAddressPreview {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #faf7f2;
+  border: 1px solid rgba(217, 203, 189, 0.6);
+  font-size: 0.8125rem;
+}
+
+.shippingAddressLabel {
+  margin: 0 0 2px;
+  font-weight: 600;
+  color: var(--shop-muted, #716157);
+}
+
+.shippingAddressValue {
+  margin: 0;
+  line-height: 1.45;
+  color: var(--shop-ink, #281914);
+}
+
+.sellerShippingTools {
+  border-top: 1px dashed rgba(217, 203, 189, 0.8);
+  padding-top: 12px;
+}
+
+.sellerConfirmCard {
+  background: #faf7f2;
+  border: 1px solid rgba(217, 203, 189, 0.7);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.shippingFollowUp {
+  background: #faf7f2;
+  border: 1px solid rgba(217, 203, 189, 0.6);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.inspectionCard {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border-radius: 10px;
+  background: #f5eff9;
+  border: 1px solid #dec7ea;
+  color: #5e1c81;
+}
+
+.inspectionCard h4,
+.completedCard h4,
+.cancelledCard h4 {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.inspectionCard p,
+.completedCard p,
+.cancelledCard p {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.completedCard {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px;
+  border-radius: 10px;
+  background: #eff9f2;
+  border: 1px solid #bce6c7;
+  color: #12572a;
+}
+
+.completedIcon {
+  color: #1e6b36;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.reviewPrompt {
+  margin-top: 8px;
+}
+
+.reviewActionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  background: #1e6b36;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(30, 107, 54, 0.25);
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.reviewActionBtn:hover {
+  background: #155027;
+  transform: translateY(-1px);
+}
+
+.cancelledCard {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border-radius: 10px;
+  background: #faecea;
+  border: 1px solid #f5cfcb;
+  color: #9e1f18;
+}
+
+.cancelledIcon {
+  color: #9e1f18;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.errorAlert {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #faecea;
+  border: 1px solid #f5cfcb;
+  color: #9e1f18;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.policyFooterNote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(217, 203, 189, 0.6);
+  font-size: 0.75rem;
+  color: var(--shop-muted, #716157);
+  line-height: 1.4;
+}
+
+/* Trust Banner (Bảo đảm an toàn giao dịch) */
+.trustBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  background: linear-gradient(145deg, #fdfbf7 0%, #f7f2ea 100%);
+  border: 1px solid rgba(217, 203, 189, 0.75);
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(40, 25, 20, 0.03);
+  margin-top: 6px;
+}
+
+.trustBannerIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: #eaf8ed;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.trustBannerContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.trustBannerTitle {
+  display: block;
+  font-size: 0.78125rem;
+  font-weight: 700;
+  color: var(--shop-ink, #281914);
+  line-height: 1.35;
+  margin-bottom: 2px;
+}
+
+.trustBannerDesc {
+  margin: 0;
+  font-size: 0.71875rem;
+  color: var(--shop-muted, #716157);
+  line-height: 1.45;
+}
+
+@media (max-width: 1024px) {
+  .orderTwoColumns {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Negotiation Workspace Elements in Card 2
+   -------------------------------------------------------------------------- */
+.modeSwitchWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modeSwitchHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--shop-ink, #281914);
+}
+
+.modeSwitchGroup {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 4px;
+  background: #f4eee5;
+  border-radius: 8px;
+}
+
+.modeSwitchBtn {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #716157;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.modeSwitchBtn[aria-pressed="true"] {
+  background: #ffffff;
+  color: #5c0202;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.modeSwitchBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.proposalCard {
+  background: #fff8f0;
+  border: 1px solid #f2d5b6;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.proposalText {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #4a2810;
+  line-height: 1.5;
+}
+
+.proposalActions {
+  display: flex;
+  gap: 8px;
+}
+
+.priceAgreedBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #f0f9f3;
+  border: 1px solid #c1ebd0;
+  border-radius: 8px;
+  color: #156633;
+}
+
+.priceAgreedText {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.negotiationOfferForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.negotiationOfferRow {
+  display: flex;
+  gap: 8px;
+}
+
+.negotiationOfferRow input {
+  flex: 1;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid rgba(217, 203, 189, 0.9);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--shop-ink, #281914);
+  background: #ffffff;
+}
+
+.negotiationOfferRow input:focus {
+  outline: none;
+  border-color: #690b0b;
+  box-shadow: 0 0 0 1px #690b0b;
+}
+
+.negotiationOfferRow button {
+  padding: 0 18px;
+  min-height: 42px;
+  border-radius: 8px;
+  background: #690b0b;
+  color: #fff;
+  border: 0;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.negotiationOfferRow button:hover:not(:disabled) {
+  background: #450202;
+}
+
+.guidanceAccordion {
+  border: 1px solid rgba(217, 203, 189, 0.6);
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #fdfcfb;
+}
+
+.guidanceAccordion summary {
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #716157;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.guidanceAccordion[open] summary {
+  margin-bottom: 8px;
+  color: #5c0202;
+}
+
+.guidanceSteps {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-size: 0.8125rem;
+  color: #5a4b42;
+  line-height: 1.6;
+}
+
+.stepperMini {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid rgba(217, 203, 189, 0.6);
+  font-size: 0.78125rem;
+}
+
+.stepperMiniItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--shop-muted, #716157);
+}
+
+.stepperMiniDot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: #f4eee5;
+  color: var(--shop-muted, #716157);
+  border: 1px solid #ebd9c8;
+  flex-shrink: 0;
+}
+
+.stepperMiniDone {
+  color: #166534;
+  font-weight: 600;
+}
+
+.stepperMiniDone .stepperMiniDot {
+  background: #eaf8ed;
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.stepperMiniActive {
+  color: var(--shop-ink, #281914);
+  font-weight: 700;
+}
+
+.stepperMiniActive .stepperMiniDot {
+  background: #5c0202;
+  color: #fff8ee;
+  border-color: #5c0202;
+}
+
+.stepperMiniError {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.stepperMiniError .stepperMiniDot {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+

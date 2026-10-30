@@ -15,9 +15,9 @@
      - Định nghĩa `ExchangePreferences` schema (`targetCategory`, `targetAuthor`, `targetDescription`) trong `openapi.yaml`.
      - Tích hợp `exchangePreferences` vào `DraftContent`, `SubmittedContent`, và `PublicListing`.
      - `pnpm contract:generate` và `pnpm contract:check` -> PASS.
-  2. **MongoDB Migration `0042-listing-exchange-preferences.ts`**:
+  2. **MongoDB Migration `0046-listing-exchange-preferences.ts`**:
      - Khai báo kiểu `ExchangePreferencesDoc` và cập nhật `ListingRevisionDoc` trong `documents.ts`.
-     - Tạo migration 0042 cập nhật JSON schema validator cho collection `listing_revisions`.
+     - Tạo migration 0046 cập nhật JSON schema validator cho collection `listing_revisions`.
      - Đăng ký và áp dụng migration thành công trên runtime MongoDB.
   3. **Backend Service & Projection (`apps/api`)**:
      - `apps/api/src/modules/listings/listing-projection.ts`: Cập nhật `revisionContent()` lưu giữ an toàn `exchangePreferences`.
@@ -63,7 +63,7 @@
   1. **Contract-first API**:
      - `packages/api-contract/openapi.yaml`: Thêm `MutualAgreement` vào `ExchangeCancelReason`, thêm `Both` vào `ExchangeCancelledBy`, bổ sung `cancellationRequestedBy` (`Initiator` | `Recipient`) và `cancellationRequestedAt` vào schema `Exchange`.
      - Chạy `pnpm contract:generate` và `pnpm contract:check` -> PASS.
-  2. **MongoDB Migration `0041-exchange-mutual-cancellation.ts`**:
+  2. **MongoDB Migration `0045-exchange-mutual-cancellation.ts`**:
      - Bổ sung `MutualAgreement` và `Both` vào enum validator của `cancelReason` và `cancelledBy`.
      - Bổ sung `cancellationRequestedBy` và `cancellationRequestedAt` vào validator schema của collection `exchanges`.
      - Áp dụng migration thành công trên local MongoDB.
@@ -115,7 +115,7 @@
      - **Thông báo & Minh bạch**:
        - Bắn thông báo `notifyExchange` cho cả hai bên tham gia giao dịch.
        - Ghi trực tiếp tin nhắn phán quyết của Quản trị viên vào hộp thư trao đổi nội bộ `exchange_messages`.
-  3. **MongoDB Migration `0040-exchange-dispute-resolution.ts`**:
+  3. **MongoDB Migration `0044-exchange-dispute-resolution.ts`**:
      - Bổ sung `DisputeResolvedRefund` vào enum `cancelReason`, bổ sung `Staff` vào `cancelledBy`.
      - Bổ sung các trường `resolutionDecision`, `resolutionReason`, `resolvedBy`, `resolvedAt` vào JSON schema validator của collection `exchanges`.
      - Bổ sung compound index `{ status: 1, disputedAt: -1 }` tối ưu hóa truy vấn hàng đợi khiếu nại.
@@ -154,6 +154,473 @@
   - `pnpm --filter @used-books/api exec tsc --noEmit`: PASS (0 lỗi).
   - `pnpm --filter @used-books/api exec oxlint src/`: PASS (0 lỗi).
   - E2E Tests trên QA replica set cô lập (`rs-test`): `vitest run --config ./vitest.config.e2e.ts test/exchanges.e2e-spec.ts` -> 29/29 tests PASS 100% (thời gian chạy ~50s).
+
+## Tích hợp chuỗi Member/review/listing AI qua PR79 — 29/10/2026
+
+- Owner giao kiểm main mới, pull local trước push và merge an toàn toàn chuỗi đã
+  hoàn thiện. [PR79](https://github.com/huangg49/used-book-marketplace/pull/79),
+  nhánh `codex/listing-assist-fast-paths`; code head53f44e9, base remote
+  aed674fdd06c11b136b2ea9e42aeaf5736a9eb2f. Đã fetch/prune, pull main --ff-only
+  và đối chiếu origin/main vào nhánh trước push; không có code mới/conflict.
+- Chuỗi23commit code trước checkpoint này,356file: Member web/RN, đánh giá/uy tín,
+  việc cần làm, hành trình đấu giá và trợ lý đăng sách. Forum đã bỏ theo ADR0051.
+  Audit không phát hiện secret-shaped value/private env/ghi chú game cá nhân;
+  không sửa GHN/carrier/Driver hoặc migration cũ.
+- PASS trên code head: frozen install, lint/typecheck/test/build; API286unit,
+  session59/web253/RN164/Admin219, offline data41; contract0.63/196operations/
+  30controllers/generated types, docs/check/diff. Mongo schema27 và4browser
+  được chọn (reviews/work-inbox/auction-journey/listing-ai) PASS trên QA riêng.
+  Gate tổng báo PARTIAL vì6suite không chọn, không gọi cả10suite PASS. Browser
+  dùng storage/AI fake, không là native/live-provider/human acceptance.
+- Full API E2E và CI/review/merge được ghi theo head thực tế trong PR79; xem PR
+  để lấy kết quả hiện tại. Baseline mainaed674f có RN CI đỏ do lint; nhánh sửa
+  các lỗi đó và lint local đạt. Không lấy CI baseline thay kết quả PR.
+- Vòng full local37suite/786ca phát hiện784PASS/2FAIL do fixture ISBN sót và
+  test hàng chờ global giả định chỉ1record. Đã dọn đúng fixture của2suite, giữ
+  negative ISBN assertion và kiểm hàng chờ qua nhiều trang với21bài độc lập,
+  vẫn loại self/Draft/Rejected/Removed. Ba suite chạy cùng nhau27/27PASS.
+  CI User Web phát hiện selector test ví sai (`dl > div` trong khi dt/dd là con
+  trực tiếp); ảnh/API/UI đều90.000đ. Sửa locator, giữ kiểm số dư/ledger/phiên;
+  full wallet browser local PASS. Không sửa production logic tiền hoặc quyền;
+  full CI trên head sau sửa là kết quả quyết định tích hợp.
+- CI tiếp theo785/786API E2E đạt, còn ca importer vì test gọi dist trước bước
+  build trên fresh checkout. Chuyển subprocess sang source qua tsx như script
+  importer công khai, kiểm cả khi artifact CLI không tồn tại; không tăng timeout
+  hoặc bỏ kiểm dry-run/apply/replay/atomic rollback. Ba suite27/27PASS khi giữ
+  artifact CLI ngoài đường chạy, sau đó khôi phục artifact local.
+- Owner đã cho quyền thực hiện merge gói này; yêu cầu đó không được ghi thành
+  review source độc lập. Human UX/quyền/native và các gate READINESS giữ nguyên;
+  không đổi branch protection hoặc ghi AI review thành human review.
+- Contract từ0.55 lên0.63; rollout cần API/web/RN/Admin cùng phiên bản. Thêm5
+  migration0039-exchange-inspection-deadlines,0040-lifecycle,0041-reconciliation,
+  0042-catalog-recovery,0043-source-origin; giữ0039-validator-fix của main và
+  checksum cũ. Dừng API/worker cũ, backup theo runbook, bootstrap role và migrate
+  trước chạy source mới. Chưa migrate/import/reset/seed DB chính, chưa deploy.
+- Các mục bên dưới là checkpoint từng gói trước tích hợp; câu “chưa push/merge”
+  trong đó mô tả đúng thời điểm ghi, không thay trạng thái PR79 trên GitHub.
+
+## AI listing: ISBN/giá tham chiếu trước AI và nguồn độc lập — 29/10/2026
+
+- Owner duyệt nâng chất lượng/tốc độ/UX hai tính năng đã có; nhánh
+  `codex/listing-assist-fast-paths`, base9f93bae; commit subject
+  `feat(listings): add ISBN and price reference fast paths`.
+  [Báo cáo/evidence/tái lập](../features/LISTING_ASSIST_FAST_PATHS_2026_10_29.md),
+  [ADR0056](../adr/0056-listing-assist-fast-paths.md).
+- Web/RN quét EAN-13 local trước model; khớp catalog thì xác nhận chọn, chưa AI/
+  quota. Nhiều ISBN phải chọn mã; không khớp/decoder unavailable còn AI/nhập tay.
+  Worker có giới hạn pixel/heap/deadline,2scan/process, cache/coalescing2phút;
+  auth/media được kiểm lại sau đọc ảnh. Ý định đọc AI giữ qua mất ACK cùng bộ ảnh.
+- Read-only price-reference có rule range/ngày/nguồn, không gọi model/lookup/
+  quota/receipt. UI cho xác nhận mức tham chiếu trong lúc AI chờ/lỗi, ghi rõ cách
+  tính. AI về không tự đổi giá, tham chiếu là giá thủ công; clearing attribution
+  bao gồm previous suggestion đang refresh để replay không gắn nhầm applied=true.
+- Nguồn độc lập theo tổ chức + registrable domain (PSL), không dùng nhãn hiển thị;
+  dedup nhóm giá mới/cũ, giữ ưu tiên giá bìa biên tập. Không biết nguồn gốc thì
+  Limited, không tự điền mapping. Import dry-run/apply/replay kiểm calendar date,
+  thêm mapping còn thiếu theo facts khớp; xung đột abort toàn batch trong transaction.
+- Contract0.63/196operations/30controllers, registry56 đến0043 optional sourceGroup.
+  Chỉ QA đã migrate/import tổng hợp. DB chính chưa migrate/import; trước source
+  mới dừng API/worker rồi migrate, cập nhật web/RN/Admin cùng enum, không seed/reset.
+- PASS API286unit/shared59/web253/RN164/Admin219; HTTP mới11 +hồi quy28, Mongo
+  schema27; typecheck workspace có script, API/web build/RN web export, contract/
+  routes/lint liên quan. Browser web/RNweb real API/Mongo/Sharp/ZXing worker với
+  fake AI/storage: ISBN0model/quota, giá tham chiếu khi AI pending, một submit
+  PendingReview với reference là manual/applied=false, lost ACK/input/source
+  changes. Web320/390/768/1440/RNweb320/390, ảnh được xem; detector8target0finding.
+- Không paid model call, không dùng24scan/12holdout để tuning; native/real-camera/
+  live storage/human acceptance NOT_RUN trong gói, READINESS giữ nguyên. Owner cho
+  biết teammate đã thử tính năng gốc ổn; đây là gói nâng cấp và kiểm hồi quy.
+  QA DB/users/roles được dọn, QA dừng; Mongo chính vẫn Exited. Không GHN/carrier/
+  Driver/env/model/prompt; chỉ commitlocal, chưa push/PR/CI remote/merge/deploy.
+- Gói trước9f93bae: [catalog recovery](../features/LISTING_CATALOG_RECOVERY_2026_10_29.md),
+  offline24scan cũ đúng ấn bản15/24 →top3=22/24 (không là OCR/human acceptance).
+  Chẩn đoán48a3150: [journal](../features/LISTING_AI_CORPUS_2026_10_29.md),
+  Nemotron còn đọc sai, Gemma4 timeout;12holdout0call. Không sửa lịch sử này.
+- Bước tiếp: review tích hợp theo TEAMWORK, kiểm client/ảnh thực tế trong phạm vi
+  đã giao; chỉ mở model comparison theo kế hoạch riêng khi có endpoint khả dụng.
+
+## Hoàn thiện data AI sau bàn giao Gemini — 29/10/2026
+
+- Owner giao Codex làm nốt; nhánh `codex/listing-ai-data-finalization`, base271d99c,
+  commit subject `fix(qa): finalize listing AI dataset validation and corpus`.
+  [Review/finding](../../qa-data/listing-ai/REVIEW_2026_10_29.md),
+  [bộ kiểm/cách chạy](../../qa-data/listing-ai/README.md),
+  [evidence cuối](../../qa-data/listing-ai/review-2026-10-29/finalization-evidence.json).
+- Lúc nhận đã có v3dang dở: giữ12file snapshot/hash và mọi ảnh trước sửa. Bộ
+  kiểm chuẩn được lưu Git, Sharp raster decode/Zod schema/realpath trước đọc,
+  source/date/review flags/ownership và active/quarantine;2runner local là wrapper.
+  PASS29tests fixture tổng hợp độc lập và CLI/dataset, technicalPASS/0finding.
+- Data local ignored:25raw/25ảnh không đổi bytes,24active/hash,1quarantine95k,
+  15ISBN,1case nhiều tác giả. Bỏ năm chưa chắc còn trongedition, Lược sửyearnull;
+  đối chiếu3năm in Trẻ bằng bảng nguồn, giữIDlegacy.11/15nguồn giá vẫnPARTIAL,
+  không biến likely/out-of-stock/blocked thành nguồn đạt.0importcandidates.
+- Đọc40URL:37HTTP200 mới có timestamp/hash;3Trẻ timeout dùng snapshotreviewv2
+  có nhãn riêng, không gọi40nguồn mớiPASS. Human/real-camera/live-model NOT_RUN,
+  quyền ảnhunknown, READINESS không đổi. Không chạy app/DB/AI/GHN; Mongo chính
+  vẫn dừng. Docs/diffchecks; chỉ commitlocal, chưa push/PR/merge/deploy.
+- Gói sửa kỹ thuật hoàn tất. Dùng `pnpm data:listing-ai:test` và
+  `pnpm data:listing-ai:check --write-report`; bước kế tiếp là review dữ liệu/
+  corpus thực trong QA có quyền riêng, không cần thêm vòng chuyển Gemini.
+
+## Chuẩn bị giao data cho Gemini — 29/10/2026
+
+- Owner giao Gemini thu thập data, yêu cầu Codex chuẩn bị folder/prompt. Nhánh
+  `codex/listing-ai-data-handoff`, basefc9ce22; commit subject
+  `docs(ai): prepare Gemini data collection handoff`.
+- [Hướng dẫn và prompt](../../qa-data/listing-ai/README.md), output local ở
+  `qa-data/listing-ai/incoming/` đã tạo các thư mục. Template catalog/nguồn/giá/
+  eval bám code; đầu ra raw/ảnh ignored, không tự import/commit hoặc gọi AI.
+- Mục tiêu25ấn bản, ít nhất20ảnh cover-scan và15cuốn có2nguồn giá độc lập khi
+  có thể xác minh; thiếu phải ghi PARTIAL, không bịa. Phân biệt nguồn retail/
+  cover/human reference, ISBN catalog với chữ nhìn thấy trên ảnh; human review
+  và real-camera vẫn NOT_RUN, READINESS giữ nguyên. Hiện chưa có data thu thập.
+- Chỉ docs/template; kiểm JSON, link/ignore và diff; không chạy lại API/native/
+  DB/QA. Fetch origin giữ mainaed674f, base12ahead/0behind; không pull/reset.
+  Bước tiếp Gemini chỉ ghi incoming rồi Codex đọc HANDOFF, kiểm nguồn và QA riêng.
+
+## Trợ lý đăng sách web/RN — 29/10/2026
+
+- Owner giao hoàn thiện AI hiện có; nhánh `codex/listing-ai-journey`, base04a9361,
+  commit subject `feat(listings): connect AI assistance across web and native`.
+  [Phạm vi, evidence và cách chạy](../features/LISTING_AI_JOURNEY_2026_10_29.md),
+  [ADR0054](../adr/0054-cross-client-listing-ai.md).
+- RN nối đọc ảnh Ready/chọn catalog/từng trường có xác nhận thay; web nối giá
+  có nguồn vào cùng nháp, dùng ảnh đọc làm bìa qua crop bình thường. Shared
+  intent giữ key/body qua mất ACK, chỉ mã lỗi terminal mới cho intent mới.
+  Contract0.61/193operations/30controllers, registry54 không migration; timing
+  cố định an toàn, không đổi luật nguồn giá/quota/transaction/tiền.
+- PASS shared52/web253/RN164/Admin219/API243unit, AIHTTP20, typecheck/lint/build
+  liên quan/RN export, contract/routes và runner4. Browser listing-ai PASS từ
+  entry: mất ACK web/RN, failed replay, giữ input, xác nhận thay và một submit;
+  real API/Mongo/Sharp, fake AI/storage. Operations browser hồi quy PASS. Runner
+  lượt cuối chỉ listing-ai nên tổng PARTIAL/9NOT_RUN. Detector7target một
+  advisory font22px ngoài ramp, còn lint warning cũ ngoài diff.
+- NVIDIA thật10call/ảnh và giá QA tổng hợp: ảnh p50=1126/p95=10971ms, giá
+  p50=5146/p95=9801ms (n=5mỗi loại); dự toán0,011268USD, không là hóa đơn hoặc
+  SLA/chất lượng sách thật. Nhóm chưa có corpus20–30cuốn, quality NOT_RUN;
+  đã có template/eval chặn thiếu đáp án, lặp cuốn và chạy thiếu budget.
+- Metro startup bị automatic approval review từ chối “blocked by policy”;
+  không nghiệm thu native mới. Emulator đã dừng; human/live storage/ảnh thật
+  vẫn mở, READINESS giữ nguyên. GHN/carrier/Driver không đổi/gọi thật; Mongo
+  chính vẫn dừng, không start/reset/seed/migrate. Chỉ commit local, chưa push/
+  PR/merge/deploy. Bước tiếp review contract/client và kiểm native/corpus thật.
+- Dọn namespace E2E và user/role QA; kiểm còn0database QA, dừng replica set QA,
+  không còn listener3009/3010/5184/8087/8081. Mongo chính vẫn Exited.
+
+## Đồng bộ main vào chuỗi local — 29/10/2026
+
+- Owner yêu cầu fetch/pull và fix conflict. Working tree sạch tại856600f, giữ
+  10commit local; nhập29commit main tới `aed674f` vào nhánh
+  `codex/auction-cross-role-journey`. Local main fast-forward tới cùng SHA.
+  Merge subject `merge: integrate origin/main and preserve review lifecycle`.
+- [Quyết định, checks và cách chạy lại](MAIN_SYNC_2026_10_29.md): xử lý5conflict;
+  giữ UI Exchange của nhóm,72h riêng/acknowledgement và review chung ADR0050/52.
+  Migration0041 phục hồi validator nếu0039 main đến sau0040 đã áp; không sửa
+  migration/checksum cũ hoặc backfill lại. Registry54ID; API0.60/193operations.
+- PASS frozen install, contract/routes, API lint/typecheck/build/unit232;
+  schema27 + transaction/ledger/keyset23; reviewHTTP9, ExchangeHTTP4/29filtered;
+  web251/RN163, lint/typecheck/build/RN export. Warning cũ được ghi trong report.
+  Browser Exchange PASS; reviews PASS gồm entry RN từ Tài khoản→Trao đổi→chi tiết
+  →một nút review→tạo review. Runner cuối chỉ reviews, tổngPARTIAL; scope khác
+  NOT_RUN. Android debug x86_64 build PASS475tasks, không là device/native gate.
+- GHN/provider/Driver giữ logic main, không gọi provider; Mongo chính không
+  start/reset/seed/migrate. Chưa kiểm human/native interaction/ARM/iOS/live
+  storage, READINESS giữ nguyên. Dừng QA sau kiểm; trước chạy app cần dừng
+  API/worker, migrate/role/build rồi restart cùng source theo START_HERE.
+- Fetch cuối vẫn mainaed674f; PR mở0,6workflow main success/RN failure; local
+  PASS không sửa remote CI. Chỉ merge commit local, chưa push/PR/merge remote/
+  deploy. Bước tiếp review chuỗi tích hợp theo TEAMWORK và áp migration có kiểm
+  soát khi chủ dự án chạy lại, không mở fulfillment/settlement gate.
+
+## Đấu giá xuyên vai trò — hoàn tất29/10/2026
+
+- Owner duyệt gói Seller→Staff→Buyer, nhánh `codex/auction-cross-role-journey`,
+  base3bfe70a; [phạm vi và ma trận](../ui/AUCTION_JOURNEY_2026_10_29.md).
+  Commit subject `fix(auctions): connect cross-role journeys and verify payment replay`.
+- Source: exact intake→auction link/nhãn state web/RN, nhận diện Seller bằng
+  private lookup trước control, copy lịch1–168h/Buy Now60giây/kiểm tra tình trạng.
+  API0.60 thêm query auctionId cho GET own-intakes,193operations/30controllers;
+  không migration/money/state-machine hoặc GHN/carrier/Driver.
+- Browser QA PASS14checkpoint: UI Seller/Staff/Buyer, năm intent replay,
+  50 lịch sử create/cancel thật, một Order/một hold300k; ví available200k/held300k
+  từ funding500k. Giữ intent qua lỗi đọc role, giữ lịch/mức Auto khi modal tạm ẩn.
+- PASS API232unit (trừ carrier-adapter), owner lookup HTTP/Mongo1ca (72filtered),
+  web251/RN161/Admin219; lint/typecheck/build liên quan/RN export, contract/routes,
+  runner4, detector7target0findings, docs/diff. Browser cuối operations/work-inbox/
+  auction-journey3suitePASS, tổngPARTIAL vì6NOT_RUN; auction-ui fixture đạt ở lượt
+  trước với source list không đổi. Native diff mới/human vẫn NOT_RUN/OPEN.
+- Fixture QA dừng nhận HTTP/đợi handler trước đóng Mongo để không cắt GET đang
+  chạy; cleanup cuối0DB/browser-user/portQA, services/QA đã dừng. Mongo chính vẫn
+  Exited, không start/reset/seed/migrate. READINESS giữ nguyên.
+- Remote07:11VN29/10: mainaed674f/PRmở0; RN CI mainFAIL,4workflow main khác vừa
+  đọc success. Chưa tích hợp chuỗi local/registry của nhóm, không tự nhập GHN.
+  Chỉ commit local, chưa push/PR/merge/deploy. Bước tiếp review/tích hợp API0.60
+  cùng client theo TEAMWORK, rồi native/human từ entry; không mở fulfillment.
+
+## Kiểm chứng Android native và sửa lỗi — 28–29/10/2026
+
+- Owner duyệt bước tiếp; nhánh `codex/native-journey-verification`, base990a9a2;
+  commit subject `fix(native): stabilize startup and verify member journeys`.
+  [Môi trường, finding và ma trận native](../ui/NATIVE_JOURNEYS_2026_10_28.md).
+- Fetch có main mới `aed674f` với Exchange RN/GHN của nhóm. Giữ nguyên chuỗi
+  local, chưa tích hợp; kết quả gói kiểm RN990a9a2, không là kiểm main mới.
+- Emulator Android17/API37 x86_64, QA Mongo riêng; không thay GHN/carrier/Driver,
+  contract0.59/API/migration hoặc mở gate delivery/settlement.
+- Build/install đầu PASS nhưng có cold-launch SIGSEGV ở MountingCoordinator.
+  Đã backport upstream screens PR4413 qua pnpm patch4file, giữ version4.26.2;
+  rebuild/cài APK sau vá PASS;20/20coldstarts bằng `test:native:startup` có hash
+  APK/màn thật và chặn mapping/device ngoài QA. Không chứng minh hết race/native.
+- Sửa Account route khi restore unavailable phải có retry, không rơi vào login;
+  NavigationBar reselect từ màn con về root. Native đã thử guest search/detail/
+  gallery/Back, login return-book/save, Guide, restore offline/retry cùng buyer,
+  logout/reopen/đổi seller, work→exact Order→accept mất ACK→cùng key/body retry.
+  Mongo có1accept receipt/1payment vàPreparing; keyboard/leave guard giữ form,
+  account/guide OSfont1.3. Có ảnh/JSON đã chọn trong báo cáo, không credential.
+- Tìm/sửa fixture pilot7bài vượt quota5/owner: chia owner QA, không sửa quota,
+  seed catalog/media/listing/review vẫn qua API. Dataset mới7bài/2owner/max5 đã
+  READY; journal lỗi cũ giữ local. Unit reset3PASS; API paging51bài/11owner/max5,
+  50+1 PASS sau resume cùng journal qua một EPERM tạm thời, không là native PASS.
+- Dataset đơn QA thật có AwaitingPayment/PendingSellerConfirmation/Preparing,
+  ledger reconciliation PASS; không shipment. RN161/lint/typecheck/export PASS;
+  runner/journal/helper15PASS; browser MemberRNweb+work-inbox2suitePASS, tổng
+  PARTIAL đúng vì6suite khácNOT_RUN. Docs/diff checks theo báo cáo.
+- TalkBack service/focus quan sát được một phần; audio/traversal đầy đủ, human,
+  ARM/iOS/native toàn bộ Exchange/review vẫn NOT_RUN, READINESS giữPARTIAL/OPEN.
+  Emulator gặp host-renderer context errors lúc thửnight; không nhận dark-mode
+  PASS. Đã restart cùngAVD softwareGPU chỉ để restore font/night/IME/accessibility,
+  bỏ reverse và tắt đúng emulator/QA/Metro/API/proxy/Gradle của gói. Mongo chính
+  vẫn dừng, không reset/seed/migrate. Chỉ commit local; chưa push/PR/merge/deploy.
+- Remote00:26VN29/10: PRmở0, RN CI mainaed674f FAILlint ở gói Exchange mới
+  (TextInput import/màu/quote JSX);4workflow main khác vừa đọc success. Local
+  PASS không sửa CI main. Bước tiếp review/tích hợp chuỗi với main mới và registry
+  migration có chủ đích, giữ GHN ngoài quyền gói; human/TalkBack đầy đủ còn mở.
+
+## Kiểm chứng hành trình và sửa lỗi tìm được — 28/10/2026
+
+- Owner duyệt gói kiểm chứng hành trình hiện có; nhánh
+  `codex/journey-verification`, base `7a7c217`, commit subject
+  `fix(journeys): verify cross-app flows and restore mobile chat panels`.
+- Sửa lỗi ChatPage mobile chọn Đơn hàng nhưng composer vẫn hiện do CSS
+  specificity; giữ draft/motion. Account web/RN ẩn lối tắt bị API chặn với LOCKED,
+  giữ ví và giao dịch cũ; RN tách thông báo restriction. Không đổi quyền server,
+  API/contract0.59, migration/tiền hoặc GHN/carrier/Driver.
+- Thêm `pnpm test:journey-gate`:8suite browser chạy tuần tự, QA URL/artifact
+  preflight, kết quả PASS/FAIL/NOT_RUN/BLOCKED/PARTIAL theo từng phạm vi. Chạy
+  subset không thành PASS toàn gói. Sửa harness chat/RN theo entry thực tế,
+  giữ ca lỗi/replay và assertion LOCKED; START_HERE sửa mô tả Exchange chat/report.
+  [Ma trận, cách chạy và giới hạn](../ui/JOURNEY_VERIFICATION_2026_10_28.md).
+- PASS: browser tổng8/8 exit0 sau fix Account; auction HTTP/Mongo17,
+  55filtered chủ đích không chạy carrier;
+  safety runner4; web251/RN161 unit, lint/typecheck/web build/RN export, account
+  web browser. Detector Account0findings, Chat CSS còn1advisory radius cũ ngoài
+  diff; docs/checker5/diff check PASS. JSON `.tmp/journey-gate/result.json` ghi
+  từng scope/sourceHead/dirty/time/exit; browser/storage fake không là native/live.
+- Native/TalkBack/ARM/iOS, human UX/review và browser auction thật qua cả ba
+  vai trò chưa có evidence mới. Flutter scaffold; READINESS giữ nguyên.
+- QA riêng đã dừng; Mongo chính không start/reset/seed/migrate. Chỉ commit local,
+  chưa push/PR/merge/deploy. Main remote `7d92012`, PR mở0, năm workflow main
+  vừa đọc completed/success tại SHA đó, không là CI cho chuỗi local.
+
+## Việc đang chờ từ state thật và workflow nối hành trình — 28/10/2026
+
+- Owner duyệt gói nối việc cụ thể vào Việc của tôi và tiếp tục sau gián đoạn.
+  Nhánh `codex/actionable-work-inbox`, base `4b50db6`; commit subject
+  `feat(work-inbox): connect current obligations and exact member actions`.
+- Web/RN có năm nhóm việc từ nguồn thật, lý do/hạn/bên đang chờ và link hồ sơ.
+  RN đơn tải tiếp qua50 và có focus riêng; web/RN trả lời đơn bán qua API có sẵn,
+  intent giữ action/version/key qua mất ACK và navigation. Staff/Admin có hồ sơ
+  duyệt bài/đầu sách đúng quyền, loại self-review; bàn điểm/review vẫn riêng.
+- Contract0.59.0:193operations/30controllers, hai GET; không migration mới,
+  không sửa tiền/expiry/state machine hoặc GHN/carrier/Driver. LOCKED chỉ đọc
+  lane giao dịch, không Listings/AuctionIntakes. Empty/error/cursor theo phạm vi.
+  Thêm skill `latlai-journey-integration` và adapter Claude, nối AGENTS/workflow/
+  TEAMWORK/UI_SKILLS/PR template; giữ nguyên ba skill UI upstream.
+- [Nguồn, ma trận hành trình, evidence và giới hạn](../ui/WORK_INBOX_2026_10_28.md),
+  [ADR0053](../adr/0053-state-derived-work-inbox.md). PASS API232 unit (loại
+  carrier-adapter), HTTP/Mongo work8 + obligations21 + Exchange33; session42;
+  web251/RN161/Admin219. Typecheck/lint bốn app, API/web/Admin build, RN web
+  export, contract/routes, detector0findings, docs/checker và skill validator PASS.
+  Browser QA HTTP/Mongo+storage fake: accept/reject, lost ACK rồi quay lại,
+  hơn50đơn, focus intake ngoài50, lỗi/quyền và Staff/Admin; hồi quy Order/chat,
+  account bàn phím/wallet/profile/LOCKED. Chi tiết nền tảng ở báo cáo.
+- Hồi quy mở rộng `test:chat:browser` còn FAIL ở selector/kỳ vọng ExchangeOffer
+  và switch đã lệch UI hiện tại (source chat đó không đổi). Không nhận PASS chat
+  tổng; giữ kịch bản cũ ngoài ba trường quyền Order để không che finding. Owner
+  chat cần cập nhật harness và chạy lại trước nghiệm thu toàn luồng.
+  Finding đã xử lý trong gói kiểm chứng ở đầu file; giữ FAIL ở đây theo mốc cũ,
+  kết quả mới và CSS bug xem báo cáo gói kiểm chứng.
+- Native thiết bị/TalkBack/ARM/iOS, human UX và review tiền/quyền vẫn OPEN/NOT RUN.
+  Flutter scaffold, READINESS và phạm vi sau F2h giữ nguyên. Không chạy lại gate
+  import/failover/schema không bị đổi. API0.59 cần đi trước hoặc cùng client;
+  migration0040 vẫn là dependency của chuỗi review local trước đó.
+- QA đã dừng sau kiểm; Mongo chính không khởi động/reset/seed/migrate.
+  Fetch: main vẫn `7d92012`, PR mở0; bốn workflow main đọc được completed/success
+  tại SHA đó, không là CI của nhánh local này. Bảo toàn nhánh teammate vừa fetch,
+  không tự đồng bộ working tree. Chỉ commit local; chưa push/PR/merge/deploy.
+  Bước tiếp: review chuỗi local theo TEAMWORK, rồi teammate thử từ entry mà không
+  được chỉ từng nút trước khi tích hợp.
+
+## Nối hành trình Member và vận hành — 28/10/2026
+
+- Owner yêu cầu cải thiện UX phân mảnh, xác nhận cả hai phía Member và Staff/
+  Admin. Nhánh `codex/member-journey-clarity`, base `46acb26`; commit subject
+  `fix(ux): connect member journeys and role-based workspace guidance`.
+- Web/RN account thành Việc của tôi, phân nhóm theo mục đích và nơi tiếp tục;
+  bỏ widget/đơn/điểm4.9 mẫu. Guide công khai4luồng có entry/action/kết quả;
+  phân biệt đơn trực tiếp/đơn đấu giá, nối Completed tới review, hướng dẫn
+  trạng thái web không gọi nhầm state đang xử lý là kết thúc. Staff/Admin có
+  hướng dẫn tại dashboard từ navigationGroups theo role hiện tại, không thêm quyền.
+- [Bản đồ, source, evidence và checklist nhóm](../ui/JOURNEY_CLARITY_2026_10_28.md).
+  PASS web251/RN161/Admin219 unit, ba app typecheck/lint, web/Admin build/RN
+  export. Browser HTTP/Mongo QA riêng + storage fake: task hub/guide/đơn→review,
+  hồi quy review, Staff/ADMIN-only guidance; account keyboard/LOCKED/profile/
+  wallet; web1440/768/390/320 và RN web chữ130%. Detector/docs/diff check PASS.
+- Không đổi API/contract0.58/migration/tiền hoặc GHN/carrier/Driver; không chạy
+  lại gate không ảnh hưởng. Native/TalkBack/ARM/iOS/human UX NOT RUN; Flutter
+  scaffold và READINESS không đổi. QA đã dừng; Mongo chính không start/reset/
+  seed. Chỉ commit local, chưa push/PR/merge/deploy. Bước tiếp: teammate thử từng
+  hành trình từ entry theo checklist, review chuỗi local trước tích hợp.
+
+
+## Minh bạch điểm và số mẫu — 28/10/2026
+
+- Owner duyệt bổ sung trình bày uy tín. Nhánh `codex/reputation-rating-transparency`,
+  base `0c9ce87`; commit subject `fix(reputation): show sample counts for each rating`.
+- Contract0.58/191operations/29controllers: thêm partnerRatingCount/bookRatingCount
+  trong cùng aggregation tính mean; reviewCount giữ nguyên. Mẫu sách bỏ các
+  Seller-to-Buyer review không có điểm sách. Không đổi công thức hoặc nghiệp vụ.
+- Web/RN hiện số mẫu cạnh từng điểm, nhãn “Chất lượng sách đã cung cấp”, giải
+  thích điểm sách/đối tác/trung bình và count0/mean null. Cập nhật ADR0052 về
+  vận hành cần nhóm chốt; điểm thấp không tự là vi phạm. Chưa có appeal/chống
+  thông đồng mới. [Evidence/ảnh0.58](../features/TRANSACTION_REVIEWS_REPORT.md).
+- PASS API225 (không4ca GHN), review HTTP/Mongo9 với assertions mẫu khác nhau,
+  hidden/deleted/pending/restore/pagination; session29, web251/RN161; contract/
+  routes, API/web/RN lint/typecheck, Admin typecheck, API/web build/RN export.
+  Browser QA web1440/768/390/320, RN web390/320/chữ130%, empty và số mẫu2/1 PASS.
+  Docs/diff check PASS. Không chạy lại gate schema/import/failover/settlement
+  không bị đổi; không suy browser là native/human PASS. READINESS giữ nguyên.
+- Không migration mới, không đổi GHN/carrier/Driver hoặc DB chính. QA đã dừng;
+  Mongo chính vẫn dừng. Chỉ commit local, chưa push/PR/merge/deploy. Khi tích
+  hợp nâng API0.58 trước hoặc cùng client mới và review cả chuỗi local phụ thuộc.
+
+
+## Review hai chiều và uy tín — 28/10/2026
+
+- Owner duyệt gói thay thế Forum. Nhánh `codex/transaction-reviews-reputation`,
+  base `4f09c17`; commit subject `feat(reviews): complete transaction reviews and member reputation`.
+  Bảo toàn ba commit local trước đó. [ADR0052](../adr/0052-transaction-reviews-and-reputation.md),
+  [source/evidence và hướng tích hợp](../features/TRANSACTION_REVIEWS_REPORT.md).
+- Hoàn thiện review Exchange/DirectOrder/PointOrder Completed: hạn gửi168h,
+  sửa/xóa48h, bảo mật tới khi hết quyền sửa, đúng vai trò chấm điểm; tombstone,
+  revision bất biến, một reply chờ duyệt, Staff/Admin độc lập với lý do và
+  version/key. Hồ sơ public tách completed/điểm/vi phạm xác minh. Không đổi tiền,
+  completion hoặc GHN/carrier/Driver; fixture Completed không đóng gate F2h.
+- Member web/RN có danh sách giao dịch, gửi/sửa/xóa/reply và profile; Admin/Staff
+  có queue/decision/history phân trang. Intent memory-only cùng SessionClient,
+  mất ACK giữ key/body/version; lỗi xác định giữ bản nháp. Dùng workflow UI ba
+  skill theo brand; Flutter vẫn scaffold, không có parity mới.
+- Contract0.57/191operations/29controllers; migration0040 thêm lifecycle và
+  `review_revisions`, registry52 migrations/91collections. Legacy giữ nội dung/
+  disclosure và baseline revision, khóa sửa nếu từng hiển thị. Migration mới
+  giữ VNPay expiry receipt union; không sửa migration/checksum cũ. Chưa áp lên
+  Mongo chính; khi tích hợp dừng process cũ, migrate/bootstrap role rồi nâng
+  API/worker/client cùng source. Legacy Exchange POST nay cần Idempotency-Key.
+- PASS: API unit225 (không chạy4 ca carrier-adapter gọi GHN), Mongo49/SKIP6
+  import/election thiếu môi trường riêng, schema cuối26, review HTTP/Mongo9,
+  hồi quy Exchange+obligations54, session29, User-web251/RN161/Admin219. Contract/
+  routes/typecheck/lint/build và RN export PASS; API/web còn warnings cũ/chunk.
+  Browser HTTP/Mongo QA + storage fake: web lost-ACK/draft/edit/delete, Guest
+  reputation, Staff hide/restore/aggregate/history pagination, RN create/profile,
+  1440/768/390/320 và RN web chữ130%. [Ảnh QA](../features/TRANSACTION_REVIEWS_REPORT.md).
+- Native thiết bị/TalkBack/ARM/iOS/live provider/human permission/UX acceptance
+  NOT RUN; READINESS giữ nguyên. Remote fetch: main vẫn `7d92012`, PR mở0,
+  User Web/API/Docs workflow main completed/success; không là CI của gói local.
+- Đã dừng QA sau kiểm; Mongo chính vẫn dừng, không seed/migrate/reset DB chính.
+  Chỉ commit local; chưa push/PR/merge/deploy. Bước tiếp: review cả chuỗi local,
+  chốt cửa sổ cập nhật client/API và nghiệm thu native/người thật đúng gate.
+
+
+## Quyết định bỏ Forum — 28/10/2026
+
+- Nhóm quyết định bỏ Forum/Cộng đồng sách; owner yêu cầu cập nhật docs và đề
+  xuất gói khác. [ADR0051](../adr/0051-remove-forum-from-project-scope.md) ghi
+  Accepted về scope; SRS1.1 loại FR-F01–FR-F06/AC-44, phần Forum trong BR/UC/UI/
+  model/milestone liên quan. Giữ mã truy vết, không tính là backlog hoặc gate.
+- Chat, wishlist/matching, thông báo, review, kiểm duyệt listing/catalog giữ
+  yêu cầu riêng. Snapshot SRS1.0/diagram/HTML/ZIP giữ nguyên; xem
+  [ghi chú deliverables](../deliverables/README.md). Cửa vào AGENTS/PRODUCT/
+  START_HERE/docs và context/kế hoạch cũ đã dẫn scope mới.
+- Nhánh `codex/docs-remove-forum-scope`, base `f288a73`; commit subject
+  `docs(scope): remove forum from current project requirements`.
+  Chỉ docs; không đổi code/contract/migration/READINESS, không khởi động dịch vụ,
+  không chạm GHN/carrier/Driver hoặc DB. Docs check/diff check PASS; không chạy
+  lại test sản phẩm vì runtime không đổi. Chỉ commit local, chưa push/PR/merge.
+- Đề xuất review/uy tín FR-R01–R05/FR-A08 sau đó đã được owner duyệt;
+  implementation/evidence xem mục review phía trên. Không mở completion/
+  settlement hoặc tự nhận human acceptance để làm gói này.
+
+## UX frontend Member — 28/10/2026
+
+- Owner yêu cầu rà soát/cải thiện frontend; giữ nguyên GHN/carrier/Driver.
+  Nhánh `codex/frontend-ux-consistency`, base local `68f40fb`, commit subject
+  `fix(frontend): improve member navigation and exchange usability`.
+- Web: Header giữ mục hiện tại qua query/filter, menu đóng Escape/focus/outside;
+  trang trao đổi dùng typography/palette hiện hành, tên sách dài có chỗ, layout
+  tablet/mobile, tab keyboard Home/End/Arrow, nhãn inspection/hủy/hết hạn đúng và
+  empty/error/retry rõ. Copy thông báo bao quát sách/giao dịch.
+- RN: bỏ mic giả, reset cả query+filter, đồng bộ LikeNew, chip wrap, input16px/
+  control chính48dp; StatePanel wine có ví dụ `/ui`. TopNavbar giữ action48dp
+  ở320px; thanh dưới giữ tên mục ở chữ lớn và bỏ badge đấu giá cố định.
+- PASS: User-web251/RN161 unit, hai app typecheck+lint (web warning cũ), web build
+  (chunk warning) và RN export. Browser web UX1440/768/390/320/chữ lớn + Exchange
+  regressions; RN web search/reset/filters/320px130%/nav và toàn public-shelf/
+  listing/address journey trên HTTP/Mongo QA, storage fake. Docs/diff check PASS.
+- [Phạm vi, evidence và việc tiếp](../ui/FRONTEND_UX_2026_10_28.md). Admin/Staff
+  rà source, không sửa workspace; Flutter xác nhận scaffold. Native/TalkBack/
+  ARM/iOS/human review và remote CI commit mới NOT RUN; READINESS không đổi.
+  Không đổi API/contract/migration/tiền. Chỉ commit local, chưa push/PR/merge.
+  QA đã dừng sau kiểm; Mongo chính giữ nguyên, không seed/migrate/start worker.
+
+## Nhất quán Exchange và dữ liệu Member — 28/10/2026
+
+- Owner duyệt khảo sát toàn dự án và sửa theo ưu tiên, sau đó yêu cầu giữ nguyên
+  GHN/carrier/driver chờ nhóm quyết định. Nhánh `codex/exchange-member-consistency`,
+  base `7d92012`; không sửa adapter, route/schema carrier hoặc gọi GHN thật.
+- [ADR0050](../adr/0050-exchange-inspection-and-existing-obligations.md): mỗi bên
+  Exchange có72h kiểm tra riêng, không tất toán sớm từ hai acknowledgement;
+  còn dấu tranh chấp thì không quyết toán hoặc ghi đè hồ sơ, projection vẫn báo
+  ResolutionPending. Giữ version/key/body/replay và kiểm participant trước replay.
+  LOCKED/RESTRICTED xử lý nghĩa vụ Exchange cũ; point-order read/report/code/claim
+  có ExistingObligation ở handler, không mở payment/giao dịch mới.
+- Contract0.56/181operations/28controllers; migration0039 thêm validator/deadline
+  và backfill active từ receivedAt, giữ hạn legacy dài hơn, terminal history,
+  version/ledger/checksum cũ. Chưa apply trên DB chính. Khi tích hợp phải dừng
+  worker cũ, migrate rồi khởi động API/worker cùng source; không reset hoặc seed.
+- RN bỏ sản phẩm/ảnh/auction/notification/voucher mẫu trên route thật, dùng ảnh
+  đúng intake, countdown theo server và search phân trang server; giữ loading/
+  empty/error/retry. Banner không quảng cáo giảm giá/thẩm định không có căn cứ.
+  Web/RN hiển thị hạn cá nhân và không hứa acknowledgement giải ngân sớm.
+- PASS local: contract/generated/routes, API/RN/User-web typecheck+lint (API/web
+  còn warnings), API/User-web build, RN web export. API unit220 (loại riêng4 ca
+  carrier-adapter có gọi GHN), session27, RN161, User-web248; Mongo schema25;
+  Exchange+obligations54. Auction/auth suites đã PASS trong lượt rộng; lỗi thiếu
+  contract annotation claim ở obligations đã sửa và rerun suite liên quan PASS.
+  Ba regression dispute/projection/expiry trên source cuối cũng PASS riêng.
+  Có HTTP/Mongo race dispute-vs-worker thật và migration/idempotency/LOCKED/revoke
+  regressions. Không gọi toàn bộ API E2E là PASS từ các lượt scoped này.
+- Browser real HTTP/Mongo QA + storage fake: RN shelf/detail/search/empty/error/
+  retry/pagination13/large-text320 và listing/address journey PASS; Member web
+  Exchange create/accept/cancel/lost-ACK/funding-error/403 desktop/mobile PASS.
+  Android build BLOCKED thiếu Ninja>=1.12; native/TalkBack/ARM/iOS/live provider/
+  human review và remote CI của nhánh này NOT RUN. CI10/10 tại7d92012 là baseline.
+  READINESS không đổi; full dispute/return/funded mutual cancellation/ordinary
+  ViaPoint và DirectDelivery vượtF2h vẫn cần scope/gate riêng.
+- Chỉ QA57017, đã dừng sau kiểm; không migrate/seed/chạy worker trên Mongo chính. Commit local;
+  chưa push/PR/merge/deploy. Bước tiếp: nhóm review tiền/quyền và quyết định phần
+  GHN đã hoãn, chuẩn bị toolchain native trước nghiệm thu tương ứng.
+
+Các mục dưới là checkpoint của từng gói tại ngày/source được ghi; không thay
+trạng thái hiện hành ở mục trên hoặc gate READINESS.
 
 ## Tối ưu giao diện Đánh giá trên Web (Loại bỏ nút trùng lặp & Cố định thanh gửi đánh giá) — 28/10/2026
 

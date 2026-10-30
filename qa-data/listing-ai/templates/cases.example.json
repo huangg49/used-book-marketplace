@@ -1,0 +1,16 @@
+{
+  "source": "cover-scan",
+  "cases": [
+    {
+      "id": "replace-with-case-id",
+      "bookKey": "replace-with-stable-edition-key",
+      "reviewed": false,
+      "photos": ["images/replace-with-stable-edition-key/front.jpg"],
+      "expected": {
+        "title": "",
+        "authors": [],
+        "isbn": null
+      }
+    }
+  ]
+}

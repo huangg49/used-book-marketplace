@@ -29,8 +29,9 @@ const toLocalInput = (ms: number) => {
 const when = (ms: number) =>
   new Date(ms).toLocaleString('vi-VN', { weekday: 'short', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
 
-export function ScheduleAuctionDialog({ isOpen, onClose, onDone, title, target, serverTime }: {
+export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone, title, target, serverTime }: {
   isOpen: boolean
+  paused?: boolean
   onClose: () => void
   onDone: () => Promise<unknown> | void
   title: string
@@ -39,6 +40,7 @@ export function ScheduleAuctionDialog({ isOpen, onClose, onDone, title, target, 
   serverTime?: string
 }) {
   const ref = useRef<HTMLDialogElement>(null)
+  const prepared = useRef(false)
   const ids = useId()
   const intent = useIntentKey()
   const live = target.kind === 'reschedule' && target.live
@@ -55,20 +57,24 @@ export function ScheduleAuctionDialog({ isOpen, onClose, onDone, title, target, 
   const offset = serverTime ? Date.parse(serverTime) - Date.now() : 0
   const now = Date.now() + offset
 
-  useEffect(() => isOpen ? lockPageScroll() : undefined, [isOpen])
+  useEffect(() => isOpen && !paused ? lockPageScroll() : undefined, [isOpen, paused])
   useEffect(() => {
     const dialog = ref.current
     if (!dialog) return
-    if (isOpen && !dialog.open) {
-      const start = target.kind === 'reschedule' && !target.live ? Date.parse(target.startAt) : now + HOUR
-      setLater(target.kind === 'reschedule' && !target.live)
-      setStartInput(toLocalInput(start)); setHours(currentHours); setError(null)
+    if (!isOpen) prepared.current = false
+    if (isOpen && !paused && !dialog.open) {
+      if (!prepared.current) {
+        const start = target.kind === 'reschedule' && !target.live ? Date.parse(target.startAt) : now + HOUR
+        setLater(target.kind === 'reschedule' && !target.live)
+        setStartInput(toLocalInput(start)); setHours(currentHours); setError(null)
+        prepared.current = true
+      }
       dialog.showModal()
       return playAuctionMotion(dialog, sheetFrames, 220)
     }
-    if (!isOpen && dialog.open) dialog.close()
+    if ((!isOpen || paused) && dialog.open) dialog.close()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen])
+  }, [isOpen, paused])
   useEffect(() => {
     const dialog = ref.current
     if (!dialog) return

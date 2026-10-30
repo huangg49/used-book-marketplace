@@ -2,7 +2,7 @@ import type { Db } from 'mongodb';
 import { applyCollectionSpecs } from './index.js';
 import type { CollectionSpec } from '../schema-dsl.js';
 import { document } from '../schema-dsl.js';
-import { exchangeDisputeResolutionSpecs } from './0040-exchange-dispute-resolution.js';
+import { exchangeDisputeResolutionSpecs } from './0044-exchange-dispute-resolution.js';
 
 const OPTIONAL_EXCHANGE_FIELDS = new Set([
   'inspectionDeadline',
@@ -76,7 +76,7 @@ export const exchangeMutualCancellationSpecs = exchangeDisputeResolutionSpecs.ma
 );
 
 export const exchangeMutualCancellationMigration = {
-  id: '0041-exchange-mutual-cancellation',
+  id: '0045-exchange-mutual-cancellation',
   definition: { collections: exchangeMutualCancellationSpecs },
   async up(db: Db) {
     await applyCollectionSpecs(db, exchangeMutualCancellationSpecs);

@@ -13,6 +13,14 @@
   min-height: calc(100dvh - 76px);
   display: flow-root;
 }
+.main[data-chat-room="true"] {
+  height: calc(100dvh - 76px);
+  max-height: calc(100dvh - 76px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
 .main[data-chat="true"]::before {
   content: "";
   position: fixed;

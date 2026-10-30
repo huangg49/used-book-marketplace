@@ -15,6 +15,13 @@ Bản 1.1 kế thừa [SRS 1.0 lưu trữ](deliverables/SRS_Nen_tang_sach_cu.md)
 
 **Phân biệt yêu cầu và implementation:** hiện trạng code/giới hạn xem [SESSION_STATE](handoff/SESSION_STATE.md), [kiến trúc](architecture/README.md) và [READINESS](handoff/READINESS.md). Không dùng SRS làm danh sách feature đã hoàn tất. Báo cáo feature ghi evidence tại source riêng; ZIP/diagram/HTML1.0 là snapshot lịch sử, không phải đặc tả1.1.
 
+**Điều chỉnh phạm vi28/10/2026:** nhóm quyết định **bỏ Forum/Cộng đồng sách**,
+chủ dự án xác nhận tại [ADR0051](adr/0051-remove-forum-from-project-scope.md).
+FR-F01–FR-F06 và AC-44 ngoài phạm vi, không là backlog hoặc tiêu chí còn thiếu.
+Giữ mã để truy vết. Chat, wishlist/matching, thông báo và đánh giá vẫn giữ yêu cầu
+riêng. Snapshot1.0 không sửa; quyết định này ưu tiên các nội dung Forum trong
+tài liệu/diagram cũ.
+
 ## 1 Mục đích và quy ước
 
 ### 1.1 Người sử dụng tài liệu
@@ -62,15 +69,18 @@ Các quy tắc của SRS này thay thế cách diễn đạt mâu thuẫn trong 
 
 ### 2.1 Mục tiêu sản phẩm
 
-Hệ thống phục vụ người dùng giao dịch trong TP.HCM, tìm/mua/đổi sách cũ và đấu giá đơn giản, có lựa chọn giao qua điểm kiểm tra tình trạng; giúp người bán quản lý từng bản sách; giúp Staff kiểm duyệt và xử lý tranh chấp; giúp Admin quản lý chính sách, quyền, rút tiền mô phỏng và đối soát. Forum hỗ trợ thảo luận và tìm sách, nhưng giao dịch phải đi qua listing và quy trình có lưu vết.
+Hệ thống phục vụ người dùng giao dịch trong TP.HCM, tìm/mua/đổi sách cũ và đấu giá đơn giản, có lựa chọn giao qua điểm kiểm tra tình trạng; giúp người bán quản lý từng bản sách; giúp Staff kiểm duyệt và xử lý tranh chấp; giúp Admin quản lý chính sách, quyền, rút tiền mô phỏng và đối soát. Giao dịch đi qua listing và quy trình có lưu vết; Forum đã loại khỏi phạm vi theo ADR0051.
 
 ### 2.2 Phạm vi bắt buộc
 
-Phiên bản nghiệm thu gồm tài khoản bằng email, hồ sơ và địa chỉ; catalog và listing có kiểm duyệt; tìm kiếm; giỏ hàng; mua một listing mỗi Order; đổi một listing lấy một listing có hoặc không bù tiền; ví mô phỏng có sổ cái; nạp và rút mô phỏng; vận chuyển giả lập có đủ trạng thái; khiếu nại, trả hàng và giải quyết tiền; đánh giá hai chiều; chat, forum cơ bản, wishlist; thông báo; quản trị và nhật ký. Bản 1.1 bổ sung hai điểm giao nhận mô phỏng, assignment Staff, custody/inspection/handover, bảng phí từng chặng và đấu giá tối thiểu theo phụ lục. Giao trực tiếp qua ship vẫn được giữ.
+Phiên bản nghiệm thu gồm tài khoản bằng email, hồ sơ và địa chỉ; catalog và listing có kiểm duyệt; tìm kiếm; giỏ hàng; mua một listing mỗi Order; đổi một listing lấy một listing có hoặc không bù tiền; ví mô phỏng có sổ cái; nạp và rút mô phỏng; vận chuyển giả lập có đủ trạng thái; khiếu nại, trả hàng và giải quyết tiền; đánh giá hai chiều; chat, wishlist; thông báo; quản trị và nhật ký. Bản 1.1 bổ sung hai điểm giao nhận mô phỏng, assignment Staff, custody/inspection/handover, bảng phí từng chặng và đấu giá tối thiểu theo phụ lục. Giao trực tiếp qua ship vẫn được giữ. Forum không còn trong phạm vi nghiệm thu từ28/10/2026 theo ADR0051.
 
 Giỏ hàng có thể chứa listing của nhiều người bán, nhưng mỗi checkout trong phiên bản này chỉ chọn **một listing**. Người dùng muốn mua nhiều listing tạo các Order độc lập. Ngoại lệ owner25/10/2026: một listing có thể là bộ2–50cuốn được mua/giao/trả nguyên lô theo [ADR0046](adr/0046-whole-book-bundles.md); không có mua tách từng cuốn hoặc hoàn một phần. Giới hạn một listing mỗi Order vẫn giữ nguyên.
 
 ### 2.3 Ngoài phạm vi bắt buộc
+
+Forum/Cộng đồng sách đã **loại khỏi phạm vi dự án** theo ADR0051 ngày28/10/2026,
+không phải tính năng mở rộng E đang chờ thực hiện.
 
 Đăng nhập Google/Facebook/SĐT; payment gateway và ngân hàng thật; carrier thật; COD; giao dịch tiền thật; đổi nhiều cuốn cùng lúc; giao ngoài vùng TP.HCM; đấu giá nâng cao/auto-relist/giá sàn bí mật; chuyển sách giữa các điểm/đối tác ký gửi; chứng nhận sách chính hãng; miễn cọc theo điểm uy tín; định giá thị trường tự động; phát hiện nhiều tài khoản cùng một người bằng danh tính thực; xử lý bồi thường vượt nguồn tiền đang giữ; chatbot; các tích hợp thương mại thật. React Native không còn ngoài phạm vi, theo ADR 0003. Các mục này chỉ được bổ sung khi có yêu cầu thay đổi phạm vi.
 
@@ -149,7 +159,7 @@ Quyền phải kiểm tra ở máy chủ và gắn với quyền sở hữu đ�
 
 | Thao tác | Guest | Member | Staff | Admin |
 |---|---|---|---|---|
-| Xem listing và forum công khai | Có | Có | Có | Có |
+| Xem listing công khai | Có | Có | Có | Có |
 | Tạo/sửa listing | Không | Của mình | Theo vai Member | Theo vai Member |
 | Duyệt hoặc gỡ listing | Không | Không | Có, không tự duyệt | Có, không tự duyệt |
 | Mua/đổi/chat | Không | Giao dịch hợp lệ của mình | Theo vai Member | Theo vai Member |
@@ -194,7 +204,7 @@ Mọi yêu cầu trong mục này là M trừ khi ghi E. Các tiêu chí AC ở 
 | FR-C03 | Admin xử lý trùng catalog bằng ánh xạ/gộp có log; không mất listing, wishlist và lịch sử snapshot. |
 | FR-C04 | Tìm theo tên/tác giả/ISBN; lọc giá bán, giá trị đổi, tình trạng và chế độ bán/đổi; có phân trang, sắp xếp mới nhất hoặc giá tăng/giảm. |
 | FR-C05 | Kệ mua/đổi thường chỉ gồm listing Approved, Visible, Available của chủ đủ quyền và không custody obligation. Kệ auction dùng predicate riêng Active + Pass + eligibility theo FR-AU; listing của auction có cam kết Reserved nên không dùng Available để lọc nó. Listing kênh Auction (ADR 0042) không bao giờ lên kệ mua/đổi, tìm kiếm hay chi tiết công khai của sàn. |
-| FR-C06 | Trang book gom các listing đủ điều kiện; trang listing có ảnh thật, mô tả, giá, tình trạng, người đăng, đánh giá và topic liên quan được công khai. |
+| FR-C06 | Trang book gom các listing đủ điều kiện; trang listing có ảnh thật, mô tả, giá, tình trạng, người đăng và đánh giá được công khai. Phần topic liên quan đã bỏ theo ADR0051. |
 | FR-C07 | Admin quản lý banner, bộ sưu tập và thứ tự hiển thị; listing không đủ điều kiện trong bộ sưu tập tự ngừng được đề xuất mua/đổi. |
 
 ### 5.3 Listing và kiểm duyệt
@@ -290,16 +300,16 @@ Mọi yêu cầu trong mục này là M trừ khi ghi E. Các tiêu chí AC ở 
 | FR-R04 | Cho sửa/xóa công khai trong POL-19, lưu revision; không cho xóa khi được giữ làm bằng chứng. Sau hạn khóa sửa; người bị đánh giá được một phản hồi, có kiểm duyệt. |
 | FR-R05 | Staff ẩn nội dung vi phạm có lý do; điểm tổng tính từ đánh giá công khai hợp lệ, không bao gồm bị xóa/ẩn và không cộng kép các revision. |
 
-### 5.10 Forum chat wishlist và thông báo
+### 5.10 Chat, wishlist và thông báo; mã Forum đã loại khỏi phạm vi
 
 | Mã | Yêu cầu |
 |---|---|
-| FR-F01 | Member tạo topic/bình luận trong chuyên mục Admin quản lý; Guest chỉ đọc nội dung công khai. Nội dung có báo cáo vi phạm và lịch sử kiểm duyệt. |
-| FR-F02 | Topic được gắn tối đa một listing của chính tác giả và một wanted_book; card đọc trạng thái live, không dùng giá sao chép trong text để checkout. |
-| FR-F03 | Tạo listing trong trình soạn topic đi qua cùng kiểm duyệt; card chờ duyệt không lộ ảnh/mô tả chưa duyệt cho Guest, không có nút giao dịch. |
-| FR-F04 | Listing Sold/Exchanged/Reserved/Hidden/Removed đổi card tương ứng, khóa nút; topic được giữ lịch sử và tác giả có thể đóng bình luận. |
-| FR-F05 | Một topic không gắn lặp cùng listing; một listing có tối đa 3 topic đang mở của tác giả; kiểm tra chống spam và giới hạn đăng 5 topic/giờ. |
-| FR-F06 | Phát hiện thông tin liên hệ/rao bán không gắn listing thì cảnh báo và đưa nội dung nghi vấn vào kiểm duyệt; không coi bộ lọc là bằng chứng gian lận tuyệt đối. |
+| FR-F01 | OUT OF SCOPE — tạo/đọc topic, bình luận và kiểm duyệt Forum; giữ mã lịch sử theo ADR0051. |
+| FR-F02 | OUT OF SCOPE — gắn listing/wanted_book vào topic; giữ mã lịch sử theo ADR0051. |
+| FR-F03 | OUT OF SCOPE — tạo listing trong trình soạn topic; luồng đăng listing độc lập vẫn giữ yêu cầu FR-L. |
+| FR-F04 | OUT OF SCOPE — vòng đời card và đóng bình luận Forum; giữ mã lịch sử theo ADR0051. |
+| FR-F05 | OUT OF SCOPE — giới hạn topic/chống spam Forum; giữ mã lịch sử theo ADR0051. |
+| FR-F06 | OUT OF SCOPE — phát hiện liên hệ/rao bán và kiểm duyệt Forum; giữ mã lịch sử theo ADR0051. |
 | FR-M01 | Chat riêng giữa hai Member khác nhau, có ngữ cảnh listing/giao dịch; người ngoài không đọc được bằng cách đổi ID. Nội dung chat không thay điều khoản đã chốt. |
 | FR-M02 | Hạn 20 tin/phút/user, tối đa 2.000 ký tự/tin; cho báo cáo, chặn chat mới; chặn không làm mất kênh nghĩa vụ của giao dịch đang mở. |
 | FR-M03 | Staff chỉ đọc đoạn chat cần thiết của hồ sơ được phân công, có log truy cập; không có màn hình đọc toàn bộ chat mọi người mặc định. |
@@ -313,7 +323,7 @@ Mọi yêu cầu trong mục này là M trừ khi ghi E. Các tiêu chí AC ở 
 | Mã | Yêu cầu |
 |---|---|
 | FR-G01 | Staff có hàng đợi listing, nội dung báo cáo, dispute và nhiệm vụ quá hạn; lọc theo trạng thái, thời gian và người phụ trách. |
-| FR-G02 | Admin quản lý Staff, catalog, thể loại, banner, chuyên mục và chính sách có phiên bản; mọi đổi quyền/chính sách có audit. |
+| FR-G02 | Admin quản lý Staff, catalog, thể loại, banner và chính sách có phiên bản; mọi đổi quyền/chính sách có audit. Không còn quản lý chuyên mục Forum theo ADR0051. |
 | FR-G03 | Dashboard tách giá trị giao dịch, hoa hồng thực nhận, số dư giữ, tiền hoàn, giao dịch thất bại và vi phạm; cọc/nạp ví không được tính doanh thu. |
 | FR-G04 | Worker xử lý timeout, kiểm tra giao, kết thúc cửa sổ kiểm tra, công bố review, matching, thông báo và đối soát; có retry chống lặp và hàng đợi lỗi. |
 | FR-G05 | Nhật ký tra theo actor, entity, transaction ID, event ID, thời gian và lý do; không ghi mật khẩu/token, không cho sửa/xóa bằng API thường. |
@@ -386,9 +396,9 @@ Mọi yêu cầu trong mục này là M trừ khi ghi E. Các tiêu chí AC ở 
 |---|---|
 | BR-40 | Review chỉ từ participant của giao dịch Completed; đơn hủy không tạo review nhưng vẫn có thể ghi vi phạm xác minh. |
 | BR-41 | Một review/giao dịch/reviewer, kể cả đã xóa công khai; hạn sửa không đặt lại. Revision và bản dùng làm chứng cứ được giữ. |
-| BR-42 | Forum card live phục vụ khám phá; snapshot giao dịch phục vụ cam kết. Không sử dụng forum text/chat để thay giá thanh toán đã chốt. |
-| BR-43 | Listing gắn forum phải thuộc tác giả; wanted_book là catalog có thể không thuộc tác giả. Card Removed không tiết lộ nội dung bị gỡ. |
-| BR-44 | Nội dung liên hệ ngoài sàn được cảnh báo/kiểm duyệt, không cam kết chặn được mọi cách lách. Thông tin giao hàng hợp lệ nằm trong giao dịch riêng, không bị bộ lọc forum xóa. |
+| BR-42 | Thông tin listing live phục vụ khám phá; snapshot giao dịch phục vụ cam kết. Không sử dụng text/chat để thay giá thanh toán đã chốt. Phần Forum card đã bỏ theo ADR0051. |
+| BR-43 | OUT OF SCOPE — quyền gắn listing/wanted_book và card Forum; giữ mã lịch sử theo ADR0051. |
+| BR-44 | Phần cảnh báo/lọc liên hệ trong Forum đã bỏ theo ADR0051. Thông tin giao hàng hợp lệ vẫn nằm trong giao dịch riêng theo quyền truy cập; không mở công khai vì bỏ Forum. |
 | BR-45 | Thông báo lỗi không rollback tiền/sách. Trạng thái nghiệp vụ và hộp thư lưu bền phải khôi phục được việc gửi sau khi dịch vụ hoạt động trở lại. |
 | BR-46 | Chỉ mở địa chỉ nhận cho Seller sau khi nhận Order; chỉ mở địa chỉ hai bên Exchange khi đủ funding. Thông tin cần thiết cho carrier nằm trong Shipment, không đưa lên trang công khai. |
 | BR-47 | Đổi địa chỉ sau giao kết không tự sửa Shipment. Trước pickup, các bên xác nhận yêu cầu đổi và báo giá lại nếu có; phạm vi M chọn hủy an toàn và tạo giao dịch mới nếu địa chỉ hoặc phí thay đổi. Sau pickup phải xử lý qua hỗ trợ carrier và có audit. |
@@ -534,7 +544,7 @@ Mỗi use case dưới đây xác định trigger, tiền điều kiện, luồn
 
 ### UC-03 Tìm, thỏa thuận và tạo Order
 
-**Actor:** Buyer, Seller. **Trigger:** Buyer chọn nhắn người bán về listing từ tìm kiếm hoặc forum card.
+**Actor:** Buyer, Seller. **Trigger:** Buyer chọn nhắn người bán về listing từ tìm kiếm hoặc trang listing.
 
 1. Hệ thống mở listing hiện hành và tạo chat riêng; listing vẫn Available, hiển thị và có thể có chat với nhiều Buyer.
 2. Buyer thỏa thuận trong chat, chọn địa chỉ và gửi báo giá giao nhận; thao tác này chưa tạo Order hoặc reservation.
@@ -671,17 +681,17 @@ Mỗi use case dưới đây xác định trigger, tiền điều kiện, luồn
 
 **Ngoại lệ:** đơn hủy không đánh giá; xóa không tạo quyền gửi lại; ảnh chứng cứ không tự công khai trong review. **Hậu điều kiện:** không cộng hai lần và không lộ đánh giá bên kia quá sớm. **Liên kết:** FR-R01–R05, AC-42–AC-43.
 
-### UC-15 Tương tác cộng đồng
+### UC-15 Chat, wishlist và thông báo
 
 **Actor:** Guest, Member, Staff. **Tiền điều kiện:** thao tác viết yêu cầu Member đủ quyền.
 
-1. Member tạo topic, gắn listing của mình và/hoặc wanted_book.
-2. Hệ thống kiểm tra nội dung, chống spam; card phản ánh trạng thái live, chưa duyệt thì placeholder.
-3. Người đọc mở mua/đổi từ card đi qua UC-03 hoặc UC-06; không giao dịch trực tiếp trong text.
-4. Wishlist/wanted khớp listing mới thì gửi một thông báo theo sự kiện.
-5. Chat và báo cáo nội dung đi qua kiểm tra participant, rate limit và kiểm duyệt.
+1. Member mở hội thoại trong ngữ cảnh listing/giao dịch; hệ thống kiểm participant và giới hạn gửi tin.
+2. Người đọc mở mua/đổi từ listing đi qua UC-03 hoặc UC-06; text chat không thay điều khoản đã chốt.
+3. Member lưu book/listing vào wishlist và chọn nhận hoặc tắt thông báo matching.
+4. Wishlist/wanted khớp listing mới thì gửi một thông báo theo sự kiện theo FR-N; không yêu cầu topic Forum.
+5. Member xem hộp thư thông báo, đánh dấu đã đọc; báo cáo/chặn chat vẫn theo FR-M và không làm mất kênh nghĩa vụ.
 
-**Ngoại lệ:** gắn listing người khác bị chặn; listing Removed giữ topic nhưng không lộ nội dung bị gỡ; chặn chat không chặn kênh giao dịch đang có nghĩa vụ. **Hậu điều kiện:** tương tác không vượt rào nghiệp vụ. **Liên kết:** FR-F01–F06, FR-M01–M03, FR-N01–N04, AC-44–AC-46.
+**Ngoại lệ:** người ngoài không đọc được hội thoại bằng cách đổi ID; chặn chat không chặn kênh giao dịch đang có nghĩa vụ. **Hậu điều kiện:** tương tác không vượt rào nghiệp vụ. **Liên kết:** FR-M01–M03, FR-N01–N04, AC-45–AC-46. Phần topic/bình luận/card Forum và AC-44 đã bỏ theo ADR0051.
 
 ### UC-16 Quản trị và đối soát
 
@@ -833,7 +843,7 @@ Bảng nền dưới đây đọc cùng [mô hình bổ sung 1.1](features/LOCAL
 | Violation | id, user_id, source_event, type, verified_at, revoked_at | Unique source + type + user |
 | Review | id, transaction_id, reviewer, recipient, book_score?, partner_score, submitted_at, published_at | Unique transaction + reviewer kể cả soft deleted |
 | ReviewRevision | review_id, version, content, scores, created_at | Dùng bản hiện hành công khai tính điểm |
-| ForumThread/Post | id, author, category, listing_id?, wanted_book_id?, content, status | Chủ listing phải là author khi gắn |
+| ForumThread/Post | OUT OF SCOPE — giữ tên mô hình lịch sử | Không yêu cầu API/collection/UI Forum theo ADR0051 |
 | Conversation/Message | participants, context_id, sender, content, status, sent_at | Kiểm tra participant ở mọi truy vấn |
 | Wishlist | user_id, book_id/listing_id, wants_exchange, notifications | Chính xác một target type |
 | Notification | user_id, event_id, target, type, payload, read_at | Unique user + event + type |
@@ -850,7 +860,7 @@ Reservation một phần không được commit. Dữ liệu `transaction_type +
 
 ### 11.3 Kiểm tra đầu vào và tệp
 
-Tên hiển thị 2–80 ký tự; tên sách 1–300; mô tả listing 30–5.000; topic 10–10.000; claim 30–5.000. Chuẩn hóa khoảng trắng đầu/cuối, giữ dấu tiếng Việt. Không tự loại ký tự làm đổi ý nghĩa nội dung. Dữ liệu text được encode khi hiển thị, không thực thi HTML người dùng.
+Tên hiển thị 2–80 ký tự; tên sách 1–300; mô tả listing 30–5.000; claim 30–5.000. Chuẩn hóa khoảng trắng đầu/cuối, giữ dấu tiếng Việt. Không tự loại ký tự làm đổi ý nghĩa nội dung. Dữ liệu text được encode khi hiển thị, không thực thi HTML người dùng. Giới hạn topic không còn áp dụng theo ADR0051.
 
 Ảnh listing/đóng gói nhận JPEG, PNG, WebP tối đa 10 MB/tệp; 1–8 ảnh/listing. Evidence nhận ảnh tối đa 10 MB, PDF tối đa 20 MB hoặc MP4 tối đa 100 MB; tối đa 10 tệp/claim. Kiểm tra loại thực tế, kích thước và nội dung nguy hiểm; đổi tên lưu ngẫu nhiên; không chạy macro/script. Mặc định hiển thị ảnh đã bỏ metadata vị trí ở nội dung công khai; evidence gốc giữ riêng có quyền. Video mở hộp là bằng chứng hỗ trợ, không phải điều kiện duy nhất để được khiếu nại.
 
@@ -864,14 +874,14 @@ Snapshot và sổ cái giữ suốt vòng đời dữ liệu đồ án; evidence
 
 | Nhóm | Màn hình và thông tin bắt buộc |
 |---|---|
-| Công khai | Trang chủ, tìm kiếm/lọc, book, listing, hồ sơ công khai, forum; chỉ dữ liệu được phép công khai |
+| Công khai | Trang chủ, tìm kiếm/lọc, book, listing, hồ sơ công khai; chỉ dữ liệu được phép công khai |
 | Tài khoản | Đăng ký/xác minh, đăng nhập/quên mật khẩu, hồ sơ, địa chỉ, phiên và trạng thái hạn chế |
 | Người đăng | Listing của tôi, soạn/sửa, lịch sử duyệt, lý do bị từ chối, trạng thái giữ/đóng |
 | Mua | Giỏ, checkout một cuốn, số tiền và deadline, chi tiết Order, vận chuyển, nhận và khiếu nại |
 | Đổi | Tạo đề xuất, danh sách đến/đi, revision, nghĩa vụ tiền từng bên, hai hành trình, deadline từng chiều |
 | Ví | Ba nhóm số dư, nạp/rút mô phỏng, lịch sử, chi tiết hold và tiến độ refund/payout |
 | Khiếu nại | Form claim, bằng chứng, timeline, quyết định, phân bổ tiền, kháng nghị, hoàn hàng |
-| Cộng đồng | Topic/card, chat, wishlist, thông báo, review và phản hồi |
+| Tương tác | Chat, wishlist, thông báo, review và phản hồi; không có Forum |
 | Staff | Hàng đợi duyệt/ticket, hồ sơ bằng chứng theo phân công, đề xuất quyết định |
 | Admin | User/quyền, cấu hình phiên bản, catalog, rút, escalation, đối soát, báo cáo và audit |
 | Demo | Bảng phát sự kiện simulator có phân quyền riêng, lịch sử event và kịch bản lỗi |
@@ -979,7 +989,7 @@ Trang công khai không lộ email đầy đủ, SĐT, địa chỉ, số tài k
 | G3 | Ledger, ví, Order, funding Exchange và idempotency | G2 và kiểm thử đồng thời |
 | G4 | Shipment simulator, deadline, dispute, return, settlement, withdrawal; sau đó ViaPoint custody/inspection/handover/incident | G3; proof tiền và hiện vật trước point release |
 | G4b | Auction tối thiểu dùng intake điểm và Order đã kiểm thử | G4, FR-AU01–10 |
-| G5 | Review, forum, chat, wishlist, thông báo, dashboard | Lõi trạng thái và phân quyền ổn định |
+| G5 | Review, chat, wishlist, thông báo, dashboard | Lõi trạng thái và phân quyền ổn định; Forum đã bỏ theo ADR0051 |
 | G6 | Kiểm thử end-to-end, khôi phục, hiệu năng, tài liệu và demo phản biện | G2–G5 |
 
 Không triển khai miễn cọc hoặc thanh toán thật. Point release phải dựa trên lõi reservation/ledger/dispute đã qua kiểm thử; auction sau ViaPoint/Order. Có thể làm trước UI fixture và point directory, nhưng không tuyên bố hoàn tất giao dịch. Nếu cần giảm phạm vi, thay đổi danh sách M/E bằng quyết định rõ ràng; không bỏ lỗi tiền/tranh chấp nhưng giữ dashboard để tạo cảm giác đủ tính năng.
@@ -1043,7 +1053,7 @@ Mỗi dòng AC là một nhóm ca; nhóm kiểm thử triển khai đủ điều
 | AC-41 | FR-W08, NFR-03 | Tạo lệch qua fixture test có kiểm soát; đối soát cảnh báo và chặn phần liên quan; không sửa entry đã posted |
 | AC-42 | FR-R01–R03 | Review đơn hủy/sai người bị chặn; Seller không có điểm chất lượng sách Order; chưa hết quyền sửa thì chưa công bố dù hai bên đã gửi; review sát cuối hạn có đủ 48 giờ sửa |
 | AC-43 | FR-R04–R05 | Sửa/xóa tại 48 giờ, review evidence, Staff ẩn; không reset hạn hoặc cộng revision hai lần |
-| AC-44 | FR-F01–F06 | Gắn listing người khác/spam/nội dung nghi vấn; chặn hoặc kiểm duyệt; pending card không lộ nội dung chưa duyệt |
+| AC-44 | FR-F01–F06 | OUT OF SCOPE theo ADR0051; giữ mã lịch sử, không tính là FAIL, PASS hoặc gate còn thiếu của phạm vi hiện hành |
 | AC-45 | FR-M01–M03 | Đổi conversation ID hoặc Staff chưa phân công; không đọc được; chặn user vẫn còn kênh nghĩa vụ cũ |
 | AC-46 | FR-N01–N04 | Matching lặp, tắt nhận, email/realtime lỗi; không spam, hộp thư còn và retry không rollback giao dịch |
 | AC-47 | FR-G01–G03, BR-39 | Chính sách mới không đổi phí/deadline giao dịch cũ; dashboard không tính cọc/nạp thành doanh thu |
@@ -1065,7 +1075,7 @@ Mỗi dòng AC là một nhóm ca; nhóm kiểm thử triển khai đủ điều
 
 | Nội dung nguồn | Quyết định trong SRS | Lý do |
 |---|---|---|
-| SRC-A mục 2/7 tách catalog, listing, forum | Giữ tại FR-C, FR-L, FR-F và dữ liệu mục 11 | Phân biệt đầu sách và hiện vật; card live không thay snapshot |
+| SRC-A mục 2/7 tách catalog, listing, forum | Giữ FR-C, FR-L; FR-F và mô hình Forum đã bỏ theo ADR0051 | Giữ phân biệt đầu sách/hiện vật và snapshot; nhóm bỏ Forum ngày28/10/2026 |
 | SRC-A mục 3 kiểm duyệt trước Available | Giữ; B trạng thái khởi tạo Available được thay bằng mô hình ba chiều | Không công khai listing chưa được duyệt |
 | SRC-B BR-08/15 khóa đồng thời hai listing | Giữ và thêm invariant, AC đồng thời | Chống một cuốn cam kết hai nơi |
 | SRC-B Reserved nhận nhiều yêu cầu, Locked mới chốt | Đổi thành Reserved độc quyền; Proposed không giữ | Thống nhất ý nghĩa với luồng checkout |

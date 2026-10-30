@@ -40,3 +40,20 @@ Assign one primary and one backup owner to each area. Ownership means reviewing 
 ## Demo cadence
 
 Keep weekly tags such as `review-1`, `review-2`, and `demo-2026-10-15`. Every tag must include compatible API, web, Flutter, React Native, migration, and demo-data revisions.
+
+## Bàn giao một hành trình sử dụng
+
+Chia người theo chức năng vẫn được; mỗi phần cần chỉ rõ cách nối vào sản phẩm.
+Dùng [bản đồ luồng và checklist](ui/JOURNEY_CLARITY_2026_10_28.md) và
+[workflow nối hành trình](../.agents/skills/latlai-journey-integration/SKILL.md)
+khi bàn giao UI xuyên module. Mỗi issue/PR ghi vai trò → entry → điều kiện →
+command/kết quả → bước tiếp; chốt người tích hợp ở các giao điểm:
+
+- Ghi vai trò sử dụng và màn hình/nút đi vào, không chỉ URL của màn vừa viết.
+- Ghi điều kiện, thông báo khi bị chặn, nơi xem kết quả và bước tiếp theo.
+- Nếu đi qua module khác, phối hợp với người giữ module đó; giữ tên gọi/menu
+  thống nhất. Member, Staff và Admin có entry khác nhau, không dùng role thay quyền API.
+- Nhờ một người khác thử từ trang vào mà không hướng dẫn bấm từng nút. Ghi chỗ
+  họ dừng hoặc hiểu sai; đây là evidence UX người thật, khác test tự động.
+- Không dùng giao dịch, điểm uy tín hoặc tiến trình mẫu trên màn vận hành thật.
+  Số liệu chưa tải phải có loading/error, không biến thành số0 hoặc thành công.

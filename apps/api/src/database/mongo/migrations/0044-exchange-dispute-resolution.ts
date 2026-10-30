@@ -88,7 +88,7 @@ export const exchangeDisputeResolutionSpecs = exchangePhase6ChangedSpecs.map(
 );
 
 export const exchangeDisputeResolutionMigration = {
-  id: '0040-exchange-dispute-resolution',
+  id: '0044-exchange-dispute-resolution',
   definition: { collections: exchangeDisputeResolutionSpecs },
   async up(db: Db) {
     await applyCollectionSpecs(db, exchangeDisputeResolutionSpecs);
