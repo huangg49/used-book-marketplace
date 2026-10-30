@@ -162,7 +162,7 @@ async function run() {
         trade: 'Available',
       });
 
-      if (existingListing) {
+      if (existingListing && existingListing.currentRevisionId) {
         // Cập nhật revision hiện tại với exchangePreferences nếu chưa có
         await c.listing_revisions.updateOne(
           { _id: existingListing.currentRevisionId },
