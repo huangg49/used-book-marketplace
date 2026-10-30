@@ -24,11 +24,14 @@
   phục và motion theo owner, không thêm font/theme/palette.
 - QA riêng được dọn/dừng khi kết thúc; DB chính không migrate/import/reset/seed.
   Chỉ commit local cho gói này, chưa push/PR/merge; READINESS giữ nguyên.
-- Follow-up căn header Hoạt động gần đây: bỏ margin heading kế thừa, dùng gap4px
-  giữa tiêu đề/mô tả và giữ icon36px không co. Browser fixture cô lập (empty
-  notifications, không ghi API/DB) tại1440/768/390/320: cùng lề, icon căn giữa,
-  không overflow; đã xem ảnh desktop/mobile. Lint/typecheck, detector0finding
-  đạt; lint còn warning có sẵn ở exchange/search/sell ngoài phạm vi.
+- Follow-up căn toàn bộ header Tổng quan: dùng DashboardSectionHeading cho5card
+  chính (hoạt động/dòng tiền/đấu giá/kệ/đơn), thống nhất cỡ chữ, gap4px và icon36px;
+  bỏ margin kế thừa ở chào mừng, sổ cái và tiêu đề card con. Actions/filter giữ
+  riêng, xuống dòng trên mobile. Browser fixture cô lập (chặn API, không ghi DB)
+  tại1440/1024/768/390/320: cùng lề, icon căn giữa, không overflow; kiểm thêm lỗi
+  dòng tiền, đã xem ảnh desktop/mobile. Web253unit/lint/typecheck/build đạt;
+  detector còn4warning Inter chart và1advisory bounce có sẵn, giữ font/motion
+  ngoài phạm vi. READINESS và quyền push/merge không đổi.
 
 ## Tích hợp chuỗi Member/review/listing AI qua PR79 — 29/10/2026
 

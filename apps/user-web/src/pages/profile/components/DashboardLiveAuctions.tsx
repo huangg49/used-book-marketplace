@@ -4,6 +4,7 @@ import { Gavel, Bell, ArrowRight, Timer, ShieldCheck } from "lucide-react";
 import { listNotifications, markNotificationsRead } from "../../../services/notifications";
 import { queryClient } from "../../../lib/session";
 import { ROUTES } from "../../../lib/routes";
+import { DashboardSectionHeading } from "./DashboardSectionHeading";
 
 const activityDate = new Intl.DateTimeFormat("vi-VN", {
   day: "2-digit",
@@ -43,22 +44,11 @@ export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
       className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-lg border border-outline-variant/30"
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm border-b border-surface-container-high/40 pb-space-sm">
-        <div className="flex min-w-0 items-center gap-space-sm">
-          <div className="w-9 h-9 shrink-0 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
-            <Gavel size={20} />
-          </div>
-          <div className="min-w-0 flex flex-col gap-1">
-            <h2 id="overview-activity-title" className="m-0 text-lg md:text-xl leading-snug text-primary font-bold tracking-normal">
-              Hoạt động gần đây
-            </h2>
-            <p className="m-0 font-body-sm text-body-sm leading-normal text-on-surface-variant">
-              Thông báo từ các phiên đấu giá.
-            </p>
-          </div>
-        </div>
+        <DashboardSectionHeading id="overview-activity-title" title="Hoạt động gần đây"
+          description="Thông báo từ các phiên đấu giá." icon={<Gavel size={20} />} />
         <Link
           to={ROUTES.notifications}
-          className="font-label-md text-label-md text-primary hover:text-secondary inline-flex items-center gap-1 font-semibold transition-colors"
+          className="shrink-0 self-start sm:self-center min-h-11 font-label-md text-label-md text-primary hover:text-secondary inline-flex items-center gap-1 font-semibold transition-colors"
         >
           <span>Xem thông báo</span>
           <ArrowRight size={15} />
@@ -86,7 +76,7 @@ export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
           <div className="w-12 h-12 rounded-full bg-surface-container-low flex items-center justify-center text-secondary mb-3">
             <Bell size={24} />
           </div>
-          <h3 className="font-headline-sm text-headline-sm text-primary font-bold">Chưa có thông báo</h3>
+          <h3 className="m-0 font-headline-sm text-headline-sm text-primary font-bold">Chưa có thông báo</h3>
           <p className="font-body-sm text-body-sm text-on-surface-variant max-w-sm mt-1">
             Khi có cập nhật về phiên đấu giá của bạn, thông báo sẽ nằm ở đây.
           </p>
@@ -114,7 +104,7 @@ export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
                 </div>
 
                 <div className="p-space-md flex flex-col gap-2">
-                  <h3 className="font-title-md text-title-md text-primary font-bold">
+                  <h3 className="m-0 font-title-md text-title-md text-primary font-bold">
                     {outbidNotices[0].title}
                   </h3>
                   <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">
@@ -160,7 +150,7 @@ export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
                   </span>
                 </div>
                 <div className="p-space-md flex flex-col gap-2">
-                  <h3 className="font-title-md text-title-md text-primary font-bold">
+                  <h3 className="m-0 font-title-md text-title-md text-primary font-bold">
                     {items[0].title}
                   </h3>
                   <p className="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">

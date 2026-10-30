@@ -19,6 +19,7 @@ import {
   walletHistoryLabels,
 } from "../../../services/wallet";
 import { ROUTES, formatVnd } from "../../../lib/routes";
+import { DashboardSectionHeading } from "./DashboardSectionHeading";
 
 const dateFormat = new Intl.DateTimeFormat("vi-VN", {
   day: "2-digit",
@@ -119,8 +120,8 @@ export function DashboardCashflow({ ownerId }: DashboardCashflowProps) {
     const failed = summaryQuery.isError || historyQuery.isError;
     return (
       <section className="bg-primary text-on-primary rounded-xl p-space-lg flex flex-col gap-space-md">
-        <h2 className="text-xl md:text-2xl font-bold">Dòng tiền &amp; Thống kê lưu khố (6 tháng)</h2>
-        <p role={failed ? "alert" : "status"}>
+        <DashboardSectionHeading title="Dòng tiền & Thống kê lưu khố (6 tháng)" inverse icon={<BarChart3 size={20} />} />
+        <p className="m-0" role={failed ? "alert" : "status"}>
           {failed ? "Chưa tải đủ dữ liệu dòng tiền. Thử lại để xem số liệu đã xác nhận." : "Đang tải dữ liệu dòng tiền…"}
         </p>
         {failed && <button type="button" onClick={() => { void summaryQuery.refetch(); void historyQuery.refetch(); }} className="inline-flex items-center gap-2 min-h-11 underline self-start">
@@ -134,22 +135,11 @@ export function DashboardCashflow({ ownerId }: DashboardCashflowProps) {
     <section className="bg-gradient-to-br from-[#680b0b] via-[#5c0202] to-[#450202] text-white rounded-xl p-space-lg shadow-sm flex flex-col gap-space-lg border border-[#831a1a]/70">
       {/* Header Panel */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm border-b border-white/15 pb-space-sm">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/15 flex items-center justify-center text-[#fceeed] shadow-inner">
-              <BarChart3 size={18} />
-            </div>
-            <h2 className="text-xl md:text-2xl text-white font-bold tracking-normal">
-              Dòng tiền &amp; Thống kê lưu khố (6 tháng)
-            </h2>
-          </div>
-          <p className="font-body-sm text-body-sm text-[#f5eddc]/85">
-            Đối soát số dư thực tế, tiền nạp, nhận bán sách và các khoản trừ xu dịch vụ.
-          </p>
-        </div>
+        <DashboardSectionHeading title="Dòng tiền & Thống kê lưu khố (6 tháng)" inverse icon={<BarChart3 size={20} />}
+          description="Đối soát số dư thực tế, tiền nạp, nhận bán sách và các khoản trừ xu dịch vụ." />
 
         {/* Chart Legends */}
-        <div className="flex items-center gap-space-md flex-wrap bg-black/20 px-3 py-1.5 rounded-lg border border-white/10">
+        <div className="shrink-0 self-start sm:self-center flex items-center gap-space-md flex-wrap bg-black/20 px-3 py-1.5 rounded-lg border border-white/10">
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-sm bg-[#5c0202] border border-white/40 inline-block"></span>
             <span className="font-label-md text-label-md text-[#f5eddc] text-xs font-medium">
@@ -394,16 +384,16 @@ export function DashboardCashflow({ ownerId }: DashboardCashflowProps) {
 
       {/* BANNER 3: BIẾN ĐỘNG SỐ DƯ GẦN NHẤT (LỊCH SỬ THẬT TỪ SỔ CÁI) */}
       <div className="bg-white text-on-surface rounded-xl p-space-md border border-[#e6d5c3] shadow-sm flex flex-col gap-space-sm">
-        <div className="flex items-center justify-between border-b border-[#ebd9c8] pb-2">
-          <div className="flex items-center gap-2">
-            <Receipt size={16} className="text-primary" />
-            <h3 className="font-title-md text-sm md:text-base text-primary font-bold">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm border-b border-[#ebd9c8] pb-2">
+          <div className="min-w-0 flex items-center gap-2">
+            <Receipt size={16} className="shrink-0 text-primary" />
+            <h3 className="m-0 leading-snug font-title-md text-sm md:text-base text-primary font-bold">
               Biến động số dư gần nhất (Sổ cái Lật Lại)
             </h3>
           </div>
           <Link
             to={ROUTES.wallet}
-            className="text-xs font-semibold text-primary hover:text-secondary underline flex items-center gap-1"
+            className="shrink-0 self-start sm:self-center min-h-11 text-xs font-semibold text-primary hover:text-secondary underline flex items-center gap-1"
           >
             <span>Mở toàn bộ lịch sử</span>
             <ArrowRight size={12} />

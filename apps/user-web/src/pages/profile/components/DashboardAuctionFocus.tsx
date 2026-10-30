@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, ArrowUpRight, Gavel, History, Timer, AlertCircle } from "lucide-react";
 import { ROUTES } from "../../../lib/routes";
 import { listMyAuctions } from "../../../services/auctions";
+import { DashboardSectionHeading } from "./DashboardSectionHeading";
 
 interface DashboardAuctionFocusProps {
   ownerId: string;
@@ -28,22 +29,9 @@ export function DashboardAuctionFocus({ ownerId }: DashboardAuctionFocusProps) {
     >
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-lg">
         {/* Left Information & Actions */}
-        <div className="flex flex-col gap-2 max-w-2xl">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg bg-[#fbf5ef] border border-[#ecdacb] flex items-center justify-center text-[#5c0202] flex-shrink-0">
-              <Gavel size={20} />
-            </div>
-            <h2
-              id="overview-auction-title"
-              className="text-xl md:text-2xl text-primary font-bold tracking-normal"
-            >
-              Đấu giá của bạn
-            </h2>
-          </div>
-
-          <p className="font-body-md text-body-md text-on-surface-variant">
-            Theo dõi diễn biến các phiên bạn tham gia, tình trạng trả giá, người dẫn đầu và xem lại toàn bộ lịch sử đấu giá sách quý.
-          </p>
+        <div className="min-w-0 flex flex-col gap-2 max-w-2xl">
+          <DashboardSectionHeading id="overview-auction-title" title="Đấu giá của bạn" icon={<Gavel size={20} />}
+            description="Theo dõi diễn biến các phiên bạn tham gia, tình trạng trả giá, người dẫn đầu và xem lại toàn bộ lịch sử đấu giá sách quý." />
 
           <div className="flex items-center gap-space-sm mt-1 flex-wrap">
             {/* Primary Action Button: Xem lịch sử đấu giá */}

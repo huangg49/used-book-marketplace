@@ -70,13 +70,13 @@ export function DashboardGreeting({ user }: DashboardGreetingProps) {
             </Link>
           </div>
 
-          <h1 tabIndex={-1} className="font-bold text-2xl md:text-3xl text-primary tracking-normal mt-1 outline-none">
+          <h1 tabIndex={-1} className="m-0 font-bold text-2xl md:text-3xl text-primary tracking-normal mt-1 outline-none">
             Tổng quan của bạn
           </h1>
-          <p className="font-title-md text-title-md text-primary font-semibold">
+          <p className="m-0 font-title-md text-title-md text-primary font-semibold">
             Chào mừng trở lại, {user.displayName}
           </p>
-          <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">
+          <p className="m-0 font-body-md text-body-md text-on-surface-variant max-w-2xl">
             Lưu khố cá nhân hiện đang vận hành ổn định. Các giao dịch ủy thác và hồ sơ đấu giá hôm nay được cập nhật theo thời gian thực.
           </p>
 
