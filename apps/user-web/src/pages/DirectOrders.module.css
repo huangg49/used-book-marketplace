@@ -1505,6 +1505,54 @@
   line-height: 1.4;
 }
 
+/* Trust Banner (Bảo đảm an toàn giao dịch) */
+.trustBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  background: linear-gradient(145deg, #fdfbf7 0%, #f7f2ea 100%);
+  border: 1px solid rgba(217, 203, 189, 0.75);
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(40, 25, 20, 0.03);
+  margin-top: 6px;
+}
+
+.trustBannerIcon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: #eaf8ed;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.trustBannerContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.trustBannerTitle {
+  display: block;
+  font-size: 0.78125rem;
+  font-weight: 700;
+  color: var(--shop-ink, #281914);
+  line-height: 1.35;
+  margin-bottom: 2px;
+}
+
+.trustBannerDesc {
+  margin: 0;
+  font-size: 0.71875rem;
+  color: var(--shop-muted, #716157);
+  line-height: 1.45;
+}
+
 @media (max-width: 1024px) {
   .orderTwoColumns {
     grid-template-columns: 1fr;

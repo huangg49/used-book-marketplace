@@ -680,10 +680,19 @@ function AuthenticatedOrderDetails({
               )}
             </div>
 
-            {/* Ghi chú chính sách ở chân khung thủ tục */}
-            <div className={styles.policyFooterNote}>
-              <ShieldCheck size={16} aria-hidden="true" />
-              <span>Mọi giao dịch trên Lật Lại được bảo đảm an toàn qua quỹ ký quỹ & quy trình kiểm định 72h.</span>
+            {/* Huy hiệu cam kết bảo đảm giao dịch an toàn */}
+            <div className={styles.trustBanner}>
+              <div className={styles.trustBannerIcon} aria-hidden="true">
+                <ShieldCheck size={16} />
+              </div>
+              <div className={styles.trustBannerContent}>
+                <strong className={styles.trustBannerTitle}>
+                  Bảo vệ giao dịch an toàn bởi Lật Lại
+                </strong>
+                <p className={styles.trustBannerDesc}>
+                  Khoản thanh toán được bảo chứng qua Quỹ ký quỹ và áp dụng quy trình kiểm định hàng trong 72h.
+                </p>
+              </div>
             </div>
           </div>
         </article>

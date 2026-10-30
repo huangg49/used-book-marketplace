@@ -818,12 +818,19 @@ export function NegotiationWorkspace({
             </ol>
           </details>
 
-          {/* 5. Ghi chú bảo đảm quỹ ký quỹ */}
-          <div className={styles.orderNote}>
-            <ShieldCheck size={16} />
-            <span>
-              Mọi giao dịch trên Lật Lại được bảo đảm an toàn qua Quỹ ký quỹ & quy trình kiểm định 72h.
-            </span>
+          {/* 5. Huy hiệu cam kết bảo đảm giao dịch an toàn */}
+          <div className={styles.trustBanner}>
+            <div className={styles.trustBannerIcon} aria-hidden="true">
+              <ShieldCheck size={16} />
+            </div>
+            <div className={styles.trustBannerContent}>
+              <strong className={styles.trustBannerTitle}>
+                Bảo vệ giao dịch an toàn bởi Lật Lại
+              </strong>
+              <p className={styles.trustBannerDesc}>
+                Khoản thanh toán được bảo chứng qua Quỹ ký quỹ và áp dụng quy trình kiểm định hàng trong 72h.
+              </p>
+            </div>
           </div>
         </div>
       </article>
