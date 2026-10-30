@@ -16,9 +16,9 @@ export function DashboardSectionHeading({
   inverse = false,
 }: DashboardSectionHeadingProps) {
   return (
-    <div className="flex min-w-0 items-center gap-space-sm" data-overview-heading>
+    <div className="flex min-w-0 items-stretch gap-space-sm" data-overview-heading>
       {icon && (
-        <div aria-hidden="true" className={`w-9 h-9 shrink-0 rounded-lg flex items-center justify-center ${inverse ? "bg-white/10 text-white" : "bg-surface-container-high text-secondary"}`}>
+        <div aria-hidden="true" className={`w-12 shrink-0 rounded-lg flex items-center justify-center [&>svg]:h-6 [&>svg]:w-6 ${inverse ? "bg-white/10 text-white" : "bg-surface-container-high text-secondary"}`}>
           {icon}
         </div>
       )}
