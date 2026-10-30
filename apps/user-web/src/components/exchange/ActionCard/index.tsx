@@ -175,18 +175,22 @@ export function ActionCard(props: Props) {
     actions.push("dispute");
   } else if (detail.status === "COMPLETED") {
     instructions =
-      "Trao đổi đã hoàn tất thành công. Khoản cọc bảo chứng và tiền bù đã được tất toán tự động.";
+      detail.resolutionDecision === "CompleteExchange" && detail.resolutionReason
+        ? `Trao đổi đã hoàn tất theo phán quyết của Quản trị viên: "${detail.resolutionReason}". Khoản cọc bảo chứng và tiền bù đã được tất toán.`
+        : "Trao đổi đã hoàn tất thành công. Khoản cọc bảo chứng và tiền bù đã được tất toán tự động.";
   } else if (detail.status === "RESOLUTION_PENDING") {
     instructions = detail.disputeReason
       ? `Giao dịch đang có tranh chấp / báo sự cố: "${detail.disputeReason}". Toàn bộ tiền cọc bảo chứng và tiền bù đang được tạm khóa an toàn trên Ledger để bảo vệ quyền lợi của hai bên.`
       : "Trao đổi đang chờ giải quyết tranh chấp. Khoản tiền cọc đang được tạm khóa an toàn.";
   } else {
     instructions =
-      detail.status === "REJECTED"
-        ? `Đề nghị đã bị từ chối.${detail.rejectionReason ? ` Lý do: ${detail.rejectionReason}` : ""}`
-        : detail.status === "EXPIRED"
-          ? "Đề nghị hoặc thời hạn đặt cọc đã hết."
-          : "Đề nghị đã bị hủy.";
+      detail.cancelReason === "DisputeResolvedRefund" && detail.resolutionReason
+        ? `Giao dịch đã hủy theo phán quyết của Quản trị viên: "${detail.resolutionReason}". Toàn bộ tiền cọc và tiền bù đã được hoàn lại 100% về ví của bạn.`
+        : detail.status === "REJECTED"
+          ? `Đề nghị đã bị từ chối.${detail.rejectionReason ? ` Lý do: ${detail.rejectionReason}` : ""}`
+          : detail.status === "EXPIRED"
+            ? "Đề nghị hoặc thời hạn đặt cọc đã hết."
+            : "Đề nghị đã bị hủy.";
   }
 
   const open = async (next: Action) => {

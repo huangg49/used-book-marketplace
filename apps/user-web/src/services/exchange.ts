@@ -105,14 +105,19 @@ export const exchangeSchema = z.object({
       "ProposalExpired",
       "ListingUnavailable",
       "ShippingExpired",
+      "DisputeResolvedRefund",
     ])
     .nullable()
     .optional(),
   cancelledBy: z
-    .enum(["Initiator", "Recipient", "System"])
+    .enum(["Initiator", "Recipient", "System", "Staff"])
     .nullable()
     .optional(),
   cancelledAt: date,
+  resolutionDecision: z.enum(["RefundBoth", "CompleteExchange"]).nullable().optional(),
+  resolutionReason: z.string().nullable().optional(),
+  resolvedBy: z.string().uuid().nullable().optional(),
+  resolvedAt: date,
   lastProposedById: z.string().uuid().nullable().optional(),
 });
 export const exchangePageSchema = z.object({
@@ -120,6 +125,25 @@ export const exchangePageSchema = z.object({
   nextCursor: z.string().nullable(),
 });
 export type Exchange = z.infer<typeof exchangeSchema>;
+
+export function formatCancelReason(reason?: string | null): string {
+  switch (reason) {
+    case "DisputeResolvedRefund":
+      return "Phán quyết hoàn cọc từ Quản trị viên";
+    case "FundingExpired":
+      return "Hết hạn nạp cọc bảo chứng (24 giờ)";
+    case "ProposalExpired":
+      return "Hết hạn phản hồi đề xuất (72 giờ)";
+    case "ShippingExpired":
+      return "Hết hạn gửi sách (72 giờ)";
+    case "CancelledByUser":
+      return "Người dùng hủy giao dịch";
+    case "ListingUnavailable":
+      return "Sách không còn khả dụng";
+    default:
+      return reason || "Giao dịch đã hủy";
+  }
+}
 
 export function exchangeActor() {
   const state = session.getSnapshot();

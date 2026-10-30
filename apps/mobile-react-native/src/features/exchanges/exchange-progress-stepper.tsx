@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { AppText, Icon, type IconName, radius, space, stitchTokens } from "../../core/ui";
 import type { ExchangeStatus } from "./contracts";
+import { formatCancelReason } from "./contracts";
 
 interface ExchangeProgressStepperProps {
   status: ExchangeStatus;
@@ -105,7 +106,7 @@ export function ExchangeProgressStepper({
       statusBadgeBg = stitchTokens.roseWarmSurface;
       statusBadgeColor = stitchTokens.terracottaSoft;
       stageDescription = cancelReason
-        ? `Giao dịch đã hủy: "${cancelReason}"`
+        ? `Giao dịch đã hủy: "${formatCancelReason(cancelReason)}"`
         : rejectionReason
         ? `Đề nghị bị từ chối: "${rejectionReason}"`
         : "Giao dịch trao đổi đã bị hủy.";

@@ -47,6 +47,11 @@ export interface ExchangeDetail {
   disputedAt?: string;
   disputeReason?: string;
   disputedBy?: string;
+  resolutionDecision?: 'RefundBoth' | 'CompleteExchange' | null;
+  resolutionReason?: string | null;
+  resolvedBy?: string | null;
+  resolvedAt?: string | null;
+  cancelReason?: string | null;
 }
 
 export interface ChatMessage {

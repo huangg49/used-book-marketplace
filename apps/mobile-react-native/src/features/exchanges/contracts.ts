@@ -71,6 +71,10 @@ export const exchangeSchema = z.object({
   cancelReason: z.string().nullable().optional(),
   cancelledBy: z.string().nullable().optional(),
   cancelledAt: dateIso,
+  resolutionDecision: z.enum(["RefundBoth", "CompleteExchange"]).nullable().optional(),
+  resolutionReason: z.string().nullable().optional(),
+  resolvedBy: uuid.nullable().optional(),
+  resolvedAt: dateIso,
 });
 
 export type Exchange = z.infer<typeof exchangeSchema>;
@@ -139,6 +143,25 @@ export const createExchangeReviewSchema = z.object({
 
 export type CreateExchangeReview = z.infer<typeof createExchangeReviewSchema>;
 
+
+export function formatCancelReason(reason?: string | null): string {
+  switch (reason) {
+    case "DisputeResolvedRefund":
+      return "Phán quyết hoàn cọc từ Quản trị viên";
+    case "FundingExpired":
+      return "Hết hạn nạp cọc bảo chứng (24 giờ)";
+    case "ProposalExpired":
+      return "Hết hạn phản hồi đề xuất (72 giờ)";
+    case "ShippingExpired":
+      return "Hết hạn gửi sách (72 giờ)";
+    case "CancelledByUser":
+      return "Người dùng hủy giao dịch";
+    case "ListingUnavailable":
+      return "Sách không còn khả dụng";
+    default:
+      return reason || "Đã hủy";
+  }
+}
 
 export function mapExchangeStatusInfo(
   status: ExchangeStatus,

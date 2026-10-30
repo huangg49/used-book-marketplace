@@ -19,6 +19,7 @@ import { formatVnd } from "../../core/ui/format";
 import type { Exchange } from "./contracts";
 import {
   exchangeReviewsResponseSchema,
+  formatCancelReason,
   type CreateExchangeReview,
 } from "./contracts";
 import { ExchangeReviewsCard } from "./exchange-reviews-card";
@@ -877,25 +878,49 @@ export function ExchangeActionsCard({
 
       {/* State: COMPLETED (WITH REVIEWS) */}
       {exchange.status === "Completed" && (
-        <ExchangeReviewsCard
-          exchange={exchange}
-          reviewsData={reviewsQuery.data}
-          isLoading={reviewsQuery.isLoading}
-          partnerName={isInitiator ? "Đối tác" : "Đối tác đề nghị"}
-          onOpenReviewModal={() => {
-            setReviewError(null);
-            setReviewModalOpen(true);
-          }}
-        />
+        <View style={{ gap: space.sm }}>
+          {exchange.resolutionDecision === "CompleteExchange" && (
+            <View style={[styles.disputeBox, { backgroundColor: stitchTokens.likeNewGreenBg, borderColor: stitchTokens.verifiedGreen }]}>
+              <Icon name="check" size={18} color={stitchTokens.verifiedGreen} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <AppText style={[styles.disputeTitle, { color: stitchTokens.verifiedGreen }]}>
+                  Trao đổi hoàn tất theo phán quyết của Quản trị viên
+                </AppText>
+                {exchange.resolutionReason && (
+                  <AppText style={{ fontSize: 13, color: stitchTokens.darkWood, marginTop: 2 }}>
+                    Căn cứ: {exchange.resolutionReason}
+                  </AppText>
+                )}
+              </View>
+            </View>
+          )}
+          <ExchangeReviewsCard
+            exchange={exchange}
+            reviewsData={reviewsQuery.data}
+            isLoading={reviewsQuery.isLoading}
+            partnerName={isInitiator ? "Đối tác" : "Đối tác đề nghị"}
+            onOpenReviewModal={() => {
+              setReviewError(null);
+              setReviewModalOpen(true);
+            }}
+          />
+        </View>
       )}
 
       {/* State: CANCELLED */}
       {exchange.status === "Cancelled" && (
         <View style={styles.cancelledBox}>
           <Icon name="close" size={16} color={stitchTokens.flashRed} />
-          <AppText style={styles.cancelledText}>
-            Đơn trao đổi đã đóng ({exchange.cancelReason || "Đã hủy"}).
-          </AppText>
+          <View style={{ flex: 1, gap: 2 }}>
+            <AppText style={styles.cancelledText}>
+              Đơn trao đổi đã đóng ({formatCancelReason(exchange.cancelReason)}).
+            </AppText>
+            {exchange.resolutionReason && (
+              <AppText style={{ fontSize: 13, color: stitchTokens.darkWood, marginTop: 2 }}>
+                Lý do phán quyết: {exchange.resolutionReason}
+              </AppText>
+            )}
+          </View>
         </View>
       )}
 
