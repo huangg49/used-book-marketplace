@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, Gavel, History, Timer, AlertCircle } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Gavel } from "lucide-react";
 import { ROUTES } from "../../../lib/routes";
 import { listMyAuctions } from "../../../services/auctions";
 import { DashboardSectionHeading } from "./DashboardSectionHeading";
@@ -22,96 +22,49 @@ export function DashboardAuctionFocus({ ownerId }: DashboardAuctionFocusProps) {
   const paymentCount = items.filter((item) => item.needsPayment).length;
   const totalCount = items.length;
 
+  const summaries = [
+    { label: "Đang diễn ra", count: activeCount, view: "active" },
+    { label: "Cần thanh toán", count: paymentCount, view: "payment" },
+    { label: "Đã tham gia", count: totalCount, view: "all" },
+  ];
+
   return (
     <section
-      className="bg-white rounded-xl p-space-lg shadow-sm border border-[#e6d5c3]"
+      className="bg-white rounded-xl p-space-lg border border-[#e6d5c3]"
       aria-labelledby="overview-auction-title"
     >
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-space-lg">
-        {/* Left Information & Actions */}
-        <div className="min-w-0 flex flex-col gap-2 max-w-2xl">
-          <DashboardSectionHeading id="overview-auction-title" title="Đấu giá của bạn" icon={<Gavel size={20} />}
-            description="Theo dõi diễn biến các phiên bạn tham gia, tình trạng trả giá, người dẫn đầu và xem lại toàn bộ lịch sử đấu giá sách quý." />
-
-          <div className="flex items-center gap-space-sm mt-1 flex-wrap">
-            {/* Primary Action Button: Xem lịch sử đấu giá */}
-            <Link
-              to={ROUTES.myAuctions}
-              className="inline-flex items-center gap-1.5 px-space-md py-2 rounded-lg bg-secondary text-on-secondary font-title-md hover:bg-on-secondary-container transition-colors shadow-sm text-sm font-semibold"
-            >
-              <History size={16} />
-              <span>Xem lịch sử đấu giá</span>
-              <ArrowRight size={16} />
-            </Link>
-
-            {/* Secondary Action: Khám phá sàn đấu giá */}
-            <Link
-              to={ROUTES.auctions}
-              className="inline-flex items-center gap-1.5 px-space-md py-2 rounded-lg bg-[#fbf7f0] text-primary hover:bg-[#f3eadc] border border-[#e8ddcf] transition-colors text-sm font-semibold"
-            >
-              <Gavel size={14} className="text-secondary" />
-              <span>Sàn đấu giá đang mở</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Right Status / Filter Navigation Pills */}
-        <ul className="flex items-center gap-space-sm flex-wrap list-none p-0 m-0">
-          {/* Pill 1: Đang diễn ra */}
-          <li>
-            <Link
-              to={`${ROUTES.myAuctions}?view=active`}
-              className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-lg bg-[#fbf7f0] border border-[#e8ddcf] hover:bg-[#f5ede0] hover:border-[#d9c9b7] transition-all text-xs group"
-            >
-              <div className="flex flex-col">
-                <span className="flex items-center gap-1 font-semibold text-primary">
-                  <Timer size={13} className="text-secondary" />
-                  Đang diễn ra
-                </span>
-                <small className="text-on-surface-variant text-[11px] font-medium">
-                  {isPending ? "Đang tải…" : isError ? "Chưa tải" : `${activeCount} phiên`}
-                </small>
-              </div>
-              <ArrowUpRight size={14} className="text-on-surface-variant group-hover:text-primary transition-colors" />
-            </Link>
-          </li>
-
-          {/* Pill 2: Cần thanh toán */}
-          <li>
-            <Link
-              to={`${ROUTES.myAuctions}?view=payment`}
-              className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-lg bg-[#fbf7f0] border border-[#e8ddcf] hover:bg-[#f5ede0] hover:border-[#d9c9b7] transition-all text-xs group"
-            >
-              <div className="flex flex-col">
-                <span className="flex items-center gap-1 font-semibold text-primary">
-                  {paymentCount > 0 && <AlertCircle size={13} className="text-amber-600" />}
-                  Cần thanh toán
-                </span>
-                <small className="text-on-surface-variant text-[11px] font-medium">
-                  {isPending ? "Đang tải…" : isError ? "Chưa tải" : `${paymentCount} phiên`}
-                </small>
-              </div>
-              <ArrowUpRight size={14} className="text-on-surface-variant group-hover:text-primary transition-colors" />
-            </Link>
-          </li>
-
-          {/* Pill 3: Tất cả lịch sử */}
-          <li>
-            <Link
-              to={`${ROUTES.myAuctions}?view=all`}
-              className="inline-flex items-center gap-2.5 px-3.5 py-2 rounded-lg bg-[#fbf7f0] border border-[#e8ddcf] hover:bg-[#f5ede0] hover:border-[#d9c9b7] transition-all text-xs group"
-            >
-              <div className="flex flex-col">
-                <strong className="text-primary font-semibold">Tất cả phiên</strong>
-                <small className="text-on-surface-variant text-[11px] font-medium">
-                  {isPending ? "Đang tải…" : isError ? "Chưa tải" : `${totalCount} đã tham gia`}
-                </small>
-              </div>
-              <ArrowUpRight size={14} className="text-on-surface-variant group-hover:text-primary transition-colors" />
-            </Link>
-          </li>
-        </ul>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-md">
+        <DashboardSectionHeading id="overview-auction-title" title="Đấu giá của bạn" icon={<Gavel size={20} />}
+          description="Theo dõi các phiên và khoản cần thanh toán." />
+        <Link
+          to={ROUTES.auctions}
+          className="shrink-0 self-start sm:self-center min-h-11 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary text-on-secondary hover:bg-on-secondary-container transition-colors text-sm font-semibold"
+        >
+          Khám phá sàn <ArrowRight size={16} aria-hidden="true" />
+        </Link>
       </div>
+
+      <ul aria-label="Trạng thái đấu giá" className="m-0 mt-space-md grid grid-cols-1 sm:grid-cols-3 list-none p-0 border-t border-outline-variant/40 divide-y sm:divide-y-0 sm:divide-x divide-outline-variant/40">
+        {summaries.map(({ label, count, view }) => {
+          const needsAttention = view === "payment" && !isPending && !isError && count > 0;
+          return (
+            <li key={view} className="min-w-0">
+              <Link
+                to={`${ROUTES.myAuctions}?view=${view}`}
+                className="group flex items-center justify-between gap-3 min-h-11 py-3 sm:px-4 rounded-lg hover:bg-surface-container-low transition-colors"
+              >
+                <div className="min-w-0 flex flex-col gap-1">
+                  <span className={`text-sm ${needsAttention ? "text-secondary font-semibold" : "text-on-surface-variant"}`}>{label}</span>
+                  <span className={`font-semibold tabular-nums ${needsAttention ? "text-secondary" : "text-primary"}`}>
+                    {isPending ? <span className="text-sm">Đang tải…</span> : isError ? <span className="text-sm">Chưa tải</span> : <><span className="text-xl">{count}</span><span className="ml-1.5 text-xs font-normal text-on-surface-variant">phiên</span></>}
+                  </span>
+                </div>
+                <ArrowUpRight size={16} aria-hidden="true" className="shrink-0 text-on-surface-variant group-hover:text-primary" />
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }

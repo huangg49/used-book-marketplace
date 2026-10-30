@@ -45,6 +45,11 @@
   Typecheck/lint component đạt; detector chỉ advisory motion cũ. Account harness
   dùng lại heading Tổng quan của bạn; không chạy lại full API/Mongo account suite
   cho gói copy/layout này.
+- Card Đấu giá của bạn: mô tả1câu,1CTA Khám phá sàn và3mục số liệu ngăn bằng
+  đường kẻ nhẹ; bỏ nút lịch sử trùng entry Tất cả/Đã tham gia và các khung con.
+  Giữ query/count và deep link active/payment/all. Browser fixture chặn API tại
+  5width kiểm empty/count2-1-3/loading/error, link và keyboard, không overflow;
+  đã xem desktop/mobile. Lint/build và detector0finding đạt; không đổi API/DB.
 
 ## Tích hợp chuỗi Member/review/listing AI qua PR79 — 29/10/2026
 
