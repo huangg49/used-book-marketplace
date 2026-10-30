@@ -55,6 +55,9 @@
   chặn API kiểm menu desktop/sidebar mobile:2entry vắng,7mục chung và thông báo
   sidebar giữ nguyên. Lint/typecheck đạt; account/wallet harness theo menu mới,
   chưa chạy lại2suite API/Mongo browser này. Không đổi RN hoặc READINESS.
+- Owner yêu cầu bỏ câu chú thích bìa hero trên Home thường; chỉ giữ nhãn riêng
+  trong catalog preview. Browser Home1440/390 kiểm ô tìm kiếm render và câu đã
+  vắng; lint component đạt. Không đổi dữ liệu, ảnh hoặc luồng tìm kiếm.
 
 ## Tích hợp chuỗi Member/review/listing AI qua PR79 — 29/10/2026
 

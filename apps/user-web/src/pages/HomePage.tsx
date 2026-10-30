@@ -578,11 +578,11 @@ export function HomePage() {
             </button>
           </form>
         </div>
-        <p className={styles.caption}>
-          {preview
-            ? "Bìa trên hero để trang trí · Bộ sách bên dưới đang ở chế độ xem trước"
-            : "Bìa sách dùng để minh họa · Ảnh sách đang đăng ở bên dưới"}
-        </p>
+        {preview && (
+          <p className={styles.caption}>
+            Bìa trên hero để trang trí · Bộ sách bên dưới đang ở chế độ xem trước
+          </p>
+        )}
       </section>
       <div className={styles.marketplace}>
         <AutumnLeavesCanvas />
