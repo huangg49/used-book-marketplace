@@ -31,9 +31,10 @@
   tại1440/1024/768/390/320: cùng lề, icon căn giữa, không overflow; kiểm thêm lỗi
   dòng tiền, đã xem ảnh desktop/mobile. Web253unit/lint/typecheck/build đạt;
   detector còn4warning Inter chart và1advisory bounce có sẵn, giữ font/motion
-  ngoài phạm vi. Theo phản hồi tiếp theo của owner, khung icon rộng48px, cao
-  bằng toàn bộ cụm tiêu đề/mô tả (flex stretch), SVG24px căn giữa; browser fixture
-  kiểm chiều cao/top khớp tại cả5width, không overflow; đã xem ảnh và lint/detector
+  ngoài phạm vi. Theo phản hồi mới nhất của owner, thay khung icon kéo giãn bằng
+  hình vuông cố định56px desktop/48px mobile, SVG24px, viền nhẹ/nền kem/mực wine;
+  mô tả dài không kéo cao icon. Browser fixture cả5width kiểm hình vuông, căn đầu
+  cụm chữ dài/căn giữa cụm ngắn, không overflow; đã xem ảnh và lint/detector
   component đạt. READINESS và quyền push/merge không đổi.
 
 ## Tích hợp chuỗi Member/review/listing AI qua PR79 — 29/10/2026
