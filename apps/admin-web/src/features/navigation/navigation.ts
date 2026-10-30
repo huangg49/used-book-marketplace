@@ -12,7 +12,10 @@ export function navigationGroups(user: CurrentUser | undefined): NavigationGroup
     { label: "Dashboard", to: "/dashboard", icon: "dashboard" },
   ] }];
   if (canReview(user)) {
-    const items: NavigationItem[] = [{ label: "Bài đăng sách", to: "/review/listings", icon: "books" }];
+    const items: NavigationItem[] = [
+      { label: "Bài đăng sách", to: "/review/listings", icon: "books" },
+      { label: "Khiếu nại trao đổi", to: "/operations/exchange-disputes", icon: "resolution" },
+    ];
     if (canReviewCatalog(user)) items.push({ label: "Đầu sách", to: "/review/catalog-requests", icon: "catalog" });
     groups.push({ id: "review", label: "Kiểm duyệt", items });
   }
