@@ -1,4 +1,29 @@
-# Điểm lưu hiện tại — 29/10/2026
+# Điểm lưu hiện tại — 30/10/2026
+
+## Khôi phục tổng quan Profile web — 30/10/2026
+
+- Owner yêu cầu trả lại trang tổng quan cũ. Nhánh `codex/restore-profile-overview`,
+  baseab80b43 sau fetch/pull PR80 của nhóm; giữ các thay đổi trao đổi/thông báo/
+  form đăng sách mới. Commit subject `fix(web): restore member profile overview`.
+- `/account` khôi phục bố cục từaed674f: chào mừng, thống kê, hoạt động, dòng tiền,
+  đấu giá, kệ sách và đơn trực tiếp, dùng component hiện tại của nhóm. Menu header/
+  sidebar có Tổng quan; hub việc đang làm được giữ ở `/account/work`, nhãn Việc
+  của tôi. Guide/back link và harness theo đúng entry mới; RN giữ nguyên.
+- Card đơn cũ chứa tên/giá/tiến trình mẫu nên thay nội dung bằng listOrders read
+  có owner query key, vai trò mua/bán, empty/error/retry và link đúng Order ID.
+  Không phục hồi đơn/vận chuyển giả, không sửa GHN/worker/tiền/API. Lỗi dữ liệu
+  ví/kệ không hiển thị thành số0; giữ điều kiện tài khoản cho CTA đăng sách/kệ.
+- PASS web253unit/typecheck/lint/build; account browser tại1440/768/390/320,
+  đăng nhập/keyboard/menu/guide/LOCKED work entry. Session/wallet/empty orders
+  dùng API/Mongo QA thật; ca order positive/error/retry là response fixture có
+  nhãn trong harness. Browser work-inbox web/RNweb/Staff/Admin PASS với paging,
+  exact links, permission và lost ACK. Không native/human acceptance.
+- Đã xem ảnh desktop/mobile trong `.tmp/journey-account-evidence/`; không
+  overflow. Workflow Pro Max/Taste/Impeccable giữ thiết kế cũ; detector1advisory
+  animate-bounce từPR80 và4warning Inter trên nhãn biểu đồ cũ. Giữ phạm vi khôi
+  phục và motion theo owner, không thêm font/theme/palette.
+- QA riêng được dọn/dừng khi kết thúc; DB chính không migrate/import/reset/seed.
+  Chỉ commit local cho gói này, chưa push/PR/merge; READINESS giữ nguyên.
 
 ## Tích hợp chuỗi Member/review/listing AI qua PR79 — 29/10/2026
 

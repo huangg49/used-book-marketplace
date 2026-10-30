@@ -115,6 +115,21 @@ export function DashboardCashflow({ ownerId }: DashboardCashflowProps) {
   const totalVnd = summary?.total ?? 0;
   const latXu = Math.floor(availableVnd / 1000);
 
+  if (summaryQuery.isPending || historyQuery.isPending || summaryQuery.isError || historyQuery.isError) {
+    const failed = summaryQuery.isError || historyQuery.isError;
+    return (
+      <section className="bg-primary text-on-primary rounded-xl p-space-lg flex flex-col gap-space-md">
+        <h2 className="text-xl md:text-2xl font-bold">Dòng tiền &amp; Thống kê lưu khố (6 tháng)</h2>
+        <p role={failed ? "alert" : "status"}>
+          {failed ? "Chưa tải đủ dữ liệu dòng tiền. Thử lại để xem số liệu đã xác nhận." : "Đang tải dữ liệu dòng tiền…"}
+        </p>
+        {failed && <button type="button" onClick={() => { void summaryQuery.refetch(); void historyQuery.refetch(); }} className="inline-flex items-center gap-2 min-h-11 underline self-start">
+          <RefreshCw size={16} aria-hidden="true" /> Tải lại dòng tiền
+        </button>}
+      </section>
+    );
+  }
+
   return (
     <section className="bg-gradient-to-br from-[#680b0b] via-[#5c0202] to-[#450202] text-white rounded-xl p-space-lg shadow-sm flex flex-col gap-space-lg border border-[#831a1a]/70">
       {/* Header Panel */}

@@ -75,7 +75,7 @@ try {
   const pageErrors = [];
   page.on("pageerror", (e) => pageErrors.push(e.message));
   const main=page.locator('#account-content');page.setDefaultTimeout(15000);
-  async function login(){await page.getByLabel(/^Email/).fill('member@operations.test');await page.getByLabel(/^Mật khẩu/).fill(password);await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();await main.getByRole('heading',{name:'Việc của tôi',exact:true}).waitFor();}
+  async function login(heading='Việc của tôi'){await page.getByLabel(/^Email/).fill('member@operations.test');await page.getByLabel(/^Mật khẩu/).fill(password);await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();await main.getByRole('heading',{name:heading,exact:true}).waitFor();}
   async function account(){
     await page.setViewportSize({width:1440,height:900});
     await page.getByRole('button',{name:/^Tài khoản của/}).click();
@@ -83,14 +83,47 @@ try {
     await main.getByRole('heading',{name:'Việc của tôi',exact:true}).waitFor();
   }
   async function capture(name,width){await page.setViewportSize({width,height:900});await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:path.join(evidence,name+'.png'),fullPage:true});}
-  await page.goto(origin+'/account');await login();
+  await page.goto(origin+'/account');await login('Tổng quan của bạn');
+  await main.getByRole('heading',{name:'Thống kê tổng quan',exact:true}).waitFor({state:'attached'});
+  await main.getByRole('heading',{name:'Dòng tiền',exact:false}).waitFor();
+  const orders=main.getByRole('region',{name:'Theo dõi đơn hàng',exact:true});
+  await orders.getByText('Chưa có đơn mua trong danh sách gần đây.',{exact:true}).waitFor();
+  assert.equal(await main.getByText('#DM-8021',{exact:true}).count(),0);
+  for(const width of [1440,768,390,320])await capture('overview-restored-'+width,width);
+  // Exercise actual response shape without writing an order or altering money.
+  // Positive/error cases here are explicitly intercepted UI fixtures.
+  const orderId=randomUUID();
+  const ordersUrl='**/api/v1/me/orders?limit=20';
+  await page.route(ordersUrl,route=>route.fulfill({json:{items:[{id:orderId,title:'Đơn QA để kiểm liên kết',version:1,state:'AwaitingPayment',role:'Buyer',createdAt:new Date().toISOString()}],nextCursor:null}}));
+  // A fresh browser session avoids reusing the overview's valid 15s cache.
+  await page.reload();await login('Tổng quan của bạn');
+  await orders.getByRole('link',{name:'Xem chi tiết đơn',exact:true}).waitFor();
+  assert.equal(await orders.getByRole('link',{name:'Xem chi tiết đơn',exact:true}).getAttribute('href'),'/orders/'+orderId);
+  await orders.getByRole('button',{name:'Đơn bán',exact:true}).click();
+  await orders.getByText('Chưa có đơn bán trong danh sách gần đây.',{exact:true}).waitFor();
+  await page.unroute(ordersUrl);
+  await page.route(ordersUrl,route=>route.fulfill({status:503,json:{statusCode:503,code:'UNAVAILABLE',message:'QA read unavailable'}}));
+  const cashflowUrl='**/api/v1/me/wallet/history**';
+  await page.route(cashflowUrl,route=>route.fulfill({status:503,json:{statusCode:503,code:'UNAVAILABLE',message:'QA history unavailable'}}));
+  await page.reload();await login('Tổng quan của bạn');
+  await orders.getByRole('alert').waitFor();
+  await main.getByText('Chưa tải đủ dữ liệu dòng tiền. Thử lại để xem số liệu đã xác nhận.',{exact:true}).waitFor();
+  assert.equal(await main.getByText('Thặng dư tích lũy ròng',{exact:true}).count(),0);
+  assert.equal(await orders.getByRole('link',{name:'Xem chi tiết đơn',exact:true}).count(),0);
+  await page.unroute(ordersUrl);
+  await page.unroute(cashflowUrl);
+  await main.getByRole('button',{name:'Tải lại dòng tiền',exact:true}).click();
+  await main.getByText('Biến động số dư gần nhất (Sổ cái Lật Lại)',{exact:true}).waitFor();
+  await orders.getByRole('button',{name:'Tải lại đơn hàng',exact:true}).click();
+  await orders.getByText('Chưa có đơn mua trong danh sách gần đây.',{exact:true}).waitFor();
+  await account();
   await main.getByRole('link',{name:/^Đơn mua\/bán trực tiếp/}).waitFor();
   await main.getByRole('link',{name:/^Trao đổi của tôi/}).waitFor();await main.getByRole('link',{name:/^Đấu giá của tôi/}).waitFor();
   assert.equal(await main.getByText('4.9',{exact:false}).count(),0);
-  // Navigation and keyboard remain usable after replacing the former dashboard
-  // widgets. Financial values are checked on the actual wallet screen.
+  // Overview and work destinations share the keyboard menu. Financial values
+  // remain checked on the actual wallet screen as well.
   const menu=page.getByRole('button',{name:/^Tài khoản của/});await menu.click();await menu.press('ArrowDown');
-  assert.equal(await page.evaluate(()=>document.activeElement?.textContent?.trim()),'Việc của tôi');await page.keyboard.press('Escape');
+  assert.equal(await page.evaluate(()=>document.activeElement?.textContent?.trim()),'Tổng quan');await page.keyboard.press('Escape');
   assert.equal(await menu.getAttribute('aria-expanded'),'false');
   await main.getByRole('link',{name:'Thông tin tài khoản',exact:true}).click();await main.getByRole('heading',{name:'Hồ sơ của tôi',exact:true}).waitFor();await account();
   for(const width of [1440,768,390,320])await capture('task-hub-'+width,width);
@@ -105,14 +138,14 @@ try {
   // hub; existing transaction destinations remain discoverable.
   await fixture.setUserStatus(fixture.member.user.id,'LOCKED');
   await page.getByRole('button',{name:'Đăng xuất',exact:true}).first().click();
-  await page.goto(origin+'/account');await login();await main.getByRole('status').filter({hasText:'hạn chế hoặc khóa'}).waitFor();
+  await page.goto(origin+'/account/work');await login();await main.getByRole('status').filter({hasText:'hạn chế hoặc khóa'}).waitFor();
   assert.equal(await main.getByRole('link',{name:/^Đăng sách mới/}).count(),0);
   for(const name of [/^Kệ sách của tôi/,/^Trò chuyện/,/^Đánh giá của tôi/])assert.equal(await main.getByRole('link',{name}).count(),0,'LOCKED hub must not advertise a denied destination');
   await main.getByRole('link',{name:'Ví của tôi',exact:true}).waitFor();
   await main.getByRole('link',{name:'Hồ sơ uy tín của tôi',exact:true}).waitFor();
   await main.getByRole('link',{name:/^Đơn mua\/bán trực tiếp/}).waitFor();await capture('locked-task-hub',390);
   assert.deepEqual(pageErrors,[]);
-  console.log('PASS account task hub: live isolated session/profile/wallet reads, keyboard menu and guide, responsive1440/768/390/320, LOCKED entry clarity. Native NOT RUN.');
+  console.log('PASS restored account overview and separate work hub: live isolated session/profile/wallet/empty-order reads; intercepted order positive/error/retry fixtures; keyboard menu and guide; responsive1440/768/390/320; LOCKED work entry. Native NOT RUN.');
 
 } finally {
   await browser?.close();

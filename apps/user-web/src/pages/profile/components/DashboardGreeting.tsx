@@ -95,13 +95,13 @@ export function DashboardGreeting({ user }: DashboardGreetingProps) {
 
         {/* Quick Action CTAs */}
         <div className="flex items-center gap-space-sm flex-wrap flex-shrink-0">
-          <Link
+          {isActive && <Link
             to={ROUTES.sell}
             className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded bg-secondary text-on-secondary font-title-md text-title-md hover:bg-on-secondary-container transition-colors shadow-sm"
           >
             <Plus size={18} />
             <span>Đăng sách</span>
-          </Link>
+          </Link>}
           <Link
             to={ROUTES.wallet}
             className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded bg-surface-container-highest text-primary font-title-md text-title-md hover:bg-surface-dim transition-colors"
@@ -109,13 +109,13 @@ export function DashboardGreeting({ user }: DashboardGreetingProps) {
             <Wallet size={18} />
             <span>Nạp / Rút Lật-Xu</span>
           </Link>
-          <Link
+          {!isLocked && <Link
             to={ROUTES.myBooks}
             className="inline-flex items-center gap-space-xs px-space-md py-2.5 rounded bg-surface-container-high text-primary font-title-md text-title-md hover:bg-surface-dim transition-colors"
           >
             <Library size={18} />
             <span>Kệ sách</span>
-          </Link>
+          </Link>}
         </div>
       </div>
     </section>
