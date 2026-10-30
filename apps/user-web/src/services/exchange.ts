@@ -382,6 +382,8 @@ export function exchangeError(error: unknown) {
     return "Không mở được trao đổi này hoặc bạn không có quyền thực hiện.";
   if (error.code === "InsufficientFunds")
     return "Ví mô phỏng chưa đủ tiền. Kiểm tra số dư rồi thử lại.";
+  if (error.message && error.message !== "Yêu cầu chưa thực hiện được. Vui lòng thử lại.")
+    return error.message;
   if (error.status === 409)
     return "Trao đổi đã thay đổi hoặc không còn đủ điều kiện. Tải lại trạng thái trước khi tiếp tục.";
   return "Không thực hiện được thao tác. Kiểm tra thông tin rồi thử lại.";

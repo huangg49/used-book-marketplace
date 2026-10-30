@@ -56,6 +56,9 @@ export function ProgressStepper({ status, compact = false, failedAtStep, closedB
     } else if (status === 'COMPLETED') {
         statusBadgeText = 'Đã hoàn tất';
         statusBadgeType = 'success';
+    } else if (status === 'RESOLUTION_PENDING') {
+        statusBadgeText = 'Đang khiếu nại / sự cố';
+        statusBadgeType = 'failed';
     } else if (status === 'CANCELLED') {
         statusBadgeText = 'Đã hủy';
         statusBadgeType = 'failed';
