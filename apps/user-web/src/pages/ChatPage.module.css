@@ -1,3 +1,10 @@
+:global(html:has([data-room-selected="true"])),
+:global(body:has([data-room-selected="true"])) {
+  overflow: hidden !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+}
+
 .root,
 .guest {
   --shop-shelf: #f4eddf;
@@ -18,10 +25,12 @@
 .root[data-room-selected="true"] {
   width: calc(100% - 48px);
   max-width: 1440px;
-  height: calc(100dvh - 84px);
-  max-height: calc(100dvh - 84px);
-  margin: 8px auto 12px;
-  padding: 8px 16px 12px;
+  flex: 1;
+  min-height: 0;
+  height: calc(100% - 16px);
+  max-height: calc(100% - 16px);
+  margin: 6px auto 10px;
+  padding: 8px 16px 10px;
   border-radius: 14px;
   background: var(--shop-shelf);
   display: flex;
@@ -613,8 +622,10 @@
   }
   .root[data-room-selected="true"] {
     width: calc(100% - 32px);
-    padding: 8px 16px 12px;
-    margin-top: 8px;
+    height: calc(100% - 14px);
+    max-height: calc(100% - 14px);
+    padding: 8px 14px 10px;
+    margin: 6px auto 8px;
   }
   .root[data-room-selected="false"],
   .guest {
@@ -638,9 +649,11 @@
     border-radius: 12px;
   }
   .root[data-room-selected="true"] {
-    width: calc(100% - 24px);
-    margin: 8px auto;
-    padding: 8px 12px 12px;
+    width: calc(100% - 20px);
+    height: calc(100% - 12px);
+    max-height: calc(100% - 12px);
+    margin: 4px auto 8px;
+    padding: 6px 10px 8px;
     border-radius: 12px;
   }
   .pageHeading {

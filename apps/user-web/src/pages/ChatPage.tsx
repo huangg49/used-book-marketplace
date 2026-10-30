@@ -1055,6 +1055,17 @@ export function ChatPage() {
     });
   }, [roomId, rooms.isPending, location.key, position, auth.status]);
   useEffect(() => {
+    if (!roomId) return;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.body.style.overflow = prevBodyOverflow;
+    };
+  }, [roomId]);
+  useEffect(() => {
     if (transitioning || auth.status !== "authenticated") return;
     if (roomId && location.state?.chatFromInbox) {
       frameRef.current?.focus({ preventScroll: true });
