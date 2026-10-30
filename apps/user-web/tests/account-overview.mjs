@@ -83,7 +83,7 @@ try {
     await main.getByRole('heading',{name:'Việc của tôi',exact:true}).waitFor();
   }
   async function capture(name,width){await page.setViewportSize({width,height:900});await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:path.join(evidence,name+'.png'),fullPage:true});}
-  await page.goto(origin+'/account');await login('Tổng quan của bạn');
+  await page.goto(origin+'/account');await login('Tổng quan');
   await main.getByRole('heading',{name:'Thống kê tổng quan',exact:true}).waitFor({state:'attached'});
   await main.getByRole('heading',{name:'Dòng tiền',exact:false}).waitFor();
   const orders=main.getByRole('region',{name:'Theo dõi đơn hàng',exact:true});
@@ -96,7 +96,7 @@ try {
   const ordersUrl='**/api/v1/me/orders?limit=20';
   await page.route(ordersUrl,route=>route.fulfill({json:{items:[{id:orderId,title:'Đơn QA để kiểm liên kết',version:1,state:'AwaitingPayment',role:'Buyer',createdAt:new Date().toISOString()}],nextCursor:null}}));
   // A fresh browser session avoids reusing the overview's valid 15s cache.
-  await page.reload();await login('Tổng quan của bạn');
+  await page.reload();await login('Tổng quan');
   await orders.getByRole('link',{name:'Xem chi tiết đơn',exact:true}).waitFor();
   assert.equal(await orders.getByRole('link',{name:'Xem chi tiết đơn',exact:true}).getAttribute('href'),'/orders/'+orderId);
   await orders.getByRole('button',{name:'Đơn bán',exact:true}).click();
@@ -105,7 +105,7 @@ try {
   await page.route(ordersUrl,route=>route.fulfill({status:503,json:{statusCode:503,code:'UNAVAILABLE',message:'QA read unavailable'}}));
   const cashflowUrl='**/api/v1/me/wallet/history**';
   await page.route(cashflowUrl,route=>route.fulfill({status:503,json:{statusCode:503,code:'UNAVAILABLE',message:'QA history unavailable'}}));
-  await page.reload();await login('Tổng quan của bạn');
+  await page.reload();await login('Tổng quan');
   await orders.getByRole('alert').waitFor();
   await main.getByText('Chưa tải đủ dữ liệu dòng tiền. Thử lại để xem số liệu đã xác nhận.',{exact:true}).waitFor();
   assert.equal(await main.getByText('Thặng dư tích lũy ròng',{exact:true}).count(),0);

@@ -36,6 +36,14 @@
   mô tả dài không kéo cao icon. Browser fixture cả5width kiểm hình vuông, căn đầu
   cụm chữ dài/căn giữa cụm ngắn, không overflow; đã xem ảnh và lint/detector
   component đạt. READINESS và quyền push/merge không đổi.
+- Banner chào mừng được owner yêu cầu gọn hơn: chỉ giữ Tổng quan/lời chào ngắn,
+  bỏ badge hội viên/trạng thái ACTIVE và đoạn mô tả lặp; CTA Đăng sách, Ví Lật-Xu,
+  Kệ sách cùng chuông có accessible label/số chưa đọc. Nền bản đồ nhẹ hơn, giữ
+  cảnh báo và điều kiện CTA LOCKED/RESTRICTED. Browser fixture chặn API tại5width
+  kiểm không overflow, tên dài,120unread, keyboard và2trạng thái hạn chế; đã xem
+  desktop/mobile. Web253unit/build/typecheck/lint component đạt; detector chỉ
+  advisory motion cũ. Selector heading trong account harness theo nhãn mới;
+  không chạy lại full API/Mongo account suite cho gói copy/layout này.
 
 ## Tích hợp chuỗi Member/review/listing AI qua PR79 — 29/10/2026
 
