@@ -17069,6 +17069,7 @@ components:
         - ListingUnavailable
         - ShippingExpired
         - DisputeResolvedRefund
+        - MutualAgreement
     ExchangeCancelledBy:
       type: string
       enum:
@@ -17076,6 +17077,7 @@ components:
         - Initiator
         - Recipient
         - Staff
+        - Both
     Exchange:
       type: object
       additionalProperties: false
@@ -17263,6 +17265,15 @@ components:
               format: uuid
             - type: "null"
         resolvedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        cancellationRequestedBy:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeCancelledBy"
+            - type: "null"
+        cancellationRequestedAt:
           anyOf:
             - type: string
               format: date-time

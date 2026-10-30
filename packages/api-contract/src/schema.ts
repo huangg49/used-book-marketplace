@@ -5675,9 +5675,9 @@ export interface components {
         /** @enum {string} */
         ExchangeStatus: "Proposed" | "AcceptedAwaitingFunding" | "Preparing" | "InTransit" | "Delivered" | "Completed" | "Cancelled" | "ResolutionPending";
         /** @enum {string} */
-        ExchangeCancelReason: "FundingExpired" | "ProposalExpired" | "CancelledByUser" | "ListingUnavailable" | "ShippingExpired" | "DisputeResolvedRefund";
+        ExchangeCancelReason: "FundingExpired" | "ProposalExpired" | "CancelledByUser" | "ListingUnavailable" | "ShippingExpired" | "DisputeResolvedRefund" | "MutualAgreement";
         /** @enum {string} */
-        ExchangeCancelledBy: "System" | "Initiator" | "Recipient" | "Staff";
+        ExchangeCancelledBy: "System" | "Initiator" | "Recipient" | "Staff" | "Both";
         Exchange: {
             /** Format: uuid */
             id: string;
@@ -5725,6 +5725,8 @@ export interface components {
             resolutionReason?: string | null;
             resolvedBy?: string | null;
             resolvedAt?: string | null;
+            cancellationRequestedBy?: components["schemas"]["ExchangeCancelledBy"] | null;
+            cancellationRequestedAt?: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */

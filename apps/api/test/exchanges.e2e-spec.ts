@@ -2123,5 +2123,170 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       expect(rec.balanced).toBe(true);
     });
   });
+
+  describe('Mutual cancellation before shipping (Preparing state)', () => {
+    it('1. Initiator requests cancel, cannot repeat request, then Recipient accepts -> MutualAgreement cancellation with full refund and listing release', async () => {
+      const l1 = await createApprovedListing(user1, 100000, 'Both');
+      const l2 = await createApprovedListing(user2, 100000, 'Both');
+
+      const created = (
+        await post(
+          '/exchanges',
+          { initiatorListingId: l1.listingId, recipientListingId: l2.listingId },
+          user1,
+        ).expect(201)
+      ).body;
+
+      await post(`/exchanges/${created.id}/accept`, { revision: 1 }, user2).expect(200);
+      await post(`/exchanges/${created.id}/funding`, {}, user1).expect(200);
+      const funded = (
+        await post(`/exchanges/${created.id}/funding`, {}, user2).expect(200)
+      ).body;
+
+      expect(funded.status).toBe('Preparing');
+
+      // User1 (Initiator) requests cancellation before shipping
+      const req1 = (
+        await post(
+          `/exchanges/${created.id}/cancel`,
+          { expectedVersion: funded.revision },
+          user1,
+        ).expect(200)
+      ).body;
+
+      expect(req1.status).toBe('Preparing');
+      expect(req1.cancellationRequestedBy).toBe('Initiator');
+      expect(req1.cancellationRequestedAt).toBeDefined();
+
+      // User1 repeats the cancellation request -> 409 InvalidState
+      await post(
+        `/exchanges/${created.id}/cancel`,
+        { expectedVersion: req1.revision },
+        user1,
+      ).expect(409);
+
+      // User2 (Recipient) confirms the cancellation -> Mutual Agreement reached!
+      const cancelled = (
+        await post(
+          `/exchanges/${created.id}/cancel`,
+          { expectedVersion: req1.revision },
+          user2,
+        ).expect(200)
+      ).body;
+
+      expect(cancelled.status).toBe('Cancelled');
+      expect(cancelled.cancelReason).toBe('MutualAgreement');
+      expect(cancelled.cancelledBy).toBe('Both');
+
+      // Verify listings released back to Available
+      const l1Doc = await db.c.listings.findOne({ _id: l1.listingId });
+      const l2Doc = await db.c.listings.findOne({ _id: l2.listingId });
+      expect(l1Doc?.trade).toBe('Available');
+      expect(l2Doc?.trade).toBe('Available');
+
+      // Ledger invariant: all holds refunded, balanced ledger
+      const rec = await reconcile();
+      expect(rec.balanced).toBe(true);
+    });
+
+    it('2. Initiator requests cancel, Recipient rejects -> cancellation request cleared, state stays Preparing', async () => {
+      const l1 = await createApprovedListing(user1, 100000, 'Both');
+      const l2 = await createApprovedListing(user2, 100000, 'Both');
+
+      const created = (
+        await post(
+          '/exchanges',
+          { initiatorListingId: l1.listingId, recipientListingId: l2.listingId },
+          user1,
+        ).expect(201)
+      ).body;
+
+      await post(`/exchanges/${created.id}/accept`, { revision: 1 }, user2).expect(200);
+      await post(`/exchanges/${created.id}/funding`, {}, user1).expect(200);
+      const funded = (
+        await post(`/exchanges/${created.id}/funding`, {}, user2).expect(200)
+      ).body;
+
+      // User1 requests cancel
+      const req = (
+        await post(
+          `/exchanges/${created.id}/cancel`,
+          { expectedVersion: funded.revision },
+          user1,
+        ).expect(200)
+      ).body;
+      expect(req.cancellationRequestedBy).toBe('Initiator');
+
+      // User2 rejects the cancellation request
+      const rejected = (
+        await post(
+          `/exchanges/${created.id}/reject`,
+          {
+            expectedVersion: req.revision,
+            reason: 'Tôi đã đóng gói sách và muốn hoàn thành giao dịch.',
+          },
+          user2,
+        ).expect(200)
+      ).body;
+
+      expect(rejected.status).toBe('Preparing');
+      expect(rejected.cancellationRequestedBy).toBeNull();
+      expect(rejected.cancellationRequestedAt).toBeNull();
+    });
+
+    it('3. Initiator requests cancel, Recipient ships directly -> shipping succeeds, cancellation request cleared', async () => {
+      const l1 = await createApprovedListing(user1, 100000, 'Both');
+      const l2 = await createApprovedListing(user2, 100000, 'Both');
+
+      const created = (
+        await post(
+          '/exchanges',
+          { initiatorListingId: l1.listingId, recipientListingId: l2.listingId },
+          user1,
+        ).expect(201)
+      ).body;
+
+      await post(`/exchanges/${created.id}/accept`, { revision: 1 }, user2).expect(200);
+      await post(`/exchanges/${created.id}/funding`, {}, user1).expect(200);
+      const funded = (
+        await post(`/exchanges/${created.id}/funding`, {}, user2).expect(200)
+      ).body;
+
+      // User1 requests cancel
+      const req = (
+        await post(
+          `/exchanges/${created.id}/cancel`,
+          { expectedVersion: funded.revision },
+          user1,
+        ).expect(200)
+      ).body;
+      expect(req.cancellationRequestedBy).toBe('Initiator');
+
+      // User2 ships book directly
+      const shipped = (
+        await post(
+          `/exchanges/${created.id}/ship`,
+          {
+            expectedVersion: req.revision,
+            method: 'carrier',
+            carrierCode: 'GHN',
+            carrierName: 'Giao Hàng Nhanh',
+            trackingCode: 'GHN-MUTUAL-1',
+          },
+          user2,
+        ).expect(200)
+      ).body;
+
+      expect(shipped.recipientShippedAt).toBeDefined();
+      expect(shipped.cancellationRequestedBy).toBeNull();
+
+      // Once shipped, neither party can cancel
+      await post(
+        `/exchanges/${created.id}/cancel`,
+        { expectedVersion: shipped.revision },
+        user1,
+      ).expect(409);
+    });
+  });
 });
 

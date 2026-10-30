@@ -75,6 +75,8 @@ export const exchangeSchema = z.object({
   resolutionReason: z.string().nullable().optional(),
   resolvedBy: uuid.nullable().optional(),
   resolvedAt: dateIso,
+  cancellationRequestedBy: z.enum(["Initiator", "Recipient"]).nullable().optional(),
+  cancellationRequestedAt: dateIso,
 });
 
 export type Exchange = z.infer<typeof exchangeSchema>;
@@ -148,6 +150,8 @@ export function formatCancelReason(reason?: string | null): string {
   switch (reason) {
     case "DisputeResolvedRefund":
       return "Phán quyết hoàn cọc từ Quản trị viên";
+    case "MutualAgreement":
+      return "Hai bên đồng thuận hủy trước khi gửi sách";
     case "FundingExpired":
       return "Hết hạn nạp cọc bảo chứng (24 giờ)";
     case "ProposalExpired":

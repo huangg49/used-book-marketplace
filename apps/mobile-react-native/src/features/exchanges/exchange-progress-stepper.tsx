@@ -102,7 +102,12 @@ export function ExchangeProgressStepper({
     case "Cancelled":
       isFailed = true;
       currentStepIndex = 1;
-      statusBadgeText = rejectionReason ? "Bị từ chối" : "Đã hủy";
+      statusBadgeText =
+        cancelReason === "MutualAgreement"
+          ? "Đồng thuận hủy"
+          : rejectionReason
+          ? "Bị từ chối"
+          : "Đã hủy";
       statusBadgeBg = stitchTokens.roseWarmSurface;
       statusBadgeColor = stitchTokens.terracottaSoft;
       stageDescription = cancelReason

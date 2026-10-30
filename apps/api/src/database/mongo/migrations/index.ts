@@ -27,6 +27,10 @@ import {
   withExchangeDisputeResolution,
 } from './0040-exchange-dispute-resolution.js';
 import {
+  exchangeMutualCancellationMigration,
+  withExchangeMutualCancellation,
+} from './0041-exchange-mutual-cancellation.js';
+import {
   listingAutofillMigration,
   listingAutofillSpecs,
 } from './0038-listing-autofill.js';
@@ -297,6 +301,7 @@ export const migrations: Migration[] = [
   listingAutofillMigration,
   transactionReviewValidatorFixMigration,
   exchangeDisputeResolutionMigration,
+  exchangeMutualCancellationMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -367,7 +372,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withExchangePhase4Changes)
     .map(withExchangePhase5Changes)
     .map(withExchangePhase6Changes)
-    .map(withExchangeDisputeResolution),
+    .map(withExchangeDisputeResolution)
+    .map(withExchangeMutualCancellation),
   ...directDeliveryCompletionSpecs,
   ...paymentSpecs.map(withVNPayExpiry),
   ...exchangeMessageSpecs,

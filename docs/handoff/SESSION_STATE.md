@@ -1,5 +1,56 @@
 # Điểm lưu hiện tại — 30/10/2026
 
+## Hoàn thiện cơ chế Đồng thuận hủy (Mutual Cancellation) trong trạng thái Đang chuẩn bị (Preparing) — 30/10/2026
+
+- Nhánh `feature/exchange-policy-and-transit-worker`.
+- **Bối cảnh & Nghiệp vụ**:
+  - Trong luồng trao đổi sách, sau khi cả hai bên đã nạp cọc bảo chứng và tiền bù chênh lệch (nếu có), giao dịch bước vào trạng thái `Preparing` (Hạn chót gửi sách 72 giờ).
+  - Trước đây, người dùng không thể hủy đơn khi đang ở `Preparing` cho tới khi hết hạn 72h. Tuy nhiên, nếu hai bên phát hiện lý do bất khả kháng (sách bị thất lạc, đối tác đồng ý dừng giao dịch, đổi ý...), hệ thống cần hỗ trợ **Đồng thuận hủy an toàn (Mutual Cancellation)** trước khi bất kỳ bên nào gửi sách đi.
+  - **Quy tắc bảo chứng & Bất biến tài chính (Financial & Listing Invariants)**:
+    1. Khi một bên đề xuất hủy: Hệ thống ghi nhận `cancellationRequestedBy`, `cancellationRequestedAt`, giữ nguyên trạng thái `Preparing`, gửi thông báo và tin nhắn tự động vào hộp chat trao đổi.
+    2. Bên đề xuất không thể spam gửi lại yêu cầu (trả về `409 InvalidState`).
+    3. Bên đối tác có thể:
+       - **Đồng ý hủy** (`POST /exchanges/:id/cancel`): Hệ thống đạt đồng thuận `MutualAgreement`, gọi nguyên tử `ledger.refundExchange(tx, exchange, now)` hoàn trả **100% tiền cọc và tiền bù** về ví mô phỏng của cả hai bên, đồng thời giải phóng tất cả sách liên quan từ `Reserved` trở lại `Available`.
+       - **Từ chối hủy** (`POST /exchanges/:id/reject` với lý do): Hệ thống xóa yêu cầu hủy (`cancellationRequestedBy: null`), gửi thông báo cho đối tác và giữ giao dịch ở trạng thái `Preparing` để tiếp tục gửi sách.
+       - **Gửi sách đi** (`POST /exchanges/:id/ship`): Nếu đối tác trực tiếp gửi sách, yêu cầu hủy tự động bị hủy bỏ để tiến trình giao nhận diễn ra bình thường.
+    4. Khi đã có ít nhất một bên gửi sách (`initiatorShippedAt` hoặc `recipientShippedAt`), không bên nào được phép hủy giao dịch nữa (`409 InvalidState`).
+- **Nội dung thực hiện**:
+  1. **Contract-first API**:
+     - `packages/api-contract/openapi.yaml`: Thêm `MutualAgreement` vào `ExchangeCancelReason`, thêm `Both` vào `ExchangeCancelledBy`, bổ sung `cancellationRequestedBy` (`Initiator` | `Recipient`) và `cancellationRequestedAt` vào schema `Exchange`.
+     - Chạy `pnpm contract:generate` và `pnpm contract:check` -> PASS.
+  2. **MongoDB Migration `0041-exchange-mutual-cancellation.ts`**:
+     - Bổ sung `MutualAgreement` và `Both` vào enum validator của `cancelReason` và `cancelledBy`.
+     - Bổ sung `cancellationRequestedBy` và `cancellationRequestedAt` vào validator schema của collection `exchanges`.
+     - Áp dụng migration thành công trên local MongoDB.
+  3. **Backend Service (`apps/api/src/modules/exchanges/exchanges.service.ts`)**:
+     - Cập nhật `view()` để chiếu `cancellationRequestedBy` và `cancellationRequestedAt`.
+     - Cập nhật `cancel()`:
+       - Xử lý đề nghị hủy lần đầu từ một bên, gửi notification và lưu message tin nhắn.
+       - Chặn lặp lại yêu cầu hủy từ cùng một bên.
+       - Xử lý chấp thuận hủy từ bên còn lại -> `MutualAgreement` + `Both`, hoàn tiền 100% qua `ledger.refundExchange` và mở lại sách qua `safeReleaseListing`.
+     - Cập nhật `reject()`: Hỗ trợ từ chối yêu cầu hủy khi ở trạng thái `Preparing`, xóa cờ yêu cầu hủy và lưu message giải thích.
+     - Cập nhật `ship()`: Tự động xóa cờ `cancellationRequestedBy` khi có bên tiến hành gửi sách.
+  4. **Giao diện Web (`apps/user-web`)**:
+     - Cập nhật `ActionCard`: Trong trạng thái `WAITING_YOU_SEND`, hiển thị nút "Đề nghị hủy giao dịch" khi chưa gửi sách.
+     - Khi đối tác đề nghị hủy: Hiển thị banner thông báo kèm 2 nút "Đồng ý hủy giao dịch" và "Từ chối yêu cầu hủy" với hộp thoại xác nhận chi tiết.
+     - Cập nhật `ProgressStepper` và `ExchangeDetailPage`: Hiển thị rõ nhãn "Hai bên đồng thuận hủy" và "Đồng thuận hủy" khi giao dịch kết thúc bằng đồng thuận.
+  5. **Giao diện Mobile React Native (`apps/mobile-react-native`)**:
+     - Cập nhật `exchange-actions-card.tsx`: Hiển thị banner `proposalNoticeBox` thông báo trạng thái đề nghị hủy, các nút bấm "🛑 Đề nghị hủy giao dịch", "🤝 Đồng ý hủy (Hoàn cọc 100%)", "❌ Từ chối yêu cầu hủy".
+     - Cập nhật `ConfirmDialog` với thông điệp rõ ràng, bảo đảm hoàn cọc 100% cho cả 2 bên.
+     - Cập nhật `exchange-progress-stepper.tsx`: Badge hiển thị "Đồng thuận hủy" với mô tả chi tiết.
+  6. **Kiểm thử E2E (`apps/api/test/exchanges.e2e-spec.ts`)**:
+     - Bổ sung 3 ca kiểm thử toàn diện:
+       1. Đề nghị hủy -> Chặn gửi lặp lại -> Đối tác đồng ý -> Hủy `MutualAgreement`, hoàn cọc 100% qua Ledger, nhả sách về `Available`.
+       2. Đề nghị hủy -> Đối tác từ chối (`reject`) với lý do -> Xóa cờ đề nghị hủy, giữ trạng thái `Preparing`.
+       3. Đề nghị hủy -> Đối tác gửi sách trực tiếp (`ship`) -> Gửi sách thành công, xóa cờ đề nghị hủy, chặn hủy sau khi đã gửi sách.
+     - Chạy trên QA replica set cô lập (`rs-test`): **35/35 tests PASS 100%**.
+- **Kiểm tra**:
+  - `pnpm contract:check`: PASS.
+  - `pnpm --filter @used-books/api exec tsc --noEmit`: PASS.
+  - `pnpm --filter @used-books/user-web exec tsc --noEmit`: PASS.
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS.
+  - `pnpm --filter @used-books/admin-web exec tsc --noEmit`: PASS.
+
 ## Hoàn thiện API và Giao diện Quản trị viên phân xử khiếu nại (Admin Dispute Adjudication) luồng trao đổi sách — 30/10/2026
 
 - Nhánh `feature/exchange-policy-and-transit-worker`.

@@ -1178,9 +1178,10 @@ export type ExchangeCancelReason =
   | 'CancelledByUser'
   | 'ListingUnavailable'
   | 'ShippingExpired'
-  | 'DisputeResolvedRefund';
+  | 'DisputeResolvedRefund'
+  | 'MutualAgreement';
 
-export type ExchangeCancelledBy = 'System' | 'Initiator' | 'Recipient' | 'Staff';
+export type ExchangeCancelledBy = 'System' | 'Initiator' | 'Recipient' | 'Staff' | 'Both';
 
 export interface ExchangeAddressSnapshot {
   recipientName: string;
@@ -1239,6 +1240,8 @@ export interface ExchangeDoc extends Lockable {
   resolutionReason?: string | null;
   resolvedBy?: string | null;
   resolvedAt?: Date | null;
+  cancellationRequestedBy?: ExchangeCancelledBy | null;
+  cancellationRequestedAt?: Date | null;
   initiatorAddress?: ExchangeAddressSnapshot | null;
   recipientAddress?: ExchangeAddressSnapshot | null;
   initiatorShipment?: ExchangeShipmentSnapshot | null;

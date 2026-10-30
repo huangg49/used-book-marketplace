@@ -163,6 +163,9 @@ export class ExchangesService {
     } else if (cancelledBy === 'Recipient') {
       notifyRecipients = [next.initiatorId];
       reasonText = 'Đối tác đã hủy giao dịch';
+    } else if (cancelledBy === 'Both' || reason === 'MutualAgreement') {
+      notifyRecipients = [next.initiatorId, next.recipientId];
+      reasonText = 'Hai bên đã đồng thuận hủy giao dịch trao đổi';
     } else if (cancelledBy === 'System') {
       if (reason === 'FundingExpired') {
         notifyRecipients = [next.initiatorId, next.recipientId];
@@ -285,6 +288,8 @@ export class ExchangesService {
       resolutionReason: row.resolutionReason ?? null,
       resolvedBy: row.resolvedBy ?? null,
       resolvedAt: row.resolvedAt?.toISOString() ?? null,
+      cancellationRequestedBy: row.cancellationRequestedBy ?? null,
+      cancellationRequestedAt: row.cancellationRequestedAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
@@ -1087,15 +1092,97 @@ export class ExchangesService {
 
         if (exchange.status === 'Preparing') {
           if (exchange.initiatorShippedAt || exchange.recipientShippedAt) {
-            throw invalidState();
+            throw invalidState('Không thể hủy giao dịch khi đã có bên gửi sách đi.');
           }
-          if (!exchange.shippingDeadline || now < exchange.shippingDeadline) {
-            throw invalidState();
+
+          // Case A: Đã hết thời hạn 72h gửi sách -> Hủy do quá hạn vận chuyển
+          if (exchange.shippingDeadline && now >= exchange.shippingDeadline) {
+            const next = await this.cancelInternal(tx, exchange, {
+              reason: 'ShippingExpired',
+              cancelledBy,
+              now,
+            });
+
+            return {
+              entityType: 'Exchange',
+              entityId: next._id,
+              initiatorListingId: next.initiatorListingId,
+              version: next.revision,
+              state: next.status as Wire['ExchangeStatus'],
+              decidedAt: now,
+              event: 'ExchangeCancelled',
+              exchange: this.view(next),
+            };
           }
+
+          // Case B: Trong thời hạn 72h -> Đồng thuận hủy (Mutual Cancellation)
+          if (!exchange.cancellationRequestedBy) {
+            // Bước 1: Bên gọi gửi yêu cầu hủy giao dịch
+            const next = await tx.c.exchanges.findOneAndUpdate(
+              { _id: exchange._id, revision: exchange.revision, status: 'Preparing' },
+              {
+                $set: {
+                  cancellationRequestedBy: cancelledBy,
+                  cancellationRequestedAt: now,
+                  updatedAt: now,
+                },
+                $inc: { revision: 1 },
+              },
+              { returnDocument: 'after' },
+            );
+            if (!next) throw conflict();
+
+            const partnerId =
+              actor._id === exchange.initiatorId
+                ? exchange.recipientId
+                : exchange.initiatorId;
+
+            await notifyExchange(
+              tx,
+              next,
+              'ExchangeCancelled',
+              [partnerId],
+              now,
+              { reason: 'Đối tác đã đề nghị hủy giao dịch trước khi gửi sách. Hãy vào xác nhận nếu bạn đồng ý.' },
+            );
+
+            await tx.c.exchange_messages.insertOne({
+              _id: randomUUID(),
+              exchangeId: exchange._id,
+              senderId: actor._id,
+              body: `[Đề nghị hủy giao dịch]\nTôi đề nghị hủy giao dịch trao đổi này trước khi gửi sách. Nếu đối tác đồng ý xác nhận hủy, 100% tiền cọc và tiền bù sẽ được hoàn lại về ví của cả hai bên.`,
+              sentAt: now,
+            });
+
+            return {
+              entityType: 'Exchange',
+              entityId: next._id,
+              initiatorListingId: next.initiatorListingId,
+              version: next.revision,
+              state: next.status as Wire['ExchangeStatus'],
+              decidedAt: now,
+              event: 'ExchangeCancellationRequested',
+              exchange: this.view(next),
+            };
+          }
+
+          if (exchange.cancellationRequestedBy === cancelledBy) {
+            throw invalidState('Bạn đã gửi yêu cầu hủy giao dịch. Đang chờ đối tác xác nhận.');
+          }
+
+          // Bước 2: Đối tác chấp thuận yêu cầu hủy -> Hai bên đồng thuận hủy thành công!
           const next = await this.cancelInternal(tx, exchange, {
-            reason: 'ShippingExpired',
-            cancelledBy,
+            reason: 'MutualAgreement',
+            cancelledBy: 'Both',
             now,
+          });
+
+          await tx.c.exchange_messages.insertOne({
+            _id: randomUUID(),
+            exchangeId: exchange._id,
+            senderId: actor._id,
+            body: `[Đồng thuận hủy thành công]\nHai bên đã đồng thuận hủy giao dịch trước khi gửi sách. Toàn bộ tiền cọc bảo chứng và tiền bù đã được hoàn lại 100% về ví của mỗi bên. Sách đã được mở lại trên kệ.`,
+            sentAt: now,
           });
 
           return {
@@ -1137,6 +1224,69 @@ export class ExchangesService {
         // Lock then re-read to get a fresh snapshot (race with expiry worker).
         await tx.lock('exchanges', [initialExchange._id]);
         const exchange = await this.exchange(tx, initialExchange._id);
+
+        if (exchange.status === 'Preparing') {
+          this.participant(exchange, actor._id);
+          const callerRole: ExchangeCancelledBy =
+            actor._id === exchange.initiatorId ? 'Initiator' : 'Recipient';
+          if (
+            !exchange.cancellationRequestedBy ||
+            exchange.cancellationRequestedBy === callerRole
+          ) {
+            throw invalidState('Không có yêu cầu hủy nào từ đối tác để từ chối.');
+          }
+          if (exchange.revision !== body.expectedVersion) {
+            throw conflict();
+          }
+
+          const now = await tx.now();
+          const next = await tx.c.exchanges.findOneAndUpdate(
+            { _id: exchange._id, revision: exchange.revision, status: 'Preparing' },
+            {
+              $set: {
+                cancellationRequestedBy: null,
+                cancellationRequestedAt: null,
+                updatedAt: now,
+              },
+              $inc: { revision: 1 },
+            },
+            { returnDocument: 'after' },
+          );
+          if (!next) throw conflict();
+
+          const partnerId =
+            actor._id === exchange.initiatorId
+              ? exchange.recipientId
+              : exchange.initiatorId;
+
+          await notifyExchange(
+            tx,
+            next,
+            'ExchangeRejected',
+            [partnerId],
+            now,
+            { reason: `Đối tác đã từ chối yêu cầu hủy: ${body.reason}` },
+          );
+
+          await tx.c.exchange_messages.insertOne({
+            _id: randomUUID(),
+            exchangeId: exchange._id,
+            senderId: actor._id,
+            body: `[Từ chối yêu cầu hủy giao dịch]\nLý do: ${body.reason}\nĐối tác không đồng ý hủy giao dịch. Giao dịch tiếp tục ở trạng thái Đang chuẩn bị, vui lòng chuẩn bị và gửi sách trước thời hạn.`,
+            sentAt: now,
+          });
+
+          return {
+            entityType: 'Exchange',
+            entityId: next._id,
+            initiatorListingId: next.initiatorListingId,
+            version: next.revision,
+            state: next.status as Wire['ExchangeStatus'],
+            decidedAt: now,
+            event: 'ExchangeCancellationDeclined',
+            exchange: this.view(next),
+          };
+        }
 
         if (exchange.recipientId !== actor._id) {
           throw conflict();
@@ -1235,6 +1385,11 @@ export class ExchangesService {
         } else {
           setFields.recipientShippedAt = now;
           setFields.recipientShipment = shipmentSnapshot;
+        }
+
+        if (exchange.cancellationRequestedBy) {
+          setFields.cancellationRequestedBy = null;
+          setFields.cancellationRequestedAt = null;
         }
 
         const willBeBothShipped =
