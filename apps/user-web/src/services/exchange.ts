@@ -107,14 +107,22 @@ export const exchangeSchema = z.object({
       "ProposalExpired",
       "ListingUnavailable",
       "ShippingExpired",
+      "DisputeResolvedRefund",
+      "MutualAgreement",
     ])
     .nullable()
     .optional(),
   cancelledBy: z
-    .enum(["Initiator", "Recipient", "System"])
+    .enum(["Initiator", "Recipient", "System", "Staff", "Both"])
     .nullable()
     .optional(),
   cancelledAt: date,
+  cancellationRequestedBy: z.enum(["Initiator", "Recipient"]).nullable().optional(),
+  cancellationRequestedAt: date,
+  resolutionDecision: z.enum(["RefundBoth", "CompleteExchange"]).nullable().optional(),
+  resolutionReason: z.string().nullable().optional(),
+  resolvedBy: z.string().uuid().nullable().optional(),
+  resolvedAt: date,
   lastProposedById: z.string().uuid().nullable().optional(),
 });
 export const exchangePageSchema = z.object({
@@ -122,6 +130,25 @@ export const exchangePageSchema = z.object({
   nextCursor: z.string().nullable(),
 });
 export type Exchange = z.infer<typeof exchangeSchema>;
+
+export function formatCancelReason(reason?: string | null): string {
+  switch (reason) {
+    case "DisputeResolvedRefund":
+      return "Phán quyết hoàn cọc từ Quản trị viên";
+    case "FundingExpired":
+      return "Hết hạn nạp cọc bảo chứng (24 giờ)";
+    case "ProposalExpired":
+      return "Hết hạn phản hồi đề xuất (72 giờ)";
+    case "ShippingExpired":
+      return "Hết hạn gửi sách (72 giờ)";
+    case "CancelledByUser":
+      return "Người dùng hủy giao dịch";
+    case "ListingUnavailable":
+      return "Sách không còn khả dụng";
+    default:
+      return reason || "Giao dịch đã hủy";
+  }
+}
 
 export function exchangeActor() {
   const state = session.getSnapshot();
@@ -384,6 +411,8 @@ export function exchangeError(error: unknown) {
     return "Không mở được trao đổi này hoặc bạn không có quyền thực hiện.";
   if (error.code === "InsufficientFunds")
     return "Ví mô phỏng chưa đủ tiền. Kiểm tra số dư rồi thử lại.";
+  if (error.message && error.message !== "Yêu cầu chưa thực hiện được. Vui lòng thử lại.")
+    return error.message;
   if (error.status === 409)
     return "Trao đổi đã thay đổi hoặc không còn đủ điều kiện. Tải lại trạng thái trước khi tiếp tục.";
   return "Không thực hiện được thao tác. Kiểm tra thông tin rồi thử lại.";

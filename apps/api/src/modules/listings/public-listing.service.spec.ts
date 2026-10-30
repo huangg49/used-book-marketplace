@@ -38,6 +38,14 @@ describe('bounded public listing projection', () => {
         accessories: '',
         description: '',
         hasMissingPages: false,
+        exchangePreferences:
+          id === 'a'
+            ? {
+                targetCategory: 'Văn học',
+                targetAuthor: 'Haruki Murakami',
+                targetDescription: 'Cần sách bìa cứng',
+              }
+            : null,
       },
       b: { _id: 'book-' + id, currentRevisionId: 'metadata-' + id },
       u: { _id: 'owner', displayName: 'Synthetic reader' },
@@ -143,6 +151,12 @@ describe('bounded public listing projection', () => {
       code: 'DEMO-B',
       label: 'Bình Dương',
     });
+    expect(page.items[1].exchangePreferences).toEqual({
+      targetCategory: 'Văn học',
+      targetAuthor: 'Haruki Murakami',
+      targetDescription: 'Cần sách bìa cứng',
+    });
+    expect(page.items[0].exchangePreferences).toBeNull();
     for (const privateValue of [
       'originAddressId',
       'originAddressVersion',

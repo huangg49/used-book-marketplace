@@ -1,5 +1,6 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { router } from "expo-router";
 import { AppText, Icon, space, stitchTokens } from "../../../core/ui";
 import type { Listing } from "../contracts";
 
@@ -160,6 +161,71 @@ export function BookOverviewSection({ item }: BookOverviewSectionProps) {
           </AppText>
         </View>
       </View>
+
+      {/* Exchange Preferences Card */}
+      {item.exchangePreferences &&
+        (item.exchangePreferences.targetCategory ||
+          item.exchangePreferences.targetAuthor ||
+          item.exchangePreferences.targetDescription) && (
+          <View style={styles.exchangePrefCard}>
+            <View style={styles.exchangePrefHeader}>
+              <Icon name="sync" size={14} color={stitchTokens.wineDark} />
+              <AppText style={styles.exchangePrefTitle}>
+                🎯 Tiêu chí đổi sách của chủ sở hữu
+              </AppText>
+            </View>
+            <View style={styles.exchangePrefBody}>
+              {item.exchangePreferences.targetCategory ? (
+                <View style={styles.prefRow}>
+                  <AppText style={styles.prefLabel}>Thể loại mong muốn: </AppText>
+                  <AppText style={styles.prefValue}>
+                    {item.exchangePreferences.targetCategory}
+                  </AppText>
+                </View>
+              ) : null}
+              {item.exchangePreferences.targetAuthor ? (
+                <View style={styles.prefRow}>
+                  <AppText style={styles.prefLabel}>Tác giả mong muốn: </AppText>
+                  <AppText style={styles.prefValue}>
+                    {item.exchangePreferences.targetAuthor}
+                  </AppText>
+                </View>
+              ) : null}
+              {item.exchangePreferences.targetDescription ? (
+                <View style={styles.prefRow}>
+                  <AppText style={styles.prefLabel}>Ghi chú: </AppText>
+                  <AppText style={styles.prefValue}>
+                    {item.exchangePreferences.targetDescription}
+                  </AppText>
+                </View>
+              ) : null}
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Tìm sách khớp mong muốn này trên sàn"
+                onPress={() => {
+                  const query =
+                    item.exchangePreferences?.targetAuthor ||
+                    item.exchangePreferences?.targetCategory ||
+                    "";
+                  router.push({
+                    pathname: "/search",
+                    params: { q: query, mode: "Both" },
+                  });
+                }}
+                style={({ pressed }) => [
+                  styles.searchPrefBtn,
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Icon name="search" size={11} color={stitchTokens.wineDark} />
+                <AppText style={styles.searchPrefBtnText}>
+                  Tìm sách khớp mong muốn trên sàn →
+                </AppText>
+              </Pressable>
+            </View>
+          </View>
+        )}
     </View>
   );
 }
@@ -339,5 +405,60 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: stitchTokens.roseBrown,
     fontWeight: "500",
+  },
+  exchangePrefCard: {
+    backgroundColor: "#FDF8F5",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    padding: space.sm,
+    gap: 6,
+  },
+  exchangePrefHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  exchangePrefTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  exchangePrefBody: {
+    gap: 4,
+  },
+  prefRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+  },
+  prefLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.roseBrown,
+  },
+  prefValue: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: stitchTokens.wineDark,
+    flexShrink: 1,
+  },
+  searchPrefBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 5,
+    backgroundColor: stitchTokens.whiteSurface,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    marginTop: 4,
+  },
+  searchPrefBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
   },
 });

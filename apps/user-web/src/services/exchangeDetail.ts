@@ -80,6 +80,13 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     disputedAt: ex.disputedAt ?? undefined,
     disputeReason: ex.disputeReason ?? undefined,
     disputedBy: ex.disputedBy ?? undefined,
+    resolutionDecision: ex.resolutionDecision ?? undefined,
+    resolutionReason: ex.resolutionReason ?? undefined,
+    resolvedBy: ex.resolvedBy ?? undefined,
+    resolvedAt: ex.resolvedAt ?? undefined,
+    cancelReason: ex.cancelReason ?? undefined,
+    cancellationRequestedBy: ex.cancellationRequestedBy ?? undefined,
+    cancellationRequestedAt: ex.cancellationRequestedAt ?? undefined,
     viewerFundedAt:
       (initiator ? ex.initiatorFundedAt : ex.recipientFundedAt) ?? undefined,
     viewerFundingAmount:
@@ -125,9 +132,11 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     closedBy:
       ex.cancelledBy === "System" || !ex.cancelledBy
         ? undefined
-        : ex.cancelledBy === (initiator ? "Initiator" : "Recipient")
-          ? "viewer"
-          : "partner",
+        : ex.cancelledBy === "Both"
+          ? "both"
+          : ex.cancelledBy === (initiator ? "Initiator" : "Recipient")
+            ? "viewer"
+            : "partner",
   };
 }
 export function cancelExchange(id: string, revision: number) {

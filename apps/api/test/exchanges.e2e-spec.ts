@@ -1877,6 +1877,584 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       const rec = await reconcile();
       expect(rec.balanced).toBe(true);
     });
+
+    it('POL-23: limits open proposals to 5 and blocks duplicate proposals for same listing pair', async () => {
+      // 1. User1 has 1 book, User2 has 5 books (within ACTIVE_LISTING_LIMIT = 5), User3 has 1 book
+      const l1 = await createApprovedListing(user1, 100000, 'Both');
+      const u2Listings = [];
+      for (let i = 0; i < 5; i++) {
+        u2Listings.push(await createApprovedListing(user2, 100000, 'Both'));
+      }
+      const user3 = await reader();
+      const l3 = await createApprovedListing(user3, 100000, 'Both');
+
+      // Proposal 1: user1 proposes l1 <-> u2Listings[0]
+      const p1 = await post(
+        '/exchanges',
+        {
+          initiatorListingId: l1.listingId,
+          recipientListingId: u2Listings[0].listingId,
+        },
+        user1,
+      ).expect(201);
+      expect(p1.body.status).toBe('Proposed');
+
+      // Duplicate proposal for exact same pair -> rejected 409
+      const dupRes = await post(
+        '/exchanges',
+        {
+          initiatorListingId: l1.listingId,
+          recipientListingId: u2Listings[0].listingId,
+        },
+        user1,
+      ).expect(409);
+      expect(dupRes.body.code).toBe('InvalidState');
+
+      // Reverse duplicate proposal (user2 tries to propose for user1's listing that is already part of p1) -> rejected 409
+      const revDupRes = await post(
+        '/exchanges',
+        {
+          initiatorListingId: u2Listings[0].listingId,
+          recipientListingId: l1.listingId,
+        },
+        user2,
+      ).expect(409);
+      expect(revDupRes.body.code).toBe('InvalidState');
+
+      // Create proposals 2, 3, 4, 5 for user1
+      await post(
+        '/exchanges',
+        { initiatorListingId: l1.listingId, recipientListingId: u2Listings[1].listingId },
+        user1,
+      ).expect(201);
+      await post(
+        '/exchanges',
+        { initiatorListingId: l1.listingId, recipientListingId: u2Listings[2].listingId },
+        user1,
+      ).expect(201);
+      await post(
+        '/exchanges',
+        { initiatorListingId: l1.listingId, recipientListingId: u2Listings[3].listingId },
+        user1,
+      ).expect(201);
+      await post(
+        '/exchanges',
+        { initiatorListingId: l1.listingId, recipientListingId: u2Listings[4].listingId },
+        user1,
+      ).expect(201);
+
+      // Proposal 6 exceeds the 5-open-proposal limit (POL-23) -> rejected 409
+      const limitRes = await post(
+        '/exchanges',
+        {
+          initiatorListingId: l1.listingId,
+          recipientListingId: l3.listingId,
+        },
+        user1,
+      ).expect(409);
+      expect(limitRes.body.code).toBe('InvalidState');
+      expect(limitRes.body.message).toContain('POL-23');
+    });
+
+    it('POL-07: Transit Overdue Worker escalates InTransit to ResolutionPending when 240h delivery window expires', async () => {
+      const l1 = await createApprovedListing(user1, 100000, 'Both');
+      const l2 = await createApprovedListing(user2, 100000, 'Both');
+
+      const created = (
+        await post(
+          '/exchanges',
+          { initiatorListingId: l1.listingId, recipientListingId: l2.listingId },
+          user1,
+        ).expect(201)
+      ).body;
+
+      await post(`/exchanges/${created.id}/accept`, { revision: 1 }, user2).expect(200);
+      await post(`/exchanges/${created.id}/funding`, {}, user1).expect(200);
+      const funded2 = (
+        await post(`/exchanges/${created.id}/funding`, {}, user2).expect(200)
+      ).body;
+
+      // Both ship -> status enters InTransit
+      const ship1 = (
+        await post(
+          `/exchanges/${created.id}/ship`,
+          {
+            expectedVersion: funded2.revision,
+            method: 'carrier',
+            carrierCode: 'GHN',
+            carrierName: 'Giao Hàng Nhanh',
+            trackingCode: 'GHN-TRANSIT-1',
+          },
+          user1,
+        ).expect(200)
+      ).body;
+
+      const inTransitRes = (
+        await post(
+          `/exchanges/${created.id}/ship`,
+          {
+            expectedVersion: ship1.revision,
+            method: 'carrier',
+            carrierCode: 'GHN',
+            carrierName: 'Giao Hàng Nhanh',
+            trackingCode: 'GHN-TRANSIT-2',
+          },
+          user2,
+        ).expect(200)
+      ).body;
+
+      expect(inTransitRes.status).toBe('InTransit');
+
+      // User1 marks received, but User2 never confirms receipt!
+      const user1Received = (
+        await post(`/exchanges/${created.id}/receive`, { expectedVersion: inTransitRes.revision }, user1).expect(200)
+      ).body;
+      expect(user1Received.status).toBe('InTransit');
+      expect(user1Received.initiatorReceivedAt).toBeDefined();
+      expect(user1Received.recipientReceivedAt).toBeNull();
+
+      // At 239h (before 240h transit overdue threshold) -> worker does NOT touch InTransit exchange
+      const at239h = new Date(new Date(inTransitRes.recipientShippedAt).getTime() + 239 * 3_600_000);
+      await worker.tick(at239h);
+
+      const stillInTransit = await db.c.exchanges.findOne({ _id: created.id });
+      expect(stillInTransit?.status).toBe('InTransit');
+      expect(stillInTransit?.disputedAt).toBeNull();
+
+      // At 241h (after 240h threshold per POL-07) -> worker escalates to ResolutionPending
+      const at241h = new Date(new Date(inTransitRes.recipientShippedAt).getTime() + 241 * 3_600_000);
+      const sweep241 = await worker.tick(at241h);
+      expect(sweep241.processed).toBe(1);
+
+      const escalatedDoc = await db.c.exchanges.findOne({ _id: created.id });
+      expect(escalatedDoc?.status).toBe('ResolutionPending');
+      expect(escalatedDoc?.disputedBy).toBe('System');
+      expect(escalatedDoc?.disputeReason).toContain('POL-07');
+      expect(escalatedDoc?.disputeReason).toContain('240');
+
+      // Second tick is idempotent
+      const sweepIdempotent = await worker.tick(at241h);
+      expect(sweepIdempotent.processed).toBe(0);
+
+      const rec = await reconcile();
+      expect(rec.balanced).toBe(true);
+    });
+  });
+
+  describe('Admin dispute adjudication and ledger settlement (operations)', () => {
+    it('1. Member cannot access resolutions list or resolve dispute (403 Forbidden)', async () => {
+      await get('/operations/exchanges/resolutions', user1).expect(403);
+      await post(
+        `/operations/exchanges/${randomUUID()}/resolve`,
+        { expectedVersion: 1, decision: 'RefundBoth', reason: 'Không có quyền thực hiện' },
+        user1,
+      ).expect(403);
+    });
+
+    it('2. Staff lists resolutions and resolves dispute with RefundBoth: releases listings and refunds deposit', async () => {
+      const l1 = await createApprovedListing(user1, 100000, 'Both');
+      const l2 = await createApprovedListing(user2, 100000, 'Both');
+
+      const created = (
+        await post(
+          '/exchanges',
+          { initiatorListingId: l1.listingId, recipientListingId: l2.listingId },
+          user1,
+        ).expect(201)
+      ).body;
+
+      await post(`/exchanges/${created.id}/accept`, { revision: 1 }, user2).expect(200);
+      await post(`/exchanges/${created.id}/funding`, {}, user1).expect(200);
+      const funded2 = (
+        await post(`/exchanges/${created.id}/funding`, {}, user2).expect(200)
+      ).body;
+
+      const ship1 = (
+        await post(
+          `/exchanges/${created.id}/ship`,
+          {
+            expectedVersion: funded2.revision,
+            method: 'carrier',
+            carrierCode: 'GHN',
+            carrierName: 'Giao Hàng Nhanh',
+            trackingCode: 'GHN-DISP-1',
+          },
+          user1,
+        ).expect(200)
+      ).body;
+
+      const ship2 = (
+        await post(
+          `/exchanges/${created.id}/ship`,
+          {
+            expectedVersion: ship1.revision,
+            method: 'carrier',
+            carrierCode: 'GHN',
+            carrierName: 'Giao Hàng Nhanh',
+            trackingCode: 'GHN-DISP-2',
+          },
+          user2,
+        ).expect(200)
+      ).body;
+
+      // User1 disputes the exchange -> ResolutionPending
+      const disputed = (
+        await post(
+          `/exchanges/${created.id}/dispute`,
+          {
+            expectedVersion: ship2.revision,
+            reason: 'Sách nhận được bị hư hại nặng nề trong lúc vận chuyển',
+          },
+          user1,
+        ).expect(200)
+      ).body;
+
+      expect(disputed.status).toBe('ResolutionPending');
+      expect(disputed.disputedBy).toBe(user1.id);
+
+      // Staff lists resolution queue -> contains this exchange
+      const queueRes = await get('/operations/exchanges/resolutions', staff).expect(200);
+      const queue = queueRes.body;
+      expect(Array.isArray(queue)).toBe(true);
+      const foundInQueue = queue.find((e: any) => e.id === created.id);
+      expect(foundInQueue).toBeDefined();
+      expect(foundInQueue.status).toBe('ResolutionPending');
+
+      // Validation check: short reason -> 422
+      await post(
+        `/operations/exchanges/${created.id}/resolve`,
+        {
+          expectedVersion: disputed.revision,
+          decision: 'RefundBoth',
+          reason: 'abc',
+        },
+        staff,
+      ).expect(422);
+
+      // Conflict check: wrong expectedVersion -> 409
+      await post(
+        `/operations/exchanges/${created.id}/resolve`,
+        {
+          expectedVersion: disputed.revision + 10,
+          decision: 'RefundBoth',
+          reason: 'Lý do phân xử hợp lệ trên 5 ký tự',
+        },
+        staff,
+      ).expect(409);
+
+      // Staff adjudicates: RefundBoth
+      const resolveRes = (
+        await post(
+          `/operations/exchanges/${created.id}/resolve`,
+          {
+            expectedVersion: disputed.revision,
+            decision: 'RefundBoth',
+            reason: 'Đã xác minh gói hàng bị hỏng hoàn toàn. Hoàn cọc cho cả 2 bên và hủy giao dịch.',
+          },
+          staff,
+        ).expect(200)
+      ).body;
+
+      expect(resolveRes.status).toBe('Cancelled');
+      expect(resolveRes.cancelReason).toBe('DisputeResolvedRefund');
+      expect(resolveRes.cancelledBy).toBe('Staff');
+      expect(resolveRes.resolutionDecision).toBe('RefundBoth');
+      expect(resolveRes.resolvedBy).toBe(staff.id);
+      expect(resolveRes.resolvedAt).toBeDefined();
+
+      // Verify listings are safely projected back to Available
+      const l1Doc = await db.c.listings.findOne({ _id: l1.listingId });
+      const l2Doc = await db.c.listings.findOne({ _id: l2.listingId });
+      expect(l1Doc?.trade).toBe('Available');
+      expect(l2Doc?.trade).toBe('Available');
+
+      // Verify exchange chat message from Staff exists
+      const staffMsg = await db.c.exchange_messages.findOne({
+        exchangeId: created.id,
+        senderId: staff.id,
+      });
+      expect(staffMsg).toBeDefined();
+      expect(staffMsg?.body).toContain('[Phán quyết của Quản trị viên]');
+      expect(staffMsg?.body).toContain('Hủy giao dịch & Hoàn tiền');
+
+      // Reconcile verifies ledger double-entry holds are completely released & balanced
+      const rec = await reconcile();
+      expect(rec.balanced).toBe(true);
+
+      // Subsequent resolve attempt fails because exchange is already Cancelled
+      await post(
+        `/operations/exchanges/${created.id}/resolve`,
+        {
+          expectedVersion: resolveRes.revision,
+          decision: 'RefundBoth',
+          reason: 'Cố tình phân xử lại giao dịch đã hoàn tất',
+        },
+        staff,
+      ).expect(409);
+    });
+
+    it('3. Staff adjudicates dispute with CompleteExchange: marks listings Exchanged and settles ledger', async () => {
+      const l1 = await createApprovedListing(user1, 150000, 'Both');
+      const l2 = await createApprovedListing(user2, 100000, 'Both');
+
+      const created = (
+        await post(
+          '/exchanges',
+          { initiatorListingId: l1.listingId, recipientListingId: l2.listingId },
+          user1,
+        ).expect(201)
+      ).body;
+
+      await post(`/exchanges/${created.id}/accept`, { revision: 1 }, user2).expect(200);
+      await post(`/exchanges/${created.id}/funding`, {}, user1).expect(200);
+      const funded2 = (
+        await post(`/exchanges/${created.id}/funding`, {}, user2).expect(200)
+      ).body;
+
+      const ship1 = (
+        await post(
+          `/exchanges/${created.id}/ship`,
+          {
+            expectedVersion: funded2.revision,
+            method: 'carrier',
+            carrierCode: 'GHN',
+            carrierName: 'Giao Hàng Nhanh',
+            trackingCode: 'GHN-SETTLE-1',
+          },
+          user1,
+        ).expect(200)
+      ).body;
+
+      const ship2 = (
+        await post(
+          `/exchanges/${created.id}/ship`,
+          {
+            expectedVersion: ship1.revision,
+            method: 'carrier',
+            carrierCode: 'GHN',
+            carrierName: 'Giao Hàng Nhanh',
+            trackingCode: 'GHN-SETTLE-2',
+          },
+          user2,
+        ).expect(200)
+      ).body;
+
+      // Both receive
+      const rec1 = (
+        await post(`/exchanges/${created.id}/receive`, { expectedVersion: ship2.revision }, user1).expect(200)
+      ).body;
+      const rec2 = (
+        await post(`/exchanges/${created.id}/receive`, { expectedVersion: rec1.revision }, user2).expect(200)
+      ).body;
+      expect(rec2.status).toBe('Delivered');
+
+      // User2 disputes in Delivered inspection buffer
+      const disputed = (
+        await post(
+          `/exchanges/${created.id}/dispute`,
+          {
+            expectedVersion: rec2.revision,
+            reason: 'Bìa sách có một vết gập nhẹ, yêu cầu kiểm tra',
+          },
+          user2,
+        ).expect(200)
+      ).body;
+
+      expect(disputed.status).toBe('ResolutionPending');
+
+      // Staff reviews dispute and decides book condition is acceptable -> CompleteExchange
+      const resolveRes = (
+        await post(
+          `/operations/exchanges/${created.id}/resolve`,
+          {
+            expectedVersion: disputed.revision,
+            decision: 'CompleteExchange',
+            reason: 'Tình trạng sách đúng như ảnh chụp thực tế trên bài đăng. Công nhận trao đổi hoàn tất.',
+          },
+          staff,
+        ).expect(200)
+      ).body;
+
+      expect(resolveRes.status).toBe('Completed');
+      expect(resolveRes.resolutionDecision).toBe('CompleteExchange');
+      expect(resolveRes.resolvedBy).toBe(staff.id);
+      expect(resolveRes.completedAt).toBeDefined();
+
+      // Verify listings are projected to Exchanged
+      const l1Doc = await db.c.listings.findOne({ _id: l1.listingId });
+      const l2Doc = await db.c.listings.findOne({ _id: l2.listingId });
+      expect(l1Doc?.trade).toBe('Exchanged');
+      expect(l2Doc?.trade).toBe('Exchanged');
+
+      // Reconcile verifies ledger settlement and zero lingering holds
+      const rec = await reconcile();
+      expect(rec.balanced).toBe(true);
+    });
+  });
+
+  describe('Mutual cancellation before shipping (Preparing state)', () => {
+    it('1. Initiator requests cancel, cannot repeat request, then Recipient accepts -> MutualAgreement cancellation with full refund and listing release', async () => {
+      const l1 = await createApprovedListing(user1, 100000, 'Both');
+      const l2 = await createApprovedListing(user2, 100000, 'Both');
+
+      const created = (
+        await post(
+          '/exchanges',
+          { initiatorListingId: l1.listingId, recipientListingId: l2.listingId },
+          user1,
+        ).expect(201)
+      ).body;
+
+      await post(`/exchanges/${created.id}/accept`, { revision: 1 }, user2).expect(200);
+      await post(`/exchanges/${created.id}/funding`, {}, user1).expect(200);
+      const funded = (
+        await post(`/exchanges/${created.id}/funding`, {}, user2).expect(200)
+      ).body;
+
+      expect(funded.status).toBe('Preparing');
+
+      // User1 (Initiator) requests cancellation before shipping
+      const req1 = (
+        await post(
+          `/exchanges/${created.id}/cancel`,
+          { expectedVersion: funded.revision },
+          user1,
+        ).expect(200)
+      ).body;
+
+      expect(req1.status).toBe('Preparing');
+      expect(req1.cancellationRequestedBy).toBe('Initiator');
+      expect(req1.cancellationRequestedAt).toBeDefined();
+
+      // User1 repeats the cancellation request -> 409 InvalidState
+      await post(
+        `/exchanges/${created.id}/cancel`,
+        { expectedVersion: req1.revision },
+        user1,
+      ).expect(409);
+
+      // User2 (Recipient) confirms the cancellation -> Mutual Agreement reached!
+      const cancelled = (
+        await post(
+          `/exchanges/${created.id}/cancel`,
+          { expectedVersion: req1.revision },
+          user2,
+        ).expect(200)
+      ).body;
+
+      expect(cancelled.status).toBe('Cancelled');
+      expect(cancelled.cancelReason).toBe('MutualAgreement');
+      expect(cancelled.cancelledBy).toBe('Both');
+
+      // Verify listings released back to Available
+      const l1Doc = await db.c.listings.findOne({ _id: l1.listingId });
+      const l2Doc = await db.c.listings.findOne({ _id: l2.listingId });
+      expect(l1Doc?.trade).toBe('Available');
+      expect(l2Doc?.trade).toBe('Available');
+
+      // Ledger invariant: all holds refunded, balanced ledger
+      const rec = await reconcile();
+      expect(rec.balanced).toBe(true);
+    });
+
+    it('2. Initiator requests cancel, Recipient rejects -> cancellation request cleared, state stays Preparing', async () => {
+      const l1 = await createApprovedListing(user1, 100000, 'Both');
+      const l2 = await createApprovedListing(user2, 100000, 'Both');
+
+      const created = (
+        await post(
+          '/exchanges',
+          { initiatorListingId: l1.listingId, recipientListingId: l2.listingId },
+          user1,
+        ).expect(201)
+      ).body;
+
+      await post(`/exchanges/${created.id}/accept`, { revision: 1 }, user2).expect(200);
+      await post(`/exchanges/${created.id}/funding`, {}, user1).expect(200);
+      const funded = (
+        await post(`/exchanges/${created.id}/funding`, {}, user2).expect(200)
+      ).body;
+
+      // User1 requests cancel
+      const req = (
+        await post(
+          `/exchanges/${created.id}/cancel`,
+          { expectedVersion: funded.revision },
+          user1,
+        ).expect(200)
+      ).body;
+      expect(req.cancellationRequestedBy).toBe('Initiator');
+
+      // User2 rejects the cancellation request
+      const rejected = (
+        await post(
+          `/exchanges/${created.id}/reject`,
+          {
+            expectedVersion: req.revision,
+            reason: 'Tôi đã đóng gói sách và muốn hoàn thành giao dịch.',
+          },
+          user2,
+        ).expect(200)
+      ).body;
+
+      expect(rejected.status).toBe('Preparing');
+      expect(rejected.cancellationRequestedBy).toBeNull();
+      expect(rejected.cancellationRequestedAt).toBeNull();
+    });
+
+    it('3. Initiator requests cancel, Recipient ships directly -> shipping succeeds, cancellation request cleared', async () => {
+      const l1 = await createApprovedListing(user1, 100000, 'Both');
+      const l2 = await createApprovedListing(user2, 100000, 'Both');
+
+      const created = (
+        await post(
+          '/exchanges',
+          { initiatorListingId: l1.listingId, recipientListingId: l2.listingId },
+          user1,
+        ).expect(201)
+      ).body;
+
+      await post(`/exchanges/${created.id}/accept`, { revision: 1 }, user2).expect(200);
+      await post(`/exchanges/${created.id}/funding`, {}, user1).expect(200);
+      const funded = (
+        await post(`/exchanges/${created.id}/funding`, {}, user2).expect(200)
+      ).body;
+
+      // User1 requests cancel
+      const req = (
+        await post(
+          `/exchanges/${created.id}/cancel`,
+          { expectedVersion: funded.revision },
+          user1,
+        ).expect(200)
+      ).body;
+      expect(req.cancellationRequestedBy).toBe('Initiator');
+
+      // User2 ships book directly
+      const shipped = (
+        await post(
+          `/exchanges/${created.id}/ship`,
+          {
+            expectedVersion: req.revision,
+            method: 'carrier',
+            carrierCode: 'GHN',
+            carrierName: 'Giao Hàng Nhanh',
+            trackingCode: 'GHN-MUTUAL-1',
+          },
+          user2,
+        ).expect(200)
+      ).body;
+
+      expect(shipped.recipientShippedAt).toBeDefined();
+      expect(shipped.cancellationRequestedBy).toBeNull();
+
+      // Once shipped, neither party can cancel
+      await post(
+        `/exchanges/${created.id}/cancel`,
+        { expectedVersion: shipped.revision },
+        user1,
+      ).expect(409);
+    });
   });
 });
 

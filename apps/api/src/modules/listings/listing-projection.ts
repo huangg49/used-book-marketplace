@@ -182,6 +182,13 @@ export function revisionContent(
     description: content.description ?? '',
     salePrice: content.salePrice ?? null,
     exchangeValue: content.exchangeValue ?? null,
+    exchangePreferences: content.exchangePreferences
+      ? {
+          targetCategory: content.exchangePreferences.targetCategory ?? null,
+          targetAuthor: content.exchangePreferences.targetAuthor ?? null,
+          targetDescription: content.exchangePreferences.targetDescription ?? null,
+        }
+      : null,
   };
 }
 

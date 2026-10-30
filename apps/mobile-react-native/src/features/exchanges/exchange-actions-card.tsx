@@ -17,6 +17,7 @@ import {
 } from "../../core/ui";
 import { formatVnd } from "../../core/ui/format";
 import type { Exchange } from "./contracts";
+import { formatCancelReason } from "./contracts";
 import { ExchangeReviewsCard } from "./exchange-reviews-card";
 import {
   addressBook,
@@ -220,13 +221,13 @@ export function ExchangeActionsCard({
   });
 
   const rejectMutation = useMutation({
-    mutationFn: () =>
+    mutationFn: (customReason?: string) =>
       client.request(`/exchanges/${exchange.id}/reject`, z.unknown(), {
         method: "POST",
         headers: { "Idempotency-Key": Crypto.randomUUID() },
         body: JSON.stringify({
           expectedVersion: exchange.revision,
-          reason: "Không phù hợp thời điểm này",
+          reason: customReason || "Không phù hợp thời điểm này",
         }),
       }),
     onSuccess: invalidate,
@@ -362,6 +363,10 @@ export function ExchangeActionsCard({
   const isShippedByMe = isInitiator
     ? Boolean(exchange.initiatorShippedAt)
     : Boolean(exchange.recipientShippedAt);
+
+  const isPartnerShipped = isInitiator
+    ? Boolean(exchange.recipientShippedAt)
+    : Boolean(exchange.initiatorShippedAt);
 
   const isReceivedByMe = isInitiator
     ? Boolean(exchange.initiatorReceivedAt)
@@ -728,6 +733,25 @@ export function ExchangeActionsCard({
             </View>
           )}
 
+          {exchange.cancellationRequestedBy && (
+            <View style={styles.proposalNoticeBox}>
+              <Icon
+                name={
+                  exchange.cancellationRequestedBy === (isInitiator ? "Initiator" : "Recipient")
+                    ? "clock"
+                    : "info"
+                }
+                size={16}
+                color={stitchTokens.wineDark}
+              />
+              <AppText style={styles.proposalNoticeText}>
+                {exchange.cancellationRequestedBy === (isInitiator ? "Initiator" : "Recipient")
+                  ? "Bạn đã gửi yêu cầu hủy giao dịch trước khi gửi sách. Đang chờ đối tác xác nhận. Nếu đối tác đồng thuận, 100% tiền cọc và tiền bù sẽ được hoàn lại về ví của cả hai bên."
+                  : "Đối tác đã đề nghị hủy giao dịch trao đổi này trước khi gửi sách. Nếu bạn đồng ý hủy, 100% tiền cọc bảo chứng và tiền bù sẽ được hoàn trả về ví. Nếu muốn tiếp tục, bạn có thể bấm Từ chối yêu cầu hủy hoặc tiếp tục gửi sách."}
+              </AppText>
+            </View>
+          )}
+
           {isShippedByMe ? (
             <View style={styles.successNote}>
               <Icon name="check" size={16} color={stitchTokens.likeNewGreen} />
@@ -753,6 +777,33 @@ export function ExchangeActionsCard({
                   setShipModalOpen(true);
                 }}
               />
+              {!isPartnerShipped && !exchange.cancellationRequestedBy && (
+                <Button
+                  title="🛑 Đề nghị hủy giao dịch"
+                  secondary
+                  wine
+                  busy={isBusy}
+                  onPress={() => setConfirmCancelOpen(true)}
+                />
+              )}
+              {!isPartnerShipped &&
+                exchange.cancellationRequestedBy === (isInitiator ? "Recipient" : "Initiator") && (
+                  <>
+                    <Button
+                      title="🤝 Đồng ý hủy (Hoàn cọc 100%)"
+                      secondary
+                      wine
+                      busy={isBusy}
+                      onPress={() => setConfirmCancelOpen(true)}
+                    />
+                    <Button
+                      title="❌ Từ chối yêu cầu hủy"
+                      secondary
+                      busy={isBusy}
+                      onPress={() => setConfirmRejectOpen(true)}
+                    />
+                  </>
+                )}
             </View>
           )}
         </View>
@@ -869,28 +920,75 @@ export function ExchangeActionsCard({
         </View>
       )}
 
-      <ExchangeReviewsCard exchange={exchange} />
+      {/* State: COMPLETED (WITH REVIEWS) */}
+      {exchange.status === "Completed" && (
+        <View style={{ gap: space.sm }}>
+          {exchange.resolutionDecision === "CompleteExchange" && (
+            <View style={[styles.disputeBox, { backgroundColor: stitchTokens.likeNewGreenBg, borderColor: stitchTokens.verifiedGreen }]}>
+              <Icon name="check" size={18} color={stitchTokens.verifiedGreen} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <AppText style={[styles.disputeTitle, { color: stitchTokens.verifiedGreen }]}>
+                  Trao đổi hoàn tất theo phán quyết của Quản trị viên
+                </AppText>
+                {exchange.resolutionReason && (
+                  <AppText style={{ fontSize: 13, color: stitchTokens.darkWood, marginTop: 2 }}>
+                    Căn cứ: {exchange.resolutionReason}
+                  </AppText>
+                )}
+              </View>
+            </View>
+          )}
+          <ExchangeReviewsCard exchange={exchange} />
+        </View>
+      )}
 
       {/* State: CANCELLED */}
       {exchange.status === "Cancelled" && (
         <View style={styles.cancelledBox}>
           <Icon name="close" size={16} color={stitchTokens.flashRed} />
-          <AppText style={styles.cancelledText}>
-            Đơn trao đổi đã đóng ({exchange.cancelReason || "Đã hủy"}).
-          </AppText>
+          <View style={{ flex: 1, gap: 2 }}>
+            <AppText style={styles.cancelledText}>
+              Đơn trao đổi đã đóng ({formatCancelReason(exchange.cancelReason)}).
+            </AppText>
+            {exchange.cancelReason === "MutualAgreement" && (
+              <AppText style={{ fontSize: 13, color: stitchTokens.darkWood, marginTop: 2 }}>
+                Hai bên đã đồng thuận hủy giao dịch trước khi gửi sách. Toàn bộ tiền cọc bảo chứng và tiền bù đã được hoàn lại 100% về ví mô phỏng. Sách đã được mở lại trên kệ.
+              </AppText>
+            )}
+            {exchange.resolutionReason && (
+              <AppText style={{ fontSize: 13, color: stitchTokens.darkWood, marginTop: 2 }}>
+                Lý do phán quyết: {exchange.resolutionReason}
+              </AppText>
+            )}
+          </View>
         </View>
       )}
 
       {/* Confirm Dialogs */}
       <ConfirmDialog
         visible={confirmCancelOpen}
-        title="Hủy giao dịch trao đổi?"
-        message={
-          exchange.status === "AcceptedAwaitingFunding"
-            ? "Bạn có chắc chắn muốn hủy giao dịch trao đổi này? Nếu bạn hoặc đối tác đã đặt cọc, 100% số tiền cọc sẽ được hoàn lại về ví ngay lập tức và sách sẽ được mở lại trên kệ."
-            : "Hủy đề nghị trao đổi sẽ trả lại trạng thái sách về kệ của bạn."
+        title={
+          exchange.status === "Preparing"
+            ? exchange.cancellationRequestedBy === (isInitiator ? "Recipient" : "Initiator")
+              ? "Đồng ý hủy giao dịch?"
+              : "Đề nghị hủy giao dịch?"
+            : "Hủy giao dịch trao đổi?"
         }
-        confirmLabel="Hủy giao dịch"
+        message={
+          exchange.status === "Preparing"
+            ? exchange.cancellationRequestedBy === (isInitiator ? "Recipient" : "Initiator")
+              ? "Đối tác đã đề nghị hủy giao dịch này trước khi gửi sách. Bằng việc đồng ý, giao dịch sẽ hủy an toàn và 100% tiền cọc cùng tiền bù của cả hai bên sẽ được hoàn trả về ví. Sách được mở lại trên kệ."
+              : "Bạn có chắc muốn gửi yêu cầu hủy giao dịch trao đổi này trước khi gửi sách? Khi đối tác xác nhận đồng thuận, giao dịch sẽ hủy và hoàn trả 100% tiền cọc cho cả hai bên."
+            : exchange.status === "AcceptedAwaitingFunding"
+              ? "Bạn có chắc chắn muốn hủy giao dịch trao đổi này? Nếu bạn hoặc đối tác đã đặt cọc, 100% số tiền cọc sẽ được hoàn lại về ví ngay lập tức và sách sẽ được mở lại trên kệ."
+              : "Hủy đề nghị trao đổi sẽ trả lại trạng thái sách về kệ của bạn."
+        }
+        confirmLabel={
+          exchange.status === "Preparing" &&
+          exchange.cancellationRequestedBy === (isInitiator ? "Recipient" : "Initiator")
+            ? "Đồng ý hủy"
+            : "Xác nhận hủy"
+        }
         destructive
         onCancel={() => setConfirmCancelOpen(false)}
         onConfirm={() => {
@@ -901,13 +999,21 @@ export function ExchangeActionsCard({
 
       <ConfirmDialog
         visible={confirmRejectOpen}
-        title="Từ chối đề nghị?"
-        message="Từ chối đề nghị hoán đổi này từ đối tác."
-        confirmLabel="Từ chối"
+        title={exchange.status === "Preparing" ? "Từ chối yêu cầu hủy?" : "Từ chối đề nghị?"}
+        message={
+          exchange.status === "Preparing"
+            ? "Bạn muốn từ chối yêu cầu hủy của đối tác để tiếp tục giao dịch trao đổi sách? Vui lòng gửi sách trước thời hạn 72 giờ."
+            : "Từ chối đề nghị hoán đổi này từ đối tác."
+        }
+        confirmLabel={exchange.status === "Preparing" ? "Từ chối hủy & Tiếp tục" : "Từ chối"}
         onCancel={() => setConfirmRejectOpen(false)}
         onConfirm={() => {
           setConfirmRejectOpen(false);
-          rejectMutation.mutate();
+          rejectMutation.mutate(
+            exchange.status === "Preparing"
+              ? "Tôi đã chuẩn bị xong sách và muốn tiếp tục hoàn thành giao dịch này."
+              : undefined,
+          );
         }}
       />
 

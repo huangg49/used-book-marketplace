@@ -650,6 +650,63 @@ export function EditListingPage() {
                   )}
                 </div>
               )}
+
+              {/* Tiêu chí mong muốn trao đổi */}
+              {form.mode !== "Sale" && (
+                <div style={{ marginTop: 20, padding: 16, background: "rgba(232, 223, 208, 0.25)", borderRadius: 6, border: "1px dashed var(--line)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <Sparkles size={16} style={{ color: "var(--gold-strong, #b8860b)" }} />
+                    <strong style={{ fontSize: 14 }}>Mong muốn trao đổi của bạn (Tùy chọn)</strong>
+                  </div>
+                  <p style={{ fontSize: 13, color: "var(--ink-muted)", margin: "0 0 12px" }}>
+                    Nhập thể loại, tác giả hoặc mô tả cuốn sách bạn đang tìm kiếm để hệ thống hỗ trợ gợi ý ghép đôi trao đổi thông minh (Smart Matchmaking).
+                  </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 4 }} htmlFor="field-target-cat">
+                        Thể loại mong muốn
+                      </label>
+                      <input
+                        type="text"
+                        id="field-target-cat"
+                        className={styles.textInput}
+                        placeholder="VD: Văn học, Kinh tế, Tâm lý..."
+                        value={form.targetCategory}
+                        onChange={(e) => patch({ targetCategory: e.target.value })}
+                        maxLength={100}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 4 }} htmlFor="field-target-author">
+                        Tác giả mong muốn
+                      </label>
+                      <input
+                        type="text"
+                        id="field-target-author"
+                        className={styles.textInput}
+                        placeholder="VD: Haruki Murakami, Dan Brown..."
+                        value={form.targetAuthor}
+                        onChange={(e) => patch({ targetAuthor: e.target.value })}
+                        maxLength={150}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, marginBottom: 4 }} htmlFor="field-target-desc">
+                      Ghi chú tiêu chí trao đổi chi tiết
+                    </label>
+                    <input
+                      type="text"
+                      id="field-target-desc"
+                      className={styles.textInput}
+                      placeholder="VD: Ưu tiên đổi lấy Rừng Na Uy hoặc sách trinh thám còn bìa lót..."
+                      value={form.targetDescription}
+                      onChange={(e) => patch({ targetDescription: e.target.value })}
+                      maxLength={500}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Origin address */}

@@ -179,6 +179,65 @@ export class ExchangeExpiryWorker {
       }
     }
 
+    // ── Branch 5: Transit overdue (InTransit -> ResolutionPending) ───────────
+    const transitOverdueHours = Number(
+      this.config.get('EXCHANGE_DELIVERY_OVERDUE_HOURS') ?? 240,
+    );
+    const transitThreshold = new Date(
+      now.getTime() - transitOverdueHours * 3_600_000,
+    );
+
+    const transitCandidates = await this.mongo.c.exchanges
+      .find(
+        {
+          status: 'InTransit',
+          $or: [
+            {
+              initiatorShippedAt: { $lte: transitThreshold },
+              recipientReceivedAt: null,
+            },
+            {
+              recipientShippedAt: { $lte: transitThreshold },
+              initiatorReceivedAt: null,
+            },
+          ],
+        },
+        {
+          sort: { updatedAt: 1, _id: 1 },
+          limit: batchSize,
+        },
+      )
+      .toArray();
+
+    let transitProcessed = 0;
+    let transitSkipped = 0;
+    let transitFailed = 0;
+
+    for (const candidate of transitCandidates) {
+      try {
+        const result = await this.exchanges.expireTransit(candidate._id, now);
+        if (result) {
+          transitProcessed++;
+          this.logger.log(
+            JSON.stringify({
+              event: 'exchangeTransitExpired',
+              exchangeId: candidate._id,
+              escalated: result.escalated,
+              status: 'ResolutionPending',
+            }),
+          );
+        } else {
+          transitSkipped++;
+        }
+      } catch (error) {
+        transitFailed++;
+        this.logger.error(
+          `Failed to expire exchange transit ${candidate._id}: ${error instanceof Error ? error.message : String(error)}`,
+          error instanceof Error ? error.stack : undefined,
+        );
+      }
+    }
+
     const remainingFunding = await this.mongo.c.exchanges.countDocuments({
       status: 'AcceptedAwaitingFunding',
       fundingDeadline: { $lte: now },
@@ -196,18 +255,45 @@ export class ExchangeExpiryWorker {
       shippingDeadline: { $lte: now },
     });
 
+    const remainingTransit = await this.mongo.c.exchanges.countDocuments({
+      status: 'InTransit',
+      $or: [
+        {
+          initiatorShippedAt: { $lte: transitThreshold },
+          recipientReceivedAt: null,
+        },
+        {
+          recipientShippedAt: { $lte: transitThreshold },
+          initiatorReceivedAt: null,
+        },
+      ],
+    });
+
     return {
       processed:
-        processed + proposalProcessed + inspectionProcessed + shippingProcessed,
+        processed +
+        proposalProcessed +
+        inspectionProcessed +
+        shippingProcessed +
+        transitProcessed,
       skipped:
-        skipped + proposalSkipped + inspectionSkipped + shippingSkipped,
+        skipped +
+        proposalSkipped +
+        inspectionSkipped +
+        shippingSkipped +
+        transitSkipped,
       failed:
-        failed + proposalFailed + inspectionFailed + shippingFailed,
+        failed +
+        proposalFailed +
+        inspectionFailed +
+        shippingFailed +
+        transitFailed,
       remaining:
         remainingFunding +
         remainingProposals +
         remainingInspections +
-        remainingShipping,
+        remainingShipping +
+        remainingTransit,
     };
   }
 }

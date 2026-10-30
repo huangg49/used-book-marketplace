@@ -1,4 +1,159 @@
-# Điểm lưu hiện tại — 29/10/2026
+# Điểm lưu hiện tại — 30/10/2026
+
+## Hoàn thiện Tính năng Tiêu chí mong muốn trao đổi & Cơ chế Ghép đôi Thông minh (Exchange Preferences & Smart Matchmaking) — 30/10/2026
+
+- Nhánh `feature/exchange-policy-and-transit-worker`.
+- **Bối cảnh & Nghiệp vụ**:
+  - Khi người dùng đăng sách chọn chế độ Trao đổi (`Exchange`) hoặc Cả bán & đổi (`Both`), họ thường có định hướng cuốn sách mong muốn nhận lại (theo thể loại, tác giả, hoặc mô tả/bản dịch/bìa mong muốn).
+  - Khác biệt hoàn toàn với bộ lọc tìm kiếm một chiều (Catalog Search Filter): Đây là **Cơ chế ghép đôi thông minh theo ngữ cảnh trao đổi 2 chiều (Bidirectional Contextual Matchmaking)**:
+    1. Chủ sách thiết lập `exchangePreferences` (`targetCategory`, `targetAuthor`, `targetDescription`).
+    2. Khi người dùng khác mở màn hình tạo đề xuất trao đổi (`ExchangeComposePage` trên Web và `ExchangeComposeScreen` trên Mobile RN), hệ thống tự động đối chiếu các tiêu chí này với từng cuốn sách trên kệ của người dùng đó.
+    3. Cuốn sách thỏa mãn bất kỳ tiêu chí nào được tự động gắn huy hiệu `✨ Khớp mong muốn đối tác` (hoặc `✨ Khớp mong muốn`) và được tự động sắp xếp ưu tiên lên đầu danh sách chọn.
+    4. Chi tiết cuốn sách (`BookDetailPage` trên Web và `BookOverviewSection` trên Mobile RN) hiển thị thẻ trang trọng "🎯 Tiêu chí đổi sách của chủ sở hữu".
+- **Nội dung thực hiện chi tiết**:
+  1. **API Contract (`packages/api-contract`)**:
+     - Định nghĩa `ExchangePreferences` schema (`targetCategory`, `targetAuthor`, `targetDescription`) trong `openapi.yaml`.
+     - Tích hợp `exchangePreferences` vào `DraftContent`, `SubmittedContent`, và `PublicListing`.
+     - `pnpm contract:generate` và `pnpm contract:check` -> PASS.
+  2. **MongoDB Migration `0046-listing-exchange-preferences.ts`**:
+     - Khai báo kiểu `ExchangePreferencesDoc` và cập nhật `ListingRevisionDoc` trong `documents.ts`.
+     - Tạo migration 0046 cập nhật JSON schema validator cho collection `listing_revisions`.
+     - Đăng ký và áp dụng migration thành công trên runtime MongoDB.
+  3. **Backend Service & Projection (`apps/api`)**:
+     - `apps/api/src/modules/listings/listing-projection.ts`: Cập nhật `revisionContent()` lưu giữ an toàn `exchangePreferences`.
+     - `apps/api/src/modules/listings/public-listing.service.ts`: Chiếu `exchangePreferences` ra `PublicListing`.
+     - Bổ sung unit test trong `public-listing.service.spec.ts` kiểm thử chiếu `exchangePreferences` -> 9/9 tests PASS.
+  4. **User Web (`apps/user-web`)**:
+     - `services/public-listings.ts`, `services/my-listings.ts`, `services/listing-submission.ts`: Bổ sung Zod schema và submission input.
+     - `lib/owner-listing-edit.ts`: Cập nhật form state và mapping an toàn (optional chaining) -> 23/23 tests PASS.
+     - `pages/SellBookPage.tsx`: Thêm trường nhập "🎯 Tiêu chí đổi sách mong muốn (Tùy chọn)" ở Bước 4 và tóm tắt ở Bước 5.
+     - `pages/EditListingPage.tsx`: Thêm form nhập tiêu chí đổi sách khi sửa bài đăng.
+     - `pages/BookDetailPage.tsx`: Card "🎯 Tiêu chí đổi sách của chủ sở hữu" hiển thị các tiêu chí đã đăng.
+     - `pages/ExchangeComposePage.tsx` & `.module.css`: Banner tiêu chí của đối tác, thuật toán so khớp `checkMatch()`, huy hiệu `✨ Khớp mong muốn đối tác` và ưu tiên đưa sách khớp lên đầu.
+     - Vitest kiểm thử User Web: **36 test files, 248 tests PASS 100%**.
+  5. **Mobile React Native (`apps/mobile-react-native`)**:
+     - `features/shelf/contracts.ts`, `features/drafts/contracts.ts`, `features/drafts/listing-form.ts`: Schema Zod và form transform -> 13/13 tests PASS.
+     - `features/drafts/listing-fields.tsx`: Card nhập "🎯 TIÊU CHÍ ĐỔI SÁCH MONG MUỐN (TÙY CHỌN)" trong bước định giá khi chế độ giao dịch cho phép đổi.
+     - `features/drafts/draft-editor.tsx`: Hiển thị "Tiêu chí đổi mong muốn" trong bảng tổng hợp kiểm tra trước khi gửi duyệt.
+     - `features/shelf/book-detail-components/book-overview-section.tsx`: Thẻ giao diện "🎯 Tiêu chí đổi sách của chủ sở hữu".
+     - `features/exchanges/exchange-compose-screen.tsx`: Banner tiêu chí đối tác, `InventoryBookRow` với `checkMatch()`, sắp xếp danh sách ưu tiên sách khớp lên đầu `sortedEligibleListings`, huy hiệu `✨ Khớp mong muốn`.
+     - Vitest kiểm thử Mobile RN: **24 test files, 163 tests PASS 100%**.
+- **Kiểm tra**:
+  - `pnpm contract:check`: PASS
+  - `pnpm --filter @used-books/api exec tsc --noEmit`: PASS (0 errors)
+  - `pnpm --filter @used-books/user-web exec tsc --noEmit`: PASS (0 errors)
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 errors)
+  - `pnpm --filter @used-books/admin-web exec tsc --noEmit`: PASS (0 errors)
+
+## Hoàn thiện cơ chế Đồng thuận hủy (Mutual Cancellation) trong trạng thái Đang chuẩn bị (Preparing) — 30/10/2026
+
+- Nhánh `feature/exchange-policy-and-transit-worker`.
+- **Bối cảnh & Nghiệp vụ**:
+  - Trong luồng trao đổi sách, sau khi cả hai bên đã nạp cọc bảo chứng và tiền bù chênh lệch (nếu có), giao dịch bước vào trạng thái `Preparing` (Hạn chót gửi sách 72 giờ).
+  - Trước đây, người dùng không thể hủy đơn khi đang ở `Preparing` cho tới khi hết hạn 72h. Tuy nhiên, nếu hai bên phát hiện lý do bất khả kháng (sách bị thất lạc, đối tác đồng ý dừng giao dịch, đổi ý...), hệ thống cần hỗ trợ **Đồng thuận hủy an toàn (Mutual Cancellation)** trước khi bất kỳ bên nào gửi sách đi.
+  - **Quy tắc bảo chứng & Bất biến tài chính (Financial & Listing Invariants)**:
+    1. Khi một bên đề xuất hủy: Hệ thống ghi nhận `cancellationRequestedBy`, `cancellationRequestedAt`, giữ nguyên trạng thái `Preparing`, gửi thông báo và tin nhắn tự động vào hộp chat trao đổi.
+    2. Bên đề xuất không thể spam gửi lại yêu cầu (trả về `409 InvalidState`).
+    3. Bên đối tác có thể:
+       - **Đồng ý hủy** (`POST /exchanges/:id/cancel`): Hệ thống đạt đồng thuận `MutualAgreement`, gọi nguyên tử `ledger.refundExchange(tx, exchange, now)` hoàn trả **100% tiền cọc và tiền bù** về ví mô phỏng của cả hai bên, đồng thời giải phóng tất cả sách liên quan từ `Reserved` trở lại `Available`.
+       - **Từ chối hủy** (`POST /exchanges/:id/reject` với lý do): Hệ thống xóa yêu cầu hủy (`cancellationRequestedBy: null`), gửi thông báo cho đối tác và giữ giao dịch ở trạng thái `Preparing` để tiếp tục gửi sách.
+       - **Gửi sách đi** (`POST /exchanges/:id/ship`): Nếu đối tác trực tiếp gửi sách, yêu cầu hủy tự động bị hủy bỏ để tiến trình giao nhận diễn ra bình thường.
+    4. Khi đã có ít nhất một bên gửi sách (`initiatorShippedAt` hoặc `recipientShippedAt`), không bên nào được phép hủy giao dịch nữa (`409 InvalidState`).
+- **Nội dung thực hiện**:
+  1. **Contract-first API**:
+     - `packages/api-contract/openapi.yaml`: Thêm `MutualAgreement` vào `ExchangeCancelReason`, thêm `Both` vào `ExchangeCancelledBy`, bổ sung `cancellationRequestedBy` (`Initiator` | `Recipient`) và `cancellationRequestedAt` vào schema `Exchange`.
+     - Chạy `pnpm contract:generate` và `pnpm contract:check` -> PASS.
+  2. **MongoDB Migration `0045-exchange-mutual-cancellation.ts`**:
+     - Bổ sung `MutualAgreement` và `Both` vào enum validator của `cancelReason` và `cancelledBy`.
+     - Bổ sung `cancellationRequestedBy` và `cancellationRequestedAt` vào validator schema của collection `exchanges`.
+     - Áp dụng migration thành công trên local MongoDB.
+  3. **Backend Service (`apps/api/src/modules/exchanges/exchanges.service.ts`)**:
+     - Cập nhật `view()` để chiếu `cancellationRequestedBy` và `cancellationRequestedAt`.
+     - Cập nhật `cancel()`:
+       - Xử lý đề nghị hủy lần đầu từ một bên, gửi notification và lưu message tin nhắn.
+       - Chặn lặp lại yêu cầu hủy từ cùng một bên.
+       - Xử lý chấp thuận hủy từ bên còn lại -> `MutualAgreement` + `Both`, hoàn tiền 100% qua `ledger.refundExchange` và mở lại sách qua `safeReleaseListing`.
+     - Cập nhật `reject()`: Hỗ trợ từ chối yêu cầu hủy khi ở trạng thái `Preparing`, xóa cờ yêu cầu hủy và lưu message giải thích.
+     - Cập nhật `ship()`: Tự động xóa cờ `cancellationRequestedBy` khi có bên tiến hành gửi sách.
+  4. **Giao diện Web (`apps/user-web`)**:
+     - Cập nhật `ActionCard`: Trong trạng thái `WAITING_YOU_SEND`, hiển thị nút "Đề nghị hủy giao dịch" khi chưa gửi sách.
+     - Khi đối tác đề nghị hủy: Hiển thị banner thông báo kèm 2 nút "Đồng ý hủy giao dịch" và "Từ chối yêu cầu hủy" với hộp thoại xác nhận chi tiết.
+     - Cập nhật `ProgressStepper` và `ExchangeDetailPage`: Hiển thị rõ nhãn "Hai bên đồng thuận hủy" và "Đồng thuận hủy" khi giao dịch kết thúc bằng đồng thuận.
+  5. **Giao diện Mobile React Native (`apps/mobile-react-native`)**:
+     - Cập nhật `exchange-actions-card.tsx`: Hiển thị banner `proposalNoticeBox` thông báo trạng thái đề nghị hủy, các nút bấm "🛑 Đề nghị hủy giao dịch", "🤝 Đồng ý hủy (Hoàn cọc 100%)", "❌ Từ chối yêu cầu hủy".
+     - Cập nhật `ConfirmDialog` với thông điệp rõ ràng, bảo đảm hoàn cọc 100% cho cả 2 bên.
+     - Cập nhật `exchange-progress-stepper.tsx`: Badge hiển thị "Đồng thuận hủy" với mô tả chi tiết.
+  6. **Kiểm thử E2E (`apps/api/test/exchanges.e2e-spec.ts`)**:
+     - Bổ sung 3 ca kiểm thử toàn diện:
+       1. Đề nghị hủy -> Chặn gửi lặp lại -> Đối tác đồng ý -> Hủy `MutualAgreement`, hoàn cọc 100% qua Ledger, nhả sách về `Available`.
+       2. Đề nghị hủy -> Đối tác từ chối (`reject`) với lý do -> Xóa cờ đề nghị hủy, giữ trạng thái `Preparing`.
+       3. Đề nghị hủy -> Đối tác gửi sách trực tiếp (`ship`) -> Gửi sách thành công, xóa cờ đề nghị hủy, chặn hủy sau khi đã gửi sách.
+     - Chạy trên QA replica set cô lập (`rs-test`): **35/35 tests PASS 100%**.
+- **Kiểm tra**:
+  - `pnpm contract:check`: PASS.
+  - `pnpm --filter @used-books/api exec tsc --noEmit`: PASS.
+  - `pnpm --filter @used-books/user-web exec tsc --noEmit`: PASS.
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS.
+  - `pnpm --filter @used-books/admin-web exec tsc --noEmit`: PASS.
+
+## Hoàn thiện API và Giao diện Quản trị viên phân xử khiếu nại (Admin Dispute Adjudication) luồng trao đổi sách — 30/10/2026
+
+- Nhánh `feature/exchange-policy-and-transit-worker`.
+- **Nội dung thực hiện**:
+  1. **Contract-first API phân xử tranh chấp**:
+     - `GET /operations/exchanges/resolutions`: Lấy danh sách toàn bộ giao dịch đang ở trạng thái `ResolutionPending`, sắp xếp theo thời gian khiếu nại mới nhất. Phân quyền `@Roles('STAFF', 'ADMIN')`.
+     - `POST /operations/exchanges/{id}/resolve`: Thực thi phán quyết của Quản trị viên/Nhân viên vận hành với payload `ResolveExchangeDisputeCommand` (`expectedVersion`, `decision`: `RefundBoth` | `CompleteExchange`, `reason`).
+  2. **Xử lý nghiệp vụ & Bảo đảm tính bất biến của sổ cái Ledger (Double-Entry Invariants)**:
+     - **Quyết định `RefundBoth`**:
+       - Gọi `ledger.refundExchange(tx, exchange, now)` hoàn trả đầy đủ tiền cọc bảo chứng và tiền bù chênh lệch cho cả hai bên.
+       - Giải phóng toàn bộ các sách liên quan từ trạng thái `Reserved` về `Available`.
+       - Cập nhật exchange sang `status: 'Cancelled'`, `cancelReason: 'DisputeResolvedRefund'`, `cancelledBy: 'Staff'`, ghi nhận `resolutionDecision`, `resolutionReason`, `resolvedBy`, `resolvedAt`.
+     - **Quyết định `CompleteExchange`**:
+       - Gọi `ledger.settleExchange(tx, updatedForSettlement, now)` tất toán số dư bảo chứng, chuyển tiền chênh lệch cho bên nhận.
+       - Chuyển toàn bộ sách sang trạng thái `Exchanged`.
+       - Cập nhật exchange sang `status: 'Completed'`, ghi nhận đầy đủ hồ sơ phân xử.
+     - **Thông báo & Minh bạch**:
+       - Bắn thông báo `notifyExchange` cho cả hai bên tham gia giao dịch.
+       - Ghi trực tiếp tin nhắn phán quyết của Quản trị viên vào hộp thư trao đổi nội bộ `exchange_messages`.
+  3. **MongoDB Migration `0044-exchange-dispute-resolution.ts`**:
+     - Bổ sung `DisputeResolvedRefund` vào enum `cancelReason`, bổ sung `Staff` vào `cancelledBy`.
+     - Bổ sung các trường `resolutionDecision`, `resolutionReason`, `resolvedBy`, `resolvedAt` vào JSON schema validator của collection `exchanges`.
+     - Bổ sung compound index `{ status: 1, disputedAt: -1 }` tối ưu hóa truy vấn hàng đợi khiếu nại.
+  4. **Giao diện Admin Web Portal (`apps/admin-web`)**:
+     - Xây dựng trang quản lý `/operations/exchange-disputes` (`ExchangeDisputesPage`).
+     - Tích hợp vào menu điều hướng sidebar của nhân viên và quản trị viên (`canReview`).
+     - Bảng hàng đợi `OperationsQueue` hiển thị trực quan thông tin tranh chấp, phân biệt rõ khiếu nại do người dùng hay do hệ thống tự động phát hiện (POL-07).
+     - Bảng điều khiển phán quyết `ActionPanel` tích hợp đầy đủ quy trình xác nhận an toàn, chống thoát trang khi đang nhập dở, và đồng bộ tự động dữ liệu sau khi phán quyết.
+- **Kiểm tra**:
+  - `pnpm contract:check`: PASS (OpenAPI parsed successfully; generated types are current).
+  - `pnpm --filter @used-books/api exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/admin-web build`: PASS (Vite production build thành công).
+  - E2E Tests trên QA replica set cô lập (`rs-test`): `vitest run --config ./vitest.config.e2e.ts test/exchanges.e2e-spec.ts` -> **32/32 tests PASS 100%** (bao gồm 3 test case kiểm thử phân quyền 403, phán quyết RefundBoth nhả sách & hoàn cọc, và phán quyết CompleteExchange tất toán Ledger).
+
+## Hoàn thiện ràng buộc đề xuất (POL-23) & Worker quá hạn vận chuyển (POL-07) trong luồng trao đổi sách — 30/10/2026
+
+- Nhánh `feature/exchange-policy-and-transit-worker`.
+- **Nội dung thực hiện**:
+  1. **Kiểm soát đề xuất mở theo POL-23 (`open_exchange_limit`)**:
+     - Trong `ExchangesService.create()`:
+       - Giới hạn tối đa 5 đề xuất `Proposed` đang mở cho mỗi tài khoản (`EXCHANGE_MAX_OPEN_PROPOSALS`, mặc định 5). Vượt quá giới hạn sẽ trả lỗi `409 InvalidState` với thông điệp rõ ràng theo POL-23.
+       - Chặn đề xuất trùng lặp cho cùng một cặp listing: Ngăn việc gửi nhiều đề xuất cho cùng cuốn sách đối tác từ cùng các cuốn sách của mình.
+       - Chặn đề xuất đối ứng trùng lặp (reverse duplicate): Nếu đối tác đã gửi một đề xuất đang chờ phản hồi cho những cuốn sách này, hệ thống yêu cầu phản hồi đề xuất đó thay vì tạo mới.
+  2. **Worker quét quá hạn vận chuyển 240 giờ theo POL-07 (`delivery_overdue_hours`)**:
+     - Bổ sung method `expireTransit(id, nowOverride)` trong `ExchangesService`.
+     - Bổ sung Branch 5 trong `ExchangeExpiryWorker.tick()`:
+       - Quét các giao dịch đổi sách ở trạng thái `InTransit` có bưu phẩm đã gửi quá 240 giờ (10 ngày, cấu hình qua `EXCHANGE_DELIVERY_OVERDUE_HOURS`) mà một trong hai bên chưa được xác nhận đã nhận hàng.
+       - Tự động chuyển trạng thái đơn sang `ResolutionPending`, thiết lập `disputedBy: 'System'` và ghi nhận `disputeReason` mở điều tra vận chuyển theo chuẩn POL-07.
+       - Gửi thông báo sự kiện `ExchangeDisputed` cho cả hai bên tham gia giao dịch.
+       - Đảm bảo tính idempotent: quét lặp lại không gây lỗi hay phát sinh bút toán trùng lặp.
+  3. **Bổ sung ca kiểm thử E2E tương ứng**:
+     - Bổ sung 2 ca kiểm thử mới trong `apps/api/test/exchanges.e2e-spec.ts`:
+       - `POL-23: limits open proposals to 5 and blocks duplicate proposals for same listing pair`.
+       - `POL-07: Transit Overdue Worker escalates InTransit to ResolutionPending when 240h delivery window expires`.
+- **Kiểm tra**:
+  - `pnpm --filter @used-books/api exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/api exec oxlint src/`: PASS (0 lỗi).
+  - E2E Tests trên QA replica set cô lập (`rs-test`): `vitest run --config ./vitest.config.e2e.ts test/exchanges.e2e-spec.ts` -> 29/29 tests PASS 100% (thời gian chạy ~50s).
 
 ## Tích hợp chuỗi Member/review/listing AI qua PR79 — 29/10/2026
 

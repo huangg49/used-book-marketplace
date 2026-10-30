@@ -44,11 +44,18 @@ export interface ExchangeDetail {
   viewerShipment?: { method: 'carrier' | 'direct'; carrierCode?: string | null; carrierName?: string | null; trackingCode?: string | null; meetupLocation?: string | null; notes?: string | null; shippedAt?: string | null };
   partnerShipment?: { method: 'carrier' | 'direct'; carrierCode?: string | null; carrierName?: string | null; trackingCode?: string | null; meetupLocation?: string | null; notes?: string | null; shippedAt?: string | null };
   hasViewerReviewed: boolean;
-  closedBy?: 'viewer' | 'partner';
+  closedBy?: 'viewer' | 'partner' | 'both';
   shippingDeadline?: string;
   disputedAt?: string;
   disputeReason?: string;
   disputedBy?: string;
+  resolutionDecision?: 'RefundBoth' | 'CompleteExchange' | null;
+  resolutionReason?: string | null;
+  resolvedBy?: string | null;
+  resolvedAt?: string | null;
+  cancelReason?: string | null;
+  cancellationRequestedBy?: 'Initiator' | 'Recipient' | null;
+  cancellationRequestedAt?: string | null;
 }
 
 export interface ChatMessage {

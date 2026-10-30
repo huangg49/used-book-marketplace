@@ -405,12 +405,21 @@ export class PublicListingService {
           : { status: 'Available' as const, expiresAt: null },
     };
     // Submitted/approved invariants enforce the selected mode's price requirements.
+    const exchangePreferences = r.exchangePreferences
+      ? {
+          targetCategory: r.exchangePreferences.targetCategory ?? null,
+          targetAuthor: r.exchangePreferences.targetAuthor ?? null,
+          targetDescription: r.exchangePreferences.targetDescription ?? null,
+        }
+      : null;
+
     if (r.mode === 'Sale')
       return {
         ...content,
         mode: 'Sale',
         salePrice: r.salePrice!,
         exchangeValue: null,
+        exchangePreferences: null,
       };
     if (r.mode === 'Exchange')
       return {
@@ -418,12 +427,14 @@ export class PublicListingService {
         mode: 'Exchange',
         salePrice: null,
         exchangeValue: r.exchangeValue!,
+        exchangePreferences,
       };
     return {
       ...content,
       mode: 'Both',
       salePrice: r.salePrice!,
       exchangeValue: r.exchangeValue!,
+      exchangePreferences,
     };
   }
 

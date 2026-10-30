@@ -16,11 +16,13 @@ import {
   MongoCommandService,
   member,
   requireActive,
+  staff,
   type Actor,
   type CommandContext,
 } from '../commands/mongo-command.service.js';
 import {
   conflict,
+  invalidField,
   invalidState,
   notFound,
   type Wire,
@@ -162,6 +164,9 @@ export class ExchangesService {
     } else if (cancelledBy === 'Recipient') {
       notifyRecipients = [next.initiatorId];
       reasonText = 'Đối tác đã hủy giao dịch';
+    } else if (cancelledBy === 'Both' || reason === 'MutualAgreement') {
+      notifyRecipients = [next.initiatorId, next.recipientId];
+      reasonText = 'Hai bên đã đồng thuận hủy giao dịch trao đổi';
     } else if (cancelledBy === 'System') {
       if (reason === 'FundingExpired') {
         notifyRecipients = [next.initiatorId, next.recipientId];
@@ -284,6 +289,12 @@ export class ExchangesService {
       disputedAt: row.disputedAt?.toISOString() ?? null,
       disputeReason: row.disputeReason ?? null,
       disputedBy: row.disputedBy ?? null,
+      resolutionDecision: row.resolutionDecision ?? null,
+      resolutionReason: row.resolutionReason ?? null,
+      resolvedBy: row.resolvedBy ?? null,
+      resolvedAt: row.resolvedAt?.toISOString() ?? null,
+      cancellationRequestedBy: row.cancellationRequestedBy ?? null,
+      cancellationRequestedAt: row.cancellationRequestedAt?.toISOString() ?? null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
@@ -342,7 +353,53 @@ export class ExchangesService {
           requireActive(actor);
           const conversation = body.conversationId ? await this.agreements.prepareExchange(tx, body.conversationId, body.expectedConversationVersion!, actor._id, recipientListing._id, recipientListing.ownerId) : null;
           if (recipientListing.ownerId === actor._id) {
-            throw invalidState();
+            throw invalidState('Không thể tự tạo đề xuất trao đổi với chính mình.');
+          }
+
+          // POL-23: Giới hạn tối đa 5 đề xuất Proposed mỗi tài khoản
+          const maxOpenProposals = Number(
+            this.config.get('EXCHANGE_MAX_OPEN_PROPOSALS') ?? 5,
+          );
+          const openProposalsCount = await tx.c.exchanges.countDocuments({
+            initiatorId: actor._id,
+            status: 'Proposed',
+          });
+          if (openProposalsCount >= maxOpenProposals) {
+            throw invalidState(
+              `Bạn đã đạt giới hạn tối đa ${maxOpenProposals} đề xuất trao đổi đang mở (POL-23). Hãy chờ phản hồi hoặc hủy bớt đề xuất cũ.`,
+            );
+          }
+
+          // POL-23: Chỉ 1 đề xuất mở cho cùng cặp listing
+          const existingSamePair = await tx.c.exchanges.findOne({
+            initiatorId: actor._id,
+            status: 'Proposed',
+            recipientListingId: recipientListing._id,
+            $or: [
+              { initiatorListingId: { $in: initiatorListingIds } },
+              { initiatorListingIds: { $in: initiatorListingIds } },
+            ],
+          });
+          if (existingSamePair) {
+            throw invalidState(
+              'Bạn đã có một đề xuất trao đổi đang chờ xử lý cho cuốn sách này (POL-23).',
+            );
+          }
+
+          const reverseSamePair = await tx.c.exchanges.findOne({
+            initiatorId: recipientListing.ownerId,
+            recipientId: actor._id,
+            status: 'Proposed',
+            recipientListingId: { $in: initiatorListingIds },
+            $or: [
+              { initiatorListingId: recipientListing._id },
+              { initiatorListingIds: recipientListing._id },
+            ],
+          });
+          if (reverseSamePair) {
+            throw invalidState(
+              'Đối tác đã gửi một đề xuất trao đổi cho cuốn sách này đang chờ bạn phản hồi (POL-23).',
+            );
           }
 
           for (const initListing of initiatorListings) {
@@ -1045,15 +1102,97 @@ export class ExchangesService {
 
         if (exchange.status === 'Preparing') {
           if (exchange.initiatorShippedAt || exchange.recipientShippedAt) {
-            throw invalidState();
+            throw invalidState('Không thể hủy giao dịch khi đã có bên gửi sách đi.');
           }
-          if (!exchange.shippingDeadline || now < exchange.shippingDeadline) {
-            throw invalidState();
+
+          // Case A: Đã hết thời hạn 72h gửi sách -> Hủy do quá hạn vận chuyển
+          if (exchange.shippingDeadline && now >= exchange.shippingDeadline) {
+            const next = await this.cancelInternal(tx, exchange, {
+              reason: 'ShippingExpired',
+              cancelledBy,
+              now,
+            });
+
+            return {
+              entityType: 'Exchange',
+              entityId: next._id,
+              initiatorListingId: next.initiatorListingId,
+              version: next.revision,
+              state: next.status as Wire['ExchangeStatus'],
+              decidedAt: now,
+              event: 'ExchangeCancelled',
+              exchange: this.view(next),
+            };
           }
+
+          // Case B: Trong thời hạn 72h -> Đồng thuận hủy (Mutual Cancellation)
+          if (!exchange.cancellationRequestedBy) {
+            // Bước 1: Bên gọi gửi yêu cầu hủy giao dịch
+            const next = await tx.c.exchanges.findOneAndUpdate(
+              { _id: exchange._id, revision: exchange.revision, status: 'Preparing' },
+              {
+                $set: {
+                  cancellationRequestedBy: cancelledBy,
+                  cancellationRequestedAt: now,
+                  updatedAt: now,
+                },
+                $inc: { revision: 1 },
+              },
+              { returnDocument: 'after' },
+            );
+            if (!next) throw conflict();
+
+            const partnerId =
+              actor._id === exchange.initiatorId
+                ? exchange.recipientId
+                : exchange.initiatorId;
+
+            await notifyExchange(
+              tx,
+              next,
+              'ExchangeCancelled',
+              [partnerId],
+              now,
+              { reason: 'Đối tác đã đề nghị hủy giao dịch trước khi gửi sách. Hãy vào xác nhận nếu bạn đồng ý.' },
+            );
+
+            await tx.c.exchange_messages.insertOne({
+              _id: randomUUID(),
+              exchangeId: exchange._id,
+              senderId: actor._id,
+              body: `[Đề nghị hủy giao dịch]\nTôi đề nghị hủy giao dịch trao đổi này trước khi gửi sách. Nếu đối tác đồng ý xác nhận hủy, 100% tiền cọc và tiền bù sẽ được hoàn lại về ví của cả hai bên.`,
+              sentAt: now,
+            });
+
+            return {
+              entityType: 'Exchange',
+              entityId: next._id,
+              initiatorListingId: next.initiatorListingId,
+              version: next.revision,
+              state: next.status as Wire['ExchangeStatus'],
+              decidedAt: now,
+              event: 'ExchangeCancellationRequested',
+              exchange: this.view(next),
+            };
+          }
+
+          if (exchange.cancellationRequestedBy === cancelledBy) {
+            throw invalidState('Bạn đã gửi yêu cầu hủy giao dịch. Đang chờ đối tác xác nhận.');
+          }
+
+          // Bước 2: Đối tác chấp thuận yêu cầu hủy -> Hai bên đồng thuận hủy thành công!
           const next = await this.cancelInternal(tx, exchange, {
-            reason: 'ShippingExpired',
-            cancelledBy,
+            reason: 'MutualAgreement',
+            cancelledBy: 'Both',
             now,
+          });
+
+          await tx.c.exchange_messages.insertOne({
+            _id: randomUUID(),
+            exchangeId: exchange._id,
+            senderId: actor._id,
+            body: `[Đồng thuận hủy thành công]\nHai bên đã đồng thuận hủy giao dịch trước khi gửi sách. Toàn bộ tiền cọc bảo chứng và tiền bù đã được hoàn lại 100% về ví của mỗi bên. Sách đã được mở lại trên kệ.`,
+            sentAt: now,
           });
 
           return {
@@ -1095,6 +1234,69 @@ export class ExchangesService {
         // Lock then re-read to get a fresh snapshot (race with expiry worker).
         await tx.lock('exchanges', [initialExchange._id]);
         const exchange = await this.exchange(tx, initialExchange._id);
+
+        if (exchange.status === 'Preparing') {
+          this.participant(exchange, actor._id);
+          const callerRole: ExchangeCancelledBy =
+            actor._id === exchange.initiatorId ? 'Initiator' : 'Recipient';
+          if (
+            !exchange.cancellationRequestedBy ||
+            exchange.cancellationRequestedBy === callerRole
+          ) {
+            throw invalidState('Không có yêu cầu hủy nào từ đối tác để từ chối.');
+          }
+          if (exchange.revision !== body.expectedVersion) {
+            throw conflict();
+          }
+
+          const now = await tx.now();
+          const next = await tx.c.exchanges.findOneAndUpdate(
+            { _id: exchange._id, revision: exchange.revision, status: 'Preparing' },
+            {
+              $set: {
+                cancellationRequestedBy: null,
+                cancellationRequestedAt: null,
+                updatedAt: now,
+              },
+              $inc: { revision: 1 },
+            },
+            { returnDocument: 'after' },
+          );
+          if (!next) throw conflict();
+
+          const partnerId =
+            actor._id === exchange.initiatorId
+              ? exchange.recipientId
+              : exchange.initiatorId;
+
+          await notifyExchange(
+            tx,
+            next,
+            'ExchangeRejected',
+            [partnerId],
+            now,
+            { reason: `Đối tác đã từ chối yêu cầu hủy: ${body.reason}` },
+          );
+
+          await tx.c.exchange_messages.insertOne({
+            _id: randomUUID(),
+            exchangeId: exchange._id,
+            senderId: actor._id,
+            body: `[Từ chối yêu cầu hủy giao dịch]\nLý do: ${body.reason}\nĐối tác không đồng ý hủy giao dịch. Giao dịch tiếp tục ở trạng thái Đang chuẩn bị, vui lòng chuẩn bị và gửi sách trước thời hạn.`,
+            sentAt: now,
+          });
+
+          return {
+            entityType: 'Exchange',
+            entityId: next._id,
+            initiatorListingId: next.initiatorListingId,
+            version: next.revision,
+            state: next.status as Wire['ExchangeStatus'],
+            decidedAt: now,
+            event: 'ExchangeCancellationDeclined',
+            exchange: this.view(next),
+          };
+        }
 
         if (exchange.recipientId !== actor._id) {
           throw conflict();
@@ -1195,6 +1397,11 @@ export class ExchangesService {
         } else {
           setFields.recipientShippedAt = now;
           setFields.recipientShipment = shipmentSnapshot;
+        }
+
+        if (exchange.cancellationRequestedBy) {
+          setFields.cancellationRequestedBy = null;
+          setFields.cancellationRequestedAt = null;
         }
 
         const willBeBothShipped =
@@ -1662,6 +1869,205 @@ export class ExchangesService {
     );
   }
 
+  listResolutions(auth: Actor) {
+    return this.commands.read(auth, async (tx, actor) => {
+      staff(actor);
+      const rows = await tx.c.exchanges
+        .find({ status: 'ResolutionPending' })
+        .sort({ disputedAt: -1, updatedAt: -1 })
+        .toArray();
+      return rows.map((r) => this.view(r));
+    });
+  }
+
+  resolveDispute(
+    context: CommandContext,
+    id: string,
+    body: Wire['ResolveExchangeDisputeCommand'],
+  ) {
+    return this.commands.runExchange<ExchangeDoc>(
+      context,
+      'resolveExchangeDispute',
+      id,
+      body,
+      {
+        discover: async (tx) => {
+          const exchange = await tx.c.exchanges.findOne({ _id: id });
+          return [exchange?.initiatorId, exchange?.recipientId].filter(
+            Boolean,
+          ) as string[];
+        },
+        authorize: async (tx, actor) => {
+          staff(actor);
+          return this.exchange(tx, id);
+        },
+        mutate: async (tx, actor, initialExchange) => {
+          requireActive(actor);
+          staff(actor);
+
+          if (!body.decision || !['RefundBoth', 'CompleteExchange'].includes(body.decision)) {
+            invalidField('/decision', 'Quyết định phân xử phải là RefundBoth hoặc CompleteExchange.');
+          }
+          if (!body.reason || body.reason.trim().length < 5 || body.reason.trim().length > 500) {
+            invalidField('/reason', 'Lý do phân xử phải từ 5 đến 500 ký tự.');
+          }
+
+          await tx.lock('exchanges', [initialExchange._id]);
+          const exchange = await this.exchange(tx, initialExchange._id);
+
+          if (exchange.status !== 'ResolutionPending') {
+            throw invalidState('Chỉ có thể giải quyết khiếu nại cho giao dịch đang ở trạng thái ResolutionPending.');
+          }
+          if (exchange.revision !== body.expectedVersion) {
+            throw conflict();
+          }
+
+          const now = await tx.now();
+          const trimmedReason = body.reason.trim();
+
+          let next: ExchangeDoc | null = null;
+
+          if (body.decision === 'RefundBoth') {
+            // 1. Hoàn tiền cọc và tiền chênh lệch cho cả 2 bên theo số dư bảo chứng
+            await this.ledger.refundExchange(tx, exchange, now);
+
+            // 2. Mở khóa giải phóng sách trở lại Available
+            const initIds = this.getInitiatorListingIds(exchange);
+            const allIds = [...initIds, exchange.recipientListingId];
+            const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
+            for (const listingId of allIds) {
+              const listing = lockedMap.get(listingId);
+              if (listing) {
+                await this.safeReleaseListing(tx, exchange._id, listing);
+              }
+            }
+
+            // 3. Cập nhật trạng thái Cancelled do phán quyết giải quyết tranh chấp
+            next = await tx.c.exchanges.findOneAndUpdate(
+              { _id: exchange._id, revision: exchange.revision, status: 'ResolutionPending' },
+              {
+                $set: {
+                  status: 'Cancelled',
+                  cancelReason: 'DisputeResolvedRefund',
+                  cancelledBy: 'Staff',
+                  cancelledAt: now,
+                  resolutionDecision: 'RefundBoth',
+                  resolutionReason: trimmedReason,
+                  resolvedBy: actor._id,
+                  resolvedAt: now,
+                  updatedAt: now,
+                },
+                $inc: { revision: 1 },
+              },
+              { returnDocument: 'after' },
+            );
+          } else {
+            // CompleteExchange: Phán quyết công nhận hoàn tất giao dịch
+            const updatedForSettlement: ExchangeDoc = {
+              ...exchange,
+              status: 'Completed',
+              completedAt: now,
+              resolutionDecision: 'CompleteExchange',
+              resolutionReason: trimmedReason,
+              resolvedBy: actor._id,
+              resolvedAt: now,
+              updatedAt: now,
+            };
+
+            // 1. Tất toán bảo chứng: trả lại cọc và chuyển tiền chênh lệch cho bên nhận
+            await this.ledger.settleExchange(tx, updatedForSettlement, now);
+
+            // 2. Chuyển trạng thái sách thành Exchanged
+            const initIds = this.getInitiatorListingIds(exchange);
+            const allIds = [...initIds, exchange.recipientListingId];
+            const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
+            for (const listingId of allIds) {
+              const listing = lockedMap.get(listingId);
+              if (listing && listing.trade === 'Reserved') {
+                await this.listings.project(
+                  tx,
+                  listing._id,
+                  listing.version,
+                  'Reserved',
+                  'Exchanged',
+                );
+              }
+            }
+
+            // 3. Cập nhật exchange sang Completed
+            next = await tx.c.exchanges.findOneAndUpdate(
+              { _id: exchange._id, revision: exchange.revision, status: 'ResolutionPending' },
+              {
+                $set: {
+                  status: 'Completed',
+                  completedAt: now,
+                  resolutionDecision: 'CompleteExchange',
+                  resolutionReason: trimmedReason,
+                  resolvedBy: actor._id,
+                  resolvedAt: now,
+                  updatedAt: now,
+                },
+                $inc: { revision: 1 },
+              },
+              { returnDocument: 'after' },
+            );
+          }
+
+          if (!next) throw conflict();
+
+          // Gửi thông báo đến cả hai bên tham gia giao dịch
+          await notifyExchange(
+            tx,
+            next,
+            body.decision === 'RefundBoth' ? 'ExchangeCancelled' : 'ExchangeCompleted',
+            [next.initiatorId, next.recipientId],
+            now,
+            {
+              reason: `Phán quyết từ quản trị viên: ${trimmedReason}`,
+            },
+          );
+
+          // Lưu tin nhắn giải trình vào hộp thư trao đổi giữa hai bên
+          await tx.c.exchange_messages.insertOne({
+            _id: randomUUID(),
+            exchangeId: exchange._id,
+            senderId: actor._id,
+            body: `[Phán quyết của Quản trị viên]\nQuyết định: ${
+              body.decision === 'RefundBoth'
+                ? 'Hủy giao dịch & Hoàn tiền cho 2 bên'
+                : 'Công nhận hoàn tất trao đổi & Tất toán'
+            }\nLý do: ${trimmedReason}`,
+            sentAt: now,
+          });
+
+          this.logger.log(
+            JSON.stringify({
+              event: 'exchangeDisputeResolved',
+              exchangeId: exchange._id,
+              decision: body.decision,
+              resolvedBy: actor._id,
+              reason: trimmedReason,
+            }),
+          );
+
+          return {
+            entityType: 'Exchange',
+            entityId: next._id,
+            initiatorListingId: next.initiatorListingId,
+            version: next.revision,
+            state: next.status as Wire['ExchangeStatus'],
+            decidedAt: now,
+            event:
+              body.decision === 'RefundBoth'
+                ? 'ExchangeDisputeRefunded'
+                : 'ExchangeDisputeCompleted',
+            exchange: this.view(next),
+          };
+        },
+      },
+    );
+  }
+
   async expireShipping(id: string, nowOverride?: Date) {
     return this.mongo.tx(async (tx) => {
       await tx.lock('exchanges', [id]);
@@ -1731,6 +2137,80 @@ export class ExchangesService {
       this.logger.log(
         JSON.stringify({
           event: 'exchangeShippingExpiredOneSent',
+          exchangeId: exchange._id,
+          status: 'ResolutionPending',
+          disputeReason,
+        }),
+      );
+
+      return { exchange: this.view(next), escalated: true };
+    });
+  }
+
+  async expireTransit(id: string, nowOverride?: Date) {
+    return this.mongo.tx(async (tx) => {
+      await tx.lock('exchanges', [id]);
+      const exchange = await tx.c.exchanges.findOne({ _id: id });
+      if (!exchange) return null;
+
+      if (exchange.status !== 'InTransit') {
+        return null;
+      }
+
+      const overdueHours = Number(
+        this.config.get('EXCHANGE_DELIVERY_OVERDUE_HOURS') ?? 240,
+      );
+      const overdueMs = overdueHours * 3_600_000;
+      const now = nowOverride ?? (await tx.now());
+
+      const initLegOverdue =
+        Boolean(exchange.initiatorShippedAt) &&
+        !exchange.recipientReceivedAt &&
+        now.getTime() - exchange.initiatorShippedAt!.getTime() >= overdueMs;
+
+      const recipLegOverdue =
+        Boolean(exchange.recipientShippedAt) &&
+        !exchange.initiatorReceivedAt &&
+        now.getTime() - exchange.recipientShippedAt!.getTime() >= overdueMs;
+
+      if (!initLegOverdue && !recipLegOverdue) {
+        return null;
+      }
+
+      const overdueSides: string[] = [];
+      if (initLegOverdue) overdueSides.push('chiều Người khởi tạo gửi');
+      if (recipLegOverdue) overdueSides.push('chiều Người nhận gửi');
+
+      const disputeReason = `Quá hạn vận chuyển (${overdueHours} giờ): ${overdueSides.join(' và ')} chưa được xác nhận đã nhận hàng. Hệ thống tự động mở điều tra vận chuyển (POL-07).`;
+
+      const next = await tx.c.exchanges.findOneAndUpdate(
+        { _id: exchange._id, revision: exchange.revision, status: 'InTransit' },
+        {
+          $set: {
+            status: 'ResolutionPending',
+            disputedAt: now,
+            disputeReason,
+            disputedBy: 'System',
+            updatedAt: now,
+          },
+          $inc: { revision: 1 },
+        },
+        { returnDocument: 'after' },
+      );
+      if (!next) return null;
+
+      await notifyExchange(
+        tx,
+        next,
+        'ExchangeDisputed',
+        [next.initiatorId, next.recipientId],
+        now,
+        { reason: disputeReason },
+      );
+
+      this.logger.log(
+        JSON.stringify({
+          event: 'exchangeTransitOverdue',
           exchangeId: exchange._id,
           status: 'ResolutionPending',
           disputeReason,
