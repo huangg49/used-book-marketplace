@@ -1,5 +1,39 @@
 # Điểm lưu hiện tại — 30/10/2026
 
+## Hoàn thiện API và Giao diện Quản trị viên phân xử khiếu nại (Admin Dispute Adjudication) luồng trao đổi sách — 30/10/2026
+
+- Nhánh `feature/exchange-policy-and-transit-worker`.
+- **Nội dung thực hiện**:
+  1. **Contract-first API phân xử tranh chấp**:
+     - `GET /operations/exchanges/resolutions`: Lấy danh sách toàn bộ giao dịch đang ở trạng thái `ResolutionPending`, sắp xếp theo thời gian khiếu nại mới nhất. Phân quyền `@Roles('STAFF', 'ADMIN')`.
+     - `POST /operations/exchanges/{id}/resolve`: Thực thi phán quyết của Quản trị viên/Nhân viên vận hành với payload `ResolveExchangeDisputeCommand` (`expectedVersion`, `decision`: `RefundBoth` | `CompleteExchange`, `reason`).
+  2. **Xử lý nghiệp vụ & Bảo đảm tính bất biến của sổ cái Ledger (Double-Entry Invariants)**:
+     - **Quyết định `RefundBoth`**:
+       - Gọi `ledger.refundExchange(tx, exchange, now)` hoàn trả đầy đủ tiền cọc bảo chứng và tiền bù chênh lệch cho cả hai bên.
+       - Giải phóng toàn bộ các sách liên quan từ trạng thái `Reserved` về `Available`.
+       - Cập nhật exchange sang `status: 'Cancelled'`, `cancelReason: 'DisputeResolvedRefund'`, `cancelledBy: 'Staff'`, ghi nhận `resolutionDecision`, `resolutionReason`, `resolvedBy`, `resolvedAt`.
+     - **Quyết định `CompleteExchange`**:
+       - Gọi `ledger.settleExchange(tx, updatedForSettlement, now)` tất toán số dư bảo chứng, chuyển tiền chênh lệch cho bên nhận.
+       - Chuyển toàn bộ sách sang trạng thái `Exchanged`.
+       - Cập nhật exchange sang `status: 'Completed'`, ghi nhận đầy đủ hồ sơ phân xử.
+     - **Thông báo & Minh bạch**:
+       - Bắn thông báo `notifyExchange` cho cả hai bên tham gia giao dịch.
+       - Ghi trực tiếp tin nhắn phán quyết của Quản trị viên vào hộp thư trao đổi nội bộ `exchange_messages`.
+  3. **MongoDB Migration `0040-exchange-dispute-resolution.ts`**:
+     - Bổ sung `DisputeResolvedRefund` vào enum `cancelReason`, bổ sung `Staff` vào `cancelledBy`.
+     - Bổ sung các trường `resolutionDecision`, `resolutionReason`, `resolvedBy`, `resolvedAt` vào JSON schema validator của collection `exchanges`.
+     - Bổ sung compound index `{ status: 1, disputedAt: -1 }` tối ưu hóa truy vấn hàng đợi khiếu nại.
+  4. **Giao diện Admin Web Portal (`apps/admin-web`)**:
+     - Xây dựng trang quản lý `/operations/exchange-disputes` (`ExchangeDisputesPage`).
+     - Tích hợp vào menu điều hướng sidebar của nhân viên và quản trị viên (`canReview`).
+     - Bảng hàng đợi `OperationsQueue` hiển thị trực quan thông tin tranh chấp, phân biệt rõ khiếu nại do người dùng hay do hệ thống tự động phát hiện (POL-07).
+     - Bảng điều khiển phán quyết `ActionPanel` tích hợp đầy đủ quy trình xác nhận an toàn, chống thoát trang khi đang nhập dở, và đồng bộ tự động dữ liệu sau khi phán quyết.
+- **Kiểm tra**:
+  - `pnpm contract:check`: PASS (OpenAPI parsed successfully; generated types are current).
+  - `pnpm --filter @used-books/api exec tsc --noEmit`: PASS (0 lỗi).
+  - `pnpm --filter @used-books/admin-web build`: PASS (Vite production build thành công).
+  - E2E Tests trên QA replica set cô lập (`rs-test`): `vitest run --config ./vitest.config.e2e.ts test/exchanges.e2e-spec.ts` -> **32/32 tests PASS 100%** (bao gồm 3 test case kiểm thử phân quyền 403, phán quyết RefundBoth nhả sách & hoàn cọc, và phán quyết CompleteExchange tất toán Ledger).
+
 ## Hoàn thiện ràng buộc đề xuất (POL-23) & Worker quá hạn vận chuyển (POL-07) trong luồng trao đổi sách — 30/10/2026
 
 - Nhánh `feature/exchange-policy-and-transit-worker`.
