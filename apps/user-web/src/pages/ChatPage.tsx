@@ -1,5 +1,4 @@
-import { AgreementTerms } from "../components/conversation/AgreementTerms";
-import { ExchangeOffer } from "../components/conversation/ExchangeOffer";
+import { NegotiationWorkspace } from "./NegotiationWorkspace";
 import { ConversationInbox } from "../components/conversation/ConversationInbox";
 import { ConversationBookIdentity } from "../components/conversation/ConversationBookIdentity";
 import { ConversationBackLink } from "../components/conversation/ConversationBackLink";
@@ -7,7 +6,6 @@ import {
   useConversationTransition,
   useInboxPosition,
 } from "../components/conversation/conversation-navigation";
-import { ExchangeDetailPage } from "./ExchangeDetailPage";
 import { OrderDetails } from "./OrderDetails";
 import sheet from "../components/conversation/Conversation.module.css";
 import {
@@ -21,7 +19,7 @@ import { io, type Socket } from "socket.io-client";
 import { ApiError } from "@used-books/session-client";
 import { z } from "zod";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { ArrowUpRight, ChevronDown, Send } from "lucide-react";
+import { ArrowUpRight, Send } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import {
@@ -33,7 +31,7 @@ import {
 } from "../services/purchase-conversations";
 import { getPublicListing } from "../services/public-listings";
 import { createSellerOrder } from "../services/purchase-conversations";
-import { getOrder, orderStates } from "../services/orders";
+
 import { purchaseChatGuidance } from "../lib/purchase-chat-guidance";
 import { formatVnd } from "../lib/routes";
 import { PurchaseDialog } from "../components/PurchaseDialog";
@@ -45,12 +43,6 @@ const configuredBase =
 const socketUrl = configuredBase.startsWith("/")
   ? window.location.origin
   : configuredBase.replace(/\/api\/v1\/?$/, "");
-const statusLabels = {
-  Active: "Đang thương lượng",
-  Expired: "Đã hết hạn",
-  Cancelled: "Đã hủy",
-  OrderCreated: "Đã tạo đơn",
-};
 const serviceAreasSchema = z.object({
   localities: z.array(z.object({ code: z.string(), label: z.string() })),
 });
@@ -88,10 +80,8 @@ function ChatRoom({
   refreshRooms: () => void;
 }) {
   const other = room.buyer.id === userId ? room.seller : room.buyer;
-  const compactHeader = useCompactHeader();
   const [panel, setPanel] = useState<"sheet" | "chat">("sheet");
   const sheetBodyRef = useRef<HTMLDivElement>(null);
-  const guidanceScrollIntent = useRef(false);
   const [historyExchange, setHistoryExchange] = useState<string | null>(null);
   const history = useQuery({
     queryKey: ["purchase-messages", room.id],
@@ -101,12 +91,6 @@ function ChatRoom({
   const book = useQuery({
     queryKey: ["public-listing", room.listingId],
     queryFn: () => getPublicListing(room.listingId),
-  });
-  const order = useQuery({
-    queryKey: ["direct-order", userId, room.orderId],
-    queryFn: () => getOrder(room.orderId!),
-    enabled: !!room.orderId,
-    refetchInterval: 5000,
   });
   const [live, setLive] = useState<PurchaseMessage[]>([]);
   const [body, setBody] = useState("");
@@ -294,31 +278,6 @@ function ChatRoom({
         setError(undefined);
       });
   }
-  const orderAccessDenied =
-    order.error instanceof ApiError && [401, 403, 404].includes(order.error.status);
-  const readableOrder = orderAccessDenied ? undefined : order.data;
-  const bookIdentity = (
-    <ConversationBookIdentity
-      listingId={room.listingId}
-      title={readableOrder?.item.bundle?.title || readableOrder?.item.metadata.title}
-      status={
-        <>
-          {room.orderId
-            ? (readableOrder && orderStates[readableOrder.state]) || "Đơn hàng"
-            : isExchange && room.status === "Active"
-            ? "Đang trao đổi sách"
-            : statusLabels[room.status]}
-          {room.expiresAt && (
-            <>
-              {" "}
-              · Hạn hội thoại:{" "}
-              <time dateTime={room.expiresAt}>{dateTime(room.expiresAt)}</time>
-            </>
-          )}
-        </>
-      }
-    />
-  );
   return (
     <section
       className={styles.room}
@@ -336,7 +295,6 @@ function ChatRoom({
           </span>
         )}
       </header>
-      {compactHeader && !room.orderId && <div className={styles.mobileBookHeader}>{bookIdentity}</div>}
       <nav
         className={`${sheet.mobileTabs} ${sheet.bookTabs}`}
         aria-label="Nội dung cuộc trao đổi"
@@ -363,9 +321,6 @@ function ChatRoom({
         data-lenis-prevent="true"
       >
         <aside className={sheet.sheet} aria-label={room.orderId ? "Thông tin đơn hàng" : "Phiếu thỏa thuận"}>
-          {!compactHeader && !room.orderId && <header className={`${sheet.sheetHeading} ${styles.dossierHeader}`}>
-            {bookIdentity}
-          </header>}
           <h2 className={styles.srOnly}>{room.orderId ? "Thông tin đơn hàng" : "Phiếu thỏa thuận"}</h2>
           <div
             className={`${sheet.sheetBody} ${styles.dossierBody}`}
@@ -378,211 +333,26 @@ function ChatRoom({
             {room.orderId ? (
               <OrderDetails key={room.orderId} orderId={room.orderId} embedded />
             ) : (
-              <>
-            {room.terms?.locked &&
-              !room.orderId &&
-              !room.terms.activeExchangeId && (
-                <p className={sheet.error}>
-                  Sách hiện chưa thể chốt giao dịch. Bạn vẫn có thể tiếp tục
-                  nhắn tin.
-                </p>
-              )}
-            {!(isExchange && (room.terms?.activeExchangeId || historyExchange)) && (
-              <AgreementTerms
+              <NegotiationWorkspace
                 room={room}
                 userId={userId}
                 book={book.data}
                 refresh={refreshRooms}
                 frozen={!!orderAttempt.current}
+                guidance={guidance}
+                onOpenOrderDialog={() => setOrderDialogOpen(true)}
+                historyExchange={historyExchange}
+                setHistoryExchange={setHistoryExchange}
+                now={now}
+                expired={expired}
               />
             )}
-            {!!room.terms?.exchangeIds.length &&
-              (room.terms.exchangeIds.length > 1 || !room.terms.activeExchangeId) && (
-              <details className={sheet.exchangeHistory}>
-                <summary>Lịch sử các đề nghị đổi sách ({room.terms.exchangeIds.length} lần)</summary>
-                {room.terms.exchangeIds.map((id, i) => (
-                  <button
-                    type="button"
-                    key={id}
-                    className={sheet.textButton}
-                    onClick={() => setHistoryExchange(id)}
-                  >
-                    Xem đề nghị lần {i + 1}
-                    {id === room.terms?.activeExchangeId ? " — hiện tại" : ""}
-                  </button>
-                ))}
-              </details>
-            )}
-            {historyExchange ? (
-              <>
-                <div className={sheet.proposal}>
-                  <p>Đang xem đề nghị đổi sách trước.</p>
-                  <button
-                    type="button"
-                    className={sheet.textButton}
-                    onClick={() => setHistoryExchange(null)}
-                  >
-                    Về phiếu hiện tại
-                  </button>
-                </div>
-                <ExchangeDetailPage
-                  key={historyExchange}
-                  exchangeId={historyExchange}
-                  embedded
-                />
-              </>
-            ) : (
-              isExchange &&
-              (room.terms?.activeExchangeId ? (
-                <ExchangeDetailPage
-                  key={room.terms.activeExchangeId}
-                  exchangeId={room.terms.activeExchangeId}
-                  embedded
-                />
-              ) : book.data &&
-                !room.terms?.pendingProposal &&
-                !room.terms?.locked ? (
-                <ExchangeOffer
-                  room={room}
-                  userId={userId}
-                  book={book.data}
-                  refresh={refreshRooms}
-                />
-              ) : null)
-            )}
-            {!isExchange && !(room.orderId && isBuyer) && (
-              <details
-                className={styles.guidanceDetails}
-                onToggle={(event) => {
-                  if (!guidanceScrollIntent.current) return;
-                  guidanceScrollIntent.current = false;
-                  const body = sheetBodyRef.current;
-                  if (!body) return;
-                  const details = event.currentTarget;
-                  if (getComputedStyle(body).overflowY === "visible") {
-                    (details.open ? details : body).scrollIntoView({
-                      block: "start",
-                      behavior: "smooth",
-                    });
-                  } else {
-                    body.scrollTo({
-                      top: details.open ? body.scrollHeight : 0,
-                      behavior: "smooth",
-                    });
-                  }
-                }}
-                open={
-                  expired ||
-                  (book.data != null && !book.data.fulfillment) ||
-                  (room.hasQuote &&
-                    (!room.quotePreview ||
-                      Date.parse(room.quotePreview.expiresAt) <= now))
-                }
-              >
-                <summary
-                  onClick={() => {
-                    guidanceScrollIntent.current = true;
-                  }}
-                >
-                  Cách giao dịch
-                  <ChevronDown size={16} aria-hidden="true" />
-                </summary>
-                <ol className={styles.progress} aria-label="Tiến trình mua bán">
-                  {["Trao đổi", "Thông tin nhận sách", "Đơn hàng"].map(
-                    (label, index) => (
-                      <li
-                        key={label}
-                        aria-current={
-                          guidance.phase === index ? "step" : undefined
-                        }
-                      >
-                        {label}
-                      </li>
-                    ),
-                  )}
-                </ol>
-                <p>{guidance.description}</p>
-                {!expired && <p>Chat chưa giữ chỗ cho cuốn sách.</p>}
-                <p>
-                  Người bán đề xuất hình thức, người mua xác nhận. Đề nghị giá
-                  cần đối tác chấp nhận trước khi dùng để tạo đơn.
-                </p>
-              </details>
-            )}
-              </>
-            )}
           </div>
-          {!room.orderId && !isExchange && (
-            <>
-              {!(room.orderId && isBuyer) && (
-                <aside
-                  className={styles.nextStep}
-                  aria-label="Bước tiếp theo"
-                  data-primary={canCreate || !!room.orderId}
-                >
-                  <div>
-                    <h3>{guidance.title}</h3>
-                    {guidance.description && (
-                      <p>{guidance.description}</p>
-                    )}
-                  </div>
-                  {guidance.action === "edit-listing" && (
-                    <Link
-                      className={styles.nextAction}
-                      to={`/books/${room.listingId}`}
-                    >
-                      {guidance.actionLabel}
-                    </Link>
-                  )}
-                  {guidance.action === "address" && !room.terms?.locked && (
-                    <Link
-                      className={styles.nextAction}
-                      to={`/checkout/${room.listingId}?conversationId=${room.id}`}
-                    >
-                      {guidance.actionLabel}
-                    </Link>
-                  )}
-                  {guidance.action === "create-order" && (
-                    <button
-                      className={styles.nextAction}
-                      type="button"
-                      disabled={!canCreate}
-                      onClick={() => setOrderDialogOpen(true)}
-                    >
-                      {canCreate
-                        ? guidance.actionLabel
-                        : room.terms?.locked
-                          ? "Sách hiện chưa thể chốt"
-                          : "Cần thống nhất giá trước"}
-                    </button>
-                  )}
-                  {active &&
-                    !isBuyer &&
-                    orderAttempt.current &&
-                    guidance.action !== "create-order" && (
-                      <button
-                        className={styles.nextAction}
-                        type="button"
-                        onClick={() => setOrderDialogOpen(true)}
-                      >
-                        Tiếp tục yêu cầu tạo đơn
-                      </button>
-                    )}
-                  {guidance.action === "order" && (
-                    <Link
-                      className={styles.nextAction}
-                      to={`/orders/${room.orderId}`}
-                    >
-                      Xem đơn hàng
-                    </Link>
-                  )}
-                </aside>
-              )}
-              {active &&
-                room.seller.id === userId &&
-                (room.hasQuote || orderAttempt.current) && (
-                  <>
-                    <PurchaseDialog
+          {active &&
+            room.seller.id === userId &&
+            (room.hasQuote || orderAttempt.current) && (
+              <>
+                <PurchaseDialog
                       open={orderDialogOpen}
                       onClose={() => setOrderDialogOpen(false)}
                       busy={orderBusy}
@@ -744,8 +514,6 @@ function ChatRoom({
                     </PurchaseDialog>
                   </>
                 )}
-            </>
-          )}
         </aside>
         <section
           className={`${sheet.chat} ${styles.dossierChat}`}

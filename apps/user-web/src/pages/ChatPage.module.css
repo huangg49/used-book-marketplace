@@ -736,7 +736,7 @@
 }
 .paperSpread.dossierSpread {
   --conversation-chat-surface: #fff;
-  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(0, 1fr) 350px;
   gap: 0;
   padding: 0;
   flex: 1;
@@ -747,12 +747,8 @@
   overflow: hidden;
   box-shadow: 0 8px 30px rgba(40, 25, 20, 0.08);
 }
-.paperSpread.dossierSpread[data-order-mode="true"],
-.paperSpread.dossierSpread.orderSpread {
-  grid-template-columns: minmax(0, 1fr) 350px;
-}
 @media (min-width: 961px) {
-  .paperSpread.dossierSpread[data-order-mode="true"] > .dossierChat {
+  .paperSpread.dossierSpread > .dossierChat {
     width: 350px;
     min-width: 320px;
     max-width: 360px;

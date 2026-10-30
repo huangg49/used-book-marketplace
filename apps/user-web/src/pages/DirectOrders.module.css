@@ -1512,3 +1512,178 @@
   }
 }
 
+/* --------------------------------------------------------------------------
+   Negotiation Workspace Elements in Card 2
+   -------------------------------------------------------------------------- */
+.modeSwitchWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modeSwitchHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--shop-ink, #281914);
+}
+
+.modeSwitchGroup {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 4px;
+  background: #f4eee5;
+  border-radius: 8px;
+}
+
+.modeSwitchBtn {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #716157;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.modeSwitchBtn[aria-pressed="true"] {
+  background: #ffffff;
+  color: #5c0202;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.modeSwitchBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.proposalCard {
+  background: #fff8f0;
+  border: 1px solid #f2d5b6;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.proposalText {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #4a2810;
+  line-height: 1.5;
+}
+
+.proposalActions {
+  display: flex;
+  gap: 8px;
+}
+
+.priceAgreedBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #f0f9f3;
+  border: 1px solid #c1ebd0;
+  border-radius: 8px;
+  color: #156633;
+}
+
+.priceAgreedText {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.negotiationOfferForm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.negotiationOfferRow {
+  display: flex;
+  gap: 8px;
+}
+
+.negotiationOfferRow input {
+  flex: 1;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid rgba(217, 203, 189, 0.9);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--shop-ink, #281914);
+  background: #ffffff;
+}
+
+.negotiationOfferRow input:focus {
+  outline: none;
+  border-color: #690b0b;
+  box-shadow: 0 0 0 1px #690b0b;
+}
+
+.negotiationOfferRow button {
+  padding: 0 18px;
+  min-height: 42px;
+  border-radius: 8px;
+  background: #690b0b;
+  color: #fff;
+  border: 0;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.negotiationOfferRow button:hover:not(:disabled) {
+  background: #450202;
+}
+
+.guidanceAccordion {
+  border: 1px solid rgba(217, 203, 189, 0.6);
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #fdfcfb;
+}
+
+.guidanceAccordion summary {
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #716157;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.guidanceAccordion[open] summary {
+  margin-bottom: 8px;
+  color: #5c0202;
+}
+
+.guidanceSteps {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-size: 0.8125rem;
+  color: #5a4b42;
+  line-height: 1.6;
+}
+
+
