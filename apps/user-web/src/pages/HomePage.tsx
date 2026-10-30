@@ -596,7 +596,6 @@ export function HomePage() {
           <span className={styles.canopyRight} />
         </div>
         <div className={styles.shortcutBand}>
-          <Link to="/guide">Chưa biết bắt đầu? Xem cách mua, bán, đổi và đấu giá.</Link>
           <nav className={styles.quickLinks} aria-label="Khám phá sách">
             <Link
               className={styles.quickBuy}
