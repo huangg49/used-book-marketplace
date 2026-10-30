@@ -3030,6 +3030,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/exchanges/resolutions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * listExchangeResolutions
+         * @description ACTIVE STAFF/ADMIN. Returns all exchanges currently in ResolutionPending status for dispute adjudication.
+         */
+        get: operations["listExchangeResolutions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/exchanges/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * resolveExchangeDispute
+         * @description ACTIVE STAFF/ADMIN. Resolves an exchange in ResolutionPending with decision RefundBoth or CompleteExchange.
+         */
+        post: operations["resolveExchangeDispute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5635,9 +5675,9 @@ export interface components {
         /** @enum {string} */
         ExchangeStatus: "Proposed" | "AcceptedAwaitingFunding" | "Preparing" | "InTransit" | "Delivered" | "Completed" | "Cancelled" | "ResolutionPending";
         /** @enum {string} */
-        ExchangeCancelReason: "FundingExpired" | "ProposalExpired" | "CancelledByUser" | "ListingUnavailable" | "ShippingExpired";
+        ExchangeCancelReason: "FundingExpired" | "ProposalExpired" | "CancelledByUser" | "ListingUnavailable" | "ShippingExpired" | "DisputeResolvedRefund";
         /** @enum {string} */
-        ExchangeCancelledBy: "System" | "Initiator" | "Recipient";
+        ExchangeCancelledBy: "System" | "Initiator" | "Recipient" | "Staff";
         Exchange: {
             /** Format: uuid */
             id: string;
@@ -5681,6 +5721,10 @@ export interface components {
             disputedAt?: string | null;
             disputeReason?: string | null;
             disputedBy?: string | null;
+            resolutionDecision?: string | null;
+            resolutionReason?: string | null;
+            resolvedBy?: string | null;
+            resolvedAt?: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -5803,6 +5847,12 @@ export interface components {
             deadline?: string | null;
             myReview?: components["schemas"]["ExchangeReviewItem"] | null;
             partnerReview?: components["schemas"]["ExchangeReviewItem"] | null;
+        };
+        ResolveExchangeDisputeCommand: {
+            expectedVersion: number;
+            /** @enum {string} */
+            decision: "RefundBoth" | "CompleteExchange";
+            reason: string;
         };
     };
     responses: {
@@ -11946,6 +11996,64 @@ export interface operations {
                     "application/json": components["schemas"]["ExchangeReviewItem"];
                 };
             };
+        };
+    };
+    listExchangeResolutions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"][];
+                };
+            };
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    resolveExchangeDispute: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveExchangeDisputeCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
         };
     };
 }

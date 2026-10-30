@@ -23,6 +23,10 @@ import {
 } from './0037-seller-scheduled-auctions.js';
 import { transactionReviewValidatorFixMigration } from './0039-transaction-review-validator-fix.js';
 import {
+  exchangeDisputeResolutionMigration,
+  withExchangeDisputeResolution,
+} from './0040-exchange-dispute-resolution.js';
+import {
   listingAutofillMigration,
   listingAutofillSpecs,
 } from './0038-listing-autofill.js';
@@ -292,6 +296,7 @@ export const migrations: Migration[] = [
   moderationOverviewIndexesMigration,
   listingAutofillMigration,
   transactionReviewValidatorFixMigration,
+  exchangeDisputeResolutionMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -361,7 +366,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withExchangePhase3Changes)
     .map(withExchangePhase4Changes)
     .map(withExchangePhase5Changes)
-    .map(withExchangePhase6Changes),
+    .map(withExchangePhase6Changes)
+    .map(withExchangeDisputeResolution),
   ...directDeliveryCompletionSpecs,
   ...paymentSpecs.map(withVNPayExpiry),
   ...exchangeMessageSpecs,

@@ -64,6 +64,15 @@ export function reviewer(actor: CurrentActor) {
       'Bạn không có quyền kiểm duyệt sách.',
     );
 }
+export function staff(actor: CurrentActor) {
+  requireActive(actor);
+  if (!hasRole(actor, 'STAFF', 'ADMIN'))
+    throw new DomainError(
+      403,
+      'FORBIDDEN',
+      'Bạn không có quyền quản lý vận hành / giải quyết khiếu nại.',
+    );
+}
 
 type Change = {
   entityType: 'Catalog' | 'Listing' | 'Media';
@@ -494,7 +503,8 @@ export class MongoCommandService {
       | 'shipExchange'
       | 'receiveExchange'
       | 'completeExchange'
-      | 'disputeExchange',
+      | 'disputeExchange'
+      | 'resolveExchangeDispute',
     target: string | null,
     body: unknown,
     options: Options<C, ExchangeChange>,

@@ -9258,6 +9258,79 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExchangeReviewItem"
+  /operations/exchanges/resolutions:
+    get:
+      operationId: listExchangeResolutions
+      tags:
+        - Exchanges
+      summary: listExchangeResolutions
+      description: ACTIVE STAFF/ADMIN. Returns all exchanges currently in ResolutionPending status for dispute adjudication.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Exchange"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+  /operations/exchanges/{id}/resolve:
+    post:
+      operationId: resolveExchangeDispute
+      tags:
+        - Exchanges
+      summary: resolveExchangeDispute
+      description: ACTIVE STAFF/ADMIN. Resolves an exchange in ResolutionPending with decision RefundBoth or CompleteExchange.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveExchangeDisputeCommand"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Exchange"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
 components:
   securitySchemes:
     bearerAuth:
@@ -16995,12 +17068,14 @@ components:
         - CancelledByUser
         - ListingUnavailable
         - ShippingExpired
+        - DisputeResolvedRefund
     ExchangeCancelledBy:
       type: string
       enum:
         - System
         - Initiator
         - Recipient
+        - Staff
     Exchange:
       type: object
       additionalProperties: false
@@ -17173,7 +17248,24 @@ components:
         disputedBy:
           anyOf:
             - type: string
+            - type: "null"
+        resolutionDecision:
+          anyOf:
+            - type: string
+            - type: "null"
+        resolutionReason:
+          anyOf:
+            - type: string
+            - type: "null"
+        resolvedBy:
+          anyOf:
+            - type: string
               format: uuid
+            - type: "null"
+        resolvedAt:
+          anyOf:
+            - type: string
+              format: date-time
             - type: "null"
         createdAt:
           type: string
@@ -17502,3 +17594,23 @@ components:
           anyOf:
             - $ref: "#/components/schemas/ExchangeReviewItem"
             - type: "null"
+    ResolveExchangeDisputeCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - decision
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        decision:
+          type: string
+          enum:
+            - RefundBoth
+            - CompleteExchange
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 500
