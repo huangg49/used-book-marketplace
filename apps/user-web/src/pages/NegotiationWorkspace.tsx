@@ -133,7 +133,7 @@ export function NegotiationWorkspace({
             <h3 id="negotiation-book-heading" className={styles.cardTitle}>
               Thông tin sách
             </h3>
-            <p className={styles.cardSubtitle}>Chi tiết ấn bản & niêm yết</p>
+            <p className={styles.cardSubtitle}>Chi tiết ấn bản và thanh toán</p>
           </div>
         </div>
 
@@ -145,17 +145,17 @@ export function NegotiationWorkspace({
                 <ListingPhoto book={book} eager />
               ) : (
                 <div className={styles.placeholderCover} aria-hidden="true">
-                  <BookOpen size={24} />
+                  <BookOpen size={28} />
                 </div>
               )}
             </div>
 
             <div className={styles.bookProfileMeta}>
               <h4 className={styles.bookTitle}>
-                {book?.book.title ?? "Đang tải thông tin sách…"}
+                {book?.bundle?.title || book?.book.title || "Đang tải thông tin sách…"}
               </h4>
               <p className={styles.bookAuthor}>
-                {book?.book.authors?.join(", ") ?? ""}
+                {book?.book.authors?.join(", ") || (book ? "Tác giả" : "Đang tải thông tin tác giả…")}
               </p>
 
               {conditionLabel && (
@@ -168,36 +168,36 @@ export function NegotiationWorkspace({
 
               <Link
                 to={`/books/${room.listingId}`}
-                className={styles.viewPostLink}
+                className={styles.viewListingLink}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
               >
                 <span>Xem bài đăng gốc</span>
-                <ExternalLink size={12} aria-hidden="true" />
+                <ExternalLink size={13} aria-hidden="true" />
               </Link>
             </div>
           </div>
 
           {/* Bundle manifest nếu là combo */}
           {book?.bundle && (
-            <div style={{ marginTop: 4 }}>
+            <div className={styles.bundleSection}>
               <BundleManifest bundle={book.bundle} />
             </div>
           )}
 
-          {/* Quy cách và thông số chi tiết */}
-          <div className={styles.bookSpecsList}>
+          {/* Chi tiết tình trạng & số trang */}
+          <div className={styles.specList}>
             <div className={styles.specItem}>
-              <span className={styles.specKey}>Bìa & gáy:</span>
+              <span className={styles.specLabel}>Bìa & gáy:</span>
               <span className={styles.specVal}>{book?.coverNote || "Tốt"}</span>
             </div>
             <div className={styles.specItem}>
-              <span className={styles.specKey}>Số trang:</span>
+              <span className={styles.specLabel}>Số trang:</span>
               <span className={styles.specVal}>{book?.pages || "Tốt"}</span>
             </div>
             {(book?.notes || book?.description) && (
               <div className={styles.descriptionBlock}>
-                <span className={styles.specKey}>Ghi chú người bán:</span>
+                <span className={styles.specLabel}>Ghi chú người bán:</span>
                 <p className={styles.descriptionText}>
                   {book.notes || book.description}
                 </p>
@@ -205,39 +205,81 @@ export function NegotiationWorkspace({
             )}
           </div>
 
-          {/* Bảng giá niêm yết & giá thống nhất */}
+          {/* Bảng chi tiết thanh toán */}
           <div className={styles.paymentCard}>
             <div className={styles.paymentCardHeader}>
-              <span className={styles.paymentHeading}>Giá sách & Thỏa thuận</span>
+              <span className={styles.paymentHeading}>Chi tiết thanh toán</span>
               <span className={styles.paymentModeBadge}>
-                {mode === "Exchange" ? "Đổi sách" : "Mua bán"}
+                {mode === "Exchange" ? "Đổi sách" : "Thương lượng"}
               </span>
             </div>
 
             <dl className={styles.paymentDl}>
               <div className={styles.paymentRow}>
-                <dt>Giá niêm yết</dt>
+                <dt>Tiền sách</dt>
                 <dd>
-                  {book?.salePrice != null
-                    ? formatVnd(book.salePrice)
-                    : "Đang tải…"}
+                  {terms?.agreedPrice != null
+                    ? formatVnd(terms.agreedPrice)
+                    : book?.salePrice != null
+                      ? formatVnd(book.salePrice)
+                      : "Chưa thống nhất"}
                 </dd>
               </div>
 
-              <div className={styles.paymentTotalRow}>
-                <dt>Giá đã thống nhất</dt>
-                <dd style={{ color: terms?.agreedPrice != null ? "#156633" : "#5c0202" }}>
+              <div className={styles.paymentRow}>
+                <dt>Phí giao hàng</dt>
+                <dd>
+                  {room.quotePreview
+                    ? formatVnd(room.quotePreview.shippingFee)
+                    : "Chưa tính"}
+                </dd>
+              </div>
+
+              <div className={`${styles.paymentRow} ${styles.paymentTotalRow}`}>
+                <dt>Tổng thanh toán</dt>
+                <dd>
                   {terms?.agreedPrice != null
-                    ? formatVnd(terms.agreedPrice)
-                    : "Chưa thống nhất"}
+                    ? formatVnd(terms.agreedPrice + (room.quotePreview?.shippingFee ?? 0))
+                    : book?.salePrice != null
+                      ? formatVnd(book.salePrice + (room.quotePreview?.shippingFee ?? 0))
+                      : "Chưa tính"}
                 </dd>
               </div>
             </dl>
 
-            <p style={{ margin: "8px 0 0", fontSize: "0.75rem", color: "#716157" }}>
-              Chưa gồm phí giao nhận. Phí vận chuyển sẽ được tính khi người mua cung cấp địa chỉ nhận sách.
-            </p>
+            {/* Thông báo ký quỹ bảo chứng an toàn */}
+            <div className={styles.escrowNotice}>
+              <div className={styles.escrowUnpaid}>
+                <Clock size={18} className={styles.escrowIconUnpaid} aria-hidden="true" />
+                <div>
+                  <p className={styles.escrowTitle}>
+                    {terms?.agreedPrice != null ? "Đã thống nhất giá sách" : "Chưa chốt giá sách"}
+                  </p>
+                  <p className={styles.escrowSubtitle}>
+                    {room.hasQuote
+                      ? "Đã có báo giá vận chuyển. Hai bên có thể tiến hành tạo đơn hàng."
+                      : "Sau khi thống nhất giá và nhận thông tin giao nhận, đơn sẽ được tạo và bảo chứng bởi Lật Lại."}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
+
+          {/* Địa chỉ nhận sách (nếu người mua đã gửi báo giá vận chuyển) */}
+          {room.quotePreview && (
+            <div className={styles.addressBox}>
+              <div className={styles.addressBoxHeader}>
+                <MapPin size={16} aria-hidden="true" />
+                <span>{isBuyer ? "Địa chỉ nhận sách của bạn" : "Nơi nhận của người mua"}</span>
+              </div>
+              <p className={styles.addressContact}>
+                <strong>{room.quotePreview.destination.recipientName}</strong> · {room.quotePreview.destination.phone}
+              </p>
+              <p className={styles.addressDetail}>
+                {room.quotePreview.destination.detail}
+              </p>
+            </div>
+          )}
         </div>
       </article>
 
@@ -250,46 +292,32 @@ export function NegotiationWorkspace({
           <div className={styles.cardHeaderIcon} aria-hidden="true">
             {isExchange ? <ArrowLeftRight size={20} /> : <Handshake size={20} />}
           </div>
-          <div>
-            <h3 id="negotiation-terms-heading" className={styles.cardTitle}>
-              Thỏa thuận giao dịch
-            </h3>
+          <div className={styles.proceduresHeaderInfo}>
+            <div className={styles.proceduresTitleRow}>
+              <h3 id="negotiation-terms-heading" className={styles.cardTitle}>
+                Thỏa thuận giao dịch
+              </h3>
+              <span
+                className={styles.orderStatusPill}
+                style={{
+                  background: proposal ? "#fff2e0" : terms?.agreedPrice != null ? "#eaf8ed" : "#f4eee5",
+                  color: proposal ? "#875109" : terms?.agreedPrice != null ? "#156633" : "#5c0202",
+                  border: "1px solid rgba(0,0,0,0.08)",
+                }}
+              >
+                {proposal
+                  ? "Có đề nghị mới"
+                  : terms?.agreedPrice != null
+                  ? "Đã chốt giá"
+                  : isExchange
+                  ? "Đổi sách"
+                  : "Đang thương lượng"}
+              </span>
+            </div>
             <p className={styles.cardSubtitle}>
-              {isExchange
-                ? "Thủ tục đề nghị & trao đổi sách hai bên"
-                : "Thương lượng giá sách & chuẩn bị tạo đơn"}
+              Mã hội thoại: <span className={styles.orderCodeBadge}>#{room.id.slice(0, 8).toUpperCase()}</span> · {isBuyer ? "Bạn là Người mua" : "Bạn là Người bán"}
             </p>
           </div>
-
-          {/* Badge trạng thái ở góc phải header */}
-          <span
-            style={{
-              marginLeft: "auto",
-              fontSize: "0.75rem",
-              fontWeight: 700,
-              padding: "4px 10px",
-              borderRadius: 999,
-              background: proposal
-                ? "#fff2e0"
-                : terms?.agreedPrice != null
-                ? "#eaf8ed"
-                : "rgba(255, 255, 255, 0.18)",
-              color: proposal
-                ? "#875109"
-                : terms?.agreedPrice != null
-                ? "#156633"
-                : "#ffffff",
-              border: "1px solid rgba(255, 255, 255, 0.25)",
-            }}
-          >
-            {proposal
-              ? "Có đề nghị mới"
-              : terms?.agreedPrice != null
-              ? "Đã chốt giá"
-              : isExchange
-              ? "Đổi sách"
-              : "Đang thương lượng"}
-          </span>
         </div>
 
         <div className={styles.cardContent}>
