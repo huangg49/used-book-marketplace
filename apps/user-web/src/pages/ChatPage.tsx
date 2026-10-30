@@ -135,6 +135,7 @@ function ChatRoom({
   const socketRef = useRef<Socket | null>(null);
   const attemptRef = useRef<typeof attempt>(undefined);
   const messagesEnd = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [clock, setClock] = useState(Date.now);
   const now = Math.max(clock, Date.now());
   const active =
@@ -241,6 +242,12 @@ function ChatRoom({
       behavior: "instant",
     });
   }, [messages.length]);
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 96)}px`;
+    }
+  }, [body]);
   function send() {
     const socket = socketRef.current;
     if (sending || expired || !socket || connection !== "online") return;
@@ -320,7 +327,7 @@ function ChatRoom({
       <header className={styles.roomHeader}>
         <ConversationBackLink className={styles.back} />
       </header>
-      {compactHeader && <div className={styles.mobileBookHeader}>{bookIdentity}</div>}
+      {compactHeader && !room.orderId && <div className={styles.mobileBookHeader}>{bookIdentity}</div>}
       <nav
         className={`${sheet.mobileTabs} ${sheet.bookTabs}`}
         aria-label="Nội dung cuộc trao đổi"
@@ -341,12 +348,13 @@ function ChatRoom({
         </button>
       </nav>
       <div
-        className={`${sheet.workspace} ${sheet.openBook} ${styles.paperSpread} ${styles.dossierSpread}`}
+        className={`${sheet.workspace} ${sheet.openBook} ${styles.paperSpread} ${styles.dossierSpread} ${room.orderId ? styles.orderSpread : ""}`}
         data-panel={panel}
+        data-order-mode={Boolean(room.orderId)}
         data-lenis-prevent="true"
       >
         <aside className={sheet.sheet} aria-label={room.orderId ? "Thông tin đơn hàng" : "Phiếu thỏa thuận"}>
-          {!compactHeader && <header className={`${sheet.sheetHeading} ${styles.dossierHeader}`}>
+          {!compactHeader && !room.orderId && <header className={`${sheet.sheetHeading} ${styles.dossierHeader}`}>
             {bookIdentity}
           </header>}
           <h2 className={styles.srOnly}>{room.orderId ? "Thông tin đơn hàng" : "Phiếu thỏa thuận"}</h2>
@@ -928,41 +936,58 @@ function ChatRoom({
                   : "Cuộc trò chuyện đã đóng. Bạn vẫn có thể đọc tin nhắn cũ."}
               </p>
             ) : (
-              <>
+              <div className={styles.composerBar}>
                 <textarea
+                  ref={textareaRef}
                   id="chat-message"
-                  rows={2}
+                  rows={1}
                   maxLength={1000}
                   value={body}
                   disabled={!!attempt}
                   onChange={(event) => setBody(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      send();
+                    }
+                  }}
                   placeholder={
                     room.orderId
-                      ? "Trao đổi về đơn hàng và việc giao nhận…"
+                      ? "Nhắn về đơn hàng… (Enter để gửi)"
                       : isExchange
-                      ? "Trao đổi về sách, tiền bù hoặc giao nhận…"
+                      ? "Nhắn về trao đổi… (Enter để gửi)"
                       : isBuyer
-                        ? "Hỏi về cuốn sách hoặc trao đổi giá…"
-                        : "Trả lời người mua về cuốn sách…"
+                        ? "Hỏi về cuốn sách… (Enter để gửi)"
+                        : "Trả lời người mua… (Enter để gửi)"
                   }
                 />
-                <div className={styles.sendRow}>
-                  <span>{body.length}/1.000 ký tự</span>
-                  <button
-                    type="submit"
-                    disabled={
-                      sending || !body.trim() || connection !== "online"
-                    }
-                  >
-                    <Send size={16} aria-hidden="true" />
-                    {sending
+                <button
+                  type="submit"
+                  className={styles.sendButton}
+                  title={
+                    sending
                       ? "Đang gửi…"
                       : attempt
-                        ? "Thử gửi lại"
-                        : "Gửi tin nhắn"}
-                  </button>
-                </div>
-              </>
+                        ? "Thử gửi lại tin nhắn"
+                        : "Gửi tin nhắn (Enter)"
+                  }
+                  aria-label={
+                    sending
+                      ? "Đang gửi…"
+                      : attempt
+                        ? "Thử gửi lại tin nhắn"
+                        : "Gửi tin nhắn"
+                  }
+                  disabled={sending || !body.trim() || connection !== "online"}
+                >
+                  <Send size={16} aria-hidden="true" />
+                </button>
+                {body.length > 800 && (
+                  <span className={styles.charCount}>
+                    {body.length}/1.000
+                  </span>
+                )}
+              </div>
             )}
           </form>
         </section>

@@ -290,14 +290,14 @@
   text-underline-offset: 4px;
 }
 .suggestion {
-  min-height: 44px;
-  margin-top: 20px;
-  padding: 10px 16px;
+  min-height: 36px;
+  margin-top: 10px;
+  padding: 6px 14px;
   border: 1px solid var(--shop-control);
   border-radius: 8px;
   background: var(--shop-paper);
   color: var(--shop-wine);
-  font: 400 var(--conversation-meta)/1.5 var(--shop-body);
+  font: 500 0.825rem/1.4 var(--shop-body);
   cursor: pointer;
 }
 .suggestion:hover {
@@ -369,7 +369,7 @@
 .composer {
   flex-shrink: 0;
   margin-top: auto;
-  padding-top: 20px;
+  padding: 10px 14px 12px;
   border-top: 1px solid var(--shop-line);
   background: var(--shop-paper);
 }
@@ -383,17 +383,25 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
-.root .composer textarea {
+.composerBar {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  position: relative;
   width: 100%;
-  min-height: 72px;
-  max-height: 140px;
+}
+.root .composer textarea {
+  flex: 1;
+  min-height: 40px;
+  max-height: 96px;
   border: 1px solid var(--shop-control);
-  border-radius: 8px;
-  padding: 12px 16px;
-  font: 400 var(--conversation-body)/1.65 var(--shop-body);
+  border-radius: 20px;
+  padding: 9px 14px;
+  font: 400 0.875rem/1.4 var(--shop-body);
   color: var(--shop-ink);
   background: var(--shop-paper);
-  resize: vertical;
+  resize: none;
+  box-sizing: border-box;
   transition-property: border-color, box-shadow;
   transition-duration: 170ms !important;
   transition-timing-function: ease-out;
@@ -401,17 +409,52 @@
 .root .composer textarea:focus {
   outline: none;
   border-color: var(--shop-wine);
-  box-shadow: none;
+  box-shadow: 0 0 0 1px var(--shop-wine);
 }
 .root .composer textarea:focus-visible {
-  box-shadow: inset 0 0 0 1px var(--shop-wine);
+  box-shadow: 0 0 0 2px var(--shop-wine);
 }
 .composer textarea::placeholder {
   color: var(--shop-muted);
-  opacity: 1;
+  opacity: 0.85;
 }
 .composer textarea:disabled {
   opacity: 0.75;
+}
+.sendButton {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--shop-wine);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+}
+.sendButton:hover:not(:disabled) {
+  background: var(--shop-wine-hover);
+  transform: scale(1.06);
+}
+.sendButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+.charCount {
+  position: absolute;
+  top: -18px;
+  right: 6px;
+  font-size: 0.72rem;
+  color: var(--shop-muted);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
 .sendRow {
   display: flex;
@@ -486,30 +529,30 @@
 }
 .emptyRoom {
   margin: auto;
-  padding: 4px 8px;
-  max-width: 36ch;
+  padding: 8px 12px;
+  max-width: 32ch;
   color: var(--shop-muted);
   text-align: center;
 }
 .emptyMascot {
   display: block;
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 12px;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 8px;
   object-fit: contain;
   pointer-events: none;
   user-select: none;
 }
 .emptyRoom h3 {
-  font-size: var(--conversation-body);
-  line-height: 1.5;
+  font-size: 0.95rem;
+  line-height: 1.4;
   color: var(--shop-ink);
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   font-weight: 700;
 }
 .emptyRoom p {
-  font-size: var(--conversation-body);
-  line-height: 1.65;
+  font-size: 0.825rem;
+  line-height: 1.45;
   margin: 0;
 }
 .selectRoom {
@@ -655,6 +698,17 @@
   overflow: hidden;
   box-shadow: 0 8px 30px rgba(40, 25, 20, 0.08);
 }
+.paperSpread.dossierSpread[data-order-mode="true"],
+.paperSpread.dossierSpread.orderSpread {
+  grid-template-columns: minmax(0, 1fr) 350px;
+}
+@media (min-width: 961px) {
+  .paperSpread.dossierSpread[data-order-mode="true"] > .dossierChat {
+    width: 350px;
+    min-width: 320px;
+    max-width: 360px;
+  }
+}
 .dossierSpread .dossierHeader,
 .mobileBookHeader {
   background: var(--shop-wine);
@@ -752,7 +806,7 @@
 }
 .dossierSpread .dossierChatHeading {
   background: var(--conversation-chat-surface);
-  padding: 14px 20px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--shop-line);
   flex-shrink: 0;
 }
@@ -761,12 +815,12 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior-y: contain;
-  padding: 16px 20px;
+  padding: 12px 14px;
   scrollbar-width: thin;
 }
 .dossierSpread .composer {
   background: var(--conversation-chat-surface);
-  padding: 12px 20px 16px;
+  padding: 8px 12px 10px;
   border-top: 1px solid var(--shop-line);
   flex-shrink: 0;
   margin-top: auto;
