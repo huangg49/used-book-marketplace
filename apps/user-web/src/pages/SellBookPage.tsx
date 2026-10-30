@@ -953,13 +953,17 @@ export function SellBookPage() {
       : ownershipDeclared && [1, 2, 3, 4].every((number) => !stepError(number));
   }
   function statusForStep(value: number) {
-    return value === step
-      ? "Đang chỉnh"
-      : completeStep(value)
-        ? "Đủ thông tin"
-        : checkedSteps.includes(value)
-          ? "Cần bổ sung"
-          : "Chưa hoàn thành";
+    if (value === step) return "Đang chỉnh";
+    if (completeStep(value)) return "Đủ thông tin";
+    if (
+      checkedSteps.includes(value) ||
+      hasAttempt ||
+      validationFailure ||
+      (value < step && Boolean(stepError(value)))
+    ) {
+      return "Thiếu thông tin";
+    }
+    return "Chưa hoàn thành";
   }
   const stepFields: string[] =
     step === 1
@@ -1408,29 +1412,72 @@ export function SellBookPage() {
                 aria-hidden="true"
               />
               <ol>
-                {steps.map((label, index) => (
-                  <li key={label}>
-                    <button
-                      type="button"
-                      aria-current={step === index + 1 ? "step" : undefined}
-                      disabled={submitting}
-                      aria-label={`${index + 1}. ${label}, ${statusForStep(index + 1).toLowerCase()}`}
-                      onClick={() => changeStep(index + 1)}
-                    >
-                      <span className={styles.stepNumber}>
-                        {completeStep(index + 1) ? (
-                          <Check size={16} aria-hidden="true" />
-                        ) : (
-                          index + 1
-                        )}
-                      </span>
-                      <span className={styles.stepLabel}>
-                        {label}
-                        <small>{statusForStep(index + 1)}</small>
-                      </span>
-                    </button>
-                  </li>
-                ))}
+                {steps.map((label, index) => {
+                  const stepNum = index + 1;
+                  const isCurrent = step === stepNum;
+                  const isComplete = completeStep(stepNum);
+                  const isError =
+                    !isComplete &&
+                    (checkedSteps.includes(stepNum) ||
+                      hasAttempt ||
+                      validationFailure ||
+                      (stepNum < step && Boolean(stepError(stepNum))));
+
+                  return (
+                    <li key={label}>
+                      <button
+                        type="button"
+                        aria-current={isCurrent ? "step" : undefined}
+                        disabled={submitting}
+                        aria-label={`${stepNum}. ${label}, ${statusForStep(stepNum).toLowerCase()}`}
+                        onClick={() => changeStep(stepNum)}
+                        className={
+                          isCurrent
+                            ? styles.stepCurrent
+                            : isComplete
+                            ? styles.stepComplete
+                            : isError
+                            ? styles.stepHasError
+                            : ""
+                        }
+                      >
+                        <span
+                          className={`${styles.stepNumber} ${
+                            isComplete
+                              ? styles.stepNumberComplete
+                              : isError
+                              ? styles.stepNumberError
+                              : ""
+                          }`}
+                        >
+                          {isComplete ? (
+                            <Check size={15} strokeWidth={2.8} aria-hidden="true" />
+                          ) : isError ? (
+                            <X size={15} strokeWidth={2.8} aria-hidden="true" />
+                          ) : (
+                            stepNum
+                          )}
+                        </span>
+                        <span className={styles.stepLabel}>
+                          {label}
+                          <small
+                            className={
+                              isCurrent
+                                ? ""
+                                : isComplete
+                                ? styles.stepStatusComplete
+                                : isError
+                                ? styles.stepStatusError
+                                : ""
+                            }
+                          >
+                            {statusForStep(stepNum)}
+                          </small>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
               </ol>
             </nav>
             <div
