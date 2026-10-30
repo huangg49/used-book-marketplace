@@ -326,6 +326,15 @@ function ChatRoom({
     >
       <header className={styles.roomHeader}>
         <ConversationBackLink className={styles.back} />
+        {room.orderId ? (
+          <span className={styles.roomHeaderBadge}>
+            Đơn hàng #{room.orderId.slice(0, 8)}
+          </span>
+        ) : (
+          <span className={styles.roomHeaderBadge}>
+            {other.displayName}
+          </span>
+        )}
       </header>
       {compactHeader && !room.orderId && <div className={styles.mobileBookHeader}>{bookIdentity}</div>}
       <nav
