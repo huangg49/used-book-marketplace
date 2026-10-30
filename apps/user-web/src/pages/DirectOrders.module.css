@@ -1686,4 +1686,71 @@
   line-height: 1.6;
 }
 
+.stepperMini {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 12px 0;
+  padding: 10px 12px;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid rgba(217, 203, 189, 0.6);
+  font-size: 0.78125rem;
+}
+
+.stepperMiniItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--shop-muted, #716157);
+}
+
+.stepperMiniDot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: #f4eee5;
+  color: var(--shop-muted, #716157);
+  border: 1px solid #ebd9c8;
+  flex-shrink: 0;
+}
+
+.stepperMiniDone {
+  color: #166534;
+  font-weight: 600;
+}
+
+.stepperMiniDone .stepperMiniDot {
+  background: #eaf8ed;
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.stepperMiniActive {
+  color: var(--shop-ink, #281914);
+  font-weight: 700;
+}
+
+.stepperMiniActive .stepperMiniDot {
+  background: #5c0202;
+  color: #fff8ee;
+  border-color: #5c0202;
+}
+
+.stepperMiniError {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.stepperMiniError .stepperMiniDot {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
 

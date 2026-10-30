@@ -15,6 +15,8 @@ import {
   AlertCircle,
   Tag,
   ArrowLeftRight,
+  PencilLine,
+  X,
 } from "lucide-react";
 import {
   changeConversationTerms,
@@ -389,106 +391,107 @@ export function NegotiationWorkspace({
               )}
           </div>
 
+          {/* Proposal Banner: Đề nghị mới (về giá hoặc chuyển đổi hình thức) - luôn hiển thị ưu tiên khi có đề nghị */}
+          {proposal && (
+            <div className={styles.proposalCard}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <Tag size={16} color="#875109" />
+                <p className={styles.proposalText}>
+                  <strong>
+                    {proposal.proposedById === userId
+                      ? "Bạn vừa đề nghị"
+                      : "Đối tác đề nghị"}
+                  </strong>{" "}
+                  {proposal.kind === "Price" ? (
+                    <>
+                      giá sách{" "}
+                      <strong style={{ color: "#5c0202", fontSize: "1rem" }}>
+                        {formatVnd(proposal.amount!)}
+                      </strong>
+                    </>
+                  ) : (
+                    <>
+                      chuyển sang hình thức{" "}
+                      <strong>
+                        {proposal.mode === "Exchange"
+                          ? "Đổi sách"
+                          : "Thương lượng mua"}
+                      </strong>
+                    </>
+                  )}
+                </p>
+              </div>
+
+              {proposal.proposedById !== userId ? (
+                <div className={styles.proposalActions}>
+                  <button
+                    type="button"
+                    className={styles.primaryActionBtn}
+                    style={{ minHeight: 38, fontSize: "0.8125rem" }}
+                    disabled={disabled}
+                    onClick={() =>
+                      void command({
+                        expectedVersion: room.version,
+                        proposalId: proposal.id,
+                        accept: true,
+                      })
+                    }
+                  >
+                    <Check size={15} />
+                    <span>Chấp nhận {proposal.kind === "Price" ? "giá này" : "hình thức"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.secondaryActionBtn}
+                    style={{ minHeight: 38, fontSize: "0.8125rem" }}
+                    disabled={disabled}
+                    onClick={() =>
+                      void command({
+                        expectedVersion: room.version,
+                        proposalId: proposal.id,
+                        accept: false,
+                      })
+                    }
+                  >
+                    <X size={15} />
+                    <span>Từ chối</span>
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+                  <span style={{ fontSize: "0.75rem", color: "#875109" }}>
+                    Đang chờ đối tác phản hồi. Đề nghị chưa giữ sách.
+                  </span>
+                  <button
+                    type="button"
+                    style={{
+                      background: "none",
+                      border: 0,
+                      color: "#912b0e",
+                      textDecoration: "underline",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                    disabled={disabled}
+                    onClick={() =>
+                      void command({
+                        expectedVersion: room.version,
+                        proposalId: proposal.id,
+                        accept: false,
+                      })
+                    }
+                  >
+                    Rút đề nghị
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 2. Nếu là Thương lượng mua (Negotiation) */}
           {mode === "Negotiation" && (
             <div className={styles.procedureSection}>
-              {/* Proposal Banner nếu có đề nghị chờ duyệt */}
-              {proposal && (
-                <div className={styles.proposalCard}>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <Tag size={16} color="#875109" />
-                    <p className={styles.proposalText}>
-                      <strong>
-                        {proposal.proposedById === userId
-                          ? "Bạn vừa đề nghị"
-                          : "Đối tác đề nghị"}
-                      </strong>{" "}
-                      {proposal.kind === "Price" ? (
-                        <>
-                          giá sách{" "}
-                          <strong style={{ color: "#5c0202", fontSize: "1rem" }}>
-                            {formatVnd(proposal.amount!)}
-                          </strong>
-                        </>
-                      ) : (
-                        <>
-                          chuyển sang{" "}
-                          <strong>
-                            {proposal.mode === "Exchange"
-                              ? "đổi sách"
-                              : "thương lượng mua"}
-                          </strong>
-                        </>
-                      )}
-                    </p>
-                  </div>
-
-                  {proposal.proposedById !== userId ? (
-                    <div className={styles.proposalActions}>
-                      <button
-                        type="button"
-                        className={styles.primaryActionBtn}
-                        style={{ minHeight: 38, fontSize: "0.8125rem" }}
-                        disabled={disabled}
-                        onClick={() =>
-                          void command({
-                            expectedVersion: room.version,
-                            proposalId: proposal.id,
-                            accept: true,
-                          })
-                        }
-                      >
-                        <Check size={15} />
-                        <span>Chấp nhận {proposal.kind === "Price" ? "giá này" : "hình thức"}</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.secondaryActionBtn}
-                        style={{ minHeight: 38, fontSize: "0.8125rem" }}
-                        disabled={disabled}
-                        onClick={() =>
-                          void command({
-                            expectedVersion: room.version,
-                            proposalId: proposal.id,
-                            accept: false,
-                          })
-                        }
-                      >
-                        <span>Từ chối</span>
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: "0.75rem", color: "#875109" }}>
-                        Đang chờ đối tác phản hồi. Đề nghị chưa giữ sách.
-                      </span>
-                      <button
-                        type="button"
-                        style={{
-                          background: "none",
-                          border: 0,
-                          color: "#912b0e",
-                          textDecoration: "underline",
-                          fontSize: "0.75rem",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
-                        disabled={disabled}
-                        onClick={() =>
-                          void command({
-                            expectedVersion: room.version,
-                            proposalId: proposal.id,
-                            accept: false,
-                          })
-                        }
-                      >
-                        Rút đề nghị
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* Box xác nhận giá đã thống nhất */}
               {terms?.agreedPrice != null && !proposal && (
                 <div className={styles.priceAgreedBox}>
@@ -607,7 +610,86 @@ export function NegotiationWorkspace({
                   <h4>{guidance.title}</h4>
                   <p>{guidance.description}</p>
 
+                  {/* Tiến trình 4 bước chuẩn bị tạo đơn */}
+                  <div className={styles.stepperMini}>
+                    <div className={`${styles.stepperMiniItem} ${terms?.agreedPrice != null ? styles.stepperMiniDone : styles.stepperMiniActive}`}>
+                      <span className={styles.stepperMiniDot}>
+                        {terms?.agreedPrice != null ? <Check size={11} strokeWidth={3} /> : "1"}
+                      </span>
+                      <span>
+                        {terms?.agreedPrice != null
+                          ? `Đã thống nhất giá: ${formatVnd(terms.agreedPrice)}`
+                          : "1. Thống nhất giá sách"}
+                      </span>
+                    </div>
+
+                    <div
+                      className={`${styles.stepperMiniItem} ${
+                        guidance.action === "edit-listing"
+                          ? styles.stepperMiniError
+                          : styles.stepperMiniDone
+                      }`}
+                    >
+                      <span className={styles.stepperMiniDot}>
+                        {guidance.action === "edit-listing" ? (
+                          <AlertCircle size={11} />
+                        ) : (
+                          <Check size={11} strokeWidth={3} />
+                        )}
+                      </span>
+                      <span>
+                        {guidance.action === "edit-listing"
+                          ? "2. Cần cập nhật nơi gửi sách"
+                          : "2. Nơi gửi sách của người bán"}
+                      </span>
+                    </div>
+
+                    <div
+                      className={`${styles.stepperMiniItem} ${
+                        room.hasQuote && room.quotePreview
+                          ? styles.stepperMiniDone
+                          : terms?.agreedPrice != null && guidance.action !== "edit-listing"
+                          ? styles.stepperMiniActive
+                          : ""
+                      }`}
+                    >
+                      <span className={styles.stepperMiniDot}>
+                        {room.hasQuote && room.quotePreview ? (
+                          <Check size={11} strokeWidth={3} />
+                        ) : (
+                          "3"
+                        )}
+                      </span>
+                      <span>
+                        {room.hasQuote && room.quotePreview
+                          ? `3. Đã có phí giao hàng: ${formatVnd(room.quotePreview.shippingFee)}`
+                          : "3. Địa chỉ nhận & phí giao hàng"}
+                      </span>
+                    </div>
+
+                    <div
+                      className={`${styles.stepperMiniItem} ${
+                        guidance.action === "create-order"
+                          ? styles.stepperMiniActive
+                          : ""
+                      }`}
+                    >
+                      <span className={styles.stepperMiniDot}>4</span>
+                      <span>4. Người bán tạo đơn hàng</span>
+                    </div>
+                  </div>
+
                   <div style={{ marginTop: 12 }}>
+                    {guidance.action === "edit-listing" && (
+                      <Link
+                        className={styles.primaryActionBtn}
+                        to={`/my-books/${room.listingId}/edit`}
+                      >
+                        <PencilLine size={16} />
+                        <span>{guidance.actionLabel || "Cập nhật nơi gửi sách"}</span>
+                      </Link>
+                    )}
+
                     {guidance.action === "address" && !room.terms?.locked && (
                       <Link
                         className={styles.primaryActionBtn}
@@ -668,7 +750,11 @@ export function NegotiationWorkspace({
                 <ExchangeOffer room={room} userId={userId} book={book} refresh={refresh} />
               ) : (
                 <div className={styles.procedureNoticeInfo}>
-                  <p>Chưa có đề nghị đổi sách nào đang hoạt động.</p>
+                  <p>
+                    {seller
+                      ? "Chế độ Đổi sách đang hoạt động. Chờ người mua chọn sách từ tủ sách để gửi đề nghị đổi, hoặc trao đổi thêm ở khung chat bên phải."
+                      : "Chưa có đề nghị đổi sách nào đang hoạt động."}
+                  </p>
                 </div>
               )}
 
