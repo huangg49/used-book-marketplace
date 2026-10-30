@@ -43,15 +43,15 @@ export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
       className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-lg border border-outline-variant/30"
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm border-b border-surface-container-high/40 pb-space-sm">
-        <div className="flex items-center gap-space-sm">
-          <div className="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
+        <div className="flex min-w-0 items-center gap-space-sm">
+          <div className="w-9 h-9 shrink-0 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary">
             <Gavel size={20} />
           </div>
-          <div>
-            <h2 id="overview-activity-title" className="text-lg md:text-xl text-primary font-bold tracking-normal">
+          <div className="min-w-0 flex flex-col gap-1">
+            <h2 id="overview-activity-title" className="m-0 text-lg md:text-xl leading-snug text-primary font-bold tracking-normal">
               Hoạt động gần đây
             </h2>
-            <p className="font-body-sm text-body-sm text-on-surface-variant">
+            <p className="m-0 font-body-sm text-body-sm leading-normal text-on-surface-variant">
               Thông báo từ các phiên đấu giá.
             </p>
           </div>

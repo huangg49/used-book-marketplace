@@ -24,6 +24,11 @@
   phục và motion theo owner, không thêm font/theme/palette.
 - QA riêng được dọn/dừng khi kết thúc; DB chính không migrate/import/reset/seed.
   Chỉ commit local cho gói này, chưa push/PR/merge; READINESS giữ nguyên.
+- Follow-up căn header Hoạt động gần đây: bỏ margin heading kế thừa, dùng gap4px
+  giữa tiêu đề/mô tả và giữ icon36px không co. Browser fixture cô lập (empty
+  notifications, không ghi API/DB) tại1440/768/390/320: cùng lề, icon căn giữa,
+  không overflow; đã xem ảnh desktop/mobile. Lint/typecheck, detector0finding
+  đạt; lint còn warning có sẵn ở exchange/search/sell ngoài phạm vi.
 
 ## Tích hợp chuỗi Member/review/listing AI qua PR79 — 29/10/2026
 
