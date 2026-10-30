@@ -1,9 +1,7 @@
 import {
   Library,
-  UserRound,
   ArrowLeftRight,
   LayoutDashboard,
-  ListChecks,
   Gavel,
   ShoppingBag,
   Wallet,
@@ -14,8 +12,6 @@ import { ROUTES } from "./routes";
 // One set of destinations for the header disclosure, mobile menu and sidebar.
 export const accountNavigation = [
   { to: ROUTES.account, label: "Tổng quan", icon: LayoutDashboard },
-  { to: ROUTES.accountWork, label: "Việc của tôi", icon: ListChecks },
-  { to: ROUTES.profile, label: "Hồ sơ của tôi", icon: UserRound },
   { to: '/reviews', label: 'Đánh giá của tôi', icon: Star },
   { to: ROUTES.wallet, label: "Ví của tôi", icon: Wallet },
   { to: "/orders", label: "Đơn trực tiếp", icon: ShoppingBag },

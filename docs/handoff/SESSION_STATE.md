@@ -50,6 +50,11 @@
   Giữ query/count và deep link active/payment/all. Browser fixture chặn API tại
   5width kiểm empty/count2-1-3/loading/error, link và keyboard, không overflow;
   đã xem desktop/mobile. Lint/build và detector0finding đạt; không đổi API/DB.
+- Owner bỏ2tab Việc của tôi/Hồ sơ của tôi khỏi accountNavigation dùng chung
+  header desktop/mobile và sidebar; giữ route/trang hiện có. Browser fixture
+  chặn API kiểm menu desktop/sidebar mobile:2entry vắng,7mục chung và thông báo
+  sidebar giữ nguyên. Lint/typecheck đạt; account/wallet harness theo menu mới,
+  chưa chạy lại2suite API/Mongo browser này. Không đổi RN hoặc READINESS.
 
 ## Tích hợp chuỗi Member/review/listing AI qua PR79 — 29/10/2026
 

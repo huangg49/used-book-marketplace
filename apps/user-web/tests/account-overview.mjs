@@ -79,7 +79,12 @@ try {
   async function account(){
     await page.setViewportSize({width:1440,height:900});
     await page.getByRole('button',{name:/^Tài khoản của/}).click();
-    await page.getByRole('navigation',{name:'Tài khoản cá nhân',exact:true}).getByRole('link',{name:'Việc của tôi',exact:true}).click();
+    const navigation=page.getByRole('navigation',{name:'Tài khoản cá nhân',exact:true});
+    for(const name of ['Việc của tôi','Hồ sơ của tôi'])assert.equal(await navigation.getByRole('link',{name,exact:true}).count(),0);
+    // These pages remain available by URL; they are no longer menu entries.
+    await page.goto(origin+'/account/work');
+    await Promise.race([main.getByRole('heading',{name:'Việc của tôi',exact:true}).waitFor(),page.getByLabel(/^Email/).waitFor()]);
+    if(await page.getByLabel(/^Email/).isVisible())await login();
     await main.getByRole('heading',{name:'Việc của tôi',exact:true}).waitFor();
   }
   async function capture(name,width){await page.setViewportSize({width,height:900});await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:path.join(evidence,name+'.png'),fullPage:true});}
