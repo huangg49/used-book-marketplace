@@ -2,6 +2,12 @@
 
 ## Khôi phục tổng quan Profile web — 30/10/2026
 
+- Tạm dừng theo yêu cầu owner để tắt máy: web5174, API3000 và Mongo local đã
+  dừng; giữ volume/dữ liệu. Code UI đã commit local trên nhánh bên dưới, chưa
+  push/PR/merge. Lượt khởi chạy UI đã sao lưu DB trước khi áp dụng7migration
+  thiếu/cập nhật role bằng env hiện có; preflight sau đó đủ56migration, không
+  lệch checksum; không reset/seed, số user/ledger giữ nguyên. Khi tiếp tục, kiểm
+  git và trạng thái dịch vụ trước khởi chạy lại; READINESS không đổi.
 - Owner yêu cầu trả lại trang tổng quan cũ. Nhánh `codex/restore-profile-overview`,
   baseab80b43 sau fetch/pull PR80 của nhóm; giữ các thay đổi trao đổi/thông báo/
   form đăng sách mới. Commit subject `fix(web): restore member profile overview`.
