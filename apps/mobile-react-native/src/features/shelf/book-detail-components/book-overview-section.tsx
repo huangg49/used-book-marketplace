@@ -1,5 +1,6 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { router } from "expo-router";
 import { AppText, Icon, space, stitchTokens } from "../../../core/ui";
 import type { Listing } from "../contracts";
 
@@ -198,6 +199,30 @@ export function BookOverviewSection({ item }: BookOverviewSectionProps) {
                   </AppText>
                 </View>
               ) : null}
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Tìm sách khớp mong muốn này trên sàn"
+                onPress={() => {
+                  const query =
+                    item.exchangePreferences?.targetAuthor ||
+                    item.exchangePreferences?.targetCategory ||
+                    "";
+                  router.push({
+                    pathname: "/search",
+                    params: { q: query, mode: "Both" },
+                  });
+                }}
+                style={({ pressed }) => [
+                  styles.searchPrefBtn,
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Icon name="search" size={11} color={stitchTokens.wineDark} />
+                <AppText style={styles.searchPrefBtnText}>
+                  Tìm sách khớp mong muốn trên sàn →
+                </AppText>
+              </Pressable>
             </View>
           </View>
         )}
@@ -417,5 +442,23 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: stitchTokens.wineDark,
     flexShrink: 1,
+  },
+  searchPrefBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 5,
+    backgroundColor: stitchTokens.whiteSurface,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    marginTop: 4,
+  },
+  searchPrefBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
   },
 });

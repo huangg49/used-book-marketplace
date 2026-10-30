@@ -294,18 +294,58 @@ export function BookDetailPage() {
                     </div>
                     {book.exchangePreferences.targetCategory && (
                       <p style={{ margin: "2px 0", fontSize: 13, color: "var(--ink)" }}>
-                        <strong>Thể loại:</strong> {book.exchangePreferences.targetCategory}
+                        <strong>Thể loại:</strong>{" "}
+                        <Link
+                          to={`/books?search=${encodeURIComponent(book.exchangePreferences.targetCategory)}`}
+                          style={{ color: "#9a3412", textDecoration: "underline" }}
+                          title="Tìm sách thể loại này trên sàn"
+                        >
+                          {book.exchangePreferences.targetCategory}
+                        </Link>
                       </p>
                     )}
                     {book.exchangePreferences.targetAuthor && (
                       <p style={{ margin: "2px 0", fontSize: 13, color: "var(--ink)" }}>
-                        <strong>Tác giả:</strong> {book.exchangePreferences.targetAuthor}
+                        <strong>Tác giả:</strong>{" "}
+                        <Link
+                          to={`/books?search=${encodeURIComponent(book.exchangePreferences.targetAuthor)}`}
+                          style={{ color: "#9a3412", textDecoration: "underline" }}
+                          title="Tìm sách tác giả này trên sàn"
+                        >
+                          {book.exchangePreferences.targetAuthor}
+                        </Link>
                       </p>
                     )}
                     {book.exchangePreferences.targetDescription && (
                       <p style={{ margin: "2px 0", fontSize: 13, color: "var(--ink)" }}>
                         <strong>Ghi chú:</strong> {book.exchangePreferences.targetDescription}
                       </p>
+                    )}
+                    {isOwner && (
+                      <div style={{ marginTop: 8 }}>
+                        <Link
+                          to={`/books?search=${encodeURIComponent(
+                            book.exchangePreferences.targetAuthor ||
+                              book.exchangePreferences.targetCategory ||
+                              "",
+                          )}`}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#9a3412",
+                            padding: "4px 10px",
+                            borderRadius: 6,
+                            background: "#fff",
+                            border: "1px solid #fed7aa",
+                            textDecoration: "none",
+                          }}
+                        >
+                          🔍 Tìm sách khớp mong muốn này trên sàn →
+                        </Link>
+                      </div>
                     )}
                   </div>
                 )}
