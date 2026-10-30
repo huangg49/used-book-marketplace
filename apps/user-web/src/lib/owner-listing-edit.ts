@@ -89,9 +89,9 @@ export type RevisionFormValue = {
   mode: Mode;
   salePrice: string;
   exchangeValue: string;
-  targetCategory: string;
-  targetAuthor: string;
-  targetDescription: string;
+  targetCategory?: string;
+  targetAuthor?: string;
+  targetDescription?: string;
   originAddressId: string;
   photoCount: number;
   ownershipDeclared: boolean;

@@ -108,14 +108,17 @@ export const exchangeSchema = z.object({
       "ListingUnavailable",
       "ShippingExpired",
       "DisputeResolvedRefund",
+      "MutualAgreement",
     ])
     .nullable()
     .optional(),
   cancelledBy: z
-    .enum(["Initiator", "Recipient", "System", "Staff"])
+    .enum(["Initiator", "Recipient", "System", "Staff", "Both"])
     .nullable()
     .optional(),
   cancelledAt: date,
+  cancellationRequestedBy: z.enum(["Initiator", "Recipient"]).nullable().optional(),
+  cancellationRequestedAt: date,
   resolutionDecision: z.enum(["RefundBoth", "CompleteExchange"]).nullable().optional(),
   resolutionReason: z.string().nullable().optional(),
   resolvedBy: z.string().uuid().nullable().optional(),

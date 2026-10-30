@@ -3,9 +3,12 @@ import { applyCollectionSpecs } from './index.js';
 import type { CollectionSpec } from '../schema-dsl.js';
 import { document, UUID_PATTERN } from '../schema-dsl.js';
 import { exchangePhase6ChangedSpecs } from './0031-exchange-multi-book.js';
+import { withExchangeInspectionDeadlines } from './0039-exchange-inspection-deadlines.js';
 
 const OPTIONAL_EXCHANGE_FIELDS = new Set([
   'inspectionDeadline',
+  'initiatorInspectionDeadline',
+  'recipientInspectionDeadline',
   'completedAt',
   'initiatorAddress',
   'recipientAddress',
@@ -83,9 +86,9 @@ export const withExchangeDisputeResolution = (
   };
 };
 
-export const exchangeDisputeResolutionSpecs = exchangePhase6ChangedSpecs.map(
-  withExchangeDisputeResolution,
-);
+export const exchangeDisputeResolutionSpecs = exchangePhase6ChangedSpecs
+  .map(withExchangeInspectionDeadlines)
+  .map(withExchangeDisputeResolution);
 
 export const exchangeDisputeResolutionMigration = {
   id: '0044-exchange-dispute-resolution',

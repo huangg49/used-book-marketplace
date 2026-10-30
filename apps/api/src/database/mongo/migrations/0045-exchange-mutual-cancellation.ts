@@ -6,6 +6,8 @@ import { exchangeDisputeResolutionSpecs } from './0044-exchange-dispute-resoluti
 
 const OPTIONAL_EXCHANGE_FIELDS = new Set([
   'inspectionDeadline',
+  'initiatorInspectionDeadline',
+  'recipientInspectionDeadline',
   'completedAt',
   'initiatorAddress',
   'recipientAddress',

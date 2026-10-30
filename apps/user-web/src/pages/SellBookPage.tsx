@@ -1399,6 +1399,9 @@ export function SellBookPage() {
                 mode: "Sale",
                 salePrice: "",
                 exchangeValue: "",
+                targetCategory: "",
+                targetAuthor: "",
+                targetDescription: "",
               });
               setImageFiles([]);
               setHasCoverPhoto(false);
