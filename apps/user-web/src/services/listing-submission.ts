@@ -127,6 +127,11 @@ export type ListingInput = {
   mode: "Sale" | "Exchange" | "Both";
   salePrice: number | null;
   exchangeValue: number | null;
+  exchangePreferences?: {
+    targetCategory?: string | null;
+    targetAuthor?: string | null;
+    targetDescription?: string | null;
+  } | null;
   files: File[];
   readable: boolean;
   hasMissingPages: boolean;
@@ -269,6 +274,7 @@ export function createListingSubmission(
             missingEssentialContent: input.missingEssentialContent,
             salePrice: input.salePrice,
             exchangeValue: input.exchangeValue,
+            exchangePreferences: input.exchangePreferences ?? null,
             mediaIds,
             fulfillment: input.fulfillment,
           },

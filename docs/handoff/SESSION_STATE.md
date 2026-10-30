@@ -1,5 +1,50 @@
 # Điểm lưu hiện tại — 30/10/2026
 
+## Hoàn thiện Tính năng Tiêu chí mong muốn trao đổi & Cơ chế Ghép đôi Thông minh (Exchange Preferences & Smart Matchmaking) — 30/10/2026
+
+- Nhánh `feature/exchange-policy-and-transit-worker`.
+- **Bối cảnh & Nghiệp vụ**:
+  - Khi người dùng đăng sách chọn chế độ Trao đổi (`Exchange`) hoặc Cả bán & đổi (`Both`), họ thường có định hướng cuốn sách mong muốn nhận lại (theo thể loại, tác giả, hoặc mô tả/bản dịch/bìa mong muốn).
+  - Khác biệt hoàn toàn với bộ lọc tìm kiếm một chiều (Catalog Search Filter): Đây là **Cơ chế ghép đôi thông minh theo ngữ cảnh trao đổi 2 chiều (Bidirectional Contextual Matchmaking)**:
+    1. Chủ sách thiết lập `exchangePreferences` (`targetCategory`, `targetAuthor`, `targetDescription`).
+    2. Khi người dùng khác mở màn hình tạo đề xuất trao đổi (`ExchangeComposePage` trên Web và `ExchangeComposeScreen` trên Mobile RN), hệ thống tự động đối chiếu các tiêu chí này với từng cuốn sách trên kệ của người dùng đó.
+    3. Cuốn sách thỏa mãn bất kỳ tiêu chí nào được tự động gắn huy hiệu `✨ Khớp mong muốn đối tác` (hoặc `✨ Khớp mong muốn`) và được tự động sắp xếp ưu tiên lên đầu danh sách chọn.
+    4. Chi tiết cuốn sách (`BookDetailPage` trên Web và `BookOverviewSection` trên Mobile RN) hiển thị thẻ trang trọng "🎯 Tiêu chí đổi sách của chủ sở hữu".
+- **Nội dung thực hiện chi tiết**:
+  1. **API Contract (`packages/api-contract`)**:
+     - Định nghĩa `ExchangePreferences` schema (`targetCategory`, `targetAuthor`, `targetDescription`) trong `openapi.yaml`.
+     - Tích hợp `exchangePreferences` vào `DraftContent`, `SubmittedContent`, và `PublicListing`.
+     - `pnpm contract:generate` và `pnpm contract:check` -> PASS.
+  2. **MongoDB Migration `0042-listing-exchange-preferences.ts`**:
+     - Khai báo kiểu `ExchangePreferencesDoc` và cập nhật `ListingRevisionDoc` trong `documents.ts`.
+     - Tạo migration 0042 cập nhật JSON schema validator cho collection `listing_revisions`.
+     - Đăng ký và áp dụng migration thành công trên runtime MongoDB.
+  3. **Backend Service & Projection (`apps/api`)**:
+     - `apps/api/src/modules/listings/listing-projection.ts`: Cập nhật `revisionContent()` lưu giữ an toàn `exchangePreferences`.
+     - `apps/api/src/modules/listings/public-listing.service.ts`: Chiếu `exchangePreferences` ra `PublicListing`.
+     - Bổ sung unit test trong `public-listing.service.spec.ts` kiểm thử chiếu `exchangePreferences` -> 9/9 tests PASS.
+  4. **User Web (`apps/user-web`)**:
+     - `services/public-listings.ts`, `services/my-listings.ts`, `services/listing-submission.ts`: Bổ sung Zod schema và submission input.
+     - `lib/owner-listing-edit.ts`: Cập nhật form state và mapping an toàn (optional chaining) -> 23/23 tests PASS.
+     - `pages/SellBookPage.tsx`: Thêm trường nhập "🎯 Tiêu chí đổi sách mong muốn (Tùy chọn)" ở Bước 4 và tóm tắt ở Bước 5.
+     - `pages/EditListingPage.tsx`: Thêm form nhập tiêu chí đổi sách khi sửa bài đăng.
+     - `pages/BookDetailPage.tsx`: Card "🎯 Tiêu chí đổi sách của chủ sở hữu" hiển thị các tiêu chí đã đăng.
+     - `pages/ExchangeComposePage.tsx` & `.module.css`: Banner tiêu chí của đối tác, thuật toán so khớp `checkMatch()`, huy hiệu `✨ Khớp mong muốn đối tác` và ưu tiên đưa sách khớp lên đầu.
+     - Vitest kiểm thử User Web: **36 test files, 248 tests PASS 100%**.
+  5. **Mobile React Native (`apps/mobile-react-native`)**:
+     - `features/shelf/contracts.ts`, `features/drafts/contracts.ts`, `features/drafts/listing-form.ts`: Schema Zod và form transform -> 13/13 tests PASS.
+     - `features/drafts/listing-fields.tsx`: Card nhập "🎯 TIÊU CHÍ ĐỔI SÁCH MONG MUỐN (TÙY CHỌN)" trong bước định giá khi chế độ giao dịch cho phép đổi.
+     - `features/drafts/draft-editor.tsx`: Hiển thị "Tiêu chí đổi mong muốn" trong bảng tổng hợp kiểm tra trước khi gửi duyệt.
+     - `features/shelf/book-detail-components/book-overview-section.tsx`: Thẻ giao diện "🎯 Tiêu chí đổi sách của chủ sở hữu".
+     - `features/exchanges/exchange-compose-screen.tsx`: Banner tiêu chí đối tác, `InventoryBookRow` với `checkMatch()`, sắp xếp danh sách ưu tiên sách khớp lên đầu `sortedEligibleListings`, huy hiệu `✨ Khớp mong muốn`.
+     - Vitest kiểm thử Mobile RN: **24 test files, 163 tests PASS 100%**.
+- **Kiểm tra**:
+  - `pnpm contract:check`: PASS
+  - `pnpm --filter @used-books/api exec tsc --noEmit`: PASS (0 errors)
+  - `pnpm --filter @used-books/user-web exec tsc --noEmit`: PASS (0 errors)
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 errors)
+  - `pnpm --filter @used-books/admin-web exec tsc --noEmit`: PASS (0 errors)
+
 ## Hoàn thiện cơ chế Đồng thuận hủy (Mutual Cancellation) trong trạng thái Đang chuẩn bị (Preparing) — 30/10/2026
 
 - Nhánh `feature/exchange-policy-and-transit-worker`.

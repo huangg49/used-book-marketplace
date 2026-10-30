@@ -10573,6 +10573,28 @@ components:
                 type: string
                 maxLength: 500
       description: Whole-only physical lot; exact component labels must be nonblank and unique after normalization. All items are sold, reserved, shipped and returned together. No separate component sale, Auction or Exchange. Catalog series does not imply a bundle.
+    ExchangePreferences:
+      type: object
+      additionalProperties: false
+      properties:
+        targetCategory:
+          anyOf:
+            - type: string
+              maxLength: 100
+            - type: "null"
+          description: Thể loại sách mong muốn nhận (VD 'Văn học', 'Kinh tế', 'Tâm lý học')
+        targetAuthor:
+          anyOf:
+            - type: string
+              maxLength: 150
+            - type: "null"
+          description: Tác giả mong muốn nhận (VD 'Haruki Murakami', 'Nguyễn Nhật Ánh')
+        targetDescription:
+          anyOf:
+            - type: string
+              maxLength: 500
+            - type: "null"
+          description: Ghi chú tiêu chí trao đổi chi tiết
     DraftContent:
       type: object
       additionalProperties: false
@@ -10665,6 +10687,10 @@ components:
             - type: integer
               minimum: 10000
               maximum: 1000000
+            - type: "null"
+        exchangePreferences:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangePreferences"
             - type: "null"
         mediaIds:
           type: array
@@ -10789,6 +10815,10 @@ components:
             - type: integer
               minimum: 10000
               maximum: 1000000
+            - type: "null"
+        exchangePreferences:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangePreferences"
             - type: "null"
         mediaIds:
           type: array
@@ -11106,6 +11136,10 @@ components:
             - type: integer
               minimum: 10000
               maximum: 1000000
+            - type: "null"
+        exchangePreferences:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangePreferences"
             - type: "null"
         seller:
           type: object

@@ -23,6 +23,14 @@ export const draftContent = z.object({
   missingEssentialContent: z.boolean().nullable(),
   salePrice: z.number().int().nullable(),
   exchangeValue: z.number().int().nullable(),
+  exchangePreferences: z
+    .object({
+      targetCategory: z.string().nullable().optional(),
+      targetAuthor: z.string().nullable().optional(),
+      targetDescription: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional(),
   mediaIds: z.array(uuid).max(8),
 });
 // ADR 0042: Auction listings are created by the auction flow and never reach
@@ -116,5 +124,6 @@ export const emptyContent: z.infer<typeof draftContent> = {
   missingEssentialContent: null,
   salePrice: null,
   exchangeValue: null,
+  exchangePreferences: null,
   mediaIds: [],
 };

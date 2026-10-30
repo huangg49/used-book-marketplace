@@ -115,6 +115,7 @@ export function archiveListing(
 const bookIdentitySchema = z.object({
   title: z.string(),
   authors: z.array(z.string()),
+  category: z.string().optional(),
 });
 const privateBookSchema = z.object({
   currentRevision: z.object({ metadata: bookIdentitySchema }),

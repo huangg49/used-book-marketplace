@@ -3332,6 +3332,14 @@ export interface components {
                 notes: string;
             }[];
         };
+        ExchangePreferences: {
+            /** @description Thể loại sách mong muốn nhận (VD 'Văn học', 'Kinh tế', 'Tâm lý học') */
+            targetCategory?: string | null;
+            /** @description Tác giả mong muốn nhận (VD 'Haruki Murakami', 'Nguyễn Nhật Ánh') */
+            targetAuthor?: string | null;
+            /** @description Ghi chú tiêu chí trao đổi chi tiết */
+            targetDescription?: string | null;
+        };
         /** @description Full replacement, not a patch. Incomplete text is allowed. Selected values must be valid; inactive mode prices must be null (both null if mode is null). mediaIds are ordered and must belong to this listing. Uploads may be Processing in a draft, but must be Ready at submission. */
         DraftContent: ({
             /** @description Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return. */
@@ -3349,6 +3357,7 @@ export interface components {
             description: string;
             salePrice: number | null;
             exchangeValue: number | null;
+            exchangePreferences?: components["schemas"]["ExchangePreferences"] | null;
             mediaIds: string[];
             /** @description Optional while a draft is incomplete; required before submitting a Sale or Both listing. Omitted preserves the existing choice on replacement; null explicitly clears it. Configured origins must be current at save, submission and approval. No checkout is enabled. */
             fulfillment?: components["schemas"]["ListingFulfillment"] | null;
@@ -3388,6 +3397,7 @@ export interface components {
             description: string;
             salePrice: number | null;
             exchangeValue: number | null;
+            exchangePreferences?: components["schemas"]["ExchangePreferences"] | null;
             mediaIds: string[];
             /** @description Optional for legacy compatibility. Omitted preserves the existing choice on replacement; null explicitly clears it. Configured origins must be current at save, submission and approval. No checkout is enabled. */
             fulfillment?: components["schemas"]["ListingFulfillment"] | null;
@@ -3492,6 +3502,7 @@ export interface components {
             description: string;
             salePrice: number | null;
             exchangeValue: number | null;
+            exchangePreferences?: components["schemas"]["ExchangePreferences"] | null;
             seller: {
                 /** Format: uuid */
                 id: string;

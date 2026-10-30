@@ -1572,6 +1572,30 @@ export function DraftEditor({
                 ...(form.mode === "Exchange" || form.mode === "Both"
                   ? [["Giá trị đổi / đối chiếu", displayPrice(form.exchangeValue)]]
                   : []),
+                ...(!auction &&
+                (form.mode === "Exchange" || form.mode === "Both") &&
+                (form.exchangePreferences?.targetCategory ||
+                  form.exchangePreferences?.targetAuthor ||
+                  form.exchangePreferences?.targetDescription)
+                  ? [
+                      [
+                        "Tiêu chí đổi mong muốn",
+                        [
+                          form.exchangePreferences.targetCategory
+                            ? `Thể loại: ${form.exchangePreferences.targetCategory}`
+                            : null,
+                          form.exchangePreferences.targetAuthor
+                            ? `Tác giả: ${form.exchangePreferences.targetAuthor}`
+                            : null,
+                          form.exchangePreferences.targetDescription
+                            ? `Ghi chú: ${form.exchangePreferences.targetDescription}`
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · "),
+                      ],
+                    ]
+                  : []),
               ].map(([lbl, val]) => (
                 <View
                   key={lbl}

@@ -160,6 +160,47 @@ export function BookOverviewSection({ item }: BookOverviewSectionProps) {
           </AppText>
         </View>
       </View>
+
+      {/* Exchange Preferences Card */}
+      {item.exchangePreferences &&
+        (item.exchangePreferences.targetCategory ||
+          item.exchangePreferences.targetAuthor ||
+          item.exchangePreferences.targetDescription) && (
+          <View style={styles.exchangePrefCard}>
+            <View style={styles.exchangePrefHeader}>
+              <Icon name="sync" size={14} color={stitchTokens.wineDark} />
+              <AppText style={styles.exchangePrefTitle}>
+                🎯 Tiêu chí đổi sách của chủ sở hữu
+              </AppText>
+            </View>
+            <View style={styles.exchangePrefBody}>
+              {item.exchangePreferences.targetCategory ? (
+                <View style={styles.prefRow}>
+                  <AppText style={styles.prefLabel}>Thể loại mong muốn: </AppText>
+                  <AppText style={styles.prefValue}>
+                    {item.exchangePreferences.targetCategory}
+                  </AppText>
+                </View>
+              ) : null}
+              {item.exchangePreferences.targetAuthor ? (
+                <View style={styles.prefRow}>
+                  <AppText style={styles.prefLabel}>Tác giả mong muốn: </AppText>
+                  <AppText style={styles.prefValue}>
+                    {item.exchangePreferences.targetAuthor}
+                  </AppText>
+                </View>
+              ) : null}
+              {item.exchangePreferences.targetDescription ? (
+                <View style={styles.prefRow}>
+                  <AppText style={styles.prefLabel}>Ghi chú: </AppText>
+                  <AppText style={styles.prefValue}>
+                    {item.exchangePreferences.targetDescription}
+                  </AppText>
+                </View>
+              ) : null}
+            </View>
+          </View>
+        )}
     </View>
   );
 }
@@ -339,5 +380,42 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: stitchTokens.roseBrown,
     fontWeight: "500",
+  },
+  exchangePrefCard: {
+    backgroundColor: "#FDF8F5",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    padding: space.sm,
+    gap: 6,
+  },
+  exchangePrefHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  exchangePrefTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  exchangePrefBody: {
+    gap: 4,
+  },
+  prefRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+  },
+  prefLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.roseBrown,
+  },
+  prefValue: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: stitchTokens.wineDark,
+    flexShrink: 1,
   },
 });

@@ -743,6 +743,97 @@ export function PricingFields({
           </View>
         </View>
       ) : null}
+
+      {/* Exchange Preferences Card */}
+      {!auction && (form.mode === "Exchange" || form.mode === "Both") ? (
+        <View
+          style={{
+            backgroundColor: stitchTokens.warmIvory,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: stitchTokens.borderWarm,
+            padding: space.md,
+            gap: space.sm,
+            shadowColor: stitchTokens.black,
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.05,
+            shadowRadius: 3,
+            elevation: 1,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <Icon name="sync" size={14} color={stitchTokens.wine} />
+            <AppText
+              kind="label"
+              color={stitchTokens.wine}
+              style={{ fontWeight: "700", letterSpacing: 0.5 }}
+            >
+              🎯 TIÊU CHÍ ĐỔI SÁCH MONG MUỐN (TÙY CHỌN)
+            </AppText>
+          </View>
+
+          <AppText kind="small" color={stitchTokens.subtleGray}>
+            Nhập thể loại, tác giả hoặc mô tả cuốn sách bạn muốn đổi lấy để hệ thống gợi ý ghép đôi trao đổi thông minh (Smart Matchmaking).
+          </AppText>
+
+          <TextField
+            label="Thể loại mong muốn"
+            hint="VD: Văn học, Kinh tế, Tâm lý..."
+            value={form.exchangePreferences?.targetCategory ?? ""}
+            editable={!disabled}
+            onChangeText={(targetCategory) =>
+              onChange({
+                ...form,
+                exchangePreferences: {
+                  ...form.exchangePreferences,
+                  targetCategory,
+                },
+              })
+            }
+            maxLength={100}
+          />
+
+          <TextField
+            label="Tác giả mong muốn"
+            hint="VD: Haruki Murakami, Dan Brown..."
+            value={form.exchangePreferences?.targetAuthor ?? ""}
+            editable={!disabled}
+            onChangeText={(targetAuthor) =>
+              onChange({
+                ...form,
+                exchangePreferences: {
+                  ...form.exchangePreferences,
+                  targetAuthor,
+                },
+              })
+            }
+            maxLength={150}
+          />
+
+          <TextField
+            label="Ghi chú tiêu chí trao đổi chi tiết"
+            hint="VD: Ưu tiên bản dịch mới hoặc sách trinh thám..."
+            value={form.exchangePreferences?.targetDescription ?? ""}
+            editable={!disabled}
+            onChangeText={(targetDescription) =>
+              onChange({
+                ...form,
+                exchangePreferences: {
+                  ...form.exchangePreferences,
+                  targetDescription,
+                },
+              })
+            }
+            maxLength={500}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }

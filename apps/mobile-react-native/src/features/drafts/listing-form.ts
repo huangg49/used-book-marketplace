@@ -38,6 +38,14 @@ export function toContent(f: Form): Content {
       f.mode === "Exchange" || f.mode === "Both"
         ? price(f.exchangeValue)
         : null,
+    exchangePreferences:
+      f.mode !== "Sale" && f.exchangePreferences
+        ? {
+            targetCategory: f.exchangePreferences.targetCategory || null,
+            targetAuthor: f.exchangePreferences.targetAuthor || null,
+            targetDescription: f.exchangePreferences.targetDescription || null,
+          }
+        : null,
   };
 }
 export const editableListing = (d: Draft) =>

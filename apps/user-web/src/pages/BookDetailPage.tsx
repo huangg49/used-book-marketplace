@@ -3,7 +3,7 @@ import { listingTitle } from "../lib/book-bundle";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowUpRight, MapPin, MessageCircle, BookOpen, ClipboardCheck, Languages, CalendarDays, Building2, Hash, Layers3 } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, MapPin, MessageCircle, BookOpen, ClipboardCheck, Languages, CalendarDays, Building2, Hash, Layers3, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { ListingGallery } from "../components/ListingGallery";
 import { conditions } from "../lib/listing-labels";
@@ -264,6 +264,51 @@ export function BookDetailPage() {
           )}
           {["Exchange", "Both"].includes(book.mode) && (
             <section className={styles.purchase}>
+              {book.exchangePreferences &&
+                (book.exchangePreferences.targetCategory ||
+                  book.exchangePreferences.targetAuthor ||
+                  book.exchangePreferences.targetDescription) && (
+                  <div
+                    style={{
+                      background: "#fffdf5",
+                      border: "1px solid #ebd9a2",
+                      borderRadius: 6,
+                      padding: "12px 14px",
+                      marginBottom: 16,
+                      textAlign: "left",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontWeight: 700,
+                        fontSize: 13,
+                        color: "#8c5b13",
+                        marginBottom: 6,
+                      }}
+                    >
+                      <Sparkles size={15} />
+                      <span>Tiêu chí đổi sách của chủ sở hữu:</span>
+                    </div>
+                    {book.exchangePreferences.targetCategory && (
+                      <p style={{ margin: "2px 0", fontSize: 13, color: "var(--ink)" }}>
+                        <strong>Thể loại:</strong> {book.exchangePreferences.targetCategory}
+                      </p>
+                    )}
+                    {book.exchangePreferences.targetAuthor && (
+                      <p style={{ margin: "2px 0", fontSize: 13, color: "var(--ink)" }}>
+                        <strong>Tác giả:</strong> {book.exchangePreferences.targetAuthor}
+                      </p>
+                    )}
+                    {book.exchangePreferences.targetDescription && (
+                      <p style={{ margin: "2px 0", fontSize: 13, color: "var(--ink)" }}>
+                        <strong>Ghi chú:</strong> {book.exchangePreferences.targetDescription}
+                      </p>
+                    )}
+                  </div>
+                )}
               <p className={styles.exchangeNote}>
                 {isOwner
                   ? "Đây là bản sách của bạn. Theo dõi đề nghị trong Trao đổi của tôi."

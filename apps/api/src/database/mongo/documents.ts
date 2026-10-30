@@ -157,9 +157,16 @@ export interface ConversationEventDoc {
   mode: ConversationMode | null; amount: number | null; exchangeId: string | null; createdAt: Date;
 }
 export interface ConversationExchangeLinkDoc { _id: string; conversationId: string; createdAt: Date }
+export interface ExchangePreferencesDoc {
+  targetCategory?: string | null;
+  targetAuthor?: string | null;
+  targetDescription?: string | null;
+}
+
 export interface ListingRevisionDoc extends Lockable {
   bundleSearchText?: string;
   bundle?: import('@used-books/api-contract').components['schemas']['BookBundle'] | null;
+  exchangePreferences?: ExchangePreferencesDoc | null;
   _id: string;
   listingId: string;
   number: number;

@@ -31,6 +31,10 @@ import {
   withExchangeMutualCancellation,
 } from './0041-exchange-mutual-cancellation.js';
 import {
+  listingExchangePreferencesMigration,
+  withListingExchangePreferences,
+} from './0042-listing-exchange-preferences.js';
+import {
   listingAutofillMigration,
   listingAutofillSpecs,
 } from './0038-listing-autofill.js';
@@ -302,6 +306,7 @@ export const migrations: Migration[] = [
   transactionReviewValidatorFixMigration,
   exchangeDisputeResolutionMigration,
   exchangeMutualCancellationMigration,
+  listingExchangePreferencesMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -331,6 +336,7 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withListingChannel)
     .map(withBookBundles)
     .map(withBundleReviewSearch)
+    .map(withListingExchangePreferences)
     .map(withModerationIndexes),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')

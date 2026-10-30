@@ -178,6 +178,9 @@ export function SellBookPage() {
     mode: "Sale", // Sale, Exchange, Both
     salePrice: "",
     exchangeValue: "",
+    targetCategory: "",
+    targetAuthor: "",
+    targetDescription: "",
   });
   const needsOrigin = !auction && formData.mode !== "Exchange";
 
@@ -648,6 +651,18 @@ export function SellBookPage() {
         mode: auction ? "Sale" : (formData.mode as "Sale" | "Exchange" | "Both"),
         salePrice: formData.mode === "Exchange" ? null : sale,
         exchangeValue: formData.mode === "Sale" ? null : exchange,
+        exchangePreferences:
+          !auction &&
+          formData.mode !== "Sale" &&
+          (formData.targetCategory.trim() ||
+            formData.targetAuthor.trim() ||
+            formData.targetDescription.trim())
+            ? {
+                targetCategory: formData.targetCategory.trim() || null,
+                targetAuthor: formData.targetAuthor.trim() || null,
+                targetDescription: formData.targetDescription.trim() || null,
+              }
+            : null,
         files: imageFiles,
         readable: formData.readable!,
         hasMissingPages: formData.hasMissingPages!,
@@ -2388,6 +2403,72 @@ export function SellBookPage() {
                                 {fieldFeedback(key)}
                               </div>
                             ))}
+                          {!auction && formData.mode !== "Sale" && (
+                            <div
+                              style={{
+                                marginTop: 16,
+                                padding: 14,
+                                background: "var(--surface-sunken, #f8fafc)",
+                                border: "1px dashed var(--border-subtle, #cbd5e1)",
+                                borderRadius: 8,
+                              }}
+                            >
+                              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
+                                🎯 Tiêu chí đổi sách mong muốn (Tùy chọn)
+                              </div>
+                              <p style={{ fontSize: 13, color: "var(--ink-muted, #64748b)", margin: "0 0 12px" }}>
+                                Nhập thể loại, tác giả hoặc mô tả cuốn sách bạn muốn đổi lấy để hệ thống hỗ trợ gợi ý ghép đôi thông minh (Smart Matchmaking).
+                              </p>
+                              <div className={styles.field}>
+                                <label htmlFor="targetCategory">Thể loại mong muốn</label>
+                                <input
+                                  id="targetCategory"
+                                  type="text"
+                                  placeholder="VD: Văn học, Kinh tế, Tâm lý..."
+                                  value={formData.targetCategory}
+                                  onChange={(event) =>
+                                    setFormData((previous) => ({
+                                      ...previous,
+                                      targetCategory: event.target.value,
+                                    }))
+                                  }
+                                  maxLength={100}
+                                />
+                              </div>
+                              <div className={styles.field}>
+                                <label htmlFor="targetAuthor">Tác giả mong muốn</label>
+                                <input
+                                  id="targetAuthor"
+                                  type="text"
+                                  placeholder="VD: Haruki Murakami, Dan Brown..."
+                                  value={formData.targetAuthor}
+                                  onChange={(event) =>
+                                    setFormData((previous) => ({
+                                      ...previous,
+                                      targetAuthor: event.target.value,
+                                    }))
+                                  }
+                                  maxLength={150}
+                                />
+                              </div>
+                              <div className={styles.field}>
+                                <label htmlFor="targetDescription">Ghi chú tiêu chí trao đổi chi tiết</label>
+                                <input
+                                  id="targetDescription"
+                                  type="text"
+                                  placeholder="VD: Ưu tiên bản dịch mới hoặc sách trinh thám..."
+                                  value={formData.targetDescription}
+                                  onChange={(event) =>
+                                    setFormData((previous) => ({
+                                      ...previous,
+                                      targetDescription: event.target.value,
+                                    }))
+                                  }
+                                  maxLength={500}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </>
                       )}
                       {step === 5 && (
@@ -2530,6 +2611,20 @@ export function SellBookPage() {
                                   {validPrice(formData.exchangeValue)
                                     ? formatVnd(Number(formData.exchangeValue))
                                     : "Chưa nhập giá hợp lệ"}
+                                </dd>
+                              </div>
+                            )}
+                            {!auction && formData.mode !== "Sale" && (formData.targetCategory.trim() || formData.targetAuthor.trim() || formData.targetDescription.trim()) && (
+                              <div>
+                                <dt>Mong muốn đổi</dt>
+                                <dd>
+                                  {[
+                                    formData.targetCategory.trim() ? `Thể loại: ${formData.targetCategory.trim()}` : null,
+                                    formData.targetAuthor.trim() ? `Tác giả: ${formData.targetAuthor.trim()}` : null,
+                                    formData.targetDescription.trim() ? `Ghi chú: ${formData.targetDescription.trim()}` : null,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" · ")}
                                 </dd>
                               </div>
                             )}
