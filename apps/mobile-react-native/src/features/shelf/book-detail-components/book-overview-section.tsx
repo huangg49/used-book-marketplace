@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   exchangePrefCard: {
-    backgroundColor: "#FDF8F5",
+    backgroundColor: stitchTokens.creamWarm,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: stitchTokens.peachBorder,

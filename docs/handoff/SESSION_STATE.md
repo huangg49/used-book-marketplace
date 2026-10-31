@@ -1,5 +1,28 @@
 # Điểm lưu hiện tại — 31/10/2026
 
+## Đồng bộ main và chuẩn bị tích hợp UI — 31/10/2026
+
+- Owner giao fetch/pull main, xử lý conflict, push nhánh và squash merge sau CI.
+  Main mới0a2b3202 (PR81/82),24commit sau baseab80b43; pull main ff-only rồi merge
+  vào `codex/restore-profile-overview`. Conflict duy nhất SESSION_STATE được nối
+  giữ cả phần việc của nhóm và UI; không có conflict source.
+- CI main mới có3job đỏ trước tích hợp: RN lint (memo dependency/màu literal),
+  User Web browser selector sau đổi layout chat, API E2E5ca trao đổi do test
+  migration0039 để lại validator cũ. Sửa dependency/tái dùng token RN; test migration
+  khôi phục validator hiện tại trong finally, giữ nguyên checksums/migration cũ.
+- Browser chat còn phát hiện retry pay/cancel bị ẩn khi polling thấy trạng thái
+  đã đổi sau mất ACK. Khôi phục retry cùng intent/version/key trong OrderDetails;
+  không đổi API, quyền, ledger, carrier/GHN hoặc worker. Browser fixture PASS gồm
+  snapshot riêng, buyer/seller, mất ACK, tabs/draft,403/503 và320/390px chữ130%.
+- PASS local: install frozen, contract/routes0.63/198operations/31controllers;
+  web253unit/lint/typecheck/build, RN164unit/lint/typecheck, exchange E2E41/41.
+  Account browser PASS trên QA riêng: overview/work routes, menu mới, guide,
+  LOCKED và4width; ca đơn positive/error là fixture có nhãn. API unit ban đầu
+  Windows shutdown timeout khi chạy nhiều check; ca đó riêng chạy lại PASS.
+- Remote CI/PR còn chờ ở checkpoint này. Không lấy AI review thay human review,
+  không đóng gate READINESS. DB chính và dịch vụ app vẫn dừng, chỉ bật QA57017;
+  không migrate/reset/seed DB chính khi đồng bộ source.
+
 ## Khôi phục tổng quan Profile web — 30/10/2026
 
 - Tạm dừng theo yêu cầu owner để tắt máy: web5174, API3000 và Mongo local đã

@@ -465,6 +465,17 @@ function AuthenticatedOrderDetails({
 
             {/* KHU VỰC THAO TÁC CÁC BƯỚC THỦ TỤC */}
             <div className={styles.activeProcedureBox}>
+              {pendingAction && o.state !== "AwaitingPayment" && o.role === "Buyer" && (
+                <div className={styles.procedureSection}>
+                  <p className={styles.walletHint}>
+                    Chưa nhận được xác nhận thao tác trước. Thử lại để xác nhận kết quả.
+                  </p>
+                  <button type="button" className={styles.primaryActionBtn} disabled={busy}
+                    onClick={() => void act(pendingAction)}>
+                    {busy ? "Đang xác nhận…" : pendingAction === "pay" ? "Thử lại thanh toán" : "Thử lại hủy đơn"}
+                  </button>
+                </div>
+              )}
               {/* BƯỚC 1: CHỜ THANH TOÁN (AwaitingPayment) */}
               {o.state === "AwaitingPayment" && (
                 <div className={styles.procedureSection}>

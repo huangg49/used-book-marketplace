@@ -208,7 +208,7 @@ export function ExchangeComposeScreen() {
       const matchB = checkMatch(bookB, targetBook.exchangePreferences) ? 1 : 0;
       return matchB - matchA;
     });
-  }, [myEligibleListings, targetBook?.exchangePreferences, queryClient]);
+  }, [myEligibleListings, targetBook, queryClient]);
   const chosenMyListings = myEligibleListings.filter((l) =>
     selectedMyListingIds.includes(l.id),
   );
@@ -835,7 +835,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   prefBanner: {
-    backgroundColor: "#FDF4EE",
+    backgroundColor: stitchTokens.creamWarm,
     borderWidth: 1,
     borderColor: stitchTokens.peachBorder,
     borderRadius: 12,
@@ -885,23 +885,23 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.roseWarmSurface,
   },
   bookOptionCardMatched: {
-    borderColor: "#E59866",
-    backgroundColor: "#FFFDFB",
+    borderColor: stitchTokens.goldBorder,
+    backgroundColor: stitchTokens.ivoryWhite,
   },
   matchedBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#FEF3C7",
+    backgroundColor: stitchTokens.goldVeryLight,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 0.5,
-    borderColor: "#F59E0B",
+    borderColor: stitchTokens.goldBorder,
     marginTop: 3,
   },
   matchedBadgeText: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#B45309",
+    color: stitchTokens.warmUmber,
   },
   optionPhotoBox: {
     width: 50,
