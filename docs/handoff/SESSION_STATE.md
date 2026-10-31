@@ -1,6 +1,6 @@
 # Điểm lưu hiện tại — 31/10/2026
 
-## Đồng bộ main và chuẩn bị tích hợp UI — 31/10/2026
+## Đồng bộ main và tích hợp UI qua PR83 — 31/10/2026
 
 - Owner giao fetch/pull main, xử lý conflict, push nhánh và squash merge sau CI.
   Main mới0a2b3202 (PR81/82),24commit sau baseab80b43; pull main ff-only rồi merge
@@ -12,14 +12,21 @@
   khôi phục validator hiện tại trong finally, giữ nguyên checksums/migration cũ.
 - Browser chat còn phát hiện retry pay/cancel bị ẩn khi polling thấy trạng thái
   đã đổi sau mất ACK. Khôi phục retry cùng intent/version/key trong OrderDetails;
+  giữ thêm retry quyết định Seller cùng intent khi trạng thái đã sang Preparing.
   không đổi API, quyền, ledger, carrier/GHN hoặc worker. Browser fixture PASS gồm
   snapshot riêng, buyer/seller, mất ACK, tabs/draft,403/503 và320/390px chữ130%.
 - PASS local: install frozen, contract/routes0.63/198operations/31controllers;
   web253unit/lint/typecheck/build, RN164unit/lint/typecheck, exchange E2E41/41.
   Account browser PASS trên QA riêng: overview/work routes, menu mới, guide,
-  LOCKED và4width; ca đơn positive/error là fixture có nhãn. API unit ban đầu
-  Windows shutdown timeout khi chạy nhiều check; ca đó riêng chạy lại PASS.
-- Remote CI/PR còn chờ ở checkpoint này. Không lấy AI review thay human review,
+  LOCKED và4width; ca đơn positive/error là fixture có nhãn. Wallet browser PASS
+  cả signed QueryDR, mất ACK/replay, expiry, balance/history/paging và mobile.
+  API unit286/286 khi chạy tuần tự; parallel timeout ca Windows shutdown10s,
+  ca đó riêng chạy lại PASS. Work-inbox browser PASS: web/RNweb/Staff/Admin,
+  paging quá50, exact links, permission và lost ACK; không native/human acceptance.
+  Audit25file không có secret/private env/ghi chú
+  máy cá nhân, không sửa carrier/GHN/Driver hoặc migration đã áp dụng.
+- [PR83](https://github.com/huangg49/used-book-marketplace/pull/83) đã mở;
+  remote CI/merge còn chờ ở checkpoint này. Không lấy AI review thay human review,
   không đóng gate READINESS. DB chính và dịch vụ app vẫn dừng, chỉ bật QA57017;
   không migrate/reset/seed DB chính khi đồng bộ source.
 

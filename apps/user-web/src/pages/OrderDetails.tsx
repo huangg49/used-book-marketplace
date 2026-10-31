@@ -1,10 +1,11 @@
 import { BundleManifest } from "../components/BookBundle";
 import { ListingPhoto } from "../components/BookCard";
-import { ApiError } from "@used-books/session-client";
+import { ApiError, pendingOrderResponse } from "@used-books/session-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSession } from "../hooks/useSession";
+import { session } from "../lib/session";
 import { buyNowError } from "../lib/buy-now-error";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
@@ -544,7 +545,8 @@ function AuthenticatedOrderDetails({
               )}
 
               {/* BƯỚC 2: NGƯỜI BÁN XÁC NHẬN ĐƠN (PendingSellerConfirmation) */}
-              {o.state === "PendingSellerConfirmation" && (
+              {(o.state === "PendingSellerConfirmation" ||
+                (o.role === "Seller" && pendingOrderResponse(session, o.id))) && (
                 <div className={styles.procedureSection}>
                   {o.role === "Seller" ? (
                     <div className={styles.sellerConfirmCard}>

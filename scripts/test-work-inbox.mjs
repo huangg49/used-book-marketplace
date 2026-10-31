@@ -423,8 +423,8 @@ try {
   await p.locator(`a[href="/orders/${orders[0]}"]`).click();
   await button(p, "Thử lại quyết định xác nhận").click();
   await p
-    .getByRole("status")
-    .filter({ hasText: /^Người bán đang chuẩn bị gửi$/ })
+    .getByRole("region", { name: "Chi tiết đơn hàng", exact: true })
+    .getByText("Người bán đang chuẩn bị gửi", { exact: true })
     .waitFor();
   assert.equal(attempts.length, 2);
   assert.deepEqual(attempts[0], attempts[1]);
