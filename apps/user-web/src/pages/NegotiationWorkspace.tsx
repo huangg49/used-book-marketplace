@@ -742,10 +742,14 @@ export function NegotiationWorkspace({
                       Về phiếu hiện tại
                     </button>
                   </div>
-                  <ExchangeDetailPage key={historyExchange} exchangeId={historyExchange} embedded />
+                  <section aria-label="Chi tiết trao đổi">
+                    <ExchangeDetailPage key={historyExchange} exchangeId={historyExchange} embedded />
+                  </section>
                 </div>
               ) : room.terms?.activeExchangeId ? (
-                <ExchangeDetailPage key={room.terms.activeExchangeId} exchangeId={room.terms.activeExchangeId} embedded />
+                <section aria-label="Chi tiết trao đổi">
+                  <ExchangeDetailPage key={room.terms.activeExchangeId} exchangeId={room.terms.activeExchangeId} embedded />
+                </section>
               ) : book && !room.terms?.pendingProposal && !room.terms?.locked ? (
                 <ExchangeOffer room={room} userId={userId} book={book} refresh={refresh} />
               ) : (

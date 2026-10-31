@@ -23,10 +23,19 @@
   API unit286/286 khi chạy tuần tự; parallel timeout ca Windows shutdown10s,
   ca đó riêng chạy lại PASS. Work-inbox browser PASS: web/RNweb/Staff/Admin,
   paging quá50, exact links, permission và lost ACK; không native/human acceptance.
-  Audit25file không có secret/private env/ghi chú
-  máy cá nhân, không sửa carrier/GHN/Driver hoặc migration đã áp dụng.
+  Audit diff không có secret/private env/ghi chú máy cá nhân, không sửa
+  carrier/GHN/Driver hoặc migration đã áp dụng.
+- Vòng CI tiếp theo phát hiện thêm seller-order test dùng nhãn/layout cũ. Đã
+  cập nhật seller-order/buy-now/exchange browser theo cấu trúc mới, giữ assertion
+  giá/snapshot/ledger/key/body/quyền; kiểm cả tab public và owner view với token
+  memory-only. Cả3suite PASS local trên API/Mongo QA thật, carrier/storage fake.
+  ExchangeMine còn lỗi focus Arrow/Home/End, touch target và CTA overflow390px:
+  sửa focus, min-height48px, wrap CTA và role alert; kiểm4width/chữ lớn/retry.
+  Tách region chi tiết trao đổi để ca403 kiểm đúng dữ liệu/nút riêng thay vì card
+  sách public cùng tên bên ngoài. Đã xem ảnh desktop/mobile; giữ style incumbent.
 - [PR83](https://github.com/huangg49/used-book-marketplace/pull/83) đã mở;
-  remote CI/merge còn chờ ở checkpoint này. Không lấy AI review thay human review,
+  kết quả CI/merge cuối theo đúng head trong PR, không lấy lượt cũ thay lượt mới.
+  Chỉ merge khi mọi job áp dụng đạt. Không lấy AI review thay human review,
   không đóng gate READINESS. DB chính và dịch vụ app vẫn dừng, chỉ bật QA57017;
   không migrate/reset/seed DB chính khi đồng bộ source.
 
