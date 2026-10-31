@@ -10,8 +10,8 @@ import {
   X,
   AlertCircle,
   BookPlus,
-  Sparkles,
 } from "lucide-react";
+import { BrandIcon } from "../BrandIcon";
 import { ApiError } from "@used-books/session-client";
 import { session } from "../../lib/session";
 import {
@@ -484,7 +484,7 @@ export function ExchangeOffer({
                       </p>
                       {item.matchReason && (
                         <div className={styles.matchedBadge}>
-                          <Sparkles size={11} />
+                          <BrandIcon size={13} />
                           <span>{item.matchReason}</span>
                         </div>
                       )}

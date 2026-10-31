@@ -17,8 +17,8 @@ import {
   ArrowLeftRight,
   PencilLine,
   X,
-  Sparkles,
 } from "lucide-react";
+import { BrandIcon } from "../components/BrandIcon";
 import {
   changeConversationTerms,
   type PurchaseConversation,
@@ -214,7 +214,7 @@ export function NegotiationWorkspace({
               ) && (
                 <div className={styles.exchangePrefBlock}>
                   <div className={styles.exchangePrefHeading}>
-                    <Sparkles size={13} />
+                    <BrandIcon size={16} />
                     <span>Tiêu chí mong muốn khi đổi</span>
                   </div>
                   {book.exchangePreferences.targetCategory && (

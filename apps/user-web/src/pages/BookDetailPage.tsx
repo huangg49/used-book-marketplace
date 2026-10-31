@@ -3,7 +3,8 @@ import { listingTitle } from "../lib/book-bundle";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowUpRight, MapPin, MessageCircle, BookOpen, ClipboardCheck, Languages, CalendarDays, Building2, Hash, Layers3, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, MapPin, MessageCircle, BookOpen, ClipboardCheck, Languages, CalendarDays, Building2, Hash, Layers3 } from "lucide-react";
+import { BrandIcon } from "../components/BrandIcon";
 import { motion } from "framer-motion";
 import { ListingGallery } from "../components/ListingGallery";
 import { conditions } from "../lib/listing-labels";
@@ -289,7 +290,7 @@ export function BookDetailPage() {
                         marginBottom: 6,
                       }}
                     >
-                      <Sparkles size={15} />
+                      <BrandIcon size={16} />
                       <span>Tiêu chí đổi sách của chủ sở hữu:</span>
                     </div>
                     {book.exchangePreferences.targetCategory && (

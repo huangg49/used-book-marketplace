@@ -10,8 +10,8 @@ import {
   Search,
   FileText,
   PlusCircle,
-  Sparkles,
 } from "lucide-react";
+import { BrandIcon } from "../components/BrandIcon";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import { ROUTES, formatVnd } from "../lib/routes";
@@ -391,7 +391,7 @@ function LegacyExchangeComposePage() {
                 ) && (
                   <div className={styles.prefBanner}>
                     <div className={styles.prefBannerHeader}>
-                      <Sparkles size={16} />
+                      <BrandIcon size={16} />
                       <span>🎯 Tiêu chí mong muốn của chủ sách:</span>
                     </div>
                     <div className={styles.prefDetails}>
@@ -485,7 +485,7 @@ function LegacyExchangeComposePage() {
                           <p>{formatVnd(book.value)}</p>
                           {book.matchReason && (
                             <span className={styles.matchedBadge}>
-                              <Sparkles size={11} /> {book.matchReason}
+                              <BrandIcon size={12} /> {book.matchReason}
                             </span>
                           )}
                         </div>
