@@ -266,9 +266,6 @@ export function ExchangeOffer({
   };
 
   const pref = book.exchangePreferences;
-  const hasPref = Boolean(
-    pref && (pref.targetCategory || pref.targetAuthor || pref.targetDescription),
-  );
 
   const processedBooks = useMemo(() => {
     if (!mine.data) return [];
@@ -283,11 +280,6 @@ export function ExchangeOffer({
         return 0;
       });
   }, [mine.data, pref]);
-
-  const hasMatch = useMemo(
-    () => processedBooks.some((b) => Boolean(b.matchReason)),
-    [processedBooks],
-  );
 
   const filteredBooks = useMemo(() => {
     if (!search.trim()) return processedBooks;
@@ -421,41 +413,6 @@ export function ExchangeOffer({
       ) : (
         <>
         <fieldset className={styles.fieldset} disabled={busy || uncertain}>
-          {hasPref && (
-            <div className={styles.prefBanner}>
-              <div className={styles.prefBannerHeader}>
-                <Sparkles size={15} />
-                <span>🎯 Tiêu chí mong muốn của chủ sách:</span>
-              </div>
-              <div className={styles.prefDetails}>
-                {pref?.targetCategory && (
-                  <div>
-                    <strong>Thể loại tìm kiếm:</strong> {pref.targetCategory}
-                  </div>
-                )}
-                {pref?.targetAuthor && (
-                  <div>
-                    <strong>Tác giả tìm kiếm:</strong> {pref.targetAuthor}
-                  </div>
-                )}
-                {pref?.targetDescription && (
-                  <div>
-                    <strong>Ghi chú:</strong> {pref.targetDescription}
-                  </div>
-                )}
-                {hasMatch ? (
-                  <div className={styles.prefMatchSuccess}>
-                    ✨ Tuyệt vời! Kệ sách của bạn có cuốn phù hợp với mong muốn đối tác (được ưu tiên xếp đầu).
-                  </div>
-                ) : (
-                  <div className={styles.prefMatchNotice}>
-                    💡 Bạn vẫn có thể chọn sách khác trên kệ của mình để trao đổi và bù tiền nếu cần.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {mine.data.length > 2 && (
             <div className={styles.searchBox}>
               <Search size={16} className={styles.searchIcon} />
