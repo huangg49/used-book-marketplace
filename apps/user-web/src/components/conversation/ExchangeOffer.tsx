@@ -10,6 +10,7 @@ import {
   X,
   AlertCircle,
   BookPlus,
+  Sparkles,
 } from "lucide-react";
 import { ApiError } from "@used-books/session-client";
 import { session } from "../../lib/session";
@@ -67,8 +68,48 @@ interface InventoryItem {
   book: {
     title: string;
     authors: string[];
+    category?: string;
   };
   coverUrl?: string;
+}
+
+function checkMatch(
+  myBook: { title: string; authors: string[]; category?: string },
+  pref?: {
+    targetCategory?: string | null;
+    targetAuthor?: string | null;
+    targetDescription?: string | null;
+  } | null,
+) {
+  if (!pref) return null;
+  const reasons: string[] = [];
+  const authorStr = myBook.authors.join(", ");
+  if (
+    pref.targetAuthor &&
+    pref.targetAuthor.trim() &&
+    authorStr.toLowerCase().includes(pref.targetAuthor.toLowerCase().trim())
+  ) {
+    reasons.push(`Khớp tác giả "${pref.targetAuthor}"`);
+  }
+  if (
+    pref.targetCategory &&
+    pref.targetCategory.trim() &&
+    myBook.category &&
+    (myBook.category.toLowerCase().includes(pref.targetCategory.toLowerCase().trim()) ||
+      pref.targetCategory.toLowerCase().includes(myBook.category.toLowerCase().trim()))
+  ) {
+    reasons.push(`Khớp thể loại "${pref.targetCategory}"`);
+  }
+  if (pref.targetDescription && pref.targetDescription.trim()) {
+    const descWords = pref.targetDescription
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w) => w.length >= 3);
+    if (descWords.some((w) => myBook.title.toLowerCase().includes(w))) {
+      reasons.push("Khớp tiêu chí mong muốn");
+    }
+  }
+  return reasons.length > 0 ? reasons.join(" · ") : null;
 }
 
 async function inventory(): Promise<InventoryItem[]> {
@@ -106,7 +147,11 @@ async function inventory(): Promise<InventoryItem[]> {
         id: row.id,
         value: row.currentRevision.content.exchangeValue ?? 0,
         condition: row.currentRevision.content.condition ?? null,
-        book,
+        book: {
+          title: book.title,
+          authors: book.authors,
+          category: book.category,
+        },
         coverUrl,
       };
     }),
@@ -220,16 +265,39 @@ export function ExchangeOffer({
     }
   };
 
-  const filteredBooks = useMemo(() => {
+  const pref = book.exchangePreferences;
+  const hasPref = Boolean(
+    pref && (pref.targetCategory || pref.targetAuthor || pref.targetDescription),
+  );
+
+  const processedBooks = useMemo(() => {
     if (!mine.data) return [];
-    if (!search.trim()) return mine.data;
+    return mine.data
+      .map((item) => ({
+        ...item,
+        matchReason: checkMatch(item.book, pref),
+      }))
+      .sort((a, b) => {
+        if (a.matchReason && !b.matchReason) return -1;
+        if (!a.matchReason && b.matchReason) return 1;
+        return 0;
+      });
+  }, [mine.data, pref]);
+
+  const hasMatch = useMemo(
+    () => processedBooks.some((b) => Boolean(b.matchReason)),
+    [processedBooks],
+  );
+
+  const filteredBooks = useMemo(() => {
+    if (!search.trim()) return processedBooks;
     const q = search.trim().toLowerCase();
-    return mine.data.filter(
+    return processedBooks.filter(
       (item) =>
         item.book.title.toLowerCase().includes(q) ||
         item.book.authors.some((author) => author.toLowerCase().includes(q)),
     );
-  }, [mine.data, search]);
+  }, [processedBooks, search]);
 
   if (!buyer)
     return (
@@ -353,7 +421,42 @@ export function ExchangeOffer({
       ) : (
         <>
         <fieldset className={styles.fieldset} disabled={busy || uncertain}>
-          {mine.data.length > 4 && (
+          {hasPref && (
+            <div className={styles.prefBanner}>
+              <div className={styles.prefBannerHeader}>
+                <Sparkles size={15} />
+                <span>🎯 Tiêu chí mong muốn của chủ sách:</span>
+              </div>
+              <div className={styles.prefDetails}>
+                {pref?.targetCategory && (
+                  <div>
+                    <strong>Thể loại tìm kiếm:</strong> {pref.targetCategory}
+                  </div>
+                )}
+                {pref?.targetAuthor && (
+                  <div>
+                    <strong>Tác giả tìm kiếm:</strong> {pref.targetAuthor}
+                  </div>
+                )}
+                {pref?.targetDescription && (
+                  <div>
+                    <strong>Ghi chú:</strong> {pref.targetDescription}
+                  </div>
+                )}
+                {hasMatch ? (
+                  <div className={styles.prefMatchSuccess}>
+                    ✨ Tuyệt vời! Kệ sách của bạn có cuốn phù hợp với mong muốn đối tác (được ưu tiên xếp đầu).
+                  </div>
+                ) : (
+                  <div className={styles.prefMatchNotice}>
+                    💡 Bạn vẫn có thể chọn sách khác trên kệ của mình để trao đổi và bù tiền nếu cần.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {mine.data.length > 2 && (
             <div className={styles.searchBox}>
               <Search size={16} className={styles.searchIcon} />
               <input
@@ -396,6 +499,7 @@ export function ExchangeOffer({
                     key={item.id}
                     className={styles.bookCard}
                     data-selected={isSelected ? "true" : undefined}
+                    data-matched={item.matchReason ? "true" : undefined}
                   >
                     <input
                       type="checkbox"
@@ -421,6 +525,12 @@ export function ExchangeOffer({
                       <p className={styles.bookAuthor}>
                         {item.book.authors.join(", ")}
                       </p>
+                      {item.matchReason && (
+                        <div className={styles.matchedBadge}>
+                          <Sparkles size={11} />
+                          <span>{item.matchReason}</span>
+                        </div>
+                      )}
                       <div className={styles.metaRow}>
                         {conditionText && (
                           <span className={styles.conditionBadge}>
