@@ -49,6 +49,7 @@ export const router = createBrowserRouter([
             element: <DashboardLayout />,
             children: [
               { path: '/account', lazy: () => import('../pages/AccountOverviewPage').then(m => ({ Component: m.AccountOverviewPage })) },
+              { path: '/account/work', lazy: () => import('../pages/MemberWorkPage').then(m => ({ Component: m.MemberWorkPage })) },
               { path: '/reviews', lazy: () => import('../pages/ReviewsPage').then(m => ({ Component: m.ReviewsPage })) },
               { path: '/wallet', lazy: () => import('../pages/WalletPage').then(m => ({ Component: m.WalletPage })) },
               { path: '/profile', lazy: () => import('../pages/ProfilePage').then(m => ({ Component: m.ProfilePage })) },

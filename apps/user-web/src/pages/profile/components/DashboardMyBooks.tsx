@@ -5,6 +5,7 @@ import { BookOpen, ArrowRight, ArrowUpRight, Edit, Eye, ImageOff } from "lucide-
 import { myListingsQuery } from "../../../lib/owner-listing-queries";
 import { getMyPhoto } from "../../../services/my-listings";
 import { ROUTES, formatVnd } from "../../../lib/routes";
+import { DashboardSectionHeading } from "./DashboardSectionHeading";
 
 function MyListingPhoto({ listingId, mediaId }: { listingId: string; mediaId: string }) {
   const photo = useQuery({
@@ -62,17 +63,11 @@ export function DashboardMyBooks({ ownerId }: DashboardMyBooksProps) {
       className="bg-surface-container-lowest rounded-xl p-space-lg shadow-sm flex flex-col gap-space-lg border border-outline-variant/30"
     >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-md border-b border-surface-container-high/40 pb-space-sm">
-        <div>
-          <h2 id="overview-books" className="text-xl md:text-2xl text-primary font-bold tracking-normal">
-            Kệ cập nhật gần đây
-          </h2>
-          <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
-            Những bản sách bạn vừa chăm chút. Quản lý hiện trạng niêm yết và giao lưu tác phẩm.
-          </p>
-        </div>
+        <DashboardSectionHeading id="overview-books" title="Kệ cập nhật gần đây"
+          description="Những bản sách bạn vừa chăm chút. Quản lý hiện trạng niêm yết và giao lưu tác phẩm." />
 
         {/* Filter Tabs */}
-        <div className="inline-flex p-1 rounded-lg bg-surface-container-high gap-1 flex-wrap" id="shelfTabs">
+        <div className="shrink-0 self-start md:self-center inline-flex p-1 rounded-lg bg-surface-container-high gap-1 flex-wrap" id="shelfTabs">
           <button
             onClick={() => setFilter("Approved")}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
@@ -140,7 +135,7 @@ export function DashboardMyBooks({ ownerId }: DashboardMyBooksProps) {
           <div className="w-12 h-12 rounded-full bg-surface-container-low flex items-center justify-center text-secondary mb-3">
             <BookOpen size={24} />
           </div>
-          <h3 className="font-headline-sm text-headline-sm text-primary font-bold">
+          <h3 className="m-0 font-headline-sm text-headline-sm text-primary font-bold">
             Một chỗ trống cho cuốn sách đầu tiên.
           </h3>
           <p className="font-body-sm text-body-sm text-on-surface-variant max-w-sm mt-1">
@@ -204,7 +199,7 @@ export function DashboardMyBooks({ ownerId }: DashboardMyBooksProps) {
                     </div>
 
                     <h3
-                      className="font-title-md text-sm sm:text-base text-primary font-bold line-clamp-2 h-[2.6em] leading-snug"
+                      className="m-0 font-title-md text-sm sm:text-base text-primary font-bold line-clamp-2 h-[2.6em] leading-snug"
                       title={content?.bundle?.title || book?.title || content?.title || "Bản thảo"}
                     >
                       {content?.bundle?.title || book?.title || content?.title || "Bản thảo chưa hoàn tất"}

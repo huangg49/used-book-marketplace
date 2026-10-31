@@ -13,6 +13,7 @@ import { MediaStorage } from '../src/modules/media/media-storage.js';
 import { ExchangeExpiryWorker } from '../src/modules/exchanges/exchange-expiry.service.js';
 import { MongoFixtures } from './helpers/mongo-fixtures.js';
 import { Gate } from './helpers/mongo-gate.js';
+import { applyCollectionSpecs, currentCollections } from '../src/database/mongo/migrations/index.js';
 import { exchangeInspectionDeadlinesMigration } from '../src/database/mongo/migrations/0039-exchange-inspection-deadlines.js';
 
 const storage = {
@@ -680,34 +681,40 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       $set: { inspectionDeadline: new Date(Date.parse(second.recipientReceivedAt) + 48 * 3600000) },
     });
     const database = db.client.db();
-    const checksums = await database.collection('_migrations').find().sort({ _id: 1 }).toArray();
-    const postings = await db.c.ledger_entries.countDocuments();
-    await exchangeInspectionDeadlinesMigration.up(database);
-    const backfilled = (await db.c.exchanges.findOne({ _id: ex.id }))!;
-    expect(backfilled.revision).toBe(second.revision);
-    expect(backfilled.initiatorInspectionDeadline!.getTime() - backfilled.initiatorReceivedAt!.getTime()).toBe(72 * 3600000);
-    expect(backfilled.recipientInspectionDeadline!.getTime() - backfilled.recipientReceivedAt!.getTime()).toBe(72 * 3600000);
-    expect(backfilled.inspectionDeadline).toEqual(backfilled.recipientInspectionDeadline);
-    expect(await db.c.ledger_entries.countDocuments()).toBe(postings);
-    expect(await database.collection('_migrations').find().sort({ _id: 1 }).toArray()).toEqual(checksums);
-    await exchangeInspectionDeadlinesMigration.up(database);
-    expect(await db.c.exchanges.findOne({ _id: ex.id })).toEqual(backfilled);
-    // A longer historically promised window must not be shortened on upgrade.
-    const longer = new Date(Date.parse(second.recipientReceivedAt) + 96 * 3600000);
-    await db.c.exchanges.updateOne({ _id: ex.id }, {
-      $unset: { initiatorInspectionDeadline: '', recipientInspectionDeadline: '' },
-      $set: { inspectionDeadline: longer },
-    });
-    await exchangeInspectionDeadlinesMigration.up(database);
-    expect((await db.c.exchanges.findOne({ _id: ex.id }))?.inspectionDeadline).toEqual(longer);
-    await worker.tick(new Date(longer.getTime() + 1));
-    await db.c.exchanges.updateOne({ _id: ex.id }, {
-      $unset: { initiatorInspectionDeadline: '', recipientInspectionDeadline: '' },
-    });
-    const terminal = await db.c.exchanges.findOne({ _id: ex.id });
-    expect(terminal?.status).toBe('Completed');
-    await exchangeInspectionDeadlinesMigration.up(database);
-    expect(await db.c.exchanges.findOne({ _id: ex.id })).toEqual(terminal);
+    try {
+      const checksums = await database.collection('_migrations').find().sort({ _id: 1 }).toArray();
+      const postings = await db.c.ledger_entries.countDocuments();
+      await exchangeInspectionDeadlinesMigration.up(database);
+      const backfilled = (await db.c.exchanges.findOne({ _id: ex.id }))!;
+      expect(backfilled.revision).toBe(second.revision);
+      expect(backfilled.initiatorInspectionDeadline!.getTime() - backfilled.initiatorReceivedAt!.getTime()).toBe(72 * 3600000);
+      expect(backfilled.recipientInspectionDeadline!.getTime() - backfilled.recipientReceivedAt!.getTime()).toBe(72 * 3600000);
+      expect(backfilled.inspectionDeadline).toEqual(backfilled.recipientInspectionDeadline);
+      expect(await db.c.ledger_entries.countDocuments()).toBe(postings);
+      expect(await database.collection('_migrations').find().sort({ _id: 1 }).toArray()).toEqual(checksums);
+      await exchangeInspectionDeadlinesMigration.up(database);
+      expect(await db.c.exchanges.findOne({ _id: ex.id })).toEqual(backfilled);
+      // A longer historically promised window must not be shortened on upgrade.
+      const longer = new Date(Date.parse(second.recipientReceivedAt) + 96 * 3600000);
+      await db.c.exchanges.updateOne({ _id: ex.id }, {
+        $unset: { initiatorInspectionDeadline: '', recipientInspectionDeadline: '' },
+        $set: { inspectionDeadline: longer },
+      });
+      await exchangeInspectionDeadlinesMigration.up(database);
+      expect((await db.c.exchanges.findOne({ _id: ex.id }))?.inspectionDeadline).toEqual(longer);
+      await worker.tick(new Date(longer.getTime() + 1));
+      await db.c.exchanges.updateOne({ _id: ex.id }, {
+        $unset: { initiatorInspectionDeadline: '', recipientInspectionDeadline: '' },
+      });
+      const terminal = await db.c.exchanges.findOne({ _id: ex.id });
+      expect(terminal?.status).toBe('Completed');
+      await exchangeInspectionDeadlinesMigration.up(database);
+      expect(await db.c.exchanges.findOne({ _id: ex.id })).toEqual(terminal);
+    } finally {
+      // The frozen legacy migration replaces the validator. Restore the current
+      // schema even after an assertion fails, without replaying any backfill.
+      await applyCollectionSpecs(database, currentCollections().filter((spec) => spec.name === 'exchanges'));
+    }
   });
 
   it('retains dispute evidence and holds even if a legacy writer leaves the state Delivered', async () => {

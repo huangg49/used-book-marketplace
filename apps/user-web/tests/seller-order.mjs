@@ -202,7 +202,7 @@ try {
     (await fixture.db.collection("listings").findOne({ _id: listingId })).trade,
     "Available",
   );
-  await buyerPage.getByLabel("Đề nghị giá sách (₫)", { exact: true }).fill("90000");
+  await buyerPage.getByLabel("Đề nghị giá sách mong muốn (₫):", { exact: true }).fill("90000");
   await buyerPage.getByRole("button", { name: "Gửi đề nghị", exact: true }).click();
   await buyerPage.getByRole("button", { name: "Rút đề nghị", exact: true }).waitFor();
   await buyerPage
@@ -317,8 +317,8 @@ try {
   await login(sellerPage, "member@operations.test");
   await sellerPage.locator('a[href="/chat"]').first().click();
   await sellerPage.locator(`a[href="/chat/${conversationId}"]`).first().click();
-  await sellerPage.getByRole("button", { name: "Chấp nhận giá", exact: true }).click();
-  await sellerPage.getByRole("button", { name: "Kiểm tra và tạo đơn", exact: true }).waitFor();
+  await sellerPage.getByRole("button", { name: "Chấp nhận giá này", exact: true }).click();
+  await sellerPage.getByRole("button", { name: "Tạo đơn cho người mua này", exact: true }).waitFor();
   let releaseAreas;
   const areasGate = new Promise((resolve) => { releaseAreas = resolve; });
   let failAreas = true;
@@ -330,11 +330,12 @@ try {
     } else await route.continue();
   });
   await sellerPage
-    .getByRole("button", { name: "Kiểm tra và tạo đơn", exact: true })
+    .getByRole("button", { name: "Tạo đơn cho người mua này", exact: true })
     .click();
   const price = sellerPage.getByLabel("Giá sách đã thỏa thuận (₫)", {
     exact: true,
   });
+  await sellerPage.locator('dialog[open] input[name="agreedBookPrice"][value="90000"]').waitFor();
   assert.equal(await price.inputValue(), "90000");
   assert.equal(await price.getAttribute("readonly") !== null, true);
   const sellerDialog = sellerPage.getByRole("dialog");
@@ -349,7 +350,7 @@ try {
     .getByRole("button", { name: "Đóng popup", exact: true })
     .click();
   await sellerPage
-    .getByRole("button", { name: "Kiểm tra và tạo đơn", exact: true })
+    .getByRole("button", { name: "Tạo đơn cho người mua này", exact: true })
     .click();
   assert.equal(await price.inputValue(), "90000");
   await sellerDialog.getByText("QA destination, simulated only, TP.HCM", { exact: true }).waitFor();
@@ -391,7 +392,7 @@ try {
       await route.continue();
     }
   });
-  await sellerPage
+  await sellerDialog
     .getByRole("button", { name: "Tạo đơn cho người mua này", exact: true })
     .click();
   await sellerPage
@@ -402,7 +403,7 @@ try {
   const replayed = sellerPage.waitForResponse(
     (r) => r.url().endsWith("/api/v1/orders") && r.status() === 200,
   );
-  await sellerPage
+  await sellerDialog
     .getByRole("button", { name: "Tạo đơn cho người mua này", exact: true })
     .click();
   const createReceipt = await (await replayed).json();
@@ -414,15 +415,15 @@ try {
     exact: true,
   });
   await buyerPage.waitForURL(`**/chat/${conversationId}`);
-  await buyerOrderDetails.getByRole("heading", { name: "Đơn mua sách", exact: true }).waitFor();
-  await buyerOrderDetails.getByRole("status").filter({ hasText: /^Chờ thanh toán$/ }).waitFor();
+  await buyerOrderDetails.getByRole("heading", { name: "Thủ tục đơn hàng", exact: true }).waitFor();
+  await buyerOrderDetails.getByText("Chờ thanh toán", {exact: true}).waitFor();
   const order = await fixture.db
     .collection("direct_orders")
     .findOne({ buyerId: buyer.user.id });
   assert(order);
   assert.equal(order._id, createReceipt.entityId);
-  await buyerPage.getByRole("heading", {
-    level: 1, name: fixture.metadata.title, exact: true,
+  await buyerOrderDetails.getByRole("heading", {
+    name: fixture.metadata.title, exact: true,
   }).waitFor();
   assert.equal(
     (await fixture.api(`/me/orders/${order._id}`, buyer.accessToken)).conversationId,
@@ -456,7 +457,7 @@ try {
     fullPage: true,
   });
   await buyerOrderDetails
-    .getByRole("button", { name: /^Thanh toán 120\.000\s*₫$/ })
+    .getByRole("button", { name: /^Thanh toán ngay 120\.000\s*₫$/ })
     .click();
   await buyerOrderDetails
     .getByRole("alert")
@@ -472,10 +473,10 @@ try {
   );
   await fundBuyer(150000);
   await buyerOrderDetails
-    .getByRole("button", { name: /^Thanh toán 120\.000\s*₫$/ })
+    .getByRole("button", { name: /^Thanh toán ngay 120\.000\s*₫$/ })
     .click();
   await buyerOrderDetails
-    .getByRole("status").filter({ hasText: /^Chờ người bán xác nhận$/ })
+    .getByText("Chờ người bán xác nhận", {exact: true})
     .waitFor();
   const wallet = await fixture.api("/me/wallet", buyer.accessToken);
   assert.equal(wallet.transactionHeld, 120000);
@@ -490,7 +491,17 @@ try {
       .countDocuments({ orderId: order._id, type: "OrderPayment" }),
     1,
   );
+  const listingTabReady = buyerPage.waitForEvent("popup");
   await buyerPage.locator(`a[href="/books/${listingId}"]`).first().click();
+  const listingTab = await listingTabReady;
+  await listingTab.getByRole("heading", { name: "Đang giao dịch", exact: true }).waitFor();
+  await listingTab.close();
+  // A new browser tab has no memory-only access token. Verify the authenticated
+  // participant view in the existing session as well as the public popup above.
+  await buyerPage.evaluate(async (id) => {
+    const { router } = await import("/src/app/router.tsx");
+    await router.navigate(`/books/${id}`);
+  }, listingId);
   await buyerPage
     .getByText("Đang giao dịch với bạn", { exact: true })
     .waitFor();

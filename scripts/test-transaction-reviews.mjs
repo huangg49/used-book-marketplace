@@ -256,7 +256,7 @@ try {
   await p.getByLabel(/^Mật khẩu/).fill(password);
   await button(p, "Đăng nhập").click();
   await p.waitForURL(web + "/account");
-  await p.getByRole("heading", { name: "Việc của tôi", exact: true }).waitFor();
+  await p.getByRole("heading", { name: "Tổng quan của bạn", exact: true }).waitFor();
   assert.equal(await p.getByText("★ 4.9", { exact: false }).count(), 0);
   await p
     .getByRole("link", { name: "Cách mua, bán, đổi và đấu giá", exact: true })

@@ -372,11 +372,11 @@ try {
   const p = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   p.on("pageerror", (e) => errors.push(e.message));
   p.setDefaultTimeout(15000);
-  await p.goto(web + "/login?returnUrl=%2Faccount");
+  await p.goto(web + "/login?returnUrl=%2Faccount%2Fwork");
   await p.getByLabel(/^Email/).fill("member@operations.test");
   await p.getByLabel(/^Mật khẩu/).fill(password);
   await button(p, "Đăng nhập").click();
-  await p.waitForURL(web + "/account");
+  await p.waitForURL(web + "/account/work");
   await p.locator(`a[href="/orders/${orders[0]}"]`).waitFor();
   const inbox = p.getByRole("region", { name: "Việc đang chờ", exact: true });
   await inbox
@@ -419,12 +419,12 @@ try {
   await button(p, "Ghi quyết định").click();
   await button(p, "Thử lại quyết định xác nhận").waitFor();
   assert.equal(await button(p, "Từ chối đơn").count(), 0);
-  await navigate(p, "/account");
+  await navigate(p, "/account/work");
   await p.locator(`a[href="/orders/${orders[0]}"]`).click();
   await button(p, "Thử lại quyết định xác nhận").click();
   await p
-    .getByRole("status")
-    .filter({ hasText: /^Người bán đang chuẩn bị gửi$/ })
+    .getByRole("region", { name: "Chi tiết đơn hàng", exact: true })
+    .getByText("Người bán đang chuẩn bị gửi", { exact: true })
     .waitFor();
   assert.equal(attempts.length, 2);
   assert.deepEqual(attempts[0], attempts[1]);
@@ -432,7 +432,7 @@ try {
     (await api(`/me/orders/${orders[0]}`, seller.accessToken)).state,
     "Preparing",
   );
-  await navigate(p, "/account");
+  await navigate(p, "/account/work");
   await button(p, "Sách gửi đấu giá").click();
   await p.locator(`a[href="/my-auctions?intakeId=${intakeId}"]`).click();
   await p
@@ -441,7 +441,7 @@ try {
       exact: true,
     })
     .waitFor();
-  await navigate(p, "/account");
+  await navigate(p, "/account/work");
   await button(p, "Bài đăng sách").click();
   await p.locator(`a[href="/my-books/${fixture.listings[2]}/edit"]`).waitFor();
   await fixture.setUserStatus(seller.user.id, "LOCKED");

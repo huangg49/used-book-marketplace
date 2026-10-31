@@ -1,5 +1,109 @@
-# Điểm lưu hiện tại — 30/10/2026
+# Điểm lưu hiện tại — 31/10/2026
 
+## Đồng bộ main và tích hợp UI qua PR83 — 31/10/2026
+
+- Owner giao fetch/pull main, xử lý conflict, push nhánh và squash merge sau CI.
+  Main mới0a2b3202 (PR81/82),24commit sau baseab80b43; pull main ff-only rồi merge
+  vào `codex/restore-profile-overview`. Conflict duy nhất SESSION_STATE được nối
+  giữ cả phần việc của nhóm và UI; không có conflict source.
+- CI main mới có3job đỏ trước tích hợp: RN lint (memo dependency/màu literal),
+  User Web browser selector sau đổi layout chat, API E2E5ca trao đổi do test
+  migration0039 để lại validator cũ. Sửa dependency/tái dùng token RN; test migration
+  khôi phục validator hiện tại trong finally, giữ nguyên checksums/migration cũ.
+- Browser chat còn phát hiện retry pay/cancel bị ẩn khi polling thấy trạng thái
+  đã đổi sau mất ACK. Khôi phục retry cùng intent/version/key trong OrderDetails;
+  giữ thêm retry quyết định Seller cùng intent khi trạng thái đã sang Preparing.
+  không đổi API, quyền, ledger, carrier/GHN hoặc worker. Browser fixture PASS gồm
+  snapshot riêng, buyer/seller, mất ACK, tabs/draft,403/503 và320/390px chữ130%.
+- PASS local: install frozen, contract/routes0.63/198operations/31controllers;
+  web253unit/lint/typecheck/build, RN164unit/lint/typecheck, exchange E2E41/41.
+  Account browser PASS trên QA riêng: overview/work routes, menu mới, guide,
+  LOCKED và4width; ca đơn positive/error là fixture có nhãn. Wallet browser PASS
+  cả signed QueryDR, mất ACK/replay, expiry, balance/history/paging và mobile.
+  API unit286/286 khi chạy tuần tự; parallel timeout ca Windows shutdown10s,
+  ca đó riêng chạy lại PASS. Work-inbox browser PASS: web/RNweb/Staff/Admin,
+  paging quá50, exact links, permission và lost ACK; không native/human acceptance.
+  Audit diff không có secret/private env/ghi chú máy cá nhân, không sửa
+  carrier/GHN/Driver hoặc migration đã áp dụng.
+- Vòng CI tiếp theo phát hiện thêm seller-order test dùng nhãn/layout cũ. Đã
+  cập nhật seller-order/buy-now/exchange browser theo cấu trúc mới, giữ assertion
+  giá/snapshot/ledger/key/body/quyền; kiểm cả tab public và owner view với token
+  memory-only. Cả3suite PASS local trên API/Mongo QA thật, carrier/storage fake.
+  ExchangeMine còn lỗi focus Arrow/Home/End, touch target và CTA overflow390px:
+  sửa focus, min-height48px, wrap CTA và role alert; kiểm4width/chữ lớn/retry.
+  Tách region chi tiết trao đổi để ca403 kiểm đúng dữ liệu/nút riêng thay vì card
+  sách public cùng tên bên ngoài. Đã xem ảnh desktop/mobile; giữ style incumbent.
+- [PR83](https://github.com/huangg49/used-book-marketplace/pull/83) đã mở;
+  kết quả CI/merge cuối theo đúng head trong PR, không lấy lượt cũ thay lượt mới.
+  Chỉ merge khi mọi job áp dụng đạt. Không lấy AI review thay human review,
+  không đóng gate READINESS. DB chính và dịch vụ app vẫn dừng, chỉ bật QA57017;
+  không migrate/reset/seed DB chính khi đồng bộ source.
+
+## Khôi phục tổng quan Profile web — 30/10/2026
+
+- Tạm dừng theo yêu cầu owner để tắt máy: web5174, API3000 và Mongo local đã
+  dừng; giữ volume/dữ liệu. Code UI đã commit local trên nhánh bên dưới, chưa
+  push/PR/merge. Lượt khởi chạy UI đã sao lưu DB trước khi áp dụng7migration
+  thiếu/cập nhật role bằng env hiện có; preflight sau đó đủ56migration, không
+  lệch checksum; không reset/seed, số user/ledger giữ nguyên. Khi tiếp tục, kiểm
+  git và trạng thái dịch vụ trước khởi chạy lại; READINESS không đổi.
+- Owner yêu cầu trả lại trang tổng quan cũ. Nhánh `codex/restore-profile-overview`,
+  baseab80b43 sau fetch/pull PR80 của nhóm; giữ các thay đổi trao đổi/thông báo/
+  form đăng sách mới. Commit subject `fix(web): restore member profile overview`.
+- `/account` khôi phục bố cục từaed674f: chào mừng, thống kê, hoạt động, dòng tiền,
+  đấu giá, kệ sách và đơn trực tiếp, dùng component hiện tại của nhóm. Menu header/
+  sidebar có Tổng quan; hub việc đang làm được giữ ở `/account/work`, nhãn Việc
+  của tôi. Guide/back link và harness theo đúng entry mới; RN giữ nguyên.
+- Card đơn cũ chứa tên/giá/tiến trình mẫu nên thay nội dung bằng listOrders read
+  có owner query key, vai trò mua/bán, empty/error/retry và link đúng Order ID.
+  Không phục hồi đơn/vận chuyển giả, không sửa GHN/worker/tiền/API. Lỗi dữ liệu
+  ví/kệ không hiển thị thành số0; giữ điều kiện tài khoản cho CTA đăng sách/kệ.
+- PASS web253unit/typecheck/lint/build; account browser tại1440/768/390/320,
+  đăng nhập/keyboard/menu/guide/LOCKED work entry. Session/wallet/empty orders
+  dùng API/Mongo QA thật; ca order positive/error/retry là response fixture có
+  nhãn trong harness. Browser work-inbox web/RNweb/Staff/Admin PASS với paging,
+  exact links, permission và lost ACK. Không native/human acceptance.
+- Đã xem ảnh desktop/mobile trong `.tmp/journey-account-evidence/`; không
+  overflow. Workflow Pro Max/Taste/Impeccable giữ thiết kế cũ; detector1advisory
+  animate-bounce từPR80 và4warning Inter trên nhãn biểu đồ cũ. Giữ phạm vi khôi
+  phục và motion theo owner, không thêm font/theme/palette.
+- QA riêng được dọn/dừng khi kết thúc; DB chính không migrate/import/reset/seed.
+  Chỉ commit local cho gói này, chưa push/PR/merge; READINESS giữ nguyên.
+- Follow-up căn toàn bộ header Tổng quan: dùng DashboardSectionHeading cho5card
+  chính (hoạt động/dòng tiền/đấu giá/kệ/đơn), thống nhất cỡ chữ và gap4px;
+  bỏ margin kế thừa ở chào mừng, sổ cái và tiêu đề card con. Actions/filter giữ
+  riêng, xuống dòng trên mobile. Browser fixture cô lập (chặn API, không ghi DB)
+  tại1440/1024/768/390/320: cùng lề, icon căn giữa, không overflow; kiểm thêm lỗi
+  dòng tiền, đã xem ảnh desktop/mobile. Web253unit/lint/typecheck/build đạt;
+  detector còn4warning Inter chart và1advisory bounce có sẵn, giữ font/motion
+  ngoài phạm vi. Theo phản hồi mới nhất của owner, thay khung icon kéo giãn bằng
+  hình vuông cố định56px desktop/48px mobile, SVG24px, viền nhẹ/nền kem/mực wine;
+  mô tả dài không kéo cao icon. Browser fixture cả5width kiểm hình vuông, căn đầu
+  cụm chữ dài/căn giữa cụm ngắn, không overflow; đã xem ảnh và lint/detector
+  component đạt. READINESS và quyền push/merge không đổi.
+- Banner chào mừng: owner thấy bản tối giản mất phong cách nên khôi phục bố cục,
+  nền bản đồ, tiêu đề/lời chào và hàng badge trước đó; rút nhãn thành Hội viên
+  Lật lại, Đang hoạt động và Ví Lật-Xu. Mô tả còn1câu: Quản lý sách, giao dịch
+  và các phiên đấu giá của bạn. Giữ cảnh báo/CTA LOCKED/RESTRICTED và label
+  thông báo/số chưa đọc. Browser fixture chặn API tại5width kiểm không overflow,
+  tên dài,120unread, keyboard và2trạng thái hạn chế; đã xem desktop/mobile.
+  Typecheck/lint component đạt; detector chỉ advisory motion cũ. Account harness
+  dùng lại heading Tổng quan của bạn; không chạy lại full API/Mongo account suite
+  cho gói copy/layout này.
+- Card Đấu giá của bạn: mô tả1câu,1CTA Khám phá sàn và3mục số liệu ngăn bằng
+  đường kẻ nhẹ; bỏ nút lịch sử trùng entry Tất cả/Đã tham gia và các khung con.
+  Giữ query/count và deep link active/payment/all. Browser fixture chặn API tại
+  5width kiểm empty/count2-1-3/loading/error, link và keyboard, không overflow;
+  đã xem desktop/mobile. Lint/build và detector0finding đạt; không đổi API/DB.
+- Owner bỏ2tab Việc của tôi/Hồ sơ của tôi khỏi accountNavigation dùng chung
+  header desktop/mobile và sidebar; giữ route/trang hiện có. Browser fixture
+  chặn API kiểm menu desktop/sidebar mobile:2entry vắng,7mục chung và thông báo
+  sidebar giữ nguyên. Lint/typecheck đạt; account/wallet harness theo menu mới,
+  chưa chạy lại2suite API/Mongo browser này. Không đổi RN hoặc READINESS.
+- Owner yêu cầu bỏ câu chú thích bìa hero trên Home thường và dòng link hướng dẫn
+  đen phía trên4shortcut; chỉ giữ nhãn riêng trong catalog preview. Browser
+  Home1440/390 kiểm ô tìm kiếm render, cả2câu vắng và4link shortcut còn nguyên;
+  đã xem ảnh band desktop, lint/detector đạt. Không đổi dữ liệu/ảnh/tìm kiếm.
 ## Hoàn thiện Tính năng Tiêu chí mong muốn trao đổi & Cơ chế Ghép đôi Thông minh (Exchange Preferences & Smart Matchmaking) — 30/10/2026
 
 - Nhánh `feature/exchange-policy-and-transit-worker`.

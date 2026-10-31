@@ -88,7 +88,7 @@ const refresh = (page, key) => page.evaluate(async (key) => {
   await queryClient.invalidateQueries({ queryKey: [key] });
 }, key);
 const orderRegion = (page) => page.getByRole("region", { name: "Chi tiết đơn hàng", exact: true });
-const paymentButton = (page) => orderRegion(page).getByRole("button", { name: "Thanh toán 95.000 ₫", exact: true });
+const paymentButton = (page) => orderRegion(page).getByRole("button", { name: "Thanh toán ngay 95.000 ₫", exact: true });
 
 try {
   http = createHttpServer();
@@ -237,8 +237,8 @@ try {
   const br = orderRegion(b);
   await br.getByText("Địa chỉ nhận riêng của đơn QA", { exact: false }).waitFor();
   assert.equal(commands.ensure.length, 0, "linked order skips creation and selects its exact room");
-  await b.getByRole("heading", { name: negotiated.item.metadata.title, level: 1, exact: true }).waitFor();
-  assert.equal(await b.getByRole("heading", { name: "[QA] Tên bài đăng đã đổi sau khi đặt đơn", level: 1 }).count(), 0, "private order snapshot wins over edited public listing");
+  await br.getByRole("heading", { name: negotiated.item.metadata.title, exact: true }).waitFor();
+  assert.equal(await br.getByRole("heading", { name: "[QA] Tên bài đăng đã đổi sau khi đặt đơn" }).count(), 0, "private order snapshot wins over edited public listing");
   await b.getByText(oldMessage.body, { exact: true }).waitFor();
   await b.getByRole("region", { name: "Lịch sử thỏa thuận", exact: true }).getByText("chấp nhận giá 75.000 ₫.", { exact: false }).waitFor();
   assert.equal(await br.getByRole("button", { name: "Đăng ký vận đơn", exact: true }).count(), 0);
@@ -246,22 +246,22 @@ try {
 
   await b.locator("#chat-message").fill("[QA] Tin nhắn chỉ gửi đúng một lần.");
   await b.getByRole("button", { name: "Gửi tin nhắn", exact: true }).click();
-  await b.getByRole("button", { name: "Thử gửi lại", exact: true }).waitFor();
+  await b.getByRole("button", { name: "Thử gửi lại tin nhắn", exact: true }).waitFor();
   assert.equal(await b.locator("#chat-message").inputValue(), "[QA] Tin nhắn chỉ gửi đúng một lần.");
-  await b.getByRole("button", { name: "Thử gửi lại", exact: true }).click();
+  await b.getByRole("button", { name: "Thử gửi lại tin nhắn", exact: true }).click();
   await b.waitForFunction(() => document.getElementById("chat-message").value === "");
   assert.deepEqual(commands.message[0], commands.message[1]);
   assert.equal(messages.get(negotiated.conversationId).length, 2, "message id dedupes committed retry");
 
   await paymentButton(b).click();
-  await br.getByRole("button", { name: "Thử lại cùng thanh toán", exact: true }).waitFor();
+  await br.getByRole("button", { name: "Thử lại thanh toán", exact: true }).waitFor();
   await refresh(b, "direct-order");
   await b.setViewportSize({ width: 390, height: 844 });
   await b.evaluate(() => document.documentElement.style.fontSize = "130%");
   await b.getByRole("button", { name: "Hội thoại", exact: true }).click();
   await b.locator("#chat-message").fill("[QA] Bản nháp giữ khi đổi tab đơn hàng.");
   await b.getByRole("button", { name: "Đơn hàng", exact: true }).click();
-  await br.getByRole("button", { name: "Thử lại cùng thanh toán", exact: true }).click();
+  await br.getByRole("button", { name: "Thử lại thanh toán", exact: true }).click();
   assert.deepEqual(commands.pay[0], commands.pay[1], "payment keeps original version/key/body after committed lost reply and mobile tabs");
   await b.getByRole("button", { name: "Hội thoại", exact: true }).click();
   assert.equal(await b.locator("#chat-message").inputValue(), "[QA] Bản nháp giữ khi đổi tab đơn hàng.");
@@ -279,7 +279,7 @@ try {
   await b.getByText(oldMessage.body, { exact: true }).waitFor();
   historyFailures.clear(); await b.getByRole("button", { name: "Tải lại tin nhắn", exact: true }).click();
   detailFailures.set("buyer" + negotiated.id, 1); await refresh(b, "direct-order");
-  await br.getByText("Chưa cập nhật được trạng thái mới.", { exact: false }).waitFor();
+  await br.getByText("Chưa cập nhật được trạng thái mới nhất.", { exact: false }).waitFor();
   await br.getByText("Địa chỉ nhận riêng của đơn QA", { exact: false }).waitFor();
   await br.getByRole("button", { name: "Thử lại", exact: true }).click();
   denied.add("buyer" + negotiated.id); await refresh(b, "direct-order");
@@ -297,7 +297,7 @@ try {
   await b.waitForURL(`**/chat/${buyNow.conversationId}`);
   assert.equal(commands.ensure.length, 2); assert.deepEqual(commands.ensure[0], commands.ensure[1], "ensure retry preserves key/body after committed lost response");
   assert.equal(commands.ensure[0].body, "{}"); assert.ok(commands.ensure[0].key);
-  await b.getByRole("heading", { name: buyNow.item.metadata.title, level: 1, exact: true }).waitFor();
+  await orderRegion(b).getByRole("heading", { name: buyNow.item.metadata.title, exact: true }).waitFor();
   await orderRegion(b).getByText("Mô tả bản sách được lưu tại thời điểm đặt đơn QA.", { exact: true }).waitFor();
   await goto(b, `/orders/${buyNow.id}`); await b.waitForURL(`**/chat/${buyNow.conversationId}`);
   assert.equal(commands.ensure.length, 2, "legacy URL reuses linked order room");
@@ -343,7 +343,7 @@ try {
   await refresh(b, "direct-order");
   await orderRegion(b).getByRole("button", { name: "Thử lại hủy đơn", exact: true }).click();
   assert.deepEqual(commands.cancel[0], commands.cancel[1], "cancel retry pins original version and key even after state poll");
-  await orderRegion(b).getByText("Đã hủy", { exact: true }).waitFor();
+  await orderRegion(b).getByRole("heading", { name: "Đã hủy", exact: true }).waitFor();
   assert.deepEqual(issues, []);
   await writeFile(path.join(out, "result.json"), JSON.stringify({ result: "PASS", api: "All isolated HTTP fixtures", socket: "Isolated Socket.IO5197",
     cases: ["order list to exact existing room", "existing history and agreement events", "snapshot title over edited or archived listing", "BuyNow ensure committed lost reply same key/body", "legacy order URL", "buyer/seller fields and command eligibility", "payment and cancellation committed retry", "shipping draft and registration retry", "message committed retry dedupe", "cached detail503 retains snapshot and403 hides it", "history error retains messages", "mobile320/390px130% no overflow", "mobile tabs preserve payment/chat/shipping state"] }, null, 2));

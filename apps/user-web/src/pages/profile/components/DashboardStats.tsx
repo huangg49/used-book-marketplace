@@ -70,7 +70,7 @@ export function DashboardStats({ ownerId }: DashboardStatsProps) {
 
           <div className="pt-space-md mt-space-md flex items-center justify-between border-t border-white/15 gap-1.5">
             <span className="text-xs font-bold text-amber-200 whitespace-nowrap">
-              +{latXu.toLocaleString("vi-VN")} Lật-Xu
+              {walletQuery.data && !walletQuery.isError ? `+${latXu.toLocaleString("vi-VN")} Lật-Xu` : "Theo số dư đã xác nhận"}
             </span>
             <Link
               to={ROUTES.wallet}
@@ -93,7 +93,7 @@ export function DashboardStats({ ownerId }: DashboardStatsProps) {
                 <div className="h-8 w-28 bg-surface-container-high rounded animate-pulse my-1" />
               ) : (
                 <span className="font-currency-display text-lg sm:text-xl lg:text-2xl text-primary tracking-tight font-bold truncate">
-                  {formatVnd(heldVnd)}
+                  {walletQuery.isError ? "Chưa tải được" : formatVnd(heldVnd)}
                 </span>
               )}
             </div>
@@ -116,6 +116,8 @@ export function DashboardStats({ ownerId }: DashboardStatsProps) {
               </span>
               {listingsQuery.isPending ? (
                 <div className="h-8 w-28 bg-white/20 rounded animate-pulse my-1" />
+              ) : listingsQuery.isError ? (
+                <button type="button" onClick={() => void listingsQuery.refetch()} className="min-h-11 text-sm underline">Chưa tải được kệ sách. Thử lại</button>
               ) : (
                 <span className="font-currency-display text-lg sm:text-xl lg:text-2xl text-white tracking-tight font-bold">
                   {totalValue > 0 ? formatVnd(totalValue) : `${totalBooks} cuốn`}
@@ -130,7 +132,7 @@ export function DashboardStats({ ownerId }: DashboardStatsProps) {
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-400/20 border border-amber-300/35 text-amber-200 shadow-xs whitespace-nowrap">
               <BookOpen size={12} className="text-amber-300 flex-shrink-0" />
               <span className="text-xs font-bold tracking-wide">
-                <strong className="font-extrabold text-amber-100">{totalBooks}</strong> ấn phẩm
+                <strong className="font-extrabold text-amber-100">{listingsQuery.data && !listingsQuery.isError ? totalBooks : "—"}</strong> ấn phẩm
               </span>
             </div>
             <Link

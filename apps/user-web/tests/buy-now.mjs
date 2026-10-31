@@ -353,11 +353,11 @@ try {
     name: "Chi tiết đơn hàng",
     exact: true,
   });
-  await buyerOrderDetails.getByRole("heading", { name: "Đơn Mua ngay", exact: true }).waitFor();
-  await buyerPage.getByRole("heading", {
-    level: 1, name: order.item.metadata.title, exact: true,
+  await buyerOrderDetails.getByText("Mua ngay", { exact: true }).waitFor();
+  await buyerOrderDetails.getByRole("heading", {
+    name: order.item.metadata.title, exact: true,
   }).waitFor();
-  await buyerOrderDetails.getByRole("status").filter({ hasText: /^Chờ thanh toán$/ }).waitFor();
+  await buyerOrderDetails.getByText("Chờ thanh toán", { exact: true }).waitFor();
   const room = await fixture.api(`/me/purchase-conversations/${conversationId}`, buyer.accessToken);
   assert.equal(room.orderId, orderId);
   assert.equal(room.listingId, listingId);
@@ -409,7 +409,7 @@ try {
       .countDocuments({ buyerId: buyer.user.id }),
     1,
   );
-  await buyerOrderDetails.getByRole("button", { name: /^Thanh toán 155\.000\s*₫$/ }).click();
+  await buyerOrderDetails.getByRole("button", { name: /^Thanh toán ngay 155\.000\s*₫$/ }).click();
   await buyerOrderDetails.getByRole("alert").filter({ hasText: "số dư ví" }).waitFor();
   assert.equal(
     (await fixture.api("/me/wallet", buyer.accessToken)).transactionHeld,
@@ -430,15 +430,15 @@ try {
       await route.abort("failed");
     } else await route.continue();
   });
-  await buyerOrderDetails.getByRole("button", { name: /^Thanh toán 155\.000\s*₫$/ }).click();
+  await buyerOrderDetails.getByRole("button", { name: /^Thanh toán ngay 155\.000\s*₫$/ }).click();
   await buyerOrderDetails
-    .getByRole("button", { name: "Thử lại cùng thanh toán", exact: true })
+    .getByRole("button", { name: "Thử lại thanh toán", exact: true })
     .waitFor();
   await buyerOrderDetails
-    .getByRole("button", { name: "Thử lại cùng thanh toán", exact: true })
+    .getByRole("button", { name: "Thử lại thanh toán", exact: true })
     .click();
   await buyerOrderDetails
-    .getByRole("status").filter({ hasText: /^Người bán đang chuẩn bị gửi$/ })
+    .getByText("Người bán đang chuẩn bị gửi", { exact: true })
     .waitFor();
   assert.equal(paymentAttempts.length, 2);
   assert.deepEqual(paymentAttempts[0], paymentAttempts[1]);
@@ -457,7 +457,7 @@ try {
   await buyerPage.goBack();
   await buyerPage.waitForURL(`**/chat/${conversationId}`);
   await buyerOrderDetails
-    .getByRole("status").filter({ hasText: /^Người bán đang chuẩn bị gửi$/ })
+    .getByText("Người bán đang chuẩn bị gửi", { exact: true })
     .waitFor();
   assert.equal(
     (await fixture.api("/me/wallet", buyer.accessToken)).transactionHeld,
@@ -505,9 +505,9 @@ try {
     name: "Chi tiết đơn hàng",
     exact: true,
   });
-  await sellerOrderDetails.getByRole("heading", { name: "Đơn Mua ngay", exact: true }).waitFor();
-  await sellerPage
-    .getByRole("heading", { name: "Chuẩn bị và bàn giao sách", exact: true })
+  await sellerOrderDetails.getByText("Mua ngay", { exact: true }).waitFor();
+  await sellerOrderDetails
+    .getByText("Người bán đang chuẩn bị gửi", { exact: true })
     .waitFor();
   const apiRequire = createRequire(path.join(root, "apps/api/package.json"));
   const bytes = await apiRequire("sharp")({
@@ -633,7 +633,7 @@ try {
     "POST",
     { "Idempotency-Key": pickupEventId },
   );
-  await buyerOrderDetails.getByRole("status").filter({ hasText: /^Đang giao$/ }).waitFor();
+  await buyerOrderDetails.getByText("Đang giao", { exact: true }).waitFor();
   await buyerPage.evaluate(() =>
     window.scrollTo({ top: 0, behavior: "instant" }),
   );
