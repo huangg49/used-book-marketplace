@@ -82,34 +82,38 @@ function checkMatch(
   } | null,
 ) {
   if (!pref) return null;
-  const reasons: string[] = [];
   const authorStr = myBook.authors.join(", ");
-  if (
+  const matchAuthor = Boolean(
     pref.targetAuthor &&
-    pref.targetAuthor.trim() &&
-    authorStr.toLowerCase().includes(pref.targetAuthor.toLowerCase().trim())
-  ) {
-    reasons.push(`Khớp tác giả "${pref.targetAuthor}"`);
-  }
-  if (
+      pref.targetAuthor.trim() &&
+      authorStr.toLowerCase().includes(pref.targetAuthor.toLowerCase().trim()),
+  );
+  const matchCat = Boolean(
     pref.targetCategory &&
-    pref.targetCategory.trim() &&
-    myBook.category &&
-    (myBook.category.toLowerCase().includes(pref.targetCategory.toLowerCase().trim()) ||
-      pref.targetCategory.toLowerCase().includes(myBook.category.toLowerCase().trim()))
-  ) {
-    reasons.push(`Khớp thể loại "${pref.targetCategory}"`);
-  }
+      pref.targetCategory.trim() &&
+      myBook.category &&
+      (myBook.category.toLowerCase().includes(pref.targetCategory.toLowerCase().trim()) ||
+        pref.targetCategory.toLowerCase().includes(myBook.category.toLowerCase().trim())),
+  );
+  let matchDesc = false;
   if (pref.targetDescription && pref.targetDescription.trim()) {
     const descWords = pref.targetDescription
       .toLowerCase()
       .split(/\s+/)
       .filter((w) => w.length >= 3);
-    if (descWords.some((w) => myBook.title.toLowerCase().includes(w))) {
-      reasons.push("Khớp tiêu chí mong muốn");
-    }
+    matchDesc = descWords.some((w) => myBook.title.toLowerCase().includes(w));
   }
-  return reasons.length > 0 ? reasons.join(" · ") : null;
+
+  if (matchAuthor) {
+    return `Đúng gu đối tác · ${pref.targetAuthor}`;
+  }
+  if (matchCat) {
+    return `Đúng thể loại đối tác tìm · ${pref.targetCategory}`;
+  }
+  if (matchDesc) {
+    return "Đúng cuốn đối tác mong muốn";
+  }
+  return null;
 }
 
 async function inventory(): Promise<InventoryItem[]> {
