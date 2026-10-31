@@ -34,6 +34,7 @@
     "mongo:migrate": "tsx src/mongo-migrate.ts",
     "mongo:seed": "tsx src/mongo-seed.ts",
     "mongo:seed-exchange": "tsx src/seed-exchange-data.ts",
+    "mongo:seed-preferences": "tsx src/seed-exchange-preferences.ts",
     "price-refs:import": "tsx src/price-refs-import.ts",
     "eval:price": "tsx eval/price-assist/run.ts",
     "eval:autofill": "tsx eval/autofill-assist/run.ts",

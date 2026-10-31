@@ -3124,6 +3124,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/exchanges/resolutions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * listExchangeResolutions
+         * @description ACTIVE STAFF/ADMIN. Returns all exchanges currently in ResolutionPending status for dispute adjudication.
+         */
+        get: operations["listExchangeResolutions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/exchanges/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * resolveExchangeDispute
+         * @description ACTIVE STAFF/ADMIN. Resolves an exchange in ResolutionPending with decision RefundBoth or CompleteExchange.
+         */
+        post: operations["resolveExchangeDispute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/transactions/{type}/{id}/reviews": {
         parameters: {
             query?: never;
@@ -3564,6 +3604,14 @@ export interface components {
                 notes: string;
             }[];
         };
+        ExchangePreferences: {
+            /** @description Thể loại sách mong muốn nhận (VD 'Văn học', 'Kinh tế', 'Tâm lý học') */
+            targetCategory?: string | null;
+            /** @description Tác giả mong muốn nhận (VD 'Haruki Murakami', 'Nguyễn Nhật Ánh') */
+            targetAuthor?: string | null;
+            /** @description Ghi chú tiêu chí trao đổi chi tiết */
+            targetDescription?: string | null;
+        };
         /** @description Full replacement, not a patch. Incomplete text is allowed. Selected values must be valid; inactive mode prices must be null (both null if mode is null). mediaIds are ordered and must belong to this listing. Uploads may be Processing in a draft, but must be Ready at submission. */
         DraftContent: ({
             /** @description Optional for legacy single books. Whole bundle manifest is pinned to this revision/snapshot; no partial purchase or return. */
@@ -3581,6 +3629,7 @@ export interface components {
             description: string;
             salePrice: number | null;
             exchangeValue: number | null;
+            exchangePreferences?: components["schemas"]["ExchangePreferences"] | null;
             mediaIds: string[];
             /** @description Optional while a draft is incomplete; required before submitting a Sale or Both listing. Omitted preserves the existing choice on replacement; null explicitly clears it. Configured origins must be current at save, submission and approval. No checkout is enabled. */
             fulfillment?: components["schemas"]["ListingFulfillment"] | null;
@@ -3620,6 +3669,7 @@ export interface components {
             description: string;
             salePrice: number | null;
             exchangeValue: number | null;
+            exchangePreferences?: components["schemas"]["ExchangePreferences"] | null;
             mediaIds: string[];
             /** @description Optional for legacy compatibility. Omitted preserves the existing choice on replacement; null explicitly clears it. Configured origins must be current at save, submission and approval. No checkout is enabled. */
             fulfillment?: components["schemas"]["ListingFulfillment"] | null;
@@ -3724,6 +3774,7 @@ export interface components {
             description: string;
             salePrice: number | null;
             exchangeValue: number | null;
+            exchangePreferences?: components["schemas"]["ExchangePreferences"] | null;
             seller: {
                 /** Format: uuid */
                 id: string;
@@ -5960,9 +6011,9 @@ export interface components {
         /** @enum {string} */
         ExchangeStatus: "Proposed" | "AcceptedAwaitingFunding" | "Preparing" | "InTransit" | "Delivered" | "Completed" | "Cancelled" | "ResolutionPending";
         /** @enum {string} */
-        ExchangeCancelReason: "FundingExpired" | "ProposalExpired" | "CancelledByUser" | "ListingUnavailable" | "ShippingExpired";
+        ExchangeCancelReason: "FundingExpired" | "ProposalExpired" | "CancelledByUser" | "ListingUnavailable" | "ShippingExpired" | "DisputeResolvedRefund" | "MutualAgreement";
         /** @enum {string} */
-        ExchangeCancelledBy: "System" | "Initiator" | "Recipient";
+        ExchangeCancelledBy: "System" | "Initiator" | "Recipient" | "Staff" | "Both";
         Exchange: {
             /** Format: uuid */
             id: string;
@@ -6013,6 +6064,12 @@ export interface components {
             disputedAt?: string | null;
             disputeReason?: string | null;
             disputedBy?: string | null;
+            resolutionDecision?: string | null;
+            resolutionReason?: string | null;
+            resolvedBy?: string | null;
+            resolvedAt?: string | null;
+            cancellationRequestedBy?: components["schemas"]["ExchangeCancelledBy"] | null;
+            cancellationRequestedAt?: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -6187,6 +6244,12 @@ export interface components {
             serverTime: string;
             myReview: components["schemas"]["ExchangeReviewItem"] | null;
             partnerReview: components["schemas"]["ExchangeReviewItem"] | null;
+        };
+        ResolveExchangeDisputeCommand: {
+            expectedVersion: number;
+            /** @enum {string} */
+            decision: "RefundBoth" | "CompleteExchange";
+            reason: string;
         };
         ExchangeReviewsResponse: components["schemas"]["TransactionReviewsResponse"];
         ReviewTransactionsPage: {
@@ -12574,6 +12637,64 @@ export interface operations {
             404: components["responses"]["Error"];
             409: components["responses"]["Error"];
             422: components["responses"]["Error"];
+        };
+    };
+    listExchangeResolutions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"][];
+                };
+            };
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+        };
+    };
+    resolveExchangeDispute: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveExchangeDisputeCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Exchange"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
         };
     };
     getTransactionReviews: {

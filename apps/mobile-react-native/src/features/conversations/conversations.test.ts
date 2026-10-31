@@ -15,7 +15,7 @@ describe("conversations service & guidance", () => {
     seller: { id: "seller-1", displayName: "Người Bán" },
     version: 1,
     status: "Active",
-    expiresAt: "2026-10-30T00:00:00.000Z",
+    expiresAt: new Date(Date.now() + 86400000).toISOString(),
     hasQuote: false,
     quotePreview: null,
     orderId: null,

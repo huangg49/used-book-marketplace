@@ -16,6 +16,15 @@ const metadata = z.object({
   ...catalogClassificationFields,
   isbn: z.string().nullable(),
 });
+const exchangePreferences = z
+  .object({
+    targetCategory: z.string().nullable().optional(),
+    targetAuthor: z.string().nullable().optional(),
+    targetDescription: z.string().nullable().optional(),
+  })
+  .nullable()
+  .optional();
+
 const base = z.object({
   fulfillment: z
     .object({
@@ -39,6 +48,7 @@ const base = z.object({
   missingEssentialContent: z.literal(false),
   description: z.string(),
   seller: z.object({ id: uuid, displayName: z.string() }),
+  exchangePreferences,
   photos: z
     .array(
       z.object({

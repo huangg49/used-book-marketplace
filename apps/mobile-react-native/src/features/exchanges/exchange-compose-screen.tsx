@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -22,14 +22,119 @@ import { formatVnd } from "../../core/ui/format";
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import { publicListing } from "../shelf/contracts";
-import { draftPage } from "../drafts/contracts";
+import { draftPage, type PrivateDraft } from "../drafts/contracts";
 import { addressBook } from "../addresses/contracts";
 import { PublicPhoto } from "../shelf/public-photo";
 import { DraftCoverPhoto } from "../drafts/draft-cover-photo";
-import { BookIdentity } from "../drafts/catalog-picker";
+import { BookIdentity, useCatalogBook } from "../drafts/catalog-picker";
 import { exchangeReceiptSchema } from "./contracts";
 import * as Crypto from "expo-crypto";
 import { z } from "zod";
+
+function checkMatch(
+  book: { title?: string; authors?: string[]; category?: string } | undefined | null,
+  pref: { targetCategory?: string | null; targetAuthor?: string | null; targetDescription?: string | null } | null | undefined,
+): boolean {
+  if (!book || !pref) return false;
+  const targetCat = pref.targetCategory?.trim().toLowerCase();
+  const targetAuth = pref.targetAuthor?.trim().toLowerCase();
+  const targetDesc = pref.targetDescription?.trim().toLowerCase();
+
+  if (!targetCat && !targetAuth && !targetDesc) return false;
+
+  if (targetCat && book.category && book.category.toLowerCase().includes(targetCat)) {
+    return true;
+  }
+  if (targetAuth && book.authors && book.authors.some((a) => a.toLowerCase().includes(targetAuth))) {
+    return true;
+  }
+  if (
+    targetDesc &&
+    book.title &&
+    (book.title.toLowerCase().includes(targetDesc) || targetDesc.includes(book.title.toLowerCase()))
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function InventoryBookRow({
+  listing,
+  isSelected,
+  targetPref,
+  onToggle,
+}: {
+  listing: PrivateDraft;
+  isSelected: boolean;
+  targetPref: { targetCategory?: string | null; targetAuthor?: string | null; targetDescription?: string | null } | null | undefined;
+  onToggle: () => void;
+}) {
+  const bookQuery = useCatalogBook(listing.currentRevision.content.bookId);
+  const book = bookQuery.data;
+
+  const isMatched = checkMatch(book, targetPref);
+  const coverMediaId = listing.currentRevision.content.mediaIds[0];
+  const listingValue = listing.currentRevision.content.exchangeValue ?? 0;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={isSelected ? "Bỏ chọn cuốn sách này" : "Chọn cuốn sách này"}
+      onPress={onToggle}
+      style={({ pressed }) => [
+        styles.bookOptionCard,
+        isSelected && styles.bookOptionCardSelected,
+        isMatched && styles.bookOptionCardMatched,
+        pressed && styles.pressed,
+      ]}
+    >
+      <View style={styles.optionPhotoBox}>
+        {coverMediaId ? (
+          <DraftCoverPhoto
+            listingId={listing.id}
+            mediaId={coverMediaId}
+          />
+        ) : (
+          <View style={styles.optionPhotoEmpty}>
+            <Icon name="book" size={20} color={stitchTokens.roseBrown} />
+          </View>
+        )}
+      </View>
+
+      <View style={styles.optionInfoCol}>
+        <BookIdentity
+          id={listing.currentRevision.content.bookId}
+          compact
+        />
+
+        {isMatched && (
+          <View style={styles.matchedBadge}>
+            <AppText style={styles.matchedBadgeText}>✨ Khớp mong muốn</AppText>
+          </View>
+        )}
+
+        <View style={styles.optionValueRow}>
+          <AppText style={styles.optionValueTag}>
+            Quy đổi: {formatVnd(listingValue)}
+          </AppText>
+        </View>
+      </View>
+
+      <View style={styles.checkCol}>
+        <View
+          style={[
+            styles.radioCircle,
+            isSelected && styles.radioCircleSelected,
+          ]}
+        >
+          {isSelected && (
+            <Icon name="check" size={13} color={stitchTokens.white} />
+          )}
+        </View>
+      </View>
+    </Pressable>
+  );
+}
 
 export function ExchangeComposeScreen() {
   const params = useLocalSearchParams<{ book?: string }>();
@@ -88,6 +193,22 @@ export function ExchangeComposeScreen() {
   });
 
   const targetBook = targetQuery.data;
+  const sortedEligibleListings = useMemo(() => {
+    if (!targetBook?.exchangePreferences) return myEligibleListings;
+    return [...myEligibleListings].sort((a, b) => {
+      const bookA = queryClient.getQueryData<{ title?: string; authors?: string[]; category?: string }>([
+        "listing-book",
+        a.currentRevision.content.bookId,
+      ]);
+      const bookB = queryClient.getQueryData<{ title?: string; authors?: string[]; category?: string }>([
+        "listing-book",
+        b.currentRevision.content.bookId,
+      ]);
+      const matchA = checkMatch(bookA, targetBook.exchangePreferences) ? 1 : 0;
+      const matchB = checkMatch(bookB, targetBook.exchangePreferences) ? 1 : 0;
+      return matchB - matchA;
+    });
+  }, [myEligibleListings, targetBook?.exchangePreferences, queryClient]);
   const chosenMyListings = myEligibleListings.filter((l) =>
     selectedMyListingIds.includes(l.id),
   );
@@ -300,6 +421,41 @@ export function ExchangeComposeScreen() {
             </View>
           </View>
 
+          {/* Target Preferences Banner */}
+          {targetBook?.exchangePreferences &&
+            (targetBook.exchangePreferences.targetCategory ||
+              targetBook.exchangePreferences.targetAuthor ||
+              targetBook.exchangePreferences.targetDescription) && (
+              <View style={styles.prefBanner}>
+                <View style={styles.prefBannerHeader}>
+                  <Icon name="sync" size={14} color={stitchTokens.wineDark} />
+                  <AppText style={styles.prefBannerTitle}>
+                    🎯 Tiêu chí đối tác đang tìm kiếm
+                  </AppText>
+                </View>
+                <View style={styles.prefBannerBody}>
+                  {targetBook.exchangePreferences.targetCategory ? (
+                    <AppText style={styles.prefBannerText}>
+                      • Thể loại: <AppText style={styles.prefBold}>{targetBook.exchangePreferences.targetCategory}</AppText>
+                    </AppText>
+                  ) : null}
+                  {targetBook.exchangePreferences.targetAuthor ? (
+                    <AppText style={styles.prefBannerText}>
+                      • Tác giả: <AppText style={styles.prefBold}>{targetBook.exchangePreferences.targetAuthor}</AppText>
+                    </AppText>
+                  ) : null}
+                  {targetBook.exchangePreferences.targetDescription ? (
+                    <AppText style={styles.prefBannerText}>
+                      • Ghi chú: <AppText style={styles.prefBold}>{targetBook.exchangePreferences.targetDescription}</AppText>
+                    </AppText>
+                  ) : null}
+                </View>
+                <AppText style={styles.prefHint}>
+                  Sách trong kệ của bạn khớp tiêu chí sẽ có huy hiệu ✨ Khớp mong muốn.
+                </AppText>
+              </View>
+            )}
+
           {myEligibleListings.length === 0 ? (
             <View style={styles.emptyInventory}>
               <Icon name="book" size={32} color={stitchTokens.roseBrown} />
@@ -317,64 +473,20 @@ export function ExchangeComposeScreen() {
             </View>
           ) : (
             <View style={styles.inventoryList}>
-              {myEligibleListings.map((listing) => {
+              {sortedEligibleListings.map((listing) => {
                 const isSelected = selectedMyListingIds.includes(listing.id);
-                const coverMediaId = listing.currentRevision.content.mediaIds[0];
-                const listingValue = listing.currentRevision.content.exchangeValue ?? 0;
 
                 return (
-                  <Pressable
+                  <InventoryBookRow
                     key={listing.id}
-                    accessibilityRole="button"
-                    accessibilityLabel={isSelected ? "Bỏ chọn cuốn sách này" : "Chọn cuốn sách này"}
-                    onPress={() => {
+                    listing={listing}
+                    isSelected={isSelected}
+                    targetPref={targetBook?.exchangePreferences}
+                    onToggle={() => {
                       toggleSelectBook(listing.id);
                       setErrorNotice(null);
                     }}
-                    style={({ pressed }) => [
-                      styles.bookOptionCard,
-                      isSelected && styles.bookOptionCardSelected,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <View style={styles.optionPhotoBox}>
-                      {coverMediaId ? (
-                        <DraftCoverPhoto
-                          listingId={listing.id}
-                          mediaId={coverMediaId}
-                        />
-                      ) : (
-                        <View style={styles.optionPhotoEmpty}>
-                          <Icon name="book" size={20} color={stitchTokens.roseBrown} />
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={styles.optionInfoCol}>
-                      <BookIdentity
-                        id={listing.currentRevision.content.bookId}
-                        compact
-                      />
-                      <View style={styles.optionValueRow}>
-                        <AppText style={styles.optionValueTag}>
-                          Quy đổi: {formatVnd(listingValue)}
-                        </AppText>
-                      </View>
-                    </View>
-
-                    <View style={styles.checkCol}>
-                      <View
-                        style={[
-                          styles.radioCircle,
-                          isSelected && styles.radioCircleSelected,
-                        ]}
-                      >
-                        {isSelected && (
-                          <Icon name="check" size={13} color={stitchTokens.white} />
-                        )}
-                      </View>
-                    </View>
-                  </Pressable>
+                  />
                 );
               })}
             </View>
@@ -722,6 +834,42 @@ const styles = StyleSheet.create({
   inventoryList: {
     gap: 10,
   },
+  prefBanner: {
+    backgroundColor: "#FDF4EE",
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 12,
+    padding: space.sm,
+    gap: 6,
+  },
+  prefBannerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  prefBannerTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  prefBannerBody: {
+    gap: 2,
+    paddingLeft: 4,
+  },
+  prefBannerText: {
+    fontSize: 12,
+    color: stitchTokens.roseBrown,
+  },
+  prefBold: {
+    fontWeight: "600",
+    color: stitchTokens.wineDark,
+  },
+  prefHint: {
+    fontSize: 11,
+    fontStyle: "italic",
+    color: stitchTokens.wineMid,
+    marginTop: 2,
+  },
   bookOptionCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -735,6 +883,25 @@ const styles = StyleSheet.create({
   bookOptionCardSelected: {
     borderColor: stitchTokens.wineMid,
     backgroundColor: stitchTokens.roseWarmSurface,
+  },
+  bookOptionCardMatched: {
+    borderColor: "#E59866",
+    backgroundColor: "#FFFDFB",
+  },
+  matchedBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 0.5,
+    borderColor: "#F59E0B",
+    marginTop: 3,
+  },
+  matchedBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#B45309",
   },
   optionPhotoBox: {
     width: 50,

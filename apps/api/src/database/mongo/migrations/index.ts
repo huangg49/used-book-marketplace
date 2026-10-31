@@ -26,6 +26,18 @@ import {
   withSellerScheduledAuctions,
 } from './0037-seller-scheduled-auctions.js';
 import {
+  exchangeDisputeResolutionMigration,
+  withExchangeDisputeResolution,
+} from './0044-exchange-dispute-resolution.js';
+import {
+  exchangeMutualCancellationMigration,
+  withExchangeMutualCancellation,
+} from './0045-exchange-mutual-cancellation.js';
+import {
+  listingExchangePreferencesMigration,
+  withListingExchangePreferences,
+} from './0046-listing-exchange-preferences.js';
+import {
   listingAutofillMigration,
   listingAutofillSpecs,
 } from './0038-listing-autofill.js';
@@ -303,6 +315,9 @@ export const migrations: Migration[] = [
   reviewValidatorReconciliationMigration,
   catalogRecoveryMigration,
   priceSourceOriginMigration,
+  exchangeDisputeResolutionMigration,
+  exchangeMutualCancellationMigration,
+  listingExchangePreferencesMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -334,7 +349,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withBundleReviewSearch)
     .map(withModerationIndexes)
     .map(withReviewCommandTarget)
-    .map(withCatalogRecovery),
+    .map(withCatalogRecovery)
+    .map(withListingExchangePreferences),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape),
@@ -375,7 +391,9 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withExchangePhase4Changes)
     .map(withExchangePhase5Changes)
     .map(withExchangePhase6Changes)
-    .map(withExchangeInspectionDeadlines),
+    .map(withExchangeInspectionDeadlines)
+    .map(withExchangeDisputeResolution)
+    .map(withExchangeMutualCancellation),
   ...directDeliveryCompletionSpecs,
   ...paymentSpecs.map(withVNPayExpiry),
   ...exchangeMessageSpecs,

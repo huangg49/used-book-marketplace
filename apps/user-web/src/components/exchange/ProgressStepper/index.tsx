@@ -6,7 +6,7 @@ export interface ProgressStepperProps {
     status: ExchangeStatus;
     compact?: boolean;
     failedAtStep?: number;
-    closedBy?: 'viewer' | 'partner';
+    closedBy?: 'viewer' | 'partner' | 'both';
     partnerUsername?: string;
     hasReceived?: boolean;
 }
@@ -56,6 +56,9 @@ export function ProgressStepper({ status, compact = false, failedAtStep, closedB
     } else if (status === 'COMPLETED') {
         statusBadgeText = 'Đã hoàn tất';
         statusBadgeType = 'success';
+    } else if (status === 'RESOLUTION_PENDING') {
+        statusBadgeText = 'Đang khiếu nại / sự cố';
+        statusBadgeType = 'failed';
     } else if (status === 'CANCELLED') {
         statusBadgeText = 'Đã hủy';
         statusBadgeType = 'failed';
@@ -139,7 +142,7 @@ export function ProgressStepper({ status, compact = false, failedAtStep, closedB
                                     {compact ? step.shortLabel : (
                                         isFailedHere ? (
                                             status === 'EXPIRED' ? 'Hết hạn' :
-                                            status === 'CANCELLED' ? 'Đã hủy' :
+                                            status === 'CANCELLED' ? (closedBy === 'both' ? 'Đồng thuận hủy' : 'Đã hủy') :
                                             status === 'REJECTED' ? (closedBy === 'viewer' ? 'Từ chối' : 'Bị từ chối') : step.label
                                         ) : step.label
                                     )}

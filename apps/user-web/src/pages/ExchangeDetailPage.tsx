@@ -171,7 +171,13 @@ export function ExchangeDetailPage({ exchangeId, embedded = false }: { exchangeI
     else if (detail.status === 'REJECTED') {
         statusText = detail.closedBy === 'viewer' ? 'Bạn đã từ chối đề nghị này' : `@${detail.partner.username} đã từ chối đề nghị của bạn`;
     }
-    else if (detail.status === 'CANCELLED') statusText = detail.closedBy === 'viewer' ? 'Bạn đã hủy đề nghị' : detail.closedBy === 'partner' ? 'Đối tác đã hủy đề nghị' : 'Đề nghị đã hủy';
+    else if (detail.status === 'CANCELLED') {
+        if (detail.closedBy === 'both' || detail.cancelReason === 'MutualAgreement') {
+            statusText = 'Hai bên đồng thuận hủy';
+        } else {
+            statusText = detail.closedBy === 'viewer' ? 'Bạn đã hủy đề nghị' : detail.closedBy === 'partner' ? 'Đối tác đã hủy đề nghị' : 'Đề nghị đã hủy';
+        }
+    }
     else if (detail.status === 'EXPIRED') statusText = 'Hết hạn';
 
     return (

@@ -10,6 +10,7 @@ import {
   Search,
   FileText,
   PlusCircle,
+  Sparkles,
 } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
@@ -79,11 +80,46 @@ async function inventory() {
         id: row.id,
         title: book.title,
         author: book.authors.join(", "),
+        category: book.category ?? "",
         value: row.currentRevision.content.exchangeValue ?? 0,
         coverUrl,
       };
     }),
   );
+}
+
+function checkMatch(
+  myBook: { title: string; author: string; category?: string },
+  pref?: { targetCategory?: string | null; targetAuthor?: string | null; targetDescription?: string | null } | null,
+) {
+  if (!pref) return null;
+  const reasons: string[] = [];
+  if (
+    pref.targetAuthor &&
+    pref.targetAuthor.trim() &&
+    myBook.author.toLowerCase().includes(pref.targetAuthor.toLowerCase().trim())
+  ) {
+    reasons.push(`Khớp tác giả "${pref.targetAuthor}"`);
+  }
+  if (
+    pref.targetCategory &&
+    pref.targetCategory.trim() &&
+    myBook.category &&
+    (myBook.category.toLowerCase().includes(pref.targetCategory.toLowerCase().trim()) ||
+      pref.targetCategory.toLowerCase().includes(myBook.category.toLowerCase().trim()))
+  ) {
+    reasons.push(`Khớp thể loại "${pref.targetCategory}"`);
+  }
+  if (pref.targetDescription && pref.targetDescription.trim()) {
+    const descWords = pref.targetDescription
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w) => w.length >= 3);
+    if (descWords.some((w) => myBook.title.toLowerCase().includes(w))) {
+      reasons.push("Khớp tiêu chí mong muốn");
+    }
+  }
+  return reasons.length > 0 ? reasons.join(" · ") : null;
 }
 function LegacyExchangeComposePage() {
   const auth = useSession();
@@ -346,6 +382,49 @@ function LegacyExchangeComposePage() {
                   Đã chọn {chosenBooks.length} cuốn
                 </span>
               </div>
+
+              {targetBook?.exchangePreferences &&
+                Boolean(
+                  targetBook.exchangePreferences.targetCategory ||
+                    targetBook.exchangePreferences.targetAuthor ||
+                    targetBook.exchangePreferences.targetDescription,
+                ) && (
+                  <div className={styles.prefBanner}>
+                    <div className={styles.prefBannerHeader}>
+                      <Sparkles size={16} />
+                      <span>🎯 Tiêu chí mong muốn của chủ sách:</span>
+                    </div>
+                    <div className={styles.prefDetails}>
+                      {targetBook.exchangePreferences.targetCategory && (
+                        <div>
+                          <strong>Thể loại tìm kiếm:</strong> {targetBook.exchangePreferences.targetCategory}
+                        </div>
+                      )}
+                      {targetBook.exchangePreferences.targetAuthor && (
+                        <div>
+                          <strong>Tác giả tìm kiếm:</strong> {targetBook.exchangePreferences.targetAuthor}
+                        </div>
+                      )}
+                      {targetBook.exchangePreferences.targetDescription && (
+                        <div>
+                          <strong>Ghi chú:</strong> {targetBook.exchangePreferences.targetDescription}
+                        </div>
+                      )}
+                      {(mine.data ?? []).some((b) =>
+                        checkMatch(b, targetBook.exchangePreferences),
+                      ) ? (
+                        <div style={{ marginTop: 6, color: "#92540c", fontWeight: 600 }}>
+                          ✨ Tuyệt vời! Tủ sách của bạn có cuốn phù hợp với mong muốn đối tác (được ưu tiên xếp đầu).
+                        </div>
+                      ) : (
+                        <div style={{ marginTop: 6, color: "var(--ink-muted)" }}>
+                          💡 Bạn vẫn có thể chọn sách khác trên kệ của mình để trao đổi và bù tiền nếu cần.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
               <label htmlFor="exchange-search" className={styles.label}>
                 <Search size={16} /> Tìm trong kệ của bạn
               </label>
@@ -360,7 +439,16 @@ function LegacyExchangeComposePage() {
                 <p>Kệ chưa có bản sách được duyệt và đang cho phép đổi.</p>
               )}
               <div className={styles.bookGrid}>
-                {mine.data
+                {[...(mine.data ?? [])]
+                  .map((book) => ({
+                    ...book,
+                    matchReason: checkMatch(book, targetBook?.exchangePreferences),
+                  }))
+                  .sort((a, b) => {
+                    if (a.matchReason && !b.matchReason) return -1;
+                    if (!a.matchReason && b.matchReason) return 1;
+                    return 0;
+                  })
                   ?.filter((book) =>
                     `${book.title} ${book.author}`
                       .toLocaleLowerCase("vi")
@@ -395,6 +483,11 @@ function LegacyExchangeComposePage() {
                           <p className={styles.selectBookTitle}>{book.title}</p>
                           <p className={styles.selectBookAuthor}>{book.author}</p>
                           <p>{formatVnd(book.value)}</p>
+                          {book.matchReason && (
+                            <span className={styles.matchedBadge}>
+                              <Sparkles size={11} /> {book.matchReason}
+                            </span>
+                          )}
                         </div>
                       </label>
                     );

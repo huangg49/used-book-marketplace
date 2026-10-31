@@ -12,6 +12,8 @@ export default function MainLayout() {
   const location = useLocation();
   const isChat =
     location.pathname === "/chat" || location.pathname.startsWith("/chat/");
+  const isChatRoom =
+    location.pathname.startsWith("/chat/") && location.pathname !== "/chat";
   const chatTransition = useConversationTransition("/chat");
   useEffect(() => {
     if (isChat) return;
@@ -38,6 +40,7 @@ export default function MainLayout() {
         tabIndex={-1}
         className={styles.main}
         data-chat={isChat || undefined}
+        data-chat-room={isChatRoom || undefined}
         data-exchange={
           location.pathname === "/exchange" ||
           location.pathname.startsWith("/exchange/") ||

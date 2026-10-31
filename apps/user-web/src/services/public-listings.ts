@@ -2,6 +2,14 @@ import { z } from "zod";
 import { session } from "./api";
 import { bundleSchema } from '../lib/book-bundle';
 
+export const exchangePreferencesSchema = z.object({
+  targetCategory: z.string().nullable().optional(),
+  targetAuthor: z.string().nullable().optional(),
+  targetDescription: z.string().nullable().optional(),
+}).nullable().optional();
+
+export type ExchangePreferences = z.infer<typeof exchangePreferencesSchema>;
+
 const publicListingSchema = z.object({
   bundle: bundleSchema.nullable().optional(),
   id: z.string().uuid(),
@@ -33,6 +41,7 @@ const publicListingSchema = z.object({
   description: z.string(),
   salePrice: z.number().int().nullable(),
   exchangeValue: z.number().int().nullable(),
+  exchangePreferences: exchangePreferencesSchema,
   seller: z.object({ id: z.string().uuid(), displayName: z.string() }),
   photos: z.array(
     z.object({

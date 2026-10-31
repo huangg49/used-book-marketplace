@@ -89,6 +89,9 @@ export type RevisionFormValue = {
   mode: Mode;
   salePrice: string;
   exchangeValue: string;
+  targetCategory?: string;
+  targetAuthor?: string;
+  targetDescription?: string;
   originAddressId: string;
   photoCount: number;
   ownershipDeclared: boolean;
@@ -129,6 +132,9 @@ export function formFromListing(
     mode: bundle ? "Sale" : mode === "Exchange" || mode === "Both" ? mode : "Sale",
     salePrice: money(c.salePrice),
     exchangeValue: money(c.exchangeValue),
+    targetCategory: text((c.exchangePreferences as Record<string, unknown> | undefined)?.targetCategory),
+    targetAuthor: text((c.exchangePreferences as Record<string, unknown> | undefined)?.targetAuthor),
+    targetDescription: text((c.exchangePreferences as Record<string, unknown> | undefined)?.targetDescription),
     originAddressId: text(fulfillment?.originAddressId),
     photoCount: Array.isArray(c.mediaIds) ? c.mediaIds.length : 0,
     ownershipDeclared: false,
@@ -224,6 +230,11 @@ export type RevisionContent = {
   missingEssentialContent: false;
   salePrice: number | null;
   exchangeValue: number | null;
+  exchangePreferences?: {
+    targetCategory?: string | null;
+    targetAuthor?: string | null;
+    targetDescription?: string | null;
+  } | null;
   mediaIds: string[];
   fulfillment: {
     originAddressId: string;
@@ -258,6 +269,17 @@ export function buildRevisionContent(
     // A price outside the chosen mode must be null, never carried over.
     salePrice: value.mode === "Exchange" ? null : sale,
     exchangeValue: value.mode === "Sale" ? null : exchange,
+    exchangePreferences:
+      value.mode !== "Sale" &&
+      (value.targetCategory?.trim() ||
+        value.targetAuthor?.trim() ||
+        value.targetDescription?.trim())
+        ? {
+            targetCategory: value.targetCategory?.trim() || null,
+            targetAuthor: value.targetAuthor?.trim() || null,
+            targetDescription: value.targetDescription?.trim() || null,
+          }
+        : null,
     mediaIds,
     fulfillment:
       needsOrigin(value.mode) && origin

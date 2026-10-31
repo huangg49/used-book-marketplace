@@ -79,6 +79,11 @@ const SimulatorEventsPage = lazy(() =>
     default: m.SimulatorEventsPage,
   })),
 );
+const ExchangeDisputesPage = lazy(() =>
+  import("./features/operations/exchange-disputes").then((m) => ({
+    default: m.ExchangeDisputesPage,
+  })),
+);
 
 function Workspace() {
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
@@ -122,6 +127,7 @@ const router = createBrowserRouter([
       { path: "/operations/points", element: <PointsPage /> },
       { path: "/operations/incidents", element: <IncidentsPage /> },
       { path: "/operations/escalations", element: <EscalationsPage /> },
+      { path: "/operations/exchange-disputes", element: <ExchangeDisputesPage /> },
       { path: "/simulator/deliveries", element: <DeliverySimulator /> },
       { path: "/simulator/events/:kind", element: <SimulatorEventsPage /> },
       {

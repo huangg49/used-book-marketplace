@@ -159,9 +159,16 @@ export interface ConversationEventDoc {
   mode: ConversationMode | null; amount: number | null; exchangeId: string | null; createdAt: Date;
 }
 export interface ConversationExchangeLinkDoc { _id: string; conversationId: string; createdAt: Date }
+export interface ExchangePreferencesDoc {
+  targetCategory?: string | null;
+  targetAuthor?: string | null;
+  targetDescription?: string | null;
+}
+
 export interface ListingRevisionDoc extends Lockable {
   bundleSearchText?: string;
   bundle?: import('@used-books/api-contract').components['schemas']['BookBundle'] | null;
+  exchangePreferences?: ExchangePreferencesDoc | null;
   _id: string;
   listingId: string;
   number: number;
@@ -1182,9 +1189,11 @@ export type ExchangeCancelReason =
   | 'ProposalExpired'
   | 'CancelledByUser'
   | 'ListingUnavailable'
-  | 'ShippingExpired';
+  | 'ShippingExpired'
+  | 'DisputeResolvedRefund'
+  | 'MutualAgreement';
 
-export type ExchangeCancelledBy = 'System' | 'Initiator' | 'Recipient';
+export type ExchangeCancelledBy = 'System' | 'Initiator' | 'Recipient' | 'Staff' | 'Both';
 
 export interface ExchangeAddressSnapshot {
   recipientName: string;
@@ -1241,6 +1250,12 @@ export interface ExchangeDoc extends Lockable {
   disputedAt?: Date | null;
   disputeReason?: string | null;
   disputedBy?: string | null;
+  resolutionDecision?: string | null;
+  resolutionReason?: string | null;
+  resolvedBy?: string | null;
+  resolvedAt?: Date | null;
+  cancellationRequestedBy?: ExchangeCancelledBy | null;
+  cancellationRequestedAt?: Date | null;
   initiatorAddress?: ExchangeAddressSnapshot | null;
   recipientAddress?: ExchangeAddressSnapshot | null;
   initiatorShipment?: ExchangeShipmentSnapshot | null;
