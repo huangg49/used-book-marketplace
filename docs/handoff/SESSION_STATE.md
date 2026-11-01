@@ -1,5 +1,22 @@
 # Điểm lưu hiện tại — 01/11/2026
 
+## Chuẩn bị tích hợp chuỗi local theo yêu cầu owner — 01/11/2026
+
+- Owner yêu cầu push, kiểm CI và squash merge vào main để giao task cho nhóm.
+  Source trước checkpoint này `49c5ae1d`,19commit từ main `be581aec`; các mục
+  “chưa push/PR/merge” bên dưới là lịch sử tại thời điểm kết thúc từng gói.
+  Kết quả tích hợp cuối phải đọc PR/CI trên đúng head và squash SHA, không suy
+  trạng thái từ việc đã chuẩn bị checkpoint. Không deploy hoặc migrate DB chính.
+- [Khảo sát core BuyNow](../features/CORE_BUY_NOW_AUDIT_2026_11_01.md):15E2E PASS/
+  137SKIP theo filter; xác nhận khoảng thiếu Buyer claim trước settlement, web
+  diễn giải sai ResolutionPending và renewal quote RN. Chưa sửa các finding;
+  giữ READINESS và ba gói giao việc được nêu. P1 backend đã có từ main, không
+  phải thay đổi settlement mới trong chuỗi này. Test xanh không là nghiệm thu.
+- Tích hợp phần đã commit; các chỉnh sửa Admin/Profile/cart/navigation/ảnh
+  chưa commit của công việc khác được bảo toàn và không đưa vào PR này.
+  Review người thật chưa thực hiện cho các gói bổ sung; ghi minh bạch trong PR
+  cùng chỉ đạo owner tự kiểm/merge, không gọi đây là chữ ký reviewer độc lập.
+
 ## Bộ sách: hướng dẫn web và nối RN — đã kiểm chứng local, chưa native acceptance
 
 - Nhánh `codex/whole-bundle-journey`, base `86fba065`, subject
