@@ -129,8 +129,13 @@ describe('Member profile HTTP/Mongo/Sharp; explicit storage and delivery fakes',
     actor = await reader();
     other = await reader();
   });
-  afterEach(() => {
+  afterEach(async () => {
     vi.restoreAllMocks();
+    // The mail worker polls the shared QA queue. Retire only this test's jobs
+    // so a later suite's first-delivery fault cannot hit an unrelated warning.
+    await db.c.auth_mail_jobs.deleteMany({
+      userId: { $in: [actor.id, other.id] },
+    });
   });
   afterAll(async () => {
     await db?.close();

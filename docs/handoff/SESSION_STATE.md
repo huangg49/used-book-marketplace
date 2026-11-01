@@ -26,6 +26,12 @@
   heading hồ sơ biến mất trước khi quay lại; giữ assertion password rỗng, email
   và intent gốc/replay đúng. RN cũng chờ remount thực; không thêm sleep hoặc
   sửa production profile đang có local work khác. Kết quả cuối đọc trên PR84.
+- Full API lượt đầu824/825PASS: mail retry thất bại do profile suite để job của
+  mình trong queue chung. Ép profile email-confirm chạy trước account-auth retry
+  trên QA riêng tái hiện FAIL1/PASS1; cleanup nay chỉ xóa mail của hai actor
+  thuộc chính ca profile, không xóa queue chung hoặc sửa mail worker/assertion.
+  Sau sửa PASS2/38SKIP cho thứ tự ép; trọn hai suite profile/account-auth PASS40,
+  lint/docs/diff PASS. Mọi thư dùng provider local, QA rs-test/database `_test`.
 
 ## Bộ sách: hướng dẫn web và nối RN — đã kiểm chứng local, chưa native acceptance
 
