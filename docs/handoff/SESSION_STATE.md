@@ -19,10 +19,16 @@
   APK không chứa index.android.bundle, cần Metro. Native runtime **BLOCKED** bởi
   automatic policy block trước đó; không đi vòng qua chặn, không cài/mở emulator.
   Không nhận build/hash trùng APK cũ thành runtime PASS của profile/cart mới.
-- Email thật **BLOCKED cấu hình**: chưa bật provider thật, thiếu key provider và
-  recipient QA do nhóm xác nhận; không gửi thử thư cá nhân. Owner hỏi nghĩa của
-  email; đã giải thích OTP đổi email/cảnh báo email cũ, chưa có cấu hình mới.
-  Native/human/mail delivery/remote CI giữ mở. QA Mongo/API/media/browser/Gradle
+- Brevo QA bổ sung trên source `3f12fa11`: owner duyệt key riêng restricted chỉ
+  Transactional email/hạn01/12 và recipient là sender đã xác minh. Adapter thật
+  nhận HTTP201, replay cùng job trả400 `duplicate_parameter`; owner xác nhận thư
+  mẫu vào Inbox. Không tạo/đổi tài khoản hoặc nối DB, chưa là OTP journey thật.
+  Key đầu xuất hiện trong đầu ra tự động khi nối lại tab; owner đã xác nhận thay.
+  Đã thấy key cũ Deactivated, key r2 Active cùng scope/hạn; key mới được đọc/lưu
+  kín, không xuất giá trị. Rerun adapter thật với r2 PASS201/replay400. Inbox r2
+  chưa được owner xác nhận riêng; Inbox PASS là thư mẫu trước rotation. Cấu hình
+  QA riêng đã bật lại, env chạy chính vẫn local; không dùng lại key cũ.
+  Native/human/full mail journey/remote CI giữ mở. QA Mongo/API/media/browser/Gradle
   của lượt này đã dừng; không còn port app/QA listener hoặc Java/emulator của lượt.
   READINESS giữ nguyên; các gói phát triển và bằng chứng trước xem tiếp bên dưới.
 

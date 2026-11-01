@@ -100,7 +100,41 @@ Preflight chỉ báo trạng thái biến: `AUTH_MAIL_ENCRYPTION_KEY` chưa đ�
 `RESEND_API_KEY`/`BREVO_API_KEY` chưa cấu hình; provider thật chưa bật. Không gửi thư
 tới địa chỉ cá nhân, không tạo tài khoản provider hoặc yêu cầu key qua chat.
 
+### Bổ sung Brevo QA trên source 3f12fa11
+
+Owner đã duyệt tạo key QA, chỉ scope Transactional email, hạn01/12/2026 và gửi
+thư mẫu đến sender đã xác minh. Provider bắt buộc xác minh điện thoại; owner đã
+tự hoàn tất bước này. Cấu hình ở `apps/api/.env.brevo.qa` bị Git ignore, độc lập
+với `apps/api/.env`; không bật worker hoặc đổi khóa mã hóa của dữ liệu chính.
+
+PASS kiểm cấu hình và AES-GCM roundtrip với dữ liệu giả; production
+`AuthMailService.deliver` gọi Brevo thật trả201. Replay cùng UUID job/payload trả400
+`duplicate_parameter`, được adapter coi là ACK; không tạo job hoặc mã mới.
+Thư có nhãn QA, code giả, không thay tài khoản. Owner xác nhận vào **Inbox**.
+Không nối Mongo; không kiểm HTTP email-change/queue/revocation xuyên suốt bằng
+mail thật, không nhận provider acceptance thay cho bằng chứng những bước đó.
+Evidence sanitized: `.tmp/member-acceptance/brevo-qa.json`; helper riêng ignored,
+chỉ cho một recipient đã duyệt và tối đa hai request send/replay, không tự chạy CI.
+
+Credential handling **rotation completed**: khi nối lại tab, output tự động đã
+hiển thị key đầu. Đã tắt provider QA tạm thời và báo owner; owner xác nhận thay.
+UI Brevo hiện key cũ **Deactivated**, key `LatLai-local-QA-2026-11-01-r2` **Active**,
+cùng restricted scope/hạn01/12. Key mới được đọc/lưu trong memory/file private,
+không xuất giá trị ra output; đóng màn hiển thị key ngay sau lưu. File QA chỉ giữ
+key mới, giữ khóa mã hóa QA và sender, bật lại provider Brevo riêng trong file này.
+`apps/api/.env` vẫn local; ứng dụng không tự đọc file QA và không tự gửi thư thật.
+Không ghi giá trị key/recipient vào tài liệu/Git.
+
+Rerun bằng key r2: cấu hình/encryption/HTTP201/replay400 đều PASS; không đổi
+business source hoặc nối DB. Kết quả mới ở `brevo-qa.json`; kết quả trước rotation
+ở `brevo-qa-before-rotation.json` trong cùng thư mục evidence ignored. Owner xác
+nhận **Inbox** của thư mẫu trước rotation; không suy thành Inbox PASS riêng cho
+thư r2. Key cũ không được kích hoạt hoặc dùng lại.
+Sender freemail đang có cảnh báo domain authentication; Inbox mẫu một thư không
+chứng minh deliverability production, các nhà cung cấp khác hay gửi quy mô lớn.
+
 Khi điều kiện chạy native hợp lệ được khôi phục: kiểm entry Account→Profile/
 Cart, image picker, keyboard/Back, OTP, chữ lớn/resume, network loss và đổi identity
-trên đúng JS source. Khi nhóm có provider/recipient QA: kiểm actual inbox và mail
-cảnh báo. Hai việc này còn mở; không nhận phần PASS độc lập ở trên thay cho chúng.
+trên đúng JS source. Bước mail tiếp theo: kiểm journey email-change và mail cảnh báo
+thật trên dữ liệu QA riêng khi được duyệt. Hai việc này còn mở; không nhận phần
+PASS độc lập ở trên thay cho chúng.
