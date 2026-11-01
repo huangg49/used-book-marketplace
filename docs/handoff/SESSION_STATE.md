@@ -1,5 +1,24 @@
 # Điểm lưu hiện tại — 01/11/2026
 
+## Kiểm native từ build sạch — 01/11/2026
+
+- Nhánh `codex/native-build-verification`, source sạch `c5c30261`, subject
+  `docs(qa): record fresh Android build and verified purchase journey`.
+  [Ma trận/evidence](../ui/MEMBER_NATIVE_DEMO_2026_11_01.md): build debug x86_64
+  PASS7m57s, installed APK hash khớp. Không source/dependency/native-config change.
+- Android17QA: PASS scoped Search→detail→login return→quote/create→Back/reopen cùng
+  đơn→pay→đúng Preparing; logout Buyer→Seller→accept đơn thương lượng; font130%
+  sau background/resume/cuộn.1Order BuyNow/1payment journal,155.000đ giữ cho đơn.
+- **Điều chỉnh finding Back cũ**: Back gesture thật đóng modal/checkout đúng;
+  chỉ toolbar qua công cụ đưa launcher, chưa đủ căn cứ quy lỗi app. ADB đổi font
+  foreground có thể cắt dòng; sau resume đo lại đúng. Giữ diagnostic/evidence.
+- Native lost-ACK injection/copy selection/TalkBack audio/ARM/iOS/release/human
+  NOT RUN. READINESS giữ nguyên, không nhận scoped PASS thành full native PASS.
+  QA dùng run mới, fake storage/funding, AI tắt; không DB chính/GHN/carrier.
+  Kết thúc logout QA, font1.0; app/Metro/API/emulator/ADB/Gradle/Mongo QA đã dừng.
+  Main/origin/main vẫn `be581aec`; chưa push/PR/merge/deploy. Giữ journal ignored,
+  lần QA sau dùng run mới vì tmpfs mất khi stop.
+
 ## AI offline trên corpus đã có — 01/11/2026
 
 - Nhánh `codex/listing-ai-offline-verification`, base `1574d986`, subject
@@ -14,7 +33,7 @@
   không import/migration/DB chính/GHN; không gọi AI trả phí hoặc12holdout.
 - Owner xác nhận chưa có ảnh điện thoại/người duyệt: giữ gate OPEN, không nhận là
   AI chính xác hơn từ kiểm offline. Giá offline0call, độ chính xác NOT_SCORED.
-  [RN](../ui/MEMBER_NATIVE_DEMO_2026_11_01.md) vẫn PARTIAL native/Back; human review
+  [RN](../ui/MEMBER_NATIVE_DEMO_2026_11_01.md) có scoped native PASS mới ở mục trên; human review
   tiền/quyền của cả chuỗi còn OPEN. Chưa push/PR/merge/deploy, READINESS không đổi.
 
 ## Hành trình mua Member RN — 01/11/2026
@@ -31,8 +50,8 @@
   build; RN buy-now browser thật QA+fake storage/funding (create/pay/cancel/lost ACK/
   remount/late ACK/GET error/single hold); web checkout-only và order-chat regression.
   RN browser được nối Operations CI; remote CI NOT RUN, chưa push/PR/merge/deploy.
-- Native PARTIAL: debug Android17x86_64, APK hash và quan sát tách riêng trong report;
-  toolbar Back còn đưa app về launcher, chưa cô lập nguyên nhân. Không native PASS,
+- Native lượt đầu PARTIAL: đã được kiểm lại bằng build sạch ở mục trên;
+  scoped PASS không đóng nghiệm thu tổng thể.
   human/TalkBack audio/ARM/iOS/release NOT RUN; READINESS giữ nguyên. Không GHN,
   DB chính, migration hoặc env. Gói AI tiếp tục dùng incoming đã có, không tạo lại;
   owner xác nhận chưa có ảnh điện thoại/người duyệt, giữ gate riêng mở.

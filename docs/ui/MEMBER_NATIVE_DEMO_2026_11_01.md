@@ -50,21 +50,67 @@ Khi app khởi động lại phải đọc danh sách/Order hiện hành; không
 - Browser captures nằm `apps/mobile-react-native/test-results/buy-now/` ignored;
   native captures/evidence ở [thư mục kiểm](member-native-demo-2026-11-01/).
 
-## Native — PARTIAL, chưa nghiệm thu
+## Native mới nhất — PASS trong lát cắt, nghiệm thu tổng thể PARTIAL
 
-Android17/API37 x86_64, debug APK + Metro, QA riêng/fake storage. Không claim
-web export là native PASS. Trước khi kiểm hash APK đã quan sát Search→chi tiết→
-login quay lại đúng sách→create→pay mở đúng Order; logout Buyer→Seller và accept
-đơn thương lượng→Preparing. Những quan sát đó chỉ là diagnostic: APK lúc đó
-khác artifact hiện có. Không dùng chúng để đóng gate.
+Nhánh kiểm `codex/native-build-verification`, source sạch `c5c30261` trước build,
+không đổi code/dependency. Dùng script repo `node scripts/build-android.mjs --emulator`,
+JAVA_HOME/LATLAI_NINJA chỉ đặt trong terminal: JDK21.0.12.1, Gradle9.3.1,
+compile/target36, NDK27.1.12297006, Ninja1.12.1. Prebuild không đổi tracked files.
+Build PASS7m57s,443task thực thi/32up-to-date; debug APK x86_64 không là release.
+Artifact SHA256 `4cbdc04b5abd763009287d1d43be6641c183d44423f8302b0b98ed212161b498`
+trùng artifact local cũ; đã cài và so hash installed base.apk trong phiên emulator
+hiện tại. Không dùng việc AVD từng cài APK ở phiên trước thay kiểm hash này.
 
-Đã cài đúng artifact debug local và so SHA256 với installed base.apk. Các quan
-sát sau kiểm hash được ghi riêng trong evidence. APK không được build mới trong
-gói JS này; không suy ra native binary đã build từ commit hiện tại. Back/large
-text còn cần xử lý nếu evidence ghi FAIL/BLOCKED; human/TalkBack audio/ARM/iOS và
-release build NOT RUN. Không đổi READINESS từ test xanh.
+Android17/API37 x86_64,1080×2400/420dpi. QA run mới `member-rn-final-20261101`,
+Mongo57017/rs-test/database *_test, fake storage, tiền simulator, AI tắt.
+Dữ liệu sách có nhãn mô phỏng; không DB/bucket chính, shipment/carrier/Delivered.
 
-Lượt đầu web regression bị Vite reload khi formatter ghi shared source, làm mất
-phiên memory-only: không coi là lỗi session mới. Lượt source ổn định sau đó PASS.
-Các lượt RN harness đầu có selector không đúng hoặc expected201 trong khi contract
-trả200; đã sửa harness theo source/contract, giữ nguyên assertion tiền/quyền/replay.
+| Ca thực chạy trên native | Kết quả |
+| --- | --- |
+| Home → thông tin kiểm tra tại điểm → Back gesture từ mép Android | PASS: đóng modal về Home, không thoát app |
+| Search → chi tiết → Mua ngay → login Buyer → quay đúng sách | PASS; ảnh fake tải được, nhãn đúng số ảnh |
+| Địa chỉ/quote → create → Back gesture đóng checkout → CTA trả tiền mở lại | PASS: cùng Order/deadline155.000đ, không tạo đơn thay thế |
+| Pay → ACK → đúng Order Preparing | PASS: không đòi Seller duyệt lại BuyNow; hiện tiền giữ và hạn/bước chờ |
+| Chọn lại Account → logout Buyer → login Seller | PASS: đúng identity, không còn dữ liệu form/phiên Buyer |
+| Seller work hub → đúng đơn thương lượng → confirm accept | PASS: Preparing, hạn bàn giao và hướng dẫn tiếp tục trên Member web, mã đơn selectable |
+| Chữ OS100↔130%, background/resume và cuộn | PASS Seller: thấy đủ nội dung/nút cuối và giữ đúng hồ sơ. Buyer130% đã xem layout; chưa kiểm đủ cuộn/resume riêng |
+| Native injection mất ACK / chép mã / TalkBack audio / ARM / iOS / release | NOT RUN; mất ACK được kiểm riêng RN web/shared, không nhận là native PASS |
+
+API đọc lại và Mongo QA xác nhận đúng1Order BuyNow mới, đúng1journal OrderPayment,
+155.000đ giữ cho đơn đó. Ví còn535.000đ available/465.000đ held (gồm310.000đ đã giữ
+ở hai đơn setup). Seller accept đơn thương lượng không phát sinh khoản giữ mới.
+Ảnh [Buyer native](member-native-demo-2026-11-01/buyer-paid-native.png),
+[Seller native](member-native-demo-2026-11-01/seller-preparing-native.png),
+[Seller130% sau resume/cuộn](member-native-demo-2026-11-01/seller-preparing-native-130.png),
+[evidence JSON](member-native-demo-2026-11-01/native-evidence.json).
+
+### Điều chỉnh finding sau kiểm chứng
+
+Lượt đầu điều khiển nút toolbar emulator đưa app ra launcher, nên đã giữ finding
+Back chưa rõ nguyên nhân. **Back gesture thật sau build đóng cả modal thông tin và
+checkout đúng**. Không còn đủ căn cứ gọi đây là lỗi Back của app; đường toolbar qua
+công cụ còn chưa xác minh. Escape từ cửa sổ emulator không có hiệu lực, không dùng
+để chấm native. Giữ [ảnh diagnostic](member-native-demo-2026-11-01/back-result.png)
+và kết quả cũ trong JSON, không sửa dependency/config để chữa một kết luận chưa chắc.
+
+Đổi font bằng ADB trong khi app luôn foreground có thể khiến intrinsic layout cũ
+cắt một số dòng khi cuộn. Sau background/resume (như người dùng quay từ Settings),
+Order đo lại đúng và cuộn đầy đủ; ảnh diagnostic trước resume giữ riêng.
+Không nhận ca ADB foreground đó là UX PASS hoặc tự quy thành lỗi luồng Settings.
+
+Trước kiểm hash đã quan sát luồng mua/seller trên APK khác; ảnh
+`diagnostic-before-apk-verification.png` chỉ là diagnostic. Các PASS trong bảng
+là lượt mới sau build/cài/hash, không lấy lượt cũ làm nghiệm thu.
+Lượt đầu browser regression bị Vite reload khi formatter ghi shared source làm mất
+phiên memory-only; lượt source ổn định PASS. Harness đầu có selector sai/expected201
+trong khi contract trả200; sửa harness theo contract, giữ checks tiền/quyền/replay.
+
+READINESS và review người thật vẫn OPEN. Đây là kiểm kỹ thuật một lát cắt trên
+emulator, không tuyên bố toàn bộ RN hoặc fulfillment đã được nghiệm thu.
+
+Kết thúc: tài khoản native QA đã logout, font emulator về1.0, bỏ các reverse port;
+Metro/API/fake media/emulator/ADB/Gradle daemon và Mongo QA của phiên đã dừng.
+Mongo chính giữ dừng/nguyên dữ liệu. QA tmpfs bị mất khi stop: giữ journal/private
+ignored để truy vết, lần sau dùng run mới thay vì replay vào DB trống.
+Working tree sau commit sạch; main/origin/main vẫn `be581aec`. Chưa push/PR/merge/
+deploy hoặc remote CI. Hai reviewer theo TEAMWORK cho tiền/quyền vẫn cần trước merge.
