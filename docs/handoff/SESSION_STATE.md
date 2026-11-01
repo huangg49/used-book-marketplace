@@ -21,6 +21,11 @@
   đổi đúng thành “Tình trạng người bán khai báo”. Sửa locator heading/toggle,
   giữ kiểm expanded/collapse, restriction, ảnh, quyền và replay; thêm assertion
   nội dung tự kê khai. Không sửa source nghiệp vụ hoặc xóa assertion để qua CI.
+- Head tiếp `c27f9160`: public shelf/RN BuyNow qua; profile browser bắt race của
+  hai lần click sidebar liên tiếp trước lazy route commit. Test nay chờ URL và
+  heading hồ sơ biến mất trước khi quay lại; giữ assertion password rỗng, email
+  và intent gốc/replay đúng. RN cũng chờ remount thực; không thêm sleep hoặc
+  sửa production profile đang có local work khác. Kết quả cuối đọc trên PR84.
 
 ## Bộ sách: hướng dẫn web và nối RN — đã kiểm chứng local, chưa native acceptance
 

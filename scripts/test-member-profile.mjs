@@ -37,6 +37,17 @@ const qaTargetAllowed=()=>{
 };
 assert.ok(qaTargetAllowed(),'Use only the dedicated loopback rs-test QA replica set.');
 const button = (p, name) => p.getByRole("button", { name, exact: true });
+const reopenWebProfile = async (p) => {
+  const heading = p.getByRole("heading", { name: "Hồ sơ của tôi", exact: true });
+  await p.getByRole("link", { name: "Tổng quan", exact: true }).first().click();
+  await p.waitForURL(webOrigin + "/account");
+  // Lazy route transitions can still expose the previous screen's sidebar.
+  // Prove the editor unmounted before following its persistent navigation back.
+  await heading.waitFor({ state: "hidden" });
+  await p.getByRole("link", { name: "Hồ sơ & bảo mật", exact: true }).first().click();
+  await p.waitForURL(webOrigin + "/profile");
+  await heading.waitFor();
+};
 try {
   await mkdir(evidence, { recursive: true });
   fixture = await createTestApi({
@@ -170,11 +181,7 @@ try {
     .fill("Tên sau mất phản hồi QA");
   await button(p, "Lưu hồ sơ").click();
   await button(p, "Xác minh lần lưu trước").waitFor();
-  await p.getByRole("link", { name: "Tổng quan", exact: true }).first().click();
-  await p
-    .getByRole("link", { name: "Hồ sơ & bảo mật", exact: true })
-    .first()
-    .click();
+  await reopenWebProfile(p);
   await button(p, "Xác minh lần lưu trước").click();
   await p.getByRole("status").filter({ hasText: "Đã lưu hồ sơ." }).waitFor();
   assert.ok(
@@ -192,11 +199,7 @@ try {
     .fill("wrong-password-42");
   await button(p, "Gửi mã đến email mới").click();
   await p.getByText("Mật khẩu hiện tại chưa đúng.", { exact: true }).waitFor();
-  await p.getByRole("link", { name: "Tổng quan", exact: true }).first().click();
-  await p
-    .getByRole("link", { name: "Hồ sơ & bảo mật", exact: true })
-    .first()
-    .click();
+  await reopenWebProfile(p);
   assert.equal(
     await p.getByLabel("Mật khẩu hiện tại", { exact: true }).inputValue(),
     "",
@@ -317,7 +320,11 @@ try {
   await button(rn, "Gửi mã đến email mới").click();
   await rn.getByText("Mật khẩu hiện tại chưa đúng.", { exact: true }).waitFor();
   await button(rn, "Về tài khoản").click();
+  await rn.waitForURL(rnOrigin + "/account");
+  await rn.getByRole("heading", { name: "Hồ sơ của tôi", exact: true }).waitFor({ state: "hidden" });
   await button(rn, "Sửa hồ sơ và email").click();
+  await rn.waitForURL(rnOrigin + "/profile");
+  await rn.getByRole("heading", { name: "Hồ sơ của tôi", exact: true }).waitFor();
   assert.equal(
     await rn.getByLabel("Mật khẩu hiện tại", { exact: true }).inputValue(),
     "",
