@@ -1,4 +1,33 @@
-# Điểm lưu hiện tại — 31/10/2026
+# Điểm lưu hiện tại — 01/11/2026
+
+## Bảo vệ phân xử Exchange — 01/11/2026
+
+- Owner duyệt ba gói tiếp theo sau khảo sát toàn dự án; thực hiện gói an toàn
+  trước. Nhánh `codex/exchange-resolution-safety`, base main `be581aec`, subject
+  `fix(exchange): hold disputed money and books until safe adjudication`.
+- [ADR0057](../adr/0057-exchange-resolution-safety.md), contract0.64/198operations/
+  31controllers: chặn quyết định phân xử mới thiếu custody/allocation/effective
+  decision và appeal. Giữ tiền/sách; không thêm migration hoặc sửa bút toán cũ.
+  Participant có STAFF/ADMIN bị chặn trước replay; queue loại self. Receipt cũ
+  vẫn đọc lại cùng key/body với current role/session, không lặp tác động tiền.
+- Admin queue chỉ đọc, có thông tin đang giữ và error/retry/empty đúng phạm vi;
+  sửa overflow320px/chữ130% trong chi tiết hai bên. Không mở lại nút tài chính
+  cho tới gói quyết định hiệu lực được review. Mutual cancellation trước gửi
+  và inspection bình thường giữ protocol cũ; full dispute vẫn chưa nghiệm thu.
+- PASS: Exchange HTTP/Mongo45/45 trên replica QA riêng (storage fake), gồm
+  self cả2participant/2role, cả2decision khi đã gửi/đã nhận và nguồn600.000đ,
+  không đổi ledger/listing/receipt/audit/notification, legacy replay/body conflict/
+  revoke/lost role và contention với worker. Admin219unit/lint/typecheck/build,
+  API typecheck/build, contract/generated/routes, docs/diff. API lint không lỗi,
+  còn warning cũ ngoài thay đổi. Không chạy unit gọi GHN.
+- Browser queue PASS với login/API QA thật và queue HTTP fixture có nhãn:
+  không POST quyết định, loading/error/retry/empty,1440/390/320+chữ130%; đã xem
+  ảnh trong `apps/admin-web/test-results/exchange-resolution-safety/` (ignored).
+  Lệnh `pnpm --filter @used-books/admin-web test:exchange-safety:browser` được
+  nối vào Operations CI; remote CI NOT RUN cho gói này.
+- Không DB chính/env/GHN/carrier/Driver, không push/PR/merge/deploy. READINESS
+  giữ nguyên; human review tiền/quyền theo TEAMWORK còn OPEN. Các gói RN và
+  nghiệm thu AI tiếp theo giữ gate người thật/provider riêng.
 
 ## Đồng bộ main và tích hợp UI qua PR83 — 31/10/2026
 

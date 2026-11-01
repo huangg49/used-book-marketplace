@@ -55,6 +55,14 @@ review source and gate before changing or extending completion.
 
 ## Exchange hiện hành — deadline và nghĩa vụ cũ
 
+01/11/2026: [ADR0057](../adr/0057-exchange-resolution-safety.md), contract0.64,
+chặn mọi quyết định phân xử tài chính mới qua route legacy. Không hoàn/tất toán
+hoặc mở sách trong ResolutionPending khi chưa có custody, allocation và quyết
+định có hiệu lực sau appeal. Staff/Admin participant bị chặn trước replay;
+receipt cũ hợp lệ chỉ được đọc lại bởi actor hiện còn quyền và độc lập. Hàng
+đợi vận hành chỉ đọc và loại self. Đây là bảo vệ an toàn, không nghiệm thu đầy
+đủ tranh chấp hoặc đóng gate. Mutual cancellation trước gửi giữ protocol riêng.
+
 [ADR0050](../adr/0050-exchange-inspection-and-existing-obligations.md) đối chiếu
 source28/10 với POL-08/FR-X08/X09/BR-18: mỗi bên có72h từ lần nhận hợp lệ; common
 inspectionDeadline là hạn muộn hơn khi cả hai nhận. Xác nhận hài lòng chỉ ghi nhận,

@@ -32,6 +32,7 @@ jobs:
       - run: pnpm --filter @used-books/admin-web build
       - run: pnpm --filter @used-books/admin-web exec playwright install --with-deps chromium
       - run: pnpm --filter @used-books/admin-web test:browser
+      - run: pnpm --filter @used-books/admin-web test:exchange-safety:browser
       - run: pnpm --filter @used-books/mobile-react-native export:web
         env:
           EXPO_PUBLIC_API_BASE_URL: http://127.0.0.1:3009/api/v1

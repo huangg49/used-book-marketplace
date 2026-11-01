@@ -1,8 +1,8 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
-Cập nhật29/10/2026 theo main `aed674f` đã ghép cùng các gói Member/review/auction local
-bàn giao tại [SESSION_STATE](SESSION_STATE.md). Contract **0.63.0** (196operations/30controllers); registry có56
-migration MongoDB (đến0043), không suy từ tiền tố file lớn nhất. Migration
+Cập nhật01/11/2026: gói bảo vệ phân xử Exchange từ main `be581aec`, xem
+[SESSION_STATE](SESSION_STATE.md). Contract **0.64.0** (198operations/31controllers); registry có59
+migration MongoDB (đến0046), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
 Phạm vi28/10: nhóm **bỏ Forum/Cộng đồng sách** theo [ADR0051](../adr/0051-remove-forum-from-project-scope.md).
@@ -26,7 +26,7 @@ chưa có API/session hoặc parity với RN.
 | Member web/RN | Search/detail/wishlist, đăng sách, chat/Order, Exchange, auction/inbox, ví; dùng API thật | Export/browser không thay nghiệm thu native; RN phải giữ empty/error và ảnh đúng nguồn |
 | Địa chỉ | Sổ địa chỉ và snapshot origin/destination; TP.HCM, Bình Dương, Vũng Tàu theo ADR0039 | Mã demo không là dữ liệu địa giới chính thức hoặc điểm hoạt động thật |
 | DirectDelivery | Quote/Order/pay/accept/packaging/shipment/pickup/review; source có receipt/Inspection72h/settlement | READINESS vẫn F2h; chưa có claim/return/adjudication hoàn chỉnh, không tự mở rộng completion |
-| Exchange | Proposal/counter/accept/fund/ship/receive/dispute/expiry/settlement, messages/reviews; web/RN thật | Hạn72h riêng và acknowledgement theo ADR0050; dispute resolution/ordinary ViaPoint/funded mutual cancellation chưa đầy đủ |
+| Exchange | Proposal/counter/accept/fund/ship/receive/dispute/expiry/settlement, messages/reviews; web/RN thật; đồng thuận hủy trước gửi | Hạn72h riêng theo ADR0050. Phân xử tài chính mới bị chặn theo ADR0057; return/appeal và ordinary ViaPoint chưa đầy đủ |
 | Auction/điểm | Intake/inspection/evidence, publish/schedule, bid/Auto/BuyNow, PointOrder/pay/code/handover, claim/return/settlement/incidents | Chỉ các ngoại lệ đã ghi được cấp phạm vi; source không là full acceptance |
 | Ví | Ledger/holds/history, topup simulator/VNPay sandbox/IPN/QueryDR/expiry | Chưa có withdrawal/payout production hoặc đối soát rút tiền đầy đủ |
 | Review/uy tín | Exchange/DirectOrder/PointOrder Completed, sửa/xóa48h, bảo mật hai chiều, reply chờ duyệt, Staff/Admin, public aggregate; web/RN | [ADR0052](../adr/0052-transaction-reviews-and-reputation.md), [evidence](../features/TRANSACTION_REVIEWS_REPORT.md); không tự mở completion/settlement hoặc native/human gate |
@@ -36,6 +36,9 @@ chưa có API/session hoặc parity với RN.
 [ADR0050](../adr/0050-exchange-inspection-and-existing-obligations.md) sửa deadline
 Exchange và quyền nghĩa vụ cũ. GHN/carrier/driver được owner yêu cầu giữ nguyên
 chờ nhóm quyết định; không coi các route đó đã được nghiệm thu bảo mật.
+[ADR0057](../adr/0057-exchange-resolution-safety.md) giữ hàng đợi Exchange chỉ đọc;
+không mở lại tiền/sách bằng lệnh RefundBoth/CompleteExchange thiếu quyết định có
+hiệu lực và căn cứ custody. Receipt lịch sử vẫn đối soát dưới quyền hiện tại.
 Nghiệp vụ chuẩn là [SRS1.1](../SRS_V1_1.md), [phụ lục](../features/LOCAL_HANDOVER_AUCTION.md)
 và ADR hiện hành. Checkpoint có ngày trong SESSION_STATE/report là lịch sử nguồn,
 không thay contract/code/tests mới hoặc gate.

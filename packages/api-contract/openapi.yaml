@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.63.0
+  version: 0.64.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -9519,7 +9519,7 @@ paths:
       tags:
         - Exchanges
       summary: listExchangeResolutions
-      description: ACTIVE STAFF/ADMIN. Returns all exchanges currently in ResolutionPending status for dispute adjudication.
+      description: ACTIVE independent STAFF/ADMIN. Returns ResolutionPending exchanges excluding the caller's own transactions for read-only triage. New financial adjudication is unavailable until custody, allocations and effective-decision/appeal safeguards are implemented; funds and books remain held.
       security:
         - bearerAuth: []
       responses:
@@ -9543,7 +9543,13 @@ paths:
       tags:
         - Exchanges
       summary: resolveExchangeDispute
-      description: ACTIVE STAFF/ADMIN. Resolves an exchange in ResolutionPending with decision RefundBoth or CompleteExchange.
+      description: >-
+        ACTIVE independent STAFF/ADMIN only. New RefundBoth and CompleteExchange decisions are
+        currently rejected with 409 InvalidState: the legacy command cannot establish custody,
+        allocations, authority limits or an effective decision after appeal. No money, listing,
+        exchange, audit or notification mutation is committed on rejection. Historical receipts
+        may still be replayed with the original key and body after current session, role and
+        participant-independence checks; replay does not repeat their financial effects.
       security:
         - bearerAuth: []
       parameters:

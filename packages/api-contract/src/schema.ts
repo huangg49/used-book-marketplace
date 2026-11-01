@@ -3133,7 +3133,7 @@ export interface paths {
         };
         /**
          * listExchangeResolutions
-         * @description ACTIVE STAFF/ADMIN. Returns all exchanges currently in ResolutionPending status for dispute adjudication.
+         * @description ACTIVE independent STAFF/ADMIN. Returns ResolutionPending exchanges excluding the caller's own transactions for read-only triage. New financial adjudication is unavailable until custody, allocations and effective-decision/appeal safeguards are implemented; funds and books remain held.
          */
         get: operations["listExchangeResolutions"];
         put?: never;
@@ -3155,7 +3155,7 @@ export interface paths {
         put?: never;
         /**
          * resolveExchangeDispute
-         * @description ACTIVE STAFF/ADMIN. Resolves an exchange in ResolutionPending with decision RefundBoth or CompleteExchange.
+         * @description ACTIVE independent STAFF/ADMIN only. New RefundBoth and CompleteExchange decisions are currently rejected with 409 InvalidState: the legacy command cannot establish custody, allocations, authority limits or an effective decision after appeal. No money, listing, exchange, audit or notification mutation is committed on rejection. Historical receipts may still be replayed with the original key and body after current session, role and participant-independence checks; replay does not repeat their financial effects.
          */
         post: operations["resolveExchangeDispute"];
         delete?: never;
