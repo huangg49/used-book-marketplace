@@ -1,5 +1,6 @@
 import { createMemberProfilesMigration, memberProfileSpecs, withMemberProfiles } from './0047-member-profiles.js';
 import { createAccountControlsMigration, withAccountControls } from './0048-account-controls.js';
+import {memberCartMigration,memberCartSpec} from './0049-member-cart.js';
 import { transactionReviewValidatorFixMigration } from './0039-transaction-review-validator-fix.js';
 import { reviewValidatorReconciliationMigration } from './0041-review-validator-reconciliation.js';
 import { catalogRecoveryMigration, withCatalogRecovery } from './0042-catalog-recovery-index.js';
@@ -328,6 +329,7 @@ export const migrations: Migration[] = [
   listingExchangePreferencesMigration,
   memberProfilesMigration,
   accountControlsMigration,
+  memberCartMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -416,4 +418,5 @@ export const currentCollections = (): CollectionSpec[] => [
   ...auctionDeliveryCollectionSpecs,
   ...listingAutofillSpecs,
   ...memberProfileSpecs,
+  memberCartSpec,
 ];

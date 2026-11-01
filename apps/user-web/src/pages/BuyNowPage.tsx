@@ -10,8 +10,14 @@ import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import { formatVnd } from "../lib/routes";
 import { conditions } from "../lib/listing-labels";
-import { getPublicListing, type PublicListing } from "../services/public-listings";
-import { capturePurchaseListing, purchaseListingKey } from "../lib/purchase-listing";
+import {
+  getPublicListing,
+  type PublicListing,
+} from "../services/public-listings";
+import {
+  capturePurchaseListing,
+  purchaseListingKey,
+} from "../lib/purchase-listing";
 import { createBuyNowOrder, type BuyNowInput } from "../services/orders";
 import { ListingPhoto } from "../components/BookCard";
 import { MapPin, ArrowRight, Check, Truck } from "lucide-react";
@@ -70,7 +76,11 @@ const definite = (error: unknown) =>
 export function BuyNowPage() {
   const { listingId = "" } = useParams<{ listingId: string }>();
   const auth = useSession();
-  return <BuyNowListing key={`${auth.status === 'authenticated' ? auth.user.id : 'guest'}:${listingId}`} />;
+  return (
+    <BuyNowListing
+      key={`${auth.status === "authenticated" ? auth.user.id : "guest"}:${listingId}`}
+    />
+  );
 }
 
 function BuyNowListing() {
@@ -82,6 +92,8 @@ function BuyNowListing() {
     queryKey: ["public-listing", listingId],
     queryFn: () => getPublicListing(listingId),
     retry: false,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
   const addresses = useQuery({
     queryKey: ["address-book"],
@@ -89,7 +101,8 @@ function BuyNowListing() {
     enabled: auth.status === "authenticated",
     retry: false,
   });
-  const bundleAcknowledged = !!book.data && acknowledgedRevision === purchaseListingKey(book.data);
+  const bundleAcknowledged =
+    !!book.data && acknowledgedRevision === purchaseListingKey(book.data);
   const areas = useQuery({
     queryKey: ["service-areas"],
     queryFn: () => session.request("/service-areas", areasSchema),
@@ -120,9 +133,16 @@ function BuyNowListing() {
         existing[0]);
   async function prepare(event: React.FormEvent) {
     event.preventDefault();
-    if (busy || !book.data || !addresses.data || !areas.data) return;
+    if (
+      busy ||
+      (book.isFetching && !attempt.current) ||
+      !book.data ||
+      !addresses.data ||
+      !areas.data
+    )
+      return;
     if (!attempt.current && book.data.bundle && !bundleAcknowledged) {
-      setError('Xem danh sách và xác nhận mua toàn bộ các cuốn trong bộ.');
+      setError("Xem danh sách và xác nhận mua toàn bộ các cuốn trong bộ.");
       return;
     }
     setBusy(true);
@@ -437,7 +457,18 @@ function BuyNowListing() {
           </div>
         </div>
         <BundleManifest bundle={item.bundle} />
-        {item.bundle && <BundleAcknowledgment bundle={item.bundle} checked={!!prepared || !!pendingListing || bundleAcknowledged} onChange={checked => setAcknowledgedRevision(checked ? purchaseListingKey(item) : undefined)} disabled={busy || uncertain || !!prepared} />}
+        {item.bundle && (
+          <BundleAcknowledgment
+            bundle={item.bundle}
+            checked={!!prepared || !!pendingListing || bundleAcknowledged}
+            onChange={(checked) =>
+              setAcknowledgedRevision(
+                checked ? purchaseListingKey(item) : undefined,
+              )
+            }
+            disabled={busy || uncertain || !!prepared}
+          />
+        )}
         {(addresses.isError || areas.isError) && (
           <div role="alert" className={styles.error}>
             Chưa tải được thông tin giao nhận.{" "}
@@ -479,7 +510,15 @@ function BuyNowListing() {
         {error && (
           <p role="alert" className={styles.error}>
             {error}
-            {!busy && !uncertain && !createPending && <button type="button" className={styles.textButton} onClick={resetQuote}>Tải lại nội dung bài đăng</button>}
+            {!busy && !uncertain && !createPending && (
+              <button
+                type="button"
+                className={styles.textButton}
+                onClick={resetQuote}
+              >
+                Tải lại nội dung bài đăng
+              </button>
+            )}
           </p>
         )}
         {prepared ? (

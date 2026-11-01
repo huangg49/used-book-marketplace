@@ -633,6 +633,15 @@ export class PublicListingService {
       return this.projection(tx, row);
     });
   }
+  // Internal consumer shares the public predicate and the caller's transaction;
+  // never starts a nested read or reconstructs a private revision as public.
+  async forCart(tx:Tx,ids:string[]) {
+    if(ids.length>50)throw new Error('Cart projection exceeds bounded scope');
+    const rows=await tx.c.listings.aggregate<Eligible>([{$match:{_id:{$in:ids}}},...publicEligibleStages()]).toArray();
+    const result=new Map<string,Wire['PublicListing']>();
+    for(const row of rows)result.set(row._id,await this.projection(tx,row));
+    return result;
+  }
   async media(listingId: string, mediaId: string): Promise<Wire['MediaRead']> {
     const authorize = async () => {
       const [row] = await this.mongo.c.listings

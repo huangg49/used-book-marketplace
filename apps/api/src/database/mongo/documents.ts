@@ -55,6 +55,11 @@ export interface UserDoc extends Lockable {
   updatedAt: Date;
   roles: { role: RoleCode; grantedAt: Date }[];
 }
+export interface MemberCartDoc extends Lockable {
+  _id: string; version: number;
+  items: {listingId:string;priceAtAdd:number;addedAt:Date}[];
+  createdAt:Date;updatedAt:Date;
+}
 export interface AuthSessionDoc extends Lockable {
   _id: string;
   userId: string;

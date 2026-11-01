@@ -1,8 +1,8 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
 Cập nhật01/11/2026: chuỗi local từ main `be581aec`, có hồ sơ Member theo
-[SESSION_STATE](SESSION_STATE.md). Contract **0.66.0** (210operations/32controllers); registry có61
-migration MongoDB (đến0048), không suy từ tiền tố file lớn nhất. Migration
+[SESSION_STATE](SESSION_STATE.md). Contract **0.67.0** (213operations/33controllers); registry có62
+migration MongoDB (đến0049), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
 Phạm vi28/10: nhóm **bỏ Forum/Cộng đồng sách** theo [ADR0051](../adr/0051-remove-forum-from-project-scope.md).
@@ -24,6 +24,7 @@ chưa có API/session hoặc parity với RN.
 | Auth/session | Login/me/refresh/logout, đăng ký/xác minh/reset bằng link/OTP; shared SessionClient; [hồ sơ/ảnh/email web/RN](../features/MEMBER_PROFILE_REPORT.md), [Admin khóa/mở](../features/ACCOUNT_CONTROLS_REPORT.md) | Native/human hồ sơ chưa nghiệm thu; quản lý mọi phiên và workflow Staff đề nghị còn riêng |
 | Catalog/listing | Request/review, draft/media/revision, gửi duyệt, chỉnh/ẩn/mở/archive; Sale nguyên bộ theo ADR0046 | Merge catalog/banner management và native acceptance toàn hành trình còn thiếu |
 | Member web/RN | Search/detail/wishlist, đăng sách, chat/Order, Exchange, auction/inbox, ví; dùng API thật | Export/browser không thay nghiệm thu native; RN phải giữ empty/error và ảnh đúng nguồn |
+| Giỏ sách | [Web/RN/API](../features/MEMBER_CART_REPORT.md): max50, quantity1, không giữ chỗ; chọn một bài vào checkout hiện có | Giá/khả năng mua kiểm lại khi checkout; native/human chưa nghiệm thu |
 | Địa chỉ | Sổ địa chỉ và snapshot origin/destination; TP.HCM, Bình Dương, Vũng Tàu theo ADR0039 | Mã demo không là dữ liệu địa giới chính thức hoặc điểm hoạt động thật |
 | DirectDelivery | Quote/Order/pay/accept/packaging/shipment/pickup/review; source có receipt/Inspection72h/settlement | READINESS vẫn F2h; chưa có claim/return/adjudication hoàn chỉnh, không tự mở rộng completion |
 | Exchange | Proposal/counter/accept/fund/ship/receive/dispute/expiry/settlement, messages/reviews; web/RN thật; đồng thuận hủy trước gửi | Hạn72h riêng theo ADR0050. Phân xử tài chính mới bị chặn theo ADR0057; return/appeal và ordinary ViaPoint chưa đầy đủ |

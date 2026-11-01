@@ -257,7 +257,7 @@ describe('Admin account controls: real HTTP/Mongo and current permission', () =>
     try {
       await gate.contended();
       await gate.db
-        .collection('users')
+        .collection<{ _id: string }>('users')
         .updateOne(
           { _id: admin.id },
           { $set: { status: 'LOCKED' } },
@@ -310,7 +310,7 @@ describe('Admin account controls: real HTTP/Mongo and current permission', () =>
     const seen = new Set<string>();
     let cursor: string | null = null;
     do {
-      const page = (
+      const page: request.Response['body'] = (
         await get(
           `/operations/users/${target.id}/history?limit=2${cursor ? '&cursor=' + encodeURIComponent(cursor) : ''}`,
         ).expect(200)
@@ -356,13 +356,11 @@ describe('Admin account controls: real HTTP/Mongo and current permission', () =>
     await get(`/me/purchase-conversations/${id}`, target).expect(403);
     await get(`/me/purchase-conversations/${id}/messages`, target).expect(403);
     await expect(
-      app
-        .get(PurchasesService)
-        .send(auth, {
-          messageId: randomUUID(),
-          conversationId: id,
-          body: 'QA blocked new negotiation',
-        }),
+      app.get(PurchasesService).send(auth, {
+        messageId: randomUUID(),
+        conversationId: id,
+        body: 'QA blocked new negotiation',
+      }),
     ).rejects.toMatchObject({ status: 403 });
     await db.c.purchase_conversations.updateOne(
       { _id: id },

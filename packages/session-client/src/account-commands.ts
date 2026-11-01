@@ -129,6 +129,7 @@ export function accountErrorMessage(error: unknown) {
       RATE_LIMITED: "Bạn đã gửi nhiều yêu cầu. Vui lòng thử lại sau 15 phút.",
       AvatarQuotaExceeded:
         "Bạn có 3 ảnh đang chờ. Hoàn tất ảnh đã tải hoặc thử lại sau.",
+      CartFull: "Giỏ đã có 50 bài đăng. Mở giỏ và xóa bớt trước khi thêm.",
       InvalidImage:
         "Ảnh không hợp lệ. Chọn ảnh JPEG, PNG hoặc WebP một khung hình.",
     };
@@ -161,8 +162,31 @@ export async function readMemberProfile(client: SessionClient) {
   assertOwner(state, generation);
   return profile;
 }
+export async function readAccountResource<T>(
+  client: SessionClient,
+  path: string,
+  schema: z.ZodType<T>,
+) {
+  const state = stateFor(client),
+    generation = state.generation;
+  assertOwner(state, generation);
+  const value = await client.request(path, schema);
+  assertOwner(state, generation);
+  if (
+    value &&
+    typeof value === "object" &&
+    "id" in value &&
+    value.id !== state.owner
+  )
+    throw new Error("Unexpected account resource owner");
+  return value;
+}
 export function pendingAccountCommand(client: SessionClient, slot: string) {
   return stateFor(client).commands.has(slot);
+}
+export function accountIdentity(client: SessionClient) {
+  const state = stateFor(client);
+  return `${state.owner}/${state.generation}`;
 }
 export function pendingAccountCommandPath(client: SessionClient, slot: string) {
   return stateFor(client).commands.get(slot)?.path;

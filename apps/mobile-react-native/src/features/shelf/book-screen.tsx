@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import {AddToCart} from '../cart/add-to-cart';
 import {
   StyleSheet,
   View,
@@ -231,6 +232,7 @@ export function BookScreen({ id }: { id: string }) {
           <View style={styles.framedContainer}>
             {/* Book Title, Authors & Unified Pricing Module */}
             <BookOverviewSection item={item} />
+            {!isOwner&&item.salePrice!==null&&item.purchaseAvailability.status==='Available'&&<AddToCart key={state.status==='authenticated'?state.user.id:'anonymous'} listingId={item.id} listingVersion={item.version}/>}
 
             {/* Condition Bento & Catalog Metadata */}
             <BookInspectionReport item={item} />

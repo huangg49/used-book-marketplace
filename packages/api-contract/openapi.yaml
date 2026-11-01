@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.66.0
+  version: 0.67.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -905,6 +905,124 @@ paths:
       responses:
         "200":
           description: Current authorized result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /me/cart:
+    get:
+      operationId: getMemberCart
+      tags:
+        - Member cart
+      description: Current MEMBER owner only; LOCKED may inspect and remove own rows. Full bounded max50 list.
+        Unavailable/private/deleted books yield null listing; never leak historical private content. Prices and
+        eligibility are current, priceAtAdd is informational; no price guarantee.
+      security:
+        - bearerAuth: []
+      x-locked-access: existing-obligations
+      responses:
+        "200":
+          description: Current result; adding does not reserve books and checkout remains single-listing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberCart"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /me/cart/add:
+    post:
+      operationId: addCartItem
+      tags:
+        - Member cart
+      description: ACTIVE MEMBER only, published eligible Marketplace Sale/Both Available and not own listing.
+        Max50, unique listing IDs, quantity1. Expected cart/listing versions and serialized user/listing locks.
+        No reservation, commitment, quote, order or money change; duplicate add is no-op receipt.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: &a1
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCartItem"
+      responses:
+        "200":
+          description: Current result; adding does not reserve books and checkout remains single-listing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /me/cart/remove:
+    post:
+      operationId: removeCartItem
+      tags:
+        - Member cart
+      description: Current MEMBER owner only, including LOCKED. Expected cart version; removing absent row is no-op
+        receipt. Never releases any reservation or cancels an Order.
+      security:
+        - bearerAuth: []
+      x-locked-access: existing-obligations
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RemoveCartItem"
+      responses:
+        "200":
+          description: Current result; adding does not reserve books and checkout remains single-listing.
           content:
             application/json:
               schema:
@@ -4649,15 +4767,16 @@ paths:
   /orders/{orderId}/conversation:
     post:
       operationId: openOrderConversation
+      x-locked-access: existing-obligations
       tags: [Orders, Purchase conversations]
       summary: Open the exact Order's participant conversation
       x-implementation-status: implemented
-      description: ACTIVE MEMBER Buyer or Seller only. Reuses the conversation already linked to this
+      description: Current MEMBER Buyer or Seller, including LOCKED/RESTRICTED for this existing Order only. Reuses the conversation already linked to this
         Order, preserving its messages and terms. If none exists, creates a separate OrderCreated
         conversation from the Order's frozen participants and item. Does not change the Order,
         listing, quote, prices, commitment or ledger. No financial expectedVersion is required;
         opening a conversation is serialized by the Order lock. Same key and empty body replay
-        the receipt after current participant, role, account and session checks. No LOCKED access.
+        the receipt after current participant, role, account and session checks. Does not permit new negotiation, terms or quote commands.
       security: [{ bearerAuth: [] }]
       parameters:
         - in: path
@@ -11109,6 +11228,74 @@ components:
               maxLength: 2048
             - type: "null"
         serverTime: *a3
+    MemberCartItem:
+      type: object
+      additionalProperties: false
+      required:
+        - listingId
+        - quantity
+        - addedAt
+        - priceAtAdd
+        - listing
+        - canBuy
+      properties:
+        listingId: &a1
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          const: 1
+        addedAt: &a2
+          type: string
+          format: date-time
+        priceAtAdd:
+          type: integer
+          minimum: 0
+        listing:
+          anyOf:
+            - $ref: "#/components/schemas/PublicListing"
+            - type: "null"
+        canBuy:
+          type: boolean
+    MemberCart:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - version
+        - items
+        - serverTime
+      properties:
+        id: *a1
+        version: &a3
+          type: integer
+          minimum: 1
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/MemberCartItem"
+        serverTime: *a2
+    AddCartItem:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - listingId
+        - expectedListingVersion
+      properties:
+        expectedVersion: *a3
+        listingId: *a1
+        expectedListingVersion: *a3
+    RemoveCartItem:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - listingId
+      properties:
+        expectedVersion: *a3
+        listingId: *a1
     CurrentUser:
       type: object
       additionalProperties: false
@@ -14194,6 +14381,7 @@ components:
         - SelfReviewForbidden
         - INVALID_EMAIL_CHANGE
         - AvatarQuotaExceeded
+        - CartFull
         - InvalidImage
         - INVALID_CREDENTIALS
         - CREDENTIAL_CHANGED

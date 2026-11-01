@@ -127,7 +127,9 @@ describe('migrations', () => {
         // ADR 0048 photo autofill suggestions are Mongo-native.
         listingAutofillSpecs.length -
         // Private profile avatar/challenge collections are Mongo-native too.
-        memberProfileSpecs.length +
+        memberProfileSpecs.length -
+        // Member cart is Mongo-native (FR-O01).
+        1 +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });

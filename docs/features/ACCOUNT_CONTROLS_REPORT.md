@@ -24,7 +24,7 @@ không DB chính. Không GHN/carrier, Flutter, ledger hoặc quyền settlement.
 
 | Kiểm tra | Bằng chứng |
 |---|---|
-| API HTTP/Mongo | PASS76/76: account controls12, directory4, Order60; genuine target/actor contention, mutual Admin lock, stale/replay/body conflict/revoke, immutable-audit rollback, exact restore and legacy choice; actual Admin command locks Order participants, vẫn cancel/read/media/chat, new commands403 |
+| API HTTP/Mongo | PASS76/76: account controls11, directory3, Order62; genuine target/actor contention, mutual Admin lock, stale/replay/body conflict/revoke, immutable-audit rollback, exact restore and legacy choice; actual Admin command locks Order participants, vẫn cancel/read/media/chat, new commands403 |
 | Schema | PASS27/27, có0048; giữ checksum migrations cũ |
 | Admin unit/typecheck/lint/build | PASS219/219, typecheck/lint/build; không dependency upgrade |
 | API typecheck/build/lint, contract/routes | PASS; lint còn8warning cũ ngoài phạm vi |

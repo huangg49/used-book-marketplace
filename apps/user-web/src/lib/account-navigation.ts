@@ -14,6 +14,7 @@ import { ROUTES } from "./routes";
 export const accountNavigation = [
   { to: ROUTES.account, label: "Tổng quan", icon: LayoutDashboard },
   { to: '/profile', label: 'Hồ sơ & bảo mật', icon: UserRound },
+  { to: '/cart', label: 'Giỏ sách', icon: ShoppingBag },
   { to: '/reviews', label: 'Đánh giá của tôi', icon: Star },
   { to: ROUTES.wallet, label: "Ví của tôi", icon: Wallet },
   { to: "/orders", label: "Đơn trực tiếp", icon: ShoppingBag },

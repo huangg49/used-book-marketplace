@@ -57,6 +57,8 @@
     "test:work-inbox:browser": "node scripts/test-work-inbox.mjs",
     "test:rn-buy-now:browser": "node scripts/test-rn-buy-now.mjs",
     "test:member-profile:browser": "node scripts/test-member-profile.mjs",
+    "test:member-cart:api": "node scripts/test-member-cart-api.mjs",
+    "test:member-cart:browser": "node scripts/test-member-cart-browser.mjs",
     "build": "pnpm -r --if-present run build",
     "lint": "pnpm -r --if-present run lint",
     "typecheck": "pnpm -r --if-present run typecheck",

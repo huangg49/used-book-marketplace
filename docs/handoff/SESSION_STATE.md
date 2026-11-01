@@ -1,16 +1,29 @@
 # Điểm lưu hiện tại — 01/11/2026
 
-## Ba gói được duyệt: hồ sơ và Admin đã kiểm, tiếp cart — 01/11/2026
+## Ba gói hồ sơ/Admin/cart đã triển khai và kiểm local — 01/11/2026
 
-- Owner duyệt lần lượt hồ sơ web/RN, Admin khóa/mở tài khoản và giỏ hàng web/RN;
-  tiếp tục giữ local, chưa push/PR/merge. Nhánh `codex/member-profile`, base
-  `2d051c0a`, subject `feat(profile): connect member profile avatar and verified email changes`.
-  Hồ sơ source `f49160fa`; Admin base này, subject
-  `feat(admin): control account locks while preserving existing obligations`.
-  Cart tiếp tục trong cùng chuỗi đã duyệt, chưa publish.
+- Owner duyệt hồ sơ web/RN, Admin khóa/mở và giỏ sách web/RN; giữ local,
+  chưa push/PR/merge/deploy. Chuỗi từ `2d051c0a`: hồ sơ `f49160fa`, Admin
+  `b13f0d5b`, cart nhánh `codex/member-cart`, base `b13f0d5b`, subject
+  `feat(cart): connect bounded member carts to single-listing checkout`.
+- [Giỏ sách](../features/MEMBER_CART_REPORT.md), [ADR0060](../adr/0060-member-cart.md):
+  contract0.67/213operations/33controllers, migration0049/registry62. Max50/unique/
+  quantity1/no reservation; giá và public eligibility hiện tại, private row null,
+  locked read/remove, shared intent và checkout một bài. PASS9nhóm API invariants
+  với genuine contention, schema27, public projection9unit, shared105/web253/
+  RN164unit, API/web/RN types/lint, API/web build và Android/iOS/web export.
+  Browser cart + profile + RN buy-now + web checkout-only cuối PASS; kiểm đúng
+  Order/ledger/intent, không carrier commands. 320px/web130% đã xem ảnh và sửa
+  title hẹp, cover quá lớn, stale error; export không là native runtime PASS.
+  Web BuyNow refetch khi mở sửa quote409 do cache cũ. Contract annotation Order
+  chat sửa theo ADR0059 sau allowlist-wide test FAIL; rerun21obligations PASS,
+  không bỏ assertion. Profile16/account11 PASS; Order62/directory3 ở lượt76PASS
+  trước đó không đổi nghiệp vụ sau đó.
+  API cart harness dùng49IDs capacity synthetic có nhãn, admissions/public data
+  thật; storage/mail/funding QA fake, không tính là provider thật.
 - [Admin khóa/mở](../features/ACCOUNT_CONTROLS_REPORT.md), [ADR0059](../adr/0059-administrative-account-controls.md):
   contract0.66/210operations/32controllers, migration0048/registry61, chỉ QA.
-  PASS76HTTP/Mongo(account12/directory4/Order60), schema27, Admin219unit,
+  PASS76HTTP/Mongo(account11/directory3/Order62), schema27, Admin219unit,
   API/Admin typecheck/lint/build/contract/routes. Browser real entry/confirm/
   stale/refetch/history14rows/lostACK+Back/remount đúng intent và320px130% PASS.
   Khôi phục trạng thái gốc; không clear violations/ledger/session. Order chat
@@ -25,8 +38,11 @@
   Browser web/RN-web PASS từ entry, ảnh/OTP/lost ACK/remount/password reentry/Back;
   responsive320px và web chữ130% đã xem ảnh. Expo web export không là native PASS.
   Metro launch bị automatic policy block (tool không nêu lý do); không vượt block.
-  Native runtime mới, live storage/mail và human UX NOT RUN; để lượt kiểm cuối chuỗi.
-- Mongo QA57017 đang chạy riêng, DB `_test`; DB chính dừng/không migrate/seed.
+  Native runtime mới, live storage/mail và human UX NOT RUN; giữ gate riêng mở.
+- Fetch cuối: main/origin/main vẫn `be581aec`; remote CI NOT RUN cho chuỗi local.
+  Đã nối harness profile/Admin/cart vào Operations CI, chưa publish để chạy CI.
+- Mongo QA57017/DB `_test` đã dừng cuối phiên; các port app/QA đã kiểm không còn
+  listener. DB chính giữ dừng/không migrate/seed; không env/GHN/carrier change.
   Browser harness tự bật/tắt API3009/media3010/web5194/RNweb8087 theo lượt, không
   giữ dịch vụ app sau test. READINESS và các gate ảnh điện thoại/human AI giữ nguyên.
 

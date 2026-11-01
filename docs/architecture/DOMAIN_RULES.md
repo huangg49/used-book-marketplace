@@ -228,13 +228,14 @@ never treat login, roles or a client capability as permission for new transactio
 0.15.0 allows LOCKED paid cancellation/rejection; 0.16.0 adds Seller acceptance.
 New payment remains denied for LOCKED.
 Purchase chat exists in `modules/purchases`, with gateway/service participant
-authorization; its HTTP handlers are not an ExistingObligation allowlist.
+authorization. ADR0059 allows LOCKED reads/sends only for a real owned OrderCreated
+room; new negotiation/terms/quote commands are not on this allowlist.
 Point report/code/claim/read handlers currently lack the decorator described in
 older reports, so do not claim LOCKED access there from documentation alone.
-  Claim evidence upload/real carrier remain planned. Admin lock/unlock now follows
-  ADR0059: prior status is preserved, sessions/roles/ledger/obligations are not erased.
-  LOCKED purchase-chat reads/sends are limited to real owned OrderCreated rooms;
-  new negotiation/terms/quotes remain blocked. See ACCOUNT_CONTROLS_REPORT.
+Claim evidence upload/real carrier remain planned. Admin lock/unlock now follows
+ADR0059: prior status is preserved, sessions/roles/ledger/obligations are not erased.
+LOCKED purchase-chat reads/sends are limited to real owned OrderCreated rooms;
+new negotiation/terms/quotes remain blocked. See ACCOUNT_CONTROLS_REPORT.
 
 ## Ví mô phỏng
 

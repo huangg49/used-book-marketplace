@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import {CartModule} from './modules/cart/cart.module.js';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
@@ -27,6 +28,7 @@ import { MemberProfileModule } from './modules/profile/member-profile.module.js'
 
 @Module({
   imports: [
+    CartModule,
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
     DatabaseModule,
     AuthModule,

@@ -296,6 +296,7 @@ const EXISTING_OBLIGATION_OPERATIONS = [
   'requestMemberEmailChange', 'confirmMemberEmailChange',
   'cancelUnpaidOrder',
   'openOrderConversation',
+  'removeCartItem',
   'cancelPaidOrder',
   'rejectPaidOrder',
   'acceptOrder',

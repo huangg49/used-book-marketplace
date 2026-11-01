@@ -475,6 +475,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/cart": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Current MEMBER owner only; LOCKED may inspect and remove own rows. Full bounded max50 list. Unavailable/private/deleted books yield null listing; never leak historical private content. Prices and eligibility are current, priceAtAdd is informational; no price guarantee. */
+        get: operations["getMemberCart"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/cart/add": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE MEMBER only, published eligible Marketplace Sale/Both Available and not own listing. Max50, unique listing IDs, quantity1. Expected cart/listing versions and serialized user/listing locks. No reservation, commitment, quote, order or money change; duplicate add is no-op receipt. */
+        post: operations["addCartItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/cart/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Current MEMBER owner only, including LOCKED. Expected cart version; removing absent row is no-op receipt. Never releases any reservation or cancels an Order. */
+        post: operations["removeCartItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/catalog/taxonomy": {
         parameters: {
             query?: never;
@@ -1695,7 +1746,7 @@ export interface paths {
         put?: never;
         /**
          * Open the exact Order's participant conversation
-         * @description ACTIVE MEMBER Buyer or Seller only. Reuses the conversation already linked to this Order, preserving its messages and terms. If none exists, creates a separate OrderCreated conversation from the Order's frozen participants and item. Does not change the Order, listing, quote, prices, commitment or ledger. No financial expectedVersion is required; opening a conversation is serialized by the Order lock. Same key and empty body replay the receipt after current participant, role, account and session checks. No LOCKED access.
+         * @description Current MEMBER Buyer or Seller, including LOCKED/RESTRICTED for this existing Order only. Reuses the conversation already linked to this Order, preserving its messages and terms. If none exists, creates a separate OrderCreated conversation from the Order's frozen participants and item. Does not change the Order, listing, quote, prices, commitment or ledger. No financial expectedVersion is required; opening a conversation is serialized by the Order lock. Same key and empty body replay the receipt after current participant, role, account and session checks. Does not permit new negotiation, terms or quote commands.
          */
         post: operations["openOrderConversation"];
         delete?: never;
@@ -3713,6 +3764,36 @@ export interface components {
             /** Format: date-time */
             serverTime: string;
         };
+        MemberCartItem: {
+            /** Format: uuid */
+            listingId: string;
+            /** @constant */
+            quantity: 1;
+            /** Format: date-time */
+            addedAt: string;
+            priceAtAdd: number;
+            listing: components["schemas"]["PublicListing"] | null;
+            canBuy: boolean;
+        };
+        MemberCart: {
+            /** Format: uuid */
+            id: string;
+            version: number;
+            items: components["schemas"]["MemberCartItem"][];
+            /** Format: date-time */
+            serverTime: string;
+        };
+        AddCartItem: {
+            expectedVersion: number;
+            /** Format: uuid */
+            listingId: string;
+            expectedListingVersion: number;
+        };
+        RemoveCartItem: {
+            expectedVersion: number;
+            /** Format: uuid */
+            listingId: string;
+        };
         /** @description Current verified account state from the database, never JWT role/status claims. LOCKED can authenticate but is limited to explicit existing-obligation endpoints. DISABLED/unverified cannot authenticate. Roles and ownership checks still apply; 403 does not invalidate the session. */
         CurrentUser: {
             /** Format: uuid */
@@ -4676,7 +4757,7 @@ export interface components {
          * @description AI_ASSIST_FAILED means an advisory request has a persisted terminal failure; a deliberate new request may use a new key. Network errors and UNAVAILABLE are uncertain and must retain their original key/body.
          * @enum {string}
          */
-        ListingErrorCode: "VALIDATION_ERROR" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "RATE_LIMITED" | "UNAVAILABLE" | "AI_ASSIST_FAILED" | "INTERNAL_ERROR" | "AccountIneligible" | "SelfReviewForbidden" | "INVALID_EMAIL_CHANGE" | "AvatarQuotaExceeded" | "InvalidImage" | "INVALID_CREDENTIALS" | "CREDENTIAL_CHANGED" | "EMAIL_CHANGE_COOLDOWN" | "EMAIL_UNAVAILABLE" | "CatalogDuplicate" | "CatalogNotConfirmed" | "ListingLimitReached" | "ListingInvalid" | "VersionConflict" | "InvalidState" | "IdempotencyConflict" | "MediaNotReady" | "MediaQuotaExceeded" | "UploadIncomplete" | "UploadExpired" | "PayloadTooLarge" | "UnsupportedMediaType" | "SESSION_EXPIRED" | "BidTooLow" | "AuctionClosed" | "AuctionNotStarted";
+        ListingErrorCode: "VALIDATION_ERROR" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "RATE_LIMITED" | "UNAVAILABLE" | "AI_ASSIST_FAILED" | "INTERNAL_ERROR" | "AccountIneligible" | "SelfReviewForbidden" | "INVALID_EMAIL_CHANGE" | "AvatarQuotaExceeded" | "CartFull" | "InvalidImage" | "INVALID_CREDENTIALS" | "CREDENTIAL_CHANGED" | "EMAIL_CHANGE_COOLDOWN" | "EMAIL_UNAVAILABLE" | "CatalogDuplicate" | "CatalogNotConfirmed" | "ListingLimitReached" | "ListingInvalid" | "VersionConflict" | "InvalidState" | "IdempotencyConflict" | "MediaNotReady" | "MediaQuotaExceeded" | "UploadIncomplete" | "UploadExpired" | "PayloadTooLarge" | "UnsupportedMediaType" | "SESSION_EXPIRED" | "BidTooLow" | "AuctionClosed" | "AuctionNotStarted";
         ListingApiError: {
             statusCode: number;
             code: components["schemas"]["ListingErrorCode"];
@@ -7445,6 +7526,99 @@ export interface operations {
         };
         responses: {
             /** @description Current authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountCommandReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    getMemberCart: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current result; adding does not reserve books and checkout remains single-listing. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberCart"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    addCartItem: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddCartItem"];
+            };
+        };
+        responses: {
+            /** @description Current result; adding does not reserve books and checkout remains single-listing. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountCommandReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    removeCartItem: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RemoveCartItem"];
+            };
+        };
+        responses: {
+            /** @description Current result; adding does not reserve books and checkout remains single-listing. */
             200: {
                 headers: {
                     [name: string]: unknown;

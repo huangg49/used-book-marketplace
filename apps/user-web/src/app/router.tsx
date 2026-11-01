@@ -23,6 +23,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <HomePage /> },
           { path: '/books', lazy: () => import('../pages/BookSearchPage').then(m => ({ Component: m.BookSearchPage })) },
+          { path: '/cart', lazy: () => import('../pages/CartPage').then(m => ({ Component: m.CartPage })) },
           { path: '/books/:id', lazy: () => import('../pages/BookDetailPage').then(m => ({ Component: m.BookDetailPage })) },
           { path: '/chat', lazy: chatRoute },
           { path: '/chat/orders/:orderId', lazy: orderConversationRoute },
