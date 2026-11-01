@@ -22,6 +22,7 @@ const suffix = [
   '0047-member-profiles',
   '0048-account-controls',
   '0049-member-cart',
+  '0050-listing-auto-review',
 ];
 const sha = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -67,6 +68,7 @@ describe('main → member profile/account/cart schema upgrade', () => {
               'profile_avatars',
               'member_email_changes',
               'member_carts',
+              'listing_auto_reviews',
             ].includes(p.resource.collection),
         ),
       });

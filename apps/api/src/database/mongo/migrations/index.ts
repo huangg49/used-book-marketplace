@@ -1,6 +1,7 @@
 import { createMemberProfilesMigration, memberProfileSpecs, withMemberProfiles } from './0047-member-profiles.js';
 import { createAccountControlsMigration, withAccountControls } from './0048-account-controls.js';
 import {memberCartMigration,memberCartSpec} from './0049-member-cart.js';
+import { createListingAutoReviewMigration, listingAutoReviewSpec, withListingAutoReview } from './0050-listing-auto-review.js';
 import { transactionReviewValidatorFixMigration } from './0039-transaction-review-validator-fix.js';
 import { reviewValidatorReconciliationMigration } from './0041-review-validator-reconciliation.js';
 import { catalogRecoveryMigration, withCatalogRecovery } from './0042-catalog-recovery-index.js';
@@ -237,6 +238,10 @@ const memberProfilesMigration = createMemberProfilesMigration([
     .map(withIntegratedWalletPointCommands).map(withVNPayExpiry).map(withReviewCommandTarget),
 ]);
 const accountControlsMigration = createAccountControlsMigration(memberProfilesMigration.definition.collections.filter(spec => ['users','audit_events'].includes(spec.name)));
+const listingAutoReviewMigration = createListingAutoReviewMigration([
+  ...memberProfilesMigration.definition.collections.filter(spec => spec.name === 'mutation_receipts'),
+  ...accountControlsMigration.definition.collections.filter(spec => spec.name === 'audit_events'),
+]);
 export const migrations: Migration[] = [
   {
     id: '0001-baseline-schema',
@@ -330,6 +335,7 @@ export const migrations: Migration[] = [
   memberProfilesMigration,
   accountControlsMigration,
   memberCartMigration,
+  listingAutoReviewMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -364,7 +370,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withCatalogRecovery)
     .map(withListingExchangePreferences)
     .map(withMemberProfiles)
-    .map(withAccountControls),
+    .map(withAccountControls)
+    .map(withListingAutoReview),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape),
@@ -419,4 +426,5 @@ export const currentCollections = (): CollectionSpec[] => [
   ...listingAutofillSpecs,
   ...memberProfileSpecs,
   memberCartSpec,
+  listingAutoReviewSpec,
 ];

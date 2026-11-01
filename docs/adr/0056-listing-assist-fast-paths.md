@@ -3,7 +3,8 @@
 29/10/2026. Accepted trong gói owner duyệt tăng tốc/chất lượng hai trợ lý hiện có.
 Kế thừa [ADR0028](0028-listing-price-assistant.md),
 [ADR0048](0048-listing-photo-autofill.md), [ADR0054](0054-cross-client-listing-ai.md)
-và [ADR0055](0055-listing-catalog-recovery.md). Không thêm AI duyệt bài, không đổi
+và [ADR0055](0055-listing-catalog-recovery.md). Gói này không thêm AI duyệt bài (sau
+đó có [ADR0061](0061-ai-listing-auto-review.md) sau cờ tắt), không đổi
 SRS, luật giá POL-16, ledger hoặc gate giao nhận.
 
 ## ISBN trước AI
