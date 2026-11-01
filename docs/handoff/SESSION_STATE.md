@@ -5,7 +5,9 @@
 - Nhánh `codex/money-permission-review`, base lượt review `1aa958be`; source fix
   `aeee8b81e89b0c1ab257fc13c76348a3d2721965`. [Hồ sơ review hiện tại](INDEPENDENT_REVIEW.md#gói-hiện-tại--01112026)
   ghi toàn bộ chain từ main `be581aec`, đường đọc và phiếu cho owner/reviewer.
-  Đây là tự rà của tác giả, chưa là independent human review.
+  Đây là tự rà của tác giả, chưa là independent human review. Sau `d7341fe5`,
+  owner chấp thuận agent tự kiểm và bỏ reviewer thứ hai riêng gói hiện tại;
+  không miễn review chung cho gói tương lai hoặc tự cấp quyền publish/merge.
 - R10/P2 xác nhận offline: sau mất ACK503 rồi retry408/429, helper bỏ intent,
   cho phép đổi key/version/quyết định trước receipt. Sửa predicate dùng chung giữ
   original key/body/version; không đổi backend, ledger, API/schema hoặc UI.
@@ -17,8 +19,8 @@
 - Fetch: main/origin/main vẫn `be581aec`;0PR mở,6CI xanh chỉ ở base. Local chain
   remote CI NOT RUN, chưa push/PR/merge/deploy. Mongo app/QA và các port app/ADB
   đã kiểm đều dừng; không bật dịch vụ/đụng DB chính/GHN/env/migration.
-- Bước tiếp: owner vùng bị ảnh hưởng và reviewer thứ hai tiền/quyền/dispute đọc
-  hồ sơ/source, ghi SHA và nhận xét; nhóm chưa chỉ định hoặc ký nhận. READINESS,
+- Bước tiếp đề xuất: tích hợp chuỗi đã có qua PR/CI đúng head khi owner giao quyền
+  push/PR/merge; không chờ reviewer thứ hai theo ngoại lệ mới ở trên. READINESS,
   human UX/AI và native gate giữ nguyên. Không áp ngoại lệ PR83 cho gói mới.
 
 ## Kiểm native từ build sạch — 01/11/2026

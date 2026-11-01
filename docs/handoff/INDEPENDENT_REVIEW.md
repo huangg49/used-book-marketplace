@@ -8,8 +8,13 @@ Team tự điền tên, không mặc định người tạo báo cáo là review
 
 ## Gói hiện tại — 01/11/2026
 
-**Rà kỹ thuật của tác giả đã thực hiện; review độc lập người thật vẫn OPEN.**
-Không dùng kết luận dưới đây thay chữ ký của owner hoặc reviewer thứ hai.
+**Rà kỹ thuật của tác giả đã thực hiện; chủ dự án chấp thuận tự kiểm cho gói này.**
+Ngày01/11/2026, sau hồ sơ tại `d7341fe5`, chủ dự án nói: “Không cần Review thứ 2
+nữa đâu, mình bạn làm là được rồi.” Gói hiện tại không chờ thêm reviewer; đây là
+ngoại lệ mới cho chuỗi từ `be581aec` tới source `aeee8b81`, không kế thừa PR83
+và không miễn review chung cho thay đổi tương lai. Review độc lập người thật
+chưa thực hiện. Ngoại lệ không tự cấp quyền push/PR/merge/deploy hoặc đóng các
+gate UX người thật, native và AI.
 
 - Base/main/origin/main sau fetch: `be581aeca4afaf3a7cea8b4b047281fd78e661de`.
 - Chuỗi khảo sát: Exchange `65b40161`, RN `1574d986`, AI offline `c5c30261`,
@@ -80,20 +85,20 @@ CI của local chain **NOT RUN**; không nhận thành Admin/Flutter/native PASS
 Mongo app và Mongo QA đều dừng; không listener3000/3009/3020/57017/8089/5037 tại
 lượt kiểm. Không bật thêm dịch vụ hoặc ghi/xóa DB. READINESS giữ nguyên.
 
-### Việc reviewer người thật cần chốt
+### Đường kiểm tham khảo và bước tích hợp
 
-Owner các phần API/Mongo, Operations và RN/web đọc source/contract cùng evidence
-đúng SHA; reviewer thứ hai xem tiền/quyền/dispute theo TEAMWORK. Nhóm chưa chỉ định
-tên; chưa có ký nhận hoặc ngoại lệ review cho gói này.
+Đường đọc dưới đây được giữ để người nhận có thể kiểm lại. Với ngoại lệ vừa được
+chủ dự án cấp ở đầu mục này, gói hiện tại không chờ owner/reviewer thứ hai ký nhận;
+không ghi thêm chữ ký người thật hoặc nhận là review độc lập đã PASS.
 
 1. Chấp nhận phạm vi fail-closed của ADR0057: tiền/sách giữ khi protocol quyết định
    chưa đủ; replay lịch sử không là quyền tạo phán quyết mới.
 2. Đối chiếu current auth trước replay, cả2participant/2role và worker contention;
    nếu cần chạy lại, dùng replica QA/DB `_test`, không DB chính.
 3. Đọc R10/fix/regression và giới hạn tiến trình/native; nhận xét có căn cứ,
-   ghi owner/reviewer thứ hai, SHA đã review và kết luận từng người vào phiếu dưới.
+   nếu có review bổ sung, ghi reviewer, SHA đã review và kết luận vào phiếu dưới.
 
-Sau review và khi owner giao quyền publish, mới push/mở PR và lấy CI ở đúng
+Khi owner giao quyền publish, mới push/mở PR và lấy CI ở đúng
 candidate head; mọi job áp dụng phải PASS trước merge. Chưa tự thực hiện các
 bước đó. Ảnh điện thoại/human AI, UX người thật và native còn mở theo gate riêng.
 
