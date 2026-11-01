@@ -1,5 +1,22 @@
 # Điểm lưu hiện tại — 01/11/2026
 
+## AI offline trên corpus đã có — 01/11/2026
+
+- Nhánh `codex/listing-ai-offline-verification`, base `1574d986`, subject
+  `test(ai): verify corpus offline and reject incomplete quality evidence`.
+- Đọc lại README/incoming HANDOFF và [báo cáo corpus](../features/LISTING_AI_CORPUS_2026_10_29.md);
+  dùng đúng bộ Codex-finalized, không tạo lại. Technical PASS/acceptance PARTIAL:
+  25raw/24active/1quarantine,40quan sát,11/15hai nguồn,0real-camera,0human reviewed.
+- `eval:autofill --check-only` chỉ đọc/kiểm ảnh và đáp án,0provider; chặn book/hash
+  trùng, ISBN/metadata/review flag sai. qualityGate không nhận failure hoặc thiếu
+  điểm thành evidence. PASS52data/CLI và30eval unit, API typecheck/lint eval/docs.
+  Workflow offline dùng fixture; remote CI NOT RUN. Không đổi model/prompt/env/flags,
+  không import/migration/DB chính/GHN; không gọi AI trả phí hoặc12holdout.
+- Owner xác nhận chưa có ảnh điện thoại/người duyệt: giữ gate OPEN, không nhận là
+  AI chính xác hơn từ kiểm offline. Giá offline0call, độ chính xác NOT_SCORED.
+  [RN](../ui/MEMBER_NATIVE_DEMO_2026_11_01.md) vẫn PARTIAL native/Back; human review
+  tiền/quyền của cả chuỗi còn OPEN. Chưa push/PR/merge/deploy, READINESS không đổi.
+
 ## Hành trình mua Member RN — 01/11/2026
 
 - Nhánh `codex/member-native-demo`, base `65b40161`; subject

@@ -36,6 +36,7 @@ import {
 } from '../../src/modules/autofill-assist/autofill-prompt.js';
 import { processImage } from '../../src/modules/media/image-processor.js';
 import { digest } from '../../src/modules/media/media-storage.js';
+import { isbn13 } from '../../src/modules/commands/contract-input.service.js';
 import {
   costMicroUsd,
   PriceModelError,
@@ -58,19 +59,30 @@ const seen = new Set<string>();
 for (let i = 0; i < args.length; i++) {
   const flag = args[i];
   if (
-    !['--dir', '--only', '--max-usd', '--system-file', '--init'].includes(
-      flag,
-    ) ||
+    ![
+      '--dir',
+      '--only',
+      '--max-usd',
+      '--system-file',
+      '--init',
+      '--check-only',
+    ].includes(flag) ||
     seen.has(flag)
   )
     throw new Error('Unknown or duplicate evaluation option.');
   seen.add(flag);
-  if (flag !== '--init' && (!args[++i] || args[i].startsWith('--')))
+  if (
+    !['--init', '--check-only'].includes(flag) &&
+    (!args[++i] || args[i].startsWith('--'))
+  )
     throw new Error('Evaluation option requires a value.');
 }
 const arg = (name: string) =>
   args.includes(name) ? args[args.indexOf(name) + 1] : null;
 const dir = arg('--dir') ? resolve(arg('--dir')!) : null;
+const checkOnly = args.includes('--check-only');
+if (checkOnly && args.includes('--init'))
+  throw new Error('--check-only cannot create a corpus with --init.');
 const only = arg('--only');
 const maxUsd = Number(arg('--max-usd') ?? 0.5);
 // A candidate prompt is evaluated without changing the production prompt.
@@ -128,6 +140,15 @@ const MIME: Record<string, string> = {
   png: 'image/png',
   webp: 'image/webp',
 };
+const realDir = realpathSync(dir);
+const caseRel = relative(realDir, realpathSync(casesPath));
+if (
+  !caseRel ||
+  caseRel === '..' ||
+  caseRel.startsWith(`..${sep}`) ||
+  isAbsolute(caseRel)
+)
+  throw new Error('Case file outside evaluation folder.');
 const file = JSON.parse(readFileSync(casesPath, 'utf8')) as CaseFile;
 if (
   !['cover-scan', 'real-camera', 'synthetic', 'unknown'].includes(
@@ -144,16 +165,57 @@ if (new Set(file.cases.map((c) => c.id)).size !== file.cases.length)
 // Decode all selected inputs before spending on any model call.
 const prepared = new Map<string, string[]>();
 const photoSha256: Record<string, string[]> = {};
-const realDir = realpathSync(dir);
+const bookKeys = file.cases
+  .filter((c) => c.bookKey !== undefined)
+  .map((c) => c.bookKey);
+if (new Set(bookKeys).size !== bookKeys.length)
+  throw new Error('Duplicate book keys: group a book photos into one case.');
+const hashes = new Set<string>();
 for (const c of file.cases.filter((c) => !only || c.id === only)) {
   if (
-    !c.id ||
+    typeof c.id !== 'string' ||
+    !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,159}$/.test(c.id) ||
+    typeof c.expected?.title !== 'string' ||
     !c.expected?.title?.trim() ||
     !Array.isArray(c.photos) ||
     c.photos.length < 1 ||
     c.photos.length > 3
   )
     throw new Error('Each case needs an ID, expected title and 1–3 photos.');
+  if (
+    (c.bookKey !== undefined &&
+      (typeof c.bookKey !== 'string' || !c.bookKey.trim())) ||
+    (c.reviewed !== undefined && typeof c.reviewed !== 'boolean')
+  )
+    throw new Error('Book identity/review flag must be explicit and typed.');
+  if (
+    'isbn' in c.expected &&
+    c.expected.isbn !== null &&
+    (typeof c.expected.isbn !== 'string' ||
+      !/^97[89]\d{10}$/.test(c.expected.isbn) ||
+      !isbn13(c.expected.isbn))
+  )
+    throw new Error(
+      'Expected ISBN must be canonical ISBN-13 with a valid checksum, or null.',
+    );
+  for (const field of ['publisher', 'edition', 'language'] as const) {
+    if (
+      field in c.expected &&
+      c.expected[field] !== null &&
+      (typeof c.expected[field] !== 'string' || !c.expected[field]!.trim())
+    )
+      throw new Error('Expected metadata must be non-empty strings or null.');
+  }
+  if (
+    'publicationYear' in c.expected &&
+    c.expected.publicationYear !== null &&
+    (!Number.isInteger(c.expected.publicationYear) ||
+      c.expected.publicationYear! < 1400 ||
+      c.expected.publicationYear! > new Date().getUTCFullYear())
+  )
+    throw new Error(
+      'Expected publication year must be a real non-future year or null.',
+    );
   if (
     c.expected.authors !== undefined &&
     (!Array.isArray(c.expected.authors) ||
@@ -172,7 +234,44 @@ for (const c of file.cases.filter((c) => !only || c.id === only)) {
   photoSha256[c.id] = photos.map((p) =>
     createHash('sha256').update(readFileSync(p)).digest('hex'),
   );
+  for (const hash of photoSha256[c.id]) {
+    if (hashes.has(hash))
+      throw new Error(
+        'Duplicate photo bytes: quarantine or group them before evaluation.',
+      );
+    hashes.add(hash);
+  }
   prepared.set(c.id, await Promise.all(photos.map((p) => asProvided(p))));
+}
+if (checkOnly) {
+  console.log(
+    JSON.stringify(
+      {
+        mode: 'offline-preflight',
+        technicalStatus: 'PASS',
+        source: file.source,
+        selectedCases: prepared.size,
+        totalCases: file.cases.length,
+        uniquePhotos: hashes.size,
+        reviewedCases: file.cases.filter(
+          (c) => prepared.has(c.id) && c.reviewed === true,
+        ).length,
+        casesWithIsbnAnswer: file.cases.filter(
+          (c) => prepared.has(c.id) && !!c.expected.isbn,
+        ).length,
+        casesSha256: createHash('sha256')
+          .update(readFileSync(casesPath))
+          .digest('hex'),
+        providerCalls: 0,
+        meetsAdr0048:
+          'NOT EVALUATED: preflight is not model or human acceptance',
+        readinessGateChanged: false,
+      },
+      null,
+      2,
+    ),
+  );
+  process.exit(0);
 }
 const model = autofillModelFromConfig((key) => process.env[key]);
 if (!model) {

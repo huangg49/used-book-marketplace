@@ -1,0 +1,28 @@
+name: Listing AI offline CI
+
+on:
+  pull_request:
+    paths: ["qa-data/listing-ai/**", "apps/api/eval/**", "apps/api/src/modules/autofill-assist/**", "apps/api/src/modules/price-assist/**", "apps/api/src/modules/media/**", "apps/api/src/modules/commands/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/listing-ai-offline-ci.yml"]
+  push:
+    branches: [main]
+    paths: ["qa-data/listing-ai/**", "apps/api/eval/**", "apps/api/src/modules/autofill-assist/**", "apps/api/src/modules/price-assist/**", "apps/api/src/modules/media/**", "apps/api/src/modules/commands/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/listing-ai-offline-ci.yml"]
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    env:
+      AUTOFILL_ENABLED: 'false'
+      PRICE_ASSIST_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.15.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Generated fixtures only. No incoming private corpus, DB, credentials or paid provider.
+      - run: pnpm data:listing-ai:test
+      - run: pnpm --filter @used-books/api exec vitest run eval/autofill-assist/quality.spec.ts eval/autofill-assist/comparison.spec.ts eval/autofill-assist/endpoint-probe.spec.ts
