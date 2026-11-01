@@ -81,6 +81,81 @@ function fake() {
   };
 }
 describe("order decisions across navigation and uncertain responses", () => {
+  it.each(
+    (["accept", "reject", "pay", "cancel"] as const).flatMap((action) =>
+      [408, 429].map((status) => ({ action, status })),
+    ),
+  )("retains $action after lost ACK followed by HTTP $status", async ({
+    action,
+    status,
+  }) => {
+    const f = fake();
+    await expect(
+      sendOrderResponse(f.client, id, action, 1, () => "original"),
+    ).rejects.toBeInstanceOf(ApiError);
+    f.fail(new ApiError(status, "HTTP_ERROR", "Receipt unavailable"));
+    await expect(
+      sendOrderResponse(f.client, id, action, 9, () => "replacement"),
+    ).rejects.toBeInstanceOf(ApiError);
+    expect(pendingOrderResponse(f.client, id)).toBe(action);
+    await expect(
+      sendOrderResponse(
+        f.client,
+        id,
+        action === "cancel" ? "pay" : "cancel",
+        9,
+        () => "opposite",
+      ),
+    ).rejects.toThrow("trước khi đổi");
+    f.fail(null);
+    await sendOrderResponse(f.client, id, action, 9, () => "replacement");
+    expect(f.calls).toHaveLength(3);
+    expect(
+      f.calls.every(
+        (call) =>
+          call.key === "original" &&
+          call.body === JSON.stringify({ expectedVersion: 1 }),
+      ),
+    ).toBe(true);
+    expect(pendingOrderResponse(f.client, id)).toBeUndefined();
+  });
+
+  it.each([408, 429])(
+    "retains the original buy-now creation after lost ACK followed by HTTP %s",
+    async (status) => {
+      const f = fake();
+      const body = {
+        quoteId: id,
+        expectedQuoteVersion: 1,
+        expectedListingVersion: 2,
+        expectedListingRevisionId: id,
+      };
+      await expect(
+        sendBuyNowOrder(f.client, id, body, () => "original"),
+      ).rejects.toBeInstanceOf(ApiError);
+      f.fail(new ApiError(status, "HTTP_ERROR", "Receipt unavailable"));
+      await expect(
+        sendBuyNowOrder(f.client, id, null, () => "replacement"),
+      ).rejects.toBeInstanceOf(ApiError);
+      expect(pendingBuyNowOrder(f.client, id)).toBe(true);
+      f.fail(null);
+      await sendBuyNowOrder(
+        f.client,
+        id,
+        { ...body, expectedListingVersion: 9 },
+        () => "replacement",
+      );
+      expect(f.calls).toHaveLength(3);
+      expect(
+        f.calls.every(
+          (call) => call.key === "original" && call.body === JSON.stringify(body),
+        ),
+      ).toBe(true);
+      expect(pendingBuyNowOrder(f.client, id)).toBe(false);
+      expect(acknowledgedBuyNowOrder(f.client, id)).toBe(id);
+    },
+  );
+
   it.each(["pay", "cancel"] as const)(
     "pins %s across navigation and blocks its opposite after lost ACK or permission denial",
     async (action) => {

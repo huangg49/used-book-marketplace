@@ -28,6 +28,18 @@ export type BuyNowOrderInput = {
 };
 type CreateIntent = { key: string; body: BuyNowOrderInput };
 type Intent = { action: Action; version: number; key: string };
+
+function isDefiniteRejection(error: unknown) {
+  // Auth, timeout and rate-limit responses cannot settle an earlier lost ACK.
+  // Keep the original intent until its receipt can be recovered.
+  return (
+    error instanceof ApiError &&
+    error.status >= 400 &&
+    error.status < 500 &&
+    ![401, 403, 408, 429].includes(error.status)
+  );
+}
+
 const stores = new WeakMap<
   SessionClient,
   {
@@ -133,10 +145,7 @@ export async function sendBuyNowOrder(
     if (
       s.generation === generation &&
       s.creates.get(listingId) === attempt &&
-      error instanceof ApiError &&
-      error.status >= 400 &&
-      error.status < 500 &&
-      ![401, 403].includes(error.status)
+      isDefiniteRejection(error)
     )
       s.creates.delete(listingId);
     throw error;
@@ -182,10 +191,7 @@ export async function sendOrderResponse(
     if (
       s.generation === generation &&
       s.intents.get(id) === attempt &&
-      error instanceof ApiError &&
-      error.status >= 400 &&
-      error.status < 500 &&
-      ![401, 403].includes(error.status)
+      isDefiniteRejection(error)
     )
       s.intents.delete(id);
     throw error;
