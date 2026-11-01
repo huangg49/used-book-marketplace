@@ -1,5 +1,26 @@
 # Điểm lưu hiện tại — 01/11/2026
 
+## Rà tiền/quyền và sửa retry HTTP408/429 — 01/11/2026
+
+- Nhánh `codex/money-permission-review`, base lượt review `1aa958be`; source fix
+  `aeee8b81e89b0c1ab257fc13c76348a3d2721965`. [Hồ sơ review hiện tại](INDEPENDENT_REVIEW.md#gói-hiện-tại--01112026)
+  ghi toàn bộ chain từ main `be581aec`, đường đọc và phiếu cho owner/reviewer.
+  Đây là tự rà của tác giả, chưa là independent human review.
+- R10/P2 xác nhận offline: sau mất ACK503 rồi retry408/429, helper bỏ intent,
+  cho phép đổi key/version/quyết định trước receipt. Sửa predicate dùng chung giữ
+  original key/body/version; không đổi backend, ledger, API/schema hoặc UI.
+  Không chứng minh double-charge từ fake transport.
+- 10regression FAIL trước sửa/PASS sau sửa; session75/75, RN164/164 và web253/253,
+  cả2client typecheck PASS; oxlint2file sửa, docs:check và diff check PASS.
+  Không chạy lại Mongo/browser/native/model gate không đổi. APK/evidence cũ ở
+  sourcec5c30261 chưa chứa sửa mới, không nhận là native PASS ở aeee8b81.
+- Fetch: main/origin/main vẫn `be581aec`;0PR mở,6CI xanh chỉ ở base. Local chain
+  remote CI NOT RUN, chưa push/PR/merge/deploy. Mongo app/QA và các port app/ADB
+  đã kiểm đều dừng; không bật dịch vụ/đụng DB chính/GHN/env/migration.
+- Bước tiếp: owner vùng bị ảnh hưởng và reviewer thứ hai tiền/quyền/dispute đọc
+  hồ sơ/source, ghi SHA và nhận xét; nhóm chưa chỉ định hoặc ký nhận. READINESS,
+  human UX/AI và native gate giữ nguyên. Không áp ngoại lệ PR83 cho gói mới.
+
 ## Kiểm native từ build sạch — 01/11/2026
 
 - Nhánh `codex/native-build-verification`, source sạch `c5c30261`, subject
