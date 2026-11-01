@@ -409,9 +409,11 @@ export function DriverPage() {
                   ? '✓ Đã xong'
                   : ro.status === 'InTransit'
                     ? '🚚 Đang giao'
-                    : ro.status === 'Cancelled'
-                      ? 'Đã hủy'
-                      : ro.status;
+                    : ro.status === 'Preparing'
+                      ? '📦 Chuẩn bị gửi'
+                      : ro.status === 'Cancelled'
+                        ? 'Đã hủy'
+                        : ro.status;
                 return (
                   <button
                     key={ro.exchangeId}

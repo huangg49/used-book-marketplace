@@ -144,10 +144,13 @@
   color: var(--shop-wine, #5c0202);
 }
 
-.chipActive {
-  background-color: var(--shop-wine, #5c0202);
-  border-color: var(--shop-wine, #5c0202);
-  color: #ffffff;
+.chipActive,
+.chip.chipActive,
+.chip.chipActive:hover,
+.chip.chipActive:focus {
+  background-color: var(--shop-wine, #5c0202) !important;
+  border-color: var(--shop-wine, #5c0202) !important;
+  color: #ffffff !important;
 }
 
 /* 2-Leg Tabs */
