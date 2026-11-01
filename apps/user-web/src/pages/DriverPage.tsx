@@ -687,8 +687,10 @@ export function DriverPage() {
                 </div>
                 {order.deliveredAt || currentStep >= 4 ? (
                   <span className={styles.stepBadgeDoneWhite}>✓ ĐÃ GIAO</span>
-                ) : (
+                ) : currentStep >= 3 ? (
                   <span className={styles.stepBadgeNextWhite}>Bấm hoàn tất</span>
+                ) : (
+                  <span className={styles.stepBadgeWaitingWhite}>Chờ đi giao</span>
                 )}
               </button>
             </div>
