@@ -251,11 +251,16 @@ export class CarrierService {
         ? await this.mongo.c.listing_revisions.findOne({ _id: listing.currentRevisionId })
         : null;
       if (rev?.bookId) {
+        const book = await this.mongo.c.catalog_books.findOne({ _id: rev.bookId });
+        if (book?.currentRevisionId) {
+          const catRev = await this.mongo.c.catalog_revisions.findOne({ _id: book.currentRevisionId });
+          if (catRev?.title) return catRev.title;
+        }
         const catRev = await this.mongo.c.catalog_revisions.findOne(
           { bookId: rev.bookId },
           { sort: { number: -1 } },
         );
-        return catRev?.title ?? null;
+        return catRev?.title ?? book?.titleKey ?? null;
       }
     } catch {
       // ignore
@@ -364,7 +369,7 @@ export class CarrierService {
         phone: exchange.recipientAddress?.phone || '0373916690',
         detail: exchange.recipientAddress?.detail || '120 Yên Lãng',
       },
-      itemsSummary: bookTitleA ? `Sách gửi: "${bookTitleA}"` : 'Bưu phẩm sách trao đổi',
+      itemsSummary: bookTitleA ? `Tác phẩm: "${bookTitleA}"` : 'Sách: "Rừng Na Uy" (Trao đổi)',
       fee: 21000,
       shippedAt: exchange.initiatorShipment?.shippedAt || exchange.initiatorShippedAt || null,
       deliveredAt: exchange.recipientReceivedAt || null,
@@ -389,7 +394,7 @@ export class CarrierService {
         phone: exchange.initiatorAddress?.phone || '0901234567',
         detail: exchange.initiatorAddress?.detail || '123 Nguyễn Huệ, P. Bến Nghé, Quận 1',
       },
-      itemsSummary: bookTitleB ? `Sách gửi: "${bookTitleB}"` : 'Bưu phẩm sách trao đổi',
+      itemsSummary: bookTitleB ? `Tác phẩm: "${bookTitleB}"` : 'Sách: "Đại Gia Gatsby" (Trao đổi)',
       fee: 21000,
       shippedAt: exchange.recipientShipment?.shippedAt || exchange.recipientShippedAt || null,
       deliveredAt: exchange.initiatorReceivedAt || null,
@@ -562,22 +567,25 @@ export class CarrierService {
 
     await this.mongo.tx(async (tx) => {
       // Tìm 2 user thực tế trong hệ thống
-      const users = await tx.c.users.find({}).limit(4).toArray();
-      const userA = users[0] || {
+      const users = await tx.c.users.find({}).limit(10).toArray();
+      const userA = users.find(u => u.displayName?.includes('Đại')) || users[0] || {
         _id: randomUUID(),
         displayName: 'Nguyễn Đại (Bên A)',
         username: 'nguyendai',
       };
-      const userB = users[1] || {
+      const userB = users.find(u => u.displayName?.includes('Tú')) || users[1] || {
         _id: randomUUID(),
-        displayName: 'Trần Tú (Bên B)',
-        username: 'trantu',
+        displayName: 'Nguyễn Tú (Bên B)',
+        username: 'nguyentu',
       };
 
-      // Tìm 2 listing sách
-      const listings = await tx.c.listings.find({}).limit(2).toArray();
-      const listingAId = listings[0]?._id || randomUUID();
-      const listingBId = listings[1]?._id || randomUUID();
+      // Tìm 2 listing sách có gắn tác phẩm catalog thực tế
+      const candidateListings = await tx.c.listings
+        .find({ currentRevisionId: { $ne: null } })
+        .limit(10)
+        .toArray();
+      const listingAId = candidateListings[0]?._id || '45e2bff0-2bcc-444e-8326-031bad8890af';
+      const listingBId = candidateListings[1]?._id || '7fdf4c33-1d20-4a67-9885-4dc4bd6a1561';
 
       const trackingA = `GHN${Math.floor(100000000 + Math.random() * 900000000)}VN`;
       const trackingB = `GHN${Math.floor(100000000 + Math.random() * 900000000)}VN`;
@@ -636,7 +644,7 @@ export class CarrierService {
           serviceAreaCode: 'HCM-DEMO-v1',
         },
         recipientAddress: {
-          recipientName: userB.displayName || 'Trần Tú (Bên B)',
+          recipientName: userB.displayName || 'Nguyễn Tú (Bên B)',
           phone: '0373916690',
           detail: '120 Yên Lãng, Đống Đa, TP.HCM',
           localityCode: 'DEMO-B',
