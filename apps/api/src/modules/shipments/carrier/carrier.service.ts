@@ -344,24 +344,27 @@ export class CarrierService {
     const bookTitleA = await this.getBookTitle(listingIdA);
     const bookTitleB = await this.getBookTitle(listingIdB);
 
+    const nameA = exchange.initiatorAddress?.recipientName || initiatorUser?.displayName || 'Bên A';
+    const nameB = exchange.recipientAddress?.recipientName || recipientUser?.displayName || 'Bên B';
+
     // Kiện 1: Initiator -> Recipient (Bên A gửi bên B)
     const leg1 = {
       leg: 'initiator' as const,
-      label: 'Kiện 1 (Bên A ➔ Bên B)',
+      label: `Kiện 1: ${nameA} ➔ ${nameB} (Chiều đi)`,
       trackingCode: exchange.initiatorShipment?.trackingCode || 'GHN_A_PENDING',
       carrierCode: exchange.initiatorShipment?.carrierCode || 'GHN',
       carrierName: exchange.initiatorShipment?.carrierName || 'Giao Hàng Nhanh (GHN Express)',
       sender: {
-        name: exchange.initiatorAddress?.recipientName || initiatorUser?.displayName || 'Nguyễn Đại (Bên A)',
+        name: `${nameA} (Người gửi)`,
         phone: exchange.initiatorAddress?.phone || '0901234567',
         detail: exchange.initiatorAddress?.detail || '123 Nguyễn Huệ, P. Bến Nghé, Quận 1',
       },
       receiver: {
-        name: exchange.recipientAddress?.recipientName || recipientUser?.displayName || 'Trần Tú (Bên B)',
+        name: `${nameB} (Người nhận)`,
         phone: exchange.recipientAddress?.phone || '0373916690',
         detail: exchange.recipientAddress?.detail || '120 Yên Lãng',
       },
-      itemsSummary: bookTitleA ? `Sách: ${bookTitleA}` : 'Sách trao đổi (Bên A gửi)',
+      itemsSummary: bookTitleA ? `Sách gửi: "${bookTitleA}"` : 'Bưu phẩm sách trao đổi',
       fee: 21000,
       shippedAt: exchange.initiatorShipment?.shippedAt || exchange.initiatorShippedAt || null,
       deliveredAt: exchange.recipientReceivedAt || null,
@@ -372,21 +375,21 @@ export class CarrierService {
     // Kiện 2: Recipient -> Initiator (Bên B gửi bên A)
     const leg2 = {
       leg: 'recipient' as const,
-      label: 'Kiện 2 (Bên B ➔ Bên A)',
+      label: `Kiện 2: ${nameB} ➔ ${nameA} (Chiều về)`,
       trackingCode: exchange.recipientShipment?.trackingCode || 'GHN_B_PENDING',
       carrierCode: exchange.recipientShipment?.carrierCode || 'GHN',
       carrierName: exchange.recipientShipment?.carrierName || 'Giao Hàng Nhanh (GHN Express)',
       sender: {
-        name: exchange.recipientAddress?.recipientName || recipientUser?.displayName || 'Trần Tú (Bên B)',
+        name: `${nameB} (Người gửi)`,
         phone: exchange.recipientAddress?.phone || '0373916690',
         detail: exchange.recipientAddress?.detail || '120 Yên Lãng',
       },
       receiver: {
-        name: exchange.initiatorAddress?.recipientName || initiatorUser?.displayName || 'Nguyễn Đại (Bên A)',
+        name: `${nameA} (Người nhận)`,
         phone: exchange.initiatorAddress?.phone || '0901234567',
         detail: exchange.initiatorAddress?.detail || '123 Nguyễn Huệ, P. Bến Nghé, Quận 1',
       },
-      itemsSummary: bookTitleB ? `Sách: ${bookTitleB}` : 'Sách trao đổi (Bên B gửi)',
+      itemsSummary: bookTitleB ? `Sách gửi: "${bookTitleB}"` : 'Bưu phẩm sách trao đổi',
       fee: 21000,
       shippedAt: exchange.recipientShipment?.shippedAt || exchange.recipientShippedAt || null,
       deliveredAt: exchange.initiatorReceivedAt || null,

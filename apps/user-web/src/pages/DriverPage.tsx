@@ -230,9 +230,9 @@ export function DriverPage() {
 
       alert(
         `🎉 TỰ ĐỘNG MÔ PHỎNG THÀNH CÔNG!\n\n` +
-          `• Kiện 1: Đã giao tận tay & ký nhận POD.\n` +
-          `• Kiện 2: Đã giao tận tay & ký nhận POD.\n\n` +
-          `Sàn Lật Lại đã tức thì chuyển sang giai đoạn "KIỂM ĐỊNH & NGHIỆM THU 48H"!`,
+        `• Kiện 1: Đã giao tận tay & ký nhận POD.\n` +
+        `• Kiện 2: Đã giao tận tay & ký nhận POD.\n\n` +
+        `Sàn Lật Lại đã tức thì chuyển sang giai đoạn "KIỂM ĐỊNH & NGHIỆM THU 48H"!`,
       );
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Có lỗi khi tự động chạy mô phỏng');
@@ -302,14 +302,14 @@ export function DriverPage() {
         if (willBeBothDelivered) {
           alert(
             `🎉 GIAO HÀNG THÀNH CÔNG CHO CẢ 2 BÊN!\n\n` +
-              `Cả 2 kiện hàng đã được giao tận tay và ký nhận POD!\n` +
-              `Sàn Lật Lại đã tự động chuyển sang bước "ĐÃ NHẬN SÁCH" & bắt đầu đếm ngược 48h kiểm định!`,
+            `Cả 2 kiện hàng đã được giao tận tay và ký nhận POD!\n` +
+            `Sàn Lật Lại đã tự động chuyển sang bước "ĐÃ NHẬN SÁCH" & bắt đầu đếm ngược 48h kiểm định!`,
           );
         } else {
           alert(
             `✓ GIAO THÀNH CÔNG KIỆN HÀNG!\n\n` +
-              `Mã vận đơn ${order.trackingCode} đã được giao cho ${order.receiver.name}.\n` +
-              `👉 Còn Kiện hàng chiều ngược lại (${otherLeg?.trackingCode || 'Kiện 2'}), hãy chuyển sang tab bên cạnh để tiếp tục giao nhé!`,
+            `Mã vận đơn ${order.trackingCode} đã được giao cho ${order.receiver.name}.\n` +
+            `👉 Còn Kiện hàng chiều ngược lại (${otherLeg?.trackingCode || 'Kiện 2'}), hãy chuyển sang tab bên cạnh để tiếp tục giao nhé!`,
           );
         }
       } else {
@@ -478,13 +478,13 @@ export function DriverPage() {
               <div className={styles.orderHeaderRow}>
                 <div>
                   <p className={styles.trackingLabel}>
-                    MÃ VẬN ĐƠN ({order.activeLeg === 'initiator' ? 'KIỆN 1' : 'KIỆN 2'})
+                    MÃ VẬN ĐƠN GHN ({order.activeLeg === 'initiator' ? 'CHIỀU ĐI' : 'CHIỀU VỀ'})
                   </p>
                   <p className={styles.trackingCode}>{order.trackingCode}</p>
                 </div>
                 <div className={styles.feeBadge}>
                   <p className={styles.feeText}>{order.fee.toLocaleString('vi-VN')} đ</p>
-                  <p className={styles.feeSub}>Cước vận chuyển</p>
+                  <p className={styles.feeSub}>Cước giao nhận GHN</p>
                 </div>
               </div>
 
@@ -501,7 +501,7 @@ export function DriverPage() {
                 <div className={styles.stopRow}>
                   <div className={styles.stopDotPickup} />
                   <div>
-                    <p className={styles.stopType}>ĐIỂM LẤY SÁCH (NGƯỜI GỬI)</p>
+                    <p className={styles.stopType}>📍 ĐIỂM LẤY SÁCH (NGƯỜI GỬI)</p>
                     <p className={styles.personName}>
                       {order.sender.name} · {order.sender.phone}
                     </p>
@@ -515,7 +515,7 @@ export function DriverPage() {
                 <div className={styles.stopRow}>
                   <div className={styles.stopDotDelivery} />
                   <div>
-                    <p className={styles.stopType}>ĐIỂM GIAO SÁCH (NGƯỜI NHẬN)</p>
+                    <p className={styles.stopType}>🏁 ĐIỂM PHÁT SÁCH (NGƯỜI NHẬN)</p>
                     <p className={styles.personName}>
                       {order.receiver.name} · {order.receiver.phone}
                     </p>
@@ -575,7 +575,7 @@ export function DriverPage() {
 
             {/* Thao tác bưu tá */}
             <p className={styles.sectionTitle}>
-              THAO TÁC BƯU TÁ CHO {order.activeLeg === 'initiator' ? 'KIỆN 1' : 'KIỆN 2'}
+              QUY TRÌNH GIAO NHẬN CHO {order.activeLeg === 'initiator' ? 'CHIỀU ĐI' : 'CHIỀU VỀ'}
             </p>
             <div className={styles.actionGrid}>
               {/* Step 1 */}
@@ -587,18 +587,18 @@ export function DriverPage() {
                   void handleUpdateStatus(
                     1,
                     'PICKING',
-                    `Bưu tá Lê Hoàng Nam đã có mặt và lấy kiện sách ${order.trackingCode} tại ${order.sender.detail}`,
-                    'Bưu tá đã lấy sách',
+                    `Bưu tá Lê Hoàng Nam đã đến địa chỉ lấy hàng và tiếp nhận bưu phẩm từ ${order.sender.name}`,
+                    'Đã lấy hàng từ người gửi',
                   )
                 }
               >
                 <span className={styles.actionBtnIcon}>📦</span>
                 <div className={styles.actionBtnContent}>
-                  <p className={styles.actionBtnTitle}>1. Bưu tá đã lấy sách</p>
-                  <p className={styles.actionBtnDesc}>Xác nhận đã nhận kiện sách từ người gửi</p>
+                  <p className={styles.actionBtnTitle}>1. Đến lấy hàng tận nơi (Pick-up)</p>
+                  <p className={styles.actionBtnDesc}>Bưu tá đến địa chỉ người gửi để nhận bưu phẩm sách</p>
                 </div>
                 {currentStep >= 1 ? (
-                  <span className={styles.stepBadgeDone}>✓ Đã lấy sách</span>
+                  <span className={styles.stepBadgeDone}>✓ Đã lấy từ người gửi</span>
                 ) : (
                   <span className={styles.stepBadgeNext}>Bấm lấy sách</span>
                 )}
@@ -613,18 +613,18 @@ export function DriverPage() {
                   void handleUpdateStatus(
                     2,
                     'IN_TRANSIT',
-                    `Kiện ${order.trackingCode} đã nhập kho bưu cục trung chuyển Tân Bình - TP.HCM`,
-                    'Nhập kho trung chuyển Hub',
+                    `Kiện ${order.trackingCode} đã nhập kho trung chuyển phân loại Tân Bình - TP.HCM`,
+                    'Nhập kho phân loại trung chuyển',
                   )
                 }
               >
                 <span className={styles.actionBtnIcon}>🚚</span>
                 <div className={styles.actionBtnContent}>
-                  <p className={styles.actionBtnTitle}>2. Nhập kho trung chuyển</p>
-                  <p className={styles.actionBtnDesc}>Cập nhật kiện hàng đã về kho tổng TP.HCM</p>
+                  <p className={styles.actionBtnTitle}>2. Nhập kho trung chuyển (Sorting Hub)</p>
+                  <p className={styles.actionBtnDesc}>Bưu kiện về kho trung chuyển, phân luồng tuyến giao</p>
                 </div>
                 {currentStep >= 2 ? (
-                  <span className={styles.stepBadgeDone}>✓ Đã nhập kho</span>
+                  <span className={styles.stepBadgeDone}>✓ Đã nhập kho Hub</span>
                 ) : currentStep >= 1 ? (
                   <span className={styles.stepBadgeNext}>Bấm nhập kho</span>
                 ) : (
@@ -641,22 +641,22 @@ export function DriverPage() {
                   void handleUpdateStatus(
                     3,
                     'IN_TRANSIT',
-                    `Bưu tá đang trên đường giao sách ${order.trackingCode} đến ${order.receiver.detail}`,
-                    'Bưu tá đang đi giao',
+                    `Bưu tá đang trên đường đi phát sách đến ${order.receiver.name}`,
+                    'Đang phát tới người nhận',
                   )
                 }
               >
                 <span className={styles.actionBtnIcon}>🛵</span>
                 <div className={styles.actionBtnContent}>
-                  <p className={styles.actionBtnTitle}>3. Bưu tá đang đi giao</p>
-                  <p className={styles.actionBtnDesc}>Bắt đầu chuyến phát tới tay người nhận</p>
+                  <p className={styles.actionBtnTitle}>3. Xuất kho & Đi phát hàng (Out for Delivery)</p>
+                  <p className={styles.actionBtnDesc}>Bưu tá nhận sách từ kho và bắt đầu giao đến người nhận</p>
                 </div>
                 {currentStep >= 3 ? (
-                  <span className={styles.stepBadgeDone}>✓ Đang đi giao</span>
+                  <span className={styles.stepBadgeDone}>✓ Đang phát hàng</span>
                 ) : currentStep >= 2 ? (
                   <span className={styles.stepBadgeNext}>Bấm đi giao</span>
                 ) : (
-                  <span className={styles.stepBadgeWaiting}>Chờ xuất kho</span>
+                  <span className={styles.stepBadgeWaiting}>Chờ tại kho</span>
                 )}
               </button>
 
@@ -677,12 +677,12 @@ export function DriverPage() {
                 <span className={styles.actionBtnIcon}>📸</span>
                 <div className={styles.actionBtnContent}>
                   <p className={styles.actionBtnTitleWhite}>
-                    {order.deliveredAt ? '✓ KIỆN NÀY ĐÃ GIAO THÀNH CÔNG' : '4. XÁC NHẬN GIAO HÀNG THÀNH CÔNG'}
+                    {order.deliveredAt ? '✓ KIỆN NÀY ĐÃ GIAO THÀNH CÔNG' : '4. Giao thành công & Ký nhận POD'}
                   </p>
                   <p className={styles.actionBtnDescWhite}>
                     {order.deliveredAt
-                      ? 'Đã ký nhận biên bản POD và bàn giao sách'
-                      : 'Xác nhận giao tận tay người nhận và ký nhận biên bản POD'}
+                      ? 'Đã bàn giao sách tận tay và ký nhận biên bản POD'
+                      : 'Xác nhận giao tận tay người nhận, kiểm tra sách và ký nhận POD'}
                   </p>
                 </div>
                 {order.deliveredAt || currentStep >= 4 ? (
