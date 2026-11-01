@@ -323,7 +323,12 @@ export function MemberProfileEditor({ ownerId }: { ownerId: string }) {
           ) : null}
         </div>
       )}
-      {(needsRead || profile.error) && (
+      {busy && needsRead && (
+        <p className={styles.feedback} role="status">
+          Đang cập nhật hồ sơ…
+        </p>
+      )}
+      {!busy && (needsRead || profile.error) && (
         <div className={styles.feedback} role="alert">
           <p>
             Chưa tải lại được thông tin hiện tại. Hồ sơ chưa sẵn sàng cho lần
@@ -512,7 +517,9 @@ export function MemberProfileEditor({ ownerId }: { ownerId: string }) {
         {dirty && <p>Lưu hoặc bỏ thay đổi hồ sơ trước khi đổi email.</p>}
         {pendingEmail && (
           <p role="status">
-            Yêu cầu gửi mã trước chưa rõ kết quả. Hãy xác minh lại yêu cầu đó.
+            {needsPassword
+              ? "Nhập lại mật khẩu hiện tại để tiếp tục. Email mới và yêu cầu đang chờ được giữ nguyên."
+              : "Yêu cầu gửi mã trước chưa rõ kết quả. Hãy xác minh lại yêu cầu đó."}
           </p>
         )}
         <form

@@ -1,5 +1,28 @@
 # Điểm lưu hiện tại — 01/11/2026
 
+## Hồ sơ trên Member web thật, đối chiếu RN và thông báo phục hồi
+
+- Nhánh `codex/profile-feedback-clarity`, base `73fcf6da`, subject
+  `fix(profile): distinguish credential recovery and pending profile reads`.
+  Owner duyệt kiểm UI thật; giữ local/chưa push/PR/merge/deploy.
+  [Bằng chứng client](../features/MEMBER_ACCEPTANCE_2026_11_01.md#nghiệm-thu-bổ-sung-trên-client-thật-và-sửa-thông-báo-hồ-sơ).
+- PASS Member web từ Home/menu→Profile: invalid contact/dirty Back/lưu, sai
+  password→remount→nhập lại, OTP Brevo thật do owner nhập→đổi email, reload về
+  login rồi email mới đăng nhập/return đúng Profile.2job201/Sent/payload erased.
+  Owner báo hoàn tất, chưa ghi nhận riêng folder thư cảnh báo lượt UI; journal
+  giữ PARTIAL thay vì cộng thành Inbox PASS. Storage fake, dữ liệu QA tổng hợp.
+- PASS RN-web Account→Profile, cùng email mới, dirty Back và password recovery;
+  export mới sau sửa. Native vẫn BLOCKED trước đây, không thử đi vòng Metro block.
+  Không gọi web export là native, không lấy thao tác agent thành UX độc lập.
+- Sửa2feedback trên web/RN: password-required nói rõ bước nhập lại và giữ intent;
+  busy+needsRead hiển thị loading thay vì báo read failed sớm. Không đổi API,
+  permission/session/receipt/schema hoặc motion. Proxy QA mất ACK sau commit,
+  replay exact key/body và read chậm10giây đã kiểm web PASS, mail local/fake storage.
+- PASS web253/RN164unit, cả hai typecheck, lint hai file, build web, RN-web export,
+  detector web0findings, docs/diff; web320px không tràn.
+  Hai QA DB/user/role đã dọn, các dịch vụ lượt này và QA replica set đã dừng.
+  Main DB/env/bucket giữ nguyên, READINESS và remote CI chưa đổi.
+
 ## Ba gói hồ sơ/Admin/cart: kiểm bổ sung schema và storage thật — 01/11/2026
 
 - Nhánh hiện tại `codex/member-acceptance-verification`, base/business source

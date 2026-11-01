@@ -334,7 +334,10 @@ export function ProfileScreen({ ownerId }: { ownerId: string }) {
         )}
         {message && <Notice>{message}</Notice>}
         {error && <Notice tone="error">{error}</Notice>}
-        {(needsRead || profile.error) && profile.data && (
+        {busy && needsRead && (
+          <StatePanel loading title="Đang cập nhật hồ sơ…" />
+        )}
+        {!busy && (needsRead || profile.error) && profile.data && (
           <StatePanel
             title="Chưa tải lại được thông tin hiện tại"
             message="Tải lại hồ sơ trước lần sửa tiếp."
@@ -483,8 +486,9 @@ export function ProfileScreen({ ownerId }: { ownerId: string }) {
               )}
               {pendingEmail && (
                 <Notice>
-                  Yêu cầu gửi mã trước chưa rõ kết quả. Thử lại sẽ xác minh đúng
-                  yêu cầu đó.
+                  {needsPassword
+                    ? "Nhập lại mật khẩu hiện tại để tiếp tục. Email mới và yêu cầu đang chờ được giữ nguyên."
+                    : "Yêu cầu gửi mã trước chưa rõ kết quả. Thử lại sẽ xác minh đúng yêu cầu đó."}
                 </Notice>
               )}
               {emailError && !needsPassword && (

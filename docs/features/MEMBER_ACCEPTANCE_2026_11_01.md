@@ -191,3 +191,66 @@ Khi điều kiện chạy native hợp lệ được khôi phục: kiểm entry 
 Cart, image picker, keyboard/Back, OTP, chữ lớn/resume, network loss và đổi identity
 trên đúng JS source. Kiểm human UX trên client sản phẩm vẫn riêng; không nhận phần
 PASS độc lập ở trên thay cho nó.
+
+### Nghiệm thu bổ sung trên client thật và sửa thông báo hồ sơ
+
+Nhánh `codex/profile-feedback-clarity`, base `73fcf6da`, subject
+`fix(profile): distinguish credential recovery and pending profile reads`.
+Owner duyệt kiểm từ menu Member web, đối chiếu RN, giữ local/chưa push.
+Hai thay đổi UI chỉ phân biệt thông báo mật khẩu cần nhập lại và dữ liệu đang
+đọc; không đổi API/schema/session/receipt, GHN hoặc quyền nghiệp vụ.
+
+| Vai trò / điểm vào | Thao tác và kết quả quan sát | Bước tiếp / phục hồi | Bằng chứng |
+| --- | --- | --- | --- |
+| Member web: Home → menu tài khoản → Hồ sơ & bảo mật | Form thật `MemberProfileEditor`, nhập số điện thoại sai có lỗi; tên vẫn giữ; rời khi dirty mở dialog | Hủy rời giữ draft; sửa input/lưu cập nhật tên cả header/sidebar | PASS thao tác browser và đối soát Mongo QA |
+| Member web: Email đăng nhập | Sai password bị403; rời/đến lại xóa password, giữ target/intent; nhập lại password phát đúng1OTP Brevo | Owner nhận/nhập OTP trên UI sản phẩm, báo “được rồi”; UI báo thành công và email mới hiển thị | PASS UI/Mongo/real Brevo;2request201 cho OTP và cảnh báo,2job Sent/xóa payload |
+| Member web: reload trang hồ sơ | Browser session memory-only trở về login, giữ returnUrl=/profile | Đăng nhập bằng email mới mở lại đúng hồ sơ, không còn form OTP cũ | PASS; không tự thêm token persist/cookie để giữ login |
+| RN: Account → Sửa hồ sơ và email | Expo web đăng nhập bằng email mới, đọc cùng hồ sơ; sửa draft/Back có dialog; sai password có hướng dẫn nhập lại | Hủy Back/khôi phục bản đang xem; pending target giữ nguyên | PASS RN-web bản export hiện tại; không native PASS |
+| Member web: QA mất ACK sau lưu và read chậm | Proxy QA bỏ phản hồi200 đã commit thành502; retry cùng key/body nhận replay=true; GET sau đó chậm10giây | Hiện trạng thái chờ, khóa sửa; sau read xong hiện tên đã lưu, hết chờ, không cảnh báo lỗi sớm | PASS browser + proxy/API/Mongo; mail local/storage fake, không gửi thư |
+
+Các fixture đều ở replica set57017/rs-test và database random `_test`. Lượt live
+dùng hai biến thể Gmail do owner đã duyệt, storage fake, manual poll production
+mail class; không đọc OTP từ queue, không đưa code/email/key vào output. Owner
+tự thao tác confirm trên sản phẩm; thao tác menu/form/negative chủ yếu do agent,
+chưa là thử UX độc lập không hướng dẫn. Folder cảnh báo của **lượt UI này** chưa
+được hỏi/xác nhận riêng; provider201 không suy thành Inbox PASS. Journal live giữ
+`status=PARTIAL`, cleanup PASS theo đúng giới hạn đó; Inbox trước ở lượt helper
+vẫn là bằng chứng riêng. Live flow chạy trên base trước chỉnh16dòng thông báo;
+copy mới được kiểm trực tiếp sau HMR/export và trong lượt fault riêng, không gửi
+thêm OTP chỉ để kiểm câu chữ.
+
+Hai lỗi UI xác nhận đã sửa:
+
+- Sau `INVALID_CREDENTIALS`, cả hai client vừa báo password sai vừa báo “chưa rõ
+  kết quả”. Nay khi cần nhập lại password, nói rõ giữ email/yêu cầu đang chờ và
+  bước nhập lại; trạng thái thật sự bất định vẫn giữ nội dung xác minh như cũ.
+- Sau ACK, `needsRead` trước đây tự hiện cảnh báo read thất bại ngay khi refetch
+  còn chạy. Nay busy+needsRead là loading; cảnh báo/retry chỉ hiện khi xử lý kết
+  thúc mà dữ liệu vẫn chưa sẵn sàng. Read10giây trên web đã chứng minh nhánh này.
+  RN có cùng sửa source/typecheck/export, chưa có ca delay10giây native.
+
+UI workflow dùng Pro Max (error recovery/inline error), Taste app screen và
+Impeccable context/detect cho web, context native cho RN; giữ brand và motion.
+Web320px đã kiểm DOM không tràn ngang; không lặp kiểm
+font130% đã có trước vì thay thông báo không đổi layout/component chung.
+Detector web0findings không đại diện cho audit a11y/TalkBack đầy đủ.
+
+PASS web253unit/RN164unit, hai typecheck, lint đúng hai file, build web, export RN-web,
+docs/link checker và diff check.
+Expo export exit0/đã sinh dist nhưng có cảnh báo forceful exit của CLI; không
+đưa cảnh báo đó thành native runtime PASS. Build web có cảnh báo chunk/plugin timing,
+không sửa dependency/bundler hoặc nâng warning limit chỉ để làm log sạch.
+Không sửa test để che lỗi hoặc chạy lại toàn bộ backend/schema vì không đổi API.
+Một `waitFor` phía browser hết deadline trước read10giây; snapshot tiếp theo đã
+thấy read hoàn tất và assertion trạng thái cuối PASS, không bỏ qua lỗi sản phẩm.
+
+Ảnh crop lượt dùng email thật bị lệch vùng; một ảnh đã hiện địa chỉ trong output
+công cụ khi kiểm ảnh. Đã báo owner và xóa hai ảnh của lượt live, không đưa chúng
+vào Git/bàn giao. Ảnh giữ lại chỉ thuộc lượt synthetic `operations.test`.
+
+Evidence local ignored: `.tmp/member-profile-ui-live/result.json`,
+`.tmp/profile-ui-faults/result.json`, log unit/type/build/export theo lượt. QA
+startup đầu thiếu thư mục journal đã dừng/dọn và sửa helper, không gửi thư hoặc
+thay source sản phẩm để xử lý lỗi helper đó. Hai database/user/role đã dọn;
+API/proxy/media/web/RN-static/replica set đã dừng, không còn listener của lượt.
+Main DB/env/bucket giữ nguyên; READINESS/native/human review/remote CI không đóng.
