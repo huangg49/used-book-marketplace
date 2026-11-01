@@ -164,6 +164,9 @@ export async function readMemberProfile(client: SessionClient) {
 export function pendingAccountCommand(client: SessionClient, slot: string) {
   return stateFor(client).commands.has(slot);
 }
+export function pendingAccountCommandPath(client: SessionClient, slot: string) {
+  return stateFor(client).commands.get(slot)?.path;
+}
 export function accountPasswordRequired(client: SessionClient, slot: string) {
   return stateFor(client).commands.get(slot)?.credentialRequired === true;
 }

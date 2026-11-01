@@ -913,7 +913,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
     expect(await stateCounts(p.f.l.entityId)).toEqual(before);
     expect((await db.c.listings.findOne({ _id: p.f.l.entityId }))!.trade).toBe('Available');
   });
-  it('order conversation rejects outsiders, forged linkage and current ineligibility before replay', async () => {
+  it('order conversation preserves restricted/locked obligations but denies outsiders, forged linkage and revoked authority before replay', async () => {
     const p = await prepared(), created = (await create(p).expect(200)).body, key = randomUUID();
     await request(app.getHttpServer()).post(`/api/v1/orders/${created.entityId}/conversation`).send({}).expect(401);
     for (const actor of [m1, m2]) await openOrderChat(created.entityId, actor).expect(404);
@@ -926,7 +926,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
     expect(replay.headers['idempotency-replayed']).toBe('true');
     for (const status of ['RESTRICTED', 'LOCKED'] as const) {
       await db.setStatus(p.f.buyer.id, status);
-      await openOrderChat(created.entityId, p.f.buyer, key).expect(403);
+      await openOrderChat(created.entityId, p.f.buyer, key).expect(200);
       expect((await orderView(created.entityId, p.f.buyer)).id).toBe(created.entityId);
     }
     await db.setStatus(p.f.buyer.id, 'ACTIVE');
@@ -1855,7 +1855,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       r = (await create(p, key).expect(200)).body;
     await db.addRole(p.f.buyer.id, 'ADMIN');
     for (const id of [p.f.buyer.id, p.f.seller.id])
-      await db.setStatus(id, 'LOCKED');
+      await post(`/operations/users/${id}/lock`,{expectedVersion:1,reason:'QA khóa giao dịch mới',unlockCondition:'Đối chiếu nghĩa vụ',relatedReference:null},a1).expect(200);
     for (const actor of [p.f.buyer, p.f.seller]) {
       const page = (await get('/me/orders', actor).expect(200)).body;
       validates('MyOrderPage', page);
@@ -1870,6 +1870,13 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
       ).expect(200);
       await get('/me/listings', actor).expect(403);
       await get('/operations/listings', actor).expect(403);
+      const room=(await openOrderChat(r.entityId,actor).expect(200)).body;
+      await get(`/me/purchase-conversations/${room.entityId}`,actor).expect(200);
+      await get(`/me/purchase-conversations/${room.entityId}/events`,actor).expect(200);
+      const auth=await app.get(AuthService).authenticate(actor.token);
+      const message=await app.get(PurchasesService).send(auth,{messageId:randomUUID(),conversationId:room.entityId,body:'QA xử lý nghĩa vụ của đơn cũ'});
+      expect(message.conversationId).toBe(room.entityId);
+      await get(`/me/purchase-conversations/${room.entityId}/messages`,actor).expect(200);
     }
     await create(p, key).expect(403); // Existing create receipt does not bypass current lock.
     await cancel(r.entityId, p.f.seller).expect(404);

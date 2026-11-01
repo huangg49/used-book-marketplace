@@ -231,7 +231,10 @@ Purchase chat exists in `modules/purchases`, with gateway/service participant
 authorization; its HTTP handlers are not an ExistingObligation allowlist.
 Point report/code/claim/read handlers currently lack the decorator described in
 older reports, so do not claim LOCKED access there from documentation alone.
-Claim evidence upload/real carrier and Admin lock/unlock workflows remain planned.
+  Claim evidence upload/real carrier remain planned. Admin lock/unlock now follows
+  ADR0059: prior status is preserved, sessions/roles/ledger/obligations are not erased.
+  LOCKED purchase-chat reads/sends are limited to real owned OrderCreated rooms;
+  new negotiation/terms/quotes remain blocked. See ACCOUNT_CONTROLS_REPORT.
 
 ## Ví mô phỏng
 

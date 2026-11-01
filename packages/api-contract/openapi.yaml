@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.65.0
+  version: 0.66.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -745,6 +745,184 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ConfirmMemberEmailChange"
+  /operations/users/{userId}:
+    get:
+      operationId: getOperationsAccount
+      tags:
+        - Operations users
+      description: ACTIVE ADMIN only. Current version and administrative lock; credentials, sessions and money are
+        never returned.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: &a1
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Current authorized result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsAccount"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /operations/users/{userId}/history:
+    get:
+      operationId: listAccountControlHistory
+      tags:
+        - Operations users
+      description: ACTIVE ADMIN only. Cursor-scoped append-only lock/unlock audit history; no credentials or
+        profile/contact snapshots.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: *a1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - in: query
+          name: cursor
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 2048
+      responses:
+        "200":
+          description: Current authorized result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountControlEventPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /operations/users/{userId}/lock:
+    post:
+      operationId: lockUserAccount
+      tags:
+        - Operations users
+      description: ACTIVE ADMIN only; cannot lock self. ACTIVE/RESTRICTED target only. Records reason, scope,
+        release condition and related reference; preserves prior status, sessions, roles, money and existing
+        obligations. Current authorization precedes replay.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: *a1
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LockUserAccount"
+      responses:
+        "200":
+          description: Current authorized result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /operations/users/{userId}/unlock:
+    post:
+      operationId: unlockUserAccount
+      tags:
+        - Operations users
+      description: ACTIVE ADMIN only; cannot unlock self. Restores recorded pre-lock ACTIVE/RESTRICTED status;
+        cannot override it. Legacy LOCKED without metadata requires explicit restoreStatus, audited as an Admin
+        decision. Does not clear violation records, freezes or trade obligations. Current authority before
+        replay.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: *a1
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnlockUserAccount"
+      responses:
+        "200":
+          description: Current authorized result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
   /catalog/taxonomy:
     get:
       operationId: getCatalogTaxonomy
@@ -1643,6 +1821,8 @@ paths:
   /me/purchase-conversations:
     get:
       operationId: listMyPurchaseConversations
+      x-locked-access: existing-obligations
+      description: Current MEMBER participants only. LOCKED may read only OrderCreated conversations linked to a real owned Order. New negotiation and commands remain blocked.
       tags: [Purchase conversations]
       x-implementation-status: implemented
       security: [{ bearerAuth: [] }]
@@ -1727,6 +1907,8 @@ paths:
   /me/purchase-conversations/{conversationId}:
     get:
       operationId: getPurchaseConversation
+      x-locked-access: existing-obligations
+      description: Current MEMBER participants only. LOCKED may read only OrderCreated conversations linked to a real owned Order. New negotiation and commands remain blocked.
       tags: [Purchase conversations]
       summary: Read a participant-only conversation and its current agreement sheet
       parameters:
@@ -1796,6 +1978,8 @@ paths:
   /me/purchase-conversations/{conversationId}/events:
     get:
       operationId: getConversationEvents
+      x-locked-access: existing-obligations
+      description: Current MEMBER participants only. LOCKED may read only OrderCreated conversations linked to a real owned Order. New negotiation and commands remain blocked.
       tags: [Purchase conversations]
       summary: Read immutable structured agreement events, separate from member messages
       parameters:
@@ -1815,6 +1999,8 @@ paths:
   /me/purchase-conversations/{conversationId}/messages:
     get:
       operationId: listPurchaseMessages
+      x-locked-access: existing-obligations
+      description: Current MEMBER participants only. LOCKED may read only OrderCreated conversations linked to a real owned Order. New negotiation and commands remain blocked.
       tags: [Purchase conversations]
       x-implementation-status: implemented
       security: [{ bearerAuth: [] }]
@@ -10758,6 +10944,171 @@ components:
         code:
           type: string
           pattern: ^[0-9]{6}$
+    OperationsAccount:
+      type: object
+      additionalProperties: false
+      required:
+        - user
+        - version
+        - lock
+      properties:
+        user:
+          $ref: "#/components/schemas/OperationsUser"
+        version: &a1
+          type: integer
+          minimum: 1
+        lock:
+          anyOf:
+            - type: object
+              additionalProperties: false
+              required:
+                - scope
+                - restoreStatus
+                - reason
+                - unlockCondition
+                - relatedReference
+                - actorId
+                - createdAt
+              properties:
+                scope:
+                  type: string
+                  enum:
+                    - NewTransactions
+                restoreStatus:
+                  type: string
+                  enum:
+                    - ACTIVE
+                    - RESTRICTED
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+                unlockCondition:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+                relatedReference:
+                  anyOf:
+                    - type: string
+                      minLength: 1
+                      maxLength: 100
+                    - type: "null"
+                actorId: &a2
+                  type: string
+                  format: uuid
+                createdAt: &a3
+                  type: string
+                  format: date-time
+            - type: "null"
+    LockUserAccount:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - reason
+        - unlockCondition
+        - relatedReference
+      properties:
+        expectedVersion: *a1
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        unlockCondition:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        relatedReference:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 100
+            - type: "null"
+    UnlockUserAccount:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - reason
+        - restoreStatus
+      properties:
+        expectedVersion: *a1
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        restoreStatus:
+          type: string
+          enum:
+            - ACTIVE
+            - RESTRICTED
+    AccountControlEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - actorId
+        - action
+        - fromStatus
+        - toStatus
+        - reason
+        - scope
+        - unlockCondition
+        - relatedReference
+        - createdAt
+      properties:
+        id: *a2
+        actorId: *a2
+        action:
+          type: string
+          enum:
+            - AccountLocked
+            - AccountUnlocked
+        fromStatus:
+          $ref: "#/components/schemas/ManagedUserStatus"
+        toStatus:
+          $ref: "#/components/schemas/ManagedUserStatus"
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        scope:
+          type: string
+          enum:
+            - NewTransactions
+        unlockCondition:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 1000
+            - type: "null"
+        relatedReference:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 100
+            - type: "null"
+        createdAt: *a3
+    AccountControlEventPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/AccountControlEvent"
+        nextCursor:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 2048
+            - type: "null"
+        serverTime: *a3
     CurrentUser:
       type: object
       additionalProperties: false

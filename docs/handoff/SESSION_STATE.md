@@ -1,11 +1,20 @@
 # Điểm lưu hiện tại — 01/11/2026
 
-## Ba gói được duyệt: hồ sơ Member đã kiểm, tiếp Admin/cart — 01/11/2026
+## Ba gói được duyệt: hồ sơ và Admin đã kiểm, tiếp cart — 01/11/2026
 
 - Owner duyệt lần lượt hồ sơ web/RN, Admin khóa/mở tài khoản và giỏ hàng web/RN;
   tiếp tục giữ local, chưa push/PR/merge. Nhánh `codex/member-profile`, base
   `2d051c0a`, subject `feat(profile): connect member profile avatar and verified email changes`.
-  Hai gói Admin/cart tiếp tục trong cùng chuỗi đã duyệt, chưa publish.
+  Hồ sơ source `f49160fa`; Admin base này, subject
+  `feat(admin): control account locks while preserving existing obligations`.
+  Cart tiếp tục trong cùng chuỗi đã duyệt, chưa publish.
+- [Admin khóa/mở](../features/ACCOUNT_CONTROLS_REPORT.md), [ADR0059](../adr/0059-administrative-account-controls.md):
+  contract0.66/210operations/32controllers, migration0048/registry61, chỉ QA.
+  PASS76HTTP/Mongo(account12/directory4/Order60), schema27, Admin219unit,
+  API/Admin typecheck/lint/build/contract/routes. Browser real entry/confirm/
+  stale/refetch/history14rows/lostACK+Back/remount đúng intent và320px130% PASS.
+  Khôi phục trạng thái gốc; không clear violations/ledger/session. Order chat
+  LOCKED chỉ real owned OrderCreated room. Không quyền trade/terms/quote mới.
 - [ADR0058](../adr/0058-member-profile-and-email-change.md), [báo cáo](../features/MEMBER_PROFILE_REPORT.md),
   contract0.65/206operations/32controllers: profile version/phone/avatar, private image pipeline/cleanup, OTP
   đổi email với current password, giữ phiên hiện tại/revoke phiên khác. Web có

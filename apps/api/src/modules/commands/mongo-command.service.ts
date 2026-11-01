@@ -260,6 +260,7 @@ export type ReviewChange = {
   event?: string;
 };
 export type AccountChange = {
+  accountControl?: { scope: 'NewTransactions'; unlockCondition: string | null; relatedReference: string | null };
   event?: string;
   entityType: Wire['AccountCommandReceipt']['entityType'];
   entityId: string;
@@ -294,6 +295,7 @@ const EXISTING_OBLIGATION_OPERATIONS = [
   'discardProfileAvatar',
   'requestMemberEmailChange', 'confirmMemberEmailChange',
   'cancelUnpaidOrder',
+  'openOrderConversation',
   'cancelPaidOrder',
   'rejectPaidOrder',
   'acceptOrder',
@@ -1173,10 +1175,11 @@ export class MongoCommandService {
 
 function auditAfter(change: CommandChange): Json {
   switch (change.entityType) {
+    case 'UserAccount':
+      return { entityId: change.entityId, version: change.version, state: change.state, ...change.accountControl };
     case 'MemberProfile':
     case 'ProfileAvatar':
     case 'MemberEmailChange':
-    case 'UserAccount':
     case 'Cart':
       return { entityId: change.entityId, version: change.version, state: change.state };
     case 'TransactionReview':

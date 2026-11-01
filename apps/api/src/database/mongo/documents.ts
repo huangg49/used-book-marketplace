@@ -37,6 +37,11 @@ type Lockable = { lockSeq: number };
 // Roles are embedded so role writers write the locked user document (replaces
 // the role_mutation_lock trigger); UserRole's composite key becomes role uniqueness.
 export interface UserDoc extends Lockable {
+  administrativeLock?: {
+    scope: 'NewTransactions'; restoreStatus: 'ACTIVE' | 'RESTRICTED';
+    reason: string; unlockCondition: string; relatedReference: string | null;
+    actorId: string; createdAt: Date;
+  } | null;
   version?: number;
   contactPhone?: string | null;
   avatarId?: string | null;

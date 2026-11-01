@@ -40,6 +40,7 @@ jobs:
       - run: pnpm test:public:browser
       - run: pnpm test:rn-buy-now:browser
       - run: pnpm test:member-profile:browser
+      - run: pnpm --filter @used-books/admin-web test:account-controls:browser
       - name: Mongo QA diagnostics on failure
         if: failure()
         run: |

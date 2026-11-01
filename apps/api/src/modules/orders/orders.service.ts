@@ -165,7 +165,6 @@ export class OrdersService {
       },
       authorize: async (tx, actor) => {
         member(actor);
-        requireActive(actor);
         return this.own(tx, id, actor._id);
       },
       mutate: async (tx, actor, before) => {

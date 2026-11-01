@@ -1,4 +1,5 @@
 import { createMemberProfilesMigration, memberProfileSpecs, withMemberProfiles } from './0047-member-profiles.js';
+import { createAccountControlsMigration, withAccountControls } from './0048-account-controls.js';
 import { transactionReviewValidatorFixMigration } from './0039-transaction-review-validator-fix.js';
 import { reviewValidatorReconciliationMigration } from './0041-review-validator-reconciliation.js';
 import { catalogRecoveryMigration, withCatalogRecovery } from './0042-catalog-recovery-index.js';
@@ -234,6 +235,7 @@ const memberProfilesMigration = createMemberProfilesMigration([
   ...baselineCollections.filter(spec => ['mutation_receipts', 'audit_events'].includes(spec.name))
     .map(withIntegratedWalletPointCommands).map(withVNPayExpiry).map(withReviewCommandTarget),
 ]);
+const accountControlsMigration = createAccountControlsMigration(memberProfilesMigration.definition.collections.filter(spec => ['users','audit_events'].includes(spec.name)));
 export const migrations: Migration[] = [
   {
     id: '0001-baseline-schema',
@@ -325,6 +327,7 @@ export const migrations: Migration[] = [
   exchangeMutualCancellationMigration,
   listingExchangePreferencesMigration,
   memberProfilesMigration,
+  accountControlsMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -358,7 +361,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withReviewCommandTarget)
     .map(withCatalogRecovery)
     .map(withListingExchangePreferences)
-    .map(withMemberProfiles),
+    .map(withMemberProfiles)
+    .map(withAccountControls),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape),

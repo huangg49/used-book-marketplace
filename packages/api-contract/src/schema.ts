@@ -407,6 +407,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/users/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN only. Current version and administrative lock; credentials, sessions and money are never returned. */
+        get: operations["getOperationsAccount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/users/{userId}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN only. Cursor-scoped append-only lock/unlock audit history; no credentials or profile/contact snapshots. */
+        get: operations["listAccountControlHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/users/{userId}/lock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN only; cannot lock self. ACTIVE/RESTRICTED target only. Records reason, scope, release condition and related reference; preserves prior status, sessions, roles, money and existing obligations. Current authorization precedes replay. */
+        post: operations["lockUserAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/users/{userId}/unlock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN only; cannot unlock self. Restores recorded pre-lock ACTIVE/RESTRICTED status; cannot override it. Legacy LOCKED without metadata requires explicit restoreStatus, audited as an Admin decision. Does not clear violation records, freezes or trade obligations. Current authority before replay. */
+        post: operations["unlockUserAccount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/catalog/taxonomy": {
         parameters: {
             query?: never;
@@ -672,6 +740,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Current MEMBER participants only. LOCKED may read only OrderCreated conversations linked to a real owned Order. New negotiation and commands remain blocked. */
         get: operations["listMyPurchaseConversations"];
         put?: never;
         post?: never;
@@ -722,7 +791,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read a participant-only conversation and its current agreement sheet */
+        /**
+         * Read a participant-only conversation and its current agreement sheet
+         * @description Current MEMBER participants only. LOCKED may read only OrderCreated conversations linked to a real owned Order. New negotiation and commands remain blocked.
+         */
         get: operations["getPurchaseConversation"];
         put?: never;
         post?: never;
@@ -773,7 +845,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read immutable structured agreement events, separate from member messages */
+        /**
+         * Read immutable structured agreement events, separate from member messages
+         * @description Current MEMBER participants only. LOCKED may read only OrderCreated conversations linked to a real owned Order. New negotiation and commands remain blocked.
+         */
         get: operations["getConversationEvents"];
         put?: never;
         post?: never;
@@ -790,6 +865,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Current MEMBER participants only. LOCKED may read only OrderCreated conversations linked to a real owned Order. New negotiation and commands remain blocked. */
         get: operations["listPurchaseMessages"];
         put?: never;
         post?: never;
@@ -3584,6 +3660,58 @@ export interface components {
             /** Format: uuid */
             changeId: string;
             code: string;
+        };
+        OperationsAccount: {
+            user: components["schemas"]["OperationsUser"];
+            version: number;
+            lock: {
+                /** @enum {string} */
+                scope: "NewTransactions";
+                /** @enum {string} */
+                restoreStatus: "ACTIVE" | "RESTRICTED";
+                reason: string;
+                unlockCondition: string;
+                relatedReference: string | null;
+                /** Format: uuid */
+                actorId: string;
+                /** Format: date-time */
+                createdAt: string;
+            } | null;
+        };
+        LockUserAccount: {
+            expectedVersion: number;
+            reason: string;
+            unlockCondition: string;
+            relatedReference: string | null;
+        };
+        UnlockUserAccount: {
+            expectedVersion: number;
+            reason: string;
+            /** @enum {string} */
+            restoreStatus: "ACTIVE" | "RESTRICTED";
+        };
+        AccountControlEvent: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            actorId: string;
+            /** @enum {string} */
+            action: "AccountLocked" | "AccountUnlocked";
+            fromStatus: components["schemas"]["ManagedUserStatus"];
+            toStatus: components["schemas"]["ManagedUserStatus"];
+            reason: string;
+            /** @enum {string} */
+            scope: "NewTransactions";
+            unlockCondition: string | null;
+            relatedReference: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AccountControlEventPage: {
+            items: components["schemas"]["AccountControlEvent"][];
+            nextCursor: string | null;
+            /** Format: date-time */
+            serverTime: string;
         };
         /** @description Current verified account state from the database, never JWT role/status claims. LOCKED can authenticate but is limited to explicit existing-obligation endpoints. DISABLED/unverified cannot authenticate. Roles and ownership checks still apply; 403 does not invalidate the session. */
         CurrentUser: {
@@ -7200,6 +7328,137 @@ export interface operations {
             404: components["responses"]["Error"];
             409: components["responses"]["Error"];
             429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    getOperationsAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsAccount"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    listAccountControlHistory: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountControlEventPage"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    lockUserAccount: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LockUserAccount"];
+            };
+        };
+        responses: {
+            /** @description Current authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountCommandReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    unlockUserAccount: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnlockUserAccount"];
+            };
+        };
+        responses: {
+            /** @description Current authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountCommandReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
             503: components["responses"]["Error"];
         };
     };
