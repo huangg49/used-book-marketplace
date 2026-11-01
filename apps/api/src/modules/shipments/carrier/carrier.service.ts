@@ -434,19 +434,21 @@ export class CarrierService {
   }
 
   /**
-   * Danh sách các cuộc trao đổi có mã vận chuyển gần đây để bưu tá chọn nhanh
+   * Danh sách các cuộc trao đổi có mã vận chuyển đang hoạt động gần đây để bưu tá chọn nhanh
+   * Chỉ lấy tối đa 3 đơn đang trong quá trình giao nhận (InTransit, Preparing, Delivered)
    */
   async getRecentShipmentOrders() {
     if (!this.mongo) return [];
     const exchanges = await this.mongo.c.exchanges
       .find({
+        status: { $in: ['InTransit', 'Preparing', 'Delivered'] },
         $or: [
           { 'initiatorShipment.trackingCode': { $exists: true, $ne: null } },
           { 'recipientShipment.trackingCode': { $exists: true, $ne: null } },
         ],
       })
       .sort({ updatedAt: -1 })
-      .limit(6)
+      .limit(3)
       .toArray();
 
     return exchanges.map((ex) => ({
