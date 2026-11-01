@@ -256,6 +256,7 @@ export function BookScreen({ id }: { id: string }) {
 
       {/* Modal: Mua ngay / Xem đơn thanh toán bản sách */}
       <BuyNowModal
+        key={state.status === "authenticated" ? state.user.id : "anonymous"}
         visible={buyDialogVisible}
         listing={item}
         initialOrderId={activeOrder?.id}
@@ -264,9 +265,11 @@ export function BookScreen({ id }: { id: string }) {
           void listingQuery.refetch();
           void myOrdersQuery.refetch();
         }}
-        onSuccess={() => {
+        onSuccess={(orderId) => {
+          setBuyDialogVisible(false);
           void listingQuery.refetch();
           void myOrdersQuery.refetch();
+          router.push({ pathname: "/orders", params: { orderId } });
         }}
       />
 

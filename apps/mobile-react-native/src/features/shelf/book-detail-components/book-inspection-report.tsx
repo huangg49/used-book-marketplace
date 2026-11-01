@@ -11,26 +11,7 @@ function normalizeSellerText(
   raw: string | undefined | null,
   emptyFallback: string,
 ): string {
-  if (!raw) return emptyFallback;
-  const trimmed = raw.trim();
-  const lower = trimmed.toLowerCase();
-  if (
-    [
-      "kh có",
-      "không có",
-      "không",
-      "k",
-      "kh",
-      "chưa có",
-      "none",
-      "n/a",
-      "ko có",
-      "ko",
-    ].includes(lower)
-  ) {
-    return emptyFallback;
-  }
-  return trimmed;
+  return raw?.trim() || emptyFallback;
 }
 
 export function BookInspectionReport({ item }: BookInspectionReportProps) {
@@ -39,19 +20,19 @@ export function BookInspectionReport({ item }: BookInspectionReportProps) {
 
   const pagesText = normalizeSellerText(
     item.pages,
-    "Ruột sách sạch đẹp, các mép giấy phẳng phiu, không quăn góc.",
+    "Người bán chưa mô tả riêng ruột sách và mép giấy.",
   );
   const coverText = normalizeSellerText(
     item.coverNote,
-    "Bìa và gáy sách nguyên vẹn, giữ dáng chuẩn, không gãy nếp.",
+    "Người bán chưa mô tả riêng bìa và gáy sách.",
   );
   const notesText = normalizeSellerText(
     item.notes,
-    "Không có vết bút viết, tô màu hay gạch chân trên trang.",
+    "Người bán chưa ghi rõ tình trạng đánh dấu.",
   );
   const accessoriesText = normalizeSellerText(
     item.accessories,
-    "Không kèm phụ kiện ngoài sách.",
+    "Người bán chưa ghi rõ phụ kiện.",
   );
 
   const inspectionRows = [
@@ -66,7 +47,7 @@ export function BookInspectionReport({ item }: BookInspectionReportProps) {
       label: "Trang thiếu / Rách",
       value: item.hasMissingPages
         ? "Người bán khai báo có thiếu trang — vui lòng kiểm tra kỹ ảnh chụp & mô tả."
-        : "Đầy đủ 100% các trang, không bị rách rời.",
+        : "Người bán khai báo không thiếu trang; đối chiếu ảnh và mô tả trước khi mua.",
       warning: item.hasMissingPages,
     },
     {
@@ -90,13 +71,15 @@ export function BookInspectionReport({ item }: BookInspectionReportProps) {
   ];
 
   const catalogSpecs = [
-    { label: "Thể loại", value: item.book.category || "Văn học" },
+    { label: "Thể loại", value: item.book.category || "Chưa cung cấp" },
     { label: "Nhà xuất bản", value: item.book.publisher || "Chưa ghi rõ" },
     {
       label: "Năm phát hành",
-      value: item.book.publicationYear ? `${item.book.publicationYear}` : "Chưa ghi rõ",
+      value: item.book.publicationYear
+        ? `${item.book.publicationYear}`
+        : "Chưa ghi rõ",
     },
-    { label: "Quy cách", value: item.book.edition || "Bìa mềm" },
+    { label: "Quy cách", value: item.book.edition || "Chưa cung cấp" },
     { label: "Mã ISBN", value: item.book.isbn || "Chưa cung cấp" },
     {
       label: "Ngôn ngữ",
@@ -105,7 +88,7 @@ export function BookInspectionReport({ item }: BookInspectionReportProps) {
           ? "Tiếng Việt"
           : item.book.language === "en"
             ? "Tiếng Anh"
-            : item.book.language || "Tiếng Việt",
+            : item.book.language || "Chưa cung cấp",
     },
   ];
 
@@ -117,7 +100,7 @@ export function BookInspectionReport({ item }: BookInspectionReportProps) {
           <View style={styles.accentBar} />
           <View style={styles.titleColumn}>
             <AppText style={styles.sectionTitle} accessibilityRole="header">
-              Khảo chứng tình trạng sách
+              Tình trạng người bán khai báo
             </AppText>
             <AppText style={styles.sectionSubtitle}>
               Thông tin chi tiết do người bán tự kê khai
@@ -125,7 +108,7 @@ export function BookInspectionReport({ item }: BookInspectionReportProps) {
           </View>
         </View>
         <View style={styles.badgeDeclaration}>
-          <Icon name="verified" size={12} color={stitchTokens.wineDark} />
+          <Icon name="info" size={12} color={stitchTokens.wineDark} />
           <AppText style={styles.badgeDeclarationText}>Tự kê khai</AppText>
         </View>
       </View>
@@ -134,7 +117,9 @@ export function BookInspectionReport({ item }: BookInspectionReportProps) {
       <View style={styles.bentoCard}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={isExpanded ? "Thu gọn đánh giá thực tế" : "Mở rộng đánh giá thực tế"}
+          accessibilityLabel={
+            isExpanded ? "Thu gọn mô tả tình trạng" : "Mở rộng mô tả tình trạng"
+          }
           aria-expanded={isExpanded}
           onPress={() => setIsExpanded((prev) => !prev)}
           style={({ pressed }) => [
@@ -144,16 +129,16 @@ export function BookInspectionReport({ item }: BookInspectionReportProps) {
           ]}
         >
           <View style={styles.conditionTitleRow}>
-            <Icon name="verified" size={17} color={stitchTokens.wineDark} />
+            <Icon name="info" size={17} color={stitchTokens.wineDark} />
             <AppText style={styles.bentoTitle}>
-              Đánh giá thực tế: {conditionLabel}
+              Tình trạng: {conditionLabel}
             </AppText>
           </View>
 
           <View style={styles.headerRightGroup}>
             <View style={styles.approvedPill}>
               <AppText style={styles.approvedText}>
-                {item.readable ? "Đọc rõ 100%" : "Nội dung mờ"}
+                {item.readable ? "Khai báo: đọc rõ" : "Khai báo: khó đọc"}
               </AppText>
             </View>
             <View
@@ -181,7 +166,11 @@ export function BookInspectionReport({ item }: BookInspectionReportProps) {
                     <Icon
                       name={row.icon}
                       size={15}
-                      color={row.warning ? stitchTokens.crimson : stitchTokens.wineDark}
+                      color={
+                        row.warning
+                          ? stitchTokens.crimson
+                          : stitchTokens.wineDark
+                      }
                     />
                   </View>
                   <View style={styles.rowContent}>
@@ -203,7 +192,9 @@ export function BookInspectionReport({ item }: BookInspectionReportProps) {
               <View style={styles.descriptionBox}>
                 <View style={styles.descTitleRow}>
                   <Icon name="pen" size={13} color={stitchTokens.wineDark} />
-                  <AppText style={styles.descTitle}>Lời nhắn từ chủ sách:</AppText>
+                  <AppText style={styles.descTitle}>
+                    Lời nhắn từ chủ sách:
+                  </AppText>
                 </View>
                 <AppText style={styles.descBody}>{item.description}</AppText>
               </View>

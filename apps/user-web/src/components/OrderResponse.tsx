@@ -28,7 +28,7 @@ export function OrderResponse({
     null,
   );
   const pending = pendingOrderResponse(session, order.id);
-  async function act(action: "accept" | "reject" | "cancel") {
+  async function act(action: "accept" | "reject" | "cancel" | "pay") {
     if (busy) return;
     setBusy(true);
     setError("");
@@ -77,7 +77,7 @@ export function OrderResponse({
             ? "xác nhận"
             : pending === "reject"
               ? "từ chối"
-              : "hủy"}
+              : pending === "pay" ? "thanh toán" : "hủy"}
         </button>
       ) : (
         <>

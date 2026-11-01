@@ -1,5 +1,25 @@
 # Điểm lưu hiện tại — 01/11/2026
 
+## Hành trình mua Member RN — 01/11/2026
+
+- Nhánh `codex/member-native-demo`, base `65b40161`; subject
+  `fix(rn): preserve checkout intent and guide the next order step`.
+- [Báo cáo/source/evidence](../ui/MEMBER_NATIVE_DEMO_2026_11_01.md): giữ intent
+  create/pay/cancel khi mất ACK và navigation, GET lỗi sau ACK không tạo đơn mới,
+  late callback không điều hướng màn đã đóng; xóa bộ nhớ khi đổi identity.
+  ACK payment mở đúng Order; Preparing có hướng dẫn vai trò và Member web.
+- Bỏ Search ViaPoint giả, camera Home sai hành vi, lời bảo đảm/ảnh/góc chụp và
+  mô tả tình trạng tự bịa. Giữ brand/motion. Own Expo entry sửa dev resolve pnpm.
+- PASS65session/164RN/253web unit; RN lint/typecheck/export all, web lint/typecheck/
+  build; RN buy-now browser thật QA+fake storage/funding (create/pay/cancel/lost ACK/
+  remount/late ACK/GET error/single hold); web checkout-only và order-chat regression.
+  RN browser được nối Operations CI; remote CI NOT RUN, chưa push/PR/merge/deploy.
+- Native PARTIAL: debug Android17x86_64, APK hash và quan sát tách riêng trong report;
+  toolbar Back còn đưa app về launcher, chưa cô lập nguyên nhân. Không native PASS,
+  human/TalkBack audio/ARM/iOS/release NOT RUN; READINESS giữ nguyên. Không GHN,
+  DB chính, migration hoặc env. Gói AI tiếp tục dùng incoming đã có, không tạo lại;
+  owner xác nhận chưa có ảnh điện thoại/người duyệt, giữ gate riêng mở.
+
 ## Bảo vệ phân xử Exchange — 01/11/2026
 
 - Owner duyệt ba gói tiếp theo sau khảo sát toàn dự án; thực hiện gói an toàn

@@ -1,0 +1,28 @@
+{
+  "status": "PARTIAL",
+  "sourceBase": "65b40161",
+  "dirty": true,
+  "apkSha256": "4cbdc04b5abd763009287d1d43be6641c183d44423f8302b0b98ed212161b498",
+  "installedApkMatches": true,
+  "platform": {
+    "api": "37",
+    "abi": "x86_64"
+  },
+  "qa": {
+    "database": "isolated *_test on57017/rs-test",
+    "storage": "fake",
+    "funding": "simulated",
+    "providerCalls": 0
+  },
+  "observations": {
+    "home": true,
+    "inspectionModal": true,
+    "emulatorToolbarBack": "Returns to Android launcher while modal visible; native cause not isolated",
+    "earlierBuyerPaymentAndSellerAcceptance": "Observed before APK hash match; diagnostic only, not final native acceptance"
+  },
+  "limits": [
+    "No native PASS",
+    "Back regression remains open; do not infer native root cause from automation alone",
+    "Not release/ARM/iOS/TalkBack audio/human review"
+  ]
+}

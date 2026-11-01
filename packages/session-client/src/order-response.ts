@@ -18,11 +18,25 @@ export const orderCommandReceiptSchema = z.object({
   version: z.number().int().positive(),
   state: z.string(),
 });
-type Action = "accept" | "reject" | "cancel";
+type Action = "accept" | "reject" | "cancel" | "pay";
+
+export type BuyNowOrderInput = {
+  quoteId: string;
+  expectedQuoteVersion: number;
+  expectedListingVersion: number;
+  expectedListingRevisionId: string;
+};
+type CreateIntent = { key: string; body: BuyNowOrderInput };
 type Intent = { action: Action; version: number; key: string };
 const stores = new WeakMap<
   SessionClient,
-  { owner: string | null; generation: number; intents: Map<string, Intent> }
+  {
+    owner: string | null;
+    generation: number;
+    intents: Map<string, Intent>;
+    creates: Map<string, CreateIntent>;
+    acknowledged: Map<string, string>;
+  }
 >();
 function store(client: SessionClient) {
   let value = stores.get(client);
@@ -31,12 +45,20 @@ function store(client: SessionClient) {
       const s = client.getSnapshot();
       return s.status === "authenticated" ? s.user.id : null;
     };
-    value = { owner: identity(), generation: 0, intents: new Map() };
+    value = {
+      owner: identity(),
+      generation: 0,
+      intents: new Map(),
+      creates: new Map(),
+      acknowledged: new Map(),
+    };
     const current = value;
     client.subscribe(() => {
       const next = identity();
       if (current.owner !== next) {
         current.intents.clear();
+        current.creates.clear();
+        current.acknowledged.clear();
         current.owner = next;
         current.generation++;
       }
@@ -47,6 +69,78 @@ function store(client: SessionClient) {
 }
 export function pendingOrderResponse(client: SessionClient, id: string) {
   return store(client).intents.get(id)?.action;
+}
+
+export function pendingBuyNowOrder(client: SessionClient, listingId: string) {
+  return store(client).creates.has(listingId);
+}
+
+// Keep an acknowledged ID addressable if checkout closes before its GET finishes.
+export function acknowledgedBuyNowOrder(
+  client: SessionClient,
+  listingId: string,
+) {
+  return store(client).acknowledged.get(listingId);
+}
+export function forgetBuyNowOrder(
+  client: SessionClient,
+  listingId: string,
+  orderId: string,
+) {
+  const s = store(client);
+  if (s.acknowledged.get(listingId) === orderId)
+    s.acknowledged.delete(listingId);
+}
+
+// The quote/version tuple belongs to the original intent, including when a new
+// quote is read after navigation. Only a definite rejection permits replacing it.
+export async function sendBuyNowOrder(
+  client: SessionClient,
+  listingId: string,
+  body: BuyNowOrderInput | null,
+  keyFactory: () => string,
+) {
+  const s = store(client),
+    generation = s.generation;
+  if (!s.owner)
+    throw new ApiError(401, "SESSION_EXPIRED", "Đăng nhập để tạo đơn.");
+  const saved = s.creates.get(listingId);
+  if (!saved && !body) throw new Error("Cần báo giá để tạo đơn mới.");
+  const attempt = saved ?? { key: keyFactory(), body: { ...body! } };
+  s.creates.set(listingId, attempt);
+  try {
+    const result = await client.request(
+      "/orders/buy-now",
+      orderCommandReceiptSchema,
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": attempt.key },
+        body: JSON.stringify(attempt.body),
+      },
+    );
+    if (s.generation !== generation)
+      throw new ApiError(
+        401,
+        "SESSION_EXPIRED",
+        "Phiên tài khoản đã thay đổi.",
+      );
+    if (s.creates.get(listingId) === attempt) {
+      s.acknowledged.set(listingId, result.entityId);
+      s.creates.delete(listingId);
+    }
+    return result;
+  } catch (error) {
+    if (
+      s.generation === generation &&
+      s.creates.get(listingId) === attempt &&
+      error instanceof ApiError &&
+      error.status >= 400 &&
+      error.status < 500 &&
+      ![401, 403].includes(error.status)
+    )
+      s.creates.delete(listingId);
+    throw error;
+  }
 }
 // One uncertain decision blocks its opposite even after navigation. The pinned
 // version/body/key survive a lost ACK, but never survive a change of account.
@@ -82,14 +176,16 @@ export async function sendOrderResponse(
         "SESSION_EXPIRED",
         "Phiên tài khoản đã thay đổi.",
       );
-    s.intents.delete(id);
+    if (s.intents.get(id) === attempt) s.intents.delete(id);
     return result;
   } catch (error) {
     if (
       s.generation === generation &&
+      s.intents.get(id) === attempt &&
       error instanceof ApiError &&
       error.status >= 400 &&
-      error.status < 500
+      error.status < 500 &&
+      ![401, 403].includes(error.status)
     )
       s.intents.delete(id);
     throw error;

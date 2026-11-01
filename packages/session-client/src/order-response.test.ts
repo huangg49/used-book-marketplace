@@ -4,7 +4,14 @@ import {
   type SessionClient,
   type SessionState,
 } from "./session-client";
-import { pendingOrderResponse, sendOrderResponse } from "./order-response";
+import {
+  acknowledgedBuyNowOrder,
+  forgetBuyNowOrder,
+  pendingBuyNowOrder,
+  pendingOrderResponse,
+  sendBuyNowOrder,
+  sendOrderResponse,
+} from "./order-response";
 
 const id = "1101d28c-80c3-4223-b289-e9446ba940be";
 function fake() {
@@ -74,6 +81,168 @@ function fake() {
   };
 }
 describe("order decisions across navigation and uncertain responses", () => {
+  it.each(["pay", "cancel"] as const)(
+    "pins %s across navigation and blocks its opposite after lost ACK or permission denial",
+    async (action) => {
+      const f = fake();
+      await expect(
+        sendOrderResponse(f.client, id, action, 1, () => "original"),
+      ).rejects.toBeInstanceOf(ApiError);
+      f.fail(new ApiError(403, "FORBIDDEN", "Current permission unavailable"));
+      await expect(
+        sendOrderResponse(f.client, id, action, 9, () => "must-not-replace"),
+      ).rejects.toBeInstanceOf(ApiError);
+      expect(pendingOrderResponse(f.client, id)).toBe(action);
+      await expect(
+        sendOrderResponse(
+          f.client,
+          id,
+          action === "pay" ? "cancel" : "pay",
+          9,
+          () => "opposite",
+        ),
+      ).rejects.toThrow("trước khi đổi");
+      f.fail(null);
+      await sendOrderResponse(
+        f.client,
+        id,
+        action,
+        9,
+        () => "must-not-replace",
+      );
+      expect(f.calls).toHaveLength(3);
+      expect(
+        f.calls.every(
+          (call) =>
+            call.key === "original" &&
+            call.body === JSON.stringify({ expectedVersion: 1 }),
+        ),
+      ).toBe(true);
+      expect(pendingOrderResponse(f.client, id)).toBeUndefined();
+    },
+  );
+
+  it("pins the original buy-now quote after lost ACK, remount and edited inputs", async () => {
+    const f = fake();
+    const input = {
+      quoteId: id,
+      expectedQuoteVersion: 1,
+      expectedListingVersion: 2,
+      expectedListingRevisionId: id,
+    };
+    await expect(
+      sendBuyNowOrder(f.client, id, input, () => "create-original"),
+    ).rejects.toBeInstanceOf(ApiError);
+    input.expectedListingVersion = 99;
+    expect(pendingBuyNowOrder(f.client, id)).toBe(true);
+    f.fail(new ApiError(403, "FORBIDDEN", "Current permission unavailable"));
+    await expect(
+      sendBuyNowOrder(f.client, id, null, () => "new"),
+    ).rejects.toBeInstanceOf(ApiError);
+    f.fail(null);
+    await sendBuyNowOrder(
+      f.client,
+      id,
+      { ...input, quoteId: "different" },
+      () => "new",
+    );
+    expect(f.calls).toHaveLength(3);
+    expect(
+      f.calls.every(
+        (call) =>
+          call.path === "/orders/buy-now" &&
+          call.key === "create-original" &&
+          JSON.parse(call.body).expectedListingVersion === 2,
+      ),
+    ).toBe(true);
+    expect(pendingBuyNowOrder(f.client, id)).toBe(false);
+    expect(acknowledgedBuyNowOrder(f.client, id)).toBe(id);
+    forgetBuyNowOrder(f.client, id, "different-order");
+    expect(acknowledgedBuyNowOrder(f.client, id)).toBe(id);
+    forgetBuyNowOrder(f.client, id, id);
+    expect(acknowledgedBuyNowOrder(f.client, id)).toBeUndefined();
+  });
+
+  it("replaces only a definitively rejected creation and drops pending creation on identity change", async () => {
+    const f = fake();
+    const body = {
+      quoteId: id,
+      expectedQuoteVersion: 1,
+      expectedListingVersion: 2,
+      expectedListingRevisionId: id,
+    };
+    f.fail(new ApiError(409, "VersionConflict", "Rejected"));
+    await expect(
+      sendBuyNowOrder(f.client, id, body, () => "rejected"),
+    ).rejects.toBeInstanceOf(ApiError);
+    expect(pendingBuyNowOrder(f.client, id)).toBe(false);
+    f.fail(new TypeError("Network"));
+    await expect(
+      sendBuyNowOrder(f.client, id, body, () => "uncertain"),
+    ).rejects.toThrow("Network");
+    f.state({ status: "anonymous" });
+    f.state(f.authenticated);
+    expect(pendingBuyNowOrder(f.client, id)).toBe(false);
+    f.fail(null);
+    await sendBuyNowOrder(
+      f.client,
+      id,
+      { ...body, expectedListingVersion: 3 },
+      () => "new-identity",
+    );
+    expect(f.calls[2].key).toBe("new-identity");
+  });
+
+  it("does not apply a late creation ACK to a changed identity or clear its new intent", async () => {
+    const f = fake();
+    const body = {
+      quoteId: id,
+      expectedQuoteVersion: 1,
+      expectedListingVersion: 2,
+      expectedListingRevisionId: id,
+    };
+    let release!: () => void;
+    f.delay(
+      new Promise<void>((resolve) => {
+        release = resolve;
+      }),
+    );
+    f.fail(null);
+    const old = sendBuyNowOrder(f.client, id, body, () => "old");
+    const rejected = expect(old).rejects.toBeInstanceOf(ApiError);
+    f.state({ status: "anonymous" });
+    f.state(f.authenticated);
+    f.delay(null);
+    f.fail(new TypeError("Network"));
+    await expect(
+      sendBuyNowOrder(f.client, id, body, () => "new"),
+    ).rejects.toThrow("Network");
+    release();
+    await rejected;
+    expect(pendingBuyNowOrder(f.client, id)).toBe(true);
+    f.fail(null);
+    await sendBuyNowOrder(f.client, id, null, () => "wrong");
+    expect(f.calls[2].key).toBe("new");
+  });
+  it("keeps the acknowledged ID across closing checkout, but clears it when identity changes", async () => {
+    const f = fake();
+    f.fail(null);
+    await sendBuyNowOrder(
+      f.client,
+      id,
+      {
+        quoteId: id,
+        expectedQuoteVersion: 1,
+        expectedListingVersion: 2,
+        expectedListingRevisionId: id,
+      },
+      () => "ack",
+    );
+    expect(acknowledgedBuyNowOrder(f.client, id)).toBe(id);
+    f.state({ status: "anonymous" });
+    f.state(f.authenticated);
+    expect(acknowledgedBuyNowOrder(f.client, id)).toBeUndefined();
+  });
   it("replays the same version/body/key after lost ACK even when the screen now reads a later version", async () => {
     const f = fake();
     await expect(

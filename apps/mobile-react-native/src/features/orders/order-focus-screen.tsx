@@ -39,11 +39,12 @@ const details = orderDetailsSchema
     }),
     preparation: z.object({ pickupDeadline: z.string() }).nullable(),
   });
-type Action = "accept" | "reject" | "cancel";
+type Action = "accept" | "reject" | "cancel" | "pay";
 const labels: Record<Action, string> = {
   accept: "Xác nhận bán",
   reject: "Từ chối đơn",
   cancel: "Hủy đơn chưa thanh toán",
+  pay: "Thanh toán đơn",
 };
 
 export function OrderFocusScreen({
@@ -153,15 +154,30 @@ export function OrderFocusScreen({
                   )}
                 </AppText>
               )}
-            {order.preparation && (
-              <Notice>
-                Đơn đang ở bước chuẩn bị sách. Hạn bàn giao:{" "}
-                {new Date(order.preparation.pickupDeadline).toLocaleString(
-                  "vi-VN",
+            {order.state === "Preparing" && order.preparation && (
+              <View style={{ gap: space.sm }}>
+                <Notice>
+                  {order.role === "Seller"
+                    ? "Bạn cần chuẩn bị sách. "
+                    : "Người bán đang chuẩn bị sách. "}
+                  Hạn bàn giao:{" "}
+                  {new Date(order.preparation.pickupDeadline).toLocaleString(
+                    "vi-VN",
+                  )}
+                  .{" "}
+                  {order.role === "Seller"
+                    ? "Ảnh đóng gói và vận chuyển hiện thực hiện trên Member web: đăng nhập cùng tài khoản, vào Đơn trực tiếp và mở đúng mã đơn này. Không tạo đơn mới."
+                    : "Tiền đang được giữ trong giao dịch. Theo dõi cập nhật tại đơn này; chưa cần xác nhận đã nhận sách."}
+                </Notice>
+                {order.role === "Seller" && (
+                  <>
+                    <AppText selectable>Mã đơn: {id}</AppText>
+                    <AppText kind="small">
+                      Nhấn giữ mã đơn để sao chép khi mở Member web.
+                    </AppText>
+                  </>
                 )}
-                . Người bán chuẩn bị sách theo thời hạn. Mở lại đơn để theo dõi
-                cập nhật.
-              </Notice>
+              </View>
             )}
             {error && <Notice tone="error">{error}</Notice>}
             {pending ? (
