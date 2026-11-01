@@ -49,7 +49,8 @@ Node trực tiếp, không install hoặc đổi lockfile.
 | Expo57.0.24 web export | **PASS**,32route gồm forgot-password; exit0 nhưng CLI có thông báo forcefully exiting; không là native runtime |
 | API OTP E2E Vitest4.1.11 | **PASS19/19** toàn file otp-auth.e2e-spec.ts; Mongo8 rs-test57017, database `latlai_rn_recovery_20261101_test`; mail local, storage fake, không gọi provider |
 | Expo web UI với HTTP/Mongo thật | **PASS** Login→recovery, email rỗng, email tổng hợp không tồn tại→ACK/form OTP/cooldown, reload chỉ giữ UUID, Back→Login giữ returnBook;320px không tràn ở form email |
-| OTP Brevo + reset + login trên UI | **PENDING người dùng** tự nhập OTP và mật khẩu QA; chưa tính PASS từ test API |
+| OTP Brevo + reset trên UI | **PASS** owner tự nhập OTP/mật khẩu QA, báo hoàn tất và nhận thư thông báo; audit có1PasswordReset,2job Sent/payload erased,2provider201 |
+| Login mới sau reset trên UI | **NOT CONFIRMED**: chưa thấy session mới khi đối soát; đã hỏi owner, chưa có xác nhận riêng trước khi phiên QA hết hạn |
 | Android/iOS/TalkBack/ARM | **BLOCKED/NOT RUN**: native runtime đã bị automatic policy block ở lượt trước; không thử đi vòng bằng cách mở Metro khác |
 | Remote CI / nghiệm thu UX độc lập | **NOT RUN**, chưa push; không đóng READINESS |
 
@@ -65,25 +66,40 @@ Typed route `.expo/types/router.d.ts` đang được repo track, được sinh l
 `setupTypedRoutes` của CLI57.0.26 đã cài; không sửa tay và không mở dev server.
 Export có route mới nhưng không tự cập nhật file type ở lượt này.
 
-## Lượt QA thật đang chờ
+## Lượt QA thật và phần còn chờ
 
 Runner riêng ignored `.tmp/rn-recovery-qa.mjs` dùng createTestApi với DB ngẫu nhiên
 `ops_browser_<hex>_test`, không DB chính. RN web export phục vụ ở8087; API3009,
 fake storage3010. Chỉ recipient đã được owner duyệt trong file cấu hình riêng,
 Brevo tối đa4lần/20phút, không log key/email/OTP/password. Mail có nhãn QA, chỉ
-đổi mật khẩu user tổng hợp. Chưa gửi thư khi ghi checkpoint này.
+đổi mật khẩu user tổng hợp. Lượt thật chạy trên source `7ef57f12`.
 
-Người dùng cần tự nhập Gmail đã dùng ở lượt Brevo trước, lấy OTP, chọn mật khẩu
-chỉ cho QA và tự submit; đây là handoff bắt buộc theo quy tắc điều khiển trình
-duyệt khi đổi credential. Sau đó kiểm Login bằng mật khẩu mới và thư cảnh báo.
-Không yêu cầu gửi OTP/password qua chat. Chưa xác nhận Inbox hoặc login mới thì
-giữ PENDING. Runner tự dọn DB/user/role khi dừng hoặc hết20phút; cleanup chưa
-được xác nhận tại checkpoint này. Các dịch vụ QA cần được đối soát khi tiếp tục.
+Owner tự nhập credential và báo “Ok rồi, nó gửi thông báo về mail luôn”. Không
+đọc/ghi OTP hoặc mật khẩu của owner. Audit độc lập read-only xác nhận đúng1event
+PasswordReset, user còn ACTIVE,2phiên cũ revoked, không còn phiên active lúc
+đối soát. HTTP cũ: password401, access401, refresh401. Hai job Sent và encrypted
+payload rỗng,2HTTP201 từ Brevo. Owner xác nhận nhận thư; folder Inbox/Spam
+**chưa được báo riêng**, không tự cộng thành Inbox PASS.
+
+Hai loại thư trong source là OTP ResetPassword và PasswordChanged. Trường
+`warning` trong runner journal dùng tokenId=null nên không phân loại được hai
+loại này; không dùng nó để đếm cảnh báo. `.tmp/rn-recovery-qa/audit.json` giữ số
+đối soát không chứa PII/credential. Chưa thấy session mới nên đã hỏi riêng owner
+về bước Login; không suy Login PASS từ reset hay thư đã nhận.
+
+Runner hết20phút và kết thúc với status `BLOCKED_TIMEOUT`, exit0, cleanup PASS.
+Không đổi nhãn tổng này thành full journey PASS: reset/mail/session denial có
+evidence riêng ở trên; Login mới còn chưa xác nhận. Kiểm read-only sau teardown
+PASS không còn DB/user/role browser QA. API3009, fake storage3010, static8087
+đã đóng; Docker mongo-test đã dừng và không còn listener57017. Replica set dùng
+tmpfs nên dữ liệu E2E QA cũng không được giữ qua lần stop này. DB/env/bucket
+chính giữ nguyên. Không cần nhập tiếp ở URL QA đã hết hạn.
 
 Ảnh local trong `.tmp/rn-recovery-qa/`: recovery-empty-320.png và
 recovery-code-synthetic.png chỉ có form trống/email tổng hợp; không commit ảnh
 hoặc cấu hình riêng. Không chụp form chứa email thật/OTP/mật khẩu.
 
-Sau handoff: đối soát auth event, thu hồi access/refresh cũ, queue Sent/payload
-erased và báo cáo người dùng; dừng/dọn runner rồi cập nhật kết quả thực tế.
+Tiếp theo khi cần nghiệm thu trọn hành trình: tạo phiên QA riêng mới, owner tự
+đổi và đăng nhập bằng mật khẩu mới trong cùng phiên; không dùng lại credential
+QA cũ sau teardown. Native/UI người thật độc lập vẫn là gate khác.
 Không mở PR trước yêu cầu gom gói của owner; không coi checklist này là release.

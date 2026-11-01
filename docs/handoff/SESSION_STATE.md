@@ -1,6 +1,6 @@
 # Điểm lưu hiện tại — 01/11/2026
 
-## RN Quên mật khẩu: code và kiểm máy đạt, chờ lượt UI do owner nhập
+## RN Quên mật khẩu: reset và thư thật đạt; QA đã dọn, Login mới chưa xác nhận
 
 - Nhánh `codex/rn-password-recovery`, base `39f9b023`, subject
   `feat(rn): add OTP password recovery with safe failure handling`.
@@ -13,11 +13,15 @@
   Expo web export32route; API OTP19/19 trên QA rs-test/_test, mail local.
   PASS Expo web với API/Mongo thật cho entry, empty email, generic ACK/cooldown,
   reload và Back giữ ngữ cảnh;320px form email. Không gọi đó là native PASS.
-- **PENDING** lượt Brevo thật/reset/login do owner tự nhập credential ở
-  `http://127.0.0.1:8087/forgot-password`; đã gửi hướng dẫn, chưa có kết quả.
-  Runner `.tmp/rn-recovery-qa.mjs` giữ API3009/fake storage3010/static8087,
-  DB QA ngẫu nhiên; tối đa4send/20phút và tự dọn. Tại checkpoint chưa gửi thư;
-  cleanup/dịch vụ QA phải kiểm lại. File riêng không lộ key/email/code/password.
+- Source mới `7ef57f12`: owner tự nhập OTP/mật khẩu QA, báo hoàn tất và nhận thư
+  thông báo. PASS audit1PasswordReset,2phiên revoked, old password/access/refresh
+  đều401;2job Sent/payload erased,2provider201. Inbox/Spam chưa báo riêng.
+  **NOT CONFIRMED** Login mới: lúc đối soát0session active; đã hỏi owner nhưng
+  chưa có xác nhận riêng trước timeout. Không gọi toàn journey là PASS.
+- Runner `.tmp/rn-recovery-qa.mjs` kết thúc `BLOCKED_TIMEOUT`/exit0/cleanup PASS.
+  Đã kiểm không còn DB/user/role browser QA; API3009/fake storage3010/static8087
+  và Docker QA57017 đã dừng. File riêng không lộ key/email/code/password.
+  Khi nghiệm thu Login mới cần phiên QA khác; URL cũ đã hết hạn.
 - Native runtime tiếp tục BLOCKED bởi automatic policy block cũ; không đi vòng.
   READINESS, GHN, DB/env/bucket chính và remote CI giữ nguyên.
 
