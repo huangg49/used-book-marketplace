@@ -19,9 +19,13 @@
 - Fetch: main/origin/main vẫn `be581aec`;0PR mở,6CI xanh chỉ ở base. Local chain
   remote CI NOT RUN, chưa push/PR/merge/deploy. Mongo app/QA và các port app/ADB
   đã kiểm đều dừng; không bật dịch vụ/đụng DB chính/GHN/env/migration.
-- Bước tiếp đề xuất: tích hợp chuỗi đã có qua PR/CI đúng head khi owner giao quyền
-  push/PR/merge; không chờ reviewer thứ hai theo ngoại lệ mới ở trên. READINESS,
-  human UX/AI và native gate giữ nguyên. Không áp ngoại lệ PR83 cho gói mới.
+- Owner yêu cầu tiếp tục giữ local, làm thêm gói hoàn chỉnh rồi mới publish một
+  đợt để giảm số vòng CI; chưa giao quyền push/PR/merge. Lượt đối chiếu source
+  `295e2404` xác nhận còn thiếu profile edit, Admin lock/unlock, cart, simulated
+  withdrawal, full dispute/return và ordinary ViaPoint; Flutter vẫn scaffold.
+  Các gói mới chưa bắt đầu. Giữ commit/phạm vi riêng cho từng gói, CI đúng head
+  vẫn cần trước merge khi được giao tích hợp. READINESS, human UX/AI và native
+  gate giữ nguyên; không chờ reviewer thứ hai riêng chuỗi đã được miễn ở trên.
 
 ## Kiểm native từ build sạch — 01/11/2026
 
