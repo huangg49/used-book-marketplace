@@ -168,13 +168,13 @@ export function ActionCard(props: Props) {
     }
   } else if (detail.status === "WAITING_YOU_CONFIRM") {
     instructions = detail.viewerShipping.receivedAt
-      ? "Bạn đã xác nhận nhận sách. Đang chờ đối tác xác nhận nhận sách để bước vào giai đoạn kiểm tra sách (48 giờ)."
+      ? "Bạn đã xác nhận nhận sách. Đang chờ đối tác xác nhận nhận sách để cùng bước vào giai đoạn kiểm tra sách (72 giờ)."
       : "Hai bên đã gửi sách. Chỉ xác nhận khi bạn đã nhận bưu phẩm và kiểm tra kỹ sách.";
     if (!detail.viewerShipping.receivedAt) actions.push("received");
     actions.push("dispute");
   } else if (detail.status === "DELIVERING") {
     instructions = detail.viewerShipping.receivedAt
-      ? "Bạn đã xác nhận nhận sách. Đang chờ đối tác xác nhận nhận sách để bước vào giai đoạn kiểm tra sách (48 giờ)."
+      ? "Bạn đã nhận được sách từ bưu tá! Hãy kiểm tra kỹ sách. Nếu sách bị hỏng hóc hoặc không đúng mô tả, bạn có thể bấm 'Báo sự cố / Khiếu nại'. Đang chờ đối tác nhận được kiện sách còn lại để cùng bước vào giai đoạn nghiệm thu (72 giờ đồng kiểm)."
       : "Sách đang được vận chuyển. Theo dõi bưu gửi tại thẻ Tiến trình giao nhận.";
     if (!detail.viewerShipping.receivedAt && detail.partnerShipping.sentAt) {
       actions.push("received");
@@ -186,14 +186,14 @@ export function ActionCard(props: Props) {
       : null;
     if (detail.viewerCompletedAt) {
       instructions =
-        `Bạn đã xác nhận nghiệm thu sách đạt yêu cầu. Đang chờ đối tác xác nhận hoặc hết 48 giờ kiểm tra để hoàn tất giao dịch.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
+        `Bạn đã xác nhận nghiệm thu sách đạt yêu cầu. Đang chờ đối tác xác nhận hoặc hết 72 giờ kiểm tra để hoàn tất giao dịch.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
     } else if (detail.partnerCompletedAt) {
       instructions =
         `Đối tác đã bấm xác nhận nghiệm thu sách! Bạn có thể kiểm tra sách kỹ lưỡng. Nếu hoàn toàn hài lòng, hãy bấm 'Xác nhận hài lòng & Nghiệm thu sách' để tất toán sớm và giải phóng cọc ngay.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
       actions.push("complete");
     } else {
       instructions =
-        `Hai bên đều đã nhận được sách! Giao dịch đang trong khoảng đệm kiểm tra 48 giờ.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""} Bạn có thể kiểm tra sách kỹ lưỡng. Nếu hoàn toàn hài lòng, hãy bấm 'Xác nhận hài lòng & Nghiệm thu sách' để tất toán sớm và giải phóng cọc ngay.`;
+        `Hai bên đều đã nhận được sách! Giao dịch đang trong khoảng đệm kiểm tra 72 giờ.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""} Bạn có thể kiểm tra sách kỹ lưỡng. Nếu hoàn toàn hài lòng, hãy bấm 'Xác nhận hài lòng & Nghiệm thu sách' để tất toán sớm và giải phóng cọc ngay.`;
       actions.push("complete");
     }
     actions.push("dispute");
