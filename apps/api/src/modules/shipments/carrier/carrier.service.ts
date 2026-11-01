@@ -291,10 +291,6 @@ export class CarrierService {
       exchange = await this.mongo.c.exchanges.findOne(
         {
           status: { $in: ['InTransit', 'Delivered'] },
-          $or: [
-            { 'initiatorShipment.trackingCode': { $exists: true, $ne: null } },
-            { 'recipientShipment.trackingCode': { $exists: true, $ne: null } },
-          ],
         },
         { sort: { updatedAt: -1 } },
       );
@@ -304,24 +300,15 @@ export class CarrierService {
         exchange = await this.mongo.c.exchanges.findOne(
           {
             status: 'Preparing',
-            $or: [
-              { 'initiatorShipment.trackingCode': { $exists: true, $ne: null } },
-              { 'recipientShipment.trackingCode': { $exists: true, $ne: null } },
-            ],
           },
           { sort: { updatedAt: -1 } },
         );
       }
 
-      // 3. Fallback: Đơn có mã vận chuyển gần nhất để không bị kẹt màn hình trống
+      // 3. Fallback: Đơn gần nhất
       if (!exchange) {
         exchange = await this.mongo.c.exchanges.findOne(
-          {
-            $or: [
-              { 'initiatorShipment.trackingCode': { $exists: true, $ne: null } },
-              { 'recipientShipment.trackingCode': { $exists: true, $ne: null } },
-            ],
-          },
+          {},
           { sort: { updatedAt: -1 } },
         );
       }
@@ -356,7 +343,7 @@ export class CarrierService {
     const leg1 = {
       leg: 'initiator' as const,
       label: `Kiện 1: ${nameA} ➔ ${nameB} (Chiều đi)`,
-      trackingCode: exchange.initiatorShipment?.trackingCode || 'GHN_A_PENDING',
+      trackingCode: exchange.initiatorShipment?.trackingCode || 'CHỜ TẠO ĐƠN (CHIỀU ĐI)',
       carrierCode: exchange.initiatorShipment?.carrierCode || 'GHN',
       carrierName: exchange.initiatorShipment?.carrierName || 'Giao Hàng Nhanh (GHN Express)',
       sender: {
@@ -381,7 +368,7 @@ export class CarrierService {
     const leg2 = {
       leg: 'recipient' as const,
       label: `Kiện 2: ${nameB} ➔ ${nameA} (Chiều về)`,
-      trackingCode: exchange.recipientShipment?.trackingCode || 'GHN_B_PENDING',
+      trackingCode: exchange.recipientShipment?.trackingCode || 'CHỜ TẠO ĐƠN (CHIỀU VỀ)',
       carrierCode: exchange.recipientShipment?.carrierCode || 'GHN',
       carrierName: exchange.recipientShipment?.carrierName || 'Giao Hàng Nhanh (GHN Express)',
       sender: {
@@ -447,10 +434,6 @@ export class CarrierService {
     const exchanges = await this.mongo.c.exchanges
       .find({
         status: { $in: ['InTransit', 'Preparing', 'Delivered'] },
-        $or: [
-          { 'initiatorShipment.trackingCode': { $exists: true, $ne: null } },
-          { 'recipientShipment.trackingCode': { $exists: true, $ne: null } },
-        ],
       })
       .sort({ updatedAt: -1 })
       .limit(3)
