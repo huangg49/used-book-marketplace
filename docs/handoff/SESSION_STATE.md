@@ -28,7 +28,21 @@
   kín, không xuất giá trị. Rerun adapter thật với r2 PASS201/replay400. Inbox r2
   chưa được owner xác nhận riêng; Inbox PASS là thư mẫu trước rotation. Cấu hình
   QA riêng đã bật lại, env chạy chính vẫn local; không dùng lại key cũ.
-  Native/human/full mail journey/remote CI giữ mở. QA Mongo/API/media/browser/Gradle
+  [Lượt HTTP/Mongo/queue/Brevo tiếp theo](../features/MEMBER_ACCEPTANCE_2026_11_01.md#bổ-sung-httpmongoqueuebrevo-và-otp-do-owner-nhập)
+  trên source `2ba4418c` + runner local PASS7nhóm: request/confirm lost-response
+  replay, cooldown/owner, OTP thật201, lỗi ACK provider tiêm/retry duplicate400,
+  giữ current session/revoke access+refresh phiên khác, old login401/new200,
+  một warning201 và xóa encrypted payload. Owner tự nhập OTP, xác nhận cảnh báo
+  vào Inbox qua chat; folder riêng của OTP không ghi nhận, không tự suy cả hai Inbox.
+  PASS16profile +3queue targeted,21skip theo filter; syntax/opt-in/docs/diff PASS.
+  `test:member-email:live` chỉ opt-in/recipient được duyệt, không CI; helper riêng
+  không là UI sản phẩm/native. Sửa helper Referrer-Policy để native POST giữ Origin;
+  không đổi auth guard. Owner xác nhận qua chat nên dùng protected stop/dọn QA;
+  runner exit BLOCKED/operator-stop được giữ riêng trong evidence, kết luận mail
+  PASS là đối soát7nhóm + owner report, không giả bấm xác nhận cả hai Inbox.
+  Cleanup DB/user/role riêng PASS; QA helper/API/media và replica set đã dừng.
+  Env chạy chính vẫn local, không migration/seed/worker chính hoặc push/PR/merge.
+  Native/human UX client/remote CI giữ mở. QA Mongo/API/media/browser/Gradle
   của lượt này đã dừng; không còn port app/QA listener hoặc Java/emulator của lượt.
   READINESS giữ nguyên; các gói phát triển và bằng chứng trước xem tiếp bên dưới.
 

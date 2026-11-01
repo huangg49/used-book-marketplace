@@ -94,8 +94,9 @@ Hash trùng APK checkpoint c5c30261; kiểm ZIP xác nhận không có
 hash/build hoặc ảnh native cũ làm chứng cứ runtime của profile/cart mới.
 Phiên này không cài/mở APK/emulator, không thay native permission/cài đặt máy.
 
-Email đang nói tới OTP6số khi Member đổi email đăng nhập và cảnh báo gửi về email
-cũ sau confirm. Backend/local mailbox đã có evidence riêng; gửi thật chưa kiểm.
+Ở lượt preflight trước cấu hình Brevo bên dưới: email đang nói tới OTP6số khi
+Member đổi email đăng nhập và cảnh báo gửi về email cũ sau confirm. Backend/local
+mailbox đã có evidence riêng; gửi thật chưa kiểm tại mốc đó.
 Preflight chỉ báo trạng thái biến: `AUTH_MAIL_ENCRYPTION_KEY` chưa đặt riêng,
 `RESEND_API_KEY`/`BREVO_API_KEY` chưa cấu hình; provider thật chưa bật. Không gửi thư
 tới địa chỉ cá nhân, không tạo tài khoản provider hoặc yêu cầu key qua chat.
@@ -133,8 +134,60 @@ thư r2. Key cũ không được kích hoạt hoặc dùng lại.
 Sender freemail đang có cảnh báo domain authentication; Inbox mẫu một thư không
 chứng minh deliverability production, các nhà cung cấp khác hay gửi quy mô lớn.
 
+### Bổ sung HTTP/Mongo/queue/Brevo và OTP do owner nhập
+
+Owner duyệt tiếp gói kiểm thật và alias Gmail `+latlaiqa` cùng hộp thư. Source
+`2ba4418c` cùng [runner opt-in](../../scripts/test-member-email-live.mjs) đang local;
+không thay business API/schema/contract/client. Cấu hình vẫn riêng trong file QA.
+
+- PASS16/16 `member-profile.e2e-spec.ts`: HTTP/Mongo/Sharp thật, mail/storage fake,
+  gồm credential/owner,5mã sai/hết hạn/cooldown, queue rollback, unique-email race,
+  confirm/replay/revocation. Lỗi500 `QA notification failure` được tiêm để chứng
+  minh rollback, không là lỗi runtime mới cần che.
+- PASS3 targeted queue tests trong `account-auth.e2e-spec.ts`: failed delivery/
+  lease/payload erase, crashed final lease, superseded delivery.21ca khác skip do
+  lọc tên test; không cộng thành24PASS hoặc toàn bộ auth PASS của lượt này.
+- Live: genuine Nest HTTP/API và Mongo QA random `*_test`; actor tổng hợp với
+ 2phiên thật. Class production `AuthMailService.drain()` được điều phối thủ công
+  trên collection thật; storage fake, AI/carrier không gọi, không timer nhiều process.
+- PASS request ACK bị bỏ rồi replay nguyên key/body/version: một challenge/job
+  mã hóa, email cũ chưa đổi, resend tức thì429, sai owner404 không tiêu thụ mã.
+- PASS Brevo201 OTP thật; lỗi ACK provider tiêm sau201 giữ job Pending/payload.
+  Fixture tăng tốc `nextAttemptAt` của đúng job; retry400 duplicate_parameter đưa
+  đúng job Sent, attempts2 và xóa encrypted payload. Không tạo mã/job mới.
+- PASS owner tự nhận và nhập OTP trực tiếp trên loopback helper, không đọc mã
+  từ queue hoặc đưa vào chat/log. Confirm rồi bỏ response/replay cùng intent
+  trả receipt cũ; identity/current session giữ nguyên. Access/refresh phiên khác
+  401, email cũ login401, email mới200. Mã đã dùng với key mới400.
+- PASS một warning job đến email cũ; Brevo nhận và job Sent/xóa payload; audit
+  không chứa email/code/password. Owner xác nhận đúng tiêu đề và **Hộp thư đến**
+  qua chat. OTP đã được owner nhận/dùng thành công; không ghi nhận riêng folder
+  của thư OTP, không suy thành cả hai Inbox.
+
+Lỗi helper đã xác nhận và sửa: native form POST bị Origin không khớp do chính
+`Referrer-Policy: no-referrer`; đổi helper thành `same-origin`, giữ kiểm Origin/
+Host/CSRF, không sửa auth guard hoặc cấu hình trình duyệt. Form gửi và confirm
+thật đã chạy sau sửa; không nhận lỗi helper là lỗi UI web/RN sản phẩm. Probe
+Host giả/cross-site GET/POST thiếu Origin/cross-origin POST403 và no-store/CSP
+đã kiểm riêng; probe Host đầu bằng fetch không gửi Host override như mong muốn,
+đã dùng node:http gửi header thật để đối chiếu, không bỏ assertion.
+
+Kết quả sanitized `.tmp/member-acceptance/member-email-live.json`; hướng dẫn và
+giới hạn [ACCOUNT_AUTH](ACCOUNT_AUTH.md#kiểm-luồng-đổi-email-với-brevo-thật-trong-qa).
+Không tự chạy live runner trong CI. Đây là backend/queue/mail thật + helper do
+owner thao tác, chưa là web/RN product journey với mail thật hoặc native PASS.
+
+Owner xác nhận Inbox qua chat thay vì nút helper tuyên bố cả hai thư đều Inbox.
+Operator dùng protected `/stop` để dọn môi trường, giữ raw runner exit
+`BLOCKED/operator-stop` trong trường `runnerExit` và bản trước owner confirmation.
+Sau đối soát đủ7nhóm, provider201/400/201 và owner report, kết luận nghiệm thu
+mail riêng là **PASS**, `completionMethod` ghi rõ đường xác nhận này; không giả
+bấm nút hoặc đổi kết quả assertion. Folder của OTP vẫn NOT_SEPARATELY_RECORDED.
+Cleanup database/user/role riêng PASS; API/media/helper và replica set QA đã dừng,
+không còn port app/QA của lượt. Database/bucket/env chạy chính giữ nguyên.
+Không áp migration chính, không push/PR/merge/deploy; READINESS giữ nguyên.
+
 Khi điều kiện chạy native hợp lệ được khôi phục: kiểm entry Account→Profile/
 Cart, image picker, keyboard/Back, OTP, chữ lớn/resume, network loss và đổi identity
-trên đúng JS source. Bước mail tiếp theo: kiểm journey email-change và mail cảnh báo
-thật trên dữ liệu QA riêng khi được duyệt. Hai việc này còn mở; không nhận phần
-PASS độc lập ở trên thay cho chúng.
+trên đúng JS source. Kiểm human UX trên client sản phẩm vẫn riêng; không nhận phần
+PASS độc lập ở trên thay cho nó.

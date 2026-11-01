@@ -122,8 +122,46 @@ Retry lâu hơn window không có đảm bảo exactly-once của provider; khô
 mới khi retry. [Brevo API](https://developers.brevo.com/docs/send-a-transactional-email),
 [idempotency](https://developers.brevo.com/docs/heterogenous-versions-batch-emails).
 QA luôn ép provider local, chỉ replica set/DB _test; test không gửi email thật.
-Lượt test Internet chỉ dùng thư mẫu được chủ dự án cho phép, không tạo/đổi tài khoản.
-Trạng thái provider và inbox của phiên này ghi trong evidence.
+Lượt test Internet chỉ dùng thư mẫu/recipient được chủ dự án cho phép; không tự
+tạo/đổi tài khoản thật. Trạng thái provider và inbox ghi trong evidence.
+
+### Kiểm luồng đổi email với Brevo thật trong QA
+
+Runner opt-in [test-member-email-live.mjs](../../scripts/test-member-email-live.mjs)
+chỉ dùng khi owner đã duyệt recipient Gmail và biến thể `+latlaiqa` cùng hộp thư.
+Cấu hình riêng ignored `apps/api/.env.brevo.qa`: `AUTH_MAIL_PROVIDER=brevo`,
+`BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`,
+`BREVO_QA_RECIPIENT` bằng sender đã xác minh và `AUTH_MAIL_ENCRYPTION_KEY` QA
+riêng ít nhất32ký tự. Không ghi giá trị vào tài liệu/chat/client. Không thay
+encryption key của dữ liệu chính khi còn job/challenge đang chờ.
+
+Build API hiện tại, bật replica set QA và đặt `MONGO_TEST_URL` theo START_HERE,
+rồi chạy từ root:
+
+```sh
+pnpm test:member-email:live --live-approved-gmail-alias
+```
+
+Thiếu cờ trả NOT RUN/exit2 trước đọc env/gọi network. Runner không vào CI tự động;
+chỉ chấp nhận loopback57017/rs-test, tạo tài khoản tổng hợp trong database ngẫu nhiên
+`*_test`, storage fake/không gọi AI/carrier. Tối đa3request Brevo: OTP, retry cùng
+job sau lỗi ACK tiêm và cảnh báo email cũ. Hạn dùng key là cấu hình ở provider.
+
+Mở `http://127.0.0.1:5196/`, nhấn Gửi mã QA rồi người giữ hộp thư nhập OTP trực
+tiếp. Không lấy code từ queue hoặc gửi qua chat. Sau confirm kiểm thư cảnh báo
+và tự xác nhận Inbox trên trang. Helper chỉ bind127.0.0.1, kiểm Host/Origin/CSRF,
+no-store/CSP và không xuất địa chỉ/code/token. Referrer policy `same-origin` giữ
+Origin cho form POST, không gửi referrer ra site ngoài. Trang này chỉ hỗ trợ QA,
+không thay UX web/RN thật hoặc native acceptance.
+
+Runner gọi API HTTP thật, điều phối `AuthMailService.drain()` production class
+trên collection QA thật, không dùng timer nền. Mất ACK HTTP được mô phỏng bằng
+bỏ response đã nhận rồi replay nguyên intent; lỗi ACK provider được tiêm sau201.
+Backoff được tăng tốc bằng fixture `nextAttemptAt` của đúng job QA. Không gọi đó
+là mất mạng tự nhiên hoặc worker nhiều process. Kết quả sanitized ở
+`.tmp/member-acceptance/member-email-live.json`; timeout20phút/tín hiệu dừng dọn
+database/user/role QA. Trang đóng sau xác nhận cuối. Provider201 không tự chứng
+minh Inbox; helper/backend PASS không chứng minh product UI/native PASS.
 
 ## Provider Resend tùy chọn
 
