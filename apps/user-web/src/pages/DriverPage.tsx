@@ -209,7 +209,7 @@ export function DriverPage() {
       if (leg2Tracking) {
         setLegSteps((prev) => ({ ...prev, [leg2Tracking]: 2 }));
       }
-      setLastAction('⚡ [Tự động] Kiện 1 đã giao! Bắt đầu phát Kiện 2...');
+      setLastAction('⚡ [Tự động] Kiện 1 đã giao! Bắt đầu giao Kiện 2...');
       await new Promise((r) => setTimeout(r, 550));
 
       if (leg2Tracking) setLegSteps((prev) => ({ ...prev, [leg2Tracking]: 3 }));
@@ -465,7 +465,7 @@ export function DriverPage() {
                       {legItem.isDelivered ? (
                         <span className={styles.tabBadgeDelivered}>✓ Đã giao</span>
                       ) : (
-                        <span className={styles.tabBadgePending}>⏳ Chờ phát</span>
+                        <span className={styles.tabBadgePending}>⏳ Chờ giao</span>
                       )}
                     </button>
                   );
@@ -515,7 +515,7 @@ export function DriverPage() {
                 <div className={styles.stopRow}>
                   <div className={styles.stopDotDelivery} />
                   <div>
-                    <p className={styles.stopType}>🏁 ĐIỂM PHÁT SÁCH (NGƯỜI NHẬN)</p>
+                    <p className={styles.stopType}>🏁 ĐIỂM GIAO SÁCH (NGƯỜI NHẬN)</p>
                     <p className={styles.personName}>
                       {order.receiver.name} · {order.receiver.phone}
                     </p>
@@ -641,18 +641,18 @@ export function DriverPage() {
                   void handleUpdateStatus(
                     3,
                     'IN_TRANSIT',
-                    `Bưu tá đang trên đường đi phát sách đến ${order.receiver.name}`,
-                    'Đang phát tới người nhận',
+                    `Bưu tá đang trên đường đi giao sách đến ${order.receiver.name}`,
+                    'Đang giao tới người nhận',
                   )
                 }
               >
                 <span className={styles.actionBtnIcon}>🛵</span>
                 <div className={styles.actionBtnContent}>
-                  <p className={styles.actionBtnTitle}>3. Xuất kho & Đi phát hàng (Out for Delivery)</p>
+                  <p className={styles.actionBtnTitle}>3. Xuất kho & Đi giao hàng (Out for Delivery)</p>
                   <p className={styles.actionBtnDesc}>Bưu tá nhận sách từ kho và bắt đầu giao đến người nhận</p>
                 </div>
                 {currentStep >= 3 ? (
-                  <span className={styles.stepBadgeDone}>✓ Đang phát hàng</span>
+                  <span className={styles.stepBadgeDone}>✓ Đang giao hàng</span>
                 ) : currentStep >= 2 ? (
                   <span className={styles.stepBadgeNext}>Bấm đi giao</span>
                 ) : (
