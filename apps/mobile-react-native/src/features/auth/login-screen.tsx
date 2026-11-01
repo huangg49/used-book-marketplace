@@ -246,11 +246,14 @@ export function LoginScreen({
             />
           </View>
           <Pressable
-            style={{ flexShrink: 0 }}
+            style={{ flexShrink: 0, minHeight: 44, justifyContent: "center" }}
+            accessibilityRole="button"
+            accessibilityLabel="Quên mật khẩu?"
             onPress={() =>
-              setInfo(
-                "Để cấp lại mật khẩu, vui lòng liên hệ ban quản trị hoặc kiểm tra email khôi phục.",
-              )
+              router.push({
+                pathname: "/forgot-password",
+                params: returnBook ? { returnBook } : undefined,
+              })
             }
           >
             <AppText

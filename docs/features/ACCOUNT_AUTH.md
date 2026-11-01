@@ -189,6 +189,8 @@ compact height≤800px giữ đủ OTP/form trong1536×700, không khóa scroll 
 [Báo cáo OTP hiện hành](../../.impeccable/review/auth-otp/README.md) và
 [bằng chứng link trước đó](../../.impeccable/review/auth-registration/README.md) ghi checks,
 capture và giới hạn. QA write/race chạy replica set57017, database `_test` riêng;
-không chạy harness trên DB local chính. Native/RN/Flutter UI, physical mobile,
+không chạy harness trên DB local chính. Native Android/iOS, Flutter UI, physical mobile,
 NVDA/human acceptance, Resend thật và toàn bộ E2E nghiệp vụ còn NOT RUN.
+Riêng RN đã nối luồng OTP recovery ngày01/11; kiểm source và giới hạn web export,
+native cùng lượt người dùng tại [báo cáo RN recovery](RN_PASSWORD_RECOVERY_2026_11_01.md).
 READINESS không đổi. Endpoint change-password khi đang đăng nhập là phạm vi khác.

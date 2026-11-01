@@ -1,5 +1,26 @@
 # Điểm lưu hiện tại — 01/11/2026
 
+## RN Quên mật khẩu: code và kiểm máy đạt, chờ lượt UI do owner nhập
+
+- Nhánh `codex/rn-password-recovery`, base `39f9b023`, subject
+  `feat(rn): add OTP password recovery with safe failure handling`.
+  Owner duyệt làm tiếp, vẫn local/chưa push/PR/merge/deploy.
+  [Source và bằng chứng](../features/RN_PASSWORD_RECOVERY_2026_11_01.md).
+- Login→email→OTP/reset→ACK→Login đã nối API hiện có. Double tap, sai/hết hạn/
+  vượt lần thử, resend, blur/late ACK và mất phản hồi có đường phục hồi; không
+  auto-login/replay reset, không persist OTP/password. Giữ returnBook UUID.
+- PASS RN184unit/25file (20ca mới), typecheck, lint0error/1warning cũ,
+  Expo web export32route; API OTP19/19 trên QA rs-test/_test, mail local.
+  PASS Expo web với API/Mongo thật cho entry, empty email, generic ACK/cooldown,
+  reload và Back giữ ngữ cảnh;320px form email. Không gọi đó là native PASS.
+- **PENDING** lượt Brevo thật/reset/login do owner tự nhập credential ở
+  `http://127.0.0.1:8087/forgot-password`; đã gửi hướng dẫn, chưa có kết quả.
+  Runner `.tmp/rn-recovery-qa.mjs` giữ API3009/fake storage3010/static8087,
+  DB QA ngẫu nhiên; tối đa4send/20phút và tự dọn. Tại checkpoint chưa gửi thư;
+  cleanup/dịch vụ QA phải kiểm lại. File riêng không lộ key/email/code/password.
+- Native runtime tiếp tục BLOCKED bởi automatic policy block cũ; không đi vòng.
+  READINESS, GHN, DB/env/bucket chính và remote CI giữ nguyên.
+
 ## Hồ sơ trên Member web thật, đối chiếu RN và thông báo phục hồi
 
 - Nhánh `codex/profile-feedback-clarity`, base `73fcf6da`, subject
