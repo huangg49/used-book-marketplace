@@ -70,6 +70,8 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
             meetupLocation: detail.viewerShipment.meetupLocation ?? undefined,
             notes: detail.viewerShipment.notes ?? undefined,
             shippedAt: detail.viewerShipment.shippedAt ?? undefined,
+            lastEvent: detail.viewerShipment.lastEvent ?? undefined,
+            lastEventAt: detail.viewerShipment.lastEventAt ?? undefined,
         }
         : null;
 
@@ -82,6 +84,8 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
             meetupLocation: detail.partnerShipment.meetupLocation ?? undefined,
             notes: detail.partnerShipment.notes ?? undefined,
             shippedAt: detail.partnerShipment.shippedAt ?? undefined,
+            lastEvent: detail.partnerShipment.lastEvent ?? undefined,
+            lastEventAt: detail.partnerShipment.lastEventAt ?? undefined,
         }
         : null;
 
@@ -369,6 +373,21 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
                                                 <BarcodeSvg value={trackingCode} />
                                             </div>
                                             <div className={styles.barcodeCode}>{trackingCode}</div>
+                                        </div>
+                                    )}
+
+                                    {shipment?.lastEvent && (
+                                        <div className={styles.liveTrackingEventBox}>
+                                            <div className={styles.liveTrackingHeader}>
+                                                <Truck size={14} className={styles.liveTrackingIcon} />
+                                                <span className={styles.liveTrackingTag}>Cập nhật từ bưu tá:</span>
+                                                {shipment.lastEventAt && (
+                                                    <span className={styles.liveTrackingTime}>
+                                                        {new Date(shipment.lastEventAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className={styles.liveTrackingText}>{shipment.lastEvent}</p>
                                         </div>
                                     )}
 

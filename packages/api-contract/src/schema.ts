@@ -6096,6 +6096,9 @@ export interface components {
             notes?: string | null;
             /** Format: date-time */
             shippedAt?: string | null;
+            lastEvent?: string | null;
+            /** Format: date-time */
+            lastEventAt?: string | null;
         };
         CreateExchangeProposal: {
             /**

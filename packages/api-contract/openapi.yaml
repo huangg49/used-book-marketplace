@@ -18251,6 +18251,15 @@ components:
             - string
             - "null"
           format: date-time
+        lastEvent:
+          type:
+            - string
+            - "null"
+        lastEventAt:
+          type:
+            - string
+            - "null"
+          format: date-time
     CreateExchangeProposal:
       type: object
       additionalProperties: false
