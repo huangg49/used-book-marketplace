@@ -75,3 +75,12 @@ nhóm** review implementation trước tích hợp, không được AI tự ký 
 
 Full Playwright suite, CI remote và chữ ký human review chưa có trong gói này.
 Không áp dụng migration lên DB chính hoặc tự merge vì các ca local đã đạt.
+
+## Bổ sung client — 01/11/2026
+
+Owner duyệt hoàn thiện hướng dẫn web và nối RN trong gói riêng. RN nay có source
+đăng/sửa/đọc manifest, opt-in kệ/chi tiết, xác nhận mua cả bộ và snapshot Order;
+web làm rõ đầu sách đại diện, danh sách cuốn và bảo toàn input khi đổi lựa chọn.
+Không đổi quy tắc whole-only hoặc API. [Bằng chứng và giới hạn client](../features/WHOLE_BUNDLE_JOURNEY_2026_11_01.md)
+phân biệt RN web export với native runtime. Câu không hỗ trợ mobile trong phạm
+vi gói25/10 ở trên là mốc lịch sử; không là native acceptance của gói mới.

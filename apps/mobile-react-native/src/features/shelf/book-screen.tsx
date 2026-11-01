@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import {AddToCart} from '../cart/add-to-cart';
 import {
   StyleSheet,
   View,
@@ -55,7 +56,7 @@ export function BookScreen({ id }: { id: string }) {
   // Fetch listing details from backend API
   const listingQuery = useQuery({
     queryKey: ["public-listing", id],
-    queryFn: () => client.publicRequest(`/listings/${id}`, publicListing),
+    queryFn: () => client.publicRequest(`/listings/${id}?bundleSupport=whole-v1`, publicListing),
     enabled: active && isValidUuid,
     staleTime: 0,
     gcTime: 0,
@@ -177,7 +178,7 @@ export function BookScreen({ id }: { id: string }) {
       header={
         <BookDetailHeader
           listingId={id}
-          bookTitle={item?.book?.title ?? "Chi tiết sách"}
+          bookTitle={item?.bundle?.title || item?.book?.title || "Chi tiết sách"}
           isScrolled={isScrolled}
         />
       }
@@ -231,6 +232,7 @@ export function BookScreen({ id }: { id: string }) {
           <View style={styles.framedContainer}>
             {/* Book Title, Authors & Unified Pricing Module */}
             <BookOverviewSection item={item} />
+            {!isOwner&&item.salePrice!==null&&item.purchaseAvailability.status==='Available'&&<AddToCart key={state.status==='authenticated'?state.user.id:'anonymous'} listingId={item.id} listingVersion={item.version}/>}
 
             {/* Condition Bento & Catalog Metadata */}
             <BookInspectionReport item={item} />
@@ -256,6 +258,7 @@ export function BookScreen({ id }: { id: string }) {
 
       {/* Modal: Mua ngay / Xem đơn thanh toán bản sách */}
       <BuyNowModal
+        key={state.status === "authenticated" ? state.user.id : "anonymous"}
         visible={buyDialogVisible}
         listing={item}
         initialOrderId={activeOrder?.id}
@@ -264,9 +267,11 @@ export function BookScreen({ id }: { id: string }) {
           void listingQuery.refetch();
           void myOrdersQuery.refetch();
         }}
-        onSuccess={() => {
+        onSuccess={(orderId) => {
+          setBuyDialogVisible(false);
           void listingQuery.refetch();
           void myOrdersQuery.refetch();
+          router.push({ pathname: "/orders", params: { orderId } });
         }}
       />
 

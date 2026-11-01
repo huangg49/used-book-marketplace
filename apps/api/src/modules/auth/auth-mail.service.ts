@@ -20,7 +20,7 @@ import type { AuthMailJobDoc } from '../../database/mongo/documents.js';
 
 export interface AccountMail {
   to: string;
-  kind: 'VerifyEmail' | 'ResetPassword' | 'PasswordChanged';
+  kind: 'VerifyEmail' | 'ResetPassword' | 'PasswordChanged' | 'ChangeEmail' | 'EmailChanged';
   token?: string;
   code?: string;
   challengeId?: string;
@@ -130,9 +130,14 @@ export class AuthMailService implements OnModuleInit, OnModuleDestroy {
   }
 
   render(payload: AccountMail) {
+    if (payload.kind === 'EmailChanged') {
+      const subject = 'Email đăng nhập Lật lại đã được thay đổi';
+      const text = 'Email đăng nhập tài khoản của bạn vừa được thay đổi sau xác minh. Các phiên khác và mã khôi phục cũ đã được thu hồi. Nếu bạn không thực hiện, hãy liên hệ nhóm hỗ trợ.';
+      return { subject, text, html: `<html lang="vi"><meta charset="utf-8"><h1>${subject}</h1><p>${text}</p></html>` };
+    }
     const changed = payload.kind === 'PasswordChanged';
     const verify = payload.kind === 'VerifyEmail';
-    const subject = changed
+    const subject = payload.kind === 'ChangeEmail' ? 'Xác minh email đăng nhập mới · Lật lại' : changed
       ? 'Mật khẩu Lật Lại đã được thay đổi'
       : verify
         ? 'Xác minh email · Lật Lại'
@@ -270,18 +275,21 @@ export class AuthMailService implements OnModuleInit, OnModuleDestroy {
       try {
         const payload = this.decrypt(job.encryptedPayload);
         if (
-          (job.tokenId &&
+          (payload.kind === 'ChangeEmail' && !(payload.challengeId && await this.mongo.c.member_email_changes.findOne({
+            _id: payload.challengeId, userId: job.userId, state: 'Pending', attempts: { $lt: 5 }, expiresAt: { $gt: new Date() },
+          }))) ||
+          (payload.kind !== 'ChangeEmail' && job.tokenId &&
             !(await this.mongo.c.auth_action_tokens.findOne({
               _id: job.tokenId,
               consumedAt: null,
               expiresAt: { $gt: new Date() },
             }))) ||
-          (payload.challengeId &&
-            (payload.kind === 'PasswordChanged' ||
+          (payload.kind !== 'ChangeEmail' && payload.challengeId &&
+            (!['VerifyEmail', 'ResetPassword'].includes(payload.kind) ||
               !(await this.mongo.c.auth_otp_challenges.findOne({
                 _id: payload.challengeId,
                 userId: job.userId,
-                purpose: payload.kind,
+                purpose: payload.kind as 'VerifyEmail' | 'ResetPassword',
                 consumedAt: null,
                 attempts: { $lt: 5 },
                 expiresAt: { $gt: new Date() },

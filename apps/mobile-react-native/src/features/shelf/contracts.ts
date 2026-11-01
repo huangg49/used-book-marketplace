@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { components } from "@used-books/api-contract";
 import { catalogClassificationFields } from "../drafts/catalog-classification";
+import { bundleSchema } from "../bundles/book-bundle";
 type Wire = components["schemas"];
 const uuid = z.uuid(),
   time = z.iso.datetime({ offset: true });
@@ -26,6 +27,7 @@ const exchangePreferences = z
   .optional();
 
 const base = z.object({
+  bundle: bundleSchema.nullable().optional(),
   fulfillment: z
     .object({
       serviceAreaCode: z.literal("HCM-DEMO-v1"),

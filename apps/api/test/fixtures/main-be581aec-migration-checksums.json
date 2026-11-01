@@ -1,0 +1,241 @@
+{
+  "source": "be581aeca4afaf3a7cea8b4b047281fd78e661de",
+  "migrations": [
+    {
+      "id": "0001-baseline-schema",
+      "checksum": "92ef1a825941284c44d94eb8e6902e3d2ef6c3f39f7f381962c996fa0c07093a"
+    },
+    {
+      "id": "0002-reference-data",
+      "checksum": "b74a2a4bb8b8e7d949c4231187b948a99640c68db8cde42d31f945c60affc545"
+    },
+    {
+      "id": "0003-catalog-title-key",
+      "checksum": "ea6bb8965a1bd4ef3b9c5bafa3c22aae8d3430ba80cee350a5396b23185b4ab7"
+    },
+    {
+      "id": "0004-wishlist",
+      "checksum": "7fe07cbe77b2e13f91c40ea8cf6efcbb313efb61e5a7d5a531239d255cb02806"
+    },
+    {
+      "id": "0005-price-assist",
+      "checksum": "7b9caf5dd8071bec38a11bf3b24a2808a4746336f277fee90c069d8dd70214b4"
+    },
+    {
+      "id": "0006-price-suggestion-input",
+      "checksum": "bf00d1aeb5cf6f9d5994284a3d90a953bd975dc3c49e34358a5786aa0ba48cb2"
+    },
+    {
+      "id": "0007-online-price-lookup",
+      "checksum": "4ce50061e09afb642785cc9cb0f18283977602f7bd33046405f1048f36f04251"
+    },
+    {
+      "id": "0008-auctions",
+      "checksum": "43fcd80145eff3d9a6caf8812c128ddc1e51c69252f1b3e702902605c59baa85"
+    },
+    {
+      "id": "0009-point-orders",
+      "checksum": "1051c8c0b5819474da1d3495c2282db0ee3a9312445353586eb60802a5f69a1b"
+    },
+    {
+      "id": "0010-point-collection",
+      "checksum": "d7a2615b2534336f3bd9a825753e5e63a6ecc566129810a09c9a12a7adefff9a"
+    },
+    {
+      "id": "0011-point-order-resolution",
+      "checksum": "1812b9c71a863296c4468d4c2d5218c68bf154633a082cfcf19497e644b85bfe"
+    },
+    {
+      "id": "0012-point-order-settlement",
+      "checksum": "0218072cff58d9762df00392551a880913d422a64ff9dade66466fa38ceee05e"
+    },
+    {
+      "id": "0013-auction-business-rules",
+      "checksum": "7397f149cf8cc0ba13c22d282e36db71292e3dfd073e302cf10def306427ca5e"
+    },
+    {
+      "id": "0014-purchase-conversations",
+      "checksum": "c44dd88a89194a112efda5b0b0149243092a1b424df45e904f37c84918d16411"
+    },
+    {
+      "id": "0015-member-notifications",
+      "checksum": "87a7adac3d4b26b8773650f5f300bf6c0db22a27deab1814391007baa3c26d5c"
+    },
+    {
+      "id": "0016-catalog-classification",
+      "checksum": "aa404c68993c4bbef06cd1220d58e8e2a8b72ab666c491ec289d9f298edea799"
+    },
+    {
+      "id": "0017-account-recovery",
+      "checksum": "e7850d50920a773f120caa10c97dcbd59819b8df365aaaf7896f1f790ff78a71"
+    },
+    {
+      "id": "0018-auth-otp",
+      "checksum": "e7b8096d37ac8ed5f19a52c4d3d13471273a5c6ddbf5c1692b820bc84eac9488"
+    },
+    {
+      "id": "0019-catalog-vocabulary-v2",
+      "checksum": "d20fbcb88486f6eb09d3083b0dfdb02de35b661166a4cc5d941bbdd9453dbedf"
+    },
+    {
+      "id": "0016-exchanges",
+      "checksum": "95c7e2b294cc5d458603fb8b9f3af25feb4f8b58c8708de8b25a27b0c504bf0d"
+    },
+    {
+      "id": "0017-exchanges-phase2",
+      "checksum": "9e33485750c898bb10dedf96e2328264c5bed16e59e6a056736971fa3cab5c6a"
+    },
+    {
+      "id": "0018-exchanges-proposal-expiry",
+      "checksum": "78dc9c6bc1e15eb0cb9451f4eeae2629a0fa6a385106febd7182d9bc81ca508b"
+    },
+    {
+      "id": "0020-direct-delivery-completion",
+      "checksum": "fac5821a69b6aa6e7fe72dd2c2e5ed76973f5ff2d7aca71753bde68c6c4a6885"
+    },
+    {
+      "id": "0021-direct-delivery-completion-legacy-shape",
+      "checksum": "7cb384102796abbc0e35b3dddf19608f4ddc3b9f703a9a7f9b33e6b5b6ad0132"
+    },
+    {
+      "id": "0022-vnpay-wallet-listing-fees",
+      "checksum": "68eaf37f04e73f0c6c87398a92c612237fb305f4e6ed82c68e7d6e78675dc0db"
+    },
+    {
+      "id": "0023-direct-order-settlement-principals",
+      "checksum": "37a621454dcb79f27a6014d6be1ef0a8d94febb14fb9a34942ff9ddfe7bb4a03"
+    },
+    {
+      "id": "0024-vnpay-querydr",
+      "checksum": "e3abb4de89e86c2b89bb6a669f3a7514a9e3b4dc49a3e4b42414550fbc45d817"
+    },
+    {
+      "id": "0022-point-administration",
+      "checksum": "ad37227a4c52d5e6d6dace36711ca75f3539d546fb547bce6c6e51fdcca4b07e"
+    },
+    {
+      "id": "0023-inspection-evidence",
+      "checksum": "1082fe089d7398fe8f52b803ebf4602d071c0ad4754980974d74251f7f437f93"
+    },
+    {
+      "id": "0024-point-incidents",
+      "checksum": "46fed2d910026721cca390806d3d93853c1287824b4311e6ff590e40482ef9b8"
+    },
+    {
+      "id": "0022-exchange-completion",
+      "checksum": "12ed5aa1fd600a0ebb520f08b146ada47d86cce12a3f609866806a6e4214078e"
+    },
+    {
+      "id": "0023-exchange-messages",
+      "checksum": "c65db22beda53b6a38a6a02cea78ea5130a54c118267212114653a97b7ef78f7"
+    },
+    {
+      "id": "0024-exchange-notifications",
+      "checksum": "0de78cdfa2581047fd91ccb230d4538bf461319e70d370975da2dc1a0ea74ac0"
+    },
+    {
+      "id": "0025-exchange-reviews",
+      "checksum": "b9bbfbd963d409883eac5a514ad3991090f54089b329c6791f7fce3a172a1a68"
+    },
+    {
+      "id": "0026-exchange-mutual-completion",
+      "checksum": "149f1c07b967212d87fbb632366bf7c5defa4cee992585a9e8caeb4b3df031aa"
+    },
+    {
+      "id": "0027-wallet-point-command-union",
+      "checksum": "c44cef4d7e46573fb4748bb55aaf1de58b1bafedd053cfa32cc53c1447c05884"
+    },
+    {
+      "id": "0028-seller-selected-orders",
+      "checksum": "b1a1853d13a12a581d5c8cbf32a57f776cf4e3372cd31cead98bb79b11b8d00d"
+    },
+    {
+      "id": "0029-buy-now-notifications",
+      "checksum": "d37a43103a8b6c76c5c12ba2d037dd597b1f71f80df7b7d904f966df470783db"
+    },
+    {
+      "id": "0030-book-circulation-regions",
+      "checksum": "af1faefc610ae878c4a4a2c61762e16a0be39e4ebb8fd22ce718fe56590fb153"
+    },
+    {
+      "id": "0031-exchange-multi-book",
+      "checksum": "432ab20ab029100d764e6317ca4c1ba3ebd6e9ecbb8b4354fc1ff22a80381a22"
+    },
+    {
+      "id": "0032-vnpay-topup-expiry",
+      "checksum": "69d7c3e981b58a2c5a800750621d3de5a374e313d129a7646d02ab5530bdda0a"
+    },
+    {
+      "id": "0032-conversation-agreements",
+      "checksum": "c102c2898ef4b25d0e641f33b29317af07a0e88deb09e7df1aac8eaf041a82d9"
+    },
+    {
+      "id": "0032-auction-only-listings",
+      "checksum": "4c8e1b3e98dcd194fc419cb717cea638d1f263e16ec5a4408d67e57509bb4f2d"
+    },
+    {
+      "id": "0033-buy-now-challenge",
+      "checksum": "83a6a0ec29d3d0599b7e0228f4fb76607799af5f9988361096c33bd9eccfb54c"
+    },
+    {
+      "id": "0034-auction-delivery",
+      "checksum": "300f1ee7153a2e53549367adb3361c4e052c5fd457beca5a1db97938e9cca7ea"
+    },
+    {
+      "id": "0035-whole-book-bundles",
+      "checksum": "e4c837b78e0c2d7e48a474d3114a6a0c48815a0f46d746ae3bdab3cb806da923"
+    },
+    {
+      "id": "0036-bundle-review-search",
+      "checksum": "efeeb6319dda110adcae8b4c5e61b3cabfb44d8474bfd1b685df69357dcf8109"
+    },
+    {
+      "id": "0037-seller-scheduled-auctions",
+      "checksum": "5bc24eb97b8c3ae4d361305e2b8370758d559b002589ea07b50df965b477b76d"
+    },
+    {
+      "id": "0037-moderation-overview-indexes",
+      "checksum": "f72018530d9ad8f8c2a0e2b646065a3031dd2408bf6ca221dba6a759b30c1d86"
+    },
+    {
+      "id": "0038-listing-autofill",
+      "checksum": "d7a19295f6b78d9fe8676a1306fc14450b7847a5dec9ad0f156c78e6e1df025a"
+    },
+    {
+      "id": "0039-transaction-review-validator-fix",
+      "checksum": "b9bbfbd963d409883eac5a514ad3991090f54089b329c6791f7fce3a172a1a68"
+    },
+    {
+      "id": "0039-exchange-inspection-deadlines",
+      "checksum": "dd241fecf17e76b9ad9f01f50cd340a3c6a0868cea25981cbddcf59d48f13a2a"
+    },
+    {
+      "id": "0040-transaction-review-lifecycle",
+      "checksum": "6ac3a7d29a913e5fc69c68e3af935ed857d9164e4f3036176d6f6b37d4c2e9e3"
+    },
+    {
+      "id": "0041-review-validator-reconciliation",
+      "checksum": "592cf2b618e980c3557cdd1db8316bd57f622743d7e754ad3955a1837cc5d714"
+    },
+    {
+      "id": "0042-catalog-recovery-index",
+      "checksum": "3098c5403ee00131168ac2f2a2870493cda6b44be8e67d81809b2dc1ce9ab993"
+    },
+    {
+      "id": "0043-price-source-origin",
+      "checksum": "b5373b47e8efdffa680c58597a4d181f8f81765afe24c20757be158144f49d8d"
+    },
+    {
+      "id": "0044-exchange-dispute-resolution",
+      "checksum": "93d1bdf427b4c83150c4179761f31b4702097ee47be0311a35ab29ab2d967639"
+    },
+    {
+      "id": "0045-exchange-mutual-cancellation",
+      "checksum": "914361155f5aee2d60bff7dbe3a639dbf2817acfc1b4a298477722f2ff35d227"
+    },
+    {
+      "id": "0046-listing-exchange-preferences",
+      "checksum": "5b88d84a89968922a3dfc21d02d34cc1866e676c92b867514599672c45b2ccc9"
+    }
+  ]
+}

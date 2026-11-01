@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useListMotion } from "../../core/task-motion";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useOutletContext, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useOutletContext, useSearchParams } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
 import {
   operationsUsersPage as page,
@@ -39,6 +39,7 @@ export function UserDirectory() {
   return <UserDirectoryContent />;
 }
 function UserDirectoryContent() {
+  const location=useLocation();
   const [params, setParams] = useSearchParams();
   const filters = readDirectoryFilters(params);
   const { q: query, status, role } = filters;
@@ -66,7 +67,7 @@ function UserDirectoryContent() {
       <header className="page-heading">
         <h1>Người dùng</h1>
         <p className="intro">
-          Tra cứu tài khoản, trạng thái và quyền hiện tại. Chỉ đọc.
+          Tra cứu trạng thái, xem lịch sử và quản lý khóa tài khoản.
         </p>
       </header>
       <DirectoryFilterForm filters={filters} apply={applyFilters} />
@@ -111,7 +112,7 @@ function UserDirectoryContent() {
                   data-motion-revision={`${item.status}/${item.roles.join()}`}
                 >
                   <th scope="row">
-                    <span>{item.displayName}</span>
+                    <Link to={`/users/${item.id}`} state={{returnTo:location.pathname+location.search}}>{item.displayName}</Link>
                     <small>{item.email}</small>
                   </th>
                   <td>

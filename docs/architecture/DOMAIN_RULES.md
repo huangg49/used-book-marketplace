@@ -55,6 +55,14 @@ review source and gate before changing or extending completion.
 
 ## Exchange hiện hành — deadline và nghĩa vụ cũ
 
+01/11/2026: [ADR0057](../adr/0057-exchange-resolution-safety.md), contract0.64,
+chặn mọi quyết định phân xử tài chính mới qua route legacy. Không hoàn/tất toán
+hoặc mở sách trong ResolutionPending khi chưa có custody, allocation và quyết
+định có hiệu lực sau appeal. Staff/Admin participant bị chặn trước replay;
+receipt cũ hợp lệ chỉ được đọc lại bởi actor hiện còn quyền và độc lập. Hàng
+đợi vận hành chỉ đọc và loại self. Đây là bảo vệ an toàn, không nghiệm thu đầy
+đủ tranh chấp hoặc đóng gate. Mutual cancellation trước gửi giữ protocol riêng.
+
 [ADR0050](../adr/0050-exchange-inspection-and-existing-obligations.md) đối chiếu
 source28/10 với POL-08/FR-X08/X09/BR-18: mỗi bên có72h từ lần nhận hợp lệ; common
 inspectionDeadline là hạn muộn hơn khi cả hai nhận. Xác nhận hài lòng chỉ ghi nhận,
@@ -220,10 +228,14 @@ never treat login, roles or a client capability as permission for new transactio
 0.15.0 allows LOCKED paid cancellation/rejection; 0.16.0 adds Seller acceptance.
 New payment remains denied for LOCKED.
 Purchase chat exists in `modules/purchases`, with gateway/service participant
-authorization; its HTTP handlers are not an ExistingObligation allowlist.
+authorization. ADR0059 allows LOCKED reads/sends only for a real owned OrderCreated
+room; new negotiation/terms/quote commands are not on this allowlist.
 Point report/code/claim/read handlers currently lack the decorator described in
 older reports, so do not claim LOCKED access there from documentation alone.
-Claim evidence upload/real carrier and Admin lock/unlock workflows remain planned.
+Claim evidence upload/real carrier remain planned. Admin lock/unlock now follows
+ADR0059: prior status is preserved, sessions/roles/ledger/obligations are not erased.
+LOCKED purchase-chat reads/sends are limited to real owned OrderCreated rooms;
+new negotiation/terms/quotes remain blocked. See ACCOUNT_CONTROLS_REPORT.
 
 ## Ví mô phỏng
 

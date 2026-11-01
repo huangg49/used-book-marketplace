@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ApiError } from "@used-books/session-client";
+import { bundleSchema } from "../bundles/book-bundle";
 
 export const quoteSchema = z.object({
   id: z.string().uuid(),
@@ -28,6 +29,7 @@ export const orderReceiptSchema = z.object({
 export type OrderReceipt = z.infer<typeof orderReceiptSchema>;
 
 export const orderDetailsSchema = z.object({
+  item: z.object({bundle: bundleSchema.nullable().optional(), metadata: z.object({title: z.string()})}).optional(),
   id: z.string().uuid(),
   role: z.enum(["Buyer", "Seller"]),
   version: z.number().int(),

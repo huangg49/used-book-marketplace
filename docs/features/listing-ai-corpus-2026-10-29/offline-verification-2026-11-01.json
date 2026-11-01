@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "ranAt": "2026-11-01T03:57:14.491Z",
+  "sourceBase": "1574d986",
+  "sourceSubject": "test(ai): verify corpus offline and reject incomplete quality evidence",
+  "providerCalls": 0,
+  "databaseAccess": false,
+  "productionModelOrPromptChanged": false,
+  "corpus": {
+    "technicalStatus": "PASS",
+    "coverageStatus": "PARTIAL",
+    "rawBooks": 25,
+    "activeUniqueHashes": 24,
+    "quarantineCases": 1,
+    "observations": 40,
+    "twoSourceBooks": 11,
+    "observedIsbns": 15,
+    "realCameraCases": 0,
+    "importCandidates": 0,
+    "unknownImageRights": 25
+  },
+  "preflight": {
+    "mode": "offline-preflight",
+    "technicalStatus": "PASS",
+    "source": "cover-scan",
+    "selectedCases": 24,
+    "totalCases": 24,
+    "uniquePhotos": 24,
+    "reviewedCases": 0,
+    "casesWithIsbnAnswer": 0,
+    "casesSha256": "87416089e11df0ceb968803637bfd93020b63ed67fc969cb54a21c0397a3f599",
+    "providerCalls": 0,
+    "meetsAdr0048": "NOT EVALUATED: preflight is not model or human acceptance",
+    "readinessGateChanged": false
+  },
+  "prices": {
+    "ranAt": "2026-11-01T03:55:06.140Z",
+    "mode": "offline-rules",
+    "source": "Unreviewed public retail observations; hypothetical Good copy; no DB/import/storage",
+    "model": null,
+    "providerCalls": 0,
+    "maxCalls": 3,
+    "maxUsd": 0.02,
+    "costUsd": 0,
+    "billingLimit": "Token estimate only; failures without usage unpriced; not a hard billing cap.",
+    "counts": {
+      "Proceed": 23,
+      "NeedsMoreData": 1,
+      "QUARANTINED": 1
+    },
+    "priceAccuracy": "NOT_SCORED: no reviewed used-copy valuation or completed sale",
+    "humanReview": "NOT_RUN",
+    "readinessGateChanged": false
+  },
+  "tests": {
+    "dataCli": {
+      "status": "PASS",
+      "count": 52,
+      "liveProvider": false
+    },
+    "eval": {
+      "status": "PASS",
+      "count": 30,
+      "liveProvider": false
+    }
+  },
+  "acceptance": {
+    "humanReview": "NOT_RUN",
+    "realCameraQuality": "NOT_RUN",
+    "modelAccuracyImprovement": "NOT_MEASURED",
+    "holdout": "NOT_RUN",
+    "native": "NOT_RUN",
+    "readinessGateChanged": false
+  },
+  "limits": [
+    "Only offline validation and fixtures; no new provider measurements",
+    "Existing cover scans/answers remain unreviewed",
+    "ISBN checksum does not verify a book edition",
+    "Price accuracy not scored; Good condition is a QA assumption"
+  ]
+}

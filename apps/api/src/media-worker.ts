@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { MediaWorker } from './modules/media/media-worker.service.js';
+import { ProfileAvatarWorker } from './modules/profile/profile-avatar-worker.js';
 
 const app = await NestFactory.createApplicationContext(AppModule, {
   logger: ['error', 'warn'],
@@ -20,6 +21,7 @@ try {
     try {
       if (Date.now() > sweepAt) {
         await worker.cleanup();
+        await app.get(ProfileAvatarWorker).cleanup();
         sweepAt = Date.now() + 60_000;
       }
       if (await worker.tick()) continue;

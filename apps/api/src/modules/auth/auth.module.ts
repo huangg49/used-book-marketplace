@@ -44,6 +44,6 @@ import { LoginLimiter } from './login-limiter.service.js';
     { provide: APP_GUARD, useExisting: AuthGuard },
     { provide: APP_GUARD, useExisting: RolesGuard },
   ],
-  exports: [AuthGuard, RolesGuard, AuthService],
+  exports: [AuthGuard, RolesGuard, AuthService, AuthMailService, LoginLimiter],
 })
 export class AuthModule {}

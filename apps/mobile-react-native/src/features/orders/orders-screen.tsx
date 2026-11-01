@@ -55,7 +55,7 @@ function OrderBookCover({
   const listingQuery = useQuery({
     queryKey: ["public-listing", listingId],
     queryFn: () =>
-      client.publicRequest(`/listings/${listingId}`, publicListing),
+      client.publicRequest(`/listings/${listingId}?bundleSupport=whole-v1`, publicListing),
     enabled: !!listingId,
     staleTime: 5 * 60 * 1000,
   });

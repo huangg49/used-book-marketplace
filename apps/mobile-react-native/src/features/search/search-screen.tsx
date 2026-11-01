@@ -128,19 +128,9 @@ export function SearchScreen() {
   const [exchangeBudgetOpen, setExchangeBudgetOpen] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("");
   const [languageModalOpen, setLanguageModalOpen] = useState(false);
-  const [pickupIndex, setPickupIndex] = useState(0);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(4);
 
-  const pickupLocations = [
-    { name: "Cà phê Thứ Bảy, Q.1", detail: "Cà phê Thứ Bảy, Q.1 · Tự nhận 0đ" },
-    {
-      name: "45 Nguyễn Gia Trí, Bình Thạnh",
-      detail: "45 Nguyễn Gia Trí, Bình Thạnh · Tự nhận 0đ",
-    },
-  ];
-
-  const currentPickup = pickupLocations[pickupIndex];
   const currentSort = SORTS[sortIndex];
 
   // Active category & dynamic facets
@@ -268,7 +258,7 @@ export function SearchScreen() {
     getNextPageParam: (lastPage: z.infer<typeof publicPage>) => lastPage.nextCursor ?? undefined,
     queryFn: ({ pageParam }) =>
       client.publicRequest(
-        `/listings?${query}${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ""}`,
+        `/listings?bundleSupport=whole-v1&${query}${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ""}`,
         publicPage,
       ),
     enabled: active,
@@ -328,10 +318,6 @@ export function SearchScreen() {
     } else {
       setSortDropdownOpen(true);
     }
-  };
-
-  const handleTogglePickup = () => {
-    setPickupIndex((prev) => (prev + 1) % pickupLocations.length);
   };
 
   const activeChips = useMemo(() => {
@@ -1230,37 +1216,6 @@ export function SearchScreen() {
                     : "Tất cả ngôn ngữ"}
                 </AppText>
                 <Icon name="chevronDown" size={16} color={stitchTokens.stoneMuted} />
-              </Pressable>
-            </View>
-
-            {/* ViaPoint Pickup Selector */}
-            <View style={styles.pickupCard}>
-              <View style={styles.pickupLeft}>
-                <View style={styles.pickupPinCircle}>
-                  <Icon name="pin" size={15} color={stitchTokens.gold} />
-                </View>
-                <View style={styles.pickupDetails}>
-                  <AppText kind="bold" style={styles.pickupTitle}>
-                    Điểm giao nhận ViaPoint TP.HCM
-                  </AppText>
-                  <AppText
-                    kind="small"
-                    style={styles.pickupSubtitle}
-                    numberOfLines={1}
-                  >
-                    {currentPickup.detail}
-                  </AppText>
-                </View>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Đổi trạm giao nhận ViaPoint"
-                onPress={handleTogglePickup}
-                style={styles.changePickupBtn}
-              >
-                <AppText kind="small" style={styles.changePickupText}>
-                  Đổi trạm
-                </AppText>
               </Pressable>
             </View>
 

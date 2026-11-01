@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { AppText, Icon, space, stitchTokens } from "../../../core/ui";
 import type { Listing } from "../contracts";
+import { BundleManifest } from "../../bundles/bundle-manifest";
 
 interface BookOverviewSectionProps {
   item: Listing;
@@ -99,7 +100,7 @@ export function BookOverviewSection({ item }: BookOverviewSectionProps) {
       {/* Book Title & Authors */}
       <View style={styles.headerStack}>
         <AppText style={styles.bookTitle} accessibilityRole="header">
-          {book.title}
+          {item.bundle?.title || book.title}
         </AppText>
 
         <AppText style={styles.authorsRow}>
@@ -121,7 +122,7 @@ export function BookOverviewSection({ item }: BookOverviewSectionProps) {
               <View style={styles.mainPriceGroup}>
                 <AppText style={styles.mainPrice}>{formatVnd(salePrice)}</AppText>
                 <View style={styles.discountBadge}>
-                  <AppText style={styles.discountText}>Giá niêm yết</AppText>
+                  <AppText style={styles.discountText}>{item.bundle ? "Giá cả bộ" : "Giá niêm yết"}</AppText>
                 </View>
               </View>
             ) : null}
@@ -137,7 +138,9 @@ export function BookOverviewSection({ item }: BookOverviewSectionProps) {
           </View>
         </View>
 
-        {/* Status Line */}
+      <BundleManifest bundle={item.bundle}/>
+      {item.bundle ? <AppText>Đầu sách đại diện để phân loại: {book.title}. Danh sách trên xác định các cuốn được giao.</AppText> : null}
+      {/* Status Line */}
         <View style={styles.statusRow}>
           <View style={[styles.statusPill, { backgroundColor: statusBg }]}>
             <View style={[styles.statusDot, { backgroundColor: statusColor }]} />

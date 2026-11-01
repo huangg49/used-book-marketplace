@@ -235,6 +235,7 @@ export type AuctionOperation =
   | 'dispatchPointOrder'
   | 'recordPointDelivery';
 type CommandChange =
+  | AccountChange
   | ReviewChange
   | PointChange
   | AuctionChange
@@ -258,6 +259,17 @@ export type ReviewChange = {
   reason?: string;
   event?: string;
 };
+export type AccountChange = {
+  accountControl?: { scope: 'NewTransactions'; unlockCondition: string | null; relatedReference: string | null };
+  event?: string;
+  entityType: Wire['AccountCommandReceipt']['entityType'];
+  entityId: string;
+  accountId: string;
+  version: number;
+  state: string;
+  reason?: string;
+  before?: Json;
+};
 type Options<C, D> = {
   discover?: (tx: Tx) => Promise<string[]>;
   authorize: (tx: Tx, actor: CurrentActor) => Promise<C>;
@@ -277,7 +289,14 @@ type Principal = {
 
 // Operations a LOCKED account may still perform on existing obligations.
 const EXISTING_OBLIGATION_OPERATIONS = [
+  // Own-account maintenance is permitted while trades are locked. Each of
+  // these handlers still checks MEMBER, current session and ownership.
+  'updateMemberProfile', 'createProfileAvatar', 'uploadProfileAvatar',
+  'discardProfileAvatar',
+  'requestMemberEmailChange', 'confirmMemberEmailChange',
   'cancelUnpaidOrder',
+  'openOrderConversation',
+  'removeCartItem',
   'cancelPaidOrder',
   'rejectPaidOrder',
   'acceptOrder',
@@ -305,6 +324,19 @@ const sessionExpired = (
 @Injectable()
 export class MongoCommandService {
   constructor(private readonly mongo: MongoService) {}
+  runAccount<C>(
+    context: CommandContext,
+    operation: string,
+    target: string,
+    body: unknown,
+    options: Options<C, AccountChange>,
+  ) {
+    return this.execute(context, operation, target, body, options,
+      (change, id, serverTime): Wire['AccountCommandReceipt'] => ({
+        id, entityType: change.entityType, entityId: change.entityId,
+        version: change.version, state: change.state, serverTime: serverTime.toISOString(),
+      }));
+  }
   runReview<C>(
     context: CommandContext,
     operation: string,
@@ -1026,7 +1058,9 @@ export class MongoCommandService {
         topupId: null as string | null,
         pointId: null as string | null,
       };
-      if (change.entityType === 'TransactionReview')
+      if ('accountId' in change)
+        Object.assign(targets, { accountId: change.accountId });
+      else if (change.entityType === 'TransactionReview')
         Object.assign(targets, { reviewId: change.entityId });
       else if (
         change.entityType === 'HandoverPoint' ||
@@ -1142,6 +1176,13 @@ export class MongoCommandService {
 
 function auditAfter(change: CommandChange): Json {
   switch (change.entityType) {
+    case 'UserAccount':
+      return { entityId: change.entityId, version: change.version, state: change.state, ...change.accountControl };
+    case 'MemberProfile':
+    case 'ProfileAvatar':
+    case 'MemberEmailChange':
+    case 'Cart':
+      return { entityId: change.entityId, version: change.version, state: change.state };
     case 'TransactionReview':
       return {
         entityId: change.entityId,

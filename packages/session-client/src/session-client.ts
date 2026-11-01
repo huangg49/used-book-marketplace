@@ -1,6 +1,7 @@
 import type { z } from "zod";
 import {
   authTokensSchema,
+  currentUserSchema,
   type AuthTokens,
   type CurrentUser,
   type LoginRequest,
@@ -282,6 +283,16 @@ export class SessionClient {
         throw retryError;
       }
     }
+  }
+
+  async reloadUser() {
+    const revision = this.revision;
+    const user = await this.request('/auth/me', currentUserSchema);
+    this.assertCurrent(revision);
+    if (this.state.status !== 'authenticated' || this.state.user.id !== user.id)
+      throw new ApiError(401, 'SESSION_CHANGED', 'Phiên tài khoản đã thay đổi.');
+    this.publish({ status: 'authenticated', user });
+    return user;
   }
 
   async logout() {

@@ -32,7 +32,7 @@ import { WalletModule } from '../wallet/wallet.module.js';
     PublicListingService,
     ListingLifecycleService,
   ],
-  exports: [ListingCommitmentPolicy],
+  exports: [ListingCommitmentPolicy, PublicListingService],
   controllers: [
     ListingDraftsController,
     ListingReviewController,

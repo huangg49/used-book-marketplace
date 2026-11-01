@@ -34,7 +34,7 @@ export function BookBottomBar({
 
   const displayPrice = item.salePrice ?? item.exchangeValue;
   const priceLabel =
-    item.salePrice != null
+    item.bundle ? "GIÁ CẢ BỘ" : item.salePrice != null
       ? "GIÁ BÁN"
       : item.mode === "Exchange"
         ? "GIÁ ĐỔI"
@@ -97,12 +97,12 @@ export function BookBottomBar({
         ) : canBuy ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Mua ngay cuốn sách này"
+            accessibilityLabel={item.bundle ? "Mua cả bộ sách này" : "Mua ngay cuốn sách này"}
             style={({ pressed }) => [styles.buyBtn, pressed && styles.pressed]}
             onPress={onBuyPress}
           >
             <AppText numberOfLines={1} style={styles.buyBtnText}>
-              Mua ngay
+              {item.bundle ? "Mua cả bộ" : "Mua ngay"}
             </AppText>
           </Pressable>
         ) : (

@@ -6,7 +6,103 @@ Quy tắc người review ở [TEAMWORK](../TEAMWORK.md): owner review implement
 cần reviewer thứ hai cho wallet, settlement, permissions và disputes.
 Team tự điền tên, không mặc định người tạo báo cáo là reviewer độc lập.
 
-## Nguồn và ranh giới
+## Gói hiện tại — 01/11/2026
+
+**Rà kỹ thuật của tác giả đã thực hiện; chủ dự án chấp thuận tự kiểm cho gói này.**
+Ngày01/11/2026, sau hồ sơ tại `d7341fe5`, chủ dự án nói: “Không cần Review thứ 2
+nữa đâu, mình bạn làm là được rồi.” Gói hiện tại không chờ thêm reviewer; đây là
+ngoại lệ mới cho chuỗi từ `be581aec` tới source `aeee8b81`, không kế thừa PR83
+và không miễn review chung cho thay đổi tương lai. Review độc lập người thật
+chưa thực hiện. Ngoại lệ không tự cấp quyền push/PR/merge/deploy hoặc đóng các
+gate UX người thật, native và AI.
+
+- Base/main/origin/main sau fetch: `be581aeca4afaf3a7cea8b4b047281fd78e661de`.
+- Chuỗi khảo sát: Exchange `65b40161`, RN `1574d986`, AI offline `c5c30261`,
+  evidence Android `1aa958beecff779ea7dd56a513e3fb7aa4ed4646`.
+- Source sau sửa finding: `aeee8b81e89b0c1ab257fc13c76348a3d2721965`, nhánh
+  `codex/money-permission-review`. Reviewer đọc toàn bộ diff từ base, không chỉ
+  commit sửa cuối. Một worktree; trước lượt review sạch, không có local work bị bỏ.
+- Runtime MongoDB; contract0.64.0. Không đổi migration, ledger/backend trong lượt
+  review này. Không GHN/carrier/Driver, env, DB chính, push/PR/merge/deploy.
+
+### Finding xác nhận và đã sửa
+
+**R10 · P2 · intent bị bỏ sau HTTP408/429 dù kết quả trước chưa rõ.**
+[Hai helper dùng chung](../../packages/session-client/src/order-response.ts)
+trước sửa loại408/429 cùng nhóm từ chối chắc chắn. Tái hiện offline: gửi create
+hoặc accept/reject/pay/cancel nhận503 mô phỏng mất ACK; retry nhận408 hoặc429;
+map intent mất mục đã lưu. Client có thể tạo key/version mới hoặc bỏ chặn quyết
+định đối nghịch trước khi lấy được receipt cũ, vi phạm invariant retry trong
+AGENTS. Với429 ở lần retry, bị giới hạn request không chứng minh lần trước chưa
+commit. Đây là lỗi client được tái hiện, **không phải bằng chứng đã phát sinh đơn
+trùng hoặc mất tiền**; backend vẫn có state/version/receipt guards.
+
+- Lỗi quyết định accept/reject có từ base; gói RN mở rộng helper cho pay/cancel và
+  thêm create nên cũng chịu cùng lỗi. Không gán toàn bộ lỗi cho increment RN.
+- Sửa bằng cùng một predicate cho hai helper:401/403/408/429, network/5xx và
+  lỗi đọc receipt giữ intent;409 từ chối chắc chắn vẫn cho phép intent mới theo
+  protocol hiện có. Không thay key/body/version khi retry hoặc tự gọi mutation.
+- [Regression](../../packages/session-client/src/order-response.test.ts):10ca
+  mới FAIL trước sửa (8quyết định,2create); PASS sau sửa. Kiểm giữ map, chặn
+  opposite trước HTTP, retry đúng key/body/version và xóa pending khi ACK hợp lệ.
+  Đây là fake transport/unit, không proxy thật hoặc kiểm ledger/Mongo mới.
+
+### Đường đọc và kết luận trong phạm vi đã rà
+
+| Phần | Source và invariant đã đối chiếu | Kết luận / giới hạn |
+| --- | --- | --- |
+| Phân xử Exchange | [service](../../apps/api/src/modules/exchanges/exchanges.service.ts): listResolutions/resolveDispute; [executor](../../apps/api/src/modules/commands/mongo-command.service.ts): actor/execute/executePrincipal; [controller](../../apps/api/src/modules/exchanges/exchange-operations.controller.ts); [ADR0057](../adr/0057-exchange-resolution-safety.md) và OpenAPI | Current ACTIVE role/session và self-participant check trước receipt; quyết định mới bị chặn, queue loại self. Không mở thực thi phân xử hoặc kết luận dispute hoàn chỉnh |
+| Tiền/sách và worker | [inspection policy](../../apps/api/src/modules/exchanges/exchange-inspection.ts), expireInspection; [E2E](../../apps/api/test/exchanges.e2e-spec.ts): Exchange resolution safety | Predicate không settle claim; denial không đi vào ledger/release. Đọc assertions cả2decision,2role/2participant,600.000đ, replay/revoke và Gate contention;45/45 là evidence lượt65b40161 đã ghi, không chạy lại Mongo trong lượt này |
+| Session và hành trình RN/web | [helper](../../packages/session-client/src/order-response.ts), [checkout](../../apps/mobile-react-native/src/features/orders/buy-now-modal.tsx), [OrderFocus](../../apps/mobile-react-native/src/features/orders/order-focus-screen.tsx), [web](../../apps/user-web/src/components/OrderResponse.tsx) | R10 đã sửa; map theo identity/generation, late ACK không điều hướng phiên đã đóng. Bộ nhớ chỉ tồn tại trong tiến trình; không tuyên bố chịu được app bị kill. [Native evidence](../ui/MEMBER_NATIVE_DEMO_2026_11_01.md) thuộc sourcec5c30261, chưa chứa sửa408/429 |
+| AI offline | [preflight](../../apps/api/eval/autofill-assist/run.ts), [qualityGate](../../apps/api/eval/autofill-assist/quality.ts), [workflow](../../.github/workflows/listing-ai-offline-ci.yml), [corpus/evidence](../features/LISTING_AI_CORPUS_2026_10_29.md) | Check-only thoát trước adapter/provider; workflow dùng fixture, gate từ chối failure/thiếu điểm/trùng ID. Không sửa model/prompt.0ảnh điện thoại/0human review; không nâng technical PASS thành chất lượng AI đã nghiệm thu |
+
+### Kiểm tra thực chạy trong lượt review
+
+Windows/Node local; source sửa tương ứng `aeee8b81`. Các lệnh dưới không bật app,
+gọi provider hoặc dùng DB. Không thay assertion cũ để che lỗi.
+
+| Check | Kết quả | Giới hạn |
+| --- | --- | --- |
+| Session focused trước sửa | FAIL10/20 như dự kiến | Regression chứng minh map bị xóa sau408/429 |
+| `pnpm --filter @used-books/session-client test` | PASS75/75,9file | Fake transport; gồm10ca mới |
+| RN `typecheck` và `test` | PASS164/164,24file | Không Android build hoặc native runtime mới |
+| User web `typecheck` và `test` | PASS253/253,38file | Không browser E2E mới |
+| Oxlint hai file session sửa | PASS | Chạy binary local từ root với đường dẫn nằm trong repo |
+| `pnpm docs:check` / `git diff --check` | PASS |484Markdown/3106relative links/6skill pairs; không kiểm anchor, URL ngoài hoặc business claims |
+| Mongo/contract/build/browser/native/AI live | NOT RUN lượt này | Không đổi API/schema/UI/model; giữ evidence có SHA của từng gói, không chạy lại harness nặng |
+
+### Remote và môi trường đã xác minh
+
+Fetch không có main mới; GitHub trả0PR mở. Sáu workflow sau cùng PASS ở **base
+be581aec**, không phải ở local head: [API](https://github.com/huangg49/used-book-marketplace/actions/runs/41163724896),
+[User Web](https://github.com/huangg49/used-book-marketplace/actions/runs/41163724953),
+[RN](https://github.com/huangg49/used-book-marketplace/actions/runs/41163724882),
+[Operations](https://github.com/huangg49/used-book-marketplace/actions/runs/41163724892),
+[Docs](https://github.com/huangg49/used-book-marketplace/actions/runs/41163725001),
+[Demo](https://github.com/huangg49/used-book-marketplace/actions/runs/41163724878).
+CI của local chain **NOT RUN**; không nhận thành Admin/Flutter/native PASS.
+
+Mongo app và Mongo QA đều dừng; không listener3000/3009/3020/57017/8089/5037 tại
+lượt kiểm. Không bật thêm dịch vụ hoặc ghi/xóa DB. READINESS giữ nguyên.
+
+### Đường kiểm tham khảo và bước tích hợp
+
+Đường đọc dưới đây được giữ để người nhận có thể kiểm lại. Với ngoại lệ vừa được
+chủ dự án cấp ở đầu mục này, gói hiện tại không chờ owner/reviewer thứ hai ký nhận;
+không ghi thêm chữ ký người thật hoặc nhận là review độc lập đã PASS.
+
+1. Chấp nhận phạm vi fail-closed của ADR0057: tiền/sách giữ khi protocol quyết định
+   chưa đủ; replay lịch sử không là quyền tạo phán quyết mới.
+2. Đối chiếu current auth trước replay, cả2participant/2role và worker contention;
+   nếu cần chạy lại, dùng replica QA/DB `_test`, không DB chính.
+3. Đọc R10/fix/regression và giới hạn tiến trình/native; nhận xét có căn cứ,
+   nếu có review bổ sung, ghi reviewer, SHA đã review và kết luận vào phiếu dưới.
+
+Khi owner giao quyền publish, mới push/mở PR và lấy CI ở đúng
+candidate head; mọi job áp dụng phải PASS trước merge. Chưa tự thực hiện các
+bước đó. Ảnh điện thoại/human AI, UX người thật và native còn mở theo gate riêng.
+
+## Nguồn và ranh giới — baseline lịch sử
 
 Cập nhật09/10: review mới chọn SHA thực tế/contract từ Git và OpenAPI (snapshot
 main `da59199`, contract0.30.0,15 migration Mongo). Đọc ADR0027 và các lane

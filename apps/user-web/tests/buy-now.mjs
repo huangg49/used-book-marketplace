@@ -1,5 +1,7 @@
 // Real HTTP/Mongo and two browser sessions; QA-only accounts/storage/funding.
 import assert from "node:assert/strict";
+import { parseArgs } from "node:util";
+const { values: { "checkout-only": checkoutOnly } } = parseArgs({ options: { "checkout-only": { type: "boolean", default: false } } });
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
@@ -475,6 +477,9 @@ try {
       .countDocuments({ targetId: orderId, kind: "OrderBuyNowPaid" }),
     2,
   );
+  // The scoped RN/session regression stops before any shipping/carrier command.
+  // Full CI keeps the original fulfillment assertions when this flag is absent.
+  if (!checkoutOnly) {
   await login(sellerPage, "member@operations.test");
   await sellerPage
     .getByRole("button", { name: /^Tài khoản của .+$/, exact: true })
@@ -646,6 +651,7 @@ try {
     path: path.join(artifacts, "buyer-in-transit-mobile.png"),
     fullPage: true,
   });
+  }
   assert.equal(
     await fixture.db
       .collection("purchase_conversations")
@@ -657,7 +663,8 @@ try {
     conversationId,
   );
   assert.deepEqual(errors, []);
-  console.log(
+  if (checkoutOnly) console.log("PASS buy-now checkout-only: quote/address/create/pay, lost ACK pinned key/body, single ledger hold/Order/notification, public state, chat focus after Back; no shipping/carrier commands.");
+  else console.log(
     "PASS buy-now browser: listed price, quote does not reserve or open chat, create/pay lost ACK same-key/body replay, one OrderCreated room shared by buyer/seller with no negotiation/quote, underfunded no hold, paid Preparing without seller approval, durable notifications, file chooser/input/focus/draft retained across shipment polling and transient 503, real image upload/registration, independent simulated pickup InTransit; 390/1440. API/Mongo real, QA storage/payment/carrier only.",
   );
 } catch (error) {

@@ -37,6 +37,14 @@ type Lockable = { lockSeq: number };
 // Roles are embedded so role writers write the locked user document (replaces
 // the role_mutation_lock trigger); UserRole's composite key becomes role uniqueness.
 export interface UserDoc extends Lockable {
+  administrativeLock?: {
+    scope: 'NewTransactions'; restoreStatus: 'ACTIVE' | 'RESTRICTED';
+    reason: string; unlockCondition: string; relatedReference: string | null;
+    actorId: string; createdAt: Date;
+  } | null;
+  version?: number;
+  contactPhone?: string | null;
+  avatarId?: string | null;
   _id: string;
   emailNormalized: string;
   passwordHash: string;
@@ -46,6 +54,11 @@ export interface UserDoc extends Lockable {
   createdAt: Date;
   updatedAt: Date;
   roles: { role: RoleCode; grantedAt: Date }[];
+}
+export interface MemberCartDoc extends Lockable {
+  _id: string; version: number;
+  items: {listingId:string;priceAtAdd:number;addedAt:Date}[];
+  createdAt:Date;updatedAt:Date;
 }
 export interface AuthSessionDoc extends Lockable {
   _id: string;
@@ -233,6 +246,7 @@ export interface ListingDecisionDoc {
 // Exactly one target field is set; `principal` is the idempotency identity:
 // `user:<actorId>` or `system:<systemActor>`.
 export interface MutationReceiptDoc {
+  accountId?: string | null;
   reviewId?: string | null;
   _id: string;
   principal: string;
@@ -254,6 +268,7 @@ export interface MutationReceiptDoc {
   committedAt: Date;
 }
 export interface AuditEventDoc {
+  accountId?: string | null;
   reviewId?: string | null;
   _id: string;
   actorId: string | null;
@@ -273,6 +288,35 @@ export interface AuditEventDoc {
   reason: string | null;
   requestId: string;
   createdAt: Date;
+}
+
+export interface ProfileAvatarDoc extends Lockable {
+  _id: string;
+  ownerId: string;
+  version: number;
+  state: 'Pending' | 'Ready' | 'Attached' | 'Retired' | 'Deleting';
+  mimeType: string;
+  byteSize: number;
+  sha256: string;
+  storageKey: string;
+  inFlightUntil: Date | null;
+  gcAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+export interface MemberEmailChangeDoc extends Lockable {
+  _id: string;
+  userId: string;
+  version: number;
+  emailNormalized: string;
+  previousEmailHash: string;
+  passwordFingerprint: string;
+  codeHash: string;
+  attempts: number;
+  state: 'Pending' | 'Verified' | 'Cancelled' | 'Exhausted';
+  createdAt: Date;
+  expiresAt: Date;
+  gcAt: Date;
 }
 export interface OutboxEventDoc {
   _id: string;

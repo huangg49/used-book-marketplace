@@ -14,6 +14,7 @@ import { formatVnd } from "./format";
 import { colors, space, stitchTokens } from "./theme";
 
 export interface BookCardItem {
+  bundle?: {title: string; items: unknown[]} | null;
   id: string;
   book?: {
     id?: string;
@@ -130,7 +131,7 @@ export function BookCard({
     }
   };
 
-  const bookTitle = item.book?.title || "Chưa chọn đầu sách";
+  const bookTitle = item.bundle?.title || item.book?.title || "Chưa chọn đầu sách";
   const authorText =
     Array.isArray(item.book?.authors) && item.book.authors.length > 0
       ? item.book.authors.join(" · ")
@@ -158,7 +159,7 @@ export function BookCard({
   };
 
   // Mode badge
-  const modeInfo = item.mode ? modeConfig[item.mode] || { label: item.mode, bg: stitchTokens.wine } : null;
+  const modeInfo = item.bundle ? {label: `Bộ ${item.bundle.items.length} cuốn · Giá cả bộ`, bg: stitchTokens.wine} : item.mode ? modeConfig[item.mode] || { label: item.mode, bg: stitchTokens.wine } : null;
 
   const locationText =
     item.fulfillment?.name ?? item.location ?? "TP.HCM";

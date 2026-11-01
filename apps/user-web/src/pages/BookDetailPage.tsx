@@ -1,4 +1,5 @@
 import { BundleManifest } from "../components/BookBundle";
+import {AddToCart} from '../components/AddToCart';
 import { listingTitle } from "../lib/book-bundle";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
@@ -225,6 +226,7 @@ export function BookDetailPage() {
                   </Link>
                 )}
               </div>
+              {!isOwner&&!held&&<AddToCart key={state.status==='authenticated'?state.user.id:'anonymous'} listingId={book.id} listingVersion={book.version}/>}
               {held && !orderConversation && state.status === 'authenticated' && (
                 <Link className={styles.secondary} to="/orders">Xem đơn hàng của tôi</Link>
               )}

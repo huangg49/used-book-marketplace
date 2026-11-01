@@ -25,6 +25,7 @@ import {
   getPurchaseConversation,
 } from "./purchase-conversation-service";
 import { BookIdentityCard } from "./components/book-identity-card";
+import { BundleManifest } from "../bundles/bundle-manifest";
 import { AgreementSheetPanel } from "./components/agreement-sheet-panel";
 import { ChatMessagesPanel } from "./components/chat-messages-panel";
 import { MemberNavigation } from "../navigation/member-navigation";
@@ -51,7 +52,7 @@ export function ConversationScreen({ id }: ConversationScreenProps) {
   const listingQuery = useQuery({
     queryKey: ["public-listing", room?.listingId],
     queryFn: () =>
-      client.publicRequest(`/listings/${room!.listingId}`, publicListing),
+      client.publicRequest(`/listings/${room!.listingId}?bundleSupport=whole-v1`, publicListing),
     enabled: Boolean(room?.listingId),
   });
 
@@ -194,6 +195,7 @@ export function ConversationScreen({ id }: ConversationScreenProps) {
         room={room}
         isExchange={isExchange}
       />
+      <BundleManifest bundle={listingQuery.data?.bundle}/>
 
       {/* 3. Thanh chuyển đổi 2 Panel (Segmented Tabs Bar) */}
       <View style={styles.segmentedTabBar} role="tablist">

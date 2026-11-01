@@ -1,7 +1,7 @@
 import { ConversationAgreementsService } from './conversation-agreements.service.js';
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import type { PurchaseConversationDoc } from '../../database/mongo/documents.js';
+import type { PurchaseConversationDoc, UserDoc } from '../../database/mongo/documents.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import { MongoCommandService, member, requireActive, type Actor, type CommandContext } from '../commands/mongo-command.service.js';
 import { conflict, invalidState, notFound, type Wire } from '../commands/domain-error.js';
@@ -44,6 +44,14 @@ export class PurchasesService {
   }
   private participant(row: PurchaseConversationDoc, userId: string) {
     if (row.buyerId !== userId && row.sellerId !== userId) throw notFound();
+  }
+  private async existingContact(tx: Tx, row: PurchaseConversationDoc, actor: UserDoc) {
+    member(actor);
+    this.participant(row, actor._id);
+    if (actor.status === 'ACTIVE') return;
+    const order = row.status === 'OrderCreated' && row.orderId
+      ? await tx.c.direct_orders.findOne({_id:row.orderId,buyerId:row.buyerId,sellerId:row.sellerId}) : null;
+    if (!order) requireActive(actor);
   }
   private async view(tx: Tx, row: PurchaseConversationDoc) {
     const buyer = await tx.c.users.findOne({ _id: row.buyerId });
@@ -195,27 +203,39 @@ export class PurchasesService {
     });
   }
   events(auth: Actor, id: string) {
-    return this.commands.read(auth, async (tx, actor) => {
+    return this.commands.readObligation(auth, async (tx, actor) => {
       const row = await this.conversation(tx, id); this.participant(row, actor._id);
+      member(actor); if(actor.status==='LOCKED') await this.existingContact(tx,row,actor);
       const events = await tx.c.conversation_events.find({ conversationId: id }, { sort: { createdAt: 1, _id: 1 }, limit: 500 }).toArray();
       return events.map(({ _id, createdAt, ...event }) => ({ id: _id, ...event, createdAt: createdAt.toISOString() }));
     });
   }
   list(auth: Actor) {
-    return this.commands.read(auth, async (tx, actor) => {
-      const rows = await tx.c.purchase_conversations.find({ $or: [{ buyerId: actor._id }, { sellerId: actor._id }] }, { sort: { updatedAt: -1, _id: -1 }, limit: 100 }).toArray();
-      return Promise.all(rows.map((row) => this.view(tx, row)));
+    return this.commands.readObligation(auth, async (tx, actor) => {
+      member(actor);
+      const rows = await tx.c.purchase_conversations.find({ $or: [{ buyerId: actor._id }, { sellerId: actor._id }],...(actor.status==='LOCKED'?{status:'OrderCreated' as const,orderId:{$ne:null}}:{}) }, { sort: { updatedAt: -1, _id: -1 }, limit: 100 }).toArray();
+      const visible=[];
+      for(const row of rows){
+        if(actor.status==='LOCKED'){
+          const order=await tx.c.direct_orders.findOne({_id:row.orderId!,buyerId:row.buyerId,sellerId:row.sellerId});
+          if(!order)continue;
+        }
+        visible.push(await this.view(tx,row));
+      }
+      return visible;
     });
   }
   get(auth: Actor, id: string) {
-    return this.commands.read(auth, async (tx, actor) => {
+    return this.commands.readObligation(auth, async (tx, actor) => {
       const row = await this.conversation(tx, id); this.participant(row, actor._id);
+      member(actor); if(actor.status==='LOCKED') await this.existingContact(tx,row,actor);
       return this.view(tx, row);
     });
   }
   messages(auth: Actor, id: string) {
-    return this.commands.read(auth, async (tx, actor) => {
+    return this.commands.readObligation(auth, async (tx, actor) => {
       const row = await this.conversation(tx, id); this.participant(row, actor._id);
+      member(actor); if(actor.status==='LOCKED') await this.existingContact(tx,row,actor);
       const messages = await tx.c.purchase_messages.find({ conversationId: id }, { sort: { sentAt: 1, _id: 1 }, limit: 500 }).toArray();
       const links = await tx.c.conversation_exchange_links.find({ conversationId: id }).toArray();
       const legacy = links.length ? await tx.c.exchange_messages.find({ exchangeId: { $in: links.map(l => l._id) } }, { sort: { sentAt: -1, _id: -1 }, limit: 500 }).toArray() : [];
@@ -223,13 +243,13 @@ export class PurchasesService {
     });
   }
   send(auth: Actor, input: { messageId: string; conversationId: string; body: string }) {
-    return this.commands.read(auth, async (tx, actor) => {
+    return this.commands.readObligation(auth, async (tx, actor) => {
       const body = input.body.trim();
       if (!body || [...body].length > 1000) throw invalidState();
       await tx.lock('purchase_conversations', [input.conversationId]);
       const row = await this.conversation(tx, input.conversationId); this.participant(row, actor._id);
       const now = await tx.now();
-      requireActive(actor);
+      await this.existingContact(tx,row,actor);
       if (!['Active', 'OrderCreated'].includes(row.status) || (row.status === 'Active' && row.expiresAt && now >= row.expiresAt)) throw invalidState();
       const existing = await tx.c.purchase_messages.findOne({ _id: input.messageId });
       if (existing) {

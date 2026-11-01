@@ -33,6 +33,7 @@ const UserDirectory = lazy(() =>
     default: m.UserDirectory,
   })),
 );
+const AccountControls = lazy(() => import('./features/users/account-controls').then(m=>({default:m.AccountControls})));
 const TransactionReviewsPage=lazy(()=>import('./features/reviews/TransactionReviewsPage').then(m=>({default:m.TransactionReviewsPage})));
 const IntakeQueue = lazy(() =>
   import("./features/operations/queues").then((m) => ({
@@ -119,6 +120,7 @@ const router = createBrowserRouter([
         children: [{ path: ":id", element: <Detail /> }],
       },
       { path: "/users", element: <UserDirectory /> },
+      { path: "/users/:id", element: <AccountControls /> },
       { path: "/transaction-reviews", element: <TransactionReviewsPage /> },
       { path: "/operations/intakes", element: <IntakeQueue /> },
       { path: "/operations/collections", element: <CollectionQueue /> },

@@ -12,7 +12,7 @@ export interface HomeHeaderProps {
   readonly search?: string;
   readonly onSearchChange?: (value: string) => void;
   readonly onSubmitSearch?: () => void;
-  readonly onCameraPress: () => void;
+  readonly onInspectionPress: () => void;
   readonly onOpenNotifications: () => void;
   readonly onMessagesPress?: () => void;
   readonly notificationCount?: number;
@@ -22,7 +22,7 @@ export interface HomeHeaderProps {
 export function HomeHeader({
   onSearchPress,
   search = "",
-  onCameraPress,
+  onInspectionPress,
   onOpenNotifications,
   onMessagesPress,
   notificationCount = 0,
@@ -67,43 +67,41 @@ export function HomeHeader({
     <View style={[styles.headerRoot, { paddingTop: Math.max(insets.top, 12) }]}>
       <View style={styles.headerContent}>
         {/* Search Bar - Button-like trigger navigating directly to /search */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Tìm sách theo tên, tác giả hoặc ISBN"
-          onPress={onSearchPress}
-          style={({ pressed }) => [
-            styles.searchBar,
-            pressed && { opacity: 0.85 },
-          ]}
-        >
-          <View style={styles.searchIconWrapper}>
-            <Icon name="search" size={18} color={stitchTokens.wine} />
-          </View>
-          <View pointerEvents="none" style={styles.searchInputWrapper}>
-            <AppText
-              kind="small"
-              style={[
-                styles.searchPlaceholder,
-                search ? styles.searchActiveText : null,
-              ]}
-              numberOfLines={1}
-            >
-              {search || "Tìm kiếm sách cổ, tác giả, tựa s..."}
-            </AppText>
-          </View>
+        <View style={styles.searchBar}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Tìm bằng hình ảnh bìa sách"
-            onPress={(e) => {
-              e.stopPropagation();
-              onCameraPress();
-            }}
-            hitSlop={8}
+            accessibilityLabel="Tìm sách theo tên, tác giả hoặc ISBN"
+            onPress={onSearchPress}
+            style={({ pressed }) => [
+              styles.searchEntry,
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <View style={styles.searchIconWrapper}>
+              <Icon name="search" size={18} color={stitchTokens.wine} />
+            </View>
+            <View pointerEvents="none" style={styles.searchInputWrapper}>
+              <AppText
+                kind="small"
+                style={[
+                  styles.searchPlaceholder,
+                  search ? styles.searchActiveText : null,
+                ]}
+                numberOfLines={1}
+              >
+                {search || "Tìm kiếm sách cổ, tác giả, tựa s..."}
+              </AppText>
+            </View>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Thông tin kiểm tra sách tại điểm"
+            onPress={onInspectionPress}
             style={styles.iconButton}
           >
-            <Icon name="camera" size={18} color={stitchTokens.stoneMuted} />
+            <Icon name="shield" size={18} color={stitchTokens.stoneMuted} />
           </Pressable>
-        </Pressable>
+        </View>
 
         {/* Action: Notifications */}
         <Pressable
@@ -170,12 +168,19 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    height: 38,
+    minHeight: 48,
     backgroundColor: stitchTokens.white,
     borderRadius: 8,
     paddingHorizontal: 10,
     borderWidth: 1,
     borderColor: stitchTokens.softRose,
+  },
+  searchEntry: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
   },
   searchIconWrapper: {
     marginRight: 8,
@@ -193,14 +198,15 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   iconButton: {
-    padding: 4,
+    minWidth: 48,
+    minHeight: 48,
     justifyContent: "center",
     alignItems: "center",
   },
   headerActionBtn: {
     position: "relative",
-    width: 36,
-    height: 36,
+    width: 48,
+    height: 48,
     borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
