@@ -36,6 +36,7 @@ export function navigationGroups(user: CurrentUser | undefined): NavigationGroup
     groups.push({ id: "operations", label: "Điểm & đấu giá", items });
   }
   if (canReviewCatalog(user)) groups.push({ id: "management", label: "Quản lý", items: [
+    { label: "Trung tâm xử lý", to: "/support", icon: "resolution" },
     { label: "Quản lý người dùng", to: "/users", icon: "users" },
   ] });
   if (canSimulate(user)) groups.push({ id: "simulation", label: "Mô phỏng", items: [

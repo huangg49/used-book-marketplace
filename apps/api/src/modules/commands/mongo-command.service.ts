@@ -235,6 +235,7 @@ export type AuctionOperation =
   | 'dispatchPointOrder'
   | 'recordPointDelivery';
 type CommandChange =
+  | SupportChange
   | AccountChange
   | ReviewChange
   | PointChange
@@ -270,6 +271,10 @@ export type AccountChange = {
   reason?: string;
   before?: Json;
 };
+export type SupportChange = {
+  entityType: 'SupportCase'; entityId: string; version: number;
+  state: Wire['SupportState']; decidedAt: Date; reason?: string; event?: string;
+};
 type Options<C, D> = {
   discover?: (tx: Tx) => Promise<string[]>;
   authorize: (tx: Tx, actor: CurrentActor) => Promise<C>;
@@ -297,6 +302,7 @@ const EXISTING_OBLIGATION_OPERATIONS = [
   'cancelUnpaidOrder',
   'openOrderConversation',
   'removeCartItem',
+  'replyToSupportCase',
   'cancelPaidOrder',
   'rejectPaidOrder',
   'acceptOrder',
@@ -324,6 +330,13 @@ const sessionExpired = (
 @Injectable()
 export class MongoCommandService {
   constructor(private readonly mongo: MongoService) {}
+  runSupport<C>(context: CommandContext, operation: string, target: string, body: unknown, options: Options<C, SupportChange>) {
+    return this.execute(context, operation, target, body, options,
+      (change,id): Wire['SupportCaseReceipt'] => ({
+        id, entityType:'SupportCase', entityId:change.entityId, version:change.version,
+        state:change.state, serverTime:change.decidedAt.toISOString(),
+      }));
+  }
   runAccount<C>(
     context: CommandContext,
     operation: string,
@@ -1083,7 +1096,8 @@ export class MongoCommandService {
         change.entityType === 'PointAssignment' ||
         change.entityType === 'PointIncident' ||
         change.entityType === 'PurchaseConversation' ||
-        change.entityType === 'TransactionReview'
+        change.entityType === 'TransactionReview' ||
+        change.entityType === 'SupportCase'
           ? change.decidedAt
           : new Date();
       const receipt = project(change, id, serverTime);
@@ -1097,7 +1111,9 @@ export class MongoCommandService {
         topupId: null as string | null,
         pointId: null as string | null,
       };
-      if ('accountId' in change)
+      if (change.entityType === 'SupportCase')
+        Object.assign(targets, { supportCaseId: change.entityId });
+      else if ('accountId' in change)
         Object.assign(targets, { accountId: change.accountId });
       else if (change.entityType === 'TransactionReview')
         Object.assign(targets, { reviewId: change.entityId });
@@ -1215,6 +1231,8 @@ export class MongoCommandService {
 
 function auditAfter(change: CommandChange): Json {
   switch (change.entityType) {
+    case 'SupportCase':
+      return {entityId:change.entityId,version:change.version,state:change.state};
     case 'UserAccount':
       return { entityId: change.entityId, version: change.version, state: change.state, ...change.accountControl };
     case 'MemberProfile':

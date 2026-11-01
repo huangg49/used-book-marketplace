@@ -222,3 +222,15 @@ The immutable `listing_decisions` approval for a bundle adds the seventh true
 check `bundleContentsVerified`. Order item snapshots embed the full manifest from
 the locked revision. A bundle remains one workflow item and one commitment;
 component inventory/partial purchase/partial return identities are not introduced.
+
+## Support cases (ADR0061, migration0050)
+
+Mongo-native `support_cases` are mutable, lockable UUID documents, separate from
+financial disputes. Command lock → actor/session → case lock serializes assignment,
+messages and state changes with expectedVersion; linked transaction IDs never
+become receipt targets by accident. Receipts/audit carry nullable `supportCaseId`.
+`support_messages` are append-only with caseId, author/audience and server time;
+app privileges permit find/insert only. Member queries remove internal messages
+at the server. Notifications join the case transaction and dedupe by case/version/
+recipient. Current schema adds both collections to roles; no PostgreSQL model or
+historical migration is rewritten. Full dispute settlement is unchanged.

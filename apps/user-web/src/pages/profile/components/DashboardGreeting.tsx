@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Wallet, Library, AlertTriangle, ShieldCheck, Bell } from "lucide-react";
 import { ROUTES } from "../../../lib/routes";
-import { listNotifications } from "../../../services/notifications";
+import { listNotifications,notificationKeys } from "../../../services/notifications";
 
 interface DashboardUser {
   id: string;
@@ -20,7 +20,7 @@ export function DashboardGreeting({ user }: DashboardGreetingProps) {
   const isActive = user.status === "ACTIVE";
 
   const notificationsQuery = useQuery({
-    queryKey: ["notifications", "page"],
+    queryKey: notificationKeys.summary(user.id),
     queryFn: () => listNotifications(undefined, 1),
     staleTime: 30_000,
   });

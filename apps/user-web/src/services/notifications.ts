@@ -24,10 +24,13 @@ export const notificationSchema = z.object({
     'ExchangeCompleted',
     'ExchangeCancelled',
     'ExchangeRejected',
+    'ExchangeDisputed',
+    'SupportUpdated',
+    'ReviewModerated',
   ]),
   title: z.string(),
   body: z.string(),
-  targetType: z.enum(['Auction', 'Exchange', 'Order']),
+  targetType: z.enum(['Auction', 'Exchange', 'Order', 'SupportCase', 'TransactionReview']),
   targetId: z.string().uuid(),
   createdAt: z.string(),
   readAt: z.string().nullable(),
@@ -37,6 +40,21 @@ const unreadSchema = z.object({ unreadCount: z.number().int() })
 
 export type MemberNotification = z.infer<typeof notificationSchema>
 export type NotificationPage = z.infer<typeof pageSchema>
+export const notificationKeys={
+  summary:(owner:string|undefined)=>['notifications',owner,'summary'] as const,
+  pages:(owner:string|undefined)=>['notifications',owner,'pages'] as const,
+  bell:(owner:string|undefined)=>['notifications',owner,'bell'] as const,
+};
+export function notificationPath(n:Pick<MemberNotification,'targetType'|'targetId'>){
+  switch(n.targetType){
+    case 'SupportCase':return `/support/${n.targetId}`;
+    case 'TransactionReview':return `/reviews?reviewId=${encodeURIComponent(n.targetId)}`;
+    case 'Order':return `/orders/${n.targetId}`;
+    case 'Exchange':return `/exchange/${n.targetId}`;
+    case 'Auction':return `/auctions/${n.targetId}`;
+    default:return '/notifications';
+  }
+}
 
 export function listNotifications(cursor?: string, limit = 20) {
   const query = new URLSearchParams({ limit: String(limit) })

@@ -3565,6 +3565,143 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/support-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Own support cases only. Creation requires ACTIVE MEMBER; read and reply on existing owned cases permit locked members. No escrow, refund or transaction-state side effects. */
+        get: operations["listMySupportCases"];
+        put?: never;
+        /** @description Own support cases only. Creation requires ACTIVE MEMBER; read and reply on existing owned cases permit locked members. No escrow, refund or transaction-state side effects. */
+        post: operations["createSupportCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/support-cases/{caseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Own support cases only. Creation requires ACTIVE MEMBER; read and reply on existing owned cases permit locked members. No escrow, refund or transaction-state side effects. */
+        get: operations["getMySupportCase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/support-cases/{caseId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Own support cases only. Creation requires ACTIVE MEMBER; read and reply on existing owned cases permit locked members. No escrow, refund or transaction-state side effects. */
+        post: operations["replyToSupportCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/support-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN, independent of reporter and linked participants. Current authorization before replay. Case responses do not move money or adjudicate a transaction. */
+        get: operations["listOperationsSupportCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/support-cases/{caseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN, independent of reporter and linked participants. Current authorization before replay. Case responses do not move money or adjudicate a transaction. */
+        get: operations["getOperationsSupportCase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/support-cases/{caseId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN, independent of reporter and linked participants. Current authorization before replay. Case responses do not move money or adjudicate a transaction. */
+        post: operations["messageSupportCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/support-cases/{caseId}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN, independent of reporter and linked participants. Current authorization before replay. Case responses do not move money or adjudicate a transaction. */
+        post: operations["actOnSupportCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/transaction-reviews/{reviewId}/target": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Own support cases only. Creation requires ACTIVE MEMBER; read and reply on existing owned cases permit locked members. No escrow, refund or transaction-state side effects. */
+        get: operations["resolveMyReviewNotification"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4261,11 +4398,11 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed";
+            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "SupportUpdated" | "ReviewModerated";
             title: string;
             body: string;
             /** @enum {string} */
-            targetType: "Auction" | "Exchange" | "Order";
+            targetType: "Auction" | "Exchange" | "Order" | "SupportCase" | "TransactionReview";
             /**
              * Format: uuid
              * @description Opens with GET /auctions/{id} or GET /exchanges/{id}; the caller's own view comes from participation or point-order reads.
@@ -6711,6 +6848,107 @@ export interface components {
         ReviewRevisionPage: {
             items: components["schemas"]["ReviewRevisionItem"][];
             nextCursor: string | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        ReviewNotificationTarget: {
+            /** @enum {string} */
+            type: "Exchange" | "DirectOrder" | "PointOrder";
+            /** Format: uuid */
+            id: string;
+        };
+        /** @enum {string} */
+        SupportKind: "Feedback" | "Bug" | "Violation" | "TransactionIssue";
+        /** @enum {string} */
+        SupportState: "Open" | "InReview" | "AwaitingMember" | "Answered" | "Closed";
+        SupportTarget: {
+            /** @enum {string} */
+            type: "DirectOrder" | "Exchange" | "PointOrder" | "Auction" | "Listing" | "Review" | "Member";
+            /** Format: uuid */
+            id: string;
+        };
+        SupportCaseSummary: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "Feedback" | "Bug" | "Violation" | "TransactionIssue";
+            title: string;
+            /** Format: uuid */
+            reporterId: string;
+            reporterName: string;
+            target: {
+                /** @enum {string} */
+                type: "DirectOrder" | "Exchange" | "PointOrder" | "Auction" | "Listing" | "Review" | "Member";
+                /** Format: uuid */
+                id: string;
+            } | null;
+            assigneeId: string | null;
+            /** @enum {string} */
+            state: "Open" | "InReview" | "AwaitingMember" | "Answered" | "Closed";
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateSupportCase: {
+            /** @enum {string} */
+            kind: "Feedback" | "Bug" | "Violation" | "TransactionIssue";
+            title: string;
+            description: string;
+            target: components["schemas"]["SupportTarget"] | null;
+        };
+        SupportMessage: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            authorId: string;
+            authorName: string;
+            /** @enum {string} */
+            role: "Member" | "Admin" | "System";
+            internal: boolean;
+            text: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        SupportCasePage: {
+            items: components["schemas"]["SupportCaseSummary"][];
+            nextCursor: string | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        SupportCaseDetail: {
+            case: components["schemas"]["SupportCaseSummary"];
+            messages: components["schemas"]["SupportMessage"][];
+            canManage: boolean;
+            canReply: boolean;
+            relatedState: string | null;
+            relatedAuctionId: string | null;
+            review: components["schemas"]["ExchangeReviewItem"] | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        SupportMessageCommand: {
+            expectedVersion: number;
+            text: string;
+            internal: boolean;
+        };
+        SupportActionCommand: {
+            expectedVersion: number;
+            /** @enum {string} */
+            action: "Assign" | "RequestEvidence" | "Answer" | "Close" | "Reopen";
+            text: string;
+        };
+        SupportCaseReceipt: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            entityType: "SupportCase";
+            /** Format: uuid */
+            entityId: string;
+            version: number;
+            /** @enum {string} */
+            state: "Open" | "InReview" | "AwaitingMember" | "Answered" | "Closed";
             /** Format: date-time */
             serverTime: string;
         };
@@ -13902,6 +14140,313 @@ export interface operations {
             404: components["responses"]["Error"];
             409: components["responses"]["Error"];
             422: components["responses"]["Error"];
+        };
+    };
+    listMySupportCases: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+                state?: components["schemas"]["SupportState"];
+                kind?: components["schemas"]["SupportKind"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCasePage"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    createSupportCase: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSupportCase"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Exact intent replay. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    getMySupportCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseDetail"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    replyToSupportCase: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportMessageCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Exact intent replay. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    listOperationsSupportCases: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+                state?: components["schemas"]["SupportState"];
+                kind?: components["schemas"]["SupportKind"];
+                assignedToMe?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCasePage"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    getOperationsSupportCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseDetail"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    messageSupportCase: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportMessageCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Exact intent replay. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    actOnSupportCase: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportActionCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Exact intent replay. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    resolveMyReviewNotification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reviewId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewNotificationTarget"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
         };
     };
 }

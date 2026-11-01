@@ -1,6 +1,7 @@
 import { buyNowNotificationsMigration } from '../../src/database/mongo/migrations/0029-buy-now-notifications.js';
 import { reviewLifecycleSpecs } from '../../src/database/mongo/migrations/0040-transaction-review-lifecycle.js';
 import { memberProfileSpecs } from '../../src/database/mongo/migrations/0047-member-profiles.js';
+import {supportSpecs} from '../../src/database/mongo/migrations/0050-support-cases.js';
 import { randomUUID } from 'node:crypto';
 import { MongoClient, MongoServerError, type Db } from 'mongodb';
 import { COLLECTION_NAMES } from '../../src/database/mongo/collections.js';
@@ -128,6 +129,7 @@ describe('migrations', () => {
         listingAutofillSpecs.length -
         // Private profile avatar/challenge collections are Mongo-native too.
         memberProfileSpecs.length -
+        supportSpecs.length -
         // Member cart is Mongo-native (FR-O01).
         1 -
         // ADR 0061 auto review verdicts are Mongo-native.
@@ -1193,5 +1195,27 @@ describe('buy-now notification migration', () => {
       await buyNowNotificationsMigration.up(db);
       expect(await rows.countDocuments()).toBe(2);
     } finally { await db.dropDatabase(); }
+  });
+});
+
+describe('support cases migration and least privilege',()=>{
+  it('upgrades applied 0049 without changing checksums or inbox, and keeps support history append-only',async()=>{
+    const db=root.db(`support_upgrade_${randomUUID().replaceAll('-','')}_test`);
+    try{
+      const old=migrations.filter(m=>!['0050-support-cases','0051-support-auto-review-union'].includes(m.id));
+      await migrate(root,db,old);
+      const before=await db.collection('_migrations').find({_id:{$ne:'~lock'} as never}).toArray();
+      const notice={_id:randomUUID(),userId:randomUUID(),kind:'ExchangeDisputed',title:'QA notice',body:'Existing inbox row',targetType:'Exchange',targetId:randomUUID(),dedupeKey:randomUUID(),createdAt:new Date(),readAt:null};
+      await db.collection('member_notifications').insertOne(notice as never);
+      expect(await migrate(root,db)).toEqual(['0050-support-cases','0051-support-auto-review-union']);
+      for(const row of before)expect(await db.collection('_migrations').findOne({_id:row._id})).toEqual(row);
+      expect(await db.collection('member_notifications').findOne({_id:notice._id as never})).toEqual(notice);
+      expect(await migrate(root,db)).toEqual([]);
+      const message={_id:randomUUID(),caseId:randomUUID(),authorId:randomUUID(),authorName:'QA actor',role:'Member',internal:false,text:'Evidence text retained',createdAt:new Date()};
+      await rootDb.collection('support_messages').insertOne(message as never);
+      await rejectsUnauthorized(appDb.collection('support_messages').updateOne({_id:message._id as never},{$set:{text:'Rewrite'}}));
+      await rejectsUnauthorized(appDb.collection('support_messages').deleteOne({_id:message._id as never}));
+      await rejectsValidation(rootDb.collection('support_messages').insertOne({...message,_id:randomUUID(),role:'Guest'} as never));
+    }finally{await db.dropDatabase();}
   });
 });

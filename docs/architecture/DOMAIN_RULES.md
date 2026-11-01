@@ -100,6 +100,24 @@ hợp lệ, không phụ thuộc số item của trang hiện tại.
 Chi tiết implementation/evidence ở [báo cáo](../features/TRANSACTION_REVIEWS_REPORT.md).
 Không thay READINESS, không cấp ExistingObligation cho review, không thay GHN.
 
+## Hồ sơ phản ánh Member/Admin web
+
+[ADR0061](../adr/0061-web-support-cases.md), contract0.68: SupportCase riêng của
+người gửi, Admin ACTIVE độc lập nhận phụ trách và phản hồi; Staff không tự có
+quyền vào module mới. TransactionIssue kiểm participant DirectOrder/Exchange/
+PointOrder; đây là tiếp nhận hỗ trợ, không thay claim/hold hoặc dispute hai chiều.
+Không chuyển tiền, ghi vi phạm, thay custody hoặc settlement từ một ticket.
+
+Message gốc append-only; ghi chú nội bộ chỉ Admin được đọc. State/receipt/audit/
+notification cùng transaction; auth/owner/independence trước replay. Member bị
+LOCKED chỉ đọc/bổ sung hồ sơ đã có theo đúng method, không tạo report mới. Admin
+gửi kết quả trước đóng, không đóng khi giao dịch còn ResolutionPending. Hai mục
+lịch sử cuối dành cho kết quả/đóng trong giới hạn200; tối đa20 hồ sơ chưa đóng.
+Review moderation giữ ADR0052, thêm hộp thư bền cho hai bên; lý do moderation là
+nội dung gửi các bên, ghi chú riêng không đi vào notification. Mở thông báo đọc
+lại quyền/target ID; cache summary và infinite inbox tách cấu trúc, theo account.
+Hiện nhận chứng cứ văn bản/dữ liệu liên kết; file và phân xử tiền đầy đủ chưa mở.
+
 ## Commitment và unpaid Order
 
 For commitment/checkout work, also read ADR 0013, `docs/features/COMMITMENT_DESIGN.md`,

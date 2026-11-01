@@ -1,6 +1,8 @@
 import { createMemberProfilesMigration, memberProfileSpecs, withMemberProfiles } from './0047-member-profiles.js';
 import { createAccountControlsMigration, withAccountControls } from './0048-account-controls.js';
 import {memberCartMigration,memberCartSpec} from './0049-member-cart.js';
+import { createSupportCasesMigration, supportSpecs, withSupportCases } from './0050-support-cases.js';
+import { createSupportAutoReviewUnionMigration } from './0051-support-auto-review-union.js';
 import { createListingAutoReviewMigration, listingAutoReviewSpec, withListingAutoReview } from './0050-listing-auto-review.js';
 import { transactionReviewValidatorFixMigration } from './0039-transaction-review-validator-fix.js';
 import { reviewValidatorReconciliationMigration } from './0041-review-validator-reconciliation.js';
@@ -242,6 +244,12 @@ const listingAutoReviewMigration = createListingAutoReviewMigration([
   ...memberProfilesMigration.definition.collections.filter(spec => spec.name === 'mutation_receipts'),
   ...accountControlsMigration.definition.collections.filter(spec => spec.name === 'audit_events'),
 ]);
+const supportCasesMigration = createSupportCasesMigration([
+  ...memberProfilesMigration.definition.collections.filter(spec => spec.name === 'mutation_receipts'),
+  ...accountControlsMigration.definition.collections.filter(spec => spec.name === 'audit_events'),
+  ...notificationSpecs.map(withExchangeNotificationChanges).map(withBuyNowNotifications).map(withExchangePhase6Changes),
+]);
+const supportAutoReviewUnionMigration = createSupportAutoReviewUnionMigration(supportCasesMigration.definition.collections);
 export const migrations: Migration[] = [
   {
     id: '0001-baseline-schema',
@@ -336,6 +344,8 @@ export const migrations: Migration[] = [
   accountControlsMigration,
   memberCartMigration,
   listingAutoReviewMigration,
+  supportCasesMigration,
+  supportAutoReviewUnionMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -371,7 +381,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withListingExchangePreferences)
     .map(withMemberProfiles)
     .map(withAccountControls)
-    .map(withListingAutoReview),
+    .map(withListingAutoReview)
+    .map(withSupportCases),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape),
@@ -403,7 +414,8 @@ export const currentCollections = (): CollectionSpec[] => [
   ...notificationSpecs
     .map(withExchangeNotificationChanges)
     .map(withBuyNowNotifications)
-    .map(withExchangePhase6Changes),
+    .map(withExchangePhase6Changes)
+    .map(withSupportCases),
   ...accountRecoverySpecs,
   ...authOtpSpecs,
   ...exchangeCollectionSpecs
@@ -427,4 +439,5 @@ export const currentCollections = (): CollectionSpec[] => [
   ...memberProfileSpecs,
   memberCartSpec,
   listingAutoReviewSpec,
+  ...supportSpecs,
 ];

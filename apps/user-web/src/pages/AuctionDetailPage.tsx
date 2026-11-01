@@ -1,3 +1,4 @@
+import {SupportLink} from '../features/support/SupportLink';
 import { useEffect, useId, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@used-books/session-client'
@@ -226,6 +227,7 @@ export function AuctionDetailPage() {
 
         <header className={styles.head}>
           <h1>{auction.title}</h1>
+          <p><SupportLink type='Auction' id={auction.id} report/></p>
           {!!auction.book?.authors.length && <p className={styles.authors}>{auction.book.authors.join(', ')}</p>}
           <span className={`${styles.status} ${open ? '' : styles.statusClosed}`}>
             {open ? <Gavel size={14} aria-hidden="true" /> : null}
@@ -870,10 +872,12 @@ function WinnerPanel({ me, auction, onChanged, paused }: { me: AuctionParticipat
     )
   if (o.state !== 'AwaitingPayment')
     return (
+      <><p><SupportLink type='PointOrder' id={o.id}/></p>
       <PointOrderSteps
         order={o}
         onChanged={async () => { await queryClient.invalidateQueries({ queryKey: ['point-order', me.orderId] }); await onChanged() }}
       />
+      </>
     )
 
   const total = deliver ? quote.data?.buyerTotal : o.amounts.bookPrice
