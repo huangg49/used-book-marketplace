@@ -103,3 +103,17 @@ Tiếp theo khi cần nghiệm thu trọn hành trình: tạo phiên QA riêng m
 đổi và đăng nhập bằng mật khẩu mới trong cùng phiên; không dùng lại credential
 QA cũ sau teardown. Native/UI người thật độc lập vẫn là gate khác.
 Không mở PR trước yêu cầu gom gói của owner; không coi checklist này là release.
+
+### Lượt thứ hai đang chờ owner
+
+Owner xác nhận lượt trước mới đổi mật khẩu/nhận thư, sẽ thử Login. Vì fixture cũ
+đã dọn, đã mở fixture mới với `.tmp/rn-recovery-qa-2.mjs` (ignored), source sản
+phẩm `7ef57f12` không đổi. Cùng QA rs-test57017/DB ngẫu nhiên `_test`, API3009,
+storage fake3010, static8087. Form trống mở ở tab9. Tối đa4send/40phút để đủ
+thời gian handoff; chưa có kết quả hoặc cleanup lượt này.
+
+Runner lượt2 ghi HTTP metadata không body/header: reset204 rồi Login200 và
+session có createdAt sau PasswordReset event. Phân loại mail từ kind trước
+drain, không suy từ tokenId. Chặn tác động ngoài recipient được duyệt như lượt1.
+Journal riêng `.tmp/rn-recovery-qa-2/result.json`; không ghi đè kết quả lượt1.
+Owner cần reset lại rồi Login ngay trong cùng phiên, chỉ dùng credential QA.

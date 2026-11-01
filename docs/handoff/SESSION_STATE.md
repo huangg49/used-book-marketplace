@@ -1,6 +1,6 @@
 # Điểm lưu hiện tại — 01/11/2026
 
-## RN Quên mật khẩu: reset và thư thật đạt; QA đã dọn, Login mới chưa xác nhận
+## RN Quên mật khẩu: reset/thư đạt; lượt QA thứ hai đang chờ owner Login
 
 - Nhánh `codex/rn-password-recovery`, base `39f9b023`, subject
   `feat(rn): add OTP password recovery with safe failure handling`.
@@ -22,6 +22,14 @@
   Đã kiểm không còn DB/user/role browser QA; API3009/fake storage3010/static8087
   và Docker QA57017 đã dừng. File riêng không lộ key/email/code/password.
   Khi nghiệm thu Login mới cần phiên QA khác; URL cũ đã hết hạn.
+- Owner xác nhận lượt trước mới reset/nhận thư, chưa Login. Đã mở QA mới bằng
+  `.tmp/rn-recovery-qa-2.mjs`, source sản phẩm không đổi. API3009/storage fake3010/
+  static8087 và QA57017 đang chạy; DB ngẫu nhiên `_test`, tối đa4send/40phút.
+  Tab9 form trống đã mở để owner reset rồi Login ngay trong cùng lượt. Journal
+  riêng `.tmp/rn-recovery-qa-2/result.json` đo reset204, Login200 sau reset và
+  session tạo mới; dùng auth event cho reset, kind cho mail, không dùng tokenId
+  null để phân loại cảnh báo. Chưa có kết quả/cleanup lượt2; không lấy kết quả
+  lượt1 thay cho lượt2. Tiếp tục đối soát trước khi dọn hoặc khi runner hết hạn.
 - Native runtime tiếp tục BLOCKED bởi automatic policy block cũ; không đi vòng.
   READINESS, GHN, DB/env/bucket chính và remote CI giữ nguyên.
 
