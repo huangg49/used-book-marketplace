@@ -1,5 +1,26 @@
 # Điểm lưu hiện tại — 01/11/2026
 
+## Ba gói được duyệt: hồ sơ Member đã kiểm, tiếp Admin/cart — 01/11/2026
+
+- Owner duyệt lần lượt hồ sơ web/RN, Admin khóa/mở tài khoản và giỏ hàng web/RN;
+  tiếp tục giữ local, chưa push/PR/merge. Nhánh `codex/member-profile`, base
+  `2d051c0a`, subject `feat(profile): connect member profile avatar and verified email changes`.
+  Hai gói Admin/cart tiếp tục trong cùng chuỗi đã duyệt, chưa publish.
+- [ADR0058](../adr/0058-member-profile-and-email-change.md), [báo cáo](../features/MEMBER_PROFILE_REPORT.md),
+  contract0.65/206operations/32controllers: profile version/phone/avatar, private image pipeline/cleanup, OTP
+  đổi email với current password, giữ phiên hiện tại/revoke phiên khác. Web có
+  entry Hồ sơ & bảo mật; RN có Sửa hồ sơ và email. Không đổi snapshot/tiền/GHN.
+- PASS89 API E2E gồm profile16/auth/OTP/obligations; schema27, shared session98,
+  web253/RN164unit, typecheck/lint/build web/RN export, contract/routes. QA storage/mail fake, Sharp/Mongo thật.
+  Factory0047 sửa import cycle nhưng giữ checksum `fbabcbc789b2951b1d6aeed0e449463d6d1170e2eaafdb0ecc6b6cae2a165789`.
+  Browser web/RN-web PASS từ entry, ảnh/OTP/lost ACK/remount/password reentry/Back;
+  responsive320px và web chữ130% đã xem ảnh. Expo web export không là native PASS.
+  Metro launch bị automatic policy block (tool không nêu lý do); không vượt block.
+  Native runtime mới, live storage/mail và human UX NOT RUN; để lượt kiểm cuối chuỗi.
+- Mongo QA57017 đang chạy riêng, DB `_test`; DB chính dừng/không migrate/seed.
+  Browser harness tự bật/tắt API3009/media3010/web5194/RNweb8087 theo lượt, không
+  giữ dịch vụ app sau test. READINESS và các gate ảnh điện thoại/human AI giữ nguyên.
+
 ## Rà tiền/quyền và sửa retry HTTP408/429 — 01/11/2026
 
 - Nhánh `codex/money-permission-review`, base lượt review `1aa958be`; source fix

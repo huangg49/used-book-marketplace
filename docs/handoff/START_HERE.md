@@ -1,8 +1,8 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
-Cập nhật01/11/2026: gói bảo vệ phân xử Exchange từ main `be581aec`, xem
-[SESSION_STATE](SESSION_STATE.md). Contract **0.64.0** (198operations/31controllers); registry có59
-migration MongoDB (đến0046), không suy từ tiền tố file lớn nhất. Migration
+Cập nhật01/11/2026: chuỗi local từ main `be581aec`, có hồ sơ Member theo
+[SESSION_STATE](SESSION_STATE.md). Contract **0.65.0** (206operations/32controllers); registry có60
+migration MongoDB (đến0047), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
 Phạm vi28/10: nhóm **bỏ Forum/Cộng đồng sách** theo [ADR0051](../adr/0051-remove-forum-from-project-scope.md).
@@ -21,7 +21,7 @@ chưa có API/session hoặc parity với RN.
 
 | Phần | Source đã có | Giới hạn/nghiệm thu còn thiếu |
 |---|---|---|
-| Auth/session | Login/me/refresh/logout, đăng ký/xác minh/reset bằng link/OTP; shared SessionClient | Sửa profile/email/avatar, quản lý mọi phiên và Admin khóa/mở account chưa đầy đủ |
+| Auth/session | Login/me/refresh/logout, đăng ký/xác minh/reset bằng link/OTP; shared SessionClient; [hồ sơ/ảnh/email web/RN](../features/MEMBER_PROFILE_REPORT.md) | Native/human hồ sơ chưa nghiệm thu; quản lý mọi phiên và Admin khóa/mở account chưa đầy đủ |
 | Catalog/listing | Request/review, draft/media/revision, gửi duyệt, chỉnh/ẩn/mở/archive; Sale nguyên bộ theo ADR0046 | Merge catalog/banner management và native acceptance toàn hành trình còn thiếu |
 | Member web/RN | Search/detail/wishlist, đăng sách, chat/Order, Exchange, auction/inbox, ví; dùng API thật | Export/browser không thay nghiệm thu native; RN phải giữ empty/error và ảnh đúng nguồn |
 | Địa chỉ | Sổ địa chỉ và snapshot origin/destination; TP.HCM, Bình Dương, Vũng Tàu theo ADR0039 | Mã demo không là dữ liệu địa giới chính thức hoặc điểm hoạt động thật |
@@ -265,7 +265,7 @@ kết quả mong đợi và cách xử lý lỗi mà không bỏ quy tắc nghi�
 4. Có thể demo API Order riêng bằng Swagger và dữ liệu thử, nhưng dừng tại InTransit
    hoặc review ở lane DirectDelivery; không gọi đó là mua hoàn chỉnh. Auction web/
    purchase chat có luồng thật từng phần; completion ViaPoint chưa đóng gate.
-   Ví/topup/pickup là mô phỏng; Exchange/register đã có API thật, profile còn giới hạn.
+   Ví/topup/pickup là mô phỏng; Exchange/register và profile dùng API thật.
 5. Nếu chưa cấu hình storage hoặc catalog chưa duyệt, trình bày đúng trạng thái bị chặn.
    Limiter hiện chặn sau 5 login/account/IP/15 phút, tính cả lần đúng; tránh đăng nhập
    lặp liên tục khi demo team. Không tắt limiter hoặc xóa counters trên DB app để né.

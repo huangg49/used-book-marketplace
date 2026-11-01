@@ -370,6 +370,13 @@ export async function createTestApi({
             { $set: { status, updatedAt: new Date() }, $inc: { lockSeq: 1 } },
           ),
       member,
+      // QA-only access to encrypted mail for an isolated fixture. Never logged.
+      readAccountMail: async (changeId) => {
+        const job = await db.collection('auth_mail_jobs').findOne({ tokenId: changeId });
+        if (!job) return null;
+        const { AuthMailService } = await load('modules/auth/auth-mail.service.js');
+        return app.get(AuthMailService).decrypt(job.encryptedPayload);
+      },
       metadata,
       catalogId: catalog.entityId,
       extraId: extra.entityId,

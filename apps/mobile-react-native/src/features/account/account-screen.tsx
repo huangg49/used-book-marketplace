@@ -153,6 +153,12 @@ export function AccountScreen() {
           <Button
             wine
             secondary
+            title="Sửa hồ sơ và email"
+            onPress={() => router.push('/profile')}
+          />
+          <Button
+            wine
+            secondary
             title="Ví của tôi"
             onPress={() => router.push("/wallet")}
           />

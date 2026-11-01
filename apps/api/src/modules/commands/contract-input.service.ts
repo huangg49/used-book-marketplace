@@ -92,6 +92,10 @@ export class ContractInput {
   }
   body<K extends keyof Wire>(name: K, raw: unknown): Wire[K] {
     const value = trimInput(raw);
+    // Credentials are opaque, including leading/trailing whitespace.
+    if (name === 'RequestMemberEmailChange' && value && typeof value === 'object'
+      && raw && typeof raw === 'object' && !Array.isArray(raw))
+      (value as Record<string, unknown>).password = (raw as Record<string, unknown>).password;
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       const record = value as Record<string, unknown>;
       if (

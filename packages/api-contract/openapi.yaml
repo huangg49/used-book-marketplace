@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.64.0
+  version: 0.65.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -418,6 +418,333 @@ paths:
       description: " Verified LOCKED users may authenticate/rotate/read profile for existing obligations;
         protected routes remain deny-by-default for LOCKED. Status and roles are rechecked from DB."
       x-locked-access: profile
+  /me/profile:
+    get:
+      operationId: getMemberProfile
+      tags:
+        - Member profile
+      description: MEMBER owner only, including LOCKED/RESTRICTED. Current private contact and profile version. Does
+        not expose other members or change transaction snapshots.
+      security:
+        - bearerAuth: []
+      x-locked-access: profile
+      parameters: []
+      responses:
+        "200":
+          description: Current result. Signed reads are short lived; command receipts contain no contact data or
+            verification secrets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberProfile"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: updateMemberProfile
+      tags:
+        - Member profile
+      description: Owner only. Pins expectedVersion/key/body; no role/status/reputation fields accepted. Avatar must
+        be this owner's Ready asset. Existing snapshots are immutable.
+      security:
+        - bearerAuth: []
+      x-locked-access: profile
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: &a1
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Current result. Signed reads are short lived; command receipts contain no contact data or
+            verification secrets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMemberProfile"
+  /me/profile/avatar-uploads:
+    post:
+      operationId: createProfileAvatar
+      tags:
+        - Member profile
+      description: Owner only. At most three unexpired Pending/Ready uploads; max 2MB per JPEG/PNG/WebP. No public
+        bucket or client storage credential. Upload ID is the receipt entityId.
+      security:
+        - bearerAuth: []
+      x-locked-access: profile
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: Current result. Signed reads are short lived; command receipts contain no contact data or
+            verification secrets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProfileAvatar"
+  /me/profile/avatar-uploads/{avatarId}/content:
+    put:
+      operationId: uploadProfileAvatar
+      tags:
+        - Member profile
+      description: Owner only before and after storage I/O. Exact immutable byte length/hash and actual format; EXIF
+        stripped and resized to 256px. No profile pointer changes until updateMemberProfile.
+      security:
+        - bearerAuth: []
+      x-locked-access: profile
+      parameters:
+        - name: avatarId
+          in: path
+          required: true
+          schema: *a1
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: Current result. Signed reads are short lived; command receipts contain no contact data or
+            verification secrets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+          image/png:
+            schema:
+              type: string
+              format: binary
+          image/webp:
+            schema:
+              type: string
+              format: binary
+  /me/profile/avatar-uploads/{avatarId}/discard:
+    post:
+      operationId: discardProfileAvatar
+      tags: [Member profile]
+      description: Owner only. Retires an unattached Pending/Ready upload for durable worker cleanup. An avatar currently attached to the profile cannot be discarded.
+      security: [{bearerAuth: []}]
+      x-locked-access: profile
+      parameters:
+        - {name: avatarId, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: Idempotency-Key, in: header, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/VersionCommand'}
+      responses:
+        '200':
+          description: Retired; no attached image is removed.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AccountCommandReceipt'}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+  /me/profile/avatar-uploads/{avatarId}/read:
+    get:
+      operationId: readProfileAvatar
+      tags:
+        - Member profile
+      description: Owner only for Ready/Attached assets; current authorization is checked again after signing. No
+        public or third-party read by guessing the UUID.
+      security:
+        - bearerAuth: []
+      x-locked-access: profile
+      parameters:
+        - name: avatarId
+          in: path
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: Current result. Signed reads are short lived; command receipts contain no contact data or
+            verification secrets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaRead"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /me/profile/email-changes:
+    post:
+      operationId: requestMemberEmailChange
+      tags:
+        - Member profile
+      description: Owner only with current password. New email is normalized; generic acknowledgement avoids email
+        enumeration. Six-digit keyed OTP expires after 5 minutes, max 5 attempts and 60s resend cooldown. No
+        login email changes here. Password is checked before replay and excluded from receipt/audit payload.
+      security:
+        - bearerAuth: []
+      x-locked-access: profile
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: Current result. Signed reads are short lived; command receipts contain no contact data or
+            verification secrets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestMemberEmailChange"
+  /me/profile/email-changes/confirm:
+    post:
+      operationId: confirmMemberEmailChange
+      tags:
+        - Member profile
+      description: Owner/challenge bound. Rechecks old email and password fingerprint; verified unique email changes
+        atomically. Preserves current session, revokes other sessions, invalidates old reset links/OTPs and
+        notifies the old address. Wrong attempts persist even when rejected; same accepted code/key may replay.
+      security:
+        - bearerAuth: []
+      x-locked-access: profile
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: Current result. Signed reads are short lived; command receipts contain no contact data or
+            verification secrets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmMemberEmailChange"
   /catalog/taxonomy:
     get:
       operationId: getCatalogTaxonomy
@@ -10284,6 +10611,153 @@ components:
         refreshToken:
           type: string
           pattern: ^[A-Za-z0-9_-]{43}$
+    AccountCommandReceipt:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - entityType
+        - entityId
+        - version
+        - state
+        - serverTime
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        entityType:
+          type: string
+          enum:
+            - MemberProfile
+            - ProfileAvatar
+            - MemberEmailChange
+            - UserAccount
+            - Cart
+        entityId: *a1
+        version: &a2
+          type: integer
+          minimum: 1
+        state:
+          type: string
+        serverTime: &a3
+          type: string
+          format: date-time
+    MemberProfile:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - version
+        - displayName
+        - email
+        - contactPhone
+        - avatarId
+        - pendingEmailChange
+      properties:
+        id: *a1
+        version: *a2
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email
+        contactPhone:
+          anyOf:
+            - type: string
+            - type: "null"
+        avatarId:
+          anyOf:
+            - *a1
+            - type: "null"
+        pendingEmailChange:
+          anyOf:
+            - type: object
+              additionalProperties: false
+              required:
+                - id
+                - email
+                - expiresAt
+                - resendAt
+              properties:
+                id: *a1
+                email:
+                  type: string
+                  format: email
+                expiresAt: *a3
+                resendAt: *a3
+            - type: "null"
+    UpdateMemberProfile:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - displayName
+        - contactPhone
+        - avatarId
+      properties:
+        expectedVersion: *a2
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        contactPhone:
+          anyOf:
+            - type: string
+              pattern: ^\+?(?=(?:[^0-9]*[0-9]){8,15}[^0-9]*$)[0-9 ()-]{8,20}$
+            - type: "null"
+        avatarId:
+          anyOf:
+            - *a1
+            - type: "null"
+    CreateProfileAvatar:
+      type: object
+      additionalProperties: false
+      required:
+        - mimeType
+        - byteSize
+        - sha256
+      properties:
+        mimeType:
+          type: string
+          enum:
+            - image/jpeg
+            - image/png
+            - image/webp
+        byteSize:
+          type: integer
+          minimum: 1
+          maximum: 2000000
+        sha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+    RequestMemberEmailChange:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - email
+        - password
+      properties:
+        expectedVersion: *a2
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 10
+          maxLength: 128
+    ConfirmMemberEmailChange:
+      type: object
+      additionalProperties: false
+      required:
+        - changeId
+        - code
+      properties:
+        changeId: *a1
+        code:
+          type: string
+          pattern: ^[0-9]{6}$
     CurrentUser:
       type: object
       additionalProperties: false
@@ -13367,6 +13841,13 @@ components:
         - INTERNAL_ERROR
         - AccountIneligible
         - SelfReviewForbidden
+        - INVALID_EMAIL_CHANGE
+        - AvatarQuotaExceeded
+        - InvalidImage
+        - INVALID_CREDENTIALS
+        - CREDENTIAL_CHANGED
+        - EMAIL_CHANGE_COOLDOWN
+        - EMAIL_UNAVAILABLE
         - CatalogDuplicate
         - CatalogNotConfirmed
         - ListingLimitReached

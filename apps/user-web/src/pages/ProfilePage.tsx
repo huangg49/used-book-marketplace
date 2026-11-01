@@ -3,6 +3,7 @@ import { ArrowRight, Library, KeyRound, ArrowLeftRight, Bell } from "lucide-reac
 import { useSession } from "../hooks/useSession";
 import { ROUTES } from "../lib/routes";
 import styles from "./ProfilePage.module.css";
+import { MemberProfileEditor } from './profile/MemberProfileEditor';
 
 const statusLabels = {
   ACTIVE: "Đang hoạt động",
@@ -25,28 +26,14 @@ export function ProfilePage() {
         <h1 tabIndex={-1}>Hồ sơ của tôi</h1>
         <p>Thông tin tài khoản của bạn tại Lật Lại.</p>
       </header>
-      <section className={styles.paper} aria-labelledby="profile-name">
+      <section className={styles.paper} aria-labelledby="profile-display-name">
         <div className={styles.identity}>
-          <span className={styles.initial} aria-hidden="true">
-            {Array.from(user.displayName.trim())[0]?.toLocaleUpperCase(
-              "vi-VN",
-            ) || "L"}
-          </span>
           <div>
-            <h2 id="profile-name">{user.displayName}</h2>
+            <h2 id="profile-display-name">{user.displayName}</h2>
             <p>{statusLabels[user.status]}</p>
           </div>
         </div>
-        <dl className={styles.facts}>
-          <div>
-            <dt>Tên hiển thị</dt>
-            <dd>{user.displayName}</dd>
-          </div>
-          <div>
-            <dt>Email đăng ký</dt>
-            <dd>{user.email}</dd>
-          </div>
-        </dl>
+        <MemberProfileEditor key={user.id} ownerId={user.id}/>
         <div className={styles.security}>
           <div>
             <h2>Đăng nhập &amp; bảo mật</h2>

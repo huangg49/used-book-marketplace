@@ -1,5 +1,6 @@
 import { buyNowNotificationsMigration } from '../../src/database/mongo/migrations/0029-buy-now-notifications.js';
 import { reviewLifecycleSpecs } from '../../src/database/mongo/migrations/0040-transaction-review-lifecycle.js';
+import { memberProfileSpecs } from '../../src/database/mongo/migrations/0047-member-profiles.js';
 import { randomUUID } from 'node:crypto';
 import { MongoClient, MongoServerError, type Db } from 'mongodb';
 import { COLLECTION_NAMES } from '../../src/database/mongo/collections.js';
@@ -124,7 +125,9 @@ describe('migrations', () => {
         exchangeMessageSpecs.length -
         reviewLifecycleSpecs.length -
         // ADR 0048 photo autofill suggestions are Mongo-native.
-        listingAutofillSpecs.length +
+        listingAutofillSpecs.length -
+        // Private profile avatar/challenge collections are Mongo-native too.
+        memberProfileSpecs.length +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });

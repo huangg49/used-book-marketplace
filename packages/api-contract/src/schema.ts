@@ -287,6 +287,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description MEMBER owner only, including LOCKED/RESTRICTED. Current private contact and profile version. Does not expose other members or change transaction snapshots. */
+        get: operations["getMemberProfile"];
+        put?: never;
+        /** @description Owner only. Pins expectedVersion/key/body; no role/status/reputation fields accepted. Avatar must be this owner's Ready asset. Existing snapshots are immutable. */
+        post: operations["updateMemberProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/profile/avatar-uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Owner only. At most three unexpired Pending/Ready uploads; max 2MB per JPEG/PNG/WebP. No public bucket or client storage credential. Upload ID is the receipt entityId. */
+        post: operations["createProfileAvatar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/profile/avatar-uploads/{avatarId}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Owner only before and after storage I/O. Exact immutable byte length/hash and actual format; EXIF stripped and resized to 256px. No profile pointer changes until updateMemberProfile. */
+        put: operations["uploadProfileAvatar"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/profile/avatar-uploads/{avatarId}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Owner only. Retires an unattached Pending/Ready upload for durable worker cleanup. An avatar currently attached to the profile cannot be discarded. */
+        post: operations["discardProfileAvatar"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/profile/avatar-uploads/{avatarId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Owner only for Ready/Attached assets; current authorization is checked again after signing. No public or third-party read by guessing the UUID. */
+        get: operations["readProfileAvatar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/profile/email-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Owner only with current password. New email is normalized; generic acknowledgement avoids email enumeration. Six-digit keyed OTP expires after 5 minutes, max 5 attempts and 60s resend cooldown. No login email changes here. Password is checked before replay and excluded from receipt/audit payload. */
+        post: operations["requestMemberEmailChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/profile/email-changes/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Owner/challenge bound. Rechecks old email and password fingerprint; verified unique email changes atomically. Preserves current session, revokes other sessions, invalidates old reset links/OTPs and notifies the old address. Wrong attempts persist even when rejected; same accepted code/key may replay. */
+        post: operations["confirmMemberEmailChange"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/catalog/taxonomy": {
         parameters: {
             query?: never;
@@ -3410,6 +3530,61 @@ export interface components {
         RefreshRequest: {
             refreshToken: string;
         };
+        AccountCommandReceipt: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            entityType: "MemberProfile" | "ProfileAvatar" | "MemberEmailChange" | "UserAccount" | "Cart";
+            /** Format: uuid */
+            entityId: string;
+            version: number;
+            state: string;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        MemberProfile: {
+            /** Format: uuid */
+            id: string;
+            version: number;
+            displayName: string;
+            /** Format: email */
+            email: string;
+            contactPhone: string | null;
+            avatarId: string | null;
+            pendingEmailChange: {
+                /** Format: uuid */
+                id: string;
+                /** Format: email */
+                email: string;
+                /** Format: date-time */
+                expiresAt: string;
+                /** Format: date-time */
+                resendAt: string;
+            } | null;
+        };
+        UpdateMemberProfile: {
+            expectedVersion: number;
+            displayName: string;
+            contactPhone: string | null;
+            avatarId: string | null;
+        };
+        CreateProfileAvatar: {
+            /** @enum {string} */
+            mimeType: "image/jpeg" | "image/png" | "image/webp";
+            byteSize: number;
+            sha256: string;
+        };
+        RequestMemberEmailChange: {
+            expectedVersion: number;
+            /** Format: email */
+            email: string;
+            password: string;
+        };
+        ConfirmMemberEmailChange: {
+            /** Format: uuid */
+            changeId: string;
+            code: string;
+        };
         /** @description Current verified account state from the database, never JWT role/status claims. LOCKED can authenticate but is limited to explicit existing-obligation endpoints. DISABLED/unverified cannot authenticate. Roles and ownership checks still apply; 403 does not invalidate the session. */
         CurrentUser: {
             /** Format: uuid */
@@ -4373,7 +4548,7 @@ export interface components {
          * @description AI_ASSIST_FAILED means an advisory request has a persisted terminal failure; a deliberate new request may use a new key. Network errors and UNAVAILABLE are uncertain and must retain their original key/body.
          * @enum {string}
          */
-        ListingErrorCode: "VALIDATION_ERROR" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "RATE_LIMITED" | "UNAVAILABLE" | "AI_ASSIST_FAILED" | "INTERNAL_ERROR" | "AccountIneligible" | "SelfReviewForbidden" | "CatalogDuplicate" | "CatalogNotConfirmed" | "ListingLimitReached" | "ListingInvalid" | "VersionConflict" | "InvalidState" | "IdempotencyConflict" | "MediaNotReady" | "MediaQuotaExceeded" | "UploadIncomplete" | "UploadExpired" | "PayloadTooLarge" | "UnsupportedMediaType" | "SESSION_EXPIRED" | "BidTooLow" | "AuctionClosed" | "AuctionNotStarted";
+        ListingErrorCode: "VALIDATION_ERROR" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "RATE_LIMITED" | "UNAVAILABLE" | "AI_ASSIST_FAILED" | "INTERNAL_ERROR" | "AccountIneligible" | "SelfReviewForbidden" | "INVALID_EMAIL_CHANGE" | "AvatarQuotaExceeded" | "InvalidImage" | "INVALID_CREDENTIALS" | "CREDENTIAL_CHANGED" | "EMAIL_CHANGE_COOLDOWN" | "EMAIL_UNAVAILABLE" | "CatalogDuplicate" | "CatalogNotConfirmed" | "ListingLimitReached" | "ListingInvalid" | "VersionConflict" | "InvalidState" | "IdempotencyConflict" | "MediaNotReady" | "MediaQuotaExceeded" | "UploadIncomplete" | "UploadExpired" | "PayloadTooLarge" | "UnsupportedMediaType" | "SESSION_EXPIRED" | "BidTooLow" | "AuctionClosed" | "AuctionNotStarted";
         ListingApiError: {
             statusCode: number;
             code: components["schemas"]["ListingErrorCode"];
@@ -6768,6 +6943,264 @@ export interface operations {
                 };
             };
             401: components["responses"]["Error"];
+        };
+    };
+    getMemberProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current result. Signed reads are short lived; command receipts contain no contact data or verification secrets. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberProfile"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    updateMemberProfile: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateMemberProfile"];
+            };
+        };
+        responses: {
+            /** @description Current result. Signed reads are short lived; command receipts contain no contact data or verification secrets. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountCommandReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    createProfileAvatar: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateProfileAvatar"];
+            };
+        };
+        responses: {
+            /** @description Current result. Signed reads are short lived; command receipts contain no contact data or verification secrets. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountCommandReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    uploadProfileAvatar: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                avatarId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "image/jpeg": string;
+                "image/png": string;
+                "image/webp": string;
+            };
+        };
+        responses: {
+            /** @description Current result. Signed reads are short lived; command receipts contain no contact data or verification secrets. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountCommandReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    discardProfileAvatar: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                avatarId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Retired; no attached image is removed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountCommandReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+        };
+    };
+    readProfileAvatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                avatarId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current result. Signed reads are short lived; command receipts contain no contact data or verification secrets. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaRead"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    requestMemberEmailChange: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RequestMemberEmailChange"];
+            };
+        };
+        responses: {
+            /** @description Current result. Signed reads are short lived; command receipts contain no contact data or verification secrets. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountCommandReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    confirmMemberEmailChange: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmMemberEmailChange"];
+            };
+        };
+        responses: {
+            /** @description Current result. Signed reads are short lived; command receipts contain no contact data or verification secrets. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountCommandReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
         };
     };
     getCatalogTaxonomy: {

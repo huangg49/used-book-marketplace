@@ -1,10 +1,10 @@
 name: Operations and public shelf CI
 on:
   pull_request:
-    paths: ["apps/admin-web/**", "apps/mobile-react-native/**", "apps/api/**", "packages/api-contract/**", "packages/session-client/**", "packages/brand/**", "scripts/test-public-shelf.mjs", "scripts/test-rn-buy-now.mjs", "scripts/test-listing-journey.mjs", "scripts/test-address-journey.mjs", "infra/docker-compose.mongo-test.yml", "infra/mongo/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/operations-ci.yml"]
+    paths: ["apps/admin-web/**", "apps/mobile-react-native/**", "apps/api/**", "packages/api-contract/**", "packages/session-client/**", "packages/brand/**", "scripts/test-public-shelf.mjs", "scripts/test-rn-buy-now.mjs", "scripts/test-member-profile.mjs", "scripts/test-listing-journey.mjs", "scripts/test-address-journey.mjs", "infra/docker-compose.mongo-test.yml", "infra/mongo/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/operations-ci.yml"]
   push:
     branches: [main]
-    paths: ["apps/admin-web/**", "apps/mobile-react-native/**", "apps/api/**", "packages/api-contract/**", "packages/session-client/**", "packages/brand/**", "scripts/test-public-shelf.mjs", "scripts/test-rn-buy-now.mjs", "scripts/test-listing-journey.mjs", "scripts/test-address-journey.mjs", "infra/docker-compose.mongo-test.yml", "infra/mongo/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/operations-ci.yml"]
+    paths: ["apps/admin-web/**", "apps/mobile-react-native/**", "apps/api/**", "packages/api-contract/**", "packages/session-client/**", "packages/brand/**", "scripts/test-public-shelf.mjs", "scripts/test-rn-buy-now.mjs", "scripts/test-member-profile.mjs", "scripts/test-listing-journey.mjs", "scripts/test-address-journey.mjs", "infra/docker-compose.mongo-test.yml", "infra/mongo/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/operations-ci.yml"]
 jobs:
   operations:
     # MongoDB 8.0 requires a runner kernel older than 6.19 (SERVER-121912).
@@ -39,6 +39,7 @@ jobs:
           EXPO_PUBLIC_DESIGN_PREVIEW: '1'
       - run: pnpm test:public:browser
       - run: pnpm test:rn-buy-now:browser
+      - run: pnpm test:member-profile:browser
       - name: Mongo QA diagnostics on failure
         if: failure()
         run: |

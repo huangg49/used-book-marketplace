@@ -23,6 +23,7 @@ import { ExchangesModule } from './modules/exchanges/exchanges.module.js';
 import { ReviewsModule } from './modules/reviews/reviews.module.js';
 import { OperationsDashboardModule } from './modules/operations-dashboard/operations-dashboard.module.js';
 import { WorkInboxModule } from './modules/work-inbox/work-inbox.module.js';
+import { MemberProfileModule } from './modules/profile/member-profile.module.js';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { WorkInboxModule } from './modules/work-inbox/work-inbox.module.js';
     ReviewsModule,
     OperationsDashboardModule,
     WorkInboxModule,
+    MemberProfileModule,
   ],
   controllers: [AppController],
   providers: [AppService],
