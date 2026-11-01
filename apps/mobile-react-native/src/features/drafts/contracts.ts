@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { bookCondition } from "./book-condition";
+import { bundleSchema } from "../bundles/book-bundle";
 const uuid = z.string().uuid();
 export const draftContent = z.object({
+  bundle: bundleSchema.nullable().optional(),
   fulfillment: z
     .object({
       originAddressId: uuid,

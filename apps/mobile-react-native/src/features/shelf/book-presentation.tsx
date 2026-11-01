@@ -31,7 +31,7 @@ export function BookPresentation({
           accessibilityRole="header"
           color={colors.forest}
         >
-          {item.book.title}
+          {item.bundle?.title || item.book.title}
         </AppText>
         <AppText kind="reading" color={colors.muted}>
           {item.book.authors.join(" · ")}

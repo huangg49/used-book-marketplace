@@ -13,6 +13,7 @@ import {
   acknowledgedBuyNowOrder,
   forgetBuyNowOrder,
   pendingBuyNowOrder,
+  pendingBuyNowOrderInput,
   pendingOrderResponse,
   sendBuyNowOrder,
   sendOrderResponse,
@@ -22,6 +23,7 @@ import { useSession } from "../../core/session/session-provider";
 import {
   AppModal,
   AppText,
+  Checkbox,
   Button,
   Icon,
   Notice,
@@ -42,6 +44,7 @@ import {
   type Quote,
 } from "./contracts";
 import { z } from "zod";
+import { BundleManifest } from "../bundles/bundle-manifest";
 
 const areasSchema = z.object({
   localities: z.array(z.object({ code: z.string(), label: z.string() })),
@@ -63,6 +66,24 @@ interface BuyNowModalProps {
 
 export function BuyNowModal(props: BuyNowModalProps) {
   const { client } = useSession();
+  // Keep the listing/revision the buyer actually saw while the dialog is open.
+  const [selection, setSelection] = useState(() => ({
+    source: props.listing,
+    value: props.listing
+      ? (JSON.parse(JSON.stringify(props.listing)) as Listing)
+      : undefined,
+  }));
+  if (
+    (!selection.value && props.listing) ||
+    (!props.visible && selection.source !== props.listing)
+  ) {
+    setSelection({
+      source: props.listing,
+      value: props.listing
+        ? (JSON.parse(JSON.stringify(props.listing)) as Listing)
+        : undefined,
+    });
+  }
   const orderId =
     props.initialOrderId ??
     (props.listing
@@ -72,8 +93,9 @@ export function BuyNowModal(props: BuyNowModalProps) {
   // Shared intents and acknowledged IDs survive navigation within this identity.
   return (
     <BuyNowSession
-      key={`${props.listing?.id ?? ""}:${orderId ?? ""}`}
+      key={`${selection.value?.id ?? ""}:${selection.value?.revisionId ?? ""}:${orderId ?? ""}`}
       {...props}
+      listing={selection.value}
       initialOrderId={orderId}
     />
   );
@@ -105,6 +127,21 @@ function BuyNowSession({
     );
   }
   const pendingCreation = !!listing && pendingBuyNowOrder(client, listing.id);
+  const pendingInput = listing
+    ? pendingBuyNowOrderInput(client, listing.id)
+    : undefined;
+  const mismatchedPending =
+    !!pendingInput &&
+    pendingInput.expectedListingRevisionId !== listing?.revisionId;
+  const [bundleAcknowledged, setBundleAcknowledged] = useState(false);
+  const [quoteRetry, setQuoteRetry] = useState(0);
+  const quoteAttempt = useRef<{
+    signature: string;
+    key: string;
+    body: string;
+    id?: string;
+    read?: boolean;
+  } | null>(null);
 
   const [step, setStep] = useState<"address_quote" | "payment" | "success">(
     initialOrderId && !pendingCreation ? "payment" : "address_quote",
@@ -223,7 +260,8 @@ function BuyNowSession({
       addingAddress ||
       step !== "address_quote" ||
       Boolean(initialOrderId) ||
-      pendingCreation
+      pendingCreation ||
+      (listing.bundle && !bundleAcknowledged)
     )
       return;
     const address = items.find((a) => a.id === effectiveAddressId);
@@ -234,28 +272,47 @@ function BuyNowSession({
       setQuoteLoading(true);
       setError("");
       try {
-        const quoteKey = Crypto.randomUUID();
-        const quoteResult = await client.request(
-          `/listings/${listing!.id}/quotes`,
-          z.object({ entityId: z.string().uuid() }),
-          {
-            method: "POST",
-            headers: { "Idempotency-Key": quoteKey },
-            body: JSON.stringify({
-              expectedListingVersion: listing!.version,
-              expectedListingRevisionId: listing!.revisionId,
-              destinationAddressId: address!.id,
-              expectedDestinationAddressVersion: address!.version,
-              method: "DirectDelivery",
-            }),
-          },
-        );
+        const body = JSON.stringify({
+          expectedListingVersion: listing!.version,
+          expectedListingRevisionId: listing!.revisionId,
+          destinationAddressId: address!.id,
+          expectedDestinationAddressVersion: address!.version,
+          method: "DirectDelivery",
+          ...(listing!.bundle ? { acknowledgeWholeBundle: true } : {}),
+        });
+        if (
+          !quoteAttempt.current ||
+          (quoteAttempt.current.read && quoteAttempt.current.signature !== body)
+        )
+          quoteAttempt.current = {
+            signature: body,
+            body,
+            key: Crypto.randomUUID(),
+          };
+        const attempt = quoteAttempt.current;
+        if (attempt.signature !== body)
+          throw new Error(
+            "Báo giá trước chưa xác định kết quả. Chọn lại địa chỉ đã dùng rồi thử lại báo giá; không tạo yêu cầu khác để thay thế.",
+          );
+        const quoteResult = attempt.id
+          ? { entityId: attempt.id }
+          : await client.request(
+              `/listings/${listing!.id}/quotes`,
+              z.object({ entityId: z.string().uuid() }),
+              {
+                method: "POST",
+                headers: { "Idempotency-Key": attempt.key },
+                body: attempt.body,
+              },
+            );
+        attempt.id = quoteResult.entityId;
 
         if (cancelled) return;
         const fetchedQuote = await client.request(
           `/me/quotes/${quoteResult.entityId}`,
           quoteSchema,
         );
+        attempt.read = true;
         if (!cancelled) {
           setQuote(fetchedQuote);
         }
@@ -285,6 +342,8 @@ function BuyNowSession({
     pendingCreation,
     client,
     items,
+    bundleAcknowledged,
+    quoteRetry,
   ]);
 
   // Handle saving new address inline
@@ -350,7 +409,13 @@ function BuyNowSession({
   // An acknowledged Order remains addressable even if its follow-up read fails.
   async function handleCreateOrder() {
     const generation = lifecycle.current.generation;
-    if (!listing || (!quote && !pendingCreation) || busy) return;
+    if (
+      !listing ||
+      (!quote && !pendingCreation) ||
+      busy ||
+      (!pendingCreation && listing.bundle && !bundleAcknowledged)
+    )
+      return;
     setBusy(true);
     setError("");
     try {
@@ -511,7 +576,9 @@ function BuyNowSession({
                 style={{ fontSize: 18 }}
               >
                 {step === "address_quote"
-                  ? "Mua ngay bản sách"
+                  ? listing?.bundle
+                    ? "Mua cả bộ sách"
+                    : "Mua ngay bản sách"
                   : step === "payment"
                     ? "Thanh toán đơn hàng"
                     : "Đặt mua thành công"}
@@ -552,7 +619,8 @@ function BuyNowSession({
             }}
           >
             {/* Book Mini Card */}
-            {listing || initialBookTitle || orderDetails ? (
+            {!mismatchedPending &&
+            (listing || initialBookTitle || orderDetails) ? (
               <View
                 style={{
                   flexDirection: "row",
@@ -598,8 +666,11 @@ function BuyNowSession({
                     numberOfLines={2}
                     style={{ fontSize: 14 }}
                   >
-                    {listing?.book?.title ??
-                      initialBookTitle ??
+                    {orderDetails?.item?.bundle?.title ||
+                      orderDetails?.item?.metadata.title ||
+                      listing?.bundle?.title ||
+                      listing?.book?.title ||
+                      initialBookTitle ||
                       "Bản sách đang đặt mua"}
                   </AppText>
                   {listing?.book?.authors ? (
@@ -620,7 +691,38 @@ function BuyNowSession({
               </View>
             ) : null}
 
+            {mismatchedPending && !orderDetails ? (
+              <Notice>
+                Đang khôi phục lệnh đặt mua trước đó. Nội dung mới của bài đăng
+                không thay danh sách đã xác nhận; danh sách chính xác sẽ hiện
+                trong đơn sau khi đọc được kết quả.
+              </Notice>
+            ) : (
+              <BundleManifest
+                bundle={
+                  step === "address_quote"
+                    ? listing?.bundle
+                    : orderDetails?.item?.bundle
+                }
+              />
+            )}
+            {listing?.bundle && step === "address_quote" && !pendingCreation ? (
+              <Checkbox
+                title={`Tôi đã xem danh sách và mua toàn bộ ${listing.bundle.items.length} cuốn trong bộ.`}
+                checked={bundleAcknowledged}
+                disabled={busy || quoteLoading || !!quote}
+                onPress={() => setBundleAcknowledged((v) => !v)}
+              />
+            ) : null}
             {error ? <Notice tone="error">{error}</Notice> : null}
+            {error && step === "address_quote" && !pendingCreation ? (
+              <Button
+                secondary
+                title="Thử lại báo giá đã yêu cầu"
+                onPress={() => setQuoteRetry((v) => v + 1)}
+                disabled={quoteLoading || busy}
+              />
+            ) : null}
 
             {/* STEP 1: Address & Quote */}
             {step === "address_quote" && !pendingCreation && (
@@ -978,7 +1080,13 @@ function BuyNowSession({
                 <Button
                   wine
                   title={busy ? "Đang tạo đơn mua..." : "Xác nhận đặt mua"}
-                  disabled={busy || quoteLoading || !quote || addingAddress}
+                  disabled={
+                    busy ||
+                    quoteLoading ||
+                    !quote ||
+                    addingAddress ||
+                    (!!listing?.bundle && !bundleAcknowledged)
+                  }
                   onPress={() => void handleCreateOrder()}
                 />
               </>

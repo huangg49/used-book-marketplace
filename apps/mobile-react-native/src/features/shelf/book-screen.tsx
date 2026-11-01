@@ -56,7 +56,7 @@ export function BookScreen({ id }: { id: string }) {
   // Fetch listing details from backend API
   const listingQuery = useQuery({
     queryKey: ["public-listing", id],
-    queryFn: () => client.publicRequest(`/listings/${id}`, publicListing),
+    queryFn: () => client.publicRequest(`/listings/${id}?bundleSupport=whole-v1`, publicListing),
     enabled: active && isValidUuid,
     staleTime: 0,
     gcTime: 0,
@@ -178,7 +178,7 @@ export function BookScreen({ id }: { id: string }) {
       header={
         <BookDetailHeader
           listingId={id}
-          bookTitle={item?.book?.title ?? "Chi tiết sách"}
+          bookTitle={item?.bundle?.title || item?.book?.title || "Chi tiết sách"}
           isScrolled={isScrolled}
         />
       }

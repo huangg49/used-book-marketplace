@@ -86,6 +86,10 @@ export function pendingOrderResponse(client: SessionClient, id: string) {
 export function pendingBuyNowOrder(client: SessionClient, listingId: string) {
   return store(client).creates.has(listingId);
 }
+export function pendingBuyNowOrderInput(client: SessionClient, listingId: string) {
+  const body = store(client).creates.get(listingId)?.body;
+  return body ? { ...body } : undefined;
+}
 
 // Keep an acknowledged ID addressable if checkout closes before its GET finishes.
 export function acknowledgedBuyNowOrder(

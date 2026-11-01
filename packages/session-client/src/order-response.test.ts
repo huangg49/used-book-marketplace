@@ -8,6 +8,7 @@ import {
   acknowledgedBuyNowOrder,
   forgetBuyNowOrder,
   pendingBuyNowOrder,
+  pendingBuyNowOrderInput,
   pendingOrderResponse,
   sendBuyNowOrder,
   sendOrderResponse,
@@ -81,6 +82,16 @@ function fake() {
   };
 }
 describe("order decisions across navigation and uncertain responses", () => {
+  it("exposes a copy of the pinned purchase revision and clears it on account change", async () => {
+    const f=fake();
+    const body={quoteId:id,expectedQuoteVersion:1,expectedListingVersion:4,expectedListingRevisionId:id};
+    await expect(sendBuyNowOrder(f.client,id,body,()=>"bundle-key")).rejects.toThrow();
+    const snapshot=pendingBuyNowOrderInput(f.client,id)!;
+    snapshot.expectedListingVersion=99;
+    expect(pendingBuyNowOrderInput(f.client,id)).toEqual(body);
+    f.state({status:"anonymous"});
+    expect(pendingBuyNowOrderInput(f.client,id)).toBeUndefined();
+  });
   it.each(
     (["accept", "reject", "pay", "cancel"] as const).flatMap((action) =>
       [408, 429].map((status) => ({ action, status })),

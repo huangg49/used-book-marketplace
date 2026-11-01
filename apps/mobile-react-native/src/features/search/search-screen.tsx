@@ -258,7 +258,7 @@ export function SearchScreen() {
     getNextPageParam: (lastPage: z.infer<typeof publicPage>) => lastPage.nextCursor ?? undefined,
     queryFn: ({ pageParam }) =>
       client.publicRequest(
-        `/listings?${query}${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ""}`,
+        `/listings?bundleSupport=whole-v1&${query}${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ""}`,
         publicPage,
       ),
     enabled: active,

@@ -24,7 +24,7 @@ export function BookIdentityCard({
   isExchange = false,
 }: BookIdentityCardProps) {
   const router = useRouter();
-  const title = listing?.book.title ?? "Đang tải thông tin ấn bản sách…";
+  const title = listing?.bundle?.title || listing?.book.title || "Đang tải thông tin ấn bản sách…";
   const authors = listing?.book.authors?.join(", ") ?? "";
   const primaryPhoto = listing?.photos?.[0];
   const revisionId = listing?.revisionId;

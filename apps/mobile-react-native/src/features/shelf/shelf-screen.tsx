@@ -65,7 +65,7 @@ export function ShelfScreen() {
     queryKey: ["public-shelf", query, cursor],
     queryFn: () =>
       client.publicRequest(
-        `/listings?${query}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+        `/listings?bundleSupport=whole-v1&${query}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
         publicPage,
       ),
     enabled: active,

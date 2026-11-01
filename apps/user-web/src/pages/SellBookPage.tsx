@@ -115,6 +115,9 @@ export function SellBookPage() {
   const [entryMode, setEntryMode] = useState<"catalog" | "manual">("catalog");
   const [step, setStep] = useState(1);
   const [bundle, setBundle] = useState<BookBundle | null>(null);
+  const bundleDraft = useRef<BookBundle | null>(null);
+  const singleTerms = useRef<{mode: typeof formData.mode; salePrice: string; exchangeValue: string; condition: typeof formData.condition} | null>(null);
+  const bundlePrice = useRef("");
   const [checkedSteps, setCheckedSteps] = useState<number[]>([]);
   const [touched, setTouched] = useState<string[]>([]);
   const [ownershipDeclared, setOwnershipDeclared] = useState(false);
@@ -668,7 +671,7 @@ export function SellBookPage() {
         ...(auction ? { channel: "Auction" as const } : {}),
         ...(selectedBook ? {} : autofillFacts),
         title: formData.title,
-        priceAssist: decisionFor(assist, assistKey, assistForm),
+        priceAssist: bundle ? undefined : decisionFor(assist, assistKey, assistForm),
         ...(bundle ? { bundle } : {}),
         author: formData.author,
         category:
@@ -1375,6 +1378,9 @@ export function SellBookPage() {
               setDraftAttempt(createDraftAttempt());
               setAutofillFacts({});
               setBundle(null);
+              bundleDraft.current = null;
+              singleTerms.current = null;
+              bundlePrice.current = "";
               setClassification({
                 categoryId: "",
                 attributes: {},
@@ -1601,16 +1607,28 @@ export function SellBookPage() {
                         <>
                           {!auction && <>
                             <div className={styles.entryChoice} role="group" aria-label="Sách lẻ hoặc bộ sách">
-                              <button type="button" aria-pressed={!bundle} onClick={() => setBundle(null)}>Sách lẻ</button>
+                              <button type="button" aria-pressed={!bundle} onClick={() => {
+                                if (!bundle) return;
+                                bundleDraft.current = bundle;
+                                bundlePrice.current = formData.salePrice;
+                                setBundle(null);
+                                setOwnershipDeclared(false);
+                                if (singleTerms.current) setFormData(previous => ({ ...previous, ...singleTerms.current! }));
+                              }}>Sách lẻ</button>
                               <button type="button" aria-pressed={!!bundle} onClick={() => {
                                 if (bundle) return;
-                                setBundle(previous => previous || { title: '', wholeOnly: true, exclusiveOwnershipDeclared: true,
-                                  items: [{ label: '', condition: 'Good', notes: '' }, { label: '', condition: 'Good', notes: '' }] });
-                                setFormData(previous => ({ ...previous, mode: 'Sale', exchangeValue: '', condition: 'Good' }));
+                                singleTerms.current = { mode: formData.mode, salePrice: formData.salePrice, exchangeValue: formData.exchangeValue, condition: formData.condition };
+                                const restored = bundleDraft.current || { title: '', wholeOnly: true as const, exclusiveOwnershipDeclared: true as const,
+                                  items: [{ label: '', condition: 'Good' as const, notes: '' }, { label: '', condition: 'Good' as const, notes: '' }] };
+                                setBundle(restored);
+                                setOwnershipDeclared(false);
+                                setFormData(previous => ({ ...previous, mode: 'Sale', salePrice: bundlePrice.current, exchangeValue: '', condition: bundleCondition(restored) }));
                               }}>Bộ sách</button>
                             </div>
+                            <p className={styles.help}>Đổi lựa chọn vẫn giữ thông tin bộ trong phiên này. Bộ sách chỉ bán nguyên bộ, không đổi sách hoặc đấu giá.</p>
                             {bundle && <BundleEditor value={bundle} error={shownError('bundle')} onChange={next => {
                               setBundle(next);
+                              setOwnershipDeclared(false);
                               setFormData(previous => ({ ...previous, condition: bundleCondition(next), mode: 'Sale', exchangeValue: '' }));
                             }} />}
                           </>}

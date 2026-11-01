@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { conditions } from '../lib/listing-labels';
 import type { BookBundle } from '../lib/book-bundle';
+import { appendBundleRange } from '../lib/book-bundle';
 import styles from './BookBundle.module.css';
 
 export function BundleManifest({ bundle }: { bundle?: BookBundle | null }) {
@@ -33,31 +34,26 @@ export function BundleEditor({ value, onChange, error }: {
   const [from, setFrom] = useState('1'), [to, setTo] = useState('20');
   const [rangeError, setRangeError] = useState('');
   function generate() {
-    const start = Number(from), end = Number(to);
-    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start + 1 || end - start >= 50 || end > 9999) {
-      setRangeError('Chọn một khoảng từ 2 đến 50 tập, số tập từ 1 đến 9999.'); return;
-    }
-    setRangeError('');
-    onChange({ ...value, items: Array.from({ length: end - start + 1 }, (_, index) => {
-      const label = `Tập ${start + index}`;
-      return value.items.find(item => item.label === label) || { label, condition: 'Good', notes: '' };
-    }) });
+    try { onChange(appendBundleRange(value, from, to)); setRangeError(''); }
+    catch (cause) { setRangeError(cause instanceof Error ? cause.message : 'Chưa thêm được dãy tập.'); }
   }
   function change(index: number, patch: Partial<BookBundle['items'][number]>) {
     onChange({ ...value, items: value.items.map((item, position) => position === index ? { ...item, ...patch } : item) });
   }
   return <fieldset id="bundle" tabIndex={-1} className={styles.editor} aria-invalid={!!error} aria-describedby={error ? 'bundle-input-error' : undefined}>
     <legend>Bộ sách bán nguyên bộ</legend>
-    <p>Chọn đầu sách đại diện ở bên dưới. Danh sách này xác định chính xác các cuốn người mua nhận được.</p>
+    <p>Một tin đăng, một giá cho cả bộ từ 2 đến 50 cuốn. Chỉ ghi những cuốn bạn thực sự giao; thiếu tập nào thì bỏ tập đó, không mặc định là trọn bộ.</p>
+    <p>Ở phần thông tin bên dưới, chọn một cuốn trong bộ làm đầu sách đại diện để phân loại. Danh sách từng cuốn ở đây mới xác định người mua nhận được gì.</p>
     <label>Tên bộ sách<input value={value.title} maxLength={300} onChange={event => onChange({ ...value, title: event.target.value })} placeholder="Ví dụ: Naruto — tập 1 đến 20" /></label>
     <div className={styles.generator}>
       <label>Từ tập<input inputMode="numeric" value={from} onChange={event => setFrom(event.target.value)} /></label>
       <label>Đến tập<input inputMode="numeric" value={to} onChange={event => setTo(event.target.value)} /></label>
-      <button type="button" onClick={generate}>Tạo danh sách tập</button>
+      <button type="button" onClick={generate}>Thêm dãy tập</button>
     </div>
+    <p>Thêm dãy giữ nguyên các cuốn và ghi chú đã nhập. Bạn cũng có thể thêm từng cuốn có tên khác nhau.</p>
     {rangeError && <p role="alert" className={styles.error}>{rangeError}</p>}
-    <details>
-      <summary>Kiểm tra, sửa {value.items.length} cuốn và ghi lỗi từng cuốn</summary>
+    <section aria-label="Danh sách cuốn thực tế">
+      <h3>Danh sách {value.items.length} cuốn sẽ giao</h3>
       <ol className={styles.rows}>{value.items.map((item, index) => <li className={styles.row} key={index}>
         <label>Cuốn/tập {index + 1}<input value={item.label} maxLength={200} onChange={event => change(index, { label: event.target.value })} /></label>
         <label>Tình trạng cuốn {index + 1}<select value={item.condition} onChange={event => change(index, { condition: event.target.value as typeof item.condition })}>{Object.entries(conditions).map(([key, text]) => <option value={key} key={key}>{text}</option>)}</select></label>
@@ -65,7 +61,7 @@ export function BundleEditor({ value, onChange, error }: {
         <label>Ghi chú cuốn {index + 1}<textarea rows={2} maxLength={500} value={item.notes} onChange={event => change(index, { notes: event.target.value })} placeholder="Ghi rõ lỗi, phụ kiện hoặc khác biệt của cuốn này" /></label>
       </li>)}</ol>
       <button type="button" disabled={value.items.length >= 50} onClick={() => onChange({ ...value, items: [...value.items, { label: '', condition: 'Good', notes: '' }] })}>Thêm cuốn khác</button>
-    </details>
+    </section>
     {error && <p id="bundle-input-error" role="alert" className={styles.error}>{error}</p>}
   </fieldset>;
 }

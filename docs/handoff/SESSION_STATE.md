@@ -1,6 +1,30 @@
 # Điểm lưu hiện tại — 01/11/2026
 
-## RN Quên mật khẩu: reset/thư đạt; lượt QA thứ hai đang chờ owner Login
+## Bộ sách: hướng dẫn web và nối RN — đã kiểm chứng local, chưa native acceptance
+
+- Nhánh `codex/whole-bundle-journey`, base `86fba065`, subject
+  `feat(listings): complete whole-bundle web and RN journeys`; owner duyệt sau
+  khảo sát, tiếp tục giữ local/chưa push/PR/merge/deploy.
+  [Hành trình/source/evidence](../features/WHOLE_BUNDLE_JOURNEY_2026_11_01.md).
+- Web hiện danh sách từng cuốn trực tiếp; thêm dãy nối cuốn chưa có, giữ ghi chú/
+  tình trạng. Đổi sách lẻ/bộ giữ riêng danh sách và giá, bài mới bỏ dữ liệu cũ.
+  RN giữ bundle trong private/public schemas, editor, kệ/chi tiết/giỏ/hội thoại,
+  quote xác nhận cả bộ và Order snapshot; không auto dùng AI một cuốn cho bộ.
+- PASS194RN/262web/106session-client unit, type/lint/build/export tương ứng,
+  API9unit +6HTTP bundle (135skip theo filter), routes213/33; detector0findings
+  trong phạm vi. Warning cũ và giới hạn xem báo cáo, không gọi native/CI PASS.
+- PASS QA UI web tới PendingReview với bộ thiếu tập2; RN web export lưu/mở lại
+  manifest và Buyer từ Home→chi tiết→tick nguyên bộ→quote→Order chưa trả tiền;
+  Mongo audit giữ đúng danh sách/snapshot. Fake storage/ảnh tổng hợp/mail local.
+  Đã bỏ điểm4.9/98%/xác minh/địa chỉ viết cứng trên seller card RN; nối hồ sơ uy
+  tín thật theo seller ID. Native/human/fulfillment gates còn mở, READINESS không đổi.
+- PASS cleanup cả hai fixture: không còn browser QA DB/user/role; các port
+  3009/3010/5194/8087 đã đóng, QA57017 đã stop. Mongo chính27017 vẫn healthy,
+  không dừng/sửa. Docs/diff PASS; hai trang UI cuối0console errors.
+  Các thay đổi Admin và hai file Profile web ngoài gói trong working tree được
+  giữ nguyên, không stage cùng. Hướng dẫn sử dụng/gate tiếp xem báo cáo.
+
+## RN Quên mật khẩu: reset/thư đạt; lượt QA thứ hai chưa có kết quả Login
 
 - Nhánh `codex/rn-password-recovery`, base `39f9b023`, subject
   `feat(rn): add OTP password recovery with safe failure handling`.
@@ -30,6 +54,10 @@
   session tạo mới; dùng auth event cho reset, kind cho mail, không dùng tokenId
   null để phân loại cảnh báo. Chưa có kết quả/cleanup lượt2; không lấy kết quả
   lượt1 thay cho lượt2. Tiếp tục đối soát trước khi dọn hoặc khi runner hết hạn.
+- Đối chiếu lúc bắt đầu gói bộ sách01/11: không còn listener/dịch vụ QA lượt2,
+  journal cũ vẫn RUNNING và không có provider/reset/login. Không suy thành PASS
+  hoặc cleanup có journal đầy đủ. Các port QA nêu trên sau đó được gói bộ dùng
+  riêng và đã dừng/dọn; không mở URL cũ để tiếp tục tài khoản QA mật khẩu.
 - Native runtime tiếp tục BLOCKED bởi automatic policy block cũ; không đi vòng.
   READINESS, GHN, DB/env/bucket chính và remote CI giữ nguyên.
 

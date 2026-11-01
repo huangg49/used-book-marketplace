@@ -27,6 +27,8 @@ import {
 import { orderDetailsSchema, ORDER_STATE_CONFIG } from "./contracts";
 import { BuyNowModal } from "./buy-now-modal";
 import { MemberNavigation } from "../navigation/member-navigation";
+import { bundleSchema } from "../bundles/book-bundle";
+import { BundleManifest } from "../bundles/bundle-manifest";
 
 const details = orderDetailsSchema
   .extend(orderResponseStateSchema.shape)
@@ -34,6 +36,7 @@ const details = orderDetailsSchema
     canCancel: z.boolean(),
     moneyHeld: z.number().int(),
     item: z.object({
+      bundle: bundleSchema.nullable().optional(),
       metadata: z.object({ title: z.string() }),
       description: z.string(),
     }),
@@ -125,7 +128,8 @@ export function OrderFocusScreen({
         )}
         {order && (
           <>
-            <AppText kind="bold">{order.item.metadata.title}</AppText>
+            <AppText kind="bold">{order.item.bundle?.title || order.item.metadata.title}</AppText>
+            <BundleManifest bundle={order.item.bundle}/>
             <AppText>
               {order.role === "Buyer" ? "Bạn là người mua" : "Bạn là người bán"}{" "}
               · {ORDER_STATE_CONFIG[order.state]?.label ?? order.state}
@@ -272,7 +276,7 @@ export function OrderFocusScreen({
         <BuyNowModal
           visible
           initialOrderId={id}
-          initialBookTitle={order.item.metadata.title}
+          initialBookTitle={order.item.bundle?.title || order.item.metadata.title}
           onClose={() => {
             setPaying(false);
             void changed();

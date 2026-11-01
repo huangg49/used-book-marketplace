@@ -159,13 +159,13 @@ export function CartScreen({ owner }: { owner: string }) {
                       listingId={item.listingId}
                       revisionId={item.listing.revisionId}
                       mediaId={item.listing.photos[0].id}
-                      label={item.listing.book.title}
+                      label={(item.listing.bundle?.title || item.listing.book.title)}
                       active
                       compact
                     />
                   </View>
                   <AppText kind="bookHeading" accessibilityRole="header">
-                    {item.listing.book.title}
+                    {(item.listing.bundle?.title || item.listing.book.title)}
                   </AppText>
                   <AppText>
                     {item.listing.seller.displayName} · Số lượng: 1

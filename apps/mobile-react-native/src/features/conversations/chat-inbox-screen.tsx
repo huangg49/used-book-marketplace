@@ -64,12 +64,12 @@ function ConversationInboxItem({
   const listingQuery = useQuery({
     queryKey: ["public-listing", room.listingId],
     queryFn: () =>
-      client.publicRequest(`/listings/${room.listingId}`, publicListing),
+      client.publicRequest(`/listings/${room.listingId}?bundleSupport=whole-v1`, publicListing),
     staleTime: 60000,
   });
 
   const listing = listingQuery.data;
-  const bookTitle = listing?.book.title ?? "Đang tải thông tin sách…";
+  const bookTitle = listing?.bundle?.title || listing?.book.title || "Đang tải thông tin sách…";
   const primaryPhoto = listing?.photos?.[0];
   const revisionId = listing?.revisionId;
 
@@ -244,7 +244,7 @@ function ExchangeInboxItem({
   const listingQuery = useQuery({
     queryKey: ["public-listing", targetListingId],
     queryFn: () =>
-      client.publicRequest(`/listings/${targetListingId}`, publicListing),
+      client.publicRequest(`/listings/${targetListingId}?bundleSupport=whole-v1`, publicListing),
     staleTime: 60000,
     enabled: Boolean(targetListingId),
   });
@@ -252,7 +252,7 @@ function ExchangeInboxItem({
   const listing = listingQuery.data;
   const partnerName =
     listing?.seller.displayName ?? (isInitiator ? "Đối tác" : "Người đề nghị");
-  const bookTitle = listing?.book.title ?? "Đang tải thông tin sách…";
+  const bookTitle = listing?.bundle?.title || listing?.book.title || "Đang tải thông tin sách…";
   const primaryPhoto = listing?.photos?.[0];
   const revisionId = listing?.revisionId;
 
