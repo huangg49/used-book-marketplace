@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Sparkles, Clock, AlertCircle, ShieldAlert } from "lucide-react";
+import { Clock, AlertCircle, ShieldAlert } from "lucide-react";
+import { BrandIcon } from "../../BrandIcon";
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
 import { session } from "../../../lib/session";
 import { ConfirmDialog } from "../../ConfirmDialog";
@@ -420,7 +421,7 @@ export function ActionCard(props: Props) {
     <div className={styles.card}>
       <div className={styles.headerRow}>
         <h2 className={styles.cardTitle}>
-          <Sparkles className={styles.iconGold} size={18} />
+          <BrandIcon size={18} />
           <span>Hành động tiếp theo</span>
         </h2>
         <span className={styles.roleBadge}>
