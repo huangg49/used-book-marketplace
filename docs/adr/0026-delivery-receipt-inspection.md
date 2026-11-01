@@ -1,9 +1,15 @@
 # ADR 0026: Delivered, Buyer receipt and inspection window (DirectDelivery Order)
 
-**Status: Proposed — bản nháp D01, chưa review, chưa triển khai.** 29/09/2026.
-Không có API, migration hay worker nào trong tài liệu này tồn tại. OpenAPI vẫn 0.20.0.
+**Status: Proposed — bản nháp D01, chính sách hoàn chỉnh chưa được chấp thuận.**
+Snapshot29/09/2026 ban đầu ghi chưa có API/migration/worker, OpenAPI0.20.0.
 Cần reviewer tiền/quyền theo TEAMWORK chấp nhận và chủ dự án trả lời các câu hỏi ở §9
 trước khi mở T01. Mở rộng ADR 0013, 0020–0025.
+
+**Đối chiếu01/11/2026:** trạng thái triển khai29/09 không mô tả source hiện tại.
+Main đã có receipt/delivery/settlement và migration
+0020/0021; chưa đủ claim/denial theo đề xuất. [ADR0061](0061-direct-delivery-completion-release-gate.md)
+chặn command/settlement mới, giữ lịch sử và tiền/sách khi READINESS sau F2h còn mở.
+ADR0026 tiếp tục Proposed; không chuyển thành Accepted vì code hoặc test đã có.
 
 Nguồn: SRS 1.1 §7.3 (Order), §7.5 (Shipment), POL-07/08, FR-O07/O08/O10,
 FR-S03/S04/S05, FR-D01/D02, BR-15–BR-18, EF-10/EF-11, AC-13/AC-14/AC-16.

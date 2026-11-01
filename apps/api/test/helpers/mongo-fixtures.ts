@@ -13,10 +13,8 @@ export class MongoFixtures {
     readonly client: MongoClient,
     readonly c: Collections,
   ) {}
-  static async connect() {
-    const client = await new MongoClient(
-      process.env.MONGO_FIXTURE_URL!,
-    ).connect();
+  static async connect(url = process.env.MONGO_FIXTURE_URL!) {
+    const client = await new MongoClient(url).connect();
     return new MongoFixtures(client, bindCollections(client.db()));
   }
   close() {

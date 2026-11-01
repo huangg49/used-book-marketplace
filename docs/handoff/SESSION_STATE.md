@@ -1,5 +1,25 @@
 # Điểm lưu hiện tại — 01/11/2026
 
+## DirectDelivery completion: chốt bảo vệ Buyer đã kiểm local
+
+- Owner duyệt gói1sau khảo sát, branch `codex/direct-delivery-release-gate`, base
+  main `2ae2212b`. [ADR0061](../adr/0061-direct-delivery-completion-release-gate.md)
+  chặn command receipt/delivery/settlement mới, giữ historical replay sau current
+  auth; [evidence và giới hạn](../features/DIRECT_COMPLETION_GATE_2026_11_01.md).
+  Subject `fix(orders): enforce direct delivery completion release gate`.
+- Worker báo Inspection bị chặn riêng, giữ tiền/sách/lịch sử; ledger cũng chặn
+  qua shared payout alias. Không env flag, migration, GHN, đổi gate READINESS
+  hoặc mở workflow claim/return mới. Chưa publish/deploy hoặc thao tác DB chính.
+- PASS48wallet E2E (8ca gate),20upstream/88SKIP,3PointOrder/70SKIP,5Mongo ledger
+  integrity. Hai regression trước chốt FAIL đúng yêu cầu. API unit lượt đầu có
+  một child shutdown Windows lỗi; ca riêng PASS, full tuần tự PASS288/288, không
+  sửa test/tăng timeout. API/consumer types, lint phạm vi, build, contract/routes
+  và docs/diff PASS. Không gọi gói này là full CI/native/human acceptance.
+- QA DB/user/role đã dọn/đối soát, replica set riêng đã dừng; DB chính healthy
+  giữ nguyên. Không có env flag mở lại; khi mở sau này phải xử lý riêng cơ hội
+  claim cho Inspection lịch sử, không tự trả tiền chỉ vì deadline cũ đã qua.
+- Giữ nguyên các file UI/ảnh chưa commit của công việc khác. Không stage cùng gói.
+
 ## Chuẩn bị tích hợp chuỗi local theo yêu cầu owner — 01/11/2026
 
 - Owner yêu cầu push, kiểm CI và squash merge vào main để giao task cho nhóm.
@@ -32,6 +52,12 @@
   thuộc chính ca profile, không xóa queue chung hoặc sửa mail worker/assertion.
   Sau sửa PASS2/38SKIP cho thứ tự ép; trọn hai suite profile/account-auth PASS40,
   lint/docs/diff PASS. Mọi thư dùng provider local, QA rs-test/database `_test`.
+- Đã tích hợp [PR84](https://github.com/huangg49/used-book-marketplace/pull/84)
+  tại main `2ae2212b`, PR head `808d0b4e`:11job mới nhất PASS trước merge;
+  API825E2E/57Mongo/287unit PASS/1unit SKIP. User Web rerun một lần do timing ca
+  lỗi trang sau lịch sử ví; giữ disclosure trên PR, không nhận đã sửa flake.
+  Kiểm lại CI sau merge trên đúng `2ae2212b`:11/11PASS. Ref main local/origin
+  đồng bộ, giữ working tree của teammate; READINESS không đổi.
 
 ## Bộ sách: hướng dẫn web và nối RN — đã kiểm chứng local, chưa native acceptance
 

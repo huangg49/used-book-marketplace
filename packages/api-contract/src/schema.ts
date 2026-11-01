@@ -2148,7 +2148,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Independent TEST_OPERATOR records one simulated Delivered event after an Applied pickup. It starts, but never settles, the buyer inspection window. */
+        /** @description Retained for historical compatibility. New DirectDelivery delivery commands return 409 InvalidState while the post-F2h Buyer-protection release gate is closed; no delivery event, inspection window or money movement is created. Current ACTIVE independent TEST_OPERATOR authorization and shipment binding run before an exact historical receipt replay. Replay returns the original committed receipt without repeating effects. This does not gate auction point-delivery events or change GHN/carrier routes. */
         post: operations["emitSimulatedDeliveryEvent"];
         delete?: never;
         options?: never;
@@ -2165,7 +2165,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Buyer-only receipt confirmation. It starts the 72-hour inspection window; it does not settle money or mark the listing Sold. */
+        /** @description Buyer-only historical compatibility endpoint, including eligible LOCKED existing obligations. New commands return 409 InvalidState while the post-F2h Buyer-protection release gate is closed. No delivery event, inspection window, receipt success or money movement is created. Current ownership/session/role checks precede exact historical receipt replay; replay returns stored facts without changing the current Order. Existing Inspection/Completed records remain readable and are not rewritten/refunded. */
         post: operations["confirmOrderReceipt"];
         delete?: never;
         options?: never;
@@ -5065,7 +5065,11 @@ export interface components {
             inspectionDeadline: string | null;
             /** Format: date-time */
             completedAt: string | null;
-            canConfirmReceipt: boolean;
+            /**
+             * @description Always false while DirectDelivery completion is release-blocked; historical delivery/inspection timestamps do not grant a new command or settlement.
+             * @constant
+             */
+            canConfirmReceipt: false;
             /** Format: uuid */
             quoteId: string;
             item: components["schemas"]["OrderItemSnapshot"];
@@ -10876,7 +10880,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Delivery recorded. */
+            /** @description An authorized historical delivery receipt was replayed; new delivery intake remains release-blocked. */
             200: {
                 headers: {
                     /** @description Private response; never cache. */
@@ -10915,7 +10919,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Receipt confirmation recorded. */
+            /** @description An authorized historical Buyer receipt was replayed; new confirmations remain release-blocked. */
             200: {
                 headers: {
                     /** @description Private response; never cache. */

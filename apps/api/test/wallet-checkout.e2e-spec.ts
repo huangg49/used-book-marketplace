@@ -6,6 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { MongoClient } from 'mongodb';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/configure-app.js';
 import { MediaStorage } from '../src/modules/media/media-storage.js';
@@ -23,9 +24,12 @@ import { MongoService } from '../src/database/mongo/mongo.service.js';
 import { LedgerService } from '../src/modules/wallet/ledger.service.js';
 import { OrdersService } from '../src/modules/orders/orders.service.js';
 import { OrderClock } from '../src/modules/orders/order-clock.js';
+import { OrderExpiryWorker } from '../src/modules/orders/order-expiry.service.js';
+import { DirectOrderReleasePolicy } from '../src/modules/wallet/direct-order-release.policy.js';
 import { MongoFixtures } from './helpers/mongo-fixtures.js';
 import { Gate } from './helpers/mongo-gate.js';
 import { validates } from './helpers/contract.js';
+import { prepareDatabase, testUrl } from './mongo/harness.js';
 import type { RoleCode } from '../src/database/mongo/documents.js';
 
 const provider = new VNPaySandbox(
@@ -49,6 +53,7 @@ const checklist = {
 };
 describe('VNPay sandbox / free capped listings / seller-selected wallet checkout', () => {
   let app: INestApplication, db: MongoFixtures, reviewer: Reader;
+  let scopedRootUrl: string | undefined;
   const post = (url: string, body: object, actor: Reader, key = randomUUID()) =>
     request(app.getHttpServer())
       .post('/api/v1' + url)
@@ -273,7 +278,8 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
     const l = await listing(seller),
       sent = (await submit(l, seller).expect(200)).body;
     const approved = (await decide(sent, true).expect(200)).body;
-    const destination = await address(buyer);
+    const destinations = (await get('/me/addresses', buyer).expect(200)).body;
+    const destination = destinations.items[0] ?? await address(buyer);
     const q = await post(
       `/listings/${l.entityId}/quotes`,
       {
@@ -298,8 +304,16 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
     };
   }
   beforeAll(async () => {
-    db = await MongoFixtures.connect();
+    // Worker sweeps must not consume another E2E file's financial fixtures.
+    // Both the real API and fixture writer use this owned, disposable database.
+    scopedRootUrl = testUrl(
+      `wallet_checkout_${randomUUID().replaceAll('-', '')}_test`,
+    );
+    const { appUrl, migratorUrl } = await prepareDatabase(scopedRootUrl);
+    db = await MongoFixtures.connect(migratorUrl);
     const module = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(MongoService)
+      .useValue(new MongoService(new ConfigService({ MONGODB_URL: appUrl })))
       .overrideProvider(TransactionPolicy)
       .useValue(
         new TransactionPolicy(
@@ -335,11 +349,38 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
     await app.listen(0, '127.0.0.1');
     reviewer = await reader(['ADMIN']);
   }, 60000);
-  // Each run uses a dedicated *_test database recreated by the QA harness.
-  // Keep complete financial chains until final reconciliation; close all clients.
+  // Keep complete owned financial chains until reconciliation, then remove only
+  // this suite's random database/users/roles, even if an assertion failed.
   afterAll(async () => {
-    await app?.close();
-    await db?.close();
+    try {
+      await app?.close();
+    } finally {
+      try {
+        await db?.close();
+      } finally {
+        if (scopedRootUrl) {
+          const root = new MongoClient(scopedRootUrl);
+          try {
+            await root.connect();
+            const owned = root.db();
+            await owned.dropDatabase();
+            await owned.command({ dropAllUsersFromDatabase: 1 });
+            await owned.command({ dropAllRolesFromDatabase: 1 });
+            expect((await owned.command({ usersInfo: 1 })).users).toEqual([]);
+            expect((await owned.command({ rolesInfo: 1 })).roles).toEqual([]);
+            expect(
+              (await root.db('admin').command({
+                listDatabases: 1,
+                nameOnly: true,
+                filter: { name: owned.databaseName },
+              })).databases,
+            ).toEqual([]);
+          } finally {
+            await root.close();
+          }
+        }
+      }
+    }
   });
   afterEach(() => vi.restoreAllMocks());
   function queryReply(
@@ -1317,18 +1358,18 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
     expect((await Promise.all([a, b])).map((r) => r.status).sort()).toEqual([200, 409]);
     expect(await wallet(buyer)).toMatchObject({ available: 0, transactionHeld: 80000 });
   });
-  it('keeps money held through delivery and settles to the seller once after 72h inspection', async () => {
-    const f = await sale();
+  async function shippedSale(buyer?: Reader) {
+    const f = await sale(buyer);
     f.body.agreedBookPrice = 40000;
     await fund(f.buyer, 70000);
-    const created = (await post('/orders', f.body, f.seller).expect(200)).body,
+    const created = (await post("/orders", f.body, f.seller).expect(200)).body,
       id = created.entityId;
     await post(`/orders/${id}/pay`, { expectedVersion: 1 }, f.buyer).expect(200);
     await post(`/orders/${id}/accept`, { expectedVersion: 2 }, f.seller).expect(
       200,
     );
     const bytes = await sharp({
-      create: { width: 64, height: 64, channels: 3, background: '#58685E' },
+      create: { width: 64, height: 64, channels: 3, background: "#58685E" },
     })
       .png()
       .toBuffer();
@@ -1337,99 +1378,445 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
         `/orders/${id}/packaging-evidence`,
         {
           expectedVersion: 3,
-          mimeType: 'image/png',
+          mimeType: "image/png",
           byteSize: bytes.length,
-          sha256: createHash('sha256').update(bytes).digest('hex'),
+          sha256: createHash("sha256").update(bytes).digest("hex"),
         },
         f.seller,
       ).expect(200)
     ).body;
     await request(app.getHttpServer())
-      .put(
-        `/api/v1/orders/${id}/packaging-evidence/${evidence.entityId}/content`,
-      )
-      .set('Authorization', `Bearer ${f.seller.token}`)
-      .set('Idempotency-Key', randomUUID())
-      .set('Content-Type', 'image/png')
+      .put(`/api/v1/orders/${id}/packaging-evidence/${evidence.entityId}/content`)
+      .set("Authorization", `Bearer ${f.seller.token}`)
+      .set("Idempotency-Key", randomUUID())
+      .set("Content-Type", "image/png")
       .send(bytes)
       .expect(200);
-    const trackingCode = 'LL-' + randomUUID().replaceAll('-', '').toUpperCase();
+    const trackingCode = "LL-" + randomUUID().replaceAll("-", "").toUpperCase();
     const shipment = (
       await post(
         `/orders/${id}/shipment`,
         {
           expectedOrderVersion: 3,
-          carrier: 'LatLaiSimulator',
+          carrier: "LatLaiSimulator",
           trackingCode,
           packagingEvidenceIds: [evidence.entityId],
         },
         f.seller,
       ).expect(200)
     ).body;
-    const operator = await reader(['TEST_OPERATOR']),
+    const operator = await reader(["TEST_OPERATOR"]),
       eventId = randomUUID();
     await post(
-      '/operations/simulator/pickup-events',
+      "/operations/simulator/pickup-events",
       {
         eventId,
         shipmentId: shipment.entityId,
         orderId: id,
-        carrier: 'LatLaiSimulator',
+        carrier: "LatLaiSimulator",
         trackingCode,
-        type: 'PickedUp',
+        type: "PickedUp",
         occurredAt: new Date().toISOString(),
       },
       operator,
       eventId,
     ).expect(200);
+    return { ...f, id, evidence, shipment, operator, trackingCode };
+  }
+  // Explicit historical fixture only: temporarily allow the old transition to
+  // produce valid receipt/audit/outbox chains, then restore the production gate
+  // before every replay, denial, worker or ledger assertion below.
+  async function historicalReceipt(
+    f: Awaited<ReturnType<typeof shippedSale>>,
+    carrier = false,
+  ) {
+    const permit = vi
+      .spyOn(app.get(DirectOrderReleasePolicy), "isReleased")
+      .mockReturnValue(true);
+    const key = randomUUID();
+    const path = carrier
+      ? "/operations/simulator/delivery-events"
+      : `/orders/${f.id}/confirm-receipt`;
+    const body = carrier
+      ? {
+          eventId: key,
+          shipmentId: f.shipment.entityId,
+          orderId: f.id,
+          carrier: "LatLaiSimulator",
+          trackingCode: f.trackingCode,
+          occurredAt: new Date().toISOString(),
+        }
+      : { expectedVersion: 4 };
+    try {
+      const result = await post(
+        path,
+        body,
+        carrier ? f.operator : f.buyer,
+        key,
+      ).expect(200);
+      return { key, path, body, receipt: result.body };
+    } finally {
+      permit.mockRestore();
+    }
+  }
+  async function directEffects(id: string) {
+    const context = (await db.c.workflow_contexts.findOne({ orderId: id }))!;
+    const journals = await db.c.ledger_journals.find({ orderId: id }).toArray();
+    const audits = await db.c.audit_events
+      .find({ contextId: context._id })
+      .toArray();
+    const commitments = await db.c.exclusive_commitments
+      .find({ currentContextId: context._id })
+      .toArray();
+    const item = (await db.c.workflow_items.findOne({ contextId: context._id }))!;
+    // Private reads take write locks too. Compare all business/history fields,
+    // excluding only the internal lock sequence shared by reads and commands.
+    const business = <T extends { lockSeq: number }>(doc: T | null) => {
+      if (!doc) return null;
+      const { lockSeq: _lockSeq, ...state } = doc;
+      return state;
+    };
+    return {
+      order: business(await db.c.direct_orders.findOne({ _id: id })),
+      context: business(context),
+      journals,
+      entries: await db.c.ledger_entries
+        .find({ journalId: { $in: journals.map((j) => j._id) } })
+        .toArray(),
+      deliveries: await db.c.direct_delivery_events
+        .find({ orderId: id })
+        .toArray(),
+      receipts: await db.c.mutation_receipts
+        .find({ contextId: context._id })
+        .toArray(),
+      audits,
+      outbox: await db.c.outbox_events
+        .find({ auditId: { $in: audits.map((a) => a._id) } })
+        .toArray(),
+      commitments: commitments.map(business),
+      commitmentEvents: await db.c.commitment_events
+        .find({ commitmentId: { $in: commitments.map((c) => c._id) } })
+        .toArray(),
+      listing: business(await db.c.listings.findOne({ _id: item.listingId })),
+    };
+  }
+  it("release gate refuses new receipt and carrier delivery without changing held funds or history", async () => {
+    const f = await shippedSale();
+    const before = await directEffects(f.id);
+    const view = (await get(`/me/orders/${f.id}`, f.buyer).expect(200)).body;
+    expect(view.canConfirmReceipt).toBe(false);
+    const key = randomUUID();
+    for (let n = 0; n < 2; n++) {
+      const denied = await post(
+        `/orders/${f.id}/confirm-receipt`,
+        { expectedVersion: 4 },
+        f.buyer,
+        key,
+      ).expect(409);
+      expect(denied.body).toMatchObject({ code: "InvalidState" });
+    }
+    const eventId = randomUUID();
+    const event = {
+      eventId,
+      shipmentId: f.shipment.entityId,
+      orderId: f.id,
+      carrier: "LatLaiSimulator",
+      trackingCode: f.trackingCode,
+      occurredAt: new Date().toISOString(),
+    };
     await post(
-      `/orders/${id}/confirm-receipt`,
-      { expectedVersion: 4 },
-      f.buyer,
-    ).expect(200);
-    await app.get(MongoService).tx((tx) => checkPackaging(tx, evidence.entityId));
-    await post(`/orders/${id}/packaging-evidence`, {
-      expectedVersion: 5, mimeType: 'image/png', byteSize: bytes.length,
-      sha256: createHash('sha256').update(bytes).digest('hex'),
-    }, f.seller).expect(409);
+      "/operations/simulator/delivery-events",
+      event,
+      f.operator,
+      eventId,
+    ).expect(409);
+    await post(
+      "/operations/simulator/delivery-events",
+      event,
+      f.operator,
+      eventId,
+    ).expect(409);
+    expect(await directEffects(f.id)).toEqual(before);
     expect(await wallet(f.buyer)).toMatchObject({
       available: 0,
       transactionHeld: 70000,
     });
     expect((await wallet(f.seller)).available).toBe(0);
-    await expect(app.get(OrdersService).settle(id)).rejects.toMatchObject({
-      status: 409,
-    });
-    const order = await db.c.direct_orders.findOne({ _id: id });
+  });
+  it("release gate retains current owner, role, session and existing-obligation checks before replay", async () => {
+    const f = await shippedSale();
+    const legacy = await historicalReceipt(f);
+    const before = await directEffects(f.id);
+    await request(app.getHttpServer())
+      .post("/api/v1" + legacy.path)
+      .set("Idempotency-Key", legacy.key)
+      .send(legacy.body)
+      .expect(401);
+    await post(legacy.path, legacy.body, f.seller, legacy.key).expect(404);
+    const outsider = await reader();
+    await post(legacy.path, legacy.body, outsider, legacy.key).expect(404);
+    const staff = await reader(["STAFF"]);
+    await post(legacy.path, legacy.body, staff, legacy.key).expect(403);
+    for (const status of ["RESTRICTED", "LOCKED", "ACTIVE"] as const) {
+      await db.setStatus(f.buyer.id, status);
+      expect(
+        (await post(legacy.path, legacy.body, f.buyer, legacy.key).expect(200))
+          .body,
+      ).toEqual(legacy.receipt);
+      await post(legacy.path, { expectedVersion: 4 }, f.buyer).expect(409);
+      expect(
+        (await get(`/me/orders/${f.id}`, f.buyer).expect(200)).body
+          .canConfirmReceipt,
+      ).toBe(false);
+    }
+    await post(
+      legacy.path,
+      { expectedVersion: 4, completionEnabled: true },
+      f.buyer,
+    ).expect(422);
+    await db.removeRole(f.buyer.id, "MEMBER");
+    await post(legacy.path, legacy.body, f.buyer, legacy.key).expect(403);
+    expect(await directEffects(f.id)).toEqual(before);
+  });
+  it.each([false, true])(
+    "release gate preserves authorized historical replay (carrier=%s) and denies new or revoked commands",
+    async (carrier) => {
+      const f = await shippedSale();
+      const legacy = await historicalReceipt(f, carrier);
+      const before = await directEffects(f.id);
+      const actor = carrier ? f.operator : f.buyer;
+      const replay = await post(
+        legacy.path,
+        legacy.body,
+        actor,
+        legacy.key,
+      ).expect(200);
+      expect(replay.headers["idempotency-replayed"]).toBe("true");
+      expect(replay.body).toEqual(legacy.receipt);
+      if (carrier) {
+        await post(
+          legacy.path,
+          { ...legacy.body, occurredAt: new Date(0).toISOString() },
+          actor,
+          legacy.key,
+        ).expect(409);
+        await db.addRole(f.buyer.id, "TEST_OPERATOR");
+        await post(legacy.path, legacy.body, f.buyer, legacy.key).expect(403);
+        await db.removeRole(f.operator.id, "TEST_OPERATOR");
+        await post(legacy.path, legacy.body, actor, legacy.key).expect(403);
+        await db.addRole(f.operator.id, "TEST_OPERATOR");
+      } else {
+        // The existing contract admits only expectedVersion=4. A changed value
+        // is rejected at validation, while a different owned target conflicts
+        // with the stored idempotency hash after authorization.
+        await post(legacy.path, { expectedVersion: 5 }, actor, legacy.key).expect(
+          422,
+        );
+        const other = await shippedSale(f.buyer);
+        const conflict = await post(
+          `/orders/${other.id}/confirm-receipt`,
+          legacy.body,
+          actor,
+          legacy.key,
+        ).expect(409);
+        expect(conflict.body.code).toBe("IdempotencyConflict");
+      }
+      const newKey = randomUUID();
+      await post(
+        legacy.path,
+        carrier ? { ...legacy.body, eventId: newKey } : { expectedVersion: 4 },
+        actor,
+        newKey,
+      ).expect(409);
+      expect(await directEffects(f.id)).toEqual(before);
+      await db.c.auth_sessions.updateOne(
+        { _id: actor.sessionId },
+        { $set: { revokedAt: new Date() } },
+      );
+      await post(legacy.path, legacy.body, actor, legacy.key).expect(401);
+      expect(await directEffects(f.id)).toEqual(before);
+    },
+  );
+  it.each([false, true])(
+    "release gate keeps historical inspection holds out of executable backlog and rejects direct ledger settlement (carrier=%s)",
+    async (carrier) => {
+      const f = await shippedSale();
+      await historicalReceipt(f, carrier);
+      const before = await directEffects(f.id);
+      const order = before.order!;
+      const settle = vi.spyOn(app.get(OrdersService), "settle");
+      const clock = vi
+        .spyOn(app.get(OrderClock), "now")
+        .mockResolvedValue(new Date(order.inspectionDeadline!.getTime() + 1));
+      try {
+        for (let n = 0; n < 2; n++) {
+          const result = await app.get(OrderExpiryWorker).tick();
+          expect(result.failed).toBe(0);
+          expect(result.inspectionRemaining).toBe(0);
+          expect(result.inspectionBlocked).toBeGreaterThanOrEqual(1);
+          expect(result.inspectionOverdueBlocked).toBeGreaterThanOrEqual(1);
+        }
+        expect(settle).not.toHaveBeenCalled();
+        await expect(app.get(OrdersService).settle(f.id)).rejects.toMatchObject({
+          status: 409,
+        });
+        await expect(
+          app.get(MongoService).tx((tx) =>
+            app.get(LedgerService).settleDirectOrder(
+              tx,
+              {
+                _id: f.id,
+                sellerId: f.seller.id,
+                buyerTotal: 70000,
+                sellerProceeds: 68000,
+              },
+              randomUUID(),
+              new Date(order.inspectionDeadline!.getTime() + 1),
+            ),
+          ),
+        ).rejects.toMatchObject({ status: 409 });
+        await expect(
+          app.get(MongoService).tx((tx) =>
+            app.get(LedgerService).settlePointOrder(
+              tx,
+              {
+                _id: f.id,
+                sellerId: f.seller.id,
+                buyerTotal: 70000,
+                sellerProceeds: 68000,
+              },
+              randomUUID(),
+              new Date(order.inspectionDeadline!.getTime() + 1),
+            ),
+          ),
+        ).rejects.toMatchObject({ status: 409 });
+      } finally {
+        clock.mockRestore();
+      }
+      expect(await directEffects(f.id)).toEqual(before);
+      expect(await wallet(f.buyer)).toMatchObject({
+        available: 0,
+        transactionHeld: 70000,
+      });
+      expect((await wallet(f.seller)).available).toBe(0);
+      expect(await db.c.listings.findOne({ _id: f.l.entityId })).toMatchObject({
+        trade: "Reserved",
+      });
+      await app
+        .get(MongoService)
+        .tx((tx) => checkPackaging(tx, f.evidence.entityId));
+    },
+  );
+  it("release gate races new receipt and delivery against overdue review without payout or lost hold", async () => {
+    const f = await shippedSale();
+    const pickup = (await db.c.carrier_pickup_events.findOne({
+      orderId: f.id,
+      outcome: "Applied",
+    }))!;
     const clock = vi
-      .spyOn(app.get(OrderClock), 'now')
-      .mockResolvedValue(new Date(order!.inspectionDeadline!.getTime() + 1));
+      .spyOn(app.get(OrderClock), "now")
+      .mockResolvedValue(new Date(pickup.deliveryDeadline!.getTime() + 1));
+    // Sessions remain valid for this QA-only advanced decision clock.
+    await db.c.auth_sessions.updateMany(
+      { _id: { $in: [f.buyer.sessionId, f.operator.sessionId] } },
+      {
+        $set: {
+          expiresAt: new Date(pickup.deliveryDeadline!.getTime() + 3600000),
+        },
+      },
+    );
+    const barrier = await Gate.lockUser(db.client, f.buyer.id);
+    const eventId = randomUUID();
+    const receipt = post(
+      `/orders/${f.id}/confirm-receipt`,
+      { expectedVersion: 4 },
+      f.buyer,
+    ).then((r) => r);
+    const delivery = post(
+      "/operations/simulator/delivery-events",
+      {
+        eventId,
+        shipmentId: f.shipment.entityId,
+        orderId: f.id,
+        carrier: "LatLaiSimulator",
+        trackingCode: f.trackingCode,
+        occurredAt: new Date().toISOString(),
+      },
+      f.operator,
+      eventId,
+    ).then((r) => r);
+    const overdue = app.get(OrdersService).expireDelivery(f.id);
+    const outcomes = Promise.allSettled([receipt, delivery, overdue]);
     try {
-      await app.get(OrdersService).settle(id);
-      await app.get(OrdersService).settle(id);
+      await barrier.contended(3);
+      await barrier.commit();
+      const [buyerResult, carrierResult, reviewResult] = await outcomes;
+      expect(buyerResult.status).toBe("fulfilled");
+      expect(carrierResult.status).toBe("fulfilled");
+      if (buyerResult.status === "fulfilled")
+        expect(buyerResult.value.status).toBe(409);
+      if (carrierResult.status === "fulfilled")
+        expect(carrierResult.value.status).toBe(409);
+      expect(reviewResult.status).toBe("fulfilled");
     } finally {
+      await barrier.close();
       clock.mockRestore();
     }
-    expect(await wallet(f.buyer)).toMatchObject({
-      available: 0,
-      transactionHeld: 0,
+    expect(await db.c.direct_orders.findOne({ _id: f.id })).toMatchObject({
+      state: "ResolutionPending",
     });
-    // 40000 - 5% commission + 30000 advanced shipping reimbursement.
+    expect(
+      await db.c.order_delivery_reviews.countDocuments({ orderId: f.id }),
+    ).toBe(1);
+    expect(
+      await db.c.direct_delivery_events.countDocuments({ orderId: f.id }),
+    ).toBe(0);
+    expect(
+      await db.c.ledger_journals.countDocuments({
+        orderId: f.id,
+        type: "OrderSettlement",
+      }),
+    ).toBe(0);
+    expect(await wallet(f.buyer)).toMatchObject({ transactionHeld: 70000 });
+  });
+  it("release gate preserves historical completed settlement replay without paying twice", async () => {
+    const f = await shippedSale();
+    const { id, evidence } = f;
+    await historicalReceipt(f);
+    const permit = vi
+      .spyOn(app.get(DirectOrderReleasePolicy), "isReleased")
+      .mockReturnValue(true);
+    let settled;
+    try {
+      const order = (await db.c.direct_orders.findOne({ _id: id }))!;
+      const clock = vi
+        .spyOn(app.get(OrderClock), "now")
+        .mockResolvedValue(new Date(order.inspectionDeadline!.getTime() + 1));
+      try {
+        settled = await app.get(OrdersService).settle(id);
+      } finally {
+        clock.mockRestore();
+      }
+    } finally {
+      permit.mockRestore();
+    }
+    const before = await directEffects(id);
+    expect((await app.get(OrdersService).settle(id)).receipt).toEqual(
+      settled.receipt,
+    );
+    expect(await directEffects(id)).toEqual(before);
+    expect(await wallet(f.buyer)).toMatchObject({ transactionHeld: 0 });
     expect((await wallet(f.seller)).available).toBe(68000);
     expect(
       await db.c.ledger_journals.countDocuments({
         orderId: id,
-        type: 'OrderSettlement',
+        type: "OrderSettlement",
       }),
     ).toBe(1);
     expect(await db.c.listings.findOne({ _id: f.l.entityId })).toMatchObject({
-      trade: 'Sold',
+      trade: "Sold",
     });
     await app.get(MongoService).tx((tx) => checkPackaging(tx, evidence.entityId));
-    await post(`/orders/${id}/packaging-evidence`, {
-      expectedVersion: 6, mimeType: 'image/png', byteSize: bytes.length,
-      sha256: createHash('sha256').update(bytes).digest('hex'),
-    }, f.seller).expect(409);
   });
   it('reconciles all immutable journals, fees, callbacks and finite simulator capital', async () => {
     const result = await app

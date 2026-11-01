@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.67.0
+  version: 0.68.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -11,8 +11,11 @@ info:
     acknowledgement never waives either deadline. Settlement retains all funds
     while any dispute evidence remains. Eligible existing-obligation handlers
     permit LOCKED participants; new funding/trades remain denied. DirectDelivery
-    receipt/inspection/settlement source exists, but release and post-F2h readiness
-    gates remain open. Full dispute adjudication/return, ordinary ViaPoint and
+    completion is release-blocked: new receipt/delivery commands return 409
+    InvalidState and inspection settlement cannot execute until Buyer protection
+    and post-F2h readiness are accepted. Authorized historical receipt replays
+    remain read-only; existing holds/history are preserved. Full dispute
+    adjudication/return, ordinary ViaPoint and
     withdrawal remain incomplete. This contract describes source capabilities,
     not production readiness or full client/native acceptance. GHN/carrier routes
     retain their current behavior pending the owner's team decision.
@@ -6190,7 +6193,14 @@ paths:
       operationId: emitSimulatedDeliveryEvent
       tags: [Orders]
       x-implementation-status: implemented
-      description: Independent TEST_OPERATOR records one simulated Delivered event after an Applied pickup. It starts, but never settles, the buyer inspection window.
+      description: >-
+        Retained for historical compatibility. New DirectDelivery delivery commands
+        return 409 InvalidState while the post-F2h Buyer-protection release gate is
+        closed; no delivery event, inspection window or money movement is created.
+        Current ACTIVE independent TEST_OPERATOR authorization and shipment binding
+        run before an exact historical receipt replay. Replay returns the original
+        committed receipt without repeating effects. This does not gate auction
+        point-delivery events or change GHN/carrier routes.
       security:
         - bearerAuth: []
       parameters:
@@ -6206,7 +6216,7 @@ paths:
               $ref: "#/components/schemas/SimulatedDeliveryEvent"
       responses:
         "200":
-          description: Delivery recorded.
+          description: An authorized historical delivery receipt was replayed; new delivery intake remains release-blocked.
           headers:
             Cache-Control:
               description: Private response; never cache.
@@ -6235,7 +6245,14 @@ paths:
       tags: [Orders]
       x-implementation-status: implemented
       x-locked-access: existing-obligations
-      description: Buyer-only receipt confirmation. It starts the 72-hour inspection window; it does not settle money or mark the listing Sold.
+      description: >-
+        Buyer-only historical compatibility endpoint, including eligible LOCKED
+        existing obligations. New commands return 409 InvalidState while the
+        post-F2h Buyer-protection release gate is closed. No delivery event,
+        inspection window, receipt success or money movement is created. Current
+        ownership/session/role checks precede exact historical receipt replay;
+        replay returns stored facts without changing the current Order. Existing
+        Inspection/Completed records remain readable and are not rewritten/refunded.
       security:
         - bearerAuth: []
       parameters:
@@ -6255,7 +6272,7 @@ paths:
               $ref: "#/components/schemas/ConfirmOrderReceipt"
       responses:
         "200":
-          description: Receipt confirmation recorded.
+          description: An authorized historical Buyer receipt was replayed; new confirmations remain release-blocked.
           headers:
             Cache-Control:
               description: Private response; never cache.
@@ -15276,6 +15293,8 @@ components:
           format: date-time
         canConfirmReceipt:
           type: boolean
+          const: false
+          description: Always false while DirectDelivery completion is release-blocked; historical delivery/inspection timestamps do not grant a new command or settlement.
         quoteId:
           type: string
           format: uuid

@@ -68,6 +68,10 @@ try {
         console.warn(
           'Open fulfillment verification tasks require custody review; funds and books remain held.',
         );
+      if (result.inspectionBlocked > 0)
+        console.warn(
+          'DirectDelivery inspection completion is release-blocked; existing funds and books remain held pending Buyer-protection readiness.',
+        );
     } catch {
       console.error('Order expiry sweep failed; retrying next cycle.');
       if (process.argv.includes('--once')) process.exitCode = 1;

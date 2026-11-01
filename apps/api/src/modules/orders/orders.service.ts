@@ -33,6 +33,7 @@ import { ReservationsService } from '../reservations/reservations.service.js';
 import { MediaStorage } from '../media/media-storage.js';
 import { OrderClock } from './order-clock.js';
 import { LedgerService } from '../wallet/ledger.service.js';
+import { DirectOrderReleasePolicy } from '../wallet/direct-order-release.policy.js';
 import { checkOrder } from './order-invariants.js';
 import { quoteAmounts } from '../quotes/quote-money.js';
 
@@ -99,6 +100,7 @@ export class OrdersService {
     private readonly input: ContractInput,
     private readonly storage: MediaStorage,
     private readonly ledger: LedgerService,
+    private readonly directRelease: DirectOrderReleasePolicy,
   ) {}
   private async order(tx: Tx, id: string) {
     const o = await loadOrder(tx.c, id);
@@ -870,6 +872,8 @@ export class OrdersService {
         return this.own(tx, id, actor._id, true);
       },
       mutate: async (tx, _actor, _before, receiptId) => {
+        // Authorization and stored-receipt replay already ran in the executor.
+        this.directRelease.assertReleased();
         const { o, commitment } = await this.locked(tx, id);
         if (o.version !== body.expectedVersion || o.state !== 'InTransit')
           throw invalidState();
@@ -976,6 +980,7 @@ export class OrdersService {
             );
         },
         mutate: async (tx, _actor, _before, receiptId) => {
+          this.directRelease.assertReleased();
           const { o, commitment } = await this.locked(tx, event.orderId);
           const shipment = await tx.c.direct_shipments.findOne({
             _id: event.shipmentId,
@@ -1132,6 +1137,7 @@ export class OrdersService {
         },
         authorize: (tx) => this.order(tx, id),
         mutate: async (tx, _before, receiptId) => {
+          this.directRelease.assertReleased();
           const { o, listing } = await this.locked(tx, id);
           if (o.state !== 'Inspection' || !o.inspectionDeadline)
             throw invalidState();
@@ -1395,12 +1401,7 @@ export class OrdersService {
           deliveredAt: o.deliveredAt?.toISOString() ?? null,
           inspectionDeadline: o.inspectionDeadline?.toISOString() ?? null,
           completedAt: o.completedAt?.toISOString() ?? null,
-          canConfirmReceipt:
-            role === 'Buyer' &&
-            o.state === 'InTransit' &&
-            !!pickup &&
-            !delivery &&
-            funds.held === o.quote.buyerTotal,
+          canConfirmReceipt: false as const,
           carrierReview: carrierReview
             ? {
                 id: carrierReview._id,

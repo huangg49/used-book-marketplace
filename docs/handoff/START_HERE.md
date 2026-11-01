@@ -173,6 +173,12 @@ Tên schema/receipt lịch sử có thể vẫn chứa `Unpaid` dù projection h
 
 ## 5. Chạy kiểm thử mà không dùng database của app
 
+DirectDelivery completion bị chặn theo [ADR0061](../adr/0061-direct-delivery-completion-release-gate.md):
+không dùng confirm-receipt/delivery-events mới hoặc worker để ép demo tới Completed.
+Exact receipt lịch sử chỉ replay sau current auth. Đơn Inspection cũ giữ tiền/sách;
+worker báo inspectionBlocked/inspectionOverdueBlocked riêng. Không có env flag bật
+lại; cần gói bảo vệ Buyer và quyền mở gate riêng. Không sửa DB để vượt giới hạn này.
+
 Compose **riêng** `infra/docker-compose.mongo-test.yml` chạy replica set QA
 `127.0.0.1:57017` (auth, dữ liệu trên tmpfs — khởi động lại là rỗng). Tài khoản
 `latlai_qa_root/local_test_only` là credential local-test công khai, không dùng cho môi
