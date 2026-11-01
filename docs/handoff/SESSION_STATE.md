@@ -1,6 +1,30 @@
 # Điểm lưu hiện tại — 01/11/2026
 
-## Ba gói hồ sơ/Admin/cart đã triển khai và kiểm local — 01/11/2026
+## Ba gói hồ sơ/Admin/cart: kiểm bổ sung schema và storage thật — 01/11/2026
+
+- Nhánh hiện tại `codex/member-acceptance-verification`, base/business source
+  `5e179691`, subject `test(qa): verify member schema upgrades and real private avatar storage`.
+  Owner duyệt kiểm thực tế, vẫn giữ local/chưa push/PR/merge/deploy.
+  [Báo cáo kiểm bổ sung](../features/MEMBER_ACCEPTANCE_2026_11_01.md).
+- PASS upgrade1: trích độc lập59checksum từ Git main `be581aec`, so đủ trước
+  nâng0047/0048/0049 trong DB QA ngẫu nhiên `_test`; giữ user/session/ledger,
+  migration idempotent và least-privilege role sau bootstrap. Không DB chính.
+- PASS7nhóm avatar với Supabase thật trong bucket QA mới/private: upload/replay,
+  signed GET/WebP256/EXIF, owner/public denial, attached retention, durable cleanup
+  retry. Blob/bucket QA đã dọn sạch; không đụng bucket ứng dụng. Mail vẫn local.
+  Profile browser regression PASS sau adapter opt-in; API/Admin lint/types PASS,
+  docs/contract/routes/diff PASS. Live runner có guard `--live`, không tự gọi ở CI.
+- Android debug x86_64 build mới PASS7m28s/443executed/32up-to-date; SHA256
+  `4cbdc04b5abd763009287d1d43be6641c183d44423f8302b0b98ed212161b498`.
+  APK không chứa index.android.bundle, cần Metro. Native runtime **BLOCKED** bởi
+  automatic policy block trước đó; không đi vòng qua chặn, không cài/mở emulator.
+  Không nhận build/hash trùng APK cũ thành runtime PASS của profile/cart mới.
+- Email thật **BLOCKED cấu hình**: chưa bật provider thật, thiếu key provider và
+  recipient QA do nhóm xác nhận; không gửi thử thư cá nhân. Owner hỏi nghĩa của
+  email; đã giải thích OTP đổi email/cảnh báo email cũ, chưa có cấu hình mới.
+  Native/human/mail delivery/remote CI giữ mở. QA Mongo/API/media/browser/Gradle
+  của lượt này đã dừng; không còn port app/QA listener hoặc Java/emulator của lượt.
+  READINESS giữ nguyên; các gói phát triển và bằng chứng trước xem tiếp bên dưới.
 
 - Owner duyệt hồ sơ web/RN, Admin khóa/mở và giỏ sách web/RN; giữ local,
   chưa push/PR/merge/deploy. Chuỗi từ `2d051c0a`: hồ sơ `f49160fa`, Admin

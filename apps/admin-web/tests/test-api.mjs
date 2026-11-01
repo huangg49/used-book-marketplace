@@ -1,5 +1,6 @@
 // Isolated HTTP/MongoDB fixture: a disposable *_test database on the QA replica
-// set with its own least-privilege users. Storage is local and fake; Sharp is real.
+// set with its own least-privilege users. Default storage is local/fake; Sharp is
+// real. An explicit storageAdapter supports opt-in live tests in a new QA bucket.
 import { randomBytes, randomUUID, createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -24,6 +25,7 @@ export async function createTestApi({
   onResponse,
   aiModels,
   catalogMetadata,
+  storageAdapter,
 } = {}) {
   const rootUrl = process.env.MONGO_TEST_URL;
   if (!rootUrl)
@@ -86,7 +88,10 @@ export async function createTestApi({
               requestsIdle = undefined;
               reject(new Error("QA requests did not drain before teardown."));
             }, 10000);
-            requestsIdle = () => { clearTimeout(timer); resolve(); };
+            requestsIdle = () => {
+              clearTimeout(timer);
+              resolve();
+            };
           });
       } finally {
         await app?.close();
@@ -122,7 +127,7 @@ export async function createTestApi({
     await migrate(migrator, migrator.db());
     const db = migrator.db();
     const objects = new Map();
-    const storage = {
+    const storage = storageAdapter ?? {
       async check() {},
       async put(key, bytes) {
         objects.set(key, Buffer.from(bytes));
@@ -160,10 +165,13 @@ export async function createTestApi({
       { MediaWorker } = await load("modules/media/media-worker.service.js"),
       { configureApp } = await load("configure-app.js");
     const builder = Test.createTestingModule({ imports: [AppModule] })
-      .overrideProvider(MediaStorage).useValue(storage);
+      .overrideProvider(MediaStorage)
+      .useValue(storage);
     if (aiModels) {
       const { PriceModel } = await load("modules/price-assist/price-model.js");
-      const { AutofillModel } = await load("modules/autofill-assist/autofill-model.js");
+      const { AutofillModel } = await load(
+        "modules/autofill-assist/autofill-model.js",
+      );
       builder.overrideProvider(PriceModel).useValue(aiModels.price);
       builder.overrideProvider(AutofillModel).useValue(aiModels.autofill);
     }
@@ -175,9 +183,13 @@ export async function createTestApi({
       let ended = false;
       const end = response.end;
       response.end = function (...args) {
-        try { return end.apply(this, args); }
-        finally {
-          if (!ended) { ended = true; activeRequests--; }
+        try {
+          return end.apply(this, args);
+        } finally {
+          if (!ended) {
+            ended = true;
+            activeRequests--;
+          }
           if (!activeRequests) requestsIdle?.();
         }
       };
@@ -255,7 +267,9 @@ export async function createTestApi({
       isbn: null,
     };
     if (catalogMetadata) Object.assign(metadata, catalogMetadata);
-    const catalog = await api("/catalog/requests", member.accessToken, { metadata });
+    const catalog = await api("/catalog/requests", member.accessToken, {
+      metadata,
+    });
     const extra = await api("/catalog/requests", member.accessToken, {
       metadata: { ...metadata, title: "Đầu sách cần bổ sung thông tin" },
     });
@@ -372,9 +386,13 @@ export async function createTestApi({
       member,
       // QA-only access to encrypted mail for an isolated fixture. Never logged.
       readAccountMail: async (changeId) => {
-        const job = await db.collection('auth_mail_jobs').findOne({ tokenId: changeId });
+        const job = await db
+          .collection("auth_mail_jobs")
+          .findOne({ tokenId: changeId });
         if (!job) return null;
-        const { AuthMailService } = await load('modules/auth/auth-mail.service.js');
+        const { AuthMailService } = await load(
+          "modules/auth/auth-mail.service.js",
+        );
         return app.get(AuthMailService).decrypt(job.encryptedPayload);
       },
       metadata,
@@ -383,9 +401,17 @@ export async function createTestApi({
       listings,
       photo,
       processMedia: () => app.get(MediaWorker).tick(),
+      cleanupProfileAvatars: async () => {
+        const { ProfileAvatarWorker } = await load(
+          "modules/profile/profile-avatar-worker.js",
+        );
+        return app.get(ProfileAvatarWorker).cleanup();
+      },
       // Explicit QA sweep, never a background timer or a production worker.
       processAuctions: async () => {
-        const { AuctionWorker } = await load("modules/auctions/auction-worker.service.js");
+        const { AuctionWorker } = await load(
+          "modules/auctions/auction-worker.service.js",
+        );
         return app.get(AuctionWorker).tick();
       },
     };

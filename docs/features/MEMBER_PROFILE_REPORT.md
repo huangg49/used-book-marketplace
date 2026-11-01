@@ -54,3 +54,7 @@ không tắt cooldown production, API suite kiểm từ chối60giây riêng.
 Lệnh bật Metro trực tiếp bị automatic policy block (tool không nêu lý do chi tiết);
 không thử vượt block, native verification để lượt cuối của chuỗi được duyệt.
 Không đóng [READINESS](../handoff/READINESS.md), không nhận fake là tích hợp thật.
+
+Kiểm bổ sung trên business source `5e179691`: [schema upgrade và avatar Supabase
+thật](MEMBER_ACCEPTANCE_2026_11_01.md) PASS trong scope riêng. Native runtime và
+mail delivery thật vẫn BLOCKED; không thay thế các gate bằng build/export.
