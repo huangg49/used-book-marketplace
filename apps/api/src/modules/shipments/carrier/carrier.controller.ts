@@ -62,12 +62,40 @@ export class CarrierController {
   }
 
   /**
-   * Endpoint tra cứu đơn hàng vận chuyển thật cho App Tài Xế / Bưu tá
+   * Endpoint tra cứu đơn hàng vận chuyển thật cho App Tài Xế / Bưu tá GHN
    */
   @Get('shipments/carrier/orders/active')
   @Public()
-  async getActiveShipmentOrder(@Query('trackingCode') trackingCode?: string) {
-    return this.carrier.getShipmentOrder(trackingCode);
+  async getActiveShipmentOrder(
+    @Query('trackingCode') trackingCode?: string,
+    @Query('exchangeId') exchangeId?: string,
+    @Query('leg') leg?: 'initiator' | 'recipient',
+  ) {
+    return this.carrier.getShipmentOrder(trackingCode, exchangeId, leg);
+  }
+
+  @Get('shipments/carrier/orders/recent')
+  @Public()
+  async getRecentShipmentOrders() {
+    return this.carrier.getRecentShipmentOrders();
+  }
+
+  @Post('shipments/carrier/orders/:id/reset-for-demo')
+  @Public()
+  async resetForDemo(@Param('id') id: string) {
+    return this.carrier.resetForDemo(id);
+  }
+
+  @Post('shipments/carrier/orders/:id/auto-simulate')
+  @Public()
+  async autoSimulateExchange(@Param('id') id: string) {
+    return this.carrier.autoSimulateExchange(id);
+  }
+
+  @Post('shipments/carrier/seed-demo-order')
+  @Public()
+  async seedDemoOrder() {
+    return this.carrier.seedDemoOrder();
   }
 
   @Get('shipments/carrier/order/:code')
