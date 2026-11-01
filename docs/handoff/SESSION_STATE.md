@@ -16,6 +16,11 @@
   chưa commit của công việc khác được bảo toàn và không đưa vào PR này.
   Review người thật chưa thực hiện cho các gói bổ sung; ghi minh bạch trong PR
   cùng chỉ đạo owner tự kiểm/merge, không gọi đây là chữ ký reviewer độc lập.
+- [PR84](https://github.com/huangg49/used-book-marketplace/pull/84), head ban đầu
+  `72be9b86`: Operations CI bắt locator cũ “Khảo chứng tình trạng sách” dù RN đã
+  đổi đúng thành “Tình trạng người bán khai báo”. Sửa locator heading/toggle,
+  giữ kiểm expanded/collapse, restriction, ảnh, quyền và replay; thêm assertion
+  nội dung tự kê khai. Không sửa source nghiệp vụ hoặc xóa assertion để qua CI.
 
 ## Bộ sách: hướng dẫn web và nối RN — đã kiểm chứng local, chưa native acceptance
 
