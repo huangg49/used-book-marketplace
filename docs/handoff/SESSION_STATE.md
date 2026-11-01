@@ -1,4 +1,42 @@
-# Điểm lưu hiện tại — 30/10/2026
+# Điểm lưu hiện tại — 01/11/2026
+
+## Hoàn thiện Giao diện & Hồ sơ khiếu nại (Evidence Dossier), Trạm phân xử Admin và Đồng bộ Mobile React Native — 01/11/2026
+
+- Nhánh: `feature/exchange-policy-and-transit-worker`.
+- **Bối cảnh & Nghiệp vụ**:
+  - Tối ưu hóa toàn diện luồng giải quyết khiếu nại (Dispute Reporting & Resolution) trên cả 3 nền tảng: User Web, Admin Web và Mobile React Native.
+  - Người dùng có thể lập biên bản khiếu nại kèm hồ sơ bằng chứng đầy đủ (ảnh chụp hư hỏng, video mở gói unboxing 3.5s, phân loại sự cố chuẩn và mô tả chi tiết), có nút nạp dữ liệu mẫu tiện lợi cho demo.
+  - Quản trị viên tại trạm phân xử (`ExchangeDisputesPage`) có hàng đợi compact scannable, bộ lọc nhanh, thanh tìm kiếm, và workstation thẩm định trực quan đối chiếu video/ảnh, số dư cọc bảo chứng và sổ cái Ledger trước khi ra phán quyết bất biến (`RefundBoth` hoặc `CompleteExchange`).
+  - Giao diện Mobile React Native đồng bộ 100% tính năng với User Web (bộ chọn phân loại, hồ sơ bằng chứng chọn từ thư viện ảnh máy `expo-image-picker` hoặc nạp mẫu, hiển thị trạng thái `ResolutionPending` giàu thông tin, và thẻ phán quyết quản trị viên trang trọng trong hộp thoại chat trao đổi).
+- **Nội dung thực hiện chi tiết**:
+  1. **User Web (`apps/user-web`)**:
+     - `ConfirmDialog/ConfirmDialog.module.css` & `index.tsx`: Sửa lỗi nhảy cuộn khi mở modal, thêm `maxWidth`, nút đóng góc trên (`✕`), thanh cuộn mỏng tinh tế.
+     - `ActionCard/ActionCard.module.css` & `index.tsx`: Thiết kế lại modal khiếu nại với banner bảo vệ ký quỹ, phân loại sự cố chuẩn, ô nhập chi tiết kèm đếm ký tự, hồ sơ bằng chứng song song (ảnh chụp + video unboxing 3.5s), các nút nạp mẫu demo.
+     - `public/bridge.html` & `public/demo-evidence/`: Cầu nối đồng bộ IndexedDB và localStorage đa cổng (5174 <-> 5173) để xem trước bằng chứng video/ảnh thực tế.
+  2. **Admin Web (`apps/admin-web`)**:
+     - `exchange-disputes.tsx` & `exchange-disputes.module.css`: Thiết kế lại hàng đợi dạng hàng thu gọn (~65px) với badge phân loại, đoạn trích lý do và pill bằng chứng. Bổ sung thanh công cụ lọc (`Tất cả`, `Hư hỏng / Rách nát`, `Có video unboxing`, `Có ảnh hiện trạng`) và ô tìm kiếm tức thì.
+     - Workstation Thẩm định & Phân xử mở rộng: Xem trước bằng chứng trực quan song song (ảnh + video player 16:9), bảng so sánh cọc và bưu kiện hai bên, 2 radio lựa chọn phán quyết (`RefundBoth` vs `CompleteExchange`), nút nạp căn cứ mẫu nhanh và hộp thoại xác nhận phán quyết bất biến.
+  3. **Mobile React Native (`apps/mobile-react-native`)**:
+     - `exchange-actions-card.tsx`: Nâng cấp modal báo cáo khiếu nại từ `ConfirmDialog` thô sơ lên `AppModal` hoàn chỉnh đồng bộ Web (banner bảo vệ ký quỹ, phân loại sự cố, chi tiết vấn đề, hồ sơ bằng chứng với `expo-image-picker` và nạp mẫu demo).
+     - Thiết kế lại thẻ trạng thái `ResolutionPending` dạng Rich Dispute Card (bóc tách category, chi tiết, pill bằng chứng, thông báo đóng băng bảo lưu tiền cọc trên Ledger).
+     - Bổ sung thẻ thông báo phán quyết Quản trị viên nổi bật cho `RefundBoth` (hoàn cọc 100% về ví mô phỏng) và `CompleteExchange` (tất toán giao dịch).
+     - `exchange-chat-box.tsx`: Định dạng tin nhắn hệ thống phán quyết quản trị viên `[Phán quyết của Quản trị viên]` và biên bản `[Sự cố]:` thành các thẻ card chuyên nghiệp, trang trọng.
+     - `icon.tsx`: Bổ sung vector icon `video` cho ứng dụng mobile.
+- **Kiểm tra**:
+  - `pnpm contract:check`: PASS.
+  - `git diff --check`: PASS (0 errors, no whitespace issues).
+  - `pnpm --filter @used-books/api exec tsc --noEmit`: PASS (0 errors).
+  - `pnpm --filter @used-books/user-web exec tsc --noEmit`: PASS (0 errors).
+  - `pnpm --filter @used-books/admin-web exec tsc --noEmit`: PASS (0 errors).
+  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 errors).
+  - `pnpm --filter @used-books/admin-web build`: PASS.
+  - `pnpm --filter @used-books/user-web build`: PASS.
+  - Unit Tests:
+    - `mobile-react-native`: 24 test suites, 164/164 tests PASS.
+    - `user-web`: 38 test suites, 253/253 tests PASS.
+    - `admin-web`: 33 test suites, 219/219 tests PASS.
+
+# Điểm lưu trước — 30/10/2026
 
 ## Hoàn thiện Tính năng Tiêu chí mong muốn trao đổi & Cơ chế Ghép đôi Thông minh (Exchange Preferences & Smart Matchmaking) — 30/10/2026
 

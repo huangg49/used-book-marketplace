@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Evidence Bridge</title></head>
+<body>
+<script>
+  function openDB() {
+    return new Promise(function(resolve, reject) {
+      if (!window.indexedDB) {
+        resolve(null);
+        return;
+      }
+      var req = indexedDB.open('LatLaiEvidenceDB', 1);
+      req.onupgradeneeded = function(e) {
+        var db = e.target.result;
+        if (!db.objectStoreNames.contains('media')) {
+          db.createObjectStore('media', { keyPath: 'key' });
+        }
+      };
+      req.onsuccess = function(e) { resolve(e.target.result); };
+      req.onerror = function() { resolve(null); };
+    });
+  }
+
+  function getMediaFromDB(key) {
+    return openDB().then(function(db) {
+      if (!db) return null;
+      return new Promise(function(resolve) {
+        try {
+          var tx = db.transaction('media', 'readonly');
+          var store = tx.objectStore('media');
+          var req = store.get(key);
+          req.onsuccess = function() { resolve(req.result ? req.result.data : null); };
+          req.onerror = function() { resolve(null); };
+        } catch (err) {
+          resolve(null);
+        }
+      });
+    }).catch(function() { return null; });
+  }
+
+  window.addEventListener('message', function(event) {
+    if (event.data && (event.data.type === 'GET_EVIDENCE_IMG' || event.data.type === 'GET_EVIDENCE_MEDIA')) {
+      var id = event.data.id;
+      var imgData = null;
+      var vidData = null;
+      try {
+        imgData = localStorage.getItem('evidence_img_' + id);
+        vidData = localStorage.getItem('evidence_video_' + id);
+      } catch (e) {}
+
+      // Legacy response
+      if (imgData) {
+        event.source.postMessage({
+          type: 'EVIDENCE_IMG_RES',
+          id: id,
+          dataUrl: imgData
+        }, '*');
+      }
+
+      // Query IndexedDB for large media (videos, high-res photos)
+      Promise.all([
+        getMediaFromDB('img_' + id),
+        getMediaFromDB('vid_' + id)
+      ]).then(function(res) {
+        var finalImg = res[0] || imgData;
+        var finalVid = res[1] || vidData;
+
+        event.source.postMessage({
+          type: 'EVIDENCE_MEDIA_RES',
+          id: id,
+          imageData: finalImg,
+          videoData: finalVid
+        }, '*');
+      });
+    }
+  });
+</script>
+</body>
+</html>
