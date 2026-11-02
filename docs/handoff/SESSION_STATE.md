@@ -1,5 +1,16 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## VNPay — owner báo thanh toán nhưng ví chưa cộng
+
+- Khảo sát read-only: hai topup gần nhất đã hết hạn local, chưa có credit journal;
+  config/link HMAC/Return/clock khớp. QueryDR live trả99 Unexpected error, không
+  chữ ký/status xác minh. Chưa xác nhận được provider đã thu hay chưa; không kết
+  luận VNPay toàn hệ thống bị lỗi hoặc tự cộng/bù tiền.
+- [Bằng chứng/giới hạn](../features/VNPAY_DIAGNOSIS_2026_11_02.md), nhánh
+  `codex/vnpay-topup-diagnosis` base `185dd2b2`. Không topup mới/credit/code/env
+  mutation; giữ intent cũ chờ provider evidence. User2 trước đó nạp simulator,
+  không được diễn giải là VNPay live PASS. Không push/CI/merge/đóng gate.
+
 ## Chốt gói giao diện local và tiếp tục demo
 
 - Đã commit local `cc853aad` (`feat(web): complete listing review and purchase presentation`)
