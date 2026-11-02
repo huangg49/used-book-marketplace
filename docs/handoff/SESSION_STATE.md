@@ -3,7 +3,7 @@
 - Owner yêu cầu fetch/main sync và xử lý conflict; Antigravity đã được owner xác
   nhận dừng sửa. Nhánh `codex/sync-main-20261103` giữ cả các commit local và
   checkpoint 131 file từ checkout ứng dụng, không reset/clean/stash/force checkout.
-- Đã tích hợp main tới `997d4808` (panel khiếu nại trượt bên phải), giữ UI local,
+- Đã tích hợp main tới `6919981c` (bằng chứng khiếu nại mở gọn trong trang), giữ UI local,
   các điểm vào Hỗ trợ/Hậu kiểm AI, cache thông báo theo user và quyền xem bằng chứng.
   Ảnh/video chỉ từ signed read có phân công/audit, không iframe bridge hoặc ảnh mẫu.
 - Phát hiện và sửa nâng cấp AI v1 có dữ liệu bị validator chặn: thêm migration
@@ -25,9 +25,9 @@
   đã cùng bản tích hợp; API/worker3000, Admin5173, Member5174 đang chạy; QA dừng.
 - PASS kiểm tra API chính:401bài public/400nền,9trang không trùng, search/filter,
   12signed ảnh thật; User1/2/3 login/profile/wallet/reviews. Git working tree sạch.
-- CI remote trên997d4808:Docs/Admin PASS,Operations FAIL ở bước RN buy-now browser;
-  các bước sau bị skip. Chưa có lỗi chi tiết từ log runner, không nhận CI xanh
-  hoặc quy lỗi cho conflict local. Bản local chưa push, không có CI riêng.
+- CI remote trên6919981c:Docs/Admin/Operations đều PASS (3job áp dụng).
+  Bản997d4808 trước đó Operations FAIL ở RN buy-now, bản mới đã PASS; chưa
+  kết luận nguyên nhân lịch sử. Bản local chưa push, không có CI riêng.
   [Bằng chứng, thay đổi và kích hoạt](../features/LOCAL_MAIN_SYNC_2026_11_03.md).
   Không push/PR/remote merge/deploy; không đóng READINESS.
 

@@ -3,8 +3,8 @@
 ## Source và bảo toàn
 
 Owner giao kiểm tra main, đồng bộ và giải quyết conflict. Main đã fetch tới
-`997d480873905d877721af455a28ef49fb8ee625`. Hai commit mới trong lúc kiểm tra
-là90fc1491 và997d4808, đổi giao diện khiếu nại thành panel trượt.
+`6919981ccb8e263863dbba0c9104ef91218da2c1`. Thiết kế cuối của main dùng vùng
+bằng chứng mở gọn ngay trong trang; thay thiết kế panel trượt trước đó.
 
 Nhánh tích hợp `codex/sync-main-20261103` giữ các commit của nhánh
 `codex/demo-background-catalog`, main và checkpoint local
@@ -18,8 +18,8 @@ Checkout ứng dụng đã chuyển sang `codex/local-main-synced-20261103`.
 - Giữ UI local, draft edit/submit, avatar, review demo skip và cấu trúc menu local;
   bổ sung lại Hỗ trợ/Hậu kiểm AI/SupportLink từ main. Cache thông báo theo user.
 - Giữ AutoReviewView/history/filter và API support/evidence mới của main.
-- Panel khiếu nại giữ thiết kế mới, dùng native dialog cho focus/Escape/restore,
-  một body scroll, không cuộn nền. [Bằng chứng riêng](../../apps/admin-web/src/features/operations/exchange-evidence-review.tsx)
+- Giữ thiết kế khiếu nại mở gọn trong trang của main bằng native details/summary,
+  keyboard và một document scroll; đóng vùng bằng chứng sẽ dừng video. [Bằng chứng riêng](../../apps/admin-web/src/features/operations/exchange-evidence-review.tsx)
   chỉ hiển thị tệp Ready từ API sau nhận phân công và signed read có audit.
   Có preview image/video, tải tệp và fallback; URL hết hạn bị gỡ. Không lấy URL
   từ lý do, localStorage, iframe/cross-origin message hoặc thay bằng ảnh mẫu.
@@ -41,7 +41,7 @@ Checkout ứng dụng đã chuyển sang `codex/local-main-synced-20261103`.
 
 ## Kiểm chứng local
 
-Bằng chứng áp dụng cho nhánh tích hợp và merge997d4808; không là remote CI của
+Bằng chứng áp dụng cho nhánh tích hợp và merge6919981c; không là remote CI của
 commit local. Artifacts private ignored ở`.tmp/main-sync-20261103/`.
 
 | Kiểm tra | Kết quả/phạm vi |
@@ -97,15 +97,14 @@ nằm ngoài Git hoặc ignored, không có secret/dump/token trong commit.
 
 ## CI remote và giới hạn
 
-CI trên đúng SHA997d4808: [Docs PASS](https://github.com/huangg49/used-book-marketplace/actions/runs/41504071247),
-[Admin PASS](https://github.com/huangg49/used-book-marketplace/actions/runs/41504069180),
-[Operations FAIL](https://github.com/huangg49/used-book-marketplace/actions/runs/41504068896).
-Job Operations qua API build,Admin lint/typecheck/tests/build,browser/exchange-safety/
-auto-review,Expo web export và public shelf; thất bại ở`pnpm test:rn-buy-now:browser`.
-Các bước member-profile/account-controls/cart/support sau đó bị skip. Annotations
-chỉ có exit1, chưa có log/assertion cụ thể; không kết luận nguyên nhân hoặc quy cho
-merge local. Không sửa test để bỏ qua. Bản tích hợp local chưa push và chưa có CI
-remote riêng; native Android,live evidence video storage và human acceptance NOT RUN.
+CI trên đúng SHA6919981c: [Docs PASS](https://github.com/huangg49/used-book-marketplace/actions/runs/41504740881),
+[Admin PASS](https://github.com/huangg49/used-book-marketplace/actions/runs/41504740622),
+[Operations PASS](https://github.com/huangg49/used-book-marketplace/actions/runs/41504740980).
+Đây là3job áp dụng, không diễn giải thành mọi app/native PASS.
+Bản997d4808 trước đó Operations FAIL ở RN buy-now; bản mới6919981c đã PASS,
+không tự kết luận nguyên nhân lịch sử hoặc quy cho merge local.
+Bản tích hợp local chưa push và chưa có CI remote riêng; native Android,
+live evidence video storage và human acceptance NOT RUN.
 
 Chính sách free shipping từ main chỉ tác động quote/order mới. Đơn Preparing
 cũ có hold150000VND không được tính lại hoặc hoàn tiền khi đồng bộ source.

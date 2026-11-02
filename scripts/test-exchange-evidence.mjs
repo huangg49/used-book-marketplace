@@ -403,7 +403,7 @@ try {
     .first()
     .click();
 
-  await ops.getByRole("button", { name: "Xem hồ sơ", exact: true }).first().click();
+  await ops.getByText("Xem ảnh & video bằng chứng", { exact: true }).first().click();
   const review = ops.getByRole("region", {
     name: "Bằng chứng riêng của hồ sơ",
     exact: true,
