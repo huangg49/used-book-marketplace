@@ -941,7 +941,7 @@ describe('Order acceptance and pickup review: real MongoDB and HTTP', () => {
       }
       expect(await pickupReviews(f.id)).toBe(offset < 0 ? 0 : 1);
       expect((await stateCounts(f.f.l.entityId)).active).toBe(1);
-      expect((await wallet(f.f.buyer)).transactionHeld).toBe(230000);
+      expect((await wallet(f.f.buyer)).transactionHeld).toBe(200000);
       expect(await journals(f.id)).toBe(1);
       if (offset >= 0) {
         expect(

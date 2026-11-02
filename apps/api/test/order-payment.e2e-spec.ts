@@ -1456,7 +1456,7 @@ describe('Order wallet payment and pre-confirmation refund HTTP and MongoDB', ()
     const buyer = await orderView(id, p.f.buyer),
       seller = await orderView(id, p.f.seller);
     expect(buyer.purchaseMode).toBe('BuyNow');
-    expect(buyer.moneyHeld).toBe(230000);
+    expect(buyer.moneyHeld).toBe(200000);
     expect(buyer.sellerConfirmationDeadline).toBeNull();
     expect(seller.sellerAcceptanceEnabled).toBe(false);
     expect(seller.shipmentRegistrationEnabled).toBe(false); // Ready packaging evidence is still required.

@@ -1,3 +1,4 @@
+import { createFreeShippingMigration, withFreeShipping } from './0052-free-shipping.js';
 import { createMemberProfilesMigration, memberProfileSpecs, withMemberProfiles } from './0047-member-profiles.js';
 import { createAccountControlsMigration, withAccountControls } from './0048-account-controls.js';
 import {memberCartMigration,memberCartSpec} from './0049-member-cart.js';
@@ -352,6 +353,7 @@ export const migrations: Migration[] = [
   supportAutoReviewUnionMigration,
   listingAutoReviewV2Migration,
   exchangeAgreementMigration,
+  createFreeShippingMigration(auctionDeliveryMigration.definition.collections),
   exchangeNegotiatedDiffMigration,
   exchangeFlexibleDiffMigration,
 ];
@@ -410,7 +412,7 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withPointCollectionChanges)
     .map(withResolutionChanges)
     .map(withSettlementChanges)
-    .map(withAuctionDelivery),
+    .map(withAuctionDelivery).map(withFreeShipping),
   ...pointCollectionSpecs.map(withAuctionDelivery),
   ...resolutionCollectionSpecs
     .map(withSettlementChanges)
@@ -445,7 +447,7 @@ export const currentCollections = (): CollectionSpec[] => [
   ...reviewLifecycleSpecs,
   ...inspectionEvidenceCollectionSpecs,
   ...pointIncidentCollectionSpecs,
-  ...auctionDeliveryCollectionSpecs,
+  ...auctionDeliveryCollectionSpecs.map(withFreeShipping),
   ...listingAutofillSpecs,
   ...memberProfileSpecs,
   memberCartSpec,

@@ -4864,6 +4864,7 @@ export interface components {
         };
         PurchaseQuotePreview: {
             destination: components["schemas"]["OrderContact"];
+            /** @description Zero for new quotes under the free shipping policy; historical snapshots retain their fee. */
             shippingFee: number;
             /** Format: date-time */
             expiresAt: string;
