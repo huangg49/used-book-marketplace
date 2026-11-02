@@ -8,7 +8,8 @@ import { formatVnd } from "../../../lib/routes";
 import styles from "./CounterDialog.module.css";
 
 export interface CounterOfferData {
-  listingIds: string[];
+  listingIds?: string[];
+  negotiatedDiffAmount?: number;
   deliveryAddressId?: string;
   note?: string;
 }

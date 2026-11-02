@@ -47,6 +47,7 @@ export const exchangeSchema = z.object({
   recipientDeposit: z.number().int().min(0),
   diffAmount: z.number().int().min(0),
   diffPayerId: z.string().uuid().nullable(),
+  negotiatedDiffAmount: z.number().int().min(0).nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   fundingDeadline: date,

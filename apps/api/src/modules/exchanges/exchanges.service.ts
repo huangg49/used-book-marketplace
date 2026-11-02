@@ -225,6 +225,7 @@ export class ExchangesService {
       recipientDeposit: row.recipientDeposit,
       diffAmount: row.diffAmount,
       diffPayerId: row.diffPayerId,
+      negotiatedDiffAmount: row.negotiatedDiffAmount ?? null,
       fundingDeadline: row.fundingDeadline?.toISOString() ?? null,
       initiatorFundedAt: row.initiatorFundedAt?.toISOString() ?? null,
       recipientFundedAt: row.recipientFundedAt?.toISOString() ?? null,
@@ -770,19 +771,44 @@ export class ExchangesService {
 
           if ((exchange.lastProposedById ?? exchange.initiatorId) === actor._id) throw conflict();
           const isInitiator = actor._id === exchange.initiatorId;
-          if (!isInitiator && body.listingIds.length !== 1) throw invalidState('Bên nhận đề xuất chọn đúng một sách thay thế.');
+          const ownIds = isInitiator ? this.getInitiatorListingIds(exchange) : [exchange.recipientListingId];
+          const hasNewListings = Array.isArray(body.listingIds) && body.listingIds.length > 0;
+          const targetListingIds: string[] = hasNewListings ? body.listingIds! : ownIds;
+
+          if (hasNewListings && !isInitiator && targetListingIds.length !== 1) {
+            throw invalidState('Bên nhận đề xuất chọn đúng một sách thay thế.');
+          }
+
           const currentIds = [...this.getInitiatorListingIds(exchange), exchange.recipientListingId];
-          const locked = await this.lockAllListingsOrdered(tx, [...currentIds, ...body.listingIds]);
+          const locked = await this.lockAllListingsOrdered(tx, [...currentIds, ...targetListingIds]);
           if (!await this.agreementEligible(tx, exchange, locked)) {
             return this.closeUnavailable(tx, exchange, now);
           }
-          const ownIds = isInitiator ? this.getInitiatorListingIds(exchange) : [exchange.recipientListingId];
-          if (body.listingIds.length === ownIds.length && body.listingIds.every((id) => ownIds.includes(id))) throw invalidState('Hãy chọn sách khác để đề xuất lại.');
-          const replacements = await Promise.all(body.listingIds.map((id) => snapshotExchangeBook(tx, locked.get(id)!, actor._id)));
+
+          const isBooksChanged = targetListingIds.length !== ownIds.length || !targetListingIds.every((id) => ownIds.includes(id));
+          const isNegotiated = body.negotiatedDiffAmount !== undefined && body.negotiatedDiffAmount !== null;
+
+          if (!isBooksChanged && !isNegotiated && !body.deliveryAddressId) {
+            throw invalidState('Hãy chọn sách khác hoặc điều chỉnh tiền bù để đề xuất lại.');
+          }
+          if (isNegotiated && body.negotiatedDiffAmount! < 0) {
+            throw invalidState('Tiền bù không thể là số âm.');
+          }
+
+          const replacements = isBooksChanged
+            ? await Promise.all(targetListingIds.map((id) => snapshotExchangeBook(tx, locked.get(id)!, actor._id)))
+            : (isInitiator ? exchange.agreement!.initiatorBooks : [exchange.agreement!.recipientBook]);
+
           const agreement = isInitiator
             ? { initiatorBooks: replacements, recipientBook: exchange.agreement!.recipientBook }
             : { initiatorBooks: exchange.agreement!.initiatorBooks, recipientBook: replacements[0] };
-          const amounts = exchangeAmounts(agreement, exchange.initiatorId, exchange.recipientId);
+
+          const amounts = exchangeAmounts(
+            agreement,
+            exchange.initiatorId,
+            exchange.recipientId,
+            isNegotiated ? body.negotiatedDiffAmount : (isBooksChanged ? null : exchange.negotiatedDiffAmount),
+          );
           let updatedAddress: ExchangeAddressSnapshot | null = null;
           if (body.deliveryAddressId) {
             const addr = await tx.c.member_addresses.findOne({
@@ -803,10 +829,15 @@ export class ExchangesService {
           const setFields: Record<string, unknown> = {
             agreement,
             ...amounts,
-            ...(isInitiator ? { initiatorListingIds: body.listingIds, initiatorListingId: body.listingIds[0] } : { recipientListingId: body.listingIds[0] }),
+            ...(isInitiator ? { initiatorListingIds: targetListingIds, initiatorListingId: targetListingIds[0] } : { recipientListingId: targetListingIds[0] }),
             lastProposedById: actor._id,
             updatedAt: now,
           };
+          if (isNegotiated) {
+            setFields.negotiatedDiffAmount = amounts.diffAmount;
+          } else if (isBooksChanged) {
+            setFields.negotiatedDiffAmount = null;
+          }
           if (updatedAddress) {
             if (isInitiator) {
               setFields.initiatorAddress = updatedAddress;

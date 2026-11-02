@@ -58,6 +58,7 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
         : "other_pays"
       : "none",
     moneyAmount: ex.diffAmount || undefined,
+    negotiatedDiffAmount: ex.negotiatedDiffAmount ?? undefined,
     rejectionReason: ex.rejectionReason ?? undefined,
     fundingDeadline: ex.fundingDeadline ?? undefined,
     proposalExpiresAt: ex.proposalExpiresAt ?? undefined,
@@ -209,14 +210,18 @@ export function counterExchange(
   id: string,
   revision: number,
   data: {
-    listingIds: string[];
+    listingIds?: string[];
+    negotiatedDiffAmount?: number;
     deliveryAddressId?: string;
     note?: string;
   },
 ) {
   return exchangeCommand(`/exchanges/${id}/counter`, {
     expectedVersion: revision,
-    listingIds: data.listingIds,
+    ...(data.listingIds ? { listingIds: data.listingIds } : {}),
+    ...(data.negotiatedDiffAmount !== undefined
+      ? { negotiatedDiffAmount: data.negotiatedDiffAmount }
+      : {}),
     ...(data.deliveryAddressId
       ? { deliveryAddressId: data.deliveryAddressId }
       : {}),

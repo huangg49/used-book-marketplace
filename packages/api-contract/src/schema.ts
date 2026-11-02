@@ -6950,6 +6950,8 @@ export interface components {
             recipientDeposit: number;
             diffAmount: number;
             diffPayerId: string | null;
+            /** @description Custom compensation amount negotiated between members, if applicable. */
+            negotiatedDiffAmount?: number | null;
             fundingDeadline?: string | null;
             initiatorFundedAt?: string | null;
             recipientFundedAt?: string | null;
@@ -7073,10 +7075,11 @@ export interface components {
         ExchangeMessagesResponse: {
             items: components["schemas"]["ExchangeMessage"][];
         };
-        /** @description The responding Member replaces their own books; the server derives both deposits and compensation from reviewed values. Recipient replaces exactly one listing, initiator one to five. The other party's frozen books must remain eligible and unchanged. */
+        /** @description The responding Member replaces their own books or negotiates compensation; the server derives deposits from reviewed book values while compensation can be customized within bounds. Recipient replaces exactly one listing, initiator one to five. The other party's frozen books must remain eligible and unchanged. */
         CounterExchangeProposal: {
             expectedVersion: number;
-            listingIds: string[];
+            listingIds?: string[];
+            negotiatedDiffAmount?: number;
             /** Format: uuid */
             deliveryAddressId?: string;
             note?: string;

@@ -134,22 +134,33 @@ export function exchangeAmounts(
   agreement: ExchangeAgreement,
   initiatorId: string,
   recipientId: string,
+  negotiatedDiffAmount?: number | null,
 ) {
   const initiatorValue = agreement.initiatorBooks.reduce(
     (sum, book) => sum + book.exchangeValue,
     0,
   );
   const recipientValue = agreement.recipientBook.exchangeValue;
+  const isNegotiated = negotiatedDiffAmount !== undefined && negotiatedDiffAmount !== null;
+  const diffAmount = isNegotiated
+    ? Math.max(0, negotiatedDiffAmount)
+    : Math.abs(initiatorValue - recipientValue);
+
+  let diffPayerId: string | null = null;
+  if (diffAmount > 0) {
+    if (initiatorValue !== recipientValue) {
+      diffPayerId = initiatorValue < recipientValue ? initiatorId : recipientId;
+    } else {
+      diffPayerId = null;
+    }
+  }
+
   return {
     initiatorDeposit: recipientValue,
     recipientDeposit: initiatorValue,
-    diffAmount: Math.abs(initiatorValue - recipientValue),
-    diffPayerId:
-      initiatorValue === recipientValue
-        ? null
-        : initiatorValue < recipientValue
-          ? initiatorId
-          : recipientId,
+    diffAmount,
+    diffPayerId,
+    ...(isNegotiated ? { negotiatedDiffAmount: diffAmount } : {}),
   };
 }
 
@@ -182,11 +193,13 @@ export function agreementMatches(
     agreement,
     exchange.initiatorId,
     exchange.recipientId,
+    exchange.negotiatedDiffAmount,
   );
   if (
-    Object.entries(amounts).some(
-      ([key, value]) => exchange[key as keyof typeof amounts] !== value,
-    )
+    amounts.initiatorDeposit !== exchange.initiatorDeposit ||
+    amounts.recipientDeposit !== exchange.recipientDeposit ||
+    amounts.diffAmount !== exchange.diffAmount ||
+    amounts.diffPayerId !== exchange.diffPayerId
   )
     return false;
   return agreementBooks(agreement).every((book) => {

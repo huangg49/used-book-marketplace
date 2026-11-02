@@ -639,6 +639,7 @@ export function ActionCard(props: Props) {
             setBusy(false);
           }
         }}
+        onCounter={handleCounterSubmit}
         isBusy={busy}
         detail={detail}
       />
