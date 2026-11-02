@@ -49,9 +49,13 @@ wide sizes,24px below1100px. A single spine rule separates agreement/chat.
 Above960px, both pages share top/bottom edges. Only the agreement body scrolls;
 heading and next-action area remain in flex flow, never overlaid on price fields.
 Guidance explanations remain in the body. Messages scroll above the composer.
-The spread uses clamp(600px,100dvh -284px,860px). At960px and below, two labelled
-panel buttons preserve mounted drafts, the sheet returns to natural page flow
-and chat has a600px minimum. Long titles wrap; narrow title width is preserved
+The current room fills the viewport below the shared header. Owner bug follow-up
+03/11/2026 replaces the old clamp/natural-page/600px-minimum rules: at960px and
+below, two labelled panel buttons preserve mounted drafts while the selected pane
+stays bounded by the remaining viewport. The agreement body owns wheel/keyboard
+scrolling; the chat message list scrolls above a composer inside that viewport.
+Never pair the locked document with an auto-height sheet that gets clipped.
+Long titles wrap; narrow title width is preserved
 by stacking Back/cover beside the title rather than across three columns.
 
 Scoped Be Vietnam Pro uses400/700 only. Book title and agreed price are28px,

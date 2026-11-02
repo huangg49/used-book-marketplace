@@ -134,6 +134,64 @@ try{
   await page.setViewportSize({width:1440,height:1100});await page.evaluate(()=>document.documentElement.style.fontSize='100%');
  };
  const p=await makePage('buyer');
+ if (process.argv.includes('--scroll-only')) {
+  const scrollEvidence=[];
+  for (const role of ['buyer','seller']) {
+   const page=role==='buyer'?p:await makePage(role);
+   for (const [width,height,scale] of [[1440,900,100],[1000,900,100],[961,900,100],[960,940,100],[950,940,100],[760,700,100],[390,844,100],[320,700,130],[950,480,100]]) {
+    await page.setViewportSize({width,height});
+    await page.evaluate(value=>document.documentElement.style.fontSize=value+'%',scale);
+    const sheetTab=page.getByRole('button',{name:'Phiếu thỏa thuận',exact:true});
+    if(await sheetTab.isVisible())await sheetTab.click();
+    const content=page.getByRole('region',{name:'Nội dung phiếu thỏa thuận',exact:true});
+    await content.waitFor();await content.evaluate(node=>node.scrollTop=0);
+    const bounds=await content.boundingBox();
+    assert(bounds&&bounds.y>=70&&bounds.y+bounds.height<=height+1,`viewport-bounded agreement: ${role}/${width}/${height}`);
+    const header=await page.locator('header').first().boundingBox();
+    await page.mouse.move(bounds.x+bounds.width/2,Math.min(height-60,bounds.y+100));
+    const before=await content.evaluate(node=>({top:node.scrollTop,range:node.scrollHeight-node.clientHeight}));
+    await page.mouse.wheel(0,650);
+    if(before.range>2)await page.waitForFunction(label=>document.querySelector(`[aria-label="${label}"]`).scrollTop>0,'Nội dung phiếu thỏa thuận');
+    assert.equal(await page.evaluate(()=>window.scrollY),0,'document must not move behind the fixed header');
+    await content.focus();await page.keyboard.press('Control+End');
+    if(before.range>2)await page.waitForFunction(label=>{const n=document.querySelector(`[aria-label="${label}"]`);return n.scrollTop>=n.scrollHeight-n.clientHeight-2;},'Nội dung phiếu thỏa thuận');
+    const last=content.locator('button,a').last();
+    if(await last.count()){await last.focus();const b=await last.boundingBox();assert(b.y+b.height<=height+1,'last action can be reached by keyboard');}
+    assert(!await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),'no horizontal overflow');
+    const currentHeader=await page.locator('header').first().boundingBox();assert.equal(Math.round(currentHeader.y),Math.round(header.y),'header stays put');
+    if(await sheetTab.isVisible())await page.getByRole('button',{name:'Hội thoại',exact:true}).click();
+    const composer=page.locator('#chat-message');await composer.waitFor();const cb=await composer.boundingBox();assert(cb.y+cb.height<=height+1,'composer is inside viewport');
+    await composer.fill('Bản nháp kiểm tra cuộn — chưa gửi');
+    if(await sheetTab.isVisible()){await sheetTab.click();await page.getByRole('button',{name:'Hội thoại',exact:true}).click();assert.equal(await composer.inputValue(),'Bản nháp kiểm tra cuộn — chưa gửi');}
+    await composer.fill('');if(await sheetTab.isVisible())await sheetTab.click();
+    await content.evaluate(node=>node.scrollTop=0);
+    if([1440,950,390].includes(width)&&height>480)await page.screenshot({path:path.join(out,`scroll-${role}-${width}.png`),fullPage:false});
+    scrollEvidence.push({role,width,height,scale,overflow:before.range>2,wheel:true,keyboardEnd:true,composer:true,draftRetained:true});
+   }
+   await page.evaluate(value=>document.documentElement.style.fontSize=value,'100%');
+   await page.getByRole('link',{name:'Về danh sách hội thoại',exact:true}).click();
+   await page.getByRole('heading',{name:'Hội thoại của bạn',exact:true}).waitFor();
+   assert.notEqual(await page.evaluate(()=>getComputedStyle(document.body).overflowY),'hidden','leave room restores document scrolling');
+  }
+  // The same frame also hosts private Orders; their longer embedded detail must
+  // retain one reachable scroll region after switching the narrow-screen tabs.
+  room.orderId=id(7);room.status='OrderCreated';room.terms.locked=true;
+  const orderPage=await makePage('buyer');
+  for(const width of [950,390]){
+   await orderPage.setViewportSize({width,height:844});
+   await orderPage.getByRole('button',{name:'Đơn hàng',exact:true}).click();
+   const content=orderPage.getByRole('region',{name:'Nội dung đơn hàng',exact:true});await content.waitFor();
+   const bounds=await content.boundingBox();assert(bounds.y+bounds.height<=844,'embedded Order fits viewport');
+   const range=await content.evaluate(node=>node.scrollHeight-node.clientHeight);
+   await orderPage.mouse.move(bounds.x+bounds.width/2,bounds.y+100);await orderPage.mouse.wheel(0,500);
+   if(range>2)await orderPage.waitForFunction(()=>document.querySelector('[aria-label="Nội dung đơn hàng"]').scrollTop>0);
+   await orderPage.getByRole('button',{name:'Hội thoại',exact:true}).click();
+   const composer=await orderPage.locator('#chat-message').boundingBox();assert(composer.y+composer.height<=844,'Order chat composer fits viewport');
+   scrollEvidence.push({mode:'OrderCreated',width,height:844,wheel:true,composer:true});
+  }
+  assert.deepEqual(issues,[]);await writeFile(path.join(out,'scroll-result.json'),JSON.stringify({status:'PASS',api:'HTTP and Socket.IO fixtures, no DB/storage',cases:scrollEvidence},null,2));
+  console.log('PASS: buyer/seller wheel and keyboard agreement scrolling; 1440/1000/961/960/950/760/390/320px, short viewport and 130% text, visible composer and retained draft, Back restores page. No DB or real messages.');
+ } else {
  await p.evaluate(async listingId=>{const{router}=await import('/src/app/router.tsx');await router.navigate(`/chat/start/${listingId}?intent=Negotiation`);},room.listingId);await p.waitForURL('**/chat/'+room.id);
 
  await p.getByRole('heading',{name:'Trao đổi trước khi chốt mua',exact:true}).waitFor();
@@ -193,4 +251,5 @@ try{
  exchangeError=true;await p.evaluate(async()=>{const{queryClient}=await import('/src/lib/session.ts');await queryClient.invalidateQueries({queryKey:['exchangeMessages']});});await chat.getByText('Chưa tải được tin nhắn. Lịch sử đã tải vẫn được giữ lại.',{exact:true}).waitFor();await chat.getByText(exchangeMessages[0].body,{exact:true}).waitFor();exchangeError=false;
  assert.deepEqual(issues,[]);await writeFile(path.join(out,'result.json'),JSON.stringify({result:'PASS',source:'codex/journey-verification',api:'all intercepted fixtures',socket:'isolated Socket.IO on 5195',cases:['buyer/seller next steps','quote sent','same-room OrderCreated retains chat','price acceptance and immutable order price','seller mode switch requires buyer acceptance','linked exchange stays in workspace','mobile panels preserve draft','card inbox navigation','message lost ACK dedupe','order/payment pinned key/body retry including missing quote recovery','exchange book context','history error/recovery preserves messages','user text not system','exchange draft retained','1440/900/390/320px130%','aligned independently scrolling agreement and chat','primary actions visible','price edit disclosure and complete event history']},null,2));
  console.log('PASS: chat context and role-specific next action; purchase message/order/payment retry unchanged; exchange history/draft/error; desktop/mobile/large text. No application DB or storage used.');console.log(out);
+ }
 }finally{await browser?.close();await vite?.close();await io?.close();await new Promise(resolve=>http?.listening?http.close(resolve):resolve());}

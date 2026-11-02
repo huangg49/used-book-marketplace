@@ -320,7 +320,7 @@ function ChatRoom({
         data-order-mode={Boolean(room.orderId)}
         data-lenis-prevent="true"
       >
-        <aside className={sheet.sheet} aria-label={room.orderId ? "Thông tin đơn hàng" : "Phiếu thỏa thuận"}>
+        <aside className={`${sheet.sheet} ${styles.dossierSheet}`} aria-label={room.orderId ? "Thông tin đơn hàng" : "Phiếu thỏa thuận"}>
           <h2 className={styles.srOnly}>{room.orderId ? "Thông tin đơn hàng" : "Phiếu thỏa thuận"}</h2>
           <div
             className={`${sheet.sheetBody} ${styles.dossierBody}`}

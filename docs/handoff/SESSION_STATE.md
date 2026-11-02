@@ -1,3 +1,14 @@
+# Sửa cuộn phiếu/hội thoại khi chia đôi cửa sổ — 03/11/2026
+
+Owner báo chat không lăn chuột ở màn hẹp. Nhánh `codex/chat-scroll-containment`,
+base4e77f4e5: viewport room bị khóa nhưng CSS≤960px cho sheet height:auto,
+nội dung phình rồi bị cắt. Giữ sheet/chat theo chiều cao viewport, body riêng
+cuộn; composer/tab nằm trong màn hình, header72/76px. Không đổi giao dịch/DB.
+Tái hiện FAIL bản cũ tại960px; PASS20browser fixture cases (18buyer/seller+
+2embedded Order), wheel/keyboard/focus/Back/draft,1440→320px/chữ130%/màn thấp;
+typecheck/build/lint scope. Native/human NOT RUN, không push/merge hoặc đóng gate.
+[Nguyên nhân, sửa và evidence](../ui/CHAT_SCROLL_2026_11_03.md).
+
 # Nhận sách → đánh giá và chuẩn bị demo trao đổi — 03/11/2026
 
 Owner chốt viết review ngay sau nhận sách, giữ tiền/điều kiện công bố/48h sửa;
