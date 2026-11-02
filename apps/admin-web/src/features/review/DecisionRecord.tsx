@@ -9,12 +9,14 @@ export function DecisionRecord({
   reason,
   revisionId,
   animate = false,
+  automated = false,
 }: {
   decision: "Approve" | "Confirm" | "Reject";
   decidedAt: string;
   reason: string | null;
   revisionId: string;
   animate?: boolean;
+  automated?: boolean;
 }) {
   const stamp = useRef<HTMLDivElement>(null);
   const record = useRef<HTMLElement>(null);
@@ -38,7 +40,13 @@ export function DecisionRecord({
       {positive && (
         <div ref={stamp} className={styles.stamp} aria-hidden="true">
           <span>LẬT LẠI · KIỂM DUYỆT</span>
-          <strong>{decision === "Approve" ? "ĐÃ DUYỆT" : "ĐÃ XÁC NHẬN"}</strong>
+          <strong>
+            {automated
+              ? "AI ĐÃ DUYỆT"
+              : decision === "Approve"
+                ? "ĐÃ DUYỆT"
+                : "ĐÃ XÁC NHẬN"}
+          </strong>
           <span>
             {new Intl.DateTimeFormat("vi-VN").format(new Date(decidedAt))}
           </span>
@@ -47,7 +55,9 @@ export function DecisionRecord({
       <div className={styles.content}>
         <p className={styles.label}>KẾT QUẢ ĐÃ LƯU</p>
         <p className={styles.outcome} role={animate ? "status" : undefined}>
-          {decision === "Approve"
+          {automated
+            ? "AI đã tự duyệt bài đăng. Chưa có người kiểm duyệt xem bản này."
+            : decision === "Approve"
             ? "Bài đăng đã được duyệt."
             : decision === "Confirm"
               ? "Đầu sách đã được xác nhận."

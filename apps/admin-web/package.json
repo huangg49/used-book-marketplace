@@ -15,7 +15,8 @@
     "test:dashboard:api": "node tests/dashboard-api.mjs",
     "test:browser": "node tests/browser.mjs",
     "test:exchange-safety:browser": "node tests/exchange-resolution-safety.mjs",
-    "test:account-controls:browser": "node tests/account-controls.mjs"
+    "test:account-controls:browser": "node tests/account-controls.mjs",
+    "test:auto-review:browser": "node tests/auto-review.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

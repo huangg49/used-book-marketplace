@@ -1,0 +1,267 @@
+{
+  "policy": "auto-review-v2",
+  "model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+  "ranAt": "2026-11-02T01:36:04.645Z",
+  "stoppedAtSpendCap": false,
+  "casesLeftAfterProviderFailure": 0,
+  "labels": "AI draft unless humanReviewed; a pilot on Commons photos, not phone photos; no holdout",
+  "notExercised": [
+    "stored facts",
+    "two-photo rule",
+    "edition and ISBN against a catalog record"
+  ],
+  "cases": 118,
+  "scored": 103,
+  "humanReviewed": 0,
+  "falseApproval": {
+    "count": 5,
+    "of": 93,
+    "rate": 0.053763440860215055,
+    "upper95": 0.10971880516844829
+  },
+  "falseApprovalModelOnly": {
+    "count": 5,
+    "of": 93,
+    "rate": 0.053763440860215055,
+    "upper95": 0.10971880516844829
+  },
+  "falseApprovalByKind": {
+    "Natural": {
+      "count": 5,
+      "of": 71,
+      "rate": 0.07042253521126761,
+      "upper95": 0.1423802380144445
+    },
+    "ConstructedMismatch": {
+      "count": 0,
+      "of": 7,
+      "rate": 0,
+      "upper95": 0.3481636551311608
+    },
+    "ConstructedOverstated": {
+      "count": 0,
+      "of": 6,
+      "rate": 0,
+      "upper95": 0.3930377689970827
+    },
+    "ConstructedInjection": {
+      "count": 0,
+      "of": 9,
+      "rate": 0,
+      "upper95": 0.2831288355631136
+    }
+  },
+  "automation": {
+    "count": 9,
+    "of": 10,
+    "rate": 0.9,
+    "upper95": 0.9948838031081764
+  },
+  "automationModelOnly": {
+    "count": 9,
+    "of": 10,
+    "rate": 0.9,
+    "upper95": 0.9948838031081764
+  },
+  "caughtByReason": {
+    "SevereDamage": {
+      "caught": 12,
+      "of": 17
+    },
+    "ConditionOverstated": {
+      "caught": 6,
+      "of": 6
+    },
+    "CoverNotShown": {
+      "caught": 19,
+      "of": 21
+    },
+    "TitleUnreadable": {
+      "caught": 11,
+      "of": 11
+    },
+    "MultipleBooks": {
+      "caught": 23,
+      "of": 23
+    },
+    "NotABook": {
+      "caught": 1,
+      "of": 6
+    },
+    "NotASaleItem": {
+      "caught": 3,
+      "of": 6
+    },
+    "NotPrimarilyBook": {
+      "caught": 2,
+      "of": 3
+    },
+    "BookTooSmall": {
+      "caught": 0,
+      "of": 1
+    },
+    "ScanOrStockImage": {
+      "caught": 5,
+      "of": 14
+    },
+    "RareOrAntique": {
+      "caught": 1,
+      "of": 3
+    },
+    "EditionConcern": {
+      "caught": 1,
+      "of": 1
+    },
+    "TitleMismatch": {
+      "caught": 7,
+      "of": 7
+    },
+    "PromptInjection": {
+      "caught": 6,
+      "of": 6
+    },
+    "OffPlatformContact": {
+      "caught": 3,
+      "of": 3
+    }
+  },
+  "perCriterion": {
+    "contentAppropriate": {
+      "tp": 0,
+      "fp": 0,
+      "fn": 0,
+      "tn": 103,
+      "precision": null,
+      "recall": null
+    },
+    "noOffPlatformContact": {
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "tn": 100,
+      "precision": 1,
+      "recall": 1
+    },
+    "noReviewerInstructions": {
+      "tp": 5,
+      "fp": 0,
+      "fn": 1,
+      "tn": 97,
+      "precision": 1,
+      "recall": 0.8333333333333334
+    },
+    "matchesDeclaredCondition": {
+      "tp": 0,
+      "fp": 7,
+      "fn": 0,
+      "tn": 96,
+      "precision": 0,
+      "recall": null
+    },
+    "realPhoto": {
+      "tp": 6,
+      "fp": 0,
+      "fn": 23,
+      "tn": 74,
+      "precision": 1,
+      "recall": 0.20689655172413793
+    },
+    "singleCopy": {
+      "tp": 23,
+      "fp": 10,
+      "fn": 6,
+      "tn": 64,
+      "precision": 0.696969696969697,
+      "recall": 0.7931034482758621
+    },
+    "coverReadable": {
+      "tp": 29,
+      "fp": 20,
+      "fn": 3,
+      "tn": 51,
+      "precision": 0.5918367346938775,
+      "recall": 0.90625
+    },
+    "conditionConsistent": {
+      "tp": 8,
+      "fp": 24,
+      "fn": 15,
+      "tn": 56,
+      "precision": 0.25,
+      "recall": 0.34782608695652173
+    },
+    "noAuthenticityRedFlags": {
+      "tp": 2,
+      "fp": 18,
+      "fn": 2,
+      "tn": 81,
+      "precision": 0.1,
+      "recall": 0.5
+    },
+    "imageContentAppropriate": {
+      "tp": 0,
+      "fp": 1,
+      "fn": 0,
+      "tn": 102,
+      "precision": 0,
+      "recall": null
+    }
+  },
+  "calibration": [
+    {
+      "range": "0-0.5",
+      "n": 0,
+      "accuracy": null
+    },
+    {
+      "range": "0.5-0.7",
+      "n": 0,
+      "accuracy": null
+    },
+    {
+      "range": "0.7-0.85",
+      "n": 30,
+      "accuracy": 0.5333333333333333
+    },
+    {
+      "range": "0.85-0.95",
+      "n": 210,
+      "accuracy": 0.7380952380952381
+    },
+    {
+      "range": "0.95-1",
+      "n": 790,
+      "accuracy": 0.9468354430379747
+    }
+  ],
+  "injection": {
+    "modelMissed": {
+      "count": 0,
+      "of": 9,
+      "rate": 0,
+      "upper95": 0.2831288355631136
+    },
+    "published": {
+      "count": 0,
+      "of": 9,
+      "rate": 0,
+      "upper95": 0.2831288355631136
+    }
+  },
+  "invalidOutputRate": 0,
+  "providerFailureRate": 0,
+  "calls": 354,
+  "inputTokens": 299154,
+  "outputTokens": 26775,
+  "costUsd": 0.406254,
+  "latencyMsPerCase": {
+    "p50": 3500,
+    "p95": 9094
+  },
+  "gate": {
+    "minReviewed": 60,
+    "reviewedMustEscalate": 0,
+    "reviewedApprovable": 0,
+    "met": false
+  }
+}

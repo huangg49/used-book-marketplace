@@ -1,5 +1,8 @@
 # ADR 0061: AI tự duyệt bài đăng theo tiêu chí kiểm duyệt
 
+[ADR0062](0062-ai-listing-review-hardening.md) thay phần tiêu chí, gọi mô hình và "Giới
+hạn" dưới đây. Phần lưu vết và "AI không từ chối" giữ nguyên.
+
 02/11/2026. Accepted theo yêu cầu của thành viên nhóm trong phiên làm việc, **sau cờ tắt
 mặc định**. Bổ sung [ADR0048](0048-listing-photo-autofill.md) và thay phần "không
 thêm AI duyệt bài" của [ADR0056](0056-listing-assist-fast-paths.md) khi cờ bật.

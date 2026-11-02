@@ -90,6 +90,9 @@ chưa áp dụng DB chính; [ADR0055](../adr/0055-listing-catalog-recovery.md).
 AI tự duyệt thêm0050 và collection mới: dừng API/worker, `pnpm db:migrate` rồi
 `pnpm db:bootstrap`. Cờ `LISTING_AUTO_REVIEW_ENABLED` mặc định tắt;
 [ADR0061](../adr/0061-ai-listing-auto-review.md).
+Bản hậu kiểm thêm0051 và `listing_auto_review_checks`: cùng các bước trên. Muốn worker
+chạy còn phải đặt `LISTING_AUTO_REVIEW_APPROVED_POLICY` đúng `POLICY_VERSION`;
+[ADR0062](../adr/0062-ai-listing-review-hardening.md).
 
 Gói đường nhanh thêm0043/sourceGroup: dừng API/worker và migrate, cập nhật web/RN/
 Admin cùng enum DuplicateSource. Không backfill nguồn từ nhãn; legacy thiếu nguồn

@@ -9,8 +9,11 @@ import {
 } from './auto-review-facts.js';
 import {
   precheckAutoReview,
+  POLICY_VERSION,
   type AutoReviewChecklist,
+  type AutoReviewSettings,
 } from './auto-review-policy.js';
+import { autoReviewForRevision, autoReviewWire } from './auto-review-wire.js';
 import { CatalogService } from '../catalog/catalog.service.js';
 import {
   ListingFulfillmentService,
@@ -309,9 +312,17 @@ export class ListingReviewService {
     revisionId: string;
     expectedVersion: number;
     checklist: AutoReviewChecklist;
-    maxAutoPrice: number;
-    assessment: Json;
+    settings: AutoReviewSettings;
+    assessment: Json | null;
+    facts: Json;
+    photoHashes: string[];
+    sampleBucket: number;
+    humanAudit: boolean;
     model: string | null;
+    inputTokens: number;
+    outputTokens: number;
+    costMicroUsd: number;
+    latencyMs: number | null;
   }) {
     const id = input.listingId;
     return this.commands.systemAutoApprove(input.revisionId, id, {
@@ -332,7 +343,8 @@ export class ListingReviewService {
         if (l.currentRevisionId !== input.revisionId) throw conflict();
         if (l.moderation !== 'PendingReview') throw invalidState();
         const reasons = precheckAutoReview(
-          await autoReviewFacts(tx.c, l, input.maxAutoPrice),
+          await autoReviewFacts(tx.c, l, await tx.now()),
+          input.settings,
         );
         if (reasons.length) throw new AutoReviewBlocked(reasons);
         this.input.body(
@@ -359,7 +371,40 @@ export class ListingReviewService {
           assessment: input.assessment,
           model: input.model,
           decidedAt,
+          policyVersion: POLICY_VERSION,
+          facts: input.facts,
+          photoHashes: input.photoHashes,
+          sampleBucket: input.sampleBucket,
+          inputTokens: input.inputTokens,
+          outputTokens: input.outputTokens,
+          costMicroUsd: input.costMicroUsd,
+          latencyMs: input.latencyMs,
         });
+        // A random share goes straight to people: the only check on the AI that
+        // does not depend on the same model agreeing with itself.
+        if (input.humanAudit)
+          await tx.c.listing_auto_review_checks.insertOne({
+            _id: randomUUID(),
+            revisionId: input.revisionId,
+            listingId: id,
+            selection: 'HumanAudit',
+            status: 'Open',
+            reasons: ['RandomAudit'],
+            assessment: null,
+            facts: null,
+            model: null,
+            policyVersion: POLICY_VERSION,
+            inputTokens: 0,
+            outputTokens: 0,
+            costMicroUsd: 0,
+            resolvedBy: null,
+            resolvedAt: null,
+            note: null,
+            version: 1,
+            createdAt: decidedAt,
+            updatedAt: decidedAt,
+            lockSeq: 0,
+          });
         const next = await tx.c.listings.findOneAndUpdate(
           { _id: id, version: l.version },
           {
@@ -394,18 +439,9 @@ export class ListingReviewService {
       reviewer(actor);
       const l = await this.listing(tx, id);
       if (!l.currentRevision?.submittedAt) throw notFound();
-      const autoReview = await tx.c.listing_auto_reviews.findOne({
-        revisionId: l.currentRevisionId!,
-      });
       return {
         ...projection(l),
-        autoReview: autoReview
-          ? {
-              outcome: autoReview.outcome,
-              reasons: autoReview.reasons,
-              decidedAt: autoReview.decidedAt.toISOString(),
-            }
-          : null,
+        autoReview: await autoReviewForRevision(tx.c, l.currentRevisionId!),
         priceAssist: await priceAssistForRevision(
           tx,
           l._id,
@@ -418,6 +454,7 @@ export class ListingReviewService {
     return this.commands.read(auth, async (tx, actor) => {
       reviewer(actor);
       const moderation = String(query.moderation ?? 'PendingReview');
+      const aiOutcome = query.aiOutcome ? String(query.aiOutcome) : null;
       const page = await this.pages.page(
         tx.c.listings,
         [
@@ -438,6 +475,24 @@ export class ListingReviewService {
           },
           { $unwind: '$r' },
           { $match: { 'r.submittedAt': { $ne: null } } },
+          ...(aiOutcome
+            ? [
+                {
+                  $lookup: {
+                    from: 'listing_auto_reviews',
+                    localField: 'currentRevisionId',
+                    foreignField: 'revisionId',
+                    as: 'ai',
+                  },
+                },
+                {
+                  $match:
+                    aiOutcome === 'None'
+                      ? { ai: { $size: 0 } }
+                      : { 'ai.outcome': aiOutcome },
+                },
+              ]
+            : []),
           { $project: { key: '$r.submittedAt' } },
         ],
         {
@@ -447,6 +502,7 @@ export class ListingReviewService {
             operation: 'listListingReviewQueue',
             actor: actor._id,
             moderation,
+            ...(aiOutcome ? { aiOutcome } : {}),
           },
           limit: Number(query.limit),
           cursor: query.cursor as string | undefined,
@@ -461,8 +517,15 @@ export class ListingReviewService {
           l.visibility !== 'Removed' &&
           l.currentRevision?.submittedAt &&
           l.moderation === moderation
-        )
-          items.push(projection(l));
+        ) {
+          const row = await tx.c.listing_auto_reviews.findOne({
+            revisionId: l.currentRevisionId!,
+          });
+          items.push({
+            ...projection(l),
+            autoReview: row ? autoReviewWire(row, []) : null,
+          });
+        }
       }
       return {
         items,

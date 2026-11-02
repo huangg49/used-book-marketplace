@@ -130,8 +130,8 @@ describe('migrations', () => {
         memberProfileSpecs.length -
         // Member cart is Mongo-native (FR-O01).
         1 -
-        // ADR 0061 auto review verdicts are Mongo-native.
-        1 +
+        // ADR 0061/0062 auto review verdicts and checks are Mongo-native.
+        2 +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });
