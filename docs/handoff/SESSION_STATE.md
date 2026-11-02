@@ -1,5 +1,25 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## Seller RN: đóng gói → vận đơn → theo dõi tới F2h
+
+- Owner duyệt cùng tích hợp main/socket. Branch `codex/rn-seller-shipping`, base
+  `20e1a67b`, subject `feat(rn): connect seller packaging and shipment journey`.
+  [Hành trình/source/evidence](../features/SELLER_RN_F2H_2026_11_02.md).
+  Không còn yêu cầu Seller chép mã rồi tự sang Member web cho bước đóng gói/gửi.
+- Native source dùng picker/photoBytes, ảnh Ready, địa chỉ snapshot, mã mô phỏng
+  và server eligibility/deadline. Giữ exact intent qua Back/mất ACK, chặn lệnh ngược;
+  ACK đã có/GET lỗi chỉ đọc lại. Đổi identity ngăn continuation/late ACK lẫn dữ liệu.
+  Buyer/Seller đọc pickup thật trong simulator; không tự xác nhận Delivered.
+- PASS223RN unit/17ca shipping mới; RN type/lint/export32route, detector0findings.
+  PASS60packaging/shipment E2E; API sau socket PASS327unit. Browser RN PASS picker,
+  create/content lostACK + Back,1Ready asset, register lostACK/Back/GET lỗi và
+  exact replay1shipment, pickup độc lập→InTransit/giữ tiền/no settlement; quá hạn
+  pickup thật→ResolutionPending gỡ thao tác cũ. Ảnh tổng hợp/storage fake/mail local.
+- Web review sau socket PASS1440/390/320, không còn log Unauthorized join. Native/
+  TalkBack/người thật/storage thật NOT RUN, block native cũ giữ nguyên. Cờ AI tắt,
+  ADR0062/READINESS/GHN giữ nguyên; chưa push/PR/CI/merge/deploy source mới.
+  QA DB/users/roles riêng đã dọn/đối soát;28file UI/ảnh ngoài gói giữ nguyên.
+
 ## Socket hội thoại: xác thực trước connect
 
 - Owner duyệt sau gói quote; branch `codex/purchase-socket-auth`, base `86dc7cd9`,

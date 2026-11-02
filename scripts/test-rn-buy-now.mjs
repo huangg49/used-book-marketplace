@@ -1,7 +1,7 @@
 // RN web regression: real API/Mongo/ledger, local fake storage/funding.
 // Faults discard or delay real ACKs; this does not replace Android/human checks.
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import { mkdir, readFile } from "node:fs/promises";
@@ -399,6 +399,29 @@ try {
   });
   sellerPage.setDefaultTimeout(15000);
   sellerPage.on("pageerror", (e) => errors.push(e.message));
+  let evidenceReadFault = true,
+    shipmentReadFault = false;
+  await sellerPage.route(
+    "**/api/v1/me/orders/*/packaging-evidence",
+    async (route) => {
+      if (evidenceReadFault) {
+        evidenceReadFault = false;
+        return route.fulfill({
+          status: 503,
+          json: { code: "UNAVAILABLE", message: "QA packaging read failure" },
+        });
+      }
+      return route.continue();
+    },
+  );
+  await sellerPage.route("**/api/v1/me/orders/*/shipment", async (route) => {
+    if (shipmentReadFault)
+      return route.fulfill({
+        status: 503,
+        json: { code: "UNAVAILABLE", message: "QA shipment read failure" },
+      });
+    return route.continue();
+  });
   console.log("QA: seller continuation");
   await login(sellerPage, "member@operations.test");
   await button(sellerPage, new RegExp(orderId.slice(0, 8))).click();
@@ -407,16 +430,187 @@ try {
     0,
     "BuyNow payment already enters Preparing",
   );
-  await sellerPage
-    .getByText(/Ảnh đóng gói và vận chuyển hiện thực hiện trên Member web/)
-    .waitFor();
-  await sellerPage.getByText("Mã đơn: " + orderId, { exact: true }).waitFor();
+  await button(sellerPage, "Thử tải lại ảnh đóng gói").click();
+  await button(sellerPage, "Chọn ảnh đóng gói").waitFor();
   assert.equal(
     (await api(`/me/orders/${orderId}`, seller.accessToken)).state,
     "Preparing",
   );
   await sellerPage.screenshot({
     path: path.join(artifacts, "seller-preparing-320.png"),
+    fullPage: true,
+  });
+  const photoCreates = [],
+    photoPuts = [],
+    shipmentCreates = [];
+  let registeredId;
+  await sellerPage.route(
+    "**/api/v1/orders/*/packaging-evidence",
+    async (route) => {
+      const request = route.request();
+      photoCreates.push({
+        key: request.headers()["idempotency-key"],
+        body: request.postData(),
+      });
+      const response = await route.fetch();
+      assert.equal(response.status(), 200);
+      if (photoCreates.length === 1) await route.abort("failed");
+      else await route.fulfill({ response });
+    },
+  );
+  await sellerPage.route(
+    "**/api/v1/orders/*/packaging-evidence/*/content",
+    async (route) => {
+      const request = route.request();
+      photoPuts.push({
+        key: request.headers()["idempotency-key"],
+        target: request.url(),
+        sha256: createHash("sha256")
+          .update(request.postDataBuffer())
+          .digest("hex"),
+      });
+      const response = await route.fetch();
+      assert.equal(response.status(), 200);
+      if (photoPuts.length === 1) await route.abort("failed");
+      else await route.fulfill({ response });
+    },
+  );
+  const chosen = sellerPage.waitForEvent("filechooser");
+  await button(sellerPage, "Chọn ảnh đóng gói").click();
+  await (
+    await chosen
+  ).setFiles({
+    name: "qa-packaging.png",
+    mimeType: "image/png",
+    buffer: fixture.photo,
+  });
+  await button(sellerPage, "Thử lại lưu ảnh đóng gói").waitFor();
+  const reopenSeller = async () => {
+    await button(sellerPage, "Về danh sách đơn trực tiếp").click();
+    await button(sellerPage, "Mở chi tiết đơn").first().click();
+    await sellerPage
+      .getByRole("heading", {
+        name: "Đơn #" + orderId.slice(0, 8),
+        exact: true,
+      })
+      .waitFor();
+  };
+  await reopenSeller();
+  await button(sellerPage, "Thử lại lưu ảnh đóng gói").click();
+  await button(sellerPage, "Thử lại lưu ảnh đóng gói").waitFor();
+  await sellerPage
+    .getByRole("alert")
+    .filter({ hasText: /Chưa xác minh ảnh đã lưu/ })
+    .waitFor();
+  await button(sellerPage, "Thử lại lưu ảnh đóng gói").click();
+  await sellerPage
+    .getByText("Ảnh đóng gói đã lưu: 1", { exact: true })
+    .filter({ visible: true })
+    .waitFor();
+  assert.equal(photoCreates.length, 2);
+  assert.deepEqual(photoCreates[0], photoCreates[1]);
+  assert.equal(photoPuts.length, 2);
+  assert.deepEqual(photoPuts[0], photoPuts[1]);
+  assert.equal(
+    await fixture.db
+      .collection("order_packaging_evidence")
+      .countDocuments({ orderId, status: "Ready" }),
+    1,
+  );
+  await sellerPage
+    .getByLabel("Mã vận đơn mô phỏng", { exact: true })
+    .fill("bad");
+  await button(sellerPage, "Đăng ký vận đơn mô phỏng").click();
+  await sellerPage
+    .getByRole("alert")
+    .filter({ hasText: /mã bắt đầu LL-/ })
+    .waitFor();
+  assert.equal(shipmentCreates.length, 0);
+  const trackingCode = "LL-RNSELLER20261102";
+  await sellerPage
+    .getByLabel("Mã vận đơn mô phỏng", { exact: true })
+    .fill(trackingCode);
+  await sellerPage.route("**/api/v1/orders/*/shipment", async (route) => {
+    const request = route.request();
+    shipmentCreates.push({
+      key: request.headers()["idempotency-key"],
+      body: request.postData(),
+    });
+    const response = await route.fetch();
+    assert.equal(response.status(), 200);
+    registeredId = (await response.json()).entityId;
+    if (shipmentCreates.length === 1) {
+      shipmentReadFault = true;
+      await route.abort("failed");
+    } else await route.fulfill({ response });
+  });
+  await button(sellerPage, "Đăng ký vận đơn mô phỏng").click();
+  await button(sellerPage, "Thử lại đăng ký vận đơn").waitFor();
+  assert.equal(await button(sellerPage, "Chọn ảnh đóng gói").count(), 0);
+  await reopenSeller();
+  await button(sellerPage, "Thử lại đăng ký vận đơn").click();
+  await sellerPage
+    .getByText(/Đã có xác nhận đăng ký vận đơn/)
+    .filter({ visible: true })
+    .waitFor();
+  assert.equal(await button(sellerPage, "Đăng ký vận đơn mô phỏng").count(), 0);
+  shipmentReadFault = false;
+  await button(sellerPage, "Thử tải lại vận đơn").click();
+  await sellerPage
+    .getByText("Mã vận đơn mô phỏng: " + trackingCode, { exact: true })
+    .filter({ visible: true })
+    .waitFor();
+  assert.equal(shipmentCreates.length, 2);
+  assert.deepEqual(shipmentCreates[0], shipmentCreates[1]);
+  assert.equal(
+    await fixture.db.collection("direct_shipments").countDocuments({ orderId }),
+    1,
+  );
+  const eventId = randomUUID();
+  await api(
+    "/operations/simulator/pickup-events",
+    operator.accessToken,
+    {
+      eventId,
+      shipmentId: registeredId,
+      orderId,
+      carrier: "LatLaiSimulator",
+      trackingCode,
+      type: "PickedUp",
+      occurredAt: new Date().toISOString(),
+    },
+    "POST",
+    { "Idempotency-Key": eventId },
+  );
+  await sellerPage
+    .getByText(/Đã xác nhận bàn giao vận chuyển\. Theo dõi/)
+    .filter({ visible: true })
+    .waitFor();
+  assert.equal(
+    await sellerPage
+      .getByText("Đã đăng ký vận đơn. Đang chờ xác nhận bàn giao vận chuyển.", {
+        exact: true,
+      })
+      .filter({ visible: true })
+      .count(),
+    0,
+  );
+  assert.equal(
+    (await api(`/me/orders/${orderId}`, buyer.accessToken)).state,
+    "InTransit",
+  );
+  assert.equal(
+    (await api("/me/wallet", buyer.accessToken)).transactionHeld,
+    wallet.transactionHeld,
+  );
+  assert.equal(
+    await fixture.db
+      .collection("ledger_journals")
+      .countDocuments({ orderId, type: "OrderSettlement" }),
+    0,
+  );
+  await sellerPage.screenshot({
+    path: path.join(artifacts, "seller-shipped-320.png"),
     fullPage: true,
   });
   // An ACK arriving after Back must never navigate the closed checkout. Its
@@ -561,9 +755,54 @@ try {
     0,
   );
   await p.unroute("**/api/v1/me/quotes/*");
+  // An actual overdue-pickup transition must remove the old preparation actions.
+  const l = await api(`/listings/${fixture.listings[2]}`, buyer.accessToken);
+  const destinations = await api("/me/addresses", buyer.accessToken);
+  const destination = destinations.items[0];
+  const q = await api(`/listings/${l.id}/quotes`, buyer.accessToken, {
+    expectedListingVersion: l.version,
+    expectedListingRevisionId: l.revisionId,
+    destinationAddressId: destination.id,
+    expectedDestinationAddressVersion: destination.version,
+    method: "DirectDelivery",
+  });
+  const overdue = await api("/orders/buy-now", buyer.accessToken, {
+    quoteId: q.entityId,
+    expectedQuoteVersion: 1,
+    expectedListingVersion: l.version,
+    expectedListingRevisionId: l.revisionId,
+  });
+  await api(`/orders/${overdue.entityId}/pay`, buyer.accessToken, {
+    expectedVersion: 1,
+  });
+  await fixture.openDirectOrderReview(overdue.entityId, "pickup");
+  await button(sellerPage, "Về danh sách đơn trực tiếp").click();
+  const overdueCard=sellerPage.getByText("#"+overdue.entityId.slice(0,8).toUpperCase(),{exact:true}).filter({visible:true}).locator("xpath=ancestor::div[.//*[@role='button']][1]");
+  await overdueCard.getByRole("button",{name:"Mở chi tiết đơn",exact:true}).click();
+  await sellerPage
+    .getByRole("heading", {
+      name: "Đơn #" + overdue.entityId.slice(0, 8),
+      exact: true,
+    })
+    .waitFor();
+  const overdueNotice = sellerPage
+    .getByText(/Đơn đã qua bước chuẩn bị hoặc quá hạn bàn giao/)
+    .filter({ visible: true });
+  await overdueNotice.waitFor();
+  await overdueNotice.scrollIntoViewIfNeeded();
+  assert.equal(await button(sellerPage, "Chọn ảnh đóng gói").count(), 0);
+  assert.equal(await button(sellerPage, "Đăng ký vận đơn mô phỏng").count(), 0);
+  assert.equal(
+    (await api(`/me/orders/${overdue.entityId}`, seller.accessToken)).state,
+    "ResolutionPending",
+  );
+  await sellerPage.screenshot({
+    path: path.join(artifacts, "seller-overdue-320.png"),
+    fullPage: true,
+  });
   assert.deepEqual(errors, []);
   console.log(
-    "PASS RN web buy-now: quote POST lost ACK/GET failure exact retry, server-confirmed expiry across Back, explicit new quote, actual Changed listing + review/reopen, local timer with shortened response TTL; real create/pay/cancel, lost ACK + remount pinned intents, failed follow-up read, late ACK after Back, exact Order, seller Preparing/web continuation. Native/human NOT COVERED here.",
+    "PASS RN web buy-now + Seller F2h: quote recovery/Changed/timer; real create/pay/cancel exact retry/remount/lateACK; real picker and packaging POST/PUT lost ACK, Back, immutable bytes; shipment lost ACK/Back/GET failure exact recovery, independent pickup to InTransit with hold/no settlement; actual overdue pickup removes old actions. Fake storage/synthetic image; native/human NOT COVERED here.",
   );
 } catch (error) {
   let index = 0;
