@@ -2,6 +2,9 @@
 
 ## Thu gọn thẻ bạn đọc theo phản hồi owner
 
+- Follow-up `codex/reader-name-status-alignment`, base99ed9620: tên và trạng thái
+  đặt cùng hàng, căn giữa; bỏ margin auto của pill trong phạm vi thẻ. PASS browser
+  fixture trên checkout app ở1440/1000/390/320/chữ130%, không đổi dữ liệu/API.
 - `codex/compact-reader-card`, base792d3942: ReaderCard riêng, chỉ avatar/tên/
   trạng thái và2điểm/link. Bỏ ribbon/Club/email/quick hub trùng menu; chuyển
   gỡ/retry ảnh xuống phần chỉnh sửa, giữ camera/handler/dirty guard. Cùng số mẫu

@@ -16,7 +16,8 @@
 .avatar { flex-shrink: 0; }
 .avatar > img, .initial { display: grid; place-items: center; width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
 .initial { background: var(--shop-cream); color: var(--shop-wine); font-size: 2rem; font-weight: 700; }
-.identity { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.identity { min-width: 0; display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px; }
+.identity > :last-child { flex-shrink: 0; margin: 0; }
 .identity h2 { margin: 0; font: 700 1.5rem/1.4 var(--shop-body); }
 .status { color: var(--shop-cream); border: 1px solid #a85d53; border-radius: 6px; font-size: .8125rem; padding: 4px 8px; line-height: 1.6; }
 .status[data-status="ACTIVE"] { color: var(--shop-mint); }
