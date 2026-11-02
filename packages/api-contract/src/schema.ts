@@ -5743,11 +5743,8 @@ export interface components {
             inspectionDeadline: string | null;
             /** Format: date-time */
             completedAt: string | null;
-            /**
-             * @description Always false while DirectDelivery completion is release-blocked; historical delivery/inspection timestamps do not grant a new command or settlement.
-             * @constant
-             */
-            canConfirmReceipt: false;
+            /** @description Buyer may acknowledge receipt after validated pickup. Opens the 72-hour inspection window without settlement. */
+            canConfirmReceipt: boolean;
             /** Format: uuid */
             quoteId: string;
             item: components["schemas"]["OrderItemSnapshot"];
@@ -7423,6 +7420,8 @@ export interface components {
             pairToken: string | null;
         };
         TransactionReviewsResponse: {
+            /** @description A received transaction may be reviewed privately before completion; no public score or settlement yet. */
+            awaitingCompletion: boolean;
             demoTimeAdvance?: components["schemas"]["DemoReviewTimeAdvance"];
             /** Format: uuid */
             partnerId: string;
@@ -7451,7 +7450,9 @@ export interface components {
                 /** Format: uuid */
                 transactionId: string;
                 /** Format: date-time */
-                completedAt: string;
+                completedAt: string | null;
+                /** Format: date-time */
+                reviewableAt: string;
                 /** Format: uuid */
                 partnerId: string;
                 partnerName: string;

@@ -1,3 +1,5 @@
+import { ReceiptConfirmation } from "../features/reviews/ReceiptConfirmation";
+import { ReviewEntry } from "../features/reviews/ReviewEntry";
 import {SupportLink} from '../features/support/SupportLink';
 import { BundleManifest } from "../components/BookBundle";
 import { ListingPhoto } from "../components/BookCard";
@@ -38,7 +40,6 @@ import {
   ShieldCheck,
   ExternalLink,
   MapPin,
-  Star,
   Package,
 } from "lucide-react";
 import styles from "./DirectOrders.module.css";
@@ -681,15 +682,12 @@ function AuthenticatedOrderDetails({
                     </div>
                   </div>
 
-                  <div className={styles.reviewPrompt}>
-                    <Link to="/reviews" className={styles.reviewActionBtn}>
-                      <Star size={18} aria-hidden="true" />
-                      <span>Đánh giá giao dịch & Người bán</span>
-                    </Link>
-                  </div>
+
                 </div>
               )}
 
+              <ReceiptConfirmation order={o} onChanged={() => order.refetch()} />
+              {["Inspection","Completed"].includes(o.state) && <ReviewEntry type="DirectOrder" id={o.id} version={o.version} />}
               {/* BƯỚC 7: ĐƠN HÀNG ĐÃ HỦY HOẶC HẾT HẠN */}
               {(o.state === "Cancelled" || o.state === "PaymentExpired" || o.state === "SettlementPending") && (
                 <div className={styles.procedureSection}>

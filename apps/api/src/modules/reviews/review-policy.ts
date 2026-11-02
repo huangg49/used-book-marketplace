@@ -12,7 +12,7 @@ export function publicationTime(
   reviews: TransactionReviewDoc[],
 ): Date | null {
   if (!completedAt || !reviews.length) return null;
-  const times = reviews.map((r) => r.editDeadline.getTime());
+  const times = [completedAt.getTime(), ...reviews.map((r) => r.editDeadline.getTime())];
   if (reviews.length < 2)
     times.push(completedAt.getTime() + REVIEW_SUBMISSION_MS);
   return new Date(Math.max(...times));

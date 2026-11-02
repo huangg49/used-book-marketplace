@@ -171,8 +171,8 @@ function ReviewList({ type }: { type: ReviewType }) {
       {result.isSuccess && result.data.pages[0].items.length === 0 ? (
         <StatePanel
           wine
-          title="Chưa có giao dịch hoàn tất"
-          message="Giao dịch đang giao nhận hoặc xử lý sự cố chưa đủ điều kiện đánh giá."
+          title="Chưa có giao dịch đủ điều kiện đánh giá"
+          message="Xác nhận đã nhận sách để viết đánh giá ngay; không cần chờ hết 72 giờ. Giao dịch đang xử lý sự cố chưa mở đánh giá."
         />
       ) : null}
       {result.data?.pages
@@ -182,7 +182,7 @@ function ReviewList({ type }: { type: ReviewType }) {
             wine
             secondary
             key={item.transactionId}
-            title={`Đánh giá giao dịch với ${item.partnerName} · Mã ${item.transactionId.slice(0, 8).toUpperCase()} · Hoàn tất ${date(item.completedAt)}`}
+            title={`Đánh giá giao dịch với ${item.partnerName} · Mã ${item.transactionId.slice(0, 8).toUpperCase()} · ${item.completedAt ? `Hoàn tất ${date(item.completedAt)}` : `Đã nhận sách ${date(item.reviewableAt!)}`}`}
             onPress={() =>
               router.push({
                 pathname: "/reviews",
@@ -312,6 +312,7 @@ function ReviewPanel({ type, id }: { type: ReviewType; id: string }) {
         Bạn có 48 giờ từ lần gửi đầu để sửa/xóa. Chỉ công bố khi hết quyền sửa
         của hai bên và đủ điều kiện; không công bố ngay khi đối phương gửi.
       </AppText>
+      {data.awaitingCompletion ? <Notice><AppText>Đánh giá đang riêng tư trong thời gian kiểm tra. Tiền vẫn giữ theo quy trình; chỉ công bố và tính điểm khi giao dịch hoàn tất và đủ điều kiện.</AppText></Notice> : null}
       {data.deadline ? (
         <AppText kind="small">
           Hạn gửi theo máy chủ: {date(data.deadline)}

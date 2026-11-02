@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.73.1
+  version: 0.74.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -17089,8 +17089,7 @@ components:
           format: date-time
         canConfirmReceipt:
           type: boolean
-          const: false
-          description: Always false while DirectDelivery completion is release-blocked; historical delivery/inspection timestamps do not grant a new command or settlement.
+          description: Buyer may acknowledge receipt after validated pickup. Opens the 72-hour inspection window without settlement.
         quoteId:
           type: string
           format: uuid
@@ -21720,7 +21719,11 @@ components:
         - myReview
         - partnerReview
         - partnerId
+        - awaitingCompletion
       properties:
+        awaitingCompletion:
+          type: boolean
+          description: A received transaction may be reviewed privately before completion; no public score or settlement yet.
         demoTimeAdvance:
           $ref: "#/components/schemas/DemoReviewTimeAdvance"
         partnerId:
@@ -21791,6 +21794,7 @@ components:
               - transactionType
               - transactionId
               - completedAt
+              - reviewableAt
               - partnerId
               - partnerName
             properties:
@@ -21804,6 +21808,9 @@ components:
                 type: string
                 format: uuid
               completedAt:
+                type: [string, "null"]
+                format: date-time
+              reviewableAt:
                 type: string
                 format: date-time
               partnerId:

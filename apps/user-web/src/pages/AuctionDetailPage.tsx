@@ -1,3 +1,4 @@
+import { ReviewEntry } from "../features/reviews/ReviewEntry";
 import {SupportLink} from '../features/support/SupportLink';
 import { useEffect, useId, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -873,6 +874,7 @@ function WinnerPanel({ me, auction, onChanged, paused }: { me: AuctionParticipat
   if (o.state !== 'AwaitingPayment')
     return (
       <><p><SupportLink type='PointOrder' id={o.id}/></p>
+      {['Inspection','Completed'].includes(o.state) && <ReviewEntry type="PointOrder" id={o.id} version={o.version} />}
       <PointOrderSteps
         order={o}
         onChanged={async () => { await queryClient.invalidateQueries({ queryKey: ['point-order', me.orderId] }); await onChanged() }}

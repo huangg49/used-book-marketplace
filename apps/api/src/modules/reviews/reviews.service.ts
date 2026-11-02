@@ -70,13 +70,26 @@ export class ReviewsService {
         ? new Date(transaction.completedAt.getTime() + REVIEW_SUBMISSION_MS)
         : null;
       return {
-        ...(type === 'Exchange' && actor.status === 'ACTIVE' ? { demoTimeAdvance: await this.demoTime.state(tx, id, rows, now) } : {}),
+        ...(type === 'Exchange' && actor.status === 'ACTIVE'
+          ? { demoTimeAdvance: await this.demoTime.state(tx, id, rows, now) }
+          : {}),
+        awaitingCompletion:
+          !transaction.completedAt && !!transaction.reviewableAt,
         canReview:
-          actor.status === 'ACTIVE' && !!deadline && now < deadline && !mine,
+          actor.status === 'ACTIVE' &&
+          !!transaction.reviewableAt &&
+          (!deadline || now < deadline) &&
+          !mine,
         canEdit:
-          actor.status === 'ACTIVE' && !!mine && reviewIsEditable(mine, now),
+          actor.status === 'ACTIVE' &&
+          !!transaction.reviewableAt &&
+          !!mine &&
+          reviewIsEditable(mine, now),
         canDelete:
-          actor.status === 'ACTIVE' && !!mine && reviewIsEditable(mine, now),
+          actor.status === 'ACTIVE' &&
+          !!transaction.reviewableAt &&
+          !!mine &&
+          reviewIsEditable(mine, now),
         canReply:
           actor.status === 'ACTIVE' &&
           !!peer &&
@@ -139,9 +152,12 @@ export class ReviewsService {
           );
           const now = await tx.now();
           if (
-            !transaction.completedAt ||
-            now >=
-              new Date(transaction.completedAt.getTime() + REVIEW_SUBMISSION_MS)
+            !transaction.reviewableAt ||
+            (transaction.completedAt &&
+              now >=
+                new Date(
+                  transaction.completedAt.getTime() + REVIEW_SUBMISSION_MS,
+                ))
           )
             throw invalidState();
           if (
@@ -263,7 +279,8 @@ export class ReviewsService {
           const publication = publicationTime(transaction.completedAt, rows);
           let reason: string | null = null;
           if (action === 'edit' || action === 'delete') {
-            if (!reviewIsEditable(r, now)) throw invalidState();
+            if (!transaction.reviewableAt || !reviewIsEditable(r, now))
+              throw invalidState();
             if (action === 'edit')
               Object.assign(
                 r,

@@ -876,7 +876,7 @@ export class OrdersService {
       },
       mutate: async (tx, _actor, _before, receiptId) => {
         // Authorization and stored-receipt replay already ran in the executor.
-        this.directRelease.assertReleased();
+        // Owner03/11: receipt opens inspection/private review, never settlement.
         const { o, commitment } = await this.locked(tx, id);
         if (o.version !== body.expectedVersion || o.state !== 'InTransit')
           throw invalidState();
@@ -902,6 +902,7 @@ export class OrdersService {
         )
           throw invalidState();
         const now = await this.decision(tx, context.auth);
+        if (!pickup.deliveryDeadline || now >= pickup.deliveryDeadline) throw invalidState();
         await tx.c.direct_delivery_events.insertOne({
           _id: receiptId,
           orderId: o._id,
@@ -1462,7 +1463,7 @@ export class OrdersService {
           deliveredAt: o.deliveredAt?.toISOString() ?? null,
           inspectionDeadline: o.inspectionDeadline?.toISOString() ?? null,
           completedAt: o.completedAt?.toISOString() ?? null,
-          canConfirmReceipt: false as const,
+          canConfirmReceipt: actor.status === 'ACTIVE' && role === 'Buyer' && o.state === 'InTransit' && !!pickup?.deliveryDeadline && now < pickup.deliveryDeadline && !carrierReview && !delivery && funds.held === o.quote.buyerTotal,
           demoCompletionEnabled: role === 'Seller' && actor.status === 'ACTIVE' && this.localDemo.allows(id) && o.state === 'Preparing' &&
             !!(await tx.c.direct_shipments.findOne({ orderId: o._id, carrier: 'LatLaiSimulator' })) &&
             !(await tx.c.local_demo_order_completions.findOne({ _id: o._id })),

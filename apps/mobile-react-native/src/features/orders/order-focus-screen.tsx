@@ -1,3 +1,4 @@
+import { ReviewEntry } from "../reviews/review-entry";
 import { useState } from "react";
 import { View } from "react-native";
 import { router } from "expo-router";
@@ -35,6 +36,7 @@ const details = orderDetailsSchema
   .extend(orderResponseStateSchema.shape)
   .extend({
     canCancel: z.boolean(),
+    canConfirmReceipt: z.boolean().optional().default(false),
     moneyHeld: z.number().int(),
     item: z.object({
       bundle: bundleSchema.nullable().optional(),
@@ -53,12 +55,13 @@ const details = orderDetailsSchema
       })
       .nullable(),
   });
-type Action = "accept" | "reject" | "cancel" | "pay";
+type Action = "accept" | "reject" | "cancel" | "pay" | "confirm-receipt";
 const labels: Record<Action, string> = {
   accept: "Xác nhận bán",
   reject: "Từ chối đơn",
   cancel: "Hủy đơn chưa thanh toán",
   pay: "Thanh toán đơn",
+  "confirm-receipt": "Xác nhận đã nhận sách",
 };
 
 export function OrderFocusScreen({
@@ -252,18 +255,9 @@ export function OrderFocusScreen({
                 </>
               )
             )}
-            {order.state === "Completed" && (
-              <Button
-                wine
-                title="Xem hoặc viết đánh giá"
-                onPress={() =>
-                  router.push({
-                    pathname: "/reviews",
-                    params: { type: "DirectOrder", id },
-                  })
-                }
-              />
-            )}
+            {order.canConfirmReceipt && <Button wine title="Tôi đã nhận được sách" busy={busy} onPress={() => setConfirming("confirm-receipt")} />}
+            {["Inspection","Completed"].includes(order.state) && <ReviewEntry type="DirectOrder" id={id} version={order.version} />}
+
             <Button
               wine
               secondary
@@ -278,7 +272,9 @@ export function OrderFocusScreen({
         visible={!!confirming}
         title={confirming ? labels[confirming] + "?" : ""}
         message={
-          confirming === "accept"
+          confirming === "confirm-receipt"
+            ? "Xác nhận bạn đã nhận sách. Mở 72 giờ kiểm tra và đánh giá riêng tư; tiền vẫn giữ, không giải ngân."
+            : confirming === "accept"
             ? "Bạn nhận chuẩn bị sách cho đơn đã được người mua thanh toán."
             : confirming === "reject"
               ? "Từ chối chuyển đơn sang xử lý hoàn tiền theo quy trình."

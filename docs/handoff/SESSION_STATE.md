@@ -1,3 +1,18 @@
+# Nhận sách → đánh giá và chuẩn bị demo trao đổi — 03/11/2026
+
+Owner chốt viết review ngay sau nhận sách, giữ tiền/điều kiện công bố/48h sửa;
+cấp TEST_OPERATOR cho Admin demo local; thêm hai Member trao đổi vào DB local
+chính. Nhánh `codex/receipt-review-demo-readiness`, baseb447dbab sau PR93.
+Contract0.74 mở private review theo receipt, nút/deep link trên Member web/RN,
+Buyer acknowledgement có giới hạn; carrier/settlement/worker gate vẫn đóng.
+PASS14review E2E,8receipt/release E2E (40ngoài filter SKIP),6policy,151session,
+315Member unit, browser thật API/Mongo QA nhận→review/lostACK/tiền giữ nguyên,
+typecheckAPI/web/RN,buildAPI/web,lintscope vàcontract246operations/38controllers.
+Đã thử QA bộ hai Member/11listing/địa chỉ/wishlist, chưa nhập đè dữ liệu cũ.
+Không push/PR/merge mới hoặc đóng READINESS. Native/human/remoteCI NOT RUN.
+[Phạm vi, thao tác và bằng chứng](../features/RECEIPT_REVIEW_DEMO_2026_11_03.md).
+Kết quả kích hoạt local cập nhật khi kết thúc gói; các checkpoint cũ giữ bên dưới.
+
 # Đồng bộ main và bảo toàn checkout local — 03/11/2026
 
 ## Quyền xuất bản gói tích hợp — 03/11/2026

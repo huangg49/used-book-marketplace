@@ -1502,48 +1502,121 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
       listing: business(await db.c.listings.findOne({ _id: item.listingId })),
     };
   }
-  it("release gate refuses new receipt and carrier delivery without changing held funds or history", async () => {
+  it('receipt acknowledgement opens private review immediately while settlement and carrier release remain blocked', async () => {
     const f = await shippedSale();
     const before = await directEffects(f.id);
-    const view = (await get(`/me/orders/${f.id}`, f.buyer).expect(200)).body;
-    expect(view.canConfirmReceipt).toBe(false);
+    expect(
+      (await get(`/me/orders/${f.id}`, f.buyer).expect(200)).body
+        .canConfirmReceipt,
+    ).toBe(true);
+    await post(
+      `/orders/${f.id}/confirm-receipt`,
+      { expectedVersion: 4 },
+      f.seller,
+    ).expect(404);
     const key = randomUUID();
-    for (let n = 0; n < 2; n++) {
-      const denied = await post(
-        `/orders/${f.id}/confirm-receipt`,
-        { expectedVersion: 4 },
+    const confirmed = await post(
+      `/orders/${f.id}/confirm-receipt`,
+      { expectedVersion: 4 },
+      f.buyer,
+      key,
+    ).expect(200);
+    expect(confirmed.body).toMatchObject({ state: 'Inspection', version: 5 });
+    expect(
+      (
+        await post(
+          `/orders/${f.id}/confirm-receipt`,
+          { expectedVersion: 4 },
+          f.buyer,
+          key,
+        ).expect(200)
+      ).body,
+    ).toEqual(confirmed.body);
+    const received = (await get(`/me/orders/${f.id}`, f.buyer).expect(200))
+      .body;
+    expect(
+      Date.parse(received.inspectionDeadline) -
+        Date.parse(received.deliveredAt),
+    ).toBe(72 * 3600000);
+    expect(received.canConfirmReceipt).toBe(false);
+    const url = `/transactions/DirectOrder/${f.id}/reviews`;
+    expect((await get(url, f.buyer).expect(200)).body).toMatchObject({
+      canReview: true,
+      awaitingCompletion: true,
+      deadline: null,
+    });
+    await post(
+      url,
+      {
+        partnerRating: 5,
+        bookRating: 4,
+        comment: 'Đã nhận sách trong thời gian kiểm tra.',
+      },
+      f.buyer,
+    ).expect(200);
+    await post(
+      url,
+      { partnerRating: 5, comment: 'Đối tác giao dịch tốt.' },
+      f.seller,
+    ).expect(200);
+    const oldCreated = new Date(Date.now() - 49 * 3600000);
+    await db.c.transaction_reviews.updateMany(
+      { transactionId: f.id },
+      {
+        $set: {
+          createdAt: oldCreated,
+          editDeadline: new Date(+oldCreated + 48 * 3600000),
+        },
+      },
+    );
+    expect((await get(url, f.buyer).expect(200)).body.partnerReview).toBeNull();
+    expect(
+      (await get(`/members/${f.seller.id}/reputation`).expect(200)).body
+        .reviewCount,
+    ).toBe(0);
+    const listed = (
+      await get(
+        '/me/review-transactions?type=DirectOrder&limit=50',
         f.buyer,
-        key,
-      ).expect(409);
-      expect(denied.body).toMatchObject({ code: "InvalidState" });
-    }
+      ).expect(200)
+    ).body.items.find((r: any) => r.transactionId === f.id);
+    expect(listed).toMatchObject({
+      completedAt: null,
+      reviewableAt: received.deliveredAt,
+    });
+    const after = await directEffects(f.id);
+    expect(after.entries).toEqual(before.entries);
+    expect(after.journals).toEqual(before.journals);
+    expect(after.commitments).toEqual(before.commitments);
     const eventId = randomUUID();
     const event = {
       eventId,
       shipmentId: f.shipment.entityId,
       orderId: f.id,
-      carrier: "LatLaiSimulator",
+      carrier: 'LatLaiSimulator',
       trackingCode: f.trackingCode,
       occurredAt: new Date().toISOString(),
     };
     await post(
-      "/operations/simulator/delivery-events",
+      '/operations/simulator/delivery-events',
       event,
       f.operator,
       eventId,
     ).expect(409);
-    await post(
-      "/operations/simulator/delivery-events",
-      event,
-      f.operator,
-      eventId,
-    ).expect(409);
-    expect(await directEffects(f.id)).toEqual(before);
+    await app
+      .get(OrdersService)
+      .settle(f.id)
+      .then(
+        () => {
+          throw new Error('Settlement must remain blocked');
+        },
+        () => {},
+      );
+    expect((await directEffects(f.id)).entries).toEqual(before.entries);
     expect(await wallet(f.buyer)).toMatchObject({
       available: 70000 - f.amounts.buyerTotal,
       transactionHeld: f.amounts.buyerTotal,
     });
-    expect((await wallet(f.seller)).available).toBe(0);
   });
   it("release gate retains current owner, role, session and existing-obligation checks before replay", async () => {
     const f = await shippedSale();

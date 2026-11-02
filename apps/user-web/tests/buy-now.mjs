@@ -1,7 +1,7 @@
 // Real HTTP/Mongo and two browser sessions; QA-only accounts/storage/funding.
 import assert from "node:assert/strict";
 import { parseArgs } from "node:util";
-const { values: { "checkout-only": checkoutOnly, "demo-completion": demoCompletion } } = parseArgs({ options: { "checkout-only": { type: "boolean", default: false }, "demo-completion": { type: "boolean", default: false } } });
+const { values: { "checkout-only": checkoutOnly, "demo-completion": demoCompletion, "receipt-review": receiptReview } } = parseArgs({ options: { "checkout-only": { type: "boolean", default: false }, "demo-completion": { type: "boolean", default: false }, "receipt-review": { type: "boolean", default: false } } });
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
@@ -772,6 +772,41 @@ try {
     path: path.join(artifacts, "buyer-in-transit-mobile.png"),
     fullPage: true,
   });
+  if (receiptReview) {
+    const before = await fixture.api('/me/wallet', buyer.accessToken);
+    const endpoint = `/orders/${orderId}/confirm-receipt`;
+    const posts = [];
+    await buyerPage.route(`**/api/v1${endpoint}`, async route => {
+      posts.push({ key: route.request().headers()['idempotency-key'], body: route.request().postData() });
+      if (posts.length === 1) { await route.fetch(); await route.abort('failed'); }
+      else await route.continue();
+    });
+    await buyerOrderDetails.getByRole('button', { name: 'Tôi đã nhận được sách', exact: true }).click();
+    await buyerPage.getByRole('button', { name: 'Xác nhận đã nhận sách', exact: true }).click();
+    await buyerOrderDetails.getByRole('button', { name: 'Thử lại xác nhận nhận sách', exact: true }).click();
+    assert.equal(posts.length, 2); assert.deepEqual(posts[0], posts[1]);
+    const read = await fixture.api(`/me/orders/${orderId}`, buyer.accessToken);
+    assert.equal(read.state, 'Inspection'); assert.equal(read.moneyHeld, before.transactionHeld);
+    assert.equal(await fixture.db.collection('direct_delivery_events').countDocuments({ orderId, source: 'BuyerReceived' }), 1);
+    await buyerOrderDetails.getByRole('link', { name: 'Viết đánh giá', exact: true }).click();
+    await buyerPage.waitForURL(url => url.pathname === '/reviews' && url.searchParams.get('transaction') === orderId);
+    assert.equal(new URL(buyerPage.url()).searchParams.get('transaction'), orderId);
+    await buyerPage.getByRole('button', { name: 'Viết đánh giá', exact: true }).click();
+    await buyerPage.getByLabel('Nhận xét chi tiết (không bắt buộc)').fill('QA: đã nhận sách, đánh giá riêng trong thời gian kiểm tra.');
+    await buyerPage.getByRole('button', { name: 'Lưu đánh giá', exact: true }).click();
+    await buyerPage.getByText('QA: đã nhận sách, đánh giá riêng trong thời gian kiểm tra.', { exact: true }).waitFor();
+    await buyerPage.getByText('Chờ công bố', { exact: true }).waitFor();
+    const ownReview = await fixture.api(`/transactions/DirectOrder/${orderId}/reviews`, buyer.accessToken);
+    const peerReview = await fixture.api(`/transactions/DirectOrder/${orderId}/reviews`, seller.accessToken);
+    assert.equal(ownReview.awaitingCompletion, true); assert.equal(peerReview.partnerReview, null);
+    assert.equal((await fixture.api('/me/wallet', buyer.accessToken)).transactionHeld, before.transactionHeld);
+    for (const width of [1440, 390, 320]) {
+      await buyerPage.setViewportSize({ width, height: 900 });
+      assert(await buyerPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await buyerPage.screenshot({ path: path.join(artifacts, `receipt-review-${width}.png`), fullPage: true });
+    }
+    console.log('PASS received → private review from ordinary order UI; lost ACK exact key/body, one receipt event, 72h Inspection and funds retained, partner blind; 1440/390/320, real API/Mongo with QA storage/funding/carrier.');
+  }
   }
   }
   assert.equal(

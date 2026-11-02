@@ -129,6 +129,62 @@ describe('Transaction reviews lifecycle — real Mongo HTTP', () => {
     await db?.close();
   });
 
+  it('opens an Exchange draft only for the participant who acknowledged receipt; keeps it blind and freezes edits during a dispute', async () => {
+    const id = await exchange(null, 'InTransit'),
+      url = `/transactions/Exchange/${id}/reviews`,
+      now = new Date();
+    expect((await get(url, a).expect(200)).body.canReview).toBe(false);
+    await db.c.exchanges.updateOne(
+      { _id: id },
+      {
+        $set: {
+          initiatorReceivedAt: now,
+          initiatorInspectionDeadline: new Date(+now + 72 * 3600000),
+        },
+      },
+    );
+    expect((await get(url, a).expect(200)).body).toMatchObject({
+      canReview: true,
+      awaitingCompletion: true,
+      deadline: null,
+    });
+    expect((await get(url, b).expect(200)).body.canReview).toBe(false);
+    await post(url, input, b).expect(409);
+    await post(url, input, outsider).expect(404);
+    const key = randomUUID(),
+      created = (await post(url, input, a, key).expect(200)).body;
+    expect((await post(url, input, a, key).expect(200)).body).toEqual(created);
+    const page = (
+      await get('/me/review-transactions?type=Exchange&limit=50', a).expect(200)
+    ).body;
+    expect(page.items.find((x: any) => x.transactionId === id)).toMatchObject({
+      completedAt: null,
+      reviewableAt: now.toISOString(),
+    });
+    expect(
+      (await get(`/members/${b.id}/reputation`).expect(200)).body.reviewCount,
+    ).toBe(0);
+    await db.c.exchanges.updateOne(
+      { _id: id },
+      { $set: { status: 'ResolutionPending' } },
+    );
+    expect((await get(url, a).expect(200)).body).toMatchObject({
+      canReview: false,
+      canEdit: false,
+      canDelete: false,
+    });
+    await post(
+      `/transaction-reviews/${created.id}/edit`,
+      { ...input, expectedVersion: created.version },
+      a,
+    ).expect(409);
+    await post(
+      `/transaction-reviews/${created.id}/delete`,
+      { expectedVersion: created.version },
+      a,
+    ).expect(409);
+  });
+
   async function demoPair(both = true) {
     const id = await exchange();
     const note = '[DỮ LIỆU DEMO] Lịch sử nhập mẫu để thử đánh giá; không xác nhận giao hàng thật.';
@@ -712,6 +768,43 @@ describe('Transaction reviews lifecycle — real Mongo HTTP', () => {
     expect(profile.partnerRatingCount).toBe(2);
     expect(profile.bookRatingCount).toBe(0);
     expect(profile.bookRating).toBeNull();
+    const inspectingPoint = randomUUID();
+    const pointRow = (await db.c.point_orders.findOne({ _id: point }))!;
+    await db.c.point_orders.insertOne({
+      ...pointRow,
+      _id: inspectingPoint,
+      auctionId: randomUUID(),
+      intakeId: randomUUID(),
+      contextId: randomUUID(),
+      listingId: randomUUID(),
+      state: 'Inspection',
+      version: 4,
+      closedAt: null,
+    });
+    const earlyUrl = `/transactions/PointOrder/${inspectingPoint}/reviews`;
+    expect((await get(earlyUrl, a).expect(200)).body).toMatchObject({
+      canReview: true,
+      awaitingCompletion: true,
+      deadline: null,
+    });
+    await post(earlyUrl, input, a).expect(200);
+    await post(earlyUrl, { partnerRating: 4 }, b).expect(200);
+    await age(inspectingPoint);
+    expect((await get(earlyUrl, b).expect(200)).body.partnerReview).toBeNull();
+    expect(
+      (await get(`/members/${a.id}/reputation`).expect(200)).body.reviewCount,
+    ).toBe(2);
+    const inspectingList = (
+      await get('/me/review-transactions?type=PointOrder', a).expect(200)
+    ).body;
+    expect(
+      inspectingList.items.find(
+        (item: any) => item.transactionId === inspectingPoint,
+      ),
+    ).toMatchObject({
+      completedAt: null,
+      reviewableAt: delivered.toISOString(),
+    });
     // Seller-to-buyer reviews have no book score. One Exchange review adds a
     // third partner score but only the first book score, even on a 1-item page.
     const ex = await exchange(),

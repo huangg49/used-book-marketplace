@@ -343,17 +343,44 @@ export class ReviewQueries {
     return this.commands.read(auth, async (tx, actor) => {
       member(actor);
       const id = actor._id;
+      const ownReceived = {
+        $cond: [
+          { $eq: ['$initiatorId', id] },
+          '$initiatorReceivedAt',
+          '$recipientReceivedAt',
+        ],
+      };
       const ex = [
         {
           $match: {
-            status: 'Completed',
-            $or: [{ initiatorId: id }, { recipientId: id }],
+            $or: [
+              {
+                status: 'Completed',
+                $or: [{ initiatorId: id }, { recipientId: id }],
+              },
+              {
+                status: { $in: ['InTransit', 'Delivered'] },
+                $or: [
+                  { initiatorId: id, initiatorReceivedAt: { $type: 'date' } },
+                  { recipientId: id, recipientReceivedAt: { $type: 'date' } },
+                ],
+              },
+            ],
           },
         },
         {
           $project: {
             _id: 1,
-            key: '$completedAt',
+            completedAt: {
+              $cond: [{ $eq: ['$status', 'Completed'] }, '$completedAt', null],
+            },
+            key: {
+              $cond: [
+                { $eq: ['$status', 'Completed'] },
+                '$completedAt',
+                ownReceived,
+              ],
+            },
             transactionType: { $literal: 'Exchange' },
             partnerId: {
               $cond: [
@@ -368,14 +395,52 @@ export class ReviewQueries {
       const order = (type: string) => [
         {
           $match: {
-            state: 'Completed',
+            state: { $in: ['Completed', 'Inspection'] },
             $or: [{ buyerId: id }, { sellerId: id }],
           },
         },
+        ...(type === 'DirectOrder'
+          ? [
+              {
+                $lookup: {
+                  from: 'direct_delivery_events',
+                  let: { oid: '$_id' },
+                  pipeline: [
+                    {
+                      $match: {
+                        $expr: {
+                          $and: [
+                            { $eq: ['$orderId', '$$oid'] },
+                            { $eq: ['$source', 'BuyerReceived'] },
+                          ],
+                        },
+                      },
+                    },
+                  ],
+                  as: 'receipt',
+                },
+              },
+            ]
+          : []),
         {
           $project: {
             _id: 1,
-            key: type === 'PointOrder' ? '$closedAt' : '$completedAt',
+            completedAt: {
+              $cond: [
+                { $eq: ['$state', 'Completed'] },
+                type === 'PointOrder' ? '$closedAt' : '$completedAt',
+                null,
+              ],
+            },
+            key: {
+              $cond: [
+                { $eq: ['$state', 'Completed'] },
+                type === 'PointOrder' ? '$closedAt' : '$completedAt',
+                type === 'PointOrder'
+                  ? '$collectedAt'
+                  : { $arrayElemAt: ['$receipt.occurredAt', 0] },
+              ],
+            },
             transactionType: { $literal: type },
             partnerId: {
               $cond: [{ $eq: ['$buyerId', id] }, '$sellerId', '$buyerId'],
@@ -416,6 +481,7 @@ export class ReviewQueries {
           .aggregate<{
             _id: string;
             key: Date;
+            completedAt: Date | null;
             transactionType: ReviewType;
             partnerId: string;
           }>([...pipeline, { $match: { _id: { $in: page.ids } } }])
@@ -433,7 +499,8 @@ export class ReviewQueries {
             transactionId: id,
             partnerId: r.partnerId,
             partnerName: names.get(r.partnerId) ?? 'Thành viên',
-            completedAt: r.key.toISOString(),
+            completedAt: r.completedAt?.toISOString() ?? null,
+            reviewableAt: r.key.toISOString(),
           };
         }),
         nextCursor: page.nextCursor,

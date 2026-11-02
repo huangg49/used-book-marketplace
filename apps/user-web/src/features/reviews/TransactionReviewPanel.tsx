@@ -320,6 +320,7 @@ export function TransactionReviewPanel({
         </span>
       </div>
 
+      {data.awaitingCompletion && <p role="status" className={styles.intro}>Bạn đã nhận sách và có thể viết đánh giá ngay. Trong 72 giờ kiểm tra, tiền vẫn được giữ; nội dung chưa công khai hoặc tính điểm trước khi giao dịch hoàn tất và đủ điều kiện công bố.</p>}
       <div className={styles.panelHeaderCard}>
         <h2>Chi tiết đánh giá giao dịch</h2>
         <p className={styles.intro}>

@@ -38,7 +38,7 @@ export function ReviewsPage() {
   const selected = params.get("transaction");
   const tabParam = params.get("tab");
   const activeTab: "reputation" | "pending" =
-    tabParam === "pending" || !!selected ? "pending" : "reputation";
+    tabParam === "pending" || !!selected || params.has("type") ? "pending" : "reputation";
 
   const owner = auth.status === "authenticated" ? auth.user.id : undefined;
 
@@ -219,10 +219,9 @@ export function ReviewsPage() {
                 <div className={styles.emptyIconWrap}>
                   <BookOpen size={32} />
                 </div>
-                <h2 className={styles.emptyTitle}>Chưa có giao dịch hoàn tất ở mục này</h2>
+                <h2 className={styles.emptyTitle}>Chưa có giao dịch đủ điều kiện đánh giá ở mục này</h2>
                 <p className={styles.emptyText}>
-                  Giao dịch đang vận chuyển hoặc đang xử lý sự cố chưa đủ điều kiện
-                  đánh giá. Sau khi nhận sách thành công, các giao dịch sẽ hiển thị tại đây để bạn gửi phản hồi.
+                  Xác nhận đã nhận sách trong giao dịch để bắt đầu viết đánh giá, không cần chờ hết 72 giờ. Giao dịch chưa nhận hoặc đang xử lý sự cố chưa mở đánh giá.
                 </p>
                 <Link to="/orders" className={styles.emptyBtn}>
                   <Package size={16} />
@@ -270,7 +269,7 @@ export function ReviewsPage() {
                               </span>
                               <span className={styles.metaTime}>
                                 <Clock size={13} />
-                                <span>Hoàn tất {reviewDate(item.completedAt)}</span>
+                                <span>{item.completedAt ? `Hoàn tất ${reviewDate(item.completedAt)}` : `Đã nhận sách ${reviewDate(item.reviewableAt!)} · Chờ hoàn tất`}</span>
                               </span>
                             </div>
                           </div>

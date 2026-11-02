@@ -1026,6 +1026,7 @@ function ExchangeActionsContent({
               );
             })()}
 
+          <ExchangeReviewsCard exchange={exchange} />
           {/* State: COMPLETED (WITH REVIEWS) */}
           {exchange.status === "Completed" && (
             <View style={{ gap: space.sm }}>
@@ -1079,7 +1080,7 @@ function ExchangeActionsContent({
                   </View>
                 </View>
               )}
-              <ExchangeReviewsCard exchange={exchange} />
+
             </View>
           )}
 
