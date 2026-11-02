@@ -128,12 +128,12 @@ export function CreateOrderDialog({
               {isValidPrice ? formatVnd(priceNum) : "—"}
             </AppText>
           </View>
-          <View style={styles.summaryRow}>
+          {shippingFee > 0 && (<View style={styles.summaryRow}>
             <AppText style={styles.summaryLabel}>Phí giao nhận dự tính</AppText>
             <AppText style={styles.summaryValue}>
               {formatVnd(shippingFee)}
             </AppText>
-          </View>
+          </View>)}
           <View style={styles.divider} />
           <View style={styles.summaryRow}>
             <AppText style={styles.totalLabel}>Tổng người mua cần trả</AppText>

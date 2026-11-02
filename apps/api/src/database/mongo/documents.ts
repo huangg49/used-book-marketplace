@@ -24,6 +24,7 @@ export type SystemActor =
   | 'OrderPickupExpiry'
   | 'OrderDeliveryExpiry'
   | 'OrderInspectionExpiry'
+  | 'OrderDemoCompletion'
   | 'AuctionClose'
   | 'AuctionPaymentExpiry'
   | 'AuctionIntakeExpiry'
@@ -465,6 +466,7 @@ export interface SaleQuoteDoc {
 }
 
 export interface DirectOrderDoc extends Lockable {
+  demoCompletionPolicy?: string;
   _id: string;
   buyerId: string;
   sellerId: string;
@@ -1332,6 +1334,7 @@ export interface ExchangeDoc extends Lockable {
   recipientDeposit: number;
   diffAmount: number;
   diffPayerId: string | null;
+  negotiatedDiffAmount?: number | null;
   initiatorOrderId: string;
   recipientOrderId: string;
   fundingDeadline: Date | null;
@@ -1486,4 +1489,34 @@ export interface ReviewRevisionDoc {
   at: Date;
   snapshot: Json;
   reason: string | null;
+}
+
+export interface ExchangeEvidenceDoc {
+  _id: string;
+  exchangeId: string;
+  uploaderId: string;
+  fileName: string;
+  mimeType:
+    'image/jpeg' | 'image/png' | 'image/webp' | 'application/pdf' | 'video/mp4';
+  byteSize: number;
+  sha256: string;
+  reservedBytes: number;
+  status: 'Pending' | 'Ready';
+  version: number;
+  createdAt: Date;
+  uploadedAt: Date | null;
+  createReceiptId: string;
+  uploadReceiptId: string | null;
+}
+export interface ExchangeEvidenceAssignmentDoc {
+  _id: string;
+  assigneeId: string;
+  version: number;
+  updatedAt: Date;
+  lockSeq: number;
+}
+export interface LocalDemoOrderCompletionDoc {
+  _id: string; policy: string; sellerId: string; shipmentId: string; receiptId: string;
+  sourceVersion: number; status: 'Pending' | 'Completed'; createdAt: Date; dueAt: Date;
+  updatedAt: Date; completedAt: Date | null; completionReceiptId: string | null; lockSeq: number;
 }

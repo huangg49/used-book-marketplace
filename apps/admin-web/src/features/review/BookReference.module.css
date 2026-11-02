@@ -1,0 +1,192 @@
+.card {
+  container-type: inline-size;
+  padding: 22px;
+  color: var(--shop-ink);
+  font-family: "Be Vietnam Pro", sans-serif;
+}
+.heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 20px;
+}
+.heading > div {
+  flex: 1;
+  min-width: 0;
+}
+.heading h3 {
+  margin: 0 0 10px;
+  color: var(--shop-wine);
+  font:
+    700 22px/1.45 "Be Vietnam Pro",
+    sans-serif;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.heading p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px 12px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.heading p > span {
+  color: var(--shop-muted);
+  font-size: 12px;
+}
+.heading p > strong {
+  font-weight: 500;
+}
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--shop-yellow) 28%, var(--shop-paper));
+  color: var(--shop-wine);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.status[data-confirmed="true"] {
+  background: color-mix(in srgb, var(--shop-mint) 45%, var(--shop-paper));
+  color: var(--shop-exchange-ink, #254337);
+}
+.groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--shop-line);
+}
+.group {
+  min-width: 0;
+}
+.group h4 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 16px;
+  color: var(--shop-wine);
+  font:
+    650 14px/1.5 "Be Vietnam Pro",
+    sans-serif;
+}
+.group h4 svg {
+  flex: none;
+}
+.group:first-child {
+  border-right: 1px solid var(--shop-line);
+  padding-right: 24px;
+}
+.fields {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+}
+.fields > div {
+  min-width: 0;
+}
+.fields dt {
+  margin-bottom: 5px;
+  color: var(--shop-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.fields dd {
+  margin: 0;
+  color: var(--shop-ink);
+  font-size: 14px;
+  font-weight: 550;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.fields dd.missing {
+  color: var(--shop-muted);
+  font-weight: 400;
+}
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 22px;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--shop-yellow) 18%, var(--shop-paper));
+  border-radius: 8px;
+}
+.footer p {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 180px;
+  gap: 9px;
+  margin: 0;
+  color: var(--shop-ink);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.footer p > svg {
+  flex: none;
+  color: var(--shop-wine);
+}
+.footer a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 9px 13px;
+  border: 1px solid var(--shop-line);
+  border-radius: 7px;
+  background: var(--shop-paper);
+  color: var(--shop-wine);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.footer a:hover {
+  border-color: var(--shop-wine);
+}
+.state {
+  margin: 0;
+  padding: 22px;
+  color: var(--shop-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+@container (max-width:540px) {
+  .heading {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .heading > div {
+    flex-basis: 100%;
+  }
+  .heading h3 {
+    font-size: 20px;
+  }
+  .groups {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 22px;
+  }
+  .group:first-child {
+    border-right: 0;
+    padding-right: 0;
+  }
+  .group + .group {
+    border-top: 1px solid var(--shop-line);
+    padding-top: 20px;
+  }
+  .footer p {
+    min-width: 0;
+    flex-basis: 100%;
+  }
+}

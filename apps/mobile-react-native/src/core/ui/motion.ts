@@ -1,9 +1,15 @@
 import { useSyncExternalStore } from "react";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, Platform } from "react-native";
 import { createMotionPreference } from "./motion-preference";
 
 export const motion = { duration: 160, distance: 12 } as const;
-const preference = createMotionPreference({
+// Expo web follows the website's authored-motion policy. Native retains its
+// own device subscription; web never subscribes to OS reduction changes.
+const fullWebMotion = {
+  getSnapshot: () => false,
+  subscribe: (_listener: () => void) => () => {},
+};
+const preference = Platform.OS === "web" ? fullWebMotion : createMotionPreference({
   read: () => AccessibilityInfo.isReduceMotionEnabled(),
   listen: (changed) => {
     const subscription = AccessibilityInfo.addEventListener(
@@ -17,6 +23,6 @@ export function useReducedMotion() {
   return useSyncExternalStore(
     preference.subscribe,
     preference.getSnapshot,
-    () => true,
+    () => Platform.OS !== "web",
   );
 }

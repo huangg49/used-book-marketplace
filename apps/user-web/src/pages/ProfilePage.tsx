@@ -1,15 +1,8 @@
-import { Link, Navigate, useLocation } from "react-router-dom";
-import { ArrowRight, Library, KeyRound, ArrowLeftRight, Bell } from "lucide-react";
+import { Navigate, useLocation } from "react-router-dom";
 import { useSession } from "../hooks/useSession";
 import { ROUTES } from "../lib/routes";
+import { MemberProfileEditor } from "./profile/MemberProfileEditor";
 import styles from "./ProfilePage.module.css";
-import { MemberProfileEditor } from './profile/MemberProfileEditor';
-
-const statusLabels = {
-  ACTIVE: "Đang hoạt động",
-  RESTRICTED: "Đang hạn chế giao dịch mới",
-  LOCKED: "Đang khóa giao dịch mới",
-};
 
 export function ProfilePage() {
   const auth = useSession();
@@ -20,53 +13,19 @@ export function ProfilePage() {
   if (params.has("moderation") || params.has("cursor"))
     return <Navigate to={ROUTES.myBooks + location.search} replace />;
   const { user } = auth;
+
   return (
-    <div className={styles.root}>
-      <header className={styles.heading}>
-        <h1 tabIndex={-1}>Hồ sơ của tôi</h1>
-        <p>Thông tin tài khoản của bạn tại Lật Lại.</p>
+    <div className={styles.pageRoot}>
+      <header className={styles.pageHeader}>
+        <h1 tabIndex={-1} className={styles.pageTitle}>
+          Hồ sơ &amp; Bảo mật
+        </h1>
+        <p className={styles.pageSubtitle}>
+          Quản lý thẻ bạn đọc, thông tin cá nhân và an toàn tài khoản tại hiệu sách Lật Lại.
+        </p>
       </header>
-      <section className={styles.paper} aria-labelledby="profile-display-name">
-        <div className={styles.identity}>
-          <div>
-            <h2 id="profile-display-name">{user.displayName}</h2>
-            <p>{statusLabels[user.status]}</p>
-          </div>
-        </div>
-        <MemberProfileEditor key={user.id} ownerId={user.id}/>
-        <div className={styles.security}>
-          <div>
-            <h2>Đăng nhập &amp; bảo mật</h2>
-            <p>Đặt lại mật khẩu qua mã xác nhận gửi đến email của bạn.</p>
-          </div>
-          <Link to="/forgot-password">
-            <KeyRound size={18} aria-hidden="true" />
-            Đặt lại mật khẩu
-            <ArrowRight size={16} aria-hidden="true" />
-          </Link>
-        </div>
-      </section>
-      <Link className={styles.shelfLink} to={ROUTES.myBooks}>
-        <Library size={20} aria-hidden="true" />
-        <span>
-          Quản lý sách đã đăng trong <strong>Kệ sách của tôi</strong>
-        </span>
-        <ArrowRight size={18} aria-hidden="true" />
-      </Link>
-      <Link className={styles.shelfLink} to={ROUTES.exchangeMine}>
-        <ArrowLeftRight size={20} aria-hidden="true" />
-        <span>
-          Theo dõi các lời đề nghị trong <strong>Trao đổi của tôi</strong>
-        </span>
-        <ArrowRight size={18} aria-hidden="true" />
-      </Link>
-      <Link className={styles.shelfLink} to={ROUTES.notifications}>
-        <Bell size={20} aria-hidden="true" />
-        <span>
-          Xem thông báo và cập nhật mới trong <strong>Thông báo của tôi</strong>
-        </span>
-        <ArrowRight size={18} aria-hidden="true" />
-      </Link>
+
+      <MemberProfileEditor key={user.id} ownerId={user.id} user={user} />
     </div>
   );
 }

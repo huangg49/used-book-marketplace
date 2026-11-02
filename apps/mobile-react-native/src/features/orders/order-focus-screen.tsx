@@ -149,8 +149,8 @@ export function OrderFocusScreen({
             </AppText>
             <AppText>{order.item.description}</AppText>
             <AppText>
-              Giá sách: {formatVnd(order.amounts.bookPrice)} · Phí giao nhận:{" "}
-              {formatVnd(order.amounts.shippingFee)}
+              Giá sách: {formatVnd(order.amounts.bookPrice)}
+              {order.amounts.shippingFee > 0 && ` · Phí giao nhận: ${formatVnd(order.amounts.shippingFee)}`}
             </AppText>
             <AppText>
               Tổng người mua thanh toán: {formatVnd(order.amounts.buyerTotal)}

@@ -32,6 +32,7 @@ export interface ExchangeDetail {
   proposalExpiresAt?: string;
   moneyCompensationType: 'none' | 'user_pays' | 'other_pays';
   moneyAmount?: number;
+  negotiatedDiffAmount?: number | null;
   initialMessage?: string;
   rejectionReason?: string;
   viewerShipping: ShippingConfirm;

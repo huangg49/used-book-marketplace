@@ -130,8 +130,17 @@ try {
   const manifest = await runTransit(config, directory, sandbox);
   assert.equal(manifest.orders.intransit.state, "InTransit");
   assert.equal(manifest.orders.intransit.version, 4);
-  assert.equal(manifest.wallet.available, 535_000);
-  assert.equal(manifest.wallet.held, 465_000);
+  // The scenario holds three 125k books. Current policy has no shipping fee;
+  // retaining the former 30k per order would hide a pricing regression.
+  const heldOrders = Object.values(manifest.orders).filter(order => order.heldAmount > 0);
+  assert.equal(heldOrders.length, 3);
+  for (const order of heldOrders) {
+    assert.equal(order.amounts.bookPrice, 125_000);
+    assert.equal(order.amounts.shippingFee, 0);
+    assert.equal(order.heldAmount, 125_000);
+  }
+  assert.equal(manifest.wallet.available, 625_000);
+  assert.equal(manifest.wallet.held, 375_000);
   assert.equal(manifest.wallet.sellerAvailable, 0);
   assert.equal(
     (

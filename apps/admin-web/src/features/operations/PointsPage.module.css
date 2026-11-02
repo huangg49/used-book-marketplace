@@ -1,0 +1,452 @@
+/* ==========================================================================
+   LẬT LẠI - OPERATIONS HANDOVER POINTS (HUB COMMAND CENTER)
+   Brand v1.1 styling: Wine #5c0202, Paper #fffcf5, Shelf #f4eddf, Line #d9cbbd
+   ========================================================================== */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+/* Page Header & Top Toolbar */
+.pageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.5rem;
+}
+
+.titleArea {
+  max-width: 700px;
+}
+
+.titleArea h1 {
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: clamp(1.75rem, 2.5vw, 2.25rem);
+  font-weight: 700;
+  color: var(--shop-ink, #281914);
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.02em;
+}
+
+.titleArea .intro {
+  color: var(--shop-muted, #716157);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.createButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--shop-wine, #5c0202) !important;
+  color: var(--shop-cream, #fcf8db) !important;
+  border: 1px solid var(--shop-wine, #5c0202) !important;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.625rem 1.25rem !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 6px rgba(92, 2, 2, 0.2);
+  transition: all 180ms ease !important;
+}
+
+.createButton:hover:not(:disabled) {
+  background-color: var(--shop-wine-hover, #7c2320) !important;
+  border-color: var(--shop-wine-hover, #7c2320) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(92, 2, 2, 0.3);
+}
+
+.refreshButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--shop-paper, #fffcf5) !important;
+  color: var(--shop-wine, #5c0202) !important;
+  border: 1px solid var(--shop-line, #d9cbbd) !important;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.625rem 1.15rem !important;
+  border-radius: 8px !important;
+  transition: all 180ms ease !important;
+}
+
+.refreshButton:hover:not(:disabled) {
+  background-color: var(--shop-shelf, #f4eddf) !important;
+  border-color: var(--shop-wine, #5c0202) !important;
+}
+
+.spinIcon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Overview KPI Command Strip */
+.kpiStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.kpiCard {
+  background: var(--shop-paper, #fffcf5);
+  border: 1px solid var(--shop-line, #d9cbbd);
+  border-radius: 10px;
+  padding: 1.15rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 1px 3px rgba(40, 25, 20, 0.04);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.kpiCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(40, 25, 20, 0.07);
+}
+
+.kpiHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.kpiLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--shop-muted, #716157);
+}
+
+.kpiIconWrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--shop-shelf, #f4eddf);
+  color: var(--shop-wine, #5c0202);
+}
+
+.kpiValue {
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--shop-ink, #281914);
+  line-height: 1.2;
+}
+
+.kpiSubtext {
+  font-size: 0.8125rem;
+  color: var(--shop-muted, #716157);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.kpiWarningText {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.kpiSuccessText {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+/* Hub Grid */
+.hubGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .hubGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.hubCard {
+  background: var(--shop-paper, #fffcf5);
+  border: 1px solid var(--shop-line, #d9cbbd);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-shadow: 0 2px 8px rgba(40, 25, 20, 0.04);
+  transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.hubCard:hover {
+  border-color: #bcaaa4;
+  box-shadow: 0 8px 24px rgba(40, 25, 20, 0.08);
+}
+
+.cardTopRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.codeBadge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 0.3rem 0.65rem;
+  background: var(--shop-shelf, #f4eddf);
+  border: 1px solid var(--shop-line, #d9cbbd);
+  border-radius: 6px;
+  color: var(--shop-wine, #5c0202);
+  letter-spacing: 0.04em;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.statusActive {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border-color: #a5d6a7;
+}
+
+.statusPaused {
+  background: #fff8e1;
+  color: #b78103;
+  border-color: #ffe082;
+}
+
+.statusClosed {
+  background: #f5f5f5;
+  color: #616161;
+  border-color: #e0e0e0;
+}
+
+.pulseDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #2e7d32;
+  box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.3);
+}
+
+.pulseDotPaused {
+  background-color: #f57c00;
+  box-shadow: 0 0 0 2px rgba(245, 124, 0, 0.3);
+}
+
+.hubTitle {
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--shop-ink, #281914);
+  margin: 0;
+  line-height: 1.35;
+}
+
+/* Capacity Section with Visual Meter */
+.capacityBlock {
+  background: var(--shop-shelf, #f4eddf);
+  border: 1px solid rgba(217, 203, 189, 0.7);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.capacityLabels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8125rem;
+}
+
+.capacityTitle {
+  color: var(--shop-muted, #716157);
+  font-weight: 600;
+}
+
+.capacityFraction {
+  color: var(--shop-ink, #281914);
+  font-weight: 700;
+  font-family: "Be Vietnam Pro", sans-serif;
+}
+
+.capacityTrack {
+  width: 100%;
+  height: 8px;
+  background: #e5ded5;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.capacityFill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 350ms ease-in-out;
+}
+
+.fillNormal {
+  background-color: #2e7d32;
+}
+
+.fillWarning {
+  background-color: #f57c00;
+}
+
+.fillCritical {
+  background-color: var(--shop-wine, #5c0202);
+}
+
+/* Station Details List */
+.detailsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  font-size: 0.875rem;
+}
+
+.detailRow {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  align-items: flex-start;
+  gap: 0.65rem;
+  line-height: 1.45;
+  color: var(--shop-ink, #281914);
+}
+
+.detailIcon {
+  color: var(--shop-control, #8e7564);
+  margin-top: 2px;
+}
+
+.staffBadgeAssigned {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #edf7ed;
+  color: #1e4620;
+  border: 1px solid #c8e6c9;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.staffBadgeUnassigned {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #fff8e1;
+  color: #8c5800;
+  border: 1px solid #ffe082;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+/* Card Actions */
+.cardFooter {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--shop-line, #d9cbbd);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.manageButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--shop-paper, #fffcf5) !important;
+  color: var(--shop-wine, #5c0202) !important;
+  border: 1px solid var(--shop-wine, #5c0202) !important;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.5rem 1.15rem !important;
+  border-radius: 6px !important;
+  transition: all 160ms ease !important;
+}
+
+.manageButton:hover:not(:disabled) {
+  background: var(--shop-wine, #5c0202) !important;
+  color: var(--shop-cream, #fcf8db) !important;
+}
+
+.manageButtonActive {
+  background: var(--shop-wine, #5c0202) !important;
+  color: var(--shop-cream, #fcf8db) !important;
+}
+
+/* Management Expanded Panel */
+.managePanelContainer {
+  margin-top: 1rem;
+  padding: 1.25rem;
+  background: var(--shop-shelf, #f4eddf);
+  border: 1px solid var(--shop-line, #d9cbbd);
+  border-radius: 8px;
+}
+
+.createPanelContainer {
+  background: var(--shop-paper, #fffcf5);
+  border: 1px solid var(--shop-wine, #5c0202);
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 16px rgba(92, 2, 2, 0.08);
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  background: var(--shop-paper, #fffcf5);
+  border: 1px dashed var(--shop-line, #d9cbbd);
+  border-radius: 12px;
+  color: var(--shop-muted, #716157);
+}
+
+.emptyState h3 {
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: 1.25rem;
+  color: var(--shop-ink, #281914);
+  margin: 0 0 0.5rem 0;
+}
+
+.emptyState p {
+  margin: 0;
+  font-size: 0.9375rem;
+}

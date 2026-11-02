@@ -1,35 +1,41 @@
 .root {
   min-width: 0;
   width: 100%;
+  max-width: 1040px;
+  margin: 0;
+  padding: 0 0 64px;
 }
 
 .heading {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 20px;
   margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(217, 203, 189, 0.65);
   flex-wrap: wrap;
 }
 
 .headingInfo {
-  max-width: 68ch;
+  max-width: 65ch;
 }
 
 .title {
-  font-family: var(--shop-display), var(--shop-body);
-  font-weight: 700;
+  font-family: var(--shop-display, "Anton", sans-serif);
+  font-weight: 400;
   color: var(--shop-wine);
-  font-size: clamp(1.85rem, 2.8vw, 2.5rem);
-  line-height: 1.25;
-  margin: 0 0 8px;
-  letter-spacing: normal;
+  font-size: clamp(2rem, 3.2vw, 2.75rem);
+  line-height: 1.2;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
 }
 
 .subtitle {
   color: var(--shop-muted);
-  font-size: 0.875rem;
-  line-height: 1.7;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  max-width: 65ch;
   margin: 0;
 }
 

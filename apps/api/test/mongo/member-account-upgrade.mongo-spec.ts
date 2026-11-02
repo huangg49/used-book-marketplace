@@ -25,8 +25,14 @@ const suffix = [
   '0050-listing-auto-review',
   '0050-support-cases',
   '0051-support-auto-review-union',
+  '0056-auto-review-v2-upgrade-bridge',
   '0052-listing-auto-review-v2',
   '0053-exchange-agreement',
+  '0054-exchange-evidence',
+  '0052-free-shipping',
+  '0054-exchange-negotiated-diff',
+  '0055-exchange-negotiated-diff-payer',
+  '0054-local-demo-completion',
 ];
 const sha = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');

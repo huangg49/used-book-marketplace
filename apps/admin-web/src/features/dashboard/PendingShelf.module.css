@@ -1,6 +1,11 @@
 .desk {
   container-type: inline-size;
   min-width: 0;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid rgba(217, 203, 189, 0.85);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(40, 25, 20, 0.03), 0 8px 24px -4px rgba(40, 25, 20, 0.06);
   color: var(--shop-ink);
 }
 .emptyCompact {
@@ -91,9 +96,9 @@
   margin: 0;
   font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
   font-size: clamp(1.375rem, 2vw, 1.75rem);
-  font-weight: 650;
+  font-weight: 700;
   line-height: 1.3;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
 }
 .heading h2 > span {
   color: var(--shop-wine);
@@ -101,14 +106,28 @@
 .all {
   display: inline-flex;
   align-items: center;
-  gap: 16px;
-  min-height: 44px;
-  font-size: 0.8125rem;
-  font-weight: 700;
+  gap: 8px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: #faf7f0;
+  border: 1px solid rgba(217, 203, 189, 0.75);
+  color: var(--shop-ink);
+  font-size: 13px;
+  font-weight: 600;
   text-decoration: none;
+  transition: all 140ms ease;
 }
 .all:hover {
-  text-decoration: underline;
+  background: #ffffff;
+  border-color: rgba(92, 2, 2, 0.35);
+  color: var(--shop-wine);
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(40, 25, 20, 0.06);
+}
+.all:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--shop-wine);
 }
 .layout {
   display: grid;
@@ -118,10 +137,10 @@
 }
 .stage {
   min-width: 0;
-  padding: 18px 22px 16px;
-  border: 1px solid var(--shop-line);
-  background: var(--shop-shelf);
-  border-radius: 4px;
+  padding: 20px 22px 18px;
+  border: 1px solid rgba(217, 203, 189, 0.75);
+  background: #faf7f0;
+  border-radius: 8px;
 }
 .stageHeading {
   display: flex;
@@ -329,11 +348,12 @@
   border-radius: 0;
 }
 .sheetPaper {
-  border: 1px solid var(--shop-line);
-  border-top: 4px solid var(--shop-wine);
-  background: var(--shop-paper) url("/login-art/ivory-paper.webp") repeat;
+  border: 1px solid rgba(217, 203, 189, 0.85);
+  border-top: 3px solid var(--shop-wine);
+  border-radius: 8px;
+  background: #ffffff url("/login-art/ivory-paper.webp") repeat;
   background-size: 420px auto;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 2px 10px rgba(40, 25, 20, 0.05);
 }
 .sheet:focus-visible {
   outline: 2px solid var(--shop-wine);
@@ -418,20 +438,23 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  min-height: 46px;
-  padding: 12px 16px;
+  min-height: 42px;
+  padding: 10px 16px;
   border: 1px solid var(--shop-wine);
-  border-radius: 3px;
+  border-radius: 8px;
   background: var(--shop-wine);
-  color: var(--shop-paper);
-  font-size: 0.8125rem;
-  line-height: 1.8;
-  font-weight: 700;
+  color: #ffffff;
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 600;
   text-decoration: none;
+  box-shadow: 0 2px 6px rgba(92, 2, 2, 0.2);
+  transition: all 140ms ease;
 }
 .review:hover {
   background: var(--shop-wine-hover);
-  color: var(--shop-paper);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(92, 2, 2, 0.28);
 }
 .sheetAction p,
 .referenceNote {
@@ -624,15 +647,6 @@
 @container (max-width: 300px) {
   .books {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-/* Owner motion policy: preserve the authored hover/selection even when the
-   system preference would otherwise disable transitions in the shared CSS. */
-@media (prefers-reduced-motion: reduce) {
-  .desk .bookObject {
-    transition:
-      transform 220ms var(--ease-smooth),
-      box-shadow 220ms ease !important;
   }
 }
 

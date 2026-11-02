@@ -1,13 +1,26 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
+import {
+  Building2,
+  Package,
+  Users,
+  Clock,
+  MapPin,
+  Plus,
+  RefreshCw,
+  SlidersHorizontal,
+  AlertCircle,
+  CheckCircle2,
+} from "lucide-react";
 import { dateText } from "../../core/format";
 import { canResolve, session } from "../../core/session";
 import { Button, ErrorNotice } from "../../core/ui";
-import { ActionPanel } from "./action-panel";
+import { ActionPanel, type Finish } from "./action-panel";
 import { Field } from "./field";
 import { MotionPanel } from "../../core/MotionPanel";
+import { ListFeedback } from "../../core/list-feedback";
 import {
   operationsPointList,
   pointReceipt,
@@ -15,12 +28,13 @@ import {
   staffPage,
   type OperationsPoint,
 } from "./contracts";
-import { Forbidden, OperationsQueue } from "./queue-frame";
+import { Forbidden, OperationReceipt } from "./queue-frame";
 import {
   refetchWhileClosed,
   useQueuePanel,
   type ActionContext,
 } from "./queue-panel";
+import styles from "./PointsPage.module.css";
 
 // N4-10/N4-11 (FR-H04): Admin creates and edits the simulated points and
 // assigns Staff. Opening hours stay the fixed 09:00–18:00 rule (ADR 0030).
@@ -46,73 +60,322 @@ function PointsContent() {
     queryFn: () => session.request("/operations/points", operationsPointList),
     refetchInterval: creating ? false : refetchWhileClosed(panel),
   });
+
+  const presented = useRef<unknown>(undefined);
+  const presentNotice = useCallback((value: unknown, element: HTMLElement) => {
+    if (presented.current === value) return;
+    presented.current = value;
+    element.focus({ preventScroll: true });
+    element.scrollIntoView({ block: "nearest", behavior: "instant" });
+  }, []);
+
+  const reconcile = useCallback(
+    () => result.refetch({ throwOnError: true }),
+    [result],
+  );
+
+  const finish = useCallback<Finish>(
+    (outcome) => {
+      panel.setOpen(undefined);
+      panel.setNotice(outcome);
+    },
+    [panel],
+  );
+
+  const points = result.data?.items ?? [];
+  const totalPoints = points.length;
+  const activePoints = points.filter((p) => p.status === "Active").length;
+  const totalCapacity = points.reduce((sum, p) => sum + p.capacity, 0);
+  const totalHeld = points.reduce((sum, p) => sum + p.heldSlots, 0);
+  const assignedPoints = points.filter((p) => p.assignments.length > 0).length;
+  const unassignedPoints = totalPoints - assignedPoints;
+  const overallCapacityPct =
+    totalCapacity > 0 ? Math.round((totalHeld / totalCapacity) * 100) : 0;
+
+  function renderStatusPill(status: OperationsPoint["status"]) {
+    switch (status) {
+      case "Active":
+        return (
+          <span className={`${styles.statusPill} ${styles.statusActive}`}>
+            <span className={styles.pulseDot} aria-hidden="true" />
+            <span>{pointStatusLabels[status]}</span>
+          </span>
+        );
+      case "Paused":
+        return (
+          <span className={`${styles.statusPill} ${styles.statusPaused}`}>
+            <span className={styles.pulseDotPaused} aria-hidden="true" />
+            <span>{pointStatusLabels[status]}</span>
+          </span>
+        );
+      case "Closed":
+      default:
+        return (
+          <span className={`${styles.statusPill} ${styles.statusClosed}`}>
+            <span>{pointStatusLabels[status]}</span>
+          </span>
+        );
+    }
+  }
+
   return (
-    <OperationsQueue
-      number="05"
-      title="Điểm giao nhận."
-      intro="Tạo và sửa điểm mô phỏng, đổi trạng thái và phân công nhân viên. Giờ mở cửa cố định 09:00–18:00 mỗi ngày."
-      order="Xếp theo mã điểm."
-      unit="điểm"
-      result={result}
-      serverTime={result.data?.serverTime}
-      panel={panel}
-      extra={(context) => (
-        <>
-          <MotionPanel open={creating} className="row-panel">
-            {creating && (
-              <PointCreate
-                {...context}
-                onFinish={(outcome) => {
-                  setCreating(false);
-                  context.onFinish(outcome);
-                }}
-                onClose={() => setCreating(false)}
-              />
+    <div className={styles.container}>
+      {/* Header & Main Actions */}
+      <header className={styles.pageHeader}>
+        <div className={styles.titleArea}>
+          <h1>Điểm giao nhận.</h1>
+          <p className={styles.intro}>
+            Tạo và sửa điểm mô phỏng, đổi trạng thái và phân công nhân viên. Giờ mở cửa cố định 09:00–18:00 mỗi ngày.
+          </p>
+        </div>
+        <div className={styles.topActions}>
+          <Button
+            className={styles.createButton}
+            disabled={panel.pending}
+            onClick={() => {
+              panel.setOpen(undefined);
+              panel.setNotice(undefined);
+              setCreating((prev) => !prev);
+            }}
+          >
+            <Plus size={16} aria-hidden="true" />
+            <span>{creating ? "Đóng thêm điểm" : "Thêm điểm"}</span>
+          </Button>
+          <Button
+            className={styles.refreshButton}
+            disabled={panel.pending || result.isFetching}
+            onClick={() => void result.refetch()}
+            aria-label="Cập nhật danh sách điểm"
+          >
+            <RefreshCw
+              size={15}
+              className={result.isFetching ? styles.spinIcon : undefined}
+              aria-hidden="true"
+            />
+            <span>Cập nhật danh sách</span>
+          </Button>
+        </div>
+      </header>
+
+      {/* KPI Command Strip */}
+      <section className={styles.kpiStrip} aria-label="Tổng quan trạm giao nhận">
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiLabel}>Trạm vận hành</span>
+            <div className={styles.kpiIconWrapper} aria-hidden="true">
+              <Building2 size={18} />
+            </div>
+          </div>
+          <div className={styles.kpiValue}>
+            {activePoints} / {totalPoints}
+          </div>
+          <div className={styles.kpiSubtext}>
+            {activePoints === totalPoints && totalPoints > 0 ? (
+              <span className={styles.kpiSuccessText}>✓ Tất cả đang mở cửa</span>
+            ) : (
+              <span>Đang mở cửa trực tuyến</span>
             )}
-          </MotionPanel>
-          {!creating && (
-            <Button
-              disabled={panel.pending}
-              onClick={() => {
-                panel.setOpen(undefined);
-                panel.setNotice(undefined);
-                setCreating(true);
-              }}
-            >
-              Thêm điểm
-            </Button>
-          )}
-        </>
+          </div>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiLabel}>Sức chứa kho</span>
+            <div className={styles.kpiIconWrapper} aria-hidden="true">
+              <Package size={18} />
+            </div>
+          </div>
+          <div className={styles.kpiValue}>
+            {totalHeld} / {totalCapacity} <small style={{ fontSize: "0.875rem", fontWeight: 600 }}>cuốn</small>
+          </div>
+          <div className={styles.kpiSubtext}>
+            <span>Tỷ lệ lấp đầy: <strong>{overallCapacityPct}%</strong></span>
+          </div>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiLabel}>Nhân sự trực</span>
+            <div className={styles.kpiIconWrapper} aria-hidden="true">
+              <Users size={18} />
+            </div>
+          </div>
+          <div className={styles.kpiValue}>
+            {assignedPoints} / {totalPoints} <small style={{ fontSize: "0.875rem", fontWeight: 600 }}>trạm</small>
+          </div>
+          <div className={styles.kpiSubtext}>
+            {unassignedPoints > 0 ? (
+              <span className={styles.kpiWarningText}>⚠️ {unassignedPoints} trạm chưa phân công</span>
+            ) : (
+              <span className={styles.kpiSuccessText}>✓ Đã phân công đủ</span>
+            )}
+          </div>
+        </div>
+
+        <div className={styles.kpiCard}>
+          <div className={styles.kpiHeader}>
+            <span className={styles.kpiLabel}>Khung giờ mở cửa</span>
+            <div className={styles.kpiIconWrapper} aria-hidden="true">
+              <Clock size={18} />
+            </div>
+          </div>
+          <div className={styles.kpiValue}>09:00 – 18:00</div>
+          <div className={styles.kpiSubtext}>
+            <span>Áp dụng cố định hằng ngày</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Creation Panel */}
+      <MotionPanel open={creating} className={styles.createPanelContainer}>
+        {creating && (
+          <PointCreate
+            onFinish={(outcome) => {
+              setCreating(false);
+              finish(outcome);
+            }}
+            onPending={panel.setPending}
+            reconcile={reconcile}
+            onClose={() => setCreating(false)}
+          />
+        )}
+      </MotionPanel>
+
+      {/* Operation Receipt */}
+      {panel.notice && (
+        <OperationReceipt value={panel.notice} present={presentNotice} />
       )}
-      rows={(result.data?.items ?? []).map((point) => ({
-        id: point.id,
-        status: pointStatusLabels[point.status],
-        meta: [
-          point.code,
-          `Sức chứa ${point.capacity}`,
-          `Đang giữ ${point.heldSlots}`,
-        ],
-        title: point.name,
-        detail: (
-          <>
-            <p>{point.displayAddress}</p>
-            <p>
-              {point.assignments.length
-                ? `Nhân viên: ${point.assignments.map((a) => a.displayName || a.userId.slice(0, 8)).join(", ")}`
-                : "Chưa phân công nhân viên."}
-            </p>
-          </>
-        ),
-        action: {
-          label: "Quản lý",
-          render: (context) => <PointManage point={point} {...context} />,
-        },
-      }))}
-      empty={{
-        title: "Chưa có điểm giao nhận.",
-        body: "Thêm điểm đầu tiên, phân công nhân viên rồi mở điểm.",
-      }}
-    />
+
+      {/* List Feedback & Hub Cards Grid */}
+      <ListFeedback
+        result={result}
+        loadingText="Đang tải danh sách điểm giao nhận…"
+        retryDisabled={panel.pending}
+      />
+
+      {points.length === 0 && !result.isPending && !result.error && (
+        <div className={styles.emptyState}>
+          <h3>Chưa có điểm giao nhận</h3>
+          <p>
+            Bấm &ldquo;Thêm điểm&rdquo; để tạo trạm trung chuyển đầu tiên, sau đó phân công nhân viên để mở điểm.
+          </p>
+        </div>
+      )}
+
+      {points.length > 0 && (
+        <div className={styles.hubGrid} role="list" aria-label="Danh sách điểm giao nhận">
+          {points.map((point) => {
+            const isOpen = panel.open === point.id;
+            const capacityPct =
+              point.capacity > 0
+                ? Math.min(100, Math.round((point.heldSlots / point.capacity) * 100))
+                : 0;
+            const fillClass =
+              capacityPct >= 90
+                ? styles.fillCritical
+                : capacityPct >= 70
+                  ? styles.fillWarning
+                  : styles.fillNormal;
+
+            return (
+              <article key={point.id} className={styles.hubCard}>
+                <div className={styles.cardTopRow}>
+                  <span className={styles.codeBadge}>{point.code}</span>
+                  {renderStatusPill(point.status)}
+                </div>
+
+                <h2 className={styles.hubTitle}>{point.name}</h2>
+
+                {/* Capacity Visual Progress Bar */}
+                <div className={styles.capacityBlock}>
+                  <div className={styles.capacityLabels}>
+                    <span className={styles.capacityTitle}>Sức chứa lưu kho</span>
+                    <span className={styles.capacityFraction}>
+                      {point.heldSlots} / {point.capacity} cuốn ({capacityPct}%)
+                    </span>
+                  </div>
+                  <div
+                    className={styles.capacityTrack}
+                    role="progressbar"
+                    aria-valuenow={point.heldSlots}
+                    aria-valuemin={0}
+                    aria-valuemax={point.capacity}
+                    aria-label={`Sức chứa ${point.code}`}
+                  >
+                    <div
+                      className={`${styles.capacityFill} ${fillClass}`}
+                      style={{
+                        width: `${Math.max(capacityPct, point.heldSlots > 0 ? 6 : 0)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Details List */}
+                <div className={styles.detailsList}>
+                  <div className={styles.detailRow}>
+                    <MapPin size={16} className={styles.detailIcon} aria-hidden="true" />
+                    <span>{point.displayAddress}</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <Clock size={16} className={styles.detailIcon} aria-hidden="true" />
+                    <span>09:00 – 18:00 mỗi ngày (Tiếp nhận & bàn giao)</span>
+                  </div>
+                  <div className={styles.detailRow}>
+                    <Users size={16} className={styles.detailIcon} aria-hidden="true" />
+                    <div>
+                      {point.assignments.length > 0 ? (
+                        <span className={styles.staffBadgeAssigned}>
+                          <CheckCircle2 size={13} aria-hidden="true" />
+                          <span>
+                            Nhân viên:{" "}
+                            {point.assignments
+                              .map((a) => a.displayName || a.userId.slice(0, 8))
+                              .join(", ")}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className={styles.staffBadgeUnassigned}>
+                          <AlertCircle size={13} aria-hidden="true" />
+                          <span>Chưa phân công nhân viên</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Action */}
+                <div className={styles.cardFooter}>
+                  <Button
+                    className={`${styles.manageButton} ${isOpen ? styles.manageButtonActive : ""}`}
+                    disabled={panel.pending}
+                    onClick={() => panel.setOpen(isOpen ? undefined : point.id)}
+                  >
+                    <SlidersHorizontal size={15} aria-hidden="true" />
+                    <span>{isOpen ? "Đóng quản lý" : "Quản lý"}</span>
+                  </Button>
+                </div>
+
+                {/* Expandable Management Panel */}
+                <MotionPanel open={isOpen} className={styles.managePanelContainer}>
+                  {isOpen && (
+                    <PointManage
+                      point={point}
+                      onFinish={(outcome) => {
+                        panel.setOpen(undefined);
+                        panel.setNotice(outcome);
+                      }}
+                      onPending={panel.setPending}
+                      reconcile={reconcile}
+                    />
+                  )}
+                </MotionPanel>
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 

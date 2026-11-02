@@ -26,6 +26,7 @@ export async function createTestApi({
   aiModels,
   catalogMetadata,
   storageAdapter,
+  evidenceStorageAdapter,
 } = {}) {
   const rootUrl = process.env.MONGO_TEST_URL;
   if (!rootUrl)
@@ -161,12 +162,18 @@ export async function createTestApi({
     });
     const { Test } = req("@nestjs/testing");
     const { AppModule } = await load("app.module.js"),
-      { MediaStorage } = await load("modules/media/media-storage.js"),
+      { MediaStorage, EvidenceStorage } = await load(
+        "modules/media/media-storage.js",
+      ),
       { MediaWorker } = await load("modules/media/media-worker.service.js"),
       { configureApp } = await load("configure-app.js");
     const builder = Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(MediaStorage)
       .useValue(storage);
+    if (evidenceStorageAdapter)
+      builder
+        .overrideProvider(EvidenceStorage)
+        .useValue(evidenceStorageAdapter);
     if (aiModels) {
       const { PriceModel } = await load("modules/price-assist/price-model.js");
       const { AutofillModel } = await load(
@@ -208,6 +215,8 @@ export async function createTestApi({
         next();
       });
     await app.listen(3009, "127.0.0.1");
+    const { LocalDemoCompletionWorker } = await load("modules/orders/local-demo-completion.worker.js");
+    app.get(LocalDemoCompletionWorker).start();
     for (const [email, roles] of [
       ["member@operations.test", ["MEMBER"]],
       ["admin@operations.test", ["ADMIN", "STAFF", "MEMBER"]],
@@ -372,6 +381,11 @@ export async function createTestApi({
     // Login throttling is tested by API E2E. Browser fixtures clear only their own database.
     await db.collection("login_attempts").deleteMany({});
     return {
+      // QA only: model changing the server flag across a restart without replacing this fixture DB.
+      setLocalDemoCompletion: (enabled) => {
+        if (typeof enabled !== 'boolean') throw new Error('Expected a boolean demo setting');
+        app.get(req('@nestjs/config').ConfigService).set('LOCAL_DEMO_COMPLETION_ENABLED', String(enabled));
+      },
       close,
       api,
       db,

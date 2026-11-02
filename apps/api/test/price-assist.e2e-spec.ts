@@ -345,11 +345,21 @@ describe('price suggestions through HTTP with MongoDB', () => {
     expect(again.body).toMatchObject({ cached: true, range: first.body.range });
     expect(again.body.id).not.toBe(first.body.id);
     expect(fake.calls).toBe(calls);
+    // An answer from the provider configured before (e.g. Gemini) is not reused.
+    await db.c.price_suggestions.updateMany(
+      { listingId: l.entityId },
+      { $set: { 'response.model': 'gemini-3.8-flash' } },
+    );
+    const switched = await ask(l.entityId, m1, {
+      conditionNote: 'Gáy hơi sờn. Liên hệ 0901234567 hoặc x@y.vn',
+    }).expect(200);
+    expect(switched.body).toMatchObject({ cached: false, model: 'fake-price-model' });
+    expect(fake.calls).toBe(calls + 1);
     const fair = await ask(l.entityId, m1, { condition: 'Fair' }).expect(200);
     expect(fair.body.inputFingerprint).not.toBe(first.body.inputFingerprint);
-    expect(fake.calls).toBe(calls + 1);
+    expect(fake.calls).toBe(calls + 2);
     const usage = await db.c.price_assist_usage.findOne({ _id: `user:${m1.id}:${today()}` });
-    expect(usage).toMatchObject({ calls: 2 });
+    expect(usage).toMatchObject({ calls: 3 });
     expect(usage!.costMicroUsd).toBeGreaterThan(0);
   });
 

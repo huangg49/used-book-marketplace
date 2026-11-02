@@ -59,3 +59,109 @@ export function createListingRevision(value: ListingRevisionInput) {
     );
   };
 }
+
+export type DraftSubmissionInput = {
+  listingId: string;
+  version: number;
+  photos: RevisionPhoto[];
+  content: Omit<RevisionContent, "mediaIds">;
+  bookId: string;
+};
+
+// Completes and submits a Draft or Rejected listing for moderation (SRS §7.1, ADR 0009).
+// Saves the working draft first, then submits it with ownership declaration in sequence.
+export function createDraftSubmission(value: DraftSubmissionInput) {
+  const input = {
+    ...value,
+    content: structuredClone(value.content),
+    photos: value.photos.map((photo) => ({ ...photo })),
+  };
+  const remember = rememberCommands();
+  return async () => {
+    if (!input.photos.length) throw new Error("Cần ít nhất một ảnh sách.");
+    const mediaIds: string[] = [];
+    let index = 0;
+    for (const photo of input.photos.slice(0, 8)) {
+      if (photo.kind === "existing") mediaIds.push(photo.id);
+      else {
+        mediaIds.push(
+          await upload(
+            input.listingId,
+            input.version,
+            photo.file,
+            remember,
+            index,
+          ),
+        );
+      }
+      index += 1;
+    }
+    const saved = await remember("save-draft", (key) =>
+      session.request(`/listings/${input.listingId}/draft`, receipt, {
+        method: "PUT",
+        headers: { "Idempotency-Key": key },
+        body: JSON.stringify({
+          expectedVersion: input.version,
+          content: {
+            ...input.content,
+            bookId: input.bookId,
+            mediaIds,
+          },
+        }),
+      }),
+    );
+    return remember("submit-draft", (key) =>
+      session.request(`/listings/${input.listingId}/submit`, receipt, {
+        method: "POST",
+        headers: { "Idempotency-Key": key },
+        body: JSON.stringify({
+          expectedVersion: saved.version,
+          ownershipDeclared: true,
+        }),
+      }),
+    );
+  };
+}
+
+// Saves working draft content without submitting for review.
+export function createDraftSave(value: DraftSubmissionInput) {
+  const input = {
+    ...value,
+    content: structuredClone(value.content),
+    photos: value.photos.map((photo) => ({ ...photo })),
+  };
+  const remember = rememberCommands();
+  return async () => {
+    const mediaIds: string[] = [];
+    let index = 0;
+    for (const photo of input.photos.slice(0, 8)) {
+      if (photo.kind === "existing") mediaIds.push(photo.id);
+      else {
+        mediaIds.push(
+          await upload(
+            input.listingId,
+            input.version,
+            photo.file,
+            remember,
+            index,
+          ),
+        );
+      }
+      index += 1;
+    }
+    return remember("save-draft-only", (key) =>
+      session.request(`/listings/${input.listingId}/draft`, receipt, {
+        method: "PUT",
+        headers: { "Idempotency-Key": key },
+        body: JSON.stringify({
+          expectedVersion: input.version,
+          content: {
+            ...input.content,
+            bookId: input.bookId,
+            mediaIds,
+          },
+        }),
+      }),
+    );
+  };
+}

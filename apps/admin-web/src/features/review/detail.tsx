@@ -1,8 +1,13 @@
-import { dateText } from "../../core/format";
+import { dateText, money } from "../../core/format";
 import { invalidateDashboard } from "../../core/dashboard-cache";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowDownToLine } from "lucide-react";
+import {
+  ArrowDownToLine,
+  BookMarked,
+  ArrowUpRight,
+  ChevronDown,
+} from "lucide-react";
 import {
   Link,
   useLocation,
@@ -66,6 +71,7 @@ function DetailContent({
   const [comparisonOpened, setComparisonOpened] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const recordHeader = useRef<HTMLElement>(null);
+  const readingArea = useRef<HTMLDivElement>(null);
   const decisionArea = useRef<HTMLDivElement>(null);
   const onPhotoReady = useCallback(
     (mediaId: string, ready: boolean) =>
@@ -93,10 +99,12 @@ function DetailContent({
   const loadedId = value?.id;
   useLayoutEffect(() => {
     if (!loadedId) return;
-    recordHeader.current?.scrollIntoView({
-      block: "start",
-      behavior: "instant",
-    });
+    // Reset the actual reader, never the document or the independent queue.
+    readingArea.current?.scrollTo({ top: 0, behavior: "instant" });
+    recordHeader.current
+      ?.closest<HTMLElement>("[data-review-dossier]")
+      ?.scrollTo({ top: 0, behavior: "instant" });
+    decisionArea.current?.scrollTo({ top: 0, behavior: "instant" });
     heading.current?.focus({ preventScroll: true });
   }, [loadedId]);
   async function reconcile() {
@@ -136,7 +144,11 @@ function DetailContent({
         !value.state.deletedAt));
   return (
     <div className={styles.detail}>
-      <Link className="back-link" to={reviewReturnPath(kind, location.state)}>
+      <Link
+        className="back-link"
+        to={reviewReturnPath(kind, location.state)}
+        state={{ reviewOverview: true }}
+      >
         ← Về danh sách
       </Link>
       {result.isLoading && <p role="status">Đang mở hồ sơ…</p>}
@@ -149,27 +161,117 @@ function DetailContent({
       )}
       {value && (
         <>
-          <header className="detail-heading" ref={recordHeader}>
-            <div>
-              <h2 className={styles.recordTitle} ref={heading} tabIndex={-1}>
-                {"state" in value
-                  ? "Hồ sơ bài đăng"
-                  : value.currentRevision.metadata.title}
-              </h2>
-              <p>
-                #{id.slice(0, 8)} · Bản gửi {value.currentRevision.number} ·{" "}
-                {dateText(value.currentRevision.submittedAt)}
-              </p>
-              {"state" in value && (
-                <h3 className={styles.bookName}>
-                  <ListingTitle value={value} />
-                </h3>
-              )}
-            </div>
-            <span className="status-label">{labels[status] || status}</span>
-          </header>
           <div className="detail-layout">
-            <div className={`reading-column ${styles.evidence}`}>
+            <div
+              className={`reading-column ${styles.evidence}`}
+              ref={readingArea}
+              role="region"
+              aria-label="Nội dung và bằng chứng"
+              tabIndex={0}
+            >
+              <header className="detail-heading" ref={recordHeader}>
+                <div>
+                  <h2 className={styles.recordTitle} ref={heading} tabIndex={-1}>
+                    {"state" in value
+                      ? "Hồ sơ bài đăng"
+                      : value.currentRevision.metadata.title}
+                  </h2>
+                  <p>
+                    #{id.slice(0, 8)} · Bản gửi {value.currentRevision.number} ·{" "}
+                    {dateText(value.currentRevision.submittedAt)}
+                  </p>
+                  {"state" in value && (
+                    <h3 className={styles.bookName}>
+                      <ListingTitle value={value} showAuthor canReadPendingCatalog={canReviewCatalog(user)} />
+                    </h3>
+                  )}
+                </div>
+                <span className="status-label">{labels[status] || status}</span>
+              </header>
+              {"state" in value && (
+                <>
+                  <dl
+                    className={styles.reviewSummary}
+                    aria-label="Tóm tắt bản sách"
+                  >
+                    <div>
+                      <dt>Hình thức</dt>
+                      <dd>
+                        {value.channel === "Auction"
+                          ? "Đấu giá"
+                          : labels[value.currentRevision.content.mode || ""] ||
+                            "Chưa khai báo"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Tình trạng khai báo</dt>
+                      <dd>
+                        {labels[value.currentRevision.content.condition || ""] ||
+                          "Chưa khai báo"}
+                      </dd>
+                    </div>
+                    <div className={styles.summaryPrice}>
+                      <dt>
+                        {value.channel === "Auction"
+                          ? "Giá trị khai báo"
+                          : value.currentRevision.content.mode === "Exchange"
+                            ? "Giá trị đổi"
+                            : "Giá bán"}
+                      </dt>
+                      <dd>
+                        {money(
+                          value.currentRevision.content.mode === "Exchange"
+                            ? value.currentRevision.content.exchangeValue
+                            : value.currentRevision.content.salePrice,
+                        )}
+                      </dd>
+                    </div>
+                    {value.currentRevision.content.mode === "Both" && (
+                      <div className={styles.summaryPrice}>
+                        <dt>Giá trị đổi</dt>
+                        <dd>
+                          {money(value.currentRevision.content.exchangeValue)}
+                        </dd>
+                      </div>
+                    )}
+                    <div>
+                      <dt>Ảnh bản sách</dt>
+                      <dd>{value.currentRevision.content.mediaIds.length} ảnh</dd>
+                    </div>
+                  </dl>
+                  {pending && value.catalogStatus !== "Confirmed" && (
+                    <div className={styles.catalogGate} role="note">
+                      <BookMarked
+                        className={styles.gateIcon}
+                        size={23}
+                        aria-hidden="true"
+                      />
+                      <div>
+                        <strong>
+                          {value.catalogStatus === "Rejected"
+                            ? "Đầu sách đã bị từ chối"
+                            : "Đầu sách đang chờ xác nhận"}
+                        </strong>
+                        <p>
+                          Bài đã gửi thành công. Cần xác nhận đầu sách trước khi
+                          duyệt bài này.
+                        </p>
+                      </div>
+                      {canReviewCatalog(user) &&
+                      value.currentRevision.content.bookId ? (
+                        <Link
+                          to={`/review/catalog-requests/${value.currentRevision.content.bookId}`}
+                        >
+                          Mở yêu cầu đầu sách{" "}
+                          <ArrowUpRight size={17} aria-hidden="true" />
+                        </Link>
+                      ) : (
+                        <span>Chờ Admin xử lý đầu sách</span>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
               {"state" in value && (
                 <nav className={styles.evidenceNav} aria-label="Nội dung hồ sơ">
                   <Button
@@ -198,11 +300,20 @@ function DetailContent({
                     aria-label="Đi tới phiếu quyết định"
                     title="Đi tới phiếu quyết định"
                     onClick={() => {
-                      decisionArea.current?.scrollIntoView({
-                        block: "start",
-                        behavior: "instant",
-                      });
-                      decisionArea.current?.focus({ preventScroll: true });
+                      const target = decisionArea.current;
+                      const dossier = target?.closest<HTMLElement>(
+                        "[data-review-dossier]",
+                      );
+                      if (target && dossier)
+                        dossier.scrollTo({
+                          top:
+                            target.getBoundingClientRect().top -
+                            dossier.getBoundingClientRect().top +
+                            dossier.scrollTop -
+                            dossier.clientTop,
+                          behavior: "instant",
+                        });
+                      target?.focus({ preventScroll: true });
                     }}
                   >
                     <ArrowDownToLine size={17} aria-hidden="true" />
@@ -231,8 +342,16 @@ function DetailContent({
                       listingId={id}
                       onPhotoReady={onPhotoReady}
                     />
-                    <details className={styles.reference}>
-                      <summary>Đối chiếu thông tin đầu sách</summary>
+                    <details className={styles.reference} open>
+                      <summary>
+                        <BookMarked size={19} aria-hidden="true" />
+                        <span>Đối chiếu thông tin đầu sách</span>
+                        <ChevronDown
+                          className={styles.referenceToggle}
+                          size={18}
+                          aria-hidden="true"
+                        />
+                      </summary>
                       <BookReference
                         id={value.currentRevision.content.bookId}
                         confirmed={value.catalogStatus === "Confirmed"}
@@ -319,7 +438,13 @@ function DetailContent({
               )}
               <p className="record-id">Mã hồ sơ: {id}</p>
             </div>
-            <div className={styles.decision} ref={decisionArea} tabIndex={-1}>
+            <div
+              className={styles.decision}
+              ref={decisionArea}
+              tabIndex={0}
+              role="region"
+              aria-label="Phiếu quyết định"
+            >
               {decisionRecord && (
                 <DecisionRecord
                   {...decisionRecord}
@@ -342,7 +467,7 @@ function DetailContent({
                   <Notice>Hồ sơ đã có kết quả.</Notice>
                 ) : null)}
               {!pending && !self && (
-                <NextReview kind={kind} currentId={id} reviewerId={user.id} />
+                <NextReview kind={kind} currentId={id} reviewerId={user.id} canReadPendingCatalog={canReviewCatalog(user)} />
               )}
               {(decisionAllowed ||
                 (isListing &&
@@ -366,6 +491,31 @@ function DetailContent({
                     (value.catalogStatus === "Confirmed" &&
                       bookReady &&
                       value.currentRevision.fulfillmentStatus !== "NeedsUpdate")
+                  }
+                  approvalBlock={
+                    isListing
+                      ? value.catalogStatus !== "Confirmed"
+                        ? value.catalogStatus === "Rejected"
+                          ? "Đầu sách đã bị từ chối. Cần Admin xử lý thông tin đầu sách trước khi duyệt bài này."
+                          : "Đầu sách chưa được xác nhận. Cần Admin xác nhận đầu sách trước khi duyệt bài này."
+                        : value.currentRevision.fulfillmentStatus ===
+                            "NeedsUpdate"
+                          ? "Địa chỉ gửi sách cần được người đăng cập nhật."
+                          : !bookReady
+                            ? "Chờ tải thành công thông tin đầu sách để đối chiếu."
+                            : undefined
+                      : undefined
+                  }
+                  approvalAction={
+                    isListing &&
+                    value.catalogStatus !== "Confirmed" &&
+                    canReviewCatalog(user) &&
+                    value.currentRevision.content.bookId
+                      ? {
+                          to: `/review/catalog-requests/${value.currentRevision.content.bookId}`,
+                          label: "Xem yêu cầu đầu sách",
+                        }
+                      : undefined
                   }
                   photosReady={
                     !isListing ||

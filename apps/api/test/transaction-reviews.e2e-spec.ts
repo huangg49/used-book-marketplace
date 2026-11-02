@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { MongoService } from '../src/database/mongo/mongo.service.js';
+import { onTransactionRetry } from '../src/database/mongo/transaction.js';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module.js';
@@ -116,12 +119,136 @@ describe('Transaction reviews lifecycle — real Mongo HTTP', () => {
     outsider = await user();
   }, 60000);
   beforeEach(async () => {
+    app.get(ConfigService).set('DEMO_REVIEW_TIME_ENABLED', 'false');
+    app.get(ConfigService).set('DEMO_REVIEW_EXCHANGE_IDS', '');
     a = await user();
     b = await user();
   });
   afterAll(async () => {
     await app?.close();
     await db?.close();
+  });
+
+  async function demoPair(both = true) {
+    const id = await exchange();
+    const note = '[DỮ LIỆU DEMO] Lịch sử nhập mẫu để thử đánh giá; không xác nhận giao hàng thật.';
+    await db.c.exchanges.updateOne({ _id: id }, { $set: {
+      initiatorDeposit: 0, recipientDeposit: 0,
+      initiatorShipment: { method: 'direct', notes: note }, recipientShipment: { method: 'direct', notes: note },
+      initiatorReceivedAt: new Date(Date.now() - 72 * 3600000), recipientReceivedAt: new Date(Date.now() - 72 * 3600000),
+    } });
+    const url = `/transactions/Exchange/${id}/reviews`;
+    await post(url, input, a).expect(200);
+    if (both) await post(url, { ...input, bookRating: 3, partnerRating: 2 }, b).expect(200);
+    app.get(ConfigService).set('DEMO_REVIEW_TIME_ENABLED', 'true');
+    app.get(ConfigService).set('DEMO_REVIEW_EXCHANGE_IDS', id);
+    const state = (await get(url, a).expect(200)).body;
+    return { id, url, command: { expectedVersion: state.myReview.version, pairToken: state.demoTimeAdvance.pairToken } };
+  }
+
+  it('advances only the allowlisted zero-money demo once, preserving content, provenance and exact receipt', async () => {
+    const { id, url, command } = await demoPair(), key = randomUUID();
+    const before = await db.c.transaction_reviews.find({ transactionId: id }).toArray();
+    const ex = (await db.c.exchanges.findOne({ _id: id }))!;
+    const journals = await db.c.ledger_journals.countDocuments({});
+    const first = await post(url + '/demo-advance', command, a, key).expect(200);
+    expect(first.body.status).toBe('Published');
+    const replay = await post(url + '/demo-advance', command, a, key).expect(200);
+    expect(replay.body).toEqual(first.body);
+    expect(replay.headers['idempotency-replayed']).toBe('true');
+    await post(url + '/demo-advance', { ...command, expectedVersion: 99 }, a, key).expect(409);
+    await post(url + '/demo-advance', command, a).expect(409);
+    const after = await db.c.transaction_reviews.find({ transactionId: id }).toArray();
+    const shifted = (await db.c.exchanges.findOne({ _id: id }))!;
+    const delta = +ex.completedAt! - +shifted.completedAt!;
+    expect(delta).toBeGreaterThan(47 * 3600000);
+    expect(shifted.revision).toBe(ex.revision + 1);
+    for (const r of after) {
+      const old = before.find(o => o._id === r._id)!;
+      expect([r.comment, r.tags, r.partnerRating, r.bookRating, r.authorId, r.targetUserId])
+        .toEqual([old.comment, old.tags, old.partnerRating, old.bookRating, old.authorId, old.targetUserId]);
+      expect(+old.createdAt - +r.createdAt).toBe(delta);
+      expect(+r.editDeadline - +r.createdAt).toBe(REVIEW_EDIT_MS);
+      expect(r.version).toBe(2);
+      const revisions = await db.c.review_revisions.find({ reviewId: r._id }).sort({ version: 1 }).toArray();
+      expect(revisions).toHaveLength(2);
+      expect(revisions[0].snapshot).toMatchObject({ createdAt: old.createdAt.toISOString() });
+      expect(revisions[1]).toMatchObject({ action: 'DemoTimeAdvance', actorId: a.id });
+      expect(revisions[1].reason).toContain('original exchange times=');
+    }
+    expect(await db.c.ledger_journals.countDocuments({})).toBe(journals);
+    const state = (await get(url, b).expect(200)).body;
+    expect(state).toMatchObject({ canEdit: false, canDelete: false, canReply: true, demoTimeAdvance: { applied: true, available: false } });
+    expect(state.partnerReview.status).toBe('Published');
+    expect((await get(`/members/${a.id}/reputation`).expect(200)).body).toMatchObject({ reviewCount: 1, partnerRating: 2, bookRating: 3 });
+    const queue = (await get('/operations/transaction-reviews?limit=50', staff).expect(200)).body;
+    expect(queue.items.filter((row: any) => row.review.transactionId === id)).toHaveLength(2);
+    await post(`/transaction-reviews/${first.body.id}/edit`, { ...input, expectedVersion: first.body.version }, a).expect(409);
+    await post(`/transaction-reviews/${first.body.id}/delete`, { expectedVersion: first.body.version }, a).expect(409);
+    // Current auth precedes replay, even after the mutation already succeeded.
+    await db.setStatus(a.id, 'RESTRICTED');
+    await post(url + '/demo-advance', command, a, key).expect(403);
+    await db.setStatus(a.id, 'ACTIVE');
+    await db.c.auth_sessions.updateOne({ _id: a.sessionId }, { $set: { revokedAt: new Date() } });
+    await post(url + '/demo-advance', command, a, key).expect(401);
+  });
+
+  it('refuses production, disabled, other samples, foreign actors and stale pair confirmation', async () => {
+    const { id, url, command } = await demoPair();
+    const config = app.get(ConfigService);
+    await post(url + '/demo-advance', command, outsider).expect(404);
+    await post(url + '/demo-advance', command, staff).expect(403);
+    for (const [name, bad, good] of [
+      ['NODE_ENV', 'production', 'test'], ['DEMO_REVIEW_TIME_ENABLED', 'false', 'true'],
+      ['DEMO_REVIEW_EXCHANGE_IDS', randomUUID(), id], ['MONGODB_URL', 'mongodb://db.remote/demo', process.env.MONGODB_URL!],
+    ]) {
+      config.set(name, bad);
+      expect((await get(url, a).expect(200)).body.demoTimeAdvance).toBeUndefined();
+      await post(url + '/demo-advance', command, a).expect(404);
+      config.set(name, good);
+    }
+    const peer = (await get(url, b).expect(200)).body.myReview;
+    await post(`/transaction-reviews/${peer.id}/edit`, { ...input, expectedVersion: peer.version }, b).expect(200);
+    await post(url + '/demo-advance', command, a).expect(409);
+    expect((await get(url, a).expect(200)).body.partnerReview).toBeNull();
+    expect((await get(`/members/${a.id}/reputation`).expect(200)).body.reviewCount).toBe(0);
+  });
+
+  it('refuses one-sided, held, deleted and funded histories despite an allowlist', async () => {
+    const single = await demoPair(false);
+    expect((await get(single.url, a).expect(200)).body.demoTimeAdvance.available).toBe(false);
+    await post(single.url + '/demo-advance', { expectedVersion: 1, pairToken: 'a'.repeat(64) }, a).expect(409);
+    const { id, url, command } = await demoPair();
+    const mine = (await get(url, a).expect(200)).body.myReview;
+    for (const field of ['evidenceHeld', 'deletedAt', 'hiddenAt', 'legacyDisclosed']) {
+      await db.c.transaction_reviews.updateOne({ _id: mine.id }, { $set: { [field]: field.endsWith('At') ? new Date() : true } });
+      await post(url + '/demo-advance', command, a).expect(409);
+      await db.c.transaction_reviews.updateOne({ _id: mine.id }, { $set: { [field]: field.endsWith('At') ? null : false } });
+    }
+    await db.c.exchanges.updateOne({ _id: id }, { $set: { initiatorDeposit: 100000 } });
+    await post(url + '/demo-advance', command, a).expect(404);
+    expect((await get(url, a).expect(200)).body.demoTimeAdvance).toBeUndefined();
+  });
+
+  it('serializes genuinely competing participant skips to one pair of revisions', async () => {
+    const { id, url, command } = await demoPair();
+    const peer = (await get(url, b).expect(200)).body;
+    let release!: () => void, locked!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const ready = new Promise<void>(resolve => { locked = resolve; });
+    const holder = app.get(MongoService).tx(async tx => { await tx.lock('exchanges', [id]); locked(); await gate; });
+    await ready;
+    const attempts = new Set<number>();
+    let both!: () => void;
+    const competing = new Promise<void>(resolve => { both = resolve; });
+    const unsubscribe = onTransactionRetry(e => { attempts.add(e.transactionId); if (attempts.size >= 2) both(); });
+    const requests = [post(url + '/demo-advance', command, a).then(r => r.status),
+      post(url + '/demo-advance', { expectedVersion: peer.myReview.version, pairToken: peer.demoTimeAdvance.pairToken }, b).then(r => r.status)];
+    try { await competing; } finally { unsubscribe(); release(); await holder; }
+    expect((await Promise.all(requests)).sort()).toEqual([200, 409]);
+    const rows = await db.c.transaction_reviews.find({ transactionId: id }).toArray();
+    expect(rows.every(r => r.version === 2)).toBe(true);
+    expect(await db.c.review_revisions.countDocuments({ reviewId: { $in: rows.map(r => r._id) }, action: 'DemoTimeAdvance' })).toBe(2);
   });
 
   it('keeps the legacy Exchange alias on the same idempotent review lifecycle', async () => {

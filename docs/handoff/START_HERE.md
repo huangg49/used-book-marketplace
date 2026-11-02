@@ -1,8 +1,8 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
-Cập nhật02/11/2026: theo [SESSION_STATE](SESSION_STATE.md). Contract **0.72.0**
-(234operations/37controllers); registry có67
-migration MongoDB (đến0053), không suy từ tiền tố file lớn nhất. Migration
+Cập nhật03/11/2026: theo [SESSION_STATE](SESSION_STATE.md). Contract **0.73.1**
+(235operations/37controllers); registry có71
+migration MongoDB (đến0055), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
 Phạm vi28/10: nhóm **bỏ Forum/Cộng đồng sách** theo [ADR0051](../adr/0051-remove-forum-from-project-scope.md).
@@ -52,6 +52,11 @@ chạy `pnpm db:migrate` rồi `pnpm db:bootstrap` trước khi chạy cùng con
 Không reset/reseed hoặc sửa checksum migration cũ. Không bật cờ AI tự duyệt từ
 gói hỗ trợ, và READINESS vẫn giữ gate hiện có.
 
+Miễn phí giao hàng theo [ADR0063](../adr/0063-free-shipping.md): migration
+`0052-free-shipping` chọn biểu phí 0 cho giao dịch mới và cho phép giao sách đấu
+giá có cước 0. Dừng API/worker, backup rồi migrate trước khi chạy source mới.
+Giữ nguyên đơn/ledger cũ; báo giá cũ cần lấy lại do policy đã đổi.
+
 ## 2. Dựng môi trường mới
 
 Node theo `.nvmrc`, pnpm theo `packageManager` trong root `package.json`, Docker
@@ -100,9 +105,11 @@ AI tự duyệt thêm0050 và collection mới: dừng API/worker, `pnpm db:migr
 [ADR0061](../adr/0061-ai-listing-auto-review.md).
 Bản hậu kiểm thêm0052 và `listing_auto_review_checks`: cùng các bước trên. Muốn worker
 chạy còn phải đặt `LISTING_AUTO_REVIEW_APPROVED_POLICY` đúng `POLICY_VERSION`;
-[ADR0063](../adr/0063-ai-listing-review-hardening.md).
+[ADR0063](../adr/0063-ai-listing-review-hardening.md). Gọi NVIDIA thử lại một lần trong
+cùng timeout; tự duyệt chờ tối đa ba chu kỳ khi nhà cung cấp im lặng, không cần
+migration; [ADR0066](../adr/0066-ai-provider-resilience.md).
 
-Exchange thêm0052 để lưu agreement sách/giá đã thỏa thuận; không backfill lịch sử
+Exchange thêm0053 để lưu agreement sách/giá đã thỏa thuận; không backfill lịch sử
 hoặc đổi tiền. Dừng API/worker cũ, migrate rồi nâng API và web/RN cùng gói:
 counter mới nhận listingIds, client gửi tiền bù tùy ý sẽ bị422. Chưa chạy trên DB
 chính; source đã ghép main add4d615 local, chưa publish. [ADR0065](../adr/0065-exchange-agreement-snapshots.md),
@@ -117,6 +124,16 @@ cần ID tổ chức do biên tập xác minh; [ADR0056](../adr/0056-listing-ass
 Seed chỉ cho local, không tự đổi mật khẩu account đã tồn tại. Xem tài khoản mẫu ở
 [hướng dẫn RN](../REACT_NATIVE_START.md); mật khẩu theo cấu hình local của người nhận.
 Không cần seed đơn hàng hoặc sửa số dư SQL để chứng minh backend hoạt động.
+
+Bằng chứng Exchange thêm0054 và hai collection riêng: khi được duyệt áp dụng, dừng
+API/worker, chạy migrate rồi bootstrap role; không reset DB.
+`SUPABASE_EVIDENCE_BUCKET` private riêng, khác bucket listing; project phải hỗ trợ
+MP4 100MB, gate cấu hình hiện còn mở. [ADR0066](../adr/0066-exchange-private-evidence.md).
+Ngoại lệ demo hoàn tất/giải ngân5giây dùng migration0054 và cờ `LOCAL_DEMO_COMPLETION_ENABLED`
+phía BE, false mặc định. Dừng API/worker, backup, migrate/bootstrap rồi chạy source
+mới. Không bật cho Inspection cũ hoặc suy từ đây rằng gate completion đã mở.
+Xem [ADR0067](../adr/0067-local-demo-order-settlement.md) và
+[DEVELOPMENT](../DEVELOPMENT.md#demo-hoàn-tất-đơn-và-giải-ngân-sau-5-giây).
 
 Chạy hằng ngày theo [DEVELOPMENT](../DEVELOPMENT.md): hai terminal cho backend
 và client phụ trách. `dev:api` bật Mongo/API/media+order worker; không bật worker trùng.

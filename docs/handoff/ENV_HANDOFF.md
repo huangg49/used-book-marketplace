@@ -28,7 +28,7 @@ node_modules, Expo cache, build output, DB dump hoặc các fixture test.
    secret mới trên máy riêng khi không cần chia sẻ session/simulator với máy cũ;
    không cần dùng chung mọi secret chỉ để chạy project.
 3. Chủ dự án chuyển riêng cấu hình storage cần dùng: SUPABASE_URL,
-   SUPABASE_STORAGE_KEY, SUPABASE_MEDIA_BUCKET trong `apps/api/.env`. Có thể
+   SUPABASE_STORAGE_KEY, SUPABASE_MEDIA_BUCKET và SUPABASE_EVIDENCE_BUCKET trong `apps/api/.env`. Có thể
    chuyển cả bốn file làm tham chiếu rồi teammate đối chiếu, không chép đè mù quáng.
    Key này là server credential, tuyệt đối không chuyển vào EXPO_PUBLIC_* hoặc VITE_*.
 4. API/worker dùng MongoDB replica set; Supabase chỉ lưu media. Chép `.env`
@@ -39,6 +39,10 @@ node_modules, Expo cache, build output, DB dump hoặc các fixture test.
 5. Nếu tách môi trường storage, dùng bucket dev riêng đã tạo/cấu hình đúng và
    sửa SUPABASE_MEDIA_BUCKET. Dùng chung project/bucket nghĩa là chia sẻ tài nguyên
    và quyền truy cập; phối hợp worker/cleanup, không chạy cleanup thử trên ảnh của nhau.
+   Evidence dùng bucket private riêng, không trùng bucket listing; ảnh10MB/PDF20MB/MP4
+   100MB theo SRS. Project và bucket phải hỗ trợ100MB; gate cấu hình hiện còn mở.
+   Không tự giảm giới hạn nghiệp vụ hoặc nâng gói trả phí. Xem
+   [gói bằng chứng Exchange](../features/EXCHANGE_EVIDENCE_2026_11_02.md).
 6. Trợ lý gợi ý giá ([ADR 0028](../adr/0028-listing-price-assistant.md)) tắt mặc định.
    Tra giá trực tuyến ([ADR 0029](../adr/0029-online-price-lookup.md)) cần thêm
    `PRICE_LOOKUP_ENABLED=true` với `PRICE_ASSIST_PROVIDER=gemini`; danh sách shop

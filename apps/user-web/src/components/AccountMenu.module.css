@@ -1,32 +1,48 @@
+/* ==========================================================================
+   LẬT LẠI - ACCOUNT DROPDOWN (THẺ BẠN ĐỌC MINI)
+   Crafted Dual Quick-Hub (Tổng quan + Ví) with Fluid Spring Motion
+   ========================================================================== */
+
 .root {
   --cover-sand: #f0e2ca;
   --shop-shelf: #f4eddf;
+  --shop-paper: #faf8f5;
+  --shop-wine: #5c0202;
+  --shop-wine-hover: #480101;
+  --shop-ink: #281914;
+  --shop-muted: #6b5850;
+  --shop-line: #e6ded3;
   position: relative;
 }
+
+/* Header Trigger Pill */
 .trigger {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   min-height: 40px;
   padding: 4px 12px 4px 5px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--shop-cream);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--shop-cream, #fcf8db);
   font: inherit;
   font-size: 0.875rem;
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, color 160ms ease;
+  user-select: none;
 }
+
 .trigger:hover,
 .trigger[aria-expanded="true"] {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.28);
-  color: #fff;
-  text-decoration: none;
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.32);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
 }
+
 .navAvatar {
   display: grid;
   place-items: center;
@@ -38,162 +54,394 @@
   font-weight: 700;
   font-size: 0.8125rem;
   flex-shrink: 0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  position: relative;
 }
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
+}
+
 .userName {
   max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
+
 @media (min-width: 1001px) and (max-width: 1279px) {
   .userName {
     max-width: 80px;
   }
 }
-/* Floating navigation caps its width even on a wide desktop viewport. */
+
 :global(header[data-floating="true"]) .userName {
   max-width: 80px;
 }
-.trigger svg {
-  transition: transform 180ms ease-out;
+
+.chevronWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
-.trigger[aria-expanded="true"] svg {
-  transform: rotate(180deg);
-}
+
 .root .trigger:focus-visible {
-  outline: 2px solid var(--shop-cream);
-  outline-offset: 4px;
-  border-radius: 4px;
+  outline: 2px solid var(--shop-cream, #fcf8db);
+  outline-offset: 3px;
+  border-radius: 999px;
 }
+
+/* Floating Popover Container */
 .popover {
   position: absolute;
-  top: calc(100% + 14px);
+  top: calc(100% + 10px);
   right: 0;
-  width: 286px;
+  width: 348px;
   max-width: calc(100vw - 32px);
-  max-height: calc(100dvh - 112px);
+  max-height: calc(100dvh - 90px);
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-color: var(--shop-control) var(--shop-paper);
-  padding: 8px;
-  border-radius: 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--shop-line) var(--shop-paper);
+  padding: 16px;
+  border-radius: 16px;
   background: var(--shop-paper);
   color: var(--shop-ink);
-  box-shadow: 0 12px 32px #28191433;
-  animation: accountOpen 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(92, 2, 2, 0.1);
+  box-shadow:
+    0 4px 6px -1px rgba(40, 25, 20, 0.06),
+    0 20px 32px -4px rgba(40, 25, 20, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+  transform-origin: top right;
+  z-index: 1000;
 }
-.popover[hidden] {
-  display: none;
+
+/* User Identity Header Card */
+.identityCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
-.identity {
+
+.identityRow {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 12px 18px;
-  border-bottom: 1px solid var(--shop-line);
-  margin-bottom: 8px;
+  text-decoration: none;
+  color: inherit;
+  border-radius: 8px;
+  transition: opacity 140ms ease;
 }
-.identity strong {
-  font-size: 0.9375rem;
-  line-height: 1.6;
-  min-width: 0;
-  overflow-wrap: anywhere;
+
+.identityRow:hover {
+  opacity: 0.9;
 }
-.initial {
+
+.initialBadge {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
   border-radius: 50%;
   background: var(--cover-sand);
   color: var(--shop-wine);
   font-weight: 700;
+  font-size: 1.15rem;
+  border: 1px solid rgba(92, 2, 2, 0.15);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  position: relative;
 }
-.popover nav {
-  display: grid;
+
+.identityMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
   gap: 2px;
 }
-.popover a,
-.exit button {
+
+.nameText {
+  font-size: 0.96rem;
+  font-weight: 700;
+  color: var(--shop-ink);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emailText {
+  font-size: 0.78rem;
+  color: var(--shop-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Dual Quick-Hub Row (Tổng quan + Ví song song) */
+.quickHubGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.hubCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 10px 11px;
+  border-radius: 10px;
+  background: var(--shop-shelf);
+  border: 1px solid rgba(92, 2, 2, 0.08);
+  text-decoration: none;
+  color: var(--shop-ink);
+  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+  min-height: 60px;
+}
+
+.hubCard:hover {
+  background: var(--cover-sand);
+  border-color: rgba(92, 2, 2, 0.22);
+  transform: translateY(-1.5px);
+  box-shadow: 0 3px 8px rgba(40, 25, 20, 0.08);
+}
+
+.hubCard:active {
+  transform: scale(0.97);
+}
+
+.hubTop {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 46px;
-  padding: 10px 12px;
-  border-radius: 6px;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.hubHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--shop-wine);
+}
+
+.hubTitle {
+  font-size: 0.8125rem;
+  font-weight: 700;
   color: var(--shop-ink);
-  font: inherit;
-  font-size: 0.875rem;
+}
+
+.hubArrow {
+  color: var(--shop-muted);
+  transition: transform 140ms ease, color 140ms ease;
+  flex-shrink: 0;
+}
+
+.hubCard:hover .hubArrow {
+  transform: translate(1px, -1px);
+  color: var(--shop-wine);
+}
+
+.hubSub {
+  font-size: 0.72rem;
+  color: var(--shop-muted);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.hubBalance {
+  font-size: 0.78rem;
+  color: var(--shop-wine);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* 2-Column Split Layout for Content */
+.columnsSplit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--shop-line);
+}
+
+.columnBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.columnTitle {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--shop-muted);
+  margin-bottom: 4px;
+  padding-left: 6px;
+}
+
+.tileLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 7px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--shop-ink);
   text-decoration: none;
-  line-height: 1.6;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background-color 140ms ease, color 140ms ease, transform 140ms ease, border-color 140ms ease;
+  line-height: 1.3;
 }
-.popover a:hover,
-.exit button:hover {
+
+.tileLink svg {
+  color: var(--shop-wine);
+  flex-shrink: 0;
+  transition: transform 140ms ease;
+}
+
+.tileLink:hover {
   background: var(--shop-shelf);
+  color: var(--shop-wine);
+  border-color: rgba(92, 2, 2, 0.08);
+  transform: translateY(-1px);
 }
-.popover a[aria-current="page"] {
+
+.tileLink:hover svg {
+  transform: scale(1.12);
+}
+
+.tileLink:active {
+  transform: scale(0.98);
+}
+
+.tileLink[aria-current="page"] {
   background: var(--cover-sand);
   color: var(--shop-wine);
   font-weight: 700;
+  border-color: rgba(92, 2, 2, 0.15);
 }
+
+.tileText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Footer & Logout Actions */
+.popoverFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--shop-line);
+  gap: 8px;
+}
+
+.footerLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--shop-muted);
+  text-decoration: none;
+  padding: 5px 8px;
+  border-radius: 6px;
+  transition: all 140ms ease;
+}
+
+.footerLink svg {
+  color: var(--shop-muted);
+  flex-shrink: 0;
+  transition: color 140ms ease;
+}
+
+.footerLink:hover {
+  color: var(--shop-wine);
+  background: var(--shop-shelf);
+}
+
+.footerLink:hover svg {
+  color: var(--shop-wine);
+}
+
+.footerLink:active {
+  transform: scale(0.97);
+}
+
+.logoutBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #8f2626;
+  background: transparent;
+  border: none;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.logoutBtn svg {
+  flex-shrink: 0;
+  transition: transform 140ms ease;
+}
+
+.logoutBtn:hover:not(:disabled) {
+  background: #fcedee;
+  color: #7f1d1d;
+}
+
+.logoutBtn:hover:not(:disabled) svg {
+  transform: translateX(2px);
+}
+
+.logoutBtn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.logoutBtn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.errorText {
+  margin: 6px 4px 0;
+  font-size: 0.75rem;
+  color: #912b0e;
+  line-height: 1.4;
+}
+
+/* Accessibility Focus States */
 .popover :is(a, button):focus-visible {
   outline: 2px solid var(--shop-wine);
-  outline-offset: -2px;
+  outline-offset: 1px;
 }
-.popover svg {
-  flex-shrink: 0;
-  color: var(--shop-wine);
-}
-.exit {
-  border-top: 1px solid var(--shop-line);
-  margin-top: 8px;
-  padding-top: 8px;
-}
-.exit button {
-  width: 100%;
-  border: 0;
-  background: transparent;
-  text-align: left;
-  color: var(--shop-wine);
-  cursor: pointer;
-}
-.exit button:disabled {
-  cursor: wait;
-  opacity: 0.65;
-}
-.error {
-  margin: 8px 12px;
-  font-size: 0.8125rem;
-  line-height: 1.7;
-  color: var(--shop-wine);
-}
-.popover ::selection {
-  background: var(--cover-sand);
-  color: var(--shop-wine);
-}
-@keyframes accountOpen {
-  from {
-    transform: translateY(-6px);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
+
+/* Hide on mobile viewport */
 @media (max-width: 1000px) {
   .root {
     display: none;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .popover {
-    animation-duration: 180ms !important;
-    animation-iteration-count: 1 !important;
-  }
-  .trigger svg {
-    transition-duration: 180ms !important;
   }
 }

@@ -36,7 +36,7 @@ export function PaperSelect({
   function show(index = selected) {
     if (!choices.length) return;
     const rect = trigger.current?.getBoundingClientRect();
-    const height = Math.min(choices.length * 44 + 16, 260);
+    const height = Math.min(choices.length * 44 + 16, 380);
     setAbove(
       !!rect &&
         window.innerHeight - rect.bottom < height + 12 &&

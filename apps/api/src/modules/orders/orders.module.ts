@@ -1,3 +1,4 @@
+import { LocalDemoCompletionWorker } from './local-demo-completion.worker.js';
 import { PurchasesModule } from '../purchases/purchases.module.js';
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../database/database.module.js';
@@ -27,6 +28,7 @@ import { PackagingEvidenceController } from './packaging-evidence.controller.js'
     OrdersService,
     OrderClock,
     OrderExpiryWorker,
+    LocalDemoCompletionWorker,
     PackagingEvidenceService,
   ],
   controllers: [OrdersController, PackagingEvidenceController],

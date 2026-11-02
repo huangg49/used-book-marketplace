@@ -110,7 +110,7 @@ function summary(o: PointOrder) {
       return 'Quản trị viên đang xem xét đơn này. Tiền vẫn được giữ cho đơn cho tới khi có quyết định; theo dõi thông báo.'
     case 'ReturnPending':
       return delivered && !o.delivery?.deliveredAt
-        ? `Giao hàng không thành công. Hãng đang trả sách về ${o.pointName}; tiền sách và phí giao được hoàn sau khi nhân viên đối chiếu sách.`
+        ? `Giao hàng không thành công. Hãng đang trả sách về ${o.pointName}; tiền đã thanh toán được hoàn sau khi nhân viên đối chiếu sách.`
         : `Hãy mang sách trả về ${o.pointName} trước ${when(o.returnDeadline)}, trong giờ ${POINT_HOURS}. Tiền được hoàn sau khi nhân viên đối chiếu sách.`
     case 'Completed':
       return 'Quy trình nhận sách đã hoàn tất. Cảm ơn bạn đã cho cuốn sách một chương mới.'

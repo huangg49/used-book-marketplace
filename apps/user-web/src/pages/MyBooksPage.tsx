@@ -22,9 +22,12 @@ export function MyBooksPage() {
   const location = useLocation();
   const [params, setParams] = useSearchParams();
   const [dismissedBanner, setDismissedBanner] = useState(false);
-  const showRevisedBanner =
-    Boolean((location.state as { revised?: boolean } | null)?.revised) &&
-    !dismissedBanner;
+  const navState = location.state as {
+    revised?: boolean;
+    submitted?: boolean;
+  } | null;
+  const showStatusBanner =
+    Boolean(navState?.revised || navState?.submitted) && !dismissedBanner;
   const rawFilter = params.get("moderation") || "";
   const filter = filters.some((f) => f.value === rawFilter) ? rawFilter : "";
   const cursor = params.get("cursor") || undefined;
@@ -82,10 +85,18 @@ export function MyBooksPage() {
           Đăng sách
         </Link>
       </header>
-      {showRevisedBanner && (
+      {showStatusBanner && (
         <div className={styles.revisedBanner} role="status">
           <div>
-            <strong>Đã gửi bản sửa để duyệt lại!</strong> Bản sách tạm chuyển sang trạng thái <em>Chờ duyệt</em> và sẽ hiển thị lại trên kệ sau khi được quản trị viên duyệt.
+            {navState?.submitted ? (
+              <>
+                <strong>Đã gửi bài đăng cho ban quản trị duyệt thành công!</strong> Bài đăng đã chuyển sang trạng thái <em>Chờ duyệt</em> và sẽ hiển thị công khai ngay sau khi được kiểm duyệt phê duyệt.
+              </>
+            ) : (
+              <>
+                <strong>Đã gửi bản sửa để duyệt lại!</strong> Bản sách tạm chuyển sang trạng thái <em>Chờ duyệt</em> và sẽ hiển thị lại trên kệ sau khi được quản trị viên duyệt.
+              </>
+            )}
           </div>
           <button
             type="button"

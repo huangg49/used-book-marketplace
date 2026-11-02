@@ -300,7 +300,7 @@ function BuyNowListing() {
     prepared?.destination ??
     (selectedAddress
       ? `${selectedAddress.recipientName} · ${selectedAddress.phone} · ${selectedAddress.detail}`
-      : "Thêm địa chỉ để tính phí giao hàng chính xác.");
+      : "Thêm địa chỉ nhận sách.");
   const disabled =
     busy ||
     book.isFetching ||
@@ -389,20 +389,20 @@ function BuyNowListing() {
                 {formatVnd(prepared?.amounts.bookPrice ?? item.salePrice ?? 0)}
               </dd>
             </div>
-            <div>
+            {(prepared?.amounts.shippingFee ?? 0) > 0 && (<div>
               <dt>Phí giao hàng</dt>
               <dd>
                 {prepared
                   ? formatVnd(prepared.amounts.shippingFee)
                   : "Chờ địa chỉ"}
               </dd>
-            </div>
+            </div>)}
             <div className={styles.total}>
               <dt>Tổng thanh toán</dt>
               <dd>
                 {prepared
                   ? formatVnd(prepared.amounts.buyerTotal)
-                  : "Chưa tính phí giao"}
+                  : "Chờ xác nhận địa chỉ"}
               </dd>
             </div>
           </dl>
@@ -493,7 +493,7 @@ function BuyNowListing() {
               {item.seller.id === auth.user.id
                 ? "Bạn không thể tự mua bản sách của chính mình."
                 : !item.fulfillment
-                  ? "Bản sách này người bán chưa cấu hình nơi gửi nên chưa thể tính phí giao ngay."
+                  ? "Bản sách này người bán chưa cấu hình nơi gửi nên chưa thể xác nhận giao hàng."
                   : "Bản sách này hiện chưa thể mua ngay. Hãy xem lại bài đăng."}
             </p>
             {item.seller.id !== auth.user.id && (
@@ -535,10 +535,10 @@ function BuyNowListing() {
                 <dt>Tiền sách</dt>
                 <dd>{formatVnd(prepared.amounts.bookPrice)}</dd>
               </div>
-              <div>
+              {(prepared?.amounts.shippingFee ?? 0) > 0 && (<div>
                 <dt>Phí giao hàng</dt>
                 <dd>{formatVnd(prepared.amounts.shippingFee)}</dd>
-              </div>
+              </div>)}
               <div className={styles.total}>
                 <dt>Tổng thanh toán</dt>
                 <dd>{formatVnd(prepared.amounts.buyerTotal)}</dd>
@@ -584,12 +584,12 @@ function BuyNowListing() {
                 localities={areas.data?.localities ?? []}
               />
               <p className={styles.note}>
-                Xem phí chưa giữ sách hoặc trừ tiền. Địa chỉ mới được lưu vào sổ
+                Xem tổng thanh toán chưa giữ sách hoặc trừ tiền. Địa chỉ mới được lưu vào sổ
                 địa chỉ.
               </p>
               <div className={styles.actions}>
                 <button className={styles.primary} type="submit">
-                  {busy ? "Đang tính phí…" : "Xem tổng thanh toán"}
+                  {busy ? "Đang xác nhận…" : "Xem tổng thanh toán"}
                   <ArrowRight size={18} aria-hidden="true" />
                 </button>
               </div>
@@ -603,7 +603,7 @@ function BuyNowListing() {
                   void prepare({ preventDefault() {} } as React.FormEvent)
                 }
               >
-                Thử lại bước tính phí
+                Thử lại bước xác nhận địa chỉ
               </button>
             )}
           </form>

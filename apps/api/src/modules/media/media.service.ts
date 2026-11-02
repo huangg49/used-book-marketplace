@@ -60,6 +60,7 @@ export async function reservedStorage(tx: Tx) {
   for (const collection of [
     'listing_media',
     'order_packaging_evidence',
+    'exchange_evidence',
   ] as const) {
     const [row] = await tx.c[collection]
       .aggregate<{ total: number }>([
@@ -104,7 +105,11 @@ export async function recentUploads(tx: Tx, userId: string, now = new Date()) {
       { $count: 'n' },
     ])
     .toArray();
-  return (media?.n ?? 0) + (packaging?.n ?? 0);
+  const evidence = await tx.c.exchange_evidence.countDocuments({
+    uploaderId: userId,
+    createdAt: { $gt: hourAgo },
+  });
+  return (media?.n ?? 0) + (packaging?.n ?? 0) + evidence;
 }
 
 @Injectable()

@@ -368,7 +368,7 @@ function CheckoutListing() {
       <header className={styles.pageHeader}>
         <h1>Thông tin giao nhận</h1>
         <p>
-          Gửi địa chỉ và phí giao hàng để người bán tạo đơn với giá đã thỏa
+          Gửi địa chỉ nhận sách để người bán tạo đơn với giá đã thỏa
           thuận.
         </p>
       </header>
@@ -405,7 +405,7 @@ function CheckoutListing() {
             </div>
             <p>
               {prepared?.destination ??
-                "Chọn nơi nhận và kiểm tra phí trước khi gửi người bán."}
+                "Chọn nơi nhận trước khi gửi người bán."}
             </p>
             <button
               className={styles.textButton}
@@ -443,7 +443,7 @@ function CheckoutListing() {
         description={
           prepared
             ? "Người bán dùng thông tin này để tạo đơn với giá hai bên đã thỏa thuận."
-            : "Chọn khu vực luân chuyển và nơi nhận để xem phí giao nhận."
+            : "Chọn khu vực luân chuyển và nơi nhận sách."
         }
       >
         {displayedListing && (
@@ -500,10 +500,10 @@ function CheckoutListing() {
               </div>
             </div>
             <dl className={styles.receipt}>
-              <div className={styles.total}>
+              {prepared.shipping > 0 && (<div className={styles.total}>
                 <dt>Phí giao nhận dự kiến</dt>
                 <dd>{formatVnd(prepared.shipping)}</dd>
-              </div>
+              </div>)}
             </dl>
             <p className={styles.note}>
               Người bán nhập giá sách khi tạo đơn. Bước này chỉ gửi thông tin
@@ -536,7 +536,7 @@ function CheckoutListing() {
               </p>
               <div className={styles.actions}>
                 <button className={styles.primary} type="submit">
-                  {busy ? "Đang tạo báo giá…" : "Xem phí giao nhận"}
+                  {busy ? "Đang tạo báo giá…" : "Xác nhận nơi nhận"}
                   <ArrowRight size={18} aria-hidden="true" />
                 </button>
               </div>
@@ -550,7 +550,7 @@ function CheckoutListing() {
                   void submit({ preventDefault() {} } as React.FormEvent)
                 }
               >
-                Thử lại bước tính phí
+                Thử lại bước xác nhận địa chỉ
               </button>
             )}
           </form>

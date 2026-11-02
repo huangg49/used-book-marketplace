@@ -90,6 +90,9 @@
   box-sizing: border-box;
 }
 
+/* Owner policy: keep authored motion for Admin and Staff regardless of the OS
+   motion preference. Visibility guards and technical fallbacks still apply. */
+
 html {
   background-color: #3b0202;
 }
@@ -151,14 +154,6 @@ button:disabled {
 .button .animate-spin,
 .admin-loading-spinner {
   animation: admin-busy-spin 900ms linear infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .button .animate-spin,
-  .admin-loading-spinner {
-    animation: admin-busy-spin 900ms linear infinite !important;
-    animation-duration: 900ms !important;
-    animation-iteration-count: infinite !important;
-  }
 }
 
 img {

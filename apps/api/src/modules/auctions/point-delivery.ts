@@ -40,7 +40,7 @@ export async function deliveryPrice(
   const policy =
     selection &&
     (await tx.c.sale_quote_policies.findOne({ _id: selection.policyCode }));
-  if (!policy || policy.shippingFee <= 0)
+  if (!policy || policy.shippingFee < 0)
     throw new DomainError(
       503,
       'UNAVAILABLE',

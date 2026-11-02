@@ -976,3 +976,76 @@ API, confirms state after acknowledgment and retries the same intended action
 after an unknown result. Guests return through login; previews have no wishlist.
 Missing location stays explicit, and preview catalog cards have no physical zone.
 Public location follows ADR0039; the legacy service-area name is not a book zone.
+
+## Admin listing review — scoped workspace, 02/11/2026
+
+The review queue and dossier use the existing wine/cream identity with flat paper
+sheets. Preserve the incumbent navigation shell. The canvas is fluid, with a304px
+queue and20px separation; the dossier holds real book photography beside the
+decision form when its own width permits. On narrow screens the queue becomes a
+disclosure and the form follows the evidence. The review route owns the viewport:
+navigation and page heading stay still, with no competing document scrollbar.
+Queue, reader and decision have bounded scrolling; reader and decision share their
+top/bottom edges. Each pane contains wheel input. Below740px of dossier width,
+the dossier has one scroller containing both evidence and the decision form.
+The whole queue scrolls, including its filters, so short windows never collapse
+the list. Other routes keep their own layout. No welcome hero or invented KPI.
+
+This surface uses Be Vietnam Pro: title28px (23px narrow), book title24px (20px
+narrow), empty-state heading22px, body13–14px, labels12px and compact metadata11px.
+Quiet sheet corners16px, grouped summary/reference10px, decision12px and controls/
+photo thumbnails6px are intentional local exceptions to the Member card scale.
+State is carried by actual labels and the selected tab underline; count means
+loaded records, never an inferred total. Queue photos never satisfy gallery review
+readiness. Keep image loading/error/retry, unsent form/leave guards, decision
+confirmation/reconciliation, current permissions and the owner's motion policy.
+See [implementation and evidence](docs/ui/ADMIN_LISTING_REVIEW_2026_11_02.md).
+
+Owner refinement02/11 supersedes the quiet presentation above: the book identity
+and summary form one wine field, cream title/author and a yellow24px price. The
+identity title is28px;18px section headings and14px prose separate evidence from
+metadata. White evidence sections sit on the shelf ground with12px corners;
+condition declarations are explicitly labelled as seller statements, with concern
+color only for declared missing/damaged content. The decision head uses wine,
+checks use a pale selected tint, and its progress bar counts actual local checks,
+never a saved approval. Summary/header corners14px, selected tabs7px and condition
+values17px are scoped additions. Below980px of actual workspace width, the queue
+becomes a disclosure regardless of the surrounding sidebar's viewport breakpoint.
+
+In the trade facts section, all three values use16px with shared baseline
+alignment: mode600/ink, actual money700/wine, null amount400/muted. Do not style
+the text "Không áp dụng" as a monetary amount. Other metadata keeps its scale.
+
+## Web motion consistency — owner request, 02/11/2026
+
+Member web, Admin/Staff and Expo web keep their authored animations and effects
+regardless of the OS motion preference. There is no global duration cutdown and
+no component-level preference branch; one normal timing/iteration definition is
+shared by both preferences. Member Framer Motion explicitly uses
+`MotionConfig reducedMotion="never"`. Expo web does not subscribe to native OS
+reduction. This does not add motion to static content or extend native scope.
+Preserve hover/device conditions, viewport/visibility guards, cleanup, one-shot
+versus loop semantics and technical fallbacks. Do not change machine settings.
+See [checks and scope](docs/ui/WEB_MOTION_POLICY_2026_11_02.md).
+
+## Member listing detail — 02/11/2026
+
+Use the existing wine/cream identity and Be Vietnam Pro on a paper ground. Mode
+is Read/Operate: compare the actual used copy, then choose a transaction. The
+real copy's condition photos are the left stage; title/author, seller-declared
+condition, price, seller and commands form the right stage in that order.
+Taste split-stage seed1300799799 supplies the45/55 composition, adapted to the
+owner's explicit single document scroll: no fixed/sticky stage, wordmark takeover
+or separate pane scrollers. Photograph is contain throughout, not a decorative
+crop. One thumbnail rail may scroll horizontally within the photo column.
+
+Remove the boxed summary inside a boxed card. Name28–36px, price24–32px,
+section headings18–20px, body15–16px and secondary labels13–14px. Photo/price
+ground radius12px, buttons8px, consistent48px minimum action height; thumbnail
+frames64×80px. A single applicable price occupies its whole row; Both can show
+two amounts. Buy now is the main action, cart/chat are secondary. Cart feedback
+and its next-step link appear only after server acknowledgement; cart/chat do
+not reserve a book. Seller is in the reading column before commands, with no
+fabricated trust badge. Below850px, use one column; below420px stack secondary
+actions. Keep real images, safe guest return, owner/hold eligibility, error/retry,
+viewer keyboard/focus, command replay and authored motion/visibility semantics.

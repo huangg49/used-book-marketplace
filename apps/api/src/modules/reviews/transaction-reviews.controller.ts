@@ -16,6 +16,7 @@ import { ContractInput } from '../commands/contract-input.service.js';
 import { commandContext, commandResponse } from '../commands/command-http.js';
 import { ReviewsService } from './reviews.service.js';
 import { ReviewQueries } from './review-queries.service.js';
+import { DemoReviewTime } from './demo-review-time.js';
 
 @Controller()
 export class TransactionReviewsController {
@@ -23,7 +24,16 @@ export class TransactionReviewsController {
     private readonly service: ReviewsService,
     private readonly queries: ReviewQueries,
     private readonly input: ContractInput,
+    private readonly demoTime: DemoReviewTime,
   ) {}
+  @Post('transactions/Exchange/:id/reviews/demo-advance')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  advanceDemo(@Param('id') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response) {
+    return commandResponse(this.demoTime.advance(commandContext(this.input, req, res), this.input.uuid(id),
+      this.input.body('AdvanceDemoReviewTime', body)), res);
+  }
   @Get('me/transaction-reviews/:reviewId/target')
   @Roles('MEMBER')
   notificationTarget(@Param('reviewId') id:string,@Req() req:AuthenticatedRequest){

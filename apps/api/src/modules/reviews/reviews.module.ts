@@ -5,11 +5,12 @@ import { ReviewsController } from './reviews.controller.js';
 import { ReviewsService } from './reviews.service.js';
 import { ReviewQueries } from './review-queries.service.js';
 import { TransactionReviewsController } from './transaction-reviews.controller.js';
+import { DemoReviewTime } from './demo-review-time.js';
 
 @Module({
   imports: [DatabaseModule, CommandsModule],
   controllers: [ReviewsController, TransactionReviewsController],
-  providers: [ReviewsService, ReviewQueries],
+  providers: [ReviewsService, ReviewQueries, DemoReviewTime],
   exports: [ReviewsService, ReviewQueries],
 })
 export class ReviewsModule {}
