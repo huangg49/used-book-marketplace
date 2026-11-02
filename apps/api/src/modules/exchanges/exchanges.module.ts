@@ -1,4 +1,5 @@
 import { PurchasesModule } from '../purchases/purchases.module.js';
+import { MediaModule } from '../media/media.module.js';
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../../database/database.module.js';
 import { AuthModule } from '../auth/auth.module.js';
@@ -11,7 +12,7 @@ import { ExchangesService } from './exchanges.service.js';
 import { ExchangeExpiryWorker } from './exchange-expiry.service.js';
 
 @Module({
-  imports: [PurchasesModule, DatabaseModule, AuthModule, CommandsModule, ListingsModule, WalletModule],
+  imports: [MediaModule, PurchasesModule, DatabaseModule, AuthModule, CommandsModule, ListingsModule, WalletModule],
   controllers: [ExchangesController, ExchangeOperationsController],
   providers: [ExchangesService, ExchangeExpiryWorker],
   exports: [ExchangesService, ExchangeExpiryWorker],

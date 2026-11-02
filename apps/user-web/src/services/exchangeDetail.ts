@@ -4,8 +4,7 @@ import type { ExchangeDetail, ChatMessage } from "../lib/mock/exchangeDetail";
 import {
   exchangeActor,
   getExchange,
-  exchangeListing,
-  exchangeBook,
+  exchangeBooks,
   mapExchangeStatus,
   exchangeCommand,
 } from "./exchange";
@@ -14,38 +13,7 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
   const actor = exchangeActor();
   const ex = await getExchange(id);
   const initiator = ex.initiatorId === actor.id;
-  const initiatorIds =
-    ex.initiatorListingIds && ex.initiatorListingIds.length > 0
-      ? ex.initiatorListingIds
-      : [ex.initiatorListingId];
-  const recipientIds = [ex.recipientListingId];
-
-  const [initListings, recListings] = await Promise.all([
-    Promise.all(initiatorIds.map(exchangeListing)),
-    Promise.all(recipientIds.map(exchangeListing)),
-  ]);
-  const [giveBooks, receiveBooks] = await Promise.all([
-    Promise.all(
-      (initiator ? initiatorIds : recipientIds).map((bookId, idx) =>
-        exchangeBook(
-          bookId,
-          initiator ? initListings[idx] : recListings[idx],
-          initiator && initiatorIds.length === 1 ? ex.recipientDeposit : undefined,
-        ),
-      ),
-    ),
-    Promise.all(
-      (initiator ? recipientIds : initiatorIds).map((bookId, idx) =>
-        exchangeBook(
-          bookId,
-          initiator ? recListings[idx] : initListings[idx],
-          initiator
-            ? ex.initiatorDeposit
-            : (!initiator && initiatorIds.length === 1 ? ex.recipientDeposit : undefined),
-        ),
-      ),
-    ),
-  ]);
+  const { giveBooks, receiveBooks } = await exchangeBooks(ex, actor.id);
   return {
     id: ex.id,
     transactionCode: ex.id.slice(0, 8).toUpperCase(),
@@ -53,6 +21,7 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     createdAt: ex.createdAt,
     status: mapExchangeStatus(ex, actor.id),
     rawStatus: ex.status,
+    hasAgreementSnapshot: Boolean(ex.agreement),
     lastProposedById: ex.lastProposedById ?? ex.initiatorId,
     canViewerAccept:
       ex.status === "Proposed" &&
@@ -62,8 +31,7 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     partner: {
       id: initiator ? ex.recipientId : ex.initiatorId,
       username:
-        (initiator ? recListings[0] : initListings[0])?.seller.displayName ??
-        "Đối tác trao đổi",
+        (initiator ? ex.agreement?.recipientBook.ownerDisplayName : ex.agreement?.initiatorBooks[0]?.ownerDisplayName) ?? "Đối tác trao đổi",
     },
     receiveBooks,
     giveBooks,
@@ -92,6 +60,7 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     viewerFundingAmount:
       (initiator ? ex.initiatorDeposit : ex.recipientDeposit) +
       (ex.diffPayerId === actor.id ? ex.diffAmount : 0),
+    viewerDeposit: initiator ? ex.initiatorDeposit : ex.recipientDeposit,
     viewerShipping: {
       sentAt:
         (initiator ? ex.initiatorShippedAt : ex.recipientShippedAt) ??
@@ -212,16 +181,14 @@ export function counterExchange(
   id: string,
   revision: number,
   data: {
-    diffAmount: number;
-    diffPayer: "initiator" | "recipient" | "none";
+    listingIds: string[];
     deliveryAddressId?: string;
     note?: string;
   },
 ) {
   return exchangeCommand(`/exchanges/${id}/counter`, {
     expectedVersion: revision,
-    diffAmount: data.diffAmount,
-    diffPayer: data.diffPayer,
+    listingIds: data.listingIds,
     ...(data.deliveryAddressId ? { deliveryAddressId: data.deliveryAddressId } : {}),
     ...(data.note ? { note: data.note } : {}),
   });

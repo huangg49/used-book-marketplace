@@ -8,6 +8,8 @@ export interface ShippingConfirm {
 }
 
 export interface ExchangeDetail {
+  hasAgreementSnapshot?: boolean;
+  viewerDeposit?: number;
   id: string;
   transactionCode: string;
   createdAt: string;

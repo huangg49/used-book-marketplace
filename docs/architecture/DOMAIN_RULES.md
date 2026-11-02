@@ -55,6 +55,14 @@ review source and gate before changing or extending completion.
 
 ## Exchange hiện hành — deadline và nghĩa vụ cũ
 
+02/11/2026: [ADR0063](../adr/0063-exchange-agreement-snapshots.md), contract0.71:
+đề xuất mới cố định revision/nội dung/giá và ảnh tham chiếu trong agreement.
+Accept tái kiểm cả hai chủ/sách; lỗi thời hoặc thiếu snapshot đóng với
+Cancelled/ListingUnavailable trước reserve/tiền. Counter do bên đang phản hồi
+chọn sách của mình thay thế; server tính lại cọc/bù theo SRS, không nhập tiền
+tùy ý. Legacy thiếu snapshot không được dựng từ public listing hiện tại; giữ
+nguyên nghĩa vụ đã phát sinh. Migration0052 không backfill hoặc di chuyển tiền.
+
 01/11/2026: [ADR0057](../adr/0057-exchange-resolution-safety.md), contract0.64,
 chặn mọi quyết định phân xử tài chính mới qua route legacy. Không hoàn/tất toán
 hoặc mở sách trong ResolutionPending khi chưa có custody, allocation và quyết

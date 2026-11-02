@@ -1,5 +1,29 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## Exchange gói 1: cố định thỏa thuận và kiểm lại accept
+
+- Owner duyệt sau khảo sát. Branch `codex/exchange-agreement-snapshot`, base
+  `c7085d78`, subject `fix(exchange): freeze agreement terms and revalidate acceptance`.
+  [ADR0063](../adr/0063-exchange-agreement-snapshots.md),
+  [hành trình/source/evidence](../features/EXCHANGE_AGREEMENT_2026_11_02.md).
+- Proposal lưu snapshot, accept kiểm cả hai chủ/sách/revision/version. Lỗi thời
+  hoặc thiếu snapshot → persisted Cancelled/ListingUnavailable, không reserve/
+  thu tiền. Counter theo SRS chọn sách của người đang phản hồi, server tính
+  cọc/bù; web/RN đọc facts và ảnh participant, legacy không dựng lại từ bài hiện
+  tại. Giữ nghĩa vụ cũ; contract0.71/214operation, migration mới0052 chưa áp dụng
+  DB chính. Không sửa GHN, worker ship/receive, pending-intent toàn luồng hoặc gate.
+- PASS62E2E Exchange/conversation +1ca counter multi/funding bổ sung,1Mongo
+  upgrade;275web/223RN/106shared unit, API/RN/web/Admin types, API/web build,
+  Expo web32route và browser API/Mongo thật. Ảnh/storage fake, mail local/ví
+  simulator; native/human/live storage/CI mới NOT RUN. Detector82finding ở CSS
+  cũ, web lint2warning effect địa chỉ có sẵn; không gọi design critique sạch.
+- Fetch main mới `48ab01fa`/PR86 support. Chưa ghép/push/PR/merge/deploy; trước
+  publish phải giữ support/AI union và xử lý ADR0062 trùng local/main. Tiếp gói
+  phục hồi intent sau mất ACK; giao nhận từng chiều/expiry vẫn còn phát hiện mở.
+- QA DB/user/role của gói đã dọn về0, không còn DB QA khác; Docker mongo-test
+  đã dừng, port3009/3010/5194/8087/57017 đã đóng. Mongo chính27017 vẫn chạy,
+  không migrate/reset/seed hoặc dừng. 28file ngoài gói giữ nguyên checksum.
+
 ## Khảo sát core Exchange — chưa sửa nghiệp vụ
 
 - Owner yêu cầu chọn core tiếp theo và kiểm logic/UI. Branch

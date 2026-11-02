@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.69.0
+  version: 0.71.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -9445,12 +9445,52 @@ paths:
           $ref: "#/components/responses/ListingError"
         "500":
           $ref: "#/components/responses/ListingError"
+  /exchanges/{id}/books/{listingId}/photos/{mediaId}:
+    get:
+      operationId: getExchangeBookPhoto
+      x-locked-access: existing-obligations
+      security:
+        - bearerAuth: []
+      tags: [Exchanges]
+      summary: Read a frozen agreement photo as a current participant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: listingId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: mediaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Short-lived signed read of this agreement's photo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaRead"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
   /exchanges/{id}/accept:
     post:
       operationId: acceptExchange
+      description: Accept only the unchanged frozen proposal and current eligibility of both Members/books. Unavailable or unverifiable proposals return a persisted Exchange with status Cancelled and cancelReason ListingUnavailable, without reserving books or collecting money. Clients inspect the returned state; HTTP 200 alone does not mean accepted. Exact-key replay returns the original outcome after current authorization.
       tags:
         - Exchanges
-      description: Recipient accepts the exchange proposal.
       security:
         - bearerAuth: []
       parameters:
@@ -9494,9 +9534,9 @@ paths:
   /exchanges/{id}/counter:
     post:
       operationId: counterExchange
+      description: The responding Member selects replacement books they own. Both sides' current eligibility and the original frozen terms are checked before deriving a new revision and compensation. An unavailable original proposal closes as Cancelled/ListingUnavailable without reservations. Free-form monetary counteroffers are rejected.
       tags:
         - Exchanges
-      description: Submit a counter-proposal for the exchange.
       security:
         - bearerAuth: []
       parameters:
@@ -19043,6 +19083,76 @@ components:
         - Recipient
         - Staff
         - Both
+    ExchangeBookSnapshot:
+      type: object
+      additionalProperties: false
+      required: [listingId, listingVersion, revisionId, ownerId, ownerDisplayName, bookId, catalogRevisionId, book, condition, description, pages, coverNote, notes, accessories, readable, hasMissingPages, missingEssentialContent, exchangeValue, mediaIds]
+      properties:
+        listingId:
+          type: string
+          format: uuid
+        listingVersion:
+          type: integer
+          minimum: 1
+        revisionId:
+          type: string
+          format: uuid
+        ownerId:
+          type: string
+          format: uuid
+        ownerDisplayName:
+          type: string
+        bookId:
+          type: string
+          format: uuid
+        catalogRevisionId:
+          type: string
+          format: uuid
+        book:
+          $ref: "#/components/schemas/CatalogMetadata"
+        condition:
+          $ref: "#/components/schemas/BookCondition"
+        description:
+          type: string
+        pages:
+          type: string
+        coverNote:
+          type: string
+        notes:
+          type: string
+        accessories:
+          type: string
+        readable:
+          type: boolean
+        hasMissingPages:
+          type: boolean
+        missingEssentialContent:
+          type: boolean
+        exchangeValue:
+          type: integer
+          minimum: 1
+        mediaIds:
+          type: array
+          minItems: 1
+          maxItems: 8
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+    ExchangeAgreement:
+      type: object
+      additionalProperties: false
+      description: Frozen books and values of the current proposal revision; null for historical records whose original content cannot be proved. New acceptance never reconstructs a missing agreement from current listings.
+      required: [initiatorBooks, recipientBook]
+      properties:
+        initiatorBooks:
+          type: array
+          minItems: 1
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/ExchangeBookSnapshot"
+        recipientBook:
+          $ref: "#/components/schemas/ExchangeBookSnapshot"
     Exchange:
       type: object
       additionalProperties: false
@@ -19061,6 +19171,10 @@ components:
         - createdAt
         - updatedAt
       properties:
+        agreement:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeAgreement"
+            - type: "null"
         id:
           type: string
           format: uuid
@@ -19464,24 +19578,20 @@ components:
     CounterExchangeProposal:
       type: object
       additionalProperties: false
-      required:
-        - expectedVersion
-        - diffAmount
-        - diffPayer
+      description: The responding Member replaces their own books; the server derives both deposits and compensation from reviewed values. Recipient replaces exactly one listing, initiator one to five. The other party's frozen books must remain eligible and unchanged.
+      required: [expectedVersion, listingIds]
       properties:
         expectedVersion:
           type: integer
           minimum: 1
-        diffAmount:
-          type: integer
-          minimum: 0
-          maximum: 10000000
-        diffPayer:
-          type: string
-          enum:
-            - initiator
-            - recipient
-            - none
+        listingIds:
+          type: array
+          minItems: 1
+          maxItems: 5
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
         deliveryAddressId:
           type: string
           format: uuid

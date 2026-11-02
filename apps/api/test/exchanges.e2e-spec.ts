@@ -285,8 +285,10 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     // five-listing quota or couple its wallet funding to test execution order.
     user1 = await reader(['MEMBER']);
     user2 = await reader(['MEMBER']);
-    await topupUser(user1, 1000000);
-    await topupUser(user2, 1000000);
+    // Keep the complete expanded suite within the finite 100M simulator capital;
+    // 750k covers the largest obligation without altering ledger/reference data.
+    await topupUser(user1, 750000);
+    await topupUser(user2, 750000);
   });
 
   afterAll(async () => {
@@ -393,6 +395,130 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
     await app?.close();
     if (originalSecret === undefined) delete process.env.PAYMENT_SIMULATOR_SECRET;
     else process.env.PAYMENT_SIMULATOR_SECRET = originalSecret;
+  });
+
+  describe('frozen exchange agreement', () => {
+    async function propose(aValue = 100000, bValue = 150000) {
+      const a = await createApprovedListing(user1, aValue);
+      const b = await createApprovedListing(user2, bValue);
+      const response = await post('/exchanges', { initiatorListingId: a.listingId, recipientListingId: b.listingId }, user1).expect(201);
+      return { a, b, exchange: response.body };
+    }
+
+    it('pins books and server-computed money through replacement, acceptance and replay', async () => {
+      const { a, b, exchange } = await propose();
+      expect(exchange.agreement.initiatorBooks[0]).toMatchObject({ listingId: a.listingId, listingVersion: a.version, exchangeValue: 100000, condition: 'Good' });
+      expect(exchange.agreement.recipientBook).toMatchObject({ listingId: b.listingId, exchangeValue: 150000 });
+      expect(exchange.agreement.recipientBook.book.title).toBeTruthy();
+      expect((await db.c.listings.findOne({ _id: a.listingId }))?.trade).toBe('Available');
+      await post('/exchanges/' + exchange.id + '/counter', { expectedVersion: 1, diffAmount: 0, diffPayer: 'none' }, user2).expect(422);
+      await post('/exchanges/' + exchange.id + '/counter', { expectedVersion: 1, listingIds: [a.listingId] }, user1).expect(409);
+      await post('/exchanges/' + exchange.id + '/counter', { expectedVersion: 1, listingIds: [a.listingId] }, user2).expect(409);
+      const replacement = await createApprovedListing(user2, 200000);
+      const counterBody = { expectedVersion: 1, listingIds: [replacement.listingId] };
+      const key = randomUUID();
+      const counter = (await post('/exchanges/' + exchange.id + '/counter', counterBody, user2, key).expect(200)).body;
+      expect(counter).toMatchObject({ revision: 2, recipientListingId: replacement.listingId, initiatorDeposit: 200000, recipientDeposit: 100000, diffAmount: 100000, diffPayerId: user1.id, lastProposedById: user2.id });
+      await post('/exchanges/' + exchange.id + '/accept', { revision: 1 }, user1).expect(409);
+      const acceptKey = randomUUID();
+      const accepted = (await post('/exchanges/' + exchange.id + '/accept', { revision: 2 }, user1, acceptKey).expect(200)).body;
+      expect(accepted.status).toBe('AcceptedAwaitingFunding');
+      expect(accepted.agreement).toEqual(counter.agreement);
+      expect((await post('/exchanges/' + exchange.id + '/accept', { revision: 2 }, user1, acceptKey).expect(200)).body).toEqual(accepted);
+      expect((await post('/exchanges/' + exchange.id + '/counter', counterBody, user2, key).expect(200)).body).toEqual(counter);
+      await post('/exchanges/' + exchange.id + '/counter', { ...counterBody, listingIds: [b.listingId] }, user2, key).expect(409);
+      expect((await db.c.listings.findOne({ _id: b.listingId }))?.trade).toBe('Available');
+      expect((await db.c.listings.findOne({ _id: a.listingId }))?.trade).toBe('Reserved');
+      expect((await db.c.listings.findOne({ _id: replacement.listingId }))?.trade).toBe('Reserved');
+      const mediaId = counter.agreement.recipientBook.mediaIds[0];
+      const photoPath = '/exchanges/' + exchange.id + '/books/' + replacement.listingId + '/photos/' + mediaId;
+      await get(photoPath, user1).expect(200);
+      const outsider = await reader();
+      await get(photoPath, outsider).expect(404);
+      await get(photoPath).expect(401);
+      await get('/exchanges/' + exchange.id + '/books/' + b.listingId + '/photos/' + mediaId, user1).expect(404);
+      // A new public state never changes the copied facts or participant photo scope.
+      await db.c.listings.updateOne({ _id: replacement.listingId }, { $set: { visibility: 'Hidden' } });
+      expect((await get('/exchanges/' + exchange.id, user1).expect(200)).body.agreement).toEqual(counter.agreement);
+      await get(photoPath, user1).expect(200);
+      await db.c.auth_sessions.updateOne({ _id: user1.sessionId }, { $set: { revokedAt: new Date() } });
+      await get(photoPath, user1).expect(401);
+    });
+
+    it('lets the initiator respond with multiple owned replacement books and recalculates the payer', async () => {
+      const { a, b, exchange } = await propose();
+      const replacementB = await createApprovedListing(user2, 200000);
+      const replacementA1 = await createApprovedListing(user1, 150000);
+      const replacementA2 = await createApprovedListing(user1, 100000);
+      await post('/exchanges/' + exchange.id + '/counter', { expectedVersion: 1, listingIds: [replacementB.listingId] }, user2).expect(200);
+      await post('/exchanges/' + exchange.id + '/counter', { expectedVersion: 2, listingIds: [b.listingId] }, user2).expect(409);
+      await post('/exchanges/' + exchange.id + '/counter', { expectedVersion: 2, listingIds: [replacementA1.listingId, replacementA1.listingId] }, user1).expect(422);
+      const second = (await post('/exchanges/' + exchange.id + '/counter', { expectedVersion: 2, listingIds: [replacementA1.listingId, replacementA2.listingId] }, user1).expect(200)).body;
+      expect(second).toMatchObject({ revision: 3, initiatorListingIds: [replacementA1.listingId, replacementA2.listingId], initiatorDeposit: 200000, recipientDeposit: 250000, diffAmount: 50000, diffPayerId: user2.id });
+      await post('/exchanges/' + exchange.id + '/accept', { revision: 2 }, user2).expect(409);
+      const accepted = (await post('/exchanges/' + exchange.id + '/accept', { revision: 3 }, user2).expect(200)).body;
+      expect(accepted.status).toBe('AcceptedAwaitingFunding');
+      expect(accepted.agreement).toEqual(second.agreement);
+      for (const listingId of [a.listingId, b.listingId]) expect((await db.c.listings.findOne({ _id: listingId }))?.trade).toBe('Available');
+      for (const listingId of [replacementA1.listingId, replacementA2.listingId, replacementB.listingId]) expect((await db.c.listings.findOne({ _id: listingId }))?.trade).toBe('Reserved');
+      await post('/exchanges/' + exchange.id + '/funding', {}, user1).expect(200);
+      const funded = (await post('/exchanges/' + exchange.id + '/funding', {}, user2).expect(200)).body;
+      expect(funded.status).toBe('Preparing');
+      expect((await get('/me/wallet', user1).expect(200)).body.available).toBe(550000);
+      expect((await get('/me/wallet', user2).expect(200)).body.available).toBe(450000);
+      expect((await reconcile()).balanced).toBe(true);
+    });
+
+    it.each(['PendingReview', 'Approved'] as const)('closes a repriced %s proposal without reserving either book', async (moderation) => {
+      const { a, b, exchange } = await propose();
+      const current = (await get('/me/listings/' + b.listingId, user2).expect(200)).body;
+      const revised = (await post('/listings/' + b.listingId + '/revision', { expectedVersion: current.version, ownershipDeclared: true, content: { ...current.currentRevision.content, exchangeValue: 600000 } }, user2).expect(200)).body;
+      if (moderation === 'Approved') await post('/operations/listings/' + b.listingId + '/decision', { expectedVersion: revised.version, revisionId: revised.revisionId, decision: 'Approve', checklist }, staff).expect(200);
+      const key = randomUUID();
+      const result = (await post('/exchanges/' + exchange.id + '/accept', { revision: 1 }, user2, key).expect(200)).body;
+      expect(result).toMatchObject({ status: 'Cancelled', cancelReason: 'ListingUnavailable', revision: 2 });
+      expect(result.agreement.recipientBook.exchangeValue).toBe(150000);
+      expect((await post('/exchanges/' + exchange.id + '/accept', { revision: 1 }, user2, key).expect(200)).body).toEqual(result);
+      for (const listingId of [a.listingId, b.listingId]) expect((await db.c.listings.findOne({ _id: listingId }))?.trade).toBe('Available');
+      expect(await db.c.ledger_journals.countDocuments({ orderId: { $in: [(await db.c.exchanges.findOne({ _id: exchange.id }))!.initiatorOrderId] } })).toBe(0);
+    });
+
+    it.each(['Hidden', 'LOCKED', 'RESTRICTED'] as const)('rejects new acceptance when the other side becomes %s', async (condition) => {
+      const { a, b, exchange } = await propose();
+      if (condition === 'Hidden') await db.c.listings.updateOne({ _id: a.listingId }, { $set: { visibility: 'Hidden' }, $inc: { version: 1 } });
+      else await db.c.users.updateOne({ _id: user1.id }, { $set: { status: condition } });
+      const result = (await post('/exchanges/' + exchange.id + '/accept', { revision: 1 }, user2).expect(200)).body;
+      expect(result).toMatchObject({ status: 'Cancelled', cancelReason: 'ListingUnavailable' });
+      for (const listingId of [a.listingId, b.listingId]) expect((await db.c.listings.findOne({ _id: listingId }))?.trade).toBe('Available');
+    });
+
+    it('keeps legacy obligations but never invents a missing agreement for a new acceptance', async () => {
+      const { exchange } = await propose();
+      await db.c.exchanges.updateOne({ _id: exchange.id }, { $unset: { agreement: '' } });
+      expect((await get('/exchanges/' + exchange.id, user1).expect(200)).body.agreement).toBeNull();
+      expect((await post('/exchanges/' + exchange.id + '/accept', { revision: 1 }, user2).expect(200)).body.status).toBe('Cancelled');
+      const next = await propose();
+      await post('/exchanges/' + next.exchange.id + '/accept', { revision: 1 }, user2).expect(200);
+      await db.c.exchanges.updateOne({ _id: next.exchange.id }, { $unset: { agreement: '' } });
+      await topupUser(user1);
+      expect((await post('/exchanges/' + next.exchange.id + '/funding', {}, user1).expect(200)).body.initiatorFundedAt).toBeTruthy();
+    });
+
+    it('rechecks the book version after real lock contention instead of accepting stale facts', async () => {
+      const { a, b, exchange } = await propose();
+      const gate = await Gate.lock(db.client, 'listings', [a.listingId]);
+      try {
+        const pending = post('/exchanges/' + exchange.id + '/accept', { revision: 1 }, user2).then((r) => r);
+        await gate.contended();
+        // Concurrent owner state change committed before the waiting command resumes.
+        await gate.db.collection('listings').updateOne({ _id: a.listingId as never }, { $set: { visibility: 'Hidden' }, $inc: { version: 1 } }, { session: gate.session });
+        await gate.commit();
+        const result = await pending;
+        expect(result.status).toBe(200);
+        expect(result.body.status).toBe('Cancelled');
+        expect((await db.c.listings.findOne({ _id: b.listingId }))?.trade).toBe('Available');
+      } finally { await gate.close(); }
+    });
   });
 
   it('completes the full exchange lifecycle: proposal -> accept -> fund -> ship -> receive -> inspection -> settlement', async () => {
@@ -683,6 +809,10 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       $set: { inspectionDeadline: new Date(Date.parse(second.recipientReceivedAt) + 48 * 3600000) },
     });
     const database = db.client.db();
+    // This test deliberately reapplies the frozen 0039 validator. Simulate its
+    // historical shape, not documents containing fields introduced in 0052.
+    const agreements = await db.c.exchanges.find({ agreement: { $ne: null } }, { projection: { _id: 1, agreement: 1 } }).toArray();
+    await db.c.exchanges.updateMany({}, { $unset: { agreement: '' } });
     try {
       const checksums = await database.collection('_migrations').find().sort({ _id: 1 }).toArray();
       const postings = await db.c.ledger_entries.countDocuments();
@@ -716,6 +846,7 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       // The frozen legacy migration replaces the validator. Restore the current
       // schema even after an assertion fails, without replaying any backfill.
       await applyCollectionSpecs(database, currentCollections().filter((spec) => spec.name === 'exchanges'));
+      for (const row of agreements) await db.c.exchanges.updateOne({ _id: row._id }, { $set: { agreement: row.agreement } });
     }
   });
 

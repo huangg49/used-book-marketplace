@@ -91,6 +91,13 @@ AI tự duyệt thêm0050 và collection mới: dừng API/worker, `pnpm db:migr
 `pnpm db:bootstrap`. Cờ `LISTING_AUTO_REVIEW_ENABLED` mặc định tắt;
 [ADR0061](../adr/0061-ai-listing-auto-review.md).
 
+Exchange thêm0052 để lưu agreement sách/giá đã thỏa thuận; không backfill lịch sử
+hoặc đổi tiền. Dừng API/worker cũ, migrate rồi nâng API và web/RN cùng gói:
+counter mới nhận listingIds, client gửi tiền bù tùy ý sẽ bị422. Chưa chạy trên DB
+chính; cần ghép main mới trước publish. [ADR0063](../adr/0063-exchange-agreement-snapshots.md),
+[evidence/giới hạn](../features/EXCHANGE_AGREEMENT_2026_11_02.md). Không cần seed hoặc
+thêm quyền DB chỉ vì0052; các migration khác vẫn theo hướng dẫn riêng.
+
 Gói đường nhanh thêm0043/sourceGroup: dừng API/worker và migrate, cập nhật web/RN/
 Admin cùng enum DuplicateSource. Không backfill nguồn từ nhãn; legacy thiếu nguồn
 gốc giữ Limited khi đánh giá mới. Import mặc định dry-run, nguồn không website

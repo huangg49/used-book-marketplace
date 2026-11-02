@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   AppText,
   Button,
@@ -26,7 +26,6 @@ import {
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import { exchangeSchema } from "./contracts";
-import { publicListing } from "../shelf/contracts";
 import { ExchangeProposalCard } from "./exchange-proposal-card";
 import { ExchangeActionsCard } from "./exchange-actions-card";
 import { ExchangeProgressStepper } from "./exchange-progress-stepper";
@@ -50,40 +49,13 @@ export function ExchangeDetailScreen() {
 
   // 1. Fetch Exchange Data
   const exchangeQuery = useQuery({
-    queryKey: ["exchange", id],
+    queryKey: ["exchange", id, currentUserId],
     queryFn: () => client.request(`/exchanges/${id}`, exchangeSchema),
     enabled: Boolean(id) && state.status === "authenticated" && foreground,
     refetchInterval: 5000,
   });
 
   const exchange = exchangeQuery.data;
-
-  // 2. Fetch Initiator & Recipient Public Listings to get cover photos and metadata
-  const initiatorListingIds =
-    exchange?.initiatorListingIds && exchange.initiatorListingIds.length > 0
-      ? exchange.initiatorListingIds
-      : exchange?.initiatorListingId
-        ? [exchange.initiatorListingId]
-        : [];
-
-  const initiatorListingQueries = useQueries({
-    queries: initiatorListingIds.map((lid) => ({
-      queryKey: ["public-listing", lid],
-      queryFn: () => client.publicRequest(`/listings/${lid}`, publicListing),
-      enabled: Boolean(lid) && foreground,
-      staleTime: 60000,
-    })),
-  });
-
-  const initiatorListings = initiatorListingQueries.map((q) => q.data ?? null);
-  const primaryInitiatorListing = initiatorListings[0] ?? null;
-
-  const recipientListingQuery = useQuery({
-    queryKey: ["public-listing", exchange?.recipientListingId],
-    queryFn: () => client.publicRequest(`/listings/${exchange!.recipientListingId}`, publicListing),
-    enabled: Boolean(exchange?.recipientListingId) && foreground,
-    staleTime: 60000,
-  });
 
   if (state.status !== "authenticated") {
     return (
@@ -225,9 +197,7 @@ export function ExchangeDetailScreen() {
   const partnerAddressName = isInitiator
     ? exchange.recipientAddress?.recipientName
     : exchange.initiatorAddress?.recipientName;
-  const partnerName = isInitiator
-    ? recipientListingQuery.data?.seller.displayName ?? partnerAddressName ?? "Đối tác"
-    : primaryInitiatorListing?.seller.displayName ?? partnerAddressName ?? "Đối tác trao đổi";
+  const partnerName = (isInitiator ? exchange.agreement?.recipientBook.ownerDisplayName : exchange.agreement?.initiatorBooks[0]?.ownerDisplayName) ?? partnerAddressName ?? "Đối tác trao đổi";
 
   const isReadOnly = ["Completed", "Cancelled"].includes(exchange.status);
 
@@ -356,9 +326,6 @@ export function ExchangeDetailScreen() {
           <ExchangeProposalCard
             exchange={exchange}
             isInitiator={isInitiator}
-            initiatorListings={initiatorListings}
-            initiatorListing={primaryInitiatorListing}
-            recipientListing={recipientListingQuery.data}
           />
 
           {/* 4. TIẾN TRÌNH GIAO NHẬN 2 CHIỀU ĐỘC LẬP (Shipping Tracking 2-Way) */}

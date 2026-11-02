@@ -1,5 +1,8 @@
 # Khảo sát core đổi sách — 02/11/2026
 
+Gói 1 được triển khai sau khảo sát ở [bàn giao thỏa thuận Exchange](EXCHANGE_AGREEMENT_2026_11_02.md).
+Báo cáo bên dưới giữ bằng chứng tại source khảo sát, không thay trạng thái gói mới.
+
 ## Kết luận và phạm vi
 
 Core được chọn sau hành trình mua bán là **Exchange: hai Member đổi sách**.

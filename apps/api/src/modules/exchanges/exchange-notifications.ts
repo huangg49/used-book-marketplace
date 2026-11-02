@@ -16,24 +16,10 @@ export type ExchangeNotificationKind =
   | 'ExchangeRejected'
   | 'ExchangeDisputed';
 
-async function getListingTitle(tx: Tx, listingId: string): Promise<string> {
-  const listing = await tx.c.listings.findOne({ _id: listingId });
-  if (!listing?.currentRevisionId) return 'Sách';
-  const rev = await tx.c.listing_revisions.findOne({ _id: listing.currentRevisionId });
-  if (!rev?.bookId) return 'Sách';
-  const book = await tx.c.catalog_books.findOne({ _id: rev.bookId });
-  if (book?.currentRevisionId) {
-    const catRev = await tx.c.catalog_revisions.findOne({ _id: book.currentRevisionId });
-    if (catRev?.title) return catRev.title;
-  }
-  if (book?.titleKey) return book.titleKey;
-  return 'Sách';
-}
-
 async function exchangeContext(tx: Tx, ex: ExchangeDoc) {
   const [initTitleRaw, recTitleRaw, initiator, recipient] = await Promise.all([
-    getListingTitle(tx, ex.initiatorListingId),
-    getListingTitle(tx, ex.recipientListingId),
+    Promise.resolve(ex.agreement?.initiatorBooks[0]?.book.title ?? 'Sách trong hồ sơ cũ'),
+    Promise.resolve(ex.agreement?.recipientBook.book.title ?? 'Sách trong hồ sơ cũ'),
     tx.c.users.findOne({ _id: ex.initiatorId }),
     tx.c.users.findOne({ _id: ex.recipientId }),
   ]);

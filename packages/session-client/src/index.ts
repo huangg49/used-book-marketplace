@@ -9,3 +9,4 @@ export * from "./catalog-recovery";
 export * from "./assist-fast-paths";
 export * from './account-commands';
 export * from './cart';
+export { exchangeAgreementSchema, exchangeBookSnapshotSchema, type ExchangeBookSnapshot } from './exchange-agreement';

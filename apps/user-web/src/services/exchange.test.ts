@@ -64,6 +64,35 @@ beforeEach(() => {
   mock.listener();
 });
 describe("exchange integration", () => {
+  it("renders frozen agreement values without fetching today's public listings", async () => {
+    const book = (id: string, ownerId: string, value: number) => ({
+      listingId: id, ownerId, ownerDisplayName: 'Đối tác QA', listingVersion: 5, revisionId: id, bookId: id, catalogRevisionId: id,
+      book: { title: 'Ấn bản đã thỏa thuận', authors: ['Tác giả'], publisher: null, publicationYear: 2020, language: 'vi', edition: 'Lần 1', category: 'Văn học', isbn: null },
+      condition: 'Good' as const, description: 'Mô tả gốc', pages: 'Đủ', coverNote: '', notes: '', accessories: '',
+      readable: true, hasMissingPages: false, missingEssentialContent: false, exchangeValue: value, mediaIds: [id],
+    });
+    const agreement = { initiatorBooks: [book(row.initiatorListingId, row.initiatorId, 100000)], recipientBook: book(row.recipientListingId, row.recipientId, 150000) };
+    mock.request.mockImplementation((path) => path.includes('/photos/') ? Promise.resolve({ url: 'https://storage.test/frozen.png' }) : Promise.resolve({ ...row, agreement }));
+    mock.publicListing.mockResolvedValue({ exchangeValue: 600000 });
+    const detail = await getExchangeDetail(row.id);
+    expect(detail.receiveBooks[0]).toMatchObject({ title: 'Ấn bản đã thỏa thuận', price: 150000 });
+    expect(detail.giveBooks[0].price).toBe(100000);
+    expect(detail.moneyAmount).toBe(50000);
+    expect(detail.viewerDeposit).toBe(150000);
+    expect(detail.viewerFundingAmount).toBe(200000);
+    expect(mock.publicListing).not.toHaveBeenCalled();
+    expect(mock.photo).not.toHaveBeenCalled();
+    expect(mock.request.mock.calls.filter(([path]) => path.includes('/photos/'))).toHaveLength(2);
+  });
+
+  it("labels legacy books without replacing them with today's public content", async () => {
+    mock.request.mockResolvedValue({ ...row, agreement: null });
+    const detail = await getExchangeDetail(row.id);
+    expect(detail.hasAgreementSnapshot).toBe(false);
+    expect(detail.receiveBooks[0].title).toContain('thiếu bản chụp');
+    expect(detail.receiveBooks[0].price).toBe(150000);
+    expect(mock.publicListing).not.toHaveBeenCalled();
+  });
   it("keeps authored text as a member message even when it contains system-like prefixes", async () => {
     mock.request.mockResolvedValue({ items: [
       { id: "message", exchangeId: row.id, senderId: row.recipientId, body: "[Hệ thống] nội dung do thành viên nhập", sentAt: "2026-10-18T10:00:00Z" },
@@ -195,7 +224,7 @@ describe("exchange integration", () => {
       "WAITING_YOU_CONFIRM",
     );
   });
-  it("populates multiple giveBooks when initiator offers multiple books", async () => {
+  it("keeps legacy multi-book identities without inventing each book's historical price", async () => {
     const multiRow: Exchange = {
       ...row,
       initiatorListingIds: [
@@ -218,9 +247,10 @@ describe("exchange integration", () => {
     expect(detail.giveBooks).toHaveLength(2);
     expect(detail.receiveBooks).toHaveLength(1);
     expect(detail.giveBooks[0].id).toBe("44444444-4444-4444-8444-444444444444");
-    expect(detail.giveBooks[0].price).toBe(50000);
+    expect(detail.giveBooks[0].price).toBeUndefined();
     expect(detail.giveBooks[1].id).toBe("66666666-6666-4666-8666-666666666666");
-    expect(detail.giveBooks[1].price).toBe(50000);
-    expect(detail.receiveBooks[0].price).toBe(50000);
+    expect(detail.giveBooks[1].price).toBeUndefined();
+    expect(detail.receiveBooks[0].price).toBe(150000);
+    expect(mock.publicListing).not.toHaveBeenCalled();
   });
 });

@@ -1,3 +1,4 @@
+import { ExchangeCounterForm } from './exchange-counter-form';
 import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
@@ -17,7 +18,7 @@ import {
 } from "../../core/ui";
 import { formatVnd } from "../../core/ui/format";
 import type { Exchange } from "./contracts";
-import { formatCancelReason } from "./contracts";
+import { exchangeSchema, formatCancelReason } from "./contracts";
 import { ExchangeReviewsCard } from "./exchange-reviews-card";
 import {
   addressBook,
@@ -74,19 +75,6 @@ export function ExchangeActionsCard({
 
   // Counter offer state
   const [counterModalOpen, setCounterModalOpen] = useState(false);
-  const [counterSide, setCounterSide] = useState<"me" | "partner" | "none">(
-    exchange.diffAmount === 0 || !exchange.diffPayerId
-      ? "none"
-      : (isInitiator && exchange.diffPayerId === exchange.initiatorId) ||
-          (!isInitiator && exchange.diffPayerId === exchange.recipientId)
-        ? "me"
-        : "partner",
-  );
-  const [counterAmountStr, setCounterAmountStr] = useState(
-    exchange.diffAmount ? String(exchange.diffAmount) : "0",
-  );
-  const [counterNote, setCounterNote] = useState("");
-
   // Shipment state
   const [shipModalOpen, setShipModalOpen] = useState(false);
   const [shipMethod, setShipMethod] = useState<"carrier" | "direct">("carrier");
@@ -113,7 +101,6 @@ export function ExchangeActionsCard({
     queryFn: () => client.request("/me/addresses", addressBook),
     enabled:
       state.status === "authenticated" &&
-      !isInitiator &&
       exchange.status === "Proposed",
   });
 
@@ -235,35 +222,10 @@ export function ExchangeActionsCard({
   });
 
   const counterMutation = useMutation({
-    mutationFn: () => {
-      let diffPayer: "initiator" | "recipient" | "none" = "none";
-      let diffAmount = 0;
-
-      if (counterSide === "me") {
-        diffPayer = isInitiator ? "initiator" : "recipient";
-        diffAmount = Math.max(
-          0,
-          parseInt(counterAmountStr.replace(/\D/g, ""), 10) || 0,
-        );
-      } else if (counterSide === "partner") {
-        diffPayer = isInitiator ? "recipient" : "initiator";
-        diffAmount = Math.max(
-          0,
-          parseInt(counterAmountStr.replace(/\D/g, ""), 10) || 0,
-        );
-      }
-
-      return client.request(`/exchanges/${exchange.id}/counter`, z.unknown(), {
-        method: "POST",
-        headers: { "Idempotency-Key": Crypto.randomUUID() },
-        body: JSON.stringify({
-          expectedVersion: exchange.revision,
-          diffAmount,
-          diffPayer,
-          note: counterNote.trim() || undefined,
-        }),
-      });
-    },
+    mutationFn: ({ listingIds, note }: { listingIds: string[]; note: string }) => client.request('/exchanges/' + exchange.id + '/counter', exchangeSchema, {
+      method: 'POST', headers: { 'Idempotency-Key': Crypto.randomUUID() },
+      body: JSON.stringify({ expectedVersion: exchange.revision, listingIds, note: note.trim() || undefined }),
+    }),
     onSuccess: () => {
       setCounterModalOpen(false);
       invalidate();
@@ -557,7 +519,7 @@ export function ExchangeActionsCard({
               </View>
               <AppText style={styles.hintText}>
                 Đối tác đề nghị trao đổi sách với bạn. Bạn có thể đồng ý, yêu
-                cầu đổi giá bù, hoặc từ chối hoán đổi này.
+                chọn sách của mình thay thế, hoặc từ chối đề nghị.
               </AppText>
               <View style={styles.rowTwoButtons}>
                 <View style={{ flex: 1 }}>
@@ -586,7 +548,7 @@ export function ExchangeActionsCard({
                 </View>
               </View>
               <Button
-                title="🏷️ Đề xuất lại mức bù tiền"
+                title="Đề xuất sách thay thế"
                 secondary
                 busy={isBusy}
                 onPress={() => setCounterModalOpen(true)}
@@ -597,22 +559,16 @@ export function ExchangeActionsCard({
               <View style={styles.proposalNoticeBox}>
                 <Icon name="tag" size={14} color={stitchTokens.wineDark} />
                 <AppText style={styles.proposalNoticeText}>
-                  Mức bù bạn đề xuất:{" "}
+                  Tiền bù tính từ sách:{" "}
                   <AppText style={{ fontWeight: "700" }}>
                     {diffPayerLabel}
                   </AppText>
                 </AppText>
               </View>
               <AppText style={styles.hintText}>
-                Đề nghị đã được gửi đến đối tác. Bạn có thể điều chỉnh lại tiền
-                bù hoặc rút lại đề nghị bất kỳ lúc nào nếu đổi ý.
+                Đề nghị đã gửi, sách chưa được giữ. Đang chờ đối tác phản hồi;
+                bạn có thể rút đề nghị nếu đổi ý.
               </AppText>
-              <Button
-                title="🏷️ Thay đổi mức bù tiền"
-                secondary
-                busy={isBusy}
-                onPress={() => setCounterModalOpen(true)}
-              />
               <Button
                 title="Hủy đề nghị đổi sách"
                 secondary
@@ -1343,184 +1299,16 @@ export function ExchangeActionsCard({
         </View>
       </AppModal>
 
-      {/* Modal 2: Đề xuất lại mức bù tiền */}
-      <AppModal
-        visible={counterModalOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setCounterModalOpen(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-              >
-                <Icon name="tag" size={18} color={stitchTokens.wineDark} />
-                <AppText style={styles.modalTitle}>
-                  Đề xuất lại mức bù tiền
-                </AppText>
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Đóng modal"
-                onPress={() => setCounterModalOpen(false)}
-              >
-                <Icon name="close" size={20} color={stitchTokens.darkWood} />
-              </Pressable>
-            </View>
-
-            <AppText style={styles.modalSub}>
-              Chọn bên chịu tiền bù chênh lệch giá trị sách và mức tiền mong
-              muốn:
-            </AppText>
-
-            {/* Chọn ai bù */}
-            <View style={styles.sideOptionGroup}>
-              <Pressable
-                style={[
-                  styles.sideOptionItem,
-                  counterSide === "none" && styles.sideOptionItemActive,
-                ]}
-                onPress={() => {
-                  setCounterSide("none");
-                  setCounterAmountStr("0");
-                }}
-              >
-                <View
-                  style={[
-                    styles.radioCircle,
-                    counterSide === "none" && styles.radioCircleActive,
-                  ]}
-                />
-                <View style={{ flex: 1 }}>
-                  <AppText style={styles.sideOptionTitle}>
-                    Đổi ngang giá
-                  </AppText>
-                  <AppText style={styles.sideOptionDesc}>
-                    Hai bên bằng giá, không ai bù tiền
-                  </AppText>
-                </View>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.sideOptionItem,
-                  counterSide === "me" && styles.sideOptionItemActive,
-                ]}
-                onPress={() => setCounterSide("me")}
-              >
-                <View
-                  style={[
-                    styles.radioCircle,
-                    counterSide === "me" && styles.radioCircleActive,
-                  ]}
-                />
-                <View style={{ flex: 1 }}>
-                  <AppText style={styles.sideOptionTitle}>
-                    Tôi sẽ bù thêm tiền cho đối tác
-                  </AppText>
-                  <AppText style={styles.sideOptionDesc}>
-                    Sách của đối tác có giá trị cao hơn
-                  </AppText>
-                </View>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.sideOptionItem,
-                  counterSide === "partner" && styles.sideOptionItemActive,
-                ]}
-                onPress={() => setCounterSide("partner")}
-              >
-                <View
-                  style={[
-                    styles.radioCircle,
-                    counterSide === "partner" && styles.radioCircleActive,
-                  ]}
-                />
-                <View style={{ flex: 1 }}>
-                  <AppText style={styles.sideOptionTitle}>
-                    Đối tác sẽ bù thêm tiền cho tôi
-                  </AppText>
-                  <AppText style={styles.sideOptionDesc}>
-                    Sách của tôi có giá trị cao hơn
-                  </AppText>
-                </View>
-              </Pressable>
-            </View>
-
-            {/* Nhập số tiền nếu không phải 'none' */}
-            {counterSide !== "none" && (
-              <View style={styles.inputSection}>
-                <AppText style={styles.inputLabel}>
-                  Số tiền bù chênh lệch (VNĐ):
-                </AppText>
-                <AppTextInput
-                  accessibilityLabel="Số tiền bù chênh lệch"
-                  style={styles.amountInput}
-                  keyboardType="numeric"
-                  value={counterAmountStr}
-                  onChangeText={(val) =>
-                    setCounterAmountStr(val.replace(/\D/g, ""))
-                  }
-                  placeholder="Ví dụ: 10000"
-                  placeholderTextColor={stitchTokens.subtleGray}
-                />
-
-                <View style={styles.presetRow}>
-                  {[10000, 20000, 30000, 50000].map((preset) => (
-                    <Pressable
-                      key={preset}
-                      style={styles.presetChip}
-                      onPress={() => setCounterAmountStr(String(preset))}
-                    >
-                      <AppText style={styles.presetChipText}>
-                        +{preset.toLocaleString("vi-VN")} ₫
-                      </AppText>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {/* Lời nhắn kèm theo */}
-            <View style={styles.inputSection}>
-              <AppText style={styles.inputLabel}>
-                Lời nhắn cho đối tác (tùy chọn):
-              </AppText>
-              <AppTextInput
-                accessibilityLabel="Lời nhắn cho đối tác"
-                style={styles.noteInput}
-                value={counterNote}
-                onChangeText={setCounterNote}
-                placeholder="Ví dụ: Sách mình là bản bìa cứng mới 99% nhé..."
-                placeholderTextColor={stitchTokens.subtleGray}
-                maxLength={300}
-                multiline
-              />
-            </View>
-
-            {/* Action buttons */}
-            <View style={styles.modalActionRow}>
-              <View style={{ flex: 1 }}>
-                <Button
-                  title="Hủy"
-                  secondary
-                  onPress={() => setCounterModalOpen(false)}
-                />
-              </View>
-              <View style={{ flex: 1.5 }}>
-                <Button
-                  title="Gửi đề xuất bù mới"
-                  wine
-                  busy={counterMutation.isPending}
-                  onPress={() => counterMutation.mutate()}
-                />
-              </View>
-            </View>
-          </View>
-        </View>
+      <AppModal visible={counterModalOpen} transparent animationType="fade" onRequestClose={() => { if (!counterMutation.isPending) setCounterModalOpen(false); }}>
+        <View style={styles.modalBackdrop}><View style={styles.modalCard}>
+          <AppText style={styles.modalTitle}>Đề xuất sách thay thế</AppText>
+          {actionError && <Notice tone="error">{actionError}</Notice>}
+          {counterModalOpen && <ExchangeCounterForm key={currentUserId + ':' + exchange.revision} isInitiator={isInitiator}
+            currentIds={isInitiator ? exchange.initiatorListingIds ?? [exchange.initiatorListingId!] : [exchange.recipientListingId]}
+            partnerValue={isInitiator ? exchange.initiatorDeposit : exchange.recipientDeposit} busy={counterMutation.isPending}
+            onSubmit={(listingIds, note) => counterMutation.mutate({ listingIds, note })} />}
+          <Button title="Quay lại" secondary disabled={counterMutation.isPending} onPress={() => setCounterModalOpen(false)} />
+        </View></View>
       </AppModal>
 
       {/* Modal 3: Báo gửi sách & Cập nhật vận đơn */}

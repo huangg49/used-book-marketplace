@@ -3080,6 +3080,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exchanges/{id}/books/{listingId}/photos/{mediaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a frozen agreement photo as a current participant */
+        get: operations["getExchangeBookPhoto"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/exchanges/{id}/accept": {
         parameters: {
             query?: never;
@@ -3089,7 +3106,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Recipient accepts the exchange proposal. */
+        /** @description Accept only the unchanged frozen proposal and current eligibility of both Members/books. Unavailable or unverifiable proposals return a persisted Exchange with status Cancelled and cancelReason ListingUnavailable, without reserving books or collecting money. Clients inspect the returned state; HTTP 200 alone does not mean accepted. Exact-key replay returns the original outcome after current authorization. */
         post: operations["acceptExchange"];
         delete?: never;
         options?: never;
@@ -3106,7 +3123,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Submit a counter-proposal for the exchange. */
+        /** @description The responding Member selects replacement books they own. Both sides' current eligibility and the original frozen terms are checked before deriving a new revision and compensation. An unavailable original proposal closes as Cancelled/ListingUnavailable without reservations. Free-form monetary counteroffers are rejected. */
         post: operations["counterExchange"];
         delete?: never;
         options?: never;
@@ -6417,7 +6434,39 @@ export interface components {
         ExchangeCancelReason: "FundingExpired" | "ProposalExpired" | "CancelledByUser" | "ListingUnavailable" | "ShippingExpired" | "DisputeResolvedRefund" | "MutualAgreement";
         /** @enum {string} */
         ExchangeCancelledBy: "System" | "Initiator" | "Recipient" | "Staff" | "Both";
+        ExchangeBookSnapshot: {
+            /** Format: uuid */
+            listingId: string;
+            listingVersion: number;
+            /** Format: uuid */
+            revisionId: string;
+            /** Format: uuid */
+            ownerId: string;
+            ownerDisplayName: string;
+            /** Format: uuid */
+            bookId: string;
+            /** Format: uuid */
+            catalogRevisionId: string;
+            book: components["schemas"]["CatalogMetadata"];
+            condition: components["schemas"]["BookCondition"];
+            description: string;
+            pages: string;
+            coverNote: string;
+            notes: string;
+            accessories: string;
+            readable: boolean;
+            hasMissingPages: boolean;
+            missingEssentialContent: boolean;
+            exchangeValue: number;
+            mediaIds: string[];
+        };
+        /** @description Frozen books and values of the current proposal revision; null for historical records whose original content cannot be proved. New acceptance never reconstructs a missing agreement from current listings. */
+        ExchangeAgreement: {
+            initiatorBooks: components["schemas"]["ExchangeBookSnapshot"][];
+            recipientBook: components["schemas"]["ExchangeBookSnapshot"];
+        };
         Exchange: {
+            agreement?: components["schemas"]["ExchangeAgreement"] | null;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -6555,11 +6604,10 @@ export interface components {
         ExchangeMessagesResponse: {
             items: components["schemas"]["ExchangeMessage"][];
         };
+        /** @description The responding Member replaces their own books; the server derives both deposits and compensation from reviewed values. Recipient replaces exactly one listing, initiator one to five. The other party's frozen books must remain eligible and unchanged. */
         CounterExchangeProposal: {
             expectedVersion: number;
-            diffAmount: number;
-            /** @enum {string} */
-            diffPayer: "initiator" | "recipient" | "none";
+            listingIds: string[];
             /** Format: uuid */
             deliveryAddressId?: string;
             note?: string;
@@ -12949,6 +12997,33 @@ export interface operations {
             403: components["responses"]["ListingError"];
             404: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
+        };
+    };
+    getExchangeBookPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                listingId: string;
+                mediaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Short-lived signed read of this agreement's photo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaRead"];
+                };
+            };
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
         };
     };
     acceptExchange: {

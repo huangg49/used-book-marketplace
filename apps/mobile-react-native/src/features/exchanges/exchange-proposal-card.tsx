@@ -1,26 +1,31 @@
-import React from "react";
-import { StyleSheet, View } from "react-native";
+import React, { useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import { AppText, Icon, space, stitchTokens } from "../../core/ui";
 import { formatVnd } from "../../core/ui/format";
 import type { Exchange } from "./contracts";
 import { mapExchangeStatusInfo } from "./contracts";
 import { PublicPhoto } from "../shelf/public-photo";
-import type { Listing } from "../shelf/contracts";
 
 interface ExchangeProposalCardProps {
   exchange: Exchange;
   isInitiator: boolean;
-  initiatorListings?: (Listing | null)[] | null;
-  initiatorListing?: Listing | null;
-  recipientListing?: Listing | null;
+}
+
+function FrozenCondition({ book }: { book: NonNullable<Exchange['agreement']>['recipientBook'] }) {
+  const [expanded, setExpanded] = useState(false);
+  return <View>
+    <AppText>{[book.book.edition, book.book.publicationYear, book.book.isbn].filter(Boolean).join(' · ')}</AppText>
+    <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded((value) => !value)} style={{ minHeight: 48, justifyContent: 'center' }}>
+      <AppText>{expanded ? 'Thu gọn tình trạng' : 'Tình trạng đã ghi nhận'}</AppText>
+    </Pressable>
+    {expanded && <AppText>{[book.description, book.pages, book.coverNote, book.notes, book.accessories,
+      book.hasMissingPages ? 'Có thiếu trang' : 'Không thiếu trang', book.readable ? 'Đọc được' : 'Không đọc được'].filter(Boolean).join('. ')}</AppText>}
+  </View>;
 }
 
 export function ExchangeProposalCard({
   exchange,
   isInitiator,
-  initiatorListings,
-  initiatorListing,
-  recipientListing,
 }: ExchangeProposalCardProps) {
   const statusInfo = mapExchangeStatusInfo(exchange.status, isInitiator);
 
@@ -29,30 +34,24 @@ export function ExchangeProposalCard({
       ? exchange.initiatorListingIds.length
       : 1;
 
-  const initiatorBookList: (Listing | null)[] =
-    initiatorListings && initiatorListings.length > 0
-      ? initiatorListings
-      : initiatorListing
-        ? [initiatorListing]
-        : new Array(initiatorListingCount).fill(null);
-
-  const recipientBookList: (Listing | null)[] = recipientListing
-    ? [recipientListing]
-    : [null];
-
+  type FrozenBook = NonNullable<Exchange['agreement']>['recipientBook'];
+  const frozen = (book: FrozenBook) => ({
+    id: book.listingId, revisionId: book.revisionId, photos: book.mediaIds.map((id) => ({ id })),
+    book: book.book, snapshot: book, exchangeValue: book.exchangeValue, salePrice: null,
+  });
+  type BookView = ReturnType<typeof frozen>;
+  const initiatorBookList: (BookView | null)[] = exchange.agreement
+    ? exchange.agreement.initiatorBooks.map(frozen) : new Array(initiatorListingCount).fill(null);
+  const recipientBookList: (BookView | null)[] = exchange.agreement ? [frozen(exchange.agreement.recipientBook)] : [null];
   const myBooks = isInitiator ? initiatorBookList : recipientBookList;
   const partnerBooks = isInitiator ? recipientBookList : initiatorBookList;
-
-  const partnerListingPrimary = isInitiator
-    ? recipientListing
-    : initiatorListing ?? initiatorListings?.[0];
 
   const partnerAddressName = isInitiator
     ? exchange.recipientAddress?.recipientName
     : exchange.initiatorAddress?.recipientName;
 
   const partnerName =
-    partnerListingPrimary?.seller.displayName ??
+    (isInitiator ? exchange.agreement?.recipientBook.ownerDisplayName : exchange.agreement?.initiatorBooks[0]?.ownerDisplayName) ??
     partnerAddressName ??
     (isInitiator ? "Đối tác" : "Đối tác đề nghị");
 
@@ -84,6 +83,7 @@ export function ExchangeProposalCard({
 
   return (
     <View style={styles.card}>
+      {!exchange.agreement && <AppText>Hồ sơ cũ thiếu bản chụp sách ban đầu. Cọc/bù là nghĩa vụ đã lưu; nội dung sách không được lấy từ bài đăng hiện tại.</AppText>}
       {/* 1. Header with Code and Status Badge */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -120,6 +120,7 @@ export function ExchangeProposalCard({
                   <View style={styles.photoBox}>
                     {item?.photos?.[0] ? (
                       <PublicPhoto
+                        exchangeId={exchange.agreement ? exchange.id : undefined}
                         listingId={item.id}
                         revisionId={item.revisionId}
                         mediaId={item.photos[0].id}
@@ -145,6 +146,7 @@ export function ExchangeProposalCard({
                         <AppText style={styles.bookValue}>
                           Giá trị: {formatVnd(item.exchangeValue ?? item.salePrice ?? 0)}
                         </AppText>
+                        <FrozenCondition book={item.snapshot} />
                       </>
                     ) : (
                       <>
@@ -195,6 +197,7 @@ export function ExchangeProposalCard({
                   <View style={styles.photoBox}>
                     {item?.photos?.[0] ? (
                       <PublicPhoto
+                        exchangeId={exchange.agreement ? exchange.id : undefined}
                         listingId={item.id}
                         revisionId={item.revisionId}
                         mediaId={item.photos[0].id}
@@ -220,6 +223,7 @@ export function ExchangeProposalCard({
                         <AppText style={styles.bookValue}>
                           Giá trị: {formatVnd(item.exchangeValue ?? item.salePrice ?? 0)}
                         </AppText>
+                        <FrozenCondition book={item.snapshot} />
                       </>
                     ) : (
                       <>

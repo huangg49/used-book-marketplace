@@ -10,7 +10,6 @@ import { ShipmentDialog } from "../ShipmentDialog";
 import { ReceiveDialog } from "../ReceiveDialog";
 import { CounterDialog, type CounterOfferData } from "../CounterDialog";
 import { AcceptExchangeDialog } from "../AcceptExchangeDialog";
-import { counterExchange } from "../../../services/exchangeDetail";
 import { ROUTES, formatVnd } from "../../../lib/routes";
 import { exchangeError, pendingExchange } from "../../../services/exchange";
 import type { ShipmentData } from "../../../services/exchangeShipment";
@@ -62,7 +61,7 @@ const labels: Record<Action, string> = {
   cancel: "Hủy đề nghị",
   accept: "Chấp nhận đề nghị",
   reject: "Từ chối đề nghị",
-  counter: "Đề xuất lại điều khoản",
+  counter: "Đề xuất sách thay thế",
   fund: "Đặt cọc mô phỏng",
   sent: "Tạo đơn vận chuyển",
   received: "Xác nhận đã nhận sách",
@@ -115,9 +114,9 @@ export function ActionCard(props: Props) {
     if (canAccept) {
       instructions =
         detail.viewerRole === "proposer"
-          ? "Đối tác đã gửi lại điều khoản chốt mới theo thương lượng. Hãy kiểm tra hợp đồng và bấm chấp nhận để khóa giao dịch."
+          ? "Đối tác đã chọn sách thay thế. Hãy kiểm tra sách, cọc và tiền bù mới trước khi chấp nhận."
           : "Xem thông tin sách và các điều khoản trước khi chấp nhận trao đổi.";
-      actions.push("accept", "reject");
+      actions.push("accept", "counter", "reject");
       if (detail.viewerRole === "proposer") {
         actions.push("cancel");
       }
@@ -125,7 +124,7 @@ export function ActionCard(props: Props) {
       instructions =
         detail.viewerRole === "proposer"
           ? "Đề nghị đã gửi. Bạn có thể nhắn tin thương lượng trong khung chat hoặc hủy đề nghị nếu đổi ý."
-          : "Bạn đã gửi điều khoản chốt cho đối tác. Đang chờ đối tác đồng ý để chính thức khóa giao dịch.";
+          : "Bạn đã gửi sách thay thế. Đang chờ đối tác phản hồi; sách chưa được giữ.";
       actions.push("cancel");
     }
   } else if (detail.status === "FUNDING") {
@@ -208,7 +207,9 @@ export function ActionCard(props: Props) {
             ? `Đề nghị đã bị từ chối.${detail.rejectionReason ? ` Lý do: ${detail.rejectionReason}` : ""}`
             : detail.status === "EXPIRED"
               ? "Đề nghị hoặc thời hạn đặt cọc đã hết."
-              : "Đề nghị đã bị hủy.";
+              : detail.cancelReason === "ListingUnavailable"
+                ? "Thỏa thuận không còn hợp lệ hoặc thiếu bản chụp sách gốc. Chưa giữ sách hay thu tiền từ đề xuất này. Hãy tạo đề xuất mới từ sách đủ điều kiện."
+                : "Đề nghị đã bị hủy.";
   }
 
   const open = async (next: Action) => {
@@ -310,11 +311,15 @@ export function ActionCard(props: Props) {
         </h2>
         <span className={styles.roleBadge}>
           {detail.status === "PENDING"
-            ? (detail.viewerRole === "proposer" ? "Đã gửi đề nghị" : "Chờ bạn phản hồi")
+            ? ((detail.canViewerAccept ?? detail.viewerRole !== "proposer") ? "Chờ bạn phản hồi" : "Chờ đối tác phản hồi")
             : detail.status === "FUNDING"
             ? "Đặt cọc bảo chứng"
             : detail.status === "WAITING_YOU_SEND"
             ? "Chuẩn bị gửi sách"
+            : ["CANCELLED", "REJECTED", "EXPIRED"].includes(detail.status)
+            ? "Đã đóng"
+            : ["COMPLETED", "NEED_REVIEW"].includes(detail.status)
+            ? "Đã hoàn tất"
             : "Đang tiến hành"}
         </span>
       </div>
@@ -438,54 +443,28 @@ export function ActionCard(props: Props) {
       )}
 
       {/* Counter-Offer Negotiation Modal */}
-      <CounterDialog
+      {counterOpen && <CounterDialog
+        key={`${detail.viewer.id}:${detail.revision}`}
         isOpen={counterOpen}
         onClose={() => setCounterOpen(false)}
         onSubmit={handleCounterSubmit}
         isBusy={busy}
         viewerRole={detail.viewerRole}
         partnerName={detail.partner.username}
-        currentCompensationType={detail.moneyCompensationType}
-        currentAmount={detail.moneyAmount ?? 0}
+        partnerBookValue={detail.receiveBooks.reduce((sum, book) => sum + (book.price ?? 0), 0)}
+        currentListingIds={detail.giveBooks.map((book) => book.id)}
         currentAddressId={selectedAddressId}
-      />
+      />}
 
       {/* Accept Exchange Contract Review Modal */}
       <AcceptExchangeDialog
         isOpen={acceptOpen}
         onClose={() => setAcceptOpen(false)}
-        onConfirm={async ({ deliveryAddressId, customTerms }) => {
+        onConfirm={async ({ deliveryAddressId }) => {
           setBusy(true);
-          try {
-            const rev = detail.revision!;
-            if (customTerms) {
-              // Phương án B: Gửi đề xuất điều khoản mới cho đối tác chốt
-              if (props.onCounter) {
-                await props.onCounter({
-                  diffAmount: customTerms.diffAmount,
-                  diffPayer: customTerms.diffPayer,
-                  deliveryAddressId,
-                  note: "Đề xuất chốt hợp đồng trao đổi theo thỏa thuận trong chat",
-                });
-              } else {
-                await counterExchange(detail.id, rev, {
-                  diffAmount: customTerms.diffAmount,
-                  diffPayer: customTerms.diffPayer,
-                  deliveryAddressId,
-                  note: "Đề xuất chốt hợp đồng trao đổi theo thỏa thuận trong chat",
-                });
-              }
-              setAcceptOpen(false);
-            } else {
-              // Chấp nhận điều khoản ban đầu -> Khóa giao dịch & chuyển sang đặt cọc ngay!
-              await props.onAccept(deliveryAddressId, rev);
-              setAcceptOpen(false);
-            }
-          } catch (failure) {
-            throw new Error(exchangeError(failure));
-          } finally {
-            setBusy(false);
-          }
+          try { await props.onAccept(deliveryAddressId, detail.revision!); setAcceptOpen(false); }
+          catch (failure) { throw new Error(exchangeError(failure)); }
+          finally { setBusy(false); }
         }}
         isBusy={busy}
         detail={detail}
