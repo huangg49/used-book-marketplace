@@ -114,6 +114,7 @@ describe("exchange integration", () => {
     expect(detail.giveBooks[0].price).toBe(100000);
     expect(detail.moneyAmount).toBe(50000);
     expect(detail.viewerDeposit).toBe(150000);
+    expect(detail.partnerDeposit).toBe(100000);
     expect(detail.viewerFundingAmount).toBe(200000);
     expect(mock.publicListing).not.toHaveBeenCalled();
     expect(mock.photo).not.toHaveBeenCalled();
@@ -122,6 +123,16 @@ describe("exchange integration", () => {
     ).toHaveLength(2);
   });
 
+  it("maps recipient deposit and funding without deducting the compensation they will receive", async () => {
+    mock.actor = row.recipientId;
+    mock.listener();
+    mock.request.mockResolvedValue(row);
+    const detail = await getExchangeDetail(row.id);
+    expect(detail.viewerDeposit).toBe(100000);
+    expect(detail.partnerDeposit).toBe(150000);
+    expect(detail.viewerFundingAmount).toBe(100000);
+    expect(detail.moneyCompensationType).toBe("other_pays");
+  });
   it("labels legacy books without replacing them with today's public content", async () => {
     mock.request.mockResolvedValue({ ...row, agreement: null });
     const detail = await getExchangeDetail(row.id);
@@ -178,13 +189,11 @@ describe("exchange integration", () => {
     expect(pendingExchange(row.id)).toBeUndefined();
   });
   it("blocks a different command while the preceding result is unknown", async () => {
-    mock.request
-      .mockRejectedValueOnce(new Error("network"))
-      .mockResolvedValue({
-        ...row,
-        status: "AcceptedAwaitingFunding",
-        initiatorFundedAt: "2026-11-02T00:00:00.000Z",
-      });
+    mock.request.mockRejectedValueOnce(new Error("network")).mockResolvedValue({
+      ...row,
+      status: "AcceptedAwaitingFunding",
+      initiatorFundedAt: "2026-11-02T00:00:00.000Z",
+    });
     await expect(
       exchangeCommand(`/exchanges/${row.id}/funding`, {}),
     ).rejects.toThrow();

@@ -117,6 +117,8 @@ kiểm thử storage hoặc provider thật.
   không phải số tiền ledger thu. Đây là nội dung có sẵn, gói này chỉ khóa command
   và nối recovery, chưa thay toàn khung tài chính thương lượng. Cần sửa scoped
   theo mode và đối chiếu với phiếu thỏa thuận, kiểm cả hai vai trò.
+  Cập nhật sau đó: [gói3 khung tài chính](EXCHANGE_FINANCE_2026_11_02.md) đã xử lý
+  điểm này trên chuỗi local; cần ghép main mới trước evidence source kết hợp.
 - Main remote fetch lúc bắt đầu vẫn `48ab01fa`/PR86 support; nhánh teammate
   `feature/exchange-policy-and-transit-worker` từ `13e0931d` lên `ab74bb53`
   tại fetch cuối (fix wallet browser test/checkpoint); main giữ nguyên. Trước gói

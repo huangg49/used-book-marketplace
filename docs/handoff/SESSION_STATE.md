@@ -1,6 +1,6 @@
 # Điểm lưu hiện tại — 02/11/2026
 
-## Exchange: thỏa thuận và phục hồi thao tác Member
+## Exchange: thỏa thuận, phục hồi thao tác và khung tài chính
 
 - Owner duyệt gói2 sau gói1 `a1258e1a`. Branch `codex/exchange-intent-recovery`,
   base `a1258e1a`, subject `fix(exchange): preserve exact intents across uncertain responses`.
@@ -21,18 +21,29 @@
   1journal/1proposal, late ACK sau đổi account và revoked replay401. Storage fake,
   mail local/ví simulator; native/human/live provider/CI source mới NOT RUN.
   Detector19advisory màu có sẵn, không phải design critique sạch.
-- X04/X05 còn mở. Xác nhận thêm: khung thương lượng web mode Exchange còn hiện
-  giá bán125k ở “Tiền sách/Tổng thanh toán”, khác giá quy đổi150k/bù50k của fixture;
-  không là ledger thu sai. Cần sửa scoped theo mode trước nghiệm thu UX.
-- Fetch đầu gói: main `48ab01fa`/PR86 support, teammate exchange/transit
-  `13e0931d`; fetch cuối teammate lên `ab74bb53`, main giữ nguyên.
-  Chưa tích hợp/push/PR/merge/deploy. Trước publish giữ support/AI
-  union, giải quyết ADR0062 trùng local/main; trước giao nhận đọc nhánh teammate.
-- QA cuối:0owned DB/user/role,0DB khác; mongo-test đã dừng và các port thử đã
-  đóng. Mongo chính27017 healthy, không migrate/reset/seed/dừng. 28file UI/ảnh
-  ngoài gói giữ nguyên checksum. Scoped diff-check PASS; whole workspace còn
-  trailing whitespace AccountMenu ngoài gói, không sửa/stage cùng gói này.
-  Browser/build dùng workspace kết hợp28file này, không là clean checkout CI.
+- Owner duyệt gói3 khung tài chính Member web, branch
+  `codex/exchange-financial-summary`, base `650db20f`, subject
+  `fix(web): distinguish exchange deposits from purchase totals`.
+  [Source/hành trình/evidence](../features/EXCHANGE_FINANCE_2026_11_02.md).
+  Exchange tách giá trị snapshot, hai cọc, bù và khoản của viewer; không hiện giá
+  bán/quote mua như tổng Exchange. Preview ghi dự kiến, thiếu giá không giả0;
+  có ACK/GET lỗi/legacy/lịch sử không bịa nghĩa vụ mới hoặc hoàn tiền. Chung cache
+  với phiếu; link focus đúng phần thao tác. Negotiation giữ khung mua riêng.
+- Gói3 PASS297web unit (18component/SSR mới +1mapper), types/build/lint scoped,
+  7scenario browser/API/Mongo thật; hai vai trò, counter đảo bên bù,1proposal qua
+  lostACK/Back/429,1journal funding, GET lỗi và320–1440px. Detector3advisory màu
+  có sẵn; native/Flutter/backend E2E/live provider/200%zoom/human/CI mới NOT RUN.
+  Không đổi API/contract/migration/READINESS/GHN; không suy toàn core hoàn thiện.
+- Fetch cuối: main vừa nhận PR88 tại `7fe67113`, teammate `ab74bb53`.
+  Chưa ghép/push/PR/merge/deploy. Có overlap ExchangeOffer/NegotiationWorkspace/
+  RN actions, shipment fields; main contract0.70/local0.71 cần giữ union với
+  snapshot/recovery/support/AI, xử lý ADR0062 trùng local/main khi tích hợp.
+  X04/X05 chưa được kiểm lại trên main mới; đọc source hợp nhất trước gói giao
+  nhận tiếp theo. Không coi merge/CI nhánh nhóm là evidence source kết hợp.
+- QA cuối0owned DB/user/role,0DB khác; mongo-test đã dừng và port thử đã đóng.
+  Mongo chính27017 healthy, không migrate/reset/seed/dừng.28file UI/ảnh ngoài gói
+  giữ nguyên checksum; browser/build dùng workspace kết hợp, không clean CI.
+  Scoped diff-check PASS; whole workspace còn whitespace AccountMenu ngoài gói.
 
 ## Khảo sát core Exchange — chưa sửa nghiệp vụ
 

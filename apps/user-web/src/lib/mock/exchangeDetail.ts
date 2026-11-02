@@ -10,6 +10,7 @@ export interface ShippingConfirm {
 export interface ExchangeDetail {
   hasAgreementSnapshot?: boolean;
   viewerDeposit?: number;
+  partnerDeposit?: number;
   id: string;
   transactionCode: string;
   createdAt: string;

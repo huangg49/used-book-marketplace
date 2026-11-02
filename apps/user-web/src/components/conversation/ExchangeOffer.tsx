@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 import {
@@ -132,6 +132,7 @@ export function ExchangeOffer({
   refresh: () => void;
 }) {
   const buyer = room.buyer.id === userId;
+  const queryClient = useQueryClient();
   const mine = useQuery({
     queryKey: ["conversation-exchange-inventory", userId],
     queryFn: inventory,
@@ -254,6 +255,12 @@ export function ExchangeOffer({
   const selected = mine.data?.filter((x) => chosen.includes(x.id)) ?? [];
   const total = selected.reduce((n, b) => n + b.value, 0);
   const difference = (book.exchangeValue ?? 0) - total;
+  const pricesKnown =
+    Number.isSafeInteger(book.exchangeValue) &&
+    (book.exchangeValue ?? 0) > 0 &&
+    selected.every(
+      (item) => Number.isSafeInteger(item.value) && item.value > 0,
+    );
   const addressId =
     address ||
     addresses.data?.items.find((a) => a.isDefault)?.id ||
@@ -341,8 +348,8 @@ export function ExchangeOffer({
 
   async function submit() {
     if (busy) return;
-    if (!retained && (!chosen.length || !addressId)) {
-      setError("Chọn sách và địa chỉ nhận trước khi gửi.");
+    if (!retained && (!chosen.length || !addressId || !pricesKnown)) {
+      setError("Kiểm tra giá trị sách và chọn địa chỉ nhận trước khi gửi.");
       return;
     }
     if (retained && !relevant) {
@@ -492,52 +499,93 @@ export function ExchangeOffer({
               )}
             </div>
 
-            {selected.length > 0 && (
-              <div className={styles.balanceCard}>
-                <div className={styles.balanceHeader}>
-                  <div className={styles.balanceHeaderLeft}>
-                    <Scale size={16} />
-                    <span>Cân đối giá trị trao đổi</span>
+            {selected.length > 0 &&
+              (pricesKnown ? (
+                <div className={styles.balanceCard}>
+                  <div className={styles.balanceHeader}>
+                    <div className={styles.balanceHeaderLeft}>
+                      <Scale size={16} />
+                      <span>Cân đối giá trị trao đổi</span>
+                    </div>
+                  </div>
+
+                  <div className={styles.balanceRow}>
+                    <span>Sách bạn muốn nhận</span>
+                    <strong>{formatVnd(book.exchangeValue ?? 0)}</strong>
+                  </div>
+                  <div className={styles.balanceRow}>
+                    <span>Sách bạn gửi ({selected.length} cuốn)</span>
+                    <strong>{formatVnd(total)}</strong>
+                  </div>
+
+                  <div className={styles.balanceRow}>
+                    <span>Cọc của bạn (dự kiến)</span>
+                    <strong>{formatVnd(book.exchangeValue ?? 0)}</strong>
+                  </div>
+                  <div className={styles.balanceRow}>
+                    <span>Cọc của đối tác (dự kiến)</span>
+                    <strong>{formatVnd(total)}</strong>
+                  </div>
+                  <div className={styles.balanceRow}>
+                    <span>Khoản bạn nộp nếu chấp nhận</span>
+                    <strong>
+                      {formatVnd(
+                        (book.exchangeValue ?? 0) + Math.max(difference, 0),
+                      )}
+                    </strong>
+                  </div>
+                  <p className={styles.helpText}>
+                    Gồm cọc và tiền bù bạn trả, chưa gồm phí giao nhận. Phiếu
+                    sau khi gửi là căn cứ để hai bên kiểm tra.
+                  </p>
+
+                  <div className={styles.balanceDivider} />
+
+                  <div className={styles.balanceResult}>
+                    <span className={styles.balanceResultLabel}>
+                      {difference > 0
+                        ? "Bạn cần bù thêm"
+                        : difference < 0
+                          ? "Đối tác bù cho bạn"
+                          : "Trạng thái"}
+                    </span>
+                    <span
+                      className={`${styles.balanceBadge} ${
+                        difference > 0
+                          ? styles.badgePay
+                          : difference < 0
+                            ? styles.badgeReceive
+                            : styles.badgeEqual
+                      }`}
+                    >
+                      {difference > 0
+                        ? formatVnd(difference)
+                        : difference < 0
+                          ? formatVnd(-difference)
+                          : "Đổi ngang giá (0 ₫)"}
+                    </span>
                   </div>
                 </div>
-
-                <div className={styles.balanceRow}>
-                  <span>Sách bạn muốn nhận</span>
-                  <strong>{formatVnd(book.exchangeValue ?? 0)}</strong>
-                </div>
-                <div className={styles.balanceRow}>
-                  <span>Sách bạn gửi ({selected.length} cuốn)</span>
-                  <strong>{formatVnd(total)}</strong>
-                </div>
-
-                <div className={styles.balanceDivider} />
-
-                <div className={styles.balanceResult}>
-                  <span className={styles.balanceResultLabel}>
-                    {difference > 0
-                      ? "Bạn cần bù thêm"
-                      : difference < 0
-                        ? "Đối tác bù cho bạn"
-                        : "Trạng thái"}
-                  </span>
-                  <span
-                    className={`${styles.balanceBadge} ${
-                      difference > 0
-                        ? styles.badgePay
-                        : difference < 0
-                          ? styles.badgeReceive
-                          : styles.badgeEqual
-                    }`}
+              ) : (
+                <div role="alert">
+                  <p>
+                    Chưa đủ giá trị quy đổi để tính cọc và tiền bù. Tải lại kệ
+                    sách trước khi gửi đề nghị.
+                  </p>
+                  <button
+                    type="button"
+                    className={styles.primaryButton}
+                    onClick={() => {
+                      void mine.refetch();
+                      void queryClient.invalidateQueries({
+                        queryKey: ["public-listing", room.listingId],
+                      });
+                    }}
                   >
-                    {difference > 0
-                      ? formatVnd(difference)
-                      : difference < 0
-                        ? formatVnd(-difference)
-                        : "Đổi ngang giá (0 ₫)"}
-                  </span>
+                    Tải lại giá trị sách
+                  </button>
                 </div>
-              </div>
-            )}
+              ))}
 
             <div className={styles.addressSection}>
               <div className={styles.addressHeader}>
@@ -674,7 +722,10 @@ export function ExchangeOffer({
           <button
             type="button"
             className={styles.primaryButton}
-            disabled={busy || (!uncertain && (!chosen.length || !addressId))}
+            disabled={
+              busy ||
+              (!uncertain && (!chosen.length || !addressId || !pricesKnown))
+            }
             onClick={() => void submit()}
           >
             {busy

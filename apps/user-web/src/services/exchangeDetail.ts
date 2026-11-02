@@ -78,6 +78,7 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
       (initiator ? ex.initiatorDeposit : ex.recipientDeposit) +
       (ex.diffPayerId === actor.id ? ex.diffAmount : 0),
     viewerDeposit: initiator ? ex.initiatorDeposit : ex.recipientDeposit,
+    partnerDeposit: initiator ? ex.recipientDeposit : ex.initiatorDeposit,
     viewerShipping: {
       sentAt:
         (initiator ? ex.initiatorShippedAt : ex.recipientShippedAt) ??

@@ -1,3 +1,4 @@
+import { ExchangeFinanceSummary } from "../components/conversation/ExchangeFinanceSummary";
 import { useExchangeRecovery } from "../hooks/useExchangeRecovery";
 import { createdExchange, pendingProposal } from "../services/exchange";
 import { useRef, useState } from "react";
@@ -47,6 +48,7 @@ export function NegotiationWorkspace({
   onOpenOrderDialog,
   historyExchange,
   setHistoryExchange,
+  now,
 }: {
   room: PurchaseConversation;
   userId: string;
@@ -125,6 +127,11 @@ export function NegotiationWorkspace({
 
   const disabled = busy || uncertain || locked || frozen || exchangeBlocked;
   const mode = terms?.mode ?? "Negotiation";
+  const exchangeSummaryId =
+    historyExchange ??
+    terms?.activeExchangeId ??
+    createdExchange(room.listingId);
+  const exchangeSheetId = "exchange-sheet-" + room.id;
   const conditionLabel = book ? conditions[book.condition] : undefined;
 
   return (
@@ -220,80 +227,95 @@ export function NegotiationWorkspace({
             )}
           </div>
 
-          {/* Bảng chi tiết thanh toán */}
-          <div className={styles.paymentCard}>
-            <div className={styles.paymentCardHeader}>
-              <span className={styles.paymentHeading}>Chi tiết thanh toán</span>
-              <span className={styles.paymentModeBadge}>
-                {mode === "Exchange" ? "Đổi sách" : "Thương lượng"}
-              </span>
-            </div>
+          {isExchange ? (
+            <ExchangeFinanceSummary
+              id={exchangeSummaryId}
+              userId={userId}
+              referenceValue={book?.exchangeValue}
+              sheetId={exchangeSheetId}
+              historical={Boolean(historyExchange)}
+              now={now}
+            />
+          ) : (
+            <>
+              {/* Bảng chi tiết thanh toán */}
+              <div className={styles.paymentCard}>
+                <div className={styles.paymentCardHeader}>
+                  <span className={styles.paymentHeading}>
+                    Chi tiết thanh toán
+                  </span>
+                  <span className={styles.paymentModeBadge}>Thương lượng</span>
+                </div>
 
-            <dl className={styles.paymentDl}>
-              <div className={styles.paymentRow}>
-                <dt>Tiền sách</dt>
-                <dd>
-                  {terms?.agreedPrice != null
-                    ? formatVnd(terms.agreedPrice)
-                    : book?.salePrice != null
-                      ? formatVnd(book.salePrice)
-                      : "Chưa thống nhất"}
-                </dd>
-              </div>
+                <dl className={styles.paymentDl}>
+                  <div className={styles.paymentRow}>
+                    <dt>Tiền sách</dt>
+                    <dd>
+                      {terms?.agreedPrice != null
+                        ? formatVnd(terms.agreedPrice)
+                        : book?.salePrice != null
+                          ? formatVnd(book.salePrice)
+                          : "Chưa thống nhất"}
+                    </dd>
+                  </div>
 
-              <div className={styles.paymentRow}>
-                <dt>Phí giao hàng</dt>
-                <dd>
-                  {room.quotePreview
-                    ? formatVnd(room.quotePreview.shippingFee)
-                    : "Chưa tính"}
-                </dd>
-              </div>
+                  <div className={styles.paymentRow}>
+                    <dt>Phí giao hàng</dt>
+                    <dd>
+                      {room.quotePreview
+                        ? formatVnd(room.quotePreview.shippingFee)
+                        : "Chưa tính"}
+                    </dd>
+                  </div>
 
-              <div className={`${styles.paymentRow} ${styles.paymentTotalRow}`}>
-                <dt>Tổng thanh toán</dt>
-                <dd>
-                  {terms?.agreedPrice != null
-                    ? formatVnd(
-                        terms.agreedPrice +
-                          (room.quotePreview?.shippingFee ?? 0),
-                      )
-                    : book?.salePrice != null
-                      ? formatVnd(
-                          book.salePrice +
-                            (room.quotePreview?.shippingFee ?? 0),
-                        )
-                      : "Chưa tính"}
-                </dd>
-              </div>
-            </dl>
+                  <div
+                    className={`${styles.paymentRow} ${styles.paymentTotalRow}`}
+                  >
+                    <dt>Tổng thanh toán</dt>
+                    <dd>
+                      {terms?.agreedPrice != null
+                        ? formatVnd(
+                            terms.agreedPrice +
+                              (room.quotePreview?.shippingFee ?? 0),
+                          )
+                        : book?.salePrice != null
+                          ? formatVnd(
+                              book.salePrice +
+                                (room.quotePreview?.shippingFee ?? 0),
+                            )
+                          : "Chưa tính"}
+                    </dd>
+                  </div>
+                </dl>
 
-            {/* Thông báo ký quỹ bảo chứng an toàn */}
-            <div className={styles.escrowNotice}>
-              <div className={styles.escrowUnpaid}>
-                <Clock
-                  size={18}
-                  className={styles.escrowIconUnpaid}
-                  aria-hidden="true"
-                />
-                <div>
-                  <p className={styles.escrowTitle}>
-                    {terms?.agreedPrice != null
-                      ? "Đã thống nhất giá sách"
-                      : "Chưa chốt giá sách"}
-                  </p>
-                  <p className={styles.escrowSubtitle}>
-                    {room.hasQuote
-                      ? "Đã có báo giá vận chuyển. Hai bên có thể tiến hành tạo đơn hàng."
-                      : "Sau khi thống nhất giá và nhận thông tin giao nhận, đơn sẽ được tạo và bảo chứng bởi Lật Lại."}
-                  </p>
+                {/* Thông báo ký quỹ bảo chứng an toàn */}
+                <div className={styles.escrowNotice}>
+                  <div className={styles.escrowUnpaid}>
+                    <Clock
+                      size={18}
+                      className={styles.escrowIconUnpaid}
+                      aria-hidden="true"
+                    />
+                    <div>
+                      <p className={styles.escrowTitle}>
+                        {terms?.agreedPrice != null
+                          ? "Đã thống nhất giá sách"
+                          : "Chưa chốt giá sách"}
+                      </p>
+                      <p className={styles.escrowSubtitle}>
+                        {room.hasQuote
+                          ? "Đã có báo giá vận chuyển. Hai bên có thể tiến hành tạo đơn hàng."
+                          : "Sau khi thống nhất giá và nhận thông tin giao nhận, đơn sẽ được tạo và bảo chứng bởi Lật Lại."}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </>
+          )}
 
           {/* Địa chỉ nhận sách (nếu người mua đã gửi báo giá vận chuyển) */}
-          {room.quotePreview && (
+          {!isExchange && room.quotePreview && (
             <div className={styles.addressBox}>
               <div className={styles.addressBoxHeader}>
                 <MapPin size={16} aria-hidden="true" />
@@ -320,6 +342,8 @@ export function NegotiationWorkspace({
           ======================================================== */}
       <article
         className={styles.orderProceduresCard}
+        id={exchangeSheetId}
+        tabIndex={-1}
         aria-labelledby="negotiation-terms-heading"
       >
         {/* Header khung Thỏa thuận giao dịch */}
@@ -341,12 +365,12 @@ export function NegotiationWorkspace({
                 style={{
                   background: proposal
                     ? "#fff2e0"
-                    : terms?.agreedPrice != null
+                    : !isExchange && terms?.agreedPrice != null
                       ? "#eaf8ed"
                       : "#f4eee5",
                   color: proposal
                     ? "#875109"
-                    : terms?.agreedPrice != null
+                    : !isExchange && terms?.agreedPrice != null
                       ? "#156633"
                       : "#5c0202",
                   border: "1px solid rgba(0,0,0,0.08)",
@@ -354,10 +378,10 @@ export function NegotiationWorkspace({
               >
                 {proposal
                   ? "Có đề nghị mới"
-                  : terms?.agreedPrice != null
-                    ? "Đã chốt giá"
-                    : isExchange
-                      ? "Đổi sách"
+                  : isExchange
+                    ? "Đổi sách"
+                    : terms?.agreedPrice != null
+                      ? "Đã chốt giá"
                       : "Đang thương lượng"}
               </span>
             </div>
@@ -366,7 +390,14 @@ export function NegotiationWorkspace({
               <span className={styles.orderCodeBadge}>
                 #{room.id.slice(0, 8).toUpperCase()}
               </span>{" "}
-              · {isBuyer ? "Bạn là Người mua" : "Bạn là Người bán"}
+              ·{" "}
+              {isExchange
+                ? isBuyer
+                  ? "Bạn mở đề nghị"
+                  : "Bạn là chủ sách đang được hỏi đổi"
+                : isBuyer
+                  ? "Bạn là Người mua"
+                  : "Bạn là Người bán"}
             </p>
           </div>
         </div>
