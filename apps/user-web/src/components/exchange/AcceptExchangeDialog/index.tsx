@@ -482,7 +482,7 @@ export function AcceptExchangeDialog({
                           ? 'Số tiền bạn sẽ bù thêm cho đối tác (VNĐ):'
                           : `Số tiền đối tác (${detail.partner.username}) sẽ bù thêm cho bạn (VNĐ):`}
                       </label>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                         <input
                           type="number"
                           min="0"
@@ -491,7 +491,6 @@ export function AcceptExchangeDialog({
                           onChange={(e) => setNegotiatedDiff(Math.max(0, parseInt(e.target.value) || 0))}
                           style={{
                             flex: 1,
-                            minWidth: 160,
                             padding: '8px 12px',
                             fontSize: 15,
                             fontWeight: 700,
@@ -501,49 +500,6 @@ export function AcceptExchangeDialog({
                             background: '#fff'
                           }}
                         />
-                        <button
-                          type="button"
-                          onClick={() => setNegotiatedDiff(defaultDiffAmount)}
-                          style={{
-                            padding: '7px 10px',
-                            background: '#fff',
-                            border: '1px solid var(--line)',
-                            borderRadius: 4,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Giá chênh gốc ({formatVnd(defaultDiffAmount)})
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setNegotiatedDiff((prev) => prev + 10000)}
-                          style={{
-                            padding: '7px 8px',
-                            background: '#fff',
-                            border: '1px solid var(--line)',
-                            borderRadius: 4,
-                            fontSize: 12,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          +10k
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setNegotiatedDiff((prev) => prev + 50000)}
-                          style={{
-                            padding: '7px 8px',
-                            background: '#fff',
-                            border: '1px solid var(--line)',
-                            borderRadius: 4,
-                            fontSize: 12,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          +50k
-                        </button>
                       </div>
                     </div>
                   )}
