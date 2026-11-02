@@ -1,3 +1,4 @@
+import { LocalDemoCompletionWorker } from './modules/orders/local-demo-completion.worker.js';
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
@@ -13,6 +14,7 @@ const AUCTION_CLOSE_INTERVAL_MS = 5000;
 const app = await NestFactory.createApplicationContext(AppModule, {
   logger: ['error', 'warn'],
 });
+app.get(LocalDemoCompletionWorker).start();
 const worker = app.get(OrderExpiryWorker);
 const auctions = app.get(AuctionWorker);
 const purchases = app.get(PurchaseExpiryWorker);

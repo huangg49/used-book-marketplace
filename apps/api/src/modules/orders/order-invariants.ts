@@ -1,3 +1,4 @@
+import { LOCAL_DEMO_COMPLETION_MS, LOCAL_DEMO_COMPLETION_POLICY } from '../../database/mongo/demo-completion-policy.js';
 import { orderContext } from '../reservations/workflow-context.js';
 import { canonicalJson } from '../../common/canonical-json.js';
 import type {
@@ -136,7 +137,7 @@ export async function checkOrder(tx: Tx, orderId: string) {
           ? 2
           : 1
         : o.state === 'Completed'
-          ? 6
+          ? (o.demoCompletionPolicy === LOCAL_DEMO_COMPLETION_POLICY ? 5 : 6)
           : o.paidAt
             ? 4
             : 2;
@@ -222,9 +223,9 @@ async function checkOrderFunding(
           x.r.systemActor !== 'OrderRefund' ||
           x.r.resultVersion !== 4)) ||
       (j.type === 'OrderSettlement' &&
-        (x.r.operation !== 'settleDirectOrder' ||
-          x.r.systemActor !== 'OrderInspectionExpiry' ||
-          x.r.resultVersion !== 6))
+        (o.demoCompletionPolicy === LOCAL_DEMO_COMPLETION_POLICY
+          ? x.r.operation !== 'completeLocalDemoOrder' || x.r.systemActor !== 'OrderDemoCompletion' || x.r.resultVersion !== 5
+          : x.r.operation !== 'settleDirectOrder' || x.r.systemActor !== 'OrderInspectionExpiry' || x.r.resultVersion !== 6))
     )
       fail('Order journal receipt mismatch');
   }
@@ -333,9 +334,46 @@ async function checkOrderPreparation(
     )
       fail('Pickup verification task mismatch');
   }
+  if (await checkLocalDemoCompletion(tx, o, c)) return;
   await checkOrderPickup(tx, o, c);
   if (['Inspection', 'Completed'].includes(o.state)) return;
   await checkDeliveryReview(tx, o, c);
+}
+
+async function checkLocalDemoCompletion(tx: Tx, o: DirectOrderDoc, c: WorkflowContextDoc): Promise<boolean> {
+  const job = await tx.c.local_demo_order_completions.findOne({ _id: o._id });
+  if (!job && !o.demoCompletionPolicy) return false;
+  if (!job || job.policy !== LOCAL_DEMO_COMPLETION_POLICY || o.demoCompletionPolicy !== job.policy ||
+    job.sourceVersion !== 3 || job.sellerId !== o.sellerId || job.dueAt.getTime() !== job.createdAt.getTime() + LOCAL_DEMO_COMPLETION_MS)
+    fail('Invalid local demo completion declaration');
+  const started = await chain(tx, job!.receiptId);
+  const shipment = await tx.c.direct_shipments.findOne({ _id: job!.shipmentId, orderId: o._id });
+  if (!started || !shipment || shipment.carrier !== 'LatLaiSimulator' || shipment.registeredAt > job!.createdAt ||
+    started.r.actorId !== o.sellerId || started.r.systemActor !== null || started.r.operation !== 'startLocalDemoOrderCompletion' ||
+    started.r.resultVersion !== 4 || started.r.contextId !== c._id || started.r.committedAt.getTime() !== job!.createdAt.getTime() ||
+    get(started.r.result, 'entityId') !== o._id || get(started.r.result, 'state') !== 'InTransit' ||
+    started.a.action !== started.r.operation || started.a.actorId !== o.sellerId || started.a.contextId !== c._id ||
+    started.a.reason !== job!.policy || started.o.type !== 'LocalDemoOrderCompletionStarted' ||
+    await tx.c.carrier_pickup_events.findOne({ orderId: o._id }) || await tx.c.direct_delivery_events.findOne({ orderId: o._id }) ||
+    await tx.c.pickup_reviews.findOne({ orderId: o._id }) || await tx.c.carrier_pickup_reviews.findOne({ orderId: o._id }) ||
+    await tx.c.order_delivery_reviews.findOne({ orderId: o._id }) || await tx.c.order_non_receipt_reports.findOne({ orderId: o._id }))
+    fail('Invalid local demo completion source/receipt');
+  if (job!.status === 'Pending') {
+    if (o.state !== 'InTransit' || o.version !== 4 || o.completedAt || o.closedAt || o.deliveredAt || o.inspectionDeadline)
+      fail('Invalid pending local demo Order');
+  } else {
+    const ended = job!.completionReceiptId ? await chain(tx, job!.completionReceiptId) : null;
+    const journal = await tx.c.ledger_journals.findOne({ orderId: o._id, type: 'OrderSettlement' });
+    if (o.state !== 'Completed' || o.version !== 5 || !o.completedAt || !o.deliveredAt || o.inspectionDeadline ||
+      !job!.completedAt || job!.completedAt < job!.dueAt || job!.completedAt.getTime() !== o.completedAt.getTime() ||
+      o.deliveredAt.getTime() !== o.completedAt.getTime() || o.closedAt?.getTime() !== o.completedAt.getTime() ||
+      !ended || ended.r.operation !== 'completeLocalDemoOrder' || ended.r.systemActor !== 'OrderDemoCompletion' || ended.r.actorId !== null ||
+      ended.r.resultVersion !== 5 || ended.r.contextId !== c._id || ended.r.committedAt.getTime() !== o.completedAt.getTime() ||
+      ended.a.systemActor !== 'OrderDemoCompletion' || ended.a.action !== ended.r.operation || ended.a.reason !== job!.policy ||
+      ended.o.type !== 'DirectOrderSettled' || !journal || journal.receiptId !== ended.r._id || journal.postedAt.getTime() !== o.completedAt.getTime())
+      fail('Invalid completed local demo Order/ledger');
+  }
+  return true;
 }
 
 async function checkOrderPickup(

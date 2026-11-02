@@ -1,5 +1,66 @@
 # Điểm lưu hiện tại — 03/11/2026
 
+## Thanh tiến trình và demo hoàn tất/giải ngân thật — 03/11/2026
+
+- Nhánh `codex/local-demo-settlement`, base `6ba6ef39`; giữ phần chỉnh thanh tiến
+  trình của phiên này. Chờ thanh toán ở bước2; Preparing chưa có vận đơn bước3;
+  đăng ký vận đơn thành công sang bước4 ở cả Buyer/Seller, nhãn chờ bàn giao.
+- Owner làm rõ cần kết thúc giữ tiền và chuyển tiền thật trong ledger demo local,
+  thay bản xem thử UI. [ADR0067](../adr/0067-local-demo-order-settlement.md):
+  lệnh riêng với cờ demo local phía BE, mặc định tắt, development/test + Mongo
+  localhost + simulator. Seller ACTIVE, đúng owner/version/phiên, đã đăng ký vận
+  đơn và không có review mới bắt đầu được job bền vững5giây. Không tự chạy khi tải trang.
+- Lệnh start có receipt/audit/outbox; worker ghi1OrderSettlement, hold về0,
+  proceeds/commission theo agreement, Order Completed/v5, listing Sold/context
+  Closed/commitment Released trong1transaction. Exact retry giữ key/body/version;
+  Back/reload không hủy job. Không có bộ đếm giả hoặc màn minh họa riêng nữa.
+- Contract0.73.1/235operations/37controllers; migration0054 thêm job và principal/
+  terminal shape riêng, không sửa migration cũ. Registry71/99collection sau hòa giải main. Trước đó đã
+  backup/migrate/bootstrap local, counts nghiệp vụ giữ nguyên, API/hai worker
+  chạy lại và readiness200. ID riêng/backup/log nằm ngoài Git trong `.tmp/`.
+- PASS browser `--demo-completion` HTTP/Mongo QA57017/`*_test`, storage/payment
+  test: disabled/wrong owner/stale, lostACK/exact retry/key conflict/revoked replay,
+  cả2phía Completed sau dueAt5giây, Buyer hold0 và seller tăng đúng proceeds,
+  1settlement/3entries cân bằng; ảnh390/1440đã xem. Đã xác minh local sau thao tác:
+  Completed sau5164ms, hold190.000đ về0, seller được180.500đ, commission9.500đ,
+  đúng1settlement; đối soát toàn bộ ledger local balanced. Chi tiết máy/ID ngoài Git.
+- PASS API/web types, API/web lint (warning cũ),308web unit/build, contract/routes,
+  detector0finding;30Mongo của3file schema/upgrade/newmigration PASS. Full Mongo
+  lượt trước57PASS/2FAIL/6SKIP do baseline upgrade/count cần cập nhật cho0054;
+  hai ca fail đã nằm trong30PASS nêu trên. API unit405PASS/1FAIL: shutdown Windows
+  10s timeout có sẵn, chạy riêng vẫn FAIL; không sửa test để che lỗi. 405unit còn
+  lại PASS ở lượt scoped loại đúng bài shutdown đã FAIL; full browser
+  buy-now thường PASS lại sau thay đổi (không bật cờ demo ở lượt QA thường).
+- PASS8ca release-gate HTTP/Mongo (40ca ngoài filter SKIP): đơn thường/Inspection
+  vẫn giữ tiền, historical replay/current auth và alias ledger không vượt gate.
+  Fixture gate bỏ số phí30k cũ, lấy amounts đã chốt theo miễn phí giao hàng.
+  Worker chỉ được start ở API/order-worker; các context CLI read-only không tự quét.
+- Owner yêu cầu chỉ bật một cờ, bỏ UUID/query: `LOCAL_DEMO_COMPLETION_ENABLED`
+  false mặc định. Đổi true và restart API/worker sẽ hiện nút cho Seller trên các
+  đơn đủ điều kiện; projection BE quyết định quyền. Cấu hình UUID cũ bị bỏ qua.
+  Production/remote vẫn từ chối; không tự chạy lệnh khi bật cờ.
+- PASS9policy unit (cờ off/on, production/remote, bỏ cấu hình UUID cũ), API/web
+  types/build/lint, contract0.73.1/routes235, docs/diff/detector. Browser demo
+  PASS390/1440 trên URL thường, off ẩn/on hiện, không cấu hình UUID, giữ replay/
+  hold/proceeds/commission một lần. Cấu hình local để false và đã restart BE.
+  Follow-up commit `refactor(demo): use one local completion switch` trên cùng nhánh.
+- Owner yêu cầu máy khác không phụ thuộc `.env` local: biến demo không bắt buộc,
+  thiếu biến thì off; thêm ca kiểm missing flag, giữ setup DB/JWT hiện có.
+  PASS10policy unit và docs/diff. Không commit file `.env` thật; chỉ cập nhật
+  test/hướng dẫn, không sửa runtime.
+- Owner yêu cầu sửa conflict với `origin/main` tại `6919981c`. Hòa giải registry
+  và điểm lưu, giữ nguyên source Exchange/Admin từ main và source Order/demo
+  trên nhánh. Giữ cả0054-local-demo-completion/0054-exchange-negotiated-diff/
+  0055-exchange-negotiated-diff-payer theo full ID, không đổi migration đã áp dụng.
+  Registry source71/99collection; chưa migrate DB app hoặc restart BE cho lượt này.
+- PASS3Mongo: upgrade main-first/demo-first + baseline59/checksum/ledger; giữ
+  validator Exchange đúng migration main. Contract0.73.1/routes235/API types/build,
+  308web unit, types/build Member web và Admin PASS. Không sửa logic
+  Exchange/Admin hoặc payment/refund ngoài nội dung hai nhánh đã có.
+- Luồng này là ngoại lệ demo được cấp rõ, không mở confirm-receipt/Delivered/
+  settlement thường hoặc xử lý Inspection lịch sử. READINESS/native/human/CI
+  không đổi; chỉ push nhánh theo quyền owner, chưa PR/merge/deploy ngoài máy.
+
 ## Tích hợp origin/main (Free Shipping PR #91 & AI Resilience PR #90) với Exchange Compensation — 03/11/2026
 
 - Kéo và hòa giải `origin/main` (commit `6ba6ef39` gồm PR #90 AI resilience và PR #91 bỏ phí giao hàng) vào `main` local.

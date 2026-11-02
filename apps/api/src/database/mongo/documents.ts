@@ -24,6 +24,7 @@ export type SystemActor =
   | 'OrderPickupExpiry'
   | 'OrderDeliveryExpiry'
   | 'OrderInspectionExpiry'
+  | 'OrderDemoCompletion'
   | 'AuctionClose'
   | 'AuctionPaymentExpiry'
   | 'AuctionIntakeExpiry'
@@ -465,6 +466,7 @@ export interface SaleQuoteDoc {
 }
 
 export interface DirectOrderDoc extends Lockable {
+  demoCompletionPolicy?: string;
   _id: string;
   buyerId: string;
   sellerId: string;
@@ -1487,4 +1489,10 @@ export interface ReviewRevisionDoc {
   at: Date;
   snapshot: Json;
   reason: string | null;
+}
+
+export interface LocalDemoOrderCompletionDoc {
+  _id: string; policy: string; sellerId: string; shipmentId: string; receiptId: string;
+  sourceVersion: number; status: 'Pending' | 'Completed'; createdAt: Date; dueAt: Date;
+  updatedAt: Date; completedAt: Date | null; completionReceiptId: string | null; lockSeq: number;
 }

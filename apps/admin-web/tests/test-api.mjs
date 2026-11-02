@@ -208,6 +208,8 @@ export async function createTestApi({
         next();
       });
     await app.listen(3009, "127.0.0.1");
+    const { LocalDemoCompletionWorker } = await load("modules/orders/local-demo-completion.worker.js");
+    app.get(LocalDemoCompletionWorker).start();
     for (const [email, roles] of [
       ["member@operations.test", ["MEMBER"]],
       ["admin@operations.test", ["ADMIN", "STAFF", "MEMBER"]],
@@ -372,6 +374,11 @@ export async function createTestApi({
     // Login throttling is tested by API E2E. Browser fixtures clear only their own database.
     await db.collection("login_attempts").deleteMany({});
     return {
+      // QA only: model changing the server flag across a restart without replacing this fixture DB.
+      setLocalDemoCompletion: (enabled) => {
+        if (typeof enabled !== 'boolean') throw new Error('Expected a boolean demo setting');
+        app.get(req('@nestjs/config').ConfigService).set('LOCAL_DEMO_COMPLETION_ENABLED', String(enabled));
+      },
       close,
       api,
       db,

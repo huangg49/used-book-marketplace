@@ -295,6 +295,7 @@ export class ShipmentsService {
           event.orderId,
         );
         const { s } = await locate(tx);
+        if (o.demoCompletionPolicy) throw invalidState('Đơn đang chạy luồng hoàn tất demo riêng.');
         if (
           !o.preparation ||
           !['Preparing', 'InTransit', 'ResolutionPending'].includes(o.state) ||
