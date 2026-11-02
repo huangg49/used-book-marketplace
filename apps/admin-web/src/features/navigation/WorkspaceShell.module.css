@@ -656,15 +656,6 @@
   outline: 2px solid var(--shop-wine);
   outline-offset: 2px;
 }
-@media (prefers-reduced-motion: reduce) {
-  .shell,
-  .sidebar {
-    transition-duration: 220ms !important;
-  }
-  .linkLabel {
-    transition-duration: 180ms !important;
-  }
-}
 .mobileActions {
   display: flex;
   align-items: center;

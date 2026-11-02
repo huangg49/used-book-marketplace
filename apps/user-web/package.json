@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:book-detail:browser": "node tests/book-detail.mjs",
+    "test:search-recovery:browser": "node tests/search-recovery.mjs",
     "dev:auth-wind": "vite --host 127.0.0.1 --port 5198 --strictPort",
     "build:auth-wind": "node scripts/build-auth-wind-preview.mjs",
     "test:auth-wind:browser": "node tests/auth-wind-preview.mjs",

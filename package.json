@@ -8,6 +8,7 @@
     "node": ">=24.15.0"
   },
   "scripts": {
+    "test:web-motion": "node scripts/check-web-motion.mjs",
     "test:exchange-evidence:browser": "node scripts/test-exchange-evidence.mjs",
     "test:exchange-finance:browser": "node scripts/test-exchange-finance.mjs",
     "test:exchange-recovery:browser": "node scripts/test-exchange-recovery.mjs",

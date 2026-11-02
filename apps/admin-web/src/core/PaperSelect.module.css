@@ -118,15 +118,3 @@
     transform: translateY(4px);
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .select > button,
-  .select ul {
-    transition-duration: 140ms !important;
-  }
-  .select > button > svg {
-    transition-duration: 180ms !important;
-  }
-  .select li {
-    transition-duration: 100ms !important;
-  }
-}

@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router-dom';
+import { MotionConfig } from 'framer-motion';
 import { Providers } from './app/providers';
 import { router } from './app/router';
 import './styles/global.css';
@@ -17,8 +18,10 @@ if (!rootEl) throw new Error('Root element #root not found');
 
 createRoot(rootEl).render(
   <StrictMode>
-    <Providers>
-      <RouterProvider router={router} />
-    </Providers>
+    <MotionConfig reducedMotion="never">
+      <Providers>
+        <RouterProvider router={router} />
+      </Providers>
+    </MotionConfig>
   </StrictMode>,
 );

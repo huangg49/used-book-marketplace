@@ -1,4 +1,8 @@
 import { ReviewGallery } from "./ReviewGallery";
+import { BookReferenceCard } from "./BookReferenceCard";
+import referenceStyles from "./BookReference.module.css";
+import { ListingCondition } from "./ListingCondition";
+import { Camera, Truck, Wallet } from "lucide-react";
 import { dateText, money } from "../../core/format";
 import {
   categoryPath,
@@ -108,33 +112,43 @@ export function BookReference({
     return () => onReady(false);
   }, [ready, onReady]);
   return (
-    <section className="section">
-      <p className="eyebrow">Đối chiếu đầu sách</p>
-      {result.isLoading && <p role="status">Đang tải thông tin đầu sách…</p>}
+    <div>
+      {result.isLoading && (
+        <p className={referenceStyles.state} role="status">
+          Đang tải thông tin đầu sách…
+        </p>
+      )}
       {result.error && (
-        <ErrorNotice
-          error={result.error}
-          retry={() => void result.refetch()}
-          busy={result.isFetching}
-        />
+        <div className={referenceStyles.state}>
+          <ErrorNotice
+            error={result.error}
+            retry={() => void result.refetch()}
+            busy={result.isFetching}
+          />
+        </div>
       )}
       {result.data && (
-        <>
-          <h3>{result.data.title}</h3>
-          <MetadataView value={result.data} />
-        </>
+        <BookReferenceCard
+          value={result.data}
+          id={id}
+          confirmed={confirmed}
+          admin={admin}
+        />
       )}
-      {!confirmed && (
-        <Notice tone="warning">
-          Đầu sách chưa được xác nhận. Cần Admin xử lý thông tin đầu sách trước
-          khi duyệt bài đăng.
-        </Notice>
+      {!id && (
+        <p className={referenceStyles.state}>
+          Bài đăng chưa liên kết với đầu sách.
+        </p>
       )}
-    </section>
+      {!!id && !confirmed && !admin && (
+        <p className={referenceStyles.state}>
+          Đầu sách chưa được xác nhận. Cần Admin kiểm tra yêu cầu đầu sách trước
+          khi duyệt bài.
+        </p>
+      )}
+    </div>
   );
 }
-const yesNo = (value: boolean | null) =>
-  value === null ? "Chưa khai báo" : value ? "Có" : "Không";
 export function ContentView({
   value,
   listingId,
@@ -170,7 +184,10 @@ export function ContentView({
 
       <section className="section">
         <div className="section-heading">
-          <h3>Ảnh người đăng gửi</h3>
+          <h3>
+            <Camera size={20} aria-hidden="true" />
+            Ảnh người đăng gửi
+          </h3>
           <span>{c.mediaIds.length} ảnh</span>
         </div>
         <p className="muted">
@@ -185,63 +202,36 @@ export function ContentView({
           onReady={onPhotoReady}
         />
       </section>
+      <ListingCondition content={c} />
       <section className="section">
-        <h3>Tình trạng bản sách</h3>
-        <dl className="facts">
-          <div>
-            <dt>Người đăng đánh giá</dt>
-            <dd>{labels[c.condition || ""] || "Chưa khai báo"}</dd>
-          </div>
-          <div>
-            <dt>Ruột sách</dt>
-            <dd>{c.pages || "Chưa mô tả"}</dd>
-          </div>
-          <div>
-            <dt>Bìa và gáy</dt>
-            <dd>{c.coverNote || "Chưa mô tả"}</dd>
-          </div>
-          <div>
-            <dt>Ghi chú / đánh dấu</dt>
-            <dd>{c.notes || "Chưa mô tả"}</dd>
-          </div>
-          <div>
-            <dt>Phụ kiện</dt>
-            <dd>{c.accessories || "Chưa mô tả"}</dd>
-          </div>
-          <div>
-            <dt>Còn đọc được</dt>
-            <dd>{yesNo(c.readable)}</dd>
-          </div>
-          <div>
-            <dt>Thiếu trang</dt>
-            <dd>{yesNo(c.hasMissingPages)}</dd>
-          </div>
-          <div>
-            <dt>Thiếu nội dung trọng yếu</dt>
-            <dd>{yesNo(c.missingEssentialContent)}</dd>
-          </div>
-        </dl>
-        <p className="prose">{c.description}</p>
-      </section>
-      <section className="section">
-        <h3>Giá và cách trao sách</h3>
-        <dl className="facts">
+        <h3>
+          <Wallet size={20} aria-hidden="true" />
+          Giá và cách trao sách
+        </h3>
+        <dl className="facts trade-facts">
           <div>
             <dt>Hình thức</dt>
             <dd>{labels[c.mode || ""] || "Chưa chọn"}</dd>
           </div>
           <div>
             <dt>Giá bán</dt>
-            <dd className="price">{money(c.salePrice)}</dd>
+            <dd className={c.salePrice === null ? "not-applicable" : "price"}>
+              {money(c.salePrice)}
+            </dd>
           </div>
           <div>
             <dt>Giá trị đổi</dt>
-            <dd className="price">{money(c.exchangeValue)}</dd>
+            <dd className={c.exchangeValue === null ? "not-applicable" : "price"}>
+              {money(c.exchangeValue)}
+            </dd>
           </div>
         </dl>
       </section>
       <section className="section">
-        <h3>Lựa chọn giao nhận</h3>
+        <h3>
+          <Truck size={20} aria-hidden="true" />
+          Lựa chọn giao nhận
+        </h3>
         {value.fulfillmentStatus === "Current" ? (
           <p>
             Giao trực tiếp · TP.HCM · vùng mô phỏng. Địa chỉ riêng không hiển

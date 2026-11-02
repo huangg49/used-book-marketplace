@@ -188,12 +188,3 @@
     display: none;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .popover {
-    animation-duration: 180ms !important;
-    animation-iteration-count: 1 !important;
-  }
-  .trigger svg {
-    transition-duration: 180ms !important;
-  }
-}

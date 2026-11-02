@@ -49,13 +49,6 @@
     transform: translateY(-4px) scale(1.02);
     filter: drop-shadow(0 16px 14px #28191436);
   }
-  @media (prefers-reduced-motion: reduce) {
-    .motionFrame > .card,
-    .motionFrame .cover,
-    .motionFrame .image {
-      transition-duration: 240ms !important;
-    }
-  }
 }
 .cover {
   position: relative;

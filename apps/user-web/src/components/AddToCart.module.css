@@ -1,0 +1,29 @@
+.add { min-width: 0; }
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 11px 14px;
+  border: 1px solid var(--shop-control);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--shop-wine);
+  font: 600 0.875rem/1.5 var(--shop-body);
+  text-decoration: none;
+  transition: background-color 180ms ease-out, border-color 180ms ease-out;
+}
+.button svg { flex: none; }
+.button:hover:not(:disabled) { background: var(--shop-cream); border-color: var(--shop-wine); }
+.button:disabled, .button[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
+.button:focus-visible, .result a:focus-visible { outline: 2px solid var(--shop-wine); outline-offset: 3px; }
+.result, .error { margin: 12px 0 0; font-size: .8125rem; line-height: 1.7; }
+.result { color: #254337; }
+.result p { display: flex; align-items: flex-start; gap: 6px; margin: 0; }
+.result p svg { flex: none; margin-top: 3px; }
+.result a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--shop-wine); font-weight: 600; text-underline-offset: 3px; }
+.error { color: #8c241c; }
+.spinner { animation: cart-spin 900ms linear infinite; }
+@keyframes cart-spin { to { transform: rotate(360deg); } }

@@ -626,15 +626,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-/* Owner motion policy: preserve the authored hover/selection even when the
-   system preference would otherwise disable transitions in the shared CSS. */
-@media (prefers-reduced-motion: reduce) {
-  .desk .bookObject {
-    transition:
-      transform 220ms var(--ease-smooth),
-      box-shadow 220ms ease !important;
-  }
-}
 
 .cover img[data-loaded="false"] {
   opacity: 0;

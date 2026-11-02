@@ -271,21 +271,6 @@
     opacity: 1;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  /* Owner explicitly requests hero motion regardless of OS preference.
-     Keep this exception scoped; offscreen/hidden guards still apply. */
-  .heroCover {
-    animation-duration: 600ms !important;
-    animation-iteration-count: 1 !important;
-  }
-  .heroCover img {
-    transition-duration: 250ms !important;
-  }
-  .coverMotion {
-    animation-duration: var(--sway-duration) !important;
-    animation-iteration-count: infinite !important;
-  }
-}
 .search {
   grid-column: 1 / -1;
   grid-row: 2;
@@ -863,15 +848,6 @@
 .quickLinks a:active {
   --bookmark-motion-duration: 100ms;
 }
-/* Owner requests visible motion even with OS reduction enabled; interaction only. */
-@media (prefers-reduced-motion: reduce) {
-  .bookmarkPaper,
-  .quickLinks a > img,
-  .quickLinks a > span,
-  .quickLinks a::before {
-    transition-duration: var(--bookmark-motion-duration, 180ms) !important;
-  }
-}
 .categories {
   padding: 24px 28px;
   background: var(--shop-paper);
@@ -1387,42 +1363,6 @@
   83% {
     transform: translate(0, -8px) rotate(var(--motif-angle));
     opacity: 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  /* Owner requests all Home motion even with OS reduction enabled.
-     Restore durations only here; viewport/hidden guards still pause loops. */
-  .canopyLeft,
-  .canopyRight {
-    animation-duration: 12s !important;
-    animation-iteration-count: infinite !important;
-  }
-  .autumnMotif[data-home-loop] {
-    animation-duration: var(--leaf-duration, 16s) !important;
-    animation-iteration-count: infinite !important;
-  }
-  .categoryChoices button,
-  .shelfFilters button {
-    transition-duration: 150ms, 150ms, 150ms, 120ms !important;
-  }
-  .search button,
-  .more,
-  .posting a {
-    transition-duration: 160ms, 120ms !important;
-  }
-  .home article > div:first-child > img {
-    transition-duration: 240ms !important;
-  }
-  .bannerCovers img {
-    transition-duration: 320ms !important;
-  }
-  .more svg,
-  .search button svg,
-  .sectionHead > a svg,
-  .exchangeIntro a svg,
-  .budgetBanners a svg,
-  .posting a svg {
-    transition-duration: 200ms !important;
   }
 }
 @media (max-width: 1100px) {

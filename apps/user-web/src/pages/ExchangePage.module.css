@@ -564,17 +564,3 @@
         padding: 4px 8px;
     }
 }
-
-@media (prefers-reduced-motion: reduce) {
-
-    .match,
-    .card {
-        transition: none;
-    }
-
-    .match:hover,
-    .card:hover,
-    .card:focus-within {
-        transform: none;
-    }
-}

@@ -1,28 +1,28 @@
 .gallery {
   min-width: 0;
-  position: sticky;
-  top: 108px;
 }
 .photo {
   position: relative;
   width: 100%;
-  max-width: 460px;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 4 / 5;
   height: auto;
-  padding: 0;
-  background: #efe3cf;
-  border-radius: 16px;
+  padding: 24px;
+  background: #f4eddf;
+  border-radius: 12px;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow:
-    0 16px 36px -8px rgba(40, 25, 20, 0.22),
-    0 4px 14px rgba(40, 25, 20, 0.08);
-  border: 1px solid rgba(231, 213, 194, 0.8);
+  border: 1px solid var(--shop-line);
 }
 .supportPhotoStage {
   background: #efe3cf;
+}
+.photo > div {
+  position: absolute;
+  inset: 24px;
+  width: auto;
+  height: auto;
 }
 .supportPhotoStage img {
   object-fit: contain !important;
@@ -37,14 +37,12 @@
   gap: 8px;
   min-height: 40px;
   padding: 8px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 999px;
-  background: rgba(255, 253, 248, 0.92);
-  backdrop-filter: blur(8px);
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  background: var(--shop-paper);
   color: var(--shop-wine);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 700;
-  box-shadow: 0 4px 14px rgba(40, 25, 20, 0.16);
   transition: background 160ms ease, transform 160ms ease;
   cursor: pointer;
 }
@@ -54,12 +52,17 @@
 }
 .thumbnails {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   margin-top: 14px;
+  padding: 4px 3px 10px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--shop-control) transparent;
 }
 .thumbnails button {
   position: relative;
+  flex: 0 0 64px;
   width: 64px;
   height: 80px;
   padding: 6px;
@@ -88,7 +91,7 @@
   min-width: 18px;
   background: var(--shop-paper);
   color: var(--shop-wine);
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   line-height: 1.6;
   border-radius: 3px;
 }
@@ -98,7 +101,7 @@
   gap: 16px;
   margin-top: 12px;
   color: var(--shop-muted);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   line-height: 1.7;
 }
 .caption p {
@@ -184,21 +187,18 @@
   outline: 2px solid var(--shop-wine);
   outline-offset: 3px;
 }
-@media (max-width: 1000px) {
-  .photo {
-    max-width: 380px;
-  }
-}
-@media (max-width: 720px) {
+@media (max-width: 850px) {
   .gallery {
-    position: static;
-    max-width: 400px;
+    max-width: 480px;
     width: 100%;
     margin: 0 auto;
   }
   .photo {
-    max-width: 100%;
+    padding: 18px;
   }
+  .photo > div { inset: 18px; }
+}
+@media (max-width: 720px) {
   .viewer {
     width: calc(100% - 20px);
     max-height: calc(100dvh - 20px);

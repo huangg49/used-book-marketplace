@@ -1,5 +1,127 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## Chốt gói giao diện local và tiếp tục demo
+
+- Owner duyệt commit local gói Admin review, web motion, search recovery và
+  Member book detail; commit subject `feat(web): complete listing review and purchase presentation`.
+  Giữ riêng các sửa đổi Antigravity tại checkout ứng dụng, không push/CI/merge.
+- Tiếp theo được duyệt: bổ sung User2 làm Buyer và đi qua mua bài User1 trên app
+  local đang dùng; giữ dữ liệu cũ. Chưa nhận là đã có đơn hoặc đã thanh toán.
+
+## Member web — tân trang chi tiết bản sách
+
+- Owner duyệt bố cục45/55, ảnh contain+dải thumbnail, một document scroller;
+  giá rõ, seller trước thao tác; Mua ngay chính, giỏ/chat phụ, status/condition
+  dựa dữ liệu thật. Giữ owner/hold/bundle/retry/motion; không đổi API/nghiệp vụ.
+- Cart có style riêng, chỉ ACK mới có Xem giỏ; sửa returnUrl guest quay đúng sách.
+  Giữ replay yêu cầu cũ cả khi refresh detail lỗi. PASS308unit/typecheck/build,
+  QA8nhóm+buy-now harness thật trên Mongo QA (storage/payment/carrier fake);
+  live8ảnh thật/6viewport/chữ130%/viewer/focus0pageErrors, detector0primary.
+- [Source, kiểm chứng và giới hạn](../ui/BOOK_DETAIL_REFINEMENT_2026_11_02.md).
+  Checkout local nhận đúng file tương thích, giữ việc teammate; User1 hiện Approved
+  đọc được công khai, lượt này không đổi DB chính. Chưa push/merge/đóng gate.
+
+## Member web — tìm kiếm kẹt loading
+
+- Repro xác nhận: IME start→đổi chữ→blur thiếu end giữ composing=true/query disabled,
+  không phải API đang tìm mãi. Sửa blur/submit kết thúc lượt nhập; chặn Enter đang
+  ghép dấu khỏi submit sớm. Giữ debounce/query/timeout/motion/API.
+- PASS typecheck hai checkout,308unit/build/lint0error; browser8nhóm HTTP kiểm soát
+  gồm lỗi mạng/timeout15giây/retry và mobile; API local3response200/0pageErrors.
+  [Bằng chứng và giới hạn](../ui/SEARCH_RECOVERY_2026_11_02.md). Chỉ hunk ô tìm kiếm
+  áp sang local, giữ việc teammate. Không ghi DB/push/merge hoặc đóng gate.
+
+## Web — giữ hiệu ứng khi máy bật Giảm chuyển động
+
+- Owner yêu cầu toàn bộ web: bỏ global cutdown và các nhánh reduced-motion ở
+  Member/Admin; Framer Motion never giảm, Expo web hook luôn full motion.
+  Giữ visibility/viewport/cleanup và timing gốc; không đổi máy/native policy.
+- PASS Member308unit/Admin228unit/typecheck/build, RN typecheck/5motion tests/
+  lint file, Expo web export; browser5nhóm CSS+RN-web adapter và4màn local thực.
+  [Phạm vi, evidence và giới hạn](../ui/WEB_MOTION_POLICY_2026_11_02.md).
+- Chỉ biến đổi motion trên checkout local, giữ Profile/Member/shell của teammate.
+  Không push/merge/đóng gate; API và hai web app có sẵn tiếp tục chạy.
+
+## Admin — bàn kiểm duyệt bài đăng
+
+- Owner thấy đủ6tick nhưng nút vẫn khóa: chuyển lý do chặn xuống sát nút duyệt,
+  có status/description và link đúng đầu sách cho Admin; Staff chỉ thấy chờ Admin.
+  QA phát hiện ListingTitle Staff vẫn gọi private catalog: đã chặn theo capability
+  ở queue/detail/next, tách cache và không render metadata khi thiếu quyền đọc.
+  PASS229unit/typecheck/lint/build, QA14nhóm (Admin/Staff), live3viewport/8ảnh;
+  fixture DB/user/role còn0. User1 thật vẫn PendingReview, không gửi quyết định.
+  Giữ các focus style riêng của teammate tại checkout đang dùng; chưa push/merge.
+- Typography khối Giá và cách trao sách: cả3giá trị16px/cùng căn hàng; tiền thật
+  wine700, hình thức600, null400/muted. PASS typecheck hai checkout và browser
+  local1920/768/390 (computed size/alignment/weight,0pageErrors). Chỉ sửa trình bày.
+- Follow-up scroll: route có viewport cố định; menu/heading đứng yên, queue cuộn
+  trọn cột, reader/phiếu cùng top/bottom và cuộn độc lập; dossier hẹp dùng1scroller.
+  Không sticky/page scroll cạnh tranh. Guard giữ vị trí, đổi hồ sơ về đầu;
+  nút tới phiếu cuộn đúng dossier. PASS228unit/typecheck/lint/build, QA12nhóm,
+  live7viewport với8ảnh thật/0pageErrors; app typecheck PASS. Teardown QA exit0,
+  QA Mongo đã dừng; API3000/Admin5173 giữ chạy, User1 PendingReview. Chi tiết và
+  giới hạn kiểm kê QA ở report; không push/merge/đóng gate.
+- Follow-up phần đối chiếu đầu sách: một disclosure, tên/author/status nổi bật,
+  xuất bản và phân loại chia2/1cột; null giữ chưa cung cấp, Admin có exact link.
+  Giữ readiness callback/quyền. QA11nhóm/unit228/build PASS;4viewport/keyboard
+  disclosure PASS0pageErrors. Không sửa dữ liệu hoặc quyết định bài User1.
+- Mới nhất: owner chưa chấp nhận bản phẳng; đã nhấn vùng nhận diện sách/giá wine,
+  nhóm lời khai/ghi chú/mô tả, phiếu quyết định/check/progress. Container980px đổi
+  sang một khu đọc khi sidebar còn mở. QA11nhóm PASS; main User1 vẫn PendingReview;
+  ảnh thật8/8,4viewport/6geometry PASS. Chi tiết ở report, chưa human/remote CI.
+- Owner yêu cầu sửa màn `/review/listings` sau khi User1 gửi bài. Nhánh
+  `codex/admin-listing-review-workspace`, base `cbc616f7`;
+  [phạm vi, source và kiểm chứng](../ui/ADMIN_LISTING_REVIEW_2026_11_02.md).
+- Mở hồ sơ đầu hàng khi vào; explicit Back giữ danh sách, không nhảy hồ sơ đang
+  đọc khi polling. Thumbnail/ảnh thật, summary giá/tình trạng, catalog gate và
+  exact deep link, phiếu quyết định rõ; giữ dirty guard, checklist và key/body/version.
+- PASS Admin worktree228unit/typecheck/lint/build; checkout đang dùng219unit và
+  typecheck. Browser10nhóm real API/Mongo QA+storage fake PASS; local chỉ đọc hồ sơ
+  và media thật1920/1440/768/390 PASS0pageErrors. Không duyệt/từ chối bài User1 thật.
+- Chỉ áp phần review UI tương thích vào checkout local cũ, không đè Member web,
+  App.css hoặc công việc Antigravity. Native/human/remote CI NOT RUN; chưa push/merge.
+- Follow-up owner: sửa thumbnail tràn ô64px/đè caption do Grid min-content. Repro
+  ảnh thật FAIL trước sửa; sau sửa containment8/8/caption/section PASS6độ rộng,
+  chọn ảnh8/viewer/Escape/focus PASS. Thêm geometry helper vào QA runner; full QA
+  không chạy lại cho CSS-only, helper chạy trực tiếp với ảnh thật. Chi tiết ở report.
+
+## Dữ liệu demo User 1 — local, không deploy
+
+- Owner duyệt đúng1Member và1bài bán trong app local đang dùng, giữ dữ liệu cũ.
+  Đã thêm tài khoản demo ACTIVE/preverified, hồ sơ,1địa chỉ mặc định, catalog Pending,
+  listing Draft và8ảnh Commons có ghi công CC BY-SA4.0 qua storage/worker thật.
+  Giá120.000đ mô phỏng; chưa xác minh hiện vật/ấn bản, ảnh điện thoại hoặc đủ góc.
+- Nạp ví1.000.000đ mô phỏng qua API Member và TEST_OPERATOR có sẵn, không gán balance.
+  Ledger đối soát cân bằng trước/sau;7bản ghi nghiệp vụ cũ được fingerprint không đổi
+  (bỏ lockSeq). Không reset/migrate DB chính hoặc tự gửi/duyệt catalog/bài đăng.
+- PASS đăng nhập/Kệ sách/ví trên Member web local và mở đúng nháp/tải8ảnh trên RN
+  Expo web430px,0pageErrors. Native NOT RUN. Web Kệ sách chưa có mở lại Draft;
+  dùng trình nháp RN. Không thay code UI trong gói dữ liệu.
+- Owner yêu cầu credential dễ nhớ riêng User1 demo local; đã đổi và thu hồi các
+  phiên cũ trong transaction. Giữ policy mật khẩu chung, tài khoản khác và bài nháp;
+  thông tin đăng nhập lưu riêng, không ghi vào tài liệu chung.
+- Owner duyệt tắt giới hạn đăng nhập cho demo local: bật cờ có sẵn theo
+  [ACCOUNT_AUTH](../features/ACCOUNT_AUTH.md#demo-local) và khởi động lại riêng API,
+  giữ watch mode. Runtime PASS6lần sai trả401 rồi lần7đúng trả200; Member web PASS.
+  Unit12/12PASS giữ giới hạn production/test và các scope OTP/khôi phục. Không sửa
+  source auth hoặc xóa counters. Cờ local trước đó không bật; chưa xác định lịch
+  sử đổi file riêng. Workflow CI hosted và `.env` ignored không chứng minh CI đổi nó.
+- App/worker local có sẵn được giữ chạy. Preview riêng trước đó vẫn còn; RN Expo
+  web local8081 mới trỏ API3000, không phải preview QA8087/API3032. Thông tin đăng
+  nhập, nguồn ảnh và evidence giữ riêng trong thư mục ignored `.tmp/user1-local`;
+  không đưa credential/DB dump vào Git. Không push/PR/merge hoặc đóng readiness.
+- Theo yêu cầu owner sau đó, đã restart API3000 (giữ watch mode) và bật lại Member
+  web5174/Admin5173 đang dừng. PASS startup, hai form login render0pageErrors,
+  API từ chối request chưa đăng nhập401; cờ demo login vẫn bật. Không nghiệm thu
+  phần chỉnh/gửi nháp Antigravity đang làm chỉ bằng các kiểm tra startup này.
+- **Trạng thái cuối theo yêu cầu owner tự tập khởi động:** đã dừng API/watch,
+  Member/Admin, hai preview và Mongo chính/QA; các cổng ứng dụng/DB không còn
+  listener. Mongo chính dùng volume được giữ nguyên. QA preview dùng tmpfs nên
+  đã lưu archive riêng có users/roles, SHA256/gzip integrity PASS trước khi dừng;
+  restore NOT RUN. Bản thử QA cần restore riêng trước khi mở lại, không tự coi
+  còn dữ liệu sau restart. Chạy hằng ngày bằng `pnpm dev:api`, `pnpm dev:user`,
+  `pnpm dev:admin`; launcher tự bật Mongo chính và media/order worker, không seed.
+
 ## Gia cố Operations CI / RN mua ngay — checkpoint local
 
 - Owner duyệt xử lý lỗi Operations sau PR89. Nhánh `codex/fix-rn-buy-now-navigation`,

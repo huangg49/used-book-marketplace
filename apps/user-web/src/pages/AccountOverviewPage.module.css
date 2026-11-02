@@ -421,13 +421,6 @@
   color: var(--shop-cream);
   background: var(--shop-wine);
 }
-@media (prefers-reduced-motion: reduce) {
-  .root :is(a, button) {
-    transition:
-      color 170ms ease-out,
-      background-color 170ms ease-out !important;
-  }
-}
 @media (max-width: 1150px) {
   .workspace {
     grid-template-columns: minmax(0, 1fr);

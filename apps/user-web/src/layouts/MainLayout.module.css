@@ -164,24 +164,6 @@
     min-height var(--nav-morph-duration) cubic-bezier(0.16, 1, 0.3, 1),
     padding var(--nav-morph-duration) cubic-bezier(0.16, 1, 0.3, 1);
 }
-/* Owner requests a visible, finite navbar morph even on their reduced-motion laptop. */
-@media (prefers-reduced-motion: reduce) {
-  .header,
-  .headerInner {
-    transition-duration: var(--nav-morph-duration) !important;
-  }
-  .header[data-collapsing="true"]::after {
-    animation-duration: var(--nav-edge-duration) !important;
-    animation-iteration-count: 1 !important;
-  }
-  .navEdge rect {
-    transition-duration: var(--nav-morph-duration) !important;
-  }
-  .header[data-collapsing="true"] .navEdge rect {
-    animation-duration: var(--nav-edge-duration) !important;
-    animation-iteration-count: 1 !important;
-  }
-}
 .header[data-floating="true"] .headerInner {
   min-height: 64px;
   padding-block: 8px;
