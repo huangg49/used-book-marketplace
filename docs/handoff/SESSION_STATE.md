@@ -8,10 +8,23 @@ Buyer acknowledgement có giới hạn; carrier/settlement/worker gate vẫn đ�
 PASS14review E2E,8receipt/release E2E (40ngoài filter SKIP),6policy,151session,
 315Member unit, browser thật API/Mongo QA nhận→review/lostACK/tiền giữ nguyên,
 typecheckAPI/web/RN,buildAPI/web,lintscope vàcontract246operations/38controllers.
-Đã thử QA bộ hai Member/11listing/địa chỉ/wishlist, chưa nhập đè dữ liệu cũ.
+PASS20catalog/draft E2E gồm mở lại tiêu chí đổi sách sau restart, giữ response
+cũ cho bài chưa có tiêu chí. Không sửa migration hoặc tắt quota.
+Đã thử QA rồi bổ sung hai Member/11listing/địa chỉ/wishlist vào DB local chính:
+5+3bài sẵn đổi,3nháp, mỗi ví1triệu, không exchange; giữ cap5. Admin demo được
+thêm TEST_OPERATOR, menu Mô phỏng→Nạp tiền mô phỏng. PASS browser QA matching
+trong phiếu đề nghị; không có engine matching wishlist toàn hệ thống. PASS
+browser app chính5174/5173, login5Member, ví/đơn cũ giữ nguyên và public409bài.
+Phát hiện400ảnh nền giữ thừa quota gây429: kiểm live checksum đủ400gốc+400WebP,
+thử validator/index/ledger trên clone QA rồi hiệu chỉnh atomic metadata giữ chỗ
+từ821,6MB xuống34,5MB; không đổi file ảnh/budget/ledger. Backup/audit private,
+3308bản ghi cũ giữ nội dung; ngoại lệ role Admin và metadata quota được đối chiếu.
+5env giữ nguyên; không gọi AI cho11bài. Hướng dẫn demo private trên Desktop.
 Không push/PR/merge mới hoặc đóng READINESS. Native/human/remoteCI NOT RUN.
 [Phạm vi, thao tác và bằng chứng](../features/RECEIPT_REVIEW_DEMO_2026_11_03.md).
-Kết quả kích hoạt local cập nhật khi kết thúc gói; các checkpoint cũ giữ bên dưới.
+Checkout app kích hoạt d03bd5ce và commit bàn giao cùng gói (giữ field tiêu chí
+tùy chọn + bằng chứng demo), nhánh `codex/demo-receipt-local-20261103`;
+API/worker3000, Admin5173, Member5174 giữ chạy; các checkpoint cũ giữ bên dưới.
 
 # Đồng bộ main và bảo toàn checkout local — 03/11/2026
 

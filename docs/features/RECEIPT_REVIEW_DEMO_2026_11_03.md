@@ -62,7 +62,7 @@ lượt kích hoạt/data local được ghi riêng. Không gọi provider AI/em
 - PASS transaction-reviews14ca trên Mongo/HTTP, gồm Exchange own receipt,
   peer/outsider bị từ chối, private list, dispute khóa sửa/xóa, PointOrder viết sớm
   dù cả hai hết48h vẫn không công bố khi chưa Completed; lifecycle/race hiện có.
-- PASS8ca receipt/release-gate wallet được chọn (hai lượt7+1, các ca ngoài filter
+- PASS8ca receipt/release-gate wallet được chọn (lượt chốt8PASS/40ngoài filter
   SKIP): Buyer-only, exact replay, 72h, tiền/commitment/ledger giữ nguyên,
   carrier/settlement bị chặn và overdue race. Không chạy toàn wallet harness.
 - PASS browser mua ngay → giao mô phỏng → nhận → review bằng API/Mongo thật;
@@ -72,7 +72,61 @@ lượt kích hoạt/data local được ghi riêng. Không gọi provider AI/em
   contract0.74:246operations/38controllers. Detector hỗ trợ, không thay nhìn UI.
 - PASS bộ cấp role/tạo2Member/11listing/địa chỉ/wishlist qua API trên QA:8bài
   Approved/3Draft, media theo owner,2bút toán nạp cân bằng, không tạo exchange.
+- PASS20catalog/draft E2E; ca lưu/mở lại sau restart giữ đúng exchangePreferences
+  đã gửi. Draft không có tiêu chí giữ response cũ, không thêm field null bắt buộc.
 - Native Android/iOS, human UX/review và CI remote NOT RUN cho gói này.
   Các gate claim/settlement, storage video100MB và AI nghiệm thu giữ nguyên.
 
-Kết quả kích hoạt DB/app local và thử menu/matching được cập nhật khi kết thúc gói.
+## Kích hoạt trên app local chính
+
+- Đã kích hoạt code từ d03bd5ce trên checkout ứng dụng, nhánh
+  `codex/demo-receipt-local-20261103`; API/worker3000, Admin5173, Member5174.
+  Commit bàn giao cùng gói giữ optional field tiêu chí và bổ sung regression/
+  bằng chứng; API/worker được khởi động lại cùng source. Fetch origin/main vẫn
+  b447dbab. Không push/PR/merge mới.
+- PASS browser QA: User mở bài đối tác → gửi đề nghị đổi sách → kệ của mình có
+  nhãn khớp tác giả/thể loại và sách khớp trước → chọn cặp cùng giá trị. Chưa gửi
+  proposal để không tiêu thụ dữ liệu demo. Admin có role bổ sung mở nhóm Mô phỏng,
+  đi từ menu tới form nạp và tìm người nhận. API/Mongo thật, storage QA fake.
+- PASS trên ứng dụng chính: cả5Member demo đăng nhập, ví hai người mới1triệu/
+  held0, không exchange; User1/User3 vẫn1triệu/held0, User2available850k/held150k,
+  đơn cũ Preparing giữ nguyên. Public409bài (401cũ+8mới), không trùng ID;3nháp.
+  Mỗi Member mới1địa chỉ hợp lệ,6wishlist;2bút toán simulator mới cân bằng.
+- PASS browser localhost5174/5173/API3000: Member mở bài đối tác thấy ảnh thật từ
+  private storage/tiêu chí đổi/nút gửi đề nghị; Admin hiện quyền TEST_OPERATOR,
+  mở đúng form và tìm/chọn Member. Không gửi proposal, chat hoặc nạp thêm ngoài
+  2khoản được duyệt. Đăng xuất/đăng nhập lại nếu menu trong phiên cũ chưa cập nhật.
+- Backup DB trước thêm dữ liệu và trước hiệu chỉnh quota được giữ private. Đối
+  chiếu3308bản ghi cũ: nội dung nghiệp vụ giữ nguyên, chỉ có role Admin+updatedAt
+  đã duyệt và metadata giữ chỗ400ảnh như phần dưới. Kiểm chính xác password/roles
+  cũ của Admin giữ nguyên;5file cấu hình không đổi. Không model/provider AI call
+  cho11bài mới; không đổi cấu hình tự duyệt có sẵn của owner.
+- Hướng dẫn tài khoản, bài đích và thứ tự thao tác lưu private trên Desktop của
+  owner, cùng bản trong `.tmp/receipt-review-demo/` của checkout ứng dụng.
+  User đầu tiên đủ5slot nên dùng Member trống đã chuẩn bị trước khi demo đăng mới.
+
+## Chặn quota phát hiện khi thêm ảnh và hiệu chỉnh có bằng chứng
+
+API thật trả429 MediaQuotaExceeded dù ảnh mới hợp lệ: lần nhập400bìa giữ mỗi ảnh
+Ready thêm2MB thay vì dung lượng WebP thực, tổng giữ821.590.869byte vượt quota
+800.000.000byte hiện hành. Đây là lỗi dữ liệu import, không lỗi Supabase hoặc
+thiếu tài khoản. Không tăng quota, đổi gói, xóa ảnh hay sửa migration để né lỗi.
+
+Đã đọc lại400original+400WebP đang dùng từ private storage, kiểm kích thước và
+checksum khớp manifest. Thử trên bản sao QA với validator/index runtime, sau đó
+hiệu chỉnh atomic đúng400ID Ready/import/không processing job: reservedBytes bằng
+inputBytes+derivativeBytes như worker thành công lần đầu, tăng version/updatedAt
+và lưu audit. Tổng400ảnh còn34.514.743byte, giải phóng787.076.126byte giữ thừa.
+Không đổi object/key/hash/ảnh/nội dung bài, budget cấu hình hoặc ledger. Kiểm QA
+và primary ledger trước/sau giống hệt, balanced. Sau đó11media mới upload/Ready,
+ảnh public đọc lại thành công. Bản sao, checksum, plan và audit proof ở thư mục
+private của gói; không commit DB/key/ảnh hoặc công cụ dành riêng máy owner.
+
+Không coi toàn bộ storage project đã được đối soát từ việc sửa400ảnh; packaging,
+video100MB và các gate khác giữ nguyên. Không mở readiness qua việc demo chạy.
+
+Quan sát cấu hình local có sẵn: worker báo LISTING_AUTO_REVIEW_ENABLED bật và
+policyApproved=true, trong khi READINESS vẫn NOT MET/cờ tắt cho release. Gói này
+không tự bật/tắt hoặc coi local setting là quyền đóng gate;5file env giữ nguyên.
+Các bài demo mới không gọi model (precheck ảnh/nguồn/tuổi tài khoản và quyết định
+demo qua Admin). Việc dùng AI tự duyệt khi phát hành vẫn cần evidence/gate riêng.

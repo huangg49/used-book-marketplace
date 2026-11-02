@@ -136,7 +136,7 @@ export function revision(r: Revision): Wire['ListingRevision'] {
       description: r.description,
       salePrice: r.salePrice,
       exchangeValue: r.exchangeValue,
-      exchangePreferences: r.exchangePreferences ?? null,
+      ...(r.exchangePreferences ? { exchangePreferences: r.exchangePreferences } : {}),
       mediaIds: r.media.map((m) => m.mediaId),
     } as Wire['DraftContent'],
   };
