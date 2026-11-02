@@ -7,6 +7,7 @@ import {
   Wallet,
   Star,
   UserRound,
+  MessageSquare,
 } from "lucide-react";
 import { ROUTES } from "./routes";
 
@@ -16,6 +17,7 @@ export const accountNavigation = [
   { to: '/profile', label: 'Hồ sơ & bảo mật', icon: UserRound },
   { to: '/cart', label: 'Giỏ sách', icon: ShoppingBag },
   { to: '/reviews', label: 'Đánh giá của tôi', icon: Star },
+  { to: '/support', label: 'Hỗ trợ & phản ánh', icon: MessageSquare },
   { to: ROUTES.wallet, label: "Ví của tôi", icon: Wallet },
   { to: "/orders", label: "Đơn trực tiếp", icon: ShoppingBag },
   { to: ROUTES.myBooks, label: "Kệ sách của tôi", icon: Library },

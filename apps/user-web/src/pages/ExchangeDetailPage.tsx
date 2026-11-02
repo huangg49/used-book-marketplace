@@ -1,3 +1,4 @@
+import {SupportLink} from '../features/support/SupportLink';
 import { useState } from 'react';
 import conversation from '../components/conversation/Conversation.module.css';
 import { useParams, Link, Navigate, useLocation } from 'react-router-dom';
@@ -187,6 +188,7 @@ export function ExchangeDetailPage({ exchangeId, embedded = false }: { exchangeI
                 <div>
                     <span className={styles.transactionCode}>Mã Giao Dịch: #{detail.transactionCode}</span>
                     <h1 className={styles.pageTitle}>Cuộc trao đổi sách</h1>
+                    <p><SupportLink type='Exchange' id={id!}/></p>
                 </div>
                 <div className={styles.headerStatus}>
                     Trạng thái: <span className={styles.statusValue}>{statusText}</span>

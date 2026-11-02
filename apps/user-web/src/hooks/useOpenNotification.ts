@@ -1,7 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ROUTES } from '../lib/routes'
-import { markNotificationsRead, type MemberNotification } from '../services/notifications'
+import { markNotificationsRead, notificationPath, type MemberNotification } from '../services/notifications'
 
 export function timeAgo(iso: string) {
   const s = Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 1000))
@@ -20,13 +19,7 @@ export function useOpenNotification() {
       void markNotificationsRead({ ids: [n.id] })
         .catch(() => undefined)
         .finally(() => void queryClient.invalidateQueries({ queryKey: ['notifications'] }))
-    if (n.targetType === 'Order') {
-      navigate(`/orders/${n.targetId}`)
-    } else if (n.targetType === 'Exchange') {
-      navigate(`/exchange/${n.targetId}`)
-    } else {
-      navigate(ROUTES.auctionDetail(n.targetId))
-    }
+    navigate(notificationPath(n))
   }
 }
 

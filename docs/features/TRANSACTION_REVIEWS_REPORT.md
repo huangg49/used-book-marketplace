@@ -7,6 +7,26 @@ Theo [ADR0052](../adr/0052-transaction-reviews-and-reputation.md),
 FR-R01–R05/FR-A08, AC-42–AC-43. Đây là evidence kỹ thuật, chưa là ký nghiệm thu
 người thật hoặc bản đã tích hợp lên main. Flutter vẫn scaffold.
 
+## Thu gọn sau quyết định Admin —02/11/2026
+
+Owner yêu cầu thu gọn record sau Ghi nhận quyết định. Nhánh
+`codex/admin-review-collapse`, base `14363f92`, subject
+`fix(admin): collapse review records after acknowledged decisions`.
+Mỗi record mặc định mở; ACK thành công đóng phần nội dung/form/history, giữ
+summary và notice đã lưu, chuyển focus về summary. Mở lại xử lý dùng được bằng
+chuột/keyboard. Receipt cung cấp phiên bản/trạng thái mới nếu refetch thất bại.
+Lỗi hoặc kết quả bất định không tự thu gọn, giữ draft và retry đúng key/body.
+Trạng thái thu gọn chỉ trong trang đang mở, không tạo trạng thái nghiệp vụ mới.
+
+PASS219Admin unit, type/lint/build/bundle, browser riêng
+`pnpm --filter @used-books/admin-web test:review-collapse:browser` trên QA57017/
+`*_test`: ACK-only, lostACK replay1lần, record khác không đổi, lỗi422 giữ input,
+refresh503 sau ACK vẫn giữ version/notice, reopen/focus/history và1440/320px/
+chữ130%,0page errors. Ảnh đã xem ở `.tmp/admin-review-collapse/`, detector0finding.
+Harness review cũ bổ sung bước mở lại sau quyết định; không chạy full web/RN
+harness vì scope chỉ Admin. Không đổi API/quyền/deadline/publication hoặc DB local.
+Human/remote CI/native/live storage NOT RUN; READINESS giữ nguyên.
+
 ## Bổ sung minh bạch điểm0.58 — 28/10/2026
 
 Nhánh `codex/reputation-rating-transparency`, base `0c9ce87`; commit subject

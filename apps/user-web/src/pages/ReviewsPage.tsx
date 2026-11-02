@@ -1,6 +1,7 @@
 import { reviewDate } from "../features/reviews/format";
 import type { ReviewTransactionsPage } from "@used-books/session-client";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {z} from 'zod';
 import { Link, useSearchParams } from "react-router-dom";
 import {
   reviewTransactionsSchema,
@@ -15,11 +16,14 @@ import styles from "../features/reviews/reviews.module.css";
 export function ReviewsPage() {
   const auth = useSession(),
     [params] = useSearchParams();
-  const type: ReviewType = reviewTypes.some(([t]) => t === params.get("type"))
+  const requestedType: ReviewType = reviewTypes.some(([t]) => t === params.get("type"))
     ? (params.get("type") as ReviewType)
     : "Exchange";
-  const selected = params.get("transaction");
   const owner = auth.status === "authenticated" ? auth.user.id : undefined;
+  const reviewId=params.get('reviewId');
+  const resolution=useQuery({queryKey:['review-notification-target',owner,reviewId],queryFn:()=>session.request(`/me/transaction-reviews/${encodeURIComponent(reviewId!)}/target`,z.object({type:z.enum(['Exchange','DirectOrder','PointOrder']),id:z.uuid()})),enabled:!!owner&&!!reviewId,retry:false});
+  const type=resolution.data?.type??requestedType;
+  const selected=resolution.data?.id??params.get('transaction');
   const result = useInfiniteQuery({
     queryKey: ["reviewTransactions", owner, type],
     initialPageParam: undefined as string | undefined,
@@ -29,7 +33,7 @@ export function ReviewsPage() {
         `/me/review-transactions?limit=10&type=${type}${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ""}`,
         reviewTransactionsSchema,
       ),
-    enabled: !!owner,
+    enabled: !!owner && (!reviewId || !!resolution.data),
     retry: false,
   });
   if (
@@ -44,6 +48,8 @@ export function ReviewsPage() {
   return (
     <div className={styles.page}>
       <h1>Đánh giá của tôi</h1>
+      {reviewId&&resolution.isPending?<p role='status'>Đang mở đánh giá từ thông báo…</p>:null}
+      {reviewId&&resolution.isError?<div role='alert'><p>Chưa mở được đánh giá. Kiểm tra quyền và thử lại.</p><button onClick={()=>void resolution.refetch()}>Thử mở lại đánh giá</button></div>:null}
       <p className={styles.intro}>
         Các giao dịch hoàn tất được liệt kê theo thời gian. Chỉ các bên tham gia
         mới được gửi đánh giá.

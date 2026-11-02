@@ -24,6 +24,11 @@ export class TransactionReviewsController {
     private readonly queries: ReviewQueries,
     private readonly input: ContractInput,
   ) {}
+  @Get('me/transaction-reviews/:reviewId/target')
+  @Roles('MEMBER')
+  notificationTarget(@Param('reviewId') id:string,@Req() req:AuthenticatedRequest){
+    return this.service.notificationTarget(req.auth,this.input.uuid(id));
+  }
   @Get('transactions/:type/:id/reviews')
   @Roles('MEMBER')
   get(

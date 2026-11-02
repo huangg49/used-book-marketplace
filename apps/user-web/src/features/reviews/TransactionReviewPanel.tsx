@@ -14,6 +14,7 @@ import { session } from "../../lib/session";
 import { useSession } from "../../hooks/useSession";
 import styles from "./reviews.module.css";
 import { reviewDate } from "./format";
+import {SupportLink} from '../support/SupportLink';
 
 export function ReviewContent({
   review,
@@ -26,6 +27,7 @@ export function ReviewContent({
     <article className={styles.review}>
       <h3>{title ?? review.authorName}</h3>
       <span className={styles.status}>{reviewStatusLabels[review.status]}</span>
+      {review.status==='Published'?<p><SupportLink type='Review' id={review.id} report/></p>:null}
       <p className={styles.meta}>Gửi {reviewDate(review.createdAt)}</p>
       {review.status === "Deleted" ? (
         <p>

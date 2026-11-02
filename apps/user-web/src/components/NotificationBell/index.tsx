@@ -1,3 +1,4 @@
+import {useSession} from '../../hooks/useSession';
 import { useEffect, useId, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -15,6 +16,7 @@ import { ROUTES } from "../../lib/routes";
 import { timeAgo, useOpenNotification } from "../../hooks/useOpenNotification";
 import {
   listNotifications,
+  notificationKeys,
   markNotificationsRead,
   type MemberNotification,
 } from "../../services/notifications";
@@ -54,6 +56,7 @@ function getCategoryInfo(item: MemberNotification) {
 }
 
 export function NotificationBell() {
+  const auth=useSession();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const panelId = useId();
@@ -61,10 +64,11 @@ export function NotificationBell() {
   const openNotification = useOpenNotification();
 
   const inbox = useQuery({
-    queryKey: ["notifications", "bell"],
+    queryKey: notificationKeys.bell(auth.status==='authenticated'?auth.user.id:undefined),
     queryFn: () => listNotifications(undefined, 8),
     refetchInterval: 30_000,
     retry: false,
+    enabled:auth.status==='authenticated',
   });
   const unread = inbox.data?.unreadCount ?? 0;
 
