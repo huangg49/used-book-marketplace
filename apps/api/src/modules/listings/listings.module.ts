@@ -17,6 +17,8 @@ import { PriceAssistModule } from '../price-assist/price-assist.module.js';
 import { WalletModule } from '../wallet/wallet.module.js';
 import { AutofillAssistModule } from '../autofill-assist/autofill-assist.module.js';
 import { ListingAutoReviewService } from './listing-auto-review.service.js';
+import { ListingAutoReviewAdminService } from './listing-auto-review-admin.service.js';
+import { ListingAutoReviewAdminController } from './listing-auto-review-admin.controller.js';
 @Module({
   imports: [
     AutofillAssistModule,
@@ -33,6 +35,7 @@ import { ListingAutoReviewService } from './listing-auto-review.service.js';
     ListingDraftsService,
     ListingReviewService,
     ListingAutoReviewService,
+    ListingAutoReviewAdminService,
     PublicListingService,
     ListingLifecycleService,
   ],
@@ -44,6 +47,7 @@ import { ListingAutoReviewService } from './listing-auto-review.service.js';
   controllers: [
     ListingDraftsController,
     ListingReviewController,
+    ListingAutoReviewAdminController,
     PublicListingController,
     ListingLifecycleController,
   ],

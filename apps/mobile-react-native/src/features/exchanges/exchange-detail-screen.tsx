@@ -1,4 +1,9 @@
-import React, { useState } from "react";
+import { confirmExchangeRead, readExchange } from "@used-books/session-client";
+import {
+  ExchangeRecoveryPanel,
+  useExchangeRecovery,
+} from "./exchange-recovery";
+import React, { useEffect, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -8,7 +13,7 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   AppText,
   Button,
@@ -26,7 +31,6 @@ import {
 import { useSession } from "../../core/session/session-provider";
 import { useForeground } from "../../core/hooks/use-foreground";
 import { exchangeSchema } from "./contracts";
-import { publicListing } from "../shelf/contracts";
 import { ExchangeProposalCard } from "./exchange-proposal-card";
 import { ExchangeActionsCard } from "./exchange-actions-card";
 import { ExchangeProgressStepper } from "./exchange-progress-stepper";
@@ -44,46 +48,29 @@ export function ExchangeDetailScreen() {
   const insets = useSafeAreaInsets();
   const { client, state } = useSession();
   const foreground = useForeground();
+  const { identity, ack } = useExchangeRecovery(id);
   const currentUserId = state.status === "authenticated" ? state.user.id : null;
 
-  const [activePanel, setActivePanel] = useState<"proposal" | "chat">(initialTab);
+  const [activePanel, setActivePanel] = useState<"proposal" | "chat">(
+    initialTab,
+  );
 
   // 1. Fetch Exchange Data
   const exchangeQuery = useQuery({
-    queryKey: ["exchange", id],
-    queryFn: () => client.request(`/exchanges/${id}`, exchangeSchema),
+    queryKey: ["exchange", id, identity],
+    queryFn: () => readExchange(client, id, exchangeSchema),
     enabled: Boolean(id) && state.status === "authenticated" && foreground,
     refetchInterval: 5000,
   });
 
-  const exchange = exchangeQuery.data;
-
-  // 2. Fetch Initiator & Recipient Public Listings to get cover photos and metadata
-  const initiatorListingIds =
-    exchange?.initiatorListingIds && exchange.initiatorListingIds.length > 0
-      ? exchange.initiatorListingIds
-      : exchange?.initiatorListingId
-        ? [exchange.initiatorListingId]
-        : [];
-
-  const initiatorListingQueries = useQueries({
-    queries: initiatorListingIds.map((lid) => ({
-      queryKey: ["public-listing", lid],
-      queryFn: () => client.publicRequest(`/listings/${lid}`, publicListing),
-      enabled: Boolean(lid) && foreground,
-      staleTime: 60000,
-    })),
-  });
-
-  const initiatorListings = initiatorListingQueries.map((q) => q.data ?? null);
-  const primaryInitiatorListing = initiatorListings[0] ?? null;
-
-  const recipientListingQuery = useQuery({
-    queryKey: ["public-listing", exchange?.recipientListingId],
-    queryFn: () => client.publicRequest(`/listings/${exchange!.recipientListingId}`, publicListing),
-    enabled: Boolean(exchange?.recipientListingId) && foreground,
-    staleTime: 60000,
-  });
+  const exchange =
+    ack && (!exchangeQuery.data || ack.revision > exchangeQuery.data.revision)
+      ? ack
+      : exchangeQuery.data;
+  useEffect(() => {
+    if (exchangeQuery.data)
+      confirmExchangeRead(client, id, exchangeQuery.data.revision);
+  }, [client, id, exchangeQuery.data, exchangeQuery.dataUpdatedAt, identity]);
 
   if (state.status !== "authenticated") {
     return (
@@ -129,7 +116,7 @@ export function ExchangeDetailScreen() {
     );
   }
 
-  if (exchangeQuery.isPending) {
+  if (exchangeQuery.isPending && !exchange) {
     return (
       <View style={styles.screenRoot}>
         <StatusBar barStyle="light-content" />
@@ -151,7 +138,9 @@ export function ExchangeDetailScreen() {
             <Icon name="back" size={18} color={stitchTokens.wineDark} />
             <AppText style={styles.backLabel}>Quay lại</AppText>
           </Pressable>
-          <AppText style={styles.subHeaderTitle}>Đang tải cuộc trao đổi…</AppText>
+          <AppText style={styles.subHeaderTitle}>
+            Đang tải cuộc trao đổi…
+          </AppText>
           <View style={{ width: 60 }} />
         </View>
         <View style={{ flex: 1, justifyContent: "center" }}>
@@ -169,7 +158,7 @@ export function ExchangeDetailScreen() {
     );
   }
 
-  if (exchangeQuery.error || !exchange) {
+  if (!exchange) {
     return (
       <View style={styles.screenRoot}>
         <StatusBar barStyle="light-content" />
@@ -195,6 +184,13 @@ export function ExchangeDetailScreen() {
           <View style={{ width: 60 }} />
         </View>
         <View style={styles.errorContainer}>
+          <ExchangeRecoveryPanel
+            id={id}
+            onRead={async () => {
+              const result = await exchangeQuery.refetch();
+              if (result.error) throw result.error;
+            }}
+          />
           <Notice tone="error">
             {exchangeQuery.error
               ? presentError(exchangeQuery.error).message
@@ -225,9 +221,12 @@ export function ExchangeDetailScreen() {
   const partnerAddressName = isInitiator
     ? exchange.recipientAddress?.recipientName
     : exchange.initiatorAddress?.recipientName;
-  const partnerName = isInitiator
-    ? recipientListingQuery.data?.seller.displayName ?? partnerAddressName ?? "Đối tác"
-    : primaryInitiatorListing?.seller.displayName ?? partnerAddressName ?? "Đối tác trao đổi";
+  const partnerName =
+    (isInitiator
+      ? exchange.agreement?.recipientBook.ownerDisplayName
+      : exchange.agreement?.initiatorBooks[0]?.ownerDisplayName) ??
+    partnerAddressName ??
+    "Đối tác trao đổi";
 
   const isReadOnly = ["Completed", "Cancelled"].includes(exchange.status);
 
@@ -285,9 +284,7 @@ export function ExchangeDetailScreen() {
             name="ticket"
             size={16}
             color={
-              activePanel === "proposal"
-                ? stitchTokens.wineDark
-                : colors.muted
+              activePanel === "proposal" ? stitchTokens.wineDark : colors.muted
             }
           />
           <AppText
@@ -314,9 +311,7 @@ export function ExchangeDetailScreen() {
             name="message"
             size={16}
             color={
-              activePanel === "chat"
-                ? stitchTokens.wineDark
-                : colors.muted
+              activePanel === "chat" ? stitchTokens.wineDark : colors.muted
             }
           />
           <AppText
@@ -337,6 +332,12 @@ export function ExchangeDetailScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {exchangeQuery.error && (
+            <Notice tone="error">
+              Chưa tải được trạng thái hiện tại. Thông tin đã xác nhận được giữ
+              lại.
+            </Notice>
+          )}
           {/* 1. TIẾN TRÌNH CÁC BƯỚC TRAO ĐỔI (Progress Stepper) */}
           <ExchangeProgressStepper
             status={exchange.status}
@@ -353,13 +354,7 @@ export function ExchangeDetailScreen() {
           />
 
           {/* 3. PHIẾU ĐỀ NGHỊ ĐỔI SÁCH (Books Matching & Financial Diff) */}
-          <ExchangeProposalCard
-            exchange={exchange}
-            isInitiator={isInitiator}
-            initiatorListings={initiatorListings}
-            initiatorListing={primaryInitiatorListing}
-            recipientListing={recipientListingQuery.data}
-          />
+          <ExchangeProposalCard exchange={exchange} isInitiator={isInitiator} />
 
           {/* 4. TIẾN TRÌNH GIAO NHẬN 2 CHIỀU ĐỘC LẬP (Shipping Tracking 2-Way) */}
           <ExchangeShippingCard
@@ -372,6 +367,10 @@ export function ExchangeDetailScreen() {
           <ExchangeActionsCard
             exchange={exchange}
             isInitiator={isInitiator}
+            readError={Boolean(exchangeQuery.error)}
+            onReload={async () => {
+              await exchangeQuery.refetch();
+            }}
           />
 
           {/* 6. MẸO AN TOÀN KHI TRAO ĐỔI SÁCH (Safety Tips) */}

@@ -13,6 +13,8 @@ export interface ExchangeUser {
 }
 
 export interface ExchangeBook {
+    editionLabel?: string;
+    conditionDetails?: string;
     id: string;
     title: string;
     author: string;

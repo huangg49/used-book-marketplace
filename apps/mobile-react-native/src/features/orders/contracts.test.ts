@@ -9,20 +9,19 @@ import {
 
 describe("orders contracts & helpers", () => {
   it("translates API error status codes into helpful Vietnamese messages", () => {
-    expect(buyNowError(new ApiError(409, "ListingLocked", "Conflict"))).toContain(
-      "đang được giữ chỗ giao dịch",
-    );
+    expect(
+      buyNowError(new ApiError(409, "ListingLocked", "Conflict")),
+    ).toContain("đang được giữ chỗ giao dịch");
     expect(buyNowError(new ApiError(403, "Forbidden", "Forbidden"))).toContain(
       "chưa đủ điều kiện đặt mua",
     );
     expect(buyNowError(new ApiError(404, "NotFound", "NotFound"))).toContain(
       "không còn tồn tại",
     );
-    expect(buyNowError(new ApiError(422, "Unprocessable", "Unprocessable"))).toContain(
-      "Khu vực giao nhận không hợp lệ",
-    );
+    expect(
+      buyNowError(new ApiError(422, "Unprocessable", "Unprocessable")),
+    ).toContain("Khu vực giao nhận không hợp lệ");
   });
-
 
   it("validates quote and receipt schemas", () => {
     const validQuote = {
@@ -31,6 +30,8 @@ describe("orders contracts & helpers", () => {
       listingVersion: 2,
       listingRevisionId: "22222222-2222-4222-8222-222222222222",
       expiresAt: "2026-10-20T00:00:00.000Z",
+      serverTime: "2026-10-19T23:55:00.000Z",
+      assessment: "Current",
       amounts: {
         bookPrice: 50000,
         shippingFee: 15000,
@@ -49,7 +50,9 @@ describe("orders contracts & helpers", () => {
       paymentDeadline: "2026-10-20T00:15:00.000Z",
       serverTime: "2026-10-20T00:00:00.000Z",
     };
-    expect(orderReceiptSchema.parse(validReceipt).state).toBe("AwaitingPayment");
+    expect(orderReceiptSchema.parse(validReceipt).state).toBe(
+      "AwaitingPayment",
+    );
   });
 
   it("validates orders page schema", () => {

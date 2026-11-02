@@ -28,6 +28,11 @@ const Queue = lazy(() =>
 const Detail = lazy(() =>
   import("./features/review/detail").then((m) => ({ default: m.Detail })),
 );
+const AutoReviewChecksPage = lazy(() =>
+  import("./features/review/auto-review-checks").then((m) => ({
+    default: m.AutoReviewChecksPage,
+  })),
+);
 const UserDirectory = lazy(() =>
   import("./features/users/directory").then((m) => ({
     default: m.UserDirectory,
@@ -121,6 +126,7 @@ const router = createBrowserRouter([
         element: <Queue />,
         children: [{ path: ":id", element: <Detail /> }],
       },
+      { path: "/ai-review-checks", element: <AutoReviewChecksPage /> },
       { path: "/users", element: <UserDirectory /> },
       { path: "/users/:id", element: <AccountControls /> },
       { path: "/transaction-reviews", element: <TransactionReviewsPage /> },

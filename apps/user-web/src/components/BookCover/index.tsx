@@ -4,13 +4,13 @@ import styles from './BookCover.module.css'
 
 export interface BookCoverProps {
     title: string
-    index: number
+    index?: number
     tag?: string
     coverUrl?: string
     className?: string
 }
 
-export function BookCover({ title, index, tag, coverUrl, className = '' }: BookCoverProps) {
+export function BookCover({ title, index = 0, tag, coverUrl, className = '' }: BookCoverProps) {
     const [imgError, setImgError] = useState(false)
     const coverClass = styles[`cover${index % 4}`] ?? ''
     

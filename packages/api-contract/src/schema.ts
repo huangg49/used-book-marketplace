@@ -1322,6 +1322,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/auto-review/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * getAutoReviewReport
+         * @description ACTIVE STAFF/ADMIN. Counts for the AI reviewer over the last 30 days. Overturn rate counts only checks a person closed; null until a person has closed one.
+         */
+        get: operations["getAutoReviewReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/auto-review/checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * listAutoReviewChecks
+         * @description ACTIVE STAFF/ADMIN. Post-publication checks of AI approvals, oldest first. A check never changes published state.
+         */
+        get: operations["listAutoReviewChecks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/listings/{listingId}/auto-review/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * getAutoReviewHistory
+         * @description ACTIVE STAFF/ADMIN. For each submitted revision, newest first and at most 50, what the AI reviewer concluded next to the recorded decision.
+         */
+        get: operations["getAutoReviewHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/listings/{listingId}/auto-review/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * revokeAutoApproval
+         * @description ACTIVE independent STAFF/ADMIN, reason mandatory. Takes back an AI approval of an Available listing. The same content returns to PendingReview as a new revision for a person to decide, and open checks close as Confirmed. Reserved, Removed or Staff-approved listings return 409.
+         */
+        post: operations["revokeAutoApproval"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/listings/{listingId}/auto-review/checks/{checkId}/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * clearAutoReviewCheck
+         * @description ACTIVE independent STAFF/ADMIN, note mandatory. Records that a person looked at an open check and the listing stands. Published state does not change.
+         */
+        post: operations["clearAutoReviewCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/listings/{listingId}/remove": {
         parameters: {
             query?: never;
@@ -2148,7 +2248,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Independent TEST_OPERATOR records one simulated Delivered event after an Applied pickup. It starts, but never settles, the buyer inspection window. */
+        /** @description Retained for historical compatibility. New DirectDelivery delivery commands return 409 InvalidState while the post-F2h Buyer-protection release gate is closed; no delivery event, inspection window or money movement is created. Current ACTIVE independent TEST_OPERATOR authorization and shipment binding run before an exact historical receipt replay. Replay returns the original committed receipt without repeating effects. This does not gate auction point-delivery events or change GHN/carrier routes. */
         post: operations["emitSimulatedDeliveryEvent"];
         delete?: never;
         options?: never;
@@ -2165,7 +2265,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Buyer-only receipt confirmation. It starts the 72-hour inspection window; it does not settle money or mark the listing Sold. */
+        /** @description Buyer-only historical compatibility endpoint, including eligible LOCKED existing obligations. New commands return 409 InvalidState while the post-F2h Buyer-protection release gate is closed. No delivery event, inspection window, receipt success or money movement is created. Current ownership/session/role checks precede exact historical receipt replay; replay returns stored facts without changing the current Order. Existing Inspection/Completed records remain readable and are not rewritten/refunded. */
         post: operations["confirmOrderReceipt"];
         delete?: never;
         options?: never;
@@ -3080,6 +3180,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exchanges/{id}/books/{listingId}/photos/{mediaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a frozen agreement photo as a current participant */
+        get: operations["getExchangeBookPhoto"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/exchanges/{id}/accept": {
         parameters: {
             query?: never;
@@ -3089,7 +3206,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Recipient accepts the exchange proposal. */
+        /** @description Accept only the unchanged frozen proposal and current eligibility of both Members/books. Unavailable or unverifiable proposals return a persisted Exchange with status Cancelled and cancelReason ListingUnavailable, without reserving books or collecting money. Clients inspect the returned state; HTTP 200 alone does not mean accepted. Exact-key replay returns the original outcome after current authorization. */
         post: operations["acceptExchange"];
         delete?: never;
         options?: never;
@@ -3106,7 +3223,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Submit a counter-proposal for the exchange. */
+        /** @description The responding Member selects replacement books they own. Both sides' current eligibility and the original frozen terms are checked before deriving a new revision and compensation. An unavailable original proposal closes as Cancelled/ListingUnavailable without reservations. Free-form monetary counteroffers are rejected. */
         post: operations["counterExchange"];
         delete?: never;
         options?: never;
@@ -3330,6 +3447,74 @@ export interface paths {
         get: operations["getShipmentOrderByCode"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipments/carrier/orders/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get recent shipment orders for demo and carrier driver portal. */
+        get: operations["getRecentShipmentOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipments/carrier/orders/{id}/reset-for-demo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Reset exchange and shipment state for live interactive demo. */
+        post: operations["resetShipmentOrderForDemo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipments/carrier/orders/{id}/auto-simulate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Automatically advance simulation of exchange delivery stages. */
+        post: operations["autoSimulateExchangeShipment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipments/carrier/seed-demo-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Seed demo exchange order ready for carrier delivery testing. */
+        post: operations["seedDemoShipmentOrder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4287,6 +4472,133 @@ export interface components {
             reasons: string[];
             /** Format: date-time */
             decidedAt: string;
+            /** @description Null when server facts settled it and no model was called. */
+            model: string | null;
+            policyVersion: string | null;
+            stages: components["schemas"]["AutoReviewStage"][];
+            criteria: components["schemas"]["AutoReviewCriterion"][];
+            extraction: components["schemas"]["AutoReviewExtraction"] | null;
+            comparison: components["schemas"]["AutoReviewComparison"] | null;
+            damage: ("None" | "Minor" | "Moderate" | "Severe") | null;
+            facts: components["schemas"]["AutoReviewFacts"] | null;
+            checks: components["schemas"]["AutoReviewCheck"][];
+        };
+        /** @enum {string} */
+        AutoReviewMatch: "Match" | "Mismatch" | "Unread" | "NotInCatalog";
+        /** @description A judgment reported by the model. confidence is the model's own number, not calibrated. */
+        AutoReviewCriterion: {
+            /** @enum {string} */
+            stage: "Text" | "Visual";
+            criterion: string;
+            pass: boolean;
+            confidence: number;
+            floor: number;
+            met: boolean;
+        };
+        AutoReviewStage: {
+            /** @enum {string} */
+            stage: "Text" | "Extraction" | "Visual";
+            /** @enum {string} */
+            status: "Completed" | "Unavailable" | "NotRun";
+        };
+        /** @description What the model read on the photos without seeing the seller's text or the catalog. */
+        AutoReviewExtraction: {
+            title: string | null;
+            authors: string[];
+            isbn: string | null;
+            edition: string | null;
+            publisher: string | null;
+            contactOrInstructionTextVisible: boolean;
+        };
+        /** @description Server comparison of the extraction and locally decoded barcodes with the catalog record. */
+        AutoReviewComparison: {
+            title: components["schemas"]["AutoReviewMatch"];
+            author: components["schemas"]["AutoReviewMatch"];
+            isbn: components["schemas"]["AutoReviewMatch"];
+            edition: components["schemas"]["AutoReviewMatch"];
+            publisher: components["schemas"]["AutoReviewMatch"];
+            barcodes: string[];
+        };
+        /** @description Server facts read from stored records, never from a model. */
+        AutoReviewFacts: {
+            ownerAccountAgeDays: number;
+            recentSubmissions: number;
+            photoCount: number;
+            duplicatePhoto: boolean;
+            priceBounds: {
+                low: number;
+                high: number;
+            } | null;
+            textSignals: string[];
+        };
+        /** @enum {string} */
+        AutoReviewCheckStatus: "Passed" | "Skipped" | "Open" | "Cleared" | "Confirmed";
+        AutoReviewCheck: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            listingId: string;
+            /** Format: uuid */
+            revisionId: string;
+            /** @enum {string} */
+            selection: "AiRecheck" | "HumanAudit" | "StaffOverride";
+            status: components["schemas"]["AutoReviewCheckStatus"];
+            reasons: string[];
+            model: string | null;
+            policyVersion: string | null;
+            note: string | null;
+            resolvedAt: string | null;
+            resolvedByStaff: boolean;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AutoReviewCheckPage: {
+            items: components["schemas"]["AutoReviewCheck"][];
+            nextCursor: string | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        AutoReviewHistory: {
+            items: {
+                /** Format: uuid */
+                revisionId: string;
+                number: number;
+                /** Format: date-time */
+                submittedAt: string;
+                decision: components["schemas"]["ReviewDecision"] | null;
+                autoReview: components["schemas"]["AutoReviewSummary"] | null;
+            }[];
+        };
+        AutoReviewReport: {
+            windowDays: number;
+            enabled: boolean;
+            policyVersion: string;
+            policyApproved: boolean;
+            approved: number;
+            escalated: number;
+            escalatedThenApproved: number;
+            escalatedThenRejected: number;
+            checksOpen: number;
+            rechecksPassed: number;
+            rechecksFlagged: number;
+            humanAudits: number;
+            staffReviewedChecks: number;
+            staffConfirmedProblems: number;
+            overturnRate: number | null;
+            costMicroUsd: number;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        RevokeAutoApproval: {
+            expectedVersion: number;
+            /** Format: uuid */
+            revisionId: string;
+            reason: string;
+        };
+        ClearAutoReviewCheck: {
+            expectedVersion: number;
+            note: string;
         };
         PrivateListing: {
             /** Format: uuid */
@@ -4300,7 +4612,7 @@ export interface components {
             latestDecision: components["schemas"]["ReviewDecision"] | null;
             /** @description Present only on the Staff/Admin review detail. The price suggestion the seller decided on with the revision under review (null when none), so the reviewer can tell a suggested price from the seller's own. */
             priceAssist?: components["schemas"]["PriceAssistReview"] | null;
-            /** @description Present only on the Staff/Admin review detail. What the AI reviewer concluded about the current revision (null when it has not looked at it). */
+            /** @description Present only on Staff/Admin review reads. What the AI reviewer concluded about the current revision (null when it has not looked at it). The review queue carries the same summary without post-publication checks. */
             autoReview?: components["schemas"]["AutoReviewSummary"] | null;
             removalReason: string | null;
             catalogStatus: components["schemas"]["CatalogStatus"] | null;
@@ -5251,7 +5563,11 @@ export interface components {
             inspectionDeadline: string | null;
             /** Format: date-time */
             completedAt: string | null;
-            canConfirmReceipt: boolean;
+            /**
+             * @description Always false while DirectDelivery completion is release-blocked; historical delivery/inspection timestamps do not grant a new command or settlement.
+             * @constant
+             */
+            canConfirmReceipt: false;
             /** Format: uuid */
             quoteId: string;
             item: components["schemas"]["OrderItemSnapshot"];
@@ -6584,7 +6900,39 @@ export interface components {
         ExchangeCancelReason: "FundingExpired" | "ProposalExpired" | "CancelledByUser" | "ListingUnavailable" | "ShippingExpired" | "DisputeResolvedRefund" | "MutualAgreement";
         /** @enum {string} */
         ExchangeCancelledBy: "System" | "Initiator" | "Recipient" | "Staff" | "Both";
+        ExchangeBookSnapshot: {
+            /** Format: uuid */
+            listingId: string;
+            listingVersion: number;
+            /** Format: uuid */
+            revisionId: string;
+            /** Format: uuid */
+            ownerId: string;
+            ownerDisplayName: string;
+            /** Format: uuid */
+            bookId: string;
+            /** Format: uuid */
+            catalogRevisionId: string;
+            book: components["schemas"]["CatalogMetadata"];
+            condition: components["schemas"]["BookCondition"];
+            description: string;
+            pages: string;
+            coverNote: string;
+            notes: string;
+            accessories: string;
+            readable: boolean;
+            hasMissingPages: boolean;
+            missingEssentialContent: boolean;
+            exchangeValue: number;
+            mediaIds: string[];
+        };
+        /** @description Frozen books and values of the current proposal revision; null for historical records whose original content cannot be proved. New acceptance never reconstructs a missing agreement from current listings. */
+        ExchangeAgreement: {
+            initiatorBooks: components["schemas"]["ExchangeBookSnapshot"][];
+            recipientBook: components["schemas"]["ExchangeBookSnapshot"];
+        };
         Exchange: {
+            agreement?: components["schemas"]["ExchangeAgreement"] | null;
             /** Format: uuid */
             id: string;
             /** Format: uuid */
@@ -6666,6 +7014,9 @@ export interface components {
             notes?: string | null;
             /** Format: date-time */
             shippedAt?: string | null;
+            lastEvent?: string | null;
+            /** Format: date-time */
+            lastEventAt?: string | null;
         };
         CreateExchangeProposal: {
             /**
@@ -6722,11 +7073,10 @@ export interface components {
         ExchangeMessagesResponse: {
             items: components["schemas"]["ExchangeMessage"][];
         };
+        /** @description The responding Member replaces their own books; the server derives both deposits and compensation from reviewed values. Recipient replaces exactly one listing, initiator one to five. The other party's frozen books must remain eligible and unchanged. */
         CounterExchangeProposal: {
             expectedVersion: number;
-            diffAmount: number;
-            /** @enum {string} */
-            diffPayer: "initiator" | "recipient" | "none";
+            listingIds: string[];
             /** Format: uuid */
             deliveryAddressId?: string;
             note?: string;
@@ -9236,6 +9586,8 @@ export interface operations {
                 /** @description Opaque base64url keyset cursor bound to normalized filters, sort and caller scope. Invalid/mismatched cursor: 400. No snapshot guarantee. All pages recheck eligibility. */
                 cursor?: string;
                 moderation?: "PendingReview" | "Approved" | "Rejected";
+                /** @description Filter by what the AI reviewer concluded about the current revision. None means it has not looked at it. */
+                aiOutcome?: "Approved" | "Escalated" | "None";
             };
             header?: never;
             path?: never;
@@ -9381,6 +9733,186 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["DecideListing"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    /** @description true only for a previously committed command. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MutationReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getAutoReviewReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutoReviewReport"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listAutoReviewChecks: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description Opaque base64url keyset cursor bound to normalized filters, sort and caller scope. Invalid/mismatched cursor: 400. No snapshot guarantee. All pages recheck eligibility. */
+                cursor?: string;
+                status?: components["schemas"]["AutoReviewCheckStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutoReviewCheckPage"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getAutoReviewHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutoReviewHistory"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    revokeAutoApproval: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Fingerprint includes method, path IDs and canonical body. Different payload with same key: 409. Required for all domain mutations. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                listingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevokeAutoApproval"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    /** @description true only for a previously committed command. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MutationReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    clearAutoReviewCheck: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Fingerprint includes method, path IDs and canonical body. Different payload with same key: 409. Required for all domain mutations. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                listingId: string;
+                checkId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClearAutoReviewCheck"];
             };
         };
         responses: {
@@ -11177,7 +11709,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Delivery recorded. */
+            /** @description An authorized historical delivery receipt was replayed; new delivery intake remains release-blocked. */
             200: {
                 headers: {
                     /** @description Private response; never cache. */
@@ -11216,7 +11748,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Receipt confirmation recorded. */
+            /** @description An authorized historical Buyer receipt was replayed; new confirmations remain release-blocked. */
             200: {
                 headers: {
                     /** @description Private response; never cache. */
@@ -13233,6 +13765,33 @@ export interface operations {
             500: components["responses"]["ListingError"];
         };
     };
+    getExchangeBookPhoto: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                listingId: string;
+                mediaId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Short-lived signed read of this agreement's photo */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaRead"];
+                };
+            };
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+        };
+    };
     acceptExchange: {
         parameters: {
             query?: never;
@@ -13702,6 +14261,90 @@ export interface operations {
             path: {
                 code: string;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    getRecentShipmentOrders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>[];
+                };
+            };
+        };
+    };
+    resetShipmentOrderForDemo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    autoSimulateExchangeShipment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    seedDemoShipmentOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;

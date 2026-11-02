@@ -55,6 +55,14 @@ review source and gate before changing or extending completion.
 
 ## Exchange hiện hành — deadline và nghĩa vụ cũ
 
+02/11/2026: [ADR0065](../adr/0065-exchange-agreement-snapshots.md), contract0.71:
+đề xuất mới cố định revision/nội dung/giá và ảnh tham chiếu trong agreement.
+Accept tái kiểm cả hai chủ/sách; lỗi thời hoặc thiếu snapshot đóng với
+Cancelled/ListingUnavailable trước reserve/tiền. Counter do bên đang phản hồi
+chọn sách của mình thay thế; server tính lại cọc/bù theo SRS, không nhập tiền
+tùy ý. Legacy thiếu snapshot không được dựng từ public listing hiện tại; giữ
+nguyên nghĩa vụ đã phát sinh. Migration0052 không backfill hoặc di chuyển tiền.
+
 01/11/2026: [ADR0057](../adr/0057-exchange-resolution-safety.md), contract0.64,
 chặn mọi quyết định phân xử tài chính mới qua route legacy. Không hoàn/tất toán
 hoặc mở sách trong ResolutionPending khi chưa có custody, allocation và quyết
@@ -222,9 +230,13 @@ LOCKED/RESTRICTED Buyer may report; Seller/operations roles cannot report for Bu
 Worker OrderDeliveryExpiry scans100 without candidate locks, retries failures and logs
 deliveryRemaining/openDeliveryReviews/oldestDeliveryReviewAgeSeconds. Keep original
 review identity and pickup history; no refund/restock/custody conclusion from a report.
-Delivered/Buyer receipt/72h inspection and denial of carrier-reported delivery remain
-planned. These review tasks are intake/blockers, not a completed dispute/adjudication
-workflow. Review resolution and shipment/report UI remain planned.
+Delivered/Buyer receipt/72h inspection source exists, but new completion commands
+and settlement are release-blocked by [ADR0064](../adr/0064-direct-delivery-completion-release-gate.md).
+Current auth precedes read-only historical replay; canConfirmReceipt is false.
+Worker reports blocked Inspection separately from executable backlog, preserving
+holds/books/history. Carrier-delivered denial and quality claims are still incomplete.
+These review tasks are intake/blockers, not a completed dispute/adjudication workflow.
+Review resolution and report UI remain planned; web packaging/registration exists.
 
 ## Packaging media
 

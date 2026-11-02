@@ -16,6 +16,7 @@ import { catalog, labels, listing, type Kind } from "./contracts";
 import { BookReference, ContentView, History, MetadataView } from "./readers";
 import { DecisionForm } from "./decision-form";
 import { PriceAssistView } from "./price-assist-view";
+import { AutoReviewHistoryView, AutoReviewView } from "./auto-review-view";
 import { DecisionRecord } from "./DecisionRecord";
 import { NextReview } from "./NextReview";
 import { reviewReturnPath } from "./review-navigation";
@@ -239,6 +240,25 @@ function DetailContent({
                         onReady={setBookReady}
                       />
                     </details>
+                    {value.autoReview && (
+                      <AutoReviewView
+                        value={value.autoReview}
+                        listingId={id}
+                        version={value.version}
+                        revisionId={value.currentRevision.id}
+                        canAct={!self}
+                        canRevoke={
+                          !!value.latestDecision?.automated &&
+                          value.latestDecision.revisionId ===
+                            value.currentRevision.id &&
+                          value.state.moderation === "Approved" &&
+                          value.state.trade === "Available" &&
+                          value.state.visibility !== "Removed" &&
+                          !value.state.deletedAt
+                        }
+                        reconcile={reconcile}
+                      />
+                    )}
                     {value.priceAssist && (
                       <PriceAssistView value={value.priceAssist} />
                     )}
@@ -267,6 +287,7 @@ function DetailContent({
                         listingId={id}
                         currentId={value.currentRevision.id}
                       />
+                      <AutoReviewHistoryView listingId={id} />
                     </div>
                   )}
                 </>

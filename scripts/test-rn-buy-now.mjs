@@ -1,7 +1,7 @@
 // RN web regression: real API/Mongo/ledger, local fake storage/funding.
 // Faults discard or delay real ACKs; this does not replace Android/human checks.
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import { mkdir, readFile } from "node:fs/promises";
@@ -37,7 +37,7 @@ let fixture, browser, server;
 const errors = [];
 try {
   await mkdir(artifacts, { recursive: true });
-  fixture = await createTestApi({ corsOrigin: origin, listingCount: 2 });
+  fixture = await createTestApi({ corsOrigin: origin, listingCount: 3 });
   const api = fixture.api,
     seller = fixture.member;
   const buyer = await api("/auth/login", null, {
@@ -209,6 +209,9 @@ try {
   const openBook = async (id) => {
     console.log("QA: open book");
     await navigate("/book?id=" + id);
+    // History changes before React replaces the previous book's buy button.
+    // Wait for the target listing's rendered identity before opening checkout.
+    await p.getByText(`#TIN-${id.slice(0, 8).toUpperCase()}`, { exact: true }).waitFor();
     await button(p, "Mua ngay cuốn sách này").click();
     await button(p, "Xác nhận đặt mua").waitFor({ state: "visible" });
     await p.waitForFunction(() =>
@@ -220,6 +223,99 @@ try {
     );
   };
   await login(p, "admin@operations.test");
+  // Real quote, lost POST ACK and failed GET: never mint a replacement intent.
+  const quotePosts = [],
+    quoteReads = [];
+  let loseQuoteAck = true,
+    loseQuoteRead = true;
+  await intercept("**/api/v1/listings/*/quotes", async (route) => {
+    quotePosts.push({
+      key: route.request().headers()["idempotency-key"],
+      body: route.request().postData(),
+    });
+    const response = await route.fetch();
+    assert.equal(response.status(), 200);
+    if (loseQuoteAck) {
+      loseQuoteAck = false;
+      await route.abort("failed");
+    } else await route.fulfill({ response });
+  });
+  await intercept("**/api/v1/me/quotes/*", async (route) => {
+    quoteReads.push(route.request().url());
+    if (loseQuoteRead) {
+      loseQuoteRead = false;
+      return route.fulfill({
+        status: 503,
+        json: { code: "UNAVAILABLE", message: "QA quote read failure" },
+      });
+    }
+    await route.continue();
+  });
+  await navigate("/book?id=" + fixture.listings[0]);
+  await button(p, "Mua ngay cuốn sách này").click();
+  await button(p, "Thử lại báo giá đã yêu cầu").waitFor();
+  assert.equal(
+    await button(p, "Xác nhận đặt mua").getAttribute("aria-disabled"),
+    "true",
+  );
+  await button(p, "Đóng modal mua ngay").click();
+  await button(p, "Mua ngay cuốn sách này").click();
+  await button(p, "Thử lại báo giá đã yêu cầu").waitFor();
+  assert.deepEqual(quotePosts[0], quotePosts[1]);
+  await button(p, "Thử lại báo giá đã yêu cầu").click();
+  await p.waitForFunction(() =>
+    [...document.querySelectorAll('[role="button"]')].some(
+      (n) =>
+        n.textContent === "Xác nhận đặt mua" &&
+        n.getAttribute("aria-disabled") !== "true",
+    ),
+  );
+  assert.equal(quotePosts.length, 2);
+  assert.equal(quoteReads[0], quoteReads[1]);
+  await fixture.setQuoteTimeOffset(16 * 60000);
+  await button(p, "Đóng modal mua ngay").click();
+  await button(p, "Mua ngay cuốn sách này").click();
+  await button(p, "Lấy báo giá mới").waitFor();
+  assert.equal(
+    await button(p, "Xác nhận đặt mua").getAttribute("aria-disabled"),
+    "true",
+  );
+  assert.equal(
+    quotePosts.length,
+    2,
+    "Expired GET must not auto-create another quote",
+  );
+  assert.equal(quoteReads[2], quoteReads[1]);
+  await p.screenshot({
+    path: path.join(artifacts, "expired-quote-390.png"),
+    fullPage: true,
+  });
+  await fixture.setQuoteTimeOffset(0);
+  await button(p, "Lấy báo giá mới").click();
+  await p.waitForFunction(() =>
+    [...document.querySelectorAll('[role="button"]')].some(
+      (n) =>
+        n.textContent === "Xác nhận đặt mua" &&
+        n.getAttribute("aria-disabled") !== "true",
+    ),
+  );
+  assert.equal(quotePosts.length, 3);
+  assert.notEqual(quotePosts[2].key, quotePosts[1].key);
+  assert.equal(quotePosts[2].body, quotePosts[1].body);
+  assert.notEqual(quoteReads[3], quoteReads[2]);
+  assert.equal(
+    await fixture.db
+      .collection("direct_orders")
+      .countDocuments({ buyerId: buyer.user.id }),
+    0,
+  );
+  await p.screenshot({
+    path: path.join(artifacts, "renewed-quote-390.png"),
+    fullPage: true,
+  });
+  await p.unroute("**/api/v1/listings/*/quotes");
+  await p.unroute("**/api/v1/me/quotes/*");
+  await button(p, "Đóng modal mua ngay").click();
   await openBook(fixture.listings[0]);
   const creates = [],
     pays = [],
@@ -306,6 +402,29 @@ try {
   });
   sellerPage.setDefaultTimeout(15000);
   sellerPage.on("pageerror", (e) => errors.push(e.message));
+  let evidenceReadFault = true,
+    shipmentReadFault = false;
+  await sellerPage.route(
+    "**/api/v1/me/orders/*/packaging-evidence",
+    async (route) => {
+      if (evidenceReadFault) {
+        evidenceReadFault = false;
+        return route.fulfill({
+          status: 503,
+          json: { code: "UNAVAILABLE", message: "QA packaging read failure" },
+        });
+      }
+      return route.continue();
+    },
+  );
+  await sellerPage.route("**/api/v1/me/orders/*/shipment", async (route) => {
+    if (shipmentReadFault)
+      return route.fulfill({
+        status: 503,
+        json: { code: "UNAVAILABLE", message: "QA shipment read failure" },
+      });
+    return route.continue();
+  });
   console.log("QA: seller continuation");
   await login(sellerPage, "member@operations.test");
   await button(sellerPage, new RegExp(orderId.slice(0, 8))).click();
@@ -314,16 +433,187 @@ try {
     0,
     "BuyNow payment already enters Preparing",
   );
-  await sellerPage
-    .getByText(/Ảnh đóng gói và vận chuyển hiện thực hiện trên Member web/)
-    .waitFor();
-  await sellerPage.getByText("Mã đơn: " + orderId, { exact: true }).waitFor();
+  await button(sellerPage, "Thử tải lại ảnh đóng gói").click();
+  await button(sellerPage, "Chọn ảnh đóng gói").waitFor();
   assert.equal(
     (await api(`/me/orders/${orderId}`, seller.accessToken)).state,
     "Preparing",
   );
   await sellerPage.screenshot({
     path: path.join(artifacts, "seller-preparing-320.png"),
+    fullPage: true,
+  });
+  const photoCreates = [],
+    photoPuts = [],
+    shipmentCreates = [];
+  let registeredId;
+  await sellerPage.route(
+    "**/api/v1/orders/*/packaging-evidence",
+    async (route) => {
+      const request = route.request();
+      photoCreates.push({
+        key: request.headers()["idempotency-key"],
+        body: request.postData(),
+      });
+      const response = await route.fetch();
+      assert.equal(response.status(), 200);
+      if (photoCreates.length === 1) await route.abort("failed");
+      else await route.fulfill({ response });
+    },
+  );
+  await sellerPage.route(
+    "**/api/v1/orders/*/packaging-evidence/*/content",
+    async (route) => {
+      const request = route.request();
+      photoPuts.push({
+        key: request.headers()["idempotency-key"],
+        target: request.url(),
+        sha256: createHash("sha256")
+          .update(request.postDataBuffer())
+          .digest("hex"),
+      });
+      const response = await route.fetch();
+      assert.equal(response.status(), 200);
+      if (photoPuts.length === 1) await route.abort("failed");
+      else await route.fulfill({ response });
+    },
+  );
+  const chosen = sellerPage.waitForEvent("filechooser");
+  await button(sellerPage, "Chọn ảnh đóng gói").click();
+  await (
+    await chosen
+  ).setFiles({
+    name: "qa-packaging.png",
+    mimeType: "image/png",
+    buffer: fixture.photo,
+  });
+  await button(sellerPage, "Thử lại lưu ảnh đóng gói").waitFor();
+  const reopenSeller = async () => {
+    await button(sellerPage, "Về danh sách đơn trực tiếp").click();
+    await button(sellerPage, "Mở chi tiết đơn").first().click();
+    await sellerPage
+      .getByRole("heading", {
+        name: "Đơn #" + orderId.slice(0, 8),
+        exact: true,
+      })
+      .waitFor();
+  };
+  await reopenSeller();
+  await button(sellerPage, "Thử lại lưu ảnh đóng gói").click();
+  await button(sellerPage, "Thử lại lưu ảnh đóng gói").waitFor();
+  await sellerPage
+    .getByRole("alert")
+    .filter({ hasText: /Chưa xác minh ảnh đã lưu/ })
+    .waitFor();
+  await button(sellerPage, "Thử lại lưu ảnh đóng gói").click();
+  await sellerPage
+    .getByText("Ảnh đóng gói đã lưu: 1", { exact: true })
+    .filter({ visible: true })
+    .waitFor();
+  assert.equal(photoCreates.length, 2);
+  assert.deepEqual(photoCreates[0], photoCreates[1]);
+  assert.equal(photoPuts.length, 2);
+  assert.deepEqual(photoPuts[0], photoPuts[1]);
+  assert.equal(
+    await fixture.db
+      .collection("order_packaging_evidence")
+      .countDocuments({ orderId, status: "Ready" }),
+    1,
+  );
+  await sellerPage
+    .getByLabel("Mã vận đơn mô phỏng", { exact: true })
+    .fill("bad");
+  await button(sellerPage, "Đăng ký vận đơn mô phỏng").click();
+  await sellerPage
+    .getByRole("alert")
+    .filter({ hasText: /mã bắt đầu LL-/ })
+    .waitFor();
+  assert.equal(shipmentCreates.length, 0);
+  const trackingCode = "LL-RNSELLER20261102";
+  await sellerPage
+    .getByLabel("Mã vận đơn mô phỏng", { exact: true })
+    .fill(trackingCode);
+  await sellerPage.route("**/api/v1/orders/*/shipment", async (route) => {
+    const request = route.request();
+    shipmentCreates.push({
+      key: request.headers()["idempotency-key"],
+      body: request.postData(),
+    });
+    const response = await route.fetch();
+    assert.equal(response.status(), 200);
+    registeredId = (await response.json()).entityId;
+    if (shipmentCreates.length === 1) {
+      shipmentReadFault = true;
+      await route.abort("failed");
+    } else await route.fulfill({ response });
+  });
+  await button(sellerPage, "Đăng ký vận đơn mô phỏng").click();
+  await button(sellerPage, "Thử lại đăng ký vận đơn").waitFor();
+  assert.equal(await button(sellerPage, "Chọn ảnh đóng gói").count(), 0);
+  await reopenSeller();
+  await button(sellerPage, "Thử lại đăng ký vận đơn").click();
+  await sellerPage
+    .getByText(/Đã có xác nhận đăng ký vận đơn/)
+    .filter({ visible: true })
+    .waitFor();
+  assert.equal(await button(sellerPage, "Đăng ký vận đơn mô phỏng").count(), 0);
+  shipmentReadFault = false;
+  await button(sellerPage, "Thử tải lại vận đơn").click();
+  await sellerPage
+    .getByText("Mã vận đơn mô phỏng: " + trackingCode, { exact: true })
+    .filter({ visible: true })
+    .waitFor();
+  assert.equal(shipmentCreates.length, 2);
+  assert.deepEqual(shipmentCreates[0], shipmentCreates[1]);
+  assert.equal(
+    await fixture.db.collection("direct_shipments").countDocuments({ orderId }),
+    1,
+  );
+  const eventId = randomUUID();
+  await api(
+    "/operations/simulator/pickup-events",
+    operator.accessToken,
+    {
+      eventId,
+      shipmentId: registeredId,
+      orderId,
+      carrier: "LatLaiSimulator",
+      trackingCode,
+      type: "PickedUp",
+      occurredAt: new Date().toISOString(),
+    },
+    "POST",
+    { "Idempotency-Key": eventId },
+  );
+  await sellerPage
+    .getByText(/Đã xác nhận bàn giao vận chuyển\. Theo dõi/)
+    .filter({ visible: true })
+    .waitFor();
+  assert.equal(
+    await sellerPage
+      .getByText("Đã đăng ký vận đơn. Đang chờ xác nhận bàn giao vận chuyển.", {
+        exact: true,
+      })
+      .filter({ visible: true })
+      .count(),
+    0,
+  );
+  assert.equal(
+    (await api(`/me/orders/${orderId}`, buyer.accessToken)).state,
+    "InTransit",
+  );
+  assert.equal(
+    (await api("/me/wallet", buyer.accessToken)).transactionHeld,
+    wallet.transactionHeld,
+  );
+  assert.equal(
+    await fixture.db
+      .collection("ledger_journals")
+      .countDocuments({ orderId, type: "OrderSettlement" }),
+    0,
+  );
+  await sellerPage.screenshot({
+    path: path.join(artifacts, "seller-shipped-320.png"),
     fullPage: true,
   });
   // An ACK arriving after Back must never navigate the closed checkout. Its
@@ -375,7 +665,9 @@ try {
   console.log("QA: resume through order list");
   await openNewestOrder(orderId);
   await button(p, "Thử lại: Hủy đơn chưa thanh toán").click();
-  await button(p, "Thử lại: Hủy đơn chưa thanh toán").waitFor({ state: "hidden" });
+  await button(p, "Thử lại: Hủy đơn chưa thanh toán").waitFor({
+    state: "hidden",
+  });
   await p.getByText(/Bạn là người mua.*Đã hủy đơn/).waitFor();
   assert.ok(
     JSON.stringify(cancels[0]) === JSON.stringify(cancels[1]),
@@ -390,9 +682,130 @@ try {
     (await api("/me/wallet", buyer.accessToken)).transactionHeld,
     wallet.transactionHeld,
   );
+  // Changed listing: review the new source rather than substituting versions.
+  await p.unroute("**/api/v1/orders/buy-now");
+  await openBook(fixture.listings[2]);
+  await button(p, "Đóng modal mua ngay").click();
+  const beforeRevision = await api(
+    `/me/listings/${fixture.listings[2]}`,
+    seller.accessToken,
+  );
+  await api(`/listings/${fixture.listings[2]}/revision`, seller.accessToken, {
+    expectedVersion: beforeRevision.version,
+    ownershipDeclared: true,
+    content: {
+      ...beforeRevision.currentRevision.content,
+      notes: "Synthetic changed listing for quote review",
+    },
+  });
+  await approve(fixture.listings[2]);
+  await button(p, "Mua ngay cuốn sách này").click();
+  await button(p, "Xem lại bản sách").waitFor();
+  assert.equal(
+    await button(p, "Xác nhận đặt mua").getAttribute("aria-disabled"),
+    "true",
+  );
+  assert.equal(
+    await button(p, "Lấy báo giá mới").count(),
+    0,
+    "Changed is not expiry",
+  );
+  await p.screenshot({
+    path: path.join(artifacts, "changed-quote-390.png"),
+    fullPage: true,
+  });
+  const refreshed = p.waitForResponse(
+    (r) =>
+      r.url().includes(`/listings/${fixture.listings[2]}?`) &&
+      r.status() === 200,
+  );
+  await button(p, "Xem lại bản sách").click();
+  await refreshed;
+  await button(p, "Mua ngay cuốn sách này").click();
+  await p.waitForFunction(() =>
+    [...document.querySelectorAll('[role="button"]')].some(
+      (n) =>
+        n.textContent === "Xác nhận đặt mua" &&
+        n.getAttribute("aria-disabled") !== "true",
+    ),
+  );
+  assert.equal(
+    await fixture.db
+      .collection("direct_orders")
+      .countDocuments({ listingId: fixture.listings[2] }),
+    0,
+  );
+  await button(p, "Đóng modal mua ngay").click();
+  // Only the response TTL is shortened here: fake timing, actual quote/API.
+  await intercept("**/api/v1/me/quotes/*", async (route) => {
+    const response = await route.fetch(),
+      value = await response.json();
+    value.expiresAt = new Date(
+      Date.parse(value.serverTime) + 200,
+    ).toISOString();
+    await route.fulfill({ response, json: value });
+  });
+  await button(p, "Mua ngay cuốn sách này").click();
+  await button(p, "Lấy báo giá mới").waitFor();
+  assert.equal(
+    await button(p, "Xác nhận đặt mua").getAttribute("aria-disabled"),
+    "true",
+  );
+  assert.equal(
+    await fixture.db
+      .collection("direct_orders")
+      .countDocuments({ listingId: fixture.listings[2] }),
+    0,
+  );
+  await p.unroute("**/api/v1/me/quotes/*");
+  // An actual overdue-pickup transition must remove the old preparation actions.
+  const l = await api(`/listings/${fixture.listings[2]}`, buyer.accessToken);
+  const destinations = await api("/me/addresses", buyer.accessToken);
+  const destination = destinations.items[0];
+  const q = await api(`/listings/${l.id}/quotes`, buyer.accessToken, {
+    expectedListingVersion: l.version,
+    expectedListingRevisionId: l.revisionId,
+    destinationAddressId: destination.id,
+    expectedDestinationAddressVersion: destination.version,
+    method: "DirectDelivery",
+  });
+  const overdue = await api("/orders/buy-now", buyer.accessToken, {
+    quoteId: q.entityId,
+    expectedQuoteVersion: 1,
+    expectedListingVersion: l.version,
+    expectedListingRevisionId: l.revisionId,
+  });
+  await api(`/orders/${overdue.entityId}/pay`, buyer.accessToken, {
+    expectedVersion: 1,
+  });
+  await fixture.openDirectOrderReview(overdue.entityId, "pickup");
+  await button(sellerPage, "Về danh sách đơn trực tiếp").click();
+  const overdueCard=sellerPage.getByText("#"+overdue.entityId.slice(0,8).toUpperCase(),{exact:true}).filter({visible:true}).locator("xpath=ancestor::div[.//*[@role='button']][1]");
+  await overdueCard.getByRole("button",{name:"Mở chi tiết đơn",exact:true}).click();
+  await sellerPage
+    .getByRole("heading", {
+      name: "Đơn #" + overdue.entityId.slice(0, 8),
+      exact: true,
+    })
+    .waitFor();
+  const overdueNotice = sellerPage
+    .getByText(/Đơn đã qua bước chuẩn bị hoặc quá hạn bàn giao/)
+    .filter({ visible: true });
+  await overdueNotice.waitFor();
+  await overdueNotice.scrollIntoViewIfNeeded();
+  assert.equal(await button(sellerPage, "Chọn ảnh đóng gói").count(), 0);
+  assert.equal(await button(sellerPage, "Đăng ký vận đơn mô phỏng").count(), 0);
+  assert.equal(
+    (await api(`/me/orders/${overdue.entityId}`, seller.accessToken)).state,
+    "ResolutionPending",
+  );
+  await sellerPage.screenshot({
+    path: path.join(artifacts, "seller-overdue-320.png"),
+    fullPage: true,
+  });
   assert.deepEqual(errors, []);
   console.log(
-    "PASS RN web buy-now: real create/pay/cancel, lost ACK + remount pinned intents, failed follow-up read, late ACK after Back, exact Order, seller Preparing/web continuation. Native/human NOT COVERED here.",
+    "PASS RN web buy-now + Seller F2h: quote recovery/Changed/timer; real create/pay/cancel exact retry/remount/lateACK; real picker and packaging POST/PUT lost ACK, Back, immutable bytes; shipment lost ACK/Back/GET failure exact recovery, independent pickup to InTransit with hold/no settlement; actual overdue pickup removes old actions. Fake storage/synthetic image; native/human NOT COVERED here.",
   );
 } catch (error) {
   let index = 0;

@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 import {
@@ -11,6 +11,8 @@ import {
   AlertCircle,
   BookPlus,
 } from "lucide-react";
+import { useExchangeRecovery } from "../../hooks/useExchangeRecovery";
+import { BrandIcon } from "../BrandIcon";
 import { ApiError } from "@used-books/session-client";
 import { session } from "../../lib/session";
 import {
@@ -18,7 +20,13 @@ import {
   getMyBookIdentity,
   getMyPhoto,
 } from "../../services/my-listings";
-import { exchangeSchema } from "../../services/exchange";
+import {
+  createdExchange,
+  exchangeCommand,
+  exchangeError,
+  exchangeIdentity,
+  pendingProposal,
+} from "../../services/exchange";
 import type { PurchaseConversation } from "../../services/purchase-conversations";
 import type { PublicListing } from "../../services/public-listings";
 import { FilterSelect } from "../FilterSelect";
@@ -67,8 +75,56 @@ interface InventoryItem {
   book: {
     title: string;
     authors: string[];
+    category?: string;
   };
   coverUrl?: string;
+}
+
+function checkMatch(
+  myBook: { title: string; authors: string[]; category?: string },
+  pref?: {
+    targetCategory?: string | null;
+    targetAuthor?: string | null;
+    targetDescription?: string | null;
+  } | null,
+) {
+  if (!pref) return null;
+  const authorStr = myBook.authors.join(", ");
+  const matchAuthor = Boolean(
+    pref.targetAuthor &&
+    pref.targetAuthor.trim() &&
+    authorStr.toLowerCase().includes(pref.targetAuthor.toLowerCase().trim()),
+  );
+  const matchCat = Boolean(
+    pref.targetCategory &&
+    pref.targetCategory.trim() &&
+    myBook.category &&
+    (myBook.category
+      .toLowerCase()
+      .includes(pref.targetCategory.toLowerCase().trim()) ||
+      pref.targetCategory
+        .toLowerCase()
+        .includes(myBook.category.toLowerCase().trim())),
+  );
+  let matchDesc = false;
+  if (pref.targetDescription && pref.targetDescription.trim()) {
+    const descWords = pref.targetDescription
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w) => w.length >= 3);
+    matchDesc = descWords.some((w) => myBook.title.toLowerCase().includes(w));
+  }
+
+  if (matchAuthor) {
+    return `Đúng gu đối tác · ${pref.targetAuthor}`;
+  }
+  if (matchCat) {
+    return `Đúng thể loại đối tác tìm · ${pref.targetCategory}`;
+  }
+  if (matchDesc) {
+    return "Đúng cuốn đối tác mong muốn";
+  }
+  return null;
 }
 
 async function inventory(): Promise<InventoryItem[]> {
@@ -106,7 +162,11 @@ async function inventory(): Promise<InventoryItem[]> {
         id: row.id,
         value: row.currentRevision.content.exchangeValue ?? 0,
         condition: row.currentRevision.content.condition ?? null,
-        book,
+        book: {
+          title: book.title,
+          authors: book.authors,
+          category: book.category,
+        },
         coverUrl,
       };
     }),
@@ -125,6 +185,7 @@ export function ExchangeOffer({
   refresh: () => void;
 }) {
   const buyer = room.buyer.id === userId;
+  const queryClient = useQueryClient();
   const mine = useQuery({
     queryKey: ["conversation-exchange-inventory", userId],
     queryFn: inventory,
@@ -144,13 +205,18 @@ export function ExchangeOffer({
     staleTime: 60_000,
   });
 
-  const [chosen, setChosen] = useState<string[]>([]);
+  const identity = useExchangeRecovery();
+  const retained = pendingProposal();
+  const relevant = retained?.conversationId === room.id;
+  const created = createdExchange(room.listingId);
+  const [chosen, setChosen] = useState<string[]>(() =>
+    relevant ? (retained?.initiatorListingIds ?? []) : [],
+  );
   const [search, setSearch] = useState("");
   const [address, setAddress] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [uncertain, setUncertain] = useState(false);
-  const attempt = useRef<{ body: object; key: string } | null>(null);
+  const uncertain = Boolean(retained);
 
   // Form thêm địa chỉ mới trực tiếp tại chỗ
   const [showAddAddress, setShowAddAddress] = useState(false);
@@ -172,7 +238,9 @@ export function ExchangeOffer({
       return;
     }
     if (!/^0\d{9}$/.test(phoneTrim)) {
-      setAddressError("Số điện thoại nhận hàng phải gồm đúng 10 chữ số (bắt đầu bằng 0).");
+      setAddressError(
+        "Số điện thoại nhận hàng phải gồm đúng 10 chữ số (bắt đầu bằng 0).",
+      );
       return;
     }
     if (!newLocality) {
@@ -180,28 +248,34 @@ export function ExchangeOffer({
       return;
     }
     if (detailTrim.length < 5) {
-      setAddressError("Địa chỉ chi tiết phải có ít nhất 5 ký tự (số nhà, tên đường...).");
+      setAddressError(
+        "Địa chỉ chi tiết phải có ít nhất 5 ký tự (số nhà, tên đường...).",
+      );
       return;
     }
 
     setAddressSaving(true);
     setAddressError("");
     try {
-      const saved = await session.request("/me/addresses", addressReceiptSchema, {
-        method: "POST",
-        headers: { "Idempotency-Key": crypto.randomUUID() },
-        body: JSON.stringify({
-          expectedBookVersion: addresses.data?.version ?? 0,
-          address: {
-            recipientName: nameTrim,
-            phone: phoneTrim,
-            localityCode: newLocality,
-            detail: detailTrim,
-            serviceAreaCode: serviceAreas.data?.code ?? "HCM-DEMO-v1",
-          },
-          makeDefault: false,
-        }),
-      });
+      const saved = await session.request(
+        "/me/addresses",
+        addressReceiptSchema,
+        {
+          method: "POST",
+          headers: { "Idempotency-Key": crypto.randomUUID() },
+          body: JSON.stringify({
+            expectedBookVersion: addresses.data?.version ?? 0,
+            address: {
+              recipientName: nameTrim,
+              phone: phoneTrim,
+              localityCode: newLocality,
+              detail: detailTrim,
+              serviceAreaCode: serviceAreas.data?.code ?? "HCM-DEMO-v1",
+            },
+            makeDefault: false,
+          }),
+        },
+      );
       await addresses.refetch();
       setAddress(saved.addressId);
       setShowAddAddress(false);
@@ -220,16 +294,46 @@ export function ExchangeOffer({
     }
   };
 
-  const filteredBooks = useMemo(() => {
+  const pref = book.exchangePreferences;
+
+  const processedBooks = useMemo(() => {
     if (!mine.data) return [];
-    if (!search.trim()) return mine.data;
+    return mine.data
+      .map((item) => ({
+        ...item,
+        matchReason: checkMatch(item.book, pref),
+      }))
+      .sort((a, b) => {
+        if (a.matchReason && !b.matchReason) return -1;
+        if (!a.matchReason && b.matchReason) return 1;
+        return 0;
+      });
+  }, [mine.data, pref]);
+
+  const filteredBooks = useMemo(() => {
+    if (!search.trim()) return processedBooks;
     const q = search.trim().toLowerCase();
-    return mine.data.filter(
+    return processedBooks.filter(
       (item) =>
         item.book.title.toLowerCase().includes(q) ||
         item.book.authors.some((author) => author.toLowerCase().includes(q)),
     );
-  }, [mine.data, search]);
+  }, [processedBooks, search]);
+
+  const selected = mine.data?.filter((x) => chosen.includes(x.id)) ?? [];
+  const total = selected.reduce((n, b) => n + b.value, 0);
+  const difference = (book.exchangeValue ?? 0) - total;
+  const pricesKnown =
+    Number.isSafeInteger(book.exchangeValue) &&
+    (book.exchangeValue ?? 0) > 0 &&
+    selected.every(
+      (item) => Number.isSafeInteger(item.value) && item.value > 0,
+    );
+  const addressId =
+    address ||
+    addresses.data?.items.find((a) => a.isDefault)?.id ||
+    addresses.data?.items[0]?.id ||
+    "";
 
   if (!buyer)
     return (
@@ -240,6 +344,45 @@ export function ExchangeOffer({
           chấp nhận hoặc đề xuất lại.
         </p>
       </div>
+    );
+
+  if (created)
+    return (
+      <section className={styles.exchangeOffer} role="status">
+        <h3>Đề nghị đã được tạo</h3>
+        <p>
+          Máy chủ đã xác nhận. Mở đề nghị để xem trạng thái, không cần gửi lại.
+        </p>
+        <Link to={ROUTES.exchangeDetail(created)}>Xem đề nghị đã tạo</Link>
+        <button type="button" onClick={refresh}>
+          Tải lại hội thoại
+        </button>
+      </section>
+    );
+  if (retained)
+    return (
+      <section className={styles.exchangeOffer}>
+        <p role="status">
+          Chưa xác nhận được kết quả gửi đề nghị. Nội dung gốc được giữ nguyên
+          qua Quay lại.
+        </p>
+        {error && <p role="alert">{error}</p>}
+        {relevant ? (
+          <button type="button" disabled={busy} onClick={() => void submit()}>
+            {busy ? "Đang xác minh…" : "Thử lại đề nghị trước"}
+          </button>
+        ) : (
+          <Link
+            to={
+              retained.conversationId
+                ? "/chat/" + retained.conversationId
+                : ROUTES.exchangeCompose(retained.recipientListingId)
+            }
+          >
+            Mở đề nghị chưa rõ kết quả
+          </Link>
+        )}
+      </section>
     );
 
   if (mine.isPending || addresses.isPending)
@@ -265,15 +408,6 @@ export function ExchangeOffer({
       </div>
     );
 
-  const selected = mine.data?.filter((x) => chosen.includes(x.id)) ?? [];
-  const total = selected.reduce((n, b) => n + b.value, 0);
-  const difference = (book.exchangeValue ?? 0) - total;
-  const addressId =
-    address ||
-    addresses.data?.items.find((a) => a.isDefault)?.id ||
-    addresses.data?.items[0]?.id ||
-    "";
-
   const toggleBook = (id: string) => {
     setChosen((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
@@ -282,47 +416,40 @@ export function ExchangeOffer({
 
   async function submit() {
     if (busy) return;
-    if (!attempt.current && (!chosen.length || !addressId)) {
-      setError("Vui lòng chọn ít nhất 1 cuốn sách đem đổi và địa chỉ nhận.");
+    if (!retained && (!chosen.length || !addressId || !pricesKnown)) {
+      setError("Kiểm tra giá trị sách và chọn địa chỉ nhận trước khi gửi.");
       return;
     }
-    attempt.current ??= {
-      key: crypto.randomUUID(),
-      body: {
-        conversationId: room.id,
-        expectedConversationVersion: room.version,
-        initiatorListingIds: chosen,
-        recipientListingId: room.listingId,
-        deliveryAddressId: addressId,
-      },
-    };
+    if (retained && !relevant) {
+      setError(
+        "Có đề nghị chưa rõ kết quả trong hội thoại khác. Hãy mở đề nghị đó trước.",
+      );
+      return;
+    }
     setBusy(true);
     setError("");
     try {
-      await session.request("/exchanges", exchangeSchema, {
-        method: "POST",
-        headers: { "Idempotency-Key": attempt.current.key },
-        body: JSON.stringify(attempt.current.body),
-      });
-      attempt.current = null;
-      setUncertain(false);
-      refresh();
-    } catch (e) {
-      const terminal =
-        e instanceof ApiError && [400, 403, 404, 409, 422].includes(e.status);
-      if (terminal) {
-        attempt.current = null;
-        setUncertain(false);
-        refresh();
-        void mine.refetch();
-      } else setUncertain(true);
-      setError(
-        terminal
-          ? "Sách hoặc điều kiện vừa thay đổi. Kiểm tra lại phiếu; lựa chọn của bạn vẫn được giữ."
-          : "Chưa xác nhận được đề nghị đã gửi. Thử lại sẽ dùng đúng yêu cầu này.",
+      await exchangeCommand(
+        "/exchanges",
+        retained ?? {
+          conversationId: room.id,
+          expectedConversationVersion: room.version,
+          initiatorListingIds: chosen,
+          recipientListingId: room.listingId,
+          deliveryAddressId: addressId,
+        },
       );
+      if (exchangeIdentity() === identity) refresh();
+    } catch (failure) {
+      if (exchangeIdentity() === identity) {
+        setError(exchangeError(failure));
+        if (!pendingProposal()) {
+          refresh();
+          void mine.refetch();
+        }
+      }
     } finally {
-      setBusy(false);
+      if (exchangeIdentity() === identity) setBusy(false);
     }
   }
 
@@ -339,7 +466,9 @@ export function ExchangeOffer({
           className={styles.selectionChip}
           data-active={chosen.length > 0 ? "true" : undefined}
         >
-          {chosen.length > 0 ? `Đã chọn ${chosen.length} cuốn` : "Chưa chọn sách"}
+          {chosen.length > 0
+            ? `Đã chọn ${chosen.length} cuốn`
+            : "Chưa chọn sách"}
         </span>
       </div>
 
@@ -352,271 +481,326 @@ export function ExchangeOffer({
         </div>
       ) : (
         <>
-        <fieldset className={styles.fieldset} disabled={busy || uncertain}>
-          {mine.data.length > 4 && (
-            <div className={styles.searchBox}>
-              <Search size={16} className={styles.searchIcon} />
-              <input
-                type="text"
-                className={styles.searchInput}
-                placeholder="Tìm theo tên sách hoặc tác giả..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              {search && (
-                <button
-                  type="button"
-                  className={styles.clearSearch}
-                  aria-label="Xóa tìm kiếm"
-                  onClick={() => setSearch("")}
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-          )}
-
-          <div className={styles.inventory}>
-            {filteredBooks.length === 0 ? (
-              <div className={styles.emptySearch}>
-                <p>Không tìm thấy cuốn sách nào khớp với từ khóa.</p>
-                <button type="button" onClick={() => setSearch("")}>
-                  Hiển thị tất cả
-                </button>
-              </div>
-            ) : (
-              filteredBooks.map((item, idx) => {
-                const isSelected = chosen.includes(item.id);
-                const conditionText = item.condition
-                  ? CONDITION_LABELS[item.condition] ?? item.condition
-                  : null;
-
-                return (
-                  <label
-                    key={item.id}
-                    className={styles.bookCard}
-                    data-selected={isSelected ? "true" : undefined}
-                  >
-                    <input
-                      type="checkbox"
-                      className={styles.hiddenCheckbox}
-                      checked={isSelected}
-                      onChange={() => toggleBook(item.id)}
-                    />
-                    <div className={styles.checkboxIndicator}>
-                      {isSelected && <Check size={12} strokeWidth={3} />}
-                    </div>
-
-                    <div className={styles.coverWrap}>
-                      <BookCover
-                        title={item.book.title}
-                        coverUrl={item.coverUrl}
-                        index={idx}
-                        className={styles.cardCover}
-                      />
-                    </div>
-
-                    <div className={styles.bookInfo}>
-                      <h4 className={styles.bookTitle}>{item.book.title}</h4>
-                      <p className={styles.bookAuthor}>
-                        {item.book.authors.join(", ")}
-                      </p>
-                      <div className={styles.metaRow}>
-                        {conditionText && (
-                          <span className={styles.conditionBadge}>
-                            {conditionText}
-                          </span>
-                        )}
-                        <span className={styles.valueTag}>
-                          {formatVnd(item.value)}
-                        </span>
-                      </div>
-                    </div>
-                  </label>
-                );
-              })
-            )}
-          </div>
-
-          {selected.length > 0 && (
-            <div className={styles.balanceCard}>
-              <div className={styles.balanceHeader}>
-                <div className={styles.balanceHeaderLeft}>
-                  <Scale size={16} />
-                  <span>Cân đối giá trị trao đổi</span>
-                </div>
-              </div>
-
-              <div className={styles.balanceRow}>
-                <span>Sách bạn muốn nhận</span>
-                <strong>{formatVnd(book.exchangeValue ?? 0)}</strong>
-              </div>
-              <div className={styles.balanceRow}>
-                <span>Sách bạn gửi ({selected.length} cuốn)</span>
-                <strong>{formatVnd(total)}</strong>
-              </div>
-
-              <div className={styles.balanceDivider} />
-
-              <div className={styles.balanceResult}>
-                <span className={styles.balanceResultLabel}>
-                  {difference > 0
-                    ? "Bạn cần bù thêm"
-                    : difference < 0
-                      ? "Đối tác bù cho bạn"
-                      : "Trạng thái"}
-                </span>
-                <span
-                  className={`${styles.balanceBadge} ${
-                    difference > 0
-                      ? styles.badgePay
-                      : difference < 0
-                        ? styles.badgeReceive
-                        : styles.badgeEqual
-                  }`}
-                >
-                  {difference > 0
-                    ? formatVnd(difference)
-                    : difference < 0
-                      ? formatVnd(-difference)
-                      : "Đổi ngang giá (0 ₫)"}
-                </span>
-              </div>
-            </div>
-          )}
-
-          <div className={styles.addressSection}>
-            <div className={styles.addressHeader}>
-              <span className={styles.addressLabel}>
-                <MapPin size={15} /> Địa chỉ nhận sách của bạn
-              </span>
-              <button
-                type="button"
-                className={styles.addAddressToggle}
-                onClick={() => {
-                  setShowAddAddress(!showAddAddress);
-                  setAddressError("");
-                }}
-              >
-                {showAddAddress ? "Đóng form" : "+ Thêm địa chỉ mới"}
-              </button>
-            </div>
-
-            {showAddAddress ? (
-              <form
-                className={styles.addAddressCard}
-                onSubmit={handleSaveNewAddress}
-              >
-                <h4>Thêm địa chỉ giao nhận mới</h4>
-                <div className={styles.formGrid}>
-                  <div className={styles.formField}>
-                    <label htmlFor="new-addr-name">Họ và tên người nhận</label>
-                    <input
-                      id="new-addr-name"
-                      type="text"
-                      placeholder="Ví dụ: Nguyễn Văn A"
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      disabled={addressSaving}
-                    />
-                  </div>
-                  <div className={styles.formField}>
-                    <label htmlFor="new-addr-phone">Số điện thoại</label>
-                    <input
-                      id="new-addr-phone"
-                      type="tel"
-                      placeholder="0912345678"
-                      value={newPhone}
-                      onChange={(e) => setNewPhone(e.target.value)}
-                      disabled={addressSaving}
-                    />
-                  </div>
-                </div>
-
-                <div className={styles.formField}>
-                  <label htmlFor="new-addr-locality">Quận / Huyện (TP.HCM)</label>
-                  <select
-                    id="new-addr-locality"
-                    value={newLocality}
-                    onChange={(e) => setNewLocality(e.target.value)}
-                    disabled={addressSaving}
-                  >
-                    <option value="">-- Chọn Quận / Huyện --</option>
-                    {serviceAreas.data?.localities.map((loc) => (
-                      <option key={loc.code} value={loc.code}>
-                        {loc.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className={styles.formField}>
-                  <label htmlFor="new-addr-detail">Địa chỉ chi tiết</label>
-                  <input
-                    id="new-addr-detail"
-                    type="text"
-                    placeholder="Số nhà, tên đường, phường..."
-                    value={newDetail}
-                    onChange={(e) => setNewDetail(e.target.value)}
-                    disabled={addressSaving}
-                  />
-                </div>
-
-                {addressError && (
-                  <p role="alert" className={styles.addressError}>
-                    {addressError}
-                  </p>
-                )}
-
-                <div className={styles.addAddressActions}>
-                  <button
-                    type="submit"
-                    className={styles.saveAddressBtn}
-                    disabled={addressSaving}
-                  >
-                    {addressSaving ? "Đang lưu..." : "Lưu & chọn địa chỉ này"}
-                  </button>
+          <fieldset className={styles.fieldset} disabled={busy || uncertain}>
+            {mine.data.length > 2 && (
+              <div className={styles.searchBox}>
+                <Search size={16} className={styles.searchIcon} />
+                <input
+                  type="text"
+                  className={styles.searchInput}
+                  placeholder="Tìm theo tên sách hoặc tác giả..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                {search && (
                   <button
                     type="button"
-                    className={styles.cancelAddressBtn}
-                    disabled={addressSaving}
-                    onClick={() => {
-                      setShowAddAddress(false);
-                      setAddressError("");
-                    }}
+                    className={styles.clearSearch}
+                    aria-label="Xóa tìm kiếm"
+                    onClick={() => setSearch("")}
                   >
-                    Hủy
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            )}
+
+            <div className={styles.inventory}>
+              {filteredBooks.length === 0 ? (
+                <div className={styles.emptySearch}>
+                  <p>Không tìm thấy cuốn sách nào khớp với từ khóa.</p>
+                  <button type="button" onClick={() => setSearch("")}>
+                    Hiển thị tất cả
                   </button>
                 </div>
-              </form>
-            ) : addresses.data?.items.length ? (
-              <FilterSelect
-                id={`exchange-address-${room.id}`}
-                label=""
-                value={addressId}
-                options={addresses.data.items.map((a) => ({
-                  value: a.id,
-                  label: `${a.recipientName} · ${a.detail}`,
-                }))}
-                onChange={setAddress}
-              />
-            ) : (
-              <p>
-                Chưa có địa chỉ nào. Bấm <strong>+ Thêm địa chỉ mới</strong> ở trên để tạo địa chỉ nhận sách.
-              </p>
-            )}
-          </div>
+              ) : (
+                filteredBooks.map((item, idx) => {
+                  const isSelected = chosen.includes(item.id);
+                  const conditionText = item.condition
+                    ? (CONDITION_LABELS[item.condition] ?? item.condition)
+                    : null;
 
-        </fieldset>
+                  return (
+                    <label
+                      key={item.id}
+                      className={styles.bookCard}
+                      data-selected={isSelected ? "true" : undefined}
+                      data-matched={item.matchReason ? "true" : undefined}
+                    >
+                      <input
+                        type="checkbox"
+                        className={styles.hiddenCheckbox}
+                        checked={isSelected}
+                        onChange={() => toggleBook(item.id)}
+                      />
+                      <div className={styles.checkboxIndicator}>
+                        {isSelected && <Check size={12} strokeWidth={3} />}
+                      </div>
+
+                      <div className={styles.coverWrap}>
+                        <BookCover
+                          title={item.book.title}
+                          coverUrl={item.coverUrl}
+                          index={idx}
+                          className={styles.cardCover}
+                        />
+                      </div>
+
+                      <div className={styles.bookInfo}>
+                        <h4 className={styles.bookTitle}>{item.book.title}</h4>
+                        <p className={styles.bookAuthor}>
+                          {item.book.authors.join(", ")}
+                        </p>
+                        {item.matchReason && (
+                          <div className={styles.matchedBadge}>
+                            <BrandIcon size={13} />
+                            <span>{item.matchReason}</span>
+                          </div>
+                        )}
+                        <div className={styles.metaRow}>
+                          {conditionText && (
+                            <span className={styles.conditionBadge}>
+                              {conditionText}
+                            </span>
+                          )}
+                          <span className={styles.valueTag}>
+                            {formatVnd(item.value)}
+                          </span>
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+
+            {selected.length > 0 &&
+              (pricesKnown ? (
+                <div className={styles.balanceCard}>
+                  <div className={styles.balanceHeader}>
+                    <div className={styles.balanceHeaderLeft}>
+                      <Scale size={16} />
+                      <span>Cân đối giá trị trao đổi</span>
+                    </div>
+                  </div>
+
+                  <div className={styles.balanceRow}>
+                    <span>Sách bạn muốn nhận</span>
+                    <strong>{formatVnd(book.exchangeValue ?? 0)}</strong>
+                  </div>
+                  <div className={styles.balanceRow}>
+                    <span>Sách bạn gửi ({selected.length} cuốn)</span>
+                    <strong>{formatVnd(total)}</strong>
+                  </div>
+
+                  <div className={styles.balanceRow}>
+                    <span>Cọc của bạn (dự kiến)</span>
+                    <strong>{formatVnd(book.exchangeValue ?? 0)}</strong>
+                  </div>
+                  <div className={styles.balanceRow}>
+                    <span>Cọc của đối tác (dự kiến)</span>
+                    <strong>{formatVnd(total)}</strong>
+                  </div>
+                  <div className={styles.balanceRow}>
+                    <span>Khoản bạn nộp nếu chấp nhận</span>
+                    <strong>
+                      {formatVnd(
+                        (book.exchangeValue ?? 0) + Math.max(difference, 0),
+                      )}
+                    </strong>
+                  </div>
+                  <p className={styles.helpText}>
+                    Gồm cọc và tiền bù bạn trả, chưa gồm phí giao nhận. Phiếu
+                    sau khi gửi là căn cứ để hai bên kiểm tra.
+                  </p>
+
+                  <div className={styles.balanceDivider} />
+
+                  <div className={styles.balanceResult}>
+                    <span className={styles.balanceResultLabel}>
+                      {difference > 0
+                        ? "Bạn cần bù thêm"
+                        : difference < 0
+                          ? "Đối tác bù cho bạn"
+                          : "Trạng thái"}
+                    </span>
+                    <span
+                      className={`${styles.balanceBadge} ${
+                        difference > 0
+                          ? styles.badgePay
+                          : difference < 0
+                            ? styles.badgeReceive
+                            : styles.badgeEqual
+                      }`}
+                    >
+                      {difference > 0
+                        ? formatVnd(difference)
+                        : difference < 0
+                          ? formatVnd(-difference)
+                          : "Đổi ngang giá (0 ₫)"}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div role="alert">
+                  <p>
+                    Chưa đủ giá trị quy đổi để tính cọc và tiền bù. Tải lại kệ
+                    sách trước khi gửi đề nghị.
+                  </p>
+                  <button
+                    type="button"
+                    className={styles.primaryButton}
+                    onClick={() => {
+                      void mine.refetch();
+                      void queryClient.invalidateQueries({
+                        queryKey: ["public-listing", room.listingId],
+                      });
+                    }}
+                  >
+                    Tải lại giá trị sách
+                  </button>
+                </div>
+              ))}
+
+            <div className={styles.addressSection}>
+              <div className={styles.addressHeader}>
+                <span className={styles.addressLabel}>
+                  <MapPin size={15} /> Địa chỉ nhận sách của bạn
+                </span>
+                <button
+                  type="button"
+                  className={styles.addAddressToggle}
+                  onClick={() => {
+                    setShowAddAddress(!showAddAddress);
+                    setAddressError("");
+                  }}
+                >
+                  {showAddAddress ? "Đóng form" : "+ Thêm địa chỉ mới"}
+                </button>
+              </div>
+
+              {showAddAddress ? (
+                <form
+                  className={styles.addAddressCard}
+                  onSubmit={handleSaveNewAddress}
+                >
+                  <h4>Thêm địa chỉ giao nhận mới</h4>
+                  <div className={styles.formGrid}>
+                    <div className={styles.formField}>
+                      <label htmlFor="new-addr-name">
+                        Họ và tên người nhận
+                      </label>
+                      <input
+                        id="new-addr-name"
+                        type="text"
+                        placeholder="Ví dụ: Nguyễn Văn A"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        disabled={addressSaving}
+                      />
+                    </div>
+                    <div className={styles.formField}>
+                      <label htmlFor="new-addr-phone">Số điện thoại</label>
+                      <input
+                        id="new-addr-phone"
+                        type="tel"
+                        placeholder="0912345678"
+                        value={newPhone}
+                        onChange={(e) => setNewPhone(e.target.value)}
+                        disabled={addressSaving}
+                      />
+                    </div>
+                  </div>
+
+                  <div className={styles.formField}>
+                    <label htmlFor="new-addr-locality">
+                      Quận / Huyện (TP.HCM)
+                    </label>
+                    <select
+                      id="new-addr-locality"
+                      value={newLocality}
+                      onChange={(e) => setNewLocality(e.target.value)}
+                      disabled={addressSaving}
+                    >
+                      <option value="">-- Chọn Quận / Huyện --</option>
+                      {serviceAreas.data?.localities.map((loc) => (
+                        <option key={loc.code} value={loc.code}>
+                          {loc.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className={styles.formField}>
+                    <label htmlFor="new-addr-detail">Địa chỉ chi tiết</label>
+                    <input
+                      id="new-addr-detail"
+                      type="text"
+                      placeholder="Số nhà, tên đường, phường..."
+                      value={newDetail}
+                      onChange={(e) => setNewDetail(e.target.value)}
+                      disabled={addressSaving}
+                    />
+                  </div>
+
+                  {addressError && (
+                    <p role="alert" className={styles.addressError}>
+                      {addressError}
+                    </p>
+                  )}
+
+                  <div className={styles.addAddressActions}>
+                    <button
+                      type="submit"
+                      className={styles.saveAddressBtn}
+                      disabled={addressSaving}
+                    >
+                      {addressSaving ? "Đang lưu..." : "Lưu & chọn địa chỉ này"}
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.cancelAddressBtn}
+                      disabled={addressSaving}
+                      onClick={() => {
+                        setShowAddAddress(false);
+                        setAddressError("");
+                      }}
+                    >
+                      Hủy
+                    </button>
+                  </div>
+                </form>
+              ) : addresses.data?.items.length ? (
+                <FilterSelect
+                  id={`exchange-address-${room.id}`}
+                  label=""
+                  value={addressId}
+                  options={addresses.data.items.map((a) => ({
+                    value: a.id,
+                    label: `${a.recipientName} · ${a.detail}`,
+                  }))}
+                  onChange={setAddress}
+                />
+              ) : (
+                <p>
+                  Chưa có địa chỉ nào. Bấm <strong>+ Thêm địa chỉ mới</strong> ở
+                  trên để tạo địa chỉ nhận sách.
+                </p>
+              )}
+            </div>
+          </fieldset>
           <p className={styles.helpText}>
-            Gửi đề nghị chưa giữ sách. Hệ thống sẽ giữ tiền cọc bảo chứng và tiền
-            bù sau khi hai bên chốt trao đổi.
+            Gửi đề nghị chưa giữ sách. Hệ thống sẽ giữ tiền cọc bảo chứng và
+            tiền bù sau khi hai bên chốt trao đổi.
           </p>
 
           <button
             type="button"
             className={styles.primaryButton}
-            disabled={busy || (!uncertain && (!chosen.length || !addressId))}
+            disabled={
+              busy ||
+              (!uncertain && (!chosen.length || !addressId || !pricesKnown))
+            }
             onClick={() => void submit()}
           >
             {busy

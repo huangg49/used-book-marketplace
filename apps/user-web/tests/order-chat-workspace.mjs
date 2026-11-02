@@ -33,7 +33,8 @@ const makeOrder = (n, mode, state, linked) => ({
   amounts: { bookPrice: 75000, shippingFee: 20000, buyerTotal: 95000 },
   paidAt: state === "Preparing" ? now() : null, moneyHeld: state === "Preparing" ? 95000 : 0,
   shipmentRegistrationEnabled: state === "Preparing",
-  preparation: state === "Preparing" ? { acceptedAt: now(), pickupDeadline: future() } : null,
+  deliveredAt: null, inspectionDeadline: null, carrierReview: null, deliveryReview: null,
+  preparation: state === "Preparing" ? { acceptedAt: now(), pickupDeadline: future(), pickupReview: null } : null,
   ownAddress: contact("Buyer"), shippingAddress: null,
   item: { listingId: id(n + 20), metadata: { title: `[QA] ${mode === "BuyNow" ? "Mua ngay — Bản sách đã ẩn khỏi kệ" : n === 12 ? "Cuốn sách thử hủy đơn" : "Đơn thương lượng đã thống nhất"}` }, condition: "Good", description: "Mô tả bản sách được lưu tại thời điểm đặt đơn QA.", coverNote: "Bìa có nếp gấp nhỏ — snapshot QA", pages: "Đủ trang — snapshot QA" },
 });

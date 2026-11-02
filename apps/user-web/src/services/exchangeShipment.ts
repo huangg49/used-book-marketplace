@@ -55,6 +55,8 @@ export interface ShipmentData {
     meetupLocation?: string;
     meetupTime?: string;
     shippedAt?: string; // ISO string
+    lastEvent?: string;
+    lastEventAt?: string;
 }
 
 function getStorageKey(exchangeId: string, role: 'initiator' | 'recipient'): string {

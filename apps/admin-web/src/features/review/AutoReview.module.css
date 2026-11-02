@@ -1,0 +1,139 @@
+.panel h4 {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.head h3 {
+  margin: 0;
+}
+
+.reasons,
+.checks ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.meta {
+  margin-top: 1rem;
+  overflow-wrap: anywhere;
+  font-size: 0.8rem;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 26rem;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.table th,
+.table td {
+  padding: 0.5rem 0.6rem 0.5rem 0;
+  border-bottom: 1px solid var(--shop-line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th:nth-child(n + 2),
+.table td:nth-child(n + 2) {
+  white-space: nowrap;
+}
+
+.table tr[data-met="false"] td {
+  background: var(--warning-surface);
+  color: var(--warning);
+}
+
+.checks {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.checks > li {
+  padding: 0.85rem 0;
+  border-top: 1px solid var(--shop-line);
+  overflow-wrap: anywhere;
+}
+
+.action {
+  margin-top: 1rem;
+  padding-top: 0.25rem;
+}
+
+.action h4 {
+  margin-top: 0.5rem;
+}
+
+.action textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.35rem;
+}
+
+.history {
+  display: grid;
+  gap: 0.85rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history > li {
+  overflow-wrap: anywhere;
+}
+
+.history p {
+  margin: 0.25rem 0 0;
+}
+
+.page {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 62rem;
+}
+
+.page header h1 {
+  margin: 0 0 0.5rem;
+}
+
+.page header p {
+  margin: 0;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.stats > div {
+  padding: 0.85rem 1rem;
+  background: var(--shop-paper);
+  border: 1px solid var(--shop-line);
+  border-radius: 4px;
+}
+
+.stats dt {
+  font-size: 0.8rem;
+}
+
+.stats dd {
+  margin: 0.25rem 0 0;
+  font-weight: 700;
+}

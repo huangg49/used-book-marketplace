@@ -8,6 +8,9 @@ export interface ShippingConfirm {
 }
 
 export interface ExchangeDetail {
+  hasAgreementSnapshot?: boolean;
+  viewerDeposit?: number;
+  partnerDeposit?: number;
   id: string;
   transactionCode: string;
   createdAt: string;
@@ -41,8 +44,8 @@ export interface ExchangeDetail {
   partnerCompletedAt?: string;
   viewerAddress?: { recipientName: string; phone: string; detail: string; localityCode?: string | null; serviceAreaCode?: string | null };
   partnerAddress?: { recipientName: string; phone: string; detail: string; localityCode?: string | null; serviceAreaCode?: string | null };
-  viewerShipment?: { method: 'carrier' | 'direct'; carrierCode?: string | null; carrierName?: string | null; trackingCode?: string | null; meetupLocation?: string | null; notes?: string | null; shippedAt?: string | null };
-  partnerShipment?: { method: 'carrier' | 'direct'; carrierCode?: string | null; carrierName?: string | null; trackingCode?: string | null; meetupLocation?: string | null; notes?: string | null; shippedAt?: string | null };
+  viewerShipment?: { method: 'carrier' | 'direct'; carrierCode?: string | null; carrierName?: string | null; trackingCode?: string | null; meetupLocation?: string | null; notes?: string | null; shippedAt?: string | null; lastEvent?: string | null; lastEventAt?: string | null };
+  partnerShipment?: { method: 'carrier' | 'direct'; carrierCode?: string | null; carrierName?: string | null; trackingCode?: string | null; meetupLocation?: string | null; notes?: string | null; shippedAt?: string | null; lastEvent?: string | null; lastEventAt?: string | null };
   hasViewerReviewed: boolean;
   closedBy?: 'viewer' | 'partner' | 'both';
   shippingDeadline?: string;

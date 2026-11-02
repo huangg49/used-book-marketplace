@@ -1,0 +1,51 @@
+.row {
+  gap: 12px;
+  align-items: baseline;
+}
+
+.row dt {
+  flex: 1 1 50%;
+  min-width: 0;
+}
+
+.row dd {
+  flex: 0 1 50%;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.note {
+  margin: 12px 0;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-underline-offset: 3px;
+}
+.summary {
+  container-type: inline-size;
+}
+
+.header {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.amount {
+  white-space: nowrap;
+}
+
+@container (max-width: 200px) {
+  .row {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .row dd {
+    text-align: left;
+  }
+}

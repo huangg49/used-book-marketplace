@@ -506,3 +506,6 @@
     margin: 0;
     line-height: 1.5;
 }
+.conditionDetails { line-height: 1.6; overflow-wrap: anywhere; }
+.conditionDetails summary { cursor: pointer; min-height: 44px; padding-block: 10px; }
+.conditionDetails p { white-space: pre-wrap; }

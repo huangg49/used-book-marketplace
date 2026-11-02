@@ -7,7 +7,9 @@ export const quoteSchema = z.object({
   version: z.literal(1),
   listingVersion: z.number(),
   listingRevisionId: z.string().uuid(),
-  expiresAt: z.string(),
+  expiresAt: z.iso.datetime(),
+  serverTime: z.iso.datetime(),
+  assessment: z.enum(["Current", "Expired", "Changed", "Unavailable"]),
   amounts: z.object({
     bookPrice: z.number().int(),
     shippingFee: z.number().int(),
@@ -29,7 +31,12 @@ export const orderReceiptSchema = z.object({
 export type OrderReceipt = z.infer<typeof orderReceiptSchema>;
 
 export const orderDetailsSchema = z.object({
-  item: z.object({bundle: bundleSchema.nullable().optional(), metadata: z.object({title: z.string()})}).optional(),
+  item: z
+    .object({
+      bundle: bundleSchema.nullable().optional(),
+      metadata: z.object({ title: z.string() }),
+    })
+    .optional(),
   id: z.string().uuid(),
   role: z.enum(["Buyer", "Seller"]),
   version: z.number().int(),
@@ -81,7 +88,10 @@ export const ORDER_STATE_CONFIG: Record<
   { label: string; tone: "warning" | "info" | "success" | "neutral" | "danger" }
 > = {
   AwaitingPayment: { label: "Chờ thanh toán", tone: "warning" },
-  PendingSellerConfirmation: { label: "Chờ người bán xác nhận", tone: "warning" },
+  PendingSellerConfirmation: {
+    label: "Chờ người bán xác nhận",
+    tone: "warning",
+  },
   Preparing: { label: "Người bán chuẩn bị sách", tone: "warning" },
   InTransit: { label: "Đang giao hàng", tone: "info" },
   Inspection: { label: "Đang kiểm định sách", tone: "info" },
@@ -95,11 +105,16 @@ export const ORDER_STATE_CONFIG: Record<
 export function buyNowError(cause: unknown): string {
   if (cause instanceof ApiError) {
     if (cause.status === 401) return "Vui lòng đăng nhập lại để tiếp tục.";
-    if (cause.status === 403) return "Tài khoản chưa đủ điều kiện đặt mua (cần kích hoạt hoặc xác minh).";
-    if (cause.status === 404) return "Bản sách hoặc địa chỉ nhận không còn tồn tại.";
-    if (cause.status === 409) return "Bản sách đã có người đặt mua hoặc đang được giữ chỗ giao dịch.";
-    if (cause.status === 422) return "Khu vực giao nhận không hợp lệ hoặc thông tin không đủ điều kiện.";
-    if (cause.status === 429) return "Hệ thống đang bận. Vui lòng thử lại sau giây lát.";
+    if (cause.status === 403)
+      return "Tài khoản chưa đủ điều kiện đặt mua (cần kích hoạt hoặc xác minh).";
+    if (cause.status === 404)
+      return "Bản sách hoặc địa chỉ nhận không còn tồn tại.";
+    if (cause.status === 409)
+      return "Bản sách đã có người đặt mua hoặc đang được giữ chỗ giao dịch.";
+    if (cause.status === 422)
+      return "Khu vực giao nhận không hợp lệ hoặc thông tin không đủ điều kiện.";
+    if (cause.status === 429)
+      return "Hệ thống đang bận. Vui lòng thử lại sau giây lát.";
   }
   if (cause instanceof Error && cause.message) return cause.message;
   return "Không thể hoàn tất giao dịch. Vui lòng kiểm tra lại.";

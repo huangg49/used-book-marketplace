@@ -1,72 +1,284 @@
 .container {
   min-height: 100vh;
-  background-color: #0f172a;
+  background-color: #f5eedf;
   display: flex;
   justify-content: center;
-  padding: 16px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  padding: 16px 12px;
+  font-family: var(--shop-body, 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  color: var(--shop-ink, #281914);
 }
 
 .mobileFrame {
   width: 100%;
   max-width: 440px;
-  background-color: #0f172a;
-  color: #f8fafc;
+  background-color: var(--shop-paper, #fffcf5);
+  border: 1px solid var(--shop-line, #d9cbbd);
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(92, 2, 2, 0.08), 0 2px 8px rgba(40, 25, 20, 0.04);
   display: flex;
   flex-direction: column;
+  padding: 18px 16px;
+  overflow: hidden;
 }
 
+/* Header */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #1e293b;
+  background: linear-gradient(135deg, var(--shop-wine, #5c0202) 0%, #7c2320 100%);
+  margin: -18px -16px 16px -16px;
+  padding: 16px 18px;
+  color: #ffffff;
 }
 
 .appTitle {
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 800;
-  color: #f97316;
+  color: var(--shop-cream, #fcf8db);
   letter-spacing: 0.5px;
   margin: 0;
+  font-family: var(--shop-display, Anton, sans-serif);
 }
 
 .driverName {
   font-size: 12px;
-  color: #94a3b8;
+  color: #f7e6d2;
   margin: 2px 0 0;
+  font-weight: 500;
 }
 
 .refreshBtn {
-  background-color: #1e293b;
-  color: #e2e8f0;
-  border: 1px solid #334155;
+  background-color: rgba(252, 248, 219, 0.18);
+  color: var(--shop-cream, #fcf8db);
+  border: 1px solid rgba(252, 248, 219, 0.4);
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.refreshBtn:hover {
+  background-color: rgba(252, 248, 219, 0.3);
+}
+
+/* Search bar */
+.searchContainer {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.searchInput {
+  flex: 1;
+  background-color: #ffffff;
+  border: 1.5px solid var(--shop-line, #d9cbbd);
+  border-radius: 10px;
+  color: var(--shop-ink, #281914);
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.searchInput:focus {
+  border-color: var(--shop-wine, #5c0202);
+  box-shadow: 0 0 0 3px rgba(92, 2, 2, 0.1);
+}
+
+.searchBtn {
+  background-color: var(--shop-wine, #5c0202);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 15px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s;
+}
+
+.searchBtn:hover {
+  background-color: #7c2320;
+}
+
+/* Quick chips */
+.chipsSection {
+  margin-bottom: 14px;
+}
+
+.chipsLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--shop-control, #8e7564);
+  margin: 0 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.chipsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  background-color: #ffffff;
+  border: 1px solid var(--shop-line, #d9cbbd);
+  color: var(--shop-muted, #716157);
+  padding: 5px 11px;
+  border-radius: 20px;
+  font-size: 11px;
   font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.chip:hover {
+  border-color: var(--shop-wine, #5c0202);
+  color: var(--shop-wine, #5c0202);
+}
+
+.chipActive,
+.chip.chipActive,
+.chip.chipActive:hover,
+.chip.chipActive:focus {
+  background-color: var(--shop-wine, #5c0202) !important;
+  border-color: var(--shop-wine, #5c0202) !important;
+  color: #ffffff !important;
+}
+
+/* 2-Leg Tabs */
+.tabsContainer {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.tabBtn {
+  flex: 1;
+  background-color: #ffffff;
+  border: 1.5px solid var(--shop-line, #d9cbbd);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.tabBtn:hover {
+  border-color: #b5a394;
+}
+
+.tabBtnActive {
+  background-color: #fff9f5;
+  border-color: var(--shop-wine, #5c0202);
+  box-shadow: 0 2px 8px rgba(92, 2, 2, 0.1);
+}
+
+.tabTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--shop-ink, #281914);
+  margin: 0;
+}
+
+.tabBtnActive .tabTitle {
+  color: var(--shop-wine, #5c0202);
+}
+
+.tabCode {
+  font-size: 11px;
+  color: var(--shop-muted, #716157);
+  margin: 0;
+  font-family: monospace;
+}
+
+.tabBadgeDelivered {
+  display: inline-block;
+  background-color: #e8f5e9;
+  color: #1b5e20;
+  border: 1px solid #a5d6a7;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 4px;
+  width: fit-content;
+}
+
+.tabBadgePending {
+  display: inline-block;
+  background-color: #fff8e1;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 4px;
+  width: fit-content;
+}
+
+/* Celebration Banner */
+.celebrationBanner {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1.5px solid #86efac;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  color: #166534;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(22, 101, 52, 0.08);
+}
+
+.celebrationTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: #15803d;
+  margin: 0 0 4px;
+}
+
+.celebrationDesc {
+  font-size: 12px;
+  color: #166534;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.resetDemoBtn {
+  margin-top: 10px;
+  background-color: var(--shop-wine, #5c0202);
+  border: none;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 11px;
+  font-weight: 700;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
-.refreshBtn:hover {
-  background-color: #334155;
+.resetDemoBtn:hover {
+  background-color: #7c2320;
 }
 
-.loadingBox {
-  padding: 40px 20px;
-  text-align: center;
-  color: #94a3b8;
-}
-
+/* Order Card */
 .orderCard {
-  background-color: #1e293b;
-  border-radius: 12px;
+  background-color: #ffffff;
+  border-radius: 14px;
   padding: 16px;
-  border: 1px solid #334155;
-  margin-bottom: 20px;
+  border: 1.5px solid var(--shop-line, #d9cbbd);
+  box-shadow: 0 4px 16px rgba(40, 25, 20, 0.04);
+  margin-bottom: 18px;
 }
 
 .orderHeaderRow {
@@ -78,42 +290,44 @@
 .trackingLabel {
   font-size: 11px;
   font-weight: 700;
-  color: #f97316;
+  color: var(--shop-control, #8e7564);
   letter-spacing: 0.5px;
   margin: 0;
+  text-transform: uppercase;
 }
 
 .trackingCode {
   font-size: 18px;
   font-weight: 800;
-  color: #f8fafc;
+  color: var(--shop-wine, #5c0202);
   margin: 2px 0 0;
+  font-family: monospace;
 }
 
 .feeBadge {
-  background-color: #0f172a;
+  background-color: var(--shop-cream, #fcf8db);
   padding: 6px 10px;
   border-radius: 8px;
   text-align: right;
-  border: 1px solid #334155;
+  border: 1px solid #ebdcb2;
 }
 
 .feeText {
-  color: #10b981;
+  color: var(--shop-wine, #5c0202);
   font-weight: 800;
   font-size: 15px;
   margin: 0;
 }
 
 .feeSub {
-  color: #64748b;
+  color: var(--shop-muted, #716157);
   font-size: 10px;
   margin: 2px 0 0;
 }
 
 .divider {
   height: 1px;
-  background-color: #334155;
+  background-color: var(--shop-line, #d9cbbd);
   margin: 12px 0;
 }
 
@@ -121,16 +335,17 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #0f172a;
+  background-color: var(--shop-shelf, #f4eddf);
   padding: 10px 12px;
   border-radius: 8px;
   margin-bottom: 14px;
+  border: 1px solid #e7dcce;
 }
 
 .itemSummary {
   font-size: 13px;
-  font-weight: 600;
-  color: #e2e8f0;
+  font-weight: 700;
+  color: var(--shop-ink, #281914);
   margin: 0;
 }
 
@@ -149,7 +364,7 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background-color: #3b82f6;
+  background-color: var(--shop-wine, #5c0202);
   margin-top: 4px;
   flex-shrink: 0;
 }
@@ -158,7 +373,7 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background-color: #10b981;
+  background-color: #254337;
   margin-top: 4px;
   flex-shrink: 0;
 }
@@ -166,88 +381,100 @@
 .routeLine {
   width: 2px;
   height: 20px;
-  background-color: #475569;
+  background-color: var(--shop-line, #d9cbbd);
   margin: 2px 0 2px 5px;
 }
 
 .stopType {
   font-size: 10px;
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--shop-control, #8e7564);
   margin: 0 0 2px;
 }
 
 .personName {
   font-size: 13px;
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--shop-ink, #281914);
   margin: 0;
 }
 
 .addressText {
   font-size: 12px;
-  color: #cbd5e1;
+  color: #55443b;
   margin: 2px 0 0;
   line-height: 1.4;
 }
 
 .lastActionBox {
-  background-color: rgba(249, 115, 22, 0.1);
-  border-radius: 6px;
+  background-color: #fff8f4;
+  border-radius: 8px;
   padding: 8px 12px;
   margin-top: 14px;
-  border: 1px solid rgba(249, 115, 22, 0.3);
+  border: 1px solid #ffd8c7;
   font-size: 12px;
-  color: #fdba74;
+  color: #9a3412;
 }
 
 .sectionTitle {
   font-size: 11px;
   font-weight: 700;
-  color: #94a3b8;
+  color: var(--shop-control, #8e7564);
   margin: 0 0 10px;
   letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
+/* Thao tác bưu tá */
 .actionGrid {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .actionBtn {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px;
-  border-radius: 10px;
-  border: 1px solid #334155;
-  background-color: #1e293b;
+  padding: 13px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--shop-line, #d9cbbd);
+  background-color: #ffffff;
   cursor: pointer;
   text-align: left;
   transition: all 0.2s;
-  color: #f8fafc;
+  color: var(--shop-ink, #281914);
 }
 
 .actionBtn:hover:not(:disabled) {
-  border-color: #64748b;
+  border-color: var(--shop-wine, #5c0202);
+  background-color: #fdfaf6;
   transform: translateY(-1px);
 }
 
 .actionBtnActive {
-  border-color: #10b981;
-  background-color: rgba(16, 185, 129, 0.05);
+  border-color: #16a34a;
+  background-color: #f0fdf4;
 }
 
 .actionBtnFinish {
-  background-color: #15803d;
-  border-color: #22c55e;
+  background-color: var(--shop-wine, #5c0202);
+  border-color: var(--shop-wine, #5c0202);
+  color: #ffffff;
   margin-top: 4px;
+  box-shadow: 0 4px 12px rgba(92, 2, 2, 0.2);
 }
 
 .actionBtnFinish:hover:not(:disabled) {
-  background-color: #16a34a;
+  background-color: #7c2320;
+}
+
+.actionBtnFinishDelivered {
+  background-color: #15803d;
+  border-color: #15803d;
+  color: #ffffff;
+  margin-top: 4px;
 }
 
 .actionBtnIcon {
@@ -262,11 +489,12 @@
   font-size: 14px;
   font-weight: 700;
   margin: 0;
+  color: var(--shop-ink, #281914);
 }
 
 .actionBtnDesc {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--shop-muted, #716157);
   margin: 2px 0 0;
 }
 
@@ -279,12 +507,12 @@
 
 .actionBtnDescWhite {
   font-size: 11px;
-  color: #dcfce7;
+  color: var(--shop-cream, #fcf8db);
   margin: 2px 0 0;
 }
 
 .checkBadge {
-  color: #10b981;
+  color: #16a34a;
   font-weight: 800;
   font-size: 16px;
 }
@@ -295,18 +523,185 @@
   font-size: 16px;
 }
 
-.emptyBox {
-  background-color: #1e293b;
+.stepBadgeDone {
+  display: inline-block;
+  background-color: #e8f5e9;
+  color: #166534;
+  border: 1px solid #a5d6a7;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.stepBadgeNext {
+  display: inline-block;
+  background-color: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.stepBadgeWaiting {
+  display: inline-block;
+  background-color: #f5f5f4;
+  color: #78716c;
+  border: 1px solid #e7e5e4;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.stepBadgeDoneWhite {
+  display: inline-block;
+  background-color: #ffffff;
+  color: #15803d;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.stepBadgeNextWhite {
+  display: inline-block;
+  background-color: var(--shop-cream, #fcf8db);
+  color: var(--shop-wine, #5c0202);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.stepBadgeWaitingWhite {
+  display: inline-block;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fce8d5;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.failBtn {
+  margin-top: 4px;
+  background-color: #fff5f5;
+  border: 1.5px dashed #f87171;
+  color: #b91c1c;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  width: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.failBtn:hover {
+  background-color: #fee2e2;
+}
+
+/* Mini Seed Button in Chips bar */
+.seedMiniBtn {
+  background-color: var(--shop-cream, #fcf8db);
+  border: 1px dashed var(--shop-wine, #5c0202);
+  color: var(--shop-wine, #5c0202);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.seedMiniBtn:hover:not(:disabled) {
+  background-color: #f7edd0;
+  border-style: solid;
+}
+
+/* 1-Click Auto Simulate Button */
+.autoSimulateBtn {
+  width: 100%;
+  margin-bottom: 14px;
+  background: linear-gradient(135deg, #7c2320 0%, #5c0202 100%);
+  border: 1.5px solid #ebdcb2;
+  color: var(--shop-cream, #fcf8db);
+  padding: 12px 14px;
   border-radius: 12px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(92, 2, 2, 0.22);
+  transition: all 0.2s;
+}
+
+.autoSimulateBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(92, 2, 2, 0.32);
+}
+
+.autoSimulateBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Big Seed Button for Empty State */
+.seedBigBtn {
+  background-color: var(--shop-wine, #5c0202);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(92, 2, 2, 0.2);
+  transition: all 0.2s;
+}
+
+.seedBigBtn:hover:not(:disabled) {
+  background-color: #7c2320;
+  transform: translateY(-1px);
+}
+
+.loadingBox {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--shop-muted, #716157);
+}
+
+.emptyBox {
+  background-color: #ffffff;
+  border: 1.5px solid var(--shop-line, #d9cbbd);
+  border-radius: 14px;
   padding: 30px;
   text-align: center;
-  color: #94a3b8;
+  color: var(--shop-muted, #716157);
+  margin-bottom: 20px;
 }
 
 .emptyTitle {
   font-size: 16px;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--shop-ink, #281914);
   margin: 10px 0 6px;
 }
 
@@ -317,13 +712,14 @@
 
 .backHomeLink {
   text-align: center;
-  color: #64748b;
+  color: var(--shop-wine, #5c0202);
   font-size: 13px;
+  font-weight: 700;
   text-decoration: none;
   margin-top: auto;
   padding: 10px 0;
 }
 
 .backHomeLink:hover {
-  color: #94a3b8;
+  text-decoration: underline;
 }
