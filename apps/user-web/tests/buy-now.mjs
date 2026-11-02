@@ -26,6 +26,7 @@ Object.assign(process.env, {
   VITE_API_BASE_URL: base,
   PAYMENT_SIMULATOR_SECRET: "qa-only-buy-now-order-funding-000000000000",
   AUTH_MAIL_PROVIDER: "local",
+  LOCAL_DEMO_COMPLETION_ENABLED: 'false',
 });
 const artifacts = path.join(root, "apps/user-web/test-results/buy-now");
 await mkdir(artifacts, { recursive: true });
@@ -659,12 +660,13 @@ try {
       body: JSON.stringify({ expectedVersion }),
     });
     assert.equal((await post(seller.accessToken, 3)).status, 403);
-    process.env.LOCAL_DEMO_DIRECT_ORDER_IDS = orderId;
+    assert.equal(await sellerOrderDetails.getByRole('button', { name: 'Hoàn tất và giải ngân sau 5 giây', exact: true }).count(), 0);
+    fixture.setLocalDemoCompletion(true);
     assert.equal((await post(buyer.accessToken, 3)).status, 403);
     assert.equal((await post(operator.accessToken, 3)).status, 403);
     assert.equal((await post(seller.accessToken, 2)).status, 409);
     assert.equal((await fixture.api(`/me/orders/${orderId}`, seller.accessToken)).demoCompletionEnabled, true);
-    // Even an authorized local Order hides demo controls on its ordinary URL.
+    // One server switch exposes the control on the ordinary URL, without UUID/query settings.
     await sellerPage.locator('a[href="/"]').first().click();
     const authorizedView = sellerPage.waitForResponse(response =>
       new URL(response.url()).pathname === `/api/v1/me/orders/${orderId}` &&
@@ -672,14 +674,6 @@ try {
     await sellerPage.goBack();
     assert.equal((await (await authorizedView).json()).demoCompletionEnabled, true);
     await sellerOrderDetails.getByText('Chờ bàn giao vận chuyển', { exact: true }).waitFor();
-    assert.equal(await sellerOrderDetails.getByRole('button', { name: 'Hoàn tất và giải ngân sau 5 giây', exact: true }).count(), 0);
-    await sellerPage.screenshot({ path: path.join(artifacts, 'demo-controls-hidden.png') });
-    await sellerPage.evaluate(() => {
-      const url = new URL(window.location.href);
-      url.searchParams.set('demoCompletion', '1');
-      window.history.pushState(window.history.state, '', url);
-      window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
-    });
     await sellerOrderDetails.getByRole('button', { name: 'Hoàn tất và giải ngân sau 5 giây', exact: true }).waitFor();
     const buyerBefore = await fixture.api('/me/wallet', buyer.accessToken);
     const sellerBefore = await fixture.api('/me/wallet', seller.accessToken);

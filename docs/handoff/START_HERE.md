@@ -1,6 +1,6 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
-Cập nhật03/11/2026: theo [SESSION_STATE](SESSION_STATE.md). Contract **0.73.0**
+Cập nhật03/11/2026: theo [SESSION_STATE](SESSION_STATE.md). Contract **0.73.1**
 (235operations/37controllers); registry có69
 migration MongoDB (đến0054), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
@@ -125,8 +125,8 @@ Seed chỉ cho local, không tự đổi mật khẩu account đã tồn tại. 
 [hướng dẫn RN](../REACT_NATIVE_START.md); mật khẩu theo cấu hình local của người nhận.
 Không cần seed đơn hàng hoặc sửa số dư SQL để chứng minh backend hoạt động.
 
-Ngoại lệ demo hoàn tất/giải ngân5giây dùng migration0054 và allowlist Order local
-phía BE, tắt mặc định. Dừng API/worker, backup, migrate/bootstrap rồi chạy source
+Ngoại lệ demo hoàn tất/giải ngân5giây dùng migration0054 và cờ `LOCAL_DEMO_COMPLETION_ENABLED`
+phía BE, false mặc định. Dừng API/worker, backup, migrate/bootstrap rồi chạy source
 mới. Không bật cho Inspection cũ hoặc suy từ đây rằng gate completion đã mở.
 Xem [ADR0067](../adr/0067-local-demo-order-settlement.md) và
 [DEVELOPMENT](../DEVELOPMENT.md#demo-hoàn-tất-đơn-và-giải-ngân-sau-5-giây).

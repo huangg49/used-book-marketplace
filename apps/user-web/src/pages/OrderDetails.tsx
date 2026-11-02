@@ -4,7 +4,7 @@ import { ListingPhoto } from "../components/BookCard";
 import { ApiError, pendingOrderResponse } from "@used-books/session-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useSession } from "../hooks/useSession";
 import { useOrderShipment } from "../hooks/useOrderShipment";
 import { session } from "../lib/session";
@@ -132,8 +132,6 @@ function AuthenticatedOrderDetails({
   embedded: boolean;
 }) {
   const cache = useQueryClient();
-  const [searchParams] = useSearchParams();
-  const demoToolsVisible = import.meta.env.DEV && searchParams.get("demoCompletion") === "1";
   const order = useQuery({
     queryKey: ["direct-order", ownerId, orderId],
     queryFn: () => getOrder(orderId),
@@ -711,7 +709,7 @@ function AuthenticatedOrderDetails({
                 </div>
               )}
 
-              {((demoToolsVisible && o.demoCompletionEnabled) || demoPending) && (
+              {(o.demoCompletionEnabled || demoPending) && (
                 <div className={styles.procedureSection}>
                   <button type="button" className={styles.secondaryActionBtn} disabled={demoBusy || busy || !!pendingAction}
                     onClick={() => void startShippingDemo()}>

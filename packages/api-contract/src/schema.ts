@@ -2061,7 +2061,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Local demo only, disabled by default and restricted to configured Order IDs. Current ACTIVE seller MEMBER starts a durable five-second completion job for a paid Preparing Order with registered shipment. At the due time the server completes this exact Order and posts the frozen hold to seller proceeds and platform commission once. No normal receipt/settlement gate is opened. */
+        /** @description Local demo only, disabled by default and enabled by the server LOCAL_DEMO_COMPLETION_ENABLED switch. Current ACTIVE seller MEMBER starts a durable five-second completion job for a paid Preparing Order with registered shipment. At the due time the server completes this exact Order and posts the frozen hold to seller proceeds and platform commission once. No normal receipt/settlement gate is opened. */
         post: operations["startDemoOrderCompletion"];
         delete?: never;
         options?: never;
@@ -5548,7 +5548,7 @@ export interface components {
         };
         /** @description Private DirectDelivery Order including funding, pre-confirmation refund, seller acceptance and overdue pickup review. Historical schema name retained. shippingAddress is the frozen buyer destination, disclosed only to the accepted Seller. Review is an unresolved task, never proof of custody, strike or refund. Shipment registration is available through its separate endpoint; independent pickup simulation can advance InTransit or open carrierReview/ResolutionPending. Review resolution handlers remain planned. */
         PrivateUnpaidOrder: {
-            /** @description Explicitly allowed local-demo seller command; false outside the configured demo Orders. */
+            /** @description Local-demo seller command; enabled only when the server demo switch is on and the current seller/order is eligible. */
             demoCompletionEnabled?: boolean;
             /**
              * Format: date-time

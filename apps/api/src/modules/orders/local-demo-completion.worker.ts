@@ -23,11 +23,10 @@ export class LocalDemoCompletionWorker implements OnModuleDestroy {
   }
   async onModuleDestroy() { clearInterval(this.timer); await this.running; }
   async tick() {
-    const ids = this.policy.ids();
-    if (!ids.length) return;
+    if (!this.policy.enabled()) return;
     const now = await this.mongo.now();
     const rows = await this.mongo.c.local_demo_order_completions.find({
-      _id: { $in: ids }, status: 'Pending', dueAt: { $lte: now },
+      status: 'Pending', dueAt: { $lte: now },
     }, { sort: { dueAt: 1, _id: 1 }, limit: 10 }).toArray();
     for (const row of rows) {
       await this.orders.completeLocalDemo(row._id); this.warned = false;

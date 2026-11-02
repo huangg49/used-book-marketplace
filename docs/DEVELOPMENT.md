@@ -94,24 +94,25 @@ Thiếu storage thì login/xem dữ liệu vẫn chạy, upload chưa sẵn sàn
 
 ### Demo hoàn tất đơn và giải ngân sau 5 giây
 
-Theo [ADR0067](adr/0067-local-demo-order-settlement.md), BE có ngoại lệ demo local
-được owner chọn rõ từng UUID trong `LOCAL_DEMO_DIRECT_ORDER_IDS` của `apps/api/.env`.
-Mặc định rỗng; chỉ development/test, Mongo localhost và simulator đã cấu hình.
-Không đặt ID qua client, không wildcard, không bật completion của các đơn thường.
+Theo [ADR0067](adr/0067-local-demo-order-settlement.md), chỉ cần một cờ phía BE
+trong `apps/api/.env`:
 
-Dừng API/worker, backup database, chạy `pnpm db:migrate` và `pnpm db:bootstrap`
-cho migration0054 rồi build/chạy lại BE. Cấu hình riêng giữ ngoài Git theo ENV_HANDOFF.
-Nút demo mặc định bị ẩn. Khi cần trình diễn, chạy Member web bằng dev server và
-thêm `?demoCompletion=1` vào URL hội thoại/đơn đang xem (dùng `&` nếu đã có query).
-Chỉ với đơn đã được cấp phạm vi BE, Seller ACTIVE đã đăng ký vận đơn mới thấy nút
-“Hoàn tất và giải ngân sau 5 giây”. Nút gọi BE thật, ghi job theo giờ máy chủ và
-chuyển InTransit. Sau hạn5giây, worker đóng Completed, giải phóng hold và ghi
-seller proceeds/commission theo agreement trong một transaction. Hai bên đọc
-cùng trạng thái và xem số dư/lịch sử ví; không còn bộ đếm giả trên giao diện.
-Xóa query để ẩn công cụ; production build luôn ẩn công cụ này. Cờ URL không cấp
-quyền API. Xóa UUID khỏi allowlist BE và chạy lại API/worker sau khi demo xong;
-không rút quyền khi job đã nhận còn Pending. Exact retry của yêu cầu mất ACK
-vẫn hiện để xác nhận kết quả, kể cả khi query bị xóa trong cùng phiên.
+```dotenv
+LOCAL_DEMO_COMPLETION_ENABLED=true
+```
+
+Khởi động lại API và worker đơn hàng để nhận cấu hình. Seller ACTIVE mở đơn đã
+thanh toán/đăng ký vận đơn sẽ thấy nút “Hoàn tất và giải ngân sau 5 giây” ngay
+trên URL bình thường. Không cần UUID hay query URL. Mặc định `false`; tắt bằng
+cách đổi lại `false` rồi khởi động lại BE/worker sau khi job đã hoàn tất.
+Cài đặt UUID cũ không còn được dùng. Cờ chỉ có hiệu lực ở development/test,
+Mongo localhost và simulator đã cấu hình; API production/remote luôn từ chối.
+
+Máy nhận source lần đầu cần dừng API/worker, backup, migrate/bootstrap0054 rồi
+build/chạy lại. Nút gọi BE thật, ghi job theo giờ máy chủ và chuyển InTransit.
+Sau hạn5giây, worker đóng Completed, giải phóng hold và ghi seller proceeds/
+commission theo agreement trong một transaction. Hai bên đọc cùng trạng thái
+và xem số dư/lịch sử ví. Việc bật cờ không tự hoàn tất đơn; Seller phải bấm nút.
 
 Đây là lệnh đã chấp nhận, không có nút hủy bản xem thử. Back/reload không hủy job.
 Nếu mất ACK, dùng “Thử lại hoàn tất demo” với đúng key/body/version; không tạo key

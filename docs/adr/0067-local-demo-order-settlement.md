@@ -6,12 +6,13 @@ có phạm vi, không mở gate release của ADR0064 hoặc xác nhận carrier
 
 ## Phạm vi được cấp
 
-- Tắt mặc định. Chỉ development/test, MongoDB localhost, simulator đã cấu hình,
-  và đúng UUID trong `LOCAL_DEMO_DIRECT_ORDER_IDS` của BE local. Không wildcard,
-  không bật qua request. Production/remote không có quyền này.
-- Nút chỉ hiện trên Member web dev khi URL có `demoCompletion=1` và BE cho phép
-  đúng đơn. Mặc định ẩn và không có trong production UI; URL không cấp quyền BE.
-  Recovery của intent mất ACK vẫn được giữ cho đến khi xác nhận được kết quả.
+- Owner làm rõ cùng ngày: thay allowlist UUID và query URL bằng một cờ
+  `LOCAL_DEMO_COMPLETION_ENABLED=true` phía BE. Mặc định false; khởi động lại
+  API/worker sau khi đổi. Bật cờ thì Seller thấy nút trên các đơn đủ điều kiện,
+  không phải nhập UUID hoặc thay URL; cài đặt UUID trước đây không còn hiệu lực.
+- Chỉ development/test, MongoDB localhost và simulator đã cấu hình. Không bật
+  qua request. Production/remote không có quyền này. UI lấy quyền từ projection
+  BE; recovery của intent mất ACK vẫn giữ cho đến khi xác nhận được kết quả.
 - Seller hiện tại phải là ACTIVE MEMBER có phiên hợp lệ; đơn Preparing/version3
   đã thanh toán đầy đủ, commitment còn Active, có vận đơn LatLaiSimulator và
   ảnh đóng gói đã ghim, không có review/report tranh chấp. Buyer/người ngoài bị từ chối.
@@ -45,7 +46,7 @@ custody, đồng kiểm72giờ, khiếu nại hoặc giải ngân production.
 
 | Vai trò | Entry và điều kiện | Command | Kết quả và bước tiếp |
 | --- | --- | --- | --- |
-| Seller | Khung thủ tục đúng đơn được cấu hình, đã đăng ký vận đơn | Hoàn tất và giải ngân sau5giây | InTransit; lỗi/mất ACK thử lại đúng intent; tải lại đọc job |
+| Seller | Khung thủ tục khi cờ demo local bật, đã đăng ký vận đơn | Hoàn tất và giải ngân sau5giây | InTransit; lỗi/mất ACK thử lại đúng intent; tải lại đọc job |
 | Buyer/Seller | Đơn đang có job, tiền đang giữ | Chờ BE xử lý | Cùng đọc Completed và moneyHeld0; ví/lịch sử ghi số tiền thật trong ledger mô phỏng |
 | Worker | Job đến hạn và còn được cấp phạm vi | completeLocalDemoOrder | Commit một lần; lỗi giữ tiền/job để xử lý lại, không ép UI thành công |
 
