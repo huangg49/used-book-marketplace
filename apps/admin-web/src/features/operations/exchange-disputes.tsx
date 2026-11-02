@@ -37,22 +37,29 @@ function ExchangeDisputesContent() {
       unit="khiếu nại"
       result={result}
       panel={panel}
-      rows={(result.data ?? []).map((item) => ({
-        id: item.id,
-        status: "Chờ xử lý · Giữ tiền và sách",
-        meta: [
-          item.disputedBy === "System"
-            ? "Hệ thống tự động (POL-07)"
-            : "Thành viên khiếu nại",
-          item.disputedAt ? `Mở ${dateText(item.disputedAt)}` : "Mới mở",
-          `Cọc: ${money(item.initiatorDeposit)} / ${money(item.recipientDeposit)}`,
-          item.diffAmount > 0
-            ? `Bù chênh lệch: ${money(item.diffAmount)}`
-            : "Không bù tiền",
-        ],
-        title: `Giao dịch trao đổi: #${item.id.slice(0, 8)}`,
-        detail: <DisputeDetail item={item} />,
-      }))}
+      rows={(result.data ?? []).map((item) => {
+        const parsed = parseDisputeReason(item.disputeReason || "");
+        return {
+          id: item.id,
+          status: "Chờ xử lý · Giữ tiền và sách",
+          meta: [
+            item.disputedBy === "System"
+              ? "Hệ thống tự động (POL-07)"
+              : "Thành viên khiếu nại",
+            item.disputedAt ? `Mở ${dateText(item.disputedAt)}` : "Mới mở",
+            `Cọc: ${money(item.initiatorDeposit)} / ${money(item.recipientDeposit)}`,
+            item.diffAmount > 0
+              ? `Bù chênh lệch: ${money(item.diffAmount)}`
+              : "Không bù tiền",
+          ],
+          title: `Giao dịch trao đổi: #${item.id.slice(0, 8)}`,
+          detail: <DisputeCompactSummary parsed={parsed} />,
+          action: {
+            label: "Xem hồ sơ",
+            render: () => <DisputeDetail item={item} parsed={parsed} />,
+          },
+        };
+      })}
       empty={{
         title: "Chưa có khiếu nại nào.",
         body: "Chưa có giao dịch chờ xử lý trong danh sách bạn được xem. Điều này không xác nhận mọi giao dịch đều đã hoàn tất.",
@@ -68,7 +75,14 @@ function ExchangeDisputesContent() {
   );
 }
 
-function parseDisputeReason(reason: string) {
+type ParsedDisputeReason = {
+  category: string;
+  detail: string;
+  videoName: string;
+  imageName: string;
+};
+
+function parseDisputeReason(reason: string): ParsedDisputeReason {
   let category = "";
   let detail = "";
   let videoName = "";
@@ -94,6 +108,40 @@ function parseDisputeReason(reason: string) {
     videoName,
     imageName,
   };
+}
+
+function DisputeCompactSummary({ parsed }: { parsed: ParsedDisputeReason }) {
+  const hasImage = Boolean(parsed.imageName);
+  const hasVideo = Boolean(parsed.videoName);
+
+  return (
+    <div className={styles.compactRow}>
+      {parsed.category && (
+        <span className={styles.compactCategoryBadge}>
+          ⚠️ {parsed.category}
+        </span>
+      )}
+      {parsed.detail && (
+        <span className={styles.compactDetailText} title={parsed.detail}>
+          &ldquo;{parsed.detail}&rdquo;
+        </span>
+      )}
+      {(hasImage || hasVideo) && (
+        <div className={styles.compactAttachGroup}>
+          {hasImage && (
+            <span className={styles.compactAttachPill} title={parsed.imageName}>
+              📸 1 ảnh chụp
+            </span>
+          )}
+          {hasVideo && (
+            <span className={styles.compactAttachPill} title={parsed.videoName}>
+              🎥 1 video mở hộp
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function useEvidenceMedia(exchangeId: string) {
@@ -162,8 +210,13 @@ function useEvidenceMedia(exchangeId: string) {
   return media;
 }
 
-function DisputeDetail({ item }: { item: ExchangeDisputeItem }) {
-  const parsed = parseDisputeReason(item.disputeReason || "");
+function DisputeDetail({
+  item,
+  parsed,
+}: {
+  item: ExchangeDisputeItem;
+  parsed: ParsedDisputeReason;
+}) {
   const evidence = useEvidenceMedia(item.id);
 
   const imageSrc =
@@ -187,25 +240,37 @@ function DisputeDetail({ item }: { item: ExchangeDisputeItem }) {
       : undefined);
 
   return (
-    <div className={styles.details}>
-      <div className={styles.reasonBox}>
-        {parsed.category && (
-          <div className={styles.categoryBadge}>
-            <span className={styles.categoryIcon}>⚠️</span>
-            <span>{parsed.category}</span>
-          </div>
-        )}
-        {parsed.detail && (
-          <p className={styles.reasonText}>
-            {parsed.detail}
+    <div className={styles.expandedPanel}>
+      <div className={styles.panelHeader}>
+        <div>
+          <h3 className={styles.panelTitle}>Hồ sơ khiếu nại & Bằng chứng xác minh</h3>
+          <p className={styles.panelSubtitle}>
+            Kiểm tra bằng chứng trực tiếp và tiến độ gửi nhận của hai bên trước khi ra quyết định.
           </p>
-        )}
+        </div>
+      </div>
+
+      <div className={styles.reasonBox}>
+        <div className={styles.reasonHeader}>
+          <strong className={styles.reasonLabel}>Nội dung phản ánh từ thành viên:</strong>
+          {parsed.category && (
+            <span className={styles.categoryBadge}>
+              <span className={styles.categoryIcon}>⚠️</span>
+              <span>{parsed.category}</span>
+            </span>
+          )}
+        </div>
+        <p className={styles.reasonText}>
+          {parsed.detail || item.disputeReason || "Không có lý do chi tiết"}
+        </p>
       </div>
 
       {(imageSrc || videoSrc || parsed.imageName || parsed.videoName) && (
         <div className={styles.evidenceSection}>
           <div className={styles.evidenceHeader}>
-            <strong>Bằng chứng kiểm định từ thành viên:</strong>
+            <strong>
+              Tệp bằng chứng đính kèm ({[imageSrc && "1 ảnh", videoSrc && "1 video"].filter(Boolean).join(", ")}):
+            </strong>
           </div>
           <div className={styles.evidenceGrid}>
             {imageSrc && (
@@ -253,19 +318,40 @@ function DisputeDetail({ item }: { item: ExchangeDisputeItem }) {
         </div>
       )}
 
-      <div className={styles.parties}>
-        <div className={styles.party}>
-          <strong>Người khởi tạo (Bên A)</strong>
-          <div>Gửi hàng: {item.initiatorShippedAt ? dateText(item.initiatorShippedAt) : "Chưa gửi"}</div>
-          <div>Xác nhận đã nhận: {item.initiatorReceivedAt ? dateText(item.initiatorReceivedAt) : "Chưa nhận"}</div>
-          <div>Cọc bảo chứng: {money(item.initiatorDeposit)}</div>
+      <div className={styles.auditSection}>
+        <div className={styles.auditHeader}>
+          <strong>Đối soát giao nhận & Cọc bảo chứng hai chiều:</strong>
         </div>
+        <div className={styles.parties}>
+          <div className={styles.party}>
+            <div className={styles.partyHeader}>
+              <strong>Người khởi tạo (Bên A)</strong>
+              <span className={styles.partyDeposit}>Cọc: {money(item.initiatorDeposit)}</span>
+            </div>
+            <div className={styles.partyDetailRow}>
+              <span>Gửi hàng:</span>
+              <strong>{item.initiatorShippedAt ? dateText(item.initiatorShippedAt) : "Chưa gửi"}</strong>
+            </div>
+            <div className={styles.partyDetailRow}>
+              <span>Xác nhận đã nhận:</span>
+              <strong>{item.initiatorReceivedAt ? dateText(item.initiatorReceivedAt) : "Chưa nhận"}</strong>
+            </div>
+          </div>
 
-        <div className={styles.party}>
-          <strong>Đối tác (Bên B)</strong>
-          <div>Gửi hàng: {item.recipientShippedAt ? dateText(item.recipientShippedAt) : "Chưa gửi"}</div>
-          <div>Xác nhận đã nhận: {item.recipientReceivedAt ? dateText(item.recipientReceivedAt) : "Chưa nhận"}</div>
-          <div>Cọc bảo chứng: {money(item.recipientDeposit)}</div>
+          <div className={styles.party}>
+            <div className={styles.partyHeader}>
+              <strong>Đối tác (Bên B)</strong>
+              <span className={styles.partyDeposit}>Cọc: {money(item.recipientDeposit)}</span>
+            </div>
+            <div className={styles.partyDetailRow}>
+              <span>Gửi hàng:</span>
+              <strong>{item.recipientShippedAt ? dateText(item.recipientShippedAt) : "Chưa gửi"}</strong>
+            </div>
+            <div className={styles.partyDetailRow}>
+              <span>Xác nhận đã nhận:</span>
+              <strong>{item.recipientReceivedAt ? dateText(item.recipientReceivedAt) : "Chưa nhận"}</strong>
+            </div>
+          </div>
         </div>
       </div>
     </div>
