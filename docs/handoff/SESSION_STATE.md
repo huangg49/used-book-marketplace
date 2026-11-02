@@ -1,5 +1,22 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## Bộ thử đánh giá User1/User2 — đang mở cho owner
+
+- Owner yêu cầu tạo hai tài khoản tới đoạn giao dịch hoàn tất để tự thử review.
+  Đã dựng QA riêng57017/`*_test`, API3009, hai Member web Vite5197/5198.
+  User1 Seller/User2 Buyer, cùng1DirectOrder Completed fixture mới; không tạo
+  review hộ owner, không giảm hạn168h/48h hoặc mở release policy.
+- Hai tab đã đăng nhập và mở form: Seller chỉ điểm đối tác; Buyer có cả điểm sách.
+  API canReview=true, profile mỗi bên1completed/0review lúc chuẩn bị. Browser AX/
+  screenshot xác nhận form; không nhận là full order/fulfillment/settlement PASS.
+- Dữ liệu chỉ phục vụ review, cùng fixture của transaction-reviews E2E; không dựng
+  ledger/thanh toán/vận chuyển cho giao dịch mẫu. App chính3000/5174/DB27017 giữ
+  nguyên: User1/User2 chưa có Completed/review; đơn thật của demo vẫn Preparing.
+- Runner, exact IDs/credentials và hướng dẫn giữ private ignored ở
+  `.tmp/review-user-demo/`. Giữ process QA chạy để owner thử; đây là bộ thử tạm,
+  không tự startup Windows. Restart runner tạo namespace mới; QA Mongo tmpfs.
+  Không push/merge hoặc đổi READINESS. Không dùng bộ này làm bằng chứng giao nhận.
+
 ## Nạp tiền mô phỏng thuận tiện cho demo
 
 - `codex/simple-simulator-topup`, base `7a9af802`: Admin chọn Member/số tiền,
