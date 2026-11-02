@@ -7,7 +7,9 @@
   `merge: integrate main support and AI hardening with Exchange recovery`.
   [Source, lỗi tích hợp, evidence và giới hạn](../features/EXCHANGE_MAIN_INTEGRATION_2026_11_02.md).
   Worktree riêng sạch; checkout gốc/28file dirty-untracked giữ nguyên checksum,
-  chưa ghép28file đó vào gói này. Chưa push/PR/merge main/deploy hoặc cấp quyền mới.
+  chưa ghép28file đó vào gói này. Owner đã duyệt push nhánh/tạo PR và kiểm CI;
+  chưa cấp quyền merge main/deploy cho gói này. Kết quả remote theo đúng head xem
+  PR của branch này; báo cáo local không tự đại diện CI mới.
 - Giữ snapshot/revalidate/counter sách, exact recovery/identity và tài chính cùng
   preference matching/BrandIcon/dispute UI, Support và AI v2. Web giữ hai hạn72giờ,
   bỏ câu48h/giải phóng sớm; RN giữ chọn sách và recovery, không quay về nhập tiền bù.

@@ -4,7 +4,9 @@ Owner duyệt tích hợp sau [gói tài chính](EXCHANGE_FINANCE_2026_11_02.md)
 `codex/integrate-exchange-main`, parent local `f3291409`, parent main
 `add4d6151f217b4cc7c9e4dfb92136e22af68211`; subject
 `merge: integrate main support and AI hardening with Exchange recovery`.
-Chỉ merge local, chưa push/PR/merge lên main/deploy. Không đổi quyền publish/release,
+Tại mốc kiểm source: merge local. Owner sau đó duyệt push branch/tạo PR và kiểm
+CI; chưa cho merge main/deploy. Trạng thái CI cuối ghi tại PR đúng head, không
+suy từ kiểm local dưới đây. Không đổi quyền release,
 không migrate/bootstrap/seed DB chính hoặc gọi provider ngoài phạm vi.
 
 ## Bảo toàn và phạm vi
@@ -106,9 +108,10 @@ không dùng DB/bucket local chính.
 
 ## Còn mở / hành động kế tiếp
 
-- Chưa push/PR/merge main/deploy, không áp dụng migration0053 hoặc0050–0052 trên DB
-  chính, không đổi cờ AI/gate. Muốn publish cần quyền gói mới và CI đúng commit
-  kết hợp; CI mainFAIL trên test đã sửa vẫn là trạng thái thật của SHA main cũ.
+- Owner đã duyệt push nhánh/tạo PR và kiểm CI cho gói này. Chưa có quyền merge
+  main/deploy, không áp dụng migration0053 hoặc0050–0052 trên DB chính, không đổi
+  cờ AI/gate. Kết quả remote phải lấy từ đúng head PR; CI mainFAIL trên test đã
+  sửa vẫn là trạng thái thật của SHA main cũ.
 - Source main có form dispute ảnh/video mẫu và tên file ghép trong reason. Giữ
   source để không xóa việc nhóm; **chưa có evidence upload/custody/provider thật**,
   không diễn giải tênfile/preview thành bằng chứng tranh chấp được lưu/xác thực.
