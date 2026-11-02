@@ -10037,6 +10037,72 @@ paths:
             application/json:
               schema:
                 type: object
+  /shipments/carrier/orders/recent:
+    get:
+      operationId: getRecentShipmentOrders
+      tags:
+        - Shipments
+      description: Get recent shipment orders for demo and carrier driver portal.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /shipments/carrier/orders/{id}/reset-for-demo:
+    post:
+      operationId: resetShipmentOrderForDemo
+      tags:
+        - Shipments
+      description: Reset exchange and shipment state for live interactive demo.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /shipments/carrier/orders/{id}/auto-simulate:
+    post:
+      operationId: autoSimulateExchangeShipment
+      tags:
+        - Shipments
+      description: Automatically advance simulation of exchange delivery stages.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+  /shipments/carrier/seed-demo-order:
+    post:
+      operationId: seedDemoShipmentOrder
+      tags:
+        - Shipments
+      description: Seed demo exchange order ready for carrier delivery testing.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
   /webhooks/carrier:
     post:
       operationId: carrierWebhookCallback
@@ -19827,6 +19893,15 @@ components:
             - string
             - "null"
         shippedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+        lastEvent:
+          type:
+            - string
+            - "null"
+        lastEventAt:
           type:
             - string
             - "null"

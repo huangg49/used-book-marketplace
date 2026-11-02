@@ -10,6 +10,7 @@ import styles from "./BookCard.module.css";
 import { conditions } from "../lib/listing-labels";
 import { usePublicListingPhoto } from "../hooks/usePublicListingPhoto";
 import { useNearViewport } from "../hooks/useNearViewport";
+import { BookCover } from "./BookCover";
 import "./BookTransition.css";
 
 export function ListingPhoto({
@@ -18,12 +19,14 @@ export function ListingPhoto({
   photoIndex = 0,
   alt,
   fit,
+  fallbackCover = false,
 }: {
   book: PublicListing;
   eager?: boolean;
   photoIndex?: number;
   alt?: string;
   fit?: "cover" | "contain";
+  fallbackCover?: boolean;
 }) {
   const photoId = book.photos[photoIndex]?.id;
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
@@ -37,6 +40,19 @@ export function ListingPhoto({
   const url = photo.url;
   const failed = photo.isError || (!!url && failedUrl === url);
   const isContain = fit === "contain" || (fit === undefined && photoIndex > 0);
+
+  if (fallbackCover && (failed || (!photoId && !url))) {
+    return (
+      <div ref={ref} className={styles.photoFrame} style={{ width: "100%", height: "100%" }}>
+        <BookCover
+          title={book.bundle?.title || book.book.title}
+          index={0}
+          className={`${styles.image} ${isContain ? styles.containImage : ""}`}
+        />
+      </div>
+    );
+  }
+
   return (
     <div ref={ref} className={styles.photoFrame}>
       {url && !failed ? (

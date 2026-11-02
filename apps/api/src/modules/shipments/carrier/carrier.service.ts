@@ -1,4 +1,5 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { MongoService } from '../../../database/mongo/mongo.service.js';
 import { notifyExchange } from '../../exchanges/exchange-notifications.js';
@@ -130,12 +131,31 @@ export class CarrierService {
             const setFields: Record<string, unknown> = { updatedAt: now };
             let notifiedUser: string | null = null;
 
+            if (event.description) {
+              if (isInitiatorLeg) {
+                setFields['initiatorShipment.lastEvent'] = event.description;
+                setFields['initiatorShipment.lastEventAt'] = now;
+              } else if (isRecipientLeg) {
+                setFields['recipientShipment.lastEvent'] = event.description;
+                setFields['recipientShipment.lastEventAt'] = now;
+              }
+            }
+
+            const inspectionHours = Math.max(
+              Number(this.config?.get('EXCHANGE_INSPECTION_HOURS') ?? 72),
+              72,
+            );
+
             if (isInitiatorLeg && !ex.recipientReceivedAt) {
               setFields.recipientReceivedAt = now;
-              notifiedUser = ex.initiatorId;
+              setFields.recipientInspectionDeadline = new Date(
+                now.getTime() + inspectionHours * 3_600_000,
+              );
             } else if (isRecipientLeg && !ex.initiatorReceivedAt) {
               setFields.initiatorReceivedAt = now;
-              notifiedUser = ex.recipientId;
+              setFields.initiatorInspectionDeadline = new Date(
+                now.getTime() + inspectionHours * 3_600_000,
+              );
             }
 
             const nextInitiatorReceived = isRecipientLeg ? now : (ex.initiatorReceivedAt ?? null);
@@ -143,9 +163,6 @@ export class CarrierService {
             const willBeBothReceived = Boolean(nextInitiatorReceived && nextRecipientReceived);
 
             if (willBeBothReceived) {
-              const inspectionHours = Number(
-                this.config?.get('EXCHANGE_INSPECTION_HOURS') ?? 48,
-              );
               setFields.status = 'Delivered';
               setFields.inspectionDeadline = new Date(
                 now.getTime() + inspectionHours * 3_600_000,
@@ -164,35 +181,55 @@ export class CarrierService {
               this.logger.log(
                 `[CarrierWebhook] Đã tự động cập nhật Exchange ${updated._id} sang ${updated.status} (receivedAt=${now.toISOString()}) theo sự kiện DELIVERED từ bưu tá.`,
               );
-              if (notifiedUser) {
-                await notifyExchange(
-                  tx,
-                  updated,
-                  'ExchangeReceived',
-                  [notifiedUser],
-                  now,
-                );
-              }
+              await notifyExchange(
+                tx,
+                updated,
+                'ExchangeReceived',
+                [ex.initiatorId, ex.recipientId],
+                now,
+              );
             }
           } else if (statusCode === 'IN_TRANSIT' || statusCode === 'PICKING') {
+            const setFields: Record<string, unknown> = { updatedAt: now };
+
+            if (event.description) {
+              if (isInitiatorLeg) {
+                setFields['initiatorShipment.lastEvent'] = event.description;
+                setFields['initiatorShipment.lastEventAt'] = now;
+              } else if (isRecipientLeg) {
+                setFields['recipientShipment.lastEvent'] = event.description;
+                setFields['recipientShipment.lastEventAt'] = now;
+              }
+            }
+
+            if (statusCode === 'PICKING') {
+              if (isInitiatorLeg && !ex.initiatorShippedAt) {
+                setFields.initiatorShippedAt = now;
+                setFields['initiatorShipment.shippedAt'] = now;
+              }
+              if (isRecipientLeg && !ex.recipientShippedAt) {
+                setFields.recipientShippedAt = now;
+                setFields['recipientShipment.shippedAt'] = now;
+              }
+            }
+
             if (ex.status === 'Preparing') {
               const willBeBothShipped =
-                Boolean(ex.initiatorShippedAt) && Boolean(ex.recipientShippedAt);
+                Boolean(isInitiatorLeg ? now : ex.initiatorShippedAt) &&
+                Boolean(isRecipientLeg ? now : ex.recipientShippedAt);
               if (willBeBothShipped) {
-                const updated = await tx.c.exchanges.findOneAndUpdate(
-                  { _id: ex._id, revision: ex.revision, status: 'Preparing' },
-                  { $set: { status: 'InTransit', updatedAt: now }, $inc: { revision: 1 } },
-                  { returnDocument: 'after' },
-                );
-                if (updated) {
-                  exchangeUpdated = true;
-                  nextStatus = updated.status;
-                }
-              } else {
-                this.logger.warn(
-                  `[CarrierWebhook] Từ chối tiếp nhận mã ${event.trackingCode}: Cần cả 2 bên hoàn tất tạo đơn vận chuyển mới bàn giao bên vận chuyển.`,
-                );
+                setFields.status = 'InTransit';
               }
+            }
+
+            const updated = await tx.c.exchanges.findOneAndUpdate(
+              { _id: ex._id, revision: ex.revision },
+              { $set: setFields, $inc: { revision: 1 } },
+              { returnDocument: 'after' },
+            );
+            if (updated) {
+              exchangeUpdated = true;
+              nextStatus = updated.status;
             }
           }
         });
@@ -206,46 +243,74 @@ export class CarrierService {
     return { success: true, trackingCode: event.trackingCode, exchangeUpdated, nextStatus };
   }
 
+  private async getBookTitle(listingId?: string): Promise<string | null> {
+    if (!listingId || !this.mongo) return null;
+    try {
+      const listing = await this.mongo.c.listings.findOne({ _id: listingId });
+      const rev = listing?.currentRevisionId
+        ? await this.mongo.c.listing_revisions.findOne({ _id: listing.currentRevisionId })
+        : null;
+      if (rev?.bookId) {
+        const book = await this.mongo.c.catalog_books.findOne({ _id: rev.bookId });
+        if (book?.currentRevisionId) {
+          const catRev = await this.mongo.c.catalog_revisions.findOne({ _id: book.currentRevisionId });
+          if (catRev?.title) return catRev.title;
+        }
+        const catRev = await this.mongo.c.catalog_revisions.findOne(
+          { bookId: rev.bookId },
+          { sort: { number: -1 } },
+        );
+        return catRev?.title ?? book?.titleKey ?? null;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  }
+
   /**
-   * Lấy thông tin đơn hàng vận chuyển thật từ Database cho tài xế
-   * Quy tắc nghiệp vụ BA: Đơn vị vận chuyển chỉ tham gia/bàn giao khi CẢ 2 USER hoàn thành việc tạo đơn vận chuyển.
+   * Lấy thông tin đơn hàng vận chuyển thật từ Database cho tài xế GHN
+   * Hỗ trợ đầy đủ 2 kiện hàng (Initiator Leg & Recipient Leg) của cuộc trao đổi
    */
-  async getShipmentOrder(trackingCode?: string) {
+  async getShipmentOrder(trackingCode?: string, exchangeId?: string, leg?: 'initiator' | 'recipient') {
     if (!this.mongo) return null;
-    let query: Record<string, unknown> = {};
-    if (trackingCode) {
-      query = {
+
+    let exchange: any = null;
+
+    if (exchangeId) {
+      exchange = await this.mongo.c.exchanges.findOne({ _id: exchangeId });
+    } else if (trackingCode) {
+      exchange = await this.mongo.c.exchanges.findOne({
         $or: [
           { 'initiatorShipment.trackingCode': trackingCode },
           { 'recipientShipment.trackingCode': trackingCode },
         ],
-      };
+      });
     } else {
-      // Ưu tiên đơn đã sẵn sàng bàn giao cho vận chuyển (cả 2 bên đã tạo đơn)
-      query = {
-        status: { $in: ['InTransit', 'Delivered'] },
-        'initiatorShipment.trackingCode': { $exists: true, $ne: null },
-        'recipientShipment.trackingCode': { $exists: true, $ne: null },
-      };
-    }
-
-    let exchange = await this.mongo.c.exchanges.findOne(query, { sort: { updatedAt: -1 } });
-
-    // Nếu chưa có đơn InTransit/Delivered, kiểm tra xem có đơn nào đang chờ đối tác tạo đơn không
-    let isWaitingPartner = false;
-    if (!exchange && !trackingCode) {
+      // 1. Ưu tiên đơn đang giao (InTransit) hoặc vừa giao (Delivered)
       exchange = await this.mongo.c.exchanges.findOne(
         {
-          status: 'Preparing',
-          $or: [
-            { 'initiatorShipment.trackingCode': { $exists: true, $ne: null } },
-            { 'recipientShipment.trackingCode': { $exists: true, $ne: null } },
-          ],
+          status: { $in: ['InTransit', 'Delivered'] },
         },
         { sort: { updatedAt: -1 } },
       );
-      if (exchange) {
-        isWaitingPartner = true;
+
+      // 2. Đơn đang chuẩn bị (Preparing)
+      if (!exchange) {
+        exchange = await this.mongo.c.exchanges.findOne(
+          {
+            status: 'Preparing',
+          },
+          { sort: { updatedAt: -1 } },
+        );
+      }
+
+      // 3. Fallback: Đơn gần nhất
+      if (!exchange) {
+        exchange = await this.mongo.c.exchanges.findOne(
+          {},
+          { sort: { updatedAt: -1 } },
+        );
       }
     }
 
@@ -255,60 +320,355 @@ export class CarrierService {
       Boolean(exchange.initiatorShipment?.trackingCode) &&
       Boolean(exchange.recipientShipment?.trackingCode);
 
-    if (!isBothCreated) {
-      isWaitingPartner = true;
-    }
+    const isWaitingPartner = !isBothCreated;
 
-    const isInitiatorLeg =
-      Boolean(exchange.initiatorShipment?.trackingCode) &&
-      (!trackingCode || exchange.initiatorShipment?.trackingCode === trackingCode);
-
-    const shipment = isInitiatorLeg ? exchange.initiatorShipment : exchange.recipientShipment;
-    const sender = isInitiatorLeg ? exchange.initiatorAddress : exchange.recipientAddress;
-    const receiver = isInitiatorLeg ? exchange.recipientAddress : exchange.initiatorAddress;
-
-    const listingId = isInitiatorLeg
-      ? (exchange.initiatorListingIds?.[0] || exchange.initiatorListingId)
-      : exchange.recipientListingId;
-    const listing = listingId ? await this.mongo.c.listings.findOne({ _id: listingId }) : null;
-    const rev = listing?.currentRevisionId
-      ? await this.mongo.c.listing_revisions.findOne({ _id: listing.currentRevisionId })
+    // Lấy thông tin user 2 bên
+    const initiatorUser = exchange.initiatorId
+      ? await this.mongo.c.users.findOne({ _id: exchange.initiatorId })
       : null;
-    let bookTitle: string | null = null;
-    if (rev?.bookId) {
-      const catRev = await this.mongo.c.catalog_revisions.findOne(
-        { bookId: rev.bookId },
-        { sort: { number: -1 } },
-      );
-      bookTitle = catRev?.title ?? null;
+    const recipientUser = exchange.recipientId
+      ? await this.mongo.c.users.findOne({ _id: exchange.recipientId })
+      : null;
+
+    // Lấy tên sách 2 bên
+    const listingIdA = exchange.initiatorListingIds?.[0] || exchange.initiatorListingId;
+    const listingIdB = exchange.recipientListingId;
+    const bookTitleA = await this.getBookTitle(listingIdA);
+    const bookTitleB = await this.getBookTitle(listingIdB);
+
+    const nameA = exchange.initiatorAddress?.recipientName || initiatorUser?.displayName || 'Bên A';
+    const nameB = exchange.recipientAddress?.recipientName || recipientUser?.displayName || 'Bên B';
+
+    // Kiện 1: Initiator -> Recipient (Bên A gửi bên B)
+    const leg1 = {
+      leg: 'initiator' as const,
+      label: `Kiện 1: ${nameA} ➔ ${nameB} (Chiều đi)`,
+      trackingCode: exchange.initiatorShipment?.trackingCode || 'CHỜ TẠO ĐƠN (CHIỀU ĐI)',
+      carrierCode: exchange.initiatorShipment?.carrierCode || 'GHN',
+      carrierName: exchange.initiatorShipment?.carrierName || 'Giao Hàng Nhanh (GHN Express)',
+      sender: {
+        name: `${nameA} (Người gửi)`,
+        phone: exchange.initiatorAddress?.phone || '0901234567',
+        detail: exchange.initiatorAddress?.detail || '123 Nguyễn Huệ, P. Bến Nghé, Quận 1',
+      },
+      receiver: {
+        name: `${nameB} (Người nhận)`,
+        phone: exchange.recipientAddress?.phone || '0373916690',
+        detail: exchange.recipientAddress?.detail || '120 Yên Lãng',
+      },
+      itemsSummary: bookTitleA ? `Tác phẩm: "${bookTitleA}"` : 'Sách: "Rừng Na Uy" (Trao đổi)',
+      fee: 21000,
+      shippedAt: exchange.initiatorShipment?.shippedAt || exchange.initiatorShippedAt || null,
+      deliveredAt: exchange.recipientReceivedAt || null,
+      isDelivered: Boolean(exchange.recipientReceivedAt),
+      lastEvent: (exchange.initiatorShipment as any)?.lastEvent || null,
+    };
+
+    // Kiện 2: Recipient -> Initiator (Bên B gửi bên A)
+    const leg2 = {
+      leg: 'recipient' as const,
+      label: `Kiện 2: ${nameB} ➔ ${nameA} (Chiều về)`,
+      trackingCode: exchange.recipientShipment?.trackingCode || 'CHỜ TẠO ĐƠN (CHIỀU VỀ)',
+      carrierCode: exchange.recipientShipment?.carrierCode || 'GHN',
+      carrierName: exchange.recipientShipment?.carrierName || 'Giao Hàng Nhanh (GHN Express)',
+      sender: {
+        name: `${nameB} (Người gửi)`,
+        phone: exchange.recipientAddress?.phone || '0373916690',
+        detail: exchange.recipientAddress?.detail || '120 Yên Lãng',
+      },
+      receiver: {
+        name: `${nameA} (Người nhận)`,
+        phone: exchange.initiatorAddress?.phone || '0901234567',
+        detail: exchange.initiatorAddress?.detail || '123 Nguyễn Huệ, P. Bến Nghé, Quận 1',
+      },
+      itemsSummary: bookTitleB ? `Tác phẩm: "${bookTitleB}"` : 'Sách: "Đại Gia Gatsby" (Trao đổi)',
+      fee: 21000,
+      shippedAt: exchange.recipientShipment?.shippedAt || exchange.recipientShippedAt || null,
+      deliveredAt: exchange.initiatorReceivedAt || null,
+      isDelivered: Boolean(exchange.initiatorReceivedAt),
+      lastEvent: (exchange.recipientShipment as any)?.lastEvent || null,
+    };
+
+    // Xác định kiện nào đang active
+    let activeLeg: 'initiator' | 'recipient' = 'initiator';
+    if (leg === 'recipient' || (trackingCode && trackingCode === exchange.recipientShipment?.trackingCode)) {
+      activeLeg = 'recipient';
+    } else if (leg === 'initiator' || (trackingCode && trackingCode === exchange.initiatorShipment?.trackingCode)) {
+      activeLeg = 'initiator';
+    } else if (leg1.isDelivered && !leg2.isDelivered) {
+      // Nếu kiện 1 đã giao mà kiện 2 chưa giao, tự động ưu tiên hiển thị kiện 2
+      activeLeg = 'recipient';
     }
 
-    const senderUserId = isInitiatorLeg ? exchange.initiatorId : exchange.recipientId;
-    const senderUser = senderUserId ? await this.mongo.c.users.findOne({ _id: senderUserId }) : null;
-    const receiverUserId = isInitiatorLeg ? exchange.recipientId : exchange.initiatorId;
-    const receiverUser = receiverUserId ? await this.mongo.c.users.findOne({ _id: receiverUserId }) : null;
+    const currentLeg = activeLeg === 'initiator' ? leg1 : leg2;
+    const bothDelivered = Boolean(exchange.initiatorReceivedAt && exchange.recipientReceivedAt);
 
     return {
       exchangeId: exchange._id,
-      trackingCode: shipment?.trackingCode || 'GHN120383736VN',
-      carrierCode: shipment?.carrierCode || 'GHN',
-      carrierName: shipment?.carrierName || 'Giao Hàng Nhanh (GHN Express)',
+      exchangeStatus: exchange.status,
+      activeLeg,
+      trackingCode: currentLeg.trackingCode,
+      carrierCode: currentLeg.carrierCode,
+      carrierName: currentLeg.carrierName,
       status: isWaitingPartner ? 'WAITING_PARTNER_SHIPMENT' : exchange.status,
       readyForPickup: !isWaitingPartner,
-      sender: {
-        name: sender?.recipientName || senderUser?.displayName || 'Nguyễn Đại',
-        phone: sender?.phone || '0901234567',
-        detail: sender?.detail || '123 Nguyễn Huệ, P. Bến Nghé, Quận 1',
+      bothDelivered,
+      inspectionDeadline: exchange.inspectionDeadline || null,
+      sender: currentLeg.sender,
+      receiver: currentLeg.receiver,
+      itemsSummary: currentLeg.itemsSummary,
+      fee: currentLeg.fee,
+      shippedAt: currentLeg.shippedAt,
+      deliveredAt: currentLeg.deliveredAt,
+      lastEvent: currentLeg.lastEvent,
+      legs: [leg1, leg2],
+    };
+  }
+
+  /**
+   * Danh sách các cuộc trao đổi có mã vận chuyển đang hoạt động gần đây để bưu tá chọn nhanh
+   * Chỉ lấy tối đa 3 đơn đang trong quá trình giao nhận (InTransit, Preparing, Delivered)
+   */
+  async getRecentShipmentOrders() {
+    if (!this.mongo) return [];
+    const exchanges = await this.mongo.c.exchanges
+      .find({
+        status: { $in: ['InTransit', 'Preparing', 'Delivered'] },
+      })
+      .sort({ updatedAt: -1 })
+      .limit(3)
+      .toArray();
+
+    return exchanges.map((ex) => ({
+      exchangeId: ex._id,
+      status: ex.status,
+      updatedAt: ex.updatedAt,
+      initiatorTracking: ex.initiatorShipment?.trackingCode,
+      recipientTracking: ex.recipientShipment?.trackingCode,
+      bothDelivered: Boolean(ex.initiatorReceivedAt && ex.recipientReceivedAt),
+    }));
+  }
+
+  /**
+   * Đặt lại trạng thái đơn trao đổi về InTransit để phục vụ demo / test lặp lại
+   */
+  async resetForDemo(exchangeId: string) {
+    if (!this.mongo) return { success: false, message: 'No Mongo instance' };
+    const now = new Date();
+    const result = await this.mongo.c.exchanges.findOneAndUpdate(
+      { _id: exchangeId },
+      {
+        $set: {
+          status: 'InTransit',
+          initiatorShippedAt: now,
+          recipientShippedAt: now,
+          initiatorReceivedAt: null,
+          recipientReceivedAt: null,
+          initiatorInspectionDeadline: null,
+          recipientInspectionDeadline: null,
+          inspectionDeadline: null,
+          'initiatorShipment.lastEvent': null,
+          'initiatorShipment.lastEventAt': null,
+          'recipientShipment.lastEvent': null,
+          'recipientShipment.lastEventAt': null,
+          updatedAt: now,
+        },
       },
-      receiver: {
-        name: receiver?.recipientName || receiverUser?.displayName || 'Trần Tú',
-        phone: receiver?.phone || '0373916690',
-        detail: receiver?.detail || 'so nha 36, 120 Yen Lang',
-      },
-      itemsSummary: bookTitle ? `Sách: ${bookTitle}` : 'Sách trao đổi Lật Lại',
-      fee: 21001,
-      shippedAt: shipment?.shippedAt || exchange.initiatorShippedAt,
-      deliveredAt: isInitiatorLeg ? exchange.recipientReceivedAt : exchange.initiatorReceivedAt,
+      { returnDocument: 'after' },
+    );
+    return { success: Boolean(result), exchange: result };
+  }
+
+  /**
+   * Tự động chạy mô phỏng nhanh toàn bộ quy trình giao nhận 2 chiều (Dành cho Demo / Thuyết trình)
+   * Tự động hoàn tất cả 2 kiện hàng và kích hoạt mốc nghiệm thu 48h trên sàn Lật Lại
+   */
+  async autoSimulateExchange(exchangeId: string) {
+    if (!this.mongo) return { success: false, message: 'No Mongo instance' };
+    let updatedExchange: any = null;
+
+    await this.mongo.tx(async (tx) => {
+      const ex = await tx.c.exchanges.findOne({ _id: exchangeId });
+      if (!ex) return;
+      await tx.lock('exchanges', [ex._id]);
+
+      const now = await tx.now();
+      const inspectionHours = Math.max(
+        Number(this.config?.get('EXCHANGE_INSPECTION_HOURS') ?? 72),
+        72,
+      );
+      const deadline = new Date(now.getTime() + inspectionHours * 3_600_000);
+
+      const trackingA = ex.initiatorShipment?.trackingCode || `GHN${Math.floor(100000000 + Math.random() * 900000000)}VN`;
+      const trackingB = ex.recipientShipment?.trackingCode || `GHN${Math.floor(100000000 + Math.random() * 900000000)}VN`;
+
+      const setFields: Record<string, unknown> = {
+        status: 'Delivered',
+        initiatorShippedAt: ex.initiatorShippedAt || now,
+        recipientShippedAt: ex.recipientShippedAt || now,
+        initiatorReceivedAt: now,
+        recipientReceivedAt: now,
+        initiatorInspectionDeadline: deadline,
+        recipientInspectionDeadline: deadline,
+        inspectionDeadline: deadline,
+        'initiatorShipment.lastEvent': `Giao kiện ${trackingA} tận tay thành công kèm ký nhận POD`,
+        'initiatorShipment.lastEventAt': now,
+        'recipientShipment.lastEvent': `Giao kiện ${trackingB} tận tay thành công kèm ký nhận POD`,
+        'recipientShipment.lastEventAt': now,
+        updatedAt: now,
+      };
+
+      const updated = await tx.c.exchanges.findOneAndUpdate(
+        { _id: ex._id, revision: ex.revision },
+        { $set: setFields, $inc: { revision: 1 } },
+        { returnDocument: 'after' },
+      );
+
+      if (updated) {
+        updatedExchange = updated;
+        await notifyExchange(
+          tx,
+          updated,
+          'ExchangeReceived',
+          [ex.initiatorId, ex.recipientId],
+          now,
+        );
+      }
+    });
+
+    return { success: Boolean(updatedExchange), exchange: updatedExchange };
+  }
+
+  /**
+   * Tạo nhanh đơn trao đổi mẫu (Seed Demo Order) để phục vụ test ngay khi DB trống
+   */
+  async seedDemoOrder() {
+    if (!this.mongo) return { success: false, message: 'No Mongo instance' };
+
+    let createdId: string | null = null;
+    let createdTracking: string | null = null;
+
+    await this.mongo.tx(async (tx) => {
+      // Tìm 2 user thực tế trong hệ thống
+      const users = await tx.c.users.find({}).limit(10).toArray();
+      const userA = users.find(u => u.displayName?.includes('Đại')) || users[0] || {
+        _id: randomUUID(),
+        displayName: 'Nguyễn Đại (Bên A)',
+        username: 'nguyendai',
+      };
+      const userB = users.find(u => u.displayName?.includes('Tú')) || users[1] || {
+        _id: randomUUID(),
+        displayName: 'Nguyễn Tú (Bên B)',
+        username: 'nguyentu',
+      };
+
+      // Tìm 2 listing sách có gắn tác phẩm catalog thực tế
+      const candidateListings = await tx.c.listings
+        .find({ currentRevisionId: { $ne: null } })
+        .limit(10)
+        .toArray();
+      const listingAId = candidateListings[0]?._id || '45e2bff0-2bcc-444e-8326-031bad8890af';
+      const listingBId = candidateListings[1]?._id || '7fdf4c33-1d20-4a67-9885-4dc4bd6a1561';
+
+      const trackingA = `GHN${Math.floor(100000000 + Math.random() * 900000000)}VN`;
+      const trackingB = `GHN${Math.floor(100000000 + Math.random() * 900000000)}VN`;
+      const now = await tx.now();
+      const newId = randomUUID();
+
+      const newExchange: any = {
+        _id: newId,
+        initiatorId: userA._id,
+        recipientId: userB._id,
+        initiatorListingId: listingAId,
+        initiatorListingIds: [listingAId],
+        recipientListingId: listingBId,
+        status: 'InTransit',
+        revision: 1,
+        initiatorDeposit: 50000,
+        recipientDeposit: 50000,
+        diffAmount: 0,
+        diffPayerId: null,
+        initiatorOrderId: randomUUID(),
+        recipientOrderId: randomUUID(),
+        fundingDeadline: null,
+        initiatorFundedAt: now,
+        recipientFundedAt: now,
+        proposalExpiresAt: null,
+        rejectionReason: null,
+        cancelReason: null,
+        cancelledBy: null,
+        cancelledAt: null,
+        shippingDeadline: null,
+        initiatorShippedAt: now,
+        recipientShippedAt: now,
+        initiatorReceivedAt: null,
+        recipientReceivedAt: null,
+        initiatorInspectionDeadline: null,
+        recipientInspectionDeadline: null,
+        inspectionDeadline: null,
+        completedAt: null,
+        initiatorCompletedAt: null,
+        recipientCompletedAt: null,
+        disputedAt: null,
+        disputeReason: null,
+        disputedBy: null,
+        resolutionDecision: null,
+        resolutionReason: null,
+        resolvedBy: null,
+        resolvedAt: null,
+        cancellationRequestedBy: null,
+        cancellationRequestedAt: null,
+        lastProposedById: null,
+        initiatorAddress: {
+          recipientName: userA.displayName || 'Nguyễn Đại (Bên A)',
+          phone: '0901234567',
+          detail: '123 Nguyễn Huệ, P. Bến Nghé, Quận 1',
+          localityCode: 'DEMO-A',
+          serviceAreaCode: 'HCM-DEMO-v1',
+        },
+        recipientAddress: {
+          recipientName: userB.displayName || 'Nguyễn Tú (Bên B)',
+          phone: '0373916690',
+          detail: '120 Yên Lãng, Đống Đa, TP.HCM',
+          localityCode: 'DEMO-B',
+          serviceAreaCode: 'HCM-DEMO-v1',
+        },
+        initiatorShipment: {
+          method: 'carrier',
+          carrierCode: 'GHN',
+          carrierName: 'Giao Hàng Nhanh (GHN Express)',
+          trackingCode: trackingA,
+          meetupLocation: null,
+          notes: null,
+          shippedAt: now,
+          lastEvent: 'Bưu tá Lê Hoàng Nam đã tiếp nhận kiện sách tại bưu cục TP.HCM',
+          lastEventAt: now,
+        },
+        recipientShipment: {
+          method: 'carrier',
+          carrierCode: 'GHN',
+          carrierName: 'Giao Hàng Nhanh (GHN Express)',
+          trackingCode: trackingB,
+          meetupLocation: null,
+          notes: null,
+          shippedAt: now,
+          lastEvent: 'Bưu tá Lê Hoàng Nam đã tiếp nhận kiện sách tại bưu cục TP.HCM',
+          lastEventAt: now,
+        },
+        createdAt: now,
+        updatedAt: now,
+        lockSeq: 0,
+      };
+
+      await tx.c.exchanges.insertOne(newExchange);
+      createdId = newId;
+      createdTracking = trackingA;
+    });
+
+    return {
+      success: Boolean(createdId),
+      exchangeId: createdId,
+      trackingCode: createdTracking,
     };
   }
 }
