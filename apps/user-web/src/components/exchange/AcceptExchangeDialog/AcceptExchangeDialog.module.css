@@ -849,44 +849,75 @@
 .amountInputWrapper {
     display: flex;
     align-items: center;
-    background: #fff;
+    background: #ffffff;
     border: 1.5px solid var(--shop-line, #d9cbbd);
-    border-radius: 6px;
-    padding: 2px 6px 2px 12px;
-    transition: all 0.15s ease;
+    border-radius: 8px;
+    padding: 4px 10px 4px 14px;
+    min-height: 48px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 1px 2px rgba(40, 25, 20, 0.03);
 }
+
+.amountInputWrapper:hover {
+    border-color: #c4b5a5;
+}
+
 .amountInputWrapper:focus-within {
     border-color: var(--shop-wine, #5c0202);
-    box-shadow: 0 0 0 3px rgba(92, 2, 2, 0.1);
+    box-shadow: 0 0 0 3px rgba(92, 2, 2, 0.12), 0 2px 6px rgba(92, 2, 2, 0.06);
 }
 
 .amountInputPrefix {
     display: flex;
     align-items: center;
-    color: var(--shop-control, #8e7564);
-    margin-right: 8px;
+    justify-content: center;
+    color: var(--shop-wine, #5c0202);
+    margin-right: 10px;
+    flex-shrink: 0;
 }
 
 .amountInput {
     flex: 1;
-    border: none;
-    outline: none;
-    font-size: 16px;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    font-size: 18px;
     font-weight: 700;
     color: var(--shop-wine, #5c0202);
     background: transparent;
-    padding: 8px 0;
-    font-family: inherit;
+    padding: 8px 4px;
+    font-family: var(--shop-body, 'Be Vietnam Pro', sans-serif);
+    letter-spacing: 0.02em;
+    min-width: 0;
+    -webkit-appearance: none;
+    -moz-appearance: textfield;
+}
+
+.amountInput:focus,
+.amountInput:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.amountInput::-webkit-outer-spin-button,
+.amountInput::-webkit-inner-spin-button {
+    -webkit-appearance: none !important;
+    margin: 0;
 }
 
 .amountInputSuffix {
-    padding: 4px 10px;
-    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    font-size: 12.5px;
     font-weight: 700;
-    color: var(--shop-control, #8e7564);
-    background: #f4eddf;
-    border-radius: 4px;
-    letter-spacing: 0.02em;
+    color: var(--shop-wine, #5c0202);
+    background: rgba(92, 2, 2, 0.07);
+    border-radius: 6px;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+    user-select: none;
 }
 
 .evenCompensationBanner {

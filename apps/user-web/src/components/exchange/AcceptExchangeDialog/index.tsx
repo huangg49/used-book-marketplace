@@ -96,6 +96,15 @@ export function AcceptExchangeDialog({
 
   const [isNegotiating, setIsNegotiating] = useState(false);
   const [negotiatedDiff, setNegotiatedDiff] = useState<number>(detail.moneyAmount ?? defaultDiffAmount);
+  const [diffInputText, setDiffInputText] = useState<string>(() =>
+    new Intl.NumberFormat('vi-VN').format(detail.moneyAmount ?? defaultDiffAmount)
+  );
+
+  const updateNegotiatedDiff = (amount: number) => {
+    setNegotiatedDiff(amount);
+    setDiffInputText(amount > 0 ? new Intl.NumberFormat('vi-VN').format(amount) : '');
+  };
+
   const initialPayer = detail.moneyCompensationType === 'user_pays'
     ? 'viewer'
     : (detail.moneyCompensationType === 'other_pays' ? 'partner' : 'none');
@@ -124,7 +133,9 @@ export function AcceptExchangeDialog({
       setError('');
       setAddressMode('existing');
       setIsNegotiating(false);
-      setNegotiatedDiff(detail.moneyAmount ?? defaultDiffAmount);
+      const initialDiff = detail.moneyAmount ?? defaultDiffAmount;
+      setNegotiatedDiff(initialDiff);
+      setDiffInputText(new Intl.NumberFormat('vi-VN').format(initialDiff));
       setNegotiatedPayer(
         detail.moneyCompensationType === 'user_pays'
           ? 'viewer'
@@ -378,8 +389,9 @@ export function AcceptExchangeDialog({
                       type="button"
                       className={isNegotiating ? styles.headerResetBtn : styles.headerToggleBtn}
                       onClick={() => {
-                        setIsNegotiating(!isNegotiating);
-                        if (!isNegotiating) setNegotiatedDiff(defaultDiffAmount);
+                        const nextState = !isNegotiating;
+                        setIsNegotiating(nextState);
+                        if (!nextState) updateNegotiatedDiff(defaultDiffAmount);
                       }}
                     >
                       {isNegotiating ? (
@@ -421,7 +433,7 @@ export function AcceptExchangeDialog({
                       className={`${styles.payerOptionBtn} ${negotiatedPayer === 'viewer' ? styles.payerOptionBtnActive : ''}`}
                       onClick={() => {
                         setNegotiatedPayer('viewer');
-                        if (negotiatedDiff === 0) setNegotiatedDiff(defaultDiffAmount || 10000);
+                        if (negotiatedDiff === 0) updateNegotiatedDiff(defaultDiffAmount || 10000);
                       }}
                     >
                       <span className={styles.payerOptionIcon}>
@@ -435,7 +447,7 @@ export function AcceptExchangeDialog({
                       className={`${styles.payerOptionBtn} ${negotiatedPayer === 'partner' ? styles.payerOptionBtnActive : ''}`}
                       onClick={() => {
                         setNegotiatedPayer('partner');
-                        if (negotiatedDiff === 0) setNegotiatedDiff(defaultDiffAmount || 10000);
+                        if (negotiatedDiff === 0) updateNegotiatedDiff(defaultDiffAmount || 10000);
                       }}
                     >
                       <span className={styles.payerOptionIcon}>
@@ -449,7 +461,7 @@ export function AcceptExchangeDialog({
                       className={`${styles.payerOptionBtn} ${negotiatedPayer === 'none' ? styles.payerOptionBtnActive : ''}`}
                       onClick={() => {
                         setNegotiatedPayer('none');
-                        setNegotiatedDiff(0);
+                        updateNegotiatedDiff(0);
                       }}
                     >
                       <span className={styles.payerOptionIcon}>
@@ -473,16 +485,27 @@ export function AcceptExchangeDialog({
                       </label>
                       <div className={styles.amountInputWrapper}>
                         <span className={styles.amountInputPrefix}>
-                          <Coins size={16} />
+                          <Coins size={18} />
                         </span>
                         <input
-                          type="number"
-                          min="0"
-                          step="1000"
+                          type="text"
+                          inputMode="numeric"
                           className={styles.amountInput}
-                          value={negotiatedDiff}
-                          onChange={(e) => setNegotiatedDiff(Math.max(0, parseInt(e.target.value) || 0))}
-                          placeholder="Nhập số tiền đã chốt"
+                          value={diffInputText}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/\D/g, '');
+                            const num = digits ? parseInt(digits, 10) : 0;
+                            setNegotiatedDiff(num);
+                            setDiffInputText(digits === '' ? '' : new Intl.NumberFormat('vi-VN').format(num));
+                          }}
+                          onBlur={() => {
+                            if (negotiatedDiff > 0) {
+                              setDiffInputText(new Intl.NumberFormat('vi-VN').format(negotiatedDiff));
+                            } else {
+                              setDiffInputText('0');
+                            }
+                          }}
+                          placeholder="0"
                         />
                         <span className={styles.amountInputSuffix}>VNĐ</span>
                       </div>
