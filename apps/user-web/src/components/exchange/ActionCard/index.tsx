@@ -1,3 +1,5 @@
+import { useExchangeRecovery } from "../../../hooks/useExchangeRecovery";
+import { ExchangeRecoveryPanel } from "../ExchangeRecoveryPanel";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -11,7 +13,11 @@ import { ReceiveDialog } from "../ReceiveDialog";
 import { CounterDialog, type CounterOfferData } from "../CounterDialog";
 import { AcceptExchangeDialog } from "../AcceptExchangeDialog";
 import { ROUTES, formatVnd } from "../../../lib/routes";
-import { exchangeError, pendingExchange } from "../../../services/exchange";
+import {
+  exchangeError,
+  pendingExchange,
+  exchangeAcknowledged,
+} from "../../../services/exchange";
 import type { ShipmentData } from "../../../services/exchangeShipment";
 import styles from "./ActionCard.module.css";
 
@@ -46,7 +52,10 @@ type Action =
 interface Props {
   detail: ExchangeDetail;
   onCancel: () => Promise<void>;
-  onAccept: (deliveryAddressId?: string, revisionOverride?: number) => Promise<void>;
+  onAccept: (
+    deliveryAddressId?: string,
+    revisionOverride?: number,
+  ) => Promise<void>;
   onReject: (reason: string) => Promise<void>;
   onCounter?: (data: CounterOfferData) => Promise<void>;
   onFund: () => Promise<void>;
@@ -81,7 +90,10 @@ export function ActionCard(props: Props) {
   const [error, setError] = useState("");
   const [reason, setReason] = useState("");
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  useExchangeRecovery();
   const pending = pendingExchange(detail.id);
+  const acknowledged = exchangeAcknowledged(detail.id);
+  const blocked = Boolean(pending || acknowledged);
   const [now, setNow] = useState(() => Date.now());
 
   const addresses = useQuery({
@@ -110,7 +122,8 @@ export function ActionCard(props: Props) {
   const actions: Action[] = [];
 
   if (detail.status === "PENDING") {
-    const canAccept = detail.canViewerAccept ?? (detail.viewerRole !== "proposer");
+    const canAccept =
+      detail.canViewerAccept ?? detail.viewerRole !== "proposer";
     if (canAccept) {
       instructions =
         detail.viewerRole === "proposer"
@@ -138,7 +151,8 @@ export function ActionCard(props: Props) {
       ? new Date(detail.shippingDeadline).toLocaleString("vi-VN")
       : null;
     const myRole = detail.viewerRole === "proposer" ? "Initiator" : "Recipient";
-    const partnerRole = detail.viewerRole === "proposer" ? "Recipient" : "Initiator";
+    const partnerRole =
+      detail.viewerRole === "proposer" ? "Recipient" : "Initiator";
 
     if (detail.viewerShipping.sentAt) {
       instructions = `Bạn đã tạo đơn vận chuyển thành công. Đang chờ đối tác tạo đơn để bưu tá cùng đến lấy sách ở cả hai đầu.${deadlineStr ? ` Hạn gửi: ${deadlineStr}.` : ""}`;
@@ -176,21 +190,19 @@ export function ActionCard(props: Props) {
       ? new Date(detail.inspectionDeadline).toLocaleString("vi-VN")
       : null;
     if (detail.viewerCompletedAt) {
-      instructions =
-        `Bạn đã xác nhận kiểm tra sách. Tiền cọc vẫn được giữ đến khi cả hai hạn kiểm tra 72 giờ kết thúc và không có tranh chấp.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
+      instructions = `Bạn đã xác nhận kiểm tra sách. Tiền cọc vẫn được giữ đến khi cả hai hạn kiểm tra 72 giờ kết thúc và không có tranh chấp.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
     } else if (detail.partnerCompletedAt) {
-      instructions =
-        `Đối tác đã xác nhận kiểm tra sách. Bạn vẫn có đủ 72 giờ từ lúc nhận để đối chiếu tình trạng. Xác nhận kiểm tra không rút ngắn hạn hoặc giải phóng cọc sớm.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
+      instructions = `Đối tác đã xác nhận kiểm tra sách. Bạn vẫn có đủ 72 giờ từ lúc nhận để đối chiếu tình trạng. Xác nhận kiểm tra không rút ngắn hạn hoặc giải phóng cọc sớm.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
       actions.push("complete");
     } else {
-      instructions =
-        `Hai bên đã nhận sách. Mỗi bên có 72 giờ kiểm tra tính từ lúc nhận.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""} Bạn có thể kiểm tra sách kỹ lưỡng. Bạn có thể xác nhận đã kiểm tra; cọc chỉ được giải phóng khi cả hai hạn kết thúc và không có tranh chấp.`;
+      instructions = `Hai bên đã nhận sách. Mỗi bên có 72 giờ kiểm tra tính từ lúc nhận.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""} Bạn có thể kiểm tra sách kỹ lưỡng. Bạn có thể xác nhận đã kiểm tra; cọc chỉ được giải phóng khi cả hai hạn kết thúc và không có tranh chấp.`;
       actions.push("complete");
     }
     actions.push("dispute");
   } else if (detail.status === "COMPLETED") {
     instructions =
-      detail.resolutionDecision === "CompleteExchange" && detail.resolutionReason
+      detail.resolutionDecision === "CompleteExchange" &&
+      detail.resolutionReason
         ? `Trao đổi đã hoàn tất theo phán quyết của Quản trị viên: "${detail.resolutionReason}". Khoản cọc bảo chứng và tiền bù đã được tất toán.`
         : "Trao đổi đã hoàn tất thành công. Khoản cọc bảo chứng và tiền bù đã được tất toán tự động.";
   } else if (detail.status === "RESOLUTION_PENDING") {
@@ -240,6 +252,12 @@ export function ActionCard(props: Props) {
       await props.onCounter(data);
       setCounterOpen(false);
     } catch (failure) {
+      if (pendingExchange(detail.id)) {
+        setCounterOpen(false);
+        setShipmentOpen(false);
+        setReceiveOpen(false);
+        setAcceptOpen(false);
+      }
       throw new Error(exchangeError(failure));
     } finally {
       setBusy(false);
@@ -252,6 +270,12 @@ export function ActionCard(props: Props) {
       await props.onConfirmSent(shipmentData);
       setShipmentOpen(false);
     } catch (failure) {
+      if (pendingExchange(detail.id)) {
+        setCounterOpen(false);
+        setShipmentOpen(false);
+        setReceiveOpen(false);
+        setAcceptOpen(false);
+      }
       throw new Error(exchangeError(failure));
     } finally {
       setBusy(false);
@@ -264,6 +288,12 @@ export function ActionCard(props: Props) {
       await props.onConfirmReceived();
       setReceiveOpen(false);
     } catch (failure) {
+      if (pendingExchange(detail.id)) {
+        setCounterOpen(false);
+        setShipmentOpen(false);
+        setReceiveOpen(false);
+        setAcceptOpen(false);
+      }
       throw new Error(exchangeError(failure));
     } finally {
       setBusy(false);
@@ -291,11 +321,13 @@ export function ActionCard(props: Props) {
         received: props.onConfirmReceived,
         retry: props.onRetry,
         complete: props.onComplete,
-        dispute: () => (props.onDispute ? props.onDispute(reason.trim()) : Promise.resolve()),
+        dispute: () =>
+          props.onDispute ? props.onDispute(reason.trim()) : Promise.resolve(),
       };
       await run[action]();
       setAction(undefined);
     } catch (failure) {
+      if (pendingExchange(detail.id)) setAction(undefined);
       setError(exchangeError(failure));
     } finally {
       setBusy(false);
@@ -311,16 +343,18 @@ export function ActionCard(props: Props) {
         </h2>
         <span className={styles.roleBadge}>
           {detail.status === "PENDING"
-            ? ((detail.canViewerAccept ?? detail.viewerRole !== "proposer") ? "Chờ bạn phản hồi" : "Chờ đối tác phản hồi")
+            ? (detail.canViewerAccept ?? detail.viewerRole !== "proposer")
+              ? "Chờ bạn phản hồi"
+              : "Chờ đối tác phản hồi"
             : detail.status === "FUNDING"
-            ? "Đặt cọc bảo chứng"
-            : detail.status === "WAITING_YOU_SEND"
-            ? "Chuẩn bị gửi sách"
-            : ["CANCELLED", "REJECTED", "EXPIRED"].includes(detail.status)
-            ? "Đã đóng"
-            : ["COMPLETED", "NEED_REVIEW"].includes(detail.status)
-            ? "Đã hoàn tất"
-            : "Đang tiến hành"}
+              ? "Đặt cọc bảo chứng"
+              : detail.status === "WAITING_YOU_SEND"
+                ? "Chuẩn bị gửi sách"
+                : ["CANCELLED", "REJECTED", "EXPIRED"].includes(detail.status)
+                  ? "Đã đóng"
+                  : ["COMPLETED", "NEED_REVIEW"].includes(detail.status)
+                    ? "Đã hoàn tất"
+                    : "Đang tiến hành"}
         </span>
       </div>
       <div className={styles.calloutBox}>
@@ -328,14 +362,16 @@ export function ActionCard(props: Props) {
       </div>
       {detail.viewerInspectionDeadline && (
         <p className={styles.deadlineRow}>
-          Hạn kiểm tra sách của bạn: <time dateTime={detail.viewerInspectionDeadline}>
+          Hạn kiểm tra sách của bạn:{" "}
+          <time dateTime={detail.viewerInspectionDeadline}>
             {new Date(detail.viewerInspectionDeadline).toLocaleString("vi-VN")}
           </time>
         </p>
       )}
       {detail.partnerInspectionDeadline && (
         <p className={styles.deadlineRow}>
-          Hạn kiểm tra của đối tác: <time dateTime={detail.partnerInspectionDeadline}>
+          Hạn kiểm tra của đối tác:{" "}
+          <time dateTime={detail.partnerInspectionDeadline}>
             {new Date(detail.partnerInspectionDeadline).toLocaleString("vi-VN")}
           </time>
         </p>
@@ -383,24 +419,21 @@ export function ActionCard(props: Props) {
       {pending && (
         <p role="status" className={styles.pendingRow}>
           <AlertCircle size={15} />
-          <span>Có thao tác chưa rõ kết quả. Thử lại trước khi thực hiện việc khác.</span>
+          <span>
+            Có thao tác chưa rõ kết quả. Thử lại trước khi thực hiện việc khác.
+          </span>
         </p>
       )}
       <div className={styles.btnGrid}>
-        {pending ? (
-          <button
-            type="button"
-            className={styles.btnPrimary}
-            disabled={busy}
-            onClick={() => void open("retry")}
-          >
-            {busy ? "Đang xử lý..." : labels.retry}
-          </button>
+        {blocked ? (
+          <ExchangeRecoveryPanel id={detail.id} onRead={props.onRetry} />
         ) : (
           actions.map((next, index) => {
-            const isPrimary = index === 0 && next !== "cancel" && next !== "reject";
+            const isPrimary =
+              index === 0 && next !== "cancel" && next !== "reject";
             const isDanger = next === "cancel" || next === "reject";
-            const partnerRole = detail.viewerRole === "proposer" ? "Recipient" : "Initiator";
+            const partnerRole =
+              detail.viewerRole === "proposer" ? "Recipient" : "Initiator";
             let label = labels[next];
             if (detail.status === "WAITING_YOU_SEND") {
               if (next === "cancel") {
@@ -443,18 +476,23 @@ export function ActionCard(props: Props) {
       )}
 
       {/* Counter-Offer Negotiation Modal */}
-      {counterOpen && <CounterDialog
-        key={`${detail.viewer.id}:${detail.revision}`}
-        isOpen={counterOpen}
-        onClose={() => setCounterOpen(false)}
-        onSubmit={handleCounterSubmit}
-        isBusy={busy}
-        viewerRole={detail.viewerRole}
-        partnerName={detail.partner.username}
-        partnerBookValue={detail.receiveBooks.reduce((sum, book) => sum + (book.price ?? 0), 0)}
-        currentListingIds={detail.giveBooks.map((book) => book.id)}
-        currentAddressId={selectedAddressId}
-      />}
+      {counterOpen && (
+        <CounterDialog
+          key={`${detail.viewer.id}:${detail.revision}`}
+          isOpen={counterOpen}
+          onClose={() => setCounterOpen(false)}
+          onSubmit={handleCounterSubmit}
+          isBusy={busy}
+          viewerRole={detail.viewerRole}
+          partnerName={detail.partner.username}
+          partnerBookValue={detail.receiveBooks.reduce(
+            (sum, book) => sum + (book.price ?? 0),
+            0,
+          )}
+          currentListingIds={detail.giveBooks.map((book) => book.id)}
+          currentAddressId={selectedAddressId}
+        />
+      )}
 
       {/* Accept Exchange Contract Review Modal */}
       <AcceptExchangeDialog
@@ -462,9 +500,15 @@ export function ActionCard(props: Props) {
         onClose={() => setAcceptOpen(false)}
         onConfirm={async ({ deliveryAddressId }) => {
           setBusy(true);
-          try { await props.onAccept(deliveryAddressId, detail.revision!); setAcceptOpen(false); }
-          catch (failure) { throw new Error(exchangeError(failure)); }
-          finally { setBusy(false); }
+          try {
+            await props.onAccept(deliveryAddressId, detail.revision!);
+            setAcceptOpen(false);
+          } catch (failure) {
+            if (pendingExchange(detail.id)) setAcceptOpen(false);
+            throw new Error(exchangeError(failure));
+          } finally {
+            setBusy(false);
+          }
         }}
         isBusy={busy}
         detail={detail}
@@ -497,24 +541,34 @@ export function ActionCard(props: Props) {
         onClose={() => setAction(undefined)}
         title={
           action === "cancel" && detail.status === "WAITING_YOU_SEND"
-            ? (detail.cancellationRequestedBy ? "Xác nhận đồng ý hủy" : "Đề nghị hủy giao dịch")
+            ? detail.cancellationRequestedBy
+              ? "Xác nhận đồng ý hủy"
+              : "Đề nghị hủy giao dịch"
             : action === "reject" && detail.status === "WAITING_YOU_SEND"
               ? "Từ chối yêu cầu hủy"
-              : action ? labels[action] : ""
+              : action
+                ? labels[action]
+                : ""
         }
         confirmText={
           action === "dispute"
             ? "Gửi khiếu nại"
             : action === "complete"
               ? "Xác nhận nghiệm thu"
-              : action === "cancel" && detail.status === "WAITING_YOU_SEND" && detail.cancellationRequestedBy
+              : action === "cancel" &&
+                  detail.status === "WAITING_YOU_SEND" &&
+                  detail.cancellationRequestedBy
                 ? "Đồng ý hủy"
                 : action === "reject" && detail.status === "WAITING_YOU_SEND"
                   ? "Từ chối hủy"
-                  : action ? labels[action] : "Xác nhận"
+                  : action
+                    ? labels[action]
+                    : "Xác nhận"
         }
         isBusy={busy}
-        isDanger={action === "cancel" || action === "reject" || action === "dispute"}
+        isDanger={
+          action === "cancel" || action === "reject" || action === "dispute"
+        }
         onConfirm={() => void confirm()}
       >
         <p>
@@ -528,11 +582,13 @@ export function ActionCard(props: Props) {
                   ? "Bạn xác nhận đã kiểm tra sách? Xác nhận này không rút ngắn hạn khiếu nại. Tiền cọc tiếp tục được giữ đến khi cả hai hạn kiểm tra 72 giờ kết thúc và không có tranh chấp."
                   : action === "dispute"
                     ? "Nếu sách có vấn đề nghiêm trọng (hư hỏng nặng, rách nát, sách giả, không đúng cam kết hoặc đối tác không gửi hàng), bạn có thể gửi khiếu nại để tạm dừng tất toán tự động và chuyển sang trạng thái chờ giải quyết để bảo vệ quyền lợi."
-                    : action === "cancel" && detail.status === "WAITING_YOU_SEND"
-                      ? (detail.cancellationRequestedBy
-                          ? "Đối tác đã đề nghị hủy giao dịch này trước khi gửi sách. Bằng việc đồng ý, giao dịch sẽ hủy an toàn và toàn bộ 100% tiền cọc cùng tiền bù của cả hai bên sẽ được hoàn trả về ví mô phỏng. Sách sẽ được mở lại trên kệ."
-                          : "Bạn có chắc muốn gửi yêu cầu hủy giao dịch trao đổi này trước khi gửi sách? Hệ thống sẽ gửi thông báo đến đối tác. Khi đối tác xác nhận đồng thuận, giao dịch sẽ hủy và hoàn trả 100% tiền cọc cho cả hai bên.")
-                      : action === "reject" && detail.status === "WAITING_YOU_SEND"
+                    : action === "cancel" &&
+                        detail.status === "WAITING_YOU_SEND"
+                      ? detail.cancellationRequestedBy
+                        ? "Đối tác đã đề nghị hủy giao dịch này trước khi gửi sách. Bằng việc đồng ý, giao dịch sẽ hủy an toàn và toàn bộ 100% tiền cọc cùng tiền bù của cả hai bên sẽ được hoàn trả về ví mô phỏng. Sách sẽ được mở lại trên kệ."
+                        : "Bạn có chắc muốn gửi yêu cầu hủy giao dịch trao đổi này trước khi gửi sách? Hệ thống sẽ gửi thông báo đến đối tác. Khi đối tác xác nhận đồng thuận, giao dịch sẽ hủy và hoàn trả 100% tiền cọc cho cả hai bên."
+                      : action === "reject" &&
+                          detail.status === "WAITING_YOU_SEND"
                         ? "Bạn có chắc muốn từ chối yêu cầu hủy của đối tác để tiếp tục giao dịch? Hãy nhập lý do để đối tác yên tâm chuẩn bị và gửi sách đúng hạn."
                         : "Kiểm tra thông tin trước khi xác nhận thao tác này."}
         </p>

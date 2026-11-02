@@ -138,9 +138,10 @@ typecheck PASS.
   vụ, không tự hủy/hoàn hoặc làm mất money history để nâng chuẩn dữ liệu.
 - Chưa push/PR/merge/deploy, không thay READINESS/GHN/ADR0057. Kiểm chứng không
   phải chữ ký review tiền/quyền và UX người thật.
-- X04/X05 (giao nhận từng chiều/hết hạn ship) và X06 (pending intent/retry) của
-  khảo sát vẫn mở. Bước kế tiếp nên là gói phục hồi thao tác Member; không tự mở
-  return/settlement để làm kín flow. Không đề xuất công nghệ/provider mới.
+- Tại mốc gói1, X04/X05 (giao nhận từng chiều/hết hạn ship) và X06 (pending
+  intent/retry) vẫn mở. Cập nhật sau đó: [gói2 phục hồi thao tác Member](EXCHANGE_RECOVERY_2026_11_02.md)
+  xử lý X06 trong runtime web/RN; X04/X05 và gate giao nhận giữ nguyên. Không tự
+  mở return/settlement để làm kín flow.
 - Cuối phiên đã dọn0owned database/user/role, không còn DB QA khác; fixture
   ngẫu nhiên tự dọn trong finally. Docker mongo-test đã dừng; port3009/3010/5194/
   8087/57017 đã đóng. Mongo chính27017 vẫn chạy và không bị migrate/reset/seed/

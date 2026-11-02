@@ -1,12 +1,27 @@
+import {
+  acknowledgedExchange,
+  acknowledgedExchangeProposal,
+  exchangeCommandIdentity,
+  pendingExchangeIntent,
+  pendingExchangeProposal,
+  readExchange,
+  retryExchangeCommand,
+  sendExchangeCommand,
+  sendExchangeProposal,
+  type ExchangeCommand,
+} from "@used-books/session-client";
 import { z } from "zod";
-import { ApiError, exchangeAgreementSchema, type ExchangeBookSnapshot } from "@used-books/session-client";
+import {
+  ApiError,
+  exchangeAgreementSchema,
+  type ExchangeBookSnapshot,
+} from "@used-books/session-client";
 import { session } from "./api";
 import type {
   ExchangeTab,
   ExchangeItem,
   ExchangeStatus,
 } from "../lib/mock/exchangeMine";
-
 
 const date = z.string().nullable().optional();
 export const exchangeSchema = z.object({
@@ -114,9 +129,15 @@ export const exchangeSchema = z.object({
     .nullable()
     .optional(),
   cancelledAt: date,
-  cancellationRequestedBy: z.enum(["Initiator", "Recipient"]).nullable().optional(),
+  cancellationRequestedBy: z
+    .enum(["Initiator", "Recipient"])
+    .nullable()
+    .optional(),
   cancellationRequestedAt: date,
-  resolutionDecision: z.enum(["RefundBoth", "CompleteExchange"]).nullable().optional(),
+  resolutionDecision: z
+    .enum(["RefundBoth", "CompleteExchange"])
+    .nullable()
+    .optional(),
   resolutionReason: z.string().nullable().optional(),
   resolvedBy: z.string().uuid().nullable().optional(),
   resolvedAt: date,
@@ -207,7 +228,16 @@ export function getExchanges() {
   return session.request("/exchanges", exchangePageSchema);
 }
 export function getExchange(id: string) {
-  return session.request(`/exchanges/${id}`, exchangeSchema);
+  return readExchange(session, id, exchangeSchema);
+}
+export function exchangeAcknowledged(id: string) {
+  return acknowledgedExchange(session, id, exchangeSchema);
+}
+export function createdExchange(listingId: string) {
+  return acknowledgedExchangeProposal(session, listingId);
+}
+export function exchangeIdentity() {
+  return exchangeCommandIdentity(session);
 }
 
 export async function exchangeBook(
@@ -220,29 +250,83 @@ export async function exchangeBook(
     let coverUrl: string | undefined;
     if (exchangeId && snapshot.mediaIds[0]) {
       try {
-        coverUrl = (await session.request(`/exchanges/${exchangeId}/books/${id}/photos/${snapshot.mediaIds[0]}`, z.object({ url: z.string().url() }))).url;
-      } catch { /* Photo failure does not replace frozen agreement facts. */ }
+        coverUrl = (
+          await session.request(
+            `/exchanges/${exchangeId}/books/${id}/photos/${snapshot.mediaIds[0]}`,
+            z.object({ url: z.string().url() }),
+          )
+        ).url;
+      } catch {
+        /* Photo failure does not replace frozen agreement facts. */
+      }
     }
-    return { id, title: snapshot.book.title, author: snapshot.book.authors.join(", "),
-      condition: snapshot.condition, price: snapshot.exchangeValue, coverUrl,
-      editionLabel: [snapshot.book.edition, snapshot.book.publicationYear, snapshot.book.isbn ? `ISBN ${snapshot.book.isbn}` : null].filter(Boolean).join(" · "),
-      conditionDetails: [snapshot.description, snapshot.pages, snapshot.coverNote, snapshot.notes, snapshot.accessories,
-        snapshot.hasMissingPages ? "Có thiếu trang" : "Không thiếu trang", snapshot.readable ? "Đọc được" : "Không đọc được"].filter(Boolean).join(". "),
+    return {
+      id,
+      title: snapshot.book.title,
+      author: snapshot.book.authors.join(", "),
+      condition: snapshot.condition,
+      price: snapshot.exchangeValue,
+      coverUrl,
+      editionLabel: [
+        snapshot.book.edition,
+        snapshot.book.publicationYear,
+        snapshot.book.isbn ? `ISBN ${snapshot.book.isbn}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      conditionDetails: [
+        snapshot.description,
+        snapshot.pages,
+        snapshot.coverNote,
+        snapshot.notes,
+        snapshot.accessories,
+        snapshot.hasMissingPages ? "Có thiếu trang" : "Không thiếu trang",
+        snapshot.readable ? "Đọc được" : "Không đọc được",
+      ]
+        .filter(Boolean)
+        .join(". "),
     };
   }
-  return { id, title: "Hồ sơ cũ — thiếu bản chụp sách", author: "Chưa có thông tin",
-    condition: "Chưa có thông tin", price: fallbackPrice };
+  return {
+    id,
+    title: "Hồ sơ cũ — thiếu bản chụp sách",
+    author: "Chưa có thông tin",
+    condition: "Chưa có thông tin",
+    price: fallbackPrice,
+  };
 }
 
 export async function exchangeBooks(exchange: Exchange, actorId: string) {
-  const initiatorIds = exchange.initiatorListingIds?.length ? exchange.initiatorListingIds : [exchange.initiatorListingId];
-  const books = async (ids: string[]) => Promise.all(ids.map((id) => exchangeBook(
-    id,
-    id === exchange.recipientListingId ? exchange.initiatorDeposit : initiatorIds.length === 1 ? exchange.recipientDeposit : undefined,
-    exchange.agreement?.initiatorBooks.find((book) => book.listingId === id) ?? (exchange.agreement?.recipientBook.listingId === id ? exchange.agreement.recipientBook : undefined), exchange.id,
-  )));
-  const [initiatorBooks, recipientBooks] = await Promise.all([books(initiatorIds), books([exchange.recipientListingId])]);
-  return exchange.initiatorId === actorId ? { giveBooks: initiatorBooks, receiveBooks: recipientBooks } : { giveBooks: recipientBooks, receiveBooks: initiatorBooks };
+  const initiatorIds = exchange.initiatorListingIds?.length
+    ? exchange.initiatorListingIds
+    : [exchange.initiatorListingId];
+  const books = async (ids: string[]) =>
+    Promise.all(
+      ids.map((id) =>
+        exchangeBook(
+          id,
+          id === exchange.recipientListingId
+            ? exchange.initiatorDeposit
+            : initiatorIds.length === 1
+              ? exchange.recipientDeposit
+              : undefined,
+          exchange.agreement?.initiatorBooks.find(
+            (book) => book.listingId === id,
+          ) ??
+            (exchange.agreement?.recipientBook.listingId === id
+              ? exchange.agreement.recipientBook
+              : undefined),
+          exchange.id,
+        ),
+      ),
+    );
+  const [initiatorBooks, recipientBooks] = await Promise.all([
+    books(initiatorIds),
+    books([exchange.recipientListingId]),
+  ]);
+  return exchange.initiatorId === actorId
+    ? { giveBooks: initiatorBooks, receiveBooks: recipientBooks }
+    : { giveBooks: recipientBooks, receiveBooks: initiatorBooks };
 }
 
 export async function getExchangeTransactions(
@@ -257,7 +341,10 @@ export async function getExchangeTransactions(
   const data = await Promise.all(
     filtered.slice((page - 1) * 5, page * 5).map(async (ex) => {
       const initiator = ex.initiatorId === actor;
-      const { giveBooks: give, receiveBooks: receive } = await exchangeBooks(ex, actor);
+      const { giveBooks: give, receiveBooks: receive } = await exchangeBooks(
+        ex,
+        actor,
+      );
       return {
         id: ex.id,
         createdAt: ex.createdAt,
@@ -266,7 +353,10 @@ export async function getExchangeTransactions(
         partner: {
           id: initiator ? ex.recipientId : ex.initiatorId,
           username:
-            (initiator ? ex.agreement?.recipientBook.ownerDisplayName : ex.agreement?.initiatorBooks[0]?.ownerDisplayName) ?? "Đối tác trao đổi",
+            (initiator
+              ? ex.agreement?.recipientBook.ownerDisplayName
+              : ex.agreement?.initiatorBooks[0]?.ownerDisplayName) ??
+            "Đối tác trao đổi",
         },
         receiveBooks: receive,
         giveBooks: give,
@@ -291,83 +381,66 @@ export async function getExchangeCounts(): Promise<
   return counts;
 }
 
-// Retain unresolved intent across dialog reopening/refresh, in memory only.
-const pending = new Map<string, { key: string; body: string; path: string }>();
-export function pendingProposal():
-  | {
-      initiatorListingId?: string;
-      initiatorListingIds?: string[];
-      recipientListingId: string;
-      deliveryAddressId?: string;
-    }
-  | undefined {
-  const state = session.getSnapshot();
-  if (state.status !== "authenticated") return undefined;
-  const intent = pending.get(`${state.user.id}:/exchanges`);
-  return intent ? JSON.parse(intent.body) : undefined;
+export function pendingProposal() {
+  return pendingExchangeProposal(session) as
+    | {
+        initiatorListingId?: string;
+        initiatorListingIds?: string[];
+        recipientListingId: string;
+        deliveryAddressId?: string;
+        conversationId?: string;
+        expectedConversationVersion?: number;
+      }
+    | undefined;
 }
 export function pendingExchange(id: string) {
-  const actor = session.getSnapshot();
-  if (actor.status !== "authenticated") return undefined;
-  return [...pending.entries()].find(([slot]) =>
-    slot.startsWith(`${actor.user.id}:/exchanges/${id}/`),
-  )?.[1];
+  return pendingExchangeIntent(session, id);
 }
-export async function retryExchange(id: string) {
-  const intent = pendingExchange(id);
-  if (!intent) return getExchange(id);
-  return exchangeCommand(intent.path, JSON.parse(intent.body));
+export function retryExchange(id: string) {
+  return retryExchangeCommand(
+    session,
+    id,
+    () => crypto.randomUUID(),
+    exchangeSchema,
+  );
 }
-let identity: string | undefined;
-session.subscribe(() => {
-  const state = session.getSnapshot();
-  const next = state.status === "authenticated" ? state.user.id : undefined;
-  if (next !== identity) pending.clear();
-  identity = next;
-});
-export async function exchangeCommand(path: string, body: object) {
-  const id = path.match(/^\/exchanges\/([^/]+)\//)?.[1];
-  const previous = id ? pendingExchange(id) : undefined;
-  if (previous && previous.path !== path)
-    throw new Error("Hãy thử lại thao tác chưa rõ kết quả trước.");
-  const slot = `${exchangeActor().id}:${path}`;
-  const intent = pending.get(slot) ?? {
-    key: crypto.randomUUID(),
-    body: JSON.stringify(body),
-    path,
-  };
-  pending.set(slot, intent);
-  try {
-    const result = await session.request(intent.path, exchangeSchema, {
-      method: "POST",
-      headers: { "Idempotency-Key": intent.key },
-      body: intent.body,
-    });
-    if (id && result.id !== id)
-      throw new Error("Unconfirmed exchange response");
-    pending.delete(slot);
-    return result;
-  } catch (error) {
-    if (
-      error instanceof ApiError &&
-      error.status >= 400 &&
-      error.status < 500 &&
-      error.code !== "IdempotencyConflict"
-    )
-      pending.delete(slot);
-    throw error;
-  }
+export function exchangeCommand(path: string, body: object) {
+  if (path === "/exchanges")
+    return sendExchangeProposal(
+      session,
+      body,
+      () => crypto.randomUUID(),
+      exchangeSchema,
+    );
+  const match =
+    /^\/exchanges\/([^/]+)\/(accept|reject|counter|funding|cancel|ship|receive|complete|dispute)$/.exec(
+      path,
+    );
+  if (!match) throw new Error("Thao tác trao đổi không hợp lệ.");
+  return sendExchangeCommand(
+    session,
+    match[1],
+    match[2] as ExchangeCommand,
+    body,
+    () => crypto.randomUUID(),
+    exchangeSchema,
+  );
 }
 export function exchangeError(error: unknown) {
   if (!(error instanceof ApiError) || error.status === 0 || error.status >= 500)
     return "Chưa xác nhận được kết quả. Thử lại sẽ gửi cùng thao tác trước, không tạo thêm giao dịch.";
+  if (error.status === 429 || error.status === 408)
+    return "Chưa xác nhận được kết quả. Chờ một lát rồi thử lại thao tác trước; nội dung và mã yêu cầu được giữ nguyên.";
   if (error.status === 401)
     return "Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.";
   if (error.status === 404 || error.status === 403)
     return "Không mở được trao đổi này hoặc bạn không có quyền thực hiện.";
   if (error.code === "InsufficientFunds")
     return "Ví mô phỏng chưa đủ tiền. Kiểm tra số dư rồi thử lại.";
-  if (error.message && error.message !== "Yêu cầu chưa thực hiện được. Vui lòng thử lại.")
+  if (
+    error.message &&
+    error.message !== "Yêu cầu chưa thực hiện được. Vui lòng thử lại."
+  )
     return error.message;
   if (error.status === 409)
     return "Trao đổi đã thay đổi hoặc không còn đủ điều kiện. Tải lại trạng thái trước khi tiếp tục.";

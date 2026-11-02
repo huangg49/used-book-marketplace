@@ -1,28 +1,38 @@
 # Điểm lưu hiện tại — 02/11/2026
 
-## Exchange gói 1: cố định thỏa thuận và kiểm lại accept
+## Exchange: thỏa thuận và phục hồi thao tác Member
 
-- Owner duyệt sau khảo sát. Branch `codex/exchange-agreement-snapshot`, base
-  `c7085d78`, subject `fix(exchange): freeze agreement terms and revalidate acceptance`.
-  [ADR0063](../adr/0063-exchange-agreement-snapshots.md),
-  [hành trình/source/evidence](../features/EXCHANGE_AGREEMENT_2026_11_02.md).
-- Proposal lưu snapshot, accept kiểm cả hai chủ/sách/revision/version. Lỗi thời
-  hoặc thiếu snapshot → persisted Cancelled/ListingUnavailable, không reserve/
-  thu tiền. Counter theo SRS chọn sách của người đang phản hồi, server tính
-  cọc/bù; web/RN đọc facts và ảnh participant, legacy không dựng lại từ bài hiện
-  tại. Giữ nghĩa vụ cũ; contract0.71/214operation, migration mới0052 chưa áp dụng
-  DB chính. Không sửa GHN, worker ship/receive, pending-intent toàn luồng hoặc gate.
-- PASS62E2E Exchange/conversation +1ca counter multi/funding bổ sung,1Mongo
-  upgrade;275web/223RN/106shared unit, API/RN/web/Admin types, API/web build,
-  Expo web32route và browser API/Mongo thật. Ảnh/storage fake, mail local/ví
-  simulator; native/human/live storage/CI mới NOT RUN. Detector82finding ở CSS
-  cũ, web lint2warning effect địa chỉ có sẵn; không gọi design critique sạch.
-- Fetch main mới `48ab01fa`/PR86 support. Chưa ghép/push/PR/merge/deploy; trước
-  publish phải giữ support/AI union và xử lý ADR0062 trùng local/main. Tiếp gói
-  phục hồi intent sau mất ACK; giao nhận từng chiều/expiry vẫn còn phát hiện mở.
-- QA DB/user/role của gói đã dọn về0, không còn DB QA khác; Docker mongo-test
-  đã dừng, port3009/3010/5194/8087/57017 đã đóng. Mongo chính27017 vẫn chạy,
-  không migrate/reset/seed hoặc dừng. 28file ngoài gói giữ nguyên checksum.
+- Owner duyệt gói2 sau gói1 `a1258e1a`. Branch `codex/exchange-intent-recovery`,
+  base `a1258e1a`, subject `fix(exchange): preserve exact intents across uncertain responses`.
+  [Source/hành trình/evidence gói2](../features/EXCHANGE_RECOVERY_2026_11_02.md),
+  [snapshot/revalidation gói1](../features/EXCHANGE_AGREEMENT_2026_11_02.md).
+- Web/RN dùng shared store giữ exact key/body/version qua Back, mất ACK/429/5xx;
+  chặn lệnh ngược. ACK funding phải có bằng chứng khoản nộp của đúng người;
+  GET lỗi/cũ chỉ đọc lại, không POST nữa. Query đã render GET đủ mới mới mở lệnh;
+  giữ revision floor chống đọc lùi. Proposal lưu ID đã tạo khi room GET còn cũ.
+- Store RAM theo identity/generation, clear khi logout/đổi người và bỏ late ACK/
+  GET. Không recovery xuyên reload/cold restart/tab khác. Hook RN opt-out memo
+  tại external store để tránh compiler giữ selector cũ; đã tái hiện/sửa/browser PASS.
+  Không đổi API/contract/migration; contract vẫn0.71/214operation,0052 của gói1
+  chưa migrate DB chính. GHN/giao nhận/expiry/settlement/READINESS giữ nguyên.
+- PASS129shared/278web/223RN unit, RN/web/Admin types, web build, Expo web32route,
+  scoped lint (web2warning cũ), contract/routes/docs. Browser5scenario trên API/
+  Mongo QA thật: funding/create loss+Back+429+exact replay ở web/RN, GET503/cũ,
+  1journal/1proposal, late ACK sau đổi account và revoked replay401. Storage fake,
+  mail local/ví simulator; native/human/live provider/CI source mới NOT RUN.
+  Detector19advisory màu có sẵn, không phải design critique sạch.
+- X04/X05 còn mở. Xác nhận thêm: khung thương lượng web mode Exchange còn hiện
+  giá bán125k ở “Tiền sách/Tổng thanh toán”, khác giá quy đổi150k/bù50k của fixture;
+  không là ledger thu sai. Cần sửa scoped theo mode trước nghiệm thu UX.
+- Fetch đầu gói: main `48ab01fa`/PR86 support, teammate exchange/transit
+  `13e0931d`; fetch cuối teammate lên `ab74bb53`, main giữ nguyên.
+  Chưa tích hợp/push/PR/merge/deploy. Trước publish giữ support/AI
+  union, giải quyết ADR0062 trùng local/main; trước giao nhận đọc nhánh teammate.
+- QA cuối:0owned DB/user/role,0DB khác; mongo-test đã dừng và các port thử đã
+  đóng. Mongo chính27017 healthy, không migrate/reset/seed/dừng. 28file UI/ảnh
+  ngoài gói giữ nguyên checksum. Scoped diff-check PASS; whole workspace còn
+  trailing whitespace AccountMenu ngoài gói, không sửa/stage cùng gói này.
+  Browser/build dùng workspace kết hợp28file này, không là clean checkout CI.
 
 ## Khảo sát core Exchange — chưa sửa nghiệp vụ
 

@@ -7,13 +7,27 @@ import {
   exchangeBooks,
   mapExchangeStatus,
   exchangeCommand,
+  exchangeAcknowledged,
+  exchangeIdentity,
 } from "./exchange";
 
 export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
+  const identity = exchangeIdentity();
   const actor = exchangeActor();
-  const ex = await getExchange(id);
+  let ex;
+  try {
+    ex = await getExchange(id);
+  } catch (error) {
+    if (exchangeIdentity() !== identity) throw error;
+    ex = exchangeAcknowledged(id);
+    if (!ex) throw error;
+  }
+  if (exchangeIdentity() !== identity)
+    throw new Error("Phiên tài khoản đã thay đổi.");
   const initiator = ex.initiatorId === actor.id;
   const { giveBooks, receiveBooks } = await exchangeBooks(ex, actor.id);
+  if (exchangeIdentity() !== identity)
+    throw new Error("Phiên tài khoản đã thay đổi.");
   return {
     id: ex.id,
     transactionCode: ex.id.slice(0, 8).toUpperCase(),
@@ -31,7 +45,10 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     partner: {
       id: initiator ? ex.recipientId : ex.initiatorId,
       username:
-        (initiator ? ex.agreement?.recipientBook.ownerDisplayName : ex.agreement?.initiatorBooks[0]?.ownerDisplayName) ?? "Đối tác trao đổi",
+        (initiator
+          ? ex.agreement?.recipientBook.ownerDisplayName
+          : ex.agreement?.initiatorBooks[0]?.ownerDisplayName) ??
+        "Đối tác trao đổi",
     },
     receiveBooks,
     giveBooks,
@@ -78,8 +95,14 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
         undefined,
     },
     inspectionDeadline: ex.inspectionDeadline ?? undefined,
-    viewerInspectionDeadline: (initiator ? ex.initiatorInspectionDeadline : ex.recipientInspectionDeadline) ?? undefined,
-    partnerInspectionDeadline: (initiator ? ex.recipientInspectionDeadline : ex.initiatorInspectionDeadline) ?? undefined,
+    viewerInspectionDeadline:
+      (initiator
+        ? ex.initiatorInspectionDeadline
+        : ex.recipientInspectionDeadline) ?? undefined,
+    partnerInspectionDeadline:
+      (initiator
+        ? ex.recipientInspectionDeadline
+        : ex.initiatorInspectionDeadline) ?? undefined,
     completedAt: ex.completedAt ?? undefined,
     viewerCompletedAt:
       (initiator ? ex.initiatorCompletedAt : ex.recipientCompletedAt) ??
@@ -87,10 +110,14 @@ export async function getExchangeDetail(id: string): Promise<ExchangeDetail> {
     partnerCompletedAt:
       (initiator ? ex.recipientCompletedAt : ex.initiatorCompletedAt) ??
       undefined,
-    viewerAddress: (initiator ? ex.initiatorAddress : ex.recipientAddress) ?? undefined,
-    partnerAddress: (initiator ? ex.recipientAddress : ex.initiatorAddress) ?? undefined,
-    viewerShipment: (initiator ? ex.initiatorShipment : ex.recipientShipment) ?? undefined,
-    partnerShipment: (initiator ? ex.recipientShipment : ex.initiatorShipment) ?? undefined,
+    viewerAddress:
+      (initiator ? ex.initiatorAddress : ex.recipientAddress) ?? undefined,
+    partnerAddress:
+      (initiator ? ex.recipientAddress : ex.initiatorAddress) ?? undefined,
+    viewerShipment:
+      (initiator ? ex.initiatorShipment : ex.recipientShipment) ?? undefined,
+    partnerShipment:
+      (initiator ? ex.recipientShipment : ex.initiatorShipment) ?? undefined,
     hasViewerReviewed: false,
     failedAtStep:
       ex.status === "Cancelled"
@@ -189,7 +216,9 @@ export function counterExchange(
   return exchangeCommand(`/exchanges/${id}/counter`, {
     expectedVersion: revision,
     listingIds: data.listingIds,
-    ...(data.deliveryAddressId ? { deliveryAddressId: data.deliveryAddressId } : {}),
+    ...(data.deliveryAddressId
+      ? { deliveryAddressId: data.deliveryAddressId }
+      : {}),
     ...(data.note ? { note: data.note } : {}),
   });
 }
@@ -208,7 +237,10 @@ const exchangeMessagesSchema = z.object({
 
 export async function getMessages(id: string): Promise<ChatMessage[]> {
   const actor = exchangeActor();
-  const res = await session.request(`/exchanges/${id}/messages`, exchangeMessagesSchema);
+  const res = await session.request(
+    `/exchanges/${id}/messages`,
+    exchangeMessagesSchema,
+  );
   return res.items.map((message) => ({
     id: message.id,
     senderRole: message.senderId === actor.id ? "viewer" : "partner",
@@ -228,11 +260,7 @@ export async function sendMessage(id: string, text: string): Promise<void> {
   );
 }
 
-export function reportIssue(
-  id: string,
-  revision: number,
-  reason: string,
-) {
+export function reportIssue(id: string, revision: number, reason: string) {
   return exchangeCommand(`/exchanges/${id}/dispute`, {
     expectedVersion: revision,
     reason,

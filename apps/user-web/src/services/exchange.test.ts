@@ -35,6 +35,7 @@ import {
   exchangeTab,
   retryExchange,
   pendingExchange,
+  exchangeAcknowledged,
   type Exchange,
 } from "./exchange";
 import { getExchangeDetail, getMessages } from "./exchangeDetail";
@@ -66,44 +67,99 @@ beforeEach(() => {
 describe("exchange integration", () => {
   it("renders frozen agreement values without fetching today's public listings", async () => {
     const book = (id: string, ownerId: string, value: number) => ({
-      listingId: id, ownerId, ownerDisplayName: 'Đối tác QA', listingVersion: 5, revisionId: id, bookId: id, catalogRevisionId: id,
-      book: { title: 'Ấn bản đã thỏa thuận', authors: ['Tác giả'], publisher: null, publicationYear: 2020, language: 'vi', edition: 'Lần 1', category: 'Văn học', isbn: null },
-      condition: 'Good' as const, description: 'Mô tả gốc', pages: 'Đủ', coverNote: '', notes: '', accessories: '',
-      readable: true, hasMissingPages: false, missingEssentialContent: false, exchangeValue: value, mediaIds: [id],
+      listingId: id,
+      ownerId,
+      ownerDisplayName: "Đối tác QA",
+      listingVersion: 5,
+      revisionId: id,
+      bookId: id,
+      catalogRevisionId: id,
+      book: {
+        title: "Ấn bản đã thỏa thuận",
+        authors: ["Tác giả"],
+        publisher: null,
+        publicationYear: 2020,
+        language: "vi",
+        edition: "Lần 1",
+        category: "Văn học",
+        isbn: null,
+      },
+      condition: "Good" as const,
+      description: "Mô tả gốc",
+      pages: "Đủ",
+      coverNote: "",
+      notes: "",
+      accessories: "",
+      readable: true,
+      hasMissingPages: false,
+      missingEssentialContent: false,
+      exchangeValue: value,
+      mediaIds: [id],
     });
-    const agreement = { initiatorBooks: [book(row.initiatorListingId, row.initiatorId, 100000)], recipientBook: book(row.recipientListingId, row.recipientId, 150000) };
-    mock.request.mockImplementation((path) => path.includes('/photos/') ? Promise.resolve({ url: 'https://storage.test/frozen.png' }) : Promise.resolve({ ...row, agreement }));
+    const agreement = {
+      initiatorBooks: [book(row.initiatorListingId, row.initiatorId, 100000)],
+      recipientBook: book(row.recipientListingId, row.recipientId, 150000),
+    };
+    mock.request.mockImplementation((path) =>
+      path.includes("/photos/")
+        ? Promise.resolve({ url: "https://storage.test/frozen.png" })
+        : Promise.resolve({ ...row, agreement }),
+    );
     mock.publicListing.mockResolvedValue({ exchangeValue: 600000 });
     const detail = await getExchangeDetail(row.id);
-    expect(detail.receiveBooks[0]).toMatchObject({ title: 'Ấn bản đã thỏa thuận', price: 150000 });
+    expect(detail.receiveBooks[0]).toMatchObject({
+      title: "Ấn bản đã thỏa thuận",
+      price: 150000,
+    });
     expect(detail.giveBooks[0].price).toBe(100000);
     expect(detail.moneyAmount).toBe(50000);
     expect(detail.viewerDeposit).toBe(150000);
     expect(detail.viewerFundingAmount).toBe(200000);
     expect(mock.publicListing).not.toHaveBeenCalled();
     expect(mock.photo).not.toHaveBeenCalled();
-    expect(mock.request.mock.calls.filter(([path]) => path.includes('/photos/'))).toHaveLength(2);
+    expect(
+      mock.request.mock.calls.filter(([path]) => path.includes("/photos/")),
+    ).toHaveLength(2);
   });
 
   it("labels legacy books without replacing them with today's public content", async () => {
     mock.request.mockResolvedValue({ ...row, agreement: null });
     const detail = await getExchangeDetail(row.id);
     expect(detail.hasAgreementSnapshot).toBe(false);
-    expect(detail.receiveBooks[0].title).toContain('thiếu bản chụp');
+    expect(detail.receiveBooks[0].title).toContain("thiếu bản chụp");
     expect(detail.receiveBooks[0].price).toBe(150000);
     expect(mock.publicListing).not.toHaveBeenCalled();
   });
   it("keeps authored text as a member message even when it contains system-like prefixes", async () => {
-    mock.request.mockResolvedValue({ items: [
-      { id: "message", exchangeId: row.id, senderId: row.recipientId, body: "[Hệ thống] nội dung do thành viên nhập", sentAt: "2026-10-18T10:00:00Z" },
-      { id: "counter", exchangeId: row.id, senderId: row.initiatorId, body: "[Đề xuất lại điều khoản]", sentAt: "2026-10-18T10:01:00Z" },
-    ] });
+    mock.request.mockResolvedValue({
+      items: [
+        {
+          id: "message",
+          exchangeId: row.id,
+          senderId: row.recipientId,
+          body: "[Hệ thống] nội dung do thành viên nhập",
+          sentAt: "2026-10-18T10:00:00Z",
+        },
+        {
+          id: "counter",
+          exchangeId: row.id,
+          senderId: row.initiatorId,
+          body: "[Đề xuất lại điều khoản]",
+          sentAt: "2026-10-18T10:01:00Z",
+        },
+      ],
+    });
     const messages = await getMessages(row.id);
-    expect(messages.map((message) => message.senderRole)).toEqual(["partner", "viewer"]);
+    expect(messages.map((message) => message.senderRole)).toEqual([
+      "partner",
+      "viewer",
+    ]);
     expect(messages[0].text).toContain("[Hệ thống]");
   });
   it("surfaces history failures rather than treating them as a successful empty conversation", async () => {
-    mock.request.mockRejectedValue(new ApiError(503, "Unavailable", "Unavailable"));
+    mock.request.mockRejectedValue(
+      new ApiError(503, "Unavailable", "Unavailable"),
+    );
     await expect(getMessages(row.id)).rejects.toBeInstanceOf(ApiError);
   });
   it("retains key, body and stale revision after response loss, including after refresh", async () => {
@@ -124,7 +180,11 @@ describe("exchange integration", () => {
   it("blocks a different command while the preceding result is unknown", async () => {
     mock.request
       .mockRejectedValueOnce(new Error("network"))
-      .mockResolvedValue(row);
+      .mockResolvedValue({
+        ...row,
+        status: "AcceptedAwaitingFunding",
+        initiatorFundedAt: "2026-11-02T00:00:00.000Z",
+      });
     await expect(
       exchangeCommand(`/exchanges/${row.id}/funding`, {}),
     ).rejects.toThrow();
@@ -134,6 +194,61 @@ describe("exchange integration", () => {
     expect(mock.request).toHaveBeenCalledTimes(1);
     await retryExchange(row.id);
     expect(mock.request.mock.calls[1][0]).toBe(`/exchanges/${row.id}/funding`);
+  });
+  it("retains the exact funding intent through a lost response and rate limit", async () => {
+    mock.request
+      .mockRejectedValueOnce(new Error("lost ACK"))
+      .mockRejectedValueOnce(new ApiError(429, "RATE_LIMITED", "limited"))
+      .mockResolvedValue({
+        ...row,
+        status: "AcceptedAwaitingFunding",
+        initiatorFundedAt: row.createdAt,
+      });
+    await expect(
+      exchangeCommand(`/exchanges/${row.id}/funding`, {}),
+    ).rejects.toThrow();
+    await expect(retryExchange(row.id)).rejects.toThrow();
+    expect(pendingExchange(row.id)).toBeDefined();
+    await retryExchange(row.id);
+    expect(mock.request.mock.calls[1][2]).toEqual(
+      mock.request.mock.calls[0][2],
+    );
+    expect(mock.request.mock.calls[2][2]).toEqual(
+      mock.request.mock.calls[0][2],
+    );
+  });
+  it("renders the acknowledged funding facts when the following GET fails", async () => {
+    mock.request
+      .mockResolvedValueOnce({
+        ...row,
+        status: "AcceptedAwaitingFunding",
+        initiatorFundedAt: row.createdAt,
+      })
+      .mockRejectedValue(new ApiError(503, "UNAVAILABLE", "unavailable"));
+    await exchangeCommand(`/exchanges/${row.id}/funding`, {});
+    const detail = await getExchangeDetail(row.id);
+    expect(detail.viewerFundedAt).toBe(row.createdAt);
+    expect(exchangeAcknowledged(row.id)).toBeDefined();
+    await expect(
+      exchangeCommand(`/exchanges/${row.id}/cancel`, {
+        expectedVersion: row.revision,
+      }),
+    ).rejects.toThrow();
+    expect(mock.request).toHaveBeenCalledTimes(2);
+  });
+  it("rejects late detail mapping after an account change", async () => {
+    let resolve!: (value: Exchange) => void;
+    mock.request.mockReturnValue(
+      new Promise<Exchange>((done) => {
+        resolve = done;
+      }),
+    );
+    const reading = getExchangeDetail(row.id);
+    mock.actor = row.recipientId;
+    mock.listener();
+    resolve(row);
+    await expect(reading).rejects.toThrow();
+    expect(exchangeAcknowledged(row.id)).toBeUndefined();
   });
   it("clears definite rejection and allows a new intent with fresh version", async () => {
     mock.request
@@ -159,6 +274,7 @@ describe("exchange integration", () => {
     ).rejects.toThrow();
     mock.actor = row.recipientId;
     mock.listener();
+    mock.request.mockResolvedValue({ ...row, revision: 9 });
     await exchangeCommand(`/exchanges/${row.id}/accept`, { revision: 8 });
     expect(mock.request.mock.calls[1][2].body).toBe('{"revision":8}');
     expect(mock.request.mock.calls[1][2].headers).not.toEqual(
