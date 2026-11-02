@@ -1,5 +1,24 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## Khảo sát core Exchange — chưa sửa nghiệp vụ
+
+- Owner yêu cầu chọn core tiếp theo và kiểm logic/UI. Branch
+  `codex/audit-exchange-core`, source `90b89ac1`, subject
+  `docs(exchange): audit core logic and member journeys`.
+  [Phát hiện, source, bằng chứng và ba gói đề xuất](../features/CORE_EXCHANGE_AUDIT_2026_11_02.md).
+- Xác nhận accept sách PendingReview/Hidden và phía còn lại LOCKED; thiếu
+  snapshot làm tiền cũ/UI giá mới; counter khác SRS; một chiều gửi bị chặn
+  receive/dispute; hai bên gửi muộn thoát expiry. RN retry đổi key, web mất
+  intent sau 429; chưa thấy double debit. Web nhãn cọc dùng tổng cọc+bù.
+- PASS API build,9Exchange E2E/36SKIP. API/Mongo QA + web/Expo web tái hiện các
+  lỗi; deadline quá khứ/stale GET/429 là fault fixture có chủ ý. Native/human/
+  provider thật và CI source mới NOT RUN. Không sửa code/test/contract/migration,
+  không mở READINESS/ADR0057/GHN; fetch vẫn main `d44b813b`.
+- QA database/user/role đã dọn về0, dịch vụ thử đã dừng; DB chính và28file
+  UI/ảnh ngoài gói giữ nguyên. Chỉ commit docs local, chưa push/PR/merge/deploy.
+  Khuyến nghị chốt thỏa thuận/revalidation/snapshot trước; chờ owner duyệt sửa
+  và nhóm quyết định counter theo SRS hay thay đổi nghiệp vụ.
+
 ## Seller RN: đóng gói → vận đơn → theo dõi tới F2h
 
 - Owner duyệt cùng tích hợp main/socket. Branch `codex/rn-seller-shipping`, base
