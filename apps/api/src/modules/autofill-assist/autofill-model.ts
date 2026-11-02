@@ -48,7 +48,7 @@ export class NvidiaAutofillModel extends AutofillModel {
       );
     } catch (e) {
       if (e instanceof NvidiaChatError)
-        throw new PriceModelError(e.kind, e.message, e.usage);
+        throw new PriceModelError(e.kind, e.message, e.usage, e.detail);
       throw new PriceModelError('ProviderError', 'Provider call failed');
     }
   }

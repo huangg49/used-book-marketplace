@@ -34,7 +34,13 @@ const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
 const DUPLICATE_WINDOW_MS = 180 * DAY_MS;
 const BUCKETS = 10_000;
-export type AutoReviewOutcome = 'Approved' | 'Escalated' | 'Skipped';
+// A provider that did not answer gets this many worker cycles (about a minute
+// apart) before the listing goes to Staff; a refusal or a malformed answer is
+// an answer and goes to Staff at once.
+const MAX_PROVIDER_ATTEMPTS = 3;
+const ATTEMPTS_TTL_MS = 7 * DAY_MS;
+const TRANSIENT = new Set(['Timeout', 'ProviderError']);
+export type AutoReviewOutcome = 'Approved' | 'Escalated' | 'Skipped' | 'Deferred';
 
 const stillPending = (l: Listing | null) =>
   Boolean(
@@ -70,6 +76,13 @@ const assessmentOf = (p: PipelineResult | null) =>
         damage: p.damage,
       } as unknown as Json)
     : null;
+// Every reason is a stage the provider never assessed, for want of an answer.
+const providerSilent = (seen: Inspection) =>
+  Boolean(seen.pipeline) &&
+  seen.reasons.length > 0 &&
+  seen.reasons.every((r) => r.endsWith(':AssessmentUnavailable')) &&
+  seen.pipeline!.failures.length > 0 &&
+  seen.pipeline!.failures.every((f) => TRANSIENT.has(f));
 const usageOf = (p: PipelineResult | null) => ({
   inputTokens: p?.usage.inputTokens ?? 0,
   outputTokens: p?.usage.outputTokens ?? 0,
@@ -137,6 +150,23 @@ export class ListingAutoReviewService {
       this.setting('PRICE_ASSIST_DAILY_BUDGET_USD', 2) * 1e6
     );
   }
+  // Counts provider-silent cycles per revision without writing a decision, so
+  // the next cycle picks the listing up again. Kept with the daily counters
+  // (same shape, own key, removed by TTL); no decision reads it.
+  private async retryLater(use: 'review' | 'recheck', revisionId: string) {
+    const counter = await this.mongo.c.price_assist_usage.findOneAndUpdate(
+      { _id: `autoreview:${use}:${revisionId}` },
+      {
+        $inc: { calls: 1 },
+        $setOnInsert: {
+          costMicroUsd: 0,
+          expiresAt: new Date(Date.now() + ATTEMPTS_TTL_MS),
+        },
+      },
+      { upsert: true, returnDocument: 'after' },
+    );
+    return (counter?.calls ?? 0) < MAX_PROVIDER_ATTEMPTS;
+  }
   private async recordSpend(p: PipelineResult) {
     if (!p.usage.calls) return;
     const day = new Date().toISOString().slice(0, 10);
@@ -158,6 +188,7 @@ export class ListingAutoReviewService {
       processed: 0,
       approved: 0,
       escalated: 0,
+      deferred: 0,
       failed: 0,
     };
     if (!this.active) return result;
@@ -194,6 +225,7 @@ export class ListingAutoReviewService {
         const outcome = await this.reviewOne(_id);
         if (outcome === 'Approved') result.approved++;
         if (outcome === 'Escalated') result.escalated++;
+        if (outcome === 'Deferred') result.deferred++;
       } catch (e) {
         // No row was written, so the next cycle tries again; Staff can act meanwhile.
         result.failed++;
@@ -213,6 +245,8 @@ export class ListingAutoReviewService {
     if (await c.listing_auto_reviews.findOne({ revisionId })) return 'Skipped';
 
     const seen = await this.inspect(l!);
+    if (providerSilent(seen) && (await this.retryLater('review', revisionId)))
+      return 'Deferred';
     if (seen.reasons.length) return this.escalate(l!, seen.reasons, seen);
     const auditRate = this.setting('LISTING_AUTO_REVIEW_AUDIT_RATE', 0.1);
     try {
@@ -293,10 +327,13 @@ export class ListingAutoReviewService {
       minConfidence: this.setting('LISTING_AUTO_REVIEW_MIN_CONFIDENCE', 0.85),
     });
     await this.recordSpend(pipeline);
-    // Failure kinds only; never photo bytes, seller text or the key.
+    // Failure kinds, status and network code; never photo bytes, seller text or the key.
     if (pipeline.failures.length)
       this.logger.warn(
-        JSON.stringify({ listingId: l._id, autoReviewFailures: pipeline.failures }),
+        JSON.stringify({
+          listingId: l._id,
+          autoReviewFailures: pipeline.failureDetails,
+        }),
       );
     return { facts, photoHashes, pipeline, reasons: pipeline.reasons };
   }
@@ -386,6 +423,7 @@ export class ListingAutoReviewService {
       passed: 0,
       flagged: 0,
       skipped: 0,
+      deferred: 0,
       failed: 0,
     };
     if (!this.active) return result;
@@ -429,6 +467,7 @@ export class ListingAutoReviewService {
         const status = await this.recheckOne(row.listingId, row.revisionId);
         if (status === 'Passed') result.passed++;
         else if (status === 'Open') result.flagged++;
+        else if (status === 'Deferred') result.deferred++;
         else result.skipped++;
       } catch (e) {
         result.failed++;
@@ -494,6 +533,8 @@ export class ListingAutoReviewService {
       l.currentRevisionId === revisionId;
     // Edited or taken down since: that version is no longer what buyers see.
     const seen = published ? await this.inspect(l) : null;
+    if (seen && providerSilent(seen) && (await this.retryLater('recheck', revisionId)))
+      return 'Deferred' as const;
     const status = !seen ? 'Skipped' : seen.reasons.length ? 'Open' : 'Passed';
     const pipeline = seen?.pipeline ?? null;
     return this.mongo.tx(async (tx) => {

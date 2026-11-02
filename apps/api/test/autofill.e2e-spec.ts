@@ -290,6 +290,25 @@ describe('photo autofill through HTTP with MongoDB', () => {
     await ask(l.id, [l.photo], m1).expect(200);
   });
 
+  it('waits on a key still being read, but releases one left behind by a crash', async () => {
+    const l = await listing();
+    const key = randomUUID();
+    await ask(l.id, [l.photo], m1, key).expect(200);
+    // As if the process stopped between reserving the call and saving the answer.
+    const pending = (createdAt: Date) =>
+      db.c.autofill_suggestions.updateOne(
+        { ownerId: m1.id, requestKey: key },
+        { $set: { status: 'Pending', response: null, createdAt } },
+      );
+    await pending(new Date());
+    expect((await ask(l.id, [l.photo], m1, key).expect(429)).body.code).toBe('RATE_LIMITED');
+    await pending(new Date(Date.now() - 10 * 60_000));
+    const stale = await ask(l.id, [l.photo], m1, key).expect(503);
+    expect(stale.body.code).toBe('AI_ASSIST_FAILED');
+    expect(fake.calls).toHaveLength(1);
+    await ask(l.id, [await photo(l.id)], m1).expect(200);
+  });
+
   it('calls the fallback model once when the first reads no title', async () => {
     const l = await listing();
     fake.fallback = 'fake/fallback';

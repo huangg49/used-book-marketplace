@@ -1,5 +1,16 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## AI lúc được lúc không: thử lại có giới hạn — 02/11/2026
+
+- Nhánh `fix/ai-provider-resilience` từ `origin/main` (dd7304de). [ADR0066](../adr/0066-ai-provider-resilience.md).
+- Nguyên nhân: NVIDIA hosted đôi khi treo/429/5xx (ADR0063: 12/118 ca timeout lượt đầu),
+  mã thật không thử lại; tự duyệt chuyển Staff vĩnh viễn sau một lượt lỗi; log không có status.
+- `nvidiaChat` thử lại một lần trong cùng timeout; log có status/mã mạng/số lượt; tự duyệt
+  và hậu kiểm `Deferred` tối đa ba chu kỳ; Pending bỏ dở không chặn key; `answerText` chịu câu dẫn.
+- PASS: API lint/typecheck, unit 398/399 (`configure-app.spec` Windows shutdown timeout
+  khi chạy cả bộ, chạy riêng PASS cả trước và sau thay đổi), E2E `listing-auto-review`,
+  `autofill`, `price-assist` trên replica set QA. NOT RUN: NVIDIA thật, client/browser.
+
 ## Tích hợp chuỗi local với main Support/AI/Exchange
 
 - Owner duyệt; branch `codex/integrate-exchange-main`, hai parent local
