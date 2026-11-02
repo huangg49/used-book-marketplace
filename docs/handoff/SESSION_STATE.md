@@ -1,5 +1,20 @@
 # Điểm lưu hiện tại — 03/11/2026
 
+## Dữ liệu nền400cuốn trên app local chính
+
+- Owner yêu cầu400cuốn:100Manga,100Light Novel,200cuốn thuộc14nhóm khác.
+  Đã nhập bổ sung metadata Open Library/ảnh bìa vào API và storage local hiện có,
+  với3người đăng demo riêng; không dùng User1/User2/User3 cho bộ nền.
+- PublishedAt mẫu cũ hơn bài thật; API hiện401bài public, bài thật đứng đầu.
+  Giá/tình trạng/approval là fixture có audit nhập demo, không human review,
+  ảnh hiện vật, nguồn giá AI hoặc dữ liệu để demo giao nhận/thanh toán.
+- PASS400catalog+400listing invariants/validator/index trên QA riêng,400ảnh
+  round-trip storage thật, import atomic/backup/fingerprints và ledger nguyên vẹn;
+  API phân trang/search/filter/signed media. QA đã dừng, app chính giữ chạy.
+- Chỉ bàn giao docs trên `codex/demo-background-catalog`, base059a777e;
+  không sửa app/contract/migration, không push/CI/merge hoặc đổi readiness.
+  [Cách dùng, nguồn và giới hạn](../features/BACKGROUND_CATALOG_DEMO_2026_11_03.md).
+
 ## Thu gọn thẻ bạn đọc theo phản hồi owner
 
 - Follow-up `codex/reader-name-status-alignment`, base99ed9620: tên và trạng thái
