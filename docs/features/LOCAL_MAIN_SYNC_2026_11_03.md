@@ -3,7 +3,7 @@
 ## Source và bảo toàn
 
 Owner giao kiểm tra main, đồng bộ và giải quyết conflict. Main đã fetch tới
-`6919981ccb8e263863dbba0c9104ef91218da2c1`. Thiết kế cuối của main dùng vùng
+`00a1d16d8f65e766c339b9cf8d69736704592fb8` (gồmPR92). Thiết kế cuối của main dùng vùng
 bằng chứng mở gọn ngay trong trang; thay thiết kế panel trượt trước đó.
 
 Nhánh tích hợp `codex/sync-main-20261103` giữ các commit của nhánh
@@ -41,7 +41,7 @@ Checkout ứng dụng đã chuyển sang `codex/local-main-synced-20261103`.
 
 ## Kiểm chứng local
 
-Bằng chứng áp dụng cho nhánh tích hợp và merge6919981c; không là remote CI của
+Bằng chứng áp dụng cho nhánh tích hợp và merge00a1d16d; không là remote CI của
 commit local. Artifacts private ignored ở`.tmp/main-sync-20261103/`.
 
 | Kiểm tra | Kết quả/phạm vi |
@@ -65,7 +65,7 @@ Không đổi/xóa ID cũ để ép trùng0053.
 
 ## Kích hoạt đã được owner duyệt và hoàn tất
 
-Đã áp dụng9migration trên DB local chính theo thứ tự registry:
+Đã áp dụng9migration ban đầu và1migration mới củaPR92 trên DB local chính:
 
 1. 0050-support-cases
 2. 0051-support-auto-review-union
@@ -76,6 +76,7 @@ Không đổi/xóa ID cũ để ép trùng0053.
 7. 0052-free-shipping
 8. 0054-exchange-negotiated-diff
 9. 0055-exchange-negotiated-diff-payer
+10. 0054-local-demo-completion
 
 Owner đã xác nhận “Cho phép nâng DB và kích hoạt bản mới”. Đã dừng đúng cây
 process API/worker/Member/Admin, chụp backup private nhất quán mới và kiểm đọc lại;
@@ -95,16 +96,43 @@ Public API401bài,400nền đầy đủ và bài thật đầu;9trang không tr�
 QA57017 đã dừng; Mongo chính27017 và3app giữ chạy. Backup/config/private evidence
 nằm ngoài Git hoặc ignored, không có secret/dump/token trong commit.
 
+## PR92 nhận trong lúc đồng bộ
+
+Main tiếp tục nhậnPR92 tại00a1d16d, thêm job/command hoàn tất đơn demo riêng.
+Đã ghép contract0.73.1 (246operations/38controllers), giữ cả bằng chứng Exchange
+và bridge AI. Fixture upgrade main59migration giữ nguyên59checksum gốc, thêm đủ
+các migration mới theo thứ tự; không bỏ assertion hoặc đổi baseline đã áp dụng.
+
+Clone DB thực trênQA nâng thêm0054-local-demo-completion PASS:5225bản ghi cũ
+nguyên vẹn,không validator mới nào làm dữ liệu hiện có không hợp lệ. Sau đó dừng
+API/worker,có backup private mới,áp dụng đúng migration,cập nhật role,build tại
+checkout app và khởi động lại.5env không đổi; LOCAL_DEMO_COMPLETION_ENABLED đang
+**tắt**,không tạo job hoặc tự hoàn tất đơn. User2 vẫn850k/150k,đơn cũ Preparing,
+ledger cân bằng. Migration này chỉ thêm collection/validator,không giải ngân.
+
+Kiểm thêm PASS toàn Mongo61/6SKIP (không chạy cluster failover riêng),8release
+case/40ngoài filter SKIP,10policy unit và315web unit/build/types. Demo transit
+trước sửa tái hiện625k!=535k: test vẫn cộng30k ship cho3đơn. Đã cập nhật theo
+chính sách miễn phí đã có trên main,thêm kiểm tra3bookPrice125k/shipping0/
+held125k từng đơn,aggregate375kheld/625kavailable. PASS65stable intents/receipts,
+mấtACK/race/restart,không đổi ledger/commitment; storage fake,QA riêng.
+
+Seller-order browser tái hiện hai lệch sau free shipping: selector vẫn tìm
+“Xem phí giao nhận”/“Thử lại bước tính phí”,và90kbook+30kshipping. Đã cập nhật
+selector sang nhãn hiện có,kiểm độc lập bookPrice90000/shippingFee0,held90000,
+available110000 từ funding200000. Giữ ca thiếu tiền,không giữ trước thanh toán,
+lost ACK exact-key/body,1Order/1payment journal và public availability.
+Browser2phiên,390/1440,API/Mongo QA thật,funding/storage fake PASS.
+
 ## CI remote và giới hạn
 
-CI trên đúng SHA6919981c: [Docs PASS](https://github.com/huangg49/used-book-marketplace/actions/runs/41504740881),
-[Admin PASS](https://github.com/huangg49/used-book-marketplace/actions/runs/41504740622),
-[Operations PASS](https://github.com/huangg49/used-book-marketplace/actions/runs/41504740980).
-Đây là3job áp dụng, không diễn giải thành mọi app/native PASS.
-Bản997d4808 trước đó Operations FAIL ở RN buy-now; bản mới6919981c đã PASS,
-không tự kết luận nguyên nhân lịch sử hoặc quy cho merge local.
-Bản tích hợp local chưa push và chưa có CI remote riêng; native Android,
-live evidence video storage và human acceptance NOT RUN.
+CI trên6919981c trướcPR92:Docs/Admin/Operations đều PASS.
+CI trên đúng SHA00a1d16d hiện có [API FAIL ở Mongo](https://github.com/huangg49/used-book-marketplace/actions/runs/41506791165),
+[Demo FAIL ở transit](https://github.com/huangg49/used-book-marketplace/actions/runs/41506791136),
+[User Web FAIL ở seller-order browser](https://github.com/huangg49/used-book-marketplace/actions/runs/41506791109).
+Các kết quả local nêu trên không thay trạng thái CI này. Không tự rerun/push lên
+remote; bản tích hợp chưa có CI riêng. Native Android,live evidence video storage
+và human acceptance NOT RUN.
 
 Chính sách free shipping từ main chỉ tác động quote/order mới. Đơn Preparing
 cũ có hold150000VND không được tính lại hoặc hoàn tiền khi đồng bộ source.

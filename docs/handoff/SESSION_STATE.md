@@ -3,7 +3,7 @@
 - Owner yêu cầu fetch/main sync và xử lý conflict; Antigravity đã được owner xác
   nhận dừng sửa. Nhánh `codex/sync-main-20261103` giữ cả các commit local và
   checkpoint 131 file từ checkout ứng dụng, không reset/clean/stash/force checkout.
-- Đã tích hợp main tới `6919981c` (bằng chứng khiếu nại mở gọn trong trang), giữ UI local,
+- Đã tích hợp main tới `00a1d16d` (gồmPR92; bằng chứng mở gọn trong trang), giữ UI local,
   các điểm vào Hỗ trợ/Hậu kiểm AI, cache thông báo theo user và quyền xem bằng chứng.
   Ảnh/video chỉ từ signed read có phân công/audit, không iframe bridge hoặc ảnh mẫu.
 - Phát hiện và sửa nâng cấp AI v1 có dữ liệu bị validator chặn: thêm migration
@@ -17,7 +17,8 @@
   9 migration, không checksum cũ lệch, không bản ghi mới vi phạm validator,
   ledger/giao dịch/400 listing giữ nguyên; policy chọn cho quote mới chuyển free
   shipping và AI cũ thêm metadata mặc định. Không reset/seed/import DB chính.
-- Owner đã duyệt nâng DB/kích hoạt:9migration áp dụng thành công trên DB chính,
+- Owner đã duyệt nâng DB/kích hoạt:9migration và1migration mới từPR92 đã áp dụng
+  thành công trên DB chính,
   backup private mới, giữ5209bản ghi cũ;2AI review chỉ thêm metadata mặc định.
   Ledger cân bằng, đơn cũ Preparing và User2 available850k/held150k; User1/User3
   available1triệu. Không đổi password/5file cấu hình. Role app được cấp quyền
@@ -25,9 +26,20 @@
   đã cùng bản tích hợp; API/worker3000, Admin5173, Member5174 đang chạy; QA dừng.
 - PASS kiểm tra API chính:401bài public/400nền,9trang không trùng, search/filter,
   12signed ảnh thật; User1/2/3 login/profile/wallet/reviews. Git working tree sạch.
-- CI remote trên6919981c:Docs/Admin/Operations đều PASS (3job áp dụng).
-  Bản997d4808 trước đó Operations FAIL ở RN buy-now, bản mới đã PASS; chưa
-  kết luận nguyên nhân lịch sử. Bản local chưa push, không có CI riêng.
+- PR92 thêm schema hoàn tất demo:đã thử clone QA trước áp dụng,5225bản ghi và
+  ledger giữ nguyên. Giữ công tắc LOCAL_DEMO_COMPLETION_ENABLED tắt; không tự
+  hoàn tất đơn cũ. Contract0.73.1/246operations/38controllers; toàn Mongo61PASS/
+  6SKIP,8release-gate PASS/40ngoài filter SKIP và10policy unit PASS.
+- Demo transit từng FAIL do2số tiền cũ còn cộng30k phí mỗi đơn. Đã sửa kỳ vọng
+  theo chính sách free shipping, thêm assertion3đơn×125k/phí0/held375k;
+  PASS65stable intents/receipts, mấtACK/race/restart; storage fake,QA riêng.
+- Seller-order browser tái hiện selector/nút cũ và tổng90k+30k không còn đúng.
+  Đã đổi sang nhãn xác nhận nơi nhận/phí0,giữ nguyên lostACK/exact retry,
+  thiếu tiền bị từ chối,1Order/1hold/1journal và public availability. PASS2phiên,
+  390/1440,API/Mongo QA thật,funding/storage fake; không đổi app để khớp test.
+- CI6919981c trước đó3job PASS. CI mới00a1d16d:API Mongo,Demo transit và
+  User Web seller-order browser FAIL. Bản local có full Mongo/transit/seller-order browser PASS;
+  không suy CI remote đã xanh. Bản local chưa push, không có CI riêng.
   [Bằng chứng, thay đổi và kích hoạt](../features/LOCAL_MAIN_SYNC_2026_11_03.md).
   Không push/PR/remote merge/deploy; không đóng READINESS.
 
