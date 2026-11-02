@@ -12,6 +12,7 @@ interface ConfirmDialogProps {
     onConfirm: () => void;
     isBusy?: boolean;
     isDanger?: boolean;
+    maxWidth?: string;
 }
 
 export function ConfirmDialog({
@@ -25,6 +26,7 @@ export function ConfirmDialog({
     onConfirm,
     isBusy = false,
     isDanger = false,
+    maxWidth,
 }: ConfirmDialogProps) {
     const dialogRef = useRef<HTMLDialogElement>(null);
     const triggerRef = useRef<HTMLElement | null>(null);
@@ -36,6 +38,21 @@ export function ConfirmDialog({
         if (isOpen) {
             triggerRef.current = document.activeElement as HTMLElement;
             dialog.showModal();
+            // Focus dialog itself to prevent auto-scrolling down to first input
+            dialog.focus();
+            dialog.scrollLeft = 0;
+            dialog.scrollTop = 0;
+            requestAnimationFrame(() => {
+                if (dialogRef.current) {
+                    dialogRef.current.scrollTop = 0;
+                    dialogRef.current.scrollLeft = 0;
+                }
+            });
+            setTimeout(() => {
+                if (dialogRef.current) {
+                    dialogRef.current.scrollTop = 0;
+                }
+            }, 30);
         } else {
             dialog.close();
             // Trả focus
@@ -74,13 +91,26 @@ export function ConfirmDialog({
     return (
         <dialog 
             ref={dialogRef} 
+            tabIndex={-1}
+            style={maxWidth ? { maxWidth } : undefined}
             className={styles.dialog}
             role={isDanger ? "alertdialog" : "dialog"}
             aria-labelledby="dialog-title"
             aria-describedby={description ? "dialog-desc" : undefined}
         >
             <div className={styles.content}>
-                <h2 id="dialog-title" className={styles.title}>{title}</h2>
+                <div className={styles.header}>
+                    <h2 id="dialog-title" className={styles.title}>{title}</h2>
+                    <button
+                        type="button"
+                        className={styles.closeBtn}
+                        onClick={onClose}
+                        aria-label="Đóng"
+                        disabled={isBusy}
+                    >
+                        ✕
+                    </button>
+                </div>
                 {description && <p id="dialog-desc" className={styles.description}>{description}</p>}
                 
                 {children && <div className={styles.body}>{children}</div>}

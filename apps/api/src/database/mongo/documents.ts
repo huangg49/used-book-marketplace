@@ -1313,6 +1313,8 @@ export interface ExchangeShipmentSnapshot {
   notes?: string | null;
   meetupLocation?: string | null;
   shippedAt?: Date | null;
+  lastEvent?: string | null;
+  lastEventAt?: Date | null;
 }
 
 export interface ExchangeDoc extends Lockable {

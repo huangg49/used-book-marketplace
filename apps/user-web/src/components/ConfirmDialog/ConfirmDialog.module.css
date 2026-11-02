@@ -1,38 +1,83 @@
 .dialog {
   padding: 0;
   border: none;
-  border-radius: 12px;
-  background: var(--shop-paper);
-  max-width: 480px;
+  border-radius: 14px;
+  background: var(--shop-paper, #fffcf5);
+  max-width: 520px;
   width: calc(100% - 32px);
-  max-height: calc(100dvh - 32px);
-  overflow: auto;
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
   margin: auto;
-  color: var(--shop-ink);
-  box-shadow: 0 18px 60px #28191440;
+  color: var(--shop-ink, #281914);
+  box-shadow: 0 20px 60px rgba(40, 25, 20, 0.35);
+  scrollbar-width: thin;
+  scrollbar-color: var(--shop-line, #ebd9c8) transparent;
+}
+.dialog:focus {
+  outline: none;
+}
+.dialog::-webkit-scrollbar {
+  width: 6px;
+}
+.dialog::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dialog::-webkit-scrollbar-thumb {
+  background: var(--shop-line, #ebd9c8);
+  border-radius: 4px;
 }
 .dialog::backdrop {
-  background: #28191480;
+  background: rgba(40, 25, 20, 0.55);
+  backdrop-filter: blur(2px);
 }
 .content {
-  padding: 28px;
+  padding: 24px 28px;
+  box-sizing: border-box;
+  width: 100%;
+}
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
 }
 .title {
-  font: 700 1.25rem/1.5 var(--shop-body);
-  margin: 0 0 14px;
-  color: var(--shop-ink);
+  font: 700 1.25rem/1.4 var(--shop-body, sans-serif);
+  margin: 0;
+  color: var(--shop-ink, #281914);
+}
+.closeBtn {
+  background: transparent;
+  border: none;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--shop-muted, #716157);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.closeBtn:hover:not(:disabled) {
+  background: #f0e2ca;
+  color: var(--shop-wine, #5c0202);
 }
 .description {
   font-size: 0.9rem;
   color: var(--shop-muted);
   margin: 0 0 20px;
-  line-height: 1.8;
+  line-height: 1.6;
 }
 .body {
   margin-bottom: 20px;
   font-size: 0.9rem;
-  line-height: 1.8;
-  color: #912b0e;
+  line-height: 1.6;
+  color: var(--shop-ink);
+  box-sizing: border-box;
+  width: 100%;
 }
 .footer {
   display: flex;

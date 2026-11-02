@@ -11,6 +11,70 @@
   `qa-data/listing-auto-review`, chạy lại trên tập chưa dùng để chỉnh prompt; chủ dự án
   xác nhận khác biệt FR-L03. DB local chưa có0050–0052: `db:migrate` rồi `db:bootstrap`.
 
+## Khắc phục triệt để lỗi CI GitHub (API CI, React Native CI & User Web CI) sau khi hợp nhất main — 02/11/2026
+
+- Nhánh: `feature/exchange-policy-and-transit-worker`.
+- **Hợp nhất mã nguồn**: Đã cập nhật và merge nhánh `origin/main` (bao gồm PR #83, #84, #85, #86) vào nhánh làm việc; giải quyết xung đột tại `apps/admin-web/src/features/operations/exchange-disputes.tsx` và `SESSION_STATE.md`.
+- **Khắc phục lỗi API CI**:
+  - Lỗi: `scripts/check-api-routes.mjs` phát hiện 4 endpoints điều phối bưu tá/mô phỏng demo trong `CarrierController` chưa được đặc tả trong OpenAPI (`/shipments/carrier/orders/recent`, `/shipments/carrier/orders/{id}/reset-for-demo`, `/shipments/carrier/orders/{id}/auto-simulate`, `/shipments/carrier/seed-demo-order`).
+  - Xử lý: Contract-first bổ sung đầy đủ 4 endpoints vào `packages/api-contract/openapi.yaml`, sinh lại types TypeScript bằng `pnpm contract:generate`.
+  - Kết quả: `pnpm contract:routes` PASS (228 operations khớp chuẩn 36 controllers; 0 missing/undocumented/duplicate routes).
+- **Khắc phục lỗi React Native CI**:
+  - Lỗi: `expo lint` bị chặn bởi 8 lỗi ký tự quote unescaped `"` và màu hex/rgba trực tiếp không qua design tokens trong `exchange-actions-card.tsx`, cùng 1 cảnh báo biến không dùng `myReceivedAt` trong `exchange-shipping-card.tsx`.
+  - Xử lý:
+    - Bổ sung các tokens `videoBackground`, `videoBadgeBg`, `whiteAlpha25` vào `apps/mobile-react-native/src/core/ui/theme.ts`.
+    - Escape ký tự nháy kép `&quot;` trong JSX tại `exchange-actions-card.tsx`.
+    - Gỡ bỏ khai báo `myReceivedAt` không sử dụng trong `exchange-shipping-card.tsx`.
+  - Kết quả: `pnpm --filter @used-books/mobile-react-native lint` PASS (0 errors, 0 warnings); `test` và `export:all` đều PASS.
+- **Khắc phục lỗi User Web CI (`test:wallet:browser`)**:
+  - Lỗi: Trong `tests/wallet-checkout.mjs`, mock `globalThis.fetch` cho VNPay QueryDR mặc định cứng số tiền `vnp_Amount` thành `"5000000"` (50.000đ) khi `checkoutAmounts` chưa chứa mã đơn hàng (đơn hàng thử lại sau lỗi mạng có mệnh giá 20.000đ hoặc 45.000đ). Khi client gọi `vnpay-query`, `vnpay-sandbox.ts` phát hiện lệch số tiền và trả về lỗi 503 (`DomainError: Chưa xác minh được kết quả từ VNPay`), khiến Playwright chờ hủy đơn hết thời gian 20s.
+  - Xử lý: Bổ sung tra cứu số tiền chính xác từ collection `topup_intents` trong `fixture.db` nếu chưa có sẵn trong `checkoutAmounts`, đảm bảo số tiền gửi về VNPay luôn khớp 100% với giá trị nạp thực tế.
+- **Kiểm tra toàn diện**:
+  - `pnpm contract:check`: PASS.
+  - `pnpm contract:routes`: PASS (228 operations).
+  - `pnpm --filter @used-books/api lint`: PASS (0 errors).
+  - `pnpm --filter @used-books/api typecheck`: PASS (0 errors).
+  - `pnpm --filter @used-books/api test`: PASS (42 test files, 322 tests pass).
+  - `pnpm --filter @used-books/mobile-react-native lint`: PASS (0 errors).
+  - `pnpm --filter @used-books/mobile-react-native typecheck`: PASS (0 errors).
+  - `pnpm --filter @used-books/mobile-react-native test`: PASS (26 test files, 194 tests pass).
+  - `pnpm --filter @used-books/session-client test`: PASS (12 test files, 119 tests pass).
+  - `pnpm --filter @used-books/user-web lint`: PASS (0 errors).
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 errors).
+  - `pnpm --filter @used-books/user-web test`: PASS (40 test files, 264 tests pass).
+  - `pnpm --filter @used-books/user-web build`: PASS.
+
+## Hoàn thiện Luồng Live Tracking Vận chuyển Bưu tá, Đồng bộ Dữ liệu Trao đổi 2 chiều & Nhận diện Thương hiệu Lật Lại — 02/11/2026
+
+- Nhánh: `feature/exchange-policy-and-transit-worker`.
+- **Bối cảnh & Nghiệp vụ**:
+  - Diễn tập và nghiệm thu thực tế luồng Trao đổi sách 2 chiều trên 2 tài khoản thật (`Nguyễn Đại` và `Trần Tú / Nguyễn Tu`) kèm trang điều phối bưu tá Lật Lại Express (`/driver`).
+  - Đảm bảo luồng dữ liệu bưu tá cập nhật theo từng bước (Lấy sách -> Nhập kho trung chuyển -> Xuất kho đi giao -> Ký nhận POD) phản ánh tức thì lên giao diện của cả hai bên theo thời gian thực (Contract-first OpenAPI).
+  - Khắc phục triệt để lỗi lọc dữ liệu Zod ở client và lỗi độ tương phản giao diện điều phối bưu tá.
+  - Chuẩn hóa quy chế đồng kiểm 72 giờ (POL-14 / SRS 1.1) và tích hợp logo linh vật cú mèo Lật Lại chính thức vào các thẻ hành động.
+- **Nội dung thực hiện chi tiết**:
+  1. **Contract-first API & Serialization (`packages/api-contract`, `apps/api`)**:
+     - `openapi.yaml`: Khai báo 2 trường `lastEvent` (string) và `lastEventAt` (date-time) trong schema `ExchangeShipmentInfo`.
+     - `schema.ts`: Tự động tái sinh kiểu TypeScript đồng bộ (`pnpm contract:generate`).
+     - `documents.ts`: Mở rộng `ExchangeShipmentSnapshot` trong database schema MongoDB với `lastEvent` và `lastEventAt`.
+     - `exchanges.service.ts`: Cập nhật hàm chiếu `view()` trả về đầy đủ nhật ký bưu tá cho cả `initiatorShipment` và `recipientShipment`.
+  2. **Client Schema & Giao diện Theo dõi Vận chuyển (`apps/user-web`)**:
+     - `services/exchange.ts`: Bổ sung `lastEvent` và `lastEventAt` vào Zod `exchangeSchema`, ngăn chặn Zod strip dữ liệu trả về từ API.
+     - `ShippingTrackingCard`: Render thẻ Live Tracking trực tiếp ngay dưới mã vạch vận đơn với icon xe tải, huy hiệu thời gian và mô tả sự kiện bưu tá. Gỡ bỏ nút bắn webhook thử nghiệm cũ.
+     - `ActionCard`: Thay thế icon generic `Sparkles` bằng linh vật cú mèo Lật Lại chính thức `<BrandIcon size={18} />`. Chuẩn hóa câu chữ chỉ dẫn và mốc đồng kiểm thành **72 giờ** cho các trạng thái `WAITING_YOU_CONFIRM`, `DELIVERING`, `INSPECTING`.
+  3. **Trang Điều phối Bưu tá (`apps/user-web/src/pages/DriverPage.tsx`)**:
+     - Cố định màu chữ trắng nổi bật `.chip.chipActive { color: #ffffff !important; }` trên nền đỏ rượu `#5c0202` để hiển thị rõ nét mã đơn hàng.
+     - Chuẩn hóa thuật ngữ "phát sách" thành "giao sách" theo đúng ngữ cảnh giao nhận.
+     - Ràng buộc hiển thị danh sách đơn hàng thật từ database MongoDB, lọc các đơn đang giao (`InTransit`) hoặc hoàn tất.
+- **Kiểm tra**:
+  - `pnpm contract:check`: PASS (OpenAPI parsed successfully; generated types are current).
+  - `pnpm --filter @used-books/api exec tsc --noEmit`: PASS (0 errors).
+  - `pnpm --filter @used-books/user-web exec tsc --noEmit`: PASS (0 errors).
+  - `pnpm --filter @used-books/admin-web exec tsc --noEmit`: PASS (0 errors).
+  - `pnpm --filter @used-books/user-web build`: PASS (Vite build thành công trong 4.89s).
+
+# Điểm lưu trước — 02/11/2026
+
 ## Bàn giao hỗ trợ Member/Admin web —02/11/2026
 
 - Owner yêu cầu chia commit/push phần chức năng, loại phần tạo luồng/dữ liệu mẫu

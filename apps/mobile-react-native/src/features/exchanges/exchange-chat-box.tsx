@@ -141,8 +141,41 @@ export function ExchangeChatBox({
             }
             renderItem={({ item }: { item: ExchangeMessage }) => {
               const isMe = item.senderId === currentUserId;
-              const isSystem =
-                item.body.startsWith("[") && item.body.includes("]");
+              const isVerdict = item.body.startsWith("[Phán quyết của Quản trị viên]");
+              const isDispute = item.body.startsWith("[Sự cố]:");
+              const isSystem = isVerdict || isDispute || (item.body.startsWith("[") && item.body.includes("]"));
+
+              if (isVerdict) {
+                return (
+                  <View style={styles.verdictCard}>
+                    <View style={styles.verdictHeader}>
+                      <Icon name="shield" size={14} color={stitchTokens.wineDark} />
+                      <AppText style={styles.verdictHeaderTitle}>PHÁN QUYẾT CỦA QUẢN TRỊ VIÊN</AppText>
+                    </View>
+                    <AppText style={styles.verdictBody}>
+                      {item.body.replace("[Phán quyết của Quản trị viên]\n", "").replace("[Phán quyết của Quản trị viên]", "").trim()}
+                    </AppText>
+                    <AppText style={styles.verdictTime}>
+                      {formatMessageTime(item.sentAt)}
+                    </AppText>
+                  </View>
+                );
+              }
+
+              if (isDispute) {
+                return (
+                  <View style={styles.disputeCard}>
+                    <View style={styles.disputeCardHeader}>
+                      <Icon name="info" size={14} color={stitchTokens.flashRed} />
+                      <AppText style={styles.disputeCardTitle}>BIÊN BẢN KHIẾU NẠI SÁCH</AppText>
+                    </View>
+                    <AppText style={styles.disputeCardBody}>{item.body}</AppText>
+                    <AppText style={styles.disputeCardTime}>
+                      {formatMessageTime(item.sentAt)}
+                    </AppText>
+                  </View>
+                );
+              }
 
               if (isSystem) {
                 return (
@@ -419,6 +452,84 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: stitchTokens.roseBrown,
     marginTop: 2,
+  },
+  verdictCard: {
+    alignSelf: "center",
+    backgroundColor: stitchTokens.amberBg,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.goldBorder,
+    marginVertical: 6,
+    maxWidth: "94%",
+    width: "94%",
+    gap: 6,
+    shadowColor: stitchTokens.wineDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  verdictHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: stitchTokens.goldBorder,
+  },
+  verdictHeaderTitle: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: stitchTokens.wineDark,
+    letterSpacing: 0.5,
+  },
+  verdictBody: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.darkWood,
+    lineHeight: 18,
+  },
+  verdictTime: {
+    fontSize: 9,
+    color: stitchTokens.roseBrown,
+    alignSelf: "flex-end",
+  },
+  disputeCard: {
+    alignSelf: "center",
+    backgroundColor: stitchTokens.roseWarmSurface,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.peachBorder,
+    marginVertical: 6,
+    maxWidth: "94%",
+    width: "94%",
+    gap: 6,
+  },
+  disputeCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: stitchTokens.peachBorder,
+  },
+  disputeCardTitle: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: stitchTokens.crimson,
+    letterSpacing: 0.5,
+  },
+  disputeCardBody: {
+    fontSize: 12,
+    color: stitchTokens.darkWood,
+    lineHeight: 17,
+  },
+  disputeCardTime: {
+    fontSize: 9,
+    color: stitchTokens.subtleGray,
+    alignSelf: "flex-end",
   },
   inputBar: {
     flexDirection: "row",

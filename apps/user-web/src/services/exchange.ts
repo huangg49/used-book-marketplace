@@ -84,6 +84,8 @@ export const exchangeSchema = z.object({
       meetupLocation: z.string().nullable().optional(),
       notes: z.string().nullable().optional(),
       shippedAt: date,
+      lastEvent: z.string().nullable().optional(),
+      lastEventAt: date,
     })
     .nullable()
     .optional(),
@@ -96,6 +98,8 @@ export const exchangeSchema = z.object({
       meetupLocation: z.string().nullable().optional(),
       notes: z.string().nullable().optional(),
       shippedAt: date,
+      lastEvent: z.string().nullable().optional(),
+      lastEventAt: date,
     })
     .nullable()
     .optional(),

@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { z } from "zod";
 import * as Crypto from "expo-crypto";
+import * as ImagePicker from "expo-image-picker";
 import {
   AppModal,
   AppText,
@@ -44,6 +45,43 @@ const CARRIER_OPTIONS = [
   { code: "OTHER", name: "Khác" },
 ];
 
+const DISPUTE_CATEGORIES = [
+  "Sách rách nát / hư hỏng nặng",
+  "Giao sai sách / Không đúng cam kết",
+  "Thiếu sách / Bưu kiện rỗng",
+  "Sách nghi vấn bản in lậu / photo",
+  "Sự cố giao nhận khác",
+];
+
+const SAMPLE_DISPUTE_IMAGE_URI =
+  "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=600";
+const SAMPLE_DISPUTE_IMAGE_NAME = "sample-book-damage.jpg (607 KB)";
+const SAMPLE_DISPUTE_VIDEO_NAME = "sample-unboxing.mp4 (176 KB · 3.5s)";
+const SAMPLE_DISPUTE_DETAIL =
+  "Kiểm tra bưu phẩm lúc mở hộp: bìa sau sách bị rách toạc 1 vệt dài và ẩm ướt nhiều trang, không đúng cam kết ban đầu.";
+
+function parseDisputeReason(rawReason: string) {
+  const categoryMatch = rawReason.match(/\[Sự cố\]:\s*([^\n\r]+)/i);
+  const detailMatch = rawReason.match(/\[Chi tiết\]:\s*([^\n\r]+)/i);
+  const videoMatch = rawReason.match(/\[Video[^\]]*\]:\s*([^\n\r]+)/i);
+  const imageMatch = rawReason.match(/\[Ảnh[^\]]*\]:\s*([^\n\r]+)/i);
+
+  const category = categoryMatch ? categoryMatch[1].trim() : "Khiếu nại giao nhận";
+  let detailText = detailMatch ? detailMatch[1].trim() : "";
+  if (!detailText) {
+    detailText = rawReason.replace(/\[[^\]]+\]:[^\n\r]*/g, "").trim() || rawReason;
+  }
+  const videoRef = videoMatch ? videoMatch[1].trim() : null;
+  const imageRef = imageMatch ? imageMatch[1].trim() : null;
+
+  return {
+    category,
+    detailText,
+    videoRef,
+    imageRef,
+  };
+}
+
 export function ExchangeActionsCard({
   exchange,
   isInitiator,
@@ -54,10 +92,18 @@ export function ExchangeActionsCard({
 
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
   const [confirmRejectOpen, setConfirmRejectOpen] = useState(false);
-  const [confirmDisputeOpen, setConfirmDisputeOpen] = useState(false);
   const [confirmCompleteOpen, setConfirmCompleteOpen] = useState(false);
-  const [disputeReason, setDisputeReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Rich Dispute Modal State
+  const [disputeModalOpen, setDisputeModalOpen] = useState(false);
+  const [disputeCategory, setDisputeCategory] = useState(DISPUTE_CATEGORIES[0]);
+  const [disputeDetail, setDisputeDetail] = useState("");
+  const [disputeError, setDisputeError] = useState<string | null>(null);
+  const [evidenceImageUri, setEvidenceImageUri] = useState<string | null>(null);
+  const [evidenceImageName, setEvidenceImageName] = useState<string | null>(null);
+  const [evidenceVideoUri, setEvidenceVideoUri] = useState<string | null>(null);
+  const [evidenceVideoName, setEvidenceVideoName] = useState<string | null>(null);
 
   // Accept with address selector & inline address creation
   const [acceptModalOpen, setAcceptModalOpen] = useState(false);
@@ -339,11 +385,85 @@ export function ExchangeActionsCard({
         }),
       }),
     onSuccess: () => {
-      setDisputeReason("");
+      setDisputeModalOpen(false);
       invalidate();
     },
     onError: (err) => setActionError(presentError(err).message),
   });
+
+  const handleUseSampleEvidence = () => {
+    setDisputeCategory(DISPUTE_CATEGORIES[0]);
+    if (!disputeDetail.trim()) {
+      setDisputeDetail(SAMPLE_DISPUTE_DETAIL);
+    }
+    setEvidenceImageUri(SAMPLE_DISPUTE_IMAGE_URI);
+    setEvidenceImageName(SAMPLE_DISPUTE_IMAGE_NAME);
+    setEvidenceVideoUri("sample-unboxing.mp4");
+    setEvidenceVideoName(SAMPLE_DISPUTE_VIDEO_NAME);
+    setDisputeError(null);
+  };
+
+  const handleUseSampleImageOnly = () => {
+    setEvidenceImageUri(SAMPLE_DISPUTE_IMAGE_URI);
+    setEvidenceImageName(SAMPLE_DISPUTE_IMAGE_NAME);
+    setDisputeError(null);
+  };
+
+  const handleUseSampleVideoOnly = () => {
+    setEvidenceVideoUri("sample-unboxing.mp4");
+    setEvidenceVideoName(SAMPLE_DISPUTE_VIDEO_NAME);
+    setDisputeError(null);
+  };
+
+  const handlePickImage = async () => {
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+      if (!res.canceled && res.assets && res.assets.length > 0) {
+        const asset = res.assets[0];
+        setEvidenceImageUri(asset.uri);
+        setEvidenceImageName(asset.fileName || "anh-chup-loi.jpg");
+        setDisputeError(null);
+      }
+    } catch {}
+  };
+
+  const handlePickVideo = async () => {
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["videos"],
+        allowsEditing: false,
+        quality: 0.8,
+      });
+      if (!res.canceled && res.assets && res.assets.length > 0) {
+        const asset = res.assets[0];
+        setEvidenceVideoUri(asset.uri);
+        setEvidenceVideoName(asset.fileName || "video-unboxing.mp4");
+        setDisputeError(null);
+      }
+    } catch {}
+  };
+
+  const handleConfirmDispute = () => {
+    const detailText = disputeDetail.trim();
+    if (detailText.length < 5) {
+      setDisputeError(
+        "Vui lòng nhập mô tả chi tiết sự cố từ 5 ký tự (hoặc bấm '⚡ Nạp mẫu cả hai').",
+      );
+      return;
+    }
+    setDisputeError(null);
+
+    let finalReason = `[Sự cố]: ${disputeCategory}\n[Chi tiết]: ${detailText}\n[Video unboxing]: ${evidenceVideoName || SAMPLE_DISPUTE_VIDEO_NAME}\n[Ảnh bằng chứng]: ${evidenceImageName || SAMPLE_DISPUTE_IMAGE_NAME}`;
+    if (finalReason.length > 490) {
+      finalReason = finalReason.slice(0, 490);
+    }
+
+    disputeMutation.mutate(finalReason);
+  };
 
   const isBusy =
     cancelMutation.isPending ||
@@ -837,7 +957,10 @@ export function ExchangeActionsCard({
                 secondary
                 wine
                 busy={isBusy}
-                onPress={() => setConfirmDisputeOpen(true)}
+                onPress={() => {
+                  setDisputeError(null);
+                  setDisputeModalOpen(true);
+                }}
               />
             </View>
           )}
@@ -882,7 +1005,10 @@ export function ExchangeActionsCard({
                 secondary
                 wine
                 busy={isBusy}
-                onPress={() => setConfirmDisputeOpen(true)}
+                onPress={() => {
+                  setDisputeError(null);
+                  setDisputeModalOpen(true);
+                }}
               />
             </View>
           )}
@@ -892,33 +1018,69 @@ export function ExchangeActionsCard({
               secondary
               wine
               busy={isBusy}
-              onPress={() => setConfirmDisputeOpen(true)}
+              onPress={() => {
+                setDisputeError(null);
+                setDisputeModalOpen(true);
+              }}
             />
           )}
         </View>
       )}
 
       {/* State: RESOLUTION_PENDING */}
-      {exchange.status === "ResolutionPending" && (
-        <View style={styles.disputeBox}>
-          <Icon name="info" size={20} color={stitchTokens.crimson} />
-          <View style={{ flex: 1, gap: 4 }}>
-            <AppText style={styles.disputeTitle}>
-              Đang giải quyết khiếu nại
-            </AppText>
-            <AppText style={styles.disputeReason}>
-              Lý do:{" "}
-              {exchange.disputeReason ||
-                "Phát sinh khiếu nại trong giao nhận hoặc đồng kiểm."}
-            </AppText>
-            <AppText style={styles.disputeHint}>
-              Quy trình tự động tất toán 72 giờ đã được tạm dừng và tiền cọc
-              được đóng băng bảo vệ. Ban quản trị Lật Lại đang tiếp nhận hỗ trợ
-              hai bên.
-            </AppText>
+      {exchange.status === "ResolutionPending" && (() => {
+        const parsed = parseDisputeReason(exchange.disputeReason || "");
+        return (
+          <View style={styles.disputeRichBox}>
+            <View style={styles.disputeHeaderRow}>
+              <View style={styles.disputeHeaderTitleRow}>
+                <Icon name="shield" size={18} color={stitchTokens.crimson} />
+                <AppText style={styles.disputeTitle}>
+                  Đang giải quyết khiếu nại
+                </AppText>
+              </View>
+              <View style={styles.pendingBadge}>
+                <AppText style={styles.pendingBadgeText}>Chờ phân xử</AppText>
+              </View>
+            </View>
+
+            <View style={styles.disputeCategoryTag}>
+              <AppText style={styles.disputeCategoryText}>
+                ⚠️ {parsed.category}
+              </AppText>
+            </View>
+
+            {parsed.detailText ? (
+              <View style={styles.disputeDetailBlock}>
+                <AppText style={styles.disputeDetailLabel}>Mô tả chi tiết:</AppText>
+                <AppText style={styles.disputeDetailText}>{parsed.detailText}</AppText>
+              </View>
+            ) : null}
+
+            <View style={styles.disputeEvidencePillsRow}>
+              <View style={styles.evidencePill}>
+                <Icon name="camera" size={13} color={parsed.imageRef ? stitchTokens.likeNewGreen : stitchTokens.subtleGray} />
+                <AppText style={styles.evidencePillText} numberOfLines={1}>
+                  {parsed.imageRef ? `Ảnh: ${parsed.imageRef}` : "Chưa có ảnh"}
+                </AppText>
+              </View>
+              <View style={styles.evidencePill}>
+                <Icon name="video" size={13} color={parsed.videoRef ? stitchTokens.likeNewGreen : stitchTokens.subtleGray} />
+                <AppText style={styles.evidencePillText} numberOfLines={1}>
+                  {parsed.videoRef ? `Video: ${parsed.videoRef}` : "Chưa có clip"}
+                </AppText>
+              </View>
+            </View>
+
+            <View style={styles.ledgerNoticeCallout}>
+              <Icon name="info" size={14} color={stitchTokens.wineDark} />
+              <AppText style={styles.disputeHint}>
+                Quy trình tự động tất toán 72 giờ đã được tạm dừng. Tiền cọc và tiền bù đang được bảo vệ an toàn trên Ledger trong khi Quản trị viên thẩm định đối chiếu bằng chứng.
+              </AppText>
+            </View>
           </View>
-        </View>
-      )}
+        );
+      })()}
 
       {/* State: COMPLETED (WITH REVIEWS) */}
       {exchange.status === "Completed" && (
@@ -930,9 +1092,12 @@ export function ExchangeActionsCard({
                 <AppText style={[styles.disputeTitle, { color: stitchTokens.verifiedGreen }]}>
                   Trao đổi hoàn tất theo phán quyết của Quản trị viên
                 </AppText>
+                <AppText style={{ fontSize: 12, color: stitchTokens.darkWood, marginTop: 2 }}>
+                  Toàn bộ tiền cọc bảo chứng và tiền bù đã được tất toán theo thỏa thuận.
+                </AppText>
                 {exchange.resolutionReason && (
-                  <AppText style={{ fontSize: 13, color: stitchTokens.darkWood, marginTop: 2 }}>
-                    Căn cứ: {exchange.resolutionReason}
+                  <AppText style={{ fontSize: 13, fontWeight: "600", color: stitchTokens.wineDark, marginTop: 4 }}>
+                    Căn cứ phán quyết: &quot;{exchange.resolutionReason}&quot;
                   </AppText>
                 )}
               </View>
@@ -944,23 +1109,44 @@ export function ExchangeActionsCard({
 
       {/* State: CANCELLED */}
       {exchange.status === "Cancelled" && (
-        <View style={styles.cancelledBox}>
-          <Icon name="close" size={16} color={stitchTokens.flashRed} />
-          <View style={{ flex: 1, gap: 2 }}>
-            <AppText style={styles.cancelledText}>
-              Đơn trao đổi đã đóng ({formatCancelReason(exchange.cancelReason)}).
-            </AppText>
-            {exchange.cancelReason === "MutualAgreement" && (
-              <AppText style={{ fontSize: 13, color: stitchTokens.darkWood, marginTop: 2 }}>
-                Hai bên đã đồng thuận hủy giao dịch trước khi gửi sách. Toàn bộ tiền cọc bảo chứng và tiền bù đã được hoàn lại 100% về ví mô phỏng. Sách đã được mở lại trên kệ.
-              </AppText>
-            )}
-            {exchange.resolutionReason && (
-              <AppText style={{ fontSize: 13, color: stitchTokens.darkWood, marginTop: 2 }}>
-                Lý do phán quyết: {exchange.resolutionReason}
-              </AppText>
-            )}
-          </View>
+        <View style={{ gap: space.sm }}>
+          {exchange.cancelReason === "DisputeResolvedRefund" ? (
+            <View style={[styles.disputeBox, { backgroundColor: stitchTokens.amberBg, borderColor: stitchTokens.goldBorder }]}>
+              <Icon name="sync" size={18} color={stitchTokens.wineDark} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <AppText style={[styles.disputeTitle, { color: stitchTokens.wineDark }]}>
+                  Phán quyết Quản trị viên: Hủy đơn &amp; Hoàn tiền (RefundBoth)
+                </AppText>
+                <AppText style={{ fontSize: 12, color: stitchTokens.darkWood, marginTop: 2 }}>
+                  Toàn bộ tiền cọc bảo chứng và tiền bù đã được hoàn lại 100% về ví mô phỏng của cả hai bên. Sách đã được mở lại trên kệ.
+                </AppText>
+                {exchange.resolutionReason && (
+                  <AppText style={{ fontSize: 13, fontWeight: "600", color: stitchTokens.wineDark, marginTop: 4 }}>
+                    Căn cứ phán quyết: &quot;{exchange.resolutionReason}&quot;
+                  </AppText>
+                )}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.cancelledBox}>
+              <Icon name="close" size={16} color={stitchTokens.flashRed} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <AppText style={styles.cancelledText}>
+                  Đơn trao đổi đã đóng ({formatCancelReason(exchange.cancelReason)}).
+                </AppText>
+                {exchange.cancelReason === "MutualAgreement" && (
+                  <AppText style={{ fontSize: 13, color: stitchTokens.darkWood, marginTop: 2 }}>
+                    Hai bên đã đồng thuận hủy giao dịch trước khi gửi sách. Toàn bộ tiền cọc bảo chứng và tiền bù đã được hoàn lại 100% về ví mô phỏng. Sách đã được mở lại trên kệ.
+                  </AppText>
+                )}
+                {exchange.resolutionReason && (
+                  <AppText style={{ fontSize: 13, color: stitchTokens.darkWood, marginTop: 2 }}>
+                    Lý do phán quyết: {exchange.resolutionReason}
+                  </AppText>
+                )}
+              </View>
+            </View>
+          )}
         </View>
       )}
 
@@ -1029,20 +1215,267 @@ export function ExchangeActionsCard({
         }}
       />
 
-      <ConfirmDialog
-        visible={confirmDisputeOpen}
-        title="Báo cáo khiếu nại giao dịch?"
-        message="Quy trình tất toán 72h sẽ tạm dừng ngay lập tức và tiền cọc được giữ an toàn. Bạn có chắc muốn gửi khiếu nại cho đơn hàng này?"
-        confirmLabel="Gửi khiếu nại ngay"
-        destructive
-        onCancel={() => setConfirmDisputeOpen(false)}
-        onConfirm={() => {
-          setConfirmDisputeOpen(false);
-          disputeMutation.mutate(
-            disputeReason.trim() || "Sách không đúng như mô tả khi nhận",
-          );
-        }}
-      />
+      {/* Modal: Báo sự cố / Khiếu nại đơn trao đổi */}
+      <AppModal
+        visible={disputeModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDisputeModalOpen(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, styles.disputeModalCard]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
+                <Icon name="shield" size={18} color={stitchTokens.crimson} />
+                <AppText style={styles.modalTitle} numberOfLines={1}>
+                  Báo sự cố / Khiếu nại
+                </AppText>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Đóng modal"
+                onPress={() => setDisputeModalOpen(false)}
+              >
+                <Icon name="close" size={20} color={stitchTokens.darkWood} />
+              </Pressable>
+            </View>
+
+            <ScrollView
+              style={styles.disputeScroll}
+              contentContainerStyle={{ gap: 12, paddingBottom: 8 }}
+              showsVerticalScrollIndicator
+              nestedScrollEnabled
+            >
+              {/* Notice Banner */}
+              <View style={styles.disputeNoticeBanner}>
+                <Icon name="info" size={16} color={stitchTokens.crimson} />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <AppText style={styles.disputeNoticeTitle}>
+                    Bảo vệ quyền lợi &amp; Ký quỹ an toàn:
+                  </AppText>
+                  <AppText style={styles.disputeNoticeDesc}>
+                    Giao dịch sẽ tạm dừng tất toán ngay lập tức. Toàn bộ tiền cọc bảo chứng và tiền bù được giữ an toàn trên Ledger để Hội đồng Quản trị thẩm định qua video unboxing và ảnh đối chiếu.
+                  </AppText>
+                </View>
+              </View>
+
+              {/* Category Selector */}
+              <View style={styles.formGroup}>
+                <AppText style={styles.formLabel}>
+                  Phân loại sự cố <AppText style={{ color: stitchTokens.crimson }}>*</AppText>
+                </AppText>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: 6, paddingVertical: 2 }}
+                >
+                  {DISPUTE_CATEGORIES.map((cat) => {
+                    const isSelected = cat === disputeCategory;
+                    return (
+                      <Pressable
+                        key={cat}
+                        onPress={() => setDisputeCategory(cat)}
+                        style={[
+                          styles.categoryPill,
+                          isSelected && styles.categoryPillActive,
+                        ]}
+                      >
+                        <AppText
+                          style={[
+                            styles.categoryPillText,
+                            isSelected && styles.categoryPillTextActive,
+                          ]}
+                        >
+                          {cat}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              {/* Detail Input */}
+              <View style={styles.formGroup}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <AppText style={styles.formLabel}>
+                    Mô tả chi tiết vấn đề <AppText style={{ color: stitchTokens.crimson }}>*</AppText>
+                  </AppText>
+                  <AppText style={styles.charCountText}>
+                    {disputeDetail.length}/220 ký tự
+                  </AppText>
+                </View>
+                <AppTextInput
+                  style={styles.disputeMultilineInput}
+                  multiline
+                  numberOfLines={3}
+                  value={disputeDetail}
+                  maxLength={220}
+                  placeholder="Mô tả cụ thể vị trí hư hại, vết rách hoặc sự sai lệch của sách lúc mở gói..."
+                  placeholderTextColor={stitchTokens.subtleGray}
+                  onChangeText={(val) => {
+                    setDisputeDetail(val);
+                    if (disputeError) setDisputeError(null);
+                  }}
+                />
+              </View>
+
+              {/* Evidence Section Header */}
+              <View style={styles.evidenceSectionHeader}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Icon name="bookmark" size={14} color={stitchTokens.wineDark} />
+                  <AppText style={styles.evidenceSectionTitle}>
+                    Bằng chứng thẩm định (Ảnh &amp; Video)
+                  </AppText>
+                </View>
+                <Pressable
+                  onPress={handleUseSampleEvidence}
+                  style={({ pressed }) => [styles.sampleEvidenceBtn, pressed && { opacity: 0.7 }]}
+                >
+                  <AppText style={styles.sampleEvidenceBtnText}>⚡ Nạp mẫu cả hai (Demo)</AppText>
+                </Pressable>
+              </View>
+
+              {/* Evidence Cards: Image & Video */}
+              <View style={styles.evidenceGrid}>
+                {/* 1. Photo card */}
+                <View style={[styles.evidenceCardBox, Boolean(evidenceImageUri) && styles.evidenceCardBoxActive]}>
+                  <View style={styles.evidenceCardTop}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <Icon name="camera" size={14} color={stitchTokens.wineDark} />
+                      <AppText style={styles.evidenceCardTitle}>Ảnh chụp sách lỗi</AppText>
+                    </View>
+                    <View style={[styles.evidenceBadge, Boolean(evidenceImageUri) && styles.evidenceBadgeActive]}>
+                      <AppText style={[styles.evidenceBadgeText, Boolean(evidenceImageUri) && styles.evidenceBadgeTextActive]}>
+                        {evidenceImageUri ? "✓ Đã chọn" : "Chưa có"}
+                      </AppText>
+                    </View>
+                  </View>
+
+                  <View style={styles.evidenceBtnRow}>
+                    <Pressable
+                      style={styles.evidencePickerBtn}
+                      onPress={handlePickImage}
+                    >
+                      <AppText style={styles.evidencePickerBtnText}>
+                        {evidenceImageUri ? "Đổi ảnh..." : "Chọn ảnh từ máy..."}
+                      </AppText>
+                    </Pressable>
+                    <Pressable
+                      style={styles.miniSampleBtn}
+                      onPress={handleUseSampleImageOnly}
+                    >
+                      <AppText style={styles.miniSampleBtnText}>⚡ Ảnh mẫu</AppText>
+                    </Pressable>
+                  </View>
+
+                  <View style={styles.evidencePreviewBox}>
+                    {evidenceImageUri ? (
+                      <View style={styles.imagePreviewWrap}>
+                        <Image
+                          source={{ uri: evidenceImageUri }}
+                          style={styles.previewImage}
+                          resizeMode="cover"
+                        />
+                        <View style={styles.previewOverlayBadge}>
+                          <AppText style={styles.previewOverlayText} numberOfLines={1}>
+                            {evidenceImageName || "sample-book-damage.jpg"}
+                          </AppText>
+                        </View>
+                      </View>
+                    ) : (
+                      <Pressable style={styles.emptyPreviewBox} onPress={handlePickImage}>
+                        <Icon name="camera" size={20} color={stitchTokens.roseBrown} />
+                        <AppText style={styles.emptyPreviewText}>Chọn ảnh chụp vết rách / hư hại</AppText>
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+
+                {/* 2. Video unboxing card */}
+                <View style={[styles.evidenceCardBox, Boolean(evidenceVideoUri) && styles.evidenceCardBoxActive]}>
+                  <View style={styles.evidenceCardTop}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                      <Icon name="video" size={14} color={stitchTokens.wineDark} />
+                      <AppText style={styles.evidenceCardTitle}>Video unboxing (3-4s)</AppText>
+                    </View>
+                    <View style={[styles.evidenceBadge, Boolean(evidenceVideoUri) && styles.evidenceBadgeActive]}>
+                      <AppText style={[styles.evidenceBadgeText, Boolean(evidenceVideoUri) && styles.evidenceBadgeTextActive]}>
+                        {evidenceVideoUri ? "✓ Đã nạp clip 3.5s" : "Chưa có"}
+                      </AppText>
+                    </View>
+                  </View>
+
+                  <View style={styles.evidenceBtnRow}>
+                    <Pressable
+                      style={styles.evidencePickerBtn}
+                      onPress={handlePickVideo}
+                    >
+                      <AppText style={styles.evidencePickerBtnText}>
+                        {evidenceVideoUri ? "Đổi clip..." : "Chọn video từ máy..."}
+                      </AppText>
+                    </Pressable>
+                    <Pressable
+                      style={styles.miniSampleBtn}
+                      onPress={handleUseSampleVideoOnly}
+                    >
+                      <AppText style={styles.miniSampleBtnText}>⚡ Video mẫu 3s</AppText>
+                    </Pressable>
+                  </View>
+
+                  <View style={styles.evidencePreviewBox}>
+                    {evidenceVideoUri ? (
+                      <View style={styles.videoPreviewWrap}>
+                        <View style={styles.videoSimulatedPlayer}>
+                          <View style={styles.playButtonCircle}>
+                            <Icon name="chevronRight" size={18} color={stitchTokens.white} />
+                          </View>
+                          <AppText style={styles.videoSimulatedTitle} numberOfLines={1}>
+                            {evidenceVideoName || "sample-unboxing.mp4 (176 KB · 3.5s)"}
+                          </AppText>
+                          <AppText style={styles.videoSimulatedSubtitle}>
+                            Clip mở gói đồng kiểm GHN · Sẵn sàng gửi thẩm định
+                          </AppText>
+                        </View>
+                      </View>
+                    ) : (
+                      <Pressable style={styles.emptyPreviewBox} onPress={handlePickVideo}>
+                        <Icon name="video" size={20} color={stitchTokens.roseBrown} />
+                        <AppText style={styles.emptyPreviewText}>Clip mở gói đồng kiểm (3-4s)</AppText>
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+              </View>
+
+              {disputeError ? (
+                <View style={styles.errorAlertBox}>
+                  <Icon name="info" size={14} color={stitchTokens.flashRed} />
+                  <AppText style={styles.errorAlertText}>{disputeError}</AppText>
+                </View>
+              ) : null}
+            </ScrollView>
+
+            <View style={styles.modalActionRow}>
+              <View style={{ flex: 1 }}>
+                <Button
+                  title="Hủy"
+                  secondary
+                  disabled={disputeMutation.isPending}
+                  onPress={() => setDisputeModalOpen(false)}
+                />
+              </View>
+              <View style={{ flex: 1.4 }}>
+                <Button
+                  title="Gửi biên bản khiếu nại"
+                  destructive
+                  busy={disputeMutation.isPending}
+                  onPress={handleConfirmDispute}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </AppModal>
 
       {/* Modal 1: Đồng ý đổi sách kèm chọn địa chỉ nhận */}
       <AppModal
@@ -2427,5 +2860,360 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: stitchTokens.likeNewGreen,
     lineHeight: 16,
+  },
+  /* Dispute Modal & Rich Box Styles */
+  disputeModalCard: {
+    maxHeight: "90%",
+    paddingHorizontal: space.md,
+    paddingTop: space.md,
+    paddingBottom: space.md,
+  },
+  disputeScroll: {
+    maxHeight: 460,
+  },
+  disputeNoticeBanner: {
+    flexDirection: "row",
+    gap: 8,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: stitchTokens.flashRedBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+  },
+  disputeNoticeTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: stitchTokens.crimson,
+  },
+  disputeNoticeDesc: {
+    fontSize: 11,
+    color: stitchTokens.darkWood,
+    lineHeight: 15,
+  },
+  charCountText: {
+    fontSize: 11,
+    color: stitchTokens.subtleGray,
+  },
+  categoryPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: stitchTokens.creamBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+  },
+  categoryPillActive: {
+    backgroundColor: stitchTokens.wineDark,
+    borderColor: stitchTokens.wineDark,
+  },
+  categoryPillText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: stitchTokens.darkWood,
+  },
+  categoryPillTextActive: {
+    color: stitchTokens.white,
+    fontWeight: "700",
+  },
+  disputeMultilineInput: {
+    minHeight: 64,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 12,
+    color: stitchTokens.wineDark,
+    backgroundColor: stitchTokens.whiteSurface,
+    textAlignVertical: "top",
+  },
+  evidenceSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: stitchTokens.peachBorder,
+  },
+  evidenceSectionTitle: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: stitchTokens.wineDark,
+  },
+  sampleEvidenceBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: stitchTokens.amberBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldBorder,
+  },
+  sampleEvidenceBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  evidenceGrid: {
+    gap: 10,
+  },
+  evidenceCardBox: {
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    gap: 8,
+  },
+  evidenceCardBoxActive: {
+    borderColor: stitchTokens.wineMid,
+    backgroundColor: stitchTokens.roseWarmSurface,
+  },
+  evidenceCardTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  evidenceCardTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  evidenceBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: stitchTokens.creamBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+  },
+  evidenceBadgeActive: {
+    backgroundColor: stitchTokens.likeNewGreenBg,
+    borderColor: stitchTokens.verifiedGreen,
+  },
+  evidenceBadgeText: {
+    fontSize: 10,
+    color: stitchTokens.subtleGray,
+    fontWeight: "600",
+  },
+  evidenceBadgeTextActive: {
+    color: stitchTokens.likeNewGreen,
+    fontWeight: "700",
+  },
+  evidenceBtnRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  evidencePickerBtn: {
+    flex: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: stitchTokens.whiteSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    alignItems: "center",
+  },
+  evidencePickerBtnText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: stitchTokens.wineDark,
+  },
+  miniSampleBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: stitchTokens.amberBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldBorder,
+    alignItems: "center",
+  },
+  miniSampleBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  evidencePreviewBox: {
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  emptyPreviewBox: {
+    height: 60,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: stitchTokens.borderWarm,
+    borderStyle: "dashed",
+    backgroundColor: stitchTokens.whiteSurface,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  emptyPreviewText: {
+    fontSize: 11,
+    color: stitchTokens.subtleGray,
+  },
+  imagePreviewWrap: {
+    position: "relative",
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  previewImage: {
+    width: "100%",
+    height: 120,
+    borderRadius: 8,
+  },
+  previewOverlayBadge: {
+    position: "absolute",
+    bottom: 4,
+    left: 4,
+    right: 4,
+    backgroundColor: stitchTokens.videoBadgeBg,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  previewOverlayText: {
+    fontSize: 10,
+    color: stitchTokens.white,
+    fontWeight: "500",
+  },
+  videoPreviewWrap: {
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  videoSimulatedPlayer: {
+    height: 90,
+    backgroundColor: stitchTokens.videoBackground,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 8,
+    gap: 4,
+  },
+  playButtonCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: stitchTokens.whiteAlpha25,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  videoSimulatedTitle: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.white,
+    textAlign: "center",
+  },
+  videoSimulatedSubtitle: {
+    fontSize: 10,
+    color: stitchTokens.whiteAlpha70,
+    textAlign: "center",
+  },
+  errorAlertBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: stitchTokens.flashRedBg,
+  },
+  errorAlertText: {
+    fontSize: 11,
+    color: stitchTokens.flashRed,
+    flex: 1,
+  },
+  /* Dispute Rich Box for ResolutionPending */
+  disputeRichBox: {
+    padding: space.md,
+    borderRadius: 14,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderWidth: 1.5,
+    borderColor: stitchTokens.peachBorder,
+    gap: 10,
+  },
+  disputeHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  disputeHeaderTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+  },
+  pendingBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    backgroundColor: stitchTokens.amberBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldBorder,
+  },
+  pendingBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: stitchTokens.wineDark,
+  },
+  disputeCategoryTag: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: stitchTokens.flashRedBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+  },
+  disputeCategoryText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: stitchTokens.crimson,
+  },
+  disputeDetailBlock: {
+    backgroundColor: stitchTokens.whiteSurface,
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    gap: 2,
+  },
+  disputeDetailLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+  },
+  disputeDetailText: {
+    fontSize: 12,
+    color: stitchTokens.darkWood,
+    lineHeight: 16,
+  },
+  disputeEvidencePillsRow: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  evidencePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: stitchTokens.parchment,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    maxWidth: "48%",
+  },
+  evidencePillText: {
+    fontSize: 11,
+    color: stitchTokens.darkWood,
+  },
+  ledgerNoticeCallout: {
+    flexDirection: "row",
+    gap: 6,
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: stitchTokens.amberBg,
+    borderWidth: 1,
+    borderColor: stitchTokens.goldBorder,
   },
 });
