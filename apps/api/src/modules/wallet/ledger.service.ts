@@ -1121,10 +1121,12 @@ export async function checkTopupRecord(tx: Tx, topupId: string) {
   };
   const creation = await tx.c.mutation_receipts.findOne({
     topupId,
-    operation: provider ? 'createVNPayTopup' : 'createTopupIntent',
-    actorId: t.ownerId,
-    resultVersion: 1,
+    $or: [
+      { operation: provider ? 'createVNPayTopup' : 'createTopupIntent', actorId: t.ownerId, resultVersion: 1 },
+      ...(!provider ? [{ operation: 'createSimulatedTopup', actorId: { $nin: [null, t.ownerId] }, systemActor: null, resultVersion: 2 }] : []),
+    ],
   });
+  const atomicCreation = creation?.operation === 'createSimulatedTopup';
   const created = creation ? await chain(creation._id) : null;
   let bad =
     (t.state === 'Succeeded' && !journal) ||
@@ -1141,7 +1143,11 @@ export async function checkTopupRecord(tx: Tx, topupId: string) {
         ? ['applyVNPayIpn', 'applyVNPayQuery'].includes(r.operation)
         : e.provider === 'VNPayExpiry-v1'
           ? r.operation === 'expireVNPayTopup'
-          : r.operation === 'emitSimulatedTopupEvent') ||
+          : r.operation === 'emitSimulatedTopupEvent' ||
+            (atomicCreation && r._id === creation._id && r.operation === 'createSimulatedTopup' &&
+              e.outcome === 'Succeeded' && e.disposition === 'Applied' &&
+              e.occurredAt.getTime() === t.createdAt.getTime() &&
+              e.receivedAt.getTime() === t.createdAt.getTime())) ||
       (['VNPaySandbox-v1', 'VNPayExpiry-v1'].includes(e.provider) &&
         (!provider || r.systemActor !== 'VNPaySandbox')) ||
       (e.provider === 'LatLaiSimulator-v1' && !!provider) ||

@@ -734,7 +734,7 @@ export class MongoCommandService {
   runWallet<C>(
     context: CommandContext,
     operation:
-      'createTopupIntent' | 'createVNPayTopup' | 'emitSimulatedTopupEvent',
+      'createTopupIntent' | 'createVNPayTopup' | 'emitSimulatedTopupEvent' | 'createSimulatedTopup',
     target: string | null,
     body: unknown,
     options: Options<C, WalletChange>,

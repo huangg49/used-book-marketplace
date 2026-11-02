@@ -1918,6 +1918,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/simulator/topup-recipients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE verified TEST_OPERATOR only. Lists up to 40 ACTIVE verified Members, excluding the operator. Search by literal display name or exact account UUID; no email or contact details are returned. Refine the search when hasMore is true. */
+        get: operations["listSimulatedTopupRecipients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/simulator/topups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE verified TEST_OPERATOR, independent of the ACTIVE verified MEMBER recipient. Requires PAYMENT_SIMULATOR_SECRET. Atomically creates a new simulator intent, authenticated success event, finite-source ledger posting, receipt, audit and outbox. Never accepts an existing intent or touches VNPay. Same key/body replays once after current authorization; different body returns 409. Recipient eligibility is checked under participant locks before a new posting. No balance adjustment or source refill. */
+        post: operations["createSimulatedTopup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/simulator/topup-events": {
         parameters: {
             query?: never;
@@ -3422,6 +3456,23 @@ export interface paths {
          * @description ACTIVE independent STAFF/ADMIN only. New RefundBoth and CompleteExchange decisions are currently rejected with 409 InvalidState: the legacy command cannot establish custody, allocations, authority limits or an effective decision after appeal. No money, listing, exchange, audit or notification mutation is committed on rejection. Historical receipts may still be replayed with the original key and body after current session, role and participant-independence checks; replay does not repeat their financial effects.
          */
         post: operations["resolveExchangeDispute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/transactions/Exchange/{id}/reviews/demo-advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Development-only, explicitly allowlisted zero-money demo history. Both participants must have submitted. Atomically shifts the sample timeline to expire both edit windows, preserves content and records DemoTimeAdvance revisions. No financial side effects. Never enabled in production. */
+        post: operations["advanceDemoReviewTime"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5155,6 +5206,19 @@ export interface components {
         CreateVNPayTopup: {
             amount: number;
         };
+        SimulatedTopupRecipientPage: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                displayName: string;
+            }[];
+            hasMore: boolean;
+        };
+        CreateSimulatedTopup: {
+            /** Format: uuid */
+            recipientId: string;
+            amount: number;
+        };
         CreateTopupIntent: {
             amount: number;
         };
@@ -6682,7 +6746,17 @@ export interface components {
                 createdAt: string;
             } | null;
         };
+        AdvanceDemoReviewTime: {
+            expectedVersion: number;
+            pairToken: string;
+        };
+        DemoReviewTimeAdvance: {
+            available: boolean;
+            applied: boolean;
+            pairToken: string | null;
+        };
         TransactionReviewsResponse: {
+            demoTimeAdvance?: components["schemas"]["DemoReviewTimeAdvance"];
             /** Format: uuid */
             partnerId: string;
             canReview: boolean;
@@ -10453,6 +10527,68 @@ export interface operations {
             503: components["responses"]["ListingError"];
         };
     };
+    listSimulatedTopupRecipients: {
+        parameters: {
+            query?: {
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Eligible simulator recipients. Never cached. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimulatedTopupRecipientPage"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    createSimulatedTopup: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSimulatedTopup"];
+            };
+        };
+        responses: {
+            /** @description Atomic simulator topup receipt. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
     emitSimulatedTopupEvent: {
         parameters: {
             query?: never;
@@ -13655,6 +13791,40 @@ export interface operations {
             409: components["responses"]["ListingError"];
             422: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
+        };
+    };
+    advanceDemoReviewTime: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdvanceDemoReviewTime"];
+            };
+        };
+        responses: {
+            /** @description Acting participant's published review; retry identical intent after uncertain response. */
+            200: {
+                headers: {
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeReviewItem"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
         };
     };
     getTransactionReviews: {

@@ -101,6 +101,26 @@ export class WalletController {
       this.input.query('listMyWalletHistory', query),
     );
   }
+  @Get('operations/simulator/topup-recipients')
+  @Roles('TEST_OPERATOR')
+  recipients(@Query() query: unknown, @Req() req: AuthenticatedRequest) {
+    return this.wallet.simulatedRecipients(req.auth, this.input.query('listSimulatedTopupRecipients', query));
+  }
+  @Post('operations/simulator/topups')
+  @HttpCode(200)
+  @Roles('TEST_OPERATOR')
+  async simulatedTopup(
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.wallet.createSimulated(
+      commandContext(this.input, req, res),
+      this.input.body('CreateSimulatedTopup', body),
+    );
+    res.setHeader('Idempotency-Replayed', String(result.replayed));
+    return result.receipt;
+  }
   @Post('operations/simulator/topup-events')
   @HttpCode(200)
   @Roles('TEST_OPERATOR')

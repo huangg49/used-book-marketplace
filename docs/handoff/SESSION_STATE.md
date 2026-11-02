@@ -1,4 +1,89 @@
-# Điểm lưu hiện tại — 02/11/2026
+# Điểm lưu hiện tại — 03/11/2026
+
+## Dữ liệu nền400cuốn trên app local chính
+
+- Owner yêu cầu400cuốn:100Manga,100Light Novel,200cuốn thuộc14nhóm khác.
+  Đã nhập bổ sung metadata Open Library/ảnh bìa vào API và storage local hiện có,
+  với3người đăng demo riêng; không dùng User1/User2/User3 cho bộ nền.
+- PublishedAt mẫu cũ hơn bài thật; API hiện401bài public, bài thật đứng đầu.
+  Giá/tình trạng/approval là fixture có audit nhập demo, không human review,
+  ảnh hiện vật, nguồn giá AI hoặc dữ liệu để demo giao nhận/thanh toán.
+- PASS400catalog+400listing invariants/validator/index trên QA riêng,400ảnh
+  round-trip storage thật, import atomic/backup/fingerprints và ledger nguyên vẹn;
+  API phân trang/search/filter/signed media. QA đã dừng, app chính giữ chạy.
+- Chỉ bàn giao docs trên `codex/demo-background-catalog`, base059a777e;
+  không sửa app/contract/migration, không push/CI/merge hoặc đổi readiness.
+  [Cách dùng, nguồn và giới hạn](../features/BACKGROUND_CATALOG_DEMO_2026_11_03.md).
+
+## Thu gọn thẻ bạn đọc theo phản hồi owner
+
+- Follow-up `codex/reader-name-status-alignment`, base99ed9620: tên và trạng thái
+  đặt cùng hàng, căn giữa; bỏ margin auto của pill trong phạm vi thẻ. PASS browser
+  fixture trên checkout app ở1440/1000/390/320/chữ130%, không đổi dữ liệu/API.
+
+- `codex/compact-reader-card`, base792d3942: ReaderCard riêng, chỉ avatar/tên/
+  trạng thái và2điểm/link. Bỏ ribbon/Club/email/quick hub trùng menu; chuyển
+  gỡ/retry ảnh xuống phần chỉnh sửa, giữ camera/handler/dirty guard. Cùng số mẫu
+  gộp một dòng; khác số mẫu giữ riêng. Completed/0vi phạm xem ở hồ sơ đầy đủ;
+  vi phạm xác minh>0 vẫn hiện. Không đổi dữ liệu, API/contract hoặc policy.
+- PASS browser HTTP fixture ở cả2checkout1440/1000/390/320/chữ130%, thông tin
+  rút gọn/ngoại lệ số mẫu/vi phạm, loading/error/retry, cache/identity/dirty guard;
+  typecheck/build/lint scoped. App chính5174 giữ chạy, không push/CI/merge/gate.
+  [Chi tiết và checkpoint trước](../ui/PROFILE_REPUTATION_2026_11_03.md).
+
+
+## Uy tín trong thẻ bạn đọc
+
+- `codex/profile-reputation-card`, base4146e3a3: profile có component đọc điểm đối
+  tác/chất lượng sách, số mẫu, completed/verified violations và link hồ sơ công
+  khai. Summary key riêng, current owner/session, null/error/stale/retry; không
+  suy trạng thái ACTIVE thành uy tín hoặc thêm nhãn/rank/thưởng/phạt.
+- Áp đúng banner đỏ trong checkout app bằng import/mount scoped, giữ editor/hero/
+  avatar/motion của teammate. Worktree editor dùng paper tone cùng component.
+- PASS browser HTTP fixture cả hai checkout1440/1000/390/320/chữ130%, giữ draft
+  khi hủy rời trang, cache/invalidation/cross-account late read và recovery; typecheck,
+  build/lint scoped. Main5174/API3000 thấy5.0/4.5 từ2mẫu và link/Back đúng owner.
+- Không đổi API/contract/profile/review/money data; không DB harness/provider/
+  push/CI/merge/native/human acceptance hay gate. [Bằng chứng](../ui/PROFILE_REPUTATION_2026_11_03.md).
+
+
+## Hồ sơ uy tín công khai — tách layout và sửa xung đột cache
+
+- `codex/public-reputation-profile`, base09198a00: `/members/:id` có CSS riêng,
+  khung căn giữa, danh tính/2điểm/số mẫu rõ, nhận xét chính và giải thích phụ.
+  Một document scroll; giữ API/data và UI đánh giá của teammate. Public bỏ nhãn
+  cảm tính; Approved reply, empty/error/paging/retry và tên/nội dung dài được giữ.
+- Public infinite key tách khỏi summary regular query để mở hồ sơ chính mình
+  không đọc nhầm cache shape. Network stale giữ dữ liệu;403/404 che cache.
+- PASS UI HTTP fixture1440/900/390/320/chữ130%, paging recovery, cache isolation,
+  missing/null/approved reply; typecheck/build/lint. App chính5174/API3000 đọc
+  profile đã được owner công bố:2review, điểm3.5/4.0 đúng; không mutation dữ liệu.
+- Đã áp riêng page/CSS vào checkout app, không đè shared reviews/global/layout.
+  Giữ SupportLink ở worktree mới; không kéo link support vào runtime0.71 chưa nối.
+  [Bằng chứng và giới hạn](../ui/PUBLIC_REPUTATION_2026_11_02.md). App giữ chạy;
+  không push/CI/PR/merge/native/human acceptance hoặc đóng gate.
+
+
+## Nút bỏ chờ48h cho giao dịch đánh giá mẫu local
+
+- Owner yêu cầu bỏ thời gian chờ để demo. Nhánh `codex/demo-review-time-advance`,
+  base821dbdb8: thêm nút trên Member web chính5174, xác nhận rồi API mô phỏng thời
+  gian cho đúng Exchange nhập mẫu, cả hai review đã gửi. Giữ nội dung/điểm/tiền,
+  ghi2revision DemoTimeAdvance; một lần, hết quyền sửa/xóa sau công bố.
+- API cần config riêng/allowlist, development/test và Mongo loopback, participant
+  ACTIVE, mẫu Completed zero-money đúng provenance. Không dùng cho đơn/giao dịch
+  thật; production từ chối. Auth trước replay, pair token/version, lock và receipt.
+- PASS13API E2E (có race thật),150session tests, contract/routes/typecheck/build/
+  lint; browser QA1440/390/320 xác nhận/hủy/mất ACK/exact retry/public totals/khóa
+  sửa/link hồ sơ và mẫu thường vẫn Pending. Storage fake, không native/provider/
+  human acceptance. Warning lint/build cũ ngoài phạm vi giữ nguyên.
+- Patch tương thích vào checkout app đang chạy, giữ UI Antigravity; contract0.71
+  regenerate, không migration hay đồng bộ toàn source. App chính đã hiện nút,
+  hai review vẫn Pending để owner bấm; fingerprints/ledger balanced nguyên vẹn.
+- Cách dùng/giới hạn: [demo](../features/MAIN_REVIEW_DEMO_2026_11_02.md#nút-bỏ-chờ48h--bổ-sung02112026),
+  [ADR0067](../adr/0067-local-review-demo-time-advance.md). API/worker3000 và web
+  5173/5174 giữ chạy; QA riêng dừng sau kiểm. Không push/CI/merge/đóng READINESS.
+
 
 ## Exchange: thỏa thuận, phục hồi thao tác và khung tài chính
 

@@ -47,6 +47,9 @@ export const transactionReviewSchema = z.object({
 });
 export type TransactionReview = z.infer<typeof transactionReviewSchema>;
 export const transactionReviewsSchema = z.object({
+  demoTimeAdvance: z.object({
+    available: z.boolean(), applied: z.boolean(), pairToken: z.string().nullable(),
+  }).optional(),
   partnerId: z.uuid(),
   canReview: z.boolean(),
   canEdit: z.boolean(),
@@ -175,7 +178,7 @@ export async function sendReviewIntent(
   } catch (error) {
     // Schema/network/5xx errors may follow a committed command. Retain exactly
     // the original intent; only a definite 4xx response releases it.
-    if (error instanceof ApiError && error.status >= 400 && error.status < 500)
+    if (error instanceof ApiError && error.status >= 400 && error.status < 500 && ![401,403,408,429].includes(error.status))
       s.intents.delete(scope);
     throw error;
   }

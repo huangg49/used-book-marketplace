@@ -5354,6 +5354,88 @@ paths:
         "503":
           $ref: "#/components/responses/ListingError"
       x-locked-access: existing-obligations
+  /operations/simulator/topup-recipients:
+    get:
+      operationId: listSimulatedTopupRecipients
+      tags: [Wallet]
+      x-implementation-status: implemented
+      description: ACTIVE verified TEST_OPERATOR only. Lists up to 40 ACTIVE verified Members,
+        excluding the operator. Search by literal display name or exact account UUID; no email
+        or contact details are returned. Refine the search when hasMore is true.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 80, default: "" }
+      responses:
+        "200":
+          description: Eligible simulator recipients. Never cached.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulatedTopupRecipientPage"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/simulator/topups:
+    post:
+      operationId: createSimulatedTopup
+      tags: [Wallet]
+      x-implementation-status: implemented
+      description: ACTIVE verified TEST_OPERATOR, independent of the ACTIVE verified MEMBER recipient.
+        Requires PAYMENT_SIMULATOR_SECRET. Atomically creates a new simulator intent, authenticated
+        success event, finite-source ledger posting, receipt, audit and outbox. Never accepts an
+        existing intent or touches VNPay. Same key/body replays once after current authorization;
+        different body returns 409. Recipient eligibility is checked under participant locks before
+        a new posting. No balance adjustment or source refill.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSimulatedTopup"
+      responses:
+        "200":
+          description: Atomic simulator topup receipt.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+            Idempotency-Replayed:
+              schema: { type: string, enum: ["true", "false"] }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /operations/simulator/topup-events:
     post:
       operationId: emitSimulatedTopupEvent
@@ -10281,6 +10363,48 @@ paths:
           $ref: "#/components/responses/ListingError"
         "500":
           $ref: "#/components/responses/ListingError"
+  /transactions/Exchange/{id}/reviews/demo-advance:
+    post:
+      operationId: advanceDemoReviewTime
+      tags: [Reviews]
+      description: Development-only, explicitly allowlisted zero-money demo history. Both participants must have submitted. Atomically shifts the sample timeline to expire both edit windows, preserves content and records DemoTimeAdvance revisions. No financial side effects. Never enabled in production.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdvanceDemoReviewTime"
+      responses:
+        "200":
+          description: Acting participant's published review; retry identical intent after uncertain response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewItem"
+          headers:
+            Idempotency-Replayed:
+              schema: {type: boolean}
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
   /transactions/{type}/{id}/reviews:
     get:
       operationId: getTransactionReviews
@@ -15521,6 +15645,29 @@ components:
       required: [amount]
       properties:
         amount: { type: integer, minimum: 5000, maximum: 10000000 }
+    SimulatedTopupRecipientPage:
+      type: object
+      additionalProperties: false
+      required: [items, hasMore]
+      properties:
+        items:
+          type: array
+          maxItems: 40
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, displayName]
+            properties:
+              id: { type: string, format: uuid }
+              displayName: { type: string }
+        hasMore: { type: boolean }
+    CreateSimulatedTopup:
+      type: object
+      additionalProperties: false
+      required: [recipientId, amount]
+      properties:
+        recipientId: { type: string, format: uuid }
+        amount: { type: integer, minimum: 1000, maximum: 10000000 }
     CreateTopupIntent:
       type: object
       additionalProperties: false
@@ -19843,6 +19990,24 @@ components:
                   type: string
                   format: date-time
             - type: "null"
+    AdvanceDemoReviewTime:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, pairToken]
+      properties:
+        expectedVersion: {type: integer, minimum: 1}
+        pairToken: {type: string, pattern: "^[a-f0-9]{64}$"}
+    DemoReviewTimeAdvance:
+      type: object
+      additionalProperties: false
+      required: [available, applied, pairToken]
+      properties:
+        available: {type: boolean}
+        applied: {type: boolean}
+        pairToken:
+          anyOf:
+            - {type: string, pattern: "^[a-f0-9]{64}$"}
+            - {type: "null"}
     TransactionReviewsResponse:
       type: object
       additionalProperties: false
@@ -19858,6 +20023,8 @@ components:
         - partnerReview
         - partnerId
       properties:
+        demoTimeAdvance:
+          $ref: "#/components/schemas/DemoReviewTimeAdvance"
         partnerId:
           type: string
           format: uuid

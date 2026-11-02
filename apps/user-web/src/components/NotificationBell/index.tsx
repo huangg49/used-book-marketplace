@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import {
   Bell,
   CheckCheck,
@@ -53,6 +54,62 @@ function getCategoryInfo(item: MemberNotification) {
   };
 }
 
+const panelVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: -14,
+    scale: 0.88,
+    transition: {
+      duration: 0.14,
+      ease: [0.4, 0, 1, 1],
+    },
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring",
+      stiffness: 400,
+      damping: 26,
+      mass: 0.75,
+      staggerChildren: 0.03,
+      delayChildren: 0.02,
+    },
+  },
+  exit: {
+    opacity: 0,
+    y: -10,
+    scale: 0.94,
+    transition: {
+      duration: 0.14,
+      ease: [0.32, 0, 0.67, 0],
+    },
+  },
+};
+
+const itemVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: -8,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 380,
+      damping: 26,
+    },
+  },
+  exit: {
+    opacity: 0,
+    transition: {
+      duration: 0.08,
+    },
+  },
+};
+
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -91,9 +148,10 @@ export function NotificationBell() {
 
   return (
     <div className={styles.wrap} ref={ref}>
-      <button
+      <motion.button
         type="button"
         className={styles.bell}
+        whileTap={{ scale: 0.94 }}
         aria-label={unread ? `Thông báo, ${unread} chưa đọc` : "Thông báo"}
         aria-expanded={open}
         aria-controls={panelId}
@@ -108,146 +166,158 @@ export function NotificationBell() {
             {unread > 99 ? "99+" : unread}
           </span>
         )}
-      </button>
+      </motion.button>
 
-      {open && (
-        <div
-          id={panelId}
-          className={styles.panel}
-          role="region"
-          aria-label="Thông báo gần đây"
-        >
-          {/* Header */}
-          <div className={styles.head}>
-            <div className={styles.headTitle}>
-              <strong>Thông báo</strong>
-              {unread > 0 && (
-                <span className={styles.unreadCountBadge}>{unread} mới</span>
-              )}
-            </div>
-
-            {unread > 0 && (
-              <button
-                type="button"
-                className={styles.readAllButton}
-                onClick={() => void readAll()}
-                title="Đánh dấu tất cả thông báo là đã đọc"
-              >
-                <CheckCheck size={15} aria-hidden="true" />
-                <span>Đã đọc hết</span>
-              </button>
-            )}
-          </div>
-
-          {/* List or Empty State */}
-          {inbox.isPending ? (
-            <div className={styles.empty}>
-              <p>Đang tải thông báo…</p>
-            </div>
-          ) : inbox.isError ? (
-            <div className={styles.empty}>
-              <p>Chưa tải được danh sách thông báo.</p>
-              <button
-                type="button"
-                className={styles.retryButton}
-                onClick={() => void inbox.refetch()}
-              >
-                Thử lại
-              </button>
-            </div>
-          ) : inbox.data.items.length === 0 ? (
-            <div className={styles.empty}>
-              <div className={styles.emptyIconBox}>
-                <Bell size={24} aria-hidden="true" />
-              </div>
-              <p className={styles.emptyTitle}>Chưa có thông báo nào</p>
-              <p className={styles.emptyDesc}>
-                Các cập nhật về đơn hàng, trao đổi sách và phiên đấu giá sẽ hiển thị tại đây.
-              </p>
-            </div>
-          ) : (
-            <ul className={styles.list}>
-              {inbox.data.items.map((n) => {
-                const isUnread = !n.readAt;
-                const cat = getCategoryInfo(n);
-                const IconComp = cat.Icon;
-
-                return (
-                  <li key={n.id} className={styles.listItem}>
-                    <button
-                      type="button"
-                      className={`${styles.item} ${isUnread ? styles.unread : ""}`}
-                      onClick={() => {
-                        setOpen(false);
-                        openNotification(n);
-                      }}
-                      aria-label={`${n.title}: ${n.body}`}
-                    >
-                      {/* Category Icon */}
-                      <div
-                        className={`${styles.iconBox} ${cat.boxClass}`}
-                        aria-hidden="true"
-                      >
-                        <IconComp size={18} />
-                      </div>
-
-                      {/* Content */}
-                      <div className={styles.text}>
-                        <div className={styles.itemTopMeta}>
-                          <span
-                            className={`${styles.categoryTag} ${cat.tagClass}`}
-                          >
-                            {cat.label}
-                          </span>
-                          {isUnread && (
-                            <span
-                              className={styles.unreadDot}
-                              title="Tin mới"
-                            />
-                          )}
-                        </div>
-
-                        <h4 className={styles.title}>{n.title}</h4>
-                        <p className={styles.body}>{n.body}</p>
-
-                        <div className={styles.timeRow}>
-                          <Clock size={11} />
-                          <time
-                            dateTime={n.createdAt}
-                            title={new Date(n.createdAt).toLocaleString("vi-VN")}
-                          >
-                            {timeAgo(n.createdAt)}
-                          </time>
-                          {isUnread && (
-                            <span className={styles.unreadText}>· Chưa đọc</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Hover Arrow */}
-                      <ChevronRight
-                        size={16}
-                        className={styles.arrow}
-                        aria-hidden="true"
-                      />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-
-          {/* Footer Action */}
-          <Link
-            className={styles.all}
-            to={ROUTES.notifications}
-            onClick={() => setOpen(false)}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            id={panelId}
+            className={styles.panel}
+            role="region"
+            aria-label="Thông báo gần đây"
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={panelVariants}
           >
-            <span>Xem tất cả thông báo</span>
-            <ArrowRight size={15} aria-hidden="true" />
-          </Link>
-        </div>
-      )}
+            {/* Header */}
+            <motion.div variants={itemVariants} className={styles.head}>
+              <div className={styles.headTitle}>
+                <strong>Thông báo</strong>
+                {unread > 0 && (
+                  <span className={styles.unreadCountBadge}>{unread} mới</span>
+                )}
+              </div>
+
+              {unread > 0 && (
+                <button
+                  type="button"
+                  className={styles.readAllButton}
+                  onClick={() => void readAll()}
+                  title="Đánh dấu tất cả thông báo là đã đọc"
+                >
+                  <CheckCheck size={15} aria-hidden="true" />
+                  <span>Đã đọc hết</span>
+                </button>
+              )}
+            </motion.div>
+
+            {/* List or Empty State */}
+            {inbox.isPending ? (
+              <div className={styles.empty}>
+                <p>Đang tải thông báo…</p>
+              </div>
+            ) : inbox.isError ? (
+              <div className={styles.empty}>
+                <p>Chưa tải được danh sách thông báo.</p>
+                <button
+                  type="button"
+                  className={styles.retryButton}
+                  onClick={() => void inbox.refetch()}
+                >
+                  Thử lại
+                </button>
+              </div>
+            ) : inbox.data.items.length === 0 ? (
+              <div className={styles.empty}>
+                <div className={styles.emptyIconBox}>
+                  <Bell size={24} aria-hidden="true" />
+                </div>
+                <p className={styles.emptyTitle}>Chưa có thông báo nào</p>
+                <p className={styles.emptyDesc}>
+                  Các cập nhật về đơn hàng, trao đổi sách và phiên đấu giá sẽ hiển thị tại đây.
+                </p>
+              </div>
+            ) : (
+              <ul className={styles.list}>
+                {inbox.data.items.map((n) => {
+                  const isUnread = !n.readAt;
+                  const cat = getCategoryInfo(n);
+                  const IconComp = cat.Icon;
+
+                  return (
+                    <motion.li
+                      key={n.id}
+                      variants={itemVariants}
+                      className={styles.listItem}
+                    >
+                      <button
+                        type="button"
+                        className={`${styles.item} ${isUnread ? styles.unread : ""}`}
+                        onClick={() => {
+                          setOpen(false);
+                          openNotification(n);
+                        }}
+                        aria-label={`${n.title}: ${n.body}`}
+                      >
+                        {/* Category Icon */}
+                        <div
+                          className={`${styles.iconBox} ${cat.boxClass}`}
+                          aria-hidden="true"
+                        >
+                          <IconComp size={18} />
+                        </div>
+
+                        {/* Content */}
+                        <div className={styles.text}>
+                          <div className={styles.itemTopMeta}>
+                            <span
+                              className={`${styles.categoryTag} ${cat.tagClass}`}
+                            >
+                              {cat.label}
+                            </span>
+                            {isUnread && (
+                              <span
+                                className={styles.unreadDot}
+                                title="Tin mới"
+                              />
+                            )}
+                          </div>
+
+                          <h4 className={styles.title}>{n.title}</h4>
+                          <p className={styles.body}>{n.body}</p>
+
+                          <div className={styles.timeRow}>
+                            <Clock size={11} />
+                            <time
+                              dateTime={n.createdAt}
+                              title={new Date(n.createdAt).toLocaleString("vi-VN")}
+                            >
+                              {timeAgo(n.createdAt)}
+                            </time>
+                            {isUnread && (
+                              <span className={styles.unreadText}>· Chưa đọc</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Hover Arrow */}
+                        <ChevronRight
+                          size={16}
+                          className={styles.arrow}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </motion.li>
+                  );
+                })}
+              </ul>
+            )}
+
+            {/* Footer Action */}
+            <motion.div variants={itemVariants}>
+              <Link
+                className={styles.all}
+                to={ROUTES.notifications}
+                onClick={() => setOpen(false)}
+              >
+                <span>Xem tất cả thông báo</span>
+                <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

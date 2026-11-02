@@ -11,39 +11,73 @@ export function navigationGroups(user: CurrentUser | undefined): NavigationGroup
   const groups: NavigationGroup[] = [{ id: "workspace", label: "Không gian làm việc", items: [
     { label: "Dashboard", to: "/dashboard", icon: "dashboard" },
   ] }];
+
+  // 1. Quản lý người dùng: Đưa lên vị trí ưu tiên cao, trực tiếp dưới Dashboard cho Quản trị viên
+  if (canReviewCatalog(user)) {
+    groups.push({
+      id: "management",
+      label: "Quản lý",
+      items: [{ label: "Quản lý người dùng", to: "/users", icon: "users" }],
+    });
+  }
+
+  // 2. Kiểm duyệt: Xếp tuần tự theo chu trình Đầu sách -> Bài đăng sách -> Đánh giá -> Khiếu nại
   if (canReview(user)) {
-    const items: NavigationItem[] = [
+    const items: NavigationItem[] = [];
+    if (canReviewCatalog(user)) {
+      items.push({ label: "Đầu sách", to: "/review/catalog-requests", icon: "catalog" });
+    }
+    items.push(
       { label: "Bài đăng sách", to: "/review/listings", icon: "books" },
-      { label: "Khiếu nại trao đổi", to: "/operations/exchange-disputes", icon: "resolution" },
       { label: "Đánh giá giao dịch", to: "/transaction-reviews", icon: "books" },
-    ];
-    if (canReviewCatalog(user)) items.push({ label: "Đầu sách", to: "/review/catalog-requests", icon: "catalog" });
+      { label: "Khiếu nại trao đổi", to: "/operations/exchange-disputes", icon: "resolution" },
+    );
     groups.push({ id: "review", label: "Kiểm duyệt", items });
   }
+
+  // 3. Điểm & đấu giá: Xếp tuần tự từ Thiết lập trạm -> Phiên đấu giá -> Nhận sách -> Giao sách -> Xử lý đơn/sự cố/quá hạn
   if (canOperatePoint(user) || canResolve(user)) {
     const items: NavigationItem[] = [];
-    if (canOperatePoint(user)) items.push(
-      { label: "Nhận sách đấu giá", to: "/operations/intakes", icon: "intake" },
-      { label: "Giao sách", to: "/operations/collections", icon: "collection" },
-    );
+    if (canResolve(user)) {
+      items.push(
+        { label: "Điểm giao nhận", to: "/operations/points", icon: "point" },
+        { label: "Phiên đấu giá", to: "/operations/auctions", icon: "auction" },
+      );
+    }
+    if (canOperatePoint(user)) {
+      items.push(
+        { label: "Nhận sách đấu giá", to: "/operations/intakes", icon: "intake" },
+        { label: "Giao sách", to: "/operations/collections", icon: "collection" },
+      );
+    }
+    if (canResolve(user)) {
+      items.push(
+        { label: "Xử lý đơn tại điểm", to: "/operations/resolutions", icon: "resolution" },
+      );
+    }
     items.push({ label: "Sự cố tại điểm", to: "/operations/incidents", icon: "incident" });
-    if (canResolve(user)) items.push(
-      { label: "Xử lý đơn tại điểm", to: "/operations/resolutions", icon: "resolution" },
-      { label: "Phiên đấu giá", to: "/operations/auctions", icon: "auction" },
-      { label: "Việc quá hạn", to: "/operations/escalations", icon: "overdue" },
-      { label: "Điểm giao nhận", to: "/operations/points", icon: "point" },
-    );
+    if (canResolve(user)) {
+      items.push(
+        { label: "Việc quá hạn", to: "/operations/escalations", icon: "overdue" },
+      );
+    }
     groups.push({ id: "operations", label: "Điểm & đấu giá", items });
   }
-  if (canReviewCatalog(user)) groups.push({ id: "management", label: "Quản lý", items: [
-    { label: "Quản lý người dùng", to: "/users", icon: "users" },
-  ] });
-  if (canSimulate(user)) groups.push({ id: "simulation", label: "Mô phỏng", items: [
-    { label: "Hãng vận chuyển", to: "/simulator/deliveries", icon: "carrier" },
-    { label: "Lấy hàng trực tiếp", to: "/simulator/events/pickups", icon: "intake" },
-    { label: "Giao hàng trực tiếp", to: "/simulator/events/deliveries", icon: "carrier" },
-    { label: "Nạp tiền mô phỏng", to: "/simulator/events/topups", icon: "resolution" },
-  ] });
+
+  // 4. Mô phỏng (dành cho Test Operator)
+  if (canSimulate(user)) {
+    groups.push({
+      id: "simulation",
+      label: "Mô phỏng",
+      items: [
+        { label: "Hãng vận chuyển", to: "/simulator/deliveries", icon: "carrier" },
+        { label: "Lấy hàng trực tiếp", to: "/simulator/events/pickups", icon: "intake" },
+        { label: "Giao hàng trực tiếp", to: "/simulator/events/deliveries", icon: "carrier" },
+        { label: "Nạp tiền mô phỏng", to: "/simulator/events/topups", icon: "resolution" },
+      ],
+    });
+  }
+
   return groups;
 }
 

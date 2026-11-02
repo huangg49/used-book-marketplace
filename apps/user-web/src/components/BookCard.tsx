@@ -1,7 +1,7 @@
 import { listingTitle } from "../lib/book-bundle";
 import { useState } from "react";
 import { Link, useLocation, useViewTransitionState } from "react-router-dom";
-import { BookOpen, ChevronRight, MapPin, Tag, UserRound } from "lucide-react";
+import { BookOpen, ChevronRight, MapPin, UserRound } from "lucide-react";
 import { WishlistButton } from "./WishlistButton";
 import { CardFitText } from "./CardFitText";
 import { ROUTES, formatVnd } from "../lib/routes";
@@ -93,6 +93,12 @@ export function BookCard({ book, compact = false }: BookCardProps) {
     location.pathname === ROUTES.search
       ? { catalogReturn: location.pathname + location.search, listing: book, morphBookId: book.id }
       : { listing: book, morphBookId: book.id };
+  const title = listingTitle(book);
+  const locationLabel = book.fulfillment?.locality?.label || book.fulfillment?.name || "Toàn quốc";
+  const isSaleAndExchange = book.salePrice !== null && book.exchangeValue !== null;
+  const isSaleOnly = book.salePrice !== null && book.exchangeValue === null;
+  const isExchangeOnly = book.salePrice === null && book.exchangeValue !== null;
+
   return (
     <article
       className={[styles.card, compact ? styles.compact : ""].join(" ")}
@@ -105,9 +111,9 @@ export function BookCard({ book, compact = false }: BookCardProps) {
           viewTransition
           state={returnState}
           className={styles.coverLink}
-          aria-label={"Xem chi tiết " + listingTitle(book)}
+          aria-label={"Xem chi tiết " + title}
         />
-        <WishlistButton listingId={book.id} title={listingTitle(book)} />
+        <WishlistButton listingId={book.id} title={title} />
         <span className={styles.condition}>
           <BookOpen size={15} aria-hidden="true" />
           {book.bundle ? `Bộ ${book.bundle.items.length} cuốn` : conditions[book.condition]} ·{" "}
@@ -128,71 +134,85 @@ export function BookCard({ book, compact = false }: BookCardProps) {
         )}
       </div>
       <div className={styles.meta}>
-        <h3>
+        <h3 className={styles.titleWrap}>
           <Link
             to={detailUrl}
             viewTransition
             state={returnState}
-            title={listingTitle(book)}
-            className={styles.ellipsis}
+            title={title}
+            className={styles.titleLink}
           >
-            {listingTitle(book)}
+            {title}
           </Link>
+          {title.length > 28 && (
+            <span className={styles.titleTooltip} role="tooltip" aria-hidden="true">
+              {title}
+            </span>
+          )}
         </h3>
         <div className={styles.information}>
-          <p className={styles.author}>
-            <UserRound size={18} aria-hidden="true" />
-            <span className="sr-only">Tác giả: </span>
-            <span
-              className={styles.ellipsis}
-              title={book.book.authors.join(", ") || "Chưa rõ tác giả"}
-            >
-              {book.book.authors.join(", ") || "Chưa rõ tác giả"}
-            </span>
+          <p className={styles.seller} title={"Người đăng: " + book.seller.displayName}>
+            <UserRound size={13} aria-hidden="true" />
+            <span className="sr-only">Người đăng: </span>
+            <span className={styles.ellipsis}>{book.seller.displayName}</span>
           </p>
-          <p className={styles.location}>
-            <MapPin size={18} aria-hidden="true" />
+          <p className={styles.location} title={"Khu vực: " + locationLabel}>
+            <MapPin size={13} aria-hidden="true" />
             <span className="sr-only">Khu vực: </span>
-            <strong
-              className={`${styles.region} ${styles.ellipsis}`}
-              title={book.fulfillment?.locality?.label || "Chưa có khu vực"}
-            >
-              {book.fulfillment?.locality?.label || "Chưa có khu vực"}
+            <strong className={`${styles.region} ${styles.ellipsis}`}>
+              {locationLabel}
             </strong>
           </p>
         </div>
-        <div className={styles.prices}>
-          {book.salePrice !== null && (
-            <p>
-              <Tag size={24} aria-hidden="true" />
-              <span>
-                <span className={styles.fieldLabel}>{book.bundle ? "Giá cả bộ" : "Giá bán"}</span>
-                <strong className={styles.amount}>
-                  <CardFitText>{formatVnd(book.salePrice)}</CardFitText>
-                </strong>
+        <div className={styles.footerRow}>
+          <div className={styles.prices}>
+            <div className={styles.primaryRow}>
+              <span className={styles.priceLabel}>
+                {book.salePrice !== null
+                  ? book.bundle
+                    ? "Giá cả bộ"
+                    : "Giá bán"
+                  : "Giá trị đổi"}
               </span>
-            </p>
-          )}
-          {book.exchangeValue !== null && (
-            <p>
-              <Tag size={24} aria-hidden="true" />
-              <span>
-                <span className={styles.fieldLabel}>Giá trị đổi</span>
-                <strong className={styles.amount}>
-                  <CardFitText>{formatVnd(book.exchangeValue)}</CardFitText>
-                </strong>
-              </span>
-            </p>
-          )}
+              <strong className={styles.amount}>
+                <CardFitText>
+                  {book.salePrice !== null
+                    ? formatVnd(book.salePrice)
+                    : book.exchangeValue !== null
+                      ? formatVnd(book.exchangeValue)
+                      : "Thỏa thuận"}
+                </CardFitText>
+              </strong>
+            </div>
+            <div className={styles.secondaryRow}>
+              {isSaleAndExchange ? (
+                <span
+                  className={styles.exchangeNote}
+                  title={`Có thể trao đổi sách giá trị tương đương ${formatVnd(book.exchangeValue!)}`}
+                >
+                  Hoặc đổi ~{formatVnd(book.exchangeValue!)}
+                </span>
+              ) : isSaleOnly ? (
+                <span className={styles.modeNote}>
+                  {book.bundle ? "Bán nguyên bộ" : "Chỉ bán trực tiếp"}
+                </span>
+              ) : isExchangeOnly ? (
+                <span className={styles.modeNote}>Chỉ nhận trao đổi</span>
+              ) : (
+                <span className={styles.modeNote}>Thỏa thuận trực tiếp</span>
+              )}
+            </div>
+          </div>
+          <Link
+            className={styles.view}
+            to={ROUTES.bookDetail(book.id)}
+            state={returnState}
+            aria-label={"Xem chi tiết " + title}
+          >
+            <span>Xem sách</span>
+            <ChevronRight size={15} aria-hidden="true" />
+          </Link>
         </div>
-        <Link
-          className={styles.view}
-          to={ROUTES.bookDetail(book.id)}
-          state={returnState}
-        >
-          <BookOpen size={18} aria-hidden="true" /> Xem sách{" "}
-          <ChevronRight size={19} aria-hidden="true" />
-        </Link>
       </div>
     </article>
   );

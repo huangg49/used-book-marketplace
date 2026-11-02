@@ -671,12 +671,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .stickyFilterBar {
-    transition-duration: var(--nav-morph-duration) !important;
-  }
-}
-
 .gridContainer {
   position: relative;
   width: 100%;
@@ -1149,12 +1143,6 @@
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .page button {
-    transition: none;
   }
 }
 

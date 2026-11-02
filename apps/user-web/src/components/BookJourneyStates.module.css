@@ -101,4 +101,3 @@
   .emptyArt { order: -1; max-width: 240px; margin: auto; }
   .emptyMessage p { max-width: 45ch; }
 }
-@media (prefers-reduced-motion: reduce) { .pendingArt { animation: none; } }

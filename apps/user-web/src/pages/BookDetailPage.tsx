@@ -4,7 +4,7 @@ import { listingTitle } from "../lib/book-bundle";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowUpRight, MapPin, MessageCircle, BookOpen, ClipboardCheck, Languages, CalendarDays, Building2, Hash, Layers3, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, MapPin, MessageCircle, BookOpen, ClipboardCheck, Languages, CalendarDays, Building2, Hash, Layers3 } from "lucide-react";
 import { motion } from "framer-motion";
 import { ListingGallery } from "../components/ListingGallery";
 import { conditions } from "../lib/listing-labels";
@@ -160,7 +160,7 @@ export function BookDetailPage() {
           </p>
 
           <div className={styles.labels}>
-            <span>{conditions[book.condition]}</span>
+            <span className={styles.conditionLabel}>Người bán mô tả: {conditions[book.condition]}</span>
             <span>
               {book.mode === "Sale"
                 ? "Đăng bán"
@@ -176,12 +176,18 @@ export function BookDetailPage() {
               </span>
             )}
           </div>
+          <p className={styles.conditionSummary}>
+            <BookOpen size={18} aria-hidden="true" />
+            {book.hasMissingPages
+              ? "Có trang thiếu — xem mô tả và ảnh trước khi mua."
+              : "Người bán khai báo sách không thiếu trang."}
+            <a href="#book-condition">Xem tình trạng</a>
+          </p>
           <div className={styles.prices}>
             {book.salePrice !== null && (
               <div className={styles.priceCard}>
                 <span className={styles.priceLabel}>{book.bundle ? "GIÁ CẢ BỘ" : "GIÁ BÁN"}</span>
                 <strong>{formatVnd(book.salePrice)}</strong>
-                <span className={styles.priceHint}>Thanh toán bằng tiền</span>
               </div>
             )}
             {book.exchangeValue !== null && (
@@ -192,6 +198,20 @@ export function BookDetailPage() {
               </div>
             )}
           </div>
+          <section className={styles.sellerCard} aria-label="Thông tin người đăng">
+            <div className={styles.sellerAvatar} aria-hidden="true">
+              {book.seller.displayName.trim().slice(0, 1).toLocaleUpperCase("vi-VN") || "?"}
+            </div>
+            <div className={styles.sellerCardInfo}>
+              <span className={styles.sellerCardMeta}>Người đăng sách</span>
+              <strong>{book.seller.displayName}</strong>
+            </div>
+            {isOwner ? <span className={styles.ownerLabel}>Bài của bạn</span> : (
+              <Link className={styles.sellerProfile} to={`/members/${book.seller.id}`}>
+                Xem hồ sơ <ArrowUpRight size={16} aria-hidden="true" />
+              </Link>
+            )}
+          </section>
           {book.salePrice !== null && (
             <section className={styles.purchase}>
               <h2>
@@ -203,7 +223,7 @@ export function BookDetailPage() {
                   ? "Đây là bài đăng của bạn"
                   : held
                     ? heldLabel
-                    : book.bundle ? "Muốn đọc bộ này?" : "Muốn đọc cuốn này?"}
+                    : "Chọn cách mua"}
               </h2>
               <p>
                 {buyerOrderConversation
@@ -214,21 +234,29 @@ export function BookDetailPage() {
                   ? "Người mua có thể mua ngay theo giá niêm yết hoặc nhắn bạn để thương lượng. Đơn Mua ngay đã thanh toán sẽ chuyển thẳng sang chuẩn bị gửi."
                   : held
                     ? "Bản sách này đã có đơn giữ chỗ. Bạn vẫn có thể xem bài đăng nhưng chưa thể đặt mua."
-                    : "Mua ngay theo giá niêm yết, không cần trao đổi. Bạn cũng có thể nhắn người bán nếu muốn thương lượng; chat chưa giữ sách."}
+                    : "Mua theo giá niêm yết hoặc nhắn người bán để trao đổi thêm."}
               </p>
               <div className={styles.actionRow}>
                 {!isOwner && !held && (
                   <Link className={styles.primary} to={`/buy-now/${book.id}`}>{book.bundle ? "Mua cả bộ" : "Mua ngay"} <ArrowUpRight size={18} aria-hidden="true" /></Link>
                 )}
                 {["Exchange", "Both"].includes(book.mode) && !isOwner && !held && (
-                  <Link className={styles.primary} to={`/chat/start/${book.id}?intent=Exchange`}>
+                  <Link className={styles.secondary} to={`/chat/start/${book.id}?intent=Exchange`}>
                     Gửi đề nghị đổi sách <ArrowUpRight size={18} aria-hidden="true" />
                   </Link>
                 )}
               </div>
-              {!isOwner&&!held&&<AddToCart key={state.status==='authenticated'?state.user.id:'anonymous'} listingId={book.id} listingVersion={book.version}/>}
               {held && !orderConversation && state.status === 'authenticated' && (
                 <Link className={styles.secondary} to="/orders">Xem đơn hàng của tôi</Link>
+              )}
+              <div className={styles.secondaryActions}>
+              {!isOwner && !held && (
+                <AddToCart
+                  key={state.status === "authenticated" ? state.user.id : "anonymous"}
+                  listingId={book.id}
+                  listingVersion={book.version}
+                  disabled={detail.isFetching || detail.isError}
+                />
               )}
               {conversationToOpen ? (
                 <Link
@@ -262,6 +290,10 @@ export function BookDetailPage() {
                   </button>
                 )
               )}
+              </div>
+              {!isOwner && !held && (
+                <p className={styles.purchaseHint}>Thêm giỏ hoặc nhắn tin chưa giữ chỗ cho bản sách.</p>
+              )}
             </section>
           )}
           {["Exchange", "Both"].includes(book.mode) && (
@@ -270,84 +302,32 @@ export function BookDetailPage() {
                 (book.exchangePreferences.targetCategory ||
                   book.exchangePreferences.targetAuthor ||
                   book.exchangePreferences.targetDescription) && (
-                  <div
-                    style={{
-                      background: "#fffdf5",
-                      border: "1px solid #ebd9a2",
-                      borderRadius: 6,
-                      padding: "12px 14px",
-                      marginBottom: 16,
-                      textAlign: "left",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        fontWeight: 700,
-                        fontSize: 13,
-                        color: "#8c5b13",
-                        marginBottom: 6,
-                      }}
-                    >
-                      <Sparkles size={15} />
-                      <span>Tiêu chí đổi sách của chủ sở hữu:</span>
-                    </div>
+                  <div className={styles.exchangePreferences}>
+                    <h3><BookOpen size={18} aria-hidden="true" />Tiêu chí đổi sách của người đăng</h3>
                     {book.exchangePreferences.targetCategory && (
-                      <p style={{ margin: "2px 0", fontSize: 13, color: "var(--ink)" }}>
-                        <strong>Thể loại:</strong>{" "}
-                        <Link
-                          to={`/books?search=${encodeURIComponent(book.exchangePreferences.targetCategory)}`}
-                          style={{ color: "#9a3412", textDecoration: "underline" }}
-                          title="Tìm sách thể loại này trên sàn"
-                        >
+                      <p><strong>Thể loại:</strong>{" "}
+                        <Link to={searchUrl({ data: "live", q: book.exchangePreferences.targetCategory })}>
                           {book.exchangePreferences.targetCategory}
                         </Link>
                       </p>
                     )}
                     {book.exchangePreferences.targetAuthor && (
-                      <p style={{ margin: "2px 0", fontSize: 13, color: "var(--ink)" }}>
-                        <strong>Tác giả:</strong>{" "}
-                        <Link
-                          to={`/books?search=${encodeURIComponent(book.exchangePreferences.targetAuthor)}`}
-                          style={{ color: "#9a3412", textDecoration: "underline" }}
-                          title="Tìm sách tác giả này trên sàn"
-                        >
+                      <p><strong>Tác giả:</strong>{" "}
+                        <Link to={searchUrl({ data: "live", q: book.exchangePreferences.targetAuthor })}>
                           {book.exchangePreferences.targetAuthor}
                         </Link>
                       </p>
                     )}
                     {book.exchangePreferences.targetDescription && (
-                      <p style={{ margin: "2px 0", fontSize: 13, color: "var(--ink)" }}>
-                        <strong>Ghi chú:</strong> {book.exchangePreferences.targetDescription}
-                      </p>
+                      <p><strong>Ghi chú:</strong> {book.exchangePreferences.targetDescription}</p>
                     )}
                     {isOwner && (
-                      <div style={{ marginTop: 8 }}>
-                        <Link
-                          to={`/books?search=${encodeURIComponent(
-                            book.exchangePreferences.targetAuthor ||
-                              book.exchangePreferences.targetCategory ||
-                              "",
-                          )}`}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 4,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: "#9a3412",
-                            padding: "4px 10px",
-                            borderRadius: 6,
-                            background: "#fff",
-                            border: "1px solid #fed7aa",
-                            textDecoration: "none",
-                          }}
-                        >
-                          🔍 Tìm sách khớp mong muốn này trên sàn →
-                        </Link>
-                      </div>
+                      <Link className={styles.exchangeSearch} to={searchUrl({
+                        data: "live",
+                        q: book.exchangePreferences.targetAuthor || book.exchangePreferences.targetCategory || "",
+                      })}>
+                        Tìm sách theo mong muốn <ArrowUpRight size={16} aria-hidden="true" />
+                      </Link>
                     )}
                   </div>
                 )}
@@ -374,29 +354,13 @@ export function BookDetailPage() {
           )}
         </motion.article>
       </div>
-      <div className={styles.sellerRow}>
-        <section className={styles.sellerCard} aria-label="Thông tin người đăng">
-          <div className={styles.sellerAvatar} aria-hidden="true">
-            {book.seller.displayName.trim().slice(0, 1).toLocaleUpperCase("vi-VN") || "?"}
-          </div>
-          <div className={styles.sellerCardInfo}>
-            <span className={styles.sellerCardEyebrow}>Người đăng sách</span>
-            <strong>{book.seller.displayName}</strong>
-            <Link to={`/members/${book.seller.id}`}>Xem hồ sơ uy tín</Link>
-            <span className={styles.sellerCardMeta}>
-              {isOwner ? "Đây là bài đăng của bạn" : "Thông tin người bán"}
-            </span>
-          </div>
-          {isOwner && <span className={styles.ownerLabel}>Bạn</span>}
-        </section>
-      </div>
       <div className={styles.detailsGrid}>
-        <section className={styles.details}>
+        <section className={styles.details} id="book-condition" tabIndex={-1}>
           <div className={styles.detailsHeading}>
             <span className={styles.detailsIcon}><ClipboardCheck size={19} aria-hidden="true" /></span>
             <div>
               <h2>Tình trạng sách</h2>
-              <p>Chi tiết thực tế của bản sách này</p>
+              <p>Thông tin do người đăng mô tả. Đối chiếu cùng ảnh bản sách.</p>
             </div>
           </div>
           <p className={styles.description}>

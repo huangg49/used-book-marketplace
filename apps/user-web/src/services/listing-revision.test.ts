@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { session } from "./api";
-import { createListingRevision } from "./listing-revision";
+import {
+  createListingRevision,
+  createDraftSubmission,
+  createDraftSave,
+} from "./listing-revision";
 import { upload } from "./listing-submission";
 
 vi.mock("./api", () => ({ session: { request: vi.fn() } }));
@@ -108,5 +112,70 @@ describe("createListingRevision", () => {
     const calls = revisionCalls();
     expect(calls[1][2]).toEqual(calls[0][2]);
     expect(JSON.parse(String(calls[1][2]?.body)).content).toMatchObject({ bundle: original, mediaIds: [media(1)] });
+  });
+
+  describe("createDraftSubmission", () => {
+    it("saves working draft and then submits for moderation in sequence", async () => {
+      request
+        .mockResolvedValueOnce({ entityId: id, version: 3 }) // save draft
+        .mockResolvedValueOnce({ entityId: id, version: 4 }); // submit
+      const run = createDraftSubmission({
+        listingId: id,
+        version: 2,
+        photos: [{ kind: "existing", id: media(1) }],
+        content,
+        bookId: "book-1",
+      });
+      const result = await run();
+      expect(result).toEqual({ entityId: id, version: 4 });
+
+      expect(request).toHaveBeenCalledTimes(2);
+      const [draftPath, , draftInit] = request.mock.calls[0];
+      expect(draftPath).toBe(`/listings/${id}/draft`);
+      expect(draftInit?.method).toBe("PUT");
+      const draftBody = JSON.parse(String(draftInit?.body));
+      expect(draftBody.expectedVersion).toBe(2);
+      expect(draftBody.content.bookId).toBe("book-1");
+      expect(draftBody.content.mediaIds).toEqual([media(1)]);
+
+      const [submitPath, , submitInit] = request.mock.calls[1];
+      expect(submitPath).toBe(`/listings/${id}/submit`);
+      expect(submitInit?.method).toBe("POST");
+      const submitBody = JSON.parse(String(submitInit?.body));
+      expect(submitBody.expectedVersion).toBe(3);
+      expect(submitBody.ownershipDeclared).toBe(true);
+    });
+
+    it("rejects an empty photo list", async () => {
+      const run = createDraftSubmission({
+        listingId: id,
+        version: 2,
+        photos: [],
+        content,
+        bookId: "book-1",
+      });
+      await expect(run()).rejects.toThrow(/ảnh/);
+      expect(request).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("createDraftSave", () => {
+    it("saves draft without calling submit", async () => {
+      request.mockResolvedValueOnce({ entityId: id, version: 3 });
+      const run = createDraftSave({
+        listingId: id,
+        version: 2,
+        photos: [{ kind: "existing", id: media(1) }],
+        content,
+        bookId: "book-1",
+      });
+      const result = await run();
+      expect(result).toEqual({ entityId: id, version: 3 });
+
+      expect(request).toHaveBeenCalledTimes(1);
+      const [draftPath, , draftInit] = request.mock.calls[0];
+      expect(draftPath).toBe(`/listings/${id}/draft`);
+      expect(draftInit?.method).toBe("PUT");
+    });
   });
 });

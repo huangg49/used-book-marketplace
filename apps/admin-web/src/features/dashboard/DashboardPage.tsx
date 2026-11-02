@@ -1,5 +1,3 @@
-import { WorkspaceStart } from "./WorkspaceStart";
-import { OperationsWorkInbox } from "./WorkInbox";
 import { useState } from "react";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { refreshDashboard } from "../../core/dashboard-cache";
@@ -132,8 +130,6 @@ export function DashboardPage() {
           </Button>
         </div>
       </header>
-      <OperationsWorkInbox user={user}/>
-      <WorkspaceStart user={user}/>
       {canReview(user) && (
         <>
           {overview.isError && (
@@ -180,30 +176,11 @@ export function DashboardPage() {
               className={styles.workboard}
               aria-labelledby="workboard-title"
             >
-              <svg
-                className={`${styles.workOrnament} ${styles.workCornerTop}`}
-                viewBox="0 0 96 96"
-                fill="none"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path d="M8 10h54c14 0 24 10 24 24v52M28 18h34c10 0 16 6 16 16v32M48 26h14c6 0 8 2 8 8v12" />
-              </svg>
-              <svg
-                className={`${styles.workOrnament} ${styles.workCornerBottom}`}
-                viewBox="0 0 88 88"
-                fill="none"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path d="M10 76c36 0 66-30 66-66M30 76c25 0 46-21 46-46M50 76c14 0 26-12 26-26" />
-              </svg>
               <header>
-                <ArrowRight
-                  className={styles.workMark}
-                  size={28}
-                  aria-hidden="true"
-                />
+                <div className={styles.workboardBadge}>
+                  <span className={styles.workboardDot} aria-hidden="true" />
+                  <span>Hàng chờ trực ban</span>
+                </div>
                 <h2 id="workboard-title">
                   {emptyQueue ? (
                     <>
@@ -230,7 +207,7 @@ export function DashboardPage() {
                       Bài đăng sách
                       <strong>{data?.pending.listings ?? "—"}</strong>
                     </span>
-                    <ArrowRight size={19} aria-hidden="true" />
+                    <ArrowRight size={18} aria-hidden="true" />
                   </span>
                 </Link>
                 {canReviewCatalog(user) && (
@@ -239,7 +216,7 @@ export function DashboardPage() {
                       <span className={styles.workLabel}>
                         Đầu sách<strong>{data?.pending.catalog ?? "—"}</strong>
                       </span>
-                      <ArrowRight size={19} aria-hidden="true" />
+                      <ArrowRight size={18} aria-hidden="true" />
                     </span>
                   </Link>
                 )}
