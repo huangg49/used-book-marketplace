@@ -172,7 +172,7 @@ export function purchaseChatGuidance(
         : "Người mua đã gửi thông tin nhận sách",
       description: buyer
         ? "Hai bên có thể trao đổi thêm. Người bán sẽ tạo đơn khi thống nhất giá."
-        : "Kiểm tra địa chỉ, phí giao hàng và nhập giá đã thống nhất để tạo đơn.",
+        : "Kiểm tra địa chỉ và nhập giá đã thống nhất để tạo đơn.",
       action: buyer ? ("address" as const) : ("create-order" as const),
       actionLabel: buyer ? "Xem lại thông tin nhận sách" : "Kiểm tra và tạo đơn",
     };
@@ -195,8 +195,8 @@ export function purchaseChatGuidance(
       : "Trao đổi trước khi chốt mua",
     description: room.hasQuote
       ? buyer
-        ? "Phí giao hàng hoặc địa chỉ trước đó cần được cập nhật. Gửi lại thông tin để người bán tạo đơn."
-        : "Thông tin nhận sách trước đó không còn dùng để tạo đơn. Nhắn người mua gửi lại địa chỉ và phí giao hàng."
+        ? "Địa chỉ nhận sách trước đó cần được cập nhật. Gửi lại thông tin để người bán tạo đơn."
+        : "Thông tin nhận sách trước đó không còn dùng để tạo đơn. Nhắn người mua gửi lại địa chỉ nhận sách."
       : buyer
         ? "Hỏi về tình trạng sách và thống nhất giá. Khi muốn mua, gửi thông tin nhận sách."
         : "Trả lời câu hỏi và thống nhất giá với người mua. Sau khi họ gửi thông tin nhận sách, bạn có thể tạo đơn.",

@@ -483,7 +483,7 @@ export function ShippingTrackingCard({ detail, onRefresh }: ShippingTrackingCard
                     </div>
                     <h3 className={styles.cardTitle}>Tiến trình giao nhận 2 chiều</h3>
                     <p className={styles.cardSubtitle}>
-                        Mỗi bên chủ động đóng gói, gửi sách và tự thanh toán cước phí chiều gửi của mình
+                        Mỗi bên chủ động đóng gói và gửi sách của chiều mình. Hệ thống không thu phí giao hàng.
                     </p>
                 </div>
             </div>

@@ -472,8 +472,7 @@ function ChatRoom({
                               </p>
                             )}
                             <p>
-                              Phí giao nhận:{" "}
-                              {formatVnd(room.quotePreview.shippingFee)} · Báo
+                              {room.quotePreview.shippingFee > 0 && `Phí giao nhận: ${formatVnd(room.quotePreview.shippingFee)} · `}Báo
                               giá đến {dateTime(room.quotePreview.expiresAt)}
                             </p>
                           </div>

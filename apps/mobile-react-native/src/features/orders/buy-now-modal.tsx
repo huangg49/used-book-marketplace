@@ -1015,7 +1015,7 @@ function BuyNowSession({
                     </AppText>
                   </View>
 
-                  <View
+                  {(quote?.amounts.shippingFee ?? 0) > 0 && (<View
                     style={{
                       flexDirection: "row",
                       justifyContent: "space-between",
@@ -1032,7 +1032,7 @@ function BuyNowSession({
                           ? formatVnd(quote.amounts.shippingFee)
                           : "Chưa có báo giá"}
                     </AppText>
-                  </View>
+                  </View>)}
 
                   <View
                     style={{

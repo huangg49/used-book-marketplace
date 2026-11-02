@@ -372,10 +372,10 @@ function AuthenticatedOrderDetails({
                   <dt>Tiền sách</dt>
                   <dd>{formatVnd(o.amounts.bookPrice)}</dd>
                 </div>
-                <div className={styles.paymentRow}>
+                {o.amounts.shippingFee > 0 && (<div className={styles.paymentRow}>
                   <dt>Phí giao hàng</dt>
                   <dd>{formatVnd(o.amounts.shippingFee)}</dd>
-                </div>
+                </div>)}
                 <div className={`${styles.paymentRow} ${styles.paymentTotalRow}`}>
                   <dt>Tổng thanh toán</dt>
                   <dd>{formatVnd(o.amounts.buyerTotal)}</dd>

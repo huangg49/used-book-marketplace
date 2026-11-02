@@ -727,7 +727,7 @@ describe('Carrier pickup: real MongoDB and HTTP', () => {
       version: 4,
       carrierReview: null,
       shipmentRegistrationEnabled: false,
-      moneyHeld: 230000,
+      moneyHeld: 200000,
       commitment: { status: 'Active' },
     });
     const view = (await shipment(f).expect(200)).body;
@@ -937,7 +937,7 @@ describe('Carrier pickup: real MongoDB and HTTP', () => {
       orderVersion: 5,
     });
     expect((await emit(event).expect(200)).body).toEqual(first.body);
-    expect((await orderView(f.id, f.f.buyer)).moneyHeld).toBe(230000);
+    expect((await orderView(f.id, f.f.buyer)).moneyHeld).toBe(200000);
     expect(await reviews(f.id)).toBe(1);
     await expect(app.get(OrdersService).refund(f.id)).rejects.toThrow();
     expect((await reconcile()).balanced).toBe(true);
@@ -963,7 +963,7 @@ describe('Carrier pickup: real MongoDB and HTTP', () => {
         carrierReview: { reason: 'LatePickup' },
       });
       const o = await orderView(f.id, f.f.buyer);
-      expect(o.moneyHeld).toBe(230000);
+      expect(o.moneyHeld).toBe(200000);
       expect(!!o.preparation.pickupReview).toBe(workerFirst);
       const status = await app.get(OrderExpiryWorker).tick();
       expect(status.openCarrierReviews).toBeGreaterThan(0);

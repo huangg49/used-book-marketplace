@@ -186,7 +186,7 @@ describe('DirectDelivery quote HTTP and MongoDB', () => {
       const c = db.c;
       await c.sale_quote_policy_selection.updateOne(
         { _id: 'DirectSale' },
-        { $set: { policyCode: 'HCM-DIRECT-v1' } },
+        { $set: { policyCode: 'DIRECT-FREE-SHIPPING-v1' } },
       );
       await c.sale_quote_policies.deleteMany({ _id: 'QA-POLICY' });
       await c.sale_quotes.deleteMany({ buyerId: { $in: users } });
@@ -445,11 +445,11 @@ describe('DirectDelivery quote HTTP and MongoDB', () => {
     const q = await readQuote(r.body.entityId, f.buyer);
     expect(q.amounts).toEqual({
       bookPrice: 200000,
-      shippingFee: 30000,
-      buyerTotal: 230000,
+      shippingFee: 0,
+      buyerTotal: 200000,
       commissionBps: 500,
       commission: 10000,
-      sellerProceedsOnCompletion: 220000,
+      sellerProceedsOnCompletion: 190000,
     });
     expect(q.assessment).toBe('Current');
     expect(q.reservesBook).toBe(false);
@@ -591,7 +591,7 @@ describe('DirectDelivery quote HTTP and MongoDB', () => {
       await mutateAddress(owner, address.id, true);
       const q = await readQuote(r.entityId, f.buyer);
       expect(q.assessment).toBe('Changed');
-      expect(q.amounts.buyerTotal).toBe(230000);
+      expect(q.amounts.buyerTotal).toBe(200000);
     },
   );
   it('new policy invalidates existing quotes without repricing them; policy rows remain immutable', async () => {
@@ -611,7 +611,7 @@ describe('DirectDelivery quote HTTP and MongoDB', () => {
     try {
       const q = await readQuote(r.entityId, f.buyer);
       expect(q.assessment).toBe('Changed');
-      expect(q.amounts.shippingFee).toBe(30000);
+      expect(q.amounts.shippingFee).toBe(0);
       const fresh = await readQuote(
         (await quote(f).expect(200)).body.entityId,
         f.buyer,

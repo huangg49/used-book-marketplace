@@ -228,14 +228,14 @@ export function NegotiationWorkspace({
                 </dd>
               </div>
 
-              <div className={styles.paymentRow}>
+              {(room.quotePreview?.shippingFee ?? 0) > 0 && (<div className={styles.paymentRow}>
                 <dt>Phí giao hàng</dt>
                 <dd>
                   {room.quotePreview
                     ? formatVnd(room.quotePreview.shippingFee)
                     : "Chưa tính"}
                 </dd>
-              </div>
+              </div>)}
 
               <div className={`${styles.paymentRow} ${styles.paymentTotalRow}`}>
                 <dt>Tổng thanh toán</dt>
@@ -662,8 +662,8 @@ export function NegotiationWorkspace({
                       </span>
                       <span>
                         {room.hasQuote && room.quotePreview
-                          ? `3. Đã có phí giao hàng: ${formatVnd(room.quotePreview.shippingFee)}`
-                          : "3. Địa chỉ nhận & phí giao hàng"}
+                          ? "3. Đã có địa chỉ nhận sách"
+                          : "3. Địa chỉ nhận sách"}
                       </span>
                     </div>
 

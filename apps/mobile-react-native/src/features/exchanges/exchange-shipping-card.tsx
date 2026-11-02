@@ -129,7 +129,7 @@ export function ExchangeShippingCard({
           </View>
           <AppText style={styles.cardTitle}>Tiến trình giao nhận 2 chiều</AppText>
           <AppText style={styles.cardSubtitle}>
-            Mỗi bên chủ động gửi sách và tự thanh toán cước phí chiều đi
+            Mỗi bên chủ động gửi sách của chiều mình. Hệ thống không thu phí giao hàng.
           </AppText>
         </View>
       </View>
