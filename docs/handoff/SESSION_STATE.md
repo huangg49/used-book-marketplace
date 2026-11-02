@@ -1,5 +1,21 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## Hồ sơ uy tín công khai — tách layout và sửa xung đột cache
+
+- `codex/public-reputation-profile`, base09198a00: `/members/:id` có CSS riêng,
+  khung căn giữa, danh tính/2điểm/số mẫu rõ, nhận xét chính và giải thích phụ.
+  Một document scroll; giữ API/data và UI đánh giá của teammate. Public bỏ nhãn
+  cảm tính; Approved reply, empty/error/paging/retry và tên/nội dung dài được giữ.
+- Public infinite key tách khỏi summary regular query để mở hồ sơ chính mình
+  không đọc nhầm cache shape. Network stale giữ dữ liệu;403/404 che cache.
+- PASS UI HTTP fixture1440/900/390/320/chữ130%, paging recovery, cache isolation,
+  missing/null/approved reply; typecheck/build/lint. App chính5174/API3000 đọc
+  profile đã được owner công bố:2review, điểm3.5/4.0 đúng; không mutation dữ liệu.
+- Đã áp riêng page/CSS vào checkout app, không đè shared reviews/global/layout.
+  Giữ SupportLink ở worktree mới; không kéo link support vào runtime0.71 chưa nối.
+  [Bằng chứng và giới hạn](../ui/PUBLIC_REPUTATION_2026_11_02.md). App giữ chạy;
+  không push/CI/PR/merge/native/human acceptance hoặc đóng gate.
+
 ## Nút bỏ chờ48h cho giao dịch đánh giá mẫu local
 
 - Owner yêu cầu bỏ thời gian chờ để demo. Nhánh `codex/demo-review-time-advance`,
