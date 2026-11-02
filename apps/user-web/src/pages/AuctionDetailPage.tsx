@@ -915,8 +915,8 @@ function WinnerPanel({ me, auction, onChanged, paused }: { me: AuctionParticipat
             {quote.isError
               ? commandError(quote.error)
               : quote.data
-                ? `Phí giao ${formatVnd(quote.data.outboundFee)} (hãng vận chuyển mô phỏng). Sau khi bạn đồng ý biên bản, điểm giao sách cho hãng.`
-                : 'Đang tính phí giao…'}
+                ? `Giao hàng miễn phí (hãng vận chuyển mô phỏng). Sau khi bạn đồng ý biên bản, điểm giao sách cho hãng.`
+                : 'Đang kiểm tra địa chỉ…'}
           </p>
         </div>
       ))}
@@ -934,7 +934,7 @@ function WinnerPanel({ me, auction, onChanged, paused }: { me: AuctionParticipat
         onClose={() => !busy && setConfirming(false)}
         title={`Thanh toán ${formatVnd(total ?? o.amounts.bookPrice)} từ ví?`}
         description={delivery
-          ? `Gồm ${formatVnd(o.amounts.bookPrice)} tiền sách và ${formatVnd(delivery.fee)} phí giao. Số tiền được giữ cho đơn này đến khi bạn nhận sách. Đã chọn giao tận nơi thì không đổi sang tự nhận; không nhận thanh toán một phần.`
+          ? `Tiền sách ${formatVnd(o.amounts.bookPrice)}. Giao hàng miễn phí. Số tiền được giữ cho đơn này đến khi bạn nhận sách. Đã chọn giao tận nơi thì không đổi sang tự nhận; không nhận thanh toán một phần.`
           : `Số tiền được giữ cho đơn này đến khi bạn nhận sách tại ${o.pointName}. Ví cần đủ số dư khả dụng; không nhận thanh toán một phần.`}
         confirmText="Thanh toán"
         onConfirm={() => void pay()}

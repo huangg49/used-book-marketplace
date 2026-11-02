@@ -459,7 +459,7 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
                     </div>
                     <h3 className={styles.cardTitle}>Tiến trình giao nhận 2 chiều</h3>
                     <p className={styles.cardSubtitle}>
-                        Mỗi bên chủ động đóng gói, gửi sách và tự thanh toán cước phí chiều gửi của mình
+                        Mỗi bên chủ động đóng gói và gửi sách của chiều mình. Hệ thống không thu phí giao hàng.
                     </p>
                 </div>
             </div>
@@ -469,7 +469,7 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
                 {bothReceived ? (
                     <div className={`${styles.statusPillLarge} ${styles.statusCompleted}`}>
                         <CheckCircle2 size={16} />
-                        <span>Cả 2 gói sách đã được giao nhận thành công · Sẵn sàng tất toán</span>
+                        <span>Cả 2 gói sách đã được giao nhận thành công · Đang trong thời gian kiểm định 72h (POL-08)</span>
                     </div>
                 ) : bothSent ? (
                     <div className={`${styles.statusPillLarge} ${styles.statusShipping}`}>

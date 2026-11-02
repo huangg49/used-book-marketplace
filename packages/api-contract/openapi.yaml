@@ -14960,7 +14960,7 @@ components:
       required: [destination, shippingFee, expiresAt]
       properties:
         destination: { $ref: "#/components/schemas/OrderContact" }
-        shippingFee: { type: integer, minimum: 0 }
+        shippingFee: { type: integer, minimum: 0, description: Zero for new quotes under the free shipping policy; historical snapshots retain their fee. }
         expiresAt: { type: string, format: date-time }
     PurchaseMessage:
       type: object
@@ -18363,7 +18363,7 @@ components:
           type: string
         outboundFee:
           type: integer
-          minimum: 1
+          minimum: 0
           maximum: 1000000
         carrier:
           type: string
@@ -18423,7 +18423,7 @@ components:
           maximum: 1000000
         outboundFee:
           type: integer
-          minimum: 1
+          minimum: 0
           maximum: 1000000
         buyerTotal:
           type: integer
@@ -18548,7 +18548,7 @@ components:
           maximum: 2147483647
         expectedOutboundFee:
           type: integer
-          minimum: 1
+          minimum: 0
           maximum: 1000000
           description: The fee the buyer saw in the delivery quote.
     AcceptPointOrderReport:
@@ -20889,6 +20889,12 @@ components:
             - type: string
               format: uuid
             - type: "null"
+        negotiatedDiffAmount:
+          anyOf:
+            - type: integer
+              minimum: 0
+            - type: "null"
+          description: Custom compensation amount negotiated between members, if applicable.
         fundingDeadline:
           anyOf:
             - type: string
@@ -21335,8 +21341,8 @@ components:
     CounterExchangeProposal:
       type: object
       additionalProperties: false
-      description: The responding Member replaces their own books; the server derives both deposits and compensation from reviewed values. Recipient replaces exactly one listing, initiator one to five. The other party's frozen books must remain eligible and unchanged.
-      required: [expectedVersion, listingIds]
+      description: The responding Member replaces their own books or negotiates compensation; the server derives deposits from reviewed book values while compensation can be customized within bounds. Recipient replaces exactly one listing, initiator one to five. The other party's frozen books must remain eligible and unchanged.
+      required: [expectedVersion]
       properties:
         expectedVersion:
           type: integer
@@ -21349,6 +21355,15 @@ components:
           items:
             type: string
             format: uuid
+        negotiatedDiffAmount:
+          type: integer
+          minimum: 0
+        diffPayerId:
+          anyOf:
+            - type: string
+              format: uuid
+            - type: "null"
+          description: Who pays the compensation (initiator or recipient, or null if 0).
         deliveryAddressId:
           type: string
           format: uuid

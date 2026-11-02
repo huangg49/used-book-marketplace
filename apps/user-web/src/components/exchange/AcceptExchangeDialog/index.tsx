@@ -10,11 +10,19 @@ import {
     Plus, 
     CheckCircle2,
     AlertTriangle,
-    Lock
+    Lock,
+    SlidersHorizontal,
+    RotateCcw,
+    ArrowUpRight,
+    ArrowDownLeft,
+    Scale,
+    Coins,
+    Info
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 import type { ExchangeDetail } from '../../../lib/mock/exchangeDetail';
+import type { CounterOfferData } from '../CounterDialog';
 import { getWalletSummary } from '../../../services/wallet';
 import { session } from '../../../lib/session';
 import { BookCover } from '../../BookCover';
@@ -55,6 +63,7 @@ interface AcceptExchangeDialogProps {
   onConfirm: (data: {
     deliveryAddressId?: string;
   }) => Promise<void>;
+  onCounter?: (data: CounterOfferData) => Promise<void>;
   isBusy: boolean;
   detail: ExchangeDetail;
 }
@@ -63,6 +72,7 @@ export function AcceptExchangeDialog({
   isOpen,
   onClose,
   onConfirm,
+  onCounter,
   isBusy,
   detail,
 }: AcceptExchangeDialogProps) {
@@ -75,6 +85,30 @@ export function AcceptExchangeDialog({
   const [newLocalityCode, setNewLocalityCode] = useState('');
   const [newDetail, setNewDetail] = useState('');
   const [error, setError] = useState('');
+
+  // Compensation Negotiation states
+  const isAlreadyNegotiated = detail.negotiatedDiffAmount != null;
+  const receiveBooks = detail.receiveBooks;
+  const giveBooks = detail.giveBooks;
+  const totalReceivePrice = receiveBooks.reduce((sum, b) => sum + (b.price || 0), 0);
+  const totalGivePrice = giveBooks.reduce((sum, b) => sum + (b.price || 0), 0);
+  const defaultDiffAmount = Math.abs(totalReceivePrice - totalGivePrice);
+
+  const [isNegotiating, setIsNegotiating] = useState(false);
+  const [negotiatedDiff, setNegotiatedDiff] = useState<number>(detail.moneyAmount ?? defaultDiffAmount);
+  const [diffInputText, setDiffInputText] = useState<string>(() =>
+    new Intl.NumberFormat('vi-VN').format(detail.moneyAmount ?? defaultDiffAmount)
+  );
+
+  const updateNegotiatedDiff = (amount: number) => {
+    setNegotiatedDiff(amount);
+    setDiffInputText(amount > 0 ? new Intl.NumberFormat('vi-VN').format(amount) : '');
+  };
+
+  const initialPayer = detail.moneyCompensationType === 'user_pays'
+    ? 'viewer'
+    : (detail.moneyCompensationType === 'other_pays' ? 'partner' : 'none');
+  const [negotiatedPayer, setNegotiatedPayer] = useState<'viewer' | 'partner' | 'none'>(initialPayer);
 
   const addresses = useQuery({
     queryKey: ['address-book'],
@@ -98,6 +132,15 @@ export function AcceptExchangeDialog({
     if (isOpen) {
       setError('');
       setAddressMode('existing');
+      setIsNegotiating(false);
+      const initialDiff = detail.moneyAmount ?? defaultDiffAmount;
+      setNegotiatedDiff(initialDiff);
+      setDiffInputText(new Intl.NumberFormat('vi-VN').format(initialDiff));
+      setNegotiatedPayer(
+        detail.moneyCompensationType === 'user_pays'
+          ? 'viewer'
+          : (detail.moneyCompensationType === 'other_pays' ? 'partner' : 'none')
+      );
 
       if (addresses.data?.items?.length) {
         const def = addresses.data.items.find((a) => a.isDefault) ?? addresses.data.items[0];
@@ -106,25 +149,47 @@ export function AcceptExchangeDialog({
         setAddressMode('new');
       }
     }
-  }, [isOpen, addresses.data, detail.moneyAmount]);
+  }, [isOpen, addresses.data, detail.moneyAmount, detail.negotiatedDiffAmount, defaultDiffAmount, detail.moneyCompensationType]);
 
   if (!isOpen) return null;
 
-  const receiveBooks = detail.receiveBooks;
-  const giveBooks = detail.giveBooks;
-  const totalReceivePrice = receiveBooks.reduce((sum, b) => sum + (b.price || 0), 0);
-  const totalGivePrice = giveBooks.reduce((sum, b) => sum + (b.price || 0), 0);
+  const currentDiff = isNegotiating
+    ? (negotiatedPayer === 'none' ? 0 : negotiatedDiff)
+    : (detail.moneyAmount ?? defaultDiffAmount);
+  let effectiveCompensationNotice = 'Hai bên trao đổi ngang giá (0 đ bù trừ)';
+  let effectiveFundingAmount = totalReceivePrice;
 
-  const moneyAmount = detail.moneyAmount || 0;
-  let compensationNotice = 'Hai bên trao đổi ngang giá (0 đ bù trừ)';
-  if (detail.moneyCompensationType === 'user_pays' && moneyAmount > 0) {
-    compensationNotice = `Bạn cần bù thêm: ${formatVnd(moneyAmount)}`;
-  } else if (detail.moneyCompensationType === 'other_pays' && moneyAmount > 0) {
-    compensationNotice = `Đối tác (${detail.partner.username}) sẽ bù thêm cho bạn: ${formatVnd(moneyAmount)}`;
+  if (isNegotiating) {
+    if (negotiatedPayer === 'viewer') {
+      effectiveCompensationNotice = currentDiff > 0
+        ? `Bạn sẽ bù thêm cho đối tác (theo thỏa thuận mới): ${formatVnd(currentDiff)}`
+        : 'Hai bên trao đổi ngang giá (0 đ bù trừ)';
+      effectiveFundingAmount = totalReceivePrice + currentDiff;
+    } else if (negotiatedPayer === 'partner') {
+      effectiveCompensationNotice = currentDiff > 0
+        ? `Đối tác (${detail.partner.username}) sẽ bù thêm cho bạn (theo thỏa thuận mới): ${formatVnd(currentDiff)}`
+        : 'Hai bên trao đổi ngang giá (0 đ bù trừ)';
+      effectiveFundingAmount = totalReceivePrice;
+    } else {
+      effectiveCompensationNotice = 'Hai bên trao đổi ngang giá (0 đ bù trừ)';
+      effectiveFundingAmount = totalReceivePrice;
+    }
+  } else {
+    if (detail.moneyCompensationType === 'user_pays' && (detail.moneyAmount ?? 0) > 0) {
+      effectiveCompensationNotice = isAlreadyNegotiated
+        ? `Bạn cần bù thêm (đã chốt theo thương lượng): ${formatVnd(detail.moneyAmount!)}`
+        : `Bạn cần bù thêm: ${formatVnd(detail.moneyAmount!)}`;
+      effectiveFundingAmount = totalReceivePrice + detail.moneyAmount!;
+    } else if (detail.moneyCompensationType === 'other_pays' && (detail.moneyAmount ?? 0) > 0) {
+      effectiveCompensationNotice = isAlreadyNegotiated
+        ? `Đối tác (${detail.partner.username}) sẽ bù thêm cho bạn (đã chốt theo thương lượng): ${formatVnd(detail.moneyAmount!)}`
+        : `Đối tác (${detail.partner.username}) sẽ bù thêm cho bạn: ${formatVnd(detail.moneyAmount!)}`;
+      effectiveFundingAmount = totalReceivePrice;
+    } else {
+      effectiveFundingAmount = totalReceivePrice;
+    }
   }
 
-  const effectiveCompensationNotice = compensationNotice;
-  const effectiveFundingAmount = detail.viewerFundingAmount ?? totalReceivePrice;
   const availableBalance = wallet.data?.available ?? 0;
   const isBalanceSufficient = availableBalance >= effectiveFundingAmount;
   const missingBalance = Math.max(0, effectiveFundingAmount - availableBalance);
@@ -133,66 +198,91 @@ export function AcceptExchangeDialog({
   const defaultRecipientName = defaultAddr?.recipientName || '';
   const defaultPhone = defaultAddr?.phone || '';
 
+  const resolveAddressId = async () => {
+    if (addressMode === 'existing') return selectedAddressId;
+    const nameTrim = newRecipientName.trim() || defaultRecipientName;
+    const phoneTrim = newPhone.trim() || defaultPhone;
+    const detailTrim = newDetail.trim();
+
+    if (!nameTrim || nameTrim.length < 2) {
+      throw new Error('Vui lòng nhập họ tên người nhận.');
+    }
+    if (!phoneTrim) {
+      throw new Error('Vui lòng nhập số điện thoại người nhận.');
+    }
+    if (!/^0[0-9]{9}$/.test(phoneTrim)) {
+      throw new Error('Số điện thoại nhận hàng phải gồm đúng 10 chữ số (bắt đầu bằng 0).');
+    }
+    if (!newLocalityCode) {
+      throw new Error('Vui lòng chọn Khu vực / Quận huyện tại TP.HCM.');
+    }
+    if (detailTrim.length < 5) {
+      throw new Error('Địa chỉ chi tiết phải có ít nhất 5 ký tự (số nhà, tên đường, phường...).');
+    }
+
+    const saved = await session.request(
+      '/me/addresses',
+      addressReceiptSchema,
+      {
+        method: 'POST',
+        headers: { 'Idempotency-Key': crypto.randomUUID() },
+        body: JSON.stringify({
+          expectedBookVersion: addresses.data?.version ?? 0,
+          address: {
+            recipientName: nameTrim,
+            phone: phoneTrim,
+            localityCode: newLocalityCode,
+            detail: detailTrim,
+            serviceAreaCode: 'HCM-DEMO-v1',
+          },
+          makeDefault: false,
+        }),
+      },
+    );
+    await addresses.refetch();
+    return saved.addressId;
+  };
+
   const handleConfirmSubmit = async () => {
     setError('');
-    let finalAddressId = selectedAddressId;
-
     try {
-      if (addressMode === 'new') {
-        const nameTrim = newRecipientName.trim() || defaultRecipientName;
-        const phoneTrim = newPhone.trim() || defaultPhone;
-        const detailTrim = newDetail.trim();
-
-        if (!nameTrim || nameTrim.length < 2) {
-          setError('Vui lòng nhập họ tên người nhận.');
-          return;
-        }
-        if (!phoneTrim) {
-          setError('Vui lòng nhập số điện thoại người nhận.');
-          return;
-        }
-        if (!/^0[0-9]{9}$/.test(phoneTrim)) {
-          setError('Số điện thoại nhận hàng phải gồm đúng 10 chữ số (bắt đầu bằng 0).');
-          return;
-        }
-        if (!newLocalityCode) {
-          setError('Vui lòng chọn Khu vực / Quận huyện tại TP.HCM.');
-          return;
-        }
-        if (detailTrim.length < 5) {
-          setError('Địa chỉ chi tiết phải có ít nhất 5 ký tự (số nhà, tên đường, phường...).');
-          return;
-        }
-
-        const saved = await session.request(
-          '/me/addresses',
-          addressReceiptSchema,
-          {
-            method: 'POST',
-            headers: { 'Idempotency-Key': crypto.randomUUID() },
-            body: JSON.stringify({
-              expectedBookVersion: addresses.data?.version ?? 0,
-              address: {
-                recipientName: nameTrim,
-                phone: phoneTrim,
-                localityCode: newLocalityCode,
-                detail: detailTrim,
-                serviceAreaCode: 'HCM-DEMO-v1',
-              },
-              makeDefault: false,
-            }),
-          },
-        );
-        finalAddressId = saved.addressId;
-        await addresses.refetch();
-      }
-
+      const finalAddressId = await resolveAddressId();
       await onConfirm({
         deliveryAddressId: finalAddressId || undefined,
       });
       onClose();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi xác nhận đề nghị.');
+    }
+  };
+
+  const handleCounterSubmit = async () => {
+    setError('');
+    const finalDiff = negotiatedPayer === 'none' ? 0 : negotiatedDiff;
+    if (finalDiff < 0) {
+      setError('Tiền bù không thể là số âm.');
+      return;
+    }
+    const finalPayerId = negotiatedPayer === 'none' || finalDiff === 0
+      ? null
+      : (negotiatedPayer === 'viewer' ? detail.viewer.id : detail.partner.id);
+
+    try {
+      const finalAddressId = await resolveAddressId();
+      if (onCounter) {
+        const payerDesc = finalPayerId === null
+          ? 'đổi ngang 0 đ'
+          : (finalPayerId === detail.viewer.id ? 'bạn bù' : 'đối tác bù');
+        await onCounter({
+          negotiatedDiffAmount: finalDiff,
+          diffPayerId: finalPayerId,
+          deliveryAddressId: finalAddressId || undefined,
+          note: `Thương lượng tiền bù: ${formatVnd(finalDiff)} (${payerDesc})`,
+        });
+        onClose();
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi gửi đề xuất điều chỉnh.');
     }
   };
 
@@ -285,20 +375,157 @@ export function AcceptExchangeDialog({
               <h3 className={styles.sectionTitle}>
                 <Banknote size={15} /> Thỏa thuận tài chính
               </h3>
-              <div className={styles.lockedBadge}><Lock size={12} /> Theo giá trị sách đã duyệt</div>
+              {isAlreadyNegotiated ? (
+                <div className={styles.lockedBadge}>
+                  <Lock size={12} /> Đã chốt theo thương lượng của đối tác
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div className={styles.lockedBadge}>
+                    <ShieldCheck size={13} /> Theo giá trị sách đã duyệt
+                  </div>
+                  {onCounter && (
+                    <button
+                      type="button"
+                      className={isNegotiating ? styles.headerResetBtn : styles.headerToggleBtn}
+                      onClick={() => {
+                        const nextState = !isNegotiating;
+                        setIsNegotiating(nextState);
+                        if (!nextState) updateNegotiatedDiff(defaultDiffAmount);
+                      }}
+                    >
+                      {isNegotiating ? (
+                        <>
+                          <RotateCcw size={12} /> Khôi phục mặc định
+                        </>
+                      ) : (
+                        <>
+                          <SlidersHorizontal size={12} /> Thỏa thuận lại tiền bù
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className={styles.financialBox}>
-              <div className={styles.financialRow}><Banknote size={18} className={styles.financialIcon} /><div className={styles.financialContent}>
-                <p className={styles.financialLabel}>Tiền bù tính từ giá trị sách</p><p className={styles.financialDesc}>{effectiveCompensationNotice}</p>
-              </div></div>
+              <div className={styles.financialRow}>
+                <Banknote size={18} className={styles.financialIcon} />
+                <div className={styles.financialContent}>
+                  <p className={styles.financialLabel}>
+                    {isAlreadyNegotiated || isNegotiating ? 'Tiền bù (theo thương lượng)' : 'Tiền bù tính từ giá trị sách'}
+                  </p>
+                  <p className={styles.financialDesc}>{effectiveCompensationNotice}</p>
+                </div>
+              </div>
+
+              {isNegotiating && (
+                <div className={styles.negotiationCard}>
+                  <div className={styles.negotiationCardHeader}>
+                    <SlidersHorizontal size={14} className={styles.negotiationCardHeaderIcon} />
+                    <span>Chọn bên bù tiền theo thỏa thuận trong chat:</span>
+                  </div>
+
+                  <div className={styles.payerSelectorGroup}>
+                    <button
+                      type="button"
+                      className={`${styles.payerOptionBtn} ${negotiatedPayer === 'viewer' ? styles.payerOptionBtnActive : ''}`}
+                      onClick={() => {
+                        setNegotiatedPayer('viewer');
+                        if (negotiatedDiff === 0) updateNegotiatedDiff(defaultDiffAmount || 10000);
+                      }}
+                    >
+                      <span className={styles.payerOptionIcon}>
+                        <ArrowUpRight size={14} />
+                      </span>
+                      <span>Bạn bù cho đối tác</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`${styles.payerOptionBtn} ${negotiatedPayer === 'partner' ? styles.payerOptionBtnActive : ''}`}
+                      onClick={() => {
+                        setNegotiatedPayer('partner');
+                        if (negotiatedDiff === 0) updateNegotiatedDiff(defaultDiffAmount || 10000);
+                      }}
+                    >
+                      <span className={styles.payerOptionIcon}>
+                        <ArrowDownLeft size={14} />
+                      </span>
+                      <span>Đối tác bù cho bạn</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`${styles.payerOptionBtn} ${negotiatedPayer === 'none' ? styles.payerOptionBtnActive : ''}`}
+                      onClick={() => {
+                        setNegotiatedPayer('none');
+                        updateNegotiatedDiff(0);
+                      }}
+                    >
+                      <span className={styles.payerOptionIcon}>
+                        <Scale size={14} />
+                      </span>
+                      <span>Đổi ngang (0 đ)</span>
+                    </button>
+                  </div>
+
+                  {negotiatedPayer === 'none' ? (
+                    <div className={styles.evenCompensationBanner}>
+                      <CheckCircle2 size={16} className={styles.evenCompensationIcon} />
+                      <span>Hai bên thống nhất đổi ngang sách — không phát sinh tiền bù chênh lệch.</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className={styles.amountInputLabel}>
+                        {negotiatedPayer === 'viewer'
+                          ? 'Số tiền bạn sẽ bù thêm cho đối tác:'
+                          : `Số tiền đối tác (${detail.partner.username}) sẽ bù thêm cho bạn:`}
+                      </label>
+                      <div className={styles.amountInputWrapper}>
+                        <span className={styles.amountInputPrefix}>
+                          <Coins size={18} />
+                        </span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          className={styles.amountInput}
+                          value={diffInputText}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/\D/g, '');
+                            const num = digits ? parseInt(digits, 10) : 0;
+                            setNegotiatedDiff(num);
+                            setDiffInputText(digits === '' ? '' : new Intl.NumberFormat('vi-VN').format(num));
+                          }}
+                          onBlur={() => {
+                            if (negotiatedDiff > 0) {
+                              setDiffInputText(new Intl.NumberFormat('vi-VN').format(negotiatedDiff));
+                            } else {
+                              setDiffInputText('0');
+                            }
+                          }}
+                          placeholder="0"
+                        />
+                        <span className={styles.amountInputSuffix}>VNĐ</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className={styles.depositDisclaimer}>
+                    <Info size={14} className={styles.depositDisclaimerIcon} />
+                    <span>Tiền cọc sách ({formatVnd(totalReceivePrice)}) luôn giữ nguyên theo giá trị sách để bảo chứng an toàn tài sản.</span>
+                  </div>
+                </div>
+              )}
+
               <div className={styles.financialRow}>
                 <ShieldCheck size={18} className={styles.financialIcon} />
                 <div className={styles.financialContent}>
                   <p className={styles.financialLabel}>Tổng tiền cần nộp của bạn</p>
                   <p className={styles.financialDesc}>
                     <strong>{formatVnd(effectiveFundingAmount)}</strong>
-                    {' '}(Gồm cọc và tiền bù nếu bạn là bên bù. Cọc được hoàn khi giao dịch hoàn tất hợp lệ; tiền bù chuyển cho đối tác).
+                    {' '}(Gồm cọc sách bạn nhận và tiền bù nếu bạn là bên bù. Cọc được hoàn khi giao dịch hoàn tất hợp lệ; tiền bù chuyển cho đối tác).
                   </p>
                   {wallet.data && (
                     <div className={isBalanceSufficient ? styles.balanceOkBadge : styles.balanceWarningBadge}>
@@ -434,9 +661,17 @@ export function AcceptExchangeDialog({
             </div>
           </div>
 
-          <div className={styles.noticeBox}>
-            Khi chấp nhận, hệ thống kiểm tra lại sách và thỏa thuận trước khi giữ sách.
-            Nếu còn hợp lệ, hai bên có 24 giờ để nộp đủ cọc và tiền bù trước khi gửi sách.
+          <div className={isNegotiating ? styles.noticeBoxCounter : styles.noticeBox}>
+            {isNegotiating ? (
+              <>
+                <strong>Điều chỉnh tiền bù:</strong> Sau khi gửi đề xuất điều chỉnh, thông tin sẽ được chuyển sang đối tác trong hội thoại chat. Đối tác sẽ kiểm tra điều khoản và bấm <strong>Đồng ý & Khóa giao dịch</strong>.
+              </>
+            ) : (
+              <>
+                Khi chấp nhận, hệ thống kiểm tra lại sách và thỏa thuận trước khi giữ sách.
+                Nếu còn hợp lệ, hai bên có 24 giờ để nộp đủ cọc và tiền bù trước khi gửi sách.
+              </>
+            )}
           </div>
 
           {error && <p className={styles.errorText} role="alert">{error}</p>}
@@ -452,14 +687,25 @@ export function AcceptExchangeDialog({
           >
             Hủy
           </button>
-          <button
-            type="button"
-            className={styles.btnConfirm}
-            onClick={handleConfirmSubmit}
-            disabled={isBusy}
-          >
-            <CheckCircle2 size={16} /> {isBusy ? 'Đang xử lý...' : 'Đồng ý & Khóa giao dịch'}
-          </button>
+          {isNegotiating ? (
+            <button
+              type="button"
+              className={styles.btnConfirmCounter}
+              onClick={handleCounterSubmit}
+              disabled={isBusy}
+            >
+              <ArrowLeftRight size={16} /> {isBusy ? 'Đang gửi...' : 'Gửi đề xuất điều chỉnh cho đối tác'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.btnConfirm}
+              onClick={handleConfirmSubmit}
+              disabled={isBusy}
+            >
+              <CheckCircle2 size={16} /> {isBusy ? 'Đang xử lý...' : 'Đồng ý & Khóa giao dịch'}
+            </button>
+          )}
         </div>
       </div>
     </div>,

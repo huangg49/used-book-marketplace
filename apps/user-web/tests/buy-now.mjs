@@ -226,6 +226,30 @@ try {
       ),
     );
   }
+  // A real wheel gesture must scroll the modal while global Lenis is active.
+  // Programmatic scrollTo alone would miss Lenis swallowing the wheel event.
+  await buyerPage.setViewportSize({ width: 390, height: 600 });
+  const addressDialog = buyerPage.locator("dialog[open]");
+  await addressDialog.evaluate(async (node) => {
+    await Promise.all(node.getAnimations().map((animation) => animation.finished));
+    node.scrollTop = 0;
+  });
+  assert(await addressDialog.evaluate((node) => node.scrollHeight > node.clientHeight));
+  const backgroundScroll = await buyerPage.evaluate(() => window.scrollY);
+  const dialogBounds = await addressDialog.boundingBox();
+  await buyerPage.mouse.move(dialogBounds.x + 40, dialogBounds.y + 100);
+  await buyerPage.mouse.wheel(0, 10000);
+  await buyerPage.waitForFunction(() => {
+    const dialog = document.querySelector("dialog[open]");
+    return dialog.scrollTop > 0 && dialog.scrollTop + dialog.clientHeight >= dialog.scrollHeight - 2;
+  });
+  assert.equal(await buyerPage.evaluate(() => window.scrollY), backgroundScroll);
+  assert(await buyerPage.getByRole("button", { name: "Xem tổng thanh toán", exact: true }).evaluate((node) => {
+    const button = node.getBoundingClientRect();
+    const dialog = node.closest("dialog").getBoundingClientRect();
+    return button.top >= dialog.top && button.bottom <= dialog.bottom;
+  }));
+  await buyerPage.setViewportSize({ width: 390, height: 844 });
   await buyerPage.emulateMedia({ reducedMotion: "reduce" });
   const duration = await buyerPage
     .getByRole("dialog")
@@ -254,7 +278,7 @@ try {
     .getByRole("button", { name: "Xem tổng thanh toán", exact: true })
     .click();
   await buyerPage
-    .getByRole("button", { name: "Thử lại bước tính phí", exact: true })
+    .getByRole("button", { name: "Thử lại bước xác nhận địa chỉ", exact: true })
     .waitFor();
   assert.equal(
     await buyerPage.getByLabel("Họ tên", { exact: true }).isDisabled(),
@@ -267,7 +291,7 @@ try {
     .getByRole("button", { name: "Chọn địa chỉ nhận sách", exact: true })
     .click();
   await buyerPage
-    .getByRole("button", { name: "Thử lại bước tính phí", exact: true })
+    .getByRole("button", { name: "Thử lại bước xác nhận địa chỉ", exact: true })
     .click();
   assert.equal(addressAttempts.length, 2);
   assert.deepEqual(addressAttempts[0], addressAttempts[1]);
@@ -371,7 +395,9 @@ try {
   assert.equal(room.terms, null);
   assert.equal(order.purchaseMode, "BuyNow");
   assert.equal(order.amounts.bookPrice, 125000);
-  assert.equal(order.amounts.buyerTotal, 155000);
+  assert.equal(order.amounts.shippingFee, 0);
+  assert.equal(await buyerOrderDetails.getByText("Phí giao hàng", { exact: true }).count(), 0);
+  assert.equal(order.amounts.buyerTotal, 125000);
   assert.equal(order.state, "AwaitingPayment");
   const observer = await browser.newPage({
     viewport: { width: 1440, height: 900 },
@@ -411,7 +437,7 @@ try {
       .countDocuments({ buyerId: buyer.user.id }),
     1,
   );
-  await buyerOrderDetails.getByRole("button", { name: /^Thanh toán ngay 155\.000\s*₫$/ }).click();
+  await buyerOrderDetails.getByRole("button", { name: /^Thanh toán ngay 125\.000\s*₫$/ }).click();
   await buyerOrderDetails.getByRole("alert").filter({ hasText: "số dư ví" }).waitFor();
   assert.equal(
     (await fixture.api("/me/wallet", buyer.accessToken)).transactionHeld,
@@ -432,7 +458,7 @@ try {
       await route.abort("failed");
     } else await route.continue();
   });
-  await buyerOrderDetails.getByRole("button", { name: /^Thanh toán ngay 155\.000\s*₫$/ }).click();
+  await buyerOrderDetails.getByRole("button", { name: /^Thanh toán ngay 125\.000\s*₫$/ }).click();
   await buyerOrderDetails
     .getByRole("button", { name: "Thử lại thanh toán", exact: true })
     .waitFor();
@@ -463,7 +489,7 @@ try {
     .waitFor();
   assert.equal(
     (await fixture.api("/me/wallet", buyer.accessToken)).transactionHeld,
-    155000,
+    125000,
   );
   assert.equal(
     await fixture.db

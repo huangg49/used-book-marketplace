@@ -27,6 +27,7 @@ import {
 } from '../commands/mongo-command.service.js';
 import {
   costMicroUsd,
+  failureLog,
   PriceModelError,
   rateFor,
   type ModelFailure,
@@ -93,6 +94,10 @@ export class AutofillAssistService {
   private get timeoutMs() {
     return Number(this.config.get('AUTOFILL_TIMEOUT_MS') ?? 25_000);
   }
+  // Longest a read can take: the first model and the fallback, each bounded.
+  private get inFlightMs() {
+    return 2 * this.timeoutMs + 5_000;
+  }
 
   async suggest(
     auth: Actor,
@@ -123,8 +128,15 @@ export class AutofillAssistService {
             'IdempotencyConflict',
             'Mã yêu cầu đã được dùng cho nội dung khác.',
           );
-        if (replay.status === 'Pending')
+        // Past the in-flight window the reading process is gone (restart or
+        // crash): answer as a timeout so the client starts over with a new key
+        // instead of replaying this one forever.
+        if (replay.status === 'Pending') {
+          const stale =
+            replay.createdAt.getTime() < (await tx.now()).getTime() - this.inFlightMs;
+          if (stale) throw failed(failureCopy.Timeout);
           throw rateLimited('Ảnh đang được đọc. Thử lại sau giây lát.');
+        }
         if (replay.status === 'Failed')
           throw failed(failureCopy[replay.failure ?? 'ProviderError']);
         return { kind: 'done', doc: replay, cached: true };
@@ -203,7 +215,7 @@ export class AutofillAssistService {
       const inFlight = await tx.c.autofill_suggestions.findOne({
         ownerId: actor._id,
         status: 'Pending',
-        createdAt: { $gt: new Date(now.getTime() - 2 * this.timeoutMs - 5_000) },
+        createdAt: { $gt: new Date(now.getTime() - this.inFlightMs) },
       });
       if (inFlight) throw rateLimited('Đang đọc ảnh khác. Thử lại sau giây lát.');
       const recent = await tx.c.autofill_suggestions.countDocuments({
@@ -296,12 +308,13 @@ export class AutofillAssistService {
       if (e instanceof PriceModelError) failure = e.kind;
       else if (e instanceof InvalidAutofillOutput) failure = 'InvalidOutput';
       else failure = 'ProviderError';
-      // Ids and the provider's short reason only; never photo bytes or the key.
+      // Ids, status and network code only; never photo bytes or the key.
       this.logger.warn(
         JSON.stringify({
           autofillId: p.id,
           model: modelId,
           failure,
+          ...failureLog(e),
         }),
       );
     }

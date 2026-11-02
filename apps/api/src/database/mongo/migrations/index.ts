@@ -1,8 +1,11 @@
 import { exchangeEvidenceMigration, exchangeEvidenceSpecs } from './0054-exchange-evidence.js';
+import { createFreeShippingMigration, withFreeShipping } from './0052-free-shipping.js';
 import { createMemberProfilesMigration, memberProfileSpecs, withMemberProfiles } from './0047-member-profiles.js';
 import { createAccountControlsMigration, withAccountControls } from './0048-account-controls.js';
 import {memberCartMigration,memberCartSpec} from './0049-member-cart.js';
 import { exchangeAgreementMigration, withExchangeAgreement } from './0053-exchange-agreement.js';
+import { exchangeNegotiatedDiffMigration, withNegotiatedDiff } from './0054-exchange-negotiated-diff.js';
+import { exchangeFlexibleDiffMigration, withFlexibleNegotiatedDiff } from './0055-exchange-negotiated-diff-payer.js';
 import { createSupportCasesMigration, supportSpecs, withSupportCases } from './0050-support-cases.js';
 import { createSupportAutoReviewUnionMigration } from './0051-support-auto-review-union.js';
 import { createListingAutoReviewMigration, withListingAutoReview } from './0050-listing-auto-review.js';
@@ -352,6 +355,9 @@ export const migrations: Migration[] = [
   listingAutoReviewV2Migration,
   exchangeAgreementMigration,
   exchangeEvidenceMigration,
+  createFreeShippingMigration(auctionDeliveryMigration.definition.collections),
+  exchangeNegotiatedDiffMigration,
+  exchangeFlexibleDiffMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -408,7 +414,7 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withPointCollectionChanges)
     .map(withResolutionChanges)
     .map(withSettlementChanges)
-    .map(withAuctionDelivery),
+    .map(withAuctionDelivery).map(withFreeShipping),
   ...pointCollectionSpecs.map(withAuctionDelivery),
   ...resolutionCollectionSpecs
     .map(withSettlementChanges)
@@ -433,7 +439,9 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withExchangeInspectionDeadlines)
     .map(withExchangeDisputeResolution)
     .map(withExchangeMutualCancellation)
-    .map(withExchangeAgreement),
+    .map(withExchangeAgreement)
+    .map(withNegotiatedDiff)
+    .map(withFlexibleNegotiatedDiff),
   ...directDeliveryCompletionSpecs,
   ...paymentSpecs.map(withVNPayExpiry),
   ...exchangeMessageSpecs,
@@ -441,7 +449,7 @@ export const currentCollections = (): CollectionSpec[] => [
   ...reviewLifecycleSpecs,
   ...inspectionEvidenceCollectionSpecs,
   ...pointIncidentCollectionSpecs,
-  ...auctionDeliveryCollectionSpecs,
+  ...auctionDeliveryCollectionSpecs.map(withFreeShipping),
   ...listingAutofillSpecs,
   ...memberProfileSpecs,
   memberCartSpec,

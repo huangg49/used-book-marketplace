@@ -550,23 +550,48 @@ describe('AI listing auto review with MongoDB', () => {
     expect(read).not.toHaveBeenCalled();
   });
 
-  it.each([
-    [
-      'a provider failure',
-      () => read.mockRejectedValue(new PriceModelError('Timeout', 'slow')),
-    ],
-    [
-      'malformed output',
-      () => read.mockResolvedValue(answer({ approve: true })),
-    ],
-  ])('escalates on %s', async (_name, arrange) => {
+  it('escalates malformed output at once', async () => {
     const l = await submitted();
-    arrange();
+    read.mockResolvedValue(answer({ approve: true }));
     expect(await service.reviewOne(l.id)).toBe('Escalated');
     expect((await row(l.revisionId))!.reasons).toEqual([
       'Text:AssessmentUnavailable',
     ]);
     expect((await listing(l.id))!.moderation).toBe('PendingReview');
+  });
+
+  it('leaves a silent provider for later cycles, then for Staff', async () => {
+    const l = await submitted();
+    read.mockRejectedValue(new PriceModelError('Timeout', 'slow'));
+    expect(await service.reviewOne(l.id)).toBe('Deferred');
+    expect(await service.reviewOne(l.id)).toBe('Deferred');
+    // No decision yet: the next sweep still finds the listing.
+    expect(await row(l.revisionId)).toBeNull();
+    expect((await listing(l.id))!.moderation).toBe('PendingReview');
+    expect(await service.reviewOne(l.id)).toBe('Escalated');
+    expect((await row(l.revisionId))!.reasons).toEqual([
+      'Text:AssessmentUnavailable',
+    ]);
+    await db.c.price_assist_usage.deleteOne({
+      _id: `autoreview:review:${l.revisionId}`,
+    });
+  });
+
+  it('publishes on a later cycle once the provider answers', async () => {
+    const l = await submitted();
+    read.mockRejectedValueOnce(
+      new PriceModelError('ProviderError', 'busy', null, {
+        status: 503,
+        code: null,
+        attempts: 2,
+        elapsedMs: 9000,
+      }),
+    );
+    expect(await service.reviewOne(l.id)).toBe('Deferred');
+    expect(await service.reviewOne(l.id)).toBe('Approved');
+    await db.c.price_assist_usage.deleteOne({
+      _id: `autoreview:review:${l.revisionId}`,
+    });
   });
 
   it('stops seller text that addresses the reviewer before any model sees it', async () => {
@@ -1037,6 +1062,21 @@ describe('AI listing auto review with MongoDB', () => {
           }),
         ]),
       );
+    });
+
+    it('waits for a silent provider before recording a recheck', async () => {
+      const l = await approved();
+      read.mockReset();
+      read.mockRejectedValue(new PriceModelError('Timeout', 'slow'));
+      expect(await service.recheckOne(l.id, l.revisionId)).toBe('Deferred');
+      expect(
+        (await checks(l.revisionId)).filter((c) => c.selection === 'AiRecheck'),
+      ).toHaveLength(0);
+      read.mockImplementation(stages());
+      expect(await service.recheckOne(l.id, l.revisionId)).toBe('Passed');
+      await db.c.price_assist_usage.deleteOne({
+        _id: `autoreview:recheck:${l.revisionId}`,
+      });
     });
 
     it('sweeps due approvals, records a pass, and skips what changed', async () => {
