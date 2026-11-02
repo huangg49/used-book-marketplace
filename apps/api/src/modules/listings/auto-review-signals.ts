@@ -1,7 +1,7 @@
 // Deterministic checks on seller text and photo bytes (ADR 0063). They run with
 // no model, so text that tries to steer a model cannot talk its way past them.
 
-const HIDDEN = /[­​-‏‪-‮⁠-⁤﻿]/;
+const HIDDEN = /[\u00AD\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF]/;
 const EMAIL = /[^\s@]+@[^\s@]+\.[^\s@]+/;
 const URL_LIKE = /\b(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+\.(?:com|net|org|vn|me|io|shop|store)\b/i;
 const PHONE = /(?:\+?\d[\s.-]?){8,}/;
