@@ -44,6 +44,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   List<Map<String, dynamic>> _packagingEvidences = const [];
   final TextEditingController _trackingCtrl = TextEditingController();
   final TextEditingController _complaintCtrl = TextEditingController();
+  final Map<String, Map<String, dynamic>> _orderDetailCache = {};
 
   static const _inProgressStates = [
     'AwaitingPayment',
@@ -97,6 +98,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
         _orders = parsed;
         _loading = false;
       });
+      _enrichOrderSummaries(parsed);
       if (widget.focusOrderId != null && widget.focusOrderId!.isNotEmpty) {
         await _openOrderDetail(widget.focusOrderId!);
       }
@@ -106,6 +108,29 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
         _error = presentErrorMessage(e);
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _enrichOrderSummaries(List<Map<String, dynamic>> orders) async {
+    final client = ref.read(sessionClientProvider);
+    final toFetch = orders
+        .map((o) => (o['id'] ?? '').toString())
+        .where((id) => id.isNotEmpty && !_orderDetailCache.containsKey(id))
+        .take(15)
+        .toList();
+    if (toFetch.isEmpty) return;
+
+    await Future.wait(toFetch.map((id) async {
+      try {
+        final res = await client.request('/me/orders/$id');
+        if (res is Map && mounted) {
+          _orderDetailCache[id] = Map<String, dynamic>.from(res);
+        }
+      } catch (_) {}
+    }));
+
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -125,6 +150,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
       final evidenceRes = results[2];
 
       if (orderRes is Map) {
+        final orderMap = Map<String, dynamic>.from(orderRes);
+        _orderDetailCache[orderId] = orderMap;
         final evidences = (evidenceRes is Map && evidenceRes['items'] is List)
             ? (evidenceRes['items'] as List)
                 .whereType<Map>()
@@ -133,7 +160,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
             : const <Map<String, dynamic>>[];
 
         setState(() {
-          _focusedOrder = Map<String, dynamic>.from(orderRes);
+          _focusedOrder = orderMap;
           _orderShipment = shipmentRes is Map
               ? Map<String, dynamic>.from(shipmentRes)
               : null;
@@ -857,12 +884,17 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
         state == 'PaymentExpired' ||
         state == 'Rejected';
 
-    final item = order['item'] is Map
-        ? Map<String, dynamic>.from(order['item'] as Map)
-        : const <String, dynamic>{};
-    final amounts = order['amounts'] is Map
-        ? Map<String, dynamic>.from(order['amounts'] as Map)
-        : const <String, dynamic>{};
+    final cached = _orderDetailCache[id];
+    final item = cached?['item'] is Map
+        ? Map<String, dynamic>.from(cached!['item'] as Map)
+        : (order['item'] is Map
+            ? Map<String, dynamic>.from(order['item'] as Map)
+            : const <String, dynamic>{});
+    final amounts = cached?['amounts'] is Map
+        ? Map<String, dynamic>.from(cached!['amounts'] as Map)
+        : (order['amounts'] is Map
+            ? Map<String, dynamic>.from(order['amounts'] as Map)
+            : const <String, dynamic>{});
     final metadata = item['metadata'] is Map
         ? Map<String, dynamic>.from(item['metadata'] as Map)
         : const <String, dynamic>{};
@@ -1042,12 +1074,21 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                               kind: AppTextKind.small,
                               color: AppColors.muted,
                             ),
-                            AppText(
-                              formatVnd(total),
-                              kind: AppTextKind.bold,
-                              color: StitchTokens.wine,
-                              style: const TextStyle(fontSize: 15),
-                            ),
+                            if (total > 0)
+                              AppText(
+                                formatVnd(total),
+                                kind: AppTextKind.bold,
+                                color: StitchTokens.wine,
+                                style: const TextStyle(fontSize: 15),
+                              )
+                            else if (cached == null)
+                              const AppText(
+                                '…',
+                                kind: AppTextKind.small,
+                                color: AppColors.muted,
+                              )
+                            else
+                              const SizedBox.shrink(),
                           ],
                         ),
                       ],
