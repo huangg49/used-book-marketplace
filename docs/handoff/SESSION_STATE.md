@@ -1,6 +1,23 @@
 # Điểm lưu hiện tại — 02/11/2026
 
-## Bộ thử đánh giá User1/User2 — đang mở cho owner
+## Demo đánh giá — chuyển sang app/DB local chính theo owner
+
+- Owner yêu cầu dùng trực tiếp5174/DB chính, thay hai cổng demo riêng. Nhánh
+  `codex/main-review-demo`: thêm2Exchange Completed mẫu lịch sử cho User1/User2
+  hiện có, một mới để tự viết và một cũ có2review Published/revision DemoSeed.
+  Vào menu Đánh giá của tôi → Đổi sách, không cần runner/URL môi trường khác.
+- Dữ liệu mẫu không có dòng tiền, agreement legacy null;4listing tham chiếu có
+  revision riêng đã lưu trữ, không lên kệ public. Không giả approval/carrier/
+  settlement hay mở release policy. Mẫu không là chứng minh full giao nhận.
+- PASS validators/index runtime và checkListing/checkExchange trên QA trước ghi;
+  import atomic/additive, fingerprint bản ghi cũ/tiền nguyên vẹn; API cả hai Member,
+  UI entry/form/review cũ, Admin đọc history, wallet:check balanced. Đơn mua cũ
+  vẫn Preparing; User2 available850k/held150k. Không gửi review mới hộ owner.
+- Đã dừng3009/5197/5198/QA57017; app chính3000/5173/5174 và Mongo27017 giữ chạy.
+  [Hướng dẫn và giới hạn](../features/MAIN_REVIEW_DEMO_2026_11_02.md).
+  Exact IDs/plan/fingerprint/credentials ignored; không push/CI/merge/đóng gate.
+
+## Bộ thử đánh giá User1/User2 riêng — đã thay bằng dữ liệu app chính
 
 - Owner yêu cầu tạo hai tài khoản tới đoạn giao dịch hoàn tất để tự thử review.
   Đã dựng QA riêng57017/`*_test`, API3009, hai Member web Vite5197/5198.
@@ -12,9 +29,9 @@
 - Dữ liệu chỉ phục vụ review, cùng fixture của transaction-reviews E2E; không dựng
   ledger/thanh toán/vận chuyển cho giao dịch mẫu. App chính3000/5174/DB27017 giữ
   nguyên: User1/User2 chưa có Completed/review; đơn thật của demo vẫn Preparing.
-- Runner, exact IDs/credentials và hướng dẫn giữ private ignored ở
-  `.tmp/review-user-demo/`. Giữ process QA chạy để owner thử; đây là bộ thử tạm,
-  không tự startup Windows. Restart runner tạo namespace mới; QA Mongo tmpfs.
+- Runner, exact IDs/credentials và hướng dẫn cũ giữ private ignored ở
+  `.tmp/review-user-demo/`. Đã dừng bộ thử này theo yêu cầu chuyển app chính;
+  không hướng dẫn owner quay lại5197/5198. QA Mongo là tmpfs.
   Không push/merge hoặc đổi READINESS. Không dùng bộ này làm bằng chứng giao nhận.
 
 ## Nạp tiền mô phỏng thuận tiện cho demo
