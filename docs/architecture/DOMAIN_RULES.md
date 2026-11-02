@@ -55,7 +55,7 @@ review source and gate before changing or extending completion.
 
 ## Exchange hiện hành — deadline và nghĩa vụ cũ
 
-02/11/2026: [ADR0063](../adr/0063-exchange-agreement-snapshots.md), contract0.71:
+02/11/2026: [ADR0065](../adr/0065-exchange-agreement-snapshots.md), contract0.71:
 đề xuất mới cố định revision/nội dung/giá và ảnh tham chiếu trong agreement.
 Accept tái kiểm cả hai chủ/sách; lỗi thời hoặc thiếu snapshot đóng với
 Cancelled/ListingUnavailable trước reserve/tiền. Counter do bên đang phản hồi
@@ -107,6 +107,24 @@ Book score là chất lượng sách thành viên đã cung cấp; không có m�
 hợp lệ, không phụ thuộc số item của trang hiện tại.
 Chi tiết implementation/evidence ở [báo cáo](../features/TRANSACTION_REVIEWS_REPORT.md).
 Không thay READINESS, không cấp ExistingObligation cho review, không thay GHN.
+
+## Hồ sơ phản ánh Member/Admin web
+
+[ADR0062](../adr/0062-web-support-cases.md), contract0.70: SupportCase riêng của
+người gửi, Admin ACTIVE độc lập nhận phụ trách và phản hồi; Staff không tự có
+quyền vào module mới. TransactionIssue kiểm participant DirectOrder/Exchange/
+PointOrder; đây là tiếp nhận hỗ trợ, không thay claim/hold hoặc dispute hai chiều.
+Không chuyển tiền, ghi vi phạm, thay custody hoặc settlement từ một ticket.
+
+Message gốc append-only; ghi chú nội bộ chỉ Admin được đọc. State/receipt/audit/
+notification cùng transaction; auth/owner/independence trước replay. Member bị
+LOCKED chỉ đọc/bổ sung hồ sơ đã có theo đúng method, không tạo report mới. Admin
+gửi kết quả trước đóng, không đóng khi giao dịch còn ResolutionPending. Hai mục
+lịch sử cuối dành cho kết quả/đóng trong giới hạn200; tối đa20 hồ sơ chưa đóng.
+Review moderation giữ ADR0052, thêm hộp thư bền cho hai bên; lý do moderation là
+nội dung gửi các bên, ghi chú riêng không đi vào notification. Mở thông báo đọc
+lại quyền/target ID; cache summary và infinite inbox tách cấu trúc, theo account.
+Hiện nhận chứng cứ văn bản/dữ liệu liên kết; file và phân xử tiền đầy đủ chưa mở.
 
 ## Commitment và unpaid Order
 
@@ -213,7 +231,7 @@ Worker OrderDeliveryExpiry scans100 without candidate locks, retries failures an
 deliveryRemaining/openDeliveryReviews/oldestDeliveryReviewAgeSeconds. Keep original
 review identity and pickup history; no refund/restock/custody conclusion from a report.
 Delivered/Buyer receipt/72h inspection source exists, but new completion commands
-and settlement are release-blocked by [ADR0062](../adr/0062-direct-delivery-completion-release-gate.md).
+and settlement are release-blocked by [ADR0064](../adr/0064-direct-delivery-completion-release-gate.md).
 Current auth precedes read-only historical replay; canConfirmReceipt is false.
 Worker reports blocked Inspection separately from executable backlog, preserving
 holds/books/history. Carrier-delivered denial and quality claims are still incomplete.

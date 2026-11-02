@@ -159,6 +159,11 @@
   box-shadow: 0 2px 8px rgba(92, 2, 2, 0.12);
 }
 
+.bookCard[data-matched="true"]:not([data-selected="true"]) {
+  border-color: #ebd9a2;
+  background: #fffef9;
+}
+
 .hiddenCheckbox {
   position: absolute;
   opacity: 0;
@@ -247,6 +252,22 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.matchedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff8db;
+  color: #92540c;
+  border: 1px solid #f9d868;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-top: 1px;
+  margin-bottom: 6px;
+  width: fit-content;
 }
 
 .metaRow {

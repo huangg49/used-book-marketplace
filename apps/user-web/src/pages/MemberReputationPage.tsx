@@ -4,6 +4,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { memberReputationSchema } from "@used-books/session-client";
 import { session } from "../lib/session";
 import { ReviewContent } from "../features/reviews/TransactionReviewPanel";
+import {SupportLink} from '../features/support/SupportLink';
 import styles from "../features/reviews/reviews.module.css";
 export function MemberReputationPage() {
   const { id } = useParams();
@@ -23,6 +24,7 @@ export function MemberReputationPage() {
   return (
     <div className={styles.page}>
       <h1>Hồ sơ uy tín</h1>
+      {data&&id?<p><SupportLink type='Member' id={id} report/></p>:null}
       {result.isPending && <p role="status">Đang tải hồ sơ…</p>}
       {result.isError && (
         <section role="alert">

@@ -36,6 +36,17 @@ import {
 @Injectable()
 export class ReviewsService {
   constructor(private readonly commands: MongoCommandService) {}
+  notificationTarget(auth:Actor,id:string):Promise<Wire['ReviewNotificationTarget']>{
+    return this.commands.read(auth,async(tx,actor)=>{
+      member(actor);
+      const r=await tx.c.transaction_reviews.findOne({_id:id});
+      if(!r || ![r.authorId,r.targetUserId].includes(actor._id))throw notFound();
+      const t=await reviewTransaction(tx,r.transactionType,r.transactionId,actor._id);
+      const publication=publicationTime(t.completedAt,await reviewGroup(tx,r.transactionType,r.transactionId));
+      if(r.authorId!==actor._id && (!publication || (await tx.now())<publication))throw notFound();
+      return {type:r.transactionType,id:r.transactionId};
+    });
+  }
   type(value: string): ReviewType {
     if (!REVIEW_TYPES.includes(value as ReviewType))
       invalidField('type', 'Loại giao dịch không hợp lệ.');
@@ -317,6 +328,13 @@ export class ReviewsService {
             reason,
             now,
           );
+          if(action==='moderate'){
+            for(const userId of [r.authorId,r.targetUserId])await tx.c.member_notifications.insertOne({
+              _id:randomUUID(),userId,kind:'ReviewModerated',title:'Đánh giá giao dịch có cập nhật kiểm duyệt',
+              body:`Admin đã cập nhật kiểm duyệt đánh giá. ${reason?`Lý do: ${reason}`:''}`.slice(0,400),
+              targetType:'TransactionReview',targetId:r._id,dedupeKey:`review:${r._id}:${r.version}:${userId}`,createdAt:now,readAt:null,
+            });
+          }
           const item = reviewItem(r, publication, now, true);
           return {
             entityType: 'TransactionReview' as const,

@@ -28,6 +28,11 @@ const Queue = lazy(() =>
 const Detail = lazy(() =>
   import("./features/review/detail").then((m) => ({ default: m.Detail })),
 );
+const AutoReviewChecksPage = lazy(() =>
+  import("./features/review/auto-review-checks").then((m) => ({
+    default: m.AutoReviewChecksPage,
+  })),
+);
 const UserDirectory = lazy(() =>
   import("./features/users/directory").then((m) => ({
     default: m.UserDirectory,
@@ -35,6 +40,8 @@ const UserDirectory = lazy(() =>
 );
 const AccountControls = lazy(() => import('./features/users/account-controls').then(m=>({default:m.AccountControls})));
 const TransactionReviewsPage=lazy(()=>import('./features/reviews/TransactionReviewsPage').then(m=>({default:m.TransactionReviewsPage})));
+const SupportQueuePage=lazy(()=>import('./features/support/SupportPages').then(m=>({default:m.SupportQueuePage})));
+const SupportDetailPage=lazy(()=>import('./features/support/SupportPages').then(m=>({default:m.SupportDetailPage})));
 const IntakeQueue = lazy(() =>
   import("./features/operations/queues").then((m) => ({
     default: m.IntakeQueue,
@@ -119,9 +126,12 @@ const router = createBrowserRouter([
         element: <Queue />,
         children: [{ path: ":id", element: <Detail /> }],
       },
+      { path: "/ai-review-checks", element: <AutoReviewChecksPage /> },
       { path: "/users", element: <UserDirectory /> },
       { path: "/users/:id", element: <AccountControls /> },
       { path: "/transaction-reviews", element: <TransactionReviewsPage /> },
+      { path: '/support', element: <SupportQueuePage /> },
+      { path: '/support/:caseId', element: <SupportDetailPage /> },
       { path: "/operations/intakes", element: <IntakeQueue /> },
       { path: "/operations/collections", element: <CollectionQueue /> },
       { path: "/operations/resolutions", element: <ResolutionQueue /> },

@@ -10,8 +10,9 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
+      host: true,
       port: 5174,
-      allowedHosts: devHost ? [devHost] : [],
+      allowedHosts: devHost ? [devHost] : true,
       proxy: {
         '/api': {
           target: devApiOrigin,

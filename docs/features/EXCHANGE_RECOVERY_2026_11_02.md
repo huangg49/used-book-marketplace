@@ -1,5 +1,6 @@
 # Exchange gói 2 — phục hồi thao tác Member — 02/11/2026
 
+Cập nhật tích hợp02/11: [source kết hợp/main và mapping số ADR/migration](EXCHANGE_MAIN_INTEGRATION_2026_11_02.md). Số liệu và số định danh trong nội dung dưới là mốc của gói ban đầu; hiện tại Exchange migration0053, ADR snapshot0065 và Buyer gate0064.
 Owner duyệt triển khai tiếp sau gói thỏa thuận. Branch `codex/exchange-intent-recovery`,
 base `a1258e1a`, subject `fix(exchange): preserve exact intents across uncertain responses`.
 Bằng chứng dưới đây chạy trên base + source của commit chứa báo cáo; không là CI
@@ -9,7 +10,7 @@ Manifest/checksum đối soát local ở `.tmp/exchange-recovery/scope.json` và
 `.tmp/batch-integration/local-preserved.json`.
 [Khảo sát core](CORE_EXCHANGE_AUDIT_2026_11_02.md),
 [gói 1](EXCHANGE_AGREEMENT_2026_11_02.md),
-[ADR0063](../adr/0063-exchange-agreement-snapshots.md).
+[ADR0065](../adr/0065-exchange-agreement-snapshots.md).
 
 ## Kết quả và giới hạn
 

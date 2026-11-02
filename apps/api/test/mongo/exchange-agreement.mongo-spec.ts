@@ -3,7 +3,7 @@ import { MongoClient, type Document } from 'mongodb';
 import { testUrl } from './harness.js';
 import { applyCollectionSpecs } from '../../src/database/mongo/migrations/index.js';
 import { exchangeMutualCancellationSpecs } from '../../src/database/mongo/migrations/0045-exchange-mutual-cancellation.js';
-import { exchangeAgreementMigration } from '../../src/database/mongo/migrations/0052-exchange-agreement.js';
+import { exchangeAgreementMigration } from '../../src/database/mongo/migrations/0053-exchange-agreement.js';
 
 it('upgrades legacy exchanges without inventing agreements, then validates frozen identities and obligations', async () => {
   const url = testUrl('latlai_exchange_agreement_upgrade_test');

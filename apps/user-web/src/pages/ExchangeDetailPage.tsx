@@ -3,6 +3,7 @@ import { confirmExchangeRead } from "@used-books/session-client";
 import { session } from "../services/api";
 import { useExchangeRecovery } from "../hooks/useExchangeRecovery";
 import { ExchangeRecoveryPanel } from "../components/exchange/ExchangeRecoveryPanel";
+import { SupportLink } from "../features/support/SupportLink";
 import conversation from "../components/conversation/Conversation.module.css";
 import { useParams, Link, Navigate, useLocation } from "react-router-dom";
 import { useConversationTransition } from "../components/conversation/conversation-navigation";
@@ -326,6 +327,9 @@ function ExchangeDetailContent({
               Mã Giao Dịch: #{detail.transactionCode}
             </span>
             <h1 className={styles.pageTitle}>Cuộc trao đổi sách</h1>
+            <p>
+              <SupportLink type="Exchange" id={id!} />
+            </p>
           </div>
           <div className={styles.headerStatus}>
             Trạng thái: <span className={styles.statusValue}>{statusText}</span>

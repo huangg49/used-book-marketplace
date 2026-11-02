@@ -1,8 +1,8 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
-Cập nhật02/11/2026: theo [SESSION_STATE](SESSION_STATE.md). Contract **0.69.0**
-(213operations/33controllers); registry có63
-migration MongoDB (đến0050), không suy từ tiền tố file lớn nhất. Migration
+Cập nhật02/11/2026: theo [SESSION_STATE](SESSION_STATE.md). Contract **0.72.0**
+(234operations/37controllers); registry có67
+migration MongoDB (đến0053), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
 Phạm vi28/10: nhóm **bỏ Forum/Cộng đồng sách** theo [ADR0051](../adr/0051-remove-forum-from-project-scope.md).
@@ -43,6 +43,14 @@ hiệu lực và căn cứ custody. Receipt lịch sử vẫn đối soát dư�
 Nghiệp vụ chuẩn là [SRS1.1](../SRS_V1_1.md), [phụ lục](../features/LOCAL_HANDOVER_AUCTION.md)
 và ADR hiện hành. Checkpoint có ngày trong SESSION_STATE/report là lịch sử nguồn,
 không thay contract/code/tests mới hoặc gate.
+
+Hỗ trợ Member/Admin web theo [ADR0062](../adr/0062-web-support-cases.md):
+nhận/phản hồi/báo cáo tại `/support`; Admin thu gọn review sau ACK. Bản tích hợp
+giữ cả `0050-listing-auto-review` và `0050-support-cases` đã áp dụng, thêm
+`0051-support-auto-review-union` hợp nhất validator receipt/audit. Dừng API/workers,
+chạy `pnpm db:migrate` rồi `pnpm db:bootstrap` trước khi chạy cùng contract0.70.
+Không reset/reseed hoặc sửa checksum migration cũ. Không bật cờ AI tự duyệt từ
+gói hỗ trợ, và READINESS vẫn giữ gate hiện có.
 
 ## 2. Dựng môi trường mới
 
@@ -90,11 +98,14 @@ chưa áp dụng DB chính; [ADR0055](../adr/0055-listing-catalog-recovery.md).
 AI tự duyệt thêm0050 và collection mới: dừng API/worker, `pnpm db:migrate` rồi
 `pnpm db:bootstrap`. Cờ `LISTING_AUTO_REVIEW_ENABLED` mặc định tắt;
 [ADR0061](../adr/0061-ai-listing-auto-review.md).
+Bản hậu kiểm thêm0052 và `listing_auto_review_checks`: cùng các bước trên. Muốn worker
+chạy còn phải đặt `LISTING_AUTO_REVIEW_APPROVED_POLICY` đúng `POLICY_VERSION`;
+[ADR0063](../adr/0063-ai-listing-review-hardening.md).
 
 Exchange thêm0052 để lưu agreement sách/giá đã thỏa thuận; không backfill lịch sử
 hoặc đổi tiền. Dừng API/worker cũ, migrate rồi nâng API và web/RN cùng gói:
 counter mới nhận listingIds, client gửi tiền bù tùy ý sẽ bị422. Chưa chạy trên DB
-chính; cần ghép main mới trước publish. [ADR0063](../adr/0063-exchange-agreement-snapshots.md),
+chính; source đã ghép main add4d615 local, chưa publish. [ADR0065](../adr/0065-exchange-agreement-snapshots.md),
 [evidence/giới hạn](../features/EXCHANGE_AGREEMENT_2026_11_02.md). Không cần seed hoặc
 thêm quyền DB chỉ vì0052; các migration khác vẫn theo hướng dẫn riêng.
 
@@ -184,7 +195,7 @@ Tên schema/receipt lịch sử có thể vẫn chứa `Unpaid` dù projection h
 
 ## 5. Chạy kiểm thử mà không dùng database của app
 
-DirectDelivery completion bị chặn theo [ADR0062](../adr/0062-direct-delivery-completion-release-gate.md):
+DirectDelivery completion bị chặn theo [ADR0064](../adr/0064-direct-delivery-completion-release-gate.md):
 không dùng confirm-receipt/delivery-events mới hoặc worker để ép demo tới Completed.
 Exact receipt lịch sử chỉ replay sau current auth. Đơn Inspection cũ giữ tiền/sách;
 worker báo inspectionBlocked/inspectionOverdueBlocked riêng. Không có env flag bật

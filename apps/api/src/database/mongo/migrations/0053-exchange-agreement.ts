@@ -164,11 +164,13 @@ export function withExchangeAgreement(spec: CollectionSpec): CollectionSpec {
     },
   };
 }
-export const exchangeAgreementSpecs = exchangeMutualCancellationSpecs.map(
-  withExchangeAgreement,
-);
+// Only extend exchanges. Reapplying the historical notification specs here
+// would erase SupportUpdated/ReviewModerated introduced by the main branch.
+export const exchangeAgreementSpecs = exchangeMutualCancellationSpecs
+  .filter((spec) => spec.name === 'exchanges')
+  .map(withExchangeAgreement);
 export const exchangeAgreementMigration = {
-  id: '0052-exchange-agreement',
+  id: '0053-exchange-agreement',
   definition: { collections: exchangeAgreementSpecs },
   async up(db: Db) {
     const { applyCollectionSpecs } = await import('./index.js');

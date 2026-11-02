@@ -1,4 +1,7 @@
-# ADR0062: Chặn completion DirectDelivery khi bảo vệ Buyer chưa đủ
+# ADR0064: Chặn completion DirectDelivery khi bảo vệ Buyer chưa đủ
+
+Ghi chú tích hợp02/11: đổi số ADR local chưa publish từ0062 sang0064 để giữ
+nguyên ADR trên main. Nội dung quyết định và gate không đổi.
 
 01/11/2026. Accepted cho gói giới hạn an toàn theo owner sau khảo sát core và PR84.
 Không chấp nhận toàn bộ đề xuất ADR0026, mở sau F2h hoặc đóng READINESS.

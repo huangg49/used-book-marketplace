@@ -100,6 +100,10 @@ try {
       if (process.argv.includes('--once') && result.failed) process.exitCode = 1;
       if (result.enabled)
         console.log(JSON.stringify({ event: 'listingAutoReviewSweep', ...result }));
+      const recheck = await autoReview.recheckTick();
+      if (process.argv.includes('--once') && recheck.failed) process.exitCode = 1;
+      if (recheck.enabled)
+        console.log(JSON.stringify({ event: 'listingAutoReviewRecheck', ...recheck }));
     } catch {
       console.error('Listing auto review sweep failed; retrying next cycle.');
       if (process.argv.includes('--once')) process.exitCode = 1;

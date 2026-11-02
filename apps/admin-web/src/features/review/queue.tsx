@@ -34,6 +34,17 @@ import { ListingTitle } from "./ListingTitle";
 import { reviewQueuePath } from "./review-navigation";
 import styles from "./ReviewWorkspace.module.css";
 
+const aiFiltersFor = (status: string) =>
+  status === "PendingReview"
+    ? ["Escalated", "None"]
+    : status === "Approved"
+      ? ["Approved"]
+      : [];
+const aiFilterLabels: Record<string, string> = {
+  Approved: "AI đã duyệt",
+  Escalated: "AI chuyển người duyệt",
+  None: "AI chưa xem",
+};
 // Only numeric positions live here. Dossiers, private URLs and decisions never do.
 const queueScroll = new Map<string, number>();
 
@@ -61,12 +72,15 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
   const status = filters.includes(params.get("status") || "")
     ? params.get("status")!
     : filters[0];
-  const positionKey = `${user.id}/${kind}/${status}`;
+  const aiFilters = kind === "listings" ? aiFiltersFor(status) : [];
+  const ai = aiFilters.includes(params.get("ai") || "") ? params.get("ai")! : "";
+  const positionKey = `${user.id}/${kind}/${status}/${ai}`;
+  const queuePath = `${reviewQueuePath(kind, status)}${ai ? `&ai=${ai}` : ""}`;
   const result = useInfiniteQuery({
-    queryKey: ["queue", kind, status, user.id],
+    queryKey: ["queue", kind, status, user.id, ...(ai ? [ai] : [])],
     initialPageParam: "",
     queryFn: async ({ pageParam }) => {
-      const path = `/operations/${kind}?${kind === "listings" ? "moderation" : "status"}=${status}&limit=20${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ""}`;
+      const path = `/operations/${kind}?${kind === "listings" ? "moderation" : "status"}=${status}${ai ? `&aiOutcome=${ai}` : ""}&limit=20${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ""}`;
       return kind === "listings"
         ? session.request(path, pageOf(listing))
         : session.request(path, pageOf(catalog));
@@ -83,7 +97,8 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
       listRef.current.scrollTop = queueScroll.get(positionKey) ?? 0;
   }, [positionKey, selectedId, items.length]);
   const selectedIndex = items.findIndex((item) => item.id === selectedId);
-  const itemPath = (id: string) => `/review/${kind}/${id}?status=${status}`;
+  const itemPath = (id: string) =>
+    `/review/${kind}/${id}?status=${status}${ai ? `&ai=${ai}` : ""}`;
   return (
     <div className={styles.workspace}>
       <header className={styles.heading}>
@@ -136,6 +151,29 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                 </Button>
               ))}
             </div>
+            {aiFilters.length > 0 && (
+              <div className="tabs" aria-label="Lọc theo kết quả của AI">
+                <Button
+                  aria-pressed={!ai}
+                  onClick={() => {
+                    if (ai) setParams({ status });
+                  }}
+                >
+                  Tất cả
+                </Button>
+                {aiFilters.map((value) => (
+                  <Button
+                    key={value}
+                    aria-pressed={ai === value}
+                    onClick={() => {
+                      if (ai !== value) setParams({ status, ai: value });
+                    }}
+                  >
+                    {aiFilterLabels[value]}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
           <p className={styles.queueSummary}>
             {items.length} hồ sơ đã tải · Cũ nhất trước
@@ -224,6 +262,9 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                         Bản gửi {item.currentRevision.number} ·{" "}
                         {dateText(item.currentRevision.submittedAt)}
                       </span>
+                      {"state" in item && item.autoReview && (
+                        <span>{aiFilterLabels[item.autoReview.outcome]}</span>
+                      )}
                     </div>
                     <h2>
                       <Link
@@ -232,7 +273,7 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                           selectedId === item.id ? "page" : undefined
                         }
                         state={{
-                          reviewReturnTo: reviewQueuePath(kind, status),
+                          reviewReturnTo: queuePath,
                         }}
                       >
                         {"state" in item ? (
@@ -271,7 +312,7 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                   <Link
                     className="read-link"
                     to={itemPath(item.id)}
-                    state={{ reviewReturnTo: reviewQueuePath(kind, status) }}
+                    state={{ reviewReturnTo: queuePath }}
                     aria-label={`Đọc hồ sơ ${index + 1}`}
                   >
                     Đọc hồ sơ <span aria-hidden="true">↗</span>
@@ -314,7 +355,7 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                   {selectedIndex > 0 && (
                     <Link
                       to={itemPath(items[selectedIndex - 1].id)}
-                      state={{ reviewReturnTo: reviewQueuePath(kind, status) }}
+                      state={{ reviewReturnTo: queuePath }}
                     >
                       <ArrowUp size={15} aria-hidden="true" />
                       Trước
@@ -323,7 +364,7 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                   {selectedIndex >= 0 && selectedIndex < items.length - 1 && (
                     <Link
                       to={itemPath(items[selectedIndex + 1].id)}
-                      state={{ reviewReturnTo: reviewQueuePath(kind, status) }}
+                      state={{ reviewReturnTo: queuePath }}
                     >
                       Tiếp
                       <ArrowDown size={15} aria-hidden="true" />
@@ -374,7 +415,7 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                 <Link
                   className="button primary"
                   to={itemPath(items[0].id)}
-                  state={{ reviewReturnTo: reviewQueuePath(kind, status) }}
+                  state={{ reviewReturnTo: queuePath }}
                 >
                   Mở hồ sơ đầu tiên <ArrowDown size={17} aria-hidden="true" />
                 </Link>

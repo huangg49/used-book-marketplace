@@ -12,6 +12,7 @@ import {
   BookPlus,
 } from "lucide-react";
 import { useExchangeRecovery } from "../../hooks/useExchangeRecovery";
+import { BrandIcon } from "../BrandIcon";
 import { ApiError } from "@used-books/session-client";
 import { session } from "../../lib/session";
 import {
@@ -74,8 +75,56 @@ interface InventoryItem {
   book: {
     title: string;
     authors: string[];
+    category?: string;
   };
   coverUrl?: string;
+}
+
+function checkMatch(
+  myBook: { title: string; authors: string[]; category?: string },
+  pref?: {
+    targetCategory?: string | null;
+    targetAuthor?: string | null;
+    targetDescription?: string | null;
+  } | null,
+) {
+  if (!pref) return null;
+  const authorStr = myBook.authors.join(", ");
+  const matchAuthor = Boolean(
+    pref.targetAuthor &&
+    pref.targetAuthor.trim() &&
+    authorStr.toLowerCase().includes(pref.targetAuthor.toLowerCase().trim()),
+  );
+  const matchCat = Boolean(
+    pref.targetCategory &&
+    pref.targetCategory.trim() &&
+    myBook.category &&
+    (myBook.category
+      .toLowerCase()
+      .includes(pref.targetCategory.toLowerCase().trim()) ||
+      pref.targetCategory
+        .toLowerCase()
+        .includes(myBook.category.toLowerCase().trim())),
+  );
+  let matchDesc = false;
+  if (pref.targetDescription && pref.targetDescription.trim()) {
+    const descWords = pref.targetDescription
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((w) => w.length >= 3);
+    matchDesc = descWords.some((w) => myBook.title.toLowerCase().includes(w));
+  }
+
+  if (matchAuthor) {
+    return `Đúng gu đối tác · ${pref.targetAuthor}`;
+  }
+  if (matchCat) {
+    return `Đúng thể loại đối tác tìm · ${pref.targetCategory}`;
+  }
+  if (matchDesc) {
+    return "Đúng cuốn đối tác mong muốn";
+  }
+  return null;
 }
 
 async function inventory(): Promise<InventoryItem[]> {
@@ -113,7 +162,11 @@ async function inventory(): Promise<InventoryItem[]> {
         id: row.id,
         value: row.currentRevision.content.exchangeValue ?? 0,
         condition: row.currentRevision.content.condition ?? null,
-        book,
+        book: {
+          title: book.title,
+          authors: book.authors,
+          category: book.category,
+        },
         coverUrl,
       };
     }),
@@ -241,16 +294,31 @@ export function ExchangeOffer({
     }
   };
 
-  const filteredBooks = useMemo(() => {
+  const pref = book.exchangePreferences;
+
+  const processedBooks = useMemo(() => {
     if (!mine.data) return [];
-    if (!search.trim()) return mine.data;
+    return mine.data
+      .map((item) => ({
+        ...item,
+        matchReason: checkMatch(item.book, pref),
+      }))
+      .sort((a, b) => {
+        if (a.matchReason && !b.matchReason) return -1;
+        if (!a.matchReason && b.matchReason) return 1;
+        return 0;
+      });
+  }, [mine.data, pref]);
+
+  const filteredBooks = useMemo(() => {
+    if (!search.trim()) return processedBooks;
     const q = search.trim().toLowerCase();
-    return mine.data.filter(
+    return processedBooks.filter(
       (item) =>
         item.book.title.toLowerCase().includes(q) ||
         item.book.authors.some((author) => author.toLowerCase().includes(q)),
     );
-  }, [mine.data, search]);
+  }, [processedBooks, search]);
 
   const selected = mine.data?.filter((x) => chosen.includes(x.id)) ?? [];
   const total = selected.reduce((n, b) => n + b.value, 0);
@@ -414,7 +482,7 @@ export function ExchangeOffer({
       ) : (
         <>
           <fieldset className={styles.fieldset} disabled={busy || uncertain}>
-            {mine.data.length > 4 && (
+            {mine.data.length > 2 && (
               <div className={styles.searchBox}>
                 <Search size={16} className={styles.searchIcon} />
                 <input
@@ -457,6 +525,7 @@ export function ExchangeOffer({
                       key={item.id}
                       className={styles.bookCard}
                       data-selected={isSelected ? "true" : undefined}
+                      data-matched={item.matchReason ? "true" : undefined}
                     >
                       <input
                         type="checkbox"
@@ -482,6 +551,12 @@ export function ExchangeOffer({
                         <p className={styles.bookAuthor}>
                           {item.book.authors.join(", ")}
                         </p>
+                        {item.matchReason && (
+                          <div className={styles.matchedBadge}>
+                            <BrandIcon size={13} />
+                            <span>{item.matchReason}</span>
+                          </div>
+                        )}
                         <div className={styles.metaRow}>
                           {conditionText && (
                             <span className={styles.conditionBadge}>

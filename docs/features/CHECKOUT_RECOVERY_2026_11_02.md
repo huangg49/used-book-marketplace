@@ -36,7 +36,7 @@ base `60d089985bd9b0b92de26671c653dd5c0964b37b`, subject
   cắt dù document không tràn; regression nay kiểm cả bounding box của review.
   Giữ màu/font/component và motion hiện có, không redesign.
 - Đây không phải mở Buyer receipt, Delivered, claim/return hoặc settlement.
-  [ADR bảo vệ Buyer](../adr/0062-direct-delivery-completion-release-gate.md),
+  [ADR bảo vệ Buyer](../adr/0064-direct-delivery-completion-release-gate.md),
   [READINESS](../handoff/READINESS.md), GHN và DB/bucket chính giữ nguyên.
   Hội thoại giúp trao đổi, không tự là command giải quyết review hoặc hoàn tiền.
 

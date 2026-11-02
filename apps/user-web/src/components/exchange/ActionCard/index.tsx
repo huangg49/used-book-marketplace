@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { Sparkles, Clock, AlertCircle } from "lucide-react";
+import { Clock, AlertCircle, ShieldAlert } from "lucide-react";
+import { BrandIcon } from "../../BrandIcon";
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
 import { session } from "../../../lib/session";
 import { ConfirmDialog } from "../../ConfirmDialog";
@@ -89,6 +90,16 @@ export function ActionCard(props: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reason, setReason] = useState("");
+  const [disputeCategory, setDisputeCategory] = useState(
+    "Sách rách nát / hư hỏng nặng",
+  );
+  const [disputeDetail, setDisputeDetail] = useState("");
+  const [imagePreview, setImagePreview] = useState("");
+  const [imageFileName, setImageFileName] = useState("");
+  const [videoPreview, setVideoPreview] = useState("");
+  const [videoFileName, setVideoFileName] = useState("");
+  const [evidenceImageRef, setEvidenceImageRef] = useState("");
+  const [evidenceVideoRef, setEvidenceVideoRef] = useState("");
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   useExchangeRecovery();
   const pending = pendingExchange(detail.id);
@@ -173,13 +184,13 @@ export function ActionCard(props: Props) {
     }
   } else if (detail.status === "WAITING_YOU_CONFIRM") {
     instructions = detail.viewerShipping.receivedAt
-      ? "Bạn đã nhận sách và có 72 giờ để kiểm tra từ thời điểm nhận. Đối tác có hạn kiểm tra riêng; khoản cọc vẫn được giữ."
+      ? "Bạn đã xác nhận nhận sách. Đang chờ đối tác xác nhận nhận sách để cùng bước vào giai đoạn kiểm tra sách (72 giờ)."
       : "Hai bên đã gửi sách. Chỉ xác nhận khi bạn đã nhận bưu phẩm và kiểm tra kỹ sách.";
     if (!detail.viewerShipping.receivedAt) actions.push("received");
     actions.push("dispute");
   } else if (detail.status === "DELIVERING") {
     instructions = detail.viewerShipping.receivedAt
-      ? "Bạn đã nhận sách và có 72 giờ để kiểm tra từ thời điểm nhận. Đối tác có hạn kiểm tra riêng; khoản cọc vẫn được giữ."
+      ? "Bạn đã nhận được sách từ bưu tá! Hãy kiểm tra kỹ sách. Nếu sách bị hỏng hóc hoặc không đúng mô tả, bạn có thể bấm 'Báo sự cố / Khiếu nại'. Đang chờ đối tác nhận được kiện sách còn lại để cùng bước vào giai đoạn nghiệm thu (72 giờ đồng kiểm)."
       : "Sách đang được vận chuyển. Theo dõi bưu gửi tại thẻ Tiến trình giao nhận.";
     if (!detail.viewerShipping.receivedAt && detail.partnerShipping.sentAt) {
       actions.push("received");
@@ -300,18 +311,134 @@ export function ActionCard(props: Props) {
     }
   }
 
+  const SAMPLE_VIDEO_SRC = "/demo-evidence/sample-unboxing.mp4?v=3.5s";
+  const SAMPLE_VIDEO_LABEL = "sample-unboxing.mp4 (176 KB · 3.5s)";
+  const SAMPLE_IMAGE_SRC = "/demo-evidence/sample-book-damage.jpg";
+  const SAMPLE_IMAGE_LABEL = "sample-book-damage.jpg (607 KB)";
+
+  const handleUseSampleEvidence = () => {
+    setDisputeCategory("Sách rách nát / hư hỏng nặng");
+    if (!disputeDetail.trim()) {
+      setDisputeDetail(
+        "Kiểm tra bưu phẩm lúc mở hộp: bìa sau sách bị rách toạc 1 vệt dài và ẩm ướt nhiều trang, không đúng cam kết ban đầu.",
+      );
+    }
+    // Only set sample image if user has not picked their own image!
+    if (!imagePreview || imagePreview.startsWith("/demo-evidence/")) {
+      setImagePreview(SAMPLE_IMAGE_SRC);
+      setImageFileName(SAMPLE_IMAGE_LABEL);
+      setEvidenceImageRef(SAMPLE_IMAGE_SRC);
+    }
+    // Always set sample 3.5s video
+    setVideoPreview(SAMPLE_VIDEO_SRC);
+    setVideoFileName(SAMPLE_VIDEO_LABEL);
+    setEvidenceVideoRef("/demo-evidence/sample-unboxing.mp4");
+    setError("");
+  };
+
+  const handleUseSampleVideoOnly = () => {
+    setVideoPreview(SAMPLE_VIDEO_SRC);
+    setVideoFileName(SAMPLE_VIDEO_LABEL);
+    setEvidenceVideoRef("/demo-evidence/sample-unboxing.mp4");
+    setError("");
+  };
+
+  const handleUseSampleImageOnly = () => {
+    setImagePreview(SAMPLE_IMAGE_SRC);
+    setImageFileName(SAMPLE_IMAGE_LABEL);
+    setEvidenceImageRef(SAMPLE_IMAGE_SRC);
+    setError("");
+  };
+
+  const saveEvidenceToDB = (key: string, data: string) => {
+    try {
+      if (!window.indexedDB) return;
+      const req = indexedDB.open("LatLaiEvidenceDB", 1);
+      req.onupgradeneeded = (e: any) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains("media")) {
+          db.createObjectStore("media", { keyPath: "key" });
+        }
+      };
+      req.onsuccess = (e: any) => {
+        const db = e.target.result;
+        const tx = db.transaction("media", "readwrite");
+        tx.objectStore("media").put({ key, data });
+      };
+    } catch {}
+  };
+
+  const handleImagePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setImagePreview(dataUrl);
+      setImageFileName(`${file.name} (${Math.round(file.size / 1024)} KB)`);
+      try {
+        localStorage.setItem(`evidence_img_${detail.id}`, dataUrl);
+      } catch {}
+      saveEvidenceToDB(`img_${detail.id}`, dataUrl);
+      setEvidenceImageRef(file.name);
+    };
+    reader.readAsDataURL(file);
+    setError("");
+  };
+
+  const handleVideoPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setVideoPreview(url);
+    setVideoFileName(
+      `${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB)`,
+    );
+    setEvidenceVideoRef(file.name);
+    setError("");
+
+    // Read and persist for cross-origin Admin Web inspection
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      try {
+        localStorage.setItem(`evidence_video_${detail.id}`, dataUrl);
+      } catch {}
+      saveEvidenceToDB(`vid_${detail.id}`, dataUrl);
+    };
+    reader.readAsDataURL(file);
+  };
+
   async function confirm() {
     if (!action || busy || action === "counter") return;
-    if (
-      (action === "reject" || action === "dispute") &&
-      (reason.trim().length < 5 || reason.trim().length > 300)
-    ) {
-      setError("Nhập lý do từ 5 đến 300 ký tự.");
-      return;
+    if (action === "reject") {
+      if (reason.trim().length < 5 || reason.trim().length > 300) {
+        setError("Nhập lý do từ 5 đến 300 ký tự.");
+        return;
+      }
+    } else if (action === "dispute") {
+      const currentDetail = disputeDetail.trim() || reason.trim();
+      if (currentDetail.length < 5) {
+        setError(
+          "Vui lòng nhập mô tả chi tiết sự cố từ 5 ký tự (hoặc bấm 'Dùng mẫu unboxing').",
+        );
+        return;
+      }
     }
     setBusy(true);
     setError("");
     try {
+      let finalDisputeReason = reason.trim();
+      if (action === "dispute") {
+        const detailText =
+          disputeDetail.trim() ||
+          reason.trim() ||
+          "Sách có lỗi nghiêm trọng, không đúng cam kết ban đầu.";
+        finalDisputeReason = `[Sự cố]: ${disputeCategory}\n[Chi tiết]: ${detailText}\n[Video unboxing]: ${evidenceVideoRef || "/demo-evidence/sample-unboxing.mp4"}\n[Ảnh bằng chứng]: ${evidenceImageRef || "/demo-evidence/sample-book-damage.jpg"}`;
+        if (finalDisputeReason.length > 490) {
+          finalDisputeReason = finalDisputeReason.slice(0, 490);
+        }
+      }
       const run: Record<Exclude<Action, "counter">, () => Promise<void>> = {
         accept: () => props.onAccept(selectedAddressId || undefined),
         cancel: props.onCancel,
@@ -322,7 +449,9 @@ export function ActionCard(props: Props) {
         retry: props.onRetry,
         complete: props.onComplete,
         dispute: () =>
-          props.onDispute ? props.onDispute(reason.trim()) : Promise.resolve(),
+          props.onDispute
+            ? props.onDispute(finalDisputeReason)
+            : Promise.resolve(),
       };
       await run[action]();
       setAction(undefined);
@@ -338,7 +467,7 @@ export function ActionCard(props: Props) {
     <div className={styles.card}>
       <div className={styles.headerRow}>
         <h2 className={styles.cardTitle}>
-          <Sparkles className={styles.iconGold} size={18} />
+          <BrandIcon size={18} />
           <span>Hành động tiếp theo</span>
         </h2>
         <span className={styles.roleBadge}>
@@ -360,22 +489,6 @@ export function ActionCard(props: Props) {
       <div className={styles.calloutBox}>
         <p className={styles.instructions}>{instructions}</p>
       </div>
-      {detail.viewerInspectionDeadline && (
-        <p className={styles.deadlineRow}>
-          Hạn kiểm tra sách của bạn:{" "}
-          <time dateTime={detail.viewerInspectionDeadline}>
-            {new Date(detail.viewerInspectionDeadline).toLocaleString("vi-VN")}
-          </time>
-        </p>
-      )}
-      {detail.partnerInspectionDeadline && (
-        <p className={styles.deadlineRow}>
-          Hạn kiểm tra của đối tác:{" "}
-          <time dateTime={detail.partnerInspectionDeadline}>
-            {new Date(detail.partnerInspectionDeadline).toLocaleString("vi-VN")}
-          </time>
-        </p>
-      )}
       {detail.status === "FUNDING" && detail.fundingDeadline && (
         <p className={styles.deadlineRow}>
           <Clock size={14} className={styles.iconGold} />
@@ -402,11 +515,27 @@ export function ActionCard(props: Props) {
           </span>
         </p>
       )}
+      {detail.viewerInspectionDeadline && (
+        <p className={styles.deadlineRow}>
+          Hạn kiểm tra sách của bạn:{" "}
+          <time dateTime={detail.viewerInspectionDeadline}>
+            {new Date(detail.viewerInspectionDeadline).toLocaleString("vi-VN")}
+          </time>
+        </p>
+      )}
+      {detail.partnerInspectionDeadline && (
+        <p className={styles.deadlineRow}>
+          Hạn kiểm tra của đối tác:{" "}
+          <time dateTime={detail.partnerInspectionDeadline}>
+            {new Date(detail.partnerInspectionDeadline).toLocaleString("vi-VN")}
+          </time>
+        </p>
+      )}
       {detail.status === "INSPECTING" && detail.inspectionDeadline && (
         <p className={styles.deadlineRow}>
           <Clock size={14} className={styles.iconGold} />
           <span>
-            Hạn kết thúc kiểm tra của cả hai bên:{" "}
+            Hạn kiểm tra chung (72 giờ):{" "}
             <time dateTime={detail.inspectionDeadline}>
               {new Date(detail.inspectionDeadline).toLocaleString("vi-VN")}
             </time>
@@ -539,6 +668,7 @@ export function ActionCard(props: Props) {
       <ConfirmDialog
         isOpen={!!action}
         onClose={() => setAction(undefined)}
+        maxWidth={action === "dispute" ? "640px" : undefined}
         title={
           action === "cancel" && detail.status === "WAITING_YOU_SEND"
             ? detail.cancellationRequestedBy
@@ -552,7 +682,7 @@ export function ActionCard(props: Props) {
         }
         confirmText={
           action === "dispute"
-            ? "Gửi khiếu nại"
+            ? "Gửi biên bản khiếu nại"
             : action === "complete"
               ? "Xác nhận nghiệm thu"
               : action === "cancel" &&
@@ -571,17 +701,16 @@ export function ActionCard(props: Props) {
         }
         onConfirm={() => void confirm()}
       >
-        <p>
-          {action === "accept"
-            ? "Bằng việc chấp nhận, bạn đồng ý với các điều khoản trao đổi."
-            : action === "fund"
-              ? `Giữ ${formatVnd(detail.viewerFundingAmount ?? 0)} từ ví mô phỏng. Kiểm tra khoản tiền trước khi xác nhận.`
-              : action === "retry"
-                ? "Gửi lại đúng mã và nội dung của thao tác trước để xác nhận kết quả."
-                : action === "complete"
-                  ? "Bạn xác nhận đã kiểm tra sách? Xác nhận này không rút ngắn hạn khiếu nại. Tiền cọc tiếp tục được giữ đến khi cả hai hạn kiểm tra 72 giờ kết thúc và không có tranh chấp."
-                  : action === "dispute"
-                    ? "Nếu sách có vấn đề nghiêm trọng (hư hỏng nặng, rách nát, sách giả, không đúng cam kết hoặc đối tác không gửi hàng), bạn có thể gửi khiếu nại để tạm dừng tất toán tự động và chuyển sang trạng thái chờ giải quyết để bảo vệ quyền lợi."
+        {action !== "dispute" && (
+          <p className={styles.dialogText}>
+            {action === "accept"
+              ? "Bằng việc chấp nhận, bạn đồng ý với các điều khoản trao đổi."
+              : action === "fund"
+                ? `Giữ ${formatVnd(detail.viewerFundingAmount ?? 0)} từ ví mô phỏng. Kiểm tra khoản tiền trước khi xác nhận.`
+                : action === "retry"
+                  ? "Gửi lại đúng mã và nội dung của thao tác trước để xác nhận kết quả."
+                  : action === "complete"
+                    ? "Bạn xác nhận đã kiểm tra sách? Xác nhận này không rút ngắn hạn khiếu nại. Tiền cọc tiếp tục được giữ đến khi cả hai hạn kiểm tra 72 giờ kết thúc và không có tranh chấp."
                     : action === "cancel" &&
                         detail.status === "WAITING_YOU_SEND"
                       ? detail.cancellationRequestedBy
@@ -591,15 +720,266 @@ export function ActionCard(props: Props) {
                           detail.status === "WAITING_YOU_SEND"
                         ? "Bạn có chắc muốn từ chối yêu cầu hủy của đối tác để tiếp tục giao dịch? Hãy nhập lý do để đối tác yên tâm chuẩn bị và gửi sách đúng hạn."
                         : "Kiểm tra thông tin trước khi xác nhận thao tác này."}
-        </p>
-        {(action === "reject" || action === "dispute") && (
+          </p>
+        )}
+        {action === "dispute" ? (
+          <div className={styles.disputeContainer}>
+            <div className={styles.disputeNoticeBanner}>
+              <div className={styles.noticeIconWrap}>
+                <ShieldAlert size={18} />
+              </div>
+              <div className={styles.noticeContent}>
+                <strong>Bảo vệ quyền lợi &amp; Ký quỹ an toàn:</strong>
+                <p>
+                  Giao dịch sẽ tạm dừng tất toán ngay lập tức. Toàn bộ tiền cọc
+                  bảo chứng và tiền bù được giữ an toàn trên Ledger để Hội đồng
+                  Quản trị thẩm định qua video unboxing và ảnh đối chiếu.
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.disputeForm}>
+              <div className={styles.formGroup}>
+                <label htmlFor="dispute-category" className={styles.inputLabel}>
+                  <span>Phân loại sự cố</span>
+                  <span className={styles.reqStar}>*</span>
+                </label>
+                <div className={styles.selectWrap}>
+                  <select
+                    id="dispute-category"
+                    className={styles.select}
+                    value={disputeCategory}
+                    onChange={(e) => setDisputeCategory(e.target.value)}
+                    disabled={busy || !!pending}
+                  >
+                    <option value="Sách rách nát / hư hỏng nặng">
+                      Sách rách nát / hư hỏng nặng
+                    </option>
+                    <option value="Giao sai sách / Không đúng cam kết">
+                      Giao sai sách / Không đúng cam kết
+                    </option>
+                    <option value="Thiếu sách / Bưu kiện rỗng">
+                      Thiếu sách / Bưu kiện rỗng
+                    </option>
+                    <option value="Sách nghi vấn bản in lậu / photo">
+                      Sách nghi vấn bản in lậu / photo
+                    </option>
+                    <option value="Sự cố giao nhận khác">
+                      Sự cố giao nhận khác
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div className={styles.formGroup}>
+                <div className={styles.labelWithCounter}>
+                  <label htmlFor="dispute-detail" className={styles.inputLabel}>
+                    <span>Mô tả chi tiết vấn đề</span>
+                    <span className={styles.reqStar}>*</span>
+                  </label>
+                  <span className={styles.charCounter}>
+                    {disputeDetail.length}/220 ký tự
+                  </span>
+                </div>
+                <textarea
+                  id="dispute-detail"
+                  className={styles.textarea}
+                  value={disputeDetail}
+                  maxLength={220}
+                  placeholder="Mô tả cụ thể vị trí hư hại, vết rách hoặc sự sai lệch của sách lúc mở gói..."
+                  disabled={busy || !!pending}
+                  onChange={(e) => setDisputeDetail(e.target.value)}
+                />
+              </div>
+
+              {/* Bằng chứng thẩm định */}
+              <div className={styles.evidenceSection}>
+                <div className={styles.evidenceHeader}>
+                  <div className={styles.evidenceHeaderLeft}>
+                    <span className={styles.evidenceSectionIcon}>📋</span>
+                    <span className={styles.evidenceTitle}>
+                      Bằng chứng thẩm định (Ảnh &amp; Video)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.sampleButton}
+                    onClick={handleUseSampleEvidence}
+                    title="Tự động nạp dữ liệu video và ảnh mẫu"
+                  >
+                    ⚡ Dùng dữ liệu mẫu (Demo)
+                  </button>
+                </div>
+
+                <div className={styles.evidenceGrid}>
+                  {/* Cột 1: Ảnh chụp sách */}
+                  <div
+                    className={`${styles.evidenceCard} ${imagePreview ? styles.cardActive : ""}`}
+                  >
+                    <div className={styles.evidenceCardHead}>
+                      <span className={styles.evidenceCardTitle}>
+                        📷 Ảnh chụp sách lỗi
+                      </span>
+                      <span
+                        className={
+                          imagePreview ? styles.badgeSuccess : styles.badgeMuted
+                        }
+                      >
+                        {imagePreview ? "✓ Đã có ảnh" : "Chưa có ảnh"}
+                      </span>
+                    </div>
+
+                    <div className={styles.evidenceActions}>
+                      <input
+                        type="file"
+                        id="evidence-image-input"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={handleImagePicked}
+                      />
+                      <button
+                        type="button"
+                        className={styles.btnUpload}
+                        onClick={() =>
+                          document
+                            .getElementById("evidence-image-input")
+                            ?.click()
+                        }
+                        title={imageFileName || "Chọn ảnh từ máy"}
+                      >
+                        {imageFileName ? "Đổi ảnh..." : "Chọn ảnh từ máy..."}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.btnMiniSample}
+                        onClick={handleUseSampleImageOnly}
+                        title="Nạp ảnh mẫu sách rách"
+                      >
+                        ⚡ Ảnh mẫu
+                      </button>
+                    </div>
+
+                    <div className={styles.evidencePreviewBox}>
+                      {imagePreview ? (
+                        <div className={styles.imageWrapper}>
+                          <img
+                            src={imagePreview}
+                            alt="Xem trước bằng chứng"
+                            className={styles.previewImage}
+                          />
+                          <div className={styles.previewOverlayBadge}>
+                            <span>{imageFileName || "Ảnh bằng chứng"}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          className={styles.emptyPlaceholder}
+                          onClick={() =>
+                            document
+                              .getElementById("evidence-image-input")
+                              ?.click()
+                          }
+                        >
+                          <span className={styles.emptyIcon}>📷</span>
+                          <span className={styles.emptyText}>
+                            Chọn ảnh chụp vết rách / hư hại
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Cột 2: Video unboxing */}
+                  <div
+                    className={`${styles.evidenceCard} ${videoPreview ? styles.cardActive : ""}`}
+                  >
+                    <div className={styles.evidenceCardHead}>
+                      <span className={styles.evidenceCardTitle}>
+                        📹 Video unboxing
+                      </span>
+                      <span
+                        className={
+                          videoPreview ? styles.badgeSuccess : styles.badgeMuted
+                        }
+                      >
+                        {videoPreview ? "✓ Đã nạp clip 3.5s" : "Chưa có clip"}
+                      </span>
+                    </div>
+
+                    <div className={styles.evidenceActions}>
+                      <input
+                        type="file"
+                        id="evidence-video-input"
+                        accept="video/*"
+                        style={{ display: "none" }}
+                        onChange={handleVideoPicked}
+                      />
+                      <button
+                        type="button"
+                        className={styles.btnUpload}
+                        onClick={() =>
+                          document
+                            .getElementById("evidence-video-input")
+                            ?.click()
+                        }
+                        title={videoFileName || "Chọn video từ máy (3-4s)"}
+                      >
+                        {videoFileName ? "Đổi clip..." : "Chọn video từ máy..."}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.btnMiniSample}
+                        onClick={handleUseSampleVideoOnly}
+                        title="Nạp video unboxing 3.5s mẫu"
+                      >
+                        ⚡ Video mẫu 3s
+                      </button>
+                    </div>
+
+                    <div className={styles.evidencePreviewBox}>
+                      {videoPreview ? (
+                        <div className={styles.videoWrapper}>
+                          <video
+                            key={videoPreview}
+                            src={videoPreview}
+                            controls
+                            playsInline
+                            preload="metadata"
+                            className={styles.previewVideo}
+                          />
+                          <div className={styles.videoOverlayBadge}>
+                            <span>
+                              {videoFileName || "sample-unboxing.mp4 · 3.5s"}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          className={styles.emptyPlaceholder}
+                          onClick={() =>
+                            document
+                              .getElementById("evidence-video-input")
+                              ?.click()
+                          }
+                        >
+                          <span className={styles.emptyIcon}>📹</span>
+                          <span className={styles.emptyText}>
+                            Clip mở gói đồng kiểm GHN (3-4s)
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : action === "reject" ? (
           <>
             <label htmlFor="exchange-reason">
-              {action === "dispute"
-                ? "Lý do khiếu nại / mô tả sự cố (từ 5 đến 300 ký tự)"
-                : detail.status === "WAITING_YOU_SEND"
-                  ? "Lý do từ chối hủy (từ 5 đến 300 ký tự)"
-                  : "Lý do từ chối"}
+              {detail.status === "WAITING_YOU_SEND"
+                ? "Lý do từ chối hủy (từ 5 đến 300 ký tự)"
+                : "Lý do từ chối"}
             </label>
             <textarea
               id="exchange-reason"
@@ -607,17 +987,15 @@ export function ActionCard(props: Props) {
               value={reason}
               maxLength={300}
               placeholder={
-                action === "dispute"
-                  ? "Mô tả chi tiết vấn đề bạn gặp phải để đối chiếu..."
-                  : detail.status === "WAITING_YOU_SEND"
-                    ? "Ví dụ: Tôi đã đóng gói sách cẩn thận và sẽ gửi đi ngay hôm nay..."
-                    : ""
+                detail.status === "WAITING_YOU_SEND"
+                  ? "Ví dụ: Tôi đã đóng gói sách cẩn thận và sẽ gửi đi ngay hôm nay..."
+                  : ""
               }
               disabled={busy || !!pending}
               onChange={(e) => setReason(e.target.value)}
             />
           </>
-        )}
+        ) : null}
         {error && (
           <p role="alert" className={styles.errorText}>
             {error}

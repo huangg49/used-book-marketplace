@@ -1,4 +1,7 @@
-# ADR0063: Cố định thỏa thuận đổi sách và kiểm lại trước khi giữ sách
+# ADR0065: Cố định thỏa thuận đổi sách và kiểm lại trước khi giữ sách
+
+Ghi chú tích hợp02/11: đổi số ADR local chưa publish từ0063 sang0065 để giữ
+nguyên ADR trên main. Nội dung quyết định và gate không đổi.
 
 02/11/2026. Triển khai local theo gói 1 được owner duyệt sau
 [khảo sát core Exchange](../features/CORE_EXCHANGE_AUDIT_2026_11_02.md).
@@ -53,7 +56,7 @@ khác yêu cầu thay sách đủ điều kiện của SRS.
 
 ## Nâng cấp và giới hạn
 
-Migration mới `0052-exchange-agreement` chỉ mở rộng validator exchanges; không
+Migration mới `0053-exchange-agreement` chỉ mở rộng validator exchanges; không
 sửa migration/checksum đã áp dụng, không backfill hoặc thêm collection/quyền.
 Dừng API/worker cũ, migrate bằng quy trình vận hành rồi nâng API/client cùng gói.
 Counter client cũ gửi diffAmount/diffPayer sẽ bị422, không được tự hạ chuẩn để

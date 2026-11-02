@@ -212,7 +212,7 @@ classes; existing database user passwords must not change during this addition.
 ## Exchange agreements (ADR0063, migration0052)
 
 Exchange agreements use the optional `exchanges.agreement` object introduced by
-migration0052 ([ADR0063](../adr/0063-exchange-agreement-snapshots.md)). New proposals
+migration0052 ([ADR0065](../adr/0065-exchange-agreement-snapshots.md)). New proposals
 copy reviewed book/revision/value/media references under user/conversation/listing
 locks; accept revalidates before reserving all books. Counter replaces only the
 responding owner's books and derives deposits/delta. Legacy absence stays absent;
@@ -231,3 +231,15 @@ The immutable `listing_decisions` approval for a bundle adds the seventh true
 check `bundleContentsVerified`. Order item snapshots embed the full manifest from
 the locked revision. A bundle remains one workflow item and one commitment;
 component inventory/partial purchase/partial return identities are not introduced.
+
+## Support cases (ADR0062, migration0050 +0051 union)
+
+Mongo-native `support_cases` are mutable, lockable UUID documents, separate from
+financial disputes. Command lock → actor/session → case lock serializes assignment,
+messages and state changes with expectedVersion; linked transaction IDs never
+become receipt targets by accident. Receipts/audit carry nullable `supportCaseId`.
+`support_messages` are append-only with caseId, author/audience and server time;
+app privileges permit find/insert only. Member queries remove internal messages
+at the server. Notifications join the case transaction and dedupe by case/version/
+recipient. Current schema adds both collections to roles; no PostgreSQL model or
+historical migration is rewritten. Full dispute settlement is unchanged.

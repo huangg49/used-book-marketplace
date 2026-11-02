@@ -7,7 +7,7 @@ import { accountNavigation } from "../../../lib/account-navigation";
 import { ROUTES } from "../../../lib/routes";
 import { useAccountLogout } from "../../../hooks/useAccountLogout";
 import { useSession } from "../../../hooks/useSession";
-import { listNotifications } from "../../../services/notifications";
+import { listNotifications,notificationKeys } from "../../../services/notifications";
 import styles from "../../../layouts/DashboardLayout.module.css";
 
 interface DashboardSidebarProps {
@@ -26,7 +26,7 @@ export function DashboardSidebar({
   const { busy, error, logout } = useAccountLogout();
 
   const notificationsQuery = useQuery({
-    queryKey: ["notifications", "page"],
+    queryKey: notificationKeys.summary(auth.status==='authenticated'?auth.user.id:undefined),
     queryFn: () => listNotifications(undefined, 1),
     enabled: auth.status === "authenticated",
     staleTime: 30_000,

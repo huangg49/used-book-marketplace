@@ -42,7 +42,7 @@ RN trong phạm vi F2h. Branch `codex/rn-seller-shipping`, base
   reload. Tài khoản mở lại đọc evidence/shipment thật; không persist ảnh/token
   bằng kho mới. Sổ địa chỉ hoặc picker không được ghi vào log.
 - API packaging/shipment và contract không đổi trong gói RN. Giữ
-  [ADR0062](../adr/0062-direct-delivery-completion-release-gate.md),
+  [ADR0064](../adr/0064-direct-delivery-completion-release-gate.md),
   [READINESS](../handoff/READINESS.md), ledger/hold/commitment. Không mở Delivered,
   Buyer receipt/claim/settlement, carrier/GHN hoặc quyền vận hành mới.
 

@@ -45,10 +45,12 @@ export function reviewReturnPath(kind: Kind, state: unknown) {
     return reviewQueuePath(kind);
   const [path, query = ""] = state.reviewReturnTo.split("?");
   if (path !== `/review/${kind}`) return reviewQueuePath(kind);
-  return reviewQueuePath(
-    kind,
-    new URLSearchParams(query).get("status") ?? undefined,
-  );
+  const params = new URLSearchParams(query);
+  const base = reviewQueuePath(kind, params.get("status") ?? undefined);
+  const ai = params.get("ai");
+  return ai && ["Approved", "Escalated", "None"].includes(ai) && base.includes("?")
+    ? `${base}&ai=${ai}`
+    : base;
 }
 export function pendingReviewPath(kind: Kind) {
   return reviewQueuePath(

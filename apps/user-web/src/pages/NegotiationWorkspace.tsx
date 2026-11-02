@@ -21,6 +21,7 @@ import {
   PencilLine,
   X,
 } from "lucide-react";
+import { BrandIcon } from "../components/BrandIcon";
 import {
   changeConversationTerms,
   type PurchaseConversation,
@@ -161,7 +162,7 @@ export function NegotiationWorkspace({
           <div className={styles.bookProfileRow}>
             <div className={styles.bookCoverWrapper}>
               {book ? (
-                <ListingPhoto book={book} eager />
+                <ListingPhoto book={book} eager fallbackCover />
               ) : (
                 <div className={styles.placeholderCover} aria-hidden="true">
                   <BookOpen size={28} />
@@ -225,6 +226,39 @@ export function NegotiationWorkspace({
                 </p>
               </div>
             )}
+            {book?.exchangePreferences &&
+              Boolean(
+                book.exchangePreferences.targetCategory ||
+                  book.exchangePreferences.targetAuthor ||
+                  book.exchangePreferences.targetDescription,
+              ) && (
+                <div className={styles.exchangePrefBlock}>
+                  <div className={styles.exchangePrefHeading}>
+                    <BrandIcon size={16} />
+                    <span>Tiêu chí mong muốn khi đổi</span>
+                  </div>
+                  {book.exchangePreferences.targetCategory && (
+                    <div className={styles.specItem}>
+                      <span className={styles.specLabel}>Thể loại:</span>
+                      <span className={styles.specVal}>{book.exchangePreferences.targetCategory}</span>
+                    </div>
+                  )}
+                  {book.exchangePreferences.targetAuthor && (
+                    <div className={styles.specItem}>
+                      <span className={styles.specLabel}>Tác giả:</span>
+                      <span className={styles.specVal}>{book.exchangePreferences.targetAuthor}</span>
+                    </div>
+                  )}
+                  {book.exchangePreferences.targetDescription && (
+                    <div className={styles.descriptionBlock}>
+                      <span className={styles.specLabel}>Ghi chú:</span>
+                      <p className={styles.descriptionText}>
+                        {book.exchangePreferences.targetDescription}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
           </div>
 
           {isExchange ? (

@@ -17,8 +17,8 @@ import {
   Search,
   FileText,
   PlusCircle,
-  Sparkles,
 } from "lucide-react";
+import { BrandIcon } from "../components/BrandIcon";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import { ROUTES, formatVnd } from "../lib/routes";
@@ -106,15 +106,14 @@ function checkMatch(
   } | null,
 ) {
   if (!pref) return null;
-  const reasons: string[] = [];
-  if (
+  const matchAuthor = Boolean(
     pref.targetAuthor &&
     pref.targetAuthor.trim() &&
-    myBook.author.toLowerCase().includes(pref.targetAuthor.toLowerCase().trim())
-  ) {
-    reasons.push(`Khớp tác giả "${pref.targetAuthor}"`);
-  }
-  if (
+    myBook.author
+      .toLowerCase()
+      .includes(pref.targetAuthor.toLowerCase().trim()),
+  );
+  const matchCat = Boolean(
     pref.targetCategory &&
     pref.targetCategory.trim() &&
     myBook.category &&
@@ -123,20 +122,27 @@ function checkMatch(
       .includes(pref.targetCategory.toLowerCase().trim()) ||
       pref.targetCategory
         .toLowerCase()
-        .includes(myBook.category.toLowerCase().trim()))
-  ) {
-    reasons.push(`Khớp thể loại "${pref.targetCategory}"`);
-  }
+        .includes(myBook.category.toLowerCase().trim())),
+  );
+  let matchDesc = false;
   if (pref.targetDescription && pref.targetDescription.trim()) {
     const descWords = pref.targetDescription
       .toLowerCase()
       .split(/\s+/)
       .filter((w) => w.length >= 3);
-    if (descWords.some((w) => myBook.title.toLowerCase().includes(w))) {
-      reasons.push("Khớp tiêu chí mong muốn");
-    }
+    matchDesc = descWords.some((w) => myBook.title.toLowerCase().includes(w));
   }
-  return reasons.length > 0 ? reasons.join(" · ") : null;
+
+  if (matchAuthor) {
+    return `Đúng gu đối tác · ${pref.targetAuthor}`;
+  }
+  if (matchCat) {
+    return `Đúng thể loại đối tác tìm · ${pref.targetCategory}`;
+  }
+  if (matchDesc) {
+    return "Đúng cuốn đối tác mong muốn";
+  }
+  return null;
 }
 function LegacyExchangeComposePage() {
   const auth = useSession();
@@ -411,7 +417,7 @@ function LegacyExchangeComposePage() {
                 ) && (
                   <div className={styles.prefBanner}>
                     <div className={styles.prefBannerHeader}>
-                      <Sparkles size={16} />
+                      <BrandIcon size={16} />
                       <span>🎯 Tiêu chí mong muốn của chủ sách:</span>
                     </div>
                     <div className={styles.prefDetails}>
@@ -523,7 +529,7 @@ function LegacyExchangeComposePage() {
                           <p>{formatVnd(book.value)}</p>
                           {book.matchReason && (
                             <span className={styles.matchedBadge}>
-                              <Sparkles size={11} /> {book.matchReason}
+                              <BrandIcon size={12} /> {book.matchReason}
                             </span>
                           )}
                         </div>

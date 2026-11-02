@@ -1,11 +1,12 @@
 # Thỏa thuận Exchange: snapshot, điều kiện accept và thay sách — 02/11/2026
 
+Cập nhật tích hợp02/11: [source kết hợp/main và mapping số ADR/migration](EXCHANGE_MAIN_INTEGRATION_2026_11_02.md). Số liệu và số định danh trong nội dung dưới là mốc của gói ban đầu; hiện tại Exchange migration0053, ADR snapshot0065 và Buyer gate0064.
 ## Kết quả và nguồn
 
 Owner duyệt gói 1 sau [khảo sát](CORE_EXCHANGE_AUDIT_2026_11_02.md). Triển khai
 theo SRS hiện hành: tiền bù tự tính, counter thay sách đủ điều kiện. Đã sửa
 X01/X02/X03 và cách tách cọc/bù X07 trên web; không coi toàn core Exchange hoàn
-thiện. [ADR0063](../adr/0063-exchange-agreement-snapshots.md) giữ quyết định và
+thiện. [ADR0065](../adr/0065-exchange-agreement-snapshots.md) giữ quyết định và
 cách nâng cấp; báo cáo này ghi hành trình/evidence/giới hạn của gói.
 
 - Branch `codex/exchange-agreement-snapshot`, base `c7085d78`, subject
@@ -46,7 +47,7 @@ AGENTS kể cả reduced-motion. Không đổi brand hoặc component navigation
 - [Service](../../apps/api/src/modules/exchanges/exchanges.service.ts): transaction
   create/accept/counter, đóng unavailable có receipt, ảnh chỉ participant/current
   agreement. Không dùng exception để đóng rồi rollback mất trạng thái đóng.
-- [Migration0052](../../apps/api/src/database/mongo/migrations/0052-exchange-agreement.ts):
+- [Migration0052](../../apps/api/src/database/mongo/migrations/0053-exchange-agreement.ts):
   optional/null cho lịch sử, schema và điều kiện IDs/owners/deposit/delta. Không
   ghi tiền, sửa bút toán hoặc chạy backfill nội dung đã thất lạc.
 - [Shared parser](../../packages/session-client/src/exchange-agreement.ts),

@@ -1,3 +1,4 @@
+import {SupportLink} from '../features/support/SupportLink';
 import { BundleManifest } from "../components/BookBundle";
 import { ListingPhoto } from "../components/BookCard";
 import { ApiError, pendingOrderResponse } from "@used-books/session-client";
@@ -247,6 +248,7 @@ function AuthenticatedOrderDetails({
 
   return (
     <section className={className} aria-label="Chi tiết đơn hàng">
+      <p><SupportLink type='DirectOrder' id={o.id}/></p>
       {!embedded && (
         <header className={styles.dashboardHeader}>
           <div>

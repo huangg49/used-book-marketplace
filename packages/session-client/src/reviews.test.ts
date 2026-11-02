@@ -70,6 +70,13 @@ function fake() {
   };
 }
 describe("review command recovery", () => {
+  it.each([401,403,408,429])('keeps a moderation intent through HTTP %s until exact replay',async status=>{
+    const f=fake();f.setFailure(new ApiError(status,'UNAVAILABLE','Unknown'));
+    await expect(sendReviewIntent(f.client,'review','/first',{expectedVersion:1,decision:'Hide'},()=>id)).rejects.toBeDefined();
+    expect(pendingReviewIntent(f.client,'review')).toBe(true);f.setFailure(null);
+    await sendReviewIntent(f.client,'review','/opposite',{expectedVersion:2,decision:'Restore'},()=>crypto.randomUUID());
+    expect(f.calls[1]).toEqual(f.calls[0]);
+  });
   it("keeps exact key/path/body/version after uncertain ACK even if screen remounted with new draft", async () => {
     const f = fake();
     await expect(

@@ -1,5 +1,133 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## Tích hợp chuỗi local với main Support/AI/Exchange
+
+- Owner duyệt; branch `codex/integrate-exchange-main`, hai parent local
+  `f3291409` + main `add4d615` (PR86/88/87), subject
+  `merge: integrate main support and AI hardening with Exchange recovery`.
+  [Source, lỗi tích hợp, evidence và giới hạn](../features/EXCHANGE_MAIN_INTEGRATION_2026_11_02.md).
+  Worktree riêng sạch; checkout gốc/28file dirty-untracked giữ nguyên checksum,
+  chưa ghép28file đó vào gói này. Chưa push/PR/merge main/deploy hoặc cấp quyền mới.
+- Giữ snapshot/revalidate/counter sách, exact recovery/identity và tài chính cùng
+  preference matching/BrandIcon/dispute UI, Support và AI v2. Web giữ hai hạn72giờ,
+  bỏ câu48h/giải phóng sớm; RN giữ chọn sách và recovery, không quay về nhập tiền bù.
+  GHN API/handler giữ nguyên main, không call/config provider hoặc mở gate.
+- Contract0.72/234operations/37controllers; registry67ID. Giữ main0052AI/checksum,
+  chuyển Exchange local chưa publish sang0053 và chỉ sửa validator exchanges để
+  không xóa Support notifications. Giữ67file migration main từng byte. Đổi ADR
+  local Buyer0062→0064, Exchange0063→0065, giữ Support0062/AI0063 trên main.
+- PASS1279unit (API383/shared142/web303/RN223/Admin228), types/build phù hợp,
+  Expo web32route,32Mongo,156ca E2E riêng biệt có evidence qua các lượt chọn lọc,
+  không là full156một lượt/full repo. Browser Exchange3+5+7scenario/Support6PASS.
+  Lint không lỗi (warnings cũ API/web),52advisory UI có sẵn. Native/human/provider
+  thật/full E2E/CI source kết hợp NOT RUN; READINESS/AIflag mặc địnhfalse giữ nguyên.
+- CI đúng main add4d615:8PASS/API FAIL ở test AiRecheck chọn nhầm HumanAudit.
+  Local đã tái hiện; ca test nay buộc hai nhánh, chọn đúng AiRecheck và assert1bản,
+  không giảm yêu cầu.1targetedPASS/30SKIP rồi full31AI PASS. Cần CI đúng commit
+  kết hợp khi được phép push, không gọi main xanh hoặc human review đã đạt.
+- QA cuối dọn DB/user/role riêng và dừng mongo-test; Mongo chính27017 vẫn healthy,
+  không migrate/reset/seed/dừng. X04/X05/giao nhận/provider và evidence dispute thật
+  vẫn cần gói riêng; tênfile/preview mẫu không là upload/custody đã nghiệm thu.
+
+## Gia cố AI tự duyệt, đo bằng mô hình thật — 02/11/2026
+
+- [ADR0063](../adr/0063-ai-listing-review-hardening.md): ba lượt gọi tách riêng, luật máy
+  chủ thay điểm chung, Admin xem/thu hồi, hậu kiểm lấy mẫu. Contract0.71, migration0052.
+- Đã chạy thật `nvidia/nemotron-3.5-super-vl-120b-a12b`: `eval:auto-review` trên118 ca và
+  test worker sống4/4. v3: 0/93 duyệt sai, nhưng 6/71 ca tự nhiên sẽ lọt nếu tên sách
+  khai đúng. **Gate NOT MET, cờ vẫn tắt.** Nhãn do AI soạn, ảnh Commons, không có holdout.
+- Việc tiếp: nhóm chụp ảnh điện thoại, người kiểm nhãn trong
+  `qa-data/listing-auto-review`, chạy lại trên tập chưa dùng để chỉnh prompt; chủ dự án
+  xác nhận khác biệt FR-L03. DB local chưa có0050–0052: `db:migrate` rồi `db:bootstrap`.
+
+## Khắc phục triệt để lỗi CI GitHub (API CI, React Native CI & User Web CI) sau khi hợp nhất main — 02/11/2026
+
+- Nhánh: `feature/exchange-policy-and-transit-worker`.
+- **Hợp nhất mã nguồn**: Đã cập nhật và merge nhánh `origin/main` (bao gồm PR #83, #84, #85, #86) vào nhánh làm việc; giải quyết xung đột tại `apps/admin-web/src/features/operations/exchange-disputes.tsx` và `SESSION_STATE.md`.
+- **Khắc phục lỗi API CI**:
+  - Lỗi: `scripts/check-api-routes.mjs` phát hiện 4 endpoints điều phối bưu tá/mô phỏng demo trong `CarrierController` chưa được đặc tả trong OpenAPI (`/shipments/carrier/orders/recent`, `/shipments/carrier/orders/{id}/reset-for-demo`, `/shipments/carrier/orders/{id}/auto-simulate`, `/shipments/carrier/seed-demo-order`).
+  - Xử lý: Contract-first bổ sung đầy đủ 4 endpoints vào `packages/api-contract/openapi.yaml`, sinh lại types TypeScript bằng `pnpm contract:generate`.
+  - Kết quả: `pnpm contract:routes` PASS (228 operations khớp chuẩn 36 controllers; 0 missing/undocumented/duplicate routes).
+- **Khắc phục lỗi React Native CI**:
+  - Lỗi: `expo lint` bị chặn bởi 8 lỗi ký tự quote unescaped `"` và màu hex/rgba trực tiếp không qua design tokens trong `exchange-actions-card.tsx`, cùng 1 cảnh báo biến không dùng `myReceivedAt` trong `exchange-shipping-card.tsx`.
+  - Xử lý:
+    - Bổ sung các tokens `videoBackground`, `videoBadgeBg`, `whiteAlpha25` vào `apps/mobile-react-native/src/core/ui/theme.ts`.
+    - Escape ký tự nháy kép `&quot;` trong JSX tại `exchange-actions-card.tsx`.
+    - Gỡ bỏ khai báo `myReceivedAt` không sử dụng trong `exchange-shipping-card.tsx`.
+  - Kết quả: `pnpm --filter @used-books/mobile-react-native lint` PASS (0 errors, 0 warnings); `test` và `export:all` đều PASS.
+- **Khắc phục lỗi User Web CI (`test:wallet:browser`)**:
+  - Lỗi: Trong `tests/wallet-checkout.mjs`, mock `globalThis.fetch` cho VNPay QueryDR mặc định cứng số tiền `vnp_Amount` thành `"5000000"` (50.000đ) khi `checkoutAmounts` chưa chứa mã đơn hàng (đơn hàng thử lại sau lỗi mạng có mệnh giá 20.000đ hoặc 45.000đ). Khi client gọi `vnpay-query`, `vnpay-sandbox.ts` phát hiện lệch số tiền và trả về lỗi 503 (`DomainError: Chưa xác minh được kết quả từ VNPay`), khiến Playwright chờ hủy đơn hết thời gian 20s.
+  - Xử lý: Bổ sung tra cứu số tiền chính xác từ collection `topup_intents` trong `fixture.db` nếu chưa có sẵn trong `checkoutAmounts`, đảm bảo số tiền gửi về VNPay luôn khớp 100% với giá trị nạp thực tế.
+- **Kiểm tra toàn diện**:
+  - `pnpm contract:check`: PASS.
+  - `pnpm contract:routes`: PASS (228 operations).
+  - `pnpm --filter @used-books/api lint`: PASS (0 errors).
+  - `pnpm --filter @used-books/api typecheck`: PASS (0 errors).
+  - `pnpm --filter @used-books/api test`: PASS (42 test files, 322 tests pass).
+  - `pnpm --filter @used-books/mobile-react-native lint`: PASS (0 errors).
+  - `pnpm --filter @used-books/mobile-react-native typecheck`: PASS (0 errors).
+  - `pnpm --filter @used-books/mobile-react-native test`: PASS (26 test files, 194 tests pass).
+  - `pnpm --filter @used-books/session-client test`: PASS (12 test files, 119 tests pass).
+  - `pnpm --filter @used-books/user-web lint`: PASS (0 errors).
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 errors).
+  - `pnpm --filter @used-books/user-web test`: PASS (40 test files, 264 tests pass).
+  - `pnpm --filter @used-books/user-web build`: PASS.
+
+## Hoàn thiện Luồng Live Tracking Vận chuyển Bưu tá, Đồng bộ Dữ liệu Trao đổi 2 chiều & Nhận diện Thương hiệu Lật Lại — 02/11/2026
+
+- Nhánh: `feature/exchange-policy-and-transit-worker`.
+- **Bối cảnh & Nghiệp vụ**:
+  - Diễn tập và nghiệm thu thực tế luồng Trao đổi sách 2 chiều trên 2 tài khoản thật (`Nguyễn Đại` và `Trần Tú / Nguyễn Tu`) kèm trang điều phối bưu tá Lật Lại Express (`/driver`).
+  - Đảm bảo luồng dữ liệu bưu tá cập nhật theo từng bước (Lấy sách -> Nhập kho trung chuyển -> Xuất kho đi giao -> Ký nhận POD) phản ánh tức thì lên giao diện của cả hai bên theo thời gian thực (Contract-first OpenAPI).
+  - Khắc phục triệt để lỗi lọc dữ liệu Zod ở client và lỗi độ tương phản giao diện điều phối bưu tá.
+  - Chuẩn hóa quy chế đồng kiểm 72 giờ (POL-14 / SRS 1.1) và tích hợp logo linh vật cú mèo Lật Lại chính thức vào các thẻ hành động.
+- **Nội dung thực hiện chi tiết**:
+  1. **Contract-first API & Serialization (`packages/api-contract`, `apps/api`)**:
+     - `openapi.yaml`: Khai báo 2 trường `lastEvent` (string) và `lastEventAt` (date-time) trong schema `ExchangeShipmentInfo`.
+     - `schema.ts`: Tự động tái sinh kiểu TypeScript đồng bộ (`pnpm contract:generate`).
+     - `documents.ts`: Mở rộng `ExchangeShipmentSnapshot` trong database schema MongoDB với `lastEvent` và `lastEventAt`.
+     - `exchanges.service.ts`: Cập nhật hàm chiếu `view()` trả về đầy đủ nhật ký bưu tá cho cả `initiatorShipment` và `recipientShipment`.
+  2. **Client Schema & Giao diện Theo dõi Vận chuyển (`apps/user-web`)**:
+     - `services/exchange.ts`: Bổ sung `lastEvent` và `lastEventAt` vào Zod `exchangeSchema`, ngăn chặn Zod strip dữ liệu trả về từ API.
+     - `ShippingTrackingCard`: Render thẻ Live Tracking trực tiếp ngay dưới mã vạch vận đơn với icon xe tải, huy hiệu thời gian và mô tả sự kiện bưu tá. Gỡ bỏ nút bắn webhook thử nghiệm cũ.
+     - `ActionCard`: Thay thế icon generic `Sparkles` bằng linh vật cú mèo Lật Lại chính thức `<BrandIcon size={18} />`. Chuẩn hóa câu chữ chỉ dẫn và mốc đồng kiểm thành **72 giờ** cho các trạng thái `WAITING_YOU_CONFIRM`, `DELIVERING`, `INSPECTING`.
+  3. **Trang Điều phối Bưu tá (`apps/user-web/src/pages/DriverPage.tsx`)**:
+     - Cố định màu chữ trắng nổi bật `.chip.chipActive { color: #ffffff !important; }` trên nền đỏ rượu `#5c0202` để hiển thị rõ nét mã đơn hàng.
+     - Chuẩn hóa thuật ngữ "phát sách" thành "giao sách" theo đúng ngữ cảnh giao nhận.
+     - Ràng buộc hiển thị danh sách đơn hàng thật từ database MongoDB, lọc các đơn đang giao (`InTransit`) hoặc hoàn tất.
+- **Kiểm tra**:
+  - `pnpm contract:check`: PASS (OpenAPI parsed successfully; generated types are current).
+  - `pnpm --filter @used-books/api exec tsc --noEmit`: PASS (0 errors).
+  - `pnpm --filter @used-books/user-web exec tsc --noEmit`: PASS (0 errors).
+  - `pnpm --filter @used-books/admin-web exec tsc --noEmit`: PASS (0 errors).
+  - `pnpm --filter @used-books/user-web build`: PASS (Vite build thành công trong 4.89s).
+
+# Điểm lưu trước — 02/11/2026
+
+## Bàn giao hỗ trợ Member/Admin web —02/11/2026
+
+- Owner yêu cầu chia commit/push phần chức năng, loại phần tạo luồng/dữ liệu mẫu
+  để test. Nhánh `codex/web-support-ready` từ main `d44b813b`; workspace local
+  đang chạy giữ nguyên ở nhánh cũ. Không push các nhánh/commit tạo mẫu demo.
+  Helper, manifest, DB/backup/credential và `.tmp/` không thuộc Git. Kiểm thử
+  tự động của chức năng được giữ; không xóa fixture local người dùng đang test.
+- Member gửi/theo dõi/bổ sung SupportCase, chọn giao dịch bằng nhãn thay nhập ID,
+  báo cáo nội dung; Admin nhận việc, note riêng, kiểm duyệt review, phản hồi và
+  đóng hồ sơ. Review queue thu gọn sau ACK, mở lại được, giữ input/exact retry.
+  [Đặc tả](../features/WEB_FEEDBACK_COMPLAINTS_SPEC.md),
+  [báo cáo](../features/WEB_SUPPORT_CENTER_REPORT.md),
+  [ADR0062](../adr/0062-web-support-cases.md).
+- Tích hợp main có AI tự duyệt: contract0.70/224operations/36controllers,
+  registry65migration/97collection. Hai migration0050 giữ nguyên checksum;
+  thêm0051 hợp nhất receipt/audit sau cả hai. Không bật cờ AI, không thay gate
+  hoặc migrate DB local đang phục vụ owner. Nhận source phải migrate/bootstrap.
+- Source tích hợp PASS49HTTP/Mongo (support/obligations/AI auto review),32Mongo
+  (schema/upgrade/role/checksum, gồm3 đường nâng cấp union); shared119/Admin219/
+  Member264unit. API/web/RN type, API/hai web build/lint, contract/routes/docs/diff
+  PASS. Browser support6nhóm và Admin collapse9ca PASS,0page errors; QA riêng
+  57017/*_test, storage fake. Chi tiết ở báo cáo; full native/human/remote CI chưa
+  chạy. Push được owner cho phép; chưa PR/merge/deploy hoặc đổi gate.
+
 ## Exchange: thỏa thuận, phục hồi thao tác và khung tài chính
 
 - Owner duyệt gói2 sau gói1 `a1258e1a`. Branch `codex/exchange-intent-recovery`,
@@ -134,7 +262,7 @@
 ## DirectDelivery completion: chốt bảo vệ Buyer đã kiểm local
 
 - Owner duyệt gói1sau khảo sát, branch `codex/direct-delivery-release-gate`, base
-  main `2ae2212b`. [ADR0062](../adr/0062-direct-delivery-completion-release-gate.md)
+  main `2ae2212b`. [ADR0064](../adr/0064-direct-delivery-completion-release-gate.md)
   chặn command receipt/delivery/settlement mới, giữ historical replay sau current
   auth; [evidence và giới hạn](../features/DIRECT_COMPLETION_GATE_2026_11_01.md).
   Subject `fix(orders): enforce direct delivery completion release gate`.
@@ -157,7 +285,7 @@
   Staff, không từ chối; mặc định tắt. Contract0.68, migration0050, cần `db:migrate`
   rồi `db:bootstrap`. **Khác SRS FR-L03: chủ dự án xác nhận trước khi bật ở môi
   trường dùng chung.** Test dùng mô hình giả; chưa đo trên ảnh thật, chưa hiệu chỉnh
-  ngưỡng. Chưa có màn Admin hiển thị `autoReview`/`automated`. READINESS giữ nguyên.
+  ngưỡng. (Mục này là mốc trước ADR0062.)
 
 ## Chuẩn bị tích hợp chuỗi local theo yêu cầu owner — 01/11/2026
 

@@ -23,6 +23,9 @@ const suffix = [
   '0048-account-controls',
   '0049-member-cart',
   '0050-listing-auto-review',
+  '0050-support-cases',
+  '0051-support-auto-review-union',
+  '0052-listing-auto-review-v2',
 ];
 const sha = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');

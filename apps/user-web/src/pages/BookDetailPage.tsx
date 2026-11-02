@@ -1,10 +1,12 @@
 import { BundleManifest } from "../components/BookBundle";
 import {AddToCart} from '../components/AddToCart';
+import {SupportLink} from '../features/support/SupportLink';
 import { listingTitle } from "../lib/book-bundle";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowUpRight, MapPin, MessageCircle, BookOpen, ClipboardCheck, Languages, CalendarDays, Building2, Hash, Layers3, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, MapPin, MessageCircle, BookOpen, ClipboardCheck, Languages, CalendarDays, Building2, Hash, Layers3 } from "lucide-react";
+import { BrandIcon } from "../components/BrandIcon";
 import { motion } from "framer-motion";
 import { ListingGallery } from "../components/ListingGallery";
 import { conditions } from "../lib/listing-labels";
@@ -154,6 +156,7 @@ export function BookDetailPage() {
           transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
         >
           <h1>{listingTitle(book)}</h1>
+          <p><SupportLink type='Listing' id={book.id} report/></p>
           <BundleManifest bundle={book.bundle} />
           <p className={styles.author}>
             Tác giả: {book.book.authors.join(", ") || "Chưa rõ tác giả"}
@@ -291,7 +294,7 @@ export function BookDetailPage() {
                         marginBottom: 6,
                       }}
                     >
-                      <Sparkles size={15} />
+                      <BrandIcon size={16} />
                       <span>Tiêu chí đổi sách của chủ sở hữu:</span>
                     </div>
                     {book.exchangePreferences.targetCategory && (

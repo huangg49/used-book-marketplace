@@ -1322,6 +1322,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/auto-review/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * getAutoReviewReport
+         * @description ACTIVE STAFF/ADMIN. Counts for the AI reviewer over the last 30 days. Overturn rate counts only checks a person closed; null until a person has closed one.
+         */
+        get: operations["getAutoReviewReport"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/auto-review/checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * listAutoReviewChecks
+         * @description ACTIVE STAFF/ADMIN. Post-publication checks of AI approvals, oldest first. A check never changes published state.
+         */
+        get: operations["listAutoReviewChecks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/listings/{listingId}/auto-review/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * getAutoReviewHistory
+         * @description ACTIVE STAFF/ADMIN. For each submitted revision, newest first and at most 50, what the AI reviewer concluded next to the recorded decision.
+         */
+        get: operations["getAutoReviewHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/listings/{listingId}/auto-review/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * revokeAutoApproval
+         * @description ACTIVE independent STAFF/ADMIN, reason mandatory. Takes back an AI approval of an Available listing. The same content returns to PendingReview as a new revision for a person to decide, and open checks close as Confirmed. Reserved, Removed or Staff-approved listings return 409.
+         */
+        post: operations["revokeAutoApproval"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/listings/{listingId}/auto-review/checks/{checkId}/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * clearAutoReviewCheck
+         * @description ACTIVE independent STAFF/ADMIN, note mandatory. Records that a person looked at an open check and the listing stands. Published state does not change.
+         */
+        post: operations["clearAutoReviewCheck"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/listings/{listingId}/remove": {
         parameters: {
             query?: never;
@@ -3353,6 +3453,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/shipments/carrier/orders/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get recent shipment orders for demo and carrier driver portal. */
+        get: operations["getRecentShipmentOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipments/carrier/orders/{id}/reset-for-demo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Reset exchange and shipment state for live interactive demo. */
+        post: operations["resetShipmentOrderForDemo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipments/carrier/orders/{id}/auto-simulate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Automatically advance simulation of exchange delivery stages. */
+        post: operations["autoSimulateExchangeShipment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipments/carrier/seed-demo-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Seed demo exchange order ready for carrier delivery testing. */
+        post: operations["seedDemoShipmentOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/webhooks/carrier": {
         parameters: {
             query?: never;
@@ -3576,6 +3744,177 @@ export interface paths {
         put?: never;
         /** @description Independent active STAFF/ADMIN only. Reason required. Hide/restore review; approve/hide pending reply; preserve/release evidence. Retain revisions and audit; no settlement or balance changes. */
         post: operations["moderateTransactionReview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/support-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Own support cases only. Creation requires ACTIVE MEMBER; read and reply on existing owned cases permit locked members. No escrow, refund or transaction-state side effects. */
+        get: operations["listMySupportCases"];
+        put?: never;
+        /** @description Own support cases only. Creation requires ACTIVE MEMBER; read and reply on existing owned cases permit locked members. No escrow, refund or transaction-state side effects. */
+        post: operations["createSupportCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/support-cases/{caseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Own support cases only. Creation requires ACTIVE MEMBER; read and reply on existing owned cases permit locked members. No escrow, refund or transaction-state side effects. */
+        get: operations["getMySupportCase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/support-cases/{caseId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Own support cases only. Creation requires ACTIVE MEMBER; read and reply on existing owned cases permit locked members. No escrow, refund or transaction-state side effects. */
+        post: operations["replyToSupportCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/support-cases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN, independent of reporter and linked participants. Current authorization before replay. Case responses do not move money or adjudicate a transaction. */
+        get: operations["listOperationsSupportCases"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/support-cases/{caseId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE ADMIN, independent of reporter and linked participants. Current authorization before replay. Case responses do not move money or adjudicate a transaction. */
+        get: operations["getOperationsSupportCase"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/support-cases/{caseId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN, independent of reporter and linked participants. Current authorization before replay. Case responses do not move money or adjudicate a transaction. */
+        post: operations["messageSupportCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/support-cases/{caseId}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE ADMIN, independent of reporter and linked participants. Current authorization before replay. Case responses do not move money or adjudicate a transaction. */
+        post: operations["actOnSupportCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/transaction-reviews/{reviewId}/target": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Own support cases only. Creation requires ACTIVE MEMBER; read and reply on existing owned cases permit locked members. No escrow, refund or transaction-state side effects. */
+        get: operations["resolveMyReviewNotification"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/support-targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE MEMBER. Readable labels only; no address, email or payment data. Options are current owned transactions; resolve rechecks the same target access as support creation. No business mutation. */
+        get: operations["listMySupportTargets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/support-targets/{type}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE MEMBER. Readable labels only; no address, email or payment data. Options are current owned transactions; resolve rechecks the same target access as support creation. No business mutation. */
+        get: operations["getMySupportTarget"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4133,6 +4472,133 @@ export interface components {
             reasons: string[];
             /** Format: date-time */
             decidedAt: string;
+            /** @description Null when server facts settled it and no model was called. */
+            model: string | null;
+            policyVersion: string | null;
+            stages: components["schemas"]["AutoReviewStage"][];
+            criteria: components["schemas"]["AutoReviewCriterion"][];
+            extraction: components["schemas"]["AutoReviewExtraction"] | null;
+            comparison: components["schemas"]["AutoReviewComparison"] | null;
+            damage: ("None" | "Minor" | "Moderate" | "Severe") | null;
+            facts: components["schemas"]["AutoReviewFacts"] | null;
+            checks: components["schemas"]["AutoReviewCheck"][];
+        };
+        /** @enum {string} */
+        AutoReviewMatch: "Match" | "Mismatch" | "Unread" | "NotInCatalog";
+        /** @description A judgment reported by the model. confidence is the model's own number, not calibrated. */
+        AutoReviewCriterion: {
+            /** @enum {string} */
+            stage: "Text" | "Visual";
+            criterion: string;
+            pass: boolean;
+            confidence: number;
+            floor: number;
+            met: boolean;
+        };
+        AutoReviewStage: {
+            /** @enum {string} */
+            stage: "Text" | "Extraction" | "Visual";
+            /** @enum {string} */
+            status: "Completed" | "Unavailable" | "NotRun";
+        };
+        /** @description What the model read on the photos without seeing the seller's text or the catalog. */
+        AutoReviewExtraction: {
+            title: string | null;
+            authors: string[];
+            isbn: string | null;
+            edition: string | null;
+            publisher: string | null;
+            contactOrInstructionTextVisible: boolean;
+        };
+        /** @description Server comparison of the extraction and locally decoded barcodes with the catalog record. */
+        AutoReviewComparison: {
+            title: components["schemas"]["AutoReviewMatch"];
+            author: components["schemas"]["AutoReviewMatch"];
+            isbn: components["schemas"]["AutoReviewMatch"];
+            edition: components["schemas"]["AutoReviewMatch"];
+            publisher: components["schemas"]["AutoReviewMatch"];
+            barcodes: string[];
+        };
+        /** @description Server facts read from stored records, never from a model. */
+        AutoReviewFacts: {
+            ownerAccountAgeDays: number;
+            recentSubmissions: number;
+            photoCount: number;
+            duplicatePhoto: boolean;
+            priceBounds: {
+                low: number;
+                high: number;
+            } | null;
+            textSignals: string[];
+        };
+        /** @enum {string} */
+        AutoReviewCheckStatus: "Passed" | "Skipped" | "Open" | "Cleared" | "Confirmed";
+        AutoReviewCheck: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            listingId: string;
+            /** Format: uuid */
+            revisionId: string;
+            /** @enum {string} */
+            selection: "AiRecheck" | "HumanAudit" | "StaffOverride";
+            status: components["schemas"]["AutoReviewCheckStatus"];
+            reasons: string[];
+            model: string | null;
+            policyVersion: string | null;
+            note: string | null;
+            resolvedAt: string | null;
+            resolvedByStaff: boolean;
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AutoReviewCheckPage: {
+            items: components["schemas"]["AutoReviewCheck"][];
+            nextCursor: string | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        AutoReviewHistory: {
+            items: {
+                /** Format: uuid */
+                revisionId: string;
+                number: number;
+                /** Format: date-time */
+                submittedAt: string;
+                decision: components["schemas"]["ReviewDecision"] | null;
+                autoReview: components["schemas"]["AutoReviewSummary"] | null;
+            }[];
+        };
+        AutoReviewReport: {
+            windowDays: number;
+            enabled: boolean;
+            policyVersion: string;
+            policyApproved: boolean;
+            approved: number;
+            escalated: number;
+            escalatedThenApproved: number;
+            escalatedThenRejected: number;
+            checksOpen: number;
+            rechecksPassed: number;
+            rechecksFlagged: number;
+            humanAudits: number;
+            staffReviewedChecks: number;
+            staffConfirmedProblems: number;
+            overturnRate: number | null;
+            costMicroUsd: number;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        RevokeAutoApproval: {
+            expectedVersion: number;
+            /** Format: uuid */
+            revisionId: string;
+            reason: string;
+        };
+        ClearAutoReviewCheck: {
+            expectedVersion: number;
+            note: string;
         };
         PrivateListing: {
             /** Format: uuid */
@@ -4146,7 +4612,7 @@ export interface components {
             latestDecision: components["schemas"]["ReviewDecision"] | null;
             /** @description Present only on the Staff/Admin review detail. The price suggestion the seller decided on with the revision under review (null when none), so the reviewer can tell a suggested price from the seller's own. */
             priceAssist?: components["schemas"]["PriceAssistReview"] | null;
-            /** @description Present only on the Staff/Admin review detail. What the AI reviewer concluded about the current revision (null when it has not looked at it). */
+            /** @description Present only on Staff/Admin review reads. What the AI reviewer concluded about the current revision (null when it has not looked at it). The review queue carries the same summary without post-publication checks. */
             autoReview?: components["schemas"]["AutoReviewSummary"] | null;
             removalReason: string | null;
             catalogStatus: components["schemas"]["CatalogStatus"] | null;
@@ -4278,11 +4744,11 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed";
+            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "SupportUpdated" | "ReviewModerated";
             title: string;
             body: string;
             /** @enum {string} */
-            targetType: "Auction" | "Exchange" | "Order";
+            targetType: "Auction" | "Exchange" | "Order" | "SupportCase" | "TransactionReview";
             /**
              * Format: uuid
              * @description Opens with GET /auctions/{id} or GET /exchanges/{id}; the caller's own view comes from participation or point-order reads.
@@ -6548,6 +7014,9 @@ export interface components {
             notes?: string | null;
             /** Format: date-time */
             shippedAt?: string | null;
+            lastEvent?: string | null;
+            /** Format: date-time */
+            lastEventAt?: string | null;
         };
         CreateExchangeProposal: {
             /**
@@ -6762,6 +7231,121 @@ export interface components {
         };
         ReviewRevisionPage: {
             items: components["schemas"]["ReviewRevisionItem"][];
+            nextCursor: string | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        ReviewNotificationTarget: {
+            /** @enum {string} */
+            type: "Exchange" | "DirectOrder" | "PointOrder";
+            /** Format: uuid */
+            id: string;
+        };
+        /** @enum {string} */
+        SupportKind: "Feedback" | "Bug" | "Violation" | "TransactionIssue";
+        /** @enum {string} */
+        SupportState: "Open" | "InReview" | "AwaitingMember" | "Answered" | "Closed";
+        SupportTarget: {
+            /** @enum {string} */
+            type: "DirectOrder" | "Exchange" | "PointOrder" | "Auction" | "Listing" | "Review" | "Member";
+            /** Format: uuid */
+            id: string;
+        };
+        SupportCaseSummary: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            kind: "Feedback" | "Bug" | "Violation" | "TransactionIssue";
+            title: string;
+            /** Format: uuid */
+            reporterId: string;
+            reporterName: string;
+            target: {
+                /** @enum {string} */
+                type: "DirectOrder" | "Exchange" | "PointOrder" | "Auction" | "Listing" | "Review" | "Member";
+                /** Format: uuid */
+                id: string;
+            } | null;
+            assigneeId: string | null;
+            /** @enum {string} */
+            state: "Open" | "InReview" | "AwaitingMember" | "Answered" | "Closed";
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateSupportCase: {
+            /** @enum {string} */
+            kind: "Feedback" | "Bug" | "Violation" | "TransactionIssue";
+            title: string;
+            description: string;
+            target: components["schemas"]["SupportTarget"] | null;
+        };
+        SupportMessage: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            authorId: string;
+            authorName: string;
+            /** @enum {string} */
+            role: "Member" | "Admin" | "System";
+            internal: boolean;
+            text: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        SupportCasePage: {
+            items: components["schemas"]["SupportCaseSummary"][];
+            nextCursor: string | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        SupportCaseDetail: {
+            case: components["schemas"]["SupportCaseSummary"];
+            messages: components["schemas"]["SupportMessage"][];
+            canManage: boolean;
+            canReply: boolean;
+            relatedState: string | null;
+            relatedAuctionId: string | null;
+            review: components["schemas"]["ExchangeReviewItem"] | null;
+            /** Format: date-time */
+            serverTime: string;
+        };
+        SupportMessageCommand: {
+            expectedVersion: number;
+            text: string;
+            internal: boolean;
+        };
+        SupportActionCommand: {
+            expectedVersion: number;
+            /** @enum {string} */
+            action: "Assign" | "RequestEvidence" | "Answer" | "Close" | "Reopen";
+            text: string;
+        };
+        SupportCaseReceipt: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            entityType: "SupportCase";
+            /** Format: uuid */
+            entityId: string;
+            version: number;
+            /** @enum {string} */
+            state: "Open" | "InReview" | "AwaitingMember" | "Answered" | "Closed";
+            /** Format: date-time */
+            serverTime: string;
+        };
+        SupportTargetOption: {
+            target: components["schemas"]["SupportTarget"];
+            label: string;
+            description: string | null;
+            partnerName: string | null;
+            createdAt: string | null;
+            state: string | null;
+        };
+        SupportTargetOptionsPage: {
+            items: components["schemas"]["SupportTargetOption"][];
             nextCursor: string | null;
             /** Format: date-time */
             serverTime: string;
@@ -9002,6 +9586,8 @@ export interface operations {
                 /** @description Opaque base64url keyset cursor bound to normalized filters, sort and caller scope. Invalid/mismatched cursor: 400. No snapshot guarantee. All pages recheck eligibility. */
                 cursor?: string;
                 moderation?: "PendingReview" | "Approved" | "Rejected";
+                /** @description Filter by what the AI reviewer concluded about the current revision. None means it has not looked at it. */
+                aiOutcome?: "Approved" | "Escalated" | "None";
             };
             header?: never;
             path?: never;
@@ -9147,6 +9733,186 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["DecideListing"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    /** @description true only for a previously committed command. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MutationReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getAutoReviewReport: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutoReviewReport"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listAutoReviewChecks: {
+        parameters: {
+            query?: {
+                limit?: number;
+                /** @description Opaque base64url keyset cursor bound to normalized filters, sort and caller scope. Invalid/mismatched cursor: 400. No snapshot guarantee. All pages recheck eligibility. */
+                cursor?: string;
+                status?: components["schemas"]["AutoReviewCheckStatus"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutoReviewCheckPage"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getAutoReviewHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful read. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutoReviewHistory"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    revokeAutoApproval: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Fingerprint includes method, path IDs and canonical body. Different payload with same key: 409. Required for all domain mutations. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                listingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevokeAutoApproval"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    /** @description true only for a previously committed command. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MutationReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    clearAutoReviewCheck: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Fingerprint includes method, path IDs and canonical body. Different payload with same key: 409. Required for all domain mutations. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                listingId: string;
+                checkId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClearAutoReviewCheck"];
             };
         };
         responses: {
@@ -13510,6 +14276,90 @@ export interface operations {
             };
         };
     };
+    getRecentShipmentOrders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>[];
+                };
+            };
+        };
+    };
+    resetShipmentOrderForDemo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    autoSimulateExchangeShipment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    seedDemoShipmentOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
     carrierWebhookCallback: {
         parameters: {
             query?: never;
@@ -13980,6 +14830,371 @@ export interface operations {
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];
             409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+        };
+    };
+    listMySupportCases: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+                state?: components["schemas"]["SupportState"];
+                kind?: components["schemas"]["SupportKind"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCasePage"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    createSupportCase: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSupportCase"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Exact intent replay. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    getMySupportCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseDetail"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    replyToSupportCase: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportMessageCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Exact intent replay. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    listOperationsSupportCases: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+                state?: components["schemas"]["SupportState"];
+                kind?: components["schemas"]["SupportKind"];
+                assignedToMe?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCasePage"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    getOperationsSupportCase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseDetail"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    messageSupportCase: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportMessageCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Exact intent replay. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    actOnSupportCase: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SupportActionCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Exact intent replay. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    resolveMyReviewNotification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reviewId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewNotificationTarget"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    listMySupportTargets: {
+        parameters: {
+            query: {
+                type: "DirectOrder" | "Exchange" | "PointOrder";
+                q?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportTargetOptionsPage"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+        };
+    };
+    getMySupportTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                type: "DirectOrder" | "Exchange" | "PointOrder" | "Listing" | "Auction" | "Review" | "Member";
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportTargetOption"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
             422: components["responses"]["Error"];
         };
     };

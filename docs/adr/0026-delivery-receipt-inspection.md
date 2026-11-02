@@ -7,7 +7,7 @@ trước khi mở T01. Mở rộng ADR 0013, 0020–0025.
 
 **Đối chiếu01/11/2026:** trạng thái triển khai29/09 không mô tả source hiện tại.
 Main đã có receipt/delivery/settlement và migration
-0020/0021; chưa đủ claim/denial theo đề xuất. [ADR0062](0062-direct-delivery-completion-release-gate.md)
+0020/0021; chưa đủ claim/denial theo đề xuất. [ADR0062](0064-direct-delivery-completion-release-gate.md)
 chặn command/settlement mới, giữ lịch sử và tiền/sách khi READINESS sau F2h còn mở.
 ADR0026 tiếp tục Proposed; không chuyển thành Accepted vì code hoặc test đã có.
 

@@ -61,6 +61,18 @@ export interface MemberCartDoc extends Lockable {
   items: {listingId:string;priceAtAdd:number;addedAt:Date}[];
   createdAt:Date;updatedAt:Date;
 }
+export interface SupportCaseDoc extends Lockable {
+  _id: string; reporterId: string; reporterName: string;
+  kind: 'Feedback' | 'Bug' | 'Violation' | 'TransactionIssue'; title: string;
+  target: {type: 'DirectOrder' | 'Exchange' | 'PointOrder' | 'Auction' | 'Listing' | 'Review' | 'Member'; id: string} | null;
+  involvedUserIds: string[]; assigneeId: string | null;
+  state: 'Open' | 'InReview' | 'AwaitingMember' | 'Answered' | 'Closed';
+  version: number; messageCount: number; createdAt: Date; updatedAt: Date;
+}
+export interface SupportMessageDoc {
+  _id: string; caseId: string; authorId: string; authorName: string;
+  role: 'Member' | 'Admin' | 'System'; internal: boolean; text: string; createdAt: Date;
+}
 export interface AuthSessionDoc extends Lockable {
   _id: string;
   userId: string;
@@ -254,11 +266,43 @@ export interface ListingAutoReviewDoc {
   assessment: Json | null;
   model: string | null;
   decidedAt: Date;
+  policyVersion: string | null;
+  facts: Json | null;
+  photoHashes: string[];
+  sampleBucket: number | null;
+  inputTokens: number;
+  outputTokens: number;
+  costMicroUsd: number;
+  latencyMs: number | null;
+}
+
+// ADR 0063: a look at an AI-approved revision after publication.
+export interface ListingAutoReviewCheckDoc extends Lockable {
+  _id: string;
+  revisionId: string;
+  listingId: string;
+  selection: 'AiRecheck' | 'HumanAudit' | 'StaffOverride';
+  status: 'Passed' | 'Skipped' | 'Open' | 'Cleared' | 'Confirmed';
+  reasons: string[];
+  assessment: Json | null;
+  facts: Json | null;
+  model: string | null;
+  policyVersion: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  costMicroUsd: number;
+  resolvedBy: string | null;
+  resolvedAt: Date | null;
+  note: string | null;
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Exactly one target field is set; `principal` is the idempotency identity:
 // `user:<actorId>` or `system:<systemActor>`.
 export interface MutationReceiptDoc {
+  supportCaseId?: string | null;
   accountId?: string | null;
   reviewId?: string | null;
   _id: string;
@@ -281,6 +325,7 @@ export interface MutationReceiptDoc {
   committedAt: Date;
 }
 export interface AuditEventDoc {
+  supportCaseId?: string | null;
   accountId?: string | null;
   reviewId?: string | null;
   _id: string;
@@ -1268,6 +1313,8 @@ export interface ExchangeShipmentSnapshot {
   notes?: string | null;
   meetupLocation?: string | null;
   shippedAt?: Date | null;
+  lastEvent?: string | null;
+  lastEventAt?: Date | null;
 }
 
 export interface ExchangeDoc extends Lockable {
@@ -1347,10 +1394,12 @@ export interface MemberNotificationDoc {
     | 'ExchangeCompleted'
     | 'ExchangeCancelled'
     | 'ExchangeRejected'
-    | 'ExchangeDisputed';
+    | 'ExchangeDisputed'
+    | 'SupportUpdated'
+    | 'ReviewModerated';
   title: string;
   body: string;
-  targetType: 'Auction' | 'Exchange' | 'Order';
+  targetType: 'Auction' | 'Exchange' | 'Order' | 'SupportCase' | 'TransactionReview';
   targetId: string;
   dedupeKey: string;
   createdAt: Date;

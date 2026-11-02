@@ -57,6 +57,13 @@ globalThis.fetch = async (input, init) => {
     .toISOString()
     .slice(0, 19)
     .replace(/[-T:]/g, "");
+  let amount = checkoutAmounts.get(request.vnp_TxnRef);
+  if (!amount && fixture?.db) {
+    const doc = await fixture.db
+      .collection("topup_intents")
+      .findOne({ _id: request.vnp_TxnRef }, { projection: { amount: 1 } });
+    if (doc?.amount) amount = String(doc.amount * 100);
+  }
   const data = {
     vnp_ResponseId: "qa-query-response",
     vnp_Command: "querydr",
@@ -64,7 +71,7 @@ globalThis.fetch = async (input, init) => {
     vnp_Message: "Success",
     vnp_TmnCode: "TESTDEMO",
     vnp_TxnRef: request.vnp_TxnRef,
-    vnp_Amount: checkoutAmounts.get(request.vnp_TxnRef) ?? "5000000",
+    vnp_Amount: amount ?? "5000000",
     vnp_BankCode: "NCB",
     vnp_PayDate: date,
     vnp_TransactionNo: String(

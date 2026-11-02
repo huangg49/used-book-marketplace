@@ -272,6 +272,10 @@ export class ExchangesService {
             shippedAt: row.initiatorShipment.shippedAt
               ? new Date(row.initiatorShipment.shippedAt).toISOString()
               : null,
+            lastEvent: row.initiatorShipment.lastEvent ?? null,
+            lastEventAt: row.initiatorShipment.lastEventAt
+              ? new Date(row.initiatorShipment.lastEventAt).toISOString()
+              : null,
           }
         : null,
       recipientShipment: row.recipientShipment
@@ -284,6 +288,10 @@ export class ExchangesService {
             notes: row.recipientShipment.notes ?? null,
             shippedAt: row.recipientShipment.shippedAt
               ? new Date(row.recipientShipment.shippedAt).toISOString()
+              : null,
+            lastEvent: row.recipientShipment.lastEvent ?? null,
+            lastEventAt: row.recipientShipment.lastEventAt
+              ? new Date(row.recipientShipment.lastEventAt).toISOString()
               : null,
           }
         : null,

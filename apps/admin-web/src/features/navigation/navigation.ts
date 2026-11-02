@@ -14,6 +14,7 @@ export function navigationGroups(user: CurrentUser | undefined): NavigationGroup
   if (canReview(user)) {
     const items: NavigationItem[] = [
       { label: "Bài đăng sách", to: "/review/listings", icon: "books" },
+      { label: "Hậu kiểm AI", to: "/ai-review-checks", icon: "overdue" },
       { label: "Khiếu nại trao đổi", to: "/operations/exchange-disputes", icon: "resolution" },
       { label: "Đánh giá giao dịch", to: "/transaction-reviews", icon: "books" },
     ];
@@ -36,6 +37,7 @@ export function navigationGroups(user: CurrentUser | undefined): NavigationGroup
     groups.push({ id: "operations", label: "Điểm & đấu giá", items });
   }
   if (canReviewCatalog(user)) groups.push({ id: "management", label: "Quản lý", items: [
+    { label: "Trung tâm xử lý", to: "/support", icon: "resolution" },
     { label: "Quản lý người dùng", to: "/users", icon: "users" },
   ] });
   if (canSimulate(user)) groups.push({ id: "simulation", label: "Mô phỏng", items: [

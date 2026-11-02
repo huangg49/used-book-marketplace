@@ -1,5 +1,6 @@
 # Exchange gói 3 — khung tài chính hội thoại — 02/11/2026
 
+Cập nhật tích hợp02/11: [source kết hợp/main và mapping số ADR/migration](EXCHANGE_MAIN_INTEGRATION_2026_11_02.md). Số liệu và số định danh trong nội dung dưới là mốc của gói ban đầu; hiện tại Exchange migration0053, ADR snapshot0065 và Buyer gate0064.
 Owner duyệt sửa điểm tiếp theo sau gói recovery. Branch `codex/exchange-financial-summary`,
 base `650db20f`, subject `fix(web): distinguish exchange deposits from purchase totals`.
 [Khảo sát core](CORE_EXCHANGE_AUDIT_2026_11_02.md),

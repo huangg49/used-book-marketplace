@@ -35,6 +35,6 @@ const reader = (config: ConfigService) => (key: string) => {
   ],
   controllers: [AutofillAssistController],
   // ADR 0061: the listing auto review worker reuses the vision provider.
-  exports: [AutofillModel, AutofillImages],
+  exports: [AutofillModel, AutofillImages, IsbnBarcodeReader],
 })
 export class AutofillAssistModule {}
