@@ -26,3 +26,11 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/brand/
+    - assets/brand/lat-lai-horizontal-web.png
+    - assets/brand/lat-lai-owl.png
+    - assets/brand/lat-lai-wordmark.png
+    - assets/brand/logo-original.png
+    - assets/brand/lat-lai-horizontal-primary.png
+    - assets/brand/lat-lai-horizontal-white.png
