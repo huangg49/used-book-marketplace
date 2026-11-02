@@ -104,3 +104,11 @@ RN/web/Admin types, contract/routes/docs. CI [API main](https://github.com/huang
 và8job áp dụng khác PASS trên đúng SHA main trên; chưa CI source kết hợp. Các lỗi
 HTTP cố ý trong negative tests không là ca FAIL. Không suy model giả/native export
 thành nghiệm thu chất lượng AI hoặc thiết bị. Bước socket và Seller RN nằm ở gói tiếp.
+
+Socket đã xử lý ở gói `fix(chat): authenticate purchase sockets before connect`,
+base `86dc7cd9`: regression delayed-auth FAIL trước sửa, PASS5unit và real
+HTTP/Socket.IO/Mongo qua [runner](../../scripts/test-purchase-socket.mjs).
+Middleware chờ AuthService hoàn tất trước connect; hai participant gửi/nhận,
+same-ID replay, outsider/LOCKED/session revocation được kiểm. Không thay quyền,
+handler service hay token store. Kết quả xử lý finding handshake của lượt QA;
+không suy toàn bộ chat/native/UX người thật đã nghiệm thu.

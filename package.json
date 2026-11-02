@@ -56,6 +56,7 @@
     "test:dev": "node --test scripts/dev-*.test.mjs",
     "test:work-inbox:browser": "node scripts/test-work-inbox.mjs",
     "test:rn-buy-now:browser": "node scripts/test-rn-buy-now.mjs",
+    "test:purchase-socket:api": "node scripts/test-purchase-socket.mjs",
     "test:member-profile:browser": "node scripts/test-member-profile.mjs",
     "test:member-profile:live": "node scripts/test-member-profile-live.mjs",
     "test:member-email:live": "node scripts/test-member-email-live.mjs",

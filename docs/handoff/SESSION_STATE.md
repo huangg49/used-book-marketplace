@@ -1,5 +1,20 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## Socket hội thoại: xác thực trước connect
+
+- Owner duyệt sau gói quote; branch `codex/purchase-socket-auth`, base `86dc7cd9`,
+  subject `fix(chat): authenticate purchase sockets before connect`.
+  Delayed-auth regression FAIL trước sửa: client connect khi auth chưa xong.
+  Namespace middleware nay xác thực trước connect ACK, vẫn kiểm participant/
+  status/session tại service cho mỗi join/send; không đổi quyền/token store.
+- PASS5unit và runner `pnpm test:purchase-socket:api` trên HTTP/Socket.IO/Mongo QA:
+  immediate join, gửi hai chiều, same-ID replay một bản, outsider/LOCKED negotiation,
+  session revoked sau connect/reconnect đều bị từ chối. API types/build PASS.
+  Ảnh fake/mail local, không native/human PASS; chưa push/PR/CI/merge/deploy.
+- Theo [Socket.IO middleware](https://socket.io/docs/v4/middlewares/), connect chỉ
+  được tiếp tục sau next(). Web CI thêm runner, không giảm quyền để né lỗi.
+  Tiếp Seller RN tới F2h; giữ READINESS/GHN và28file UI/ảnh ngoài gói.
+
 ## Tích hợp main PR85 vào chuỗi local
 
 - Owner duyệt tích hợp main `d44b813b` vào base `e2a8fa99`, branch
