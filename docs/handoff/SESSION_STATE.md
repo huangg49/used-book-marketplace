@@ -2,11 +2,17 @@
 
 ## Chốt gói giao diện local và tiếp tục demo
 
-- Owner duyệt commit local gói Admin review, web motion, search recovery và
-  Member book detail; commit subject `feat(web): complete listing review and purchase presentation`.
-  Giữ riêng các sửa đổi Antigravity tại checkout ứng dụng, không push/CI/merge.
-- Tiếp theo được duyệt: bổ sung User2 làm Buyer và đi qua mua bài User1 trên app
-  local đang dùng; giữ dữ liệu cũ. Chưa nhận là đã có đơn hoặc đã thanh toán.
+- Đã commit local `cc853aad` (`feat(web): complete listing review and purchase presentation`)
+  trên `codex/admin-listing-review-workspace`. Giữ riêng sửa đổi Antigravity ở
+  checkout ứng dụng; không push/CI/merge hoặc tự đồng bộ source khác nhánh.
+- Gói tiếp `codex/demo-user2-buy-now` base `cc853aad`: User2 có profile/địa chỉ
+  default/ví1.000.000đ mô phỏng, đã mua bài User1 trên app/API local thật.
+  BuyNow Preparing, tiền sách120.000đ+phí30.000đ, ví850.000đ available/150.000đ held.
+  Buyer/Seller thấy cùng đơn, không chờ Seller accept lại,1payment journal/2notification.
+- PASS ledger cân bằng/nguồn hữu hạn, fingerprints dữ liệu cũ ngoài bài đang mua
+  nguyên vẹn;0pageErrors. [Evidence/phạm vi](../ui/USER2_BUY_NOW_DEMO_2026_11_02.md).
+  Credential/exact intents giữ riêng ignored; không seed/reset hoặc gửi tiền thật.
+  Chưa shipment/pickup/Delivered/settlement; bước tiếp là owner xem demo Preparing.
 
 ## Member web — tân trang chi tiết bản sách
 
