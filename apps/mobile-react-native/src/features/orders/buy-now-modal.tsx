@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { router } from "expo-router";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -8,11 +9,21 @@ import {
 } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  acknowledgedBuyNowOrder,
+  forgetBuyNowOrder,
+  pendingBuyNowOrder,
+  pendingBuyNowOrderInput,
+  pendingOrderResponse,
+  sendBuyNowOrder,
+  sendOrderResponse,
+} from "@used-books/session-client";
 import * as Crypto from "expo-crypto";
 import { useSession } from "../../core/session/session-provider";
 import {
   AppModal,
   AppText,
+  Checkbox,
   Button,
   Icon,
   Notice,
@@ -28,12 +39,12 @@ import { TopupModal } from "../wallet/topup-modal";
 import {
   buyNowError,
   orderDetailsSchema,
-  orderReceiptSchema,
   quoteSchema,
   type OrderDetails,
   type Quote,
 } from "./contracts";
 import { z } from "zod";
+import { BundleManifest } from "../bundles/bundle-manifest";
 
 const areasSchema = z.object({
   localities: z.array(z.object({ code: z.string(), label: z.string() })),
@@ -53,7 +64,44 @@ interface BuyNowModalProps {
   onSuccess?: (orderId: string) => void;
 }
 
-export function BuyNowModal({
+export function BuyNowModal(props: BuyNowModalProps) {
+  const { client } = useSession();
+  // Keep the listing/revision the buyer actually saw while the dialog is open.
+  const [selection, setSelection] = useState(() => ({
+    source: props.listing,
+    value: props.listing
+      ? (JSON.parse(JSON.stringify(props.listing)) as Listing)
+      : undefined,
+  }));
+  if (
+    (!selection.value && props.listing) ||
+    (!props.visible && selection.source !== props.listing)
+  ) {
+    setSelection({
+      source: props.listing,
+      value: props.listing
+        ? (JSON.parse(JSON.stringify(props.listing)) as Listing)
+        : undefined,
+    });
+  }
+  const orderId =
+    props.initialOrderId ??
+    (props.listing
+      ? acknowledgedBuyNowOrder(client, props.listing.id)
+      : undefined);
+  // Keep address drafts across Back; a closed checkout has no live UI callbacks.
+  // Shared intents and acknowledged IDs survive navigation within this identity.
+  return (
+    <BuyNowSession
+      key={`${selection.value?.id ?? ""}:${selection.value?.revisionId ?? ""}:${orderId ?? ""}`}
+      {...props}
+      listing={selection.value}
+      initialOrderId={orderId}
+    />
+  );
+}
+
+function BuyNowSession({
   visible,
   listing,
   initialOrderId,
@@ -61,13 +109,42 @@ export function BuyNowModal({
   onClose,
   onSuccess,
 }: BuyNowModalProps) {
-
   const insets = useSafeAreaInsets();
   const { client, state } = useSession();
   const cache = useQueryClient();
+  const lifecycle = useRef({ active: visible, generation: 0 });
+  useEffect(() => {
+    const current = lifecycle.current;
+    current.active = visible;
+    return () => {
+      current.active = false;
+      current.generation++;
+    };
+  }, [visible]);
+  function isCurrent(generation: number) {
+    return (
+      lifecycle.current.active && lifecycle.current.generation === generation
+    );
+  }
+  const pendingCreation = !!listing && pendingBuyNowOrder(client, listing.id);
+  const pendingInput = listing
+    ? pendingBuyNowOrderInput(client, listing.id)
+    : undefined;
+  const mismatchedPending =
+    !!pendingInput &&
+    pendingInput.expectedListingRevisionId !== listing?.revisionId;
+  const [bundleAcknowledged, setBundleAcknowledged] = useState(false);
+  const [quoteRetry, setQuoteRetry] = useState(0);
+  const quoteAttempt = useRef<{
+    signature: string;
+    key: string;
+    body: string;
+    id?: string;
+    read?: boolean;
+  } | null>(null);
 
   const [step, setStep] = useState<"address_quote" | "payment" | "success">(
-    "address_quote",
+    initialOrderId && !pendingCreation ? "payment" : "address_quote",
   );
 
   // Address state
@@ -84,15 +161,18 @@ export function BuyNowModal({
   const [quoteLoading, setQuoteLoading] = useState(false);
 
   // Order state
-  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(
+    pendingCreation ? null : (initialOrderId ?? null),
+  );
   const [orderDetails, setOrderDetails] = useState<OrderDetails | null>(null);
 
   // Operation state
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>("");
   const [showTopupModal, setShowTopupModal] = useState(false);
-  const orderAttemptKey = useRef<string>(Crypto.randomUUID());
-  const payAttemptKey = useRef<string>(Crypto.randomUUID());
+  const pending = createdOrderId
+    ? pendingOrderResponse(client, createdOrderId)
+    : undefined;
 
   // Queries
   const addressesQuery = useQuery({
@@ -126,20 +206,21 @@ export function BuyNowModal({
       : (items.find((a) => a.isDefault)?.id ?? items[0]?.id ?? "");
 
   function handleDismiss() {
-    setStep("address_quote");
-    setCreatedOrderId(null);
-    setOrderDetails(null);
-    setError("");
+    lifecycle.current.active = false;
+    lifecycle.current.generation++;
     setBusy(false);
     onClose();
   }
 
   // Load existing order when initialOrderId is provided
   useEffect(() => {
+    if (pendingCreation) return;
     if (!visible || !initialOrderId || state.status !== "authenticated") return;
     let cancelled = false;
     async function loadInitialOrder() {
       try {
+        setCreatedOrderId(initialOrderId ?? null);
+        setStep("payment");
         setBusy(true);
         setError("");
         const details = await client.request(
@@ -147,12 +228,13 @@ export function BuyNowModal({
           orderDetailsSchema,
         );
         if (!cancelled) {
+          if (listing && details.state !== "AwaitingPayment")
+            forgetBuyNowOrder(client, listing.id, details.id);
           setOrderDetails(details);
           setCreatedOrderId(initialOrderId ?? null);
           setError("");
           setStep("payment");
         }
-
       } catch (err) {
         if (!cancelled) {
           setError(buyNowError(err));
@@ -167,8 +249,7 @@ export function BuyNowModal({
     return () => {
       cancelled = true;
     };
-  }, [visible, initialOrderId, state.status, client]);
-
+  }, [visible, initialOrderId, state.status, client, pendingCreation, listing]);
 
   // Request Quote automatically when selected address changes
   useEffect(() => {
@@ -178,7 +259,9 @@ export function BuyNowModal({
       !effectiveAddressId ||
       addingAddress ||
       step !== "address_quote" ||
-      Boolean(initialOrderId)
+      Boolean(initialOrderId) ||
+      pendingCreation ||
+      (listing.bundle && !bundleAcknowledged)
     )
       return;
     const address = items.find((a) => a.id === effectiveAddressId);
@@ -189,28 +272,47 @@ export function BuyNowModal({
       setQuoteLoading(true);
       setError("");
       try {
-        const quoteKey = Crypto.randomUUID();
-        const quoteResult = await client.request(
-          `/listings/${listing!.id}/quotes`,
-          z.object({ entityId: z.string().uuid() }),
-          {
-            method: "POST",
-            headers: { "Idempotency-Key": quoteKey },
-            body: JSON.stringify({
-              expectedListingVersion: listing!.version,
-              expectedListingRevisionId: listing!.revisionId,
-              destinationAddressId: address!.id,
-              expectedDestinationAddressVersion: address!.version,
-              method: "DirectDelivery",
-            }),
-          },
-        );
+        const body = JSON.stringify({
+          expectedListingVersion: listing!.version,
+          expectedListingRevisionId: listing!.revisionId,
+          destinationAddressId: address!.id,
+          expectedDestinationAddressVersion: address!.version,
+          method: "DirectDelivery",
+          ...(listing!.bundle ? { acknowledgeWholeBundle: true } : {}),
+        });
+        if (
+          !quoteAttempt.current ||
+          (quoteAttempt.current.read && quoteAttempt.current.signature !== body)
+        )
+          quoteAttempt.current = {
+            signature: body,
+            body,
+            key: Crypto.randomUUID(),
+          };
+        const attempt = quoteAttempt.current;
+        if (attempt.signature !== body)
+          throw new Error(
+            "Báo giá trước chưa xác định kết quả. Chọn lại địa chỉ đã dùng rồi thử lại báo giá; không tạo yêu cầu khác để thay thế.",
+          );
+        const quoteResult = attempt.id
+          ? { entityId: attempt.id }
+          : await client.request(
+              `/listings/${listing!.id}/quotes`,
+              z.object({ entityId: z.string().uuid() }),
+              {
+                method: "POST",
+                headers: { "Idempotency-Key": attempt.key },
+                body: attempt.body,
+              },
+            );
+        attempt.id = quoteResult.entityId;
 
         if (cancelled) return;
         const fetchedQuote = await client.request(
           `/me/quotes/${quoteResult.entityId}`,
           quoteSchema,
         );
+        attempt.read = true;
         if (!cancelled) {
           setQuote(fetchedQuote);
         }
@@ -237,41 +339,48 @@ export function BuyNowModal({
     addingAddress,
     step,
     initialOrderId,
+    pendingCreation,
     client,
     items,
+    bundleAcknowledged,
+    quoteRetry,
   ]);
-
 
   // Handle saving new address inline
   async function handleSaveNewAddress() {
-    if (!newRecipient.trim() || newPhone.trim().length !== 10 || !newLocality || !newDetail.trim()) {
-      setAddressError("Vui lòng điền đủ họ tên, SĐT 10 số, khu vực và địa chỉ chi tiết.");
+    const generation = lifecycle.current.generation;
+    if (
+      !newRecipient.trim() ||
+      newPhone.trim().length !== 10 ||
+      !newLocality ||
+      !newDetail.trim()
+    ) {
+      setAddressError(
+        "Vui lòng điền đủ họ tên, SĐT 10 số, khu vực và địa chỉ chi tiết.",
+      );
       return;
     }
     setBusy(true);
     setAddressError("");
     try {
       const addKey = Crypto.randomUUID();
-      const saved = await client.request(
-        "/me/addresses",
-        addressReceipt,
-        {
-          method: "POST",
-          headers: { "Idempotency-Key": addKey },
-          body: JSON.stringify({
-            expectedBookVersion: addressesQuery.data?.version ?? 0,
-            address: {
-              recipientName: newRecipient.trim(),
-              phone: newPhone.trim(),
-              serviceAreaCode: "HCM-DEMO-v1",
-              localityCode: newLocality,
-              detail: newDetail.trim(),
-            },
-            makeDefault: (addressesQuery.data?.items?.length ?? 0) === 0,
-          }),
-        },
-      );
+      const saved = await client.request("/me/addresses", addressReceipt, {
+        method: "POST",
+        headers: { "Idempotency-Key": addKey },
+        body: JSON.stringify({
+          expectedBookVersion: addressesQuery.data?.version ?? 0,
+          address: {
+            recipientName: newRecipient.trim(),
+            phone: newPhone.trim(),
+            serviceAreaCode: "HCM-DEMO-v1",
+            localityCode: newLocality,
+            detail: newDetail.trim(),
+          },
+          makeDefault: (addressesQuery.data?.items?.length ?? 0) === 0,
+        }),
+      });
       await addressesQuery.refetch();
+      if (!isCurrent(generation)) return;
       setSelectedAddressId(saved.addressId);
       setAddingAddress(false);
       setNewRecipient("");
@@ -279,111 +388,149 @@ export function BuyNowModal({
       setNewDetail("");
       setNewLocality("");
     } catch (err) {
-      setAddressError(buyNowError(err));
+      if (isCurrent(generation)) setAddressError(buyNowError(err));
     } finally {
-      setBusy(false);
+      if (isCurrent(generation)) setBusy(false);
     }
   }
 
-  // Handle Create Buy Now Order
+  async function readCreatedOrder(id: string, generation: number) {
+    const details = await client.request(
+      `/me/orders/${id}`,
+      orderDetailsSchema,
+    );
+    if (!isCurrent(generation)) return;
+    if (listing && details.state !== "AwaitingPayment")
+      forgetBuyNowOrder(client, listing.id, id);
+    setOrderDetails(details);
+    setStep("payment");
+  }
+
+  // An acknowledged Order remains addressable even if its follow-up read fails.
   async function handleCreateOrder() {
-    if (!listing || !quote || busy) return;
+    const generation = lifecycle.current.generation;
+    if (
+      !listing ||
+      (!quote && !pendingCreation) ||
+      busy ||
+      (!pendingCreation && listing.bundle && !bundleAcknowledged)
+    )
+      return;
     setBusy(true);
     setError("");
     try {
-      const receipt = await client.request(
-        "/orders/buy-now",
-        orderReceiptSchema,
-        {
-          method: "POST",
-          headers: { "Idempotency-Key": orderAttemptKey.current },
-          body: JSON.stringify({
-            quoteId: quote.id,
-            expectedQuoteVersion: quote.version,
-            expectedListingVersion: quote.listingVersion,
-            expectedListingRevisionId: quote.listingRevisionId,
-          }),
-        },
+      const receipt = await sendBuyNowOrder(
+        client,
+        listing.id,
+        quote
+          ? {
+              quoteId: quote.id,
+              expectedQuoteVersion: quote.version,
+              expectedListingVersion: quote.listingVersion,
+              expectedListingRevisionId: quote.listingRevisionId,
+            }
+          : null,
+        () => Crypto.randomUUID(),
       );
-
+      void cache.invalidateQueries({
+        queryKey: ["public-listing", listing.id],
+      });
+      void cache.invalidateQueries({ queryKey: ["my-orders"] });
+      if (!isCurrent(generation)) return;
       setCreatedOrderId(receipt.entityId);
-      // Fetch fresh order details
-      const details = await client.request(
-        `/me/orders/${receipt.entityId}`,
-        orderDetailsSchema,
-      );
-      setOrderDetails(details);
-      setError("");
       setStep("payment");
-      void cache.invalidateQueries({ queryKey: ["public-listing", listing.id] });
+      await readCreatedOrder(receipt.entityId, generation);
       void walletQuery.refetch();
     } catch (err) {
-      setError(buyNowError(err));
+      if (isCurrent(generation)) setError(buyNowError(err));
     } finally {
-      setBusy(false);
+      if (isCurrent(generation)) setBusy(false);
     }
+  }
+
+  async function retryOrderRead() {
+    const generation = lifecycle.current.generation;
+    if (!createdOrderId || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await readCreatedOrder(createdOrderId, generation);
+    } catch (err) {
+      if (isCurrent(generation)) setError(buyNowError(err));
+    } finally {
+      if (isCurrent(generation)) setBusy(false);
+    }
+  }
+
+  function openCreatedOrder() {
+    if (!createdOrderId) return;
+    const orderId = createdOrderId;
+    handleDismiss();
+    router.push({ pathname: "/orders", params: { orderId } });
   }
 
   // Handle Pay Order via Wallet
   async function handlePayOrder() {
+    const generation = lifecycle.current.generation;
     if (!createdOrderId || !orderDetails || busy) return;
     setBusy(true);
     setError("");
     try {
-      await client.request(
-        `/orders/${createdOrderId}/pay`,
-        orderReceiptSchema,
-        {
-          method: "POST",
-          headers: { "Idempotency-Key": payAttemptKey.current },
-          body: JSON.stringify({
-            expectedVersion: orderDetails.version,
-          }),
-        },
+      await sendOrderResponse(
+        client,
+        createdOrderId,
+        "pay",
+        orderDetails.version,
+        () => Crypto.randomUUID(),
       );
-
-      setStep("success");
+      if (listing) forgetBuyNowOrder(client, listing.id, createdOrderId);
       void cache.invalidateQueries({ queryKey: ["public-listing"] });
       void cache.invalidateQueries({ queryKey: ["wallet"] });
       void cache.invalidateQueries({ queryKey: ["my-orders"] });
+      if (!isCurrent(generation)) return;
+      setStep("success");
       onSuccess?.(createdOrderId);
     } catch (err) {
-      setError(buyNowError(err));
+      if (isCurrent(generation)) setError(buyNowError(err));
     } finally {
-      setBusy(false);
+      if (isCurrent(generation)) setBusy(false);
     }
   }
 
   // Handle Cancel Order
   async function handleCancelOrder() {
+    const generation = lifecycle.current.generation;
     if (!createdOrderId || !orderDetails || busy) return;
     setBusy(true);
     setError("");
     try {
-      await client.request(
-        `/orders/${createdOrderId}/cancel`,
-        orderReceiptSchema,
-        {
-          method: "POST",
-          headers: { "Idempotency-Key": Crypto.randomUUID() },
-          body: JSON.stringify({
-            expectedVersion: orderDetails.version,
-          }),
-        },
+      await sendOrderResponse(
+        client,
+        createdOrderId,
+        "cancel",
+        orderDetails.version,
+        () => Crypto.randomUUID(),
       );
+      if (listing) forgetBuyNowOrder(client, listing.id, createdOrderId);
       void cache.invalidateQueries({ queryKey: ["public-listing"] });
       void cache.invalidateQueries({ queryKey: ["my-orders"] });
+      if (!isCurrent(generation)) return;
       handleDismiss();
     } catch (err) {
-      setError(buyNowError(err));
+      if (isCurrent(generation)) setError(buyNowError(err));
     } finally {
-      setBusy(false);
+      if (isCurrent(generation)) setBusy(false);
     }
   }
 
   const walletBalance = walletQuery.data?.available ?? 0;
-  const totalAmount = orderDetails?.amounts?.buyerTotal ?? quote?.amounts?.buyerTotal ?? (listing?.salePrice ?? 0);
-  const hasEnoughBalance = walletBalance >= totalAmount;
+  const walletReady = !!walletQuery.data && !walletQuery.error;
+  const totalAmount =
+    orderDetails?.amounts?.buyerTotal ??
+    quote?.amounts?.buyerTotal ??
+    listing?.salePrice ??
+    0;
+  const hasEnoughBalance = walletReady && walletBalance >= totalAmount;
 
   return (
     <AppModal
@@ -429,7 +576,9 @@ export function BuyNowModal({
                 style={{ fontSize: 18 }}
               >
                 {step === "address_quote"
-                  ? "Mua ngay bản sách"
+                  ? listing?.bundle
+                    ? "Mua cả bộ sách"
+                    : "Mua ngay bản sách"
                   : step === "payment"
                     ? "Thanh toán đơn hàng"
                     : "Đặt mua thành công"}
@@ -459,7 +608,6 @@ export function BuyNowModal({
             >
               <Icon name="close" size={20} color={stitchTokens.wine} />
             </Pressable>
-
           </View>
 
           <ScrollView
@@ -471,7 +619,8 @@ export function BuyNowModal({
             }}
           >
             {/* Book Mini Card */}
-            {listing || initialBookTitle || orderDetails ? (
+            {!mismatchedPending &&
+            (listing || initialBookTitle || orderDetails) ? (
               <View
                 style={{
                   flexDirection: "row",
@@ -517,7 +666,12 @@ export function BuyNowModal({
                     numberOfLines={2}
                     style={{ fontSize: 14 }}
                   >
-                    {listing?.book?.title ?? initialBookTitle ?? "Bản sách đang đặt mua"}
+                    {orderDetails?.item?.bundle?.title ||
+                      orderDetails?.item?.metadata.title ||
+                      listing?.bundle?.title ||
+                      listing?.book?.title ||
+                      initialBookTitle ||
+                      "Bản sách đang đặt mua"}
                   </AppText>
                   {listing?.book?.authors ? (
                     <AppText kind="small" color={stitchTokens.subtleGray}>
@@ -529,20 +683,87 @@ export function BuyNowModal({
                     color={stitchTokens.wine}
                     style={{ fontSize: 15, marginTop: 2 }}
                   >
-                    {formatVnd(orderDetails?.amounts?.bookPrice ?? listing?.salePrice)}
+                    {formatVnd(
+                      orderDetails?.amounts?.bookPrice ?? listing?.salePrice,
+                    )}
                   </AppText>
                 </View>
               </View>
             ) : null}
 
-
+            {mismatchedPending && !orderDetails ? (
+              <Notice>
+                Đang khôi phục lệnh đặt mua trước đó. Nội dung mới của bài đăng
+                không thay danh sách đã xác nhận; danh sách chính xác sẽ hiện
+                trong đơn sau khi đọc được kết quả.
+              </Notice>
+            ) : (
+              <BundleManifest
+                bundle={
+                  step === "address_quote"
+                    ? listing?.bundle
+                    : orderDetails?.item?.bundle
+                }
+              />
+            )}
+            {listing?.bundle && step === "address_quote" && !pendingCreation ? (
+              <Checkbox
+                title={`Tôi đã xem danh sách và mua toàn bộ ${listing.bundle.items.length} cuốn trong bộ.`}
+                checked={bundleAcknowledged}
+                disabled={busy || quoteLoading || !!quote}
+                onPress={() => setBundleAcknowledged((v) => !v)}
+              />
+            ) : null}
             {error ? <Notice tone="error">{error}</Notice> : null}
+            {error && step === "address_quote" && !pendingCreation ? (
+              <Button
+                secondary
+                title="Thử lại báo giá đã yêu cầu"
+                onPress={() => setQuoteRetry((v) => v + 1)}
+                disabled={quoteLoading || busy}
+              />
+            ) : null}
 
             {/* STEP 1: Address & Quote */}
-            {step === "address_quote" && (
+            {step === "address_quote" && !pendingCreation && (
               <>
                 {/* Delivery Address Section */}
                 <View style={{ gap: space.xs }}>
+                  {addressesQuery.isPending && (
+                    <Notice>Đang tải địa chỉ nhận sách…</Notice>
+                  )}
+                  {addressesQuery.error && (
+                    <>
+                      <Notice tone="error">
+                        Chưa tải được địa chỉ. Dữ liệu nhập vẫn được giữ.
+                      </Notice>
+                      <Button
+                        secondary
+                        title="Thử tải lại địa chỉ"
+                        onPress={() => void addressesQuery.refetch()}
+                      />
+                    </>
+                  )}
+                  {areasQuery.error && (
+                    <>
+                      <Notice tone="error">
+                        Chưa tải được khu vực giao nhận.
+                      </Notice>
+                      <Button
+                        secondary
+                        title="Thử tải lại khu vực"
+                        onPress={() => void areasQuery.refetch()}
+                      />
+                    </>
+                  )}
+                  {addressesQuery.data?.items.length === 0 &&
+                    !addingAddress && (
+                      <Button
+                        secondary
+                        title="Thêm địa chỉ nhận sách"
+                        onPress={() => setAddingAddress(true)}
+                      />
+                    )}
                   <View
                     style={{
                       flexDirection: "row",
@@ -606,10 +827,18 @@ export function BuyNowModal({
                       />
 
                       <View style={{ gap: 4 }}>
-                        <AppText kind="small" color={stitchTokens.wineDark} style={{ fontWeight: "600" }}>
+                        <AppText
+                          kind="small"
+                          color={stitchTokens.wineDark}
+                          style={{ fontWeight: "600" }}
+                        >
                           Khu vực luân chuyển
                         </AppText>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+                        <ScrollView
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          contentContainerStyle={{ gap: 6 }}
+                        >
                           {areasQuery.data?.localities.map((loc) => {
                             const isLocActive = newLocality === loc.code;
                             return (
@@ -620,15 +849,25 @@ export function BuyNowModal({
                                   paddingHorizontal: 12,
                                   paddingVertical: 8,
                                   borderRadius: 8,
-                                  backgroundColor: isLocActive ? stitchTokens.wine : stitchTokens.parchment,
+                                  backgroundColor: isLocActive
+                                    ? stitchTokens.wine
+                                    : stitchTokens.parchment,
                                   borderWidth: 1,
-                                  borderColor: isLocActive ? stitchTokens.wine : stitchTokens.peachBorder,
+                                  borderColor: isLocActive
+                                    ? stitchTokens.wine
+                                    : stitchTokens.peachBorder,
                                 }}
                               >
                                 <AppText
                                   kind="small"
-                                  color={isLocActive ? stitchTokens.white : stitchTokens.wineDark}
-                                  style={{ fontWeight: isLocActive ? "700" : "500" }}
+                                  color={
+                                    isLocActive
+                                      ? stitchTokens.white
+                                      : stitchTokens.wineDark
+                                  }
+                                  style={{
+                                    fontWeight: isLocActive ? "700" : "500",
+                                  }}
                                 >
                                   {loc.label}
                                 </AppText>
@@ -645,9 +884,17 @@ export function BuyNowModal({
                         onChangeText={setNewDetail}
                       />
 
-                      {addressError ? <Notice tone="error">{addressError}</Notice> : null}
+                      {addressError ? (
+                        <Notice tone="error">{addressError}</Notice>
+                      ) : null}
 
-                      <View style={{ flexDirection: "row", gap: space.sm, marginTop: 4 }}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          gap: space.sm,
+                          marginTop: 4,
+                        }}
+                      >
                         {addressesQuery.data?.items?.length ? (
                           <Button
                             secondary
@@ -673,16 +920,30 @@ export function BuyNowModal({
                             key={addr.id}
                             onPress={() => setSelectedAddressId(addr.id)}
                             style={{
-                              backgroundColor: isSelected ? stitchTokens.roseWarmSurface : stitchTokens.warmIvory,
+                              backgroundColor: isSelected
+                                ? stitchTokens.roseWarmSurface
+                                : stitchTokens.warmIvory,
                               borderWidth: isSelected ? 2 : 1,
-                              borderColor: isSelected ? stitchTokens.wine : stitchTokens.borderWarm,
+                              borderColor: isSelected
+                                ? stitchTokens.wine
+                                : stitchTokens.borderWarm,
                               borderRadius: 12,
                               padding: space.sm,
                               gap: 2,
                             }}
                           >
-                            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                              <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 13 }}>
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <AppText
+                                kind="bold"
+                                color={stitchTokens.wineDark}
+                                style={{ fontSize: 13 }}
+                              >
                                 {addr.recipientName} · {addr.phone}
                               </AppText>
                               {isSelected ? (
@@ -696,11 +957,19 @@ export function BuyNowModal({
                                     justifyContent: "center",
                                   }}
                                 >
-                                  <Icon name="check" size={10} color={stitchTokens.gold} />
+                                  <Icon
+                                    name="check"
+                                    size={10}
+                                    color={stitchTokens.gold}
+                                  />
                                 </View>
                               ) : null}
                             </View>
-                            <AppText kind="small" color={stitchTokens.subtleGray} numberOfLines={2}>
+                            <AppText
+                              kind="small"
+                              color={stitchTokens.subtleGray}
+                              numberOfLines={2}
+                            >
                               {addr.detail}
                             </AppText>
                           </Pressable>
@@ -721,25 +990,47 @@ export function BuyNowModal({
                     gap: space.xs,
                   }}
                 >
-                  <AppText kind="label" color={stitchTokens.wine} style={{ fontWeight: "700" }}>
+                  <AppText
+                    kind="label"
+                    color={stitchTokens.wine}
+                    style={{ fontWeight: "700" }}
+                  >
                     CHI PHÍ ĐƠN HÀNG
                   </AppText>
 
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      paddingVertical: 2,
+                    }}
+                  >
                     <AppText kind="body" color={stitchTokens.subtleGray}>
                       Tiền sách
                     </AppText>
                     <AppText kind="bold" color={stitchTokens.wineDark}>
-                      {formatVnd(quote?.amounts.bookPrice ?? listing?.salePrice)}
+                      {formatVnd(
+                        quote?.amounts.bookPrice ?? listing?.salePrice,
+                      )}
                     </AppText>
                   </View>
 
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      paddingVertical: 2,
+                    }}
+                  >
                     <AppText kind="body" color={stitchTokens.subtleGray}>
                       Phí giao hàng
                     </AppText>
                     <AppText kind="bold" color={stitchTokens.wineDark}>
-                      {quoteLoading ? "Đang tính phí..." : formatVnd(quote?.amounts.shippingFee ?? 0)}
+                      {quoteLoading
+                        ? "Đang tính phí..."
+                        : quote
+                          ? formatVnd(quote.amounts.shippingFee)
+                          : "Chưa có báo giá"}
                     </AppText>
                   </View>
 
@@ -751,130 +1042,293 @@ export function BuyNowModal({
                     }}
                   />
 
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 }}>
-                    <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 16 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      paddingVertical: 2,
+                    }}
+                  >
+                    <AppText
+                      kind="bold"
+                      color={stitchTokens.wineDark}
+                      style={{ fontSize: 16 }}
+                    >
                       Tổng thanh toán
                     </AppText>
-                    <AppText kind="bold" color={stitchTokens.wine} style={{ fontSize: 18, fontWeight: "800" }}>
-                      {quoteLoading ? "..." : formatVnd(quote?.amounts.buyerTotal ?? listing?.salePrice)}
+                    <AppText
+                      kind="bold"
+                      color={stitchTokens.wine}
+                      style={{ fontSize: 18, fontWeight: "800" }}
+                    >
+                      {quoteLoading
+                        ? "..."
+                        : quote
+                          ? formatVnd(quote.amounts.buyerTotal)
+                          : "Chưa có báo giá"}
                     </AppText>
                   </View>
                 </View>
 
                 <Notice tone="info">
-                  Bấm &quot;Xác nhận đặt mua&quot; sẽ giữ bản sách trong 15 phút để bạn tiến hành thanh toán qua Ví Lật Lại. Người bán có 48 giờ bàn giao sách sau khi thanh toán.
+                  Bấm &quot;Xác nhận đặt mua&quot; sẽ giữ bản sách trong 15 phút
+                  để thanh toán qua Ví Lật Lại. Sau thanh toán, người bán chuẩn
+                  bị bàn giao theo thời hạn tại đơn.
                 </Notice>
 
                 {/* Order Action Button */}
                 <Button
                   wine
                   title={busy ? "Đang tạo đơn mua..." : "Xác nhận đặt mua"}
-                  disabled={busy || quoteLoading || !quote || addingAddress}
+                  disabled={
+                    busy ||
+                    quoteLoading ||
+                    !quote ||
+                    addingAddress ||
+                    (!!listing?.bundle && !bundleAcknowledged)
+                  }
                   onPress={() => void handleCreateOrder()}
                 />
               </>
             )}
 
-            {/* STEP 2: Payment Step */}
-            {step === "payment" && orderDetails && (
+            {step === "address_quote" && pendingCreation && (
               <>
-                <View
-                  style={{
-                    backgroundColor: stitchTokens.goldLight,
-                    borderRadius: 12,
-                    padding: space.md,
-                    gap: 6,
-                    borderWidth: 1,
-                    borderColor: stitchTokens.goldDark,
-                  }}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Icon name="clock" size={18} color={stitchTokens.wineDark} />
-                    <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 14 }}>
-                      Đang giữ sách trong 15 phút
-                    </AppText>
-                  </View>
-                  <AppText kind="small" color={stitchTokens.wineDark}>
-                    Hạn thanh toán:{" "}
-                    {new Date(orderDetails.paymentDeadline).toLocaleTimeString("vi-VN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    })}
-                    . Quá thời gian này, sách sẽ tự động mở lại cho người khác mua.
-                  </AppText>
-                </View>
-
-                {/* Wallet Balance Card */}
-                <View
-                  style={{
-                    backgroundColor: stitchTokens.warmIvory,
-                    borderRadius: 14,
-                    borderWidth: 1,
-                    borderColor: stitchTokens.peachBorder,
-                    padding: space.md,
-                    gap: space.xs,
-                  }}
-                >
-                  <AppText kind="label" color={stitchTokens.wine} style={{ fontWeight: "700" }}>
-                    VÍ LẬT LẠI (SỐ DƯ THANH TOÁN)
-                  </AppText>
-
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <AppText kind="body" color={stitchTokens.subtleGray}>
-                      Số dư khả dụng:
-                    </AppText>
-                    <AppText kind="bold" color={stitchTokens.wineDark} style={{ fontSize: 16 }}>
-                      {formatVnd(walletBalance)}
-                    </AppText>
-                  </View>
-
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <AppText kind="body" color={stitchTokens.subtleGray}>
-                      Số tiền cần trả:
-                    </AppText>
-                    <AppText kind="bold" color={stitchTokens.wine} style={{ fontSize: 18, fontWeight: "800" }}>
-                      {formatVnd(orderDetails.amounts.buyerTotal)}
-                    </AppText>
-                  </View>
-                </View>
-
-                {!hasEnoughBalance && (
-                  <Notice tone="warning">
-                    Số dư ví không đủ để thanh toán đơn hàng này. Vui lòng nạp thêm tiền vào ví trước khi hết hạn 15 phút.
-                  </Notice>
-                )}
-
-                <View style={{ gap: space.sm, marginTop: space.sm }}>
-                  {hasEnoughBalance ? (
-                    <Button
-                      wine
-                      title={busy ? "Đang thanh toán..." : `Thanh toán ngay (${formatVnd(orderDetails.amounts.buyerTotal)})`}
-                      disabled={busy}
-                      onPress={() => void handlePayOrder()}
-                    />
-                  ) : (
-                    <Button
-                      wine
-                      title={`Nạp tiền vào Ví (Thiếu ${formatVnd(orderDetails ? Math.max(0, orderDetails.amounts.buyerTotal - walletBalance) : 0)})`}
-                      onPress={() => setShowTopupModal(true)}
-                    />
-                  )}
-
-                  <Button
-                    secondary
-                    destructive
-                    title="Hủy đơn đặt mua"
-                    disabled={busy}
-                    onPress={() => void handleCancelOrder()}
-                  />
-                </View>
+                <Notice tone="warning">
+                  Chưa xác minh xong yêu cầu tạo đơn trước. Thử lại giữ nguyên
+                  báo giá và yêu cầu; chưa đổi địa chỉ hoặc tạo đơn khác.
+                </Notice>
+                <Button
+                  wine
+                  title="Thử lại tạo đơn trước"
+                  busy={busy}
+                  onPress={() => void handleCreateOrder()}
+                />
+              </>
+            )}
+            {step === "payment" && !orderDetails && (
+              <>
+                <Notice>
+                  Đơn đã có mã. Cần tải thông tin đơn trước khi thanh toán;
+                  không tạo đơn thay thế.
+                </Notice>
+                <Button
+                  wine
+                  title="Thử tải lại đơn đã tạo"
+                  busy={busy}
+                  onPress={() => void retryOrderRead()}
+                />
               </>
             )}
 
+            {/* STEP 2: Payment Step */}
+            {step === "payment" &&
+              orderDetails &&
+              !orderDetails.paymentEnabled &&
+              !pending && (
+                <>
+                  <Notice>
+                    Đơn không còn ở bước thanh toán. Mở chi tiết để xem trạng
+                    thái, thời hạn và việc tiếp theo.
+                  </Notice>
+                  <Button
+                    wine
+                    title="Mở chi tiết đơn"
+                    onPress={openCreatedOrder}
+                  />
+                </>
+              )}
+            {step === "payment" &&
+              orderDetails &&
+              (orderDetails.paymentEnabled || pending) && (
+                <>
+                  <View
+                    style={{
+                      backgroundColor: stitchTokens.goldLight,
+                      borderRadius: 12,
+                      padding: space.md,
+                      gap: 6,
+                      borderWidth: 1,
+                      borderColor: stitchTokens.goldDark,
+                    }}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <Icon
+                        name="clock"
+                        size={18}
+                        color={stitchTokens.wineDark}
+                      />
+                      <AppText
+                        kind="bold"
+                        color={stitchTokens.wineDark}
+                        style={{ fontSize: 14 }}
+                      >
+                        Đang giữ sách trong 15 phút
+                      </AppText>
+                    </View>
+                    <AppText kind="small" color={stitchTokens.wineDark}>
+                      Hạn thanh toán:{" "}
+                      {new Date(
+                        orderDetails.paymentDeadline,
+                      ).toLocaleTimeString("vi-VN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })}
+                      . Quá thời gian này, sách sẽ tự động mở lại cho người khác
+                      mua.
+                    </AppText>
+                  </View>
+
+                  {/* Wallet Balance Card */}
+                  <View
+                    style={{
+                      backgroundColor: stitchTokens.warmIvory,
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: stitchTokens.peachBorder,
+                      padding: space.md,
+                      gap: space.xs,
+                    }}
+                  >
+                    <AppText
+                      kind="label"
+                      color={stitchTokens.wine}
+                      style={{ fontWeight: "700" }}
+                    >
+                      VÍ LẬT LẠI (SỐ DƯ THANH TOÁN)
+                    </AppText>
+
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <AppText kind="body" color={stitchTokens.subtleGray}>
+                        Số dư khả dụng:
+                      </AppText>
+                      <AppText
+                        kind="bold"
+                        color={stitchTokens.wineDark}
+                        style={{ fontSize: 16 }}
+                      >
+                        {walletQuery.isPending
+                          ? "Đang tải…"
+                          : walletReady
+                            ? formatVnd(walletBalance)
+                            : "Chưa tải được"}
+                      </AppText>
+                    </View>
+
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <AppText kind="body" color={stitchTokens.subtleGray}>
+                        Số tiền cần trả:
+                      </AppText>
+                      <AppText
+                        kind="bold"
+                        color={stitchTokens.wine}
+                        style={{ fontSize: 18, fontWeight: "800" }}
+                      >
+                        {formatVnd(orderDetails.amounts.buyerTotal)}
+                      </AppText>
+                    </View>
+                  </View>
+
+                  {walletReady && !hasEnoughBalance && (
+                    <Notice tone="warning">
+                      Số dư ví không đủ để thanh toán đơn hàng này. Vui lòng nạp
+                      thêm tiền vào ví trước khi hết hạn 15 phút.
+                    </Notice>
+                  )}
+
+                  <View style={{ gap: space.sm, marginTop: space.sm }}>
+                    {pending ? (
+                      <>
+                        <Notice tone="warning">
+                          Chưa xác minh xong thao tác trước. Thử lại cùng yêu
+                          cầu; chưa thanh toán hoặc hủy bằng lệnh khác.
+                        </Notice>
+                        {pending === "pay" || pending === "cancel" ? (
+                          <Button
+                            wine
+                            busy={busy}
+                            title={
+                              pending === "pay"
+                                ? "Thử lại thanh toán trước"
+                                : "Thử lại hủy đơn trước"
+                            }
+                            onPress={() =>
+                              void (pending === "pay"
+                                ? handlePayOrder()
+                                : handleCancelOrder())
+                            }
+                          />
+                        ) : (
+                          <Notice>
+                            Mở chi tiết đơn để xác minh quyết định trước.
+                          </Notice>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {!walletReady ? (
+                          <Button
+                            secondary
+                            title="Thử tải lại số dư ví"
+                            busy={walletQuery.isFetching}
+                            onPress={() => void walletQuery.refetch()}
+                          />
+                        ) : hasEnoughBalance ? (
+                          <Button
+                            wine
+                            title={`Thanh toán ngay (${formatVnd(orderDetails.amounts.buyerTotal)})`}
+                            busy={busy}
+                            disabled={!orderDetails.paymentEnabled}
+                            onPress={() => void handlePayOrder()}
+                          />
+                        ) : (
+                          <Button
+                            wine
+                            title={`Nạp tiền vào Ví (Thiếu ${formatVnd(Math.max(0, orderDetails.amounts.buyerTotal - walletBalance))})`}
+                            onPress={() => setShowTopupModal(true)}
+                          />
+                        )}
+                        <Button
+                          secondary
+                          destructive
+                          title="Hủy đơn đặt mua"
+                          disabled={busy || orderDetails.canCancel === false}
+                          onPress={() => void handleCancelOrder()}
+                        />
+                      </>
+                    )}
+                  </View>
+                </>
+              )}
+
             {/* STEP 3: Success Step */}
             {step === "success" && (
-              <View style={{ alignItems: "center", gap: space.md, paddingVertical: space.lg }}>
+              <View
+                style={{
+                  alignItems: "center",
+                  gap: space.md,
+                  paddingVertical: space.lg,
+                }}
+              >
                 <View
                   style={{
                     width: 64,
@@ -885,27 +1339,37 @@ export function BuyNowModal({
                     justifyContent: "center",
                   }}
                 >
-                  <Icon name="check" size={32} color={stitchTokens.likeNewGreen} />
+                  <Icon
+                    name="check"
+                    size={32}
+                    color={stitchTokens.likeNewGreen}
+                  />
                 </View>
 
-                <AppText kind="heading" color={stitchTokens.wineDark} style={{ textAlign: "center" }}>
+                <AppText
+                  kind="heading"
+                  color={stitchTokens.wineDark}
+                  style={{ textAlign: "center" }}
+                >
                   Đặt mua thành công!
                 </AppText>
 
-                <AppText kind="body" color={stitchTokens.subtleGray} style={{ textAlign: "center", lineHeight: 22 }}>
-                  Tiền đã được giữ an toàn trên hệ thống bảo chứng Lật Lại. Người bán có 48 giờ để chuẩn bị và gửi sách cho đơn vị vận chuyển DirectDelivery.
+                <AppText
+                  kind="body"
+                  color={stitchTokens.subtleGray}
+                  style={{ textAlign: "center", lineHeight: 22 }}
+                >
+                  Tiền đang được giữ trong giao dịch. Mở chi tiết để theo dõi
+                  trạng thái, thời hạn và bước tiếp theo.
                 </AppText>
 
                 <Button
                   wine
-                  title="Hoàn tất và xem sách"
-                  onPress={() => {
-                    handleDismiss();
-                  }}
+                  title="Xem đơn vừa thanh toán"
+                  onPress={openCreatedOrder}
                 />
               </View>
             )}
-
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -916,7 +1380,12 @@ export function BuyNowModal({
         onClose={() => setShowTopupModal(false)}
         initialAmount={
           orderDetails
-            ? Math.max(10_000, Math.ceil((orderDetails.amounts.buyerTotal - walletBalance) / 10_000) * 10_000)
+            ? Math.max(
+                10_000,
+                Math.ceil(
+                  (orderDetails.amounts.buyerTotal - walletBalance) / 10_000,
+                ) * 10_000,
+              )
             : 100_000
         }
         onSuccess={() => {

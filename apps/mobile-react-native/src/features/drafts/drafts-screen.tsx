@@ -510,6 +510,7 @@ export function DraftsScreen() {
                   style={{ width: "100%", marginBottom: 0 }}
                   item={{
                     id: d.id,
+                    bundle: d.currentRevision.content.bundle,
                     moderation: d.state.moderation,
                     salePrice: d.currentRevision.content.salePrice,
                     mediaCount: d.currentRevision.content.mediaIds.length,
@@ -524,7 +525,7 @@ export function DraftsScreen() {
                     ) : undefined
                   }
                   titleNode={
-                    <BookIdentity
+                    d.currentRevision.content.bundle ? <AppText kind="bold">{d.currentRevision.content.bundle.title} · Bộ {d.currentRevision.content.bundle.items.length} cuốn</AppText> : <BookIdentity
                       id={d.currentRevision.content.bookId}
                       compact
                     />

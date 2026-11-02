@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import {CartModule} from './modules/cart/cart.module.js';
+import {SupportModule} from './modules/support/support.module.js';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
@@ -23,9 +25,12 @@ import { ExchangesModule } from './modules/exchanges/exchanges.module.js';
 import { ReviewsModule } from './modules/reviews/reviews.module.js';
 import { OperationsDashboardModule } from './modules/operations-dashboard/operations-dashboard.module.js';
 import { WorkInboxModule } from './modules/work-inbox/work-inbox.module.js';
+import { MemberProfileModule } from './modules/profile/member-profile.module.js';
 
 @Module({
   imports: [
+    CartModule,
+    SupportModule,
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
     DatabaseModule,
     AuthModule,
@@ -47,6 +52,7 @@ import { WorkInboxModule } from './modules/work-inbox/work-inbox.module.js';
     ReviewsModule,
     OperationsDashboardModule,
     WorkInboxModule,
+    MemberProfileModule,
   ],
   controllers: [AppController],
   providers: [AppService],

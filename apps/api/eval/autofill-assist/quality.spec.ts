@@ -90,4 +90,39 @@ describe('reviewed real-camera AI evaluation', () => {
       ),
     ).toBe(false);
   });
+  it('rejects a provider failure even when 19/20 titles would meet the ratio', () => {
+    expect(
+      qualityGate(
+        'real-camera',
+        rows.map((row, i) => ({
+          ...row,
+          titleExact: i !== 0,
+          failure: i === 0 ? 'Timeout' : null,
+        })),
+      ),
+    ).toMatch(/NOT EVIDENCE/);
+    expect(
+      qualityGate(
+        'real-camera',
+        rows.map((row, i) => ({
+          ...row,
+          status: i === 0 ? 'Failed' : 'Suggested',
+        })),
+      ),
+    ).toMatch(/NOT EVIDENCE/);
+  });
+  it('rejects missing title scores and repeated case IDs independently of book counts', () => {
+    expect(
+      qualityGate(
+        'real-camera',
+        rows.map((row) => ({ ...row, titleExact: null })),
+      ),
+    ).toMatch(/NOT EVIDENCE/);
+    expect(
+      qualityGate(
+        'real-camera',
+        rows.map((row) => ({ ...row, id: 'same-case' })),
+      ),
+    ).toMatch(/NOT EVIDENCE/);
+  });
 });

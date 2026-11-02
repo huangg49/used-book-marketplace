@@ -30,13 +30,22 @@ export type SystemActor =
   | 'PointOrderDeadline'
   | 'PointOrderSettlement'
   | 'PurchaseConversationExpiry'
-  | 'AuctionHold';
+  | 'AuctionHold'
+  | 'ListingAutoReview';
 
 type Lockable = { lockSeq: number };
 
 // Roles are embedded so role writers write the locked user document (replaces
 // the role_mutation_lock trigger); UserRole's composite key becomes role uniqueness.
 export interface UserDoc extends Lockable {
+  administrativeLock?: {
+    scope: 'NewTransactions'; restoreStatus: 'ACTIVE' | 'RESTRICTED';
+    reason: string; unlockCondition: string; relatedReference: string | null;
+    actorId: string; createdAt: Date;
+  } | null;
+  version?: number;
+  contactPhone?: string | null;
+  avatarId?: string | null;
   _id: string;
   emailNormalized: string;
   passwordHash: string;
@@ -46,6 +55,23 @@ export interface UserDoc extends Lockable {
   createdAt: Date;
   updatedAt: Date;
   roles: { role: RoleCode; grantedAt: Date }[];
+}
+export interface MemberCartDoc extends Lockable {
+  _id: string; version: number;
+  items: {listingId:string;priceAtAdd:number;addedAt:Date}[];
+  createdAt:Date;updatedAt:Date;
+}
+export interface SupportCaseDoc extends Lockable {
+  _id: string; reporterId: string; reporterName: string;
+  kind: 'Feedback' | 'Bug' | 'Violation' | 'TransactionIssue'; title: string;
+  target: {type: 'DirectOrder' | 'Exchange' | 'PointOrder' | 'Auction' | 'Listing' | 'Review' | 'Member'; id: string} | null;
+  involvedUserIds: string[]; assigneeId: string | null;
+  state: 'Open' | 'InReview' | 'AwaitingMember' | 'Answered' | 'Closed';
+  version: number; messageCount: number; createdAt: Date; updatedAt: Date;
+}
+export interface SupportMessageDoc {
+  _id: string; caseId: string; authorId: string; authorName: string;
+  role: 'Member' | 'Admin' | 'System'; internal: boolean; text: string; createdAt: Date;
 }
 export interface AuthSessionDoc extends Lockable {
   _id: string;
@@ -230,9 +256,23 @@ export interface ListingDecisionDoc {
   decidedAt: Date;
 }
 
+// ADR 0061: what the AI reviewer concluded about one submitted revision.
+export interface ListingAutoReviewDoc {
+  _id: string;
+  revisionId: string;
+  listingId: string;
+  outcome: 'Approved' | 'Escalated';
+  reasons: string[];
+  assessment: Json | null;
+  model: string | null;
+  decidedAt: Date;
+}
+
 // Exactly one target field is set; `principal` is the idempotency identity:
 // `user:<actorId>` or `system:<systemActor>`.
 export interface MutationReceiptDoc {
+  supportCaseId?: string | null;
+  accountId?: string | null;
   reviewId?: string | null;
   _id: string;
   principal: string;
@@ -254,6 +294,8 @@ export interface MutationReceiptDoc {
   committedAt: Date;
 }
 export interface AuditEventDoc {
+  supportCaseId?: string | null;
+  accountId?: string | null;
   reviewId?: string | null;
   _id: string;
   actorId: string | null;
@@ -273,6 +315,35 @@ export interface AuditEventDoc {
   reason: string | null;
   requestId: string;
   createdAt: Date;
+}
+
+export interface ProfileAvatarDoc extends Lockable {
+  _id: string;
+  ownerId: string;
+  version: number;
+  state: 'Pending' | 'Ready' | 'Attached' | 'Retired' | 'Deleting';
+  mimeType: string;
+  byteSize: number;
+  sha256: string;
+  storageKey: string;
+  inFlightUntil: Date | null;
+  gcAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+export interface MemberEmailChangeDoc extends Lockable {
+  _id: string;
+  userId: string;
+  version: number;
+  emailNormalized: string;
+  previousEmailHash: string;
+  passwordFingerprint: string;
+  codeHash: string;
+  attempts: number;
+  state: 'Pending' | 'Verified' | 'Cancelled' | 'Exhausted';
+  createdAt: Date;
+  expiresAt: Date;
+  gcAt: Date;
 }
 export interface OutboxEventDoc {
   _id: string;
@@ -1290,10 +1361,12 @@ export interface MemberNotificationDoc {
     | 'ExchangeCompleted'
     | 'ExchangeCancelled'
     | 'ExchangeRejected'
-    | 'ExchangeDisputed';
+    | 'ExchangeDisputed'
+    | 'SupportUpdated'
+    | 'ReviewModerated';
   title: string;
   body: string;
-  targetType: 'Auction' | 'Exchange' | 'Order';
+  targetType: 'Auction' | 'Exchange' | 'Order' | 'SupportCase' | 'TransactionReview';
   targetId: string;
   dedupeKey: string;
   createdAt: Date;

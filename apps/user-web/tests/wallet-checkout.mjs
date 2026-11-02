@@ -728,9 +728,8 @@ try {
   await page.getByRole("button", { name: /^Tài khoản của .+$/, exact: true }).click();
   await page
     .getByRole("navigation", { name: "Tài khoản cá nhân", exact: true })
-    .getByRole("link", { name: "Việc của tôi", exact: true })
+    .getByRole("link", { name: "Ví của tôi", exact: true })
     .click();
-  await page.locator('#account-content').getByRole('link',{name:'Ví của tôi',exact:true}).click();
   await page
     .locator('dl')
     .filter({ has: page.getByText('Số dư khả dụng', { exact: true }) })

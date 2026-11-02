@@ -1,0 +1,84 @@
+{
+  "status": "PASS_SCOPED_ACCEPTANCE_PARTIAL",
+  "freshBuild": {
+    "sourceHead": "c5c30261",
+    "sourceDirty": false,
+    "status": "PASS",
+    "durationSeconds": 477,
+    "gradle": "9.3.1",
+    "jdk": "21.0.12.1",
+    "compileSdk": 36,
+    "abi": "x86_64",
+    "apkSha256": "4cbdc04b5abd763009287d1d43be6641c183d44423f8302b0b98ed212161b498",
+    "installedApkMatches": true,
+    "nativeTestStatus": "PASS_SCOPED",
+    "limits": [
+      "Debug artifact, not release/store",
+      "No dependency or system configuration changes"
+    ],
+    "observations": {
+      "home": true,
+      "inspectionModalBackGesture": "PASS",
+      "searchDetailLoginReturn": "PASS",
+      "createBackReopenSameOrder": "PASS",
+      "payFocusPreparing": "PASS",
+      "buyerLogoutSellerLogin": "PASS",
+      "sellerNegotiatedAccept": "PASS",
+      "font130AfterResumeAndScroll": "PASS",
+      "nativeFaultInjection": "NOT_RUN",
+      "copySelection": "NOT_RUN"
+    },
+    "money": {
+      "orderId": "6b1fa467-1754-4831-bee5-16f5fa161cb1",
+      "orderCount": 1,
+      "paymentJournalCount": 1,
+      "heldForOrder": 155000,
+      "walletAvailable": 535000,
+      "walletHeld": 465000,
+      "sellerNegotiatedOrderState": "Preparing"
+    },
+    "toolingLimits": [
+      "Toolbar click returned launcher; not attributable to app after Back gesture passed",
+      "ADB foreground font change can transiently clip layout; after background/resume and scroll all text/actions visible",
+      "Full native acceptance, TalkBack audio, ARM, iOS and release remain open"
+    ]
+  },
+  "initialDiagnostic": {
+    "sourceBase": "65b40161",
+    "dirty": true,
+    "apkSha256": "4cbdc04b5abd763009287d1d43be6641c183d44423f8302b0b98ed212161b498",
+    "installedApkMatches": true,
+    "observations": {
+      "home": true,
+      "inspectionModal": true,
+      "emulatorToolbarBack": "Returns to Android launcher while modal visible; native cause not isolated",
+      "earlierBuyerPaymentAndSellerAcceptance": "Observed before APK hash match; diagnostic only, not final native acceptance"
+    }
+  },
+  "platform": {
+    "api": "37",
+    "abi": "x86_64"
+  },
+  "qa": {
+    "database": "isolated *_test on57017/rs-test",
+    "storage": "fake",
+    "funding": "simulated",
+    "providerCalls": 0
+  },
+  "limits": [
+    "Debug Android17x86_64 QA/fake storage/funding only",
+    "Native lost-ACK injection NOT_RUN; covered separately by RN web/shared tests",
+    "No human/TalkBack audio/ARM/iOS/release acceptance or READINESS closure"
+  ],
+  "cleanup": {
+    "nativeQaLogout": true,
+    "emulatorFontScaleRestored": 1.0,
+    "ownedApplicationServicesStopped": true,
+    "qaMongoStopped": true,
+    "mainMongoUnchanged": true,
+    "mainAndOriginMain": "be581aeca4afaf3a7cea8b4b047281fd78e661de",
+    "pushed": false,
+    "remoteCi": "NOT_RUN",
+    "qaJournal": "Retained ignored; use a new run after tmpfs restart"
+  }
+}

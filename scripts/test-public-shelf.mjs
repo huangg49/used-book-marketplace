@@ -147,15 +147,16 @@ try {
   // Owner eligibility assertions target the main Member in a multi-owner shelf.
   await p.goto(`${origin}/book?id=${fixture.listings[0]}`);
   await p
-    .getByRole("heading", { name: "Khảo chứng tình trạng sách", exact: true })
+    .getByRole("heading", { name: "Tình trạng người bán khai báo", exact: true })
     .waitFor();
+  await p.getByText("Thông tin chi tiết do người bán tự kê khai", { exact: true }).waitFor();
   const conditionToggle = p.getByRole("button", {
-    name: "Thu gọn đánh giá thực tế",
+    name: "Thu gọn mô tả tình trạng",
     exact: true,
   });
   assert.equal(await conditionToggle.getAttribute("aria-expanded"), "true");
   await conditionToggle.click();
-  const expandCondition = p.getByRole("button", { name: "Mở rộng đánh giá thực tế", exact: true });
+  const expandCondition = p.getByRole("button", { name: "Mở rộng mô tả tình trạng", exact: true });
   assert.equal(await expandCondition.getAttribute("aria-expanded"), "false");
   await p.getByText("Nhà xuất bản", { exact: true }).waitFor();
   await expandCondition.click();
@@ -226,7 +227,7 @@ try {
   await p.getByText("Không tìm thấy sách", { exact: true }).waitFor();
   assert.equal(
     await p
-      .getByRole("heading", { name: "Khảo chứng tình trạng sách", exact: true })
+      .getByRole("heading", { name: "Tình trạng người bán khai báo", exact: true })
       .count(),
     0,
   );

@@ -10,7 +10,7 @@ export const exchangePreferencesSchema = z.object({
 
 export type ExchangePreferences = z.infer<typeof exchangePreferencesSchema>;
 
-const publicListingSchema = z.object({
+export const publicListingSchema = z.object({
   bundle: bundleSchema.nullable().optional(),
   id: z.string().uuid(),
   revisionId: z.string().uuid(),

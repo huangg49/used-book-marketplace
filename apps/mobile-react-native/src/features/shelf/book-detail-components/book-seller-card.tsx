@@ -1,13 +1,14 @@
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { AppText, Icon, space, stitchTokens } from "../../../core/ui";
+import { router } from "expo-router";
 
 interface BookSellerCardProps {
   sellerName: string;
   sellerId: string;
 }
 
-export function BookSellerCard({ sellerName }: BookSellerCardProps) {
+export function BookSellerCard({ sellerName, sellerId }: BookSellerCardProps) {
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
@@ -15,9 +16,6 @@ export function BookSellerCard({ sellerName }: BookSellerCardProps) {
           <View style={styles.avatarBox}>
             <View style={styles.avatarInner}>
               <Icon name="person" size={24} color={stitchTokens.wineDark} />
-            </View>
-            <View style={styles.verifiedDot}>
-              <Icon name="check" size={10} color={stitchTokens.white} strokeWidth={2.5} />
             </View>
           </View>
 
@@ -28,49 +26,27 @@ export function BookSellerCard({ sellerName }: BookSellerCardProps) {
                 <AppText style={styles.memberChipText}>Chủ sách</AppText>
               </View>
             </View>
-            <View style={styles.locationRow}>
-              <Icon name="pin" size={13} color={stitchTokens.wineMid} />
-              <AppText style={styles.locationText}>Quận 1, TP. Hồ Chí Minh</AppText>
-            </View>
           </View>
         </View>
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Xem tủ sách người này"
+          accessibilityLabel="Xem hồ sơ uy tín người bán"
+          onPress={() =>
+            router.push({ pathname: "/reputation", params: { id: sellerId } })
+          }
           style={({ pressed }) => [styles.shelfBtn, pressed && styles.pressed]}
         >
-          <AppText style={styles.shelfBtnText}>Xem tủ sách</AppText>
+          <AppText style={styles.shelfBtnText}>Hồ sơ uy tín</AppText>
         </Pressable>
-      </View>
-
-      {/* Seller Metrics 3-Col with Warm Accent Background */}
-      <View style={styles.metricsGrid}>
-        <View style={styles.metricItem}>
-          <AppText style={styles.ratingVal}>★ 4.9</AppText>
-          <AppText style={styles.metricSub}>Uy tín đối soát</AppText>
-        </View>
-
-        <View style={styles.metricDivider} />
-
-        <View style={styles.metricItem}>
-          <AppText style={styles.metricVal}>98%</AppText>
-          <AppText style={styles.metricSub}>Phản hồi &lt;15p</AppText>
-        </View>
-
-        <View style={styles.metricDivider} />
-
-        <View style={styles.metricItem}>
-          <AppText style={styles.verifiedVal}>Đã xác minh</AppText>
-          <AppText style={styles.metricSub}>Tài khoản thật</AppText>
-        </View>
       </View>
 
       {/* Note */}
       <View style={styles.disclaimerBox}>
         <Icon name="info" size={13} color={stitchTokens.wineMid} />
         <AppText style={styles.disclaimerText}>
-          Lật lại kiểm duyệt thông tin catalog; ảnh và tình trạng do người đăng chịu trách nhiệm.
+          Lật lại kiểm duyệt thông tin catalog; ảnh và tình trạng do người đăng
+          chịu trách nhiệm.
         </AppText>
       </View>
     </View>
@@ -96,6 +72,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 10,
+    flexWrap: "wrap",
   },
   sellerInfo: {
     flexDirection: "row",
@@ -115,19 +92,6 @@ const styles = StyleSheet.create({
     borderColor: stitchTokens.peachBorder,
     alignItems: "center",
     justifyContent: "center",
-  },
-  verifiedDot: {
-    position: "absolute",
-    bottom: -2,
-    right: -2,
-    width: 17,
-    height: 17,
-    borderRadius: 9,
-    backgroundColor: stitchTokens.verifiedGreen,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: stitchTokens.white,
   },
   nameBlock: {
     flex: 1,
@@ -157,17 +121,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: stitchTokens.wineDark,
   },
-  locationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-  },
-  locationText: {
-    fontSize: 12,
-    color: stitchTokens.roseBrown,
-    fontWeight: "500",
-  },
   shelfBtn: {
+    minHeight: 44,
+    justifyContent: "center",
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
@@ -182,47 +138,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     color: stitchTokens.white,
-  },
-  metricsGrid: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 12,
-    backgroundColor: stitchTokens.amberBg,
-    borderWidth: 1.5,
-    borderColor: stitchTokens.goldBorder,
-  },
-  metricItem: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 2,
-  },
-  metricDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: stitchTokens.goldBorderAlpha35,
-  },
-  ratingVal: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: stitchTokens.goldBronze,
-  },
-  metricVal: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: stitchTokens.likeNewGreen,
-  },
-  verifiedVal: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: stitchTokens.wineDark,
-  },
-  metricSub: {
-    fontSize: 10,
-    color: stitchTokens.darkWood,
-    fontWeight: "600",
   },
   disclaimerBox: {
     flexDirection: "row",

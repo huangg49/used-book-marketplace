@@ -50,6 +50,16 @@ export async function requestOtp(
   });
 }
 
+export async function resetPasswordWithOtp(
+  client: SessionClient,
+  body: { challengeId: string; code: string; password: string },
+): Promise<void> {
+  return client.publicRequest("/auth/otp/reset-password", z.undefined(), {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export function formatAuthError(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 0)

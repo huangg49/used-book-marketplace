@@ -13,7 +13,10 @@
     "test": "vitest run",
     "test:api": "vitest run --config vitest.config.integration.ts",
     "test:dashboard:api": "node tests/dashboard-api.mjs",
-    "test:browser": "node tests/browser.mjs"
+    "test:browser": "node tests/browser.mjs",
+    "test:exchange-safety:browser": "node tests/exchange-resolution-safety.mjs",
+    "test:account-controls:browser": "node tests/account-controls.mjs",
+    "test:review-collapse:browser": "node tests/review-collapse.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

@@ -256,7 +256,7 @@ try {
   await p.getByLabel(/^Mật khẩu/).fill(password);
   await button(p, "Đăng nhập").click();
   await p.waitForURL(web + "/account");
-  await p.getByRole("heading", { name: "Việc của tôi", exact: true }).waitFor();
+  await p.getByRole("heading", { name: "Tổng quan của bạn", exact: true }).waitFor();
   assert.equal(await p.getByText("★ 4.9", { exact: false }).count(), 0);
   await p
     .getByRole("link", { name: "Cách mua, bán, đổi và đấu giá", exact: true })
@@ -546,6 +546,8 @@ try {
   await bookFact.getByText("Từ 0 đánh giá", { exact: true }).waitFor();
   await bookFact.getByText("Chưa có điểm", { exact: false }).waitFor();
   await partnerFact.getByText("Từ 1 đánh giá", { exact: true }).waitFor();
+  await record.getByText('Mở lại xử lý', { exact: true }).waitFor();
+  await record.locator('summary').first().click();
   await record
     .getByRole("combobox", { name: /^Quyết định/ })
     .selectOption("Restore");
@@ -556,6 +558,8 @@ try {
     .getByRole("button", { name: "Ghi nhận quyết định", exact: true })
     .click();
   await record.getByText("Đã ghi nhận quyết định.", { exact: true }).waitFor();
+  await record.getByText('Mở lại xử lý', { exact: true }).waitFor();
+  await record.locator('summary').first().click();
   await record
     .getByText("Lịch sử phiên bản · mới nhất trước", { exact: true })
     .click();

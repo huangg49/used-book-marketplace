@@ -74,6 +74,7 @@ export function AccountScreen() {
           title="Cách mua, bán, đổi và đấu giá"
           onPress={() => router.push("/guide")}
         />
+        <Button wine title="Giỏ sách" onPress={()=>router.push('/cart')}/>
         {profile.isPending ? (
           <StatePanel wine loading title="Đang cập nhật tài khoản…" />
         ) : null}
@@ -150,6 +151,12 @@ export function AccountScreen() {
           <AppText kind="heading" accessibilityRole="header">
             Thông tin và đánh giá
           </AppText>
+          <Button
+            wine
+            secondary
+            title="Sửa hồ sơ và email"
+            onPress={() => router.push('/profile')}
+          />
           <Button
             wine
             secondary

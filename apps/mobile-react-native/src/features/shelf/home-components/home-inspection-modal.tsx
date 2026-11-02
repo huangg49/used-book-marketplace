@@ -22,7 +22,7 @@ export function HomeInspectionModal({
         <Pressable
           style={styles.backdrop}
           onPress={onClose}
-          accessibilityLabel="Đóng thông tin thẩm định"
+          accessibilityLabel="Đóng thông tin kiểm tra tại điểm"
         />
         <View style={styles.sheetContainer}>
           {/* Header */}
@@ -30,7 +30,7 @@ export function HomeInspectionModal({
             <View style={styles.headerLeft}>
               <Icon name="shield" size={22} color={stitchTokens.wine} />
               <AppText kind="bookHeading" style={styles.headerTitle}>
-                Quy Trình Thẩm Định 24h
+                Kiểm tra sách tại điểm
               </AppText>
             </View>
             <Pressable
@@ -55,12 +55,10 @@ export function HomeInspectionModal({
               </View>
               <View style={styles.highlightText}>
                 <AppText kind="bold" style={styles.highlightTitle}>
-                  Cam Kết Chuẩn Thẩm Định Lật Lại
+                  Kiểm tra tình trạng, không chứng nhận chính hãng
                 </AppText>
                 <AppText kind="small" style={styles.highlightSub}>
-                  Mọi cuốn sách cổ, bản in đầu và kỳ thư đấu giá đều được kiểm
-                  duyệt trực tiếp tại 2 trạm ViaPoint TP.HCM trước khi giao tới tay
-                  bạn.
+                  Sách đấu giá phải được điểm tiếp nhận và kiểm tra trước khi mở phiên. Hai điểm trong dự án là điểm demo mô phỏng, không phải cơ sở đang hoạt động.
                 </AppText>
               </View>
             </View>
@@ -75,11 +73,10 @@ export function HomeInspectionModal({
                 </View>
                 <View style={styles.stepInfo}>
                   <AppText kind="bold" style={styles.stepTitle}>
-                    Tiếp Nhận Tại ViaPoint
+                    Tiếp nhận đúng hồ sơ
                   </AppText>
                   <AppText kind="small" style={styles.stepDesc}>
-                    Người bán gửi sách tại ViaPoint Quận 1 hoặc Bình Thạnh. Chuyên
-                    viên lập biên bản tiếp nhận vật lý.
+                    Người bán xem điểm được chọn, thời hạn và điều kiện gửi trong hồ sơ đấu giá. Nhân viên ghi nhận việc nhận sách tại điểm.
                   </AppText>
                 </View>
               </View>
@@ -92,11 +89,10 @@ export function HomeInspectionModal({
                 </View>
                 <View style={styles.stepInfo}>
                   <AppText kind="bold" style={styles.stepTitle}>
-                    Kiểm Tra Tình Trạng Trong 24 Giờ
+                    Đối chiếu tình trạng và mô tả
                   </AppText>
                   <AppText kind="small" style={styles.stepDesc}>
-                    Đối chiếu số trang, gáy sách, vết ố, chữ ký tác giả và bản in
-                    đầu. Ghi chép chi tiết vào báo cáo giám định.
+                    Nhân viên đối chiếu sách với ảnh và checklist. Kết quả chỉ phản ánh phạm vi đã kiểm tra; không bảo đảm đã kiểm mọi trang, chữ ký hay nguồn gốc bản in.
                   </AppText>
                 </View>
               </View>
@@ -109,11 +105,10 @@ export function HomeInspectionModal({
                 </View>
                 <View style={styles.stepInfo}>
                   <AppText kind="bold" style={styles.stepTitle}>
-                    Dán Tem & Bàn Giao
+                    Xem báo cáo trước khi nhận
                   </AppText>
                   <AppText kind="small" style={styles.stepDesc}>
-                    Dán tem niêm phong Lật Lại Certified. Người mua được đồng kiểm
-                    100% khi nhận hàng tại TP.HCM.
+                    Người nhận xem báo cáo và làm bước tiếp theo trong đơn. Trạng thái, mã nhận và thời hạn kiểm tra được ghi riêng trong từng hồ sơ.
                   </AppText>
                 </View>
               </View>

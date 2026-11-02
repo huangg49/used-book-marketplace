@@ -1,0 +1,56 @@
+.account-controls {
+  max-width: 64rem;
+  min-width: 0;
+}
+.account-controls section {
+  margin-block: 1.5rem;
+}
+.account-control-summary,
+.account-control-form {
+  border-block: 1px solid var(--border);
+  padding-block: 1.25rem;
+}
+.account-control-form {
+  display: grid;
+  gap: 1rem;
+  max-width: 44rem;
+}
+.account-controls p,
+.account-controls dd,
+.account-controls li,
+.account-controls blockquote {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.account-controls dl {
+  display: grid;
+  gap: 0.5rem 1.5rem;
+  grid-template-columns: minmax(8rem, 1fr) minmax(0, 3fr);
+}
+.account-controls dd {
+  margin: 0;
+}
+.account-controls textarea {
+  resize: vertical;
+}
+.account-controls input,
+.account-controls textarea,
+.account-controls select {
+  min-width: 0;
+  width: 100%;
+}
+.account-control-history {
+  padding-left: 1.5rem;
+}
+.account-control-history li {
+  padding-block: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+@media (max-width: 600px) {
+  .account-controls dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .account-controls dt {
+    font-weight: 700;
+  }
+}

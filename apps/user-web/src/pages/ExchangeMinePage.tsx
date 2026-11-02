@@ -119,15 +119,15 @@ export default function ExchangeMinePage() {
     tabKeys: ExchangeTab[],
     currentIndex: number,
   ) => {
-    if (e.key === "ArrowRight") {
-      e.preventDefault();
-      const next = tabKeys[(currentIndex + 1) % tabKeys.length];
-      setTab(next);
-    } else if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      const prev = tabKeys[(currentIndex - 1 + tabKeys.length) % tabKeys.length];
-      setTab(prev);
-    }
+    const nextIndex = e.key === "ArrowRight" ? (currentIndex + 1) % tabKeys.length
+      : e.key === "ArrowLeft" ? (currentIndex - 1 + tabKeys.length) % tabKeys.length
+      : e.key === "Home" ? 0
+      : e.key === "End" ? tabKeys.length - 1
+      : undefined;
+    if (nextIndex === undefined) return;
+    e.preventDefault();
+    setTab(tabKeys[nextIndex]);
+    document.getElementById(`tab-${tabKeys[nextIndex]}`)?.focus();
   };
 
   if (!actor) {
@@ -233,7 +233,7 @@ export default function ExchangeMinePage() {
         )}
 
         {isError && (
-          <div className={styles.errorBox}>
+          <div className={styles.errorBox} role="alert">
             <p className="font-semibold">Đã xảy ra lỗi khi tải danh sách trao đổi.</p>
             <button
               type="button"

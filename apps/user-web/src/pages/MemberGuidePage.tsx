@@ -54,7 +54,7 @@ export function MemberGuidePage() {
           đã hoàn tất.
         </p>
         <div className={styles.actions}>
-          <Link to="/account">Về việc của tôi</Link>
+          <Link to="/account/work">Về việc của tôi</Link>
           <Link to="/reviews">Đánh giá của tôi</Link>
         </div>
       </section>

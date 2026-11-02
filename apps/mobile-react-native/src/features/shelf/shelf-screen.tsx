@@ -65,7 +65,7 @@ export function ShelfScreen() {
     queryKey: ["public-shelf", query, cursor],
     queryFn: () =>
       client.publicRequest(
-        `/listings?${query}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+        `/listings?bundleSupport=whole-v1&${query}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
         publicPage,
       ),
     enabled: active,
@@ -108,7 +108,7 @@ export function ShelfScreen() {
           onSearchPress={() => router.navigate("/search")}
           onSearchChange={setSearch}
           onSubmitSearch={() => apply({ ...applied, q: search })}
-          onCameraPress={() => setInspectionOpen(true)}
+          onInspectionPress={() => setInspectionOpen(true)}
           onOpenNotifications={() => setNotificationsOpen(true)}
           onMessagesPress={() => router.push("/chat-inbox")}
           notificationCount={notificationCount}
@@ -287,7 +287,7 @@ export function ShelfScreen() {
 
           <AppText kind="small" color={colors.muted}>
             Ảnh và tình trạng do người đăng cung cấp. Xem chi tiết sách trước khi
-            quyết định. Chức năng giao dịch trên ứng dụng đang được chuẩn bị.
+            quyết định. Mở chi tiết để xem thao tác hiện được hỗ trợ và nơi theo dõi giao dịch.
           </AppText>
         </View>
       </View>

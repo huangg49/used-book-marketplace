@@ -27,6 +27,8 @@ import {
 import { orderDetailsSchema, ORDER_STATE_CONFIG } from "./contracts";
 import { BuyNowModal } from "./buy-now-modal";
 import { MemberNavigation } from "../navigation/member-navigation";
+import { bundleSchema } from "../bundles/book-bundle";
+import { BundleManifest } from "../bundles/bundle-manifest";
 
 const details = orderDetailsSchema
   .extend(orderResponseStateSchema.shape)
@@ -34,16 +36,18 @@ const details = orderDetailsSchema
     canCancel: z.boolean(),
     moneyHeld: z.number().int(),
     item: z.object({
+      bundle: bundleSchema.nullable().optional(),
       metadata: z.object({ title: z.string() }),
       description: z.string(),
     }),
     preparation: z.object({ pickupDeadline: z.string() }).nullable(),
   });
-type Action = "accept" | "reject" | "cancel";
+type Action = "accept" | "reject" | "cancel" | "pay";
 const labels: Record<Action, string> = {
   accept: "Xác nhận bán",
   reject: "Từ chối đơn",
   cancel: "Hủy đơn chưa thanh toán",
+  pay: "Thanh toán đơn",
 };
 
 export function OrderFocusScreen({
@@ -124,7 +128,8 @@ export function OrderFocusScreen({
         )}
         {order && (
           <>
-            <AppText kind="bold">{order.item.metadata.title}</AppText>
+            <AppText kind="bold">{order.item.bundle?.title || order.item.metadata.title}</AppText>
+            <BundleManifest bundle={order.item.bundle}/>
             <AppText>
               {order.role === "Buyer" ? "Bạn là người mua" : "Bạn là người bán"}{" "}
               · {ORDER_STATE_CONFIG[order.state]?.label ?? order.state}
@@ -153,15 +158,30 @@ export function OrderFocusScreen({
                   )}
                 </AppText>
               )}
-            {order.preparation && (
-              <Notice>
-                Đơn đang ở bước chuẩn bị sách. Hạn bàn giao:{" "}
-                {new Date(order.preparation.pickupDeadline).toLocaleString(
-                  "vi-VN",
+            {order.state === "Preparing" && order.preparation && (
+              <View style={{ gap: space.sm }}>
+                <Notice>
+                  {order.role === "Seller"
+                    ? "Bạn cần chuẩn bị sách. "
+                    : "Người bán đang chuẩn bị sách. "}
+                  Hạn bàn giao:{" "}
+                  {new Date(order.preparation.pickupDeadline).toLocaleString(
+                    "vi-VN",
+                  )}
+                  .{" "}
+                  {order.role === "Seller"
+                    ? "Ảnh đóng gói và vận chuyển hiện thực hiện trên Member web: đăng nhập cùng tài khoản, vào Đơn trực tiếp và mở đúng mã đơn này. Không tạo đơn mới."
+                    : "Tiền đang được giữ trong giao dịch. Theo dõi cập nhật tại đơn này; chưa cần xác nhận đã nhận sách."}
+                </Notice>
+                {order.role === "Seller" && (
+                  <>
+                    <AppText selectable>Mã đơn: {id}</AppText>
+                    <AppText kind="small">
+                      Nhấn giữ mã đơn để sao chép khi mở Member web.
+                    </AppText>
+                  </>
                 )}
-                . Người bán chuẩn bị sách theo thời hạn. Mở lại đơn để theo dõi
-                cập nhật.
-              </Notice>
+              </View>
             )}
             {error && <Notice tone="error">{error}</Notice>}
             {pending ? (
@@ -256,7 +276,7 @@ export function OrderFocusScreen({
         <BuyNowModal
           visible
           initialOrderId={id}
-          initialBookTitle={order.item.metadata.title}
+          initialBookTitle={order.item.bundle?.title || order.item.metadata.title}
           onClose={() => {
             setPaying(false);
             void changed();

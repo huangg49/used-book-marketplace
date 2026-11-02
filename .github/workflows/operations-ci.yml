@@ -1,10 +1,10 @@
 name: Operations and public shelf CI
 on:
   pull_request:
-    paths: ["apps/admin-web/**", "apps/mobile-react-native/**", "apps/api/**", "packages/api-contract/**", "packages/session-client/**", "packages/brand/**", "scripts/test-public-shelf.mjs", "scripts/test-listing-journey.mjs", "scripts/test-address-journey.mjs", "infra/docker-compose.mongo-test.yml", "infra/mongo/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/operations-ci.yml"]
+    paths: ["apps/admin-web/**", "apps/user-web/**", "apps/mobile-react-native/**", "apps/api/**", "packages/api-contract/**", "packages/session-client/**", "packages/brand/**", "scripts/test-public-shelf.mjs", "scripts/test-rn-buy-now.mjs", "scripts/test-member-profile.mjs", "scripts/qa-member-cart.mjs", "scripts/test-member-cart-api.mjs", "scripts/test-member-cart-browser.mjs", "scripts/test-support-center.mjs", "scripts/test-listing-journey.mjs", "scripts/test-address-journey.mjs", "infra/docker-compose.mongo-test.yml", "infra/mongo/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/operations-ci.yml"]
   push:
     branches: [main]
-    paths: ["apps/admin-web/**", "apps/mobile-react-native/**", "apps/api/**", "packages/api-contract/**", "packages/session-client/**", "packages/brand/**", "scripts/test-public-shelf.mjs", "scripts/test-listing-journey.mjs", "scripts/test-address-journey.mjs", "infra/docker-compose.mongo-test.yml", "infra/mongo/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/operations-ci.yml"]
+    paths: ["apps/admin-web/**", "apps/user-web/**", "apps/mobile-react-native/**", "apps/api/**", "packages/api-contract/**", "packages/session-client/**", "packages/brand/**", "scripts/test-public-shelf.mjs", "scripts/test-rn-buy-now.mjs", "scripts/test-member-profile.mjs", "scripts/qa-member-cart.mjs", "scripts/test-member-cart-api.mjs", "scripts/test-member-cart-browser.mjs", "scripts/test-support-center.mjs", "scripts/test-listing-journey.mjs", "scripts/test-address-journey.mjs", "infra/docker-compose.mongo-test.yml", "infra/mongo/**", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".github/workflows/operations-ci.yml"]
 jobs:
   operations:
     # MongoDB 8.0 requires a runner kernel older than 6.19 (SERVER-121912).
@@ -32,11 +32,18 @@ jobs:
       - run: pnpm --filter @used-books/admin-web build
       - run: pnpm --filter @used-books/admin-web exec playwright install --with-deps chromium
       - run: pnpm --filter @used-books/admin-web test:browser
+      - run: pnpm --filter @used-books/admin-web test:exchange-safety:browser
       - run: pnpm --filter @used-books/mobile-react-native export:web
         env:
           EXPO_PUBLIC_API_BASE_URL: http://127.0.0.1:3009/api/v1
           EXPO_PUBLIC_DESIGN_PREVIEW: '1'
       - run: pnpm test:public:browser
+      - run: pnpm test:rn-buy-now:browser
+      - run: pnpm test:member-profile:browser
+      - run: pnpm --filter @used-books/admin-web test:account-controls:browser
+      - run: pnpm test:member-cart:api
+      - run: pnpm test:member-cart:browser
+      - run: pnpm test:support:browser
       - name: Mongo QA diagnostics on failure
         if: failure()
         run: |
@@ -46,6 +53,8 @@ jobs:
         if: always()
         with:
           name: client-browser-evidence
+          include-hidden-files: true
           path: |
             apps/admin-web/test-results
             apps/mobile-react-native/test-results
+            .tmp/support-evidence

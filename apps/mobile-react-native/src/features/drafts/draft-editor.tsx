@@ -71,6 +71,9 @@ import {
   type AssistState,
 } from "./price-assist";
 import { PriceSuggestionPanel } from "./price-suggestion-panel";
+import { BundleEditor } from "../bundles/bundle-editor";
+import { BundleManifest } from "../bundles/bundle-manifest";
+import { blankBundle, bundleCondition, type BookBundle } from "../bundles/book-bundle";
 
 const stepLabels = [
   "Thông tin sách",
@@ -86,6 +89,15 @@ const stepHelp = [
   "Mô tả chân thực tình trạng sách để người đọc sau an tâm.",
   "Thiết lập giá bán hoặc giá trị quy đổi và phương thức giao nhận.",
   "Xem lại toàn bộ thông tin trước khi lưu hoặc gửi duyệt.",
+] as const;
+const bundleStepLabels = ["Thông tin bộ", "Ảnh cả bộ", "Tình trạng", "Giá cả bộ", "Kiểm tra"] as const;
+const bundleShortLabels = ["1. Bộ sách", "2. Ảnh bộ", "3. Tình trạng", "4. Giá cả bộ", "5. Kiểm tra"] as const;
+const bundleStepHelp = [
+  "Ghi các cuốn thực tế và chọn một cuốn làm đầu sách đại diện.",
+  "Ảnh chính thấy rõ cả bộ; ảnh bổ sung mô tả gáy, ruột và lỗi từng cuốn.",
+  "Mô tả cả bộ. Tình trạng chung theo cuốn có tình trạng thấp nhất.",
+  "Một giá và nơi gửi cho toàn bộ danh sách; không bán tách hoặc đổi sách.",
+  "Đối chiếu đủ cuốn, ảnh, ghi chú và tổng giá trước khi gửi duyệt.",
 ] as const;
 
 // ADR 0042: an auction listing is a Sale whose price is a declared value and
@@ -153,8 +165,12 @@ export function DraftEditor({
   const scroll = useRef<ScrollView>(null);
   const [catalogDirty, setCatalogDirty] = useState(false);
   const auction = base.channel === "Auction";
-  const labels = auction ? auctionStepLabels : stepLabels;
-  const help = auction ? auctionStepHelp : stepHelp;
+  const savedBundle = useRef<BookBundle | null>(null);
+  const singleTerms = useRef<Pick<typeof form, "mode" | "salePrice" | "exchangeValue" | "condition"> | null>(null);
+  const bundlePrice = useRef("");
+  const [switchToSingle, setSwitchToSingle] = useState(false);
+  const labels = auction ? auctionStepLabels : form.bundle ? bundleStepLabels : stepLabels;
+  const help = auction ? auctionStepHelp : form.bundle ? bundleStepHelp : stepHelp;
   const insets = useSafeAreaInsets();
 
   // Price suggestion lives here so it survives step changes
@@ -290,6 +306,7 @@ export function DraftEditor({
   const assistKey = suggestionKey(base.id, form);
 
   const askPrice = async () => {
+    if (form.bundle) return;
     const input = suggestionInput(form);
     if (!input.bookId) return;
     const token = ++assistToken.current;
@@ -350,7 +367,7 @@ export function DraftEditor({
         submit,
         Crypto.randomUUID,
         approvedEdit,
-        decisionFor(assist, assistKey, form),
+        form.bundle ? undefined : decisionFor(assist, assistKey, form),
       );
     }
     if (!intent.current) return;
@@ -659,7 +676,7 @@ export function DraftEditor({
         {/* 5-Step Stepper Tabs */}
         <StepNav
           labels={labels}
-          short={auction ? auctionShortLabels : undefined}
+          short={auction ? auctionShortLabels : form.bundle ? bundleShortLabels : undefined}
           current={step}
           states={labels.map((_, i) => {
             if (i === 4) {
@@ -777,6 +794,22 @@ export function DraftEditor({
       {/* STEP 0 (01: Thông tin đầu sách) */}
       <View style={{ display: step === 0 ? "flex" : "none" }}>
         <View style={styles.formWhiteCard}>
+          {!auction && base.state.moderation === "Draft" && !base.currentRevision.content.bundle ? <View style={{gap: space.sm}}>
+            <Button title={form.bundle ? "Chuyển sang sách lẻ" : "Đăng bộ sách"} secondary disabled={locked} onPress={() => {
+              if (form.bundle) { setSwitchToSingle(true); return; }
+              singleTerms.current = {mode: form.mode, salePrice: form.salePrice, exchangeValue: form.exchangeValue, condition: form.condition};
+              const bundle = savedBundle.current ?? blankBundle();
+              setDeclared(false);
+              setForm(f => ({...f, bundle, mode: "Sale", salePrice: bundlePrice.current, exchangeValue: "", condition: bundleCondition(bundle)}));
+            }}/>
+            <AppText>Chọn bộ để bán chung 2–50 cuốn trong một tin. Không ghép các tin sách đã đăng.</AppText>
+          </View> : null}
+          {form.bundle ? <View ref={anchor("bundle")}>
+            <BundleEditor value={form.bundle} disabled={locked} error={errors.bundle} onChange={bundle => {
+              setDeclared(false);
+              setForm(f => ({...f, bundle, mode: "Sale", exchangeValue: "", condition: bundleCondition(bundle)}));
+            }}/>
+          </View> : null}
           {form.bookId ? (
             <View style={{ gap: space.md }}>
               <BookIdentity
@@ -793,7 +826,7 @@ export function DraftEditor({
           ) : (
             <>
               <CatalogPicker
-                assistPhotos={{ listingId: base.id, photos: photoList.filter(p => form.mediaIds.includes(p.id)), add: () => void send(false) }}
+                assistPhotos={form.bundle ? undefined : { listingId: base.id, photos: photoList.filter(p => form.mediaIds.includes(p.id)), add: () => void send(false) }}
                 selected={form.bookId}
                 onDirtyChange={setCatalogDirty}
                 disabled={locked}
@@ -808,6 +841,7 @@ export function DraftEditor({
       {/* STEP 1 (02: Ảnh bản sách) */}
       {step === 1 ? (
         <View style={styles.formWhiteCard}>
+          {form.bundle ? <Notice>Ảnh chính cần thấy rõ tất cả các cuốn được giao. Thêm ảnh gáy, ruột và lỗi từng cuốn; tối đa 8 ảnh cho cả bộ.</Notice> : null}
           {form.bookId ? <BookIdentity id={form.bookId} /> : null}
 
           {/* Stitch Section 2: Photo Manager (Separate Cover and Support Photos) */}
@@ -1296,7 +1330,7 @@ export function DraftEditor({
             auction={auction}
           />
 
-          {editable && !auction && (form.mode === "Sale" || form.mode === "Both") ? (
+          {editable && !auction && !form.bundle && (form.mode === "Sale" || form.mode === "Both") ? (
             <PriceSuggestionPanel
               reference={priceReference}
               onApplyReference={amount => { setForm(f => ({ ...f, salePrice: String(amount) })); setAssist(clearAiPriceAttribution); }}
@@ -1383,6 +1417,7 @@ export function DraftEditor({
               <Button secondary title="Chỉnh sửa" onPress={() => go(0)} />
             ) : null}
           </View>
+          <BundleManifest bundle={form.bundle}/>
           <BookIdentity id={form.bookId} />
 
           {/* Photos Preview */}
@@ -1659,7 +1694,7 @@ export function DraftEditor({
               }}
             >
               <Checkbox
-                title="Tôi có quyền sở hữu và cam kết thông tin trung thực theo quy chuẩn thẩm định của cộng đồng Lật Lại."
+                title={form.bundle ? "Tôi sở hữu toàn bộ các cuốn đã liệt kê, không đăng chúng đồng thời ở tin khác và mô tả đúng tình trạng từng cuốn." : "Tôi có quyền sở hữu và cam kết thông tin trung thực theo quy chuẩn thẩm định của cộng đồng Lật Lại."}
                 checked={declared}
                 disabled={locked}
                 onPress={() => setDeclared((v) => !v)}
@@ -1872,6 +1907,20 @@ export function DraftEditor({
       </AppModal>
 
       {/* Confirmation Dialogs */}
+      <ConfirmDialog
+        visible={switchToSingle}
+        title="Chuyển sang sách lẻ?"
+        message="Danh sách bộ được giữ trong phiên này để bạn chọn lại. Tin gửi duyệt sẽ chỉ gồm sách lẻ nếu tiếp tục với lựa chọn này."
+        confirmLabel="Chuyển sang sách lẻ"
+        onCancel={() => setSwitchToSingle(false)}
+        onConfirm={() => {
+          savedBundle.current = form.bundle ?? null;
+          bundlePrice.current = form.salePrice;
+          setForm(f => ({...f, ...(singleTerms.current ?? {}), bundle: null}));
+          setDeclared(false);
+          setSwitchToSingle(false);
+        }}
+      />
       <ConfirmDialog
         visible={reviseConfirm}
         title="Gửi bản sửa để duyệt lại?"

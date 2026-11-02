@@ -57,6 +57,7 @@ export class OrdersController {
     return this.orders.read(req.auth, this.input.uuid(id));
   }
   @Post('orders/:orderId/conversation')
+  @ExistingObligation()
   @HttpCode(200)
   async openConversation(
     @Param('orderId') id: string,

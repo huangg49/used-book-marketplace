@@ -1,5 +1,46 @@
 # Kiểm AI bằng bìa sách thật — 29/10/2026
 
+## Kiểm độc lập offline — 01/11/2026
+
+Nhánh `codex/listing-ai-offline-verification`, base `1574d986`. Owner xác nhận dùng
+lại `incoming` đã được Codex hoàn thiện, chưa có ảnh điện thoại/người duyệt.
+Không thu thập lại từ đầu; không sửa ảnh, đáp án, flags, quarantine, model/prompt,
+provider/env hoặc cấu hình sản phẩm. [Evidence](listing-ai-corpus-2026-10-29/offline-verification-2026-11-01.json).
+
+- Validator trên incoming hiện tại **Technical PASS / acceptance PARTIAL**:
+  25raw,24active hash,1quarantine,40quan sát,11/15hai nhóm nguồn,15ISBN checksum
+  hợp lệ trong catalog;0real-camera,0import candidate,25ảnh unknown rights.
+- Bổ sung `eval:autofill --check-only`: kiểm đường dẫn vật lý, ảnh qua cùng
+  derivative/shrink, schema đáp án và trùng hash/book trước khi tạo adapter.
+  Chế độ này không gọi provider, không ghi file, không chấm chất lượng.
+  Corpus24case PASS,0reviewed,0case có đáp án ISBN. Hash cases được ghi evidence.
+  Checksum catalog không biến thành ISBN nhìn thấy trên ảnh hoặc đúng ấn bản.
+- Chặn đáp án ISBN sai checksum/không canonical13, metadata sai kiểu/năm tương lai,
+  cờ review dạng chuỗi, ID không an toàn, một cuốn/bytes ảnh bị đếm nhiều lần.
+  Bộ dữ liệu cũ không đổi; checker incoming vẫn bắt flags false như quy định.
+- Sửa **bộ chấm**, không sửa model: qualityGate trước đây chưa loại `failure` hoặc
+  `status=Failed`;19tên đúng/20 với1ca lỗi có thể vượt tỷ lệ80% nếu các field khác
+  đủ. Nay lỗi provider, thiếu điểm title hoặc lặp caseID không được thành evidence.
+  Negative tests chứng minh trường hợp này. Không hạ ngưỡng và không tính lại
+  kết quả cũ thành một lượt gọi AI mới.
+- Giá offline:23Proceed/1NeedsMoreData/1QUARANTINED,0provider call. Tình trạng Good
+  là giả định QA, OnlineRetail giữ nguyên; độ chính xác giá **NOT_SCORED**.
+- PASS52data/CLI tests (fixture tự sinh/local fake HTTP, không incoming private
+  hoặc API trả phí),30unit eval, API typecheck/lint eval, docs/diff. Workflow
+  [Listing AI offline CI](../../.github/workflows/listing-ai-offline-ci.yml) chạy
+  các bộ kiểm đó trên fixture, không cần DB/key. Remote CI NOT RUN chưa push.
+
+```sh
+# Từ apps/api; chế độ chỉ kiểm file, an toàn ngay cả khi local đã cấu hình AI:
+pnpm eval:autofill --dir ../../qa-data/listing-ai/incoming/autofill/cover-scan --check-only
+```
+
+Bỏ `--check-only` là đường eval có thể gọi provider và vẫn cần quyền/ngân sách
+riêng. Không gọi lại endpoint bị timeout, không mở12case holdout, không import DB.
+Cải thiện lần này làm phép đo và CI đáng tin hơn, **chưa chứng minh tên/tác giả/giá
+được AI đọc chính xác hơn**. Chất lượng native, ảnh điện thoại, human review đáp án,
+quyền ảnh và định giá sách cũ vẫn OPEN/NOT_RUN; READINESS giữ nguyên.
+
 ## Lượt mới nhất: xác minh endpoint — 29/10, 16:04–16:06 VN
 
 Nhánh `codex/listing-ai-endpoint-verification`, basec59d8cf. Owner giao bước

@@ -17,6 +17,7 @@ import { timeAgo, useOpenNotification } from "../hooks/useOpenNotification";
 import { useSession } from "../hooks/useSession";
 import {
   listNotifications,
+  notificationKeys,
   markNotificationsRead,
   type MemberNotification,
 } from "../services/notifications";
@@ -66,7 +67,9 @@ export function NotificationsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
 
   const pages = useInfiniteQuery({
-    queryKey: ["notifications", "page"],
+    queryKey: notificationKeys.pages(auth.status==='authenticated'?auth.user.id:undefined),
+    staleTime:0,
+    refetchOnMount:'always',
     queryFn: ({ pageParam }) => listNotifications(pageParam, 30),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (last) => last.nextCursor ?? undefined,

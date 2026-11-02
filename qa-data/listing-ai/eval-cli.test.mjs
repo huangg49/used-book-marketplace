@@ -32,7 +32,7 @@ test("autofill CLI rejects invalid inputs before provider access", async (t) => 
     photos: ["front.jpg"],
     expected: { title: "Book", authors: [], isbn: null },
   };
-  const run = (args = []) =>
+  const run = (args = [], environment = {}) =>
     spawnSync(
       process.execPath,
       [
@@ -52,6 +52,7 @@ test("autofill CLI rejects invalid inputs before provider access", async (t) => 
           ...process.env,
           AUTOFILL_ENABLED: "false",
           AUTOFILL_API_KEY: "",
+          ...environment,
         },
       },
     );
@@ -87,6 +88,64 @@ test("autofill CLI rejects invalid inputs before provider access", async (t) => 
         "expected title",
       ],
       ["non-positive budget", [one], ["--max-usd", "0"], "finite positive"],
+      [
+        "wrong ISBN answer",
+        [{ ...one, expected: { title: "Book", isbn: "9780306406158" } }],
+        ["--check-only"],
+        "Expected ISBN",
+      ],
+      [
+        "ISBN-10 requires canonical answer",
+        [{ ...one, expected: { title: "Book", isbn: "0306406152" } }],
+        [],
+        "Expected ISBN",
+      ],
+      [
+        "untyped review flag",
+        [{ ...one, reviewed: "false" }],
+        [],
+        "review flag",
+      ],
+      ["unsafe case ID", [{ ...one, id: "../book" }], [], "Each case needs"],
+      [
+        "future answer year",
+        [{ ...one, expected: { title: "Book", publicationYear: 9999 } }],
+        [],
+        "publication year",
+      ],
+      [
+        "wrong metadata type",
+        [{ ...one, expected: { title: "Book", publisher: 123 } }],
+        [],
+        "Expected metadata",
+      ],
+      [
+        "same book twice",
+        [
+          { ...one, bookKey: "same" },
+          { ...one, id: "second", bookKey: "same" },
+        ],
+        [],
+        "Duplicate book keys",
+      ],
+      [
+        "same photo twice in book",
+        [{ ...one, photos: ["front.jpg", "front.jpg"] }],
+        [],
+        "Duplicate photo bytes",
+      ],
+      [
+        "same bytes across cases",
+        [one, { ...one, id: "second" }],
+        ["--check-only"],
+        "Duplicate photo bytes",
+      ],
+      [
+        "check cannot initialize",
+        [one],
+        ["--check-only", "--init"],
+        "cannot create",
+      ],
     ]) {
       await t.test(label, async () => {
         await write(cases);
@@ -98,6 +157,32 @@ test("autofill CLI rejects invalid inputs before provider access", async (t) => 
         );
       });
     }
+    await t.test(
+      "offline preflight succeeds even with AI configured, without treating checksum/review as acceptance",
+      async () => {
+        await write([
+          {
+            ...one,
+            bookKey: "book",
+            reviewed: false,
+            expected: { title: "Book", isbn: "9780306406157" },
+          },
+        ]);
+        const r = run(["--check-only"], {
+          AUTOFILL_ENABLED: "true",
+          AUTOFILL_API_KEY: "qa-only-never-send",
+          NVIDIA_BASE_URL: "http://127.0.0.1:1/v1",
+        });
+        assert.equal(r.status, 0);
+        const report = JSON.parse(r.stdout);
+        assert.equal(report.technicalStatus, "PASS");
+        assert.equal(report.providerCalls, 0);
+        assert.equal(report.reviewedCases, 0);
+        assert.equal(report.casesWithIsbnAnswer, 1);
+        assert.match(report.meetsAdr0048, /NOT EVALUATED/);
+        assert.equal(report.readinessGateChanged, false);
+      },
+    );
     await t.test(
       "exhausted budget skips fallback and cannot report acceptance",
       async () => {

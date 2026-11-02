@@ -345,7 +345,11 @@ try {
     await page.getByText("Đối tác trao đổi", { exact: true }).count(),
     0,
   );
-  assert.equal(await page.getByRole("heading", { name: "Thông tin sách", exact: true }).count(), 0);
+  // The surrounding negotiation page now has its own public book card. Only
+  // private exchange detail must disappear on denial, including cached actions.
+  const deniedDetail = page.getByRole("region", { name: "Chi tiết trao đổi", exact: true });
+  assert.equal(await deniedDetail.getByRole("heading", { name: "Thông tin sách", exact: true }).count(), 0);
+  assert.equal(await deniedDetail.getByRole("region", { name: "Hành động của bạn", exact: true }).count(), 0);
   assert.deepEqual(errors, []);
   console.log(
     "PASS exchange browser: real create/accept/cancel; lost ACK retains intent; funding rejection stays open; 403 hides data; desktop/mobile.",

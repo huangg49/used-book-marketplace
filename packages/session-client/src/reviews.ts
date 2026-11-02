@@ -175,7 +175,7 @@ export async function sendReviewIntent(
   } catch (error) {
     // Schema/network/5xx errors may follow a committed command. Retain exactly
     // the original intent; only a definite 4xx response releases it.
-    if (error instanceof ApiError && error.status >= 400 && error.status < 500)
+    if (error instanceof ApiError && error.status >= 400 && error.status < 500 && ![401,403,408,429].includes(error.status))
       s.intents.delete(scope);
     throw error;
   }

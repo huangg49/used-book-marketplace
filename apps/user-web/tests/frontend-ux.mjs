@@ -47,9 +47,9 @@ export async function frontendUxJourney(page, evidence, chatPath) {
     await page.route("**/api/v1/exchanges", route => route.abort("failed"));
     // An unvisited tab exercises a fresh read without changing session semantics.
     await page.getByRole("tab", { name: /^Đang thực hiện/ }).click();
-    await page.getByRole("heading", { name: "Chưa tải được trao đổi", exact: true }).waitFor();
+    await page.getByRole("alert").getByText("Đã xảy ra lỗi khi tải danh sách trao đổi.", { exact: true }).waitFor();
     await page.unroute("**/api/v1/exchanges");
-    await page.getByRole("button", { name: "Thử lại", exact: true }).click();
+    await page.getByRole("button", { name: "Thử tải lại", exact: true }).click();
     await page.getByRole("heading", { name: "Không có giao dịch nào đang thực hiện" }).waitFor();
     await page.getByRole("tab", { name: /^Đề nghị đã gửi/ }).click();
     await page.locator('[role="tabpanel"] a[href^="/exchange/"]:visible').first().waitFor();

@@ -235,6 +235,8 @@ export type AuctionOperation =
   | 'dispatchPointOrder'
   | 'recordPointDelivery';
 type CommandChange =
+  | SupportChange
+  | AccountChange
   | ReviewChange
   | PointChange
   | AuctionChange
@@ -258,6 +260,21 @@ export type ReviewChange = {
   reason?: string;
   event?: string;
 };
+export type AccountChange = {
+  accountControl?: { scope: 'NewTransactions'; unlockCondition: string | null; relatedReference: string | null };
+  event?: string;
+  entityType: Wire['AccountCommandReceipt']['entityType'];
+  entityId: string;
+  accountId: string;
+  version: number;
+  state: string;
+  reason?: string;
+  before?: Json;
+};
+export type SupportChange = {
+  entityType: 'SupportCase'; entityId: string; version: number;
+  state: Wire['SupportState']; decidedAt: Date; reason?: string; event?: string;
+};
 type Options<C, D> = {
   discover?: (tx: Tx) => Promise<string[]>;
   authorize: (tx: Tx, actor: CurrentActor) => Promise<C>;
@@ -277,7 +294,15 @@ type Principal = {
 
 // Operations a LOCKED account may still perform on existing obligations.
 const EXISTING_OBLIGATION_OPERATIONS = [
+  // Own-account maintenance is permitted while trades are locked. Each of
+  // these handlers still checks MEMBER, current session and ownership.
+  'updateMemberProfile', 'createProfileAvatar', 'uploadProfileAvatar',
+  'discardProfileAvatar',
+  'requestMemberEmailChange', 'confirmMemberEmailChange',
   'cancelUnpaidOrder',
+  'openOrderConversation',
+  'removeCartItem',
+  'replyToSupportCase',
   'cancelPaidOrder',
   'rejectPaidOrder',
   'acceptOrder',
@@ -305,6 +330,26 @@ const sessionExpired = (
 @Injectable()
 export class MongoCommandService {
   constructor(private readonly mongo: MongoService) {}
+  runSupport<C>(context: CommandContext, operation: string, target: string, body: unknown, options: Options<C, SupportChange>) {
+    return this.execute(context, operation, target, body, options,
+      (change,id): Wire['SupportCaseReceipt'] => ({
+        id, entityType:'SupportCase', entityId:change.entityId, version:change.version,
+        state:change.state, serverTime:change.decidedAt.toISOString(),
+      }));
+  }
+  runAccount<C>(
+    context: CommandContext,
+    operation: string,
+    target: string,
+    body: unknown,
+    options: Options<C, AccountChange>,
+  ) {
+    return this.execute(context, operation, target, body, options,
+      (change, id, serverTime): Wire['AccountCommandReceipt'] => ({
+        id, entityType: change.entityType, entityId: change.entityId,
+        version: change.version, state: change.state, serverTime: serverTime.toISOString(),
+      }));
+  }
   runReview<C>(
     context: CommandContext,
     operation: string,
@@ -580,6 +625,45 @@ export class MongoCommandService {
         version: change.version,
         status: change.state,
         expiresAt: change.expiresAt?.toISOString() ?? null,
+        serverTime: serverTime.toISOString(),
+      }),
+    );
+  }
+  // ADR 0061 worker only. The key is the revision, so one submitted revision
+  // can be published by the AI reviewer at most once.
+  systemAutoApprove<C>(
+    key: string,
+    target: string,
+    options: {
+      discover: (tx: Tx) => Promise<string[]>;
+      authorize: (tx: Tx) => Promise<C>;
+      mutate: (tx: Tx, current: C, receiptId: string) => Promise<Change>;
+    },
+  ) {
+    return this.executePrincipal(
+      {
+        actorId: null,
+        systemActor: 'ListingAutoReview',
+        key,
+        requestId: randomUUID(),
+      },
+      'autoApproveListing',
+      target,
+      {},
+      {
+        authorize: async (tx) => {
+          await this.lockUsers(tx, await options.discover(tx));
+          return options.authorize(tx);
+        },
+        mutate: options.mutate,
+      },
+      (change, id, serverTime): Wire['MutationReceipt'] => ({
+        id,
+        entityType: change.entityType,
+        entityId: change.entityId,
+        version: change.version,
+        revisionId: change.revisionId,
+        state: change.state,
         serverTime: serverTime.toISOString(),
       }),
     );
@@ -1012,7 +1096,8 @@ export class MongoCommandService {
         change.entityType === 'PointAssignment' ||
         change.entityType === 'PointIncident' ||
         change.entityType === 'PurchaseConversation' ||
-        change.entityType === 'TransactionReview'
+        change.entityType === 'TransactionReview' ||
+        change.entityType === 'SupportCase'
           ? change.decidedAt
           : new Date();
       const receipt = project(change, id, serverTime);
@@ -1026,7 +1111,11 @@ export class MongoCommandService {
         topupId: null as string | null,
         pointId: null as string | null,
       };
-      if (change.entityType === 'TransactionReview')
+      if (change.entityType === 'SupportCase')
+        Object.assign(targets, { supportCaseId: change.entityId });
+      else if ('accountId' in change)
+        Object.assign(targets, { accountId: change.accountId });
+      else if (change.entityType === 'TransactionReview')
         Object.assign(targets, { reviewId: change.entityId });
       else if (
         change.entityType === 'HandoverPoint' ||
@@ -1142,6 +1231,15 @@ export class MongoCommandService {
 
 function auditAfter(change: CommandChange): Json {
   switch (change.entityType) {
+    case 'SupportCase':
+      return {entityId:change.entityId,version:change.version,state:change.state};
+    case 'UserAccount':
+      return { entityId: change.entityId, version: change.version, state: change.state, ...change.accountControl };
+    case 'MemberProfile':
+    case 'ProfileAvatar':
+    case 'MemberEmailChange':
+    case 'Cart':
+      return { entityId: change.entityId, version: change.version, state: change.state };
     case 'TransactionReview':
       return {
         entityId: change.entityId,

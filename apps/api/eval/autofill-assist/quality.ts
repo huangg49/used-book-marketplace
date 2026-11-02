@@ -80,6 +80,8 @@ export function qualityGate(
     scored?: boolean;
     titleExact?: boolean | null;
     isbnWrong?: boolean | null;
+    failure?: string | null;
+    status?: string;
   }[],
 ) {
   if (source !== 'real-camera')
@@ -88,13 +90,18 @@ export function qualityGate(
     rows.some(
       (row) =>
         row.skipped ||
+        row.failure ||
+        row.status === 'Failed' ||
         !row.scored ||
         row.reviewed !== true ||
         !row.bookKey?.trim() ||
-        typeof row.isbnWrong !== 'boolean',
+        typeof row.isbnWrong !== 'boolean' ||
+        typeof row.titleExact !== 'boolean',
     )
   )
     return 'NOT EVIDENCE: incomplete run or unreviewed answers/book identity/ISBN';
+  if (new Set(rows.map((row) => row.id)).size !== rows.length)
+    return 'NOT EVIDENCE: duplicate case identities';
   const distinct = new Set(rows.map((row) => row.bookKey!.trim()));
   if (distinct.size < 20 || distinct.size !== rows.length)
     return 'NOT EVIDENCE: need at least 20 distinct books, grouped photos';

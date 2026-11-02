@@ -1,6 +1,7 @@
 import type { components } from "@used-books/api-contract";
 import type { Content, Draft, Media } from "./contracts";
 import { formatVnd } from "../../core/ui/format";
+import { bundleCondition, bundleError } from "../bundles/book-bundle";
 export type Mode = NonNullable<components["schemas"]["DraftContent"]["mode"]>;
 export type Form = Omit<Content, "salePrice" | "exchangeValue"> & {
   salePrice: string;
@@ -9,6 +10,7 @@ export type Form = Omit<Content, "salePrice" | "exchangeValue"> & {
 export type Errors = Partial<Record<keyof Form | "ownershipDeclared", string>>;
 export const fromContent = (c: Content): Form => ({
   ...c,
+  bundle: c.bundle ? {...c.bundle, items: c.bundle.items.map(item => ({...item}))} : null,
   fulfillment: c.fulfillment ?? null,
   mediaIds: [...c.mediaIds],
   salePrice: c.salePrice?.toString() ?? "",
@@ -27,6 +29,7 @@ export function displayPrice(value: string) {
 export function toContent(f: Form): Content {
   return {
     ...f,
+    bundle: f.bundle ? {...f.bundle, items: f.bundle.items.map(item => ({...item}))} : null,
     pages: f.pages.trim(),
     coverNote: f.coverNote.trim(),
     notes: f.notes.trim(),
@@ -131,6 +134,12 @@ export function validateForm(
 ): Errors {
   const e: Errors = {};
   const c = toContent(f);
+  if (f.bundle) {
+    e.bundle = bundleError(f.bundle);
+    if (!e.bundle) delete e.bundle;
+    if (f.mode !== "Sale") e.mode = "Bộ sách chỉ bán nguyên bộ.";
+    if (f.condition !== bundleCondition(f.bundle)) e.condition = "Tình trạng chung phải theo cuốn thấp nhất trong bộ.";
+  }
   for (const k of ["salePrice", "exchangeValue"] as const)
     if (
       c[k] !== null &&
@@ -194,7 +203,7 @@ export function stillFailing(flagged: Errors, current: Errors): Errors {
 // Fields per editor step, in on-screen order (5 steps matching web), so errors land on the first visible one.
 export const stepFields: readonly (readonly (keyof Errors)[])[] = [
   // 1: Thông tin sách
-  ["bookId"],
+  ["bundle", "bookId"],
   // 2: Ảnh bản sách
   ["mediaIds"],
   // 3: Tình trạng

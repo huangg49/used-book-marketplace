@@ -55,6 +55,14 @@ review source and gate before changing or extending completion.
 
 ## Exchange hiện hành — deadline và nghĩa vụ cũ
 
+01/11/2026: [ADR0057](../adr/0057-exchange-resolution-safety.md), contract0.64,
+chặn mọi quyết định phân xử tài chính mới qua route legacy. Không hoàn/tất toán
+hoặc mở sách trong ResolutionPending khi chưa có custody, allocation và quyết
+định có hiệu lực sau appeal. Staff/Admin participant bị chặn trước replay;
+receipt cũ hợp lệ chỉ được đọc lại bởi actor hiện còn quyền và độc lập. Hàng
+đợi vận hành chỉ đọc và loại self. Đây là bảo vệ an toàn, không nghiệm thu đầy
+đủ tranh chấp hoặc đóng gate. Mutual cancellation trước gửi giữ protocol riêng.
+
 [ADR0050](../adr/0050-exchange-inspection-and-existing-obligations.md) đối chiếu
 source28/10 với POL-08/FR-X08/X09/BR-18: mỗi bên có72h từ lần nhận hợp lệ; common
 inspectionDeadline là hạn muộn hơn khi cả hai nhận. Xác nhận hài lòng chỉ ghi nhận,
@@ -91,6 +99,24 @@ Book score là chất lượng sách thành viên đã cung cấp; không có m�
 hợp lệ, không phụ thuộc số item của trang hiện tại.
 Chi tiết implementation/evidence ở [báo cáo](../features/TRANSACTION_REVIEWS_REPORT.md).
 Không thay READINESS, không cấp ExistingObligation cho review, không thay GHN.
+
+## Hồ sơ phản ánh Member/Admin web
+
+[ADR0062](../adr/0062-web-support-cases.md), contract0.70: SupportCase riêng của
+người gửi, Admin ACTIVE độc lập nhận phụ trách và phản hồi; Staff không tự có
+quyền vào module mới. TransactionIssue kiểm participant DirectOrder/Exchange/
+PointOrder; đây là tiếp nhận hỗ trợ, không thay claim/hold hoặc dispute hai chiều.
+Không chuyển tiền, ghi vi phạm, thay custody hoặc settlement từ một ticket.
+
+Message gốc append-only; ghi chú nội bộ chỉ Admin được đọc. State/receipt/audit/
+notification cùng transaction; auth/owner/independence trước replay. Member bị
+LOCKED chỉ đọc/bổ sung hồ sơ đã có theo đúng method, không tạo report mới. Admin
+gửi kết quả trước đóng, không đóng khi giao dịch còn ResolutionPending. Hai mục
+lịch sử cuối dành cho kết quả/đóng trong giới hạn200; tối đa20 hồ sơ chưa đóng.
+Review moderation giữ ADR0052, thêm hộp thư bền cho hai bên; lý do moderation là
+nội dung gửi các bên, ghi chú riêng không đi vào notification. Mở thông báo đọc
+lại quyền/target ID; cache summary và infinite inbox tách cấu trúc, theo account.
+Hiện nhận chứng cứ văn bản/dữ liệu liên kết; file và phân xử tiền đầy đủ chưa mở.
 
 ## Commitment và unpaid Order
 
@@ -220,10 +246,14 @@ never treat login, roles or a client capability as permission for new transactio
 0.15.0 allows LOCKED paid cancellation/rejection; 0.16.0 adds Seller acceptance.
 New payment remains denied for LOCKED.
 Purchase chat exists in `modules/purchases`, with gateway/service participant
-authorization; its HTTP handlers are not an ExistingObligation allowlist.
+authorization. ADR0059 allows LOCKED reads/sends only for a real owned OrderCreated
+room; new negotiation/terms/quote commands are not on this allowlist.
 Point report/code/claim/read handlers currently lack the decorator described in
 older reports, so do not claim LOCKED access there from documentation alone.
-Claim evidence upload/real carrier and Admin lock/unlock workflows remain planned.
+Claim evidence upload/real carrier remain planned. Admin lock/unlock now follows
+ADR0059: prior status is preserved, sessions/roles/ledger/obligations are not erased.
+LOCKED purchase-chat reads/sends are limited to real owned OrderCreated rooms;
+new negotiation/terms/quotes remain blocked. See ACCOUNT_CONTROLS_REPORT.
 
 ## Ví mô phỏng
 

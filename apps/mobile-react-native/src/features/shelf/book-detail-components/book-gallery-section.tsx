@@ -1,10 +1,5 @@
 import React, { useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText, Icon, Sheet, space, stitchTokens } from "../../../core/ui";
 import { conditions, type Listing } from "../contracts";
@@ -16,17 +11,6 @@ interface BookGallerySectionProps {
   onSelectPhoto: (index: number) => void;
   active: boolean;
 }
-
-const photoLabels = [
-  "Bìa trước",
-  "Mép giấy",
-  "Bìa sau & gáy",
-  "Ghi chú",
-  "Gáy sách",
-  "Trang tiêu đề",
-  "Khuyết điểm",
-  "Ảnh thêm",
-];
 
 export function BookGallerySection({
   item,
@@ -92,7 +76,7 @@ export function BookGallerySection({
         <View style={styles.watermarkPill}>
           <Icon name="camera" size={13} color={stitchTokens.white} />
           <AppText style={styles.watermarkText}>
-            Ảnh chụp thật (4 góc + ruột)
+            Ảnh bài đăng ({totalPhotos})
           </AppText>
         </View>
 
@@ -109,7 +93,10 @@ export function BookGallerySection({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Chạm để phóng to ảnh"
-            style={({ pressed }) => [styles.zoomPill, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.zoomPill,
+              pressed && styles.pressed,
+            ]}
             onPress={() => setZoomVisible(true)}
           >
             <Icon name="search" size={14} color={stitchTokens.wineDark} />
@@ -127,7 +114,7 @@ export function BookGallerySection({
         >
           {item.photos.map((photo, idx) => {
             const isSelected = idx === selectedIndex;
-            const label = photoLabels[idx] || `Ảnh ${idx + 1}`;
+            const label = `Ảnh ${idx + 1}`;
             return (
               <Pressable
                 key={photo.id}
@@ -160,7 +147,7 @@ export function BookGallerySection({
 
       {/* Fullscreen Photo Modal Sheet */}
       <Sheet
-        title={`${photoLabels[selectedIndex] || `Ảnh ${selectedIndex + 1}`} · ${item.book.title}`}
+        title={`Ảnh ${selectedIndex + 1} · ${item.book.title}`}
         visible={zoomVisible}
         onClose={() => setZoomVisible(false)}
         motion="photo"

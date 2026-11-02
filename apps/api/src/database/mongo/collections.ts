@@ -26,7 +26,12 @@ import type * as D from './documents.js';
 
 // Collection name -> document type. One entry per collection in the baseline.
 export interface CollectionTypes {
+  support_cases: D.SupportCaseDoc;
+  support_messages: D.SupportMessageDoc;
   users: D.UserDoc;
+  member_carts: D.MemberCartDoc;
+  profile_avatars: D.ProfileAvatarDoc;
+  member_email_changes: D.MemberEmailChangeDoc;
   auth_sessions: D.AuthSessionDoc;
   login_attempts: D.LoginAttemptDoc;
   auth_action_tokens: D.AuthActionTokenDoc;
@@ -47,6 +52,7 @@ export interface CollectionTypes {
   listing_media: D.ListingMediaDoc;
   revision_media: D.RevisionMediaDoc;
   listing_decisions: D.ListingDecisionDoc;
+  listing_auto_reviews: D.ListingAutoReviewDoc;
   mutation_receipts: D.MutationReceiptDoc;
   audit_events: D.AuditEventDoc;
   outbox_events: D.OutboxEventDoc;
@@ -200,6 +206,11 @@ export type Collections = {
 
 const NAMES: CollectionName[] = [
   'users',
+  'member_carts',
+  'support_cases',
+  'support_messages',
+  'profile_avatars',
+  'member_email_changes',
   'auth_sessions',
   'login_attempts',
   'auth_action_tokens',
@@ -220,6 +231,7 @@ const NAMES: CollectionName[] = [
   'listing_media',
   'revision_media',
   'listing_decisions',
+  'listing_auto_reviews',
   'mutation_receipts',
   'audit_events',
   'outbox_events',

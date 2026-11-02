@@ -24,6 +24,14 @@ Hướng dẫn/template được lưu Git. Dữ liệu thu thập/ảnh trong in
 chưa phải tài sản đã duyệt để commit hoặc đưa vào DB. Chia sẻ qua Git chỉ sau khi
 rà soát nguồn/quyền dùng/dữ liệu riêng; không dùng env/token trong gói này.
 
+## Kiểm độc lập mới nhất — 01/11/2026
+
+Tiếp tục dùng incoming Codex-finalized; không tạo lại corpus hoặc đổi review flags.
+Có thêm `eval:autofill --check-only` từ apps/api để kiểm24ảnh/đáp án offline trước
+adapter, không provider hoặc ghi report. [Kết quả và giới hạn](../../docs/features/LISTING_AI_CORPUS_2026_10_29.md#kiểm-độc-lập-offline--01112026):
+52data/CLI +30eval tests; technical PASS vẫn khác human/real-camera acceptance.
+Workflow offline dùng fixture tự sinh, không cần dữ liệu incoming private hay key.
+
 ## Bộ kiểm dùng lại
 
 ```sh
@@ -57,7 +65,7 @@ model với24ảnh scan:13/24tên,18/24tác giả,0ISBN bịa trên ảnh không
 cải thiện khi thử prompt bố cục nên giữ prompt sản phẩm. Browser web/RNweb PASS
 với một bìa và output phát lại; chưa là native/human/real-camera acceptance.
 
-`pnpm data:listing-ai:test` hiện gồm29validator +12CLI/preflight, không gọi paid AI.
+`pnpm data:listing-ai:test` hiện gồm29validator +23CLI/preflight, không gọi paid AI.
 Sau build API, `node qa-data/listing-ai/evaluate-prices.mjs` chỉ đọc corpus/rule,
 không DB/provider; thêm `--live` mới gọi tối đa3lượt với budget token dự toán0,02USD.
 Không thêm flag nếu chưa có quyền trả phí. Bộ map giữ OnlineRetail và loại

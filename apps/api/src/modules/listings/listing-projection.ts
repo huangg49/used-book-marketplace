@@ -8,6 +8,7 @@ import type {
 } from '../../database/mongo/documents.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import type { Wire } from '../commands/domain-error.js';
+import { AUTO_REVIEWER_ID } from './auto-review-facts.js';
 import { normalizeBundle, validateBundle } from './book-bundle.js';
 import { normalizeSearch } from '../commands/contract-input.service.js';
 import {
@@ -106,6 +107,7 @@ function decision(r: Revision): Wire['ReviewDecision'] | null {
         decision: d.decision,
         reason: d.reason,
         decidedAt: d.decidedAt.toISOString(),
+        ...(d.reviewerId === AUTO_REVIEWER_ID ? { automated: true as const } : {}),
       }
     : null;
 }

@@ -29,46 +29,463 @@
   - `pnpm --filter @used-books/admin-web exec tsc --noEmit`: PASS (0 errors).
   - `pnpm --filter @used-books/user-web build`: PASS (Vite build thành công trong 4.89s).
 
-# Điểm lưu trước — 01/11/2026
+# Điểm lưu trước — 02/11/2026
 
-## Hoàn thiện Giao diện & Hồ sơ khiếu nại (Evidence Dossier), Trạm phân xử Admin và Đồng bộ Mobile React Native — 01/11/2026
+## Bàn giao hỗ trợ Member/Admin web —02/11/2026
 
-- Nhánh: `feature/exchange-policy-and-transit-worker`.
-- **Bối cảnh & Nghiệp vụ**:
-  - Tối ưu hóa toàn diện luồng giải quyết khiếu nại (Dispute Reporting & Resolution) trên cả 3 nền tảng: User Web, Admin Web và Mobile React Native.
-  - Người dùng có thể lập biên bản khiếu nại kèm hồ sơ bằng chứng đầy đủ (ảnh chụp hư hỏng, video mở gói unboxing 3.5s, phân loại sự cố chuẩn và mô tả chi tiết), có nút nạp dữ liệu mẫu tiện lợi cho demo.
-  - Quản trị viên tại trạm phân xử (`ExchangeDisputesPage`) có hàng đợi compact scannable, bộ lọc nhanh, thanh tìm kiếm, và workstation thẩm định trực quan đối chiếu video/ảnh, số dư cọc bảo chứng và sổ cái Ledger trước khi ra phán quyết bất biến (`RefundBoth` hoặc `CompleteExchange`).
-  - Giao diện Mobile React Native đồng bộ 100% tính năng với User Web (bộ chọn phân loại, hồ sơ bằng chứng chọn từ thư viện ảnh máy `expo-image-picker` hoặc nạp mẫu, hiển thị trạng thái `ResolutionPending` giàu thông tin, và thẻ phán quyết quản trị viên trang trọng trong hộp thoại chat trao đổi).
-- **Nội dung thực hiện chi tiết**:
-  1. **User Web (`apps/user-web`)**:
-     - `ConfirmDialog/ConfirmDialog.module.css` & `index.tsx`: Sửa lỗi nhảy cuộn khi mở modal, thêm `maxWidth`, nút đóng góc trên (`✕`), thanh cuộn mỏng tinh tế.
-     - `ActionCard/ActionCard.module.css` & `index.tsx`: Thiết kế lại modal khiếu nại với banner bảo vệ ký quỹ, phân loại sự cố chuẩn, ô nhập chi tiết kèm đếm ký tự, hồ sơ bằng chứng song song (ảnh chụp + video unboxing 3.5s), các nút nạp mẫu demo.
-     - `public/bridge.html` & `public/demo-evidence/`: Cầu nối đồng bộ IndexedDB và localStorage đa cổng (5174 <-> 5173) để xem trước bằng chứng video/ảnh thực tế.
-  2. **Admin Web (`apps/admin-web`)**:
-     - `exchange-disputes.tsx` & `exchange-disputes.module.css`: Thiết kế lại hàng đợi dạng hàng thu gọn (~65px) với badge phân loại, đoạn trích lý do và pill bằng chứng. Bổ sung thanh công cụ lọc (`Tất cả`, `Hư hỏng / Rách nát`, `Có video unboxing`, `Có ảnh hiện trạng`) và ô tìm kiếm tức thì.
-     - Workstation Thẩm định & Phân xử mở rộng: Xem trước bằng chứng trực quan song song (ảnh + video player 16:9), bảng so sánh cọc và bưu kiện hai bên, 2 radio lựa chọn phán quyết (`RefundBoth` vs `CompleteExchange`), nút nạp căn cứ mẫu nhanh và hộp thoại xác nhận phán quyết bất biến.
-  3. **Mobile React Native (`apps/mobile-react-native`)**:
-     - `exchange-actions-card.tsx`: Nâng cấp modal báo cáo khiếu nại từ `ConfirmDialog` thô sơ lên `AppModal` hoàn chỉnh đồng bộ Web (banner bảo vệ ký quỹ, phân loại sự cố, chi tiết vấn đề, hồ sơ bằng chứng với `expo-image-picker` và nạp mẫu demo).
-     - Thiết kế lại thẻ trạng thái `ResolutionPending` dạng Rich Dispute Card (bóc tách category, chi tiết, pill bằng chứng, thông báo đóng băng bảo lưu tiền cọc trên Ledger).
-     - Bổ sung thẻ thông báo phán quyết Quản trị viên nổi bật cho `RefundBoth` (hoàn cọc 100% về ví mô phỏng) và `CompleteExchange` (tất toán giao dịch).
-     - `exchange-chat-box.tsx`: Định dạng tin nhắn hệ thống phán quyết quản trị viên `[Phán quyết của Quản trị viên]` và biên bản `[Sự cố]:` thành các thẻ card chuyên nghiệp, trang trọng.
-     - `icon.tsx`: Bổ sung vector icon `video` cho ứng dụng mobile.
-- **Kiểm tra**:
-  - `pnpm contract:check`: PASS.
-  - `git diff --check`: PASS (0 errors, no whitespace issues).
-  - `pnpm --filter @used-books/api exec tsc --noEmit`: PASS (0 errors).
-  - `pnpm --filter @used-books/user-web exec tsc --noEmit`: PASS (0 errors).
-  - `pnpm --filter @used-books/admin-web exec tsc --noEmit`: PASS (0 errors).
-  - `pnpm --filter @used-books/mobile-react-native exec tsc --noEmit`: PASS (0 errors).
-  - `pnpm --filter @used-books/admin-web build`: PASS.
-  - `pnpm --filter @used-books/user-web build`: PASS.
-  - Unit Tests:
-    - `mobile-react-native`: 24 test suites, 164/164 tests PASS.
-    - `user-web`: 38 test suites, 253/253 tests PASS.
-    - `admin-web`: 33 test suites, 219/219 tests PASS.
+- Owner yêu cầu chia commit/push phần chức năng, loại phần tạo luồng/dữ liệu mẫu
+  để test. Nhánh `codex/web-support-ready` từ main `d44b813b`; workspace local
+  đang chạy giữ nguyên ở nhánh cũ. Không push các nhánh/commit tạo mẫu demo.
+  Helper, manifest, DB/backup/credential và `.tmp/` không thuộc Git. Kiểm thử
+  tự động của chức năng được giữ; không xóa fixture local người dùng đang test.
+- Member gửi/theo dõi/bổ sung SupportCase, chọn giao dịch bằng nhãn thay nhập ID,
+  báo cáo nội dung; Admin nhận việc, note riêng, kiểm duyệt review, phản hồi và
+  đóng hồ sơ. Review queue thu gọn sau ACK, mở lại được, giữ input/exact retry.
+  [Đặc tả](../features/WEB_FEEDBACK_COMPLAINTS_SPEC.md),
+  [báo cáo](../features/WEB_SUPPORT_CENTER_REPORT.md),
+  [ADR0062](../adr/0062-web-support-cases.md).
+- Tích hợp main có AI tự duyệt: contract0.70/224operations/36controllers,
+  registry65migration/97collection. Hai migration0050 giữ nguyên checksum;
+  thêm0051 hợp nhất receipt/audit sau cả hai. Không bật cờ AI, không thay gate
+  hoặc migrate DB local đang phục vụ owner. Nhận source phải migrate/bootstrap.
+- Source tích hợp PASS49HTTP/Mongo (support/obligations/AI auto review),32Mongo
+  (schema/upgrade/role/checksum, gồm3 đường nâng cấp union); shared119/Admin219/
+  Member264unit. API/web/RN type, API/hai web build/lint, contract/routes/docs/diff
+  PASS. Browser support6nhóm và Admin collapse9ca PASS,0page errors; QA riêng
+  57017/*_test, storage fake. Chi tiết ở báo cáo; full native/human/remote CI chưa
+  chạy. Push được owner cho phép; chưa PR/merge/deploy hoặc đổi gate.
 
-# Điểm lưu trước — 30/10/2026
+## AI tự duyệt bài đăng sau cờ tắt — 02/11/2026
 
+- [ADR0061](../adr/0061-ai-listing-auto-review.md): worker chỉ Approve hoặc chuyển
+  Staff, không từ chối; mặc định tắt. Contract0.68, migration0050, cần `db:migrate`
+  rồi `db:bootstrap`. **Khác SRS FR-L03: chủ dự án xác nhận trước khi bật ở môi
+  trường dùng chung.** Test dùng mô hình giả; chưa đo trên ảnh thật, chưa hiệu chỉnh
+  ngưỡng. Chưa có màn Admin hiển thị `autoReview`/`automated`. READINESS giữ nguyên.
+
+## Chuẩn bị tích hợp chuỗi local theo yêu cầu owner — 01/11/2026
+
+- Owner yêu cầu push, kiểm CI và squash merge vào main để giao task cho nhóm.
+  Source trước checkpoint này `49c5ae1d`,19commit từ main `be581aec`; các mục
+  “chưa push/PR/merge” bên dưới là lịch sử tại thời điểm kết thúc từng gói.
+  Kết quả tích hợp cuối phải đọc PR/CI trên đúng head và squash SHA, không suy
+  trạng thái từ việc đã chuẩn bị checkpoint. Không deploy hoặc migrate DB chính.
+- [Khảo sát core BuyNow](../features/CORE_BUY_NOW_AUDIT_2026_11_01.md):15E2E PASS/
+  137SKIP theo filter; xác nhận khoảng thiếu Buyer claim trước settlement, web
+  diễn giải sai ResolutionPending và renewal quote RN. Chưa sửa các finding;
+  giữ READINESS và ba gói giao việc được nêu. P1 backend đã có từ main, không
+  phải thay đổi settlement mới trong chuỗi này. Test xanh không là nghiệm thu.
+- Tích hợp phần đã commit; các chỉnh sửa Admin/Profile/cart/navigation/ảnh
+  chưa commit của công việc khác được bảo toàn và không đưa vào PR này.
+  Review người thật chưa thực hiện cho các gói bổ sung; ghi minh bạch trong PR
+  cùng chỉ đạo owner tự kiểm/merge, không gọi đây là chữ ký reviewer độc lập.
+- [PR84](https://github.com/huangg49/used-book-marketplace/pull/84), head ban đầu
+  `72be9b86`: Operations CI bắt locator cũ “Khảo chứng tình trạng sách” dù RN đã
+  đổi đúng thành “Tình trạng người bán khai báo”. Sửa locator heading/toggle,
+  giữ kiểm expanded/collapse, restriction, ảnh, quyền và replay; thêm assertion
+  nội dung tự kê khai. Không sửa source nghiệp vụ hoặc xóa assertion để qua CI.
+- Head tiếp `c27f9160`: public shelf/RN BuyNow qua; profile browser bắt race của
+  hai lần click sidebar liên tiếp trước lazy route commit. Test nay chờ URL và
+  heading hồ sơ biến mất trước khi quay lại; giữ assertion password rỗng, email
+  và intent gốc/replay đúng. RN cũng chờ remount thực; không thêm sleep hoặc
+  sửa production profile đang có local work khác. Kết quả cuối đọc trên PR84.
+- Full API lượt đầu824/825PASS: mail retry thất bại do profile suite để job của
+  mình trong queue chung. Ép profile email-confirm chạy trước account-auth retry
+  trên QA riêng tái hiện FAIL1/PASS1; cleanup nay chỉ xóa mail của hai actor
+  thuộc chính ca profile, không xóa queue chung hoặc sửa mail worker/assertion.
+  Sau sửa PASS2/38SKIP cho thứ tự ép; trọn hai suite profile/account-auth PASS40,
+  lint/docs/diff PASS. Mọi thư dùng provider local, QA rs-test/database `_test`.
+
+## Bộ sách: hướng dẫn web và nối RN — đã kiểm chứng local, chưa native acceptance
+
+- Nhánh `codex/whole-bundle-journey`, base `86fba065`, subject
+  `feat(listings): complete whole-bundle web and RN journeys`; owner duyệt sau
+  khảo sát, tiếp tục giữ local/chưa push/PR/merge/deploy.
+  [Hành trình/source/evidence](../features/WHOLE_BUNDLE_JOURNEY_2026_11_01.md).
+- Web hiện danh sách từng cuốn trực tiếp; thêm dãy nối cuốn chưa có, giữ ghi chú/
+  tình trạng. Đổi sách lẻ/bộ giữ riêng danh sách và giá, bài mới bỏ dữ liệu cũ.
+  RN giữ bundle trong private/public schemas, editor, kệ/chi tiết/giỏ/hội thoại,
+  quote xác nhận cả bộ và Order snapshot; không auto dùng AI một cuốn cho bộ.
+- PASS194RN/262web/106session-client unit, type/lint/build/export tương ứng,
+  API9unit +6HTTP bundle (135skip theo filter), routes213/33; detector0findings
+  trong phạm vi. Warning cũ và giới hạn xem báo cáo, không gọi native/CI PASS.
+- PASS QA UI web tới PendingReview với bộ thiếu tập2; RN web export lưu/mở lại
+  manifest và Buyer từ Home→chi tiết→tick nguyên bộ→quote→Order chưa trả tiền;
+  Mongo audit giữ đúng danh sách/snapshot. Fake storage/ảnh tổng hợp/mail local.
+  Đã bỏ điểm4.9/98%/xác minh/địa chỉ viết cứng trên seller card RN; nối hồ sơ uy
+  tín thật theo seller ID. Native/human/fulfillment gates còn mở, READINESS không đổi.
+- PASS cleanup cả hai fixture: không còn browser QA DB/user/role; các port
+  3009/3010/5194/8087 đã đóng, QA57017 đã stop. Mongo chính27017 vẫn healthy,
+  không dừng/sửa. Docs/diff PASS; hai trang UI cuối0console errors.
+  Các thay đổi Admin và hai file Profile web ngoài gói trong working tree được
+  giữ nguyên, không stage cùng. Hướng dẫn sử dụng/gate tiếp xem báo cáo.
+
+## RN Quên mật khẩu: reset/thư đạt; lượt QA thứ hai chưa có kết quả Login
+
+- Nhánh `codex/rn-password-recovery`, base `39f9b023`, subject
+  `feat(rn): add OTP password recovery with safe failure handling`.
+  Owner duyệt làm tiếp, vẫn local/chưa push/PR/merge/deploy.
+  [Source và bằng chứng](../features/RN_PASSWORD_RECOVERY_2026_11_01.md).
+- Login→email→OTP/reset→ACK→Login đã nối API hiện có. Double tap, sai/hết hạn/
+  vượt lần thử, resend, blur/late ACK và mất phản hồi có đường phục hồi; không
+  auto-login/replay reset, không persist OTP/password. Giữ returnBook UUID.
+- PASS RN184unit/25file (20ca mới), typecheck, lint0error/1warning cũ,
+  Expo web export32route; API OTP19/19 trên QA rs-test/_test, mail local.
+  PASS Expo web với API/Mongo thật cho entry, empty email, generic ACK/cooldown,
+  reload và Back giữ ngữ cảnh;320px form email. Không gọi đó là native PASS.
+- Source mới `7ef57f12`: owner tự nhập OTP/mật khẩu QA, báo hoàn tất và nhận thư
+  thông báo. PASS audit1PasswordReset,2phiên revoked, old password/access/refresh
+  đều401;2job Sent/payload erased,2provider201. Inbox/Spam chưa báo riêng.
+  **NOT CONFIRMED** Login mới: lúc đối soát0session active; đã hỏi owner nhưng
+  chưa có xác nhận riêng trước timeout. Không gọi toàn journey là PASS.
+- Runner `.tmp/rn-recovery-qa.mjs` kết thúc `BLOCKED_TIMEOUT`/exit0/cleanup PASS.
+  Đã kiểm không còn DB/user/role browser QA; API3009/fake storage3010/static8087
+  và Docker QA57017 đã dừng. File riêng không lộ key/email/code/password.
+  Khi nghiệm thu Login mới cần phiên QA khác; URL cũ đã hết hạn.
+- Owner xác nhận lượt trước mới reset/nhận thư, chưa Login. Đã mở QA mới bằng
+  `.tmp/rn-recovery-qa-2.mjs`, source sản phẩm không đổi. API3009/storage fake3010/
+  static8087 và QA57017 đang chạy; DB ngẫu nhiên `_test`, tối đa4send/40phút.
+  Tab9 form trống đã mở để owner reset rồi Login ngay trong cùng lượt. Journal
+  riêng `.tmp/rn-recovery-qa-2/result.json` đo reset204, Login200 sau reset và
+  session tạo mới; dùng auth event cho reset, kind cho mail, không dùng tokenId
+  null để phân loại cảnh báo. Chưa có kết quả/cleanup lượt2; không lấy kết quả
+  lượt1 thay cho lượt2. Tiếp tục đối soát trước khi dọn hoặc khi runner hết hạn.
+- Đối chiếu lúc bắt đầu gói bộ sách01/11: không còn listener/dịch vụ QA lượt2,
+  journal cũ vẫn RUNNING và không có provider/reset/login. Không suy thành PASS
+  hoặc cleanup có journal đầy đủ. Các port QA nêu trên sau đó được gói bộ dùng
+  riêng và đã dừng/dọn; không mở URL cũ để tiếp tục tài khoản QA mật khẩu.
+- Native runtime tiếp tục BLOCKED bởi automatic policy block cũ; không đi vòng.
+  READINESS, GHN, DB/env/bucket chính và remote CI giữ nguyên.
+
+## Hồ sơ trên Member web thật, đối chiếu RN và thông báo phục hồi
+
+- Nhánh `codex/profile-feedback-clarity`, base `73fcf6da`, subject
+  `fix(profile): distinguish credential recovery and pending profile reads`.
+  Owner duyệt kiểm UI thật; giữ local/chưa push/PR/merge/deploy.
+  [Bằng chứng client](../features/MEMBER_ACCEPTANCE_2026_11_01.md#nghiệm-thu-bổ-sung-trên-client-thật-và-sửa-thông-báo-hồ-sơ).
+- PASS Member web từ Home/menu→Profile: invalid contact/dirty Back/lưu, sai
+  password→remount→nhập lại, OTP Brevo thật do owner nhập→đổi email, reload về
+  login rồi email mới đăng nhập/return đúng Profile.2job201/Sent/payload erased.
+  Owner báo hoàn tất, chưa ghi nhận riêng folder thư cảnh báo lượt UI; journal
+  giữ PARTIAL thay vì cộng thành Inbox PASS. Storage fake, dữ liệu QA tổng hợp.
+- PASS RN-web Account→Profile, cùng email mới, dirty Back và password recovery;
+  export mới sau sửa. Native vẫn BLOCKED trước đây, không thử đi vòng Metro block.
+  Không gọi web export là native, không lấy thao tác agent thành UX độc lập.
+- Sửa2feedback trên web/RN: password-required nói rõ bước nhập lại và giữ intent;
+  busy+needsRead hiển thị loading thay vì báo read failed sớm. Không đổi API,
+  permission/session/receipt/schema hoặc motion. Proxy QA mất ACK sau commit,
+  replay exact key/body và read chậm10giây đã kiểm web PASS, mail local/fake storage.
+- PASS web253/RN164unit, cả hai typecheck, lint hai file, build web, RN-web export,
+  detector web0findings, docs/diff; web320px không tràn.
+  Hai QA DB/user/role đã dọn, các dịch vụ lượt này và QA replica set đã dừng.
+  Main DB/env/bucket giữ nguyên, READINESS và remote CI chưa đổi.
+
+## Ba gói hồ sơ/Admin/cart: kiểm bổ sung schema và storage thật — 01/11/2026
+
+- Nhánh hiện tại `codex/member-acceptance-verification`, base/business source
+  `5e179691`, subject `test(qa): verify member schema upgrades and real private avatar storage`.
+  Owner duyệt kiểm thực tế, vẫn giữ local/chưa push/PR/merge/deploy.
+  [Báo cáo kiểm bổ sung](../features/MEMBER_ACCEPTANCE_2026_11_01.md).
+- PASS upgrade1: trích độc lập59checksum từ Git main `be581aec`, so đủ trước
+  nâng0047/0048/0049 trong DB QA ngẫu nhiên `_test`; giữ user/session/ledger,
+  migration idempotent và least-privilege role sau bootstrap. Không DB chính.
+- PASS7nhóm avatar với Supabase thật trong bucket QA mới/private: upload/replay,
+  signed GET/WebP256/EXIF, owner/public denial, attached retention, durable cleanup
+  retry. Blob/bucket QA đã dọn sạch; không đụng bucket ứng dụng. Mail vẫn local.
+  Profile browser regression PASS sau adapter opt-in; API/Admin lint/types PASS,
+  docs/contract/routes/diff PASS. Live runner có guard `--live`, không tự gọi ở CI.
+- Android debug x86_64 build mới PASS7m28s/443executed/32up-to-date; SHA256
+  `4cbdc04b5abd763009287d1d43be6641c183d44423f8302b0b98ed212161b498`.
+  APK không chứa index.android.bundle, cần Metro. Native runtime **BLOCKED** bởi
+  automatic policy block trước đó; không đi vòng qua chặn, không cài/mở emulator.
+  Không nhận build/hash trùng APK cũ thành runtime PASS của profile/cart mới.
+- Brevo QA bổ sung trên source `3f12fa11`: owner duyệt key riêng restricted chỉ
+  Transactional email/hạn01/12 và recipient là sender đã xác minh. Adapter thật
+  nhận HTTP201, replay cùng job trả400 `duplicate_parameter`; owner xác nhận thư
+  mẫu vào Inbox. Không tạo/đổi tài khoản hoặc nối DB, chưa là OTP journey thật.
+  Key đầu xuất hiện trong đầu ra tự động khi nối lại tab; owner đã xác nhận thay.
+  Đã thấy key cũ Deactivated, key r2 Active cùng scope/hạn; key mới được đọc/lưu
+  kín, không xuất giá trị. Rerun adapter thật với r2 PASS201/replay400. Inbox r2
+  chưa được owner xác nhận riêng; Inbox PASS là thư mẫu trước rotation. Cấu hình
+  QA riêng đã bật lại, env chạy chính vẫn local; không dùng lại key cũ.
+  [Lượt HTTP/Mongo/queue/Brevo tiếp theo](../features/MEMBER_ACCEPTANCE_2026_11_01.md#bổ-sung-httpmongoqueuebrevo-và-otp-do-owner-nhập)
+  trên source `2ba4418c` + runner local PASS7nhóm: request/confirm lost-response
+  replay, cooldown/owner, OTP thật201, lỗi ACK provider tiêm/retry duplicate400,
+  giữ current session/revoke access+refresh phiên khác, old login401/new200,
+  một warning201 và xóa encrypted payload. Owner tự nhập OTP, xác nhận cảnh báo
+  vào Inbox qua chat; folder riêng của OTP không ghi nhận, không tự suy cả hai Inbox.
+  PASS16profile +3queue targeted,21skip theo filter; syntax/opt-in/docs/diff PASS.
+  `test:member-email:live` chỉ opt-in/recipient được duyệt, không CI; helper riêng
+  không là UI sản phẩm/native. Sửa helper Referrer-Policy để native POST giữ Origin;
+  không đổi auth guard. Owner xác nhận qua chat nên dùng protected stop/dọn QA;
+  runner exit BLOCKED/operator-stop được giữ riêng trong evidence, kết luận mail
+  PASS là đối soát7nhóm + owner report, không giả bấm xác nhận cả hai Inbox.
+  Cleanup DB/user/role riêng PASS; QA helper/API/media và replica set đã dừng.
+  Env chạy chính vẫn local, không migration/seed/worker chính hoặc push/PR/merge.
+  Native/human UX client/remote CI giữ mở. QA Mongo/API/media/browser/Gradle
+  của lượt này đã dừng; không còn port app/QA listener hoặc Java/emulator của lượt.
+  READINESS giữ nguyên; các gói phát triển và bằng chứng trước xem tiếp bên dưới.
+
+- Owner duyệt hồ sơ web/RN, Admin khóa/mở và giỏ sách web/RN; giữ local,
+  chưa push/PR/merge/deploy. Chuỗi từ `2d051c0a`: hồ sơ `f49160fa`, Admin
+  `b13f0d5b`, cart nhánh `codex/member-cart`, base `b13f0d5b`, subject
+  `feat(cart): connect bounded member carts to single-listing checkout`.
+- [Giỏ sách](../features/MEMBER_CART_REPORT.md), [ADR0060](../adr/0060-member-cart.md):
+  contract0.67/213operations/33controllers, migration0049/registry62. Max50/unique/
+  quantity1/no reservation; giá và public eligibility hiện tại, private row null,
+  locked read/remove, shared intent và checkout một bài. PASS9nhóm API invariants
+  với genuine contention, schema27, public projection9unit, shared105/web253/
+  RN164unit, API/web/RN types/lint, API/web build và Android/iOS/web export.
+  Browser cart + profile + RN buy-now + web checkout-only cuối PASS; kiểm đúng
+  Order/ledger/intent, không carrier commands. 320px/web130% đã xem ảnh và sửa
+  title hẹp, cover quá lớn, stale error; export không là native runtime PASS.
+  Web BuyNow refetch khi mở sửa quote409 do cache cũ. Contract annotation Order
+  chat sửa theo ADR0059 sau allowlist-wide test FAIL; rerun21obligations PASS,
+  không bỏ assertion. Profile16/account11 PASS; Order62/directory3 ở lượt76PASS
+  trước đó không đổi nghiệp vụ sau đó.
+  API cart harness dùng49IDs capacity synthetic có nhãn, admissions/public data
+  thật; storage/mail/funding QA fake, không tính là provider thật.
+- [Admin khóa/mở](../features/ACCOUNT_CONTROLS_REPORT.md), [ADR0059](../adr/0059-administrative-account-controls.md):
+  contract0.66/210operations/32controllers, migration0048/registry61, chỉ QA.
+  PASS76HTTP/Mongo(account11/directory3/Order62), schema27, Admin219unit,
+  API/Admin typecheck/lint/build/contract/routes. Browser real entry/confirm/
+  stale/refetch/history14rows/lostACK+Back/remount đúng intent và320px130% PASS.
+  Khôi phục trạng thái gốc; không clear violations/ledger/session. Order chat
+  LOCKED chỉ real owned OrderCreated room. Không quyền trade/terms/quote mới.
+- [ADR0058](../adr/0058-member-profile-and-email-change.md), [báo cáo](../features/MEMBER_PROFILE_REPORT.md),
+  contract0.65/206operations/32controllers: profile version/phone/avatar, private image pipeline/cleanup, OTP
+  đổi email với current password, giữ phiên hiện tại/revoke phiên khác. Web có
+  entry Hồ sơ & bảo mật; RN có Sửa hồ sơ và email. Không đổi snapshot/tiền/GHN.
+- PASS89 API E2E gồm profile16/auth/OTP/obligations; schema27, shared session98,
+  web253/RN164unit, typecheck/lint/build web/RN export, contract/routes. QA storage/mail fake, Sharp/Mongo thật.
+  Factory0047 sửa import cycle nhưng giữ checksum `fbabcbc789b2951b1d6aeed0e449463d6d1170e2eaafdb0ecc6b6cae2a165789`.
+  Browser web/RN-web PASS từ entry, ảnh/OTP/lost ACK/remount/password reentry/Back;
+  responsive320px và web chữ130% đã xem ảnh. Expo web export không là native PASS.
+  Metro launch bị automatic policy block (tool không nêu lý do); không vượt block.
+  Native runtime mới, live storage/mail và human UX NOT RUN; giữ gate riêng mở.
+- Fetch cuối: main/origin/main vẫn `be581aec`; remote CI NOT RUN cho chuỗi local.
+  Đã nối harness profile/Admin/cart vào Operations CI, chưa publish để chạy CI.
+- Mongo QA57017/DB `_test` đã dừng cuối phiên; các port app/QA đã kiểm không còn
+  listener. DB chính giữ dừng/không migrate/seed; không env/GHN/carrier change.
+  Browser harness tự bật/tắt API3009/media3010/web5194/RNweb8087 theo lượt, không
+  giữ dịch vụ app sau test. READINESS và các gate ảnh điện thoại/human AI giữ nguyên.
+
+## Rà tiền/quyền và sửa retry HTTP408/429 — 01/11/2026
+
+- Nhánh `codex/money-permission-review`, base lượt review `1aa958be`; source fix
+  `aeee8b81e89b0c1ab257fc13c76348a3d2721965`. [Hồ sơ review hiện tại](INDEPENDENT_REVIEW.md#gói-hiện-tại--01112026)
+  ghi toàn bộ chain từ main `be581aec`, đường đọc và phiếu cho owner/reviewer.
+  Đây là tự rà của tác giả, chưa là independent human review. Sau `d7341fe5`,
+  owner chấp thuận agent tự kiểm và bỏ reviewer thứ hai riêng gói hiện tại;
+  không miễn review chung cho gói tương lai hoặc tự cấp quyền publish/merge.
+- R10/P2 xác nhận offline: sau mất ACK503 rồi retry408/429, helper bỏ intent,
+  cho phép đổi key/version/quyết định trước receipt. Sửa predicate dùng chung giữ
+  original key/body/version; không đổi backend, ledger, API/schema hoặc UI.
+  Không chứng minh double-charge từ fake transport.
+- 10regression FAIL trước sửa/PASS sau sửa; session75/75, RN164/164 và web253/253,
+  cả2client typecheck PASS; oxlint2file sửa, docs:check và diff check PASS.
+  Không chạy lại Mongo/browser/native/model gate không đổi. APK/evidence cũ ở
+  sourcec5c30261 chưa chứa sửa mới, không nhận là native PASS ở aeee8b81.
+- Fetch: main/origin/main vẫn `be581aec`;0PR mở,6CI xanh chỉ ở base. Local chain
+  remote CI NOT RUN, chưa push/PR/merge/deploy. Mongo app/QA và các port app/ADB
+  đã kiểm đều dừng; không bật dịch vụ/đụng DB chính/GHN/env/migration.
+- Owner yêu cầu tiếp tục giữ local, làm thêm gói hoàn chỉnh rồi mới publish một
+  đợt để giảm số vòng CI; chưa giao quyền push/PR/merge. Lượt đối chiếu source
+  `295e2404` xác nhận còn thiếu profile edit, Admin lock/unlock, cart, simulated
+  withdrawal, full dispute/return và ordinary ViaPoint; Flutter vẫn scaffold.
+  Các gói mới chưa bắt đầu. Giữ commit/phạm vi riêng cho từng gói, CI đúng head
+  vẫn cần trước merge khi được giao tích hợp. READINESS, human UX/AI và native
+  gate giữ nguyên; không chờ reviewer thứ hai riêng chuỗi đã được miễn ở trên.
+
+## Kiểm native từ build sạch — 01/11/2026
+
+- Nhánh `codex/native-build-verification`, source sạch `c5c30261`, subject
+  `docs(qa): record fresh Android build and verified purchase journey`.
+  [Ma trận/evidence](../ui/MEMBER_NATIVE_DEMO_2026_11_01.md): build debug x86_64
+  PASS7m57s, installed APK hash khớp. Không source/dependency/native-config change.
+- Android17QA: PASS scoped Search→detail→login return→quote/create→Back/reopen cùng
+  đơn→pay→đúng Preparing; logout Buyer→Seller→accept đơn thương lượng; font130%
+  sau background/resume/cuộn.1Order BuyNow/1payment journal,155.000đ giữ cho đơn.
+- **Điều chỉnh finding Back cũ**: Back gesture thật đóng modal/checkout đúng;
+  chỉ toolbar qua công cụ đưa launcher, chưa đủ căn cứ quy lỗi app. ADB đổi font
+  foreground có thể cắt dòng; sau resume đo lại đúng. Giữ diagnostic/evidence.
+- Native lost-ACK injection/copy selection/TalkBack audio/ARM/iOS/release/human
+  NOT RUN. READINESS giữ nguyên, không nhận scoped PASS thành full native PASS.
+  QA dùng run mới, fake storage/funding, AI tắt; không DB chính/GHN/carrier.
+  Kết thúc logout QA, font1.0; app/Metro/API/emulator/ADB/Gradle/Mongo QA đã dừng.
+  Main/origin/main vẫn `be581aec`; chưa push/PR/merge/deploy. Giữ journal ignored,
+  lần QA sau dùng run mới vì tmpfs mất khi stop.
+
+## AI offline trên corpus đã có — 01/11/2026
+
+- Nhánh `codex/listing-ai-offline-verification`, base `1574d986`, subject
+  `test(ai): verify corpus offline and reject incomplete quality evidence`.
+- Đọc lại README/incoming HANDOFF và [báo cáo corpus](../features/LISTING_AI_CORPUS_2026_10_29.md);
+  dùng đúng bộ Codex-finalized, không tạo lại. Technical PASS/acceptance PARTIAL:
+  25raw/24active/1quarantine,40quan sát,11/15hai nguồn,0real-camera,0human reviewed.
+- `eval:autofill --check-only` chỉ đọc/kiểm ảnh và đáp án,0provider; chặn book/hash
+  trùng, ISBN/metadata/review flag sai. qualityGate không nhận failure hoặc thiếu
+  điểm thành evidence. PASS52data/CLI và30eval unit, API typecheck/lint eval/docs.
+  Workflow offline dùng fixture; remote CI NOT RUN. Không đổi model/prompt/env/flags,
+  không import/migration/DB chính/GHN; không gọi AI trả phí hoặc12holdout.
+- Owner xác nhận chưa có ảnh điện thoại/người duyệt: giữ gate OPEN, không nhận là
+  AI chính xác hơn từ kiểm offline. Giá offline0call, độ chính xác NOT_SCORED.
+  [RN](../ui/MEMBER_NATIVE_DEMO_2026_11_01.md) có scoped native PASS mới ở mục trên; human review
+  tiền/quyền của cả chuỗi còn OPEN. Chưa push/PR/merge/deploy, READINESS không đổi.
+
+## Hành trình mua Member RN — 01/11/2026
+
+- Nhánh `codex/member-native-demo`, base `65b40161`; subject
+  `fix(rn): preserve checkout intent and guide the next order step`.
+- [Báo cáo/source/evidence](../ui/MEMBER_NATIVE_DEMO_2026_11_01.md): giữ intent
+  create/pay/cancel khi mất ACK và navigation, GET lỗi sau ACK không tạo đơn mới,
+  late callback không điều hướng màn đã đóng; xóa bộ nhớ khi đổi identity.
+  ACK payment mở đúng Order; Preparing có hướng dẫn vai trò và Member web.
+- Bỏ Search ViaPoint giả, camera Home sai hành vi, lời bảo đảm/ảnh/góc chụp và
+  mô tả tình trạng tự bịa. Giữ brand/motion. Own Expo entry sửa dev resolve pnpm.
+- PASS65session/164RN/253web unit; RN lint/typecheck/export all, web lint/typecheck/
+  build; RN buy-now browser thật QA+fake storage/funding (create/pay/cancel/lost ACK/
+  remount/late ACK/GET error/single hold); web checkout-only và order-chat regression.
+  RN browser được nối Operations CI; remote CI NOT RUN, chưa push/PR/merge/deploy.
+- Native lượt đầu PARTIAL: đã được kiểm lại bằng build sạch ở mục trên;
+  scoped PASS không đóng nghiệm thu tổng thể.
+  human/TalkBack audio/ARM/iOS/release NOT RUN; READINESS giữ nguyên. Không GHN,
+  DB chính, migration hoặc env. Gói AI tiếp tục dùng incoming đã có, không tạo lại;
+  owner xác nhận chưa có ảnh điện thoại/người duyệt, giữ gate riêng mở.
+
+## Bảo vệ phân xử Exchange — 01/11/2026
+
+- Owner duyệt ba gói tiếp theo sau khảo sát toàn dự án; thực hiện gói an toàn
+  trước. Nhánh `codex/exchange-resolution-safety`, base main `be581aec`, subject
+  `fix(exchange): hold disputed money and books until safe adjudication`.
+- [ADR0057](../adr/0057-exchange-resolution-safety.md), contract0.64/198operations/
+  31controllers: chặn quyết định phân xử mới thiếu custody/allocation/effective
+  decision và appeal. Giữ tiền/sách; không thêm migration hoặc sửa bút toán cũ.
+  Participant có STAFF/ADMIN bị chặn trước replay; queue loại self. Receipt cũ
+  vẫn đọc lại cùng key/body với current role/session, không lặp tác động tiền.
+- Admin queue chỉ đọc, có thông tin đang giữ và error/retry/empty đúng phạm vi;
+  sửa overflow320px/chữ130% trong chi tiết hai bên. Không mở lại nút tài chính
+  cho tới gói quyết định hiệu lực được review. Mutual cancellation trước gửi
+  và inspection bình thường giữ protocol cũ; full dispute vẫn chưa nghiệm thu.
+- PASS: Exchange HTTP/Mongo45/45 trên replica QA riêng (storage fake), gồm
+  self cả2participant/2role, cả2decision khi đã gửi/đã nhận và nguồn600.000đ,
+  không đổi ledger/listing/receipt/audit/notification, legacy replay/body conflict/
+  revoke/lost role và contention với worker. Admin219unit/lint/typecheck/build,
+  API typecheck/build, contract/generated/routes, docs/diff. API lint không lỗi,
+  còn warning cũ ngoài thay đổi. Không chạy unit gọi GHN.
+- Browser queue PASS với login/API QA thật và queue HTTP fixture có nhãn:
+  không POST quyết định, loading/error/retry/empty,1440/390/320+chữ130%; đã xem
+  ảnh trong `apps/admin-web/test-results/exchange-resolution-safety/` (ignored).
+  Lệnh `pnpm --filter @used-books/admin-web test:exchange-safety:browser` được
+  nối vào Operations CI; remote CI NOT RUN cho gói này.
+- Không DB chính/env/GHN/carrier/Driver, không push/PR/merge/deploy. READINESS
+  giữ nguyên; human review tiền/quyền theo TEAMWORK còn OPEN. Các gói RN và
+  nghiệm thu AI tiếp theo giữ gate người thật/provider riêng.
+
+## Đồng bộ main và tích hợp UI qua PR83 — 31/10/2026
+
+- Owner giao fetch/pull main, xử lý conflict, push nhánh và squash merge sau CI.
+  Main mới0a2b3202 (PR81/82),24commit sau baseab80b43; pull main ff-only rồi merge
+  vào `codex/restore-profile-overview`. Conflict duy nhất SESSION_STATE được nối
+  giữ cả phần việc của nhóm và UI; không có conflict source.
+- CI main mới có3job đỏ trước tích hợp: RN lint (memo dependency/màu literal),
+  User Web browser selector sau đổi layout chat, API E2E5ca trao đổi do test
+  migration0039 để lại validator cũ. Sửa dependency/tái dùng token RN; test migration
+  khôi phục validator hiện tại trong finally, giữ nguyên checksums/migration cũ.
+- Browser chat còn phát hiện retry pay/cancel bị ẩn khi polling thấy trạng thái
+  đã đổi sau mất ACK. Khôi phục retry cùng intent/version/key trong OrderDetails;
+  giữ thêm retry quyết định Seller cùng intent khi trạng thái đã sang Preparing.
+  không đổi API, quyền, ledger, carrier/GHN hoặc worker. Browser fixture PASS gồm
+  snapshot riêng, buyer/seller, mất ACK, tabs/draft,403/503 và320/390px chữ130%.
+- PASS local: install frozen, contract/routes0.63/198operations/31controllers;
+  web253unit/lint/typecheck/build, RN164unit/lint/typecheck, exchange E2E41/41.
+  Account browser PASS trên QA riêng: overview/work routes, menu mới, guide,
+  LOCKED và4width; ca đơn positive/error là fixture có nhãn. Wallet browser PASS
+  cả signed QueryDR, mất ACK/replay, expiry, balance/history/paging và mobile.
+  API unit286/286 khi chạy tuần tự; parallel timeout ca Windows shutdown10s,
+  ca đó riêng chạy lại PASS. Work-inbox browser PASS: web/RNweb/Staff/Admin,
+  paging quá50, exact links, permission và lost ACK; không native/human acceptance.
+  Audit diff không có secret/private env/ghi chú máy cá nhân, không sửa
+  carrier/GHN/Driver hoặc migration đã áp dụng.
+- Vòng CI tiếp theo phát hiện thêm seller-order test dùng nhãn/layout cũ. Đã
+  cập nhật seller-order/buy-now/exchange browser theo cấu trúc mới, giữ assertion
+  giá/snapshot/ledger/key/body/quyền; kiểm cả tab public và owner view với token
+  memory-only. Cả3suite PASS local trên API/Mongo QA thật, carrier/storage fake.
+  ExchangeMine còn lỗi focus Arrow/Home/End, touch target và CTA overflow390px:
+  sửa focus, min-height48px, wrap CTA và role alert; kiểm4width/chữ lớn/retry.
+  Tách region chi tiết trao đổi để ca403 kiểm đúng dữ liệu/nút riêng thay vì card
+  sách public cùng tên bên ngoài. Đã xem ảnh desktop/mobile; giữ style incumbent.
+- [PR83](https://github.com/huangg49/used-book-marketplace/pull/83) đã mở;
+  kết quả CI/merge cuối theo đúng head trong PR, không lấy lượt cũ thay lượt mới.
+  Chỉ merge khi mọi job áp dụng đạt. Không lấy AI review thay human review,
+  không đóng gate READINESS. DB chính và dịch vụ app vẫn dừng, chỉ bật QA57017;
+  không migrate/reset/seed DB chính khi đồng bộ source.
+
+## Khôi phục tổng quan Profile web — 30/10/2026
+
+- Tạm dừng theo yêu cầu owner để tắt máy: web5174, API3000 và Mongo local đã
+  dừng; giữ volume/dữ liệu. Code UI đã commit local trên nhánh bên dưới, chưa
+  push/PR/merge. Lượt khởi chạy UI đã sao lưu DB trước khi áp dụng7migration
+  thiếu/cập nhật role bằng env hiện có; preflight sau đó đủ56migration, không
+  lệch checksum; không reset/seed, số user/ledger giữ nguyên. Khi tiếp tục, kiểm
+  git và trạng thái dịch vụ trước khởi chạy lại; READINESS không đổi.
+- Owner yêu cầu trả lại trang tổng quan cũ. Nhánh `codex/restore-profile-overview`,
+  baseab80b43 sau fetch/pull PR80 của nhóm; giữ các thay đổi trao đổi/thông báo/
+  form đăng sách mới. Commit subject `fix(web): restore member profile overview`.
+- `/account` khôi phục bố cục từaed674f: chào mừng, thống kê, hoạt động, dòng tiền,
+  đấu giá, kệ sách và đơn trực tiếp, dùng component hiện tại của nhóm. Menu header/
+  sidebar có Tổng quan; hub việc đang làm được giữ ở `/account/work`, nhãn Việc
+  của tôi. Guide/back link và harness theo đúng entry mới; RN giữ nguyên.
+- Card đơn cũ chứa tên/giá/tiến trình mẫu nên thay nội dung bằng listOrders read
+  có owner query key, vai trò mua/bán, empty/error/retry và link đúng Order ID.
+  Không phục hồi đơn/vận chuyển giả, không sửa GHN/worker/tiền/API. Lỗi dữ liệu
+  ví/kệ không hiển thị thành số0; giữ điều kiện tài khoản cho CTA đăng sách/kệ.
+- PASS web253unit/typecheck/lint/build; account browser tại1440/768/390/320,
+  đăng nhập/keyboard/menu/guide/LOCKED work entry. Session/wallet/empty orders
+  dùng API/Mongo QA thật; ca order positive/error/retry là response fixture có
+  nhãn trong harness. Browser work-inbox web/RNweb/Staff/Admin PASS với paging,
+  exact links, permission và lost ACK. Không native/human acceptance.
+- Đã xem ảnh desktop/mobile trong `.tmp/journey-account-evidence/`; không
+  overflow. Workflow Pro Max/Taste/Impeccable giữ thiết kế cũ; detector1advisory
+  animate-bounce từPR80 và4warning Inter trên nhãn biểu đồ cũ. Giữ phạm vi khôi
+  phục và motion theo owner, không thêm font/theme/palette.
+- QA riêng được dọn/dừng khi kết thúc; DB chính không migrate/import/reset/seed.
+  Chỉ commit local cho gói này, chưa push/PR/merge; READINESS giữ nguyên.
+- Follow-up căn toàn bộ header Tổng quan: dùng DashboardSectionHeading cho5card
+  chính (hoạt động/dòng tiền/đấu giá/kệ/đơn), thống nhất cỡ chữ và gap4px;
+  bỏ margin kế thừa ở chào mừng, sổ cái và tiêu đề card con. Actions/filter giữ
+  riêng, xuống dòng trên mobile. Browser fixture cô lập (chặn API, không ghi DB)
+  tại1440/1024/768/390/320: cùng lề, icon căn giữa, không overflow; kiểm thêm lỗi
+  dòng tiền, đã xem ảnh desktop/mobile. Web253unit/lint/typecheck/build đạt;
+  detector còn4warning Inter chart và1advisory bounce có sẵn, giữ font/motion
+  ngoài phạm vi. Theo phản hồi mới nhất của owner, thay khung icon kéo giãn bằng
+  hình vuông cố định56px desktop/48px mobile, SVG24px, viền nhẹ/nền kem/mực wine;
+  mô tả dài không kéo cao icon. Browser fixture cả5width kiểm hình vuông, căn đầu
+  cụm chữ dài/căn giữa cụm ngắn, không overflow; đã xem ảnh và lint/detector
+  component đạt. READINESS và quyền push/merge không đổi.
+- Banner chào mừng: owner thấy bản tối giản mất phong cách nên khôi phục bố cục,
+  nền bản đồ, tiêu đề/lời chào và hàng badge trước đó; rút nhãn thành Hội viên
+  Lật lại, Đang hoạt động và Ví Lật-Xu. Mô tả còn1câu: Quản lý sách, giao dịch
+  và các phiên đấu giá của bạn. Giữ cảnh báo/CTA LOCKED/RESTRICTED và label
+  thông báo/số chưa đọc. Browser fixture chặn API tại5width kiểm không overflow,
+  tên dài,120unread, keyboard và2trạng thái hạn chế; đã xem desktop/mobile.
+  Typecheck/lint component đạt; detector chỉ advisory motion cũ. Account harness
+  dùng lại heading Tổng quan của bạn; không chạy lại full API/Mongo account suite
+  cho gói copy/layout này.
+- Card Đấu giá của bạn: mô tả1câu,1CTA Khám phá sàn và3mục số liệu ngăn bằng
+  đường kẻ nhẹ; bỏ nút lịch sử trùng entry Tất cả/Đã tham gia và các khung con.
+  Giữ query/count và deep link active/payment/all. Browser fixture chặn API tại
+  5width kiểm empty/count2-1-3/loading/error, link và keyboard, không overflow;
+  đã xem desktop/mobile. Lint/build và detector0finding đạt; không đổi API/DB.
+- Owner bỏ2tab Việc của tôi/Hồ sơ của tôi khỏi accountNavigation dùng chung
+  header desktop/mobile và sidebar; giữ route/trang hiện có. Browser fixture
+  chặn API kiểm menu desktop/sidebar mobile:2entry vắng,7mục chung và thông báo
+  sidebar giữ nguyên. Lint/typecheck đạt; account/wallet harness theo menu mới,
+  chưa chạy lại2suite API/Mongo browser này. Không đổi RN hoặc READINESS.
+- Owner yêu cầu bỏ câu chú thích bìa hero trên Home thường và dòng link hướng dẫn
+  đen phía trên4shortcut; chỉ giữ nhãn riêng trong catalog preview. Browser
+  Home1440/390 kiểm ô tìm kiếm render, cả2câu vắng và4link shortcut còn nguyên;
+  đã xem ảnh band desktop, lint/detector đạt. Không đổi dữ liệu/ảnh/tìm kiếm.
 ## Hoàn thiện Tính năng Tiêu chí mong muốn trao đổi & Cơ chế Ghép đôi Thông minh (Exchange Preferences & Smart Matchmaking) — 30/10/2026
 
 - Nhánh `feature/exchange-policy-and-transit-worker`.

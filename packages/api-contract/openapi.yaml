@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.63.0
+  version: 0.70.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -418,6 +418,629 @@ paths:
       description: " Verified LOCKED users may authenticate/rotate/read profile for existing obligations;
         protected routes remain deny-by-default for LOCKED. Status and roles are rechecked from DB."
       x-locked-access: profile
+  /me/profile:
+    get:
+      operationId: getMemberProfile
+      tags:
+        - Member profile
+      description: MEMBER owner only, including LOCKED/RESTRICTED. Current private contact and profile version. Does
+        not expose other members or change transaction snapshots.
+      security:
+        - bearerAuth: []
+      x-locked-access: profile
+      parameters: []
+      responses:
+        "200":
+          description: Current result. Signed reads are short lived; command receipts contain no contact data or
+            verification secrets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberProfile"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+    post:
+      operationId: updateMemberProfile
+      tags:
+        - Member profile
+      description: Owner only. Pins expectedVersion/key/body; no role/status/reputation fields accepted. Avatar must
+        be this owner's Ready asset. Existing snapshots are immutable.
+      security:
+        - bearerAuth: []
+      x-locked-access: profile
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: &a1
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Current result. Signed reads are short lived; command receipts contain no contact data or
+            verification secrets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMemberProfile"
+  /me/profile/avatar-uploads:
+    post:
+      operationId: createProfileAvatar
+      tags:
+        - Member profile
+      description: Owner only. At most three unexpired Pending/Ready uploads; max 2MB per JPEG/PNG/WebP. No public
+        bucket or client storage credential. Upload ID is the receipt entityId.
+      security:
+        - bearerAuth: []
+      x-locked-access: profile
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: Current result. Signed reads are short lived; command receipts contain no contact data or
+            verification secrets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProfileAvatar"
+  /me/profile/avatar-uploads/{avatarId}/content:
+    put:
+      operationId: uploadProfileAvatar
+      tags:
+        - Member profile
+      description: Owner only before and after storage I/O. Exact immutable byte length/hash and actual format; EXIF
+        stripped and resized to 256px. No profile pointer changes until updateMemberProfile.
+      security:
+        - bearerAuth: []
+      x-locked-access: profile
+      parameters:
+        - name: avatarId
+          in: path
+          required: true
+          schema: *a1
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: Current result. Signed reads are short lived; command receipts contain no contact data or
+            verification secrets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema:
+              type: string
+              format: binary
+          image/png:
+            schema:
+              type: string
+              format: binary
+          image/webp:
+            schema:
+              type: string
+              format: binary
+  /me/profile/avatar-uploads/{avatarId}/discard:
+    post:
+      operationId: discardProfileAvatar
+      tags: [Member profile]
+      description: Owner only. Retires an unattached Pending/Ready upload for durable worker cleanup. An avatar currently attached to the profile cannot be discarded.
+      security: [{bearerAuth: []}]
+      x-locked-access: profile
+      parameters:
+        - {name: avatarId, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: Idempotency-Key, in: header, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/VersionCommand'}
+      responses:
+        '200':
+          description: Retired; no attached image is removed.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AccountCommandReceipt'}
+        '400': {$ref: '#/components/responses/Error'}
+        '401': {$ref: '#/components/responses/Error'}
+        '403': {$ref: '#/components/responses/Error'}
+        '404': {$ref: '#/components/responses/Error'}
+        '409': {$ref: '#/components/responses/Error'}
+  /me/profile/avatar-uploads/{avatarId}/read:
+    get:
+      operationId: readProfileAvatar
+      tags:
+        - Member profile
+      description: Owner only for Ready/Attached assets; current authorization is checked again after signing. No
+        public or third-party read by guessing the UUID.
+      security:
+        - bearerAuth: []
+      x-locked-access: profile
+      parameters:
+        - name: avatarId
+          in: path
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: Current result. Signed reads are short lived; command receipts contain no contact data or
+            verification secrets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaRead"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /me/profile/email-changes:
+    post:
+      operationId: requestMemberEmailChange
+      tags:
+        - Member profile
+      description: Owner only with current password. New email is normalized; generic acknowledgement avoids email
+        enumeration. Six-digit keyed OTP expires after 5 minutes, max 5 attempts and 60s resend cooldown. No
+        login email changes here. Password is checked before replay and excluded from receipt/audit payload.
+      security:
+        - bearerAuth: []
+      x-locked-access: profile
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: Current result. Signed reads are short lived; command receipts contain no contact data or
+            verification secrets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestMemberEmailChange"
+  /me/profile/email-changes/confirm:
+    post:
+      operationId: confirmMemberEmailChange
+      tags:
+        - Member profile
+      description: Owner/challenge bound. Rechecks old email and password fingerprint; verified unique email changes
+        atomically. Preserves current session, revokes other sessions, invalidates old reset links/OTPs and
+        notifies the old address. Wrong attempts persist even when rejected; same accepted code/key may replay.
+      security:
+        - bearerAuth: []
+      x-locked-access: profile
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: Current result. Signed reads are short lived; command receipts contain no contact data or
+            verification secrets.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmMemberEmailChange"
+  /operations/users/{userId}:
+    get:
+      operationId: getOperationsAccount
+      tags:
+        - Operations users
+      description: ACTIVE ADMIN only. Current version and administrative lock; credentials, sessions and money are
+        never returned.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: &a1
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Current authorized result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationsAccount"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /operations/users/{userId}/history:
+    get:
+      operationId: listAccountControlHistory
+      tags:
+        - Operations users
+      description: ACTIVE ADMIN only. Cursor-scoped append-only lock/unlock audit history; no credentials or
+        profile/contact snapshots.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: *a1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - in: query
+          name: cursor
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 2048
+      responses:
+        "200":
+          description: Current authorized result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountControlEventPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /operations/users/{userId}/lock:
+    post:
+      operationId: lockUserAccount
+      tags:
+        - Operations users
+      description: ACTIVE ADMIN only; cannot lock self. ACTIVE/RESTRICTED target only. Records reason, scope,
+        release condition and related reference; preserves prior status, sessions, roles, money and existing
+        obligations. Current authorization precedes replay.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: *a1
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LockUserAccount"
+      responses:
+        "200":
+          description: Current authorized result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /operations/users/{userId}/unlock:
+    post:
+      operationId: unlockUserAccount
+      tags:
+        - Operations users
+      description: ACTIVE ADMIN only; cannot unlock self. Restores recorded pre-lock ACTIVE/RESTRICTED status;
+        cannot override it. Legacy LOCKED without metadata requires explicit restoreStatus, audited as an Admin
+        decision. Does not clear violation records, freezes or trade obligations. Current authority before
+        replay.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: *a1
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnlockUserAccount"
+      responses:
+        "200":
+          description: Current authorized result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /me/cart:
+    get:
+      operationId: getMemberCart
+      tags:
+        - Member cart
+      description: Current MEMBER owner only; LOCKED may inspect and remove own rows. Full bounded max50 list.
+        Unavailable/private/deleted books yield null listing; never leak historical private content. Prices and
+        eligibility are current, priceAtAdd is informational; no price guarantee.
+      security:
+        - bearerAuth: []
+      x-locked-access: existing-obligations
+      responses:
+        "200":
+          description: Current result; adding does not reserve books and checkout remains single-listing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MemberCart"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /me/cart/add:
+    post:
+      operationId: addCartItem
+      tags:
+        - Member cart
+      description: ACTIVE MEMBER only, published eligible Marketplace Sale/Both Available and not own listing.
+        Max50, unique listing IDs, quantity1. Expected cart/listing versions and serialized user/listing locks.
+        No reservation, commitment, quote, order or money change; duplicate add is no-op receipt.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: &a1
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCartItem"
+      responses:
+        "200":
+          description: Current result; adding does not reserve books and checkout remains single-listing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /me/cart/remove:
+    post:
+      operationId: removeCartItem
+      tags:
+        - Member cart
+      description: Current MEMBER owner only, including LOCKED. Expected cart version; removing absent row is no-op
+        receipt. Never releases any reservation or cancels an Order.
+      security:
+        - bearerAuth: []
+      x-locked-access: existing-obligations
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RemoveCartItem"
+      responses:
+        "200":
+          description: Current result; adding does not reserve books and checkout remains single-listing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountCommandReceipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
   /catalog/taxonomy:
     get:
       operationId: getCatalogTaxonomy
@@ -1316,6 +1939,8 @@ paths:
   /me/purchase-conversations:
     get:
       operationId: listMyPurchaseConversations
+      x-locked-access: existing-obligations
+      description: Current MEMBER participants only. LOCKED may read only OrderCreated conversations linked to a real owned Order. New negotiation and commands remain blocked.
       tags: [Purchase conversations]
       x-implementation-status: implemented
       security: [{ bearerAuth: [] }]
@@ -1400,6 +2025,8 @@ paths:
   /me/purchase-conversations/{conversationId}:
     get:
       operationId: getPurchaseConversation
+      x-locked-access: existing-obligations
+      description: Current MEMBER participants only. LOCKED may read only OrderCreated conversations linked to a real owned Order. New negotiation and commands remain blocked.
       tags: [Purchase conversations]
       summary: Read a participant-only conversation and its current agreement sheet
       parameters:
@@ -1469,6 +2096,8 @@ paths:
   /me/purchase-conversations/{conversationId}/events:
     get:
       operationId: getConversationEvents
+      x-locked-access: existing-obligations
+      description: Current MEMBER participants only. LOCKED may read only OrderCreated conversations linked to a real owned Order. New negotiation and commands remain blocked.
       tags: [Purchase conversations]
       summary: Read immutable structured agreement events, separate from member messages
       parameters:
@@ -1488,6 +2117,8 @@ paths:
   /me/purchase-conversations/{conversationId}/messages:
     get:
       operationId: listPurchaseMessages
+      x-locked-access: existing-obligations
+      description: Current MEMBER participants only. LOCKED may read only OrderCreated conversations linked to a real owned Order. New negotiation and commands remain blocked.
       tags: [Purchase conversations]
       x-implementation-status: implemented
       security: [{ bearerAuth: [] }]
@@ -4136,15 +4767,16 @@ paths:
   /orders/{orderId}/conversation:
     post:
       operationId: openOrderConversation
+      x-locked-access: existing-obligations
       tags: [Orders, Purchase conversations]
       summary: Open the exact Order's participant conversation
       x-implementation-status: implemented
-      description: ACTIVE MEMBER Buyer or Seller only. Reuses the conversation already linked to this
+      description: Current MEMBER Buyer or Seller, including LOCKED/RESTRICTED for this existing Order only. Reuses the conversation already linked to this
         Order, preserving its messages and terms. If none exists, creates a separate OrderCreated
         conversation from the Order's frozen participants and item. Does not change the Order,
         listing, quote, prices, commitment or ledger. No financial expectedVersion is required;
         opening a conversation is serialized by the Order lock. Same key and empty body replay
-        the receipt after current participant, role, account and session checks. No LOCKED access.
+        the receipt after current participant, role, account and session checks. Does not permit new negotiation, terms or quote commands.
       security: [{ bearerAuth: [] }]
       parameters:
         - in: path
@@ -9519,7 +10151,7 @@ paths:
       tags:
         - Exchanges
       summary: listExchangeResolutions
-      description: ACTIVE STAFF/ADMIN. Returns all exchanges currently in ResolutionPending status for dispute adjudication.
+      description: ACTIVE independent STAFF/ADMIN. Returns ResolutionPending exchanges excluding the caller's own transactions for read-only triage. New financial adjudication is unavailable until custody, allocations and effective-decision/appeal safeguards are implemented; funds and books remain held.
       security:
         - bearerAuth: []
       responses:
@@ -9543,7 +10175,13 @@ paths:
       tags:
         - Exchanges
       summary: resolveExchangeDispute
-      description: ACTIVE STAFF/ADMIN. Resolves an exchange in ResolutionPending with decision RefundBoth or CompleteExchange.
+      description: >-
+        ACTIVE independent STAFF/ADMIN only. New RefundBoth and CompleteExchange decisions are
+        currently rejected with 409 InvalidState: the legacy command cannot establish custody,
+        allocations, authority limits or an effective decision after appeal. No money, listing,
+        exchange, audit or notification mutation is committed on rejection. Historical receipts
+        may still be replayed with the original key and body after current session, role and
+        participant-independence checks; replay does not repeat their financial effects.
       security:
         - bearerAuth: []
       parameters:
@@ -10059,6 +10697,525 @@ paths:
         "422":
           $ref: "#/components/responses/Error"
 
+  /me/support-cases:
+    get:
+      operationId: listMySupportCases
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: Own support cases only. Creation requires ACTIVE MEMBER; read and
+        reply on existing owned cases permit locked members. No escrow, refund or
+        transaction-state side effects.
+      parameters:
+        - &a4
+          in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 2000
+        - &a5
+          in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - &a6
+          in: query
+          name: state
+          required: false
+          schema:
+            $ref: "#/components/schemas/SupportState"
+        - &a7
+          in: query
+          name: kind
+          required: false
+          schema:
+            $ref: "#/components/schemas/SupportKind"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCasePage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+      x-locked-access: existing-obligations
+    post:
+      operationId: createSupportCase
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: Own support cases only. Creation requires ACTIVE MEMBER; read and
+        reply on existing owned cases permit locked members. No escrow, refund or
+        transaction-state side effects.
+      parameters:
+        - &a3
+          in: header
+          name: Idempotency-Key
+          required: true
+          schema: &a1
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSupportCase"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCaseReceipt"
+          headers:
+            Idempotency-Replayed:
+              description: Exact intent replay.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /me/support-cases/{caseId}:
+    get:
+      operationId: getMySupportCase
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: Own support cases only. Creation requires ACTIVE MEMBER; read and
+        reply on existing owned cases permit locked members. No escrow, refund or
+        transaction-state side effects.
+      parameters:
+        - &a2
+          in: path
+          name: caseId
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCaseDetail"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+      x-locked-access: existing-obligations
+  /me/support-cases/{caseId}/messages:
+    post:
+      operationId: replyToSupportCase
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: Own support cases only. Creation requires ACTIVE MEMBER; read and
+        reply on existing owned cases permit locked members. No escrow, refund or
+        transaction-state side effects.
+      parameters:
+        - *a2
+        - *a3
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportMessageCommand"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCaseReceipt"
+          headers:
+            Idempotency-Replayed:
+              description: Exact intent replay.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+      x-locked-access: existing-obligations
+  /operations/support-cases:
+    get:
+      operationId: listOperationsSupportCases
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: ACTIVE ADMIN, independent of reporter and linked participants.
+        Current authorization before replay. Case responses do not move money or
+        adjudicate a transaction.
+      parameters:
+        - *a4
+        - *a5
+        - *a6
+        - *a7
+        - in: query
+          name: assignedToMe
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCasePage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /operations/support-cases/{caseId}:
+    get:
+      operationId: getOperationsSupportCase
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: ACTIVE ADMIN, independent of reporter and linked participants.
+        Current authorization before replay. Case responses do not move money or
+        adjudicate a transaction.
+      parameters:
+        - *a2
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCaseDetail"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /operations/support-cases/{caseId}/messages:
+    post:
+      operationId: messageSupportCase
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: ACTIVE ADMIN, independent of reporter and linked participants.
+        Current authorization before replay. Case responses do not move money or
+        adjudicate a transaction.
+      parameters:
+        - *a2
+        - *a3
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportMessageCommand"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCaseReceipt"
+          headers:
+            Idempotency-Replayed:
+              description: Exact intent replay.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /operations/support-cases/{caseId}/actions:
+    post:
+      operationId: actOnSupportCase
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: ACTIVE ADMIN, independent of reporter and linked participants.
+        Current authorization before replay. Case responses do not move money or
+        adjudicate a transaction.
+      parameters:
+        - *a2
+        - *a3
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportActionCommand"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCaseReceipt"
+          headers:
+            Idempotency-Replayed:
+              description: Exact intent replay.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /me/transaction-reviews/{reviewId}/target:
+    get:
+      operationId: resolveMyReviewNotification
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: Own support cases only. Creation requires ACTIVE MEMBER; read and
+        reply on existing owned cases permit locked members. No escrow, refund or
+        transaction-state side effects.
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewNotificationTarget"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+
+  /me/support-targets:
+    get:
+      operationId: listMySupportTargets
+      tags:
+        - Support
+      description: ACTIVE MEMBER. Readable labels only; no address, email or payment
+        data. Options are current owned transactions; resolve rechecks the same
+        target access as support creation. No business mutation.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: type
+          required: true
+          schema:
+            type: string
+            enum:
+              - DirectOrder
+              - Exchange
+              - PointOrder
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+            maxLength: 120
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+            maxLength: 2000
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 10
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportTargetOptionsPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+  /me/support-targets/{type}/{id}:
+    get:
+      operationId: getMySupportTarget
+      tags:
+        - Support
+      description: ACTIVE MEMBER. Readable labels only; no address, email or payment
+        data. Options are current owned transactions; resolve rechecks the same
+        target access as support creation. No business mutation.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: type
+          required: true
+          schema:
+            type: string
+            enum:
+              - DirectOrder
+              - Exchange
+              - PointOrder
+              - Listing
+              - Auction
+              - Review
+              - Member
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportTargetOption"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -10278,6 +11435,386 @@ components:
         refreshToken:
           type: string
           pattern: ^[A-Za-z0-9_-]{43}$
+    AccountCommandReceipt:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - entityType
+        - entityId
+        - version
+        - state
+        - serverTime
+      properties:
+        id: &a1
+          type: string
+          format: uuid
+        entityType:
+          type: string
+          enum:
+            - MemberProfile
+            - ProfileAvatar
+            - MemberEmailChange
+            - UserAccount
+            - Cart
+        entityId: *a1
+        version: &a2
+          type: integer
+          minimum: 1
+        state:
+          type: string
+        serverTime: &a3
+          type: string
+          format: date-time
+    MemberProfile:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - version
+        - displayName
+        - email
+        - contactPhone
+        - avatarId
+        - pendingEmailChange
+      properties:
+        id: *a1
+        version: *a2
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email
+        contactPhone:
+          anyOf:
+            - type: string
+            - type: "null"
+        avatarId:
+          anyOf:
+            - *a1
+            - type: "null"
+        pendingEmailChange:
+          anyOf:
+            - type: object
+              additionalProperties: false
+              required:
+                - id
+                - email
+                - expiresAt
+                - resendAt
+              properties:
+                id: *a1
+                email:
+                  type: string
+                  format: email
+                expiresAt: *a3
+                resendAt: *a3
+            - type: "null"
+    UpdateMemberProfile:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - displayName
+        - contactPhone
+        - avatarId
+      properties:
+        expectedVersion: *a2
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 80
+        contactPhone:
+          anyOf:
+            - type: string
+              pattern: ^\+?(?=(?:[^0-9]*[0-9]){8,15}[^0-9]*$)[0-9 ()-]{8,20}$
+            - type: "null"
+        avatarId:
+          anyOf:
+            - *a1
+            - type: "null"
+    CreateProfileAvatar:
+      type: object
+      additionalProperties: false
+      required:
+        - mimeType
+        - byteSize
+        - sha256
+      properties:
+        mimeType:
+          type: string
+          enum:
+            - image/jpeg
+            - image/png
+            - image/webp
+        byteSize:
+          type: integer
+          minimum: 1
+          maximum: 2000000
+        sha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+    RequestMemberEmailChange:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - email
+        - password
+      properties:
+        expectedVersion: *a2
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 10
+          maxLength: 128
+    ConfirmMemberEmailChange:
+      type: object
+      additionalProperties: false
+      required:
+        - changeId
+        - code
+      properties:
+        changeId: *a1
+        code:
+          type: string
+          pattern: ^[0-9]{6}$
+    OperationsAccount:
+      type: object
+      additionalProperties: false
+      required:
+        - user
+        - version
+        - lock
+      properties:
+        user:
+          $ref: "#/components/schemas/OperationsUser"
+        version: &a1
+          type: integer
+          minimum: 1
+        lock:
+          anyOf:
+            - type: object
+              additionalProperties: false
+              required:
+                - scope
+                - restoreStatus
+                - reason
+                - unlockCondition
+                - relatedReference
+                - actorId
+                - createdAt
+              properties:
+                scope:
+                  type: string
+                  enum:
+                    - NewTransactions
+                restoreStatus:
+                  type: string
+                  enum:
+                    - ACTIVE
+                    - RESTRICTED
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+                unlockCondition:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+                relatedReference:
+                  anyOf:
+                    - type: string
+                      minLength: 1
+                      maxLength: 100
+                    - type: "null"
+                actorId: &a2
+                  type: string
+                  format: uuid
+                createdAt: &a3
+                  type: string
+                  format: date-time
+            - type: "null"
+    LockUserAccount:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - reason
+        - unlockCondition
+        - relatedReference
+      properties:
+        expectedVersion: *a1
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        unlockCondition:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        relatedReference:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 100
+            - type: "null"
+    UnlockUserAccount:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - reason
+        - restoreStatus
+      properties:
+        expectedVersion: *a1
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        restoreStatus:
+          type: string
+          enum:
+            - ACTIVE
+            - RESTRICTED
+    AccountControlEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - actorId
+        - action
+        - fromStatus
+        - toStatus
+        - reason
+        - scope
+        - unlockCondition
+        - relatedReference
+        - createdAt
+      properties:
+        id: *a2
+        actorId: *a2
+        action:
+          type: string
+          enum:
+            - AccountLocked
+            - AccountUnlocked
+        fromStatus:
+          $ref: "#/components/schemas/ManagedUserStatus"
+        toStatus:
+          $ref: "#/components/schemas/ManagedUserStatus"
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        scope:
+          type: string
+          enum:
+            - NewTransactions
+        unlockCondition:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 1000
+            - type: "null"
+        relatedReference:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 100
+            - type: "null"
+        createdAt: *a3
+    AccountControlEventPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/AccountControlEvent"
+        nextCursor:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 2048
+            - type: "null"
+        serverTime: *a3
+    MemberCartItem:
+      type: object
+      additionalProperties: false
+      required:
+        - listingId
+        - quantity
+        - addedAt
+        - priceAtAdd
+        - listing
+        - canBuy
+      properties:
+        listingId: &a1
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          const: 1
+        addedAt: &a2
+          type: string
+          format: date-time
+        priceAtAdd:
+          type: integer
+          minimum: 0
+        listing:
+          anyOf:
+            - $ref: "#/components/schemas/PublicListing"
+            - type: "null"
+        canBuy:
+          type: boolean
+    MemberCart:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - version
+        - items
+        - serverTime
+      properties:
+        id: *a1
+        version: &a3
+          type: integer
+          minimum: 1
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/MemberCartItem"
+        serverTime: *a2
+    AddCartItem:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - listingId
+        - expectedListingVersion
+      properties:
+        expectedVersion: *a3
+        listingId: *a1
+        expectedListingVersion: *a3
+    RemoveCartItem:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - listingId
+      properties:
+        expectedVersion: *a3
+        listingId: *a1
     CurrentUser:
       type: object
       additionalProperties: false
@@ -11719,6 +13256,33 @@ components:
         decidedAt:
           type: string
           format: date-time
+        automated:
+          type: boolean
+          const: true
+          description: Present only when the AI reviewer published this revision instead of Staff (ADR 0061).
+    AutoReviewSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - outcome
+        - reasons
+        - decidedAt
+      properties:
+        outcome:
+          type: string
+          enum:
+            - Approved
+            - Escalated
+        reasons:
+          type: array
+          maxItems: 30
+          description: Why the listing was left for Staff, as stable reason codes. Empty when Approved.
+          items:
+            type: string
+            maxLength: 60
+        decidedAt:
+          type: string
+          format: date-time
     PrivateListing:
       type: object
       additionalProperties: false
@@ -11762,6 +13326,12 @@ components:
           description: Present only on the Staff/Admin review detail. The price suggestion the seller
             decided on with the revision under review (null when none), so the reviewer can tell a
             suggested price from the seller's own.
+        autoReview:
+          anyOf:
+            - $ref: "#/components/schemas/AutoReviewSummary"
+            - type: "null"
+          description: Present only on the Staff/Admin review detail. What the AI reviewer concluded about the
+            current revision (null when it has not looked at it).
         removalReason:
           anyOf:
             - type: string
@@ -12056,9 +13626,11 @@ components:
             - ExchangeCancelled
             - ExchangeRejected
             - ExchangeDisputed
+            - SupportUpdated
+            - ReviewModerated
         title: { type: string, maxLength: 120 }
         body: { type: string, maxLength: 400 }
-        targetType: { type: string, enum: [Auction, Exchange, Order] }
+        targetType: { type: string, enum: [Auction, Exchange, Order, SupportCase, TransactionReview] }
         targetId:
           type: string
           format: uuid
@@ -13361,6 +14933,14 @@ components:
         - INTERNAL_ERROR
         - AccountIneligible
         - SelfReviewForbidden
+        - INVALID_EMAIL_CHANGE
+        - AvatarQuotaExceeded
+        - CartFull
+        - InvalidImage
+        - INVALID_CREDENTIALS
+        - CREDENTIAL_CHANGED
+        - EMAIL_CHANGE_COOLDOWN
+        - EMAIL_UNAVAILABLE
         - CatalogDuplicate
         - CatalogNotConfirmed
         - ListingLimitReached
@@ -18919,3 +20499,321 @@ components:
         serverTime:
           type: string
           format: date-time
+    ReviewNotificationTarget:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - id
+      properties:
+        type:
+          type: string
+          enum:
+            - Exchange
+            - DirectOrder
+            - PointOrder
+        id: &a1
+          type: string
+          format: uuid
+    SupportKind: &a2
+      type: string
+      enum:
+        - Feedback
+        - Bug
+        - Violation
+        - TransactionIssue
+    SupportState: &a4
+      type: string
+      enum:
+        - Open
+        - InReview
+        - AwaitingMember
+        - Answered
+        - Closed
+    SupportTarget: &a3
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - id
+      properties:
+        type:
+          type: string
+          enum:
+            - DirectOrder
+            - Exchange
+            - PointOrder
+            - Auction
+            - Listing
+            - Review
+            - Member
+        id: *a1
+    SupportCaseSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - kind
+        - title
+        - reporterId
+        - reporterName
+        - target
+        - assigneeId
+        - state
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id: *a1
+        kind: *a2
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        reporterId: *a1
+        reporterName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        target:
+          anyOf:
+            - *a3
+            - type: "null"
+        assigneeId:
+          anyOf:
+            - *a1
+            - type: "null"
+        state: *a4
+        version:
+          type: integer
+          minimum: 1
+        createdAt: &a5
+          type: string
+          format: date-time
+        updatedAt: *a5
+    CreateSupportCase:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - title
+        - description
+        - target
+      properties:
+        kind: *a2
+        title:
+          type: string
+          minLength: 3
+          maxLength: 160
+        description:
+          type: string
+          minLength: 10
+          maxLength: 5000
+        target:
+          anyOf:
+            - $ref: "#/components/schemas/SupportTarget"
+            - type: "null"
+    SupportMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - authorId
+        - authorName
+        - role
+        - internal
+        - text
+        - createdAt
+      properties:
+        id: *a1
+        authorId: *a1
+        authorName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        role:
+          type: string
+          enum:
+            - Member
+            - Admin
+            - System
+        internal:
+          type: boolean
+        text:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        createdAt: *a5
+    SupportCasePage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportCaseSummary"
+        nextCursor:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 2000
+            - type: "null"
+        serverTime: *a5
+    SupportCaseDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - case
+        - messages
+        - canManage
+        - canReply
+        - relatedState
+        - relatedAuctionId
+        - review
+        - serverTime
+      properties:
+        case:
+          $ref: "#/components/schemas/SupportCaseSummary"
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportMessage"
+        canManage:
+          type: boolean
+        canReply:
+          type: boolean
+        relatedState:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 80
+            - type: "null"
+        relatedAuctionId:
+          anyOf:
+            - *a1
+            - type: "null"
+        review:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeReviewItem"
+            - type: "null"
+        serverTime: *a5
+    SupportMessageCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - text
+        - internal
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        text:
+          type: string
+          minLength: 3
+          maxLength: 5000
+        internal:
+          type: boolean
+    SupportActionCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - action
+        - text
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        action:
+          type: string
+          enum:
+            - Assign
+            - RequestEvidence
+            - Answer
+            - Close
+            - Reopen
+        text:
+          type: string
+          minLength: 3
+          maxLength: 5000
+    SupportCaseReceipt:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - entityType
+        - entityId
+        - version
+        - state
+        - serverTime
+      properties:
+        id: *a1
+        entityType:
+          type: string
+          enum:
+            - SupportCase
+        entityId: *a1
+        version:
+          type: integer
+          minimum: 1
+        state: *a4
+        serverTime: *a5
+    SupportTargetOption:
+      type: object
+      additionalProperties: false
+      required:
+        - target
+        - label
+        - description
+        - partnerName
+        - createdAt
+        - state
+      properties:
+        target:
+          $ref: "#/components/schemas/SupportTarget"
+        label:
+          type: string
+          maxLength: 500
+        description:
+          anyOf:
+            - type: string
+              maxLength: 180
+            - type: "null"
+        partnerName:
+          anyOf:
+            - type: string
+              maxLength: 120
+            - type: "null"
+        createdAt:
+          anyOf:
+            - &a2
+              type: string
+              format: date-time
+            - type: "null"
+        state:
+          anyOf:
+            - &a1
+              type: string
+            - type: "null"
+    SupportTargetOptionsPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportTargetOption"
+        nextCursor:
+          anyOf:
+            - *a1
+            - type: "null"
+        serverTime: *a2

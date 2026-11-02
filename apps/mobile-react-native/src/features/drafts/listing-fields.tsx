@@ -67,6 +67,7 @@ export function ConditionFields({
     <View style={{ gap: space.xl }}>
       {/* 2x2 Condition Grid */}
       <View ref={anchor("condition")} style={{ gap: space.sm }}>
+        {form.bundle ? <Notice>Tình trạng chung theo cuốn thấp nhất. Sửa tình trạng từng cuốn ở bước Thông tin sách.</Notice> : null}
         <View
           style={{
             flexDirection: "row",
@@ -103,7 +104,7 @@ export function ConditionFields({
             return (
               <Pressable
                 key={c.value}
-                disabled={disabled}
+                disabled={disabled || !!form.bundle}
                 onPress={() => onChange({ ...form, condition: c.value })}
                 accessibilityRole="button"
                 accessibilityLabel={`${c.title}, ${c.tier}`}
@@ -511,7 +512,7 @@ export function PricingFields({
       {/* Mode selection 3 cards */}
       <View
         ref={anchor("mode")}
-        style={{ gap: space.sm, display: auction ? "none" : "flex" }}
+        style={{ gap: space.sm, display: auction || form.bundle ? "none" : "flex" }}
       >
         <AppText
           kind="label"
@@ -634,7 +635,7 @@ export function PricingFields({
               color={stitchTokens.wine}
               style={{ fontWeight: "700", letterSpacing: 0.5 }}
             >
-              {auction ? "GIÁ TRỊ KHAI BÁO (VND)" : "GIÁ BÁN ĐỀ XUẤT (VND)"}
+              {auction ? "GIÁ TRỊ KHAI BÁO (VND)" : form.bundle ? "GIÁ CẢ BỘ (VND)" : "GIÁ BÁN ĐỀ XUẤT (VND)"}
             </AppText>
             <AppText kind="small" color={stitchTokens.subtleGray}>
               10.000₫ – 1.000.000₫
@@ -657,7 +658,7 @@ export function PricingFields({
             </AppText>
             <View style={{ flex: 1 }}>
               <TextField
-                label={auction ? "Giá trị khai báo (đồng)" : "Giá bán (đồng)"}
+                label={auction ? "Giá trị khai báo (đồng)" : form.bundle ? "Giá cả bộ (đồng)" : "Giá bán (đồng)"}
                 hint={
                   auction
                     ? "Mức bồi thường tối đa nếu sách gặp sự cố tại điểm, ví dụ 125000"

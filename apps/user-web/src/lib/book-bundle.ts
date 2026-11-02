@@ -11,6 +11,20 @@ export const bundleSchema = z.object({
   })).min(2).max(50),
 }) satisfies z.ZodType<components['schemas']['BookBundle']>;
 export type BookBundle = z.infer<typeof bundleSchema>;
+export function appendBundleRange(bundle: BookBundle, from: string, to: string): BookBundle {
+  const start = Number(from), end = Number(to);
+  if (!/^\d+$/.test(from) || !/^\d+$/.test(to) || !Number.isSafeInteger(start) ||
+      !Number.isSafeInteger(end) || start < 1 || end < start + 1 || end - start >= 50 || end > 9999)
+    throw new Error('Chọn từ 2 đến 50 tập, số tập từ 1 đến 9999.');
+  const items = bundle.items.filter(item => item.label.trim() || item.notes.trim() || item.condition !== 'Good');
+  const labels = new Set(items.map(item => item.label.trim().normalize('NFC').toLocaleLowerCase('vi-VN')));
+  for (let volume = start; volume <= end; volume++) {
+    const label = `Tập ${volume}`;
+    if (!labels.has(label.toLocaleLowerCase('vi-VN'))) items.push({label, condition: 'Good', notes: ''});
+  }
+  if (items.length > 50) throw new Error('Bộ có tối đa 50 cuốn. Danh sách hiện tại được giữ nguyên.');
+  return {...bundle, items};
+}
 const levels = ['LikeNew', 'Good', 'Fair', 'Worn'] as const;
 export function bundleCondition(bundle: BookBundle) {
   return levels[Math.max(0, ...bundle.items.map(item => levels.indexOf(item.condition)))]!;
