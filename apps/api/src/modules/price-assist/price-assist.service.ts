@@ -264,6 +264,10 @@ export class PriceAssistService {
             inputFingerprint: fp,
             status: { $in: ['Suggested', 'NeedsMoreData', 'Refused'] },
             expiresAt: { $gt: now },
+            // A rule-only answer (no model) holds for any provider; a model's
+            // answer only for that model, so switching provider takes effect
+            // at once instead of replaying the old one for a day.
+            'response.model': { $in: [null, this.model?.model ?? null] },
           },
           { sort: { createdAt: -1 } },
         );
