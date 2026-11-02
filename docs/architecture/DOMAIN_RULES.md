@@ -102,7 +102,7 @@ Không thay READINESS, không cấp ExistingObligation cho review, không thay G
 
 ## Hồ sơ phản ánh Member/Admin web
 
-[ADR0061](../adr/0061-web-support-cases.md), contract0.68: SupportCase riêng của
+[ADR0062](../adr/0062-web-support-cases.md), contract0.70: SupportCase riêng của
 người gửi, Admin ACTIVE độc lập nhận phụ trách và phản hồi; Staff không tự có
 quyền vào module mới. TransactionIssue kiểm participant DirectOrder/Exchange/
 PointOrder; đây là tiếp nhận hỗ trợ, không thay claim/hold hoặc dispute hai chiều.

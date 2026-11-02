@@ -1,4 +1,4 @@
-# ADR 0061: Hồ sơ phản ánh riêng giữa Member và Admin trên web
+# ADR 0062: Hồ sơ phản ánh riêng giữa Member và Admin trên web
 
 02/11/2026. Owner yêu cầu triển khai chức năng sau khi chọn Member web/Admin web
 và nhận [đặc tả](../features/WEB_FEEDBACK_COMPLAINTS_SPEC.md). Quyết định này mô
@@ -32,6 +32,9 @@ tả lát cắt tiếp nhận và phản hồi; không thay SRS FR-D hoặc mở
   riêng; không mượn URL public hoặc vòng đời ảnh listing làm kho chứng cứ.
 
 ## Contract và persistence
+
+Bản tích hợp vào main `d44b813b` dùng contract0.70,224operations/36controllers.
+Các mốc0.68/0.69 dưới đây mô tả source ban đầu trước tích hợp.
 
 Contract0.68 thêm9 operation (8 support +1 resolve notification review), tổng
 222 operations/35controllers. Client types sinh từ YAML. Dùng chung SessionClient;
@@ -71,6 +74,20 @@ dung và quay lại qua entry mới; scope theo account, logout xóa. Pending cr
 vẫn ưu tiên bản gửi gốc, không dùng resolver lỗi để đổi body/key hoặc chặn replay.
 
 ## Đánh giá và thông báo
+
+### Tích hợp với AI tự duyệt trên main —02/11/2026
+
+Main có `0050-listing-auto-review` độc lập với `0050-support-cases`. Giữ nguyên
+cả hai ID/definition/checksum đã áp dụng, không đổi số để vượt kiểm checksum.
+Thêm `0051-support-auto-review-union` sau cả hai để hợp nhất validator receipt/
+audit: chấp nhận đúng principal auto review và target SupportCase, vẫn giữ
+exactly-one-target. Các schema hiện hành gồm cả notification SupportCase.
+Kiểm nâng cấp từ AI-first, support-first và cả hai theo thứ tự ngược; không sửa
+dữ liệu/ledger/inbox cũ. Registry65migration,97collection, không suy số từ prefix.
+
+ADR hỗ trợ dùng0062 vì0061 đã được main dành cho AI tự duyệt; đây là đổi định
+danh tài liệu, không đổi nghiệp vụ. Cờ AI vẫn mặc định tắt, quyền bật theo ADR0061
+và SRS giữ nguyên. Nhận source cần migrate rồi bootstrap role theo START_HERE.
 
 Giữ lifecycle hai chiều, deadline, điểm và revision ADR0052. Báo cáo review mở
 được nội dung đủ publication cho Admin độc lập; nút kiểm duyệt dùng service

@@ -1,9 +1,33 @@
 # Trung tâm phản ánh Member/Admin web — 02/11/2026
 
-Nhánh `codex/web-support-center`, base đặc tả `0cdd164f`, business source gốc
-`2ae2212b`. Subject checkpoint: `feat(web): connect private member and admin support cases`.
-[Đặc tả](WEB_FEEDBACK_COMPLAINTS_SPEC.md), [ADR0061](../adr/0061-web-support-cases.md)
+Nhánh bàn giao `codex/web-support-ready`, tích hợp trên main `d44b813b`.
+Chia commit đặc tả, chức năng hỗ trợ, chọn nội dung và thu gọn Admin; giữ riêng
+kiểm thử tự động, không gồm helper seed hoặc dữ liệu mẫu local.
+[Đặc tả](WEB_FEEDBACK_COMPLAINTS_SPEC.md), [ADR0062](../adr/0062-web-support-cases.md)
 và [READINESS](../handoff/READINESS.md) phân biệt phạm vi đã nối và gate còn mở.
+
+## Bản tích hợp bàn giao trên main02/11
+
+Base `d44b813b` đã có AI tự duyệt. Bản hỗ trợ cuối dùng contract0.70,
+224operations/36controllers, registry65migration/97collection. Giữ checksum hai
+migration0050, thêm0051 union để không ghi đè validator receipt/audit của nhau;
+schema notification hiện hành cũng giữ target SupportCase. ADR hỗ trợ đổi thành
+0062 để giữ0061 của main. Cờ AI, quyền và READINESS giữ nguyên.
+
+Source tích hợp đã kiểm lại:49HTTP/Mongo (support14/obligations21/AI auto review14),
+32Mongo (schema/least privilege/member upgrade và3 đường union giữ checksum,
+ledger/inbox); shared119/Admin219/Member264unit; API/web/RN typecheck, API/hai web
+build, lint, contract/routes/docs/diffPASS. Warning lint/chunk cũ còn. Browser
+support6nhóm và Admin collapse9ca PASS,0page errors, QA57017/*_test/storage fake.
+Harness chờ ACK trong lịch sử trước refresh ở role kia, tránh đọc trước commit;
+không bỏ assertion quyền, nội dung hay replay. Evidence tại `.tmp/support-evidence/`
+và `.tmp/admin-review-collapse/` của workspace kiểm tra. Các bảng sau giữ evidence
+source gốc, không cộng thành nghiệm thu human/native/fulfillment. Remote CI chưa
+được xác minh ở checkpoint chuẩn bị push.
+
+Nhánh chỉ gồm chức năng, contract/migration, đặc tả và kiểm thử tự động. Không có
+helper seed tạo luồng local, manifest/ID mẫu, DB/backup, credential hoặc các commit
+ghi nhận tạo mẫu thủ công. Dữ liệu local owner đang dùng được giữ nguyên ngoài Git.
 
 ## Chức năng và hành trình
 
@@ -22,7 +46,7 @@ Giao diện kế thừa DashboardLayout/brand Member và shell/component Admin, 
 
 ## Thay đổi kỹ thuật
 
-- OpenAPI0.68,222operations/35controllers, generated types; migration0050, registry63.
+- OpenAPI0.70,224operations/36controllers, generated types; migration0051, registry65.
   Mongo QA thật, quyền app tối thiểu, messages append-only và cursor theo actor/filter.
 - `apps/api/src/modules/support/`: owner/independence/assignment/version/state
   trước mutation; quyền hiện tại trước replay; receipt/audit target SupportCase.
@@ -50,12 +74,10 @@ resolve nhãn hiện tại để xác nhận. Nếu vào form chung, có hướn
 nội dung; tiêu đề/mô tả được giữ qua entry mới. Có loading/empty/error/retry,
 bỏ chọn, tìm bằng Enter và tải thêm. Mất ACK vẫn giữ nguyên command gốc.
 
-Contract0.69,224operations/36controllers; thêm hai read endpoint được bảo vệ theo
+Contract0.70,224operations/36controllers; thêm hai read endpoint được bảo vệ theo
 actor/participant/publication, không tạo directory Member hoặc trả địa chỉ/email.
-Tái dùng policy create để resolve, không ghi lock target trong read. Registry63/
-migration0050 giữ nguyên, không migrate/reset/seed DB local cho thay đổi này.
-API đã restart cùng bản build mới, Member5174/Admin5173 tiếp tục chạy; smoke
-readiness200, login Member và options cả ba lane200. Chi tiết process ở `.tmp/`.
+Tái dùng policy create để resolve, không ghi lock target trong read. Phần chọn
+không thêm quyền nghiệp vụ; yêu cầu migration khi nhận source xem cuối báo cáo.
 
 Kiểm chứng lát cắt mới: HTTP/Mongo35PASS (support14 + obligations21), gồm
 participant/role/locked denial, cursor actor/type/query, literal search, nhãn từ
@@ -71,7 +93,7 @@ unmount sau chọn; giữ assertion quyền/command/submit. Fake storage/mail lo
 native/human/remote CI NOT RUN. Bảng bên dưới là evidence gói0.68 ban đầu,
 không cộng thành gate nghiệp vụ/native/human mới.
 
-## Kiểm chứng
+## Kiểm chứng source trước tích hợp main
 
 Windows, Node24.21.0/pnpm11.19.0. QA riêng loopback57017/rs-test, DB kết thúc
 `_test`; fixtures giao dịch Completed dùng kiểm quyền/link, không nghiệm thu
@@ -104,7 +126,7 @@ trên source đã sửa, không suy một lượt FAIL thành PASS nếu chưa c
 ## Nhận source và giới hạn
 
 Khi áp dụng vào môi trường của mình: dừng API/workers, chạy `pnpm db:migrate`
-để áp0050 rồi `pnpm db:bootstrap` để cập nhật quyền app; chạy API/workers và hai
+để áp đủ hai nhánh0050 và0051 union rồi `pnpm db:bootstrap` để cập nhật quyền app; chạy API/workers và hai
 web cùng contract mới. Không reset/reseed hoặc sửa checksum migration cũ. Chưa
 chạy các lệnh migration này trên DB chính trong gói hiện tại.
 

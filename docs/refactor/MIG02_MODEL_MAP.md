@@ -223,7 +223,7 @@ check `bundleContentsVerified`. Order item snapshots embed the full manifest fro
 the locked revision. A bundle remains one workflow item and one commitment;
 component inventory/partial purchase/partial return identities are not introduced.
 
-## Support cases (ADR0061, migration0050)
+## Support cases (ADR0062, migration0050 +0051 union)
 
 Mongo-native `support_cases` are mutable, lockable UUID documents, separate from
 financial disputes. Command lock → actor/session → case lock serializes assignment,

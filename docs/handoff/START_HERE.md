@@ -1,8 +1,8 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
-Cập nhật02/11/2026: theo [SESSION_STATE](SESSION_STATE.md). Contract **0.68.0**
-(213operations/33controllers); registry có63
-migration MongoDB (đến0050), không suy từ tiền tố file lớn nhất. Migration
+Cập nhật02/11/2026: theo [SESSION_STATE](SESSION_STATE.md). Contract **0.70.0**
+(224operations/36controllers); registry có65
+migration MongoDB (đến0051), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
 Phạm vi28/10: nhóm **bỏ Forum/Cộng đồng sách** theo [ADR0051](../adr/0051-remove-forum-from-project-scope.md).
@@ -43,6 +43,14 @@ hiệu lực và căn cứ custody. Receipt lịch sử vẫn đối soát dư�
 Nghiệp vụ chuẩn là [SRS1.1](../SRS_V1_1.md), [phụ lục](../features/LOCAL_HANDOVER_AUCTION.md)
 và ADR hiện hành. Checkpoint có ngày trong SESSION_STATE/report là lịch sử nguồn,
 không thay contract/code/tests mới hoặc gate.
+
+Hỗ trợ Member/Admin web theo [ADR0062](../adr/0062-web-support-cases.md):
+nhận/phản hồi/báo cáo tại `/support`; Admin thu gọn review sau ACK. Bản tích hợp
+giữ cả `0050-listing-auto-review` và `0050-support-cases` đã áp dụng, thêm
+`0051-support-auto-review-union` hợp nhất validator receipt/audit. Dừng API/workers,
+chạy `pnpm db:migrate` rồi `pnpm db:bootstrap` trước khi chạy cùng contract0.70.
+Không reset/reseed hoặc sửa checksum migration cũ. Không bật cờ AI tự duyệt từ
+gói hỗ trợ, và READINESS vẫn giữ gate hiện có.
 
 ## 2. Dựng môi trường mới
 

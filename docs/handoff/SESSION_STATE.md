@@ -1,5 +1,29 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## Bàn giao hỗ trợ Member/Admin web —02/11/2026
+
+- Owner yêu cầu chia commit/push phần chức năng, loại phần tạo luồng/dữ liệu mẫu
+  để test. Nhánh `codex/web-support-ready` từ main `d44b813b`; workspace local
+  đang chạy giữ nguyên ở nhánh cũ. Không push các nhánh/commit tạo mẫu demo.
+  Helper, manifest, DB/backup/credential và `.tmp/` không thuộc Git. Kiểm thử
+  tự động của chức năng được giữ; không xóa fixture local người dùng đang test.
+- Member gửi/theo dõi/bổ sung SupportCase, chọn giao dịch bằng nhãn thay nhập ID,
+  báo cáo nội dung; Admin nhận việc, note riêng, kiểm duyệt review, phản hồi và
+  đóng hồ sơ. Review queue thu gọn sau ACK, mở lại được, giữ input/exact retry.
+  [Đặc tả](../features/WEB_FEEDBACK_COMPLAINTS_SPEC.md),
+  [báo cáo](../features/WEB_SUPPORT_CENTER_REPORT.md),
+  [ADR0062](../adr/0062-web-support-cases.md).
+- Tích hợp main có AI tự duyệt: contract0.70/224operations/36controllers,
+  registry65migration/97collection. Hai migration0050 giữ nguyên checksum;
+  thêm0051 hợp nhất receipt/audit sau cả hai. Không bật cờ AI, không thay gate
+  hoặc migrate DB local đang phục vụ owner. Nhận source phải migrate/bootstrap.
+- Source tích hợp PASS49HTTP/Mongo (support/obligations/AI auto review),32Mongo
+  (schema/upgrade/role/checksum, gồm3 đường nâng cấp union); shared119/Admin219/
+  Member264unit. API/web/RN type, API/hai web build/lint, contract/routes/docs/diff
+  PASS. Browser support6nhóm và Admin collapse9ca PASS,0page errors; QA riêng
+  57017/*_test, storage fake. Chi tiết ở báo cáo; full native/human/remote CI chưa
+  chạy. Push được owner cho phép; chưa PR/merge/deploy hoặc đổi gate.
+
 ## AI tự duyệt bài đăng sau cờ tắt — 02/11/2026
 
 - [ADR0061](../adr/0061-ai-listing-auto-review.md): worker chỉ Approve hoặc chuyển

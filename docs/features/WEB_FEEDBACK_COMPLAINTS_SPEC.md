@@ -7,7 +7,7 @@ Tài liệu này là phạm vi đề xuất để triển khai, không là bằn
 quyết định thay SRS/ADR hoặc quyền mở các gate tiền/giao nhận.
 
 Triển khai tiếp theo02/11: [báo cáo chức năng web](WEB_SUPPORT_CENTER_REPORT.md)
-và [ADR0061](../adr/0061-web-support-cases.md) ghi phần đã nối, evidence và giới
+và [ADR0062](../adr/0062-web-support-cases.md) ghi phần đã nối, evidence và giới
 hạn. State dispute/W4 bên dưới vẫn là đích nghiệp vụ, không là feature đã mở.
 
 ## 1. Nguồn và phạm vi
