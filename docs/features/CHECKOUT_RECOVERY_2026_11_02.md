@@ -36,7 +36,7 @@ base `60d089985bd9b0b92de26671c653dd5c0964b37b`, subject
   cắt dù document không tràn; regression nay kiểm cả bounding box của review.
   Giữ màu/font/component và motion hiện có, không redesign.
 - Đây không phải mở Buyer receipt, Delivered, claim/return hoặc settlement.
-  [ADR bảo vệ Buyer](../adr/0061-direct-delivery-completion-release-gate.md),
+  [ADR bảo vệ Buyer](../adr/0062-direct-delivery-completion-release-gate.md),
   [READINESS](../handoff/READINESS.md), GHN và DB/bucket chính giữ nguyên.
   Hội thoại giúp trao đổi, không tự là command giải quyết review hoặc hoàn tiền.
 
@@ -91,3 +91,16 @@ thấy qua screenshot được sửa bằng CSS và thêm kiểm panel, không c
 Bước tiếp theo: nối Seller RN ảnh đóng gói/đăng ký shipment tới F2h theo gói riêng;
 triage socket join trước khi coi hội thoại là đường hỗ trợ đã nghiệm thu đầy đủ.
 Không mở workflow hậu kiểm hoặc đóng READINESS từ các kết quả client này.
+
+## Tích hợp main sau owner duyệt — 02/11
+
+Base `e2a8fa99` ghép main `d44b813b7631b92d0ddfd301c2de98288ce1eb14` trên nhánh
+`codex/integrate-ai-review-main`; contract kết hợp0.69.0. ADR0061 đã publish của
+AI giữ nguyên, ADR chốt bảo vệ Buyer đổi0062 và cập nhật link. Giữ toàn bộ checkpoint
+AI, worker tick AI mặc định tắt và metrics Inspection bị chặn; không migrate DB chính.
+
+PASS322API unit/42file,62E2E wallet+AI review giả, API types/build và consumer
+RN/web/Admin types, contract/routes/docs. CI [API main](https://github.com/huangg49/used-book-marketplace/actions/runs/41365398700)
+và8job áp dụng khác PASS trên đúng SHA main trên; chưa CI source kết hợp. Các lỗi
+HTTP cố ý trong negative tests không là ca FAIL. Không suy model giả/native export
+thành nghiệm thu chất lượng AI hoặc thiết bị. Bước socket và Seller RN nằm ở gói tiếp.

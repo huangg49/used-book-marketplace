@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { invalidState } from '../commands/domain-error.js';
 
-// READINESS / ADR0061: reopening completion requires a reviewed implementation
+// READINESS / ADR0062: reopening completion requires a reviewed implementation
 // with Buyer claims and settlement interlocks. No request or env flag enables it.
 @Injectable()
 export class DirectOrderReleasePolicy {

@@ -47,6 +47,7 @@ export function validateEnvironment(env: Record<string, unknown>) {
     ...env,
     ...priceAssist,
     ...autofill,
+    ...validateListingAutoReview(env),
     ...accountMail,
     MONGODB_URL: mongoUrl,
     JWT_ACCESS_SECRET: secret,
@@ -249,6 +250,24 @@ export function validateAutofill(env: Record<string, unknown>) {
     AUTOFILL_FALLBACK_MODEL: fallback,
     AUTOFILL_TIMEOUT_MS: intIn(env.AUTOFILL_TIMEOUT_MS, 25_000, 2_000, 60_000, 'AUTOFILL_TIMEOUT_MS'),
     AUTOFILL_USER_DAILY_LIMIT: intIn(env.AUTOFILL_USER_DAILY_LIMIT, 10, 1, 200, 'AUTOFILL_USER_DAILY_LIMIT'),
+  };
+}
+
+// Listing auto review (ADR 0061): off unless enabled, and also needs the photo
+// autofill provider above. Below the confidence floor means Staff, so it stays high.
+export function validateListingAutoReview(env: Record<string, unknown>) {
+  const enabled = String(env.LISTING_AUTO_REVIEW_ENABLED ?? 'false');
+  if (!['true', 'false'].includes(enabled))
+    throw new Error('LISTING_AUTO_REVIEW_ENABLED must be true or false.');
+  const minConfidence = Number(env.LISTING_AUTO_REVIEW_MIN_CONFIDENCE ?? 0.85);
+  if (!(minConfidence >= 0.5 && minConfidence <= 1))
+    throw new Error('LISTING_AUTO_REVIEW_MIN_CONFIDENCE must be between 0.5 and 1.');
+  return {
+    LISTING_AUTO_REVIEW_ENABLED: enabled,
+    LISTING_AUTO_REVIEW_MIN_CONFIDENCE: minConfidence,
+    LISTING_AUTO_REVIEW_MAX_PRICE: intIn(env.LISTING_AUTO_REVIEW_MAX_PRICE, 500_000, 0, 100_000_000, 'LISTING_AUTO_REVIEW_MAX_PRICE'),
+    LISTING_AUTO_REVIEW_BATCH_SIZE: intIn(env.LISTING_AUTO_REVIEW_BATCH_SIZE, 10, 1, 100, 'LISTING_AUTO_REVIEW_BATCH_SIZE'),
+    LISTING_AUTO_REVIEW_DAILY_LIMIT: intIn(env.LISTING_AUTO_REVIEW_DAILY_LIMIT, 200, 0, 10_000, 'LISTING_AUTO_REVIEW_DAILY_LIMIT'),
   };
 }
 

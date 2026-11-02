@@ -1,4 +1,4 @@
-# ADR0061: Chặn completion DirectDelivery khi bảo vệ Buyer chưa đủ
+# ADR0062: Chặn completion DirectDelivery khi bảo vệ Buyer chưa đủ
 
 01/11/2026. Accepted cho gói giới hạn an toàn theo owner sau khảo sát core và PR84.
 Không chấp nhận toàn bộ đề xuất ADR0026, mở sau F2h hoặc đóng READINESS.

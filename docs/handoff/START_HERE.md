@@ -1,8 +1,8 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
-Cập nhật01/11/2026: chuỗi local từ main `be581aec`, có hồ sơ Member theo
-[SESSION_STATE](SESSION_STATE.md). Contract **0.67.0** (213operations/33controllers); registry có62
-migration MongoDB (đến0049), không suy từ tiền tố file lớn nhất. Migration
+Cập nhật02/11/2026: theo [SESSION_STATE](SESSION_STATE.md). Contract **0.69.0**
+(213operations/33controllers); registry có63
+migration MongoDB (đến0050), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
 Phạm vi28/10: nhóm **bỏ Forum/Cộng đồng sách** theo [ADR0051](../adr/0051-remove-forum-from-project-scope.md).
@@ -86,6 +86,10 @@ Gói catalog recovery thêm0042: dừng API/worker rồi chạy `pnpm db:migrate
 source mới. Backfill projection/index từ current catalog revision, không đổi
 business version; không seed lại. Không thêm collection/quyền. Mới kiểm trong QA,
 chưa áp dụng DB chính; [ADR0055](../adr/0055-listing-catalog-recovery.md).
+
+AI tự duyệt thêm0050 và collection mới: dừng API/worker, `pnpm db:migrate` rồi
+`pnpm db:bootstrap`. Cờ `LISTING_AUTO_REVIEW_ENABLED` mặc định tắt;
+[ADR0061](../adr/0061-ai-listing-auto-review.md).
 
 Gói đường nhanh thêm0043/sourceGroup: dừng API/worker và migrate, cập nhật web/RN/
 Admin cùng enum DuplicateSource. Không backfill nguồn từ nhãn; legacy thiếu nguồn
@@ -173,7 +177,7 @@ Tên schema/receipt lịch sử có thể vẫn chứa `Unpaid` dù projection h
 
 ## 5. Chạy kiểm thử mà không dùng database của app
 
-DirectDelivery completion bị chặn theo [ADR0061](../adr/0061-direct-delivery-completion-release-gate.md):
+DirectDelivery completion bị chặn theo [ADR0062](../adr/0062-direct-delivery-completion-release-gate.md):
 không dùng confirm-receipt/delivery-events mới hoặc worker để ép demo tới Completed.
 Exact receipt lịch sử chỉ replay sau current auth. Đơn Inspection cũ giữ tiền/sách;
 worker báo inspectionBlocked/inspectionOverdueBlocked riêng. Không có env flag bật

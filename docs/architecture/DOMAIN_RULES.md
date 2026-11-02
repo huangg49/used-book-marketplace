@@ -205,7 +205,7 @@ Worker OrderDeliveryExpiry scans100 without candidate locks, retries failures an
 deliveryRemaining/openDeliveryReviews/oldestDeliveryReviewAgeSeconds. Keep original
 review identity and pickup history; no refund/restock/custody conclusion from a report.
 Delivered/Buyer receipt/72h inspection source exists, but new completion commands
-and settlement are release-blocked by [ADR0061](../adr/0061-direct-delivery-completion-release-gate.md).
+and settlement are release-blocked by [ADR0062](../adr/0062-direct-delivery-completion-release-gate.md).
 Current auth precedes read-only historical replay; canConfirmReceipt is false.
 Worker reports blocked Inspection separately from executable backlog, preserving
 holds/books/history. Carrier-delivered denial and quality claims are still incomplete.

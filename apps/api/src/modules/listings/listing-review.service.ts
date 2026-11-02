@@ -1,6 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import type { Json } from '../../database/mongo/documents.js';
 import type { Tx } from '../../database/mongo/transaction.js';
+import {
+  AUTO_REVIEWER_ID,
+  AutoReviewBlocked,
+  autoReviewFacts,
+} from './auto-review-facts.js';
+import {
+  precheckAutoReview,
+  type AutoReviewChecklist,
+} from './auto-review-policy.js';
 import { CatalogService } from '../catalog/catalog.service.js';
 import {
   ListingFulfillmentService,
@@ -292,13 +302,110 @@ export class ListingReviewService {
       },
     });
   }
+  // ADR 0061 worker only: no HTTP route selects this principal. The worker's
+  // verdict is only an input; state, owner and catalog are rechecked under locks.
+  autoApprove(input: {
+    listingId: string;
+    revisionId: string;
+    expectedVersion: number;
+    checklist: AutoReviewChecklist;
+    maxAutoPrice: number;
+    assessment: Json;
+    model: string | null;
+  }) {
+    const id = input.listingId;
+    return this.commands.systemAutoApprove(input.revisionId, id, {
+      discover: async (tx) => {
+        const l = await tx.c.listings.findOne({ _id: id });
+        if (!l) throw notFound();
+        return [l.ownerId];
+      },
+      authorize: (tx) => this.listing(tx, id),
+      mutate: async (tx, before) => {
+        await this.fulfillment.prepare(
+          tx,
+          before.ownerId,
+          originReference(before.currentRevision!),
+        );
+        await this.catalog.lockForReview(tx, before.currentRevision!.bookId);
+        const l = await this.lock(tx, before, input.expectedVersion);
+        if (l.currentRevisionId !== input.revisionId) throw conflict();
+        if (l.moderation !== 'PendingReview') throw invalidState();
+        const reasons = precheckAutoReview(
+          await autoReviewFacts(tx.c, l, input.maxAutoPrice),
+        );
+        if (reasons.length) throw new AutoReviewBlocked(reasons);
+        this.input.body(
+          'SubmittedContent',
+          revision(l.currentRevision!).content,
+        );
+        await this.ready(tx, l);
+        const decidedAt = await tx.now();
+        await tx.c.listing_decisions.insertOne({
+          _id: randomUUID(),
+          revisionId: input.revisionId,
+          reviewerId: AUTO_REVIEWER_ID,
+          decision: 'Approve',
+          checklist: input.checklist,
+          reason: null,
+          decidedAt,
+        });
+        await tx.c.listing_auto_reviews.insertOne({
+          _id: randomUUID(),
+          revisionId: input.revisionId,
+          listingId: id,
+          outcome: 'Approved',
+          reasons: [],
+          assessment: input.assessment,
+          model: input.model,
+          decidedAt,
+        });
+        const next = await tx.c.listings.findOneAndUpdate(
+          { _id: id, version: l.version },
+          {
+            $set: {
+              moderation: 'Approved',
+              publishedAt: new Date(),
+              updatedAt: new Date(),
+            },
+            $inc: { version: 1 },
+          },
+          { returnDocument: 'after' },
+        );
+        tx.check(`listing:${id}`, () => checkListing(tx, id));
+        return {
+          entityType: 'Listing' as const,
+          entityId: id,
+          version: next!.version,
+          revisionId: input.revisionId,
+          state: state(next!),
+          before: {
+            version: l.version,
+            revisionId: l.currentRevisionId,
+            moderation: l.moderation,
+          },
+          event: 'ListingApproved',
+        };
+      },
+    });
+  }
   detail(auth: Actor, id: string) {
     return this.commands.read(auth, async (tx, actor) => {
       reviewer(actor);
       const l = await this.listing(tx, id);
       if (!l.currentRevision?.submittedAt) throw notFound();
+      const autoReview = await tx.c.listing_auto_reviews.findOne({
+        revisionId: l.currentRevisionId!,
+      });
       return {
         ...projection(l),
+        autoReview: autoReview
+          ? {
+              outcome: autoReview.outcome,
+              reasons: autoReview.reasons,
+              decidedAt: autoReview.decidedAt.toISOString(),
+            }
+          : null,
         priceAssist: await priceAssistForRevision(
           tx,
           l._id,

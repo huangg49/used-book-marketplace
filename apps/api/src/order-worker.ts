@@ -7,6 +7,7 @@ import { PurchaseExpiryWorker } from './modules/purchases/purchase-expiry.servic
 import { ExchangeExpiryWorker } from './modules/exchanges/exchange-expiry.service.js';
 import { WalletExpiryWorker } from './modules/wallet/wallet-expiry.service.js';
 import { ReviewQueries } from './modules/reviews/review-queries.service.js';
+import { ListingAutoReviewService } from './modules/listings/listing-auto-review.service.js';
 
 const AUCTION_CLOSE_INTERVAL_MS = 5000;
 const app = await NestFactory.createApplicationContext(AppModule, {
@@ -18,6 +19,7 @@ const purchases = app.get(PurchaseExpiryWorker);
 const exchangeExpiry = app.get(ExchangeExpiryWorker);
 const walletExpiry = app.get(WalletExpiryWorker);
 const reviews = app.get(ReviewQueries);
+const autoReview = app.get(ListingAutoReviewService);
 let nextReviewSweep = 0;
 let stopping = false;
 process.on('SIGINT', () => {
@@ -90,6 +92,16 @@ try {
       console.log(JSON.stringify({ event: 'exchangeExpirySweep', ...result }));
     } catch {
       console.error('Exchange expiry sweep failed; retrying next cycle.');
+      if (process.argv.includes('--once')) process.exitCode = 1;
+    }
+    // ADR 0061: off unless enabled; anything not published stays with Staff.
+    try {
+      const result = await autoReview.tick();
+      if (process.argv.includes('--once') && result.failed) process.exitCode = 1;
+      if (result.enabled)
+        console.log(JSON.stringify({ event: 'listingAutoReviewSweep', ...result }));
+    } catch {
+      console.error('Listing auto review sweep failed; retrying next cycle.');
       if (process.argv.includes('--once')) process.exitCode = 1;
     }
     // Auction close/payment/drop-off deadlines; a failure here never blocks

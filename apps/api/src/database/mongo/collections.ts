@@ -50,6 +50,7 @@ export interface CollectionTypes {
   listing_media: D.ListingMediaDoc;
   revision_media: D.RevisionMediaDoc;
   listing_decisions: D.ListingDecisionDoc;
+  listing_auto_reviews: D.ListingAutoReviewDoc;
   mutation_receipts: D.MutationReceiptDoc;
   audit_events: D.AuditEventDoc;
   outbox_events: D.OutboxEventDoc;
@@ -226,6 +227,7 @@ const NAMES: CollectionName[] = [
   'listing_media',
   'revision_media',
   'listing_decisions',
+  'listing_auto_reviews',
   'mutation_receipts',
   'audit_events',
   'outbox_events',

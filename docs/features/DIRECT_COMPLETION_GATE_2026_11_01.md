@@ -3,7 +3,7 @@
 Gói theo owner duyệt sau [khảo sát core](CORE_BUY_NOW_AUDIT_2026_11_01.md).
 Base main `2ae2212b`, branch `codex/direct-delivery-release-gate`. Phạm vi là sửa
 ranh giới an toàn, không mở toàn bộ claim/return/settlement. Quyết định tại
-[ADR0061](../adr/0061-direct-delivery-completion-release-gate.md).
+[ADR0062](../adr/0062-direct-delivery-completion-release-gate.md).
 Source của gói: subject `fix(orders): enforce direct delivery completion release gate`.
 Implementation: [policy](../../apps/api/src/modules/wallet/direct-order-release.policy.ts),
 [OrdersService](../../apps/api/src/modules/orders/orders.service.ts),

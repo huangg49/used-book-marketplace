@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.68.0
+  version: 0.69.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -12754,6 +12754,33 @@ components:
         decidedAt:
           type: string
           format: date-time
+        automated:
+          type: boolean
+          const: true
+          description: Present only when the AI reviewer published this revision instead of Staff (ADR 0061).
+    AutoReviewSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - outcome
+        - reasons
+        - decidedAt
+      properties:
+        outcome:
+          type: string
+          enum:
+            - Approved
+            - Escalated
+        reasons:
+          type: array
+          maxItems: 30
+          description: Why the listing was left for Staff, as stable reason codes. Empty when Approved.
+          items:
+            type: string
+            maxLength: 60
+        decidedAt:
+          type: string
+          format: date-time
     PrivateListing:
       type: object
       additionalProperties: false
@@ -12797,6 +12824,12 @@ components:
           description: Present only on the Staff/Admin review detail. The price suggestion the seller
             decided on with the revision under review (null when none), so the reviewer can tell a
             suggested price from the seller's own.
+        autoReview:
+          anyOf:
+            - $ref: "#/components/schemas/AutoReviewSummary"
+            - type: "null"
+          description: Present only on the Staff/Admin review detail. What the AI reviewer concluded about the
+            current revision (null when it has not looked at it).
         removalReason:
           anyOf:
             - type: string

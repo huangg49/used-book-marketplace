@@ -1,5 +1,16 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## Tích hợp main PR85 vào chuỗi local
+
+- Owner duyệt tích hợp main `d44b813b` vào base `e2a8fa99`, branch
+  `codex/integrate-ai-review-main`. Giữ hai gói Buyer gate/quote recovery và toàn bộ
+  checkpoint AI của teammate. Contract kết hợp0.69.0,213operation; ADR AI giữ0061,
+  ADR gate chưa publish đổi0062. Cờ AI mặc định tắt, chưa migrate/bootstrap DB chính.
+- Chỉ tích hợp local, chưa push/PR/merge vào main hoặc đóng READINESS. Kiểm chứng
+  source kết hợp PASS322API unit,62E2E AI giả/wallet (gồm gate), API build/types,
+  consumer RN/web/Admin types, contract/routes/docs. CI trên đúng main `d44b813b`
+  có9job PASS, không thay evidence source kết hợp/native. Giữ nguyên28file UI/ảnh.
+
 ## Quote RN và review web: phục hồi và nội dung đúng trạng thái
 
 - Owner duyệt gói2, branch `codex/checkout-quote-recovery`, base `60d08998`,
@@ -24,7 +35,7 @@
 ## DirectDelivery completion: chốt bảo vệ Buyer đã kiểm local
 
 - Owner duyệt gói1sau khảo sát, branch `codex/direct-delivery-release-gate`, base
-  main `2ae2212b`. [ADR0061](../adr/0061-direct-delivery-completion-release-gate.md)
+  main `2ae2212b`. [ADR0062](../adr/0062-direct-delivery-completion-release-gate.md)
   chặn command receipt/delivery/settlement mới, giữ historical replay sau current
   auth; [evidence và giới hạn](../features/DIRECT_COMPLETION_GATE_2026_11_01.md).
   Subject `fix(orders): enforce direct delivery completion release gate`.
@@ -40,6 +51,14 @@
   giữ nguyên. Không có env flag mở lại; khi mở sau này phải xử lý riêng cơ hội
   claim cho Inspection lịch sử, không tự trả tiền chỉ vì deadline cũ đã qua.
 - Giữ nguyên các file UI/ảnh chưa commit của công việc khác. Không stage cùng gói.
+
+## AI tự duyệt bài đăng sau cờ tắt — 02/11/2026
+
+- [ADR0061](../adr/0061-ai-listing-auto-review.md): worker chỉ Approve hoặc chuyển
+  Staff, không từ chối; mặc định tắt. Contract0.68, migration0050, cần `db:migrate`
+  rồi `db:bootstrap`. **Khác SRS FR-L03: chủ dự án xác nhận trước khi bật ở môi
+  trường dùng chung.** Test dùng mô hình giả; chưa đo trên ảnh thật, chưa hiệu chỉnh
+  ngưỡng. Chưa có màn Admin hiển thị `autoReview`/`automated`. READINESS giữ nguyên.
 
 ## Chuẩn bị tích hợp chuỗi local theo yêu cầu owner — 01/11/2026
 
