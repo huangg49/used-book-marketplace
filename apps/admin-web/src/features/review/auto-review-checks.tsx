@@ -8,6 +8,7 @@ import { CursorPagination, ErrorNotice, Notice } from "../../core/ui";
 import { autoReviewCheck, autoReviewReport, pageOf } from "./contracts";
 import { reasonLabel } from "./auto-review-view";
 import styles from "./AutoReview.module.css";
+import { EmptyArt } from "../../core/EmptyArt";
 
 export function AutoReviewChecksPage() {
   const user = useOutletContext<CurrentUser | undefined>();
@@ -98,7 +99,7 @@ function ChecksContent() {
         <ListFeedback result={checks} loadingText="Đang tải cảnh báo…" />
         {checks.isSuccess && items.length === 0 && (
           <div className="empty">
-            <span className="folio">—</span>
+            <EmptyArt variant="alerts" />
             <h2>Không có cảnh báo nào.</h2>
             <p>Danh sách cập nhật khi có bài cần xem lại.</p>
           </div>

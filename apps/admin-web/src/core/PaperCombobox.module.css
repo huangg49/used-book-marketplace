@@ -1,0 +1,116 @@
+.combo {
+  position: relative;
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+.combo > label {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--shop-ink);
+}
+.control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 13px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  background: var(--shop-paper);
+  transition: border-color 140ms ease-out;
+}
+.control:hover {
+  border-color: var(--shop-control);
+}
+.control:focus-within {
+  border-color: var(--shop-wine);
+  outline: 2px solid color-mix(in srgb, var(--shop-wine) 25%, transparent);
+  outline-offset: 1px;
+}
+.control > svg {
+  flex-shrink: 0;
+  color: var(--shop-muted);
+}
+.control > input {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--shop-ink);
+  font: inherit;
+  outline: none;
+}
+/* The wrapper draws the focus ring; drop the global input border/shadow. */
+.combo .control > input[role="combobox"],
+.combo .control > input[role="combobox"]:focus {
+  border: 0;
+  box-shadow: none;
+}
+.spin {
+  animation: spin 900ms linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.combo ul {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  max-height: min(280px, 50dvh);
+  overflow: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--shop-line);
+  border-top: 2px solid var(--shop-wine);
+  border-radius: 8px;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  box-shadow: 0 12px 25px color-mix(in srgb, var(--shop-ink) 14%, transparent);
+}
+.combo ul[data-open="true"] {
+  display: block;
+}
+.combo li {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.combo li > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.combo li small {
+  color: var(--shop-muted);
+  font-size: 0.78rem;
+}
+.combo li[data-active="true"] {
+  background: var(--shop-shelf);
+  color: var(--shop-wine);
+}
+.combo li[aria-selected="true"] {
+  color: var(--shop-wine);
+}
+.combo li > svg {
+  flex-shrink: 0;
+  color: var(--shop-wine);
+}
+.combo li.empty {
+  cursor: default;
+  color: var(--shop-muted);
+}

@@ -22,3 +22,50 @@
 .confirm { min-height: 52px; border: 0; border-radius: 12px; background: var(--shop-wine); color: var(--shop-cream); font-weight: 700; font-size: 1rem; cursor: pointer; }
 .confirm:disabled { opacity: .6; cursor: not-allowed; }
 @media (max-width: 420px) { .heading strong { font-size: 1.15rem; } }
+/* Brand the native controls: wine radio dot, wine chevron, wine calendar icon.
+   accent-color also tints the browser's own date popup where supported. */
+.dialog { accent-color: var(--shop-wine); color-scheme: light; }
+.choice > label:hover { border-color: var(--shop-wine); background: var(--shop-shelf, #f4eddf); }
+.choice input[type="radio"] { appearance: none; flex: none; display: grid; place-items: center; width: 20px; height: 20px; margin: 0; border: 2px solid var(--shop-control); border-radius: 50%; background: var(--shop-paper); cursor: pointer; transition: border-color 140ms ease-out; }
+.choice input[type="radio"]::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--shop-wine); transform: scale(0); transition: transform 140ms ease-out; }
+.choice input[type="radio"]:checked { border-color: var(--shop-wine); }
+.choice input[type="radio"]:checked::before { transform: scale(1); }
+.choice input[type="radio"]:focus-visible { outline: 2px solid var(--shop-wine); outline-offset: 2px; }
+.choice > label:has(input:checked) { color: var(--shop-wine); font-weight: 600; background: var(--shop-paper); }
+.field input:hover, .field select:hover { border-color: var(--shop-wine); }
+.field input[type="datetime-local"] { font-variant-numeric: tabular-nums; cursor: text; }
+.field input[type="datetime-local"]::-webkit-calendar-picker-indicator { width: 20px; height: 20px; padding: 4px; border-radius: 6px; cursor: pointer; background: var(--shop-wine); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E") center / 20px no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E") center / 20px no-repeat; }
+.field input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper { padding: 0; }
+.field input[type="datetime-local"]::-webkit-datetime-edit-day-field:focus,
+.field input[type="datetime-local"]::-webkit-datetime-edit-month-field:focus,
+.field input[type="datetime-local"]::-webkit-datetime-edit-year-field:focus,
+.field input[type="datetime-local"]::-webkit-datetime-edit-hour-field:focus,
+.field input[type="datetime-local"]::-webkit-datetime-edit-minute-field:focus,
+.field input[type="datetime-local"]::-webkit-datetime-edit-ampm-field:focus { background: var(--shop-wine); color: var(--shop-cream); border-radius: 3px; }
+.field select { appearance: none; padding-right: 40px; cursor: pointer; background: var(--shop-paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235c0202' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 18px; }
+.field select option { background: var(--shop-paper); color: var(--shop-ink); }
+.field select option:checked { background: var(--shop-wine); color: var(--shop-cream); }
+.field input:disabled, .field select:disabled { opacity: .6; cursor: not-allowed; }
+/* Layout pass: roomier header, even section rhythm, labelled summary card. */
+.header { align-items: flex-start; padding: 22px 16px 18px 22px; }
+.heading { gap: 6px; padding-top: 4px; }
+.heading strong { font-size: 1.35rem; letter-spacing: -0.01em; }
+.heading small { font-size: .875rem; opacity: .85; padding-left: 26px; }
+.close { margin-top: -6px; }
+.body { padding: 20px 22px 22px; gap: 18px; }
+.choice legend, .field label { font-size: .8125rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--shop-muted); }
+.choice legend { margin-bottom: 8px; }
+.choice > .field { margin-top: 6px; }
+dl.summary { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 0; padding: 0; border: 1px solid var(--shop-line, #d9cbbd); border-left: 3px solid var(--shop-wine); border-radius: 8px; background: var(--shop-shelf, #f4eddf); color: var(--shop-ink); font-weight: 400; }
+dl.summary > div { display: grid; gap: 4px; padding: 10px 14px; }
+dl.summary > div + div { border-left: 1px dashed var(--shop-line, #d9cbbd); }
+dl.summary dt { display: inline-flex; align-items: center; gap: 6px; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--shop-muted); }
+dl.summary dt svg { color: var(--shop-wine); }
+dl.summary dd { margin: 0; font-weight: 700; color: var(--shop-wine); font-variant-numeric: tabular-nums; }
+.note { display: flex; gap: 8px; align-items: flex-start; padding-top: 14px; border-top: 1px solid var(--shop-line, #d9cbbd); }
+.note > svg { flex: none; margin-top: 2px; color: var(--shop-wine); }
+.note strong { color: var(--shop-ink); font-weight: 700; }
+.confirm { margin-top: 2px; border-radius: 10px; letter-spacing: .01em; }
+.confirm:not(:disabled):hover { background: #7c2320; }
+@media (max-width: 420px) { dl.summary { grid-template-columns: 1fr; } dl.summary > div + div { border-left: 0; border-top: 1px dashed var(--shop-line, #d9cbbd); } }
+.body > .note:first-child { padding-top: 0; border-top: 0; }

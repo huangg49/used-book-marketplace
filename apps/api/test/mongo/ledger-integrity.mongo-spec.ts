@@ -6,6 +6,7 @@ import {
 } from '../../src/database/mongo/collections.js';
 import { runTransaction } from '../../src/database/mongo/transaction.js';
 import { OPENING_JOURNAL_ID } from '../../src/database/mongo/migrations/0002-reference-data.js';
+import { SIMULATED_CAPITAL } from '../../src/database/mongo/migrations/0055-simulator-capital-increase.js';
 import { checkIntegrity } from '../../src/integrity/integrity.js';
 import {
   CLEARING_ID,
@@ -73,7 +74,7 @@ describe('ledger reconciliation backstops', () => {
     expect((await sweep()).failures).toEqual([]);
     expect(await reconcile()).toMatchObject({
       balanced: true,
-      sourceRemaining: 100_000_000,
+      sourceRemaining: SIMULATED_CAPITAL,
       memberAvailable: 0,
     });
     expect(await c.ledger_entries.find({}).toArray()).toEqual(before);

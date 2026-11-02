@@ -1,17 +1,19 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { CalendarClock, X } from 'lucide-react'
+import { CalendarClock, Flag, Info, Play, X } from 'lucide-react'
 import { lockPageScroll } from '../../lib/page-scroll'
 import { playAuctionMotion, sheetFrames } from '../../lib/auction-motion'
 import { commandError } from '../../lib/auction-errors'
 import { outcomeUnknown, useIntentKey } from '../../hooks/useAuctionClock'
 import {
-  AUCTION_MAX_HOURS, AUCTION_MIN_LEAD_MS, AUCTION_SCHEDULE_HORIZON_MS, publishAuction, rescheduleAuction,
+  AUCTION_MAX_DURATION_S, AUCTION_MIN_DURATION_S, AUCTION_MIN_LEAD_MS, AUCTION_SCHEDULE_HORIZON_MS, publishAuction, rescheduleAuction,
   type ScheduleBody,
 } from '../../services/auctions'
+import { DateTimePicker } from '../DateTimePicker'
+import { DurationInput } from '../DurationInput'
 import styles from './ScheduleAuctionDialog.module.css'
 
 const HOUR = 3_600_000
-const PRESETS = [1, 3, 6, 12, 24, 48, 72, 120, 168]
+const PRESETS = [1, 3, 6, 12, 24, 48, 72, 168].map((h) => h * 3600)
 // ADR 0047: the server keeps a live auction open at least one more hour.
 const MIN_REMAINING_MS = HOUR
 
@@ -44,12 +46,12 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
   const ids = useId()
   const intent = useIntentKey()
   const live = target.kind === 'reschedule' && target.live
-  const currentHours = target.kind === 'reschedule'
-    ? Math.round((Date.parse(target.endAt) - Date.parse(target.startAt)) / HOUR)
-    : 24
+  const currentSeconds = target.kind === 'reschedule'
+    ? Math.round((Date.parse(target.endAt) - Date.parse(target.startAt)) / 1000)
+    : 24 * 3600
   const [later, setLater] = useState(target.kind === 'reschedule' && !live)
   const [startInput, setStartInput] = useState('')
-  const [hours, setHours] = useState(currentHours)
+  const [seconds, setSeconds] = useState(currentSeconds)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // A lost response keeps the same body and key so the retry replays it.
@@ -66,7 +68,7 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
       if (!prepared.current) {
         const start = target.kind === 'reschedule' && !target.live ? Date.parse(target.startAt) : now + HOUR
         setLater(target.kind === 'reschedule' && !target.live)
-        setStartInput(toLocalInput(start)); setHours(currentHours); setError(null)
+        setStartInput(toLocalInput(start)); setSeconds(currentSeconds); setError(null)
         prepared.current = true
       }
       dialog.showModal()
@@ -88,8 +90,10 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
   const startMs = live && target.kind === 'reschedule'
     ? Date.parse(target.startAt)
     : later ? Date.parse(startInput) : now
-  const endMs = startMs + hours * HOUR
-  const fieldError = live
+  const endMs = startMs + seconds * 1000
+  const fieldError = seconds < AUCTION_MIN_DURATION_S || seconds > AUCTION_MAX_DURATION_S
+    ? 'Thời lượng phiên từ 1 giờ đến 7 ngày.'
+    : live
     ? endMs < now + MIN_REMAINING_MS ? 'Phiên đang mở phải còn ít nhất 1 giờ. Chọn thời lượng dài hơn.' : null
     : later && Number.isNaN(startMs) ? 'Chọn ngày giờ mở phiên.'
       : later && startMs < now + AUCTION_MIN_LEAD_MS ? 'Hẹn giờ mở ít nhất 5 phút sau bây giờ.'
@@ -100,7 +104,7 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
     const body: ScheduleBody = unknown ?? {
       expectedVersion: target.version,
       startAt: !live && later ? new Date(startMs).toISOString() : null,
-      durationHours: hours,
+      durationSeconds: seconds,
     }
     const key = intent.keyFor(JSON.stringify(body))
     let pending = false, done = false
@@ -146,27 +150,37 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
               {later && (
                 <div className={styles.field}>
                   <label htmlFor={`${ids}-start`}>Giờ mở phiên</label>
-                  <input
-                    id={`${ids}-start`} type="datetime-local" value={startInput}
+                  <DateTimePicker
+                    id={`${ids}-start`} label="Giờ mở phiên" value={startInput}
                     min={toLocalInput(now + AUCTION_MIN_LEAD_MS)} max={toLocalInput(now + AUCTION_SCHEDULE_HORIZON_MS)}
-                    onChange={(event) => setStartInput(event.target.value)}
+                    onChange={setStartInput}
                   />
                 </div>
               )}
             </fieldset>
           )}
-          <div className={styles.field}>
-            <label htmlFor={`${ids}-hours`}>Thời lượng phiên</label>
-            <select id={`${ids}-hours`} value={hours} disabled={locked} onChange={(event) => setHours(Number(event.target.value))}>
-              {[...new Set([...PRESETS, currentHours])].filter((h) => h >= 1 && h <= AUCTION_MAX_HOURS).sort((a, b) => a - b).map((h) => (
-                <option key={h} value={h}>{h < 24 || h % 24 ? `${h} giờ` : `${h / 24} ngày (${h} giờ)`}</option>
-              ))}
-            </select>
-          </div>
-          <p className={fieldError ? styles.error : styles.summary} role={fieldError ? 'alert' : undefined}>
-            {fieldError ?? `Mở ${later || live ? when(startMs) : 'ngay khi xác nhận'} · kết thúc ${when(endMs)}`}
+          <DurationInput
+            id={`${ids}-duration`} label="Thời lượng phiên" value={seconds}
+            presets={PRESETS} disabled={locked} onChange={setSeconds}
+          />
+          {fieldError ? (
+            <p className={styles.error} role="alert">{fieldError}</p>
+          ) : (
+            <dl className={styles.summary}>
+              <div>
+                <dt><Play size={14} aria-hidden="true" /> Mở phiên</dt>
+                <dd>{later || live ? when(startMs) : 'Ngay khi xác nhận'}</dd>
+              </div>
+              <div>
+                <dt><Flag size={14} aria-hidden="true" /> Kết thúc</dt>
+                <dd>{when(endMs)}</dd>
+              </div>
+            </dl>
+          )}
+          <p className={styles.note}>
+            <Info size={15} aria-hidden="true" />
+            <span>Bạn đổi được thời gian <strong>tối đa 5 lần</strong>, chỉ khi chưa có lượt trả giá. Sau lượt trả giá đầu tiên, thời gian phiên được giữ nguyên.</span>
           </p>
-          <p className={styles.note}>Bạn đổi được thời gian tối đa 5 lần, chỉ khi chưa có lượt trả giá. Sau lượt trả giá đầu tiên, thời gian phiên được giữ nguyên.</p>
           {error && <p role="alert" className={styles.error}>{error}</p>}
           <button type="button" className={styles.confirm} disabled={busy || (!unknown && !!fieldError)} onClick={() => void submit()}>
             {busy ? 'Đang gửi…' : unknown ? 'Thử lại' : target.kind === 'publish' ? (later ? 'Hẹn giờ mở phiên' : 'Mở phiên ngay') : 'Lưu thời gian mới'}

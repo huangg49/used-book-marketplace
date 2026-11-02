@@ -2,15 +2,20 @@ import { useState } from "react";
 import { LayoutAnimation, Platform, Pressable, StyleSheet, Switch, UIManager, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { AppTextInput as TextInput, Icon, formatVnd, stitchTokens } from "../../../core/ui";
-import { AUCTION_MAX_PRICE } from "../auctions-model";
+import { AUCTION_STEP_MAX, AUCTION_STEPS, type AuctionStep } from "../auctions-model";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 export interface SendToAuctionPricingProps {
-  readonly step: 10000 | 50000;
-  readonly onSelectStep: (step: 10000 | 50000) => void;
+  readonly step: AuctionStep;
+  readonly onSelectStep: (step: AuctionStep) => void;
+  readonly customStepOn: boolean;
+  readonly onSelectCustomStep: () => void;
+  readonly customStepText: string;
+  readonly onChangeCustomStepText: (text: string) => void;
+  readonly customStepError?: string;
   readonly startPriceText: string;
   readonly onChangeStartPriceText: (text: string) => void;
   readonly startPriceError?: string;
@@ -26,6 +31,11 @@ export interface SendToAuctionPricingProps {
 export function SendToAuctionPricing({
   step,
   onSelectStep,
+  customStepOn,
+  onSelectCustomStep,
+  customStepText,
+  onChangeCustomStepText,
+  customStepError,
   startPriceText,
   onChangeStartPriceText,
   startPriceError,
@@ -99,8 +109,8 @@ export function SendToAuctionPricing({
           Bước giá tối thiểu (Mỗi lượt ra giá)
         </AppText>
         <View style={styles.stepGrid}>
-          {([10000, 50000] as const).map((val) => {
-            const isSelected = step === val;
+          {AUCTION_STEPS.map((val) => {
+            const isSelected = !customStepOn && step === val;
             return (
               <Pressable
                 key={val}
@@ -128,7 +138,56 @@ export function SendToAuctionPricing({
               </Pressable>
             );
           })}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Tự nhập bước giá"
+            accessibilityState={{ selected: customStepOn }}
+            disabled={disabled}
+            onPress={onSelectCustomStep}
+            style={[
+              styles.stepButton,
+              styles.stepButtonWide,
+              customStepOn && styles.stepButtonActive,
+              disabled && { opacity: 0.6 },
+            ]}
+          >
+            <Icon
+              name={customStepOn ? "check" : "radio_button_unchecked" as any}
+              size={14}
+              color={customStepOn ? stitchTokens.gold : stitchTokens.subtleGray}
+            />
+            <AppText
+              kind="bold"
+              style={[styles.stepButtonText, customStepOn && styles.stepButtonTextActive]}
+            >
+              Tự nhập bước giá
+            </AppText>
+          </Pressable>
         </View>
+        {customStepOn && (
+          <>
+            <View style={[styles.inputWrapper, Boolean(customStepError) && styles.inputWrapperError]}>
+              <TextInput
+                value={customStepText}
+                onChangeText={(text) =>
+                  onChangeCustomStepText(text.replace(/\D/g, "").slice(0, String(AUCTION_STEP_MAX).length))
+                }
+                keyboardType="number-pad"
+                editable={!disabled}
+                placeholder="0"
+                placeholderTextColor={stitchTokens.subtleGray}
+                accessibilityLabel="Bước giá tự nhập"
+                style={styles.textInput}
+              />
+              <AppText kind="bold" style={styles.currencySuffix}>
+                VNĐ
+              </AppText>
+            </View>
+            <AppText kind="small" style={customStepError ? styles.errorText : styles.helpText}>
+              {customStepError ?? "Bội số của 1.000đ, từ 1.000đ đến 10.000.000đ."}
+            </AppText>
+          </>
+        )}
       </View>
 
       {/* 2. Starting Price (Giá khởi điểm) */}
@@ -163,7 +222,7 @@ export function SendToAuctionPricing({
           </AppText>
         ) : (
           <AppText kind="small" style={styles.helpText}>
-            Phạm vi hợp lệ: Từ {formatVnd(10000)} đến {formatVnd(AUCTION_MAX_PRICE)}
+            Phạm vi hợp lệ: Từ {formatVnd(10000)} trở lên
           </AppText>
         )}
       </View>
@@ -176,7 +235,7 @@ export function SendToAuctionPricing({
               Cho phép mua ngay
             </AppText>
             <AppText kind="small" style={styles.buyNowSubtitle}>
-              Còn dùng được sau lượt trả giá khi giá hiện tại thấp hơn giá mua ngay. Người khác có 60 giây để trả cao hơn.
+              Còn dùng được sau lượt trả giá khi giá hiện tại thấp hơn giá mua ngay. Người khác có 5 phút để trả cao hơn (60 giây nếu người bấm đang dẫn).
             </AppText>
           </View>
           <Switch
@@ -327,10 +386,12 @@ const styles = StyleSheet.create({
   },
   stepGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   stepButton: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: "45%",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -340,6 +401,9 @@ const styles = StyleSheet.create({
     backgroundColor: stitchTokens.whiteAlpha90,
     borderWidth: 1,
     borderColor: stitchTokens.goldBorder,
+  },
+  stepButtonWide: {
+    flexBasis: "100%",
   },
   stepButtonActive: {
     backgroundColor: stitchTokens.wineDark,

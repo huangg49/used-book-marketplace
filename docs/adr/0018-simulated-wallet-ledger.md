@@ -3,6 +3,8 @@
 2026-09-28. F2a backend increment; OpenAPI 0.13.0. Sources: SRS 1.1 FR-W01–04,
 AC-38, §9.1, §13; ADR 0013 and the transaction foundation plan. This is not the
 whole F2, a production wallet, or permission to charge an Order.
+Later: [ADR 0067](0067-uncapped-auction-amounts.md) journals a capital increase to
+1,000,000,000,000 VND and raises the topup ceiling; the opening journal below is unchanged.
 Follow-up: [ADR 0019](0019-locked-existing-obligations.md) adds LOCKED wallet/history
 reads with topupEnabled=false. The F2a baseline below predates that access increment.
 [ADR 0020](0020-order-wallet-payment.md) subsequently adds typed OrderHold accounts,

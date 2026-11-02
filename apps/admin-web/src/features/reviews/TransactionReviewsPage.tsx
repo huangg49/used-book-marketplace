@@ -19,6 +19,7 @@ import { Button, CursorPagination, Notice } from "../../core/ui";
 import { ListFeedback } from "../../core/list-feedback";
 import { dateText } from "../../core/format";
 import styles from "./TransactionReviewsPage.module.css";
+import { EmptyArt } from "../../core/EmptyArt";
 export function TransactionReviewsPage() {
   const user = useOutletContext<CurrentUser>();
   if (!canReview(user))
@@ -61,6 +62,7 @@ function ReviewQueue({ owner }: { owner: string }) {
       <ListFeedback result={result} loadingText="Đang tải đánh giá…" />
       {result.isSuccess && result.data.pages[0].items.length === 0 ? (
         <div className="empty">
+          <EmptyArt variant="stars" />
           <h2>Chưa có đánh giá được phép xử lý</h2>
           <p>Đánh giá chỉ vào hàng đợi sau khi hết các thời hạn bảo mật.</p>
         </div>

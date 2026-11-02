@@ -12,6 +12,10 @@ import { PLATFORM_COMMISSION_ACCOUNT_ID } from '../migrations/auction-constants.
 import { LISTING_FEE_CLEARING_ID } from '../migrations/0022-vnpay-wallet-listing-fees.js';
 import { bookCirculationRegions } from '../migrations/0030-book-circulation-regions.js';
 import {
+  CAPITAL_INCREASE_JOURNAL_ID,
+  postCapitalIncrease,
+} from '../migrations/0055-simulator-capital-increase.js';
+import {
   LEDGER_SEQUENCE_COUNTER,
   OPENING_JOURNAL_ID,
   referenceData,
@@ -837,13 +841,15 @@ export async function importPostgres(
     }
     throw new Error(`Reference data ${name} differs between the databases.`);
   }
-  // Replace migration 0002's simulator ledger with the PostgreSQL original.
+  // Replace migration 0002's simulator ledger with the PostgreSQL original;
+  // 0055's capital increase is posted again after the imported journals.
+  const simulatorJournals = [OPENING_JOURNAL_ID, CAPITAL_INCREASE_JOURNAL_ID];
   await db
     .collection('ledger_entries')
-    .deleteMany({ journalId: OPENING_JOURNAL_ID });
+    .deleteMany({ journalId: { $in: simulatorJournals } });
   await db
     .collection('ledger_journals')
-    .deleteMany({ _id: OPENING_JOURNAL_ID as never });
+    .deleteMany({ _id: { $in: simulatorJournals } as never });
   await db.collection('wallet_accounts').deleteMany({
     _id: { $in: referenceData.wallet_accounts.map((a) => a._id) } as never,
   });
@@ -867,6 +873,7 @@ export async function importPostgres(
       { $set: { value: maxSequence } },
       { upsert: true },
     );
+  await postCapitalIncrease(db);
   for (const account of docs.wallet_accounts)
     await db
       .collection('account_locks')
@@ -888,7 +895,11 @@ export async function importPostgres(
         (spec.collection !== 'wallet_accounts' ||
         ![PLATFORM_COMMISSION_ACCOUNT_ID, LISTING_FEE_CLEARING_ID].includes(
           String(d._id),
-        )),
+        )) &&
+        (spec.collection !== 'ledger_journals' ||
+          String(d._id) !== CAPITAL_INCREASE_JOURNAL_ID) &&
+        (spec.collection !== 'ledger_entries' ||
+          d.journalId !== CAPITAL_INCREASE_JOURNAL_ID),
     );
     const expected = contentHash(docs[spec.collection]);
     collections[spec.collection] = {

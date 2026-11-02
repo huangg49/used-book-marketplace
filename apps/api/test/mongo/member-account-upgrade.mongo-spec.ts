@@ -16,6 +16,7 @@ import {
   TEST_APP_PASSWORD,
   TEST_MIGRATOR_PASSWORD,
 } from './harness.js';
+import { CAPITAL_INCREASE_JOURNAL_ID } from '../../src/database/mongo/migrations/0055-simulator-capital-increase.js';
 
 // An upgrade from main's 59 applied migrations, not a fresh-current-schema test.
 const suffix = [
@@ -33,6 +34,12 @@ const suffix = [
   '0054-exchange-negotiated-diff',
   '0055-exchange-negotiated-diff-payer',
   '0054-local-demo-completion',
+  '0054-uncapped-auction-amounts',
+  '0055-simulator-capital-increase',
+  '0056-auction-step-options',
+  '0057-custom-auction-step',
+  '0058-buy-now-rival-window',
+  '0059-auction-free-shipping-reconcile',
 ];
 const sha = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -132,11 +139,12 @@ describe('main → member profile/account/cart schema upgrade', () => {
             .findOne({ _id: sessionId as never }),
         ),
       ).toBe(sha(session));
+      // Existing money is untouched; 0055 only adds its fixed CapitalIncrease journal.
       expect(
         sha(
           await db
             .collection('ledger_journals')
-            .find()
+            .find({ _id: { $ne: CAPITAL_INCREASE_JOURNAL_ID } } as never)
             .sort({ _id: 1 })
             .toArray(),
         ),

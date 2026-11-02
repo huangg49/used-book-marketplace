@@ -2,6 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { MongoClient, type Db, type Document } from 'mongodb';
 import { bindCollections } from '../src/database/mongo/collections.js';
 import type { ListingDoc } from '../src/database/mongo/documents.js';
+import {
+  CAPITAL_INCREASE_JOURNAL_ID,
+  SIMULATED_CAPITAL,
+} from '../src/database/mongo/migrations/0055-simulator-capital-increase.js';
 import { migrate } from '../src/database/mongo/migrate.js';
 import { migrations } from '../src/database/mongo/migrations/index.js';
 import {
@@ -230,6 +234,12 @@ it('upgrades from the baseline without changing existing address/listing/receipt
         .toArray(),
     ).toEqual([
       { _id: OPENING_JOURNAL_ID, type: 'OpeningCapital', sequence: 1 },
+      // ADR 0067: migration 0055 journals the simulator capital increase.
+      {
+        _id: CAPITAL_INCREASE_JOURNAL_ID,
+        type: 'CapitalIncrease',
+        sequence: 2,
+      },
     ]);
     expect(
       await rootDb
@@ -245,13 +255,13 @@ it('upgrades from the baseline without changing existing address/listing/receipt
           { $project: { _id: 0 } },
         ])
         .toArray(),
-    ).toEqual([{ debit: 100000000, credit: 100000000 }]);
+    ).toEqual([{ debit: SIMULATED_CAPITAL, credit: SIMULATED_CAPITAL }]);
     // Posting order continues after the opening journal (the bigint sequence).
     expect(
       await rootDb
         .collection('counters')
         .findOne({ _id: LEDGER_SEQUENCE_COUNTER as never }),
-    ).toEqual({ _id: LEDGER_SEQUENCE_COUNTER, value: 1 });
+    ).toEqual({ _id: LEDGER_SEQUENCE_COUNTER, value: 2 });
     expect(await rootDb.collection('topup_intents').countDocuments()).toBe(0);
     expect(await rootDb.collection('sale_quotes').countDocuments()).toBe(0);
     expect(

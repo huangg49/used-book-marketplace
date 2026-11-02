@@ -1,0 +1,49 @@
+.picker { display: grid; gap: 8px; --line: var(--shop-line, #d9cbbd); --shelf: var(--shop-shelf, #f4eddf); }
+.trigger { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 0 12px; border: 1px solid var(--shop-control); border-radius: 6px; background: var(--shop-paper); color: var(--shop-ink); font: inherit; text-align: left; cursor: pointer; transition: border-color 140ms ease-out; }
+.trigger:hover, .trigger[aria-expanded="true"] { border-color: var(--shop-wine); }
+.trigger:focus-visible { outline: 2px solid var(--shop-wine); outline-offset: 1px; }
+.trigger:disabled { opacity: .6; cursor: not-allowed; }
+.trigger > svg { flex: none; color: var(--shop-wine); }
+.date { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: capitalize; }
+.time { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; background: var(--shop-wine); color: var(--shop-cream); font-weight: 700; font-size: .875rem; font-variant-numeric: tabular-nums; }
+
+.panel { position: fixed; inset: auto; z-index: 60; width: min(380px, calc(100vw - 24px)); margin: 0; padding: 0; color: var(--shop-ink); display: grid; grid-template-columns: 1fr auto; border: 1px solid var(--line); border-top: 3px solid var(--shop-wine); border-radius: 10px; background: var(--shop-paper); box-shadow: 0 18px 40px rgba(40, 25, 20, .22), 0 2px 6px rgba(40, 25, 20, .08); overflow: hidden; animation: drop 160ms ease-out; }
+@keyframes drop { from { opacity: 0; transform: translateY(-4px); } }
+
+.calendar { padding: 12px; }
+.month { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.month strong { color: var(--shop-wine); font-size: .95rem; }
+.month button { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--shop-paper); color: var(--shop-wine); cursor: pointer; }
+.month button:hover:not(:disabled) { background: var(--shelf); }
+.month button:disabled { opacity: .35; cursor: not-allowed; }
+.weekdays, .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+.weekdays span { padding: 4px 0; font-size: .7rem; font-weight: 700; letter-spacing: .04em; color: var(--shop-muted); }
+.days button { aspect-ratio: 1; min-height: 32px; border: 0; border-radius: 8px; background: transparent; color: var(--shop-ink); font: inherit; font-size: .875rem; font-variant-numeric: tabular-nums; cursor: pointer; }
+.days button[data-outside="true"] { color: var(--shop-muted); opacity: .55; }
+.days button[data-today="true"] { box-shadow: inset 0 0 0 1px var(--shop-wine); font-weight: 700; }
+.days button:hover:not(:disabled) { background: var(--shelf); color: var(--shop-wine); }
+.days button[aria-pressed="true"], .days button[aria-pressed="true"]:hover:not(:disabled) { background: var(--shop-wine); color: var(--shop-cream); font-weight: 700; opacity: 1; }
+.days button:disabled { opacity: .25; text-decoration: line-through; cursor: not-allowed; }
+.days button:focus-visible, .column button:focus-visible, .footer button:focus-visible { outline: 2px solid var(--shop-wine); outline-offset: 1px; }
+
+.clock { display: grid; grid-template-columns: repeat(2, 52px); grid-template-rows: auto 1fr; column-gap: 4px; padding: 12px 10px; border-left: 1px solid var(--line); background: var(--shelf); }
+.clockLabel { padding-bottom: 6px; text-align: center; font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--shop-muted); }
+.column { display: grid; align-content: start; gap: 2px; max-height: 236px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--shop-control) transparent; }
+.column button { min-height: 32px; border: 0; border-radius: 6px; background: transparent; color: var(--shop-ink); font: inherit; font-size: .875rem; font-variant-numeric: tabular-nums; cursor: pointer; }
+.column button:hover:not(:disabled) { background: var(--shop-paper); color: var(--shop-wine); }
+.column button[aria-pressed="true"], .column button[aria-pressed="true"]:hover:not(:disabled) { background: var(--shop-wine); color: var(--shop-cream); font-weight: 700; }
+.column button:disabled { opacity: .3; cursor: not-allowed; }
+
+.footer { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-top: 1px solid var(--line); }
+.link { border: 0; background: none; color: var(--shop-wine); font: inherit; font-size: .8125rem; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.link:disabled { opacity: .4; cursor: not-allowed; }
+.done { min-height: 34px; padding: 0 16px; border: 0; border-radius: 8px; background: var(--shop-wine); color: var(--shop-cream); font: inherit; font-size: .8125rem; font-weight: 700; cursor: pointer; }
+.done:hover { background: #7c2320; }
+
+@media (max-width: 420px) {
+  .panel { grid-template-columns: 1fr; max-height: calc(100dvh - 24px); overflow-y: auto; }
+  .clock { grid-template-columns: repeat(2, 1fr); border-left: 0; border-top: 1px solid var(--line); }
+  .column { max-height: 140px; }
+}
+/* Without Popover API support the panel falls back to flowing inline. */
+@supports not selector(:popover-open) { .panel { position: static; width: auto; } }

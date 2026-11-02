@@ -1,26 +1,40 @@
-.card { min-width: 0; display: flex; flex-direction: column; }
-.cover { display: flex; align-items: center; justify-content: center; position: relative; height: 240px; padding: 24px 20px 44px; background: var(--cover-sand,#f0e2ca); border-radius: 12px; text-decoration: none; overflow: hidden; }
+/* A framed card: cover on top, then title, a price panel, a fact list and one clear action. */
+.card { min-width: 0; display: flex; flex-direction: column; padding: 10px; border: 1px solid var(--shop-line, #e3d6c4); border-radius: 14px; background: var(--shop-paper); transition: border-color 180ms ease-out, box-shadow 180ms ease-out, transform 180ms ease-out; }
+.cover { display: flex; align-items: center; justify-content: center; position: relative; height: 230px; padding: 22px 20px 42px; background: var(--cover-sand,#f0e2ca); border-radius: 10px; text-decoration: none; overflow: hidden; }
 .cover > img { max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 7px 9px #28191426); }
-.timer { position: absolute; bottom: 12px; left: 12px; display: inline-flex; gap: 6px; align-items: center; padding: 5px 9px; border-radius: 4px; background: var(--shop-paper); color: var(--shop-ink); font-size: .8125rem; font-variant-numeric: tabular-nums; }
+.timer { position: absolute; bottom: 12px; left: 12px; display: inline-flex; gap: 6px; align-items: center; padding: 5px 10px; border-radius: 999px; background: var(--shop-paper); color: var(--shop-ink); font-size: .8125rem; font-weight: 700; font-variant-numeric: tabular-nums; box-shadow: 0 2px 6px #2819141a; }
+.timer svg { color: var(--shop-wine); }
 .timerSoon { background: var(--shop-wine); color: var(--shop-cream); }
-.meta { display: flex; flex-direction: column; flex: 1; padding-top: 14px; }
-.title { font-size: .9375rem; font-weight: 700; line-height: 1.6; min-height: 3em; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.timerSoon svg { color: var(--shop-cream); }
+
+.meta { display: flex; flex-direction: column; flex: 1; padding: 14px 6px 4px; }
+.title { font-size: 1rem; font-weight: 700; line-height: 1.45; margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .title a { color: var(--shop-ink); text-decoration: none; }
 .title a:hover { color: var(--shop-wine); text-decoration: underline; text-underline-offset: 3px; }
-.author { margin: 4px 0 0; font-size: .8125rem; color: var(--shop-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.priceRow { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px; margin: 16px 0 12px; }
-.priceLabel { display: block; color: var(--shop-muted); font-size: .75rem; margin-bottom: 3px; }
-.price { font-size: 1.125rem; font-weight: 700; color: var(--shop-wine); font-variant-numeric: tabular-nums; }
-.bidders { font-size: .75rem; color: var(--shop-muted); }
-.ends,.point,.buyNow { font-size: .75rem; color: var(--shop-muted); margin: 3px 0; line-height: 1.7; overflow-wrap: anywhere; }
-.buyNow strong { color: var(--shop-ink); }
-.action { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 44px; margin-top: auto; padding-top: 12px; color: var(--shop-wine); font-size: .875rem; font-weight: 700; text-decoration: none; }
-.action:hover { text-decoration: underline; text-underline-offset: 4px; }
-@media(max-width:700px) { .cover { height: 200px; padding: 18px 14px 40px; } .price { font-size: 1rem; } .priceRow { margin-top: 12px; } }
-@media(max-width:380px) { .cover { height: 176px; } }
+.author { margin: 2px 0 0; font-size: .8125rem; font-style: italic; color: var(--shop-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.priceBox { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 6px 10px; margin: 14px 0 12px; padding: 10px 12px; border-left: 3px solid var(--shop-wine); border-radius: 8px; background: var(--shop-shelf, #f4eddf); }
+.priceLabel { display: block; margin-bottom: 2px; color: var(--shop-muted); font-size: .6875rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.price { font-size: 1.25rem; font-weight: 800; color: var(--shop-wine); font-variant-numeric: tabular-nums; }
+.bidders { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; background: var(--shop-paper); color: var(--shop-muted); font-size: .72rem; font-weight: 600; white-space: nowrap; }
+.bidders[data-active] { background: var(--shop-wine); color: var(--shop-cream); }
+
+.facts { display: grid; gap: 6px; margin: 0 0 14px; padding: 0; list-style: none; font-size: .78rem; }
+.facts li { display: grid; grid-template-columns: 16px auto minmax(0, 1fr); align-items: center; gap: 7px; color: var(--shop-muted); }
+.facts svg { color: var(--shop-wine); opacity: .8; }
+.facts b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; color: var(--shop-ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.facts .buyNow b { color: var(--shop-wine); font-weight: 800; }
+
+.action { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; margin-top: auto; border: 1px solid var(--shop-wine); border-radius: 8px; color: var(--shop-wine); font-size: .875rem; font-weight: 700; text-decoration: none; transition: background-color 160ms ease-out, color 160ms ease-out; }
+.action:hover, .action:focus-visible { background: var(--shop-wine); color: var(--shop-cream); }
+.action:focus-visible { outline: 2px solid var(--shop-wine); outline-offset: 2px; }
+
+@media(max-width:700px) { .cover { height: 196px; padding: 18px 14px 40px; } .price { font-size: 1.0625rem; } }
+@media(max-width:380px) { .cover { height: 172px; } }
 @media(hover:hover) and (pointer:fine) {
+  .card:hover { border-color: var(--shop-control); box-shadow: 0 12px 28px #2819141c; transform: translateY(-2px); }
   .cover > img { transition: transform 220ms cubic-bezier(.16,1,.3,1), filter 220ms ease-out !important; }
   .cover:hover > img,.cover:focus-visible > img { transform: translateY(-3px); filter: drop-shadow(0 10px 10px #28191430); }
   .action svg { transition: transform 170ms ease-out !important; }
-  .action:hover svg,.action:focus-visible svg { transform: translate(2px,-2px); }
+  .action:hover svg,.action:focus-visible svg { transform: translateX(3px); }
 }

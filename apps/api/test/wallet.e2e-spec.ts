@@ -10,6 +10,10 @@ import { configureApp } from '../src/configure-app.js';
 import type { RoleCode, UserStatus } from '../src/database/mongo/documents.js';
 import { MongoService } from '../src/database/mongo/mongo.service.js';
 import { OPENING_JOURNAL_ID } from '../src/database/mongo/migrations/0002-reference-data.js';
+import {
+  SIMULATED_CAPITAL,
+  TOPUP_MAX,
+} from '../src/database/mongo/migrations/0055-simulator-capital-increase.js';
 import { runTransaction } from '../src/database/mongo/transaction.js';
 import { PaymentSimulator } from '../src/modules/wallet/payment-simulator.js';
 import {
@@ -244,7 +248,7 @@ describe('Simulated wallet: real MongoDB and HTTP', () => {
   it.each([
     { amount: 0 },
     { amount: 1.1 },
-    { amount: 10000001 },
+    { amount: TOPUP_MAX + 1 },
     { amount: 1000, ownerId: randomUUID() },
     { amount: 1000, state: 'Succeeded' },
     { amount: 1000, systemActor: 'Payment' },
@@ -656,7 +660,7 @@ describe('Simulated wallet: real MongoDB and HTTP', () => {
         good.memberAvailable +
         good.transactionHeld +
         good.platformCommission,
-    ).toBe(100000000);
+    ).toBe(SIMULATED_CAPITAL);
     // Only a privileged writer (the migrator here, a DB owner before) can
     // alter a posted entry; done inside a transaction that is rolled back.
     await expect(
@@ -932,7 +936,7 @@ describe('Simulated wallet: real MongoDB and HTTP', () => {
     let drain = total - 10000000;
     while (drain > 0) {
       const member = await reader();
-      const amount = Math.min(10000000, drain);
+      const amount = Math.min(TOPUP_MAX, drain);
       await emit(await event(member, amount)).expect(200);
       drain -= amount;
     }
