@@ -1,5 +1,26 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## Gia cố Operations CI / RN mua ngay — checkpoint local
+
+- Owner duyệt xử lý lỗi Operations sau PR89. Nhánh `codex/fix-rn-buy-now-navigation`,
+  base local `d95161f7` giữ nguyên gói evidence; subject
+  `test(rn): use shelf navigation for buy-now regression`.
+  [Chi tiết và giới hạn](../features/EXCHANGE_MAIN_INTEGRATION_2026_11_02.md#gia-cố-browser-runner-sau-merge-pr89).
+- Thay history/popstate giả bằng Trang chủ → thẻ sách thật → đúng URL/mã sách →
+  Mua ngay; ba bản QA cùng đầu sách có giá khác nhau qua revision/duyệt API thật.
+  Mở đơn từ thẻ đang hiện đúng ID, không dùng nút đầu tiên hoặc text của màn nền.
+  Giữ timeout15s, mọi assertion quote/key/body/version/ledger/hold/Back/lateACK.
+  Lỗi có thêm artifact UI an toàn, không token/body/email.
+- Hai lượt full sau sửa PASS: thường và CPU trang Buyer Chromium chậm6lần,0pageErrors;
+  real Nest/Mongo QA, storage/ảnh/funding simulator, RN Expo web390/Seller320px.
+  Chỉ đổi runner/docs nên không chạy lại API unit/native/build không liên quan.
+  Syntax/docs/diff PASS. QA cuối database/user/role còn0; dừng mongo-test, app test
+  đã dừng, DB chính vẫn healthy;28file local teammate giữ nguyên checksum.
+- Hai lượt full trước sửa cũng PASS; chưa tái hiện timeout gốc hoặc chứng minh
+  nguyên nhân duy nhất. Đã loại bỏ điểm yếu history và selector xác nhận từ source/
+  navigation thật. Main `dd7304de` vẫn10PASS/OperationsFAIL; sửa mới chỉ commit local,
+  remote CI NOT RUN, chưa push/PR/merge. Không gọi CI xanh hoặc native/human PASS.
+
 ## Bằng chứng riêng cho sự cố Exchange — checkpoint local
 
 - Owner duyệt gói mới sau khi tự merge [PR89](https://github.com/huangg49/used-book-marketplace/pull/89).

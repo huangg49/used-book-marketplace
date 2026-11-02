@@ -132,6 +132,45 @@ exact create/pay/cancel qua Back/lateACK, ảnh đóng gói/vận đơn lostACK,
 độc lập tới InTransit và giữ tiền, quá hạn bỏ thao tác cũ. API/Mongo thật trên QA,
 storage/ảnh/funding mô phỏng; không là native hoặc giao nhận/provider thật.
 
+## Gia cố browser runner sau merge PR89
+
+Owner đã merge PR89 thành main `dd7304de5c7cf96e2d7faf51e42fbe73dcac0628`.
+[Operations CI đúng SHA](https://github.com/huangg49/used-book-marketplace/actions/runs/41406972829/job/125151105877)
+FAIL ở helper openBook chờ “Xác nhận đặt mua” sau khi chuyển sang bản sách thứ ba;
+10job còn lại PASS. Ảnh artifact cho thấy trang đích có nút Mua ngay, không có
+modal. Hai lượt full local trước sửa (thường và CPU trang Buyer Chromium chậm6lần) đều PASS;
+**chưa tái hiện được timeout gốc hoặc chứng minh nguyên nhân duy nhất**.
+
+Gói owner duyệt tiếp theo ở `codex/fix-rn-buy-now-navigation`, base local
+`d95161f7` (giữ nguyên gói evidence chưa push). Subject
+`test(rn): use shelf navigation for buy-now regression`. Chỉ sửa
+[browser runner](../../scripts/test-rn-buy-now.mjs), không đổi app/API, dependency,
+contract hoặc migration:
+
+- Bỏ tự `history.pushState({})` rồi phát `popstate`. Expo Router57.0.22 hiện dùng
+  ID trong history để ánh xạ state; entry không có ID có thể đi qua resetRoot,
+  nên URL/mã sách xuất hiện chưa đủ chứng minh navigation đã ổn định. Đây là điểm
+  yếu xác nhận từ helper/SDK, không tự chứng minh là nguyên nhân duy nhất của CI.
+- Dùng entry thật: về màn trước nếu đang ở sách → tab Trang chủ → thẻ sách →
+  kiểm URL/ID sách đích → Mua ngay. Đưa page ra foreground khi chuyển từ page Seller.
+  Ba bản sách QA có cùng đầu sách nhưng giá khác nhau qua revision/duyệt thật,
+  chọn thẻ bằng accessible label chính xác, không dùng thứ tự hoặc nút đầu tiên.
+- Navigation thật giữ màn Orders ở nền: lượt đầu phát hiện selector text trùng
+  giữa màn ẩn/hiện. Nay helper chỉ chọn thẻ đơn đang hiển thị theo đúng ID, mở nút
+  trong thẻ đó và chờ heading chi tiết đúng đơn. Không đổi assertion hoặc API.
+- Khi lỗi, artifact thêm pathname, ID sách QA đang mở, số nút và số pageErrors;
+  không lưu token/body/email/response. Screenshot vẫn nằm trong artifact CI cũ.
+- Giữ nguyên timeout15s và mọi assertion quote Changed/expiry, key/body/version,
+  lostACK/Back/lateACK, ledger/hold, pickup độc lập, stale action và không settlement.
+
+Kết quả local sau sửa: full runner thường PASS và full runner với CPU trang Buyer
+Chromium chậm6lần PASS, đều0pageErrors. HTTP/Nest/Mongo thật trên rs-test57017, database ngẫu nhiên `*_test`;
+ảnh/storage/funding simulator. API/RN artifact từ `d95161f7`, RN Expo web390px,
+Seller320px. Log ở `.tmp/integration/rn-checkout-*` và ảnh trong
+`apps/mobile-react-native/test-results/buy-now/`. Browser không thay native/human.
+Remote CI của sửa đổi này **NOT RUN**: chưa push/PR/merge. Main cũ vẫn Operations
+FAIL; cần kiểm lại đúng SHA mới sau khi gói được phép đẩy lên, không gọi CI đã xanh.
+
 ## Bằng chứng local
 
 Windows, Node24.22.1/pnpm11.19.0, pnpm install --offline --frozen-lockfile

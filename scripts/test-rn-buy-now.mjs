@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { randomUUID, createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   createTestApi,
@@ -35,6 +35,7 @@ Object.assign(process.env, {
 });
 let fixture, browser, server;
 const errors = [];
+let openingListingId;
 try {
   await mkdir(artifacts, { recursive: true });
   fixture = await createTestApi({ corsOrigin: origin, listingCount: 3 });
@@ -87,7 +88,8 @@ try {
       },
     });
   };
-  for (const id of fixture.listings) {
+  const listingCards = new Map();
+  for (const [index, id] of fixture.listings.entries()) {
     await approve(id);
     const l = await api(`/me/listings/${id}`, seller.accessToken);
     await api(`/listings/${id}/revision`, seller.accessToken, {
@@ -95,6 +97,8 @@ try {
       ownershipDeclared: true,
       content: {
         ...l.currentRevision.content,
+        // Distinguish three copies of the same title through their real card labels.
+        salePrice: 125000 + index * 1000,
         fulfillment: {
           method: "DirectDelivery",
           originAddressId: source.addressId,
@@ -103,6 +107,11 @@ try {
       },
     });
     await approve(id);
+    const listing = await api(`/listings/${id}`, buyer.accessToken);
+    listingCards.set(
+      id,
+      `Xem sách: ${listing.book.title}. Giá: ${listing.salePrice.toLocaleString("vi-VN")} ₫`,
+    );
   }
   const operatorId = randomUUID();
   const template = await fixture.db
@@ -182,20 +191,20 @@ try {
         await route.abort().catch(() => {});
       }
     });
-  const navigate = (url) =>
-    p.evaluate((value) => {
-      history.pushState({}, "", value);
-      dispatchEvent(new PopStateEvent("popstate"));
-    }, url);
   const openNewestOrder = async (id) => {
     await button(p, "Về kệ sách").click();
     await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
     await p.getByRole("button", { name: /^Đơn mua\/bán trực tiếp/ }).click();
-    await p
+    const card = p
       .getByText("#" + id.slice(0, 8).toUpperCase(), { exact: true })
+      .filter({ visible: true })
+      .locator("xpath=ancestor::div[.//*[@role='button']][1]");
+    await card
+      .getByRole("button", { name: "Mở chi tiết đơn", exact: true })
+      .click();
+    await p
+      .getByRole("heading", { name: "Đơn #" + id.slice(0, 8), exact: true })
       .waitFor();
-    await button(p, "Mở chi tiết đơn").first().click();
-    await p.getByText("Đơn #" + id.slice(0, 8), { exact: true }).waitFor();
   };
   const login = async (page, email) => {
     await page.goto(origin + "/account");
@@ -206,12 +215,26 @@ try {
       .getByRole("heading", { name: "Việc của tôi", exact: true })
       .waitFor();
   };
+  const openListing = async (id) => {
+    assert.ok(listingCards.has(id), "Unknown QA listing");
+    openingListingId = id;
+    // Use Expo Router through real entry points. A fabricated pushState({}) /
+    // popstate has no router history ID and can reset the navigation tree.
+    await p.bringToFront();
+    if (new URL(p.url()).pathname === "/book")
+      await button(p, "Về kệ sách").click();
+    await p.getByRole("tab", { name: "Trang chủ", exact: true }).click();
+    await button(p, listingCards.get(id)).click();
+    await p.waitForURL(
+      (url) => url.pathname === "/book" && url.searchParams.get("id") === id,
+    );
+    await p
+      .getByText(`#TIN-${id.slice(0, 8).toUpperCase()}`, { exact: true })
+      .waitFor();
+  };
   const openBook = async (id) => {
-    console.log("QA: open book");
-    await navigate("/book?id=" + id);
-    // History changes before React replaces the previous book's buy button.
-    // Wait for the target listing's rendered identity before opening checkout.
-    await p.getByText(`#TIN-${id.slice(0, 8).toUpperCase()}`, { exact: true }).waitFor();
+    console.log("QA: open book through shelf");
+    await openListing(id);
     await button(p, "Mua ngay cuốn sách này").click();
     await button(p, "Xác nhận đặt mua").waitFor({ state: "visible" });
     await p.waitForFunction(() =>
@@ -251,7 +274,7 @@ try {
     }
     await route.continue();
   });
-  await navigate("/book?id=" + fixture.listings[0]);
+  await openListing(fixture.listings[0]);
   await button(p, "Mua ngay cuốn sách này").click();
   await button(p, "Thử lại báo giá đã yêu cầu").waitFor();
   assert.equal(
@@ -808,15 +831,31 @@ try {
     "PASS RN web buy-now + Seller F2h: quote recovery/Changed/timer; real create/pay/cancel exact retry/remount/lateACK; real picker and packaging POST/PUT lost ACK, Back, immutable bytes; shipment lost ACK/Back/GET failure exact recovery, independent pickup to InTransit with hold/no settlement; actual overdue pickup removes old actions. Fake storage/synthetic image; native/human NOT COVERED here.",
   );
 } catch (error) {
+  // Only UI state and QA IDs: no tokens, request bodies, email or response data.
+  const pages = [];
   let index = 0;
   for (const context of browser?.contexts() ?? [])
-    for (const page of context.pages())
+    for (const page of context.pages()) {
+      pages.push({
+        path: new URL(page.url()).pathname,
+        buyButtons: await button(page, "Mua ngay cuốn sách này")
+          .count()
+          .catch(() => -1),
+        confirmButtons: await button(page, "Xác nhận đặt mua")
+          .count()
+          .catch(() => -1),
+      });
       await page
         .screenshot({
           path: path.join(artifacts, `failure-${index++}.png`),
           fullPage: true,
         })
         .catch(() => {});
+    }
+  await writeFile(
+    path.join(artifacts, "failure-state.json"),
+    JSON.stringify({ openingListingId, pages, pageErrorCount: errors.length }, null, 2),
+  ).catch(() => {});
   throw error;
 } finally {
   await browser?.close();
