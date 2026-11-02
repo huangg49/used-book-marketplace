@@ -1,6 +1,6 @@
 # Điểm lưu hiện tại — 02/11/2026
 
-## Khắc phục triệt để lỗi CI GitHub (API CI & React Native CI) sau khi hợp nhất main — 02/11/2026
+## Khắc phục triệt để lỗi CI GitHub (API CI, React Native CI & User Web CI) sau khi hợp nhất main — 02/11/2026
 
 - Nhánh: `feature/exchange-policy-and-transit-worker`.
 - **Hợp nhất mã nguồn**: Đã cập nhật và merge nhánh `origin/main` (bao gồm PR #83, #84, #85, #86) vào nhánh làm việc; giải quyết xung đột tại `apps/admin-web/src/features/operations/exchange-disputes.tsx` và `SESSION_STATE.md`.
@@ -15,6 +15,9 @@
     - Escape ký tự nháy kép `&quot;` trong JSX tại `exchange-actions-card.tsx`.
     - Gỡ bỏ khai báo `myReceivedAt` không sử dụng trong `exchange-shipping-card.tsx`.
   - Kết quả: `pnpm --filter @used-books/mobile-react-native lint` PASS (0 errors, 0 warnings); `test` và `export:all` đều PASS.
+- **Khắc phục lỗi User Web CI (`test:wallet:browser`)**:
+  - Lỗi: Trong `tests/wallet-checkout.mjs`, mock `globalThis.fetch` cho VNPay QueryDR mặc định cứng số tiền `vnp_Amount` thành `"5000000"` (50.000đ) khi `checkoutAmounts` chưa chứa mã đơn hàng (đơn hàng thử lại sau lỗi mạng có mệnh giá 20.000đ hoặc 45.000đ). Khi client gọi `vnpay-query`, `vnpay-sandbox.ts` phát hiện lệch số tiền và trả về lỗi 503 (`DomainError: Chưa xác minh được kết quả từ VNPay`), khiến Playwright chờ hủy đơn hết thời gian 20s.
+  - Xử lý: Bổ sung tra cứu số tiền chính xác từ collection `topup_intents` trong `fixture.db` nếu chưa có sẵn trong `checkoutAmounts`, đảm bảo số tiền gửi về VNPay luôn khớp 100% với giá trị nạp thực tế.
 - **Kiểm tra toàn diện**:
   - `pnpm contract:check`: PASS.
   - `pnpm contract:routes`: PASS (228 operations).
@@ -25,6 +28,10 @@
   - `pnpm --filter @used-books/mobile-react-native typecheck`: PASS (0 errors).
   - `pnpm --filter @used-books/mobile-react-native test`: PASS (26 test files, 194 tests pass).
   - `pnpm --filter @used-books/session-client test`: PASS (12 test files, 119 tests pass).
+  - `pnpm --filter @used-books/user-web lint`: PASS (0 errors).
+  - `pnpm --filter @used-books/user-web typecheck`: PASS (0 errors).
+  - `pnpm --filter @used-books/user-web test`: PASS (40 test files, 264 tests pass).
+  - `pnpm --filter @used-books/user-web build`: PASS.
 
 ## Hoàn thiện Luồng Live Tracking Vận chuyển Bưu tá, Đồng bộ Dữ liệu Trao đổi 2 chiều & Nhận diện Thương hiệu Lật Lại — 02/11/2026
 
