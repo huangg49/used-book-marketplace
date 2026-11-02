@@ -664,14 +664,15 @@
     flex-shrink: 0;
 }
 
-/* Counter-Proposal Notice & Button (Method B) */
+/* Counter-Proposal Notice & Button */
 .noticeBoxCounter {
-    background: rgba(30, 58, 138, 0.08);
-    border-left: 4px solid #1e3a8a;
-    padding: 12px 14px;
-    border-radius: 0 4px 4px 0;
+    background: #fdfaf3;
+    border: 1px solid #e2d7c5;
+    border-left: 4px solid var(--shop-wine, #5c0202);
+    padding: 12px 16px;
+    border-radius: 0 6px 6px 0;
     font-size: 13px;
-    color: var(--ink);
+    color: var(--shop-ink, #281914);
     line-height: 1.5;
 }
 
@@ -679,21 +680,21 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 11px 20px;
-    background: #1e3a8a;
+    padding: 11px 22px;
+    background: var(--shop-wine, #5c0202);
     color: #fff;
     border: none;
     font-size: 14px;
     font-weight: 700;
     border-radius: 4px;
     cursor: pointer;
-    box-shadow: 0 2px 4px rgba(30, 58, 138, 0.2);
-    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(92, 2, 2, 0.25);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .btnConfirmCounter:hover:not(:disabled) {
-    background: #172554;
+    background: #7c2320;
     transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(30, 58, 138, 0.25);
+    box-shadow: 0 4px 10px rgba(92, 2, 2, 0.3);
 }
 .btnConfirmCounter:disabled {
     opacity: 0.5;
@@ -707,12 +708,217 @@
     align-items: center;
     gap: 6px;
     padding: 4px 10px;
-    background: rgba(125, 31, 31, 0.08);
-    border: 1px solid rgba(125, 31, 31, 0.2);
-    border-radius: 4px;
+    background: #fdfaf3;
+    border: 1px solid #dfd2c0;
+    border-radius: 9999px;
     font-size: 12px;
     font-weight: 600;
-    color: var(--burgundy, #7d1f1f);
+    color: var(--shop-muted, #716157);
+}
+
+.headerToggleBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--shop-wine, #5c0202);
+    background: #fff;
+    border: 1px solid var(--shop-line, #d9cbbd);
+    border-radius: 9999px;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(40, 25, 20, 0.04);
+    transition: all 0.15s ease;
+}
+.headerToggleBtn:hover {
+    background: var(--shop-paper, #fffcf5);
+    border-color: var(--shop-wine, #5c0202);
+    color: var(--shop-wine, #5c0202);
+    transform: translateY(-0.5px);
+}
+
+.headerResetBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--shop-muted, #716157);
+    background: #fdfaf3;
+    border: 1px solid var(--shop-line, #d9cbbd);
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.headerResetBtn:hover {
+    background: #f4eddf;
+    color: var(--shop-ink, #281914);
+    border-color: #c4b5a5;
+}
+
+/* Financial Negotiation Card */
+.negotiationCard {
+    margin: 12px 0 14px;
+    padding: 16px;
+    background: var(--shop-paper, #fffcf5);
+    border: 1px solid var(--shop-line, #d9cbbd);
+    border-left: 3px solid var(--shop-wine, #5c0202);
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(40, 25, 20, 0.02);
+}
+
+.negotiationCardHeader {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--shop-ink, #281914);
+    margin-bottom: 12px;
+}
+.negotiationCardHeaderIcon {
+    color: var(--shop-wine, #5c0202);
+}
+
+.payerSelectorGroup {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    background: #f4eddf;
+    padding: 4px;
+    border-radius: 8px;
+    border: 1px solid #e5dacf;
+    margin-bottom: 14px;
+}
+
+.payerOptionBtn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 10px 8px;
+    border-radius: 6px;
+    border: 1.5px solid transparent;
+    background: transparent;
+    color: var(--shop-muted, #716157);
+    font-size: 12.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    text-align: center;
+}
+.payerOptionBtn:hover:not(.payerOptionBtnActive) {
+    background: rgba(255, 255, 255, 0.6);
+    color: var(--shop-ink, #281914);
+}
+.payerOptionBtnActive {
+    background: #ffffff;
+    color: var(--shop-wine, #5c0202);
+    font-weight: 700;
+    border-color: var(--shop-wine, #5c0202);
+    box-shadow: 0 2px 6px rgba(40, 25, 20, 0.08);
+}
+
+.payerOptionIcon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(142, 117, 100, 0.12);
+    color: var(--shop-control, #8e7564);
+    transition: all 0.18s ease;
+}
+.payerOptionBtnActive .payerOptionIcon {
+    background: rgba(92, 2, 2, 0.1);
+    color: var(--shop-wine, #5c0202);
+}
+
+.amountInputLabel {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--shop-ink, #281914);
+    margin-bottom: 6px;
+}
+
+.amountInputWrapper {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 1.5px solid var(--shop-line, #d9cbbd);
+    border-radius: 6px;
+    padding: 2px 6px 2px 12px;
+    transition: all 0.15s ease;
+}
+.amountInputWrapper:focus-within {
+    border-color: var(--shop-wine, #5c0202);
+    box-shadow: 0 0 0 3px rgba(92, 2, 2, 0.1);
+}
+
+.amountInputPrefix {
+    display: flex;
+    align-items: center;
+    color: var(--shop-control, #8e7564);
+    margin-right: 8px;
+}
+
+.amountInput {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--shop-wine, #5c0202);
+    background: transparent;
+    padding: 8px 0;
+    font-family: inherit;
+}
+
+.amountInputSuffix {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--shop-control, #8e7564);
+    background: #f4eddf;
+    border-radius: 4px;
+    letter-spacing: 0.02em;
+}
+
+.evenCompensationBanner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #f0f7f3;
+    border: 1px solid #cce3d7;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #1e4d3a;
+}
+.evenCompensationIcon {
+    color: #2e7d5a;
+    flex-shrink: 0;
+}
+
+.depositDisclaimer {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--shop-muted, #716157);
+    line-height: 1.45;
+}
+.depositDisclaimerIcon {
+    color: var(--shop-control, #8e7564);
+    margin-top: 2px;
+    flex-shrink: 0;
 }
 
 .compNoticeLocked {
