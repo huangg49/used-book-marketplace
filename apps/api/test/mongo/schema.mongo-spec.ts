@@ -129,6 +129,8 @@ describe('migrations', () => {
         // Private profile avatar/challenge collections are Mongo-native too.
         memberProfileSpecs.length -
         // Member cart is Mongo-native (FR-O01).
+        1 -
+        // ADR 0061 auto review verdicts are Mongo-native.
         1 +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);

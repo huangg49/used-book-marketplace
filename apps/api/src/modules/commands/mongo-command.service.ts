@@ -616,6 +616,45 @@ export class MongoCommandService {
       }),
     );
   }
+  // ADR 0061 worker only. The key is the revision, so one submitted revision
+  // can be published by the AI reviewer at most once.
+  systemAutoApprove<C>(
+    key: string,
+    target: string,
+    options: {
+      discover: (tx: Tx) => Promise<string[]>;
+      authorize: (tx: Tx) => Promise<C>;
+      mutate: (tx: Tx, current: C, receiptId: string) => Promise<Change>;
+    },
+  ) {
+    return this.executePrincipal(
+      {
+        actorId: null,
+        systemActor: 'ListingAutoReview',
+        key,
+        requestId: randomUUID(),
+      },
+      'autoApproveListing',
+      target,
+      {},
+      {
+        authorize: async (tx) => {
+          await this.lockUsers(tx, await options.discover(tx));
+          return options.authorize(tx);
+        },
+        mutate: options.mutate,
+      },
+      (change, id, serverTime): Wire['MutationReceipt'] => ({
+        id,
+        entityType: change.entityType,
+        entityId: change.entityId,
+        version: change.version,
+        revisionId: change.revisionId,
+        state: change.state,
+        serverTime: serverTime.toISOString(),
+      }),
+    );
+  }
   runPackaging<C>(
     context: CommandContext,
     operation: 'createPackagingEvidence' | 'uploadPackagingEvidence',

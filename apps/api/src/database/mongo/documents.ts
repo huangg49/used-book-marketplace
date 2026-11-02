@@ -30,7 +30,8 @@ export type SystemActor =
   | 'PointOrderDeadline'
   | 'PointOrderSettlement'
   | 'PurchaseConversationExpiry'
-  | 'AuctionHold';
+  | 'AuctionHold'
+  | 'ListingAutoReview';
 
 type Lockable = { lockSeq: number };
 
@@ -240,6 +241,18 @@ export interface ListingDecisionDoc {
   decision: 'Approve' | 'Reject';
   checklist: Json | null;
   reason: string | null;
+  decidedAt: Date;
+}
+
+// ADR 0061: what the AI reviewer concluded about one submitted revision.
+export interface ListingAutoReviewDoc {
+  _id: string;
+  revisionId: string;
+  listingId: string;
+  outcome: 'Approved' | 'Escalated';
+  reasons: string[];
+  assessment: Json | null;
+  model: string | null;
   decidedAt: Date;
 }
 

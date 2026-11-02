@@ -1,4 +1,12 @@
-# Điểm lưu hiện tại — 01/11/2026
+# Điểm lưu hiện tại — 02/11/2026
+
+## AI tự duyệt bài đăng sau cờ tắt — 02/11/2026
+
+- [ADR0061](../adr/0061-ai-listing-auto-review.md): worker chỉ Approve hoặc chuyển
+  Staff, không từ chối; mặc định tắt. Contract0.68, migration0050, cần `db:migrate`
+  rồi `db:bootstrap`. **Khác SRS FR-L03: chủ dự án xác nhận trước khi bật ở môi
+  trường dùng chung.** Test dùng mô hình giả; chưa đo trên ảnh thật, chưa hiệu chỉnh
+  ngưỡng. Chưa có màn Admin hiển thị `autoReview`/`automated`. READINESS giữ nguyên.
 
 ## Chuẩn bị tích hợp chuỗi local theo yêu cầu owner — 01/11/2026
 

@@ -15,8 +15,11 @@ import { ListingLifecycleController } from './listing-lifecycle.controller.js';
 import { ListingFulfillmentService } from './listing-fulfillment.service.js';
 import { PriceAssistModule } from '../price-assist/price-assist.module.js';
 import { WalletModule } from '../wallet/wallet.module.js';
+import { AutofillAssistModule } from '../autofill-assist/autofill-assist.module.js';
+import { ListingAutoReviewService } from './listing-auto-review.service.js';
 @Module({
   imports: [
+    AutofillAssistModule,
     CommandsModule,
     CatalogModule,
     MediaModule,
@@ -29,10 +32,15 @@ import { WalletModule } from '../wallet/wallet.module.js';
     ListingFulfillmentService,
     ListingDraftsService,
     ListingReviewService,
+    ListingAutoReviewService,
     PublicListingService,
     ListingLifecycleService,
   ],
-  exports: [ListingCommitmentPolicy, PublicListingService],
+  exports: [
+    ListingCommitmentPolicy,
+    PublicListingService,
+    ListingAutoReviewService,
+  ],
   controllers: [
     ListingDraftsController,
     ListingReviewController,

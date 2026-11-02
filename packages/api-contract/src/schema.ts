@@ -4103,6 +4103,19 @@ export interface components {
             reason: string | null;
             /** Format: date-time */
             decidedAt: string;
+            /**
+             * @description Present only when the AI reviewer published this revision instead of Staff (ADR 0061).
+             * @constant
+             */
+            automated?: true;
+        };
+        AutoReviewSummary: {
+            /** @enum {string} */
+            outcome: "Approved" | "Escalated";
+            /** @description Why the listing was left for Staff, as stable reason codes. Empty when Approved. */
+            reasons: string[];
+            /** Format: date-time */
+            decidedAt: string;
         };
         PrivateListing: {
             /** Format: uuid */
@@ -4116,6 +4129,8 @@ export interface components {
             latestDecision: components["schemas"]["ReviewDecision"] | null;
             /** @description Present only on the Staff/Admin review detail. The price suggestion the seller decided on with the revision under review (null when none), so the reviewer can tell a suggested price from the seller's own. */
             priceAssist?: components["schemas"]["PriceAssistReview"] | null;
+            /** @description Present only on the Staff/Admin review detail. What the AI reviewer concluded about the current revision (null when it has not looked at it). */
+            autoReview?: components["schemas"]["AutoReviewSummary"] | null;
             removalReason: string | null;
             catalogStatus: components["schemas"]["CatalogStatus"] | null;
             /** Format: date-time */
