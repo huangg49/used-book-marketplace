@@ -1,5 +1,12 @@
 # Điểm lưu hiện tại — 03/11/2026
 
+## Tích hợp origin/main (Free Shipping PR #91 & AI Resilience PR #90) với Exchange Compensation — 03/11/2026
+
+- Kéo và hòa giải `origin/main` (commit `6ba6ef39` gồm PR #90 AI resilience và PR #91 bỏ phí giao hàng) vào `main` local.
+- Giải quyết xung đột tại `apps/api/src/database/mongo/migrations/index.ts`: giữ cả migration `0052-free-shipping`, `0054-exchange-negotiated-diff`, và `0055-exchange-negotiated-diff-payer`.
+- Đã chạy `pnpm --filter @used-books/api mongo:migrate`, áp dụng thành công `0052-free-shipping` (schema MongoDB hiện tại đã khớp đầy đủ).
+- Contract check (`contract:check`), web build (`@used-books/user-web build` PASS), 308 unit tests web PASS toàn bộ.
+
 ## Miễn phí giao hàng mới — 03/11/2026
 
 - Hòa giải với `origin/main` tại `009e7946`: giữ registry AI/Exchange mới và
