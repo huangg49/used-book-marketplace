@@ -1,5 +1,17 @@
 # Điểm lưu hiện tại — 03/11/2026
 
+## Thu gọn thẻ bạn đọc theo phản hồi owner
+
+- `codex/compact-reader-card`, base792d3942: ReaderCard riêng, chỉ avatar/tên/
+  trạng thái và2điểm/link. Bỏ ribbon/Club/email/quick hub trùng menu; chuyển
+  gỡ/retry ảnh xuống phần chỉnh sửa, giữ camera/handler/dirty guard. Cùng số mẫu
+  gộp một dòng; khác số mẫu giữ riêng. Completed/0vi phạm xem ở hồ sơ đầy đủ;
+  vi phạm xác minh>0 vẫn hiện. Không đổi dữ liệu, API/contract hoặc policy.
+- PASS browser HTTP fixture ở cả2checkout1440/1000/390/320/chữ130%, thông tin
+  rút gọn/ngoại lệ số mẫu/vi phạm, loading/error/retry, cache/identity/dirty guard;
+  typecheck/build/lint scoped. App chính5174 giữ chạy, không push/CI/merge/gate.
+  [Chi tiết và checkpoint trước](../ui/PROFILE_REPUTATION_2026_11_03.md).
+
 ## Uy tín trong thẻ bạn đọc
 
 - `codex/profile-reputation-card`, base4146e3a3: profile có component đọc điểm đối

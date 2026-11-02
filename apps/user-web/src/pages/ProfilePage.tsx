@@ -5,12 +5,6 @@ import { ROUTES } from "../lib/routes";
 import styles from "./ProfilePage.module.css";
 import { MemberProfileEditor } from './profile/MemberProfileEditor';
 
-const statusLabels = {
-  ACTIVE: "Đang hoạt động",
-  RESTRICTED: "Đang hạn chế giao dịch mới",
-  LOCKED: "Đang khóa giao dịch mới",
-};
-
 export function ProfilePage() {
   const auth = useSession();
   const location = useLocation();
@@ -26,13 +20,7 @@ export function ProfilePage() {
         <h1 tabIndex={-1}>Hồ sơ của tôi</h1>
         <p>Thông tin tài khoản của bạn tại Lật Lại.</p>
       </header>
-      <section className={styles.paper} aria-labelledby="profile-display-name">
-        <div className={styles.identity}>
-          <div>
-            <h2 id="profile-display-name">{user.displayName}</h2>
-            <p>{statusLabels[user.status]}</p>
-          </div>
-        </div>
+      <section className={styles.paper} aria-label="Thông tin hồ sơ">
         <MemberProfileEditor key={user.id} ownerId={user.id}/>
         <div className={styles.security}>
           <div>

@@ -1,5 +1,26 @@
 # Uy tín trong thẻ bạn đọc — 03/11/2026
 
+## Bản gọn theo phản hồi tiếp theo của owner
+
+Nhánh `codex/compact-reader-card`, base792d3942: owner yêu cầu giảm nội dung.
+`ReaderCard` giữ avatar/tên/trạng thái và hai điểm với link hồ sơ. Bỏ ribbon,
+Club, email và quick hub trùng menu. Gỡ/retry avatar chuyển xuống phần chỉnh
+sửa, giữ handler/disabled state và camera upload; email vẫn có ở phần bảo mật.
+Không đổi profile/review/tiền hoặc thời hạn đánh giá.
+
+Số mẫu giống nhau được gộp một dòng; khác nhau vẫn hiển thị riêng đúng số mẫu
+từng điểm. Bỏ completed và0vi phạm khỏi bản tóm tắt, giữ ở hồ sơ công khai; khi
+vi phạm xác minh lớn hơn0 vẫn hiện. Không đổi công thức hoặc gắn hạng uy tín.
+CSS riêng, giữ bề mặt màu/motion hiện có; thẻ hẹp đổi hai hàng để số không tràn.
+
+PASS cùng browser fixture ở cả worktree và checkout app, thêm kiểm dedupe/mixed
+sample counts, positive violation, nội dung đã bỏ và avatar remove ở ngoài thẻ.
+1440/1000/390/320/chữ130%, loading/recovery/owner cache/dirty guard vẫn PASS;
+typecheck/build/lint theo diff. Không DB/provider/remote CI/native/human PASS.
+Detector ghi nhận4advisory màu của bề mặt/divider cũ được giữ khi chuyển component;
+không thay palette toàn dự án hoặc tắt detector. Phần bên dưới là checkpoint bản
+đầy đủ trước phản hồi thu gọn, không đại diện cho bố cục cuối.
+
 Owner yêu cầu bổ sung chỉ dấu uy tín/đánh giá ngay trong banner hồ sơ cá nhân.
 Nhánh `codex/profile-reputation-card`, base4146e3a3. Không đổi API/contract hoặc
 nghiệp vụ điểm, quyền, tiền, profile/avatar/email commands hay thời hạn review.

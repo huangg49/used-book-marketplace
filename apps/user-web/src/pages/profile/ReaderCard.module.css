@@ -1,0 +1,37 @@
+.card {
+  /* Preserve the existing reader-card surface while reducing its contents. */
+  background: radial-gradient(circle at 10% 20%, rgba(142, 28, 28, .5) 0%, transparent 48%), linear-gradient(135deg, #4d0202 0%, #350101 60%, #1f0000 100%);
+  color: var(--shop-cream);
+  border: 1px solid #a85d53;
+  border-radius: 12px;
+  display: grid;
+  grid-template-columns: auto minmax(120px, .8fr) minmax(280px, 1.2fr);
+  align-items: center;
+  gap: 24px;
+  padding: 24px 28px;
+  margin-bottom: 24px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.avatar { flex-shrink: 0; }
+.avatar > img, .initial { display: grid; place-items: center; width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
+.initial { background: var(--shop-cream); color: var(--shop-wine); font-size: 2rem; font-weight: 700; }
+.identity { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.identity h2 { margin: 0; font: 700 1.5rem/1.4 var(--shop-body); }
+.status { color: var(--shop-cream); border: 1px solid #a85d53; border-radius: 6px; font-size: .8125rem; padding: 4px 8px; line-height: 1.6; }
+.status[data-status="ACTIVE"] { color: var(--shop-mint); }
+.trust { min-width: 0; padding-left: 24px; border-left: 1px solid #a85d53; }
+.avatarActions { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 16px; }
+.avatarAction { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; max-width: 100%; padding: 8px 12px; background: var(--shop-paper); color: var(--shop-wine); border: 1px solid var(--shop-control); border-radius: 8px; font: inherit; font-size: .875rem; cursor: pointer; }
+.avatarAction:hover:not(:disabled) { background: var(--shop-shelf, #f4eddf); }
+.avatarAction:disabled { opacity: .6; cursor: default; }
+.avatarActions :focus-visible { outline: 2px solid var(--shop-wine); outline-offset: 3px; }
+@media (max-width: 1000px) {
+  .card { grid-template-columns: auto minmax(0, 1fr); padding: 24px; gap: 20px; }
+  .trust { grid-column: 1 / -1; border-left: 0; border-top: 1px solid #a85d53; padding: 16px 0 0; }
+}
+@media (max-width: 420px) {
+  .card { padding: 20px; gap: 16px; }
+  .avatar > img, .initial { width: 64px; height: 64px; font-size: 1.5rem; }
+  .identity h2 { font-size: 1.25rem; }
+}

@@ -12,6 +12,7 @@
   max-width: 100%;
   text-align: left;
   overflow-wrap: anywhere;
+  container-type: inline-size;
 }
 .reputation[data-tone="wine"] {
   --reputation-ink: #fcf8db;
@@ -45,4 +46,13 @@
 .feedback button { min-height: 44px; padding: 6px 0; border: 0; background: transparent; color: var(--reputation-ink); font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; cursor: pointer; }
 .feedback button:disabled { opacity: .65; cursor: default; }
 .reputation :focus-visible { outline: 2px solid var(--reputation-accent); outline-offset: 4px; }
+.reputation[data-compact="true"] { border: 0; padding: 0; margin: 0; }
+.reputation[data-compact="true"] .scores { margin: 0 0 4px; }
+.compactFooter { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.compactFooter .samples { margin: 0; }
 @media (max-width: 420px) { .scores { gap: 8px 12px; } .scores > div + div { padding-left: 12px; } }
+@container (max-width: 240px) {
+  .scores { grid-template-columns: 1fr; gap: 10px; }
+  .scores > div { grid-row: auto; grid-template-rows: auto; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+  .scores > div + div { border-left: 0; padding-left: 0; border-top: 1px solid var(--reputation-line); padding-top: 10px; }
+}
