@@ -1,3 +1,4 @@
+import { exchangeEvidenceMigration, exchangeEvidenceSpecs } from './0054-exchange-evidence.js';
 import { createMemberProfilesMigration, memberProfileSpecs, withMemberProfiles } from './0047-member-profiles.js';
 import { createAccountControlsMigration, withAccountControls } from './0048-account-controls.js';
 import {memberCartMigration,memberCartSpec} from './0049-member-cart.js';
@@ -350,6 +351,7 @@ export const migrations: Migration[] = [
   supportAutoReviewUnionMigration,
   listingAutoReviewV2Migration,
   exchangeAgreementMigration,
+  exchangeEvidenceMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -446,4 +448,5 @@ export const currentCollections = (): CollectionSpec[] => [
   listingAutoReviewSpecV2,
   listingAutoReviewCheckSpec,
   ...supportSpecs,
+  ...exchangeEvidenceSpecs,
 ];

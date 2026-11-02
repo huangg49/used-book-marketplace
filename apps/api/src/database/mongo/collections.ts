@@ -69,6 +69,8 @@ export interface CollectionTypes {
   direct_orders: D.DirectOrderDoc;
   order_preparations: D.OrderPreparationDoc;
   pickup_reviews: D.PickupReviewDoc;
+  exchange_evidence: D.ExchangeEvidenceDoc;
+  exchange_evidence_assignments: D.ExchangeEvidenceAssignmentDoc;
   order_packaging_evidence: D.OrderPackagingEvidenceDoc;
   direct_shipments: D.DirectShipmentDoc;
   shipment_packaging_evidence: D.ShipmentPackagingEvidenceDoc;
@@ -250,6 +252,8 @@ const NAMES: CollectionName[] = [
   'order_preparations',
   'pickup_reviews',
   'order_packaging_evidence',
+  'exchange_evidence',
+  'exchange_evidence_assignments',
   'direct_shipments',
   'shipment_packaging_evidence',
   'carrier_pickup_events',

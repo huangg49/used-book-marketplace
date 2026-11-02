@@ -234,7 +234,19 @@ export type AuctionOperation =
   | 'receivePointOrderReturn'
   | 'dispatchPointOrder'
   | 'recordPointDelivery';
+type EvidenceChange = {
+  entityType: 'ExchangeEvidence';
+  event?: string;
+  entityId: string;
+  exchangeId: string;
+  initiatorListingId: string;
+  version: number;
+  state: Wire['ExchangeEvidenceReceipt']['state'];
+  decidedAt: Date;
+  reason?: string;
+};
 type CommandChange =
+  | EvidenceChange
   | SupportChange
   | AccountChange
   | ReviewChange
@@ -261,7 +273,11 @@ export type ReviewChange = {
   event?: string;
 };
 export type AccountChange = {
-  accountControl?: { scope: 'NewTransactions'; unlockCondition: string | null; relatedReference: string | null };
+  accountControl?: {
+    scope: 'NewTransactions';
+    unlockCondition: string | null;
+    relatedReference: string | null;
+  };
   event?: string;
   entityType: Wire['AccountCommandReceipt']['entityType'];
   entityId: string;
@@ -272,8 +288,13 @@ export type AccountChange = {
   before?: Json;
 };
 export type SupportChange = {
-  entityType: 'SupportCase'; entityId: string; version: number;
-  state: Wire['SupportState']; decidedAt: Date; reason?: string; event?: string;
+  entityType: 'SupportCase';
+  entityId: string;
+  version: number;
+  state: Wire['SupportState'];
+  decidedAt: Date;
+  reason?: string;
+  event?: string;
 };
 type Options<C, D> = {
   discover?: (tx: Tx) => Promise<string[]>;
@@ -296,9 +317,12 @@ type Principal = {
 const EXISTING_OBLIGATION_OPERATIONS = [
   // Own-account maintenance is permitted while trades are locked. Each of
   // these handlers still checks MEMBER, current session and ownership.
-  'updateMemberProfile', 'createProfileAvatar', 'uploadProfileAvatar',
+  'updateMemberProfile',
+  'createProfileAvatar',
+  'uploadProfileAvatar',
   'discardProfileAvatar',
-  'requestMemberEmailChange', 'confirmMemberEmailChange',
+  'requestMemberEmailChange',
+  'confirmMemberEmailChange',
   'cancelUnpaidOrder',
   'openOrderConversation',
   'removeCartItem',
@@ -308,6 +332,8 @@ const EXISTING_OBLIGATION_OPERATIONS = [
   'acceptOrder',
   'confirmOrderReceipt',
   'reportOrderNonReceipt',
+  'createExchangeEvidence',
+  'uploadExchangeEvidence',
   'createPackagingEvidence',
   'uploadPackagingEvidence',
   'registerDirectShipment',
@@ -330,12 +356,28 @@ const sessionExpired = (
 @Injectable()
 export class MongoCommandService {
   constructor(private readonly mongo: MongoService) {}
-  runSupport<C>(context: CommandContext, operation: string, target: string, body: unknown, options: Options<C, SupportChange>) {
-    return this.execute(context, operation, target, body, options,
-      (change,id): Wire['SupportCaseReceipt'] => ({
-        id, entityType:'SupportCase', entityId:change.entityId, version:change.version,
-        state:change.state, serverTime:change.decidedAt.toISOString(),
-      }));
+  runSupport<C>(
+    context: CommandContext,
+    operation: string,
+    target: string,
+    body: unknown,
+    options: Options<C, SupportChange>,
+  ) {
+    return this.execute(
+      context,
+      operation,
+      target,
+      body,
+      options,
+      (change, id): Wire['SupportCaseReceipt'] => ({
+        id,
+        entityType: 'SupportCase',
+        entityId: change.entityId,
+        version: change.version,
+        state: change.state,
+        serverTime: change.decidedAt.toISOString(),
+      }),
+    );
   }
   runAccount<C>(
     context: CommandContext,
@@ -344,11 +386,21 @@ export class MongoCommandService {
     body: unknown,
     options: Options<C, AccountChange>,
   ) {
-    return this.execute(context, operation, target, body, options,
+    return this.execute(
+      context,
+      operation,
+      target,
+      body,
+      options,
       (change, id, serverTime): Wire['AccountCommandReceipt'] => ({
-        id, entityType: change.entityType, entityId: change.entityId,
-        version: change.version, state: change.state, serverTime: serverTime.toISOString(),
-      }));
+        id,
+        entityType: change.entityType,
+        entityId: change.entityId,
+        version: change.version,
+        state: change.state,
+        serverTime: serverTime.toISOString(),
+      }),
+    );
   }
   runReview<C>(
     context: CommandContext,
@@ -357,7 +409,14 @@ export class MongoCommandService {
     body: unknown,
     options: Options<C, ReviewChange>,
   ) {
-    return this.execute(context, operation, target, body, options, (change) => change.review);
+    return this.execute(
+      context,
+      operation,
+      target,
+      body,
+      options,
+      (change) => change.review,
+    );
   }
 
   // Locks the acting user, any other affected users and the session, then
@@ -663,6 +722,29 @@ export class MongoCommandService {
         entityId: change.entityId,
         version: change.version,
         revisionId: change.revisionId,
+        state: change.state,
+        serverTime: serverTime.toISOString(),
+      }),
+    );
+  }
+  runEvidence<C>(
+    context: CommandContext,
+    operation: string,
+    target: string,
+    body: unknown,
+    options: Options<C, EvidenceChange>,
+  ) {
+    return this.execute(
+      context,
+      operation,
+      target,
+      body,
+      options,
+      (change, id, serverTime): Wire['ExchangeEvidenceReceipt'] => ({
+        id,
+        entityId: change.entityId,
+        exchangeId: change.exchangeId,
+        version: change.version,
         state: change.state,
         serverTime: serverTime.toISOString(),
       }),
@@ -1125,7 +1207,10 @@ export class MongoCommandService {
         targets.pointId = change.pointId;
       else if (change.entityType === 'TopupIntent')
         targets.topupId = change.entityId;
-      else if (change.entityType === 'Exchange') {
+      else if (
+        change.entityType === 'Exchange' ||
+        change.entityType === 'ExchangeEvidence'
+      ) {
         targets.listingId = change.initiatorListingId;
       } else if (
         change.entityType === 'Order' ||
@@ -1232,14 +1317,27 @@ export class MongoCommandService {
 function auditAfter(change: CommandChange): Json {
   switch (change.entityType) {
     case 'SupportCase':
-      return {entityId:change.entityId,version:change.version,state:change.state};
+      return {
+        entityId: change.entityId,
+        version: change.version,
+        state: change.state,
+      };
     case 'UserAccount':
-      return { entityId: change.entityId, version: change.version, state: change.state, ...change.accountControl };
+      return {
+        entityId: change.entityId,
+        version: change.version,
+        state: change.state,
+        ...change.accountControl,
+      };
     case 'MemberProfile':
     case 'ProfileAvatar':
     case 'MemberEmailChange':
     case 'Cart':
-      return { entityId: change.entityId, version: change.version, state: change.state };
+      return {
+        entityId: change.entityId,
+        version: change.version,
+        state: change.state,
+      };
     case 'TransactionReview':
       return {
         entityId: change.entityId,
@@ -1318,6 +1416,13 @@ function auditAfter(change: CommandChange): Json {
       return {
         version: change.version,
         expiresAt: change.expiresAt.toISOString(),
+      };
+    case 'ExchangeEvidence':
+      return {
+        exchangeId: change.exchangeId,
+        evidenceId: change.entityId,
+        version: change.version,
+        state: change.state,
       };
     case 'Exchange':
       return {

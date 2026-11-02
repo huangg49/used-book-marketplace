@@ -1,3 +1,4 @@
+import { ExchangeEvidenceReview } from "./exchange-evidence-review";
 import { useQuery } from "@tanstack/react-query";
 import { useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
@@ -23,7 +24,10 @@ function ExchangeDisputesContent() {
   const result = useQuery({
     queryKey: ["operations", "exchange-disputes"],
     queryFn: () =>
-      session.request("/operations/exchanges/resolutions", exchangeDisputeResolutionsList),
+      session.request(
+        "/operations/exchanges/resolutions",
+        exchangeDisputeResolutionsList,
+      ),
     refetchInterval: refetchWhileClosed(panel),
   });
 
@@ -59,8 +63,9 @@ function ExchangeDisputesContent() {
       extra={() => (
         <Notice tone="warning">
           Chưa thể thực thi phán quyết hoàn tiền hoặc hoàn tất trao đổi. Tiền và
-          sách tiếp tục được giữ. Nhóm vận hành cần hoàn tất việc xác minh nơi giữ
-          sách, phân bổ tiền và quy trình kháng nghị trước khi mở quyền phân xử.
+          sách tiếp tục được giữ. Nhóm vận hành cần hoàn tất việc xác minh nơi
+          giữ sách, phân bổ tiền và quy trình kháng nghị trước khi mở quyền phân
+          xử.
         </Notice>
       )}
     />
@@ -68,8 +73,14 @@ function ExchangeDisputesContent() {
 }
 
 function DisputeDetail({ item }: { item: ExchangeDisputeItem }) {
+  const user = useOutletContext<CurrentUser>();
   return (
     <div className={styles.details}>
+      <ExchangeEvidenceReview
+        key={user.id + ":" + item.id}
+        id={item.id}
+        userId={user.id}
+      />
       <div>
         <strong>Lý do cần xử lý:</strong>
         <p className={styles.reason}>
@@ -80,15 +91,35 @@ function DisputeDetail({ item }: { item: ExchangeDisputeItem }) {
       <div className={styles.parties}>
         <div className={styles.party}>
           <strong>Người khởi tạo (Bên A)</strong>
-          <div>Gửi hàng: {item.initiatorShippedAt ? dateText(item.initiatorShippedAt) : "Chưa gửi"}</div>
-          <div>Xác nhận đã nhận: {item.initiatorReceivedAt ? dateText(item.initiatorReceivedAt) : "Chưa nhận"}</div>
+          <div>
+            Gửi hàng:{" "}
+            {item.initiatorShippedAt
+              ? dateText(item.initiatorShippedAt)
+              : "Chưa gửi"}
+          </div>
+          <div>
+            Xác nhận đã nhận:{" "}
+            {item.initiatorReceivedAt
+              ? dateText(item.initiatorReceivedAt)
+              : "Chưa nhận"}
+          </div>
           <div>Cọc bảo chứng: {money(item.initiatorDeposit)}</div>
         </div>
 
         <div className={styles.party}>
           <strong>Đối tác (Bên B)</strong>
-          <div>Gửi hàng: {item.recipientShippedAt ? dateText(item.recipientShippedAt) : "Chưa gửi"}</div>
-          <div>Xác nhận đã nhận: {item.recipientReceivedAt ? dateText(item.recipientReceivedAt) : "Chưa nhận"}</div>
+          <div>
+            Gửi hàng:{" "}
+            {item.recipientShippedAt
+              ? dateText(item.recipientShippedAt)
+              : "Chưa gửi"}
+          </div>
+          <div>
+            Xác nhận đã nhận:{" "}
+            {item.recipientReceivedAt
+              ? dateText(item.recipientReceivedAt)
+              : "Chưa nhận"}
+          </div>
           <div>Cọc bảo chứng: {money(item.recipientDeposit)}</div>
         </div>
       </div>

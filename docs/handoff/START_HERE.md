@@ -102,7 +102,7 @@ Bản hậu kiểm thêm0052 và `listing_auto_review_checks`: cùng các bướ
 chạy còn phải đặt `LISTING_AUTO_REVIEW_APPROVED_POLICY` đúng `POLICY_VERSION`;
 [ADR0063](../adr/0063-ai-listing-review-hardening.md).
 
-Exchange thêm0052 để lưu agreement sách/giá đã thỏa thuận; không backfill lịch sử
+Exchange thêm0053 để lưu agreement sách/giá đã thỏa thuận; không backfill lịch sử
 hoặc đổi tiền. Dừng API/worker cũ, migrate rồi nâng API và web/RN cùng gói:
 counter mới nhận listingIds, client gửi tiền bù tùy ý sẽ bị422. Chưa chạy trên DB
 chính; source đã ghép main add4d615 local, chưa publish. [ADR0065](../adr/0065-exchange-agreement-snapshots.md),
@@ -117,6 +117,11 @@ cần ID tổ chức do biên tập xác minh; [ADR0056](../adr/0056-listing-ass
 Seed chỉ cho local, không tự đổi mật khẩu account đã tồn tại. Xem tài khoản mẫu ở
 [hướng dẫn RN](../REACT_NATIVE_START.md); mật khẩu theo cấu hình local của người nhận.
 Không cần seed đơn hàng hoặc sửa số dư SQL để chứng minh backend hoạt động.
+
+Bằng chứng Exchange thêm0054 và hai collection riêng: khi được duyệt áp dụng, dừng
+API/worker, chạy migrate rồi bootstrap role; không reset DB.
+`SUPABASE_EVIDENCE_BUCKET` private riêng, khác bucket listing; project phải hỗ trợ
+MP4 100MB, gate cấu hình hiện còn mở. [ADR0066](../adr/0066-exchange-private-evidence.md).
 
 Chạy hằng ngày theo [DEVELOPMENT](../DEVELOPMENT.md): hai terminal cho backend
 và client phụ trách. `dev:api` bật Mongo/API/media+order worker; không bật worker trùng.

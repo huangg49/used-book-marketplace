@@ -3921,6 +3921,110 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/exchanges/{exchangeId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Private dispute evidence only. Current session and participant or assigned independent reviewer checked before replay/signing and after storage I/O. No custody, money or settlement change. Claim is accepted separately before upload; Pending is not submitted evidence. Images 10MB, PDF 20MB, MP4 100MB; ten retained intents per participant, no automatic deletion. */
+        get: operations["listExchangeEvidence"];
+        put?: never;
+        /** @description Private dispute evidence only. Current session and participant or assigned independent reviewer checked before replay/signing and after storage I/O. No custody, money or settlement change. Claim is accepted separately before upload; Pending is not submitted evidence. Images 10MB, PDF 20MB, MP4 100MB; ten retained intents per participant, no automatic deletion. */
+        post: operations["createExchangeEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchanges/{exchangeId}/evidence/{evidenceId}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description Private dispute evidence only. Current session and participant or assigned independent reviewer checked before replay/signing and after storage I/O. No custody, money or settlement change. Claim is accepted separately before upload; Pending is not submitted evidence. Images 10MB, PDF 20MB, MP4 100MB; ten retained intents per participant, no automatic deletion. */
+        put: operations["uploadExchangeEvidence"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exchanges/{exchangeId}/evidence/{evidenceId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Private dispute evidence only. Current session and participant or assigned independent reviewer checked before replay/signing and after storage I/O. No custody, money or settlement change. Claim is accepted separately before upload; Pending is not submitted evidence. Images 10MB, PDF 20MB, MP4 100MB; ten retained intents per participant, no automatic deletion. */
+        post: operations["readExchangeEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/exchanges/{exchangeId}/evidence-access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Private dispute evidence only. Current session and participant or assigned independent reviewer checked before replay/signing and after storage I/O. No custody, money or settlement change. Claim is accepted separately before upload; Pending is not submitted evidence. Images 10MB, PDF 20MB, MP4 100MB; ten retained intents per participant, no automatic deletion. */
+        get: operations["getExchangeEvidenceAccess"];
+        put?: never;
+        /** @description Private dispute evidence only. Current session and participant or assigned independent reviewer checked before replay/signing and after storage I/O. No custody, money or settlement change. Claim is accepted separately before upload; Pending is not submitted evidence. Images 10MB, PDF 20MB, MP4 100MB; ten retained intents per participant, no automatic deletion. */
+        post: operations["assignExchangeEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/exchanges/{exchangeId}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Private dispute evidence only. Current session and participant or assigned independent reviewer checked before replay/signing and after storage I/O. No custody, money or settlement change. Claim is accepted separately before upload; Pending is not submitted evidence. Images 10MB, PDF 20MB, MP4 100MB; ten retained intents per participant, no automatic deletion. */
+        get: operations["listOperationsExchangeEvidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/exchanges/{exchangeId}/evidence/{evidenceId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Private dispute evidence only. Current session and participant or assigned independent reviewer checked before replay/signing and after storage I/O. No custody, money or settlement change. Claim is accepted separately before upload; Pending is not submitted evidence. Images 10MB, PDF 20MB, MP4 100MB; ten retained intents per participant, no automatic deletion. */
+        post: operations["readOperationsExchangeEvidence"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7050,6 +7154,69 @@ export interface components {
         };
         RejectExchangeCommand: {
             expectedVersion: number;
+            reason: string;
+        };
+        CreateExchangeEvidence: {
+            expectedVersion: number;
+            fileName: string;
+            /** @enum {string} */
+            mimeType: "image/jpeg" | "image/png" | "image/webp" | "application/pdf" | "video/mp4";
+            byteSize: number;
+            sha256: string;
+        };
+        ExchangeEvidence: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            exchangeId: string;
+            /** Format: uuid */
+            uploaderId: string;
+            fileName: string;
+            /** @enum {string} */
+            mimeType: "image/jpeg" | "image/png" | "image/webp" | "application/pdf" | "video/mp4";
+            byteSize: number;
+            sha256: string;
+            /** @enum {string} */
+            status: "Pending" | "Ready";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            uploadedAt: string | null;
+        };
+        ExchangeEvidenceList: {
+            items: components["schemas"]["ExchangeEvidence"][];
+        };
+        ExchangeEvidenceReceipt: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            entityId: string;
+            /** Format: uuid */
+            exchangeId: string;
+            version: number;
+            /** @enum {string} */
+            state: "Pending" | "Ready" | "Assigned";
+            /** Format: date-time */
+            serverTime: string;
+        };
+        ExchangeEvidenceRead: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uri */
+            url: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        ExchangeEvidenceAccess: {
+            version: number;
+            /** Format: uuid */
+            assigneeId: string | null;
+        };
+        AssignExchangeEvidence: {
+            expectedVersion: number;
+            reason: string;
+        };
+        ReadExchangeEvidence: {
             reason: string;
         };
         DisputeExchangeCommand: {
@@ -15196,6 +15363,231 @@ export interface operations {
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];
             422: components["responses"]["Error"];
+        };
+    };
+    listExchangeEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exchangeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized private result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeEvidenceList"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    createExchangeEvidence: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                exchangeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateExchangeEvidence"];
+            };
+        };
+        responses: {
+            /** @description Authorized private result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeEvidenceReceipt"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    uploadExchangeEvidence: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                exchangeId: string;
+                evidenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description Authorized private result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeEvidenceReceipt"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    readExchangeEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exchangeId: string;
+                evidenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized private result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeEvidenceRead"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    getExchangeEvidenceAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exchangeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized private result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeEvidenceAccess"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    assignExchangeEvidence: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                exchangeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignExchangeEvidence"];
+            };
+        };
+        responses: {
+            /** @description Authorized private result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeEvidenceReceipt"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    listOperationsExchangeEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exchangeId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Authorized private result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeEvidenceList"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+        };
+    };
+    readOperationsExchangeEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exchangeId: string;
+                evidenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReadExchangeEvidence"];
+            };
+        };
+        responses: {
+            /** @description Authorized private result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeEvidenceRead"];
+                };
+            };
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
         };
     };
 }

@@ -94,12 +94,6 @@ export function ActionCard(props: Props) {
     "Sách rách nát / hư hỏng nặng",
   );
   const [disputeDetail, setDisputeDetail] = useState("");
-  const [imagePreview, setImagePreview] = useState("");
-  const [imageFileName, setImageFileName] = useState("");
-  const [videoPreview, setVideoPreview] = useState("");
-  const [videoFileName, setVideoFileName] = useState("");
-  const [evidenceImageRef, setEvidenceImageRef] = useState("");
-  const [evidenceVideoRef, setEvidenceVideoRef] = useState("");
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   useExchangeRecovery();
   const pending = pendingExchange(detail.id);
@@ -311,104 +305,6 @@ export function ActionCard(props: Props) {
     }
   }
 
-  const SAMPLE_VIDEO_SRC = "/demo-evidence/sample-unboxing.mp4?v=3.5s";
-  const SAMPLE_VIDEO_LABEL = "sample-unboxing.mp4 (176 KB · 3.5s)";
-  const SAMPLE_IMAGE_SRC = "/demo-evidence/sample-book-damage.jpg";
-  const SAMPLE_IMAGE_LABEL = "sample-book-damage.jpg (607 KB)";
-
-  const handleUseSampleEvidence = () => {
-    setDisputeCategory("Sách rách nát / hư hỏng nặng");
-    if (!disputeDetail.trim()) {
-      setDisputeDetail(
-        "Kiểm tra bưu phẩm lúc mở hộp: bìa sau sách bị rách toạc 1 vệt dài và ẩm ướt nhiều trang, không đúng cam kết ban đầu.",
-      );
-    }
-    // Only set sample image if user has not picked their own image!
-    if (!imagePreview || imagePreview.startsWith("/demo-evidence/")) {
-      setImagePreview(SAMPLE_IMAGE_SRC);
-      setImageFileName(SAMPLE_IMAGE_LABEL);
-      setEvidenceImageRef(SAMPLE_IMAGE_SRC);
-    }
-    // Always set sample 3.5s video
-    setVideoPreview(SAMPLE_VIDEO_SRC);
-    setVideoFileName(SAMPLE_VIDEO_LABEL);
-    setEvidenceVideoRef("/demo-evidence/sample-unboxing.mp4");
-    setError("");
-  };
-
-  const handleUseSampleVideoOnly = () => {
-    setVideoPreview(SAMPLE_VIDEO_SRC);
-    setVideoFileName(SAMPLE_VIDEO_LABEL);
-    setEvidenceVideoRef("/demo-evidence/sample-unboxing.mp4");
-    setError("");
-  };
-
-  const handleUseSampleImageOnly = () => {
-    setImagePreview(SAMPLE_IMAGE_SRC);
-    setImageFileName(SAMPLE_IMAGE_LABEL);
-    setEvidenceImageRef(SAMPLE_IMAGE_SRC);
-    setError("");
-  };
-
-  const saveEvidenceToDB = (key: string, data: string) => {
-    try {
-      if (!window.indexedDB) return;
-      const req = indexedDB.open("LatLaiEvidenceDB", 1);
-      req.onupgradeneeded = (e: any) => {
-        const db = e.target.result;
-        if (!db.objectStoreNames.contains("media")) {
-          db.createObjectStore("media", { keyPath: "key" });
-        }
-      };
-      req.onsuccess = (e: any) => {
-        const db = e.target.result;
-        const tx = db.transaction("media", "readwrite");
-        tx.objectStore("media").put({ key, data });
-      };
-    } catch {}
-  };
-
-  const handleImagePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      setImagePreview(dataUrl);
-      setImageFileName(`${file.name} (${Math.round(file.size / 1024)} KB)`);
-      try {
-        localStorage.setItem(`evidence_img_${detail.id}`, dataUrl);
-      } catch {}
-      saveEvidenceToDB(`img_${detail.id}`, dataUrl);
-      setEvidenceImageRef(file.name);
-    };
-    reader.readAsDataURL(file);
-    setError("");
-  };
-
-  const handleVideoPicked = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    setVideoPreview(url);
-    setVideoFileName(
-      `${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB)`,
-    );
-    setEvidenceVideoRef(file.name);
-    setError("");
-
-    // Read and persist for cross-origin Admin Web inspection
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string;
-      try {
-        localStorage.setItem(`evidence_video_${detail.id}`, dataUrl);
-      } catch {}
-      saveEvidenceToDB(`vid_${detail.id}`, dataUrl);
-    };
-    reader.readAsDataURL(file);
-  };
-
   async function confirm() {
     if (!action || busy || action === "counter") return;
     if (action === "reject") {
@@ -430,14 +326,8 @@ export function ActionCard(props: Props) {
     try {
       let finalDisputeReason = reason.trim();
       if (action === "dispute") {
-        const detailText =
-          disputeDetail.trim() ||
-          reason.trim() ||
-          "Sách có lỗi nghiêm trọng, không đúng cam kết ban đầu.";
-        finalDisputeReason = `[Sự cố]: ${disputeCategory}\n[Chi tiết]: ${detailText}\n[Video unboxing]: ${evidenceVideoRef || "/demo-evidence/sample-unboxing.mp4"}\n[Ảnh bằng chứng]: ${evidenceImageRef || "/demo-evidence/sample-book-damage.jpg"}`;
-        if (finalDisputeReason.length > 490) {
-          finalDisputeReason = finalDisputeReason.slice(0, 490);
-        }
+        const detailText = disputeDetail.trim();
+        finalDisputeReason = `[Sự cố]: ${disputeCategory}\n[Chi tiết]: ${detailText}`;
       }
       const run: Record<Exclude<Action, "counter">, () => Promise<void>> = {
         accept: () => props.onAccept(selectedAddressId || undefined),
@@ -793,185 +683,11 @@ export function ActionCard(props: Props) {
               </div>
 
               {/* Bằng chứng thẩm định */}
-              <div className={styles.evidenceSection}>
-                <div className={styles.evidenceHeader}>
-                  <div className={styles.evidenceHeaderLeft}>
-                    <span className={styles.evidenceSectionIcon}>📋</span>
-                    <span className={styles.evidenceTitle}>
-                      Bằng chứng thẩm định (Ảnh &amp; Video)
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    className={styles.sampleButton}
-                    onClick={handleUseSampleEvidence}
-                    title="Tự động nạp dữ liệu video và ảnh mẫu"
-                  >
-                    ⚡ Dùng dữ liệu mẫu (Demo)
-                  </button>
-                </div>
-
-                <div className={styles.evidenceGrid}>
-                  {/* Cột 1: Ảnh chụp sách */}
-                  <div
-                    className={`${styles.evidenceCard} ${imagePreview ? styles.cardActive : ""}`}
-                  >
-                    <div className={styles.evidenceCardHead}>
-                      <span className={styles.evidenceCardTitle}>
-                        📷 Ảnh chụp sách lỗi
-                      </span>
-                      <span
-                        className={
-                          imagePreview ? styles.badgeSuccess : styles.badgeMuted
-                        }
-                      >
-                        {imagePreview ? "✓ Đã có ảnh" : "Chưa có ảnh"}
-                      </span>
-                    </div>
-
-                    <div className={styles.evidenceActions}>
-                      <input
-                        type="file"
-                        id="evidence-image-input"
-                        accept="image/*"
-                        style={{ display: "none" }}
-                        onChange={handleImagePicked}
-                      />
-                      <button
-                        type="button"
-                        className={styles.btnUpload}
-                        onClick={() =>
-                          document
-                            .getElementById("evidence-image-input")
-                            ?.click()
-                        }
-                        title={imageFileName || "Chọn ảnh từ máy"}
-                      >
-                        {imageFileName ? "Đổi ảnh..." : "Chọn ảnh từ máy..."}
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.btnMiniSample}
-                        onClick={handleUseSampleImageOnly}
-                        title="Nạp ảnh mẫu sách rách"
-                      >
-                        ⚡ Ảnh mẫu
-                      </button>
-                    </div>
-
-                    <div className={styles.evidencePreviewBox}>
-                      {imagePreview ? (
-                        <div className={styles.imageWrapper}>
-                          <img
-                            src={imagePreview}
-                            alt="Xem trước bằng chứng"
-                            className={styles.previewImage}
-                          />
-                          <div className={styles.previewOverlayBadge}>
-                            <span>{imageFileName || "Ảnh bằng chứng"}</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          className={styles.emptyPlaceholder}
-                          onClick={() =>
-                            document
-                              .getElementById("evidence-image-input")
-                              ?.click()
-                          }
-                        >
-                          <span className={styles.emptyIcon}>📷</span>
-                          <span className={styles.emptyText}>
-                            Chọn ảnh chụp vết rách / hư hại
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Cột 2: Video unboxing */}
-                  <div
-                    className={`${styles.evidenceCard} ${videoPreview ? styles.cardActive : ""}`}
-                  >
-                    <div className={styles.evidenceCardHead}>
-                      <span className={styles.evidenceCardTitle}>
-                        📹 Video unboxing
-                      </span>
-                      <span
-                        className={
-                          videoPreview ? styles.badgeSuccess : styles.badgeMuted
-                        }
-                      >
-                        {videoPreview ? "✓ Đã nạp clip 3.5s" : "Chưa có clip"}
-                      </span>
-                    </div>
-
-                    <div className={styles.evidenceActions}>
-                      <input
-                        type="file"
-                        id="evidence-video-input"
-                        accept="video/*"
-                        style={{ display: "none" }}
-                        onChange={handleVideoPicked}
-                      />
-                      <button
-                        type="button"
-                        className={styles.btnUpload}
-                        onClick={() =>
-                          document
-                            .getElementById("evidence-video-input")
-                            ?.click()
-                        }
-                        title={videoFileName || "Chọn video từ máy (3-4s)"}
-                      >
-                        {videoFileName ? "Đổi clip..." : "Chọn video từ máy..."}
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.btnMiniSample}
-                        onClick={handleUseSampleVideoOnly}
-                        title="Nạp video unboxing 3.5s mẫu"
-                      >
-                        ⚡ Video mẫu 3s
-                      </button>
-                    </div>
-
-                    <div className={styles.evidencePreviewBox}>
-                      {videoPreview ? (
-                        <div className={styles.videoWrapper}>
-                          <video
-                            key={videoPreview}
-                            src={videoPreview}
-                            controls
-                            playsInline
-                            preload="metadata"
-                            className={styles.previewVideo}
-                          />
-                          <div className={styles.videoOverlayBadge}>
-                            <span>
-                              {videoFileName || "sample-unboxing.mp4 · 3.5s"}
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div
-                          className={styles.emptyPlaceholder}
-                          onClick={() =>
-                            document
-                              .getElementById("evidence-video-input")
-                              ?.click()
-                          }
-                        >
-                          <span className={styles.emptyIcon}>📹</span>
-                          <span className={styles.emptyText}>
-                            Clip mở gói đồng kiểm GHN (3-4s)
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <p>
+                Báo sự cố trước để ghi nhận đúng hạn. Sau đó bổ sung ảnh, PDF
+                hoặc MP4 trong mục Bằng chứng sự cố; không bắt buộc video mở
+                hộp.
+              </p>
             </div>
           </div>
         ) : action === "reject" ? (

@@ -1,5 +1,37 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## Bằng chứng riêng cho sự cố Exchange — checkpoint local
+
+- Owner duyệt gói mới sau khi tự merge [PR89](https://github.com/huangg49/used-book-marketplace/pull/89).
+  Base main `dd7304de5c7cf96e2d7faf51e42fbe73dcac0628`, nhánh
+  `codex/exchange-dispute-evidence`, subject
+  `feat(exchange): persist private dispute evidence across member and operations`.
+  [Hành vi, source, kết quả và giới hạn](../features/EXCHANGE_EVIDENCE_2026_11_02.md),
+  [ADR0066](../adr/0066-exchange-private-evidence.md). Chỉ commit local; chưa push,
+  mở PR hoặc merge gói này. Checkout gốc/28file local của teammate được giữ riêng.
+- Member RN/web báo sự cố bằng mô tả trước rồi gửi bytes ảnh/PDF/MP4; Pending→Ready,
+  hash/original immutable, exact retry qua mất ACK/Back/reload, đổi identity xóa RAM.
+  Bỏ chọn mẫu/tênfile giả làm bằng chứng. Staff/Admin độc lập nhận phụ trách, đọc
+  original bằng attachment120s có audit; không cấp quyền phân xử/settlement mới.
+- Contract0.73/242operations/38controllers; migration mới0054. Chưa áp dụng lên DB
+  chính; khi môi trường đích được duyệt cần migrate rồi bootstrap quyền collection.
+  Không sửa migration cũ, GHN, ledger hoặc readiness custody/settlement.
+- PASS types/build phù hợp, shared150/web308/RN223/Admin228unit,32Mongo,
+  88E2E hồi quy và6evidence riêng sau bổ sung race/storage503; browser web→Staff
+  và RN Expo web picker/bytesPASS (storage fake, trạng thái vận chuyển fixture).
+  API full384PASS/1Windows shutdown timeout; targeted chạy lại ca đó PASS1.
+  Expo web32routePASS; Android debug FAIL Worklets CMake/Prefab dù thử JDK21/
+  đường dẫn ngắn, nên native functional BLOCKED, không gọi native PASS.
+- Supabase QA bucket private riêng20MB: ảnh nhỏ round-trip/hash/attachment/public
+  deniedPASS, đã xóa object/bucket do lượt thử tạo. Project từ chối bucket100MB;
+  **owner giữ100MB và để gate cấu hình mở**. Chưa chứng minh PDF20MB/video100MB,
+  retention, Android/iOS/ARM/TalkBack hoặc nghiệm thu người thật.
+- Remote main đúng `dd7304de`:10jobPASS/OperationsFAIL ở RN mua ngay helper
+  openBook chờ “Xác nhận đặt mua”; [CI](https://github.com/huangg49/used-book-marketplace/actions/runs/41406972829/job/125151105877).
+  Chưa xác định nguyên nhân, không gọi main xanh. Remote CI gói evidence NOT RUN.
+- QA cuối: database/user/role riêng còn0, app test đã dừng; dừng mongo-test57017,
+  Mongo chính27017 vẫn healthy. Checkout gốc28file foreign giữ checksum nguyên.
+
 ## Tích hợp chuỗi local với main Support/AI/Exchange
 
 - Owner duyệt; branch `codex/integrate-exchange-main`, hai parent local
