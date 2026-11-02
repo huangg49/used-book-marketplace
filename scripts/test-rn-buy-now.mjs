@@ -209,6 +209,9 @@ try {
   const openBook = async (id) => {
     console.log("QA: open book");
     await navigate("/book?id=" + id);
+    // History changes before React replaces the previous book's buy button.
+    // Wait for the target listing's rendered identity before opening checkout.
+    await p.getByText(`#TIN-${id.slice(0, 8).toUpperCase()}`, { exact: true }).waitFor();
     await button(p, "Mua ngay cuốn sách này").click();
     await button(p, "Xác nhận đặt mua").waitFor({ state: "visible" });
     await p.waitForFunction(() =>

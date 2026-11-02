@@ -122,6 +122,16 @@ thấy503 đã hiện cảnh báo, sau đó refetch trang đầu thành công đ
 Wallet UI/API để khớp test. Full browser Wallet sau sửa PASS, gồm provider mô
 phỏng, deadline/cancel/lostACK và balance/history; không là thanh toán VNPay thật.
 
+CI `9e933bb9`:User Web PASS (gồm Exchange và Wallet đã sửa); Operations lần này
+FAIL ở `test:rn-buy-now:browser`, hai lượt trước PASS. Ảnh lỗi GitHub cho thấy trang
+sách có nút mua nhưng không còn modal; helper đổi history rồi bấm trước khi React
+render identity sách đích, nên có thể bấm nút của trang cũ. Helper nay chờ đúng mã
+`#TIN-<listingId>` trên UI trước thao tác, không tăng timeout/thay logic mua.
+Local chạy lại full RN Expo web buy-now/Seller F2h PASS: quote Changed/expiry,
+exact create/pay/cancel qua Back/lateACK, ảnh đóng gói/vận đơn lostACK, pickup
+độc lập tới InTransit và giữ tiền, quá hạn bỏ thao tác cũ. API/Mongo thật trên QA,
+storage/ảnh/funding mô phỏng; không là native hoặc giao nhận/provider thật.
+
 ## Bằng chứng local
 
 Windows, Node24.22.1/pnpm11.19.0, pnpm install --offline --frozen-lockfile

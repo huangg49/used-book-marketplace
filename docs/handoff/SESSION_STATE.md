@@ -23,6 +23,10 @@
   Wallet lỗi label retry bị
   refetch nền đổi lại “Xem thêm”; test tái hiện refetch, giữ cursor và2ledger thật,
   full browser WalletPASS. Trạng thái cuối theo đúng head PR89, không suy main xanh.
+- CI9e933bb9:User WebPASS; Operations gặp race helper RN mua ngay sau đổi sách
+  (hai lượt trướcPASS). Helper nay chờ đúng #TIN listing đích sau đổi URL trước
+  click, full RN Expo web buy-now/Seller F2h PASS lại, giữ exact create/pay/cancel,
+  packaging/shipment retry/lateACK và hold. Head CI cuối theo PR89.
 - Giữ snapshot/revalidate/counter sách, exact recovery/identity và tài chính cùng
   preference matching/BrandIcon/dispute UI, Support và AI v2. Web giữ hai hạn72giờ,
   bỏ câu48h/giải phóng sớm; RN giữ chọn sách và recovery, không quay về nhập tiền bù.
