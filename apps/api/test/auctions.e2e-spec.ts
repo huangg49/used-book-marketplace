@@ -3941,7 +3941,8 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       await buyNowCmd(auctionId, y).expect(200);
       const { a } = await expectConsistent(auctionId);
       expect(a).toMatchObject({ leaderId: y.id, currentPrice: 600_000 });
-      expect(a.endAt.getTime() - a.buyNowAt!.getTime()).toBe(60_000);
+      // y did not lead when buying, so ADR 0070 gives the rivals 5 minutes.
+      expect(a.endAt.getTime() - a.buyNowAt!.getTime()).toBe(300_000);
     });
   });
   describe('FR-AU09 holds and FR-N03 notifications', () => {

@@ -7,6 +7,7 @@ import {
   migrations,
 } from '../../src/database/mongo/migrations/index.js';
 import { testUrl } from './harness.js';
+import { CAPITAL_INCREASE_JOURNAL_ID } from '../../src/database/mongo/migrations/0055-simulator-capital-increase.js';
 
 const ids = [
   '0050-listing-auto-review',
@@ -83,9 +84,13 @@ describe('support and AI auto review schema integration', () => {
           expect(
           await db.collection<{ _id: string; checksum: string; appliedAt: Date }>('_migrations').findOne({ _id: row._id }),
           ).toEqual(row);
-        expect(await db.collection('ledger_entries').find().toArray()).toEqual(
-          ledger,
-        );
+        // Only 0055 adds ledger rows: its fixed CapitalIncrease journal (ADR0067).
+        expect(
+          await db
+            .collection('ledger_entries')
+            .find({ journalId: { $ne: CAPITAL_INCREASE_JOURNAL_ID } })
+            .toArray(),
+        ).toEqual(ledger);
         expect(
           await db
             .collection('member_notifications')
