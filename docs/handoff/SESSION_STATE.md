@@ -1,3 +1,17 @@
+# Thêm một bài trao đổi để demo lượt2 — 03/11/2026
+
+Owner yêu cầu thêm1bài như lượt trước. Nhánh `codex/demo-extra-exchange-listing`,
+base99a82f44, chỉ docs/data: thêm Spy x Family Vol.1 mới của Member demo thứ hai,
+Exchange50k/Approved/Visible/Available, địa chỉ có sẵn và tiêu chí Tsugumi Ohba/
+Death Note Vol.1 của người thứ nhất (còn Available50k). Dùng media ID/key mới,
+không chép key ảnh của bài cũ; ảnh bìa thư viện/tình trạng/approval là fixture.
+PASS cùng chuỗi API trên QA riêng trước apply; backup primary, ledger trước/sau
+giống hệt;1761bản ghi cũ giữ nguyên. Không tạo chat/proposal/exchange/review hoặc
+nạp thêm tiền. Người đăng dùng4/5slot, bài cũ/giao dịch đang kiểm tra giữ nguyên.
+PASS browser local User4→bài mới của User5 thấy tiêu chí và nút gửi đề nghị;
+2bài ngang giá/author khớp, signed ảnh thật. Hướng dẫn lượt2 lưu private Desktop.
+Không sửa source/API/migration/env/push/merge hoặc gate; QA đã dừng.
+
 # Nút đánh giá Exchange sau nhận sách — 03/11/2026
 
 Owner demo User4/User5 đã nhận/kiểm tra nhưng không có nút. Đối chiếu thật:

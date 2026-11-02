@@ -152,3 +152,23 @@ HTTP/Socket.IO fixture không DB: cả hai vai trò, chưa nhận→ẩn, chỉ 
 submit review hoặc skip timer. PASS typecheck/build, lint scope và21unit liên quan.
 READINESS/CI/native/human giữ nguyên; chưa push/merge. Bản local được fast-forward
 sau kiểm working tree, không sửa dữ liệu demo để làm xuất hiện nút.
+
+## Bài trao đổi mới cho demo lượt2 — 03/11/2026
+
+Owner yêu cầu thêm một bài để làm lại demo; giữ giao dịch Spy x Family/Naruto
+đang diễn ra. Thêm đúng1bài Spy x Family Vol.1 của Member demo thứ hai, giá trị
+đổi50k, khớp tác giả Tsugumi Ohba/Death Note Vol.1 (50k) đang Available của người
+thứ nhất. Chưa tạo hội thoại/đề nghị/giao dịch, chưa giữ cọc hoặc gửi review.
+
+Thử cùng chuỗi API trên rs-test/*_test trước: draft, origin address, upload media
+ID riêng, worker Ready, attach, submit, độc lập Admin decision và public read.
+Sau backup DB chính mới apply, tất cả qua API hiện hành; giữ cap5 (owner4slot).
+Ảnh signed/read thực từ private storage, tiêu chí khớp và hai bài Available/
+ngang giá được đối chiếu; browser local Member đăng nhập→mở bài→nút gửi đề nghị
+đúng target, không bấm tạo room thay owner. Ledger trước/sau giống hệt/balanced,
+1761bản ghi cũ không đổi; không có model call cho bài mới. QA đóng/dừng sau kiểm.
+
+Hướng dẫn và link cụ thể lưu private Desktop của owner, bản sao trong thư mục
+ignored của gói. Ảnh bìa thư viện, giá/tình trạng/sở hữu/approval tiếp tục là dữ
+liệu demo, không phải hiện vật/human review. Không đổi code/API/migration/env,
+không reset dữ liệu, nạp thêm tiền, push/merge hoặc đóng READINESS.
