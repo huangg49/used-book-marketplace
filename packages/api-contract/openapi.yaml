@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.71.0
+  version: 0.72.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -11,8 +11,11 @@ info:
     acknowledgement never waives either deadline. Settlement retains all funds
     while any dispute evidence remains. Eligible existing-obligation handlers
     permit LOCKED participants; new funding/trades remain denied. DirectDelivery
-    receipt/inspection/settlement source exists, but release and post-F2h readiness
-    gates remain open. Full dispute adjudication/return, ordinary ViaPoint and
+    completion is release-blocked: new receipt/delivery commands return 409
+    InvalidState and inspection settlement cannot execute until Buyer protection
+    and post-F2h readiness are accepted. Authorized historical receipt replays
+    remain read-only; existing holds/history are preserved. Full dispute
+    adjudication/return, ordinary ViaPoint and
     withdrawal remain incomplete. This contract describes source capabilities,
     not production readiness or full client/native acceptance. GHN/carrier routes
     retain their current behavior pending the owner's team decision.
@@ -6492,7 +6495,14 @@ paths:
       operationId: emitSimulatedDeliveryEvent
       tags: [Orders]
       x-implementation-status: implemented
-      description: Independent TEST_OPERATOR records one simulated Delivered event after an Applied pickup. It starts, but never settles, the buyer inspection window.
+      description: >-
+        Retained for historical compatibility. New DirectDelivery delivery commands
+        return 409 InvalidState while the post-F2h Buyer-protection release gate is
+        closed; no delivery event, inspection window or money movement is created.
+        Current ACTIVE independent TEST_OPERATOR authorization and shipment binding
+        run before an exact historical receipt replay. Replay returns the original
+        committed receipt without repeating effects. This does not gate auction
+        point-delivery events or change GHN/carrier routes.
       security:
         - bearerAuth: []
       parameters:
@@ -6508,7 +6518,7 @@ paths:
               $ref: "#/components/schemas/SimulatedDeliveryEvent"
       responses:
         "200":
-          description: Delivery recorded.
+          description: An authorized historical delivery receipt was replayed; new delivery intake remains release-blocked.
           headers:
             Cache-Control:
               description: Private response; never cache.
@@ -6537,7 +6547,14 @@ paths:
       tags: [Orders]
       x-implementation-status: implemented
       x-locked-access: existing-obligations
-      description: Buyer-only receipt confirmation. It starts the 72-hour inspection window; it does not settle money or mark the listing Sold.
+      description: >-
+        Buyer-only historical compatibility endpoint, including eligible LOCKED
+        existing obligations. New commands return 409 InvalidState while the
+        post-F2h Buyer-protection release gate is closed. No delivery event,
+        inspection window, receipt success or money movement is created. Current
+        ownership/session/role checks precede exact historical receipt replay;
+        replay returns stored facts without changing the current Order. Existing
+        Inspection/Completed records remain readable and are not rewritten/refunded.
       security:
         - bearerAuth: []
       parameters:
@@ -6557,7 +6574,7 @@ paths:
               $ref: "#/components/schemas/ConfirmOrderReceipt"
       responses:
         "200":
-          description: Receipt confirmation recorded.
+          description: An authorized historical Buyer receipt was replayed; new confirmations remain release-blocked.
           headers:
             Cache-Control:
               description: Private response; never cache.
@@ -9730,12 +9747,52 @@ paths:
           $ref: "#/components/responses/ListingError"
         "500":
           $ref: "#/components/responses/ListingError"
+  /exchanges/{id}/books/{listingId}/photos/{mediaId}:
+    get:
+      operationId: getExchangeBookPhoto
+      x-locked-access: existing-obligations
+      security:
+        - bearerAuth: []
+      tags: [Exchanges]
+      summary: Read a frozen agreement photo as a current participant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: listingId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: mediaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Short-lived signed read of this agreement's photo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaRead"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
   /exchanges/{id}/accept:
     post:
       operationId: acceptExchange
+      description: Accept only the unchanged frozen proposal and current eligibility of both Members/books. Unavailable or unverifiable proposals return a persisted Exchange with status Cancelled and cancelReason ListingUnavailable, without reserving books or collecting money. Clients inspect the returned state; HTTP 200 alone does not mean accepted. Exact-key replay returns the original outcome after current authorization.
       tags:
         - Exchanges
-      description: Recipient accepts the exchange proposal.
       security:
         - bearerAuth: []
       parameters:
@@ -9779,9 +9836,9 @@ paths:
   /exchanges/{id}/counter:
     post:
       operationId: counterExchange
+      description: The responding Member selects replacement books they own. Both sides' current eligibility and the original frozen terms are checked before deriving a new revision and compensation. An unavailable original proposal closes as Cancelled/ListingUnavailable without reservations. Free-form monetary counteroffers are rejected.
       tags:
         - Exchanges
-      description: Submit a counter-proposal for the exchange.
       security:
         - bearerAuth: []
       parameters:
@@ -16652,6 +16709,8 @@ components:
           format: date-time
         canConfirmReceipt:
           type: boolean
+          const: false
+          description: Always false while DirectDelivery completion is release-blocked; historical delivery/inspection timestamps do not grant a new command or settlement.
         quoteId:
           type: string
           format: uuid
@@ -20367,6 +20426,76 @@ components:
         - Recipient
         - Staff
         - Both
+    ExchangeBookSnapshot:
+      type: object
+      additionalProperties: false
+      required: [listingId, listingVersion, revisionId, ownerId, ownerDisplayName, bookId, catalogRevisionId, book, condition, description, pages, coverNote, notes, accessories, readable, hasMissingPages, missingEssentialContent, exchangeValue, mediaIds]
+      properties:
+        listingId:
+          type: string
+          format: uuid
+        listingVersion:
+          type: integer
+          minimum: 1
+        revisionId:
+          type: string
+          format: uuid
+        ownerId:
+          type: string
+          format: uuid
+        ownerDisplayName:
+          type: string
+        bookId:
+          type: string
+          format: uuid
+        catalogRevisionId:
+          type: string
+          format: uuid
+        book:
+          $ref: "#/components/schemas/CatalogMetadata"
+        condition:
+          $ref: "#/components/schemas/BookCondition"
+        description:
+          type: string
+        pages:
+          type: string
+        coverNote:
+          type: string
+        notes:
+          type: string
+        accessories:
+          type: string
+        readable:
+          type: boolean
+        hasMissingPages:
+          type: boolean
+        missingEssentialContent:
+          type: boolean
+        exchangeValue:
+          type: integer
+          minimum: 1
+        mediaIds:
+          type: array
+          minItems: 1
+          maxItems: 8
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+    ExchangeAgreement:
+      type: object
+      additionalProperties: false
+      description: Frozen books and values of the current proposal revision; null for historical records whose original content cannot be proved. New acceptance never reconstructs a missing agreement from current listings.
+      required: [initiatorBooks, recipientBook]
+      properties:
+        initiatorBooks:
+          type: array
+          minItems: 1
+          maxItems: 5
+          items:
+            $ref: "#/components/schemas/ExchangeBookSnapshot"
+        recipientBook:
+          $ref: "#/components/schemas/ExchangeBookSnapshot"
     Exchange:
       type: object
       additionalProperties: false
@@ -20385,6 +20514,10 @@ components:
         - createdAt
         - updatedAt
       properties:
+        agreement:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeAgreement"
+            - type: "null"
         id:
           type: string
           format: uuid
@@ -20797,24 +20930,20 @@ components:
     CounterExchangeProposal:
       type: object
       additionalProperties: false
-      required:
-        - expectedVersion
-        - diffAmount
-        - diffPayer
+      description: The responding Member replaces their own books; the server derives both deposits and compensation from reviewed values. Recipient replaces exactly one listing, initiator one to five. The other party's frozen books must remain eligible and unchanged.
+      required: [expectedVersion, listingIds]
       properties:
         expectedVersion:
           type: integer
           minimum: 1
-        diffAmount:
-          type: integer
-          minimum: 0
-          maximum: 10000000
-        diffPayer:
-          type: string
-          enum:
-            - initiator
-            - recipient
-            - none
+        listingIds:
+          type: array
+          minItems: 1
+          maxItems: 5
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
         deliveryAddressId:
           type: string
           format: uuid

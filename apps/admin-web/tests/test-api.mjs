@@ -401,6 +401,49 @@ export async function createTestApi({
       listings,
       photo,
       processMedia: () => app.get(MediaWorker).tick(),
+      // Fixture clocks only; never change the host clock or stored deadlines.
+      setQuoteTimeOffset: async (milliseconds) => {
+        if (
+          !Number.isFinite(milliseconds) ||
+          Math.abs(milliseconds) > 7 * 86400000
+        )
+          throw new Error("Invalid QA quote clock offset");
+        const { QuoteClock } = await load("modules/quotes/quote-clock.js");
+        app.get(QuoteClock).now = async (tx) =>
+          new Date((await tx.now()).getTime() + milliseconds);
+      },
+      openDirectOrderReview: async (id, phase) => {
+        if (!["pickup", "delivery"].includes(phase))
+          throw new Error("Invalid QA review phase");
+        if (!(await db.collection("direct_orders").findOne({ _id: id })))
+          throw new Error("Order does not belong to this QA fixture");
+        const { OrderClock } = await load("modules/orders/order-clock.js");
+        const { OrdersService } = await load(
+          "modules/orders/orders.service.js",
+        );
+        const deadlineSource =
+          phase === "pickup"
+            ? await db.collection("order_preparations").findOne({ _id: id })
+            : await db
+                .collection("carrier_pickup_events")
+                .findOne({ orderId: id, outcome: "Applied" });
+        const deadline =
+          deadlineSource?.[
+            phase === "pickup" ? "pickupDeadline" : "deliveryDeadline"
+          ];
+        if (!(deadline instanceof Date))
+          throw new Error("QA order has no recorded deadline");
+        const clock = app.get(OrderClock),
+          original = clock.now.bind(clock);
+        clock.now = async () => new Date(deadline.getTime() + 1);
+        try {
+          return await app
+            .get(OrdersService)
+            [phase === "pickup" ? "expirePickup" : "expireDelivery"](id);
+        } finally {
+          clock.now = original;
+        }
+      },
       cleanupProfileAvatars: async () => {
         const { ProfileAvatarWorker } = await load(
           "modules/profile/profile-avatar-worker.js",

@@ -1,3 +1,5 @@
+import { useExchangeRecovery } from "../../../hooks/useExchangeRecovery";
+import { ExchangeRecoveryPanel } from "../ExchangeRecoveryPanel";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -11,9 +13,12 @@ import { ShipmentDialog } from "../ShipmentDialog";
 import { ReceiveDialog } from "../ReceiveDialog";
 import { CounterDialog, type CounterOfferData } from "../CounterDialog";
 import { AcceptExchangeDialog } from "../AcceptExchangeDialog";
-import { counterExchange } from "../../../services/exchangeDetail";
 import { ROUTES, formatVnd } from "../../../lib/routes";
-import { exchangeError, pendingExchange } from "../../../services/exchange";
+import {
+  exchangeError,
+  pendingExchange,
+  exchangeAcknowledged,
+} from "../../../services/exchange";
 import type { ShipmentData } from "../../../services/exchangeShipment";
 import styles from "./ActionCard.module.css";
 
@@ -48,7 +53,10 @@ type Action =
 interface Props {
   detail: ExchangeDetail;
   onCancel: () => Promise<void>;
-  onAccept: (deliveryAddressId?: string, revisionOverride?: number) => Promise<void>;
+  onAccept: (
+    deliveryAddressId?: string,
+    revisionOverride?: number,
+  ) => Promise<void>;
   onReject: (reason: string) => Promise<void>;
   onCounter?: (data: CounterOfferData) => Promise<void>;
   onFund: () => Promise<void>;
@@ -63,12 +71,12 @@ const labels: Record<Action, string> = {
   cancel: "Hủy đề nghị",
   accept: "Chấp nhận đề nghị",
   reject: "Từ chối đề nghị",
-  counter: "Đề xuất lại điều khoản",
+  counter: "Đề xuất sách thay thế",
   fund: "Đặt cọc mô phỏng",
   sent: "Tạo đơn vận chuyển",
   received: "Xác nhận đã nhận sách",
   retry: "Thử lại thao tác trước",
-  complete: "✨ Xác nhận hài lòng & Nghiệm thu sách",
+  complete: "Xác nhận đã kiểm tra",
   dispute: "Báo sự cố / Khiếu nại",
 };
 
@@ -82,7 +90,9 @@ export function ActionCard(props: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reason, setReason] = useState("");
-  const [disputeCategory, setDisputeCategory] = useState("Sách rách nát / hư hỏng nặng");
+  const [disputeCategory, setDisputeCategory] = useState(
+    "Sách rách nát / hư hỏng nặng",
+  );
   const [disputeDetail, setDisputeDetail] = useState("");
   const [imagePreview, setImagePreview] = useState("");
   const [imageFileName, setImageFileName] = useState("");
@@ -91,7 +101,10 @@ export function ActionCard(props: Props) {
   const [evidenceImageRef, setEvidenceImageRef] = useState("");
   const [evidenceVideoRef, setEvidenceVideoRef] = useState("");
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  useExchangeRecovery();
   const pending = pendingExchange(detail.id);
+  const acknowledged = exchangeAcknowledged(detail.id);
+  const blocked = Boolean(pending || acknowledged);
   const [now, setNow] = useState(() => Date.now());
 
   const addresses = useQuery({
@@ -120,13 +133,14 @@ export function ActionCard(props: Props) {
   const actions: Action[] = [];
 
   if (detail.status === "PENDING") {
-    const canAccept = detail.canViewerAccept ?? (detail.viewerRole !== "proposer");
+    const canAccept =
+      detail.canViewerAccept ?? detail.viewerRole !== "proposer";
     if (canAccept) {
       instructions =
         detail.viewerRole === "proposer"
-          ? "Đối tác đã gửi lại điều khoản chốt mới theo thương lượng. Hãy kiểm tra hợp đồng và bấm chấp nhận để khóa giao dịch."
+          ? "Đối tác đã chọn sách thay thế. Hãy kiểm tra sách, cọc và tiền bù mới trước khi chấp nhận."
           : "Xem thông tin sách và các điều khoản trước khi chấp nhận trao đổi.";
-      actions.push("accept", "reject");
+      actions.push("accept", "counter", "reject");
       if (detail.viewerRole === "proposer") {
         actions.push("cancel");
       }
@@ -134,7 +148,7 @@ export function ActionCard(props: Props) {
       instructions =
         detail.viewerRole === "proposer"
           ? "Đề nghị đã gửi. Bạn có thể nhắn tin thương lượng trong khung chat hoặc hủy đề nghị nếu đổi ý."
-          : "Bạn đã gửi điều khoản chốt cho đối tác. Đang chờ đối tác đồng ý để chính thức khóa giao dịch.";
+          : "Bạn đã gửi sách thay thế. Đang chờ đối tác phản hồi; sách chưa được giữ.";
       actions.push("cancel");
     }
   } else if (detail.status === "FUNDING") {
@@ -148,7 +162,8 @@ export function ActionCard(props: Props) {
       ? new Date(detail.shippingDeadline).toLocaleString("vi-VN")
       : null;
     const myRole = detail.viewerRole === "proposer" ? "Initiator" : "Recipient";
-    const partnerRole = detail.viewerRole === "proposer" ? "Recipient" : "Initiator";
+    const partnerRole =
+      detail.viewerRole === "proposer" ? "Recipient" : "Initiator";
 
     if (detail.viewerShipping.sentAt) {
       instructions = `Bạn đã tạo đơn vận chuyển thành công. Đang chờ đối tác tạo đơn để bưu tá cùng đến lấy sách ở cả hai đầu.${deadlineStr ? ` Hạn gửi: ${deadlineStr}.` : ""}`;
@@ -186,21 +201,19 @@ export function ActionCard(props: Props) {
       ? new Date(detail.inspectionDeadline).toLocaleString("vi-VN")
       : null;
     if (detail.viewerCompletedAt) {
-      instructions =
-        `Bạn đã xác nhận nghiệm thu sách đạt yêu cầu. Đang chờ đối tác xác nhận hoặc hết 72 giờ kiểm tra để hoàn tất giao dịch.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
+      instructions = `Bạn đã xác nhận kiểm tra sách. Tiền cọc vẫn được giữ đến khi cả hai hạn kiểm tra 72 giờ kết thúc và không có tranh chấp.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
     } else if (detail.partnerCompletedAt) {
-      instructions =
-        `Đối tác đã bấm xác nhận nghiệm thu sách! Bạn có thể kiểm tra sách kỹ lưỡng. Nếu hoàn toàn hài lòng, hãy bấm 'Xác nhận hài lòng & Nghiệm thu sách' để tất toán sớm và giải phóng cọc ngay.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
+      instructions = `Đối tác đã xác nhận kiểm tra sách. Bạn vẫn có đủ 72 giờ từ lúc nhận để đối chiếu tình trạng. Xác nhận kiểm tra không rút ngắn hạn hoặc giải phóng cọc sớm.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""}`;
       actions.push("complete");
     } else {
-      instructions =
-        `Hai bên đều đã nhận được sách! Giao dịch đang trong khoảng đệm kiểm tra 72 giờ.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""} Bạn có thể kiểm tra sách kỹ lưỡng. Nếu hoàn toàn hài lòng, hãy bấm 'Xác nhận hài lòng & Nghiệm thu sách' để tất toán sớm và giải phóng cọc ngay.`;
+      instructions = `Hai bên đã nhận sách. Mỗi bên có 72 giờ kiểm tra tính từ lúc nhận.${deadlineStr ? ` Hạn kiểm tra: ${deadlineStr}.` : ""} Bạn có thể kiểm tra sách kỹ lưỡng. Bạn có thể xác nhận đã kiểm tra; cọc chỉ được giải phóng khi cả hai hạn kết thúc và không có tranh chấp.`;
       actions.push("complete");
     }
     actions.push("dispute");
   } else if (detail.status === "COMPLETED") {
     instructions =
-      detail.resolutionDecision === "CompleteExchange" && detail.resolutionReason
+      detail.resolutionDecision === "CompleteExchange" &&
+      detail.resolutionReason
         ? `Trao đổi đã hoàn tất theo phán quyết của Quản trị viên: "${detail.resolutionReason}". Khoản cọc bảo chứng và tiền bù đã được tất toán.`
         : "Trao đổi đã hoàn tất thành công. Khoản cọc bảo chứng và tiền bù đã được tất toán tự động.";
   } else if (detail.status === "RESOLUTION_PENDING") {
@@ -217,7 +230,9 @@ export function ActionCard(props: Props) {
             ? `Đề nghị đã bị từ chối.${detail.rejectionReason ? ` Lý do: ${detail.rejectionReason}` : ""}`
             : detail.status === "EXPIRED"
               ? "Đề nghị hoặc thời hạn đặt cọc đã hết."
-              : "Đề nghị đã bị hủy.";
+              : detail.cancelReason === "ListingUnavailable"
+                ? "Thỏa thuận không còn hợp lệ hoặc thiếu bản chụp sách gốc. Chưa giữ sách hay thu tiền từ đề xuất này. Hãy tạo đề xuất mới từ sách đủ điều kiện."
+                : "Đề nghị đã bị hủy.";
   }
 
   const open = async (next: Action) => {
@@ -248,6 +263,12 @@ export function ActionCard(props: Props) {
       await props.onCounter(data);
       setCounterOpen(false);
     } catch (failure) {
+      if (pendingExchange(detail.id)) {
+        setCounterOpen(false);
+        setShipmentOpen(false);
+        setReceiveOpen(false);
+        setAcceptOpen(false);
+      }
       throw new Error(exchangeError(failure));
     } finally {
       setBusy(false);
@@ -260,6 +281,12 @@ export function ActionCard(props: Props) {
       await props.onConfirmSent(shipmentData);
       setShipmentOpen(false);
     } catch (failure) {
+      if (pendingExchange(detail.id)) {
+        setCounterOpen(false);
+        setShipmentOpen(false);
+        setReceiveOpen(false);
+        setAcceptOpen(false);
+      }
       throw new Error(exchangeError(failure));
     } finally {
       setBusy(false);
@@ -272,6 +299,12 @@ export function ActionCard(props: Props) {
       await props.onConfirmReceived();
       setReceiveOpen(false);
     } catch (failure) {
+      if (pendingExchange(detail.id)) {
+        setCounterOpen(false);
+        setShipmentOpen(false);
+        setReceiveOpen(false);
+        setAcceptOpen(false);
+      }
       throw new Error(exchangeError(failure));
     } finally {
       setBusy(false);
@@ -286,7 +319,9 @@ export function ActionCard(props: Props) {
   const handleUseSampleEvidence = () => {
     setDisputeCategory("Sách rách nát / hư hỏng nặng");
     if (!disputeDetail.trim()) {
-      setDisputeDetail("Kiểm tra bưu phẩm lúc mở hộp: bìa sau sách bị rách toạc 1 vệt dài và ẩm ướt nhiều trang, không đúng cam kết ban đầu.");
+      setDisputeDetail(
+        "Kiểm tra bưu phẩm lúc mở hộp: bìa sau sách bị rách toạc 1 vệt dài và ẩm ướt nhiều trang, không đúng cam kết ban đầu.",
+      );
     }
     // Only set sample image if user has not picked their own image!
     if (!imagePreview || imagePreview.startsWith("/demo-evidence/")) {
@@ -356,7 +391,9 @@ export function ActionCard(props: Props) {
     if (!file) return;
     const url = URL.createObjectURL(file);
     setVideoPreview(url);
-    setVideoFileName(`${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB)`);
+    setVideoFileName(
+      `${file.name} (${(file.size / (1024 * 1024)).toFixed(1)} MB)`,
+    );
     setEvidenceVideoRef(file.name);
     setError("");
 
@@ -382,7 +419,9 @@ export function ActionCard(props: Props) {
     } else if (action === "dispute") {
       const currentDetail = disputeDetail.trim() || reason.trim();
       if (currentDetail.length < 5) {
-        setError("Vui lòng nhập mô tả chi tiết sự cố từ 5 ký tự (hoặc bấm 'Dùng mẫu unboxing').");
+        setError(
+          "Vui lòng nhập mô tả chi tiết sự cố từ 5 ký tự (hoặc bấm 'Dùng mẫu unboxing').",
+        );
         return;
       }
     }
@@ -391,7 +430,10 @@ export function ActionCard(props: Props) {
     try {
       let finalDisputeReason = reason.trim();
       if (action === "dispute") {
-        const detailText = disputeDetail.trim() || reason.trim() || "Sách có lỗi nghiêm trọng, không đúng cam kết ban đầu.";
+        const detailText =
+          disputeDetail.trim() ||
+          reason.trim() ||
+          "Sách có lỗi nghiêm trọng, không đúng cam kết ban đầu.";
         finalDisputeReason = `[Sự cố]: ${disputeCategory}\n[Chi tiết]: ${detailText}\n[Video unboxing]: ${evidenceVideoRef || "/demo-evidence/sample-unboxing.mp4"}\n[Ảnh bằng chứng]: ${evidenceImageRef || "/demo-evidence/sample-book-damage.jpg"}`;
         if (finalDisputeReason.length > 490) {
           finalDisputeReason = finalDisputeReason.slice(0, 490);
@@ -406,11 +448,15 @@ export function ActionCard(props: Props) {
         received: props.onConfirmReceived,
         retry: props.onRetry,
         complete: props.onComplete,
-        dispute: () => (props.onDispute ? props.onDispute(finalDisputeReason) : Promise.resolve()),
+        dispute: () =>
+          props.onDispute
+            ? props.onDispute(finalDisputeReason)
+            : Promise.resolve(),
       };
       await run[action]();
       setAction(undefined);
     } catch (failure) {
+      if (pendingExchange(detail.id)) setAction(undefined);
       setError(exchangeError(failure));
     } finally {
       setBusy(false);
@@ -426,12 +472,18 @@ export function ActionCard(props: Props) {
         </h2>
         <span className={styles.roleBadge}>
           {detail.status === "PENDING"
-            ? (detail.viewerRole === "proposer" ? "Đã gửi đề nghị" : "Chờ bạn phản hồi")
+            ? (detail.canViewerAccept ?? detail.viewerRole !== "proposer")
+              ? "Chờ bạn phản hồi"
+              : "Chờ đối tác phản hồi"
             : detail.status === "FUNDING"
               ? "Đặt cọc bảo chứng"
               : detail.status === "WAITING_YOU_SEND"
                 ? "Chuẩn bị gửi sách"
-                : "Đang tiến hành"}
+                : ["CANCELLED", "REJECTED", "EXPIRED"].includes(detail.status)
+                  ? "Đã đóng"
+                  : ["COMPLETED", "NEED_REVIEW"].includes(detail.status)
+                    ? "Đã hoàn tất"
+                    : "Đang tiến hành"}
         </span>
       </div>
       <div className={styles.calloutBox}>
@@ -463,11 +515,27 @@ export function ActionCard(props: Props) {
           </span>
         </p>
       )}
+      {detail.viewerInspectionDeadline && (
+        <p className={styles.deadlineRow}>
+          Hạn kiểm tra sách của bạn:{" "}
+          <time dateTime={detail.viewerInspectionDeadline}>
+            {new Date(detail.viewerInspectionDeadline).toLocaleString("vi-VN")}
+          </time>
+        </p>
+      )}
+      {detail.partnerInspectionDeadline && (
+        <p className={styles.deadlineRow}>
+          Hạn kiểm tra của đối tác:{" "}
+          <time dateTime={detail.partnerInspectionDeadline}>
+            {new Date(detail.partnerInspectionDeadline).toLocaleString("vi-VN")}
+          </time>
+        </p>
+      )}
       {detail.status === "INSPECTING" && detail.inspectionDeadline && (
         <p className={styles.deadlineRow}>
           <Clock size={14} className={styles.iconGold} />
           <span>
-            Hạn kiểm tra sách (48h):{" "}
+            Hạn kiểm tra chung (72 giờ):{" "}
             <time dateTime={detail.inspectionDeadline}>
               {new Date(detail.inspectionDeadline).toLocaleString("vi-VN")}
             </time>
@@ -480,24 +548,21 @@ export function ActionCard(props: Props) {
       {pending && (
         <p role="status" className={styles.pendingRow}>
           <AlertCircle size={15} />
-          <span>Có thao tác chưa rõ kết quả. Thử lại trước khi thực hiện việc khác.</span>
+          <span>
+            Có thao tác chưa rõ kết quả. Thử lại trước khi thực hiện việc khác.
+          </span>
         </p>
       )}
       <div className={styles.btnGrid}>
-        {pending ? (
-          <button
-            type="button"
-            className={styles.btnPrimary}
-            disabled={busy}
-            onClick={() => void open("retry")}
-          >
-            {busy ? "Đang xử lý..." : labels.retry}
-          </button>
+        {blocked ? (
+          <ExchangeRecoveryPanel id={detail.id} onRead={props.onRetry} />
         ) : (
           actions.map((next, index) => {
-            const isPrimary = index === 0 && next !== "cancel" && next !== "reject";
+            const isPrimary =
+              index === 0 && next !== "cancel" && next !== "reject";
             const isDanger = next === "cancel" || next === "reject";
-            const partnerRole = detail.viewerRole === "proposer" ? "Recipient" : "Initiator";
+            const partnerRole =
+              detail.viewerRole === "proposer" ? "Recipient" : "Initiator";
             let label = labels[next];
             if (detail.status === "WAITING_YOU_SEND") {
               if (next === "cancel") {
@@ -540,50 +605,35 @@ export function ActionCard(props: Props) {
       )}
 
       {/* Counter-Offer Negotiation Modal */}
-      <CounterDialog
-        isOpen={counterOpen}
-        onClose={() => setCounterOpen(false)}
-        onSubmit={handleCounterSubmit}
-        isBusy={busy}
-        viewerRole={detail.viewerRole}
-        partnerName={detail.partner.username}
-        currentCompensationType={detail.moneyCompensationType}
-        currentAmount={detail.moneyAmount ?? 0}
-        currentAddressId={selectedAddressId}
-      />
+      {counterOpen && (
+        <CounterDialog
+          key={`${detail.viewer.id}:${detail.revision}`}
+          isOpen={counterOpen}
+          onClose={() => setCounterOpen(false)}
+          onSubmit={handleCounterSubmit}
+          isBusy={busy}
+          viewerRole={detail.viewerRole}
+          partnerName={detail.partner.username}
+          partnerBookValue={detail.receiveBooks.reduce(
+            (sum, book) => sum + (book.price ?? 0),
+            0,
+          )}
+          currentListingIds={detail.giveBooks.map((book) => book.id)}
+          currentAddressId={selectedAddressId}
+        />
+      )}
 
       {/* Accept Exchange Contract Review Modal */}
       <AcceptExchangeDialog
         isOpen={acceptOpen}
         onClose={() => setAcceptOpen(false)}
-        onConfirm={async ({ deliveryAddressId, customTerms }) => {
+        onConfirm={async ({ deliveryAddressId }) => {
           setBusy(true);
           try {
-            const rev = detail.revision!;
-            if (customTerms) {
-              // Phương án B: Gửi đề xuất điều khoản mới cho đối tác chốt
-              if (props.onCounter) {
-                await props.onCounter({
-                  diffAmount: customTerms.diffAmount,
-                  diffPayer: customTerms.diffPayer,
-                  deliveryAddressId,
-                  note: "Đề xuất chốt hợp đồng trao đổi theo thỏa thuận trong chat",
-                });
-              } else {
-                await counterExchange(detail.id, rev, {
-                  diffAmount: customTerms.diffAmount,
-                  diffPayer: customTerms.diffPayer,
-                  deliveryAddressId,
-                  note: "Đề xuất chốt hợp đồng trao đổi theo thỏa thuận trong chat",
-                });
-              }
-              setAcceptOpen(false);
-            } else {
-              // Chấp nhận điều khoản ban đầu -> Khóa giao dịch & chuyển sang đặt cọc ngay!
-              await props.onAccept(deliveryAddressId, rev);
-              setAcceptOpen(false);
-            }
+            await props.onAccept(deliveryAddressId, detail.revision!);
+            setAcceptOpen(false);
           } catch (failure) {
+            if (pendingExchange(detail.id)) setAcceptOpen(false);
             throw new Error(exchangeError(failure));
           } finally {
             setBusy(false);
@@ -621,24 +671,34 @@ export function ActionCard(props: Props) {
         maxWidth={action === "dispute" ? "640px" : undefined}
         title={
           action === "cancel" && detail.status === "WAITING_YOU_SEND"
-            ? (detail.cancellationRequestedBy ? "Xác nhận đồng ý hủy" : "Đề nghị hủy giao dịch")
+            ? detail.cancellationRequestedBy
+              ? "Xác nhận đồng ý hủy"
+              : "Đề nghị hủy giao dịch"
             : action === "reject" && detail.status === "WAITING_YOU_SEND"
               ? "Từ chối yêu cầu hủy"
-              : action ? labels[action] : ""
+              : action
+                ? labels[action]
+                : ""
         }
         confirmText={
           action === "dispute"
             ? "Gửi biên bản khiếu nại"
             : action === "complete"
               ? "Xác nhận nghiệm thu"
-              : action === "cancel" && detail.status === "WAITING_YOU_SEND" && detail.cancellationRequestedBy
+              : action === "cancel" &&
+                  detail.status === "WAITING_YOU_SEND" &&
+                  detail.cancellationRequestedBy
                 ? "Đồng ý hủy"
                 : action === "reject" && detail.status === "WAITING_YOU_SEND"
                   ? "Từ chối hủy"
-                  : action ? labels[action] : "Xác nhận"
+                  : action
+                    ? labels[action]
+                    : "Xác nhận"
         }
         isBusy={busy}
-        isDanger={action === "cancel" || action === "reject" || action === "dispute"}
+        isDanger={
+          action === "cancel" || action === "reject" || action === "dispute"
+        }
         onConfirm={() => void confirm()}
       >
         {action !== "dispute" && (
@@ -650,12 +710,14 @@ export function ActionCard(props: Props) {
                 : action === "retry"
                   ? "Gửi lại đúng mã và nội dung của thao tác trước để xác nhận kết quả."
                   : action === "complete"
-                    ? "Bạn xác nhận sách nhận được đúng tình trạng thỏa thuận và hoàn toàn hài lòng với chất lượng? Khi cả hai bên cùng xác nhận nghiệm thu (hoặc hết hạn 48h kiểm tra), giao dịch sẽ hoàn tất và tiền cọc bảo chứng sẽ được giải phóng ngay."
-                    : action === "cancel" && detail.status === "WAITING_YOU_SEND"
-                      ? (detail.cancellationRequestedBy
+                    ? "Bạn xác nhận đã kiểm tra sách? Xác nhận này không rút ngắn hạn khiếu nại. Tiền cọc tiếp tục được giữ đến khi cả hai hạn kiểm tra 72 giờ kết thúc và không có tranh chấp."
+                    : action === "cancel" &&
+                        detail.status === "WAITING_YOU_SEND"
+                      ? detail.cancellationRequestedBy
                         ? "Đối tác đã đề nghị hủy giao dịch này trước khi gửi sách. Bằng việc đồng ý, giao dịch sẽ hủy an toàn và toàn bộ 100% tiền cọc cùng tiền bù của cả hai bên sẽ được hoàn trả về ví mô phỏng. Sách sẽ được mở lại trên kệ."
-                        : "Bạn có chắc muốn gửi yêu cầu hủy giao dịch trao đổi này trước khi gửi sách? Hệ thống sẽ gửi thông báo đến đối tác. Khi đối tác xác nhận đồng thuận, giao dịch sẽ hủy và hoàn trả 100% tiền cọc cho cả hai bên.")
-                      : action === "reject" && detail.status === "WAITING_YOU_SEND"
+                        : "Bạn có chắc muốn gửi yêu cầu hủy giao dịch trao đổi này trước khi gửi sách? Hệ thống sẽ gửi thông báo đến đối tác. Khi đối tác xác nhận đồng thuận, giao dịch sẽ hủy và hoàn trả 100% tiền cọc cho cả hai bên."
+                      : action === "reject" &&
+                          detail.status === "WAITING_YOU_SEND"
                         ? "Bạn có chắc muốn từ chối yêu cầu hủy của đối tác để tiếp tục giao dịch? Hãy nhập lý do để đối tác yên tâm chuẩn bị và gửi sách đúng hạn."
                         : "Kiểm tra thông tin trước khi xác nhận thao tác này."}
           </p>
@@ -669,7 +731,9 @@ export function ActionCard(props: Props) {
               <div className={styles.noticeContent}>
                 <strong>Bảo vệ quyền lợi &amp; Ký quỹ an toàn:</strong>
                 <p>
-                  Giao dịch sẽ tạm dừng tất toán ngay lập tức. Toàn bộ tiền cọc bảo chứng và tiền bù được giữ an toàn trên Ledger để Hội đồng Quản trị thẩm định qua video unboxing và ảnh đối chiếu.
+                  Giao dịch sẽ tạm dừng tất toán ngay lập tức. Toàn bộ tiền cọc
+                  bảo chứng và tiền bù được giữ an toàn trên Ledger để Hội đồng
+                  Quản trị thẩm định qua video unboxing và ảnh đối chiếu.
                 </p>
               </div>
             </div>
@@ -688,11 +752,21 @@ export function ActionCard(props: Props) {
                     onChange={(e) => setDisputeCategory(e.target.value)}
                     disabled={busy || !!pending}
                   >
-                    <option value="Sách rách nát / hư hỏng nặng">Sách rách nát / hư hỏng nặng</option>
-                    <option value="Giao sai sách / Không đúng cam kết">Giao sai sách / Không đúng cam kết</option>
-                    <option value="Thiếu sách / Bưu kiện rỗng">Thiếu sách / Bưu kiện rỗng</option>
-                    <option value="Sách nghi vấn bản in lậu / photo">Sách nghi vấn bản in lậu / photo</option>
-                    <option value="Sự cố giao nhận khác">Sự cố giao nhận khác</option>
+                    <option value="Sách rách nát / hư hỏng nặng">
+                      Sách rách nát / hư hỏng nặng
+                    </option>
+                    <option value="Giao sai sách / Không đúng cam kết">
+                      Giao sai sách / Không đúng cam kết
+                    </option>
+                    <option value="Thiếu sách / Bưu kiện rỗng">
+                      Thiếu sách / Bưu kiện rỗng
+                    </option>
+                    <option value="Sách nghi vấn bản in lậu / photo">
+                      Sách nghi vấn bản in lậu / photo
+                    </option>
+                    <option value="Sự cố giao nhận khác">
+                      Sự cố giao nhận khác
+                    </option>
                   </select>
                 </div>
               </div>
@@ -703,7 +777,9 @@ export function ActionCard(props: Props) {
                     <span>Mô tả chi tiết vấn đề</span>
                     <span className={styles.reqStar}>*</span>
                   </label>
-                  <span className={styles.charCounter}>{disputeDetail.length}/220 ký tự</span>
+                  <span className={styles.charCounter}>
+                    {disputeDetail.length}/220 ký tự
+                  </span>
                 </div>
                 <textarea
                   id="dispute-detail"
@@ -721,7 +797,9 @@ export function ActionCard(props: Props) {
                 <div className={styles.evidenceHeader}>
                   <div className={styles.evidenceHeaderLeft}>
                     <span className={styles.evidenceSectionIcon}>📋</span>
-                    <span className={styles.evidenceTitle}>Bằng chứng thẩm định (Ảnh &amp; Video)</span>
+                    <span className={styles.evidenceTitle}>
+                      Bằng chứng thẩm định (Ảnh &amp; Video)
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -735,10 +813,18 @@ export function ActionCard(props: Props) {
 
                 <div className={styles.evidenceGrid}>
                   {/* Cột 1: Ảnh chụp sách */}
-                  <div className={`${styles.evidenceCard} ${imagePreview ? styles.cardActive : ''}`}>
+                  <div
+                    className={`${styles.evidenceCard} ${imagePreview ? styles.cardActive : ""}`}
+                  >
                     <div className={styles.evidenceCardHead}>
-                      <span className={styles.evidenceCardTitle}>📷 Ảnh chụp sách lỗi</span>
-                      <span className={imagePreview ? styles.badgeSuccess : styles.badgeMuted}>
+                      <span className={styles.evidenceCardTitle}>
+                        📷 Ảnh chụp sách lỗi
+                      </span>
+                      <span
+                        className={
+                          imagePreview ? styles.badgeSuccess : styles.badgeMuted
+                        }
+                      >
                         {imagePreview ? "✓ Đã có ảnh" : "Chưa có ảnh"}
                       </span>
                     </div>
@@ -754,7 +840,11 @@ export function ActionCard(props: Props) {
                       <button
                         type="button"
                         className={styles.btnUpload}
-                        onClick={() => document.getElementById("evidence-image-input")?.click()}
+                        onClick={() =>
+                          document
+                            .getElementById("evidence-image-input")
+                            ?.click()
+                        }
                         title={imageFileName || "Chọn ảnh từ máy"}
                       >
                         {imageFileName ? "Đổi ảnh..." : "Chọn ảnh từ máy..."}
@@ -772,7 +862,11 @@ export function ActionCard(props: Props) {
                     <div className={styles.evidencePreviewBox}>
                       {imagePreview ? (
                         <div className={styles.imageWrapper}>
-                          <img src={imagePreview} alt="Xem trước bằng chứng" className={styles.previewImage} />
+                          <img
+                            src={imagePreview}
+                            alt="Xem trước bằng chứng"
+                            className={styles.previewImage}
+                          />
                           <div className={styles.previewOverlayBadge}>
                             <span>{imageFileName || "Ảnh bằng chứng"}</span>
                           </div>
@@ -780,20 +874,34 @@ export function ActionCard(props: Props) {
                       ) : (
                         <div
                           className={styles.emptyPlaceholder}
-                          onClick={() => document.getElementById("evidence-image-input")?.click()}
+                          onClick={() =>
+                            document
+                              .getElementById("evidence-image-input")
+                              ?.click()
+                          }
                         >
                           <span className={styles.emptyIcon}>📷</span>
-                          <span className={styles.emptyText}>Chọn ảnh chụp vết rách / hư hại</span>
+                          <span className={styles.emptyText}>
+                            Chọn ảnh chụp vết rách / hư hại
+                          </span>
                         </div>
                       )}
                     </div>
                   </div>
 
                   {/* Cột 2: Video unboxing */}
-                  <div className={`${styles.evidenceCard} ${videoPreview ? styles.cardActive : ''}`}>
+                  <div
+                    className={`${styles.evidenceCard} ${videoPreview ? styles.cardActive : ""}`}
+                  >
                     <div className={styles.evidenceCardHead}>
-                      <span className={styles.evidenceCardTitle}>📹 Video unboxing</span>
-                      <span className={videoPreview ? styles.badgeSuccess : styles.badgeMuted}>
+                      <span className={styles.evidenceCardTitle}>
+                        📹 Video unboxing
+                      </span>
+                      <span
+                        className={
+                          videoPreview ? styles.badgeSuccess : styles.badgeMuted
+                        }
+                      >
                         {videoPreview ? "✓ Đã nạp clip 3.5s" : "Chưa có clip"}
                       </span>
                     </div>
@@ -809,7 +917,11 @@ export function ActionCard(props: Props) {
                       <button
                         type="button"
                         className={styles.btnUpload}
-                        onClick={() => document.getElementById("evidence-video-input")?.click()}
+                        onClick={() =>
+                          document
+                            .getElementById("evidence-video-input")
+                            ?.click()
+                        }
                         title={videoFileName || "Chọn video từ máy (3-4s)"}
                       >
                         {videoFileName ? "Đổi clip..." : "Chọn video từ máy..."}
@@ -836,16 +948,24 @@ export function ActionCard(props: Props) {
                             className={styles.previewVideo}
                           />
                           <div className={styles.videoOverlayBadge}>
-                            <span>{videoFileName || "sample-unboxing.mp4 · 3.5s"}</span>
+                            <span>
+                              {videoFileName || "sample-unboxing.mp4 · 3.5s"}
+                            </span>
                           </div>
                         </div>
                       ) : (
                         <div
                           className={styles.emptyPlaceholder}
-                          onClick={() => document.getElementById("evidence-video-input")?.click()}
+                          onClick={() =>
+                            document
+                              .getElementById("evidence-video-input")
+                              ?.click()
+                          }
                         >
                           <span className={styles.emptyIcon}>📹</span>
-                          <span className={styles.emptyText}>Clip mở gói đồng kiểm GHN (3-4s)</span>
+                          <span className={styles.emptyText}>
+                            Clip mở gói đồng kiểm GHN (3-4s)
+                          </span>
                         </div>
                       )}
                     </div>

@@ -1318,6 +1318,8 @@ export interface ExchangeShipmentSnapshot {
 }
 
 export interface ExchangeDoc extends Lockable {
+  // Missing/null only for historical records; never reconstruct from live listings.
+  agreement?: import('@used-books/api-contract').components['schemas']['ExchangeAgreement'] | null;
   _id: string;
   initiatorId: string;
   recipientId: string;

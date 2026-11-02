@@ -5,6 +5,7 @@ import type { Tx } from '../../database/mongo/transaction.js';
 import { DomainError } from '../commands/domain-error.js';
 import { OrdersService } from './orders.service.js';
 import { OrderClock } from './order-clock.js';
+import { DirectOrderReleasePolicy } from '../wallet/direct-order-release.policy.js';
 
 // Carrier pickups whose delivery deadline passed without a delivery review.
 const deliveryCandidates = (now: Date): Document[] => [
@@ -48,6 +49,7 @@ export class OrderExpiryWorker {
     private readonly mongo: MongoService,
     private readonly orders: OrdersService,
     private readonly clock: OrderClock,
+    private readonly directRelease: DirectOrderReleasePolicy,
   ) {}
   // Candidate discovery is a read in its own snapshot and takes no locks; each
   // command then locks users before the Order and decides with $$NOW.
@@ -131,15 +133,18 @@ export class OrderExpiryWorker {
     );
     for (const row of deliveries)
       await attempt(() => this.orders.expireDelivery(row.orderId));
-    const inspections = await this.scan(async (tx, now) =>
-      tx.c.direct_orders
-        .find(
-          { state: 'Inspection', inspectionDeadline: { $lte: now } },
-          { sort: { inspectionDeadline: 1, _id: 1 }, limit: 100 },
-        )
-        .toArray(),
-    );
-    for (const order of inspections) await attempt(() => this.orders.settle(order._id));
+    if (this.directRelease.isReleased()) {
+      const inspections = await this.scan(async (tx, now) =>
+        tx.c.direct_orders
+          .find(
+            { state: 'Inspection', inspectionDeadline: { $lte: now } },
+            { sort: { inspectionDeadline: 1, _id: 1 }, limit: 100 },
+          )
+          .toArray(),
+      );
+      for (const order of inspections)
+        await attempt(() => this.orders.settle(order._id));
+    }
     const backlog = await this.scan(async (tx, now) => {
       const unpaid = {
         state: 'AwaitingPayment',
@@ -204,22 +209,34 @@ export class OrderExpiryWorker {
         { sort: { openedAt: 1 } },
       );
       const deliveryRemaining = deliveryBacklog?.count ?? 0;
-      const inspectionRemaining = await tx.c.direct_orders.countDocuments({
-        state: 'Inspection', inspectionDeadline: { $lte: now },
+      const inspectionsDue = await tx.c.direct_orders.countDocuments({
+        state: 'Inspection',
+        inspectionDeadline: { $lte: now },
       });
-      const inspection = await tx.c.direct_orders.findOne(
-        { state: 'Inspection', inspectionDeadline: { $lte: now } },
-        { sort: { inspectionDeadline: 1, _id: 1 } },
-      );
-      if (inspection?.inspectionDeadline) deadlines.push(inspection.inspectionDeadline);
+      const released = this.directRelease.isReleased();
+      const inspectionRemaining = released ? inspectionsDue : 0;
+      const inspectionBlocked = released
+        ? 0
+        : await tx.c.direct_orders.countDocuments({ state: 'Inspection' });
+      const inspection = released
+        ? await tx.c.direct_orders.findOne(
+            { state: 'Inspection', inspectionDeadline: { $lte: now } },
+            { sort: { inspectionDeadline: 1, _id: 1 } },
+          )
+        : null;
+      if (inspection?.inspectionDeadline)
+        deadlines.push(inspection.inspectionDeadline);
       return {
         remaining:
           remaining +
           confirmationRemaining +
           refundRemaining +
           pickups.length +
-          deliveryRemaining + inspectionRemaining,
+          deliveryRemaining +
           inspectionRemaining,
+        inspectionRemaining,
+        inspectionBlocked,
+        inspectionOverdueBlocked: released ? 0 : inspectionsDue,
         deliveryRemaining,
         openDeliveryReviews,
         oldestDeliveryReviewAgeSeconds: oldestDeliveryReview

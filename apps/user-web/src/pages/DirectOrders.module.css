@@ -704,6 +704,7 @@
 
 .bookInfoCard,
 .orderProceduresCard {
+  min-width: 0;
   background: #ffffff;
   border: 1px solid rgba(217, 203, 189, 0.75);
   border-radius: 14px;
@@ -1424,6 +1425,11 @@
   color: #5e1c81;
 }
 
+.inspectionCard > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .inspectionCard h4,
 .completedCard h4,
 .cancelledCard h4 {
@@ -1576,8 +1582,19 @@
 
 @media (max-width: 1024px) {
   .orderTwoColumns {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
+  }
+
+  .stepItem {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .stepLabel {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
   }
 }
 

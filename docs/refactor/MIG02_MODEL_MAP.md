@@ -209,6 +209,15 @@ Terms reference the accepted listing revision, never overwrite listing prices or
 Order snapshots. Current roles include the three collections with their access
 classes; existing database user passwords must not change during this addition.
 
+## Exchange agreements (ADR0063, migration0052)
+
+Exchange agreements use the optional `exchanges.agreement` object introduced by
+migration0052 ([ADR0065](../adr/0065-exchange-agreement-snapshots.md)). New proposals
+copy reviewed book/revision/value/media references under user/conversation/listing
+locks; accept revalidates before reserving all books. Counter replaces only the
+responding owner's books and derives deposits/delta. Legacy absence stays absent;
+there is no reconstruction from current listings or ledger mutation on upgrade.
+
 ## Whole book bundles (ADR0046, migrations0035/0036)
 
 `listing_revisions.bundle` is optional/null for old single-book revisions; when

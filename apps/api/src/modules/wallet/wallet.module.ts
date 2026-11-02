@@ -10,6 +10,7 @@ import { ListingFeeService } from './listing-fee.service.js';
 import { TransactionPolicy } from './transaction-policy.js';
 import { WalletClock } from './wallet-clock.js';
 import { WalletExpiryWorker } from './wallet-expiry.service.js';
+import { DirectOrderReleasePolicy } from './direct-order-release.policy.js';
 @Module({
   imports: [CommandsModule, DatabaseModule],
   controllers: [WalletController],
@@ -22,12 +23,14 @@ import { WalletExpiryWorker } from './wallet-expiry.service.js';
     TransactionPolicy,
     WalletClock,
     WalletExpiryWorker,
+    DirectOrderReleasePolicy,
   ],
   exports: [
     LedgerService,
     ListingFeeService,
     TransactionPolicy,
     WalletExpiryWorker,
+    DirectOrderReleasePolicy,
   ],
 })
 export class WalletModule {}

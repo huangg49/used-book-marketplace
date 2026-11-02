@@ -1,3 +1,5 @@
+import { MediaStorage } from '../media/media-storage.js';
+import { agreementBooks, agreementMatches, eligibleExchangeMember, exchangeAmounts, snapshotExchangeBook } from './exchange-agreement.js';
 import { ConversationAgreementsService } from '../purchases/conversation-agreements.service.js';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -27,7 +29,6 @@ import {
   notFound,
   type Wire,
 } from '../commands/domain-error.js';
-import { requireMarketplace } from '../listings/listing-channel.js';
 import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.service.js';
 import { LedgerService } from '../wallet/ledger.service.js';
 import { notifyExchange } from './exchange-notifications.js';
@@ -38,6 +39,7 @@ export class ExchangesService {
   private readonly logger = new Logger(ExchangesService.name);
 
   constructor(
+    private readonly storage: MediaStorage,
     private readonly agreements: ConversationAgreementsService,
     private readonly commands: MongoCommandService,
     private readonly listings: ListingCommitmentPolicy,
@@ -210,6 +212,7 @@ export class ExchangesService {
     const deadlines = inspectionDeadlines(row);
     return {
       id: row._id,
+      agreement: row.agreement ?? null,
       initiatorId: row.initiatorId,
       recipientId: row.recipientId,
       initiatorListingId: row.initiatorListingId,
@@ -308,6 +311,54 @@ export class ExchangesService {
     };
   }
 
+  private async closeUnavailable(tx: Tx, exchange: ExchangeDoc, now: Date) {
+    const next = await tx.c.exchanges.findOneAndUpdate(
+      { _id: exchange._id, revision: exchange.revision, status: 'Proposed' },
+      { $set: { status: 'Cancelled', cancelReason: 'ListingUnavailable', cancelledBy: 'System', cancelledAt: now,
+        rejectionReason: 'Thỏa thuận không còn hợp lệ hoặc thiếu bản chụp gốc. Hãy tạo đề xuất mới từ sách đủ điều kiện.', updatedAt: now }, $inc: { revision: 1 } },
+      { returnDocument: 'after' },
+    );
+    if (!next) throw conflict();
+    await notifyExchange(tx, next, 'ExchangeCancelled', [next.initiatorId, next.recipientId], now, { reason: next.rejectionReason! });
+    return { entityType: 'Exchange' as const, entityId: next._id, initiatorListingId: next.initiatorListingId,
+      version: next.revision, state: next.status as Wire['ExchangeStatus'], decidedAt: now,
+      event: 'ExchangeUnavailable', exchange: this.view(next) };
+  }
+
+  private async agreementEligible(tx: Tx, exchange: ExchangeDoc, listings: Map<string, ListingDoc>) {
+    const parties = await tx.c.users.find({ _id: { $in: [exchange.initiatorId, exchange.recipientId] } }).toArray();
+    if (parties.length !== 2 || parties.some((user) => !eligibleExchangeMember(user)) || !agreementMatches(exchange, listings)) return false;
+    try {
+      for (const book of agreementBooks(exchange.agreement!)) {
+        const current = await snapshotExchangeBook(tx, listings.get(book.listingId)!, book.ownerId);
+        if (current.exchangeValue !== book.exchangeValue || current.mediaIds.join() !== book.mediaIds.join()) return false;
+      }
+      return true;
+    } catch (error) {
+      if (error instanceof DomainError && error.getStatus() === 409) return false;
+      throw error;
+    }
+  }
+
+  async photo(auth: Actor, id: string, listingId: string, mediaId: string): Promise<Wire['MediaRead']> {
+    const authorize = () => this.commands.readObligation(auth, async (tx, actor) => {
+      member(actor);
+      const exchange = await this.exchange(tx, id);
+      this.participant(exchange, actor._id);
+      const book = exchange.agreement && agreementBooks(exchange.agreement).find((b) => b.listingId === listingId);
+      if (!book?.mediaIds.includes(mediaId)) throw notFound();
+      const media = await tx.c.listing_media.findOne({ _id: mediaId, listingId, status: 'Ready', purgedAt: null });
+      if (!media?.derivativeKey || !media.width || !media.height) throw notFound();
+      return { key: media.derivativeKey, width: media.width, height: media.height, revisionId: book.revisionId };
+    });
+    const before = await authorize();
+    await this.storage.check();
+    const signed = await this.storage.signedRead(before.key);
+    const after = await authorize();
+    if (before.key !== after.key || before.revisionId !== after.revisionId) throw notFound();
+    return { id: mediaId, ...signed, width: after.width, height: after.height };
+  }
+
   create(context: CommandContext, body: Wire['CreateExchangeProposal']) {
     const proposalTtlHours = Number(
       this.config.get('EXCHANGE_PROPOSAL_TTL_HOURS') ?? 72,
@@ -357,9 +408,15 @@ export class ExchangesService {
           }
           return { initiatorListings, recipientListing };
         },
-        mutate: async (tx, actor, { initiatorListings, recipientListing }) => {
+        mutate: async (tx, actor, { recipientListing: proposedRecipient }) => {
           requireActive(actor);
-          const conversation = body.conversationId ? await this.agreements.prepareExchange(tx, body.conversationId, body.expectedConversationVersion!, actor._id, recipientListing._id, recipientListing.ownerId) : null;
+          // Conversation precedes resource locks in the transaction protocol.
+          const conversation = body.conversationId ? await this.agreements.prepareExchange(tx, body.conversationId, body.expectedConversationVersion!, actor._id, proposedRecipient._id, proposedRecipient.ownerId) : null;
+          const locked = await this.lockAllListingsOrdered(tx, [...initiatorListingIds, body.recipientListingId]);
+          const initiatorListings = initiatorListingIds.map((id) => locked.get(id)!);
+          const recipientListing = locked.get(body.recipientListingId)!;
+          if (!initiatorListingIds.includes(primaryInitiatorListingId) || new Set(rawIds).size !== rawIds.length || initiatorListingIds.length > 5) throw invalidState();
+          if (!eligibleExchangeMember(await tx.c.users.findOne({ _id: recipientListing.ownerId }))) throw invalidState('Đối tác hiện không đủ điều kiện tạo giao dịch mới.');
           if (recipientListing.ownerId === actor._id) {
             throw invalidState('Không thể tự tạo đề xuất trao đổi với chính mình.');
           }
@@ -410,70 +467,11 @@ export class ExchangesService {
             );
           }
 
-          for (const initListing of initiatorListings) {
-            if (initListing.ownerId !== actor._id) {
-              throw invalidState();
-            }
-            requireMarketplace(initListing);
-            if (
-              initListing.trade !== 'Available' ||
-              initListing.moderation !== 'Approved' ||
-              initListing.visibility !== 'Visible'
-            ) {
-              throw invalidState();
-            }
-          }
-
-          requireMarketplace(recipientListing);
-          if (
-            recipientListing.trade !== 'Available' ||
-            recipientListing.moderation !== 'Approved' ||
-            recipientListing.visibility !== 'Visible'
-          ) {
-            throw invalidState();
-          }
-
-          const initiatorRevIds = initiatorListings.map(
-            (l) => l.currentRevisionId!,
-          );
-          const initiatorRevs = await tx.c.listing_revisions
-            .find({ _id: { $in: initiatorRevIds } })
-            .toArray();
-          const recipientRev = await tx.c.listing_revisions.findOne({
-            _id: recipientListing.currentRevisionId!,
-          });
-
-          if (
-            initiatorRevs.length !== initiatorListings.length ||
-            !recipientRev
-          ) {
-            throw invalidState();
-          }
-
-          for (const initRev of initiatorRevs) {
-            if (!['Exchange', 'Both'].includes(initRev.mode ?? '')) {
-              throw invalidState();
-            }
-          }
-
-          if (!['Exchange', 'Both'].includes(recipientRev.mode ?? '')) {
-            throw invalidState();
-          }
-
-          const initiatorValue = initiatorRevs.reduce(
-            (sum, r) => sum + (r.exchangeValue ?? 0),
-            0,
-          );
-          const recipientValue = recipientRev.exchangeValue ?? 0;
-
-          const diffAmount = Math.abs(initiatorValue - recipientValue);
-          let diffPayerId: string | null = null;
-          if (initiatorValue < recipientValue) {
-            diffPayerId = actor._id;
-          } else if (initiatorValue > recipientValue) {
-            diffPayerId = recipientListing.ownerId;
-          }
-
+          const agreement = {
+            initiatorBooks: await Promise.all(initiatorListings.map((listing) => snapshotExchangeBook(tx, listing, actor._id))),
+            recipientBook: await snapshotExchangeBook(tx, recipientListing, recipientListing.ownerId),
+          };
+          const amounts = exchangeAmounts(agreement, actor._id, recipientListing.ownerId);
           let initiatorAddress: ExchangeAddressSnapshot | null = null;
           if (body.deliveryAddressId) {
             const addr = await tx.c.member_addresses.findOne({
@@ -504,10 +502,8 @@ export class ExchangesService {
             recipientListingId: recipientListing._id,
             status: 'Proposed',
             revision: 1,
-            initiatorDeposit: recipientValue,
-            recipientDeposit: initiatorValue,
-            diffAmount,
-            diffPayerId,
+            agreement,
+            ...amounts,
             initiatorOrderId: randomUUID(),
             recipientOrderId: randomUUID(),
             fundingDeadline: null,
@@ -627,14 +623,9 @@ export class ExchangesService {
         const allIds = [...initIds, exchange.recipientListingId];
         const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
 
-        for (const id of allIds) {
-          const listing = lockedMap.get(id);
-          if (!listing || listing.trade !== 'Available') {
-            throw invalidState();
-          }
-          requireMarketplace(listing);
+        if (!await this.agreementEligible(tx, exchange, lockedMap)) {
+          return this.closeUnavailable(tx, exchange, now);
         }
-
         // Project all listings from Available to Reserved
         for (const id of allIds) {
           const listing = lockedMap.get(id)!;
@@ -762,6 +753,7 @@ export class ExchangesService {
           requireActive(actor);
           this.participant(initialExchange, actor._id);
 
+          await tx.lock('exchanges', [initialExchange._id]);
           const exchange = await this.exchange(tx, initialExchange._id);
 
           if (exchange.status !== 'Proposed') {
@@ -776,13 +768,21 @@ export class ExchangesService {
             throw invalidState();
           }
 
-          let diffPayerId: string | null = null;
-          if (body.diffPayer === 'initiator') {
-            diffPayerId = exchange.initiatorId;
-          } else if (body.diffPayer === 'recipient') {
-            diffPayerId = exchange.recipientId;
+          if ((exchange.lastProposedById ?? exchange.initiatorId) === actor._id) throw conflict();
+          const isInitiator = actor._id === exchange.initiatorId;
+          if (!isInitiator && body.listingIds.length !== 1) throw invalidState('Bên nhận đề xuất chọn đúng một sách thay thế.');
+          const currentIds = [...this.getInitiatorListingIds(exchange), exchange.recipientListingId];
+          const locked = await this.lockAllListingsOrdered(tx, [...currentIds, ...body.listingIds]);
+          if (!await this.agreementEligible(tx, exchange, locked)) {
+            return this.closeUnavailable(tx, exchange, now);
           }
-
+          const ownIds = isInitiator ? this.getInitiatorListingIds(exchange) : [exchange.recipientListingId];
+          if (body.listingIds.length === ownIds.length && body.listingIds.every((id) => ownIds.includes(id))) throw invalidState('Hãy chọn sách khác để đề xuất lại.');
+          const replacements = await Promise.all(body.listingIds.map((id) => snapshotExchangeBook(tx, locked.get(id)!, actor._id)));
+          const agreement = isInitiator
+            ? { initiatorBooks: replacements, recipientBook: exchange.agreement!.recipientBook }
+            : { initiatorBooks: exchange.agreement!.initiatorBooks, recipientBook: replacements[0] };
+          const amounts = exchangeAmounts(agreement, exchange.initiatorId, exchange.recipientId);
           let updatedAddress: ExchangeAddressSnapshot | null = null;
           if (body.deliveryAddressId) {
             const addr = await tx.c.member_addresses.findOne({
@@ -800,10 +800,10 @@ export class ExchangesService {
             }
           }
 
-          const isInitiator = actor._id === exchange.initiatorId;
           const setFields: Record<string, unknown> = {
-            diffAmount: body.diffAmount,
-            diffPayerId,
+            agreement,
+            ...amounts,
+            ...(isInitiator ? { initiatorListingIds: body.listingIds, initiatorListingId: body.listingIds[0] } : { recipientListingId: body.listingIds[0] }),
             lastProposedById: actor._id,
             updatedAt: now,
           };
@@ -826,14 +826,8 @@ export class ExchangesService {
           if (!next) throw conflict();
 
           // Also insert a notification in exchange_messages so both parties see it in chat
-          const payerLabel =
-            body.diffPayer === 'none'
-              ? 'Đổi ngang giá (không bù tiền)'
-              : (body.diffPayer === (isInitiator ? 'initiator' : 'recipient')
-                  ? 'Tôi bù thêm '
-                  : 'Đối tác bù thêm ') +
-                body.diffAmount.toLocaleString('vi-VN') +
-                ' đ';
+          const payerLabel = amounts.diffAmount === 0 ? 'Đổi ngang giá (không bù tiền)'
+            : (amounts.diffPayerId === actor._id ? 'Tôi bù thêm ' : 'Đối tác bù thêm ') + amounts.diffAmount.toLocaleString('vi-VN') + ' đ';
           const addressPart = updatedAddress
             ? `\n• Địa chỉ nhận mới: ${updatedAddress.recipientName} - ${updatedAddress.phone}, ${updatedAddress.detail} (${updatedAddress.localityCode ?? 'TP.HCM'})`
             : '';

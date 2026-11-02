@@ -30,6 +30,7 @@ export function BookInfoCard({ detail, compact = false }: BookInfoCardProps) {
 
     return (
         <div className={compact ? `${styles.card} ${styles.compact}` : styles.card}>
+            {detail.hasAgreementSnapshot === false && <p role="status">Hồ sơ cũ thiếu bản chụp sách ban đầu. Các khoản cọc/bù bên dưới là nghĩa vụ đã lưu; không thể xác minh lại nội dung sách từ bài đăng hiện tại.</p>}
             {/* Header */}
             <div className={styles.cardHeader}>
                 <h2 className={styles.cardTitle}>
@@ -71,6 +72,8 @@ export function BookInfoCard({ detail, compact = false }: BookInfoCardProps) {
                                 <div className={styles.bookMeta}>
                                     <h3 className={styles.bookTitle}>{book.title}</h3>
                                     <p className={styles.bookAuthor}>{book.author}</p>
+                                    {book.editionLabel && <p className={styles.bookAuthor}>{book.editionLabel}</p>}
+                                    {book.conditionDetails && <details className={styles.conditionDetails}><summary>Tình trạng đã ghi nhận</summary><p>{book.conditionDetails}</p></details>}
                                     <div className={styles.tagsRow}>
                                         <span className={styles.conditionTag}>
                                             {conditions[book.condition as keyof typeof conditions] ?? book.condition ?? 'Đã qua sử dụng'}
@@ -111,6 +114,8 @@ export function BookInfoCard({ detail, compact = false }: BookInfoCardProps) {
                                 <div className={styles.bookMeta}>
                                     <h3 className={styles.bookTitle}>{book.title}</h3>
                                     <p className={styles.bookAuthor}>{book.author}</p>
+                                    {book.editionLabel && <p className={styles.bookAuthor}>{book.editionLabel}</p>}
+                                    {book.conditionDetails && <details className={styles.conditionDetails}><summary>Tình trạng đã ghi nhận</summary><p>{book.conditionDetails}</p></details>}
                                     <div className={styles.tagsRow}>
                                         <span className={styles.conditionTag}>
                                             {conditions[book.condition as keyof typeof conditions] ?? book.condition ?? 'Đã qua sử dụng'}
@@ -152,7 +157,7 @@ export function BookInfoCard({ detail, compact = false }: BookInfoCardProps) {
                             <span>Tiền cọc bảo chứng</span>
                         </div>
                         <div className={styles.bentoTileValue}>
-                            {detail.viewerFundingAmount ? formatVnd(detail.viewerFundingAmount) : '100% giá trị sách đối tác'}
+                            {detail.viewerDeposit !== undefined ? formatVnd(detail.viewerDeposit) : '100% giá trị sách đối tác'}
                         </div>
                         <div className={styles.bentoTileNote}>
                             Hoàn lại 100% vào ví khi hoàn tất giao dịch an toàn (POL-14)
