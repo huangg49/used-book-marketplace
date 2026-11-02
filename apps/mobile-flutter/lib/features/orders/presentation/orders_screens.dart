@@ -860,10 +860,18 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     final item = order['item'] is Map
         ? Map<String, dynamic>.from(order['item'] as Map)
         : const <String, dynamic>{};
-    final title = (item['title'] ?? order['title'] ?? 'Ấn bản sách Lật Lại')
+    final amounts = order['amounts'] is Map
+        ? Map<String, dynamic>.from(order['amounts'] as Map)
+        : const <String, dynamic>{};
+    final metadata = item['metadata'] is Map
+        ? Map<String, dynamic>.from(item['metadata'] as Map)
+        : const <String, dynamic>{};
+    final title = (metadata['title'] ?? item['title'] ?? order['title'] ?? 'Ấn bản sách Lật Lại')
         .toString();
-    final total = (order['buyerTotal'] ??
+    final total = (amounts['buyerTotal'] ??
+        order['buyerTotal'] ??
         order['totalAmount'] ??
+        amounts['bookPrice'] ??
         item['bookPrice'] ??
         0) as num;
 
@@ -1123,11 +1131,18 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     final item = order['item'] is Map
         ? Map<String, dynamic>.from(order['item'] as Map)
         : const <String, dynamic>{};
-    final bookPrice = (item['bookPrice'] ?? order['bookPrice'] ?? 0) as num;
+    final amounts = order['amounts'] is Map
+        ? Map<String, dynamic>.from(order['amounts'] as Map)
+        : const <String, dynamic>{};
+    final metadata = item['metadata'] is Map
+        ? Map<String, dynamic>.from(item['metadata'] as Map)
+        : const <String, dynamic>{};
+    final title = (metadata['title'] ?? item['title'] ?? order['title'] ?? 'Ấn bản sách trong đơn').toString();
+    final bookPrice = (amounts['bookPrice'] ?? item['bookPrice'] ?? order['bookPrice'] ?? 0) as num;
     final shippingFee =
-        (order['shippingFee'] ?? item['shippingFee'] ?? 0) as num;
+        (amounts['shippingFee'] ?? order['shippingFee'] ?? item['shippingFee'] ?? 0) as num;
     final buyerTotal =
-        (order['buyerTotal'] ?? (bookPrice + shippingFee)) as num;
+        (amounts['buyerTotal'] ?? order['buyerTotal'] ?? (bookPrice + shippingFee)) as num;
 
     const steps = [
       'Đặt đơn',
@@ -1273,9 +1288,12 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                               height: 82,
                               color: StitchTokens.parchment,
                               child: BookCoverPhoto(
-                                item: item.isNotEmpty
-                                    ? item
-                                    : {'id': order['listingId'] ?? '', 'title': item['title'] ?? ''},
+                                item: {
+                                  'id': order['listingId'] ?? item['listingId'] ?? '',
+                                  'title': title,
+                                  if (item['photos'] != null) 'photos': item['photos'],
+                                  if (order['photos'] != null) 'photos': order['photos'],
+                                },
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -1286,7 +1304,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 AppText(
-                                  (item['title'] ?? 'Ấn bản sách trong đơn').toString(),
+                                  title,
                                   kind: AppTextKind.card,
                                   color: StitchTokens.darkWood,
                                 ),
@@ -1320,17 +1338,19 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                                 AppText(formatVnd(bookPrice), kind: AppTextKind.bold),
                               ],
                             ),
-                            const SizedBox(height: 6),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const AppText('Phí giao nhận:'),
-                                AppText(
-                                  formatVnd(shippingFee),
-                                  kind: AppTextKind.bold,
-                                ),
-                              ],
-                            ),
+                            if (shippingFee > 0) ...[
+                              const SizedBox(height: 6),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const AppText('Phí giao nhận:'),
+                                  AppText(
+                                    formatVnd(shippingFee),
+                                    kind: AppTextKind.bold,
+                                  ),
+                                ],
+                              ),
+                            ],
                             const Divider(height: 16),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
