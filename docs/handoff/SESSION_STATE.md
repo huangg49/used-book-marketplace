@@ -1,5 +1,52 @@
 # Điểm lưu hiện tại — 03/11/2026
 
+## Thanh tiến trình và demo hoàn tất/giải ngân thật — 03/11/2026
+
+- Nhánh `codex/local-demo-settlement`, base `6ba6ef39`; giữ phần chỉnh thanh tiến
+  trình của phiên này. Chờ thanh toán ở bước2; Preparing chưa có vận đơn bước3;
+  đăng ký vận đơn thành công sang bước4 ở cả Buyer/Seller, nhãn chờ bàn giao.
+- Owner làm rõ cần kết thúc giữ tiền và chuyển tiền thật trong ledger demo local,
+  thay bản xem thử UI. [ADR0067](../adr/0067-local-demo-order-settlement.md):
+  lệnh riêng theo allowlist UUID phía BE, mặc định tắt, development/test + Mongo
+  localhost + simulator. Seller ACTIVE, đúng owner/version/phiên, đã đăng ký vận
+  đơn và không có review mới bắt đầu được job bền vững5giây. Không tự chạy khi tải trang.
+- Lệnh start có receipt/audit/outbox; worker ghi1OrderSettlement, hold về0,
+  proceeds/commission theo agreement, Order Completed/v5, listing Sold/context
+  Closed/commitment Released trong1transaction. Exact retry giữ key/body/version;
+  Back/reload không hủy job. Không có bộ đếm giả hoặc màn minh họa riêng nữa.
+- Contract0.73/235operations/37controllers; migration0054 thêm job và principal/
+  terminal shape riêng, không sửa migration cũ. Registry69/99collection. Đã
+  backup/migrate/bootstrap local, counts nghiệp vụ giữ nguyên, API/hai worker
+  chạy lại và readiness200. ID riêng/backup/log nằm ngoài Git trong `.tmp/`.
+- PASS browser `--demo-completion` HTTP/Mongo QA57017/`*_test`, storage/payment
+  test: disabled/wrong owner/stale, lostACK/exact retry/key conflict/revoked replay,
+  cả2phía Completed sau dueAt5giây, Buyer hold0 và seller tăng đúng proceeds,
+  1settlement/3entries cân bằng; ảnh390/1440đã xem. Đã xác minh local sau thao tác:
+  Completed sau5164ms, hold190.000đ về0, seller được180.500đ, commission9.500đ,
+  đúng1settlement; đối soát toàn bộ ledger local balanced. Chi tiết máy/ID ngoài Git.
+- PASS API/web types, API/web lint (warning cũ),308web unit/build, contract/routes,
+  detector0finding;30Mongo của3file schema/upgrade/newmigration PASS. Full Mongo
+  lượt trước57PASS/2FAIL/6SKIP do baseline upgrade/count cần cập nhật cho0054;
+  hai ca fail đã nằm trong30PASS nêu trên. API unit405PASS/1FAIL: shutdown Windows
+  10s timeout có sẵn, chạy riêng vẫn FAIL; không sửa test để che lỗi. 405unit còn
+  lại PASS ở lượt scoped loại đúng bài shutdown đã FAIL; full browser
+  buy-now thường PASS lại sau thay đổi (không cấp allowlist cho đơn QA thường).
+- PASS8ca release-gate HTTP/Mongo (40ca ngoài filter SKIP): đơn thường/Inspection
+  vẫn giữ tiền, historical replay/current auth và alias ledger không vượt gate.
+  Fixture gate bỏ số phí30k cũ, lấy amounts đã chốt theo miễn phí giao hàng.
+  Worker chỉ được start ở API/order-worker; các context CLI read-only không tự quét.
+- Owner yêu cầu ẩn công cụ demo mặc định, chỉ bật khi trình diễn. Web dev cần
+  query `demoCompletion=1` và đúng allowlist BE mới hiện nút; production UI ẩn.
+  Exact retry của intent mất ACK vẫn giữ khi bỏ query. Đã tắt allowlist local sau
+  khi xác nhận không còn job Pending; API/workers chạy lại, không đổi tiền/đơn.
+- PASS web type/lint/308unit/build và browser demo sau bổ sung opt-in: đơn có quyền
+  BE vẫn không hiện nút ở URL thường, bật query mới chạy được; flow5giây/replay/
+  tiền vẫn PASS390/1440. Ảnh hidden đã xem; detector0finding. Owner cấp quyền
+  commit/push nhánh này; subject dự kiến `feat(orders): add opt-in local demo settlement`.
+- Luồng này là ngoại lệ demo được cấp rõ, không mở confirm-receipt/Delivered/
+  settlement thường hoặc xử lý Inspection lịch sử. READINESS/native/human/CI
+  không đổi; chỉ push nhánh theo quyền owner, chưa PR/merge/deploy ngoài máy.
+
 ## Miễn phí giao hàng mới — 03/11/2026
 
 - Hòa giải với `origin/main` tại `009e7946`: giữ registry AI/Exchange mới và

@@ -1,7 +1,7 @@
 // Real HTTP/Mongo and two browser sessions; QA-only accounts/storage/funding.
 import assert from "node:assert/strict";
 import { parseArgs } from "node:util";
-const { values: { "checkout-only": checkoutOnly } } = parseArgs({ options: { "checkout-only": { type: "boolean", default: false } } });
+const { values: { "checkout-only": checkoutOnly, "demo-completion": demoCompletion } } = parseArgs({ options: { "checkout-only": { type: "boolean", default: false }, "demo-completion": { type: "boolean", default: false } } });
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
@@ -384,6 +384,18 @@ try {
     name: order.item.metadata.title, exact: true,
   }).waitFor();
   await buyerOrderDetails.getByText("Chờ thanh toán", { exact: true }).waitFor();
+  await buyerOrderDetails.locator('[aria-current="step"]')
+    .filter({ hasText: "Thanh toán" }).waitFor();
+  const captureProgress = async (state) => {
+    const viewport = buyerPage.viewportSize();
+    for (const width of [1440, 390]) {
+      await buyerPage.setViewportSize({ width, height: 900 });
+      await buyerOrderDetails.locator('[aria-label="Tiến trình thủ tục đơn hàng"]')
+        .screenshot({ path: path.join(artifacts, `progress-${state}-${width}.png`) });
+    }
+    await buyerPage.setViewportSize(viewport);
+  };
+  await captureProgress("payment");
   const room = await fixture.api(`/me/purchase-conversations/${conversationId}`, buyer.accessToken);
   assert.equal(room.orderId, orderId);
   assert.equal(room.listingId, listingId);
@@ -444,6 +456,7 @@ try {
     0,
   );
   await assertPublicState("Chờ thanh toán", "AwaitingPayment");
+  assert.equal(await buyerOrderDetails.locator('[aria-current="step"]').innerText(), "2\nThanh toán");
   await fundBuyer(150000);
   const paymentAttempts = [];
   let lostPay = false;
@@ -468,6 +481,8 @@ try {
   await buyerOrderDetails
     .getByText("Người bán đang chuẩn bị gửi", { exact: true })
     .waitFor();
+  assert.equal(await buyerOrderDetails.locator('[aria-current="step"]').innerText(), "3\nChuẩn bị");
+  await captureProgress("preparing");
   assert.equal(paymentAttempts.length, 2);
   assert.deepEqual(paymentAttempts[0], paymentAttempts[1]);
   await assertPublicState(
@@ -540,6 +555,7 @@ try {
   await sellerOrderDetails
     .getByText("Người bán đang chuẩn bị gửi", { exact: true })
     .waitFor();
+  assert.equal(await sellerOrderDetails.locator('[aria-current="step"]').innerText(), "3\nChuẩn bị");
   const apiRequire = createRequire(path.join(root, "apps/api/package.json"));
   const bytes = await apiRequire("sharp")({
     create: { width: 300, height: 300, channels: 3, background: "#58685E" },
@@ -612,6 +628,14 @@ try {
   await sellerPage
     .getByText("Đã đăng ký vận đơn, đang chờ xác nhận bàn giao.")
     .waitFor();
+  await sellerOrderDetails.locator('[aria-current="step"]').filter({ hasText: "Vận chuyển" }).waitFor();
+  await buyerOrderDetails.locator('[aria-current="step"]').filter({ hasText: "Vận chuyển" }).waitFor();
+  await buyerOrderDetails.getByText("Người bán đã đăng ký vận đơn", { exact: true }).waitFor();
+  for (const details of [sellerOrderDetails, buyerOrderDetails]) {
+    assert.equal(await details.locator('[aria-current="step"]').innerText(), "4\nVận chuyển");
+    await details.getByText("Chờ bàn giao vận chuyển", { exact: true }).waitFor();
+  }
+  await captureProgress("registered");
   assert.equal(
     (await fixture.api(`/me/orders/${orderId}`, seller.accessToken)).state,
     "Preparing",
@@ -628,6 +652,83 @@ try {
     path: path.join(artifacts, "seller-shipping-desktop.png"),
     fullPage: true,
   });
+  if (demoCompletion) {
+    const endpoint = `/orders/${orderId}/demo-completion`;
+    const post = async (token, expectedVersion, key = randomUUID()) => fetch(base + endpoint, {
+      method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'Idempotency-Key': key },
+      body: JSON.stringify({ expectedVersion }),
+    });
+    assert.equal((await post(seller.accessToken, 3)).status, 403);
+    process.env.LOCAL_DEMO_DIRECT_ORDER_IDS = orderId;
+    assert.equal((await post(buyer.accessToken, 3)).status, 403);
+    assert.equal((await post(operator.accessToken, 3)).status, 403);
+    assert.equal((await post(seller.accessToken, 2)).status, 409);
+    assert.equal((await fixture.api(`/me/orders/${orderId}`, seller.accessToken)).demoCompletionEnabled, true);
+    // Even an authorized local Order hides demo controls on its ordinary URL.
+    await sellerPage.locator('a[href="/"]').first().click();
+    const authorizedView = sellerPage.waitForResponse(response =>
+      new URL(response.url()).pathname === `/api/v1/me/orders/${orderId}` &&
+      response.request().method() === 'GET' && response.ok());
+    await sellerPage.goBack();
+    assert.equal((await (await authorizedView).json()).demoCompletionEnabled, true);
+    await sellerOrderDetails.getByText('Chờ bàn giao vận chuyển', { exact: true }).waitFor();
+    assert.equal(await sellerOrderDetails.getByRole('button', { name: 'Hoàn tất và giải ngân sau 5 giây', exact: true }).count(), 0);
+    await sellerPage.screenshot({ path: path.join(artifacts, 'demo-controls-hidden.png') });
+    await sellerPage.evaluate(() => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('demoCompletion', '1');
+      window.history.pushState(window.history.state, '', url);
+      window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
+    });
+    await sellerOrderDetails.getByRole('button', { name: 'Hoàn tất và giải ngân sau 5 giây', exact: true }).waitFor();
+    const buyerBefore = await fixture.api('/me/wallet', buyer.accessToken);
+    const sellerBefore = await fixture.api('/me/wallet', seller.accessToken);
+    const posts = [];
+    await sellerPage.route(`**/api/v1${endpoint}`, async route => {
+      posts.push({ key: route.request().headers()['idempotency-key'], body: route.request().postData() });
+      if (posts.length === 1) { await route.fetch(); await route.abort('failed'); }
+      else await route.continue();
+    });
+    const urlBefore = sellerPage.url();
+    await sellerOrderDetails.getByRole('button', { name: 'Hoàn tất và giải ngân sau 5 giây', exact: true }).click();
+    await sellerOrderDetails.getByRole('button', { name: 'Thử lại hoàn tất demo', exact: true }).waitFor();
+    // Another command key racing the durable job cannot schedule or settle twice.
+    const raced = await Promise.all([post(seller.accessToken, 3), post(seller.accessToken, 4)]);
+    assert.deepEqual(raced.map(r => r.status), [409, 409]);
+    assert.equal((await post(seller.accessToken, 4, posts[0].key)).status, 409);
+    await sellerOrderDetails.getByRole('button', { name: 'Thử lại hoàn tất demo', exact: true }).click();
+    assert.equal(posts.length, 2); assert.deepEqual(posts[0], posts[1]);
+    await sellerOrderDetails.locator('[aria-current="step"]').filter({ hasText: 'Hoàn tất' }).waitFor({ timeout: 20000 });
+    await buyerOrderDetails.locator('[aria-current="step"]').filter({ hasText: 'Hoàn tất' }).waitFor({ timeout: 10000 });
+    assert.equal(sellerPage.url(), urlBefore);
+    const stored = await fixture.db.collection('direct_orders').findOne({ _id: orderId });
+    const job = await fixture.db.collection('local_demo_order_completions').findOne({ _id: orderId });
+    assert.equal(stored.state, 'Completed'); assert.equal(stored.version, 5);
+    assert.equal(job.status, 'Completed'); assert.equal(job.dueAt - job.createdAt, 5000); assert(job.completedAt >= job.dueAt);
+    const buyerAfter = await fixture.api('/me/wallet', buyer.accessToken);
+    const sellerAfter = await fixture.api('/me/wallet', seller.accessToken);
+    const completed = await fixture.api(`/me/orders/${orderId}`, seller.accessToken);
+    assert.equal(buyerBefore.transactionHeld - buyerAfter.transactionHeld, completed.amounts.buyerTotal);
+    assert.equal(completed.moneyHeld, 0);
+    assert.equal(sellerAfter.available - sellerBefore.available, completed.amounts.sellerProceedsOnCompletion);
+    assert.equal((await post(seller.accessToken, 3, posts[0].key)).status, 200);
+    assert.equal(await fixture.db.collection('ledger_journals').countDocuments({ orderId, type: 'OrderSettlement' }), 1);
+    assert.equal(await fixture.db.collection('local_demo_order_completions').countDocuments({ _id: orderId }), 1);
+    for (const width of [1440, 390]) {
+      await sellerPage.setViewportSize({ width, height: 900 });
+      await sellerOrderDetails.locator('[aria-label="Tiến trình thủ tục đơn hàng"]')
+        .screenshot({ path: path.join(artifacts, `settled-demo-${width}.png`) });
+    }
+    const sellerSession = JSON.parse(Buffer.from(seller.accessToken.split('.')[1], 'base64url').toString()).sid;
+    await fixture.db.collection('auth_sessions').updateOne({ _id: sellerSession }, { $set: { revokedAt: new Date() } });
+    assert.equal((await post(seller.accessToken, 3, posts[0].key)).status, 401);
+    // The fixture uses real immutable ledger entries; inspect all affected postings.
+    const settlement = await fixture.db.collection('ledger_journals').findOne({ orderId, type: 'OrderSettlement' });
+    const entries = await fixture.db.collection('ledger_entries').find({ journalId: settlement._id }).toArray();
+    assert.equal(entries.reduce((n, e) => n + e.debit - e.credit, 0), 0);
+    assert.equal(entries.length, 3);
+    console.log('PASS local demo completion: real shared Completed Order, exact 5s due time, hold released, seller frozen proceeds credited, balanced one settlement; disabled/wrong owner/stale/replay/conflict/revoked and lost ACK recovery; 390/1440px.');
+  } else {
   const sellerTopup = await fixture.api("/me/topups", seller.accessToken, {
     amount: 50000,
   });
@@ -678,6 +779,7 @@ try {
     fullPage: true,
   });
   }
+  }
   assert.equal(
     await fixture.db
       .collection("purchase_conversations")
@@ -690,7 +792,7 @@ try {
   );
   assert.deepEqual(errors, []);
   if (checkoutOnly) console.log("PASS buy-now checkout-only: quote/address/create/pay, lost ACK pinned key/body, single ledger hold/Order/notification, public state, chat focus after Back; no shipping/carrier commands.");
-  else console.log(
+  else if (!demoCompletion) console.log(
     "PASS buy-now browser: listed price, quote does not reserve or open chat, create/pay lost ACK same-key/body replay, one OrderCreated room shared by buyer/seller with no negotiation/quote, underfunded no hold, paid Preparing without seller approval, durable notifications, file chooser/input/focus/draft retained across shipment polling and transient 503, real image upload/registration, independent simulated pickup InTransit; 390/1440. API/Mongo real, QA storage/payment/carrier only.",
   );
 } catch (error) {

@@ -1,3 +1,4 @@
+import { LocalDemoCompletionWorker } from './modules/orders/local-demo-completion.worker.js';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module.js';
@@ -11,5 +12,6 @@ async function bootstrap() {
     app.get(ConfigService).getOrThrow<number>('PORT'),
     '0.0.0.0',
   );
+  app.get(LocalDemoCompletionWorker).start();
 }
 await bootstrap();

@@ -36,6 +36,12 @@ export function getOrderForPayment(orderId: string) {
   return session.request(`/me/orders/${orderId}`, paymentOrderSchema);
 }
 
+export function startDemoOrderCompletion(orderId: string, expectedVersion: number, key: string) {
+  return session.request(`/orders/${orderId}/demo-completion`, orderReceiptSchema, {
+    method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ expectedVersion }),
+  });
+}
+
 export function payOrder(
   orderId: string,
   expectedVersion: number,
@@ -79,6 +85,8 @@ const orderDetails = paymentOrderSchema.extend({
   canReject: z.boolean(),
   sellerConfirmationDeadline: z.string().nullable(),
   shipmentRegistrationEnabled: z.boolean(),
+  demoCompletionEnabled: z.boolean().optional().default(false),
+  demoCompletionAt: z.string().nullable().optional().default(null),
   deliveredAt: z.iso.datetime().nullable(),
   inspectionDeadline: z.iso.datetime().nullable(),
   carrierReview: z

@@ -45,7 +45,11 @@ it('upgrades a free-shipping database to main without rewriting applied checksum
     ).toMatchObject({ policyCode: FREE_SHIPPING_POLICY });
     for (const name of ['point_orders', 'point_order_deliveries']) {
       const [collection] = await db.listCollections({ name }).toArray();
-      expect(collection.options.validator).toEqual(
+      const validator =
+        collection && 'options' in collection
+          ? collection.options?.validator
+          : undefined;
+      expect(validator).toEqual(
         validatorOf(currentCollections().find((spec) => spec.name === name)!),
       );
     }

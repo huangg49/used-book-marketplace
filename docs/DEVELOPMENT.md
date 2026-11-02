@@ -92,6 +92,41 @@ Thiếu storage thì login/xem dữ liệu vẫn chạy, upload chưa sẵn sàn
 
 ## Khi có lỗi
 
+### Demo hoàn tất đơn và giải ngân sau 5 giây
+
+Theo [ADR0067](adr/0067-local-demo-order-settlement.md), BE có ngoại lệ demo local
+được owner chọn rõ từng UUID trong `LOCAL_DEMO_DIRECT_ORDER_IDS` của `apps/api/.env`.
+Mặc định rỗng; chỉ development/test, Mongo localhost và simulator đã cấu hình.
+Không đặt ID qua client, không wildcard, không bật completion của các đơn thường.
+
+Dừng API/worker, backup database, chạy `pnpm db:migrate` và `pnpm db:bootstrap`
+cho migration0054 rồi build/chạy lại BE. Cấu hình riêng giữ ngoài Git theo ENV_HANDOFF.
+Nút demo mặc định bị ẩn. Khi cần trình diễn, chạy Member web bằng dev server và
+thêm `?demoCompletion=1` vào URL hội thoại/đơn đang xem (dùng `&` nếu đã có query).
+Chỉ với đơn đã được cấp phạm vi BE, Seller ACTIVE đã đăng ký vận đơn mới thấy nút
+“Hoàn tất và giải ngân sau 5 giây”. Nút gọi BE thật, ghi job theo giờ máy chủ và
+chuyển InTransit. Sau hạn5giây, worker đóng Completed, giải phóng hold và ghi
+seller proceeds/commission theo agreement trong một transaction. Hai bên đọc
+cùng trạng thái và xem số dư/lịch sử ví; không còn bộ đếm giả trên giao diện.
+Xóa query để ẩn công cụ; production build luôn ẩn công cụ này. Cờ URL không cấp
+quyền API. Xóa UUID khỏi allowlist BE và chạy lại API/worker sau khi demo xong;
+không rút quyền khi job đã nhận còn Pending. Exact retry của yêu cầu mất ACK
+vẫn hiện để xác nhận kết quả, kể cả khi query bị xóa trong cùng phiên.
+
+Đây là lệnh đã chấp nhận, không có nút hủy bản xem thử. Back/reload không hủy job.
+Nếu mất ACK, dùng “Thử lại hoàn tất demo” với đúng key/body/version; không tạo key
+mới để ép thành công. Worker có thể xử lý trễ một nhịp quét khi máy bận; UI chỉ báo
+Hoàn tất sau khi GET thấy dữ liệu đã commit. Inspection lịch sử và gate ADR0064
+vẫn giữ nguyên, không sửa hạn72giờ của đơn thường hoặc giải ngân các hồ sơ cũ.
+
+QA: build API trước, dùng replica set57017/`*_test`, rồi chạy
+`pnpm --filter @used-books/user-web test:demo-completion:browser`. Kiểm disabled,
+sai owner, stale version, mất ACK/exact retry, key khác body, revoke/replay,
+Completed ở cả hai phía, hold0/proceeds/commission và một settlement cân bằng.
+`test:buy-now:browser` tiếp tục kiểm luồng thường không được cấp ngoại lệ.
+
+### Xử lý lỗi môi trường
+
 - Node quá cũ: đổi Node theo repo, mở terminal mới. Launcher báo trước khi bật app.
 - Port API/Metro đang được dùng: dừng terminal của chính bạn hoặc chọn cổng khác;
   launcher không tự giết process. Mongo port bị Windows chặn: chọn port trống trong

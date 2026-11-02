@@ -1,3 +1,4 @@
+import { createLocalDemoCompletionMigration, demoCompletionSpec, withLocalDemoCompletion } from './0054-local-demo-completion.js';
 import { createFreeShippingMigration, withFreeShipping } from './0052-free-shipping.js';
 import { createMemberProfilesMigration, memberProfileSpecs, withMemberProfiles } from './0047-member-profiles.js';
 import { createAccountControlsMigration, withAccountControls } from './0048-account-controls.js';
@@ -352,6 +353,10 @@ export const migrations: Migration[] = [
   listingAutoReviewV2Migration,
   exchangeAgreementMigration,
   createFreeShippingMigration(auctionDeliveryMigration.definition.collections),
+  createLocalDemoCompletionMigration([
+    ...supportAutoReviewUnionMigration.definition.collections,
+    directDeliveryCompletionLegacyShapeMigration.definition.directOrders,
+  ]),
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -388,10 +393,10 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withMemberProfiles)
     .map(withAccountControls)
     .map(withListingAutoReview)
-    .map(withSupportCases),
+    .map(withSupportCases).map(withLocalDemoCompletion),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
-    .map(withDirectDeliveryCompletionLegacyShape),
+    .map(withDirectDeliveryCompletionLegacyShape).map(withLocalDemoCompletion),
   wishlistSpec,
   ...priceAssistSpecsV2.map(withPriceSourceOrigin),
   ...onlinePriceSpecs,
@@ -448,4 +453,5 @@ export const currentCollections = (): CollectionSpec[] => [
   listingAutoReviewSpecV2,
   listingAutoReviewCheckSpec,
   ...supportSpecs,
+  demoCompletionSpec,
 ];

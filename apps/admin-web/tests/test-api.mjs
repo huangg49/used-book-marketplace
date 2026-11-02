@@ -208,6 +208,8 @@ export async function createTestApi({
         next();
       });
     await app.listen(3009, "127.0.0.1");
+    const { LocalDemoCompletionWorker } = await load("modules/orders/local-demo-completion.worker.js");
+    app.get(LocalDemoCompletionWorker).start();
     for (const [email, roles] of [
       ["member@operations.test", ["MEMBER"]],
       ["admin@operations.test", ["ADMIN", "STAFF", "MEMBER"]],

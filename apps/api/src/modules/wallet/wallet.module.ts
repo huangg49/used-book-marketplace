@@ -1,3 +1,4 @@
+import { LocalDemoCompletionPolicy } from './local-demo-completion.policy.js';
 import { Module } from '@nestjs/common';
 import { CommandsModule } from '../commands/commands.module.js';
 import { DatabaseModule } from '../../database/database.module.js';
@@ -24,6 +25,7 @@ import { DirectOrderReleasePolicy } from './direct-order-release.policy.js';
     WalletClock,
     WalletExpiryWorker,
     DirectOrderReleasePolicy,
+    LocalDemoCompletionPolicy,
   ],
   exports: [
     LedgerService,
@@ -31,6 +33,7 @@ import { DirectOrderReleasePolicy } from './direct-order-release.policy.js';
     TransactionPolicy,
     WalletExpiryWorker,
     DirectOrderReleasePolicy,
+    LocalDemoCompletionPolicy,
   ],
 })
 export class WalletModule {}
