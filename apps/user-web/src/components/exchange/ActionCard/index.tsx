@@ -137,16 +137,20 @@ export function ActionCard(props: Props) {
         detail.viewerRole === "proposer"
           ? "Đối tác đã điều chỉnh điều khoản. Hãy kiểm tra sách, cọc và tiền bù trước khi chấp nhận."
           : "Xem thông tin sách và các điều khoản trước khi chấp nhận trao đổi.";
-      actions.push("accept", "reject");
+      actions.push("accept");
       if (detail.viewerRole === "proposer") {
         actions.push("cancel");
+      } else {
+        actions.push("reject");
       }
     } else {
       instructions =
         detail.viewerRole === "proposer"
           ? "Đề nghị đã gửi. Bạn có thể nhắn tin thương lượng trong khung chat hoặc hủy đề nghị nếu đổi ý."
           : "Bạn đã gửi đề xuất điều chỉnh. Đang chờ đối tác phản hồi; sách chưa được giữ.";
-      actions.push("cancel");
+      if (detail.viewerRole === "proposer") {
+        actions.push("cancel");
+      }
     }
   } else if (detail.status === "FUNDING") {
     instructions = detail.viewerFundedAt
