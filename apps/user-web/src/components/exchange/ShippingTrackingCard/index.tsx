@@ -469,7 +469,7 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
                 {bothReceived ? (
                     <div className={`${styles.statusPillLarge} ${styles.statusCompleted}`}>
                         <CheckCircle2 size={16} />
-                        <span>Cả 2 gói sách đã được giao nhận thành công · Sẵn sàng tất toán</span>
+                        <span>Cả 2 gói sách đã được giao nhận thành công · Đang trong thời gian kiểm định 72h (POL-08)</span>
                     </div>
                 ) : bothSent ? (
                     <div className={`${styles.statusPillLarge} ${styles.statusShipping}`}>
