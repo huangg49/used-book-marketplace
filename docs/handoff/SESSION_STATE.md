@@ -1,5 +1,31 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## Khắc phục triệt để lỗi CI GitHub (API CI & React Native CI) sau khi hợp nhất main — 02/11/2026
+
+- Nhánh: `feature/exchange-policy-and-transit-worker`.
+- **Hợp nhất mã nguồn**: Đã cập nhật và merge nhánh `origin/main` (bao gồm PR #83, #84, #85, #86) vào nhánh làm việc; giải quyết xung đột tại `apps/admin-web/src/features/operations/exchange-disputes.tsx` và `SESSION_STATE.md`.
+- **Khắc phục lỗi API CI**:
+  - Lỗi: `scripts/check-api-routes.mjs` phát hiện 4 endpoints điều phối bưu tá/mô phỏng demo trong `CarrierController` chưa được đặc tả trong OpenAPI (`/shipments/carrier/orders/recent`, `/shipments/carrier/orders/{id}/reset-for-demo`, `/shipments/carrier/orders/{id}/auto-simulate`, `/shipments/carrier/seed-demo-order`).
+  - Xử lý: Contract-first bổ sung đầy đủ 4 endpoints vào `packages/api-contract/openapi.yaml`, sinh lại types TypeScript bằng `pnpm contract:generate`.
+  - Kết quả: `pnpm contract:routes` PASS (228 operations khớp chuẩn 36 controllers; 0 missing/undocumented/duplicate routes).
+- **Khắc phục lỗi React Native CI**:
+  - Lỗi: `expo lint` bị chặn bởi 8 lỗi ký tự quote unescaped `"` và màu hex/rgba trực tiếp không qua design tokens trong `exchange-actions-card.tsx`, cùng 1 cảnh báo biến không dùng `myReceivedAt` trong `exchange-shipping-card.tsx`.
+  - Xử lý:
+    - Bổ sung các tokens `videoBackground`, `videoBadgeBg`, `whiteAlpha25` vào `apps/mobile-react-native/src/core/ui/theme.ts`.
+    - Escape ký tự nháy kép `&quot;` trong JSX tại `exchange-actions-card.tsx`.
+    - Gỡ bỏ khai báo `myReceivedAt` không sử dụng trong `exchange-shipping-card.tsx`.
+  - Kết quả: `pnpm --filter @used-books/mobile-react-native lint` PASS (0 errors, 0 warnings); `test` và `export:all` đều PASS.
+- **Kiểm tra toàn diện**:
+  - `pnpm contract:check`: PASS.
+  - `pnpm contract:routes`: PASS (228 operations).
+  - `pnpm --filter @used-books/api lint`: PASS (0 errors).
+  - `pnpm --filter @used-books/api typecheck`: PASS (0 errors).
+  - `pnpm --filter @used-books/api test`: PASS (42 test files, 322 tests pass).
+  - `pnpm --filter @used-books/mobile-react-native lint`: PASS (0 errors).
+  - `pnpm --filter @used-books/mobile-react-native typecheck`: PASS (0 errors).
+  - `pnpm --filter @used-books/mobile-react-native test`: PASS (26 test files, 194 tests pass).
+  - `pnpm --filter @used-books/session-client test`: PASS (12 test files, 119 tests pass).
+
 ## Hoàn thiện Luồng Live Tracking Vận chuyển Bưu tá, Đồng bộ Dữ liệu Trao đổi 2 chiều & Nhận diện Thương hiệu Lật Lại — 02/11/2026
 
 - Nhánh: `feature/exchange-policy-and-transit-worker`.

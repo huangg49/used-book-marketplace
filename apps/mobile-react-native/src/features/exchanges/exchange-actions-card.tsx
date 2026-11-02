@@ -1097,7 +1097,7 @@ export function ExchangeActionsCard({
                 </AppText>
                 {exchange.resolutionReason && (
                   <AppText style={{ fontSize: 13, fontWeight: "600", color: stitchTokens.wineDark, marginTop: 4 }}>
-                    Căn cứ phán quyết: "{exchange.resolutionReason}"
+                    Căn cứ phán quyết: &quot;{exchange.resolutionReason}&quot;
                   </AppText>
                 )}
               </View>
@@ -1122,7 +1122,7 @@ export function ExchangeActionsCard({
                 </AppText>
                 {exchange.resolutionReason && (
                   <AppText style={{ fontSize: 13, fontWeight: "600", color: stitchTokens.wineDark, marginTop: 4 }}>
-                    Căn cứ phán quyết: "{exchange.resolutionReason}"
+                    Căn cứ phán quyết: &quot;{exchange.resolutionReason}&quot;
                   </AppText>
                 )}
               </View>
@@ -3066,7 +3066,7 @@ const styles = StyleSheet.create({
     bottom: 4,
     left: 4,
     right: 4,
-    backgroundColor: "rgba(0,0,0,0.65)",
+    backgroundColor: stitchTokens.videoBadgeBg,
     paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 4,
@@ -3082,7 +3082,7 @@ const styles = StyleSheet.create({
   },
   videoSimulatedPlayer: {
     height: 90,
-    backgroundColor: "#1C1412",
+    backgroundColor: stitchTokens.videoBackground,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
@@ -3093,7 +3093,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.25)",
+    backgroundColor: stitchTokens.whiteAlpha25,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -3105,7 +3105,7 @@ const styles = StyleSheet.create({
   },
   videoSimulatedSubtitle: {
     fontSize: 10,
-    color: "rgba(255,255,255,0.7)",
+    color: stitchTokens.whiteAlpha70,
     textAlign: "center",
   },
   errorAlertBox: {

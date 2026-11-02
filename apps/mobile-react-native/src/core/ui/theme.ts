@@ -231,5 +231,8 @@ export const stitchTokens = {
   errorLightBorder: "#F5C6CB",
   timerBadgeBg: "rgba(211, 47, 47, 0.92)",
   roseParchmentAlpha90: "rgba(247, 235, 232, 0.9)",
+  videoBackground: "#1C1412",
+  videoBadgeBg: "rgba(0, 0, 0, 0.65)",
+  whiteAlpha25: "rgba(255, 255, 255, 0.25)",
 } as const;
   
