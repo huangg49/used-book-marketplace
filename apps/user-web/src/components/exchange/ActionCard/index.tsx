@@ -11,7 +11,7 @@ import { session } from "../../../lib/session";
 import { ConfirmDialog } from "../../ConfirmDialog";
 import { ShipmentDialog } from "../ShipmentDialog";
 import { ReceiveDialog } from "../ReceiveDialog";
-import { CounterDialog, type CounterOfferData } from "../CounterDialog";
+import type { CounterOfferData } from "../CounterDialog";
 import { AcceptExchangeDialog } from "../AcceptExchangeDialog";
 import { ROUTES, formatVnd } from "../../../lib/routes";
 import {
@@ -42,7 +42,6 @@ type Action =
   | "cancel"
   | "accept"
   | "reject"
-  | "counter"
   | "fund"
   | "sent"
   | "received"
@@ -71,7 +70,6 @@ const labels: Record<Action, string> = {
   cancel: "Hủy đề nghị",
   accept: "Chấp nhận đề nghị",
   reject: "Từ chối đề nghị",
-  counter: "Đề xuất sách thay thế",
   fund: "Đặt cọc mô phỏng",
   sent: "Tạo đơn vận chuyển",
   received: "Xác nhận đã nhận sách",
@@ -86,7 +84,6 @@ export function ActionCard(props: Props) {
   const [acceptOpen, setAcceptOpen] = useState(false);
   const [shipmentOpen, setShipmentOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
-  const [counterOpen, setCounterOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [reason, setReason] = useState("");
@@ -138,9 +135,9 @@ export function ActionCard(props: Props) {
     if (canAccept) {
       instructions =
         detail.viewerRole === "proposer"
-          ? "Đối tác đã chọn sách thay thế. Hãy kiểm tra sách, cọc và tiền bù mới trước khi chấp nhận."
+          ? "Đối tác đã điều chỉnh điều khoản. Hãy kiểm tra sách, cọc và tiền bù trước khi chấp nhận."
           : "Xem thông tin sách và các điều khoản trước khi chấp nhận trao đổi.";
-      actions.push("accept", "counter", "reject");
+      actions.push("accept", "reject");
       if (detail.viewerRole === "proposer") {
         actions.push("cancel");
       }
@@ -148,7 +145,7 @@ export function ActionCard(props: Props) {
       instructions =
         detail.viewerRole === "proposer"
           ? "Đề nghị đã gửi. Bạn có thể nhắn tin thương lượng trong khung chat hoặc hủy đề nghị nếu đổi ý."
-          : "Bạn đã gửi sách thay thế. Đang chờ đối tác phản hồi; sách chưa được giữ.";
+          : "Bạn đã gửi đề xuất điều chỉnh. Đang chờ đối tác phản hồi; sách chưa được giữ.";
       actions.push("cancel");
     }
   } else if (detail.status === "FUNDING") {
@@ -249,10 +246,6 @@ export function ActionCard(props: Props) {
       setReceiveOpen(true);
       return;
     }
-    if (next === "counter") {
-      setCounterOpen(true);
-      return;
-    }
     setAction(next);
   };
 
@@ -261,10 +254,8 @@ export function ActionCard(props: Props) {
     setBusy(true);
     try {
       await props.onCounter(data);
-      setCounterOpen(false);
     } catch (failure) {
       if (pendingExchange(detail.id)) {
-        setCounterOpen(false);
         setShipmentOpen(false);
         setReceiveOpen(false);
         setAcceptOpen(false);
@@ -282,7 +273,6 @@ export function ActionCard(props: Props) {
       setShipmentOpen(false);
     } catch (failure) {
       if (pendingExchange(detail.id)) {
-        setCounterOpen(false);
         setShipmentOpen(false);
         setReceiveOpen(false);
         setAcceptOpen(false);
@@ -300,7 +290,6 @@ export function ActionCard(props: Props) {
       setReceiveOpen(false);
     } catch (failure) {
       if (pendingExchange(detail.id)) {
-        setCounterOpen(false);
         setShipmentOpen(false);
         setReceiveOpen(false);
         setAcceptOpen(false);
@@ -410,7 +399,7 @@ export function ActionCard(props: Props) {
   };
 
   async function confirm() {
-    if (!action || busy || action === "counter") return;
+    if (!action || busy) return;
     if (action === "reject") {
       if (reason.trim().length < 5 || reason.trim().length > 300) {
         setError("Nhập lý do từ 5 đến 300 ký tự.");
@@ -604,24 +593,6 @@ export function ActionCard(props: Props) {
         </p>
       )}
 
-      {/* Counter-Offer Negotiation Modal */}
-      {counterOpen && (
-        <CounterDialog
-          key={`${detail.viewer.id}:${detail.revision}`}
-          isOpen={counterOpen}
-          onClose={() => setCounterOpen(false)}
-          onSubmit={handleCounterSubmit}
-          isBusy={busy}
-          viewerRole={detail.viewerRole}
-          partnerName={detail.partner.username}
-          partnerBookValue={detail.receiveBooks.reduce(
-            (sum, book) => sum + (book.price ?? 0),
-            0,
-          )}
-          currentListingIds={detail.giveBooks.map((book) => book.id)}
-          currentAddressId={selectedAddressId}
-        />
-      )}
 
       {/* Accept Exchange Contract Review Modal */}
       <AcceptExchangeDialog
