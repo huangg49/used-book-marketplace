@@ -89,6 +89,10 @@ export function AcceptExchangeDialog({
 
   const [isNegotiating, setIsNegotiating] = useState(false);
   const [negotiatedDiff, setNegotiatedDiff] = useState<number>(detail.moneyAmount ?? defaultDiffAmount);
+  const initialPayer = detail.moneyCompensationType === 'user_pays'
+    ? 'viewer'
+    : (detail.moneyCompensationType === 'other_pays' ? 'partner' : 'none');
+  const [negotiatedPayer, setNegotiatedPayer] = useState<'viewer' | 'partner' | 'none'>(initialPayer);
 
   const addresses = useQuery({
     queryKey: ['address-book'],
@@ -114,6 +118,11 @@ export function AcceptExchangeDialog({
       setAddressMode('existing');
       setIsNegotiating(false);
       setNegotiatedDiff(detail.moneyAmount ?? defaultDiffAmount);
+      setNegotiatedPayer(
+        detail.moneyCompensationType === 'user_pays'
+          ? 'viewer'
+          : (detail.moneyCompensationType === 'other_pays' ? 'partner' : 'none')
+      );
 
       if (addresses.data?.items?.length) {
         const def = addresses.data.items.find((a) => a.isDefault) ?? addresses.data.items[0];
@@ -122,27 +131,29 @@ export function AcceptExchangeDialog({
         setAddressMode('new');
       }
     }
-  }, [isOpen, addresses.data, detail.moneyAmount, detail.negotiatedDiffAmount, defaultDiffAmount]);
+  }, [isOpen, addresses.data, detail.moneyAmount, detail.negotiatedDiffAmount, defaultDiffAmount, detail.moneyCompensationType]);
 
   if (!isOpen) return null;
 
-  const currentDiff = isNegotiating ? negotiatedDiff : (detail.moneyAmount ?? defaultDiffAmount);
+  const currentDiff = isNegotiating
+    ? (negotiatedPayer === 'none' ? 0 : negotiatedDiff)
+    : (detail.moneyAmount ?? defaultDiffAmount);
   let effectiveCompensationNotice = 'Hai bên trao đổi ngang giá (0 đ bù trừ)';
   let effectiveFundingAmount = totalReceivePrice;
 
   if (isNegotiating) {
-    if (totalReceivePrice > totalGivePrice) {
+    if (negotiatedPayer === 'viewer') {
       effectiveCompensationNotice = currentDiff > 0
-        ? `Bạn cần bù thêm (theo thỏa thuận mới): ${formatVnd(currentDiff)}`
+        ? `Bạn sẽ bù thêm cho đối tác (theo thỏa thuận mới): ${formatVnd(currentDiff)}`
         : 'Hai bên trao đổi ngang giá (0 đ bù trừ)';
       effectiveFundingAmount = totalReceivePrice + currentDiff;
-    } else if (totalReceivePrice < totalGivePrice) {
+    } else if (negotiatedPayer === 'partner') {
       effectiveCompensationNotice = currentDiff > 0
         ? `Đối tác (${detail.partner.username}) sẽ bù thêm cho bạn (theo thỏa thuận mới): ${formatVnd(currentDiff)}`
         : 'Hai bên trao đổi ngang giá (0 đ bù trừ)';
       effectiveFundingAmount = totalReceivePrice;
     } else {
-      effectiveCompensationNotice = 'Hai cuốn sách có giá trị ngang nhau (0 đ bù trừ)';
+      effectiveCompensationNotice = 'Hai bên trao đổi ngang giá (0 đ bù trừ)';
       effectiveFundingAmount = totalReceivePrice;
     }
   } else {
@@ -229,17 +240,26 @@ export function AcceptExchangeDialog({
 
   const handleCounterSubmit = async () => {
     setError('');
-    if (negotiatedDiff < 0) {
+    const finalDiff = negotiatedPayer === 'none' ? 0 : negotiatedDiff;
+    if (finalDiff < 0) {
       setError('Tiền bù không thể là số âm.');
       return;
     }
+    const finalPayerId = negotiatedPayer === 'none' || finalDiff === 0
+      ? null
+      : (negotiatedPayer === 'viewer' ? detail.viewer.id : detail.partner.id);
+
     try {
       const finalAddressId = await resolveAddressId();
       if (onCounter) {
+        const payerDesc = finalPayerId === null
+          ? 'đổi ngang 0 đ'
+          : (finalPayerId === detail.viewer.id ? 'bạn bù' : 'đối tác bù');
         await onCounter({
-          negotiatedDiffAmount: negotiatedDiff,
+          negotiatedDiffAmount: finalDiff,
+          diffPayerId: finalPayerId,
           deliveryAddressId: finalAddressId || undefined,
-          note: `Thương lượng tiền bù thành ${formatVnd(negotiatedDiff)}`,
+          note: `Thương lượng tiền bù: ${formatVnd(finalDiff)} (${payerDesc})`,
         });
         onClose();
       }
@@ -375,62 +395,161 @@ export function AcceptExchangeDialog({
               </div>
 
               {isNegotiating && (
-                <div style={{ margin: '8px 0 12px', padding: 12, background: 'rgba(176, 141, 87, 0.08)', borderRadius: 6, border: '1px solid rgba(176, 141, 87, 0.3)' }}>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 6 }}>
-                    Nhập số tiền bù đã thống nhất trong chat (VNĐ):
+                <div style={{ margin: '8px 0 12px', padding: 14, background: 'rgba(176, 141, 87, 0.08)', borderRadius: 6, border: '1px solid rgba(176, 141, 87, 0.3)' }}>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>
+                    Chọn bên bù tiền theo thỏa thuận trong chat:
                   </label>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1000"
-                      value={negotiatedDiff}
-                      onChange={(e) => setNegotiatedDiff(Math.max(0, parseInt(e.target.value) || 0))}
-                      style={{
-                        flex: 1,
-                        minWidth: 160,
-                        padding: '8px 12px',
-                        fontSize: 15,
-                        fontWeight: 700,
-                        border: '1.5px solid var(--gold-strong)',
-                        borderRadius: 4,
-                        color: 'var(--burgundy, #7d1f1f)',
-                        background: '#fff'
-                      }}
-                    />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
                     <button
                       type="button"
-                      onClick={() => setNegotiatedDiff(0)}
+                      onClick={() => {
+                        setNegotiatedPayer('viewer');
+                        if (negotiatedDiff === 0) setNegotiatedDiff(defaultDiffAmount || 10000);
+                      }}
                       style={{
-                        padding: '7px 10px',
-                        background: '#fff',
-                        border: '1px solid var(--line)',
+                        padding: '9px 6px',
                         borderRadius: 4,
+                        border: negotiatedPayer === 'viewer' ? '2px solid var(--gold-strong)' : '1px solid var(--line)',
+                        background: negotiatedPayer === 'viewer' ? 'rgba(176, 141, 87, 0.18)' : '#fff',
+                        fontWeight: negotiatedPayer === 'viewer' ? 700 : 500,
+                        color: negotiatedPayer === 'viewer' ? 'var(--burgundy, #7d1f1f)' : 'var(--ink)',
+                        cursor: 'pointer',
                         fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer'
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 4
                       }}
                     >
-                      Đổi ngang (0 đ)
+                      🙋 Bạn bù cho đối tác
                     </button>
                     <button
                       type="button"
-                      onClick={() => setNegotiatedDiff(defaultDiffAmount)}
+                      onClick={() => {
+                        setNegotiatedPayer('partner');
+                        if (negotiatedDiff === 0) setNegotiatedDiff(defaultDiffAmount || 10000);
+                      }}
                       style={{
-                        padding: '7px 10px',
-                        background: '#fff',
-                        border: '1px solid var(--line)',
+                        padding: '9px 6px',
                         borderRadius: 4,
+                        border: negotiatedPayer === 'partner' ? '2px solid var(--gold-strong)' : '1px solid var(--line)',
+                        background: negotiatedPayer === 'partner' ? 'rgba(176, 141, 87, 0.18)' : '#fff',
+                        fontWeight: negotiatedPayer === 'partner' ? 700 : 500,
+                        color: negotiatedPayer === 'partner' ? 'var(--burgundy, #7d1f1f)' : 'var(--ink)',
+                        cursor: 'pointer',
                         fontSize: 12,
-                        fontWeight: 600,
-                        cursor: 'pointer'
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 4
                       }}
                     >
-                      Gốc ({formatVnd(defaultDiffAmount)})
+                      🤝 Đối tác bù cho bạn
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNegotiatedPayer('none');
+                        setNegotiatedDiff(0);
+                      }}
+                      style={{
+                        padding: '9px 6px',
+                        borderRadius: 4,
+                        border: negotiatedPayer === 'none' ? '2px solid var(--gold-strong)' : '1px solid var(--line)',
+                        background: negotiatedPayer === 'none' ? 'rgba(176, 141, 87, 0.18)' : '#fff',
+                        fontWeight: negotiatedPayer === 'none' ? 700 : 500,
+                        color: negotiatedPayer === 'none' ? 'var(--burgundy, #7d1f1f)' : 'var(--ink)',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 4
+                      }}
+                    >
+                      ⚖️ Đổi ngang (0 đ)
                     </button>
                   </div>
-                  <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--ink-secondary)', lineHeight: 1.4 }}>
-                    💡 <em>Lưu ý: Tiền cọc sách ({formatVnd(totalReceivePrice)}) luôn giữ nguyên theo giá sách để bảo chứng an toàn tài sản.</em>
+
+                  {negotiatedPayer === 'none' ? (
+                    <div style={{ padding: '8px 12px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.25)', borderRadius: 4, fontSize: 13, color: '#166534' }}>
+                      ✓ Hai bên thống nhất đổi ngang sách — 0 đ bù trừ.
+                    </div>
+                  ) : (
+                    <div>
+                      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 6 }}>
+                        {negotiatedPayer === 'viewer'
+                          ? 'Số tiền bạn sẽ bù thêm cho đối tác (VNĐ):'
+                          : `Số tiền đối tác (${detail.partner.username}) sẽ bù thêm cho bạn (VNĐ):`}
+                      </label>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1000"
+                          value={negotiatedDiff}
+                          onChange={(e) => setNegotiatedDiff(Math.max(0, parseInt(e.target.value) || 0))}
+                          style={{
+                            flex: 1,
+                            minWidth: 160,
+                            padding: '8px 12px',
+                            fontSize: 15,
+                            fontWeight: 700,
+                            border: '1.5px solid var(--gold-strong)',
+                            borderRadius: 4,
+                            color: 'var(--burgundy, #7d1f1f)',
+                            background: '#fff'
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setNegotiatedDiff(defaultDiffAmount)}
+                          style={{
+                            padding: '7px 10px',
+                            background: '#fff',
+                            border: '1px solid var(--line)',
+                            borderRadius: 4,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Giá chênh gốc ({formatVnd(defaultDiffAmount)})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNegotiatedDiff((prev) => prev + 10000)}
+                          style={{
+                            padding: '7px 8px',
+                            background: '#fff',
+                            border: '1px solid var(--line)',
+                            borderRadius: 4,
+                            fontSize: 12,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          +10k
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNegotiatedDiff((prev) => prev + 50000)}
+                          style={{
+                            padding: '7px 8px',
+                            background: '#fff',
+                            border: '1px solid var(--line)',
+                            borderRadius: 4,
+                            fontSize: 12,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          +50k
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--ink-secondary)', lineHeight: 1.4 }}>
+                    💡 <em>Lưu ý: Tiền cọc sách ({formatVnd(totalReceivePrice)}) luôn giữ nguyên theo giá trị sách để bảo chứng an toàn tài sản.</em>
                   </p>
                 </div>
               )}

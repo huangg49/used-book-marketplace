@@ -10,6 +10,7 @@ import styles from "./CounterDialog.module.css";
 export interface CounterOfferData {
   listingIds?: string[];
   negotiatedDiffAmount?: number;
+  diffPayerId?: string | null;
   deliveryAddressId?: string;
   note?: string;
 }

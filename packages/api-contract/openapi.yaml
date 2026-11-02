@@ -20953,6 +20953,12 @@ components:
         negotiatedDiffAmount:
           type: integer
           minimum: 0
+        diffPayerId:
+          anyOf:
+            - type: string
+              format: uuid
+            - type: "null"
+          description: Who pays the compensation (initiator or recipient, or null if 0).
         deliveryAddressId:
           type: string
           format: uuid

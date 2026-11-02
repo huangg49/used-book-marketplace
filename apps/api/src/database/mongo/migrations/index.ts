@@ -3,6 +3,7 @@ import { createAccountControlsMigration, withAccountControls } from './0048-acco
 import {memberCartMigration,memberCartSpec} from './0049-member-cart.js';
 import { exchangeAgreementMigration, withExchangeAgreement } from './0053-exchange-agreement.js';
 import { exchangeNegotiatedDiffMigration, withNegotiatedDiff } from './0054-exchange-negotiated-diff.js';
+import { exchangeFlexibleDiffMigration, withFlexibleNegotiatedDiff } from './0055-exchange-negotiated-diff-payer.js';
 import { createSupportCasesMigration, supportSpecs, withSupportCases } from './0050-support-cases.js';
 import { createSupportAutoReviewUnionMigration } from './0051-support-auto-review-union.js';
 import { createListingAutoReviewMigration, withListingAutoReview } from './0050-listing-auto-review.js';
@@ -352,6 +353,7 @@ export const migrations: Migration[] = [
   listingAutoReviewV2Migration,
   exchangeAgreementMigration,
   exchangeNegotiatedDiffMigration,
+  exchangeFlexibleDiffMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -434,7 +436,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withExchangeDisputeResolution)
     .map(withExchangeMutualCancellation)
     .map(withExchangeAgreement)
-    .map(withNegotiatedDiff),
+    .map(withNegotiatedDiff)
+    .map(withFlexibleNegotiatedDiff),
   ...directDeliveryCompletionSpecs,
   ...paymentSpecs.map(withVNPayExpiry),
   ...exchangeMessageSpecs,

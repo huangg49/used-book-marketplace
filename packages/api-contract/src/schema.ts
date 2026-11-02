@@ -7080,6 +7080,8 @@ export interface components {
             expectedVersion: number;
             listingIds?: string[];
             negotiatedDiffAmount?: number;
+            /** @description Who pays the compensation (initiator or recipient, or null if 0). */
+            diffPayerId?: string | null;
             /** Format: uuid */
             deliveryAddressId?: string;
             note?: string;

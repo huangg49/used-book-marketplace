@@ -803,11 +803,18 @@ export class ExchangesService {
             ? { initiatorBooks: replacements, recipientBook: exchange.agreement!.recipientBook }
             : { initiatorBooks: exchange.agreement!.initiatorBooks, recipientBook: replacements[0] };
 
+          if (isNegotiated && body.diffPayerId !== undefined && body.diffPayerId !== null) {
+            if (body.diffPayerId !== exchange.initiatorId && body.diffPayerId !== exchange.recipientId) {
+              throw invalidState('Bên bù tiền phải là một trong hai người tham gia trao đổi.');
+            }
+          }
+
           const amounts = exchangeAmounts(
             agreement,
             exchange.initiatorId,
             exchange.recipientId,
             isNegotiated ? body.negotiatedDiffAmount : (isBooksChanged ? null : exchange.negotiatedDiffAmount),
+            isNegotiated ? (body.negotiatedDiffAmount === 0 ? null : body.diffPayerId) : (isBooksChanged ? undefined : exchange.diffPayerId),
           );
           let updatedAddress: ExchangeAddressSnapshot | null = null;
           if (body.deliveryAddressId) {

@@ -212,6 +212,7 @@ export function counterExchange(
   data: {
     listingIds?: string[];
     negotiatedDiffAmount?: number;
+    diffPayerId?: string | null;
     deliveryAddressId?: string;
     note?: string;
   },
@@ -221,6 +222,9 @@ export function counterExchange(
     ...(data.listingIds ? { listingIds: data.listingIds } : {}),
     ...(data.negotiatedDiffAmount !== undefined
       ? { negotiatedDiffAmount: data.negotiatedDiffAmount }
+      : {}),
+    ...(data.diffPayerId !== undefined
+      ? { diffPayerId: data.diffPayerId }
       : {}),
     ...(data.deliveryAddressId
       ? { deliveryAddressId: data.deliveryAddressId }

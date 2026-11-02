@@ -135,6 +135,7 @@ export function exchangeAmounts(
   initiatorId: string,
   recipientId: string,
   negotiatedDiffAmount?: number | null,
+  negotiatedDiffPayerId?: string | null,
 ) {
   const initiatorValue = agreement.initiatorBooks.reduce(
     (sum, book) => sum + book.exchangeValue,
@@ -148,10 +149,10 @@ export function exchangeAmounts(
 
   let diffPayerId: string | null = null;
   if (diffAmount > 0) {
-    if (initiatorValue !== recipientValue) {
+    if (isNegotiated && negotiatedDiffPayerId !== undefined) {
+      diffPayerId = negotiatedDiffPayerId;
+    } else if (initiatorValue !== recipientValue) {
       diffPayerId = initiatorValue < recipientValue ? initiatorId : recipientId;
-    } else {
-      diffPayerId = null;
     }
   }
 
@@ -194,6 +195,7 @@ export function agreementMatches(
     exchange.initiatorId,
     exchange.recipientId,
     exchange.negotiatedDiffAmount,
+    exchange.diffPayerId,
   );
   if (
     amounts.initiatorDeposit !== exchange.initiatorDeposit ||
