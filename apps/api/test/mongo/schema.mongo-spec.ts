@@ -1,3 +1,4 @@
+import { exchangeEvidenceSpecs } from '../../src/database/mongo/migrations/0054-exchange-evidence.js';
 import { buyNowNotificationsMigration } from '../../src/database/mongo/migrations/0029-buy-now-notifications.js';
 import { reviewLifecycleSpecs } from '../../src/database/mongo/migrations/0040-transaction-review-lifecycle.js';
 import { memberProfileSpecs } from '../../src/database/mongo/migrations/0047-member-profiles.js';
@@ -93,6 +94,8 @@ describe('migrations', () => {
     expect(
       currentCollections().length -
         INFRASTRUCTURE_COLLECTIONS.length -
+        // New Mongo-native evidence/assignment collections do not change the PG baseline.
+        exchangeEvidenceSpecs.length -
         // MongoDB-native collections with no PostgreSQL model (ADR 0028).
         priceAssistSpecs.length -
         onlinePriceSpecs.length -
@@ -133,7 +136,9 @@ describe('migrations', () => {
         // Member cart is Mongo-native (FR-O01).
         1 -
         // ADR 0061/0062 auto review verdicts and checks are Mongo-native.
-        2 +
+        2 -
+        // ADR0067 local demo scheduling is Mongo-native.
+        1 +
         EMBEDDED_MODELS.length,
     ).toBe(POSTGRES_MODEL_COUNT);
   });

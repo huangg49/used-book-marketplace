@@ -152,7 +152,7 @@ export function WinnerSteps({ orderId, boughtNow, paused = false }: { orderId: s
                   ? ask(
                       "pay",
                       `Thanh toán ${formatVnd(o.amounts.bookPrice + delivery.fee)} từ ví?`,
-                      `Gồm ${formatVnd(o.amounts.bookPrice)} tiền sách và ${formatVnd(delivery.fee)} phí giao. Số tiền được giữ cho đơn này đến khi bạn nhận sách. Đã chọn giao tận nơi thì không đổi sang tự nhận; không nhận thanh toán một phần.`,
+                      `Tiền sách ${formatVnd(o.amounts.bookPrice)}. Giao hàng miễn phí. Số tiền được giữ cho đơn này đến khi bạn nhận sách. Đã chọn giao tận nơi thì không đổi sang tự nhận; không nhận thanh toán một phần.`,
                       "Thanh toán",
                       undefined,
                       delivery,
@@ -209,7 +209,7 @@ function summary(o: PointOrder) {
       return "Quản trị viên đang xem xét đơn này. Tiền vẫn được giữ cho đơn cho tới khi có quyết định.";
     case "ReturnPending":
       return delivered && !o.delivery?.deliveredAt
-        ? `Giao hàng không thành công. Hãng đang trả sách về ${o.pointName}; tiền sách và phí giao được hoàn sau khi nhân viên đối chiếu sách.`
+        ? `Giao hàng không thành công. Hãng đang trả sách về ${o.pointName}; tiền đã thanh toán được hoàn sau khi nhân viên đối chiếu sách.`
         : `Hãy mang sách trả về ${o.pointName} trước ${time(o.returnDeadline)}, trong giờ ${POINT_HOURS}. Tiền được hoàn sau khi nhân viên đối chiếu sách.`;
     case "Completed":
       return "Quy trình nhận sách đã hoàn tất. Cảm ơn bạn đã cho cuốn sách một chương mới.";
@@ -286,8 +286,8 @@ function Payment({
             ) : (
               <AppText kind="small" color={colors.ink}>
                 {quote.data
-                  ? `Phí giao ${formatVnd(quote.data.outboundFee)} (hãng vận chuyển mô phỏng). Sau khi bạn đồng ý biên bản, điểm giao sách cho hãng.`
-                  : "Đang tính phí giao…"}
+                  ? `Giao hàng miễn phí (hãng vận chuyển mô phỏng). Sau khi bạn đồng ý biên bản, điểm giao sách cho hãng.`
+                  : "Đang kiểm tra địa chỉ…"}
               </AppText>
             )}
           </View>

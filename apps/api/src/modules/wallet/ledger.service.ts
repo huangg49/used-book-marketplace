@@ -1,3 +1,5 @@
+import { LocalDemoCompletionPolicy } from './local-demo-completion.policy.js';
+import { LOCAL_DEMO_COMPLETION_POLICY } from '../../database/mongo/demo-completion-policy.js';
 import { Injectable } from '@nestjs/common';
 import { orderAmounts } from '../orders/order-amounts.js';
 import { randomUUID } from 'node:crypto';
@@ -314,6 +316,7 @@ async function refundDecided(tx: Tx, orderId: string, journalId: string) {
 export class LedgerService {
   constructor(
     private readonly directRelease: DirectOrderReleasePolicy = new DirectOrderReleasePolicy(),
+    private readonly localDemo?: LocalDemoCompletionPolicy,
   ) {}
   // Read-only reconciliation inside one snapshot transaction: every journal,
   // topup and order is checked by the commit-time rules, and simulated
@@ -796,6 +799,23 @@ export class LedgerService {
     // that identity here too so calling the older alias cannot bypass release.
     if (await tx.c.direct_orders.findOne({ _id: order._id }))
       this.directRelease.assertReleased();
+    return this.postOrderSettlement(tx, order, receiptId, now);
+  }
+  async settleLocalDemoOrder(tx: Tx, order: { _id: string; sellerId: string; buyerTotal: number; sellerProceeds: number }, receiptId: string, now: Date) {
+    if (!this.localDemo) throw invalidState();
+    this.localDemo.assertAllowed(order._id);
+    const job = await tx.c.local_demo_order_completions.findOne({ _id: order._id });
+    const source = await tx.c.direct_orders.findOne({ _id: order._id });
+    const authorized = job ? await tx.c.mutation_receipts.findOne({ _id: job.receiptId }) : null;
+    if (!job || job.policy !== LOCAL_DEMO_COMPLETION_POLICY || job.status !== 'Pending' || now < job.dueAt ||
+      job.sellerId !== order.sellerId || source?.sellerId !== order.sellerId || source.state !== 'InTransit' ||
+      source.version !== 4 || source.demoCompletionPolicy !== job.policy ||
+      authorized?.operation !== 'startLocalDemoOrderCompletion' || authorized.actorId !== job.sellerId ||
+      authorized.systemActor !== null || authorized.resultVersion !== 4 || authorized.committedAt.getTime() !== job.createdAt.getTime())
+      throw invalidState();
+    return this.postOrderSettlement(tx, order, receiptId, now);
+  }
+  private async postOrderSettlement(tx: Tx, order: { _id: string; sellerId: string; buyerTotal: number; sellerProceeds: number }, receiptId: string, now: Date) {
     const hold = await tx.c.wallet_accounts.findOne({ orderId: order._id });
     if (!hold) throw new Error('Wallet account missing');
     const seller = await this.account(tx, { ownerId: order.sellerId });
@@ -1146,10 +1166,25 @@ export async function checkTopupRecord(tx: Tx, topupId: string) {
   };
   const creation = await tx.c.mutation_receipts.findOne({
     topupId,
-    operation: provider ? 'createVNPayTopup' : 'createTopupIntent',
-    actorId: t.ownerId,
-    resultVersion: 1,
+    $or: [
+      {
+        operation: provider ? 'createVNPayTopup' : 'createTopupIntent',
+        actorId: t.ownerId,
+        resultVersion: 1,
+      },
+      ...(!provider
+        ? [
+            {
+              operation: 'createSimulatedTopup',
+              actorId: { $nin: [null, t.ownerId] },
+              systemActor: null,
+              resultVersion: 2,
+            },
+          ]
+        : []),
+    ],
   });
+  const atomicCreation = creation?.operation === 'createSimulatedTopup';
   const created = creation ? await chain(creation._id) : null;
   let bad =
     (t.state === 'Succeeded' && !journal) ||
@@ -1166,7 +1201,14 @@ export async function checkTopupRecord(tx: Tx, topupId: string) {
         ? ['applyVNPayIpn', 'applyVNPayQuery'].includes(r.operation)
         : e.provider === 'VNPayExpiry-v1'
           ? r.operation === 'expireVNPayTopup'
-          : r.operation === 'emitSimulatedTopupEvent') ||
+          : r.operation === 'emitSimulatedTopupEvent' ||
+            (atomicCreation &&
+              r._id === creation._id &&
+              r.operation === 'createSimulatedTopup' &&
+              e.outcome === 'Succeeded' &&
+              e.disposition === 'Applied' &&
+              e.occurredAt.getTime() === t.createdAt.getTime() &&
+              e.receivedAt.getTime() === t.createdAt.getTime())) ||
       (['VNPaySandbox-v1', 'VNPayExpiry-v1'].includes(e.provider) &&
         (!provider || r.systemActor !== 'VNPaySandbox')) ||
       (e.provider === 'LatLaiSimulator-v1' && !!provider) ||

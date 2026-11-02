@@ -867,7 +867,9 @@ export function BookSearchPage() {
               className={styles.search}
               onSubmit={(event) => {
                 event.preventDefault();
-                if (composing) return;
+                // Explicit submit also recovers an interrupted IME session.
+                // Enter used to commit a character is handled on the input.
+                setComposing(false);
                 const value = searchTerm.trim();
                 setSettledSearch(value);
                 update("q", value);
@@ -885,6 +887,14 @@ export function BookSearchPage() {
                 onChange={(event) => update("q", event.target.value, true)}
                 onCompositionStart={() => setComposing(true)}
                 onCompositionEnd={() => setComposing(false)}
+                onBlur={() => setComposing(false)}
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Enter" &&
+                    (event.nativeEvent.isComposing ||
+                      event.nativeEvent.keyCode === 229)
+                  ) event.preventDefault();
+                }}
               />
               <button type="submit">
                 Tìm sách <ArrowRight size={17} aria-hidden="true" />

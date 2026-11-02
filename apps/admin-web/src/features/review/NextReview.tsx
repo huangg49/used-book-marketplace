@@ -17,10 +17,12 @@ export function NextReview({
   kind,
   currentId,
   reviewerId,
+  canReadPendingCatalog = false,
 }: {
   kind: Kind;
   currentId: string;
   reviewerId: string;
+  canReadPendingCatalog?: boolean;
 }) {
   const result = useQuery({
     queryKey: ["review-next", kind, currentId, reviewerId],
@@ -73,7 +75,7 @@ export function NextReview({
           </p>
           <h4 className={styles.title}>
             {"state" in next.item ? (
-              <ListingTitle value={next.item} />
+              <ListingTitle value={next.item} canReadPendingCatalog={canReadPendingCatalog} />
             ) : (
               next.item.currentRevision.metadata.title
             )}

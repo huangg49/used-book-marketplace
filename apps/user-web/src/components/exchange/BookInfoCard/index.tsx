@@ -24,7 +24,7 @@ export function BookInfoCard({ detail, compact = false }: BookInfoCardProps) {
         if (detail.moneyCompensationType === 'user_pays') {
             moneyText = `Tôi bù thêm ${formatVnd(moneyAmount)}`;
         } else {
-            moneyText = `Họ bù thêm ${formatVnd(moneyAmount)}`;
+            moneyText = `Đối tác bù thêm ${formatVnd(moneyAmount)}`;
         }
     }
 
@@ -173,7 +173,11 @@ export function BookInfoCard({ detail, compact = false }: BookInfoCardProps) {
                             {moneyText}
                         </div>
                         <div className={styles.bentoTileNote}>
-                            Thanh toán từ số dư ví khi xác nhận đặt cọc
+                            {detail.moneyCompensationType === 'user_pays'
+                                ? 'Thanh toán từ số dư ví khi xác nhận đặt cọc'
+                                : detail.moneyCompensationType === 'other_pays'
+                                    ? 'Đối tác thanh toán, bạn nhận về ví khi hoàn tất'
+                                    : 'Hai bên đổi ngang, không phát sinh bù tiền'}
                         </div>
                     </div>
                 </div>

@@ -258,10 +258,10 @@ try {
     },
   );
   await buyerPage
-    .getByRole("button", { name: "Xem phí giao nhận", exact: true })
+    .getByRole("button", { name: "Xác nhận nơi nhận", exact: true })
     .click();
   await buyerPage
-    .getByRole("button", { name: "Thử lại bước tính phí", exact: true })
+    .getByRole("button", { name: "Thử lại bước xác nhận địa chỉ", exact: true })
     .waitFor();
   assert.equal(
     await buyerPage.getByLabel("Họ tên", { exact: true }).isDisabled(),
@@ -274,7 +274,7 @@ try {
     .getByRole("button", { name: "Gửi địa chỉ và báo giá", exact: true })
     .click();
   await buyerPage
-    .getByRole("button", { name: "Thử lại bước tính phí", exact: true })
+    .getByRole("button", { name: "Thử lại bước xác nhận địa chỉ", exact: true })
     .click();
   assert.equal(addressAttempts.length, 2);
   assert.deepEqual(addressAttempts[0], addressAttempts[1]);
@@ -291,7 +291,7 @@ try {
     0,
   );
   await buyerPage
-    .getByRole("button", { name: "Xem phí giao nhận", exact: true })
+    .getByRole("button", { name: "Xác nhận nơi nhận", exact: true })
     .click();
   await buyerPage
     .getByRole("button", { name: "Gửi báo giá cho người bán", exact: true })
@@ -438,8 +438,11 @@ try {
   assert.equal(
     (await fixture.api(`/me/orders/${order._id}`, buyer.accessToken)).amounts
       .buyerTotal,
-    120000,
+    90000,
   );
+  const agreedAmounts = (await fixture.api(`/me/orders/${order._id}`, buyer.accessToken)).amounts;
+  assert.equal(agreedAmounts.bookPrice, 90000);
+  assert.equal(agreedAmounts.shippingFee, 0);
   assert.equal(
     (await fixture.api("/me/wallet", buyer.accessToken)).transactionHeld,
     0,
@@ -457,7 +460,7 @@ try {
     fullPage: true,
   });
   await buyerOrderDetails
-    .getByRole("button", { name: /^Thanh toán ngay 120\.000\s*₫$/ })
+    .getByRole("button", { name: /^Thanh toán ngay 90\.000\s*₫$/ })
     .click();
   await buyerOrderDetails
     .getByRole("alert")
@@ -473,18 +476,18 @@ try {
   );
   await fundBuyer(150000);
   await buyerOrderDetails
-    .getByRole("button", { name: /^Thanh toán ngay 120\.000\s*₫$/ })
+    .getByRole("button", { name: /^Thanh toán ngay 90\.000\s*₫$/ })
     .click();
   await buyerOrderDetails
     .getByText("Chờ người bán xác nhận", {exact: true})
     .waitFor();
   const wallet = await fixture.api("/me/wallet", buyer.accessToken);
-  assert.equal(wallet.transactionHeld, 120000);
+  assert.equal(wallet.transactionHeld, 90000);
   assert.equal(
     (await fixture.api(`/listings/${listingId}`)).purchaseAvailability.status,
     "InTransaction",
   );
-  assert.equal(wallet.available, 80000);
+  assert.equal(wallet.available, 110000);
   assert.equal(
     await fixture.db
       .collection("ledger_journals")
@@ -511,7 +514,7 @@ try {
   });
   assert.deepEqual(errors, []);
   console.log(
-    "PASS seller-order browser: two sessions, non-exclusive chat, quote/address, negotiated 90000+30000, committed lost create response, one unpaid Order, underfunded Buyer payment rejected, explicit Buyer payment/one hold, public transaction state; mobile 390 and desktop 1440. QA funding/storage only.",
+    "PASS seller-order browser: two sessions, non-exclusive chat, quote/address, negotiated 90000 with zero shipping, committed lost create response, one unpaid Order, underfunded Buyer payment rejected, explicit Buyer payment/one hold, public transaction state; mobile 390 and desktop 1440. QA funding/storage only.",
   );
 } catch (error) {
   for (const [index, context] of (browser?.contexts() ?? []).entries())

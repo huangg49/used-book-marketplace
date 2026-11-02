@@ -886,21 +886,30 @@
 .inline-search {
   display: flex;
   flex-wrap: wrap;
-  align-items: end;
+  align-items: flex-end;
   gap: 0.75rem;
+  margin: 0.75rem 0 1rem;
 }
 
 .inline-search .field {
   flex: 1 1 16rem;
-  margin-bottom: 0;
+  margin: 0;
 }
 
-/* Match the button to the input so both share one baseline row. */
-.inline-search .field input,
-.inline-search > .button {
+.inline-search input {
+  height: 46px;
+  min-height: 46px;
   box-sizing: border-box;
-  height: 44px;
-  min-height: 44px;
+}
+
+.inline-search .button,
+.inline-search button {
+  height: 46px;
+  min-height: 46px;
+  margin: 0;
+  padding: 0 1.5rem;
+  box-sizing: border-box;
+  align-self: flex-end;
 }
 
 .report-revisions {

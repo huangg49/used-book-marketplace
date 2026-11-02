@@ -297,7 +297,7 @@ export function ShipmentDialog(props: ShipmentDialogProps) {
                     <div className={styles.policyNotice}>
                         <AlertCircle size={18} className={styles.noticeIcon} />
                         <div className={styles.noticeText}>
-                            <strong>Nguyên tắc trao đổi hai chiều:</strong> Mỗi bên tự thanh toán cước phí gửi sách của chiều mình với đơn vị vận chuyển. Tiền đặt cọc bảo chứng vẫn được Lật Lại giữ an toàn cho đến khi cả hai bên xác nhận đã nhận sách.
+                            <strong>Nguyên tắc trao đổi hai chiều:</strong> Mỗi bên chủ động gửi sách của chiều mình. Hệ thống không thu phí giao hàng. Tiền đặt cọc bảo chứng vẫn được Lật Lại giữ an toàn cho đến khi cả hai bên xác nhận đã nhận sách.
                         </div>
                     </div>
 

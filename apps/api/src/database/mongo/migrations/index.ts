@@ -1,12 +1,19 @@
+import { autoReviewV2UpgradeBridgeMigration } from './0056-auto-review-v2-upgrade-bridge.js';
+import { exchangeEvidenceMigration, exchangeEvidenceSpecs } from './0054-exchange-evidence.js';
+import { createLocalDemoCompletionMigration, demoCompletionSpec, withLocalDemoCompletion } from './0054-local-demo-completion.js';
+import { createFreeShippingMigration, withFreeShipping } from './0052-free-shipping.js';
 import { createMemberProfilesMigration, memberProfileSpecs, withMemberProfiles } from './0047-member-profiles.js';
 import { createAccountControlsMigration, withAccountControls } from './0048-account-controls.js';
 import {memberCartMigration,memberCartSpec} from './0049-member-cart.js';
-import { exchangeAgreementMigration, withExchangeAgreement } from './0053-exchange-agreement.js';
+import { exchangeAgreementMigration } from './0053-exchange-agreement.js';
+import { exchangeNegotiatedDiffMigration } from './0054-exchange-negotiated-diff.js';
+import { exchangeFlexibleDiffMigration, exchangeFlexibleDiffSpecs } from './0055-exchange-negotiated-diff-payer.js';
 import { createUncappedAuctionAmountsMigration, withUncappedAuctionAmounts } from './0054-uncapped-auction-amounts.js';
 import { createCapitalIncreaseMigration, withCapitalIncrease } from './0055-simulator-capital-increase.js';
 import { createAuctionStepOptionsMigration, withAuctionStepOptions } from './0056-auction-step-options.js';
 import { createCustomAuctionStepMigration, withCustomAuctionStep } from './0057-custom-auction-step.js';
 import { createBuyNowRivalWindowMigration, withBuyNowRivalWindow } from './0058-buy-now-rival-window.js';
+import { createAuctionFreeShippingReconcileMigration } from './0059-auction-free-shipping-reconcile.js';
 import { createSupportCasesMigration, supportSpecs, withSupportCases } from './0050-support-cases.js';
 import { createSupportAutoReviewUnionMigration } from './0051-support-auto-review-union.js';
 import { createListingAutoReviewMigration, withListingAutoReview } from './0050-listing-auto-review.js';
@@ -40,11 +47,9 @@ import {
 } from './0037-seller-scheduled-auctions.js';
 import {
   exchangeDisputeResolutionMigration,
-  withExchangeDisputeResolution,
 } from './0044-exchange-dispute-resolution.js';
 import {
   exchangeMutualCancellationMigration,
-  withExchangeMutualCancellation,
 } from './0045-exchange-mutual-cancellation.js';
 import {
   listingExchangePreferencesMigration,
@@ -55,20 +60,16 @@ import {
   listingAutofillSpecs,
 } from './0038-listing-autofill.js';
 import {
-  exchangeCollectionSpecs,
   exchangesMigration,
 } from './0016-exchanges.js';
 import {
   exchangesPhase2Migration,
-  withExchangePhase2Changes,
 } from './0017-exchanges-phase2.js';
 import {
   exchangesPhase3Migration,
-  withExchangePhase3Changes,
 } from './0018-exchanges-proposal-expiry.js';
 import {
   exchangesPhase4Migration,
-  withExchangePhase4Changes,
 } from './0022-exchange-completion.js';
 import {
   exchangeMessageSpecs,
@@ -194,7 +195,6 @@ import {
 import { exchangeReviewsMigration } from './0025-exchange-reviews.js';
 import {
   exchangeMutualCompletionMigration,
-  withExchangePhase5Changes,
 } from './0026-exchange-mutual-completion.js';
 import {
   exchangeMultiBookMigration,
@@ -328,6 +328,10 @@ const customAuctionStepMigration = createCustomAuctionStepMigration(
 const buyNowRivalWindowMigration = createBuyNowRivalWindowMigration(
   customAuctionStepMigration.definition.collections,
 );
+const auctionFreeShippingReconcileMigration =
+  createAuctionFreeShippingReconcileMigration(
+    customAuctionStepMigration.definition.collections,
+  );
 export const migrations: Migration[] = [
   {
     id: '0001-baseline-schema',
@@ -424,13 +428,23 @@ export const migrations: Migration[] = [
   listingAutoReviewMigration,
   supportCasesMigration,
   supportAutoReviewUnionMigration,
+  autoReviewV2UpgradeBridgeMigration,
   listingAutoReviewV2Migration,
   exchangeAgreementMigration,
+  exchangeEvidenceMigration,
+  createFreeShippingMigration(auctionDeliveryMigration.definition.collections),
+  exchangeNegotiatedDiffMigration,
+  exchangeFlexibleDiffMigration,
+  createLocalDemoCompletionMigration([
+    ...supportAutoReviewUnionMigration.definition.collections,
+    directDeliveryCompletionLegacyShapeMigration.definition.directOrders,
+  ]),
   uncappedAuctionAmountsMigration,
   capitalIncreaseMigration,
   auctionStepOptionsMigration,
   customAuctionStepMigration,
   buyNowRivalWindowMigration,
+  auctionFreeShippingReconcileMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -467,12 +481,12 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withMemberProfiles)
     .map(withAccountControls)
     .map(withListingAutoReview)
-    .map(withSupportCases)
+    .map(withSupportCases).map(withLocalDemoCompletion)
     .map(withUncappedAuctionAmounts)
     .map(withCapitalIncrease),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
-    .map(withDirectDeliveryCompletionLegacyShape),
+    .map(withDirectDeliveryCompletionLegacyShape).map(withLocalDemoCompletion),
   wishlistSpec,
   ...priceAssistSpecsV2.map(withPriceSourceOrigin),
   ...onlinePriceSpecs,
@@ -493,7 +507,7 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withPointCollectionChanges)
     .map(withResolutionChanges)
     .map(withSettlementChanges)
-    .map(withAuctionDelivery)
+    .map(withAuctionDelivery).map(withFreeShipping)
     .map(withUncappedAuctionAmounts)
     .map(withAuctionStepOptions)
     .map(withCustomAuctionStep),
@@ -512,16 +526,9 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withSupportCases),
   ...accountRecoverySpecs,
   ...authOtpSpecs,
-  ...exchangeCollectionSpecs
-    .map(withExchangePhase2Changes)
-    .map(withExchangePhase3Changes)
-    .map(withExchangePhase4Changes)
-    .map(withExchangePhase5Changes)
-    .map(withExchangePhase6Changes)
-    .map(withExchangeInspectionDeadlines)
-    .map(withExchangeDisputeResolution)
-    .map(withExchangeMutualCancellation)
-    .map(withExchangeAgreement),
+  // Use the final frozen migration's schema, rather than retaining the older
+  // formula for who pays alongside the negotiated-payer rule.
+  ...exchangeFlexibleDiffSpecs,
   ...directDeliveryCompletionSpecs,
   ...paymentSpecs.map(withVNPayExpiry),
   ...exchangeMessageSpecs,
@@ -529,11 +536,13 @@ export const currentCollections = (): CollectionSpec[] => [
   ...reviewLifecycleSpecs,
   ...inspectionEvidenceCollectionSpecs,
   ...pointIncidentCollectionSpecs.map(withUncappedAuctionAmounts),
-  ...auctionDeliveryCollectionSpecs,
+  ...auctionDeliveryCollectionSpecs.map(withFreeShipping),
   ...listingAutofillSpecs,
   ...memberProfileSpecs,
   memberCartSpec,
   listingAutoReviewSpecV2,
   listingAutoReviewCheckSpec,
   ...supportSpecs,
+  ...exchangeEvidenceSpecs,
+  demoCompletionSpec,
 ];

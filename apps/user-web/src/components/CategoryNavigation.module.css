@@ -313,17 +313,3 @@
     display: none;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .panel {
-    animation: directoryOpen 180ms cubic-bezier(0.16, 1, 0.3, 1) !important;
-  }
-  .trigger {
-    transition:
-      color 150ms,
-      background-color 150ms,
-      border-color 150ms !important;
-  }
-  .chevron {
-    transition: transform 160ms ease-out !important;
-  }
-}

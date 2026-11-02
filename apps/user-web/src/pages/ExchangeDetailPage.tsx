@@ -1,3 +1,4 @@
+import { ExchangeEvidencePanel } from "../components/exchange/ExchangeEvidencePanel";
 import { useEffect, useState } from "react";
 import { confirmExchangeRead } from "@used-books/session-client";
 import { session } from "../services/api";
@@ -413,6 +414,14 @@ function ExchangeDetailContent({
             aria-label="Hành động của bạn"
             tabIndex={-1}
           >
+            {detail.rawStatus === "ResolutionPending" && (
+              <ExchangeEvidencePanel
+                key={detail.viewer.id + ":" + detail.id}
+                id={detail.id}
+                revision={detail.revision!}
+                userId={detail.viewer.id}
+              />
+            )}
             <ActionCard
               detail={detail}
               onCancel={handleCancel}

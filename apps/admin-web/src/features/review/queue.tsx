@@ -1,6 +1,6 @@
 import { dateText, money } from "../../core/format";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Suspense, useLayoutEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -12,6 +12,8 @@ import {
   Link,
   Outlet,
   useMatch,
+  useLocation,
+  useNavigate,
   useOutletContext,
   useParams,
   useSearchParams,
@@ -31,6 +33,7 @@ import {
   type Catalog,
 } from "./contracts";
 import { ListingTitle } from "./ListingTitle";
+import { QueueCover } from "./QueueCover";
 import { reviewQueuePath } from "./review-navigation";
 import styles from "./ReviewWorkspace.module.css";
 import { EmptyArt } from "../../core/EmptyArt";
@@ -61,9 +64,11 @@ export function Queue() {
   return <QueueContent key={kind} kind={kind} user={user} />;
 }
 function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const selectedId = useMatch("/review/:kind/:id")?.params.id;
   const [showQueue, setShowQueue] = useState(false);
-  const listRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLElement>(null);
   const rowsRef = useRef<HTMLDivElement>(null);
   const [params, setParams] = useSearchParams();
   const filters =
@@ -74,7 +79,9 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
     ? params.get("status")!
     : filters[0];
   const aiFilters = kind === "listings" ? aiFiltersFor(status) : [];
-  const ai = aiFilters.includes(params.get("ai") || "") ? params.get("ai")! : "";
+  const ai = aiFilters.includes(params.get("ai") || "")
+    ? params.get("ai")!
+    : "";
   const positionKey = `${user.id}/${kind}/${status}/${ai}`;
   const queuePath = `${reviewQueuePath(kind, status)}${ai ? `&ai=${ai}` : ""}`;
   const result = useInfiniteQuery({
@@ -92,7 +99,10 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
   });
   const items =
     result.data?.pages.flatMap<Listing | Catalog>((page) => page.items) || [];
-  useListMotion(rowsRef,items.map(item=>`${item.id}:${item.version}`).join("/"));
+  useListMotion(
+    rowsRef,
+    items.map((item) => `${item.id}:${item.version}`).join("/"),
+  );
   useLayoutEffect(() => {
     if (listRef.current)
       listRef.current.scrollTop = queueScroll.get(positionKey) ?? 0;
@@ -100,15 +110,51 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
   const selectedIndex = items.findIndex((item) => item.id === selectedId);
   const itemPath = (id: string) =>
     `/review/${kind}/${id}?status=${status}${ai ? `&ai=${ai}` : ""}`;
+  const firstId = items[0]?.id;
+  // Start with actual work, once. An explicit Back keeps the list open; an open
+  // dossier is never switched by polling or by a new first item in the queue.
+  useEffect(() => {
+    if (
+      kind !== "listings" ||
+      selectedId ||
+      !firstId ||
+      !result.isSuccess ||
+      (location.state as { reviewOverview?: boolean } | null)?.reviewOverview
+    )
+      return;
+    navigate(
+      `/review/${kind}/${firstId}?status=${status}${ai ? `&ai=${ai}` : ""}`,
+      {
+        replace: true,
+        state: { reviewReturnTo: queuePath },
+      },
+    );
+  }, [
+    kind,
+    selectedId,
+    firstId,
+    result.isSuccess,
+    location.state,
+    navigate,
+    status,
+    ai,
+    queuePath,
+  ]);
   return (
     <div className={styles.workspace}>
       <header className={styles.heading}>
-        <h1>{kind === "listings" ? "Bài đăng sách" : "Yêu cầu đầu sách"}</h1>
-        <p>
-          {kind === "listings"
-            ? "Đọc mô tả, đối chiếu ảnh và ghi lại một quyết định rõ ràng cho người đăng."
-            : "Kiểm tra tên sách, tác giả và thông tin xuất bản trước khi đưa vào danh mục dùng chung."}
-        </p>
+        <div>
+          <h1>{kind === "listings" ? "Bài đăng sách" : "Yêu cầu đầu sách"}</h1>
+          <p>
+            {kind === "listings"
+              ? "Kiểm tra từng bản sách trước khi đến tay người đọc mới."
+              : "Kiểm tra tên sách, tác giả và thông tin xuất bản trước khi đưa vào danh mục dùng chung."}
+          </p>
+        </div>
+        <div className={styles.headerMeta}>
+          <span>Không gian kiểm duyệt</span>
+          <strong>{labels[status]}</strong>
+        </div>
       </header>
       {selectedId && (
         <Button
@@ -125,10 +171,16 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
         <section
           id="review-queue"
           aria-label="Hàng chờ kiểm duyệt"
+          ref={listRef}
+          tabIndex={0}
+          onScroll={(event) => {
+            if (queueScroll.size > 40) queueScroll.clear();
+            queueScroll.set(positionKey, event.currentTarget.scrollTop);
+          }}
           className={`${styles.queue} ${selectedId && !showQueue ? styles.mobileHidden : ""}`}
         >
           <div className={styles.queueHead}>
-            <h2>Hàng hồ sơ</h2>
+            <h2>Danh sách bài gửi</h2>
             <Button
               aria-label="Cập nhật danh sách"
               title="Cập nhật danh sách"
@@ -180,12 +232,9 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
             {items.length} hồ sơ đã tải · Cũ nhất trước
           </p>
           <div
-            ref={listRef}
             className={styles.queueScroll}
-            onScroll={(event) => {
-              if (queueScroll.size > 40) queueScroll.clear();
-              queueScroll.set(positionKey, event.currentTarget.scrollTop);
-            }}
+            role="region"
+            aria-label="Danh sách hồ sơ"
           >
             <ListFeedback result={result} loadingText="Đang tải hồ sơ…" />
             {result.isSuccess && items.length === 0 && (
@@ -245,10 +294,8 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                   data-motion-key={item.id}
                   data-motion-revision={item.version}
                 >
-                  <span className="row-number">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <div>
+                  {"state" in item && <QueueCover value={item} />}
+                  <div className={styles.queueIdentity}>
                     <div className="row-meta">
                       <span>
                         {
@@ -259,10 +306,7 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                           ]
                         }
                       </span>
-                      <span>
-                        Bản gửi {item.currentRevision.number} ·{" "}
-                        {dateText(item.currentRevision.submittedAt)}
-                      </span>
+                      <span>Bản {item.currentRevision.number}</span>
                       {"state" in item && item.autoReview && (
                         <span>{aiFilterLabels[item.autoReview.outcome]}</span>
                       )}
@@ -278,7 +322,7 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                         }}
                       >
                         {"state" in item ? (
-                          <ListingTitle value={item} />
+                          <ListingTitle value={item} canReadPendingCatalog={canReviewCatalog(user)} />
                         ) : (
                           item.currentRevision.metadata.title
                         )}
@@ -309,6 +353,9 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                           "Chưa có nhà xuất bản"}
                       </p>
                     )}
+                    <p className={styles.submittedTime}>
+                      {dateText(item.currentRevision.submittedAt)}
+                    </p>
                   </div>
                   <Link
                     className="read-link"
@@ -340,7 +387,12 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
             </p>
           )}
         </section>
-        <section className={styles.dossier} aria-label="Bàn đọc hồ sơ">
+        <section
+          className={styles.dossier}
+          aria-label="Bàn đọc hồ sơ"
+          data-review-dossier
+          tabIndex={0}
+        >
           {selectedId ? (
             <>
               <nav
@@ -385,13 +437,13 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
             </>
           ) : (
             <div className={styles.welcome}>
-              <BookOpen size={42} strokeWidth={1.2} aria-hidden="true" />
+              <BookOpen size={32} strokeWidth={1.4} aria-hidden="true" />
               {!items.length && !result.isPending ? (
                 <>
                   <h2>
                     {result.isError
                       ? "Chưa tải được hàng hồ sơ."
-                      : "Một khoảng trống,\nchờ trang sách mới."}
+                      : "Chưa có bài gửi trong mục này."}
                   </h2>
                   <p>
                     {result.isError
@@ -401,14 +453,10 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                 </>
               ) : (
                 <>
-                  <h2>
-                    Mở một hồ sơ.
-                    <br />
-                    Đọc kỹ từng trang.
-                  </h2>
+                  <h2>Chọn bài để kiểm duyệt</h2>
                   <p>
-                    Đối chiếu nội dung và hình ảnh, rồi ghi lại quyết định cho
-                    đúng bản gửi. Chọn một hồ sơ trong danh sách để bắt đầu.
+                    Ảnh bản sách, thông tin người đăng khai báo và phiếu quyết
+                    định sẽ xuất hiện tại đây.
                   </p>
                 </>
               )}
@@ -421,9 +469,6 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
                   Mở hồ sơ đầu tiên <ArrowDown size={17} aria-hidden="true" />
                 </Link>
               )}
-              <span>
-                Ảnh, lịch sử và phiếu quyết định trong cùng một bàn đọc.
-              </span>
             </div>
           )}
         </section>

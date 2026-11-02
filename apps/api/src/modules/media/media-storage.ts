@@ -17,7 +17,7 @@ export const unavailable = () =>
 
 // The interface is intentionally narrower than any vendor SDK. Tests inject an explicit fake.
 @Injectable()
-export class MediaStorage implements OnModuleDestroy {
+export class PrivateStorage implements OnModuleDestroy {
   private readonly client?: StorageClient;
   private readonly bucket: string;
   private readonly base: string;
@@ -27,9 +27,13 @@ export class MediaStorage implements OnModuleDestroy {
     (keys) => this.signBatch(keys),
     unavailable,
   );
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    bucketName = config.get<string>('SUPABASE_MEDIA_BUCKET', 'latlai-media'),
+    private readonly maxBytes = MAX_IMAGE_BYTES,
+  ) {
     this.base = config.get<string>('SUPABASE_URL', '');
-    this.bucket = config.get<string>('SUPABASE_MEDIA_BUCKET', 'latlai-media');
+    this.bucket = bucketName;
     const key = config.get<string>('SUPABASE_STORAGE_KEY', '');
     this.headers = {
       apikey: key,
@@ -61,7 +65,7 @@ export class MediaStorage implements OnModuleDestroy {
       !data ||
       data.public ||
       !data.file_size_limit ||
-      data.file_size_limit > MAX_IMAGE_BYTES
+      data.file_size_limit > this.maxBytes
     )
       throw unavailable();
   }
@@ -96,6 +100,17 @@ export class MediaStorage implements OnModuleDestroy {
       chunks.push(part);
     }
     return Buffer.concat(chunks);
+  }
+  async attachment(key: string) {
+    if (!this.client) throw unavailable();
+    const { data, error } = await this.client
+      .from(this.bucket)
+      .createSignedUrl(key, 120, { download: true });
+    if (error || !data?.signedUrl) throw unavailable();
+    return {
+      url: data.signedUrl,
+      expiresAt: new Date(Date.now() + 120000).toISOString(),
+    };
   }
   async signedRead(key: string) {
     if (!this.client) throw unavailable();
@@ -133,5 +148,22 @@ export class MediaStorage implements OnModuleDestroy {
   }
   onModuleDestroy() {
     this.signedReads.close();
+  }
+}
+
+@Injectable()
+export class MediaStorage extends PrivateStorage {
+  constructor(config: ConfigService) {
+    super(config);
+  }
+}
+@Injectable()
+export class EvidenceStorage extends PrivateStorage {
+  constructor(config: ConfigService) {
+    super(
+      config,
+      config.get<string>('SUPABASE_EVIDENCE_BUCKET', 'latlai-evidence'),
+      100000000,
+    );
   }
 }

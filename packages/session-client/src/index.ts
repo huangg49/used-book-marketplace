@@ -12,3 +12,4 @@ export * from './cart';
 export { exchangeAgreementSchema, exchangeBookSnapshotSchema, type ExchangeBookSnapshot } from './exchange-agreement';
 export * from './exchange-commands';
 export * from './support';
+export * from "./exchange-evidence";

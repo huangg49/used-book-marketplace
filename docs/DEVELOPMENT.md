@@ -92,6 +92,45 @@ Thiếu storage thì login/xem dữ liệu vẫn chạy, upload chưa sẵn sàn
 
 ## Khi có lỗi
 
+### Demo hoàn tất đơn và giải ngân sau 5 giây
+
+Theo [ADR0067](adr/0067-local-demo-order-settlement.md), chỉ cần một cờ phía BE
+trong `apps/api/.env`:
+
+```dotenv
+LOCAL_DEMO_COMPLETION_ENABLED=true
+```
+
+Khởi động lại API và worker đơn hàng để nhận cấu hình. Seller ACTIVE mở đơn đã
+thanh toán/đăng ký vận đơn sẽ thấy nút “Hoàn tất và giải ngân sau 5 giây” ngay
+trên URL bình thường. Không cần UUID hay query URL. Mặc định `false`; tắt bằng
+cách đổi lại `false` rồi khởi động lại BE/worker sau khi job đã hoàn tất.
+Cài đặt UUID cũ không còn được dùng. Cờ chỉ có hiệu lực ở development/test,
+Mongo localhost và simulator đã cấu hình; API production/remote luôn từ chối.
+Biến demo là tùy chọn: máy không khai báo biến này vẫn chạy luồng thường và demo
+tự tắt. Không chia sẻ/commit `.env` của máy mình. Máy mới tạo cấu hình riêng bằng
+`pnpm setup:local` theo hướng dẫn setup; DB/JWT và các cấu hình nền vẫn cần như trước.
+
+Máy nhận source lần đầu cần dừng API/worker, backup, migrate/bootstrap0054 rồi
+build/chạy lại. Nút gọi BE thật, ghi job theo giờ máy chủ và chuyển InTransit.
+Sau hạn5giây, worker đóng Completed, giải phóng hold và ghi seller proceeds/
+commission theo agreement trong một transaction. Hai bên đọc cùng trạng thái
+và xem số dư/lịch sử ví. Việc bật cờ không tự hoàn tất đơn; Seller phải bấm nút.
+
+Đây là lệnh đã chấp nhận, không có nút hủy bản xem thử. Back/reload không hủy job.
+Nếu mất ACK, dùng “Thử lại hoàn tất demo” với đúng key/body/version; không tạo key
+mới để ép thành công. Worker có thể xử lý trễ một nhịp quét khi máy bận; UI chỉ báo
+Hoàn tất sau khi GET thấy dữ liệu đã commit. Inspection lịch sử và gate ADR0064
+vẫn giữ nguyên, không sửa hạn72giờ của đơn thường hoặc giải ngân các hồ sơ cũ.
+
+QA: build API trước, dùng replica set57017/`*_test`, rồi chạy
+`pnpm --filter @used-books/user-web test:demo-completion:browser`. Kiểm disabled,
+sai owner, stale version, mất ACK/exact retry, key khác body, revoke/replay,
+Completed ở cả hai phía, hold0/proceeds/commission và một settlement cân bằng.
+`test:buy-now:browser` tiếp tục kiểm luồng thường không được cấp ngoại lệ.
+
+### Xử lý lỗi môi trường
+
 - Node quá cũ: đổi Node theo repo, mở terminal mới. Launcher báo trước khi bật app.
 - Port API/Metro đang được dùng: dừng terminal của chính bạn hoặc chọn cổng khác;
   launcher không tự giết process. Mongo port bị Windows chặn: chọn port trống trong

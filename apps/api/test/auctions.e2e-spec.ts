@@ -4197,7 +4197,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
   });
 
   describe('ADR 0044: delivery from the point by the simulated carrier', () => {
-    const FEE = 30_000;
+    const FEE = 0;
     const addressInput = {
       recipientName: 'Người nhận kiểm thử',
       phone: '0900123456',
@@ -4327,7 +4327,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         );
       await pay({ fulfillmentMethod: 'CarrierOutbound' }).expect(422);
       await pay({ destinationAddressId: a.id }).expect(422);
-      await pay(delivery(a, FEE - 1)).expect(409);
+      await pay(delivery(a, 30_000)).expect(409);
       await pay(delivery({ ...a, version: 2 })).expect(409);
       const outside = await address(winner);
       await db.c.member_addresses.updateOne(

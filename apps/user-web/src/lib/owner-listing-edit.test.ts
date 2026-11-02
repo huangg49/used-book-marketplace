@@ -4,9 +4,12 @@ import {
   buildRevisionContent,
   canArchiveListing,
   canEditApproved,
+  canEditDraft,
+  canEditListing,
   canToggleVisibility,
   codePoints,
   editApprovedBlock,
+  editListingBlock,
   formFromListing,
   parsePrice,
   shouldExplainEditBlock,
@@ -72,6 +75,30 @@ describe("editApprovedBlock", () => {
   it("blocks removed and auction listings", () => {
     expect(canEditApproved(item({ visibility: "Removed" }))).toBe(false);
     expect(canEditApproved(item({}, "Auction"))).toBe(false);
+  });
+});
+
+describe("editListingBlock and canEditDraft", () => {
+  it("allows Draft listings to be edited and submitted", () => {
+    expect(editListingBlock(item({ moderation: "Draft" }))).toBeNull();
+    expect(canEditDraft(item({ moderation: "Draft" }))).toBe(true);
+    expect(canEditListing(item({ moderation: "Draft" }))).toBe(true);
+  });
+  it("allows Rejected listings to be edited and resubmitted", () => {
+    expect(editListingBlock(item({ moderation: "Rejected" }))).toBeNull();
+    expect(canEditDraft(item({ moderation: "Rejected" }))).toBe(true);
+    expect(canEditListing(item({ moderation: "Rejected" }))).toBe(true);
+  });
+  it("allows Approved listings to be edited via editListingBlock", () => {
+    expect(editListingBlock(item({ moderation: "Approved" }))).toBeNull();
+    expect(canEditDraft(item({ moderation: "Approved" }))).toBe(false);
+    expect(canEditListing(item({ moderation: "Approved" }))).toBe(true);
+  });
+  it("blocks PendingReview, Removed, and Auction listings", () => {
+    expect(editListingBlock(item({ moderation: "PendingReview" }))).toMatch(/chờ duyệt/);
+    expect(canEditDraft(item({ moderation: "PendingReview" }))).toBe(false);
+    expect(editListingBlock(item({ visibility: "Removed" }))).toMatch(/bị gỡ/);
+    expect(editListingBlock(item({}, "Auction"))).toMatch(/Đấu giá/);
   });
 });
 

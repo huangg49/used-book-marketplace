@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
+import { DemoReviewTime } from './demo-review-time.js';
 import type { TransactionReviewDoc as Review } from '../../database/mongo/documents.js';
 import {
   MongoCommandService,
@@ -35,7 +36,7 @@ import {
 
 @Injectable()
 export class ReviewsService {
-  constructor(private readonly commands: MongoCommandService) {}
+  constructor(private readonly commands: MongoCommandService, private readonly demoTime: DemoReviewTime) {}
   notificationTarget(auth:Actor,id:string):Promise<Wire['ReviewNotificationTarget']>{
     return this.commands.read(auth,async(tx,actor)=>{
       member(actor);
@@ -69,6 +70,7 @@ export class ReviewsService {
         ? new Date(transaction.completedAt.getTime() + REVIEW_SUBMISSION_MS)
         : null;
       return {
+        ...(type === 'Exchange' && actor.status === 'ACTIVE' ? { demoTimeAdvance: await this.demoTime.state(tx, id, rows, now) } : {}),
         canReview:
           actor.status === 'ACTIVE' && !!deadline && now < deadline && !mine,
         canEdit:

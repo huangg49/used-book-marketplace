@@ -10,11 +10,10 @@ import {
 } from "./exchange-recovery";
 import { ExchangeCounterForm } from "./exchange-counter-form";
 import React, { useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { z } from "zod";
 import * as Crypto from "expo-crypto";
-import * as ImagePicker from "expo-image-picker";
 import {
   AppModal,
   AppText,
@@ -65,13 +64,6 @@ const DISPUTE_CATEGORIES = [
   "Sách nghi vấn bản in lậu / photo",
   "Sự cố giao nhận khác",
 ];
-
-const SAMPLE_DISPUTE_IMAGE_URI =
-  "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=600";
-const SAMPLE_DISPUTE_IMAGE_NAME = "sample-book-damage.jpg (607 KB)";
-const SAMPLE_DISPUTE_VIDEO_NAME = "sample-unboxing.mp4 (176 KB · 3.5s)";
-const SAMPLE_DISPUTE_DETAIL =
-  "Kiểm tra bưu phẩm lúc mở hộp: bìa sau sách bị rách toạc 1 vệt dài và ẩm ướt nhiều trang, không đúng cam kết ban đầu.";
 
 function parseDisputeReason(rawReason: string) {
   const categoryMatch = rawReason.match(/\[Sự cố\]:\s*([^\n\r]+)/i);
@@ -130,15 +122,6 @@ function ExchangeActionsContent({
   const [disputeCategory, setDisputeCategory] = useState(DISPUTE_CATEGORIES[0]);
   const [disputeDetail, setDisputeDetail] = useState("");
   const [disputeError, setDisputeError] = useState<string | null>(null);
-  const [evidenceImageUri, setEvidenceImageUri] = useState<string | null>(null);
-  const [evidenceImageName, setEvidenceImageName] = useState<string | null>(
-    null,
-  );
-  const [evidenceVideoUri, setEvidenceVideoUri] = useState<string | null>(null);
-  const [evidenceVideoName, setEvidenceVideoName] = useState<string | null>(
-    null,
-  );
-
   // Accept with address selector & inline address creation
   const [acceptModalOpen, setAcceptModalOpen] = useState(false);
   const [selectedAcceptAddressId, setSelectedAcceptAddressId] = useState<
@@ -372,76 +355,15 @@ function ExchangeActionsContent({
   const hasRecovery = Boolean(pending || ack);
   const blocked = hasRecovery || Boolean(readError);
 
-  const handleUseSampleEvidence = () => {
-    setDisputeCategory(DISPUTE_CATEGORIES[0]);
-    if (!disputeDetail.trim()) {
-      setDisputeDetail(SAMPLE_DISPUTE_DETAIL);
-    }
-    setEvidenceImageUri(SAMPLE_DISPUTE_IMAGE_URI);
-    setEvidenceImageName(SAMPLE_DISPUTE_IMAGE_NAME);
-    setEvidenceVideoUri("sample-unboxing.mp4");
-    setEvidenceVideoName(SAMPLE_DISPUTE_VIDEO_NAME);
-    setDisputeError(null);
-  };
-
-  const handleUseSampleImageOnly = () => {
-    setEvidenceImageUri(SAMPLE_DISPUTE_IMAGE_URI);
-    setEvidenceImageName(SAMPLE_DISPUTE_IMAGE_NAME);
-    setDisputeError(null);
-  };
-
-  const handleUseSampleVideoOnly = () => {
-    setEvidenceVideoUri("sample-unboxing.mp4");
-    setEvidenceVideoName(SAMPLE_DISPUTE_VIDEO_NAME);
-    setDisputeError(null);
-  };
-
-  const handlePickImage = async () => {
-    try {
-      const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: false,
-        quality: 0.8,
-      });
-      if (!res.canceled && res.assets && res.assets.length > 0) {
-        const asset = res.assets[0];
-        setEvidenceImageUri(asset.uri);
-        setEvidenceImageName(asset.fileName || "anh-chup-loi.jpg");
-        setDisputeError(null);
-      }
-    } catch {}
-  };
-
-  const handlePickVideo = async () => {
-    try {
-      const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["videos"],
-        allowsEditing: false,
-        quality: 0.8,
-      });
-      if (!res.canceled && res.assets && res.assets.length > 0) {
-        const asset = res.assets[0];
-        setEvidenceVideoUri(asset.uri);
-        setEvidenceVideoName(asset.fileName || "video-unboxing.mp4");
-        setDisputeError(null);
-      }
-    } catch {}
-  };
-
   const handleConfirmDispute = () => {
     const detailText = disputeDetail.trim();
     if (detailText.length < 5) {
-      setDisputeError(
-        "Vui lòng nhập mô tả chi tiết sự cố từ 5 ký tự (hoặc bấm '⚡ Nạp mẫu cả hai').",
-      );
+      setDisputeError("Vui lòng nhập mô tả chi tiết sự cố từ 5 ký tự.");
       return;
     }
     setDisputeError(null);
 
-    let finalReason = `[Sự cố]: ${disputeCategory}\n[Chi tiết]: ${detailText}\n[Video unboxing]: ${evidenceVideoName || SAMPLE_DISPUTE_VIDEO_NAME}\n[Ảnh bằng chứng]: ${evidenceImageName || SAMPLE_DISPUTE_IMAGE_NAME}`;
-    if (finalReason.length > 490) {
-      finalReason = finalReason.slice(0, 490);
-    }
+    const finalReason = `[Sự cố]: ${disputeCategory}\n[Chi tiết]: ${detailText}`;
 
     disputeMutation.mutate(finalReason);
   };
@@ -1090,46 +1012,7 @@ function ExchangeActionsContent({
                     </View>
                   ) : null}
 
-                  <View style={styles.disputeEvidencePillsRow}>
-                    <View style={styles.evidencePill}>
-                      <Icon
-                        name="camera"
-                        size={13}
-                        color={
-                          parsed.imageRef
-                            ? stitchTokens.likeNewGreen
-                            : stitchTokens.subtleGray
-                        }
-                      />
-                      <AppText
-                        style={styles.evidencePillText}
-                        numberOfLines={1}
-                      >
-                        {parsed.imageRef
-                          ? `Ảnh: ${parsed.imageRef}`
-                          : "Chưa có ảnh"}
-                      </AppText>
-                    </View>
-                    <View style={styles.evidencePill}>
-                      <Icon
-                        name="video"
-                        size={13}
-                        color={
-                          parsed.videoRef
-                            ? stitchTokens.likeNewGreen
-                            : stitchTokens.subtleGray
-                        }
-                      />
-                      <AppText
-                        style={styles.evidencePillText}
-                        numberOfLines={1}
-                      >
-                        {parsed.videoRef
-                          ? `Video: ${parsed.videoRef}`
-                          : "Chưa có clip"}
-                      </AppText>
-                    </View>
-                  </View>
+                  <AppText>Tệp đã gửi được kiểm tra riêng ở mục Bằng chứng sự cố. Tên tệp trong mô tả cũ không chứng minh tệp đã được tải lên.</AppText>
 
                   <View style={styles.ledgerNoticeCallout}>
                     <Icon name="info" size={14} color={stitchTokens.wineDark} />
@@ -1416,7 +1299,6 @@ function ExchangeActionsContent({
                   </AppText>
                 </View>
               </View>
-
               {/* Category Selector */}
               <View style={styles.formGroup}>
                 <AppText style={styles.formLabel}>
@@ -1452,7 +1334,6 @@ function ExchangeActionsContent({
                   })}
                 </ScrollView>
               </View>
-
               {/* Detail Input */}
               <View style={styles.formGroup}>
                 <View
@@ -1484,237 +1365,10 @@ function ExchangeActionsContent({
                   }}
                 />
               </View>
-
-              {/* Evidence Section Header */}
-              <View style={styles.evidenceSectionHeader}>
-                <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-                >
-                  <Icon
-                    name="bookmark"
-                    size={14}
-                    color={stitchTokens.wineDark}
-                  />
-                  <AppText style={styles.evidenceSectionTitle}>
-                    Bằng chứng thẩm định (Ảnh &amp; Video)
-                  </AppText>
-                </View>
-                <Pressable
-                  onPress={handleUseSampleEvidence}
-                  style={({ pressed }) => [
-                    styles.sampleEvidenceBtn,
-                    pressed && { opacity: 0.7 },
-                  ]}
-                >
-                  <AppText style={styles.sampleEvidenceBtnText}>
-                    ⚡ Nạp mẫu cả hai (Demo)
-                  </AppText>
-                </Pressable>
-              </View>
-
-              {/* Evidence Cards: Image & Video */}
-              <View style={styles.evidenceGrid}>
-                {/* 1. Photo card */}
-                <View
-                  style={[
-                    styles.evidenceCardBox,
-                    Boolean(evidenceImageUri) && styles.evidenceCardBoxActive,
-                  ]}
-                >
-                  <View style={styles.evidenceCardTop}>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 4,
-                      }}
-                    >
-                      <Icon
-                        name="camera"
-                        size={14}
-                        color={stitchTokens.wineDark}
-                      />
-                      <AppText style={styles.evidenceCardTitle}>
-                        Ảnh chụp sách lỗi
-                      </AppText>
-                    </View>
-                    <View
-                      style={[
-                        styles.evidenceBadge,
-                        Boolean(evidenceImageUri) && styles.evidenceBadgeActive,
-                      ]}
-                    >
-                      <AppText
-                        style={[
-                          styles.evidenceBadgeText,
-                          Boolean(evidenceImageUri) &&
-                            styles.evidenceBadgeTextActive,
-                        ]}
-                      >
-                        {evidenceImageUri ? "✓ Đã chọn" : "Chưa có"}
-                      </AppText>
-                    </View>
-                  </View>
-
-                  <View style={styles.evidenceBtnRow}>
-                    <Pressable
-                      style={styles.evidencePickerBtn}
-                      onPress={handlePickImage}
-                    >
-                      <AppText style={styles.evidencePickerBtnText}>
-                        {evidenceImageUri ? "Đổi ảnh..." : "Chọn ảnh từ máy..."}
-                      </AppText>
-                    </Pressable>
-                    <Pressable
-                      style={styles.miniSampleBtn}
-                      onPress={handleUseSampleImageOnly}
-                    >
-                      <AppText style={styles.miniSampleBtnText}>
-                        ⚡ Ảnh mẫu
-                      </AppText>
-                    </Pressable>
-                  </View>
-
-                  <View style={styles.evidencePreviewBox}>
-                    {evidenceImageUri ? (
-                      <View style={styles.imagePreviewWrap}>
-                        <Image
-                          source={{ uri: evidenceImageUri }}
-                          style={styles.previewImage}
-                          resizeMode="cover"
-                        />
-                        <View style={styles.previewOverlayBadge}>
-                          <AppText
-                            style={styles.previewOverlayText}
-                            numberOfLines={1}
-                          >
-                            {evidenceImageName || "sample-book-damage.jpg"}
-                          </AppText>
-                        </View>
-                      </View>
-                    ) : (
-                      <Pressable
-                        style={styles.emptyPreviewBox}
-                        onPress={handlePickImage}
-                      >
-                        <Icon
-                          name="camera"
-                          size={20}
-                          color={stitchTokens.roseBrown}
-                        />
-                        <AppText style={styles.emptyPreviewText}>
-                          Chọn ảnh chụp vết rách / hư hại
-                        </AppText>
-                      </Pressable>
-                    )}
-                  </View>
-                </View>
-
-                {/* 2. Video unboxing card */}
-                <View
-                  style={[
-                    styles.evidenceCardBox,
-                    Boolean(evidenceVideoUri) && styles.evidenceCardBoxActive,
-                  ]}
-                >
-                  <View style={styles.evidenceCardTop}>
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 4,
-                      }}
-                    >
-                      <Icon
-                        name="video"
-                        size={14}
-                        color={stitchTokens.wineDark}
-                      />
-                      <AppText style={styles.evidenceCardTitle}>
-                        Video unboxing (3-4s)
-                      </AppText>
-                    </View>
-                    <View
-                      style={[
-                        styles.evidenceBadge,
-                        Boolean(evidenceVideoUri) && styles.evidenceBadgeActive,
-                      ]}
-                    >
-                      <AppText
-                        style={[
-                          styles.evidenceBadgeText,
-                          Boolean(evidenceVideoUri) &&
-                            styles.evidenceBadgeTextActive,
-                        ]}
-                      >
-                        {evidenceVideoUri ? "✓ Đã nạp clip 3.5s" : "Chưa có"}
-                      </AppText>
-                    </View>
-                  </View>
-
-                  <View style={styles.evidenceBtnRow}>
-                    <Pressable
-                      style={styles.evidencePickerBtn}
-                      onPress={handlePickVideo}
-                    >
-                      <AppText style={styles.evidencePickerBtnText}>
-                        {evidenceVideoUri
-                          ? "Đổi clip..."
-                          : "Chọn video từ máy..."}
-                      </AppText>
-                    </Pressable>
-                    <Pressable
-                      style={styles.miniSampleBtn}
-                      onPress={handleUseSampleVideoOnly}
-                    >
-                      <AppText style={styles.miniSampleBtnText}>
-                        ⚡ Video mẫu 3s
-                      </AppText>
-                    </Pressable>
-                  </View>
-
-                  <View style={styles.evidencePreviewBox}>
-                    {evidenceVideoUri ? (
-                      <View style={styles.videoPreviewWrap}>
-                        <View style={styles.videoSimulatedPlayer}>
-                          <View style={styles.playButtonCircle}>
-                            <Icon
-                              name="chevronRight"
-                              size={18}
-                              color={stitchTokens.white}
-                            />
-                          </View>
-                          <AppText
-                            style={styles.videoSimulatedTitle}
-                            numberOfLines={1}
-                          >
-                            {evidenceVideoName ||
-                              "sample-unboxing.mp4 (176 KB · 3.5s)"}
-                          </AppText>
-                          <AppText style={styles.videoSimulatedSubtitle}>
-                            Clip mở gói đồng kiểm GHN · Sẵn sàng gửi thẩm định
-                          </AppText>
-                        </View>
-                      </View>
-                    ) : (
-                      <Pressable
-                        style={styles.emptyPreviewBox}
-                        onPress={handlePickVideo}
-                      >
-                        <Icon
-                          name="video"
-                          size={20}
-                          color={stitchTokens.roseBrown}
-                        />
-                        <AppText style={styles.emptyPreviewText}>
-                          Clip mở gói đồng kiểm (3-4s)
-                        </AppText>
-                      </Pressable>
-                    )}
-                  </View>
-                </View>
-              </View>
-
+              <AppText>
+                Báo sự cố trước để ghi nhận đúng hạn. Sau đó bổ sung tệp ở mục
+                Bằng chứng sự cố. Video mở hộp không bắt buộc.
+              </AppText>{" "}
               {disputeError ? (
                 <View style={styles.errorAlertBox}>
                   <Icon name="info" size={14} color={stitchTokens.flashRed} />

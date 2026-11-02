@@ -714,6 +714,223 @@ describe('Simulated wallet: real MongoDB and HTTP', () => {
     expect(await available(b)).toBe(0);
     expect((await counts(eb.intentId)).events).toBe(0);
   });
+  it('operator topup creates one atomic intent/event/journal/receipt and exact replay', async () => {
+    const recipient = await reader(),
+      key = randomUUID();
+    const body = { recipientId: recipient.id, amount: 100000 };
+    const first = await post(
+      '/operations/simulator/topups',
+      body,
+      operator,
+      key,
+    ).expect(200);
+    validates('WalletCommandReceipt', first.body);
+    expect(first.body).toMatchObject({
+      state: 'Succeeded',
+      credited: true,
+      version: 2,
+    });
+    const replay = await post(
+      '/operations/simulator/topups',
+      body,
+      operator,
+      key,
+    ).expect(200);
+    expect(replay.body).toEqual(first.body);
+    expect(replay.headers['idempotency-replayed']).toBe('true');
+    await post(
+      '/operations/simulator/topups',
+      { ...body, amount: 200000 },
+      operator,
+      key,
+    ).expect(409);
+    expect(await available(recipient)).toBe(100000);
+    expect(await counts(first.body.entityId)).toEqual({
+      events: 1,
+      journals: 1,
+      receipts: 1,
+      audits: 1,
+    });
+    const row = await db.c.topup_intents.findOne({ _id: first.body.entityId });
+    expect(row?.ownerId).toBe(recipient.id);
+    expect(
+      await db.c.vnpay_payments.countDocuments({ _id: first.body.entityId }),
+    ).toBe(0);
+    await runTransaction(db.client, db.client.db(), (tx) =>
+      checkTopupRecord(tx, first.body.entityId),
+    );
+    const history = await get('/me/wallet/history?limit=20', recipient).expect(
+      200,
+    );
+    expect(
+      history.body.items.some(
+        (item: { topupId: string }) => item.topupId === first.body.entityId,
+      ),
+    ).toBe(true);
+    // Recipient eligibility blocks NEW credit, but not recovery of an old receipt.
+    await db.setStatus(recipient.id, 'LOCKED');
+    expect(
+      (
+        await post('/operations/simulator/topups', body, operator, key).expect(
+          200,
+        )
+      ).body,
+    ).toEqual(first.body);
+    await post('/operations/simulator/topups', body, operator).expect(409);
+  });
+  it('recipient lookup is role-scoped, literal and excludes ineligible people and self', async () => {
+    const op = await reader(['TEST_OPERATOR', 'MEMBER']);
+    const recipient = await reader();
+    await db.c.users.updateOne(
+      { _id: recipient.id },
+      { $set: { displayName: 'QA [book].*' } },
+    );
+    const lookup = await get(
+      '/operations/simulator/topup-recipients?q=%5Bbook%5D.%2A',
+      op,
+    ).expect(200);
+    validates('SimulatedTopupRecipientPage', lookup.body);
+    expect(lookup.body.items).toEqual([
+      { id: recipient.id, displayName: 'QA [book].*' },
+    ]);
+    const self = await get(
+      `/operations/simulator/topup-recipients?q=${op.id}`,
+      op,
+    ).expect(200);
+    expect(self.body.items).toEqual([]);
+    await db.c.users.updateOne(
+      { _id: recipient.id },
+      { $set: { emailVerifiedAt: null } },
+    );
+    expect(
+      (
+        await get(
+          `/operations/simulator/topup-recipients?q=${recipient.id}`,
+          op,
+        ).expect(200)
+      ).body.items,
+    ).toEqual([]);
+    await get(
+      '/operations/simulator/topup-recipients?q=' + 'a'.repeat(81),
+      op,
+    ).expect(400);
+    for (const roles of [['MEMBER'], ['ADMIN'], ['STAFF']] as RoleCode[][]) {
+      const denied = await reader(roles);
+      await get('/operations/simulator/topup-recipients', denied).expect(403);
+      await post(
+        '/operations/simulator/topups',
+        { recipientId: recipient.id, amount: 1000 },
+        denied,
+      ).expect(403);
+    }
+  });
+  it('rejects self, unverified/non-Member/inactive recipients and invalid amounts without a write', async () => {
+    const op = await reader(['TEST_OPERATOR', 'MEMBER']);
+    await post(
+      '/operations/simulator/topups',
+      { recipientId: op.id, amount: 1000 },
+      op,
+    ).expect(403);
+    for (const role of ['STAFF', 'MEMBER'] as RoleCode[]) {
+      const recipient = await reader([role]);
+      if (role === 'MEMBER')
+        await db.c.users.updateOne(
+          { _id: recipient.id },
+          { $set: { emailVerifiedAt: null } },
+        );
+      await post(
+        '/operations/simulator/topups',
+        { recipientId: recipient.id, amount: 1000 },
+        op,
+      ).expect(409);
+      expect(
+        await db.c.topup_intents.countDocuments({ ownerId: recipient.id }),
+      ).toBe(0);
+    }
+    const recipient = await reader();
+    for (const amount of [999, 10000001, 1.5, -1])
+      await post(
+        '/operations/simulator/topups',
+        { recipientId: recipient.id, amount },
+        op,
+      ).expect(422);
+    for (const status of ['RESTRICTED', 'LOCKED'] as UserStatus[]) {
+      await db.setStatus(recipient.id, status);
+      await post(
+        '/operations/simulator/topups',
+        { recipientId: recipient.id, amount: 1000 },
+        op,
+      ).expect(409);
+    }
+    expect(
+      await db.c.topup_intents.countDocuments({ ownerId: recipient.id }),
+    ).toBe(0);
+  });
+  it('concurrent operator confirmations share one posting; current permissions precede replay', async () => {
+    const op = await reader(['TEST_OPERATOR']),
+      recipient = await reader(),
+      key = randomUUID();
+    const body = { recipientId: recipient.id, amount: 1000 };
+    const gate = await block('users', recipient.id);
+    let calls: Promise<request.Response>[] = [];
+    try {
+      calls = Array.from({ length: 8 }, () =>
+        post('/operations/simulator/topups', body, op, key).then((r) => r),
+      );
+      await gate.contended();
+      await gate.commit();
+    } finally {
+      await gate.close();
+    }
+    const results = await Promise.all(calls);
+    expect(results.every((r) => r.status === 200)).toBe(true);
+    expect(new Set(results.map((r) => r.body.id)).size).toBe(1);
+    expect(await available(recipient)).toBe(1000);
+    await db.removeRole(op.id, 'TEST_OPERATOR');
+    await post('/operations/simulator/topups', body, op, key).expect(403);
+  });
+  it('recipient state changes racing a new topup are checked after participant lock', async () => {
+    const recipient = await reader(),
+      gate = await block('users', recipient.id);
+    let call: Promise<request.Response>;
+    try {
+      call = post(
+        '/operations/simulator/topups',
+        { recipientId: recipient.id, amount: 1000 },
+        operator,
+      ).then((r) => r);
+      await gate.contended();
+      await gate.db
+        .collection<{ _id: string }>('users')
+        .updateOne(
+          { _id: recipient.id },
+          { $set: { status: 'LOCKED', updatedAt: new Date() } },
+          { session: gate.session },
+        );
+      await gate.commit();
+    } finally {
+      await gate.close();
+    }
+    expect((await call!).status).toBe(409);
+    expect(
+      await db.c.topup_intents.countDocuments({ ownerId: recipient.id }),
+    ).toBe(0);
+  });
+  it('disabled simulator refuses operator reads and writes', async () => {
+    const config = app.get(ConfigService),
+      secret = config.get<string>('PAYMENT_SIMULATOR_SECRET');
+    config.set('PAYMENT_SIMULATOR_SECRET', '');
+    try {
+      await get('/operations/simulator/topup-recipients', operator).expect(503);
+      await post(
+        '/operations/simulator/topups',
+        { recipientId: (await reader()).id, amount: 1000 },
+        operator,
+      ).expect(503);
+    } finally {
+      config.set('PAYMENT_SIMULATOR_SECRET', secret);
+    }
+  });
   it('two contenders for the last source funds cannot overdraw or mint new capital', async () => {
     const total = await clearingBalance();
     let drain = total - 10000000;
@@ -742,6 +959,18 @@ describe('Simulated wallet: real MongoDB and HTTP', () => {
     expect((await Promise.all(calls)).sort()).toEqual([200, 503]);
     expect((await available(a)) + (await available(b))).toBe(10000000);
     expect(await clearingBalance()).toBe(0);
+    const noFunds = await reader();
+    await post(
+      '/operations/simulator/topups',
+      { recipientId: noFunds.id, amount: 1000 },
+      operator,
+    ).expect(503);
+    expect(
+      await db.c.topup_intents.countDocuments({ ownerId: noFunds.id }),
+    ).toBe(0);
+    expect(
+      await db.c.wallet_accounts.countDocuments({ ownerId: noFunds.id }),
+    ).toBe(0);
     expect(
       await db.c.ledger_journals.countDocuments({ type: 'OpeningCapital' }),
     ).toBe(1);

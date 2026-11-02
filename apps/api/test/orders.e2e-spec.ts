@@ -748,7 +748,7 @@ describe('Unpaid DirectDelivery orders HTTP and MongoDB', () => {
     expect(
       Date.parse(buyer.paymentDeadline) - Date.parse(buyer.createdAt),
     ).toBe(900000);
-    expect(buyer.amounts.buyerTotal).toBe(230000);
+    expect(buyer.amounts.buyerTotal).toBe(200000);
     expect(buyer.item.listingRevisionId).toBe(p.quoteBody.expectedListingRevisionId);
     expect(buyer.commitment.status).toBe('Active');
     expect(r.body.affectedListings).toEqual([

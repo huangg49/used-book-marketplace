@@ -25,6 +25,9 @@ sổ cái còn trần riêng 100.000.000đ mỗi dòng.
    `ledger_entries` sang `int|long|double` + `multipleOf: 1`, giữ minimum cũ, nâng maximum
    lên `MONEY_MAX` và thay `$lte: [giá, 1000000]` trong `$expr`. Migration 0008/0009 không
    bị sửa; `AUCTION_MAX_PRICE = 1_000_000` giữ lại chỉ để checksum của chúng không đổi.
+   `0052-free-shipping` (main) và 0054/0056/0057 cùng collMod `point_orders` từ snapshot
+   riêng nên migration chạy sau ghi đè thay đổi của bên kia; `0059-auction-free-shipping-reconcile`
+   áp lại validator gộp, không sửa checksum đã áp dụng.
 4. Contract nâng maximum của các trường tiền đấu giá, sự cố tại điểm và ví (số dư, đang
    giữ, lịch sử) lên `MONEY_MAX`.
 5. Vốn mô phỏng tăng từ 100.000.000đ lên `SIMULATED_CAPITAL = 1.000.000.000.000đ` để người

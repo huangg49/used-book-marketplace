@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { z } from "zod";
 import { session } from "../lib/session";
 import type { DirectOrder } from "../services/orders";
+import { useOrderShipment } from "../hooks/useOrderShipment";
 import styles from "./DirectOrders.module.css";
 
 const receipt = z.object({ entityId: z.string().uuid() });
@@ -11,11 +12,6 @@ const evidenceSchema = z.object({
   items: z.array(
     z.object({ id: z.string().uuid(), status: z.enum(["Pending", "Ready"]) }),
   ),
-});
-const shipmentSchema = z.object({
-  trackingCode: z.string(),
-  pickupConfirmed: z.boolean(),
-  state: z.string(),
 });
 type Upload = {
   file: File;
@@ -32,24 +28,7 @@ export function OrderShipping({
   order: DirectOrder;
   onChange: () => void;
 }) {
-  const shipment = useQuery({
-    queryKey: ["order-shipment", order.id],
-    queryFn: async () => {
-      try {
-        return await session.request(
-          `/me/orders/${order.id}/shipment`,
-          shipmentSchema,
-        );
-      } catch (cause) {
-        // No shipment yet is a stable empty result. Treating it as an error
-        // unmounts the forms on every poll, interrupting the native file picker.
-        if (cause instanceof ApiError && cause.status === 404) return null;
-        throw cause;
-      }
-    },
-    retry: false,
-    refetchInterval: 5000,
-  });
+  const shipment = useOrderShipment(order.id);
   const evidence = useQuery({
     queryKey: ["order-packaging", order.id],
     queryFn: () =>
@@ -285,6 +264,7 @@ export function OrderShipping({
           </form>
         </>
       )}
+
     </div>
   );
 }

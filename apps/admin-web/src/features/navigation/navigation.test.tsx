@@ -11,13 +11,31 @@ const paths = (user: CurrentUser | undefined) => navigationGroups(user).flatMap(
 describe("workspace navigation permissions", () => {
   it("shows Staff's desks without Admin decisions, directory or catalog review", () => {
     expect(paths({ ...base, roles: ["STAFF"] })).toEqual([
-      "/dashboard", "/review/listings", "/ai-review-checks", "/operations/exchange-disputes", "/transaction-reviews", "/operations/intakes", "/operations/collections", "/operations/incidents",
+      "/dashboard",
+      "/review/listings",
+      "/ai-review-checks",
+      "/transaction-reviews",
+      "/operations/exchange-disputes",
+      "/operations/intakes",
+      "/operations/collections",
+      "/operations/incidents",
     ]);
   });
   it("does not give an Admin without Staff the custody desks or carrier simulator", () => {
     expect(paths({ ...base, roles: ["ADMIN"] })).toEqual([
-      "/dashboard", "/review/listings", "/ai-review-checks", "/operations/exchange-disputes", "/transaction-reviews", "/review/catalog-requests", "/operations/incidents",
-      "/operations/resolutions", "/operations/auctions", "/operations/escalations", "/operations/points", "/support", "/users",
+      "/dashboard",
+      "/users",
+      "/support",
+      "/review/catalog-requests",
+      "/review/listings",
+      "/ai-review-checks",
+      "/transaction-reviews",
+      "/operations/exchange-disputes",
+      "/operations/points",
+      "/operations/auctions",
+      "/operations/resolutions",
+      "/operations/incidents",
+      "/operations/escalations",
     ]);
   });
   it("limits TEST_OPERATOR to the dashboard and carrier simulator", () => {

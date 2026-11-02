@@ -1,3 +1,4 @@
+import { ExchangeEvidenceReview } from "./exchange-evidence-review";
 import { useQuery } from "@tanstack/react-query";
 import { useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
@@ -19,9 +20,10 @@ export function ExchangeDisputesPage() {
 }
 
 function ExchangeDisputesContent() {
+  const user = useOutletContext<CurrentUser>();
   const panel = useQueuePanel();
   const result = useQuery({
-    queryKey: ["operations", "exchange-disputes"],
+    queryKey: ["operations", "exchange-disputes", user.id],
     queryFn: () =>
       session.request("/operations/exchanges/resolutions", exchangeDisputeResolutionsList),
     refetchInterval: refetchWhileClosed(panel),
@@ -67,14 +69,65 @@ function ExchangeDisputesContent() {
   );
 }
 
+type ParsedDisputeReason = {
+  category: string;
+  detail: string;
+  videoName: string;
+  imageName: string;
+};
+
+function parseDisputeReason(reason: string): ParsedDisputeReason {
+  let category = "";
+  let detail = "";
+  let videoName = "";
+  let imageName = "";
+
+  const lines = reason.split("\n");
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("[Sự cố]:")) {
+      category = trimmed.replace("[Sự cố]:", "").trim();
+    } else if (trimmed.startsWith("[Chi tiết]:")) {
+      detail = trimmed.replace("[Chi tiết]:", "").trim();
+    } else if (trimmed.startsWith("[Video unboxing]:")) {
+      videoName = trimmed.replace("[Video unboxing]:", "").trim();
+    } else if (trimmed.startsWith("[Ảnh bằng chứng]:")) {
+      imageName = trimmed.replace("[Ảnh bằng chứng]:", "").trim();
+    }
+  }
+
+  return {
+    category,
+    detail: detail || (!category && !videoName && !imageName ? reason : ""),
+    videoName,
+    imageName,
+  };
+}
+
 function DisputeDetail({ item }: { item: ExchangeDisputeItem }) {
+  const parsed = parseDisputeReason(item.disputeReason || "");
+  const user = useOutletContext<CurrentUser>();
+
   return (
-    <div className={styles.details}>
-      <div>
+    <div className={styles.disputeContent}>
+      <div className={styles.reasonSection}>
         <strong>Lý do cần xử lý:</strong>
-        <p className={styles.reason}>
-          {item.disputeReason || "Không có lý do chi tiết"}
-        </p>
+        {parsed.category ? (
+          <div className={styles.reasonSummary}>
+            <span className={styles.categoryBadge}>{parsed.category}</span>
+            <p className={styles.reasonText}>{item.disputeReason}</p>
+          </div>
+        ) : (
+          <p className={styles.reasonText}>
+            {item.disputeReason || "Không có lý do chi tiết"}
+          </p>
+        )}
+
+        <details className={styles.evidenceToggleWrapper}
+          onToggle={event => { if (!event.currentTarget.open) event.currentTarget.querySelectorAll('video').forEach(video => video.pause()); }}>
+          <summary className={styles.evidenceToggleBtn}>Xem ảnh &amp; video bằng chứng</summary>
+          <ExchangeEvidenceReview key={user.id + ':' + item.id} id={item.id} userId={user.id} />
+        </details>
       </div>
 
       <div className={styles.parties}>

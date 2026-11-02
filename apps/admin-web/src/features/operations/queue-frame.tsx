@@ -190,7 +190,7 @@ export function OperationsQueue({
   );
 }
 
-function OperationReceipt({
+export function OperationReceipt({
   value,
   present,
 }: {

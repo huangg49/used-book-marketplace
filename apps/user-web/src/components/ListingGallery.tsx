@@ -61,7 +61,7 @@ export function ListingGallery({ book }: { book: PublicListing }) {
           key={book.id + current}
           book={book}
           photoIndex={current}
-          fit={current === 0 ? "cover" : "contain"}
+          fit="contain"
           eager
           alt={`Ảnh ${current + 1} của ${listingTitle(book)}`}
         />
@@ -91,7 +91,10 @@ export function ListingGallery({ book }: { book: PublicListing }) {
               type="button"
               aria-label={`Xem ảnh ${position + 1}`}
               aria-pressed={current === position}
-              onClick={() => setIndex(position)}
+              onClick={(event) => {
+                setIndex(position);
+                event.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+              }}
             >
               <Thumbnail book={book} index={position} />
               <span>{position + 1}</span>
