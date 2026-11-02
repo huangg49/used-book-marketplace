@@ -17,6 +17,12 @@
   selector màn phục hồi thay form chọn sách. Bắt/sửa bảng tài chính vẫn lộ cache
   khi403: nay401/403/404ẩn tiền,503giữ có cảnh báo; full file23unit và browser
   Exchange API/MongoPASS, retry khôi phục/desktop/320px130% đã kiểm. Head mới theo PR.
+- CI269fcd7f:9PASS/2FAIL; API Mongo62PASS, E2E885PASS/1FAIL/4liveSKIP.
+  Lỗi test đếm tổng HumanAudit+AiRecheck=1 đã sửa bằng buộc cả2loại; revoke kiểm
+  cả tạo StaffOverride và xác nhận HumanAudit có sẵn; full file32PASS QA/fake AI.
+  Wallet lỗi label retry bị
+  refetch nền đổi lại “Xem thêm”; test tái hiện refetch, giữ cursor và2ledger thật,
+  full browser WalletPASS. Trạng thái cuối theo đúng head PR89, không suy main xanh.
 - Giữ snapshot/revalidate/counter sách, exact recovery/identity và tài chính cùng
   preference matching/BrandIcon/dispute UI, Support và AI v2. Web giữ hai hạn72giờ,
   bỏ câu48h/giải phóng sớm; RN giữ chọn sách và recovery, không quay về nhập tiền bù.
@@ -29,11 +35,13 @@
   Expo web32route,32Mongo,156ca E2E riêng biệt có evidence qua các lượt chọn lọc,
   không là full156một lượt/full repo. Browser Exchange3+5+7scenario/Support6PASS.
   Lint không lỗi (warnings cũ API/web),52advisory UI có sẵn. Native/human/provider
-  thật/full E2E/CI source kết hợp NOT RUN; READINESS/AIflag mặc địnhfalse giữ nguyên.
+  thật NOT RUN; full E2E/CI source kết hợp theo PR89 đúng head và skip thực tế;
+  READINESS/AIflag mặc địnhfalse giữ nguyên.
 - CI đúng main add4d615:8PASS/API FAIL ở test AiRecheck chọn nhầm HumanAudit.
   Local đã tái hiện; ca test nay buộc hai nhánh, chọn đúng AiRecheck và assert1bản,
-  không giảm yêu cầu.1targetedPASS/30SKIP rồi full31AI PASS. Cần CI đúng commit
-  kết hợp khi được phép push, không gọi main xanh hoặc human review đã đạt.
+  không giảm yêu cầu.1targetedPASS/30SKIP rồi full31AI PASS ở baseline. Các lỗi
+  test sampling tiếp theo và CI source kết hợp theo PR89; không gọi main xanh
+  hoặc human review đã đạt.
 - QA cuối dọn DB/user/role riêng và dừng mongo-test; Mongo chính27017 vẫn healthy,
   không migrate/reset/seed/dừng. X04/X05/giao nhận/provider và evidence dispute thật
   vẫn cần gói riêng; tênfile/preview mẫu không là upload/custody đã nghiệm thu.

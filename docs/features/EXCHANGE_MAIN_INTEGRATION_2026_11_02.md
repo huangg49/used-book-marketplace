@@ -105,6 +105,23 @@ khôi phục, desktop và320px/130% không tràn. Ảnh `exchange-denied-*` tron
 `apps/user-web/test-results/exchange/` đã xem; không thay brand/motion. Không là
 native/human acceptance hoặc full design critique. Kết quả head mới theo PR89.
 
+Lượt CI `269fcd7f`:9jobPASS, API/User Web đi xa hơn nhưng còn2test lỗi.
+API unit382PASS/1SKIP (shutdown Windows không chạy trên Ubuntu), Mongo62PASS;
+E2E885PASS/1FAIL/4SKIP (4live AI chủ ý opt-in, không gọi provider trên CI).
+Lỗi còn lại cũng từ HumanAudit ngẫu nhiên: private listing có cả HumanAudit và
+AiRecheck trong khi test đếm tổng là1. Test nay buộc audit rate1, yêu cầu đủ2loại
+và giữ đúng lý do flag; ca revoke chạy cả rate0/rate1 để kiểm StaffOverride mới
+và xác nhận HumanAudit hiện có, không phụ thuộc UUID. Không đổi sampling sản phẩm.
+Full file AI sau sửa32/32PASS trên QA riêng, provider fake.
+
+User Web đã PASS Exchange nhưng Wallet FAIL ở label retry phân trang. Log cho
+thấy503 đã hiện cảnh báo, sau đó refetch trang đầu thành công đổi nút từ
+“Thử tải thêm” về “Xem thêm” trong khi cursor và dòng đã tải không đổi. Test chủ
+động tái hiện refetch ở điểm đó, yêu cầu retry cùng cursor gốc, giữ dòng đầu,
+đọc đủ2dòng ledger thật và đối chiếu balanceAfter. Không tăng timeout hoặc đổi
+Wallet UI/API để khớp test. Full browser Wallet sau sửa PASS, gồm provider mô
+phỏng, deadline/cancel/lostACK và balance/history; không là thanh toán VNPay thật.
+
 ## Bằng chứng local
 
 Windows, Node24.22.1/pnpm11.19.0, pnpm install --offline --frozen-lockfile

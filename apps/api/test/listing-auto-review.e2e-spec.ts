@@ -733,76 +733,80 @@ describe('AI listing auto review with MongoDB', () => {
       return { ...l, version: l.version + 1 };
     }
 
-    it('takes an AI approval back to a person, keeping both decisions on record', async () => {
-      const l = await approved();
-      const reason = 'Ảnh bìa có dấu hiệu là bản photo, cần người xem lại.';
-      const receipt = await post(
-        `/operations/listings/${l.id}/auto-review/revoke`,
-        { expectedVersion: l.version, revisionId: l.revisionId, reason },
-        staff,
-      ).expect(200);
-      validates('MutationReceipt', receipt.body);
-      expect(receipt.body.revisionId).not.toBe(l.revisionId);
-      expect(receipt.body.state.moderation).toBe('PendingReview');
+    it.each([0, 1])(
+      'takes an AI approval back to a person, keeping both decisions on record (audit rate %s)',
+      async (auditRate) => {
+        withConfig({ LISTING_AUTO_REVIEW_AUDIT_RATE: auditRate });
+        const l = await approved();
+        const reason = 'Ảnh bìa có dấu hiệu là bản photo, cần người xem lại.';
+        const receipt = await post(
+          `/operations/listings/${l.id}/auto-review/revoke`,
+          { expectedVersion: l.version, revisionId: l.revisionId, reason },
+          staff,
+        ).expect(200);
+        validates('MutationReceipt', receipt.body);
+        expect(receipt.body.revisionId).not.toBe(l.revisionId);
+        expect(receipt.body.state.moderation).toBe('PendingReview');
 
-      expect(await decisions(l.revisionId)).toHaveLength(1);
-      expect(await decisions(receipt.body.revisionId)).toEqual([]);
-      const [override] = await checks(l.revisionId);
-      expect(override).toMatchObject({
-        selection: 'StaffOverride',
-        status: 'Confirmed',
-        resolvedBy: staff.id,
-        note: reason,
-      });
-      const before = await db.c.listing_revisions.findOne({
-        _id: l.revisionId,
-      });
-      const after = await db.c.listing_revisions.findOne({
-        _id: receipt.body.revisionId,
-      });
-      expect(after).toMatchObject({
-        number: before!.number + 1,
-        description: before!.description,
-        salePrice: before!.salePrice,
-      });
-      expect(
-        await db.c.revision_media.countDocuments({
-          revisionId: receipt.body.revisionId,
-        }),
-      ).toBe(2);
-      const audit = await db.c.audit_events.findOne({
-        action: 'revokeAutoApproval',
-        listingId: l.id,
-      });
-      expect(audit).toMatchObject({ actorId: staff.id });
+        expect(await decisions(l.revisionId)).toHaveLength(1);
+        expect(await decisions(receipt.body.revisionId)).toEqual([]);
+        const [override] = await checks(l.revisionId);
+        expect(override).toMatchObject({
+          selection: auditRate === 1 ? 'HumanAudit' : 'StaffOverride',
+          status: 'Confirmed',
+          resolvedBy: staff.id,
+          note: reason,
+        });
+        const before = await db.c.listing_revisions.findOne({
+          _id: l.revisionId,
+        });
+        const after = await db.c.listing_revisions.findOne({
+          _id: receipt.body.revisionId,
+        });
+        expect(after).toMatchObject({
+          number: before!.number + 1,
+          description: before!.description,
+          salePrice: before!.salePrice,
+        });
+        expect(
+          await db.c.revision_media.countDocuments({
+            revisionId: receipt.body.revisionId,
+          }),
+        ).toBe(2);
+        const audit = await db.c.audit_events.findOne({
+          action: 'revokeAutoApproval',
+          listingId: l.id,
+        });
+        expect(audit).toMatchObject({ actorId: staff.id });
 
-      // A later decision is a person's, and the worker keeps its hands off.
-      expect(await service.reviewOne(l.id)).toBe('Escalated');
-      expect((await row(receipt.body.revisionId))!.reasons).toContain(
-        'PreviouslyDecided',
-      );
-      await post(
-        `/operations/listings/${l.id}/decision`,
-        {
-          expectedVersion: receipt.body.version,
-          revisionId: receipt.body.revisionId,
-          decision: 'Reject',
-          reason: 'Đã xem ảnh gốc, đây là bản photo không được phép bán.',
-        },
-        staff,
-      ).expect(200);
-      const history = await get(
-        `/operations/listings/${l.id}/auto-review/history`,
-        staff,
-      ).expect(200);
-      validates('AutoReviewHistory', history.body);
-      expect(history.body.items).toHaveLength(2);
-      expect(history.body.items[0].decision.automated).toBeUndefined();
-      expect(history.body.items[1].decision.automated).toBe(true);
-      expect(history.body.items[1].autoReview.checks[0].resolvedByStaff).toBe(
-        true,
-      );
-    });
+        // A later decision is a person's, and the worker keeps its hands off.
+        expect(await service.reviewOne(l.id)).toBe('Escalated');
+        expect((await row(receipt.body.revisionId))!.reasons).toContain(
+          'PreviouslyDecided',
+        );
+        await post(
+          `/operations/listings/${l.id}/decision`,
+          {
+            expectedVersion: receipt.body.version,
+            revisionId: receipt.body.revisionId,
+            decision: 'Reject',
+            reason: 'Đã xem ảnh gốc, đây là bản photo không được phép bán.',
+          },
+          staff,
+        ).expect(200);
+        const history = await get(
+          `/operations/listings/${l.id}/auto-review/history`,
+          staff,
+        ).expect(200);
+        validates('AutoReviewHistory', history.body);
+        expect(history.body.items).toHaveLength(2);
+        expect(history.body.items[0].decision.automated).toBeUndefined();
+        expect(history.body.items[1].decision.automated).toBe(true);
+        expect(history.body.items[1].autoReview.checks[0].resolvedByStaff).toBe(
+          true,
+        );
+      },
+    );
 
     it('replays a revoke and refuses a stale version', async () => {
       const l = await approved();
@@ -983,6 +987,9 @@ describe('AI listing auto review with MongoDB', () => {
     });
 
     it('rechecks a sample once and flags without unpublishing', async () => {
+      // A HumanAudit may coexist with the one AiRecheck. Exercise both
+      // deterministically rather than depending on the new listing's UUID.
+      withConfig({ LISTING_AUTO_REVIEW_AUDIT_RATE: 1 });
       const l = await approved();
       withConfig({
         LISTING_AUTO_REVIEW_RECHECK_RATE: 1,
@@ -1019,7 +1026,17 @@ describe('AI listing auto review with MongoDB', () => {
         200,
       );
       validates('PrivateListing', detail.body);
-      expect(detail.body.autoReview.checks).toHaveLength(1);
+      expect(detail.body.autoReview.checks).toHaveLength(2);
+      expect(detail.body.autoReview.checks).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ selection: 'HumanAudit', status: 'Open' }),
+          expect.objectContaining({
+            selection: 'AiRecheck',
+            status: 'Open',
+            reasons: ['noAuthenticityRedFlags:Failed'],
+          }),
+        ]),
+      );
     });
 
     it('sweeps due approvals, records a pass, and skips what changed', async () => {
