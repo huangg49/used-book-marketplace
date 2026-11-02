@@ -789,6 +789,19 @@
   border-radius: 6px;
   font-size: 13px;
   caret-color: var(--shop-wine);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.detail :global(.decision-panel textarea:focus),
+.detail :global(.decision-panel textarea:focus-visible) {
+  outline: none !important;
+  border-color: var(--shop-wine) !important;
+  box-shadow: 0 0 0 1px var(--shop-wine) !important;
+}
+.detail :global(.decision-panel textarea[aria-invalid="true"]:focus),
+.detail :global(.decision-panel textarea[aria-invalid="true"]:focus-visible) {
+  outline: none !important;
+  border-color: var(--error) !important;
+  box-shadow: 0 0 0 1px var(--error) !important;
 }
 .detail :global(.decision-panel .field) {
   margin-top: 16px;
@@ -964,6 +977,13 @@
 .workspace :focus-visible {
   outline: 2px solid var(--shop-wine);
   outline-offset: 3px;
+}
+.workspace input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+.workspace textarea:focus-visible,
+.workspace select:focus-visible {
+  outline: none;
+  border-color: var(--shop-wine);
+  box-shadow: 0 0 0 1px var(--shop-wine);
 }
 .workspace ::selection {
   color: var(--shop-cream);

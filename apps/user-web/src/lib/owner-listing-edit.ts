@@ -34,10 +34,39 @@ export function editApprovedBlock(item: EditableListing): string | null {
 export const canEditApproved = (item: EditableListing) =>
   editApprovedBlock(item) === null;
 
+// Returns why editing a listing (Approved, Draft, or Rejected) cannot start, or null when it can.
+export function editListingBlock(item: EditableListing): string | null {
+  const { moderation, visibility, trade } = item.state;
+  if (item.channel === "Auction")
+    return "Bài đấu giá được quản lý ở mục Đấu giá của tôi.";
+  if (visibility === "Removed") return "Bài đã bị gỡ nên không thể sửa.";
+  if (trade === "Reserved")
+    return "Sách đang có giao dịch, chưa sửa được lúc này.";
+  if (trade !== "Available")
+    return "Sách đã hoàn tất giao dịch nên không thể sửa.";
+  if (moderation === "PendingReview")
+    return "Bài đang chờ duyệt. Hãy chờ kết quả rồi sửa tiếp.";
+  if (
+    moderation !== "Approved" &&
+    moderation !== "Draft" &&
+    moderation !== "Rejected"
+  )
+    return "Chỉ bài đã duyệt hoặc bản nháp mới sửa theo cách này.";
+  return null;
+}
+
+export const canEditListing = (item: EditableListing) =>
+  editListingBlock(item) === null;
+
+export const canEditDraft = (item: EditableListing) =>
+  editListingBlock(item) === null &&
+  (item.state.moderation === "Draft" || item.state.moderation === "Rejected");
+
 // A row only explains a blocked edit when the owner could reasonably expect the
 // button (an approved or pending listing); drafts and rejections use other flows.
 export const shouldExplainEditBlock = (item: EditableListing) =>
   !canEditApproved(item) &&
+  !canEditDraft(item) &&
   item.channel !== "Auction" &&
   item.state.visibility !== "Removed" &&
   (item.state.moderation === "Approved" ||

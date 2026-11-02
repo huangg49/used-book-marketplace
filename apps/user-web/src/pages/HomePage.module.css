@@ -987,8 +987,8 @@
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 24px 16px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 20px 14px;
 }
 .more {
   margin: 28px auto 0;
@@ -1124,8 +1124,8 @@
 }
 .exchangeGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: 16px;
 }
 .exchangeBooks .state,
 .exchangeBooks .loading {
@@ -1367,7 +1367,8 @@
 }
 @media (max-width: 1100px) {
   .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px 14px;
   }
   .posting {
     width: calc(100% - 210px);
@@ -1409,7 +1410,8 @@
 }
 @media (max-width: 850px) {
   .grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px 12px;
   }
   .marketplace {
     padding: 0 24px 40px;
@@ -1523,10 +1525,10 @@
   }
   .grid,
   .exchangeGrid {
-    gap: 24px 16px;
+    gap: 14px 10px;
   }
   .grid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .budgetBanners {
     gap: 16px;

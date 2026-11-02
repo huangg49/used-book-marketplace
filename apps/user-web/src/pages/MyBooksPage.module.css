@@ -1,27 +1,33 @@
 .root {
   min-width: 0;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0;
+  padding: 0 0 64px;
 }
 .heading {
   display: flex;
-  align-items: start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(217, 203, 189, 0.65);
 }
 .heading h1 {
-  font-family: var(--shop-display), var(--shop-body);
-  font-weight: 700;
+  font-family: var(--shop-display, "Anton", sans-serif);
+  font-weight: 400;
   color: var(--shop-wine);
-  font-size: clamp(1.85rem, 2.8vw, 2.5rem);
-  line-height: 1.25;
-  margin: 0 0 8px;
-  letter-spacing: normal;
+  font-size: clamp(2rem, 3.2vw, 2.75rem);
+  line-height: 1.2;
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
 }
 .heading p {
-  max-width: 55ch;
+  max-width: 65ch;
   color: var(--shop-muted);
-  font-size: 0.875rem;
-  line-height: 1.7;
+  font-size: 0.9375rem;
+  line-height: 1.6;
   margin: 0;
 }
 .post {
@@ -586,6 +592,27 @@
 .gridEditBtn:hover {
   background: #e6d3bf;
 }
+.gridDraftBtn {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: var(--shop-wine, #5c0202);
+  color: #ffffff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 3px rgba(92, 2, 2, 0.2);
+}
+.gridDraftBtn:hover {
+  background: #7a0b0b;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(92, 2, 2, 0.3);
+}
 .listEditBtn {
   display: inline-flex;
   gap: 5px;
@@ -604,6 +631,38 @@
 }
 .listEditBtn:hover {
   background: #e6d3bf;
+}
+.listDraftBtn {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--shop-wine, #5c0202);
+  color: #ffffff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.15s ease-in-out;
+  margin-top: 4px;
+  box-shadow: 0 1px 3px rgba(92, 2, 2, 0.2);
+}
+.listDraftBtn:hover {
+  background: #7a0b0b;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(92, 2, 2, 0.3);
+}
+.clickableDraftTitle {
+  color: #2b1e16;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.clickableDraftTitle:hover {
+  color: var(--shop-wine, #5c0202);
+  text-decoration: underline;
 }
 .blockReasonNote {
   font-size: 0.75rem;

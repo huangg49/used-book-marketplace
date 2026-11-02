@@ -20,6 +20,7 @@
 - Follow-up `codex/reader-name-status-alignment`, base99ed9620: tên và trạng thái
   đặt cùng hàng, căn giữa; bỏ margin auto của pill trong phạm vi thẻ. PASS browser
   fixture trên checkout app ở1440/1000/390/320/chữ130%, không đổi dữ liệu/API.
+
 - `codex/compact-reader-card`, base792d3942: ReaderCard riêng, chỉ avatar/tên/
   trạng thái và2điểm/link. Bỏ ribbon/Club/email/quick hub trùng menu; chuyển
   gỡ/retry ảnh xuống phần chỉnh sửa, giữ camera/handler/dirty guard. Cùng số mẫu
@@ -29,6 +30,7 @@
   rút gọn/ngoại lệ số mẫu/vi phạm, loading/error/retry, cache/identity/dirty guard;
   typecheck/build/lint scoped. App chính5174 giữ chạy, không push/CI/merge/gate.
   [Chi tiết và checkpoint trước](../ui/PROFILE_REPUTATION_2026_11_03.md).
+
 
 ## Uy tín trong thẻ bạn đọc
 
@@ -43,6 +45,7 @@
   build/lint scoped. Main5174/API3000 thấy5.0/4.5 từ2mẫu và link/Back đúng owner.
 - Không đổi API/contract/profile/review/money data; không DB harness/provider/
   push/CI/merge/native/human acceptance hay gate. [Bằng chứng](../ui/PROFILE_REPUTATION_2026_11_03.md).
+
 
 ## Hồ sơ uy tín công khai — tách layout và sửa xung đột cache
 
@@ -59,6 +62,7 @@
   Giữ SupportLink ở worktree mới; không kéo link support vào runtime0.71 chưa nối.
   [Bằng chứng và giới hạn](../ui/PUBLIC_REPUTATION_2026_11_02.md). App giữ chạy;
   không push/CI/PR/merge/native/human acceptance hoặc đóng gate.
+
 
 ## Nút bỏ chờ48h cho giao dịch đánh giá mẫu local
 

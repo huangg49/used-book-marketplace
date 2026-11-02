@@ -23,7 +23,6 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <HomePage /> },
           { path: '/books', lazy: () => import('../pages/BookSearchPage').then(m => ({ Component: m.BookSearchPage })) },
-          { path: '/cart', lazy: () => import('../pages/CartPage').then(m => ({ Component: m.CartPage })) },
           { path: '/books/:id', lazy: () => import('../pages/BookDetailPage').then(m => ({ Component: m.BookDetailPage })) },
           { path: '/chat', lazy: chatRoute },
           { path: '/chat/orders/:orderId', lazy: orderConversationRoute },
@@ -51,6 +50,7 @@ export const router = createBrowserRouter([
             children: [
               { path: '/account', lazy: () => import('../pages/AccountOverviewPage').then(m => ({ Component: m.AccountOverviewPage })) },
               { path: '/account/work', lazy: () => import('../pages/MemberWorkPage').then(m => ({ Component: m.MemberWorkPage })) },
+              { path: '/cart', lazy: () => import('../pages/CartPage').then(m => ({ Component: m.CartPage })) },
               { path: '/reviews', lazy: () => import('../pages/ReviewsPage').then(m => ({ Component: m.ReviewsPage })) },
               { path: '/support', lazy: () => import('../features/support/SupportPages').then(m=>({Component:m.SupportPage})) },
               { path: '/support/new', lazy: () => import('../features/support/SupportPages').then(m=>({Component:m.NewSupportPage})) },

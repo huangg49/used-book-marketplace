@@ -53,7 +53,7 @@
   right: 0;
   z-index: 30;
   min-width: 100%;
-  max-height: min(260px, 50dvh);
+  max-height: min(380px, 60dvh);
   overflow: auto;
   overscroll-behavior: contain;
   margin: 0;

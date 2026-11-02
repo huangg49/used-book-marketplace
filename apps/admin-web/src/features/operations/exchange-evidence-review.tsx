@@ -25,6 +25,8 @@ export function ExchangeEvidenceReview({
       url: string;
       expiresAt: string;
       name: string;
+      evidenceId: string;
+      mimeType: string;
     }>();
   const [intent, setIntent] = useState<
     | { key: string; body: { expectedVersion: number; reason: string } }
@@ -93,7 +95,7 @@ export function ExchangeEvidenceReview({
       setBusy(false);
     }
   }
-  async function read(eid: string, name: string) {
+  async function read(eid: string, name: string, mimeType: string) {
     setError("");
     setDownload(undefined);
     try {
@@ -102,7 +104,7 @@ export function ExchangeEvidenceReview({
         exchangeEvidenceReadSchema,
         { method: "POST", body: JSON.stringify({ reason: reason.trim() }) },
       );
-      setDownload({ ...r, name });
+      setDownload({ ...r, name, evidenceId: eid, mimeType });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Chưa mở được bằng chứng.");
       await list.refetch();
@@ -176,8 +178,8 @@ export function ExchangeEvidenceReview({
                     {e.fileName} · {e.mimeType} · {Math.ceil(e.byteSize / 1000)}{" "}
                     KB{" "}
                     <button
-                      disabled={reason.trim().length < 5}
-                      onClick={() => void read(e.id, e.fileName)}
+                      disabled={e.status !== "Ready" || reason.trim().length < 5}
+                      onClick={() => void read(e.id, e.fileName, e.mimeType)}
                     >
                       Cấp quyền tải {e.fileName}
                     </button>
@@ -188,13 +190,18 @@ export function ExchangeEvidenceReview({
           )}
         </>
       )}
-      {assigned && !list.isError && download && (
+      {assigned && !list.isError && download &&
+        list.data?.items.some(e => e.id === download.evidenceId && e.status === "Ready") && (
+        <div className={styles.preview}>
+          {download.mimeType.startsWith("image/") && <img src={download.url} alt={`Bằng chứng: ${download.name}`} />}
+          {download.mimeType === "video/mp4" && <video aria-label={`Video bằng chứng: ${download.name}`} src={download.url} controls playsInline preload="metadata">Trình duyệt chưa phát được video. Dùng liên kết tải bên dưới.</video>}
         <p>
           <a href={download.url} target="_blank" rel="noopener noreferrer">
             Tải tệp đã được cấp quyền: {download.name}
           </a>{" "}
           · Liên kết hết hạn sau tối đa 2 phút.
         </p>
+        </div>
       )}
       {error && <Notice tone="error">{error}</Notice>}
     </section>
