@@ -1421,7 +1421,9 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
       operator,
       eventId,
     ).expect(200);
-    return { ...f, id, evidence, shipment, operator, trackingCode };
+    // Gate tests use frozen agreement amounts; free shipping does not add the old 30k fee.
+    const amounts = (await get(`/me/orders/${id}`, f.buyer).expect(200)).body.amounts;
+    return { ...f, id, evidence, shipment, operator, trackingCode, amounts };
   }
   // Explicit historical fixture only: temporarily allow the old transition to
   // produce valid receipt/audit/outbox chains, then restore the production gate
@@ -1538,8 +1540,8 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
     ).expect(409);
     expect(await directEffects(f.id)).toEqual(before);
     expect(await wallet(f.buyer)).toMatchObject({
-      available: 0,
-      transactionHeld: 70000,
+      available: 70000 - f.amounts.buyerTotal,
+      transactionHeld: f.amounts.buyerTotal,
     });
     expect((await wallet(f.seller)).available).toBe(0);
   });
@@ -1667,8 +1669,8 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
               {
                 _id: f.id,
                 sellerId: f.seller.id,
-                buyerTotal: 70000,
-                sellerProceeds: 68000,
+                buyerTotal: f.amounts.buyerTotal,
+                sellerProceeds: f.amounts.sellerProceedsOnCompletion,
               },
               randomUUID(),
               new Date(order.inspectionDeadline!.getTime() + 1),
@@ -1682,8 +1684,8 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
               {
                 _id: f.id,
                 sellerId: f.seller.id,
-                buyerTotal: 70000,
-                sellerProceeds: 68000,
+                buyerTotal: f.amounts.buyerTotal,
+                sellerProceeds: f.amounts.sellerProceedsOnCompletion,
               },
               randomUUID(),
               new Date(order.inspectionDeadline!.getTime() + 1),
@@ -1695,8 +1697,8 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
       }
       expect(await directEffects(f.id)).toEqual(before);
       expect(await wallet(f.buyer)).toMatchObject({
-        available: 0,
-        transactionHeld: 70000,
+        available: 70000 - f.amounts.buyerTotal,
+        transactionHeld: f.amounts.buyerTotal,
       });
       expect((await wallet(f.seller)).available).toBe(0);
       expect(await db.c.listings.findOne({ _id: f.l.entityId })).toMatchObject({
@@ -1777,7 +1779,7 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
         type: "OrderSettlement",
       }),
     ).toBe(0);
-    expect(await wallet(f.buyer)).toMatchObject({ transactionHeld: 70000 });
+    expect(await wallet(f.buyer)).toMatchObject({ transactionHeld: f.amounts.buyerTotal });
   });
   it("release gate preserves historical completed settlement replay without paying twice", async () => {
     const f = await shippedSale();
@@ -1806,7 +1808,7 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
     );
     expect(await directEffects(id)).toEqual(before);
     expect(await wallet(f.buyer)).toMatchObject({ transactionHeld: 0 });
-    expect((await wallet(f.seller)).available).toBe(68000);
+    expect((await wallet(f.seller)).available).toBe(f.amounts.sellerProceedsOnCompletion);
     expect(
       await db.c.ledger_journals.countDocuments({
         orderId: id,

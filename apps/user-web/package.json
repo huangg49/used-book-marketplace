@@ -22,6 +22,7 @@
     "test:reputation:browser": "node tests/member-reputation.mjs",
     "test:profile-reputation:browser": "node tests/profile-reputation.mjs",
     "test:buy-now:browser": "node tests/buy-now.mjs",
+    "test:demo-completion:browser": "node tests/buy-now.mjs --demo-completion",
     "test:seller-order:browser": "node tests/seller-order.mjs",
     "test:order-review:browser": "node tests/order-review.mjs",
     "test:exchange:browser": "node tests/exchange-integration.mjs",

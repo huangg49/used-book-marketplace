@@ -1,8 +1,8 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
-Cập nhật02/11/2026: theo [SESSION_STATE](SESSION_STATE.md). Contract **0.72.0**
-(234operations/37controllers); registry có67
-migration MongoDB (đến0053), không suy từ tiền tố file lớn nhất. Migration
+Cập nhật03/11/2026: theo [SESSION_STATE](SESSION_STATE.md). Contract **0.73.1**
+(235operations/37controllers); registry có71
+migration MongoDB (đến0055), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
 Phạm vi28/10: nhóm **bỏ Forum/Cộng đồng sách** theo [ADR0051](../adr/0051-remove-forum-from-project-scope.md).
@@ -129,6 +129,11 @@ Bằng chứng Exchange thêm0054 và hai collection riêng: khi được duyệ
 API/worker, chạy migrate rồi bootstrap role; không reset DB.
 `SUPABASE_EVIDENCE_BUCKET` private riêng, khác bucket listing; project phải hỗ trợ
 MP4 100MB, gate cấu hình hiện còn mở. [ADR0066](../adr/0066-exchange-private-evidence.md).
+Ngoại lệ demo hoàn tất/giải ngân5giây dùng migration0054 và cờ `LOCAL_DEMO_COMPLETION_ENABLED`
+phía BE, false mặc định. Dừng API/worker, backup, migrate/bootstrap rồi chạy source
+mới. Không bật cho Inspection cũ hoặc suy từ đây rằng gate completion đã mở.
+Xem [ADR0067](../adr/0067-local-demo-order-settlement.md) và
+[DEVELOPMENT](../DEVELOPMENT.md#demo-hoàn-tất-đơn-và-giải-ngân-sau-5-giây).
 
 Chạy hằng ngày theo [DEVELOPMENT](../DEVELOPMENT.md): hai terminal cho backend
 và client phụ trách. `dev:api` bật Mongo/API/media+order worker; không bật worker trùng.

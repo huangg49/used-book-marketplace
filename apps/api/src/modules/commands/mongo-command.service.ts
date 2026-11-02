@@ -577,6 +577,7 @@ export class MongoCommandService {
       | 'cancelUnpaidOrder'
       | 'payOrder'
       | 'acceptOrder'
+      | 'startLocalDemoOrderCompletion'
       | 'confirmOrderReceipt'
       | 'emitSimulatedDeliveryEvent'
       | 'reportOrderNonReceipt'
@@ -923,10 +924,12 @@ export class MongoCommandService {
       | 'expireSellerConfirmation'
       | 'expireOrderPickup'
       | 'expireOrderDelivery'
+      | 'completeLocalDemoOrder'
       | 'settleDirectOrder'
       | 'refundOrder' = 'expireOrder',
   ) {
     const systemActor: SystemActor =
+      operation === 'completeLocalDemoOrder' ? 'OrderDemoCompletion' :
       operation === 'expireOrderDelivery'
         ? 'OrderDeliveryExpiry'
         : operation === 'settleDirectOrder'

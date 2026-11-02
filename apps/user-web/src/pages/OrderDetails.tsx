@@ -3,9 +3,10 @@ import { BundleManifest } from "../components/BookBundle";
 import { ListingPhoto } from "../components/BookCard";
 import { ApiError, pendingOrderResponse } from "@used-books/session-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSession } from "../hooks/useSession";
+import { useOrderShipment } from "../hooks/useOrderShipment";
 import { session } from "../lib/session";
 import { buyNowError } from "../lib/buy-now-error";
 import { directDeliveryGuidance } from "../lib/direct-delivery-guidance";
@@ -19,8 +20,10 @@ import {
   orderStates,
   orderTime,
   payOrder,
+  startDemoOrderCompletion,
 } from "../services/orders";
 import { OrderShipping } from "./OrderShipping";
+import { OrderProgress } from "./OrderProgress";
 import { OrderResponse } from "../components/OrderResponse";
 import {
   BookOpen,
@@ -37,31 +40,22 @@ import {
   MapPin,
   Star,
   Package,
-  Check,
 } from "lucide-react";
 import styles from "./DirectOrders.module.css";
 
-const orderSteps = [
-  { id: "create", label: "Đặt đơn" },
-  { id: "payment", label: "Thanh toán" },
-  { id: "preparing", label: "Chuẩn bị" },
-  { id: "shipping", label: "Vận chuyển" },
-  { id: "complete", label: "Hoàn tất" },
-];
-
-function getStepIndex(state: string): number {
+function getStepIndex(state: string, shipmentRegistered: boolean): number {
   switch (state) {
     case "AwaitingPayment":
     case "PaymentExpired":
-      return 1;
-    case "PendingSellerConfirmation":
-    case "Preparing":
       return 2;
-    case "InTransit":
+    case "PendingSellerConfirmation":
       return 3;
+    case "Preparing":
+      return shipmentRegistered ? 4 : 3;
+    case "InTransit":
     case "Inspection":
     case "ResolutionPending":
-      return 3;
+      return 4;
     case "Completed":
       return 5;
     case "Cancelled":
@@ -142,8 +136,9 @@ function AuthenticatedOrderDetails({
     queryKey: ["direct-order", ownerId, orderId],
     queryFn: () => getOrder(orderId),
     retry: false,
-    refetchInterval: 5000,
+    refetchInterval: query => query.state.data?.demoCompletionAt ? 1000 : 5000,
   });
+  const shipment = useOrderShipment(orderId, order.data?.state === "Preparing");
 
   const listingId = order.data?.item.listingId;
   const listing = useQuery({
@@ -155,6 +150,15 @@ function AuthenticatedOrderDetails({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [pendingAction, setPendingAction] = useState<"pay" | "cancel">();
+  const [demoBusy, setDemoBusy] = useState(false);
+  const [demoPending, setDemoPending] = useState(false);
+  const demoAttempt = useRef<{ key: string; version: number } | undefined>(undefined);
+  useEffect(() => {
+    if (order.data?.state !== 'Completed') return;
+    void cache.invalidateQueries({ queryKey: ['wallet-summary', ownerId] });
+    void cache.invalidateQueries({ queryKey: ['wallet-history', ownerId] });
+    void cache.invalidateQueries({ queryKey: ['direct-orders', ownerId] });
+  }, [order.data?.state, cache, ownerId]);
   const attempt = useRef<
     { action: "pay" | "cancel"; key: string; version: number } | undefined
   >(undefined);
@@ -244,7 +248,22 @@ function AuthenticatedOrderDetails({
   const o = order.data;
   const deliveryGuidance = directDeliveryGuidance(o);
   const condition = conditions[o.item.condition as keyof typeof conditions];
-  const currentStepIndex = getStepIndex(o.state);
+  const awaitingPickup = o.state === "Preparing" && !!shipment.data;
+  const currentStepIndex = getStepIndex(o.state, !!shipment.data);
+  async function startShippingDemo() {
+    if (demoBusy || busy || pendingAction || inaccessible || (!o.demoCompletionEnabled && !demoAttempt.current)) return;
+    const intent = demoAttempt.current ?? { key: crypto.randomUUID(), version: o.version };
+    demoAttempt.current = intent; setDemoPending(true); setDemoBusy(true); setError(undefined);
+    try {
+      await startDemoOrderCompletion(orderId, intent.version, intent.key);
+      demoAttempt.current = undefined; setDemoPending(false);
+      await order.refetch();
+    } catch (cause) {
+      const known = cause instanceof ApiError && [400, 401, 403, 404, 409, 422].includes(cause.status);
+      if (known) { demoAttempt.current = undefined; setDemoPending(false); await order.refetch(); }
+      setError(known ? 'Chưa bắt đầu được hoàn tất demo. Kiểm tra quyền và trạng thái đơn.' : 'Chưa xác nhận được kết quả. Thử lại để xác nhận đúng yêu cầu hoàn tất ban đầu.');
+    } finally { setDemoBusy(false); }
+  }
 
   return (
     <section className={className} aria-label="Chi tiết đơn hàng">
@@ -439,7 +458,7 @@ function AuthenticatedOrderDetails({
               <div className={styles.proceduresTitleRow}>
                 <h3 id="order-procedures-heading" className={styles.cardTitle}>Thủ tục đơn hàng</h3>
                 <span className={`${styles.orderStatusPill} ${getStatusPillClass(o.state)}`}>
-                  {orderStates[o.state] ?? "Đang cập nhật"}
+                  {awaitingPickup ? "Chờ bàn giao vận chuyển" : orderStates[o.state] ?? "Đang cập nhật"}
                 </span>
               </div>
               <p className={styles.cardSubtitle}>
@@ -450,23 +469,7 @@ function AuthenticatedOrderDetails({
 
           <div className={styles.cardContent}>
             {/* Thanh tiến trình Stepper 5 bước */}
-            <div className={styles.stepperContainer} aria-label="Tiến trình thủ tục đơn hàng">
-              {orderSteps.map((step, idx) => {
-                const isCompleted = currentStepIndex > idx + 1;
-                const isCurrent = currentStepIndex === idx + 1;
-                return (
-                  <div
-                    key={step.id}
-                    className={`${styles.stepItem} ${isCompleted ? styles.stepCompleted : ""} ${isCurrent ? styles.stepCurrent : ""}`}
-                  >
-                    <div className={styles.stepCircle} aria-hidden="true">
-                      {isCompleted ? <Check size={14} strokeWidth={3} /> : idx + 1}
-                    </div>
-                    <span className={styles.stepLabel}>{step.label}</span>
-                  </div>
-                );
-              })}
-            </div>
+            <OrderProgress currentStep={currentStepIndex} />
 
             {/* KHU VỰC THAO TÁC CÁC BƯỚC THỦ TỤC */}
             <div className={styles.activeProcedureBox}>
@@ -481,7 +484,7 @@ function AuthenticatedOrderDetails({
                   </button>
                 </div>
               )}
-              {/* BƯỚC 1: CHỜ THANH TOÁN (AwaitingPayment) */}
+              {/* BƯỚC 2: CHỜ THANH TOÁN (AwaitingPayment) */}
               {o.state === "AwaitingPayment" && (
                 <div className={styles.procedureSection}>
                   <div className={styles.procedureNoticeWarning}>
@@ -548,7 +551,7 @@ function AuthenticatedOrderDetails({
                 </div>
               )}
 
-              {/* BƯỚC 2: NGƯỜI BÁN XÁC NHẬN ĐƠN (PendingSellerConfirmation) */}
+              {/* BƯỚC 3: NGƯỜI BÁN XÁC NHẬN ĐƠN (PendingSellerConfirmation) */}
               {(o.state === "PendingSellerConfirmation" ||
                 (o.role === "Seller" && pendingOrderResponse(session, o.id))) && (
                 <div className={styles.procedureSection}>
@@ -601,9 +604,11 @@ function AuthenticatedOrderDetails({
                         <div className={styles.procedureNoticeSuccess}>
                           <Package size={20} aria-hidden="true" />
                           <div>
-                            <h4>Người bán đang chuẩn bị sách</h4>
+                            <h4>{awaitingPickup ? "Người bán đã đăng ký vận đơn" : "Người bán đang chuẩn bị sách"}</h4>
                             <p>
-                              Đơn hàng đã được xác nhận. Người bán đang tiến hành đóng gói sách theo đúng quy chuẩn và sẽ bàn giao cho shipper trước thời hạn.
+                              {awaitingPickup
+                                ? `Mã vận đơn: ${shipment.data!.trackingCode}. Đang chờ xác nhận bàn giao sách cho đơn vị vận chuyển.`
+                                : "Đơn hàng đã được xác nhận. Người bán đang tiến hành đóng gói sách theo đúng quy chuẩn và sẽ bàn giao cho shipper trước thời hạn."}
                             </p>
                           </div>
                         </div>
@@ -619,14 +624,14 @@ function AuthenticatedOrderDetails({
                   <div className={styles.procedureNoticeInfo}>
                     <Truck size={22} aria-hidden="true" />
                     <div>
-                      <h4>Kiện hàng đang được giao</h4>
-                      <p>Đơn vị vận chuyển đã nhận sách và đang trên đường giao đến địa chỉ nhận.</p>
+                      <h4>{o.demoCompletionAt ? "Đang hoàn tất và giải ngân đơn demo" : "Kiện hàng đang được giao"}</h4>
+                      <p>{o.demoCompletionAt ? "Hệ thống xử lý mốc 5 giây tại máy chủ. Khi hoàn tất, tiền đang giữ sẽ chuyển vào ví người bán theo số tiền đã chốt." : "Đơn vị vận chuyển đã nhận sách và đang trên đường giao đến địa chỉ nhận."}</p>
                     </div>
                   </div>
 
-                  <div className={styles.shippingFollowUp}>
+                  {!o.demoCompletionAt && <div className={styles.shippingFollowUp}>
                     <OrderShipping key={o.id} order={o} onChange={() => void order.refetch()} />
-                  </div>
+                  </div>}
                 </div>
               )}
 
@@ -704,6 +709,15 @@ function AuthenticatedOrderDetails({
                 </div>
               )}
 
+              {(o.demoCompletionEnabled || demoPending) && (
+                <div className={styles.procedureSection}>
+                  <button type="button" className={styles.secondaryActionBtn} disabled={demoBusy || busy || !!pendingAction}
+                    onClick={() => void startShippingDemo()}>
+                    {demoBusy ? "Đang xác nhận yêu cầu…" : demoPending ? "Thử lại hoàn tất demo" : "Hoàn tất và giải ngân sau 5 giây"}
+                  </button>
+                  <p className={styles.walletHint}>Demo local: kết thúc đơn và chuyển khoản tiền đang giữ vào ví người bán theo giá trị đã chốt.</p>
+                </div>
+              )}
               {/* Thông báo lỗi thao tác (nếu có) */}
               {error && (
                 <div className={styles.errorAlert} role="alert">

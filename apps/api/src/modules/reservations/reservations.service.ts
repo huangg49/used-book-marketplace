@@ -1,3 +1,4 @@
+import { LOCAL_DEMO_COMPLETION_POLICY } from '../../database/mongo/demo-completion-policy.js';
 import {
   intakeContext,
   orderContext,
@@ -356,6 +357,18 @@ export class ReservationsService {
     now: Date,
     receiptId: string,
   ) {
+    return this.closeDirectCompletion(tx, contextId, now, receiptId, false);
+  }
+  async closeLocalDemoCompleted(tx: Tx, contextId: string, now: Date, receiptId: string) {
+    const context = orderContext(await tx.c.workflow_contexts.findOne({ _id: contextId }));
+    const job = context ? await tx.c.local_demo_order_completions.findOne({ _id: context.orderId }) : null;
+    const started = job ? await tx.c.mutation_receipts.findOne({ _id: job.receiptId }) : null;
+    if (!job || job.policy !== LOCAL_DEMO_COMPLETION_POLICY || job.status !== 'Pending' || now < job.dueAt ||
+      started?.operation !== 'startLocalDemoOrderCompletion' || started.actorId !== job.sellerId || started.resultVersion !== 4)
+      throw invalidState();
+    return this.closeDirectCompletion(tx, contextId, now, receiptId, true);
+  }
+  private async closeDirectCompletion(tx: Tx, contextId: string, now: Date, receiptId: string, demo: boolean) {
     const context = orderContext(
       await tx.c.workflow_contexts.findOne({ _id: contextId }),
     );
@@ -375,10 +388,9 @@ export class ReservationsService {
       !context ||
       !order ||
       context.ownershipPhase !== 'Holding' ||
-      order.state !== 'Inspection' ||
-      !order.inspectionDeadline ||
-      now < order.inspectionDeadline ||
-      !settled ||
+      (demo ? order.state !== 'InTransit' || order.version !== 4 || order.demoCompletionPolicy !== LOCAL_DEMO_COMPLETION_POLICY
+        : order.state !== 'Inspection' || !order.inspectionDeadline || now < order.inspectionDeadline) ||
+      !settled || settled.receiptId !== receiptId ||
       !hold ||
       (await balanceOf(tx, hold._id)) !== 0
     )

@@ -1,3 +1,5 @@
+import { LocalDemoCompletionPolicy } from '../wallet/local-demo-completion.policy.js';
+import { LOCAL_DEMO_COMPLETION_MS, LOCAL_DEMO_COMPLETION_POLICY } from '../../database/mongo/demo-completion-policy.js';
 import { ConversationAgreementsService } from '../purchases/conversation-agreements.service.js';
 import { PurchasesService } from '../purchases/purchases.service.js';
 import { orderContext } from '../reservations/workflow-context.js';
@@ -101,6 +103,7 @@ export class OrdersService {
     private readonly storage: MediaStorage,
     private readonly ledger: LedgerService,
     private readonly directRelease: DirectOrderReleasePolicy,
+    private readonly localDemo: LocalDemoCompletionPolicy,
   ) {}
   private async order(tx: Tx, id: string) {
     const o = await loadOrder(tx.c, id);
@@ -1127,6 +1130,64 @@ export class OrdersService {
       'expireOrderDelivery',
     );
   }
+  startLocalDemoCompletion(context: CommandContext, id: string, body: Wire['StartDemoOrderCompletion']) {
+    return this.commands.runOrder(context, 'startLocalDemoOrderCompletion', id, body, {
+      discover: async tx => { const o = await this.own(tx, id, context.auth.user.id); return [o.buyerId, o.sellerId]; },
+      authorize: async (tx, actor) => {
+        member(actor, true); this.localDemo.assertAllowed(id);
+        const o = await this.own(tx, id, actor._id);
+        if (o.sellerId !== actor._id) throw new DomainError(403, 'FORBIDDEN', 'Chỉ người bán của đơn demo được bắt đầu hoàn tất nhanh.');
+        await this.decision(tx, context.auth);
+        return o;
+      },
+      mutate: async (tx, actor, _before, receiptId) => {
+        const { o, commitment } = await this.locked(tx, id);
+        if (o.version !== body.expectedVersion) throw conflict();
+        if (o.state !== 'Preparing' || o.version !== 3 || !o.preparation || commitment.status !== 'Active' ||
+          o.preparation.pickupReview || await tx.c.carrier_pickup_reviews.findOne({ orderId: id }) ||
+          await tx.c.order_delivery_reviews.findOne({ orderId: id }) || await tx.c.order_non_receipt_reports.findOne({ orderId: id }) ||
+          await tx.c.local_demo_order_completions.findOne({ _id: id })) throw invalidState();
+        const shipment = await tx.c.direct_shipments.findOne({ orderId: id, carrier: 'LatLaiSimulator' });
+        if (!shipment) throw invalidState('Cần đăng ký vận đơn trước khi hoàn tất demo.');
+        await this.ledger.lockOrder(tx, o.buyerId, id, false);
+        if ((await this.ledger.orderFunds(tx, id)).held !== o.quote.buyerTotal) throw invalidState();
+        const now = await this.decision(tx, context.auth);
+        await tx.c.local_demo_order_completions.insertOne({
+          _id: id, policy: LOCAL_DEMO_COMPLETION_POLICY, sellerId: actor._id, shipmentId: shipment._id,
+          receiptId, sourceVersion: o.version, status: 'Pending', createdAt: now, dueAt: new Date(now.getTime() + LOCAL_DEMO_COMPLETION_MS),
+          updatedAt: now, completedAt: null, completionReceiptId: null, lockSeq: 0,
+        });
+        const next = await this.transition(tx, o, { state: 'InTransit', demoCompletionPolicy: LOCAL_DEMO_COMPLETION_POLICY });
+        return { entityType: 'Order', entityId: id, contextId: o.context!._id, version: next.version, state: 'InTransit', decidedAt: now,
+          paymentDeadline: o.paymentDeadline, affectedListings: [], event: 'LocalDemoOrderCompletionStarted', reason: LOCAL_DEMO_COMPLETION_POLICY,
+          before: { state: o.state, version: o.version } };
+      },
+    });
+  }
+  completeLocalDemo(id: string) {
+    return this.commands.expireOrder(id, {
+      discover: async tx => { const o = await this.order(tx, id); return [o.buyerId, o.sellerId]; },
+      authorize: async tx => { this.localDemo.assertAllowed(id); return this.order(tx, id); },
+      mutate: async (tx, _before, receiptId) => {
+        const { o, listing, commitment } = await this.locked(tx, id);
+        const job = await tx.c.local_demo_order_completions.findOne({ _id: id });
+        const now = await this.decision(tx);
+        if (!job || job.status !== 'Pending' || job.policy !== LOCAL_DEMO_COMPLETION_POLICY || now < job.dueAt ||
+          o.state !== 'InTransit' || o.version !== 4 || o.demoCompletionPolicy !== job.policy || commitment.status !== 'Active' ||
+          await tx.c.order_delivery_reviews.findOne({ orderId: id }) || await tx.c.carrier_pickup_reviews.findOne({ orderId: id }) ||
+          await tx.c.order_non_receipt_reports.findOne({ orderId: id })) throw invalidState();
+        await this.ledger.settleLocalDemoOrder(tx, { _id: id, sellerId: o.sellerId, buyerTotal: o.quote.buyerTotal, sellerProceeds: o.quote.sellerProceeds }, receiptId, now);
+        await this.reservations.closeLocalDemoCompleted(tx, o.context!._id, now, receiptId);
+        await this.closeContext(tx, o.context!);
+        const sold = await this.listings.project(tx, listing.id, listing.version, 'Reserved', 'Sold');
+        const next = await this.transition(tx, o, { state: 'Completed', deliveredAt: now, inspectionDeadline: null, completedAt: now, closedAt: now });
+        await tx.c.local_demo_order_completions.updateOne({ _id: id, status: 'Pending' }, { $set: { status: 'Completed', updatedAt: now, completedAt: now, completionReceiptId: receiptId }, $inc: { lockSeq: 1 } });
+        return { entityType: 'Order', entityId: id, contextId: o.context!._id, version: next.version, state: 'Completed', decidedAt: now,
+          paymentDeadline: o.paymentDeadline, affectedListings: [{ id: sold.id, version: sold.version }], event: 'DirectOrderSettled',
+          reason: LOCAL_DEMO_COMPLETION_POLICY, before: { state: o.state, version: o.version } };
+      },
+    }, 'completeLocalDemoOrder');
+  }
   settle(id: string) {
     return this.commands.expireOrder(
       id,
@@ -1402,6 +1463,11 @@ export class OrdersService {
           inspectionDeadline: o.inspectionDeadline?.toISOString() ?? null,
           completedAt: o.completedAt?.toISOString() ?? null,
           canConfirmReceipt: false as const,
+          demoCompletionEnabled: role === 'Seller' && actor.status === 'ACTIVE' && this.localDemo.allows(id) && o.state === 'Preparing' &&
+            !!(await tx.c.direct_shipments.findOne({ orderId: o._id, carrier: 'LatLaiSimulator' })) &&
+            !(await tx.c.local_demo_order_completions.findOne({ _id: o._id })),
+          demoCompletionAt: (await tx.c.local_demo_order_completions.findOne({ _id: o._id, status: 'Pending' }))?.dueAt.toISOString() ?? null,
+
           carrierReview: carrierReview
             ? {
                 id: carrierReview._id,

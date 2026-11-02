@@ -2086,6 +2086,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orders/{orderId}/demo-completion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Local demo only, disabled by default and enabled by the server LOCAL_DEMO_COMPLETION_ENABLED switch. Current ACTIVE seller MEMBER starts a durable five-second completion job for a paid Preparing Order with registered shipment. At the due time the server completes this exact Order and posts the frozen hold to seller proceeds and platform commission once. No normal receipt/settlement gate is opened. */
+        post: operations["startDemoOrderCompletion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orders/{orderId}/pay": {
         parameters: {
             query?: never;
@@ -5686,6 +5703,13 @@ export interface components {
         };
         /** @description Private DirectDelivery Order including funding, pre-confirmation refund, seller acceptance and overdue pickup review. Historical schema name retained. shippingAddress is the frozen buyer destination, disclosed only to the accepted Seller. Review is an unresolved task, never proof of custody, strike or refund. Shipment registration is available through its separate endpoint; independent pickup simulation can advance InTransit or open carrierReview/ResolutionPending. Review resolution handlers remain planned. */
         PrivateUnpaidOrder: {
+            /** @description Local-demo seller command; enabled only when the server demo switch is on and the current seller/order is eligible. */
+            demoCompletionEnabled?: boolean;
+            /**
+             * Format: date-time
+             * @description Durable server completion due time; the actual Order remains authoritative.
+             */
+            demoCompletionAt?: string | null;
             /**
              * Format: uuid
              * @description The conversation linked to this exact Order, or null before it is opened. Does not grant chat access to LOCKED accounts.
@@ -5949,6 +5973,7 @@ export interface components {
             /** Format: date-time */
             serverTime: string;
         };
+        StartDemoOrderCompletion: components["schemas"]["PayOrder"];
         PayOrder: {
             expectedVersion: number;
         };
@@ -11586,6 +11611,45 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MyOrderPage"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    startDemoOrderCompletion: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                orderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartDemoOrderCompletion"];
+            };
+        };
+        responses: {
+            /** @description Successful operation. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionCommandReceipt"];
                 };
             };
             400: components["responses"]["ListingError"];

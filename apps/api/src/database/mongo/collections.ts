@@ -26,6 +26,7 @@ import type * as D from './documents.js';
 
 // Collection name -> document type. One entry per collection in the baseline.
 export interface CollectionTypes {
+  local_demo_order_completions: D.LocalDemoOrderCompletionDoc;
   support_cases: D.SupportCaseDoc;
   support_messages: D.SupportMessageDoc;
   users: D.UserDoc;
@@ -208,6 +209,7 @@ export type Collections = {
 };
 
 const NAMES: CollectionName[] = [
+  'local_demo_order_completions',
   'users',
   'member_carts',
   'support_cases',

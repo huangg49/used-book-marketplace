@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.73.0
+  version: 0.73.1
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -5870,6 +5870,70 @@ paths:
         "503":
           $ref: "#/components/responses/ListingError"
       x-locked-access: existing-obligations
+  /orders/{orderId}/demo-completion:
+    post:
+      operationId: startDemoOrderCompletion
+      tags:
+        - Orders
+      x-implementation-status: implemented
+      description: Local demo only, disabled by default and enabled by the server LOCAL_DEMO_COMPLETION_ENABLED switch. Current ACTIVE seller MEMBER starts a durable five-second completion job for a paid Preparing Order with registered shipment. At the due time the server completes this exact Order and posts the frozen hold to seller proceeds and platform commission once. No normal receipt/settlement gate is opened.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartDemoOrderCompletion"
+      responses:
+        "200":
+          description: Successful operation.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /orders/{orderId}/pay:
     post:
       operationId: payOrder
@@ -16957,6 +17021,13 @@ components:
         - completedAt
         - canConfirmReceipt
       properties:
+        demoCompletionEnabled:
+          type: boolean
+          description: Local-demo seller command; enabled only when the server demo switch is on and the current seller/order is eligible.
+        demoCompletionAt:
+          type: [string, "null"]
+          format: date-time
+          description: Durable server completion due time; the actual Order remains authoritative.
         conversationId:
           type: [string, "null"]
           format: uuid
@@ -17603,6 +17674,8 @@ components:
         serverTime:
           type: string
           format: date-time
+    StartDemoOrderCompletion:
+      $ref: '#/components/schemas/PayOrder'
     PayOrder:
       type: object
       additionalProperties: false
