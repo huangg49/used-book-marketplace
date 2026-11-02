@@ -39,7 +39,10 @@ describe('support and AI auto review schema integration', () => {
         await migrate(
           client,
           db,
-          migrations.filter((m) => !ids.includes(m.id)),
+          // Only what precedes the union: later migrations belong to the upgrade.
+          migrations
+            .slice(0, migrations.findIndex((m) => m.id === ids[2]))
+            .filter((m) => !ids.includes(m.id)),
         );
         const initialIds =
           lane === 'auto-first'

@@ -9,8 +9,6 @@ import {
     MapPin, 
     Plus, 
     CheckCircle2,
-    Edit3,
-    Send,
     AlertTriangle,
     Lock
 } from 'lucide-react';
@@ -51,17 +49,11 @@ const addressReceiptSchema = z.object({
   version: z.number().int(),
 });
 
-export interface CustomTerms {
-  diffAmount: number;
-  diffPayer: 'initiator' | 'recipient' | 'none';
-}
-
 interface AcceptExchangeDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (data: {
     deliveryAddressId?: string;
-    customTerms?: CustomTerms;
   }) => Promise<void>;
   isBusy: boolean;
   detail: ExchangeDetail;
@@ -83,12 +75,6 @@ export function AcceptExchangeDialog({
   const [newLocalityCode, setNewLocalityCode] = useState('');
   const [newDetail, setNewDetail] = useState('');
   const [error, setError] = useState('');
-
-  // Compensation customization state
-  const isCompensationLocked = detail.viewerRole === 'proposer';
-  const [isEditingComp, setIsEditingComp] = useState(false);
-  const [compPayerOption, setCompPayerOption] = useState<'default' | 'none' | 'viewer_pays' | 'partner_pays'>('default');
-  const [customCompAmountStr, setCustomCompAmountStr] = useState('');
 
   const addresses = useQuery({
     queryKey: ['address-book'],
@@ -112,9 +98,6 @@ export function AcceptExchangeDialog({
     if (isOpen) {
       setError('');
       setAddressMode('existing');
-      setIsEditingComp(false);
-      setCompPayerOption('default');
-      setCustomCompAmountStr(detail.moneyAmount ? Number(detail.moneyAmount).toLocaleString('vi-VN') : '0');
 
       if (addresses.data?.items?.length) {
         const def = addresses.data.items.find((a) => a.isDefault) ?? addresses.data.items[0];
@@ -140,28 +123,11 @@ export function AcceptExchangeDialog({
     compensationNotice = `Đối tác (${detail.partner.username}) sẽ bù thêm cho bạn: ${formatVnd(moneyAmount)}`;
   }
 
-  // Parsed custom amount
-  const parsedCustomAmount = parseInt(customCompAmountStr.replace(/\D/g, ''), 10) || 0;
-
-  // Effective notice & preview funding amount
-  let effectiveCompensationNotice = compensationNotice;
-  let effectiveFundingAmount = detail.viewerFundingAmount ?? totalReceivePrice;
-
-  if (compPayerOption === 'none') {
-    effectiveCompensationNotice = 'Đổi ngang giá (0 đ bù trừ)';
-    effectiveFundingAmount = totalReceivePrice;
-  } else if (compPayerOption === 'viewer_pays') {
-    effectiveCompensationNotice = `Bạn cần bù thêm: ${formatVnd(parsedCustomAmount)}`;
-    effectiveFundingAmount = totalReceivePrice + parsedCustomAmount;
-  } else if (compPayerOption === 'partner_pays') {
-    effectiveCompensationNotice = `Đối tác (${detail.partner.username}) sẽ bù thêm cho bạn: ${formatVnd(parsedCustomAmount)}`;
-    effectiveFundingAmount = totalReceivePrice;
-  }
-
+  const effectiveCompensationNotice = compensationNotice;
+  const effectiveFundingAmount = detail.viewerFundingAmount ?? totalReceivePrice;
   const availableBalance = wallet.data?.available ?? 0;
   const isBalanceSufficient = availableBalance >= effectiveFundingAmount;
   const missingBalance = Math.max(0, effectiveFundingAmount - availableBalance);
-  const isTermsModified = compPayerOption !== 'default';
 
   const defaultAddr = addresses.data?.items.find((a) => a.isDefault) ?? addresses.data?.items[0];
   const defaultRecipientName = defaultAddr?.recipientName || '';
@@ -170,23 +136,6 @@ export function AcceptExchangeDialog({
   const handleConfirmSubmit = async () => {
     setError('');
     let finalAddressId = selectedAddressId;
-
-    // Validate compensation if customized
-    let customTerms: CustomTerms | undefined = undefined;
-    if (!isCompensationLocked && compPayerOption !== 'default') {
-      if (compPayerOption === 'none') {
-        customTerms = { diffAmount: 0, diffPayer: 'none' };
-      } else {
-        if (parsedCustomAmount <= 0) {
-          setError('Vui lòng nhập số tiền bù lớn hơn 0 đ (hoặc chọn "Đổi ngang giá 0 đ").');
-          return;
-        }
-        customTerms = {
-          diffAmount: parsedCustomAmount,
-          diffPayer: compPayerOption === 'viewer_pays' ? 'recipient' : 'initiator',
-        };
-      }
-    }
 
     try {
       if (addressMode === 'new') {
@@ -240,7 +189,6 @@ export function AcceptExchangeDialog({
 
       await onConfirm({
         deliveryAddressId: finalAddressId || undefined,
-        customTerms,
       });
       onClose();
     } catch (err: unknown) {
@@ -337,138 +285,20 @@ export function AcceptExchangeDialog({
               <h3 className={styles.sectionTitle}>
                 <Banknote size={15} /> Thỏa thuận tài chính
               </h3>
-              {isCompensationLocked ? (
-                <div className={styles.lockedBadge}>
-                  <Lock size={12} /> Đã khóa theo điều khoản chốt
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.btnEditCompToggle}
-                  onClick={() => setIsEditingComp((prev) => !prev)}
-                  title="Thay đổi số tiền bù chênh lệch nếu đã thương lượng trong chat"
-                >
-                  <Edit3 size={13} />
-                  {isEditingComp ? 'Đóng chỉnh sửa' : 'Thương lượng tiền bù'}
-                </button>
-              )}
+              <div className={styles.lockedBadge}><Lock size={12} /> Theo giá trị sách đã duyệt</div>
             </div>
 
             <div className={styles.financialBox}>
-              <div className={styles.financialRow}>
-                <Banknote size={18} className={styles.financialIcon} />
-                <div className={styles.financialContent}>
-                  <p className={styles.financialLabel}>Tiền bù chênh lệch</p>
-                  <p className={styles.financialDesc}>
-                    <span className={styles.highlightAmount}>{effectiveCompensationNotice}</span>
-                  </p>
-                  {isCompensationLocked ? (
-                    <div className={styles.compNoticeLocked}>
-                      🔒 Số tiền bù đã được thống nhất trong thương lượng và khóa cố định theo điều khoản chốt.
-                    </div>
-                  ) : compPayerOption !== 'default' ? (
-                    <div className={styles.compNoticeChanged}>
-                      * Đã điều chỉnh theo thỏa thuận chốt với đối tác
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              {!isCompensationLocked && isEditingComp && (
-                <div className={styles.compEditContainer}>
-                  <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>
-                    Chọn điều khoản tài chính đã thống nhất trong chat:
-                  </p>
-
-                  <label className={styles.compRadioOption}>
-                    <input
-                      type="radio"
-                      name="compPayer"
-                      className={styles.compRadioInput}
-                      checked={compPayerOption === 'default'}
-                      onChange={() => setCompPayerOption('default')}
-                    />
-                    <span>Giữ nguyên ban đầu ({compensationNotice})</span>
-                  </label>
-
-                  <label className={styles.compRadioOption}>
-                    <input
-                      type="radio"
-                      name="compPayer"
-                      className={styles.compRadioInput}
-                      checked={compPayerOption === 'none'}
-                      onChange={() => setCompPayerOption('none')}
-                    />
-                    <span><strong>Đổi ngang giá (0 đ)</strong> — Hai bên giao lưu sách, không bên nào bù tiền</span>
-                  </label>
-
-                  <div>
-                    <label className={styles.compRadioOption}>
-                      <input
-                        type="radio"
-                        name="compPayer"
-                        className={styles.compRadioInput}
-                        checked={compPayerOption === 'viewer_pays'}
-                        onChange={() => setCompPayerOption('viewer_pays')}
-                      />
-                      <span><strong>Tôi bù thêm cho đối tác</strong> ({detail.partner.username})</span>
-                    </label>
-                    {compPayerOption === 'viewer_pays' && (
-                      <div className={styles.compAmountInputWrapper}>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          className={styles.compAmountInput}
-                          placeholder="Nhập số tiền..."
-                          value={customCompAmountStr}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '');
-                            setCustomCompAmountStr(val ? Number(val).toLocaleString('vi-VN') : '');
-                          }}
-                        />
-                        <span className={styles.compAmountCurrency}>đ</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className={styles.compRadioOption}>
-                      <input
-                        type="radio"
-                        name="compPayer"
-                        className={styles.compRadioInput}
-                        checked={compPayerOption === 'partner_pays'}
-                        onChange={() => setCompPayerOption('partner_pays')}
-                      />
-                      <span><strong>Đối tác bù thêm cho tôi</strong> ({detail.partner.username})</span>
-                    </label>
-                    {compPayerOption === 'partner_pays' && (
-                      <div className={styles.compAmountInputWrapper}>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          className={styles.compAmountInput}
-                          placeholder="Nhập số tiền..."
-                          value={customCompAmountStr}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '');
-                            setCustomCompAmountStr(val ? Number(val).toLocaleString('vi-VN') : '');
-                          }}
-                        />
-                        <span className={styles.compAmountCurrency}>đ</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
+              <div className={styles.financialRow}><Banknote size={18} className={styles.financialIcon} /><div className={styles.financialContent}>
+                <p className={styles.financialLabel}>Tiền bù tính từ giá trị sách</p><p className={styles.financialDesc}>{effectiveCompensationNotice}</p>
+              </div></div>
               <div className={styles.financialRow}>
                 <ShieldCheck size={18} className={styles.financialIcon} />
                 <div className={styles.financialContent}>
-                  <p className={styles.financialLabel}>Tiền cọc bảo chứng dự kiến của bạn</p>
+                  <p className={styles.financialLabel}>Tổng tiền cần nộp của bạn</p>
                   <p className={styles.financialDesc}>
                     <strong>{formatVnd(effectiveFundingAmount)}</strong>
-                    {' '}(Khoản tiền giữ tạm thời ở Bước 2 và hoàn trả 100% về ví khi giao dịch hoàn tất).
+                    {' '}(Gồm cọc và tiền bù nếu bạn là bên bù. Cọc được hoàn khi giao dịch hoàn tất hợp lệ; tiền bù chuyển cho đối tác).
                   </p>
                   {wallet.data && (
                     <div className={isBalanceSufficient ? styles.balanceOkBadge : styles.balanceWarningBadge}>
@@ -604,17 +434,9 @@ export function AcceptExchangeDialog({
             </div>
           </div>
 
-          {/* Section 4: Notice */}
-          <div className={isTermsModified ? styles.noticeBoxCounter : styles.noticeBox}>
-            {isTermsModified ? (
-              <>
-                <strong>Lưu ý:</strong> Bạn đang điều chỉnh điều khoản tài chính so với đề xuất ban đầu. Khi bạn bấm <em>"Gửi điều khoản chốt cho đối tác"</em>, đề xuất này sẽ được cập nhật và gửi vào khung chat. Đối tác chỉ cần bấm <strong>"Đồng ý"</strong> để chính thức khóa giao dịch và tiến hành đặt cọc.
-              </>
-            ) : (
-              <>
-                <strong>Lưu ý:</strong> Khi bạn bấm <em>"Đồng ý & Khóa giao dịch"</em>, các cuốn sách sẽ được chuyển sang trạng thái <strong>Đã giữ (Reserved)</strong>. Hai bên sẽ có <strong>24 giờ</strong> để hoàn tất khoản đặt cọc bảo chứng trước khi tiến hành gửi sách.
-              </>
-            )}
+          <div className={styles.noticeBox}>
+            Khi chấp nhận, hệ thống kiểm tra lại sách và thỏa thuận trước khi giữ sách.
+            Nếu còn hợp lệ, hai bên có 24 giờ để nộp đủ cọc và tiền bù trước khi gửi sách.
           </div>
 
           {error && <p className={styles.errorText} role="alert">{error}</p>}
@@ -632,19 +454,11 @@ export function AcceptExchangeDialog({
           </button>
           <button
             type="button"
-            className={isTermsModified ? styles.btnConfirmCounter : styles.btnConfirm}
+            className={styles.btnConfirm}
             onClick={handleConfirmSubmit}
             disabled={isBusy}
           >
-            {isTermsModified ? (
-              <>
-                <Send size={15} /> {isBusy ? 'Đang gửi đề xuất...' : 'Gửi điều khoản chốt cho đối tác'}
-              </>
-            ) : (
-              <>
-                <CheckCircle2 size={16} /> {isBusy ? 'Đang xử lý...' : 'Đồng ý & Khóa giao dịch'}
-              </>
-            )}
+            <CheckCircle2 size={16} /> {isBusy ? 'Đang xử lý...' : 'Đồng ý & Khóa giao dịch'}
           </button>
         </div>
       </div>

@@ -9,7 +9,6 @@ import {
     Calendar,
     Clock,
     AlertCircle,
-    Zap,
     ShieldCheck,
     ArrowUpRight,
     ArrowDownLeft,
@@ -21,7 +20,6 @@ import {
     getExchangeShipment,
     getTrackingUrl,
     CARRIERS,
-    simulateCarrierWebhook,
     type ShipmentData
 } from '../../../services/exchangeShipment';
 import styles from './ShippingTrackingCard.module.css';
@@ -54,11 +52,9 @@ interface ShippingTrackingCardProps {
     onRefresh?: () => void;
 }
 
-export function ShippingTrackingCard({ detail, onRefresh }: ShippingTrackingCardProps) {
+export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
     const [copiedCode, setCopiedCode] = useState<string | null>(null);
     const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
-    const [simulatingCode, setSimulatingCode] = useState<string | null>(null);
-    const [webhookNotice, setWebhookNotice] = useState<string | null>(null);
 
     // Retrieve server tracking info with local fallback
     const viewerRole = detail.viewerRole; // 'proposer' (initiator) | 'recipient'
@@ -74,6 +70,8 @@ export function ShippingTrackingCard({ detail, onRefresh }: ShippingTrackingCard
             meetupLocation: detail.viewerShipment.meetupLocation ?? undefined,
             notes: detail.viewerShipment.notes ?? undefined,
             shippedAt: detail.viewerShipment.shippedAt ?? undefined,
+            lastEvent: detail.viewerShipment.lastEvent ?? undefined,
+            lastEventAt: detail.viewerShipment.lastEventAt ?? undefined,
         }
         : null;
 
@@ -86,6 +84,8 @@ export function ShippingTrackingCard({ detail, onRefresh }: ShippingTrackingCard
             meetupLocation: detail.partnerShipment.meetupLocation ?? undefined,
             notes: detail.partnerShipment.notes ?? undefined,
             shippedAt: detail.partnerShipment.shippedAt ?? undefined,
+            lastEvent: detail.partnerShipment.lastEvent ?? undefined,
+            lastEventAt: detail.partnerShipment.lastEventAt ?? undefined,
         }
         : null;
 
@@ -107,28 +107,6 @@ export function ShippingTrackingCard({ detail, onRefresh }: ShippingTrackingCard
         navigator.clipboard.writeText(text);
         setCopiedAddress(text);
         setTimeout(() => setCopiedAddress(null), 2000);
-    };
-
-    const handleSimulateDelivered = async (trackingCode: string) => {
-        setSimulatingCode(trackingCode);
-        setWebhookNotice(null);
-        try {
-            await simulateCarrierWebhook(
-                trackingCode,
-                'DELIVERED',
-                'Bưu tá GHN Express đã giao sách tận tay người nhận thành công tại TP.HCM',
-            );
-            setWebhookNotice(`✓ Đã nhận tín hiệu bưu tá giao hàng (DELIVERED) cho mã ${trackingCode}! Đang cập nhật...`);
-            if (onRefresh) {
-                onRefresh();
-            } else {
-                setTimeout(() => window.location.reload(), 800);
-            }
-        } catch {
-            setWebhookNotice('Có lỗi khi gửi tín hiệu bưu tá giả lập.');
-        } finally {
-            setSimulatingCode(null);
-        }
     };
 
     // Only render when exchange is active or past funding
@@ -398,20 +376,18 @@ export function ShippingTrackingCard({ detail, onRefresh }: ShippingTrackingCard
                                         </div>
                                     )}
 
-                                    {isSent && !isReceived && trackingCode && (
-                                        <div className={styles.webhookBox}>
-                                            <button
-                                                type="button"
-                                                className={styles.webhookBtn}
-                                                onClick={() => void handleSimulateDelivered(trackingCode)}
-                                                disabled={simulatingCode === trackingCode}
-                                            >
-                                                <Zap size={14} className={styles.zapIcon} />
-                                                {simulatingCode === trackingCode ? 'Đang kích hoạt...' : '⚡ Bắn tín hiệu bưu tá giao hàng (DELIVERED)'}
-                                            </button>
-                                            <p className={styles.webhookDesc}>
-                                                Mô phỏng Webhook bưu tá xác nhận đã giao kiện sách thành công để kiểm thử chuyển bước.
-                                            </p>
+                                    {shipment?.lastEvent && (
+                                        <div className={styles.liveTrackingEventBox}>
+                                            <div className={styles.liveTrackingHeader}>
+                                                <Truck size={14} className={styles.liveTrackingIcon} />
+                                                <span className={styles.liveTrackingTag}>Cập nhật từ bưu tá:</span>
+                                                {shipment.lastEventAt && (
+                                                    <span className={styles.liveTrackingTime}>
+                                                        {new Date(shipment.lastEventAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className={styles.liveTrackingText}>{shipment.lastEvent}</p>
                                         </div>
                                     )}
 
@@ -517,12 +493,6 @@ export function ShippingTrackingCard({ detail, onRefresh }: ShippingTrackingCard
                     </div>
                 )}
             </div>
-
-            {webhookNotice && (
-                <div className={styles.webhookAlert}>
-                    <Check size={16} /> {webhookNotice}
-                </div>
-            )}
 
             {bothSent && !bothReceived && (
                 <div className={styles.bothSentBanner}>

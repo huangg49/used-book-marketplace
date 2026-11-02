@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate, Link, useLocation, Navigate } from "react-router-dom";
+import { useExchangeRecovery } from "../hooks/useExchangeRecovery";
+import {
+  useSearchParams,
+  useNavigate,
+  Link,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import {
@@ -10,8 +17,8 @@ import {
   Search,
   FileText,
   PlusCircle,
-  Sparkles,
 } from "lucide-react";
+import { BrandIcon } from "../components/BrandIcon";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import { ROUTES, formatVnd } from "../lib/routes";
@@ -25,6 +32,8 @@ import {
   exchangeCommand,
   exchangeError,
   pendingProposal,
+  createdExchange,
+  exchangeIdentity,
 } from "../services/exchange";
 import { BookCover } from "../components/BookCover";
 import { ConfirmDialog } from "../components/ConfirmDialog";
@@ -90,36 +99,50 @@ async function inventory() {
 
 function checkMatch(
   myBook: { title: string; author: string; category?: string },
-  pref?: { targetCategory?: string | null; targetAuthor?: string | null; targetDescription?: string | null } | null,
+  pref?: {
+    targetCategory?: string | null;
+    targetAuthor?: string | null;
+    targetDescription?: string | null;
+  } | null,
 ) {
   if (!pref) return null;
-  const reasons: string[] = [];
-  if (
+  const matchAuthor = Boolean(
     pref.targetAuthor &&
     pref.targetAuthor.trim() &&
-    myBook.author.toLowerCase().includes(pref.targetAuthor.toLowerCase().trim())
-  ) {
-    reasons.push(`Khớp tác giả "${pref.targetAuthor}"`);
-  }
-  if (
+    myBook.author
+      .toLowerCase()
+      .includes(pref.targetAuthor.toLowerCase().trim()),
+  );
+  const matchCat = Boolean(
     pref.targetCategory &&
     pref.targetCategory.trim() &&
     myBook.category &&
-    (myBook.category.toLowerCase().includes(pref.targetCategory.toLowerCase().trim()) ||
-      pref.targetCategory.toLowerCase().includes(myBook.category.toLowerCase().trim()))
-  ) {
-    reasons.push(`Khớp thể loại "${pref.targetCategory}"`);
-  }
+    (myBook.category
+      .toLowerCase()
+      .includes(pref.targetCategory.toLowerCase().trim()) ||
+      pref.targetCategory
+        .toLowerCase()
+        .includes(myBook.category.toLowerCase().trim())),
+  );
+  let matchDesc = false;
   if (pref.targetDescription && pref.targetDescription.trim()) {
     const descWords = pref.targetDescription
       .toLowerCase()
       .split(/\s+/)
       .filter((w) => w.length >= 3);
-    if (descWords.some((w) => myBook.title.toLowerCase().includes(w))) {
-      reasons.push("Khớp tiêu chí mong muốn");
-    }
+    matchDesc = descWords.some((w) => myBook.title.toLowerCase().includes(w));
   }
-  return reasons.length > 0 ? reasons.join(" · ") : null;
+
+  if (matchAuthor) {
+    return `Đúng gu đối tác · ${pref.targetAuthor}`;
+  }
+  if (matchCat) {
+    return `Đúng thể loại đối tác tìm · ${pref.targetCategory}`;
+  }
+  if (matchDesc) {
+    return "Đúng cuốn đối tác mong muốn";
+  }
+  return null;
 }
 function LegacyExchangeComposePage() {
   const auth = useSession();
@@ -219,6 +242,7 @@ function LegacyExchangeComposePage() {
     if (busy || (!retained && (!hasChosen || !eligible))) return;
     setBusy(true);
     setError("");
+    const identity = exchangeIdentity();
     try {
       const result = await exchangeCommand(
         "/exchanges",
@@ -229,13 +253,15 @@ function LegacyExchangeComposePage() {
           deliveryAddressId: deliveryAddressId || undefined,
         },
       );
+      if (exchangeIdentity() !== identity) return;
       setUnresolved(false);
       navigate(ROUTES.exchangeDetail(result.id), { replace: true });
     } catch (failure) {
+      if (exchangeIdentity() !== identity) return;
       setError(exchangeError(failure));
       setUnresolved(!!pendingProposal());
     } finally {
-      setBusy(false);
+      if (exchangeIdentity() === identity) setBusy(false);
     }
   }
   if (auth.status === "anonymous") {
@@ -386,39 +412,52 @@ function LegacyExchangeComposePage() {
               {targetBook?.exchangePreferences &&
                 Boolean(
                   targetBook.exchangePreferences.targetCategory ||
-                    targetBook.exchangePreferences.targetAuthor ||
-                    targetBook.exchangePreferences.targetDescription,
+                  targetBook.exchangePreferences.targetAuthor ||
+                  targetBook.exchangePreferences.targetDescription,
                 ) && (
                   <div className={styles.prefBanner}>
                     <div className={styles.prefBannerHeader}>
-                      <Sparkles size={16} />
+                      <BrandIcon size={16} />
                       <span>🎯 Tiêu chí mong muốn của chủ sách:</span>
                     </div>
                     <div className={styles.prefDetails}>
                       {targetBook.exchangePreferences.targetCategory && (
                         <div>
-                          <strong>Thể loại tìm kiếm:</strong> {targetBook.exchangePreferences.targetCategory}
+                          <strong>Thể loại tìm kiếm:</strong>{" "}
+                          {targetBook.exchangePreferences.targetCategory}
                         </div>
                       )}
                       {targetBook.exchangePreferences.targetAuthor && (
                         <div>
-                          <strong>Tác giả tìm kiếm:</strong> {targetBook.exchangePreferences.targetAuthor}
+                          <strong>Tác giả tìm kiếm:</strong>{" "}
+                          {targetBook.exchangePreferences.targetAuthor}
                         </div>
                       )}
                       {targetBook.exchangePreferences.targetDescription && (
                         <div>
-                          <strong>Ghi chú:</strong> {targetBook.exchangePreferences.targetDescription}
+                          <strong>Ghi chú:</strong>{" "}
+                          {targetBook.exchangePreferences.targetDescription}
                         </div>
                       )}
                       {(mine.data ?? []).some((b) =>
                         checkMatch(b, targetBook.exchangePreferences),
                       ) ? (
-                        <div style={{ marginTop: 6, color: "#92540c", fontWeight: 600 }}>
-                          ✨ Tuyệt vời! Tủ sách của bạn có cuốn phù hợp với mong muốn đối tác (được ưu tiên xếp đầu).
+                        <div
+                          style={{
+                            marginTop: 6,
+                            color: "#92540c",
+                            fontWeight: 600,
+                          }}
+                        >
+                          ✨ Tuyệt vời! Tủ sách của bạn có cuốn phù hợp với mong
+                          muốn đối tác (được ưu tiên xếp đầu).
                         </div>
                       ) : (
-                        <div style={{ marginTop: 6, color: "var(--ink-muted)" }}>
-                          💡 Bạn vẫn có thể chọn sách khác trên kệ của mình để trao đổi và bù tiền nếu cần.
+                        <div
+                          style={{ marginTop: 6, color: "var(--ink-muted)" }}
+                        >
+                          💡 Bạn vẫn có thể chọn sách khác trên kệ của mình để
+                          trao đổi và bù tiền nếu cần.
                         </div>
                       )}
                     </div>
@@ -442,7 +481,10 @@ function LegacyExchangeComposePage() {
                 {[...(mine.data ?? [])]
                   .map((book) => ({
                     ...book,
-                    matchReason: checkMatch(book, targetBook?.exchangePreferences),
+                    matchReason: checkMatch(
+                      book,
+                      targetBook?.exchangePreferences,
+                    ),
                   }))
                   .sort((a, b) => {
                     if (a.matchReason && !b.matchReason) return -1;
@@ -481,11 +523,13 @@ function LegacyExchangeComposePage() {
                         </div>
                         <div className={styles.selectBookInfo}>
                           <p className={styles.selectBookTitle}>{book.title}</p>
-                          <p className={styles.selectBookAuthor}>{book.author}</p>
+                          <p className={styles.selectBookAuthor}>
+                            {book.author}
+                          </p>
                           <p>{formatVnd(book.value)}</p>
                           {book.matchReason && (
                             <span className={styles.matchedBadge}>
-                              <Sparkles size={11} /> {book.matchReason}
+                              <BrandIcon size={12} /> {book.matchReason}
                             </span>
                           )}
                         </div>
@@ -512,7 +556,8 @@ function LegacyExchangeComposePage() {
                   {hasChosen ? moneyText : "Chọn sách để xem khoản chênh lệch."}
                 </p>
                 <p className={styles.helpTextDesc}>
-                  Máy chủ tính tiền bù từ tổng giá trị đổi của các bản sách hai bên.
+                  Máy chủ tính tiền bù từ tổng giá trị đổi của các bản sách hai
+                  bên.
                 </p>
               </div>
               <div className={styles.formGroupBox}>
@@ -526,17 +571,20 @@ function LegacyExchangeComposePage() {
                   >
                     {addresses.data.items.map((item) => (
                       <option key={item.id} value={item.id}>
-                        {item.recipientName} · {item.phone} · {item.detail} ({item.localityCode})
+                        {item.recipientName} · {item.phone} · {item.detail} (
+                        {item.localityCode})
                       </option>
                     ))}
                   </select>
                 ) : (
                   <p className={styles.helpTextDesc}>
-                    Chưa có địa chỉ lưu sẵn. Bạn có thể thêm địa chỉ nhận hàng tại trang Tài khoản.
+                    Chưa có địa chỉ lưu sẵn. Bạn có thể thêm địa chỉ nhận hàng
+                    tại trang Tài khoản.
                   </p>
                 )}
                 <p className={styles.helpTextDesc}>
-                  Đối tác sẽ thấy địa chỉ này để gửi sách cho bạn sau khi cả hai bên đặt cọc.
+                  Đối tác sẽ thấy địa chỉ này để gửi sách cho bạn sau khi cả hai
+                  bên đặt cọc.
                 </p>
               </div>
             </div>
@@ -567,7 +615,8 @@ function LegacyExchangeComposePage() {
         onConfirm={() => void submit()}
       >
         <div className={styles.summarySection}>
-          <strong>Bạn nhận:</strong> {targetBook.book.title} ({formatVnd(targetBook.exchangeValue ?? 0)})
+          <strong>Bạn nhận:</strong> {targetBook.book.title} (
+          {formatVnd(targetBook.exchangeValue ?? 0)})
         </div>
         <div className={styles.summarySection}>
           <strong>Bạn giao ({chosenBooks.length} cuốn):</strong>
@@ -589,7 +638,9 @@ function LegacyExchangeComposePage() {
           <div className={styles.summarySection}>
             <strong>Địa chỉ nhận của bạn:</strong>{" "}
             {(() => {
-              const a = addresses.data.items.find((item) => item.id === deliveryAddressId);
+              const a = addresses.data.items.find(
+                (item) => item.id === deliveryAddressId,
+              );
               return a ? `${a.recipientName} (${a.phone}) - ${a.detail}` : "";
             })()}
           </div>
@@ -606,8 +657,18 @@ function LegacyExchangeComposePage() {
 }
 
 export default function ExchangeComposePage() {
+  const identity = useExchangeRecovery();
   const [params] = useSearchParams();
-  const id = params.get('book');
-  if (id && !pendingProposal()) return <Navigate replace to={`/chat/start/${id}?intent=Exchange`} />;
-  return <LegacyExchangeComposePage />;
+  const id = params.get("book");
+  const created = id ? createdExchange(id) : undefined;
+  if (created)
+    return (
+      <section role="status">
+        <p>Đề nghị đã được tạo. Mở để xem trạng thái, không cần gửi lại.</p>
+        <Link to={ROUTES.exchangeDetail(created)}>Xem đề nghị đã tạo</Link>
+      </section>
+    );
+  if (id && !pendingProposal())
+    return <Navigate replace to={`/chat/start/${id}?intent=Exchange`} />;
+  return <LegacyExchangeComposePage key={identity} />;
 }

@@ -37,6 +37,7 @@ const decisionFields = {
 const reviewDecision = z.object({
   ...decisionFields,
   decision: z.enum(["Approve", "Reject"]),
+  automated: z.literal(true).optional(),
 });
 export const catalog = z.object({
   id: uuid,
@@ -151,6 +152,111 @@ export const priceAssistReview = z.object({
   ),
 });
 export type PriceAssistReview = z.infer<typeof priceAssistReview>;
+const autoReviewMatch = z.enum(["Match", "Mismatch", "Unread", "NotInCatalog"]);
+export const autoReviewCheck = z.object({
+  id: uuid,
+  listingId: uuid,
+  revisionId: uuid,
+  selection: z.enum(["AiRecheck", "HumanAudit", "StaffOverride"]),
+  status: z.enum(["Passed", "Skipped", "Open", "Cleared", "Confirmed"]),
+  reasons: z.array(z.string()),
+  model: z.string().nullable(),
+  policyVersion: z.string().nullable(),
+  note: z.string().nullable(),
+  resolvedAt: time.nullable(),
+  resolvedByStaff: z.boolean(),
+  version,
+  createdAt: time,
+}) satisfies z.ZodType<Schema["AutoReviewCheck"]>;
+// Facts come from stored records and judgments from the model. Kept apart here
+// because the reviewer must be able to weigh them differently.
+export const autoReview = z.object({
+  outcome: z.enum(["Approved", "Escalated"]),
+  reasons: z.array(z.string()),
+  decidedAt: time,
+  model: z.string().nullable(),
+  policyVersion: z.string().nullable(),
+  stages: z.array(
+    z.object({
+      stage: z.enum(["Text", "Extraction", "Visual"]),
+      status: z.enum(["Completed", "Unavailable", "NotRun"]),
+    }),
+  ),
+  criteria: z.array(
+    z.object({
+      stage: z.enum(["Text", "Visual"]),
+      criterion: z.string(),
+      pass: z.boolean(),
+      confidence: z.number(),
+      floor: z.number(),
+      met: z.boolean(),
+    }),
+  ),
+  extraction: z
+    .object({
+      title: z.string().nullable(),
+      authors: z.array(z.string()),
+      isbn: z.string().nullable(),
+      edition: z.string().nullable(),
+      publisher: z.string().nullable(),
+      contactOrInstructionTextVisible: z.boolean(),
+    })
+    .nullable(),
+  comparison: z
+    .object({
+      title: autoReviewMatch,
+      author: autoReviewMatch,
+      isbn: autoReviewMatch,
+      edition: autoReviewMatch,
+      publisher: autoReviewMatch,
+      barcodes: z.array(z.string()),
+    })
+    .nullable(),
+  damage: z.enum(["None", "Minor", "Moderate", "Severe"]).nullable(),
+  facts: z
+    .object({
+      ownerAccountAgeDays: z.number(),
+      recentSubmissions: z.number(),
+      photoCount: z.number(),
+      duplicatePhoto: z.boolean(),
+      priceBounds: z.object({ low: z.number(), high: z.number() }).nullable(),
+      textSignals: z.array(z.string()),
+    })
+    .nullable(),
+  checks: z.array(autoReviewCheck),
+}) satisfies z.ZodType<Schema["AutoReviewSummary"]>;
+export type AutoReview = z.infer<typeof autoReview>;
+export type AutoReviewCheck = z.infer<typeof autoReviewCheck>;
+export const autoReviewHistory = z.object({
+  items: z.array(
+    z.object({
+      revisionId: uuid,
+      number: version,
+      submittedAt: time,
+      decision: reviewDecision.nullable(),
+      autoReview: autoReview.nullable(),
+    }),
+  ),
+});
+export const autoReviewReport = z.object({
+  windowDays: z.number(),
+  enabled: z.boolean(),
+  policyVersion: z.string(),
+  policyApproved: z.boolean(),
+  approved: z.number(),
+  escalated: z.number(),
+  escalatedThenApproved: z.number(),
+  escalatedThenRejected: z.number(),
+  checksOpen: z.number(),
+  rechecksPassed: z.number(),
+  rechecksFlagged: z.number(),
+  humanAudits: z.number(),
+  staffReviewedChecks: z.number(),
+  staffConfirmedProblems: z.number(),
+  overturnRate: z.number().nullable(),
+  costMicroUsd: z.number(),
+  serverTime: time,
+}) satisfies z.ZodType<Schema["AutoReviewReport"]>;
 export const listing = z.object({
   id: uuid,
   ownerId: uuid,
@@ -172,6 +278,7 @@ export const listing = z.object({
   currentRevision: revision,
   latestDecision: reviewDecision.nullable(),
   priceAssist: priceAssistReview.nullable().optional(),
+  autoReview: autoReview.nullable().optional(),
   removalReason: z.string().nullable(),
   catalogStatus: z.enum(["Pending", "Confirmed", "Rejected"]).nullable(),
   createdAt: time,

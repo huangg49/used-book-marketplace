@@ -21,6 +21,7 @@ import {
 } from "@used-books/session-client";
 export function PublicPhoto({
   listingId,
+  exchangeId,
   mediaId,
   revisionId,
   label,
@@ -35,6 +36,7 @@ export function PublicPhoto({
   onCoverFocus,
 }: {
   listingId: string;
+  exchangeId?: string;
   mediaId: string;
   revisionId: string;
   label: string;
@@ -48,23 +50,24 @@ export function PublicPhoto({
   result?: boolean;
   onCoverFocus?: () => void;
 }) {
-  const { client } = useSession();
+  const { client, state } = useSession();
+  const actorId = state.status === "authenticated" ? state.user.id : "";
   const [expired, setExpired] = useState("");
   const [failed, setFailed] = useState<string>();
   const [attempt, setAttempt] = useState(0);
   const [focused, setFocused] = useState(false);
   const photo = useQuery({
-    queryKey: ["public-media", listingId, revisionId, mediaId],
+    queryKey: exchangeId ? ["exchange-media", actorId, exchangeId, listingId, revisionId, mediaId] : ["public-media", listingId, revisionId, mediaId],
     queryFn: async () => {
-      const photo = await client.publicRequest(
-        `/listings/${listingId}/media/${mediaId}/read`,
+      const photo = await (exchangeId ? client.request.bind(client) : client.publicRequest.bind(client))(
+        exchangeId ? `/exchanges/${exchangeId}/books/${listingId}/photos/${mediaId}` : `/listings/${listingId}/media/${mediaId}/read`,
         publicMedia,
       );
       if (!signedMediaRemainingMs(photo.expiresAt))
         throw new Error("The image link expired before it arrived.");
       return photo;
     },
-    enabled: active,
+    enabled: active && (!exchangeId || Boolean(actorId)),
     staleTime: (query) =>
       signedMediaStaleTime(
         query.state.data?.expiresAt,

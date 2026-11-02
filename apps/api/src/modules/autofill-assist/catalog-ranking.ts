@@ -25,6 +25,7 @@ function similarity(a: string, b: string) {
   }
   return (2 * shared) / (a.length + b.length - 2);
 }
+export const titleSimilarity = similarity;
 const roman = (s: string) => {
   const values: Record<string, number> = {
     i: 1,

@@ -20,6 +20,7 @@ import type { Tx } from '../../database/mongo/transaction.js';
 import { DomainError, invalidState } from '../commands/domain-error.js';
 import { checkOrder } from '../orders/order-invariants.js';
 import { checkPointOrder } from '../auctions/point-order-invariants.js';
+import { DirectOrderReleasePolicy } from './direct-order-release.policy.js';
 import {
   FEE_JOURNAL_TYPES,
   LISTING_FEE_CLEARING_ID,
@@ -292,6 +293,9 @@ async function refundDecided(tx: Tx, orderId: string, journalId: string) {
 
 @Injectable()
 export class LedgerService {
+  constructor(
+    private readonly directRelease: DirectOrderReleasePolicy = new DirectOrderReleasePolicy(),
+  ) {}
   // Read-only reconciliation inside one snapshot transaction: every journal,
   // topup and order is checked by the commit-time rules, and simulated
   // capital must be conserved. Equal global debit/credit alone is not enough.
@@ -763,6 +767,10 @@ export class LedgerService {
     receiptId: string,
     now: Date,
   ) {
+    // DirectOrder historically delegated to this shared payout writer. Guard
+    // that identity here too so calling the older alias cannot bypass release.
+    if (await tx.c.direct_orders.findOne({ _id: order._id }))
+      this.directRelease.assertReleased();
     const hold = await tx.c.wallet_accounts.findOne({ orderId: order._id });
     if (!hold) throw new Error('Wallet account missing');
     const seller = await this.account(tx, { ownerId: order.sellerId });
@@ -827,6 +835,7 @@ export class LedgerService {
     receiptId: string,
     now: Date,
   ) {
+    this.directRelease.assertReleased();
     return this.settlePointOrder(tx, order, receiptId, now);
   }
   // Caller owns participant and intent locks; this never opens a nested transaction.

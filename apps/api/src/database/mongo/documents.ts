@@ -266,6 +266,37 @@ export interface ListingAutoReviewDoc {
   assessment: Json | null;
   model: string | null;
   decidedAt: Date;
+  policyVersion: string | null;
+  facts: Json | null;
+  photoHashes: string[];
+  sampleBucket: number | null;
+  inputTokens: number;
+  outputTokens: number;
+  costMicroUsd: number;
+  latencyMs: number | null;
+}
+
+// ADR 0063: a look at an AI-approved revision after publication.
+export interface ListingAutoReviewCheckDoc extends Lockable {
+  _id: string;
+  revisionId: string;
+  listingId: string;
+  selection: 'AiRecheck' | 'HumanAudit' | 'StaffOverride';
+  status: 'Passed' | 'Skipped' | 'Open' | 'Cleared' | 'Confirmed';
+  reasons: string[];
+  assessment: Json | null;
+  facts: Json | null;
+  model: string | null;
+  policyVersion: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  costMicroUsd: number;
+  resolvedBy: string | null;
+  resolvedAt: Date | null;
+  note: string | null;
+  version: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Exactly one target field is set; `principal` is the idempotency identity:
@@ -1282,9 +1313,13 @@ export interface ExchangeShipmentSnapshot {
   notes?: string | null;
   meetupLocation?: string | null;
   shippedAt?: Date | null;
+  lastEvent?: string | null;
+  lastEventAt?: Date | null;
 }
 
 export interface ExchangeDoc extends Lockable {
+  // Missing/null only for historical records; never reconstruct from live listings.
+  agreement?: import('@used-books/api-contract').components['schemas']['ExchangeAgreement'] | null;
   _id: string;
   initiatorId: string;
   recipientId: string;

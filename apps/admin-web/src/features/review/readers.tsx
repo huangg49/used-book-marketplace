@@ -293,12 +293,14 @@ export function History({
             <summary>
               Bản gửi {item.number} · {dateText(item.submittedAt)} ·{" "}
               {item.decision
-                ? labels[item.decision.decision]
+                ? `${item.decision.automated ? "AI · " : ""}${labels[item.decision.decision]}`
                 : "Chưa quyết định"}
               {item.id === currentId ? " · Hiện tại" : ""}
             </summary>
             <p className="prose">
-              {item.decision?.reason || "Không có lý do từ chối."}
+              {item.decision?.automated
+                ? "Quyết định tự động của AI, chưa có người kiểm duyệt xem."
+                : item.decision?.reason || "Không có lý do từ chối."}
             </p>
             <HistoryContent item={item} listingId={listingId} />
           </details>

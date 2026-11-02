@@ -39,10 +39,15 @@ import { TopupModal } from "../wallet/topup-modal";
 import {
   buyNowError,
   orderDetailsSchema,
-  quoteSchema,
   type OrderDetails,
-  type Quote,
 } from "./contracts";
+import {
+  CheckoutQuote,
+  quoteRemaining,
+  quoteSignature,
+  quoteUsable,
+  type ReadQuote,
+} from "./checkout-quote";
 import { z } from "zod";
 import { BundleManifest } from "../bundles/bundle-manifest";
 
@@ -65,6 +70,16 @@ interface BuyNowModalProps {
 }
 
 export function BuyNowModal(props: BuyNowModalProps) {
+  const { state } = useSession();
+  return (
+    <IdentityBuyNowModal
+      key={state.status === "authenticated" ? state.user.id : "guest"}
+      {...props}
+    />
+  );
+}
+
+function IdentityBuyNowModal(props: BuyNowModalProps) {
   const { client } = useSession();
   // Keep the listing/revision the buyer actually saw while the dialog is open.
   const [selection, setSelection] = useState(() => ({
@@ -135,13 +150,8 @@ function BuyNowSession({
     pendingInput.expectedListingRevisionId !== listing?.revisionId;
   const [bundleAcknowledged, setBundleAcknowledged] = useState(false);
   const [quoteRetry, setQuoteRetry] = useState(0);
-  const quoteAttempt = useRef<{
-    signature: string;
-    key: string;
-    body: string;
-    id?: string;
-    read?: boolean;
-  } | null>(null);
+  const quoteAttempt = useRef(new CheckoutQuote());
+  const retryPinnedQuote = useRef(false);
 
   const [step, setStep] = useState<"address_quote" | "payment" | "success">(
     initialOrderId && !pendingCreation ? "payment" : "address_quote",
@@ -157,7 +167,9 @@ function BuyNowSession({
   const [addressError, setAddressError] = useState("");
 
   // Quote state
-  const [quote, setQuote] = useState<Quote | null>(null);
+  const [readQuote, setReadQuote] = useState<ReadQuote | null>(null);
+  const quote = readQuote?.value ?? null;
+  const [quoteClock, setQuoteClock] = useState(0);
   const [quoteLoading, setQuoteLoading] = useState(false);
 
   // Order state
@@ -204,12 +216,61 @@ function BuyNowSession({
     selectedAddressId && items.some((a) => a.id === selectedAddressId)
       ? selectedAddressId
       : (items.find((a) => a.isDefault)?.id ?? items[0]?.id ?? "");
+  const address = items.find((a) => a.id === effectiveAddressId);
+  const quoteBody =
+    listing && address
+      ? JSON.stringify({
+          expectedListingVersion: listing.version,
+          expectedListingRevisionId: listing.revisionId,
+          destinationAddressId: address.id,
+          expectedDestinationAddressVersion: address.version,
+          method: "DirectDelivery",
+          ...(listing.bundle ? { acknowledgeWholeBundle: true } : {}),
+        })
+      : "";
+  const signature = listing ? quoteSignature(listing.id, quoteBody) : "";
+  const usableQuote = !!readQuote && quoteUsable(readQuote, signature);
+  const expiredQuote =
+    !!readQuote &&
+    readQuote.signature === signature &&
+    (quote?.assessment === "Expired" ||
+      (quote?.assessment === "Current" && quoteRemaining(readQuote) === 0));
+
+  useEffect(() => {
+    if (!visible || !readQuote || readQuote.value.assessment !== "Current")
+      return;
+    const remaining = quoteRemaining(readQuote);
+    if (remaining === 0) return;
+    const timer = setTimeout(() => setQuoteClock((v) => v + 1), remaining + 1);
+    return () => clearTimeout(timer);
+  }, [visible, readQuote, quoteClock]);
+
+  function renewQuote() {
+    if (
+      busy ||
+      quoteLoading ||
+      pendingCreation ||
+      !quoteAttempt.current.renew()
+    )
+      return;
+    setReadQuote(null);
+    setQuoteRetry((v) => v + 1);
+  }
 
   function handleDismiss() {
     lifecycle.current.active = false;
     lifecycle.current.generation++;
     setBusy(false);
     onClose();
+  }
+
+  function reviewListing() {
+    if (listing)
+      void cache.invalidateQueries({
+        queryKey: ["public-listing", listing.id],
+      });
+    void addressesQuery.refetch();
+    handleDismiss();
   }
 
   // Load existing order when initialOrderId is provided
@@ -256,7 +317,8 @@ function BuyNowSession({
     if (
       !visible ||
       !listing ||
-      !effectiveAddressId ||
+      !quoteBody ||
+      state.status !== "authenticated" ||
       addingAddress ||
       step !== "address_quote" ||
       Boolean(initialOrderId) ||
@@ -264,62 +326,25 @@ function BuyNowSession({
       (listing.bundle && !bundleAcknowledged)
     )
       return;
-    const address = items.find((a) => a.id === effectiveAddressId);
-    if (!address) return;
-
     let cancelled = false;
     async function fetchQuote() {
       setQuoteLoading(true);
       setError("");
       try {
-        const body = JSON.stringify({
-          expectedListingVersion: listing!.version,
-          expectedListingRevisionId: listing!.revisionId,
-          destinationAddressId: address!.id,
-          expectedDestinationAddressVersion: address!.version,
-          method: "DirectDelivery",
-          ...(listing!.bundle ? { acknowledgeWholeBundle: true } : {}),
-        });
-        if (
-          !quoteAttempt.current ||
-          (quoteAttempt.current.read && quoteAttempt.current.signature !== body)
-        )
-          quoteAttempt.current = {
-            signature: body,
-            body,
-            key: Crypto.randomUUID(),
-          };
-        const attempt = quoteAttempt.current;
-        if (attempt.signature !== body)
-          throw new Error(
-            "Báo giá trước chưa xác định kết quả. Chọn lại địa chỉ đã dùng rồi thử lại báo giá; không tạo yêu cầu khác để thay thế.",
-          );
-        const quoteResult = attempt.id
-          ? { entityId: attempt.id }
-          : await client.request(
-              `/listings/${listing!.id}/quotes`,
-              z.object({ entityId: z.string().uuid() }),
-              {
-                method: "POST",
-                headers: { "Idempotency-Key": attempt.key },
-                body: attempt.body,
-              },
-            );
-        attempt.id = quoteResult.entityId;
-
-        if (cancelled) return;
-        const fetchedQuote = await client.request(
-          `/me/quotes/${quoteResult.entityId}`,
-          quoteSchema,
-        );
-        attempt.read = true;
+        const retryPinned = retryPinnedQuote.current;
+        retryPinnedQuote.current = false;
+        const fetchedQuote = await (retryPinned
+          ? quoteAttempt.current.retry(client)
+          : quoteAttempt.current.read(client, listing!.id, quoteBody, () =>
+              Crypto.randomUUID(),
+            ));
         if (!cancelled) {
-          setQuote(fetchedQuote);
+          setReadQuote(fetchedQuote);
         }
       } catch (err) {
         if (!cancelled) {
           setError(buyNowError(err));
-          setQuote(null);
+          setReadQuote(null);
         }
       } finally {
         if (!cancelled) {
@@ -335,13 +360,13 @@ function BuyNowSession({
   }, [
     visible,
     listing,
-    effectiveAddressId,
+    quoteBody,
     addingAddress,
     step,
     initialOrderId,
     pendingCreation,
     client,
-    items,
+    state.status,
     bundleAcknowledged,
     quoteRetry,
   ]);
@@ -416,6 +441,16 @@ function BuyNowSession({
       (!pendingCreation && listing.bundle && !bundleAcknowledged)
     )
       return;
+    if (
+      !pendingCreation &&
+      (!readQuote || !quoteUsable(readQuote, signature))
+    ) {
+      setError(
+        "Báo giá không còn dùng được. Kiểm tra trạng thái báo giá trước khi đặt mua.",
+      );
+      setQuoteClock((v) => v + 1);
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -442,7 +477,13 @@ function BuyNowSession({
       await readCreatedOrder(receipt.entityId, generation);
       void walletQuery.refetch();
     } catch (err) {
-      if (isCurrent(generation)) setError(buyNowError(err));
+      if (isCurrent(generation)) {
+        setError(buyNowError(err));
+        if (!pendingBuyNowOrder(client, listing.id)) {
+          setReadQuote(null);
+          setQuoteRetry((v) => v + 1);
+        }
+      }
     } finally {
       if (isCurrent(generation)) setBusy(false);
     }
@@ -585,7 +626,7 @@ function BuyNowSession({
               </AppText>
               <AppText kind="small" color={stitchTokens.subtleGray}>
                 {step === "address_quote"
-                  ? "Giao tận nơi · Giữ sách 15 phút"
+                  ? "Giao tận nơi · Xem phí trước khi đặt mua"
                   : step === "payment"
                     ? "Thanh toán an toàn qua Ví Lật Lại"
                     : "Đơn hàng đã được xác nhận"}
@@ -719,7 +760,10 @@ function BuyNowSession({
               <Button
                 secondary
                 title="Thử lại báo giá đã yêu cầu"
-                onPress={() => setQuoteRetry((v) => v + 1)}
+                onPress={() => {
+                  retryPinnedQuote.current = true;
+                  setQuoteRetry((v) => v + 1);
+                }}
                 disabled={quoteLoading || busy}
               />
             ) : null}
@@ -727,6 +771,67 @@ function BuyNowSession({
             {/* STEP 1: Address & Quote */}
             {step === "address_quote" && !pendingCreation && (
               <>
+                {readQuote &&
+                  readQuote.signature !== signature &&
+                  !quoteLoading && (
+                    <>
+                      <Notice tone="warning">
+                        Đã khôi phục báo giá trước. Báo giá này không dành cho
+                        địa chỉ hoặc thông tin đang chọn.
+                      </Notice>
+                      <Button
+                        secondary
+                        title="Xem phí cho địa chỉ đã chọn"
+                        onPress={() => setQuoteRetry((v) => v + 1)}
+                        disabled={busy}
+                      />
+                    </>
+                  )}
+                {expiredQuote && !quoteLoading && (
+                  <>
+                    <Notice tone="warning">
+                      Báo giá đã hết hạn. Lấy báo giá mới rồi kiểm tra lại tổng
+                      tiền trước khi đặt mua.
+                    </Notice>
+                    <Button
+                      secondary
+                      title="Lấy báo giá mới"
+                      onPress={renewQuote}
+                      disabled={busy}
+                    />
+                  </>
+                )}
+                {quote?.assessment === "Changed" && !quoteLoading && (
+                  <Notice tone="warning">
+                    Thông tin sách, địa chỉ hoặc phí đã thay đổi. Chọn lại địa
+                    chỉ; nếu vẫn chưa dùng được, đóng cửa sổ và mở lại bản sách
+                    để xem thông tin mới.
+                  </Notice>
+                )}
+                {quote?.assessment === "Unavailable" && !quoteLoading && (
+                  <Notice tone="warning">
+                    Bản sách hiện không còn đủ điều kiện đặt mua. Đóng cửa sổ để
+                    xem lại trạng thái bản sách.
+                  </Notice>
+                )}
+                {(quote?.assessment === "Changed" ||
+                  quote?.assessment === "Unavailable") &&
+                  !quoteLoading && (
+                    <>
+                      <Button
+                        secondary
+                        title="Kiểm tra lại báo giá"
+                        onPress={() => setQuoteRetry((v) => v + 1)}
+                        disabled={busy}
+                      />
+                      <Button
+                        secondary
+                        title="Xem lại bản sách"
+                        onPress={reviewListing}
+                        disabled={busy}
+                      />
+                    </>
+                  )}
                 {/* Delivery Address Section */}
                 <View style={{ gap: space.xs }}>
                   {addressesQuery.isPending && (
@@ -1083,7 +1188,7 @@ function BuyNowSession({
                   disabled={
                     busy ||
                     quoteLoading ||
-                    !quote ||
+                    !usableQuote ||
                     addingAddress ||
                     (!!listing?.bundle && !bundleAcknowledged)
                   }

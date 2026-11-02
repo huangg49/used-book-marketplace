@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { MongoClient, type Document } from 'mongodb';
 import { migrate } from '../../src/database/mongo/migrate.js';
-import { migrations } from '../../src/database/mongo/migrations/index.js';
+import {
+  migrations,
+  currentCollections,
+  validatorOf,
+} from '../../src/database/mongo/migrations/index.js';
 import { FREE_SHIPPING_POLICY } from '../../src/database/mongo/migrations/0052-free-shipping.js';
 import {
   deliveryPrice,
@@ -10,6 +14,46 @@ import {
 import type { Tx } from '../../src/database/mongo/transaction.js';
 import type { PointOrderDoc } from '../../src/database/mongo/documents.js';
 import { testUrl } from './harness.js';
+
+it('upgrades a free-shipping database to main without rewriting applied checksums or restoring delivery fees', async () => {
+  const client = await new MongoClient(
+    testUrl(`free_shipping_first_${randomUUID().replaceAll('-', '')}_test`),
+  ).connect();
+  const db = client.db();
+  const additions = ['0052-listing-auto-review-v2', '0053-exchange-agreement'];
+  try {
+    await migrate(
+      client,
+      db,
+      migrations.filter((m) => !additions.includes(m.id)),
+    );
+    const applied = await db.collection('_migrations').find().toArray();
+    const ledger = await db.collection('ledger_entries').find().toArray();
+    expect(await migrate(client, db)).toEqual(additions);
+    expect(await migrate(client, db)).toEqual([]);
+    for (const row of applied)
+      expect(
+        await db.collection('_migrations').findOne({ _id: row._id }),
+      ).toEqual(row);
+    expect(await db.collection('ledger_entries').find().toArray()).toEqual(
+      ledger,
+    );
+    expect(
+      await db
+        .collection<Document & { _id: string }>('sale_quote_policy_selection')
+        .findOne({ _id: 'DirectSale' }),
+    ).toMatchObject({ policyCode: FREE_SHIPPING_POLICY });
+    for (const name of ['point_orders', 'point_order_deliveries']) {
+      const [collection] = await db.listCollections({ name }).toArray();
+      expect(collection.options.validator).toEqual(
+        validatorOf(currentCollections().find((spec) => spec.name === name)!),
+      );
+    }
+  } finally {
+    await db.dropDatabase();
+    await client.close();
+  }
+});
 
 it('upgrades to free shipping without rewriting old policy or ledger; accepts zero outbound fee and rejects stale fees', async () => {
   const client = await new MongoClient(

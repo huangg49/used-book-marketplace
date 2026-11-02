@@ -236,10 +236,12 @@ try {
     } else await route.fulfill({ response });
   });
   await offer.getByRole("button", { name: /^Gửi đề nghị đổi sách \(\d+ cuốn\)$/, exact: true }).click();
-  await offer.getByRole("alert").waitFor();
-  assert.equal(await offer.getByRole("checkbox").first().isChecked(), true);
-  assert.equal(await offer.getByRole("checkbox").first().isDisabled(), true);
-  const retryOffer = offer.getByRole("button", { name: "Thử lại đề nghị trước", exact: true });
+  await page.getByRole("alert").getByText("Chưa xác nhận được kết quả.", { exact: false }).waitFor();
+  // An unresolved command replaces the editable form with exact replay recovery.
+  // The original selection must remain in the request, without an editable copy.
+  assert.equal(await offer.count(), 0, "uncertain proposal hides the editable selection");
+  assert.deepEqual(JSON.parse(intents[0].body).initiatorListingIds, [fixture.listings[0]]);
+  const retryOffer = page.getByRole("button", { name: "Thử lại đề nghị trước", exact: true });
   assert.equal(await retryOffer.isEnabled(), true, "An uncertain proposal locks edits but must allow replay");
   await retryOffer.click();
   holdRefresh = false;
@@ -322,11 +324,12 @@ try {
   // Install the denial only after leaving the open detail. Its background
   // refresh must not remove the navigation link before this test clicks it.
   await page.locator(`a[href="${chatPath}"]`).first().waitFor();
+  let detailFailure = 503;
   await page.route(`**/api/v1/exchanges/${id}`, (route) =>
     route.fulfill({
-      status: 403,
+      status: detailFailure,
       contentType: "application/json",
-      body: JSON.stringify({ code: "Forbidden", message: "QA rejection" }),
+      body: JSON.stringify({ code: detailFailure === 403 ? "Forbidden" : "Unavailable", message: "QA rejection" }),
     }),
   );
   await page
@@ -337,10 +340,20 @@ try {
   await page.getByRole("button", { name: /^Xem đề nghị lần 1/ }).click();
   await page
     .getByRole("heading", {
-      name: "Đã có lỗi xảy ra khi tải dữ liệu",
+      name: "Chưa tải được trạng thái hiện tại",
       exact: true,
     })
     .waitFor();
+  const finance = page.getByRole("region", { name: "Tóm tắt tài chính đổi sách", exact: true });
+  await finance.getByText("Các giá trị dưới đây thuộc lần tải trước.", { exact: false }).waitFor();
+  assert.equal(await finance.locator("dt").filter({ hasText: /^Cọc bảo chứng của bạn$/ }).count(), 1, "503 retains labelled cached amounts");
+  detailFailure = 403;
+  await page.evaluate(async () => {
+    const { queryClient } = await import("/src/lib/session.ts");
+    await queryClient.invalidateQueries({ queryKey: ["exchangeDetail"] });
+  });
+  await finance.getByRole("alert").getByText("Không thể xem khoản trao đổi với quyền truy cập hiện tại.", { exact: false }).waitFor();
+  assert.equal(await finance.locator("dl").count(), 0, "403 hides all cached private financial rows");
   assert.equal(
     await page.getByText("Đối tác trao đổi", { exact: true }).count(),
     0,
@@ -350,6 +363,14 @@ try {
   const deniedDetail = page.getByRole("region", { name: "Chi tiết trao đổi", exact: true });
   assert.equal(await deniedDetail.getByRole("heading", { name: "Thông tin sách", exact: true }).count(), 0);
   assert.equal(await deniedDetail.getByRole("region", { name: "Hành động của bạn", exact: true }).count(), 0);
+  await capture(page, "exchange-denied-desktop.png");
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.evaluate(() => document.documentElement.style.fontSize = "130%");
+  await capture(page, "exchange-denied-mobile320-large.png");
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+  await page.unroute(`**/api/v1/exchanges/${id}`);
+  await finance.getByRole("button", { name: "Tải lại khoản trao đổi", exact: true }).click();
+  await finance.locator("dt").filter({ hasText: /^Cọc bảo chứng của bạn$/ }).waitFor();
   assert.deepEqual(errors, []);
   console.log(
     "PASS exchange browser: real create/accept/cancel; lost ACK retains intent; funding rejection stays open; 403 hides data; desktop/mobile.",

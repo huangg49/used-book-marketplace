@@ -8,6 +8,9 @@
     "node": ">=24.15.0"
   },
   "scripts": {
+    "test:exchange-finance:browser": "node scripts/test-exchange-finance.mjs",
+    "test:exchange-recovery:browser": "node scripts/test-exchange-recovery.mjs",
+    "test:exchange-agreement:browser": "node scripts/test-exchange-agreement.mjs",
     "auth:mailbox": "node scripts/auth-mailbox.mjs",
     "qa:android": "node scripts/android-pilot.mjs",
     "demo:books": "node scripts/demo-books.mjs",
@@ -56,6 +59,7 @@
     "test:dev": "node --test scripts/dev-*.test.mjs",
     "test:work-inbox:browser": "node scripts/test-work-inbox.mjs",
     "test:rn-buy-now:browser": "node scripts/test-rn-buy-now.mjs",
+    "test:purchase-socket:api": "node scripts/test-purchase-socket.mjs",
     "test:member-profile:browser": "node scripts/test-member-profile.mjs",
     "test:member-profile:live": "node scripts/test-member-profile-live.mjs",
     "test:member-email:live": "node scripts/test-member-email-live.mjs",

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { exchangeAgreementSchema } from "@used-books/session-client";
 import { stitchTokens } from "../../core/ui/theme";
 
 const uuid = z.string().uuid();
@@ -23,6 +24,7 @@ export const exchangeShipmentInfo = z.object({
 });
 
 export const exchangeSchema = z.object({
+  agreement: exchangeAgreementSchema.nullable().optional(),
   id: uuid,
   initiatorId: uuid,
   recipientId: uuid,

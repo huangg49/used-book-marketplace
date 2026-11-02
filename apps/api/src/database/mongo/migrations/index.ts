@@ -2,9 +2,11 @@ import { createFreeShippingMigration, withFreeShipping } from './0052-free-shipp
 import { createMemberProfilesMigration, memberProfileSpecs, withMemberProfiles } from './0047-member-profiles.js';
 import { createAccountControlsMigration, withAccountControls } from './0048-account-controls.js';
 import {memberCartMigration,memberCartSpec} from './0049-member-cart.js';
+import { exchangeAgreementMigration, withExchangeAgreement } from './0053-exchange-agreement.js';
 import { createSupportCasesMigration, supportSpecs, withSupportCases } from './0050-support-cases.js';
 import { createSupportAutoReviewUnionMigration } from './0051-support-auto-review-union.js';
-import { createListingAutoReviewMigration, listingAutoReviewSpec, withListingAutoReview } from './0050-listing-auto-review.js';
+import { createListingAutoReviewMigration, withListingAutoReview } from './0050-listing-auto-review.js';
+import { listingAutoReviewCheckSpec, listingAutoReviewSpecV2, listingAutoReviewV2Migration } from './0052-listing-auto-review-v2.js';
 import { transactionReviewValidatorFixMigration } from './0039-transaction-review-validator-fix.js';
 import { reviewValidatorReconciliationMigration } from './0041-review-validator-reconciliation.js';
 import { catalogRecoveryMigration, withCatalogRecovery } from './0042-catalog-recovery-index.js';
@@ -347,6 +349,8 @@ export const migrations: Migration[] = [
   listingAutoReviewMigration,
   supportCasesMigration,
   supportAutoReviewUnionMigration,
+  listingAutoReviewV2Migration,
+  exchangeAgreementMigration,
   createFreeShippingMigration(auctionDeliveryMigration.definition.collections),
 ];
 
@@ -428,7 +432,8 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withExchangePhase6Changes)
     .map(withExchangeInspectionDeadlines)
     .map(withExchangeDisputeResolution)
-    .map(withExchangeMutualCancellation),
+    .map(withExchangeMutualCancellation)
+    .map(withExchangeAgreement),
   ...directDeliveryCompletionSpecs,
   ...paymentSpecs.map(withVNPayExpiry),
   ...exchangeMessageSpecs,
@@ -440,6 +445,7 @@ export const currentCollections = (): CollectionSpec[] => [
   ...listingAutofillSpecs,
   ...memberProfileSpecs,
   memberCartSpec,
-  listingAutoReviewSpec,
+  listingAutoReviewSpecV2,
+  listingAutoReviewCheckSpec,
   ...supportSpecs,
 ];

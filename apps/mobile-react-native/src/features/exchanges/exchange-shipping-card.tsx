@@ -63,7 +63,6 @@ export function ExchangeShippingCard({
 
   const mySentAt = myShipment?.shippedAt || exchange.initiatorShippedAt;
   const partnerSentAt = partnerShipment?.shippedAt || exchange.recipientShippedAt;
-  const myReceivedAt = exchange.completedAt; // delivered/completed state
 
   const bothSent = Boolean(mySentAt && partnerSentAt);
   const isDeliveredOrCompleted =

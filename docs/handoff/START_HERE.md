@@ -1,8 +1,8 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
-Cập nhật02/11/2026: theo [SESSION_STATE](SESSION_STATE.md). Contract **0.70.0**
-(224operations/36controllers); registry có65
-migration MongoDB (đến0051), không suy từ tiền tố file lớn nhất. Migration
+Cập nhật02/11/2026: theo [SESSION_STATE](SESSION_STATE.md). Contract **0.72.0**
+(234operations/37controllers); registry có67
+migration MongoDB (đến0053), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
 Phạm vi28/10: nhóm **bỏ Forum/Cộng đồng sách** theo [ADR0051](../adr/0051-remove-forum-from-project-scope.md).
@@ -103,6 +103,18 @@ chưa áp dụng DB chính; [ADR0055](../adr/0055-listing-catalog-recovery.md).
 AI tự duyệt thêm0050 và collection mới: dừng API/worker, `pnpm db:migrate` rồi
 `pnpm db:bootstrap`. Cờ `LISTING_AUTO_REVIEW_ENABLED` mặc định tắt;
 [ADR0061](../adr/0061-ai-listing-auto-review.md).
+Bản hậu kiểm thêm0052 và `listing_auto_review_checks`: cùng các bước trên. Muốn worker
+chạy còn phải đặt `LISTING_AUTO_REVIEW_APPROVED_POLICY` đúng `POLICY_VERSION`;
+[ADR0063](../adr/0063-ai-listing-review-hardening.md). Gọi NVIDIA thử lại một lần trong
+cùng timeout; tự duyệt chờ tối đa ba chu kỳ khi nhà cung cấp im lặng, không cần
+migration; [ADR0066](../adr/0066-ai-provider-resilience.md).
+
+Exchange thêm0052 để lưu agreement sách/giá đã thỏa thuận; không backfill lịch sử
+hoặc đổi tiền. Dừng API/worker cũ, migrate rồi nâng API và web/RN cùng gói:
+counter mới nhận listingIds, client gửi tiền bù tùy ý sẽ bị422. Chưa chạy trên DB
+chính; source đã ghép main add4d615 local, chưa publish. [ADR0065](../adr/0065-exchange-agreement-snapshots.md),
+[evidence/giới hạn](../features/EXCHANGE_AGREEMENT_2026_11_02.md). Không cần seed hoặc
+thêm quyền DB chỉ vì0052; các migration khác vẫn theo hướng dẫn riêng.
 
 Gói đường nhanh thêm0043/sourceGroup: dừng API/worker và migrate, cập nhật web/RN/
 Admin cùng enum DuplicateSource. Không backfill nguồn từ nhãn; legacy thiếu nguồn
@@ -189,6 +201,12 @@ Tên schema/receipt lịch sử có thể vẫn chứa `Unpaid` dù projection h
   Không thêm kho token thứ hai. Không log request body/ảnh/địa chỉ/token.
 
 ## 5. Chạy kiểm thử mà không dùng database của app
+
+DirectDelivery completion bị chặn theo [ADR0064](../adr/0064-direct-delivery-completion-release-gate.md):
+không dùng confirm-receipt/delivery-events mới hoặc worker để ép demo tới Completed.
+Exact receipt lịch sử chỉ replay sau current auth. Đơn Inspection cũ giữ tiền/sách;
+worker báo inspectionBlocked/inspectionOverdueBlocked riêng. Không có env flag bật
+lại; cần gói bảo vệ Buyer và quyền mở gate riêng. Không sửa DB để vượt giới hạn này.
 
 Compose **riêng** `infra/docker-compose.mongo-test.yml` chạy replica set QA
 `127.0.0.1:57017` (auth, dữ liệu trên tmpfs — khởi động lại là rỗng). Tài khoản

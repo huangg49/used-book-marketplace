@@ -1,9 +1,12 @@
-import React, { useMemo, useState } from "react";
 import {
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
+  exchangeCommandIdentity,
+  pendingExchangeProposal,
+  sendExchangeProposal,
+} from "@used-books/session-client";
+import { useExchangeRecovery } from "./exchange-recovery";
+import { exchangeSchema } from "./contracts";
+import React, { useMemo, useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -27,13 +30,22 @@ import { addressBook } from "../addresses/contracts";
 import { PublicPhoto } from "../shelf/public-photo";
 import { DraftCoverPhoto } from "../drafts/draft-cover-photo";
 import { BookIdentity, useCatalogBook } from "../drafts/catalog-picker";
-import { exchangeReceiptSchema } from "./contracts";
 import * as Crypto from "expo-crypto";
 import { z } from "zod";
 
 function checkMatch(
-  book: { title?: string; authors?: string[]; category?: string } | undefined | null,
-  pref: { targetCategory?: string | null; targetAuthor?: string | null; targetDescription?: string | null } | null | undefined,
+  book:
+    | { title?: string; authors?: string[]; category?: string }
+    | undefined
+    | null,
+  pref:
+    | {
+        targetCategory?: string | null;
+        targetAuthor?: string | null;
+        targetDescription?: string | null;
+      }
+    | null
+    | undefined,
 ): boolean {
   if (!book || !pref) return false;
   const targetCat = pref.targetCategory?.trim().toLowerCase();
@@ -42,16 +54,25 @@ function checkMatch(
 
   if (!targetCat && !targetAuth && !targetDesc) return false;
 
-  if (targetCat && book.category && book.category.toLowerCase().includes(targetCat)) {
+  if (
+    targetCat &&
+    book.category &&
+    book.category.toLowerCase().includes(targetCat)
+  ) {
     return true;
   }
-  if (targetAuth && book.authors && book.authors.some((a) => a.toLowerCase().includes(targetAuth))) {
+  if (
+    targetAuth &&
+    book.authors &&
+    book.authors.some((a) => a.toLowerCase().includes(targetAuth))
+  ) {
     return true;
   }
   if (
     targetDesc &&
     book.title &&
-    (book.title.toLowerCase().includes(targetDesc) || targetDesc.includes(book.title.toLowerCase()))
+    (book.title.toLowerCase().includes(targetDesc) ||
+      targetDesc.includes(book.title.toLowerCase()))
   ) {
     return true;
   }
@@ -66,7 +87,14 @@ function InventoryBookRow({
 }: {
   listing: PrivateDraft;
   isSelected: boolean;
-  targetPref: { targetCategory?: string | null; targetAuthor?: string | null; targetDescription?: string | null } | null | undefined;
+  targetPref:
+    | {
+        targetCategory?: string | null;
+        targetAuthor?: string | null;
+        targetDescription?: string | null;
+      }
+    | null
+    | undefined;
   onToggle: () => void;
 }) {
   const bookQuery = useCatalogBook(listing.currentRevision.content.bookId);
@@ -79,7 +107,9 @@ function InventoryBookRow({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={isSelected ? "Bỏ chọn cuốn sách này" : "Chọn cuốn sách này"}
+      accessibilityLabel={
+        isSelected ? "Bỏ chọn cuốn sách này" : "Chọn cuốn sách này"
+      }
       onPress={onToggle}
       style={({ pressed }) => [
         styles.bookOptionCard,
@@ -90,10 +120,7 @@ function InventoryBookRow({
     >
       <View style={styles.optionPhotoBox}>
         {coverMediaId ? (
-          <DraftCoverPhoto
-            listingId={listing.id}
-            mediaId={coverMediaId}
-          />
+          <DraftCoverPhoto listingId={listing.id} mediaId={coverMediaId} />
         ) : (
           <View style={styles.optionPhotoEmpty}>
             <Icon name="book" size={20} color={stitchTokens.roseBrown} />
@@ -102,10 +129,7 @@ function InventoryBookRow({
       </View>
 
       <View style={styles.optionInfoCol}>
-        <BookIdentity
-          id={listing.currentRevision.content.bookId}
-          compact
-        />
+        <BookIdentity id={listing.currentRevision.content.bookId} compact />
 
         {isMatched && (
           <View style={styles.matchedBadge}>
@@ -122,10 +146,7 @@ function InventoryBookRow({
 
       <View style={styles.checkCol}>
         <View
-          style={[
-            styles.radioCircle,
-            isSelected && styles.radioCircleSelected,
-          ]}
+          style={[styles.radioCircle, isSelected && styles.radioCircleSelected]}
         >
           {isSelected && (
             <Icon name="check" size={13} color={stitchTokens.white} />
@@ -137,16 +158,34 @@ function InventoryBookRow({
 }
 
 export function ExchangeComposeScreen() {
+  const { identity } = useExchangeRecovery();
+  const params = useLocalSearchParams<{ book?: string }>();
+  return (
+    <ExchangeComposeContent
+      key={identity + ":" + params.book}
+      identity={identity}
+    />
+  );
+}
+function ExchangeComposeContent({ identity }: { identity: string }) {
   const params = useLocalSearchParams<{ book?: string }>();
   const targetListingId = typeof params.book === "string" ? params.book : "";
 
   const { client, state } = useSession();
+  const { proposal: retained, created } = useExchangeRecovery(
+    "",
+    targetListingId,
+  );
   const foreground = useForeground();
   const queryClient = useQueryClient();
   const currentUserId = state.status === "authenticated" ? state.user.id : null;
 
-  const [selectedMyListingIds, setSelectedMyListingIds] = useState<string[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [selectedMyListingIds, setSelectedMyListingIds] = useState<string[]>(
+    [],
+  );
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
+    null,
+  );
   const [initialMessage, setInitialMessage] = useState("");
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
 
@@ -159,14 +198,16 @@ export function ExchangeComposeScreen() {
   // 1. Fetch Target Book (Sách đối tác muốn đổi)
   const targetQuery = useQuery({
     queryKey: ["public-listing", targetListingId],
-    queryFn: () => client.request(`/listings/${targetListingId}`, publicListing),
+    queryFn: () =>
+      client.request(`/listings/${targetListingId}`, publicListing),
     enabled: Boolean(targetListingId) && foreground,
   });
 
   // 2. Fetch My Inventory (Sách đã duyệt của tôi)
   const myInventoryQuery = useQuery({
     queryKey: ["my-listings", currentUserId, "exchange-eligible"],
-    queryFn: () => client.request("/me/listings?moderation=Approved&limit=50", draftPage),
+    queryFn: () =>
+      client.request("/me/listings?moderation=Approved&limit=50", draftPage),
     enabled: state.status === "authenticated" && foreground,
   });
 
@@ -185,25 +226,30 @@ export function ExchangeComposeScreen() {
   const effectiveAddressId = selectedAddressId ?? defaultAddressId;
 
   // Filter eligible listings: must have trade available and not Sale-only
-  const myEligibleListings = (myInventoryQuery.data?.items ?? []).filter((item) => {
-    const isAvailable = item.state.trade === "Available" && item.state.visibility === "Visible";
-    const mode = item.currentRevision.content.mode;
-    const canExchange = mode === "Exchange" || mode === "Both";
-    return isAvailable && canExchange;
-  });
+  const myEligibleListings = (myInventoryQuery.data?.items ?? []).filter(
+    (item) => {
+      const isAvailable =
+        item.state.trade === "Available" && item.state.visibility === "Visible";
+      const mode = item.currentRevision.content.mode;
+      const canExchange = mode === "Exchange" || mode === "Both";
+      return isAvailable && canExchange;
+    },
+  );
 
   const targetBook = targetQuery.data;
   const sortedEligibleListings = useMemo(() => {
     if (!targetBook?.exchangePreferences) return myEligibleListings;
     return [...myEligibleListings].sort((a, b) => {
-      const bookA = queryClient.getQueryData<{ title?: string; authors?: string[]; category?: string }>([
-        "listing-book",
-        a.currentRevision.content.bookId,
-      ]);
-      const bookB = queryClient.getQueryData<{ title?: string; authors?: string[]; category?: string }>([
-        "listing-book",
-        b.currentRevision.content.bookId,
-      ]);
+      const bookA = queryClient.getQueryData<{
+        title?: string;
+        authors?: string[];
+        category?: string;
+      }>(["listing-book", a.currentRevision.content.bookId]);
+      const bookB = queryClient.getQueryData<{
+        title?: string;
+        authors?: string[];
+        category?: string;
+      }>(["listing-book", b.currentRevision.content.bookId]);
       const matchA = checkMatch(bookA, targetBook.exchangePreferences) ? 1 : 0;
       const matchB = checkMatch(bookB, targetBook.exchangePreferences) ? 1 : 0;
       return matchB - matchA;
@@ -215,7 +261,9 @@ export function ExchangeComposeScreen() {
 
   // Financial difference calculation (Multi-book sum)
   const targetValue =
-    (targetBook && "exchangeValue" in targetBook && targetBook.exchangeValue != null
+    (targetBook &&
+    "exchangeValue" in targetBook &&
+    targetBook.exchangeValue != null
       ? targetBook.exchangeValue
       : targetBook && "salePrice" in targetBook && targetBook.salePrice != null
         ? targetBook.salePrice
@@ -229,31 +277,34 @@ export function ExchangeComposeScreen() {
   // Submit Mutation
   const submitProposalMutation = useMutation({
     mutationFn: async () => {
-      if (chosenMyListings.length === 0 || !targetBook) {
-        throw new Error("Vui lòng chọn ít nhất một cuốn sách từ kệ của bạn để trao đổi.");
+      const saved = pendingExchangeProposal(client);
+      if (!saved && (chosenMyListings.length === 0 || !targetBook)) {
+        throw new Error(
+          "Vui lòng chọn ít nhất một cuốn sách từ kệ của bạn để trao đổi.",
+        );
       }
 
       setErrorNotice(null);
 
-      // Step A: Create proposal (supports multi-book)
-      const res = await client.request(
-        "/exchanges",
-        exchangeReceiptSchema,
-        {
-          method: "POST",
-          headers: {
-            "Idempotency-Key": Crypto.randomUUID(),
-          },
-          body: JSON.stringify({
-            initiatorListingId: chosenMyListings[0].id,
-            initiatorListingIds: chosenMyListings.map((b) => b.id),
-            recipientListingId: targetBook.id,
-            ...(effectiveAddressId ? { deliveryAddressId: effectiveAddressId } : {}),
-          }),
+      const sendingIdentity = exchangeCommandIdentity(client);
+      if (saved && saved.recipientListingId !== targetListingId)
+        throw new Error("Hãy mở đề nghị chưa rõ kết quả trước khi đổi sách.");
+      const res = await sendExchangeProposal(
+        client,
+        saved ?? {
+          initiatorListingId: chosenMyListings[0].id,
+          initiatorListingIds: chosenMyListings.map((book) => book.id),
+          recipientListingId: targetBook!.id,
+          ...(effectiveAddressId
+            ? { deliveryAddressId: effectiveAddressId }
+            : {}),
         },
+        () => Crypto.randomUUID(),
+        exchangeSchema,
       );
-
-      const exchangeId = res.entityId ?? res.id;
+      if (exchangeCommandIdentity(client) !== sendingIdentity)
+        throw new Error("Phiên tài khoản đã thay đổi.");
+      const exchangeId = res.id;
 
       // Step B: Send opening message if typed
       if (initialMessage.trim()) {
@@ -271,17 +322,21 @@ export function ExchangeComposeScreen() {
         }
       }
 
-      return { exchangeId };
+      return { exchangeId, identity: sendingIdentity };
     },
     onSuccess: (res) => {
+      if (exchangeCommandIdentity(client) !== res.identity) return;
       void queryClient.invalidateQueries({ queryKey: ["my-exchanges"] });
-      void queryClient.invalidateQueries({ queryKey: ["exchange", res.exchangeId] });
+      void queryClient.invalidateQueries({
+        queryKey: ["exchange", res.exchangeId],
+      });
       router.replace({
         pathname: "/exchange",
         params: { id: res.exchangeId },
       });
     },
     onError: (err) => {
+      if (exchangeCommandIdentity(client) !== identity) return;
       setErrorNotice(presentError(err).message);
     },
   });
@@ -304,6 +359,43 @@ export function ExchangeComposeScreen() {
       </Screen>
     );
   }
+
+  if (state.status === "authenticated" && (retained || created))
+    return (
+      <Screen appearance="browse">
+        <Notice>
+          {created
+            ? "Đề nghị đã được tạo. Mở đề nghị để xem trạng thái, không cần gửi lại."
+            : "Chưa xác nhận được kết quả gửi đề nghị. Nội dung và mã yêu cầu gốc được giữ nguyên."}
+        </Notice>
+        {errorNotice && <Notice tone="error">{errorNotice}</Notice>}
+        {created ? (
+          <Button
+            title="Xem đề nghị đã tạo"
+            onPress={() =>
+              router.replace({ pathname: "/exchange", params: { id: created } })
+            }
+          />
+        ) : retained?.recipientListingId === targetListingId ? (
+          <Button
+            title="Thử lại đề nghị trước"
+            busy={submitProposalMutation.isPending}
+            onPress={() => submitProposalMutation.mutate()}
+          />
+        ) : (
+          <Button
+            title="Mở đề nghị chưa rõ kết quả"
+            onPress={() =>
+              router.replace({
+                pathname: "/exchange-compose",
+                params: { book: String(retained?.recipientListingId) },
+              })
+            }
+          />
+        )}
+        <Button title="Quay lại" secondary onPress={() => router.back()} />
+      </Screen>
+    );
 
   if (targetQuery.isPending || myInventoryQuery.isPending) {
     return (
@@ -367,9 +459,13 @@ export function ExchangeComposeScreen() {
           <View style={styles.targetCardBadgeRow}>
             <View style={styles.targetBadge}>
               <Icon name="bookmark" size={13} color={stitchTokens.wineDark} />
-              <AppText style={styles.targetBadgeText}>SÁCH BẠN MUỐN NHẬN</AppText>
+              <AppText style={styles.targetBadgeText}>
+                SÁCH BẠN MUỐN NHẬN
+              </AppText>
             </View>
-            <AppText style={styles.targetOwner}>Chủ sách: @{targetBook.seller.displayName}</AppText>
+            <AppText style={styles.targetOwner}>
+              Chủ sách: @{targetBook.seller.displayName}
+            </AppText>
           </View>
 
           <View style={styles.targetBookRow}>
@@ -436,22 +532,32 @@ export function ExchangeComposeScreen() {
                 <View style={styles.prefBannerBody}>
                   {targetBook.exchangePreferences.targetCategory ? (
                     <AppText style={styles.prefBannerText}>
-                      • Thể loại: <AppText style={styles.prefBold}>{targetBook.exchangePreferences.targetCategory}</AppText>
+                      • Thể loại:{" "}
+                      <AppText style={styles.prefBold}>
+                        {targetBook.exchangePreferences.targetCategory}
+                      </AppText>
                     </AppText>
                   ) : null}
                   {targetBook.exchangePreferences.targetAuthor ? (
                     <AppText style={styles.prefBannerText}>
-                      • Tác giả: <AppText style={styles.prefBold}>{targetBook.exchangePreferences.targetAuthor}</AppText>
+                      • Tác giả:{" "}
+                      <AppText style={styles.prefBold}>
+                        {targetBook.exchangePreferences.targetAuthor}
+                      </AppText>
                     </AppText>
                   ) : null}
                   {targetBook.exchangePreferences.targetDescription ? (
                     <AppText style={styles.prefBannerText}>
-                      • Ghi chú: <AppText style={styles.prefBold}>{targetBook.exchangePreferences.targetDescription}</AppText>
+                      • Ghi chú:{" "}
+                      <AppText style={styles.prefBold}>
+                        {targetBook.exchangePreferences.targetDescription}
+                      </AppText>
                     </AppText>
                   ) : null}
                 </View>
                 <AppText style={styles.prefHint}>
-                  Sách trong kệ của bạn khớp tiêu chí sẽ có huy hiệu ✨ Khớp mong muốn.
+                  Sách trong kệ của bạn khớp tiêu chí sẽ có huy hiệu ✨ Khớp
+                  mong muốn.
                 </AppText>
               </View>
             )}
@@ -463,7 +569,8 @@ export function ExchangeComposeScreen() {
                 Chưa có sách nào sẵn sàng đổi
               </AppText>
               <AppText style={styles.emptySubtitle}>
-                Bạn cần có ít nhất một cuốn sách đã được duyệt và bật chế độ Đổi sách trong kệ của mình.
+                Bạn cần có ít nhất một cuốn sách đã được duyệt và bật chế độ Đổi
+                sách trong kệ của mình.
               </AppText>
               <Button
                 title="Đăng sách mới vào kệ"
@@ -498,7 +605,9 @@ export function ExchangeComposeScreen() {
           <View style={styles.diffCard}>
             <View style={styles.diffHeader}>
               <Icon name="swap" size={16} color={stitchTokens.wineDark} />
-              <AppText style={styles.diffTitle}>So khớp giá trị trao đổi</AppText>
+              <AppText style={styles.diffTitle}>
+                So khớp giá trị trao đổi
+              </AppText>
             </View>
 
             <View style={styles.diffGrid}>
@@ -506,7 +615,9 @@ export function ExchangeComposeScreen() {
                 <AppText style={styles.diffItemLabel}>
                   Sách bạn gửi ({chosenMyListings.length} cuốn)
                 </AppText>
-                <AppText style={styles.diffItemValue}>{formatVnd(totalMyValue)}</AppText>
+                <AppText style={styles.diffItemValue}>
+                  {formatVnd(totalMyValue)}
+                </AppText>
               </View>
 
               <View style={styles.diffDivider}>
@@ -515,7 +626,9 @@ export function ExchangeComposeScreen() {
 
               <View style={styles.diffItem}>
                 <AppText style={styles.diffItemLabel}>Sách bạn nhận</AppText>
-                <AppText style={styles.diffItemValue}>{formatVnd(targetValue)}</AppText>
+                <AppText style={styles.diffItemValue}>
+                  {formatVnd(targetValue)}
+                </AppText>
               </View>
             </View>
 
@@ -554,15 +667,22 @@ export function ExchangeComposeScreen() {
           <View style={styles.sectionHeader}>
             <View style={styles.sectionTitleWithIcon}>
               <Icon name="pin" size={18} color={stitchTokens.wineDark} />
-              <AppText style={styles.sectionTitle}>Địa chỉ nhận sách của bạn</AppText>
+              <AppText style={styles.sectionTitle}>
+                Địa chỉ nhận sách của bạn
+              </AppText>
             </View>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Quản lý địa chỉ"
               onPress={() => router.push("/addresses")}
-              style={({ pressed }) => [styles.addressManageBtn, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.addressManageBtn,
+                pressed && styles.pressed,
+              ]}
             >
-              <AppText style={styles.addressManageText}>Quản lý sổ địa chỉ ↗</AppText>
+              <AppText style={styles.addressManageText}>
+                Quản lý sổ địa chỉ ↗
+              </AppText>
             </Pressable>
           </View>
 
@@ -588,11 +708,15 @@ export function ExchangeComposeScreen() {
                         </AppText>
                         {addr.isDefault && (
                           <View style={styles.defaultPill}>
-                            <AppText style={styles.defaultPillText}>Mặc định</AppText>
+                            <AppText style={styles.defaultPillText}>
+                              Mặc định
+                            </AppText>
                           </View>
                         )}
                       </View>
-                      <AppText style={styles.addressDetailText}>{addr.detail}</AppText>
+                      <AppText style={styles.addressDetailText}>
+                        {addr.detail}
+                      </AppText>
                     </View>
 
                     <View
@@ -602,7 +726,11 @@ export function ExchangeComposeScreen() {
                       ]}
                     >
                       {isSelected && (
-                        <Icon name="check" size={13} color={stitchTokens.white} />
+                        <Icon
+                          name="check"
+                          size={13}
+                          color={stitchTokens.white}
+                        />
                       )}
                     </View>
                   </Pressable>
@@ -662,7 +790,9 @@ export function ExchangeComposeScreen() {
             }
             wine
             busy={submitProposalMutation.isPending}
-            disabled={chosenMyListings.length === 0 || submitProposalMutation.isPending}
+            disabled={
+              chosenMyListings.length === 0 || submitProposalMutation.isPending
+            }
             onPress={() => submitProposalMutation.mutate()}
           />
         </View>

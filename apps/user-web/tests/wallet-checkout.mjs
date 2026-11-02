@@ -57,6 +57,13 @@ globalThis.fetch = async (input, init) => {
     .toISOString()
     .slice(0, 19)
     .replace(/[-T:]/g, "");
+  let amount = checkoutAmounts.get(request.vnp_TxnRef);
+  if (!amount && fixture?.db) {
+    const doc = await fixture.db
+      .collection("topup_intents")
+      .findOne({ _id: request.vnp_TxnRef }, { projection: { amount: 1 } });
+    if (doc?.amount) amount = String(doc.amount * 100);
+  }
   const data = {
     vnp_ResponseId: "qa-query-response",
     vnp_Command: "querydr",
@@ -64,7 +71,7 @@ globalThis.fetch = async (input, init) => {
     vnp_Message: "Success",
     vnp_TmnCode: "TESTDEMO",
     vnp_TxnRef: request.vnp_TxnRef,
-    vnp_Amount: checkoutAmounts.get(request.vnp_TxnRef) ?? "5000000",
+    vnp_Amount: amount ?? "5000000",
     vnp_BankCode: "NCB",
     vnp_PayDate: date,
     vnp_TransactionNo: String(
@@ -529,8 +536,10 @@ try {
   // Small real API pages exercise pagination and retries without fabricated rows.
   let failNextPage = true;
   let failRefundRead = true;
+  const nextPageCursors = [];
   await page.route("**/api/v1/me/wallet/history?*", async (route) => {
     const url = new URL(route.request().url());
+    if (url.searchParams.has("cursor")) nextPageCursors.push(url.searchParams.get("cursor"));
     if (url.searchParams.has("cursor") && failNextPage) {
       failNextPage = false;
       return route.fulfill({
@@ -578,11 +587,21 @@ try {
     .filter({ hasText: "Chưa tải được các giao dịch tiếp theo" })
     .waitFor();
   assert.equal(await ledgerHistory.locator("li").count(), 1);
+  // A successful background refresh can clear the transient pagination error
+  // before this click. Both labels issue the same next-page command; verify
+  // its cursor and real ledger rows, rather than racing the error label.
+  await page.evaluate(async () => {
+    const { queryClient } = await import("/src/lib/session.ts");
+    await queryClient.invalidateQueries({ queryKey: ["wallet-history"] });
+  });
+  assert.equal(await ledgerHistory.locator("li").count(), 1, "a background refresh preserves the loaded ledger page");
   await ledgerHistory
-    .getByRole("button", { name: "Thử tải thêm giao dịch", exact: true })
+    .getByRole("button", { name: /^(Thử tải thêm|Xem thêm) giao dịch$/ })
     .click();
   await ledgerHistory.locator("li").nth(1).waitFor();
   assert.equal(await ledgerHistory.locator("li").count(), 2);
+  assert.ok(nextPageCursors[0], "the failed read had a real cursor");
+  assert.deepEqual(nextPageCursors.slice(0, 2), [nextPageCursors[0], nextPageCursors[0]], "manual retry keeps the exact failed cursor after a background refresh");
   await page
     .getByLabel("Loại giao dịch", { exact: true })
     .selectOption("OrderPayment");

@@ -29,6 +29,7 @@ import { BuyNowModal } from "./buy-now-modal";
 import { MemberNavigation } from "../navigation/member-navigation";
 import { bundleSchema } from "../bundles/book-bundle";
 import { BundleManifest } from "../bundles/bundle-manifest";
+import { OrderShipping } from "./order-shipping";
 
 const details = orderDetailsSchema
   .extend(orderResponseStateSchema.shape)
@@ -40,7 +41,17 @@ const details = orderDetailsSchema
       metadata: z.object({ title: z.string() }),
       description: z.string(),
     }),
-    preparation: z.object({ pickupDeadline: z.string() }).nullable(),
+    preparation: z.object({ pickupDeadline: z.iso.datetime() }).nullable(),
+    serverTime: z.iso.datetime(),
+    shipmentRegistrationEnabled: z.boolean(),
+    shippingAddress: z
+      .object({
+        recipientName: z.string(),
+        phone: z.string(),
+        localityCode: z.string(),
+        detail: z.string(),
+      })
+      .nullable(),
   });
 type Action = "accept" | "reject" | "cancel" | "pay";
 const labels: Record<Action, string> = {
@@ -128,8 +139,10 @@ export function OrderFocusScreen({
         )}
         {order && (
           <>
-            <AppText kind="bold">{order.item.bundle?.title || order.item.metadata.title}</AppText>
-            <BundleManifest bundle={order.item.bundle}/>
+            <AppText kind="bold">
+              {order.item.bundle?.title || order.item.metadata.title}
+            </AppText>
+            <BundleManifest bundle={order.item.bundle} />
             <AppText>
               {order.role === "Buyer" ? "Bạn là người mua" : "Bạn là người bán"}{" "}
               · {ORDER_STATE_CONFIG[order.state]?.label ?? order.state}
@@ -170,18 +183,21 @@ export function OrderFocusScreen({
                   )}
                   .{" "}
                   {order.role === "Seller"
-                    ? "Ảnh đóng gói và vận chuyển hiện thực hiện trên Member web: đăng nhập cùng tài khoản, vào Đơn trực tiếp và mở đúng mã đơn này. Không tạo đơn mới."
+                    ? "Chọn ảnh đóng gói bên dưới, rồi đăng ký mã vận đơn mô phỏng. Sau đó chờ xác nhận bàn giao vận chuyển."
                     : "Tiền đang được giữ trong giao dịch. Theo dõi cập nhật tại đơn này; chưa cần xác nhận đã nhận sách."}
                 </Notice>
-                {order.role === "Seller" && (
-                  <>
-                    <AppText selectable>Mã đơn: {id}</AppText>
-                    <AppText kind="small">
-                      Nhấn giữ mã đơn để sao chép khi mở Member web.
-                    </AppText>
-                  </>
-                )}
               </View>
+            )}
+            {order.preparation && (
+              <OrderShipping
+                key={`${ownerId}:${id}`}
+                order={order}
+                ownerId={ownerId}
+                foreground={foreground}
+                readFailed={!!result.error}
+                readAt={result.dataUpdatedAt}
+                onChange={changed}
+              />
             )}
             {error && <Notice tone="error">{error}</Notice>}
             {pending ? (
@@ -276,7 +292,9 @@ export function OrderFocusScreen({
         <BuyNowModal
           visible
           initialOrderId={id}
-          initialBookTitle={order.item.bundle?.title || order.item.metadata.title}
+          initialBookTitle={
+            order.item.bundle?.title || order.item.metadata.title
+          }
           onClose={() => {
             setPaying(false);
             void changed();

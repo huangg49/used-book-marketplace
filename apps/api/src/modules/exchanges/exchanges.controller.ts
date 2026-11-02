@@ -41,6 +41,13 @@ export class ExchangesController {
     return this.exchanges.getExchange(req.auth, this.input.uuid(id));
   }
 
+  @Get(':id/books/:listingId/photos/:mediaId')
+  @ExistingObligation()
+  @Roles('MEMBER')
+  photo(@Param('id') id: string, @Param('listingId') listingId: string, @Param('mediaId') mediaId: string, @Req() req: AuthenticatedRequest) {
+    return this.exchanges.photo(req.auth, this.input.uuid(id), this.input.uuid(listingId), this.input.uuid(mediaId));
+  }
+
   @Post(':id/accept')
   @Roles('MEMBER')
   @HttpCode(200)
