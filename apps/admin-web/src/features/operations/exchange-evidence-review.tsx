@@ -28,6 +28,7 @@ export function ExchangeEvidenceReview({
       evidenceId: string;
       mimeType: string;
     }>();
+  const [previewFailed, setPreviewFailed] = useState(false);
   const [intent, setIntent] = useState<
     | { key: string; body: { expectedVersion: number; reason: string } }
     | undefined
@@ -98,6 +99,7 @@ export function ExchangeEvidenceReview({
   async function read(eid: string, name: string, mimeType: string) {
     setError("");
     setDownload(undefined);
+    setPreviewFailed(false);
     try {
       const r = await session.request(
         `/operations/exchanges/${id}/evidence/${eid}/read`,
@@ -193,8 +195,9 @@ export function ExchangeEvidenceReview({
       {assigned && !list.isError && download &&
         list.data?.items.some(e => e.id === download.evidenceId && e.status === "Ready") && (
         <div className={styles.preview}>
-          {download.mimeType.startsWith("image/") && <img src={download.url} alt={`Bằng chứng: ${download.name}`} />}
-          {download.mimeType === "video/mp4" && <video aria-label={`Video bằng chứng: ${download.name}`} src={download.url} controls playsInline preload="metadata">Trình duyệt chưa phát được video. Dùng liên kết tải bên dưới.</video>}
+          {!previewFailed && download.mimeType.startsWith("image/") && <img onError={() => setPreviewFailed(true)} src={download.url} alt={`Bằng chứng: ${download.name}`} />}
+          {!previewFailed && download.mimeType === "video/mp4" && <video onError={() => setPreviewFailed(true)} aria-label={`Video bằng chứng: ${download.name}`} src={download.url} controls playsInline preload="metadata">Trình duyệt chưa phát được video. Dùng liên kết tải bên dưới.</video>}
+        {previewFailed && <p role="status">Chưa xem trước được tệp. Dùng liên kết tải bên dưới hoặc cấp lại quyền khi liên kết hết hạn.</p>}
         <p>
           <a href={download.url} target="_blank" rel="noopener noreferrer">
             Tải tệp đã được cấp quyền: {download.name}

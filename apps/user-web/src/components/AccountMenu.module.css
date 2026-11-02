@@ -116,7 +116,7 @@
   background: var(--shop-paper);
   color: var(--shop-ink);
   border: 1px solid rgba(92, 2, 2, 0.1);
-  box-shadow: 
+  box-shadow:
     0 4px 6px -1px rgba(40, 25, 20, 0.06),
     0 20px 32px -4px rgba(40, 25, 20, 0.16),
     0 0 0 1px rgba(255, 255, 255, 0.6) inset;

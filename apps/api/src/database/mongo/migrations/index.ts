@@ -40,11 +40,9 @@ import {
 } from './0037-seller-scheduled-auctions.js';
 import {
   exchangeDisputeResolutionMigration,
-  withExchangeDisputeResolution,
 } from './0044-exchange-dispute-resolution.js';
 import {
   exchangeMutualCancellationMigration,
-  withExchangeMutualCancellation,
 } from './0045-exchange-mutual-cancellation.js';
 import {
   listingExchangePreferencesMigration,
@@ -55,20 +53,16 @@ import {
   listingAutofillSpecs,
 } from './0038-listing-autofill.js';
 import {
-  exchangeCollectionSpecs,
   exchangesMigration,
 } from './0016-exchanges.js';
 import {
   exchangesPhase2Migration,
-  withExchangePhase2Changes,
 } from './0017-exchanges-phase2.js';
 import {
   exchangesPhase3Migration,
-  withExchangePhase3Changes,
 } from './0018-exchanges-proposal-expiry.js';
 import {
   exchangesPhase4Migration,
-  withExchangePhase4Changes,
 } from './0022-exchange-completion.js';
 import {
   exchangeMessageSpecs,
@@ -194,7 +188,6 @@ import {
 import { exchangeReviewsMigration } from './0025-exchange-reviews.js';
 import {
   exchangeMutualCompletionMigration,
-  withExchangePhase5Changes,
 } from './0026-exchange-mutual-completion.js';
 import {
   exchangeMultiBookMigration,

@@ -1,3 +1,28 @@
+# Đồng bộ main và bảo toàn checkout local — 03/11/2026
+
+- Owner yêu cầu fetch/main sync và xử lý conflict; Antigravity đã được owner xác
+  nhận dừng sửa. Nhánh `codex/sync-main-20261103` giữ cả các commit local và
+  checkpoint 131 file từ checkout ứng dụng, không reset/clean/stash/force checkout.
+- Đã tích hợp main tới `997d4808` (panel khiếu nại trượt bên phải), giữ UI local,
+  các điểm vào Hỗ trợ/Hậu kiểm AI, cache thông báo theo user và quyền xem bằng chứng.
+  Ảnh/video chỉ từ signed read có phân công/audit, không iframe bridge hoặc ảnh mẫu.
+- Phát hiện và sửa nâng cấp AI v1 có dữ liệu bị validator chặn: thêm migration
+  `0056-auto-review-v2-upgrade-bridge` chạy trước migration v2 đã đóng băng.
+  Mô tả exchanges dùng schema cuối của migration payer, tránh ghép lại luật cũ.
+  Không sửa nội dung/checksum các migration đã áp dụng.
+- PASS API/Member web/Admin/RN typecheck; API/Member/Admin build; unit 315 Member,
+  229 Admin,150 session;133 API E2E;7 Mongo upgrade tests. Browser profile fixture
+  PASS; xem bằng chứng web dùng API/Mongo QA thật, storage fake. Native NOT RUN.
+- Bản sao nhất quán của DB chính được thử nâng cấp riêng trên rs-test/_test:
+  9 migration, không checksum cũ lệch, không bản ghi mới vi phạm validator,
+  ledger/giao dịch/400 listing giữ nguyên; policy chọn cho quote mới chuyển free
+  shipping và AI cũ thêm metadata mặc định. Không reset/seed/import DB chính.
+- **Chưa kích hoạt checkout app đang chạy**: DB chính chưa được nâng cấp, API mới
+  sẽ từ chối khởi động khi thiếu schema. Cần owner duyệt áp dụng 9 migration và
+  cập nhật quyền collection cho role app trước khi chuyển source/restart.
+  [Bằng chứng, thay đổi và bước kích hoạt](../features/LOCAL_MAIN_SYNC_2026_11_03.md).
+  Không push/PR/remote merge/deploy; không đóng READINESS.
+
 # Điểm lưu hiện tại — 03/11/2026
 
 ## Dữ liệu nền400cuốn trên app local chính
