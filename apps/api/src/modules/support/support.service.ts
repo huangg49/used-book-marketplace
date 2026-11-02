@@ -424,15 +424,16 @@ export class SupportService {
       readAt: null,
     });
   }
-  private async validateTarget(
+  async validateTarget(
     tx: Tx,
     target: Case['target'],
     owner: string,
+    lock = true,
   ): Promise<string[]> {
     if (!target) return [];
     const { type, id } = target;
     if (type === 'Review') {
-      await tx.lock('transaction_reviews', [id]);
+      if (lock) await tx.lock('transaction_reviews', [id]);
       const rows = await tx.c.transaction_reviews
         .aggregate([
           { $match: { _id: id, hiddenAt: null, deletedAt: null } },
@@ -452,7 +453,7 @@ export class SupportService {
       return [id];
     }
     if (type === 'Listing') {
-      await tx.lock('listings', [id]);
+      if (lock) await tx.lock('listings', [id]);
       const row = await tx.c.listings.findOne({ _id: id });
       if (
         !row ||
@@ -463,7 +464,7 @@ export class SupportService {
       return [row.ownerId];
     }
     if (type === 'Auction') {
-      await tx.lock('auctions', [id]);
+      if (lock) await tx.lock('auctions', [id]);
       const row = await tx.c.auctions.findOne({ _id: id });
       if (
         !row ||
@@ -487,7 +488,7 @@ export class SupportService {
         : type === 'Exchange'
           ? 'exchanges'
           : 'point_orders';
-    await tx.lock(collection, [id]);
+    if (lock) await tx.lock(collection, [id]);
     const row = await tx.c[collection].findOne({ _id: id });
     if (!row) throw notFound();
     const ids =

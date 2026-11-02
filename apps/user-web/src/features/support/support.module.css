@@ -143,6 +143,67 @@
 .error {
   color: var(--shop-error);
 }
+.targetPicker {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.selectedTarget {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding: 16px;
+  background: var(--shop-shelf);
+  border: 1px solid var(--shop-line);
+  border-radius: 6px;
+}
+.targetSearch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.targetSearch label {
+  flex-basis: 100%;
+}
+.targetSearch input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.targetOptions {
+  display: grid;
+  gap: 8px;
+}
+.form .targetOption {
+  display: flex;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid var(--shop-line);
+  border-radius: 6px;
+  background: var(--shop-paper);
+  cursor: pointer;
+}
+.form .targetOption[data-selected="true"] {
+  border-color: var(--shop-wine);
+  background: var(--shop-shelf);
+}
+.page .targetOption input {
+  flex-shrink: 0;
+  min-height: 24px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: 50%;
+  margin: 2px 4px 0 0;
+  accent-color: var(--shop-wine);
+}
+.targetOption .meta {
+  font-weight: 400;
+}
+.targetOption span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
 .text {
   white-space: pre-wrap;
 }

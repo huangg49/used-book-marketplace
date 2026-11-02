@@ -3702,6 +3702,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/support-targets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE MEMBER. Readable labels only; no address, email or payment data. Options are current owned transactions; resolve rechecks the same target access as support creation. No business mutation. */
+        get: operations["listMySupportTargets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/support-targets/{type}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE MEMBER. Readable labels only; no address, email or payment data. Options are current owned transactions; resolve rechecks the same target access as support creation. No business mutation. */
+        get: operations["getMySupportTarget"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6949,6 +6983,20 @@ export interface components {
             version: number;
             /** @enum {string} */
             state: "Open" | "InReview" | "AwaitingMember" | "Answered" | "Closed";
+            /** Format: date-time */
+            serverTime: string;
+        };
+        SupportTargetOption: {
+            target: components["schemas"]["SupportTarget"];
+            label: string;
+            description: string | null;
+            partnerName: string | null;
+            createdAt: string | null;
+            state: string | null;
+        };
+        SupportTargetOptionsPage: {
+            items: components["schemas"]["SupportTargetOption"][];
+            nextCursor: string | null;
             /** Format: date-time */
             serverTime: string;
         };
@@ -14447,6 +14495,64 @@ export interface operations {
             422: components["responses"]["Error"];
             429: components["responses"]["Error"];
             503: components["responses"]["Error"];
+        };
+    };
+    listMySupportTargets: {
+        parameters: {
+            query: {
+                type: "DirectOrder" | "Exchange" | "PointOrder";
+                q?: string;
+                cursor?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportTargetOptionsPage"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+        };
+    };
+    getMySupportTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                type: "DirectOrder" | "Exchange" | "PointOrder" | "Listing" | "Auction" | "Review" | "Member";
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportTargetOption"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            422: components["responses"]["Error"];
         };
     };
 }

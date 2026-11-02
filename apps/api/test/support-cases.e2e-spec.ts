@@ -162,6 +162,86 @@ describe('Private support cases — real HTTP/Mongo, no fulfillment acceptance',
     await get(ops(id), staff).expect(403);
     validates('SupportCaseDetail', (await get(mine(id)).expect(200)).body);
   });
+  it('offers readable owned targets with scoped pagination and literal search, without leaking member PII', async () => {
+    const own = await exchange(),
+      secondOwn = await exchange(),
+      outsider = await reader();
+    await db.c.users.updateOne(
+      { _id: b.id },
+      { $set: { displayName: 'Bạn đọc [QA]' } },
+    );
+    await request(app.getHttpServer())
+      .get('/api/v1/me/support-targets?type=Exchange')
+      .expect(401);
+    await get('/me/support-targets?type=Exchange', staff).expect(403);
+    await get('/me/support-targets?type=Member').expect(400);
+    await get('/me/support-targets?type=Exchange&limit=21').expect(400);
+    const page = (
+      await get('/me/support-targets?type=Exchange&limit=1&q=%5BQA%5D').expect(
+        200,
+      )
+    ).body;
+    validates('SupportTargetOptionsPage', page);
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]).toMatchObject({
+      label: 'Trao đổi sách',
+      partnerName: 'Bạn đọc [QA]',
+      state: 'Completed',
+    });
+    const cursor = encodeURIComponent(page.nextCursor);
+    const next = (
+      await get(
+        `/me/support-targets?type=Exchange&limit=1&q=%5BQA%5D&cursor=${cursor}`,
+      ).expect(200)
+    ).body;
+    expect([page.items[0].target.id, next.items[0].target.id].sort()).toEqual(
+      [own, secondOwn].sort(),
+    );
+    expect(next.nextCursor).toBeNull();
+    await get(
+      `/me/support-targets?type=Exchange&limit=1&q=%5BQA%5D&cursor=${cursor}`,
+      b,
+    ).expect(400);
+    await get(
+      `/me/support-targets?type=DirectOrder&limit=1&q=%5BQA%5D&cursor=${cursor}`,
+    ).expect(400);
+    await get(
+      `/me/support-targets?type=Exchange&limit=1&q=other&cursor=${cursor}`,
+    ).expect(400);
+    expect(
+      (await get('/me/support-targets?type=Exchange', outsider).expect(200))
+        .body.items,
+    ).toEqual([]);
+    expect(
+      (await get('/me/support-targets?type=Exchange&q=.%2A').expect(200)).body
+        .items,
+    ).toEqual([]);
+    const resolved = (
+      await get(`/me/support-targets/Exchange/${own}`).expect(200)
+    ).body;
+    validates('SupportTargetOption', resolved);
+    expect(resolved.partnerName).toBe('Bạn đọc [QA]');
+    expect((await db.c.exchanges.findOne({ _id: own }))!.lockSeq).toBe(0);
+    await get(`/me/support-targets/Exchange/${own}`, outsider).expect(404);
+    await get(`/me/support-targets/Unknown/${own}`).expect(422);
+    const profile = (
+      await get(`/me/support-targets/Member/${b.id}`).expect(200)
+    ).body;
+    expect(Object.keys(profile).sort()).toEqual(
+      [
+        'target',
+        'label',
+        'description',
+        'partnerName',
+        'createdAt',
+        'state',
+      ].sort(),
+    );
+    expect(JSON.stringify(profile)).not.toContain('@');
+    await db.setStatus(a.id, 'LOCKED');
+    await get('/me/support-targets?type=Exchange').expect(403);
+    await get(`/me/support-targets/Exchange/${own}`).expect(403);
+  });
   it('requires assignment, protects internal notes, requests evidence, answers and closes after ACK', async () => {
     const r = await create(),
       id = r.entityId;
@@ -450,7 +530,49 @@ describe('Private support cases — real HTTP/Mongo, no fulfillment acceptance',
       ['DirectOrder', direct],
       ['PointOrder', point],
     ]) {
+      const contextId =
+        type === 'PointOrder'
+          ? (await db.c.point_orders.findOne({ _id: id }))!.contextId
+          : randomUUID();
+      await db.c.workflow_contexts.insertOne({
+        _id: contextId,
+        kind: type === 'PointOrder' ? 'PointOrder' : 'Order',
+        orderId: id,
+        auctionIntakeId: null,
+        version: 1,
+        ownershipPhase: 'Closed',
+        lockSeq: 0,
+      });
+      const listingId = randomUUID(),
+        title = `Cuốn sách ${type} [ký ức]`;
+      await db.c.workflow_items.insertOne({
+        _id: `${contextId}:${listingId}`,
+        contextId,
+        listingId,
+        listingRevisionId: randomUUID(),
+        catalogRevisionId: randomUUID(),
+        snapshot: type === 'PointOrder' ? { title } : { metadata: { title } },
+      });
       const body = { ...input, kind: 'TransactionIssue', target: { type, id } };
+      const option = (
+        await get(`/me/support-targets/${type}/${id}`).expect(200)
+      ).body;
+      validates('SupportTargetOption', option);
+      expect(option.target).toEqual({ type, id });
+      expect(option.label).toBe(title);
+      expect(
+        (
+          await get(
+            `/me/support-targets?type=${type}&q=${encodeURIComponent('[ký ức]')}`,
+          ).expect(200)
+        ).body.items[0].label,
+      ).toBe(title);
+      expect(
+        (await get(`/me/support-targets?type=${type}`).expect(200)).body.items,
+      ).toContainEqual(option);
+      await get(`/me/support-targets/${type}/${id}`, await reader()).expect(
+        404,
+      );
       const c = await create(body);
       const view = (await get(mine(c.entityId)).expect(200)).body;
       expect(view.case.target).toEqual({ type, id });
@@ -481,6 +603,7 @@ describe('Private support cases — real HTTP/Mongo, no fulfillment acceptance',
       target: { type: 'Review', id: r.id },
     };
     await post('/me/support-cases', report).expect(404);
+    await get(`/me/support-targets/Review/${r.id}`).expect(404);
     await get(`/me/transaction-reviews/${r.id}/target`, b).expect(404);
     const createdAt = new Date(Date.now() - 49 * 3600000);
     await db.c.transaction_reviews.updateMany(
@@ -491,6 +614,11 @@ describe('Private support cases — real HTTP/Mongo, no fulfillment acceptance',
     );
     const outsider = await reader(),
       c = await create(report, outsider);
+    const reviewOption = (
+      await get(`/me/support-targets/Review/${r.id}`, outsider).expect(200)
+    ).body;
+    expect(reviewOption.label).toContain('Đánh giá của');
+    expect(reviewOption.description).toBe(inputReview.comment);
     await action(c.entityId, 1, 'Assign').expect(200);
     const view = (await get(ops(c.entityId), admin).expect(200)).body;
     expect(view.review.id).toBe(r.id);
@@ -522,5 +650,6 @@ describe('Private support cases — real HTTP/Mongo, no fulfillment acceptance',
     expect(
       (await get(ops(c.entityId), admin).expect(200)).body.review.status,
     ).toBe('Hidden');
+    await get(`/me/support-targets/Review/${r.id}`, outsider).expect(404);
   });
 });

@@ -15,6 +15,31 @@ import { ExistingObligation } from '../auth/obligations.decorator.js';
 import { ContractInput } from '../commands/contract-input.service.js';
 import { commandContext, commandResponse } from '../commands/command-http.js';
 import { SupportService } from './support.service.js';
+import { SupportTargetsService } from './support-targets.service.js';
+
+@Controller('me/support-targets')
+@Roles('MEMBER')
+export class SupportTargetsController {
+  constructor(
+    private readonly targets: SupportTargetsService,
+    private readonly input: ContractInput,
+  ) {}
+  @Get()
+  list(@Req() req: AuthenticatedRequest) {
+    return this.targets.list(
+      req.auth,
+      this.input.query('listMySupportTargets', req.query),
+    );
+  }
+  @Get(':type/:id')
+  get(
+    @Param('type') type: string,
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.targets.get(req.auth, type, this.input.uuid(id));
+  }
+}
 
 @Controller('me/support-cases')
 @Roles('MEMBER')

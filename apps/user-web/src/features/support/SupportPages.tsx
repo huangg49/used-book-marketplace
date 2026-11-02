@@ -30,6 +30,7 @@ import {
 import { session } from "../../lib/session";
 import { useSession } from "../../hooks/useSession";
 import styles from "./support.module.css";
+import { SupportTargetPicker } from "./SupportTargetPicker";
 
 const date = (s: string) => new Date(s).toLocaleString("vi-VN");
 export function SupportPage() {
@@ -207,12 +208,17 @@ function NewSupportForm({
         : "",
     targetId: params.get("id") ?? "",
   };
-  const [draft, setDraft] = useState(
-      () =>
+  const [draft, setDraft] = useState(() => {
+      const latest = supportDraft(session, "create:latest");
+      return (
         pendingSupportCreateDraft(session) ??
-        supportDraft(session, draftScope) ??
-        initial,
-    ),
+        supportDraft(session, draftScope) ?? {
+          ...initial,
+          title: latest?.title ?? "",
+          description: latest?.description ?? "",
+        }
+      );
+    }),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const running = useRef(false),
@@ -222,18 +228,26 @@ function NewSupportForm({
     const next = { ...draftRef.current, ...p };
     draftRef.current = next;
     supportDraft(session, draftScope, next);
+    supportDraft(session, "create:latest", next);
     setDraft(next);
   }
   async function submit(e?: FormEvent) {
     e?.preventDefault();
     if (running.current) return;
     if (!pending) {
-      if(draft.kind==='TransactionIssue' && !['DirectOrder','Exchange','PointOrder'].includes(draft.targetType)){
-        setError('Phản ánh giao dịch cần chọn đơn mua bán, trao đổi hoặc đơn thắng đấu giá của bạn.');
+      if (
+        draft.kind === "TransactionIssue" &&
+        !["DirectOrder", "Exchange", "PointOrder"].includes(draft.targetType)
+      ) {
+        setError(
+          "Phản ánh giao dịch cần chọn đơn mua bán, trao đổi hoặc đơn thắng đấu giá của bạn.",
+        );
         return;
       }
-      if(draft.kind==='Violation' && !draft.targetType){
-        setError('Báo cáo vi phạm cần gắn với nội dung hoặc thành viên cụ thể.');
+      if (draft.kind === "Violation" && !draft.targetType) {
+        setError(
+          "Báo cáo vi phạm cần gắn với nội dung hoặc thành viên cụ thể.",
+        );
         return;
       }
       if (
@@ -248,7 +262,7 @@ function NewSupportForm({
         !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(draft.targetId)
       ) {
         setError(
-          "Mã đối tượng chưa đúng. Mở yêu cầu từ trang giao dịch hoặc nội dung liên quan.",
+          "Chọn giao dịch trong danh sách hoặc dùng nút Báo cáo nội dung tại trang liên quan.",
         );
         return;
       }
@@ -272,6 +286,7 @@ function NewSupportForm({
         () => crypto.randomUUID(),
       );
       supportDraft(session, draftScope, null);
+      supportDraft(session, "create:latest", null);
       await cache.invalidateQueries({ queryKey: ["support"] });
       navigate(`/support/${r.entityId}`, { replace: true });
     } catch (e) {
@@ -360,19 +375,13 @@ function NewSupportForm({
             </select>
           </label>
           {draft.targetType ? (
-            <label>
-              Mã đối tượng
-              <input
-                required
-                aria-label="Mã đối tượng"
-                value={draft.targetId}
-                onChange={(e) => update({ targetId: e.target.value })}
-              />
-              <small>
-                Được điền sẵn khi bạn chọn hỗ trợ ngay tại giao dịch hoặc nội
-                dung đó.
-              </small>
-            </label>
+            <SupportTargetPicker
+              key={draft.targetType}
+              type={draft.targetType}
+              id={draft.targetId}
+              active={active}
+              onSelect={(targetId) => update({ targetId })}
+            />
           ) : null}
           <label>
             Nội dung

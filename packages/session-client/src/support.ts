@@ -77,6 +77,22 @@ export const supportPageSchema = z.object({
   nextCursor: z.string().nullable(),
   serverTime: z.iso.datetime(),
 });
+export const supportTargetOptionSchema: z.ZodType<
+  components["schemas"]["SupportTargetOption"]
+> = z.object({
+  target: supportSummarySchema.shape.target.unwrap(),
+  label: z.string(),
+  description: z.string().nullable(),
+  partnerName: z.string().nullable(),
+  createdAt: z.iso.datetime().nullable(),
+  state: z.string().nullable(),
+});
+export const supportTargetOptionsPageSchema = z.object({
+  items: z.array(supportTargetOptionSchema),
+  nextCursor: z.string().nullable(),
+  serverTime: z.iso.datetime(),
+});
+export type SupportTargetOption = z.infer<typeof supportTargetOptionSchema>;
 export const supportDetailSchema = z.object({
   case: supportSummarySchema,
   messages: z.array(

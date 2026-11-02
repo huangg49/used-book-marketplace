@@ -50,6 +50,26 @@ trước replay, actor/session → case lock và server decision clock. Nhận v
 commit cùng nhau. Không ghi nội dung hội thoại vào audit hoặc log request body.
 Danh sách dùng cursor ký, ràng buộc actor/phạm vi lọc, không lấy lỗi thành empty.
 
+### Chọn nội dung để phản ánh — bổ sung02/11/2026
+
+Owner yêu cầu bỏ ô nhập mã đối tượng vì người dùng không nhớ ID. Member chọn
+DirectOrder/Exchange/PointOrder từ danh sách giao dịch mình tham gia, có tên sách
+(snapshot nếu có), tên đối tác, ngày và trạng thái; tìm theo đối tác, thêm tên
+sách cho đơn mua bán/đơn thắng đấu giá. Cursor ký theo actor/type/từ khóa, tải
+tiếp được các trang sau. Exchange dùng tên đối tác/ngày, không bịa snapshot sách.
+
+Contract0.69 thêm `GET /me/support-targets` và
+`GET /me/support-targets/{type}/{id}`, tổng224operations/36controllers. Hai route
+chỉ dành cho ACTIVE MEMBER; resolver dùng cùng policy truy cập với create, đọc
+không ghi lock target. Không thêm migration hoặc quyền nghiệp vụ. Response chỉ
+chứa nhãn nhận biết, không có địa chỉ/email/thông tin thanh toán.
+
+Listing/Auction/Review/Member được gắn từ nút Báo cáo nội dung tại trang liên
+quan; form hiện nhãn đọc được để xác nhận, không yêu cầu nhập UUID. Không mở
+directory thành viên mới. Form giữ tiêu đề/nội dung trong memory khi đi tìm nội
+dung và quay lại qua entry mới; scope theo account, logout xóa. Pending create
+vẫn ưu tiên bản gửi gốc, không dùng resolver lỗi để đổi body/key hoặc chặn replay.
+
 ## Đánh giá và thông báo
 
 Giữ lifecycle hai chiều, deadline, điểm và revision ADR0052. Báo cáo review mở

@@ -72,6 +72,19 @@ async function login(p, origin, route, email) {
   await button(p, "Đăng nhập").click();
   await p.waitForURL(origin + route, { timeout: 20000 });
 }
+async function newMemberCase(p) {
+  await p
+    .getByRole("link", { name: "Hỗ trợ & phản ánh", exact: true })
+    .first()
+    .click();
+  await expect(
+    p.getByRole("heading", { name: "Hỗ trợ & phản ánh", exact: true }),
+  ).toBeVisible();
+  await p.getByRole("link", { name: "Gửi yêu cầu mới", exact: true }).click();
+  await expect(
+    p.getByRole("heading", { name: "Gửi yêu cầu", exact: true }),
+  ).toBeVisible();
+}
 try {
   await mkdir(evidence, { recursive: true });
   fixture = await createTestApi({
@@ -307,85 +320,183 @@ try {
   const originalUser = await fixture.db
     .collection("users")
     .findOne({ _id: owner });
-  await fixture.db
-    .collection("users")
-    .insertOne({
-      ...originalUser,
-      _id: otherId,
-      emailNormalized: `review-${otherId}@example.test`,
-      displayName: "Đối tác đánh giá QA",
-      roles: [{ role: "MEMBER", grantedAt: now }],
-    });
-  await fixture.db
-    .collection("exchanges")
-    .insertOne({
-      _id: exchangeId,
-      initiatorId: owner,
-      recipientId: otherId,
-      initiatorListingId: randomUUID(),
-      recipientListingId: randomUUID(),
-      initiatorOrderId: randomUUID(),
-      recipientOrderId: randomUUID(),
-      status: "Completed",
-      revision: 1,
-      initiatorDeposit: 100000,
-      recipientDeposit: 100000,
-      diffAmount: 0,
-      diffPayerId: null,
-      fundingDeadline: null,
-      initiatorFundedAt: null,
-      recipientFundedAt: null,
-      proposalExpiresAt: null,
-      rejectionReason: null,
-      cancelReason: null,
-      cancelledBy: null,
-      cancelledAt: null,
-      initiatorShippedAt: null,
-      recipientShippedAt: null,
-      initiatorReceivedAt: null,
-      recipientReceivedAt: null,
-      inspectionDeadline: null,
-      completedAt,
-      createdAt: completedAt,
-      updatedAt: completedAt,
-      lockSeq: 0,
-    });
+  await fixture.db.collection("users").insertOne({
+    ...originalUser,
+    _id: otherId,
+    emailNormalized: `review-${otherId}@example.test`,
+    displayName: "Đối tác đánh giá QA",
+    roles: [{ role: "MEMBER", grantedAt: now }],
+  });
+  await fixture.db.collection("exchanges").insertOne({
+    _id: exchangeId,
+    initiatorId: owner,
+    recipientId: otherId,
+    initiatorListingId: randomUUID(),
+    recipientListingId: randomUUID(),
+    initiatorOrderId: randomUUID(),
+    recipientOrderId: randomUUID(),
+    status: "Completed",
+    revision: 1,
+    initiatorDeposit: 100000,
+    recipientDeposit: 100000,
+    diffAmount: 0,
+    diffPayerId: null,
+    fundingDeadline: null,
+    initiatorFundedAt: null,
+    recipientFundedAt: null,
+    proposalExpiresAt: null,
+    rejectionReason: null,
+    cancelReason: null,
+    cancelledBy: null,
+    cancelledAt: null,
+    initiatorShippedAt: null,
+    recipientShippedAt: null,
+    initiatorReceivedAt: null,
+    recipientReceivedAt: null,
+    inspectionDeadline: null,
+    completedAt,
+    createdAt: completedAt,
+    updatedAt: completedAt,
+    lockSeq: 0,
+  });
   for (const [authorId, targetUserId] of [
     [owner, otherId],
     [otherId, owner],
   ])
-    await fixture.db
-      .collection("transaction_reviews")
-      .insertOne({
-        _id: randomUUID(),
-        transactionType: "Exchange",
-        transactionId: exchangeId,
-        authorId,
-        authorName: authorId === owner ? "Bạn đọc QA" : "Đối tác đánh giá QA",
-        targetUserId,
-        bookRating: 4,
-        partnerRating: 3,
-        tags: [],
-        comment:
-          authorId === owner
-            ? "Đánh giá bên gửi QA"
-            : "QA: Nội dung đánh giá cần kiểm duyệt",
-        publishedAt: editDeadline,
-        createdAt: reviewCreated,
-        updatedAt: reviewCreated,
-        lockSeq: 0,
-        version: 1,
-        editDeadline,
-        deletedAt: null,
-        hiddenAt: null,
-        evidenceHeld: false,
-        legacyDisclosed: false,
-        reply: null,
-      });
+    await fixture.db.collection("transaction_reviews").insertOne({
+      _id: randomUUID(),
+      transactionType: "Exchange",
+      transactionId: exchangeId,
+      authorId,
+      authorName: authorId === owner ? "Bạn đọc QA" : "Đối tác đánh giá QA",
+      targetUserId,
+      bookRating: 4,
+      partnerRating: 3,
+      tags: [],
+      comment:
+        authorId === owner
+          ? "Đánh giá bên gửi QA"
+          : "QA: Nội dung đánh giá cần kiểm duyệt",
+      publishedAt: editDeadline,
+      createdAt: reviewCreated,
+      updatedAt: reviewCreated,
+      lockSeq: 0,
+      version: 1,
+      editDeadline,
+      deletedAt: null,
+      hiddenAt: null,
+      evidenceHeld: false,
+      legacyDisclosed: false,
+      reply: null,
+    });
   await member.setViewportSize({ width: 1440, height: 1000 });
   await member.evaluate(() => {
     document.documentElement.style.fontSize = "";
   });
+  // Recognition-based picker: paginated real owned rows; never ask for an ID.
+  const originalExchange = await fixture.db
+    .collection("exchanges")
+    .findOne({ _id: exchangeId });
+  for (let index = 0; index < 11; index++)
+    await fixture.db.collection("exchanges").insertOne({
+      ...originalExchange,
+      _id: randomUUID(),
+      initiatorOrderId: randomUUID(),
+      recipientOrderId: randomUUID(),
+      initiatorListingId: randomUUID(),
+      recipientListingId: randomUUID(),
+      createdAt: new Date(+completedAt - (index + 1) * 60000),
+    });
+  await newMemberCase(member);
+  await expect(
+    member.getByRole("heading", { name: "Gửi yêu cầu", exact: true }),
+  ).toBeVisible();
+  await expect(member.getByLabel("Mã đối tượng", { exact: true })).toHaveCount(
+    0,
+  );
+  await member
+    .getByLabel("Loại yêu cầu", { exact: true })
+    .selectOption("TransactionIssue");
+  await member
+    .getByLabel("Đối tượng liên quan", { exact: true })
+    .selectOption("Exchange");
+  await expect(member.getByRole("radio")).toHaveCount(10);
+  await button(member, "Xem thêm giao dịch").click();
+  await expect(member.getByRole("radio")).toHaveCount(12);
+  await member
+    .getByLabel("Tìm theo tên người trao đổi", { exact: true })
+    .fill("Không có tên này");
+  await button(member, "Tìm giao dịch").click();
+  await expect(
+    member.getByText(
+      "Không có giao dịch khớp tìm kiếm. Thử tên khác hoặc xóa từ khóa.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await member
+    .getByLabel("Tìm theo tên người trao đổi", { exact: true })
+    .fill("Đối tác đánh giá QA");
+  await member
+    .getByLabel("Tìm theo tên người trao đổi", { exact: true })
+    .press("Enter");
+  await expect(member.getByRole("radio")).toHaveCount(10);
+  await shot(member, "member-target-options-desktop");
+  await member.getByRole("radio").first().click();
+  await expect(
+    member.getByText("Đã gắn kèm yêu cầu", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    member.getByRole("button", { name: "Chọn giao dịch khác", exact: true }),
+  ).toBeVisible();
+  await expect(
+    member.getByRole("button", { name: "Chọn giao dịch khác", exact: true }),
+  ).toBeFocused();
+  await expect(member.getByText(/Với Đối tác đánh giá QA/)).toBeVisible();
+  await member
+    .getByLabel("Tiêu đề", { exact: true })
+    .fill("QA: Phản ánh từ giao dịch đã chọn");
+  await member
+    .getByLabel("Nội dung", { exact: true })
+    .fill("Tôi chọn giao dịch từ danh sách để Admin hỗ trợ đối chiếu.");
+  await shot(member, "member-target-picker-desktop");
+  await member.setViewportSize({ width: 320, height: 800 });
+  await member.evaluate(() => {
+    document.documentElement.style.fontSize = "130%";
+  });
+  await shot(member, "member-target-picker-mobile-large-text");
+  await button(member, "Gửi yêu cầu").click();
+  await member.waitForURL(/\/support\/[0-9a-f-]{36}$/);
+  const pickedCaseId = new URL(member.url()).pathname.split("/").at(-1);
+  assert.deepEqual(
+    (
+      await fixture.db
+        .collection("support_cases")
+        .findOne({ _id: pickedCaseId })
+    ).target,
+    { type: "Exchange", id: exchangeId },
+  );
+  checks.push(
+    "readable target picker/search/empty/load more/Enter/select/submit/320px/130%",
+  );
+  await member.setViewportSize({ width: 1440, height: 1000 });
+  await member.evaluate(() => {
+    document.documentElement.style.fontSize = "";
+  });
+  await newMemberCase(member);
+  await expect(
+    member.getByRole("heading", { name: "Gửi yêu cầu", exact: true }),
+  ).toBeVisible();
+  await member
+    .getByLabel("Tiêu đề", { exact: true })
+    .fill("QA: Bản nháp đi tìm nội dung");
+  await member
+    .getByLabel("Nội dung", { exact: true })
+    .fill("Nội dung bản nháp vẫn còn sau khi chọn từ hồ sơ đánh giá.");
+  await member
+    .getByLabel("Đối tượng liên quan", { exact: true })
+    .selectOption("Review");
+  await member.getByRole("link", { name: /^Về tài khoản của tôi/ }).click();
+  await member.waitForURL(memberOrigin + "/account");
   await member
     .getByRole("link", { name: "Đánh giá của tôi", exact: true })
     .first()
@@ -405,6 +516,21 @@ try {
   ).toBeVisible();
   await expect(member.getByLabel("Loại yêu cầu", { exact: true })).toHaveValue(
     "Violation",
+  );
+  await expect(member.getByLabel("Tiêu đề", { exact: true })).toHaveValue(
+    "QA: Bản nháp đi tìm nội dung",
+  );
+  await expect(member.getByLabel("Nội dung", { exact: true })).toHaveValue(
+    "Nội dung bản nháp vẫn còn sau khi chọn từ hồ sơ đánh giá.",
+  );
+  await expect(
+    member.getByText("Đánh giá của Đối tác đánh giá QA", { exact: true }),
+  ).toBeVisible();
+  await expect(member.getByLabel("Mã đối tượng", { exact: true })).toHaveCount(
+    0,
+  );
+  checks.push(
+    "contextual review attachment with readable author/excerpt and draft preserved across entry",
   );
   await member
     .getByLabel("Tiêu đề", { exact: true })

@@ -35,6 +35,42 @@ Giao diện kế thừa DashboardLayout/brand Member và shell/component Admin, 
 - RN chỉ chấp nhận enum thông báo mới trong schema để API chung không phá inbox;
   không triển khai màn hỗ trợ native. Không native acceptance trong gói này.
 
+## Thay ô mã đối tượng bằng lựa chọn —02/11/2026
+
+Nhánh `codex/support-target-picker`, base `5cbc309d`, subject
+`feat(support): select readable related transactions instead of entering IDs`.
+Owner yêu cầu bỏ việc nhớ/nhập mã. Member hiện chọn giao dịch của mình từ danh
+sách tìm kiếm/phân trang, nhận biết bằng tên sách snapshot (DirectOrder/PointOrder
+nếu có), đối tác, ngày và trạng thái. Exchange tìm theo tên đối tác. Không còn
+ô UUID. Góp ý/báo lỗi có thể không gắn nội dung; phản ánh giao dịch và báo cáo
+vẫn kiểm target bắt buộc theo nghiệp vụ.
+
+Từ Listing/Auction/Review/Member, nút Báo cáo nội dung tự gắn đối tượng và form
+resolve nhãn hiện tại để xác nhận. Nếu vào form chung, có hướng dẫn/link đi tìm
+nội dung; tiêu đề/mô tả được giữ qua entry mới. Có loading/empty/error/retry,
+bỏ chọn, tìm bằng Enter và tải thêm. Mất ACK vẫn giữ nguyên command gốc.
+
+Contract0.69,224operations/36controllers; thêm hai read endpoint được bảo vệ theo
+actor/participant/publication, không tạo directory Member hoặc trả địa chỉ/email.
+Tái dùng policy create để resolve, không ghi lock target trong read. Registry63/
+migration0050 giữ nguyên, không migrate/reset/seed DB local cho thay đổi này.
+API đã restart cùng bản build mới, Member5174/Admin5173 tiếp tục chạy; smoke
+readiness200, login Member và options cả ba lane200. Chi tiết process ở `.tmp/`.
+
+Kiểm chứng lát cắt mới: HTTP/Mongo35PASS (support14 + obligations21), gồm
+participant/role/locked denial, cursor actor/type/query, literal search, nhãn từ
+snapshot hai lane, private/hidden review và read không ghi lock target.
+Shared119/Member264unitPASS; API build/type/lint, Member build/type/lint,
+Admin typecheck, contract/routes/docs/diffPASS. Warning lint/chunk cũ còn.
+Browser hai web6nhómPASS,0page errors: thêm search/empty/tải trang2/chọn/gửi,
+giữ draft qua entry review và nhãn tác giả/excerpt; giữ toàn bộ lostACK/Back,
+Admin xử lý/notification/moderation cũ. Đã xem ảnh desktop và320px/chữ130%,
+detector0finding. Các lượt harness đầu sửa fixture trùng unique order key,
+điều hướng SPA khi fixture không có BFF cookie, tên link có mũi tên và radio
+unmount sau chọn; giữ assertion quyền/command/submit. Fake storage/mail local;
+native/human/remote CI NOT RUN. Bảng bên dưới là evidence gói0.68 ban đầu,
+không cộng thành gate nghiệp vụ/native/human mới.
+
 ## Kiểm chứng
 
 Windows, Node24.21.0/pnpm11.19.0. QA riêng loopback57017/rs-test, DB kết thúc
