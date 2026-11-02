@@ -1,6 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { MODEL_OUTPUT_SCHEMA } from './output-check.js';
-import { NvidiaChatError, nvidiaChat } from './nvidia-chat.js';
+import {
+  NvidiaChatError,
+  nvidiaChat,
+  type ProviderFailureDetail,
+} from './nvidia-chat.js';
 
 export type ModelFailure = 'Timeout' | 'InvalidOutput' | 'ProviderError' | 'Refusal';
 
@@ -9,10 +13,16 @@ export class PriceModelError extends Error {
     readonly kind: ModelFailure,
     message: string,
     readonly usage: { inputTokens: number; outputTokens: number } | null = null,
+    // Loggable facts about the call (status, network code, attempts), if known.
+    readonly detail: ProviderFailureDetail | null = null,
   ) {
     super(message);
   }
 }
+
+// Log fields for a failed provider call; nothing from the prompt or answer.
+export const failureLog = (e: unknown) =>
+  e instanceof PriceModelError && e.detail ? { ...e.detail } : {};
 
 export interface ModelDraft {
   output: unknown;
@@ -294,7 +304,7 @@ export class NvidiaPriceModel extends PriceModel {
       );
     } catch (e) {
       if (e instanceof NvidiaChatError)
-        throw new PriceModelError(e.kind, e.message, e.usage);
+        throw new PriceModelError(e.kind, e.message, e.usage, e.detail);
       throw new PriceModelError('ProviderError', 'Provider call failed');
     }
   }

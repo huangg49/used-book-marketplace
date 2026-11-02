@@ -32,6 +32,7 @@ import { checkOutput, InvalidModelOutput } from './output-check.js';
 import { buildUserPrompt, SYSTEM_PROMPT } from './prompt.js';
 import {
   costMicroUsd,
+  failureLog,
   PriceModel,
   PriceModelError,
   rateFor,
@@ -412,12 +413,13 @@ export class PriceAssistService {
         usage = e.usage ?? usage;
       } else if (e instanceof InvalidModelOutput) failure = 'InvalidOutput';
       else failure = 'ProviderError';
-      // Ids and the provider's short reason only; no prompt, note or key.
+      // Ids, status and network code only; no prompt, note or key.
       this.logger.warn(
         JSON.stringify({
           suggestionId: p.id,
           model: modelId,
           failure,
+          ...failureLog(e),
         }),
       );
     }

@@ -100,7 +100,9 @@ AI tự duyệt thêm0050 và collection mới: dừng API/worker, `pnpm db:migr
 [ADR0061](../adr/0061-ai-listing-auto-review.md).
 Bản hậu kiểm thêm0052 và `listing_auto_review_checks`: cùng các bước trên. Muốn worker
 chạy còn phải đặt `LISTING_AUTO_REVIEW_APPROVED_POLICY` đúng `POLICY_VERSION`;
-[ADR0063](../adr/0063-ai-listing-review-hardening.md).
+[ADR0063](../adr/0063-ai-listing-review-hardening.md). Gọi NVIDIA thử lại một lần trong
+cùng timeout; tự duyệt chờ tối đa ba chu kỳ khi nhà cung cấp im lặng, không cần
+migration; [ADR0066](../adr/0066-ai-provider-resilience.md).
 
 Exchange thêm0052 để lưu agreement sách/giá đã thỏa thuận; không backfill lịch sử
 hoặc đổi tiền. Dừng API/worker cũ, migrate rồi nâng API và web/RN cùng gói:

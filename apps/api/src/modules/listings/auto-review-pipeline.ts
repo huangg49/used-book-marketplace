@@ -1,6 +1,8 @@
 import type { AutofillModel } from '../autofill-assist/autofill-model.js';
+import type { ProviderFailureDetail } from '../price-assist/nvidia-chat.js';
 import {
   costMicroUsd,
+  failureLog,
   PriceModelError,
   rateFor,
 } from '../price-assist/price-model.js';
@@ -56,6 +58,8 @@ export interface PipelineResult {
   latencyMs: number;
   // Why a stage had no assessment: provider failure kinds, for logs and evaluation.
   failures: string[];
+  // The same failures with what the log may say about them.
+  failureDetails: ({ stage: StageName; kind: string } & Partial<ProviderFailureDetail>)[];
 }
 
 // Stops at the first stage that sends the listing to Staff, so a listing that
@@ -81,6 +85,7 @@ export async function runAutoReviewPipeline(
     usage: { calls: 0, inputTokens: 0, outputTokens: 0, costMicroUsd: 0 },
     latencyMs: 0,
     failures: [],
+    failureDetails: [],
   };
   const stop = () => result.reasons.length > 0 && !input.exhaustive;
   const count = (usage: { inputTokens: number; outputTokens: number }) => {
@@ -106,10 +111,15 @@ export async function runAutoReviewPipeline(
       const draft = await model.read(system, user, images);
       count(draft);
       parsed = parse(draft.output);
-      if (!parsed) result.failures.push('InvalidOutput');
+      if (!parsed) {
+        result.failures.push('InvalidOutput');
+        result.failureDetails.push({ stage, kind: 'InvalidOutput' });
+      }
     } catch (e) {
       if (e instanceof PriceModelError && e.usage) count(e.usage);
-      result.failures.push(e instanceof PriceModelError ? e.kind : 'ProviderError');
+      const kind = e instanceof PriceModelError ? e.kind : 'ProviderError';
+      result.failures.push(kind);
+      result.failureDetails.push({ stage, kind, ...failureLog(e) });
     }
     status.status = parsed ? 'Completed' : 'Unavailable';
     if (!parsed) result.reasons.push(`${stage}:AssessmentUnavailable`);
