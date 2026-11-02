@@ -20,6 +20,7 @@
     "catalog:refresh": "node scripts/refresh-preview-catalog.mjs",
     "test:browser": "node tests/integration.mjs",
     "test:reputation:browser": "node tests/member-reputation.mjs",
+    "test:profile-reputation:browser": "node tests/profile-reputation.mjs",
     "test:buy-now:browser": "node tests/buy-now.mjs",
     "test:seller-order:browser": "node tests/seller-order.mjs",
     "test:order-review:browser": "node tests/order-review.mjs",

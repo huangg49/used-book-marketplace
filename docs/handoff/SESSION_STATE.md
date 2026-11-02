@@ -1,4 +1,18 @@
-# Điểm lưu hiện tại — 02/11/2026
+# Điểm lưu hiện tại — 03/11/2026
+
+## Uy tín trong thẻ bạn đọc
+
+- `codex/profile-reputation-card`, base4146e3a3: profile có component đọc điểm đối
+  tác/chất lượng sách, số mẫu, completed/verified violations và link hồ sơ công
+  khai. Summary key riêng, current owner/session, null/error/stale/retry; không
+  suy trạng thái ACTIVE thành uy tín hoặc thêm nhãn/rank/thưởng/phạt.
+- Áp đúng banner đỏ trong checkout app bằng import/mount scoped, giữ editor/hero/
+  avatar/motion của teammate. Worktree editor dùng paper tone cùng component.
+- PASS browser HTTP fixture cả hai checkout1440/1000/390/320/chữ130%, giữ draft
+  khi hủy rời trang, cache/invalidation/cross-account late read và recovery; typecheck,
+  build/lint scoped. Main5174/API3000 thấy5.0/4.5 từ2mẫu và link/Back đúng owner.
+- Không đổi API/contract/profile/review/money data; không DB harness/provider/
+  push/CI/merge/native/human acceptance hay gate. [Bằng chứng](../ui/PROFILE_REPUTATION_2026_11_03.md).
 
 ## Hồ sơ uy tín công khai — tách layout và sửa xung đột cache
 

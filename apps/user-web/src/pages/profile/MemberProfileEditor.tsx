@@ -21,6 +21,7 @@ import type { components } from "@used-books/api-contract";
 import { session } from "../../lib/session";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import styles from "../ProfilePage.module.css";
+import { ProfileReputation } from './ProfileReputation';
 
 type Draft = components["schemas"]["UpdateMemberProfile"];
 const draftOf = (profile: components["schemas"]["MemberProfile"]): Draft => ({
@@ -348,6 +349,7 @@ export function MemberProfileEditor({ ownerId }: { ownerId: string }) {
           Chưa rõ kết quả lần lưu trước. Thử lại sẽ xác minh đúng lần lưu đó.
         </p>
       )}
+      <ProfileReputation ownerId={ownerId} />
       <form onSubmit={(event) => void save(event)} className={styles.editor}>
         <div className={styles.avatarEditor}>
           {avatar.data && failedAvatar !== avatar.data.url ? (
