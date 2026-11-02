@@ -1334,6 +1334,7 @@ export interface ExchangeDoc extends Lockable {
   recipientDeposit: number;
   diffAmount: number;
   diffPayerId: string | null;
+  negotiatedDiffAmount?: number | null;
   initiatorOrderId: string;
   recipientOrderId: string;
   fundingDeadline: Date | null;

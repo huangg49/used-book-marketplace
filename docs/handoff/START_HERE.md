@@ -1,8 +1,8 @@
 # Bắt đầu ở đây — Lật lại trên MongoDB
 
 Cập nhật03/11/2026: theo [SESSION_STATE](SESSION_STATE.md). Contract **0.73.1**
-(235operations/37controllers); registry có69
-migration MongoDB (đến0054), không suy từ tiền tố file lớn nhất. Migration
+(235operations/37controllers); registry có71
+migration MongoDB (đến0055), không suy từ tiền tố file lớn nhất. Migration
 PostgreSQL chỉ là lịch sử import. Kiểm SHA/contract thực tế trước khi chạy.
 Gate phát hành vẫn theo [READINESS](READINESS.md); source mới không tự đóng gate.
 Phạm vi28/10: nhóm **bỏ Forum/Cộng đồng sách** theo [ADR0051](../adr/0051-remove-forum-from-project-scope.md).

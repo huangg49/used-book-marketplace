@@ -28,6 +28,8 @@ const suffix = [
   '0052-listing-auto-review-v2',
   '0053-exchange-agreement',
   '0052-free-shipping',
+  '0054-exchange-negotiated-diff',
+  '0055-exchange-negotiated-diff-payer',
   '0054-local-demo-completion',
 ];
 const sha = (value: unknown) =>

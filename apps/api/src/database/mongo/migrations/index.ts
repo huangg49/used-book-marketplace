@@ -4,6 +4,8 @@ import { createMemberProfilesMigration, memberProfileSpecs, withMemberProfiles }
 import { createAccountControlsMigration, withAccountControls } from './0048-account-controls.js';
 import {memberCartMigration,memberCartSpec} from './0049-member-cart.js';
 import { exchangeAgreementMigration, withExchangeAgreement } from './0053-exchange-agreement.js';
+import { exchangeNegotiatedDiffMigration, withNegotiatedDiff } from './0054-exchange-negotiated-diff.js';
+import { exchangeFlexibleDiffMigration, withFlexibleNegotiatedDiff } from './0055-exchange-negotiated-diff-payer.js';
 import { createSupportCasesMigration, supportSpecs, withSupportCases } from './0050-support-cases.js';
 import { createSupportAutoReviewUnionMigration } from './0051-support-auto-review-union.js';
 import { createListingAutoReviewMigration, withListingAutoReview } from './0050-listing-auto-review.js';
@@ -353,6 +355,8 @@ export const migrations: Migration[] = [
   listingAutoReviewV2Migration,
   exchangeAgreementMigration,
   createFreeShippingMigration(auctionDeliveryMigration.definition.collections),
+  exchangeNegotiatedDiffMigration,
+  exchangeFlexibleDiffMigration,
   createLocalDemoCompletionMigration([
     ...supportAutoReviewUnionMigration.definition.collections,
     directDeliveryCompletionLegacyShapeMigration.definition.directOrders,
@@ -438,7 +442,9 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withExchangeInspectionDeadlines)
     .map(withExchangeDisputeResolution)
     .map(withExchangeMutualCancellation)
-    .map(withExchangeAgreement),
+    .map(withExchangeAgreement)
+    .map(withNegotiatedDiff)
+    .map(withFlexibleNegotiatedDiff),
   ...directDeliveryCompletionSpecs,
   ...paymentSpecs.map(withVNPayExpiry),
   ...exchangeMessageSpecs,

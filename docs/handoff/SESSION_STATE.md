@@ -15,7 +15,7 @@
   Closed/commitment Released trong1transaction. Exact retry giữ key/body/version;
   Back/reload không hủy job. Không có bộ đếm giả hoặc màn minh họa riêng nữa.
 - Contract0.73.1/235operations/37controllers; migration0054 thêm job và principal/
-  terminal shape riêng, không sửa migration cũ. Registry69/99collection. Đã
+  terminal shape riêng, không sửa migration cũ. Registry71/99collection sau hòa giải main. Trước đó đã
   backup/migrate/bootstrap local, counts nghiệp vụ giữ nguyên, API/hai worker
   chạy lại và readiness200. ID riêng/backup/log nằm ngoài Git trong `.tmp/`.
 - PASS browser `--demo-completion` HTTP/Mongo QA57017/`*_test`, storage/payment
@@ -48,9 +48,25 @@
   thiếu biến thì off; thêm ca kiểm missing flag, giữ setup DB/JWT hiện có.
   PASS10policy unit và docs/diff. Không commit file `.env` thật; chỉ cập nhật
   test/hướng dẫn, không sửa runtime.
+- Owner yêu cầu sửa conflict với `origin/main` tại `6919981c`. Hòa giải registry
+  và điểm lưu, giữ nguyên source Exchange/Admin từ main và source Order/demo
+  trên nhánh. Giữ cả0054-local-demo-completion/0054-exchange-negotiated-diff/
+  0055-exchange-negotiated-diff-payer theo full ID, không đổi migration đã áp dụng.
+  Registry source71/99collection; chưa migrate DB app hoặc restart BE cho lượt này.
+- PASS3Mongo: upgrade main-first/demo-first + baseline59/checksum/ledger; giữ
+  validator Exchange đúng migration main. Contract0.73.1/routes235/API types/build,
+  308web unit, types/build Member web và Admin PASS. Không sửa logic
+  Exchange/Admin hoặc payment/refund ngoài nội dung hai nhánh đã có.
 - Luồng này là ngoại lệ demo được cấp rõ, không mở confirm-receipt/Delivered/
   settlement thường hoặc xử lý Inspection lịch sử. READINESS/native/human/CI
   không đổi; chỉ push nhánh theo quyền owner, chưa PR/merge/deploy ngoài máy.
+
+## Tích hợp origin/main (Free Shipping PR #91 & AI Resilience PR #90) với Exchange Compensation — 03/11/2026
+
+- Kéo và hòa giải `origin/main` (commit `6ba6ef39` gồm PR #90 AI resilience và PR #91 bỏ phí giao hàng) vào `main` local.
+- Giải quyết xung đột tại `apps/api/src/database/mongo/migrations/index.ts`: giữ cả migration `0052-free-shipping`, `0054-exchange-negotiated-diff`, và `0055-exchange-negotiated-diff-payer`.
+- Đã chạy `pnpm --filter @used-books/api mongo:migrate`, áp dụng thành công `0052-free-shipping` (schema MongoDB hiện tại đã khớp đầy đủ).
+- Contract check (`contract:check`), web build (`@used-books/user-web build` PASS), 308 unit tests web PASS toàn bộ.
 
 ## Miễn phí giao hàng mới — 03/11/2026
 

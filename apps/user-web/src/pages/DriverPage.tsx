@@ -184,6 +184,11 @@ export function DriverPage() {
 
   const handleAutoSimulate = async () => {
     if (!order?.exchangeId) return;
+    const ok = window.confirm(
+      '⚡ Bạn có muốn TỰ ĐỘNG mô phỏng giao cả 2 kiện hàng đến bước hoàn tất (POD) không?\n\n' +
+      'Thao tác này sẽ tự động mô phỏng giao thành công cả 2 chiều và kích hoạt thời gian kiểm định 72h của sàn.',
+    );
+    if (!ok) return;
     setSimulatingSpeed(true);
     try {
       const leg1Tracking = order.legs?.[0]?.trackingCode || order.trackingCode;
@@ -216,7 +221,7 @@ export function DriverPage() {
       setLastAction('⚡ [Tự động] Kiện 2 đang giao đến đối tác...');
       await new Promise((r) => setTimeout(r, 550));
 
-      // Gọi API auto-simulate để server MongoDB cập nhật cả 2 kiện sang Delivered + kích hoạt 48h kiểm định
+      // Gọi API auto-simulate để server MongoDB cập nhật cả 2 kiện sang Delivered + kích hoạt 72h kiểm định
       const res = await fetch(`/api/v1/shipments/carrier/orders/${order.exchangeId}/auto-simulate`, {
         method: 'POST',
       });
@@ -232,7 +237,7 @@ export function DriverPage() {
         `🎉 TỰ ĐỘNG MÔ PHỎNG THÀNH CÔNG!\n\n` +
         `• Kiện 1: Đã giao tận tay & ký nhận POD.\n` +
         `• Kiện 2: Đã giao tận tay & ký nhận POD.\n\n` +
-        `Sàn Lật Lại đã tức thì chuyển sang giai đoạn "KIỂM ĐỊNH & NGHIỆM THU 48H"!`,
+        `Sàn Lật Lại đã tức thì chuyển sang giai đoạn "KIỂM ĐỊNH & NGHIỆM THU 72H (POL-08)"!`,
       );
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Có lỗi khi tự động chạy mô phỏng');
@@ -303,7 +308,7 @@ export function DriverPage() {
           alert(
             `🎉 GIAO HÀNG THÀNH CÔNG CHO CẢ 2 BÊN!\n\n` +
             `Cả 2 kiện hàng đã được giao tận tay và ký nhận POD!\n` +
-            `Sàn Lật Lại đã tự động chuyển sang bước "ĐÃ NHẬN SÁCH" & bắt đầu đếm ngược 48h kiểm định!`,
+            `Sàn Lật Lại đã tự động chuyển sang bước "ĐÃ NHẬN SÁCH" & bắt đầu đếm ngược 72h kiểm định (POL-08)!`,
           );
         } else {
           alert(
@@ -442,7 +447,7 @@ export function DriverPage() {
                 <p className={styles.celebrationTitle}>🎉 CẢ 2 BÊN ĐÃ NHẬN SÁCH THÀNH CÔNG!</p>
                 <p className={styles.celebrationDesc}>
                   Toàn bộ bưu phẩm 2 chiều đã ký nhận POD. Sàn Lật Lại đã tự động chuyển sang bước Kiểm định &amp;
-                  Nghiệm thu 48h.
+                  Nghiệm thu 72h (POL-08).
                 </p>
                 <button type="button" className={styles.resetDemoBtn} onClick={() => void handleResetDemo()}>
                   🔄 Đặt lại đơn này về &quot;Đang giao&quot; để diễn tập lại
@@ -465,7 +470,9 @@ export function DriverPage() {
                       <p className={styles.tabTitle}>{legItem.label}</p>
                       <p className={styles.tabCode}>{legItem.trackingCode}</p>
                       {legItem.isDelivered ? (
-                        <span className={styles.tabBadgeDelivered}>✓ Đã giao</span>
+                        <span className={styles.tabBadgeDelivered}>
+                          ✓ {legItem.lastEvent?.includes('POD') ? 'Đã giao (POD)' : 'Đã nhận'}
+                        </span>
                       ) : (
                         <span className={styles.tabBadgePending}>⏳ Chờ giao</span>
                       )}
@@ -683,7 +690,9 @@ export function DriverPage() {
                   </p>
                   <p className={styles.actionBtnDescWhite}>
                     {order.deliveredAt
-                      ? 'Đã bàn giao sách tận tay và ký nhận biên bản POD'
+                      ? (order.lastEvent?.includes('POD')
+                          ? 'Đã bàn giao sách tận tay và ký nhận biên bản POD (Bưu tá xác nhận)'
+                          : 'Người nhận đã xác nhận nhận sách thành công trên ứng dụng')
                       : 'Xác nhận giao tận tay người nhận, kiểm tra sách và ký nhận POD'}
                   </p>
                 </div>
