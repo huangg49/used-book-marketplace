@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { BookOpen, ArrowUpRight, Gavel, Edit, Eye, EyeOff, Trash2 } from "lucide-react";
+import { BookOpen, ArrowUpRight, Gavel, Edit, Eye, EyeOff, Trash2, Send } from "lucide-react";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { useSession } from "../hooks/useSession";
 import { useActionCooldown } from "../hooks/useActionCooldown";
@@ -23,6 +23,7 @@ import {
 } from "../lib/owner-listing-labels";
 import {
   canEditApproved,
+  canEditDraft,
   shouldExplainEditBlock,
   editApprovedBlock,
   canToggleVisibility,
@@ -243,6 +244,14 @@ export function OwnerListingRow({
             <h3 className={styles.gridTitle}>
               {publicVisible ? (
                 <Link to={`/books/${item.id}`}>{title}</Link>
+              ) : canEditDraft(item) ? (
+                <Link
+                  to={ROUTES.myBookEdit(item.id)}
+                  title="Bấm để tiếp tục hoàn thiện và gửi duyệt"
+                  className={styles.clickableDraftTitle}
+                >
+                  {title}
+                </Link>
               ) : (
                 title
               )}
@@ -297,6 +306,18 @@ export function OwnerListingRow({
                 aria-label={`Sửa bài đăng ${title}`}
               >
                 <Edit size={13} style={{ marginRight: 4 }} /> Sửa bài
+              </Link>
+            )}
+            {canEditDraft(item) && (
+              <Link
+                className={styles.gridDraftBtn}
+                to={ROUTES.myBookEdit(item.id)}
+                aria-label={`Hoàn thiện và gửi duyệt ${title}`}
+              >
+                <Send size={13} style={{ marginRight: 4 }} />
+                {item.state.moderation === "Rejected"
+                  ? "Sửa & Gửi lại"
+                  : "Hoàn thiện & Gửi duyệt"}
               </Link>
             )}
             {(canToggle || canArchive) && (
@@ -394,6 +415,14 @@ export function OwnerListingRow({
         <h3>
           {publicVisible ? (
             <Link to={`/books/${item.id}`}>{title}</Link>
+          ) : canEditDraft(item) ? (
+            <Link
+              to={ROUTES.myBookEdit(item.id)}
+              title="Bấm để tiếp tục hoàn thiện và gửi duyệt"
+              className={styles.clickableDraftTitle}
+            >
+              {title}
+            </Link>
           ) : (
             title
           )}
@@ -477,6 +506,18 @@ export function OwnerListingRow({
             aria-label={`Sửa bài đăng ${title}`}
           >
             <Edit size={13} style={{ marginRight: 4 }} /> Sửa bài
+          </Link>
+        )}
+        {canEditDraft(item) && (
+          <Link
+            className={styles.listDraftBtn}
+            to={ROUTES.myBookEdit(item.id)}
+            aria-label={`Hoàn thiện và gửi duyệt ${title}`}
+          >
+            <Send size={13} style={{ marginRight: 4 }} />
+            {item.state.moderation === "Rejected"
+              ? "Sửa & Gửi lại"
+              : "Hoàn thiện & Gửi duyệt"}
           </Link>
         )}
         {(canToggle || canArchive) && (

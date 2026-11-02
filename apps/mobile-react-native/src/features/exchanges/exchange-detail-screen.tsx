@@ -1,3 +1,4 @@
+import { ExchangeEvidenceCard } from "./exchange-evidence-card";
 import { confirmExchangeRead, readExchange } from "@used-books/session-client";
 import {
   ExchangeRecoveryPanel,
@@ -364,6 +365,13 @@ export function ExchangeDetailScreen() {
           />
 
           {/* 5. BẢNG HÀNH ĐỘNG TIẾP THEO (Accept, Reject, Counter, Fund, Ship, Receive, Complete, Dispute) */}
+          {exchange.status === "ResolutionPending" && (
+            <ExchangeEvidenceCard
+              key={identity + ":" + id}
+              id={id}
+              revision={exchange.revision}
+            />
+          )}
           <ExchangeActionsCard
             exchange={exchange}
             isInitiator={isInitiator}

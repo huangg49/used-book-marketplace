@@ -5656,6 +5656,88 @@ paths:
         "503":
           $ref: "#/components/responses/ListingError"
       x-locked-access: existing-obligations
+  /operations/simulator/topup-recipients:
+    get:
+      operationId: listSimulatedTopupRecipients
+      tags: [Wallet]
+      x-implementation-status: implemented
+      description: ACTIVE verified TEST_OPERATOR only. Lists up to 40 ACTIVE verified Members,
+        excluding the operator. Search by literal display name or exact account UUID; no email
+        or contact details are returned. Refine the search when hasMore is true.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 80, default: "" }
+      responses:
+        "200":
+          description: Eligible simulator recipients. Never cached.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulatedTopupRecipientPage"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/simulator/topups:
+    post:
+      operationId: createSimulatedTopup
+      tags: [Wallet]
+      x-implementation-status: implemented
+      description: ACTIVE verified TEST_OPERATOR, independent of the ACTIVE verified MEMBER recipient.
+        Requires PAYMENT_SIMULATOR_SECRET. Atomically creates a new simulator intent, authenticated
+        success event, finite-source ledger posting, receipt, audit and outbox. Never accepts an
+        existing intent or touches VNPay. Same key/body replays once after current authorization;
+        different body returns 409. Recipient eligibility is checked under participant locks before
+        a new posting. No balance adjustment or source refill.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSimulatedTopup"
+      responses:
+        "200":
+          description: Atomic simulator topup receipt.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+            Idempotency-Replayed:
+              schema: { type: string, enum: ["true", "false"] }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /operations/simulator/topup-events:
     post:
       operationId: emitSimulatedTopupEvent
@@ -10713,6 +10795,48 @@ paths:
           $ref: "#/components/responses/ListingError"
         "500":
           $ref: "#/components/responses/ListingError"
+  /transactions/Exchange/{id}/reviews/demo-advance:
+    post:
+      operationId: advanceDemoReviewTime
+      tags: [Reviews]
+      description: Development-only, explicitly allowlisted zero-money demo history. Both participants must have submitted. Atomically shifts the sample timeline to expire both edit windows, preserves content and records DemoTimeAdvance revisions. No financial side effects. Never enabled in production.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdvanceDemoReviewTime"
+      responses:
+        "200":
+          description: Acting participant's published review; retry identical intent after uncertain response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewItem"
+          headers:
+            Idempotency-Replayed:
+              schema: {type: boolean}
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
   /transactions/{type}/{id}/reviews:
     get:
       operationId: getTransactionReviews
@@ -11705,6 +11829,191 @@ paths:
         "422":
           $ref: "#/components/responses/Error"
 
+  /exchanges/{exchangeId}/evidence:
+    post:
+      tags: [Exchanges]
+      operationId: createExchangeEvidence
+      description: Private dispute evidence only. Current session and participant or assigned independent reviewer checked before replay/signing and after storage I/O. No custody, money or settlement change. Claim is accepted separately before upload; Pending is not submitted evidence. Images 10MB, PDF 20MB, MP4 100MB; ten retained intents per participant, no automatic deletion.
+      parameters:
+      - in: path
+        name: exchangeId
+        required: true
+        schema: { type: string, format: uuid }
+      - {name: Idempotency-Key, in: header, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateExchangeEvidence' }
+      responses:
+        '200':
+          description: Authorized private result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExchangeEvidenceReceipt' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    get:
+      tags: [Exchanges]
+      operationId: listExchangeEvidence
+      description: Private dispute evidence only. Current session and participant or assigned independent reviewer checked before replay/signing and after storage I/O. No custody, money or settlement change. Claim is accepted separately before upload; Pending is not submitted evidence. Images 10MB, PDF 20MB, MP4 100MB; ten retained intents per participant, no automatic deletion.
+      parameters:
+      - in: path
+        name: exchangeId
+        required: true
+        schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Authorized private result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExchangeEvidenceList' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /exchanges/{exchangeId}/evidence/{evidenceId}/content:
+    put:
+      tags: [Exchanges]
+      operationId: uploadExchangeEvidence
+      description: Private dispute evidence only. Current session and participant or assigned independent reviewer checked before replay/signing and after storage I/O. No custody, money or settlement change. Claim is accepted separately before upload; Pending is not submitted evidence. Images 10MB, PDF 20MB, MP4 100MB; ten retained intents per participant, no automatic deletion.
+      parameters:
+      - in: path
+        name: exchangeId
+        required: true
+        schema: { type: string, format: uuid }
+      - in: path
+        name: evidenceId
+        required: true
+        schema: { type: string, format: uuid }
+      - {name: Idempotency-Key, in: header, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary }
+      responses:
+        '200':
+          description: Authorized private result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExchangeEvidenceReceipt' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /exchanges/{exchangeId}/evidence/{evidenceId}/read:
+    post:
+      tags: [Exchanges]
+      operationId: readExchangeEvidence
+      description: Private dispute evidence only. Current session and participant or assigned independent reviewer checked before replay/signing and after storage I/O. No custody, money or settlement change. Claim is accepted separately before upload; Pending is not submitted evidence. Images 10MB, PDF 20MB, MP4 100MB; ten retained intents per participant, no automatic deletion.
+      parameters:
+      - in: path
+        name: exchangeId
+        required: true
+        schema: { type: string, format: uuid }
+      - in: path
+        name: evidenceId
+        required: true
+        schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Authorized private result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExchangeEvidenceRead' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /operations/exchanges/{exchangeId}/evidence-access:
+    get:
+      tags: [Exchanges]
+      operationId: getExchangeEvidenceAccess
+      description: Private dispute evidence only. Current session and participant or assigned independent reviewer checked before replay/signing and after storage I/O. No custody, money or settlement change. Claim is accepted separately before upload; Pending is not submitted evidence. Images 10MB, PDF 20MB, MP4 100MB; ten retained intents per participant, no automatic deletion.
+      parameters:
+      - in: path
+        name: exchangeId
+        required: true
+        schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Authorized private result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExchangeEvidenceAccess' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [Exchanges]
+      operationId: assignExchangeEvidence
+      description: Private dispute evidence only. Current session and participant or assigned independent reviewer checked before replay/signing and after storage I/O. No custody, money or settlement change. Claim is accepted separately before upload; Pending is not submitted evidence. Images 10MB, PDF 20MB, MP4 100MB; ten retained intents per participant, no automatic deletion.
+      parameters:
+      - in: path
+        name: exchangeId
+        required: true
+        schema: { type: string, format: uuid }
+      - {name: Idempotency-Key, in: header, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignExchangeEvidence' }
+      responses:
+        '200':
+          description: Authorized private result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExchangeEvidenceReceipt' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /operations/exchanges/{exchangeId}/evidence:
+    get:
+      tags: [Exchanges]
+      operationId: listOperationsExchangeEvidence
+      description: Private dispute evidence only. Current session and participant or assigned independent reviewer checked before replay/signing and after storage I/O. No custody, money or settlement change. Claim is accepted separately before upload; Pending is not submitted evidence. Images 10MB, PDF 20MB, MP4 100MB; ten retained intents per participant, no automatic deletion.
+      parameters:
+      - in: path
+        name: exchangeId
+        required: true
+        schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Authorized private result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExchangeEvidenceList' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+  /operations/exchanges/{exchangeId}/evidence/{evidenceId}/read:
+    post:
+      tags: [Exchanges]
+      operationId: readOperationsExchangeEvidence
+      description: Private dispute evidence only. Current session and participant or assigned independent reviewer checked before replay/signing and after storage I/O. No custody, money or settlement change. Claim is accepted separately before upload; Pending is not submitted evidence. Images 10MB, PDF 20MB, MP4 100MB; ten retained intents per participant, no automatic deletion.
+      parameters:
+      - in: path
+        name: exchangeId
+        required: true
+        schema: { type: string, format: uuid }
+      - in: path
+        name: evidenceId
+        required: true
+        schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReadExchangeEvidence' }
+      responses:
+        '200':
+          description: Authorized private result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExchangeEvidenceRead' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
 components:
   securitySchemes:
     bearerAuth:
@@ -16935,6 +17244,29 @@ components:
       required: [amount]
       properties:
         amount: { type: integer, minimum: 5000, maximum: 10000000 }
+    SimulatedTopupRecipientPage:
+      type: object
+      additionalProperties: false
+      required: [items, hasMore]
+      properties:
+        items:
+          type: array
+          maxItems: 40
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, displayName]
+            properties:
+              id: { type: string, format: uuid }
+              displayName: { type: string }
+        hasMore: { type: boolean }
+    CreateSimulatedTopup:
+      type: object
+      additionalProperties: false
+      required: [recipientId, amount]
+      properties:
+        recipientId: { type: string, format: uuid }
+        amount: { type: integer, minimum: 1000, maximum: 10000000 }
     CreateTopupIntent:
       type: object
       additionalProperties: false
@@ -20948,6 +21280,79 @@ components:
         reason:
           type: string
           minLength: 5
+    CreateExchangeEvidence:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, fileName, mimeType, byteSize, sha256]
+      properties:
+        expectedVersion: { type: integer, minimum: 1 }
+        fileName: { type: string, minLength: 1, maxLength: 120 }
+        mimeType: { type: string, enum: [image/jpeg, image/png, image/webp, application/pdf, video/mp4] }
+        byteSize: { type: integer, minimum: 1, maximum: 100000000 }
+        sha256: { type: string, pattern: '^[a-f0-9]{64}$' }
+    ExchangeEvidence:
+      type: object
+      additionalProperties: false
+      required: [id, exchangeId, uploaderId, fileName, mimeType, byteSize, sha256, status, createdAt, uploadedAt]
+      properties:
+        id: { type: string, format: uuid }
+        exchangeId: { type: string, format: uuid }
+        uploaderId: { type: string, format: uuid }
+        fileName: { type: string }
+        mimeType: { type: string, enum: [image/jpeg, image/png, image/webp, application/pdf, video/mp4] }
+        byteSize: { type: integer }
+        sha256: { type: string }
+        status: { type: string, enum: [Pending, Ready] }
+        createdAt: { type: string, format: date-time }
+        uploadedAt: { type: [string, 'null'], format: date-time }
+    ExchangeEvidenceList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/ExchangeEvidence' }
+    ExchangeEvidenceReceipt:
+      type: object
+      additionalProperties: false
+      required: [id, entityId, exchangeId, version, state, serverTime]
+      properties:
+        id: { type: string, format: uuid }
+        entityId: { type: string, format: uuid }
+        exchangeId: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        state: { type: string, enum: [Pending, Ready, Assigned] }
+        serverTime: { type: string, format: date-time }
+    ExchangeEvidenceRead:
+      type: object
+      additionalProperties: false
+      required: [id, url, expiresAt]
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string, format: uri }
+        expiresAt: { type: string, format: date-time }
+    ExchangeEvidenceAccess:
+      type: object
+      additionalProperties: false
+      required: [version, assigneeId]
+      properties:
+        version: { type: integer, minimum: 0 }
+        assigneeId: { type: [string, 'null'], format: uuid }
+    AssignExchangeEvidence:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, reason]
+      properties:
+        expectedVersion: { type: integer, minimum: 0 }
+        reason: { type: string, minLength: 5, maxLength: 300 }
+    ReadExchangeEvidence:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 5, maxLength: 300 }
     DisputeExchangeCommand:
       type: object
       additionalProperties: false
@@ -21283,6 +21688,24 @@ components:
                   type: string
                   format: date-time
             - type: "null"
+    AdvanceDemoReviewTime:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, pairToken]
+      properties:
+        expectedVersion: {type: integer, minimum: 1}
+        pairToken: {type: string, pattern: "^[a-f0-9]{64}$"}
+    DemoReviewTimeAdvance:
+      type: object
+      additionalProperties: false
+      required: [available, applied, pairToken]
+      properties:
+        available: {type: boolean}
+        applied: {type: boolean}
+        pairToken:
+          anyOf:
+            - {type: string, pattern: "^[a-f0-9]{64}$"}
+            - {type: "null"}
     TransactionReviewsResponse:
       type: object
       additionalProperties: false
@@ -21298,6 +21721,8 @@ components:
         - partnerReview
         - partnerId
       properties:
+        demoTimeAdvance:
+          $ref: "#/components/schemas/DemoReviewTimeAdvance"
         partnerId:
           type: string
           format: uuid

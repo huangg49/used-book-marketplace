@@ -1,3 +1,6 @@
+import { ExchangeEvidenceService } from './exchange-evidence.service.js';
+import { ExchangeEvidenceController } from './exchange-evidence.controller.js';
+import { EvidenceStorage } from '../media/media-storage.js';
 import { PurchasesModule } from '../purchases/purchases.module.js';
 import { MediaModule } from '../media/media.module.js';
 import { Module } from '@nestjs/common';
@@ -12,9 +15,26 @@ import { ExchangesService } from './exchanges.service.js';
 import { ExchangeExpiryWorker } from './exchange-expiry.service.js';
 
 @Module({
-  imports: [MediaModule, PurchasesModule, DatabaseModule, AuthModule, CommandsModule, ListingsModule, WalletModule],
-  controllers: [ExchangesController, ExchangeOperationsController],
-  providers: [ExchangesService, ExchangeExpiryWorker],
+  imports: [
+    MediaModule,
+    PurchasesModule,
+    DatabaseModule,
+    AuthModule,
+    CommandsModule,
+    ListingsModule,
+    WalletModule,
+  ],
+  controllers: [
+    ExchangeEvidenceController,
+    ExchangesController,
+    ExchangeOperationsController,
+  ],
+  providers: [
+    ExchangeEvidenceService,
+    EvidenceStorage,
+    ExchangesService,
+    ExchangeExpiryWorker,
+  ],
   exports: [ExchangesService, ExchangeExpiryWorker],
 })
 export class ExchangesModule {}

@@ -1,6 +1,6 @@
 .dashboard {
   display: grid;
-  gap: 26px;
+  gap: 24px;
   min-width: 0;
 }
 .header {
@@ -12,19 +12,21 @@
 }
 .header h1 {
   margin: 0;
-  font:
-    650 2rem/1.2 "Auth Bricolage",
-    sans-serif;
-  letter-spacing: -0.03em;
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: clamp(1.625rem, 2.2vw, 2rem);
+  font-weight: 700;
+  line-height: 1.25;
   color: var(--shop-ink);
+  letter-spacing: -0.02em;
 }
 .header h1 span {
   color: var(--shop-wine);
 }
 .header p {
-  margin: 8px 0 0;
+  margin: 4px 0 0;
   color: var(--shop-muted);
-  font-size: 0.8125rem;
+  font-size: 13px;
+  line-height: 1.6;
 }
 .headerActions {
   display: flex;
@@ -32,82 +34,78 @@
   gap: 12px;
   flex-wrap: wrap;
 }
-.headerActions > button {
-  min-height: 44px;
-}
 .period {
-  display: flex;
-  gap: 4px;
-  padding: 0;
-  border: 0;
-  border-bottom: 1px solid var(--shop-line);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 9px;
+  background: rgba(230, 219, 207, 0.55);
+  border: 1px solid rgba(217, 203, 189, 0.75);
 }
 .period button {
-  position: relative;
-  min-width: 72px;
-  min-height: 44px;
-  padding: 8px 12px;
+  min-width: 68px;
+  height: 32px;
+  min-height: 32px;
+  padding: 4px 12px;
   border: 0;
-  border-radius: 4px 4px 0 0;
+  border-radius: 6px;
   background: transparent;
-  color: var(--shop-muted);
-  font-size: 0.8125rem;
+  color: #6d5b4e;
+  font-size: 13px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-  transition: color 180ms ease-out, background-color 180ms ease-out !important;
+  cursor: pointer;
+  transition: all 140ms ease !important;
 }
-.period button::after {
-  content: "";
-  position: absolute;
-  inset: auto 12px -1px;
-  height: 2px;
-  background: var(--shop-wine);
-  transform: scaleX(0);
-  transform-origin: center;
-  transition: transform 180ms cubic-bezier(.16,1,.3,1) !important;
+.period button:hover {
+  color: var(--shop-ink);
+  background: rgba(255, 255, 255, 0.65);
 }
 .period button[aria-pressed="true"] {
   color: var(--shop-wine);
   font-weight: 600;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(40, 25, 20, 0.08);
 }
-.period button[aria-pressed="true"]::after { transform: scaleX(1); }
-.period button:hover { color: var(--shop-wine); background: var(--shop-paper); }
 .period button:focus-visible,
 .headerActions .refreshButton:focus-visible {
-  outline: 2px solid var(--shop-wine);
-  outline-offset: 3px;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--shop-wine);
 }
 .headerActions .refreshButton {
-  min-width: 112px;
-  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   gap: 8px;
-  padding: 10px 14px;
-  border: 1px solid var(--shop-line);
-  border-radius: 6px;
-  background: var(--shop-paper);
+  height: 38px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(217, 203, 189, 0.85);
+  border-radius: 8px;
+  background: #ffffff;
   color: var(--shop-ink);
-  font-size: .8125rem;
+  font-size: 13px;
   font-weight: 500;
-  box-shadow: none;
-  transition: color 180ms ease-out, border-color 180ms ease-out, background-color 180ms ease-out !important;
+  box-shadow: 0 1px 2px rgba(40, 25, 20, 0.04);
+  cursor: pointer;
+  transition: all 140ms ease !important;
 }
 .headerActions .refreshButton:hover:not(:disabled) {
-  border-color: var(--shop-control);
-  background: var(--shop-paper);
+  border-color: rgba(92, 2, 2, 0.35);
+  background: #fffdfa;
   color: var(--shop-wine);
-  box-shadow: none;
-  transform: none;
+  box-shadow: 0 2px 6px rgba(40, 25, 20, 0.08);
 }
 .headerActions .refreshButton:active:not(:disabled) {
   background: var(--shop-shelf);
-  transform: none;
+  transform: translateY(1px);
 }
 .metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: 0;
-  padding: 16px 0;
-  border-block: 1px solid var(--shop-line);
+  padding: 20px 0;
+  border-block: 1px solid rgba(217, 203, 189, 0.85);
   align-items: center;
   gap: 20px;
 }
@@ -149,10 +147,11 @@
 .chartLoading {
   min-width: 0;
   margin: 0;
-  padding: 20px;
-  background: var(--shop-paper);
-  border: 1px solid var(--shop-line);
-  border-radius: 4px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid rgba(217, 203, 189, 0.85);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(40, 25, 20, 0.03), 0 8px 24px -4px rgba(40, 25, 20, 0.06);
 }
 .chartHeader {
   display: flex;
@@ -165,25 +164,27 @@
 .chartLoading h2,
 .sectionHeader h2 {
   margin: 0;
-  font:
-    650 1.25rem/1.35 "Auth Bricolage",
-    sans-serif;
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--shop-ink);
   letter-spacing: -0.02em;
 }
 .chartHeader p,
 .capacityIntro {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: var(--shop-muted);
-  font-size: 0.75rem;
-  line-height: 1.7;
+  font-size: 12px;
+  line-height: 1.6;
 }
 .scopeSelect {
   display: grid;
-  gap: 0;
+  gap: 4px;
   width: 152px;
   max-width: 100%;
   color: var(--shop-muted);
-  font-size: 0.75rem;
+  font-size: 12px;
 }
 .scopeControl {
   position: relative;
@@ -193,80 +194,85 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
   max-width: 100%;
-  min-height: 44px;
-  padding: 8px 7px 8px 4px;
-  border: 0;
-  border-bottom: 1px solid var(--shop-line);
-  border-radius: 0;
-  color: var(--shop-wine);
-  background: transparent;
-  box-shadow: none;
-  font-size: 0.8125rem;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(217, 203, 189, 0.85);
+  border-radius: 8px;
+  color: var(--shop-ink);
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(40, 25, 20, 0.02);
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: border-color 180ms ease, background-color 180ms ease;
+  transition: all 140ms ease;
 }
 .scopeTrigger > svg {
   flex-shrink: 0;
-  opacity: .7;
+  color: var(--shop-wine);
+  opacity: .8;
   transition: transform 160ms ease !important;
 }
 .scopeTrigger[aria-expanded="true"] > svg { transform: rotate(180deg); }
 .scopeTrigger:hover {
-  border-color: var(--shop-control);
-  background: color-mix(in srgb, var(--shop-shelf) 45%, transparent);
+  border-color: rgba(140, 110, 85, 0.45);
+  background: #faf7f0;
 }
 .scopeTrigger:focus-visible,
 .scopeTrigger[aria-expanded="true"] {
   border-color: var(--shop-wine);
   outline: none;
-  box-shadow: inset 0 -1px 0 var(--shop-wine);
-  background: var(--shop-shelf);
+  box-shadow: 0 0 0 1px var(--shop-wine);
+  background: #ffffff;
 }
 .scopeMenu {
   position: absolute;
   z-index: 30;
-  top: calc(100% + 8px);
+  top: calc(100% + 6px);
   right: 0;
-  width: 220px;
+  width: 200px;
   max-width: calc(100vw - 32px);
   max-height: min(240px, calc(100dvh - 32px));
   overflow-y: auto;
   margin: 0;
   padding: 6px;
   list-style: none;
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--shop-ink);
-  background: var(--shop-paper);
-  box-shadow: 0 8px 24px #28191424, 0 2px 6px #2819140d;
+  background: #ffffff;
+  border: 1px solid rgba(217, 203, 189, 0.9);
+  border-top: 2px solid var(--shop-wine);
+  box-shadow: 0 8px 24px rgba(40, 25, 20, 0.12);
   animation: scope-menu-in 160ms cubic-bezier(.16, 1, .3, 1) both !important;
 }
 .scopeMenu[data-side="top"] {
   top: auto;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + 6px);
 }
 .scopeOption {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  min-height: 44px;
-  padding: 10px 12px;
-  border-radius: 3px;
-  font-size: .8125rem;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
   line-height: 1.5;
   cursor: pointer;
+  transition: all 120ms ease;
 }
 .scopeOption[data-active="true"] {
-  background: var(--shop-shelf);
+  background: #faf7f0;
   color: var(--shop-wine);
 }
 .scopeOption[aria-selected="true"] {
   background: var(--shop-wine);
-  color: var(--shop-cream);
+  color: #ffffff;
+  font-weight: 600;
 }
 .scopeOption[aria-selected="true"][data-active="true"] {
   background: var(--shop-wine-hover);
@@ -445,134 +451,142 @@
   isolation: isolate;
   display: flex;
   flex-direction: column;
-  padding: 26px;
-  border-radius: 4px;
-  color: var(--shop-cream);
-  background: var(--shop-wine);
-  box-shadow: var(--shadow-md);
+  padding: 24px;
+  border-radius: 12px;
+  color: #fff9f5;
+  background: linear-gradient(165deg, #640a0a 0%, #460101 100%);
+  border: 1px solid #400101;
+  box-shadow: 0 4px 20px rgba(92, 2, 2, 0.18), 0 1px 3px rgba(40, 25, 20, 0.08);
 }
-.workOrnament {
-  position: absolute;
-  z-index: -1;
-  pointer-events: none;
-  stroke: currentColor;
-  stroke-width: 1;
-  stroke-linecap: round;
+.workboardBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #f7ecd7;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 12px;
+  width: fit-content;
 }
-.workCornerTop {
-  top: 4px;
-  right: 4px;
-  width: 96px;
-  height: 96px;
-  color: var(--shop-cream);
-  opacity: .24;
-}
-.workCornerBottom {
-  right: 4px;
-  bottom: 4px;
-  width: 88px;
-  height: 88px;
-  color: var(--shop-yellow);
-  opacity: .38;
-}
-.workMark {
-  margin-bottom: 18px;
-  transform: rotate(-35deg);
-  color: var(--shop-yellow);
+.workboardDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff5252;
+  box-shadow: 0 0 6px rgba(255, 82, 82, 0.6);
 }
 .workboard h2 {
   margin: 0;
-  font:
-    600 clamp(2rem, 2.8vw, 2.75rem)/1.12 "Auth Bricolage",
-    sans-serif;
-  letter-spacing: -0.03em;
-  color: var(--shop-cream);
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: clamp(1.75rem, 2.4vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  color: #fff9f5;
 }
 .workboard header p,
 .workboardFoot {
-  margin: 12px 0 0;
-  color: #e3c6b6;
-  font-size: 0.75rem;
-  line-height: 1.8;
+  margin: 8px 0 0;
+  color: rgba(255, 240, 230, 0.78);
+  font-size: 13px;
+  line-height: 1.6;
 }
 .workLinks {
   display: grid;
-  gap: 0;
-  margin-block: 24px;
+  gap: 10px;
+  margin-block: 20px;
 }
 .workLinks a {
   display: block;
-  min-height: 76px;
-  margin-inline: -12px;
-  border-top: 1px solid #9e5750;
-  color: var(--shop-cream);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff9f5;
   text-decoration: none;
-  --row-surface: var(--shop-yellow);
-  --row-edge: color-mix(in srgb, var(--shop-yellow) 75%, var(--shop-wine));
-  --row-text: var(--shop-wine);
-  --row-focus: var(--shop-yellow);
-  --row-pressed: var(--shop-yellow);
+  transition: all 140ms ease !important;
+}
+.workLinks a:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.workLinks a:active {
+  transform: translateY(0);
+  background: rgba(255, 255, 255, 0.12);
+}
+.workLinks a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #fff9f5, 0 0 0 4px var(--shop-wine);
 }
 .workLinks .actionFace {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 76px;
-  padding: 14px 12px;
+  padding: 12px 14px;
+  min-height: 56px;
 }
 .workLabel {
-  display: grid;
-  gap: 4px;
-  font-size: 0.75rem;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #f7ecd7;
 }
-.workLinks strong {
-  font:
-    500 2rem/1.1 "Auth Bricolage",
-    sans-serif;
-}
-.workLinks a:focus-visible {
-  outline-color: var(--shop-yellow);
+.workLabel strong {
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
 }
 .workboardFoot {
   margin-top: auto;
 }
 .bottomGrid {
   display: grid;
-  grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
-  border: 1px solid var(--shop-line);
-  border-radius: 4px;
-  background: var(--shop-paper);
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.9fr);
+  gap: 20px;
+  background: transparent;
+  border: none;
   min-width: 0;
 }
 .singleBottom {
   min-width: 0;
-  border: 1px solid var(--shop-line);
-  border-radius: 4px;
-  background: var(--shop-paper);
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid rgba(217, 203, 189, 0.85);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(40, 25, 20, 0.03), 0 8px 24px -4px rgba(40, 25, 20, 0.06);
 }
 .attention,
 .capacity {
   min-width: 0;
-  padding: 28px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
+  background: #ffffff;
+  border: 1px solid rgba(217, 203, 189, 0.85);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(40, 25, 20, 0.03), 0 8px 24px -4px rgba(40, 25, 20, 0.06);
 }
-.bottomGrid .capacity {
-  --point-action-ink: var(--shop-exchange-ink, #254337);
-  --shop-muted: color-mix(in srgb, var(--shop-ink) 70%, var(--shop-mint));
-  --shop-line: color-mix(in srgb, var(--shop-ink) 14%, var(--shop-mint));
-  border-left: 1px solid var(--shop-line);
-  background: color-mix(in srgb, var(--shop-mint) 55%, var(--shop-paper));
-}
-.attention > .sectionHeader {
-  margin-bottom: 12px;
+.attention > .sectionHeader,
+.capacity > .sectionHeader {
+  margin-bottom: 8px;
 }
 .attention > .chartFootnote {
   margin-top: auto;
-  padding-top: 20px;
+  padding-top: 18px;
   max-width: 60ch;
-  font-size: .75rem;
+  font-size: 12px;
 }
 .sectionHeader {
   display: flex;
@@ -582,58 +596,84 @@
 }
 .sectionHeader > span {
   color: var(--shop-muted);
-  font-size: .75rem;
+  font-size: 12px;
 }
 .task {
-  border-bottom: 1px solid var(--shop-line);
+  border-bottom: 1px solid rgba(217, 203, 189, 0.6);
 }
 .task > a {
   display: block;
-  min-height: 88px;
-  margin-inline: -12px;
-  font-size: 0.8125rem;
+  border-radius: 8px;
+  font-size: 13px;
   text-decoration: none;
   color: var(--shop-ink);
+  transition: all 140ms ease !important;
+}
+.task > a:hover {
+  background: #faf7f0;
+}
+.task > a:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--shop-wine);
 }
 .task .actionFace {
   display: grid;
   grid-template-columns: 20px minmax(0, 1fr) auto 16px;
   align-items: center;
   gap: 16px;
-  min-height: 88px;
   padding: 16px 12px;
 }
-.task .actionFace > svg:last-child { color: var(--shop-wine); }
-.taskIcon { color: var(--shop-control); }
-.taskLabel { min-width: 0; line-height: 1.6; font-weight: 600; }
+.task .actionFace > svg:last-child {
+  color: var(--shop-wine);
+  transition: transform 140ms ease;
+}
+.task > a:hover .actionFace > svg:last-child {
+  transform: translateX(3px);
+}
+.taskIcon {
+  color: var(--shop-control);
+}
+.taskLabel {
+  min-width: 0;
+  line-height: 1.5;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--shop-ink);
+}
 .taskLabel small {
   display: block;
-  margin-top: 4px;
+  margin-top: 3px;
   color: var(--shop-muted);
-  font-size: .75rem;
+  font-size: 12px;
   font-weight: 400;
-  line-height: 1.7;
+  line-height: 1.5;
 }
 .task .actionFace > strong {
-  font: 600 1.75rem/1 "Auth Bricolage", sans-serif;
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: 1.625rem;
+  font-weight: 700;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
   color: var(--shop-wine);
 }
-.task[data-empty="true"] .actionFace > strong { color: var(--shop-muted); }
+.task[data-empty="true"] .actionFace > strong {
+  color: var(--shop-muted);
+}
 .task > p {
   margin: 0 0 12px 36px;
   color: var(--shop-muted);
-  font-size: 0.75rem;
-  line-height: 1.8;
+  font-size: 12px;
+  line-height: 1.6;
 }
 .capacityIntro {
-  margin: 8px 0 12px;
-  font-size: .8125rem;
+  margin: 6px 0 12px;
+  font-size: 13px;
+  color: var(--shop-muted);
 }
 .capacityRow {
   min-width: 0;
-  padding-block: 20px;
-  border-bottom: 1px solid var(--shop-line);
+  padding-block: 16px;
+  border-bottom: 1px solid rgba(217, 203, 189, 0.6);
 }
 .pointHeading {
   display: flex;
@@ -641,32 +681,39 @@
   align-items: start;
   gap: 16px;
 }
-.pointIdentity { min-width: 0; }
+.pointIdentity {
+  min-width: 0;
+}
 .pointIdentity h3 {
   margin: 0;
   color: var(--shop-ink);
-  font: 650 1rem/1.5 "Auth Bricolage", sans-serif;
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 .pointStatus {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: var(--shop-muted);
-  font-size: .75rem;
-  line-height: 1.7;
+  font-size: 12px;
+  line-height: 1.5;
 }
 .pointStatus::before {
   content: "";
   display: block;
   flex-shrink: 0;
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--shop-control);
 }
-.pointStatus[data-status="Active"]::before { background: var(--shop-wine); }
+.pointStatus[data-status="Active"]::before {
+  background: #2e7d32;
+}
 .pointCount {
   flex-shrink: 0;
   margin: 0;
@@ -674,135 +721,71 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   color: var(--shop-muted);
-  font-size: .8125rem;
+  font-size: 13px;
 }
 .pointCount strong {
-  font: 600 1.75rem/1 "Auth Bricolage", sans-serif;
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-size: 1.625rem;
+  font-weight: 700;
+  line-height: 1;
   color: var(--shop-wine);
 }
-.pointCount small { display: block; margin-top: 6px; font-size: .75rem; }
+.pointCount small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+}
 .capacityMeter {
   display: block;
   width: 100%;
   height: 14px;
-  margin-top: 16px;
+  margin-top: 14px;
+  border-radius: 3px;
+  overflow: hidden;
 }
-.availableSlots { fill: var(--shop-line); }
-.heldSlots { fill: var(--shop-wine); }
+.availableSlots {
+  fill: rgba(217, 203, 189, 0.5);
+}
+.heldSlots {
+  fill: var(--shop-wine);
+}
 .open {
   display: block;
-  min-height: 60px;
-  margin-top: auto;
-  margin-inline: -12px;
-  font-size: 0.8125rem;
-  font-weight: 700;
+  margin-top: 20px;
   text-decoration: none;
+  border-radius: 8px;
+  border: 1px solid rgba(217, 203, 189, 0.75);
+  background: #faf7f0;
+  color: var(--shop-ink);
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 140ms ease !important;
 }
-.capacity .open {
-  color: var(--point-action-ink);
-  --row-surface: var(--point-action-ink);
-  --row-edge: color-mix(in srgb, var(--point-action-ink) 75%, var(--shop-ink));
-  --row-text: var(--shop-cream);
-  --row-focus: var(--point-action-ink);
-  --row-pressed: color-mix(in srgb, var(--point-action-ink) 85%, var(--shop-ink));
+.open:hover {
+  background: #ffffff;
+  border-color: rgba(92, 2, 2, 0.35);
+  color: var(--shop-wine);
+  box-shadow: 0 2px 8px rgba(40, 25, 20, 0.06);
+}
+.open:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--shop-wine);
 }
 .open .actionFace {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 60px;
-  padding: 16px 12px;
+  padding: 12px 14px;
+  min-height: 44px;
 }
-.task > a,
-.open,
-.workLinks a {
-  position: relative;
-  perspective: 900px;
-  border-radius: 2px;
-  --row-ink: 0;
-  --row-lift: 0px;
-  --row-tilt: 0deg;
-  --row-depth: 0px;
-  --row-shadow: var(--shadow-lg);
-  --row-color: var(--row-surface, var(--shop-wine));
-  /* Owner motion policy: retain the authored timing under OS preferences. */
-  transition: color 180ms cubic-bezier(.16,1,.3,1) !important;
+.open .actionFace > svg {
+  color: var(--shop-wine);
+  transition: transform 140ms ease;
 }
-.actionFace {
-  position: relative;
-  isolation: isolate;
-  pointer-events: none;
-  border-radius: inherit;
-  transform-origin: center bottom;
-  transform: translateY(var(--row-lift)) rotateX(var(--row-tilt));
-  transition: transform 260ms cubic-bezier(.16,1,.3,1) !important;
+.open:hover .actionFace > svg {
+  transform: translateX(3px);
 }
-.actionFace::before {
-  content: "";
-  position: absolute;
-  inset: 4px 0;
-  z-index: -1;
-  pointer-events: none;
-  border-radius: inherit;
-  background: var(--row-color);
-  /* The solid lower edge is the thickness requested for this 3D surface. */
-  box-shadow: 0 var(--row-depth) 0 var(--row-edge, var(--shop-wine-hover)),
-    var(--row-shadow),
-    inset 0 1px 0 color-mix(in srgb, var(--shop-cream) 18%, transparent);
-  opacity: var(--row-ink);
-  transition: opacity 180ms cubic-bezier(.16,1,.3,1),
-    box-shadow 260ms cubic-bezier(.16,1,.3,1),
-    background-color 180ms cubic-bezier(.16,1,.3,1) !important;
-}
-.task > a :is(.taskLabel, .taskLabel small, .taskIcon, strong),
-.task .actionFace > svg:last-child {
-  transition: color 180ms cubic-bezier(.16,1,.3,1),
-    opacity 180ms cubic-bezier(.16,1,.3,1) !important;
-}
-.task > a:is(:focus-visible, :active),
-.open:is(:focus-visible, :active),
-.workLinks a:is(:focus-visible, :active) {
-  --row-ink: 1;
-  --row-lift: -6px;
-  --row-tilt: 3deg;
-  --row-depth: 6px;
-  color: var(--row-text, var(--shop-cream));
-  outline-color: var(--row-focus, var(--shop-wine));
-}
-.task > a:is(:focus-visible, :active) :is(.taskLabel, .taskLabel small, .taskIcon, strong),
-.task > a:is(:focus-visible, :active) .actionFace > svg:last-child {
-  color: var(--shop-cream);
-}
-.task > a:is(:focus-visible, :active) .taskLabel small { opacity: .85; }
-@media (hover: hover) and (pointer: fine) {
-  .task > a:hover,
-  .open:hover,
-  .workLinks a:hover {
-    --row-ink: 1;
-    --row-lift: -6px;
-    --row-tilt: 3deg;
-    --row-depth: 6px;
-    color: var(--row-text, var(--shop-cream));
-  }
-  .task > a:hover :is(.taskLabel, .taskLabel small, .taskIcon, strong),
-  .task > a:hover .actionFace > svg:last-child {
-    color: var(--shop-cream);
-  }
-  .task > a:hover .taskLabel small { opacity: .85; }
-}
-.task > a:active,
-.open:active,
-.workLinks a:active {
-  --row-lift: -1px;
-  --row-tilt: 0deg;
-  --row-depth: 1px;
-  --row-shadow: var(--shadow-sm);
-  --row-color: var(--row-pressed, var(--shop-wine-hover));
-}
-.task > a:active .actionFace,
-.open:active .actionFace,
-.workLinks a:active .actionFace { transition-duration: 100ms !important; }
 .notice,
 .freshness {
   margin: 0;
@@ -825,9 +808,6 @@
   .workboard h2 {
     font-size: 2rem;
   }
-  .workMark {
-    margin-bottom: 8px;
-  }
   .workLinks {
     margin-block: 0;
   }
@@ -835,8 +815,9 @@
     grid-column: 1 / -1;
     margin-top: 16px;
   }
-  .bottomGrid { grid-template-columns: minmax(0, 1fr); }
-  .bottomGrid .capacity { border-left: 0; border-top: 1px solid var(--shop-line); }
+  .bottomGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 @media (max-width: 720px) {
   .dashboard {

@@ -1,5 +1,380 @@
+# Đồng bộ main và bảo toàn checkout local — 03/11/2026
+
+## Quyền xuất bản gói tích hợp — 03/11/2026
+
+Owner yêu cầu push lên nhánh an toàn và merge main ngay, không chờ/kiểm CI mới.
+Thực hiện qua nhánh `codex/sync-main-20261103` và PR squash, giữ backup/checkpoint
+local; không force push hoặc đổi branch protection. Các kiểm chứng local và
+FAIL/skip trên main trước tích hợp được ghi bên dưới; không coi yêu cầu bỏ chờ CI
+là bằng chứng CI PASS hoặc human review. Không đổi READINESS hay dữ liệu demo.
+
+- Owner yêu cầu fetch/main sync và xử lý conflict; Antigravity đã được owner xác
+  nhận dừng sửa. Nhánh `codex/sync-main-20261103` giữ cả các commit local và
+  checkpoint 131 file từ checkout ứng dụng, không reset/clean/stash/force checkout.
+- Đã tích hợp main tới `00a1d16d` (gồmPR92; bằng chứng mở gọn trong trang), giữ UI local,
+  các điểm vào Hỗ trợ/Hậu kiểm AI, cache thông báo theo user và quyền xem bằng chứng.
+  Ảnh/video chỉ từ signed read có phân công/audit, không iframe bridge hoặc ảnh mẫu.
+- Phát hiện và sửa nâng cấp AI v1 có dữ liệu bị validator chặn: thêm migration
+  `0056-auto-review-v2-upgrade-bridge` chạy trước migration v2 đã đóng băng.
+  Mô tả exchanges dùng schema cuối của migration payer, tránh ghép lại luật cũ.
+  Không sửa nội dung/checksum các migration đã áp dụng.
+- PASS API/Member web/Admin/RN typecheck; API/Member/Admin build; unit 315 Member,
+  229 Admin,150 session;133 API E2E;7 Mongo upgrade tests. Browser profile fixture
+  PASS; xem bằng chứng web dùng API/Mongo QA thật, storage fake. Native NOT RUN.
+- Bản sao nhất quán của DB chính được thử nâng cấp riêng trên rs-test/_test:
+  9 migration, không checksum cũ lệch, không bản ghi mới vi phạm validator,
+  ledger/giao dịch/400 listing giữ nguyên; policy chọn cho quote mới chuyển free
+  shipping và AI cũ thêm metadata mặc định. Không reset/seed/import DB chính.
+- Owner đã duyệt nâng DB/kích hoạt:9migration và1migration mới từPR92 đã áp dụng
+  thành công trên DB chính,
+  backup private mới, giữ5209bản ghi cũ;2AI review chỉ thêm metadata mặc định.
+  Ledger cân bằng, đơn cũ Preparing và User2 available850k/held150k; User1/User3
+  available1triệu. Không đổi password/5file cấu hình. Role app được cấp quyền
+  collection mới, không đổi user. Checkout app `codex/local-main-synced-20261103`
+  đã cùng bản tích hợp; API/worker3000, Admin5173, Member5174 đang chạy; QA dừng.
+- PASS kiểm tra API chính:401bài public/400nền,9trang không trùng, search/filter,
+  12signed ảnh thật; User1/2/3 login/profile/wallet/reviews. Git working tree sạch.
+- PR92 thêm schema hoàn tất demo:đã thử clone QA trước áp dụng,5225bản ghi và
+  ledger giữ nguyên. Giữ công tắc LOCAL_DEMO_COMPLETION_ENABLED tắt; không tự
+  hoàn tất đơn cũ. Contract0.73.1/246operations/38controllers; toàn Mongo61PASS/
+  6SKIP,8release-gate PASS/40ngoài filter SKIP và10policy unit PASS.
+- Demo transit từng FAIL do2số tiền cũ còn cộng30k phí mỗi đơn. Đã sửa kỳ vọng
+  theo chính sách free shipping, thêm assertion3đơn×125k/phí0/held375k;
+  PASS65stable intents/receipts, mấtACK/race/restart; storage fake,QA riêng.
+- Seller-order browser tái hiện selector/nút cũ và tổng90k+30k không còn đúng.
+  Đã đổi sang nhãn xác nhận nơi nhận/phí0,giữ nguyên lostACK/exact retry,
+  thiếu tiền bị từ chối,1Order/1hold/1journal và public availability. PASS2phiên,
+  390/1440,API/Mongo QA thật,funding/storage fake; không đổi app để khớp test.
+- CI6919981c trước đó3job PASS. CI mới00a1d16d:API Mongo,Demo transit và
+  User Web seller-order browser FAIL. Bản local có full Mongo/transit/seller-order browser PASS;
+  không suy CI remote đã xanh. Bản local chưa push, không có CI riêng.
+  [Bằng chứng, thay đổi và kích hoạt](../features/LOCAL_MAIN_SYNC_2026_11_03.md).
+  Không push/PR/remote merge/deploy; không đóng READINESS.
+
 # Điểm lưu hiện tại — 03/11/2026
 
+## Dữ liệu nền400cuốn trên app local chính
+
+- Owner yêu cầu400cuốn:100Manga,100Light Novel,200cuốn thuộc14nhóm khác.
+  Đã nhập bổ sung metadata Open Library/ảnh bìa vào API và storage local hiện có,
+  với3người đăng demo riêng; không dùng User1/User2/User3 cho bộ nền.
+- PublishedAt mẫu cũ hơn bài thật; API hiện401bài public, bài thật đứng đầu.
+  Giá/tình trạng/approval là fixture có audit nhập demo, không human review,
+  ảnh hiện vật, nguồn giá AI hoặc dữ liệu để demo giao nhận/thanh toán.
+- PASS400catalog+400listing invariants/validator/index trên QA riêng,400ảnh
+  round-trip storage thật, import atomic/backup/fingerprints và ledger nguyên vẹn;
+  API phân trang/search/filter/signed media. QA đã dừng, app chính giữ chạy.
+- Chỉ bàn giao docs trên `codex/demo-background-catalog`, base059a777e;
+  không sửa app/contract/migration, không push/CI/merge hoặc đổi readiness.
+  [Cách dùng, nguồn và giới hạn](../features/BACKGROUND_CATALOG_DEMO_2026_11_03.md).
+
+## Thu gọn thẻ bạn đọc theo phản hồi owner
+
+- Follow-up `codex/reader-name-status-alignment`, base99ed9620: tên và trạng thái
+  đặt cùng hàng, căn giữa; bỏ margin auto của pill trong phạm vi thẻ. PASS browser
+  fixture trên checkout app ở1440/1000/390/320/chữ130%, không đổi dữ liệu/API.
+
+- `codex/compact-reader-card`, base792d3942: ReaderCard riêng, chỉ avatar/tên/
+  trạng thái và2điểm/link. Bỏ ribbon/Club/email/quick hub trùng menu; chuyển
+  gỡ/retry ảnh xuống phần chỉnh sửa, giữ camera/handler/dirty guard. Cùng số mẫu
+  gộp một dòng; khác số mẫu giữ riêng. Completed/0vi phạm xem ở hồ sơ đầy đủ;
+  vi phạm xác minh>0 vẫn hiện. Không đổi dữ liệu, API/contract hoặc policy.
+- PASS browser HTTP fixture ở cả2checkout1440/1000/390/320/chữ130%, thông tin
+  rút gọn/ngoại lệ số mẫu/vi phạm, loading/error/retry, cache/identity/dirty guard;
+  typecheck/build/lint scoped. App chính5174 giữ chạy, không push/CI/merge/gate.
+  [Chi tiết và checkpoint trước](../ui/PROFILE_REPUTATION_2026_11_03.md).
+
+
+## Uy tín trong thẻ bạn đọc
+
+- `codex/profile-reputation-card`, base4146e3a3: profile có component đọc điểm đối
+  tác/chất lượng sách, số mẫu, completed/verified violations và link hồ sơ công
+  khai. Summary key riêng, current owner/session, null/error/stale/retry; không
+  suy trạng thái ACTIVE thành uy tín hoặc thêm nhãn/rank/thưởng/phạt.
+- Áp đúng banner đỏ trong checkout app bằng import/mount scoped, giữ editor/hero/
+  avatar/motion của teammate. Worktree editor dùng paper tone cùng component.
+- PASS browser HTTP fixture cả hai checkout1440/1000/390/320/chữ130%, giữ draft
+  khi hủy rời trang, cache/invalidation/cross-account late read và recovery; typecheck,
+  build/lint scoped. Main5174/API3000 thấy5.0/4.5 từ2mẫu và link/Back đúng owner.
+- Không đổi API/contract/profile/review/money data; không DB harness/provider/
+  push/CI/merge/native/human acceptance hay gate. [Bằng chứng](../ui/PROFILE_REPUTATION_2026_11_03.md).
+
+
+## Hồ sơ uy tín công khai — tách layout và sửa xung đột cache
+
+- `codex/public-reputation-profile`, base09198a00: `/members/:id` có CSS riêng,
+  khung căn giữa, danh tính/2điểm/số mẫu rõ, nhận xét chính và giải thích phụ.
+  Một document scroll; giữ API/data và UI đánh giá của teammate. Public bỏ nhãn
+  cảm tính; Approved reply, empty/error/paging/retry và tên/nội dung dài được giữ.
+- Public infinite key tách khỏi summary regular query để mở hồ sơ chính mình
+  không đọc nhầm cache shape. Network stale giữ dữ liệu;403/404 che cache.
+- PASS UI HTTP fixture1440/900/390/320/chữ130%, paging recovery, cache isolation,
+  missing/null/approved reply; typecheck/build/lint. App chính5174/API3000 đọc
+  profile đã được owner công bố:2review, điểm3.5/4.0 đúng; không mutation dữ liệu.
+- Đã áp riêng page/CSS vào checkout app, không đè shared reviews/global/layout.
+  Giữ SupportLink ở worktree mới; không kéo link support vào runtime0.71 chưa nối.
+  [Bằng chứng và giới hạn](../ui/PUBLIC_REPUTATION_2026_11_02.md). App giữ chạy;
+  không push/CI/PR/merge/native/human acceptance hoặc đóng gate.
+
+
+## Nút bỏ chờ48h cho giao dịch đánh giá mẫu local
+
+- Owner yêu cầu bỏ thời gian chờ để demo. Nhánh `codex/demo-review-time-advance`,
+  base821dbdb8: thêm nút trên Member web chính5174, xác nhận rồi API mô phỏng thời
+  gian cho đúng Exchange nhập mẫu, cả hai review đã gửi. Giữ nội dung/điểm/tiền,
+  ghi2revision DemoTimeAdvance; một lần, hết quyền sửa/xóa sau công bố.
+- API cần config riêng/allowlist, development/test và Mongo loopback, participant
+  ACTIVE, mẫu Completed zero-money đúng provenance. Không dùng cho đơn/giao dịch
+  thật; production từ chối. Auth trước replay, pair token/version, lock và receipt.
+- PASS13API E2E (có race thật),150session tests, contract/routes/typecheck/build/
+  lint; browser QA1440/390/320 xác nhận/hủy/mất ACK/exact retry/public totals/khóa
+  sửa/link hồ sơ và mẫu thường vẫn Pending. Storage fake, không native/provider/
+  human acceptance. Warning lint/build cũ ngoài phạm vi giữ nguyên.
+- Patch tương thích vào checkout app đang chạy, giữ UI Antigravity; contract0.71
+  regenerate, không migration hay đồng bộ toàn source. App chính đã hiện nút,
+  hai review vẫn Pending để owner bấm; fingerprints/ledger balanced nguyên vẹn.
+- Cách dùng/giới hạn: [demo](../features/MAIN_REVIEW_DEMO_2026_11_02.md#nút-bỏ-chờ48h--bổ-sung02112026),
+  [ADR0067](../adr/0067-local-review-demo-time-advance.md). API/worker3000 và web
+  5173/5174 giữ chạy; QA riêng dừng sau kiểm. Không push/CI/merge/đóng READINESS.
+
+## Demo đánh giá — chuyển sang app/DB local chính theo owner
+
+- Owner yêu cầu dùng trực tiếp5174/DB chính, thay hai cổng demo riêng. Nhánh
+  `codex/main-review-demo`: thêm2Exchange Completed mẫu lịch sử cho User1/User2
+  hiện có, một mới để tự viết và một cũ có2review Published/revision DemoSeed.
+  Vào menu Đánh giá của tôi → Đổi sách, không cần runner/URL môi trường khác.
+- Dữ liệu mẫu không có dòng tiền, agreement legacy null;4listing tham chiếu có
+  revision riêng đã lưu trữ, không lên kệ public. Không giả approval/carrier/
+  settlement hay mở release policy. Mẫu không là chứng minh full giao nhận.
+- PASS validators/index runtime và checkListing/checkExchange trên QA trước ghi;
+  import atomic/additive, fingerprint bản ghi cũ/tiền nguyên vẹn; API cả hai Member,
+  UI entry/form/review cũ, Admin đọc history, wallet:check balanced. Đơn mua cũ
+  vẫn Preparing; User2 available850k/held150k. Không gửi review mới hộ owner.
+- Đã dừng3009/5197/5198/QA57017; app chính3000/5173/5174 và Mongo27017 giữ chạy.
+  [Hướng dẫn và giới hạn](../features/MAIN_REVIEW_DEMO_2026_11_02.md).
+  Exact IDs/plan/fingerprint/credentials ignored; không push/CI/merge/đóng gate.
+
+## Bộ thử đánh giá User1/User2 riêng — đã thay bằng dữ liệu app chính
+
+- Owner yêu cầu tạo hai tài khoản tới đoạn giao dịch hoàn tất để tự thử review.
+  Đã dựng QA riêng57017/`*_test`, API3009, hai Member web Vite5197/5198.
+  User1 Seller/User2 Buyer, cùng1DirectOrder Completed fixture mới; không tạo
+  review hộ owner, không giảm hạn168h/48h hoặc mở release policy.
+- Hai tab đã đăng nhập và mở form: Seller chỉ điểm đối tác; Buyer có cả điểm sách.
+  API canReview=true, profile mỗi bên1completed/0review lúc chuẩn bị. Browser AX/
+  screenshot xác nhận form; không nhận là full order/fulfillment/settlement PASS.
+- Dữ liệu chỉ phục vụ review, cùng fixture của transaction-reviews E2E; không dựng
+  ledger/thanh toán/vận chuyển cho giao dịch mẫu. App chính3000/5174/DB27017 giữ
+  nguyên: User1/User2 chưa có Completed/review; đơn thật của demo vẫn Preparing.
+- Runner, exact IDs/credentials và hướng dẫn cũ giữ private ignored ở
+  `.tmp/review-user-demo/`. Đã dừng bộ thử này theo yêu cầu chuyển app chính;
+  không hướng dẫn owner quay lại5197/5198. QA Mongo là tmpfs.
+  Không push/merge hoặc đổi READINESS. Không dùng bộ này làm bằng chứng giao nhận.
+
+## Nạp tiền mô phỏng thuận tiện cho demo
+
+- `codex/simple-simulator-topup`, base `7a9af802`: Admin chọn Member/số tiền,
+  xác nhận rồi nhận receipt; API atomic simulator command dùng nguồn hữu hạn,
+  TEST_OPERATOR độc lập, current auth trước replay, không đụng VNPay intent.
+- PASS95API tests,229Admin unit, browser QA lost-ACK/exact-retry/1journal và
+  desktop/mobile320/390 chữ130%; typecheck/build/lint/contract/routes PASS.
+- Đã áp patch tương thích vào checkout app; operator hiện có mở form/chọn User2/
+  xác nhận rồi hủy PASS; fingerprint collection tiền không đổi, ledger balanced.
+  API/worker restart cùng source; app giữ chạy, QA được dọn. Credential ignored.
+- [Cách dùng và evidence](../features/SIMULATOR_TOPUP_2026_11_02.md).
+  Chưa push/CI/PR/merge/human demo acceptance hoặc đóng READINESS.
+
+## VNPay — owner báo thanh toán nhưng ví chưa cộng
+
+- Khảo sát read-only: hai topup gần nhất đã hết hạn local, chưa có credit journal;
+  config/link HMAC/Return/clock khớp. QueryDR live trả99 Unexpected error, không
+  chữ ký/status xác minh. Chưa xác nhận được provider đã thu hay chưa; không kết
+  luận VNPay toàn hệ thống bị lỗi hoặc tự cộng/bù tiền.
+- [Bằng chứng/giới hạn](../features/VNPAY_DIAGNOSIS_2026_11_02.md), nhánh
+  `codex/vnpay-topup-diagnosis` base `185dd2b2`. Không topup mới/credit/code/env
+  mutation; giữ intent cũ chờ provider evidence. User2 trước đó nạp simulator,
+  không được diễn giải là VNPay live PASS. Không push/CI/merge/đóng gate.
+
+## Chốt gói giao diện local và tiếp tục demo
+
+- Đã commit local `cc853aad` (`feat(web): complete listing review and purchase presentation`)
+  trên `codex/admin-listing-review-workspace`. Giữ riêng sửa đổi Antigravity ở
+  checkout ứng dụng; không push/CI/merge hoặc tự đồng bộ source khác nhánh.
+- Gói tiếp `codex/demo-user2-buy-now` base `cc853aad`: User2 có profile/địa chỉ
+  default/ví1.000.000đ mô phỏng, đã mua bài User1 trên app/API local thật.
+  BuyNow Preparing, tiền sách120.000đ+phí30.000đ, ví850.000đ available/150.000đ held.
+  Buyer/Seller thấy cùng đơn, không chờ Seller accept lại,1payment journal/2notification.
+- PASS ledger cân bằng/nguồn hữu hạn, fingerprints dữ liệu cũ ngoài bài đang mua
+  nguyên vẹn;0pageErrors. [Evidence/phạm vi](../ui/USER2_BUY_NOW_DEMO_2026_11_02.md).
+  Credential/exact intents giữ riêng ignored; không seed/reset hoặc gửi tiền thật.
+  Chưa shipment/pickup/Delivered/settlement; bước tiếp là owner xem demo Preparing.
+
+## Member web — tân trang chi tiết bản sách
+
+- Owner duyệt bố cục45/55, ảnh contain+dải thumbnail, một document scroller;
+  giá rõ, seller trước thao tác; Mua ngay chính, giỏ/chat phụ, status/condition
+  dựa dữ liệu thật. Giữ owner/hold/bundle/retry/motion; không đổi API/nghiệp vụ.
+- Cart có style riêng, chỉ ACK mới có Xem giỏ; sửa returnUrl guest quay đúng sách.
+  Giữ replay yêu cầu cũ cả khi refresh detail lỗi. PASS308unit/typecheck/build,
+  QA8nhóm+buy-now harness thật trên Mongo QA (storage/payment/carrier fake);
+  live8ảnh thật/6viewport/chữ130%/viewer/focus0pageErrors, detector0primary.
+- [Source, kiểm chứng và giới hạn](../ui/BOOK_DETAIL_REFINEMENT_2026_11_02.md).
+  Checkout local nhận đúng file tương thích, giữ việc teammate; User1 hiện Approved
+  đọc được công khai, lượt này không đổi DB chính. Chưa push/merge/đóng gate.
+
+## Member web — tìm kiếm kẹt loading
+
+- Repro xác nhận: IME start→đổi chữ→blur thiếu end giữ composing=true/query disabled,
+  không phải API đang tìm mãi. Sửa blur/submit kết thúc lượt nhập; chặn Enter đang
+  ghép dấu khỏi submit sớm. Giữ debounce/query/timeout/motion/API.
+- PASS typecheck hai checkout,308unit/build/lint0error; browser8nhóm HTTP kiểm soát
+  gồm lỗi mạng/timeout15giây/retry và mobile; API local3response200/0pageErrors.
+  [Bằng chứng và giới hạn](../ui/SEARCH_RECOVERY_2026_11_02.md). Chỉ hunk ô tìm kiếm
+  áp sang local, giữ việc teammate. Không ghi DB/push/merge hoặc đóng gate.
+
+## Web — giữ hiệu ứng khi máy bật Giảm chuyển động
+
+- Owner yêu cầu toàn bộ web: bỏ global cutdown và các nhánh reduced-motion ở
+  Member/Admin; Framer Motion never giảm, Expo web hook luôn full motion.
+  Giữ visibility/viewport/cleanup và timing gốc; không đổi máy/native policy.
+- PASS Member308unit/Admin228unit/typecheck/build, RN typecheck/5motion tests/
+  lint file, Expo web export; browser5nhóm CSS+RN-web adapter và4màn local thực.
+  [Phạm vi, evidence và giới hạn](../ui/WEB_MOTION_POLICY_2026_11_02.md).
+- Chỉ biến đổi motion trên checkout local, giữ Profile/Member/shell của teammate.
+  Không push/merge/đóng gate; API và hai web app có sẵn tiếp tục chạy.
+
+## Admin — bàn kiểm duyệt bài đăng
+
+- Owner thấy đủ6tick nhưng nút vẫn khóa: chuyển lý do chặn xuống sát nút duyệt,
+  có status/description và link đúng đầu sách cho Admin; Staff chỉ thấy chờ Admin.
+  QA phát hiện ListingTitle Staff vẫn gọi private catalog: đã chặn theo capability
+  ở queue/detail/next, tách cache và không render metadata khi thiếu quyền đọc.
+  PASS229unit/typecheck/lint/build, QA14nhóm (Admin/Staff), live3viewport/8ảnh;
+  fixture DB/user/role còn0. User1 thật vẫn PendingReview, không gửi quyết định.
+  Giữ các focus style riêng của teammate tại checkout đang dùng; chưa push/merge.
+- Typography khối Giá và cách trao sách: cả3giá trị16px/cùng căn hàng; tiền thật
+  wine700, hình thức600, null400/muted. PASS typecheck hai checkout và browser
+  local1920/768/390 (computed size/alignment/weight,0pageErrors). Chỉ sửa trình bày.
+- Follow-up scroll: route có viewport cố định; menu/heading đứng yên, queue cuộn
+  trọn cột, reader/phiếu cùng top/bottom và cuộn độc lập; dossier hẹp dùng1scroller.
+  Không sticky/page scroll cạnh tranh. Guard giữ vị trí, đổi hồ sơ về đầu;
+  nút tới phiếu cuộn đúng dossier. PASS228unit/typecheck/lint/build, QA12nhóm,
+  live7viewport với8ảnh thật/0pageErrors; app typecheck PASS. Teardown QA exit0,
+  QA Mongo đã dừng; API3000/Admin5173 giữ chạy, User1 PendingReview. Chi tiết và
+  giới hạn kiểm kê QA ở report; không push/merge/đóng gate.
+- Follow-up phần đối chiếu đầu sách: một disclosure, tên/author/status nổi bật,
+  xuất bản và phân loại chia2/1cột; null giữ chưa cung cấp, Admin có exact link.
+  Giữ readiness callback/quyền. QA11nhóm/unit228/build PASS;4viewport/keyboard
+  disclosure PASS0pageErrors. Không sửa dữ liệu hoặc quyết định bài User1.
+- Mới nhất: owner chưa chấp nhận bản phẳng; đã nhấn vùng nhận diện sách/giá wine,
+  nhóm lời khai/ghi chú/mô tả, phiếu quyết định/check/progress. Container980px đổi
+  sang một khu đọc khi sidebar còn mở. QA11nhóm PASS; main User1 vẫn PendingReview;
+  ảnh thật8/8,4viewport/6geometry PASS. Chi tiết ở report, chưa human/remote CI.
+- Owner yêu cầu sửa màn `/review/listings` sau khi User1 gửi bài. Nhánh
+  `codex/admin-listing-review-workspace`, base `cbc616f7`;
+  [phạm vi, source và kiểm chứng](../ui/ADMIN_LISTING_REVIEW_2026_11_02.md).
+- Mở hồ sơ đầu hàng khi vào; explicit Back giữ danh sách, không nhảy hồ sơ đang
+  đọc khi polling. Thumbnail/ảnh thật, summary giá/tình trạng, catalog gate và
+  exact deep link, phiếu quyết định rõ; giữ dirty guard, checklist và key/body/version.
+- PASS Admin worktree228unit/typecheck/lint/build; checkout đang dùng219unit và
+  typecheck. Browser10nhóm real API/Mongo QA+storage fake PASS; local chỉ đọc hồ sơ
+  và media thật1920/1440/768/390 PASS0pageErrors. Không duyệt/từ chối bài User1 thật.
+- Chỉ áp phần review UI tương thích vào checkout local cũ, không đè Member web,
+  App.css hoặc công việc Antigravity. Native/human/remote CI NOT RUN; chưa push/merge.
+- Follow-up owner: sửa thumbnail tràn ô64px/đè caption do Grid min-content. Repro
+  ảnh thật FAIL trước sửa; sau sửa containment8/8/caption/section PASS6độ rộng,
+  chọn ảnh8/viewer/Escape/focus PASS. Thêm geometry helper vào QA runner; full QA
+  không chạy lại cho CSS-only, helper chạy trực tiếp với ảnh thật. Chi tiết ở report.
+
+## Dữ liệu demo User 1 — local, không deploy
+
+- Owner duyệt đúng1Member và1bài bán trong app local đang dùng, giữ dữ liệu cũ.
+  Đã thêm tài khoản demo ACTIVE/preverified, hồ sơ,1địa chỉ mặc định, catalog Pending,
+  listing Draft và8ảnh Commons có ghi công CC BY-SA4.0 qua storage/worker thật.
+  Giá120.000đ mô phỏng; chưa xác minh hiện vật/ấn bản, ảnh điện thoại hoặc đủ góc.
+- Nạp ví1.000.000đ mô phỏng qua API Member và TEST_OPERATOR có sẵn, không gán balance.
+  Ledger đối soát cân bằng trước/sau;7bản ghi nghiệp vụ cũ được fingerprint không đổi
+  (bỏ lockSeq). Không reset/migrate DB chính hoặc tự gửi/duyệt catalog/bài đăng.
+- PASS đăng nhập/Kệ sách/ví trên Member web local và mở đúng nháp/tải8ảnh trên RN
+  Expo web430px,0pageErrors. Native NOT RUN. Web Kệ sách chưa có mở lại Draft;
+  dùng trình nháp RN. Không thay code UI trong gói dữ liệu.
+- Owner yêu cầu credential dễ nhớ riêng User1 demo local; đã đổi và thu hồi các
+  phiên cũ trong transaction. Giữ policy mật khẩu chung, tài khoản khác và bài nháp;
+  thông tin đăng nhập lưu riêng, không ghi vào tài liệu chung.
+- Owner duyệt tắt giới hạn đăng nhập cho demo local: bật cờ có sẵn theo
+  [ACCOUNT_AUTH](../features/ACCOUNT_AUTH.md#demo-local) và khởi động lại riêng API,
+  giữ watch mode. Runtime PASS6lần sai trả401 rồi lần7đúng trả200; Member web PASS.
+  Unit12/12PASS giữ giới hạn production/test và các scope OTP/khôi phục. Không sửa
+  source auth hoặc xóa counters. Cờ local trước đó không bật; chưa xác định lịch
+  sử đổi file riêng. Workflow CI hosted và `.env` ignored không chứng minh CI đổi nó.
+- App/worker local có sẵn được giữ chạy. Preview riêng trước đó vẫn còn; RN Expo
+  web local8081 mới trỏ API3000, không phải preview QA8087/API3032. Thông tin đăng
+  nhập, nguồn ảnh và evidence giữ riêng trong thư mục ignored `.tmp/user1-local`;
+  không đưa credential/DB dump vào Git. Không push/PR/merge hoặc đóng readiness.
+- Theo yêu cầu owner sau đó, đã restart API3000 (giữ watch mode) và bật lại Member
+  web5174/Admin5173 đang dừng. PASS startup, hai form login render0pageErrors,
+  API từ chối request chưa đăng nhập401; cờ demo login vẫn bật. Không nghiệm thu
+  phần chỉnh/gửi nháp Antigravity đang làm chỉ bằng các kiểm tra startup này.
+- **Trạng thái cuối theo yêu cầu owner tự tập khởi động:** đã dừng API/watch,
+  Member/Admin, hai preview và Mongo chính/QA; các cổng ứng dụng/DB không còn
+  listener. Mongo chính dùng volume được giữ nguyên. QA preview dùng tmpfs nên
+  đã lưu archive riêng có users/roles, SHA256/gzip integrity PASS trước khi dừng;
+  restore NOT RUN. Bản thử QA cần restore riêng trước khi mở lại, không tự coi
+  còn dữ liệu sau restart. Chạy hằng ngày bằng `pnpm dev:api`, `pnpm dev:user`,
+  `pnpm dev:admin`; launcher tự bật Mongo chính và media/order worker, không seed.
+
+## Gia cố Operations CI / RN mua ngay — checkpoint local
+
+- Owner duyệt xử lý lỗi Operations sau PR89. Nhánh `codex/fix-rn-buy-now-navigation`,
+  base local `d95161f7` giữ nguyên gói evidence; subject
+  `test(rn): use shelf navigation for buy-now regression`.
+  [Chi tiết và giới hạn](../features/EXCHANGE_MAIN_INTEGRATION_2026_11_02.md#gia-cố-browser-runner-sau-merge-pr89).
+- Thay history/popstate giả bằng Trang chủ → thẻ sách thật → đúng URL/mã sách →
+  Mua ngay; ba bản QA cùng đầu sách có giá khác nhau qua revision/duyệt API thật.
+  Mở đơn từ thẻ đang hiện đúng ID, không dùng nút đầu tiên hoặc text của màn nền.
+  Giữ timeout15s, mọi assertion quote/key/body/version/ledger/hold/Back/lateACK.
+  Lỗi có thêm artifact UI an toàn, không token/body/email.
+- Hai lượt full sau sửa PASS: thường và CPU trang Buyer Chromium chậm6lần,0pageErrors;
+  real Nest/Mongo QA, storage/ảnh/funding simulator, RN Expo web390/Seller320px.
+  Chỉ đổi runner/docs nên không chạy lại API unit/native/build không liên quan.
+  Syntax/docs/diff PASS. QA cuối database/user/role còn0; dừng mongo-test, app test
+  đã dừng, DB chính vẫn healthy;28file local teammate giữ nguyên checksum.
+- Hai lượt full trước sửa cũng PASS; chưa tái hiện timeout gốc hoặc chứng minh
+  nguyên nhân duy nhất. Đã loại bỏ điểm yếu history và selector xác nhận từ source/
+  navigation thật. Main `dd7304de` vẫn10PASS/OperationsFAIL; sửa mới chỉ commit local,
+  remote CI NOT RUN, chưa push/PR/merge. Không gọi CI xanh hoặc native/human PASS.
+
+## Bằng chứng riêng cho sự cố Exchange — checkpoint local
+
+- Owner duyệt gói mới sau khi tự merge [PR89](https://github.com/huangg49/used-book-marketplace/pull/89).
+  Base main `dd7304de5c7cf96e2d7faf51e42fbe73dcac0628`, nhánh
+  `codex/exchange-dispute-evidence`, subject
+  `feat(exchange): persist private dispute evidence across member and operations`.
+  [Hành vi, source, kết quả và giới hạn](../features/EXCHANGE_EVIDENCE_2026_11_02.md),
+  [ADR0066](../adr/0066-exchange-private-evidence.md). Chỉ commit local; chưa push,
+  mở PR hoặc merge gói này. Checkout gốc/28file local của teammate được giữ riêng.
+- Member RN/web báo sự cố bằng mô tả trước rồi gửi bytes ảnh/PDF/MP4; Pending→Ready,
+  hash/original immutable, exact retry qua mất ACK/Back/reload, đổi identity xóa RAM.
+  Bỏ chọn mẫu/tênfile giả làm bằng chứng. Staff/Admin độc lập nhận phụ trách, đọc
+  original bằng attachment120s có audit; không cấp quyền phân xử/settlement mới.
+- Contract0.73/242operations/38controllers; migration mới0054. Chưa áp dụng lên DB
+  chính; khi môi trường đích được duyệt cần migrate rồi bootstrap quyền collection.
+  Không sửa migration cũ, GHN, ledger hoặc readiness custody/settlement.
+- PASS types/build phù hợp, shared150/web308/RN223/Admin228unit,32Mongo,
+  88E2E hồi quy và6evidence riêng sau bổ sung race/storage503; browser web→Staff
+  và RN Expo web picker/bytesPASS (storage fake, trạng thái vận chuyển fixture).
+  API full384PASS/1Windows shutdown timeout; targeted chạy lại ca đó PASS1.
+  Expo web32routePASS; Android debug FAIL Worklets CMake/Prefab dù thử JDK21/
+  đường dẫn ngắn, nên native functional BLOCKED, không gọi native PASS.
+- Supabase QA bucket private riêng20MB: ảnh nhỏ round-trip/hash/attachment/public
+  deniedPASS, đã xóa object/bucket do lượt thử tạo. Project từ chối bucket100MB;
+  **owner giữ100MB và để gate cấu hình mở**. Chưa chứng minh PDF20MB/video100MB,
+  retention, Android/iOS/ARM/TalkBack hoặc nghiệm thu người thật.
+- Remote main đúng `dd7304de`:10jobPASS/OperationsFAIL ở RN mua ngay helper
+  openBook chờ “Xác nhận đặt mua”; [CI](https://github.com/huangg49/used-book-marketplace/actions/runs/41406972829/job/125151105877).
+  Chưa xác định nguyên nhân, không gọi main xanh. Remote CI gói evidence NOT RUN.
+- QA cuối: database/user/role riêng còn0, app test đã dừng; dừng mongo-test57017,
+  Mongo chính27017 vẫn healthy. Checkout gốc28file foreign giữ checksum nguyên.
 ## Thanh tiến trình và demo hoàn tất/giải ngân thật — 03/11/2026
 
 - Nhánh `codex/local-demo-settlement`, base `6ba6ef39`; giữ phần chỉnh thanh tiến

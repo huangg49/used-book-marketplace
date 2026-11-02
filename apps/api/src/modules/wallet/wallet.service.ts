@@ -9,6 +9,7 @@ import {
   member,
   requireActive,
   type Actor,
+  type CurrentActor,
   type CommandContext,
   type WalletChange,
 } from '../commands/mongo-command.service.js';
@@ -657,6 +658,148 @@ export class WalletService {
         nextCursor: more ? rows.at(-1)!._id : null,
       };
     });
+  }
+  private operator(actor: CurrentActor) {
+    requireActive(actor);
+    if (!actor.roles.some((role) => role.role === 'TEST_OPERATOR'))
+      throw new DomainError(
+        403,
+        'FORBIDDEN',
+        'Cần tài khoản vận hành mô phỏng.',
+      );
+    if (!this.simulator.enabled())
+      throw new DomainError(
+        503,
+        'UNAVAILABLE',
+        'Bộ nạp tiền mô phỏng chưa được bật.',
+      );
+  }
+  simulatedRecipients(
+    auth: Actor,
+    query: Query,
+  ): Promise<Wire['SimulatedTopupRecipientPage']> {
+    return this.commands.read(auth, async (tx, actor) => {
+      this.operator(actor);
+      const q = String(query.q ?? '').trim();
+      const literal = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const rows = await tx.c.users
+        .find(
+          {
+            _id: { $ne: actor._id },
+            status: 'ACTIVE',
+            emailVerifiedAt: { $ne: null },
+            'roles.role': 'MEMBER',
+            ...(q
+              ? {
+                  $or: [
+                    { displayName: { $regex: literal, $options: 'i' } },
+                    { _id: q.toLowerCase() },
+                  ],
+                }
+              : {}),
+          },
+          {
+            projection: { _id: 1, displayName: 1 },
+            sort: { displayName: 1, _id: 1 },
+            limit: 41,
+          },
+        )
+        .toArray();
+      await this.session(tx, auth, await tx.now());
+      return {
+        items: rows
+          .slice(0, 40)
+          .map((row) => ({ id: row._id, displayName: row.displayName })),
+        hasMore: rows.length > 40,
+      };
+    });
+  }
+  createSimulated(context: CommandContext, body: Wire['CreateSimulatedTopup']) {
+    const recipientId = body.recipientId.toLowerCase();
+    return this.commands.runWallet(
+      context,
+      'createSimulatedTopup',
+      recipientId,
+      body,
+      {
+        discover: async () => [recipientId],
+        authorize: async (tx, actor) => {
+          this.operator(actor);
+          if (recipientId === actor._id)
+            throw new DomainError(
+              403,
+              'FORBIDDEN',
+              'Người vận hành không được nạp cho chính mình.',
+            );
+          await this.session(tx, context.auth, await tx.now());
+        },
+        mutate: async (tx, _actor, _before, receiptId) => {
+          // Participant locks are held through commit; eligibility changes conflict.
+          // A stored receipt can still replay after the recipient was locked.
+          const recipient = await tx.c.users.findOne({ _id: recipientId });
+          if (
+            !recipient ||
+            recipient.status !== 'ACTIVE' ||
+            !recipient.emailVerifiedAt ||
+            !recipient.roles.some((role) => role.role === 'MEMBER')
+          )
+            throw new DomainError(
+              409,
+              'AccountIneligible',
+              'Người nhận không còn đủ điều kiện nạp mô phỏng. Chọn Member đang hoạt động và đã xác minh email.',
+            );
+          const accountId = await this.ledger.lockFunding(tx, recipientId);
+          const now = await tx.now();
+          await this.session(tx, context.auth, now);
+          const intent: TopupIntentDoc = {
+            _id: randomUUID(),
+            ownerId: recipientId,
+            amount: body.amount,
+            currency: 'VND',
+            state: 'Succeeded',
+            version: 2,
+            createdAt: now,
+            updatedAt: now,
+            lockSeq: 0,
+          };
+          const event: Wire['SimulatedTopupEvent'] = {
+            eventId: randomUUID(),
+            intentId: intent._id,
+            recipientId,
+            amount: intent.amount,
+            currency: 'VND',
+            outcome: 'Succeeded',
+            occurredAt: now.toISOString(),
+          };
+          this.simulator.verify(event, this.simulator.sign(event));
+          await tx.c.topup_intents.insertOne(intent);
+          await tx.c.simulated_payment_events.insertOne({
+            _id: event.eventId,
+            intentId: intent._id,
+            provider: 'LatLaiSimulator-v1',
+            payloadHash: createHash('sha256')
+              .update(canonicalJson(event))
+              .digest('hex'),
+            recipientId,
+            amount: intent.amount,
+            currency: 'VND',
+            outcome: 'Succeeded',
+            disposition: 'Applied',
+            occurredAt: now,
+            receivedAt: now,
+            receiptId,
+          });
+          await this.ledger.postTopup(
+            tx,
+            intent,
+            accountId,
+            event.eventId,
+            now,
+          );
+          return this.change(tx, intent, now);
+        },
+      },
+    );
   }
   emit(context: CommandContext, body: Wire['SimulatedTopupEvent']) {
     const eventId = body.eventId.toLowerCase();

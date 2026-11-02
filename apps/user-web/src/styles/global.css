@@ -17,7 +17,8 @@ html{scrollbar-color:#a76553 var(--shop-paper);scroll-padding-top:96px;scrollbar
 input,textarea{caret-color:var(--shop-wine)}
 input::placeholder,textarea::placeholder{color:var(--shop-muted);opacity:1}
 :focus-visible{outline:3px solid var(--shop-wine);outline-offset:4px}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+/* Owner policy: authored web motion is identical for both OS motion preferences.
+   Keep component visibility/offscreen guards and technical fallbacks. */
 
 @keyframes floatMote {
   0% {

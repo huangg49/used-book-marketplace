@@ -1491,6 +1491,30 @@ export interface ReviewRevisionDoc {
   reason: string | null;
 }
 
+export interface ExchangeEvidenceDoc {
+  _id: string;
+  exchangeId: string;
+  uploaderId: string;
+  fileName: string;
+  mimeType:
+    'image/jpeg' | 'image/png' | 'image/webp' | 'application/pdf' | 'video/mp4';
+  byteSize: number;
+  sha256: string;
+  reservedBytes: number;
+  status: 'Pending' | 'Ready';
+  version: number;
+  createdAt: Date;
+  uploadedAt: Date | null;
+  createReceiptId: string;
+  uploadReceiptId: string | null;
+}
+export interface ExchangeEvidenceAssignmentDoc {
+  _id: string;
+  assigneeId: string;
+  version: number;
+  updatedAt: Date;
+  lockSeq: number;
+}
 export interface LocalDemoOrderCompletionDoc {
   _id: string; policy: string; sellerId: string; shipmentId: string; receiptId: string;
   sourceVersion: number; status: 'Pending' | 'Completed'; createdAt: Date; dueAt: Date;

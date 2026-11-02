@@ -8,32 +8,39 @@ import {
 } from "@used-books/session-client";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
-import styles from "../pages/CartPage.module.css";
+import { ArrowRight, Check, Loader2, ShoppingBag } from "lucide-react";
+import styles from "./AddToCart.module.css";
 export function AddToCart({
   listingId,
   listingVersion,
+  disabled = false,
 }: {
   listingId: string;
   listingVersion: number;
+  disabled?: boolean;
 }) {
   const state = useSession(),
     cache = useQueryClient(),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState(""),
     [error, setError] = useState("");
+  if (state.status === "loading")
+    return <button className={styles.button} type="button" disabled>Đang kiểm tra phiên…</button>;
   if (state.status !== "authenticated")
     return (
       <Link
-        className={styles.linkButton}
-        to={`/login?returnTo=${encodeURIComponent("/books/" + listingId)}`}
+        className={styles.button}
+        to={`/login?returnUrl=${encodeURIComponent("/books/" + listingId)}`}
+        aria-disabled={disabled || undefined}
+        onClick={(event) => { if (disabled) event.preventDefault(); }}
       >
-        Đăng nhập để thêm vào giỏ
+        <ShoppingBag size={18} aria-hidden="true" /> Thêm vào giỏ sách
       </Link>
     );
   const owner = state.user.id,
     pending = pendingCartCommand(session);
   async function add() {
-    if (busy) return;
+    if (busy || (!pending && disabled)) return;
     setBusy(true);
     setError("");
     setMessage("");
@@ -57,19 +64,26 @@ export function AddToCart({
   return (
     <div className={styles.add}>
       <button
+        className={styles.button}
         type="button"
-        disabled={busy || (!pending && state.user.status !== "ACTIVE")}
+        disabled={busy || (!pending && (disabled || state.user.status !== "ACTIVE"))}
+        aria-busy={busy || undefined}
         onClick={() => void add()}
       >
+        {busy ? <Loader2 className={styles.spinner} size={18} aria-hidden="true" /> : <ShoppingBag size={18} aria-hidden="true" />}
         {busy
           ? "Đang xác nhận…"
           : pending
             ? "Xác minh thao tác giỏ trước"
             : "Thêm vào giỏ sách"}
       </button>
-      {error && <p role="alert">{error}</p>}
-      {message && <p role="status">{message}</p>}
-      <Link to="/cart">Mở giỏ sách</Link>
+      {error && <p className={styles.error} role="alert">{error}</p>}
+      {message && (
+        <div className={styles.result} role="status">
+          <p><Check size={16} aria-hidden="true" />{message}</p>
+          <Link to="/cart">Xem giỏ sách <ArrowRight size={16} aria-hidden="true" /></Link>
+        </div>
+      )}
     </div>
   );
 }

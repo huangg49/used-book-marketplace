@@ -164,24 +164,6 @@
     min-height var(--nav-morph-duration) cubic-bezier(0.16, 1, 0.3, 1),
     padding var(--nav-morph-duration) cubic-bezier(0.16, 1, 0.3, 1);
 }
-/* Owner requests a visible, finite navbar morph even on their reduced-motion laptop. */
-@media (prefers-reduced-motion: reduce) {
-  .header,
-  .headerInner {
-    transition-duration: var(--nav-morph-duration) !important;
-  }
-  .header[data-collapsing="true"]::after {
-    animation-duration: var(--nav-edge-duration) !important;
-    animation-iteration-count: 1 !important;
-  }
-  .navEdge rect {
-    transition-duration: var(--nav-morph-duration) !important;
-  }
-  .header[data-collapsing="true"] .navEdge rect {
-    animation-duration: var(--nav-edge-duration) !important;
-    animation-iteration-count: 1 !important;
-  }
-}
 .header[data-floating="true"] .headerInner {
   min-height: 64px;
   padding-block: 8px;
@@ -276,6 +258,7 @@
   gap: 10px;
 }
 .iconAction {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -295,6 +278,25 @@
     background-color 160ms ease,
     border-color 160ms ease,
     color 160ms ease;
+}
+.chatBadge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: var(--shop-cream);
+  color: var(--shop-wine);
+  font-size: 0.6875rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+  border: 1.5px solid var(--shop-wine);
 }
 .iconAction:hover {
   background: rgba(255, 255, 255, 0.14);
@@ -380,14 +382,19 @@
 }
 .mobileNav a,
 .mobileNav button {
-  padding: 13px 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
   text-align: left;
   text-decoration: none;
   border: 0;
   color: inherit;
   background: transparent;
   font: inherit;
-  border-radius: 6px;
+  font-size: 0.9375rem;
+  border-radius: 8px;
+  transition: background 150ms ease, color 150ms ease;
 }
 .mobileNav a:hover,
 .mobileNav button:hover {
@@ -395,6 +402,78 @@
 }
 .mobileNav a[aria-current="page"] {
   background: var(--shop-wine-hover);
+  font-weight: 700;
+}
+.mobileDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 6px 0;
+}
+.mobileQuickHub {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 4px 0;
+}
+.mobileQuickItem {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 10px 12px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-radius: 12px !important;
+  text-decoration: none !important;
+  color: #ffffff !important;
+  transition: background 160ms ease, transform 160ms ease !important;
+}
+.mobileQuickItem:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+  transform: translateY(-1px);
+}
+.mobileQuickIcon {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.14);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--shop-cream);
+}
+.mobileQuickDot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ff5252;
+  border: 1.5px solid var(--shop-wine);
+}
+.mobileQuickInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+.mobileQuickTitle {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mobileQuickDesc {
+  font-size: 0.6875rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .footer {
   position: relative;

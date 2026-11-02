@@ -1,0 +1,679 @@
+/* ==========================================================================
+   LẬT LẠI - OPERATIONS USER DIRECTORY STYLESHEET
+   The Archive Registry / Sổ Biên Niên Ký Quản Trị
+   Refined luxury editorial aesthetic, strict 4px/8px rhythm, wine & warm paper,
+   monogram seals, breathing live status, and bespoke micro-interactions.
+   ========================================================================== */
+
+/* 1. Header Trang */
+.user-directory-header {
+  margin-bottom: 24px;
+}
+
+.directory-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.directory-header-title-group h1 {
+  margin: 0 0 4px;
+  font-family: "Auth Bricolage", "Be Vietnam Pro", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(1.625rem, 2.2vw, 2rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--shop-ink);
+  letter-spacing: -0.02em;
+}
+
+.directory-header-title-group .intro {
+  color: var(--shop-muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+  max-width: 65ch;
+}
+
+.btn-subtle-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  background: #ffffff;
+  color: var(--shop-ink);
+  border: 1px solid rgba(217, 203, 189, 0.85);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(40, 25, 20, 0.04);
+  transition: all 140ms ease;
+  white-space: nowrap;
+}
+
+.btn-subtle-refresh:hover:not(:disabled) {
+  border-color: rgba(92, 2, 2, 0.35);
+  color: var(--shop-wine);
+  background: #fffdfa;
+  box-shadow: 0 2px 6px rgba(40, 25, 20, 0.08);
+}
+
+.btn-subtle-refresh.spinning svg {
+  animation: spinSubtle 800ms linear infinite;
+}
+
+@keyframes spinSubtle {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 2. Thanh lọc: Chip tabs thống kê + Form bộ lọc 1 hàng */
+.directory-controls-block {
+  margin-bottom: 24px;
+}
+
+/* Chip tabs thống kê dạng Capsule Ledger */
+.directory-tab-strip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 16px;
+  background: rgba(230, 219, 207, 0.55);
+  padding: 3px;
+  border-radius: 10px;
+  border: 1px solid rgba(217, 203, 189, 0.75);
+  flex-wrap: wrap;
+}
+
+.tab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: 7px;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6d5b4e;
+  cursor: pointer;
+  transition: all 140ms ease;
+  user-select: none;
+}
+
+.tab-chip:hover {
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--shop-ink);
+}
+
+.tab-chip.active {
+  background: #ffffff;
+  color: var(--shop-wine);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(40, 25, 20, 0.08);
+}
+
+.tab-chip-count {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(40, 25, 20, 0.07);
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+  transition: all 140ms ease;
+}
+
+.tab-chip.active .tab-chip-count {
+  background: #fbf0ec;
+  color: var(--shop-wine);
+  font-weight: 700;
+}
+
+/* Form lọc 1 hàng - Không card, không viền thừa, viền ấm tinh tế */
+.directory-single-row-filter.directory-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-block: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.filter-search-col {
+  flex: 1 1 280px;
+  min-width: 200px;
+}
+
+.filter-search-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--shop-muted);
+}
+
+.directory-search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.directory-search-icon {
+  position: absolute;
+  left: 12px;
+  color: #8c7766;
+  pointer-events: none;
+  width: 16px;
+  height: 16px;
+  opacity: 0.85;
+  z-index: 2;
+}
+
+.directory-search-input-wrap input.directory-search-input,
+.filter-search-col input:not([type="checkbox"]):not([type="radio"]) {
+  width: 100%;
+  height: 42px;
+  min-height: 42px;
+  padding: 0 34px 0 38px !important;
+  background: #ffffff;
+  border: 1px solid rgba(217, 203, 189, 0.85);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--shop-ink);
+  box-shadow: 0 1px 2px rgba(40, 25, 20, 0.02);
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+
+.directory-search-input-wrap input.directory-search-input:focus,
+.filter-search-col input:not([type="checkbox"]):not([type="radio"]):focus {
+  outline: none;
+  border-color: var(--shop-wine);
+  box-shadow: 0 0 0 1px var(--shop-wine);
+  background: #ffffff;
+}
+
+.directory-search-input::placeholder,
+.filter-search-col input::placeholder {
+  color: #a49487;
+  font-size: 13px;
+}
+
+.directory-search-clear {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  padding: 4px;
+  color: var(--shop-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 120ms ease;
+}
+
+.directory-search-clear:hover {
+  color: var(--shop-ink);
+  background: rgba(40, 25, 20, 0.08);
+}
+
+.filter-select-col {
+  flex: 0 0 auto;
+  min-width: 160px;
+}
+
+.filter-select-col label,
+.filter-select-col [class*="select"] > span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--shop-muted);
+}
+
+/* PaperSelect Trigger Styling Override in Directory */
+.filter-select-col button[role="combobox"] {
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 14px !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(217, 203, 189, 0.85) !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  color: var(--shop-ink) !important;
+  box-shadow: 0 1px 2px rgba(40, 25, 20, 0.02) !important;
+  transition: all 140ms ease !important;
+}
+
+.filter-select-col button[role="combobox"]:hover {
+  border-color: rgba(140, 110, 85, 0.45) !important;
+  background: #faf7f0 !important;
+}
+
+.filter-select-col button[role="combobox"]:focus-visible,
+.filter-select-col button[role="combobox"][aria-expanded="true"] {
+  outline: none !important;
+  border-color: var(--shop-wine) !important;
+  box-shadow: 0 0 0 1px var(--shop-wine) !important;
+}
+
+/* Dropdown popup: xổ thẳng toàn bộ danh sách lựa chọn, không scroll */
+.filter-select-col ul {
+  max-height: none !important;
+  overflow: visible !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(40, 25, 20, 0.12) !important;
+  border: 1px solid rgba(217, 203, 189, 0.9) !important;
+  border-top: 2px solid var(--shop-wine) !important;
+}
+
+.filter-select-col li {
+  border-radius: 6px !important;
+}
+
+.filter-actions-col {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.btn-filter-primary {
+  height: 42px;
+  padding: 0 18px;
+  background: var(--shop-wine);
+  color: #ffffff;
+  border: 1px solid var(--shop-wine);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: none !important;
+  transition: all 140ms ease;
+  white-space: nowrap;
+}
+
+.btn-filter-primary:hover:not(:disabled) {
+  background: var(--shop-wine-hover);
+  border-color: var(--shop-wine-hover);
+  box-shadow: none !important;
+}
+
+.btn-filter-primary:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none !important;
+}
+
+.btn-clean-reset {
+  height: 42px;
+  padding: 0 14px;
+  background: #ffffff;
+  color: var(--shop-muted);
+  border: 1px solid rgba(217, 203, 189, 0.85);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: none !important;
+  transition: all 140ms ease;
+  white-space: nowrap;
+}
+
+.btn-clean-reset:hover:not(:disabled) {
+  color: var(--shop-ink);
+  border-color: rgba(140, 110, 85, 0.45);
+  background: #faf7f0;
+}
+
+/* 3. Dòng trạng thái kết quả */
+.directory-results-meta {
+  margin: 0 0 10px 0;
+  font-size: 12px;
+  color: #7c6a59;
+  text-align: left;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+/* 4. Khung bảng Ledger Biên Niên Ký */
+.directory-table-wrap {
+  overflow-x: auto;
+  margin: 0 0 16px;
+  background: #ffffff;
+  border: 1px solid rgba(217, 203, 189, 0.85);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(40, 25, 20, 0.03), 0 8px 24px -4px rgba(40, 25, 20, 0.06);
+}
+
+.directory-table {
+  width: 100%;
+  min-width: 52rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+
+.directory-table caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.directory-table thead th {
+  background: #fbf8f2;
+  color: #746152;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 13px 18px;
+  border-bottom: 1px solid rgba(217, 203, 189, 0.9);
+  white-space: nowrap;
+}
+
+.directory-table thead tr th:first-child {
+  border-top-left-radius: 11px;
+}
+
+.directory-table thead tr th:last-child {
+  border-top-right-radius: 11px;
+}
+
+.directory-table tbody tr {
+  height: 58px;
+  transition: background-color 140ms ease, box-shadow 140ms ease;
+  cursor: pointer;
+}
+
+.directory-table tbody tr:hover {
+  background: #faf6ed !important;
+  box-shadow: inset 3px 0 0 var(--shop-wine);
+}
+
+.directory-table th,
+.directory-table td {
+  padding: 10px 18px;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(235, 225, 215, 0.7);
+  font-size: 13px;
+}
+
+.directory-table tbody tr:last-child th,
+.directory-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.directory-table tbody tr:last-child th:first-child {
+  border-bottom-left-radius: 11px;
+}
+
+.directory-table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 11px;
+}
+
+/* Cột Người dùng: Con dấu Monogram Seal & Danh tính */
+.user-identity-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Auth Bricolage", "Be Vietnam Pro", sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+  user-select: none;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 1px 2px rgba(40, 25, 20, 0.05);
+}
+
+.user-text-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.user-name-link {
+  font-weight: 600;
+  color: var(--shop-ink);
+  text-decoration: none;
+  font-size: 13px;
+  line-height: 1.35;
+  transition: color 120ms ease;
+}
+
+.user-name-link:hover {
+  color: var(--shop-wine);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.user-email-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-email-text {
+  color: #7c6a59;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.email-verified-icon {
+  color: #1e7e34;
+  background: rgba(30, 126, 52, 0.09);
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.email-unverified-icon {
+  color: #b45309;
+  background: rgba(180, 83, 9, 0.09);
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Cột Vai trò: Bookmark Ribbon Tags */
+.role-badge-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.role-badge-unified {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.role-badge-admin {
+  background: #fbf0ec;
+  border: 1px solid rgba(92, 2, 2, 0.22);
+  color: #5c0202;
+  font-weight: 600;
+}
+
+.role-badge-staff {
+  background: #fef7ed;
+  border: 1px solid rgba(180, 83, 9, 0.22);
+  color: #9a3412;
+  font-weight: 600;
+}
+
+.role-badge-operator {
+  background: #f0f4fd;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.role-badge-member {
+  background: #f5f0e8;
+  border: 1px solid rgba(140, 110, 85, 0.2);
+  color: #4a3e35;
+  font-weight: 500;
+}
+
+/* Cột Trạng thái: Breathing Emerald Live Dot & Warning Badges */
+.status-subtle-normal {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #2b5633;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.status-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #1e7e34;
+  box-shadow: 0 0 0 0 rgba(30, 126, 52, 0.5);
+  animation: livePulse 2.4s infinite cubic-bezier(0.4, 0, 0.6, 1);
+  flex-shrink: 0;
+}
+
+@keyframes livePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(30, 126, 52, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(30, 126, 52, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(30, 126, 52, 0);
+  }
+}
+
+.user-status-warning-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fef2f2;
+  border: 1px solid rgba(185, 28, 28, 0.25);
+  color: #991b1b;
+  white-space: nowrap;
+}
+
+.status-pending {
+  background: #fffbeb;
+  border: 1px solid rgba(180, 83, 9, 0.25);
+  color: #b45309;
+}
+
+/* Cột Ngày tạo: Ngày và giờ cùng 1 dòng + Mũi tên trượt mềm */
+.time-inline-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: #4a3e35;
+}
+
+.time-text {
+  font-weight: 450;
+  color: #524338;
+}
+
+.row-hover-arrow {
+  color: #c9baa8;
+  transition: transform 160ms ease, color 160ms ease;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.directory-table tbody tr:hover .row-hover-arrow {
+  color: var(--shop-wine);
+  transform: translateX(4px);
+}
+
+/* 5. Phân trang: Đưa về trạng thái cân đối, không đường kẻ thô */
+.cursor-pagination {
+  border-top: none !important;
+  margin-top: 8px !important;
+  padding: 10px 0 24px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.cursor-pagination p {
+  color: #8c7766 !important;
+  font-size: 12px !important;
+  letter-spacing: 0.02em;
+  margin: 0 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .directory-header-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .directory-tab-strip {
+    width: 100%;
+    overflow-x: auto;
+  }
+  .directory-single-row-filter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-actions-col {
+    width: 100%;
+  }
+  .btn-filter-primary,
+  .btn-clean-reset {
+    flex: 1;
+  }
+}

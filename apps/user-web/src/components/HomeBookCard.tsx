@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BookOpen, ChevronRight, MapPin, Tag, UserRound } from "lucide-react";
+import { BookOpen, ChevronRight, MapPin, UserRound } from "lucide-react";
 import { BookCard } from "./BookCard";
 import { BookCardMotion } from "./BookCardMotion";
 import { CardFitText } from "./CardFitText";
@@ -78,67 +78,76 @@ export function HomeBookCard({
               target="_blank"
               rel="noopener noreferrer"
               title={book.book.title}
-              className={styles.ellipsis}
+              className={styles.titleLink}
             >
               {book.book.title}
             </a>
+            {book.book.title.length > 28 && (
+              <span className={styles.titleTooltip} role="tooltip" aria-hidden="true">
+                {book.book.title}
+              </span>
+            )}
           </h3>
           <div className={styles.information}>
-            <p className={styles.author}>
-              <UserRound size={18} aria-hidden="true" />
-              <span className="sr-only">Tác giả: </span>
-              <span
-                className={styles.ellipsis}
-                title={book.book.authors.join(", ") || "Chưa rõ tác giả"}
-              >
-                {book.book.authors.join(", ") || "Chưa rõ tác giả"}
+            <p className={styles.seller} title="Người đăng: Lật Lại Tuyển Chọn">
+              <UserRound size={13} aria-hidden="true" />
+              <span className="sr-only">Người đăng: </span>
+              <span className={styles.ellipsis}>
+                Lật Lại Tuyển Chọn
               </span>
             </p>
-            <p className={styles.location}>
-              <MapPin size={18} aria-hidden="true" />
+            <p className={styles.location} title="Khu vực: Toàn quốc">
+              <MapPin size={13} aria-hidden="true" />
               <span className="sr-only">Khu vực: </span>
-              <strong
-                className={`${styles.region} ${styles.ellipsis}`}
-                title="Không áp dụng cho sách mẫu"
-              >
-                Không áp dụng cho sách mẫu
+              <strong className={`${styles.region} ${styles.ellipsis}`}>
+                Toàn quốc
               </strong>
             </p>
           </div>
-          <div className={styles.prices}>
-            {book.salePrice !== null && (
-              <p>
-                <Tag size={24} aria-hidden="true" />
-                <span>
-                  <span className={styles.fieldLabel}>Giá bán mẫu</span>
-                  <strong className={styles.amount}>
-                    <CardFitText>{formatVnd(book.salePrice)}</CardFitText>
-                  </strong>
+          <div className={styles.footerRow}>
+            <div className={styles.prices}>
+              <div className={styles.primaryRow}>
+                <span className={styles.priceLabel}>
+                  {book.salePrice !== null ? "Giá bán mẫu" : "Giá trị đổi"}
                 </span>
-              </p>
-            )}
-            {book.exchangeValue !== null && (
-              <p>
-                <Tag size={24} aria-hidden="true" />
-                <span>
-                  <span className={styles.fieldLabel}>Giá trị đổi mẫu</span>
-                  <strong className={styles.amount}>
-                    <CardFitText>{formatVnd(book.exchangeValue)}</CardFitText>
-                  </strong>
-                </span>
-              </p>
-            )}
+                <strong className={styles.amount}>
+                  <CardFitText>
+                    {book.salePrice !== null
+                      ? formatVnd(book.salePrice)
+                      : book.exchangeValue !== null
+                        ? formatVnd(book.exchangeValue)
+                        : "Thỏa thuận"}
+                  </CardFitText>
+                </strong>
+              </div>
+              <div className={styles.secondaryRow}>
+                {book.salePrice !== null && book.exchangeValue !== null ? (
+                  <span
+                    className={styles.exchangeNote}
+                    title={`Có thể đổi với sách tương đương ${formatVnd(book.exchangeValue)}`}
+                  >
+                    Hoặc đổi ~{formatVnd(book.exchangeValue)}
+                  </span>
+                ) : book.salePrice !== null ? (
+                  <span className={styles.modeNote}>Chỉ bán trực tiếp</span>
+                ) : book.exchangeValue !== null ? (
+                  <span className={styles.modeNote}>Chỉ nhận trao đổi</span>
+                ) : (
+                  <span className={styles.modeNote}>Thỏa thuận trực tiếp</span>
+                )}
+              </div>
+            </div>
+            <a
+              className={styles.view}
+              href={book.book.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Xem ${book.book.title} trên Open Library (tab mới)`}
+            >
+              <span>Xem nguồn</span>
+              <ChevronRight size={15} aria-hidden="true" />
+            </a>
           </div>
-          <a
-            className={styles.view}
-            href={book.book.sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <BookOpen size={18} aria-hidden="true" /> Xem nguồn{" "}
-            <ChevronRight size={19} aria-hidden="true" />
-            <span className="sr-only"> trên Open Library (tab mới)</span>
-          </a>
         </div>
       </article>
     </BookCardMotion>

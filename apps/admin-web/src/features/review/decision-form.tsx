@@ -1,5 +1,6 @@
-import { useContext, useEffect, useRef, useState } from "react";
-import { useBlocker } from "react-router-dom";
+import { useContext, useEffect, useId, useRef, useState } from "react";
+import { ArrowUpRight, CircleAlert, ClipboardCheck } from "lucide-react";
+import { Link, useBlocker } from "react-router-dom";
 import { session } from "../../core/session";
 import { LeaveGuard } from "../../core/leave-guard";
 import { Button, ErrorNotice, Notice } from "../../core/ui";
@@ -19,6 +20,8 @@ export function DecisionForm({
   version,
   revisionId,
   canApprove,
+  approvalBlock,
+  approvalAction,
   photosReady,
   disabled,
   reconcile,
@@ -32,6 +35,8 @@ export function DecisionForm({
   version: number;
   revisionId: string;
   canApprove: boolean;
+  approvalBlock?: string;
+  approvalAction?: { to: string; label: string };
   photosReady: boolean;
   disabled: boolean;
   reconcile: () => Promise<void>;
@@ -93,6 +98,10 @@ export function DecisionForm({
     return () => window.removeEventListener("beforeunload", guard);
   }, [dirty]);
   const locked = disabled || busy || !!intent || !!done;
+  const approvalHintId = useId();
+  const showApprovalGate =
+    kind === "listings" && !removal && !done && !intent &&
+    (!canApprove || !photosReady);
   const ready =
     canApprove &&
     (kind === "catalog-requests" ||
@@ -171,24 +180,28 @@ export function DecisionForm({
   }
   return (
     <aside className="decision-panel" aria-label="Quyết định kiểm duyệt">
-      <p className="eyebrow">
-        {removal
-          ? "Xử lý bài vi phạm"
-          : `Phiếu quyết định · ${revisionId.slice(0, 8)}`}
-      </p>
       <h3>
-        {removal ? "Gỡ bài phải có lý do." : "Mỗi dấu duyệt, một lần đọc kỹ."}
+        <ClipboardCheck size={21} aria-hidden="true" />
+        {removal ? "Gỡ bài đăng" : "Quyết định kiểm duyệt"}
       </h3>
       <p className="muted">
-        Đối chiếu thông tin được cung cấp. Không dùng kết quả duyệt để cam kết
-        sách chính hãng.
+        {removal
+          ? "Nêu rõ vi phạm để người đăng biết lý do xử lý."
+          : "Đối chiếu đủ thông tin trước khi xác nhận."}
       </p>
       {kind === "listings" && !removal && (
-        <div className={styles.progress} aria-live="polite">
-          <span>Đã đối chiếu</span>
-          <strong>
-            {checked.size} / {bundle ? 7 : 6} mục
-          </strong>
+        <div className={styles.progress}>
+          <div className={styles.progressLabel} aria-live="polite">
+            <span>Đã đối chiếu</span>
+            <strong>
+              {checked.size} / {bundle ? 7 : 6} mục
+            </strong>
+          </div>
+          <progress
+            value={checked.size}
+            max={bundle ? 7 : 6}
+            aria-label="Tiến độ đối chiếu hồ sơ"
+          />
         </div>
       )}
       {kind === "listings" && !removal && (
@@ -214,9 +227,6 @@ export function DecisionForm({
               </label>
             ))}
         </fieldset>
-      )}
-      {kind === "listings" && !removal && !photosReady && !done && (
-        <p className="muted">Cần tải được toàn bộ ảnh trước khi duyệt.</p>
       )}
       <div className="field">
         <label htmlFor="decision-reason">
@@ -262,6 +272,31 @@ export function DecisionForm({
           </Button>
         </Notice>
       )}
+      {showApprovalGate && (
+        <div
+          id={approvalHintId}
+          className={styles.decisionGate}
+          role="status"
+          aria-label="Điều kiện duyệt bài"
+        >
+          <h4>
+            <CircleAlert size={17} aria-hidden="true" />
+            Chưa thể duyệt bài đăng
+          </h4>
+          <p>
+            {!canApprove
+              ? approvalBlock ||
+                "Chưa đủ điều kiện duyệt. Kiểm tra các thông tin trong hồ sơ."
+              : "Cần tải thành công toàn bộ ảnh người đăng gửi trước khi duyệt."}
+          </p>
+          {!canApprove && approvalAction && (
+            <Link to={approvalAction.to}>
+              {approvalAction.label}
+              <ArrowUpRight size={16} aria-hidden="true" />
+            </Link>
+          )}
+        </div>
+      )}
       {done ? (
         <Notice tone={done === "recorded" ? "success" : "info"}>
           Đã đối chiếu kết quả với máy chủ. Trạng thái mới nhất hiển thị trong
@@ -277,6 +312,7 @@ export function DecisionForm({
             <>
               <Button
                 className="primary"
+                aria-describedby={showApprovalGate ? approvalHintId : undefined}
                 disabled={locked || !ready}
                 onClick={() =>
                   select(kind === "listings" ? "Approve" : "Confirm")

@@ -37,7 +37,7 @@ import { ROUTES } from "../lib/routes";
 import {
   MAX_PHOTOS,
   buildRevisionContent,
-  editApprovedBlock,
+  editListingBlock,
   formFromListing,
   canToggleVisibility,
   canArchiveListing,
@@ -47,6 +47,8 @@ import {
 } from "../lib/owner-listing-edit";
 import {
   createListingRevision,
+  createDraftSubmission,
+  createDraftSave,
   type RevisionPhoto,
 } from "../services/listing-revision";
 import {
@@ -351,16 +353,33 @@ export function EditListingPage() {
       );
       const { mediaIds: _unused, ...rest } = content;
       void _unused;
-      const signature = JSON.stringify({ v: item.version, rest, photoSignature });
+      const isDraftOrRejected =
+        item.state.moderation === "Draft" ||
+        item.state.moderation === "Rejected";
+      const signature = JSON.stringify({
+        v: item.version,
+        rest,
+        photoSignature,
+        action: "submit",
+        isDraft: isDraftOrRejected,
+      });
       if (intent.current?.signature !== signature)
         intent.current = {
           signature,
-          run: createListingRevision({
-            listingId: item.id,
-            version: item.version,
-            photos: input,
-            content: rest,
-          }),
+          run: isDraftOrRejected
+            ? createDraftSubmission({
+                listingId: item.id,
+                version: item.version,
+                photos: input,
+                content: rest,
+                bookId,
+              })
+            : createListingRevision({
+                listingId: item.id,
+                version: item.version,
+                photos: input,
+                content: rest,
+              }),
         };
     }
     if (!intent.current) return;
@@ -376,8 +395,14 @@ export function EditListingPage() {
       void queryClient.invalidateQueries({ queryKey: ["my-listing"] });
       void queryClient.invalidateQueries({ queryKey: ["my-photo"] });
       void queryClient.invalidateQueries({ queryKey: ["listings"] });
+      const isDraftOrRejected =
+        item?.state.moderation === "Draft" ||
+        item?.state.moderation === "Rejected";
       navigate(`${ROUTES.myBooks}?moderation=PendingReview`, {
-        state: { revised: true },
+        state: {
+          revised: !isDraftOrRejected,
+          submitted: isDraftOrRejected,
+        },
       });
     } catch (error) {
       setConfirming(false);
@@ -385,13 +410,63 @@ export function EditListingPage() {
       const failed = status !== undefined && [400, 401, 403, 404, 409, 422, 429].includes(status);
       setPending(!failed);
       if (failed) intent.current = null;
+      const isDraftOrRejected =
+        item?.state.moderation === "Draft" ||
+        item?.state.moderation === "Rejected";
       setSubmitError(
-        !failed ? "Chưa xác nhận được kết quả gửi. Thử lại cùng bản sửa để kiểm tra; nội dung đã khóa cho lần gửi này."
+        !failed ? "Chưa xác nhận được kết quả gửi. Thử lại cùng nội dung để kiểm tra; nội dung đã khóa cho lần gửi này."
         : status === 409
           ? "Bài đã thay đổi ở nơi khác hoặc không còn sửa được. Tải lại trang để xem bản mới nhất; nội dung bạn nhập vẫn còn."
           : error instanceof Error
             ? error.message
-            : "Chưa gửi được bản sửa. Hãy thử lại.",
+            : isDraftOrRejected
+              ? "Chưa gửi duyệt được bài đăng. Hãy thử lại."
+              : "Chưa gửi được bản sửa. Hãy thử lại.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string>();
+
+  async function handleSaveDraftOnly() {
+    if (busy || !item || !current || !bookId) return;
+    setBusy(true);
+    setSubmitError(undefined);
+    setSaveSuccessMsg(undefined);
+    try {
+      const origin = origins.find((a) => a.id === current.originAddressId);
+      const input: RevisionPhoto[] = photos.map((p) =>
+        p.kind === "existing"
+          ? { kind: "existing", id: p.id }
+          : { kind: "new", file: p.file },
+      );
+      const content = buildRevisionContent(
+        current,
+        bookId,
+        [],
+        origin ? { id: origin.id, version: origin.version } : null,
+      );
+      const { mediaIds: _unused, ...rest } = content;
+      void _unused;
+      const runner = createDraftSave({
+        listingId: item.id,
+        version: item.version,
+        photos: input,
+        content: rest,
+        bookId,
+      });
+      await runner();
+      setSaveSuccessMsg("Đã lưu bản nháp thành công! Bạn có thể quay lại tiếp tục sửa bất cứ lúc nào.");
+      void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
+      void queryClient.invalidateQueries({ queryKey: ["my-listing"] });
+      void listing.refetch();
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Chưa lưu được bản nháp. Hãy thử lại.",
       );
     } finally {
       setBusy(false);
@@ -431,7 +506,10 @@ export function EditListingPage() {
       </main>
     );
 
-  const block = editApprovedBlock(item);
+  const block = editListingBlock(item);
+  const isDraftMode = item?.state.moderation === "Draft";
+  const isRejectedMode = item?.state.moderation === "Rejected";
+
   if (block && !pending)
     return (
       <main className={styles.page}>
@@ -460,14 +538,38 @@ export function EditListingPage() {
           <ArrowLeft size={16} aria-hidden="true" />
           <span>Về kệ sách của tôi</span>
         </Link>
-        <span className={styles.revisionPill}>Chỉnh sửa phiên bản</span>
+        <span
+          className={
+            isDraftMode
+              ? styles.draftPill
+              : isRejectedMode
+                ? styles.rejectedPill
+                : styles.revisionPill
+          }
+        >
+          {isDraftMode
+            ? "Hoàn thiện bản nháp"
+            : isRejectedMode
+              ? "Sửa lại bài bị từ chối"
+              : "Chỉnh sửa phiên bản"}
+        </span>
       </nav>
 
       {/* Page Title & Subtitle */}
       <div className={styles.titleSection}>
-        <h1 className={styles.pageTitle}>Chỉnh sửa bài đăng</h1>
+        <h1 className={styles.pageTitle}>
+          {isDraftMode
+            ? "Hoàn thiện và gửi duyệt bản nháp"
+            : isRejectedMode
+              ? "Chỉnh sửa bài bị từ chối duyệt"
+              : "Chỉnh sửa bài đăng"}
+        </h1>
         <p className={styles.pageSubtitle}>
-          Cập nhật thông tin chi tiết, giá bán, tình trạng thực tế và ảnh chụp mới của ấn phẩm.
+          {isDraftMode
+            ? "Kiểm tra và điền đầy đủ tình trạng sách, địa chỉ gửi sách và ảnh chụp để gửi ban quản trị kiểm duyệt."
+            : isRejectedMode
+              ? `Bài đăng bị từ chối duyệt${item.latestDecision?.reason ? `: "${item.latestDecision.reason}"` : ""}. Vui lòng kiểm tra và cập nhật lại thông tin trước khi gửi duyệt lại.`
+              : "Cập nhật thông tin chi tiết, giá bán, tình trạng thực tế và ảnh chụp mới của ấn phẩm."}
         </p>
       </div>
 
@@ -515,9 +617,29 @@ export function EditListingPage() {
           <Info size={18} aria-hidden="true" />
         </div>
         <div className={styles.noticeText}>
-          <strong>Quy trình kiểm duyệt lại:</strong> Mọi thay đổi nội dung sẽ được gửi đến ban quản trị xét duyệt. Trong thời gian chờ duyệt, bài đăng tạm thời ẩn khỏi kệ sách công khai.
+          {isDraftMode ? (
+            <>
+              <strong>Quy trình gửi duyệt:</strong> Sau khi bạn hoàn tất thông tin và bấm gửi duyệt, bài đăng sẽ được chuyển vào hàng đợi duyệt của ban quản trị (<em>PendingReview</em>). Sách sẽ hiển thị công khai trên kệ sách ngay sau khi được kiểm duyệt phê duyệt.
+            </>
+          ) : isRejectedMode ? (
+            <>
+              <strong>Lưu ý gửi lại bài bị từ chối:</strong> Hãy bảo đảm bạn đã điều chỉnh đầy đủ thông tin hoặc bổ sung ảnh minh bạch theo lý do từ chối để được ban quản trị xét duyệt thuận lợi.
+            </>
+          ) : (
+            <>
+              <strong>Quy trình kiểm duyệt lại:</strong> Mọi thay đổi nội dung sẽ được gửi đến ban quản trị xét duyệt. Trong thời gian chờ duyệt, bài đăng tạm thời ẩn khỏi kệ sách công khai.
+            </>
+          )}
         </div>
       </div>
+
+      {/* Success Callout */}
+      {saveSuccessMsg && (
+        <div className={styles.saveSuccessAlert} role="status">
+          <Check size={18} aria-hidden="true" />
+          <span>{saveSuccessMsg}</span>
+        </div>
+      )}
 
       {/* Error Callout */}
       {submitError && (
@@ -1170,29 +1292,64 @@ export function EditListingPage() {
 
         {/* Sticky Actions Bar */}
         <div className={styles.actionBar}>
+          {isDraftMode && (
+            <button
+              type="button"
+              className={styles.saveDraftBtn}
+              disabled={busy}
+              onClick={() => void handleSaveDraftOnly()}
+            >
+              Lưu bản nháp
+            </button>
+          )}
           <button type="submit" className={styles.submitBtn} disabled={busy}>
             {busy ? (
               <>
-                <span className={styles.btnSpinner} /> Đang gửi bản sửa…
+                <span className={styles.btnSpinner} /> Đang gửi…
               </>
+            ) : isDraftMode ? (
+              "Gửi duyệt cho Admin"
+            ) : isRejectedMode ? (
+              "Gửi duyệt lại"
             ) : (
               "Gửi bản sửa để duyệt lại"
             )}
           </button>
           <Link className={styles.cancelBtn} to={ROUTES.myBooks}>
-            Hủy thay đổi
+            {isDraftMode ? "Quay về kệ sách" : "Hủy thay đổi"}
           </Link>
         </div>
         </fieldset>
       </form>
-      {pending && <button type="button" className={styles.primaryBtn} disabled={busy} onClick={() => void submit()}>Thử lại cùng bản sửa</button>}
+      {pending && (
+        <button
+          type="button"
+          className={styles.primaryBtn}
+          disabled={busy}
+          onClick={() => void submit()}
+        >
+          Thử lại cùng nội dung này
+        </button>
+      )}
 
       {/* Confirm & Blocker Dialogs */}
       <ConfirmDialog
         isOpen={confirming}
         onClose={() => !busy && setConfirming(false)}
-        title="Gửi bản sửa để duyệt lại?"
-        description="Ấn phẩm sẽ tạm thời chuyển sang trạng thái Chờ duyệt và không hiển thị trên kệ công khai cho tới khi quản trị viên phê duyệt. Các cuộc trò chuyện hoặc thỏa thuận đang mở có thể cần được cập nhật."
+        title={
+          isDraftMode
+            ? "Gửi bài đăng cho Admin duyệt?"
+            : isRejectedMode
+              ? "Gửi lại bài đăng để kiểm duyệt?"
+              : "Gửi bản sửa để duyệt lại?"
+        }
+        description={
+          isDraftMode
+            ? "Bài đăng sẽ được chuyển vào hàng đợi duyệt của ban quản trị. Sau khi được duyệt, sách sẽ chính thức hiển thị công khai trên kệ sách của bạn."
+            : isRejectedMode
+              ? "Bài đăng sẽ được gửi lại cho ban quản trị duyệt theo các thông tin cập nhật mới nhất."
+              : "Ấn phẩm sẽ tạm thời chuyển sang trạng thái Chờ duyệt và không hiển thị trên kệ công khai cho tới khi quản trị viên phê duyệt. Các cuộc trò chuyện hoặc thỏa thuận đang mở có thể cần được cập nhật."
+        }
         confirmText={busy ? "Đang gửi…" : "Xác nhận gửi duyệt"}
         cancelText="Kiểm tra lại"
         isBusy={busy}

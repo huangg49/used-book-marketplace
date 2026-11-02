@@ -130,7 +130,3 @@
   .brand { width: 135px; height: 34px; }
   .brand > a { transform: scale(.7); }
 }
-@media (prefers-reduced-motion: reduce) {
-  /* Preserve the authored stamp; override the shared CSS duration reduction. */
-  .stamp { animation-duration: 280ms !important; }
-}

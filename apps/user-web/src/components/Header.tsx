@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Menu, MessageCircle, Plus, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Bell, Menu, MessageCircle, Plus, X } from "lucide-react";
 import { ROUTES, searchUrl } from "../lib/routes";
 import { observeHeaderScroll } from "../lib/header-scroll";
 import { memberNavigationSection } from "../lib/member-navigation";
@@ -10,6 +11,7 @@ import { accountNavigation } from "../lib/account-navigation";
 import { useAccountLogout } from "../hooks/useAccountLogout";
 import { NotificationBell } from "./NotificationBell";
 import { CategoryNavigation, MobileCategories } from "./CategoryNavigation";
+import { getPurchaseConversations } from "../services/purchase-conversations";
 import styles from "../layouts/MainLayout.module.css";
 
 const links = [
@@ -51,6 +53,19 @@ export function Header({
     setMenuPath(open ? location.key : null);
   const state = useSession();
   const accountLogout = useAccountLogout();
+
+  const conversationsQuery = useQuery({
+    queryKey: [
+      "purchase-conversations",
+      state.status === "authenticated" ? state.user.id : undefined,
+    ],
+    queryFn: getPurchaseConversations,
+    enabled: state.status === "authenticated",
+    staleTime: 30_000,
+    retry: false,
+  });
+  const activeRoomsCount =
+    conversationsQuery.data?.filter((c) => c.status === "Active").length ?? 0;
   useEffect(() => {
     if (!categoryArrival.current) return;
     categoryArrival.current = false;
@@ -144,10 +159,19 @@ export function Header({
               <NavLink
                 to={ROUTES.chat()}
                 className={styles.iconAction}
-                aria-label="Chat, hội thoại của bạn"
+                aria-label={
+                  activeRoomsCount > 0
+                    ? `Chat, ${activeRoomsCount} cuộc trò chuyện đang hoạt động`
+                    : "Chat, hội thoại của bạn"
+                }
                 title="Chat"
               >
                 <MessageCircle size={20} aria-hidden="true" />
+                {activeRoomsCount > 0 && (
+                  <span className={styles.chatBadge} aria-hidden="true">
+                    {activeRoomsCount > 9 ? "9+" : activeRoomsCount}
+                  </span>
+                )}
               </NavLink>
             )}
             {state.status === "authenticated" && <NotificationBell />}
@@ -201,13 +225,51 @@ export function Header({
               </Link>
             ))}
             <Link to={ROUTES.sell}>Đăng sách</Link>
+
             {state.status === "authenticated" ? (
               <>
-                <NavLink to={ROUTES.chat()}>
-                  <MessageCircle size={18} aria-hidden="true" />
-                  Chat
-                </NavLink>
-                <Link to={ROUTES.notifications}>Thông báo</Link>
+                <div className={styles.mobileDivider} aria-hidden="true" />
+
+                {/* Hub giao tiếp & Thông báo thông minh */}
+                <div className={styles.mobileQuickHub}>
+                  <NavLink
+                    to={ROUTES.chat()}
+                    className={styles.mobileQuickItem}
+                    aria-label="Hội thoại Chat"
+                  >
+                    <div className={styles.mobileQuickIcon}>
+                      <MessageCircle size={18} aria-hidden="true" />
+                      {activeRoomsCount > 0 && (
+                        <span className={styles.mobileQuickDot} aria-hidden="true" />
+                      )}
+                    </div>
+                    <div className={styles.mobileQuickInfo}>
+                      <span className={styles.mobileQuickTitle}>Hội thoại Chat</span>
+                      <span className={styles.mobileQuickDesc}>
+                        {activeRoomsCount > 0
+                          ? `${activeRoomsCount} cuộc trò chuyện`
+                          : "Thương lượng & trao đổi"}
+                      </span>
+                    </div>
+                  </NavLink>
+
+                  <NavLink
+                    to={ROUTES.notifications}
+                    className={styles.mobileQuickItem}
+                    aria-label="Thông báo tài khoản"
+                  >
+                    <div className={styles.mobileQuickIcon}>
+                      <Bell size={18} aria-hidden="true" />
+                    </div>
+                    <div className={styles.mobileQuickInfo}>
+                      <span className={styles.mobileQuickTitle}>Thông báo</span>
+                      <span className={styles.mobileQuickDesc}>Cập nhật tin mới</span>
+                    </div>
+                  </NavLink>
+                </div>
+
+                <div className={styles.mobileDivider} aria-hidden="true" />
+
                 {accountNavigation.map(({ to, label }) => (
                   <NavLink key={to} to={to} end>
                     {label}

@@ -26,6 +26,7 @@ export async function createTestApi({
   aiModels,
   catalogMetadata,
   storageAdapter,
+  evidenceStorageAdapter,
 } = {}) {
   const rootUrl = process.env.MONGO_TEST_URL;
   if (!rootUrl)
@@ -161,12 +162,18 @@ export async function createTestApi({
     });
     const { Test } = req("@nestjs/testing");
     const { AppModule } = await load("app.module.js"),
-      { MediaStorage } = await load("modules/media/media-storage.js"),
+      { MediaStorage, EvidenceStorage } = await load(
+        "modules/media/media-storage.js",
+      ),
       { MediaWorker } = await load("modules/media/media-worker.service.js"),
       { configureApp } = await load("configure-app.js");
     const builder = Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(MediaStorage)
       .useValue(storage);
+    if (evidenceStorageAdapter)
+      builder
+        .overrideProvider(EvidenceStorage)
+        .useValue(evidenceStorageAdapter);
     if (aiModels) {
       const { PriceModel } = await load("modules/price-assist/price-model.js");
       const { AutofillModel } = await load(

@@ -109,7 +109,7 @@ chạy còn phải đặt `LISTING_AUTO_REVIEW_APPROVED_POLICY` đúng `POLICY_V
 cùng timeout; tự duyệt chờ tối đa ba chu kỳ khi nhà cung cấp im lặng, không cần
 migration; [ADR0066](../adr/0066-ai-provider-resilience.md).
 
-Exchange thêm0052 để lưu agreement sách/giá đã thỏa thuận; không backfill lịch sử
+Exchange thêm0053 để lưu agreement sách/giá đã thỏa thuận; không backfill lịch sử
 hoặc đổi tiền. Dừng API/worker cũ, migrate rồi nâng API và web/RN cùng gói:
 counter mới nhận listingIds, client gửi tiền bù tùy ý sẽ bị422. Chưa chạy trên DB
 chính; source đã ghép main add4d615 local, chưa publish. [ADR0065](../adr/0065-exchange-agreement-snapshots.md),
@@ -125,6 +125,10 @@ Seed chỉ cho local, không tự đổi mật khẩu account đã tồn tại. 
 [hướng dẫn RN](../REACT_NATIVE_START.md); mật khẩu theo cấu hình local của người nhận.
 Không cần seed đơn hàng hoặc sửa số dư SQL để chứng minh backend hoạt động.
 
+Bằng chứng Exchange thêm0054 và hai collection riêng: khi được duyệt áp dụng, dừng
+API/worker, chạy migrate rồi bootstrap role; không reset DB.
+`SUPABASE_EVIDENCE_BUCKET` private riêng, khác bucket listing; project phải hỗ trợ
+MP4 100MB, gate cấu hình hiện còn mở. [ADR0066](../adr/0066-exchange-private-evidence.md).
 Ngoại lệ demo hoàn tất/giải ngân5giây dùng migration0054 và cờ `LOCAL_DEMO_COMPLETION_ENABLED`
 phía BE, false mặc định. Dừng API/worker, backup, migrate/bootstrap rồi chạy source
 mới. Không bật cho Inspection cũ hoặc suy từ đây rằng gate completion đã mở.

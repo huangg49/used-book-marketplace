@@ -25,6 +25,9 @@ export function validateEnvironment(env: Record<string, unknown>) {
     throw new Error('SUPABASE_URL must be the HTTPS project URL.');
   if (!/^[a-z0-9][a-z0-9-]{2,62}$/.test(bucket))
     throw new Error('Invalid SUPABASE_MEDIA_BUCKET.');
+  const evidenceBucket = String(env.SUPABASE_EVIDENCE_BUCKET ?? 'latlai-evidence');
+  if (!/^[a-z0-9][a-z0-9-]{2,62}$/.test(evidenceBucket) || evidenceBucket === bucket)
+    throw new Error('Evidence bucket must be valid and distinct from media bucket.');
   const budget = Number(env.MEDIA_STORAGE_BUDGET_BYTES ?? 800_000_000);
   if (!Number.isSafeInteger(budget) || budget < 1 || budget > 800_000_000)
     throw new Error('Media reservation budget must be 1..800000000 bytes.');
@@ -57,6 +60,7 @@ export function validateEnvironment(env: Record<string, unknown>) {
     SUPABASE_URL: storageUrl,
     SUPABASE_STORAGE_KEY: storageKey,
     SUPABASE_MEDIA_BUCKET: bucket,
+    SUPABASE_EVIDENCE_BUCKET: evidenceBucket,
     MEDIA_STORAGE_BUDGET_BYTES: budget,
   };
 }

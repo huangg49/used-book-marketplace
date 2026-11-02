@@ -1,62 +1,119 @@
 .card {
-  --card-condition-ink: #254337;
+  --card-condition-ink: #3b281f;
   --card-height: auto;
   box-sizing: border-box;
-  min-height: 520px;
+  min-height: 420px;
   height: 100%;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  padding: 12px;
-  border: 1px solid var(--shop-line);
-  border-radius: 20px;
-  background: var(--shop-paper);
-  color: var(--shop-ink);
-}
-.card.compact {
   padding: 10px;
+  border: 1px solid rgba(217, 203, 189, 0.7);
+  border-radius: 16px;
+  background: var(--shop-paper, #fffdf8);
+  color: var(--shop-ink, #281914);
+  box-shadow: 0 2px 8px rgba(40, 25, 20, 0.03), 0 1px 2px rgba(40, 25, 20, 0.02);
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .card:is(:hover, :focus-within) {
-  border-color: var(--shop-control);
+  border-color: rgba(184, 80, 58, 0.45);
+  box-shadow: 0 10px 24px -4px rgba(40, 25, 20, 0.08), 0 3px 8px rgba(40, 25, 20, 0.03);
 }
+
 .card :focus-visible {
   outline: 2px solid var(--shop-wine);
   outline-offset: 3px;
 }
+
+.card.compact {
+  padding: 9px;
+  min-height: 380px;
+  border-radius: 14px;
+}
+
+.card.compact .cover {
+  border-radius: 10px;
+}
+
+.card.compact .meta {
+  padding: 8px 2px 0;
+  gap: 6px;
+}
+
+.card.compact .titleWrap {
+  height: 2.6em;
+  min-height: 2.6em;
+  max-height: 2.6em;
+}
+
+.card.compact .titleLink {
+  font-size: 0.9375rem;
+  line-height: 1.35;
+}
+
+.card.compact .condition {
+  font-size: 0.65rem;
+  padding: 3px 8px;
+}
+
+.card.compact .prices {
+  height: 48px;
+}
+
+.card.compact .amount {
+  height: 22px;
+  font-size: 1.0625rem;
+}
+
+.card.compact .secondaryRow {
+  height: 16px;
+}
+
+.card.compact .exchangeNote,
+.card.compact .modeNote {
+  font-size: 0.65rem;
+}
+
+.card.compact .seller,
+.card.compact .author,
+.card.compact .location {
+  font-size: 0.75rem;
+}
+
+.card.compact .view {
+  padding: 6px 11px;
+  font-size: 0.75rem;
+}
+
 .motionFrame {
   position: relative;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
+
 .motionFrame > .card {
   flex: none;
-  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 @media (min-width: 601px) and (hover: hover) and (pointer: fine) {
   .motionFrame:is(:hover, :focus-within) {
     z-index: 2;
   }
   .motionFrame:is(:hover, :focus-within) > .card {
-    transform: translateY(-6px);
-  }
-  .motionFrame:is(:hover, :focus-within) .cover {
-    box-shadow:
-      0 16px 28px -6px #28191438,
-      0 4px 10px #28191414;
+    transform: translateY(-5px);
+    box-shadow: 0 14px 28px -6px rgba(40, 25, 20, 0.12), 0 4px 10px rgba(40, 25, 20, 0.04);
   }
   .motionFrame:is(:hover, :focus-within) .image {
-    transform: translateY(-4px) scale(1.02);
-    filter: drop-shadow(0 16px 14px #28191436);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .motionFrame > .card,
-    .motionFrame .cover,
-    .motionFrame .image {
-      transition-duration: 240ms !important;
-    }
+    transform: scale(1.03);
   }
 }
+
 .cover {
   position: relative;
   display: flex;
@@ -68,24 +125,28 @@
   aspect-ratio: 3 / 4;
   height: auto;
   padding: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   overflow: hidden;
-  background: #efe3cf;
+  background: #ede4d5;
 }
+
 .compact .cover {
   padding: 0;
 }
+
 .image {
   height: 100%;
   width: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 14px;
-  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 12px;
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .containImage {
   object-fit: contain !important;
 }
+
 .cover > .photoFrame {
   position: absolute;
   inset: 0;
@@ -101,18 +162,19 @@
   justify-content: center;
   overflow: hidden;
 }
-.cover:hover .image {
-  transform: scale(1.04);
-}
+
 .coverLink {
   position: absolute;
   inset: 0;
   z-index: 1;
-  border-radius: 14px;
+  border-radius: 12px;
 }
+
 .cover:has(.fallback button) .coverLink {
   display: none;
 }
+
+/* Warm Parchment Condition Pill */
 .condition {
   position: absolute;
   z-index: 2;
@@ -120,36 +182,59 @@
   left: 8px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   max-width: calc(100% - 16px);
   margin: 0;
-  padding: 7px 10px;
-  border-radius: 14px;
-  background: var(--shop-mint);
+  padding: 4px 9px;
+  border-radius: 9999px;
+  background: rgba(254, 251, 240, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(217, 203, 189, 0.85);
   color: var(--card-condition-ink);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  line-height: 1.5;
+  font-size: 0.71875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  box-shadow: 0 2px 6px rgba(40, 25, 20, 0.1);
   pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
 .condition svg {
   flex-shrink: 0;
+  color: var(--shop-wine, #5c0202);
+  opacity: 0.85;
 }
+
+/* Deep Wine Frosted Transaction Status Pill */
 .held {
   position: absolute;
   z-index: 2;
   top: 8px;
   left: 8px;
-  max-width: calc(100% - 68px);
-  padding: 5px 7px;
-  border-radius: 6px;
-  background: var(--shop-cream);
-  color: var(--shop-wine);
+  max-width: calc(100% - 56px);
+  padding: 3px 9px;
+  border-radius: 9999px;
+  background: rgba(92, 2, 2, 0.9);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fffcf5;
   font-size: 0.6875rem;
   font-weight: 700;
-  line-height: 1.5;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 8px rgba(92, 2, 2, 0.3);
   pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
+/* Frosted Glass Circular Wishlist Button */
 .wishlist {
   position: absolute;
   z-index: 3;
@@ -157,64 +242,149 @@
   right: 8px;
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   padding: 0;
-  border: 0;
+  border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 50%;
-  background: var(--shop-paper);
-  color: var(--shop-wine);
-  box-shadow: 0 4px 12px #28191420;
+  background: rgba(255, 252, 245, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--shop-wine, #5c0202);
+  box-shadow: 0 2px 8px rgba(40, 25, 20, 0.12);
   cursor: pointer;
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 160ms ease,
+              color 160ms ease,
+              box-shadow 160ms ease;
 }
+
 .wishlist:hover:not(:disabled) {
-  background: var(--shop-cream);
+  transform: scale(1.08);
+  background: #ffffff;
+  color: #b8231e;
+  box-shadow: 0 4px 12px rgba(40, 25, 20, 0.18);
 }
+
+.wishlist:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.wishlist[aria-pressed="true"] {
+  background: #ffffff;
+  color: #c84126;
+  border-color: rgba(200, 65, 38, 0.3);
+}
+
 .wishlist:disabled {
   opacity: 0.6;
   cursor: default;
 }
+
 .saveError {
   position: absolute;
   z-index: 4;
-  top: 56px;
+  top: 50px;
   left: 8px;
   right: 8px;
   margin: 0;
-  padding: 8px;
+  padding: 6px 8px;
   border: 1px solid var(--shop-line);
   border-radius: 8px;
   background: var(--shop-paper);
   color: var(--shop-wine);
   font-size: 0.75rem;
-  line-height: 1.6;
+  line-height: 1.5;
+  box-shadow: 0 4px 10px rgba(40, 25, 20, 0.1);
 }
+
+/* Card Content / Metadata Area */
 .meta {
   min-width: 0;
   min-height: 0;
-  display: grid;
-  grid-template-rows: minmax(52px, 1fr) 52px 76px 44px;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
   flex: 1;
-  padding: 10px 4px 0;
+  gap: 8px;
+  padding: 10px 2px 2px;
 }
-.meta h3 {
-  min-width: 0;
-  min-height: 0;
-  font: 700 1.125rem/1.45 var(--shop-body);
+
+/* Title Slot: Standardized 2-line height for all cards */
+.titleWrap {
+  position: relative;
   margin: 0;
-  overflow-wrap: anywhere;
+  min-width: 0;
+  height: 2.8em;
+  min-height: 2.8em;
+  max-height: 2.8em;
+  display: flex;
+  align-items: flex-start;
 }
-.meta h3 a {
-  display: block;
-  height: 100%;
-  min-height: 0;
-  color: inherit;
+
+.titleLink {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--shop-body, "Be Vietnam Pro", sans-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.015em;
+  color: var(--shop-ink, #281914);
+  text-decoration: none;
+  width: 100%;
+  transition: color 150ms ease;
+}
+
+.titleLink:hover {
+  color: var(--shop-wine, #5c0202);
   text-decoration: none;
 }
-.meta h3 a:hover {
-  text-decoration: underline;
+
+/* Floating Parchment Tooltip on Title Hover */
+.titleTooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  width: max-content;
+  max-width: min(290px, calc(100vw - 32px));
+  padding: 8px 12px;
+  background: var(--shop-paper, #fffdf8);
+  color: var(--shop-ink, #281914);
+  border: 1px solid rgba(217, 203, 189, 0.95);
+  border-radius: 8px;
+  font-family: var(--shop-body, "Be Vietnam Pro", sans-serif);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  box-shadow: 0 10px 25px -4px rgba(40, 25, 20, 0.22), 0 3px 8px rgba(40, 25, 20, 0.08);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 160ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  word-break: break-word;
+  white-space: normal;
 }
+
+.titleTooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 16px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: rgba(217, 203, 189, 0.95) transparent transparent transparent;
+}
+
+.titleWrap:hover .titleTooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .ellipsis {
   display: block;
   min-width: 0;
@@ -222,63 +392,77 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.author > .ellipsis {
-  flex: 1;
-}
+
 .information {
-  min-height: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: center;
-  gap: 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--shop-line);
-}
-.author,
-.location {
-  min-width: 0;
   min-height: 0;
   height: 24px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(217, 203, 189, 0.45);
+}
+
+.seller,
+.author,
+.location {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   margin: 0;
   font-size: 0.8125rem;
-  line-height: 1.4;
-  overflow-wrap: anywhere;
+  line-height: 1.25;
 }
+
+.seller,
 .author {
-  align-items: center;
-  color: var(--shop-muted);
+  color: var(--shop-muted, #716157);
+  flex: 1;
+  font-weight: 500;
 }
+
+.seller svg,
 .author svg {
   flex-shrink: 0;
+  color: rgba(113, 97, 87, 0.75);
 }
+
 .location {
   justify-content: flex-end;
   text-align: right;
+  flex-shrink: 0;
+  color: var(--shop-ink, #281914);
 }
+
 .location svg {
   flex-shrink: 0;
+  color: var(--shop-wine, #5c0202);
+  opacity: 0.85;
 }
+
 .location strong {
-  display: block;
-  color: var(--shop-ink);
-  font-weight: 700;
-}
-.region {
-  min-width: 0;
-  min-height: 0;
-  height: 24px;
+  display: inline-block;
+  color: var(--shop-ink, #281914);
+  font-weight: 600;
   line-height: inherit;
 }
+
+.region {
+  min-width: 0;
+}
+
 .information .fitFrame {
   display: flex;
   align-items: center;
 }
+
+.seller .fitFrame,
 .author .fitFrame {
   flex: 1;
 }
+
 .information .fitContent {
   width: 100%;
   min-width: 0;
@@ -286,105 +470,152 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.fieldLabel {
-  display: block;
-  color: var(--shop-muted);
-  font-size: 0.75rem;
-  font-weight: 400;
-  line-height: 1.3;
-}
-.prices {
-  display: grid;
-  grid-auto-rows: minmax(0, 1fr);
-  min-height: 0;
-  gap: 4px;
-  padding: 8px;
-  border-radius: 12px;
-  background: var(--shop-shelf, #f4eddf);
-  color: var(--shop-wine);
-  font-variant-numeric: tabular-nums;
-}
-.prices p {
-  min-width: 0;
-  min-height: 0;
+
+/* Footer Row: Clean Typography Price on Left + Pill Action Button on Right */
+.footerRow {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-}
-.prices p + p {
-  border-top: 1px solid var(--shop-line);
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
   padding-top: 4px;
 }
-.prices svg {
-  flex-shrink: 0;
-}
-.prices p > span {
+
+/* Solution A: Fixed 2-tier 52px slot guarantees identical height across all cards */
+.prices {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   min-width: 0;
   flex: 1;
+  height: 52px;
+  font-variant-numeric: tabular-nums;
 }
-.prices strong {
+
+.primaryRow {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.priceLabel {
   display: block;
-  font-size: 1.25rem;
-  line-height: 1.4;
-  font-weight: 700;
-  overflow-wrap: anywhere;
+  color: var(--shop-muted, #716157);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
 }
+
 .amount {
-  height: 28px;
+  height: 24px;
+  display: block;
+  font-family: var(--shop-body, "Be Vietnam Pro", sans-serif);
+  font-size: 1.25rem;
+  line-height: 1.15;
+  font-weight: 800;
+  color: var(--shop-wine, #5c0202);
+  letter-spacing: -0.01em;
 }
-.prices:has(p + p) .amount {
-  flex: 1;
-  min-width: 0;
-  height: 22px;
-  font-size: 1rem;
-  text-align: right;
-}
-.prices:has(p + p) svg {
-  display: none;
-}
-.prices:has(p + p) p > span {
+
+.secondaryRow {
+  height: 18px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  min-width: 0;
 }
-.prices:has(p + p) .fieldLabel {
-  flex: none;
-  font-size: 0.6875rem;
+
+.exchangeNote {
+  display: block;
+  color: var(--shop-wine, #5c0202);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.modeNote {
+  display: block;
+  color: var(--shop-muted, #716157);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Legacy fallback classes preserved for compatibility */
+.priceRow {
+  margin: 0;
+  min-width: 0;
+}
+
+.priceMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.fieldLabel {
+  display: block;
+  color: var(--shop-muted, #716157);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+/* Refined Pill Action Button */
 .view {
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 44px;
-  margin-top: 0;
-  padding: 8px 18px;
-  border: 1px solid var(--shop-wine);
-  border-radius: 12px;
-  background: var(--shop-wine);
-  color: var(--shop-cream);
-  font-size: 0.875rem;
-  font-weight: 700;
-  line-height: 1.6;
+  gap: 3px;
+  padding: 7px 13px;
+  border: 1px solid var(--shop-wine, #5c0202);
+  border-radius: 9999px;
+  background: var(--shop-wine, #5c0202);
+  color: var(--shop-cream, #fcf8db);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.3;
   text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(92, 2, 2, 0.18);
+  transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .view:hover {
   background: var(--shop-wine-hover, #7c2320);
+  border-color: var(--shop-wine-hover, #7c2320);
+  box-shadow: 0 4px 10px rgba(92, 2, 2, 0.28);
+  transform: translateY(-1px);
 }
+
+.view:active {
+  transform: translateY(0);
+}
+
 .view svg {
   flex-shrink: 0;
+  transition: transform 160ms ease;
 }
-.view svg:last-of-type {
-  position: absolute;
-  right: 8px;
+
+.view:hover svg {
+  transform: translateX(2px);
 }
+
 .view:focus-visible {
-  outline-offset: 4px;
+  outline-offset: 3px;
 }
+
 .previewNote {
   display: block;
   overflow: hidden;
@@ -395,11 +626,13 @@
   font-size: 0.75rem;
   line-height: 1.6;
 }
+
 .meta .previewHeading {
   display: grid;
   grid-template-rows: 20px minmax(0, 1fr);
   gap: 4px;
 }
+
 .fitFrame {
   display: block;
   height: 100%;
@@ -407,47 +640,88 @@
   min-height: 0;
   overflow: hidden;
 }
+
 .fitContent {
   display: block;
   overflow-wrap: anywhere;
 }
+
 .fitFrame[data-clipped="true"] .fitContent {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--card-fit-lines);
   overflow: hidden;
 }
+
 .fallback {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   height: 100%;
   min-height: 110px;
   color: var(--shop-muted);
   text-align: center;
   font-size: 0.8rem;
 }
+
 .fallback button {
   position: relative;
   z-index: 2;
-  min-height: 44px;
-  padding: 8px 12px;
+  min-height: 36px;
+  padding: 6px 12px;
   background: var(--shop-paper);
   border: 1px solid var(--shop-control);
   border-radius: 8px;
   color: var(--shop-wine);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
 }
+
 @media (max-width: 600px) {
   .card {
-    --card-height: auto;
-    min-height: 480px;
+    min-height: 360px;
+    padding: 8px;
+    border-radius: 14px;
   }
-  .compact .cover {
-    padding: 0;
+  .card.compact {
+    min-height: 330px;
+    padding: 7px;
+    border-radius: 12px;
+  }
+  .titleWrap {
+    height: 2.6em;
+    min-height: 2.6em;
+    max-height: 2.6em;
+  }
+  .titleLink {
+    font-size: 0.9375rem;
+  }
+  .wishlist {
+    width: 32px;
+    height: 32px;
+    top: 6px;
+    right: 6px;
   }
   .condition {
+    font-size: 0.65rem;
+    padding: 3px 7px;
+    bottom: 6px;
+    left: 6px;
+  }
+  .held {
+    font-size: 0.625rem;
+    padding: 2px 7px;
+    top: 6px;
+    left: 6px;
+  }
+  .footerRow {
+    gap: 6px;
+  }
+  .view {
+    padding: 6px 10px;
     font-size: 0.75rem;
   }
 }
