@@ -7,6 +7,37 @@
 .record h2 {
   font-size: 1.25rem;
 }
+.record .recordSummary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  list-style: none;
+}
+.recordSummary::-webkit-details-marker {
+  display: none;
+}
+.recordSummary:focus-visible {
+  outline: 3px solid var(--shop-wine);
+  outline-offset: 4px;
+}
+.summaryText {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.summaryText strong {
+  font-size: 1.25rem;
+}
+.summaryAction {
+  color: var(--shop-wine);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.recordBody {
+  padding-top: 8px;
+}
 .text {
   white-space: pre-wrap;
   line-height: 1.8;

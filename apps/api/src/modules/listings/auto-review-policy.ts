@@ -1,7 +1,7 @@
 import { catalogText, titleSimilarity } from '../autofill-assist/catalog-ranking.js';
 import { isbn13 } from '../commands/contract-input.service.js';
 
-// Pure decision rules for AI listing review (ADR 0061, 0062). The only outcomes
+// Pure decision rules for AI listing review (ADR 0061, 0063). The only outcomes
 // are Approve and Escalate: rejecting a seller stays a Staff decision. Server
 // facts always win over a confident model, and no output field can ask for
 // publication. Bump POLICY_VERSION whenever a rule, threshold or prompt changes:

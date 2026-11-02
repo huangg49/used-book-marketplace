@@ -11,7 +11,7 @@ import { POLICY_VERSION } from '../../src/modules/listings/auto-review-policy.js
 import { photoReasons, sellerTextSignals } from '../../src/modules/listings/auto-review-signals.js';
 import { score, type CaseResult, type Expected } from './metrics.js';
 
-// Evaluates the AI listing review on labelled real photos (ADR 0062).
+// Evaluates the AI listing review on labelled real photos (ADR 0063).
 //   pnpm --filter @used-books/api eval:auto-review [--max-usd 1] [--limit 5] [--only id] [--fresh]
 // Calls the real provider configured in apps/api/.env, through the same pipeline
 // the worker runs, and touches no database. It runs every stage of every case so

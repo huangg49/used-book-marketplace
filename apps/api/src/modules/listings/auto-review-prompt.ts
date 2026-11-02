@@ -1,6 +1,6 @@
 import type { Condition } from './auto-review-policy.js';
 
-// Three separate calls, so a stage only sees what it must judge (ADR 0062).
+// Three separate calls, so a stage only sees what it must judge (ADR 0063).
 // Reading the photos never sees the seller's text or the catalog record, so the
 // seller cannot suggest what to read; the server does the comparing. No stage has
 // an output that means "publish": each answers narrow questions.

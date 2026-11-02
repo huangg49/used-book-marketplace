@@ -1,4 +1,4 @@
-# ADR 0062: Gia cố AI tự duyệt bài đăng và đo bằng mô hình thật
+# ADR 0063: Gia cố AI tự duyệt bài đăng và đo bằng mô hình thật
 
 02/11/2026. Accepted theo yêu cầu của thành viên nhóm trong phiên làm việc, **cờ vẫn tắt**.
 Bổ sung [ADR0061](0061-ai-listing-auto-review.md). Khác biệt với SRS FR-L03 vẫn chờ chủ
@@ -98,7 +98,7 @@ trước từng bài. Giữa kiểm và ghi không có giữ chỗ nên có th�
 
 ## Hậu kiểm
 
-`listing_auto_review_checks`, migration0051. Cảnh báo không bao giờ tự gỡ bài.
+`listing_auto_review_checks`, migration0052. Cảnh báo không bao giờ tự gỡ bài.
 
 - `AiRecheck`: 20% bài AI duyệt, chọn theo hash revision, sau24 giờ chạy lại dữ kiện và mô hình.
 - `HumanAudit`: 10% đưa thẳng cho người. Đây là kiểm tra duy nhất không phụ thuộc mô hình tự đồng ý
@@ -109,7 +109,7 @@ Mỗi bài chỉ kiểm lại một lần, không lặp định kỳ. Admin có 
 
 ## Cấu hình, triển khai, kiểm tra
 
-Contract0.69. Dừng API/worker, `pnpm db:migrate`, `pnpm db:bootstrap`. Biến mới ở
+Contract0.71. Dừng API/worker, `pnpm db:migrate`, `pnpm db:bootstrap`. Biến mới ở
 `apps/api/.env.example`; các tỷ lệ và ngưỡng là đề xuất, chưa hiệu chỉnh.
 
 ```sh

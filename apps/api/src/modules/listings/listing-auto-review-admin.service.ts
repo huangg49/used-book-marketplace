@@ -37,7 +37,7 @@ const selfForbidden = () =>
     'Cần người kiểm duyệt khác xử lý bài đăng này.',
   );
 
-// What people do about the AI reviewer (ADR 0062): read its work, clear a flag,
+// What people do about the AI reviewer (ADR 0063): read its work, clear a flag,
 // or take an AI approval back. Only a person's command changes published state.
 @Injectable()
 export class ListingAutoReviewAdminService {

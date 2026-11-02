@@ -13,7 +13,7 @@ import {
 } from '../schema-dsl.js';
 import { listingAutoReviewSpec } from './0050-listing-auto-review.js';
 
-// ADR 0062: what each review rested on (server facts apart from model judgments),
+// ADR 0063: what each review rested on (server facts apart from model judgments),
 // its policy version and cost; never photos. Rows from 0050 are backfilled as
 // "not recorded" so every field stays present.
 const reviewFields = {
@@ -100,7 +100,7 @@ export const listingAutoReviewCheckSpec: CollectionSpec = {
 };
 
 export const listingAutoReviewV2Migration = {
-  id: '0051-listing-auto-review-v2',
+  id: '0052-listing-auto-review-v2',
   definition: {
     collections: [listingAutoReviewSpecV2, listingAutoReviewCheckSpec],
     policy: 'facts-apart-from-judgments-flags-never-unpublish-v1',

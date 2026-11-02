@@ -25,7 +25,7 @@ export function autoReviewCheckWire(
   };
 }
 
-// Stored JSON from a known writer. Rows from before ADR 0062 hold another shape
+// Stored JSON from a known writer. Rows from before ADR 0063 hold another shape
 // and recorded none of these parts, so they read as empty rather than as a pass.
 export function autoReviewWire(
   row: ListingAutoReviewDoc,

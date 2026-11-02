@@ -1,4 +1,4 @@
-// Deterministic checks on seller text and photo bytes (ADR 0062). They run with
+// Deterministic checks on seller text and photo bytes (ADR 0063). They run with
 // no model, so text that tries to steer a model cannot talk its way past them.
 
 const HIDDEN = /[­​-‏‪-‮⁠-⁤﻿]/;

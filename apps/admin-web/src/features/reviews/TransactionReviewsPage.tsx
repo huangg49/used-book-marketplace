@@ -68,64 +68,13 @@ function ReviewQueue({ owner }: { owner: string }) {
       {result.data?.pages
         .flatMap((p) => p.items)
         .map((item) => (
-          <section className={styles.record} key={item.review.id}>
-            <h2>{item.review.authorName}</h2>
-            <p>
-              {
-                reviewTypes.find(
-                  ([type]) => type === item.review.transactionType,
-                )?.[1]
-              }{" "}
-              · Mã giao dịch{" "}
-              {item.review.transactionId.slice(0, 8).toUpperCase()}
-            </p>
-            <p>
-              {reviewStatusLabels[item.review.status]} · Phiên bản{" "}
-              {item.review.version} · {dateText(item.review.createdAt)}
-            </p>
-            <p>
-              Đối tác: {item.review.partnerRating}/5
-              {item.review.bookRating !== null
-                ? ` · Sách: ${item.review.bookRating}/5`
-                : ""}
-            </p>
-            <p className={styles.text}>
-              {item.review.comment || "Không có nhận xét bằng chữ."}
-            </p>
-            {item.review.reply ? (
-              <div>
-                <h3>Phản hồi của người được đánh giá</h3>
-                <p className={styles.text}>{item.review.reply.text}</p>
-                <p>
-                  {item.review.reply.status === "Pending"
-                    ? "Chờ duyệt"
-                    : item.review.reply.status === "Approved"
-                      ? "Đã duyệt"
-                      : "Đã ẩn"}
-                </p>
-              </div>
-            ) : null}
-            <p>
-              {item.review.evidenceHeld
-                ? "Đang giữ làm bằng chứng."
-                : "Chưa có lệnh giữ làm bằng chứng."}
-            </p>
-            <Decision
-              review={item.review}
-              refresh={() => result.refetch()}
-              owner={owner}
-            />
-            <RevisionHistory
-              key={`${item.review.id}:${item.review.version}`}
-              owner={owner}
-              reviewId={item.review.id}
-              initial={{
-                items: item.revisions,
-                nextCursor: item.nextRevisionCursor,
-                serverTime: result.data!.pages[0].serverTime,
-              }}
-            />
-          </section>
+          <ReviewRecord
+            key={item.review.id}
+            item={item}
+            owner={owner}
+            serverTime={result.data!.pages[0].serverTime}
+            refresh={() => result.refetch()}
+          />
         ))}
       <CursorPagination
         pageCount={result.data?.pages.length ?? 0}
@@ -137,6 +86,103 @@ function ReviewQueue({ owner }: { owner: string }) {
         nextLabel="Xem thêm đánh giá"
       />
     </>
+  );
+}
+function ReviewRecord({
+  item,
+  owner,
+  serverTime,
+  refresh,
+}: {
+  item: OperationsReviewsPage["items"][number];
+  owner: string;
+  serverTime: string;
+  refresh: () => Promise<unknown>;
+}) {
+  const [expanded, setExpanded] = useState(true),
+    [acknowledged, setAcknowledged] = useState<TransactionReview | null>(null);
+  const summary = useRef<HTMLElement>(null);
+  // A saved receipt supplies the current version even if the list refresh fails.
+  const review =
+    acknowledged && acknowledged.version > item.review.version
+      ? acknowledged
+      : item.review;
+  return (
+    <section className={styles.record}>
+      <details
+        open={expanded}
+        onToggle={(e) => setExpanded(e.currentTarget.open)}
+      >
+        <summary ref={summary} className={styles.recordSummary}>
+          <span className={styles.summaryText}>
+            <strong>{review.authorName}</strong>
+            <span className="muted">
+              {
+                reviewTypes.find(
+                  ([type]) => type === review.transactionType,
+                )?.[1]
+              }{" "}
+              · Mã giao dịch {review.transactionId.slice(0, 8).toUpperCase()}
+            </span>
+            <span>
+              {reviewStatusLabels[review.status]} · Phiên bản {review.version} ·
+              Đối tác: {review.partnerRating}/5
+              {review.bookRating !== null
+                ? ` · Sách: ${review.bookRating}/5`
+                : ""}
+            </span>
+          </span>
+          <span className={styles.summaryAction}>
+            {expanded ? "Thu gọn" : "Mở lại xử lý"}
+          </span>
+        </summary>
+        <div className={styles.recordBody}>
+          <p>Gửi {dateText(review.createdAt)}</p>
+          <p className={styles.text}>
+            {review.comment || "Không có nhận xét bằng chữ."}
+          </p>
+          {review.reply ? (
+            <div>
+              <h3>Phản hồi của người được đánh giá</h3>
+              <p className={styles.text}>{review.reply.text}</p>
+              <p>
+                {review.reply.status === "Pending"
+                  ? "Chờ duyệt"
+                  : review.reply.status === "Approved"
+                    ? "Đã duyệt"
+                    : "Đã ẩn"}
+              </p>
+            </div>
+          ) : null}
+          <p>
+            {review.evidenceHeld
+              ? "Đang giữ làm bằng chứng."
+              : "Chưa có lệnh giữ làm bằng chứng."}
+          </p>
+          <Decision
+            review={review}
+            refresh={refresh}
+            owner={owner}
+            onSaved={(saved) => {
+              setAcknowledged(saved);
+              setExpanded(false);
+              summary.current?.focus();
+            }}
+          />
+          <RevisionHistory
+            key={`${review.id}:${item.review.version}`}
+            owner={owner}
+            reviewId={review.id}
+            initial={{
+              items: item.revisions,
+              nextCursor: item.nextRevisionCursor,
+              serverTime,
+            }}
+          />
+        </div>
+      </details>
+      {acknowledged ? <p role="status">Đã ghi nhận quyết định.</p> : null}
+    </section>
   );
 }
 function RevisionHistory({
@@ -221,17 +267,18 @@ function Decision({
   review,
   owner,
   refresh,
+  onSaved,
 }: {
   review: TransactionReview;
   owner: string;
   refresh: () => Promise<unknown>;
+  onSaved: (review: TransactionReview) => void;
 }) {
   const [decision, setDecision] = useState(""),
     [reason, setReason] = useState(""),
     [version, setVersion] = useState(review.version),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [notice, setNotice] = useState("");
+    [error, setError] = useState("");
   const running = useRef(false),
     scope = `review-moderation:${owner}:${review.id}`,
     uncertain = pendingReviewIntent(session, scope);
@@ -241,7 +288,6 @@ function Decision({
     running.current = true;
     setBusy(true);
     setError("");
-    setNotice("");
     try {
       const saved = await sendReviewIntent(
         session,
@@ -251,10 +297,11 @@ function Decision({
         () => crypto.randomUUID(),
       );
       setVersion(saved.version);
-      setNotice("Đã ghi nhận quyết định.");
       setDecision("");
       setReason("");
-      await refresh();
+      onSaved(saved);
+      // ListFeedback handles read failures independently of the saved command.
+      void refresh().catch(() => {});
     } catch (e) {
       setError(
         pendingReviewIntent(session, scope)
@@ -275,7 +322,6 @@ function Decision({
       className={styles.form}
       aria-label={`Xử lý đánh giá của ${review.authorName}`}
     >
-      {notice ? <p role="status">{notice}</p> : null}
       {error ? <Notice tone="error">{error}</Notice> : null}
       {uncertain ? (
         <Button type="submit" busy={busy}>

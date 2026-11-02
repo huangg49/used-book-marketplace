@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.69.0
+  version: 0.71.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -10999,6 +10999,525 @@ paths:
         "422":
           $ref: "#/components/responses/Error"
 
+  /me/support-cases:
+    get:
+      operationId: listMySupportCases
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: Own support cases only. Creation requires ACTIVE MEMBER; read and
+        reply on existing owned cases permit locked members. No escrow, refund or
+        transaction-state side effects.
+      parameters:
+        - &a4
+          in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 2000
+        - &a5
+          in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - &a6
+          in: query
+          name: state
+          required: false
+          schema:
+            $ref: "#/components/schemas/SupportState"
+        - &a7
+          in: query
+          name: kind
+          required: false
+          schema:
+            $ref: "#/components/schemas/SupportKind"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCasePage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+      x-locked-access: existing-obligations
+    post:
+      operationId: createSupportCase
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: Own support cases only. Creation requires ACTIVE MEMBER; read and
+        reply on existing owned cases permit locked members. No escrow, refund or
+        transaction-state side effects.
+      parameters:
+        - &a3
+          in: header
+          name: Idempotency-Key
+          required: true
+          schema: &a1
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSupportCase"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCaseReceipt"
+          headers:
+            Idempotency-Replayed:
+              description: Exact intent replay.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /me/support-cases/{caseId}:
+    get:
+      operationId: getMySupportCase
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: Own support cases only. Creation requires ACTIVE MEMBER; read and
+        reply on existing owned cases permit locked members. No escrow, refund or
+        transaction-state side effects.
+      parameters:
+        - &a2
+          in: path
+          name: caseId
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCaseDetail"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+      x-locked-access: existing-obligations
+  /me/support-cases/{caseId}/messages:
+    post:
+      operationId: replyToSupportCase
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: Own support cases only. Creation requires ACTIVE MEMBER; read and
+        reply on existing owned cases permit locked members. No escrow, refund or
+        transaction-state side effects.
+      parameters:
+        - *a2
+        - *a3
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportMessageCommand"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCaseReceipt"
+          headers:
+            Idempotency-Replayed:
+              description: Exact intent replay.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+      x-locked-access: existing-obligations
+  /operations/support-cases:
+    get:
+      operationId: listOperationsSupportCases
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: ACTIVE ADMIN, independent of reporter and linked participants.
+        Current authorization before replay. Case responses do not move money or
+        adjudicate a transaction.
+      parameters:
+        - *a4
+        - *a5
+        - *a6
+        - *a7
+        - in: query
+          name: assignedToMe
+          required: false
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCasePage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /operations/support-cases/{caseId}:
+    get:
+      operationId: getOperationsSupportCase
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: ACTIVE ADMIN, independent of reporter and linked participants.
+        Current authorization before replay. Case responses do not move money or
+        adjudicate a transaction.
+      parameters:
+        - *a2
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCaseDetail"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /operations/support-cases/{caseId}/messages:
+    post:
+      operationId: messageSupportCase
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: ACTIVE ADMIN, independent of reporter and linked participants.
+        Current authorization before replay. Case responses do not move money or
+        adjudicate a transaction.
+      parameters:
+        - *a2
+        - *a3
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportMessageCommand"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCaseReceipt"
+          headers:
+            Idempotency-Replayed:
+              description: Exact intent replay.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /operations/support-cases/{caseId}/actions:
+    post:
+      operationId: actOnSupportCase
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: ACTIVE ADMIN, independent of reporter and linked participants.
+        Current authorization before replay. Case responses do not move money or
+        adjudicate a transaction.
+      parameters:
+        - *a2
+        - *a3
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportActionCommand"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCaseReceipt"
+          headers:
+            Idempotency-Replayed:
+              description: Exact intent replay.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /me/transaction-reviews/{reviewId}/target:
+    get:
+      operationId: resolveMyReviewNotification
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: Own support cases only. Creation requires ACTIVE MEMBER; read and
+        reply on existing owned cases permit locked members. No escrow, refund or
+        transaction-state side effects.
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewNotificationTarget"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+
+  /me/support-targets:
+    get:
+      operationId: listMySupportTargets
+      tags:
+        - Support
+      description: ACTIVE MEMBER. Readable labels only; no address, email or payment
+        data. Options are current owned transactions; resolve rechecks the same
+        target access as support creation. No business mutation.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: type
+          required: true
+          schema:
+            type: string
+            enum:
+              - DirectOrder
+              - Exchange
+              - PointOrder
+        - in: query
+          name: q
+          required: false
+          schema:
+            type: string
+            maxLength: 120
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+            maxLength: 2000
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 10
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportTargetOptionsPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+  /me/support-targets/{type}/{id}:
+    get:
+      operationId: getMySupportTarget
+      tags:
+        - Support
+      description: ACTIVE MEMBER. Readable labels only; no address, email or payment
+        data. Options are current owned transactions; resolve rechecks the same
+        target access as support creation. No business mutation.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: type
+          required: true
+          schema:
+            type: string
+            enum:
+              - DirectOrder
+              - Exchange
+              - PointOrder
+              - Listing
+              - Auction
+              - Review
+              - Member
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportTargetOption"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -13863,9 +14382,11 @@ components:
             - ExchangeCancelled
             - ExchangeRejected
             - ExchangeDisputed
+            - SupportUpdated
+            - ReviewModerated
         title: { type: string, maxLength: 120 }
         body: { type: string, maxLength: 400 }
-        targetType: { type: string, enum: [Auction, Exchange, Order] }
+        targetType: { type: string, enum: [Auction, Exchange, Order, SupportCase, TransactionReview] }
         targetId:
           type: string
           format: uuid
@@ -20725,3 +21246,321 @@ components:
         serverTime:
           type: string
           format: date-time
+    ReviewNotificationTarget:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - id
+      properties:
+        type:
+          type: string
+          enum:
+            - Exchange
+            - DirectOrder
+            - PointOrder
+        id: &a1
+          type: string
+          format: uuid
+    SupportKind: &a2
+      type: string
+      enum:
+        - Feedback
+        - Bug
+        - Violation
+        - TransactionIssue
+    SupportState: &a4
+      type: string
+      enum:
+        - Open
+        - InReview
+        - AwaitingMember
+        - Answered
+        - Closed
+    SupportTarget: &a3
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - id
+      properties:
+        type:
+          type: string
+          enum:
+            - DirectOrder
+            - Exchange
+            - PointOrder
+            - Auction
+            - Listing
+            - Review
+            - Member
+        id: *a1
+    SupportCaseSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - kind
+        - title
+        - reporterId
+        - reporterName
+        - target
+        - assigneeId
+        - state
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id: *a1
+        kind: *a2
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        reporterId: *a1
+        reporterName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        target:
+          anyOf:
+            - *a3
+            - type: "null"
+        assigneeId:
+          anyOf:
+            - *a1
+            - type: "null"
+        state: *a4
+        version:
+          type: integer
+          minimum: 1
+        createdAt: &a5
+          type: string
+          format: date-time
+        updatedAt: *a5
+    CreateSupportCase:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - title
+        - description
+        - target
+      properties:
+        kind: *a2
+        title:
+          type: string
+          minLength: 3
+          maxLength: 160
+        description:
+          type: string
+          minLength: 10
+          maxLength: 5000
+        target:
+          anyOf:
+            - $ref: "#/components/schemas/SupportTarget"
+            - type: "null"
+    SupportMessage:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - authorId
+        - authorName
+        - role
+        - internal
+        - text
+        - createdAt
+      properties:
+        id: *a1
+        authorId: *a1
+        authorName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        role:
+          type: string
+          enum:
+            - Member
+            - Admin
+            - System
+        internal:
+          type: boolean
+        text:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        createdAt: *a5
+    SupportCasePage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportCaseSummary"
+        nextCursor:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 2000
+            - type: "null"
+        serverTime: *a5
+    SupportCaseDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - case
+        - messages
+        - canManage
+        - canReply
+        - relatedState
+        - relatedAuctionId
+        - review
+        - serverTime
+      properties:
+        case:
+          $ref: "#/components/schemas/SupportCaseSummary"
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportMessage"
+        canManage:
+          type: boolean
+        canReply:
+          type: boolean
+        relatedState:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 80
+            - type: "null"
+        relatedAuctionId:
+          anyOf:
+            - *a1
+            - type: "null"
+        review:
+          anyOf:
+            - $ref: "#/components/schemas/ExchangeReviewItem"
+            - type: "null"
+        serverTime: *a5
+    SupportMessageCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - text
+        - internal
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        text:
+          type: string
+          minLength: 3
+          maxLength: 5000
+        internal:
+          type: boolean
+    SupportActionCommand:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - action
+        - text
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        action:
+          type: string
+          enum:
+            - Assign
+            - RequestEvidence
+            - Answer
+            - Close
+            - Reopen
+        text:
+          type: string
+          minLength: 3
+          maxLength: 5000
+    SupportCaseReceipt:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - entityType
+        - entityId
+        - version
+        - state
+        - serverTime
+      properties:
+        id: *a1
+        entityType:
+          type: string
+          enum:
+            - SupportCase
+        entityId: *a1
+        version:
+          type: integer
+          minimum: 1
+        state: *a4
+        serverTime: *a5
+    SupportTargetOption:
+      type: object
+      additionalProperties: false
+      required:
+        - target
+        - label
+        - description
+        - partnerName
+        - createdAt
+        - state
+      properties:
+        target:
+          $ref: "#/components/schemas/SupportTarget"
+        label:
+          type: string
+          maxLength: 500
+        description:
+          anyOf:
+            - type: string
+              maxLength: 180
+            - type: "null"
+        partnerName:
+          anyOf:
+            - type: string
+              maxLength: 120
+            - type: "null"
+        createdAt:
+          anyOf:
+            - &a2
+              type: string
+              format: date-time
+            - type: "null"
+        state:
+          anyOf:
+            - &a1
+              type: string
+            - type: "null"
+    SupportTargetOptionsPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportTargetOption"
+        nextCursor:
+          anyOf:
+            - *a1
+            - type: "null"
+        serverTime: *a2

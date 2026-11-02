@@ -1,4 +1,4 @@
-// Scores for the AI listing review on labelled cases (ADR 0062). The number that
+// Scores for the AI listing review on labelled cases (ADR 0063). The number that
 // decides enablement is false approvals: a must-escalate listing published with
 // no person looking. Ambiguous cases are kept for reading and never scored.
 

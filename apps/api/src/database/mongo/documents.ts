@@ -61,6 +61,18 @@ export interface MemberCartDoc extends Lockable {
   items: {listingId:string;priceAtAdd:number;addedAt:Date}[];
   createdAt:Date;updatedAt:Date;
 }
+export interface SupportCaseDoc extends Lockable {
+  _id: string; reporterId: string; reporterName: string;
+  kind: 'Feedback' | 'Bug' | 'Violation' | 'TransactionIssue'; title: string;
+  target: {type: 'DirectOrder' | 'Exchange' | 'PointOrder' | 'Auction' | 'Listing' | 'Review' | 'Member'; id: string} | null;
+  involvedUserIds: string[]; assigneeId: string | null;
+  state: 'Open' | 'InReview' | 'AwaitingMember' | 'Answered' | 'Closed';
+  version: number; messageCount: number; createdAt: Date; updatedAt: Date;
+}
+export interface SupportMessageDoc {
+  _id: string; caseId: string; authorId: string; authorName: string;
+  role: 'Member' | 'Admin' | 'System'; internal: boolean; text: string; createdAt: Date;
+}
 export interface AuthSessionDoc extends Lockable {
   _id: string;
   userId: string;
@@ -264,7 +276,7 @@ export interface ListingAutoReviewDoc {
   latencyMs: number | null;
 }
 
-// ADR 0062: a look at an AI-approved revision after publication.
+// ADR 0063: a look at an AI-approved revision after publication.
 export interface ListingAutoReviewCheckDoc extends Lockable {
   _id: string;
   revisionId: string;
@@ -290,6 +302,7 @@ export interface ListingAutoReviewCheckDoc extends Lockable {
 // Exactly one target field is set; `principal` is the idempotency identity:
 // `user:<actorId>` or `system:<systemActor>`.
 export interface MutationReceiptDoc {
+  supportCaseId?: string | null;
   accountId?: string | null;
   reviewId?: string | null;
   _id: string;
@@ -312,6 +325,7 @@ export interface MutationReceiptDoc {
   committedAt: Date;
 }
 export interface AuditEventDoc {
+  supportCaseId?: string | null;
   accountId?: string | null;
   reviewId?: string | null;
   _id: string;
@@ -1376,10 +1390,12 @@ export interface MemberNotificationDoc {
     | 'ExchangeCompleted'
     | 'ExchangeCancelled'
     | 'ExchangeRejected'
-    | 'ExchangeDisputed';
+    | 'ExchangeDisputed'
+    | 'SupportUpdated'
+    | 'ReviewModerated';
   title: string;
   body: string;
-  targetType: 'Auction' | 'Exchange' | 'Order';
+  targetType: 'Auction' | 'Exchange' | 'Order' | 'SupportCase' | 'TransactionReview';
   targetId: string;
   dedupeKey: string;
   createdAt: Date;

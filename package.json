@@ -61,6 +61,7 @@
     "test:member-email:live": "node scripts/test-member-email-live.mjs",
     "test:member-cart:api": "node scripts/test-member-cart-api.mjs",
     "test:member-cart:browser": "node scripts/test-member-cart-browser.mjs",
+    "test:support:browser": "node scripts/test-support-center.mjs",
     "build": "pnpm -r --if-present run build",
     "lint": "pnpm -r --if-present run lint",
     "typecheck": "pnpm -r --if-present run typecheck",

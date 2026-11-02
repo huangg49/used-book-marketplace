@@ -1,5 +1,6 @@
 import { BundleManifest } from "../components/BookBundle";
 import {AddToCart} from '../components/AddToCart';
+import {SupportLink} from '../features/support/SupportLink';
 import { listingTitle } from "../lib/book-bundle";
 import { useQuery } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
@@ -154,6 +155,7 @@ export function BookDetailPage() {
           transition={{ duration: 0.45, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
         >
           <h1>{listingTitle(book)}</h1>
+          <p><SupportLink type='Listing' id={book.id} report/></p>
           <BundleManifest bundle={book.bundle} />
           <p className={styles.author}>
             Tác giả: {book.book.authors.join(", ") || "Chưa rõ tác giả"}

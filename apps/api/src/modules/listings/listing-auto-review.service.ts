@@ -76,7 +76,7 @@ const usageOf = (p: PipelineResult | null) => ({
   costMicroUsd: p?.usage.costMicroUsd ?? 0,
 });
 
-// ADR 0061, 0062. Provider calls run outside any transaction; publishing goes
+// ADR 0061, 0063. Provider calls run outside any transaction; publishing goes
 // through ListingReviewService, which rechecks every fact under locks. Staff keeps
 // every listing this worker does not publish.
 @Injectable()
@@ -373,7 +373,7 @@ export class ListingAutoReviewService {
     });
   }
 
-  // Post-publication sampling (ADR 0062). A fixed share of AI approvals is looked
+  // Post-publication sampling (ADR 0063). A fixed share of AI approvals is looked
   // at again once facts had time to change. A flag asks a person to look; nothing
   // here unpublishes. The same model agreeing with itself is weak evidence, which
   // is why a separate random share goes straight to people (HumanAudit).

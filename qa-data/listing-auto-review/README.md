@@ -2,7 +2,7 @@
 
 Dùng để đo [ADR0061](../../docs/adr/0061-ai-listing-auto-review.md) trước khi bật cờ.
 Hiện là **bộ thử sơ khởi**, chưa đủ làm bằng chứng bật tính năng. Kết quả chạy thật ở
-[ADR0062](../../docs/adr/0062-ai-listing-review-hardening.md).
+[ADR0063](../../docs/adr/0063-ai-listing-review-hardening.md).
 
 ## Có gì ở đây
 
