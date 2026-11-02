@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { session } from "../lib/session";
-import { bundleSchema } from '../lib/book-bundle';
+import { bundleSchema } from "../lib/book-bundle";
 
 const paymentOrderSchema = z.object({
   id: z.string().uuid(),
@@ -79,8 +79,41 @@ const orderDetails = paymentOrderSchema.extend({
   canReject: z.boolean(),
   sellerConfirmationDeadline: z.string().nullable(),
   shipmentRegistrationEnabled: z.boolean(),
+  deliveredAt: z.iso.datetime().nullable(),
+  inspectionDeadline: z.iso.datetime().nullable(),
+  carrierReview: z
+    .object({
+      id: z.uuid(),
+      openedAt: z.iso.datetime(),
+      reason: z.enum(["LatePickup", "ConflictingPickup"]),
+      status: z.literal("Open"),
+    })
+    .nullable(),
+  deliveryReview: z
+    .object({
+      id: z.uuid(),
+      openedAt: z.iso.datetime(),
+      deliveryDeadline: z.iso.datetime(),
+      reason: z.literal("DeliveryDeadlineExceeded"),
+      status: z.literal("Open"),
+      buyerReport: z
+        .object({ id: z.uuid(), submittedAt: z.iso.datetime() })
+        .nullable(),
+    })
+    .nullable(),
   preparation: z
-    .object({ acceptedAt: z.string(), pickupDeadline: z.string() })
+    .object({
+      acceptedAt: z.string(),
+      pickupDeadline: z.string(),
+      pickupReview: z
+        .object({
+          id: z.uuid(),
+          openedAt: z.iso.datetime(),
+          reason: z.literal("PickupDeadlineExceeded"),
+          status: z.literal("Open"),
+        })
+        .nullable(),
+    })
     .nullable(),
   ownAddress: contact,
   shippingAddress: contact.nullable(),

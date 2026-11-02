@@ -37,7 +37,7 @@ let fixture, browser, server;
 const errors = [];
 try {
   await mkdir(artifacts, { recursive: true });
-  fixture = await createTestApi({ corsOrigin: origin, listingCount: 2 });
+  fixture = await createTestApi({ corsOrigin: origin, listingCount: 3 });
   const api = fixture.api,
     seller = fixture.member;
   const buyer = await api("/auth/login", null, {
@@ -220,6 +220,99 @@ try {
     );
   };
   await login(p, "admin@operations.test");
+  // Real quote, lost POST ACK and failed GET: never mint a replacement intent.
+  const quotePosts = [],
+    quoteReads = [];
+  let loseQuoteAck = true,
+    loseQuoteRead = true;
+  await intercept("**/api/v1/listings/*/quotes", async (route) => {
+    quotePosts.push({
+      key: route.request().headers()["idempotency-key"],
+      body: route.request().postData(),
+    });
+    const response = await route.fetch();
+    assert.equal(response.status(), 200);
+    if (loseQuoteAck) {
+      loseQuoteAck = false;
+      await route.abort("failed");
+    } else await route.fulfill({ response });
+  });
+  await intercept("**/api/v1/me/quotes/*", async (route) => {
+    quoteReads.push(route.request().url());
+    if (loseQuoteRead) {
+      loseQuoteRead = false;
+      return route.fulfill({
+        status: 503,
+        json: { code: "UNAVAILABLE", message: "QA quote read failure" },
+      });
+    }
+    await route.continue();
+  });
+  await navigate("/book?id=" + fixture.listings[0]);
+  await button(p, "Mua ngay cuốn sách này").click();
+  await button(p, "Thử lại báo giá đã yêu cầu").waitFor();
+  assert.equal(
+    await button(p, "Xác nhận đặt mua").getAttribute("aria-disabled"),
+    "true",
+  );
+  await button(p, "Đóng modal mua ngay").click();
+  await button(p, "Mua ngay cuốn sách này").click();
+  await button(p, "Thử lại báo giá đã yêu cầu").waitFor();
+  assert.deepEqual(quotePosts[0], quotePosts[1]);
+  await button(p, "Thử lại báo giá đã yêu cầu").click();
+  await p.waitForFunction(() =>
+    [...document.querySelectorAll('[role="button"]')].some(
+      (n) =>
+        n.textContent === "Xác nhận đặt mua" &&
+        n.getAttribute("aria-disabled") !== "true",
+    ),
+  );
+  assert.equal(quotePosts.length, 2);
+  assert.equal(quoteReads[0], quoteReads[1]);
+  await fixture.setQuoteTimeOffset(16 * 60000);
+  await button(p, "Đóng modal mua ngay").click();
+  await button(p, "Mua ngay cuốn sách này").click();
+  await button(p, "Lấy báo giá mới").waitFor();
+  assert.equal(
+    await button(p, "Xác nhận đặt mua").getAttribute("aria-disabled"),
+    "true",
+  );
+  assert.equal(
+    quotePosts.length,
+    2,
+    "Expired GET must not auto-create another quote",
+  );
+  assert.equal(quoteReads[2], quoteReads[1]);
+  await p.screenshot({
+    path: path.join(artifacts, "expired-quote-390.png"),
+    fullPage: true,
+  });
+  await fixture.setQuoteTimeOffset(0);
+  await button(p, "Lấy báo giá mới").click();
+  await p.waitForFunction(() =>
+    [...document.querySelectorAll('[role="button"]')].some(
+      (n) =>
+        n.textContent === "Xác nhận đặt mua" &&
+        n.getAttribute("aria-disabled") !== "true",
+    ),
+  );
+  assert.equal(quotePosts.length, 3);
+  assert.notEqual(quotePosts[2].key, quotePosts[1].key);
+  assert.equal(quotePosts[2].body, quotePosts[1].body);
+  assert.notEqual(quoteReads[3], quoteReads[2]);
+  assert.equal(
+    await fixture.db
+      .collection("direct_orders")
+      .countDocuments({ buyerId: buyer.user.id }),
+    0,
+  );
+  await p.screenshot({
+    path: path.join(artifacts, "renewed-quote-390.png"),
+    fullPage: true,
+  });
+  await p.unroute("**/api/v1/listings/*/quotes");
+  await p.unroute("**/api/v1/me/quotes/*");
+  await button(p, "Đóng modal mua ngay").click();
   await openBook(fixture.listings[0]);
   const creates = [],
     pays = [],
@@ -375,7 +468,9 @@ try {
   console.log("QA: resume through order list");
   await openNewestOrder(orderId);
   await button(p, "Thử lại: Hủy đơn chưa thanh toán").click();
-  await button(p, "Thử lại: Hủy đơn chưa thanh toán").waitFor({ state: "hidden" });
+  await button(p, "Thử lại: Hủy đơn chưa thanh toán").waitFor({
+    state: "hidden",
+  });
   await p.getByText(/Bạn là người mua.*Đã hủy đơn/).waitFor();
   assert.ok(
     JSON.stringify(cancels[0]) === JSON.stringify(cancels[1]),
@@ -390,9 +485,85 @@ try {
     (await api("/me/wallet", buyer.accessToken)).transactionHeld,
     wallet.transactionHeld,
   );
+  // Changed listing: review the new source rather than substituting versions.
+  await p.unroute("**/api/v1/orders/buy-now");
+  await openBook(fixture.listings[2]);
+  await button(p, "Đóng modal mua ngay").click();
+  const beforeRevision = await api(
+    `/me/listings/${fixture.listings[2]}`,
+    seller.accessToken,
+  );
+  await api(`/listings/${fixture.listings[2]}/revision`, seller.accessToken, {
+    expectedVersion: beforeRevision.version,
+    ownershipDeclared: true,
+    content: {
+      ...beforeRevision.currentRevision.content,
+      notes: "Synthetic changed listing for quote review",
+    },
+  });
+  await approve(fixture.listings[2]);
+  await button(p, "Mua ngay cuốn sách này").click();
+  await button(p, "Xem lại bản sách").waitFor();
+  assert.equal(
+    await button(p, "Xác nhận đặt mua").getAttribute("aria-disabled"),
+    "true",
+  );
+  assert.equal(
+    await button(p, "Lấy báo giá mới").count(),
+    0,
+    "Changed is not expiry",
+  );
+  await p.screenshot({
+    path: path.join(artifacts, "changed-quote-390.png"),
+    fullPage: true,
+  });
+  const refreshed = p.waitForResponse(
+    (r) =>
+      r.url().includes(`/listings/${fixture.listings[2]}?`) &&
+      r.status() === 200,
+  );
+  await button(p, "Xem lại bản sách").click();
+  await refreshed;
+  await button(p, "Mua ngay cuốn sách này").click();
+  await p.waitForFunction(() =>
+    [...document.querySelectorAll('[role="button"]')].some(
+      (n) =>
+        n.textContent === "Xác nhận đặt mua" &&
+        n.getAttribute("aria-disabled") !== "true",
+    ),
+  );
+  assert.equal(
+    await fixture.db
+      .collection("direct_orders")
+      .countDocuments({ listingId: fixture.listings[2] }),
+    0,
+  );
+  await button(p, "Đóng modal mua ngay").click();
+  // Only the response TTL is shortened here: fake timing, actual quote/API.
+  await intercept("**/api/v1/me/quotes/*", async (route) => {
+    const response = await route.fetch(),
+      value = await response.json();
+    value.expiresAt = new Date(
+      Date.parse(value.serverTime) + 200,
+    ).toISOString();
+    await route.fulfill({ response, json: value });
+  });
+  await button(p, "Mua ngay cuốn sách này").click();
+  await button(p, "Lấy báo giá mới").waitFor();
+  assert.equal(
+    await button(p, "Xác nhận đặt mua").getAttribute("aria-disabled"),
+    "true",
+  );
+  assert.equal(
+    await fixture.db
+      .collection("direct_orders")
+      .countDocuments({ listingId: fixture.listings[2] }),
+    0,
+  );
+  await p.unroute("**/api/v1/me/quotes/*");
   assert.deepEqual(errors, []);
   console.log(
-    "PASS RN web buy-now: real create/pay/cancel, lost ACK + remount pinned intents, failed follow-up read, late ACK after Back, exact Order, seller Preparing/web continuation. Native/human NOT COVERED here.",
+    "PASS RN web buy-now: quote POST lost ACK/GET failure exact retry, server-confirmed expiry across Back, explicit new quote, actual Changed listing + review/reopen, local timer with shortened response TTL; real create/pay/cancel, lost ACK + remount pinned intents, failed follow-up read, late ACK after Back, exact Order, seller Preparing/web continuation. Native/human NOT COVERED here.",
   );
 } catch (error) {
   let index = 0;

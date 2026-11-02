@@ -1,4 +1,25 @@
-# Điểm lưu hiện tại — 01/11/2026
+# Điểm lưu hiện tại — 02/11/2026
+
+## Quote RN và review web: phục hồi và nội dung đúng trạng thái
+
+- Owner duyệt gói2, branch `codex/checkout-quote-recovery`, base `60d08998`,
+  subject `fix(checkout): recover expired quotes and clarify delivery reviews`.
+  [Hành trình/source/evidence](../features/CHECKOUT_RECOVERY_2026_11_02.md).
+  Giữ local; chưa push/PR/merge/deploy, không mở gate hậu kiểm hoặc đổi GHN.
+- RN giữ assessment/serverTime, chặn expired/Changed/Unavailable hoặc sai
+  selection; explicit renewal sau hết hạn. Mất ACK giữ intent, địa chỉ đổi version
+  vẫn retry được body gốc; Order bất định tiếp tục shared replay, không đổi quote.
+  Web tách pickup/carrier/delivery review, giữ deadline thật và bỏ hứa72h/đã giao
+  sai state. Sửa card/stepper bị cắt chữ ở màn hẹp, giữ brand/motion.
+- PASS206RN/273web unit,21shared order-response, types/lint phạm vi,
+  web build/Expo web export/contract213operation, hai browser regression trên
+  Mongo QA riêng. Native/human và CI mới NOT RUN; Inspection browser là response
+  fixture, không acceptance fulfillment. QA đã dọn riêng; DB chính giữ nguyên.
+- Finding riêng: browser có socket join Unauthorized, nguyên nhân chưa xác minh;
+  không gọi toàn chat PASS. Fetch thấy main `d44b813b`/PR85 AI review mới, chưa
+  tích hợp; trước PR cần giải quyết contract/worker/docs và trùng sốADR0061.
+  Giữ nguyên28file UI/ảnh ngoài gói, không stage cùng. Tiếp: Seller RN tới F2h và
+  triage socket, không tự mở claim/settlement hoặc đóng READINESS.
 
 ## DirectDelivery completion: chốt bảo vệ Buyer đã kiểm local
 

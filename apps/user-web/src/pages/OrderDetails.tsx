@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import { buyNowError } from "../lib/buy-now-error";
+import { directDeliveryGuidance } from "../lib/direct-delivery-guidance";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
 import { addressDetailLabel } from "../lib/address-detail-label";
@@ -240,6 +241,7 @@ function AuthenticatedOrderDetails({
     );
 
   const o = order.data;
+  const deliveryGuidance = directDeliveryGuidance(o);
   const condition = conditions[o.item.condition as keyof typeof conditions];
   const currentStepIndex = getStepIndex(o.state);
 
@@ -626,20 +628,36 @@ function AuthenticatedOrderDetails({
                 </div>
               )}
 
-              {/* BƯỚC 5: XÁC MINH & KIỂM TRA SÁCH 72H (ResolutionPending / Inspection) */}
-              {(o.state === "ResolutionPending" || o.state === "Inspection") && (
+              {/* Review is not proof of delivery; historical Inspection stays gated. */}
+              {(o.state === "ResolutionPending" ||
+                o.state === "Inspection") && (
                 <div className={styles.procedureSection}>
                   <div className={styles.inspectionCard}>
-                    <ShieldCheck size={24} className={styles.inspectionIcon} aria-hidden="true" />
+                    <ShieldCheck
+                      size={24}
+                      className={styles.inspectionIcon}
+                      aria-hidden="true"
+                    />
                     <div>
-                      <h4>Đang xác minh & Kiểm tra sách (Chính sách 72h)</h4>
-                      <p>
-                        Sách đã được giao đến nơi. Người mua có 72 giờ để kiểm tra tình trạng sách thực tế. Tiền thanh toán tiếp tục được giữ an toàn trong quỹ bảo chứng.
-                      </p>
+                      <h4>{deliveryGuidance?.title}</h4>
+                      <p>{deliveryGuidance?.message}</p>
+                      {deliveryGuidance?.date && (
+                        <p>
+                          {deliveryGuidance.dateLabel}:{" "}
+                          {orderTime(deliveryGuidance.date)}
+                        </p>
+                      )}
+                      {deliveryGuidance?.report && (
+                        <p>{deliveryGuidance.report}</p>
+                      )}
                     </div>
                   </div>
 
-                  <OrderShipping key={o.id} order={o} onChange={() => void order.refetch()} />
+                  <OrderShipping
+                    key={o.id}
+                    order={o}
+                    onChange={() => void order.refetch()}
+                  />
                 </div>
               )}
 
@@ -700,10 +718,10 @@ function AuthenticatedOrderDetails({
               </div>
               <div className={styles.trustBannerContent}>
                 <strong className={styles.trustBannerTitle}>
-                  Bảo vệ giao dịch an toàn bởi Lật Lại
+                  Theo dõi thanh toán và giao nhận
                 </strong>
                 <p className={styles.trustBannerDesc}>
-                  Khoản thanh toán được bảo chứng qua Quỹ ký quỹ và áp dụng quy trình kiểm định hàng trong 72h.
+                  Xem số tiền đang giữ và các mốc đã ghi nhận của đơn. Trao đổi trong hội thoại nếu thông tin bàn giao hoặc nhận sách chưa khớp.
                 </p>
               </div>
             </div>
