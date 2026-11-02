@@ -1,5 +1,16 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## Gia cố AI tự duyệt, đo bằng mô hình thật — 02/11/2026
+
+- [ADR0063](../adr/0063-ai-listing-review-hardening.md): ba lượt gọi tách riêng, luật máy
+  chủ thay điểm chung, Admin xem/thu hồi, hậu kiểm lấy mẫu. Contract0.71, migration0052.
+- Đã chạy thật `nvidia/nemotron-3.5-super-vl-120b-a12b`: `eval:auto-review` trên118 ca và
+  test worker sống4/4. v3: 0/93 duyệt sai, nhưng 6/71 ca tự nhiên sẽ lọt nếu tên sách
+  khai đúng. **Gate NOT MET, cờ vẫn tắt.** Nhãn do AI soạn, ảnh Commons, không có holdout.
+- Việc tiếp: nhóm chụp ảnh điện thoại, người kiểm nhãn trong
+  `qa-data/listing-auto-review`, chạy lại trên tập chưa dùng để chỉnh prompt; chủ dự án
+  xác nhận khác biệt FR-L03. DB local chưa có0050–0052: `db:migrate` rồi `db:bootstrap`.
+
 ## Khắc phục triệt để lỗi CI GitHub (API CI, React Native CI & User Web CI) sau khi hợp nhất main — 02/11/2026
 
 - Nhánh: `feature/exchange-policy-and-transit-worker`.
@@ -94,7 +105,7 @@
   Staff, không từ chối; mặc định tắt. Contract0.68, migration0050, cần `db:migrate`
   rồi `db:bootstrap`. **Khác SRS FR-L03: chủ dự án xác nhận trước khi bật ở môi
   trường dùng chung.** Test dùng mô hình giả; chưa đo trên ảnh thật, chưa hiệu chỉnh
-  ngưỡng. Chưa có màn Admin hiển thị `autoReview`/`automated`. READINESS giữ nguyên.
+  ngưỡng. (Mục này là mốc trước ADR0062.)
 
 ## Chuẩn bị tích hợp chuỗi local theo yêu cầu owner — 01/11/2026
 

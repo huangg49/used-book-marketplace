@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.70.0
+  version: 0.71.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -3091,6 +3091,17 @@ paths:
               - PendingReview
               - Approved
               - Rejected
+        - in: query
+          name: aiOutcome
+          required: false
+          description: Filter by what the AI reviewer concluded about the current revision. None means it has
+            not looked at it.
+          schema:
+            type: string
+            enum:
+              - Approved
+              - Escalated
+              - None
       responses:
         "200":
           description: Successful read.
@@ -3372,6 +3383,297 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/DecideListing"
+  /operations/auto-review/report:
+    get:
+      operationId: getAutoReviewReport
+      tags:
+        - Listing review
+      summary: getAutoReviewReport
+      description: ACTIVE STAFF/ADMIN. Counts for the AI reviewer over the last 30 days. Overturn rate counts
+        only checks a person closed; null until a person has closed one.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutoReviewReport"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/auto-review/checks:
+    get:
+      operationId: listAutoReviewChecks
+      tags:
+        - Listing review
+      summary: listAutoReviewChecks
+      description: ACTIVE STAFF/ADMIN. Post-publication checks of AI approvals, oldest first. A check never
+        changes published state.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 2048
+          description: "Opaque base64url keyset cursor bound to normalized filters, sort and caller scope.
+            Invalid/mismatched cursor: 400. No snapshot guarantee. All pages recheck eligibility."
+        - in: query
+          name: status
+          required: false
+          schema:
+            $ref: "#/components/schemas/AutoReviewCheckStatus"
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutoReviewCheckPage"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/listings/{listingId}/auto-review/history:
+    get:
+      operationId: getAutoReviewHistory
+      tags:
+        - Listing review
+      summary: getAutoReviewHistory
+      description: ACTIVE STAFF/ADMIN. For each submitted revision, newest first and at most 50, what the AI
+        reviewer concluded next to the recorded decision.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: listingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Successful read.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutoReviewHistory"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/listings/{listingId}/auto-review/revoke:
+    post:
+      operationId: revokeAutoApproval
+      tags:
+        - Listing review
+      summary: revokeAutoApproval
+      description: ACTIVE independent STAFF/ADMIN, reason mandatory. Takes back an AI approval of an Available listing. The same content returns to PendingReview as a new revision for a person to decide, and open checks close as Confirmed. Reserved, Removed or Staff-approved listings return 409.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: listingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: "One key per intent; scoped by actor and operationId. Fingerprint includes method, path
+            IDs and canonical body. Different payload with same key: 409. Required for all domain
+            mutations."
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: boolean
+              description: true only for a previously committed command.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MutationReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevokeAutoApproval"
+  /operations/listings/{listingId}/auto-review/checks/{checkId}/clear:
+    post:
+      operationId: clearAutoReviewCheck
+      tags:
+        - Listing review
+      summary: clearAutoReviewCheck
+      description: ACTIVE independent STAFF/ADMIN, note mandatory. Records that a person looked at an open check and the listing stands. Published state does not change.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: listingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: checkId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: "One key per intent; scoped by actor and operationId. Fingerprint includes method, path
+            IDs and canonical body. Different payload with same key: 409. Required for all domain
+            mutations."
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: boolean
+              description: true only for a previously committed command.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MutationReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClearAutoReviewCheck"
   /operations/listings/{listingId}/remove:
     post:
       operationId: removeListing
@@ -13333,6 +13635,15 @@ components:
         - outcome
         - reasons
         - decidedAt
+        - model
+        - policyVersion
+        - stages
+        - criteria
+        - extraction
+        - comparison
+        - damage
+        - facts
+        - checks
       properties:
         outcome:
           type: string
@@ -13349,6 +13660,450 @@ components:
         decidedAt:
           type: string
           format: date-time
+        model:
+          anyOf:
+            - type: string
+              maxLength: 120
+            - type: "null"
+          description: Null when server facts settled it and no model was called.
+        policyVersion:
+          anyOf:
+            - type: string
+              maxLength: 40
+            - type: "null"
+        stages:
+          type: array
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/AutoReviewStage"
+        criteria:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/AutoReviewCriterion"
+        extraction:
+          anyOf:
+            - $ref: "#/components/schemas/AutoReviewExtraction"
+            - type: "null"
+        comparison:
+          anyOf:
+            - $ref: "#/components/schemas/AutoReviewComparison"
+            - type: "null"
+        damage:
+          anyOf:
+            - type: string
+              enum:
+                - None
+                - Minor
+                - Moderate
+                - Severe
+            - type: "null"
+        facts:
+          anyOf:
+            - $ref: "#/components/schemas/AutoReviewFacts"
+            - type: "null"
+        checks:
+          type: array
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/AutoReviewCheck"
+    AutoReviewMatch:
+      type: string
+      enum:
+        - Match
+        - Mismatch
+        - Unread
+        - NotInCatalog
+    AutoReviewCriterion:
+      type: object
+      additionalProperties: false
+      description: A judgment reported by the model. confidence is the model's own number, not calibrated.
+      required:
+        - stage
+        - criterion
+        - pass
+        - confidence
+        - floor
+        - met
+      properties:
+        stage:
+          type: string
+          enum:
+            - Text
+            - Visual
+        criterion:
+          type: string
+          maxLength: 40
+        pass:
+          type: boolean
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        floor:
+          type: number
+          minimum: 0
+          maximum: 1
+        met:
+          type: boolean
+    AutoReviewStage:
+      type: object
+      additionalProperties: false
+      required:
+        - stage
+        - status
+      properties:
+        stage:
+          type: string
+          enum:
+            - Text
+            - Extraction
+            - Visual
+        status:
+          type: string
+          enum:
+            - Completed
+            - Unavailable
+            - NotRun
+    AutoReviewExtraction:
+      type: object
+      additionalProperties: false
+      description: What the model read on the photos without seeing the seller's text or the catalog.
+      required:
+        - title
+        - authors
+        - isbn
+        - edition
+        - publisher
+        - contactOrInstructionTextVisible
+      properties:
+        title:
+          anyOf:
+            - type: string
+              maxLength: 300
+            - type: "null"
+        authors:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+            maxLength: 200
+        isbn:
+          anyOf:
+            - type: string
+              maxLength: 40
+            - type: "null"
+        edition:
+          anyOf:
+            - type: string
+              maxLength: 120
+            - type: "null"
+        publisher:
+          anyOf:
+            - type: string
+              maxLength: 200
+            - type: "null"
+        contactOrInstructionTextVisible:
+          type: boolean
+    AutoReviewComparison:
+      type: object
+      additionalProperties: false
+      description: Server comparison of the extraction and locally decoded barcodes with the catalog record.
+      required:
+        - title
+        - author
+        - isbn
+        - edition
+        - publisher
+        - barcodes
+      properties:
+        title:
+          $ref: "#/components/schemas/AutoReviewMatch"
+        author:
+          $ref: "#/components/schemas/AutoReviewMatch"
+        isbn:
+          $ref: "#/components/schemas/AutoReviewMatch"
+        edition:
+          $ref: "#/components/schemas/AutoReviewMatch"
+        publisher:
+          $ref: "#/components/schemas/AutoReviewMatch"
+        barcodes:
+          type: array
+          maxItems: 6
+          items:
+            type: string
+            maxLength: 13
+    AutoReviewFacts:
+      type: object
+      description: Server facts read from stored records, never from a model.
+      required:
+        - ownerAccountAgeDays
+        - recentSubmissions
+        - photoCount
+        - duplicatePhoto
+        - priceBounds
+        - textSignals
+      properties:
+        ownerAccountAgeDays:
+          type: integer
+          minimum: 0
+        recentSubmissions:
+          type: integer
+          minimum: 0
+        photoCount:
+          type: integer
+          minimum: 0
+        duplicatePhoto:
+          type: boolean
+        priceBounds:
+          anyOf:
+            - type: object
+              required:
+                - low
+                - high
+              properties:
+                low:
+                  type: integer
+                high:
+                  type: integer
+            - type: "null"
+        textSignals:
+          type: array
+          items:
+            type: string
+            maxLength: 60
+    AutoReviewCheckStatus:
+      type: string
+      enum:
+        - Passed
+        - Skipped
+        - Open
+        - Cleared
+        - Confirmed
+    AutoReviewCheck:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - listingId
+        - revisionId
+        - selection
+        - status
+        - reasons
+        - model
+        - policyVersion
+        - note
+        - resolvedAt
+        - resolvedByStaff
+        - version
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        listingId:
+          type: string
+          format: uuid
+        revisionId:
+          type: string
+          format: uuid
+        selection:
+          type: string
+          enum:
+            - AiRecheck
+            - HumanAudit
+            - StaffOverride
+        status:
+          $ref: "#/components/schemas/AutoReviewCheckStatus"
+        reasons:
+          type: array
+          maxItems: 30
+          items:
+            type: string
+            maxLength: 60
+        model:
+          anyOf:
+            - type: string
+              maxLength: 120
+            - type: "null"
+        policyVersion:
+          anyOf:
+            - type: string
+              maxLength: 40
+            - type: "null"
+        note:
+          anyOf:
+            - type: string
+              maxLength: 1000
+            - type: "null"
+        resolvedAt:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        resolvedByStaff:
+          type: boolean
+        version:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        createdAt:
+          type: string
+          format: date-time
+    AutoReviewCheckPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+        - serverTime
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/AutoReviewCheck"
+        nextCursor:
+          anyOf:
+            - type: string
+              minLength: 1
+              maxLength: 2048
+            - type: "null"
+        serverTime:
+          type: string
+          format: date-time
+    AutoReviewHistory:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          maxItems: 50
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - revisionId
+              - number
+              - submittedAt
+              - decision
+              - autoReview
+            properties:
+              revisionId:
+                type: string
+                format: uuid
+              number:
+                type: integer
+                minimum: 1
+              submittedAt:
+                type: string
+                format: date-time
+              decision:
+                anyOf:
+                  - $ref: "#/components/schemas/ReviewDecision"
+                  - type: "null"
+              autoReview:
+                anyOf:
+                  - $ref: "#/components/schemas/AutoReviewSummary"
+                  - type: "null"
+    AutoReviewReport:
+      type: object
+      additionalProperties: false
+      required:
+        - windowDays
+        - enabled
+        - policyVersion
+        - policyApproved
+        - approved
+        - escalated
+        - escalatedThenApproved
+        - escalatedThenRejected
+        - checksOpen
+        - rechecksPassed
+        - rechecksFlagged
+        - humanAudits
+        - staffReviewedChecks
+        - staffConfirmedProblems
+        - overturnRate
+        - costMicroUsd
+        - serverTime
+      properties:
+        windowDays:
+          type: integer
+        enabled:
+          type: boolean
+        policyVersion:
+          type: string
+          maxLength: 40
+        policyApproved:
+          type: boolean
+        approved:
+          type: integer
+        escalated:
+          type: integer
+        escalatedThenApproved:
+          type: integer
+        escalatedThenRejected:
+          type: integer
+        checksOpen:
+          type: integer
+        rechecksPassed:
+          type: integer
+        rechecksFlagged:
+          type: integer
+        humanAudits:
+          type: integer
+        staffReviewedChecks:
+          type: integer
+        staffConfirmedProblems:
+          type: integer
+        overturnRate:
+          anyOf:
+            - type: number
+              minimum: 0
+              maximum: 1
+            - type: "null"
+        costMicroUsd:
+          type: integer
+        serverTime:
+          type: string
+          format: date-time
+    RevokeAutoApproval:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - revisionId
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        revisionId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 1000
+    ClearAutoReviewCheck:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - note
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        note:
+          type: string
+          minLength: 10
+          maxLength: 1000
     PrivateListing:
       type: object
       additionalProperties: false
@@ -13396,8 +14151,9 @@ components:
           anyOf:
             - $ref: "#/components/schemas/AutoReviewSummary"
             - type: "null"
-          description: Present only on the Staff/Admin review detail. What the AI reviewer concluded about the
-            current revision (null when it has not looked at it).
+          description: Present only on Staff/Admin review reads. What the AI reviewer concluded about the
+            current revision (null when it has not looked at it). The review queue carries the same summary
+            without post-publication checks.
         removalReason:
           anyOf:
             - type: string

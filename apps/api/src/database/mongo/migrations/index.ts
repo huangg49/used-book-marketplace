@@ -3,7 +3,8 @@ import { createAccountControlsMigration, withAccountControls } from './0048-acco
 import {memberCartMigration,memberCartSpec} from './0049-member-cart.js';
 import { createSupportCasesMigration, supportSpecs, withSupportCases } from './0050-support-cases.js';
 import { createSupportAutoReviewUnionMigration } from './0051-support-auto-review-union.js';
-import { createListingAutoReviewMigration, listingAutoReviewSpec, withListingAutoReview } from './0050-listing-auto-review.js';
+import { createListingAutoReviewMigration, withListingAutoReview } from './0050-listing-auto-review.js';
+import { listingAutoReviewCheckSpec, listingAutoReviewSpecV2, listingAutoReviewV2Migration } from './0052-listing-auto-review-v2.js';
 import { transactionReviewValidatorFixMigration } from './0039-transaction-review-validator-fix.js';
 import { reviewValidatorReconciliationMigration } from './0041-review-validator-reconciliation.js';
 import { catalogRecoveryMigration, withCatalogRecovery } from './0042-catalog-recovery-index.js';
@@ -346,6 +347,7 @@ export const migrations: Migration[] = [
   listingAutoReviewMigration,
   supportCasesMigration,
   supportAutoReviewUnionMigration,
+  listingAutoReviewV2Migration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -438,6 +440,7 @@ export const currentCollections = (): CollectionSpec[] => [
   ...listingAutofillSpecs,
   ...memberProfileSpecs,
   memberCartSpec,
-  listingAutoReviewSpec,
+  listingAutoReviewSpecV2,
+  listingAutoReviewCheckSpec,
   ...supportSpecs,
 ];
