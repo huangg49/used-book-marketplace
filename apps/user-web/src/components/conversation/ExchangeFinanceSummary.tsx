@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ApiError } from "@used-books/session-client";
 import type { ReactNode } from "react";
 import { useExchangeRecovery } from "../../hooks/useExchangeRecovery";
 import type { ExchangeDetail } from "../../lib/mock/exchangeDetail";
@@ -146,7 +147,12 @@ function SavedSummary({
     refetchInterval: 5000,
     refetchIntervalInBackground: false,
   });
-  const detail = query.data?.viewer.id === userId ? query.data : undefined;
+  const accessDenied =
+    query.isError &&
+    query.error instanceof ApiError &&
+    [401, 403, 404].includes(query.error.status);
+  const detail =
+    !accessDenied && query.data?.viewer.id === userId ? query.data : undefined;
   return (
     <>
       <p className={local.note}>
@@ -158,7 +164,9 @@ function SavedSummary({
       {query.isError && (
         <div role="alert">
           <p>
-            Chưa cập nhật được khoản trao đổi.
+            {accessDenied
+              ? "Không thể xem khoản trao đổi với quyền truy cập hiện tại."
+              : "Chưa cập nhật được khoản trao đổi."}
             {detail
               ? " Các giá trị dưới đây thuộc lần tải trước."
               : " Chưa thể xác định số tiền."}

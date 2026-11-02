@@ -77,6 +77,34 @@ trong đúng ca đó, chọn AiRecheck và yêu cầu đúng1bản ghi, Passed/S
 do nguyên vẹn. Không tắt audit/worker hoặc nới assertion. Ca tập trung1PASS/30SKIP,
 sau đó full file31PASS. AI fake trong test, không là chất lượng mô hình thật.
 
+### PR89 / kiểm tra CI source kết hợp
+
+[PR89](https://github.com/huangg49/used-book-marketplace/pull/89) đã mở, chưa merge,
+không auto-merge. Lượt đầu tại `6fed6f1d`:9jobPASS, API và User Web FAIL.
+API dừng ở test nâng cấp tài khoản: suffix thiếu0053Exchange nên baseline lịch sử
+bị cộng nhầm migration mới. Bổ sung0053 vào danh sách nâng cấp, giữ baseline59 và
+đối chiếu toàn bộ ID/checksum với fixture main `be581aec`; không sửa migration cũ.
+Local chạy lại member-account/Support union/Exchange upgrade:3file,5caPASS trên
+rs-test57017/*_test, gồm giữ users/sessions/ledger/checksum và quyền tối thiểu.
+
+User Web dừng ở browser chat đơn hàng: fixture thiếu deliveredAt/inspectionDeadline,
+carrierReview/deliveryReview và preparation.pickupReview bắt buộc nullable trong
+contract hiện hành. Bổ sung null đúng trạng thái trước giao hàng; browser PASS,
+giữ assertion private403, vai trò, exact key/body, chống gửi trùng và mobile320/390.
+Kiểm thêm browser Exchange phát hiện selector cũ còn chờ form chọn sách sau mất ACK.
+UI phục hồi thay form đó; test nay kiểm form không còn chỉnh được, sách trong body
+gốc đúng lựa chọn và hai lần gửi vẫn cùng key/body/một proposal. Không nới quy tắc
+tiền/quyền/idempotency để lấy CI xanh.
+
+Browser Exchange còn bắt lỗi thật ở bảng tài chính: query lỗi403 vẫn vẽ số tiền
+từ cache cùng cảnh báo dữ liệu cũ. Nay401/403/404 ẩn toàn bộ hàng tiền; lỗi503
+vẫn giữ dữ liệu cũ có nhãn và retry, đồng thời kiểm viewer identity.5ca unit mới
+(full file23PASS), types/lint scopedPASS, detector0findings. Browser API/Mongo
+thật create/accept/cancel, lostACK và permission PASS; kiểm503giữ/403ẩn/retry sau
+khôi phục, desktop và320px/130% không tràn. Ảnh `exchange-denied-*` trong
+`apps/user-web/test-results/exchange/` đã xem; không thay brand/motion. Không là
+native/human acceptance hoặc full design critique. Kết quả head mới theo PR89.
+
 ## Bằng chứng local
 
 Windows, Node24.22.1/pnpm11.19.0, pnpm install --offline --frozen-lockfile

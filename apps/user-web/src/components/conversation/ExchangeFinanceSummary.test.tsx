@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ApiError } from "@used-books/session-client";
 import { MemoryRouter } from "react-router-dom";
 import { NegotiationWorkspace } from "../../pages/NegotiationWorkspace";
 import type { PurchaseConversation } from "../../services/purchase-conversations";
@@ -170,6 +171,63 @@ describe("exchange financial meaning", () => {
     );
     expect(html).toContain("Chưa có dữ liệu");
     expect(html).not.toContain("0 ₫");
+  });
+});
+
+describe("saved exchange financial access", () => {
+  function failedRead(status: number, userId = "a") {
+    const cache = new QueryClient();
+    const key = ["exchangeDetail", userId, detail.id];
+    cache.setQueryData(key, detail);
+    cache
+      .getQueryCache()
+      .find({ queryKey: key })!
+      .setState({
+        status: "error",
+        error: new ApiError(status, "QA_READ_FAILED", "QA read failed"),
+      });
+    try {
+      return renderToStaticMarkup(
+        <QueryClientProvider client={cache}>
+          <ExchangeFinanceSummary
+            id={detail.id}
+            userId={userId}
+            sheetId="exchange-sheet"
+          />
+        </QueryClientProvider>,
+      );
+    } finally {
+      cache.clear();
+    }
+  }
+  it.each([401, 403, 404])(
+    "hides cached private amounts after HTTP %s",
+    (status) => {
+      const html = failedRead(status);
+      expect(html).toContain(
+        "Không thể xem khoản trao đổi với quyền truy cập hiện tại",
+      );
+      expect(html).toContain("Tải lại khoản trao đổi");
+      expect(html).not.toContain("150.000");
+      expect(html).not.toContain("100.000");
+      expect(html).not.toContain("50.000");
+      expect(html).not.toContain("200.000");
+      expect(html).not.toContain("<dl");
+    },
+  );
+  it("keeps cached amounts with a stale-read warning during temporary failure", () => {
+    const html = failedRead(503);
+    expect(html).toContain("150.000");
+    expect(html).toContain("Các giá trị dưới đây thuộc lần tải trước");
+    expect(html).toContain("Dữ liệu chưa cập nhật");
+    expect(html).not.toContain(
+      "Không thể xem khoản trao đổi với quyền truy cập hiện tại",
+    );
+  });
+  it("does not expose another viewer's cached amounts on a temporary failure", () => {
+    const html = failedRead(503, "b");
+    expect(html).not.toContain("150.000");
+    expect(html).not.toContain("<dl");
   });
 });
 

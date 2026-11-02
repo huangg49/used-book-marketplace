@@ -9,7 +9,14 @@
   Worktree riêng sạch; checkout gốc/28file dirty-untracked giữ nguyên checksum,
   chưa ghép28file đó vào gói này. Owner đã duyệt push nhánh/tạo PR và kiểm CI;
   chưa cấp quyền merge main/deploy cho gói này. Kết quả remote theo đúng head xem
-  PR của branch này; báo cáo local không tự đại diện CI mới.
+  [PR89](https://github.com/huangg49/used-book-marketplace/pull/89);
+  báo cáo local không tự đại diện CI mới. Lượt đầu6fed6f1d:9PASS/2FAIL
+  (baseline migration thiếu0053, fixture chat thiếu các trường nullable mới).
+  Đã sửa test theo contract/baseline lịch sử, giữ kiểm quyền/tiền/exact replay;
+  local3file/5Mongo và browser order-chatPASS. Browser Exchange cũng cập nhật
+  selector màn phục hồi thay form chọn sách. Bắt/sửa bảng tài chính vẫn lộ cache
+  khi403: nay401/403/404ẩn tiền,503giữ có cảnh báo; full file23unit và browser
+  Exchange API/MongoPASS, retry khôi phục/desktop/320px130% đã kiểm. Head mới theo PR.
 - Giữ snapshot/revalidate/counter sách, exact recovery/identity và tài chính cùng
   preference matching/BrandIcon/dispute UI, Support và AI v2. Web giữ hai hạn72giờ,
   bỏ câu48h/giải phóng sớm; RN giữ chọn sách và recovery, không quay về nhập tiền bù.
