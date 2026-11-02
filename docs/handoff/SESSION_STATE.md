@@ -17,10 +17,18 @@
   9 migration, không checksum cũ lệch, không bản ghi mới vi phạm validator,
   ledger/giao dịch/400 listing giữ nguyên; policy chọn cho quote mới chuyển free
   shipping và AI cũ thêm metadata mặc định. Không reset/seed/import DB chính.
-- **Chưa kích hoạt checkout app đang chạy**: DB chính chưa được nâng cấp, API mới
-  sẽ từ chối khởi động khi thiếu schema. Cần owner duyệt áp dụng 9 migration và
-  cập nhật quyền collection cho role app trước khi chuyển source/restart.
-  [Bằng chứng, thay đổi và bước kích hoạt](../features/LOCAL_MAIN_SYNC_2026_11_03.md).
+- Owner đã duyệt nâng DB/kích hoạt:9migration áp dụng thành công trên DB chính,
+  backup private mới, giữ5209bản ghi cũ;2AI review chỉ thêm metadata mặc định.
+  Ledger cân bằng, đơn cũ Preparing và User2 available850k/held150k; User1/User3
+  available1triệu. Không đổi password/5file cấu hình. Role app được cấp quyền
+  collection mới, không đổi user. Checkout app `codex/local-main-synced-20261103`
+  đã cùng bản tích hợp; API/worker3000, Admin5173, Member5174 đang chạy; QA dừng.
+- PASS kiểm tra API chính:401bài public/400nền,9trang không trùng, search/filter,
+  12signed ảnh thật; User1/2/3 login/profile/wallet/reviews. Git working tree sạch.
+- CI remote trên997d4808:Docs/Admin PASS,Operations FAIL ở bước RN buy-now browser;
+  các bước sau bị skip. Chưa có lỗi chi tiết từ log runner, không nhận CI xanh
+  hoặc quy lỗi cho conflict local. Bản local chưa push, không có CI riêng.
+  [Bằng chứng, thay đổi và kích hoạt](../features/LOCAL_MAIN_SYNC_2026_11_03.md).
   Không push/PR/remote merge/deploy; không đóng READINESS.
 
 # Điểm lưu hiện tại — 03/11/2026

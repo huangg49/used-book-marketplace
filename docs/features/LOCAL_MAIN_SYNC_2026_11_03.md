@@ -10,8 +10,8 @@ Nhánh tích hợp `codex/sync-main-20261103` giữ các commit của nhánh
 `codex/demo-background-catalog`, main và checkpoint local
 `7f14d34deae5d91aff28638d3bfa50a80b216ae8` (131file tracked/untracked của checkout
 ứng dụng). Có bundle Git, bản sao binary/untracked và cấu hình riêng ngoài Git;
-đã đối chiếu SHA256. Không dùng reset/clean/stash/force checkout. Nhánh ứng dụng
-`codex/local-checkpoint-20261103` vẫn giữ source đang chạy trước kích hoạt.
+đã đối chiếu SHA256. Không dùng reset/clean/stash/force checkout. Nhánh `codex/local-checkpoint-20261103` giữ checkpoint trước kích hoạt.
+Checkout ứng dụng đã chuyển sang `codex/local-main-synced-20261103`.
 
 ## Cách xử lý khác biệt
 
@@ -63,9 +63,9 @@ metadata mặc định null/0/[] (không bịa kết quả hoặc human review).
 0052-exchange-agreement được kiểm checksum với registry đang chạy và giữ lại.
 Không đổi/xóa ID cũ để ép trùng0053.
 
-## Gate kích hoạt ứng dụng đang chạy
+## Kích hoạt đã được owner duyệt và hoàn tất
 
-DB chính hiện có các migration chưa áp dụng, theo thứ tự registry:
+Đã áp dụng9migration trên DB local chính theo thứ tự registry:
 
 1. 0050-support-cases
 2. 0051-support-auto-review-union
@@ -77,16 +77,35 @@ DB chính hiện có các migration chưa áp dụng, theo thứ tự registry:
 8. 0054-exchange-negotiated-diff
 9. 0055-exchange-negotiated-diff-payer
 
-Đây là bước thay đổi schema/reference data của DB chính, ngoài thao tác Git.
-Chưa thực hiện khi viết điểm lưu. API mới kiểm pending migration lúc startup;
-không chuyển source rồi để watcher restart vào schema chưa sẵn sàng.
+Owner đã xác nhận “Cho phép nâng DB và kích hoạt bản mới”. Đã dừng đúng cây
+process API/worker/Member/Admin, chụp backup private nhất quán mới và kiểm đọc lại;
+áp dụng migration bằng migrator, cập nhật privileges của role app bằng admin local.
+Không gọi bootstrap đổi mật khẩu/user. Đối chiếu5209bản ghi cũ nguyên vẹn,2review
+AI cũ chỉ thêm metadata null/0/[]; không có pending/checksum mismatch. Legacy0052
+agreement giữ nguyên. Ledger cân bằng; đơn cũ vẫn Preparing, User2 còn850000khả
+dụng/150000held, User1/User3 có1000000khả dụng.5file env giữ nguyên hash.
 
-Sau owner duyệt: kiểm checkout không có edit mới; dừng đúng API/worker và frontend,
-chụp backup private mới; chạy đúng registry đã thử trên QA, cập nhật privileges
-của role app cho collection mới bằng admin local, không đổi password/user;
-chuyển checkout app sang nhánh local cùng commit tích hợp; đối chiếu5file cấu
-hình giữ nguyên, build/start lại3000/5173/5174; kiểm public401listing, search/filter,
-User1/2/3 và ledger/held order cũ. Giữ backup và checkpoint; không tự push/merge.
+Checkout ứng dụng đã chuyển an toàn sang nhánh local cùng source tích hợp; build
+API tại chính checkout này PASS và khởi động lại launcher API/worker3000,
+Member5174/Admin5173. Health ready200; kiểm đăng nhập,profile,wallet,reviews của
+User1/2/3 PASS, các phiên kiểm thử được logout riêng. Không đổi mật khẩu tài khoản.
+Public API401bài,400nền đầy đủ và bài thật đầu;9trang không trùng;100Manga,
+100LightNovel,Naruto10,kết quả rỗng0 và các filter mode/price/condition/facet đúng.
+12ảnh signed đọc thật thành công. Không ghi listing hoặc ví qua lượt kiểm này.
+QA57017 đã dừng; Mongo chính27017 và3app giữ chạy. Backup/config/private evidence
+nằm ngoài Git hoặc ignored, không có secret/dump/token trong commit.
+
+## CI remote và giới hạn
+
+CI trên đúng SHA997d4808: [Docs PASS](https://github.com/huangg49/used-book-marketplace/actions/runs/41504071247),
+[Admin PASS](https://github.com/huangg49/used-book-marketplace/actions/runs/41504069180),
+[Operations FAIL](https://github.com/huangg49/used-book-marketplace/actions/runs/41504068896).
+Job Operations qua API build,Admin lint/typecheck/tests/build,browser/exchange-safety/
+auto-review,Expo web export và public shelf; thất bại ở`pnpm test:rn-buy-now:browser`.
+Các bước member-profile/account-controls/cart/support sau đó bị skip. Annotations
+chỉ có exit1, chưa có log/assertion cụ thể; không kết luận nguyên nhân hoặc quy cho
+merge local. Không sửa test để bỏ qua. Bản tích hợp local chưa push và chưa có CI
+remote riêng; native Android,live evidence video storage và human acceptance NOT RUN.
 
 Chính sách free shipping từ main chỉ tác động quote/order mới. Đơn Preparing
 cũ có hold150000VND không được tính lại hoặc hoàn tiền khi đồng bộ source.
