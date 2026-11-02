@@ -1,4 +1,35 @@
-# Điểm lưu hiện tại — 01/11/2026
+# Điểm lưu hiện tại — 02/11/2026
+
+## Hoàn thiện Luồng Live Tracking Vận chuyển Bưu tá, Đồng bộ Dữ liệu Trao đổi 2 chiều & Nhận diện Thương hiệu Lật Lại — 02/11/2026
+
+- Nhánh: `feature/exchange-policy-and-transit-worker`.
+- **Bối cảnh & Nghiệp vụ**:
+  - Diễn tập và nghiệm thu thực tế luồng Trao đổi sách 2 chiều trên 2 tài khoản thật (`Nguyễn Đại` và `Trần Tú / Nguyễn Tu`) kèm trang điều phối bưu tá Lật Lại Express (`/driver`).
+  - Đảm bảo luồng dữ liệu bưu tá cập nhật theo từng bước (Lấy sách -> Nhập kho trung chuyển -> Xuất kho đi giao -> Ký nhận POD) phản ánh tức thì lên giao diện của cả hai bên theo thời gian thực (Contract-first OpenAPI).
+  - Khắc phục triệt để lỗi lọc dữ liệu Zod ở client và lỗi độ tương phản giao diện điều phối bưu tá.
+  - Chuẩn hóa quy chế đồng kiểm 72 giờ (POL-14 / SRS 1.1) và tích hợp logo linh vật cú mèo Lật Lại chính thức vào các thẻ hành động.
+- **Nội dung thực hiện chi tiết**:
+  1. **Contract-first API & Serialization (`packages/api-contract`, `apps/api`)**:
+     - `openapi.yaml`: Khai báo 2 trường `lastEvent` (string) và `lastEventAt` (date-time) trong schema `ExchangeShipmentInfo`.
+     - `schema.ts`: Tự động tái sinh kiểu TypeScript đồng bộ (`pnpm contract:generate`).
+     - `documents.ts`: Mở rộng `ExchangeShipmentSnapshot` trong database schema MongoDB với `lastEvent` và `lastEventAt`.
+     - `exchanges.service.ts`: Cập nhật hàm chiếu `view()` trả về đầy đủ nhật ký bưu tá cho cả `initiatorShipment` và `recipientShipment`.
+  2. **Client Schema & Giao diện Theo dõi Vận chuyển (`apps/user-web`)**:
+     - `services/exchange.ts`: Bổ sung `lastEvent` và `lastEventAt` vào Zod `exchangeSchema`, ngăn chặn Zod strip dữ liệu trả về từ API.
+     - `ShippingTrackingCard`: Render thẻ Live Tracking trực tiếp ngay dưới mã vạch vận đơn với icon xe tải, huy hiệu thời gian và mô tả sự kiện bưu tá. Gỡ bỏ nút bắn webhook thử nghiệm cũ.
+     - `ActionCard`: Thay thế icon generic `Sparkles` bằng linh vật cú mèo Lật Lại chính thức `<BrandIcon size={18} />`. Chuẩn hóa câu chữ chỉ dẫn và mốc đồng kiểm thành **72 giờ** cho các trạng thái `WAITING_YOU_CONFIRM`, `DELIVERING`, `INSPECTING`.
+  3. **Trang Điều phối Bưu tá (`apps/user-web/src/pages/DriverPage.tsx`)**:
+     - Cố định màu chữ trắng nổi bật `.chip.chipActive { color: #ffffff !important; }` trên nền đỏ rượu `#5c0202` để hiển thị rõ nét mã đơn hàng.
+     - Chuẩn hóa thuật ngữ "phát sách" thành "giao sách" theo đúng ngữ cảnh giao nhận.
+     - Ràng buộc hiển thị danh sách đơn hàng thật từ database MongoDB, lọc các đơn đang giao (`InTransit`) hoặc hoàn tất.
+- **Kiểm tra**:
+  - `pnpm contract:check`: PASS (OpenAPI parsed successfully; generated types are current).
+  - `pnpm --filter @used-books/api exec tsc --noEmit`: PASS (0 errors).
+  - `pnpm --filter @used-books/user-web exec tsc --noEmit`: PASS (0 errors).
+  - `pnpm --filter @used-books/admin-web exec tsc --noEmit`: PASS (0 errors).
+  - `pnpm --filter @used-books/user-web build`: PASS (Vite build thành công trong 4.89s).
+
+# Điểm lưu trước — 01/11/2026
 
 ## Hoàn thiện Giao diện & Hồ sơ khiếu nại (Evidence Dossier), Trạm phân xử Admin và Đồng bộ Mobile React Native — 01/11/2026
 
