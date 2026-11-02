@@ -283,6 +283,19 @@ describe('AI listing auto review with MongoDB', () => {
       key in values ? values[key] : original(key)) as never);
   };
   const today = () => new Date().toISOString().slice(0, 10);
+  // Oldest first in a database other suites share, so a new row can be past page one.
+  const allIds = async (path: string, schema: Parameters<typeof validates>[0]) => {
+    const found: string[] = [];
+    let cursor: string | null = null;
+    do {
+      const suffix: string = cursor ? `&cursor=${encodeURIComponent(cursor)}` : '';
+      const page = await get(path + suffix, staff).expect(200);
+      validates(schema, page.body);
+      found.push(...page.body.items.map((i: { id: string }) => i.id));
+      cursor = page.body.nextCursor;
+    } while (cursor);
+    return found;
+  };
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({ imports: [AppModule] })
@@ -793,9 +806,9 @@ describe('AI listing auto review with MongoDB', () => {
       expect(audit).toMatchObject({ selection: 'HumanAudit', status: 'Open', reasons: ['RandomAudit'] });
       expect(await listing(l.id)).toMatchObject({ moderation: 'Approved' });
 
-      const queue = await get('/operations/auto-review/checks?status=Open&limit=50', staff).expect(200);
-      validates('AutoReviewCheckPage', queue.body);
-      expect(queue.body.items.map((c: { id: string }) => c.id)).toContain(audit._id);
+      expect(
+        await allIds('/operations/auto-review/checks?status=Open&limit=50', 'AutoReviewCheckPage'),
+      ).toContain(audit._id);
 
       const note = 'Đã xem ảnh gốc, bài đăng đúng với cuốn sách.';
       const path = `/operations/listings/${l.id}/auto-review/checks/${audit._id}/clear`;
@@ -899,14 +912,11 @@ describe('AI listing auto review with MongoDB', () => {
       await service.reviewOne(left.id);
       const untouched = await submitted(1);
 
-      const ids = async (moderation: string, aiOutcome: string) => {
-        const page = await get(
+      const ids = (moderation: string, aiOutcome: string) =>
+        allIds(
           `/operations/listings?moderation=${moderation}&aiOutcome=${aiOutcome}&limit=50`,
-          staff,
-        ).expect(200);
-        validates('PrivateListingPage', page.body);
-        return page.body.items.map((i: { id: string }) => i.id);
-      };
+          'PrivateListingPage',
+        );
       expect(await ids('Approved', 'Approved')).toContain(ai.id);
       expect(await ids('PendingReview', 'Escalated')).toContain(left.id);
       expect(await ids('PendingReview', 'Escalated')).not.toContain(untouched.id);
