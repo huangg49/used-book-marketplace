@@ -12,7 +12,8 @@ describe('single local demo completion switch', () => {
   });
   it.each([
     { NODE_ENV: 'production' }, { NODE_ENV: 'staging' }, { MONGODB_URL: 'mongodb://remote.example/latlai' },
-    { PAYMENT_SIMULATOR_SECRET: '' }, { LOCAL_DEMO_COMPLETION_ENABLED: '' },
+    { PAYMENT_SIMULATOR_SECRET: '' }, { LOCAL_DEMO_COMPLETION_ENABLED: undefined },
+    { LOCAL_DEMO_COMPLETION_ENABLED: '' },
     { LOCAL_DEMO_COMPLETION_ENABLED: 'false' }, { LOCAL_DEMO_COMPLETION_ENABLED: '1' },
   ])('fails closed for %j', value => expect(make(value).enabled()).toBe(false));
   it('ignores the former ID setting while the switch is off', () => {

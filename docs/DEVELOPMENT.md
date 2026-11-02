@@ -107,6 +107,9 @@ trên URL bình thường. Không cần UUID hay query URL. Mặc định `false
 cách đổi lại `false` rồi khởi động lại BE/worker sau khi job đã hoàn tất.
 Cài đặt UUID cũ không còn được dùng. Cờ chỉ có hiệu lực ở development/test,
 Mongo localhost và simulator đã cấu hình; API production/remote luôn từ chối.
+Biến demo là tùy chọn: máy không khai báo biến này vẫn chạy luồng thường và demo
+tự tắt. Không chia sẻ/commit `.env` của máy mình. Máy mới tạo cấu hình riêng bằng
+`pnpm setup:local` theo hướng dẫn setup; DB/JWT và các cấu hình nền vẫn cần như trước.
 
 Máy nhận source lần đầu cần dừng API/worker, backup, migrate/bootstrap0054 rồi
 build/chạy lại. Nút gọi BE thật, ghi job theo giờ máy chủ và chuyển InTransit.

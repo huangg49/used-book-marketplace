@@ -44,6 +44,10 @@
   PASS390/1440 trên URL thường, off ẩn/on hiện, không cấu hình UUID, giữ replay/
   hold/proceeds/commission một lần. Cấu hình local để false và đã restart BE.
   Follow-up commit `refactor(demo): use one local completion switch` trên cùng nhánh.
+- Owner yêu cầu máy khác không phụ thuộc `.env` local: biến demo không bắt buộc,
+  thiếu biến thì off; thêm ca kiểm missing flag, giữ setup DB/JWT hiện có.
+  PASS10policy unit và docs/diff. Không commit file `.env` thật; chỉ cập nhật
+  test/hướng dẫn, không sửa runtime.
 - Luồng này là ngoại lệ demo được cấp rõ, không mở confirm-receipt/Delivered/
   settlement thường hoặc xử lý Inspection lịch sử. READINESS/native/human/CI
   không đổi; chỉ push nhánh theo quyền owner, chưa PR/merge/deploy ngoài máy.
