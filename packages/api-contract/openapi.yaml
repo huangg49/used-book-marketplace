@@ -10731,6 +10731,48 @@ paths:
           $ref: "#/components/responses/ListingError"
         "500":
           $ref: "#/components/responses/ListingError"
+  /transactions/Exchange/{id}/reviews/demo-advance:
+    post:
+      operationId: advanceDemoReviewTime
+      tags: [Reviews]
+      description: Development-only, explicitly allowlisted zero-money demo history. Both participants must have submitted. Atomically shifts the sample timeline to expire both edit windows, preserves content and records DemoTimeAdvance revisions. No financial side effects. Never enabled in production.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: string, format: uuid}
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdvanceDemoReviewTime"
+      responses:
+        "200":
+          description: Acting participant's published review; retry identical intent after uncertain response.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeReviewItem"
+          headers:
+            Idempotency-Replayed:
+              schema: {type: boolean}
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
   /transactions/{type}/{id}/reviews:
     get:
       operationId: getTransactionReviews
@@ -21558,6 +21600,24 @@ components:
                   type: string
                   format: date-time
             - type: "null"
+    AdvanceDemoReviewTime:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, pairToken]
+      properties:
+        expectedVersion: {type: integer, minimum: 1}
+        pairToken: {type: string, pattern: "^[a-f0-9]{64}$"}
+    DemoReviewTimeAdvance:
+      type: object
+      additionalProperties: false
+      required: [available, applied, pairToken]
+      properties:
+        available: {type: boolean}
+        applied: {type: boolean}
+        pairToken:
+          anyOf:
+            - {type: string, pattern: "^[a-f0-9]{64}$"}
+            - {type: "null"}
     TransactionReviewsResponse:
       type: object
       additionalProperties: false
@@ -21573,6 +21633,8 @@ components:
         - partnerReview
         - partnerId
       properties:
+        demoTimeAdvance:
+          $ref: "#/components/schemas/DemoReviewTimeAdvance"
         partnerId:
           type: string
           format: uuid

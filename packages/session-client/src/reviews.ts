@@ -47,6 +47,9 @@ export const transactionReviewSchema = z.object({
 });
 export type TransactionReview = z.infer<typeof transactionReviewSchema>;
 export const transactionReviewsSchema = z.object({
+  demoTimeAdvance: z.object({
+    available: z.boolean(), applied: z.boolean(), pairToken: z.string().nullable(),
+  }).optional(),
   partnerId: z.uuid(),
   canReview: z.boolean(),
   canEdit: z.boolean(),

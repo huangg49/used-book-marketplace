@@ -1,5 +1,25 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## Nút bỏ chờ48h cho giao dịch đánh giá mẫu local
+
+- Owner yêu cầu bỏ thời gian chờ để demo. Nhánh `codex/demo-review-time-advance`,
+  base821dbdb8: thêm nút trên Member web chính5174, xác nhận rồi API mô phỏng thời
+  gian cho đúng Exchange nhập mẫu, cả hai review đã gửi. Giữ nội dung/điểm/tiền,
+  ghi2revision DemoTimeAdvance; một lần, hết quyền sửa/xóa sau công bố.
+- API cần config riêng/allowlist, development/test và Mongo loopback, participant
+  ACTIVE, mẫu Completed zero-money đúng provenance. Không dùng cho đơn/giao dịch
+  thật; production từ chối. Auth trước replay, pair token/version, lock và receipt.
+- PASS13API E2E (có race thật),150session tests, contract/routes/typecheck/build/
+  lint; browser QA1440/390/320 xác nhận/hủy/mất ACK/exact retry/public totals/khóa
+  sửa/link hồ sơ và mẫu thường vẫn Pending. Storage fake, không native/provider/
+  human acceptance. Warning lint/build cũ ngoài phạm vi giữ nguyên.
+- Patch tương thích vào checkout app đang chạy, giữ UI Antigravity; contract0.71
+  regenerate, không migration hay đồng bộ toàn source. App chính đã hiện nút,
+  hai review vẫn Pending để owner bấm; fingerprints/ledger balanced nguyên vẹn.
+- Cách dùng/giới hạn: [demo](../features/MAIN_REVIEW_DEMO_2026_11_02.md#nút-bỏ-chờ48h--bổ-sung02112026),
+  [ADR0067](../adr/0067-local-review-demo-time-advance.md). API/worker3000 và web
+  5173/5174 giữ chạy; QA riêng dừng sau kiểm. Không push/CI/merge/đóng READINESS.
+
 ## Demo đánh giá — chuyển sang app/DB local chính theo owner
 
 - Owner yêu cầu dùng trực tiếp5174/DB chính, thay hai cổng demo riêng. Nhánh

@@ -14,6 +14,7 @@ import { session } from "../../lib/session";
 import { useSession } from "../../hooks/useSession";
 import styles from "./reviews.module.css";
 import { reviewDate } from "./format";
+import { DemoReviewAdvance } from './DemoReviewAdvance';
 import {SupportLink} from '../support/SupportLink';
 
 export function ReviewContent({
@@ -108,7 +109,7 @@ export function TransactionReviewPanel({
         crypto.randomUUID(),
       );
       setEditor(null);
-      setNotice("Đã lưu theo xác nhận của máy chủ.");
+      setNotice(path.endsWith('/demo-advance') ? 'Đã mô phỏng hết hạn chờ và công bố hai đánh giá.' : "Đã lưu theo xác nhận của máy chủ.");
       await cache.invalidateQueries({
         queryKey: ["transactionReviews", owner, type, id],
       });
@@ -189,6 +190,8 @@ export function TransactionReviewPanel({
       {/* Keep the editor mounted while an intent is pending so a definite
           rejection restores the exact draft instead of reinitializing it. */}
       <div hidden={uncertain}>
+        <DemoReviewAdvance state={data.demoTimeAdvance} version={mine?.version} partnerId={data.partnerId}
+          busy={busy} disabled={!!editor} send={body => send(`/transactions/Exchange/${id}/reviews/demo-advance`, body)} />
         {mine && (
           <>
             <ReviewContent review={mine} title="Đánh giá của bạn" />

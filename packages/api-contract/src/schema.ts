@@ -3630,6 +3630,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/transactions/Exchange/{id}/reviews/demo-advance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Development-only, explicitly allowlisted zero-money demo history. Both participants must have submitted. Atomically shifts the sample timeline to expire both edit windows, preserves content and records DemoTimeAdvance revisions. No financial side effects. Never enabled in production. */
+        post: operations["advanceDemoReviewTime"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/transactions/{type}/{id}/reviews": {
         parameters: {
             query?: never;
@@ -7365,7 +7382,17 @@ export interface components {
                 createdAt: string;
             } | null;
         };
+        AdvanceDemoReviewTime: {
+            expectedVersion: number;
+            pairToken: string;
+        };
+        DemoReviewTimeAdvance: {
+            available: boolean;
+            applied: boolean;
+            pairToken: string | null;
+        };
         TransactionReviewsResponse: {
+            demoTimeAdvance?: components["schemas"]["DemoReviewTimeAdvance"];
             /** Format: uuid */
             partnerId: string;
             canReview: boolean;
@@ -14781,6 +14808,40 @@ export interface operations {
             409: components["responses"]["ListingError"];
             422: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
+        };
+    };
+    advanceDemoReviewTime: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdvanceDemoReviewTime"];
+            };
+        };
+        responses: {
+            /** @description Acting participant's published review; retry identical intent after uncertain response. */
+            200: {
+                headers: {
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExchangeReviewItem"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
         };
     };
     getTransactionReviews: {

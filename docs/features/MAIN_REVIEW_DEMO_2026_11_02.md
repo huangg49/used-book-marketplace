@@ -61,3 +61,34 @@ Tài khoản Admin độc lập hiện có thấy hai review mẫu và revision 
 
 Không cần khởi động runner demo riêng cho bộ dữ liệu này. Dữ liệu nằm trong DB
 local hiện có và giữ qua các lần bật app/Mongo bình thường; không qua tmpfs QA.
+## Nút bỏ chờ48h — bổ sung02/11/2026
+
+Trên app chính `localhost:5174`, mở **Đánh giá của tôi → Đổi sách → giao dịch mới
+nhất**, sau khi User1/User2 đều gửi, bấm **Bỏ chờ48giờ (demo)** rồi **Mô phỏng và
+công bố**. Hộp thoại nêu rõ hai bản sẽ công khai, cập nhật điểm uy tín và khóa sửa/
+xóa. Hủy không đổi dữ liệu. Sau thành công, xem nhận xét đối tác hoặc bấm **Xem hồ
+sơ uy tín đối tác**. Tab còn lại bấm **Tải lại** để xem kết quả cùng giao dịch.
+
+Chỉ mốc thời gian mẫu được lùi; nội dung/điểm đã tự nhập được giữ và lưu revision
+mô phỏng. Không tự gửi review, không trả tiền hay sửa đơn mua đang Preparing.
+Không dùng lại nút để đặt lại mẫu. Quy tắc và config theo
+[ADR0067](../adr/0067-local-review-demo-time-advance.md). Cấu hình local riêng đã
+allowlist đúng một giao dịch mẫu mới; mặc định repo tắt.
+
+Nhánh `codex/demo-review-time-advance`, base821dbdb8. Evidence local:
+
+- PASS13API HTTP/Mongo tests: lifecycle cũ, config/prod/owner/role/session,
+  stale pair, replay/key khác body, one-sided/hold/deleted/funded từ chối,
+  cạnh tranh thực trên lock, một cặp revision, public totals/moderation, khóa sửa.
+- PASS150session-client tests; contract generate/check/routes, API typecheck/
+  build/lint và User web typecheck/build/lint (còn warning cũ ngoài phạm vi).
+- PASS browser QA riêng:1440/390/320, xác nhận/hủy, HTTP thật mất ACK/retry cùng
+  key/body, hai bên Published, điểm tính một lần, khóa sửa, link hồ sơ, mẫu không
+  allowlist giữ48h. Storage local fake; không provider/native/human acceptance.
+- App chính áp patch theo hunk, giữ layout Antigravity; contract regenerated
+  theo bản0.71 local, không chép đè API0.73 hoặc chạy migration. API/worker restart;
+  kiểm current route/contract/typecheck, UI nút hiện trên giao dịch đúng, ví
+  reconciliation balanced và fingerprint dữ liệu cũ nguyên vẹn.
+- Chưa tự bấm công bố trên mẫu chính; để owner thao tác. Không push/CI/merge hoặc
+  đóng READINESS. Sau mô phỏng, số mẫu điểm public của mỗi bên từ1thành2; dữ liệu
+  chuẩn bị lịch sử trước đó phía trên không đại diện cho trạng thái sau owner bấm.
