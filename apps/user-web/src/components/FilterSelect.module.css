@@ -114,3 +114,5 @@
     outline-offset: -2px;
   }
 }
+/* Plain dropdown mode: the field is a button-like trigger, not a text box. */
+.control[data-searchable="false"] { cursor: pointer; caret-color: transparent; user-select: none; }

@@ -31,6 +31,8 @@ import {
 import type { TopupIntent } from "./contracts";
 
 const QUICK_AMOUNTS = [50_000, 100_000, 200_000, 500_000, 1_000_000];
+// VNPay's vnp_Amount (VND × 100) has at most 12 digits.
+const VNPAY_TOPUP_MAX = 9_999_999_999;
 
 interface TopupModalProps {
   visible: boolean;
@@ -95,8 +97,8 @@ function TopupInnerContent({
 
   async function handleStartTopup() {
     if (busy) return;
-    if (parsedAmount < 5_000 || parsedAmount > 10_000_000) {
-      setError("Số tiền nạp phải từ 5.000đ đến 10.000.000đ.");
+    if (parsedAmount < 5_000 || parsedAmount > VNPAY_TOPUP_MAX) {
+      setError("Số tiền nạp phải từ 5.000đ đến 9.999.999.999đ.");
       return;
     }
 
@@ -341,7 +343,7 @@ function TopupInnerContent({
                     const digits = val.replace(/\D/g, "");
                     setRawAmount(digits);
                   }}
-                  hint="Tối thiểu 5.000đ · Tối đa 10.000.000đ"
+                  hint="Tối thiểu 5.000đ · Tối đa 9.999.999.999đ"
                 />
                 {parsedAmount > 0 ? (
                   <AppText

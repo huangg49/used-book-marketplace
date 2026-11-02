@@ -17,6 +17,7 @@ import {
   POINT_INSPECTION_MS,
   RECLAIM_ESCALATION_MS,
 } from '../../database/mongo/migrations/auction-constants.js';
+import type { AuctionStep } from '../../database/mongo/migrations/auction-constants.js';
 import { MongoService } from '../../database/mongo/mongo.service.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import {
@@ -41,8 +42,8 @@ import { publicEligibleStages } from '../listings/public-listing.service.js';
 import { ReservationsService } from '../reservations/reservations.service.js';
 import { AuctionClock } from './auction-clock.js';
 import {
-  AUCTION_MAX_PRICE,
   AUCTION_MIN_PRICE,
+  MONEY_MAX,
   onGrid,
 } from './auction-engine.js';
 import { checkAuction, checkIntake } from './auction-invariants.js';
@@ -440,29 +441,21 @@ export class AuctionIntakesService {
 
   private validatePrices(body: Wire['CreateAuctionIntake']) {
     const grid = { startPrice: body.startPrice, step: body.step };
-    if (
-      body.startPrice < AUCTION_MIN_PRICE ||
-      body.startPrice > AUCTION_MAX_PRICE
-    )
-      invalidField('startPrice', 'Giá khởi điểm từ 10.000đ đến 1.000.000đ.');
+    // ADR 0067: no business ceiling, only the exact-integer limit.
+    if (body.startPrice < AUCTION_MIN_PRICE || body.startPrice > MONEY_MAX)
+      invalidField('startPrice', 'Giá khởi điểm tối thiểu 10.000đ.');
     if (body.declaredValue !== undefined && body.declaredValue !== null) {
       if (
         body.declaredValue < AUCTION_MIN_PRICE ||
-        body.declaredValue > AUCTION_MAX_PRICE
+        body.declaredValue > MONEY_MAX
       )
-        invalidField(
-          'declaredValue',
-          'Giá trị khai báo từ 10.000đ đến 1.000.000đ.',
-        );
+        invalidField('declaredValue', 'Giá trị khai báo tối thiểu 10.000đ.');
     }
     if (body.buyNowPrice !== null) {
-      if (
-        body.buyNowPrice <= body.startPrice ||
-        body.buyNowPrice > AUCTION_MAX_PRICE
-      )
+      if (body.buyNowPrice <= body.startPrice || body.buyNowPrice > MONEY_MAX)
         invalidField(
           'buyNowPrice',
-          'Giá mua ngay phải lớn hơn giá khởi điểm và không quá 1.000.000đ.',
+          'Giá mua ngay phải lớn hơn giá khởi điểm.',
         );
       if (!onGrid(grid, body.buyNowPrice))
         invalidField(
@@ -999,7 +992,7 @@ export class AuctionIntakesService {
       title: String((item?.snapshot as { title?: string })?.title ?? ''),
       pointId: i.pointId,
       startPrice: i.startPrice,
-      step: i.step as 10000 | 50000,
+      step: i.step as AuctionStep,
       buyNowPrice: i.buyNowPrice,
       protectiveValue: i.protectiveValue,
       state: i.state,

@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { AppModal as Modal, Icon, formatVnd, stitchTokens } from "../../../core/ui";
 import type { HandoverPoint, MyIntake } from "../contracts";
+import type { AuctionStep } from "../auctions-model";
 import type { PrivateDraft } from "../../drafts/contracts";
 import { BookIdentity } from "../../drafts/catalog-picker";
 
@@ -14,7 +15,7 @@ export interface SendToAuctionModalsProps {
   readonly selectedListing: PrivateDraft | undefined;
   readonly selectedPoint: HandoverPoint | undefined;
   readonly startPrice: number | null;
-  readonly step: 10000 | 50000;
+  readonly step: AuctionStep;
   readonly buyNowPrice: number | null;
 
   // 2. Withdraw Confirm Modal

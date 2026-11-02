@@ -2,6 +2,7 @@ import {
   apply,
   EngineError,
   minimumBid,
+  MONEY_MAX,
   nextMinimumBid,
   type EngineAction,
   type EngineAuction,
@@ -28,9 +29,13 @@ function run(actions: EngineAction[], startPrice = 200_000, step = 50_000) {
   }
   return { a, bidders, trace };
 }
-const reject = (actions: EngineAction[], last: EngineAction) => {
+const reject = (
+  actions: EngineAction[],
+  last: EngineAction,
+  startPrice?: number,
+) => {
   try {
-    run([...actions, last]);
+    run([...actions, last], startPrice);
   } catch (e) {
     return (e as EngineError).reason;
   }
@@ -105,9 +110,10 @@ describe('auction engine (FR-AU03–05)', () => {
     ]);
   });
 
-  it('AC-AU06: off-grid, above 1m, below minimum and lowering are rejected', () => {
+  it('AC-AU06: off-grid, above the integer limit, below minimum and lowering are rejected', () => {
     expect(reject([], manual('A', 225_000))).toBe('OffGrid');
-    expect(reject([], auto('A', 1_050_000))).toBe('OutOfRange');
+    expect(reject([], auto('A', 1_050_000))).toBeNull();
+    expect(reject([], auto('A', MONEY_MAX + 1))).toBe('OutOfRange');
     expect(reject([manual('A', 300_000)], manual('B', 300_000))).toBe(
       'BelowMinimum',
     );
@@ -309,21 +315,28 @@ describe('auction engine (FR-AU03–05)', () => {
     expect([...outcomes]).toEqual(['D@700000']);
   });
 
-  it('cap: at 1,000,000 no next bid is offered and nothing can raise the price', () => {
+  it('ADR 0067: prices continue past the old 1,000,000 cap', () => {
     const { a } = run([auto('A', 1_000_000), auto('B', 1_000_000)]);
     expect([a.currentPrice, a.leaderId]).toEqual([1_000_000, 'A']);
-    expect(minimumBid(a)).toBe(1_050_000);
+    expect(nextMinimumBid(a)).toBe(1_050_000);
+    const raised = run([
+      auto('A', 1_000_000),
+      auto('B', 1_000_000),
+      manual('C', 1_050_000),
+    ]).a;
+    expect([raised.currentPrice, raised.leaderId]).toEqual([1_050_000, 'C']);
+    expect(nextMinimumBid(run([manual('A', 5_000_000_000)]).a)).toBe(
+      5_000_050_000,
+    );
+  });
+
+  it('limit: within one step of the exact-integer limit no next bid is offered', () => {
+    const start = MONEY_MAX - 40_000;
+    const { a } = run([manual('A', start)], start);
     expect(nextMinimumBid(a)).toBeNull();
-    expect(
-      reject(
-        [auto('A', 1_000_000), auto('B', 1_000_000)],
-        manual('C', 1_000_000),
-      ),
-    ).toBe('BelowMinimum');
-    expect(reject([auto('A', 1_000_000)], auto('A', 1_050_000))).toBe(
+    expect(reject([manual('A', start)], auto('B', start + 50_000), start)).toBe(
       'OutOfRange',
     );
-    expect(nextMinimumBid(run([manual('A', 950_000)]).a)).toBe(1_000_000);
   });
   it('FR-AU05: a leader who raised after winning a tie can still disable and keeps the lead', () => {
     const { a, bidders } = run([
@@ -344,5 +357,60 @@ describe('auction engine (FR-AU03–05)', () => {
         manual('C', 400_000),
       ),
     ).toBe('BelowMinimum');
+  });
+
+  describe('ADR 0070: Buy Now by the current leader', () => {
+    const leaderBuy = (bidderId: string, amount: number): EngineAction => ({
+      kind: 'LeaderBuyNow',
+      bidderId,
+      amount,
+    });
+
+    it('raises the price to the Buy Now amount and keeps the leader', () => {
+      const { a, bidders } = run([
+        manual('A', 300_000),
+        manual('B', 350_000),
+        leaderBuy('B', 600_000),
+      ]);
+      expect(a.currentPrice).toBe(600_000);
+      expect(a.leaderId).toBe('B');
+      expect(bidders.get('B')).toMatchObject({ mode: 'Manual', level: 600_000 });
+    });
+
+    it('keeps a higher private Auto ceiling and its sequence', () => {
+      const { a, bidders } = run([
+        auto('A', 800_000),
+        manual('B', 300_000),
+        leaderBuy('A', 600_000),
+      ]);
+      expect(a.currentPrice).toBe(600_000);
+      expect(a.leaderId).toBe('A');
+      expect(bidders.get('A')).toMatchObject({ mode: 'Auto', level: 800_000, levelSequence: 1 });
+    });
+
+    it('a lower Auto ceiling becomes the Buy Now commitment, keeping its sequence', () => {
+      const { bidders } = run([
+        auto('A', 400_000),
+        manual('B', 300_000),
+        leaderBuy('A', 600_000),
+      ]);
+      expect(bidders.get('A')).toMatchObject({ mode: 'Manual', level: 600_000, levelSequence: 1 });
+    });
+
+    it('rivals still outbid from the Buy Now price plus one step', () => {
+      const { a } = run([
+        manual('A', 300_000),
+        leaderBuy('A', 600_000),
+        manual('B', 650_000),
+      ]);
+      expect(a).toMatchObject({ currentPrice: 650_000, leaderId: 'B' });
+      expect(reject([manual('A', 300_000), leaderBuy('A', 600_000)], manual('B', 600_000))).toBe('BelowMinimum');
+    });
+
+    it('a non-leader, an off-grid or a non-raising amount is refused', () => {
+      expect(reject([manual('A', 300_000)], leaderBuy('B', 600_000))).toBe('InvalidState');
+      expect(reject([manual('A', 300_000)], leaderBuy('A', 610_000))).toBe('OffGrid');
+      expect(reject([manual('A', 300_000)], leaderBuy('A', 300_000))).toBe('BelowMinimum');
+    });
   });
 });

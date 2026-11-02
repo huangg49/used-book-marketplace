@@ -60,33 +60,48 @@ describe('buyNowOffered', () => {
 
 describe('publishSchedule', () => {
   it('starts now or at a future time with the chosen length', () => {
-    expect(publishSchedule({ startAt: null, durationHours: 24 }, now)).toEqual({
+    expect(publishSchedule({ startAt: null, durationSeconds: 24 * 3600 }, now)).toEqual({
       startAt: now,
       plannedEndAt: at(24 * HOUR),
     });
     const later = at(2 * HOUR).toISOString();
-    expect(publishSchedule({ startAt: later, durationHours: 1 }, now)).toEqual({
+    expect(publishSchedule({ startAt: later, durationSeconds: 1 * 3600 }, now)).toEqual({
       startAt: at(2 * HOUR),
       plannedEndAt: at(3 * HOUR),
     });
   });
+  it('keeps second precision inside the bounds (ADR 0069)', () => {
+    // 1 hour 30 minutes 15 seconds.
+    expect(
+      publishSchedule({ startAt: null, durationSeconds: 5415 }, now)
+        .plannedEndAt,
+    ).toEqual(at(5_415_000));
+    expect(
+      publishSchedule({ startAt: null, durationSeconds: 3600 }, now)
+        .plannedEndAt,
+    ).toEqual(at(HOUR));
+    expect(
+      publishSchedule({ startAt: null, durationSeconds: 604_800 }, now)
+        .plannedEndAt,
+    ).toEqual(at(168 * HOUR));
+  });
   it('refuses lengths and starts outside the limits', () => {
-    for (const durationHours of [0, 169, 1.5])
-      expect(code(() => publishSchedule({ durationHours }, now))).toBe(
+    for (const durationSeconds of [0, 3599, 604_801, 3600.5])
+      expect(code(() => publishSchedule({ durationSeconds }, now))).toBe(
         'VALIDATION_ERROR',
       );
     for (const ms of [-1, 5 * 60_000 - 1, 7 * 24 * HOUR + 1])
       expect(
         code(() =>
           publishSchedule(
-            { startAt: at(ms).toISOString(), durationHours: 24 },
+            { startAt: at(ms).toISOString(), durationSeconds: 24 * 3600 },
             now,
           ),
         ),
       ).toBe('VALIDATION_ERROR');
     expect(
       publishSchedule(
-        { startAt: at(7 * 24 * HOUR).toISOString(), durationHours: 168 },
+        { startAt: at(7 * 24 * HOUR).toISOString(), durationSeconds: 168 * 3600 },
         now,
       ).plannedEndAt,
     ).toEqual(at(14 * 24 * HOUR));
@@ -96,32 +111,32 @@ describe('publishSchedule', () => {
 describe('reschedule', () => {
   it('moves start and length before the start', () => {
     const a = auction({ startAt: at(HOUR), endAt: at(25 * HOUR) });
-    expect(reschedule(a, { startAt: null, durationHours: 6 }, now)).toEqual({
+    expect(reschedule(a, { startAt: null, durationSeconds: 6 * 3600 }, now)).toEqual({
       startAt: now,
       plannedEndAt: at(6 * HOUR),
     });
   });
   it('moves only the end once live and keeps an hour left', () => {
     const a = auction({ startAt: at(-3 * HOUR) });
-    expect(reschedule(a, { startAt: null, durationHours: 48 }, now)).toEqual({
+    expect(reschedule(a, { startAt: null, durationSeconds: 48 * 3600 }, now)).toEqual({
       startAt: a.startAt,
       plannedEndAt: at(45 * HOUR),
     });
     expect(
-      code(() => reschedule(a, { startAt: null, durationHours: 3 }, now)),
+      code(() => reschedule(a, { startAt: null, durationSeconds: 3 * 3600 }, now)),
     ).toBe('VALIDATION_ERROR');
     expect(
       code(() =>
         reschedule(
           a,
-          { startAt: at(HOUR).toISOString(), durationHours: 24 },
+          { startAt: at(HOUR).toISOString(), durationSeconds: 24 * 3600 },
           now,
         ),
       ),
     ).toBe('VALIDATION_ERROR');
   });
   it('is locked after a bid, a Buy Now, the end or five edits', () => {
-    const input = { startAt: null, durationHours: 24 };
+    const input = { startAt: null, durationSeconds: 24 * 3600 };
     for (const over of [
       { bidderCount: 1, currentPrice: 50_000 },
       { buyNowAt: now, bidderCount: 1 },

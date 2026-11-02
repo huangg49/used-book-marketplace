@@ -16,6 +16,11 @@ import {
   OPENING_JOURNAL_ID,
 } from '../../database/mongo/migrations/0002-reference-data.js';
 import { PLATFORM_COMMISSION_ACCOUNT_ID } from '../../database/mongo/migrations/auction-constants.js';
+import {
+  CAPITAL_INCREASE,
+  CAPITAL_INCREASE_JOURNAL_ID,
+  SIMULATED_CAPITAL,
+} from '../../database/mongo/migrations/0055-simulator-capital-increase.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import { DomainError, invalidState } from '../commands/domain-error.js';
 import { checkOrder } from '../orders/order-invariants.js';
@@ -71,6 +76,20 @@ export async function checkJournal(tx: Tx, journalId: string) {
       !entries.some(
         (e) =>
           e.accountId === CLEARING_ACCOUNT_ID && e.debit === OPENING_CAPITAL,
+      )
+    )
+      throw new Error('Invalid finite simulator capital');
+  } else if (j.type === 'CapitalIncrease') {
+    // ADR 0067: the one fixed, journaled increase posted by migration 0055.
+    if (
+      j._id !== CAPITAL_INCREASE_JOURNAL_ID ||
+      !entries.some(
+        (e) =>
+          e.accountId === CAPITAL_ACCOUNT_ID && e.credit === CAPITAL_INCREASE,
+      ) ||
+      !entries.some(
+        (e) =>
+          e.accountId === CLEARING_ACCOUNT_ID && e.debit === CAPITAL_INCREASE,
       )
     )
       throw new Error('Invalid finite simulator capital');
@@ -413,6 +432,12 @@ export class LedgerService {
       throw new Error('Wallet account references a missing Order');
     if (!(await tx.c.ledger_journals.findOne({ _id: OPENING_JOURNAL_ID })))
       throw new Error('Opening capital journal missing');
+    if (
+      !(await tx.c.ledger_journals.findOne({
+        _id: CAPITAL_INCREASE_JOURNAL_ID,
+      }))
+    )
+      throw new Error('Capital increase journal missing');
     for (const j of await tx.c.ledger_journals.find({}).toArray())
       await checkJournal(tx, j._id);
     for (const t of await tx.c.topup_intents.find({}).toArray())
@@ -483,7 +508,7 @@ export class LedgerService {
         row.held +
         platformCommission +
         listingFeeHeld !==
-        OPENING_CAPITAL
+        SIMULATED_CAPITAL
     )
       throw new Error('Simulated capital conservation mismatch');
     return {

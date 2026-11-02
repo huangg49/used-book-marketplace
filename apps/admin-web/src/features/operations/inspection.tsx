@@ -31,6 +31,13 @@ const blank: Checklist = {
   notesAccessoriesMatch: false,
   suspectedCopy: false,
 };
+const allMatched: Checklist = {
+  titleEditionMatches: true,
+  privateMarksMatch: true,
+  coverPagesMatch: true,
+  notesAccessoriesMatch: true,
+  suspectedCopy: false,
+};
 const noteLength = (value: string) => [...value.trim()].length;
 const allMatch = (c: Checklist) =>
   MATCHES.every((k) => c[k]) && !c.suspectedCopy;
@@ -134,6 +141,14 @@ export function IntakeInspect({ item, ...context }: Props) {
         </>
       }
       dirty={outcome !== null || note !== "" || checklist !== blank}
+      shortcut={{
+        label: "Đạt: mọi mục khớp",
+        apply: () => {
+          setChecklist(allMatched);
+          setOutcome("Pass");
+          setProblem(null);
+        },
+      }}
       fields={(locked) => (
         <>
           <ChecklistFields

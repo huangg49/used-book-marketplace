@@ -1,10 +1,11 @@
+import { formatDuration } from '../components/DurationInput';
 import {SupportLink} from '../features/support/SupportLink';
 import { useEffect, useId, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@used-books/session-client'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import {
-  AlertTriangle, ArrowRight, BookMarked, Check, ChevronRight, FileText, Gavel, Images, MapPin, Package, ShieldCheck, StickyNote, TrendingUp, Zap,
+  AlertTriangle, ArrowRight, BookMarked, Wallet, CalendarClock, CircleSlash, UserRound, Check, ChevronRight, FileText, Gavel, Images, MapPin, Package, ShieldCheck, StickyNote, TrendingUp, Zap,
 } from 'lucide-react'
 import { AutoBidDialog } from '../components/AutoBidDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -12,8 +13,9 @@ import { formatRemaining, outcomeUnknown, useCountdown, useIntentKey } from '../
 import { useAuctionLive } from '../hooks/useAuctionLive'
 import { useSession } from '../hooks/useSession'
 import { formatVnd, ROUTES } from '../lib/routes'
+import { getWalletSummary } from '../services/wallet'
 import {
-  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation,
+  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation,
   getMyPointOrder, getPointOrderDeliveryQuote, payPointOrder, placeBid, setAutoBid, withdrawIntake, type DeliveryChoice, type MyIntake,
   type AuctionParticipation, type AuctionState, type AuctionSummary,
 } from '../services/auctions'
@@ -58,15 +60,15 @@ const STATE_LABEL: Record<AuctionState, string> = {
 }
 
 function when(iso: string) {
-  return new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+  return new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit' })
 }
 const plain = (amount: number) => amount.toLocaleString('vi-VN')
 
-/** Giá hợp lệ: giá khởi điểm + n·bước, trong [floor, 1.000.000]. */
+/** Giá hợp lệ: giá khởi điểm + n·bước, từ floor trở lên (ADR 0067). */
 function amountError(amount: number | null, floor: number, start: number, step: number) {
   if (!amount) return 'Nhập số tiền bạn muốn trả.'
   if (amount < floor) return `Tối thiểu ${formatVnd(floor)}.`
-  if (amount > AUCTION_MAX_PRICE) return `Tối đa ${formatVnd(AUCTION_MAX_PRICE)}.`
+  if (amount > AUCTION_MAX_PRICE) return 'Số tiền vượt mức hệ thống hỗ trợ.'
   if ((amount - start) % step !== 0) {
     const up = start + Math.ceil((amount - start) / step) * step
     return `Giá đi theo bước ${formatVnd(step)}. Thử ${formatVnd(Math.min(up, AUCTION_MAX_PRICE))}.`
@@ -340,7 +342,7 @@ function BookCondition({ book }: { book: AuctionBook | null }) {
   )
 }
 
-const clock = (iso: string) => new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+const clock = (iso: string) => new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 const day = (iso: string) => new Date(iso).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })
 
 // Prices as tiles, the session window as a track (progress from the server-aligned
@@ -368,13 +370,13 @@ function SessionFacts({ auction, remaining, open, scheduled, untilStart }: { auc
           <p><span>Mở phiên</span><strong>{clock(auction.startAt)}</strong><small>{day(auction.startAt)}</small></p>
           <p><span>Kết thúc</span><strong>{clock(auction.endAt)}</strong><small>{day(auction.endAt)}</small></p>
         </div>
-        <div className={styles.track} role="progressbar" aria-label="Thời gian phiên đã trôi qua" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
+        <div className={styles.track} data-live={open || undefined} role="progressbar" aria-label="Thời gian phiên đã trôi qua" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
           <span style={{ width: `${progress}%` }} />
         </div>
-        <p className={styles.windowNote} role={open && auction.buyNowAt ? 'status' : undefined}>{scheduled ? `Mở sau ${formatRemaining(untilStart)} · phiên kéo dài ${Math.round(span / HOUR)} giờ`
+        <p className={styles.windowNote} role={open && auction.buyNowAt ? 'status' : undefined}>{scheduled ? `Mở sau ${formatRemaining(untilStart)} · phiên kéo dài ${formatDuration(Math.round(span / 1000))}`
           : !open ? 'Phiên đã đóng'
           : auction.buyNowAt ? `Đã có người chọn mua ngay · còn ${formatRemaining(remaining)} để trả cao hơn; hết giờ, người dẫn đầu thắng`
-            : `Còn ${formatRemaining(remaining)} · phiên kéo dài ${Math.round(span / HOUR)} giờ`}</p>
+            : `Còn ${formatRemaining(remaining)} · phiên kéo dài ${formatDuration(Math.round(span / 1000))}`}</p>
       </div>
       <div className={styles.pickup}>
         <span className={styles.pickupIcon}><MapPin size={18} aria-hidden="true" /></span>
@@ -446,7 +448,7 @@ function Countdown({ ms, open, endAt, live, state }: { ms: number; open: boolean
         {shown.map(([value, unit], index) => (
           <span key={unit} className={styles.timerPart} aria-hidden="true">
             {index > 0 && <span className={styles.timerSep}>:</span>}
-            <strong>{String(value).padStart(2, '0')}</strong>
+            <strong key={value}>{String(value).padStart(2, '0')}</strong>
             <small>{unit}</small>
           </span>
         ))}
@@ -475,7 +477,7 @@ function AmountField({ id, label, value, onChange, disabled, hint, error }: {
           aria-invalid={!!error}
           aria-describedby={`${id}-hint`}
           onChange={(event) => {
-            const digits = event.target.value.replace(/\D/g, '').slice(0, 7)
+            const digits = event.target.value.replace(/\D/g, '').slice(0, AUCTION_PRICE_DIGITS)
             onChange(digits ? Number(digits) : null)
           }}
         />
@@ -509,21 +511,25 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
   const [unknown, setUnknown] = useState<Intent | null>(null)
   const intent = useIntentKey()
   const ids = useId()
+  // ADR 0071: the server refuses a commitment the wallet cannot cover. This is
+  // only an early hint from the member's own available balance; the server also
+  // counts prices they lead at elsewhere and unpaid auction orders.
+  const wallet = useQuery({ queryKey: ['wallet-summary'], queryFn: getWalletSummary, staleTime: 15_000 })
+  const available = wallet.data?.available ?? null
+  const shortOf = (amount: number | null | undefined) =>
+    available !== null && amount != null && amount > available ? amount - available : 0
   const locked = busy || !!unknown
   const currentPrice = auction.currentPrice ?? auction.startPrice
   // FR-AU04: equal commitments rank by who reached the level first, so an equal
   // bid that does not lead is a tie lost on order, not a higher rival amount.
   const tied = !!me && !leading && me.ownLevel !== null && me.ownLevel === auction.currentPrice
-  // Someone else's bid arrives by push; say so when the lead is lost, with the
-  // same tie rule as the status card.
+  // Someone else's bid arrives by push. The status card (role=status) already
+  // announces the lost lead, so only clear the previous bid's receipt here.
   const [wasLeading, setWasLeading] = useState(leading)
   if (wasLeading !== leading) {
     setWasLeading(leading)
     if (wasLeading && !leading && !busy) {
-      setReceipt(null); setNoticePrice(null)
-      setNotice(tied
-        ? `Một người khác đã cam kết ${formatVnd(currentPrice)} trước bạn nên đang dẫn giá.`
-        : `Bạn vừa bị vượt giá. Giá hiện tại ${formatVnd(currentPrice)}.`)
+      setReceipt(null); setNoticePrice(null); setNotice(null)
     }
   }
   const staleNotice = noticePrice !== null && noticePrice !== currentPrice
@@ -543,7 +549,7 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
       intent.settle(); setUnknown(null); setManual(undefined); setAutoDialog(false)
       const price = receipt.currentPrice !== null ? formatVnd(receipt.currentPrice) : ''
       setNotice(
-        next.kind === 'BuyNow' ? 'Bạn đang dẫn với giá mua ngay. Người khác còn 60 giây để trả cao hơn; nếu không ai vượt, bạn thắng phiên.'
+        next.kind === 'BuyNow' ? `Bạn đang dẫn với giá mua ngay. Người khác còn ${buyNowWindow(leading)} để trả cao hơn; nếu không ai vượt, bạn thắng phiên.`
         : next.kind === 'Disable' ? 'Đã tắt đặt giá tự động.'
         : receipt.leading ? `Bạn đang dẫn giá ở ${price}.`
         : receipt.currentPrice === next.amount
@@ -562,18 +568,21 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
     }
   }
 
-  const dialog = confirming && dialogCopy(confirming, auction)
+  const dialog = confirming && dialogCopy(confirming, auction, leading)
   return (
     <div className={styles.bidPanel}>
       {me && (
         <div ref={standing} role="status" className={`${styles.standing} ${leading ? styles.standingLead : styles.standingOut}`}>
-          <strong>{leading ? 'Bạn đang dẫn giá' : tied ? 'Bạn trả bằng người dẫn giá' : 'Bạn đã bị vượt giá'}</strong>
+          <strong>
+            {leading ? <Check size={16} aria-hidden="true" /> : <AlertTriangle size={16} aria-hidden="true" />}
+            {leading ? 'Bạn đang dẫn giá' : tied ? 'Bạn trả bằng người dẫn giá' : 'Bạn đã bị vượt giá'}
+          </strong>
           <span>
             {tied
-              ? `Một người khác đã cam kết ${formatVnd(currentPrice)} trước bạn. Khi hai mức bằng nhau, người đặt trước dẫn giá. Trả từ ${formatVnd(minimumBid)} để vượt lên.`
+              ? <>Người khác cam kết <b>{formatVnd(currentPrice)}</b> trước bạn nên dẫn giá.</>
               : me.mode === 'Auto' && me.ownLevel !== null
-              ? `Mức tự động tối đa của bạn: ${formatVnd(me.ownLevel)} (chỉ bạn thấy).`
-              : me.ownLevel !== null ? `Lượt trả gần nhất của bạn: ${formatVnd(me.ownLevel)}.` : null}
+              ? <>Tự động tối đa <b>{formatVnd(me.ownLevel)}</b> · chỉ bạn thấy</>
+              : me.ownLevel !== null ? <>Lượt của bạn <b>{formatVnd(me.ownLevel)}</b></> : null}
           </span>
         </div>
       )}
@@ -593,11 +602,10 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
       ) : leading ? (
         <p className={styles.muted}>Bạn không cần trả thêm. Muốn giữ vị trí khi có người trả cao hơn, hãy đặt hoặc nâng mức tự động.</p>
       ) : manualCapped ? (
-        <p className={styles.muted}>Giá đã chạm mức tối đa {formatVnd(AUCTION_MAX_PRICE)} của phiên.</p>
+        <p className={styles.muted}>Giá đã chạm mức tối đa hệ thống hỗ trợ.</p>
       ) : (
         <>
-          <p className={styles.quickLabel}>Chọn nhanh mức trả</p>
-          <div className={styles.quick}>
+          <div className={styles.quick} role="group" aria-label="Chọn nhanh mức trả">
             {bidOptions(minimumBid, step).map((value) => (
               <button key={value} type="button" disabled={locked} aria-pressed={manualAmount === value} onClick={() => setManual(value)}>
                 {formatVnd(value)}
@@ -609,8 +617,9 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
               id={`${ids}-manual`} label="Số tiền trả lượt này" value={manualAmount} onChange={setManual} disabled={locked}
               hint={`Lượt tiếp theo tối thiểu ${formatVnd(minimumBid)}`} error={manualError}
             />
+            <WalletLine available={available} short={shortOf(manualAmount)} />
             <button
-              type="button" className={styles.continue} disabled={locked || !!manualError}
+              type="button" className={styles.continue} disabled={locked || !!manualError || shortOf(manualAmount) > 0}
               onClick={() => manualAmount && setConfirming({ kind: 'Manual', amount: manualAmount })}
             >
               {manualAmount ? `Tiếp tục trả ${formatVnd(manualAmount)}` : 'Tiếp tục'} <ArrowRight size={16} aria-hidden="true" />
@@ -626,8 +635,8 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
               <strong><Zap size={14} aria-hidden="true" /> {me?.mode === 'Auto' ? 'Nâng mức tự động' : 'Đặt giá tự động'}</strong>
               <small>
                 {autoCapped
-                  ? `Mức tự động của bạn đã ở mức tối đa ${formatVnd(AUCTION_MAX_PRICE)}.`
-                  : 'Khi có người trả cao hơn, tự trả hơn họ một bước giá, không vượt mức tối đa bạn chọn.'}
+                  ? 'Mức tự động của bạn đã ở mức tối đa hệ thống hỗ trợ.'
+                  : 'Tự trả hơn người khác một bước, tối đa mức bạn chọn.'}
               </small>
             </span>
             <ChevronRight size={18} aria-hidden="true" />
@@ -656,12 +665,17 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
         onConfirm={(maxAmount) => run({ kind: 'Auto', amount: maxAmount })}
       />
 
-      {auction.buyNowPrice !== null && !unknown && !leading && (
+      {auction.buyNowPrice !== null && !unknown && (
         <div className={styles.buyNow}>
-          <span>Mua ngay <strong>{formatVnd(auction.buyNowPrice)}</strong><small>Còn dùng được khi giá hiện tại thấp hơn giá mua ngay. Sau khi bấm, người khác còn 60 giây để trả cao hơn.</small></span>
-          <button type="button" className={styles.secondary} disabled={busy} onClick={() => setConfirming({ kind: 'BuyNow', amount: auction.buyNowPrice! })}>
+          <span>Mua ngay <strong>{formatVnd(auction.buyNowPrice)}</strong><small>{leading ? 'Kết thúc sớm: người khác còn 60 giây để trả cao hơn.' : 'Người khác còn 5 phút để trả cao hơn sau khi bạn bấm.'}</small></span>
+          <button type="button" className={styles.secondary} disabled={busy || shortOf(auction.buyNowPrice) > 0} onClick={() => setConfirming({ kind: 'BuyNow', amount: auction.buyNowPrice! })}>
             Mua ngay
           </button>
+          {shortOf(auction.buyNowPrice) > 0 && (
+            <small className={styles.walletShort}>
+              Cần thêm {formatVnd(shortOf(auction.buyNowPrice))} để mua ngay. <Link to={ROUTES.wallet}>Nạp ví</Link>
+            </small>
+          )}
         </div>
       )}
 
@@ -680,7 +694,26 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
   )
 }
 
-function dialogCopy(intent: Intent, auction: AuctionSummary) {
+// ADR 0070: the leader's Buy Now leaves others 60 seconds; anyone else's, 5 minutes.
+const buyNowWindow = (leading: boolean) => (leading ? '60 giây' : '5 phút')
+
+function WalletLine({ available, short }: { available: number | null; short: number }) {
+  if (available === null) return null
+  return short > 0 ? (
+    <p className={styles.walletShort} role="status">
+      <Wallet size={14} aria-hidden="true" />
+      Số dư khả dụng {formatVnd(available)}, cần thêm <b>{formatVnd(short)}</b> cho mức này.{' '}
+      <Link to={ROUTES.wallet}>Nạp ví</Link>
+    </p>
+  ) : (
+    <p className={styles.walletLine}>
+      <Wallet size={14} aria-hidden="true" />
+      Số dư khả dụng <b>{formatVnd(available)}</b>
+    </p>
+  )
+}
+
+function dialogCopy(intent: Intent, auction: AuctionSummary, leading: boolean) {
   const pay = `Nếu thắng, bạn thanh toán từ ví trong 24 giờ sau khi phiên kết thúc và tự nhận sách tại ${auction.pointName}. Không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`
   switch (intent.kind) {
     case 'Manual':
@@ -700,7 +733,7 @@ function dialogCopy(intent: Intent, auction: AuctionSummary) {
     case 'BuyNow':
       return {
         title: `Mua ngay với ${formatVnd(intent.amount)}?`,
-        description: `Bạn cam kết mua với giá này và dẫn đầu. Người khác còn 60 giây để trả cao hơn; nếu không ai vượt, bạn thắng và thanh toán từ ví trong 24 giờ sau khi phiên kết thúc, rồi tự nhận sách tại ${auction.pointName}. Lượt mua ngay không thể rút lại; không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`,
+        description: `Bạn cam kết mua với giá này và ${leading ? 'giữ vị trí dẫn đầu; giá hiện tại tăng lên giá mua ngay' : 'dẫn đầu'}. Người khác còn ${buyNowWindow(leading)} để trả cao hơn; nếu không ai vượt, bạn thắng và thanh toán từ ví trong 24 giờ sau khi phiên kết thúc, rồi tự nhận sách tại ${auction.pointName}. Lượt mua ngay không thể rút lại; không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`,
         confirm: 'Mua ngay',
       }
   }
@@ -749,27 +782,27 @@ function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged, 
   }
   return (
     <div className={styles.bidPanel}>
-      <div className={`${styles.standing} ${styles.standingLead}`}>
-        <strong>Đây là phiên của bạn</strong>
+      <div className={`${styles.standing} ${styles.standingLead} ${styles.ownerNote}`}>
+        <strong><UserRound size={16} aria-hidden="true" />Đây là phiên của bạn</strong>
         <span>
           {scheduled
-            ? `Phiên hẹn mở lúc ${when(auction.startAt)}. Trước lượt trả giá đầu tiên, bạn có thể đổi thời gian hoặc rút phiên.`
+            ? <>Phiên hẹn mở lúc <b>{when(auction.startAt)}</b>. Trước <b>lượt trả giá đầu tiên</b>, bạn có thể <b>đổi thời gian</b> hoặc <b>rút phiên</b>.</>
             : open
             ? auction.bidderCount === 0
-              ? 'Chưa có lượt trả giá. Bạn có thể đổi thời lượng hoặc rút phiên trước lượt trả giá đầu tiên.'
-              : `Đã có ${auction.bidderCount} người trả giá nên phiên không thể rút. Người bán không tham gia trả giá.`
+              ? <><b>Chưa có lượt trả giá.</b> Bạn có thể <b>đổi thời lượng</b> hoặc <b>rút phiên</b> trước lượt trả giá đầu tiên.</>
+              : <>Đã có <b>{auction.bidderCount} người trả giá</b> nên phiên <b>không thể rút</b>. Người bán không tham gia trả giá.</>
             : SELLER_STATE[auction.state] ?? STATE_LABEL[auction.state]}
         </span>
       </div>
       {error && <p role="alert" className={styles.fieldError}>{error}</p>}
       {canEdit && !unknown && (
-        <button type="button" className={styles.secondaryBlock} disabled={busy} onClick={() => setEditing(true)}>
-          Đổi thời gian phiên
+        <button type="button" className={styles.ownerPrimary} disabled={busy} onClick={() => setEditing(true)}>
+          <CalendarClock size={17} aria-hidden="true" />Đổi thời gian phiên
         </button>
       )}
       {(canWithdraw || unknown) && (
-        <button type="button" className={styles.secondaryBlock} disabled={busy} onClick={() => (unknown ? void withdraw() : setConfirming(true))}>
-          {unknown ? 'Thử lại rút phiên' : 'Rút phiên'}
+        <button type="button" className={styles.ownerDanger} disabled={busy} onClick={() => (unknown ? void withdraw() : setConfirming(true))}>
+          <CircleSlash size={17} aria-hidden="true" />{unknown ? 'Thử lại rút phiên' : 'Rút phiên'}
         </button>
       )}
       {canEdit && (

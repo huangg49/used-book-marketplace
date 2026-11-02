@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "@used-books/session-client";
@@ -8,6 +8,7 @@ import { Button, ErrorNotice } from "../../core/ui";
 import { ActionPanel } from "./action-panel";
 import { Field } from "./field";
 import { MotionPanel } from "../../core/MotionPanel";
+import { PaperCombobox } from "../../core/PaperCombobox";
 import {
   operationsPointList,
   pointReceipt,
@@ -95,11 +96,19 @@ function PointsContent() {
         title: point.name,
         detail: (
           <>
-            <p>{point.displayAddress}</p>
             <p>
-              {point.assignments.length
-                ? `Nhân viên: ${point.assignments.map((a) => a.displayName || a.userId.slice(0, 8)).join(", ")}`
-                : "Chưa phân công nhân viên."}
+              <span className="row-detail-label">Địa chỉ:</span>{" "}
+              {point.displayAddress}
+            </p>
+            <p>
+              <span className="row-detail-label">Nhân viên:</span>{" "}
+              {point.assignments.length ? (
+                point.assignments
+                  .map((a) => a.displayName || a.userId.slice(0, 8))
+                  .join(", ")
+              ) : (
+                <span className="row-detail-warn">Chưa phân công</span>
+              )}
             </p>
           </>
         ),
@@ -487,12 +496,11 @@ function PointEdit({ point, ...context }: Props) {
 
 function PointAssign({ point, ...context }: Props) {
   const [query, setQuery] = useState("");
-  const [term, setTerm] = useState<string>();
+  const [term, setTerm] = useState("");
   const [userId, setUserId] = useState<string>();
   const [problem, setProblem] = useState(false);
   const staff = useQuery({
     queryKey: ["operations", "staff", term],
-    enabled: term !== undefined,
     queryFn: () => {
       const parameters = new URLSearchParams({
         limit: "20",
@@ -508,7 +516,11 @@ function PointAssign({ point, ...context }: Props) {
     (u) => !assigned.has(u.id),
   );
   const chosen = candidates.find((u) => u.id === userId);
-  const id = `assign-${point.id}`;
+  // Search as the admin types; a short pause avoids one request per key.
+  useEffect(() => {
+    const timer = setTimeout(() => setTerm(query.trim()), 250);
+    return () => clearTimeout(timer);
+  }, [query]);
   return (
     <ActionPanel
       {...context}
@@ -518,57 +530,38 @@ function PointAssign({ point, ...context }: Props) {
       dirty={!!userId}
       fields={(locked) => (
         <fieldset disabled={locked}>
-          <form
-            className="inline-search"
-            onSubmit={(event) => {
-              event.preventDefault();
+          <PaperCombobox
+            label="Tìm nhân viên"
+            placeholder="Nhập tên hoặc email"
+            query={query}
+            onQueryChange={(next) => {
+              setQuery(next);
               setUserId(undefined);
-              setTerm(query.trim());
             }}
-          >
-            <div className="field">
-              <label htmlFor={`${id}-q`}>Tìm nhân viên</label>
-              <input
-                id={`${id}-q`}
-                type="search"
-                value={query}
-                placeholder="Tên hoặc email"
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
-            <Button type="submit" busy={staff.isFetching}>
-              Tìm
-            </Button>
-          </form>
+            busy={staff.isFetching}
+            options={candidates.map((u) => ({
+              value: u.id,
+              label: u.displayName,
+              hint: u.email,
+            }))}
+            value={userId}
+            emptyText={
+              staff.isSuccess
+                ? "Không có nhân viên phù hợp chưa được phân công."
+                : "Đang tải…"
+            }
+            onChange={(option) => {
+              setUserId(option.value);
+              setQuery(option.hint ?? option.label);
+              setProblem(false);
+            }}
+          />
           {staff.error && (
             <ErrorNotice
               error={staff.error}
               retry={() => void staff.refetch()}
               busy={staff.isFetching}
             />
-          )}
-          {staff.isSuccess && !candidates.length && (
-            <p className="muted">
-              Không có nhân viên phù hợp chưa được phân công.
-            </p>
-          )}
-          {candidates.length > 0 && (
-            <div role="radiogroup" aria-label="Nhân viên">
-              {candidates.map((u) => (
-                <label className="check" key={u.id}>
-                  <input
-                    type="radio"
-                    name={id}
-                    checked={userId === u.id}
-                    onChange={() => {
-                      setUserId(u.id);
-                      setProblem(false);
-                    }}
-                  />
-                  {u.displayName} · {u.email}
-                </label>
-              ))}
-            </div>
           )}
           {problem && <p className="field-error">Chọn một nhân viên.</p>}
         </fieldset>

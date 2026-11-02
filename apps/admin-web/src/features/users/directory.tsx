@@ -21,6 +21,7 @@ import {
   readDirectoryFilters,
   type DirectoryFilters,
 } from "./directory-filters";
+import { EmptyArt } from "../../core/EmptyArt";
 const roleLabel: Record<User["roles"][number], string> = {
   MEMBER: "Thành viên",
   STAFF: "Nhân viên",
@@ -86,7 +87,7 @@ function UserDirectoryContent() {
       />
       {result.isSuccess && !items.length && (
         <div className="empty">
-          <p className="folio">—</p>
+          <EmptyArt variant="people" />
           <h2>Không có tài khoản phù hợp</h2>
           <p>Thử đổi từ khóa hoặc bỏ bớt bộ lọc.</p>
         </div>

@@ -454,7 +454,7 @@ function IncidentDecide({
                 aria-invalid={problem === "amount"}
                 aria-describedby={`${id}-amount-hint`}
                 onChange={(e) => {
-                  setAmount(e.target.value.replace(/\D/g, "").slice(0, 7));
+                  setAmount(e.target.value.replace(/\D/g, "").slice(0, 15));
                   setProblem(undefined);
                 }}
               />

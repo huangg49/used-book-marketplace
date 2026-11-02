@@ -2,6 +2,11 @@ import { createMemberProfilesMigration, memberProfileSpecs, withMemberProfiles }
 import { createAccountControlsMigration, withAccountControls } from './0048-account-controls.js';
 import {memberCartMigration,memberCartSpec} from './0049-member-cart.js';
 import { exchangeAgreementMigration, withExchangeAgreement } from './0053-exchange-agreement.js';
+import { createUncappedAuctionAmountsMigration, withUncappedAuctionAmounts } from './0054-uncapped-auction-amounts.js';
+import { createCapitalIncreaseMigration, withCapitalIncrease } from './0055-simulator-capital-increase.js';
+import { createAuctionStepOptionsMigration, withAuctionStepOptions } from './0056-auction-step-options.js';
+import { createCustomAuctionStepMigration, withCustomAuctionStep } from './0057-custom-auction-step.js';
+import { createBuyNowRivalWindowMigration, withBuyNowRivalWindow } from './0058-buy-now-rival-window.js';
 import { createSupportCasesMigration, supportSpecs, withSupportCases } from './0050-support-cases.js';
 import { createSupportAutoReviewUnionMigration } from './0051-support-auto-review-union.js';
 import { createListingAutoReviewMigration, withListingAutoReview } from './0050-listing-auto-review.js';
@@ -252,6 +257,77 @@ const supportCasesMigration = createSupportCasesMigration([
   ...notificationSpecs.map(withExchangeNotificationChanges).map(withBuyNowNotifications).map(withExchangePhase6Changes),
 ]);
 const supportAutoReviewUnionMigration = createSupportAutoReviewUnionMigration(supportCasesMigration.definition.collections);
+// Frozen snapshot of every collection 0054 widens, as of migration 0053.
+const uncappedAuctionAmountsMigration = createUncappedAuctionAmountsMigration([
+  ...auctionCollectionSpecs
+    .filter((spec) =>
+      ['auction_intakes', 'auctions', 'auction_bidders', 'auction_bids'].includes(spec.name),
+    )
+    .map(withPointOrderChanges)
+    .map(withResolutionChanges)
+    .map(withSettlementChanges)
+    .map(withRulesChanges)
+    .map(withPointAdministrationChanges)
+    .map(withInspectionEvidenceChanges)
+    .map(withBuyNowChallenge)
+    .map(withSellerScheduledAuctions),
+  ...pointOrderCollectionSpecs
+    .filter((spec) => spec.name === 'point_orders')
+    .map(withPointCollectionChanges)
+    .map(withResolutionChanges)
+    .map(withSettlementChanges)
+    .map(withAuctionDelivery),
+  ...pointIncidentCollectionSpecs.filter((spec) => spec.name === 'point_incidents'),
+  ...baselineCollections
+    .filter((spec) => spec.name === 'ledger_entries')
+    .map(withTitleKey)
+    .map(withAuctionChanges)
+    .map(withPointOrderChanges)
+    .map(withPointCollectionChanges)
+    .map(withSettlementChanges)
+    .map(withPurchaseConversationChanges)
+    .map(withNotificationChanges)
+    .map(withCatalogClassification)
+    .map(withCatalogVocabularyV2)
+    .map(withPointAdministrationChanges)
+    .map(withPayments)
+    .map(withDirectSettlementPrincipal)
+    .map(withVNPayQuery)
+    .map(withIntegratedWalletPointCommands)
+    .map(withVNPayExpiry),
+]);
+// Frozen snapshot of the collections 0055 widens, as of migration 0054.
+const capitalIncreaseMigration = createCapitalIncreaseMigration(
+  baselineCollections
+    .filter((spec) =>
+      ['ledger_journals', 'topup_intents', 'simulated_payment_events'].includes(spec.name),
+    )
+    .map(withTitleKey)
+    .map(withAuctionChanges)
+    .map(withPointOrderChanges)
+    .map(withPointCollectionChanges)
+    .map(withSettlementChanges)
+    .map(withPurchaseConversationChanges)
+    .map(withNotificationChanges)
+    .map(withCatalogClassification)
+    .map(withCatalogVocabularyV2)
+    .map(withPointAdministrationChanges)
+    .map(withPayments)
+    .map(withDirectSettlementPrincipal)
+    .map(withVNPayQuery)
+    .map(withIntegratedWalletPointCommands)
+    .map(withVNPayExpiry),
+);
+// 0056 widens the step list on the 0054 snapshots, which 0055 leaves untouched.
+const auctionStepOptionsMigration = createAuctionStepOptionsMigration(
+  uncappedAuctionAmountsMigration.definition.collections,
+);
+const customAuctionStepMigration = createCustomAuctionStepMigration(
+  auctionStepOptionsMigration.definition.collections,
+);
+const buyNowRivalWindowMigration = createBuyNowRivalWindowMigration(
+  customAuctionStepMigration.definition.collections,
+);
 export const migrations: Migration[] = [
   {
     id: '0001-baseline-schema',
@@ -350,6 +426,11 @@ export const migrations: Migration[] = [
   supportAutoReviewUnionMigration,
   listingAutoReviewV2Migration,
   exchangeAgreementMigration,
+  uncappedAuctionAmountsMigration,
+  capitalIncreaseMigration,
+  auctionStepOptionsMigration,
+  customAuctionStepMigration,
+  buyNowRivalWindowMigration,
 ];
 
 export const checksumOf = (migration: Migration) =>
@@ -386,7 +467,9 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withMemberProfiles)
     .map(withAccountControls)
     .map(withListingAutoReview)
-    .map(withSupportCases),
+    .map(withSupportCases)
+    .map(withUncappedAuctionAmounts)
+    .map(withCapitalIncrease),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape),
@@ -401,12 +484,19 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withPointAdministrationChanges)
     .map(withInspectionEvidenceChanges)
     .map(withBuyNowChallenge)
-    .map(withSellerScheduledAuctions),
+    .map(withSellerScheduledAuctions)
+    .map(withUncappedAuctionAmounts)
+    .map(withAuctionStepOptions)
+    .map(withCustomAuctionStep)
+    .map(withBuyNowRivalWindow),
   ...pointOrderCollectionSpecs
     .map(withPointCollectionChanges)
     .map(withResolutionChanges)
     .map(withSettlementChanges)
-    .map(withAuctionDelivery),
+    .map(withAuctionDelivery)
+    .map(withUncappedAuctionAmounts)
+    .map(withAuctionStepOptions)
+    .map(withCustomAuctionStep),
   ...pointCollectionSpecs.map(withAuctionDelivery),
   ...resolutionCollectionSpecs
     .map(withSettlementChanges)
@@ -438,7 +528,7 @@ export const currentCollections = (): CollectionSpec[] => [
   ...conversationAgreementSpecs,
   ...reviewLifecycleSpecs,
   ...inspectionEvidenceCollectionSpecs,
-  ...pointIncidentCollectionSpecs,
+  ...pointIncidentCollectionSpecs.map(withUncappedAuctionAmounts),
   ...auctionDeliveryCollectionSpecs,
   ...listingAutofillSpecs,
   ...memberProfileSpecs,

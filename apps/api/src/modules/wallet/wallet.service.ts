@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { createHash, randomUUID } from 'node:crypto';
 import type { Document } from 'mongodb';
 import type { TopupIntentDoc } from '../../database/mongo/documents.js';
+import { VNPAY_TOPUP_MAX } from '../../database/mongo/migrations/0055-simulator-capital-increase.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import {
   MongoCommandService,
@@ -175,6 +176,12 @@ export class WalletService {
               400,
               'VALIDATION_ERROR',
               'VNPay yêu cầu nạp ít nhất 5.000đ.',
+            );
+          if (body.amount > VNPAY_TOPUP_MAX)
+            throw new DomainError(
+              400,
+              'VALIDATION_ERROR',
+              'VNPay nhận tối đa 9.999.999.999đ mỗi lần nạp.',
             );
           const expiresAt = new Date(now.getTime() + 5 * 60000);
           const checkout = this.vnpay.checkout(

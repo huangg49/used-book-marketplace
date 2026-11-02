@@ -33,6 +33,7 @@ import {
 import { ListingTitle } from "./ListingTitle";
 import { reviewQueuePath } from "./review-navigation";
 import styles from "./ReviewWorkspace.module.css";
+import { EmptyArt } from "../../core/EmptyArt";
 
 const aiFiltersFor = (status: string) =>
   status === "PendingReview"
@@ -189,7 +190,7 @@ function QueueContent({ kind, user }: { kind: Kind; user: CurrentUser }) {
             <ListFeedback result={result} loadingText="Đang tải hồ sơ…" />
             {result.isSuccess && items.length === 0 && (
               <div className="empty">
-                <span className="folio">—</span>
+                <EmptyArt variant="review" />
                 <h2>Chưa có hồ sơ ở mục này.</h2>
                 <p>Danh sách sẽ cập nhật khi có lần gửi phù hợp.</p>
               </div>

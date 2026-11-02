@@ -24,6 +24,8 @@ import {
   intakePriceErrors,
   outcomeUnknown,
   EVIDENCE_MIN_LENGTH,
+  auctionStepError,
+  type AuctionStep,
 } from "./auctions-model";
 import {
   handoverPoints,
@@ -134,7 +136,12 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const [listingId, setListingId] = useState<string | null>(null);
   const [pointId, setPointId] = useState<string | null>(null);
   const [start, setStart] = useState("");
-  const [step, setStep] = useState<10000 | 50000>(10000);
+  const [presetStep, setPresetStep] = useState<AuctionStep>(10000);
+  const [customStepOn, setCustomStepOn] = useState(false);
+  const [customStep, setCustomStep] = useState("");
+  const stepError = customStepOn ? auctionStepError(digits(customStep)) : undefined;
+  // Prices keep a usable grid while the custom step is still being typed.
+  const step = customStepOn && !stepError ? digits(customStep)! : presetStep;
   const [buyNowOn, setBuyNowOn] = useState(false);
   const [buyNow, setBuyNow] = useState("");
   const [touched, setTouched] = useState(false);
@@ -173,7 +180,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
         selectedPoint.availableSlots < 1 ||
         selectedPoint.status !== "Active"
       ? "Vui lòng chọn trạm tiếp nhận còn chỗ tại TP.HCM."
-      : (priceErrors.startPrice ?? priceErrors.buyNowPrice ?? null);
+      : (stepError ?? priceErrors.startPrice ?? priceErrors.buyNowPrice ?? null);
 
   const locked = busy || Boolean(pending);
 
@@ -403,8 +410,19 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
 
             {/* 6. Section 3: Pricing Settings */}
             <SendToAuctionPricing
-              step={step}
-              onSelectStep={setStep}
+              step={presetStep}
+              onSelectStep={(value) => {
+                setPresetStep(value);
+                setCustomStepOn(false);
+              }}
+              customStepOn={customStepOn}
+              onSelectCustomStep={() => {
+                setCustomStepOn(true);
+                if (!customStep) setCustomStep(String(presetStep));
+              }}
+              customStepText={customStep}
+              onChangeCustomStepText={setCustomStep}
+              customStepError={touched || customStep ? stepError : undefined}
               startPriceText={start}
               onChangeStartPriceText={setStart}
               startPriceError={touched ? priceErrors.startPrice : undefined}

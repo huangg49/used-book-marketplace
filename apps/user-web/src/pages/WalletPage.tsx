@@ -26,7 +26,7 @@ const labels = {
   Cancelled: "Đã hủy",
   ReviewRequired: "Cần đối soát",
 };
-const amountError = "Nhập số tiền từ 5.000đ đến 10.000.000đ.";
+const amountError = "Nhập số tiền từ 5.000đ đến 9.999.999.999đ.";
 export function WalletPage() {
   const auth = useSession();
   const [params] = useSearchParams();
@@ -241,7 +241,7 @@ export function WalletPage() {
     event.preventDefault();
     if (busy || paymentOpen) return;
     const value = Number(amount);
-    if (!/^\d+$/.test(amount) || value < 5000 || value > 10000000) {
+    if (!/^\d+$/.test(amount) || value < 5000 || value > 9_999_999_999) {
       setError(amountError);
       amountInput.current?.focus();
       return;
@@ -490,7 +490,7 @@ export function WalletPage() {
             aria-invalid={error === amountError}
           />
           <p id="topup-range">
-            Từ <strong>5.000đ</strong> đến <strong>10.000.000đ</strong> mỗi lần
+            Từ <strong>5.000đ</strong> đến <strong>9.999.999.999đ</strong> mỗi lần
             nạp.
           </p>
           <p>

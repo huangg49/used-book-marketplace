@@ -8,7 +8,8 @@ export const AUCTION_DURATION_MS = 24 * HOUR_MS;
 export const AUCTION_DROPOFF_MS = 72 * HOUR_MS;
 export const AUCTION_PAYMENT_MS = 24 * HOUR_MS;
 export const BUY_NOW_PAYMENT_MS = 15 * 60_000;
-export const BUY_NOW_CHALLENGE_MS = 60_000; // ADR 0043
+export const BUY_NOW_CHALLENGE_MS = 60_000; // ADR 0043: Buy Now by the current leader
+export const BUY_NOW_RIVAL_CHALLENGE_MS = 5 * 60_000; // ADR 0070: Buy Now by a non-leader
 // ADR 0047: the seller publishes a Passed intake now or schedules it.
 export const AUCTION_MIN_DURATION_MS = HOUR_MS;
 export const AUCTION_MAX_DURATION_MS = 168 * HOUR_MS;
@@ -17,7 +18,19 @@ export const AUCTION_SCHEDULE_HORIZON_MS = 7 * 24 * HOUR_MS;
 export const AUCTION_MIN_REMAINING_MS = HOUR_MS;
 export const AUCTION_MAX_SCHEDULE_EDITS = 5;
 export const AUCTION_MIN_PRICE = 10_000;
+// ADR 0068: preset bid steps (frozen in migration 0056's checksum). Sellers may
+// also enter any step on the AUCTION_STEP_UNIT grid within the bounds below.
+export const AUCTION_STEPS = [10_000, 20_000, 50_000, 100_000] as const;
+export const AUCTION_STEP_MIN = 1_000;
+export const AUCTION_STEP_MAX = 10_000_000;
+export const AUCTION_STEP_UNIT = 1_000;
+export type AuctionStep = number;
+// Frozen ceiling of migrations 0008/0009 (their checksums depend on it).
+// Migration 0054 lifts it: application code checks MONEY_MAX instead.
 export const AUCTION_MAX_PRICE = 1_000_000;
+// ADR 0067: auction prices and declared values have no business ceiling; only
+// the largest integer JavaScript and the validators represent exactly.
+export const MONEY_MAX = Number.MAX_SAFE_INTEGER;
 export const POINT_ORDER_COMMISSION_BPS = 500;
 export const RECIPIENT_DECISION_MS = 72 * HOUR_MS;
 export const COLLECTION_WINDOW_MS = 72 * HOUR_MS;

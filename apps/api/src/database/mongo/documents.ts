@@ -694,6 +694,7 @@ export interface LedgerJournalDoc {
   sequence: number;
   type:
     | 'OpeningCapital'
+    | 'CapitalIncrease'
     | 'Topup'
     | 'OrderPayment'
     | 'OrderRefund'

@@ -33,6 +33,7 @@ import { session, canResolve } from "../../core/session";
 import { Button, Notice } from "../../core/ui";
 import { dateText } from "../../core/format";
 import styles from "./support.module.css";
+import { EmptyArt } from "../../core/EmptyArt";
 
 export function SupportQueuePage() {
   const user = useOutletContext<CurrentUser>();
@@ -172,6 +173,7 @@ function SupportQueue({ owner }: { owner: string }) {
           ))}
       {result.isSuccess && !result.data.pages[0].items.length ? (
         <section className="empty">
+          <EmptyArt variant="inbox" />
           <h2>Chưa có hồ sơ trong phạm vi này</h2>
           <p>
             Đổi bộ lọc hoặc cập nhật danh sách. Hàng đợi này không xác nhận mọi

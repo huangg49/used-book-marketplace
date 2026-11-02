@@ -76,6 +76,26 @@
   flex-wrap: wrap;
 }
 
+/* Status line and refresh share one ruled bar above the list. */
+.queue-status {
+  margin: 0;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--shop-line);
+}
+
+.queue-status > p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.queue-extra:not(:empty) {
+  margin: 0.25rem 0 1rem;
+}
+
+.queue-extra:not(:empty) + * {
+  margin-top: 0;
+}
+
 .queue-toolbar > .button:only-child {
   margin-left: auto;
 }
@@ -285,8 +305,17 @@
   transition: background-color 180ms ease;
 }
 
+/* Shelf matches the desk ground, so a hovered row would vanish into the page;
+   use the cream tint plus a wine edge instead. */
 .queue-row:hover {
-  background: var(--shop-shelf);
+  background: var(--shop-cream);
+  box-shadow: inset 3px 0 0 var(--shop-wine);
+}
+
+/* The status pill shares the shelf tone; lift it so it stays visible on hover. */
+.queue-row:hover .row-meta > span:first-child {
+  background: var(--shop-paper);
+  box-shadow: inset 0 0 0 1px var(--shop-line);
 }
 
 .row-number {
@@ -313,6 +342,26 @@
   color: var(--shop-muted);
   margin-bottom: 0.5rem;
   align-items: center;
+}
+
+/* Secondary attributes read as outlined chips beside the status pill. */
+.row-meta > span:not(:first-child) {
+  padding: 1px 8px;
+  border: 1px solid var(--shop-line);
+  border-radius: 6px;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.row-detail-label {
+  color: var(--shop-ink);
+  font-weight: 600;
+}
+
+.row-detail-warn {
+  color: var(--warning);
+  font-weight: 600;
 }
 
 .row-meta > span:first-child {
@@ -843,6 +892,15 @@
 
 .inline-search .field {
   flex: 1 1 16rem;
+  margin-bottom: 0;
+}
+
+/* Match the button to the input so both share one baseline row. */
+.inline-search .field input,
+.inline-search > .button {
+  box-sizing: border-box;
+  height: 44px;
+  min-height: 44px;
 }
 
 .report-revisions {
@@ -987,3 +1045,11 @@
     padding: 0.5rem 0.75rem;
   }
 }
+
+/* Receive desk: one-click recent shelf codes under the shelf field. */
+.shelf-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: -4px 0 8px; }
+.shelf-chips .muted { font-size: .8125rem; margin-right: 2px; }
+.chip-button { min-height: 32px; padding: 4px 12px; border: 1px solid var(--shop-line, #d9cbbd); border-radius: 999px; background: var(--shop-paper, #fffdf8); color: var(--shop-wine, #5c0202); font: inherit; font-size: .8125rem; font-weight: 700; letter-spacing: .03em; cursor: pointer; transition: background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out; }
+.chip-button:hover:not(:disabled) { border-color: var(--shop-wine, #5c0202); }
+.chip-button[aria-pressed="true"] { border-color: var(--shop-wine, #5c0202); background: var(--shop-wine, #5c0202); color: var(--shop-cream, #fcf8db); }
+.chip-button:focus-visible { outline: 2px solid var(--shop-wine, #5c0202); outline-offset: 2px; }

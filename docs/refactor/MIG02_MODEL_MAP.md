@@ -17,7 +17,8 @@ và 17 migration SQL ở baseline. Đích: `apps/api/src/database/mongo/migratio
   `workflow_items`=`contextId:listingId`, `shipment_packaging_evidence`=`shipmentId:evidenceId`,
   `service_localities`=`areaCode:code`). Validator kiểm `_id` ghép khớp các field.
 - Cột nullable luôn lưu `null`, không bỏ field; `additionalProperties:false` từ chối field lạ.
-- Tiền là số nguyên BSON `int` (VND); ledger ≤ 100.000.000 nên không cần int64.
+- Tiền là số nguyên BSON `int` (VND). Từ ADR0067 (migration 0054/0055) tiền đấu giá,
+  sự cố, nạp ví và `ledger_entries` nhận `int|long|double` nguyên, tối đa `MAX_SAFE_INTEGER`.
 - Thời gian: BSON date, **mili giây** (PostgreSQL micro giây). Dữ liệu import bị cắt về ms;
   thứ tự trùng thời gian luôn phân xử bằng `_id`. Cursor v1 bị từ chối 400 (`keyset.ts`).
 - Chuỗi văn bản sắp xếp theo khóa đã chuẩn hóa (bỏ dấu, `đ→d`, chữ thường) so sánh nhị phân;

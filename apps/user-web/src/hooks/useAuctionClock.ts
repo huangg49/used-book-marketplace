@@ -27,7 +27,7 @@ export function formatRemaining(ms: number, compact = false) {
   const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0')
   const ss = String(s % 60).padStart(2, '0')
   if (h === 0) return `${mm}:${ss}`
-  return compact ? `${h}:${mm}:${ss}` : `${h} giờ ${mm} phút`
+  return compact ? `${h}:${mm}:${ss}` : `${h} giờ ${mm} phút ${ss} giây`
 }
 
 /**

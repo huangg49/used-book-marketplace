@@ -29,12 +29,12 @@
 .priceLabel { margin: 0; color: var(--shop-muted); font-size: .8125rem; }
 .price { margin: 6px 0 10px; color: var(--shop-wine); font-size: clamp(2rem,3vw,2.5rem); line-height: 1.3; font-weight: 700; font-variant-numeric: tabular-nums; }
 .priceMeta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: .8125rem; color: var(--shop-muted); margin: 0 0 22px; }
-.bidPanel { display: grid; gap: 16px; }
+.bidPanel { display: grid; gap: 12px; }
 .quickLabel { margin: 0 0 -8px; font-size: .8125rem; color: var(--shop-muted); }
 .quick { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
 .quick button { min-height: 44px; padding: 8px 5px; border: 1px solid var(--shop-control); border-radius: 6px; background: var(--shop-paper); color: var(--shop-wine); font-size: .8125rem; font-weight: 600; font-variant-numeric: tabular-nums; cursor: pointer; }
 .quick button[aria-pressed=true] { background: var(--shop-wine); border-color: var(--shop-wine); color: var(--shop-cream); }
-.customBid { display: grid; gap: 12px; }
+.customBid { display: grid; gap: 10px; }
 .field { display: grid; gap: 7px; }
 .field label { font-size: .875rem; font-weight: 600; }
 .inputWrap { display: flex; align-items: center; border: 1px solid var(--shop-control); border-radius: 6px; padding: 0 12px; background: var(--shop-paper); }
@@ -54,14 +54,18 @@
 .continue:hover:not(:disabled),.primaryBlock:hover { background: var(--shop-wine-hover); }
 .page button:disabled { opacity: .6; cursor: not-allowed; }
 .autoBid { display: grid; border-top: 1px solid var(--shop-line); border-bottom: 1px solid var(--shop-line); }
-.autoToggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 14px 0; width: 100%; background: none; border: 0; text-align: left; color: var(--shop-ink); cursor: pointer; }
+.autoToggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 10px 0; width: 100%; background: none; border: 0; text-align: left; color: var(--shop-ink); cursor: pointer; }
 .autoToggle strong { display: inline-flex; align-items: center; gap: 6px; font-size: .875rem; }
-.autoToggle small { display: block; margin-top: 5px; color: var(--shop-muted); font-size: .8125rem; line-height: 1.7; }
+.autoToggle small { display: block; margin-top: 3px; color: var(--shop-muted); font-size: .78rem; line-height: 1.5; }
 .buyNow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: .875rem; }
 .buyNow strong { color: var(--shop-wine); }
-.buyNow small { display: block; margin-top: 4px; font-size: .75rem; line-height: 1.7; color: var(--shop-muted); }
-.standing { display: grid; gap: 6px; padding: 14px; border-radius: 6px; font-size: .875rem; line-height: 1.8; transition: background-color 270ms ease-out, color 270ms ease-out !important; }
-.standing strong { font-size: .9375rem; }
+.buyNow small { display: block; margin-top: 2px; font-size: .75rem; line-height: 1.5; color: var(--shop-muted); }
+.standing { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; padding: 10px 12px; border-radius: 8px; font-size: .8125rem; line-height: 1.6; transition: background-color 270ms ease-out, color 270ms ease-out !important; }
+.standing strong { display: inline-flex; align-items: center; gap: 6px; font-size: .875rem; }
+.standing strong svg { flex: none; align-self: center; }
+.standing b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.standingOut { border-left: 3px solid #b4483e; }
+.standingLead { border-left: 3px solid var(--shop-exchange-ink); }
 .standingLead { background: #e8efe9; color: var(--shop-exchange-ink); }
 .standingOut { background: #fbeee9; color: #7b2e1b; }
 .success { margin: 0; font-size: .875rem; line-height: 1.8; color: var(--shop-exchange-ink); font-weight: 600; }
@@ -138,3 +142,96 @@
 @media(max-width:640px) { .conditionRow { grid-template-columns: 1fr; gap: 16px; } }
 @media(max-width:480px) { .page { padding-top: 16px; } .crumbs { margin-bottom: 18px; } .timerPart strong { font-size: 1.5rem; } .bidCard { padding: 18px 16px; } .head h1 { font-size: 1.65rem; } .inspected { margin-top: 10px; } .bookCard, .sessionCard { padding: 18px 16px; } .partGrid, .priceTiles { grid-template-columns: 1fr; } .priceTiles { gap: 8px; } .priceTiles div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; } .priceTiles dd { margin: 0; font-size: 1rem; text-align: right; } .partGrid { gap: 8px; } .partGrid div { display: grid; grid-template-columns: 104px minmax(0,1fr); gap: 10px; padding: 10px 12px; } .partGrid dd { margin: 0; } .historyList li { grid-template-columns: 32px minmax(0,1fr) auto; gap: 7px; padding-inline: 4px; } .avatar { width: 30px; height: 30px; } }
 .priceTiles small { display: block; margin-top: 2px; font-size: .6875rem; line-height: 1.5; color: var(--shop-muted); }
+
+/* Seller's own auction: labelled note and coloured actions. */
+.ownerNote { border-left: 3px solid var(--shop-exchange-ink); }
+.ownerNote strong { display: inline-flex; align-items: center; gap: 7px; font-size: .8125rem; letter-spacing: .05em; text-transform: uppercase; }
+.ownerNote b { font-weight: 700; color: var(--shop-ink); }
+.ownerPrimary, .ownerDanger { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 44px; padding: 10px 16px; border-radius: 6px; font: inherit; font-size: .875rem; font-weight: 700; cursor: pointer; transition: background-color 140ms ease-out, border-color 140ms ease-out, color 140ms ease-out; }
+.ownerPrimary { border: 1px solid var(--shop-wine); background: var(--shop-wine); color: var(--shop-cream); }
+.ownerPrimary:hover:not(:disabled) { background: #7c2320; border-color: #7c2320; }
+.ownerDanger { border: 1px solid #b4483e; background: #fbeeec; color: #9b2c22; }
+.ownerDanger:hover:not(:disabled) { background: #b4483e; border-color: #b4483e; color: #fff; }
+.ownerPrimary:focus-visible, .ownerDanger:focus-visible { outline: 2px solid var(--shop-wine); outline-offset: 2px; }
+.ownerPrimary:disabled, .ownerDanger:disabled { opacity: .55; cursor: not-allowed; }
+
+/* ── Motion and finish ─────────────────────────────────────────────────────
+   Project motion policy (11/10/2026): these run regardless of
+   prefers-reduced-motion; nothing here hides content if animation is absent. */
+@keyframes adRise { from { opacity: 0; transform: translateY(14px); } }
+@keyframes adTick { from { opacity: .35; transform: translateY(-35%); } }
+@keyframes adPulseRing { 0% { box-shadow: 0 0 0 0 #25433766; } 70% { box-shadow: 0 0 0 7px #25433700; } 100% { box-shadow: 0 0 0 0 #25433700; } }
+@keyframes adUrgent { 50% { opacity: .55; } }
+@keyframes adStripes { to { background-position: 28px 0; } }
+@keyframes adShine { from { transform: translateX(-120%) skewX(-18deg); } to { transform: translateX(220%) skewX(-18deg); } }
+@keyframes adFill { from { transform: scaleX(0); } }
+@keyframes adGlow { 50% { box-shadow: 0 0 0 4px #5c020214; } }
+
+/* Staggered entrance: header, gallery, bid panel, then the detail cards. */
+.head { animation: adRise 520ms cubic-bezier(.16,1,.3,1) both; }
+.media { animation: adRise 560ms 80ms cubic-bezier(.16,1,.3,1) both; }
+.side { animation: adRise 560ms 140ms cubic-bezier(.16,1,.3,1) both; }
+.body > * { animation: adRise 560ms cubic-bezier(.16,1,.3,1) both; }
+.body > :nth-child(1) { animation-delay: 200ms; }
+.body > :nth-child(2) { animation-delay: 260ms; }
+.body > :nth-child(3) { animation-delay: 320ms; }
+.body > :nth-child(n+4) { animation-delay: 380ms; }
+
+/* Bid panel: a wine-to-gold rule on top and a soft lift off the page. */
+.side { overflow: clip; box-shadow: 0 1px 2px #2819140d, 0 18px 40px -22px #28191440; }
+.side::before { content: ''; display: block; height: 4px; background: linear-gradient(90deg, var(--shop-wine), #a8452c 55%, #d9a441); }
+.timerCard { background: linear-gradient(180deg, #fbf3e6, transparent); }
+
+/* Each digit drops in when it changes; the last hour pulses gently. */
+.timerPart strong { display: inline-block; animation: adTick 380ms cubic-bezier(.16,1,.3,1); }
+.timerSoon .timerPart strong { animation: adTick 380ms cubic-bezier(.16,1,.3,1), adUrgent 1.6s 380ms ease-in-out infinite; }
+.liveOn span { animation: adPulseRing 1.8s ease-out infinite; }
+
+/* Quick picks and the main button respond to pointer and press. */
+.quick button { transition: transform 140ms ease-out, box-shadow 140ms ease-out, background-color 140ms ease-out, color 140ms ease-out, border-color 140ms ease-out; }
+.quick button:hover:not(:disabled):not([aria-pressed=true]) { border-color: var(--shop-wine); transform: translateY(-1px); box-shadow: 0 6px 14px -8px #5c020266; }
+.quick button:active:not(:disabled), .continue:active:not(:disabled), .primaryBlock:active { transform: scale(.98); }
+.continue, .primaryBlock { position: relative; overflow: hidden; transition: background-color 160ms ease-out, transform 120ms ease-out, box-shadow 160ms ease-out; box-shadow: 0 8px 18px -10px #5c0202aa; }
+.continue::after, .primaryBlock::after { content: ''; position: absolute; inset: 0 auto 0 0; width: 40%; background: linear-gradient(90deg, transparent, #ffffff38, transparent); transform: translateX(-120%) skewX(-18deg); pointer-events: none; }
+.continue:hover:not(:disabled)::after, .primaryBlock:hover::after { animation: adShine 700ms ease-out; }
+.continue svg { transition: transform 160ms ease-out; }
+.continue:hover:not(:disabled) svg { transform: translateX(3px); }
+.inputWrap { transition: border-color 140ms ease-out, box-shadow 140ms ease-out; }
+
+/* Buy Now reads as a distinct offer card with a slow gold sheen. */
+.buyNow { position: relative; overflow: hidden; padding: 12px 14px; border: 1px solid #e4c47a; border-radius: 10px; background: linear-gradient(135deg, #fdf3d8, #f8e7bd); }
+.buyNow::after { content: ''; position: absolute; inset: 0 auto 0 0; width: 30%; background: linear-gradient(90deg, transparent, #ffffff70, transparent); animation: adShine 3.6s 1s ease-in-out infinite; pointer-events: none; }
+.buyNow > * { position: relative; z-index: 1; }
+.buyNow strong { font-size: 1rem; }
+.buyNow .secondary { border-color: var(--shop-wine); background: var(--shop-paper); transition: background-color 140ms ease-out, color 140ms ease-out; }
+.buyNow .secondary:hover:not(:disabled) { background: var(--shop-wine); color: var(--shop-cream); }
+
+/* Session card: tiles lift on hover, the time track fills and moves while live. */
+.priceTiles div { transition: transform 160ms ease-out, box-shadow 160ms ease-out; }
+.priceTiles div:hover { transform: translateY(-2px); box-shadow: 0 10px 20px -14px #2819144d; }
+.track span { transform-origin: left; animation: adFill 900ms 300ms cubic-bezier(.16,1,.3,1) both; transition: width 1s linear; }
+.track[data-live] span { background: repeating-linear-gradient(-45deg, var(--shop-wine) 0 7px, #7c2320 7px 14px); background-size: 28px 100%; animation: adFill 900ms 300ms cubic-bezier(.16,1,.3,1) both, adStripes 1.2s linear infinite; }
+.pickupIcon { animation: adGlow 2.8s ease-in-out infinite; }
+
+/* Condition scale fills step by step; chips and history rows react on hover. */
+.conditionScale li > span { transform-origin: left; animation: adFill 480ms cubic-bezier(.16,1,.3,1) both; }
+.conditionScale li:nth-child(2) > span { animation-delay: 90ms; }
+.conditionScale li:nth-child(3) > span { animation-delay: 180ms; }
+.conditionScale li:nth-child(4) > span { animation-delay: 270ms; }
+.chips li { transition: transform 140ms ease-out; }
+.chips li:hover { transform: translateY(-1px); }
+.historyList li { transition: background-color 140ms ease-out; }
+.historyList li:hover { background: #faf4ea; }
+.historyTop { box-shadow: inset 3px 0 0 var(--shop-wine); }
+.historyTop .avatar { animation: adGlow 2.4s ease-in-out infinite; }
+.bookCard, .sessionCard { transition: border-color 180ms ease-out, box-shadow 180ms ease-out; }
+.bookCard:hover, .sessionCard:hover { border-color: var(--shop-control); box-shadow: 0 14px 30px -24px #28191459; }
+
+/* ADR 0071: the member's available balance beside the bid amount. */
+.walletLine, .walletShort { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 0; font-size: .8125rem; line-height: 1.6; }
+.walletLine { color: var(--shop-muted); }
+.walletLine b { color: var(--shop-ink); font-variant-numeric: tabular-nums; }
+.walletShort { padding: 8px 10px; border-left: 3px solid #b4483e; border-radius: 6px; background: #fbeee9; color: #7b2e1b; }
+.walletShort b { font-variant-numeric: tabular-nums; }
+.walletShort a { color: var(--shop-wine); font-weight: 700; text-underline-offset: 3px; }
+.buyNow .walletShort { flex-basis: 100%; }

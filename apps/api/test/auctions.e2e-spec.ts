@@ -19,6 +19,7 @@ import { AuctionWorker } from '../src/modules/auctions/auction-worker.service.js
 import { isPointOpen } from '../src/modules/auctions/point-hours.js';
 import { MongoService } from '../src/database/mongo/mongo.service.js';
 import { LedgerService } from '../src/modules/wallet/ledger.service.js';
+import { AuctionBiddingService } from '../src/modules/auctions/auction-bidding.service.js';
 import { validates } from './helpers/contract.js';
 import {
   CHECKLIST,
@@ -160,21 +161,21 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     body: Partial<{
       expectedVersion: number;
       startAt: string | null;
-      durationHours: number;
+      durationSeconds: number;
     }> = {},
     key?: string,
   ) =>
     cmd(
       'post',
       `/auction-intakes/${intakeId}/publish`,
-      { expectedVersion: 3, startAt: null, durationHours: 24, ...body },
+      { expectedVersion: 3, startAt: null, durationSeconds: 24 * 3600, ...body },
       seller,
       key,
     );
   const reschedule = (
     auctionId: string,
     seller: Actor,
-    body: { expectedVersion: number; startAt: string | null; durationHours: number },
+    body: { expectedVersion: number; startAt: string | null; durationSeconds: number },
   ) => cmd('post', `/auctions/${auctionId}/schedule`, body, seller);
   // Seller intake -> assigned Staff receive -> inspect Pass -> open.
   async function openAuction(over: Parameters<typeof intakeBody>[1] = {}) {
@@ -1411,6 +1412,15 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       intakeBody(l, { buyNowPrice: 225_000 }),
       seller,
     ).expect(422);
+    // ADR 0068: a step is a multiple of 1.000đ from 1.000đ to 10.000.000đ.
+    for (const step of [0, 500, 1_500, 25_500, 10_001_000])
+      await cmd('post', '/auction-intakes', intakeBody(l, { step }), seller).expect(422);
+    await cmd(
+      'post',
+      '/auction-intakes',
+      intakeBody(l, { step: 100_000, buyNowPrice: 650_000 }),
+      seller,
+    ).expect(422);
     const key = randomUUID();
     const created = await cmd(
       'post',
@@ -1597,6 +1607,22 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     expect(JSON.stringify(audits)).not.toContain('400000');
   });
 
+  it('ADR 0068: preset and custom bid steps are stored and keep the price grid', async () => {
+    for (const step of [1_000, 10_000, 15_000, 20_000, 50_000, 100_000, 10_000_000]) {
+      const seller = await actor();
+      const l = await saleListing(seller);
+      const created = await cmd(
+        'post',
+        '/auction-intakes',
+        intakeBody(l, { step, startPrice: 200_000, buyNowPrice: 200_000 + 2 * step }),
+        seller,
+      ).expect(200);
+      expect(
+        await db.c.auction_intakes.findOne({ _id: created.body.intakeId }),
+      ).toMatchObject({ step, startPrice: 200_000, buyNowPrice: 200_000 + 2 * step });
+    }
+  });
+
   it('AC-AU05/06: tie priority, leader rules, grid, BidTooLow and replay', async () => {
     const { auctionId } = await openAuction();
     const [a, b, c] = [await actor(), await actor(), await actor()];
@@ -1608,7 +1634,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     expect(raised.body).toMatchObject({ currentPrice: 400_000, leading: true });
     await auto(auctionId, a, 550_000).expect(409);
     await bid(auctionId, c, 425_000).expect(422);
-    await bid(auctionId, c, 1_050_000).expect(422);
+    await bid(auctionId, c, Number.MAX_SAFE_INTEGER + 1).expect(422);
     const low = await bid(auctionId, c, 400_000).expect(409);
     expect(low.body.code).toBe('BidTooLow');
     const key = randomUUID();
@@ -1685,7 +1711,8 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         bidderCount: r1.status === 200 ? 2 : 1,
         winnerId: null,
       });
-      expect(a.endAt.getTime() - a.buyNowAt!.getTime()).toBe(60_000);
+      // ADR 0070: y was not leading, so the others get 5 minutes.
+      expect(a.endAt.getTime() - a.buyNowAt!.getTime()).toBe(5 * 60_000);
     }
   });
 
@@ -1928,7 +1955,8 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       bidCount: 1,
       orderId: null,
     });
-    expect(a.endAt.getTime() - a.buyNowAt!.getTime()).toBe(60_000);
+    // ADR 0070: a Buy Now by a non-leader opens a 5-minute window.
+    expect(a.endAt.getTime() - a.buyNowAt!.getTime()).toBe(5 * 60_000);
     expect(
       await db.c.auction_bids.countDocuments({ auctionId, kind: 'BuyNow' }),
     ).toBe(1);
@@ -2046,8 +2074,8 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       const stranger = await actor();
       await publish(intakeId, stranger).expect(404);
       await publish(intakeId, staff).expect(403);
-      await publish(intakeId, seller, { durationHours: 0 }).expect(422);
-      await publish(intakeId, seller, { durationHours: 169 }).expect(422);
+      await publish(intakeId, seller, { durationSeconds: 3599 }).expect(422);
+      await publish(intakeId, seller, { durationSeconds: 604_801 }).expect(422);
       for (const startAt of [later(-60_000), later(60_000), later(8 * 24 * HOUR)])
         expect(
           (await publish(intakeId, seller, { startAt }).expect(422)).body
@@ -2060,7 +2088,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       const r = await publish(
         intakeId,
         seller,
-        { startAt, durationHours: 6 },
+        { startAt, durationSeconds: 6 * 3600 },
         key,
       ).expect(200);
       validates('AuctionCommandReceipt', r.body);
@@ -2068,12 +2096,12 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       const replay = await publish(
         intakeId,
         seller,
-        { startAt, durationHours: 6 },
+        { startAt, durationSeconds: 6 * 3600 },
         key,
       ).expect(200);
       expect(replay.headers['idempotency-replayed']).toBe('true');
       expect(replay.body).toEqual(r.body);
-      await publish(intakeId, seller, { startAt, durationHours: 7 }, key).expect(409);
+      await publish(intakeId, seller, { startAt, durationSeconds: 7 * 3600 }, key).expect(409);
       expect(
         (await publish(intakeId, seller, { expectedVersion: 4 }).expect(409)).body
           .code,
@@ -2119,7 +2147,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       const { seller, intakeId } = await passedIntake();
       await publish(intakeId, seller, {
         startAt: later(2 * HOUR),
-        durationHours: 3,
+        durationSeconds: 3 * 3600,
       }).expect(200);
       const a = (await db.c.auctions.findOne({ intakeId }))!;
       expect(await publicIds()).not.toContain(a._id);
@@ -2155,7 +2183,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       expect(bought.body).toMatchObject({ currentPrice: 600_000, leading: true });
       vi.restoreAllMocks();
       const after = (await db.c.auctions.findOne({ _id: a._id }))!;
-      expect(after.endAt.getTime()).toBe(a.startAt.getTime() + 60_000);
+      expect(after.endAt.getTime()).toBe(a.startAt.getTime() + 5 * 60_000);
     });
 
     it('the seller edits the time before the first bid only; live edits move the end', async () => {
@@ -2166,25 +2194,25 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       await reschedule(a._id, stranger, {
         expectedVersion: 1,
         startAt: null,
-        durationHours: 24,
+        durationSeconds: 24 * 3600,
       }).expect(404);
       await reschedule(a._id, seller, {
         expectedVersion: 2,
         startAt: null,
-        durationHours: 24,
+        durationSeconds: 24 * 3600,
       }).expect(409);
       // Scheduled: move the start later, then start it now for 2 hours.
       const moved = later(5 * HOUR);
       await reschedule(a._id, seller, {
         expectedVersion: 1,
         startAt: moved,
-        durationHours: 12,
+        durationSeconds: 12 * 3600,
       }).expect(200);
       expect((await db.c.auctions.findOne({ _id: a._id }))!.startAt.toISOString()).toBe(moved);
       const live = await reschedule(a._id, seller, {
         expectedVersion: 2,
         startAt: null,
-        durationHours: 2,
+        durationSeconds: 2 * 3600,
       }).expect(200);
       validates('AuctionCommandReceipt', live.body);
       const started = (await db.c.auctions.findOne({ _id: a._id }))!;
@@ -2194,17 +2222,17 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       await reschedule(a._id, seller, {
         expectedVersion: 3,
         startAt: later(HOUR),
-        durationHours: 24,
+        durationSeconds: 24 * 3600,
       }).expect(422);
       await reschedule(a._id, seller, {
         expectedVersion: 3,
         startAt: null,
-        durationHours: 1,
+        durationSeconds: 1 * 3600,
       }).expect(422);
       await reschedule(a._id, seller, {
         expectedVersion: 3,
         startAt: null,
-        durationHours: 48,
+        durationSeconds: 48 * 3600,
       }).expect(200);
       const extended = (await db.c.auctions.findOne({ _id: a._id }))!;
       expect(extended.endAt.getTime() - extended.startAt.getTime()).toBe(48 * HOUR);
@@ -2213,7 +2241,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       const locked = await reschedule(a._id, seller, {
         expectedVersion: 5,
         startAt: null,
-        durationHours: 24,
+        durationSeconds: 24 * 3600,
       }).expect(409);
       expect(locked.body.code).toBe('InvalidState');
     });
@@ -2227,7 +2255,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
           reschedule(a._id, seller, {
             expectedVersion: 1,
             startAt: null,
-            durationHours: 36,
+            durationSeconds: 36 * 3600,
           }),
           bid(a._id, await actor(), 200_000),
         ]);
@@ -2243,13 +2271,31 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       }
     });
 
-    it('Buy Now is refused to the leader and once the price reaches it', async () => {
+    it('ADR 0070: the leader may Buy Now with a 60-second window', async () => {
       const { seller, intakeId } = await passedIntake();
       await publish(intakeId, seller).expect(200);
       const a = (await db.c.auctions.findOne({ intakeId }))!;
       const [x, y] = [await actor(), await actor()];
       await bid(a._id, x, 300_000).expect(200);
-      expect((await buyNowCmd(a._id, x).expect(409)).body.code).toBe('InvalidState');
+      const bought = await buyNowCmd(a._id, x).expect(200);
+      expect(bought.body).toMatchObject({ currentPrice: 600_000, leading: true });
+      const after = (await db.c.auctions.findOne({ _id: a._id }))!;
+      expect(after).toMatchObject({ leaderId: x.id, currentPrice: 600_000, bidCount: 2 });
+      expect(after.endAt.getTime() - after.buyNowAt!.getTime()).toBe(60_000);
+      expect(
+        await db.c.auction_bids.findOne({ auctionId: a._id, kind: 'BuyNow' }),
+      ).toMatchObject({ bidderId: x.id, amount: 600_000, priceBefore: 300_000, priceAfter: 600_000, leaderAfter: x.id });
+      // Others still outbid from Buy Now + step inside the window.
+      await bid(a._id, y, 650_000).expect(200);
+      expect((await db.c.auctions.findOne({ _id: a._id }))!.leaderId).toBe(y.id);
+    });
+
+    it('Buy Now is withdrawn once the price reaches it', async () => {
+      const { seller, intakeId } = await passedIntake();
+      await publish(intakeId, seller).expect(200);
+      const a = (await db.c.auctions.findOne({ intakeId }))!;
+      const [x, y] = [await actor(), await actor()];
+      await bid(a._id, x, 300_000).expect(200);
       await bid(a._id, y, 600_000).expect(200);
       const pub = await call('get', `/auctions/${a._id}`).expect(200);
       expect(pub.body.auction.buyNowPrice).toBeNull();
@@ -3755,7 +3801,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       ).toBe(5);
     });
 
-    it('cap: two Autos at 1,000,000 tie at the cap and nothing can go higher', async () => {
+    it('ADR 0067: bids pass the old 1,000,000 cap and the int32 range', async () => {
       const { auctionId } = await openAuction();
       const [x, y, z] = [await actor(), await actor(), await actor()];
       await auto(auctionId, x, 1_000_000).expect(200);
@@ -3764,12 +3810,14 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         currentPrice: 1_000_000,
         leading: false,
       });
-      const pub = await call('get', `/auctions/${auctionId}`).expect(200);
-      expect(pub.body.auction.currentPrice).toBe(1_000_000);
       expect((await bid(auctionId, z, 1_000_000).expect(409)).body.code).toBe(
         'BidTooLow',
       );
-      await bid(auctionId, z, 1_050_000).expect(422);
+      await bid(auctionId, z, 1_050_000).expect(200);
+      // Above 2^31 − 1 the driver stores a double; migration 0054 accepts it.
+      await bid(auctionId, x, 5_000_000_000).expect(200);
+      const pub = await call('get', `/auctions/${auctionId}`).expect(200);
+      expect(pub.body.auction.currentPrice).toBe(5_000_000_000);
       const { a } = await expectConsistent(auctionId);
       expect(a.leaderId).toBe(x.id);
     });
@@ -4697,4 +4745,65 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       expect(await reconciled()).toBe(true);
     });
   });
+  // ADR 0071: bids, Auto ceilings and Buy Now need available balance for the
+  // commitment plus open ones. Historical suites run with the check off
+  // (test-env.ts); this block switches it on for the real service.
+  describe('ADR 0071: wallet balance check on bidding', () => {
+    const toggle = (on: boolean) => {
+      (app.get(AuctionBiddingService) as unknown as { fundsCheck: boolean }).fundsCheck = on;
+    };
+    beforeAll(() => toggle(true));
+    afterAll(() => toggle(false));
+    const buyNowCmd = (auctionId: string, a: Actor) =>
+      cmd('post', `/auctions/${auctionId}/buy-now`, { fulfillmentMethod: 'SelfCollect' }, a);
+    const live = async () => {
+      const { seller, intakeId } = await passedIntake();
+      await publish(intakeId, seller).expect(200);
+      return (await db.c.auctions.findOne({ intakeId }))!;
+    };
+
+    it('an unfunded bid is refused without a bid row; a funded one is accepted', async () => {
+      const a = await live();
+      const x = await actor();
+      const refused = await bid(a._id, x, 300_000).expect(409);
+      expect(refused.body.code).toBe('InvalidState');
+      expect(refused.body.message).toMatch(/Số dư khả dụng 0đ chưa đủ/);
+      expect(await db.c.auction_bids.countDocuments({ auctionId: a._id })).toBe(0);
+      await fund(x, 300_000);
+      await bid(a._id, x, 300_000).expect(200);
+    });
+
+    it('an Auto ceiling must be covered in full; Buy Now needs its price', async () => {
+      const a = await live();
+      const x = await actor();
+      await fund(x, 400_000);
+      expect((await auto(a._id, x, 500_000).expect(409)).body.code).toBe('InvalidState');
+      await auto(a._id, x, 400_000).expect(200);
+      const y = await actor();
+      await fund(y, 500_000);
+      expect((await buyNowCmd(a._id, y).expect(409)).body.code).toBe('InvalidState');
+      await fund(y, 100_000);
+      await buyNowCmd(a._id, y).expect(200);
+    });
+
+    it('the price a bidder leads at elsewhere counts as committed', async () => {
+      const [first, second] = [await live(), await live()];
+      const x = await actor();
+      await fund(x, 500_000);
+      await bid(first._id, x, 300_000).expect(200);
+      const refused = await bid(second._id, x, 300_000).expect(409);
+      expect(refused.body.message).toMatch(/đang cam kết/);
+      await fund(x, 100_000);
+      await bid(second._id, x, 300_000).expect(200);
+    });
+
+    it('disabling Auto never needs funds', async () => {
+      const a = await live();
+      const x = await actor();
+      await fund(x, 300_000);
+      await auto(a._id, x, 300_000).expect(200);
+      await cmd('post', `/auctions/${a._id}/auto-bid/disable`, {}, x).expect(200);
+    });
+  });
 });
+

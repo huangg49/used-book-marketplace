@@ -16,6 +16,9 @@ process.env.NODE_ENV = 'test';
 // wallet-checkout verifies that obsolete fee config cannot re-enable charging.
 process.env.LISTING_SUBMISSION_FEE_VND = '0';
 process.env.ORDER_CHECKOUT_MODE = 'Unpaid';
+// Historical auction suites never funded their bidders; auction-funds.e2e-spec
+// turns the ADR 0071 wallet check back on (only honoured when NODE_ENV=test).
+process.env.AUCTION_BID_FUNDS_CHECK ??= 'Off';
 process.env.VNPAY_SANDBOX_ENABLED = 'false';
 // Never send real email when AppModule reads the developer's private .env.
 process.env.AUTH_MAIL_PROVIDER = 'local';
