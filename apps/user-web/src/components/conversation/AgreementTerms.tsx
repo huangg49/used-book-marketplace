@@ -238,7 +238,7 @@ export function AgreementTerms({
               </dd>
             </div>
           </dl>
-          <p className={styles.priceNote}>Chưa gồm phí giao nhận.</p>
+          <p className={styles.priceNote}>Giao hàng miễn phí.</p>
           {terms?.agreedPrice != null &&
             book &&
             terms.agreedListingRevisionId !== book.revisionId && (

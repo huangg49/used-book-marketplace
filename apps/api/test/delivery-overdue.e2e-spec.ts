@@ -918,7 +918,7 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
     expect(o).toMatchObject({
       version: 5,
       state: 'ResolutionPending',
-      moneyHeld: 230000,
+      moneyHeld: 200000,
       carrierReview: null,
       canReportNonReceipt: true,
       deliveryReview: {

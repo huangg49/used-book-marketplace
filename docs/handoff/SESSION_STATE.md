@@ -1,4 +1,34 @@
-# Điểm lưu hiện tại — 02/11/2026
+# Điểm lưu hiện tại — 03/11/2026
+
+## Miễn phí giao hàng mới — 03/11/2026
+
+- Hòa giải với `origin/main` tại `009e7946`: giữ registry AI/Exchange mới và
+  migration free-shipping theo full ID/checksum; giữ layout/recovery mới của
+  thương lượng và chỉ hiện phí lịch sử khi >0. PASS308web unit/build, API/RN
+  typecheck, contract0.72/234routes/37controllers, docs/diff và2Mongo upgrade
+  theo cả main-first/free-first trên QA riêng57127/`*_test`. Không migrate DB
+  ứng dụng, không chép env hoặc commit ghi chú VNPay local; native/full E2E/CI
+  tích hợp chưa chạy. Giữ finding stress100 của lượt trước ở bên dưới.
+
+
+- Nhánh `codex/remove-shipping-fees`, base `48ab01fa`; owner yêu cầu bỏ phí
+  toàn hệ thống, sau khảo sát xác nhận giữ dữ liệu/đơn cũ. [ADR0063](../adr/0063-free-shipping.md).
+- Migration0052 chọn policy0 và mở validator/contract cho outboundFee0; web/RN
+  ẩn dòng phí0, sửa hướng dẫn địa chỉ/gửi sách. Giữ phí lịch sử, commission,
+  expected fee/version, replay, ledger và workflow/gate hiện có.
+- Đã backup/migrate local, hash96collection nghiệp vụ không đổi; API/workers
+  chạy lại, readiness/hai web/proxy200. Chi tiết máy/backup ngoài Git trong .tmp.
+- PASS18quote/6auction delivery HTTP-Mongo và1migration;264web/194RN unit,
+  type/lint/build phù hợp, browser checkout390/1440 tới payment/replay/one hold.
+  Stress100create FAIL chỉ1success (cần2);61Orders khác và50payment/refund PASS. Không che lỗi;
+  chi tiết/giới hạn ở ADR. Owner đã cấp quyền commit/push lên nhánh riêng;
+  chưa PR/merge/deploy; native/human/remote CI chưa chạy.
+
+- Bổ sung popup địa chỉ: `PurchaseDialog` dùng native scroll qua
+  `data-lenis-prevent`, tránh Lenis toàn trang nuốt wheel. Browser regression
+  tái hiện FAIL trước sửa/PASS sau sửa bằng wheel thật ở390x600: tới nút cuối,
+  nền không cuộn, focus/Back và checkout/payment/replay vẫn PASS. Type/lint PASS,
+  detector0finding, web build PASS; giữ animation. Không đổi backend hoặc dữ liệu cho bản sửa này.
 
 ## AI lúc được lúc không: thử lại có giới hạn — 02/11/2026
 

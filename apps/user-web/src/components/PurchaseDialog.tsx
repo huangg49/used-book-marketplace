@@ -47,6 +47,7 @@ export function PurchaseDialog({
   return createPortal(
     <dialog
       ref={ref}
+      data-lenis-prevent="true"
       className={`${styles.dialog} ${className}`}
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}

@@ -377,7 +377,7 @@ export function AgreementSheetPanel({
           </View>
 
           <AppText style={styles.priceFootnote}>
-            * Giá sách chưa bao gồm phí giao nhận.
+            * Giao hàng miễn phí.
           </AppText>
 
           {/* Form / Nút đề nghị giá mới */}
@@ -480,12 +480,12 @@ export function AgreementSheetPanel({
             <AppText style={styles.destAddress}>
               {room.quotePreview.destination.detail}
             </AppText>
-            <View style={styles.destFeeRow}>
+            {room.quotePreview.shippingFee > 0 && (<View style={styles.destFeeRow}>
               <AppText style={styles.destFeeLabel}>Cước giao nhận:</AppText>
               <AppText style={styles.destFeeValue}>
                 {formatVnd(room.quotePreview.shippingFee)}
               </AppText>
-            </View>
+            </View>)}
             <AppText style={styles.destExpiry}>
               Báo giá có hiệu lực đến:{" "}
               {formatDateTimeVi(room.quotePreview.expiresAt)}
@@ -617,7 +617,7 @@ export function AgreementSheetPanel({
         <View style={styles.actionCard}>
           <AppText style={styles.actionCardTitle}>Sẵn sàng tạo đơn</AppText>
           <AppText style={styles.actionCardDesc}>
-            Người mua đã gửi địa chỉ nhận sách và cước phí đã được tính. Bấm nút
+            Người mua đã gửi địa chỉ nhận sách. Bấm nút
             dưới để xác nhận giá và tạo đơn hàng.
           </AppText>
           <View style={styles.createOrderBtn}>

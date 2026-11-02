@@ -14651,7 +14651,7 @@ components:
       required: [destination, shippingFee, expiresAt]
       properties:
         destination: { $ref: "#/components/schemas/OrderContact" }
-        shippingFee: { type: integer, minimum: 0 }
+        shippingFee: { type: integer, minimum: 0, description: Zero for new quotes under the free shipping policy; historical snapshots retain their fee. }
         expiresAt: { type: string, format: date-time }
     PurchaseMessage:
       type: object
@@ -18031,7 +18031,7 @@ components:
           type: string
         outboundFee:
           type: integer
-          minimum: 1
+          minimum: 0
           maximum: 1000000
         carrier:
           type: string
@@ -18091,7 +18091,7 @@ components:
           maximum: 1000000
         outboundFee:
           type: integer
-          minimum: 1
+          minimum: 0
           maximum: 1000000
         buyerTotal:
           type: integer
@@ -18216,7 +18216,7 @@ components:
           maximum: 2147483647
         expectedOutboundFee:
           type: integer
-          minimum: 1
+          minimum: 0
           maximum: 1000000
           description: The fee the buyer saw in the delivery quote.
     AcceptPointOrderReport:

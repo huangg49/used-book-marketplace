@@ -52,6 +52,11 @@ chạy `pnpm db:migrate` rồi `pnpm db:bootstrap` trước khi chạy cùng con
 Không reset/reseed hoặc sửa checksum migration cũ. Không bật cờ AI tự duyệt từ
 gói hỗ trợ, và READINESS vẫn giữ gate hiện có.
 
+Miễn phí giao hàng theo [ADR0063](../adr/0063-free-shipping.md): migration
+`0052-free-shipping` chọn biểu phí 0 cho giao dịch mới và cho phép giao sách đấu
+giá có cước 0. Dừng API/worker, backup rồi migrate trước khi chạy source mới.
+Giữ nguyên đơn/ledger cũ; báo giá cũ cần lấy lại do policy đã đổi.
+
 ## 2. Dựng môi trường mới
 
 Node theo `.nvmrc`, pnpm theo `packageManager` trong root `package.json`, Docker
