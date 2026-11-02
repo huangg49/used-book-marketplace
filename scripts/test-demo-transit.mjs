@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { root, initialize, createSandbox } from "./demo/sandbox.mjs";
 import { runTransit } from "./demo/transit.mjs";
+import { DEMO_FUNDING, SIMULATED_CAPITAL } from "./demo/funding.mjs";
 import { createHttp } from "./demo/http.mjs";
 import { shippingReceipt } from "./demo/shipping-receipts.mjs";
 
@@ -150,7 +151,10 @@ try {
     ).status,
     404,
   );
-  assert.equal(manifest.reconciliation.sourceRemaining, 99_000_000);
+  assert.equal(
+    manifest.reconciliation.sourceRemaining,
+    SIMULATED_CAPITAL - DEMO_FUNDING,
+  );
   for (const projection of Object.values(projections)) {
     assert.deepEqual(manifest.reconciliation, projection.ledger);
     assert.equal(manifest.shipment.pickupDeadline, projection.pickupDeadline);
@@ -195,8 +199,8 @@ try {
     shipment_packaging_evidence: 1,
     carrier_pickup_events: 1,
     carrier_pickup_reviews: 0,
-    ledger_journals: 5,
-    ledger_entries: 10,
+    ledger_journals: 6,
+    ledger_entries: 12,
     mutation_receipts: 65,
   });
   const after = await readJournal();

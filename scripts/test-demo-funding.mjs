@@ -3,7 +3,11 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { root, initialize, createSandbox } from "./demo/sandbox.mjs";
-import { runFunding, DEMO_FUNDING } from "./demo/funding.mjs";
+import {
+  runFunding,
+  DEMO_FUNDING,
+  SIMULATED_CAPITAL,
+} from "./demo/funding.mjs";
 import { createHttp } from "./demo/http.mjs";
 
 const directory = path.join(
@@ -49,10 +53,11 @@ try {
   assert.equal(manifest.wallet.available, DEMO_FUNDING);
   assert.equal(
     manifest.reconciliation.sourceRemaining,
-    100_000_000 - DEMO_FUNDING,
+    SIMULATED_CAPITAL - DEMO_FUNDING,
   );
   assert.equal(manifest.reconciliation.transactionHeld, 0);
-  assert.equal(manifest.reconciliation.journals, 2);
+  // Opening capital, the 0055 CapitalIncrease and the topup.
+  assert.equal(manifest.reconciliation.journals, 3);
   const counts = async () =>
     Object.fromEntries(
       await Promise.all(
@@ -72,8 +77,8 @@ try {
   assert.deepEqual(initial, {
     topup_intents: 1,
     simulated_payment_events: 1,
-    ledger_journals: 2,
-    ledger_entries: 4,
+    ledger_journals: 3,
+    ledger_entries: 6,
     mutation_receipts: 2,
   });
   const again = await runFunding(config, directory, sandbox);
