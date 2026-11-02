@@ -5656,6 +5656,88 @@ paths:
         "503":
           $ref: "#/components/responses/ListingError"
       x-locked-access: existing-obligations
+  /operations/simulator/topup-recipients:
+    get:
+      operationId: listSimulatedTopupRecipients
+      tags: [Wallet]
+      x-implementation-status: implemented
+      description: ACTIVE verified TEST_OPERATOR only. Lists up to 40 ACTIVE verified Members,
+        excluding the operator. Search by literal display name or exact account UUID; no email
+        or contact details are returned. Refine the search when hasMore is true.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 80, default: "" }
+      responses:
+        "200":
+          description: Eligible simulator recipients. Never cached.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulatedTopupRecipientPage"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/simulator/topups:
+    post:
+      operationId: createSimulatedTopup
+      tags: [Wallet]
+      x-implementation-status: implemented
+      description: ACTIVE verified TEST_OPERATOR, independent of the ACTIVE verified MEMBER recipient.
+        Requires PAYMENT_SIMULATOR_SECRET. Atomically creates a new simulator intent, authenticated
+        success event, finite-source ledger posting, receipt, audit and outbox. Never accepts an
+        existing intent or touches VNPay. Same key/body replays once after current authorization;
+        different body returns 409. Recipient eligibility is checked under participant locks before
+        a new posting. No balance adjustment or source refill.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSimulatedTopup"
+      responses:
+        "200":
+          description: Atomic simulator topup receipt.
+          headers:
+            Cache-Control:
+              schema: { type: string, const: no-store }
+            Idempotency-Replayed:
+              schema: { type: string, enum: ["true", "false"] }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /operations/simulator/topup-events:
     post:
       operationId: emitSimulatedTopupEvent
@@ -17049,6 +17131,29 @@ components:
       required: [amount]
       properties:
         amount: { type: integer, minimum: 5000, maximum: 10000000 }
+    SimulatedTopupRecipientPage:
+      type: object
+      additionalProperties: false
+      required: [items, hasMore]
+      properties:
+        items:
+          type: array
+          maxItems: 40
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, displayName]
+            properties:
+              id: { type: string, format: uuid }
+              displayName: { type: string }
+        hasMore: { type: boolean }
+    CreateSimulatedTopup:
+      type: object
+      additionalProperties: false
+      required: [recipientId, amount]
+      properties:
+        recipientId: { type: string, format: uuid }
+        amount: { type: integer, minimum: 1000, maximum: 10000000 }
     CreateTopupIntent:
       type: object
       additionalProperties: false

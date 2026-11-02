@@ -2018,6 +2018,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/simulator/topup-recipients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description ACTIVE verified TEST_OPERATOR only. Lists up to 40 ACTIVE verified Members, excluding the operator. Search by literal display name or exact account UUID; no email or contact details are returned. Refine the search when hasMore is true. */
+        get: operations["listSimulatedTopupRecipients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/simulator/topups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ACTIVE verified TEST_OPERATOR, independent of the ACTIVE verified MEMBER recipient. Requires PAYMENT_SIMULATOR_SECRET. Atomically creates a new simulator intent, authenticated success event, finite-source ledger posting, receipt, audit and outbox. Never accepts an existing intent or touches VNPay. Same key/body replays once after current authorization; different body returns 409. Recipient eligibility is checked under participant locks before a new posting. No balance adjustment or source refill. */
+        post: operations["createSimulatedTopup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/simulator/topup-events": {
         parameters: {
             query?: never;
@@ -5723,6 +5757,19 @@ export interface components {
             canReportNonReceipt: boolean;
         };
         CreateVNPayTopup: {
+            amount: number;
+        };
+        SimulatedTopupRecipientPage: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                displayName: string;
+            }[];
+            hasMore: boolean;
+        };
+        CreateSimulatedTopup: {
+            /** Format: uuid */
+            recipientId: string;
             amount: number;
         };
         CreateTopupIntent: {
@@ -11383,6 +11430,68 @@ export interface operations {
             422: components["responses"]["ListingError"];
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listSimulatedTopupRecipients: {
+        parameters: {
+            query?: {
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Eligible simulator recipients. Never cached. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SimulatedTopupRecipientPage"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    createSimulatedTopup: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSimulatedTopup"];
+            };
+        };
+        responses: {
+            /** @description Atomic simulator topup receipt. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WalletCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];
         };
     };

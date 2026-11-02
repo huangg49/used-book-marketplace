@@ -6,6 +6,7 @@ import { canSimulate } from "../../core/session";
 import { Button, Notice } from "../../core/ui";
 import { ActionPanel } from "./action-panel";
 import { Field } from "./field";
+import { SimulatorTopup } from "./simulator-topup";
 import { Forbidden } from "./queue-frame";
 import { simulatorCommand, simulatorOutcome, simulatorReceipts, type SimulatorKind, type SimulatorReceipt, type SimulatorValues } from "./simulator-contracts";
 
@@ -20,6 +21,7 @@ export function SimulatorEventsPage() {
   const { kind } = useParams();
   if (!canSimulate(user)) return <Forbidden />;
   if (kind !== "topups" && kind !== "pickups" && kind !== "deliveries") return <p>Không tìm thấy công cụ mô phỏng.</p>;
+  if (kind === "topups") return <SimulatorTopup userId={user.id} />;
   return <SimulatorForm key={kind} kind={kind} user={user} />;
 }
 

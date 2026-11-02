@@ -1,5 +1,18 @@
 # Điểm lưu hiện tại — 02/11/2026
 
+## Nạp tiền mô phỏng thuận tiện cho demo
+
+- `codex/simple-simulator-topup`, base `7a9af802`: Admin chọn Member/số tiền,
+  xác nhận rồi nhận receipt; API atomic simulator command dùng nguồn hữu hạn,
+  TEST_OPERATOR độc lập, current auth trước replay, không đụng VNPay intent.
+- PASS95API tests,229Admin unit, browser QA lost-ACK/exact-retry/1journal và
+  desktop/mobile320/390 chữ130%; typecheck/build/lint/contract/routes PASS.
+- Đã áp patch tương thích vào checkout app; operator hiện có mở form/chọn User2/
+  xác nhận rồi hủy PASS; fingerprint collection tiền không đổi, ledger balanced.
+  API/worker restart cùng source; app giữ chạy, QA được dọn. Credential ignored.
+- [Cách dùng và evidence](../features/SIMULATOR_TOPUP_2026_11_02.md).
+  Chưa push/CI/PR/merge/human demo acceptance hoặc đóng READINESS.
+
 ## VNPay — owner báo thanh toán nhưng ví chưa cộng
 
 - Khảo sát read-only: hai topup gần nhất đã hết hạn local, chưa có credit journal;

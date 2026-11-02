@@ -14,6 +14,7 @@
     "test:api": "vitest run --config vitest.config.integration.ts",
     "test:dashboard:api": "node tests/dashboard-api.mjs",
     "test:browser": "node tests/browser.mjs",
+    "test:simulator-topup:browser": "node tests/simulator-topup.mjs",
     "test:review-workspace:browser": "node tests/review-workspace.mjs",
     "test:exchange-safety:browser": "node tests/exchange-resolution-safety.mjs",
     "test:account-controls:browser": "node tests/account-controls.mjs",
