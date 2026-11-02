@@ -1,3 +1,14 @@
+# Nút đánh giá Exchange sau nhận sách — 03/11/2026
+
+Owner demo User4/User5 đã nhận/kiểm tra nhưng không có nút. Đối chiếu thật:
+API canReview=true cho cả hai, UI0link. Trang cha còn bọc ReviewCard trong
+Completed dù component/API đã hỗ trợ own receipt. Nhánh
+`codex/exchange-received-review-entry`, baseed3cc1e6: đưa card ngay sau Hành động
+tiếp theo, giữ quyền server/private72h và không đụng tiền/timer/DB. PASS browser
+fixture cả2vai/own receipt/refusal/read retry/deep link/form1440/950/390px,
+21unit liên quan,typecheck/build/lint. Không submit review thay owner, không
+push/merge hoặc đổi readiness. [Evidence](../features/RECEIPT_REVIEW_DEMO_2026_11_03.md).
+
 # Sửa cuộn phiếu/hội thoại khi chia đôi cửa sổ — 03/11/2026
 
 Owner báo chat không lăn chuột ở màn hẹp. Nhánh `codex/chat-scroll-containment`,

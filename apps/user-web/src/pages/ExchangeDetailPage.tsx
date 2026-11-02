@@ -349,12 +349,7 @@ function ExchangeDetailContent({
         />
       </div>
 
-      {detail.status === "COMPLETED" && (
-        <>
-          <SettlementCard detail={detail} />
-          <ReviewCard detail={detail} />
-        </>
-      )}
+      {detail.status === "COMPLETED" && <SettlementCard detail={detail} />}
 
       {!embedded && (
         <nav className={styles.sectionLinks} aria-label="Đi tới phần trao đổi">
@@ -441,6 +436,7 @@ function ExchangeDetailContent({
               onDispute={handleDispute}
             />
           </section>
+          <ReviewCard detail={detail} />
           <details className={styles.safetyDetails}>
             <summary>Mẹo bảo quản và giao nhận an toàn</summary>
             <SafetyTipsCard />

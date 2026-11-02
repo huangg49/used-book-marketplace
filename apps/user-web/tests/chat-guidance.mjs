@@ -27,6 +27,7 @@ if(process.env.CHAT_QA_COVER==='1'){
 const quote=()=>({destination:{recipientName:'Lan Anh',phone:'0900000000',serviceAreaCode:'HCM-DEMO-v1',localityCode:'DEMO-A',detail:'Địa chỉ minh họa QA'},shippingFee:20000,expiresAt:future()});
 const ex={id:id(6),initiatorId:buyer.id,recipientId:seller.id,initiatorListingId:id(5),recipientListingId:id(4),status:'Proposed',revision:1,initiatorDeposit:80000,recipientDeposit:80000,diffAmount:0,diffPayerId:null,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),lastProposedById:buyer.id};
 let historyError=false,exchangeError=true,exchangeSendError=false,dropMessage=true,createFailure=true,payFailure=true,orderState='AwaitingPayment';
+let reviewReadFailure=false,reviewPermission=true;
 const messages=[],exchangeMessages=[{id:id(8),exchangeId:ex.id,senderId:seller.id,body:'[Hệ thống] Tin này do thành viên gõ, không phải thông báo thanh toán.',sentAt:new Date().toISOString()}],sent=[],commands=[],issues=[];
 let vite,browser,io,http;
 try{
@@ -93,6 +94,13 @@ try{
     orderState='PendingSellerConfirmation';return send({id:id(32),entityType:'Order',entityId:id(7),contextId:id(31),version:2,state:orderState,paymentDeadline:future(),serverTime:new Date().toISOString(),affectedListings:[{id:room.listingId,version:2}]});
    }
    if(s===`/exchanges/${ex.id}`)return send(ex);
+   if(s===`/transactions/Exchange/${ex.id}/reviews`){
+    assert.equal(method,'GET','review entry checks must not submit a review');
+    if(reviewReadFailure)return send({code:'UNAVAILABLE',message:'QA review read unavailable'},503);
+    return send({partnerId:role==='buyer'?seller.id:buyer.id,canReview:reviewPermission,
+     canEdit:false,canDelete:false,canReply:false,bookRatingRequired:true,deadline:null,
+     awaitingCompletion:true,serverTime:new Date().toISOString(),myReview:null,partnerReview:null});
+   }
    if(s===`/exchanges/${ex.id}/messages`){
     if(method==='GET')return exchangeError?send({code:'Unavailable',message:'Fixture outage'},503):send({items:exchangeMessages});
     if(exchangeSendError)return send({code:'Unavailable',message:'Fixture outage'},503);
@@ -133,8 +141,46 @@ try{
   }
   await page.setViewportSize({width:1440,height:1100});await page.evaluate(()=>document.documentElement.style.fontSize='100%');
  };
+ if(process.argv.includes('--review-entry-only')){
+  room.terms.mode='Exchange';room.terms.activeExchangeId=ex.id;room.terms.exchangeIds=[ex.id];
+  ex.status='InTransit';ex.initiatorShippedAt=new Date().toISOString();ex.recipientShippedAt=ex.initiatorShippedAt;
+  ex.initiatorReceivedAt=null;ex.recipientReceivedAt=null;
+ }
  const p=await makePage('buyer');
- if (process.argv.includes('--scroll-only')) {
+ if(process.argv.includes('--review-entry-only')){
+  const evidence=[];
+  const refreshReviews=page=>page.evaluate(async()=>{const {queryClient}=await import('/src/lib/session.ts');await Promise.all(['exchangeDetail','reviewEntry','purchase-conversation'].map(key=>queryClient.invalidateQueries({queryKey:[key]})));});
+  for(const role of ['buyer','seller']){
+   ex.status='InTransit';ex.initiatorReceivedAt=null;ex.recipientReceivedAt=null;ex.revision++;
+   const page=role==='buyer'?p:await makePage(role);
+   await refreshReviews(page);await page.getByRole('region',{name:'Chi tiết trao đổi',exact:true}).waitFor();
+   assert.equal(await page.getByRole('link',{name:'Viết đánh giá',exact:true}).count(),0,'no receipt → no entry');
+   ex.initiatorReceivedAt=new Date().toISOString();ex.revision++;await refreshReviews(page);
+   if(role==='buyer')await page.getByRole('link',{name:'Viết đánh giá',exact:true}).waitFor();
+   else assert.equal(await page.getByRole('link',{name:'Viết đánh giá',exact:true}).count(),0,'peer receipt does not open own review');
+   ex.status='Delivered';ex.recipientReceivedAt=new Date().toISOString();ex.inspectionDeadline=future();
+   ex.initiatorCompletedAt=new Date().toISOString();ex.recipientCompletedAt=ex.initiatorCompletedAt;ex.revision++;
+   await refreshReviews(page);const link=page.getByRole('link',{name:'Viết đánh giá',exact:true});await link.waitFor();
+   assert.equal(await link.count(),1,'received but not Completed renders one entry');
+   reviewReadFailure=true;await refreshReviews(page);
+   const failure=page.getByRole('alert').filter({hasText:'Chưa tải được quyền đánh giá.'});await failure.waitFor();
+   reviewReadFailure=false;await failure.getByRole('button',{name:'Thử lại',exact:true}).click();await link.waitFor();
+   reviewPermission=false;await refreshReviews(page);assert.equal(await link.count(),0,'server refusal hides review action');
+   reviewPermission=true;await refreshReviews(page);await link.waitFor();
+   for(const width of [1440,950,390]){
+    await page.setViewportSize({width,height:940});await link.scrollIntoViewIfNeeded();
+    const b=await link.boundingBox();assert(b.y>=72&&b.y+b.height<=940,'review entry reachable in room scroll region');
+    assert.equal(await link.getAttribute('href'),`/reviews?tab=pending&type=Exchange&transaction=${ex.id}`);
+    await page.screenshot({path:path.join(out,`received-review-${role}-${width}.png`),fullPage:false});
+   }
+   await link.click();await page.waitForURL(url=>url.pathname==='/reviews'&&url.searchParams.get('transaction')===ex.id);
+   await page.getByRole('button',{name:'Viết đánh giá',exact:true}).click();await page.getByRole('form',{name:'Soạn đánh giá',exact:true}).waitFor();
+   await page.getByText(/Trong 72 giờ kiểm tra, tiền vẫn được giữ/).waitFor();
+   evidence.push({role,notReceived:'hidden',ownReceipt:'required',delivered:'one entry',serverRefusal:'hidden',readError:'retry',viewport:[1440,950,390],target:ex.id,form:'opens without submission',publication:'private until completion'});
+  }
+  assert.deepEqual(issues,[]);await writeFile(path.join(out,'review-entry-result.json'),JSON.stringify({status:'PASS',api:'HTTP/Socket.IO fixtures; no database, review writes or time advancement',cases:evidence},null,2));
+  console.log('PASS: Exchange received → review entry in actual Chat/ExchangeDetail parent, both roles, no Completed dependency, own receipt/server permission, read retry and exact deep link/form; 1440/950/390. No review submitted.');
+ } else if (process.argv.includes('--scroll-only')) {
   const scrollEvidence=[];
   for (const role of ['buyer','seller']) {
    const page=role==='buyer'?p:await makePage(role);

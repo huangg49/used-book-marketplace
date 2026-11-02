@@ -130,3 +130,25 @@ policyApproved=true, trong khi READINESS vẫn NOT MET/cờ tắt cho release. G
 không tự bật/tắt hoặc coi local setting là quyền đóng gate;5file env giữ nguyên.
 Các bài demo mới không gọi model (precheck ảnh/nguồn/tuổi tài khoản và quyết định
 demo qua Admin). Việc dùng AI tự duyệt khi phát hành vẫn cần evidence/gate riêng.
+
+## Sửa cửa vào Exchange bị chặn ở trang cha — 03/11/2026
+
+Owner demo User4/User5 tới Delivered và hai bên đã nhận/kiểm tra, nhưng không
+thấy nút đánh giá. API thật trả canReview=true/awaitingCompletion=true cho cả hai,
+chưa ai có review; UI thật có0link. ReviewCard đã hỗ trợ own receivedAt nhưng
+ExchangeDetailPage chỉ mount nó bên trong status===COMPLETED, nên phần nối web
+của gói trước còn thiếu. Native có mount ngoài Completed; không suy native PASS.
+
+Nhánh `codex/exchange-received-review-entry`, baseed3cc1e6: mount ReviewCard ngay
+sau Hành động tiếp theo cho embedded và standalone Exchange. Card/service hiện
+có tiếp tục kiểm own receipt và quyền server; chỉ SettlementCard cần Completed.
+Nút Viết đánh giá mở đúng type=Exchange/transaction, có copy tiền giữ trong72h và
+nội dung riêng chờ công bố. Không đổi API, policy, timer hoặc tiền/giao dịch DB.
+
+PASS browser `node apps/user-web/tests/chat-guidance.mjs --review-entry-only`,
+HTTP/Socket.IO fixture không DB: cả hai vai trò, chưa nhận→ẩn, chỉ đối tác nhận→
+ẩn với mình, own receipt→hiện, Delivered dù chưa Completed→đúng1nút, server từ chối→
+ẩn, read lỗi→retry, đúng deep link/form.1440/950/390px nút trong vùng cuộn, không
+submit review hoặc skip timer. PASS typecheck/build, lint scope và21unit liên quan.
+READINESS/CI/native/human giữ nguyên; chưa push/merge. Bản local được fast-forward
+sau kiểm working tree, không sửa dữ liệu demo để làm xuất hiện nút.
