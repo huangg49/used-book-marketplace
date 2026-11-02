@@ -1,5 +1,13 @@
 # Đồng bộ main và bảo toàn checkout local — 03/11/2026
 
+## Quyền xuất bản gói tích hợp — 03/11/2026
+
+Owner yêu cầu push lên nhánh an toàn và merge main ngay, không chờ/kiểm CI mới.
+Thực hiện qua nhánh `codex/sync-main-20261103` và PR squash, giữ backup/checkpoint
+local; không force push hoặc đổi branch protection. Các kiểm chứng local và
+FAIL/skip trên main trước tích hợp được ghi bên dưới; không coi yêu cầu bỏ chờ CI
+là bằng chứng CI PASS hoặc human review. Không đổi READINESS hay dữ liệu demo.
+
 - Owner yêu cầu fetch/main sync và xử lý conflict; Antigravity đã được owner xác
   nhận dừng sửa. Nhánh `codex/sync-main-20261103` giữ cả các commit local và
   checkpoint 131 file từ checkout ứng dụng, không reset/clean/stash/force checkout.
