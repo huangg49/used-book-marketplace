@@ -2019,45 +2019,22 @@ class _BookScreenState extends ConsumerState<BookScreen> {
     }
   }
 
-  Future<void> _handleAddToCart() async {
+  Future<void> _handleBuyNow() async {
     final session = ref.read(sessionProvider);
     if (!session.isAuthenticated) {
       context.push('/account');
       return;
     }
-    setState(() {
-      _actionBusy = true;
-      _actionMessage = null;
-    });
-    final client = ref.read(sessionClientProvider);
-    try {
-      final cartRes = await client.request('/me/cart').catchError((_) => null);
-      final cartVersion =
-          (cartRes is Map && cartRes['version'] is num)
-              ? (cartRes['version'] as num).toInt()
-              : 0;
-      await client.request(
-        '/me/cart/items',
-        method: 'POST',
-        idempotencyKey: generateIdempotencyKey('cart-add'),
-        body: {
-          'expectedVersion': cartVersion,
-          'listingId': widget.id,
-          'expectedListingVersion': _listing?['version'] ?? 1,
-        },
-      );
-      if (!mounted) return;
-      setState(() {
-        _actionBusy = false;
-        _actionMessage = 'Đã thêm sách vào giỏ sách của bạn.';
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _actionBusy = false;
-        _error = presentErrorMessage(e);
-      });
-    }
+    if (_listing == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _BuyNowBottomSheet(
+        listing: _listing!,
+      ),
+    );
   }
 
   Future<void> _handleToggleWishlist() async {
@@ -2518,18 +2495,18 @@ class _BookScreenState extends ConsumerState<BookScreen> {
                               children: [
                                 Expanded(
                                   child: AppButton(
-                                    title: 'Thêm vào giỏ',
-                                    secondary: true,
+                                    title: 'Mua ngay',
                                     wine: true,
                                     busy: _actionBusy,
-                                    icon: Icons.add_shopping_cart_rounded,
-                                    onPressed: _handleAddToCart,
+                                    icon: Icons.bolt_rounded,
+                                    onPressed: _handleBuyNow,
                                   ),
                                 ),
                                 const SizedBox(width: AppSpace.md),
                                 Expanded(
                                   child: AppButton(
                                     title: 'Thương lượng & Mua',
+                                    secondary: true,
                                     wine: true,
                                     busy: _actionBusy,
                                     icon: Icons.handshake_outlined,
@@ -2551,6 +2528,1117 @@ class _BookScreenState extends ConsumerState<BookScreen> {
                       ),
                   ],
                 ),
+    );
+  }
+}
+
+class _BuyNowBottomSheet extends ConsumerStatefulWidget {
+  const _BuyNowBottomSheet({required this.listing});
+
+  final Map<String, dynamic> listing;
+
+  @override
+  ConsumerState<_BuyNowBottomSheet> createState() => _BuyNowBottomSheetState();
+}
+
+class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
+  bool _loading = true;
+  bool _submitting = false;
+  String? _error;
+
+  int _addressBookVersion = 0;
+  List<Map<String, dynamic>> _addresses = const [];
+  Map<String, dynamic>? _selectedAddress;
+
+  num _walletBalance = 0;
+
+  bool _quoteLoading = false;
+  Map<String, dynamic>? _quote;
+  String? _quoteError;
+
+  bool _bundleAcknowledged = true;
+  bool _addingAddress = false;
+
+  final TextEditingController _nameCtrl = TextEditingController();
+  final TextEditingController _phoneCtrl = TextEditingController();
+  final TextEditingController _detailCtrl = TextEditingController();
+  String _localityCode = 'Q1';
+  bool _savingAddress = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(_initData);
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _phoneCtrl.dispose();
+    _detailCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initData() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final client = ref.read(sessionClientProvider);
+    try {
+      final futures = await Future.wait([
+        client.request('/me/addresses').catchError((_) => null),
+        client.request('/me/wallet').catchError((_) => null),
+      ]);
+
+      final addrRes = futures[0];
+      final walletRes = futures[1];
+
+      int bookVer = 0;
+      List<Map<String, dynamic>> addrList = [];
+      if (addrRes is Map) {
+        bookVer = (addrRes['version'] is num)
+            ? (addrRes['version'] as num).toInt()
+            : 0;
+        final rawItems =
+            addrRes['items'] is List ? (addrRes['items'] as List) : const [];
+        addrList = rawItems
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+
+      num balance = 0;
+      if (walletRes is Map) {
+        balance = (walletRes['available'] ??
+                walletRes['availableBalance'] ??
+                walletRes['balance'] ??
+                0) as num;
+      }
+
+      if (!mounted) return;
+
+      Map<String, dynamic>? defaultAddr;
+      if (addrList.isNotEmpty) {
+        defaultAddr = addrList.firstWhere(
+          (a) => a['isDefault'] == true,
+          orElse: () => addrList.first,
+        );
+      }
+
+      setState(() {
+        _addressBookVersion = bookVer;
+        _addresses = addrList;
+        _selectedAddress = defaultAddr;
+        _walletBalance = balance;
+        _loading = false;
+        _addingAddress = addrList.isEmpty;
+      });
+
+      if (_selectedAddress != null) {
+        await _fetchQuote(_selectedAddress!);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = presentErrorMessage(e);
+      });
+    }
+  }
+
+  Future<void> _fetchQuote(Map<String, dynamic> addr) async {
+    setState(() {
+      _quoteLoading = true;
+      _quoteError = null;
+    });
+    final client = ref.read(sessionClientProvider);
+    try {
+      final listingId = widget.listing['id']?.toString() ?? '';
+      final listingVer = (widget.listing['version'] is num)
+          ? (widget.listing['version'] as num).toInt()
+          : 1;
+      final revisionId = (widget.listing['revisionId'] ??
+              widget.listing['currentRevisionId'] ??
+              '')
+          .toString();
+      final addrId = addr['id']?.toString() ?? '';
+      final addrVer =
+          (addr['version'] is num) ? (addr['version'] as num).toInt() : 1;
+      final isBundle = widget.listing['bundle'] != null;
+
+      final quoteRes = await client.request(
+        '/listings/$listingId/quotes',
+        method: 'POST',
+        idempotencyKey: generateIdempotencyKey('buy-quote'),
+        body: {
+          'expectedListingVersion': listingVer,
+          'expectedListingRevisionId': revisionId,
+          'destinationAddressId': addrId,
+          'expectedDestinationAddressVersion': addrVer,
+          'method': 'DirectDelivery',
+          if (isBundle) 'acknowledgeWholeBundle': true,
+        },
+      );
+
+      final quoteId = (quoteRes is Map)
+          ? (quoteRes['entityId'] ?? quoteRes['id'])?.toString()
+          : null;
+
+      Map<String, dynamic>? finalQuote;
+      if (quoteId != null && quoteId.isNotEmpty) {
+        try {
+          final quoteDetail = await client.request('/me/quotes/$quoteId');
+          if (quoteDetail is Map) {
+            finalQuote = Map<String, dynamic>.from(quoteDetail);
+          }
+        } catch (detailErr) {
+          debugPrint('Get quote detail error: $detailErr');
+        }
+      }
+
+      if (finalQuote == null && quoteRes is Map) {
+        finalQuote = Map<String, dynamic>.from(quoteRes);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _quote = finalQuote;
+        _quoteLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _quote = null;
+        _quoteLoading = false;
+        _quoteError = presentErrorMessage(e);
+      });
+    }
+  }
+
+  Future<void> _saveNewAddress() async {
+    if (_nameCtrl.text.trim().isEmpty ||
+        _phoneCtrl.text.trim().length < 10 ||
+        _detailCtrl.text.trim().isEmpty) {
+      setState(() =>
+          _error = 'Vui lòng điền đủ họ tên, SĐT (10 số) và địa chỉ chi tiết.');
+      return;
+    }
+    setState(() {
+      _savingAddress = true;
+      _error = null;
+    });
+    final client = ref.read(sessionClientProvider);
+    try {
+      final res = await client.request(
+        '/me/addresses',
+        method: 'POST',
+        idempotencyKey: generateIdempotencyKey('addr-add'),
+        body: {
+          'expectedBookVersion': _addressBookVersion,
+          'makeDefault': _addresses.isEmpty,
+          'address': {
+            'recipientName': _nameCtrl.text.trim(),
+            'phone': _phoneCtrl.text.trim(),
+            'serviceAreaCode': 'HCM-DEMO-v1',
+            'localityCode': _localityCode,
+            'detail': _detailCtrl.text.trim(),
+          },
+        },
+      );
+
+      final addrRes =
+          await client.request('/me/addresses').catchError((_) => null);
+      if (!mounted) return;
+
+      int bookVer = _addressBookVersion + 1;
+      List<Map<String, dynamic>> addrList = [];
+      if (addrRes is Map) {
+        bookVer = (addrRes['version'] is num)
+            ? (addrRes['version'] as num).toInt()
+            : bookVer;
+        final rawItems =
+            addrRes['items'] is List ? (addrRes['items'] as List) : const [];
+        addrList = rawItems
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      }
+
+      final newAddrId = (res is Map && res['addressId'] != null)
+          ? res['addressId'].toString()
+          : (res is Map && res['entityId'] != null
+              ? res['entityId'].toString()
+              : null);
+
+      Map<String, dynamic>? selected;
+      if (newAddrId != null) {
+        selected = addrList.firstWhere(
+          (a) => a['id']?.toString() == newAddrId,
+          orElse: () => addrList.isNotEmpty ? addrList.last : const {},
+        );
+      } else if (addrList.isNotEmpty) {
+        selected = addrList.last;
+      }
+
+      setState(() {
+        _addressBookVersion = bookVer;
+        _addresses = addrList;
+        _selectedAddress = selected;
+        _addingAddress = false;
+        _savingAddress = false;
+        _nameCtrl.clear();
+        _phoneCtrl.clear();
+        _detailCtrl.clear();
+      });
+
+      if (_selectedAddress != null) {
+        await _fetchQuote(_selectedAddress!);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _savingAddress = false;
+        _error = presentErrorMessage(e);
+      });
+    }
+  }
+
+  Future<void> _submitBuyNow() async {
+    if (_submitting) return;
+    if (_selectedAddress == null) {
+      setState(() => _error = 'Vui lòng chọn địa chỉ nhận hàng.');
+      return;
+    }
+    if (widget.listing['bundle'] != null && !_bundleAcknowledged) {
+      setState(() =>
+          _error = 'Vui lòng xác nhận mua nguyên bộ sách trước khi tiếp tục.');
+      return;
+    }
+
+    if (_quote == null) {
+      await _fetchQuote(_selectedAddress!);
+      if (_quote == null) {
+        setState(() => _error = _quoteError ??
+            'Chưa thể lấy báo giá giao dịch. Vui lòng kiểm tra địa chỉ và thử lại.');
+        return;
+      }
+    }
+
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+
+    final client = ref.read(sessionClientProvider);
+    try {
+      final quoteId = _quote!['id']?.toString() ?? '';
+      final quoteVer =
+          (_quote!['version'] is num) ? (_quote!['version'] as num).toInt() : 1;
+      final listingVer = (_quote!['listingVersion'] is num)
+          ? (_quote!['listingVersion'] as num).toInt()
+          : 1;
+      final revisionId = (_quote!['listingRevisionId'] ?? '').toString();
+
+      final buyNowRes = await client.request(
+        '/orders/buy-now',
+        method: 'POST',
+        idempotencyKey: generateIdempotencyKey('buy-order'),
+        body: {
+          'quoteId': quoteId,
+          'expectedQuoteVersion': quoteVer,
+          'expectedListingVersion': listingVer,
+          'expectedListingRevisionId': revisionId,
+        },
+      );
+
+      final map = buyNowRes is Map
+          ? Map<String, dynamic>.from(buyNowRes)
+          : const <String, dynamic>{};
+      final orderId = (map['entityId'] ?? map['id'] ?? '').toString();
+      if (orderId.isEmpty) {
+        throw Exception('Không nhận được mã đơn hàng từ hệ thống.');
+      }
+
+      final amounts =
+          _quote!['amounts'] is Map ? (_quote!['amounts'] as Map) : const {};
+      final buyerTotal = (amounts['buyerTotal'] ?? 0) as num;
+
+      bool paidSuccess = false;
+      if (_walletBalance >= buyerTotal) {
+        try {
+          await client.request(
+            '/orders/$orderId/pay',
+            method: 'POST',
+            idempotencyKey: generateIdempotencyKey('order-pay'),
+            body: {'expectedVersion': 1},
+          );
+          paidSuccess = true;
+        } catch (payErr) {
+          debugPrint('Immediate wallet payment error: $payErr');
+        }
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pop();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(paidSuccess
+              ? '✓ Mua ngay và thanh toán Escrow thành công!'
+              : '✓ Đã tạo đơn mua ngay thành công! Vui lòng hoàn tất thanh toán.'),
+          backgroundColor: AppColors.forest,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      context.push('/orders/$orderId');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _submitting = false;
+        _error = presentErrorMessage(e);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final book = widget.listing['book'] is Map
+        ? Map<String, dynamic>.from(widget.listing['book'] as Map)
+        : const <String, dynamic>{};
+    final bundle = widget.listing['bundle'] is Map
+        ? Map<String, dynamic>.from(widget.listing['bundle'] as Map)
+        : null;
+    final title = (bundle?['title'] ?? book['title'] ?? 'Ấn bản sách cũ').toString();
+    final author = (book['authors'] is List && (book['authors'] as List).isNotEmpty
+            ? (book['authors'] as List).join(' · ')
+            : (book['authors'] ?? 'Đang cập nhật tác giả'))
+        .toString();
+
+    final salePrice = (widget.listing['salePrice'] is num)
+        ? (widget.listing['salePrice'] as num)
+        : 0;
+    final amounts = _quote?['amounts'] is Map
+        ? Map<String, dynamic>.from(_quote!['amounts'] as Map)
+        : null;
+    final bookPrice = (amounts?['bookPrice'] is num)
+        ? (amounts!['bookPrice'] as num)
+        : salePrice;
+    final buyerTotal = (amounts?['buyerTotal'] is num)
+        ? (amounts!['buyerTotal'] as num)
+        : bookPrice;
+    final isWalletSufficient = _walletBalance >= buyerTotal && buyerTotal > 0;
+
+    final session = ref.watch(sessionProvider);
+    final currentUserId = session.user?.id;
+    final sellerId = widget.listing['seller'] is Map
+        ? widget.listing['seller']['id']?.toString()
+        : widget.listing['ownerId']?.toString();
+    final isOwner =
+        currentUserId != null && sellerId != null && currentUserId == sellerId;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.88,
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag Handle
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 10, bottom: 6),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+
+            // Modal Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: StitchTokens.wine.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.bolt_rounded,
+                        color: StitchTokens.wine, size: 22),
+                  ),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Xác nhận Mua ngay',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: StitchTokens.wine,
+                          ),
+                        ),
+                        Text(
+                          'Ký quỹ Escrow bảo vệ người mua đến khi nhận sách',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+
+            // Scrollable Content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_error != null) ...[
+                      Notice(message: _error!, tone: NoticeTone.error),
+                      const SizedBox(height: 12),
+                    ],
+
+                    // 1. Book Summary Card
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: StitchTokens.parchment,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: StitchTokens.peachBorder),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 52,
+                            height: 70,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: BookCoverPhoto(item: widget.listing),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: StitchTokens.darkWood,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  author,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.muted,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text(
+                                      formatVnd(widget.listing['salePrice'] as num?),
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: StitchTokens.wine,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.successSurface,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        formatConditionLabel(widget.listing['condition']?.toString()),
+                                        style: const TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.forest,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    if (bundle != null) ...[
+                      const SizedBox(height: 8),
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: _bundleAcknowledged,
+                        activeColor: StitchTokens.wine,
+                        title: const Text(
+                          'Tôi xác nhận mua nguyên bộ sách (không hỗ trợ tách lẻ).',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                        onChanged: (v) =>
+                            setState(() => _bundleAcknowledged = v ?? false),
+                      ),
+                    ],
+
+                    const SizedBox(height: 16),
+
+                    // 2. Delivery Address Section
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'ĐỊA CHỈ NHẬN HÀNG (DIRECTDELIVERY)',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                              color: StitchTokens.darkWood,
+                            ),
+                          ),
+                        ),
+                        if (!_addingAddress && _addresses.isNotEmpty)
+                          InkWell(
+                            onTap: () => setState(() => _addingAddress = true),
+                            child: const Text(
+                              '+ Thêm mới',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: StitchTokens.wine,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    if (_loading)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    else if (_addingAddress) ...[
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: StitchTokens.cardBorder),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            AppTextField(
+                              label: 'Tên người nhận',
+                              requiredField: true,
+                              controller: _nameCtrl,
+                            ),
+                            const SizedBox(height: 10),
+                            AppTextField(
+                              label: 'Số điện thoại',
+                              requiredField: true,
+                              controller: _phoneCtrl,
+                              keyboardType: TextInputType.phone,
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'KHU VỰC VẬN CHUYỂN',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: StitchTokens.darkWood,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                ('Q1', 'Quận 1'),
+                                ('Q3', 'Quận 3'),
+                                ('THUDUC', 'TP. Thủ Đức'),
+                                ('BINHDUONG', 'Bình Dương'),
+                                ('VUNGTAU', 'Vũng Tàu'),
+                              ].map((loc) {
+                                return AppChip(
+                                  title: loc.$2,
+                                  wine: true,
+                                  selected: _localityCode == loc.$1,
+                                  onPressed: () =>
+                                      setState(() => _localityCode = loc.$1),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 10),
+                            AppTextField(
+                              label: 'Địa chỉ chi tiết (số nhà, đường, phường)',
+                              requiredField: true,
+                              controller: _detailCtrl,
+                            ),
+                            const SizedBox(height: 14),
+                            Row(
+                              children: [
+                                if (_addresses.isNotEmpty) ...[
+                                  Expanded(
+                                    child: AppButton(
+                                      title: 'Hủy',
+                                      secondary: true,
+                                      compact: true,
+                                      onPressed: () =>
+                                          setState(() => _addingAddress = false),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                ],
+                                Expanded(
+                                  flex: 2,
+                                  child: AppButton(
+                                    title: 'Lưu & Chọn địa chỉ này',
+                                    wine: true,
+                                    compact: true,
+                                    busy: _savingAddress,
+                                    onPressed: _saveNewAddress,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else if (_addresses.isEmpty) ...[
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: StitchTokens.parchment,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: StitchTokens.peachBorder),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text(
+                              'Bạn chưa có địa chỉ nhận hàng nào.',
+                              style: TextStyle(fontSize: 12.5),
+                            ),
+                            const SizedBox(height: 8),
+                            AppButton(
+                              title: '+ Thêm địa chỉ nhận hàng',
+                              wine: true,
+                              compact: true,
+                              onPressed: () =>
+                                  setState(() => _addingAddress = true),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: StitchTokens.parchment,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: StitchTokens.peachBorder),
+                        ),
+                        child: Column(
+                          children: [
+                            ..._addresses.map((addr) {
+                              final isSelected =
+                                  _selectedAddress?['id'] == addr['id'];
+                              return InkWell(
+                                onTap: () {
+                                  setState(() => _selectedAddress = addr);
+                                  _fetchQuote(addr);
+                                },
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 4),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        isSelected
+                                            ? Icons.radio_button_checked_rounded
+                                            : Icons.radio_button_off_rounded,
+                                        color: isSelected
+                                            ? StitchTokens.wine
+                                            : Colors.grey,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  '${addr['recipientName']} · ${addr['phone']}',
+                                                  style: const TextStyle(
+                                                    fontSize: 12.5,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: StitchTokens.darkWood,
+                                                  ),
+                                                ),
+                                                if (addr['isDefault'] == true) ...[
+                                                  const SizedBox(width: 6),
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                            horizontal: 4,
+                                                            vertical: 1),
+                                                    decoration: BoxDecoration(
+                                                      color: StitchTokens.wine
+                                                          .withValues(alpha: 0.1),
+                                                      borderRadius:
+                                                          BorderRadius.circular(4),
+                                                    ),
+                                                    child: const Text(
+                                                      'Mặc định',
+                                                      style: TextStyle(
+                                                        fontSize: 9.5,
+                                                        color: StitchTokens.wine,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                            Text(
+                                              '${addr['detail']}, ${addr['localityCode']}',
+                                              style: const TextStyle(
+                                                fontSize: 11.5,
+                                                color: AppColors.muted,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 16),
+
+                    // 3. Pricing & Shipping Quote
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: StitchTokens.cardBorder),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.receipt_long_outlined,
+                                  size: 16, color: StitchTokens.wine),
+                              SizedBox(width: 6),
+                              Text(
+                                'CHI TIẾT THANH TOÁN',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.5,
+                                  color: StitchTokens.darkWood,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Expanded(
+                                child: Text('Tiền sách:',
+                                    style: TextStyle(
+                                        fontSize: 12.5, color: AppColors.muted)),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                formatVnd(bookPrice),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: StitchTokens.darkWood,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  'Tổng thanh toán:',
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: StitchTokens.darkWood,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                formatVnd(buyerTotal),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: StitchTokens.wine,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (_quoteLoading) ...[
+                            const SizedBox(height: 8),
+                            const Row(
+                              children: [
+                                SizedBox(
+                                  width: 12,
+                                  height: 12,
+                                  child: CircularProgressIndicator(strokeWidth: 1.5),
+                                ),
+                                SizedBox(width: 6),
+                                Text(
+                                  'Đang đồng bộ báo giá…',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.muted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                          if (_quoteError != null) ...[
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppColors.error.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: AppColors.error.withValues(alpha: 0.25),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.info_outline,
+                                      size: 14, color: AppColors.error),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      _quoteError!,
+                                      style: const TextStyle(
+                                        fontSize: 11.5,
+                                        color: AppColors.error,
+                                      ),
+                                    ),
+                                  ),
+                                  if (_selectedAddress != null && !isOwner) ...[
+                                    const SizedBox(width: 6),
+                                    InkWell(
+                                      onTap: () => _fetchQuote(_selectedAddress!),
+                                      child: const Text(
+                                        'Thử lại',
+                                        style: TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: StitchTokens.wine,
+                                          decoration: TextDecoration.underline,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    // 4. Wallet & Escrow Information
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isWalletSufficient
+                            ? AppColors.successSurface
+                            : const Color(0xFFFFF9E6),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isWalletSufficient
+                              ? const Color(0xFFC7E5CD)
+                              : const Color(0xFFFFE099),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.account_balance_wallet_outlined,
+                                      size: 16,
+                                      color: isWalletSufficient
+                                          ? AppColors.forest
+                                          : const Color(0xFFB45309),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    const Text(
+                                      'Ví Lật Lại (Escrow):',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                formatVnd(_walletBalance),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: isWalletSufficient
+                                      ? AppColors.forest
+                                      : const Color(0xFFB45309),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  isWalletSufficient
+                                      ? '✓ Đủ số dư ví để thanh toán ngay. Tiền sẽ được giữ an toàn tại Escrow cho đến khi bạn nhận sách.'
+                                      : '⚠️ Số dư ví chưa đủ. Bạn vẫn có thể bấm Mua ngay để đặt giữ đơn hàng rồi nạp ví sau.',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: isWalletSufficient
+                                        ? AppColors.forest
+                                        : const Color(0xFF92400E),
+                                  ),
+                                ),
+                              ),
+                              if (!isWalletSufficient) ...[
+                                const SizedBox(width: 8),
+                                InkWell(
+                                  onTap: () {
+                                    Navigator.of(context).pop();
+                                    context.push('/wallet');
+                                  },
+                                  child: const Text(
+                                    'Nạp ví ↗',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: StitchTokens.wine,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Fixed Bottom Action Button
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    offset: const Offset(0, -2),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+              child: AppButton(
+                title: isOwner
+                    ? 'Bạn là người bán cuốn sách này'
+                    : amounts != null && isWalletSufficient
+                        ? 'Thanh toán & Đặt mua ngay (${formatVnd(buyerTotal)})'
+                        : (amounts != null
+                            ? 'Xác nhận đặt đơn (${formatVnd(buyerTotal)})'
+                            : 'Xác nhận Mua ngay'),
+                wine: !isOwner,
+                disabled: isOwner,
+                busy: _submitting,
+                icon: Icons.bolt_rounded,
+                onPressed:
+                    (_quote != null && !_quoteLoading && !_submitting && !isOwner)
+                        ? _submitBuyNow
+                        : null,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

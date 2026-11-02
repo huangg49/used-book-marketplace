@@ -385,12 +385,15 @@ class AppChip extends StatelessWidget {
               ),
               const SizedBox(width: 6),
             ],
-            AppText(
-              title,
-              kind: AppTextKind.small,
-              color: selected ? activeColor : inactiveColor,
-              style: TextStyle(
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            Flexible(
+              child: AppText(
+                title,
+                kind: AppTextKind.small,
+                color: selected ? activeColor : inactiveColor,
+                style: TextStyle(
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+                maxLines: 1,
               ),
             ),
           ],
@@ -999,13 +1002,259 @@ class _NavbarCircleIcon extends StatelessWidget {
 void _showNotificationsBottomSheet(BuildContext context, WidgetRef ref) {
   final session = ref.read(sessionProvider);
   final client = ref.read(sessionClientProvider);
+
   showModalBottomSheet<void>(
     context: context,
-    backgroundColor: AppColors.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
     builder: (ctx) {
+      return Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(ctx).size.height * 0.82,
+        ),
+        decoration: const BoxDecoration(
+          color: Color(0xFFFFFDF8),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 16,
+              offset: Offset(0, -2),
+            ),
+          ],
+        ),
+        child: _NotificationsSheetView(
+          session: session,
+          client: client,
+          onClose: () => Navigator.of(ctx).pop(),
+        ),
+      );
+    },
+  );
+}
+
+class _NotificationsSheetView extends StatefulWidget {
+  const _NotificationsSheetView({
+    required this.session,
+    required this.client,
+    required this.onClose,
+  });
+
+  final SessionState session;
+  final SessionClient client;
+  final VoidCallback onClose;
+
+  @override
+  State<_NotificationsSheetView> createState() => _NotificationsSheetViewState();
+}
+
+class _NotificationsSheetViewState extends State<_NotificationsSheetView> {
+  bool _loading = true;
+  String? _error;
+  List<Map<String, dynamic>> _items = [];
+  String _selectedFilter = 'all';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.session.isAuthenticated) {
+      _loadNotifications();
+    } else {
+      _loading = false;
+    }
+  }
+
+  Future<void> _loadNotifications() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final res = await widget.client.request('/me/notifications?limit=50');
+      if (!mounted) return;
+      final list = (res is Map && res['items'] is List)
+          ? (res['items'] as List)
+          : (res is List ? res : const []);
+      setState(() {
+        _items = list
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = presentErrorMessage(e);
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _markAllAsRead() async {
+    try {
+      await widget.client.request(
+        '/me/notifications/read',
+        method: 'POST',
+        idempotencyKey: generateIdempotencyKey('notif-read-all'),
+        body: {'all': true},
+      );
+      if (!mounted) return;
+      final now = DateTime.now().toIso8601String();
+      setState(() {
+        _items = _items.map((i) => {...i, 'readAt': now}).toList();
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _handleItemTap(Map<String, dynamic> item) async {
+    final id = item['id']?.toString();
+    final isUnread = item['readAt'] == null;
+    if (isUnread && id != null && id.isNotEmpty) {
+      try {
+        await widget.client.request(
+          '/me/notifications/read',
+          method: 'POST',
+          idempotencyKey: generateIdempotencyKey('notif-read-one'),
+          body: {
+            'ids': [id],
+          },
+        );
+        if (mounted) {
+          final now = DateTime.now().toIso8601String();
+          setState(() {
+            _items = _items.map((it) {
+              if (it['id']?.toString() == id) {
+                return {...it, 'readAt': now};
+              }
+              return it;
+            }).toList();
+          });
+        }
+      } catch (_) {}
+    }
+
+    final targetType = (item['targetType'] ?? '').toString().toUpperCase();
+    widget.onClose();
+    if (!mounted) return;
+    if (targetType == 'ORDER' || targetType == 'EXCHANGE') {
+      context.push('/account');
+    } else if (targetType == 'AUCTION') {
+      context.push('/auctions');
+    } else if (targetType == 'LISTING') {
+      context.push('/drafts');
+    } else {
+      context.push('/account');
+    }
+  }
+
+  ({
+    IconData icon,
+    Color iconColor,
+    Color bgColor,
+    String label,
+    Color badgeColor,
+    Color badgeBg,
+    String category,
+  }) _getMeta(Map<String, dynamic> item) {
+    final kind = (item['kind'] ?? '').toString().toUpperCase();
+    final targetType = (item['targetType'] ?? '').toString().toUpperCase();
+    final title = (item['title'] ?? '').toString().toLowerCase();
+    final body =
+        (item['body'] ?? item['message'] ?? '').toString().toLowerCase();
+
+    if (kind.contains('AUCTION') ||
+        targetType == 'AUCTION' ||
+        title.contains('đấu giá') ||
+        body.contains('đấu giá')) {
+      return (
+        icon: Icons.gavel_rounded,
+        iconColor: const Color(0xFF6927DA),
+        bgColor: const Color(0xFFF4F0FD),
+        label: 'ĐẤU GIÁ',
+        badgeColor: const Color(0xFF6927DA),
+        badgeBg: const Color(0xFFF4F0FD),
+        category: 'auction',
+      );
+    }
+    if (kind.contains('EXCHANGE') ||
+        targetType == 'EXCHANGE' ||
+        title.contains('trao đổi') ||
+        body.contains('trao đổi')) {
+      final isCancelled = title.contains('hủy') || body.contains('hủy');
+      if (isCancelled) {
+        return (
+          icon: Icons.cancel_outlined,
+          iconColor: StitchTokens.brickRed,
+          bgColor: const Color(0xFFFEECEB),
+          label: 'ĐỔI SÁCH · HỦY',
+          badgeColor: StitchTokens.brickRed,
+          badgeBg: const Color(0xFFFEECEB),
+          category: 'exchange',
+        );
+      }
+      return (
+        icon: Icons.swap_horiz_rounded,
+        iconColor: const Color(0xFF0F766E),
+        bgColor: const Color(0xFFE6F7F5),
+        label: 'TRAO ĐỔI SÁCH',
+        badgeColor: const Color(0xFF0F766E),
+        badgeBg: const Color(0xFFE6F7F5),
+        category: 'exchange',
+      );
+    }
+    if (kind.contains('ORDER') ||
+        targetType == 'ORDER' ||
+        title.contains('mua') ||
+        title.contains('bán') ||
+        body.contains('đơn')) {
+      final isSuccess =
+          title.contains('thành công') || title.contains('chuẩn bị');
+      final isSell = title.contains('bán') || title.contains('người mua');
+      return (
+        icon: isSuccess
+            ? Icons.check_circle_outline_rounded
+            : Icons.local_shipping_outlined,
+        iconColor: isSuccess ? const Color(0xFF1F7A3E) : StitchTokens.wine,
+        bgColor:
+            isSuccess ? const Color(0xFFEDF8F1) : StitchTokens.roseWarmSurface,
+        label: isSell ? 'ĐƠN BÁN SÁCH' : 'ĐƠN MUA SÁCH',
+        badgeColor: isSuccess ? const Color(0xFF1F7A3E) : StitchTokens.wine,
+        badgeBg:
+            isSuccess ? const Color(0xFFEDF8F1) : StitchTokens.roseWarmSurface,
+        category: 'order',
+      );
+    }
+    return (
+      icon: Icons.notifications_none_rounded,
+      iconColor: StitchTokens.wine,
+      bgColor: StitchTokens.roseWarmSurface,
+      label: 'HỆ THỐNG',
+      badgeColor: StitchTokens.wine,
+      badgeBg: StitchTokens.roseWarmSurface,
+      category: 'system',
+    );
+  }
+
+  String _formatTimeAgo(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '';
+    try {
+      final dt = DateTime.parse(dateStr).toLocal();
+      final now = DateTime.now();
+      final diff = now.difference(dt);
+      if (diff.inMinutes < 1) return 'Vừa xong';
+      if (diff.inMinutes < 60) return '${diff.inMinutes} phút trước';
+      if (diff.inHours < 24) return '${diff.inHours} giờ trước';
+      if (diff.inDays < 7) return '${diff.inDays} ngày trước';
+      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.session.isAuthenticated) {
       return Padding(
         padding: const EdgeInsets.all(AppSpace.xl),
         child: Column(
@@ -1021,89 +1270,487 @@ void _showNotificationsBottomSheet(BuildContext context, WidgetRef ref) {
                   color: StitchTokens.wine,
                 ),
                 IconButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
+                  onPressed: widget.onClose,
                   icon: const Icon(Icons.close_rounded),
                 ),
               ],
             ),
-            const SizedBox(height: AppSpace.md),
-            if (!session.isAuthenticated)
-              StatePanel(
-                wine: true,
-                icon: Icons.notifications_none_rounded,
-                title: 'Đăng nhập để xem thông báo',
-                message:
-                    'Cập nhật đơn hàng, đề nghị đổi sách, phiên đấu giá và tin nhắn mới sẽ xuất hiện tại đây.',
-                actionLabel: 'Đăng nhập',
-                onAction: () {
-                  Navigator.of(ctx).pop();
-                  context.push('/account');
-                },
-              )
-            else
-              FutureBuilder<dynamic>(
-                future: client.request('/notifications'),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const StatePanel(
-                      wine: true,
-                      loading: true,
-                      title: 'Đang tải thông báo…',
-                    );
-                  }
-                  final data = snapshot.data;
-                  final items = (data is Map && data['items'] is List)
-                      ? (data['items'] as List)
-                      : (data is List ? data : const []);
-                  if (items.isEmpty) {
-                    return const StatePanel(
-                      wine: true,
-                      icon: Icons.notifications_none_rounded,
-                      title: 'Chưa có thông báo mới',
-                      message:
-                          'Khi có cập nhật về đơn hàng, thương lượng, trao đổi hoặc đấu giá, Lật Lại sẽ báo ngay tại đây.',
-                    );
-                  }
-                  return ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 340),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: items.length,
-                      separatorBuilder: (_, _) => const Divider(),
-                      itemBuilder: (_, index) {
-                        final raw = items[index];
-                        final item = raw is Map
-                            ? Map<String, dynamic>.from(raw)
-                            : const <String, dynamic>{};
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const CircleAvatar(
-                            backgroundColor: StitchTokens.roseParchment,
-                            child: Icon(
-                              Icons.notifications_active_outlined,
-                              color: StitchTokens.wine,
-                              size: 18,
-                            ),
-                          ),
-                          title: AppText(
-                            (item['title'] ?? 'Thông báo hệ thống').toString(),
-                            kind: AppTextKind.bold,
-                          ),
-                          subtitle: AppText(
-                            (item['message'] ?? item['body'] ?? '').toString(),
-                            kind: AppTextKind.small,
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
+            const SizedBox(height: AppSpace.lg),
+            StatePanel(
+              wine: true,
+              icon: Icons.notifications_none_rounded,
+              title: 'Đăng nhập để xem thông báo',
+              message:
+                  'Cập nhật đơn hàng, đề nghị đổi sách, phiên đấu giá và tin nhắn mới sẽ xuất hiện tại đây.',
+              actionLabel: 'Đăng nhập ngay',
+              onAction: () {
+                widget.onClose();
+                context.push('/account');
+              },
+            ),
           ],
         ),
       );
-    },
-  );
+    }
+
+    final unreadCount = _items.where((i) => i['readAt'] == null).length;
+    final filteredItems = _items.where((item) {
+      if (_selectedFilter == 'unread') return item['readAt'] == null;
+      if (_selectedFilter == 'all') return true;
+      final meta = _getMeta(item);
+      return meta.category == _selectedFilter;
+    }).toList();
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Top Drag Handle
+            Center(
+              child: Container(
+                width: 38,
+                height: 4.5,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCCFBF),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Sheet Header Row
+            Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: StitchTokens.roseWarmSurface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: StitchTokens.peachBorder),
+                  ),
+                  child: const Icon(
+                    Icons.notifications_active_rounded,
+                    color: StitchTokens.wine,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Thông báo',
+                  style: TextStyle(
+                    fontFamily: 'Lora',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                    color: StitchTokens.wine,
+                  ),
+                ),
+                if (unreadCount > 0) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFBEAE8),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFF4C5C0)),
+                    ),
+                    child: Text(
+                      '$unreadCount mới',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: StitchTokens.wine,
+                      ),
+                    ),
+                  ),
+                ],
+                const Spacer(),
+                if (unreadCount > 0)
+                  TextButton.icon(
+                    onPressed: _markAllAsRead,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    icon: const Icon(
+                      Icons.done_all_rounded,
+                      size: 16,
+                      color: StitchTokens.wine,
+                    ),
+                    label: const Text(
+                      'Đọc tất cả',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: StitchTokens.wine,
+                      ),
+                    ),
+                  ),
+                IconButton(
+                  onPressed: widget.onClose,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  icon: const CircleAvatar(
+                    radius: 14,
+                    backgroundColor: Color(0xFFF2ECE1),
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 16,
+                      color: StitchTokens.darkWood,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Horizontal Filter Chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _FilterChip(
+                    title: 'Tất cả (${_items.length})',
+                    selected: _selectedFilter == 'all',
+                    onTap: () => setState(() => _selectedFilter = 'all'),
+                  ),
+                  if (unreadCount > 0)
+                    _FilterChip(
+                      title: 'Chưa đọc ($unreadCount)',
+                      selected: _selectedFilter == 'unread',
+                      highlightDot: true,
+                      onTap: () => setState(() => _selectedFilter = 'unread'),
+                    ),
+                  _FilterChip(
+                    title: 'Đơn mua/bán',
+                    selected: _selectedFilter == 'order',
+                    onTap: () => setState(() => _selectedFilter = 'order'),
+                  ),
+                  _FilterChip(
+                    title: 'Trao đổi',
+                    selected: _selectedFilter == 'exchange',
+                    onTap: () => setState(() => _selectedFilter = 'exchange'),
+                  ),
+                  _FilterChip(
+                    title: 'Đấu giá',
+                    selected: _selectedFilter == 'auction',
+                    onTap: () => setState(() => _selectedFilter = 'auction'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Content Area
+            Expanded(
+              child: _loading
+                  ? const StatePanel(
+                      wine: true,
+                      loading: true,
+                      title: 'Đang tải thông báo…',
+                    )
+                  : _error != null
+                      ? StatePanel(
+                          wine: true,
+                          icon: Icons.error_outline_rounded,
+                          title: 'Không thể tải thông báo',
+                          message: _error!,
+                          actionLabel: 'Thử lại',
+                          onAction: _loadNotifications,
+                        )
+                      : filteredItems.isEmpty
+                          ? StatePanel(
+                              wine: true,
+                              icon: Icons.notifications_none_rounded,
+                              title: _selectedFilter == 'all'
+                                  ? 'Chưa có thông báo mới'
+                                  : 'Không có thông báo trong mục này',
+                              message: _selectedFilter == 'all'
+                                  ? 'Khi có cập nhật về đơn hàng, thương lượng, trao đổi hoặc đấu giá, Lật Lại sẽ báo ngay tại đây.'
+                                  : 'Các thông báo thuộc nhóm này sẽ xuất hiện khi có giao dịch mới.',
+                            )
+                          : ListView.builder(
+                              itemCount: filteredItems.length,
+                              itemBuilder: (ctx, index) {
+                                final item = filteredItems[index];
+                                final isUnread = item['readAt'] == null;
+                                final meta = _getMeta(item);
+                                final title = (item['title'] ??
+                                        'Thông báo hệ thống')
+                                    .toString();
+                                final body = (item['body'] ??
+                                        item['message'] ??
+                                        '')
+                                    .toString();
+                                final timeAgo = _formatTimeAgo(
+                                    item['createdAt']?.toString());
+
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 9),
+                                  decoration: BoxDecoration(
+                                    color: isUnread
+                                        ? const Color(0xFFFFFBF7)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: isUnread
+                                          ? const Color(0xFFECCEB6)
+                                          : const Color(0xFFEDE3D5),
+                                      width: isUnread ? 1.2 : 1,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: isUnread
+                                            ? const Color(0x125C0202)
+                                            : const Color(0x08000000),
+                                        blurRadius: 5,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: IntrinsicHeight(
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          if (isUnread)
+                                            Container(
+                                              width: 3.5,
+                                              color: StitchTokens.wine,
+                                            ),
+                                          Expanded(
+                                            child: InkWell(
+                                              borderRadius:
+                                                  BorderRadius.circular(14),
+                                              onTap: () => _handleItemTap(item),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(12),
+                                                child: Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    // Type Avatar
+                                                    Container(
+                                                      width: 38,
+                                                      height: 38,
+                                                      decoration: BoxDecoration(
+                                                        color: meta.bgColor,
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(10),
+                                                        border: Border.all(
+                                                          color: meta.iconColor
+                                                              .withValues(
+                                                                  alpha: 0.18),
+                                                        ),
+                                                      ),
+                                                      child: Icon(
+                                                        meta.icon,
+                                                        color: meta.iconColor,
+                                                        size: 19,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 10),
+                                                    // Info
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Row(
+                                                            children: [
+                                                              Container(
+                                                                padding:
+                                                                    const EdgeInsets
+                                                                        .symmetric(
+                                                                  horizontal: 6,
+                                                                  vertical: 2,
+                                                                ),
+                                                                decoration:
+                                                                    BoxDecoration(
+                                                                  color: meta
+                                                                      .badgeBg,
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              4),
+                                                                ),
+                                                                child: Text(
+                                                                  meta.label,
+                                                                  style:
+                                                                      TextStyle(
+                                                                    fontSize:
+                                                                        9.5,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w800,
+                                                                    color: meta
+                                                                        .badgeColor,
+                                                                    letterSpacing:
+                                                                        0.4,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              if (timeAgo
+                                                                  .isNotEmpty) ...[
+                                                                const SizedBox(
+                                                                    width: 6),
+                                                                Text(
+                                                                  '• $timeAgo',
+                                                                  style:
+                                                                      const TextStyle(
+                                                                    fontSize:
+                                                                        10.5,
+                                                                    color: Color(
+                                                                        0xFF8C7E77),
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w500,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                              const Spacer(),
+                                                              if (isUnread)
+                                                                Container(
+                                                                  width: 7,
+                                                                  height: 7,
+                                                                  decoration:
+                                                                      const BoxDecoration(
+                                                                    color: StitchTokens
+                                                                        .wine,
+                                                                    shape: BoxShape
+                                                                        .circle,
+                                                                  ),
+                                                                ),
+                                                            ],
+                                                          ),
+                                                          const SizedBox(
+                                                              height: 5),
+                                                          Text(
+                                                            title,
+                                                            style: TextStyle(
+                                                              fontSize: 13,
+                                                              fontWeight: isUnread
+                                                                  ? FontWeight
+                                                                      .w800
+                                                                  : FontWeight
+                                                                      .w600,
+                                                              color: isUnread
+                                                                  ? const Color(
+                                                                      0xFF1F1614)
+                                                                  : const Color(
+                                                                      0xFF4A3E39),
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                              height: 3),
+                                                          Text(
+                                                            body,
+                                                            style:
+                                                                const TextStyle(
+                                                              fontSize: 11.5,
+                                                              color: Color(
+                                                                  0xFF635650),
+                                                              height: 1.35,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.title,
+    required this.selected,
+    required this.onTap,
+    this.highlightDot = false,
+  });
+
+  final String title;
+  final bool selected;
+  final VoidCallback onTap;
+  final bool highlightDot;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: selected
+                ? StitchTokens.wine
+                : const Color(0xFFF3EDE2),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected
+                  ? StitchTokens.wineDark
+                  : const Color(0xFFE2D6C6),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (highlightDot) ...[
+                Container(
+                  width: 6,
+                  height: 6,
+                  margin: const EdgeInsets.only(right: 5),
+                  decoration: BoxDecoration(
+                    color: selected ? StitchTokens.gold : StitchTokens.wine,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ],
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected ? Colors.white : const Color(0xFF4A3E39),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// 5-tab MemberNavigation matching `apps/mobile-react-native/src/features/navigation/member-navigation.tsx`

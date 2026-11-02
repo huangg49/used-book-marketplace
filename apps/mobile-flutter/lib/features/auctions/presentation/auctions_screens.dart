@@ -24,8 +24,9 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
 
   static const _tabs = [
     (id: 'all', label: 'Tất cả phiên'),
-    (id: 'ending_soon', label: 'Sắp kết thúc'),
     (id: 'buy_now', label: 'Có Mua ngay'),
+    (id: 'ending_soon', label: 'Sắp kết thúc'),
+    (id: 'upcoming', label: 'Sắp diễn ra'),
   ];
 
   @override
@@ -48,9 +49,19 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
     final client = ref.read(sessionClientProvider);
     try {
       final res = await client.publicRequest('/auctions');
-      final list = (res is Map && res['items'] is List)
+      var list = (res is Map && res['items'] is List)
           ? (res['items'] as List)
           : const [];
+      if (list.isEmpty) {
+        try {
+          final up = await client.publicRequest('/auctions?phase=upcoming');
+          if (up is Map &&
+              up['items'] is List &&
+              (up['items'] as List).isNotEmpty) {
+            list = up['items'] as List;
+          }
+        } catch (_) {}
+      }
       if (!mounted) return;
       setState(() {
         _auctions = list
@@ -68,6 +79,153 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
     }
   }
 
+  String _formatRemainingTime(String? endAtStr) {
+    if (endAtStr == null || endAtStr.isEmpty) return 'Đang mở';
+    try {
+      final end = DateTime.parse(endAtStr).toLocal();
+      final now = DateTime.now();
+      final diff = end.difference(now);
+      if (diff.isNegative) return 'Đã kết thúc';
+      if (diff.inDays > 0) return '${diff.inDays} ngày nữa';
+      if (diff.inHours > 0) return '${diff.inHours} giờ nữa';
+      if (diff.inMinutes > 0) return '${diff.inMinutes} phút nữa';
+      return '${diff.inSeconds} giây';
+    } catch (_) {
+      return 'Đang mở';
+    }
+  }
+
+  void _showAuctionRulesModal() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        decoration: const BoxDecoration(
+          color: Color(0xFFFFFDF8),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 38,
+                height: 4.5,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDCCFBF),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Quy chế đấu giá Lật Lại',
+                  style: TextStyle(
+                    fontFamily: 'Lora',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 17,
+                    color: StitchTokens.wine,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _buildRuleItem(
+              icon: Icons.storefront_outlined,
+              title: '1. Kiểm định thực tế tại trạm ViaPoint',
+              desc:
+                  'Mọi ấn bản đấu giá bắt buộc phải gửi tới trạm quản lý ViaPoint TP.HCM để chuyên viên xác thực bản sách, tính toàn vẹn và trang bản quyền trước khi mở phiên.',
+            ),
+            const SizedBox(height: 10),
+            _buildRuleItem(
+              icon: Icons.shield_outlined,
+              title: '2. Ký quỹ bảo chứng & Hoàn cọc 100%',
+              desc:
+                  'Bạn đọc cần nạp tiền cọc bảo chứng tương ứng mức khởi điểm để tham gia trả giá. Khoản cọc được lưu giữ an toàn và hoàn trả 100% tự động nếu không thắng phiên.',
+            ),
+            const SizedBox(height: 10),
+            _buildRuleItem(
+              icon: Icons.flash_on_rounded,
+              title: '3. Bước giá & Quyền Mua Ngay',
+              desc:
+                  'Mỗi lượt trả giá tuân theo bước giá quy định (10.000 ₫ – 50.000 ₫). Người tham gia có thể chọn "Mua ngay" để chốt sở hữu ấn bản lập tức mà không cần đợi hết giờ.',
+            ),
+            const SizedBox(height: 18),
+            AppButton(
+              title: 'Tôi đã hiểu',
+              wine: true,
+              onPressed: () => Navigator.of(ctx).pop(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRuleItem({
+    required IconData icon,
+    required String title,
+    required String desc,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFBF7F0),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFEADBCE)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: StitchTokens.roseWarmSurface,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: StitchTokens.wine, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: StitchTokens.wine,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  desc,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: Color(0xFF635650),
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _auctions.where((a) {
@@ -76,13 +234,41 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
         final book = a['book'] is Map ? (a['book'] as Map) : const {};
         final title =
             (book['title'] ?? a['title'] ?? '').toString().toLowerCase();
-        if (!title.contains(q)) return false;
+        final authors = book['authors'] is List
+            ? (book['authors'] as List).join(' ').toLowerCase()
+            : (book['author'] ?? '').toString().toLowerCase();
+        if (!title.contains(q) && !authors.contains(q)) return false;
       }
       if (_selectedTab == 'buy_now') {
         return a['buyNowPrice'] != null;
       }
+      if (_selectedTab == 'ending_soon') {
+        final end = a['endAt']?.toString();
+        if (end == null) return false;
+        final diff = DateTime.tryParse(end)?.difference(DateTime.now());
+        return diff != null && !diff.isNegative && diff.inHours < 24;
+      }
+      if (_selectedTab == 'upcoming') {
+        final state = (a['state'] ?? '').toString();
+        return state == 'Upcoming' || state == 'Pending';
+      }
       return true;
     }).toList();
+
+    // Sắp xếp
+    if (_selectedSort == 'price_asc') {
+      filtered.sort((a, b) {
+        final pa = (a['currentPrice'] ?? a['startingPrice'] ?? 0) as num;
+        final pb = (b['currentPrice'] ?? b['startingPrice'] ?? 0) as num;
+        return pa.compareTo(pb);
+      });
+    } else if (_selectedSort == 'price_desc') {
+      filtered.sort((a, b) {
+        final pa = (a['currentPrice'] ?? a['startingPrice'] ?? 0) as num;
+        final pb = (b['currentPrice'] ?? b['startingPrice'] ?? 0) as num;
+        return pb.compareTo(pa);
+      });
+    }
 
     return AppScreen(
       currentNavPath: '/auctions',
@@ -91,54 +277,314 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Flexible(
-                child: AppText(
-                  'Sách Cũ Đang Đấu Giá',
-                  kind: AppTextKind.title,
-                  color: StitchTokens.wine,
-                ),
-              ),
-              Wrap(
-                spacing: 8,
-                children: [
-                  AppButton(
-                    title: 'Phiên của tôi',
-                    secondary: true,
-                    wine: true,
-                    compact: true,
-                    onPressed: () => context.push('/my-auctions'),
-                  ),
-                  AppButton(
-                    title: 'Gửi đấu giá',
-                    wine: true,
-                    compact: true,
-                    onPressed: () => context.push('/send-to-auction'),
-                  ),
+          // 1. Bento Header Sàn Đấu Giá
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFF680B0B),
+                  StitchTokens.wine,
+                  Color(0xFF450606)
                 ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            ],
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x335C0202),
+                  blurRadius: 10,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(
+                          Icons.gavel_rounded,
+                          size: 15,
+                          color: StitchTokens.gold,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'SÀN ĐẤU GIÁ SÁCH HIẾM & SÁCH CỔ',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                            color: StitchTokens.gold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0x33FFFFFF),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0x55FFFFFF)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF4ADE80),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Text(
+                            'LIVE',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Sách Cũ Đang Đấu Giá',
+                  style: TextStyle(
+                    fontFamily: 'Lora',
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Ấn bản giá trị được kiểm định tại trạm ViaPoint TP.HCM. Bảo lưu tiền cọc an toàn qua ví ký quỹ.',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: Color(0xFFF3ECE1),
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    InkWell(
+                      onTap: () => context.push('/send-to-auction'),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 7.5,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [StitchTokens.gold, StitchTokens.goldLight],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x33DDA74F),
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(
+                              Icons.add_circle_outline_rounded,
+                              size: 15,
+                              color: StitchTokens.wineDark,
+                            ),
+                            SizedBox(width: 5),
+                            Text(
+                              'Gửi sách đấu giá',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: StitchTokens.wineDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => context.push('/my-auctions'),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7.5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0x2EFFFFFF),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0x40FFFFFF)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(
+                              Icons.history_rounded,
+                              size: 15,
+                              color: Colors.white,
+                            ),
+                            SizedBox(width: 5),
+                            Text(
+                              'Phiên của tôi',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: _showAuctionRulesModal,
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7.5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0x1AFFFFFF),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(
+                              Icons.info_outline_rounded,
+                              size: 14,
+                              color: StitchTokens.goldLight,
+                            ),
+                            SizedBox(width: 4),
+                            Text(
+                              'Quy chế',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: StitchTokens.goldLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: AppSpace.md),
+
+          // 2. Banner Bảo chứng kiểm định ViaPoint
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF9F5EC),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFEADBCE)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: StitchTokens.roseWarmSurface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: StitchTokens.peachBorder),
+                  ),
+                  child: const Icon(
+                    Icons.verified_outlined,
+                    color: StitchTokens.wine,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Kiểm định ViaPoint & Ký quỹ an toàn',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: StitchTokens.wine,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        '100% sách được thẩm định tại trạm trước khi mở phiên. Cọc bảo chứng hoàn trả nếu không thắng.',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF635650),
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpace.md),
+
+          // 3. Thanh tìm kiếm
           SearchField(
             controller: _searchCtrl,
-            placeholder: 'Tìm tên ấn bản đấu giá…',
+            placeholder: 'Tìm tên ấn bản, tác giả đấu giá…',
             onChanged: (_) => setState(() {}),
           ),
-          const SizedBox(height: AppSpace.md),
+          const SizedBox(height: AppSpace.sm),
+
+          // 4. Thanh lọc phân loại & sắp xếp
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
                 ..._tabs.map((t) {
+                  final isSelected = _selectedTab == t.id;
+                  final count = t.id == 'all'
+                      ? _auctions.length
+                      : (t.id == 'buy_now'
+                          ? _auctions
+                              .where((a) => a['buyNowPrice'] != null)
+                              .length
+                          : null);
+                  final label = count != null ? '${t.label} ($count)' : t.label;
+
                   return Padding(
                     padding: const EdgeInsets.only(right: AppSpace.sm),
                     child: AppChip(
-                      title: t.label,
+                      title: label,
                       wine: true,
-                      selected: _selectedTab == t.id,
+                      selected: isSelected,
                       onPressed: () => setState(() => _selectedTab = t.id),
                     ),
                   );
@@ -146,13 +592,21 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
                 AppChip(
                   title: _selectedSort == 'price_asc'
                       ? 'Giá tăng dần'
-                      : 'Mới nhất',
+                      : (_selectedSort == 'price_desc'
+                          ? 'Giá giảm dần'
+                          : 'Mới nhất'),
                   icon: Icons.sort_rounded,
-                  selected: false,
+                  selected: _selectedSort != 'newest',
+                  wine: true,
                   onPressed: () {
                     setState(() {
-                      _selectedSort =
-                          _selectedSort == 'newest' ? 'price_asc' : 'newest';
+                      if (_selectedSort == 'newest') {
+                        _selectedSort = 'price_asc';
+                      } else if (_selectedSort == 'price_asc') {
+                        _selectedSort = 'price_desc';
+                      } else {
+                        _selectedSort = 'newest';
+                      }
                     });
                   },
                 ),
@@ -160,6 +614,7 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
             ),
           ),
           const SizedBox(height: AppSpace.lg),
+
           if (_error != null) Notice(message: _error!, tone: NoticeTone.error),
           if (_loading)
             const StatePanel(
@@ -168,16 +623,126 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
               title: 'Đang tải phiên đấu giá…',
             )
           else if (filtered.isEmpty)
-            StatePanel(
-              wine: true,
-              icon: Icons.gavel_rounded,
-              title: 'Chưa có phiên đấu giá phù hợp',
-              message:
-                  'Sách đấu giá bắt buộc qua kiểm định tại trạm ViaPoint TP.HCM trước khi mở phiên.',
-              actionLabel: 'Gửi sách đi đấu giá',
-              onAction: () => context.push('/send-to-auction'),
+            // 5. Empty State cao cấp với quy trình 3 bước
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFDF8),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: StitchTokens.peachBorder),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0x0C5C0202),
+                    blurRadius: 10,
+                    offset: Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      color: StitchTokens.roseWarmSurface,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: StitchTokens.peachBorder),
+                    ),
+                    child: const Icon(
+                      Icons.gavel_rounded,
+                      color: StitchTokens.wine,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Hiện chưa có phiên đấu giá nào đang mở',
+                    style: TextStyle(
+                      fontFamily: 'Lora',
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w700,
+                      color: StitchTokens.wine,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Các phiên trước đã kết thúc. Sách đấu giá bắt buộc phải qua trạm kiểm định ViaPoint TP.HCM trước khi mở phiên mới.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: Color(0xFF6B5C55),
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Quy trình 3 bước kiểm định
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF7F2E8),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE8DFCE)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'QUY TRÌNH ĐẤU GIÁ MINH BẠCH TẠI LẬT LẠI',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: StitchTokens.wine,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildStepRow(
+                          number: '1',
+                          title: 'Ký gửi:',
+                          desc:
+                              'Đăng ký thông tin ấn bản & gửi tới trạm ViaPoint TP.HCM',
+                        ),
+                        const SizedBox(height: 6),
+                        _buildStepRow(
+                          number: '2',
+                          title: 'Kiểm định:',
+                          desc:
+                              'Chuyên viên kiểm tra trang, bìa, bản quyền & chốt giá sàn',
+                        ),
+                        const SizedBox(height: 6),
+                        _buildStepRow(
+                          number: '3',
+                          title: 'Mở sàn:',
+                          desc:
+                              'Đấu giá công khai toàn sàn, bảo lưu tiền cọc an toàn',
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      AppButton(
+                        title: '+ Gửi sách đi đấu giá',
+                        wine: true,
+                        onPressed: () => context.push('/send-to-auction'),
+                      ),
+                      AppButton(
+                        title: 'Phiên của tôi',
+                        secondary: true,
+                        wine: true,
+                        onPressed: () => context.push('/my-auctions'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             )
           else
+            // 6. Lưới thẻ phiên đấu giá 2 cột cao cấp
             LayoutBuilder(
               builder: (context, constraints) {
                 final cols = constraints.maxWidth >= 760 ? 3 : 2;
@@ -195,12 +760,21 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
                     final title =
                         (book['title'] ?? auction['title'] ?? 'Ấn bản đấu giá')
                             .toString();
+                    final author = (book['authors'] is List
+                            ? (book['authors'] as List).join(', ')
+                            : (book['author'] ?? ''))
+                        .toString();
                     final currentPrice = (auction['currentPrice'] ??
                         auction['startingPrice'] ??
                         0) as num;
                     final buyNow = auction['buyNowPrice'] is num
                         ? (auction['buyNowPrice'] as num)
                         : null;
+                    final bidderCount = (auction['bidderCount'] ??
+                        auction['bidsCount'] ??
+                        0) as num;
+                    final remainingText =
+                        _formatRemainingTime(auction['endAt']?.toString());
 
                     return SizedBox(
                       width: width,
@@ -208,61 +782,206 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
                         onTap: () => context.push('/auction?id=$id'),
                         borderRadius: BorderRadius.circular(14),
                         child: Container(
-                          padding: const EdgeInsets.all(AppSpace.lg),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(color: StitchTokens.peachBorder),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x0A000000),
+                                blurRadius: 6,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
+                              // Khung ảnh bìa sách
+                              ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(14),
                                 ),
-                                decoration: BoxDecoration(
-                                  color: StitchTokens.wine,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: AppText(
-                                  (auction['state'] ?? 'Active').toString() ==
-                                          'Active'
-                                      ? 'LIVE · ĐANG MỞ'
-                                      : (auction['state'] ?? '').toString(),
-                                  kind: AppTextKind.label,
-                                  color: StitchTokens.gold,
+                                child: Stack(
+                                  children: [
+                                    SizedBox(
+                                      height: 135,
+                                      width: double.infinity,
+                                      child: BookCoverPhoto(
+                                        item: auction,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    // Badge LIVE
+                                    Positioned(
+                                      top: 8,
+                                      left: 8,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: StitchTokens.wine,
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 5,
+                                              height: 5,
+                                              decoration: const BoxDecoration(
+                                                color: StitchTokens.gold,
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            const Text(
+                                              'LIVE',
+                                              style: TextStyle(
+                                                fontSize: 9.5,
+                                                fontWeight: FontWeight.w800,
+                                                color: StitchTokens.goldLight,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    // Thời gian còn lại
+                                    Positioned(
+                                      bottom: 6,
+                                      left: 8,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xCC000000),
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(
+                                              Icons.access_time_rounded,
+                                              size: 11,
+                                              color: Colors.white,
+                                            ),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              remainingText,
+                                              style: const TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 10),
-                              AppText(
-                                title,
-                                kind: AppTextKind.card,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 8),
-                              AppText(
-                                'Dẫn giá: ${formatVnd(currentPrice)}',
-                                kind: AppTextKind.shelfPrice,
-                                color: StitchTokens.wine,
-                              ),
-                              if (buyNow != null) ...[
-                                const SizedBox(height: 2),
-                                AppText(
-                                  'Mua ngay: ${formatVnd(buyNow)}',
-                                  kind: AppTextKind.small,
-                                  color: AppColors.forest,
+                              Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      title,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontFamily: 'Lora',
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: StitchTokens.deepCocoa,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                    if (author.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        author,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF8C7E77),
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      'DẪN GIÁ HIỆN TẠI',
+                                      style: TextStyle(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: StitchTokens.wine,
+                                        letterSpacing: 0.4,
+                                      ),
+                                    ),
+                                    Text(
+                                      formatVnd(currentPrice),
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w900,
+                                        color: StitchTokens.wine,
+                                      ),
+                                    ),
+                                    if (buyNow != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '⚡ Mua ngay: ${formatVnd(buyNow)}',
+                                        style: const TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.forest,
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          '$bidderCount lượt trả',
+                                          style: const TextStyle(
+                                            fontSize: 10.5,
+                                            color: Color(0xFF8C7E77),
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3.5,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: StitchTokens.wine,
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                          ),
+                                          child: const Text(
+                                            'Đặt giá',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
-                              ],
-                              const SizedBox(height: 10),
-                              AppButton(
-                                title: 'Xem phiên đấu giá',
-                                wine: true,
-                                compact: true,
-                                onPressed: () =>
-                                    context.push('/auction?id=$id'),
                               ),
                             ],
                           ),
@@ -275,6 +994,57 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
             ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStepRow({
+    required String number,
+    required String title,
+    required String desc,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 18,
+          height: 18,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: StitchTokens.wine,
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            number,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: StitchTokens.goldLight,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: Color(0xFF4A3E39),
+                height: 1.35,
+              ),
+              children: [
+                TextSpan(
+                  text: '$title ',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: StitchTokens.wine,
+                  ),
+                ),
+                TextSpan(text: desc),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

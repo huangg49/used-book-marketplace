@@ -12,23 +12,72 @@ class ApiError implements Exception {
     required this.code,
     required this.message,
     this.requestId,
+    this.details,
   });
 
   final int status;
   final String code;
   final String message;
   final String? requestId;
+  final Object? details;
 
   @override
   String toString() => message;
 }
 
+String _friendlyFieldPathName(String path) {
+  if (path.contains('mediaIds')) return 'Ảnh bản sách (cần tối thiểu 1 ảnh bìa)';
+  if (path.contains('description')) return 'Mô tả bản sách (tối thiểu 30 ký tự)';
+  if (path.contains('salePrice')) return 'Giá bán (10.000đ - 1.000.000đ)';
+  if (path.contains('exchangeValue')) return 'Giá trị trao đổi (10.000đ - 1.000.000đ)';
+  if (path.contains('originAddressId') || path.contains('fulfillment')) return 'Địa chỉ lấy hàng';
+  if (path.contains('bookId')) return 'Đầu sách trong thư viện';
+  if (path.contains('pages')) return 'Tình trạng trang sách';
+  if (path.contains('coverNote')) return 'Tình trạng bìa sách';
+  if (path.contains('notes')) return 'Ghi chú tình trạng';
+  if (path.contains('accessories')) return 'Phụ kiện kèm theo';
+  if (path.contains('readable')) return 'Khả năng đọc rõ';
+  if (path.contains('ownershipDeclared')) return 'Cam kết quyền sở hữu';
+  final cleaned = path.replaceAll(RegExp(r'^/+(content/)?'), '');
+  return cleaned.isNotEmpty ? cleaned : path;
+}
+
 String presentErrorMessage(Object? error) {
-  if (error is ApiError) return error.message;
+  if (error is ApiError) {
+    if (error.details is List && (error.details as List).isNotEmpty) {
+      final detailsList = (error.details as List).whereType<Map>().toList();
+      final errMsgs = detailsList
+          .map((d) {
+            final p = (d['path'] ?? '').toString();
+            final m = (d['message'] ?? '').toString();
+            final label = _friendlyFieldPathName(p);
+            return label.isNotEmpty ? '$label: $m' : m;
+          })
+          .where((m) => m.isNotEmpty)
+          .join('\n');
+      if (errMsgs.isNotEmpty) return '${error.message}\n$errMsgs';
+    }
+    return error.message;
+  }
   if (error is DioException) {
     final data = error.response?.data;
-    if (data is Map && data['message'] is String) {
-      return data['message'] as String;
+    if (data is Map) {
+      final msg = (data['message'] ?? 'Dữ liệu không hợp lệ.').toString();
+      final errors = data['fieldErrors'] ?? data['errors'] ?? data['details'];
+      if (errors is List && errors.isNotEmpty) {
+        final details = errors
+            .whereType<Map>()
+            .map((e) {
+              final p = e['path']?.toString() ?? '';
+              final m = e['message']?.toString() ?? '';
+              final label = _friendlyFieldPathName(p);
+              return label.isNotEmpty ? '$label: $m' : m;
+            })
+            .where((s) => s.isNotEmpty)
+            .join('\n');
+        if (details.isNotEmpty) return '$msg\n$details';
+      }
+      return msg;
     }
     return 'Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.';
   }
@@ -265,6 +314,7 @@ class SessionClient {
                   'Yêu cầu chưa thực hiện được. Vui lòng thử lại.')
               .toString(),
           requestId: map['requestId']?.toString(),
+          details: map['fieldErrors'] ?? map['errors'] ?? map['details'],
         );
       }
       return data;

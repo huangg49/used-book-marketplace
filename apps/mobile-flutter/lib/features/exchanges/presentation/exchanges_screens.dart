@@ -608,11 +608,78 @@ class _ExchangeComposeScreenState extends ConsumerState<ExchangeComposeScreen> {
   String? _error;
   List<Map<String, dynamic>> _myBooks = const [];
   final Set<String> _selectedIds = <String>{};
+  final Map<String, Map<String, dynamic>> _bookCache = {};
 
   @override
   void initState() {
     super.initState();
     Future.microtask(_loadMyInventory);
+  }
+
+  Map<String, dynamic> _normalizeBook(Map<String, dynamic> raw) {
+    final currentRev = raw['currentRevision'] is Map
+        ? raw['currentRevision'] as Map
+        : null;
+    final content = currentRev?['content'] is Map
+        ? currentRev!['content'] as Map
+        : (raw['content'] is Map ? raw['content'] as Map : null);
+
+    final mode = (content?['mode'] ?? raw['mode'] ?? '').toString();
+    final condition =
+        (content?['condition'] ?? raw['condition'] ?? 'Good').toString();
+    final salePrice = (content?['salePrice'] ?? raw['salePrice'] ?? 0) as num;
+    final exchangeValue =
+        (content?['exchangeValue'] ?? raw['exchangeValue'] ?? salePrice) as num;
+    final bundle = content?['bundle'] ?? raw['bundle'];
+    final bookId = (content?['bookId'] ?? raw['bookId'])?.toString();
+    final mediaIds = content?['mediaIds'] is List
+        ? (content!['mediaIds'] as List)
+        : (raw['mediaIds'] is List ? raw['mediaIds'] as List : const []);
+    final photos = mediaIds.isNotEmpty
+        ? mediaIds.map((m) => {'id': m.toString()}).toList()
+        : (raw['photos'] ?? const []);
+
+    final cachedBook = (bookId != null && _bookCache.containsKey(bookId))
+        ? _bookCache[bookId]
+        : null;
+    final book = cachedBook ??
+        (content?['book'] is Map
+            ? Map<String, dynamic>.from(content!['book'] as Map)
+            : (raw['book'] is Map
+                ? Map<String, dynamic>.from(raw['book'] as Map)
+                : null));
+
+    final title = (bundle is Map &&
+            bundle['title'] != null &&
+            bundle['title'].toString().isNotEmpty)
+        ? bundle['title'].toString()
+        : (book?['title'] ??
+                raw['title'] ??
+                content?['title'] ??
+                'Sách của tôi')
+            .toString();
+
+    final authors = (book?['authors'] is List &&
+            (book!['authors'] as List).isNotEmpty)
+        ? (book['authors'] as List).join(', ')
+        : (book?['author'] ?? raw['author'] ?? '').toString();
+
+    return {
+      ...raw,
+      'id': (raw['id'] ?? raw['_id'] ?? '').toString(),
+      'version': raw['version'] ?? 1,
+      'mode': mode,
+      'condition': condition,
+      'salePrice': salePrice,
+      'exchangeValue': exchangeValue,
+      'bundle': bundle,
+      'bookId': bookId,
+      'book': book,
+      'title': title,
+      'authors': authors,
+      'photos': photos,
+      'mediaIds': mediaIds,
+    };
   }
 
   Future<void> _loadMyInventory() async {
@@ -627,14 +694,51 @@ class _ExchangeComposeScreenState extends ConsumerState<ExchangeComposeScreen> {
       final list = (res is Map && res['items'] is List)
           ? (res['items'] as List)
           : const [];
+      final rawList = list
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+
+      final normalized = rawList.map(_normalizeBook).toList();
       if (!mounted) return;
       setState(() {
-        _myBooks = list
-            .whereType<Map>()
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList();
+        _myBooks = normalized;
         _loading = false;
       });
+
+      // Background fetch book identities if missing in cache
+      final missingBookIds = <String>{};
+      for (final item in normalized) {
+        final bId = item['bookId']?.toString();
+        if (bId != null && bId.isNotEmpty && !_bookCache.containsKey(bId)) {
+          missingBookIds.add(bId);
+        }
+      }
+      if (missingBookIds.isNotEmpty) {
+        for (final bId in missingBookIds) {
+          try {
+            final bookRes = await client.publicRequest('/catalog/books/$bId');
+            if (bookRes is Map) {
+              _bookCache[bId] = Map<String, dynamic>.from(bookRes);
+            }
+          } catch (_) {
+            try {
+              final own = await client.request('/me/catalog-requests/$bId');
+              if (own is Map && own['currentRevision'] is Map) {
+                final meta = (own['currentRevision'] as Map)['metadata'];
+                if (meta is Map) {
+                  _bookCache[bId] = Map<String, dynamic>.from(meta);
+                }
+              }
+            } catch (_) {}
+          }
+        }
+        if (mounted) {
+          setState(() {
+            _myBooks = rawList.map(_normalizeBook).toList();
+          });
+        }
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -731,18 +835,47 @@ class _ExchangeComposeScreenState extends ConsumerState<ExchangeComposeScreen> {
             ..._myBooks.map((book) {
               final id = (book['id'] ?? '').toString();
               final checked = _selectedIds.contains(id);
-              final b = book['book'] is Map
-                  ? Map<String, dynamic>.from(book['book'] as Map)
-                  : const <String, dynamic>{};
-              final title =
-                  (b['title'] ?? book['title'] ?? 'Sách của tôi').toString();
+              final title = (book['title'] ?? 'Sách của tôi').toString();
+              final authors = (book['authors'] ?? '').toString();
+              final exchangeValue =
+                  (book['exchangeValue'] ?? book['salePrice'] ?? 0) as num;
+
               return CheckboxListTile(
                 value: checked,
                 activeColor: StitchTokens.wine,
+                secondary: Container(
+                  width: 40,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    color: StitchTokens.warmIvory,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: StitchTokens.cardBorder),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: BookCoverPhoto(
+                    item: book,
+                    fit: BoxFit.cover,
+                    isMine: true,
+                  ),
+                ),
                 title: AppText(title, kind: AppTextKind.bold),
-                subtitle: AppText(
-                  'Định giá quy đổi: ${formatVnd((book['exchangeValue'] ?? book['salePrice'] ?? 0) as num)}',
-                  kind: AppTextKind.small,
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (authors.isNotEmpty)
+                      AppText(
+                        authors,
+                        kind: AppTextKind.small,
+                        color: AppColors.muted,
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    AppText(
+                      'Định giá quy đổi: ${formatVnd(exchangeValue)}',
+                      kind: AppTextKind.small,
+                      color: StitchTokens.wineDark,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ],
                 ),
                 onChanged: (v) {
                   setState(() {

@@ -74,7 +74,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/orders',
         builder: (context, state) => OrdersScreen(
-          focusOrderId: state.uri.queryParameters['focus'],
+          focusOrderId: state.uri.queryParameters['focus'] ??
+              state.uri.queryParameters['id'],
+        ),
+      ),
+      GoRoute(
+        path: '/orders/:orderId',
+        builder: (context, state) => OrdersScreen(
+          focusOrderId: state.pathParameters['orderId'] ??
+              state.uri.queryParameters['focus'] ??
+              state.uri.queryParameters['id'],
+        ),
+      ),
+      GoRoute(
+        path: '/chat/orders/:orderId',
+        builder: (context, state) => OrdersScreen(
+          focusOrderId: state.pathParameters['orderId'],
         ),
       ),
       GoRoute(
