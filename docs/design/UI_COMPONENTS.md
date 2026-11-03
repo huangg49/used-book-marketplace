@@ -350,8 +350,17 @@ all-node stock/native/human acceptance is not implied.
 the React Native foundation above. Source:
 [OwnerListingRow.tsx](../../apps/user-web/src/components/OwnerListingRow.tsx),
 with styles in [MyBooksPage.module.css](../../apps/user-web/src/pages/MyBooksPage.module.css).
-The actual examples are `/my-books` (full row) and `/account` (compact preview);
-no RN `/ui` example or native acceptance is implied.
+Owner row and DashboardMyBooks covers share `myListingPhotoQuery`, keyed by
+owner/listing/revision/media. Signing starts within the shared 200 px viewport
+margin. `useNearViewport(..., { once: true })` retains activation after first
+entry, so scrolling out/back does not restart a stale query. Missing
+IntersectionObserver falls back to the existing eager behavior. Keep reserved
+cover frames, hover scale and image/signing error retry. Dashboard image decode
+errors now expose the same retry path. Verify with
+`pnpm --filter @used-books/user-web test:owner-photo-visibility:browser`.
+Current consumers are `/my-books` (row/grid); `/account` uses DashboardMyBooks
+cards with the same photo query. The snippet below demonstrates the optional
+compact variant. No RN `/ui` example or native acceptance is implied.
 
 ```tsx
 <ul>

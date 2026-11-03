@@ -1,20 +1,25 @@
 # Tối ưu Member web — 03/11/2026
 
-Gói hiện tại `codex/member-web-shared-notification-preview`, base `5bbe9685`.
-[Preview thông báo](../../apps/user-web/src/services/notifications.ts) dùng
-chung trang đầu 8 mục theo owner cho chuông/sidebar/lời chào/hoạt động.
-Hoạt động giữ 4 mục đầu; inbox phân trang giữ key riêng.
+Owner cho phép cuốn chiếu tối ưu Member web, giữ animation, đo/kiểm chứng từng
+gói và sửa lỗi liên quan đã tái hiện. Đổi nghiệp vụ, thiết kế/hiệu ứng hoặc
+triển khai cần quyết định riêng; không mở rộng sang DB/provider/checkout demo.
+
+Gói hiện tại `codex/member-web-owner-photo-visibility`, base `6c5751f8`.
+[Ảnh kệ riêng](../../apps/user-web/src/lib/owner-listing-queries.ts) chỉ xin link
+khi gần viewport, giữ activation sau lần đầu và cache theo owner/revision.
 [Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Production fixture 390/1440: preview 3→1 request, JSON 3.482→2.101 B.
-  Giữ poll 30 s. Read ACK/error/retry, Back, inbox riêng và đổi tài khoản PASS.
-- Sửa link hoạt động đang dẫn mọi target sang đấu giá; dùng notificationPath.
-  Không đoán outbid từ tiêu đề hoặc gắn LIVE từ notice. 47 CSS khớp byte.
-- Build/typecheck, 348 unit test, lint và dashboard browser PASS. Detector
-  exit 0 có một advisory bounce cũ, giữ motion. Chưa đo CPU/FPS/Web Vitals.
-  API thật, DB, thiết bị thật, native, human acceptance và remote CI NOT RUN.
+- Production fixture: Kệ sách dạng danh sách xin link 20→1 ở 390 px,
+  20→3 ở 1440 px; kệ Tổng quan dưới viewport 8→0. Cuộn/tải, cache/Back,
+  stale re-entry và thiếu observer PASS. Giữ hover 1,04/1,06/1,05 và 47 CSS.
+- Sửa ảnh Tổng quan vỡ không có retry khi link hợp lệ nhưng tải ảnh 404.
+- Build/typecheck, 349 unit test, lint/detector và browser ảnh riêng PASS.
+  Hồi quy ảnh Search/đấu giá PASS. Nén lossless ảnh lời chào lớn hơn nên bỏ.
+  Chưa đo CPU/FPS/Web Vitals; API/DB/provider thật, native, thiết bị thật,
+  human acceptance và remote CI NOT RUN.
 
-Gói `5bbe9685` dừng Lenis idle và giữ cuộn khi reduced-motion;
+Gói `6c5751f8` dùng chung preview thông báo và sửa link sai target;
+`5bbe9685` dừng Lenis idle và giữ cuộn khi reduced-motion;
 `598689fe` tối ưu ảnh nền Auth; `a98db891` nén logo/chữ Hero,
 `ad49aac4` sửa submit từ khóa cũ. Chi tiết ở báo cáo hiệu năng.
 Giữ READINESS. Thay đổi nằm trong worktree phát triển. Checkout demo giữ local work.

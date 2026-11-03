@@ -6,7 +6,6 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { useSession } from "../hooks/useSession";
 import { useActionCooldown } from "../hooks/useActionCooldown";
 import {
-  getMyPhoto,
   getMyBookIdentity,
   setListingVisibility,
   archiveListing,
@@ -30,6 +29,8 @@ import {
   canArchiveListing,
 } from "../lib/owner-listing-edit";
 import styles from "../pages/MyBooksPage.module.css";
+import { myListingPhotoQuery } from "../lib/owner-listing-queries";
+import { useNearViewport } from "../hooks/useNearViewport";
 
 function OwnerPhoto({
   item,
@@ -44,15 +45,15 @@ function OwnerPhoto({
   const ownerId = auth.status === "authenticated" ? auth.user.id : undefined;
   const mediaId = item.currentRevision.content.mediaIds?.[0];
   const [failedUrl, setFailedUrl] = useState<string>();
+  const { ref, active } = useNearViewport<HTMLDivElement>(false, { once: true });
   const query = useQuery({
-    queryKey: ["my-photo", ownerId, item.id, item.currentRevision.id, mediaId],
-    queryFn: () => getMyPhoto(item.id, mediaId!),
-    enabled: !!ownerId && !!mediaId,
+    ...myListingPhotoQuery(ownerId, item.id, item.currentRevision.id, mediaId),
+    enabled: Boolean(ownerId && mediaId && active),
   });
   const url = query.data?.url;
   const failed = query.isError || (!!url && url === failedUrl);
   return (
-    <div className={fill ? styles.fillCover : styles.cover}>
+    <div ref={ref} className={fill ? styles.fillCover : styles.cover}>
       {url && !failed ? (
         <img
           src={url}

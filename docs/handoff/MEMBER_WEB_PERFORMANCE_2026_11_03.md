@@ -4,6 +4,52 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Xin link bìa riêng khi tới gần kệ đang đọc
+
+Nhánh `codex/member-web-owner-photo-visibility`, base `6c5751f8`.
+[OwnerListingRow](../../apps/user-web/src/components/OwnerListingRow.tsx) và
+[DashboardMyBooks](../../apps/user-web/src/pages/profile/components/DashboardMyBooks.tsx)
+chỉ bắt đầu xin link bìa khi frame gần viewport 200 px. Tùy chọn `once` của
+[hook dùng chung](../../apps/user-web/src/hooks/useNearViewport.ts) giữ activation
+sau lần đầu: rời/quay lại không đổi enabled của query đã đọc. Không có observer
+thì fallback tải như trước. Giữ staleTime/refetch policy hiện có, không đổi TTL.
+
+[Query ảnh](../../apps/user-web/src/lib/owner-listing-queries.ts) giữ key đầy đủ
+owner/listing/revision/media của Owner row, dùng cùng key cho kệ Tổng quan.
+Giữ đúng signed URL, không bỏ quyền tại API hoặc dùng URL của người khác.
+Unit kiểm dùng chung giữa hai consumer và tách owner/revision; guest hoặc không
+có media không được tự đọc. Không đổi API/contract/session hay màn sửa ảnh.
+
+[Browser production](../../apps/user-web/tests/owner-photo-visibility.mjs),
+Chromium 390×900 và 1440×900, reduced-motion bật, dữ liệu/ảnh HTTP fixture.
+Build base lưu riêng; số dưới đây chỉ đếm GET media/read của ảnh riêng:
+
+| Lúc mới mở trang | Trước | Sau |
+| --- | ---: | ---: |
+| Kệ sách, danh sách 390 px | 20 | 1 |
+| Kệ sách, danh sách 1440 px | 20 | 3 |
+| Kệ Tổng quan dưới viewport, 390/1440 px | 8 | 0 |
+
+- Lưới 1440 sau sửa xin 8/20 bìa gần viewport; cuộn tới cuối tải đúng bìa cuối.
+  Thiếu observer tải đủ 20. Quay lại hàng đã đọc, kể cả sau 16 s vượt staleTime
+  mặc định, không tự ký lại. Từ Tổng quan sang kệ đầy đủ và Back dùng lại cache.
+- Giữ hover scale 1,04 của row, 1,06 của grid và 1,05 của Dashboard, đã đo trên
+  browser với reduced-motion. Đã xem ảnh QA 390/1440. Không đổi CSS/asset;
+  47 CSS production vẫn khớp byte. Dashboard có thêm frame DOM ổn định để observe.
+- Phát hiện lỗi cũ: ảnh Tổng quan tải 404 sau khi xin link thành công thì ảnh
+  vỡ, không có retry. Tái hiện trên base; thêm onError theo URL và retry xin link
+  mới, giữ frame. Browser kiểm cả lỗi xin link và lỗi tải ảnh ở hai consumer.
+- Build/typecheck, 349 unit test/49 file, lint và detector `[]` PASS. Hồi quy
+  search-covers (8 ca) và auction-photo-visibility PASS, gồm hidden, expired,
+  fallback và cleanup/Back; consumer mặc định của hook không đổi sang `once`.
+  Evidence `.tmp/member-web-owner-photo-visibility/`. Chưa đo CPU/pin/FPS,
+  Web Vitals, ảnh provider thật, API/DB thật, native, thiết bị thật, human acceptance
+  hoặc remote CI. READINESS và checkout demo giữ nguyên.
+
+Phương án đã loại: thử nén lossless ảnh lời chào bằng Sharp. PNG gốc 1.040.797 B;
+PNG thử 2.038.554 B, WebP lossless thử 1.244.560 B, RGBA khớp nhưng dung lượng
+lớn hơn. Không thay ảnh gốc; evidence riêng `.tmp/member-web-greeting-image/`.
+
 ## Dùng chung bản xem trước thông báo trên Tổng quan
 
 Nhánh `codex/member-web-shared-notification-preview`, base `5bbe9685`.

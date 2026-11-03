@@ -39,14 +39,17 @@ function observeNearViewport(target: Element, update: ViewportSubscription["upda
 }
 
 // Delay signing offscreen covers as well as downloading their pixels.
-export function useNearViewport<T extends HTMLElement = HTMLDivElement>(eager = false) {
+// `once` keeps seen owner covers enabled, preserving their existing refetch policy.
+export function useNearViewport<T extends HTMLElement = HTMLDivElement>(eager = false, { once = false }: { once?: boolean } = {}) {
   const ref = useRef<T>(null);
   const [near, setNear] = useState(false);
   useEffect(() => {
     if (eager || !ref.current) return;
     if (typeof IntersectionObserver === "undefined") return;
-    return observeNearViewport(ref.current, setNear);
-  }, [eager]);
+    return observeNearViewport(ref.current, value => {
+      setNear(previous => once ? previous || value : value);
+    });
+  }, [eager, once]);
   return {
     ref,
     active: eager || near || typeof IntersectionObserver === "undefined",
