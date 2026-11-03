@@ -47,7 +47,8 @@
   cursor: pointer;
 }
 .pendingLink:hover {
-  background: var(--shop-shelf);
+  background-color: var(--shop-shelf, #f4eddf);
+  color: var(--shop-wine, #5c0202);
 }
 .pendingLink:focus-visible {
   outline: 3px solid var(--shop-wine);
@@ -140,6 +141,9 @@
 .formDialog > header button:hover {
   background: #fffcf51a;
   transform: rotate(90deg);
+}
+.formDialog > header button:focus-visible {
+  outline-color: var(--shop-paper, #fffcf5);
 }
 .steps {
   position: relative;
@@ -441,8 +445,8 @@
   gap: 10px;
   min-width: 160px;
   border: 0;
-  background: var(--shop-wine);
-  color: var(--shop-paper);
+  background-color: var(--shop-wine, #5c0202);
+  color: var(--shop-paper, #fffcf5);
   box-shadow: 0 4px 12px #5c020224;
 }
 .primary::after {
@@ -488,8 +492,11 @@
     background: var(--shop-cream);
   }
 }
-.primary:hover {
-  background: var(--shop-wine-hover);
+.primary:hover:not(:disabled),
+.primary:active:not(:disabled),
+.primary:focus-visible:not(:disabled) {
+  background-color: var(--shop-wine-hover, #7c2320);
+  color: var(--shop-paper, #fffcf5);
 }
 .primary:disabled,
 .secondary:disabled {
@@ -497,12 +504,15 @@
   cursor: wait;
 }
 .secondary {
-  background: transparent;
-  color: var(--shop-wine);
-  border: 1px solid var(--shop-control);
+  background-color: var(--shop-paper, #fffcf5);
+  color: var(--shop-wine, #5c0202);
+  border: 1px solid var(--shop-control, #8e7564);
 }
-.secondary:hover {
-  background: var(--shop-shelf);
+.secondary:hover:not(:disabled),
+.secondary:active:not(:disabled),
+.secondary:focus-visible:not(:disabled) {
+  background-color: var(--shop-shelf, #f4eddf);
+  color: var(--shop-wine, #5c0202);
 }
 .pendingError button:focus-visible,
 .dialog :is(button, input, textarea, select):focus-visible {

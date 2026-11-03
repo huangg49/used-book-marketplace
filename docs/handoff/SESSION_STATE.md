@@ -1,6 +1,14 @@
-# Rút tiền qua Admin — 03/11/2026
+# Rút tiền qua Admin — 04/11/2026
 
-- Hiện tại `codex/withdrawal-form-motion`, base `6c81c12a`; checkpoint subject
+- Hiện tại `codex/wallet-button-interaction-colors`, base `bd985543`; checkpoint
+  subject `fix(wallet): keep popup buttons readable in every interaction state`.
+  Tái hiện Tiếp tục/guard draft mất màu khi thiếu token portal, contrast1:1;
+  đã thêm fallback và foreground cho hover/active/focus, ring đóng header rõ hơn.
+  Không đổi handler/API/key/body/disabled/motion. PASS111button-state cases ở8
+  context, min contrast5.08:1;30browser captures/0page errors/overflow và320Member
+  unit/typecheck/build/lint. QA riêng, không mutation owner; main apps giữ chạy,
+  QA đã dừng. Không push/merge/native/human/CI PASS hoặc đổi READINESS.
+- Gói form trước ở `codex/withdrawal-form-motion`, base `6c81c12a`; subject
   `feat(wallet): refine withdrawal form with receipt transitions`. Owner yêu cầu
   làm đẹp popup và nhiều hiệu ứng. Entry760px wine/cream,2cột desktop/1cột mobile,
   preset tiền thật và receipt kiểm tra; giữ input khi chỉnh sửa và retry cùng key.

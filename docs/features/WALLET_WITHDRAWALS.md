@@ -206,3 +206,33 @@ khi OS reduce: `.tmp/withdrawal-form-hover-smoke.log`; QA riêng, không gửi
 đơn. Final build PASS sau token portal fix. QA đã teardown/dừng; main apps giữ
 chạy, không mutation owner, push/merge hoặc đổi READINESS. Đây là review AI trên
 browser, không thay native/human/CI acceptance.
+
+## Màu nút khi hover/nhấn/focus — 04/11/2026
+
+Owner báo nút Tiếp tục trắng khi tương tác và yêu cầu rà nút khác. Nhánh
+`codex/wallet-button-interaction-colors`, base `bd985543`; checkpoint subject
+`fix(wallet): keep popup buttons readable in every interaction state`.
+
+Tái hiện trước sửa: thiếu inherited hover token làm Tiếp tục và nút Bỏ bản nháp
+trong portal có foreground/background đều paper (contrast1:1) khi hover/active.
+Form chính được kiểm cả tình huống cố ý bỏ token; guard draft là trường hợp
+portal thật không có token của form. Thêm fallback theo brand cho primary,
+secondary và pending-link, foreground rõ ở hover/active/focus; ring nút đóng trên
+header wine dùng paper. Không đổi API, handler, disabled, key/body hoặc hiệu ứng.
+Rà source nút Wallet/PurchaseDialog; kiểm tương tác các nút enabled trên Ví,
+popup nạp/rút tiền, review/retry, guard draft và pending notice.
+
+PASS111tổ hợp nút/trạng thái trong8context, keyboard focus/hover/nhấn thực bằng
+Playwright, contrast thấp nhất5.08:1 sau sửa; chặn riêng click của phép đo để không
+submit hoặc điều hướng. Chạy tiếp journey thật PASS30captures/0page errors/0overflow,
+API/Mongo QA riêng, funding/storage fixture: form,2OS motion, exact retry, approve,
+reject/refund, owner-only và notification detail. PASS320Member unit/typecheck/
+build/lint (cảnh báo cũ ngoài phần sửa). Detector một lượt chỉ2radius advisory cũ.
+Đã xem lại form desktop; không thay DESIGN/token chung hoặc thêm ảnh.
+
+Regression dùng [helper đo state](../../scripts/wallet-button-states.mjs) trong
+runner hiện có. Evidence private `.tmp/wallet-button-states-evidence/button-states.json`,
+`.tmp/wallet-button-states-before.log` (FAIL tái hiện),
+`.tmp/wallet-button-states-after.log`, `.tmp/wallet-button-states-{build,unit,lint}.log`.
+Không tác động tiền/dữ liệu owner; QA teardown/dừng, main apps giữ chạy. Không
+push/merge, native/human/CI acceptance hoặc đổi READINESS.

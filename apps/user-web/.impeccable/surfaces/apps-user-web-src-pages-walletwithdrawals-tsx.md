@@ -53,6 +53,12 @@ actual pending request has a900ms spinner loop. No animation waits gate actions.
 Keep the owner's authored motion under both OS preferences; hover lift is only
 for fine pointers. No new raster, dependency or global dialog override.
 
+Button correction04/11: primary/secondary controls carry explicit foreground and
+fallback backgrounds for hover, active and keyboard focus, including portals
+outside the form header. Missing inherited hover/shelf tokens must never produce
+cream text on cream paper. The wine-header close button uses a paper focus ring.
+Preserve authored motion, native disabled state and command handlers.
+
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 No raster added; preserve DESIGN.md and its token sidecar for this extension.

@@ -5,6 +5,7 @@ import { createRequire } from "node:module";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { auditWalletButtons, assertWalletButtonsReadable } from "./wallet-button-states.mjs";
 import {
   createTestApi,
   root,
@@ -23,7 +24,8 @@ assert.ok(
 );
 const memberOrigin = "http://127.0.0.1:5195",
   adminOrigin = "http://127.0.0.1:5196";
-const evidence = path.join(root, ".tmp/withdrawal-form-motion-evidence");
+const evidence = path.join(root, ".tmp/wallet-button-states-evidence");
+const buttonStates = [];
 let fixture, browser, web, adminVite, member, admin, op;
 const pageErrors = [];
 const captures = [];
@@ -159,6 +161,11 @@ try {
       .last(),
   ).toBeVisible();
   await capture(member, "member-empty-desktop");
+  const wallet = member.locator("section").filter({ has: member.getByRole("heading", { name: "Ví & Ký Quỹ Thư Quán", exact: true }) }).last();
+  await auditWalletButtons(member, wallet, "wallet", buttonStates);
+  await button(member, "Nạp tiền VNPay").click();
+  await auditWalletButtons(member, member.getByRole("dialog", { name: "Nạp tiền vào ví" }), "topup", buttonStates);
+  await closePopup(member);
   await member.emulateMedia({ reducedMotion: "reduce" });
   let d = await form(member, 100000);
   assert.equal(await d.evaluate(e => getComputedStyle(e).animationDuration), "0.52s");
@@ -168,6 +175,20 @@ try {
   await expect(d.getByLabel("Số tiền muốn rút")).toHaveValue("500000");
   await button(d, "100.000").click();
   await expect(d.getByLabel("Số tiền muốn rút")).toHaveValue("100000");
+  await auditWalletButtons(member, d, "withdrawal-entry", buttonStates);
+  // Simulate a missing inherited hover token: native portals must have a safe fallback.
+  await d.evaluate(node => node.style.setProperty("--shop-wine-hover", "initial"));
+  await auditWalletButtons(member, d, "withdrawal-entry-without-hover-token", buttonStates);
+  await d.evaluate(node => node.style.removeProperty("--shop-wine-hover"));
+  await closePopup(member);
+  await member.getByRole("link", { name: "Tìm sách", exact: true }).first().click();
+  const leave = member.getByRole("dialog", { name: "Rời bản nháp rút tiền?" });
+  await leave.waitFor();
+  await auditWalletButtons(member, leave, "leave-draft", buttonStates);
+  await leave.getByRole("button", { name: "Quay lại yêu cầu", exact: true }).click();
+  await d.waitFor();
+  await writeFile(path.join(evidence, "button-states.json"), JSON.stringify(buttonStates, null, 2));
+  assertWalletButtonsReadable(buttonStates);
   const moneyStyle = await d.getByLabel("Số tiền muốn rút").evaluate(e => {
     const s = getComputedStyle(e);
     return { border: s.borderTopWidth, size: parseFloat(s.fontSize) };
@@ -211,6 +232,9 @@ try {
   });
   await button(member, "Tiếp tục").click();
   await capture(member, "member-confirm-mobile", 390);
+  await auditWalletButtons(member, member.getByRole("dialog"), "withdrawal-review", buttonStates);
+  await writeFile(path.join(evidence, "button-states.json"), JSON.stringify(buttonStates, null, 2));
+  assertWalletButtonsReadable(buttonStates);
   await button(member, "Chỉnh sửa").click();
   await expect(member.getByLabel("Số tiền muốn rút")).toBeVisible();
   await expect(member.getByLabel("Số tiền muốn rút")).toHaveValue("100000");
@@ -219,6 +243,9 @@ try {
   await button(member, "Xác nhận gửi yêu cầu").click();
   await button(member, "Kiểm tra lại yêu cầu").waitFor();
   assert.equal(await member.getByLabel("Số tiền muốn rút").isDisabled(), true);
+  await auditWalletButtons(member, member.getByRole("dialog"), "withdrawal-retry", buttonStates);
+  await writeFile(path.join(evidence, "button-states.json"), JSON.stringify(buttonStates, null, 2));
+  assertWalletButtonsReadable(buttonStates);
   await button(member, "Kiểm tra lại yêu cầu").click();
   await member.getByRole("dialog", { name: "Chi tiết rút tiền" }).waitFor();
   assert.equal(posted.length, 2);
@@ -237,6 +264,9 @@ try {
   await expect(pendingNotice).toBeVisible();
   await expect(pendingNotice.getByText("dưới 24 giờ", { exact: true })).toBeVisible();
   await capture(member, "member-pending-desktop", 1440, 900);
+  await auditWalletButtons(member, pendingNotice, "pending-notice", buttonStates);
+  await writeFile(path.join(evidence, "button-states.json"), JSON.stringify(buttonStates, null, 2));
+  assertWalletButtonsReadable(buttonStates);
   assert.ok(await pendingNotice.evaluate(e => e.getBoundingClientRect().bottom < window.innerHeight));
   await capture(member, "member-pending-mobile", 390, 844);
   await capture(member, "member-pending-small", 320, 844);
@@ -421,6 +451,8 @@ try {
           "pending-notice-visible-above-wallet",
           "separate-withdrawal-list-removed",
           "withdrawal-motion-both-os-preferences",
+          "wallet-button-hover-active-keyboard-contrast",
+          "portal-buttons-without-inherited-hover-token",
           "quick-amount-and-edit-preserve-values",
           "withdrawal-details-from-notifications",
           "pending-count-all-filtered-pages",
