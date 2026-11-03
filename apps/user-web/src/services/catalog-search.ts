@@ -1,6 +1,9 @@
-import { previewShelf, type HomeShelfBook } from "./home-shelves";
+import {
+  previewCatalogItems,
+  previewShelf,
+  type HomeShelfBook,
+} from "./home-shelves";
 import { getPublicListings } from "./public-listings";
-import catalog from "../data/preview-catalog.json";
 import {
   matchesClassification,
   categoryFor,
@@ -9,7 +12,7 @@ import { classificationQuery } from "../lib/catalog-filters";
 import { previewClassification } from "../data/preview-classification";
 
 export const previewCategories = [
-  ...new Set(catalog.items.map((book) => book.category)),
+  ...new Set(previewCatalogItems.map((book) => book.category)),
 ];
 
 /** Preview editions keep their source links; they are never listing IDs. */

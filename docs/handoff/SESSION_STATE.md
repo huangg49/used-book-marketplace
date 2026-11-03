@@ -1,3 +1,30 @@
+# Hiệu năng luồng demo Member web — 03/11/2026
+
+Owner duyệt gói đầu theo luồng Trang chủ → Tìm sách → Trang 2 → Chi tiết → Back.
+Nhánh `codex/member-web-demo-performance` từ `0f6e1fbc`. Production trước đó
+đóng cả 118 ấn bản xem trước vào JavaScript khởi động. Bản sửa giới hạn dữ liệu
+mẫu ở Vite dev và giữ đúng bốn bìa trang trí đã dùng trên banner Home.
+
+- Hai production build trước/sau, Chromium 151, ba lượt mỗi bản ở 1440px và
+  390px (CPU 4×, mạng tải xuống 4 Mbps, tải lên 0,75 Mbps, độ trễ 75 ms). HTTP fixture cố định,
+  cache lạnh và quay lại có cache. Chunk chính 460.019 → 378.803 byte,
+  truyền gzip 128.148 → 115.871 byte. Trung vị thời điểm nhận xong chunk trên
+  mobile 957 → 907 ms. LCP Hero desktop 368 → 364 ms và mobile 3.088 → 3.152 ms,
+  chưa chứng minh LCP cải thiện ổn định.
+- Luồng đầy đủ PASS 12 lượt, canvas lá vẽ khi hiện và View Transition sang chi
+  tiết/quay lại đạt ready ở cả hai chế độ motion đã đo. Ảnh Hero trước/sau cùng
+  mốc animation chỉ lệch tối đa 4 mức RGB ở 40 pixel desktop và 1 mức ở 8 pixel
+  mobile. Back giữ cursor/trang 2. Scroll về đầu theo hành vi có sẵn ở cả hai bản.
+- Smoke production build dùng GET qua API local thật PASS ở 1440/390px,
+  0 lỗi JavaScript. Build, typecheck và 338 unit test PASS. Lint exit 0 với
+  warning ngoài diff. Detector 0 finding, browser Home focus, Search recovery
+  và 42 ca màn hình/viewport phân trang PASS. Trace, harness và kết quả cục bộ
+  tại `.tmp/member-web-performance/`.
+
+Gói này ở worktree phát triển. Checkout Documents, cơ sở dữ liệu demo và
+READINESS được giữ nguyên. Thiết bị mobile thật, human acceptance và CI remote
+chưa chạy cho gói này.
+
 # Lịch sử tin nhắn Member web —03/11/2026
 
 Owner duyệt xử lý lịch sử chat trước sau rà pagination. Nhánh
