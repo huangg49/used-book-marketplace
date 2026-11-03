@@ -6,6 +6,7 @@ import { formatRemaining, useCountdown } from '../../hooks/useAuctionClock'
 import { formatVnd, ROUTES } from '../../lib/routes'
 import { auctionPhase, type AuctionSummary } from '../../services/auctions'
 import styles from './AuctionCard.module.css'
+import { useNearViewport } from '../../hooks/useNearViewport'
 
 const HOUR = 3_600_000
 const endsAt = (iso: string) =>
@@ -25,6 +26,7 @@ function AuctionCountdown({ endAt, serverTime, scheduled }: {
 }
 
 export function AuctionCard({ auction, serverTime }: { auction: AuctionSummary; serverTime: string }) {
+  const { ref: coverRef, active: coverActive } = useNearViewport<HTMLAnchorElement>()
   // ADR 0047: a scheduled card counts down to the start, not the end.
   const scheduled = auctionPhase(auction, serverTime) === 'Scheduled'
   const hasBids = auction.bidderCount > 0
@@ -32,8 +34,8 @@ export function AuctionCard({ auction, serverTime }: { auction: AuctionSummary; 
   const to = ROUTES.auctionDetail(auction.id)
   return (
     <article className={styles.card} data-auction-id={auction.id}>
-      <Link to={to} className={styles.cover} aria-label={`Xem phiên đấu giá ${auction.title}`}>
-        <AuctionPhoto auction={auction} interactive={false} />
+      <Link ref={coverRef} to={to} className={styles.cover} aria-label={`Xem phiên đấu giá ${auction.title}`}>
+        <AuctionPhoto auction={auction} interactive={false} active={coverActive} />
         <AuctionCountdown endAt={scheduled ? auction.startAt : auction.endAt} serverTime={serverTime} scheduled={scheduled} />
       </Link>
       <div className={styles.meta}>

@@ -4,6 +4,85 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Xin link ảnh thẻ đấu giá khi bìa gần viewport
+
+Nhánh `codex/member-web-auction-photo-visibility`, base `966b581a`.
+[AuctionCard](../../apps/user-web/src/components/AuctionCard/index.tsx) quan sát
+chính link bìa với `useNearViewport`, rootMargin200px. Chỉ bật query ảnh khi
+observer báo gần màn hình. Không thêm wrapper nên selector `cover > img`, hình
+học và hover/focus cũ giữ nguyên. Hook chỉ thêm generic cho ref anchor; runtime
+của các consumer div hiện có không đổi.
+
+[AuctionPhoto](../../apps/user-web/src/components/AuctionGallery.tsx) thêm prop
+`active` mặc định true. Gallery chi tiết, viewer lớn, Hero source và MyAuctions
+không được chuyển sang policy trì hoãn này. Query key theo auction/revision/
+media, staleTime60s, retry:false và nút tải lại giữ nguyên. Bật lại query áp dụng
+quy tắc stale/error của TanStack Query hiện có. Link đã có trong cache vẫn dùng
+được; rời viewport không hủy request đang chạy. Đây là
+trì hoãn công việc chưa cần, không giảm chất lượng ảnh hoặc motion.
+
+Hai production build trên Chromium151,5 cặp lạnh luân phiên mỗi viewport; HTTP
+fixture8 Live+8 Scheduled có ảnh trên danh sách thật. Width390×844/DPR2/CPU4×
+và1440×844/DPR1/CPU1×, reduced-motion; mạng4Mbps xuống/0,75Mbps lên/latency75ms.
+Ảnh WebP fixture16.708byte lấy từ asset có sẵn. Đo đến ảnh đầu của card đầu load
+xong, font sẵn sàng và800ms chờ; chưa cuộn. Byte là encoded response body ảnh,
+không gồm header/API/JS/CSS. Không dùng clock giả cho phép đo này.
+
+| Trung vị lúc mở danh sách | Trước | Sau |
+| --- | ---: | ---: |
+| Viewport390: request lấy link ảnh | 16 | 1 |
+| Viewport390: ảnh đã tải | 6 | 1 |
+| Viewport390: body ảnh | 100.248byte | 16.708byte |
+| Viewport390: ảnh đầu load, từ navigation | 2.803ms | 2.716ms |
+| Desktop: request lấy link ảnh | 16 | 4 |
+| Desktop: ảnh đã tải | 16 | 4 |
+| Desktop: body ảnh | 267.328byte | 66.832byte |
+| Desktop: ảnh đầu load, từ navigation | 2.275ms | 2.198ms |
+
+Số request và ảnh giữ đúng các mức trên ở cả5 cặp mỗi viewport. Lợi ích chính
+là tránh xin link/tải ảnh xa ban đầu; cuộn tới vẫn phải tải. Số byte và thời
+gian phụ thuộc fixture, không đại diện kích thước ảnh Supabase hoặc độ trễ API
+thật. Không suy ảnh load thành LCP/paint hay mức giảm tải MongoDB.
+
+Chi phí đi kèm: bundler tách hook dùng chung thành thêm1 JS preload ở entry,
+30→31 file JS/CSS; tổng body tăng196byte raw/218byte gzip fixture. Ba cặp lạnh
+bổ sung cho Home mỗi viewport, cùng mạng/CPU: mobile FCP/LCP1.952/1.952→
+1.888/1.888ms, desktop1.108/1.848→1.124/1.856ms. Mẫu nhỏ chưa cho thấy hồi quy
+lớn hoặc cải thiện Home chắc chắn; không so trực tiếp với gói cũ khác điều kiện.
+Đệm200px không bảo đảm mọi ảnh đã load trước khi cuộn rất nhanh; giữ loading/
+error hiện có. Cần kiểm cảm nhận cuộn trên điện thoại thật trước nghiệm thu.
+
+- [Browser production](../../apps/user-web/tests/auction-photo-visibility.mjs)
+  PASS6 cấu hình:390/1440px, không ảnh, không IntersectionObserver, lỗi link,
+  lỗi tải pixel. Bắt bản cũ gọi ảnh xa1 lần khi yêu cầu0. Khi cuộn tới thì ảnh
+  tải; quay lại trước staleTime tái dùng query; revision mới nhận dữ liệu mới
+  sau khi observer báo gần. Bìa giữ kích thước và img trực tiếp dưới link;
+  hover translateY(-3px) vẫn hoạt động khi reduced-motion bật.
+- Không có IntersectionObserver thì giữ đường tải toàn bộ ảnh. Không có ảnh
+  không gọi endpoint ảnh. Lỗi ở thẻ giữ link chi tiết; gallery vẫn tải/cho retry
+  và viewer eager dùng chung query.0 page error ở cả6 cấu hình. Các endpoint
+  và ảnh đều fixture; WebSocket bị từ chối. Không bid/command/provider thật.
+  Chạy lại:`pnpm --filter @used-books/user-web test:auction-photo-visibility:browser`.
+- Toàn bộ46 CSS production khớp byte. Đã xem ảnh bìa390/1440px; không dùng ảnh
+  đứng để kết luận mọi frame motion khớp pixel. Hiệu ứng giá500ms và đồng hồ
+  vẫn qua bộ countdown của gói trước.
+- Build/tsc,341 unit test, lint exit0, bộ auction-stage390/1440px, countdown,
+  8 ca ảnh Search và5 cấu hình chuyển cảnh sách PASS. Detector3 file đổi0
+  finding; warning lint/chunk/plugin timing cũ ngoài diff. Docs/diff check PASS.
+  Harness auction-stage cũ tìm checkbox trong panel đóng và nhãn “Xóa bộ lọc”
+  đã lỗi thời. Source AuctionListPage không đổi: test thêm mở panel và dùng
+  đúng nhãn “Xóa tất cả”, giữ toàn bộ assertions nghiệp vụ rồi chạy lại PASS.
+- API local thật BLOCKED: GET `/api/v1/auctions` trả ECONNREFUSED. Không khởi
+  động dịch vụ hoặc ghi DB. Human acceptance, native/điện thoại thật và CI
+  remote chưa chạy; READINESS giữ nguyên.
+- Harness,20 lượt đo, JSON, probe và log tại
+  `.tmp/member-web-auction-photo-performance/`; browser/ảnh ở `.tmp/auction-photo-visibility/`.
+  `.tmp` chỉ ở máy hiện tại; bộ test browser và sửa harness được đưa vào Git.
+
+Chỉ ở worktree phát triển. Checkout demo có40 file tracked thay đổi và14 file
+untracked được bảo toàn, HEAD5bd0b360. Không push/PR/merge. Phạm vi là ảnh trên
+AuctionCard; không kết luận toàn web đã hết điểm nghẽn.
+
 ## Tách đồng hồ khỏi phần còn lại của thẻ đấu giá
 
 Nhánh `codex/member-web-auction-countdown`, base `2abb5c52`.

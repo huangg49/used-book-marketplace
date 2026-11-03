@@ -582,6 +582,18 @@ book return URL. Non-Members/inactive accounts cannot mutate, and catalog previe
 have no heart. `ListingPhoto` keeps its reusable loading/missing/error/retry states
 for detail, checkout and conversation consumers. RN `/ui` remains unchanged.
 
+## Member web — Ảnh thẻ đấu giá theo viewport —03/11/2026
+
+`AuctionCard` observes its existing cover link with a200px root margin and
+passes visibility to `AuctionPhoto.active`. This defers signed-photo reads for
+distant cards while retaining the direct-child img selector and all cover
+motion. The query key/cache/retry stay unchanged; in-flight reads can finish
+and revisiting a fresh cached cover reuses its URL. `active` defaults true for
+other consumers, including the eager detail gallery/viewer. Missing observer
+falls back to the existing full loading behavior. Verify scroll, cache,
+revision and error recovery with
+`pnpm --filter @used-books/user-web test:auction-photo-visibility:browser`.
+
 ## Member web — Đồng hồ trên thẻ đấu giá —03/11/2026
 
 `AuctionCard` keeps `useCountdown` inside a badge component so clock ticks do

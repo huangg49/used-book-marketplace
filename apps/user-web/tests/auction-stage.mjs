@@ -85,12 +85,14 @@ try {
     await page.goto(origin + '/auctions')
     await cards(page).nth(2).waitFor()
     await compact(page)
+    // The shipped filter panel starts collapsed when no filters are active.
+    await page.getByRole('button', { name: /^Bộ lọc/ }).click()
     await page.getByRole('checkbox', { name: /có giá mua ngay/i }).click()
     await page.waitForURL('**/auctions?buyNow=1')
     await expectBrowser(page.getByRole('checkbox', { name: /có giá mua ngay/i })).toBeChecked()
     await page.waitForFunction(() => document.querySelectorAll('[data-auction-id]').length === 1)
     assert.equal(await cards(page).first().getAttribute('data-auction-id'), items[0].id)
-    await page.getByRole('button', { name: 'Xóa bộ lọc', exact: true }).click()
+    await page.getByRole('button', { name: 'Xóa tất cả', exact: true }).click()
     await cards(page).nth(2).waitFor()
     await page.evaluate(async value => {
       const { queryClient } = await import('/src/lib/session.ts')

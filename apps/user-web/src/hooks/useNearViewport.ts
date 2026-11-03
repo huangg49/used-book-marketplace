@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
 // Delay signing offscreen covers as well as downloading their pixels.
-export function useNearViewport(eager = false) {
-  const ref = useRef<HTMLDivElement>(null);
+export function useNearViewport<T extends HTMLElement = HTMLDivElement>(eager = false) {
+  const ref = useRef<T>(null);
   const [near, setNear] = useState(false);
   useEffect(() => {
     if (eager || !ref.current) return;

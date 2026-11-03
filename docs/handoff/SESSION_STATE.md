@@ -1,35 +1,37 @@
 # Tối ưu Member web — 03/11/2026
 
-Gói hiện tại `codex/member-web-auction-countdown`, base `2abb5c52`: tách badge
-đồng hồ khỏi phần còn lại của AuctionCard để không chạy lại giá/ảnh/ngày mỗi
-nhịp. Giữ hook, server offset, interval 1000ms, phase và motion. Giá/giờ mới từ server
-vẫn cập nhật bình thường.
+Gói hiện tại `codex/member-web-auction-photo-visibility`, base `966b581a`:
+AuctionCard chỉ xin ảnh khi link bìa gần viewport200px. Giữ DOM/CSS/hover,
+query key/cache/retry; Gallery/viewer và consumer khác giữ active mặc định.
+Hook near viewport chỉ thêm generic ref anchor, không đổi runtime cho div.
 [Source](../../apps/user-web/src/components/AuctionCard/index.tsx),
 [bằng chứng và các gói trước](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Production Chromium151/REST fixture,8 Live+8 Scheduled,5 cặp mỗi viewport,
-  khoảng4,2giây: 64 callback đồng hồ giữ nguyên, định dạng ngày96→0 ở mọi cặp.
-  ScriptDuration390px/DPR2/CPU4×232→80ms,desktop23→8ms. Đây là tổng JS lúc idle
-  trong phòng thử; không là click/FPS/INP hoặc điện thoại thật.
-- Build/tsc,341 unit test,lint,42 ca màn/viewport phân trang và browser đồng hồ
-  PASS390/1440px. Ngày máy sai10 ngày, mốc dưới1giờ, hết giờ, Scheduled, giá/endAt
-  mới, WAAPI giá500ms khi reduced-motion, phân trang và cleanup đều được kiểm.
-  Clock kiểm chức năng tách khỏi bộ đo thời gian thực; không fake thời gian đo.
-- 46 CSS production khớp byte; ảnh thẻ gần khớp. Detector0 finding. Docs/diff
-  check PASS; warning cũ ngoài diff. WebSocket fixture bị từ chối; không suy thành
-  push/bid thật. API thật BLOCKED: health/auctions ECONNREFUSED, 3000/5173/5174
-  không listen, 27017 còn listen. Không khởi động dịch vụ hay ghi DB.
-  Harness tại `.tmp/member-web-auction-performance/`,test mới trong repo.
+- Chromium151/production HTTP fixture,8 Live+8 Scheduled,5 cặp mỗi viewport.
+  Request link ban đầu16→1 ở390px,16→4 ở1440px. Với ảnh WebP16.708byte, body
+  ảnh100.248→16.708byte và267.328→66.832byte. Cuộn tới vẫn tải; không suy thành
+  giảm kích thước ảnh thật, LCP hay tải DB. Ảnh đầu mobile2.803→2.716ms.
+  Tách hook chung thêm1 JS preload ở entry,+196byte raw. Ba cặp Home mỗi viewport
+  chưa cho thấy hồi quy lớn; ảnh xa vẫn có loading khi cuộn nhanh.
+- Build/tsc,341 unit test, lint,6 ca browser ảnh đấu giá, auction-stage,
+  countdown,8 ca ảnh Search và5 cấu hình chuyển cảnh PASS. Cache/quay lại,
+  revision, geometry, hover, thiếu observer/ảnh và error/retry/viewer được kiểm.
+  46 CSS production khớp byte; detector0. Docs/diff check PASS; warning cũ.
+- Sửa bước thao tác harness auction-stage theo UI hiện có: mở bộ lọc trước
+  checkbox, dùng nhãn “Xóa tất cả”. Không sửa source filter/giảm assertions.
+- API thật BLOCKED: GET auctions ECONNREFUSED. Không khởi động dịch vụ hay ghi
+  DB. HTTP/ảnh fixture và WebSocket bị từ chối không là tích hợp provider thật.
+  Harness ở `.tmp/member-web-auction-photo-performance/`, test mới trong repo.
 
 Chuỗi trước: `62324b47` catalog, `10fd986d` WOFF2, `bbd59568` Hero preload,
 `d28f7605` canvas, `55c9df1d` ảnh trang, `8aba79c7` prefetch mã, `8fc33e1f`
-viewport,`183b457d` style chuyển cảnh, `aa023b21` bỏ fit chữ lúc cuộn, `2abb5c52`
-khung tài khoản lazy. Chi tiết trong tài liệu bằng chứng chung bên trên.
+viewport, `183b457d` style chuyển cảnh, `aa023b21` bỏ fit chữ lúc cuộn, `2abb5c52`
+khung tài khoản lazy, `966b581a` đồng hồ thẻ đấu giá. Chi tiết trong bằng chứng chung.
 
-Điểm nghẽn mới thuộc danh sách đấu giá; chưa khảo sát mọi trang/vai trò với dữ
-liệu đại diện. Chỉ ở worktree phát triển, checkout demo có local work được bảo
-toàn; chưa push/PR/merge. Thiết bị thật, human acceptance, CI remote chưa chạy.
-Gate phát hành theo READINESS giữ nguyên.
+Chỉ ở worktree phát triển, checkout demo có local work được bảo toàn; chưa
+push/PR/merge. Thiết bị thật, human acceptance, CI remote chưa chạy.
+Gate phát hành theo READINESS giữ nguyên. Chưa khảo sát mọi trang/vai trò với
+dữ liệu đại diện để kết luận toàn web hết việc tối ưu.
 
 # Lịch sử tin nhắn Member web —03/11/2026
 
