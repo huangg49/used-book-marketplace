@@ -14,6 +14,7 @@
     "test:avatar-recovery:browser": "node tests/avatar-recovery.mjs",
     "test:exchange-wallet-cache:browser": "node tests/exchange-wallet-cache.mjs",
     "test:wallet-credit-cache:browser": "node tests/wallet-credit-cache.mjs",
+    "test:wallet-popup-watch:browser": "node tests/wallet-popup-watch.mjs",
     "test:order-wallet-cache:browser": "node tests/order-wallet-cache.mjs",
     "test:point-order-wallet-cache:browser": "node tests/point-order-wallet-cache.mjs",
     "test:dashboard-chunk:browser": "node tests/dashboard-chunk.mjs",

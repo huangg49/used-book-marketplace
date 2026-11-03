@@ -4,6 +4,38 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Chỉ kiểm tra tab thanh toán khi popup đang mở — 04/11/2026
+
+Nhánh `codex/member-web-wallet-popup-watch`, base `5a0ba4c9`.
+[WalletPage](../../apps/user-web/src/pages/WalletPage.tsx) trước đây giữ interval
+500ms suốt thời gian ở Ví, cả khi không có popup. Tách cờ alive theo vòng đời
+component khỏi watcher; chỉ tạo watcher khi paymentOpen, cleanup khi đóng hoặc
+unmount. Khi popup mở vẫn kiểm closed mỗi 500ms như trước; không đổi polling
+topup, popup allowlist, intent/key/body, UI, motion hoặc quy tắc ghi có.
+
+[Production browser fixture](../../apps/user-web/tests/wallet-popup-watch.mjs)
+PASS 8 ca trước/sau, 390/1440 × đóng/mở lại, create bị409, mô phỏng popup bị
+chặn và rời trang trong lúc create đang chờ. Context chặn mọi external traffic;
+HTML provider và mọi HTTP API là dữ liệu giả. Không gọi VNPay Sandbox/DB thật.
+
+- Idle không popup: 1→0 interval; đo thực tế 4–5→0 callback trong 2100ms.
+  Sau đóng popup, lỗi hoặc popup bị chặn: 1→0 timer còn giữ. Khi popup mở:
+  vẫn đúng 1 watcher 500ms; không thay bằng nhịp chậm hơn.
+- Đóng/mở lại giữ key/body/amount intent cũ. Popup bị chặn không gửi create.
+  Rời trang cleanup timer; response create về muộn vẫn đóng tab đã tạo nhờ
+  cờ alive riêng. Không page error. Popup-blocked được mô phỏng bằng window.open
+  trả null; không thay cài đặt trình duyệt/máy. Không suy độ trễ 500ms được bảo
+  đảm khi OS/browser throttle nền; đây là nhịp lập lịch như source cũ.
+- Build/typecheck, 361 unit/51 file, scoped lint và detector `[]` PASS. Topup
+  credit-cache 8 ca PASS lại cả return/checkout và credited true/false.
+  Cả 47 CSS production khớp byte, không đổi markup/class/asset/animation.
+
+Evidence `.tmp/member-web-wallet-popup-watch/` và `.tmp/member-web-wallet-credit-cache/`.
+Đo timer work, không là CPU/FPS/pin/LCP/INP hoặc nghiệm thu thanh toán thật.
+API/DB/provider, native/thiết bị thật, human acceptance và remote CI NOT RUN.
+READINESS và checkout demo giữ nguyên. Cooldown Register/ForgotPassword sau
+60 giây còn là ứng viên cần đo riêng; chưa suy mọi timer app đã tối ưu.
+
 ## Dừng timer đếm ngược đã hết hạn — 04/11/2026
 
 Nhánh `codex/member-web-expired-countdown-timers`, base `e1eafee0`.
@@ -45,8 +77,8 @@ không là đo CPU, FPS, thời lượng pin, LCP hoặc INP trên thiết bị 
 Evidence `.tmp/member-web-expired-countdown/`, `.tmp/auction-countdown/` và
 evidence browser PointOrder/topup hiện có. Native/thiết bị thật, API/DB/provider,
 human acceptance và remote CI NOT RUN; READINESS và checkout demo giữ nguyên.
-Vòng kiểm tra popup Wallet khi không có popup và cooldown form hết hạn còn là
-ứng viên cần đo riêng, chưa suy PASS từ gói countdown này.
+Vòng kiểm tra popup Wallet được kiểm riêng ở mục mới phía trên; cooldown form
+hết hạn chưa được suy PASS từ gói countdown này.
 
 ## Làm mới view ví sau ACK thanh toán PointOrder — 04/11/2026
 

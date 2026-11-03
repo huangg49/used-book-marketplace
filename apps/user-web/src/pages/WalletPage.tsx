@@ -134,17 +134,19 @@ export function WalletPage() {
 
   useEffect(() => {
     alive.current = true;
+    return () => { alive.current = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!paymentOpen) return;
     const check = window.setInterval(() => {
       if (paymentWindow.current?.closed) {
         paymentWindow.current = null;
         setPaymentOpen(false);
       }
     }, 500);
-    return () => {
-      alive.current = false;
-      window.clearInterval(check);
-    };
-  }, []);
+    return () => window.clearInterval(check);
+  }, [paymentOpen]);
 
   useEffect(() => {
     const trackedId = checkoutId ?? id;
