@@ -4,6 +4,60 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Làm mới view ví sau lệnh đơn hàng / quan sát Completed — 04/11/2026
+
+Nhánh `codex/member-web-order-wallet-cache`, base `ac71b6dc`.
+Build base tái hiện trong hành trình thật của client `/orders/:id` → đúng
+`/chat/:roomId`: sau thanh toán, hoặc polling thấy Completed phía người bán,
+menu tài khoản vẫn dùng available cũ trong staleTime. Back về Ví vốn đã đọc
+đúng số mới; không coi đây là lỗi toàn bộ màn Ví. Key mini/cashflow chưa được
+invalidate bởi controller OrderDetails.
+
+[OrderDetails](../../apps/user-web/src/pages/OrderDetails.tsx) dùng helper ví
+chung sau ACK pay/cancel, trước khi chờ refetch chi tiết đơn; bỏ ba prefix ví
+cũ trong vòng invalidate phía sau. Effect quan sát Completed dùng cùng helper.
+Chỉ đánh dấu stale/đọc lại dữ liệu server theo owner; không tính tiền tại client,
+không đổi command/key/body/version, eligibility, state, ledger hoặc nghiệp vụ.
+Giữ mọi invalidation ngoài ví và đường lỗi/recovery hiện có.
+
+| Vai trò / entry | Điều kiện / kết quả | Nơi xem / bước tiếp |
+| --- | --- | --- |
+| Buyer → đơn hàng trong hội thoại → Thanh toán | Chỉ sau API ACK | Mở menu hoặc Back về Ví để đọc số dư server mới |
+| Buyer → Hủy đơn chưa thanh toán | ACK hủy, số dư không đổi trong fixture | Không suy đã hoàn tiền hoặc cho phép hủy đơn đã nhận |
+| Buyer → Thử lại thanh toán sau mất ACK | Cùng key/body/version cũ | Chỉ ACK retry làm stale ví; reject/pending không refresh tiền |
+| Buyer/Seller → đơn đang mở → polling Completed | Quan sát trạng thái API đã có sẵn | Các view ví stale; buyer kiểm khoản giữ, seller đọc available mới |
+
+[Production browser fixture](../../apps/user-web/tests/order-wallet-cache.mjs)
+PASS trước/sau 12 ca: 390/1440 × pay, reject rồi pay, lost ACK/retry, cancel
+chưa trả tiền, Completed buyer và seller. Cache age đóng băng, timers/motion
+giữ nguyên. Desktop menu sau sửa đọc available server mới; buyer Completed
+không tự tăng available và main card nhận khoản giữ 0. Không command trong ca
+polling Completed. Retry mất ACK giữ nguyên request; definitive rejection cho
+phép intent mới theo cơ chế cũ. Không page error. Mọi API là HTTP fixture,
+socket bị chặn; không dùng worker/settlement/DB hoặc gọi dịch vụ thật.
+
+Suite hồi quy [order/chat workspace](../../apps/user-web/tests/order-chat-workspace.mjs)
+lần đầu FAIL vì fixture còn `/messages`/query key `purchase-messages`, thiếu
+`/messages/history` mà source chat đang gọi. Sửa fixture thêm response page
+`items/olderCursor` và dùng key `purchase-message-history` cho ca lỗi lịch sử;
+giữ mọi assertion. Chạy lại PASS: buyer/seller eligibility, private details,
+403 che cache, 503 giữ dữ liệu, liên kết đúng phòng, message/shipping/pay/cancel
+lost-response retry, nháp và mobile 320/390 chữ 130%. Suite này dùng HTTP và
+Socket.IO giả riêng; không là bằng chứng provider/chat server thật.
+
+- Build/typecheck, 354 unit/50 file, scoped lint và detector `[]` PASS.
+  Helper unit hiện có kiểm owner/family và bỏ read trước ACK về muộn.
+- Đã xem ảnh desktop và mobile 390 chữ 130% của hành trình Order/chat mới chạy.
+  Cả 47 CSS production khớp byte trước/sau; không đổi markup/class/asset/motion.
+- Desktop hành trình có 3→4 GET wallet vì mini phải đọc lại khi mở; mobile
+  giữ 2. Đây là sửa độ đúng cache, không là giảm request hoặc nghiệm thu tiền.
+
+Evidence `.tmp/member-web-order-wallet-cache/`, `.tmp/order-chat-workspace-qa/`.
+Node24.22.1/pnpm11.19.0. Không thay READINESS hoặc checkout demo. API/DB/provider
+thật, native/thiết bị thật, human acceptance và remote CI NOT RUN.
+Đấu giá/PointOrder còn cần kiểm riêng; ADR0071 xác nhận bid không giữ tiền,
+nên không suy mọi thao tác đấu giá đều thay đổi số dư ví.
+
 ## Làm mới các view sau khi nạp ví được ghi có — 04/11/2026
 
 Nhánh `codex/member-web-wallet-credit-cache`, base `9a86b8e9`.
@@ -46,7 +100,7 @@ không gọi VNPay Sandbox, provider, API hoặc DB thật.
 
 Evidence `.tmp/member-web-wallet-credit-cache/`. Native, thiết bị thật,
 provider/DB/API integration, human acceptance và remote CI NOT RUN.
-READINESS và checkout demo giữ nguyên. Nguồn cập nhật ví của Order còn cần rà riêng.
+READINESS và checkout demo giữ nguyên. Order được kiểm riêng ở mục mới phía trên.
 
 ## Làm mới view ví sau ACK trao đổi — 04/11/2026
 
@@ -90,8 +144,8 @@ trong test là dữ liệu tổng hợp, không có thanh toán hay ledger thậ
   native, thiết bị thật, human acceptance hoặc remote CI. READINESS và demo
   checkout giữ nguyên. Evidence `.tmp/member-web-exchange-wallet-cache/`.
 
-Ca Exchange không chứng minh mọi nguồn ACK khác đã nối: nạp ví được kiểm riêng
-ở mục mới phía trên; Order vẫn cần rà riêng.
+Ca Exchange không chứng minh mọi nguồn ACK khác đã nối: nạp ví và Order được
+kiểm riêng ở các mục mới phía trên; PointOrder chưa được suy PASS.
 
 ## Khôi phục avatar sau khi URL được cấp lại
 

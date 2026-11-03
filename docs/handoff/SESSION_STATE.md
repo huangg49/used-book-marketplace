@@ -4,24 +4,26 @@ Owner cho phép cuốn chiếu tối ưu Member web, giữ animation, đo/kiểm
 gói và sửa lỗi liên quan đã tái hiện. Đổi nghiệp vụ, thiết kế/hiệu ứng hoặc
 triển khai cần quyết định riêng; không mở rộng sang DB/provider/checkout demo.
 
-Gói hiện tại `codex/member-web-wallet-credit-cache`, base `9a86b8e9`.
-[WalletPage](../../apps/user-web/src/pages/WalletPage.tsx) dùng helper chung
-làm mới các view ví đúng family/owner khi API topup báo `credited: true`;
-giữ hai đường return/checkout, không set số dư hoặc đổi quy tắc ghi có.
+Gói hiện tại `codex/member-web-order-wallet-cache`, base `ac71b6dc`.
+[OrderDetails](../../apps/user-web/src/pages/OrderDetails.tsx) dùng helper chung
+làm mới các view ví đúng family/owner sau ACK pay/cancel hoặc quan sát Completed.
+Không set tiền hoặc đổi command/key/body/version/nghiệp vụ.
 [Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Production fixture 8 ca 390/1440 × return/checkout × credited true/false:
-  menu desktop hết giữ số dư cũ sau ghi có; pending/chưa credited không
-  refresh ví. Popup/provider được chặn HTTP hoàn toàn, không thanh toán thật.
-- Build/typecheck, 354 unit test, lint/detector, browser 8 ca và wallet layout
-  5 cấu hình PASS, gồm chữ 125%/dialog focus và sheen 8 giây khi reduced-motion.
+- Production fixture 12 ca 390/1440: pay/reject/lost ACK/retry/cancel chưa trả,
+  polling Completed buyer/seller. Menu hết số dư cũ sau ACK/Completed seller;
+  buyer Completed không tự tăng available; pending/reject không refresh tiền.
+- Hồi quy order/chat PASS sau sửa fixture cũ theo contract lịch sử hiện tại:
+  quyền/403/503, private details, key/body retry, nháp, mobile 320/390 chữ 130%.
+- Build/typecheck, 354 unit test, scoped lint/detector PASS.
   47 CSS khớp byte; không đổi animation. API/DB/provider/thiết bị thật, native,
   human acceptance và remote CI NOT RUN. Không đổi nghiệp vụ/ledger/contract.
 
 Ứng viên lazy Home bị loại, source đã khôi phục (`901383dd` chỉ lưu đánh giá).
-Rà tiếp nguồn cập nhật ví của Order; chưa suy mọi nguồn ACK đã nối.
+Rà tiếp Đấu giá/PointOrder; ADR0071 nói bid không giữ tiền, không suy bid đổi số dư.
 
-Gói `9a86b8e9` nối ví sau ACK Exchange/recovery, giữ key/body và actor;
+Gói `ac71b6dc` nối view ví khi topup credited, kiểm riêng return/checkout;
+`9a86b8e9` nối ví sau ACK Exchange/recovery, giữ key/body và actor;
 `19950968` sửa avatar nhận URL mới sau lỗi cùng avatar ID;
 `b5b36d22` hoãn xin link bìa riêng tới gần viewport và sửa retry ảnh;
 `6c5751f8` dùng chung preview thông báo và sửa link sai target;

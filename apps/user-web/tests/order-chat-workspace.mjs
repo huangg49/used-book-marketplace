@@ -192,8 +192,11 @@ try {
       }
       if (routePath === "/me/profile") return send({id:(actor==='buyer'?buyer:seller).id,version:1,displayName:(actor==='buyer'?buyer:seller).displayName,email:actor+'@example.test',contactPhone:null,avatarId:null,pendingEmailChange:null});
       if (routePath === "/me/purchase-conversations") return send([...rooms.values()]);
-      const roomMatch = routePath.match(/^\/me\/purchase-conversations\/([^/]+)(?:\/(messages|events))?$/);
+      const roomMatch = routePath.match(/^\/me\/purchase-conversations\/([^/]+)(?:\/(messages\/history|messages|events))?$/);
       if (roomMatch && rooms.has(roomMatch[1])) {
+        if (roomMatch[2] === "messages/history") return historyFailures.has(roomMatch[1])
+          ? send({ code: "Unavailable", message: "QA history unavailable" }, 503)
+          : send({ items: messages.get(roomMatch[1]) ?? [], olderCursor: null });
         if (roomMatch[2] === "messages") return historyFailures.has(roomMatch[1])
           ? send({ code: "Unavailable", message: "QA history unavailable" }, 503)
           : send(messages.get(roomMatch[1]) ?? []);
@@ -278,7 +281,7 @@ try {
 
   await b.setViewportSize({ width: 1440, height: 1100 });
   await b.evaluate(() => document.documentElement.style.fontSize = "100%");
-  historyFailures.add(negotiated.conversationId); await refresh(b, "purchase-messages");
+  historyFailures.add(negotiated.conversationId); await refresh(b, "purchase-message-history");
   await b.getByText("Chưa tải được lịch sử tin nhắn.", { exact: true }).waitFor();
   await b.getByText(oldMessage.body, { exact: true }).waitFor();
   historyFailures.clear(); await b.getByRole("button", { name: "Tải lại tin nhắn", exact: true }).click();

@@ -17,6 +17,7 @@ import { directDeliveryGuidance } from "../lib/direct-delivery-guidance";
 import { conditions } from "../lib/listing-labels";
 import { formatVnd } from "../lib/routes";
 import { addressDetailLabel } from "../lib/address-detail-label";
+import { invalidateMemberWalletViews } from "../lib/wallet-cache";
 import { getPublicListing } from "../services/public-listings";
 import {
   cancelOrder,
@@ -158,8 +159,7 @@ function AuthenticatedOrderDetails({
   const demoAttempt = useRef<{ key: string; version: number } | undefined>(undefined);
   useEffect(() => {
     if (order.data?.state !== 'Completed') return;
-    void cache.invalidateQueries({ queryKey: ['wallet-summary', ownerId] });
-    void cache.invalidateQueries({ queryKey: ['wallet-history', ownerId] });
+    invalidateMemberWalletViews(cache, ownerId);
     void cache.invalidateQueries({ queryKey: ['direct-orders', ownerId] });
   }, [order.data?.state, cache, ownerId]);
   const attempt = useRef<
@@ -187,6 +187,7 @@ function AuthenticatedOrderDetails({
         intent.version,
         intent.key,
       );
+      invalidateMemberWalletViews(cache, ownerId);
       attempt.current = undefined;
       setPendingAction(undefined);
       await order.refetch();
@@ -196,9 +197,6 @@ function AuthenticatedOrderDetails({
         "home-shelves",
         "catalog-search",
         "exchange-public-listings",
-        "wallet",
-        "wallet-summary",
-        "wallet-history",
         "notifications",
         "purchase-conversation",
         "purchase-conversations",
