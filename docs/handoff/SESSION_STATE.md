@@ -21,6 +21,14 @@ cả focus/blur, bỏ focus-within glow cũ. PASS build và Search recovery9chec
 y100/h62 và delta0, shadow chỉ tăng spread0→1. Đã đưa vào Documents, giữ local
 work khác; không đổi API/DB/autocomplete settings hoặc push.
 
+Follow-up `codex/home-hero-search-focus`, codec00de137: owner chọn hover vàng cho
+Hero Home. Thêm composite owner vào form, bỏ outline vàng rời và viền input con;
+vàng hover/focus trên nền wine, shadow tâm0 và140ms, nút vẫn có focus tương phản.
+PASS build và browser Home thật+HTTP fixture1440/390 × normal/reduce, keyboard,
+Enter/button giữ query; local2view0pageerror/0transaction command. Đã cập nhật
+Documents, giữ local work khác. `test:home-search-focus:browser` để chạy lại;
+không push hoặc đổi gate/DB.
+
 # Chuẩn hóa nhịp bố cục hội thoại — 03/11/2026
 
 Owner duyệt khảo sát và triển khai. Nhánh `codex/conversation-rhythm-refinement`,

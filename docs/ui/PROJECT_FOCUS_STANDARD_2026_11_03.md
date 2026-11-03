@@ -101,3 +101,20 @@ PASS build và Search recovery9checks; ca mới đo geometry/scroll/timing/shado
 suốt cả hai chiều chuyển tiếp. Local after y100/h62, deltaY/height0; evidence
 `.tmp/search-focus-smoothness/before.json` và `after.json`. Đã cập nhật Documents,
 giữ các thay đổi local khác; không API/DB write, không push.
+
+## Follow-up Hero Home
+
+Owner yêu cầu một viền ngoài, hover vàng; sourcec00de137. Hero form trước chưa có
+composite marker nên focus policy vẽ ở input, đồng thời outline vàng cũ offset4px
+vẫn còn ở form. Thêm data-focus-surface, bỏ outline rời cũ; scope màu vàng theo
+nền wine của Hero cho hover/focus, nút submit giữ màu focus wine trên nền cam.
+Border dành sẵn1px/box-shadow tâm0, cùng140ms để không có cảm giác nâng thanh.
+Quyết định màu đã ghi UI rules/AGENTS; không lan ngoại lệ sang field khác.
+
+PASS build và `pnpm --filter @used-books/user-web test:home-search-focus:browser`:
+Home route thật với intercepted HTTP,1440/390px × motion thường/reduce; hover
+gold, input không outline/shadow, chỉ outer ring, geometry ổn định, Tab và Enter/
+button giữ query có dấu/ký tự&. Không DB/provider. Localhost5174 thêm2viewPASS,
+0pageerror/0transaction command, ảnh crop được xem tại `.tmp/home-search-focus/`.
+Đã fast-forward Documents, giữ6file local và Pagination untracked của việc khác.
+Không push/PR hoặc đổi READINESS/native gates.
