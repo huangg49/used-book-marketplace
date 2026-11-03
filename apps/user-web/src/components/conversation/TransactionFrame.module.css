@@ -73,6 +73,22 @@
 .frame :where(button, input, textarea, select) {
   max-width: 100%;
 }
+/* Match the Users directory: one continuous wine border, no detached outline. */
+.frame :is(input:not([type="file"]):not([type="checkbox"]):not([type="radio"]), textarea, select) {
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+.frame :is(input:not([type="file"]):not([type="checkbox"]):not([type="radio"]), textarea, select):focus {
+  outline: none;
+  border-color: var(--shop-wine);
+  box-shadow: 0 0 0 1px var(--shop-wine);
+  background: #fff;
+}
+@media (forced-colors: active) {
+  .frame :is(input:not([type="file"]):not([type="checkbox"]):not([type="radio"]), textarea, select):focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}
 .frame summary:focus-visible {
   outline: 2px solid var(--shop-wine);
   outline-offset: 3px;
