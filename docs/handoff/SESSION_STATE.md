@@ -1,3 +1,21 @@
+# Đồng bộ main PR95 vào local — 03/11/2026
+
+Owner yêu cầu tiếp tục sau khi tạm dừng để demo. Nhánh
+`codex/sync-main-flutter-20261103` merge `origin/main` tại
+`3cfe0c6df0bfb1b06dee0c4aa0c306e1a4517a19` (PR95), commit tích hợp `452d0d14`.
+Không conflict; giữ 15 commit local trước đó, gồm refactor workspace giao dịch.
+Checkout Documents đã fast-forward tới cùng commit khi working tree sạch.
+Diff từ `deaeaf65` chỉ có 35 file Flutter; API, Member web, Admin, contract và
+migration không đổi. Không đổi DB, cấu hình riêng hoặc khởi động lại dịch vụ.
+
+CI trên đúng SHA main: [Docs PASS](https://github.com/huangg49/used-book-marketplace/actions/runs/41560279505),
+[Flutter FAIL](https://github.com/huangg49/used-book-marketplace/actions/runs/41560279570)
+ở `dart format --output=none --set-exit-if-changed .`; analyze/test SKIPPED.
+Local không tìm thấy Flutter/Dart trên PATH nên analyze/test NOT RUN; chưa kiểm
+UI/native Flutter. `git diff --check deaeaf65 452d0d14` phát hiện whitespace/EOF
+đã có trong PR95; giữ nguyên source main, không tự sửa ngoài phạm vi đồng bộ.
+Không suy tên PR parity thành nghiệm thu, không đóng READINESS; chưa push remote.
+
 # Refactor trang phiếu và hội thoại — 03/11/2026
 
 Owner đã duyệt gói từ khảo sát. Nhánh `codex/transaction-workspace-refactor`,
