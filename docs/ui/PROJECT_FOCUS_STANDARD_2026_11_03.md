@@ -88,3 +88,16 @@ không migrate/seed, không restart DB/API/worker hoặc đổi private env.
 Web runtime đã áp quy chuẩn chung. RN native/Flutter cần SDK/thiết bị và kiểm các
 widget override/keyboard/assistive technology trước nghiệm thu. Không khẳng định
 mọi màn native đã PASS, không đóng READINESS, không push/PR/merge remote hoặc CI mới.
+
+## Follow-up thanh tìm sách
+
+Owner báo cảm giác nhấc lên khi focus, nhánh `codex/search-focus-smoothness`,
+codee84bbfb3. RAF measurement trên localhost1440px cho thấy x/y/height không đổi;
+bóng nền lệch xuống3px, blur12px chuyển thành ringY0 khiến cảm giác thị giác bị
+nhấc. Resting shadow đổi sang offset0/blur0/spread0, focus vẫn spread1 theo policy;
+focus và blur cùng140ms. Bỏ focus-within glow cũ của Search để không cạnh tranh
+nguồn chung. Không đụng autocomplete/history của browser hoặc logic query/IME.
+PASS build và Search recovery9checks; ca mới đo geometry/scroll/timing/shadow
+suốt cả hai chiều chuyển tiếp. Local after y100/h62, deltaY/height0; evidence
+`.tmp/search-focus-smoothness/before.json` và `after.json`. Đã cập nhật Documents,
+giữ các thay đổi local khác; không API/DB write, không push.

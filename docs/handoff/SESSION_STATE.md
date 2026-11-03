@@ -13,6 +13,14 @@ và Pagination untracked của việc khác. Chi tiết [evidence/giới hạn](
 Flutter SDK không tìm thấy nên format/analyze/test NOT RUN; RN native runtime
 NOT RUN, không suy từ Expo web. Chưa push/PR/CI mới; READINESS/human gates giữ mở.
 
+Follow-up `codex/search-focus-smoothness`, codee84bbfb3: owner thấy thanh search
+nhấc lên khi focus. Đo RAF localhost: geometry không đổi, nhưng shadow cũ lệch
+Y3px/blur12 đổi về ringY0/blur0. Đổi resting shadow sang tâm0/spread0, giữ140ms
+cả focus/blur, bỏ focus-within glow cũ. PASS build và Search recovery9checks,
+0pageerror; thêm đo từng frame về y/height/scroll/paint/timing. Local after giữ
+y100/h62 và delta0, shadow chỉ tăng spread0→1. Đã đưa vào Documents, giữ local
+work khác; không đổi API/DB/autocomplete settings hoặc push.
+
 # Chuẩn hóa nhịp bố cục hội thoại — 03/11/2026
 
 Owner duyệt khảo sát và triển khai. Nhánh `codex/conversation-rhythm-refinement`,
