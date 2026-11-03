@@ -1,0 +1,129 @@
+.frame {
+  --shop-shelf: #f4eddf;
+  container: transaction-frame / inline-size;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  color: var(--shop-ink);
+}
+.columns {
+  display: grid;
+  grid-template-areas: "context stage";
+  grid-template-columns: minmax(220px, 0.75fr) minmax(0, 1.4fr);
+  height: 100%;
+  min-height: 0;
+}
+.context,
+.stage {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--shop-line) transparent;
+  scroll-padding-block: 16px;
+}
+.context {
+  grid-area: context;
+  padding: 20px;
+  background: var(--shop-paper);
+  border-right: 1px solid var(--shop-line);
+}
+.stage {
+  grid-area: stage;
+  padding: 22px 24px 28px;
+  background: #fffdf9;
+}
+.disclosure > summary {
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+.disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.disclosure > summary > svg {
+  margin-left: auto;
+  transition: transform 160ms ease;
+}
+.disclosure[open] > summary > svg {
+  transform: rotate(180deg);
+}
+.disclosure {
+  border-top: 1px solid var(--shop-line);
+  margin-top: 18px;
+}
+.disclosure > summary {
+  display: flex;
+  min-height: 48px;
+  padding: 10px 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--shop-wine);
+}
+.disclosure > div {
+  padding: 4px 0 16px;
+}
+.frame :where(p, dd, h2, h3, h4, span, a) {
+  overflow-wrap: anywhere;
+}
+.frame :where(button, input, textarea, select) {
+  max-width: 100%;
+}
+.frame summary:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+.frame [data-stage-heading] {
+  padding-bottom: 16px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--shop-line);
+}
+.frame [data-stage-heading] h3 {
+  font-size: 1.15rem;
+  line-height: 1.45;
+  color: var(--shop-wine);
+}
+.frame [data-stage-heading] p {
+  margin: 6px 0 0;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+.frame [data-stage-heading] > a {
+  font-size: .8125rem;
+  line-height: 1.6;
+}
+@container transaction-frame (max-width: 680px) {
+  .columns {
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--shop-line) transparent;
+  }
+  .stage {
+    order: 0;
+    overflow: visible;
+    flex-shrink: 0;
+    padding: 18px;
+  }
+  .context {
+    order: 1;
+    overflow: visible;
+    flex-shrink: 0;
+    border-right: 0;
+    border-top: 1px solid var(--shop-line);
+    padding: 0 18px 18px;
+  }
+}
+
+.context:focus-visible,
+.stage:focus-visible,
+.columns:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: -3px;
+}

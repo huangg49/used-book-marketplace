@@ -1841,3 +1841,44 @@
 }
 
 
+
+/* Transaction workspace: context and current work have distinct scroll owners. */
+.workspacePage { display:flex; flex-direction:column; min-height:0; min-width:0; height:100%; padding:0; gap:0; }
+.workspacePage > p { margin:0; padding:8px 20px; font-size:.8rem; flex-shrink:0; }
+.workspacePage .bookInfoCard,.workspacePage .orderProceduresCard { border:0; padding:0; border-radius:0; box-shadow:none; background:transparent; gap:0; }
+.workspacePage .cardHeader { background:none; color:var(--shop-ink); box-shadow:none; border-radius:0; border:0; margin:0 0 16px; padding:0; gap:8px; align-items:flex-start; }
+.workspacePage .cardHeaderIcon { display:none; }
+.workspacePage .cardTitle { color:var(--shop-wine); font-size:1rem; }
+.workspacePage .cardSubtitle { color:var(--shop-muted); font-size:.75rem; line-height:1.6; }
+.workspacePage .cardContent { gap:14px; }
+.workspacePage .bookCoverWrapper { width:48px; min-width:48px; height:70px; }
+.workspacePage .bookTitle { font-size:.95rem; }
+.workspacePage .bookProfileRow { gap:12px; }
+.workspacePage .specList { border:0; padding:0; background:transparent; }
+.workspacePage .descriptionText { overflow-wrap:anywhere; word-break:normal; }
+.workspacePage .specItem { display:block; }
+.workspacePage .specLabel { display:block; font-size:.75rem; margin-bottom:4px; }
+.workspacePage .specVal { text-align:left; font-weight:400; font-size:.8rem; }
+.workspacePage .paymentCard { margin:0; padding:14px 0; border:0; border-top:1px solid var(--shop-line); border-radius:0; background:transparent; }
+.workspacePage .addressBox { margin:0; }
+.workspacePage .orderCodeBadge { background:var(--shop-shelf,#f4eddf); color:var(--shop-muted); border:0; }
+.workspacePage .proceduresTitleRow { align-items:flex-start; flex-wrap:wrap; gap:10px; }
+.workspacePage .preparationBox,.workspacePage .sellerShippingTools { padding:0; background:transparent; border:0; }
+.workspacePage .form { gap:12px; }
+.workspacePage .form input[type=file] { font-size:.8rem; width:100%; min-width:0; }
+.workspacePage .form input { min-width:0; }
+.workspacePage .stepperContainer { padding:4px 0 12px; }
+.workspacePage .stepLabel { font-size:.65rem; }
+.workspacePage .stepCircle { width:22px; height:22px; font-size:.65rem; box-shadow:none; border:1px solid var(--shop-line); }
+.workspacePage .stepperContainer::before { top:14px; }
+.workspacePage .deadlineBadge { font-size:.8rem; padding:10px 12px; }
+.workspacePage .trustBanner { border:0; padding:0; background:transparent; }
+.workspacePage .primaryActionBtn,.workspacePage .secondaryActionBtn,.workspacePage .primary,.workspacePage .secondary { font-size:.85rem; }
+
+.workspacePage .procedureNoticeInfo { background:transparent; border:0; padding:16px 0; color:var(--shop-ink); }
+.workspacePage .procedureNoticeInfo>svg { display:none; }
+.workspacePage .procedureNoticeInfo h4 { color:var(--shop-wine); margin:0 0 6px; }
+.workspacePage .procedureNoticeInfo p { color:var(--shop-muted); line-height:1.65; }
+.workspacePage .stepLabel { font-size:.75rem; }
+
+.workspacePage .bookTitle { white-space:normal; overflow:visible; text-overflow:clip; }

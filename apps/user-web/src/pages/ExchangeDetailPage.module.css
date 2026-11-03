@@ -229,3 +229,8 @@
   font-weight: 600;
   color: var(--shop-muted);
 }
+
+.workspacePage { display:flex; flex-direction:column; flex:1; height:100%; min-height:0; min-width:0; }
+.workspacePage .workspaceProgress { margin-bottom:18px; }
+.workspacePage .actionSection { padding:0; margin:0 0 18px; }
+.workspacePage .actionSection>div { border:0; box-shadow:none; border-radius:0; background:transparent; padding:0; }

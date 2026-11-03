@@ -1,0 +1,107 @@
+.context header {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--shop-line);
+}
+.context h3 {
+  font-size: 1rem;
+  color: var(--shop-wine);
+  margin: 0 0 6px;
+}
+.context header p,
+.context .notice {
+  font-size: 0.75rem;
+  color: var(--shop-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+.context > section {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--shop-line);
+}
+.context h4 {
+  font-size: 0.8rem;
+  margin: 0 0 12px;
+  color: var(--shop-wine);
+}
+.context h4 > span {
+  font-weight: 400;
+  color: var(--shop-muted);
+}
+.book {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.book:last-child {
+  margin-bottom: 0;
+}
+.cover {
+  width: 46px;
+  min-width: 46px;
+  height: 66px;
+  overflow: hidden;
+  border-radius: 3px;
+}
+.cover > div {
+  width: 100%;
+  height: 100%;
+}
+.book > div:last-child {
+  min-width: 0;
+}
+.book strong {
+  display: block;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.book p {
+  font-size: 0.75rem;
+  color: var(--shop-muted);
+  line-height: 1.6;
+  margin: 4px 0;
+}
+.book span,
+.book summary {
+  font-size: 0.72rem;
+  color: var(--shop-muted);
+  line-height: 1.6;
+}
+.book details {
+  margin-top: 8px;
+}
+.book summary {
+  cursor: pointer;
+  color: var(--shop-wine);
+}
+.money {
+  margin: 14px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.8rem;
+}
+.money > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+.money dt {
+  color: var(--shop-muted);
+}
+.money dd {
+  margin: 0;
+  font-weight: 700;
+}
+.context .notice {
+  margin-top: 14px;
+}
+
+.cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--shop-shelf);
+  color: var(--shop-muted);
+}

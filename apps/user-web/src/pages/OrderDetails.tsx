@@ -1,4 +1,6 @@
 import { ReceiptConfirmation } from "../features/reviews/ReceiptConfirmation";
+import { TransactionFrame, TransactionDisclosure } from '../components/conversation/TransactionFrame';
+import { orderStage } from '../lib/transaction-stage';
 import { ReviewEntry } from "../features/reviews/ReviewEntry";
 import {SupportLink} from '../features/support/SupportLink';
 import { BundleManifest } from "../components/BookBundle";
@@ -251,6 +253,7 @@ function AuthenticatedOrderDetails({
   const condition = conditions[o.item.condition as keyof typeof conditions];
   const awaitingPickup = o.state === "Preparing" && !!shipment.data;
   const currentStepIndex = getStepIndex(o.state, !!shipment.data);
+  const stage = orderStage(o, awaitingPickup);
   async function startShippingDemo() {
     if (demoBusy || busy || pendingAction || inaccessible || (!o.demoCompletionEnabled && !demoAttempt.current)) return;
     const intent = demoAttempt.current ?? { key: crypto.randomUUID(), version: o.version };
@@ -267,7 +270,7 @@ function AuthenticatedOrderDetails({
   }
 
   return (
-    <section className={className} aria-label="Chi tiết đơn hàng">
+    <section className={`${className} ${styles.workspacePage}`} data-transaction-page aria-label="Chi tiết đơn hàng">
       <p><SupportLink type='DirectOrder' id={o.id}/></p>
       {!embedded && (
         <header className={styles.dashboardHeader}>
@@ -299,10 +302,7 @@ function AuthenticatedOrderDetails({
       )}
 
       {/* 2 KHUNG THEO YÊU CẦU: KHUNG TRÁI (THÔNG TIN SÁCH) & KHUNG PHẢI (THỦ TỤC ĐƠN HÀNG) */}
-      <div className={styles.orderTwoColumns}>
-        {/* ========================================================
-            KHUNG 1 (BÊN TRÁI): THÔNG TIN SÁCH
-            ======================================================== */}
+      <TransactionFrame context={
         <article className={styles.bookInfoCard} aria-labelledby="book-info-heading">
           {/* Header của Khung Thông tin sách */}
           <div className={styles.cardHeader}>
@@ -318,7 +318,7 @@ function AuthenticatedOrderDetails({
           <div className={styles.cardContent}>
             {/* Ảnh và thông tin bìa sách */}
             <div className={styles.bookProfileRow}>
-              <div className={styles.bookCoverWrapper}>
+              <div className={styles.bookCoverWrapper} data-conversation-cover>
                 {listing.data ? (
                   <ListingPhoto book={listing.data} eager />
                 ) : (
@@ -359,7 +359,7 @@ function AuthenticatedOrderDetails({
             )}
 
             {/* Chi tiết tình trạng & số trang */}
-            <div className={styles.specList}>
+            <TransactionDisclosure title="Tình trạng và ghi chú bản sách"><div className={styles.specList}>
               {o.item.coverNote && (
                 <div className={styles.specItem}>
                   <span className={styles.specLabel}>Bìa & gáy:</span>
@@ -380,6 +380,7 @@ function AuthenticatedOrderDetails({
               )}
             </div>
 
+            </TransactionDisclosure>
             {/* Khối thanh toán & Ký quỹ bảo chứng */}
             <div className={styles.paymentCard}>
               <div className={styles.paymentCardHeader}>
@@ -412,7 +413,7 @@ function AuthenticatedOrderDetails({
                     <div>
                       <p className={styles.escrowTitle}>Đã thanh toán lúc {orderTime(o.paidAt)}</p>
                       <p className={styles.escrowSubtitle}>
-                        Khoản tiền <strong>{formatVnd(o.moneyHeld)}</strong> đang được giữ an toàn trong quỹ bảo chứng của Lật Lại.
+                        Tiền đang giữ cho đơn: <strong>{formatVnd(o.moneyHeld)}</strong>. Xem trạng thái đơn để đối chiếu kết quả xử lý.
                       </p>
                     </div>
                   </div>
@@ -431,7 +432,7 @@ function AuthenticatedOrderDetails({
             </div>
 
             {/* Địa chỉ giao / nhận */}
-            <div className={styles.addressBox}>
+            <TransactionDisclosure title={o.role === 'Buyer' ? 'Địa chỉ nhận sách' : 'Nơi gửi sách'}><div className={styles.addressBox}>
               <div className={styles.addressBoxHeader}>
                 <MapPin size={16} aria-hidden="true" />
                 <span>{o.role === "Buyer" ? "Địa chỉ nhận sách của bạn" : "Nơi gửi hàng của bạn"}</span>
@@ -442,22 +443,22 @@ function AuthenticatedOrderDetails({
               <p className={styles.addressDetail}>
                 {addressDetailLabel(o.ownAddress.detail)}
               </p>
-            </div>
+            </div></TransactionDisclosure>
           </div>
         </article>
-
+      }>
         {/* ========================================================
             KHUNG 2 (BÊN PHẢI): THỦ TỤC ĐƠN HÀNG (MỌI BƯỚC HOẠT ĐỘNG TẠI ĐÂY)
             ======================================================== */}
         <article className={styles.orderProceduresCard} aria-labelledby="order-procedures-heading">
           {/* Header của Khung Thủ tục */}
-          <div className={styles.cardHeader}>
+          <div className={styles.cardHeader} data-stage-heading>
             <div className={styles.cardHeaderIcon} aria-hidden="true">
               <ClipboardCheck size={20} />
             </div>
             <div className={styles.proceduresHeaderInfo}>
               <div className={styles.proceduresTitleRow}>
-                <h3 id="order-procedures-heading" className={styles.cardTitle}>Thủ tục đơn hàng</h3>
+                <h3 id="order-procedures-heading" className={styles.cardTitle}>{stage.title}</h3>
                 <span className={`${styles.orderStatusPill} ${getStatusPillClass(o.state)}`}>
                   {awaitingPickup ? "Chờ bàn giao vận chuyển" : orderStates[o.state] ?? "Đang cập nhật"}
                 </span>
@@ -465,12 +466,13 @@ function AuthenticatedOrderDetails({
               <p className={styles.cardSubtitle}>
                 Mã đơn: <span className={styles.orderCodeBadge}>#{o.id.slice(0, 8).toUpperCase()}</span> · {o.role === "Buyer" ? "Bạn là Người mua" : "Bạn là Người bán"}
               </p>
+              <p className={styles.cardSubtitle}>{stage.who}</p>
             </div>
           </div>
 
           <div className={styles.cardContent}>
             {/* Thanh tiến trình Stepper 5 bước */}
-            <OrderProgress currentStep={currentStepIndex} />
+            <OrderProgress currentStep={currentStepIndex} inspection={o.state === 'Inspection'} />
 
             {/* KHU VỰC THAO TÁC CÁC BƯỚC THỦ TỤC */}
             <div className={styles.activeProcedureBox}>
@@ -726,7 +728,7 @@ function AuthenticatedOrderDetails({
             </div>
 
             {/* Huy hiệu cam kết bảo đảm giao dịch an toàn */}
-            <div className={styles.trustBanner}>
+            <TransactionDisclosure title="Về thanh toán và giao nhận"><div className={styles.trustBanner}>
               <div className={styles.trustBannerIcon} aria-hidden="true">
                 <ShieldCheck size={16} />
               </div>
@@ -738,10 +740,10 @@ function AuthenticatedOrderDetails({
                   Xem số tiền đang giữ và các mốc đã ghi nhận của đơn. Trao đổi trong hội thoại nếu thông tin bàn giao hoặc nhận sách chưa khớp.
                 </p>
               </div>
-            </div>
+            </div></TransactionDisclosure>
           </div>
         </article>
-      </div>
+      </TransactionFrame>
     </section>
   );
 }

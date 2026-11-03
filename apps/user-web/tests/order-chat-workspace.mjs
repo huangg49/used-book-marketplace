@@ -134,6 +134,7 @@ try {
       if (routePath === "/auth/login") return send({ accessToken: "fixture-" + actor,
         refreshToken: "q".repeat(43), expiresIn: 900,
         user: { ...(role === "Buyer" ? buyer : seller), email: actor + "@example.test", roles: ["MEMBER"], status: "ACTIVE" } });
+      if (routePath === "/auth/me") return send({...(role==='Buyer'?buyer:seller),email:actor+'@example.test',roles:['MEMBER'],status:'ACTIVE'});
       if (routePath === "/me/orders") return send({ items: [...orders.values()].map((order) => ({
         id: order.id, title: order.item.metadata.title, listingId: order.item.listingId,
         version: order.version, state: order.state, role, createdAt: order.createdAt,
@@ -189,6 +190,7 @@ try {
         evidence.set(packing[2], [{ id: id(601), status: method === "PUT" ? "Ready" : "Pending" }]);
         return send({ entityId: id(601) });
       }
+      if (routePath === "/me/profile") return send({id:(actor==='buyer'?buyer:seller).id,version:1,displayName:(actor==='buyer'?buyer:seller).displayName,email:actor+'@example.test',contactPhone:null,avatarId:null,pendingEmailChange:null});
       if (routePath === "/me/purchase-conversations") return send([...rooms.values()]);
       const roomMatch = routePath.match(/^\/me\/purchase-conversations\/([^/]+)(?:\/(messages|events))?$/);
       if (roomMatch && rooms.has(roomMatch[1])) {
@@ -236,6 +238,7 @@ try {
   await b.locator(`a[href="/chat/orders/${negotiated.id}"]`).click();
   await b.waitForURL(`**/chat/${negotiated.conversationId}`);
   const br = orderRegion(b);
+  await br.getByText("Địa chỉ nhận sách", { exact: true }).click();
   await br.getByText("Địa chỉ nhận riêng của đơn QA", { exact: false }).waitFor();
   assert.equal(commands.ensure.length, 0, "linked order skips creation and selects its exact room");
   await br.getByRole("heading", { name: negotiated.item.metadata.title, exact: true }).waitFor();
@@ -288,6 +291,7 @@ try {
   assert.equal(await br.getByText("Địa chỉ nhận riêng của đơn QA", { exact: false }).count(), 0, "cached private address hidden on403");
   assert.equal(await br.getByRole("button", { name: /Thanh toán|Hủy đơn/ }).count(), 0, "403 hides private actions");
   denied.clear(); await br.getByRole("button", { name: "Thử lại", exact: true }).click();
+  await br.getByText("Địa chỉ nhận sách", { exact: true }).click();
   await br.getByText("Địa chỉ nhận riêng của đơn QA", { exact: false }).waitFor();
   await b.getByRole("link", { name: "Về đơn hàng của tôi", exact: true }).click();
   await b.waitForURL("**/orders");
@@ -299,6 +303,7 @@ try {
   assert.equal(commands.ensure.length, 2); assert.deepEqual(commands.ensure[0], commands.ensure[1], "ensure retry preserves key/body after committed lost response");
   assert.equal(commands.ensure[0].body, "{}"); assert.ok(commands.ensure[0].key);
   await orderRegion(b).getByRole("heading", { name: buyNow.item.metadata.title, exact: true }).waitFor();
+  await orderRegion(b).getByText("Tình trạng và ghi chú bản sách", { exact: true }).click();
   await orderRegion(b).getByText("Mô tả bản sách được lưu tại thời điểm đặt đơn QA.", { exact: true }).waitFor();
   await goto(b, `/orders/${buyNow.id}`); await b.waitForURL(`**/chat/${buyNow.conversationId}`);
   assert.equal(commands.ensure.length, 2, "legacy URL reuses linked order room");
@@ -307,6 +312,7 @@ try {
   await goto(s, "/orders"); await s.locator(`a[href="/chat/orders/${buyNow.id}"]`).click();
   await s.waitForURL(`**/chat/${buyNow.conversationId}`);
   const sr = orderRegion(s);
+  await sr.getByText("Nơi gửi sách", { exact: true }).click();
   await sr.getByText("Địa chỉ gửi riêng của đơn QA", { exact: false }).waitFor();
   await sr.getByText("Địa chỉ nhận riêng của đơn QA", { exact: false }).waitFor();
   assert.equal(await sr.getByRole("button", { name: /Thanh toán|Hủy đơn/ }).count(), 0, "seller never gets buyer payment/cancel actions");

@@ -3,7 +3,7 @@ import styles from "./DirectOrders.module.css";
 
 const steps = ["Đặt đơn", "Thanh toán", "Chuẩn bị", "Vận chuyển", "Hoàn tất"];
 
-export function OrderProgress({ currentStep }: { currentStep: number }) {
+export function OrderProgress({ currentStep, inspection = false }: { currentStep: number; inspection?: boolean }) {
   return (
     <div className={styles.stepperContainer} aria-label="Tiến trình thủ tục đơn hàng">
       {steps.map((label, index) => {
@@ -15,7 +15,7 @@ export function OrderProgress({ currentStep }: { currentStep: number }) {
             <div className={styles.stepCircle} aria-hidden="true">
               {completed ? <Check size={14} strokeWidth={3} /> : index + 1}
             </div>
-            <span className={styles.stepLabel}>{label}</span>
+            <span className={styles.stepLabel}>{inspection && index === 3 ? 'Kiểm tra sách' : label}</span>
           </div>
         );
       })}

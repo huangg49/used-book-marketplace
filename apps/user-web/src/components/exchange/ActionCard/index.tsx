@@ -366,7 +366,7 @@ export function ActionCard(props: Props) {
                   ? "Đã đóng"
                   : ["COMPLETED", "NEED_REVIEW"].includes(detail.status)
                     ? "Đã hoàn tất"
-                    : "Đang tiến hành"}
+                    : detail.status === 'INSPECTING' ? 'Đang kiểm tra sách' : detail.viewerShipping.receivedAt ? 'Bạn đã nhận sách' : 'Đang giao nhận'}
         </span>
       </div>
       <div className={styles.calloutBox}>

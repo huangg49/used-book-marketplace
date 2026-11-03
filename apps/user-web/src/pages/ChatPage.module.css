@@ -966,3 +966,15 @@
     min-height: 64px;
   }
 }
+
+/* The work area itself owns scrolling, not the full embedded dossier. */
+.dossierSpread .dossierBody:has(> [data-transaction-page]) { overflow:hidden; padding:0; gap:0; }
+.dossierSpread .dossierBody > [data-transaction-page] { min-height:0; height:100%; max-height:100%; flex:1; flex-shrink:1; }
+@media (min-width:961px) {
+  .paperSpread.dossierSpread { grid-template-columns:minmax(0,1fr) 320px; }
+  .paperSpread.dossierSpread > .dossierChat { width:320px;min-width:0;max-width:none; }
+}
+
+/* Long partner names must not stretch the fixed room toolbar vertically. */
+.roomHeader { flex-wrap:wrap; gap:6px 12px; }
+.roomHeaderBadge { min-width:0; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

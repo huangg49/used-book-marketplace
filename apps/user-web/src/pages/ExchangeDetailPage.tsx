@@ -1,3 +1,10 @@
+import type { ReactNode } from "react";
+import {
+  TransactionFrame,
+  TransactionDisclosure,
+} from "../components/conversation/TransactionFrame";
+import { ExchangeContext } from "../components/conversation/ExchangeContext";
+import { exchangeStage } from "../lib/transaction-stage";
 import { ExchangeEvidencePanel } from "../components/exchange/ExchangeEvidencePanel";
 import { useEffect, useState } from "react";
 import { confirmExchangeRead } from "@used-books/session-client";
@@ -29,10 +36,7 @@ import {
   reportIssue,
 } from "../services/exchangeDetail";
 import type { CounterOfferData } from "../components/exchange/CounterDialog";
-import {
-  saveExchangeShipment,
-  type ShipmentData,
-} from "../services/exchangeShipment";
+import { type ShipmentData } from "../services/exchangeShipment";
 import { ProgressStepper } from "../components/exchange/ProgressStepper";
 import { SettlementCard } from "../components/exchange/SettlementCard";
 import { ReviewCard } from "../components/exchange/ReviewCard";
@@ -45,7 +49,12 @@ import { SafetyTipsCard } from "../components/exchange/SafetyTipsCard";
 import styles from "./ExchangeDetailPage.module.css";
 
 export function ExchangeDetailPage(
-  props: { exchangeId?: string; embedded?: boolean } = {},
+  props: {
+    exchangeId?: string;
+    embedded?: boolean;
+    workspaceNavigation?: ReactNode;
+    workspaceNotice?: ReactNode;
+  } = {},
 ) {
   const identity = useExchangeRecovery();
   const { id } = useParams<{ id: string }>();
@@ -59,9 +68,13 @@ export function ExchangeDetailPage(
 function ExchangeDetailContent({
   exchangeId,
   embedded = false,
+  workspaceNavigation,
+  workspaceNotice,
 }: {
   exchangeId?: string;
   embedded?: boolean;
+  workspaceNavigation?: ReactNode;
+  workspaceNotice?: ReactNode;
 }) {
   useExchangeRecovery();
   const chatTransition = useConversationTransition("/chat");
@@ -175,10 +188,6 @@ function ExchangeDetailContent({
   };
 
   const handleConfirmSent = async (shipmentData?: ShipmentData) => {
-    if (shipmentData && detail) {
-      const role = detail.viewerRole === "proposer" ? "initiator" : "recipient";
-      saveExchangeShipment(id!, role, shipmentData);
-    }
     await confirmSent(id!, detail!.revision!, shipmentData);
     invalidate();
   };
@@ -315,6 +324,94 @@ function ExchangeDetailContent({
     }
   } else if (detail.status === "EXPIRED") statusText = "Hết hạn";
 
+  const actionSection = (
+    <section
+      id="exchange-actions"
+      className={styles.actionSection}
+      aria-label="Hành động của bạn"
+      tabIndex={-1}
+    >
+      <ActionCard
+        detail={detail}
+        onCancel={handleCancel}
+        onAccept={handleAccept}
+        onCounter={handleCounter}
+        onFund={async () => {
+          await fundExchange(id!);
+          invalidate();
+        }}
+        onRetry={async () => {
+          await refetchDetail();
+        }}
+        onReject={handleReject}
+        onConfirmSent={handleConfirmSent}
+        onConfirmReceived={handleConfirmReceived}
+        onComplete={handleComplete}
+        onDispute={handleDispute}
+      />
+      {detail.rawStatus === "ResolutionPending" && (
+        <ExchangeEvidencePanel
+          key={detail.viewer.id + ":" + detail.id}
+          id={detail.id}
+          revision={detail.revision!}
+          userId={detail.viewer.id}
+        />
+      )}
+    </section>
+  );
+  if (embedded)
+    return (
+      <div
+        className={styles.workspacePage}
+        data-transaction-page
+        role="region"
+        aria-label="Chi tiết trao đổi"
+      >
+        <TransactionFrame context={<ExchangeContext detail={detail} />}>
+          {workspaceNotice}
+          <header data-stage-heading>
+            <h3>{exchangeStage(detail)}</h3>
+            <p>
+              Trao đổi #{detail.transactionCode} · Bạn trao đổi với{" "}
+              {detail.partner.username}
+            </p>
+            <SupportLink type="Exchange" id={detail.id} />
+          </header>
+          <div className={styles.workspaceProgress}>
+            <ProgressStepper
+              compact
+              status={detail.status}
+              failedAtStep={detail.failedAtStep}
+              closedBy={detail.closedBy}
+              partnerUsername={detail.partner.username}
+              hasReceived={Boolean(detail.viewerShipping.receivedAt)}
+            />
+          </div>
+          {actionSection}
+          <ReviewCard detail={detail} />
+          {detail.status === "COMPLETED" && <SettlementCard detail={detail} />}
+          {!["PENDING", "FUNDING", "CANCELLED", "REJECTED", "EXPIRED"].includes(
+            detail.status,
+          ) && (
+            <TransactionDisclosure
+              title="Theo dõi giao nhận hai chiều"
+              open={[
+                "WAITING_YOU_SEND",
+                "DELIVERING",
+                "WAITING_YOU_CONFIRM",
+              ].includes(detail.status)}
+            >
+              <ShippingTrackingCard detail={detail} onRefresh={invalidate} />
+            </TransactionDisclosure>
+          )}
+          {workspaceNavigation}
+          <TransactionDisclosure title="Hướng dẫn giao nhận và bảo quản">
+            <SafetyTipsCard />
+          </TransactionDisclosure>
+        </TransactionFrame>
+      </div>
+    );
+
   return (
     <div
       className={embedded ? styles.embedded : styles.container}
@@ -403,39 +500,7 @@ function ExchangeDetailContent({
           )}
           <BookInfoCard detail={detail} compact={embedded} />
           <ShippingTrackingCard detail={detail} onRefresh={invalidate} />
-          <section
-            id="exchange-actions"
-            className={styles.actionSection}
-            aria-label="Hành động của bạn"
-            tabIndex={-1}
-          >
-            {detail.rawStatus === "ResolutionPending" && (
-              <ExchangeEvidencePanel
-                key={detail.viewer.id + ":" + detail.id}
-                id={detail.id}
-                revision={detail.revision!}
-                userId={detail.viewer.id}
-              />
-            )}
-            <ActionCard
-              detail={detail}
-              onCancel={handleCancel}
-              onAccept={handleAccept}
-              onCounter={handleCounter}
-              onFund={async () => {
-                await fundExchange(id!);
-                invalidate();
-              }}
-              onRetry={async () => {
-                await refetchDetail();
-              }}
-              onReject={handleReject}
-              onConfirmSent={handleConfirmSent}
-              onConfirmReceived={handleConfirmReceived}
-              onComplete={handleComplete}
-              onDispute={handleDispute}
-            />
-          </section>
+          {actionSection}
           <ReviewCard detail={detail} />
           <details className={styles.safetyDetails}>
             <summary>Mẹo bảo quản và giao nhận an toàn</summary>
