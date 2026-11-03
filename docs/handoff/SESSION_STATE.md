@@ -1,19 +1,32 @@
-# Khảo sát trước refactor trang giao dịch — 03/11/2026
+# Refactor trang phiếu và hội thoại — 03/11/2026
 
-Owner yêu cầu rà soát trước, chưa sửa UI. Nhánh `codex/chat-workspace-audit`,
-source3fc1fa9f. Đối chiếu ChatPage→OrderDetails/Negotiation→ExchangeDetail,
-ADR0041/0045/quyền/state/review/gate. Browser read-only24view trên Order Buyer/
-Seller và Exchange kiểm tra,1918→320px,0pageerror; giữ nháp khi đổi tab. Số đo
-thật xác nhận việc hiện tại bị đẩy sau mô tả/card lồng; Exchange review tại390px
-cách đầu phiếu7081px; Order ở390px có contentWidth491>335 do URL trong description.
-Probe SSR riêng tái hiện local shipment được hiển thị đã tạo đơn dù server chưa
-có sentAt; lỗi nguồn dữ liệu cần xử lý trong refactor. Detector3color advisory.
-Ma trận state/role/action và kiến trúc giữ ba vai trò, bỏ nhúng nguyên trang,
-thu gọn bước xong/hồ sơ dài có trong
-[báo cáo khảo sát](../ui/TRANSACTION_WORKSPACE_AUDIT_2026_11_03.md).
-Chỉ docs/evidence, không sửa source UI/API/DB, không gọi provider hoặc gửi command
-giao dịch; không push/remote merge, không đóng gate. Chờ owner duyệt gói refactor;
-prototype trước đó không tự trở thành thiết kế sản phẩm được duyệt.
+Owner đã duyệt gói từ khảo sát. Nhánh `codex/transaction-workspace-refactor`,
+base `af6e6887`, UI `65ac1439` + fixture clock `5ab51c41`. Member web thật dùng
+ba vai trò context/thao tác/chat; bỏ lớp nhúng Exchange nguyên trang trong thẻ
+cha, thu gọn mô tả/tracking/hướng dẫn; màn hẹp cuộn một vùng với bước hiện tại
+đứng trước hồ sơ dài. Header/composer không trôi, giữ nháp/pending/motion.
+Local shipment cache không còn chứng minh đã gửi; chỉ dùng server sentAt.
+Sửa thêm nút tiếp tục yêu cầu tạo đơn sau mất ACK + đóng dialog + mất báo giá;
+retry giữ đúng key/body/version. Không đổi API/contract/DB/quỹ/72h/công bố review.
+
+PASS build/typecheck, unit324/47files; lint scope exit0/1warning effect cũ;
+HTTP/Socket.IO fixture Order/Chat mất ACK, quyền, snapshot, upload và giữ nháp;
+Exchange64state-role-size cases, review entry hai vai trò và scroll20cases;
+320px130%, màn thấp/Back, View Transition cả reduced-motion; detector0findings.
+Một fixture unit cần truyền clock bắt buộc, đã sửa và build/unit lại PASS;
+không bỏ assertion tiền/quyền/idempotency. Selector browser cập nhật nhãn UI
+hiện có; fixture Order bổ sung field nullable contract đang yêu cầu.
+
+Đã đưa cùng source `5ab51c41` vào checkout Documents bằng fast-forward khi sạch;
+API3000/Member5174/Mongo27017 đang chạy. Browser read-only trên dữ liệu local
+PASS12views (Order Buyer/Seller, Exchange hai bên,1440/1000/390px), cuộn/tab/nháp,
+0pageerror/0transaction command; Exchange hiện đúng nút review theo server.
+Không seed/migrate/đổi tiền hoặc submit review/ảnh trong gói này. Chi tiết và
+phạm vi kiểm chứng ở [báo cáo](../ui/TRANSACTION_WORKSPACE_AUDIT_2026_11_03.md).
+Chưa push/PR/merge remote, không chạy CI mới, không đóng READINESS; native,
+Supabase/provider thật và human usability acceptance chưa kiểm trong gói này.
+Standalone Exchange không tìm được linked room vẫn giữ fallback trước đó;
+phạm vi refactor là workspace `/chat/:roomId` đang dùng cho Order/Exchange.
 
 # Bản thử không gian giao dịch Minh An — 03/11/2026
 

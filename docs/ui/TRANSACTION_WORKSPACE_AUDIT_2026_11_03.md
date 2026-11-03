@@ -251,3 +251,80 @@ NOT RUN: full state/action API E2E, upload/storage/provider thật, TalkBack/nat
 human usability acceptance và CI mới. Chưa sửa UI/API/contract/test sản phẩm,
 chưa push/PR/merge remote, chưa đóng READINESS. Bước tiếp là owner chốt gói
 refactor từ báo cáo này; không coi prototype cũ là thiết kế đã được duyệt áp.
+
+
+## Thực hiện sau khi owner duyệt — 03/11/2026
+
+Nhánh `codex/transaction-workspace-refactor`, base `af6e6887`; source UI
+`65ac1439`, fixture clock `5ab51c41`. Đây là bản tích
+hợp vào Member web thật, không phải preview HTML. API/contract/Mongo, mốc giữ tiền
+72 giờ và quy tắc công bố đánh giá không đổi.
+
+- [TransactionFrame](../../apps/user-web/src/components/conversation/TransactionFrame.tsx)
+  chia context sách/thỏa thuận và vùng thao tác; ChatPage giữ khung chat bên phải.
+  Desktop có ranh giới cuộn cho từng cột, không có cuộn trong từng card; khi vùng
+  phiếu hẹp hơn 680px, chỉ một vùng cuộn với hành động đứng trước context. Thứ tự
+  DOM cũng ưu tiên thao tác để bàn phím/đọc màn hình không đi vào hồ sơ dài trước.
+- [OrderDetails](../../apps/user-web/src/pages/OrderDetails.tsx) giữ controller,
+  command và pending intents. Header nói rõ bước/ai làm; mô tả dài, địa chỉ riêng
+  và hướng dẫn vào disclosure. Số tiền giữ đọc từ `moneyHeld`, không khẳng định
+  vẫn giữ tiền khi giá trị đã về 0; bước Inspection mang tên kiểm tra sách.
+- [NegotiationWorkspace](../../apps/user-web/src/pages/NegotiationWorkspace.tsx)
+  dùng cùng frame. Khi đã có Exchange, chỉ dựng một workspace của Exchange,
+  bỏ lớp thẻ sách/tiền/procedure bên ngoài; giữ lịch sử đề nghị và lối quay lại.
+  Trường tình trạng trống ghi chưa có dữ liệu, không tự gán “Tốt”.
+- [ExchangeDetailPage](../../apps/user-web/src/pages/ExchangeDetailPage.tsx) đưa
+  bước hiện tại, ActionCard và ReviewCard lên trước tracking/hướng dẫn. Bằng
+  chứng sự cố vẫn có khi ResolutionPending; ở sau hướng dẫn xử lý hiện tại.
+  [ExchangeContext](../../apps/user-web/src/components/conversation/ExchangeContext.tsx)
+  chỉ đọc projection đã có, hiển thị sách gửi/nhận, cọc/bù và chi tiết nghĩa vụ.
+  Không tạo thêm nguồn tiền hoặc giả định thiếu số tiền bằng 0.
+- [ShippingTrackingCard](../../apps/user-web/src/components/exchange/ShippingTrackingCard/index.tsx)
+  chỉ dùng shipment/sentAt từ server. ConfirmSent không ghi localStorage trước
+  ACK nữa; cache cũ không bị xóa nhưng không còn làm bằng chứng đã tạo/gửi đơn.
+- Mất ACK khi tạo đơn: có lối tiếp tục ngay cả khi đóng hộp thoại và báo giá
+  không còn hợp lệ. Nút chỉ mở lại controller/intent cũ; không tạo key/version mới.
+  Dòng thông tin giao nhận không còn khẳng định có thể tạo đơn nếu báo giá cũ.
+- URL dài được ngắt trong phiếu; tên đối tác dài được rút gọn trên toolbar,
+  vẫn giữ đầy đủ trong heading chat. Header/composer ở trong chiều cao viewport.
+  Không đổi token store, session hay motion đã thiết kế.
+
+### Kiểm chứng và giới hạn
+
+Bằng chứng browser là HTTP/Socket.IO fixtures riêng, không ghi/xóa DB hoặc gọi
+provider; điều kiện và command thật vẫn do server quyết định. Các script đã đọc
+trước khi chạy. Dữ liệu/ảnh chụp fixture có tên QA, không là giao dịch thật.
+
+| Kiểm tra | Trạng thái/phạm vi |
+| --- | --- |
+| Unit Member | PASS 324 tests/47 files, gồm regression local-only shipment và phase theo vai trò/trạng thái |
+| Typecheck/build | PASS; build còn cảnh báo chunk lớn vốn có |
+| Lint scope | PASS exit 0; 1 warning effect trong ActionCard hiện hữu, không sửa logic đó trong gói này |
+| Order chat browser | PASS: đúng room/snapshot riêng, Buyer/Seller, lost ACK payment/cancel/register/message giữ key/body/version, 403 ẩn dữ liệu cache, upload và mobile tab giữ nháp |
+| Chat journey browser | PASS với screenshots tắt: thương lượng/mode/đề nghị, cùng room sau tạo đơn, missing quote + lost ACK giữ intent, Back/draft/history và View Transition vẫn chạy khi reduced-motion |
+| Exchange state/role browser | PASS 64 trường hợp: Proposed/Funding/Preparing/InTransit/Delivered/ResolutionPending/Completed/Cancelled × 2 vai trò × 1440/1000/390/320px130%; đúng một workspace, bước hiện tại ở đầu, không overflow trong pane, cuộn/keyboard/draft |
+| Exchange review browser | PASS: hai vai trò, receipt của chính mình + quyền server, retry quyền đọc, đúng link/form ở 1440/950/390px; không gửi review |
+| Scroll browser | PASS 20 trường hợp, wheel/Control+End/Back/composer/draft; 1440/1000/961/960/950/760/390/320px, màn thấp và chữ130% |
+| Detector | PASS 0 findings trên frame/context/ExchangeDetail; không thay việc xem giao diện hoặc acceptance |
+
+Evidence riêng ở `.tmp/unified-chat-qa/`, `.tmp/order-chat-workspace-qa/`;
+không commit ảnh/dữ liệu tài khoản local.
+
+Đã fast-forward checkout ứng dụng từ `3fc1fa9f` tới `5ab51c41` sau khi xác nhận
+working tree sạch. API3000 và Member5174 đang chạy; không migration hoặc đổi DB.
+Browser read-only trên localhost thật PASS 12 views: Order Seller/Buyer và
+Exchange Initiator/Recipient ở1440/1000/390px. Bước hiện tại bắt đầu ở179–240px
+trong các view Order đã ghi; không overflow trong pane, wheel/draft/tab hoạt
+động, 0 pageerror và không có transaction command. Exchange cả hai bên hiện
+đúng một link Viết đánh giá; Order đang Preparing không có link đánh giá sớm.
+Chỉ tạo/thu hồi phiên đăng nhập kiểm tra; không submit review/ảnh, không nhấn
+nhận/gửi/kiểm tra sách, không đổi thời gian hay gọi lệnh tiền. Ảnh chụp đã che
+địa chỉ/mô tả, lưu riêng ở `.tmp/transaction-workspace-real/`. Lần probe wheel
+đầu chưa chờ giao diện/font ổn định không được tính PASS; lượt đủ chờ đã qua.
+Browser không chứng minh mọi ảnh từ storage/provider tải thành công; đó không
+là bằng chứng Supabase/live-upload của gói này. Đánh giá UI theo Pro Max + Taste +
+Impeccable, xem ảnh desktop/mobile và kiểm actual scroll owner.
+
+NOT RUN: native/RN/Flutter, upload Supabase/provider thật, E2E mutation trên DB
+chính, remote CI mới. Human usability acceptance và các gate READINESS vẫn mở.
+Không push/PR/merge remote trong gói này.
