@@ -39,7 +39,7 @@ const labels: Record<string, string> = {
 };
 
 const PRESET_AMOUNTS = [50000, 100000, 200000, 500000, 1000000];
-const amountError = "Nhập số tiền hợp lệ từ 5.000đ đến 10.000.000đ.";
+const amountError = "Nhập số tiền hợp lệ từ 5.000đ đến 9.999.999.999đ.";
 
 export function WalletPage() {
   const auth = useSession();
@@ -281,7 +281,7 @@ export function WalletPage() {
     event.preventDefault();
     if (busy || paymentOpen) return;
     const value = Number(amount);
-    if (!/^\d+$/.test(amount) || value < 5000 || value > 10000000) {
+    if (!/^\d+$/.test(amount) || value < 5000 || value > 9_999_999_999) {
       setError(amountError);
       amountInput.current?.focus();
       return;
@@ -792,7 +792,7 @@ export function WalletPage() {
                 margin: "4px 0 0",
               }}
             >
-              Tối thiểu <strong>5.000₫</strong> và tối đa <strong>10.000.000₫</strong> cho mỗi lần nạp.
+              Tối thiểu <strong>5.000₫</strong> và tối đa <strong>9.999.999.999₫</strong> cho mỗi lần nạp.
             </p>
           </div>
 

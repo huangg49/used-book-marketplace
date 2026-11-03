@@ -1,8 +1,10 @@
+import { formatDuration } from '../components/DurationInput'
+import { AuctionEmptyArt } from '../components/AuctionEmptyArt'
 import { useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@used-books/session-client'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowRight, Gavel, MapPin, Plus, RefreshCw } from 'lucide-react'
+import { ArrowRight, Info, MapPin, Plus, RefreshCw } from 'lucide-react'
 import { AuctionPhoto } from '../components/AuctionGallery'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
@@ -76,7 +78,7 @@ function AuctionRow({
         <h2>
           <Link to={ROUTES.auctionDetail(a.id)}>{a.title}</Link>
         </h2>
-        <p>{a.pointName}</p>
+        <p className={styles.place}><MapPin size={13} aria-hidden="true" /> {a.pointName}</p>
         <span
           className={`${styles.status} ${payable ? styles.urgent : ''}`}
         >
@@ -92,7 +94,7 @@ function AuctionRow({
           </p>
         )}
         {open && <p>Còn {formatRemaining(remaining)}</p>}
-        {scheduled && <p>Mở sau {formatRemaining(untilStart)} · kéo dài {Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 3_600_000)} giờ</p>}
+        {scheduled && <p>Mở sau {formatRemaining(untilStart)} · kéo dài {formatDuration(Math.round((Date.parse(a.endAt) - Date.parse(a.startAt)) / 1000))}</p>}
       </div>
       <div className={styles.action}>
         <span>
@@ -101,7 +103,11 @@ function AuctionRow({
             : 'Giá hiện tại / giá chốt'}
         </span>
         <strong>{formatVnd(a.currentPrice ?? a.startPrice)}</strong>
-        <Link to={ROUTES.auctionDetail(a.id)}>
+        <div className={styles.rowButtons}>
+        {editable && (
+          <button type="button" className={styles.secondaryAction} onClick={() => setEditing(true)}>Đổi thời gian</button>
+        )}
+        <Link className={styles.viewButton} to={ROUTES.auctionDetail(a.id)}>
           {payable
             ? 'Xem và thanh toán'
             : open && item.role === 'Bidder' && !item.leading
@@ -109,9 +115,7 @@ function AuctionRow({
               : 'Xem phiên'}{' '}
           <ArrowRight size={16} aria-hidden="true" />
         </Link>
-        {editable && (
-          <button type="button" className={styles.secondaryAction} onClick={() => setEditing(true)}>Đổi thời gian</button>
-        )}
+        </div>
       </div>
       {editable && (
         <ScheduleAuctionDialog
@@ -148,7 +152,7 @@ const RECLAIM: Record<string, string> = {
   AuctionCancelled: 'Phiên đã bị hủy.',
 }
 const intakeTime = (iso: string) =>
-  new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+  new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: '2-digit' })
 
 // N4-12: the point asked for evidence. One written answer before the deadline;
 // another Staff member decides, and silence never counts as a Pass.
@@ -243,30 +247,40 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
         <span className={styles.intakeState}>{INTAKE_STATES[intake.state]}</span>
         <h3>{intake.title}</h3>
         <p>
-          <MapPin size={13} aria-hidden="true" /> {pointName ?? 'Điểm đã chọn'}
-          {intake.state === 'AwaitingDropoff' && <> · hạn gửi {intakeTime(intake.dropoffDeadline)}</>}
+          <span className={styles.place}><MapPin size={13} aria-hidden="true" /> {pointName ?? 'Điểm đã chọn'}</span>
+          {intake.state === 'AwaitingDropoff' && <span className={styles.deadline}>hạn gửi {intakeTime(intake.dropoffDeadline)}</span>}
         </p>
         {intake.state === 'ReclaimRequired' && intake.reclaimReason && (
-          <p>{RECLAIM[intake.reclaimReason] ?? 'Sách cần được nhận lại.'}{intake.inspectionNote ? ` Ghi chú kiểm tra: ${intake.inspectionNote}` : ''}</p>
+          <div className={styles.reclaim}>
+            <strong>{RECLAIM[intake.reclaimReason] ?? 'Sách cần được nhận lại.'}</strong>
+            {intake.inspectionNote && <span><em>Ghi chú kiểm tra:</em> {intake.inspectionNote}</span>}
+          </div>
         )}
         {intake.state === 'NeedsEvidence' && <EvidenceForm intake={intake} onChanged={onChanged} />}
-        {intake.auctionId && <p>Mở phiên để xem lịch, trạng thái và kết quả đấu giá.</p>}
+        {intake.auctionId && <p className={styles.hint}><Info size={13} aria-hidden="true" /> Mở phiên để xem lịch, trạng thái và kết quả đấu giá.</p>}
         {error && <p className={styles.urgent} role="alert">{error}</p>}
       </div>
       <div className={styles.intakeSide}>
         <span>Khởi điểm</span>
         <strong>{formatVnd(intake.startPrice)}</strong>
-        <span>Bước {formatVnd(intake.step)}{intake.buyNowPrice !== null ? ` · mua ngay ${formatVnd(intake.buyNowPrice)}` : ''}</span>
-        {intake.auctionId && <Link to={ROUTES.auctionDetail(intake.auctionId)}>Xem phiên đấu giá <ArrowRight size={16} aria-hidden="true" /></Link>}
-        {intake.state === 'Passed' && (
-          <button type="button" className={styles.publish} disabled={busy} onClick={() => setPublishing(true)}>
-            Đăng phiên
-          </button>
-        )}
-        {cancellable && (
-          <button type="button" disabled={busy} onClick={() => (unknown ? void withdraw() : setConfirming(true))}>
-            {unknown ? 'Thử lại rút sách' : 'Rút khỏi đấu giá'}
-          </button>
+        <span className={styles.terms}>
+          <span>Bước <b>{formatVnd(intake.step)}</b></span>
+          {intake.buyNowPrice !== null && <span>Mua ngay <b>{formatVnd(intake.buyNowPrice)}</b></span>}
+        </span>
+        {intake.auctionId && <Link className={styles.viewButton} to={ROUTES.auctionDetail(intake.auctionId)}>Xem phiên đấu giá <ArrowRight size={16} aria-hidden="true" /></Link>}
+        {(intake.state === 'Passed' || cancellable) && (
+          <div className={styles.intakeActions}>
+            {cancellable && (
+              <button type="button" disabled={busy} onClick={() => (unknown ? void withdraw() : setConfirming(true))}>
+                {unknown ? 'Thử lại rút sách' : 'Rút khỏi đấu giá'}
+              </button>
+            )}
+            {intake.state === 'Passed' && (
+              <button type="button" className={styles.publish} disabled={busy} onClick={() => setPublishing(true)}>
+                Đăng phiên
+              </button>
+            )}
+          </div>
         )}
       </div>
       <ConfirmDialog
@@ -449,7 +463,7 @@ export function MyAuctionsPage() {
         )}
         {query.data && !query.isError && !query.data.items.length && (
           <div className={styles.empty}>
-            <Gavel size={32} aria-hidden="true" />
+            <AuctionEmptyArt variant={view === 'selling' || view === 'upcoming' ? 'mine' : 'shelf'} />
             <h2>
               {view === 'payment'
                 ? 'Bạn không có phiên cần thanh toán'

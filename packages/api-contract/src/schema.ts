@@ -2452,7 +2452,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ADR 0047. Owner MEMBER publishes a Passed (inspected) intake while ACTIVE and unrestricted and while the listing revision is unchanged. startAt null starts now; otherwise startAt is 5 minutes to 7 days ahead. durationHours is 1-168. The auction is stored Active; before startAt its phase is Scheduled and bids/Auto/Buy Now return 409 AuctionNotStarted. */
+        /** @description ADR 0047. Owner MEMBER publishes a Passed (inspected) intake while ACTIVE and unrestricted and while the listing revision is unchanged. startAt null starts now; otherwise startAt is 5 minutes to 7 days ahead. durationSeconds is 3600-604800 (1 hour to 7 days, ADR 0069). The auction is stored Active; before startAt its phase is Scheduled and bids/Auto/Buy Now return 409 AuctionNotStarted. */
         post: operations["publishAuction"];
         delete?: never;
         options?: never;
@@ -2469,7 +2469,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ADR 0047. Seller edits the time of an Active auction before the first bid and before any Buy Now, at most 5 times. Scheduled: startAt (null = now) and durationHours. Live: only durationHours (end = startAt + duration, at least 1 hour from now); startAt must be null. expectedVersion is the auction version. */
+        /** @description ADR 0047. Seller edits the time of an Active auction before the first bid and before any Buy Now, at most 5 times. Scheduled: startAt (null = now) and durationSeconds. Live: only durationSeconds (end = startAt + duration, at least 1 hour from now); startAt must be null. expectedVersion is the auction version. */
         post: operations["rescheduleAuction"];
         delete?: never;
         options?: never;
@@ -2882,7 +2882,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ACTIVE verified MEMBER other than the seller or the Staff handling the book. Amount must be on the start + n*step grid, at least the minimum bid and at most 1,000,000. The leader cannot bid manually. Rejected at or after endAt even if the close worker has not run. No money is held at bid time. */
+        /** @description ACTIVE verified MEMBER other than the seller or the Staff handling the book. Amount must be on the start + n*step grid, at least the minimum bid (no upper ceiling, ADR 0067). The leader cannot bid manually. Rejected at or after endAt even if the close worker has not run. No money is held at bid time. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers this commitment plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. */
         post: operations["placeAuctionBid"];
         delete?: never;
         options?: never;
@@ -2898,7 +2898,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** @description Sets or raises a private Auto ceiling on the price grid. A new ceiling must reach the minimum bid; the leader may only raise, which never raises the price. */
+        /** @description Sets or raises a private Auto ceiling on the price grid. A new ceiling must reach the minimum bid; the leader may only raise, which never raises the price. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the new ceiling plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. */
         put: operations["setAuctionAutoBid"];
         post?: never;
         delete?: never;
@@ -3188,7 +3188,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ADR 0047 — offered while the auction is live, Buy Now has not been used and the current price is below the Buy Now price, also after bids; the current leader cannot use it. Decided under the same auction lock as bids so exactly one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer offered and the auction ends at min(endAt, now + 60 s). Others may outbid from Buy Now price + step in that window; the normal close then forms the winner's Order (24-hour payment). The receipt reports state Active and no orderId. Auctions already BuyNowPending keep their 15-minute Order. */
+        /** @description ADR 0047 — offered while the auction is live, Buy Now has not been used and the current price is below the Buy Now price, also after bids. ADR 0070 — the current leader may use it too and keeps the lead at the Buy Now price. Decided under the same auction lock as bids so exactly one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer offered and the auction ends at min(endAt, now + 60 s) when the buyer was already leading, or min(endAt, now + 5 min) when the buyer was not (ADR 0070). Others may outbid from Buy Now price + step in that window; the normal close then forms the winner's Order (24-hour payment). The receipt reports state Active and no orderId. Auctions already BuyNowPending keep their 15-minute Order. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the Buy Now price plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. */
         post: operations["buyAuctionNow"];
         delete?: never;
         options?: never;
@@ -6523,10 +6523,10 @@ export interface components {
             /** Format: uuid */
             pointId: string;
             startPrice: number;
-            /** @enum {integer} */
-            step: 10000 | 50000;
+            /** @description Bid step chosen by the Seller (ADR 0068). */
+            step: number;
             buyNowPrice: number | null;
-            /** @description Protective value snapshotted at intake (ADR 0049). Does not change the shelf price or set a bid. If omitted for compatibility, uses the revision salePrice, then exchangeValue, then startPrice. Never recalculated from later bids. */
+            /** @description Protective value snapshotted at intake (ADR 0049). Not capped by the auction price ceiling (ADR 0067); the maximum is the exact-integer limit. Does not change the shelf price or set a bid. If omitted for compatibility, uses the revision salePrice, then exchangeValue, then startPrice. Never recalculated from later bids. */
             declaredValue?: number;
         };
         AuctionVersionCommand: {
@@ -6540,7 +6540,8 @@ export interface components {
              * @description Null starts now; otherwise 5 minutes to 7 days ahead.
              */
             startAt: string | null;
-            durationHours: number;
+            /** @description Session length in seconds, 1 hour to 7 days (ADR 0069). */
+            durationSeconds: number;
         };
         RescheduleAuction: {
             /** @description Auction version. */
@@ -6550,7 +6551,8 @@ export interface components {
              * @description Scheduled only; null starts now. Must be null once live.
              */
             startAt: string | null;
-            durationHours: number;
+            /** @description Session length in seconds, 1 hour to 7 days (ADR 0069). */
+            durationSeconds: number;
         };
         ReceiveAuctionIntake: {
             expectedVersion: number;
@@ -6612,8 +6614,8 @@ export interface components {
             /** Format: uuid */
             pointId: string;
             startPrice: number;
-            /** @enum {integer} */
-            step: 10000 | 50000;
+            /** @description Bid step chosen by the Seller (ADR 0068). */
+            step: number;
             buyNowPrice: number | null;
             protectiveValue: number;
             /** @enum {string} */
@@ -6725,8 +6727,8 @@ export interface components {
             /** @enum {string} */
             state: "Active" | "BuyNowPending" | "AwaitingWinnerPayment" | "Sold" | "Unsold" | "OnHold" | "Cancelled" | "PaymentExpired";
             startPrice: number;
-            /** @enum {integer} */
-            step: 10000 | 50000;
+            /** @description Bid step chosen by the Seller (ADR 0068). */
+            step: number;
             /** @description ADR 0047. Shown while Buy Now is offered (scheduled, or live with the price below it and Buy Now unused); null otherwise. */
             buyNowPrice: number | null;
             currentPrice: number | null;
@@ -6827,8 +6829,8 @@ export interface components {
             /** @enum {string} */
             state: "Active" | "OnHold";
             startPrice: number;
-            /** @enum {integer} */
-            step: 10000 | 50000;
+            /** @description Bid step chosen by the Seller (ADR 0068). */
+            step: number;
             currentPrice: number | null;
             bidderCount: number;
             /** Format: date-time */

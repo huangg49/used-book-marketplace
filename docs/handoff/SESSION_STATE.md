@@ -1,3 +1,26 @@
+# Đồng bộ PR94 vào worktree — 03/11/2026
+
+Owner yêu cầu lấy code main mới. Nhánh `codex/sync-main-20261103-auctions`
+tích hợp `origin/main` 93289df5993b5d856d6529e03b24343d32d10335 (PR94) trên
+base local 3558422f, giữ cả 5 commit local. Conflict duy nhất ở import
+AuctionDetailPage: giữ ReviewEntry và formatDuration. Contract 0.74 vẫn giữ
+review sau receipt và nhận thay đổi đấu giá. Không sửa nghiệp vụ của PR94.
+PASS build API/Member/Admin, typecheck API/RN, unit API419/Member319/Admin229/
+RN224; lint API/Member/Admin có warning; contract246operations/38controllers.
+Mongo QA61 PASS/6 SKIP. E2E đấu giá/ví/review138 PASS/1 FAIL do lỗi commit
+trong fixture khi Mongo fault injection chạy đồng thời; chạy riêng ca lỗi
+PASS1/78 SKIP. Không sửa test; lần sau không chạy fault injection cùng suite
+khác trên một mongod dù dùng DB riêng. Browser fixture review entry và scroll
+PASS; không submit review, không phải native/human evidence.
+Bản sao QA của DB hiện tại áp đủ 6 migration mới, giữ 5.818 bản ghi cũ;
+counter sequence tăng1 và thêm journal tăng vốn mô phỏng cân bằng, không sửa
+ledger cũ hoặc làm dữ liệu vi phạm validator. Primary không có write.
+CI main đúng SHA có API Mongo, User Web order-chat browser và Operations
+Admin browser FAIL; không suy local PASS là remote CI PASS.
+Chưa nâng DB/kích hoạt checkout ứng dụng, vẫn ở3558422f; giữ dịch vụ demo,
+env/dữ liệu, không push/PR/remote merge hoặc đổi READINESS. QA đã dừng.
+[Bằng chứng và bước kích hoạt còn lại](../features/LOCAL_MAIN_SYNC_2026_11_03.md#tích-hợp-pr94-vào-worktree).
+
 # Thêm một bài trao đổi để demo lượt2 — 03/11/2026
 
 Owner yêu cầu thêm1bài như lượt trước. Nhánh `codex/demo-extra-exchange-listing`,

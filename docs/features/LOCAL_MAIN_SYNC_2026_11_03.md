@@ -1,5 +1,51 @@
 # Đồng bộ main vào local — 03/11/2026
 
+## Tích hợp PR94 vào worktree
+
+Lượt đồng bộ tiếp theo theo yêu cầu owner: main
+`93289df5993b5d856d6529e03b24343d32d10335`,
+[PR94](https://github.com/huangg49/used-book-marketplace/pull/94), vào nhánh
+`codex/sync-main-20261103-auctions` từ local3558422f. Giữ 5 commit local về
+review sau nhận sách, tiêu chí đổi, scroll chat, điểm vào review và dữ liệu demo.
+Chỉ một conflict import trong AuctionDetailPage; giữ cả ReviewEntry và
+formatDuration, không chọn đè toàn bộ file. YAML/generated contract tự merge
+và được kiểm khớp; version0.74 giữ các bổ sung review local.
+
+Kiểm tra trên bản tích hợp (Node24.22.1, pnpm11.19.0):
+
+- PASS build API/Member/Admin; typecheck API/RN; unit API419, Member319,
+  Admin229, RN224; lint API/Member/Admin exit0 nhưng còn warning.
+- PASS contract246operations/38controllers và generated schema.
+- Mongo QA:61 PASS/6 SKIP; không có PostgreSQL import/failover evidence mới.
+- E2E đấu giá/ví/review:138 PASS/1 FAIL trong bước tạo fixture do
+  CommitOutcomeUnknownError. Mongo transaction probe bật failCommand trên cùng
+  mongod trong lượt chạy đồng thời; chạy riêng ca leader Buy Now sau khi probe
+  kết thúc PASS1/78 SKIP. Không sửa source/test để vượt lỗi. Các suite có server
+  failpoint phải chạy tuần tự, DB riêng không cô lập được failpoint.
+- PASS browser HTTP fixture điểm vào review Exchange sau receipt cho cả hai vai,
+  server refusal/retry/deep link; scroll chat1440→320px, chữ130%, màn thấp,
+  composer/draft/Back. Không ghi review thật, không là native/human nghiệm thu.
+- PASS nâng bản sao nhất quán của DB hiện tại trên rs-test, tên `_test`:6migration
+  mới, rerun idempotent, checksum migration đang có trong registry không đổi,
+  dòng lịch sử0052-exchange-agreement giữ nguyên. Giữ5.818bản ghi cũ; chỉ counter
+  sequence tăng1 và thêm journal CapitalIncrease cùng2entry cân bằng. Tất cả
+  ledger entry cũ giữ nguyên, không có bản ghi vi phạm validator sau nâng.
+  Primary chỉ đọc; bản sao QA đã xóa, container QA đã dừng.
+
+CI remote trên đúng SHA main chưa xanh: [API Mongo](https://github.com/huangg49/used-book-marketplace/actions/runs/41532185328/job/125574931927),
+[User Web order-chat browser](https://github.com/huangg49/used-book-marketplace/actions/runs/41532185352/job/125574932250)
+và [Operations Admin browser](https://github.com/huangg49/used-book-marketplace/actions/runs/41532185275/job/125574931733)
+FAIL. Năm workflow còn lại success; điều này không chứng minh native hoặc Flutter
+đủ tính năng. Chưa chẩn đoán/sửa ba lỗi CI trong phạm vi lấy code.
+
+**Chưa kích hoạt trên ứng dụng demo.** Checkout ứng dụng vẫn3558422f để không
+hot-reload API/web mới lên DB cũ. Sáu migration pending gồm uncapped amounts,
+simulator capital, step options, custom step, rival window, free shipping
+reconcile. Đặc biệt CapitalIncrease thêm tiền vào nguồn mô phỏng hệ thống;
+không phải nạp thêm vào ví Member. Cần chốt gói kích hoạt DB riêng, backup mới,
+dừng API/worker, migrate rồi cập nhật đồng bộ client/API/worker và kiểm ứng dụng.
+Không thay env, reset dữ liệu, push/PR/merge remote hoặc đóng READINESS.
+
 ## Source và bảo toàn
 
 Owner giao kiểm tra main, đồng bộ và giải quyết conflict. Main đã fetch tới

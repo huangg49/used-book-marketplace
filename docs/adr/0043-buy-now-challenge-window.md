@@ -9,6 +9,9 @@ the rest of FR-AU03–10 is unchanged.
 > 27/10/2026: [ADR 0047](0047-seller-scheduled-auctions.md) keeps Buy Now offered
 > after bids while the price is below it; the window rule below is unchanged.
 
+> 03/11/2026: [ADR 0070](0070-leader-buy-now-and-rival-window.md) keeps 60 s for a Buy Now
+> by the current leader and uses 5 minutes when someone else presses Buy Now.
+
 ## Decision
 
 - Buy Now is still offered only before the first valid bid and is decided

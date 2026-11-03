@@ -15,7 +15,24 @@ import {
 } from "./contracts";
 
 export const AUCTIONS_QUERY_KEY = ["public-auctions"] as const;
-export const AUCTION_MAX_PRICE = 1_000_000;
+// ADR 0067: no business ceiling on auction prices, only the exact-integer limit.
+// ADR 0068: bid steps a Seller may choose before the auction opens.
+export const AUCTION_STEPS = [10_000, 20_000, 50_000, 100_000] as const;
+// A Seller may also enter their own step: a multiple of 1.000đ in this range.
+export const AUCTION_STEP_MIN = 1_000;
+export const AUCTION_STEP_MAX = 10_000_000;
+export const AUCTION_STEP_UNIT = 1_000;
+export type AuctionStep = number;
+
+export function auctionStepError(step: number | null): string | undefined {
+  if (!step) return "Nhập bước giá.";
+  if (step < AUCTION_STEP_MIN || step > AUCTION_STEP_MAX)
+    return "Bước giá từ 1.000đ đến 10.000.000đ.";
+  if (step % AUCTION_STEP_UNIT !== 0) return "Bước giá phải là bội số của 1.000đ.";
+  return undefined;
+}
+
+export const AUCTION_MAX_PRICE = Number.MAX_SAFE_INTEGER;
 export const EVIDENCE_MIN_LENGTH = 20;
 
 export function usePublicAuctions(client: SessionClient, enabled = true) {
@@ -64,8 +81,7 @@ export function amountError(
 ) {
   if (!amount) return "Nhập số tiền bạn muốn trả.";
   if (amount < floor) return `Tối thiểu ${formatVnd(floor)}.`;
-  if (amount > AUCTION_MAX_PRICE)
-    return `Tối đa ${formatVnd(AUCTION_MAX_PRICE)}.`;
+  if (amount > AUCTION_MAX_PRICE) return "Số tiền vượt mức hệ thống hỗ trợ.";
   if ((amount - start) % step !== 0) {
     const up = start + Math.ceil((amount - start) / step) * step;
     return `Giá đi theo bước ${formatVnd(step)}. Thử ${formatVnd(Math.min(up, AUCTION_MAX_PRICE))}.`;
@@ -203,14 +219,31 @@ export function auctionErrorText(error: unknown) {
     return "Thao tác trước chưa hoàn tất. Hãy cập nhật trạng thái phiên.";
   return e.message || "Không thể thực hiện thao tác này. Hãy cập nhật trạng thái phiên.";
 }
+// ADR 0071: an early hint from the member's own available balance. The server
+// also counts prices they lead at elsewhere and unpaid auction orders.
+export function fundsShortfall(amount: number | null | undefined, available: number | null | undefined) {
+  return available != null && amount != null && amount > available ? amount - available : 0;
+}
+export function fundsHint(amount: number | null | undefined, available: number | null | undefined) {
+  if (available == null) return null;
+  const short = fundsShortfall(amount, available);
+  return short
+    ? `Số dư khả dụng ${formatVnd(available)}, cần nạp thêm ${formatVnd(short)} cho mức này.`
+    : `Số dư khả dụng ${formatVnd(available)}.`;
+}
+
+// ADR 0070: the leader's Buy Now leaves others 60 seconds; anyone else's, 5 minutes.
+export const buyNowWindow = (leading: boolean) => (leading ? "60 giây" : "5 phút");
+
 export function receiptMessage(
   kind: AuctionCommandKind,
   amount: number,
   receipt: { currentPrice: number | null; leading: boolean | null },
+  wasLeading = false,
 ) {
   const price = receipt.currentPrice !== null ? formatVnd(receipt.currentPrice) : "";
   if (kind === "BuyNow")
-    return "Bạn đang dẫn với giá mua ngay. Người khác còn 60 giây để trả cao hơn; nếu không ai vượt, bạn thắng phiên.";
+    return `Bạn đang dẫn với giá mua ngay. Người khác còn ${buyNowWindow(wasLeading)} để trả cao hơn; nếu không ai vượt, bạn thắng phiên.`;
   if (kind === "Disable") return "Đã tắt đặt giá tự động.";
   if (receipt.leading) return `Bạn đang dẫn giá ở ${price}.`;
   if (receipt.currentPrice === amount)
@@ -306,10 +339,10 @@ export function intakePriceErrors(
   const errors: { startPrice?: string; buyNowPrice?: string } = {};
   if (!startPrice) errors.startPrice = "Nhập giá khởi điểm.";
   else if (startPrice < AUCTION_MIN_PRICE || startPrice > AUCTION_MAX_PRICE)
-    errors.startPrice = "Giá khởi điểm từ 10.000đ đến 1.000.000đ.";
+    errors.startPrice = "Giá khởi điểm tối thiểu 10.000đ.";
   else if (buyNowPrice !== null) {
     if (buyNowPrice <= startPrice || buyNowPrice > AUCTION_MAX_PRICE)
-      errors.buyNowPrice = "Giá mua ngay phải lớn hơn giá khởi điểm và không quá 1.000.000đ.";
+      errors.buyNowPrice = "Giá mua ngay phải lớn hơn giá khởi điểm.";
     else if ((buyNowPrice - startPrice) % step !== 0) {
       const up = Math.min(
         startPrice + Math.ceil((buyNowPrice - startPrice) / step) * step,
@@ -347,7 +380,18 @@ export const AUCTION_MAX_SCHEDULE_EDITS = 5;
 export const AUCTION_MIN_LEAD_MS = 5 * 60_000;
 export const AUCTION_SCHEDULE_HORIZON_MS = 7 * 24 * HOUR_MS;
 export const AUCTION_MIN_REMAINING_MS = HOUR_MS;
-export const DURATION_CHOICES = [1, 3, 6, 12, 24, 48, 72, 168] as const;
+// ADR 0069: lengths are whole seconds (1 hour to 7 days); the sheet offers presets.
+export const DURATION_CHOICES = [1, 3, 6, 12, 24, 48, 72, 168].map((h) => h * 3600);
+export function durationLabel(seconds: number) {
+  const h = Math.floor(seconds / 3600);
+  const parts = [
+    Math.floor(h / 24) && `${Math.floor(h / 24)} ngày`,
+    h % 24 && `${h % 24} giờ`,
+    Math.floor((seconds % 3600) / 60) && `${Math.floor((seconds % 3600) / 60)} phút`,
+    seconds % 60 && `${seconds % 60} giây`,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" ") : "0 giây";
+}
 
 /**
  * Start choices for the schedule sheet: now, a few hours ahead, or 09:00 on the
@@ -368,15 +412,15 @@ export function startChoices(now: number) {
   );
 }
 /** A live auction keeps its start; the new end must leave at least one hour. */
-export function durationAllowed(hours: number, startAt: number, now: number) {
-  return startAt + hours * HOUR_MS >= now + AUCTION_MIN_REMAINING_MS;
+export function durationAllowed(seconds: number, startAt: number, now: number) {
+  return startAt + seconds * 1000 >= now + AUCTION_MIN_REMAINING_MS;
 }
 export type ScheduleCommand = { path: string; body: string; key: string };
 // Frozen on confirm like auction commands: a retry after an unknown outcome
 // resends this exact request with the same Idempotency-Key.
 export function createScheduleCommand(
   target: { kind: "publish"; intakeId: string } | { kind: "reschedule"; auctionId: string },
-  body: { expectedVersion: number; startAt: string | null; durationHours: number },
+  body: { expectedVersion: number; startAt: string | null; durationSeconds: number },
   key: string,
 ): ScheduleCommand {
   return {

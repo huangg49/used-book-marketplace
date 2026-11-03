@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import type {
   AuctionBidderDoc,
@@ -8,8 +9,11 @@ import type {
 import {
   AUCTION_PAYMENT_MS,
   BUY_NOW_CHALLENGE_MS,
+  BUY_NOW_RIVAL_CHALLENGE_MS,
 } from '../../database/mongo/migrations/auction-constants.js';
+import type { AuctionStep } from '../../database/mongo/migrations/auction-constants.js';
 import { MongoService } from '../../database/mongo/mongo.service.js';
+import { LedgerService } from '../wallet/ledger.service.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import {
   DomainError,
@@ -32,8 +36,8 @@ import {
 import { AuctionClock } from './auction-clock.js';
 import {
   apply,
-  AUCTION_MAX_PRICE,
   EngineError,
+  MONEY_MAX,
   nextMinimumBid,
   type EngineAction,
 } from './auction-engine.js';
@@ -65,6 +69,7 @@ const rejectionMessages: Record<string, string> = {
     'Bạn đang dẫn giá; chỉ có thể nâng mức trả tối đa của Đặt giá tự động.',
   NotIncreasing: 'Mức cam kết mới phải cao hơn mức hiện tại của bạn.',
   NoAutoBid: 'Bạn chưa bật Đặt giá tự động trong phiên này.',
+  InvalidState: 'Thao tác không còn phù hợp với trạng thái phiên.',
 };
 
 // Bids, Auto ceilings, Buy Now, close and payment deadline (FR-AU03–10).
@@ -82,7 +87,17 @@ export class AuctionBiddingService {
     private readonly clock: AuctionClock,
     private readonly books: AuctionBookService,
     private readonly pages: MongoPageService,
-  ) {}
+    private readonly ledger: LedgerService,
+    config: ConfigService,
+  ) {
+    // Only the test harness may switch the ADR 0071 check off, for historical
+    // suites whose bidders were never funded; a dedicated suite keeps it on.
+    this.fundsCheck = !(
+      config.get<string>('NODE_ENV') === 'test' &&
+      config.get<string>('AUCTION_BID_FUNDS_CHECK') === 'Off'
+    );
+  }
+  private readonly fundsCheck: boolean;
 
   private async auction(tx: Tx, id: string) {
     const a = await tx.c.auctions.findOne({ _id: id });
@@ -192,6 +207,47 @@ export class AuctionBiddingService {
     }
     return { a, now, own };
   }
+  // ADR 0071: the wallet must cover this commitment plus the caller's open
+  // ones (live auctions they lead elsewhere, unpaid auction orders). A check
+  // at command time, not a hold: no ledger entry, PaymentExpired stays the net.
+  private async requireFunds(
+    tx: Tx,
+    userId: string,
+    auctionId: string,
+    amount: number,
+  ) {
+    const leading = await tx.c.auctions
+      .find(
+        {
+          leaderId: userId,
+          state: { $in: ['Active', 'OnHold'] },
+          _id: { $ne: auctionId },
+        },
+        { projection: { currentPrice: 1 } },
+      )
+      .toArray();
+    const unpaid = await tx.c.point_orders
+      .find(
+        { buyerId: userId, state: 'AwaitingPayment' },
+        { projection: { buyerTotal: 1 } },
+      )
+      .toArray();
+    const open =
+      leading.reduce((sum, x) => sum + (x.currentPrice ?? 0), 0) +
+      unpaid.reduce((sum, o) => sum + o.buyerTotal, 0);
+    const available = await this.ledger.available(tx, userId);
+    if (available >= amount + open) return;
+    const vnd = (n: number) => `${n.toLocaleString('vi-VN')}đ`;
+    throw new DomainError(
+      409,
+      'InvalidState',
+      `Số dư khả dụng ${vnd(available)} chưa đủ cho mức ${vnd(amount)}` +
+        (open
+          ? ` cộng ${vnd(open)} đang cam kết ở phiên khác hoặc đơn chờ thanh toán`
+          : '') +
+        '. Hãy nạp thêm ví rồi thử lại.',
+    );
+  }
   // POL-41 counts commitments not yet released: auctions the user currently
   // leads (an outbid level no longer binds) and wins awaiting payment.
   private async checkParticipationQuota(
@@ -300,12 +356,6 @@ export class AuctionBiddingService {
             'InvalidState',
             'Mua ngay không còn khả dụng: giá hiện tại đã chạm giá mua ngay hoặc đã có người mua ngay.',
           );
-        if (buyNow && a.leaderId === actor._id)
-          throw new DomainError(
-            409,
-            'InvalidState',
-            'Bạn đang dẫn giá nên không thể dùng Mua ngay.',
-          );
         const act = action(actor._id, a);
         const bidders = await tx.c.auction_bidders
           .find({ auctionId: a._id })
@@ -320,8 +370,8 @@ export class AuctionBiddingService {
             throw new DomainError(
               409,
               'BidTooLow',
-              e.minimumBid > AUCTION_MAX_PRICE
-                ? `Giá đã đạt mức tối đa ${AUCTION_MAX_PRICE.toLocaleString('vi-VN')}đ; phiên không nhận thêm giá.`
+              e.minimumBid > MONEY_MAX
+                ? 'Giá đã đạt mức tối đa hệ thống; phiên không nhận thêm giá.'
                 : `Giá đã thay đổi. Mức tối thiểu hiện tại là ${e.minimumBid.toLocaleString('vi-VN')}đ.`,
             );
           if (e.reason === 'OffGrid')
@@ -330,13 +380,20 @@ export class AuctionBiddingService {
               'Giá phải bằng giá khởi điểm cộng một số bước giá.',
             );
           if (e.reason === 'OutOfRange')
-            invalidField(field, 'Giá phải từ 10.000đ đến 1.000.000đ.');
+            invalidField(field, 'Giá phải từ 10.000đ trở lên.');
           throw new DomainError(
             409,
             'InvalidState',
             rejectionMessages[e.reason],
           );
         }
+        if (this.fundsCheck && act.kind !== 'AutoDisable')
+          await this.requireFunds(
+            tx,
+            actor._id,
+            a._id,
+            act.kind === 'AutoSet' ? act.max : act.amount,
+          );
         const bidder: AuctionBidderDoc = own
           ? {
               ...own,
@@ -379,9 +436,9 @@ export class AuctionBiddingService {
           _id: randomUUID(),
           auctionId: a._id,
           bidderId: actor._id,
-          kind: buyNow ? 'BuyNow' : act.kind,
+          kind: buyNow || act.kind === 'LeaderBuyNow' ? 'BuyNow' : act.kind,
           amount:
-            act.kind === 'Manual'
+            act.kind === 'Manual' || act.kind === 'LeaderBuyNow'
               ? act.amount
               : act.kind === 'AutoSet'
                 ? act.max
@@ -408,7 +465,11 @@ export class AuctionBiddingService {
                   endAt: new Date(
                     Math.min(
                       a.endAt.getTime(),
-                      now.getTime() + BUY_NOW_CHALLENGE_MS,
+                      now.getTime() +
+                        // ADR 0070: a rival's Buy Now gives others 5 minutes.
+                        (a.leaderId === actor._id
+                          ? BUY_NOW_CHALLENGE_MS
+                          : BUY_NOW_RIVAL_CHALLENGE_MS),
                     ),
                   ),
                 }
@@ -437,7 +498,8 @@ export class AuctionBiddingService {
   // FR-AU06/ADR 0043, widened by ADR 0047: while live, unused and above the
   // current price, also after bids. The buyer commits to buyNowPrice (an
   // earlier equal Auto ceiling keeps the lead by sequence); others may outbid
-  // until min(endAt, now + 60 s), then the normal close decides the winner.
+  // until min(endAt, now + 60 s) for the leader's Buy Now or now + 5 min for a
+  // non-leader's (ADR 0070), then the normal close decides the winner.
   buyNow(context: CommandContext, id: string, body: Wire['BuyAuctionNow']) {
     return this.engineCommand(
       context,
@@ -445,7 +507,7 @@ export class AuctionBiddingService {
       id,
       body,
       (actorId, a) => ({
-        kind: 'Manual',
+        kind: a.leaderId === actorId ? 'LeaderBuyNow' : 'Manual',
         bidderId: actorId,
         amount: a.buyNowPrice!,
       }),
@@ -743,7 +805,7 @@ export class AuctionBiddingService {
       title: String((item?.snapshot as { title?: string })?.title ?? ''),
       state: a.state,
       startPrice: a.startPrice,
-      step: a.step as 10000 | 50000,
+      step: a.step as AuctionStep,
       buyNowPrice:
         phase === 'Scheduled' || buyNowOffered(a, now) ? a.buyNowPrice : null,
       buyNowAt: a.buyNowAt?.toISOString() ?? null,
@@ -825,7 +887,7 @@ export class AuctionBiddingService {
           title: String((item?.snapshot as { title?: string })?.title ?? ''),
           state: a.state as 'Active' | 'OnHold',
           startPrice: a.startPrice,
-          step: a.step as 10000 | 50000,
+          step: a.step as AuctionStep,
           currentPrice: a.currentPrice,
           bidderCount: a.bidderCount,
           startAt: a.startAt.toISOString(),

@@ -10,11 +10,11 @@
 // Prices stay on the start + n × step grid because every input is on it.
 
 import {
-  AUCTION_MAX_PRICE,
   AUCTION_MIN_PRICE,
+  MONEY_MAX,
 } from '../../database/mongo/migrations/auction-constants.js';
 
-export { AUCTION_MAX_PRICE, AUCTION_MIN_PRICE };
+export { AUCTION_MIN_PRICE, MONEY_MAX };
 
 export interface EngineAuction {
   startPrice: number;
@@ -32,14 +32,17 @@ export interface EngineBidder {
 export type EngineAction =
   | { kind: 'Manual'; bidderId: string; amount: number }
   | { kind: 'AutoSet'; bidderId: string; max: number }
-  | { kind: 'AutoDisable'; bidderId: string };
+  | { kind: 'AutoDisable'; bidderId: string }
+  // ADR 0070: the current leader commits to the Buy Now price.
+  | { kind: 'LeaderBuyNow'; bidderId: string; amount: number };
 export type EngineRejection =
   | 'OffGrid'
   | 'OutOfRange'
   | 'BelowMinimum'
   | 'LeaderMustRaiseAuto'
   | 'NotIncreasing'
-  | 'NoAutoBid';
+  | 'NoAutoBid'
+  | 'InvalidState';
 export class EngineError extends Error {
   constructor(
     readonly reason: EngineRejection,
@@ -61,10 +64,10 @@ export interface EngineResult {
 export const minimumBid = (a: EngineAuction) =>
   a.currentPrice === null ? a.startPrice : a.currentPrice + a.step;
 // What clients may bid next: null once the price sits within one step of the
-// 1,000,000 cap, because no amount on the grid can beat it any more.
+// exact-integer limit (ADR 0067), because no amount on the grid can beat it.
 export const nextMinimumBid = (a: EngineAuction) => {
   const min = minimumBid(a);
-  return min > AUCTION_MAX_PRICE ? null : min;
+  return min > MONEY_MAX ? null : min;
 };
 
 export const onGrid = (
@@ -98,7 +101,7 @@ export function settle(
 }
 
 function checkAmount(a: EngineAuction, amount: number) {
-  if (amount < AUCTION_MIN_PRICE || amount > AUCTION_MAX_PRICE)
+  if (amount < AUCTION_MIN_PRICE || amount > MONEY_MAX)
     throw new EngineError('OutOfRange', minimumBid(a));
   if (!onGrid(a, amount)) throw new EngineError('OffGrid', minimumBid(a));
 }
@@ -128,6 +131,27 @@ export function apply(
       nextSequence: a.nextSequence,
       bidder,
       levelSequence: null,
+    };
+  }
+
+  if (action.kind === 'LeaderBuyNow') {
+    if (!isLeader || !own) throw new EngineError('InvalidState', min);
+    checkAmount(a, action.amount);
+    if (action.amount <= a.currentPrice!)
+      throw new EngineError('BelowMinimum', min);
+    // The price jumps to the Buy Now amount and the leader keeps the sequence
+    // that won the lead (every rival is at or below the old price). A higher
+    // private Auto ceiling stays; a lower one becomes the Buy Now commitment.
+    const keepsCeiling = own.mode === 'Auto' && own.level > action.amount;
+    const bidder: EngineBidder = keepsCeiling
+      ? own
+      : { ...own, mode: 'Manual', level: action.amount };
+    return {
+      currentPrice: action.amount,
+      leaderId: a.leaderId!,
+      nextSequence: a.nextSequence + 1,
+      bidder,
+      levelSequence: keepsCeiling ? null : a.nextSequence,
     };
   }
 

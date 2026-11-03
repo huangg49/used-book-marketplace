@@ -23,6 +23,7 @@ import {
 import { priceAssistSpecs } from '../../src/database/mongo/migrations/0005-price-assist.js';
 import { onlinePriceSpecs } from '../../src/database/mongo/migrations/0007-online-price-lookup.js';
 import { auctionCollectionSpecs } from '../../src/database/mongo/migrations/0008-auctions.js';
+import { CAPITAL_INCREASE_JOURNAL_ID } from '../../src/database/mongo/migrations/0055-simulator-capital-increase.js';
 import { pointOrderCollectionSpecs } from '../../src/database/mongo/migrations/0009-point-orders.js';
 import { pointCollectionSpecs } from '../../src/database/mongo/migrations/0010-point-collection.js';
 import { resolutionCollectionSpecs } from '../../src/database/mongo/migrations/0011-point-order-resolution.js';
@@ -379,12 +380,17 @@ describe('migrations', () => {
         for (const row of await ledger.find().toArray())
           if (checksums.has(row._id))
             expect(row.checksum).toBe(checksums.get(row._id));
-        expect(await db.collection('ledger_journals').countDocuments()).toBe(
-          journalCount,
-        );
-        expect(await db.collection('ledger_entries').countDocuments()).toBe(
-          entryCount,
-        );
+        // Only 0055 writes money: one fixed CapitalIncrease journal (ADR0067).
+        expect(
+          await db
+            .collection('ledger_journals')
+            .countDocuments({ _id: { $ne: CAPITAL_INCREASE_JOURNAL_ID } } as never),
+        ).toBe(journalCount);
+        expect(
+          await db
+            .collection('ledger_entries')
+            .countDocuments({ journalId: { $ne: CAPITAL_INCREASE_JOURNAL_ID } }),
+        ).toBe(entryCount);
         const actual = new Map(
           (await db.listCollections().toArray()).map((c) => [
             c.name,
@@ -544,7 +550,8 @@ describe('migrations', () => {
       await rootDb
         .collection('counters')
         .findOne({ _id: 'ledger_journal_sequence' as never }),
-    ).toMatchObject({ value: 1 });
+      // 0055's CapitalIncrease journal takes the next sequence (ADR0067).
+    ).toMatchObject({ value: 2 });
     expect(await rootDb.collection('service_localities').countDocuments()).toBe(
       3,
     );

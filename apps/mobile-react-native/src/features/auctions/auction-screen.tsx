@@ -37,6 +37,9 @@ import {
   outcomeUnknown,
   participationKey,
   participationOptions,
+  buyNowWindow,
+  fundsHint,
+  fundsShortfall,
   receiptMessage,
   sendAuctionCommand,
   standingOf,
@@ -52,6 +55,7 @@ import {
   type PublicAuctionSummary,
 } from "./contracts";
 import { WinnerSteps } from "./winner-steps";
+import { walletSummary } from "../wallet/contracts";
 
 const STATE_LABEL: Record<AuctionState, string> = {
   Active: "Đang mở",
@@ -345,6 +349,13 @@ function BidPanel({
   const manualError = manual === null ? null : amountError(manualAmount, minimum, auction.startPrice, auction.step);
   const locked = busy || !!pending;
   const capped = minimum > AUCTION_MAX_PRICE;
+  const wallet = useQuery({
+    queryKey: ["wallet"],
+    queryFn: () => client.request("/me/wallet", walletSummary),
+    enabled: state.status === "authenticated",
+    retry: false,
+  });
+  const available = wallet.data?.available ?? null;
   const price = auction.currentPrice ?? auction.startPrice;
 
   const run = async (command: AuctionCommand) => {
@@ -356,7 +367,7 @@ function BidPanel({
       setPending(null);
       setManual(null);
       setAuto("");
-      setNotice(receiptMessage(command.kind, command.amount, receipt));
+      setNotice(receiptMessage(command.kind, command.amount, receipt, !!me?.leading));
     } catch (caught) {
       // An unknown outcome keeps the frozen request for "Thử lại".
       setPending(outcomeUnknown(caught) ? command : null);
@@ -369,7 +380,7 @@ function BidPanel({
       void refresh();
     }
   };
-  const copy = confirming && dialogCopy(confirming.kind, confirming.amount, auction);
+  const copy = confirming && dialogCopy(confirming.kind, confirming.amount, auction, !!me?.leading);
   return (
     <View style={{ gap: space.lg }}>
       {standing && (
@@ -408,7 +419,7 @@ function BidPanel({
           Bạn không cần trả thêm. Muốn giữ vị trí khi có người trả cao hơn, hãy đặt hoặc nâng mức tự động.
         </AppText>
       ) : capped ? (
-        <AppText color={colors.muted}>Giá đã chạm mức tối đa {formatVnd(AUCTION_MAX_PRICE)} của phiên.</AppText>
+        <AppText color={colors.muted}>Giá đã chạm mức tối đa hệ thống hỗ trợ.</AppText>
       ) : (
         <View style={{ gap: space.md }}>
           <AppText kind="bold">Chọn nhanh mức trả</AppText>
@@ -430,13 +441,13 @@ function BidPanel({
             value={manual ?? String(minimum)}
             editable={!locked}
             onChangeText={(text) => setManual(text.replace(/\D/g, ""))}
-            hint={`Lượt tiếp theo tối thiểu ${formatVnd(minimum)}`}
-            error={manualError ?? undefined}
+            hint={`Lượt tiếp theo tối thiểu ${formatVnd(minimum)}. ${fundsHint(manualAmount, available) ?? ""}`.trim()}
+            error={manualError ?? (fundsShortfall(manualAmount, available) ? (fundsHint(manualAmount, available) ?? undefined) : undefined)}
           />
           <Button
             wine
             title={manualAmount ? `Tiếp tục trả ${formatVnd(manualAmount)}` : "Tiếp tục"}
-            disabled={locked || !!manualError || !manualAmount}
+            disabled={locked || !!manualError || !manualAmount || fundsShortfall(manualAmount, available) > 0}
             onPress={() => manualAmount && setConfirming({ kind: "Manual", amount: manualAmount })}
           />
         </View>
@@ -467,7 +478,9 @@ function BidPanel({
             disabled={locked}
             onPress={() => {
               const amount = Number(auto) || null;
-              const problem = amountError(amount, floor, auction.startPrice, auction.step);
+              const problem =
+                amountError(amount, floor, auction.startPrice, auction.step) ??
+                (fundsShortfall(amount, available) ? fundsHint(amount, available) : null);
               if (problem) setAutoError(problem);
               else setConfirming({ kind: "Auto", amount: amount! });
             }}
@@ -477,16 +490,23 @@ function BidPanel({
           )}
         </View>
       )}
-      {!pending && auction.buyNowPrice !== null && !me?.leading && (
+      {!pending && auction.buyNowPrice !== null && (
         <View style={{ gap: space.sm, paddingTop: space.md, borderTopWidth: 1, borderColor: colors.rule }}>
           <AppText kind="bold">Mua ngay {formatVnd(auction.buyNowPrice)}</AppText>
           <AppText kind="small" color={colors.muted}>
-            Còn dùng được khi giá hiện tại thấp hơn giá mua ngay. Sau khi bấm, người khác còn 60 giây để trả cao hơn.
+            {me?.leading
+              ? "Kết thúc sớm: giá lên giá mua ngay, người khác còn 60 giây để trả cao hơn."
+              : "Còn dùng được khi giá hiện tại thấp hơn giá mua ngay. Sau khi bấm, người khác còn 5 phút để trả cao hơn."}
           </AppText>
+          {fundsShortfall(auction.buyNowPrice, available) > 0 && (
+            <AppText kind="small" color={colors.error}>
+              {fundsHint(auction.buyNowPrice, available)}
+            </AppText>
+          )}
           <Button
             secondary
             title="Mua ngay"
-            disabled={locked}
+            disabled={locked || fundsShortfall(auction.buyNowPrice, available) > 0}
             onPress={() => setConfirming({ kind: "BuyNow", amount: auction.buyNowPrice! })}
           />
         </View>
@@ -507,7 +527,7 @@ function BidPanel({
   );
 }
 
-function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuctionSummary) {
+function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuctionSummary, leading: boolean) {
   const pay = `Nếu thắng, bạn thanh toán từ ví trong 24 giờ sau khi phiên kết thúc và tự nhận sách tại ${auction.pointName}. Không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`;
   switch (kind) {
     case "Manual":
@@ -527,7 +547,7 @@ function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuc
     case "BuyNow":
       return {
         title: `Mua ngay với ${formatVnd(amount)}?`,
-        message: `Bạn cam kết mua với giá này và dẫn đầu. Người khác còn 60 giây để trả cao hơn; nếu không ai vượt, bạn thắng và thanh toán từ ví trong 24 giờ sau khi phiên kết thúc, rồi tự nhận sách tại ${auction.pointName}. Lượt mua ngay không thể rút lại; không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`,
+        message: `Bạn cam kết mua với giá này và ${leading ? "giữ vị trí dẫn đầu; giá hiện tại tăng lên giá mua ngay" : "dẫn đầu"}. Người khác còn ${buyNowWindow(leading)} để trả cao hơn; nếu không ai vượt, bạn thắng và thanh toán từ ví trong 24 giờ sau khi phiên kết thúc, rồi tự nhận sách tại ${auction.pointName}. Lượt mua ngay không thể rút lại; không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`,
         confirm: "Mua ngay",
       };
   }

@@ -4,7 +4,7 @@ import { Commands, ScenarioError, openJournal, writeJson } from "./journal.mjs";
 import { bindingFor } from "./sandbox.mjs";
 import { createHttp } from "./http.mjs";
 import { runBooks } from "./books.mjs";
-import { runFunding, DEMO_FUNDING } from "./funding.mjs";
+import { runFunding, DEMO_FUNDING, SIMULATED_CAPITAL } from "./funding.mjs";
 import { orderReceipt } from "./order-receipts.mjs";
 
 export const ORDER_STATES = {
@@ -317,7 +317,7 @@ export async function runOrders(
       buyerWallet.total === DEMO_FUNDING &&
       sellerWallet.total === 0 &&
       reconciliation.balanced &&
-      reconciliation.sourceRemaining === 100_000_000 - DEMO_FUNDING &&
+      reconciliation.sourceRemaining === SIMULATED_CAPITAL - DEMO_FUNDING &&
       reconciliation.memberAvailable === buyerWallet.available &&
       reconciliation.transactionHeld === held,
     "Order funding/hold/finite source reconciliation failed; keep the money and books held.",

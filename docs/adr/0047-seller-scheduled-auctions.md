@@ -28,7 +28,7 @@ payment window; POL-39 prices; POL-41 limits; Admin cancel.
 - **Publish.** `POST /auction-intakes/{id}/publish` (`publishAuction`), owner
   MEMBER, ACTIVE and not restricted (POL-17), intake `Passed`, listing revision
   unchanged. Body: intake `expectedVersion`, `startAt` (null = now, otherwise now
-  + 5 minutes … now + 7 days) and `durationHours` 1–168. It creates the auction
+  + 5 minutes … now + 7 days) and `durationHours` 1–168 (superseded by `durationSeconds`, [ADR0069](0069-auction-duration-seconds.md)). It creates the auction
   like the Staff open did and moves the intake to `Auctioning`.
 - **No scheduled state.** The auction is stored `Active`; its phase is derived
   from server time: `Scheduled` before `startAt`, `Live` until `endAt`, then
@@ -44,7 +44,8 @@ payment window; POL-39 prices; POL-41 limits; Admin cancel.
   a racing first bid or close have exactly one order.
 - **Buy Now.** Offered when the auction is live, has a Buy Now price, Buy Now has
   not been used and `currentPrice` is null or below it. The current leader cannot
-  use it. It stays one committed manual bid at `buyNowPrice` (ADR 0043): an
+  use it (superseded 03/11/2026 by [ADR 0070](0070-leader-buy-now-and-rival-window.md):
+  the leader may, and a non-leader's Buy Now opens a 5-minute window). It stays one committed manual bid at `buyNowPrice` (ADR 0043): an
   earlier Auto ceiling at or above it keeps the lead by sequence (FR-AU04), and
   the window still starts. Refusing that case would reveal a hidden ceiling
   (FR-AU10). Once the price reaches the Buy Now price, Buy Now is withdrawn.

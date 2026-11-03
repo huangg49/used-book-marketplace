@@ -15,6 +15,8 @@ export interface FilterSelectProps {
   value: string;
   options: readonly { value: string; label: string }[];
   onChange: (value: string) => void;
+  /** false: a plain dropdown for short lists; typing never filters. */
+  searchable?: boolean;
 }
 function subscribeViewport(notify: () => void) {
   const media = window.matchMedia("(max-width: 900px)");
@@ -35,6 +37,7 @@ export function FilterSelect({
   value,
   options,
   onChange,
+  searchable = true,
 }: FilterSelectProps) {
   const narrow = useSyncExternalStore(
     subscribeViewport,
@@ -53,9 +56,9 @@ export function FilterSelect({
   const expanded = open && !narrow;
   const selected =
     options.find((option) => option.value === value)?.label || "";
-  const matches = options.filter((option) =>
-    fold(option.label).includes(fold(query.trim())),
-  );
+  const matches = searchable
+    ? options.filter((option) => fold(option.label).includes(fold(query.trim())))
+    : options;
   const activeId =
     expanded && matches[active] ? `${id}-option-${active}` : undefined;
 
@@ -148,23 +151,26 @@ export function FilterSelect({
             ref={input}
             id={id}
             className={styles.control}
+            data-searchable={searchable}
+            readOnly={!searchable}
             role="combobox"
             aria-label={label}
             aria-expanded={expanded}
             aria-controls={`${id}-options`}
-            aria-autocomplete="list"
+            aria-autocomplete={searchable ? "list" : "none"}
             aria-activedescendant={activeId}
             autoComplete="off"
             aria-describedby={`${id}-help`}
             title={selected}
-            value={expanded ? query : selected}
+            value={expanded && searchable ? query : selected}
             placeholder={selected}
             onFocus={() => {
               focused.current = true;
-              show();
+              if (searchable) show();
             }}
             onClick={() => {
               if (!expanded) show();
+              else if (!searchable) setOpen(false);
             }}
             onChange={(event) => {
               setQuery(event.target.value);
@@ -194,6 +200,10 @@ export function FilterSelect({
                             matches.length
                           : 0,
                   );
+              } else if (!searchable && event.key === " ") {
+                event.preventDefault();
+                if (expanded && matches[active]) choose(matches[active].value);
+                else if (!expanded) show();
               } else if (event.key === "Enter") {
                 event.preventDefault();
                 if (expanded && matches[active]) choose(matches[active].value);
@@ -205,13 +215,15 @@ export function FilterSelect({
               } else if (event.key === "Tab") setOpen(false);
             }}
           />
-          {expanded ? (
+          {expanded && searchable ? (
             <Search className={styles.icon} size={16} aria-hidden="true" />
           ) : (
             <ChevronDown className={styles.icon} size={16} aria-hidden="true" />
           )}
           <span id={`${id}-help`} className="sr-only">
-            Gõ để tìm; dùng phím mũi tên và Enter để chọn. Escape để đóng.
+            {searchable
+              ? "Gõ để tìm; dùng phím mũi tên và Enter để chọn. Escape để đóng."
+              : "Dùng phím mũi tên và Enter để chọn. Escape để đóng."}
           </span>
           {expanded &&
             createPortal(

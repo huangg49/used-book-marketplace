@@ -5,6 +5,8 @@ import { createHttp } from "./http.mjs";
 import { bindingFor } from "./sandbox.mjs";
 
 export const DEMO_FUNDING = 1_000_000;
+// Finite simulator capital after migration 0055 (ADR0067).
+export const SIMULATED_CAPITAL = 1_000_000_000_000;
 const check = (condition, message) => {
   if (!condition) throw new ScenarioError("MONEY_MISMATCH", message);
 };
@@ -158,7 +160,7 @@ export async function runFunding(
     reconciliation.demoOnly &&
       reconciliation.balanced &&
       reconciliation.totalDebit === reconciliation.totalCredit &&
-      reconciliation.sourceRemaining + DEMO_FUNDING === 100_000_000 &&
+      reconciliation.sourceRemaining + DEMO_FUNDING === SIMULATED_CAPITAL &&
       reconciliation.memberAvailable + reconciliation.transactionHeld ===
         DEMO_FUNDING,
     "Finite simulator source/ledger reconciliation failed; stop financial scenarios.",

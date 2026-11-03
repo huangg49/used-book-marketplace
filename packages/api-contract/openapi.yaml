@@ -7138,7 +7138,7 @@ paths:
         - Auctions
       description: "ADR 0047. Owner MEMBER publishes a Passed (inspected) intake while ACTIVE and
         unrestricted and while the listing revision is unchanged. startAt null starts now; otherwise
-        startAt is 5 minutes to 7 days ahead. durationHours is 1-168. The auction is stored Active;
+        startAt is 5 minutes to 7 days ahead. durationSeconds is 3600-604800 (1 hour to 7 days, ADR 0069). The auction is stored Active;
         before startAt its phase is Scheduled and bids/Auto/Buy Now return 409 AuctionNotStarted."
       x-implementation-status: implemented
       security:
@@ -7206,8 +7206,8 @@ paths:
       tags:
         - Auctions
       description: "ADR 0047. Seller edits the time of an Active auction before the first bid and
-        before any Buy Now, at most 5 times. Scheduled: startAt (null = now) and durationHours. Live:
-        only durationHours (end = startAt + duration, at least 1 hour from now); startAt must be null.
+        before any Buy Now, at most 5 times. Scheduled: startAt (null = now) and durationSeconds. Live:
+        only durationSeconds (end = startAt + duration, at least 1 hour from now); startAt must be null.
         expectedVersion is the auction version."
       x-implementation-status: implemented
       security:
@@ -8611,9 +8611,9 @@ paths:
       tags:
         - Auctions
       description: ACTIVE verified MEMBER other than the seller or the Staff handling the book. Amount
-        must be on the start + n*step grid, at least the minimum bid and at most 1,000,000. The leader
+        must be on the start + n*step grid, at least the minimum bid (no upper ceiling, ADR 0067). The leader
         cannot bid manually. Rejected at or after endAt even if the close worker has not run. No money
-        is held at bid time.
+        is held at bid time. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers this commitment plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -8680,7 +8680,7 @@ paths:
       tags:
         - Auctions
       description: Sets or raises a private Auto ceiling on the price grid. A new ceiling must reach the
-        minimum bid; the leader may only raise, which never raises the price.
+        minimum bid; the leader may only raise, which never raises the price. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the new ceiling plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -9735,12 +9735,14 @@ paths:
       tags:
         - Auctions
       description: ADR 0047 — offered while the auction is live, Buy Now has not been used and the current
-        price is below the Buy Now price, also after bids; the current leader cannot use it. Decided
-        under the same auction lock as bids so exactly one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer
-        offered and the auction ends at min(endAt, now + 60 s). Others may outbid from Buy Now price +
+        price is below the Buy Now price, also after bids. ADR 0070 — the current leader may use it too
+        and keeps the lead at the Buy Now price. Decided under the same auction lock as bids so exactly
+        one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer
+        offered and the auction ends at min(endAt, now + 60 s) when the buyer was already leading, or
+        min(endAt, now + 5 min) when the buyer was not (ADR 0070). Others may outbid from Buy Now price +
         step in that window; the normal close then forms the winner's Order (24-hour payment). The
         receipt reports state Active and no orderId. Auctions already BuyNowPending keep their
-        15-minute Order.
+        15-minute Order. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the Buy Now price plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -17170,7 +17172,7 @@ components:
         moneyHeld:
           type: integer
           minimum: 0
-          maximum: 100000000
+          maximum: 9007199254740991
         paidAt:
           type:
             - string
@@ -17198,7 +17200,7 @@ components:
         refundedAmount:
           type: integer
           minimum: 0
-          maximum: 100000000
+          maximum: 9007199254740991
         canRequestRefund:
           type: boolean
         canReject:
@@ -17242,7 +17244,7 @@ components:
       additionalProperties: false
       required: [amount]
       properties:
-        amount: { type: integer, minimum: 5000, maximum: 10000000 }
+        amount: { type: integer, minimum: 5000, maximum: 9999999999 }
     SimulatedTopupRecipientPage:
       type: object
       additionalProperties: false
@@ -17275,7 +17277,7 @@ components:
         amount:
           type: integer
           minimum: 1000
-          maximum: 10000000
+          maximum: 1000000000000
     TopupIntent:
       type: object
       additionalProperties: false
@@ -17303,7 +17305,7 @@ components:
         amount:
           type: integer
           minimum: 0
-          maximum: 100000000
+          maximum: 1000000000000
         state:
           type: string
           enum:
@@ -17377,18 +17379,18 @@ components:
         available:
           type: integer
           minimum: 0
-          maximum: 100000000
+          maximum: 9007199254740991
         transactionHeld:
           type: integer
           minimum: 0
-          maximum: 100000000
+          maximum: 9007199254740991
         withdrawalHeld:
           type: integer
           const: 0
         total:
           type: integer
           minimum: 0
-          maximum: 100000000
+          maximum: 9007199254740991
         serverTime:
           type: string
           format: date-time
@@ -17515,11 +17517,11 @@ components:
         amount:
           type: integer
           minimum: -100000000
-          maximum: 100000000
+          maximum: 9007199254740991
         balanceAfter:
           type: integer
           minimum: 0
-          maximum: 100000000
+          maximum: 9007199254740991
         postedAt:
           type: string
           format: date-time
@@ -17578,7 +17580,7 @@ components:
         amount:
           type: integer
           minimum: 1
-          maximum: 10000000
+          maximum: 1000000000000
         currency:
           type: string
           pattern: ^[A-Z]{3}$
@@ -18492,7 +18494,7 @@ components:
         bookPrice:
           type: integer
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         outboundFee:
           type: integer
           minimum: 0
@@ -18873,7 +18875,7 @@ components:
             bookPrice:
               type: integer
               minimum: 10000
-              maximum: 1000000
+              maximum: 9007199254740991
             outboundFee:
               type: integer
               minimum: 0
@@ -19089,13 +19091,13 @@ components:
             - integer
             - "null"
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         minimumBid:
           type:
             - integer
             - "null"
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         leading:
           type:
             - boolean
@@ -19160,23 +19162,25 @@ components:
         startPrice:
           type: integer
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         step:
           type: integer
-          enum:
-            - 10000
-            - 50000
+          description: Bid step chosen by the Seller (ADR 0068).
+          minimum: 1000
+          maximum: 10000000
+          multipleOf: 1000
         buyNowPrice:
           type:
             - integer
             - "null"
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         declaredValue:
           type: integer
           minimum: 10000
-          maximum: 1000000
-          description: Protective value snapshotted at intake (ADR 0049). Does not change the shelf
+          maximum: 9007199254740991
+          description: Protective value snapshotted at intake (ADR 0049). Not capped by the auction
+            price ceiling (ADR 0067); the maximum is the exact-integer limit. Does not change the shelf
             price or set a bid. If omitted for compatibility, uses the revision salePrice, then
             exchangeValue, then startPrice. Never recalculated from later bids.
     AuctionVersionCommand:
@@ -19195,7 +19199,7 @@ components:
       required:
         - expectedVersion
         - startAt
-        - durationHours
+        - durationSeconds
       properties:
         expectedVersion:
           type: integer
@@ -19208,17 +19212,18 @@ components:
             - "null"
           format: date-time
           description: Null starts now; otherwise 5 minutes to 7 days ahead.
-        durationHours:
+        durationSeconds:
           type: integer
-          minimum: 1
-          maximum: 168
+          minimum: 3600
+          maximum: 604800
+          description: Session length in seconds, 1 hour to 7 days (ADR 0069).
     RescheduleAuction:
       type: object
       additionalProperties: false
       required:
         - expectedVersion
         - startAt
-        - durationHours
+        - durationSeconds
       properties:
         expectedVersion:
           type: integer
@@ -19231,10 +19236,11 @@ components:
             - "null"
           format: date-time
           description: Scheduled only; null starts now. Must be null once live.
-        durationHours:
+        durationSeconds:
           type: integer
-          minimum: 1
-          maximum: 168
+          minimum: 3600
+          maximum: 604800
+          description: Session length in seconds, 1 hour to 7 days (ADR 0069).
     ReceiveAuctionIntake:
       type: object
       additionalProperties: false
@@ -19303,7 +19309,7 @@ components:
         amount:
           type: integer
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         fulfillmentMethod:
           type: string
           enum:
@@ -19318,7 +19324,7 @@ components:
         maxAmount:
           type: integer
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         fulfillmentMethod:
           type: string
           enum:
@@ -19443,22 +19449,23 @@ components:
         startPrice:
           type: integer
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         step:
           type: integer
-          enum:
-            - 10000
-            - 50000
+          description: Bid step chosen by the Seller (ADR 0068).
+          minimum: 1000
+          maximum: 10000000
+          multipleOf: 1000
         buyNowPrice:
           type:
             - integer
             - "null"
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         protectiveValue:
           type: integer
           minimum: 0
-          maximum: 2147483647
+          maximum: 9007199254740991
         state:
           type: string
           enum:
@@ -19703,18 +19710,19 @@ components:
         startPrice:
           type: integer
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         step:
           type: integer
-          enum:
-            - 10000
-            - 50000
+          description: Bid step chosen by the Seller (ADR 0068).
+          minimum: 1000
+          maximum: 10000000
+          multipleOf: 1000
         buyNowPrice:
           type:
             - integer
             - "null"
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
           description: ADR 0047. Shown while Buy Now is offered (scheduled, or live with the price below
             it and Buy Now unused); null otherwise.
         currentPrice:
@@ -19722,13 +19730,13 @@ components:
             - integer
             - "null"
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         minimumBid:
           type:
             - integer
             - "null"
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
           description: Null when bidding is closed.
         bidderCount:
           type: integer
@@ -19776,7 +19784,7 @@ components:
         price:
           type: integer
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         bidderAlias:
           type: integer
           minimum: 1
@@ -19852,7 +19860,7 @@ components:
             - integer
             - "null"
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
           description: Own manual amount or own private Auto ceiling.
         boughtNow:
           type: boolean
@@ -19874,13 +19882,13 @@ components:
             - integer
             - "null"
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         minimumBid:
           type:
             - integer
             - "null"
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         fulfillmentMethod:
           type: string
           enum:
@@ -19898,7 +19906,7 @@ components:
             - integer
             - "null"
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         paymentDeadline:
           type:
             - string
@@ -20026,18 +20034,19 @@ components:
         startPrice:
           type: integer
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         step:
           type: integer
-          enum:
-            - 10000
-            - 50000
+          description: Bid step chosen by the Seller (ADR 0068).
+          minimum: 1000
+          maximum: 10000000
+          multipleOf: 1000
         currentPrice:
           type:
             - integer
             - "null"
           minimum: 10000
-          maximum: 1000000
+          maximum: 9007199254740991
         bidderCount:
           type: integer
           minimum: 0
@@ -20504,7 +20513,7 @@ components:
             - integer
             - "null"
           minimum: 0
-          maximum: 1000000
+          maximum: 9007199254740991
         state:
           type: string
           enum:
@@ -20530,19 +20539,19 @@ components:
             - integer
             - "null"
           minimum: 0
-          maximum: 1000000
+          maximum: 9007199254740991
         fundedAmount:
           type:
             - integer
             - "null"
           minimum: 0
-          maximum: 1000000
+          maximum: 9007199254740991
         unfundedAmount:
           type:
             - integer
             - "null"
           minimum: 0
-          maximum: 1000000
+          maximum: 9007199254740991
         decidedAt:
           type:
             - string
@@ -20622,7 +20631,7 @@ components:
         amount:
           type: integer
           minimum: 0
-          maximum: 1000000
+          maximum: 9007199254740991
           description: 0 for NoCompensation; 1..protectedValue for Compensate.
         reason:
           type: string

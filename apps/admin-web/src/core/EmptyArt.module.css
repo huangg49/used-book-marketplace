@@ -1,0 +1,26 @@
+/* Project motion policy (11/10/2026): these small, slow loops play regardless
+   of prefers-reduced-motion; nothing is hidden if animation is absent. */
+.art { width: min(220px, 70vw); margin: 0 auto 6px; }
+.art svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+.glow { transform-origin: 120px 74px; animation: eaBreathe 5.5s ease-in-out infinite; }
+.sparkles path { transform-box: fill-box; transform-origin: center; animation: eaTwinkle 2.8s ease-in-out infinite; }
+.sparkles path:nth-child(2) { animation-delay: 1.2s; }
+.prop { animation: eaRise 560ms cubic-bezier(.16,1,.3,1) both; }
+.badge { transform-box: fill-box; transform-origin: center; animation: eaPop 520ms 260ms cubic-bezier(.34,1.56,.64,1) both; }
+.dash { animation: eaDash 1.6s linear infinite; }
+.stamp { transform-box: view-box; transform-origin: 129px 52px; animation: eaStamp 3.4s ease-in-out infinite; }
+.draw { stroke-dasharray: 40; animation: eaDraw 700ms 300ms ease-out both; }
+.star { transform-box: fill-box; transform-origin: center; animation: eaTwinkle 3s ease-in-out infinite; }
+.float { transform-box: fill-box; animation: eaFloat 3.2s ease-in-out infinite; }
+.lens { transform-box: fill-box; transform-origin: center; animation: eaSearch 4s ease-in-out infinite; }
+
+@keyframes eaBreathe { 50% { transform: scale(1.05); opacity: .8; } }
+@keyframes eaTwinkle { 0%, 100% { transform: scale(.75); opacity: .5; } 50% { transform: scale(1); opacity: 1; } }
+@keyframes eaRise { from { opacity: 0; transform: translateY(8px); } }
+@keyframes eaPop { from { opacity: 0; transform: scale(.4); } }
+@keyframes eaDash { to { stroke-dashoffset: -12; } }
+@keyframes eaStamp { 0%, 60%, 100% { transform: translateY(0); } 70% { transform: translateY(14px); } 78% { transform: translateY(12px); } }
+@keyframes eaDraw { from { stroke-dashoffset: 40; } to { stroke-dashoffset: 0; } }
+@keyframes eaFloat { 50% { transform: translateY(-5px); } }
+@keyframes eaSearch { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-46px, 10px); } }

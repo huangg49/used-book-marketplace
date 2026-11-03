@@ -9,12 +9,12 @@ import {
   auctionErrorText,
   createScheduleCommand,
   durationAllowed,
+  durationLabel,
   outcomeUnknown,
   startChoices,
   type ScheduleCommand,
 } from "../auctions-model";
 
-const HOUR = 3_600_000;
 const when = (ms: number) =>
   new Date(ms).toLocaleString("vi-VN", { weekday: "short", hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
 
@@ -45,13 +45,13 @@ export function ScheduleAuctionSheet({
     return () => clearInterval(timer);
   }, [visible]);
   const live = target?.kind === "reschedule" && target.live;
-  const currentHours =
+  const currentSeconds =
     target?.kind === "reschedule"
-      ? Math.round((Date.parse(target.endAt) - Date.parse(target.startAt)) / HOUR)
-      : 24;
+      ? Math.round((Date.parse(target.endAt) - Date.parse(target.startAt)) / 1000)
+      : 24 * 3600;
   const choices = startChoices(now);
   const [start, setStart] = useState(0);
-  const [hours, setHours] = useState(currentHours);
+  const [seconds, setSeconds] = useState(currentSeconds);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // A lost response keeps the frozen request so the retry replays it.
@@ -59,8 +59,8 @@ export function ScheduleAuctionSheet({
   if (!target) return null;
 
   const startAt = live ? Date.parse(target.startAt) : (choices[start]?.at ?? now);
-  const allowed = !live || durationAllowed(hours, startAt, now);
-  const durations = [...new Set([...DURATION_CHOICES, currentHours])].sort((a, b) => a - b);
+  const allowed = !live || durationAllowed(seconds, startAt, now);
+  const durations = [...new Set([...DURATION_CHOICES, currentSeconds])].sort((a, b) => a - b);
 
   const submit = async () => {
     const command =
@@ -72,7 +72,7 @@ export function ScheduleAuctionSheet({
         {
           expectedVersion: target.version,
           startAt: live ? null : choices[start]?.at ? new Date(choices[start]!.at!).toISOString() : null,
-          durationHours: hours,
+          durationSeconds: seconds,
         },
         Crypto.randomUUID(),
       );
@@ -130,21 +130,21 @@ export function ScheduleAuctionSheet({
         <View style={{ gap: space.sm }}>
           <AppText kind="label" color={colors.muted}>THỜI LƯỢNG</AppText>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
-            {durations.map((h) => (
+            {durations.map((d) => (
               <Chip
-                key={h}
+                key={d}
                 wine
-                title={h < 24 || h % 24 ? `${h} giờ` : `${h / 24} ngày`}
-                selected={hours === h}
-                disabled={busy || !!pending || (live && !durationAllowed(h, startAt, now))}
-                onPress={() => setHours(h)}
+                title={durationLabel(d)}
+                selected={seconds === d}
+                disabled={busy || !!pending || (live && !durationAllowed(d, startAt, now))}
+                onPress={() => setSeconds(d)}
               />
             ))}
           </View>
         </View>
         <AppText kind="bold" color={allowed ? colors.forest : colors.rustText}>
           {allowed
-            ? `Mở ${live || choices[start]?.at ? when(startAt) : "ngay khi xác nhận"} · kết thúc ${when(startAt + hours * HOUR)}`
+            ? `Mở ${live || choices[start]?.at ? when(startAt) : "ngay khi xác nhận"} · kết thúc ${when(startAt + seconds * 1000)}`
             : "Phiên đang mở phải còn ít nhất 1 giờ. Chọn thời lượng dài hơn."}
         </AppText>
         <AppText kind="small" color={colors.muted}>
