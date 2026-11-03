@@ -525,9 +525,9 @@ export function BookSearchPage() {
     heading?.focus({ preventScroll: true });
   }
 
-  function update(key: string, value: string, replace = false) {
+  function update(key: string, value: string, replace = false, source = params) {
     setTransitionDirection(0);
-    const next = new URLSearchParams(params);
+    const next = new URLSearchParams(source);
     next.delete("cursor");
     if (key === "categoryId") {
       next.delete("facets");
@@ -845,9 +845,12 @@ export function BookSearchPage() {
                 // Explicit submit also recovers an interrupted IME session.
                 // Enter used to commit a character is handled on the input.
                 setComposing(false);
-                const value = searchTerm.trim();
+                // History can already contain the last edit while React is
+                // still rendering the previous URL-controlled input value.
+                const latest = new URLSearchParams(window.location.search);
+                const value = (latest.get("q") ?? "").trim();
                 setSettledSearch(value);
-                update("q", value);
+                update("q", value, false, latest);
               }}
             >
               <Search size={21} aria-hidden="true" />

@@ -108,12 +108,20 @@ try {
 
   await input.focus();
   await input.dispatchEvent("compositionstart");
-  await input.fill("  explicit-submit-qa  ");
-  // Submit without blur or compositionend, including keyboard/assistive submit.
-  await page.getByRole("search").evaluate(form => form.requestSubmit());
+  // Submit in the same browser task as the last input event, before a
+  // concurrent React Router render can catch up. No blur/compositionend.
+  await input.evaluate(field => {
+    const value = "  explicit-submit-qa  ";
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(field, value);
+    field.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: value }));
+    field.form.requestSubmit();
+  });
   await expect.poll(() => queries.at(-1)).toBe("explicit-submit-qa");
   await expect(empty).toBeVisible();
   await expect(input).toHaveValue("explicit-submit-qa");
+  const submittedParams = new URL(page.url()).searchParams;
+  assert.equal(submittedParams.get("q"), "explicit-submit-qa");
+  assert.equal(submittedParams.get("data"), "live");
   assert.equal(queries.at(-1), "explicit-submit-qa");
   checks.push("explicit submit clears stale composition and searches trimmed text");
 

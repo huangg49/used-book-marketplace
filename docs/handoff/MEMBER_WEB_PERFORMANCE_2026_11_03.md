@@ -4,6 +4,29 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Gửi đúng từ khóa Tìm sách khi nhập và submit cùng lượt
+
+Nhánh `codex/member-web-search-submit-race`, base `a98db891`. Phát hiện
+trong Search recovery khi tối ưu ảnh thương hiệu. Tái hiện bằng input event
+và `requestSubmit()` cùng lượt. Router đã cập nhật browser history với từ khóa
+mới, nhưng DOM input và handler vẫn có thể ở render cũ. Handler cũ ghi lại từ
+khóa cũ và không đọc truy vấn mới.
+
+[BookSearchPage](../../apps/user-web/src/pages/BookSearchPage.tsx) đọc
+`window.location.search` tại submit, trim q và truyền cùng snapshot params
+cho đường cập nhật hiện có. Giữ các bộ lọc, reset cursor và kết thúc trạng thái
+ghép dấu. Nhập bình thường vẫn debounce 300 ms. Enter dùng để ghép dấu vẫn
+không submit. Không thêm flushSync, thay CSS hoặc đổi animation.
+
+[Search recovery](../../apps/user-web/tests/search-recovery.mjs) giữ ca blur
+và IME Enter. Ca submit được đặt cùng task với input cuối để tránh phụ thuộc
+thời gian render. Bản cũ FAIL với từ khóa trước, bản mới PASS cả 9 ca trên dev
+và production fixture. Kiểm q đã trim, giữ tham số `data`, network error,
+timeout/retry và nút mobile. Build/typecheck, 341 unit test, lint và docs/diff
+PASS. Bằng chứng cùng thư mục `.tmp/member-web-brand-lossless/`.
+Kiểm bằng Chromium và HTTP fixture. Bộ gõ trên thiết bị thật, API thật, native,
+human acceptance và CI remote NOT RUN. READINESS giữ nguyên.
+
 ## Nén lossless logo và chữ Hero
 
 Nhánh `codex/member-web-lossless-brand-art`, base `1728dc55`.

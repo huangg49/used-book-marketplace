@@ -1,22 +1,22 @@
 # Tối ưu Member web — 03/11/2026
 
-Gói hiện tại `codex/member-web-lossless-brand-art`, base `1728dc55`.
-[BrandArtwork](../../apps/user-web/src/components/BrandArtwork.tsx) dùng
-WebP lossless cho logo và chữ Hero, chuyển về PNG nếu tải lỗi.
-[Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
+Gói hiện tại `codex/member-web-search-submit-race`, base `a98db891`.
+Tối ưu logo/chữ Hero phát hiện Search submit đọc q cũ khi input và submit
+cùng lượt. [BookSearchPage](../../apps/user-web/src/pages/BookSearchPage.tsx)
+đọc URL mới nhất khi gửi, trim q và giữ params. 9 ca Search recovery PASS
+dev/production, gồm IME, lỗi mạng, timeout và mobile. Source cũ tái hiện FAIL.
+Giữ debounce và motion. [Bằng chứng](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Home giảm 146.698→69.556 B cho hai ảnh. Chromium cache lạnh 5 cặp,
-  390/CPU4×/4 Mbps: Hero tải xong 1,26→1,19 s, logo 2,17→1,80 s.
-  Mỗi ảnh một request. 47 CSS byte-identical.
-- Sharp RGBA khớp byte. Ảnh chụp Chromium 390/1440 logo khớp, Hero chênh
-  tối đa 1 mức màu ở biên. WebP trả 404 chuyển về PNG, Home-only preload, header
-  thu gọn, lá pause/resume và focus đã kiểm. Giữ các hiệu ứng.
-- Build/typecheck, 341 unit test, lint, Home focus và docs/diff PASS. Search
-  recovery phát hiện race IME submit. HTTP fixture. API thật, thiết bị thật,
-  native, human acceptance và CI remote NOT RUN. Gate READINESS giữ nguyên.
+Gói `a98db891` nén lossless logo và chữ Hero, chuyển về PNG khi WebP lỗi.
+Home giảm 146.698→69.556 B cho hai ảnh. Chromium 390/CPU4×/4 Mbps, 5 cặp:
+Hero tải xong 1,26→1,19 s, logo 2,17→1,80 s. Logo khớp từng pixel trong ảnh
+chụp 390/1440, Hero lệch tối đa 1 mức màu tại mép. 47 CSS production khớp byte.
+Browser PASS preload, lỗi ảnh, header scroll, lá và focus.
 
-Gói trước `1728dc55` sửa tràn ví 320/390 px và giữ sheen 8 s. Thay đổi
-nằm trong worktree phát triển. Checkout demo giữ local work.
+Build/typecheck, 341 unit test, lint, docs/diff PASS. HTTP fixture.
+API thật, thiết bị thật, native, human acceptance và CI remote NOT RUN.
+Giữ READINESS. Gói `1728dc55` sửa tràn ví và giữ sheen 8 s.
+Thay đổi nằm trong worktree phát triển. Checkout demo giữ local work.
 
 # Lịch sử tin nhắn Member web —03/11/2026
 
