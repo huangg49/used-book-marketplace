@@ -4,6 +4,50 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Làm mới các view sau khi nạp ví được ghi có — 04/11/2026
+
+Nhánh `codex/member-web-wallet-credit-cache`, base `9a86b8e9`.
+Build base tái hiện trên desktop: trang Ví nhận 125.000 sau kết quả topup
+`credited: true`, nhưng mở lại menu tài khoản trong staleTime vẫn hiện
+100.000. Cả đường return `?topup=…` và checkout từ Ví đều bỏ sót family
+`member-wallet-mini`; dashboard cashflow dùng family history riêng cũng
+không được đánh dấu stale. Không suy số dư mới từ callback trình duyệt.
+
+[WalletPage](../../apps/user-web/src/pages/WalletPage.tsx) dùng lại
+[helper ví](../../apps/user-web/src/lib/wallet-cache.ts) ở đúng hai effect
+`credited`/`checkoutCredited` hiện có. Helper kiểm owner hiện tại, đánh dấu
+stale các view và đọc lại server khi cần; không set số tiền hoặc sửa state
+topup. Giữ polling, popup allowlist, intent/key, request, receipt và retry.
+SRS FR-W01/W02 và contract topup/summary giữ nguyên.
+
+| Vai trò / entry | Điều kiện / kết quả | Nơi xem / bước tiếp |
+| --- | --- | --- |
+| Member → Ví → Nạp tiền VNPay | API xác nhận topup `credited: true` | Trang Ví và mở lại menu nhận số dư server mới |
+| Member → quay về `/wallet?topup=…` | Cùng điều kiện ghi có, không tin query URL | Xem số dư; các history view stale đọc lại khi mở |
+| Topup pending hoặc `Succeeded` nhưng `credited: false` | Không suy đã ghi có, không invalidate ví | Giữ số dư từ server đã đọc; không sửa quy tắc xử lý topup |
+
+[Browser fixture](../../apps/user-web/tests/wallet-credit-cache.mjs) chạy
+build production, login/session thật phía client, mọi HTTP API là dữ liệu giả.
+8 ca PASS trước/sau: 390/1440 × return/checkout × credited true/false.
+Freeze Date để cache không tự hết hạn, giữ timers/animation; chỉ ca có ghi
+có mới làm mới ví. Main card vốn đúng ở base; lỗi menu chỉ tái hiện ở desktop
+có menu này. Mobile kiểm không hồi quy. Không page error. Context chặn mọi
+external request: destination VNPay allowlist được fulfill bằng HTML fixture,
+không gọi VNPay Sandbox, provider, API hoặc DB thật.
+
+- Build/typecheck, 354 unit/50 file, scoped lint và detector `[]` PASS.
+  Unit helper hiện có kiểm family/owner và read trước ACK trả muộn.
+- Wallet layout browser PASS 320/390/768/1440 và 390 chữ 125%; focus dialog,
+  filter, action và sheen đủ 8 giây với reduced-motion vẫn giữ nguyên.
+  Cả 47 CSS production khớp byte; không đổi markup/class/timing/asset/animation.
+- Request thêm đúng ở mini view cần số dư mới: desktop return 3→4 và checkout
+  4→5 GET wallet trong cả hành trình; mobile giữ 2/3. Các ca chưa ghi có không
+  tăng read. Đây là sửa cache đúng, không là giảm request hoặc chứng minh ledger.
+
+Evidence `.tmp/member-web-wallet-credit-cache/`. Native, thiết bị thật,
+provider/DB/API integration, human acceptance và remote CI NOT RUN.
+READINESS và checkout demo giữ nguyên. Nguồn cập nhật ví của Order còn cần rà riêng.
+
 ## Làm mới view ví sau ACK trao đổi — 04/11/2026
 
 Nhánh `codex/member-web-exchange-wallet-cache`, base `19950968`.
@@ -46,8 +90,8 @@ trong test là dữ liệu tổng hợp, không có thanh toán hay ledger thậ
   native, thiết bị thật, human acceptance hoặc remote CI. READINESS và demo
   checkout giữ nguyên. Evidence `.tmp/member-web-exchange-wallet-cache/`.
 
-Các nguồn ACK khác (nạp ví/Order) cần rà riêng; chưa suy helper đã được nối
-toàn bộ chỉ từ sáu ca Exchange.
+Ca Exchange không chứng minh mọi nguồn ACK khác đã nối: nạp ví được kiểm riêng
+ở mục mới phía trên; Order vẫn cần rà riêng.
 
 ## Khôi phục avatar sau khi URL được cấp lại
 

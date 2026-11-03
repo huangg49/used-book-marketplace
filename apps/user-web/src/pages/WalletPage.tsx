@@ -28,6 +28,7 @@ import { formatVnd } from "../lib/routes";
 import styles from "./WalletPage.module.css";
 import frame from "./WalletFrame.module.css";
 import { paymentChannel } from "../lib/payment-return";
+import { invalidateMemberWalletViews } from "../lib/wallet-cache";
 import { WalletHistory } from "./WalletHistory";
 
 const labels: Record<string, string> = {
@@ -179,8 +180,7 @@ export function WalletPage() {
       void client.invalidateQueries({ queryKey: ["topups", ownerId] });
     }
     if (credited) {
-      void client.invalidateQueries({ queryKey: ["wallet-summary", ownerId] });
-      void client.invalidateQueries({ queryKey: ["wallet-history", ownerId] });
+      invalidateMemberWalletViews(client, ownerId);
     }
   }, [resultState, credited, client, ownerId, id]);
 
@@ -199,8 +199,7 @@ export function WalletPage() {
     setCheckoutId(undefined);
     void client.invalidateQueries({ queryKey: ["topups", ownerId] });
     if (checkoutCredited) {
-      void client.invalidateQueries({ queryKey: ["wallet-summary", ownerId] });
-      void client.invalidateQueries({ queryKey: ["wallet-history", ownerId] });
+      invalidateMemberWalletViews(client, ownerId);
     }
   }, [checkoutId, checkoutState, checkoutCredited, client, ownerId]);
 

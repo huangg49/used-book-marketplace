@@ -4,22 +4,25 @@ Owner cho phép cuốn chiếu tối ưu Member web, giữ animation, đo/kiểm
 gói và sửa lỗi liên quan đã tái hiện. Đổi nghiệp vụ, thiết kế/hiệu ứng hoặc
 triển khai cần quyết định riêng; không mở rộng sang DB/provider/checkout demo.
 
-Gói hiện tại `codex/member-web-exchange-wallet-cache`, base `19950968`.
-[Service Exchange](../../apps/user-web/src/services/exchange.ts) làm mới các
-view ví đúng family/owner sau ACK command hoặc recovery retry; không set số dư.
+Gói hiện tại `codex/member-web-wallet-credit-cache`, base `9a86b8e9`.
+[WalletPage](../../apps/user-web/src/pages/WalletPage.tsx) dùng helper chung
+làm mới các view ví đúng family/owner khi API topup báo `credited: true`;
+giữ hai đường return/checkout, không set số dư hoặc đổi quy tắc ghi có.
 [Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Production fixture 390/1440 tái hiện số dư cũ ở menu/Back về Ví và xác nhận
-  sửa, gồm ACK thường, reject rồi thành công, lost ACK/retry cùng key/body.
-  Không invalidate sớm hoặc theo actor cũ; unit kiểm read cũ về muộn.
-- Build/typecheck, 354 unit test, lint/detector và browser sáu ca PASS.
+- Production fixture 8 ca 390/1440 × return/checkout × credited true/false:
+  menu desktop hết giữ số dư cũ sau ghi có; pending/chưa credited không
+  refresh ví. Popup/provider được chặn HTTP hoàn toàn, không thanh toán thật.
+- Build/typecheck, 354 unit test, lint/detector, browser 8 ca và wallet layout
+  5 cấu hình PASS, gồm chữ 125%/dialog focus và sheen 8 giây khi reduced-motion.
   47 CSS khớp byte; không đổi animation. API/DB/provider/thiết bị thật, native,
   human acceptance và remote CI NOT RUN. Không đổi nghiệp vụ/ledger/contract.
 
 Ứng viên lazy Home bị loại, source đã khôi phục (`901383dd` chỉ lưu đánh giá).
-Rà tiếp các nguồn ACK nạp ví/Order: chưa suy mọi view ví đã nối từ ca Exchange.
+Rà tiếp nguồn cập nhật ví của Order; chưa suy mọi nguồn ACK đã nối.
 
-Gói `19950968` sửa avatar nhận URL mới sau lỗi cùng avatar ID;
+Gói `9a86b8e9` nối ví sau ACK Exchange/recovery, giữ key/body và actor;
+`19950968` sửa avatar nhận URL mới sau lỗi cùng avatar ID;
 `b5b36d22` hoãn xin link bìa riêng tới gần viewport và sửa retry ảnh;
 `6c5751f8` dùng chung preview thông báo và sửa link sai target;
 `5bbe9685` dừng Lenis idle và giữ cuộn khi reduced-motion;
