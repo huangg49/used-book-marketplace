@@ -4,25 +4,26 @@ Owner cho phép cuốn chiếu tối ưu Member web, giữ animation, đo/kiểm
 gói và sửa lỗi liên quan đã tái hiện. Đổi nghiệp vụ, thiết kế/hiệu ứng hoặc
 triển khai cần quyết định riêng; không mở rộng sang DB/provider/checkout demo.
 
-Gói hiện tại `codex/member-web-order-wallet-cache`, base `ac71b6dc`.
-[OrderDetails](../../apps/user-web/src/pages/OrderDetails.tsx) dùng helper chung
-làm mới các view ví đúng family/owner sau ACK pay/cancel hoặc quan sát Completed.
-Không set tiền hoặc đổi command/key/body/version/nghiệp vụ.
+Gói hiện tại `codex/member-web-point-order-wallet-cache`, base `450e0dd3`.
+[WinnerPanel](../../apps/user-web/src/pages/AuctionDetailPage.tsx) dùng helper ví
+sau ACK pay PointOrder theo owner của lần thao tác, gồm retry. Không set tiền
+hoặc đổi command/key/body/version/địa chỉ/phí/nghiệp vụ.
 [Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Production fixture 12 ca 390/1440: pay/reject/lost ACK/retry/cancel chưa trả,
-  polling Completed buyer/seller. Menu hết số dư cũ sau ACK/Completed seller;
-  buyer Completed không tự tăng available; pending/reject không refresh tiền.
-- Hồi quy order/chat PASS sau sửa fixture cũ theo contract lịch sử hiện tại:
-  quyền/403/503, private details, key/body retry, nháp, mobile 320/390 chữ 130%.
+- Production fixture 12 ca 390/1440 × SelfCollect/CarrierOutbound × ACK/409/
+  lost ACK: menu/Back về Ví hết giữ số dư cũ sau pay. Pending/error không
+  refresh ví; retry giữ key/body/version/address/fee và khóa lựa chọn.
 - Build/typecheck, 354 unit test, scoped lint/detector PASS.
   47 CSS khớp byte; không đổi animation. API/DB/provider/thiết bị thật, native,
   human acceptance và remote CI NOT RUN. Không đổi nghiệp vụ/ledger/contract.
 
 Ứng viên lazy Home bị loại, source đã khôi phục (`901383dd` chỉ lưu đánh giá).
-Rà tiếp Đấu giá/PointOrder; ADR0071 nói bid không giữ tiền, không suy bid đổi số dư.
+ADR0071 nói bid không giữ tiền; gói này chỉ ACK pay, không suy mọi thay đổi tiền
+bất đồng bộ đã nối. Đo tiếp timer idle/hết hạn trước khi tối ưu; giữ đồng hồ
+đang chạy và toàn bộ animation.
 
-Gói `ac71b6dc` nối view ví khi topup credited, kiểm riêng return/checkout;
+Gói `450e0dd3` nối view ví sau pay/cancel Order/Completed, kiểm order/chat;
+`ac71b6dc` nối view ví khi topup credited, kiểm riêng return/checkout;
 `9a86b8e9` nối ví sau ACK Exchange/recovery, giữ key/body và actor;
 `19950968` sửa avatar nhận URL mới sau lỗi cùng avatar ID;
 `b5b36d22` hoãn xin link bìa riêng tới gần viewport và sửa retry ảnh;

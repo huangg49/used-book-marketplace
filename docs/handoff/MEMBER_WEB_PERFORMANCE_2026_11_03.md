@@ -4,6 +4,53 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Làm mới view ví sau ACK thanh toán PointOrder — 04/11/2026
+
+Nhánh `codex/member-web-point-order-wallet-cache`, base `450e0dd3`.
+Build base tái hiện: từ Ví mở phiên đã thắng, thanh toán PointOrder qua HTTP
+fixture rồi mở menu/Back về Ví trong staleTime; available vẫn 100.000 dù
+fixture server đã là 50.000 và giữ giao dịch 50.000. Cả SelfCollect và
+CarrierOutbound đều gặp. Các callback trước chỉ refresh auction/participation/
+point-order, không invalidate view ví.
+
+[WinnerPanel](../../apps/user-web/src/pages/AuctionDetailPage.tsx) nhận owner ID
+từ session ở parent và dùng helper ví ngay sau ACK `payPointOrder`. Actor cũ
+được helper từ chối theo kiểm tra hiện có. Không set tiền hoặc gọi helper trong
+finally/error. Không đổi payload/key/version/địa chỉ/phí, command, điều kiện
+thanh toán hoặc xử lý lost ACK. Contract pay PointOrder và ADR0044 giữ nguyên.
+Theo [ADR0071](../adr/0071-auction-bid-balance-check.md), bid/Auto/BuyNow chỉ
+kiểm cam kết, không giữ tiền; không gắn invalidation mới vào các lệnh đó.
+
+| Vai trò / entry | Điều kiện / kết quả | Nơi xem / bước tiếp |
+| --- | --- | --- |
+| Member thắng phiên → SelfCollect → Thanh toán | ACK pay, Order thành Fulfilling theo response fixture | Menu/Back về Ví đọc available và khoản giữ server mới |
+| Member thắng phiên → CarrierOutbound → Thanh toán | Giữ address ID/version và phí đã xem; fixture phí 0 | Cùng view ví; không đổi lựa chọn giao nhận sau trả tiền |
+| Member → retry sau mất ACK | Khóa lựa chọn, giữ key/body/version/address/fee | Chỉ ACK retry làm stale ví; không suy thành công từ lần lỗi |
+| Pay pending / bị 409 từ chối | Không invalidate ví từ kết quả chưa xác nhận | Giữ xử lý lỗi và cho phép intent mới như source cũ |
+
+[Browser fixture](../../apps/user-web/tests/point-order-wallet-cache.mjs) PASS
+12 ca trước/sau: 390/1440 × SelfCollect/CarrierOutbound × success/reject/lost ACK.
+Date cố định để cache không tự hết hạn, timers/motion chạy bình thường. Chặn
+socket và mọi external traffic; mọi HTTP API được fulfill bằng dữ liệu giả.
+Sau sửa menu/Back nhận available 50.000 và khoản giữ 50.000; pending/reject/
+unknown chưa có wallet read thêm. Recovery giữ nguyên request; definitive
+rejection nhả intent cũ. Kiểm payload giao nhận và addressVersion7/phí0;
+không là kiểm phí khác 0, giao nhận hoặc ledger thật. Không page error.
+
+- Build/typecheck, 354 unit/50 file, scoped lint và detector `[]` PASS.
+  Helper unit hiện có kiểm owner/family và read trước ACK trả muộn.
+- Đã xem ảnh Ví 390/1440. Cả 47 CSS production khớp byte; không đổi DOM/class,
+  asset, timing hoặc animation. Prop owner mới không render nội dung mới.
+- GET ví trong hành trình mobile 1→2, desktop 2→4 do cần đọc lại các view đã
+  cache. Đây là sửa độ đúng cache; không tuyên bố giảm request hoặc cải thiện LCP/INP.
+
+Evidence `.tmp/member-web-point-order-wallet-cache/`. Không chạy API/DB/provider,
+carrier/worker/settlement thật, native/thiết bị thật, human acceptance hoặc remote
+CI. READINESS và checkout demo giữ nguyên; không đóng gate giao nhận sau F2h.
+Gói này chỉ xác nhận ACK pay, không suy mọi thay đổi tiền bất đồng bộ từ worker
+đã được nối. Bước tối ưu tiếp: đo timer còn chạy khi không có việc/đã hết hạn,
+giữ nguyên đồng hồ đang chạy và animation trước khi quyết định thay đổi.
+
 ## Làm mới view ví sau lệnh đơn hàng / quan sát Completed — 04/11/2026
 
 Nhánh `codex/member-web-order-wallet-cache`, base `ac71b6dc`.
@@ -55,8 +102,8 @@ Socket.IO giả riêng; không là bằng chứng provider/chat server thật.
 Evidence `.tmp/member-web-order-wallet-cache/`, `.tmp/order-chat-workspace-qa/`.
 Node24.22.1/pnpm11.19.0. Không thay READINESS hoặc checkout demo. API/DB/provider
 thật, native/thiết bị thật, human acceptance và remote CI NOT RUN.
-Đấu giá/PointOrder còn cần kiểm riêng; ADR0071 xác nhận bid không giữ tiền,
-nên không suy mọi thao tác đấu giá đều thay đổi số dư ví.
+ACK pay PointOrder được kiểm riêng ở mục mới phía trên; ADR0071 xác nhận bid
+không giữ tiền, nên không suy mọi thao tác đấu giá đều thay đổi số dư ví.
 
 ## Làm mới các view sau khi nạp ví được ghi có — 04/11/2026
 
