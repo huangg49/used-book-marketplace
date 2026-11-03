@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, CircleCheck, Lock, X, Zap } from 'lucide-react'
 import { formatVnd } from '../../lib/routes'
-import { AUCTION_MAX_PRICE } from '../../services/auctions'
+import { AUCTION_MAX_PRICE, AUCTION_PRICE_DIGITS } from '../../services/auctions'
 import styles from './AutoBidDialog.module.css'
 import { lockPageScroll } from '../../lib/page-scroll'
 import { playAuctionMotion, sheetFrames } from '../../lib/auction-motion'
@@ -27,7 +27,7 @@ interface AutoBidDialogProps {
 function amountError(amount: number | null, floor: number, start: number, step: number) {
   if (!amount) return 'Nhập mức tối đa bạn chấp nhận.'
   if (amount < floor) return `Tối thiểu ${formatVnd(floor)}.`
-  if (amount > AUCTION_MAX_PRICE) return `Tối đa ${formatVnd(AUCTION_MAX_PRICE)}.`
+  if (amount > AUCTION_MAX_PRICE) return 'Số tiền vượt mức hệ thống hỗ trợ.'
   if ((amount - start) % step !== 0) {
     const up = start + Math.ceil((amount - start) / step) * step
     return `Giá đi theo bước ${formatVnd(step)}. Thử ${formatVnd(Math.min(up, AUCTION_MAX_PRICE))}.`
@@ -128,14 +128,14 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
                     aria-invalid={!!error}
                     aria-describedby={`${ids}-hint`}
                     onChange={(event) => {
-                      const digits = event.target.value.replace(/\D/g, '').slice(0, 7)
+                      const digits = event.target.value.replace(/\D/g, '').slice(0, AUCTION_PRICE_DIGITS)
                       setValue(digits ? Number(digits) : null)
                     }}
                   />
                   <span aria-hidden="true">₫</span>
                 </div>
                 <p id={`${ids}-hint`} className={error ? styles.error : styles.hint}>
-                  {error ?? `Từ ${formatVnd(floor)} đến ${formatVnd(AUCTION_MAX_PRICE)}, theo bước ${formatVnd(step)}.`}
+                  {error ?? `Từ ${formatVnd(floor)} trở lên, theo bước ${formatVnd(step)}.`}
                 </p>
               </div>
               <button type="button" className={styles.continue} disabled={!!error} onClick={() => setStage('confirm')}>

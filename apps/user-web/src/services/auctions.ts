@@ -89,7 +89,25 @@ export type PublicAuction = z.infer<typeof auctionSchema>
 export type AuctionParticipation = z.infer<typeof participationSchema>
 export type PointOrder = z.infer<typeof pointOrderSchema>
 
-export const AUCTION_MAX_PRICE = 1_000_000
+// ADR 0067: auction prices and declared values have no business ceiling, only
+// the exact-integer limit. Inputs accept 15 digits, which always stay below it.
+// ADR 0068: bid steps a Seller may choose before the auction opens.
+export const AUCTION_STEPS = [10_000, 20_000, 50_000, 100_000] as const
+// A Seller may also enter their own step: a multiple of 1.000đ in this range.
+export const AUCTION_STEP_MIN = 1_000
+export const AUCTION_STEP_MAX = 10_000_000
+export const AUCTION_STEP_UNIT = 1_000
+export type AuctionStep = number
+
+export function auctionStepError(step: number | null) {
+  if (!step) return 'Nhập bước giá.'
+  if (step < AUCTION_STEP_MIN || step > AUCTION_STEP_MAX) return 'Bước giá từ 1.000đ đến 10.000.000đ.'
+  if (step % AUCTION_STEP_UNIT !== 0) return 'Bước giá phải là bội số của 1.000đ.'
+  return undefined
+}
+
+export const AUCTION_MAX_PRICE = Number.MAX_SAFE_INTEGER
+export const AUCTION_PRICE_DIGITS = 15
 
 export function listAuctions(phase: 'live' | 'upcoming' = 'live') {
   return session.publicRequest(phase === 'live' ? '/auctions' : `/auctions?phase=${phase}`, auctionListSchema)
@@ -105,12 +123,13 @@ export function auctionPhase(a: Pick<AuctionSummary, 'phase' | 'state' | 'startA
 }
 
 // ADR 0047 limits, mirrored for the form; the server stays authoritative.
-export const AUCTION_MIN_HOURS = 1
-export const AUCTION_MAX_HOURS = 168
+// ADR 0069: the length is sent in whole seconds within these bounds.
+export const AUCTION_MIN_DURATION_S = 3_600
+export const AUCTION_MAX_DURATION_S = 168 * 3_600
 export const AUCTION_MIN_LEAD_MS = 5 * 60_000
 export const AUCTION_SCHEDULE_HORIZON_MS = 7 * 24 * 3_600_000
 export const AUCTION_MAX_SCHEDULE_EDITS = 5
-export type ScheduleBody = { expectedVersion: number; startAt: string | null; durationHours: number }
+export type ScheduleBody = { expectedVersion: number; startAt: string | null; durationSeconds: number }
 /** The seller publishes a Passed intake now (startAt null) or at a later time. */
 export function publishAuction(intakeId: string, body: ScheduleBody, key: string) {
   return command(`/auction-intakes/${intakeId}/publish`, key, body)
@@ -224,7 +243,7 @@ export function listHandoverPoints() {
 }
 export type CreateIntakeBody = {
   listingId: string; expectedListingVersion: number; pointId: string
-  startPrice: number; step: 10000 | 50000; buyNowPrice: number | null
+  startPrice: number; step: AuctionStep; buyNowPrice: number | null
   declaredValue?: number | null
 }
 export function createAuctionIntake(body: CreateIntakeBody, key: string) {
@@ -241,13 +260,13 @@ export function intakePriceErrors(
 ) {
   const errors: { startPrice?: string; buyNowPrice?: string; declaredValue?: string } = {}
   if (!startPrice) errors.startPrice = 'Nhập giá khởi điểm.'
-  else if (startPrice < AUCTION_MIN_PRICE || startPrice > AUCTION_MAX_PRICE) errors.startPrice = 'Giá khởi điểm từ 10.000đ đến 1.000.000đ.'
+  else if (startPrice < AUCTION_MIN_PRICE || startPrice > AUCTION_MAX_PRICE) errors.startPrice = 'Giá khởi điểm tối thiểu 10.000đ.'
   if (declaredValue !== undefined) {
     if (!declaredValue) errors.declaredValue = 'Nhập giá trị khai báo của sách.'
-    else if (declaredValue < AUCTION_MIN_PRICE || declaredValue > AUCTION_MAX_PRICE) errors.declaredValue = 'Giá trị khai báo từ 10.000đ đến 1.000.000đ.'
+    else if (declaredValue < AUCTION_MIN_PRICE || declaredValue > AUCTION_MAX_PRICE) errors.declaredValue = 'Giá trị khai báo tối thiểu 10.000đ.'
   }
   if (buyNowPrice !== null) {
-    if (buyNowPrice <= (startPrice ?? 0) || buyNowPrice > AUCTION_MAX_PRICE) errors.buyNowPrice = 'Giá mua ngay phải lớn hơn giá khởi điểm và không quá 1.000.000đ.'
+    if (buyNowPrice <= (startPrice ?? 0) || buyNowPrice > AUCTION_MAX_PRICE) errors.buyNowPrice = 'Giá mua ngay phải lớn hơn giá khởi điểm.'
     else if (startPrice && (buyNowPrice - startPrice) % step !== 0) {
       const up = Math.min(startPrice + Math.ceil((buyNowPrice - startPrice) / step) * step, AUCTION_MAX_PRICE)
       errors.buyNowPrice = `Giá mua ngay phải bằng giá khởi điểm cộng một số bước giá. Thử ${up.toLocaleString('vi-VN')}đ.`

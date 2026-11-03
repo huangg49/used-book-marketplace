@@ -15,8 +15,13 @@ export type Outcome = {
   text: string;
   // false keeps the panel open for another attempt, e.g. a wrong handover code.
   close: boolean;
+  // Reopen the same row on its next step (already reloaded), e.g. receive → inspect.
+  next?: boolean;
 };
 export type Finish = (outcome: Omit<Outcome, "close">) => void;
+// One-click path that fills the form with a valid answer and goes straight to
+// the confirmation, e.g. "every item matches → Pass".
+export type Shortcut = { label: string; apply: () => void };
 
 // One confirmed command on one queue row. The request body and key are frozen
 // when the person confirms; an unknown result is retried as the same request.
@@ -40,6 +45,9 @@ export function ActionPanel<R = CommandReceipt>({
   refusalText = "Thao tác chưa được thực hiện. Danh sách đã tải lại theo trạng thái mới nhất.",
   refusalRecoveryText = "Thao tác chưa được chấp nhận. Tải trạng thái mới nhất để kiểm tra.",
   refusalRecoveryLabel = "Tải kết quả mới nhất",
+  confirm = true,
+  shortcut,
+  submitRef,
 }: {
   label: string;
   title: string;
@@ -61,6 +69,11 @@ export function ActionPanel<R = CommandReceipt>({
   refusalText?: string;
   refusalRecoveryText?: string;
   refusalRecoveryLabel?: string;
+  // false sends on submit when the button already states the whole action.
+  confirm?: boolean;
+  shortcut?: Shortcut;
+  // Lets a field submit on Enter through the same validate/confirm path.
+  submitRef?: { current: (() => void) | null };
 }) {
   const queryClient = useQueryClient();
   const [intent, setIntent] = useState<Intent>();
@@ -153,6 +166,13 @@ export function ActionPanel<R = CommandReceipt>({
     }
   }
   const locked = busy || !!intent;
+  const submit = () => {
+    setOutcome(undefined);
+    if (!validate()) return;
+    if (confirm) dialog.current?.showModal();
+    else void send();
+  };
+  if (submitRef) submitRef.current = locked ? null : submit;
   return (
     <section className="decision-panel operation-panel" aria-label={label}>
       <h3>{title}</h3>
@@ -183,13 +203,24 @@ export function ActionPanel<R = CommandReceipt>({
         </Notice>
       ) : (
         <div className="actions">
+          {shortcut && (
+            <Button
+              className="primary"
+              disabled={locked}
+              onClick={() => {
+                setOutcome(undefined);
+                shortcut.apply();
+                dialog.current?.showModal();
+              }}
+            >
+              {shortcut.label}
+            </Button>
+          )}
           <Button
-            className="primary"
+            className={shortcut ? undefined : "primary"}
+            busy={busy && !confirm}
             disabled={locked}
-            onClick={() => {
-              setOutcome(undefined);
-              if (validate()) dialog.current?.showModal();
-            }}
+            onClick={submit}
           >
             {submitLabel}
           </Button>

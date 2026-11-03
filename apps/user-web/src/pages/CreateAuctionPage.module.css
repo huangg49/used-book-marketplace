@@ -46,6 +46,19 @@
 .bookList, .points { display: grid; gap: 10px; }
 .bookOption, .pointOption { position: relative; display: grid; align-items: center; gap: 16px; padding: 12px 44px 12px 12px; border: 1px solid var(--shop-line); border-radius: 10px; background: var(--shop-paper); cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease; }
 .bookOption { grid-template-columns: 64px minmax(0, 1fr) auto; }
+/* Long shelves scroll inside the step instead of pushing the form down. */
+.bookList { max-height: min(468px, 62vh); overflow-y: auto; overscroll-behavior: contain; padding: 4px 8px 4px 4px; margin: -4px -8px -4px -4px; scrollbar-width: thin; scrollbar-color: var(--shop-control) transparent; }
+.bookList::-webkit-scrollbar { width: 8px; }
+.bookList::-webkit-scrollbar-thumb { border-radius: 8px; background: var(--shop-control); }
+.bookSearch { display: flex; align-items: center; gap: 8px; max-width: 480px; min-height: 44px; padding: 0 6px 0 14px; border: 1px solid var(--shop-control); border-radius: 10px; background: var(--shop-paper); color: var(--shop-muted); }
+.bookSearch:focus-within { border-color: var(--shop-wine); box-shadow: 0 0 0 3px color-mix(in srgb, var(--shop-wine) 18%, transparent); }
+.bookSearch input, .bookSearch input:focus { flex: 1; min-width: 0; min-height: 42px; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; outline: none; font: inherit; font-size: .9375rem; color: var(--shop-ink); }
+.bookSearch input::-webkit-search-cancel-button { display: none; }
+.bookSearch button { width: 32px; height: 32px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--shop-muted); cursor: pointer; }
+.bookSearch button:hover { background: var(--shop-shelf); color: var(--shop-wine); }
+.noMatch { display: none; margin: 0; font-size: .875rem; color: var(--shop-muted); }
+.bookList:not(:has(> label)) { display: none; }
+.bookList:not(:has(> label)) + .noMatch { display: block; }
 .pointOption { grid-template-columns: auto minmax(0, 1fr) auto; padding-left: 16px; }
 .bookOption input, .pointOption input, .segment input, .toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .bookOption:hover, .pointOption:hover { border-color: var(--shop-control); }
@@ -69,16 +82,35 @@
 
 .field { display: grid; gap: 8px; max-width: 420px; }
 .field > label, .label { font-size: .85rem; font-weight: 700; }
-.segment { display: inline-grid; grid-auto-flow: column; width: fit-content; padding: 4px; border-radius: 8px; background: var(--shop-shelf); gap: 4px; }
-.segment label { position: relative; min-height: 40px; min-width: 108px; display: grid; place-items: center; padding: 6px 16px; border-radius: 6px; font-weight: 600; font-size: .875rem; color: var(--shop-muted); cursor: pointer; font-variant-numeric: tabular-nums; }
+/* Options size to their labels and wrap as whole chips instead of squeezing text. */
+.segment { display: flex; flex-wrap: wrap; width: 100%; max-width: 560px; padding: 4px; border-radius: 8px; background: var(--shop-shelf); gap: 4px; }
+.segment label { position: relative; min-height: 40px; flex: 1 0 auto; min-width: 0; white-space: nowrap; display: grid; place-items: center; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: .875rem; color: var(--shop-muted); cursor: pointer; font-variant-numeric: tabular-nums; }
 .segmentOn { background: var(--shop-wine); color: var(--shop-cream) !important; }
-.money { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto 44px; align-items: center; border: 1px solid var(--shop-control); border-radius: 8px; background: var(--shop-paper); overflow: hidden; }
-.money:focus-within { outline: 3px solid var(--shop-wine); outline-offset: 2px; }
-.money input { border: 0; background: transparent; min-height: 48px; padding: 0 4px 0 8px; font: 700 1.125rem var(--shop-body); color: var(--shop-ink); text-align: right; font-variant-numeric: tabular-nums; min-width: 0; outline: none; }
-.money > span { padding-right: 10px; font-weight: 700; color: var(--shop-muted); }
-.money button { height: 48px; border: 0; background: var(--shop-shelf); color: var(--shop-wine); cursor: pointer; display: grid; place-items: center; }
-.money button:disabled { color: var(--shop-line); cursor: not-allowed; }
-.invalid { border-color: var(--shop-error); }
+.stepCustom { flex: 1 0 128px; display: flex; align-items: center; justify-content: center; gap: 4px; min-height: 40px; padding: 0 12px; border-radius: 6px; font-weight: 700; font-size: .875rem; }
+/* .segment hides its radio inputs; undo that for the typed step. */
+.stepCustom input:not([type="checkbox"]):not([type="radio"]) { position: static; opacity: 1; height: auto; width: 0; flex: 1; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; outline: none; color: inherit; font: inherit; text-align: center; font-variant-numeric: tabular-nums; }
+/* Size the box to its digits so the number and "đ" sit together in the middle of the chip. */
+@supports (field-sizing: content) { .stepCustom input:not([type="checkbox"]):not([type="radio"]) { field-sizing: content; flex: 0 1 auto; width: auto; min-width: 1ch; max-width: 100%; } }
+.stepCustom input::placeholder { color: color-mix(in srgb, var(--shop-cream) 55%, transparent); }
+.stepCustom:focus-within { outline: 3px solid var(--shop-wine); outline-offset: 2px; }
+.stepCustomInvalid { box-shadow: inset 0 0 0 2px var(--shop-error); }
+.money { display: flex; align-items: center; min-height: 52px; padding-left: 14px; border: 1px solid var(--shop-control); border-radius: 10px; background: var(--shop-paper); transition: border-color .15s, box-shadow .15s; }
+.money:hover { border-color: var(--shop-wine); }
+.money:focus-within { border-color: var(--shop-wine); box-shadow: 0 0 0 3px color-mix(in srgb, var(--shop-wine) 18%, transparent); }
+/* global.css styles every text input at (0,3,1); match it so the field stays one surface. */
+.moneyValue { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 4px; padding: 13px 0; cursor: text; overflow: hidden; }
+.money .moneyValue input:not([type="checkbox"]):not([type="radio"]) { flex: none; max-width: 100%; min-width: 1ch; min-height: 0; height: auto; padding: 0; border: 0; border-radius: 0; box-shadow: none; background: transparent; outline: none; font: 700 1.125rem/1.4 var(--shop-body); color: var(--shop-ink); text-align: left; font-variant-numeric: tabular-nums; }
+.money .moneyValue input::placeholder { color: var(--shop-line); }
+@supports (field-sizing: content) { .money .moneyValue input:not([type="checkbox"]):not([type="radio"]) { field-sizing: content; width: auto !important; } }
+.money .unit { font-weight: 700; font-size: .9375rem; color: var(--shop-muted); }
+.moneySteps { display: flex; align-self: stretch; border-left: 1px solid var(--shop-line); }
+.moneySteps button { width: 44px; border: 0; background: transparent; color: var(--shop-wine); cursor: pointer; display: grid; place-items: center; transition: background .15s; }
+.moneySteps button + button { border-left: 1px solid var(--shop-line); }
+.moneySteps button:last-child { border-radius: 0 9px 9px 0; }
+.moneySteps button:hover:not(:disabled) { background: var(--shop-shelf); }
+.moneySteps button:active:not(:disabled) { transform: scale(.92); }
+.moneySteps button:disabled { color: var(--shop-line); cursor: not-allowed; }
+.money.invalid { border-color: var(--shop-error); }
 .toggle { position: relative; display: flex; gap: 12px; align-items: flex-start; cursor: pointer; max-width: 560px; padding: 4px 0; }
 .toggle::before { content: ''; flex: none; width: 20px; height: 20px; margin-top: 2px; border: 1.5px solid var(--shop-control); border-radius: 4px; background: var(--shop-paper); }
 .toggle:has(input:checked)::before { background: var(--shop-wine) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fcf8db' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/14px no-repeat; border-color: var(--shop-wine); }
@@ -88,6 +120,19 @@
 .chips button { min-height: 44px; display: grid; padding: 6px 14px; border: 1px solid var(--shop-line); border-radius: 8px; background: var(--shop-paper); color: var(--shop-ink); font-weight: 700; font-size: .875rem; cursor: pointer; text-align: left; font-variant-numeric: tabular-nums; }
 .chips button span { font-weight: 400; font-size: .6875rem; color: var(--shop-muted); }
 .chips button[aria-pressed='true'] { border-color: var(--shop-wine); background: var(--auction-paper-soft); }
+
+/* Confirm dialog: book, four price facts, then what happens next. */
+.confirm { display: grid; gap: 14px; }
+.confirmBook { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1rem; color: var(--shop-ink); }
+.confirmBook svg { flex: none; color: var(--shop-wine); }
+.confirmPrices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; margin: 0; border: 1px solid var(--shop-line); border-radius: 10px; overflow: hidden; background: var(--shop-line); }
+.confirmPrices div { display: grid; gap: 2px; padding: 10px 14px; background: var(--shop-paper); }
+.confirmPrices dt { font-size: .75rem; font-weight: 700; color: var(--shop-wine); }
+.confirmPrices dd { margin: 0; font-weight: 700; font-size: .9375rem; color: var(--shop-ink); font-variant-numeric: tabular-nums; }
+.confirmLabel { margin: 4px 0 0; font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--shop-wine); }
+.confirmSteps { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; font-size: .875rem; line-height: 1.6; color: var(--shop-ink); }
+.confirmSteps li { display: flex; gap: 10px; align-items: flex-start; }
+.confirmSteps svg { flex: none; margin-top: 3px; color: var(--shop-wine); }
 
 .submitError { margin: 0; padding: 12px 16px; border-left: 3px solid var(--shop-error); background: var(--shop-paper); color: var(--shop-error); font-size: .875rem; line-height: 1.7; }
 .submitRow { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
@@ -119,7 +164,6 @@
 .timeline strong { font-size: .8125rem; color: var(--shop-ink); }
 .timelineNow > svg { background: var(--shop-wine) !important; color: var(--shop-cream) !important; }
 .demo { margin: 0; font-size: .75rem; line-height: 1.8; color: var(--shop-muted); }
-.confirmList { margin: 0; padding-left: 18px; display: grid; gap: 8px; font-size: .875rem; line-height: 1.7; }
 
 /* Success receipt follows the book-journey receipt geometry. */
 .receipt { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 40px; align-items: center; max-width: 960px; margin: 40px auto; padding: 40px; border-radius: 12px; background: var(--shop-paper); }

@@ -46,8 +46,8 @@ phương thức, payer và phí khi giao kết; cấu hình mới không đổi 
 | POL-35 | point_service_fee | Kiểm tra và giữ sách: 0đ ở demo. Quá hạn không tự phát sinh phí lưu kho. Chi phí vận hành mô phỏng do nền tảng chịu. |
 | POL-36 | per_carrier_leg_fee | 30.000đ/chặng được chọn, self dropoff/collect 0đ. POL-22 vẫn là ship một chiều Order trực tiếp. Đây không phải báo giá thị trường. |
 | POL-37 | collection_code | Mã ngẫu nhiên 6 số, hiệu lực 10 phút, gắn người nhận + sách + điểm; 5 lần sai/15 phút/handover, không ghi raw mã vào log |
-| POL-38 | auction_duration | Seller chọn 1–168 giờ (mặc định 24), mở ngay hoặc hẹn trong 7 ngày ([ADR 0047](../adr/0047-seller-scheduled-auctions.md)); không gia hạn phút cuối, giờ server quyết định |
-| POL-39 | auction_prices | 10.000–1.000.000đ; bước giá 10.000đ hoặc 50.000đ do Seller chọn trước mở; start, bid, max và buy-now cùng lưới `start + n × step` |
+| POL-38 | auction_duration | Seller nhập giờ/phút/giây trong 1–168 giờ (mặc định 24, [ADR0069](../adr/0069-auction-duration-seconds.md)), mở ngay hoặc hẹn trong 7 ngày ([ADR 0047](../adr/0047-seller-scheduled-auctions.md)); không gia hạn phút cuối, giờ server quyết định |
+| POL-39 | auction_prices | Từ 10.000đ, không trần ([ADR0067](../adr/0067-uncapped-auction-amounts.md)); bước giá chọn 10.000đ, 20.000đ, 50.000đ, 100.000đ hoặc tự nhập bội số 1.000đ từ 1.000đ đến 10.000.000đ, do Seller đặt trước mở ([ADR0068](../adr/0068-auction-step-options.md)); start, bid, max và buy-now cùng lưới `start + n × step` |
 | POL-40 | winner_payment | 24 giờ (cả khi thắng nhờ BuyNow sau cửa sổ 60 giây, ADR 0043); Order BuyNowPending cũ giữ hạn 15 phút POL-01; không tự chuyển người đứng thứ hai |
 | POL-41 | auction_limits | Tối đa 2 intake/auction chưa kết thúc của Seller; 5 phiên người dùng đang có cam kết bid chưa giải phóng; 30 lệnh bid/Auto mỗi phút/tài khoản |
 | POL-42 | platform_incident_fund | Số dư mở đầu demo 2.000.000đ, có journal nguồn vốn mô phỏng. Không tự nạp thêm khi hết; chỉ chi theo quyết định độc lập và nguồn còn lại. |
@@ -113,7 +113,7 @@ chuyển Δ, carrier fees đã phát sinh không bị ghi lại thành doanh thu
 Auction intake: Seller trả/giữ phí inbound ngay khi chọn ship. Không có Buyer trước
 khi thắng/mua ngay nên không thu P/outbound trước đó. Người đấu chọn self-collect
 hoặc địa chỉ ship trong vùng khi bid đầu; phương thức/quote khóa cho tới kết quả.
-Max bid chỉ là trần tiền sách, UI luôn hiển thị thêm ship. Không giữ tiền mọi bidder;
+Max bid chỉ là trần tiền sách, UI luôn hiển thị thêm ship. Không giữ tiền mọi bidder, nhưng từ 03/11/2026 ([ADR 0071](../adr/0071-auction-bid-balance-check.md)) mỗi lượt trả/Auto/Mua ngay cần số dư khả dụng đủ cho mức đó cộng các cam kết đang mở;
 khi thắng mới cần đủ available để thanh toán P+phí outbound. Rủi ro người thắng
 không trả được xử lý bằng PaymentExpired, không tuyên bố tiền đã được bảo đảm.
 
@@ -266,7 +266,7 @@ khi incident/gian lận, thông báo bidder và không tự chọn người th�
 
 FR-AU03: manual bid là mức trả có cam kết ngay, phải >= currentPrice+step, hoặc
 >=start nếu chưa bid. Auto là cam kết cho phép hệ thống trả tối đa maxAmount bí mật.
-Cả hai cùng lưới POL-39, giới hạn maxAmount 1.000.000đ; lần Auto đầu phải có thể tham
+Cả hai cùng lưới POL-39, maxAmount không có trần (ADR0067); lần Auto đầu phải có thể tham
 gia ở mức bid tối thiểu. Auto không nâng giá khi không có đối thủ; hệ thống không
 ghi hàng nghìn bid giả khi hai Auto cạnh tranh mà tính một kết quả xác định.
 
@@ -291,7 +291,7 @@ nếu đã bị vượt, đánh dấu inactive. Bật lại là cam kết mới 
 Hành động tắt không làm giảm giá, không hồi sinh bidder đã bị vượt. UI phải giải
 thích tắt Auto không hủy nghĩa vụ đang dẫn. Retry cùng key không đổi thứ tự ưu tiên.
 
-FR-AU06: BuyNow tùy chọn; từ 27/10/2026 (ADR 0047) còn dùng được sau bid khi phiên đang mở, chưa ai mua ngay và giá hiện tại thấp hơn giá mua ngay; người đang dẫn không dùng. Request BuyNow và bid cùng đến được
+FR-AU06: BuyNow tùy chọn; từ 27/10/2026 (ADR 0047) còn dùng được sau bid khi phiên đang mở, chưa ai mua ngay và giá hiện tại thấp hơn giá mua ngay; từ 03/11/2026 ([ADR 0070](../adr/0070-leader-buy-now-and-rival-window.md)) người đang dẫn cũng dùng được (cửa sổ 60 giây), còn Mua ngay của người không dẫn mở cửa sổ 5 phút. Request BuyNow và bid cùng đến được
 phân xử atomically; đúng một bên thắng. Từ 19/10/2026 ([ADR 0043](../adr/0043-buy-now-challenge-window.md)):
 BuyNow là cam kết trả đúng giá buyNow, người bấm dẫn đầu, tắt BuyNow và phiên kết
 thúc tại min(endAt gốc, lúc BuyNow + 60 giây). Trong 60 giây người khác vẫn trả giá

@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { AuctionEmptyArt } from '../components/AuctionEmptyArt'
 import { AuctionGrid } from '../components/AuctionGrid'
 import { useSearchParams, Link } from 'react-router-dom'
-import { ArrowRight, BookOpen, ChevronDown, Gavel, HelpCircle, ShieldCheck, Store } from 'lucide-react'
+import { ArrowRight, BookOpen, ChevronDown, Gavel, HelpCircle, Search, ShieldCheck, SlidersHorizontal, Store, X } from 'lucide-react'
 import { AuctionCard } from '../components/AuctionCard'
 import { FilterSelect } from '../components/FilterSelect'
 import { useAuctionListLive } from '../hooks/useAuctionLive'
@@ -10,6 +12,11 @@ import { ROUTES } from '../lib/routes'
 import { useSession } from '../hooks/useSession'
 import styles from './AuctionListPage.module.css'
 import { outcomeUnknown } from '../hooks/useAuctionClock'
+import { conditions as conditionLabels } from '../lib/listing-labels'
+import {
+  CONDITIONS, ENDING, FILTER_KEYS, PRICE_RANGES, activeFilterCount, matches, readFilters,
+  type Condition, type Ending, type PriceRange,
+} from '../lib/auction-filters'
 
 const price = (a: AuctionSummary) => a.currentPrice ?? a.startPrice
 const SORTS: Record<string, { label: string; compare: (a: AuctionSummary, b: AuctionSummary) => number }> = {
@@ -65,13 +72,42 @@ export function AuctionListPage() {
     setParams(next, { replace: true })
   }
 
-  const point = params.get('point') ?? ''
-  const buyNowOnly = params.get('buyNow') === '1'
+  const filters = readFilters(params)
+  const { point, buyNow: buyNowOnly } = filters
   const sort = SORTS[params.get('sort') ?? ''] ? params.get('sort')! : 'endingSoon'
   const all = result.data?.items ?? []
   const points = [...new Set([...all.map((a) => a.pointName), ...(point ? [point] : [])])].sort()
-  const items = all.filter((a) => (!point || a.pointName === point) && (!buyNowOnly || a.buyNowPrice !== null)).sort(SORTS[sort]!.compare)
-  const filtered = !!point || buyNowOnly
+  const now = result.data ? Date.parse(result.data.serverTime) : Date.now()
+  const items = all.filter((a) => matches(a, filters, now)).sort(SORTS[sort]!.compare)
+  const activeCount = activeFilterCount(filters)
+  const filtered = activeCount > 0 || !!filters.q
+  // The search box types freely; the URL follows after a short pause.
+  const [query, setQuery] = useState(filters.q)
+  useEffect(() => {
+    if (query.trim() === filters.q) return
+    const timer = window.setTimeout(() => update('q', query.trim()), 250)
+    return () => window.clearTimeout(timer)
+  })
+  const clearFilters = () => {
+    const next = new URLSearchParams(params)
+    FILTER_KEYS.forEach((key) => next.delete(key))
+    setParams(next, { replace: true })
+    setQuery('')
+  }
+  const [panelOpen, setPanelOpen] = useState(activeCount > 0)
+  const toggleCondition = (c: Condition) => {
+    const set = new Set(filters.conditions)
+    if (set.has(c)) set.delete(c); else set.add(c)
+    update('cond', CONDITIONS.filter((x) => set.has(x)).join(','))
+  }
+  const chips: { key: string; label: string; clear: () => void }[] = [
+    ...(point ? [{ key: 'point', label: point, clear: () => update('point', '') }] : []),
+    ...filters.conditions.map((c) => ({ key: `cond-${c}`, label: conditionLabels[c], clear: () => toggleCondition(c) })),
+    ...(filters.price ? [{ key: 'price', label: PRICE_RANGES[filters.price].label, clear: () => update('price', '') }] : []),
+    ...(filters.ending ? [{ key: 'ends', label: `Kết thúc ${ENDING[filters.ending].label.toLowerCase()}`, clear: () => update('ends', '') }] : []),
+    ...(filters.noBids ? [{ key: 'noBids', label: 'Chưa có lượt trả giá', clear: () => update('noBids', '') }] : []),
+    ...(buyNowOnly ? [{ key: 'buyNow', label: 'Có giá mua ngay', clear: () => update('buyNow', '') }] : []),
+  ]
   const stale = result.isError && !!result.data && outcomeUnknown(result.error)
   const showData = !!result.data && (!result.isError || stale)
   const layoutKey = items.map((a) => a.id).join(':')
@@ -149,27 +185,42 @@ export function AuctionListPage() {
             </div>
           </div>
 
-          {/* Filter and Sort Toolbar */}
-          <div className={styles.toolbar} role="group" aria-label="Lọc và sắp xếp phiên đấu giá">
-            <div className={styles.point}>
-              <FilterSelect
-                id="auction-point"
-                label="Điểm nhận sách"
-                value={point}
-                onChange={(v) => update('point', v)}
-                options={[{ value: '', label: 'Tất cả điểm nhận' }, ...points.map((p) => ({ value: p, label: p }))]}
+          {/* Search, sort and the filter panel */}
+          <div className={styles.toolbar} role="search" aria-label="Tìm và lọc phiên đấu giá">
+            <label className={styles.search}>
+              <Search size={18} aria-hidden="true" />
+              <span className="sr-only">Tìm theo tên sách hoặc tác giả</span>
+              <input
+                type="search"
+                value={query}
+                placeholder="Tìm tên sách, tác giả…"
+                autoComplete="off"
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Escape' && query) { e.preventDefault(); setQuery('') } }}
               />
-            </div>
-
-            <label className={styles.checkbox}>
-              <input type="checkbox" checked={buyNowOnly} onChange={() => update('buyNow', buyNowOnly ? '' : '1')} />
-              <span>Chỉ hiện có giá mua ngay</span>
+              {query && (
+                <button type="button" className={styles.searchClear} onClick={() => setQuery('')} aria-label="Xóa nội dung tìm">
+                  <X size={16} aria-hidden="true" />
+                </button>
+              )}
             </label>
-
+            <button
+              type="button"
+              className={styles.filterToggle}
+              aria-expanded={panelOpen}
+              aria-controls="auction-filter-panel"
+              onClick={() => setPanelOpen((o) => !o)}
+            >
+              <SlidersHorizontal size={16} aria-hidden="true" />
+              <span>Bộ lọc</span>
+              {activeCount > 0 && <b className={styles.filterCount}>{activeCount}</b>}
+              <ChevronDown size={16} className={styles.filterChevron} aria-hidden="true" />
+            </button>
             <div className={styles.sort}>
               <FilterSelect
                 id="auction-sort"
                 label="Sắp xếp"
+                searchable={false}
                 value={sort}
                 onChange={(v) => update('sort', v === 'endingSoon' ? '' : v)}
                 options={Object.entries(SORTS).map(([value, s]) => ({ value, label: s.label }))}
@@ -177,20 +228,80 @@ export function AuctionListPage() {
             </div>
           </div>
 
-          {filtered && (
-            <div className={styles.activeFilterNote}>
-              <span>Đang lọc theo tiêu chí bạn chọn.</span>
-              <button
-                type="button"
-                className={styles.clearBtn}
-                onClick={() => {
-                  const next = new URLSearchParams(params)
-                  next.delete('point')
-                  next.delete('buyNow')
-                  setParams(next, { replace: true })
-                }}
-              >
-                Xóa bộ lọc
+          <div id="auction-filter-panel" className={styles.filterPanel} hidden={!panelOpen}>
+            <fieldset className={styles.filterGroup}>
+              <legend>Tình trạng sách</legend>
+              <div className={styles.chipRow}>
+                {CONDITIONS.map((c) => (
+                  <button key={c} type="button" className={styles.chip} aria-pressed={filters.conditions.includes(c)} onClick={() => toggleCondition(c)}>
+                    {conditionLabels[c]}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset className={styles.filterGroup}>
+              <legend>Mức giá hiện tại</legend>
+              <div className={styles.chipRow}>
+                {(Object.keys(PRICE_RANGES) as PriceRange[]).map((key) => (
+                  <button key={key} type="button" className={styles.chip} aria-pressed={filters.price === key} onClick={() => update('price', filters.price === key ? '' : key)}>
+                    {PRICE_RANGES[key].label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset className={styles.filterGroup}>
+              <legend>Kết thúc</legend>
+              <div className={styles.chipRow}>
+                {(Object.keys(ENDING) as Ending[]).map((key) => (
+                  <button key={key} type="button" className={styles.chip} aria-pressed={filters.ending === key} onClick={() => update('ends', filters.ending === key ? '' : key)}>
+                    {ENDING[key].label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <div className={styles.filterGroup}>
+              <span className={styles.groupLabel}>Điểm nhận và lựa chọn khác</span>
+              <div className={styles.filterRow}>
+                <div className={styles.point}>
+                  <FilterSelect
+                    id="auction-point"
+                    label="Điểm nhận sách"
+                    searchable={false}
+                    value={point}
+                    onChange={(v) => update('point', v)}
+                    options={[{ value: '', label: 'Tất cả điểm nhận' }, ...points.map((p) => ({ value: p, label: p }))]}
+                  />
+                </div>
+                <label className={styles.checkbox}>
+                  <input type="checkbox" checked={buyNowOnly} onChange={() => update('buyNow', buyNowOnly ? '' : '1')} />
+                  <span>Có giá mua ngay</span>
+                </label>
+                <label className={styles.checkbox}>
+                  <input type="checkbox" checked={filters.noBids} onChange={() => update('noBids', filters.noBids ? '' : '1')} />
+                  <span>Chưa có lượt trả giá</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {filtered && result.data && (
+            <div className={styles.activeFilterNote} role="status">
+              <span className={styles.resultCount}>
+                <b>{items.length}</b> / {all.length} phiên{filters.q && <> khớp “<b>{filters.q}</b>”</>}
+              </span>
+              {chips.length > 0 && (
+                <ul className={styles.activeChips} aria-label="Bộ lọc đang dùng">
+                  {chips.map((chip) => (
+                    <li key={chip.key}>
+                      <button type="button" onClick={chip.clear} aria-label={`Bỏ lọc ${chip.label}`}>
+                        {chip.label} <X size={13} aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <button type="button" className={styles.clearBtn} onClick={clearFilters}>
+                Xóa tất cả
               </button>
             </div>
           )}
@@ -226,7 +337,7 @@ export function AuctionListPage() {
 
           {result.data && !result.isError && items.length === 0 && (
             <div className={styles.empty}>
-              <BookOpen size={36} aria-hidden="true" />
+              <AuctionEmptyArt variant={filtered ? 'filter' : 'shelf'} />
               <h3>{filtered ? 'Chưa có phiên phù hợp' : 'Kệ đấu giá đang chờ những cuốn sách mới'}</h3>
               <p>
                 {filtered
@@ -237,12 +348,7 @@ export function AuctionListPage() {
                 <button
                   type="button"
                   className={styles.retryBtn}
-                  onClick={() => {
-                    const next = new URLSearchParams(params)
-                    next.delete('point')
-                    next.delete('buyNow')
-                    setParams(next, { replace: true })
-                  }}
+                  onClick={clearFilters}
                 >
                   Xem tất cả phiên
                 </button>

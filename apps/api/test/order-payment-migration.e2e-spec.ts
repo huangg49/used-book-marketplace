@@ -1,3 +1,7 @@
+import {
+  CAPITAL_INCREASE_JOURNAL_ID,
+  SIMULATED_CAPITAL,
+} from '../src/database/mongo/migrations/0055-simulator-capital-increase.js';
 import { randomUUID } from 'node:crypto';
 import {
   applyCollectionSpecs,
@@ -132,6 +136,13 @@ describe('order payment storage on populated wallet data (MongoDB)', () => {
         orderId: null,
         receiptId: null,
       },
+      {
+        _id: CAPITAL_INCREASE_JOURNAL_ID,
+        type: 'CapitalIncrease',
+        sequence: 2,
+        orderId: null,
+        receiptId: null,
+      },
     ]);
     expect(
       await rootDb
@@ -147,12 +158,12 @@ describe('order payment storage on populated wallet data (MongoDB)', () => {
           { $project: { _id: 0 } },
         ])
         .toArray(),
-    ).toEqual([{ debit: 100000000, credit: 100000000 }]);
+    ).toEqual([{ debit: SIMULATED_CAPITAL, credit: SIMULATED_CAPITAL }]);
     expect(
       await rootDb
         .collection('counters')
         .findOne({ _id: LEDGER_SEQUENCE_COUNTER as never }),
-    ).toEqual({ _id: LEDGER_SEQUENCE_COUNTER, value: 1 });
+    ).toEqual({ _id: LEDGER_SEQUENCE_COUNTER, value: 2 });
     expect(await rootDb.collection('topup_intents').countDocuments()).toBe(0);
     expect(await rootDb.collection('sale_quotes').countDocuments()).toBe(0);
     expect(await db.c.sale_quote_policies.find({}).toArray()).toEqual([
@@ -242,6 +253,6 @@ describe('order payment storage on populated wallet data (MongoDB)', () => {
     ).rejects.toMatchObject({ code: 121 });
     // Capital, clearing, platform commission and listing fee clearing only.
     expect(await rootDb.collection('wallet_accounts').countDocuments()).toBe(4);
-    expect(await rootDb.collection('ledger_journals').countDocuments()).toBe(1);
+    expect(await rootDb.collection('ledger_journals').countDocuments()).toBe(2);
   });
 });

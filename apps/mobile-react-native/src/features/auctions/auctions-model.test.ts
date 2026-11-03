@@ -9,10 +9,13 @@ import {
   canReschedule,
   createScheduleCommand,
   durationAllowed,
+  durationLabel,
   intakePriceErrors,
   isOpen,
   isScheduled,
   startChoices,
+  fundsHint,
+  fundsShortfall,
   receiptMessage,
   standingOf,
 } from "./auctions-model";
@@ -53,16 +56,17 @@ const me = (over: Partial<Participation> = {}): Participation => ({
 });
 
 describe("auction amounts", () => {
-  it("keeps bids on the start + n·step grid between the floor and the cap", () => {
+  it("keeps bids on the start + n·step grid from the floor up", () => {
     expect(amountError(null, 350_000, 200_000, 50_000)).toMatch(/Nhập/);
     expect(amountError(300_000, 350_000, 200_000, 50_000)).toMatch(/Tối thiểu/);
     expect(amountError(370_000, 350_000, 200_000, 50_000)).toMatch(/400\.000/);
-    expect(amountError(1_050_000, 350_000, 200_000, 50_000)).toMatch(/Tối đa/);
+    expect(amountError(1_050_000, 350_000, 200_000, 50_000)).toBeNull();
+    expect(amountError(Number.MAX_SAFE_INTEGER + 1, 350_000, 200_000, 50_000)).toMatch(/vượt mức/);
     expect(amountError(400_000, 350_000, 200_000, 50_000)).toBeNull();
   });
-  it("offers quick picks from the minimum and stops at the cap", () => {
+  it("offers quick picks from the minimum, past the old 1,000,000 cap", () => {
     expect(bidOptions(350_000, 50_000)).toEqual([350_000, 400_000, 450_000]);
-    expect(bidOptions(950_000, 50_000)).toEqual([950_000, 1_000_000]);
+    expect(bidOptions(950_000, 50_000)).toEqual([950_000, 1_000_000, 1_050_000]);
   });
   it("lets a leader raise a ceiling above their own level only", () => {
     expect(autoFloor(auction(), null)).toBe(350_000);
@@ -83,6 +87,14 @@ describe("standing (FR-AU04)", () => {
     expect(receiptMessage("Manual", 300_000, { currentPrice: 300_000, leading: false })).toMatch(/trước bạn/);
     expect(receiptMessage("Manual", 300_000, { currentPrice: 350_000, leading: false })).toMatch(/cao hơn/);
     expect(receiptMessage("Auto", 500_000, { currentPrice: 350_000, leading: true })).toMatch(/dẫn giá ở 350\.000/);
+    // ADR 0071: balance hints come from the member's own available balance.
+    expect(fundsShortfall(300_000, 100_000)).toBe(200_000);
+    expect(fundsShortfall(300_000, null)).toBe(0);
+    expect(fundsHint(300_000, 100_000)).toMatch(/cần nạp thêm 200\.000/);
+    expect(fundsHint(50_000, 100_000)).toMatch(/Số dư khả dụng 100\.000/);
+    // ADR 0070: a non-leader's Buy Now gives others 5 minutes, the leader's 60 seconds.
+    expect(receiptMessage("BuyNow", 600_000, { currentPrice: 600_000, leading: true })).toMatch(/5 phút/);
+    expect(receiptMessage("BuyNow", 600_000, { currentPrice: 600_000, leading: true }, true)).toMatch(/60 giây/);
   });
 });
 
@@ -175,12 +187,17 @@ describe("ADR 0047 scheduled auctions", () => {
       expect(c.at!).toBeLessThanOrEqual(start + 7 * 24 * 3_600_000);
     }
   });
+  it("labels second-precision lengths (ADR 0069)", () => {
+    expect(durationLabel(24 * 3600)).toBe("1 ngày");
+    expect(durationLabel(5415)).toBe("1 giờ 30 phút 15 giây");
+    expect(durationLabel(26 * 3600 + 60)).toBe("1 ngày 2 giờ 1 phút");
+  });
   it("keeps a live auction open at least one more hour", () => {
-    expect(durationAllowed(3, start, start + 2 * 3_600_000)).toBe(true);
-    expect(durationAllowed(2, start, start + 2 * 3_600_000)).toBe(false);
+    expect(durationAllowed(3 * 3600, start, start + 2 * 3_600_000)).toBe(true);
+    expect(durationAllowed(2 * 3600, start, start + 2 * 3_600_000)).toBe(false);
   });
   it("freezes publish and reschedule requests", () => {
-    const body = { expectedVersion: 4, startAt: null, durationHours: 24 };
+    const body = { expectedVersion: 4, startAt: null, durationSeconds: 24 * 3600 };
     expect(createScheduleCommand({ kind: "publish", intakeId: "i" }, body, "k")).toEqual({
       path: "/auction-intakes/i/publish",
       body: JSON.stringify(body),

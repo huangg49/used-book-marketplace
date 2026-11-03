@@ -1,0 +1,30 @@
+.duration { display: grid; gap: 10px; --line: var(--shop-line, #d9cbbd); --shelf: var(--shop-shelf, #f4eddf); }
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.label { font-size: .8125rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--shop-muted); }
+.total { font-size: .8125rem; font-weight: 700; color: var(--shop-wine); }
+
+/* One clock-like field: 24 giờ : 00 phút : 00 giây. */
+.clock { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; min-height: 56px; padding: 0 6px; border: 1px solid var(--shop-control); border-radius: 10px; background: var(--shop-paper); transition: border-color 140ms ease-out, box-shadow 140ms ease-out; }
+.clock:hover { border-color: var(--shop-wine); }
+.clock:focus-within { border-color: var(--shop-wine); box-shadow: 0 0 0 1px var(--shop-wine); }
+.clock[data-disabled] { opacity: .6; }
+.segment { position: relative; display: flex; align-items: baseline; justify-content: center; gap: 4px; min-width: 0; }
+.colon { position: absolute; left: -4px; top: 50%; transform: translateY(-55%); color: var(--shop-control); font-size: 1.25rem; font-weight: 700; }
+/* Raised specificity: the global form rule would otherwise draw a box inside the clock. */
+.duration .clock .segment input { width: 3.2ch; min-width: 0; min-height: 0; height: 40px; padding: 0; margin: 0; border: 0; border-radius: 6px; background: transparent; box-shadow: none; outline: none; color: var(--shop-ink); font: inherit; font-size: 1.5rem; font-weight: 700; line-height: 1; text-align: right; font-variant-numeric: tabular-nums; caret-color: var(--shop-wine); }
+.duration .clock .segment input:focus { background: var(--shelf); color: var(--shop-wine); border: 0; box-shadow: none; }
+.segment[data-unit] { cursor: ns-resize; border-radius: 8px; transition: background-color 120ms ease-out; }
+.segment[data-unit]:hover { background: var(--shelf); }
+.duration .clock .segment input { cursor: ns-resize; }
+.duration .clock .segment input:focus { cursor: text; }
+.unit { font-size: .78rem; font-weight: 600; color: var(--shop-muted); }
+
+/* Even 4-up grid of presets instead of a ragged wrap. */
+.presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.presets button { min-height: 34px; padding: 0 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--shop-paper); color: var(--shop-ink); font: inherit; font-size: .78rem; font-weight: 600; white-space: nowrap; cursor: pointer; transition: background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out; }
+.presets button:hover:not(:disabled) { border-color: var(--shop-wine); color: var(--shop-wine); }
+.presets button[aria-pressed="true"], .presets button[aria-pressed="true"]:hover:not(:disabled) { border-color: var(--shop-wine); background: var(--shop-wine); color: var(--shop-cream); }
+.presets button[aria-pressed="true"]:hover:not(:disabled) { background: #7c2320; }
+.presets button:focus-visible { outline: 2px solid var(--shop-wine); outline-offset: 2px; }
+.presets button:disabled { opacity: .5; cursor: not-allowed; }
+@media (max-width: 380px) { .presets { grid-template-columns: repeat(2, minmax(0, 1fr)); } .duration .clock .segment input { font-size: 1.25rem; } }

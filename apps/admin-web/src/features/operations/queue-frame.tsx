@@ -15,6 +15,7 @@ import type { ActionContext, QueuePanel, Row } from "./queue-panel";
 import { MotionPanel } from "../../core/MotionPanel";
 import { useListMotion, useTaskArrival } from "../../core/task-motion";
 import styles from "../../core/task-motion.module.css";
+import { EmptyArt, type EmptyArtVariant } from "../../core/EmptyArt";
 
 export function OperationsQueue({
   title,
@@ -37,7 +38,7 @@ export function OperationsQueue({
   result: UseQueryResult<unknown>;
   serverTime?: string;
   rows: Row[];
-  empty: { title: string; body: ReactNode };
+  empty: { title: string; body: ReactNode; art?: EmptyArtVariant };
   panel: QueuePanel;
   // A page-level command (e.g. adding a point) shares the notice and refresh.
   extra?: (context: ActionContext) => ReactNode;
@@ -77,7 +78,12 @@ export function OperationsQueue({
         <h1>{title}</h1>
         <p className="intro">{intro}</p>
       </header>
-      <div className="queue-toolbar">
+      <div className="queue-toolbar queue-status">
+        <p className="muted">
+          {order}{" "}
+          {result.data !== undefined &&
+            `Đang hiển thị ${rows.length} ${unit}.${serverTime ? ` Cập nhật ${dateText(serverTime)}.` : ""}`}
+        </p>
         <Button
           busy={result.isFetching}
           disabled={pending}
@@ -86,12 +92,11 @@ export function OperationsQueue({
           Cập nhật danh sách
         </Button>
       </div>
-      {extra?.({ onFinish: finish, onPending: setPending, reconcile })}
-      <p className="muted">
-        {order}{" "}
-        {result.data !== undefined &&
-          `Đang hiển thị ${rows.length} ${unit}.${serverTime ? ` Cập nhật ${dateText(serverTime)}.` : ""}`}
-      </p>
+      {extra && (
+        <div className="queue-extra">
+          {extra({ onFinish: finish, onPending: setPending, reconcile })}
+        </div>
+      )}
       {notice && receiptIndex === undefined && (
         <OperationReceipt value={notice} present={presentNotice} />
       )}
@@ -102,7 +107,7 @@ export function OperationsQueue({
       />
       {result.isSuccess && rows.length === 0 && (
         <div className="empty">
-          <span className="folio">—</span>
+          <EmptyArt variant={empty.art} />
           <h2>{empty.title}</h2>
           <p>{empty.body}</p>
         </div>
@@ -163,7 +168,7 @@ export function OperationsQueue({
                       row.action.render({
                         onFinish: (outcome) => {
                           setReceiptIndex(index);
-                          setOpen(undefined);
+                          setOpen(outcome.next ? row.id : undefined);
                           setNotice(outcome);
                         },
                         onPending: setPending,

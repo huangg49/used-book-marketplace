@@ -7,6 +7,23 @@ import type { ActionContext } from "./queue-panel";
 // intake. Every rule is checked again by the API (assignment, deadline, state).
 
 const SHELF = /^[A-Z0-9-]{1,20}$/;
+// Per-desk convenience only: the last shelves used on this browser.
+const RECENT_KEY = "latlai.recentShelves";
+const recentShelves = (): string[] => {
+  try {
+    const value = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
+    return Array.isArray(value) ? value.filter((v) => typeof v === "string" && SHELF.test(v)).slice(0, 5) : [];
+  } catch {
+    return [];
+  }
+};
+const rememberShelf = (code: string) => {
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify([code, ...recentShelves().filter((v) => v !== code)].slice(0, 5)));
+  } catch {
+    /* storage unavailable: chips simply stay empty */
+  }
+};
 
 type Props = { item: Intake } & ActionContext;
 const base = (item: Intake) => `/operations/auction-intakes/${item.id}`;
@@ -15,14 +32,18 @@ export function IntakeReceive({ item, ...context }: Props) {
   const [shelf, setShelf] = useState("");
   const [invalid, setInvalid] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const submit = useRef<(() => void) | null>(null);
+  const [recent] = useState(recentShelves);
   const code = shelf.trim();
   return (
     <ActionPanel
       {...context}
       label="Nhận sách đấu giá"
       title="Nhận sách tại quầy."
-      intro="Chỉ xác nhận khi người bán đã giao tận tay cuốn sách. Ghi đúng mã kệ nơi đặt sách để tìm lại khi kiểm tra."
+      intro="Chỉ bấm nhận khi người bán đã giao tận tay cuốn sách. Ghi đúng mã kệ; sau khi nhận, bảng kiểm tra mở ngay bên dưới."
       dirty={shelf !== ""}
+      confirm={false}
+      submitRef={submit}
       fields={(locked) => (
         <>
           <div className="field">
@@ -30,6 +51,7 @@ export function IntakeReceive({ item, ...context }: Props) {
             <input
               id={`shelf-${item.id}`}
               ref={input}
+              autoFocus
               value={shelf}
               disabled={locked}
               autoComplete="off"
@@ -40,8 +62,35 @@ export function IntakeReceive({ item, ...context }: Props) {
                 setShelf(event.target.value.toUpperCase());
                 setInvalid(false);
               }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  submit.current?.();
+                }
+              }}
             />
           </div>
+          {recent.length > 0 && (
+            <div className="shelf-chips" role="group" aria-label="Kệ dùng gần đây">
+              <span className="muted">Gần đây:</span>
+              {recent.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className="chip-button"
+                  disabled={locked}
+                  aria-pressed={code === value}
+                  onClick={() => {
+                    setShelf(value);
+                    setInvalid(false);
+                    input.current?.focus();
+                  }}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+          )}
           <p
             id={`shelf-hint-${item.id}`}
             className={invalid ? "field-error" : "muted"}
@@ -58,7 +107,7 @@ export function IntakeReceive({ item, ...context }: Props) {
         input.current?.focus();
         return false;
       }}
-      submitLabel="Xác nhận đã nhận sách"
+      submitLabel={SHELF.test(code) ? `Nhận vào kệ ${code}` : "Nhận sách"}
       confirmTitle="Xác nhận đã nhận sách?"
       confirmBody={
         <p>
@@ -70,11 +119,15 @@ export function IntakeReceive({ item, ...context }: Props) {
         path: `${base(item)}/receive`,
         body: { expectedVersion: item.version, shelfCode: code },
       })}
-      interpret={() => ({
-        tone: "success",
-        text: `Đã nhận “${item.title}” vào kệ ${code}. Hãy kiểm tra tình trạng sách.`,
-        close: true,
-      })}
+      interpret={() => {
+        rememberShelf(code);
+        return {
+          tone: "success",
+          text: `Đã nhận “${item.title}” vào kệ ${code}. Kiểm tra tình trạng ngay bên dưới.`,
+          close: true,
+          next: true,
+        };
+      }}
     />
   );
 }

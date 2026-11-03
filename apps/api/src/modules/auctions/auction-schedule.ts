@@ -12,7 +12,6 @@ import {
 } from '../../database/mongo/migrations/auction-constants.js';
 import { DomainError, invalidField } from '../commands/domain-error.js';
 
-const HOUR_MS = 3_600_000;
 export type AuctionPhase = 'Scheduled' | 'Live' | 'Ended';
 
 export const phaseOf = (
@@ -48,17 +47,22 @@ export const buyNowOffered = (
 
 export interface ScheduleInput {
   startAt?: string | null;
-  durationHours: number;
+  durationSeconds: number;
 }
 
-function durationMs(hours: number) {
+// ADR 0069: any whole number of seconds inside the ADR 0047 bounds, which the
+// migration 0037 validator still enforces on plannedEndAt.
+function durationMs(seconds: number) {
   if (
-    !Number.isInteger(hours) ||
-    hours * HOUR_MS < AUCTION_MIN_DURATION_MS ||
-    hours * HOUR_MS > AUCTION_MAX_DURATION_MS
+    !Number.isInteger(seconds) ||
+    seconds * 1000 < AUCTION_MIN_DURATION_MS ||
+    seconds * 1000 > AUCTION_MAX_DURATION_MS
   )
-    invalidField('durationHours', 'Thời lượng phiên từ 1 đến 168 giờ.');
-  return hours * HOUR_MS;
+    invalidField(
+      'durationSeconds',
+      'Thời lượng phiên từ 1 giờ đến 7 ngày (tính bằng giây).',
+    );
+  return seconds * 1000;
 }
 
 function futureStart(raw: string, now: Date) {
@@ -77,7 +81,7 @@ function futureStart(raw: string, now: Date) {
 
 // Publishing: startAt null (or omitted) starts now.
 export function publishSchedule(input: ScheduleInput, now: Date) {
-  const length = durationMs(input.durationHours);
+  const length = durationMs(input.durationSeconds);
   const startAt = input.startAt ? futureStart(input.startAt, now) : now;
   return { startAt, plannedEndAt: new Date(startAt.getTime() + length) };
 }
@@ -103,11 +107,11 @@ export function reschedule(a: AuctionDoc, input: ScheduleInput, now: Date) {
   if (input.startAt)
     invalidField('startAt', 'Phiên đã bắt đầu; chỉ đổi được thời lượng.');
   const plannedEndAt = new Date(
-    a.startAt.getTime() + durationMs(input.durationHours),
+    a.startAt.getTime() + durationMs(input.durationSeconds),
   );
   if (plannedEndAt.getTime() < now.getTime() + AUCTION_MIN_REMAINING_MS)
     invalidField(
-      'durationHours',
+      'durationSeconds',
       'Phiên đang mở phải còn ít nhất 1 giờ sau khi đổi.',
     );
   return { startAt: a.startAt, plannedEndAt };
