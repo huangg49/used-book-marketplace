@@ -75,7 +75,8 @@ reference/helper phù hợp phạm vi. Native dùng Pro Max + Impeccable theo n�
   SecureStore, không persist access token. Flutter phải giữ cùng semantics API/session.
 - UI dùng component chung và brand; giữ loading/empty/error, dữ liệu form khi lỗi,
   keyboard/safe area/Back/chữ lớn. Không bịa rating/trust badge hoặc API để làm demo đẹp.
-- Focus theo [quy chuẩn03/11](docs/design/UI_CODING_RULES.md): viền wine sát mép,
+- Focus theo [quy chuẩn03/11](docs/design/UI_CODING_RULES.md): viền wine sát mép
+  (Hero Home dùng vàng trên nền wine theo owner),
   không outline có khoảng hở; web dùng `packages/brand/v1.1/focus.css`, native dùng
   theme/component chung tương ứng. Giữ indicator bàn phím, error/disabled/selected
   và forced-colors; không dùng `outline:none` đơn lẻ để xóa focus.

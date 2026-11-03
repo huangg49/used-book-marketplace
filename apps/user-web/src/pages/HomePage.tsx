@@ -554,6 +554,7 @@ export function HomePage() {
           </div>
           <form
             role="search"
+            data-focus-surface
             className={styles.search}
             onSubmit={(event) => {
               event.preventDefault();

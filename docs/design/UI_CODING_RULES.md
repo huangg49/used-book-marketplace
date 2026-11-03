@@ -8,6 +8,11 @@ hiện có. Nút/tab/link vẫn có focus bàn phím; nền wine có cạnh sán
 để đủ tương phản. Error giữ sắc error, disabled không tự thành enabled, checked/
 selected không bị đổi vì focus. Forced-colors dùng viền hệ thống sát mép.
 
+Ngoại lệ màu theo owner03/11: ô tìm kiếm Hero Home dùng vàng trên nền wine cho
+hover/focus, cùng một viền ngoài sát mép và140ms; input con không vẽ thêm viền.
+Nút submit vẫn giữ focus có tương phản trên nền cam. Không lan màu vàng sang
+các ô nhập ở trang khác.
+
 - Member web, Admin/Staff và Expo web import nguồn chung
   [focus.css](../../packages/brand/v1.1/focus.css). Layer `latlai-focus` chỉ cưỡng
   chế focus paint/field transition để CSS lazy/vendor không khôi phục kiểu cũ.
