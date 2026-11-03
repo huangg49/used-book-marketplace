@@ -165,3 +165,44 @@ vào trực tiếp `/wallet`, mở detail qua notification thật; không nới 
 `.tmp/without-withdrawal-list-browser-direct.log` và
 `.tmp/without-withdrawal-list-{build,unit,lint}.log`. QA fixture được teardown,
 Mongo QA dừng, app chính giữ chạy. Không push/merge hoặc đổi READINESS.
+
+## Popup rút tiền và hiệu ứng tương tác
+
+Owner yêu cầu làm đẹp form và thêm nhiều hiệu ứng. Nhánh
+`codex/withdrawal-form-motion`, base `6c81c12a`; checkpoint subject
+`feat(wallet): refine withdrawal form with receipt transitions`.
+
+Form riêng760px: header wine/cream,2bước local, số dư thật, tiền/reason bên trái
+và tài khoản nhận bên phải; mobile một cột. Chọn nhanh50k/100k/500k/tối đa không
+vượt số dư; vẫn giữ raw digits, validation và lý do Member. Bước kiểm tra là
+phiếu tóm tắt số tiền/người nhận/lý do/phí0/số dư sau gửi; quay lại không mất input.
+Giữ disabled fieldset khi review/busy/unknown, expected body/key và chỉ mở kết quả
+sau ACK. Không đổi API/contract/DB hoặc popup dùng chung.
+
+Effects: popup520ms, backdrop fade320ms + blur4px tĩnh, header light một lượt900ms,
+nhóm field420ms lệch80ms, underline320ms, Other240ms, receipt360ms, focus/hover/
+press180ms, CTA light650ms/arrow và spinner900ms chỉ khi đang gửi. Hover lift
+giới hạn fine pointer, motion giữ nguyên cả hai OS preferences theo owner; không
+thêm delay chặn thao tác hoặc vòng nền liên tục. Scope, type/spacing/motion ở
+[surface brief](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-walletwithdrawals-tsx.md);
+giữ DESIGN/token, không thêm asset/dependency.
+
+PASS320Member unit/typecheck/build/lint (cảnh báo cũ ngoài feature), hai lượt
+browser30captures desktop/1000/390/320/chữ130%,0page errors/overflow, API/Mongo QA
+thật và funding/storage fixture. Kiểm computed popup520ms ở cả2OS preferences,
+preset tối đa/100k, back/edit giữ input, lostACK/exact retry, chỉ một payout,
+notification detail, reject/refund và owner-only. Đã xem desktop/320px/receipt
+mobile; finding input bị CSS global đè đã sửa bằng selector scoped và kiểm
+font>=24px/border0. Không sửa global forms. Modal16px là quyết định scoped;
+detector một lượt có2advisory radius (16px mới có chủ đích,10px receipt cũ),
+không chạy lại để lấy0findings. Token hover/error/shelf khai báo trong popup vì
+native dialog portal không kế thừa biến từ trang Ví.
+
+Evidence private `.tmp/withdrawal-form-motion-evidence/`,
+`.tmp/withdrawal-form-browser-final.log`, `.tmp/withdrawal-form-build.log`,
+`.tmp/withdrawal-form-unit.log`, `.tmp/withdrawal-form-lint.log`.
+Smoke bổ sung PASS hover giữ nền wine, focus có vòng2px/tiền>=24px và motion520ms
+khi OS reduce: `.tmp/withdrawal-form-hover-smoke.log`; QA riêng, không gửi
+đơn. Final build PASS sau token portal fix. QA đã teardown/dừng; main apps giữ
+chạy, không mutation owner, push/merge hoặc đổi READINESS. Đây là review AI trên
+browser, không thay native/human/CI acceptance.

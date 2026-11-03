@@ -87,17 +87,112 @@
   gap: 20px;
   color: var(--shop-ink);
 }
+.formDialog {
+  --shop-wine-hover: #7c2320;
+  --shop-error: #912b0e;
+  --shop-shelf: #f4eddf;
+  width: min(760px, calc(100% - 32px));
+  max-width: 760px !important;
+  border-radius: 16px;
+  box-shadow: 0 28px 100px #28191452;
+}
+.formDialog.formDialog[open] {
+  animation: withdrawalOpen 520ms cubic-bezier(0.16, 1.08, 0.3, 1) both !important;
+}
+.formDialog::backdrop {
+  background: #28191480;
+  backdrop-filter: blur(4px);
+  animation: withdrawalBackdrop 320ms ease-out both !important;
+}
+.formDialog > header {
+  position: relative;
+  overflow: hidden;
+  background: var(--shop-wine);
+  border-bottom: 0;
+}
+.formDialog > header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    #ffffff12 50%,
+    transparent 70%
+  );
+  animation: withdrawalLight 900ms ease-out both;
+}
+.formDialog > header h2,
+.formDialog > header p,
+.formDialog > header button {
+  color: var(--shop-paper);
+}
+.formDialog > header p {
+  opacity: 0.85;
+}
+.formDialog > header button {
+  border-color: #fffcf54d;
+  transition:
+    background 180ms,
+    transform 220ms;
+}
+.formDialog > header button:hover {
+  background: #fffcf51a;
+  transform: rotate(90deg);
+}
+.steps {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--shop-line);
+  list-style: none;
+}
+.steps::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 50%;
+  height: 2px;
+  background: var(--shop-wine);
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.form[data-step="review"] .steps::after {
+  transform: translateX(100%);
+}
+.steps li {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--shop-muted);
+  transition: color 180ms;
+}
+.steps li[aria-current="step"],
+.steps li[data-complete="true"] {
+  color: var(--shop-wine);
+  font-weight: 700;
+}
 .balance {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  background: var(--shop-shelf);
-  padding: 16px 20px;
-  border-radius: 10px;
+  padding: 0 0 4px;
+  font-size: 0.875rem;
+}
+.balance > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--shop-muted);
 }
 .balance strong {
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-variant-numeric: tabular-nums;
 }
 .form fieldset {
@@ -108,11 +203,31 @@
   display: grid;
   gap: 10px;
 }
+.form .entryGrid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+}
+.form fieldset[hidden] {
+  display: none;
+}
+.moneyFields,
+.recipientFields {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  animation: withdrawalField 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.recipientFields {
+  border-left: 1px solid var(--shop-line);
+  padding-left: 28px;
+  animation-delay: 80ms;
+}
 .form label {
   font-weight: 600;
   display: block;
   margin-top: 6px;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
 }
 .form input,
 .form select,
@@ -127,6 +242,15 @@
   padding: 12px;
   min-height: 46px;
   caret-color: var(--shop-wine);
+  transition:
+    border-color 180ms,
+    background 180ms,
+    box-shadow 180ms;
+}
+.form :is(input, select, textarea):focus {
+  border-color: var(--shop-wine);
+  background: #ffffff;
+  box-shadow: 0 3px 12px #5c020214;
 }
 .form input::placeholder {
   color: var(--shop-muted);
@@ -135,12 +259,16 @@
   opacity: 0.8;
 }
 .form h3 {
-  margin: 16px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 8px;
   font-size: 1rem;
+  color: var(--shop-wine);
 }
 .twoCols {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 .twoCols > div {
@@ -151,16 +279,80 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+  padding: 4px 14px;
+  background: var(--shop-cream);
+  border: 1px solid var(--shop-control);
+  border-radius: 12px;
+  transition:
+    border-color 180ms,
+    box-shadow 180ms;
 }
-.amountInput input {
-  font-size: 1.65rem;
+.formDialog .form .amountInput input[type="text"] {
+  font-size: clamp(1.5rem, 3vw, 2rem);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   min-width: 0;
+  min-height: 64px;
+  padding: 8px 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--shop-wine);
+}
+.formDialog .form .amountInput input[type="text"]:focus-visible {
+  outline: none;
+}
+.amountInput:focus-within {
+  border-color: var(--shop-wine);
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
+  box-shadow: 0 4px 16px #5c02021a;
 }
 .amountInput span {
   color: var(--shop-muted);
   font-size: 0.875rem;
+}
+.minimum {
+  color: var(--shop-muted);
+  font-size: 0.75rem;
+}
+.quickAmounts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 2px 0 8px;
+}
+.quickAmounts button {
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 4px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  background: var(--shop-paper);
+  color: var(--shop-muted);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition:
+    background 160ms,
+    color 160ms,
+    border-color 160ms,
+    transform 180ms;
+}
+.quickAmounts button[aria-pressed="true"] {
+  background: var(--shop-wine);
+  border-color: var(--shop-wine);
+  color: var(--shop-paper);
+}
+.quickAmounts button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.reasonDetail {
+  display: grid;
+  gap: 10px;
+  animation: withdrawalField 240ms ease-out both;
 }
 .hint {
   font-size: 0.875rem;
@@ -169,16 +361,46 @@
   margin: 0;
 }
 .review {
-  background: var(--shop-shelf);
-  padding: 18px;
+  background: var(--shop-cream);
+  padding: 24px;
+  border: 1px solid var(--shop-line);
   border-radius: 10px;
   display: grid;
   gap: 14px;
+  animation: withdrawalReceipt 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.review > div {
+.reviewTotal {
   display: flex;
   justify-content: space-between;
   gap: 16px;
+  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--shop-line);
+}
+.reviewTotal strong {
+  color: var(--shop-wine);
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+.reviewFacts {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+  font-size: 0.875rem;
+}
+.reviewFacts > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 16px;
+}
+.reviewFacts dt {
+  color: var(--shop-muted);
+}
+.reviewFacts dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 .review p {
   margin: 0;
@@ -189,9 +411,11 @@
   color: var(--shop-error);
   line-height: 1.7;
   margin: 0;
+  animation: withdrawalField 240ms ease-out both;
 }
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   justify-content: flex-end;
 }
@@ -203,11 +427,66 @@
   font-weight: 600;
   border-radius: 8px;
   cursor: pointer;
+  transition:
+    transform 180ms,
+    box-shadow 180ms,
+    background 180ms;
 }
 .primary {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 160px;
   border: 0;
   background: var(--shop-wine);
   color: var(--shop-paper);
+  box-shadow: 0 4px 12px #5c020224;
+}
+.primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    #ffffff24 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+}
+.primary > svg {
+  flex-shrink: 0;
+  transition: transform 180ms;
+}
+.primary:active:not(:disabled),
+.secondary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.sendingIcon {
+  animation: withdrawalSpin 900ms linear infinite !important;
+}
+@media (hover: hover) and (pointer: fine) {
+  .primary:hover:not(:disabled),
+  .secondary:hover:not(:disabled),
+  .quickAmounts button:hover:not(:disabled) {
+    transform: translateY(-2px);
+  }
+  .primary:hover:not(:disabled)::after {
+    transform: translateX(100%);
+    transition: transform 650ms;
+  }
+  .primary:hover:not(:disabled) > svg:not(.sendingIcon) {
+    transform: translateX(3px);
+  }
+  .quickAmounts button:hover:not(:disabled):not([aria-pressed="true"]) {
+    color: var(--shop-wine);
+    border-color: var(--shop-wine);
+    background: var(--shop-cream);
+  }
 }
 .primary:hover {
   background: var(--shop-wine-hover);
@@ -283,6 +562,86 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+@keyframes withdrawalOpen {
+  from {
+    opacity: 0.3;
+    transform: translateY(24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes withdrawalBackdrop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes withdrawalLight {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes withdrawalField {
+  from {
+    opacity: 0.4;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes withdrawalReceipt {
+  from {
+    opacity: 0.4;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes withdrawalSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 680px) {
+  .formDialog {
+    width: calc(100% - 24px);
+  }
+  .form .entryGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .recipientFields {
+    border-left: 0;
+    border-top: 1px solid var(--shop-line);
+    padding: 20px 0 0;
+  }
+  .review {
+    padding: 18px;
+  }
+}
+@media (max-width: 360px) {
+  .quickAmounts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .reviewFacts > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .reviewFacts dd {
+    text-align: left;
+  }
+}
 @media (max-width: 600px) {
   .pendingNotice {
     flex-wrap: wrap;
@@ -300,7 +659,6 @@
     grid-template-columns: 1fr;
   }
   .balance {
-    padding: 14px;
     flex-wrap: wrap;
   }
   .detail dl > div {
@@ -310,7 +668,7 @@
   .actions button {
     flex: 1;
   }
-  .review > div {
+  .reviewTotal {
     flex-wrap: wrap;
   }
 }

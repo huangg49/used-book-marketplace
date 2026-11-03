@@ -23,7 +23,7 @@ assert.ok(
 );
 const memberOrigin = "http://127.0.0.1:5195",
   adminOrigin = "http://127.0.0.1:5196";
-const evidence = path.join(root, ".tmp/withdrawals-without-list-evidence");
+const evidence = path.join(root, ".tmp/withdrawal-form-motion-evidence");
 let fixture, browser, web, adminVite, member, admin, op;
 const pageErrors = [];
 const captures = [];
@@ -35,8 +35,9 @@ async function capture(p, name, width = 1440, height = 1000) {
     window.scrollTo(0, 0);
     return document.fonts.ready;
   });
-  // The incumbent native-dialog entrance lasts 260ms. Capture its settled opaque surface.
-  await p.waitForTimeout(350);
+  // Wait for the authored popup/light sequence; ordinary surfaces use the incumbent timing.
+  const animatedForm = await p.locator("dialog[open] form[data-step]").count();
+  await p.waitForTimeout(animatedForm ? 1050 : 350);
   const modal = await p.locator("dialog[open]").count();
   await p.screenshot({
     path: path.join(evidence, name + ".png"),
@@ -158,7 +159,21 @@ try {
       .last(),
   ).toBeVisible();
   await capture(member, "member-empty-desktop");
+  await member.emulateMedia({ reducedMotion: "reduce" });
   let d = await form(member, 100000);
+  assert.equal(await d.evaluate(e => getComputedStyle(e).animationDuration), "0.52s");
+  await member.emulateMedia({ reducedMotion: "no-preference" });
+  assert.equal(await d.evaluate(e => getComputedStyle(e).animationDuration), "0.52s");
+  await button(d, "Tối đa").click();
+  await expect(d.getByLabel("Số tiền muốn rút")).toHaveValue("500000");
+  await button(d, "100.000").click();
+  await expect(d.getByLabel("Số tiền muốn rút")).toHaveValue("100000");
+  const moneyStyle = await d.getByLabel("Số tiền muốn rút").evaluate(e => {
+    const s = getComputedStyle(e);
+    return { border: s.borderTopWidth, size: parseFloat(s.fontSize) };
+  });
+  assert.equal(moneyStyle.border, "0px");
+  assert.ok(moneyStyle.size >= 24);
   await d.getByLabel("Lý do rút tiền").selectOption("Other");
   assert.equal(
     await d.getByLabel("Mô tả lý do").evaluate((e) => e.checkValidity()),
@@ -196,6 +211,11 @@ try {
   });
   await button(member, "Tiếp tục").click();
   await capture(member, "member-confirm-mobile", 390);
+  await button(member, "Chỉnh sửa").click();
+  await expect(member.getByLabel("Số tiền muốn rút")).toBeVisible();
+  await expect(member.getByLabel("Số tiền muốn rút")).toHaveValue("100000");
+  await expect(member.getByLabel("Ngân hàng", {exact:true})).toHaveValue("Ngân hàng QA");
+  await button(member, "Tiếp tục").click();
   await button(member, "Xác nhận gửi yêu cầu").click();
   await button(member, "Kiểm tra lại yêu cầu").waitFor();
   assert.equal(await member.getByLabel("Số tiền muốn rút").isDisabled(), true);
@@ -400,6 +420,8 @@ try {
           "expandable-reference-identifiers",
           "pending-notice-visible-above-wallet",
           "separate-withdrawal-list-removed",
+          "withdrawal-motion-both-os-preferences",
+          "quick-amount-and-edit-preserve-values",
           "withdrawal-details-from-notifications",
           "pending-count-all-filtered-pages",
           "completed-rejected-not-counted",

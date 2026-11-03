@@ -34,6 +34,25 @@ queue rows and compact detail sheet.
 FORM: Incumbent form and queue patterns; inherited seed `incumbent-wallet-admin`.
 On small screens controls stack and dialogs scroll within the viewport.
 
+Owner motion refinement03/11: the withdrawal entry uses a760px paper dialog,
+16px corners and a wine header with cream title/description. Local step labels
+and an underline distinguish entry from confirmation. Desktop has amount/reason
+beside recipient fields, separated by one quiet rule; below680px stack them.
+Keep visible field labels, raw numeric input, minimum validation and optional
+Other detail. Presets50k/100k/500k/maximum use the real available balance.
+The confirmation shows a receipt with actual recipient, reason, fee0 and remaining
+available funds. Preserve disabled entry fields and draft values when editing.
+
+Motion thesis: turn the entered withdrawal into its confirmation receipt.
+The520ms popup opening,320ms fading backdrop with static4px blur, one900ms header
+light pass and420ms grouped entry (80ms offset) form one opening moment. The local
+step underline moves over320ms, Other detail reveals over240ms, confirmation enters
+over360ms. Focus states, pressed presets and180ms hover/press feedback stay fast;
+pointer-fine CTA light pass650ms and arrow movement support confirmation. Only the
+actual pending request has a900ms spinner loop. No animation waits gate actions.
+Keep the owner's authored motion under both OS preferences; hover lift is only
+for fine pointers. No new raster, dependency or global dialog override.
+
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 No raster added; preserve DESIGN.md and its token sidecar for this extension.

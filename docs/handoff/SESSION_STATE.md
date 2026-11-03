@@ -1,6 +1,17 @@
 # Rút tiền qua Admin — 03/11/2026
 
-- Hiện tại `codex/wallet-remove-withdrawal-list`, base `4876c54c`; checkpoint
+- Hiện tại `codex/withdrawal-form-motion`, base `6c81c12a`; checkpoint subject
+  `feat(wallet): refine withdrawal form with receipt transitions`. Owner yêu cầu
+  làm đẹp popup và nhiều hiệu ứng. Entry760px wine/cream,2cột desktop/1cột mobile,
+  preset tiền thật và receipt kiểm tra; giữ input khi chỉnh sửa và retry cùng key.
+  Motion popup/backdrop/header/field/step/receipt/focus/hover/spinner trong phạm vi
+  form, giữ cả hai OS preferences; không đổi PurchaseDialog chung/API/DB.
+- Gói form PASS320Member unit/typecheck/build/lint,30browser captures với0page
+  errors/overflow: preset, back/edit,2OS motion, exact retry và duyệt/refund/detail.
+  Visual desktop/320px/receipt mobile đã xem; input bị global CSS đè đã sửa scoped.
+  Smoke hover/focus/OS preference PASS sau bổ sung token trong portal; không gửi
+  đơn ở smoke. QA dừng, main3000/5173/5174 giữ chạy. Không push/merge/đổi READINESS.
+- Gói bỏ list trước ở `codex/wallet-remove-withdrawal-list`, base `4876c54c`;
   subject `refactor(wallet): remove separate withdrawal request list`. Owner yêu
   cầu bỏ khối “Yêu cầu rút tiền” dưới lịch sử; đã bỏ UI/query phân trang/CSS riêng.
   Giữ banner chờ duyệt, lịch sử Rút tiền và popup/deep link. Polling banner cập

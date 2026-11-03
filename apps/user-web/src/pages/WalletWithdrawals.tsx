@@ -2,6 +2,13 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useSearchParams } from "react-router-dom";
 import {
+  ArrowRight,
+  Check,
+  Landmark,
+  LoaderCircle,
+  Wallet,
+} from "lucide-react";
+import {
   ApiError,
   withdrawalLabels,
   withdrawalReasons,
@@ -110,7 +117,7 @@ export function WalletWithdrawals({
     return () => window.removeEventListener("beforeunload", guard);
   }, [amount, reason, bankName, accountNumber, accountHolder, uncertain]);
   const select = (id: string) => {
-    void client.invalidateQueries({queryKey:["withdrawal",ownerId,id]});
+    void client.invalidateQueries({ queryKey: ["withdrawal", ownerId, id] });
     const next = new URLSearchParams(params);
     next.set("withdrawal", id);
     setParams(next, { replace: true });
@@ -262,112 +269,203 @@ export function WalletWithdrawals({
         open={open}
         onClose={onClose}
         title={review ? "Xác nhận rút tiền" : "Rút tiền từ ví"}
-        description="Phí 0đ · Admin duyệt từng yêu cầu"
+        description="Phí 0đ · Admin xử lý trong vòng dưới 24 giờ"
         busy={busy}
-        className={styles.dialog}
+        className={`${styles.dialog} ${styles.formDialog}`}
       >
-        <form onSubmit={submit} className={styles.form}>
+        <form
+          onSubmit={submit}
+          className={styles.form}
+          data-step={review ? "review" : "entry"}
+        >
+          <ol className={styles.steps} aria-label="Các bước rút tiền">
+            <li
+              aria-current={!review ? "step" : undefined}
+              data-complete={review}
+            >
+              {review && <Check size={16} aria-hidden="true" />}Thông tin rút
+              tiền
+            </li>
+            <li aria-current={review ? "step" : undefined}>Kiểm tra & gửi</li>
+          </ol>
           <div className={styles.balance}>
-            <span>Số dư khả dụng</span>
+            <span>
+              <Wallet size={17} aria-hidden="true" />
+              Số dư khả dụng
+            </span>
             <strong>{formatVnd(available)}</strong>
           </div>
-          <fieldset disabled={busy || uncertain || review}>
-            <label htmlFor="withdraw-amount">Số tiền muốn rút</label>
-            <div className={styles.amountInput}>
-              <input
-                id="withdraw-amount"
-                inputMode="numeric"
-                type="text"
-                required
-                pattern="[0-9]+"
-                value={amount}
-                onChange={(e) => {
-                  setAmount(e.target.value);
-                  setError("");
-                }}
-                placeholder="Tối thiểu 50.000"
-              />
-              <span>VND</span>
-            </div>
-            <label htmlFor="withdraw-reason">
-              Lý do rút tiền <span aria-hidden="true">*</span>
-            </label>
-            <select
-              id="withdraw-reason"
-              required
-              value={reason}
-              onChange={(e) => setReason(e.target.value as typeof reason)}
-            >
-              <option value="">Chọn lý do</option>
-              {Object.entries(withdrawalReasons).map(([key, label]) => (
-                <option value={key} key={key}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            {reason === "Other" && (
-              <>
-                <label htmlFor="withdraw-reason-detail">Mô tả lý do</label>
-                <textarea
-                  id="withdraw-reason-detail"
-                  required
-                  maxLength={500}
-                  value={reasonDetail}
-                  onChange={(e) => setReasonDetail(e.target.value)}
-                  rows={3}
-                />
-              </>
-            )}
-            <h3>Thông tin nhận tiền</h3>
-            <label htmlFor="withdraw-bank">Ngân hàng</label>
-            <input
-              id="withdraw-bank"
-              required
-              minLength={2}
-              maxLength={100}
-              value={bankName}
-              onChange={(e) => setBank(e.target.value)}
-              autoComplete="off"
-            />
-            <div className={styles.twoCols}>
-              <div>
-                <label htmlFor="withdraw-account">Số tài khoản</label>
+          <fieldset
+            className={styles.entryGrid}
+            disabled={busy || uncertain || review}
+            hidden={review}
+          >
+            <div className={styles.moneyFields}>
+              <label htmlFor="withdraw-amount">Số tiền muốn rút</label>
+              <div className={styles.amountInput}>
                 <input
-                  id="withdraw-account"
-                  required
+                  id="withdraw-amount"
                   inputMode="numeric"
-                  pattern="[0-9]{6,30}"
-                  value={accountNumber}
-                  onChange={(e) => setAccount(e.target.value)}
-                  autoComplete="off"
-                />
-              </div>
-              <div>
-                <label htmlFor="withdraw-holder">Tên chủ tài khoản</label>
-                <input
-                  id="withdraw-holder"
+                  type="text"
                   required
-                  minLength={2}
-                  maxLength={120}
-                  value={accountHolder}
-                  onChange={(e) => setHolder(e.target.value)}
-                  autoComplete="off"
+                  pattern="[0-9]+"
+                  value={amount}
+                  onChange={(e) => {
+                    setAmount(e.target.value);
+                    setError("");
+                  }}
+                  placeholder="0"
+                  aria-describedby="withdraw-minimum"
                 />
+                <span>VND</span>
+              </div>
+              <small id="withdraw-minimum" className={styles.minimum}>
+                Tối thiểu 50.000đ
+              </small>
+              <div
+                className={styles.quickAmounts}
+                  role="group"
+                aria-label="Chọn nhanh số tiền"
+              >
+                {[50000, 100000, 500000].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={Number(amount) === value}
+                    disabled={available < value}
+                    onClick={() => {
+                      setAmount(String(value));
+                      setError("");
+                    }}
+                  >
+                    {value.toLocaleString("vi-VN")}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  aria-pressed={Number(amount) === available && !!amount}
+                  disabled={available < 50000}
+                  onClick={() => {
+                    setAmount(String(available));
+                    setError("");
+                  }}
+                >
+                  Tối đa
+                </button>
+              </div>
+              <label htmlFor="withdraw-reason">
+                Lý do rút tiền <span aria-hidden="true">*</span>
+              </label>
+              <select
+                id="withdraw-reason"
+                required
+                value={reason}
+                onChange={(e) => setReason(e.target.value as typeof reason)}
+              >
+                <option value="">Chọn lý do</option>
+                {Object.entries(withdrawalReasons).map(([key, label]) => (
+                  <option value={key} key={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              {reason === "Other" && (
+                <div className={styles.reasonDetail}>
+                  <label htmlFor="withdraw-reason-detail">Mô tả lý do</label>
+                  <textarea
+                    id="withdraw-reason-detail"
+                    required
+                    maxLength={500}
+                    value={reasonDetail}
+                    onChange={(e) => setReasonDetail(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              )}
+            </div>
+            <div className={styles.recipientFields}>
+              <h3>
+                <Landmark size={19} aria-hidden="true" />
+                Thông tin nhận tiền
+              </h3>
+              <label htmlFor="withdraw-bank">Ngân hàng</label>
+              <input
+                id="withdraw-bank"
+                required
+                minLength={2}
+                maxLength={100}
+                value={bankName}
+                onChange={(e) => setBank(e.target.value)}
+                autoComplete="off"
+                placeholder="Tên ngân hàng"
+              />
+              <div className={styles.twoCols}>
+                <div>
+                  <label htmlFor="withdraw-account">Số tài khoản</label>
+                  <input
+                    id="withdraw-account"
+                    required
+                    inputMode="numeric"
+                    pattern="[0-9]{6,30}"
+                    value={accountNumber}
+                    onChange={(e) => setAccount(e.target.value)}
+                    autoComplete="off"
+                    placeholder="Nhập số tài khoản"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="withdraw-holder">Tên chủ tài khoản</label>
+                  <input
+                    id="withdraw-holder"
+                    required
+                    minLength={2}
+                    maxLength={120}
+                    value={accountHolder}
+                    onChange={(e) => setHolder(e.target.value)}
+                    autoComplete="off"
+                    placeholder="Họ tên chủ tài khoản"
+                  />
+                </div>
               </div>
             </div>
           </fieldset>
           {review && (
             <div className={styles.review}>
-              <div>
-                <span>Số tiền nhận</span>
+              <div className={styles.reviewTotal}>
+                <span>Số tiền rút</span>
                 <strong>{formatVnd(Number(amount))}</strong>
               </div>
-              <div>
-                <span>Khả dụng sau khi gửi</span>
-                <strong>
-                  {formatVnd(Math.max(0, available - Number(amount)))}
-                </strong>
-              </div>
+              <dl className={styles.reviewFacts}>
+                <div>
+                  <dt>Ngân hàng</dt>
+                  <dd>{bankName}</dd>
+                </div>
+                <div>
+                  <dt>Số tài khoản</dt>
+                  <dd>{accountNumber}</dd>
+                </div>
+                <div>
+                  <dt>Chủ tài khoản</dt>
+                  <dd>{accountHolder}</dd>
+                </div>
+                <div>
+                  <dt>Lý do rút</dt>
+                  <dd>
+                    {reason && withdrawalReasons[reason]}
+                    {reason === "Other" && reasonDetail && (
+                      <p>{reasonDetail}</p>
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Phí rút tiền</dt>
+                  <dd>0đ</dd>
+                </div>
+                <div>
+                  <dt>Khả dụng sau khi gửi</dt>
+                  <dd>{formatVnd(Math.max(0, available - Number(amount)))}</dd>
+                </div>
+              </dl>
               <p>
                 Khoản tiền này được giữ ngay khi gửi. Nếu bị từ chối, tiền sẽ
                 trở lại số dư khả dụng.
@@ -407,13 +505,23 @@ export function WalletWithdrawals({
               type="submit"
               disabled={busy || (!enabled && !uncertain)}
             >
-              {busy
-                ? "Đang kiểm tra…"
-                : uncertain
-                  ? "Kiểm tra lại yêu cầu"
-                  : review
-                    ? "Xác nhận gửi yêu cầu"
-                    : "Tiếp tục"}
+              {busy && (
+                <LoaderCircle
+                  size={18}
+                  className={styles.sendingIcon}
+                  aria-hidden="true"
+                />
+              )}
+              <span>
+                {busy
+                  ? "Đang kiểm tra…"
+                  : uncertain
+                    ? "Kiểm tra lại yêu cầu"
+                    : review
+                      ? "Xác nhận gửi yêu cầu"
+                      : "Tiếp tục"}
+              </span>
+              {!busy && <ArrowRight size={18} aria-hidden="true" />}
             </button>
           </div>
         </form>
