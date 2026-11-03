@@ -563,6 +563,9 @@ snapshot capture, causing Chromium to abort the cover View Transition. Keep
 the entrance and cover timing intact, including under reduced-motion settings.
 `pnpm --filter @used-books/user-web test:book-transition:browser` checks native
 transition readiness, stable viewport, the return link and unsupported browsers.
+The default440ms duration comes from the snapshot pseudo-elements' fallback,
+so selecting a card does not change an inherited duration variable on `:root`.
+Keep that default local to the snapshots; the directional360ms override remains.
 
 `WishlistButton` is an authenticated feature control using the existing Member
 wishlist endpoints, not a primitive or an optimistic success indicator. It uses

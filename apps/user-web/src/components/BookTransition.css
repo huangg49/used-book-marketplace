@@ -4,7 +4,6 @@
 :root:has([data-book-morph-card="true"]),
 :root:has([data-book-detail="true"]) {
   view-transition-name: none;
-  --book-morph-duration: 440ms;
 }
 
 :root:has([data-book-direction="exit"]) {
