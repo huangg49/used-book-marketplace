@@ -18,6 +18,9 @@ Khai báo scoped trên wrap, đưa badge góc ngoài, căn giữa chữ và vi�
 PASS browser nền computed không transparent,3/12/99+ không che glyph/tràn chữ,
 cùng các ca responsive/cuộn/read-error/retry/deep link của dropdown. Build PASS;
 đã cập nhật checkout ứng dụng, không đổi DB hoặc API.
+Owner yêu cầu gọn hơn: follow-up `codex/compact-notification-badge` thu badge
+20→16px, chữ9px, bỏ vòng giấy dày, đặt sát góc chuông. Giữ motion; PASS lại
+browser3/12/99+, responsive và các thao tác dropdown; cập nhật localhost.
 
 # Đồng bộ PR94 vào worktree — 03/11/2026
 
