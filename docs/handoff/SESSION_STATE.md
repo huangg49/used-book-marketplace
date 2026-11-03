@@ -1,3 +1,17 @@
+# Tinh chỉnh dropdown thông báo — 03/11/2026
+
+Owner duyệt làm gọn dropdown Member web. Nhánh
+`codex/notification-dropdown-refinement`, basebbcb9534: danh sách liền mạch,
+title trước/body nhấn tên sách đã có trong dấu ngoặc kép/category và time phụ;
+unread dùng nền nhẹ+dot, icon phân biệt hủy/vượt giá. Đổi nhãn đánh dấu tất cả
+đã đọc, pending/error/retry theo ACK; Escape trả focus về bell. Panel tránh Lenis
+nuốt wheel, chỉ body list cuộn, header/footer không co. Giữ motion và API/session.
+PASS typecheck/build/lint scope, detector0finding; browser HTTP fixture
+1440/390/320px/màn950×400/chữ130%, wheel/keyboard/read-all failure-retry/serverACK,
+empty/error/deep link. Không DB write hoặc provider trong fixture.
+Đã đưa cùng source vào checkout ứng dụng; localhost5174 phục vụ dropdown mới.
+Không push/remote merge hoặc đổi READINESS.
+
 # Đồng bộ PR94 vào worktree — 03/11/2026
 
 Owner yêu cầu lấy code main mới. Nhánh `codex/sync-main-20261103-auctions`

@@ -10,7 +10,8 @@ import {
   ArrowLeftRight,
   Gavel,
   ShoppingBag,
-  Clock,
+  CircleX,
+  TrendingUp,
   ChevronRight,
 } from "lucide-react";
 import { ROUTES } from "../../lib/routes";
@@ -29,15 +30,13 @@ function getCategoryInfo(item: MemberNotification) {
       label: "Trao đổi",
       Icon: ArrowLeftRight,
       boxClass: styles.iconExchange,
-      tagClass: styles.tagExchange,
     };
   }
   if (item.targetType === "Auction" || item.kind.startsWith("Auction")) {
     return {
       label: "Đấu giá",
-      Icon: Gavel,
-      boxClass: styles.iconAuction,
-      tagClass: styles.tagAuction,
+      Icon: item.kind === 'AuctionCancelled' ? CircleX : item.kind === 'AuctionOutbid' ? TrendingUp : Gavel,
+      boxClass: item.kind === 'AuctionCancelled' ? styles.iconCancelled : styles.iconAuction,
     };
   }
   if (item.targetType === "Order" || item.kind.startsWith("Order")) {
@@ -45,14 +44,12 @@ function getCategoryInfo(item: MemberNotification) {
       label: "Đơn hàng",
       Icon: ShoppingBag,
       boxClass: styles.iconOrder,
-      tagClass: styles.tagOrder,
     };
   }
   return {
     label: "Thông báo",
     Icon: Bell,
     boxClass: styles.iconGeneral,
-    tagClass: styles.tagGeneral,
   };
 }
 
@@ -116,6 +113,9 @@ export function NotificationBell() {
   const auth=useSession();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const bellRef = useRef<HTMLButtonElement>(null);
+  const [reading, setReading] = useState(false);
+  const [readError, setReadError] = useState(false);
   const panelId = useId();
   const queryClient = useQueryClient();
   const openNotification = useOpenNotification();
@@ -135,7 +135,10 @@ export function NotificationBell() {
       if (!ref.current?.contains(event.target as Node)) setOpen(false);
     };
     const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        bellRef.current?.focus();
+      }
     };
     document.addEventListener("mousedown", outside);
     document.addEventListener("keydown", escape);
@@ -146,13 +149,23 @@ export function NotificationBell() {
   }, [open]);
 
   const readAll = async () => {
-    await markNotificationsRead({ all: true }).catch(() => undefined);
-    void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    if (reading) return;
+    setReading(true);
+    setReadError(false);
+    try {
+      await markNotificationsRead({ all: true });
+      await queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    } catch {
+      setReadError(true);
+    } finally {
+      setReading(false);
+    }
   };
 
   return (
     <div className={styles.wrap} ref={ref}>
       <motion.button
+        ref={bellRef}
         type="button"
         className={styles.bell}
         whileTap={{ scale: 0.94 }}
@@ -179,6 +192,7 @@ export function NotificationBell() {
             className={styles.panel}
             role="region"
             aria-label="Thông báo gần đây"
+            data-lenis-prevent=""
             initial="hidden"
             animate="visible"
             exit="exit"
@@ -198,13 +212,15 @@ export function NotificationBell() {
                   type="button"
                   className={styles.readAllButton}
                   onClick={() => void readAll()}
+                  disabled={reading}
                   title="Đánh dấu tất cả thông báo là đã đọc"
                 >
                   <CheckCheck size={15} aria-hidden="true" />
-                  <span>Đã đọc hết</span>
+                  <span>{reading ? 'Đang đánh dấu…' : 'Đánh dấu tất cả đã đọc'}</span>
                 </button>
               )}
             </motion.div>
+            {readError && <p className={styles.readError} role="alert">Chưa đánh dấu được. Bấm lại để thử.</p>}
 
             {/* List or Empty State */}
             {inbox.isPending ? (
@@ -238,6 +254,8 @@ export function NotificationBell() {
                   const isUnread = !n.readAt;
                   const cat = getCategoryInfo(n);
                   const IconComp = cat.Icon;
+                  // Emphasize an existing quoted book name without inferring or rewriting it.
+                  const subject = n.body.match(/^([“"][^”"]+[”"])([\s\S]*)$/);
 
                   return (
                     <motion.li
@@ -252,7 +270,7 @@ export function NotificationBell() {
                           setOpen(false);
                           openNotification(n);
                         }}
-                        aria-label={`${n.title}: ${n.body}`}
+                        aria-label={`${isUnread ? 'Chưa đọc. ' : ''}${n.title}: ${n.body}`}
                       >
                         {/* Category Icon */}
                         <div
@@ -265,33 +283,26 @@ export function NotificationBell() {
                         {/* Content */}
                         <div className={styles.text}>
                           <div className={styles.itemTopMeta}>
-                            <span
-                              className={`${styles.categoryTag} ${cat.tagClass}`}
-                            >
-                              {cat.label}
-                            </span>
+                            <h3 className={styles.title}>{n.title}</h3>
                             {isUnread && (
                               <span
                                 className={styles.unreadDot}
-                                title="Tin mới"
+                                aria-hidden="true"
                               />
                             )}
                           </div>
 
-                          <h4 className={styles.title}>{n.title}</h4>
-                          <p className={styles.body}>{n.body}</p>
+                          <p className={styles.body}>{subject ? <><strong className={styles.subject}>{subject[1]}</strong>{subject[2]}</> : n.body}</p>
 
                           <div className={styles.timeRow}>
-                            <Clock size={11} />
+                            <span className={styles.categoryTag}>{cat.label}</span>
+                            <span aria-hidden="true">·</span>
                             <time
                               dateTime={n.createdAt}
                               title={new Date(n.createdAt).toLocaleString("vi-VN")}
                             >
                               {timeAgo(n.createdAt)}
                             </time>
-                            {isUnread && (
-                              <span className={styles.unreadText}>· Chưa đọc</span>
-                            )}
                           </div>
                         </div>
 
@@ -309,7 +320,7 @@ export function NotificationBell() {
             )}
 
             {/* Footer Action */}
-            <motion.div variants={itemVariants}>
+            <motion.div variants={itemVariants} className={styles.footer}>
               <Link
                 className={styles.all}
                 to={ROUTES.notifications}
