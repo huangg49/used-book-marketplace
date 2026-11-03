@@ -4,6 +4,35 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Sửa ví tràn ngang và mất chỗ hiển thị trên mobile
+
+Nhánh `codex/member-web-wallet-mobile-layout`, base `70dfa333`. Lỗi được
+phát hiện trong phép so ở mục tách CSS bên dưới. Lưới một cột trước đây có
+minimum theo nội dung. Ở 390 px, huy hiệu VNPay ép tiêu đề hẹp và các hàng
+thẻ, thao tác, biên nhận vượt khung 347 px. Hộp thoại 320 px cũng có hàng mệnh
+giá rộng hơn vùng chứa. [CSS trang ví](../../apps/user-web/src/pages/WalletPage.module.css).
+
+- Lưới một cột co từ 960 px. Đến 600 px, huy hiệu xuống dưới tiêu đề,
+  nạp tiền có hàng riêng, các hàng phụ có thể ngắt dòng. Số dư và ký quỹ
+  nằm trong thẻ. Thông tin Sandbox cho phép ngắt ở khoảng trắng; nút chép
+  và tab lọc có vùng bấm 44 px. Tab lọc tiếp tục cuộn trong hàng riêng.
+  Biên nhận hẹp đặt số tiền dưới phần mô tả. Mệnh giá popup tự chọn số cột.
+- CSS chỉ đổi hai media query trong file ví đã tải theo route. Desktop
+  giữ bố cục hai cột. Các keyframe, thời lượng, DOM, auth và lệnh tiền giữ nguyên.
+- [Browser production](../../apps/user-web/tests/wallet-layout.mjs) PASS
+  320/390/768/1440 và 390 với chữ 125%, reduced-motion. So sổ fixture có
+  số dư dài, ký quỹ, tên dài, nút thẻ và dòng tiền trong khung. Popup kiểm
+  chiều ngang, nhập nháp, Escape và focus trả về. Tab cuối chọn bằng bàn
+  phím và gửi lọc fixture đúng. Ánh sáng thẻ 8 s, keyframe 0/80/100%.
+  Build cũ FAIL đúng kiểm hồi quy 390 px: content 382 / frame 347,
+  document scrollWidth 396. Build mới 347 / 347, document scrollWidth 375.
+  320 px có content 277 / frame 277. Đã xem ảnh 320 và 390 chữ 125%.
+- Dashboard browser PASS gồm guest callback, sidebar và tải lại khi
+  stylesheet ví lỗi. Build/typecheck, 341 unit test, lint, docs/diff PASS.
+  Lint có cảnh báo cũ. Bằng chứng ở `.tmp/member-web-wallet-layout/`.
+  HTTP fixture chỉ mô phỏng đăng nhập và dữ liệu ví. Giao dịch, Mongo,
+  VNPay thật, thiết bị thật, native, human acceptance và CI remote NOT RUN.
+
 ## Tách CSS ví khỏi lần tải đầu Member web
 
 Nhánh `codex/member-web-split-wallet-styles`, base `e7b8f65c`.

@@ -642,6 +642,14 @@ the frame usable for a guest return and the wallet stylesheet out of Home
 and Notifications. The dashboard browser check covers the return URL and
 reload recovery when the wallet stylesheet fails.
 
+At up to 960 px the wallet grid can shrink to the content frame. At up to
+600 px the header badge and primary action get their own lines. Sandbox
+details can wrap, receipt amounts have a dedicated row, and deposit presets
+adapt their column count. The filter strip scrolls independently. The card
+keeps its 8 s sheen. Run
+`pnpm --filter @used-books/user-web test:wallet-layout:browser` after a
+production build to check amounts, controls, focus and responsive geometry.
+
 ## Admin — Dashboard biểu đồ —27/10/2026
 
 Owner duyệt thống kê thật7/30ngày. [Thiết kế và semantics](../features/ADMIN_DASHBOARD.md):

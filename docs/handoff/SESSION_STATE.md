@@ -1,23 +1,20 @@
-# Tối ưu Member web — 03/11/2026
+# Member web — sửa bố cục ví hẹp — 03/11/2026
 
-Gói hiện tại `codex/member-web-split-wallet-styles`, base `e7b8f65c`.
-[WalletFrame](../../apps/user-web/src/pages/WalletFrame.module.css) chứa
-nguyên block khung dùng chung cho ví và trang quay về VNPay. CSS phần ví
-tải theo route. [Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
+Gói hiện tại `codex/member-web-wallet-mobile-layout`, base `70dfa333`.
+Đã sửa lỗi tràn ngang phát hiện trong gói tách CSS ví. Lưới co từ 960 px.
+Dưới 600 px, tiêu đề/huy hiệu, thao tác, Sandbox, biên nhận và preset popup
+đổi cách xuống dòng. [CSS](../../apps/user-web/src/pages/WalletPage.module.css)
+và [bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Entry JS/CSS giảm 26.242 B raw hoặc 5.831 B gzip. Home giảm 4.075 B
-  CSS gzip trong Chromium fixture 390/1440. Home và Thông báo không tải
-  file CSS riêng của ví. Chưa đo tốc độ trên thiết bị thật.
-- Browser PASS ví, lịch sử/lọc, popup/Escape/focus, guest callback làm sạch
-  URL và phát tín hiệu. Sheen 8 s và keyframe giữ nguyên kể cả reduced-motion.
-  Kiểm hồi quy tải CSS lỗi và reload. Ví 390 px có tràn ngang trên cả hai build,
-  nội dung 382 px trong khung 347 px. Lỗi này còn mở.
-- Build/typecheck, 341 unit test, lint, docs/diff PASS. Browser dùng
-  HTTP fixture, không giao dịch. API/Mongo/VNPay thật, native, human acceptance
-  và CI remote NOT RUN. Gate READINESS giữ nguyên.
+- 390 px: nội dung 382→347 px trong khung 347 px. 320 px: 277/277 px.
+  Browser fixture PASS cả 768/1440 và 390 chữ 125%, số tiền lớn và tên dài.
+  Giữ hiệu ứng thẻ 8 s, popup focus/Escape và lọc lịch sử bằng bàn phím.
+  Build cũ FAIL đúng kiểm tràn 390 px. Dashboard browser PASS cả callback.
+- Build/typecheck, 341 unit test, lint, docs/diff PASS. API/Mongo/VNPay thật,
+  thiết bị thật, native, human acceptance và CI remote NOT RUN. Giữ READINESS.
 
-Gói trước `e7b8f65c` dùng chung observer cho ảnh gần viewport. Thay đổi
-nằm trong worktree phát triển. Checkout demo giữ local work.
+Gói trước `70dfa333` giảm JS/CSS entry 26.242 B raw hoặc 5.831 B gzip.
+Thay đổi nằm trong worktree phát triển. Checkout demo giữ local work.
 
 # Lịch sử tin nhắn Member web —03/11/2026
 

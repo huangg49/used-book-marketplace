@@ -39,6 +39,7 @@
     "test:order-review:browser": "node tests/order-review.mjs",
     "test:exchange:browser": "node tests/exchange-integration.mjs",
     "test:wallet:browser": "node tests/wallet-checkout.mjs",
+    "test:wallet-layout:browser": "node tests/wallet-layout.mjs",
     "test:account:browser": "node tests/account-overview.mjs",
     "test:auction-stage:browser": "node tests/auction-stage.mjs",
     "test:auth-motion:browser": "node tests/auth-auction-arrival.mjs",

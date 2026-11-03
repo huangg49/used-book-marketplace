@@ -1293,10 +1293,94 @@
    ========================================================================== */
 @media (max-width: 960px) {
   .splitLayout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 24px;
   }
   .leftCol {
+    min-width: 0;
     position: static;
+  }
+}
+
+@media (max-width: 600px) {
+  .pageHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .vnpayHeaderBadge {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .passCard {
+    min-height: min-content;
+    padding: 16px;
+  }
+
+  .cardTopRow,
+  .testCardTop,
+  .testCardNumberRow,
+  .testCardMeta,
+  .historyTitleRow,
+  .receiptItemSub {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .cardBrandBadge {
+    margin-inline-start: auto;
+  }
+
+  .cardAvailableValue {
+    overflow-wrap: anywhere;
+  }
+
+  .passActionsBar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .btnPrimaryTopup {
+    grid-column: 1 / -1;
+  }
+
+  .numberCol {
+    flex: 1 1 12rem;
+  }
+
+  .testFieldLabel,
+  .testCardNumber {
+    white-space: normal;
+  }
+
+  .btnCopySimple,
+  .stampTab {
+    min-height: 44px;
+  }
+
+  .receiptBody {
+    padding: 16px;
+  }
+
+  .receiptRow {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px 12px;
+  }
+
+  .receiptAmountCol {
+    grid-column: 2;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .presetsGrid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 6rem), 1fr));
+  }
+
+  .presetChip {
+    min-height: 44px;
   }
 }
