@@ -16,6 +16,22 @@ try{
  await server.listen();browser=await chromium.launch({headless:true});
  const page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/api/v1/**',r=>new URL(r.request().url()).pathname==='/api/v1/listings'?r.fulfill({json:{items:[],nextCursor:null,serverTime:new Date().toISOString()}}):r.fulfill({status:401,json:{code:'UNAUTHENTICATED'}}));
+ const imageRequests = [];
+ page.on('request', request => {
+   if (request.resourceType() === 'image') imageRequests.push(request.url());
+ });
+ await page.goto(origin + '/books?data=live', {waitUntil:'domcontentloaded'});
+ await page.locator('#catalog-search').waitFor();
+ const deepLinkImages = imageRequests.splice(0);
+ await page.goto(origin + '/?data=live#home', {waitUntil:'domcontentloaded'});
+ const hero = page.getByRole('heading',{level:1}).locator('img');
+ await expect.poll(() => hero.evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
+ const heroSrc = await hero.evaluate(img => img.currentSrc);
+ const preload = page.locator('head link[rel="preload"][as="image"]');
+ await expect(preload).toHaveAttribute('href', new URL(heroSrc).pathname);
+ await expect(preload).toHaveAttribute('fetchpriority', 'high');
+ assert(!deepLinkImages.includes(heroSrc), 'Search deep links do not download Home lettering');
+ assert.equal(imageRequests.filter(url => url === heroSrc).length, 1, 'Home reuses the preload');
  for(const width of [1440,390])for(const reducedMotion of ['no-preference','reduce']){
   await page.setViewportSize({width,height:1000});await page.emulateMedia({reducedMotion});await page.goto(origin+'/');
   const input=page.locator('#home-search'),form=page.getByRole('search');await input.waitFor();await page.evaluate(()=>document.fonts.ready);await form.scrollIntoViewIfNeeded();await page.waitForTimeout(400);
@@ -30,5 +46,5 @@ try{
   await page.waitForURL('**/books?**');const url=new URL(page.url());assert.equal(url.searchParams.get('q'),'sách cũ & QA','query survives Enter and button submit');
   results.push({width,reducedMotion,goldHover:true,singleOuterFocus:true,geometryStable:true,keyboard:true,queryRetained:true});
  }
- assert.deepEqual(errors,[]);await fs.writeFile(path.join(out,'result.json'),JSON.stringify({status:'PASS',results,pageErrors:errors.length,environment:'Home route, intercepted HTTP; no DB'},null,2));console.log('PASS Home hero search: gold hover/focus, one outer ring, stable dimensions, keyboard, Enter/button query, 1440/390 and reduced-motion. No DB.');
+ assert.deepEqual(errors,[]);await fs.writeFile(path.join(out,'result.json'),JSON.stringify({status:'PASS',heroPreload:true,results,pageErrors:errors.length,environment:'Home route, intercepted HTTP; no DB'},null,2));console.log('PASS Home hero search: Home-only preload, gold hover/focus, one outer ring, stable dimensions, keyboard, Enter/button query, 1440/390 and reduced-motion. No DB.');
 }finally{await browser?.close();await server.close();}

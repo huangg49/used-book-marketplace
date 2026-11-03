@@ -9,6 +9,17 @@
       name="description"
       content="Lật lại — mua bán và trao đổi sách cũ tại TP.HCM. Xem ảnh thực tế, tình trạng và giá của từng bản sách."
     />
+    <script>
+      // The SPA also serves this HTML for deep links. Only Home uses this image.
+      if (window.location.pathname === '/') {
+        const hero = document.createElement('link');
+        hero.rel = 'preload';
+        hero.as = 'image';
+        hero.href = '/brand/hero-lettering.png';
+        hero.fetchPriority = 'high';
+        document.head.append(hero);
+      }
+    </script>
   </head>
 
   <body>

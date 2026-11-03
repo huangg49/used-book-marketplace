@@ -1,3 +1,30 @@
+# Tải sớm ảnh chữ Hero trên Member web — 03/11/2026
+
+Gói tiếp theo từ `10fd986d` trên nhánh `codex/member-web-hero-preload`. Browser
+trước đây chỉ biết ảnh LCP sau khi React dựng Home. HTML vào app giờ preload
+đúng PNG có sẵn khi mở trực tiếp Trang chủ. Điều kiện theo pathname để tránh
+tải ảnh Home khi mở thẳng route khác của SPA.
+
+- Hai production build trên Chromium 151, 5 cặp lạnh chạy luân phiên ở mỗi
+  viewport. Trên mobile 390px với CPU 4×, tải xuống 4 Mbps và độ trễ 75 ms,
+  trung vị bắt đầu tải ảnh 1.423 → 126 ms. LCP Hero 2.752 → 1.472 ms,
+  cải thiện ở cả 5 cặp. FCP 1.456 → 1.472 ms. LCP desktop 224 → 148 ms.
+  Ảnh PNG 91.425 byte khớp từng byte và mỗi lượt lạnh chỉ có một request ảnh.
+- Production fixture PASS phạm vi preload trên Home có query/fragment và
+  mở thẳng Search, Auction, Login. Đi từ Search về Home trong SPA vẫn tải
+  ảnh qua React. Mô phỏng CSP chặn script inline vẫn render ảnh qua đường này.
+  Browser regression Home kiểm thêm phạm vi và tái sử dụng preload.
+- Luồng Home → Tìm sách → Trang 2 → Chi tiết → Back chạy ở cả hai viewport
+  trước/sau. Canvas lá và View Transition vẫn hoạt động. Ảnh Hero cùng mốc
+  animation lệch 19 pixel desktop và 1 pixel mobile, tối đa 1 mức RGB.
+  Smoke GET API local thật ở 1440/390px PASS với 0 lỗi JavaScript.
+  Build, typecheck, 338 unit test, browser Home focus/Search recovery và
+  docs check PASS. Lint exit 0 với warning cũ. Detector HTML 0 finding.
+  Trace và kết quả chi tiết tại `.tmp/member-web-hero-performance/`.
+
+Gói ở worktree phát triển. Thiết bị thật, human acceptance và CI remote chưa
+chạy. Gate phát hành theo READINESS.
+
 # Font WOFF2 cho Member web — 03/11/2026
 
 Gói tiếp theo từ `62324b47` trên nhánh `codex/member-web-woff2`. Trace Home
