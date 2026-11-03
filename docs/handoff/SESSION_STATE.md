@@ -1,3 +1,20 @@
+# Khảo sát trước refactor trang giao dịch — 03/11/2026
+
+Owner yêu cầu rà soát trước, chưa sửa UI. Nhánh `codex/chat-workspace-audit`,
+source3fc1fa9f. Đối chiếu ChatPage→OrderDetails/Negotiation→ExchangeDetail,
+ADR0041/0045/quyền/state/review/gate. Browser read-only24view trên Order Buyer/
+Seller và Exchange kiểm tra,1918→320px,0pageerror; giữ nháp khi đổi tab. Số đo
+thật xác nhận việc hiện tại bị đẩy sau mô tả/card lồng; Exchange review tại390px
+cách đầu phiếu7081px; Order ở390px có contentWidth491>335 do URL trong description.
+Probe SSR riêng tái hiện local shipment được hiển thị đã tạo đơn dù server chưa
+có sentAt; lỗi nguồn dữ liệu cần xử lý trong refactor. Detector3color advisory.
+Ma trận state/role/action và kiến trúc giữ ba vai trò, bỏ nhúng nguyên trang,
+thu gọn bước xong/hồ sơ dài có trong
+[báo cáo khảo sát](../ui/TRANSACTION_WORKSPACE_AUDIT_2026_11_03.md).
+Chỉ docs/evidence, không sửa source UI/API/DB, không gọi provider hoặc gửi command
+giao dịch; không push/remote merge, không đóng gate. Chờ owner duyệt gói refactor;
+prototype trước đó không tự trở thành thiết kế sản phẩm được duyệt.
+
 # Bản thử không gian giao dịch Minh An — 03/11/2026
 
 Owner yêu cầu mock vì chat gộp quá nhiều phiếu/trao đổi/đơn. Nhánh
