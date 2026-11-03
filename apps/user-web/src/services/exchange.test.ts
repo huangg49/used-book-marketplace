@@ -4,6 +4,7 @@ const mock = vi.hoisted(() => ({
   request: vi.fn(),
   publicListing: vi.fn(),
   photo: vi.fn(),
+  wallet: vi.fn(),
   listener: () => {},
   actor: "11111111-1111-4111-8111-111111111111",
   authenticated: true,
@@ -28,6 +29,7 @@ vi.mock("./public-listings", () => ({
   getPublicListing: mock.publicListing,
   getPublicPhoto: mock.photo,
 }));
+vi.mock("../lib/wallet-cache", () => ({ invalidateMemberWalletViews: mock.wallet }));
 import {
   exchangeCommand,
   getExchangeCounts,
@@ -58,6 +60,7 @@ beforeEach(() => {
   mock.request.mockReset();
   mock.publicListing.mockReset();
   mock.photo.mockReset();
+  mock.wallet.mockClear();
   mock.authenticated = false;
   mock.listener();
   mock.actor = row.initiatorId;
@@ -65,6 +68,26 @@ beforeEach(() => {
   mock.listener();
 });
 describe("exchange integration", () => {
+  it("refreshes wallet views only after a confirmed command or recovery ACK", async () => {
+    mock.request.mockRejectedValueOnce(new Error('lost ACK')).mockResolvedValue({
+      ...row, status: 'AcceptedAwaitingFunding', initiatorFundedAt: row.createdAt,
+    });
+    await expect(exchangeCommand(`/exchanges/${row.id}/funding`, {})).rejects.toThrow();
+    expect(mock.wallet).not.toHaveBeenCalled();
+    await retryExchange(row.id);
+    expect(mock.wallet).toHaveBeenCalledOnce();
+    expect(mock.wallet).toHaveBeenCalledWith(expect.anything(), row.initiatorId);
+  });
+  it("does not refresh a different account after a late command response", async () => {
+    let resolve!: (value: unknown) => void;
+    mock.request.mockReturnValueOnce(new Promise(r => { resolve = r; }));
+    const sending = exchangeCommand(`/exchanges/${row.id}/funding`, {});
+    mock.actor = row.recipientId;
+    mock.listener();
+    resolve({ ...row, status: 'AcceptedAwaitingFunding', initiatorFundedAt: row.createdAt });
+    await expect(sending).rejects.toThrow();
+    expect(mock.wallet).not.toHaveBeenCalled();
+  });
   it("renders frozen agreement values without fetching today's public listings", async () => {
     const book = (id: string, ownerId: string, value: number) => ({
       listingId: id,

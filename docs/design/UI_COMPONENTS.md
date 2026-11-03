@@ -661,6 +661,15 @@ the frame usable for a guest return and the wallet stylesheet out of Home
 and Notifications. The dashboard browser check covers the return URL and
 reload recovery when the wallet stylesheet fails.
 
+Exchange command and recovery ACKs call
+[`invalidateMemberWalletViews`](../../apps/user-web/src/lib/wallet-cache.ts).
+It invalidates the current owner's summary, mini balance, history and cashflow
+history, plus exact legacy flat keys. It does not set balances or run for
+pending/rejected commands, and an old actor cannot refresh a new actor's views.
+Inactive views re-read when revisited. Keep this at the acknowledged service
+result so recovery retries have the same behavior as the original command.
+Verify with `pnpm --filter @used-books/user-web test:exchange-wallet-cache:browser`.
+
 Compact notification consumers use
 [`notificationPreviewQuery`](../../apps/user-web/src/services/notifications.ts):
 one owner-scoped first page of eight rows for the bell, sidebar count, greeting

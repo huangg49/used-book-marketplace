@@ -1,26 +1,26 @@
-# Tối ưu Member web — 03/11/2026
+# Tối ưu Member web — 04/11/2026
 
 Owner cho phép cuốn chiếu tối ưu Member web, giữ animation, đo/kiểm chứng từng
 gói và sửa lỗi liên quan đã tái hiện. Đổi nghiệp vụ, thiết kế/hiệu ứng hoặc
 triển khai cần quyết định riêng; không mở rộng sang DB/provider/checkout demo.
 
-Gói hiện tại `codex/member-web-avatar-url-recovery`, base `901383dd`.
-[Hook avatar](../../apps/user-web/src/hooks/useCurrentMemberAvatar.ts) giữ lỗi
-theo owner/avatar/URL; URL mới của cùng avatar hiện lại được sau lỗi ảnh cũ.
+Gói hiện tại `codex/member-web-exchange-wallet-cache`, base `19950968`.
+[Service Exchange](../../apps/user-web/src/services/exchange.ts) làm mới các
+view ví đúng family/owner sau ACK command hoặc recovery retry; không set số dư.
 [Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Browser production 390/1440 tái hiện base và xác nhận phục hồi; URL lỗi
-  không đổi không tải lặp. Giữ số lượt xin URL và policy cache/refresh cũ.
-- Build/typecheck, 349 unit test, lint/detector và avatar browser PASS.
-  Profile-reputation fixture PASS cả late account response/404/retry/nháp.
-  47 CSS khớp byte; không đổi animation. API/provider/thiết bị thật, native,
-  human acceptance và remote CI NOT RUN.
+- Production fixture 390/1440 tái hiện số dư cũ ở menu/Back về Ví và xác nhận
+  sửa, gồm ACK thường, reject rồi thành công, lost ACK/retry cùng key/body.
+  Không invalidate sớm hoặc theo actor cũ; unit kiểm read cũ về muộn.
+- Build/typecheck, 354 unit test, lint/detector và browser sáu ca PASS.
+  47 CSS khớp byte; không đổi animation. API/DB/provider/thiết bị thật, native,
+  human acceptance và remote CI NOT RUN. Không đổi nghiệp vụ/ledger/contract.
 
 Ứng viên lazy Home bị loại, source đã khôi phục (`901383dd` chỉ lưu đánh giá).
-Rà tiếp cache sau ACK ở Exchange legacy: invalidation prefix wallet cần đối
-chiếu query thực tế và tái hiện bằng fixture trước khi quyết định sửa.
+Rà tiếp các nguồn ACK nạp ví/Order: chưa suy mọi view ví đã nối từ ca Exchange.
 
-Gói `b5b36d22` hoãn xin link bìa riêng tới gần viewport và sửa retry ảnh;
+Gói `19950968` sửa avatar nhận URL mới sau lỗi cùng avatar ID;
+`b5b36d22` hoãn xin link bìa riêng tới gần viewport và sửa retry ảnh;
 `6c5751f8` dùng chung preview thông báo và sửa link sai target;
 `5bbe9685` dừng Lenis idle và giữ cuộn khi reduced-motion;
 `598689fe` tối ưu ảnh nền Auth; `a98db891` nén logo/chữ Hero,

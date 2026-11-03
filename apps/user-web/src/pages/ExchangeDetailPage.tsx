@@ -140,7 +140,7 @@ function ExchangeDetailContent({
     queryClient.invalidateQueries({ queryKey: ["exchangeDetail"] });
     queryClient.invalidateQueries({ queryKey: ["exchangeTransactions"] });
     queryClient.invalidateQueries({ queryKey: ["exchangeCounts"] });
-    queryClient.invalidateQueries({ queryKey: ["wallet"] });
+    // Wallet views refresh at the service ACK, including recovery retries.
     queryClient.invalidateQueries({
       queryKey: [
         "exchangeMessages",

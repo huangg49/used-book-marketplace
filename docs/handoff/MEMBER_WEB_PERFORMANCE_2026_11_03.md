@@ -4,6 +4,51 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Làm mới view ví sau ACK trao đổi — 04/11/2026
+
+Nhánh `codex/member-web-exchange-wallet-cache`, base `19950968`.
+Lỗi đã tái hiện trên build base: từ Ví sang Exchange legacy, xác nhận funding
+bằng HTTP fixture rồi mở lại menu tài khoản hoặc Back về Ví trong staleTime.
+API fixture đã trả available 50.000 nhưng UI vẫn dùng cache 100.000. Callback
+cũ chỉ invalidate prefix `wallet`, trong khi view dùng `wallet-summary`,
+`member-wallet-mini` và các key history khác. Retry sau mất ACK không đi lại
+callback onFund nên chỉ sửa callback đó sẽ chưa đủ.
+
+[Service Exchange](../../apps/user-web/src/services/exchange.ts) hiện gọi
+[helper ví](../../apps/user-web/src/lib/wallet-cache.ts) sau Promise ACK của
+command/retry. Helper chỉ invalidate đúng owner hiện tại và các flat key legacy
+exact; không set dữ liệu/số dư. Query đang đọc trước ACK được thay bằng lượt
+đọc sau ACK; view inactive đánh dấu stale và đọc lại khi trở về. Bỏ invalidate
+prefix cũ ở page để không có đường cập nhật khác cho retry hoặc gửi chat.
+Không đổi backend, contract, body/key/version, receipt, ledger, hold hoặc nghiệp vụ.
+
+| Vai trò / entry | Kết quả được xác nhận | Nơi xem tiếp |
+| --- | --- | --- |
+| Member → Exchange legacy → funding | Command client nhận ACK thuộc phiên hiện tại | Menu ví hoặc Back về Ví đọc số dư server mới |
+| Member → khôi phục thao tác → retry | Giữ nguyên key/body; chỉ ACK mới làm stale cache | Cùng các view ví, không cần gửi funding mới |
+| Lệnh đang chờ/bị từ chối hoặc phiên đã đổi | Không làm mới ví theo kết quả chưa xác nhận/actor cũ | Giữ error/recovery và xác nhận hiện có |
+
+[Production browser](../../apps/user-web/tests/exchange-wallet-cache.mjs)
+390×900/1440×900, reduced-motion bật, Date cố định để không hết staleTime;
+route/command client thật và HTTP fixture cho mọi API. Sáu cấu hình PASS:
+ACK thường, definitive rejection rồi thành công, lost ACK rồi retry. Base
+đều giữ tiền cũ; sau sửa đều nhận tiền mới ở view đã đi qua. Khi pending/error
+không có wallet read thêm; retry giữ key/body. Không page error. Mọi số tiền
+trong test là dữ liệu tổng hợp, không có thanh toán hay ledger thật.
+
+- Unit kiểm đúng family/owner, không đổi cached money, bỏ actor cũ/guest và
+  read trước ACK về muộn không ghi đè read mới. Service unit kiểm late command
+  response sau đổi account và chỉ invalidate sau ACK/recovery thành công.
+- Build/typecheck, 354 unit test/50 file, lint, detector `[]` PASS. Đã xem ảnh
+  ví 390/1440; cả 47 CSS production khớp byte. Không đổi class/variant/timing/asset.
+- Đây là sửa tính đúng của cache, không là giảm request: GET đọc lại là cần
+  thiết sau ACK. Không nghiệm thu ledger/settlement, API/DB/provider thật,
+  native, thiết bị thật, human acceptance hoặc remote CI. READINESS và demo
+  checkout giữ nguyên. Evidence `.tmp/member-web-exchange-wallet-cache/`.
+
+Các nguồn ACK khác (nạp ví/Order) cần rà riêng; chưa suy helper đã được nối
+toàn bộ chỉ từ sáu ca Exchange.
+
 ## Khôi phục avatar sau khi URL được cấp lại
 
 Nhánh `codex/member-web-avatar-url-recovery`, base `901383dd`.

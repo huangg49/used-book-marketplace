@@ -17,6 +17,8 @@ import {
   type ExchangeBookSnapshot,
 } from "@used-books/session-client";
 import { session } from "./api";
+import { queryClient } from "../lib/session";
+import { invalidateMemberWalletViews } from "../lib/wallet-cache";
 import type {
   ExchangeTab,
   ExchangeItem,
@@ -402,12 +404,17 @@ export function pendingExchange(id: string) {
   return pendingExchangeIntent(session, id);
 }
 export function retryExchange(id: string) {
+  const actor = session.getSnapshot();
+  const ownerId = actor.status === "authenticated" ? actor.user.id : undefined;
   return retryExchangeCommand(
     session,
     id,
     () => crypto.randomUUID(),
     exchangeSchema,
-  );
+  ).then(result => {
+    invalidateMemberWalletViews(queryClient, ownerId);
+    return result;
+  });
 }
 export function exchangeCommand(path: string, body: object) {
   if (path === "/exchanges")
@@ -422,6 +429,8 @@ export function exchangeCommand(path: string, body: object) {
       path,
     );
   if (!match) throw new Error("Thao tác trao đổi không hợp lệ.");
+  const actor = session.getSnapshot();
+  const ownerId = actor.status === "authenticated" ? actor.user.id : undefined;
   return sendExchangeCommand(
     session,
     match[1],
@@ -429,7 +438,10 @@ export function exchangeCommand(path: string, body: object) {
     body,
     () => crypto.randomUUID(),
     exchangeSchema,
-  );
+  ).then(result => {
+    invalidateMemberWalletViews(queryClient, ownerId);
+    return result;
+  });
 }
 export function exchangeError(error: unknown) {
   if (!(error instanceof ApiError) || error.status === 0 || error.status >= 500)
