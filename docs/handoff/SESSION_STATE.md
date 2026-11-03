@@ -1,6 +1,12 @@
 # Rút tiền qua Admin — 04/11/2026
 
-- Hiện tại `codex/withdrawal-confirmation-layout`, base `6008f1c2`; checkpoint
+- Hiện tại `codex/withdrawal-textarea-no-resize`, base `e1c70627`; checkpoint
+  subject `fix(wallet): disable manual resizing of withdrawal reason`.
+  Bỏ grip kéo giãn ô lý do bằng resize none; nội dung dài cuộn trong ô. CSS fixture
+  browser PASS computed style/drag không đổi height; không API command hoặc QA DB.
+  PASS320Member unit/typecheck/build/lint, docs/diff check; giữ main apps chạy,
+  không push/merge hoặc đổi READINESS.
+- Gói xác nhận trước ở `codex/withdrawal-confirmation-layout`, base `6008f1c2`;
   subject `refactor(wallet): clarify withdrawal confirmation layout`. Owner yêu
   cầu làm đẹp bước xác nhận. Tách financial cream/recipient paper, tiền28–36px,
   tài khoản24px, note riêng và nút Back gọn; mobile một cột, giữ màu/motion/draft.

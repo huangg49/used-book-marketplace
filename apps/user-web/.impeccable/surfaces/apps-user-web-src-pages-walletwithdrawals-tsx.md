@@ -39,7 +39,8 @@ Owner motion refinement03/11: the withdrawal entry uses a760px paper dialog,
 and an underline distinguish entry from confirmation. Desktop has amount/reason
 beside recipient fields, separated by one quiet rule; below680px stack them.
 Keep visible field labels, raw numeric input, minimum validation and optional
-Other detail. Presets50k/100k/500k/maximum use the real available balance.
+Other detail. The reason textarea has no manual resize grip; long text scrolls
+inside its row-sized height. Presets50k/100k/500k/maximum use the real available balance.
 The confirmation shows a receipt with actual recipient, reason, fee0 and remaining
 available funds. Preserve disabled entry fields and draft values when editing.
 

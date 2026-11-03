@@ -266,3 +266,17 @@ Evidence private `.tmp/withdrawal-confirmation-evidence/`,
 `.tmp/withdrawal-confirmation-{build,unit,lint}.log`. QA teardown/dừng, main apps
 giữ chạy, không mutation tiền owner. Không push/merge/READINESS hoặc suy
 native/human/CI/release PASS từ browser.
+
+## Bỏ tay nắm kéo giãn ô lý do — 04/11/2026
+
+Owner yêu cầu bỏ góc `///` kéo dài ô nhập. Nhánh
+`codex/withdrawal-textarea-no-resize`, base `e1c70627`; checkpoint subject
+`fix(wallet): disable manual resizing of withdrawal reason`.
+Textarea lý do dùng resize none/overflow-y auto, giữ rows3/maxlength500 và nội
+dung form. Browser smoke với CSS module thật PASS: computed none, nội dung dài
+cuộn trong ô và kéo góc không đổi chiều cao. Đây là CSS fixture riêng, không
+authenticated wallet journey hoặc API command; không chạy lại luồng tiền.
+PASS320Member unit/typecheck/build/lint (cảnh báo cũ ngoài phần đổi), docs/diff
+check. Detector một lượt còn advisory16px modal cũ. Evidence private
+`.tmp/withdrawal-textarea-resize-smoke.mjs` và `.tmp/withdrawal-textarea-*.log`.
+Main apps giữ chạy; không đổi API/dữ liệu/READINESS hoặc push/merge.

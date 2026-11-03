@@ -358,6 +358,10 @@
   gap: 10px;
   animation: withdrawalField 240ms ease-out both;
 }
+.form textarea {
+  resize: none;
+  overflow-y: auto;
+}
 .hint {
   font-size: 0.875rem;
   line-height: 1.7;
