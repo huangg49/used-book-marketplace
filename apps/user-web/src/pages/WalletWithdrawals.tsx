@@ -108,6 +108,13 @@ export function WalletWithdrawals({
     void client.invalidateQueries({ queryKey: ["wallet-history", ownerId] });
   }, [client, ownerId, list.dataUpdatedAt, detail.data?.version]);
   useEffect(() => {
+    if (detail.data) {
+      void client.invalidateQueries({
+        queryKey: ["withdrawals", ownerId, "pending"],
+      });
+    }
+  }, [client, ownerId, detail.data]);
+  useEffect(() => {
     if (
       !pending.current &&
       !amount &&

@@ -1,3 +1,68 @@
+.pendingNotice {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 20px 24px;
+  border: 1px solid var(--shop-control);
+  border-radius: 12px;
+  background: var(--shop-cream);
+  color: var(--shop-wine);
+}
+.pendingNotice > svg {
+  flex-shrink: 0;
+}
+.pendingText {
+  flex: 1;
+  min-width: 0;
+}
+.pendingText h2 {
+  margin: 0 0 6px;
+  font-family: var(--shop-body);
+  font-size: 1rem;
+  line-height: 1.5;
+  font-weight: 700;
+}
+.pendingText p,
+.pendingError p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--shop-ink);
+}
+.pendingLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--shop-wine);
+  border-radius: 8px;
+  color: var(--shop-wine);
+  background: var(--shop-paper);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pendingLink:hover {
+  background: var(--shop-shelf);
+}
+.pendingLink:focus-visible {
+  outline: 3px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+.pendingError {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.pendingError > button {
+  font-size: 0.875rem;
+}
 .section {
   margin-top: 28px;
   padding: 28px;
@@ -281,6 +346,18 @@
   overflow-wrap: anywhere;
 }
 @media (max-width: 600px) {
+  .pendingNotice {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px;
+  }
+  .pendingText {
+    flex-basis: calc(100% - 36px);
+  }
+  .pendingLink {
+    margin-left: 36px;
+    max-width: calc(100% - 36px);
+  }
   .section {
     padding: 20px 16px;
   }

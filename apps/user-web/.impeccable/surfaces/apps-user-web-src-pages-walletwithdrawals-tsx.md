@@ -17,12 +17,17 @@ legible labels, tabular money, restrained status marks and quiet row separators.
 No new visual system, imagery, figures or claims; no approved image comp.
 
 STORY: Enter an amount and required reason, check recipient and remaining funds,
-send once, then follow the request. Admin reviews, starts simulated processing
-and sees the same timeline; a separate operator records the simulated result.
+send once, then follow the request. For new Manual requests, Admin confirms and
+completes the wallet withdrawal in one command; approval has no reason input.
+Rejection still requires a reason. Legacy Simulator requests retain their old flow.
 
-FIRST VIEWPORT: Existing wallet card and history remain. The request list follows
-history. A centered popup leads with available balance, amount, reason and bank
-fields. Admin uses its existing shell, status filter, queue rows and detail sheet.
+FIRST VIEWPORT: Existing wallet card and history remain. Above them, pending
+requests show the real Requested count, the owner's under-24-hour processing
+message and a detail action. Count all filtered pages, independent of the history
+pagination; do not count Completed/Rejected or claim zero after a read error.
+The request list follows history. A centered popup leads with available balance,
+amount, reason and bank fields. Admin uses its existing shell, status filter,
+queue rows and compact detail sheet.
 
 FORM: Incumbent form and queue patterns; inherited seed `incumbent-wallet-admin`.
 On small screens controls stack and dialogs scroll within the viewport.

@@ -101,3 +101,40 @@ Detector chạy một lần:4advisory, không có finding chặn. Endpoint headi
 đã đổi24px;3advisory còn lại là size/radius cũ của empty state/popup ngoài phần đổi.
 Không chạy lại detector để làm đẹp số liệu. Main apps giữ chạy, chỉ dừng Mongo QA;
 không mutation dữ liệu owner, push/merge hoặc đóng gate READINESS.
+
+## Thông báo đơn chờ duyệt trên Ví
+
+Owner yêu cầu03/11 hiển thị rõ số đơn chờ và thời gian xử lý dưới24giờ. Nhánh
+`codex/wallet-pending-withdrawal-notice`, base `cec2fc6f`; checkpoint subject
+`feat(wallet): highlight pending withdrawal requests`.
+
+Thông báo nằm ngay dưới tiêu đề, phía trên thẻ ví/lịch sử, dùng wine/cream hiện có.
+Copy: “Bạn đang có N đơn rút tiền chờ duyệt” và “Yêu cầu sẽ được xử lý trong vòng
+dưới 24 giờ kể từ khi gửi.” Đây là thời gian xử lý owner yêu cầu công bố; không
+thêm job tự duyệt hoặc thay quyền Admin.
+
+Đọc endpoint owner-only hiện có với state Requested; duyệt hết cursor pages,
+dedupe ID để đếm đủ, không suy từ10đơn lịch sử đang tải hoặc số tiền hold. Cache
+theo owner, kiểm lại15giây khi tab đang hiển thị và sau gửi/đọc trạng thái đơn.
+Không có đơn thì ẩn; đọc lỗi có retry, không hiện count cũ hoặc suy zero. Một đơn
+có nút Xem chi tiết, nhiều đơn mở đơn mới nhất, giữ query params khác. Không sửa
+API/contract/migration/số dư/dữ liệu owner. Giữ DESIGN/token; không thêm ảnh.
+
+PASS320Member unit/typecheck/build/lint; không có cảnh báo lint trong component
+đổi, các cảnh báo cũ ngoài feature còn. Detector một lượt:4advisory cũ của CSS
+form/list (size/radius), không finding mới ở banner. Browser cuối PASS30captures
+1440/1000/390/320/chữ130%,0page errors/overflow, API/Mongo QA riêng thật:
+
+- Một đơn chờ có thông báo dưới24giờ trên màn đầu, link mở đúng chi tiết.
+- Hai đơn chờ với server trả một đơn mỗi cursor page vẫn đếm2; Completed/Rejected
+  không tính và thông báo ẩn khi hết chờ. Không đổi quyền, ACK/replay/hold/refund.
+- Main UI HMR; không tạo đơn trên dữ liệu owner. QA fixture/roles được teardown,
+  Mongo QA dừng, app chính3000/5173/5174 giữ chạy.
+
+Lượt browser đầu FAIL do assert deep link trong lúc login còn đang chuyển trang;
+helper nay chờ URL đích sau click, không nới timeout hoặc rút motion. Lượt chạy
+lại PASS. Build đầu bắt lỗi suy luận kiểu trong cursor loop; đã thêm type tường
+minh và build lại PASS. Evidence private `.tmp/pending-withdrawals-evidence/`,
+`.tmp/pending-wallet-browser-retry.log`, `.tmp/pending-wallet-build.log`,
+`.tmp/pending-wallet-unit.log`. Không coi đây là native/human/CI/release PASS;
+không push/merge hoặc đổi READINESS.

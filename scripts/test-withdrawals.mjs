@@ -23,7 +23,7 @@ assert.ok(
 );
 const memberOrigin = "http://127.0.0.1:5195",
   adminOrigin = "http://127.0.0.1:5196";
-const evidence = path.join(root, ".tmp/compact-withdrawals-evidence");
+const evidence = path.join(root, ".tmp/pending-withdrawals-evidence");
 let fixture, browser, web, adminVite, member, admin, op;
 const pageErrors = [];
 const captures = [];
@@ -72,6 +72,7 @@ async function login(p, origin, email, url) {
   await p.getByLabel(/^Email/).fill(email);
   await p.getByLabel(/^Mật khẩu/).fill(password);
   await button(p, "Đăng nhập").click();
+  await p.waitForURL(origin + url);
 }
 async function form(p, amount) {
   await p.getByRole("button", { name: /^Rút tiền(?: Demo)?$/ }).click();
@@ -213,6 +214,20 @@ try {
   ).toBeVisible();
   await capture(member, "member-requested-mobile", 390);
   await closePopup(member);
+  const pendingNotice = member.getByRole("region", { name: "Bạn đang có 1 đơn rút tiền chờ duyệt" });
+  await expect(pendingNotice).toBeVisible();
+  await expect(pendingNotice.getByText("dưới 24 giờ", { exact: true })).toBeVisible();
+  await capture(member, "member-pending-desktop", 1440, 900);
+  assert.ok(await pendingNotice.evaluate(e => e.getBoundingClientRect().bottom < window.innerHeight));
+  await capture(member, "member-pending-mobile", 390, 844);
+  await capture(member, "member-pending-small", 320, 844);
+  await member.evaluate(() => (document.documentElement.style.fontSize = "130%"));
+  await capture(member, "member-pending-large-text", 390, 844);
+  await member.evaluate(() => (document.documentElement.style.fontSize = ""));
+  await pendingNotice.getByRole("button", { name: "Xem chi tiết" }).click();
+  await member.getByRole("dialog", { name: "Chi tiết rút tiền" }).waitFor();
+  assert.equal(new URL(member.url()).searchParams.get("withdrawal"), id);
+  await closePopup(member);
   await member.getByRole("tab", { name: "Rút tiền", exact: true }).click();
   await expect(member.getByText("−100.000 ₫", { exact: true })).toBeVisible();
   await login(admin, adminOrigin, "admin@operations.test", "/withdrawals");
@@ -278,6 +293,7 @@ try {
   ).toBeVisible();
   await capture(member, "member-completed-mobile", 390);
   await closePopup(member);
+  await expect(pendingNotice).toHaveCount(0);
   assert.equal(
     (await fixture.api("/me/wallet", fixture.member.accessToken)).available,
     400000,
@@ -333,6 +349,21 @@ try {
   ).toBeVisible();
   await capture(member, "member-rejected-mobile", 390);
   await closePopup(member);
+  await expect(pendingNotice).toHaveCount(0);
+  // Force real server pagination at one pending request per page.
+  await member.route("**/me/withdrawals?state=Requested&limit=100*", route => {
+    const url = new URL(route.request().url());
+    url.searchParams.set("limit", "1");
+    return route.continue({ url: url.toString() });
+  });
+  for (let i = 0; i < 2; i++) {
+    await form(member, 50000);
+    await confirmCreate(member);
+    await member.getByRole("dialog", { name: "Chi tiết rút tiền" }).waitFor();
+    await closePopup(member);
+  }
+  await expect(member.getByRole("region", { name: "Bạn đang có 2 đơn rút tiền chờ duyệt" })).toBeVisible();
+  await capture(member, "member-two-pending-desktop", 1440, 900);
   // A deep link to another owner's request must not disclose the cached original.
   await login(
     member,
@@ -366,6 +397,11 @@ try {
           "320-390-1000-1440",
           "decision-visible-above-fold",
           "expandable-reference-identifiers",
+          "pending-notice-visible-above-wallet",
+          "pending-count-all-filtered-pages",
+          "completed-rejected-not-counted",
+          "pending-detail-link",
+          "under-24-hour-copy",
           "large-text",
           "member-admin-lost-ack-exact-retry",
           "independent-admin-approval",

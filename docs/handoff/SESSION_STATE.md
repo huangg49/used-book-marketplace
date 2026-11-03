@@ -1,6 +1,19 @@
 # Rút tiền qua Admin — 03/11/2026
 
-- Hiện tại `codex/admin-withdrawal-detail-ui`, base `cf23cc66`; checkpoint subject
+- Hiện tại `codex/wallet-pending-withdrawal-notice`, base `cec2fc6f`; checkpoint
+  subject `feat(wallet): highlight pending withdrawal requests`. Owner yêu cầu
+  hiện số đơn chờ duyệt và thời gian xử lý dưới24giờ rõ trên đầu trang Ví.
+- Banner trên thẻ ví/lịch sử đếm toàn bộ Requested qua endpoint/filter/cursor có
+  sẵn, cache theo owner; nút mở chi tiết, kiểm lại15giây và sau thay đổi đơn. Không
+  đếm Completed/Rejected hoặc suy zero khi đọc lỗi; không sửa API/contract/DB.
+- PASS320Member unit/typecheck/build/lint (cảnh báo cũ ngoài feature), browser30
+  captures1440/1000/390/320/chữ130%,0page errors/overflow; count1/2 qua phân trang
+  API thật, SLA copy, detail link, ẩn sau duyệt/từ chối, lostACK/exact retry và
+  owner-only. Đã xem desktop/320px và nhiều đơn; giữ DESIGN/token, không ảnh mới.
+  Browser đầu vướng race chuyển trang sau login; helper nay chờ đúng URL thay vì
+  assert trên màn login, giữ timeout/motion. Lượt chạy lại PASS. QA đã dừng;
+  main apps giữ chạy, không mutation owner, push/merge hoặc đổi READINESS.
+- UI Admin trước ở `codex/admin-withdrawal-detail-ui`, base `cf23cc66`; subject
   `refactor(admin): compact withdrawal review and confirmation`. Owner yêu cầu UI
   gọn hơn và popup duyệt chỉ bấm “Xác nhận”, không nhập lý do duyệt.
 - Admin detail gom số tiền/trạng thái/nút xử lý ở đầu, nhận tiền và thông tin đơn

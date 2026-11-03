@@ -1,4 +1,5 @@
 import { WalletWithdrawals } from "./WalletWithdrawals";
+import { PendingWithdrawalNotice } from "./PendingWithdrawalNotice";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -402,6 +403,8 @@ export function WalletPage() {
           <span className={styles.envDot} aria-hidden="true" />
         </div>
       </header>
+
+      <PendingWithdrawalNotice key={ownerId} ownerId={ownerId} />
 
       {/* =====================================================================
           2-Column Split Layout (Dual-Panel Pass & Digital Receipt)
