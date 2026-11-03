@@ -1,4 +1,9 @@
-.wrap { position: relative; }
+.wrap {
+  --shop-error: #912b0e;
+  --shop-shelf: #f4eddf;
+  --shop-exchange-ink: #254337;
+  position: relative;
+}
 .bell {
   position: relative; width: 40px; height: 40px; min-width: 40px; min-height: 40px;
   display: grid; place-items: center; border: 1px solid rgba(255,255,255,.2);
@@ -7,10 +12,12 @@
 }
 .bell:hover { background: rgba(255,255,255,.18); transform: scale(1.04); }
 .badge {
-  position: absolute; top: 0; right: -2px; min-width: 18px; height: 18px; padding: 0 5px;
+  position: absolute; top: -12px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px;
+  display: flex; align-items: center; justify-content: center; box-sizing: border-box;
+  pointer-events: none;
   border-radius: 999px; background: var(--shop-error); color: var(--shop-paper);
-  font-size: .6875rem; font-weight: 700; line-height: 18px; text-align: center;
-  box-shadow: 0 0 0 2px var(--shop-wine); font-variant-numeric: tabular-nums;
+  font-family: var(--shop-body); font-size: 11px; font-weight: 700; line-height: 1; text-align: center;
+  box-shadow: 0 0 0 2px var(--shop-paper); font-variant-numeric: tabular-nums;
   animation: pulseBadge 2s infinite ease-in-out;
 }
 @keyframes pulseBadge { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }

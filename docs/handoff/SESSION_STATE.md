@@ -12,6 +12,13 @@ empty/error/deep link. Không DB write hoặc provider trong fixture.
 Đã đưa cùng source vào checkout ứng dụng; localhost5174 phục vụ dropdown mới.
 Không push/remote merge hoặc đổi READINESS.
 
+Follow-up `codex/notification-badge-fix`, base2d1185cd: owner báo số đè chuông.
+Biến shop-error/shelf/exchange-ink chỉ có trong page khác nên Header thiếu nền.
+Khai báo scoped trên wrap, đưa badge góc ngoài, căn giữa chữ và viền giấy.
+PASS browser nền computed không transparent,3/12/99+ không che glyph/tràn chữ,
+cùng các ca responsive/cuộn/read-error/retry/deep link của dropdown. Build PASS;
+đã cập nhật checkout ứng dụng, không đổi DB hoặc API.
+
 # Đồng bộ PR94 vào worktree — 03/11/2026
 
 Owner yêu cầu lấy code main mới. Nhánh `codex/sync-main-20261103-auctions`

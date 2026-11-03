@@ -13,6 +13,7 @@ const user={id:randomUUID(),email:'reader@notification-qa.test',displayName:'B�
 const now=Date.now(),target=randomUUID();
 const original=Array.from({length:8},(_,i)=>({id:randomUUID(),kind:i===0?'AuctionCancelled':'AuctionOutbid',targetType:'Auction',targetId:target,title:i===0?'Phiên đấu giá đã bị hủy':'Bạn đã bị vượt giá',body:i===0?'“One Piece Strong Words” đã bị quản trị viên hủy. Lượt trả giá của bạn hết hiệu lực.':'“One Piece Strong Words”: giá hiện tại 2.550.000đ. Trả từ 2.600.000đ để dẫn lại.',createdAt:new Date(now-i*60000).toISOString(),readAt:i<3?null:new Date(now).toISOString()}));
 let server,browser,mode='normal',items=structuredClone(original),failRead=true,readCalls=0;
+let countOverride;
 try{
  await mkdir(out,{recursive:true});
  const {createServer}=await import(pathToFileURL(web.resolve('vite')).href);
@@ -26,7 +27,7 @@ try{
   if(endpoint==='/auth/me')return send(user);
   if(endpoint==='/me/notifications'){
    if(mode==='error')return send({code:'UNAVAILABLE',message:'QA offline'},503);
-   return send({items:mode==='empty'?[]:items,unreadCount:mode==='empty'?0:items.filter(x=>!x.readAt).length,nextCursor:null});
+   return send({items:mode==='empty'?[]:items,unreadCount:mode==='empty'?0:countOverride??items.filter(x=>!x.readAt).length,nextCursor:null});
   }
   if(endpoint==='/me/notifications/read'){
    readCalls++;assert.equal(request.method(),'POST');
@@ -43,6 +44,15 @@ try{
  await page.goto(origin+'/login?returnUrl=%2Fauctions');await page.getByLabel(/^Email/).fill(user.email);await page.getByLabel(/^Mật khẩu/).fill('QA-only-password');await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();await page.waitForURL('**/auctions');
  const bell=page.getByRole('button',{name:/^Thông báo/}),panel=page.getByRole('region',{name:'Thông báo gần đây'});
  await bell.click();await panel.getByRole('heading',{name:'Phiên đấu giá đã bị hủy'}).waitFor();
+ // The header must define its own badge colors; page-local tokens do not inherit here.
+ for(const count of [3,12,123]){
+  if(count!==3){await page.keyboard.press('Escape');countOverride=count;await bell.click();}
+  const badge=bell.locator('span');await badge.getByText(count>99?'99+':String(count),{exact:true}).waitFor();
+  const visual=await badge.evaluate(el=>{const s=getComputedStyle(el),r=el.getBoundingClientRect(),b=el.parentElement.getBoundingClientRect(),i=el.parentElement.querySelector('svg').getBoundingClientRect();return{background:s.backgroundColor,color:s.color,width:r.width,scroll:el.scrollWidth,client:el.clientWidth,onScreen:r.top>=0&&r.right<=innerWidth,aboveCenter:r.bottom<=b.top+b.height/2,iconOverlap:Math.max(0,Math.min(r.right,i.right)-Math.max(r.left,i.left))*Math.max(0,Math.min(r.bottom,i.bottom)-Math.max(r.top,i.top))};});
+  assert.notEqual(visual.background,'rgba(0, 0, 0, 0)');assert.notEqual(visual.color,visual.background);assert(visual.onScreen&&visual.aboveCenter);assert(visual.scroll<=visual.client);assert(visual.iconOverlap<4,'Badge must not obscure the bell: '+JSON.stringify(visual));
+  await bell.screenshot({path:path.join(out,`badge-${count}.png`)});
+ }
+ await page.keyboard.press('Escape');countOverride=undefined;await bell.click();
  for(const [width,height]of [[1440,1000],[390,844],[320,640],[950,400]]){
   await page.setViewportSize({width,height});await page.waitForTimeout(250);
   const box=await panel.boundingBox();assert(box.x>=0&&box.x+box.width<=width+1);assert(box.y>=0&&box.y+box.height<=height+1);
