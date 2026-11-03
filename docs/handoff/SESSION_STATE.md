@@ -1,36 +1,26 @@
 # Tối ưu Member web — 03/11/2026
 
-Gói hiện tại `codex/member-web-chat-input-render`, base `2aa1350a`:
-ChatMessage dùng memo/so sánh props mặc định để soạn nháp không dựng lại40
-hàng tin cũ. Nội dung/time/owner/partner mới vẫn cập nhật; không comparator
-chỉ theo ID hoặc cache riêng. Giữ DOM/CSS, history/cursor, socket/send/receipt,
-scroll và motion. [Source](../../apps/user-web/src/pages/ChatPage.tsx),
-[bằng chứng và các gói trước](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
+Gói hiện tại `codex/member-web-auth-woff2`, base `42fe9871`. Font Bricolage
+tiêu đề/con dấu Auth được nén nguyên bộ glyph và trục biến thiên. CSS và snapshot
+giấy ưu tiên WOFF2, lấy TTF khi tải lỗi. [Nguồn font](../../apps/user-web/public/fonts/auth/README.md)
+và [bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Production Chromium151,40 tin fixture,5 cặp mỗi viewport; gõ8 ký tự.
-  Viewport390/CPU4×: tạo formatter320→0, ScriptDuration307→133ms;
-  desktop48→17ms. Không là INP/điện thoại thật.46 CSS và31 asset JS/CSS entry,
-  tổng raw1.010.927byte không đổi; không thêm dependency.
-- Build/tsc,341 unit test, lint, chat-input390/1440, detector0 PASS. Browser
-  xác nhận giữ nháp/focus, tin socket/dedup, đổi body/time/owner cùng history ID,
-  đổi tên partner và refetch403 gỡ tin cache khỏi UI. Lịch sử85 tin PASS gồm
-  cursor retry/anchor/tin đến. API/Socket.IO ở đây là fixture, không DB.
-- Chat chức năng PASS với CHAT_GUIDANCE_SCREENSHOTS=0; tùy chọn bỏ cả helper
-  captures()/assertion bố cục. **Suite đầy đủ FAIL** selector giá75.000 tại
-  captures()/seller-ready, tái hiện cùng lỗi trên ChatPage trước thay đổi.
-  Không sửa harness; phần chụp/bố cục chưa đạt. API health ECONNREFUSED;
-  không khởi động dịch vụ/ghi DB. Docs/diff check PASS, warning cũ ngoài diff.
+- File font 408.496→208.496 byte. 5 cặp Chromium production, cache lạnh,
+  390 px/CPU4×/500.000 byte/s. Trung vị tải xong font 4,06→3,27 s và texture
+  sẵn sàng 5,78→4,93 s. Mốc đo là chuẩn bị hiệu ứng trong lab.
+- 5 texture khớp từng pixel tại 390/1440 px, kể cả ca ép WOFF2 trả 404 rồi
+  dùng TTF. Browser Auth PASS WebGL 3 tờ/gió giấy, nháp khi 401, đích/focus,
+  Back, resize, mất WebGL và lỗi capture trên desktop/mobile reduced-motion.
+- Build/typecheck, 341 unit test, lint, docs/diff PASS. Có warning lint cũ.
+  Kiểm bằng HTTP fixture. API thật, native, thiết bị thật, human acceptance,
+  CI remote NOT RUN. Gate READINESS giữ nguyên.
 
-Chuỗi trước: `62324b47` catalog, `10fd986d` WOFF2, `bbd59568` Hero preload,
+Chuỗi trước: `62324b47` catalog, `10fd986d` WOFF2 Home, `bbd59568` Hero preload,
 `d28f7605` canvas, `55c9df1d` ảnh trang, `8aba79c7` prefetch mã, `8fc33e1f`
 viewport, `183b457d` style chuyển cảnh, `aa023b21` chữ lúc cuộn, `2abb5c52`
 khung tài khoản, `966b581a` đồng hồ đấu giá, `e4ee224a` ảnh gần viewport,
-`2aa1350a` render thẻ đấu giá khi nhập liệu.
-
-Chỉ ở worktree phát triển; checkout demo có local work được bảo toàn. Chưa
-push/PR/merge. Thiết bị thật, human acceptance, CI remote chưa chạy.
-Gate phát hành theo READINESS giữ nguyên. Chưa khảo sát mọi trang/vai trò với
-dữ liệu đại diện để kết luận toàn web hết việc tối ưu.
+`2aa1350a` render thẻ đấu giá, `42fe9871` render hàng tin nhắn.
+Thay đổi nằm trong worktree phát triển. Checkout demo giữ local work.
 
 # Lịch sử tin nhắn Member web —03/11/2026
 

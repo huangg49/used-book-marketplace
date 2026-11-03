@@ -69,11 +69,16 @@ async function fontStyles() {
   const fonts = [
     ['Be Vietnam Pro', '/fonts/BeVietnamPro-Regular.woff2', '400'],
     ['Be Vietnam Pro', '/fonts/BeVietnamPro-Bold.woff2', '700'],
-    ['Auth Bricolage', '/fonts/auth/BricolageGrotesque.ttf', '200 800'],
+    ['Auth Bricolage', '/fonts/auth/BricolageGrotesque.woff2', '200 800', '/fonts/auth/BricolageGrotesque.ttf'],
     ['Auth Melody', '/fonts/auth/MTD-Fancy-Melody.otf', '400'],
   ];
-  return (await Promise.all(fonts.map(async ([family, url, weight]) =>
-    `@font-face{font-family:'${family}';src:url('${await embedded(url)}');font-weight:${weight};}`))).join('');
+  return (await Promise.all(fonts.map(async ([family, url, weight, fallback]) => {
+    const data = await embedded(url).catch(error => {
+      if (!fallback) throw error;
+      return embedded(fallback);
+    });
+    return `@font-face{font-family:'${family}';src:url('${data}');font-weight:${weight};}`;
+  }))).join('');
 }
 export async function snapshotPaper(source, back = false, stampOnly = false) {
   const started = performance.now();

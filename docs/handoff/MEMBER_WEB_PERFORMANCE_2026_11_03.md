@@ -4,6 +4,54 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Nén font tiêu đề và con dấu Auth bằng WOFF2
+
+Nhánh `codex/member-web-auth-woff2`, base `42fe9871`. Member web dùng WOFF2
+Bricolage Grotesque trong cả CSS Auth và snapshot giấy. CSS khai báo TTF dự
+phòng. Snapshot đọc TTF khi không lấy được WOFF2. Hai nơi dùng cùng URL ưu tiên
+nên lần đọc cho snapshot dùng lại HTTP cache trong fixture. Mã dựng cảnh, số lớp,
+keyframe và thời lượng giữ nguyên. Mã nguồn và hướng dẫn tái tạo ở
+[Auth CSS](../../apps/user-web/src/layouts/AuthLayout.module.css),
+[snapshot](../../apps/user-web/src/components/auth/wind/capture.mjs) và
+[font README](../../apps/user-web/public/fonts/auth/README.md).
+
+FontTools 4.63.0 + Brotli 1.2.1 nén đúng TTF nguồn. Giữ 597 glyph và 527
+codepoint, kiểm tra dấu tiếng Việt, bảng `fvar`/`gvar` và các bảng font theo
+byte. Khác biệt nằm ở DSIG và trường checksum/cờ nén của container. Hai file
+giữ cùng attribution/OFL. Không thêm dependency runtime.
+
+Hai build production, Chromium 151, cache lạnh, 5 cặp chạy luân phiên tại
+390×844/DPR2/CPU4×, băng thông tải xuống 500.000 byte/s, độ trễ cấu hình 80 ms.
+Mỗi lượt mở `/login` và chờ marker `data-flight-ready`, báo năm texture đã sẵn
+sàng. Tài nguyên tĩnh từ HTTP fixture cục bộ, JS/CSS/HTML có gzip. Bảng ghi
+trung vị, thời gian tính từ lúc bắt đầu điều hướng.
+
+| Phép đo | TTF | WOFF2 |
+| --- | ---: | ---: |
+| Nội dung file font | 408.496 byte | 208.496 byte |
+| Font truyền qua mạng theo Resource Timing | 408.796 byte | 208.796 byte |
+| Tải xong font CSS | 4,06 s | 3,27 s |
+| Texture giấy sẵn sàng | 5,78 s | 4,93 s |
+
+Mỗi lượt bình thường truyền một bản font, lần fetch cho snapshot có transferSize
+0. Năm SVG data URL ngắn hơn tổng 1.587.250 ký tự ở mỗi viewport. Mốc
+`data-flight-ready` là chuẩn bị texture trong lab. Chưa đo LCP, tốc độ hoàn tất
+đăng nhập với API thật hoặc hiệu năng thiết bị thật.
+
+- Chromium production 390/1440 px với reduced-motion. So SHA-256 của RGBA
+  cho từng texture đã rasterize, cả 5 texture đều khớp TTF ở mỗi viewport.
+  Ép WOFF2 HTTP 404 và xác nhận CSS lẫn snapshot lấy TTF, 5 texture vẫn khớp.
+  Ảnh cắt giấy desktop khớp từng pixel. Ảnh mobile lệch 18 pixel ở hai góc
+  mép dưới và cùng mức lệch khi ép TTF dự phòng. Vùng chữ khớp.
+- `pnpm --filter @used-books/user-web test:auth-motion:browser` PASS desktop
+  1366 và mobile 390 khi reduced-motion bật. Login 401 giữ nháp, Login 200
+  chạy WebGL 3 tờ, gió giấy và focus trang đích. Back, resize, mất WebGL và
+  lỗi capture đều hoàn tất theo cơ chế dọn dẹp của luồng. REST fixture và
+  không dùng DB. Suite cũng xác nhận trang đấu giá hiện hành không tải rèm cũ.
+- Build/typecheck, 341 unit test, lint, docs và diff check PASS. Lint có cảnh
+  báo cũ ngoài diff. Bằng chứng ở `.tmp/member-web-auth-font/`. Thiết bị thật,
+  API thật, native, human acceptance và CI remote NOT RUN.
+
 ## Tránh dựng lại tin nhắn không đổi khi soạn chat
 
 Nhánh `codex/member-web-chat-input-render`, base `2aa1350a`.
