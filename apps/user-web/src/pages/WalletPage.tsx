@@ -26,6 +26,7 @@ import {
 } from "../services/wallet";
 import { formatVnd } from "../lib/routes";
 import styles from "./WalletPage.module.css";
+import frame from "./WalletFrame.module.css";
 import { paymentChannel } from "../lib/payment-return";
 import { WalletHistory } from "./WalletHistory";
 
@@ -257,7 +258,7 @@ export function WalletPage() {
 
   if (!ownerId) {
     return (
-      <section className={styles.page}>
+      <section className={frame.page}>
         <div className={styles.emptyCard}>
           <div className={styles.emptyIconWrap}>
             <Wallet size={32} />
@@ -377,7 +378,7 @@ export function WalletPage() {
   const heldVal = summary.data?.transactionHeld ?? 0;
 
   return (
-    <section className={styles.page}>
+    <section className={frame.page}>
       <header className={styles.pageHeader}>
         <div className={styles.titleCol}>
           <h1 className={styles.pageTitle}>Ví & Ký Quỹ Thư Quán</h1>

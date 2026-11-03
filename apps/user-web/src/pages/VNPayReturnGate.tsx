@@ -6,7 +6,7 @@ import {
   useNavigate,
   useSearchParams,
 } from "react-router-dom";
-import styles from "./WalletPage.module.css";
+import frame from "./WalletFrame.module.css";
 import { paymentChannel } from "../lib/payment-return";
 
 // The payment tab has no credentials. It only wakes the original, authenticated
@@ -63,7 +63,7 @@ function VNPayReturnPage() {
     };
   }, [id, navigate]);
   return (
-    <main className={styles.page}>
+    <main className={frame.page}>
       <h1>Quay lại ví của bạn</h1>
       <p role="status">
         {waiting && id && typeof BroadcastChannel !== "undefined"

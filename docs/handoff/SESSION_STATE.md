@@ -1,24 +1,23 @@
 # Tối ưu Member web — 03/11/2026
 
-Gói hiện tại `codex/member-web-shared-cover-observer`, base `e667389a`.
-Bìa sách, thumbnail và thẻ đấu giá dùng chung IntersectionObserver tại
-margin 200 px. Cleanup từng node và disconnect khi hết subscriber.
-[Source](../../apps/user-web/src/hooks/useNearViewport.ts) và
-[bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
+Gói hiện tại `codex/member-web-split-wallet-styles`, base `e7b8f65c`.
+[WalletFrame](../../apps/user-web/src/pages/WalletFrame.module.css) chứa
+nguyên block khung dùng chung cho ví và trang quay về VNPay. CSS phần ví
+tải theo route. [Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Chromium production, 16 thẻ đấu giá 390/1440: 16→1 observer.
-  Mở và cuộn: callback 29→5 mobile, 52→4 desktop. Cùng số entry và
-  cùng tập ID đọc ảnh. Đây là số đếm fixture, chưa đo CPU/FPS/INP.
-- Browser PASS Đấu giá scroll/cache/revision/error/cleanup/Back,
-  Tìm sách 24 thẻ và Chi tiết 5 thumbnail cùng viewer/phím/Escape.
-  Search covers 8 ca và Book transition 5 cấu hình PASS. Bìa giữ 440 ms
-  khi bật reduced-motion. 46 CSS production khớp từng byte.
-- Build/typecheck, 341 unit test, lint, docs/diff PASS. Kiểm bằng fixture.
-  API thật, thiết bị thật, native, human acceptance và CI remote NOT RUN.
-  Gate READINESS giữ nguyên.
+- Entry JS/CSS giảm 26.242 B raw hoặc 5.831 B gzip. Home giảm 4.075 B
+  CSS gzip trong Chromium fixture 390/1440. Home và Thông báo không tải
+  file CSS riêng của ví. Chưa đo tốc độ trên thiết bị thật.
+- Browser PASS ví, lịch sử/lọc, popup/Escape/focus, guest callback làm sạch
+  URL và phát tín hiệu. Sheen 8 s và keyframe giữ nguyên kể cả reduced-motion.
+  Kiểm hồi quy tải CSS lỗi và reload. Ví 390 px có tràn ngang trên cả hai build,
+  nội dung 382 px trong khung 347 px. Lỗi này còn mở.
+- Build/typecheck, 341 unit test, lint, docs/diff PASS. Browser dùng
+  HTTP fixture, không giao dịch. API/Mongo/VNPay thật, native, human acceptance
+  và CI remote NOT RUN. Gate READINESS giữ nguyên.
 
-Gói trước `e667389a` giảm dung lượng tám bìa Home bằng ảnh theo mật độ
-điểm ảnh. Thay đổi nằm trong worktree phát triển. Checkout demo giữ local work.
+Gói trước `e7b8f65c` dùng chung observer cho ảnh gần viewport. Thay đổi
+nằm trong worktree phát triển. Checkout demo giữ local work.
 
 # Lịch sử tin nhắn Member web —03/11/2026
 

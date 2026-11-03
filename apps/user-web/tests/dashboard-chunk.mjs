@@ -24,6 +24,8 @@ const assets = await readdir(path.join(build, 'assets'));
 const dashboardJs = assets.find(file => /^DashboardLayout-.*\.js$/.test(file));
 const dashboardCss = assets.find(file => /^DashboardLayout-.*\.css$/.test(file));
 assert(dashboardJs && dashboardCss, 'Build must produce separate dashboard JS and CSS');
+const walletCss = assets.find(file => /^WalletPage-.*\.css$/.test(file));
+assert(walletCss, 'Wallet-specific styles must be in a separate asset');
 const uuid = n => '00000000-0000-4000-8000-' + String(n).padStart(12, '0');
 async function fixture(page) {
   const calls = [];
@@ -59,6 +61,7 @@ try {
     await page.goto(origin);
     await page.locator('#latest-title').waitFor();
     assert(!files.some(file => file.includes('/DashboardLayout-')), 'Home must defer dashboard JS and CSS');
+    assert(!files.includes('/assets/' + walletCss), 'Home must defer wallet-specific styles');
     assert(!calls.some(call => call.pathname.startsWith('/api/v1/me/')), 'Guest Home must not read private dashboard data');
     await page.goto(origin + '/account/notifications?source=qa');
     await expect(page).toHaveURL(/\/login\?returnUrl=%2Faccount%2Fnotifications%3Fsource%3Dqa/);
@@ -69,6 +72,7 @@ try {
     await expect(heading).toHaveText('Thông Báo');
     assert(files.includes('/assets/' + dashboardJs));
     assert(files.includes('/assets/' + dashboardCss));
+    assert(!files.includes('/assets/' + walletCss), 'Notifications must defer wallet-specific styles');
     if (width === 1440) {
       await page.getByRole('button', { name: 'Thu gọn thanh điều hướng', exact: true }).click();
       await expect(page.getByRole('button', { name: 'Mở rộng thanh điều hướng', exact: true })).toBeVisible();
@@ -104,7 +108,8 @@ try {
     checks.push({ paymentReturn: true, sanitizedUrl: true, privateReads: 0 });
     await page.close();
   }
-  for (const failedAsset of [dashboardJs, dashboardCss]) {
+  for (const failedAsset of [dashboardJs, dashboardCss, walletCss]) {
+    const routePath = failedAsset === walletCss ? '/wallet' : '/notifications';
     const page = await browser.newPage();
     await fixture(page);
     let failed = false;
@@ -112,14 +117,14 @@ try {
       failed = true;
       return route.fulfill({ status: 503, body: '', headers: { 'cache-control': 'no-store' } });
     });
-    await page.goto(origin + '/notifications');
+    await page.goto(origin + routePath);
     await expect(page.getByRole('heading', { name: 'Chưa mở được trang', exact: true })).toBeVisible();
     assert(failed);
     await page.unroute('**/assets/' + failedAsset);
     await page.getByRole('button', { name: 'Tải lại trang', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Lại gặp nhau rồi.', exact: true })).toBeVisible();
-    await expect(page).toHaveURL(/returnUrl=%2Fnotifications/);
-    checks.push({ failure: failedAsset.endsWith('.css') ? 'stylesheet' : 'script', routeError: true, reloadRecovered: true });
+    await expect(page).toHaveURL(origin + '/login?returnUrl=' + encodeURIComponent(routePath));
+    checks.push({ routePath, failure: failedAsset.endsWith('.css') ? 'stylesheet' : 'script', routeError: true, reloadRecovered: true });
     await page.close();
   }
   await writeFile(path.join(out, 'result.json'), JSON.stringify({ status: 'PASS', checks }, null, 2));

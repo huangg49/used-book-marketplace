@@ -635,6 +635,13 @@ route feedback. Component, sidebar motion and session guard stay unchanged.
 Verify login return URLs, desktop/mobile navigation and JS/CSS load recovery
 with `pnpm --filter @used-books/user-web test:dashboard-chunk:browser`.
 
+The payment return gate imports only the shared
+[wallet frame](../../apps/user-web/src/pages/WalletFrame.module.css).
+Wallet content and receipt styles belong to the wallet route asset. Keep
+the frame usable for a guest return and the wallet stylesheet out of Home
+and Notifications. The dashboard browser check covers the return URL and
+reload recovery when the wallet stylesheet fails.
+
 ## Admin — Dashboard biểu đồ —27/10/2026
 
 Owner duyệt thống kê thật7/30ngày. [Thiết kế và semantics](../features/ADMIN_DASHBOARD.md):

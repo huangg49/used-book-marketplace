@@ -4,6 +4,53 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Tách CSS ví khỏi lần tải đầu Member web
+
+Nhánh `codex/member-web-split-wallet-styles`, base `e7b8f65c`.
+`VNPayReturnGate` có mặt ở entry và chỉ dùng một class khung, nhưng trước
+đây import cả `WalletPage.module.css`. Chuyển nguyên block .page sang
+[WalletFrame](../../apps/user-web/src/pages/WalletFrame.module.css) để
+[trang ví](../../apps/user-web/src/pages/WalletPage.tsx) và
+[trang quay về VNPay](../../apps/user-web/src/pages/VNPayReturnGate.tsx)
+dùng cùng khung. CSS còn lại và mapping class đi cùng route ví. Các nhánh
+route, URL, BroadcastChannel, session, lệnh ví, keyframe và timing giữ nguyên.
+
+So hai build production với cùng cấu hình API `/api/v1`. Tổng đo các JS/CSS
+tham chiếu trực tiếp từ HTML entry. Gzip mức 9, từng file độc lập.
+
+| Dung lượng entry | Trước | Sau | Giảm |
+| --- | ---: | ---: | ---: |
+| CSS raw | 167.312 B | 146.450 B | 20.862 B |
+| CSS gzip | 32.665 B | 28.590 B | 4.075 B |
+| JS và CSS raw | 1.011.983 B | 985.741 B | 26.242 B |
+| JS và CSS gzip | 302.641 B | 296.810 B | 5.831 B |
+
+Vẫn 31 file entry. Wallet CSS riêng 20.792 B raw / 4.783 B gzip. Home ở
+390 và 1440 px nhận đúng 4.075 B CSS gzip ít hơn qua HTTP fixture.
+Kiểm request xác nhận Home và Thông báo không tải file CSS của ví, route
+ví nhận file trước khi hiển thị. Route ví có thêm một request CSS riêng.
+Số liệu trên là dung lượng tải, chưa đo LCP hay thời gian mở ví.
+
+- [Dashboard browser](../../apps/user-web/tests/dashboard-chunk.mjs) PASS
+  390/1440, login return URL, Back và sidebar. Guest quay về VNPay được làm
+  sạch URL, không đọc endpoint riêng. Từ chối tải CSS ví hiện màn lỗi và
+  tải lại phục hồi đường dẫn đăng nhập. Assertion CSS riêng tái hiện FAIL
+  đúng điều kiện trên build cũ.
+- Production fixture riêng PASS 390/reduced-motion và 1440/motion thường:
+  xem số dư, lịch sử, lọc giao dịch, mở hộp thoại nạp, nhập nháp, Escape
+  trả focus. Chỉ login giả lập, không gửi lệnh tiền. Guest callback phát
+  tín hiệu qua BroadcastChannel, không đọc endpoint riêng. Khung và giá trị
+  CSS khớp trước/sau. Sheen thẻ ví giữ vòng lặp 8 s, easing và 3 keyframe.
+- Đã so ảnh wallet, popup và callback trước/sau. Callback cả hai viewport,
+  wallet desktop và popup mobile khớp từng pixel. Wallet mobile có chênh
+  pixel và cùng số đo bố cục. Popup desktop lệch 2 pixel. Ở 390 px, nội dung
+  ví đã rộng 382 px trong khung 347 px trên cả hai build. Đây là lỗi tràn
+  có sẵn ở trang ví, chưa sửa trong gói tách CSS.
+- Build/typecheck, 341 unit test, lint, docs/diff PASS. Có cảnh báo lint cũ
+  ngoài diff. Bằng chứng ở `.tmp/member-web-wallet-styles/`. API/Mongo và
+  VNPay thật, thiết bị thật, native, human acceptance, CI remote NOT RUN.
+  READINESS giữ nguyên.
+
 ## Dùng chung observer cho ảnh gần viewport
 
 Nhánh `codex/member-web-shared-cover-observer`, base `e667389a`.

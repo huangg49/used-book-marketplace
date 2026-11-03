@@ -1,15 +1,5 @@
 /* WalletPage.module.css — Option 1: Dual-Panel Pass & Digital Receipt */
 
-.page {
-  --shop-wine-hover: #7c2320;
-  --shop-error: #912b0e;
-  width: 100%;
-  max-width: 1040px;
-  margin: 0;
-  padding: 0 0 4rem;
-  color: var(--shop-ink, #281914);
-}
-
 /* Breadcrumb & Navigation */
 .backLink {
   display: inline-flex;
