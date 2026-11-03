@@ -557,6 +557,13 @@ use their normal behavior. Detail still revalidates listing state on entry.
 Build the app before `pnpm --filter @used-books/user-web test:book-detail-prefetch:browser`
 to verify production hints, keyboard/touch, fresh state and failure recovery.
 
+The BookDetail page clips horizontal overflow at its own boundary. Its full
+24px article entrance otherwise expands the mobile layout viewport during
+snapshot capture, causing Chromium to abort the cover View Transition. Keep
+the entrance and cover timing intact, including under reduced-motion settings.
+`pnpm --filter @used-books/user-web test:book-transition:browser` checks native
+transition readiness, stable viewport, the return link and unsupported browsers.
+
 `WishlistButton` is an authenticated feature control using the existing Member
 wishlist endpoints, not a primitive or an optimistic success indicator. It uses
 the shared session/query client, an owner-keyed saved-ID query, exact intended

@@ -1,3 +1,38 @@
+# Giữ viewport ổn định khi mở Chi tiết trên mobile — 03/11/2026
+
+Gói từ `8aba79c7` trên nhánh `codex/member-web-touch-performance`.
+[BookDetailPage.module.css](../../apps/user-web/src/pages/BookDetailPage.module.css)
+giới hạn phần tràn ngang bằng `overflow-x: clip` tại trang chi tiết. Animation
+article vẫn bắt đầu ở x=24px, chạy 450ms sau delay 100ms với easing cũ. Trước
+sửa, nó vượt padding mobile 20px, tăng layout viewport thêm 4px ngay trong
+snapshot và khiến Chromium hủy chuyển cảnh bìa với `InvalidStateError`.
+Không thêm JS runtime hoặc đổi cấu hình motion của máy/browser.
+
+- Browser production fixture bắt lỗi bản cũ ở 320px: viewport 320×844 →
+  324×855, `ready` thất bại. Bản sửa giữ kích thước và `ready` thành công
+  cả chiều mở chi tiết và link về kệ ở 320/390/768/1440px. Giữ bìa 440ms,
+  toàn bộ x=24px đầu vào, kiểm reduced-motion và fallback khi không có
+  `startViewTransition`. Năm cấu hình PASS, 0 page error; đã xem ảnh 390/1440px.
+  Chạy lại bằng `pnpm --filter @used-books/user-web test:book-transition:browser`.
+- Chromium 151, 5 cặp production build luân phiên, touch 390px/DPR2/CPU4×,
+  4Mbps tải xuống, 0,75Mbps tải lên, latency75ms: chuyển cảnh `ready` 0/5 → 5/5.
+  Trung vị click thật tới DOM 714 → 1.045ms; không xác nhận cải thiện tốc độ.
+  Để tách ảnh hưởng build/cache, 5 cặp dùng cùng binary và chỉ bật/tắt khai báo
+  clip cho kết quả 722 → 725ms, `ready` vẫn 0/5 → 5/5. Cả hai tập số được giữ;
+  độ trễ mở trang cần đo tiếp trên thiết bị thật, không suy từ thời gian hoàn
+  tất animation vì bản cũ đã bỏ qua hiệu ứng. Harness cũ có chi phí tìm phần
+  tử của automation; không coi 4,2–7,3 giây trước đây là input latency thực.
+- Build/typecheck, 338 unit test, lint, 6 ca prefetch và smoke production GET
+  API local thật 1440/390px PASS. Smoke kiểm Home → Search → trang2 → chi tiết
+  → browser Back; 0 lỗi JavaScript. Không ghi DB hoặc gọi GHN.
+  Lint exit0 với warning cũ; detector có 8 cố vấn màu ở dòng có sẵn ngoài diff.
+- Harness/số đo tại `.tmp/member-web-touch-performance/`, ảnh và kết quả
+  browser tại `.tmp/book-transition/`. Fixture HTTP không chứng minh provider
+  thật hoặc human acceptance. Gate phát hành theo READINESS giữ nguyên.
+
+Gói chỉ ở worktree phát triển; chưa áp vào checkout demo đang có local work.
+Thiết bị thật, human acceptance và CI remote chưa chạy.
+
 # Prefetch mã trang chi tiết theo hover/focus — 03/11/2026
 
 Gói từ `55c9df1d` trên nhánh `codex/member-web-detail-prefetch`. Production
@@ -11,8 +46,9 @@ Detail vẫn đọc API mới khi mở. Thao tác chạm và focus wishlist gi�
   Sau 650 ms hover/focus, trung vị từ bấm tới nội dung chi tiết xuất hiện:
   hover 486 → 327 ms, bàn phím 528 → 360 ms trên desktop 1440px.
   Mạng tải xuống 4 Mbps, tải lên 0,75 Mbps, độ trễ 75 ms.
-  Touch 390px, DPR 2, CPU 4× dao động khoảng 4,2–7,3 giây và chưa có
-  cải thiện ổn định; giữ làm finding riêng cho lượt đo thao tác chạm tiếp theo.
+  Số đo touch 4,2–7,3 giây của harness cũ đã được kiểm lại ở gói viewport
+  bên trên: có chi phí automation tìm phần tử, không dùng làm độ trễ click
+  thực của app. Desktop trên đây vẫn là kết quả harness của gói này.
 - Bộ production browser 6 ca PASS: hover, bàn phím, chạm, tab ẩn, lỗi HTTP
   khi prefetch và thiếu hint. Prefetch có 0 API read; mở trang đọc đúng một
   lần và cập nhật trạng thái Available trên thẻ thành InTransaction từ API.
