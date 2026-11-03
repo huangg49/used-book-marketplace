@@ -92,14 +92,10 @@
   border: 1px solid var(--shop-line);
   border-radius: 10px;
   background: #fffdf8;
-  box-shadow: 0 3px 12px rgb(67 17 14 / 7%);
+  /* Same centered shadow geometry as the shared focus ring: no apparent lift. */
+  box-shadow: 0 0 0 0 var(--shop-wine);
   color: var(--shop-wine);
-  transition: border-color 150ms ease, box-shadow 150ms ease;
-}
-
-.search:focus-within {
-  border-color: var(--shop-wine);
-  box-shadow: 0 0 0 3px rgb(94 7 5 / 10%);
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
 
 .search input {
