@@ -582,6 +582,16 @@ book return URL. Non-Members/inactive accounts cannot mutate, and catalog previe
 have no heart. `ListingPhoto` keeps its reusable loading/missing/error/retry states
 for detail, checkout and conversation consumers. RN `/ui` remains unchanged.
 
+## Member web — Thẻ đấu giá ổn định khi nhập liệu —03/11/2026
+
+`AuctionCard` uses React.memo's default prop comparison to avoid rebuilding
+unchanged cards for parent input/filter UI. Keep immutable auction updates;
+new auction data/serverTime must still reach the card. Do not compare by ID
+alone. Local visibility, query image results and the child countdown still
+update; retain price500ms and position220ms feedback. Verify typing, focus,
+empty recovery, sorting and fresh fields with unchanged serverTime through
+`pnpm --filter @used-books/user-web test:auction-input:browser`.
+
 ## Member web — Ảnh thẻ đấu giá theo viewport —03/11/2026
 
 `AuctionCard` observes its existing cover link with a200px root margin and

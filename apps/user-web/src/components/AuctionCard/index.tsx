@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Flag, MapPin, Play, Timer, Users, Zap } from 'lucide-react'
 import { AuctionPrice } from '../AuctionPrice'
@@ -25,7 +26,9 @@ function AuctionCountdown({ endAt, serverTime, scheduled }: {
   )
 }
 
-export function AuctionCard({ auction, serverTime }: { auction: AuctionSummary; serverTime: string }) {
+// Default prop comparison keeps typing/filter UI from rebuilding unchanged cards.
+// New auction data/server time and the card's own state still update normally.
+export const AuctionCard = memo(function AuctionCard({ auction, serverTime }: { auction: AuctionSummary; serverTime: string }) {
   const { ref: coverRef, active: coverActive } = useNearViewport<HTMLAnchorElement>()
   // ADR 0047: a scheduled card counts down to the start, not the end.
   const scheduled = auctionPhase(auction, serverTime) === 'Scheduled'
@@ -69,4 +72,4 @@ export function AuctionCard({ auction, serverTime }: { auction: AuctionSummary; 
       </div>
     </article>
   )
-}
+})

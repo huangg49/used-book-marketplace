@@ -4,6 +4,71 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Tránh dựng lại thẻ không đổi khi nhập tìm kiếm đấu giá
+
+Nhánh `codex/member-web-auction-input-render`, base `e4ee224a`.
+[AuctionCard](../../apps/user-web/src/components/AuctionCard/index.tsx) dùng
+`React.memo` với so sánh props mặc định; không thêm comparator theo ID hoặc
+cache dữ liệu riêng. Nhập liệu/toggle tại trang cha không dựng lại thẻ khi
+auction object và serverTime không đổi. Props mới vẫn render; state riêng của
+thẻ, clock con và query ảnh vẫn cập nhật bình thường. Giữ immutable updates
+hiện có của TanStack Query. Không thay query, debounce250ms, URL/filter/sort,
+DOM, CSS, duration/easing hoặc policy motion.
+
+Hai production build, Chromium151,5 cặp luân phiên mỗi viewport, REST fixture
+8 Live+8 Scheduled. Chờ font/viewport ổn định, focus search rồi chờ800ms; gõ
+`Phien QA` gồm8 ký tự bằng keyboard, delay15ms giữa ký tự. Width390×844/DPR2/
+CPU4× và1440×844/DPR1/CPU1×, reduced-motion. Không bóp mạng trong đoạn nhập.
+CDP Performance metrics lấy từ trước gõ đến requestAnimationFrame sau ký tự
+cuối; mọi lượt xác nhận URL vẫn `/auctions`, chưa áp dụng debounce cuối.
+
+| Trung vị trong đoạn nhập8 ký tự | Trước | Sau |
+| --- | ---: | ---: |
+| Viewport390: gọi định dạng ngày | 215 | 0 |
+| Viewport390: ScriptDuration | 535,8ms | 102,0ms |
+| Viewport390: TaskDuration | 758,8ms | 341,1ms |
+| Viewport390: input→callback rAF,40 event | 65,6ms | 15,7ms |
+| Desktop: gọi định dạng ngày | 212 | 0 |
+| Desktop: ScriptDuration | 46,1ms | 11,7ms |
+| Desktop: TaskDuration | 79,2ms | 42,6ms |
+| Desktop: input→callback rAF,40 event | 10,4ms | 8,8ms |
+
+Đây là các cửa sổ thao tác theo script, có thể gồm công việc UI khác chạy cùng
+lúc. Tổng định dạng không đồng nghĩa mọi lời gọi đều thuộc một event input.
+Callback rAF không là paint hoàn tất, INP hoặc số đo điện thoại thật; không
+suy thành tốc độ gõ của người dùng. Lợi ích rõ nhất ở viewport390/CPU4×. Không
+dùng clock giả hoặc bỏ motion để lấy số đo. CSS production46 file khớp byte;
+HTML entry giữ31 JS/CSS và1.010.927byte raw, không thêm dependency.
+
+- [Browser production](../../apps/user-web/tests/auction-input.mjs) PASS390/
+  1440px: gõ8 ký tự không tính lại ngày, debounce/URL/focus giữ nguyên, Escape
+  và empty→clear phục hồi kết quả, sort giá thật đổi thứ tự. Bản cũ bị bắt215
+  lượt định dạng khi yêu cầu0. Không hạ assertion để bản cũ đi qua.
+- Response REST mới cố ý giữ nguyên serverTime nhưng thay object auction:
+  giá60k→180k, bidder2→4, title/point/endAt mới đều xuất hiện; sort đưa đúng
+  card lên đầu. Giữ WAAPI giá500ms với frame vàng và FLIP đổi vị trí220ms khi
+  reduced-motion bật. Clock tiếp tục đổi sau update. WebSocket fixture bị từ
+  chối; không là bằng chứng push/bid/payment thật.
+  Chạy lại:`pnpm --filter @used-books/user-web test:auction-input:browser`.
+- Đã xem card sau cập nhật giá. Fixture ngày cố định để so ảnh: desktop khớp
+  pixel,390px lệch323pixel tối đa29 mức kênh màu trong hai ảnh cùng kích thước;
+  không tuyên bố pixel-perfect mobile hoặc mọi frame motion. CSS/DOM không đổi,
+  các hiệu ứng giá/đổi vị trí được kiểm độc lập với ảnh đứng.
+- Build/tsc,341 unit test, lint exit0, input, auction-stage, countdown và6 cấu
+  hình ảnh đấu giá PASS; ảnh gần viewport/revision/cache/error/retry vẫn chạy
+  dù thẻ dùng memo. Detector AuctionCard0 finding; warning lint/chunk/plugin
+  timing cũ ngoài diff. Docs/diff check PASS.
+- API thật BLOCKED: GET `/api/v1/auctions` ECONNREFUSED. Không khởi động dịch vụ,
+  ghi DB hoặc chạy command. Thiết bị thật/human acceptance/CI remote chưa chạy.
+  READINESS giữ nguyên; API/session/permission/contract không đổi.
+- Harness,20 lượt đo với160 input event, probe, JSON và so ảnh tại
+  `.tmp/member-web-auction-input-performance/`; test/ảnh tại `.tmp/auction-input/`.
+  `.tmp` chỉ trên máy hiện tại; browser regression mới được đưa vào Git.
+
+Chỉ ở worktree phát triển, checkout demo với local work được bảo toàn. Không
+push/PR/merge. Đây là tối ưu đoạn nhập/filter UI, không kết luận mọi trang/vai
+trò hoặc mọi trường hợp đấu giá đã được benchmark.
+
 ## Xin link ảnh thẻ đấu giá khi bìa gần viewport
 
 Nhánh `codex/member-web-auction-photo-visibility`, base `966b581a`.
