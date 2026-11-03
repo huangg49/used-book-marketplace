@@ -311,7 +311,8 @@ describe("conversation mode isolation", () => {
             refresh={() => {}}
             historyExchange={null}
             setHistoryExchange={() => {}}
-            guidance={purchaseChatGuidance(state, userId, true)}
+            now={Date.parse(detail.createdAt)}
+            guidance={purchaseChatGuidance(state, userId, true, Date.parse(detail.createdAt))}
             onOpenOrderDialog={() => {}}
           />
         </QueryClientProvider>
