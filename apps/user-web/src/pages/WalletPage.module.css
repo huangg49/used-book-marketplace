@@ -766,6 +766,16 @@
   flex-direction: column;
 }
 
+.historyPagination {
+  margin-top: 16px;
+}
+
+.historyContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
 .receiptSlip {
   position: relative;
   background: #ffffff;

@@ -1,3 +1,25 @@
+# Hoàn thiện Pagination Member web —03/11/2026
+
+Owner duyệt sửa component Antigravity sau khảo sát. Nhánh
+`codex/pagination-cursor-refinement`, base5bd0b360: tiếp nhận Pagination và phần
+wrapper ví từ local Documents, giữ nguyên công việc reputation/support khác.
+Full/simple/compact rõ hành vi, page/empty clamp, mobile container520px dùng
+Trước/Sau44px, focus chung; ví cache10mục/trang trên cursor20mục, không đếm số đã
+load thành tổng, giữ rows/page khi lỗi và retry cùng cursor. Filter/owner reset,
+không để response cũ đổi trang filter mới. Không sửa API/contract/DB/quỹ.
+
+PASS build/typecheck,336unit (12Pagination), scoped lint0, detector0; browser8case
+1440/768/390/320 × chữ100/130% và motion normal/reduce, keyboard/forced-colors,
+cache/next/back/retry/duplicate/filter-focus/stale-response/owner/empty. Dùng
+component thật và transport giả riêng, không phải QA API/DB hoặc native PASS.
+Đã đưa đúng source vào Documents bằng copy có đối chiếu hash (không di chuyển
+branch runtime5bd0b360), giữ4file reputation/support khác byte-for-byte; build và
+336unit cùng local work còn lại PASS. Canonical có commit riêng cho gói, runtime
+vẫn có local changes chưa commit. Ứng dụng chưa chạy tại lúc kiểm; không tự khởi
+động API/DB. Cách dùng và
+lệnh kiểm lại ở [UI components](../design/UI_COMPONENTS.md#member-web--pagination-và-lịch-sử-ví-03112026).
+Chưa push/PR/CI mới, READINESS/human gates giữ mở.
+
 # Quy chuẩn focus toàn dự án — 03/11/2026
 
 Owner yêu cầu áp mẫu Admin Users cho mọi focus. Nhánh `codex/project-focus-standard`,

@@ -798,3 +798,26 @@ dùng lại texture/font Login. Không thêm ảnh gen, dependency hoặc sample
 - PASS70unit/10file,2HTTP/Mongo QA cho Dashboard/ảnh/quyền, lint/typecheck/build.
   Browser harness bổ sung ảnh lỗi/retry, chọn bằng Enter, mobile Back/focus và
  320px/chữ lớn; chỉ syntax check vì browser bị tắt. Visual/focus thực tế NOT RUN.
+
+
+## Member web — Pagination và lịch sử ví —03/11/2026
+
+[Pagination](../../apps/user-web/src/components/Pagination/Pagination.tsx) là UI
+controlled, không gọi API. `full` dùng số trang khi biết tổng; `simple` dùng
+Trước/Sau và chỉ báo trang; `compact` bỏ số trang và mặc định ẩn summary. Có thể
+bật lại bằng `showSummary`. Khi chưa biết tổng, truyền `itemCount` của trang đang
+xem cùng `pageSize`, `hasNext`/`hasPrev`; không truyền số mục đã tải làm totalItems.
+`totalItems` chỉ dành cho tổng thực sự biết. Component chuẩn hóa page/pageSize/
+empty, có hideOnSinglePage và khóa nút khi loading. Focus lấy từ CSS chung.
+
+Số trang đầy đủ chỉ hiện khi container rộng hơn520px; container hẹp dùng chỉ báo
+trang với Trước/Sau44px, gồm cả cột hẹp trên desktop. Nút không dịch chuyển khi
+hover. Ví dụ thực thi các variant và ca loading trong
+[browser fixture](../../apps/user-web/tests/pagination.mjs), chạy
+`pnpm --filter @used-books/user-web test:pagination:browser`.
+
+[WalletHistory](../../apps/user-web/src/pages/WalletHistory.tsx) hiện10mục/trang,
+cache các trang cursor20mục của API. Chỉ fetch khi đi quá dữ liệu đã tải, giữ trang
+và hàng khi lỗi, retry bằng cùng cursor, không dùng đồng thời Load more. Chỉ hiện
+tổng khi đã đọc hết cursor. Đổi bộ lọc/owner về trang1, giữ focus bộ lọc; phản hồi
+cũ không chuyển trang của bộ lọc mới. Đây là UI đọc ledger, không đổi tiền/API.
