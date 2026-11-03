@@ -1,30 +1,31 @@
 # Tối ưu Member web — 03/11/2026
 
-Gói hiện tại `codex/member-web-auction-input-render`, base `e4ee224a`:
-AuctionCard dùng memo/so sánh props mặc định để nhập liệu ở trang cha không
-chạy lại các thẻ không đổi. Props/state/query/clock mới vẫn cập nhật; không
-custom comparator theo ID, không đổi DOM/CSS, debounce250ms hoặc motion.
-[Source](../../apps/user-web/src/components/AuctionCard/index.tsx),
+Gói hiện tại `codex/member-web-chat-input-render`, base `2aa1350a`:
+ChatMessage dùng memo/so sánh props mặc định để soạn nháp không dựng lại40
+hàng tin cũ. Nội dung/time/owner/partner mới vẫn cập nhật; không comparator
+chỉ theo ID hoặc cache riêng. Giữ DOM/CSS, history/cursor, socket/send/receipt,
+scroll và motion. [Source](../../apps/user-web/src/pages/ChatPage.tsx),
 [bằng chứng và các gói trước](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Chromium151/production REST fixture,8 Live+8 Scheduled,5 cặp mỗi viewport;
-  gõ8 ký tự trước debounce cuối. Viewport390/CPU4×: định dạng ngày215→0,
-  ScriptDuration536→102ms. Desktop46→12ms. Input→rAF là proxy riêng trong
-  bằng chứng, không là paint/INP hoặc điện thoại thật. Giữ46 CSS và31 asset
-  JS/CSS ở entry, tổng raw1.010.927byte không đổi.
-- Build/tsc,341 unit test, lint, input390/1440px, auction-stage, countdown và6
-  cấu hình ảnh PASS. Response mới giữ cùng serverTime vẫn cập nhật giá/bidder/
-  title/point/endAt; price500ms và FLIP220ms giữ ở reduced-motion. Đồng hồ,
-  ảnh gần viewport, revision/cache/error/retry vẫn hoạt động. Detector0.
-- Docs/diff check PASS; warning cũ ngoài diff. API thật BLOCKED: GET auctions
-  ECONNREFUSED. Không khởi động dịch vụ, ghi DB hoặc chạy command; WebSocket
-  fixture bị từ chối không là kiểm push thật. Harness tại
-  `.tmp/member-web-auction-input-performance/`, test mới trong repo.
+- Production Chromium151,40 tin fixture,5 cặp mỗi viewport; gõ8 ký tự.
+  Viewport390/CPU4×: tạo formatter320→0, ScriptDuration307→133ms;
+  desktop48→17ms. Không là INP/điện thoại thật.46 CSS và31 asset JS/CSS entry,
+  tổng raw1.010.927byte không đổi; không thêm dependency.
+- Build/tsc,341 unit test, lint, chat-input390/1440, detector0 PASS. Browser
+  xác nhận giữ nháp/focus, tin socket/dedup, đổi body/time/owner cùng history ID,
+  đổi tên partner và refetch403 gỡ tin cache khỏi UI. Lịch sử85 tin PASS gồm
+  cursor retry/anchor/tin đến. API/Socket.IO ở đây là fixture, không DB.
+- Chat chức năng PASS với CHAT_GUIDANCE_SCREENSHOTS=0; tùy chọn bỏ cả helper
+  captures()/assertion bố cục. **Suite đầy đủ FAIL** selector giá75.000 tại
+  captures()/seller-ready, tái hiện cùng lỗi trên ChatPage trước thay đổi.
+  Không sửa harness; phần chụp/bố cục chưa đạt. API health ECONNREFUSED;
+  không khởi động dịch vụ/ghi DB. Docs/diff check PASS, warning cũ ngoài diff.
 
 Chuỗi trước: `62324b47` catalog, `10fd986d` WOFF2, `bbd59568` Hero preload,
 `d28f7605` canvas, `55c9df1d` ảnh trang, `8aba79c7` prefetch mã, `8fc33e1f`
 viewport, `183b457d` style chuyển cảnh, `aa023b21` chữ lúc cuộn, `2abb5c52`
-khung tài khoản, `966b581a` đồng hồ đấu giá, `e4ee224a` ảnh đấu giá theo viewport.
+khung tài khoản, `966b581a` đồng hồ đấu giá, `e4ee224a` ảnh gần viewport,
+`2aa1350a` render thẻ đấu giá khi nhập liệu.
 
 Chỉ ở worktree phát triển; checkout demo có local work được bảo toàn. Chưa
 push/PR/merge. Thiết bị thật, human acceptance, CI remote chưa chạy.

@@ -466,6 +466,17 @@ Both contexts use wine/cream, Be Vietnam Pro and44px controls with visible focus
 See the [chat surface record](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-chatpage-tsx.md)
 for scoped browser evidence and verification limits.
 
+03/11/2026 performance: ChatPage's private `ChatMessage` memoizes unchanged
+message rows using default prop comparison of message object, sender label and
+ownership. Composer drafts do not reconstruct old timestamp formatters. New
+message representations and participant names still render; no ID-only comparator
+or separate data cache. DOM/CSS, scroll/history/send behavior and motion stay intact.
+Production fixture regression: `pnpm --filter @used-books/user-web test:chat-input:browser`
+(after build), covering390/1440px, draft/focus, socket/dedup, changed fields,
+partner rename and forbidden-history cache removal. See the
+[performance evidence](../handoff/MEMBER_WEB_PERFORMANCE_2026_11_03.md) for measurements
+and the existing full chat layout-capture failure; fixture PASS is not live acceptance.
+
 ## Member web conversation workspace —19/10/2026
 
 `components/conversation/AgreementTerms` renders real mode/price proposals and

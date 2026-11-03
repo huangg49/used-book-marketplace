@@ -14,7 +14,7 @@ import {
   getConversationEvents,
   type ConversationEvent,
 } from "../services/purchase-conversations";
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
 import { ApiError } from "@used-books/session-client";
@@ -56,6 +56,22 @@ function dateTime(value: string) {
     minute: "2-digit",
   }).format(new Date(value));
 }
+
+// Draft changes do not alter existing messages. Keep normal prop comparison so
+// new message content, timestamps, participant names or ownership still render.
+const ChatMessage = memo(function ChatMessage({ message, sender, own }: {
+  message: PurchaseMessage;
+  sender: string;
+  own: boolean;
+}) {
+  return (
+    <article data-chat-message className={`${styles.message} ${own ? styles.own : ""}`}>
+      <p className={styles.sender}>{sender}</p>
+      <p className={styles.body}>{message.body}</p>
+      <time dateTime={message.sentAt}>{dateTime(message.sentAt)}</time>
+    </article>
+  );
+});
 
 const compactHeaderQuery = "(max-width: 960px)";
 function subscribeHeaderLayout(notify: () => void) {
@@ -741,19 +757,12 @@ function ChatRoom({
               </section>
             ) : null}
             {messages.map((message) => (
-              <article
+              <ChatMessage
                 key={message.id}
-                data-chat-message
-                className={`${styles.message} ${message.senderId === userId ? styles.own : ""}`}
-              >
-                <p className={styles.sender}>
-                  {message.senderId === userId ? "Bạn" : other.displayName}
-                </p>
-                <p className={styles.body}>{message.body}</p>
-                <time dateTime={message.sentAt}>
-                  {dateTime(message.sentAt)}
-                </time>
-              </article>
+                message={message}
+                own={message.senderId === userId}
+                sender={message.senderId === userId ? "Bạn" : other.displayName}
+              />
             ))}
           </div>
           <form

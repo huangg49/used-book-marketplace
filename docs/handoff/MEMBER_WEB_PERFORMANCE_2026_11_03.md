@@ -4,6 +4,69 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Tránh dựng lại tin nhắn không đổi khi soạn chat
+
+Nhánh `codex/member-web-chat-input-render`, base `2aa1350a`.
+[ChatPage](../../apps/user-web/src/pages/ChatPage.tsx) tách hàng tin nhắn thành
+`ChatMessage` dùng `React.memo` với so sánh props mặc định: message object,
+sender label và own flag. Nhập nháp không dựng lại40 hàng cũ; object/nội dung/
+thời gian/người gửi mới vẫn render. Không dùng comparator theo ID, cache riêng
+hoặc sửa hàm định dạng ngày. Giữ cập nhật immutable hiện có; key, DOM, CSS,
+query/history/cursor, merge/socket, send/receipt, scroll effects và motion không
+đổi. Phạm vi là phòng chat Member web, không là phân trang hộp hội thoại.
+
+Hai production build, Chromium151,5 cặp luân phiên mỗi viewport; REST fixture
+40 tin, đăng nhập bằng UI, chờ font và hiệu ứng đăng nhập kết thúc rồi focus
+composer/chờ500ms. Gõ8 ký tự `Xin chao`, delay15ms giữa ký tự. Viewport390×844/
+DPR2/touch/CPU4× và1440×844/DPR1/CPU1×, reduced-motion bật. Không bóp mạng
+trong đoạn gõ hoặc dùng clock giả. CDP Performance đo cửa sổ thao tác;
+input→callback rAF lấy40 event mỗi viewport/build. Fixture hiệu năng trả503
+cho socket; fixture hồi quy bên dưới dùng Socket.IO cục bộ hoạt động.
+
+| Trung vị trong đoạn nhập8 ký tự | Trước | Sau |
+| --- | ---: | ---: |
+| Viewport390: tạo Intl.DateTimeFormat | 320 | 0 |
+| Viewport390: ScriptDuration | 307,2ms | 133,5ms |
+| Viewport390: TaskDuration | 608,1ms | 476,0ms |
+| Viewport390: input→callback rAF | 50,9ms | 28,1ms |
+| Desktop: tạo Intl.DateTimeFormat | 360 | 0 |
+| Desktop: ScriptDuration | 47,8ms | 17,1ms |
+| Desktop: TaskDuration | 112,7ms | 85,6ms |
+| Desktop: input→callback rAF | 10,4ms | 9,5ms |
+
+Các cửa sổ có thể gồm poll/socket callback; tổng định dạng desktop có thêm
+render ngoài8 input, không quy mọi lời gọi cho thao tác gõ. Callback rAF không
+là paint hoàn tất/INP hoặc số đo điện thoại thật. Không suy thành mức tăng tốc
+chung cho mọi phòng chat.46 CSS production khớp byte; HTML entry vẫn31 asset
+JS/CSS và1.010.927byte raw, không thêm dependency hoặc tải đầu trang.
+
+- [Browser production](../../apps/user-web/tests/chat-input.mjs) PASS390/1440:
+  8 ký tự không dựng lại timestamp cũ; text/class/time, draft và focus giữ nguyên;
+  socket thêm tin, dedup; representation mới cùng history ID đổi body/time/owner;
+  poll đổi tên partner; refetch403 xóa hàng cache khỏi UI và giữ nháp.0 pageerror.
+  Source cũ bị bắt320 lượt định dạng ở assertion yêu cầu0; không hạ assertion.
+  Chạy lại sau build:`pnpm --filter @used-books/user-web test:chat-input:browser`.
+- Đã xem ảnh hàng tin nhắn. So ảnh cố định cùng kích thước:390px khớp pixel;
+  desktop lệch254pixel, tối đa33 mức kênh màu. Không kết luận mọi frame motion
+  khớp pixel; source CSS/DOM và các effect không đổi.
+- Build/tsc,341 unit test/48file, lint phạm vi và detector ChatPage0 PASS;
+  lint chỉ có warning cũ ngoài diff. Harness lịch sử85 tin PASS390/1440:
+  mới nhất40, retry cùng cursor, giữ anchor dưới3px, tin đến khi đọc cũ và hết
+  lịch sử. Chạy:`pnpm --filter @used-books/user-web exec node tests/chat-guidance.mjs --message-history-only`.
+- Harness chat chức năng PASS với tùy chọn sẵn có `CHAT_GUIDANCE_SCREENSHOTS=0`:
+  mua/đổi, nháp/lỗi, gửi lại sau mất phản hồi, retry order/payment. Tùy chọn này
+  bỏ toàn bộ helper captures(), gồm assertion bố cục, không chỉ bỏ file ảnh.
+  **Suite đầy đủ còn FAIL** tại selector giá75.000 trong captures()/seller-ready
+  (`chat-guidance.mjs:165`, gọi ở363). Đã tái hiện cùng lỗi với ChatPage trước
+  thay đổi; không sửa harness hoặc assertion để che lỗi. Gate chụp/bố cục cũ
+  chưa đạt và cần điều tra riêng; functional PASS không thay thế gate đó.
+- Toàn bộ REST/Socket.IO ở các harness là fixture; không DB/provider hoặc kiểm
+  quyền server thật. API local health ECONNREFUSED, không khởi động dịch vụ.
+  Native, thiết bị thật, human acceptance, CI remote NOT RUN; READINESS giữ nguyên.
+  Docs/diff check PASS. Bằng chứng local ở
+  `.tmp/member-web-chat-input-performance/` và `.tmp/chat-input/`; không commit
+  artifact hoặc đồng bộ checkout demo.
+
 ## Tránh dựng lại thẻ không đổi khi nhập tìm kiếm đấu giá
 
 Nhánh `codex/member-web-auction-input-render`, base `e4ee224a`.
