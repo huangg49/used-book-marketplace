@@ -19,6 +19,17 @@ UI tải tin cũ đã nối Member web. RN/Flutter dùng contract cũ tương th
 kiểm native. Hộp hội thoại, route Exchange legacy và hàng việc vận hành thuộc
 phạm vi riêng. Không có migration mới. READINESS giữ nguyên.
 
+Các điểm còn mở từ lượt rà, để đối chiếu lại trước khi nhận việc mới:
+
+- Hộp hội thoại Member chỉ mở thêm dữ liệu đã tải. API hộp thư hiện giới hạn
+  100 hội thoại. Phân trang tin nhắn trong phòng không thay đổi giới hạn này.
+- Các hàng việc tiếp nhận, giao nhận, phân giải tại điểm, quản lý đấu giá, sự cố
+  và chuyển cấp cần kiểm contract và phạm vi dữ liệu trước khi thêm nút tải tiếp.
+- Nhóm sách chờ đăng phiên vẫn lấy từ 50 lần gửi gần nhất. Bộ chọn đầu sách
+  trong luồng đăng có nút đi tiếp, chưa có nút về trang trước.
+
+Các mục trên là kết quả khảo sát, chưa có phạm vi triển khai được giao cho gói mới.
+
 # Phân trang đánh số và rà consumer —03/11/2026
 
 Owner yêu cầu kết hợp thiết kế Antigravity và logic cursor, bỏ UI chỉ Trước/Sau
