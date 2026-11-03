@@ -547,6 +547,16 @@ Author and location now share one horizontal line with24px text slots and center
 icons. Location has a screen-reader-only label; no visible “Khu vực” caption.
 Both values retain measured fitting, ellipsis and full tooltips when necessary.
 
+Production builds include a Vite-generated asset hint for the BookDetail route.
+Mouse entry into a real `BookCard`, or keyboard focus on its detail links,
+starts HTTP prefetch for that route's JS/CSS through
+[`prefetchBookDetail`](../../apps/user-web/src/lib/book-detail-prefetch.ts).
+Existing script/stylesheet/preload links are reused. A failed prefetch link is
+removed so later intent can retry. Wishlist focus and direct touch navigation
+use their normal behavior. Detail still revalidates listing state on entry.
+Build the app before `pnpm --filter @used-books/user-web test:book-detail-prefetch:browser`
+to verify production hints, keyboard/touch, fresh state and failure recovery.
+
 `WishlistButton` is an authenticated feature control using the existing Member
 wishlist endpoints, not a primitive or an optimistic success indicator. It uses
 the shared session/query client, an owner-keyed saved-ID query, exact intended

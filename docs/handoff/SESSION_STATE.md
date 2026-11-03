@@ -1,3 +1,32 @@
+# Prefetch mã trang chi tiết theo hover/focus — 03/11/2026
+
+Gói từ `55c9df1d` trên nhánh `codex/member-web-detail-prefetch`. Production
+build ghi hint các file JS/CSS của BookDetail cùng phụ thuộc tĩnh. Hover chuột
+vào thẻ thật hoặc focus bàn phím vào link chi tiết bắt đầu HTTP prefetch.
+File đã có link tải trên trang được dùng lại, link prefetch lỗi được gỡ.
+Detail vẫn đọc API mới khi mở. Thao tác chạm và focus wishlist giữ đường hiện có.
+[Cách dùng và kiểm tra](../design/UI_COMPONENTS.md#member-web-book-cards-22102026).
+
+- Chromium 151, production HTTP fixture, 5 cặp luân phiên mỗi kiểu thao tác.
+  Sau 650 ms hover/focus, trung vị từ bấm tới nội dung chi tiết xuất hiện:
+  hover 486 → 327 ms, bàn phím 528 → 360 ms trên desktop 1440px.
+  Mạng tải xuống 4 Mbps, tải lên 0,75 Mbps, độ trễ 75 ms.
+  Touch 390px, DPR 2, CPU 4× dao động khoảng 4,2–7,3 giây và chưa có
+  cải thiện ổn định; giữ làm finding riêng cho lượt đo thao tác chạm tiếp theo.
+- Bộ production browser 6 ca PASS: hover, bàn phím, chạm, tab ẩn, lỗi HTTP
+  khi prefetch và thiếu hint. Prefetch có 0 API read; mở trang đọc đúng một
+  lần và cập nhật trạng thái Available trên thẻ thành InTransaction từ API.
+  Lỗi prefetch vẫn mở được trang khi file phục hồi, Back về đúng danh sách.
+- Resource Timing và harness tại `.tmp/member-web-detail-performance/`;
+  kiểm chứng hành vi tại `.tmp/book-detail-prefetch/`.
+  Đây là số đo phòng thử với HTTP fixture và thời gian chuẩn bị 650 ms.
+- Build/typecheck, 338 unit test và lint PASS. Browser Home/focus và 8 ca
+  ảnh Search PASS. Smoke production GET API local thật ở 1440/390px PASS,
+  0 lỗi JavaScript. Detector BookCard 0 finding. CSS production khớp bản trước.
+
+Gói ở worktree phát triển. Thiết bị thật, human acceptance và CI remote
+chưa chạy. Gate phát hành theo READINESS.
+
 # Tải sớm hai bìa đầu khi phân trang Tìm sách — 03/11/2026
 
 Gói từ `d28f7605` trên nhánh `codex/member-web-search-covers`. Khi trang

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test:book-detail:browser": "node tests/book-detail.mjs",
+    "test:book-detail-prefetch:browser": "node tests/book-detail-prefetch.mjs",
     "test:search-recovery:browser": "node tests/search-recovery.mjs",
     "test:search-covers:browser": "node tests/search-covers.mjs",
     "test:list-pagination:browser": "node tests/list-pagination.mjs",
