@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:used_books_flutter/core/api/session_client.dart';
 import 'package:used_books_flutter/core/theme/app_theme.dart';
 import 'package:used_books_flutter/core/widgets/app_widgets.dart';
+import 'package:used_books_flutter/features/conversations/presentation/conversations_screens.dart';
 import 'package:used_books_flutter/main.dart';
 
 class _FakeSessionClient extends SessionClient {
@@ -146,6 +147,23 @@ class _FakeSessionClient extends SessionClient {
             'createdAt': DateTime.now().toIso8601String(),
           },
         ];
+      }
+      if (path.contains('conv-with-order')) {
+        return {
+          'id': 'conv-with-order',
+          'listingId': '22222222-2222-4222-8222-222222222222',
+          'sellerId': 'seller-other',
+          'buyerId': '11111111-1111-4111-8111-111111111111',
+          'buyer': {
+            'id': '11111111-1111-4111-8111-111111111111',
+            'displayName': 'Nguyễn Minh Tuấn',
+          },
+          'seller': {'id': 'seller-other', 'displayName': 'Lan Anh'},
+          'terms': {'mode': 'Sale', 'agreedPrice': 50000},
+          'orderId': 'order-1234-5678',
+          'status': 'Active',
+          'createdAt': DateTime.now().toIso8601String(),
+        };
       }
       return {
         'id': 'conv-1111-1111',
@@ -962,6 +980,43 @@ void main() {
           .where((c) => c.startsWith('POST /orders/order-1234-5678/pay')),
       isNotEmpty,
     );
+  });
+
+  testWidgets(
+      'ConversationScreen embeds full OrderDetailsDossier when orderId is present (Web parity)',
+      (tester) async {
+    tester.view.physicalSize = const Size(1080, 2200);
+    tester.view.devicePixelRatio = 2.0;
+    addTearTearDown(tester.view.resetPhysicalSize);
+
+    final fakeClient = _FakeSessionClient(authenticated: true);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [sessionClientProvider.overrideWithValue(fakeClient)],
+        child: const MaterialApp(
+          home: ConversationScreen(id: 'conv-with-order'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verify 2 Tabs
+    expect(find.text('Đơn sách'), findsOneWidget);
+    expect(find.text('Chatbox'), findsOneWidget);
+
+    // In Tab 0 ("Đơn sách"): Verify full OrderDetailsDossier is embedded in place
+    expect(find.text('Thủ tục đơn hàng'), findsOneWidget);
+    expect(find.textContaining('Bảo lưu Lật Lại Escrow:'), findsOneWidget);
+    expect(find.textContaining('Thanh toán ngay'), findsOneWidget);
+    expect(find.text('Hủy đơn chưa thanh toán'), findsOneWidget);
+
+    // Switch to Tab 1 ("Chatbox") and verify compact bar with order badge
+    await tester.tap(find.text('Chatbox'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Hộp thoại thương lượng'), findsOneWidget);
+    expect(find.textContaining('Đơn #ORDER-12'), findsOneWidget);
+    expect(find.text('Xem đơn'), findsOneWidget);
   });
 }
 

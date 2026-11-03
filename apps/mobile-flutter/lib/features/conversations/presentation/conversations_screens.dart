@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/api/session_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_widgets.dart';
+import '../../orders/presentation/order_details_dossier.dart';
 
 /// Global in-memory cache for listing details so book identity (title, cover, photos)
 /// resolves instantly across inbox, dossier and conversation views.
@@ -1924,38 +1925,35 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                           userId: userId,
                         );
 
+                        final dossierWorkspace = orderId.isNotEmpty
+                            ? OrderDetailsDossier(
+                                orderId: orderId,
+                                embedded: true,
+                                onOrderChanged: _loadConversation,
+                              )
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  bookCard,
+                                  const SizedBox(height: AppSpace.md),
+                                  agreementCard,
+                                ],
+                              );
+
                         if (isWide) {
-                          if (_activeTab == 0) {
-                            return Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(flex: 5, child: bookCard),
-                                const SizedBox(width: AppSpace.md),
-                                Expanded(flex: 5, child: agreementCard),
-                              ],
-                            );
-                          } else {
-                            return Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(flex: 4, child: bookCard),
-                                const SizedBox(width: AppSpace.md),
-                                Expanded(flex: 6, child: chatCard),
-                              ],
-                            );
-                          }
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(flex: 5, child: dossierWorkspace),
+                              const SizedBox(width: AppSpace.md),
+                              Expanded(flex: 5, child: chatCard),
+                            ],
+                          );
                         }
 
                         // Mobile View: Switch between 2 tabs (Tab 0: Đơn sách, Tab 1: Chatbox)
                         if (_activeTab == 0) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              bookCard,
-                              const SizedBox(height: AppSpace.md),
-                              agreementCard,
-                            ],
-                          );
+                          return dossierWorkspace;
                         } else {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1964,6 +1962,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                                 listing: listing,
                                 effectivePrice: effectivePrice,
                                 agreedPrice: agreedPrice,
+                                orderId: orderId,
                               ),
                               chatCard,
                             ],
@@ -3239,6 +3238,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     required Map<String, dynamic> listing,
     required num effectivePrice,
     required num? agreedPrice,
+    String? orderId,
   }) {
     final title = (listing['bundle']?['title'] ??
             listing['book']?['title'] ??
@@ -3322,7 +3322,28 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                       kind: AppTextKind.bold,
                       color: StitchTokens.wine,
                     ),
-                    if (agreedPrice != null) ...[
+                    if (orderId != null && orderId.isNotEmpty) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1.5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: const Color(0xFF86EFAC)),
+                        ),
+                        child: Text(
+                          'Đơn #${orderId.length >= 8 ? orderId.substring(0, 8).toUpperCase() : orderId}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFF166534),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ] else if (agreedPrice != null) ...[
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
