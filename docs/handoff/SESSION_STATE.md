@@ -1,22 +1,21 @@
 # Tối ưu Member web — 03/11/2026
 
-Gói hiện tại `codex/member-web-search-submit-race`, base `a98db891`.
-Tối ưu logo/chữ Hero phát hiện Search submit đọc q cũ khi input và submit
-cùng lượt. [BookSearchPage](../../apps/user-web/src/pages/BookSearchPage.tsx)
-đọc URL mới nhất khi gửi, trim q và giữ params. 9 ca Search recovery PASS
-dev/production, gồm IME, lỗi mạng, timeout và mobile. Source cũ tái hiện FAIL.
-Giữ debounce và motion. [Bằng chứng](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
+Gói hiện tại `codex/member-web-responsive-auth-scene`, base `ad49aac4`.
+[AuthLayout](../../apps/user-web/src/layouts/AuthLayout.tsx) chọn ảnh nền
+960w/1920w/3000w, lỗi WebP về JPEG. Giữ cover, blur và lớp phủ.
+[Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-Gói `a98db891` nén lossless logo và chữ Hero, chuyển về PNG khi WebP lỗi.
-Home giảm 146.698→69.556 B cho hai ảnh. Chromium 390/CPU4×/4 Mbps, 5 cặp:
-Hero tải xong 1,26→1,19 s, logo 2,17→1,80 s. Logo khớp từng pixel trong ảnh
-chụp 390/1440, Hero lệch tối đa 1 mức màu tại mép. 47 CSS production khớp byte.
-Browser PASS preload, lỗi ảnh, header scroll, lá và focus.
+- 5 cặp Chromium cache lạnh 390/DPR2/CPU4×/4 Mbps. Ảnh nền giảm
+  607.891→225.244 B, tải xong 4,29→3,42 s. Texture giấy chưa cho thấy
+  cải thiện ổn định. 47 CSS và 31 asset entry/985.861 B raw giữ nguyên.
+- Production fixture PASS lựa chọn theo DPR, Home không tải ảnh,
+  404 về JPEG và giữ ảnh khi đổi Auth form. Ảnh nền chênh tối đa 1 mức màu
+  mỗi kênh ở 390/1440. Auth browser kiểm ảnh và hiệu ứng giấy/gió/Back.
+- Build/typecheck, 341 unit test, lint, docs/diff PASS. HTTP fixture.
+  API thật, thiết bị thật, native, human acceptance và CI remote NOT RUN.
 
-Build/typecheck, 341 unit test, lint, docs/diff PASS. HTTP fixture.
-API thật, thiết bị thật, native, human acceptance và CI remote NOT RUN.
-Giữ READINESS. Gói `1728dc55` sửa tràn ví và giữ sheen 8 s.
-Thay đổi nằm trong worktree phát triển. Checkout demo giữ local work.
+Gói `a98db891` nén logo/chữ Hero, `ad49aac4` sửa submit từ khóa cũ.
+Giữ READINESS. Thay đổi nằm trong worktree phát triển. Checkout demo giữ local work.
 
 # Lịch sử tin nhắn Member web —03/11/2026
 

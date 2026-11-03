@@ -74,8 +74,18 @@ try {
     const page = await context.newPage()
     lastPage = page
     page.on('pageerror', error => errors.push(error.message))
-    page.on('request', request => { if (request.url().includes('/illustrations/auction-curtain/')) checks.push(`art request: ${name}`) })
+    const sceneRequests = [];
+    page.on('request', request => {
+      const pathname = new URL(request.url()).pathname;
+      if (pathname.includes('/illustrations/auction-curtain/')) checks.push(`art request: ${name}`);
+      if (pathname.startsWith('/photography/bookshop-barcelona')) sceneRequests.push(pathname);
+    });
     await page.goto(`${origin}/login?returnUrl=${encodeURIComponent('/auctions?buyNow=1#auction-list-title')}`)
+    const sceneImage = page.locator('img[src$="/bookshop-barcelona.jpg"]');
+    const expectedScene = `/photography/bookshop-barcelona-${mobile ? 960 : 1920}.webp`;
+    await sceneImage.evaluate(img => img.decode());
+    assert.equal(new URL(await sceneImage.evaluate(img => img.currentSrc)).pathname, expectedScene);
+    assert.deepEqual(sceneRequests, [expectedScene], 'Load only the viewport-sized Auth scene');
     await page.getByRole('textbox', { name: /Email/ }).fill('reader@example.test')
     await page.getByRole('textbox', { name: /Mật khẩu/ }).fill('wrong-fixture-pass')
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click()

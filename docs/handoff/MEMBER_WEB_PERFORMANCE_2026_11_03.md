@@ -4,6 +4,46 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Tải ảnh nền Auth theo kích thước màn hình
+
+Nhánh `codex/member-web-responsive-auth-scene`, base `ad49aac4`.
+[AuthLayout](../../apps/user-web/src/layouts/AuthLayout.tsx) dùng srcSet
+960w/1920w/3000w. Sizes tính theo chiều rộng cần cho cover và scale 1,035,
+kể cả viewport dọc. JPEG gốc phục vụ màn hình cần thêm điểm ảnh và dùng
+lại một lần khi bản WebP tải lỗi. Giữ ảnh high priority trong Auth.
+[Ảnh gốc và quy trình nén](../../apps/user-web/public/photography/README.md).
+
+Hai build production, Chromium, cache lạnh, 5 cặp xen kẽ ở 390×844/DPR2,
+CPU4×, 500.000 byte/s tải xuống và độ trễ 80 ms. Reduced-motion bật.
+Tài nguyên tĩnh HTTP fixture, JS/CSS/HTML gzip. Trung vị từ điều hướng:
+
+| Mục | JPEG | WebP 1920w |
+| --- | ---: | ---: |
+| Dung lượng ảnh nền | 607.891 B | 225.244 B |
+| Nhận xong ảnh nền | 4,29 s | 3,42 s |
+| Sau giải mã và marker texture giấy sẵn sàng | 8,49 s | 8,59 s |
+
+Giảm 382.647 B (62,9%) ở viewport đo. Thời gian chuẩn bị texture dao động
+và chưa cho thấy cải thiện ổn định. Chưa đo LCP hoặc thời gian đăng nhập
+với API thật. Entry vẫn 31 file và 985.861 B raw. Cả 47 CSS production khớp
+byte. Hai WebP thêm 321.154 B vào thư mục tài nguyên.
+
+- Production fixture PASS một request mỗi lượt bình thường. 390/DPR1
+  dùng 960w/95.910 B, 390/DPR2 và 1440/DPR1 dùng 1920w, 1440/DPR3 dùng
+  JPEG gốc. Home không đọc ảnh. Ép 1920w trả 404 thì lấy JPEG một lần, giữ
+  node ảnh đã giải mã qua Login, Register và Forgot Password.
+- CSS tính được khớp cover, vị trí 60%/52%, blur 4 px, scale 1,035 và lớp
+  phủ. Đã xem ảnh 390/1440. Sai khác mỗi kênh tối đa 1 mức trên desktop và
+  phần nền mobile. Một cặp mobile lệch trên 1 mức ở 18 pixel góc dưới của
+  mép giấy, không nằm trên ảnh nền. Bản WebP có thu nhỏ và nén quality 88.
+- [Auth browser](../../apps/user-web/tests/auth-auction-arrival.mjs) kiểm
+  đúng ứng viên ảnh và giữ luồng giấy WebGL, gió, Back, đổi kích thước,
+  mất WebGL và lỗi capture ở 1366/390. Build/typecheck, 341 unit test,
+  lint, docs/diff PASS. Lint có cảnh báo cũ.
+- Bằng chứng local ở `.tmp/member-web-auth-scene/`, HTTP fixture PASS.
+  API thật, thiết bị thật, native, human acceptance và CI remote NOT RUN.
+  READINESS giữ nguyên.
+
 ## Gửi đúng từ khóa Tìm sách khi nhập và submit cùng lượt
 
 Nhánh `codex/member-web-search-submit-race`, base `a98db891`. Phát hiện
