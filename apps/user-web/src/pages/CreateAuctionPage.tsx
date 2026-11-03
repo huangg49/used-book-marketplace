@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@used-books/session-client'
 import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import { ArrowRight, BookOpen, Check, EyeOff, Gavel, MapPin, Minus, Plus, Search, ShieldCheck, Store, Tag, X } from 'lucide-react'
@@ -160,14 +160,16 @@ export function CreateAuctionPage() {
   const ownerId = auth.status === 'authenticated' ? auth.user.id : undefined
 
   // Sách được chọn trực tiếp từ kệ của người bán (đã duyệt, chưa bị khoá/bán).
-  const listings = useQuery({
-    queryKey: ['my-listings', ownerId, 'shelf-for-auction'],
-    queryFn: () => getMyListings(undefined, undefined, 50),
+  const listings = useInfiniteQuery({
+    queryKey: ['my-listings', ownerId, 'shelf-for-auction', 'cursor'],
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) => getMyListings(undefined, pageParam, 50),
+    getNextPageParam: page => page.nextCursor ?? undefined,
     enabled: !!ownerId, retry: false, staleTime: 0,
   })
   const points = useQuery({ queryKey: ['handover-points'], queryFn: listHandoverPoints, enabled: !!ownerId, retry: false, staleTime: 0 })
 
-  const eligible = useMemo(() => (listings.data?.items ?? []).filter(auctionEligible), [listings.data])
+  const eligible = useMemo(() => (listings.data?.pages.flatMap(page => page.items) ?? []).filter(auctionEligible), [listings.data])
   const [listingId, setListingId] = useState(params.get('listing') ?? '')
   const [bookQuery, setBookQuery] = useState('')
   const [pointChoice, setPointId] = useState('')
@@ -195,7 +197,7 @@ export function CreateAuctionPage() {
   const [unknown, setUnknown] = useState(false)
 
   const listing = eligible.find((l) => l.id === listingId)
-  const preselectedMissing = !!params.get('listing') && listings.isSuccess && !listing && listingId === params.get('listing')
+  const preselectedMissing = !!params.get('listing') && listings.isSuccess && !listings.hasNextPage && !listing && listingId === params.get('listing')
 
   const defaultDeclared = listing
     ? listing.currentRevision.content.salePrice ?? listing.currentRevision.content.exchangeValue ?? 50000
@@ -309,11 +311,11 @@ export function CreateAuctionPage() {
             <p className={styles.stepHint}>Chọn một cuốn sách đã được duyệt từ kệ của bạn. Sau khi gửi yêu cầu, sách sẽ tạm ngừng hiển thị trên kệ mua bán công khai và chuyển sang trạng thái chờ tiếp nhận tại điểm.</p>
             <div className={styles.inlineActions}><Link to={ROUTES.sell}>Đăng sách mới lên kệ</Link></div>
             {loadingBooks && <div className={styles.skeletonList} aria-busy="true" aria-label="Đang tải sách của bạn">{[0, 1].map((i) => <div key={i} />)}</div>}
-            {listings.isError && <div className={styles.inlineState} role="alert"><p>Chưa tải được sách trên kệ của bạn.</p><button type="button" onClick={() => void listings.refetch()}>Thử lại</button></div>}
+            {listings.isError && !listings.isFetchNextPageError && <div className={styles.inlineState} role="alert"><p>Chưa tải được sách trên kệ của bạn.</p><button type="button" onClick={() => void listings.refetch()}>Thử lại</button></div>}
             {listings.isSuccess && eligible.length === 0 && (
               <div className={styles.inlineState}>
                 <BookOpen size={28} aria-hidden="true" />
-                <p><strong>Chưa có sách trên kệ đủ điều kiện đấu giá.</strong> Hãy đăng sách mới lên kệ và chờ duyệt, rồi quay lại đây.</p>
+                <p><strong>Chưa thấy sách đủ điều kiện trong phần kệ đã tải.</strong> Tải tiếp sách cũ hơn nếu còn, hoặc đăng sách mới và chờ duyệt.</p>
               </div>
             )}
             {preselectedMissing && <p className={styles.error} role="alert">Cuốn sách bạn chọn hiện không đưa lên đấu giá được. Hãy chọn một cuốn khác bên dưới.</p>}
@@ -321,7 +323,7 @@ export function CreateAuctionPage() {
               <div data-focus-surface className={styles.bookSearch}>
                 <Search size={16} aria-hidden="true" />
                 <input type="search" value={bookQuery} disabled={locked} onChange={(e) => setBookQuery(e.target.value)}
-                  placeholder="Tìm theo tên sách hoặc tác giả" aria-label={`Tìm trong ${eligible.length} sách trên kệ`} autoComplete="off" />
+                  placeholder="Tìm theo tên sách hoặc tác giả" aria-label={`Tìm trong ${eligible.length} sách đã tải`} autoComplete="off" />
                 {bookQuery && <button type="button" onClick={() => setBookQuery('')} aria-label="Xóa từ khóa tìm sách"><X size={16} aria-hidden="true" /></button>}
               </div>
             )}
@@ -340,8 +342,16 @@ export function CreateAuctionPage() {
                 ))}
               </div>
             )}
-            {eligible.length > 0 && <p className={styles.noMatch} role="status">Không tìm thấy sách khớp “{bookQuery.trim()}” trên kệ của bạn.</p>}
-            {listings.data?.nextCursor && <p className={styles.stepHint}>Đang hiển thị 50 sách mới nhất trên kệ.</p>}
+            {eligible.length > 0 && <p className={styles.noMatch} role="status">Không tìm thấy sách khớp “{bookQuery.trim()}” trong sách đã tải. {listings.hasNextPage ? "Bạn có thể tải tiếp sách cũ hơn." : ""}</p>}
+            {listings.hasNextPage && <div className={styles.inlineState}>
+              <p role={listings.isFetchNextPageError ? 'alert' : 'status'}>{listings.isFetchNextPageError
+                ? 'Chưa tải được sách cũ hơn. Sách đã chọn và giá đang nhập vẫn được giữ.'
+                : `Đã tải ${listings.data?.pages.reduce((sum, page) => sum + page.items.length, 0) ?? 0} sách từ kệ. Bạn có thể tải tiếp để tìm sách cũ hơn.`}</p>
+              <button type="button" disabled={locked || listings.isFetching}
+                onClick={() => void listings.fetchNextPage({ cancelRefetch: false })}>
+                {listings.isFetchingNextPage ? 'Đang tải sách…' : listings.isFetchNextPageError ? 'Thử tải sách cũ hơn' : 'Tải thêm sách từ kệ'}
+              </button>
+            </div>}
             {touched && formErrors.listing && eligible.length > 0 && <p className={styles.error} role="alert">{formErrors.listing}</p>}
           </fieldset>
 

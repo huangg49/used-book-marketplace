@@ -1,3 +1,5 @@
+import { usePagedCollection } from "../components/Pagination/usePagedCollection";
+import { CollectionPager } from "../components/Pagination/CollectionPager";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 import { useState, useMemo } from "react";
@@ -68,8 +70,7 @@ export function DirectOrderListPage() {
     [pages.data],
   );
 
-  const filteredItems = useMemo(() => {
-    return allItems.filter((o) => {
+  const filterItems = (items: typeof allItems) => items.filter((o) => {
       if (roleFilter !== "all" && o.role !== roleFilter) return false;
       if (statusFilter === "in_progress") {
         if (!IN_PROGRESS_STATES.includes(o.state)) return false;
@@ -80,7 +81,8 @@ export function DirectOrderListPage() {
       }
       return true;
     });
-  }, [allItems, roleFilter, statusFilter]);
+  const collection = usePagedCollection(pages, JSON.stringify([auth.status === "authenticated" ? auth.user.id : "guest", roleFilter, statusFilter]), source => filterItems(source.flatMap(p => p.items)), 8);
+  const filteredItems = collection.items;
 
   const buyerCount = useMemo(
     () => allItems.filter((o) => o.role === "Buyer").length,
@@ -105,7 +107,7 @@ export function DirectOrderListPage() {
         {allItems.length > 0 && (
           <div className={styles.statsBadge}>
             <span className={styles.statsNum}>{allItems.length}</span>
-            <span className={styles.statsLabel}>Tổng số đơn</span>
+            <span className={styles.statsLabel}>{pages.hasNextPage ? "Đơn đã tải" : "Tổng số đơn"}</span>
           </div>
         )}
       </header>
@@ -195,7 +197,7 @@ export function DirectOrderListPage() {
           )}
 
           {/* Error State */}
-          {pages.isError && (
+          {pages.isError && !pages.isFetchNextPageError && (
             <div className={styles.errorBox} role="alert">
               <XCircle size={28} aria-hidden="true" />
               <div>
@@ -219,12 +221,16 @@ export function DirectOrderListPage() {
                 <BookOpen size={36} aria-hidden="true" />
               </div>
               <h3>
-                {allItems.length === 0
+                {pages.hasNextPage
+                  ? "Chưa thấy đơn phù hợp trong dữ liệu đã tải"
+                  : allItems.length === 0
                   ? "Bạn chưa có đơn hàng nào"
                   : "Không có đơn hàng phù hợp bộ lọc"}
               </h3>
               <p>
-                {allItems.length === 0
+                {pages.hasNextPage
+                  ? "Bấm Sau để tìm tiếp trong những đơn cũ hơn, hoặc đổi bộ lọc."
+                  : allItems.length === 0
                   ? "Khám phá hàng ngàn bản sách cũ trên kệ hoặc đăng cuốn sách của bạn để kết nối với người đọc khác."
                   : "Thử thay đổi bộ lọc vai trò hoặc trạng thái để xem các đơn hàng khác."}
               </p>
@@ -242,7 +248,7 @@ export function DirectOrderListPage() {
           )}
 
           {/* Order Cards List */}
-          <div className={styles.orderList}>
+          <div className={styles.orderList} id="direct-order-results">
             {filteredItems.map((o) => {
               const isBuyer = o.role === "Buyer";
               const isCompleted = o.state === "Completed";
@@ -342,19 +348,7 @@ export function DirectOrderListPage() {
             })}
           </div>
 
-          {/* Load More Button */}
-          {pages.hasNextPage && (
-            <div className={styles.loadMoreWrap}>
-              <button
-                type="button"
-                className={styles.loadMoreBtn}
-                disabled={pages.isFetchingNextPage}
-                onClick={() => void pages.fetchNextPage()}
-              >
-                {pages.isFetchingNextPage ? "Đang tải thêm…" : "Xem thêm đơn hàng cũ hơn"}
-              </button>
-            </div>
-          )}
+          <CollectionPager model={collection} anchorId="direct-order-results" itemLabel="đơn hàng" />
         </>
       )}
     </div>

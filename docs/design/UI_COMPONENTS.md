@@ -821,3 +821,19 @@ cache các trang cursor20mục của API. Chỉ fetch khi đi quá dữ liệu �
 và hàng khi lỗi, retry bằng cùng cursor, không dùng đồng thời Load more. Chỉ hiện
 tổng khi đã đọc hết cursor. Đổi bộ lọc/owner về trang1, giữ focus bộ lọc; phản hồi
 cũ không chuyển trang của bộ lọc mới. Đây là UI đọc ledger, không đổi tiền/API.
+
+
+### Áp dụng cho danh sách web —03/11/2026
+
+[Rollout](../ui/LIST_PAGINATION_ROLLOUT_2026_11_03.md) ghi ma trận màn, nguồn dữ
+liệu, điều hướng và giới hạn API. `CursorPager/useCursorNavigation` dành cho URL
+cursor; `CollectionPager/usePagedCollection` dành cho cache infinite query, gồm
+filter thưa, retry cùng cursor, đổi identity và Back. Hook collection dùng router
+của Member web, không dùng cho native hoặc bên ngoài Router. `anchorId` đưa focus
+về kết quả sau phân trang được xác nhận, không cướp focus khi đổi filter.
+
+Không lấy loaded count làm total. Snapshot đấu giá/trao đổi chỉ phân trang trong
+phạm vi API hiện trả; các cap50/100 vẫn được ghi rõ. Picker mở đấu giá dùng tải
+thêm để giữ radio/giá/intent, các queue Operations giữ component của Admin. Chạy
+`pnpm --filter @used-books/user-web test:list-pagination:browser` để kiểm các màn
+và thao tác, cùng test wallet/reputation/search khi nguồn chung thay đổi.

@@ -1,0 +1,109 @@
+# Phân trang danh sách web — 03/11/2026
+
+Owner yêu cầu chạy lần lượt, đặt phân trang đúng nơi và giữ giao diện Lật lại.
+Nhánh `codex/web-list-pagination-rollout`, base `7366b792`. Phạm vi triển khai là
+Member web React/Vite và các consumer Operations liên quan; không đổi API,
+contract, DB, tiền, điều kiện review, intent/key/version hoặc phân quyền.
+
+## Quyết định theo từng bề mặt
+
+| Vai trò và entry | Cách đọc/hiển thị | Kết quả và Back/phục hồi |
+| --- | --- | --- |
+| Member/khách, `/books` | Cursor URL; giữ filter/sort và animation trang | Trước/Sau, browser Back/Forward, detail→Back và reload giữ trail. Cursor dán trực tiếp hiện “Trang hiện tại”, không bịa số trang |
+| Member, `/my-books` | Cursor URL, 20 bài mỗi response | Quay lại đúng cursor trước, không chỉ có Về đầu; không đổi card/command của owner |
+| Member, `/my-auctions` | Cursor URL, 12 phiên mỗi response | Giữ view, phiên và nghĩa vụ thanh toán; không cộng số đã tải thành tổng |
+| Member, `/orders` | Cache cursor, 8 đơn mỗi trang hiển thị | Lọc vai trò/trạng thái rồi phân trang; khi cần, tìm tiếp qua cursor thưa kết quả. Header ghi “Đơn đã tải” khi chưa đọc hết |
+| Member, `/exchange/mine` | 5 trao đổi/trang trong snapshot hiện có | Số trang rút gọn và mobile Trước/Sau; URL page quá lớn được đưa về trang cuối hợp lệ |
+| Member, `/notifications` | Cache cursor, 10 thông báo/trang | Lọc trong các trang đã đọc; tìm tiếp được ở trang cũ hơn. Số unread vẫn lấy từ máy chủ, không từ bộ lọc local |
+| Member, `/reviews?tab=pending` | Cache cursor, 10 giao dịch/trang | Deep link viết đánh giá giữ type/transaction; không đổi quyền viết/công bố, 72h/48h hoặc trạng thái giao dịch |
+| Khách/Member, `/members/:id` và hồ sơ của tôi | Cache cursor, 10 nhận xét/trang | Điểm và số mẫu vẫn từ summary API; không tính lại theo trang. 404 che cache, 503 giữ trang; đổi member không dùng nhận xét cũ |
+| Member, `/support` | Cache cursor, 10 yêu cầu/trang | Giữ state/kind; lỗi trang sau không thành rỗng hoặc làm mất hồ sơ đang đọc |
+| Khách/Member, `/auctions` | Snapshot API, 8 phiên/trang; Sắp mở có pager riêng | Giữ filter/sort trong URL, reset page khi đổi filter; hai nhóm không dùng chung số trang |
+| Member, `/auctions/new` | Tải thêm cursor trong bộ chọn sách | Chọn được sách ngoài 50 mục đầu; retry giữ sách đã chọn và giá nhập. Fieldset vẫn khóa khi command pending/unknown; không submit khi bấm tải thêm |
+| Admin, Trung tâm xử lý | `CursorPagination` của Operations | Có page count đã tải, lỗi/retry cursor, giữ các hồ sơ đã đọc; từ chối role trước khi đọc |
+| Admin/Staff, Đánh giá giao dịch | Giữ pager Operations hiện có | Next dùng `cancelRefetch:false`, không hủy refresh bằng tải trang mới |
+
+## Chỗ giữ cách hiện tại
+
+- Home là các kệ giới thiệu dẫn đến danh sách đầy đủ, không đặt số trang vào từng
+  preview. Hội thoại/tin nhắn, hàng việc và các picker có tải thêm đang dùng cách
+  mở rộng theo ngữ cảnh; không thay bằng pager làm mất nháp hoặc quyết định đang mở.
+- Admin Users, review queue/history, hậu kiểm AI đã có cursor component riêng;
+  giữ pattern phục vụ hàng việc thay vì nhập component Member sang Operations.
+- RN có các nút/điều khiển tải thêm của nền tảng; Flutter có shelf cursor riêng.
+  Không đưa CSS/React component này vào native. Gói này không tuyên bố parity,
+  nghiệm thu native hoặc khảo sát toàn bộ nghiệp vụ của những app đó.
+
+## Trạng thái và thiết kế
+
+[Pagination](../../apps/user-web/src/components/Pagination/Pagination.tsx) giữ
+wine/cream, không nhấc nút khi hover, focus từ brand chung. Container hẹp dùng
+Trước—Trang—Sau với target44px; không phụ thuộc chỉ vào viewport. Specificity của
+control đủ để form CSS của trang không đổi riêng font/padding của pager.
+
+[Cursor navigation](../../apps/user-web/src/components/Pagination/useCursorNavigation.ts)
+lưu trail trong từng history entry, scope theo identity và bộ lọc. Không dùng
+localStorage/sessionStorage và không lưu token. Chặn double navigation trước
+commit location. URL cursor lỗi vẫn có đường quay lại và retry request hiện tại.
+
+[Paged collection](../../apps/user-web/src/components/Pagination/usePagedCollection.ts)
+dùng cache TanStack hiện có, không tạo data/token store mới. Chỉ đọc tiếp khi cần
+một trang chưa có; scan bộ lọc thưa đến khi có kết quả hoặc hết cursor. Lỗi giữ
+rows/page, retry cùng cursor, chặn request trùng và vòng cursor. Đổi filter/owner,
+điều hướng hoặc unmount ngừng scan cũ; response cũ không chuyển trang hiện tại.
+History state giữ vị trí khi đi chi tiết rồi Back; đổi filter về trang1. Khi đọc
+hết, total là tổng thực của tập đã đọc; trước đó không lấy loaded count làm tổng.
+
+[CollectionPager](../../apps/user-web/src/components/Pagination/CollectionPager.tsx)
+chỉ cuộn/focus về đầu nhóm kết quả sau thao tác phân trang được xác nhận; không
+cướp focus khi người dùng đổi bộ lọc. Dùng Lenis hiện có khi đã khởi tạo. Form mở
+đấu giá dùng tải thêm và giữ nguyên draft/intent thay vì thay trang/unmount form.
+
+Một lỗi responsive có trước được tái hiện trong harness hồ sơ: ở320px, tên/nhãn
+uy tín ép identity rộng254px trong vùng193px. Thêm wrap cho identity/name/badge,
+giữ bản thiết kế local Antigravity. Không xóa assertion chống overflow để qua test.
+CSS pager cũ của Search/MyBooks/MyAuctions/Exchange được bỏ sau khi consumer đã
+chuyển hết; không đổi CSS/biểu mẫu giao dịch ngoài phạm vi.
+
+## Giới hạn dữ liệu có thật
+
+- `/exchanges` hiện không nhận cursor và source backend giới hạn100 bản ghi,
+  trả nextCursor null. Pager ở Exchange là phân trang snapshot **đã tải**. UI ghi
+  phạm vi khi đạt100; không tuyên bố đã thấy mọi lịch sử. Xem
+  [list backend](../../apps/api/src/modules/exchanges/exchanges.service.ts) và
+  [adapter Member](../../apps/user-web/src/services/exchange.ts).
+- Danh sách đấu giá công khai là snapshot giới hạn50, không có cursor trong
+  contract response hiện tại. Giữ thông báo scope50 và tổng trong danh sách đó;
+  không tự tạo cursor hoặc thay backend để làm UI trông đầy đủ.
+- Tải lại cứng một collection có history page sâu nhưng cache đã mất chỉ hiển thị
+  trong dữ liệu vừa đọc; Back/detail Back với cache còn giữ đúng trang. URL cursor
+  lists có trail trong history và đọc lại đúng cursor khi reload. Không hứa điều
+  hướng đến dữ liệu chưa tải khi API không có khả năng đó.
+
+## Kiểm chứng
+
+- PASS Member build/typecheck và336unit; Admin build/bundle/typecheck và229unit
+  trên source của gói trước bàn giao; scoped lint chỉ còn cảnh báo Date.now đã có
+  ở AuctionList. Không chạy CI hoặc push/PR mới.
+- [list-pagination.mjs](../../apps/user-web/tests/list-pagination.mjs):42 cặp màn/
+  viewport (10 màn Member ×1440/768/390/320,320 có chữ130%; Admin Support1440/390).
+  Model tests cache/Next/Back, filter/owner reset, response cũ, sparse scan, vòng
+  cursor, duplicate pending click, URL Back/Forward/detail Back/reload/pasted
+  cursor. Có test giữ radio/giá khi picker lỗi rồi retry; role Admin bị từ chối
+  không đọc queue. Focus sau page change về kết quả; mobile controls nằm trong
+  container và có target44px. External requests bị chặn.
+- [pagination.mjs](../../apps/user-web/tests/pagination.mjs):8 ca màn/chữ/motion,
+  keyboard/forced-colors, các variant và wallet cache/error/retry/identity.
+- [member-reputation.mjs](../../apps/user-web/tests/member-reputation.mjs):HTTP
+  fixture qua session/schema thật,1440/900/390/320 và130%, không internal scroll;
+  giữ summary/sample count/cache12 dù trang2 chỉ hiện2; pending reply bị ẩn,
+  approved reply hiển thị,503 giữ trang,404 che cache và đổi member không rò dữ liệu.
+- [search-recovery.mjs](../../apps/user-web/tests/search-recovery.mjs):9 ca PASS,
+  không sửa query/filter/focus recovery để làm pagination khớp giả.
+- Tất cả browser evidence dùng fixture, không DB/API thật hoặc provider; không
+  chứng minh native, thanh toán/giao hàng, UX người thật hay release readiness.
+
+Lệnh: `pnpm --filter @used-books/user-web test:list-pagination:browser` và các
+script browser trên. Artifacts cục bộ ở `.tmp/list-pagination/`,
+`.tmp/pagination-browser/`, `apps/user-web/test-results/member-reputation/`.
+Các server/browser QA được đóng trong finally. READINESS giữ nguyên.

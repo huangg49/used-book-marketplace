@@ -1,3 +1,5 @@
+import { usePagedCollection } from "../components/Pagination/usePagedCollection";
+import { CollectionPager } from "../components/Pagination/CollectionPager";
 import { reviewDate } from "../features/reviews/format";
 import type { ReviewTransactionsPage } from "@used-books/session-client";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
@@ -69,6 +71,7 @@ export function ReviewsPage() {
     retry: false,
   });
 
+  const collection = usePagedCollection(result, `${owner}:${type}`, pages => pages.flatMap(page => page.items));
   if (
     result.error instanceof ApiError &&
     [401, 403].includes(result.error.status)
@@ -192,7 +195,7 @@ export function ReviewsPage() {
             )}
 
             {/* Lỗi tải */}
-            {result.isError && (
+            {result.isError && !result.isFetchNextPageError && (
               <div className={styles.errorCard} role="alert">
                 <div className={styles.errorIconWrap}>
                   <AlertCircle size={24} />
@@ -214,7 +217,7 @@ export function ReviewsPage() {
             )}
 
             {/* Trạng thái trống */}
-            {result.isSuccess && result.data.pages[0].items.length === 0 && (
+            {result.isSuccess && collection.loadedCount === 0 && !result.hasNextPage && (
               <div className={styles.emptyCard}>
                 <div className={styles.emptyIconWrap}>
                   <BookOpen size={32} />
@@ -231,11 +234,9 @@ export function ReviewsPage() {
             )}
 
             {/* Danh sách thẻ giao dịch */}
-            {result.isSuccess && result.data.pages[0].items.length > 0 && (
-              <div className={styles.cardList}>
-                {result.data.pages
-                  .flatMap((p) => p.items)
-                  .map((item) => {
+            {result.data && collection.items.length > 0 && (
+              <div className={styles.cardList} id="review-transaction-results">
+                {collection.items.map((item) => {
                     const initial = item.partnerName.trim().charAt(0).toUpperCase() || "B";
                     const typeLabel =
                       item.transactionType === "Exchange"
@@ -297,26 +298,7 @@ export function ReviewsPage() {
               </div>
             )}
 
-            {/* Phân trang / Xem thêm */}
-            {result.hasNextPage && (
-              <div className={styles.loadMoreWrap}>
-                <button
-                  type="button"
-                  disabled={result.isFetchingNextPage}
-                  onClick={() => void result.fetchNextPage()}
-                  className={styles.loadMoreBtn}
-                >
-                  {result.isFetchingNextPage ? (
-                    <>
-                      <RefreshCw size={14} className={styles.spin} />
-                      <span>Đang tải thêm…</span>
-                    </>
-                  ) : (
-                    <span>Xem thêm giao dịch</span>
-                  )}
-                </button>
-              </div>
-            )}
+            <CollectionPager model={collection} anchorId="review-transaction-results" itemLabel="giao dịch" />
           </>
         )
       )}

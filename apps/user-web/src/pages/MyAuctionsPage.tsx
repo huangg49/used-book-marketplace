@@ -1,3 +1,5 @@
+import { CursorPager } from "../components/Pagination/CursorPager";
+import { useCursorNavigation } from "../components/Pagination/useCursorNavigation";
 import { formatDuration } from '../components/DurationInput'
 import { AuctionEmptyArt } from '../components/AuctionEmptyArt'
 import { useRef, useState } from 'react'
@@ -316,6 +318,7 @@ function SellerIntakes({
   userId: string | undefined;
 }) {
   const [params, setParams] = useSearchParams();
+
   const focusId = params.get("intakeId");
   const queryClient = useQueryClient();
   const focus = useQuery({
@@ -404,6 +407,7 @@ export function MyAuctionsPage() {
   const queryClient = useQueryClient()
   const userId = auth.status === 'authenticated' ? auth.user.id : undefined
   const [params, setParams] = useSearchParams()
+  const navigation = useCursorNavigation(auth.status === "authenticated" ? auth.user.id : "guest")
   const view = views.some((v) => v.value === params.get('view'))
     ? params.get('view')!
     : 'all'
@@ -496,34 +500,8 @@ export function MyAuctionsPage() {
             />
           ))}
       </div>
-      {(cursor || (!query.isError && query.data?.nextCursor)) && (
-        <nav className={styles.pagination} aria-label="Trang đấu giá của tôi">
-          {cursor && (
-            <button
-              type="button"
-              onClick={() => {
-                const p = new URLSearchParams(params)
-                p.delete('cursor')
-                setParams(p)
-              }}
-            >
-              Về trang đầu
-            </button>
-          )}
-          {!query.isError && query.data?.nextCursor && (
-            <button
-              type="button"
-              onClick={() => {
-                const p = new URLSearchParams(params)
-                p.set('cursor', query.data!.nextCursor!)
-                setParams(p)
-              }}
-            >
-              Trang tiếp <ArrowRight size={16} aria-hidden="true" />
-            </button>
-          )}
-        </nav>
-      )}
+      <CursorPager navigation={navigation} nextCursor={!query.isError ? query.data?.nextCursor : undefined}
+        busy={query.isFetching} count={query.data?.items.length} label="Trang đấu giá của tôi" itemLabel="phiên" />
     </div>
   )
 }

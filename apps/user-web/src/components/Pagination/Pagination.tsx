@@ -3,6 +3,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import styles from "./Pagination.module.css";
 
 export interface PaginationProps {
+  ariaLabel?: string;
+  pageLabel?: string;
+  previousLabel?: string;
+  summaryOverride?: string;
   /** Trang hiện tại (bắt đầu từ 1) */
   page: number;
   /** Tổng số trang (nếu biết trước) */
@@ -58,6 +62,10 @@ function getPageNumbers(currentPage: number, totalPages: number): (number | "ell
 }
 
 export function Pagination({
+  ariaLabel = "Điều hướng phân trang",
+  pageLabel,
+  previousLabel = "Trước",
+  summaryOverride,
   page,
   totalPages,
   totalItems,
@@ -100,6 +108,7 @@ export function Pagination({
   const rangeStart = visibleCount ? (safePage - 1) * size + 1 : 0;
   const rangeEnd = visibleCount ? rangeStart + visibleCount - 1 : 0;
   const summary = count === 0 || isEmpty ? `Chưa có ${itemLabel}`
+    : visibleCount === 0 ? `Chưa có ${itemLabel} trong dữ liệu đã tải`
     : visibleCount !== undefined
       ? `Hiển thị ${rangeStart === rangeEnd ? rangeStart : `${rangeStart}–${rangeEnd}`}${count !== undefined ? ` trong ${count}` : ""} ${itemLabel}`
       : undefined;
@@ -111,12 +120,12 @@ export function Pagination({
   return (
     <nav
       className={`${styles.paginationRoot} ${bordered ? styles.bordered : ""} ${className || ""}`}
-      aria-label="Điều hướng phân trang"
+      aria-label={ariaLabel}
       aria-busy={isLoading}
     >
-      {renderSummary && summary && (
+      {renderSummary && (summaryOverride || summary) && (
         <div className={styles.summaryWrap} role="status" aria-live="polite" aria-atomic="true">
-          <span className={styles.summaryText}>{summary}</span>
+          <span className={styles.summaryText}>{summaryOverride || summary}</span>
         </div>
       )}
 
@@ -128,11 +137,11 @@ export function Pagination({
           className={styles.navBtn}
           disabled={!canGoPrev || isLoading}
           onClick={() => canGoPrev && changePage(safePage - 1)}
-          aria-label="Đến trang trước"
+          aria-label={previousLabel === "Trước" ? "Đến trang trước" : "Về trang đầu"}
           title="Trang trước"
         >
           <ChevronLeft size={14} aria-hidden="true" />
-          <span className={styles.navBtnLabel}>Trước</span>
+          <span className={styles.navBtnLabel}>{previousLabel}</span>
         </button>
 
         {/* Danh sách các số trang (nếu ở chế độ full hoặc có totalPages) */}
@@ -170,7 +179,7 @@ export function Pagination({
         )}
 
         <div className={`${styles.simplePageBadge} ${numbered ? styles.mobileBadge : ""}`} aria-current="page">
-          {isEmpty ? "Không có trang" : `Trang ${safePage}${computedTotalPages !== undefined ? ` / ${computedTotalPages}` : ""}`}
+          {pageLabel ?? (isEmpty ? "Không có trang" : `Trang ${safePage}${computedTotalPages !== undefined ? ` / ${computedTotalPages}` : ""}`)}
         </div>
 
         {/* Nút Trang sau */}

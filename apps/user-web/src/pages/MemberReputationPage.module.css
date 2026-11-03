@@ -1108,3 +1108,13 @@
     padding: 20px 18px;
   }
 }
+
+/* Narrow profile columns must fit before the pager is reached. Keep names and
+   trust labels readable instead of forcing an internal horizontal scroller. */
+@media (max-width: 600px) {
+  .identity { max-width: 100%; flex-wrap: wrap; }
+  .identityText { flex: 1 1 12rem; max-width: 100%; }
+  .nameRow h1 { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+  .badgesRow > span { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+  .badgesRow svg { flex-shrink: 0; }
+}

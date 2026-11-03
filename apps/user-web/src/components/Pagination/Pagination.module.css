@@ -14,7 +14,7 @@
 .summaryText { margin: 0; }
 .controlsWrap, .pageNumbersList { display: flex; align-items: center; gap: 6px; }
 .controlsWrap { margin-inline-start: auto; }
-.navBtn, .pageNumberBtn {
+.paginationRoot .navBtn, .paginationRoot .pageNumberBtn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -32,15 +32,15 @@
   cursor: pointer;
   transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
 }
-.navBtn { border-color: var(--shop-line, #d9cbbd); }
-.navBtn svg { flex-shrink: 0; }
-.navBtn:hover:not(:disabled), .pageNumberBtn:hover:not(:disabled):not(.pageActive) {
+.paginationRoot .navBtn { border-color: var(--shop-line, #d9cbbd); }
+.paginationRoot .navBtn svg { flex-shrink: 0; }
+.paginationRoot .navBtn:hover:not(:disabled), .paginationRoot .pageNumberBtn:hover:not(:disabled):not(.pageActive) {
   background: var(--shop-cream, #f4eee5);
   border-color: var(--shop-wine, #5c0202);
   color: var(--shop-wine, #5c0202);
 }
-.navBtn:disabled, .pageNumberBtn:disabled { opacity: 0.45; cursor: default; }
-.pageActive { background: var(--shop-wine, #5c0202); color: var(--shop-white, #fffcf4); cursor: default; }
+.paginationRoot .navBtn:disabled, .paginationRoot .pageNumberBtn:disabled { opacity: 0.45; cursor: default; }
+.paginationRoot .pageActive { background: var(--shop-wine, #5c0202); color: var(--shop-white, #fffcf4); cursor: default; }
 .ellipsisItem { padding-inline: 2px; color: var(--shop-muted, #716157); }
 .simplePageBadge { min-width: 0; padding-inline: 8px; color: var(--shop-wine, #5c0202); font-size: 0.875rem; font-weight: 600; text-align: center; overflow-wrap: anywhere; }
 .mobileBadge { display: none; }
@@ -50,5 +50,5 @@
   .controlsWrap { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; width: 100%; margin-inline-start: 0; gap: 8px; }
   .pageNumbersList { display: none; }
   .mobileBadge { display: block; }
-  .navBtn { min-width: 44px; min-height: 44px; padding-inline: 8px; }
+  .paginationRoot .navBtn { min-width: 44px; min-height: 44px; padding-inline: 8px; }
 }

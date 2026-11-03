@@ -84,7 +84,7 @@ function ReviewQueue({ owner }: { owner: string }) {
         isFetching={result.isFetching}
         isFetchingNextPage={result.isFetchingNextPage}
         error={result.isFetchNextPageError ? result.error : undefined}
-        onNextPage={() => void result.fetchNextPage()}
+        onNextPage={() => void result.fetchNextPage({ cancelRefetch: false })}
         nextLabel="Xem thêm đánh giá"
       />
     </>

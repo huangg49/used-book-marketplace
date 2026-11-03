@@ -1,3 +1,27 @@
+# Phân trang các danh sách web —03/11/2026
+
+Owner giao chạy cuốn chiếu theo nhu cầu thực. Nhánh
+`codex/web-list-pagination-rollout`, base7366b792:11 màn Member web gồm Search,
+kệ, đơn, trao đổi, thông báo, giao dịch đánh giá, uy tín, hỗ trợ, đấu giá công
+khai/cá nhân và picker mở phiên. URL cursor giữ trail/Back; collection cache8/10
+mục, giữ page/rows khi lỗi, retry cùng cursor, tìm qua filter thưa, chặn lặp/trùng,
+reset owner/filter và giữ vị trí detail→Back. Picker tải thêm giữ sách/giá/intent;
+Admin Support dùng pager Operations, review Next không hủy refresh. Giữ Home,
+chat/picker/queue có tải thêm hợp ngữ cảnh; không đưa CSS web vào RN/Flutter.
+
+PASS Member build/typecheck/unit336, Admin build/bundle/typecheck/unit229; browser
+42 màn/viewport + model race/history/sparse/cycle + picker draft + Admin role,
+wallet8ca, reputation HTTP/privacy/320px130%, Search recovery9ca. Detector0 và lint
+chỉ1warning Date.now có trước. Có sửa wrap identity/nhãn profile sau khi harness
+phát hiện overflow thật; không bỏ assertion. Không đổi API/contract/DB/quỹ/72h/48h,
+không mở READINESS hoặc nhận fake/browser thành native/human acceptance.
+
+[Ma trận/evidence/giới hạn](../ui/LIST_PAGINATION_ROLLOUT_2026_11_03.md). API trao
+đổi vẫn cap100 và đấu giá cap50: UI ghi scope đã tải, không bịa tổng/cursor. Local
+Documents được cập nhật có backup và sửa đúng đoạn trong bản uy tín Antigravity;
+giữ layout/support khác, không di chuyển branch runtime5bd0b360 hoặc commit gộp
+work ngoài phạm vi. Không push/PR/CI mới; app services vốn dừng không tự bật lại.
+
 # Hoàn thiện Pagination Member web —03/11/2026
 
 Owner duyệt sửa component Antigravity sau khảo sát. Nhánh

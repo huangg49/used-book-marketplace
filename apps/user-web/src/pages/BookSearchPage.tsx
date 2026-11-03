@@ -1,3 +1,5 @@
+import { CursorPager } from "../components/Pagination/CursorPager";
+import { useCursorNavigation } from "../components/Pagination/useCursorNavigation";
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
@@ -6,8 +8,6 @@ import {
   Filter,
   X,
   ArrowRight,
-  ArrowLeft,
-  BookOpen,
   Menu,
 } from "lucide-react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
@@ -483,16 +483,8 @@ export function BookSearchPage() {
   });
   const filterKey = JSON.stringify(initial);
 
-  const [pageHistory, setPageHistory] = useState<string[]>([]);
+  const navigation = useCursorNavigation("catalog");
   const [transitionDirection, setTransitionDirection] = useState<number>(1);
-
-  useEffect(() => {
-    if (!params.get("cursor") && pageHistory.length > 0) {
-      setPageHistory([]);
-    }
-  }, [params.get("cursor")]);
-
-  const pageNumber = pageHistory.length + 1;
 
   function scrollToCatalogHeading() {
     const lenis = getLenis();
@@ -509,46 +501,7 @@ export function BookSearchPage() {
     heading?.focus({ preventScroll: true });
   }
 
-  function handleNextPage() {
-    if (!result.data?.nextCursor) return;
-    const currentCursor = params.get("cursor") || "";
-    setPageHistory((prev) => [...prev, currentCursor]);
-    setTransitionDirection(1);
-    const next = new URLSearchParams(params);
-    next.set("cursor", result.data.nextCursor);
-    setParams(next);
-    requestAnimationFrame(() => scrollToCatalogHeading());
-  }
-
-  function handlePrevPage() {
-    if (pageHistory.length === 0) {
-      handleFirstPage();
-      return;
-    }
-    const prevCursor = pageHistory[pageHistory.length - 1] ?? "";
-    setPageHistory((prev) => prev.slice(0, -1));
-    setTransitionDirection(-1);
-    const next = new URLSearchParams(params);
-    if (prevCursor) {
-      next.set("cursor", prevCursor);
-    } else {
-      next.delete("cursor");
-    }
-    setParams(next);
-    requestAnimationFrame(() => scrollToCatalogHeading());
-  }
-
-  function handleFirstPage() {
-    setPageHistory([]);
-    setTransitionDirection(-1);
-    const next = new URLSearchParams(params);
-    next.delete("cursor");
-    setParams(next);
-    requestAnimationFrame(() => scrollToCatalogHeading());
-  }
-
   function update(key: string, value: string, replace = false) {
-    setPageHistory([]);
     setTransitionDirection(0);
     const next = new URLSearchParams(params);
     next.delete("cursor");
@@ -572,7 +525,6 @@ export function BookSearchPage() {
     setParams(next, { replace });
   }
   function clear() {
-    setPageHistory([]);
     setTransitionDirection(0);
     const next = new URLSearchParams();
     if (params.get("q")) next.set("q", params.get("q")!);
@@ -585,7 +537,6 @@ export function BookSearchPage() {
     setFilterOpen(false);
   }
   function apply(values: FilterValues, shouldScroll = false) {
-    setPageHistory([]);
     setTransitionDirection(0);
     const next = new URLSearchParams(params);
     next.delete("cursor");
@@ -1055,53 +1006,15 @@ export function BookSearchPage() {
                   </motion.div>
                 )}
               </AnimatePresence>
-              {!searchPending && (params.has("cursor") || result.data?.nextCursor) && (
-                <nav className={styles.pagination} aria-label="Phân trang sách">
-                  {params.has("cursor") && (
-                    <>
-                      <motion.button
-                        type="button"
-                        disabled={result.isFetching}
-                        onClick={handleFirstPage}
-                        whileHover={{ scale: 1.04, y: -2 }}
-                        whileTap={{ scale: 0.96 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                      >
-                        Về trang đầu
-                      </motion.button>
-                      <motion.button
-                        type="button"
-                        disabled={result.isFetching}
-                        onClick={handlePrevPage}
-                        whileHover={{ scale: 1.04, y: -2 }}
-                        whileTap={{ scale: 0.96 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                      >
-                        <ArrowLeft size={16} aria-hidden="true" />
-                        Trang trước
-                      </motion.button>
-                    </>
-                  )}
-                  <div className={styles.pageIndicatorBadge}>
-                    <BookOpen size={15} aria-hidden="true" />
-                    <span>Trang {pageNumber}</span>
-                  </div>
-                  {result.data?.nextCursor && (
-                    <motion.button
-                      type="button"
-                      className={styles.paginationNextBtn}
-                      disabled={result.isFetching}
-                      onClick={handleNextPage}
-                      whileHover={{ scale: 1.04, y: -2 }}
-                      whileTap={{ scale: 0.96 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    >
-                      Trang tiếp theo{" "}
-                      <ArrowRight size={16} aria-hidden="true" />
-                    </motion.button>
-                  )}
-                </nav>
-              )}
+              {!searchPending && <CursorPager navigation={navigation}
+                nextCursor={!result.isError ? result.data?.nextCursor : undefined}
+                busy={result.isFetching} count={result.data?.items.length}
+                label="Phân trang sách" itemLabel={preview ? "sách xem trước" : "bài đăng"}
+                onDirection={direction => {
+                  setTransitionDirection(direction);
+                  requestAnimationFrame(scrollToCatalogHeading);
+                }} />}
+
             </div>
           )}
         </section>

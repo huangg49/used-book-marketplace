@@ -1,3 +1,5 @@
+import { CursorPager } from "../components/Pagination/CursorPager";
+import { useCursorNavigation } from "../components/Pagination/useCursorNavigation";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useState } from "react";
@@ -21,6 +23,7 @@ export function MyBooksPage() {
   const auth = useSession();
   const location = useLocation();
   const [params, setParams] = useSearchParams();
+  const navigation = useCursorNavigation(auth.status === "authenticated" ? auth.user.id : "guest");
   const [dismissedBanner, setDismissedBanner] = useState(false);
   const navState = location.state as {
     revised?: boolean;
@@ -64,12 +67,6 @@ export function MyBooksPage() {
     setParams(next);
   }
 
-  function page(nextCursor?: string) {
-    const next = new URLSearchParams(params);
-    if (nextCursor) next.set("cursor", nextCursor);
-    else next.delete("cursor");
-    setParams(next);
-  }
 
   return (
     <div className={styles.root}>
@@ -219,23 +216,8 @@ export function MyBooksPage() {
             />
           )}
 
-          {(cursor || query.data?.nextCursor) && (
-            <nav className={styles.pagination} aria-label="Trang kệ sách">
-              {cursor && (
-                <button type="button" onClick={() => page()}>
-                  Về trang đầu
-                </button>
-              )}
-              {query.data?.nextCursor && (
-                <button
-                  type="button"
-                  onClick={() => page(query.data!.nextCursor!)}
-                >
-                  Trang tiếp theo
-                </button>
-              )}
-            </nav>
-          )}
+      <CursorPager navigation={navigation} nextCursor={!query.isError ? query.data?.nextCursor : undefined}
+        busy={query.isFetching} count={query.data?.items.length} label="Trang kệ sách" itemLabel="bài đăng" />
         </div>
       </section>
     </div>
