@@ -4,6 +4,67 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Tách đồng hồ khỏi phần còn lại của thẻ đấu giá
+
+Nhánh `codex/member-web-auction-countdown`, base `2abb5c52`.
+[AuctionCard](../../apps/user-web/src/components/AuctionCard/index.tsx) giữ
+`useCountdown` trong component con chỉ dựng badge thời gian. Trước đó mỗi nhịp
+đồng hồ gọi lại toàn bộ thẻ, gồm định dạng ngày kết thúc/mở phiên, giá và hooks
+ảnh. Không memo hóa dữ liệu auction nên giá/người trả giá/giờ/điểm mới từ server
+vẫn đi qua render cha bình thường. Hook đồng hồ, interval1000ms, server offset,
+phase/sort, query, API/command, keyframe, easing và class CSS không đổi.
+
+Hai production build, Chromium151,5 cặp luân phiên mỗi viewport. REST HTTP
+fixture8 phiên Live +8 Scheduled được dựng trên danh sách thật. Chờ font và
+render đầu ổn định rồi đo khoảng4,2giây bằng CDP Performance metrics; có đếm
+callback interval1000ms và gọi `Date.toLocaleString`. Width390×844/DPR2/CPU4×
+và1440×844/DPR1/CPU1×; reduced-motion theo owner. Không bóp mạng trong đoạn idle.
+
+| Trung vị trong khoảng4,2giây | Trước | Sau |
+| --- | ---: | ---: |
+| Callback đồng hồ, cả hai viewport | 64 | 64 |
+| Gọi định dạng ngày, cả hai viewport | 96 | 0 |
+| Viewport390: ScriptDuration | 231,9ms | 79,8ms |
+| Viewport390: TaskDuration | 548,1ms | 380,0ms |
+| Desktop: ScriptDuration | 22,9ms | 7,8ms |
+| Desktop: TaskDuration | 57,6ms | 42,1ms |
+
+Cả5 cặp mỗi viewport đều giữ64 callback và giảm96→0 lần định dạng. Tính cả
+16 thẻ đang mount, gồm thẻ ngoài viewport. ScriptDuration là tổng JS trong đoạn
+đo, có phần app/socket retry/Lenis khác đang chạy; không suy thành thời gian
+một click, FPS, INP hoặc số đo điện thoại thật. Đồng hồ vẫn tick như trước,
+không giảm tần suất hoặc dừng các thẻ ngoài viewport để lấy số đẹp.
+
+- [Browser production](../../apps/user-web/tests/auction-countdown.mjs) bắt bản
+  cũ48 lần định dạng khi yêu cầu0 sau2 giây, bản sửa PASS390/1440px. Clock browser
+  được điều khiển riêng cho ca chức năng, không dùng cho bộ đo hiệu năng phía trên.
+  Ngày máy sai10 ngày vẫn dùng offset server; mốc1:00:01→59:59 đổi màu urgent,
+  hết giờ về0; Scheduled đếm tới start và không tự chuyển Live khi về0.
+- Đổi giá70k→90k, bidder2→3, endAt và điểm giao nhận qua response REST mới vẫn
+  cập nhật cùng card; hiệu ứng giá500ms có frame vàng được quan sát qua WAAPI
+  khi reduced-motion bật. Có kiểm phân trang và hủy interval khi SPA về Home.
+  WebSocket bị từ chối trong fixture: không là kiểm push thật, bid, thanh toán
+  hoặc chuyển trạng thái server. Không chạy command/ghi DB.
+  Chạy lại: `pnpm --filter @used-books/user-web test:auction-countdown:browser`.
+- Toàn bộ46 CSS production khớp byte. Ảnh thẻ sau cập nhật giá: desktop khớp
+  pixel,390px lệch6pixel tối đa8 mức kênh màu. Đã xem layout; không coi ảnh đứng
+  là bằng chứng mọi frame animation. Ảnh toàn trang lần đầu có header/footer
+  animation chưa đồng bộ mốc capture, được loại khỏi kết luận so pixel.
+- Build/tsc,341 unit test, lint exit0,42 ca actual screen/viewport của bộ phân
+  trang và browser đồng hồ PASS. Detector AuctionCard0 finding; warning lint/
+  chunk/plugin timing cũ ngoài diff. Docs/diff check PASS.
+- API local thật BLOCKED: GET health/auctions `ECONNREFUSED`; cổng3000/5173/
+  5174 không listen,27017 còn listen. Không tự khởi động dịch vụ. Không suy
+  kiểm fixture thành tích hợp API/provider hoặc nghiệm thu người thật.
+- Harness,20 lượt đo, probe, JSON và so ảnh tại
+  `.tmp/member-web-auction-performance/`; test browser/ảnh tại `.tmp/auction-countdown/`.
+  `.tmp` chỉ ở máy hiện tại; bộ test browser mới được đưa vào Git.
+
+Chỉ ở worktree phát triển; checkout demo có local work được bảo toàn. Thiết bị
+thật, API/WebSocket thật cho gói này, human acceptance và CI remote chưa chạy.
+READINESS giữ nguyên. Đây là điểm nghẽn mới ở thẻ đấu giá, không kết luận mọi
+trang/vai trò của web đã được khảo sát hiệu năng.
+
 ## Tải khung tài khoản theo route
 
 Nhánh `codex/member-web-dashboard-chunk`, base `aa023b21`.

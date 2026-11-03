@@ -9,6 +9,7 @@
     "test:book-transition:browser": "node tests/book-transition.mjs",
     "test:card-text:browser": "node tests/card-text.mjs",
     "test:dashboard-chunk:browser": "node tests/dashboard-chunk.mjs",
+    "test:auction-countdown:browser": "node tests/auction-countdown.mjs",
     "test:search-recovery:browser": "node tests/search-recovery.mjs",
     "test:search-covers:browser": "node tests/search-covers.mjs",
     "test:list-pagination:browser": "node tests/list-pagination.mjs",

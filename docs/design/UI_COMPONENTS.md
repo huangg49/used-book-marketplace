@@ -582,6 +582,15 @@ book return URL. Non-Members/inactive accounts cannot mutate, and catalog previe
 have no heart. `ListingPhoto` keeps its reusable loading/missing/error/retry states
 for detail, checkout and conversation consumers. RN `/ui` remains unchanged.
 
+## Member web — Đồng hồ trên thẻ đấu giá —03/11/2026
+
+`AuctionCard` keeps `useCountdown` inside a badge component so clock ticks do
+not render price/photo/date facts again. The same1000ms server-offset clock,
+Scheduled start deadline and under-one-hour color still apply. Server props
+continue to update the whole card and retain price feedback. Keep timer zero
+as display only; server state/eligibility still decide commands. Verify with
+`pnpm --filter @used-books/user-web test:auction-countdown:browser`.
+
 ## Member web — Tải khung tài khoản theo route —03/11/2026
 
 `DashboardLayout` uses React Router route `lazy`, matching its child pages.

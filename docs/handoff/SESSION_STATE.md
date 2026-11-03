@@ -1,31 +1,33 @@
 # Tối ưu Member web — 03/11/2026
 
-Gói hiện tại `codex/member-web-dashboard-chunk`, base `aa023b21`: tải JS/CSS
-DashboardLayout khi route tài khoản khớp; giữ component/session/guard/motion.
-[Router](../../apps/user-web/src/app/router.tsx),
+Gói hiện tại `codex/member-web-auction-countdown`, base `2abb5c52`: tách badge
+đồng hồ khỏi phần còn lại của AuctionCard để không chạy lại giá/ảnh/ngày mỗi
+nhịp. Giữ hook, server offset, interval 1000ms, phase và motion. Giá/giờ mới từ server
+vẫn cập nhật bình thường.
+[Source](../../apps/user-web/src/components/AuctionCard/index.tsx),
 [bằng chứng và các gói trước](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Home production/HTTP fixture,5 cặp mỗi viewport: giảm15.900byte JS/CSS raw,
-  3.293byte body gzip;30 file giữ nguyên. FCP/LCP chưa cải thiện rõ. Ba cặp
-  lần đầu vào tài khoản desktop: click→khung418→426ms; mẫu nhỏ, có chi phí tải
-  hai file riêng. Không gọi đây là tăng tốc rõ rệt.
-- Build/tsc,341 unit test, lint,5 cấu hình browser tài khoản, Home focus và5
-  cấu hình chuyển cảnh PASS. Deep link/login trả đúng URL, menu/sidebar/Back,
-  lỗi JS/CSS/reload, callback thanh toán và scope tải kiểm bằng HTTP fixture;
-  không là VNPay thật. Component không
-  đổi; CSS Dashboard chỉ tách khỏi entry; ảnh trước/sau gần khớp. Detector0.
-- Smoke API thật BLOCKED: GET health/listings `ECONNREFUSED`, cổng3000/5173/
-  5174 không listen,27017 còn listen. Không tự khởi động lại dịch vụ. Chưa có
-  evidence API thật cho gói này. Docs/diff check PASS; warning cũ ngoài diff.
-  Harness tại `.tmp/member-web-dashboard-performance/` và test mới trong repo.
+- Production Chromium151/REST fixture,8 Live+8 Scheduled,5 cặp mỗi viewport,
+  khoảng4,2giây: 64 callback đồng hồ giữ nguyên, định dạng ngày96→0 ở mọi cặp.
+  ScriptDuration390px/DPR2/CPU4×232→80ms,desktop23→8ms. Đây là tổng JS lúc idle
+  trong phòng thử; không là click/FPS/INP hoặc điện thoại thật.
+- Build/tsc,341 unit test,lint,42 ca màn/viewport phân trang và browser đồng hồ
+  PASS390/1440px. Ngày máy sai10 ngày, mốc dưới1giờ, hết giờ, Scheduled, giá/endAt
+  mới, WAAPI giá500ms khi reduced-motion, phân trang và cleanup đều được kiểm.
+  Clock kiểm chức năng tách khỏi bộ đo thời gian thực; không fake thời gian đo.
+- 46 CSS production khớp byte; ảnh thẻ gần khớp. Detector0 finding. Docs/diff
+  check PASS; warning cũ ngoài diff. WebSocket fixture bị từ chối; không suy thành
+  push/bid thật. API thật BLOCKED: health/auctions ECONNREFUSED, 3000/5173/5174
+  không listen, 27017 còn listen. Không khởi động dịch vụ hay ghi DB.
+  Harness tại `.tmp/member-web-auction-performance/`,test mới trong repo.
 
 Chuỗi trước: `62324b47` catalog, `10fd986d` WOFF2, `bbd59568` Hero preload,
 `d28f7605` canvas, `55c9df1d` ảnh trang, `8aba79c7` prefetch mã, `8fc33e1f`
-viewport, `183b457d` style chuyển cảnh, `aa023b21` bỏ fit chữ lúc cuộn.
+viewport,`183b457d` style chuyển cảnh, `aa023b21` bỏ fit chữ lúc cuộn, `2abb5c52`
+khung tài khoản lazy. Chi tiết trong tài liệu bằng chứng chung bên trên.
 
-Các tối ưu kế tiếp nên dựa vào trace thiết bị thật và luồng cụ thể của bản định
-Demo; lợi ích thay đổi nhỏ đang giảm dần. Chưa thể kết luận mọi trang/vai trò hết
-việc tối ưu. Chỉ ở worktree phát triển, checkout demo có local work được bảo
+Điểm nghẽn mới thuộc danh sách đấu giá; chưa khảo sát mọi trang/vai trò với dữ
+liệu đại diện. Chỉ ở worktree phát triển, checkout demo có local work được bảo
 toàn; chưa push/PR/merge. Thiết bị thật, human acceptance, CI remote chưa chạy.
 Gate phát hành theo READINESS giữ nguyên.
 
