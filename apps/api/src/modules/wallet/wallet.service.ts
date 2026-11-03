@@ -116,7 +116,7 @@ export class WalletService {
           actor.status !== 'LOCKED' &&
           (this.simulator.enabled() || this.vnpay.enabled()),
         paymentsEnabled: actor.status !== 'LOCKED',
-        withdrawalsEnabled: actor.status !== 'LOCKED' && this.simulator.enabled(),
+        withdrawalsEnabled: actor.status !== 'LOCKED',
         listingSubmissionFee: this.policy.listingFee,
         atomicCheckout: this.policy.atomicCheckout,
         vnpayEnabled: actor.status !== 'LOCKED' && this.vnpay.enabled(),

@@ -142,7 +142,7 @@ function Queue({ user, simulator }: { user: CurrentUser; simulator: boolean }) {
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <caption className={styles.srOnly}>
-              Danh sách yêu cầu rút tiền mô phỏng
+              Danh sách yêu cầu rút tiền
             </caption>
             <thead>
               <tr>
@@ -165,7 +165,7 @@ function Queue({ user, simulator }: { user: CurrentUser; simulator: boolean }) {
                   </td>
                   <td className={styles.money}>
                     {vnd(row.amount)}
-                    <small>Phí 0đ · Mô phỏng</small>
+                    <small>Phí 0đ</small>
                   </td>
                   <td>{withdrawalReasons[row.reason]}</td>
                   <td>
@@ -283,7 +283,7 @@ function Detail({ user, id }: { user: CurrentUser; id: string }) {
         <>
           <div className={styles.summary}>
             <div>
-              <span>Rút tiền mô phỏng</span>
+              <span>Rút tiền</span>
               <strong>{vnd(row.amount)}</strong>
               <small>Phí 0đ</small>
             </div>
@@ -345,7 +345,7 @@ function Detail({ user, id }: { user: CurrentUser; id: string }) {
                   <>
                     <p className="muted">
                       {row.state === "Requested"
-                        ? "Tiền đã được giữ riêng. Kiểm tra thông tin nhận trước khi quyết định."
+                        ? "Tiền đã được giữ riêng. Duyệt sẽ hoàn tất rút tiền và cập nhật lịch sử ví."
                         : row.state === "Approved"
                           ? "Đã được duyệt. Gửi lệnh chi để bắt đầu xử lý mô phỏng."
                           : row.state === "Processing"

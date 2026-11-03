@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.74.0
+  version: 0.74.1
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -16,7 +16,7 @@ info:
     and post-F2h readiness are accepted. Authorized historical receipt replays
     remain read-only; existing holds/history are preserved. Full dispute
     adjudication/return and ordinary ViaPoint remain incomplete. Withdrawals use
-    dedicated holds, independent Admin approval and verified simulator outcomes. This contract describes source capabilities,
+    dedicated holds and Admin approval which completes manual wallet withdrawals. No bank API is called. This contract describes source capabilities,
     not production readiness or full client/native acceptance. GHN/carrier routes
     retain their current behavior pending the owner's team decision.
 servers:
@@ -12024,8 +12024,7 @@ paths:
       tags:
         - Wallet
       summary: createWithdrawal
-      description: Verified MEMBER; LOCKED denied. Atomically reserves available in a dedicated withdrawal hold. Other
-        requires a description. Same key/body returns the original receipt.
+      description: Verified MEMBER; LOCKED denied. No simulator secret or bank verification required. New Manual requests reserve available in a dedicated hold. Other requires a description. Same key and body replay the original receipt.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -12255,8 +12254,7 @@ paths:
       tags:
         - Wallet
       summary: decideWithdrawal
-      description: Independent ACTIVE ADMIN and session created within 15 minutes. Approve or reject before sending; reason
-        required. Rejection releases only this hold.
+      description: Independent ACTIVE ADMIN with a session created within 15 minutes. Required reason. Approve completes a Manual wallet withdrawal atomically without a bank API or operator event. Reject returns this hold. Legacy Simulator requests retain their prior processing semantics.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -17971,6 +17969,7 @@ components:
       type: object
       additionalProperties: false
       required:
+        - processingMode
         - id
         - ownerId
         - ownerName
@@ -17988,6 +17987,10 @@ components:
         - history
         - demoOnly
       properties:
+        processingMode:
+          type: string
+          enum: [Manual, Simulator]
+          description: New requests complete on Admin approval. Simulator is legacy only.
         id: *a1
         ownerId: *a1
         ownerName:

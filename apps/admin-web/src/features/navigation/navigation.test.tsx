@@ -40,7 +40,7 @@ describe("workspace navigation permissions", () => {
     ]);
   });
   it("limits TEST_OPERATOR to the dashboard and carrier simulator", () => {
-    expect(paths({ ...base, roles: ["TEST_OPERATOR"] })).toEqual(["/dashboard", "/simulator/deliveries", "/simulator/events/pickups", "/simulator/events/deliveries", "/simulator/withdrawals", "/simulator/events/topups"]);
+    expect(paths({ ...base, roles: ["TEST_OPERATOR"] })).toEqual(["/dashboard", "/simulator/deliveries", "/simulator/events/pickups", "/simulator/events/deliveries", "/simulator/events/topups"]);
   });
   it.each(["RESTRICTED", "LOCKED"] as const)("shows no protected links for %s even with every role", status => {
     expect(paths({ ...base, status, roles: ["ADMIN", "STAFF", "TEST_OPERATOR"] })).toEqual([]);
@@ -52,7 +52,7 @@ describe("workspace navigation permissions", () => {
   it("combines actual roles without duplicate links or a guessed account role", () => {
     const user = { ...base, roles: ["ADMIN", "STAFF", "TEST_OPERATOR"] } satisfies CurrentUser;
     const links = paths(user);
-    expect(links).toHaveLength(21);
+    expect(links).toHaveLength(20);
     expect(new Set(links).size).toBe(links.length);
     expect(workspaceRole(user)).toBe("Quản trị viên · Nhân viên · Vận hành thử");
     expect(workspaceRole(undefined)).toBe("Chờ xác minh quyền");

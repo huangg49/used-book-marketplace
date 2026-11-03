@@ -1,4 +1,4 @@
-// Real HTTP/Mongo QA and both web clients; storage and payout are explicitly simulated.
+// Real HTTP/Mongo QA and both web clients; fake storage, manual wallet approval, no bank API.
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
@@ -23,7 +23,7 @@ assert.ok(
 );
 const memberOrigin = "http://127.0.0.1:5195",
   adminOrigin = "http://127.0.0.1:5196";
-const evidence = path.join(root, ".tmp/withdrawals-evidence");
+const evidence = path.join(root, ".tmp/manual-withdrawals-evidence");
 let fixture, browser, web, adminVite, member, admin, op;
 const pageErrors = [];
 const captures = [];
@@ -252,47 +252,11 @@ try {
   await button(d, "Duyệt yêu cầu rút tiền").click();
   await button(d, "Thử lại thao tác vừa gửi").waitFor();
   await button(d, "Thử lại thao tác vừa gửi").click();
-  await button(admin, "Gửi lệnh chi mô phỏng").waitFor();
-  assert.equal(approvedPosts.length, 2);
-  assert.deepEqual(approvedPosts[0], approvedPosts[1]);
-  assert.equal(
-    (await fixture.api("/me/wallet", fixture.member.accessToken))
-      .withdrawalHeld,
-    100000,
-  );
-  await button(admin, "Gửi lệnh chi mô phỏng").click();
-  d = admin.getByRole("dialog", { name: "Gửi lệnh chi mô phỏng" });
-  await button(d, "Gửi lệnh chi mô phỏng").click();
-  await expect(
-    admin.getByText("Đang chờ kết quả mô phỏng hoặc đối soát.", {
-      exact: false,
-    }),
-  ).toBeVisible();
-  await login(
-    op,
-    adminOrigin,
-    "withdraw-operator@operations.test",
-    "/simulator/withdrawals",
-  );
-  await op.getByRole("heading", { name: "Kết quả chi mô phỏng" }).waitFor();
-  await button(op, "Nhập kết quả").click();
-  d = op.getByRole("dialog", { name: "Ghi nhận kết quả chi mô phỏng" });
-  await d.getByLabel("Kết quả xác minh").selectOption("Unknown");
-  await capture(op, "operator-unknown-desktop");
-  await button(d, "Ghi nhận kết quả chi mô phỏng").click();
-  await button(op, "Nhập kết quả").waitFor();
-  assert.equal(
-    (await fixture.api("/me/wallet", fixture.member.accessToken))
-      .withdrawalHeld,
-    100000,
-  );
-  await button(op, "Nhập kết quả").click();
-  d = op.getByRole("dialog", { name: "Ghi nhận kết quả chi mô phỏng" });
-  await d.getByLabel("Kết quả xác minh").selectOption("Succeeded");
-  await button(d, "Ghi nhận kết quả chi mô phỏng").click();
-  await expect(
-    op.getByRole("dialog", { name: "Ghi nhận kết quả chi mô phỏng" }),
-  ).toBeHidden();
+  await expect(admin.getByText("Yêu cầu đã kết thúc.", {exact:false})).toBeVisible();
+  assert.equal(approvedPosts.length,2);assert.deepEqual(approvedPosts[0],approvedPosts[1]);
+  assert.equal((await fixture.api('/me/wallet',fixture.member.accessToken)).withdrawalHeld,0);
+  assert.equal(await fixture.db.collection('withdrawal_events').countDocuments(),0);
+  await capture(admin,'admin-completed-desktop');
   await member.getByRole("button", { name: /Rút tiền · 100/ }).click();
   await expect(
     member
@@ -391,7 +355,7 @@ try {
           "large-text",
           "member-admin-lost-ack-exact-retry",
           "independent-admin-approval",
-          "unknown-retains-hold",
+          "approval-completes-without-simulator",
           "one-successful-payout",
           "rejection-refunds",
           "owner-deep-link-refusal",
@@ -404,7 +368,7 @@ try {
     ),
   );
   console.log(
-    "PASS withdrawals browser: real API/Mongo, Member/Admin/operator, lost ACK, hold/payout/refund; " +
+    "PASS withdrawals browser: real API/Mongo, Member/Admin, manual approval, lost ACK, hold/payout/refund; " +
       captures.length +
       " captures; 0 page errors.",
   );

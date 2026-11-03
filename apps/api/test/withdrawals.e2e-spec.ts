@@ -82,6 +82,11 @@ describe('Withdrawal: HTTP, real Mongo ledger, permission and concurrency', () =
   }
   async function processing(u: Actor) {
     const w = await create(u);
+    // Historical requests predate manual mode and retain their processing semantics.
+    await db.c.withdrawals.updateOne(
+      { _id: w.entityId },
+      { $unset: { processingMode: '' } },
+    );
     await approve(w.entityId);
     await post(
       `/admin/withdrawals/${w.entityId}/process`,
@@ -143,8 +148,10 @@ describe('Withdrawal: HTTP, real Mongo ledger, permission and concurrency', () =
       });
       await db.c.topup_intents.deleteMany({ _id: { $in: topups } });
       await db.c.member_notifications.deleteMany({ userId: { $in: users } });
-      const auditIds = (await db.c.audit_events.find({actorId:{$in:users}}).toArray()).map(a=>a._id);
-      await db.c.outbox_events.deleteMany({auditId:{$in:auditIds}});
+      const auditIds = (
+        await db.c.audit_events.find({ actorId: { $in: users } }).toArray()
+      ).map((a) => a._id);
+      await db.c.outbox_events.deleteMany({ auditId: { $in: auditIds } });
       await db.c.audit_events.deleteMany({ actorId: { $in: users } });
       await db.c.mutation_receipts.deleteMany({ actorId: { $in: users } });
       await db.c.auth_sessions.deleteMany({ userId: { $in: users } });
@@ -155,6 +162,73 @@ describe('Withdrawal: HTTP, real Mongo ledger, permission and concurrency', () =
     if (oldSecret === undefined) delete process.env.PAYMENT_SIMULATOR_SECRET;
     else process.env.PAYMENT_SIMULATOR_SECRET = oldSecret;
   }, 60000);
+  it('accepts an arbitrary account without simulator config; Admin approval completes and debits exactly once', async () => {
+    const u = await funded(),
+      key = randomUUID();
+    const { PaymentSimulator } =
+      await import('../src/modules/wallet/payment-simulator.js');
+    const disabled = vi
+      .spyOn(app.get(PaymentSimulator), 'enabled')
+      .mockReturnValue(false);
+    try {
+      const payload = {
+        ...body(),
+        recipient: { ...body().recipient, accountNumber: '123456' },
+      };
+      const created = await post('/me/withdrawals', payload, u, key).expect(
+        200,
+      );
+      expect(await summary(u)).toMatchObject({
+        withdrawalsEnabled: true,
+        available: 100000,
+        withdrawalHeld: 100000,
+      });
+      expect((await read(u, created.body.entityId)).processingMode).toBe(
+        'Manual',
+      );
+      const decision = {
+          expectedVersion: 1,
+          decision: 'Approve',
+          reason: 'Đã duyệt yêu cầu',
+        },
+        approvalKey = randomUUID();
+      const approved = await post(
+        `/admin/withdrawals/${created.body.entityId}/decision`,
+        decision,
+        admin,
+        approvalKey,
+      ).expect(200);
+      expect(approved.body).toMatchObject({ state: 'Completed', version: 2 });
+      expect(
+        (
+          await post(
+            `/admin/withdrawals/${created.body.entityId}/decision`,
+            decision,
+            admin,
+            approvalKey,
+          ).expect(200)
+        ).body,
+      ).toEqual(approved.body);
+      expect(await summary(u)).toMatchObject({
+        available: 100000,
+        withdrawalHeld: 0,
+        total: 100000,
+      });
+      expect(
+        await db.c.withdrawal_events.countDocuments({
+          withdrawalId: created.body.entityId,
+        }),
+      ).toBe(0);
+      expect(
+        await db.c.ledger_journals.countDocuments({
+          withdrawalId: created.body.entityId,
+          type: 'WithdrawalPayout',
+        }),
+      ).toBe(1);
+    } finally {
+      disabled.mockRestore();
+    }
+  });
   it('requires reason, minimum, valid recipient and detail for Other; no partial reserve', async () => {
     const u = await funded();
     await post('/me/withdrawals', { ...body(), reason: '' }, u).expect(422);

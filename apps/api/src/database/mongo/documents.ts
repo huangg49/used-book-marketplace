@@ -666,6 +666,7 @@ export interface WalletAccountDoc {
   currency: 'VND';
 }
 export interface WithdrawalDoc extends Lockable {
+  processingMode?: 'Manual';
   _id: string; ownerId: string; ownerName: string; amount: number;
   reason: 'SaleProceeds' | 'Personal' | 'Leaving' | 'Other'; reasonDetail: string;
   recipient: { bankName: string; accountNumber: string; accountHolder: string };

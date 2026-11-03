@@ -111,6 +111,7 @@ export class WithdrawalService {
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
       history: row.history.map((h) => ({ ...h, at: h.at.toISOString() })),
+      processingMode: row.processingMode ?? 'Simulator',
       demoOnly: true,
     };
   }
@@ -131,7 +132,7 @@ export class WithdrawalService {
       userId: row.ownerId,
       kind: 'WithdrawalUpdated',
       title: 'Rút tiền · ' + labels[row.state],
-      body: 'Yêu cầu rút tiền mô phỏng đã được cập nhật. Mở Ví để xem chi tiết.',
+      body: 'Yêu cầu rút tiền đã được cập nhật. Mở Ví để xem chi tiết.',
       targetType: 'Withdrawal',
       targetId: row._id,
       dedupeKey: `withdrawal:${row._id}:${row.version}`,
@@ -176,7 +177,6 @@ export class WithdrawalService {
       {
         authorize: async (tx, actor) => {
           member(actor);
-          this.enabled();
           await this.session(tx, context.auth);
           tx.check('withdrawal-session', async () => {
             await this.session(tx, context.auth);
@@ -188,6 +188,7 @@ export class WithdrawalService {
           const now = await this.session(tx, context.auth);
           const row: WithdrawalDoc = {
             _id: randomUUID(),
+            processingMode: 'Manual',
             ownerId: actor._id,
             ownerName: actor.displayName,
             amount: body.amount,
@@ -312,7 +313,6 @@ export class WithdrawalService {
         discover: async (tx) => [(await this.owned(tx, id)).ownerId],
         authorize: async (tx, actor) => {
           admin(actor);
-          this.enabled();
           const row = await this.owned(tx, id);
           this.independent(actor, row);
           await this.session(tx, context.auth, true);
@@ -333,6 +333,27 @@ export class WithdrawalService {
               (decision.decision === 'Approve' && row.state !== 'Requested')
             )
               throw invalidState();
+            if (
+              decision.decision === 'Approve' &&
+              row.processingMode === 'Manual'
+            ) {
+              const payoutRef = randomUUID();
+              await this.ledger.postWithdrawal(
+                tx,
+                row,
+                'WithdrawalPayout',
+                receiptId,
+                now,
+              );
+              return this.transition(
+                tx,
+                row,
+                'Completed',
+                decision.reason,
+                now,
+                { approverId: actor._id, payoutRef },
+              );
+            }
             if (decision.decision === 'Reject')
               await this.ledger.postWithdrawal(
                 tx,
@@ -350,6 +371,10 @@ export class WithdrawalService {
               { approverId: actor._id },
             );
           }
+          if (row.processingMode === 'Manual')
+            throw invalidState(
+              'Yêu cầu này được hoàn tất ngay khi Admin duyệt.',
+            );
           if (action === 'process') {
             if (row.state !== 'Approved' || row.payoutRef) throw invalidState();
             return this.transition(

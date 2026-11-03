@@ -49,6 +49,7 @@ export const withdrawalSchema = z.object({
       note: z.string(),
     }),
   ),
+  processingMode: z.enum(["Manual", "Simulator"]),
   demoOnly: z.literal(true),
 });
 export const withdrawalPageSchema = z.object({

@@ -1354,7 +1354,14 @@ export async function checkWithdrawal(tx: Tx, id: string) {
     if (!receipt || !(await tx.c.audit_events.findOne({ receiptId: receipt._id, withdrawalId: id }))) throw new Error('Withdrawal receipt/audit missing');
   }
   const events = await tx.c.withdrawal_events.find({ withdrawalId: id }).toArray();
-  if (paid !== events.some(e => e.outcome === 'Succeeded') ||
+  if (w.processingMode === 'Manual') {
+    if (events.length) throw new Error('Manual withdrawal must not claim simulator evidence');
+    if (paid) {
+      const payout = journals.find(j => j.type === 'WithdrawalPayout')!;
+      const approval = await tx.c.mutation_receipts.findOne({_id:payout.receiptId!,operation:'decideWithdrawal',actorId:w.approverId,withdrawalId:id});
+      if (!approval || !w.approverId || !w.payoutRef || w.approverId === w.ownerId) throw new Error('Manual withdrawal approval missing');
+    }
+  } else if (paid !== events.some(e => e.outcome === 'Succeeded') ||
       (['FailedVerified', 'Refunded'].includes(w.state)) !== events.some(e => e.outcome === 'FailedVerified') ||
       events.some(e => e.payoutRef !== w.payoutRef)) throw new Error('Withdrawal payout evidence mismatch');
   if (w.approverId === w.ownerId) throw new Error('Withdrawal self approval');

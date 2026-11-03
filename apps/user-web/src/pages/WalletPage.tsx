@@ -523,7 +523,7 @@ export function WalletPage() {
             >
               <ArrowUpFromLine size={17} aria-hidden="true" />
               <span>Rút tiền</span>
-              <span className={styles.miniTag}>Demo</span>
+
             </button>
 
             <button

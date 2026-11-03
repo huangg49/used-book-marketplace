@@ -337,7 +337,7 @@ export function WalletWithdrawals({
         open={open}
         onClose={onClose}
         title={review ? "Xác nhận rút tiền" : "Rút tiền từ ví"}
-        description="Rút tiền mô phỏng · Phí 0đ · Admin duyệt từng yêu cầu"
+        description="Phí 0đ · Admin duyệt từng yêu cầu"
         busy={busy}
         className={styles.dialog}
       >
@@ -393,7 +393,7 @@ export function WalletWithdrawals({
                 />
               </>
             )}
-            <h3>Thông tin nhận tiền mô phỏng</h3>
+            <h3>Thông tin nhận tiền</h3>
             <label htmlFor="withdraw-bank">Ngân hàng</label>
             <input
               id="withdraw-bank"
@@ -553,7 +553,7 @@ function WithdrawalDetail({ row }: { row: Withdrawal }) {
         </div>
         <div>
           <dt>Phí</dt>
-          <dd>0đ · Mô phỏng</dd>
+          <dd>0đ</dd>
         </div>
       </dl>
       <h3>Tiến độ xử lý</h3>

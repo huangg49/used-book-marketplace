@@ -1,23 +1,34 @@
-# Rút tiền mô phỏng — 03/11/2026
+# Rút tiền qua Admin — 03/11/2026
 
-- `codex/wallet-withdrawals`, base `93289df5`: owner duyệt luồng có lý do bắt buộc,
-  Admin độc lập và lịch sử Rút tiền; yêu cầu popup và UI đồng bộ Admin.
-- Source có hold riêng, decision/process/event/refund, ledger nguyên tử và receipt;
-  Unknown giữ tiền/cùng mã chi. Member web popup xác nhận, timeline/thông báo/
-  retry; Admin queue/detail và popup lý do; operator mô phỏng kết quả độc lập.
-- Contract0.74.0/256operations/39controllers; migration0060mới, không sửa migration
-  cũ. RN chỉ tương thích đọc wallet/history/notifications, chưa có form rút native.
-- PASS61Mongo/6SKIP,12withdrawal E2E,5checkout liên quan/43SKIP,320Member/229Admin/150session/
-  14RNwallet/30APIwallet-config/7catalog unit; typecheck/build/contract/lint phù hợp.
-  Browser22captures desktop/390/320/chữ130%, Member+Admin lostACK/exact retry và
-  hold/unknown/payout/reject-refund; API/Mongo QA thật, storage/payout mô phỏng.
-- Finish reviewer:1finding history mobile đã sửa và verdict ship trong phạm vi fix;
-  documenter giữ DESIGN/token. Không suy native/human/provider/release PASS.
-- Hồi quy rộng còn Windows shutdown unit timeout và stress100topup trả503 khi
-  hết retry budget; không tính full API/wallet suite PASS. Không đổi budget để che.
+- `codex/wallet-withdrawals`, follow-up sau `91e7c011`: owner làm rõ nhập tài khoản
+  bất kỳ, không cần bước vận hành simulator. Commit checkpoint có subject
+  `fix(wallet): complete withdrawals on admin approval without simulator`.
+- Đơn mới Manual: popup bắt buộc lý do/thông tin nhận, giữ tiền riêng khi gửi;
+  Admin độc lập duyệt là Completed + debit + lịch sử Rút tiền nguyên tử. Từ chối
+  trả hold. Không xác minh tài khoản hoặc gọi ngân hàng; không phụ thuộc simulator.
+  Đơn Simulator cũ giữ semantics cũ, không tự xử lý khoản chi chưa rõ kết quả.
+- Contract0.74.1/256operations/39controllers, migration0061 thêm field tùy chọn;
+  không sửa0060/checksum cũ. Current auth, recent Admin session, version/key/body,
+  receipt và ledger invariants giữ nguyên. RN chưa có form rút native.
+- Follow-up PASS13withdrawal E2E,31Mongo schema/upgrade,320Member/229Admin unit;
+  API/Member/Admin typecheck/build, contract/routes và docs check. Browser thật
+  API/Mongo QA:22captures1440/390/320/chữ130%,0page errors/overflow; arbitrary
+  account, simulator tắt, lostACK/exact retry, một payout, reject/refund, owner-only.
+  Đã xem form desktop, Admin completed và Member completed mobile; giữ style cũ.
+- Đã thử0060/0061 trên bản sao QA riêng,4628bản ghi cũ nguyên vẹn và ledger cân.
+  Sau backup private, đã áp hai migration và quyền collection vào DB local chính;
+  bản ghi/mật khẩu cũ nguyên vẹn, ledger cân. Không seed/reset/đổi `.env`.
+  API3000, Admin5173, Member5174 và hai worker hiện chạy source mới; GET xác nhận
+  withdrawalsEnabled=true và đọc được yêu cầu của owner. Không gửi/duyệt đơn hoặc
+  trừ tiền owner khi kiểm tra.
+- Lượt tiếp tục phải bật lại Docker/app đã dừng; lỗi socket tạm Docker được giải
+  quyết bằng đóng/mở lại Docker Desktop, không xóa socket/reset/volume/đổi DB.
+  Container Mongo local cũ healthy; QA vẫn dừng. Bước dùng tiếp: tải lại `/wallet`.
+- Gói đầu còn Windows shutdown unit timeout và stress100topup503; follow-up không
+  chạy lại hoặc tính full API suite PASS. Native/human/bank/CI NOT RUN.
 - [Hành trình/evidence/kích hoạt](../features/WALLET_WITHDRAWALS.md),
-  [ADR0072](../adr/0072-simulated-wallet-withdrawals.md). Chưa push/merge hoặc áp
-  source/migration/quyền mới vào app/DB chính; READINESS giữ nguyên.
+  [ADR0073](../adr/0073-manual-wallet-withdrawals.md). Chưa push/merge;
+  READINESS giữ nguyên. Backup/evidence private trong `.tmp`, không commit.
 
 # Đồng bộ main và bảo toàn checkout local — 03/11/2026
 

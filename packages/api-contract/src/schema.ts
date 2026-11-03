@@ -4108,7 +4108,7 @@ export interface paths {
         put?: never;
         /**
          * createWithdrawal
-         * @description Verified MEMBER; LOCKED denied. Atomically reserves available in a dedicated withdrawal hold. Other requires a description. Same key/body returns the original receipt.
+         * @description Verified MEMBER; LOCKED denied. No simulator secret or bank verification required. New Manual requests reserve available in a dedicated hold. Other requires a description. Same key and body replay the original receipt.
          */
         post: operations["createWithdrawal"];
         delete?: never;
@@ -4188,7 +4188,7 @@ export interface paths {
         put?: never;
         /**
          * decideWithdrawal
-         * @description Independent ACTIVE ADMIN and session created within 15 minutes. Approve or reject before sending; reason required. Rejection releases only this hold.
+         * @description Independent ACTIVE ADMIN with a session created within 15 minutes. Required reason. Approve completes a Manual wallet withdrawal atomically without a bank API or operator event. Reject returns this hold. Legacy Simulator requests retain their prior processing semantics.
          */
         post: operations["decideWithdrawal"];
         delete?: never;
@@ -6069,6 +6069,11 @@ export interface components {
             outcome: "Unknown" | "Succeeded" | "FailedVerified";
         };
         Withdrawal: {
+            /**
+             * @description New requests complete on Admin approval. Simulator is legacy only.
+             * @enum {string}
+             */
+            processingMode: "Manual" | "Simulator";
             /** Format: uuid */
             id: string;
             /** Format: uuid */

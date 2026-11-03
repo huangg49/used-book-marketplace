@@ -1,3 +1,4 @@
+import { manualWithdrawalsMigration, withManualWithdrawals } from './0061-manual-wallet-withdrawals.js';
 import { createWithdrawalsMigration, withdrawalSpecs, withWithdrawals } from './0060-wallet-withdrawals.js';
 import { autoReviewV2UpgradeBridgeMigration } from './0056-auto-review-v2-upgrade-bridge.js';
 import { exchangeEvidenceMigration, exchangeEvidenceSpecs } from './0054-exchange-evidence.js';
@@ -551,10 +552,12 @@ const beforeWithdrawals = (): CollectionSpec[] => [
   demoCompletionSpec,
 ];
 
-export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals), ...withdrawalSpecs];
+export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals), ...withdrawalSpecs.map(withManualWithdrawals)];
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
 migrations.push(createWithdrawalsMigration([
   ...baselineBeforeWithdrawals(spec => ['wallet_accounts','ledger_journals','mutation_receipts','audit_events'].includes(spec.name)),
   ...notificationSpecs.map(withExchangeNotificationChanges).map(withBuyNowNotifications).map(withExchangePhase6Changes).map(withSupportCases),
 ]));
+
+migrations.push(manualWithdrawalsMigration);

@@ -41,6 +41,7 @@ const suffix = [
   '0058-buy-now-rival-window',
   '0059-auction-free-shipping-reconcile',
   '0060-wallet-withdrawals',
+  '0061-manual-wallet-withdrawals',
 ];
 const sha = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');

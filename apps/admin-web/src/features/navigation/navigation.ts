@@ -74,7 +74,6 @@ export function navigationGroups(user: CurrentUser | undefined): NavigationGroup
         { label: "Hãng vận chuyển", to: "/simulator/deliveries", icon: "carrier" },
         { label: "Lấy hàng trực tiếp", to: "/simulator/events/pickups", icon: "intake" },
         { label: "Giao hàng trực tiếp", to: "/simulator/events/deliveries", icon: "carrier" },
-        { label: "Chi tiền mô phỏng", to: "/simulator/withdrawals", icon: "resolution" },
         { label: "Nạp tiền mô phỏng", to: "/simulator/events/topups", icon: "resolution" },
       ],
     });
