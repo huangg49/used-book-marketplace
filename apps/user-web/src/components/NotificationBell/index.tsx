@@ -17,8 +17,7 @@ import {
 import { ROUTES } from "../../lib/routes";
 import { timeAgo, useOpenNotification } from "../../hooks/useOpenNotification";
 import {
-  listNotifications,
-  notificationKeys,
+  notificationPreviewQuery,
   markNotificationsRead,
   type MemberNotification,
 } from "../../services/notifications";
@@ -121,11 +120,8 @@ export function NotificationBell() {
   const openNotification = useOpenNotification();
 
   const inbox = useQuery({
-    queryKey: notificationKeys.bell(auth.status==='authenticated'?auth.user.id:undefined),
-    queryFn: () => listNotifications(undefined, 8),
+    ...notificationPreviewQuery(auth.status === 'authenticated' ? auth.user.id : undefined),
     refetchInterval: 30_000,
-    retry: false,
-    enabled:auth.status==='authenticated',
   });
   const unread = inbox.data?.unreadCount ?? 0;
 

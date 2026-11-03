@@ -1,21 +1,21 @@
 # Tối ưu Member web — 03/11/2026
 
-Gói hiện tại `codex/member-web-demand-scroll`, base `598689fe`.
-[Hook cuộn](../../apps/user-web/src/hooks/useSmoothScroll.ts) dùng
-[DemandScroll](../../apps/user-web/src/lib/demand-scroll.ts): chạy frame
-Lenis khi đang cuộn mượt, ngủ khi idle; giữ physics và cleanup.
+Gói hiện tại `codex/member-web-shared-notification-preview`, base `5bbe9685`.
+[Preview thông báo](../../apps/user-web/src/services/notifications.ts) dùng
+chung trang đầu 8 mục theo owner cho chuông/sidebar/lời chào/hoạt động.
+Hoạt động giữ 4 mục đầu; inbox phân trang giữ key riêng.
 [Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Chromium 390/1440, cả hai motion preference: idle 60–61→0 lời gọi
-  Lenis/giây. Cuộn wheel/anchor, modal stop/start, nested/native scroll,
-  touch mô phỏng, Back và Chat/order cleanup PASS.
-- Sửa lỗi Lenis mặc định bỏ nội suy khi reduced-motion bật: đặt rõ
-  `respectReducedMotion: false` theo owner. Giữ CSS/ảnh/font và thông số cuộn.
-- Build/typecheck, 346 unit test, lint/detector PASS. Production browser
-  card-text, search-recovery và book-transition PASS. Chưa đo CPU/pin/FPS.
-  Fixture; API thật, thiết bị thật, native, human acceptance và remote CI NOT RUN.
+- Production fixture 390/1440: preview 3→1 request, JSON 3.482→2.101 B.
+  Giữ poll 30 s. Read ACK/error/retry, Back, inbox riêng và đổi tài khoản PASS.
+- Sửa link hoạt động đang dẫn mọi target sang đấu giá; dùng notificationPath.
+  Không đoán outbid từ tiêu đề hoặc gắn LIVE từ notice. 47 CSS khớp byte.
+- Build/typecheck, 348 unit test, lint và dashboard browser PASS. Detector
+  exit 0 có một advisory bounce cũ, giữ motion. Chưa đo CPU/FPS/Web Vitals.
+  API thật, DB, thiết bị thật, native, human acceptance và remote CI NOT RUN.
 
-Gói `598689fe` tối ưu ảnh nền Auth; `a98db891` nén logo/chữ Hero,
+Gói `5bbe9685` dừng Lenis idle và giữ cuộn khi reduced-motion;
+`598689fe` tối ưu ảnh nền Auth; `a98db891` nén logo/chữ Hero,
 `ad49aac4` sửa submit từ khóa cũ. Chi tiết ở báo cáo hiệu năng.
 Giữ READINESS. Thay đổi nằm trong worktree phát triển. Checkout demo giữ local work.
 

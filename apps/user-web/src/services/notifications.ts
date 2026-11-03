@@ -41,10 +41,19 @@ const unreadSchema = z.object({ unreadCount: z.number().int() })
 export type MemberNotification = z.infer<typeof notificationSchema>
 export type NotificationPage = z.infer<typeof pageSchema>
 export const notificationKeys={
-  summary:(owner:string|undefined)=>['notifications',owner,'summary'] as const,
   pages:(owner:string|undefined)=>['notifications',owner,'pages'] as const,
   bell:(owner:string|undefined)=>['notifications',owner,'bell'] as const,
 };
+// All compact previews share the same first eight rows and authoritative count.
+// Infinite inbox pages keep a separate key and response shape.
+export function notificationPreviewQuery(owner: string | undefined) {
+  return {
+    queryKey: notificationKeys.bell(owner),
+    queryFn: () => listNotifications(undefined, 8),
+    enabled: Boolean(owner),
+    retry: false as const,
+  };
+}
 export function notificationPath(n:Pick<MemberNotification,'targetType'|'targetId'>){
   switch(n.targetType){
     case 'SupportCase':return `/support/${n.targetId}`;

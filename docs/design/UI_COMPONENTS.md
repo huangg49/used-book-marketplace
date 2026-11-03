@@ -652,6 +652,18 @@ the frame usable for a guest return and the wallet stylesheet out of Home
 and Notifications. The dashboard browser check covers the return URL and
 reload recovery when the wallet stylesheet fails.
 
+Compact notification consumers use
+[`notificationPreviewQuery`](../../apps/user-web/src/services/notifications.ts):
+one owner-scoped first page of eight rows for the bell, sidebar count, greeting
+and recent activity. Only the bell owns the existing 30 s poll; activity uses
+the first four rows, with three list links as before. Infinite Notifications
+pages keep their separate key and cursor. Opening activity follows
+`notificationPath`, including Order/Exchange/Support/Review targets; classify
+outbid warnings by kind/type, not title text. A preview is not proof a session
+is LIVE or that its row count is the total inbox count. Keep motion and
+read/error/retry states; verify with
+`pnpm --filter @used-books/user-web test:notification-preview:browser`.
+
 At up to 960 px the wallet grid can shrink to the content frame. At up to
 600 px the header badge and primary action get their own lines. Sandbox
 details can wrap, receipt amounts have a dedicated row, and deposit presets

@@ -4,6 +4,58 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Dùng chung bản xem trước thông báo trên Tổng quan
+
+Nhánh `codex/member-web-shared-notification-preview`, base `5bbe9685`.
+[notificationPreviewQuery](../../apps/user-web/src/services/notifications.ts)
+dùng cùng key theo owner và trang đầu 8 mục cho chuông, sidebar, lời chào và
+[hoạt động](../../apps/user-web/src/pages/profile/components/DashboardLiveAuctions.tsx).
+Trước đó là ba query đọc 8/1/4 mục; query 1 mục đã dùng chung giữa sidebar và
+lời chào. Sau sửa hoạt động vẫn lấy bốn mục đầu, danh sách con vẫn ba link.
+Chuông giữ poll 30 s và refetch khi mở; không thêm poll ở consumer khác.
+Giữ staleTime 30 s của summary, mặc định chung ở nơi còn lại. Infinite inbox
+giữ key/cursor riêng, không dùng mảng preview thay cho dữ liệu phân trang.
+
+Production Chromium fixture 390×900 và 1440×900, reduced-motion bật, từ
+login UI và route `/account`. [Harness](../../apps/user-web/tests/notification-preview.mjs)
+so sánh build base đã lưu với build sau sửa, không chạy API hoặc DB:
+
+| Lần đọc notification ban đầu | Trước | Sau |
+| --- | ---: | ---: |
+| Request | 3 | 1 |
+| Mục truyền qua các response | 13 | 8 |
+| JSON fixture chưa nén | 3.482 B | 2.101 B |
+
+Giảm 66,7% request và 39,7% JSON của riêng preview trong fixture. Không suy
+ra tỷ lệ cho API thật, toàn trang, CPU/FPS hoặc Web Vitals.
+
+Lỗi liên quan FR-N04 đã tái hiện ở base: link Support được dựng thành
+`/auctions/:id`; các link Order/Exchange cũng dùng cùng hàm đấu giá.
+Đã dùng `notificationPath` có sẵn cho cả card và list. Cảnh báo outbid chỉ
+theo `kind=AuctionOutbid` và target Auction, không đoán từ chữ “trả giá”.
+Card thường dùng nhãn thông báo/cập nhật, không khẳng định phiên LIVE từ
+notification. Link xem tất cả bỏ số lượng preview dễ bị hiểu là tổng hộp thư.
+
+| Vai trò / entry | Lệnh và kết quả | Bước tiếp |
+| --- | --- | --- |
+| Member → Tổng quan / chuông | GET trang đầu theo phiên; count và preview chung | Xem tối đa 8 mục; hoạt động dùng 4 mục đầu |
+| Member → mục hoạt động | Lệnh đánh dấu đã đọc hiện có, invalidate preview; mở đúng target type/ID | Trang đích tự đọc quyền/state; Back về Tổng quan |
+| Member → Xem thông báo | GET inbox phân trang riêng | Giữ cursor/filter và retry hiện có |
+
+- Browser PASS: guest không đọc preview; một invalidation cập nhật mọi vùng
+  sau đọc một mục/đọc tất cả; command lỗi không giả ACK, lỗi GET có retry;
+  mở Support và Back, link Order/Exchange/Auction đúng; inbox đọc limit 30.
+  Logout/login tài khoản thứ hai trong cùng SPA không lộ notice cũ. Tiêu đề
+  Support có chữ “trả giá” không thành cảnh báo outbid. Kiểm poll 30 s riêng.
+- Build/typecheck, 348 unit test/49 file, lint và hồi quy dashboard-chunk PASS.
+  Detector exit 0, một advisory `animate-bounce` có từ trước ở lời chào;
+  giữ theo chính sách motion owner. Cả 47 CSS production khớp byte với base.
+  Không đổi variant/timing hay asset. Ảnh QA ở `.tmp/member-web-notification-preview/`.
+- Source API/contract/session không đổi. Fixture trang đích trả lỗi read có
+  kiểm soát, không là nghiệm thu Support/Order/Exchange thật. API thật, DB,
+  thiết bị thật, native, human acceptance và remote CI NOT RUN. Giữ READINESS
+  và local work ở checkout demo.
+
 ## Chỉ chạy vòng Lenis khi đang cuộn mượt
 
 Nhánh `codex/member-web-demand-scroll`, base `598689fe`.

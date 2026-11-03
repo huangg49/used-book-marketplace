@@ -9,6 +9,7 @@
     "test:book-transition:browser": "node tests/book-transition.mjs",
     "test:card-text:browser": "node tests/card-text.mjs",
     "test:smooth-scroll:browser": "node tests/smooth-scroll.mjs",
+    "test:notification-preview:browser": "node tests/notification-preview.mjs",
     "test:dashboard-chunk:browser": "node tests/dashboard-chunk.mjs",
     "test:auction-countdown:browser": "node tests/auction-countdown.mjs",
     "test:auction-photo-visibility:browser": "node tests/auction-photo-visibility.mjs",
