@@ -1,25 +1,23 @@
 # Tối ưu Member web — 03/11/2026
 
-Gói hiện tại `codex/member-web-auth-woff2`, base `42fe9871`. Font Bricolage
-tiêu đề/con dấu Auth được nén nguyên bộ glyph và trục biến thiên. CSS và snapshot
-giấy ưu tiên WOFF2, lấy TTF khi tải lỗi. [Nguồn font](../../apps/user-web/public/fonts/auth/README.md)
-và [bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
+Gói hiện tại `codex/member-web-responsive-hero-covers`, base `b9187a4a`.
+Hero Home dùng `srcset/sizes` cho Frieren, One Piece và Dược sư tự sự.
+Ảnh gốc được chọn ở cấu hình cần độ phân giải cao và dùng lại khi bản
+nhỏ tải lỗi. [Source](../../apps/user-web/src/pages/HomePage.tsx) và
+[bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- File font 408.496→208.496 byte. 5 cặp Chromium production, cache lạnh,
-  390 px/CPU4×/500.000 byte/s. Trung vị tải xong font 4,06→3,27 s và texture
-  sẵn sàng 5,78→4,93 s. Mốc đo là chuẩn bị hiệu ứng trong lab.
-- 5 texture khớp từng pixel tại 390/1440 px, kể cả ca ép WOFF2 trả 404 rồi
-  dùng TTF. Browser Auth PASS WebGL 3 tờ/gió giấy, nháp khi 401, đích/focus,
-  Back, resize, mất WebGL và lỗi capture trên desktop/mobile reduced-motion.
-- Build/typecheck, 341 unit test, lint, docs/diff PASS. Có warning lint cũ.
-  Kiểm bằng HTTP fixture. API thật, native, thiết bị thật, human acceptance,
-  CI remote NOT RUN. Gate READINESS giữ nguyên.
+- 5 cặp Chromium production mỗi cấu hình, cache lạnh và mạng 4 Mbps.
+  Tám bìa giảm 747.499→323.456 byte ở 390/DPR2 và 1440/DPR1.
+  Trung vị giải mã đủ bìa: mobile 4,41→3,24 s, desktop 3,95→2,82 s.
+- Browser PASS chọn 200w/400w/ảnh gốc và 404 về ảnh gốc. 46 CSS khớp
+  byte. 8 gather và 8 sway giữ timing khi reduced-motion bật; hover
+  desktop giữ lift/scale. Đã xem ảnh Hero trước/sau 390/1440.
+- Build/typecheck, 341 unit test, lint, Home focus, docs/diff PASS.
+  Phép đo dùng HTTP fixture. API thật, thiết bị thật, native, human acceptance
+  và CI remote NOT RUN. Gate READINESS giữ nguyên.
 
-Chuỗi trước: `62324b47` catalog, `10fd986d` WOFF2 Home, `bbd59568` Hero preload,
-`d28f7605` canvas, `55c9df1d` ảnh trang, `8aba79c7` prefetch mã, `8fc33e1f`
-viewport, `183b457d` style chuyển cảnh, `aa023b21` chữ lúc cuộn, `2abb5c52`
-khung tài khoản, `966b581a` đồng hồ đấu giá, `e4ee224a` ảnh gần viewport,
-`2aa1350a` render thẻ đấu giá, `42fe9871` render hàng tin nhắn.
+Các gói trước trong [báo cáo hiệu năng](MEMBER_WEB_PERFORMANCE_2026_11_03.md),
+gần nhất `42fe9871` tối ưu render tin nhắn và `b9187a4a` nén font Auth.
 Thay đổi nằm trong worktree phát triển. Checkout demo giữ local work.
 
 # Lịch sử tin nhắn Member web —03/11/2026

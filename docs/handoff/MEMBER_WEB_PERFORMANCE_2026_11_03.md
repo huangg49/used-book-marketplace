@@ -4,6 +4,54 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Chọn kích thước bìa Hero theo màn hình
+
+Nhánh `codex/member-web-responsive-hero-covers`, base `b9187a4a`. Ba bìa
+Frieren, One Piece và Dược sư tự sự chiếm 521.441 byte trong tám bìa trang
+chủ. Hero dùng `srcSet` và `sizes` cho ba vị trí đó. Kích thước đích theo
+bố cục ở breakpoint 1100 px và tính phần phóng khi hover trên desktop.
+Giữ ảnh gốc trong danh sách ứng viên và dùng lại khi bản nhỏ tải lỗi.
+Thêm 282.940 byte vào thư mục tài nguyên để trình duyệt chọn đúng một bản
+cho mỗi vị trí. Giữ đủ tám bìa, tải eager, DOM, lớp CSS và lịch chuyển động.
+Xem [HeroCovers](../../apps/user-web/src/pages/HomePage.tsx) và
+[nguồn ảnh, cách nén](../../apps/user-web/public/illustrations/README.md).
+
+Hai build production, Chromium 151, cache trình duyệt lạnh, 5 cặp xen kẽ
+cho mỗi cấu hình. Viewport 390×844/DPR2/touch/CPU4× và 1440×900/DPR1/CPU1×.
+CDP giả lập 500.000 byte/s tải xuống và độ trễ 80 ms, reduced-motion bật.
+HTTP fixture cục bộ, HTML/JS/CSS gzip. Mốc giải mã đo từ lúc bắt đầu điều
+hướng tới lúc 8 lời gọi `img.decode()` hoàn thành sau khi ảnh được tải.
+
+| Trung vị | Trước | Sau |
+| --- | ---: | ---: |
+| Nội dung 8 bìa ở cả hai cấu hình | 747.499 byte | 323.456 byte |
+| Resource Timing gồm phần header | 749.899 byte | 325.856 byte |
+| Mobile nhận xong bìa cuối | 4,26 s | 3,08 s |
+| Mobile 8 bìa giải mã xong | 4,41 s | 3,24 s |
+| Desktop nhận xong bìa cuối | 3,93 s | 2,80 s |
+| Desktop 8 bìa giải mã xong | 3,95 s | 2,82 s |
+
+Bớt 424.043 byte nội dung ảnh (56,7%). Trình duyệt tải 8 ảnh bìa, mỗi vị
+trí một ứng viên trong hai cấu hình đo. CLS trong đoạn đo giữ 0,00058
+mobile và 0,00070 desktop. Mốc giải mã bao gồm chi phí quan sát của harness.
+Phép đo tập trung vào bộ bìa trong lab. LCP, INP và thiết bị thật chưa đo.
+
+- Browser production PASS chọn 200w ở 390/DPR2, 768/DPR2 và 1440/DPR1.
+  1440/DPR2 chọn 400w cho Frieren và Dược sư, giữ One Piece gốc; tổng
+  521.278 byte. 1440/DPR3 chọn ba ảnh gốc. Bản Frieren 200w trả 404 thì
+  ảnh gốc tải đúng một lần và hai vị trí còn lại tiếp tục dùng bản nhỏ.
+- 46 CSS production khớp từng byte. 390/1440 giữ kích thước hộp ảnh và
+  16 CSS animation: tám gather 600 ms, tám sway 6–7,5 s. Danh sách timing
+  trước/sau khớp, kể cả delay, easing và direction khi reduced-motion bật.
+  Desktop hover kiểm được translateY −8 px và scale 1,12.
+- Đã xem ảnh Hero 390/1440 chụp ở cùng pha animation. Bản WebP thu nhỏ và
+  nén quality 92 nên pixel có khác; giữ toàn khung bìa, bố cục và chữ chính.
+  Ảnh gốc tiếp tục đáp ứng cấu hình cần độ phân giải cao.
+- Build/typecheck, 341 unit test, lint, browser Home focus và docs/diff PASS.
+  Bằng chứng ở `.tmp/member-web-hero-cover-assets/`. Browser dùng HTTP
+  fixture. API thật, thiết bị thật, native, human acceptance và CI remote
+  NOT RUN. READINESS giữ nguyên.
+
 ## Nén font tiêu đề và con dấu Auth bằng WOFF2
 
 Nhánh `codex/member-web-auth-woff2`, base `42fe9871`. Member web dùng WOFF2
