@@ -1,3 +1,16 @@
+# Khảo sát lại nhịp bố cục hội thoại — 03/11/2026
+
+Owner yêu cầu khảo sát sâu tỷ lệ/khoảng cách trước khi sửa tiếp. Nhánh
+`codex/conversation-rhythm-audit`, source `edc3566b`; chỉ thêm tài liệu.
+Browser read-only localhost5174: 24 view, Order Seller/Buyer Preparing và
+Exchange inspection ở8 kích thước390–1920px. Đã xác nhận form gap không tác dụng
+do display:block, input→CTA sát0px, type scale không đồng nhất, composer rỗng
+vẫn cuộn2px và breakpoint container/viewport khiến bố cục đảo ở1000→960px.
+Exchange lặp trạng thái/hạn kiểm tra, empty chat dùng copy trước giao dịch.
+[Báo cáo, source, số đo và tiêu chí sửa](../ui/CONVERSATION_RHYTHM_AUDIT_2026_11_03.md).
+Chưa sửa UI/API/DB hoặc push; chờ owner duyệt gói chỉnh. Không chạy lại harness
+mutation/native/provider; không lấy kiểm tra layout cũ làm nghiệm thu thiết kế.
+
 # Đồng bộ main PR95 vào local — 03/11/2026
 
 Owner yêu cầu tiếp tục sau khi tạm dừng để demo. Nhánh
