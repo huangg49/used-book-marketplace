@@ -4,7 +4,13 @@ Owner cho phép cuốn chiếu tối ưu Member web, giữ animation, đo/kiểm
 gói và sửa lỗi liên quan đã tái hiện. Đổi nghiệp vụ, thiết kế/hiệu ứng hoặc
 triển khai cần quyết định riêng; không mở rộng sang DB/provider/checkout demo.
 
-Gói hiện tại `codex/member-web-owner-photo-visibility`, base `6c5751f8`.
+Đánh giá tiếp ở `codex/member-web-home-route-loading`, base `b5b36d22`:
+không giữ thử nghiệm lazy Home. Đo cách ly cuối có Login nhẹ hơn nhưng Home
+thêm file/byte, LCP chưa cải thiện ổn định; chưa chứng minh cả luồng demo.
+Đã khôi phục source/config/package đúng base và build PASS; chỉ lưu evidence.
+Số đo sơ bộ chưa intercept API đầy đủ được đánh dấu invalid, không dùng kết luận.
+
+Gói triển khai gần nhất `b5b36d22`, nhánh `codex/member-web-owner-photo-visibility`, base `6c5751f8`.
 [Ảnh kệ riêng](../../apps/user-web/src/lib/owner-listing-queries.ts) chỉ xin link
 khi gần viewport, giữ activation sau lần đầu và cache theo owner/revision.
 [Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).

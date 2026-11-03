@@ -4,6 +4,45 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Đánh giá tách route Home — không áp dụng
+
+Nhánh đánh giá `codex/member-web-home-route-loading`, base `b5b36d22`.
+Thử lazy Home và tải sớm graph JS/CSS chỉ khi mở `/`; thử thêm cách chờ CSS
+đã có trong head để Home không mount thiếu style. Không sửa source/CSS/motion
+của Home. Browser thử nghiệm PASS 390/1440 cho Login → Home, Back/Forward,
+giữ canvas/loop, giữ Home tới khi CSS sẵn sàng, lỗi JS/CSS và reload phục hồi.
+
+Đo cuối cùng: 5 cặp xen kẽ cho mỗi route, Chromium 390×844/DPR2, CPU4×,
+500.000 B/s xuống, trễ 80 ms, context/cache mới; static JS/CSS/HTML gzip.
+CDP Fetch trả fixture cho mọi request API trước network, không tắt cache static.
+20 lượt đã xác nhận intercept API; LCP Home cùng là `hero-lettering.webp`.
+
+| Trung vị đo cách ly | Base | Ứng viên |
+| --- | ---: | ---: |
+| Home có DOM nội dung | 1,593 s | 1,587 s |
+| Home LCP | 1,648 s | 1,664 s |
+| Home JS/CSS truyền | 297.037 B / 31 file | 300.527 B / 36 file |
+| Login có DOM form | 1,699 s | 1,448 s |
+| Login LCP | 1,988 s | 1,720 s |
+| Login JS/CSS truyền | 455.592 B / 46 file | 409.970 B / 35 file |
+
+Login giảm tải nhưng Home thêm file/byte và chưa có cải thiện ổn định. FCP
+nhanh hơn ở ứng viên có thể là RoutePending, không chứng minh Hero sẵn sàng.
+Chưa chứng minh lợi ích cho toàn luồng Login → Home với animation thành công.
+Giữ Home nguyên trạng cho demo; không áp dụng thay đổi route hoặc Vite này.
+
+Các lượt đo sơ bộ **không dùng để kết luận**: harness ban đầu chưa intercept
+đầy đủ base API trong bundle; request public read có thể đi tới loopback API.
+Không có command đăng nhập/DB/provider ở những lượt đo đó. Đã sửa harness và
+đo lại với API fixture ở request stage. Các file sơ bộ được đánh dấu invalid
+trong `.tmp/member-web-home-route/measurement-status.json`; báo cáo hợp lệ là
+`isolated-measure.json`. Bản dựng trước/sau và source thử giữ riêng trong `.tmp/`.
+
+Đã khôi phục hai file tracked đúng byte từ base, chuyển hai file thử mới vào
+`.tmp/`; git xác nhận source/config/package không có diff. Build sau khôi phục
+PASS, HTML production khớp base. Chỉ tài liệu đánh giá được lưu vào Git.
+Không phải kết luận Home đạt Web Vitals trên thiết bị thật hoặc toàn web đã tối ưu.
+
 ## Xin link bìa riêng khi tới gần kệ đang đọc
 
 Nhánh `codex/member-web-owner-photo-visibility`, base `6c5751f8`.
