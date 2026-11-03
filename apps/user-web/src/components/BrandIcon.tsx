@@ -1,3 +1,5 @@
+import { BrandArtwork } from "./BrandArtwork";
+
 export interface BrandIconProps {
   size?: number;
   className?: string;
@@ -63,8 +65,8 @@ export function BrandIcon({
       }}
       aria-hidden="true"
     >
-      <img
-        src="/brand/logo-original.png"
+      <BrandArtwork
+        artwork="logo-original"
         alt=""
         style={{
           position: "absolute",

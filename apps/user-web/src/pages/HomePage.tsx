@@ -9,6 +9,7 @@ import {
 import { ArrowUpRight, ArrowRight, Search, Repeat2, Plus } from "lucide-react";
 import { ROUTES } from "../lib/routes";
 import { CategoryDiscovery } from "../components/CategoryDiscovery";
+import { BrandArtwork } from "../components/BrandArtwork";
 import { HomeBookCard } from "../components/HomeBookCard";
 import { AutumnLeavesCanvas } from "../components/autumn/AutumnLeavesCanvas";
 import {
@@ -564,9 +565,9 @@ export function HomePage() {
               <span className="sr-only">
                 SÁCH MỚI. CHƯƠNG MỚI. CÙNG LẬT LẠI.
               </span>
-              <img
+              <BrandArtwork
                 className={styles.heroLettering}
-                src="/brand/hero-lettering.png"
+                artwork="hero-lettering"
                 alt=""
                 aria-hidden="true"
                 width="1313"

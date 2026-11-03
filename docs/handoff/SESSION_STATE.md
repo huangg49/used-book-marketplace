@@ -1,20 +1,22 @@
-# Member web — sửa bố cục ví hẹp — 03/11/2026
+# Tối ưu Member web — 03/11/2026
 
-Gói hiện tại `codex/member-web-wallet-mobile-layout`, base `70dfa333`.
-Đã sửa lỗi tràn ngang phát hiện trong gói tách CSS ví. Lưới co từ 960 px.
-Dưới 600 px, tiêu đề/huy hiệu, thao tác, Sandbox, biên nhận và preset popup
-đổi cách xuống dòng. [CSS](../../apps/user-web/src/pages/WalletPage.module.css)
-và [bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
+Gói hiện tại `codex/member-web-lossless-brand-art`, base `1728dc55`.
+[BrandArtwork](../../apps/user-web/src/components/BrandArtwork.tsx) dùng
+WebP lossless cho logo và chữ Hero, chuyển về PNG nếu tải lỗi.
+[Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- 390 px: nội dung 382→347 px trong khung 347 px. 320 px: 277/277 px.
-  Browser fixture PASS cả 768/1440 và 390 chữ 125%, số tiền lớn và tên dài.
-  Giữ hiệu ứng thẻ 8 s, popup focus/Escape và lọc lịch sử bằng bàn phím.
-  Build cũ FAIL đúng kiểm tràn 390 px. Dashboard browser PASS cả callback.
-- Build/typecheck, 341 unit test, lint, docs/diff PASS. API/Mongo/VNPay thật,
-  thiết bị thật, native, human acceptance và CI remote NOT RUN. Giữ READINESS.
+- Home giảm 146.698→69.556 B cho hai ảnh. Chromium cache lạnh 5 cặp,
+  390/CPU4×/4 Mbps: Hero tải xong 1,26→1,19 s, logo 2,17→1,80 s.
+  Mỗi ảnh một request. 47 CSS byte-identical.
+- Sharp RGBA khớp byte. Ảnh chụp Chromium 390/1440 logo khớp, Hero chênh
+  tối đa 1 mức màu ở biên. WebP trả 404 chuyển về PNG, Home-only preload, header
+  thu gọn, lá pause/resume và focus đã kiểm. Giữ các hiệu ứng.
+- Build/typecheck, 341 unit test, lint, Home focus và docs/diff PASS. Search
+  recovery phát hiện race IME submit. HTTP fixture. API thật, thiết bị thật,
+  native, human acceptance và CI remote NOT RUN. Gate READINESS giữ nguyên.
 
-Gói trước `70dfa333` giảm JS/CSS entry 26.242 B raw hoặc 5.831 B gzip.
-Thay đổi nằm trong worktree phát triển. Checkout demo giữ local work.
+Gói trước `1728dc55` sửa tràn ví 320/390 px và giữ sheen 8 s. Thay đổi
+nằm trong worktree phát triển. Checkout demo giữ local work.
 
 # Lịch sử tin nhắn Member web —03/11/2026
 

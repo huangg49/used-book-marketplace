@@ -7,6 +7,7 @@ import { observeHeaderScroll } from "../lib/header-scroll";
 import { memberNavigationSection } from "../lib/member-navigation";
 import { useSession } from "../hooks/useSession";
 import { AccountMenu } from "./AccountMenu";
+import { BrandArtwork } from "./BrandArtwork";
 import { accountNavigation } from "../lib/account-navigation";
 import { useAccountLogout } from "../hooks/useAccountLogout";
 import { NotificationBell } from "./NotificationBell";
@@ -27,10 +28,10 @@ export function Logo() {
       aria-label="Trang chủ Lật lại"
     >
       <span className={styles.logoOwl}>
-        <img src="/brand/logo-original.png" alt="" />
+        <BrandArtwork artwork="logo-original" alt="" />
       </span>
       <span className={styles.logoWord}>
-        <img src="/brand/logo-original.png" alt="" />
+        <BrandArtwork artwork="logo-original" alt="" />
       </span>
     </Link>
   );

@@ -36,7 +36,14 @@ try{
  await expect.poll(() => hero.evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
  const heroSrc = await hero.evaluate(img => img.currentSrc);
  const preload = page.locator('head link[rel="preload"][as="image"]');
+ assert.equal(new URL(heroSrc).pathname, '/brand/hero-lettering.webp');
  await expect(preload).toHaveAttribute('href', new URL(heroSrc).pathname);
+ await expect(preload).toHaveAttribute('type', 'image/webp');
+ const brand = page.getByRole('banner').getByRole('link', { name: 'Trang chủ Lật lại' }).locator('img');
+ await expect(brand).toHaveCount(2);
+ await expect(brand.first()).toHaveAttribute('src', '/brand/logo-original.webp');
+ await expect.poll(() => brand.evaluateAll(images => images.every(img => img.complete && img.naturalWidth === 2000))).toBe(true);
+ assert(!imageRequests.some(url => /\/brand\/(hero-lettering|logo-original)\.png$/.test(url)));
  await expect(preload).toHaveAttribute('fetchpriority', 'high');
  assert(!deepLinkImages.includes(heroSrc), 'Search deep links do not download Home lettering');
  assert.equal(imageRequests.filter(url => url === heroSrc).length, 1, 'Home reuses the preload');
@@ -81,5 +88,19 @@ try{
   await page.waitForURL('**/books?**');const url=new URL(page.url());assert.equal(url.searchParams.get('q'),'sách cũ & QA','query survives Enter and button submit');
   results.push({width,reducedMotion,goldHover:true,singleOuterFocus:true,geometryStable:true,keyboard:true,queryRetained:true});
  }
- assert.deepEqual(errors,[]);await fs.writeFile(path.join(out,'result.json'),JSON.stringify({status:'PASS',heroPreload:true,leafLifecycle:true,results,pageErrors:errors.length,environment:'Home route, intercepted HTTP; no DB'},null,2));console.log('PASS Home hero search: Home-only preload, leaf pause/resume, gold hover/focus, one outer ring, stable dimensions, keyboard, Enter/button query, 1440/390 and reduced-motion. No DB.');
+ const fallback = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+ try {
+  fallback.on('pageerror', e => errors.push(e.message));
+  await fallback.route('**/api/v1/**', route => route.fulfill({ status: 503, json: { code: 'QA_UNAVAILABLE' } }));
+  await fallback.route(/\/brand\/(hero-lettering|logo-original)\.webp$/, route => route.fulfill({ status: 404, body: '' }));
+  await fallback.goto(origin + '/');
+  const fallbackHero = fallback.getByRole('heading', { level: 1 }).locator('img');
+  const fallbackLogo = fallback.getByRole('banner').getByRole('link', { name: 'Trang chủ Lật lại' }).locator('img');
+  await expect(fallbackHero).toHaveAttribute('src', '/brand/hero-lettering.png');
+  await expect.poll(() => fallbackHero.evaluate(img => img.complete && img.naturalWidth === 1313)).toBe(true);
+  await expect.poll(() => fallbackLogo.evaluateAll(images => images.length === 2 && images.every(
+    img => img.complete && img.naturalWidth === 2000 && img.currentSrc.endsWith('/brand/logo-original.png'),
+  ))).toBe(true);
+ } finally { await fallback.close(); }
+ assert.deepEqual(errors,[]);await fs.writeFile(path.join(out,'result.json'),JSON.stringify({status:'PASS',heroPreload:true,losslessBrandAssets:true,pngFallback:true,leafLifecycle:true,results,pageErrors:errors.length,environment:'Home route, intercepted HTTP; no DB'},null,2));console.log('PASS Home hero search: Home-only preload, leaf pause/resume, gold hover/focus, one outer ring, stable dimensions, keyboard, Enter/button query, 1440/390 and reduced-motion. No DB.');
 }finally{await browser?.close();await server.close();}

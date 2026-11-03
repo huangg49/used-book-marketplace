@@ -4,6 +4,46 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Nén lossless logo và chữ Hero
+
+Nhánh `codex/member-web-lossless-brand-art`, base `1728dc55`.
+[BrandArtwork](../../apps/user-web/src/components/BrandArtwork.tsx) giữ thẻ
+img và ưu tiên WebP cho hai ảnh. Khi tải lỗi, mỗi ảnh chuyển sang PNG một
+lần. Header, footer và BrandIcon dùng chung URL logo; Home preload WebP
+với type `image/webp`. Giữ kích thước, cửa sổ cắt, chữ ẩn trong H1 và nhãn
+logo. [Nguồn và công thức nén](../../apps/user-web/public/brand/README.md).
+
+Hai build production, 5 cặp xen kẽ Chromium, cache lạnh tại 390×844/DPR2,
+CPU4×, mạng 500.000 byte/s và độ trễ 80 ms. Reduced-motion bật. HTTP fixture
+cục bộ, JS/CSS/HTML gzip. Mốc responseEnd tính từ điều hướng.
+
+| Mục | PNG | WebP |
+| --- | ---: | ---: |
+| Logo tải qua mạng | 55.273 B | 17.920 B |
+| Hero tải qua mạng | 91.425 B | 51.636 B |
+| Hai ảnh đầu trang | 146.698 B | 69.556 B |
+| Trung vị nhận xong Hero | 1,26 s | 1,19 s |
+| Trung vị nhận xong logo | 2,17 s | 1,80 s |
+
+Giảm 77.142 B (52,6%) ảnh. Mỗi lượt vẫn đúng hai request cho hai ảnh, Hero
+dùng lại preload và logo dùng chung một lần tải. 47 CSS production khớp
+byte. Entry 31 file, thêm 120 B raw / 42 B gzip. Chưa đo LCP hoặc thiết bị thật.
+
+- Sharp giải mã RGBA khớp byte cho cả hai ảnh. Chromium canvas khớp tuyệt
+  đối logo. Hero có 11.410 pixel bán trong suốt khác giá trị RGB khi đọc
+  canvas. Alpha và pixel đục khớp, chênh premultiplied tối đa 1,28 mức màu.
+  Ảnh chụp thật 390/1440: logo khớp từng pixel, Hero lệch tối đa 1 mức/kênh.
+  Đã xem chữ Hero và phần cắt logo.
+- [Home browser](../../apps/user-web/tests/home-search-focus.mjs) PASS: Search
+  deep link không tải ảnh Hero, Home tái sử dụng preload, ép hai WebP trả 404
+  thì cả hai PNG tải được. Pause/resume lá, hover/focus, phím và truy vấn giữ
+  hành vi. Fixture production kiểm header thu gọn và trở lại sau khi cuộn.
+- Build/typecheck, 341 unit test, lint và docs/diff PASS. Search recovery phát
+  hiện race khi gửi ngay sau nhập IME. URL trình duyệt đã có từ khóa mới trong
+  lúc input và handler còn ở render cũ. Race được xử lý ở commit riêng.
+  Lint có cảnh báo cũ. Bằng chứng local ở `.tmp/member-web-brand-lossless/`.
+  API thật, thiết bị thật, native, human acceptance và CI remote NOT RUN.
+
 ## Sửa ví tràn ngang và mất chỗ hiển thị trên mobile
 
 Nhánh `codex/member-web-wallet-mobile-layout`, base `70dfa333`. Lỗi được
