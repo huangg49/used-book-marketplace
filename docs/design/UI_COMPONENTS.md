@@ -564,6 +564,16 @@ text. Keep typography independent of those scroll state classes; revisit the
 filter if that assumption changes. Verify with
 `pnpm --filter @used-books/user-web test:card-text:browser`.
 
+Member web uses [`DemandScroll`](../../apps/user-web/src/lib/demand-scroll.ts)
+to drive the existing Lenis physics while a smooth scroll is active. Wheel
+input and programmatic anchors wake it; idle/native scrolling does not need
+a continuous Lenis frame loop. Keep duration/easing/multipliers and modal
+stop/start behavior. The hook destroys the instance in Chat/order rooms and
+on route cleanup. `respectReducedMotion: false` preserves the owner's motion
+policy under both OS preferences. Verify idle frames, smooth intermediate
+positions, nested scrolling and Back with
+`pnpm --filter @used-books/user-web test:smooth-scroll:browser`.
+
 Production builds include a Vite-generated asset hint for the BookDetail route.
 Mouse entry into a real `BookCard`, or keyboard focus on its detail links,
 starts HTTP prefetch for that route's JS/CSS through

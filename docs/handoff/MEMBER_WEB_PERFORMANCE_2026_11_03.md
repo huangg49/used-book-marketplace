@@ -4,6 +4,48 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Chỉ chạy vòng Lenis khi đang cuộn mượt
+
+Nhánh `codex/member-web-demand-scroll`, base `598689fe`.
+[Hook cuộn](../../apps/user-web/src/hooks/useSmoothScroll.ts) trước đây gọi
+Lenis mỗi frame kể cả lúc đứng yên. [DemandScroll](../../apps/user-web/src/lib/demand-scroll.ts)
+giữ nguyên Lenis và thông số duration 1,15 s, easing, wheel 0,9/touch 1,5.
+Lệnh `scrollTo` (gồm đường wheel nội bộ của Lenis) đánh thức vòng frame;
+kết thúc hoặc chuyển sang cuộn native thì dừng. Khi thức lại, đặt mốc thời
+gian mới để thời gian đứng yên không làm animation nhảy tới cuối. Cleanup
+hủy frame, kể cả callback cũ hoặc lệnh mới từ callback hoàn tất.
+
+Phát hiện thêm lỗi motion: Lenis đang cài mặc định `respectReducedMotion: true`.
+Ở source base, bật preference này khiến cuộn tới anchor thành tức thời và
+wheel mất nội suy. Đặt rõ `false` theo chính sách owner trong AGENTS;
+không thay preference máy hay cắt animation. CSS, hình ảnh và motion khác giữ nguyên.
+
+[Browser fixture](../../apps/user-web/tests/smooth-scroll.mjs) dùng hook thật,
+Lenis thật và StrictMode trên surface định tuyến tối giản, Chromium 390×844
+(touch/mobile mô phỏng) và 1440×844, cả `reduce`/`no-preference`. Base đọc bằng
+`git show 598689fe`; đếm riêng lời gọi `lenis.raf`, không đếm mọi animation trang.
+
+| Cửa sổ đứng yên 1 giây | Trước | Sau |
+| --- | ---: | ---: |
+| Sau mount | 60–61 | 0 |
+| Sau wheel hoàn tất | 60–61 | 0 |
+| Sau anchor hoàn tất | 60–61 | 0 |
+
+- Sau sửa: wheel 600 tới 540 px, anchor tới 1800 px; có vị trí trung gian
+  ở 40–250 ms dưới cả hai preference. Giữ stop/start khi modal mở, nested
+  scroll, PageDown, pan qua CDP touch trên mobile, đổi route/Back khi đang
+  cuộn và thức lại sau idle. Chat/order room giải phóng Lenis. Không page error.
+- Production browser PASS card-text 390/1440 (0 lượt fit lại chữ do wheel),
+  search-recovery 9 ca (gồm filter/scroll lock) và book-transition 320/390/768/1440
+  cùng fallback thiếu View Transition; chuyển động 0,44 s vẫn chạy. Đã xem ảnh
+  chi tiết 390/1440. Không đổi CSS hoặc asset hình/font.
+- Build/typecheck, 346 unit test/49 file (5 ca lifecycle mới), lint và detector
+  PASS; lint còn cảnh báo cũ. Node 24.22.1, pnpm 11.19.0. Evidence local
+  `.tmp/member-web-smooth-scroll/` và `.tmp/smooth-scroll-*.log`.
+- Đây là giảm lượt xử lý idle, chưa đo mức giảm CPU/pin, FPS hoặc Web Vitals.
+  Fixture không dùng backend/DB; API thật, thiết bị thật, native, human acceptance
+  và remote CI NOT RUN. Không đổi READINESS hay checkout demo.
+
 ## Tải ảnh nền Auth theo kích thước màn hình
 
 Nhánh `codex/member-web-responsive-auth-scene`, base `ad49aac4`.

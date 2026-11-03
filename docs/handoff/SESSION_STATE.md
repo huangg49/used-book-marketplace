@@ -1,20 +1,22 @@
 # Tối ưu Member web — 03/11/2026
 
-Gói hiện tại `codex/member-web-responsive-auth-scene`, base `ad49aac4`.
-[AuthLayout](../../apps/user-web/src/layouts/AuthLayout.tsx) chọn ảnh nền
-960w/1920w/3000w, lỗi WebP về JPEG. Giữ cover, blur và lớp phủ.
+Gói hiện tại `codex/member-web-demand-scroll`, base `598689fe`.
+[Hook cuộn](../../apps/user-web/src/hooks/useSmoothScroll.ts) dùng
+[DemandScroll](../../apps/user-web/src/lib/demand-scroll.ts): chạy frame
+Lenis khi đang cuộn mượt, ngủ khi idle; giữ physics và cleanup.
 [Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- 5 cặp Chromium cache lạnh 390/DPR2/CPU4×/4 Mbps. Ảnh nền giảm
-  607.891→225.244 B, tải xong 4,29→3,42 s. Texture giấy chưa cho thấy
-  cải thiện ổn định. 47 CSS và 31 asset entry/985.861 B raw giữ nguyên.
-- Production fixture PASS lựa chọn theo DPR, Home không tải ảnh,
-  404 về JPEG và giữ ảnh khi đổi Auth form. Ảnh nền chênh tối đa 1 mức màu
-  mỗi kênh ở 390/1440. Auth browser kiểm ảnh và hiệu ứng giấy/gió/Back.
-- Build/typecheck, 341 unit test, lint, docs/diff PASS. HTTP fixture.
-  API thật, thiết bị thật, native, human acceptance và CI remote NOT RUN.
+- Chromium 390/1440, cả hai motion preference: idle 60–61→0 lời gọi
+  Lenis/giây. Cuộn wheel/anchor, modal stop/start, nested/native scroll,
+  touch mô phỏng, Back và Chat/order cleanup PASS.
+- Sửa lỗi Lenis mặc định bỏ nội suy khi reduced-motion bật: đặt rõ
+  `respectReducedMotion: false` theo owner. Giữ CSS/ảnh/font và thông số cuộn.
+- Build/typecheck, 346 unit test, lint/detector PASS. Production browser
+  card-text, search-recovery và book-transition PASS. Chưa đo CPU/pin/FPS.
+  Fixture; API thật, thiết bị thật, native, human acceptance và remote CI NOT RUN.
 
-Gói `a98db891` nén logo/chữ Hero, `ad49aac4` sửa submit từ khóa cũ.
+Gói `598689fe` tối ưu ảnh nền Auth; `a98db891` nén logo/chữ Hero,
+`ad49aac4` sửa submit từ khóa cũ. Chi tiết ở báo cáo hiệu năng.
 Giữ READINESS. Thay đổi nằm trong worktree phát triển. Checkout demo giữ local work.
 
 # Lịch sử tin nhắn Member web —03/11/2026
