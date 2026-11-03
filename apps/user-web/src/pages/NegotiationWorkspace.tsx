@@ -148,7 +148,7 @@ export function NegotiationWorkspace({
   }
   return (
     <div className={styles.workspacePage} data-transaction-page>
-    <TransactionFrame context={
+    <TransactionFrame preview={book ? <ListingPhoto book={book} eager fallbackCover /> : <BookOpen size={24} />} context={
       <article
         className={styles.bookInfoCard}
         aria-labelledby="negotiation-book-heading"

@@ -332,6 +332,7 @@ function ExchangeDetailContent({
       tabIndex={-1}
     >
       <ActionCard
+        compact={embedded}
         detail={detail}
         onCancel={handleCancel}
         onAccept={handleAccept}
@@ -375,11 +376,11 @@ function ExchangeDetailContent({
               Trao đổi #{detail.transactionCode} · Bạn trao đổi với{" "}
               {detail.partner.username}
             </p>
-            <SupportLink type="Exchange" id={detail.id} />
           </header>
           <div className={styles.workspaceProgress}>
             <ProgressStepper
               compact
+              summary={false}
               status={detail.status}
               failedAtStep={detail.failedAtStep}
               closedBy={detail.closedBy}

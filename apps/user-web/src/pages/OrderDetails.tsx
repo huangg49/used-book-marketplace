@@ -271,7 +271,7 @@ function AuthenticatedOrderDetails({
 
   return (
     <section className={`${className} ${styles.workspacePage}`} data-transaction-page aria-label="Chi tiết đơn hàng">
-      <p><SupportLink type='DirectOrder' id={o.id}/></p>
+      {!embedded && <p><SupportLink type='DirectOrder' id={o.id}/></p>}
       {!embedded && (
         <header className={styles.dashboardHeader}>
           <div>
@@ -302,7 +302,7 @@ function AuthenticatedOrderDetails({
       )}
 
       {/* 2 KHUNG THEO YÊU CẦU: KHUNG TRÁI (THÔNG TIN SÁCH) & KHUNG PHẢI (THỦ TỤC ĐƠN HÀNG) */}
-      <TransactionFrame context={
+      <TransactionFrame preview={listing.data ? <ListingPhoto book={listing.data} eager /> : <BookOpen size={24} />} context={
         <article className={styles.bookInfoCard} aria-labelledby="book-info-heading">
           {/* Header của Khung Thông tin sách */}
           <div className={styles.cardHeader}>
@@ -464,7 +464,7 @@ function AuthenticatedOrderDetails({
                 </span>
               </div>
               <p className={styles.cardSubtitle}>
-                Mã đơn: <span className={styles.orderCodeBadge}>#{o.id.slice(0, 8).toUpperCase()}</span> · {o.role === "Buyer" ? "Bạn là Người mua" : "Bạn là Người bán"}
+                {o.role === "Buyer" ? "Bạn là người mua" : "Bạn là người bán"}
               </p>
               <p className={styles.cardSubtitle}>{stage.who}</p>
             </div>

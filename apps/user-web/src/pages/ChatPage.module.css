@@ -978,3 +978,11 @@
 /* Long partner names must not stretch the fixed room toolbar vertically. */
 .roomHeader { flex-wrap:wrap; gap:6px 12px; }
 .roomHeaderBadge { min-width:0; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.roomSupport { margin-left:auto; font-size:.75rem; line-height:1.5; }
+.roomSupport a { display:inline-flex; align-items:center; min-height:32px; }
+.composeHelp { margin:6px 0 0; font-size:.6875rem; line-height:1.5; color:var(--shop-muted); }
+.root .composer textarea { min-width:0; overflow-y:hidden; }
+.dossierSpread .dossierChatHeading { min-height:80px; padding:16px; }
+.dossierSpread .messages { font-size:.875rem; line-height:1.55; }
+.dossierSpread .message { padding:10px 12px; }
+.dossierSpread .body { font-size:.875rem; line-height:1.55; }

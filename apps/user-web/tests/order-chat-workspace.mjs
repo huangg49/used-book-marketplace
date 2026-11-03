@@ -336,6 +336,26 @@ try {
   assert.ok(await s.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "seller320px large text has no overflow");
   await s.setViewportSize({ width: 1440, height: 1100 });
   await s.evaluate(() => document.documentElement.style.fontSize = "100%");
+  const photoForm = sr.getByRole("form", { name: "Lưu ảnh đóng gói", exact: true });
+  const shipmentForm = sr.getByRole("form", { name: "Đăng ký vận đơn", exact: true });
+  const photoBounds = await photoForm.boundingBox(), shipmentBounds = await shipmentForm.boundingBox();
+  assert.ok(shipmentBounds.y - photoBounds.y - photoBounds.height >= 20, "separate upload and registration groups");
+  const fieldBounds = await tracking.boundingBox();
+  const registerBounds = await shipmentForm.getByRole("button").boundingBox();
+  assert.ok(registerBounds.y - fieldBounds.y - fieldBounds.height >= 8, "registration action does not touch its field");
+  for (const width of [1440, 1280, 1279, 1100, 1000, 961, 960]) {
+    await s.setViewportSize({ width, height: 900 });
+    const layout = await sr.locator('[data-transaction-scroll]').evaluate(n => getComputedStyle(n).display);
+    assert.equal(layout, width >= 1280 ? "grid" : "flex", "context never reopens into columns as the viewport narrows");
+    assert.ok(await s.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "intermediate viewport has no horizontal overflow");
+    const composer = s.locator("#chat-message");
+    if (width <= 960) await s.getByRole("button", { name: "Hội thoại", exact: true }).click();
+    await composer.fill("");
+    await s.waitForFunction(() => { const n = document.getElementById("chat-message"); return n.scrollHeight <= n.clientHeight; });
+    await composer.fill("[QA] Bản nháp của người bán.");
+    if (width <= 960) await s.getByRole("button", { name: "Đơn hàng", exact: true }).click();
+  }
+  await s.setViewportSize({ width: 1440, height: 1100 });
   await s.screenshot({ path: path.join(out, "seller-order-desktop.png"), fullPage: true });
   await sr.getByRole("button", { name: "Đăng ký vận đơn", exact: true }).click();
   await sr.getByRole("button", { name: "Thử lại đăng ký vận đơn", exact: true }).waitFor();

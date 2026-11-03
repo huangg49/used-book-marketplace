@@ -7,6 +7,7 @@ import {
   useInboxPosition,
 } from "../components/conversation/conversation-navigation";
 import { OrderDetails } from "./OrderDetails";
+import { SupportLink } from "../features/support/SupportLink";
 import sheet from "../components/conversation/Conversation.module.css";
 import {
   getPurchaseConversation,
@@ -227,10 +228,29 @@ function ChatRoom({
     });
   }, [messages.length]);
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 96)}px`;
-    }
+    const field = textareaRef.current;
+    if (!field) return;
+    const resize = () => {
+      if (!field.clientWidth) return;
+      field.style.height = "auto";
+      const style = getComputedStyle(field);
+      const border = parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+      const height = Math.min(field.scrollHeight + border, 96);
+      field.style.height = `${height}px`;
+      field.style.overflowY = field.scrollHeight > field.clientHeight ? "auto" : "hidden";
+    };
+    resize();
+    // Width and visibility change when the chat switches between pane and tab.
+    let width = field.parentElement!.clientWidth;
+    let frame = 0;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width === width) return;
+      width = entry.contentRect.width;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(resize);
+    });
+    observer.observe(field.parentElement!);
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
   }, [body]);
   function send() {
     const socket = socketRef.current;
@@ -294,6 +314,10 @@ function ChatRoom({
             {other.displayName}
           </span>
         )}
+        {(room.orderId || (isExchange && (historyExchange || room.terms?.activeExchangeId))) ? <span className={styles.roomSupport}>
+          <SupportLink type={room.orderId ? "DirectOrder" : "Exchange"}
+            id={room.orderId || historyExchange || room.terms!.activeExchangeId!} />
+        </span> : null}
       </header>
       <nav
         className={`${sheet.mobileTabs} ${sheet.bookTabs}`}
@@ -601,7 +625,9 @@ function ChatRoom({
                     ? "Lịch sử hội thoại được giữ lại tại đây."
                     : room.orderId
                       ? "Trao đổi với đối tác về việc chuẩn bị và giao nhận cuốn sách trong đơn này."
-                      : "Bạn có thể hỏi về tình trạng sách hoặc giá trước khi gửi thông tin nhận sách."}
+                      : room.terms?.exchangeIds.length
+                        ? "Trao đổi về việc giao nhận và kiểm tra sách của hai bên."
+                        : "Bạn có thể hỏi về tình trạng sách hoặc giá trước khi gửi thông tin nhận sách."}
                 </p>
                 {!expired && !body && (
                   <button
@@ -727,15 +753,8 @@ function ChatRoom({
                       send();
                     }
                   }}
-                  placeholder={
-                    room.orderId
-                      ? "Nhắn về đơn hàng… (Enter để gửi)"
-                      : isExchange
-                      ? "Nhắn về trao đổi… (Enter để gửi)"
-                      : isBuyer
-                        ? "Hỏi về cuốn sách… (Enter để gửi)"
-                        : "Trả lời người mua… (Enter để gửi)"
-                  }
+                  placeholder="Nhắn tin…"
+                  aria-describedby="chat-compose-help"
                 />
                 <button
                   type="submit"
@@ -765,6 +784,7 @@ function ChatRoom({
                 )}
               </div>
             )}
+            {!expired && <p id="chat-compose-help" className={styles.composeHelp}>Enter để gửi · Shift+Enter xuống dòng</p>}
           </form>
         </section>
       </div>

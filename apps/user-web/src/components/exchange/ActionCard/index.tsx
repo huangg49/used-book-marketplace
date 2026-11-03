@@ -50,6 +50,7 @@ type Action =
   | "dispute";
 
 interface Props {
+  compact?: boolean;
   detail: ExchangeDetail;
   onCancel: () => Promise<void>;
   onAccept: (
@@ -192,7 +193,7 @@ export function ActionCard(props: Props) {
     }
     actions.push("dispute");
   } else if (detail.status === "INSPECTING") {
-    const deadlineStr = detail.inspectionDeadline
+    const deadlineStr = !props.compact && detail.inspectionDeadline
       ? new Date(detail.inspectionDeadline).toLocaleString("vi-VN")
       : null;
     if (detail.viewerCompletedAt) {
@@ -347,8 +348,8 @@ export function ActionCard(props: Props) {
   }
 
   return (
-    <div className={styles.card}>
-      <div className={styles.headerRow}>
+    <div className={styles.card} data-compact={props.compact || undefined}>
+      {!props.compact && <div className={styles.headerRow}>
         <h2 className={styles.cardTitle}>
           <BrandIcon size={18} />
           <span>Hành động tiếp theo</span>
@@ -369,6 +370,7 @@ export function ActionCard(props: Props) {
                     : detail.status === 'INSPECTING' ? 'Đang kiểm tra sách' : detail.viewerShipping.receivedAt ? 'Bạn đã nhận sách' : 'Đang giao nhận'}
         </span>
       </div>
+      }
       <div className={styles.calloutBox}>
         <p className={styles.instructions}>{instructions}</p>
       </div>
@@ -398,6 +400,8 @@ export function ActionCard(props: Props) {
           </span>
         </p>
       )}
+      {(detail.viewerInspectionDeadline || detail.partnerInspectionDeadline) && <details className={styles.inspectionDetails}>
+        <summary>Hạn kiểm tra của từng bên</summary>
       {detail.viewerInspectionDeadline && (
         <p className={styles.deadlineRow}>
           Hạn kiểm tra sách của bạn:{" "}
@@ -414,6 +418,7 @@ export function ActionCard(props: Props) {
           </time>
         </p>
       )}
+      </details>}
       {detail.status === "INSPECTING" && detail.inspectionDeadline && (
         <p className={styles.deadlineRow}>
           <Clock size={14} className={styles.iconGold} />
