@@ -1,15 +1,19 @@
-# Khảo sát lại nhịp bố cục hội thoại — 03/11/2026
+# Chuẩn hóa nhịp bố cục hội thoại — 03/11/2026
 
-Owner yêu cầu khảo sát sâu tỷ lệ/khoảng cách trước khi sửa tiếp. Nhánh
-`codex/conversation-rhythm-audit`, source `edc3566b`; chỉ thêm tài liệu.
-Browser read-only localhost5174: 24 view, Order Seller/Buyer Preparing và
-Exchange inspection ở8 kích thước390–1920px. Đã xác nhận form gap không tác dụng
-do display:block, input→CTA sát0px, type scale không đồng nhất, composer rỗng
-vẫn cuộn2px và breakpoint container/viewport khiến bố cục đảo ở1000→960px.
-Exchange lặp trạng thái/hạn kiểm tra, empty chat dùng copy trước giao dịch.
+Owner duyệt khảo sát và triển khai. Nhánh `codex/conversation-rhythm-refinement`,
+base5384daeb, codeb75dda85: context288px/stage linh hoạt/chat320px; hồ sơ thu gọn
+dưới1280, không đảo lại grid khi hẹp hơn; toolbar hỗ trợ và header cùng trục.
+Form ảnh/vận đơn chia nhóm, grid/gap thật, file picker tiếng Việt; composer hết
+scrollbar rỗng, giữ draft/resize; Exchange bớt lặp trạng thái, mốc từng bên mở khi
+cần, giữ hạn chung/review/quyền/tiền/retry/motion. Không đổi API/DB/contract.
+PASS build/typecheck,unit324,lint exit0/1warning cũ, Order/chat retries/snapshot,
+fullchat+motion, Exchange64case, scroll20case và review entry hai vai trò.
+Localhost read-only24view:0pageerror/0transaction command; stage1440 tăng661→727px,
+formgap12/group24 và textarea scrollHeight=clientHeight. Đã đưa code vào Documents,
+giữ nguyên4file local chưa commit của công việc uy tín/reviews/support khác.
 [Báo cáo, source, số đo và tiêu chí sửa](../ui/CONVERSATION_RHYTHM_AUDIT_2026_11_03.md).
-Chưa sửa UI/API/DB hoặc push; chờ owner duyệt gói chỉnh. Không chạy lại harness
-mutation/native/provider; không lấy kiểm tra layout cũ làm nghiệm thu thiết kế.
+Chưa push/PR/merge remote. Native/provider/CI mới/human acceptance NOT RUN;
+READINESS giữ nguyên. Owner xem trực tiếp localhost5174/chat.
 
 # Đồng bộ main PR95 vào local — 03/11/2026
 

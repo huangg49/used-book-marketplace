@@ -1,6 +1,7 @@
 # Rà soát tỷ lệ, nhịp khoảng cách và thứ bậc hội thoại
 
-Khảo sát theo phản hồi owner sau refactor workspace; chưa triển khai đề xuất.
+Phần khảo sát ghi trạng thái trước sửa theo phản hồi owner sau refactor workspace;
+kết quả triển khai sau khi được duyệt nằm ở cuối báo cáo.
 Source `edc3566b`, Member web React/Vite thật tại localhost5174, API3000 và dữ
 liệu demo local hiện có. Không đánh giá Expo web/RN/Flutter trong gói này.
 Phần cấu trúc trước đó: [báo cáo refactor](TRANSACTION_WORKSPACE_AUDIT_2026_11_03.md).
@@ -220,3 +221,51 @@ các phần trong một gói UI, không thêm feature/API/state mới.
 
 Khuyến nghị làm gói chuẩn hóa form + hệ khoảng cách và chữ trước: đây là nguyên
 nhân trực tiếp của phản hồi “chỗ sát, chỗ thừa” và là nền cho việc chỉnh tỷ lệ.
+
+## Triển khai sau khi owner duyệt — 03/11/2026
+
+Nhánh `codex/conversation-rhythm-refinement`, code `b75dda85` trên base5384daeb.
+Giữ phần khảo sát phía trên như bằng chứng before, không diễn giải số đo cũ thành
+source hiện tại. Chỉ sửa Member web, không API/contract/migration/nghiệp vụ tiền.
+
+- Context desktop288px, stage lấy phần còn lại, chat320px. Dưới1280px hồ sơ được
+  thu vào nút mở/đóng, nội dung vẫn mounted; dưới961px chat chuyển tab và thao tác
+  đứng trước hồ sơ. Không còn re-enter grid khi thu viewport từ1000 xuống960.
+- Scroll owner nhận tab stop theo layout; preview bìa ở hồ sơ thu gọn giữ một
+  identity chuyển cảnh. Hỗ trợ Order/Exchange lên toolbar, chọn đúng active hoặc
+  history transaction. UI giai đoạn dùng role/type/spacing nhất quán hơn.
+- Hai form đóng gói/vận đơn dùng grid thật, label gap8, nội bộ12, giữa nhóm24px;
+  có tên nhóm, hint định dạng gắn aria-describedby và file picker tiếng Việt.
+  Input file thật vẫn focus/click được; handler/pending/key/body/version không đổi.
+- Composer placeholder ngắn, help riêng; height bù border và ResizeObserver chỉ
+  phản ứng width/visibility, có RAF cleanup. Lượt đầu phát hiện observer loop đã
+  sửa, browser cuối không còn lỗi. Empty Exchange khớp bối cảnh giao nhận/kiểm tra.
+- Compact Exchange bỏ header trạng thái trùng, giữ stepper và current heading;
+  hạn từng bên ở disclosure, hạn chung luôn thấy, không xóa khác biệt timestamp.
+  Review giữ server eligibility và rule72h/48h. Motion preference policy giữ nguyên.
+
+| Kiểm tra | Evidence cuối |
+| --- | --- |
+| Member build/typecheck | PASS; cảnh báo chunk500k cũ |
+| Unit | PASS324/47files |
+| Scoped lint | Exit0;1warning effect có sẵn trong ActionCard |
+| Order/chat browser | PASS quyền, snapshot, upload giả, mất ACK/retry, draft; thêm kiểm khoảng cách form, composer rỗng và breakpoint1440/1280/1279/1100/1000/961/960 |
+| Full chat browser | PASS lost ACK, same-room order, lịch sử, draft/error, View Transition420/340 và reduced-motion420; test mở hồ sơ thu gọn trước đọc thông tin |
+| Exchange workspace | PASS64 state/role/size cases |
+| Scroll | PASS20 ca wheel/keyboard/Back/short viewport/chữ130% |
+| Review entry | PASS hai vai trò, receipt/server permission, retry và exact deep link; không submit review |
+| Layout detector | Exit0,0 findings; không thay kiểm ảnh |
+| Runtime read-only |24views,0pageerror,0transaction command,0document horizontal overflow |
+
+Runtime after ở1440px: context288/stage727/chat320 so với354/661/320 trước;
+stage bắt đầu128px cùng mép chat thay vì165.1px. Form display:grid/gap12, hai
+group cách24px. Composer rỗng border-box40px/client38/scroll38, không scrollbar.
+Đã xem ảnh sau ở1920/1000/390 và Exchange1440; evidence riêng
+`.tmp/conversation-rhythm-after/`, fixture evidence ở các folder QA đã dẫn.
+Ảnh bìa provider chưa là bằng chứng mọi ảnh đều tải; không kiểm upload/storage thật.
+
+Đã fast-forward checkout Documents lên code khi giữ nguyên4file local chưa commit
+về uy tín/reviews/support; các file đó không nằm trong commit gói. Có lưu patch
+riêng trước tích hợp, không stash/reset/clean. Không restart API/DB hoặc ghi dữ
+liệu giao dịch. Native, live provider, CI mới và human acceptance NOT RUN; chưa
+push/PR/merge remote, READINESS giữ nguyên. Owner có thể xem trực tiếp `/chat`.
