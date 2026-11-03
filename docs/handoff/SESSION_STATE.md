@@ -17,8 +17,15 @@ counter sequence tăng1 và thêm journal tăng vốn mô phỏng cân bằng, k
 ledger cũ hoặc làm dữ liệu vi phạm validator. Primary không có write.
 CI main đúng SHA có API Mongo, User Web order-chat browser và Operations
 Admin browser FAIL; không suy local PASS là remote CI PASS.
-Chưa nâng DB/kích hoạt checkout ứng dụng, vẫn ở3558422f; giữ dịch vụ demo,
-env/dữ liệu, không push/PR/remote merge hoặc đổi READINESS. QA đã dừng.
+Follow-up owner yêu cầu giao diện mới trên localhost: đã backup private mới,
+dừng API/worker, áp6migration trên DB local rồi fast-forward checkout ứng dụng
+tới1d59ee10 và khởi động lại API/worker. Giữ5.838bản ghi cũ (chỉ counter sequence
+tăng1), ledger cũ/5env nguyên vẹn; journal tăng vốn cân bằng,0pending migration,
+0bản ghi vi phạm validator. PASS browser localhost trang đấu giá mới1440/390px,
+API200/0pageerror;5Member demo login/profile/wallet/reviews và ledger reconcile.
+Chưa có phiên công khai nên browser chỉ kiểm được empty state/toolbar, không
+phải nghiệm thu toàn luồng đấu giá. Không push/PR/remote merge hoặc đổi READINESS.
+QA đã dừng; dịch vụ ứng dụng giữ chạy.
 [Bằng chứng và bước kích hoạt còn lại](../features/LOCAL_MAIN_SYNC_2026_11_03.md#tích-hợp-pr94-vào-worktree).
 
 # Thêm một bài trao đổi để demo lượt2 — 03/11/2026

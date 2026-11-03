@@ -38,13 +38,31 @@ và [Operations Admin browser](https://github.com/huangg49/used-book-marketplace
 FAIL. Năm workflow còn lại success; điều này không chứng minh native hoặc Flutter
 đủ tính năng. Chưa chẩn đoán/sửa ba lỗi CI trong phạm vi lấy code.
 
-**Chưa kích hoạt trên ứng dụng demo.** Checkout ứng dụng vẫn3558422f để không
+**Trạng thái lúc tích hợp ban đầu: chưa kích hoạt trên ứng dụng demo.** Checkout ứng dụng giữ3558422f để không
 hot-reload API/web mới lên DB cũ. Sáu migration pending gồm uncapped amounts,
 simulator capital, step options, custom step, rival window, free shipping
 reconcile. Đặc biệt CapitalIncrease thêm tiền vào nguồn mô phỏng hệ thống;
 không phải nạp thêm vào ví Member. Cần chốt gói kích hoạt DB riêng, backup mới,
 dừng API/worker, migrate rồi cập nhật đồng bộ client/API/worker và kiểm ứng dụng.
 Không thay env, reset dữ liệu, push/PR/merge remote hoặc đóng READINESS.
+
+### Kích hoạt localhost theo yêu cầu tiếp theo của owner
+
+Owner phản ánh chưa thấy giao diện mới và yêu cầu tiếp tục. Đã dừng đúng cây
+tiến trình API/worker của checkout ứng dụng, tạo backup DB nhất quán private
+kèm schema/index, rồi áp6migration đã thử QA. PASS giữ5.838bản ghi cũ, ngoại lệ
+counter ledger sequence tăng1; thêm journal tăng vốn cùng2entry cân bằng.
+Ledger entry cũ và5env giữ nguyên,0migration pending,0bản ghi vi phạm validator.
+Không reset/seed, không sửa giá trị ví người dùng hoặc giao dịch để demo.
+
+Checkout ứng dụng fast-forward tới1d59ee10; API/worker khởi động từ source mới,
+Member/Admin Vite dùng cùng checkout. PASS browser thật localhost trang đấu giá
+1440/390px: toolbar mới/empty art hiện đúng, không tràn ngang hoặc pageerror,
+API đấu giá200. Hiện0phiên công khai nên chưa kiểm giao diện phiên đang chạy.
+PASS5Member demo login/profile/wallet/review reads và đối soát ledger cân bằng;
+phiên đăng nhập kiểm chứng đã logout. Không gửi lệnh đấu giá hay gọi provider.
+CI lỗi trên main ghi phía trên chưa được xử lý; không push/PR/merge remote,
+không đóng gate. Log/backup/ảnh kiểm chứng ở vùng private của máy thao tác.
 
 ## Source và bảo toàn
 
