@@ -3,7 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useSearchParams } from "react-router-dom";
 import {
   ArrowRight,
+  ArrowLeft,
   Check,
+  Info,
   Landmark,
   LoaderCircle,
   Wallet,
@@ -48,6 +50,7 @@ export function WalletWithdrawals({
   const [accountNumber, setAccount] = useState("");
   const [accountHolder, setHolder] = useState("");
   const [review, setReview] = useState(false);
+  const [reviewAvailable, setReviewAvailable] = useState(available);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [uncertain, setUncertain] = useState(false);
@@ -161,6 +164,7 @@ export function WalletWithdrawals({
         return;
       }
       if (!review) {
+        setReviewAvailable(available);
         setReview(true);
         setError("");
         return;
@@ -288,13 +292,15 @@ export function WalletWithdrawals({
             </li>
             <li aria-current={review ? "step" : undefined}>Kiểm tra & gửi</li>
           </ol>
-          <div className={styles.balance}>
-            <span>
-              <Wallet size={17} aria-hidden="true" />
-              Số dư khả dụng
-            </span>
-            <strong>{formatVnd(available)}</strong>
-          </div>
+          {!review && (
+            <div className={styles.balance}>
+              <span>
+                <Wallet size={17} aria-hidden="true" />
+                Số dư khả dụng
+              </span>
+              <strong>{formatVnd(available)}</strong>
+            </div>
+          )}
           <fieldset
             className={styles.entryGrid}
             disabled={busy || uncertain || review}
@@ -324,7 +330,7 @@ export function WalletWithdrawals({
               </small>
               <div
                 className={styles.quickAmounts}
-                  role="group"
+                role="group"
                 aria-label="Chọn nhanh số tiền"
               >
                 {[50000, 100000, 500000].map((value) => (
@@ -431,44 +437,61 @@ export function WalletWithdrawals({
           </fieldset>
           {review && (
             <div className={styles.review}>
-              <div className={styles.reviewTotal}>
-                <span>Số tiền rút</span>
+              <section
+                className={styles.reviewTotal}
+                aria-label="Số tiền và số dư"
+              >
+                <p>Số tiền rút</p>
                 <strong>{formatVnd(Number(amount))}</strong>
-              </div>
-              <dl className={styles.reviewFacts}>
-                <div>
-                  <dt>Ngân hàng</dt>
-                  <dd>{bankName}</dd>
+                <dl className={styles.reviewFinancial}>
+                  <div>
+                    <dt>Phí rút tiền</dt>
+                    <dd>0đ</dd>
+                  </div>
+                  <div>
+                    <dt>Khả dụng sau khi gửi</dt>
+                    <dd>
+                      {formatVnd(Math.max(0, reviewAvailable - Number(amount)))}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
+              <section
+                className={styles.reviewRecipient}
+                aria-labelledby="review-recipient-title"
+              >
+                <h3 id="review-recipient-title">
+                  <Landmark size={19} aria-hidden="true" />
+                  Thông tin nhận tiền
+                </h3>
+                <dl className={styles.reviewFacts}>
+                  <div>
+                    <dt>Ngân hàng</dt>
+                    <dd>{bankName}</dd>
+                  </div>
+                  <div>
+                    <dt>Chủ tài khoản</dt>
+                    <dd>{accountHolder}</dd>
+                  </div>
+                  <div className={styles.reviewAccount}>
+                    <dt>Số tài khoản</dt>
+                    <dd>{accountNumber}</dd>
+                  </div>
+                </dl>
+                <div className={styles.reviewReason}>
+                  <h3>Lý do rút tiền</h3>
+                  <p>{reason && withdrawalReasons[reason]}</p>
+                  {reason === "Other" && reasonDetail && (
+                    <p className={styles.hint}>{reasonDetail}</p>
+                  )}
                 </div>
-                <div>
-                  <dt>Số tài khoản</dt>
-                  <dd>{accountNumber}</dd>
-                </div>
-                <div>
-                  <dt>Chủ tài khoản</dt>
-                  <dd>{accountHolder}</dd>
-                </div>
-                <div>
-                  <dt>Lý do rút</dt>
-                  <dd>
-                    {reason && withdrawalReasons[reason]}
-                    {reason === "Other" && reasonDetail && (
-                      <p>{reasonDetail}</p>
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Phí rút tiền</dt>
-                  <dd>0đ</dd>
-                </div>
-                <div>
-                  <dt>Khả dụng sau khi gửi</dt>
-                  <dd>{formatVnd(Math.max(0, available - Number(amount)))}</dd>
-                </div>
-              </dl>
-              <p>
-                Khoản tiền này được giữ ngay khi gửi. Nếu bị từ chối, tiền sẽ
-                trở lại số dư khả dụng.
+              </section>
+              <p className={styles.reviewNotice}>
+                <Info size={18} aria-hidden="true" />
+                <span>
+                  Khoản tiền này được giữ ngay khi gửi. Nếu bị từ chối, tiền sẽ
+                  trở lại số dư khả dụng.
+                </span>
               </p>
             </div>
           )}
@@ -497,6 +520,7 @@ export function WalletWithdrawals({
                 disabled={busy}
                 onClick={() => setReview(false)}
               >
+                <ArrowLeft size={16} aria-hidden="true" />
                 Chỉnh sửa
               </button>
             )}

@@ -24,7 +24,7 @@ assert.ok(
 );
 const memberOrigin = "http://127.0.0.1:5195",
   adminOrigin = "http://127.0.0.1:5196";
-const evidence = path.join(root, ".tmp/wallet-button-states-evidence");
+const evidence = path.join(root, ".tmp/withdrawal-confirmation-evidence");
 const buttonStates = [];
 let fixture, browser, web, adminVite, member, admin, op;
 const pageErrors = [];
@@ -231,7 +231,12 @@ try {
     } else await route.fulfill({ response });
   });
   await button(member, "Tiếp tục").click();
+  await capture(member, "member-confirm-desktop", 1440, 900);
   await capture(member, "member-confirm-mobile", 390);
+  await capture(member, "member-confirm-small", 320, 844);
+  await member.evaluate(() => (document.documentElement.style.fontSize = "130%"));
+  await capture(member, "member-confirm-large-text", 390, 1000);
+  await member.evaluate(() => (document.documentElement.style.fontSize = ""));
   await auditWalletButtons(member, member.getByRole("dialog"), "withdrawal-review", buttonStates);
   await writeFile(path.join(evidence, "button-states.json"), JSON.stringify(buttonStates, null, 2));
   assertWalletButtonsReadable(buttonStates);
@@ -243,6 +248,9 @@ try {
   await button(member, "Xác nhận gửi yêu cầu").click();
   await button(member, "Kiểm tra lại yêu cầu").waitFor();
   assert.equal(await member.getByLabel("Số tiền muốn rút").isDisabled(), true);
+  // A lost ACK may already have reserved funds. The preview must not subtract twice.
+  await expect(member.locator('[aria-label="Thẻ ví thành viên Lật Lại liên kết VNPay"]')).toContainText("400.000 ₫", { timeout: 20000 });
+  await expect(member.getByRole("region", { name: "Số tiền và số dư" }).getByText("400.000 ₫", { exact: true })).toBeVisible();
   await auditWalletButtons(member, member.getByRole("dialog"), "withdrawal-retry", buttonStates);
   await writeFile(path.join(evidence, "button-states.json"), JSON.stringify(buttonStates, null, 2));
   assertWalletButtonsReadable(buttonStates);
@@ -454,6 +462,7 @@ try {
           "wallet-button-hover-active-keyboard-contrast",
           "portal-buttons-without-inherited-hover-token",
           "quick-amount-and-edit-preserve-values",
+          "confirmation-balance-preview-stable-after-lost-ack",
           "withdrawal-details-from-notifications",
           "pending-count-all-filtered-pages",
           "completed-rejected-not-counted",

@@ -1,6 +1,15 @@
 # Rút tiền qua Admin — 04/11/2026
 
-- Hiện tại `codex/wallet-button-interaction-colors`, base `bd985543`; checkpoint
+- Hiện tại `codex/withdrawal-confirmation-layout`, base `6008f1c2`; checkpoint
+  subject `refactor(wallet): clarify withdrawal confirmation layout`. Owner yêu
+  cầu làm đẹp bước xác nhận. Tách financial cream/recipient paper, tiền28–36px,
+  tài khoản24px, note riêng và nút Back gọn; mobile một cột, giữ màu/motion/draft.
+  Preview snapshot số dư lúc review để mất ACK không trừ lặp trên màn hình;
+  server/ledger/API/key/body giữ nguyên. PASS320Member unit/typecheck/build/lint,
+  33browser captures/0page errors/overflow,111button-state cases; kiểm hold thật
+  và preview400k sau lostACK, back/edit và approve/reject/refund/owner-only.
+  Đã xem desktop/390/320; QA dừng, main apps chạy. Không push/merge/đổi READINESS.
+- Gói màu nút trước ở `codex/wallet-button-interaction-colors`, base `bd985543`;
   subject `fix(wallet): keep popup buttons readable in every interaction state`.
   Tái hiện Tiếp tục/guard draft mất màu khi thiếu token portal, contrast1:1;
   đã thêm fallback và foreground cho hover/active/focus, ring đóng header rõ hơn.

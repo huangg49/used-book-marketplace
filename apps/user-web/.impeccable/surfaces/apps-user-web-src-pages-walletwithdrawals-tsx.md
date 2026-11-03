@@ -59,6 +59,16 @@ outside the form header. Missing inherited hover/shelf tokens must never produce
 cream text on cream paper. The wine-header close button uses a paper focus ring.
 Preserve authored motion, native disabled state and command handlers.
 
+Confirmation refinement04/11: replace the full yellow key/value sheet with a
+cream financial block at left and unboxed recipient details at right. Amount
+28–36px and account24px lead; bank/holder share a row, reason stays separate under
+a quiet rule. Fee and expected remaining funds belong to the money block. Below
+680px stack the two regions. Move the hold/refund note outside the figures and
+keep the Back action quiet, readable and single-line. Do not repeat the available
+balance band during confirmation. Freeze this local remaining-funds preview at
+review entry so a lost response/reservation cannot visually subtract twice;
+the server remains authoritative for every command.
+
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
 No raster added; preserve DESIGN.md and its token sidecar for this extension.

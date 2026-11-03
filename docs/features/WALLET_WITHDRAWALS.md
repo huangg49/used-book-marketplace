@@ -236,3 +236,33 @@ runner hiện có. Evidence private `.tmp/wallet-button-states-evidence/button-s
 `.tmp/wallet-button-states-after.log`, `.tmp/wallet-button-states-{build,unit,lint}.log`.
 Không tác động tiền/dữ liệu owner; QA teardown/dừng, main apps giữ chạy. Không
 push/merge, native/human/CI acceptance hoặc đổi READINESS.
+
+## Bố cục bước xác nhận — 04/11/2026
+
+Owner yêu cầu làm đẹp phần kiểm tra trước khi gửi. Nhánh
+`codex/withdrawal-confirmation-layout`, base `6008f1c2`; checkpoint subject
+`refactor(wallet): clarify withdrawal confirmation layout`.
+
+Tách số tiền/phí/khả dụng sau gửi thành vùng cream bên trái; tài khoản nhận và
+lý do ở bên phải trên nền paper, ngân hàng/chủ nhận cùng hàng và số tài khoản
+24px nổi bật. Số tiền28–36px, bỏ dải số dư lặp lại; ghi chú hold/refund ở dưới,
+nút Chỉnh sửa có mũi tên và không bẻ chữ trên mobile. Dưới680px xếp một cột.
+Giữ animation, màu nút fallback/focus, draft/back, disabled/unknown và receipt.
+
+Đồng thời snapshot số dư cho preview khi vào review: nếu mất ACK mà server đã
+giữ tiền, cập nhật số dư Ví không làm preview trừ thêm một lần. Chỉ sửa trình bày;
+server vẫn kiểm số dư/quyền và key/body như trước, không đổi API/contract/ledger.
+
+PASS320Member unit/typecheck/build/lint (cảnh báo cũ ngoài phần đổi), browser cuối
+33captures1440/1000/390/320/chữ130%,0page errors/overflow;111button states vẫn
+đọc rõ. Kiểm back/edit giữ giá trị; mất ACK đã hold thật, thẻ ví cập nhật400k và
+preview vẫn400k, không tính300k do trừ lặp; retry/duyệt/từ chối/refund/owner-only
+giữ nguyên. API/Mongo QA thật, funding/storage fixture. Hai lượt kiểm giao diện:
+đã xem desktop/390/320, sửa Back khỏi ngắt chữ rồi xác nhận mobile. Detector một
+lượt chỉ advisory16px modal cũ, không sửa token/hiệu ứng dùng chung.
+
+Evidence private `.tmp/withdrawal-confirmation-evidence/`,
+`.tmp/withdrawal-confirmation-browser-final.log`,
+`.tmp/withdrawal-confirmation-{build,unit,lint}.log`. QA teardown/dừng, main apps
+giữ chạy, không mutation tiền owner. Không push/merge/READINESS hoặc suy
+native/human/CI/release PASS từ browser.
