@@ -611,8 +611,10 @@ distant cards while retaining the direct-child img selector and all cover
 motion. The query key/cache/retry stay unchanged; in-flight reads can finish
 and revisiting a fresh cached cover reuses its URL. `active` defaults true for
 other consumers, including the eager detail gallery/viewer. Missing observer
-falls back to the existing full loading behavior. Verify scroll, cache,
-revision and error recovery with
+falls back to the existing full loading behavior. The shared `useNearViewport`
+observer also serves book cards and listing thumbnails with the same margin.
+Targets unsubscribe on unmount and the last target disconnects the observer.
+Verify scroll, cache, revision, error recovery and cleanup on Back with
 `pnpm --filter @used-books/user-web test:auction-photo-visibility:browser`.
 
 ## Member web — Đồng hồ trên thẻ đấu giá —03/11/2026

@@ -4,6 +4,53 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Dùng chung observer cho ảnh gần viewport
+
+Nhánh `codex/member-web-shared-cover-observer`, base `e667389a`.
+[useNearViewport](../../apps/user-web/src/hooks/useNearViewport.ts) dùng một
+IntersectionObserver cho các target cùng viewport và root margin 200 px.
+Mỗi entry đi tới đúng subscriber theo target. Khi node được đăng ký lại, entry
+cũ không đổi trạng thái đăng ký mới. Cleanup unobserve từng target và disconnect
+khi subscriber cuối rời trang. Eager và trình duyệt thiếu IntersectionObserver
+vẫn cho ảnh tải theo cơ chế cũ. Giữ query key, cache, expiry, retry và luồng ảnh.
+
+Hai build production, Chromium, REST/ảnh fixture. Mỗi lượt mở danh sách với
+8 Live và 8 Scheduled, chờ font rồi cuộn lần lượt tới thẻ 8, 16 và 1.
+Một cặp trước/sau mỗi viewport, reduced-motion bật. Đếm callback của observer
+với margin 200 px và cả entry được trình duyệt giao tới. Trình duyệt vẫn theo
+dõi đủ 16 target.
+
+| Trong kịch bản mở và cuộn danh sách | Trước | Sau |
+| --- | ---: | ---: |
+| Observer được tạo, cả hai viewport | 16 | 1 |
+| Mobile 390 px, tổng callback | 29 | 5 |
+| Mobile, tổng entry | 29 | 29 |
+| Desktop 1440 px, tổng callback | 52 | 4 |
+| Desktop, tổng entry | 52 | 52 |
+
+Cùng danh sách ID đọc link ảnh trước/sau và mỗi ID chỉ đọc một lần. Khi mở
+trang: 1 ảnh mobile, 4 desktop. Sau cả ba lần cuộn: 7 ảnh mobile, 16 desktop.
+Rời trang bản mới unobserve đủ 16 target, disconnect một lần. Đây là số đếm
+trong kịch bản cụ thể. Chưa đo chênh lệch CPU, FPS hoặc INP. 46 CSS production
+khớp byte. 31 asset JS/CSS trong HTML entry giữ nguyên số lượng, thêm 248 byte
+raw cho logic dùng chung.
+
+- [Browser Đấu giá](../../apps/user-web/tests/auction-photo-visibility.mjs)
+  PASS 390/1440 và bốn cấu hình fallback. Cover ngoài vùng chờ tải, quay lại
+  dùng cache, revision mới giữ phạm vi visibility, hover/lỗi ký link/lỗi ảnh
+  và viewer hoạt động. Đi Home giải phóng hết target, Back tạo đúng một
+  observer mới cho 16 target. Assertion 1 observer bắt đúng 16 trên build cũ.
+- Browser production riêng PASS Tìm sách 24 thẻ dùng một observer và ảnh cuối
+  tải khi cuộn tới. Sang Chi tiết, 24 target được giải phóng và 5 thumbnail dùng
+  observer mới. Chọn ảnh 5, mở lớn, chuyển ảnh bằng phím, Escape, quay về kệ.
+  Ảnh chính/viewer dùng cache. Đã xem ảnh gallery ở 390 px.
+- Search covers 8 ca PASS, gồm hidden, link hết hạn, lỗi ảnh và retry.
+  Book transition 5 cấu hình PASS, gồm 440 ms cả hai chiều và giảm chuyển động.
+  Build/typecheck, 341 unit test, lint, docs/diff PASS. Lint có cảnh báo cũ.
+- Bằng chứng ở `.tmp/member-web-cover-observer/`. API, Socket.IO và ảnh trong
+  harness là fixture. API thật, thiết bị thật, native, human acceptance và CI
+  remote NOT RUN. READINESS giữ nguyên.
+
 ## Chọn kích thước bìa Hero theo màn hình
 
 Nhánh `codex/member-web-responsive-hero-covers`, base `b9187a4a`. Ba bìa

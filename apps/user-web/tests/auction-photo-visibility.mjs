@@ -73,6 +73,38 @@ try {
     const page = await browser.newPage({ viewport: { width, height: 844 }, reducedMotion: 'reduce' });
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
+    await page.addInitScript(() => {
+      const Native = window.IntersectionObserver;
+      const counts = window.qaCoverObservers = { created: 0, disconnected: 0, targets: 0 };
+      window.IntersectionObserver = class extends Native {
+        constructor(callback, options) {
+          super(callback, options);
+          this.tracked = options?.rootMargin === '200px';
+          this.targets = new Set();
+          if (this.tracked) counts.created++;
+        }
+        observe(target) {
+          if (this.tracked && !this.targets.has(target)) {
+            this.targets.add(target);
+            counts.targets++;
+          }
+          super.observe(target);
+        }
+        unobserve(target) {
+          if (this.targets.delete(target)) counts.targets--;
+          super.unobserve(target);
+        }
+        disconnect() {
+          if (this.tracked) {
+            counts.disconnected++;
+            counts.targets -= this.targets.size;
+            this.targets.clear();
+          }
+          super.disconnect();
+        }
+      };
+    });
+    const observerCounts = () => page.evaluate(() => window.qaCoverObservers);
     const state = await setup(page);
     const card = i => page.locator(`[data-auction-id="${uuid(i)}"]`);
     await page.goto(origin + '/auctions');
@@ -83,6 +115,8 @@ try {
     assert.equal(state.reads.get(uuid(16)) ?? 0, 0, 'Distant scheduled covers must not request signed URLs');
     const initialReads = state.reads.size;
     assert(initialReads < 16);
+    assert.deepEqual(await observerCounts(), { created: 1, disconnected: 0, targets: 16 },
+      'All 16 covers use the same observer without losing any target');
     const cover = card(1).getByRole('link', { name: /^Xem phiên đấu giá/ });
     const geometry = await cover.boundingBox();
     assert.equal(await card(1).locator('a > img').count(), 1, 'Keep the original direct-child image styling');
@@ -117,8 +151,15 @@ try {
     const nextGeometry = await card(1).getByRole('link', { name: /^Xem phiên đấu giá/ }).boundingBox();
     assert.equal(nextGeometry.width, geometry.width);
     assert.equal(nextGeometry.height, geometry.height);
+    await page.getByRole('banner').getByRole('link', { name: 'Trang chủ Lật lại' }).click();
+    await expect(page).toHaveURL(origin + '/');
+    await expect.poll(observerCounts).toEqual({ created: 1, disconnected: 1, targets: 0 });
+    await page.goBack();
+    await expect(page.locator('[data-auction-id]')).toHaveCount(16);
+    await loaded(card(1).locator('img'));
+    await expect.poll(observerCounts).toEqual({ created: 2, disconnected: 1, targets: 16 });
     assert.deepEqual(errors, []);
-    checks.push({ width, initialReads, distantDeferred: true, scrollLoads: true, queryReuse: true, revision: true, geometry: true, pageErrors: 0 });
+    checks.push({ width, initialReads, distantDeferred: true, scrollLoads: true, queryReuse: true, revision: true, geometry: true, observerCleanupAndBack: true, pageErrors: 0 });
     await page.close();
   }
   for (const mode of ['no-photo', 'no-observer', 'link-error', 'image-error']) {

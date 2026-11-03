@@ -1,24 +1,24 @@
 # Tối ưu Member web — 03/11/2026
 
-Gói hiện tại `codex/member-web-responsive-hero-covers`, base `b9187a4a`.
-Hero Home dùng `srcset/sizes` cho Frieren, One Piece và Dược sư tự sự.
-Ảnh gốc được chọn ở cấu hình cần độ phân giải cao và dùng lại khi bản
-nhỏ tải lỗi. [Source](../../apps/user-web/src/pages/HomePage.tsx) và
+Gói hiện tại `codex/member-web-shared-cover-observer`, base `e667389a`.
+Bìa sách, thumbnail và thẻ đấu giá dùng chung IntersectionObserver tại
+margin 200 px. Cleanup từng node và disconnect khi hết subscriber.
+[Source](../../apps/user-web/src/hooks/useNearViewport.ts) và
 [bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- 5 cặp Chromium production mỗi cấu hình, cache lạnh và mạng 4 Mbps.
-  Tám bìa giảm 747.499→323.456 byte ở 390/DPR2 và 1440/DPR1.
-  Trung vị giải mã đủ bìa: mobile 4,41→3,24 s, desktop 3,95→2,82 s.
-- Browser PASS chọn 200w/400w/ảnh gốc và 404 về ảnh gốc. 46 CSS khớp
-  byte. 8 gather và 8 sway giữ timing khi reduced-motion bật; hover
-  desktop giữ lift/scale. Đã xem ảnh Hero trước/sau 390/1440.
-- Build/typecheck, 341 unit test, lint, Home focus, docs/diff PASS.
-  Phép đo dùng HTTP fixture. API thật, thiết bị thật, native, human acceptance
-  và CI remote NOT RUN. Gate READINESS giữ nguyên.
+- Chromium production, 16 thẻ đấu giá 390/1440: 16→1 observer.
+  Mở và cuộn: callback 29→5 mobile, 52→4 desktop. Cùng số entry và
+  cùng tập ID đọc ảnh. Đây là số đếm fixture, chưa đo CPU/FPS/INP.
+- Browser PASS Đấu giá scroll/cache/revision/error/cleanup/Back,
+  Tìm sách 24 thẻ và Chi tiết 5 thumbnail cùng viewer/phím/Escape.
+  Search covers 8 ca và Book transition 5 cấu hình PASS. Bìa giữ 440 ms
+  khi bật reduced-motion. 46 CSS production khớp từng byte.
+- Build/typecheck, 341 unit test, lint, docs/diff PASS. Kiểm bằng fixture.
+  API thật, thiết bị thật, native, human acceptance và CI remote NOT RUN.
+  Gate READINESS giữ nguyên.
 
-Các gói trước trong [báo cáo hiệu năng](MEMBER_WEB_PERFORMANCE_2026_11_03.md),
-gần nhất `42fe9871` tối ưu render tin nhắn và `b9187a4a` nén font Auth.
-Thay đổi nằm trong worktree phát triển. Checkout demo giữ local work.
+Gói trước `e667389a` giảm dung lượng tám bìa Home bằng ảnh theo mật độ
+điểm ảnh. Thay đổi nằm trong worktree phát triển. Checkout demo giữ local work.
 
 # Lịch sử tin nhắn Member web —03/11/2026
 

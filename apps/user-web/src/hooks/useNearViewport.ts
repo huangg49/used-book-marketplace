@@ -1,5 +1,43 @@
 import { useEffect, useRef, useState } from "react";
 
+type ViewportSubscription = {
+  observedAt: number;
+  update: (near: boolean) => void;
+};
+
+const subscriptions = new Map<Element, ViewportSubscription>();
+let viewportObserver: IntersectionObserver | undefined;
+
+function observeNearViewport(target: Element, update: ViewportSubscription["update"]) {
+  if (!viewportObserver) {
+    const observer = new IntersectionObserver(entries => {
+      if (viewportObserver !== observer) return;
+      for (const entry of entries) {
+        const subscription = subscriptions.get(entry.target);
+        // Entries queued for an earlier subscription must not affect a reused node.
+        if (subscription && entry.time >= subscription.observedAt)
+          subscription.update(entry.isIntersecting);
+      }
+    }, { rootMargin: "200px" });
+    viewportObserver = observer;
+  }
+
+  const observer = viewportObserver;
+  const subscription = { observedAt: performance.now(), update };
+  subscriptions.set(target, subscription);
+  observer.observe(target);
+
+  return () => {
+    if (subscriptions.get(target) !== subscription) return;
+    subscriptions.delete(target);
+    observer.unobserve(target);
+    if (subscriptions.size === 0) {
+      observer.disconnect();
+      viewportObserver = undefined;
+    }
+  };
+}
+
 // Delay signing offscreen covers as well as downloading their pixels.
 export function useNearViewport<T extends HTMLElement = HTMLDivElement>(eager = false) {
   const ref = useRef<T>(null);
@@ -7,14 +45,7 @@ export function useNearViewport<T extends HTMLElement = HTMLDivElement>(eager = 
   useEffect(() => {
     if (eager || !ref.current) return;
     if (typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setNear(!!entry?.isIntersecting);
-      },
-      { rootMargin: "200px" },
-    );
-    observer.observe(ref.current);
-    return () => observer.disconnect();
+    return observeNearViewport(ref.current, setNear);
   }, [eager]);
   return {
     ref,
