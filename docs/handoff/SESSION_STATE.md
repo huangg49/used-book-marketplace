@@ -1,3 +1,30 @@
+# Vẽ canvas lá rơi trên Member web — 03/11/2026
+
+Gói tiếp theo từ `bbd59568` trên nhánh `codex/member-web-autumn-canvas`.
+Home vẫn mô phỏng toàn bộ 24 lá mobile hoặc 42 lá desktop. Canvas chỉ vẽ dải
+viewport với 192 px đệm phía trên và dưới, rồi xóa dải đã vẽ ở khung trước. Vòng
+`requestAnimationFrame` chỉ lên lịch khi canvas giao với viewport và tab
+đang hiển thị. Trở lại tab khi canvas ngoài màn hình vẫn giữ vòng lặp dừng.
+
+- Chromium 151, hai production build và 5 cặp luân phiên ở mỗi viewport.
+  Trên mobile 390px, DPR 2 và CPU 4×, trung vị khi cuộn Lenis là
+  21,8 → 37,7 khung canvas/giây, p95 khoảng cách khung 71,5 → 53,6 ms.
+  Số lá vẽ mỗi khung 24 → 9,2 và vùng xóa giảm 82% (13.672 → 2.457
+  hàng pixel cùng chiều rộng). Desktop giữ khoảng 60 khung/giây.
+- Đối chiếu 20 ảnh canvas nhìn thấy tại cùng seed và đồng hồ, gồm cuộn nhanh,
+  đổi chiều cuộn, đổi kích thước, gió và tái sinh lá. Pixel khớp ở 1440px
+  motion thường và 390px reduced-motion. Fixture còn kiểm hủy/lên lịch lại
+  đúng một frame khi đổi tab, ngoài viewport và khi unmount.
+- Browser Home focus kiểm hồi quy pause/resume trên trang thật với HTTP
+  fixture. Smoke production qua API local thật PASS ở 1440/390px với 0 lỗi
+  JavaScript và Back giữ trang 2. Build, typecheck, 338 unit test, lint và
+  docs check PASS. Detector có 9 cố vấn về bảng màu lá có sẵn ngoài diff.
+- Kết quả đo, trace và bộ so pixel tại `.tmp/member-web-canvas-performance/`.
+  Số khung canvas đo trong phòng thử, chưa đo trên điện thoại thật.
+
+Gói ở worktree phát triển. Human acceptance và CI remote chưa chạy.
+Gate phát hành theo READINESS.
+
 # Tải sớm ảnh chữ Hero trên Member web — 03/11/2026
 
 Gói tiếp theo từ `10fd986d` trên nhánh `codex/member-web-hero-preload`. Browser

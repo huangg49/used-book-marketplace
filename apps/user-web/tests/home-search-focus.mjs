@@ -16,6 +16,14 @@ try{
  await server.listen();browser=await chromium.launch({headless:true});
  const page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/api/v1/**',r=>new URL(r.request().url()).pathname==='/api/v1/listings'?r.fulfill({json:{items:[],nextCursor:null,serverTime:new Date().toISOString()}}):r.fulfill({status:401,json:{code:'UNAUTHENTICATED'}}));
+ await page.addInitScript(() => {
+   window.qaLeafFrames = 0;
+   const clearRect = CanvasRenderingContext2D.prototype.clearRect;
+   CanvasRenderingContext2D.prototype.clearRect = function (...args) {
+     if (this.canvas.dataset.testid === 'autumn-leaves-canvas') window.qaLeafFrames++;
+     return clearRect.apply(this, args);
+   };
+ });
  const imageRequests = [];
  page.on('request', request => {
    if (request.resourceType() === 'image') imageRequests.push(request.url());
@@ -32,6 +40,33 @@ try{
  await expect(preload).toHaveAttribute('fetchpriority', 'high');
  assert(!deepLinkImages.includes(heroSrc), 'Search deep links do not download Home lettering');
  assert.equal(imageRequests.filter(url => url === heroSrc).length, 1, 'Home reuses the preload');
+ await page.setViewportSize({width:390,height:450});
+ const leaves = page.getByTestId('autumn-leaves-canvas');
+ await leaves.evaluate(canvas => canvas.parentElement.scrollIntoView({block:'start',behavior:'instant'}));
+ await expect.poll(() => page.evaluate(() => window.qaLeafFrames)).toBeGreaterThan(0);
+ await page.evaluate(() => window.scrollTo({top:0,behavior:'instant'}));
+ await expect.poll(() => leaves.evaluate(canvas => canvas.getBoundingClientRect().top >= innerHeight)).toBe(true);
+ const offscreenFrames = await page.evaluate(async () => {
+   const nextFrame = () => new Promise(requestAnimationFrame);
+   await nextFrame();
+   await nextFrame();
+   const before = window.qaLeafFrames;
+   try {
+     for (const hidden of [true,false]) {
+       Object.defineProperty(document,'hidden',{configurable:true,value:hidden});
+       document.dispatchEvent(new Event('visibilitychange'));
+       await nextFrame();
+       await nextFrame();
+     }
+     return window.qaLeafFrames - before;
+   } finally {
+     delete document.hidden;
+   }
+ });
+ assert.equal(offscreenFrames, 0, 'Returning to the tab does not restart an offscreen canvas');
+ const pausedFrames = await page.evaluate(() => window.qaLeafFrames);
+ await leaves.evaluate(canvas => canvas.parentElement.scrollIntoView({block:'start',behavior:'instant'}));
+ await expect.poll(() => page.evaluate(() => window.qaLeafFrames)).toBeGreaterThan(pausedFrames);
  for(const width of [1440,390])for(const reducedMotion of ['no-preference','reduce']){
   await page.setViewportSize({width,height:1000});await page.emulateMedia({reducedMotion});await page.goto(origin+'/');
   const input=page.locator('#home-search'),form=page.getByRole('search');await input.waitFor();await page.evaluate(()=>document.fonts.ready);await form.scrollIntoViewIfNeeded();await page.waitForTimeout(400);
@@ -46,5 +81,5 @@ try{
   await page.waitForURL('**/books?**');const url=new URL(page.url());assert.equal(url.searchParams.get('q'),'sách cũ & QA','query survives Enter and button submit');
   results.push({width,reducedMotion,goldHover:true,singleOuterFocus:true,geometryStable:true,keyboard:true,queryRetained:true});
  }
- assert.deepEqual(errors,[]);await fs.writeFile(path.join(out,'result.json'),JSON.stringify({status:'PASS',heroPreload:true,results,pageErrors:errors.length,environment:'Home route, intercepted HTTP; no DB'},null,2));console.log('PASS Home hero search: Home-only preload, gold hover/focus, one outer ring, stable dimensions, keyboard, Enter/button query, 1440/390 and reduced-motion. No DB.');
+ assert.deepEqual(errors,[]);await fs.writeFile(path.join(out,'result.json'),JSON.stringify({status:'PASS',heroPreload:true,leafLifecycle:true,results,pageErrors:errors.length,environment:'Home route, intercepted HTTP; no DB'},null,2));console.log('PASS Home hero search: Home-only preload, leaf pause/resume, gold hover/focus, one outer ring, stable dimensions, keyboard, Enter/button query, 1440/390 and reduced-motion. No DB.');
 }finally{await browser?.close();await server.close();}
