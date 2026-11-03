@@ -15,6 +15,14 @@ giữ nguyên4file local chưa commit của công việc uy tín/reviews/support
 Chưa push/PR/merge remote. Native/provider/CI mới/human acceptance NOT RUN;
 READINESS giữ nguyên. Owner xem trực tiếp localhost5174/chat.
 
+Follow-up focus `codex/conversation-input-focus`, code454d8c7c: owner chọn kiểu
+focus trang Admin Users. Scope TransactionFrame inputs/textarea/select và file
+picker: viền wine + shadow1px sát mép, bỏ outline rời, transition140ms; giữ focus
+bàn phím và fallback forced-colors. PASS build, browser localhost1440/390px ×
+motion thường/reduced, keyboard Tab/Shift+Tab, kích thước không đổi,0pageerror/
+0transaction command; đã xem ảnh crop và đưa vào Documents, giữ local work khác.
+Không chạy lại harness tiền/quyền vì chỉ đổi CSS; không push hoặc đóng gate.
+
 # Đồng bộ main PR95 vào local — 03/11/2026
 
 Owner yêu cầu tiếp tục sau khi tạm dừng để demo. Nhánh
