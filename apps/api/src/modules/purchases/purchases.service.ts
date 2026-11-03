@@ -4,9 +4,21 @@ import { randomUUID } from 'node:crypto';
 import type { PurchaseConversationDoc, UserDoc } from '../../database/mongo/documents.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import { MongoCommandService, member, requireActive, type Actor, type CommandContext } from '../commands/mongo-command.service.js';
-import { conflict, invalidState, notFound, type Wire } from '../commands/domain-error.js';
+import { conflict, DomainError, invalidState, notFound, type Wire } from '../commands/domain-error.js';
 import { requireMarketplace } from '../listings/listing-channel.js';
 import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.service.js';
+
+function messageBoundary(cursor: string, conversationId: string) {
+  const decoded = Buffer.from(cursor, 'base64url');
+  const [room, time, id, extra] = decoded.toString('utf8').split('/');
+  const sentAt = new Date(time ?? '');
+  if (decoded.toString('base64url') !== cursor || extra !== undefined || room !== conversationId
+    || !id || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)
+    || !Number.isFinite(sentAt.getTime()) || sentAt.toISOString() !== time) {
+    throw new DomainError(400, 'VALIDATION_ERROR', 'Vị trí lịch sử tin nhắn không hợp lệ.');
+  }
+  return { sentAt, id };
+}
 
 @Injectable()
 export class PurchasesService {
@@ -232,14 +244,39 @@ export class PurchasesService {
       return this.view(tx, row);
     });
   }
-  messages(auth: Actor, id: string) {
+  async messages(auth: Actor, id: string) {
+    return (await this.messageHistory(auth, id, undefined, 500)).items;
+  }
+
+  messageHistory(auth: Actor, id: string, before: string | undefined, limit: number): Promise<Wire['PurchaseMessageHistory']> {
     return this.commands.readObligation(auth, async (tx, actor) => {
       const row = await this.conversation(tx, id); this.participant(row, actor._id);
       member(actor); if(actor.status==='LOCKED') await this.existingContact(tx,row,actor);
-      const messages = await tx.c.purchase_messages.find({ conversationId: id }, { sort: { sentAt: 1, _id: 1 }, limit: 500 }).toArray();
+      const boundary = before ? messageBoundary(before, id) : undefined;
+      const older = boundary ? { $or: [
+        { sentAt: { $lt: boundary.sentAt } },
+        { sentAt: boundary.sentAt, _id: { $lt: boundary.id } },
+      ] } : {};
+      const options = { sort: { sentAt: -1, _id: -1 } as const, limit: limit + 1 };
+      const messages = await tx.c.purchase_messages.find({ conversationId: id, ...older }, options).toArray();
       const links = await tx.c.conversation_exchange_links.find({ conversationId: id }).toArray();
-      const legacy = links.length ? await tx.c.exchange_messages.find({ exchangeId: { $in: links.map(l => l._id) } }, { sort: { sentAt: -1, _id: -1 }, limit: 500 }).toArray() : [];
-      return [...messages, ...legacy].sort((a, b) => a.sentAt.getTime() - b.sentAt.getTime() || a._id.localeCompare(b._id)).slice(-500).map(m => ({ id: m._id, conversationId: id, senderId: m.senderId, body: m.body, sentAt: m.sentAt.toISOString() })) satisfies Wire['PurchaseMessage'][];
+      const legacy = links.length
+        ? await tx.c.exchange_messages.find({ exchangeId: { $in: links.map(link => link._id) }, ...older }, options).toArray()
+        : [];
+      // Match Mongo's binary ID order. Equal keys across sources represent one position.
+      const merged = [...new Map([...legacy, ...messages].map(message => [
+        `${message.sentAt.toISOString()}/${message._id}`, message,
+      ])).values()].sort((a, b) => b.sentAt.getTime() - a.sentAt.getTime()
+        || (a._id < b._id ? 1 : a._id > b._id ? -1 : 0));
+      const items = merged.slice(0, limit).reverse().map(message => ({
+        id: message._id, conversationId: id, senderId: message.senderId,
+        body: message.body, sentAt: message.sentAt.toISOString(),
+      }));
+      return {
+        items,
+        olderCursor: merged.length > limit && items[0]
+          ? Buffer.from(`${id}/${items[0].sentAt}/${items[0].id}`).toString('base64url') : null,
+      };
     });
   }
   send(auth: Actor, input: { messageId: string; conversationId: string; body: string }) {

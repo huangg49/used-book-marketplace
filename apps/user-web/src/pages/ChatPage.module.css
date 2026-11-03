@@ -367,6 +367,7 @@
 }
 .messages {
   overflow-y: auto;
+  overflow-anchor: none;
   padding: 24px 8px 24px 0;
   display: flex;
   flex-direction: column;
@@ -378,6 +379,29 @@
 .messages > * {
   flex-shrink: 0;
 }
+.olderMessages {
+  align-self: center;
+  text-align: center;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+}
+.olderMessages p { margin: 0 0 8px; }
+.olderMessages button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  background: var(--shop-paper);
+  color: var(--shop-wine);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.olderMessages button:hover:not(:disabled) { background: var(--shop-shelf); }
+.olderMessages button:disabled { cursor: wait; }
 .message {
   align-self: flex-start;
   max-width: min(88%, 58ch);

@@ -117,10 +117,11 @@ export function getPurchaseConversations() {
     z.array(purchaseConversationSchema),
   );
 }
-export function getPurchaseMessages(conversationId: string) {
+export function getPurchaseMessageHistory(conversationId: string, before?: string) {
+  const query = before ? `?${new URLSearchParams({ before })}` : "";
   return session.request(
-    `/me/purchase-conversations/${conversationId}/messages`,
-    z.array(purchaseMessageSchema),
+    `/me/purchase-conversations/${conversationId}/messages/history${query}`,
+    z.object({ items: z.array(purchaseMessageSchema), olderCursor: z.string().nullable() }),
   );
 }
 export function attachPurchaseQuote(

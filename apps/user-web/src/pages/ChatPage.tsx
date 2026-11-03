@@ -15,17 +15,17 @@ import {
   type ConversationEvent,
 } from "../services/purchase-conversations";
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
 import { ApiError } from "@used-books/session-client";
 import { z } from "zod";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { ArrowUpRight, Send } from "lucide-react";
+import { ArrowUp, ArrowUpRight, Send } from "lucide-react";
 import { useSession } from "../hooks/useSession";
 import { session } from "../lib/session";
 import {
   getPurchaseConversations,
-  getPurchaseMessages,
+  getPurchaseMessageHistory,
   purchaseMessageSchema,
   type PurchaseMessage,
   type PurchaseConversation,
@@ -84,9 +84,13 @@ function ChatRoom({
   const [panel, setPanel] = useState<"sheet" | "chat">("sheet");
   const sheetBodyRef = useRef<HTMLDivElement>(null);
   const [historyExchange, setHistoryExchange] = useState<string | null>(null);
-  const history = useQuery({
-    queryKey: ["purchase-messages", room.id],
-    queryFn: () => getPurchaseMessages(room.id),
+  const history = useInfiniteQuery({
+    queryKey: ["purchase-message-history", userId, room.id],
+    queryFn: ({ pageParam }) => getPurchaseMessageHistory(room.id, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (page, _pages, _param, params) =>
+      page.olderCursor && !params.includes(page.olderCursor) ? page.olderCursor : undefined,
+    retry: false,
     refetchInterval: room.terms?.exchangeIds.length ? 3000 : false,
   });
   const book = useQuery({
@@ -119,7 +123,9 @@ function ChatRoom({
   }>();
   const socketRef = useRef<Socket | null>(null);
   const attemptRef = useRef<typeof attempt>(undefined);
-  const messagesEnd = useRef<HTMLDivElement>(null);
+  const messageList = useRef<HTMLDivElement>(null);
+  const followLatest = useRef(true);
+  const olderAnchor = useRef<{ node: HTMLElement; top: number; pages: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [clock, setClock] = useState(Date.now);
   const now = Math.max(clock, Date.now());
@@ -193,7 +199,7 @@ function ChatRoom({
               setError("Chưa mở được cuộc trò chuyện. Thử kết nối lại.");
             } else {
               setConnection("online");
-              void history.refetch();
+              void history.refetch({ cancelRefetch: false });
             }
           },
         );
@@ -212,21 +218,39 @@ function ChatRoom({
     };
     // Room component is keyed by id; query refetch remains bound to this room.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [room.id]);
-  const messages = [
+  }, [room.id, userId]);
+  const historyDenied = history.error instanceof ApiError && [401, 403, 404].includes(history.error.status);
+  const messages = historyDenied ? [] : [
     ...new Map(
-      [...(history.data ?? []), ...live].map((m) => [m.id, m]),
+      [...(history.data?.pages.flatMap(page => page.items) ?? []), ...live].map((m) => [m.id, m]),
     ).values(),
   ].sort(
-    (a, b) => a.sentAt.localeCompare(b.sentAt) || a.id.localeCompare(b.id),
+    (a, b) => Date.parse(a.sentAt) - Date.parse(b.sentAt) || a.id.localeCompare(b.id),
   );
   const [expandedEvents, setExpandedEvents] = useState(false);
-  useEffect(() => {
-    messagesEnd.current?.scrollIntoView({
-      block: "nearest",
-      behavior: "instant",
-    });
-  }, [messages.length]);
+  const loadedPages = history.data?.pages.length ?? 0;
+  const latestMessage = messages.at(-1)?.id;
+  function loadOlder() {
+    const list = messageList.current;
+    if (!list || history.isFetching || !history.hasNextPage) return;
+    const top = list.getBoundingClientRect().top;
+    const node = Array.from(list.querySelectorAll<HTMLElement>('[data-chat-message]'))
+      .find(message => message.getBoundingClientRect().bottom > top);
+    olderAnchor.current = node ? { node, top: node.getBoundingClientRect().top, pages: loadedPages } : null;
+    void history.fetchNextPage({ cancelRefetch: false });
+  }
+  useLayoutEffect(() => {
+    const list = messageList.current;
+    if (!list?.clientHeight) return;
+    const anchor = olderAnchor.current;
+    if (anchor && loadedPages > anchor.pages) {
+      olderAnchor.current = null;
+      if (list.contains(anchor.node)) list.scrollTop += anchor.node.getBoundingClientRect().top - anchor.top;
+      return;
+    }
+    if (history.isFetchNextPageError) olderAnchor.current = null;
+    if (followLatest.current && !olderAnchor.current) list.scrollTop = list.scrollHeight;
+  }, [latestMessage, loadedPages, panel, history.isFetchNextPageError]);
   useEffect(() => {
     const field = textareaRef.current;
     if (!field) return;
@@ -582,23 +606,41 @@ function ChatRoom({
             </div>
           )}
           <div
+            ref={messageList}
             className={styles.messages}
             aria-label="Tin nhắn trong hội thoại"
+            tabIndex={0}
             aria-live="polite"
             data-lenis-prevent="true"
+            onScroll={event => {
+              const list = event.currentTarget;
+              followLatest.current = list.scrollHeight - list.scrollTop - list.clientHeight < 64;
+              const anchor = olderAnchor.current;
+              if (anchor && list.contains(anchor.node)) anchor.top = anchor.node.getBoundingClientRect().top;
+            }}
           >
             {history.isLoading && (
               <p className={styles.state}>Đang tải tin nhắn…</p>
             )}
-            {history.isError && (
+            {history.isError && (!history.isFetchNextPageError || historyDenied) && (
               <div className={styles.state} role="alert">
                 <p>Chưa tải được lịch sử tin nhắn.</p>
                 <button
                   type="button"
                   disabled={history.isFetching}
-                  onClick={() => void history.refetch()}
+                  onClick={() => void history.refetch({ cancelRefetch: false })}
                 >
                   Tải lại tin nhắn
+                </button>
+              </div>
+            )}
+            {!historyDenied && history.hasNextPage && (
+              <div className={styles.olderMessages}>
+                {history.isFetchNextPageError && <p role="alert">Chưa tải được tin cũ. Tin nhắn đang xem vẫn được giữ.</p>}
+                <button type="button" disabled={history.isFetching} aria-busy={history.isFetchingNextPage}
+                  onClick={loadOlder}>
+                  <ArrowUp size={15} aria-hidden="true" />
+                  {history.isFetchingNextPage ? "Đang tải tin cũ…" : history.isFetchNextPageError ? "Thử tải lại tin cũ" : "Tải tin nhắn cũ hơn"}
                 </button>
               </div>
             )}
@@ -701,6 +743,7 @@ function ChatRoom({
             {messages.map((message) => (
               <article
                 key={message.id}
+                data-chat-message
                 className={`${styles.message} ${message.senderId === userId ? styles.own : ""}`}
               >
                 <p className={styles.sender}>
@@ -712,7 +755,6 @@ function ChatRoom({
                 </time>
               </article>
             ))}
-            <div ref={messagesEnd} />
           </div>
           <form
             className={styles.composer}
@@ -949,7 +991,7 @@ export function ChatPage() {
           )}
           {room.data ? (
             <ChatRoom
-              key={room.data.id}
+              key={`${auth.user.id}:${room.data.id}`}
               room={room.data}
               userId={auth.user.id}
               refreshRooms={refresh}

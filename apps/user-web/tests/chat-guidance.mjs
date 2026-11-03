@@ -30,6 +30,7 @@ const buyer={id:id(1),displayName:'Lan Anh'},seller={id:id(2),displayName:'Minh 
 const room={id:id(3),listingId:id(4),buyer,seller,version:1,status:'Active',expiresAt:null,hasQuote:false,quotePreview:null,orderId:null,createdAt:new Date().toISOString(),closedAt:null};
 room.terms={mode:'Negotiation',pendingProposal:null,agreedPrice:null,agreedListingRevisionId:null,activeExchangeId:null,exchangeIds:[],locked:false};
 const workspaceOnly=process.argv.includes('--workspace-only');
+const historyOnly=process.argv.includes('--message-history-only');
 const agreementEvents=[],termsCommands=[];let termsFailure=true,proposalSequence=200,linkedExchange;
 const listing=(number,owner,title)=>({id:id(number),revisionId:id(number+100),version:1,book:{id:id(number+200),title,authors:['Tác giả minh họa'],publisher:null,publicationYear:null,language:'vi',edition:null,category:'Văn học',isbn:null},mode:'Both',condition:'Good',pages:'Đủ trang',coverNote:'Bìa có nếp gấp nhỏ',notes:'Không',accessories:'Không',readable:true,hasMissingPages:false,missingEssentialContent:false,description:'Dữ liệu minh họa kiểm tra chat',salePrice:80000,exchangeValue:80000,seller:owner,photos:[],publishedAt:new Date().toISOString(),fulfillment:{serviceAreaCode:'HCM-DEMO-v1',name:'TP.HCM',demoOnly:true,method:'DirectDelivery'},purchaseAvailability:{status:'Available',expiresAt:null}});
 const books=new Map([[id(4),listing(4,seller,'Doraemon — Cuốn sách qua những người đọc')],[id(5),listing(5,buyer,'Những ngày thơ ấu')]]);
@@ -43,6 +44,12 @@ const ex={id:id(6),initiatorId:buyer.id,recipientId:seller.id,initiatorListingId
 let historyError=false,exchangeError=true,exchangeSendError=false,dropMessage=true,createFailure=true,payFailure=true,orderState='AwaitingPayment';
 let reviewReadFailure=false,reviewPermission=true;
 const messages=[],exchangeMessages=[{id:id(8),exchangeId:ex.id,senderId:seller.id,body:'[Hệ thống] Tin này do thành viên gõ, không phải thông báo thanh toán.',sentAt:new Date().toISOString()}],sent=[],commands=[],issues=[];
+const historyReads=[];
+let olderFailure=false;
+if (historyOnly) {
+ const epoch=Date.now()-100_000;
+ for(let number=1;number<=85;number++) messages.push({id:id(1000+number),conversationId:room.id,senderId:seller.id,body:`Tin QA ${number}`,sentAt:new Date(epoch+number*1000).toISOString()});
+}
 let vite,browser,io,http;
 try{
  http=httpServer();io=new Server(http,{cors:{origin:true}});
@@ -92,7 +99,13 @@ try{
    if(s===`/exchanges/${id(60)}/cancel`){linkedExchange.status='Cancelled';linkedExchange.cancelReason='CancelledByUser';linkedExchange.cancelledBy='Initiator';room.terms.locked=false;room.terms.activeExchangeId=null;room.version++;return send(linkedExchange);}
    if(s==='/exchanges')return send({items:[ex,...(linkedExchange?[linkedExchange]:[])],nextCursor:null});
 
-   if(s.endsWith('/messages')&&s.startsWith('/me/purchase-conversations/'))return historyError?send({code:'Unavailable',message:'Fixture outage'},503):send(messages);
+   if(s===`/me/purchase-conversations/${room.id}/messages/history`){
+    const before=new URL(request.url()).searchParams.get('before');historyReads.push(before);
+    if(historyError || (before && olderFailure))return send({code:'Unavailable',message:'Fixture outage'},503);
+    const end=before?messages.findIndex(message=>message.id===before):messages.length;
+    const start=Math.max(0,end-40),items=messages.slice(start,end);
+    return send({items,olderCursor:start>0?items[0].id:null});
+   }
    if(s==='/service-areas')return send({code:'HCM-DEMO-v1',localities:[{code:'DEMO-A',label:'TP.HCM'}]});
    if(s===`/listings/${room.listingId}/media/${id(510)}/read`)return send({id:id(510),url:origin+'/illustrations/alice.jpg',expiresAt:future(),width:256,height:400});
    if(s.startsWith('/listings/')&&books.has(s.split('/')[2]))return send(books.get(s.split('/')[2]));
@@ -162,7 +175,44 @@ try{
   ex.initiatorReceivedAt=null;ex.recipientReceivedAt=null;
  }
  const p=await makePage('buyer');
- if(workspaceOnly){
+ if(historyOnly){
+  for(const width of [1440,390]) {
+   const page=width===1440?p:await makePage('seller');
+   await page.setViewportSize({width,height:860});
+   if(width<=960) await page.getByRole('button',{name:'Hội thoại',exact:true}).click();
+   const list=page.getByLabel('Tin nhắn trong hội thoại',{exact:true});
+   await list.getByText('Tin QA 85',{exact:true}).waitFor();
+   assert.ok(await waitForScroll(list,true),'first read opens at the newest message');
+   assert.equal(await list.locator('[data-chat-message]').count(),40);
+   assert.equal(await list.getByText('Tin QA 45',{exact:true}).count(),0);
+   const older=list.getByRole('button',{name:'Tải tin nhắn cũ hơn',exact:true});
+   const anchor=list.getByText('Tin QA 46',{exact:true});
+   await list.evaluate(node=>{node.scrollTop=0;});
+   olderFailure=true;
+   await older.click();
+   await list.getByRole('alert').getByText('Chưa tải được tin cũ. Tin nhắn đang xem vẫn được giữ.').waitFor();
+   assert.equal(await list.locator('[data-chat-message]').count(),40);
+   olderFailure=false;
+   const top=(await anchor.boundingBox()).y;
+   await list.getByRole('button',{name:'Thử tải lại tin cũ',exact:true}).click();
+   await list.getByText('Tin QA 6',{exact:true}).waitFor();
+   assert.ok(Math.abs((await anchor.boundingBox()).y-top)<3,'prepending keeps the current message in place');
+   assert.deepEqual(historyReads.filter(Boolean).slice(-2),[id(1046),id(1046)],'retry uses the same older cursor');
+   const incoming={id:id(1200+width),conversationId:room.id,senderId:seller.id,body:'Tin đến qua socket',sentAt:new Date().toISOString()};
+   const beforeIncoming=(await anchor.boundingBox()).y;
+   io.of('/purchase-chat').to(room.id).emit('purchase:message',incoming);
+   await list.getByText(incoming.body,{exact:true}).waitFor();
+   assert.ok(Math.abs((await anchor.boundingBox()).y-beforeIncoming)<3,'incoming message does not pull a reader away from older history');
+   await list.evaluate(node=>{node.scrollTop=0;});
+   await page.screenshot({path:path.join(out,`history-${width}.png`)});
+   await older.click();await list.getByText('Tin QA 1',{exact:true}).waitFor();
+   assert.equal(await older.count(),0,'exhausted history has no load button');
+   assert.equal(await list.locator('[data-chat-message]').count(),86);
+   await page.close();
+  }
+  assert.deepEqual(issues,[]);
+  console.log('PASS purchase chat history: newest first, older retry, stable scroll anchor, live messages and end of history at 1440/390. No application DB.');
+ } else if(workspaceOnly){
   const evidence=[];
   const states=[['Proposed','Đề nghị'],['AcceptedAwaitingFunding','cọc'],['Preparing','gửi sách'],['InTransit','nhận sách'],['Delivered','Kiểm tra sách'],['ResolutionPending','sự cố'],['Completed','hoàn tất'],['Cancelled','hủy']];
   for(const role of ['buyer','seller']){

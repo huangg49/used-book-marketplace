@@ -1,3 +1,24 @@
+# Lịch sử tin nhắn Member web —03/11/2026
+
+Owner duyệt xử lý lịch sử chat trước sau rà pagination. Nhánh
+`codex/chat-message-history`, base0ad4f1d4. [ADR0041](../adr/0041-unified-conversation-workspace.md)
+ghi endpoint mới dùng chung, trang đầu40 tin mới nhất, cursor theo thời điểm/ID
+và hội thoại, gộp lịch sử Exchange đã liên kết. Quyền participant/LOCKED đọc
+nghĩa vụ vẫn qua service hiện có. `/messages` giữ mảng và sửa thành 500 tin gần
+nhất. Web tải tin cũ và giữ vị trí đọc, retry cùng cursor, gộp tin socket theo ID.
+
+PASS contract/generated/routes247, API typecheck, Member web build/typecheck, lint phạm vi và
+detector. Mongo replica set `latlai_chat_history_test` PASS21 test qua Nest HTTP,
+gồm505 tin, timestamp trùng, tin mới đến giữa hai lượt đọc, cursor sai phạm vi,
+participant/LOCKED và nguồn Exchange liên kết. Browser fixture HTTP/Socket.IO
+PASS 1440/390px cho tải mới nhất, lỗi/retry, scroll anchor, tin đến và hết lịch sử.
+Suite chat hiện có PASS các luồng mua/đổi, nháp và retry lệnh. Đã cập nhật thư mục
+Documents có sao lưu. Member `/chat` HTTP200, API readiness200, route lịch sử
+trả401 cho khách. Dữ liệu test chạy riêng và replica set QA đã dừng.
+UI tải tin cũ đã nối Member web. RN/Flutter dùng contract cũ tương thích và chưa
+kiểm native. Hộp hội thoại, route Exchange legacy và hàng việc vận hành thuộc
+phạm vi riêng. Không có migration mới. READINESS giữ nguyên.
+
 # Phân trang đánh số và rà consumer —03/11/2026
 
 Owner yêu cầu kết hợp thiết kế Antigravity và logic cursor, bỏ UI chỉ Trước/Sau

@@ -2132,13 +2132,44 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         "200":
-          description: Messages in a conversation the current user participates in.
+          description: Up to the 500 most recent messages, in chronological order.
           headers:
             Cache-Control:
               schema: { type: string, const: no-store }
           content:
             application/json:
               schema: { type: array, items: { $ref: "#/components/schemas/PurchaseMessage" } }
+        "401": { $ref: "#/components/responses/ListingError" }
+        "403": { $ref: "#/components/responses/ListingError" }
+        "404": { $ref: "#/components/responses/ListingError" }
+  /me/purchase-conversations/{conversationId}/messages/history:
+    get:
+      operationId: listPurchaseMessageHistory
+      x-locked-access: existing-obligations
+      description: Same participant and existing-obligation checks as listPurchaseMessages. Starts with the most recent messages. Follow olderCursor to read earlier messages, including linked Exchange history.
+      tags: [Purchase conversations]
+      x-implementation-status: implemented
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: query
+          name: before
+          schema: { type: string, minLength: 1, maxLength: 160, pattern: '^[A-Za-z0-9_-]+$' }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 40 }
+      responses:
+        "200":
+          description: A slice of messages in chronological order, with an optional cursor for older messages.
+          headers:
+            Cache-Control: { schema: { type: string, const: no-store } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PurchaseMessageHistory" }
+        "400": { $ref: "#/components/responses/ListingError" }
         "401": { $ref: "#/components/responses/ListingError" }
         "403": { $ref: "#/components/responses/ListingError" }
         "404": { $ref: "#/components/responses/ListingError" }
@@ -15028,6 +15059,14 @@ components:
         destination: { $ref: "#/components/schemas/OrderContact" }
         shippingFee: { type: integer, minimum: 0, description: Zero for new quotes under the free shipping policy; historical snapshots retain their fee. }
         expiresAt: { type: string, format: date-time }
+    PurchaseMessageHistory:
+      type: object
+      required: [items, olderCursor]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PurchaseMessage" }
+        olderCursor: { type: [string, 'null'] }
     PurchaseMessage:
       type: object
       additionalProperties: false
