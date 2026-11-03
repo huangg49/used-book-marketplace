@@ -25,7 +25,9 @@ FIRST VIEWPORT: Existing wallet card and history remain. Above them, pending
 requests show the real Requested count, the owner's under-24-hour processing
 message and a detail action. Count all filtered pages, independent of the history
 pagination; do not count Completed/Rejected or claim zero after a read error.
-The request list follows history. A centered popup leads with available balance,
+There is no separate withdrawal request list below history, per the owner's
+follow-up. Keep withdrawal entries in the transaction history, the pending notice
+and existing detail deep links. A centered popup leads with available balance,
 amount, reason and bank fields. Admin uses its existing shell, status filter,
 queue rows and compact detail sheet.
 

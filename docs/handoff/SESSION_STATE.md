@@ -1,6 +1,17 @@
 # Rút tiền qua Admin — 03/11/2026
 
-- Hiện tại `codex/wallet-pending-withdrawal-notice`, base `cec2fc6f`; checkpoint
+- Hiện tại `codex/wallet-remove-withdrawal-list`, base `4876c54c`; checkpoint
+  subject `refactor(wallet): remove separate withdrawal request list`. Owner yêu
+  cầu bỏ khối “Yêu cầu rút tiền” dưới lịch sử; đã bỏ UI/query phân trang/CSS riêng.
+  Giữ banner chờ duyệt, lịch sử Rút tiền và popup/deep link. Polling banner cập
+  nhật số dư/lịch sử thay list cũ; không xóa dữ liệu hoặc đổi API/contract/DB.
+- Gói bỏ list PASS320Member unit/typecheck/build/lint, browser30captures với
+  0page errors/overflow, form/banner/history/notification detail, exact retry,
+  duyệt/refund/owner-only. Đã xem desktop/320px. Các lượt harness đầu vướng429
+  do thêm login, selector notification và menu timeout; runner cuối dùng đúng
+  notification và entry `/wallet`, giữ timeout/policy. Không tính lượt lỗi PASS.
+  QA đã dừng; main apps giữ chạy, không mutation owner/push/merge/đổi READINESS.
+- Gói banner trước ở `codex/wallet-pending-withdrawal-notice`, base `cec2fc6f`;
   subject `feat(wallet): highlight pending withdrawal requests`. Owner yêu cầu
   hiện số đơn chờ duyệt và thời gian xử lý dưới24giờ rõ trên đầu trang Ví.
 - Banner trên thẻ ví/lịch sử đếm toàn bộ Requested qua endpoint/filter/cursor có

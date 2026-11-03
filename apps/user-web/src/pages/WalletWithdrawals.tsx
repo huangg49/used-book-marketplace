@@ -1,22 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import {
-  useInfiniteQuery,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker, useSearchParams } from "react-router-dom";
-import {
-  ArrowUpFromLine,
-  CheckCircle2,
-  ChevronRight,
-  Clock3,
-} from "lucide-react";
 import {
   ApiError,
   withdrawalLabels,
   withdrawalReasons,
   withdrawalSchema,
-  withdrawalPageSchema,
   withdrawalReceiptSchema,
   type CreateWithdrawal,
   type Withdrawal,
@@ -80,17 +69,6 @@ export function WalletWithdrawals({
     detailId && /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(detailId)
       ? detailId
       : undefined;
-  const list = useInfiniteQuery({
-    queryKey: ["withdrawals", ownerId],
-    initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) =>
-      session.request(
-        `/me/withdrawals?limit=10${pageParam ? `&cursor=${pageParam}` : ""}`,
-        withdrawalPageSchema,
-      ),
-    getNextPageParam: (p) => p.nextCursor ?? undefined,
-    refetchInterval: document.visibilityState === "visible" ? 15000 : false,
-  });
   const detail = useQuery({
     queryKey: ["withdrawal", ownerId, validId],
     staleTime: 0,
@@ -106,7 +84,7 @@ export function WalletWithdrawals({
   useEffect(() => {
     void client.invalidateQueries({ queryKey: ["wallet-summary", ownerId] });
     void client.invalidateQueries({ queryKey: ["wallet-history", ownerId] });
-  }, [client, ownerId, list.dataUpdatedAt, detail.data?.version]);
+  }, [client, ownerId, detail.data?.version]);
   useEffect(() => {
     if (detail.data) {
       void client.invalidateQueries({
@@ -131,7 +109,6 @@ export function WalletWithdrawals({
     window.addEventListener("beforeunload", guard);
     return () => window.removeEventListener("beforeunload", guard);
   }, [amount, reason, bankName, accountNumber, accountHolder, uncertain]);
-  const rows = list.data?.pages.flatMap((p) => p.items) ?? [];
   const select = (id: string) => {
     void client.invalidateQueries({queryKey:["withdrawal",ownerId,id]});
     const next = new URLSearchParams(params);
@@ -281,65 +258,6 @@ export function WalletWithdrawals({
           )}
         </div>
       </PurchaseDialog>
-      <section className={styles.section} aria-labelledby="withdrawals-title">
-        <header className={styles.sectionHead}>
-          <div>
-            <h2 id="withdrawals-title">Yêu cầu rút tiền</h2>
-            <p>Từ lúc gửi đơn đến khi tiền được xử lý.</p>
-          </div>
-          <ArrowUpFromLine size={22} aria-hidden="true" />
-        </header>
-        {list.isPending && <p role="status">Đang tải yêu cầu rút…</p>}
-        {list.isError && (
-          <div role="alert">
-            <p>Chưa tải được yêu cầu rút tiền.</p>
-            <button
-              className={styles.secondary}
-              disabled={list.isFetching}
-              onClick={() => void list.refetch()}
-            >
-              Thử lại
-            </button>
-          </div>
-        )}
-        {!list.isPending && !list.isError && !rows.length && (
-          <p className={styles.empty}>
-            Chưa có yêu cầu rút tiền. Khi cần, chọn “Rút tiền” ở thẻ Ví.
-          </p>
-        )}
-        <ul className={styles.list}>
-          {rows.map((row) => (
-            <li key={row.id}>
-              <button className={styles.row} onClick={() => select(row.id)}>
-                <span className={styles.rowIcon}>
-                  {row.state === "Completed" ? (
-                    <CheckCircle2 size={20} />
-                  ) : (
-                    <Clock3 size={20} />
-                  )}
-                </span>
-                <span className={styles.rowText}>
-                  <strong>Rút tiền · {formatVnd(row.amount)}</strong>
-                  <small>{date(row.createdAt)}</small>
-                </span>
-                <span className={styles.status} data-state={row.state}>
-                  {withdrawalLabels[row.state]}
-                </span>
-                <ChevronRight size={16} aria-hidden="true" />
-              </button>
-            </li>
-          ))}
-        </ul>
-        {list.hasNextPage && (
-          <button
-            className={styles.secondary}
-            disabled={list.isFetching}
-            onClick={() => void list.fetchNextPage()}
-          >
-            {list.isFetchNextPageError ? "Thử tải thêm" : "Xem thêm yêu cầu"}
-          </button>
-        )}
-      </section>
       <PurchaseDialog
         open={open}
         onClose={onClose}

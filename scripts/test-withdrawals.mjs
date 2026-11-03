@@ -23,7 +23,7 @@ assert.ok(
 );
 const memberOrigin = "http://127.0.0.1:5195",
   adminOrigin = "http://127.0.0.1:5196";
-const evidence = path.join(root, ".tmp/pending-withdrawals-evidence");
+const evidence = path.join(root, ".tmp/withdrawals-without-list-evidence");
 let fixture, browser, web, adminVite, member, admin, op;
 const pageErrors = [];
 const captures = [];
@@ -73,6 +73,12 @@ async function login(p, origin, email, url) {
   await p.getByLabel(/^Mật khẩu/).fill(password);
   await button(p, "Đăng nhập").click();
   await p.waitForURL(origin + url);
+}
+async function openWithdrawalNotification(p, stateLabel) {
+  await p.setViewportSize({ width: 1440, height: 1000 });
+  await p.getByRole("link", { name: /^Thông báo/ }).last().click();
+  await p.getByRole("button", { name: new RegExp("^Rút tiền · " + stateLabel + ":") }).first().click();
+  await p.getByRole("dialog", { name: "Chi tiết rút tiền" }).waitFor();
 }
 async function form(p, amount) {
   await p.getByRole("button", { name: /^Rút tiền(?: Demo)?$/ }).click();
@@ -142,16 +148,9 @@ try {
     p.setDefaultTimeout(20000);
     p.on("pageerror", (e) => pageErrors.push(e.message));
   }
-  await login(member, memberOrigin, "member@operations.test", "/login");
-  await member.getByRole("button", { name: /^Tài khoản của/ }).click();
-  await member
-    .getByRole("link", { name: /Ví của tôi/ })
-    .first()
-    .click();
+  await login(member, memberOrigin, "member@operations.test", "/wallet");
   await member.getByRole("button", { name: /^Rút tiền(?: Demo)?$/ }).waitFor();
-  await expect(
-    member.getByText("Chưa có yêu cầu rút tiền.", { exact: false }),
-  ).toBeVisible();
+  await expect(member.getByRole("heading", { name: "Yêu cầu rút tiền", exact: true })).toHaveCount(0);
   await expect(
     member
       .getByRole("region", { name: "Lịch sử giao dịch" })
@@ -284,7 +283,8 @@ try {
   assert.equal((await fixture.api('/me/wallet',fixture.member.accessToken)).withdrawalHeld,0);
   assert.equal(await fixture.db.collection('withdrawal_events').countDocuments(),0);
   await capture(admin,'admin-completed-desktop');
-  await member.getByRole("button", { name: /Rút tiền · 100/ }).click();
+  await openWithdrawalNotification(member, "Rút tiền thành công");
+  assert.equal(new URL(member.url()).searchParams.get("withdrawal"), id);
   await expect(
     member
       .getByRole("dialog", { name: "Chi tiết rút tiền" })
@@ -340,7 +340,8 @@ try {
     () => (document.documentElement.style.fontSize = "130%"),
   );
   await capture(admin, "admin-detail-large-text");
-  await member.getByRole("button", { name: /Rút tiền · 75/ }).click();
+  await openWithdrawalNotification(member, "Đã từ chối");
+  assert.equal(new URL(member.url()).searchParams.get("withdrawal"), rejectedId);
   await expect(
     member
       .getByRole("dialog", { name: "Chi tiết rút tiền" })
@@ -398,6 +399,8 @@ try {
           "decision-visible-above-fold",
           "expandable-reference-identifiers",
           "pending-notice-visible-above-wallet",
+          "separate-withdrawal-list-removed",
+          "withdrawal-details-from-notifications",
           "pending-count-all-filtered-pages",
           "completed-rejected-not-counted",
           "pending-detail-link",

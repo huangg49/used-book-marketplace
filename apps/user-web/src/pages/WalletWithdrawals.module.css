@@ -63,68 +63,6 @@
 .pendingError > button {
   font-size: 0.875rem;
 }
-.section {
-  margin-top: 28px;
-  padding: 28px;
-  background: var(--shop-paper);
-  border-radius: 16px;
-  color: var(--shop-ink);
-}
-.sectionHead {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: center;
-  margin-bottom: 20px;
-}
-.sectionHead h2 {
-  font-size: 1.35rem;
-  margin: 0 0 6px;
-}
-.sectionHead p,
-.empty {
-  color: var(--shop-muted);
-  line-height: 1.65;
-  margin: 0;
-}
-.list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.list li + li {
-  border-top: 1px solid var(--shop-line);
-}
-.row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  text-align: left;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  padding: 18px 0;
-  font: inherit;
-  min-height: 64px;
-}
-.row:hover {
-  color: var(--shop-wine);
-}
-.rowIcon {
-  color: var(--shop-wine);
-  flex-shrink: 0;
-}
-.rowText {
-  display: grid;
-  gap: 6px;
-  flex: 1;
-  min-width: 0;
-}
-.rowText small {
-  color: var(--shop-muted);
-}
 .status {
   font-size: 0.8125rem;
   line-height: 1.5;
@@ -287,7 +225,7 @@
 .secondary:hover {
   background: var(--shop-shelf);
 }
-.section button:focus-visible,
+.pendingError button:focus-visible,
 .dialog :is(button, input, textarea, select):focus-visible {
   outline: 3px solid var(--shop-wine);
   outline-offset: 3px;
@@ -357,20 +295,6 @@
   .pendingLink {
     margin-left: 36px;
     max-width: calc(100% - 36px);
-  }
-  .section {
-    padding: 20px 16px;
-  }
-  .row {
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .rowText {
-    flex-basis: 65%;
-  }
-  .row > .status {
-    margin-left: 30px;
-    max-width: none;
   }
   .twoCols {
     grid-template-columns: 1fr;

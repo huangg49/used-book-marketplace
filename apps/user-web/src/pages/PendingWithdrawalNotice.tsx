@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { Clock3, ChevronRight } from "lucide-react";
 import {
@@ -9,6 +10,7 @@ import { session } from "../lib/session";
 import styles from "./WalletWithdrawals.module.css";
 
 export function PendingWithdrawalNotice({ ownerId }: { ownerId: string }) {
+  const client = useQueryClient();
   const [params, setParams] = useSearchParams();
   const pending = useQuery({
     queryKey: ["withdrawals", ownerId, "pending"],
@@ -33,6 +35,12 @@ export function PendingWithdrawalNotice({ ownerId }: { ownerId: string }) {
     refetchInterval: () =>
       document.visibilityState === "visible" ? 15000 : false,
   });
+
+  useEffect(() => {
+    if (!pending.dataUpdatedAt) return;
+    void client.invalidateQueries({ queryKey: ["wallet-summary", ownerId] });
+    void client.invalidateQueries({ queryKey: ["wallet-history", ownerId] });
+  }, [client, ownerId, pending.dataUpdatedAt]);
 
   if (pending.isError)
     return (

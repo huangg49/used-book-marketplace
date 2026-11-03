@@ -138,3 +138,30 @@ minh và build lại PASS. Evidence private `.tmp/pending-withdrawals-evidence/`
 `.tmp/pending-wallet-browser-retry.log`, `.tmp/pending-wallet-build.log`,
 `.tmp/pending-wallet-unit.log`. Không coi đây là native/human/CI/release PASS;
 không push/merge hoặc đổi READINESS.
+
+## Bỏ khối danh sách yêu cầu riêng
+
+Owner yêu cầu bỏ khối “Yêu cầu rút tiền” dưới lịch sử trong ảnh follow-up.
+`codex/wallet-remove-withdrawal-list`, base `4876c54c`; checkpoint subject
+`refactor(wallet): remove separate withdrawal request list`.
+
+Bỏ list/read pagination riêng và CSS/icon không còn dùng. Giữ banner chờ duyệt,
+lịch sử giao dịch “Rút tiền”, form/chi tiết popup và deep link từ thông báo. Refresh
+số dư/lịch sử theo polling banner thay cho list cũ, để Admin xử lý xong vẫn cập
+nhật được. Không xóa bản ghi, journal hoặc chức năng rút tiền; không sửa API/DB.
+
+PASS320Member unit/typecheck/build/lint (cảnh báo cũ ngoài component đổi).
+Browser cuối PASS30captures1440/1000/390/320/chữ130%,0page errors/overflow:
+khối riêng vắng mặt, pending banner/count/SLA còn, form/exact retry hoạt động,
+duyệt/từ chối và popup từ thông báo đúng đơn, history và owner-only giữ nguyên.
+API/Mongo QA thật, funding/storage fixture. Đã xem desktop/320px, giữ DESIGN/token.
+Detector một lượt chỉ có2advisory radius10px cũ trong form, không finding mới.
+
+Các lượt browser trước chưa PASS: thêm login để mở detail gây429 ở QA, selector
+nhầm nhãn notification với nhãn trạng thái, và header menu timeout. Runner cuối
+vào trực tiếp `/wallet`, mở detail qua notification thật; không nới timeout hoặc
+đổi auth/rate limit/runtime budget. Evidence private
+`.tmp/withdrawals-without-list-evidence/`,
+`.tmp/without-withdrawal-list-browser-direct.log` và
+`.tmp/without-withdrawal-list-{build,unit,lint}.log`. QA fixture được teardown,
+Mongo QA dừng, app chính giữ chạy. Không push/merge hoặc đổi READINESS.
