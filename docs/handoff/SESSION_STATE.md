@@ -1,3 +1,18 @@
+# Quy chuẩn focus toàn dự án — 03/11/2026
+
+Owner yêu cầu áp mẫu Admin Users cho mọi focus. Nhánh `codex/project-focus-standard`,
+base156bba25, code1dd524bb: Member web/Admin/Staff/Expo dùng shared focus.css;
+viền wine sát mép, field140ms, composite/file owner không vòng lồng, giữ error/
+disabled/selected, keyboard và forced-colors. RN token/field/action và Flutter
+theme/search/auth/filter đã cập nhật source chung; không đổi API/contract/DB.
+PASS Member/Admin build, RN typecheck/export QA, unit777, scoped lint exit0,
+browser focus8case/13targets, Search recovery và Order/chat; Expo browser thật
+từ export PASS, không gửi OTP. Localhost Order4ca + Search/Admin login PASS,
+0pageerror/0transaction command. Đã đưa vào Documents, giữ5file local tracked
+và Pagination untracked của việc khác. Chi tiết [evidence/giới hạn](../ui/PROJECT_FOCUS_STANDARD_2026_11_03.md).
+Flutter SDK không tìm thấy nên format/analyze/test NOT RUN; RN native runtime
+NOT RUN, không suy từ Expo web. Chưa push/PR/CI mới; READINESS/human gates giữ mở.
+
 # Chuẩn hóa nhịp bố cục hội thoại — 03/11/2026
 
 Owner duyệt khảo sát và triển khai. Nhánh `codex/conversation-rhythm-refinement`,
