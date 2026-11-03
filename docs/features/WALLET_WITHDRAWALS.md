@@ -65,3 +65,39 @@ Người dùng tải lại `/wallet` để dùng luồng mới.
 
 Chưa push/merge, không đổi READINESS; checkpoint follow-up dùng subject
 `fix(wallet): complete withdrawals on admin approval without simulator`.
+
+## Trang Admin gọn hơn và duyệt bằng xác nhận
+
+Owner yêu cầu03/11: rút gọn trang chi tiết, ưu tiên thao tác; popup duyệt không
+cần nhập lý do, chỉ bấm “Xác nhận”. Nhánh `codex/admin-withdrawal-detail-ui`,
+base `cf23cc66`; checkpoint subject `refactor(admin): compact withdrawal review and confirmation`.
+
+- Số tiền/trạng thái và nút xử lý cùng vùng đầu trang; duyệt hiển thị ngay không
+  cần cuộn ở1440×900. Từ chối dùng nút phụ; xác nhận vẫn đi qua popup.
+- Sheet nhận tiền gom ngân hàng/tài khoản/chủ nhận, người gửi/ngày gửi/lý do;
+  nhật ký gọn ở cột bên. Mã yêu cầu/mã chi vẫn đọc đủ trong “Mã tham chiếu”.
+  Mobile một cột, dữ liệu dài xuống dòng. Giữ shell, wine/cream, Be Vietnam Pro,
+  component chung, loading/error/retry và quyền hiện có.
+- Popup duyệt gọn480px, hiển thị số tiền/người gửi/tài khoản nhận và “Xác nhận”,
+  không textarea/validation lý do duyệt. Command ghi nhận cố định “Đã xác nhận
+  yêu cầu rút tiền.” qua field `reason` hiện có; đây là xác nhận tự động theo
+  thao tác, không phải lời giải thích do Admin nhập. Lý do từ chối và lý do rút
+  của Member vẫn bắt buộc. Giữ receipt/key/body/version và retry sau mất ACK.
+- Không sửa API/contract/migration hoặc dữ liệu chính. Main Admin5173 dùng HMR;
+  không cần restart BE. Taste ledger được áp cho bố cục/độ gọn; giữ wine/cream và
+  shell đã duyệt thay vì thay bằng chrome đen/trắng của sheet upstream.
+
+PASS229Admin unit/typecheck/build/lint (4cảnh báo cũ ngoài feature). Browser cuối
+PASS25captures1440/1000/390/320/chữ130%,0page errors/overflow, API/Mongo QA thật và
+storage/funding fixture: duyệt không textbox, nút Xác nhận dùng ngay, quyết định
+trong viewport1440×900, mở/đóng mã tham chiếu, lostACK/exact key-body retry và đúng
+một payout, từ chối/refund, owner-only. Đã xem desktop/tablet/320px và popup xác
+nhận desktop/390px. Lượt browser đầu timeout20s khi cold-start trang Member; retry
+giữ nguyên timeout PASS, rồi lượt sau cập nhật popup cũng PASS. Không tính lần
+timeout là PASS. Evidence `.tmp/compact-withdrawals-evidence/`, log
+`.tmp/compact-withdrawal-confirm-browser.log` và `.tmp/compact-withdrawal-*.log`.
+
+Detector chạy một lần:4advisory, không có finding chặn. Endpoint heading22px mới
+đã đổi24px;3advisory còn lại là size/radius cũ của empty state/popup ngoài phần đổi.
+Không chạy lại detector để làm đẹp số liệu. Main apps giữ chạy, chỉ dừng Mongo QA;
+không mutation dữ liệu owner, push/merge hoặc đóng gate READINESS.

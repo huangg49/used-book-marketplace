@@ -1,8 +1,14 @@
 # Rút tiền qua Admin — 03/11/2026
 
-- `codex/wallet-withdrawals`, follow-up sau `91e7c011`: owner làm rõ nhập tài khoản
-  bất kỳ, không cần bước vận hành simulator. Commit checkpoint có subject
-  `fix(wallet): complete withdrawals on admin approval without simulator`.
+- Hiện tại `codex/admin-withdrawal-detail-ui`, base `cf23cc66`; checkpoint subject
+  `refactor(admin): compact withdrawal review and confirmation`. Owner yêu cầu UI
+  gọn hơn và popup duyệt chỉ bấm “Xác nhận”, không nhập lý do duyệt.
+- Admin detail gom số tiền/trạng thái/nút xử lý ở đầu, nhận tiền và thông tin đơn
+  trong một sheet, nhật ký ở bên; mã tham chiếu mở rộng. Popup duyệt480px chỉ xem
+  thông tin nhận và xác nhận; command dùng ghi nhận cố định, không giả lý do do
+  Admin nhập. Lý do từ chối/Member và session/key/body/version giữ nguyên.
+- Gói nghiệp vụ trước ở `codex/wallet-withdrawals`, commit `91e7c011`/`cf23cc66`:
+  owner làm rõ nhập tài khoản bất kỳ, không cần bước vận hành simulator.
 - Đơn mới Manual: popup bắt buộc lý do/thông tin nhận, giữ tiền riêng khi gửi;
   Admin độc lập duyệt là Completed + debit + lịch sử Rút tiền nguyên tử. Từ chối
   trả hold. Không xác minh tài khoản hoặc gọi ngân hàng; không phụ thuộc simulator.
@@ -15,6 +21,11 @@
   API/Mongo QA:22captures1440/390/320/chữ130%,0page errors/overflow; arbitrary
   account, simulator tắt, lostACK/exact retry, một payout, reject/refund, owner-only.
   Đã xem form desktop, Admin completed và Member completed mobile; giữ style cũ.
+- Gói UI mới PASS229Admin unit/typecheck/build/lint (cảnh báo cũ), browser25captures
+  1440/1000/390/320/chữ130%,0page errors/overflow; duyệt không textarea, quyết định
+  ngay màn đầu1440×900, mở mã tham chiếu, lostACK/exact retry, một payout/refund.
+  Lượt browser đầu timeout lúc cold-start Member20s; retry giữ nguyên timeout PASS,
+  lượt kiểm sau thay đổi popup xác nhận cũng PASS. Không sửa API/contract/DB.
 - Đã thử0060/0061 trên bản sao QA riêng,4628bản ghi cũ nguyên vẹn và ledger cân.
   Sau backup private, đã áp hai migration và quyền collection vào DB local chính;
   bản ghi/mật khẩu cũ nguyên vẹn, ledger cân. Không seed/reset/đổi `.env`.

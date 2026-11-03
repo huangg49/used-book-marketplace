@@ -112,86 +112,190 @@
   align-items: center;
   gap: 8px;
   min-height: 44px;
-  margin-bottom: 12px;
+  margin-bottom: 4px;
+  font-size: 0.875rem;
+}
+.detailPage {
+  max-width: 1120px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.detailHeading h1 {
+  font-family: inherit;
+  font-size: clamp(1.5rem, 2vw, 1.625rem);
+  line-height: 1.4;
+  margin: 0 0 20px;
 }
 .summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 24px 0 32px;
-  border-bottom: 1px solid var(--shop-line);
+  padding: 24px;
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  background: var(--paper);
+  margin-bottom: 20px;
 }
-.summary > div {
+.amount {
   display: grid;
-  gap: 10px;
+  gap: 4px;
+  min-width: 0;
 }
-.summary strong {
+.amountStatus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.amountStatus > span:first-child {
+  color: var(--muted);
+}
+.amount > strong {
   font-size: 2rem;
-  color: var(--ink);
+  line-height: 1.4;
+  color: var(--shop-wine);
   font-variant-numeric: tabular-nums;
 }
-.summary small,
-.summary > div > span {
+.amount small {
   color: var(--muted);
+  font-size: 0.8125rem;
+}
+.decision {
+  max-width: 360px;
+  min-width: 0;
+}
+.decisionHint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
 }
 .columns {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-  gap: 40px;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
 }
 .sheet {
-  padding: 28px 0;
+  min-width: 0;
+  padding: 24px;
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  background: var(--surface);
 }
 .sheet h2 {
-  font-size: 1.2rem;
-  margin: 0 0 20px;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0 0 16px;
 }
-.sheet dl {
+.sheet dl,
+.references dl {
   margin: 0;
 }
-.sheet dl > div {
+.recipient,
+.requestFacts {
   display: grid;
-  grid-template-columns: 140px minmax(0, 1fr);
-  gap: 20px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--shop-line);
-  line-height: 1.7;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px 24px;
 }
-.sheet dt {
+.recipient > div:last-child,
+.requestFacts > div:last-child {
+  grid-column: 1 / -1;
+}
+.sheet dt,
+.references dt {
   color: var(--muted);
+  font-size: 0.8125rem;
+  margin-bottom: 4px;
 }
-.sheet dd {
+.sheet dd,
+.references dd {
   margin: 0;
   white-space: pre-wrap;
 }
+.recipient dd {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.account dd {
+  font-variant-numeric: tabular-nums;
+  user-select: all;
+}
 .sheet dd p {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+.request {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--shop-line);
 }
 .actions {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  margin-top: 20px;
+  margin-top: 12px;
+}
+.historyColumn {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
 }
 .timeline {
-  padding-left: 20px;
+  list-style: none;
+  padding: 0;
   margin: 0;
 }
 .timeline li {
-  padding: 0 0 24px 10px;
+  padding: 0 0 16px;
+}
+.timeline li + li {
+  border-top: 1px solid var(--shop-line);
+  padding-top: 16px;
+}
+.timeline li:last-child {
+  padding-bottom: 0;
+}
+.eventHead {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
 }
 .timeline time {
-  display: block;
   color: var(--muted);
-  font-size: 0.8125rem;
-  margin-top: 10px;
+  font-size: 0.75rem;
 }
 .timeline p {
-  line-height: 1.7;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  margin: 10px 0 0;
+  margin: 8px 0 0;
+}
+.references {
+  padding: 0 20px;
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+.references summary {
+  padding: 12px 0;
+  min-height: 44px;
+  box-sizing: border-box;
+  cursor: pointer;
+  color: var(--muted);
+}
+.references dl {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 16px;
+}
+.references dd {
+  font-size: 0.8125rem;
+  user-select: all;
+}
+.detailPage :is(a, button, summary):focus-visible {
+  outline: 3px solid var(--shop-wine);
+  outline-offset: 3px;
 }
 .dialog {
   max-width: 600px;
@@ -208,6 +312,9 @@
 }
 .dialog::backdrop {
   background: #28191466;
+}
+.confirmDialog {
+  max-width: 480px;
 }
 .dialogHead {
   display: flex;
@@ -288,7 +395,6 @@
 @media (max-width: 800px) {
   .columns {
     grid-template-columns: 1fr;
-    gap: 0;
   }
   .toolbar {
     align-items: stretch;
@@ -302,11 +408,12 @@
   }
   .summary {
     align-items: start;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 16px;
   }
-  .sheet dl > div {
-    grid-template-columns: 1fr;
-    gap: 6px;
+  .decision {
+    max-width: none;
+    width: 100%;
   }
   .dialog {
     padding: 20px;
@@ -317,6 +424,21 @@
   }
   .table {
     min-width: 750px;
+  }
+}
+
+@media (max-width: 480px) {
+  .summary,
+  .sheet {
+    padding: 18px;
+  }
+  .recipient,
+  .requestFacts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .actions > button {
+    flex: 1;
   }
 }
 

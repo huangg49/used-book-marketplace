@@ -23,14 +23,14 @@ assert.ok(
 );
 const memberOrigin = "http://127.0.0.1:5195",
   adminOrigin = "http://127.0.0.1:5196";
-const evidence = path.join(root, ".tmp/manual-withdrawals-evidence");
+const evidence = path.join(root, ".tmp/compact-withdrawals-evidence");
 let fixture, browser, web, adminVite, member, admin, op;
 const pageErrors = [];
 const captures = [];
 const overflows = [];
 const button = (p, name) => p.getByRole("button", { name, exact: true });
-async function capture(p, name, width = 1440) {
-  await p.setViewportSize({ width, height: 1000 });
+async function capture(p, name, width = 1440, height = 1000) {
+  await p.setViewportSize({ width, height });
   await p.evaluate(() => {
     window.scrollTo(0, 0);
     return document.fonts.ready;
@@ -241,15 +241,27 @@ try {
       await route.abort("connectionfailed");
     } else await route.fulfill({ response });
   });
-  await capture(admin, "admin-detail-desktop");
+  await capture(admin, "admin-detail-desktop", 1440, 900);
+  assert.ok(
+    await button(admin, "Duyệt yêu cầu").evaluate(
+      e => e.getBoundingClientRect().bottom < window.innerHeight,
+    ),
+    "Primary decision is visible without scrolling",
+  );
+  await admin.getByText("Mã tham chiếu", { exact: true }).click();
+  await expect(admin.getByText(id, { exact: true })).toBeVisible();
+  await admin.getByText("Mã tham chiếu", { exact: true }).click();
+  await capture(admin, "admin-detail-tablet", 1000, 900);
+  await capture(admin, "admin-detail-mobile", 390, 844);
+  await capture(admin, "admin-detail-small", 320, 844);
+  await admin.setViewportSize({ width: 1440, height: 900 });
   await button(admin, "Duyệt yêu cầu").click();
   d = admin.getByRole("dialog", { name: "Duyệt yêu cầu rút tiền" });
-  await d
-    .getByLabel("Lý do duyệt")
-    .fill("Đã đối chiếu số tiền và thông tin nhận.");
+  await expect(d.getByRole("textbox")).toHaveCount(0);
+  await expect(button(d, "Xác nhận")).toBeEnabled();
   await capture(admin, "admin-approve-desktop");
   await capture(admin, "admin-approve-mobile", 390);
-  await button(d, "Duyệt yêu cầu rút tiền").click();
+  await button(d, "Xác nhận").click();
   await button(d, "Thử lại thao tác vừa gửi").waitFor();
   await button(d, "Thử lại thao tác vừa gửi").click();
   await expect(admin.getByText("Yêu cầu đã kết thúc.", {exact:false})).toBeVisible();
@@ -351,10 +363,13 @@ try {
         checks: [
           "real-api-mongo",
           "modal-required-fields",
-          "320-390-1440",
+          "320-390-1000-1440",
+          "decision-visible-above-fold",
+          "expandable-reference-identifiers",
           "large-text",
           "member-admin-lost-ack-exact-retry",
           "independent-admin-approval",
+          "approval-confirmation-without-reason-input",
           "approval-completes-without-simulator",
           "one-successful-payout",
           "rejection-refunds",

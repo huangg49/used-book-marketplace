@@ -10,7 +10,7 @@ người dùng nhập; giữ validation định dạng, lý do bắt buộc và 
 
 - Gửi: Requested + chuyển available vào hold riêng nguyên tử.
 - Admin độc lập duyệt: trong cùng transaction ghi WithdrawalPayout từ hold,
-  chuyển Completed và thông báo; có lý do, receipt, audit và mã tham chiếu.
+  chuyển Completed và thông báo; có ghi nhận xác nhận, receipt, audit và mã tham chiếu.
 - Từ chối: trả hold về available. Không tự duyệt, không chi/refund hai lần.
 - Giữ current auth trước replay, phiên Admin trong15phút, expectedVersion,
   idempotency và commit-time ledger checks. Nhập tài khoản tùy ý không bỏ các kiểm
@@ -25,3 +25,8 @@ làm bằng chứng cho quyết định Admin.
 Migration0061 thêm field tùy chọn, không rewrite bản ghi/ledger/migration cũ.
 UI giữ popup và phong cách hiện có, bỏ nhãn mô phỏng trong form rút và đơn mới.
 Không đổi các gate giao nhận/settlement củaREADINESS.
+
+Làm rõ tiếp03/11: Admin chỉ bấm “Xác nhận” trong popup duyệt, không nhập lý do.
+UI gửi ghi nhận “Đã xác nhận yêu cầu rút tiền.” qua field reason hiện có để giữ
+receipt/audit; không coi đây là lời giải thích do Admin nhập. Từ chối vẫn cần lý
+do. Chi tiết bố cục và kiểm chứng ở [feature](../features/WALLET_WITHDRAWALS.md).

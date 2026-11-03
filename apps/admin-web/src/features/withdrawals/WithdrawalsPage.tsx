@@ -264,15 +264,12 @@ function Detail({ user, id }: { user: CurrentUser; id: string }) {
     ]);
   };
   return (
-    <section className={styles.page}>
+    <section className={`${styles.page} ${styles.detailPage}`}>
       <Link className={styles.back} to={`/withdrawals?${params}`}>
         <ArrowLeft size={16} aria-hidden="true" /> Yêu cầu rút tiền
       </Link>
-      <header className="page-heading">
+      <header className={styles.detailHeading}>
         <h1>Chi tiết yêu cầu rút tiền</h1>
-        <p className="intro">
-          Mỗi quyết định có lý do và được lưu vào nhật ký.
-        </p>
       </header>
       {query.isPending && <p role="status">Đang tải yêu cầu…</p>}
       {query.isError && (
@@ -281,32 +278,106 @@ function Detail({ user, id }: { user: CurrentUser; id: string }) {
       {feedback && <Notice tone="info">{feedback}</Notice>}
       {row && !query.isError && (
         <>
-          <div className={styles.summary}>
-            <div>
-              <span>Rút tiền</span>
+          <section className={styles.summary} aria-label="Số tiền và xử lý">
+            <div className={styles.amount}>
+              <div className={styles.amountStatus}>
+                <span>Số tiền rút</span>
+                <StatusPill tone={tone(row.state)}>
+                  {withdrawalLabels[row.state]}
+                </StatusPill>
+              </div>
               <strong>{vnd(row.amount)}</strong>
               <small>Phí 0đ</small>
             </div>
-            <StatusPill tone={tone(row.state)}>
-              {withdrawalLabels[row.state]}
-            </StatusPill>
-          </div>
+            <div className={styles.decision}>
+              {row.ownerId === user.id ? (
+                <Notice tone="warning">
+                  Đây là yêu cầu của bạn. Cần Admin khác xử lý.
+                </Notice>
+              ) : (
+                <>
+                  <p className={styles.decisionHint}>
+                    {row.state === "Requested"
+                      ? row.processingMode === "Manual"
+                        ? "Tiền đang được giữ. Duyệt để hoàn tất rút tiền."
+                        : "Tiền đang được giữ. Duyệt trước khi gửi lệnh chi."
+                      : row.state === "Approved"
+                        ? "Đã được duyệt. Gửi lệnh chi để bắt đầu xử lý mô phỏng."
+                        : row.state === "Processing"
+                          ? "Đang chờ kết quả mô phỏng hoặc đối soát. Không gửi thêm lệnh chi."
+                          : row.state === "FailedVerified"
+                            ? "Đã xác minh chi thất bại. Hoàn đúng khoản tiền đang giữ."
+                            : "Yêu cầu đã kết thúc. Nhật ký được giữ để tra cứu."}
+                  </p>
+                  <div className={styles.actions}>
+                    {row.state === "Requested" && (
+                      <Button
+                        variant="primary"
+                        onClick={() => setAction("approve")}
+                      >
+                        Duyệt yêu cầu
+                      </Button>
+                    )}
+                    {["Requested", "Approved"].includes(row.state) && (
+                      <Button onClick={() => setAction("reject")}>
+                        Từ chối
+                      </Button>
+                    )}
+                    {row.state === "Approved" && (
+                      <Button
+                        variant="primary"
+                        onClick={() => setAction("process")}
+                      >
+                        Gửi lệnh chi mô phỏng
+                      </Button>
+                    )}
+                    {row.state === "FailedVerified" && (
+                      <Button
+                        variant="primary"
+                        onClick={() => setAction("refund")}
+                      >
+                        Hoàn khoản giữ
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
           <div className={styles.columns}>
-            <div>
-              <section className={styles.sheet}>
+            <section
+              className={styles.sheet}
+              aria-labelledby="withdrawal-recipient-heading"
+            >
+              <h2 id="withdrawal-recipient-heading">Thông tin nhận tiền</h2>
+              <dl className={styles.recipient}>
+                <div>
+                  <dt>Ngân hàng</dt>
+                  <dd>{row.recipient.bankName}</dd>
+                </div>
+                <div className={styles.account}>
+                  <dt>Số tài khoản</dt>
+                  <dd>{row.recipient.accountNumber}</dd>
+                </div>
+                <div>
+                  <dt>Chủ tài khoản</dt>
+                  <dd>{row.recipient.accountHolder}</dd>
+                </div>
+              </dl>
+              <div className={styles.request}>
                 <h2>Thông tin yêu cầu</h2>
-                <dl>
+                <dl className={styles.requestFacts}>
                   <div>
                     <dt>Bạn đọc</dt>
                     <dd>{row.ownerName}</dd>
                   </div>
                   <div>
-                    <dt>Mã yêu cầu</dt>
-                    <dd>{row.id}</dd>
-                  </div>
-                  <div>
                     <dt>Ngày gửi</dt>
-                    <dd>{dateText(row.createdAt)}</dd>
+                    <dd>
+                      <time dateTime={row.createdAt}>
+                        {dateText(row.createdAt)}
+                      </time>
+                    </dd>
                   </div>
                   <div>
                     <dt>Lý do rút</dt>
@@ -315,17 +386,35 @@ function Detail({ user, id }: { user: CurrentUser; id: string }) {
                       {row.reasonDetail && <p>{row.reasonDetail}</p>}
                     </dd>
                   </div>
+                </dl>
+              </div>
+            </section>
+            <div className={styles.historyColumn}>
+              <section
+                className={styles.sheet}
+                aria-labelledby="withdrawal-history-heading"
+              >
+                <h2 id="withdrawal-history-heading">Nhật ký xử lý</h2>
+                <ol className={styles.timeline}>
+                  {row.history.map((h, i) => (
+                    <li key={i}>
+                      <div className={styles.eventHead}>
+                        <StatusPill tone={tone(h.state)}>
+                          {withdrawalLabels[h.state]}
+                        </StatusPill>
+                        <time dateTime={h.at}>{dateText(h.at)}</time>
+                      </div>
+                      <p>{h.note}</p>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+              <details className={styles.references}>
+                <summary>Mã tham chiếu</summary>
+                <dl>
                   <div>
-                    <dt>Ngân hàng</dt>
-                    <dd>{row.recipient.bankName}</dd>
-                  </div>
-                  <div>
-                    <dt>Số tài khoản</dt>
-                    <dd>{row.recipient.accountNumber}</dd>
-                  </div>
-                  <div>
-                    <dt>Chủ tài khoản</dt>
-                    <dd>{row.recipient.accountHolder}</dd>
+                    <dt>Mã yêu cầu</dt>
+                    <dd>{row.id}</dd>
                   </div>
                   {row.payoutRef && (
                     <div>
@@ -334,78 +423,8 @@ function Detail({ user, id }: { user: CurrentUser; id: string }) {
                     </div>
                   )}
                 </dl>
-              </section>
-              <section className={styles.sheet}>
-                <h2>Xử lý yêu cầu</h2>
-                {row.ownerId === user.id ? (
-                  <Notice tone="warning">
-                    Đây là yêu cầu của bạn. Cần Admin khác xử lý.
-                  </Notice>
-                ) : (
-                  <>
-                    <p className="muted">
-                      {row.state === "Requested"
-                        ? "Tiền đã được giữ riêng. Duyệt sẽ hoàn tất rút tiền và cập nhật lịch sử ví."
-                        : row.state === "Approved"
-                          ? "Đã được duyệt. Gửi lệnh chi để bắt đầu xử lý mô phỏng."
-                          : row.state === "Processing"
-                            ? "Đang chờ kết quả mô phỏng hoặc đối soát. Không gửi thêm lệnh chi."
-                            : row.state === "FailedVerified"
-                              ? "Đã xác minh chi thất bại. Hoàn đúng khoản tiền đang giữ."
-                              : "Yêu cầu đã kết thúc. Nhật ký được giữ để tra cứu."}
-                    </p>
-                    <div className={styles.actions}>
-                      {row.state === "Requested" && (
-                        <Button
-                          variant="primary"
-                          onClick={() => setAction("approve")}
-                        >
-                          Duyệt yêu cầu
-                        </Button>
-                      )}
-                      {["Requested", "Approved"].includes(row.state) && (
-                        <Button
-                          variant="danger"
-                          onClick={() => setAction("reject")}
-                        >
-                          Từ chối
-                        </Button>
-                      )}
-                      {row.state === "Approved" && (
-                        <Button
-                          variant="primary"
-                          onClick={() => setAction("process")}
-                        >
-                          Gửi lệnh chi mô phỏng
-                        </Button>
-                      )}
-                      {row.state === "FailedVerified" && (
-                        <Button
-                          variant="primary"
-                          onClick={() => setAction("refund")}
-                        >
-                          Hoàn khoản giữ
-                        </Button>
-                      )}
-                    </div>
-                  </>
-                )}
-              </section>
+              </details>
             </div>
-            <section className={styles.sheet}>
-              <h2>Nhật ký xử lý</h2>
-              <ol className={styles.timeline}>
-                {row.history.map((h, i) => (
-                  <li key={i}>
-                    <StatusPill tone={tone(h.state)}>
-                      {withdrawalLabels[h.state]}
-                    </StatusPill>
-                    <time dateTime={h.at}>{dateText(h.at)}</time>
-                    <p>{h.note}</p>
-                  </li>
-                ))}
-              </ol>
-            </section>
           </div>
           {action && (
             <ActionDialog
@@ -469,7 +488,7 @@ function ActionDialog({
   return (
     <dialog
       ref={ref}
-      className={styles.dialog}
+      className={`${styles.dialog} ${action === "approve" ? styles.confirmDialog : ""}`}
       aria-labelledby="withdrawal-action-title"
       onCancel={(e) => {
         e.preventDefault();
@@ -490,12 +509,14 @@ function ActionDialog({
       </div>
       <ActionPanel
         label={titles[action]}
-        title="Xác nhận thông tin"
+        title={
+          action === "approve" ? "Thông tin nhận tiền" : "Xác nhận thông tin"
+        }
         confirm={false}
         dirty={!!reason || !!outcome}
         confirmTitle={titles[action]}
         confirmBody={null}
-        submitLabel={titles[action]}
+        submitLabel={action === "approve" ? "Xác nhận" : titles[action]}
         schema={withdrawalReceiptSchema}
         onPending={onPending}
         reconcile={reconcile}
@@ -507,11 +528,17 @@ function ActionDialog({
         })}
         fields={(disabled) => (
           <fieldset className={styles.form} disabled={disabled}>
-            {["approve", "reject"].includes(action) ? (
+            {action === "approve" ? (
+              <p>
+                {row.recipient.bankName} ·{" "}
+                <strong>{row.recipient.accountNumber}</strong>
+                <br />
+                {row.recipient.accountHolder}
+              </p>
+            ) : action === "reject" ? (
               <>
                 <label htmlFor="withdrawal-decision-reason">
-                  Lý do {action === "approve" ? "duyệt" : "từ chối"}{" "}
-                  <span aria-hidden="true">*</span>
+                  Lý do từ chối <span aria-hidden="true">*</span>
                 </label>
                 <textarea
                   id="withdrawal-decision-reason"
@@ -561,10 +588,7 @@ function ActionDialog({
           </fieldset>
         )}
         validate={() => {
-          if (
-            ["approve", "reject"].includes(action) &&
-            reason.trim().length < 3
-          ) {
+          if (action === "reject" && reason.trim().length < 3) {
             setError("Nhập lý do ít nhất 3 ký tự.");
             return false;
           }
@@ -599,7 +623,10 @@ function ActionDialog({
                   ...(["approve", "reject"].includes(action)
                     ? {
                         decision: action === "approve" ? "Approve" : "Reject",
-                        reason,
+                        reason:
+                          action === "approve"
+                            ? "Đã xác nhận yêu cầu rút tiền."
+                            : reason,
                       }
                     : {}),
                 },
