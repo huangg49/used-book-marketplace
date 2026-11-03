@@ -280,3 +280,28 @@ PASS320Member unit/typecheck/build/lint (cảnh báo cũ ngoài phần đổi), 
 check. Detector một lượt còn advisory16px modal cũ. Evidence private
 `.tmp/withdrawal-textarea-resize-smoke.mjs` và `.tmp/withdrawal-textarea-*.log`.
 Main apps giữ chạy; không đổi API/dữ liệu/READINESS hoặc push/merge.
+
+## Dấu chấm hàng nghìn trong ô số tiền — 04/11/2026
+
+Owner yêu cầu5300500hiện5.300.500khi nhập. Nhánh
+`codex/withdrawal-amount-grouping`, base `5df75183`; checkpoint subject
+`feat(wallet): format withdrawal amounts with thousands separators`.
+
+Chỉ ô tiền rút hiển thị dot groups; state vẫn digits, validation/preview và API
+vẫn dùng số nguyên. Preset/Tối đa cùng format; dán số có dấu chấm/khoảng trắng,
+xóa trống, thay vùng chọn và sửa giữa số giữ caret. Backspace/Delete sát dấu phân
+cách xóa chữ số lân cận, nhưng chọn riêng dấu chấm không làm mất chữ số. Từ chối
+dấu âm/chữ/scientific thay vì biến thành số dương khác; format bằng string không
+làm tròn số lớn, safe-integer/balance checks vẫn giữ nguyên. Native pattern chấp
+nhận display có nhóm3chữ số. Không đổi số tài khoản/API/contract/ledger.
+
+PASS339Member unit (19ca helper mới), typecheck/build/lint với warning cũ ngoài
+phần đổi; browser33captures/0page errors/overflow và111button states. Kiểm typing
+5300500→5.300.500, paste, clear, middle replace, hai hướng delete/dấu chấm riêng,
+preset/back, native validity và POST amount100000là number cùng exact key/body
+sau lostACK; hold/preview/approve/refund/owner-only giữ nguyên. API/Mongo QA thật,
+funding/storage fixture. Đã xem form desktop; detector TS một lượt0finding.
+Evidence private `.tmp/withdrawal-amount-grouping-evidence/`,
+`.tmp/withdrawal-grouping-{browser,unit,build,lint}.log`. QA teardown/dừng, main
+apps giữ chạy; không mutation owner, push/merge hoặc đổi READINESS. Không suy
+native/human/CI acceptance từ browser.

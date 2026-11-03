@@ -22,6 +22,7 @@ import {
 import { PurchaseDialog } from "../components/PurchaseDialog";
 import { session } from "../lib/session";
 import { formatVnd } from "../lib/routes";
+import { editGroupedAmount, formatGroupedAmount } from "../lib/grouped-amount";
 import styles from "./WalletWithdrawals.module.css";
 
 const date = (s: string) => new Date(s).toLocaleString("vi-VN");
@@ -44,6 +45,7 @@ export function WalletWithdrawals({
   const client = useQueryClient();
   const [params, setParams] = useSearchParams();
   const [amount, setAmount] = useState("");
+  const amountSelectionCollapsed = useRef(false);
   const [reason, setReason] = useState<CreateWithdrawal["reason"] | "">("");
   const [reasonDetail, setReasonDetail] = useState("");
   const [bankName, setBank] = useState("");
@@ -314,11 +316,36 @@ export function WalletWithdrawals({
                   inputMode="numeric"
                   type="text"
                   required
-                  pattern="[0-9]+"
-                  value={amount}
+                  pattern="[0-9]{1,3}([.][0-9]{3})*"
+                  value={formatGroupedAmount(amount)}
+                  onKeyDown={(e) => {
+                    amountSelectionCollapsed.current =
+                      e.currentTarget.selectionStart ===
+                      e.currentTarget.selectionEnd;
+                  }}
+                  onBeforeInput={(e) => {
+                    amountSelectionCollapsed.current =
+                      e.currentTarget.selectionStart ===
+                      e.currentTarget.selectionEnd;
+                  }}
                   onChange={(e) => {
-                    setAmount(e.target.value);
-                    setError("");
+                    const node = e.currentTarget;
+                    const edit = editGroupedAmount(
+                      amount,
+                      node.value,
+                      node.selectionStart ?? node.value.length,
+                      (e.nativeEvent as InputEvent).inputType,
+                      amountSelectionCollapsed.current,
+                    );
+                    amountSelectionCollapsed.current = false;
+                    node.value = edit.formatted;
+                    node.setSelectionRange(edit.caret, edit.caret);
+                    setAmount(edit.digits);
+                    setError(
+                      edit.accepted
+                        ? ""
+                        : "Chỉ nhập chữ số và dấu phân cách hàng nghìn.",
+                    );
                   }}
                   placeholder="0"
                   aria-describedby="withdraw-minimum"

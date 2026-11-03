@@ -1,6 +1,13 @@
 # Rút tiền qua Admin — 04/11/2026
 
-- Hiện tại `codex/withdrawal-textarea-no-resize`, base `e1c70627`; checkpoint
+- Hiện tại `codex/withdrawal-amount-grouping`, base `5df75183`; checkpoint subject
+  `feat(wallet): format withdrawal amounts with thousands separators`. Amount
+  display5300500→5.300.500; raw digits/number payload, safe-integer/balance/min và
+  key/body giữ nguyên. Caret/paste/edit/delete quanh separator đã kiểm, không đổi
+  account/API/DB. PASS339Member unit/typecheck/build/lint, browser33captures với
+  0page errors/overflow,111button states và POST100000number/exact retry. Đã xem
+  desktop; QA dừng, main apps chạy. Không mutation owner/push/merge/đổi READINESS.
+- Gói textarea trước ở `codex/withdrawal-textarea-no-resize`, base `e1c70627`;
   subject `fix(wallet): disable manual resizing of withdrawal reason`.
   Bỏ grip kéo giãn ô lý do bằng resize none; nội dung dài cuộn trong ô. CSS fixture
   browser PASS computed style/drag không đổi height; không API command hoặc QA DB.

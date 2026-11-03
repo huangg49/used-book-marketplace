@@ -38,7 +38,7 @@ Owner motion refinement03/11: the withdrawal entry uses a760px paper dialog,
 16px corners and a wine header with cream title/description. Local step labels
 and an underline distinguish entry from confirmation. Desktop has amount/reason
 beside recipient fields, separated by one quiet rule; below680px stack them.
-Keep visible field labels, raw numeric input, minimum validation and optional
+Keep visible field labels, raw digit state with dot-grouped amount display, minimum validation and optional
 Other detail. The reason textarea has no manual resize grip; long text scrolls
 inside its row-sized height. Presets50k/100k/500k/maximum use the real available balance.
 The confirmation shows a receipt with actual recipient, reason, fee0 and remaining
@@ -69,6 +69,12 @@ keep the Back action quiet, readable and single-line. Do not repeat the availabl
 balance band during confirmation. Freeze this local remaining-funds preview at
 review entry so a lost response/reservation cannot visually subtract twice;
 the server remains authoritative for every command.
+
+Amount display04/11: group thousands with dots while typing, pasting and using
+presets, e.g.5300500 becomes5.300.500. Keep raw digits for validation, preview and
+the numeric API payload. Preserve caret position for insertion/replacement and
+Backspace/Delete around separators; selecting only a dot must not delete a money
+digit. Do not coerce signed/scientific/letter input to a different positive sum.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 

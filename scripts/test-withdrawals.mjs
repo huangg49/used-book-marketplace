@@ -24,7 +24,7 @@ assert.ok(
 );
 const memberOrigin = "http://127.0.0.1:5195",
   adminOrigin = "http://127.0.0.1:5196";
-const evidence = path.join(root, ".tmp/withdrawal-confirmation-evidence");
+const evidence = path.join(root, ".tmp/withdrawal-amount-grouping-evidence");
 const buttonStates = [];
 let fixture, browser, web, adminVite, member, admin, op;
 const pageErrors = [];
@@ -172,9 +172,32 @@ try {
   await member.emulateMedia({ reducedMotion: "no-preference" });
   assert.equal(await d.evaluate(e => getComputedStyle(e).animationDuration), "0.52s");
   await button(d, "Tối đa").click();
-  await expect(d.getByLabel("Số tiền muốn rút")).toHaveValue("500000");
+  await expect(d.getByLabel("Số tiền muốn rút")).toHaveValue("500.000");
   await button(d, "100.000").click();
-  await expect(d.getByLabel("Số tiền muốn rút")).toHaveValue("100000");
+  await expect(d.getByLabel("Số tiền muốn rút")).toHaveValue("100.000");
+  const moneyInput = d.getByLabel("Số tiền muốn rút");
+  await moneyInput.fill("");
+  await moneyInput.pressSequentially("5300500");
+  await expect(moneyInput).toHaveValue("5.300.500");
+  await moneyInput.evaluate(e => e.setSelectionRange(2, 2));
+  await moneyInput.press("Backspace");
+  await expect(moneyInput).toHaveValue("300.500");
+  assert.equal(await moneyInput.evaluate(e => e.selectionStart), 0);
+  await moneyInput.fill("5.300.500");
+  await moneyInput.evaluate(e => e.setSelectionRange(1, 2));
+  await moneyInput.press("Backspace");
+  await expect(moneyInput).toHaveValue("5.300.500");
+  await moneyInput.evaluate(e => e.setSelectionRange(1, 1));
+  await moneyInput.press("Delete");
+  await expect(moneyInput).toHaveValue("500.500");
+  assert.equal(await moneyInput.evaluate(e => e.selectionStart), 1);
+  await moneyInput.fill("5.300.500");
+  await moneyInput.evaluate(e => e.setSelectionRange(2, 5));
+  await moneyInput.pressSequentially("12");
+  await expect(moneyInput).toHaveValue("512.500");
+  assert.equal(await moneyInput.evaluate(e => e.selectionStart), 3);
+  await button(d, "100.000").click();
+  assert.equal(await moneyInput.evaluate(e => e.checkValidity()), true);
   await auditWalletButtons(member, d, "withdrawal-entry", buttonStates);
   // Simulate a missing inherited hover token: native portals must have a safe fallback.
   await d.evaluate(node => node.style.setProperty("--shop-wine-hover", "initial"));
@@ -242,7 +265,7 @@ try {
   assertWalletButtonsReadable(buttonStates);
   await button(member, "Chỉnh sửa").click();
   await expect(member.getByLabel("Số tiền muốn rút")).toBeVisible();
-  await expect(member.getByLabel("Số tiền muốn rút")).toHaveValue("100000");
+  await expect(member.getByLabel("Số tiền muốn rút")).toHaveValue("100.000");
   await expect(member.getByLabel("Ngân hàng", {exact:true})).toHaveValue("Ngân hàng QA");
   await button(member, "Tiếp tục").click();
   await button(member, "Xác nhận gửi yêu cầu").click();
@@ -258,6 +281,7 @@ try {
   await member.getByRole("dialog", { name: "Chi tiết rút tiền" }).waitFor();
   assert.equal(posted.length, 2);
   assert.deepEqual(posted[0], posted[1]);
+  assert.equal(JSON.parse(posted[0].body).amount, 100000);
   const id = new URL(member.url()).searchParams.get("withdrawal");
   assert.ok(id);
   await expect(
@@ -463,6 +487,7 @@ try {
           "portal-buttons-without-inherited-hover-token",
           "quick-amount-and-edit-preserve-values",
           "confirmation-balance-preview-stable-after-lost-ack",
+          "grouped-amount-typing-paste-caret-and-numeric-payload",
           "withdrawal-details-from-notifications",
           "pending-count-all-filtered-pages",
           "completed-rejected-not-counted",
