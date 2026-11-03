@@ -3,6 +3,7 @@ import { useFonts, loadAsync } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { colors } from "./theme";
+import "./focus-platform";
 
 const fonts = {
   BeRegular: require("../../../../../packages/brand/fonts/BeVietnamPro-Regular.ttf"),

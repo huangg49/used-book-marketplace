@@ -147,7 +147,7 @@ function CommandContent({
           <X size={20} aria-hidden="true" />
         </button>
       </header>
-      <div className={styles.search}>
+      <div data-focus-surface className={styles.search}>
         <Search size={20} aria-hidden="true" />
         <label className={styles.srOnly} htmlFor={inputId}>
           Tìm chức năng quản trị

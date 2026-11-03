@@ -483,7 +483,7 @@ export function AcceptExchangeDialog({
                           ? 'Số tiền bạn sẽ bù thêm cho đối tác:'
                           : `Số tiền đối tác (${detail.partner.username}) sẽ bù thêm cho bạn:`}
                       </label>
-                      <div className={styles.amountInputWrapper}>
+                      <div data-focus-surface className={styles.amountInputWrapper}>
                         <span className={styles.amountInputPrefix}>
                           <Coins size={18} />
                         </span>

@@ -1,7 +1,7 @@
 import { useId, useState, type Ref } from "react";
-import { Pressable, TextInput, View, type TextInputProps } from "react-native";
+import { Platform, Pressable, TextInput, View, type TextInputProps } from "react-native";
 import { AppText } from "./text";
-import { colors, metrics, radius, space } from "./theme";
+import { colors, colorRoles, metrics, radius, space } from "./theme";
 import { layout } from "./styles";
 import { Icon } from "./icon";
 import { IconButton } from "./actions";
@@ -27,6 +27,7 @@ export function SearchField({
   const [focused, setFocused] = useState(false);
   return (
     <View
+      {...(Platform.OS === "web" ? { dataSet: { focusSurface: "true" } } : {})}
       style={[
         layout.row,
         {
@@ -35,8 +36,9 @@ export function SearchField({
           paddingLeft: space.md,
           backgroundColor: colors.surface,
           borderRadius: radius.control,
-          borderWidth: focused ? 2 : 1,
-          borderColor: focused ? colors.forest : colors.border,
+          borderWidth: 1,
+          borderColor: focused ? colorRoles.focus : colors.border,
+          boxShadow: focused ? `0 0 0 1px ${colorRoles.focus}` : "none",
         },
       ]}
     >
@@ -138,15 +140,16 @@ export function TextField({
           props.editable === false && {
             backgroundColor: "#F4F0E8",
           },
+          style,
           {
             borderColor: error
               ? colors.error
               : focused
-                ? (focusColor ?? colors.forest)
+                ? (focusColor ?? colorRoles.focus)
                 : colors.border,
-            borderWidth: focused ? 2 : 1,
+            borderWidth: 1,
+            boxShadow: focused ? `0 0 0 1px ${error ? colors.error : (focusColor ?? colorRoles.focus)}` : "none",
           },
-          style,
         ]}
       />
       {description ? (
@@ -224,6 +227,10 @@ export function Checkbox({
   );
 }
 
-export function AppTextInput(props: TextInputProps & { ref?: Ref<TextInput> }) {
-  return <TextInput {...props} />;
+export function AppTextInput(props: TextInputProps & { ref?: Ref<TextInput>; "aria-invalid"?: boolean }) {
+  const [focused, setFocused] = useState(false);
+  return <TextInput {...props}
+    onFocus={event => { setFocused(true); props.onFocus?.(event); }}
+    onBlur={event => { setFocused(false); props.onBlur?.(event); }}
+    style={[props.style, focused && layout.focus, focused && props['aria-invalid'] && { outlineColor: colors.error }]} />;
 }

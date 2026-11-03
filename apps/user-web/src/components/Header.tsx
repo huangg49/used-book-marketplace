@@ -119,6 +119,7 @@ export function Header({
   return (
     <div className={styles.headerSlot} data-member-header-slot>
       <header
+        data-focus-inverse
         ref={headerRef}
         className={styles.header}
         data-floating={floating}

@@ -468,7 +468,7 @@ function AmountField({ id, label, value, onChange, disabled, hint, error }: {
   return (
     <div className={styles.field}>
       <label htmlFor={id} className="sr-only">{label}</label>
-      <div className={`${styles.inputWrap} ${error ? styles.inputInvalid : ''}`}>
+      <div data-focus-surface data-focus-invalid={!!error} className={`${styles.inputWrap} ${error ? styles.inputInvalid : ''}`}>
         <input
           id={id}
           inputMode="numeric"

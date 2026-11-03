@@ -451,6 +451,7 @@ export function WorkspaceShell({
           ref={dialog}
           id="admin-sidebar"
           className={styles.drawer}
+          data-focus-inverse
           aria-label="Điều hướng quản trị"
           data-expanded="true"
           onClose={() => setMobileLocation(null)}
@@ -471,6 +472,7 @@ export function WorkspaceShell({
       ) : (
         <aside
           id="admin-sidebar"
+          data-focus-inverse
           className={styles.sidebar}
           aria-label="Điều hướng quản trị"
           data-expanded={expanded}

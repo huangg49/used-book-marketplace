@@ -138,7 +138,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 AppTextField(
                   label: 'Tên đăng nhập hoặc Email',
                   labelColor: StitchTokens.gold,
-                  focusedBorderColor: StitchTokens.gold,
+                  focusedBorderColor: StitchTokens.wine,
                   placeholder: 'nguyentuan@latlai.vn',
                   controller: _emailCtrl,
                   keyboardType: TextInputType.emailAddress,
@@ -171,7 +171,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       placeholder: 'Nhập mật khẩu của bạn',
                       controller: _passwordCtrl,
                       obscureText: _obscurePassword,
-                      focusedBorderColor: StitchTokens.gold,
+                      focusedBorderColor: StitchTokens.wine,
                     ),
                   ],
                 ),
@@ -475,7 +475,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               AppTextField(
                 label: 'Họ và tên / Bút danh',
                 labelColor: StitchTokens.gold,
-                focusedBorderColor: StitchTokens.gold,
+                focusedBorderColor: StitchTokens.wine,
                 requiredField: true,
                 controller: _nameCtrl,
                 placeholder: 'Ví dụ: Nguyễn Minh Tuấn',
@@ -484,7 +484,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               AppTextField(
                 label: 'Địa chỉ Email',
                 labelColor: StitchTokens.gold,
-                focusedBorderColor: StitchTokens.gold,
+                focusedBorderColor: StitchTokens.wine,
                 requiredField: true,
                 controller: _emailCtrl,
                 keyboardType: TextInputType.emailAddress,
@@ -494,7 +494,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               AppTextField(
                 label: 'Mật khẩu (10 - 128 ký tự)',
                 labelColor: StitchTokens.gold,
-                focusedBorderColor: StitchTokens.gold,
+                focusedBorderColor: StitchTokens.wine,
                 requiredField: true,
                 controller: _passwordCtrl,
                 obscureText: true,
@@ -507,7 +507,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               AppTextField(
                 label: 'Nhập lại mật khẩu',
                 labelColor: StitchTokens.gold,
-                focusedBorderColor: StitchTokens.gold,
+                focusedBorderColor: StitchTokens.wine,
                 requiredField: true,
                 controller: _confirmCtrl,
                 obscureText: true,
@@ -556,7 +556,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               AppTextField(
                 label: 'Mã xác thực OTP (6 số)',
                 labelColor: StitchTokens.gold,
-                focusedBorderColor: StitchTokens.gold,
+                focusedBorderColor: StitchTokens.wine,
                 requiredField: true,
                 controller: _otpCtrl,
                 keyboardType: TextInputType.number,
@@ -771,7 +771,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               AppTextField(
                 label: 'Email khôi phục',
                 labelColor: StitchTokens.gold,
-                focusedBorderColor: StitchTokens.gold,
+                focusedBorderColor: StitchTokens.wine,
                 requiredField: true,
                 controller: _emailCtrl,
                 keyboardType: TextInputType.emailAddress,
@@ -782,7 +782,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 AppTextField(
                   label: 'Mã xác nhận (6 số)',
                   labelColor: StitchTokens.gold,
-                  focusedBorderColor: StitchTokens.gold,
+                  focusedBorderColor: StitchTokens.wine,
                   requiredField: true,
                   controller: _codeCtrl,
                   keyboardType: TextInputType.number,
@@ -791,7 +791,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 AppTextField(
                   label: 'Mật khẩu mới',
                   labelColor: StitchTokens.gold,
-                  focusedBorderColor: StitchTokens.gold,
+                  focusedBorderColor: StitchTokens.wine,
                   hint: 'Từ 10 đến 128 ký tự.',
                   requiredField: true,
                   controller: _passwordCtrl,
@@ -801,7 +801,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 AppTextField(
                   label: 'Nhập lại mật khẩu mới',
                   labelColor: StitchTokens.gold,
-                  focusedBorderColor: StitchTokens.gold,
+                  focusedBorderColor: StitchTokens.wine,
                   requiredField: true,
                   controller: _confirmCtrl,
                   obscureText: true,

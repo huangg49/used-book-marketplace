@@ -221,7 +221,7 @@ export function OrderShipping({
           </p>
             <label>
               Ảnh đóng gói
-              <span className={styles.filePicker}>
+              <span data-focus-surface className={styles.filePicker}>
                 <span>Chọn ảnh</span>
                 <span className={styles.fileName}>{file?.name || "Chưa chọn ảnh"}</span>
               <input

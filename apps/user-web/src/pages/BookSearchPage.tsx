@@ -146,7 +146,7 @@ function FilterForm({
           )}
         </legend>
         <div className={styles.priceFields}>
-          <label>
+          <label data-focus-surface>
             <span>Từ</span>
             <input
               aria-label={title + " từ"}
@@ -169,7 +169,7 @@ function FilterForm({
               aria-describedby={error ? id + "-" + kind + "-error" : undefined}
             />
           </label>
-          <label>
+          <label data-focus-surface>
             <span>Đến</span>
             <input
               aria-label={title + " đến"}
@@ -864,7 +864,7 @@ export function BookSearchPage() {
             </AnimatePresence>
             <form
               role="search"
-              className={styles.search}
+              data-focus-surface className={styles.search}
               onSubmit={(event) => {
                 event.preventDefault();
                 // Explicit submit also recovers an interrupted IME session.

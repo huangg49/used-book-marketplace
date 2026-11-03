@@ -1,7 +1,7 @@
 import { StyleSheet } from "react-native";
 import { colors as c, colorRoles, radius, metrics, space } from "./theme";
 export const layout = StyleSheet.create({
-  focus: { outlineColor: colorRoles.focus, outlineWidth: 2, outlineOffset: 3 },
+  focus: { outlineColor: colorRoles.focus, outlineStyle: "solid", outlineWidth: 2, outlineOffset: 0 },
   row: { flexDirection: "row", alignItems: "center", gap: 12 },
   pad: { padding: 20 },
   gap: { gap: 16 },

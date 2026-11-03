@@ -204,7 +204,7 @@ export function PhotoAutofill({
           </figure>
         ))}
         {files.length < MAX_PHOTOS && (
-          <label className={styles.add} aria-disabled={disabled || reading}>
+          <label data-focus-surface className={styles.add} aria-disabled={disabled || reading}>
             <Camera size={18} aria-hidden="true" />
             <span>{files.length ? "Thêm ảnh" : "Chọn ảnh"}</span>
             <input

@@ -8,10 +8,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  TextInput,
   Platform,
 } from 'react-native';
 import { router } from 'expo-router';
+import { AppTextInput as TextInput } from '../../core/ui';
 
 export interface ShipmentOrderData {
   exchangeId: string;

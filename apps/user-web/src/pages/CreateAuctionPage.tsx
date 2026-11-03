@@ -105,7 +105,7 @@ function PriceInput({ id, label, value, step, min, max = AUCTION_MAX_PRICE, digi
   return (
     <div className={styles.field}>
       <label htmlFor={id}>{label}</label>
-      <div className={`${styles.money} ${error ? styles.invalid : ''}`}>
+      <div data-focus-surface data-focus-invalid={!!error} className={`${styles.money} ${error ? styles.invalid : ''}`}>
         {/* The input grows with its digits so "đ" sits right after the amount. */}
         <label htmlFor={id} className={styles.moneyValue}>
           <input
@@ -318,7 +318,7 @@ export function CreateAuctionPage() {
             )}
             {preselectedMissing && <p className={styles.error} role="alert">Cuốn sách bạn chọn hiện không đưa lên đấu giá được. Hãy chọn một cuốn khác bên dưới.</p>}
             {eligible.length > 3 && (
-              <div className={styles.bookSearch}>
+              <div data-focus-surface className={styles.bookSearch}>
                 <Search size={16} aria-hidden="true" />
                 <input type="search" value={bookQuery} disabled={locked} onChange={(e) => setBookQuery(e.target.value)}
                   placeholder="Tìm theo tên sách hoặc tác giả" aria-label={`Tìm trong ${eligible.length} sách trên kệ`} autoComplete="off" />
@@ -396,7 +396,7 @@ export function CreateAuctionPage() {
                 ))}
                 {customStepOn ? (
                   // The chosen "Tự nhập" chip becomes the step input itself.
-                  <span className={`${styles.segmentOn} ${styles.stepCustom} ${stepError ? styles.stepCustomInvalid : ''}`}>
+                  <span data-focus-surface data-focus-invalid={!!stepError} className={`${styles.segmentOn} ${styles.stepCustom} ${stepError ? styles.stepCustomInvalid : ''}`}>
                     <input
                       // eslint-disable-next-line jsx-a11y/no-autofocus -- focus follows the user's own "Tự nhập" choice
                       autoFocus inputMode="numeric" autoComplete="off" placeholder="0" disabled={locked}

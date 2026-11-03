@@ -1,0 +1,93 @@
+/* Runtime focus policy shared by Member web, Operations and Expo web.
+ * Important declarations are confined to focus paint: lazy page CSS and vendor
+ * controls must not restore a detached ring. Geometry/pressed/error state stay local.
+ */
+@layer latlai-focus {
+  :root {
+    --latlai-focus-color: #5c0202;
+    --latlai-focus-error: #a32d34;
+  }
+  :focus-visible {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: 0 0 0 2px var(--latlai-focus-color) !important;
+  }
+  :is(button, a, summary, [role="button"], [role="tab"], [role="checkbox"], [role="radio"]):focus-visible {
+    box-shadow: inset 0 0 0 1px #fffcf4, 0 0 0 2px var(--latlai-focus-color) !important;
+  }
+  :where(input, textarea, select):not(:where([type="checkbox"], [type="radio"], [type="range"], [type="file"])):focus {
+    outline: none !important;
+    border-color: var(--latlai-focus-color) !important;
+    box-shadow: 0 0 0 1px var(--latlai-focus-color) !important;
+  }
+  :is(input, textarea, select) {
+    transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease !important;
+  }
+  [aria-invalid="true"], .ant-form-item-has-error, .ant-select-status-error, .ant-picker-status-error, .ant-input-number-status-error, .ant-input-affix-wrapper-status-error, [data-focus-invalid="true"], [data-focus-surface]:has([aria-invalid="true"]) {
+    --latlai-focus-color: var(--latlai-focus-error);
+  }
+  /* Filled buttons and navigation on wine need a light inner edge as well. */
+  [data-focus-inverse]:focus-visible,
+  [data-focus-inverse] :is(a, button, [role="button"], [role="tab"]):focus-visible {
+    box-shadow: inset 0 0 0 2px #fffcf4, 0 0 0 1px var(--latlai-focus-color) !important;
+  }
+  /* Composite controls own one perimeter; their text input must not draw a second. */
+  [data-focus-surface]:has(:is(input, textarea, select):focus) {
+    outline: none !important;
+    border-color: var(--latlai-focus-color) !important;
+    box-shadow: 0 0 0 1px var(--latlai-focus-color) !important;
+    transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease !important;
+  }
+  [data-focus-surface] :is(input, textarea, select):focus {
+    outline: none !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+  [data-focus-surface]:focus-within:not(:has(:is(input, textarea, select):focus)) {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  label:has(input[type="file"]:focus):not(:has([data-focus-surface])) {
+    outline: none !important;
+    border-color: var(--latlai-focus-color) !important;
+    box-shadow: 0 0 0 1px var(--latlai-focus-color) !important;
+  }
+  [data-focus-surface]:has(:is(input, textarea, select):focus)::after {
+    /* Retired underline focus treatment (e.g. command palette search). */
+    box-shadow: none !important;
+    border-color: transparent !important;
+    background: transparent !important;
+  }
+  /* Ant Design portals use a wrapper as well, including its invisible search input. */
+  :is(.ant-input-affix-wrapper-focused, .ant-select-focused .ant-select-selector, .ant-picker-focused, .ant-input-number-focused) {
+    outline: none !important;
+    border-color: var(--latlai-focus-color) !important;
+    box-shadow: 0 0 0 1px var(--latlai-focus-color) !important;
+  }
+  :is(.ant-input-affix-wrapper, .ant-select-selector, .ant-picker, .ant-input-number) :is(input, textarea):focus {
+    outline: none !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+  @media (forced-colors: active) {
+    :focus-visible,
+    :is(input, textarea, select):focus,
+    :is(button, a, summary, [role="button"], [role="tab"], [role="checkbox"], [role="radio"]):focus-visible,
+    [data-focus-inverse]:focus-visible,
+    [data-focus-inverse] :is(a, button, [role="button"], [role="tab"]):focus-visible,
+    :is(.ant-input-affix-wrapper-focused, .ant-select-focused .ant-select-selector, .ant-picker-focused, .ant-input-number-focused),
+    [data-focus-surface]:has(:is(input, textarea, select):focus) {
+      outline: 2px solid Highlight !important;
+      outline-offset: 0 !important;
+      box-shadow: none !important;
+    }
+    label:has(input[type="file"]:focus):not(:has([data-focus-surface])) {
+      outline: 2px solid Highlight !important;
+      outline-offset: 0 !important;
+      box-shadow: none !important;
+    }
+    [data-focus-surface] :is(input, textarea, select):focus {
+      outline: none !important;
+    }
+  }
+}

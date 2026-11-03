@@ -403,7 +403,7 @@ class AppChip extends StatelessWidget {
   }
 }
 
-class SearchField extends StatelessWidget {
+class SearchField extends StatefulWidget {
   const SearchField({
     super.key,
     required this.controller,
@@ -422,62 +422,84 @@ class SearchField extends StatelessWidget {
   final double height;
 
   @override
+  State<SearchField> createState() => _SearchFieldState();
+}
+
+class _SearchFieldState extends State<SearchField> {
+  bool _focused = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFDF8),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0x335C0202)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 4,
-            offset: Offset(0, 1),
+    final controller = widget.controller;
+    final placeholder = widget.placeholder;
+    final onSubmitted = widget.onSubmitted;
+    final onChanged = widget.onChanged;
+    final onClear = widget.onClear;
+    final height = widget.height;
+    return Focus(
+      onFocusChange: (focused) => setState(() => _focused = focused),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        height: height,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFFDF8),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _focused ? StitchTokens.wine : const Color(0x335C0202),
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.search_rounded, size: 20, color: Color(0xFF214B40)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              onChanged: onChanged,
-              onSubmitted: onSubmitted,
-              textInputAction: TextInputAction.search,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF261E1A),
-                fontWeight: FontWeight.w500,
-              ),
-              decoration: InputDecoration(
-                hintText: placeholder,
-                hintStyle: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF8A7D73),
+          boxShadow: [
+            if (_focused)
+              const BoxShadow(color: StitchTokens.wine, spreadRadius: 1),
+            const BoxShadow(
+              color: Color(0x0F000000),
+              blurRadius: 4,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.search_rounded, size: 20, color: Color(0xFF214B40)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: controller,
+                onChanged: onChanged,
+                onSubmitted: onSubmitted,
+                textInputAction: TextInputAction.search,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF261E1A),
+                  fontWeight: FontWeight.w500,
                 ),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
+                decoration: InputDecoration(
+                  hintText: placeholder,
+                  hintStyle: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF8A7D73),
+                  ),
+                  border: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
               ),
             ),
-          ),
-          if (controller.text.isNotEmpty)
-            GestureDetector(
-              onTap: () {
-                controller.clear();
-                onChanged?.call('');
-                onClear?.call();
-              },
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Icon(Icons.close_rounded, size: 18, color: Color(0xFF8A7D73)),
+            if (controller.text.isNotEmpty)
+              GestureDetector(
+                onTap: () {
+                  controller.clear();
+                  onChanged?.call('');
+                  onClear?.call();
+                },
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  child: Icon(Icons.close_rounded, size: 18, color: Color(0xFF8A7D73)),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
