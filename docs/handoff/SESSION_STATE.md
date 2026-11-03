@@ -1,3 +1,19 @@
+# Bản thử không gian giao dịch Minh An — 03/11/2026
+
+Owner yêu cầu mock vì chat gộp quá nhiều phiếu/trao đổi/đơn. Nhánh
+`codex/transaction-workspace-preview`, basefe63acd8, tạo HTML entry riêng
+`apps/user-web/design-previews/transaction-workspace/` trên Vite Member5174.
+Persona Minh An/user1, toàn bộ giao dịch/tin/tiền là minh họa, không API/session/
+DB hoặc provider. Hai vùng inbox+main, ba tab Tổng quan/Hội thoại/Chi tiết,
+mobile list→detail/Back. Có3hồ sơ,5tình huống Exchange, tin/review trong RAM;
+không nhúng lại toàn phiếu vào chat. Brand và ảnh minh họa từ repo giữ provenance.
+PASS typecheck riêng, lint exit0/warnings, detector0finding và browser1440/950/
+390/320px/màn thấp/chữ130%: chuyển tab/hồ sơ, giữ draft theo hội thoại, wheel,
+review/message mock và không API write. Đã kiểm ảnh desktop/chat/mobile.
+Entry preview đã được đưa vào checkout ứng dụng để owner xem trên localhost.
+Chưa áp thiết kế vào ChatPage/ExchangeDetail/OrderDetails thật, không push/gate.
+[Phạm vi và cách xem](../../apps/user-web/design-previews/transaction-workspace/README.md).
+
 # Tinh chỉnh dropdown thông báo — 03/11/2026
 
 Owner duyệt làm gọn dropdown Member web. Nhánh
