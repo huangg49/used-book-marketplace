@@ -454,7 +454,7 @@ export function MyAuctionsPage() {
         ))}
       </nav>
       <SellerIntakes userId={userId} enabled={!!userId && (view === 'all' || view === 'selling') && !cursor} />
-      <div className={styles.results} aria-busy={query.isFetching}>
+      <div className={styles.results} id="my-auction-results" tabIndex={-1} aria-busy={query.isFetching}>
         {query.isPending && <p role="status">Đang tải các phiên của bạn…</p>}
         {query.isError && (
           <div className={stale ? styles.refreshError : styles.empty} role="alert">
@@ -501,7 +501,7 @@ export function MyAuctionsPage() {
           ))}
       </div>
       <CursorPager navigation={navigation} nextCursor={!query.isError ? query.data?.nextCursor : undefined}
-        busy={query.isFetching} count={query.data?.items.length} label="Trang đấu giá của tôi" itemLabel="phiên" />
+        busy={query.isFetching} failed={query.isError} count={query.data?.items.length} label="Trang đấu giá của tôi" itemLabel="phiên" anchorId="my-auction-results" />
     </div>
   )
 }

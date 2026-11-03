@@ -86,6 +86,45 @@ chuyển hết; không đổi CSS/biểu mẫu giao dịch ngoài phạm vi.
 
 ## Kiểm chứng
 
+### Rà từng consumer và tinh chỉnh — base92c7b178
+
+Owner giao rà tất cả nơi đã dùng phân trang, nhánh `codex/pagination-consumer-audit`.
+Source inventory gồm12 cụm Member trong11 màn (đấu giá công khai có2 kệ) và8
+consumer `CursorPagination` Operations. Không đổi API/contract hoặc seed DB.
+
+| Màn/nhóm | Kích thước trang hiện hành | Kết luận và thay đổi |
+| --- | --- | --- |
+| Search, kệ cá nhân, đấu giá cá nhân | Theo cursor server,20 mục trong fixture | Giữ cursor/trail; thêm scroll/focus sau kết quả cho hai màn cá nhân. Search đã có heading/motion riêng |
+| Đơn trực tiếp |8 đơn | Giữ cache, focus về nhóm kết quả, Back và retry |
+| Thông báo, giao dịch đánh giá, hồ sơ uy tín, hỗ trợ |10 mục | Giữ cache/focus. Chỉnh wrap tên/ngày/điểm của thẻ review ở màn nhỏ để phần trên pager đọc được |
+| Trao đổi |5 hồ sơ nặng | Chừa24px giữa thẻ cuối và divider, focus sau đổi trang; giữ scope snapshot100 |
+| Đấu giá công khai: đang mở và sắp mở |8 phiên/kệ | Giữ số trang độc lập trong URL, mỗi kệ focus đúng heading; chừa24px trước divider, giữ scope50 |
+| Ví |10 dòng ledger | Focus heading sau đổi trang thành công; giữ dòng khi lỗi, focus filter và cache |
+| Admin: Users, lịch sử khóa tài khoản, queue bài đăng, lịch sử bản gửi, đối chiếu bản gửi, hậu kiểm AI, đánh giá giao dịch, hỗ trợ | Trang cursor server, tải thêm | Source8 nơi đều giữ `cancelRefetch:false`, khóa pending và lỗi/retry của component. Cô lập2 selector Users đang ghi đè footer toàn cục; giữ lựa chọn hồ sơ/nháp và layout từng pane |
+
+Chỉnh shared pager: không giấu một số trang duy nhất sau dấu “…”; mobile≤4 trang
+hiện thẳng các số. Bảng chọn chia cột theo bề rộng, mũi tên bàn phím theo số cột
+thật và chọn phía có chỗ trong viewport. Không đổi tên/màu thương hiệu hoặc
+phong cách số trang đã được owner chọn. Không giảm size trang chỉ để làm đẹp ảnh;
+các giá trị trên phù hợp trọng lượng nội dung và contract hiện có.
+
+PASS Member/Admin build/typecheck (Admin bundle check),338 unit Member và10 unit
+list-feedback Operations. Browser list42 màn/viewport, wallet8 màn/chữ/motion,
+popup cột hẹp/viewport thấp/ArrowDown/Escape; focus kệ/đấu giá/trao đổi/ví và kệ
+sắp mở độc lập. Browser reputation HTTP/schema thật với dữ liệu giả kiểm privacy,
+cache/filter/503/404 và320px chữ130%. Browser Admin Users→Support4 kích thước
+kiểm giữ rows khi lỗi/retry, CSS không lan và footer review queue giữ16px.
+Tất cả transport QA giả, không DB/provider.8 vị trí Operations được đọc source;
+không nhận mỗi trang Admin đã có browser integration riêng từ test footer chung.
+Lint chỉ có cảnh báo Date.now có trước ở AuctionList. Native/human/CI mới NOT RUN;
+READINESS giữ nguyên. Artifact theo các thư mục ở cuối báo cáo, thêm
+`.tmp/admin-pagination-layout/`.
+
+Bản local Documents đã nhận các file của gói sau khi đối chiếu nguồn và sao lưu.
+Phần CSS hồ sơ uy tín được nối thêm vào bản local hiện có. Sau khi khởi động
+ứng dụng, Member5174, Admin5173 và API3000 trả HTTP200. Smoke Search live chỉ
+đọc,1→2→1 PASS ở1440/390px,0 lỗi trang.
+
 Follow-up số trang (`codex/pagination-direct-page-jump`, base099e3340): PASS
 build/typecheck,13 unit Pagination và lint phạm vi, detector0. Browser component/
 wallet8 ca màn/chữ/motion; list42 màn/viewport và ca10→2 một lần bấm ở1440/390/

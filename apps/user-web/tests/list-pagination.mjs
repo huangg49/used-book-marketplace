@@ -129,16 +129,43 @@ try {
   await choosePage(cursorNav,10);await expect(cursorNav).toContainText('Trang 10');await page.goBack();await expect(cursorNav).toContainText('Trang 3');await page.goForward();await expect(cursorNav).toContainText('Trang 10');
   await cursorNav.getByRole('button',{name:'Trang 1',exact:true}).click();await expect(cursorNav).toContainText('Trang 1');
   await cursorNav.getByRole('button',{name:'Trang 2',exact:true}).click();await page.reload();await expect(cursorNav).toContainText('Trang 2');
+  await page.goto(origin+'/my-books');const shelfPager=page.getByRole('navigation',{name:'Trang kệ sách',exact:true});
+  await shelfPager.waitFor();await page.evaluate(()=>window.qa.fail=true);await shelfPager.getByRole('button',{name:'Đến trang tiếp theo'}).click();await expect(page.getByRole('alert')).toContainText('Chưa tải được kệ sách');
+  assert.equal(await page.locator('#owner-shelf-results').evaluate(n=>n===document.activeElement||n.querySelector('[role="alert"]')?.contains(document.activeElement)),false,'failed cursor read must not steal focus into results');
   // Render and operate each actual screen, desktop and phone together.
   const screens=[['search','/books?data=preview','Phân trang sách'],['shelf','/my-books','Trang kệ sách'],['mine','/auctions/mine','Trang đấu giá của tôi'],['orders','/orders','Điều hướng phân trang'],['notifications','/notifications','Điều hướng phân trang'],['reviews','/reviews?tab=pending&type=Exchange','Điều hướng phân trang'],['support','/support','Điều hướng phân trang'],['reputation','/members/00000000-0000-4000-8000-000000000001','Điều hướng phân trang'],['exchange','/exchange/mine?tab=done','Phân trang trao đổi'],['auctions','/auctions','Phân trang đấu giá đang mở']];
   for(const [name,url,label]of screens)for(const width of[1440,768,390,320]){
     await page.setViewportSize({width,height:1000});await page.goto(origin+'/detail?reset='+name+width);await page.goto(origin+url);const pager=page.getByRole('navigation',{name:label,exact:true});await pager.waitFor();await page.evaluate(s=>document.documentElement.style.fontSize=s,width===320?'130%':'100%');await page.evaluate(()=>document.fonts.ready);assert.equal(await page.getByText('QA_PRIVATE_PENDING_REPLY',{exact:true}).count(),0,'pending reply stays private');
     await pager.getByRole('button',{name:'Đến trang tiếp theo',exact:true}).click();await expect(pager).toContainText(/Trang 2/);
-    const anchors={orders:'direct-order-results',notifications:'notification-results',reviews:'review-transaction-results',reputation:'public-reviews-results',support:'support-list-start'};
+    const anchors={shelf:'owner-shelf-results',mine:'my-auction-results',orders:'direct-order-results',notifications:'notification-results',reviews:'review-transaction-results',reputation:'public-reviews-results',support:'support-list-start',exchange:'panel-done',auctions:'auction-list-title'};
     if(anchors[name])await expect.poll(()=>page.locator('#'+anchors[name]).evaluate(n=>n.contains(document.activeElement))).toBe(true);
     const box=await pager.boundingBox();for(const button of await pager.getByRole('button').all())if(await button.isVisible()){const b=await button.boundingBox();assert.ok(b.x>=box.x-1&&b.x+b.width<=box.x+box.width+1,name+' pager fits');if(width<=390)assert.ok(b.height>=44&&b.width>=44,name+' mobile touch target');}
-    await pager.scrollIntoViewIfNeeded();await page.screenshot({path:path.join(out,name+'-'+width+'.png')});results.push({screen:name,width,page2:'PASS'});
+    // Search has sequential exit/enter + staggered cards. Capture the rendered
+    // new shelf, not the intentional blank frame between those two animations.
+    if(name==='search')await page.waitForTimeout(1100);
+    await pager.scrollIntoViewIfNeeded();
+    await page.evaluate(async()=>{for(let pass=0;pass<2;pass++)await Promise.all(document.getAnimations().filter(a=>Number.isFinite(a.effect?.getTiming().iterations)).map(a=>a.finished.catch(()=>{})));});
+    if(name==='exchange'||name==='auctions')assert.equal(await pager.evaluate(n=>getComputedStyle(n).marginTop),'24px','snapshot footer keeps space above its divider');
+    if(name==='reputation'&&width<=390){
+      const score=page.locator('[class*="scoreSegment"] strong').first();
+      assert.equal(await score.evaluate(n=>{const range=document.createRange();range.selectNodeContents(n);return new Set([...range.getClientRects()].map(r=>Math.round(r.top))).size;}),1,'rating stays on one line');
+      const label=page.locator('[class*="scoreSegmentLabel"]').first();assert.ok((await label.boundingBox()).width>100,'review labels are not crushed beside stars');
+    }
+    const more=pager.getByRole('button',{name:/^Chọn trang /}).filter({visible:true}).first();
+    if(await more.isVisible()){
+      await more.click();const menu=pager.getByRole('dialog');await expect(menu).toBeVisible();
+      const popup=await menu.boundingBox();assert.ok(popup.x>=0&&popup.x+popup.width<=width+1&&popup.y>=0&&popup.y+popup.height<=1001,name+' menu stays in viewport');
+      const choice=menu.getByRole('button',{name:/^Trang /}).first();await expect(choice).toBeFocused();await page.keyboard.press('ArrowRight');await expect(menu.getByRole('button',{name:/^Trang /}).nth(1)).toBeFocused();
+      assert.equal(await choice.evaluate(n=>{const r=n.getBoundingClientRect();return n.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),true,name+' menu is not clipped');
+      await page.keyboard.press('Escape');await expect(more).toBeFocused();
+    }
+    await page.screenshot({path:path.join(out,name+'-'+width+'.png')});results.push({screen:name,width,page2:'PASS',focus:anchors[name]?'PASS':'existing search heading',popup:'checked when present'});
   }
+  // Each public auction shelf owns its page and returns focus to its own heading.
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'/auctions');
+  const upcomingPager=page.getByRole('navigation',{name:'Phân trang đấu giá sắp mở',exact:true});await upcomingPager.getByRole('button',{name:'Đến trang tiếp theo'}).click();await expect(upcomingPager).toContainText('Trang 2');await expect(page.locator('#auction-upcoming-title')).toBeFocused();
+  assert.equal(new URL(page.url()).searchParams.get('auctionPage'),null,'upcoming paging does not move the active shelf');
+  await page.goBack();await expect(upcomingPager).toContainText('Trang 1');
   await page.goto(origin+'/auctions/new');const radios=page.locator('input[name="auction-book"]');await expect(radios).toHaveCount(20);await radios.first().check();const price=page.locator('#auction-start');await price.fill('70000');await expect(price).toHaveValue('70.000');
   await page.evaluate(()=>window.qa.fail=true);await page.getByRole('button',{name:'Tải thêm sách từ kệ',exact:true}).click();await expect(page.getByRole('alert')).toContainText('Sách đã chọn và giá đang nhập vẫn được giữ');await expect(radios.first()).toBeChecked();await expect(price).toHaveValue('70.000');
   await page.getByRole('button',{name:'Thử tải sách cũ hơn',exact:true}).click();await expect(radios).toHaveCount(25);await expect(radios.first()).toBeChecked();await expect(price).toHaveValue('70.000');const pickerReads=await page.evaluate(()=>window.qa.calls.filter(p=>p.startsWith('/me/listings')&&p.includes('cursor=')));assert.equal(pickerReads[0],pickerReads[1],'picker retry keeps its cursor');

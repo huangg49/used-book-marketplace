@@ -1,4 +1,5 @@
 import { Pagination } from "../components/Pagination";
+import { usePaginationFocus } from "../components/Pagination/usePaginationFocus";
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AuctionEmptyArt } from '../components/AuctionEmptyArt'
@@ -89,7 +90,10 @@ export function AuctionListPage() {
   const currentPage = normalizePage('auctionPage', items.length)
   const upcomingItems = upcoming.data?.items ?? []
   const upcomingPage = normalizePage('upcomingPage', upcomingItems.length)
+  const requestActiveFocus = usePaginationFocus(currentPage, JSON.stringify([filters, sort]), 'auction-list-title', result.isFetching)
+  const requestUpcomingFocus = usePaginationFocus(upcomingPage, 'upcoming', 'auction-upcoming-title', upcoming.isFetching)
   const selectPage = (key: string, page: number) => {
+    if (key === 'auctionPage') requestActiveFocus(); else requestUpcomingFocus();
     const next = new URLSearchParams(params)
     if (page > 1) next.set(key, String(page)); else next.delete(key)
     setParams(next)
@@ -406,7 +410,7 @@ export function AuctionListPage() {
           <section aria-labelledby="auction-upcoming-title" className={styles.upcomingSection}>
             <div className={styles.sectionHeading}>
               <div className={styles.headingLeft}>
-                <h2 id="auction-upcoming-title">Sắp mở phiên</h2>
+                <h2 id="auction-upcoming-title" tabIndex={-1}>Sắp mở phiên</h2>
                 <span className={styles.countBadgeUpcoming}>
                   {upcoming.data.items.length} phiên đã hẹn giờ
                 </span>

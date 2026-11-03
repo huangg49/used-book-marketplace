@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Pagination } from "../components/Pagination";
+import { usePaginationFocus } from "../components/Pagination/usePaginationFocus";
 import { useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -98,6 +99,7 @@ export default function ExchangeMinePage() {
   const {
     data: listData,
     isLoading,
+    isFetching,
     isError,
     refetch,
   } = useQuery({
@@ -112,11 +114,14 @@ export default function ExchangeMinePage() {
     if (currentPage > last) setSearchParams({ tab: currentTab, page: String(last) }, { replace: true });
   }, [listData, currentPage, currentTab, setSearchParams]);
 
+  const requestPageFocus = usePaginationFocus(currentPage, `${actor}:${currentTab}`, `panel-${currentTab}`, isFetching, isError);
+
   const setTab = (tab: ExchangeTab) => {
     setSearchParams({ tab, page: "1" });
   };
 
   const setPage = (page: number) => {
+    requestPageFocus();
     setSearchParams({ tab: currentTab, page: page.toString() });
   };
 
@@ -226,6 +231,7 @@ export default function ExchangeMinePage() {
       <div
         role="tabpanel"
         id={`panel-${currentTab}`}
+        tabIndex={-1}
         aria-labelledby={`tab-${currentTab}`}
         aria-live="polite"
       >

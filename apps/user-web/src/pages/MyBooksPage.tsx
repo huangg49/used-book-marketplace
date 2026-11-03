@@ -124,7 +124,7 @@ export function MyBooksPage() {
           ))}
         </div>
 
-        <div className={styles.results} aria-busy={query.isLoading}>
+        <div className={styles.results} id="owner-shelf-results" tabIndex={-1} aria-busy={query.isLoading}>
           {query.isLoading ? (
             <p className={styles.state} role="status">
               Đang tải kệ sách…
@@ -217,7 +217,7 @@ export function MyBooksPage() {
           )}
 
       <CursorPager navigation={navigation} nextCursor={!query.isError ? query.data?.nextCursor : undefined}
-        busy={query.isFetching} count={query.data?.items.length} label="Trang kệ sách" itemLabel="bài đăng" />
+        busy={query.isFetching} failed={query.isError} count={query.data?.items.length} label="Trang kệ sách" itemLabel="bài đăng" anchorId="owner-shelf-results" />
         </div>
       </section>
     </div>

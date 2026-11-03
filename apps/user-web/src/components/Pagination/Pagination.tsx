@@ -49,7 +49,8 @@ function pageItems(selected: number[], max: number): PageItem[] {
   const items: PageItem[] = [];
   let previous = 0;
   for (const page of pages) {
-    if (page > previous + 1) items.push({ from: previous + 1, to: page - 1 });
+    if (page === previous + 2) items.push(previous + 1);
+    else if (page > previous + 1) items.push({ from: previous + 1, to: page - 1 });
     items.push(page); previous = page;
   }
   if (previous < max) items.push({ from: previous + 1, to: max });
@@ -82,7 +83,7 @@ export function Pagination({
   const menuId = useId();
   const root = useRef<HTMLElement>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
-  const [menu, setMenu] = useState<{ from: number; to: number; below: boolean; page: number } | null>(null);
+  const [menu, setMenu] = useState<{ from: number; to: number; below: boolean; height: number; page: number } | null>(null);
   const size = Number.isFinite(pageSize) ? Math.max(1, Math.floor(pageSize)) : 10;
   const count = totalItems !== undefined && Number.isFinite(totalItems)
     ? Math.max(0, Math.floor(totalItems)) : undefined;
@@ -117,9 +118,9 @@ export function Pagination({
 
   const numbered = reachable > 0 && !isEmpty;
   const desktopPages = pageItems([1, 2, safePage - 1, safePage, safePage + 1, reachable], reachable);
-  const mobilePages: PageItem[] = [1, 2].filter(value => value <= reachable);
-  if (reachable > 2) mobilePages.push({ from: 1, to: reachable });
-  if (safePage > 2 && safePage <= reachable) mobilePages.push(safePage);
+  const mobilePages: PageItem[] = reachable <= 4
+    ? Array.from({ length: reachable }, (_, index) => index + 1)
+    : [1, 2, { from: 1, to: reachable }, ...(safePage > 2 && safePage <= reachable ? [safePage] : [])];
   const visibleCount = count !== undefined
     ? Math.min(size, Math.max(0, count - (safePage - 1) * size))
     : itemCount !== undefined && Number.isFinite(itemCount)
@@ -153,7 +154,9 @@ export function Pagination({
           onClick={event => {
             trigger.current = event.currentTarget;
             const box = root.current?.getBoundingClientRect();
-            setMenu(current => current?.page === safePage && current.from === item.from && current.to === item.to ? null : { ...item, below: (box?.top ?? 0) < 300, page: safePage });
+            const above = box?.top ?? 0, below = window.innerHeight - (box?.bottom ?? 0);
+            setMenu(current => current?.page === safePage && current.from === item.from && current.to === item.to ? null
+              : { ...item, below: below > above, height: Math.min(320, Math.max(80, Math.max(above, below) - 16)), page: safePage });
           }}>…</button>
       );
       return <button key={item} type="button"
@@ -213,7 +216,7 @@ export function Pagination({
       </div>
 
       {menu && menu.page === safePage && menu.to <= reachable && <div id={menuId} className={`${styles.pageMenu} ${menu.below ? styles.menuBelow : ""}`}
-        role="dialog" aria-label="Chọn trang khác">
+        role="dialog" aria-label="Chọn trang khác" style={{ maxHeight: menu.height }}>
         <div className={styles.menuHeading}>
           <span>{computedTotalPages !== undefined ? "Chọn trang" : "Các trang đã tải"}</span>
           <button type="button" aria-label="Đóng chọn trang" onClick={() => { setMenu(null); trigger.current?.focus(); }}><X size={16} aria-hidden="true" /></button>
@@ -221,8 +224,9 @@ export function Pagination({
         <div className={styles.pageGrid} onKeyDown={event => {
           const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("button")];
           const index = buttons.indexOf(event.target as HTMLButtonElement);
+          const columns = getComputedStyle(event.currentTarget).gridTemplateColumns.split(' ').length;
           const next = event.key === "ArrowRight" ? index + 1 : event.key === "ArrowLeft" ? index - 1
-            : event.key === "ArrowDown" ? index + 5 : event.key === "ArrowUp" ? index - 5
+            : event.key === "ArrowDown" ? index + columns : event.key === "ArrowUp" ? index - columns
             : event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1 : undefined;
           if (next !== undefined) { event.preventDefault(); buttons[Math.max(0, Math.min(buttons.length - 1, next))]?.focus(); }
         }}>

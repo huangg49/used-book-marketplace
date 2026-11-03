@@ -1,4 +1,4 @@
-# Phân trang đánh số trực tiếp —03/11/2026
+# Phân trang đánh số và rà consumer —03/11/2026
 
 Owner yêu cầu kết hợp thiết kế Antigravity và logic cursor, bỏ UI chỉ Trước/Sau
 và form nhập trang. Nhánh `codex/pagination-direct-page-jump`, base099e3340:
@@ -12,6 +12,20 @@ Transport giả, không DB/API/provider/native/human acceptance. Chi tiết tron
 Đưa vào Documents bằng copy có kiểm nguồn/backup, giữ thay đổi reputation/support
 của Antigravity và branch runtime. FE5174/Admin5173/API3000 đang chạy theo yêu cầu
 owner; không restart DB. Chưa push/PR/CI mới, READINESS giữ nguyên.
+
+Follow-up owner giao rà mọi trang dùng pager: nhánh `codex/pagination-consumer-audit`,
+base92c7b178.12 cụm Member/11 màn và8 consumer Operations đã đối chiếu source.
+Sửa gap24px ở hai kệ đấu giá/trao đổi; dãy ngắn≤4 hiện đủ số mobile, bỏ gap đơn;
+popup tự chia cột/chọn phía còn chỗ. Thêm scroll/focus sau kết quả ở kệ/đấu giá
+cá nhân, đấu giá công khai, trao đổi/ví; lỗi/filter không cướp focus. Wrap review
+màn nhỏ; cô lập CSS Users đang lan sang footer Admin khác. Giữ page sizes/cursor,
+tải thêm Operations và API/quỹ. PASS hai app build/typecheck,338unit Member và
+10unit Admin; list42case, wallet8case + popup hẹp, reputation privacy/cache/HTTP
+fixture, Users→Support4width + review queue footer.8 Operations chỉ có source
+audit và các browser đại diện này, không full integration từng màn. Không DB/
+provider/native/human/CI mới; readiness giữ nguyên. Đã áp dụng vào Documents có
+sao lưu, giữ CSS riêng của hồ sơ uy tín. Member5174/Admin5173/API3000 đã chạy lại,
+Search live đọc1→2→1 PASS ở1440/390px. Chi tiết trong báo cáo trên.
 
 # Phân trang các danh sách web —03/11/2026
 

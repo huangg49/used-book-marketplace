@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
+import { usePaginationFocus } from "../components/Pagination/usePaginationFocus";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import {
   ArrowDownLeft,
@@ -86,6 +87,8 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
   const items = history.data?.pages.flatMap((page) => page.items) ?? [];
   const loadedPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, loadedPages);
+  const historyAnchor = useId();
+  const requestPageFocus = usePaginationFocus(safePage, scope, historyAnchor, history.isFetching, history.isError);
   const pagedItems = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   async function changePage(next: number) {
@@ -121,7 +124,7 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
           {/* History Header */}
           <header className={styles.receiptHeader}>
             <div className={styles.historyTitleRow}>
-              <h2 className={styles.receiptStoreTitle}>Lịch sử giao dịch</h2>
+              <h2 id={historyAnchor} tabIndex={-1} className={styles.receiptStoreTitle}>Lịch sử giao dịch</h2>
               <span className={styles.historyBadge}>VNPay Sandbox</span>
             </div>
             <p className={styles.receiptSubTitle}>
@@ -304,7 +307,7 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
             pageSize={PAGE_SIZE}
             itemLabel="giao dịch"
             hasNext={safePage < loadedPages || history.hasNextPage}
-            onPageChange={(next) => void changePage(next)}
+            onPageChange={(next) => { requestPageFocus(); void changePage(next); }}
             isLoading={history.isFetching}
           />
         </div>

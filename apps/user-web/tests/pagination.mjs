@@ -71,6 +71,14 @@ try {
     await page.screenshot({ path: path.join(out, `component-${width}-${scale}.png`) });
     results.push({ width, scale, geometry: 'PASS', keyboard: 'PASS', navigation: 'PASS' });
   }
+  await page.setViewportSize({width:320,height:540});await page.goto(origin);await nav.waitFor();
+  await page.locator('main').evaluate(n=>{n.style.maxWidth='252px';n.style.marginTop='140px';});
+  const gap=nav.getByRole('button',{name:/^Chọn trang /}).filter({visible:true}).first();await gap.click();const menu=nav.getByRole('dialog');await expect(menu).toBeVisible();
+  const bounds=await menu.boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=321&&bounds.y>=0&&bounds.y+bounds.height<=541,'narrow popup fits the visible screen');
+  const grid=menu.locator('[class*="pageGrid"]'),columns=await grid.evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length);
+  await page.keyboard.press('ArrowDown');await expect(grid.getByRole('button').nth(columns)).toBeFocused();
+  assert.equal(await grid.getByRole('button').first().evaluate(n=>{const r=n.getBoundingClientRect();return n.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),true,'narrow popup options are not clipped');
+  await page.screenshot({path:path.join(out,'popup-narrow.png')});await page.keyboard.press('Escape');await expect(gap).toBeFocused();
   await page.goto(origin + '?variant=compact'); await nav.waitFor(); await expect(nav.getByRole('button',{name:'Trang 1',exact:true})).toBeVisible();assert.equal(await nav.locator('input').count(),0); await expect(nav).toContainText('Trang 5 / 40');
   await page.goto(origin + '?loading'); await nav.waitFor(); for (const button of await nav.getByRole('button').all()) await expect(button).toBeDisabled();
   await page.setViewportSize({ width: 1440, height: 1000 }); await page.goto(origin + '?wallet');
@@ -96,7 +104,7 @@ try {
   await next().click(); await expect(nav).toContainText('11–20'); await page.evaluate(() => window.qa.owner()); await expect(nav).toContainText('1–10');
   for (const width of [1440, 390]) { await page.setViewportSize({ width, height: 1000 }); await page.screenshot({ path: path.join(out, `wallet-${width}.png`), fullPage: true }); }
   await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'?wallet&long');await expect(rows).toHaveCount(10);
-  await nav.getByRole('button',{name:'Trang 10',exact:true}).click();await expect(nav).toContainText('Trang 10');
+  await nav.getByRole('button',{name:'Trang 10',exact:true}).click();await expect(nav).toContainText('Trang 10');await expect(page.getByRole('heading',{name:'Lịch sử giao dịch',exact:true})).toBeFocused();
   await nav.getByRole('button',{name:'Trang 2',exact:true}).click();await expect(nav).toContainText('Trang 2');assert.equal(await page.evaluate(()=>window.qa.calls.length),1,'wallet 10→2 is one numbered click');
   await page.emulateMedia({ forcedColors: 'active' }); await page.keyboard.press('Tab'); await next().focus(); await expect.poll(() => next().evaluate(n => getComputedStyle(n).outlineStyle)).toBe('solid');
   assert.deepEqual(errors, []);

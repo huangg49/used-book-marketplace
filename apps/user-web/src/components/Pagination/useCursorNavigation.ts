@@ -30,7 +30,7 @@ export function useCursorNavigation(identity: string) {
     setParams(next, { state: { ...state, latlaiCursorTrail: trail ? { scope, cursors: trail, index: nextIndex } : undefined } });
   }
   return {
-    page, knownPage: !!cursors, cursor, reachablePages: cursors?.length,
+    page, knownPage: !!cursors, cursor, scope, reachablePages: cursors?.length,
     jump: (target: number) => {
       if (cursors && Number.isSafeInteger(target) && target >= 1 && target <= cursors.length)
         go(cursors[target - 1]!, cursors, target - 1);

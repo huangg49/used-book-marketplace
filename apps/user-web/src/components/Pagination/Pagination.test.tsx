@@ -68,6 +68,14 @@ describe("Pagination Component", () => {
     expect(html).toContain('aria-label="Trang 10"');
   });
 
+  it("shows short page ranges directly instead of an unnecessary single-page gap", () => {
+    const html = renderToStaticMarkup(<Pagination page={2} totalPages={5} onPageChange={() => undefined} />);
+    expect(html).toContain('aria-label="Trang 4"');
+    expect(html).not.toContain('aria-label="Chọn trang 4 đến 4"');
+    const short = renderToStaticMarkup(<Pagination page={2} totalPages={4} onPageChange={() => undefined} />);
+    expect(short).not.toContain("…");
+  });
+
   it("renders simple variant without page numbers", () => {
     const html = renderToStaticMarkup(
       <Pagination

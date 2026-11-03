@@ -1118,3 +1118,17 @@
   .badgesRow > span { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
   .badgesRow svg { flex-shrink: 0; }
 }
+
+/* Keep the review-to-pagination boundary readable on narrow screens. */
+@media (max-width: 600px) {
+  .page { width: calc(100% - 32px); }
+  .page.dashboardView { width: 100%; }
+  .reviewHeader { flex-wrap: wrap; gap: 8px; }
+  .authorLeft { flex-basis: 100%; }
+  .reviewDate { white-space: normal; }
+  .reviewScoresStrip { display: flex; padding: 10px 12px; gap: 12px; }
+  .scoreSegment { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 8px; width: 100%; }
+  .scoreSegmentLabel { grid-column: 1 / -1; overflow-wrap: normal; }
+  .scoreSegment strong { white-space: nowrap; }
+  .scoreDivider { display: none; }
+}

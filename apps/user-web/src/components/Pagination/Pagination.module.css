@@ -10,7 +10,7 @@
   color: var(--shop-ink, #281914);
   font-variant-numeric: tabular-nums;
 }
-.bordered { padding-top: 16px; border-top: 1px solid var(--shop-line, #d9cbbd); }
+.bordered { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--shop-line, #d9cbbd); }
 .summaryWrap { min-width: 0; color: var(--shop-muted, #716157); font-size: 0.8125rem; line-height: 1.5; }
 .summaryText { margin: 0; }
 .controlsWrap, .desktopPages { display: flex; align-items: center; gap: 4px; }
@@ -51,7 +51,7 @@
 .menuBelow { top: calc(100% + 8px); bottom: auto; }
 .menuHeading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; color: var(--shop-muted); font-size: 0.8125rem; }
 .paginationRoot .menuHeading button { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--shop-muted); cursor: pointer; }
-.pageGrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.pageGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); gap: 4px; }
 @container (max-width: 520px) {
   .controlsWrap { width: 100%; margin-inline-start: 0; justify-content: center; gap: 1px; flex-wrap: wrap; }
   .desktopPages { display: none; }

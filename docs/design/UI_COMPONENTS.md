@@ -820,6 +820,13 @@ hover. Ví dụ thực thi các variant và ca loading trong
 [browser fixture](../../apps/user-web/tests/pagination.mjs), chạy
 `pnpm --filter @used-books/user-web test:pagination:browser`.
 
+Dãy ngắn≤4 trang hiện tất cả số trên mobile; desktop không dùng dấu “…” chỉ để
+giấu một trang. Bảng chọn tự chia cột44px theo bề rộng, mở về phía còn chỗ và có
+chiều cao theo viewport. `bordered` chừa24px phía trên và16px dưới đường phân cách.
+`usePaginationFocus` dùng cho kệ/đấu giá cá nhân, hai kệ đấu giá công khai, trao
+đổi và ví: chỉ scroll/focus sau thao tác đổi trang đã hiện kết quả; hủy ý định
+khi đổi owner/filter hoặc đọc lỗi. Giữ motion/Lenis và focus chung.
+
 [WalletHistory](../../apps/user-web/src/pages/WalletHistory.tsx) hiện10mục/trang,
 cache các trang cursor20mục của API. Chỉ fetch khi đi quá dữ liệu đã tải, giữ trang
 và hàng khi lỗi, retry bằng cùng cursor, không dùng đồng thời Load more. Chỉ hiện
@@ -841,3 +848,9 @@ phạm vi API hiện trả; các cap50/100 vẫn được ghi rõ. Picker mở �
 thêm để giữ radio/giá/intent, các queue Operations giữ component của Admin. Chạy
 `pnpm --filter @used-books/user-web test:list-pagination:browser` để kiểm các màn
 và thao tác, cùng test wallet/reputation/search khi nguồn chung thay đổi.
+
+Operations giữ `CursorPagination` tải thêm trong8 vị trí hàng việc/lịch sử,
+không giả lập tổng hoặc thay bằng số trang Member. CSS của Users chỉ áp dưới
+`.directory-pagination`; không làm đổi footer Support/queue sau khi đổi route.
+`pnpm --filter @used-books/admin-web test:pagination:browser` kiểm Users/Support
+với transport giả và footer review queue, gồm lỗi/retry và4 kích thước.
