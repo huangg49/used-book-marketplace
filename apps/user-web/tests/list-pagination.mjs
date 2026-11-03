@@ -59,7 +59,7 @@ const read=async(url)=>{window.qa.calls.push(url);const p=new URL(url,location.o
  if(url==='/exchanges')return{items:rows.map(r=>({...r,status:'Completed',initiatorId:user.id,recipientId:id(2),initiatorListingId:id(300),recipientListingId:id(301),initiatorDeposit:50000,recipientDeposit:50000,diffAmount:0})),serverTime:now};
  if(url.startsWith('/listings/'))throw Error('QA has no legacy snapshot');
  if(url.startsWith('/auctions'))return{items:Array.from({length:25},(_,i)=>auction(i)),serverTime:now};
- if(url.startsWith('/listings?'))return{items:chunk.map(r=>({...r,mode:'Sale',salePrice:50000,exchangeValue:null,condition:'Good',author:'Tác giả QA',authors:['Tác giả QA'],thumbnailUrl:null,owner:{id:user.id,displayName:user.displayName},book:{title:r.title,authors:['Tác giả QA']},state:{moderation:'Approved',visibility:'Visible',trade:'Available'}})),nextCursor,serverTime:now};
+ if(url.startsWith('/listings?'))return{items:chunk.map(r=>({...r,revisionId:id(900),photos:[],mode:'Sale',salePrice:50000,exchangeValue:null,condition:'Good',author:'Tác giả QA',authors:['Tác giả QA'],thumbnailUrl:null,owner:{id:user.id,displayName:user.displayName},book:{title:r.title,authors:['Tác giả QA']},state:{moderation:'Approved',visibility:'Visible',trade:'Available'}})),nextCursor,serverTime:now};
  return{items:[],nextCursor:null,serverTime:now};};
 session.request=read;session.publicRequest=read;adminSession.request=read;
 function Generic(){const[filter,setFilter]=useState('all');const[owner,setOwner]=useState('one');const mode=new URLSearchParams(location.search).get('mode');

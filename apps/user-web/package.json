@@ -6,6 +6,7 @@
   "scripts": {
     "test:book-detail:browser": "node tests/book-detail.mjs",
     "test:search-recovery:browser": "node tests/search-recovery.mjs",
+    "test:search-covers:browser": "node tests/search-covers.mjs",
     "test:list-pagination:browser": "node tests/list-pagination.mjs",
     "test:pagination:browser": "node tests/pagination.mjs",
     "test:home-search-focus:browser": "node tests/home-search-focus.mjs",

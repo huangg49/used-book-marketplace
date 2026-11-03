@@ -1,7 +1,8 @@
 import { CursorPager } from "../components/Pagination/CursorPager";
 import { useCursorNavigation } from "../components/Pagination/useCursorNavigation";
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { preload } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import {
   Search,
@@ -33,6 +34,7 @@ import {
 } from "@used-books/api-contract/catalog-taxonomy";
 import { catalogQueryKeys, readAttributes } from "../lib/catalog-filters";
 import { observeHeaderScroll } from "../lib/header-scroll";
+import { publicListingPhotoOptions } from "../hooks/usePublicListingPhoto";
 import { AutumnLeavesCanvas } from "../components/autumn/AutumnLeavesCanvas";
 import styles from "./BookSearchPage.module.css";
 
@@ -387,6 +389,7 @@ const pageVariants: Variants = {
 };
 
 export function BookSearchPage() {
+  const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const searchTerm = params.get("q") || "";
   const [settledSearch, setSettledSearch] = useState(searchTerm);
@@ -475,7 +478,28 @@ export function BookSearchPage() {
   const priceInvalid = invalidFilters(initial);
   const result = useQuery({
     queryKey: ["catalog-search", taxonomyVersion, preview, query.toString()],
-    queryFn: () => getSearchShelf(query, preview),
+    queryFn: async () => {
+      const page = await getSearchShelf(query, preview);
+      // Warm the opening pair while the previous page's exit animation runs.
+      if (query.has("cursor") && document.visibilityState !== "hidden") {
+        for (const book of page.items.slice(0, 2)) {
+          if ("preview" in book || !book.photos[0]) continue;
+          const options = publicListingPhotoOptions(
+            book.id, book.revisionId, book.photos[0].id,
+          );
+          void queryClient.prefetchQuery({
+            ...options,
+            queryFn: async () => {
+              const photo = await options.queryFn();
+              if (document.visibilityState !== "hidden")
+                preload(photo.url, { as: "image" });
+              return photo;
+            },
+          });
+        }
+      }
+      return page;
+    },
     enabled: !priceInvalid && !searchPending,
     retry: false,
     staleTime: 30_000,

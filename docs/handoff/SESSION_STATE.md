@@ -1,3 +1,32 @@
+# Tải sớm hai bìa đầu khi phân trang Tìm sách — 03/11/2026
+
+Gói từ `d28f7605` trên nhánh `codex/member-web-search-covers`. Khi trang
+có cursor trả dữ liệu, Member web lấy link và preload tối đa hai bìa đầu
+trong lúc thẻ cũ chạy exit animation. Dùng chung query key, kiểm hạn link
+và cache card/detail hiện có. Cặp ảnh này có thể tải trước khi vào viewport.
+Trang đầu, sách không có ảnh, dữ liệu preview và tab ẩn giữ đường tải hiện có.
+
+- Chromium 151, production build với HTTP/ảnh fixture, 5 cặp chạy luân phiên
+  ở mỗi viewport. Tính từ lúc nhận xong dữ liệu trang 2 đến lúc tải xong
+  bìa đầu: desktop 956 → 467 ms, mobile 1.414 → 575 ms. Mobile 390px,
+  DPR 2, CPU 4×, tải xuống 4 Mbps, tải lên 0,75 Mbps và độ trễ 75 ms.
+  Lượt đầu danh sách desktop 360 → 357 ms, mobile 727 → 694 ms.
+- Browser hồi quy kiểm chỉ hai link/ảnh được tải sớm, cache tái sử dụng một
+  request ảnh, link lỗi/hết hạn và ảnh lỗi vẫn tải lại được. Tab ẩn trước
+  hoặc trong lúc lấy link, trang đầu và sách không ảnh được kiểm riêng.
+  Fixture phân trang bổ sung `photos` và `revisionId` theo contract.
+- Bộ định nghĩa chuyển cảnh Search và toàn bộ 45 file CSS production khớp
+  bản trước. Luồng trang 2 → Chi tiết → Back chạy ở hai viewport.
+  Build, typecheck, 338 unit test, lint, 42 ca phân trang, Search recovery
+  và smoke GET API local thật PASS. Smoke 1440/390px có 0 lỗi JavaScript.
+  Detector Search 0 finding. Bộ ảnh có 8 ca PASS, chạy lại bằng
+  `pnpm --filter @used-books/user-web test:search-covers:browser`.
+  Số đo và harness tại `.tmp/member-web-search-performance/`, ca ảnh
+  tại `.tmp/search-covers/`. Đây là số đo phòng thử với ảnh/HTTP fixture.
+
+Gói ở worktree phát triển. Thiết bị thật, human acceptance và CI remote
+chưa chạy. Gate phát hành theo READINESS.
+
 # Vẽ canvas lá rơi trên Member web — 03/11/2026
 
 Gói tiếp theo từ `bbd59568` trên nhánh `codex/member-web-autumn-canvas`.
