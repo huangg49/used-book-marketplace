@@ -1,3 +1,24 @@
+# Rút tiền mô phỏng — 03/11/2026
+
+- `codex/wallet-withdrawals`, base `93289df5`: owner duyệt luồng có lý do bắt buộc,
+  Admin độc lập và lịch sử Rút tiền; yêu cầu popup và UI đồng bộ Admin.
+- Source có hold riêng, decision/process/event/refund, ledger nguyên tử và receipt;
+  Unknown giữ tiền/cùng mã chi. Member web popup xác nhận, timeline/thông báo/
+  retry; Admin queue/detail và popup lý do; operator mô phỏng kết quả độc lập.
+- Contract0.74.0/256operations/39controllers; migration0060mới, không sửa migration
+  cũ. RN chỉ tương thích đọc wallet/history/notifications, chưa có form rút native.
+- PASS61Mongo/6SKIP,12withdrawal E2E,5checkout liên quan/43SKIP,320Member/229Admin/150session/
+  14RNwallet/30APIwallet-config/7catalog unit; typecheck/build/contract/lint phù hợp.
+  Browser22captures desktop/390/320/chữ130%, Member+Admin lostACK/exact retry và
+  hold/unknown/payout/reject-refund; API/Mongo QA thật, storage/payout mô phỏng.
+- Finish reviewer:1finding history mobile đã sửa và verdict ship trong phạm vi fix;
+  documenter giữ DESIGN/token. Không suy native/human/provider/release PASS.
+- Hồi quy rộng còn Windows shutdown unit timeout và stress100topup trả503 khi
+  hết retry budget; không tính full API/wallet suite PASS. Không đổi budget để che.
+- [Hành trình/evidence/kích hoạt](../features/WALLET_WITHDRAWALS.md),
+  [ADR0072](../adr/0072-simulated-wallet-withdrawals.md). Chưa push/merge hoặc áp
+  source/migration/quyền mới vào app/DB chính; READINESS giữ nguyên.
+
 # Đồng bộ main và bảo toàn checkout local — 03/11/2026
 
 ## Quyền xuất bản gói tích hợp — 03/11/2026

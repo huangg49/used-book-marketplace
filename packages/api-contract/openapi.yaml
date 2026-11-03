@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Lật lại API
-  version: 0.73.1
+  version: 0.74.0
   description: >-
     Shared NestJS/MongoDB API for Member web, React Native and Operations. Auth
     includes OTP/account recovery and rotating sessions. Catalog/listing/media,
@@ -15,8 +15,8 @@ info:
     InvalidState and inspection settlement cannot execute until Buyer protection
     and post-F2h readiness are accepted. Authorized historical receipt replays
     remain read-only; existing holds/history are preserved. Full dispute
-    adjudication/return, ordinary ViaPoint and
-    withdrawal remain incomplete. This contract describes source capabilities,
+    adjudication/return and ordinary ViaPoint remain incomplete. Withdrawals use
+    dedicated holds, independent Admin approval and verified simulator outcomes. This contract describes source capabilities,
     not production readiness or full client/native acceptance. GHN/carrier routes
     retain their current behavior pending the owner's team decision.
 servers:
@@ -5250,7 +5250,7 @@ paths:
         - Wallet
       x-implementation-status: implemented
       description: Derived simulated available + transaction-held balance. LOCKED may read, but cannot
-        pay. Withdrawal not implemented. A payment capability is not a checkout UI release gate.
+        pay. Withdrawal uses a dedicated hold and independent Admin approval. A payment capability is not a checkout UI release gate.
       security:
         - bearerAuth: []
       parameters: []
@@ -5614,6 +5614,8 @@ paths:
               - ListingFeeCharge
               - ListingFeeRefund
               - ListingFeeSettlement
+              - WithdrawalHold
+              - WithdrawalRefund
               - OrderSettlement
         - in: query
           name: topupId
@@ -12016,6 +12018,506 @@ paths:
         '401': { $ref: '#/components/responses/Error' }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
+  /me/withdrawals:
+    post:
+      operationId: createWithdrawal
+      tags:
+        - Wallet
+      summary: createWithdrawal
+      description: Verified MEMBER; LOCKED denied. Atomically reserves available in a dedicated withdrawal hold. Other
+        requires a description. Same key/body returns the original receipt.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: &a1
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWithdrawal"
+      responses:
+        "200":
+          description: Simulated withdrawal; approval is not successful payout.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WithdrawalReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+    get:
+      operationId: listMyWithdrawals
+      tags:
+        - Wallet
+      summary: listMyWithdrawals
+      description: Owner only, including locked accounts. Recipient account number is masked.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: cursor
+          schema: *a1
+        - in: query
+          name: state
+          schema:
+            $ref: "#/components/schemas/WithdrawalState"
+      responses:
+        "200":
+          description: Simulated withdrawal; approval is not successful payout.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WithdrawalPage"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+      x-locked-access: existing-obligations
+  /me/withdrawals/{withdrawalId}:
+    get:
+      operationId: getMyWithdrawal
+      tags:
+        - Wallet
+      summary: getMyWithdrawal
+      description: Owner only, including locked accounts. Recipient account number is masked.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: withdrawalId
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: Simulated withdrawal; approval is not successful payout.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Withdrawal"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+      x-locked-access: existing-obligations
+  /admin/withdrawals:
+    get:
+      operationId: listAdminWithdrawals
+      tags:
+        - Wallet
+      summary: listAdminWithdrawals
+      description: ACTIVE ADMIN only. Oldest requests first.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: cursor
+          schema: *a1
+        - in: query
+          name: state
+          schema:
+            $ref: "#/components/schemas/WithdrawalState"
+      responses:
+        "200":
+          description: Simulated withdrawal; approval is not successful payout.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WithdrawalPage"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /admin/withdrawals/{withdrawalId}:
+    get:
+      operationId: getAdminWithdrawal
+      tags:
+        - Wallet
+      summary: getAdminWithdrawal
+      description: ACTIVE ADMIN only. Full immutable recipient snapshot.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: withdrawalId
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: Simulated withdrawal; approval is not successful payout.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Withdrawal"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /admin/withdrawals/{withdrawalId}/decision:
+    post:
+      operationId: decideWithdrawal
+      tags:
+        - Wallet
+      summary: decideWithdrawal
+      description: Independent ACTIVE ADMIN and session created within 15 minutes. Approve or reject before sending; reason
+        required. Rejection releases only this hold.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+        - in: path
+          name: withdrawalId
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DecideWithdrawal"
+      responses:
+        "200":
+          description: Simulated withdrawal; approval is not successful payout.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WithdrawalReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /admin/withdrawals/{withdrawalId}/process:
+    post:
+      operationId: processWithdrawal
+      tags:
+        - Wallet
+      summary: processWithdrawal
+      description: Independent ACTIVE ADMIN, recent session. Approved only; creates one immutable payoutRef. Never starts a
+        second payout for uncertain results.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+        - in: path
+          name: withdrawalId
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawalVersion"
+      responses:
+        "200":
+          description: Simulated withdrawal; approval is not successful payout.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WithdrawalReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /admin/withdrawals/{withdrawalId}/refund:
+    post:
+      operationId: refundWithdrawal
+      tags:
+        - Wallet
+      summary: refundWithdrawal
+      description: Independent ACTIVE ADMIN, recent session. FailedVerified only; returns this hold once, atomically.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+        - in: path
+          name: withdrawalId
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawalVersion"
+      responses:
+        "200":
+          description: Simulated withdrawal; approval is not successful payout.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WithdrawalReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/simulator/withdrawals:
+    get:
+      operationId: listSimulatedWithdrawals
+      tags:
+        - Wallet
+      summary: listSimulatedWithdrawals
+      description: ACTIVE TEST_OPERATOR; recipient account number is masked.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: cursor
+          schema: *a1
+        - in: query
+          name: state
+          schema:
+            $ref: "#/components/schemas/WithdrawalState"
+      responses:
+        "200":
+          description: Simulated withdrawal; approval is not successful payout.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WithdrawalPage"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /operations/simulator/withdrawal-events:
+    post:
+      operationId: emitSimulatedWithdrawalEvent
+      tags:
+        - Wallet
+      summary: emitSimulatedWithdrawalEvent
+      description: Independent ACTIVE TEST_OPERATOR only. Trusted server adapter authenticates evidence; exact amount,
+        currency, recipient and immutable payoutRef required. Unknown retains Processing and hold. Success posts once;
+        verified failure enables refund. No live bank transfer.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: *a1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimulatedWithdrawalEvent"
+      responses:
+        "200":
+          description: Simulated withdrawal; approval is not successful payout.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WithdrawalReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
 components:
   securitySchemes:
     bearerAuth:
@@ -14880,11 +15382,12 @@ components:
             - ExchangeCancelled
             - ExchangeRejected
             - ExchangeDisputed
+            - WithdrawalUpdated
             - SupportUpdated
             - ReviewModerated
         title: { type: string, maxLength: 120 }
         body: { type: string, maxLength: 400 }
-        targetType: { type: string, enum: [Auction, Exchange, Order, SupportCase, TransactionReview] }
+        targetType: { type: string, enum: [Auction, Exchange, Order, SupportCase, TransactionReview, Withdrawal] }
         targetId:
           type: string
           format: uuid
@@ -17345,6 +17848,256 @@ components:
         currency:
           type: string
           const: VND
+    WithdrawalState:
+      type: string
+      enum:
+        - Requested
+        - Approved
+        - Processing
+        - Completed
+        - Rejected
+        - FailedVerified
+        - Refunded
+    WithdrawalRecipient:
+      type: object
+      additionalProperties: false
+      required:
+        - bankName
+        - accountNumber
+        - accountHolder
+      properties:
+        bankName:
+          type: string
+          minLength: 2
+          maxLength: 100
+        accountNumber:
+          type: string
+          pattern: ^[0-9]{6,30}$
+        accountHolder:
+          type: string
+          minLength: 2
+          maxLength: 120
+    CreateWithdrawal:
+      type: object
+      additionalProperties: false
+      required:
+        - amount
+        - reason
+        - reasonDetail
+        - recipient
+      properties:
+        amount:
+          type: integer
+          minimum: 50000
+          maximum: 9007199254740991
+        reason:
+          type: string
+          enum:
+            - SaleProceeds
+            - Personal
+            - Leaving
+            - Other
+        reasonDetail:
+          type: string
+          minLength: 0
+          maxLength: 500
+        recipient:
+          $ref: "#/components/schemas/WithdrawalRecipient"
+    DecideWithdrawal:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - decision
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        decision:
+          type: string
+          enum:
+            - Approve
+            - Reject
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 500
+    WithdrawalVersion:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+    SimulatedWithdrawalEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - eventId
+        - withdrawalId
+        - expectedVersion
+        - payoutRef
+        - recipientId
+        - amount
+        - currency
+        - outcome
+      properties:
+        eventId: &a1
+          type: string
+          format: uuid
+        withdrawalId: *a1
+        expectedVersion:
+          type: integer
+          minimum: 1
+        payoutRef: *a1
+        recipientId: *a1
+        amount:
+          type: integer
+          minimum: 50000
+          maximum: 9007199254740991
+        currency:
+          type: string
+          const: VND
+        outcome:
+          type: string
+          enum:
+            - Unknown
+            - Succeeded
+            - FailedVerified
+    Withdrawal:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - ownerId
+        - ownerName
+        - amount
+        - fee
+        - reason
+        - reasonDetail
+        - recipient
+        - state
+        - version
+        - approverId
+        - payoutRef
+        - createdAt
+        - updatedAt
+        - history
+        - demoOnly
+      properties:
+        id: *a1
+        ownerId: *a1
+        ownerName:
+          type: string
+          minLength: 0
+          maxLength: 120
+        amount:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        fee:
+          type: integer
+          const: 0
+        reason:
+          type: string
+        reasonDetail:
+          type: string
+          minLength: 0
+          maxLength: 500
+        recipient:
+          type: object
+          additionalProperties: false
+          required: [bankName, accountNumber, accountHolder]
+          properties:
+            bankName: {type: string}
+            accountNumber: {type: string}
+            accountHolder: {type: string}
+        state:
+          $ref: "#/components/schemas/WithdrawalState"
+        version:
+          type: integer
+          minimum: 1
+        approverId:
+          type:
+            - string
+            - "null"
+          format: uuid
+        payoutRef:
+          type:
+            - string
+            - "null"
+          format: uuid
+        createdAt: &a2
+          type: string
+          format: date-time
+        updatedAt: *a2
+        history:
+          type: array
+          maxItems: 200
+          items:
+            type: object
+            additionalProperties: false
+            required:
+              - state
+              - at
+              - note
+            properties:
+              state:
+                $ref: "#/components/schemas/WithdrawalState"
+              at: *a2
+              note:
+                type: string
+                minLength: 0
+                maxLength: 500
+        demoOnly:
+          type: boolean
+          const: true
+    WithdrawalPage:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - nextCursor
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/Withdrawal"
+        nextCursor:
+          type:
+            - string
+            - "null"
+          format: uuid
+    WithdrawalReceipt:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - entityType
+        - entityId
+        - version
+        - state
+        - serverTime
+        - demoOnly
+      properties:
+        id: *a1
+        entityType:
+          type: string
+          const: Withdrawal
+        entityId: *a1
+        version:
+          type: integer
+          minimum: 1
+        state:
+          $ref: "#/components/schemas/WithdrawalState"
+        serverTime: *a2
+        demoOnly:
+          type: boolean
+          const: true
     WalletSummary:
       type: object
       additionalProperties: false
@@ -17387,7 +18140,8 @@ components:
           maximum: 9007199254740991
         withdrawalHeld:
           type: integer
-          const: 0
+          minimum: 0
+          maximum: 9007199254740991
         total:
           type: integer
           minimum: 0
@@ -17401,7 +18155,6 @@ components:
           type: boolean
         withdrawalsEnabled:
           type: boolean
-          const: false
     WalletCommandReceipt:
       type: object
       additionalProperties: false
@@ -17497,6 +18250,13 @@ components:
         - currency
         - orderId
       properties:
+        withdrawalState:
+          anyOf:
+            - $ref: "#/components/schemas/WithdrawalState"
+            - type: "null"
+        withdrawalId:
+          type: [string, "null"]
+          format: uuid
         journalId:
           type: string
           format: uuid
@@ -17515,9 +18275,11 @@ components:
             - ListingFeeCharge
             - ListingFeeRefund
             - ListingFeeSettlement
+            - WithdrawalHold
+            - WithdrawalRefund
         amount:
           type: integer
-          minimum: -100000000
+          minimum: -9007199254740991
           maximum: 9007199254740991
         balanceAfter:
           type: integer

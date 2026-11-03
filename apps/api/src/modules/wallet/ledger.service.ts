@@ -9,6 +9,7 @@ import type {
   ListingFeeDoc,
   TopupIntentDoc,
   WalletAccountDoc,
+  WithdrawalDoc,
 } from '../../database/mongo/documents.js';
 import {
   CAPITAL_ACCOUNT_ID,
@@ -95,6 +96,16 @@ export async function checkJournal(tx: Tx, journalId: string) {
       )
     )
       throw new Error('Invalid finite simulator capital');
+  } else if (j.type.startsWith('Withdrawal')) {
+    const w = await tx.c.withdrawals.findOne({ _id: j.withdrawalId! });
+    const available = w && accounts.find(a => a.ownerId === w.ownerId && a.purpose === 'UserAvailable');
+    const hold = w && await tx.c.wallet_accounts.findOne({ _id: w.holdId });
+    const from = j.type === 'WithdrawalHold' ? available?._id : w?.holdId;
+    const to = j.type === 'WithdrawalPayout' ? CLEARING_ID : j.type === 'WithdrawalHold' ? w?.holdId : available?._id;
+    if (!w || !hold || hold.purpose !== 'WithdrawalHold' || hold.withdrawalId !== w._id || !j.receiptId ||
+        !entries.some(e => e.accountId === from && e.credit === w.amount && e.debit === 0) ||
+        !entries.some(e => e.accountId === to && e.debit === w.amount && e.credit === 0))
+      throw new Error('Withdrawal journal source mismatch');
   } else if (j.type === 'Topup') {
     const t = await tx.c.topup_intents.findOne({ _id: j.topupId! });
     const e = await tx.c.simulated_payment_events.findOne({ _id: j.eventId! });
@@ -494,6 +505,11 @@ export class LedgerService {
         },
       ])
       .toArray();
+    const withdrawals = await tx.c.withdrawals.find({}).toArray();
+    for (const w of withdrawals) await checkWithdrawal(tx, w._id);
+    const withdrawalHeld = await this.withdrawalHeld(tx);
+    const orphanWithdrawal = await tx.c.wallet_accounts.countDocuments({ purpose: 'WithdrawalHold', withdrawalId: { $nin: withdrawals.map(w => w._id) } });
+    if (orphanWithdrawal) throw new Error('Orphan withdrawal hold');
     const sourceRemaining = await balanceOf(tx, CLEARING_ID);
     // Settled platform fees stay inside the simulated capital.
     const platformCommission = await balanceOf(
@@ -509,6 +525,7 @@ export class LedgerService {
       sourceRemaining +
         row.available +
         row.held +
+        withdrawalHeld +
         platformCommission +
         listingFeeHeld !==
         SIMULATED_CAPITAL
@@ -521,6 +538,7 @@ export class LedgerService {
       totalCredit: row.credit,
       memberAvailable: row.available,
       transactionHeld: row.held,
+      withdrawalHeld,
       platformCommission,
       listingFeeHeld,
       sourceRemaining,
@@ -884,6 +902,24 @@ export class LedgerService {
     return this.settlePointOrder(tx, order, receiptId, now);
   }
   // Caller owns participant and intent locks; this never opens a nested transaction.
+  async withdrawalHeld(tx: Tx, ownerId?: string) {
+    const [row] = await tx.c.withdrawals.aggregate<{ amount: number }>([
+      { $match: ownerId ? { ownerId } : {} },
+      { $lookup: { from: 'ledger_entries', localField: 'holdId', foreignField: 'accountId', as: 'entries' } },
+      { $unwind: '$entries' },
+      { $group: { _id: null, amount: { $sum: { $subtract: ['$entries.debit', '$entries.credit'] } } } },
+    ]).toArray();
+    return row?.amount ?? 0;
+  }
+  async postWithdrawal(tx: Tx, row: WithdrawalDoc, type: 'WithdrawalHold' | 'WithdrawalPayout' | 'WithdrawalRefund', receiptId: string, now: Date) {
+    const available = await this.account(tx, { ownerId: row.ownerId });
+    if (type === 'WithdrawalHold') await tx.c.wallet_accounts.insertOne({ _id: row.holdId, ownerId: null, orderId: null, withdrawalId: row._id, purpose: 'WithdrawalHold', currency: 'VND' });
+    await this.lockAccounts(tx, [available._id, row.holdId, CLEARING_ID]);
+    const from = type === 'WithdrawalHold' ? available._id : row.holdId;
+    const to = type === 'WithdrawalPayout' ? CLEARING_ID : type === 'WithdrawalHold' ? row.holdId : available._id;
+    if ((await balanceOf(tx, from)) < row.amount) throw new DomainError(409, 'InvalidState', 'Số dư khả dụng không đủ để rút.');
+    return this.journal(tx, { type, withdrawalId: row._id, topupId: null, eventId: null, orderId: null, receiptId, postedAt: now }, from, to, row.amount);
+  }
   async lockFunding(tx: Tx, ownerId: string) {
     const account = await this.account(tx, { ownerId });
     await this.lockAccounts(tx, [CLEARING_ID, account._id]);
@@ -1299,4 +1335,27 @@ export async function checkExchange(tx: Tx, exchangeId: string) {
       throw new Error('Recipient exchange hold not released on completion');
     }
   }
+}
+
+export async function checkWithdrawal(tx: Tx, id: string) {
+  const w = await tx.c.withdrawals.findOne({ _id: id });
+  if (!w || !(await tx.c.users.findOne({ _id: w.ownerId }))) throw new Error('Withdrawal owner missing');
+  const hold = await tx.c.wallet_accounts.findOne({ _id: w.holdId });
+  const journals = await tx.c.ledger_journals.find({ withdrawalId: id }).toArray();
+  const returned = ['Rejected', 'Refunded'].includes(w.state), paid = w.state === 'Completed';
+  if (!hold || hold.withdrawalId !== id || hold.purpose !== 'WithdrawalHold' ||
+      journals.filter(j => j.type === 'WithdrawalHold').length !== 1 ||
+      journals.filter(j => j.type === 'WithdrawalRefund').length !== (returned ? 1 : 0) ||
+      journals.filter(j => j.type === 'WithdrawalPayout').length !== (paid ? 1 : 0) ||
+      await balanceOf(tx, hold._id) !== (returned || paid ? 0 : w.amount)) throw new Error('Withdrawal hold/state mismatch');
+  for (const j of journals) {
+    await checkJournal(tx, j._id);
+    const receipt = await tx.c.mutation_receipts.findOne({ _id: j.receiptId!, withdrawalId: id });
+    if (!receipt || !(await tx.c.audit_events.findOne({ receiptId: receipt._id, withdrawalId: id }))) throw new Error('Withdrawal receipt/audit missing');
+  }
+  const events = await tx.c.withdrawal_events.find({ withdrawalId: id }).toArray();
+  if (paid !== events.some(e => e.outcome === 'Succeeded') ||
+      (['FailedVerified', 'Refunded'].includes(w.state)) !== events.some(e => e.outcome === 'FailedVerified') ||
+      events.some(e => e.payoutRef !== w.payoutRef)) throw new Error('Withdrawal payout evidence mismatch');
+  if (w.approverId === w.ownerId) throw new Error('Withdrawal self approval');
 }

@@ -1,0 +1,330 @@
+.page {
+  max-width: 1280px;
+  overflow-wrap: anywhere;
+}
+.headingIcon {
+  display: inline-flex;
+  color: var(--shop-wine);
+  margin-bottom: 12px;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 20px;
+  padding: 24px 0;
+}
+.toolbar label {
+  display: grid;
+  gap: 8px;
+  font-weight: 600;
+  min-width: 210px;
+}
+.toolbar p {
+  flex: 1;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+.page select,
+.form select,
+.form textarea {
+  font: inherit;
+  min-height: 44px;
+  padding: 11px 12px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  width: 100%;
+  box-sizing: border-box;
+}
+.tableWrap {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+.table th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 600;
+  background: var(--surface-muted, var(--paper));
+  padding: 16px 20px;
+  white-space: nowrap;
+}
+.table td {
+  padding: 20px;
+  border-top: 1px solid var(--shop-line);
+  vertical-align: middle;
+}
+.table td:first-child strong {
+  display: block;
+  margin-bottom: 6px;
+}
+.table small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  margin-top: 6px;
+  line-height: 1.5;
+}
+.money {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.money small {
+  font-weight: 400;
+}
+.code {
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+.table .code {
+  margin-right: 10px;
+  color: var(--muted);
+}
+.openLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+}
+.empty h2 {
+  color: var(--ink);
+  font-size: 1.2rem;
+  margin: 20px 0 10px;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-bottom: 12px;
+}
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 0 32px;
+  border-bottom: 1px solid var(--shop-line);
+}
+.summary > div {
+  display: grid;
+  gap: 10px;
+}
+.summary strong {
+  font-size: 2rem;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.summary small,
+.summary > div > span {
+  color: var(--muted);
+}
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 40px;
+}
+.sheet {
+  padding: 28px 0;
+}
+.sheet h2 {
+  font-size: 1.2rem;
+  margin: 0 0 20px;
+}
+.sheet dl {
+  margin: 0;
+}
+.sheet dl > div {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 20px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--shop-line);
+  line-height: 1.7;
+}
+.sheet dt {
+  color: var(--muted);
+}
+.sheet dd {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.sheet dd p {
+  margin: 8px 0 0;
+}
+.actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.timeline {
+  padding-left: 20px;
+  margin: 0;
+}
+.timeline li {
+  padding: 0 0 24px 10px;
+}
+.timeline time {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  margin-top: 10px;
+}
+.timeline p {
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 10px 0 0;
+}
+.dialog {
+  max-width: 600px;
+  width: calc(100% - 32px);
+  max-height: calc(100dvh - 48px);
+  box-sizing: border-box;
+  overflow: auto;
+  background: var(--surface);
+  color: var(--ink);
+  border: 0;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 20px 60px #28191433;
+}
+.dialog::backdrop {
+  background: #28191466;
+}
+.dialogHead {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+}
+.dialogHead h2 {
+  font-size: 1.35rem;
+  line-height: 1.4;
+  margin: 0;
+}
+.dialogHead button {
+  padding: 10px;
+  flex-shrink: 0;
+}
+.dialogAmount {
+  display: grid;
+  gap: 10px;
+  padding: 24px 0;
+}
+.dialogAmount strong {
+  font-size: 1.8rem;
+  font-variant-numeric: tabular-nums;
+}
+.dialogAmount span {
+  color: var(--muted);
+}
+.dialog :global(.decision-panel) {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.dialog :global(.decision-panel) > h3 {
+  font-size: 1rem;
+  margin: 0 0 16px;
+}
+.form {
+  border: 0;
+  margin: 0 0 24px;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.form label {
+  font-weight: 600;
+}
+.form textarea {
+  resize: vertical;
+  line-height: 1.7;
+}
+.form small {
+  color: var(--muted);
+  line-height: 1.7;
+}
+.form p {
+  line-height: 1.7;
+  margin: 0;
+}
+.error {
+  color: var(--error);
+}
+.dialog :is(button, textarea, select):focus-visible {
+  outline: 3px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+.dialog :global(.actions) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.dialog :global(.actions) button {
+  white-space: normal;
+  max-width: 100%;
+}
+@media (max-width: 800px) {
+  .columns {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .toolbar {
+    align-items: stretch;
+  }
+  .toolbar label {
+    min-width: 0;
+    flex: 1;
+  }
+  .toolbar p {
+    flex-basis: 100%;
+  }
+  .summary {
+    align-items: start;
+    flex-wrap: wrap;
+  }
+  .sheet dl > div {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .dialog {
+    padding: 20px;
+  }
+  .table th,
+  .table td {
+    padding: 14px 16px;
+  }
+  .table {
+    min-width: 750px;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

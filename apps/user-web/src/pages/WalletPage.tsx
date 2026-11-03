@@ -1,3 +1,4 @@
+import { WalletWithdrawals } from "./WalletWithdrawals";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -57,7 +58,6 @@ export function WalletPage() {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [checkoutId, setCheckoutId] = useState<string>();
   const [dialog, setDialog] = useState<"topup" | "withdrawal" | null>(null);
-  const [withdrawalAmount] = useState("50000");
   const [copied, setCopied] = useState(false);
   const paymentWindow = useRef<Window | null>(null);
   const alive = useRef(true);
@@ -375,6 +375,7 @@ export function WalletPage() {
   // Financial figures
   const availableVal = summary.data?.available ?? 0;
   const heldVal = summary.data?.transactionHeld ?? 0;
+  const withdrawalHeld = summary.data?.withdrawalHeld ?? 0;
 
   return (
     <section className={styles.page}>
@@ -498,7 +499,7 @@ export function WalletPage() {
               <div className={styles.cardHeldInfo}>
                 <span className={styles.cardOwnerLabel}>Đang ký quỹ</span>
                 <span className={styles.cardHeldValue}>
-                  {formatVnd(heldVal)}
+                  {formatVnd(heldVal)}{withdrawalHeld > 0 && <small style={{display:"block"}}>Chờ rút: {formatVnd(withdrawalHeld)}</small>}
                 </span>
               </div>
             </div>
@@ -716,6 +717,7 @@ export function WalletPage() {
             ownerId={ownerId}
             onOpenTopup={() => setDialog("topup")}
           />
+          <WalletWithdrawals key={ownerId} ownerId={ownerId} available={availableVal} enabled={!!summary.data?.withdrawalsEnabled && !summary.isError} open={dialog === 'withdrawal'} onClose={() => setDialog(null)} onResume={() => setDialog("withdrawal")} />
         </main>
       </div>
 
@@ -881,75 +883,7 @@ export function WalletPage() {
         )}
       </PurchaseDialog>
 
-      {/* =====================================================================
-          Dialog Rút Tiền (Demo Only Information)
-          ===================================================================== */}
-      <PurchaseDialog
-        open={dialog === "withdrawal"}
-        onClose={() => setDialog(null)}
-        title="Rút tiền từ ví"
-        description="Thông tin nghiệp vụ rút tiền từ số dư khả dụng."
-        className={styles.dialog}
-      >
-        <div className={styles.dialogForm}>
-          <div className={styles.inputGroup}>
-            <label htmlFor="withdrawal-amount" className={styles.inputLabel}>
-              Số tiền muốn rút:
-            </label>
-            <div className={styles.inputContainer}>
-              <input
-                id="withdrawal-amount"
-                type="text"
-                inputMode="numeric"
-                value={withdrawalAmount}
-                disabled
-                className={styles.customAmountInput}
-              />
-              <span className={styles.currencySuffix} aria-hidden="true">
-                ₫
-              </span>
-            </div>
-          </div>
 
-          <div
-            className={styles.alertBox}
-            style={{
-              background: "#fbf8f2",
-              borderColor: "var(--shop-line, #d9cbbd)",
-              color: "var(--shop-ink, #281914)",
-            }}
-          >
-            <p
-              style={{
-                margin: 0,
-                fontWeight: 600,
-                color: "var(--shop-wine, #5c0202)",
-              }}
-            >
-              ⚠️ Thông báo quy chế kiểm thử đồ án
-            </p>
-            <p
-              style={{
-                margin: "6px 0 0",
-                fontSize: "0.8125rem",
-                color: "var(--shop-muted, #716157)",
-                lineHeight: 1.6,
-              }}
-            >
-              Theo quyết định kiến trúc của đồ án Lật Lại, chức năng rút tiền ra tài khoản ngân hàng thực tế đang được khóa an toàn. Bạn có thể sử dụng toàn bộ số dư khả dụng để mua sách hoặc cọc trao đổi sách trong môi trường demo.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            className={styles.btnDialogSubmit}
-            disabled
-            style={{ opacity: 0.5 }}
-          >
-            Chức năng đang khóa trong bản Demo
-          </button>
-        </div>
-      </PurchaseDialog>
     </section>
   );
 }

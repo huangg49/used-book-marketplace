@@ -17,7 +17,7 @@ export function navigationGroups(user: CurrentUser | undefined): NavigationGroup
     groups.push({
       id: "management",
       label: "Quản lý",
-      items: [{ label: "Quản lý người dùng", to: "/users", icon: "users" }, { label: "Trung tâm xử lý", to: "/support", icon: "resolution" }],
+      items: [{ label: "Yêu cầu rút tiền", to: "/withdrawals", icon: "resolution" }, { label: "Quản lý người dùng", to: "/users", icon: "users" }, { label: "Trung tâm xử lý", to: "/support", icon: "resolution" }],
     });
   }
 
@@ -74,6 +74,7 @@ export function navigationGroups(user: CurrentUser | undefined): NavigationGroup
         { label: "Hãng vận chuyển", to: "/simulator/deliveries", icon: "carrier" },
         { label: "Lấy hàng trực tiếp", to: "/simulator/events/pickups", icon: "intake" },
         { label: "Giao hàng trực tiếp", to: "/simulator/events/deliveries", icon: "carrier" },
+        { label: "Chi tiền mô phỏng", to: "/simulator/withdrawals", icon: "resolution" },
         { label: "Nạp tiền mô phỏng", to: "/simulator/events/topups", icon: "resolution" },
       ],
     });

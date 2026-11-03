@@ -1,0 +1,315 @@
+.section {
+  margin-top: 28px;
+  padding: 28px;
+  background: var(--shop-paper);
+  border-radius: 16px;
+  color: var(--shop-ink);
+}
+.sectionHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.sectionHead h2 {
+  font-size: 1.35rem;
+  margin: 0 0 6px;
+}
+.sectionHead p,
+.empty {
+  color: var(--shop-muted);
+  line-height: 1.65;
+  margin: 0;
+}
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.list li + li {
+  border-top: 1px solid var(--shop-line);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 18px 0;
+  font: inherit;
+  min-height: 64px;
+}
+.row:hover {
+  color: var(--shop-wine);
+}
+.rowIcon {
+  color: var(--shop-wine);
+  flex-shrink: 0;
+}
+.rowText {
+  display: grid;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.rowText small {
+  color: var(--shop-muted);
+}
+.status {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  background: var(--shop-shelf);
+  color: var(--shop-ink);
+  border-radius: 6px;
+  padding: 5px 9px;
+  max-width: 150px;
+}
+.status[data-state="Completed"],
+.status[data-state="Refunded"] {
+  background: var(--shop-mint);
+}
+.status[data-state="Rejected"] {
+  color: var(--shop-error);
+}
+.dialog {
+  max-width: 620px !important;
+}
+.form {
+  display: grid;
+  gap: 20px;
+  color: var(--shop-ink);
+}
+.balance {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  background: var(--shop-shelf);
+  padding: 16px 20px;
+  border-radius: 10px;
+}
+.balance strong {
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+.form fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+.form label {
+  font-weight: 600;
+  display: block;
+  margin-top: 6px;
+  font-size: 0.9375rem;
+}
+.form input,
+.form select,
+.form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  color: var(--shop-ink);
+  border: 1px solid var(--shop-control);
+  border-radius: 8px;
+  background: var(--shop-paper);
+  padding: 12px;
+  min-height: 46px;
+  caret-color: var(--shop-wine);
+}
+.form input::placeholder {
+  color: var(--shop-muted);
+}
+.form :disabled {
+  opacity: 0.8;
+}
+.form h3 {
+  margin: 16px 0 0;
+  font-size: 1rem;
+}
+.twoCols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.twoCols > div {
+  display: grid;
+  gap: 10px;
+}
+.amountInput {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.amountInput input {
+  font-size: 1.65rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+.amountInput span {
+  color: var(--shop-muted);
+  font-size: 0.875rem;
+}
+.hint {
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: var(--shop-muted);
+  margin: 0;
+}
+.review {
+  background: var(--shop-shelf);
+  padding: 18px;
+  border-radius: 10px;
+  display: grid;
+  gap: 14px;
+}
+.review > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.review p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+.error {
+  color: var(--shop-error);
+  line-height: 1.7;
+  margin: 0;
+}
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+.primary,
+.secondary {
+  min-height: 46px;
+  padding: 12px 18px;
+  font: inherit;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.primary {
+  border: 0;
+  background: var(--shop-wine);
+  color: var(--shop-paper);
+}
+.primary:hover {
+  background: var(--shop-wine-hover);
+}
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.secondary {
+  background: transparent;
+  color: var(--shop-wine);
+  border: 1px solid var(--shop-control);
+}
+.secondary:hover {
+  background: var(--shop-shelf);
+}
+.section button:focus-visible,
+.dialog :is(button, input, textarea, select):focus-visible {
+  outline: 3px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+.detail {
+  color: var(--shop-ink);
+}
+.detailAmount {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+}
+.detailAmount > strong {
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+}
+.detail dl {
+  margin: 24px 0;
+}
+.detail dl > div {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--shop-line);
+  line-height: 1.7;
+}
+.detail dt {
+  color: var(--shop-muted);
+}
+.detail dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.detail h3 {
+  font-size: 1rem;
+  margin: 24px 0 16px;
+}
+.timeline {
+  padding-left: 24px;
+  margin: 0 0 24px;
+}
+.timeline li {
+  padding: 0 0 20px 6px;
+}
+.timeline time {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--shop-muted);
+  margin: 6px 0;
+}
+.timeline p {
+  margin: 0;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .section {
+    padding: 20px 16px;
+  }
+  .row {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .rowText {
+    flex-basis: 65%;
+  }
+  .row > .status {
+    margin-left: 30px;
+    max-width: none;
+  }
+  .twoCols {
+    grid-template-columns: 1fr;
+  }
+  .balance {
+    padding: 14px;
+    flex-wrap: wrap;
+  }
+  .detail dl > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .actions button {
+    flex: 1;
+  }
+  .review > div {
+    flex-wrap: wrap;
+  }
+}

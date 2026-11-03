@@ -7,7 +7,7 @@ import { testUrl } from './harness.js';
 import { exchangeFlexibleDiffSpecs } from '../../src/database/mongo/migrations/0055-exchange-negotiated-diff-payer.js';
 
 it.each(['main-first', 'demo-first'] as const)('upgrades %s without rewriting applied checksums, ledger or Exchange rules', async (order) => {
-  const pending = order === 'main-first' ? ['0054-local-demo-completion'] : ['0054-exchange-negotiated-diff', '0055-exchange-negotiated-diff-payer'];
+  const pending = [...(order === 'main-first' ? ['0054-local-demo-completion'] : ['0054-exchange-negotiated-diff', '0055-exchange-negotiated-diff-payer']), '0060-wallet-withdrawals'];
   const client = await new MongoClient(testUrl(`local_demo_upgrade_${randomUUID().replaceAll('-', '')}_test`)).connect();
   const db = client.db();
   try {

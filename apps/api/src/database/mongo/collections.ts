@@ -87,6 +87,8 @@ export interface CollectionTypes {
   exclusive_commitments: D.ExclusiveCommitmentDoc;
   commitment_events: D.CommitmentEventDoc;
   wallet_accounts: D.WalletAccountDoc;
+  withdrawals: D.WithdrawalDoc;
+  withdrawal_events: D.WithdrawalEventDoc;
   topup_intents: D.TopupIntentDoc;
   listing_fees: D.ListingFeeDoc;
   vnpay_payments: D.VNPayPaymentDoc;
@@ -269,6 +271,8 @@ const NAMES: CollectionName[] = [
   'exclusive_commitments',
   'commitment_events',
   'wallet_accounts',
+  'withdrawals',
+  'withdrawal_events',
   'topup_intents',
   'listing_fees',
   'vnpay_payments',

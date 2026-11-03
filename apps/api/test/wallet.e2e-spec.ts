@@ -200,7 +200,7 @@ describe('Simulated wallet: real MongoDB and HTTP', () => {
       withdrawalHeld: 0,
       demoOnly: true,
       paymentsEnabled: true,
-      withdrawalsEnabled: false,
+      withdrawalsEnabled: true,
     });
     const entries = await db.c.ledger_entries
       .find({ journalId: response.body.journalId })
@@ -450,11 +450,17 @@ describe('Simulated wallet: real MongoDB and HTTP', () => {
     const member = await reader(),
       body = await event(member),
       gate = await block('users', member.id);
+    // Like the 100-request case above, retry only 503 with the same event and HTTP key.
+    const settle = async () => {
+      const payload = { ...body, eventId: randomUUID() }, key = randomUUID();
+      for (let attempt = 1; ; attempt++) {
+        const r = await emit(payload, operator, key);
+        if (r.status !== 503 || attempt === 10) return r.status;
+      }
+    };
     let calls: Promise<number>[] = [];
     try {
-      calls = Array.from({ length: 20 }, () =>
-        emit({ ...body, eventId: randomUUID() }).then((r) => r.status),
-      );
+      calls = Array.from({ length: 20 }, () => settle());
       await gate.contended();
       await gate.commit();
       expect(await Promise.all(calls)).toEqual(Array(20).fill(200));
