@@ -673,6 +673,13 @@ is LIVE or that its row count is the total inbox count. Keep motion and
 read/error/retry states; verify with
 `pnpm --filter @used-books/user-web test:notification-preview:browser`.
 
+[`useCurrentMemberAvatar`](../../apps/user-web/src/hooks/useCurrentMemberAvatar.ts)
+remembers a failed owner/avatar/URL source, not a permanently failed avatar ID.
+A newly issued URL can display the same avatar again; the unchanged broken URL
+still uses initials without a retry loop. Header/Sidebar retain their shared
+profile/avatar queries and existing refresh policy. Verify renewal and mobile
+disclosure with `pnpm --filter @used-books/user-web test:avatar-recovery:browser`.
+
 At up to 960 px the wallet grid can shrink to the content frame. At up to
 600 px the header badge and primary action get their own lines. Sandbox
 details can wrap, receipt amounts have a dedicated row, and deposit presets

@@ -4,6 +4,36 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Khôi phục avatar sau khi URL được cấp lại
+
+Nhánh `codex/member-web-avatar-url-recovery`, base `901383dd`.
+[Hook avatar](../../apps/user-web/src/hooks/useCurrentMemberAvatar.ts) trước đây
+giữ failedAvatarId. Ảnh từng lỗi thì Header/Sidebar luôn hiện chữ cái, kể cả
+khi query đã nhận URL hợp lệ mới cho cùng avatar. Đây là sửa lỗi liên quan
+ảnh/cache, không phải tuyên bố tăng tốc hay giảm request.
+
+Giữ failure theo owner/avatar/URL. URL mới không bị chặn bởi lỗi của URL cũ;
+URL lỗi không đổi vẫn dùng fallback, tránh vòng onError/render/tải lại.
+Không đổi query key, staleTime 60 s, lịch refetch, API hay cách cấp quyền/URL.
+
+[Browser production](../../apps/user-web/tests/avatar-recovery.mjs) dùng login
+và Header/Sidebar thật, HTTP fixture chặn mọi API; 390×900 và 1440×900,
+reduced-motion bật. Clock giả tiến hai lần 61 s rồi phát visibilitychange:
+
+- Base: ảnh 404 về initials; cùng URL không bị tải lặp. URL mới cho cùng
+  avatar vẫn không xuất hiện ở cả hai hook consumer, lỗi đã tái hiện.
+- Sau: hai ảnh nhận URL mới, decode thành công; mở disclosure mobile thấy
+  avatar. Mỗi cấu hình vẫn ba lượt xin URL (ban đầu, refetch URL lỗi cũ,
+  refetch URL mới), không tăng so với base. Không page error.
+- Build/typecheck, 349 unit test, lint và detector `[]` PASS. Profile-reputation
+  fixture PASS 1440/1000/390/320 và chữ 130%, stale503,404/retry, guard nháp,
+  cache public/summary và phản hồi muộn sau đổi account; không mutation hồ sơ/
+  đánh giá hoặc DB/provider. Đã xem ảnh QA; cả 47 CSS production khớp byte.
+- Không sửa class/variant/timing/asset. Evidence `.tmp/member-web-avatar-recovery/`.
+  Clock/HTTP fixture không chứng minh thời gian hay refresh token thật. Thiết bị/
+  provider/API thật, native, human acceptance và remote CI NOT RUN. Giữ READINESS
+  và local work checkout demo.
+
 ## Đánh giá tách route Home — không áp dụng
 
 Nhánh đánh giá `codex/member-web-home-route-loading`, base `b5b36d22`.

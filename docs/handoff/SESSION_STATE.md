@@ -4,27 +4,24 @@ Owner cho phép cuốn chiếu tối ưu Member web, giữ animation, đo/kiểm
 gói và sửa lỗi liên quan đã tái hiện. Đổi nghiệp vụ, thiết kế/hiệu ứng hoặc
 triển khai cần quyết định riêng; không mở rộng sang DB/provider/checkout demo.
 
-Đánh giá tiếp ở `codex/member-web-home-route-loading`, base `b5b36d22`:
-không giữ thử nghiệm lazy Home. Đo cách ly cuối có Login nhẹ hơn nhưng Home
-thêm file/byte, LCP chưa cải thiện ổn định; chưa chứng minh cả luồng demo.
-Đã khôi phục source/config/package đúng base và build PASS; chỉ lưu evidence.
-Số đo sơ bộ chưa intercept API đầy đủ được đánh dấu invalid, không dùng kết luận.
-
-Gói triển khai gần nhất `b5b36d22`, nhánh `codex/member-web-owner-photo-visibility`, base `6c5751f8`.
-[Ảnh kệ riêng](../../apps/user-web/src/lib/owner-listing-queries.ts) chỉ xin link
-khi gần viewport, giữ activation sau lần đầu và cache theo owner/revision.
+Gói hiện tại `codex/member-web-avatar-url-recovery`, base `901383dd`.
+[Hook avatar](../../apps/user-web/src/hooks/useCurrentMemberAvatar.ts) giữ lỗi
+theo owner/avatar/URL; URL mới của cùng avatar hiện lại được sau lỗi ảnh cũ.
 [Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Production fixture: Kệ sách dạng danh sách xin link 20→1 ở 390 px,
-  20→3 ở 1440 px; kệ Tổng quan dưới viewport 8→0. Cuộn/tải, cache/Back,
-  stale re-entry và thiếu observer PASS. Giữ hover 1,04/1,06/1,05 và 47 CSS.
-- Sửa ảnh Tổng quan vỡ không có retry khi link hợp lệ nhưng tải ảnh 404.
-- Build/typecheck, 349 unit test, lint/detector và browser ảnh riêng PASS.
-  Hồi quy ảnh Search/đấu giá PASS. Nén lossless ảnh lời chào lớn hơn nên bỏ.
-  Chưa đo CPU/FPS/Web Vitals; API/DB/provider thật, native, thiết bị thật,
+- Browser production 390/1440 tái hiện base và xác nhận phục hồi; URL lỗi
+  không đổi không tải lặp. Giữ số lượt xin URL và policy cache/refresh cũ.
+- Build/typecheck, 349 unit test, lint/detector và avatar browser PASS.
+  Profile-reputation fixture PASS cả late account response/404/retry/nháp.
+  47 CSS khớp byte; không đổi animation. API/provider/thiết bị thật, native,
   human acceptance và remote CI NOT RUN.
 
-Gói `6c5751f8` dùng chung preview thông báo và sửa link sai target;
+Ứng viên lazy Home bị loại, source đã khôi phục (`901383dd` chỉ lưu đánh giá).
+Rà tiếp cache sau ACK ở Exchange legacy: invalidation prefix wallet cần đối
+chiếu query thực tế và tái hiện bằng fixture trước khi quyết định sửa.
+
+Gói `b5b36d22` hoãn xin link bìa riêng tới gần viewport và sửa retry ảnh;
+`6c5751f8` dùng chung preview thông báo và sửa link sai target;
 `5bbe9685` dừng Lenis idle và giữ cuộn khi reduced-motion;
 `598689fe` tối ưu ảnh nền Auth; `a98db891` nén logo/chữ Hero,
 `ad49aac4` sửa submit từ khóa cũ. Chi tiết ở báo cáo hiệu năng.
