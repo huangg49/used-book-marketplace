@@ -67,8 +67,8 @@ async function copy(source) {
 }
 async function fontStyles() {
   const fonts = [
-    ['Be Vietnam Pro', '/fonts/BeVietnamPro-Regular.ttf', '400'],
-    ['Be Vietnam Pro', '/fonts/BeVietnamPro-Bold.ttf', '700'],
+    ['Be Vietnam Pro', '/fonts/BeVietnamPro-Regular.woff2', '400'],
+    ['Be Vietnam Pro', '/fonts/BeVietnamPro-Bold.woff2', '700'],
     ['Auth Bricolage', '/fonts/auth/BricolageGrotesque.ttf', '200 800'],
     ['Auth Melody', '/fonts/auth/MTD-Fancy-Melody.otf', '400'],
   ];

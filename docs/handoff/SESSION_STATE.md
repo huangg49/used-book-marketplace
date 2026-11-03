@@ -1,3 +1,32 @@
+# Font WOFF2 cho Member web — 03/11/2026
+
+Gói tiếp theo từ `62324b47` trên nhánh `codex/member-web-woff2`. Trace Home
+cho thấy Be Vietnam Pro 400/700 và Anton 400 tải 444.060 byte TTF lúc mở trang.
+Member web ưu tiên WOFF2 từ đúng font nguồn và giữ TTF làm fallback. Snapshot
+giấy đăng nhập dùng cùng hai file Be Vietnam Pro WOFF2 với CSS.
+[Nguồn và cách sinh file](../../apps/user-web/public/fonts/WEB-SOURCES.md).
+
+- Production build, Chromium 151, 5 cặp lạnh chạy luân phiên ở mỗi viewport.
+  Ba font 444.060 → 157.516 byte, giảm 64,5%. Trung vị tải xong font cuối
+  trên mobile 390px (CPU 4×, 4 Mbps tải xuống, độ trễ 75 ms) 3.524 → 2.333 ms.
+  LCP Hero mobile 2.812 → 2.740 ms, desktop 216 → 232 ms. Hiệu quả rõ nhất
+  ở tải font qua mạng giới hạn, số đo LCP phòng thử dao động theo cấu hình.
+- Đối chiếu bảng font sau giải nén và 45 mẫu Chromium gồm dấu Việt dựng sẵn,
+  dấu tổ hợp và giá tiền. Kích thước chữ và pixel canvas khớp. Chặn cả ba
+  WOFF2 thì CSS lấy đủ ba TTF ở 1440/390px. Ảnh Hero tại cùng mốc animation
+  lệch 15 pixel desktop và 1 pixel mobile, tối đa 2 mức RGB.
+- Browser production fixture qua Home → Tìm sách → Trang 2 → Chi tiết → Back
+  ở desktop/mobile trước và sau. Canvas lá và View Transition đều hoạt động.
+  Smoke GET API local thật ở 1440/390px PASS với 0 lỗi JavaScript.
+  Browser Home focus, Search recovery và Auth motion với login giả lập PASS,
+  gồm luồng WebGL và phục hồi khi resize, context loss hoặc capture lỗi.
+  Build, typecheck, 338 unit test, lint và docs check PASS. Detector exit 2
+  với 9 cảnh báo/cố vấn ở các dòng CSS có sẵn ngoài ba khai báo font đã sửa.
+  Trace và kết quả chi tiết tại `.tmp/member-web-font-performance/`.
+
+Gói ở worktree phát triển. Thiết bị thật, human acceptance và CI remote chưa
+chạy. Gate phát hành theo READINESS.
+
 # Hiệu năng luồng demo Member web — 03/11/2026
 
 Owner duyệt gói đầu theo luồng Trang chủ → Tìm sách → Trang 2 → Chi tiết → Back.
