@@ -582,6 +582,15 @@ book return URL. Non-Members/inactive accounts cannot mutate, and catalog previe
 have no heart. `ListingPhoto` keeps its reusable loading/missing/error/retry states
 for detail, checkout and conversation consumers. RN `/ui` remains unchanged.
 
+## Member web — Tải khung tài khoản theo route —03/11/2026
+
+`DashboardLayout` uses React Router route `lazy`, matching its child pages.
+Home does not load its JS or sidebar CSS. The first matching account route
+loads both before rendering; direct-link pending/error/reload use the existing
+route feedback. Component, sidebar motion and session guard stay unchanged.
+Verify login return URLs, desktop/mobile navigation and JS/CSS load recovery
+with `pnpm --filter @used-books/user-web test:dashboard-chunk:browser`.
+
 ## Admin — Dashboard biểu đồ —27/10/2026
 
 Owner duyệt thống kê thật7/30ngày. [Thiết kế và semantics](../features/ADMIN_DASHBOARD.md):

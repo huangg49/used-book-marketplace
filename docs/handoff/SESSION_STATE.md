@@ -1,28 +1,32 @@
 # Tối ưu Member web — 03/11/2026
 
-Gói hiện tại `codex/member-web-card-scroll-work`, base `183b457d`: observer chữ
-bỏ qua các thay đổi chỉ gồm class cuộn Lenis đã biết. Vẫn fit khi đổi font,
-root style, class khác, kích thước slot; giữ thuật toán/cỡ chữ/animation.
-[Source](../../apps/user-web/src/lib/card-text-observer.ts),
+Gói hiện tại `codex/member-web-dashboard-chunk`, base `aa023b21`: tải JS/CSS
+DashboardLayout khi route tài khoản khớp; giữ component/session/guard/motion.
+[Router](../../apps/user-web/src/app/router.tsx),
 [bằng chứng và các gói trước](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Production Chromium151,5 cặp mỗi viewport,20 thẻ giá10k/50k/1triệu. Sau3 wheel,
-  lượt fit120→0 ở mọi cặp. Desktop1440px: Layout991→43 sự kiện, tổng68,6→6,4ms.
-  Viewport390px/CPU4×: Layout18,5→17,3ms, cải thiện nhỏ. Cả hai dùng wheel;
-  không là touch/điện thoại thật, FPS hoặc tổng latency cuộn.
-- Build/tsc,341 unit test, lint, browser chữ390/1440px,5 cấu hình chuyển cảnh
-  và Home focus PASS. Class/style typography, font WOFF2 tải thật, resize vẫn
-  đo lại;45 CSS production khớp byte. Detector observer0 finding.
-- Smoke production chỉ GET API local thật1440/390px PASS,0 lỗi JS. Docs/diff
-  check PASS. Warning lint/chunk cũ ngoài diff. Harness và trace ở
-  `.tmp/member-web-text-performance/`, có thể chạy lại test từ repo.
+- Home production/HTTP fixture,5 cặp mỗi viewport: giảm15.900byte JS/CSS raw,
+  3.293byte body gzip;30 file giữ nguyên. FCP/LCP chưa cải thiện rõ. Ba cặp
+  lần đầu vào tài khoản desktop: click→khung418→426ms; mẫu nhỏ, có chi phí tải
+  hai file riêng. Không gọi đây là tăng tốc rõ rệt.
+- Build/tsc,341 unit test, lint,5 cấu hình browser tài khoản, Home focus và5
+  cấu hình chuyển cảnh PASS. Deep link/login trả đúng URL, menu/sidebar/Back,
+  lỗi JS/CSS/reload, callback thanh toán và scope tải kiểm bằng HTTP fixture;
+  không là VNPay thật. Component không
+  đổi; CSS Dashboard chỉ tách khỏi entry; ảnh trước/sau gần khớp. Detector0.
+- Smoke API thật BLOCKED: GET health/listings `ECONNREFUSED`, cổng3000/5173/
+  5174 không listen,27017 còn listen. Không tự khởi động lại dịch vụ. Chưa có
+  evidence API thật cho gói này. Docs/diff check PASS; warning cũ ngoài diff.
+  Harness tại `.tmp/member-web-dashboard-performance/` và test mới trong repo.
 
 Chuỗi trước: `62324b47` catalog, `10fd986d` WOFF2, `bbd59568` Hero preload,
 `d28f7605` canvas, `55c9df1d` ảnh trang, `8aba79c7` prefetch mã, `8fc33e1f`
-viewport, `183b457d` style chuyển cảnh. Chi tiết trong tài liệu bằng chứng chung.
+viewport, `183b457d` style chuyển cảnh, `aa023b21` bỏ fit chữ lúc cuộn.
 
-Chỉ ở worktree phát triển. Checkout demo có local work được bảo toàn; chưa
-push/PR/merge. Thiết bị thật, human acceptance, CI remote chưa chạy.
+Các tối ưu kế tiếp nên dựa vào trace thiết bị thật và luồng cụ thể của bản định
+Demo; lợi ích thay đổi nhỏ đang giảm dần. Chưa thể kết luận mọi trang/vai trò hết
+việc tối ưu. Chỉ ở worktree phát triển, checkout demo có local work được bảo
+toàn; chưa push/PR/merge. Thiết bị thật, human acceptance, CI remote chưa chạy.
 Gate phát hành theo READINESS giữ nguyên.
 
 # Lịch sử tin nhắn Member web —03/11/2026

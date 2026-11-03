@@ -4,6 +4,66 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Tải khung tài khoản theo route
+
+Nhánh `codex/member-web-dashboard-chunk`, base `aa023b21`.
+[Router](../../apps/user-web/src/app/router.tsx) chuyển `DashboardLayout` từ
+static import sang route `lazy`, cùng cơ chế đang dùng cho các trang con.
+Giữ nguyên source component, sidebar, spring/motion, session và guard hiện có.
+Dashboard JS/CSS chỉ được yêu cầu khi một route tài khoản khớp; mở trực tiếp
+vẫn tải chúng trước khi route render. Không thêm prefetch ngầm hoặc cache dữ
+liệu riêng. Lần đầu vào khu vực tài khoản cần tải thêm hai file JS/CSS.
+
+Production Home, Chromium151, HTTP fixture48 sách, 5 cặp lạnh luân phiên ở
+mỗi viewport; mạng4Mbps xuống/0,75Mbps lên/latency75ms. Mobile390×844/DPR2/
+CPU4× và desktop1440×844/DPR1/CPU1×; reduced-motion theo owner. Resource Timing
+đếm JS/CSS đã tải; gzip của server fixture, không suy tỷ lệ nén môi trường deploy.
+
+| Chỉ số | Trước | Sau |
+| --- | ---: | ---: |
+| JS/CSS Home sau giải nén | 1.026.631byte | 1.010.731byte |
+| JS/CSS Home body nén truyền thực | 305.352byte | 302.059byte |
+| File JS/CSS Home | 30 | 30 |
+| Mobile FCP/LCP trung vị | 1.532/1.532ms | 1.540/1.540ms |
+| Desktop FCP/LCP trung vị | 1.084/1.856ms | 1.080/1.844ms |
+
+Tiết kiệm chắc chắn15.900byte raw/3.293byte body gzip (khoảng1,1% JS/CSS nén).
+Không xác nhận cải thiện FCP/LCP. Ba cặp bổ sung ở desktop1440px, cùng mạng,
+CPU1×: đăng nhập fixture về Home rồi lần đầu bấm Tổng quan; trung vị click
+capture→DOM khung tài khoản418→426ms. Dashboard JS/CSS mới yêu cầu song song
+với mã trang con. Đây là mẫu nhỏ, không chứng minh không có overhead trên mọi
+mạng/thiết bị; không đánh đổi thời lượng animation để cải thiện số đo.
+
+- Component Dashboard/Sidebar không đổi.44 CSS khác khớp byte;9.070byte CSS
+  Dashboard tách khỏi entry giữ nguyên nội dung; entry mới đúng bằng entry cũ
+  sau khi gỡ đoạn này. Hai ảnh tài khoản trước/sau ở390/1440px chỉ lệch47/70pixel,
+  tối đa2/7 mức kênh màu; đã xem layout. Ảnh đứng không thay kiểm mọi frame motion.
+- [Browser production](../../apps/user-web/tests/dashboard-chunk.mjs) PASS5
+  cấu hình: Home không tải khung hay đọc dữ liệu private khi guest, direct link
+  `/account/notifications?source=qa` đi qua login và trả đúng URL, login UI thật
+  với HTTP giả, menu mobile, sidebar desktop68↔240px và điều hướng route con/Back
+  tái sử dụng khung. Lỗi HTTP JS và CSS kiểm riêng, hiện RouteError và reload
+  phục hồi về login đúng returnUrl. Callback thanh toán fixture giữ màn không
+  credential, lọc metadata khỏi URL và0 private API read; không là giao dịch
+  VNPay thật.0 page error trong hai luồng tài khoản thành công.
+  Chạy lại: `pnpm --filter @used-books/user-web test:dashboard-chunk:browser`.
+- Build/tsc,341 unit test, lint, Home focus/leaf pause-resume và5 cấu hình chuyển
+  cảnh sách PASS. Detector router0 finding; warning lint/chunk/plugin timing
+  có sẵn, không đổi nghiệp vụ để xử lý ngoài phạm vi. Docs/diff check PASS.
+- Smoke API thật BLOCKED: GET health/listings đều `ECONNREFUSED`; không có
+  listener3000/5173/5174 tại lúc kiểm, Mongo27017 còn listen. Harness timeout
+  vì Home không có dữ liệu; đây là môi trường đang tắt, chưa có bằng chứng API
+  thật cho gói này. Không khởi động dịch vụ, migration, seed hoặc ghi DB.
+- Evidence local, harness,20 lượt Home,6 lượt vào tài khoản, so CSS/ảnh tại
+  `.tmp/member-web-dashboard-performance/`; bộ browser tại `.tmp/dashboard-chunk/`.
+
+Lợi ích giảm dần: gói này giảm tải ban đầu một lượng nhỏ, không có thêm bằng
+chứng để hứa mở trang nhanh hơn. Các bước tiếp nên lấy trace từ thiết bị thật
+và thao tác cụ thể ở bản định demo; không tiếp tục chia chunk/đổi timer hàng
+loạt chỉ để có commit. Chưa khảo sát hiệu năng mọi vai trò/trang với dữ liệu
+đại diện, không kết luận toàn dự án hết việc tối ưu. Thiết bị thật, human
+acceptance và CI remote chưa chạy. Checkout demo/DB và READINESS giữ nguyên.
+
 ## Bỏ đo lại chữ do trạng thái cuộn Lenis
 
 Nhánh `codex/member-web-card-scroll-work`, base `183b457d`.
