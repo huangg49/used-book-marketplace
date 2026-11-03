@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ApiError } from '@used-books/session-client'
+import { startServerCountdown } from '../lib/server-countdown'
 
 /**
  * Remaining time to `endAt` measured on the server clock: `serverTime` from the
@@ -10,11 +11,7 @@ export function useCountdown(endAt: string | undefined, serverTime: string | und
   const [ms, setMs] = useState(() => (endAt ? Math.max(0, Date.parse(endAt) - Date.parse(serverTime ?? endAt)) : 0))
   useEffect(() => {
     if (!endAt) return
-    const offset = serverTime ? Date.parse(serverTime) - Date.now() : 0
-    const tick = () => setMs(Math.max(0, Date.parse(endAt) - (Date.now() + offset)))
-    tick()
-    const timer = window.setInterval(tick, 1000)
-    return () => window.clearInterval(timer)
+    return startServerCountdown(endAt, serverTime, setMs)
   }, [endAt, serverTime])
   return ms
 }

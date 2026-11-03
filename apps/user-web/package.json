@@ -18,6 +18,7 @@
     "test:point-order-wallet-cache:browser": "node tests/point-order-wallet-cache.mjs",
     "test:dashboard-chunk:browser": "node tests/dashboard-chunk.mjs",
     "test:auction-countdown:browser": "node tests/auction-countdown.mjs",
+    "test:expired-countdown:browser": "node tests/expired-countdown.mjs",
     "test:auction-photo-visibility:browser": "node tests/auction-photo-visibility.mjs",
     "test:auction-input:browser": "node tests/auction-input.mjs",
     "test:chat-input:browser": "node tests/chat-input.mjs",

@@ -4,6 +4,50 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Dừng timer đếm ngược đã hết hạn — 04/11/2026
+
+Nhánh `codex/member-web-expired-countdown-timers`, base `e1eafee0`.
+`useCountdown` cũ luôn tạo interval 1 giây khi có endAt, kể cả deadline đã
+qua; sau khi đếm về 0 vẫn tiếp tục callback. MyAuctions mỗi hàng có đồng hồ
+start/end/payment nên riêng thời điểm mở đã qua vẫn giữ timer chạy thừa.
+
+[Controller clock](../../apps/user-web/src/lib/server-countdown.ts) giữ offset
+server và cách tính thời gian còn lại theo Date.now, nhịp 1 giây và tick đầu.
+Không tạo interval cho mốc đã hết hạn; tự clear khi tick đạt 0. Hook vẫn dọn
+khi unmount/đổi props và tạo lại khi có endAt/serverTime mới. Không đổi format,
+polling, quyền mở/đóng phiên, command hoặc deadline nghiệp vụ; không suy trạng
+thái server từ timer. Không đổi hành vi khi hook không được cấp endAt.
+
+[Production browser fixture](../../apps/user-web/tests/expired-countdown.mjs)
+PASS trước/sau, 390/1440 × 8 hàng còn hạn/đã kết thúc ở `/my-auctions` (Tất cả).
+Đồng hồ máy cố ý lệch server 10 ngày; mọi API là HTTP fixture, socket bị chặn.
+
+| 8 hàng / cửa sổ đo 2 giây | Timer trước → sau | Callback trước → sau |
+| --- | --- | --- |
+| Phiên đang mở, startAt đã qua | 16 → 8 | 32 → 16 |
+| Mọi phiên đã kết thúc | 16 → 0 | 32 → 0 |
+| Phiên vừa đếm hết hạn | 16 → 0 timer còn giữ | Không tiếp tục tick 0 |
+
+UI còn hạn vẫn đếm đúng 00:03 sau 2 giây, về hết hạn như trước; timer không
+fetch hoặc ghi dữ liệu (mỗi ca chỉ 1 GET my-auctions trong cửa sổ đo). Back
+dọn toàn bộ timer countdown. Đây là đo số timer/callback bằng browser clock,
+không là đo CPU, FPS, thời lượng pin, LCP hoặc INP trên thiết bị thật.
+
+- 7 unit mới kiểm offset, mốc đã qua/bằng hiện tại, cutoff, cleanup, không có
+  serverTime, tab trễ và deadline mới sau expiry; tổng 361 unit/51 file PASS.
+- Auction countdown browser 390/1440 PASS mốc giờ/0, scheduled không tự mở,
+  server cập nhật deadline/giá, pagination/cleanup và motion giá 500ms dưới
+  reduced-motion. PointOrder 12 ca và topup 8 ca browser PASS lại vì dùng chung
+  hook; không chạy provider/DB thật.
+- Build/typecheck, scoped lint/detector `[]` PASS. Đã xem ảnh MyAuctions mobile/
+  desktop; 47 CSS production khớp byte, không đổi DOM/class/asset/animation.
+
+Evidence `.tmp/member-web-expired-countdown/`, `.tmp/auction-countdown/` và
+evidence browser PointOrder/topup hiện có. Native/thiết bị thật, API/DB/provider,
+human acceptance và remote CI NOT RUN; READINESS và checkout demo giữ nguyên.
+Vòng kiểm tra popup Wallet khi không có popup và cooldown form hết hạn còn là
+ứng viên cần đo riêng, chưa suy PASS từ gói countdown này.
+
 ## Làm mới view ví sau ACK thanh toán PointOrder — 04/11/2026
 
 Nhánh `codex/member-web-point-order-wallet-cache`, base `450e0dd3`.
@@ -48,8 +92,8 @@ Evidence `.tmp/member-web-point-order-wallet-cache/`. Không chạy API/DB/provi
 carrier/worker/settlement thật, native/thiết bị thật, human acceptance hoặc remote
 CI. READINESS và checkout demo giữ nguyên; không đóng gate giao nhận sau F2h.
 Gói này chỉ xác nhận ACK pay, không suy mọi thay đổi tiền bất đồng bộ từ worker
-đã được nối. Bước tối ưu tiếp: đo timer còn chạy khi không có việc/đã hết hạn,
-giữ nguyên đồng hồ đang chạy và animation trước khi quyết định thay đổi.
+đã được nối. Timer hết hạn được kiểm riêng ở mục mới phía trên; vòng kiểm tra
+popup Wallet chưa được tối ưu bởi gói ACK này.
 
 ## Làm mới view ví sau lệnh đơn hàng / quan sát Completed — 04/11/2026
 

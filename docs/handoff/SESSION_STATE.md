@@ -4,25 +4,27 @@ Owner cho phép cuốn chiếu tối ưu Member web, giữ animation, đo/kiểm
 gói và sửa lỗi liên quan đã tái hiện. Đổi nghiệp vụ, thiết kế/hiệu ứng hoặc
 triển khai cần quyết định riêng; không mở rộng sang DB/provider/checkout demo.
 
-Gói hiện tại `codex/member-web-point-order-wallet-cache`, base `450e0dd3`.
-[WinnerPanel](../../apps/user-web/src/pages/AuctionDetailPage.tsx) dùng helper ví
-sau ACK pay PointOrder theo owner của lần thao tác, gồm retry. Không set tiền
-hoặc đổi command/key/body/version/địa chỉ/phí/nghiệp vụ.
+Gói hiện tại `codex/member-web-expired-countdown-timers`, base `e1eafee0`.
+[Countdown](../../apps/user-web/src/lib/server-countdown.ts) không giữ timer
+cho deadline đã qua, tự dừng khi đạt 0; giữ offset server, tick 1 giây,
+cleanup và tạo lại khi props đổi. Không đổi trạng thái/command/nghiệp vụ.
 [Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Production fixture 12 ca 390/1440 × SelfCollect/CarrierOutbound × ACK/409/
-  lost ACK: menu/Back về Ví hết giữ số dư cũ sau pay. Pending/error không
-  refresh ví; retry giữ key/body/version/address/fee và khóa lựa chọn.
-- Build/typecheck, 354 unit test, scoped lint/detector PASS.
+- Production fixture 390/1440: 8 hàng MyAuctions còn hạn 16→8 timer,
+  đã kết thúc 16→0; tương ứng 32→16/0 callback trong 2 giây. Không suy CPU/FPS.
+- 7 unit mới, tổng 361/51 file; build/typecheck/scoped lint/detector PASS.
+  Browser countdown công khai, PointOrder 12 ca và topup 8 ca PASS lại;
+  giữ deadline server, giờ lệch, retry, cleanup và motion giá khi reduced-motion.
   47 CSS khớp byte; không đổi animation. API/DB/provider/thiết bị thật, native,
   human acceptance và remote CI NOT RUN. Không đổi nghiệp vụ/ledger/contract.
 
 Ứng viên lazy Home bị loại, source đã khôi phục (`901383dd` chỉ lưu đánh giá).
-ADR0071 nói bid không giữ tiền; gói này chỉ ACK pay, không suy mọi thay đổi tiền
-bất đồng bộ đã nối. Đo tiếp timer idle/hết hạn trước khi tối ưu; giữ đồng hồ
-đang chạy và toàn bộ animation.
+Đo tiếp vòng kiểm tra popup Wallet lúc idle và cooldown form hết hạn trước khi
+tối ưu. Countdown đã kiểm không đồng nghĩa mọi timer trong app đã tối ưu.
+ADR0071 giữ bid không giữ tiền; không suy mọi thay đổi tiền bất đồng bộ đã nối.
 
-Gói `450e0dd3` nối view ví sau pay/cancel Order/Completed, kiểm order/chat;
+Gói `e1eafee0` nối view ví sau ACK pay PointOrder, giữ giao nhận/retry;
+`450e0dd3` nối view ví sau pay/cancel Order/Completed, kiểm order/chat;
 `ac71b6dc` nối view ví khi topup credited, kiểm riêng return/checkout;
 `9a86b8e9` nối ví sau ACK Exchange/recovery, giữ key/body và actor;
 `19950968` sửa avatar nhận URL mới sau lỗi cùng avatar ID;
