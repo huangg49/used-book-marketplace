@@ -89,6 +89,7 @@ export function usePagedCollection<P extends { nextCursor?: string | null }, T>(
     busy,
     props: {
       page, pageSize, itemCount: items.length, variant: 'simple' as const,
+      reachablePages: loadedPages,
       totalItems: query.hasNextPage ? undefined : all.length,
       hasNext: page < loadedPages || !!query.hasNextPage,
       isLoading: query.isFetching || busy,

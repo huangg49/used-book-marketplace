@@ -1,3 +1,18 @@
+# Phân trang đánh số trực tiếp —03/11/2026
+
+Owner yêu cầu kết hợp thiết kế Antigravity và logic cursor, bỏ UI chỉ Trước/Sau
+và form nhập trang. Nhánh `codex/pagination-direct-page-jump`, base099e3340:
+dãy số wine/cream,1/2 luôn hiện khi tồn tại, dấu “…” chọn khoảng trang, mobile
+44px/container nhỏ chia hàng. Cursor giữ toàn bộ trail/index để10→2 một lần bấm,
+quay lại10 được; cache collection/ví chọn thẳng trang đã tải, không bịa tổng.
+PASS build/typecheck,13unit Pagination, scoped lint/detector0; browser wallet8ca,
+list42 màn/viewport cùng cursor/cache10→2, Back/Forward/reload/filter/race/retry.
+Transport giả, không DB/API/provider/native/human acceptance. Chi tiết trong
+[báo cáo pagination](../ui/LIST_PAGINATION_ROLLOUT_2026_11_03.md).
+Đưa vào Documents bằng copy có kiểm nguồn/backup, giữ thay đổi reputation/support
+của Antigravity và branch runtime. FE5174/Admin5173/API3000 đang chạy theo yêu cầu
+owner; không restart DB. Chưa push/PR/CI mới, READINESS giữ nguyên.
+
 # Phân trang các danh sách web —03/11/2026
 
 Owner giao chạy cuốn chiếu theo nhu cầu thực. Nhánh

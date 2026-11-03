@@ -29,8 +29,8 @@ session.request=async(url)=>{
  if(cursor&&q.hold)await new Promise(resolve=>q.release=resolve);
  if(cursor&&q.failNext){q.failNext=false;throw Error('QA next page failure');}
  if(type==='OrderPayment'&&q.failInitial){q.failInitial=false;throw Error('QA initial failure');}
- const length=type==='Topup'?3:type==='OrderRefund'?0:cursor?5:20;
- return{items:Array.from({length},(_,i)=>({journalId:'qa-'+(i+(cursor?20:0)),topupId:null,orderId:null,type:type||'Topup',amount:10000,balanceAfter:10000*(i+1),postedAt:'2026-11-03T00:00:00Z',demoOnly:true,label:'Mô phỏng đồ án',currency:'VND'})),nextCursor:!type&&!cursor?'qa-next':null};
+ const length=params.has('long')?100:type==='Topup'?3:type==='OrderRefund'?0:cursor?5:20;
+ return{items:Array.from({length},(_,i)=>({journalId:'qa-'+(i+(cursor?20:0)),topupId:null,orderId:null,type:type||'Topup',amount:10000,balanceAfter:10000*(i+1),postedAt:'2026-11-03T00:00:00Z',demoOnly:true,label:'Mô phỏng đồ án',currency:'VND'})),nextCursor:!params.has('long')&&!type&&!cursor?'qa-next':null};
 };
 const client=new QueryClient({defaultOptions:{queries:{retry:false,staleTime:Infinity}}});
 function App(){const[page,setPage]=useState(5);const[owner,setOwner]=useState('qa-one');window.qa.owner=()=>setOwner('qa-two');return <main style={{padding:16,maxWidth:1000,margin:'auto',fontFamily:'var(--shop-body)'}}><h1 style={{fontSize:18,marginBottom:24}}>QA phân trang — dữ liệu giả</h1>{params.has('wallet')?<div style={{maxWidth:550}}><WalletHistory ownerId={owner}/></div>:<Pagination page={page} totalPages={40} totalItems={400} variant={params.get('variant')||'full'} isLoading={params.has('loading')} itemLabel="giao dịch" onPageChange={n=>{window.qa.changes.push(n);setPage(n)}}/>}</main>};
@@ -71,7 +71,7 @@ try {
     await page.screenshot({ path: path.join(out, `component-${width}-${scale}.png`) });
     results.push({ width, scale, geometry: 'PASS', keyboard: 'PASS', navigation: 'PASS' });
   }
-  await page.goto(origin + '?variant=compact'); await nav.waitFor(); await expect(nav.getByRole('button')).toHaveCount(2); await expect(nav).toContainText('Trang 5 / 40');
+  await page.goto(origin + '?variant=compact'); await nav.waitFor(); await expect(nav.getByRole('button',{name:'Trang 1',exact:true})).toBeVisible();assert.equal(await nav.locator('input').count(),0); await expect(nav).toContainText('Trang 5 / 40');
   await page.goto(origin + '?loading'); await nav.waitFor(); for (const button of await nav.getByRole('button').all()) await expect(button).toBeDisabled();
   await page.setViewportSize({ width: 1440, height: 1000 }); await page.goto(origin + '?wallet');
   const rows = page.getByRole('region', { name: 'Lịch sử giao dịch' }).locator('li');
@@ -95,6 +95,9 @@ try {
   await page.getByRole('tab', { name: 'Tất cả', exact: true }).click(); await expect(rows).toHaveCount(10); await expect(nav).toContainText('1–10');
   await next().click(); await expect(nav).toContainText('11–20'); await page.evaluate(() => window.qa.owner()); await expect(nav).toContainText('1–10');
   for (const width of [1440, 390]) { await page.setViewportSize({ width, height: 1000 }); await page.screenshot({ path: path.join(out, `wallet-${width}.png`), fullPage: true }); }
+  await page.setViewportSize({width:1440,height:1000});await page.goto(origin+'?wallet&long');await expect(rows).toHaveCount(10);
+  await nav.getByRole('button',{name:'Trang 10',exact:true}).click();await expect(nav).toContainText('Trang 10');
+  await nav.getByRole('button',{name:'Trang 2',exact:true}).click();await expect(nav).toContainText('Trang 2');assert.equal(await page.evaluate(()=>window.qa.calls.length),1,'wallet 10→2 is one numbered click');
   await page.emulateMedia({ forcedColors: 'active' }); await page.keyboard.press('Tab'); await next().focus(); await expect.poll(() => next().evaluate(n => getComputedStyle(n).outlineStyle)).toBe('solid');
   assert.deepEqual(errors, []);
   await fs.writeFile(path.join(out, 'result.json'), JSON.stringify({ status: 'PASS', source: 'Pagination + WalletHistory, fake transport; no DB', results, wallet: ['cached next/previous', 'cursor retry', 'no duplicate pending request', 'error retains rows', 'filter reset/focus', 'stale response isolation', 'owner reset', 'empty', 'initial retry'], pageErrors: errors.length }, null, 2));

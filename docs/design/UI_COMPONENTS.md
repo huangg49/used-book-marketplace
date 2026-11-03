@@ -803,15 +803,19 @@ dùng lại texture/font Login. Không thêm ảnh gen, dependency hoặc sample
 ## Member web — Pagination và lịch sử ví —03/11/2026
 
 [Pagination](../../apps/user-web/src/components/Pagination/Pagination.tsx) là UI
-controlled, không gọi API. `full` dùng số trang khi biết tổng; `simple` dùng
-Trước/Sau và chỉ báo trang; `compact` bỏ số trang và mặc định ẩn summary. Có thể
-bật lại bằng `showSummary`. Khi chưa biết tổng, truyền `itemCount` của trang đang
+controlled, không gọi API. Các variant đều giữ dãy số; `compact` mặc định ẩn
+summary, có thể bật lại bằng `showSummary`. Tổng đã biết dùng `totalPages` hoặc
+`totalItems`; API cursor dùng `reachablePages` cho các trang đã truy cập/cache.
+Trang1/2 luôn có nút riêng khi tồn tại; dấu “…” mở bảng chọn các trang trong
+khoảng, hỗ trợ bàn phím/mũi tên/Escape và trả focus. Không dùng form nhập số/Đi.
+Khi chưa biết tổng, truyền `itemCount` của trang đang
 xem cùng `pageSize`, `hasNext`/`hasPrev`; không truyền số mục đã tải làm totalItems.
 `totalItems` chỉ dành cho tổng thực sự biết. Component chuẩn hóa page/pageSize/
 empty, có hideOnSinglePage và khóa nút khi loading. Focus lấy từ CSS chung.
 
-Số trang đầy đủ chỉ hiện khi container rộng hơn520px; container hẹp dùng chỉ báo
-trang với Trước/Sau44px, gồm cả cột hẹp trên desktop. Nút không dịch chuyển khi
+Container rộng hơn520px hiện số đầu, lân cận, cuối; container hẹp giữ1/2, dấu
+“…” và trang hiện tại với target44px, gồm cả cột hẹp trên desktop. Dưới280px,
+dãy số và Trước/Sau tách hai hàng để không tràn. Nút không dịch chuyển khi
 hover. Ví dụ thực thi các variant và ca loading trong
 [browser fixture](../../apps/user-web/tests/pagination.mjs), chạy
 `pnpm --filter @used-books/user-web test:pagination:browser`.

@@ -101,11 +101,11 @@ describe("Pagination Component", () => {
     expect(html).not.toContain('aria-label="Trang 1"');
   });
 
-  it("compact uses one page indicator even with known totals", () => {
+  it("compact keeps direct page access without a repeated summary", () => {
     const html = renderToStaticMarkup(<Pagination page={5} totalPages={40} totalItems={400} variant="compact" onPageChange={() => undefined} />);
     expect(html).toContain("Trang 5 / 40");
     expect(html).not.toContain("Hiển thị");
-    expect(html).not.toContain('aria-label="Trang 1"');
+    expect(html).toContain('aria-label="Trang 1"');
   });
 
   it("normalizes non-finite and empty values without an enabled direction", () => {
@@ -118,6 +118,16 @@ describe("Pagination Component", () => {
   it("loading disables every navigation control", () => {
     const html = renderToStaticMarkup(<Pagination page={2} totalPages={3} isLoading onPageChange={() => undefined} />);
     expect(html).toContain('aria-busy="true"');
-    expect((html.match(/disabled=""/g) ?? []).length).toBe(5);
+    const controls = html.match(/<(?:button|input)\b[^>]*>/g) ?? [];
+    expect(controls.length).toBeGreaterThan(0);
+    for (const control of controls) expect(control).toContain('disabled=""');
+  });
+
+  it("offers direct access within the loaded range without inventing a total", () => {
+    const html = renderToStaticMarkup(<Pagination page={10} reachablePages={10} hasNext variant="simple" onPageChange={() => undefined} />);
+    expect(html).toContain('aria-label="Trang 2"');
+    expect(html).not.toContain("<input");
+    expect(html).not.toContain(" / 10");
+    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*aria-label="Đến trang tiếp theo"/);
   });
 });

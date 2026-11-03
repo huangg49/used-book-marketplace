@@ -65,13 +65,14 @@ session.request=read;session.publicRequest=read;adminSession.request=read;
 function Generic(){const[filter,setFilter]=useState('all');const[owner,setOwner]=useState('one');const mode=new URLSearchParams(location.search).get('mode');
  const result=useInfiniteQuery({queryKey:['generic',owner],initialPageParam:0,getNextPageParam:p=>p.nextCursor??undefined,retry:false,queryFn:async({pageParam})=>{
   window.qa.calls.push('cursor-'+pageParam);if(pageParam&&window.qa.hold)await new Promise(r=>window.qa.release=r);if(pageParam&&window.qa.fail){window.qa.fail=false;throw Error('QA page failure');}
+  if(mode==='long')return{items:Array.from({length:100},(_,i)=>({id:i,kind:'A'})),nextCursor:1};
   if(mode==='sparse'||mode==='cycle')return{items:Array.from({length:pageParam===2?1:10},(_,i)=>({id:pageParam*10+i,kind:pageParam===2?'B':'A'})),nextCursor:mode==='cycle'?1:pageParam===2?null:pageParam+1};
   return{items:Array.from({length:pageParam?5:20},(_,i)=>({id:i+(pageParam?20:0),kind:'A'})),nextCursor:pageParam?null:1};
  }});
  const collection=usePagedCollection(result,owner+filter,p=>p.flatMap(p=>p.items).filter(r=>filter==='all'||r.kind===filter));
- return <><Link to="/detail">Mở chi tiết bộ sưu tập</Link><button onClick={()=>setFilter('all')}>Tất cả QA</button><button onClick={()=>setFilter('B')}>Lọc B QA</button><button onClick={()=>setOwner('two')}>Đổi owner QA</button><div data-testid="rows">{collection.items.map(r=><article key={r.id}>Mục {r.id}</article>)}</div><CollectionPager model={collection} itemLabel="mục QA"/></>;
+ return <><Link to="/detail">Mở chi tiết bộ sưu tập</Link><button onClick={()=>setFilter('all')}>Tất cả QA</button><button onClick={()=>setFilter('B')}>Lọc B QA</button><button onClick={()=>setOwner('two')}>Đổi owner QA</button><div data-testid="rows">{collection.items.map(r=><article key={r.id}>Mục {r.id}</article>)}</div>{!collection.visible&&<p role="status">Chưa có mục QA</p>}<CollectionPager model={collection} itemLabel="mục QA"/></>;
 }
-function Cursor(){const navigation=useCursorNavigation('qa');return <><Link to="/detail">Chi tiết QA</Link><Link to="/cursor?q=new">Đổi bộ lọc QA</Link><CursorPager navigation={navigation} nextCursor={navigation.cursor==='c2'?null:navigation.cursor==='c1'?'c2':'c1'} count={10} busy={false} label="Cursor QA"/></>}
+function Cursor(){const navigation=useCursorNavigation('qa');return <><Link to="/detail">Chi tiết QA</Link><Link to="/cursor?q=new">Đổi bộ lọc QA</Link><CursorPager navigation={navigation} nextCursor={navigation.cursor==='c9'?null:'c'+((Number(navigation.cursor.slice(1))||0)+1)} count={10} busy={false} label="Cursor QA"/></>}
 function Member(){return <MemberReputationView memberId={useParams().id}/>}
 function App(){return <main style={{padding:16,maxWidth:1280,margin:'auto',fontFamily:'var(--shop-body)'}}><p>QA giao diện — dữ liệu giả, không ghi DB</p><Routes><Route element={<Outlet context={{...user,roles:new URLSearchParams(location.search).has("denied")?["MEMBER"]:["ADMIN"]}}/>}><Route path="/operations-support" element={<AdminSupportQueuePage/>}/></Route><Route path="/" element={<Generic/>}/><Route path="/cursor" element={<Cursor/>}/><Route path="/detail" element={<p>Chi tiết QA</p>}/><Route path="/my-books" element={<MyBooksPage/>}/><Route path="/auctions/new" element={<CreateAuctionPage/>}/><Route path="/auctions/mine" element={<MyAuctionsPage/>}/><Route path="/orders" element={<DirectOrderListPage/>}/><Route path="/notifications" element={<NotificationsPage/>}/><Route path="/reviews" element={<ReviewsPage/>}/><Route path="/support" element={<SupportPage/>}/><Route path="/members/:id" element={<Member/>}/><Route path="/auctions" element={<AuctionListPage/>}/><Route path="/exchange/mine" element={<ExchangeMinePage/>}/><Route path="/books" element={<BookSearchPage/>}/></Routes></main>};
 createRoot(document.getElementById('root')).render(<QueryClientProvider client={queryClient}><BrowserRouter><App/></BrowserRouter></QueryClientProvider>);
@@ -95,11 +96,39 @@ try {
   await page.getByRole('button',{name:'Đổi owner QA'}).click();await expect(nav).toContainText('1–10');
   await page.goto(origin+'?mode=sparse');await expect(page.locator('article')).toHaveCount(10);await page.getByRole('button',{name:'Lọc B QA'}).click();await expect(page.locator('article')).toHaveCount(0);await next().click();await expect(page.locator('article')).toHaveCount(1);assert.equal(await page.evaluate(()=>window.qa.calls.length),3,'searches past sparse source pages');
   await page.goto(origin+'?mode=cycle');await expect(page.locator('article')).toHaveCount(10);await page.getByRole('button',{name:'Lọc B QA'}).click();await next().click();await expect(page.getByRole('alert')).toContainText('cursor đã đọc');assert.equal(await page.evaluate(()=>window.qa.calls.length),2,'cursor cycle cannot loop');
-  await page.goto(origin);await expect(page.locator('article')).toHaveCount(10);await page.evaluate(()=>window.qa.hold=true);await next().click();await next().click();await expect.poll(()=>page.evaluate(()=>typeof window.qa.release)).toBe('function');await page.getByRole('button',{name:'Lọc B QA'}).click();await page.evaluate(()=>window.qa.release());await expect(page.locator('article')).toHaveCount(0);await expect(nav).toContainText('Chưa có mục QA');
+  await page.goto(origin);await expect(page.locator('article')).toHaveCount(10);await page.evaluate(()=>window.qa.hold=true);await next().click();await next().click();await expect.poll(()=>page.evaluate(()=>typeof window.qa.release)).toBe('function');await page.getByRole('button',{name:'Lọc B QA'}).click();await page.evaluate(()=>window.qa.release());await expect(page.locator('article')).toHaveCount(0);await expect(page.getByRole('status').filter({hasText:'Chưa có mục QA'})).toBeVisible();await expect(nav).toHaveCount(0);assert.deepEqual(await page.evaluate(()=>history.state.usr.latlaiCollection),{scope:'oneB',page:1},'late source response cannot change filtered page');
   await page.goto(origin+'/cursor');const cursorNav=page.getByRole('navigation',{name:'Cursor QA'}),cn=()=>cursorNav.getByRole('button',{name:'Đến trang tiếp theo'});
   await cn().evaluate(n=>{n.click();n.click()});await expect(cursorNav).toContainText('Trang 2');await cn().click();await expect(cursorNav).toContainText('Trang 3');await page.goBack();await expect(cursorNav).toContainText('Trang 2');await page.goForward();await expect(cursorNav).toContainText('Trang 3');
   await page.getByRole('link',{name:'Chi tiết QA',exact:true}).click();await page.goBack();await expect(cursorNav).toContainText('Trang 3');await page.reload();await expect(cursorNav).toContainText('Trang 3');
   await page.goto(origin+'/cursor?cursor=pasted');await expect(cursorNav).toContainText('Trang hiện tại');await cursorNav.getByRole('button',{name:'Về trang đầu',exact:true}).click();await expect(cursorNav).toContainText('Trang 1');
+  async function choosePage(pager,target){
+    const button=pager.getByRole('button',{name:'Trang '+target,exact:true});
+    if(await button.isVisible())return button.click();
+    for(const more of await pager.getByRole('button',{name:/^Chọn trang /}).all()){
+      if(!await more.isVisible())continue;
+      const [from,to]=(await more.getAttribute('aria-label')).match(/\d+/g).map(Number);
+      if(target>=from&&target<=to){await more.click();return pager.getByRole('dialog').getByRole('button',{name:'Trang '+target,exact:true}).click();}
+    }
+    assert.fail('Requested page is not reachable: '+target);
+  }
+  for(const width of[1440,390,320]){
+    await page.setViewportSize({width,height:1000});await page.goto(origin+'?mode=long');await expect(page.locator('article')).toHaveCount(10);
+    if(width===320)await page.evaluate(()=>document.documentElement.style.fontSize='130%');
+    await choosePage(nav,10);await expect(nav.getByRole('button',{name:'Trang 10',exact:true})).toHaveAttribute('aria-current','page');
+    await nav.getByRole('button',{name:'Trang 2',exact:true}).click();await expect(nav.getByRole('button',{name:'Trang 2',exact:true})).toHaveAttribute('aria-current','page');await expect(page.locator('article').first()).toHaveText('Mục 10');
+    assert.equal(await page.evaluate(()=>window.qa.calls.length),1,'10→2 is one numbered click and no intermediate fetches');
+    assert.equal(await nav.locator('input').count(),0,'no jump form');await expect(next()).toBeEnabled();
+    await choosePage(nav,7);await expect(nav.getByRole('button',{name:'Trang 7',exact:true})).toHaveAttribute('aria-current','page');
+    const visibleMore=nav.getByRole('button',{name:/^Chọn trang /}).filter({visible:true}).first();await visibleMore.click();await expect(nav.getByRole('dialog')).toBeVisible();await page.keyboard.press('Escape');await expect(nav.getByRole('dialog')).toHaveCount(0);
+    const box=await nav.boundingBox();for(const control of await nav.getByRole('button').all())if(await control.isVisible()){const b=await control.boundingBox();assert.ok(b.x>=box.x-1&&b.x+b.width<=box.x+box.width+1,'numbered controls fit');}
+    await nav.screenshot({path:path.join(out,'numbered-'+width+'.png')});
+  }
+  await page.goto(origin+'/cursor?long=1');for(let n=2;n<=10;n++){await cn().click();await expect(cursorNav).toContainText('Trang '+n);}
+  await cursorNav.getByRole('button',{name:'Trang 2',exact:true}).click();await expect(cursorNav).toContainText('Trang 2');assert.equal(new URL(page.url()).searchParams.get('cursor'),'c1');
+  await cn().click();await expect(cursorNav).toContainText('Trang 3');
+  await choosePage(cursorNav,10);await expect(cursorNav).toContainText('Trang 10');await page.goBack();await expect(cursorNav).toContainText('Trang 3');await page.goForward();await expect(cursorNav).toContainText('Trang 10');
+  await cursorNav.getByRole('button',{name:'Trang 1',exact:true}).click();await expect(cursorNav).toContainText('Trang 1');
+  await cursorNav.getByRole('button',{name:'Trang 2',exact:true}).click();await page.reload();await expect(cursorNav).toContainText('Trang 2');
   // Render and operate each actual screen, desktop and phone together.
   const screens=[['search','/books?data=preview','Phân trang sách'],['shelf','/my-books','Trang kệ sách'],['mine','/auctions/mine','Trang đấu giá của tôi'],['orders','/orders','Điều hướng phân trang'],['notifications','/notifications','Điều hướng phân trang'],['reviews','/reviews?tab=pending&type=Exchange','Điều hướng phân trang'],['support','/support','Điều hướng phân trang'],['reputation','/members/00000000-0000-4000-8000-000000000001','Điều hướng phân trang'],['exchange','/exchange/mine?tab=done','Phân trang trao đổi'],['auctions','/auctions','Phân trang đấu giá đang mở']];
   for(const [name,url,label]of screens)for(const width of[1440,768,390,320]){

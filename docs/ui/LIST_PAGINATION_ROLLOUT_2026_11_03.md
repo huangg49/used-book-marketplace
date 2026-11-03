@@ -37,12 +37,16 @@ contract, DB, tiền, điều kiện review, intent/key/version hoặc phân quy
 ## Trạng thái và thiết kế
 
 [Pagination](../../apps/user-web/src/components/Pagination/Pagination.tsx) giữ
-wine/cream, không nhấc nút khi hover, focus từ brand chung. Container hẹp dùng
-Trước—Trang—Sau với target44px; không phụ thuộc chỉ vào viewport. Specificity của
+wine/cream, không nhấc nút khi hover, focus từ brand chung. Owner yêu cầu giữ
+phong cách số trang của Antigravity: trang hiện tại nền wine; trang1/2 luôn hiện,
+dấu “…” mở bảng chọn khoảng trang. Không có form nhập số/Đi. Container hẹp giữ
+số trang và target44px; dưới280px chia hai hàng. Không phụ thuộc chỉ viewport. Specificity của
 control đủ để form CSS của trang không đổi riêng font/padding của pager.
 
 [Cursor navigation](../../apps/user-web/src/components/Pagination/useCursorNavigation.ts)
-lưu trail trong từng history entry, scope theo identity và bộ lọc. Không dùng
+lưu toàn bộ trail và index trong từng history entry, scope theo identity/bộ lọc.
+Nhảy10→2 dùng cursor đã biết trực tiếp; không cắt mất trang3–10. Khi server trả
+cursor kế tiếp khác, chỉ vô hiệu hóa phần trail sau vị trí hiện tại. Không dùng
 localStorage/sessionStorage và không lưu token. Chặn double navigation trước
 commit location. URL cursor lỗi vẫn có đường quay lại và retry request hiện tại.
 
@@ -81,6 +85,19 @@ chuyển hết; không đổi CSS/biểu mẫu giao dịch ngoài phạm vi.
   hướng đến dữ liệu chưa tải khi API không có khả năng đó.
 
 ## Kiểm chứng
+
+Follow-up số trang (`codex/pagination-direct-page-jump`, base099e3340): PASS
+build/typecheck,13 unit Pagination và lint phạm vi, detector0. Browser component/
+wallet8 ca màn/chữ/motion; list42 màn/viewport và ca10→2 một lần bấm ở1440/390/
+320px (320 chữ130%), không fetch trung gian; dấu “…”/Escape, không form nhập số.
+Cursor10→2→3→10, Back/Forward, về1/2 và reload giữ trail. Test phản hồi muộn vẫn
+kiểm filter/page1 và rỗng; fixture hiển thị empty ngoài pager khi hết dữ liệu,
+thay vì phụ thuộc vào thời điểm pager rỗng bị ẩn. Bằng chứng dùng transport giả.
+Không chạy lại API/native/provider hoặc CI vì không đổi source những phần đó.
+Sau copy có backup vào Documents: localhost5174 `/books?data=live`, browser riêng
+chỉ GET public,1→2→1 PASS ở1440/390px;0pageerror,0write. FE5174/Admin5173/API3000
+HTTP200; giữ4file reputation/support của Antigravity byte-identical, không
+restart dịch vụ hoặc thay branch runtime. Đây là smoke đọc local, không QA ghi DB.
 
 - PASS Member build/typecheck và336unit; Admin build/bundle/typecheck và229unit
   trên source của gói trước bàn giao; scoped lint chỉ còn cảnh báo Date.now đã có

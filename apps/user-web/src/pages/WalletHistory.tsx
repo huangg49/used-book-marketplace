@@ -298,6 +298,7 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
           <Pagination
             page={safePage}
             variant="simple"
+            reachablePages={loadedPages}
             itemCount={pagedItems.length}
             totalItems={history.hasNextPage ? undefined : items.length}
             pageSize={PAGE_SIZE}
