@@ -1,26 +1,25 @@
 # Tối ưu Member web — 03/11/2026
 
-Gói hiện tại trên `codex/member-web-transition-style`, base `8fc33e1f`: bỏ giá
-trị thời lượng mặc định kế thừa từ root; pseudo-element bìa vẫn dùng440ms.
-Giữ nguyên animation, easing, keyframe, x=24px và reduced-motion theo owner.
-[Source](../../apps/user-web/src/components/BookTransition.css),
+Gói hiện tại `codex/member-web-card-scroll-work`, base `183b457d`: observer chữ
+bỏ qua các thay đổi chỉ gồm class cuộn Lenis đã biết. Vẫn fit khi đổi font,
+root style, class khác, kích thước slot; giữ thuật toán/cỡ chữ/animation.
+[Source](../../apps/user-web/src/lib/card-text-observer.ts),
 [bằng chứng và các gói trước](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Chromium151/production HTTP fixture, 5 cặp mỗi viewport. Mobile390px/DPR2/
-  CPU4×/4Mbps/75ms: trung vị click thực→DOM chi tiết968→827ms, thời gian style
-  271→210ms; lượt tính style cho khoảng2.000 phần tử giảm2→1 ở cả5 cặp.
-  Desktop335→347ms, chưa xác nhận cải thiện. Đây không là INP/điện thoại thật.
-- Build/typecheck,338 unit test, lint,5 cấu hình chuyển cảnh và6 ca prefetch
-  PASS. Chuyển cảnh native ready,440ms, x=24px, Back và fallback đều giữ.
-  Năm ảnh sau animation khớp pixel trước; không suy kiểm từng frame từ ảnh đứng.
-- Smoke production chỉ GET qua API local thật1440/390px PASS,0 lỗi JS.
-  Lint/build còn warning cũ; detector1 cố vấn radius cũ ngoài diff. Harness
-  và trace ở `.tmp/member-web-card-performance/`; cần giữ hoặc chạy lại trên máy.
+- Production Chromium151,5 cặp mỗi viewport,20 thẻ giá10k/50k/1triệu. Sau3 wheel,
+  lượt fit120→0 ở mọi cặp. Desktop1440px: Layout991→43 sự kiện, tổng68,6→6,4ms.
+  Viewport390px/CPU4×: Layout18,5→17,3ms, cải thiện nhỏ. Cả hai dùng wheel;
+  không là touch/điện thoại thật, FPS hoặc tổng latency cuộn.
+- Build/tsc,341 unit test, lint, browser chữ390/1440px,5 cấu hình chuyển cảnh
+  và Home focus PASS. Class/style typography, font WOFF2 tải thật, resize vẫn
+  đo lại;45 CSS production khớp byte. Detector observer0 finding.
+- Smoke production chỉ GET API local thật1440/390px PASS,0 lỗi JS. Docs/diff
+  check PASS. Warning lint/chunk cũ ngoài diff. Harness và trace ở
+  `.tmp/member-web-text-performance/`, có thể chạy lại test từ repo.
 
-Chuỗi commit trước: `62324b47` catalog production, `10fd986d` WOFF2,
-`bbd59568` Hero preload, `d28f7605` canvas, `55c9df1d` ảnh phân trang,
-`8aba79c7` prefetch mã và `8fc33e1f` viewport. Chi tiết giữ trong bản bằng chứng
-chung bên trên để điểm lưu này không tiếp tục nối nhiều báo cáo tối ưu.
+Chuỗi trước: `62324b47` catalog, `10fd986d` WOFF2, `bbd59568` Hero preload,
+`d28f7605` canvas, `55c9df1d` ảnh trang, `8aba79c7` prefetch mã, `8fc33e1f`
+viewport, `183b457d` style chuyển cảnh. Chi tiết trong tài liệu bằng chứng chung.
 
 Chỉ ở worktree phát triển. Checkout demo có local work được bảo toàn; chưa
 push/PR/merge. Thiết bị thật, human acceptance, CI remote chưa chạy.

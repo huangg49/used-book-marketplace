@@ -547,6 +547,12 @@ Author and location now share one horizontal line with24px text slots and center
 icons. Location has a screen-reader-only label; no visible “Khu vực” caption.
 Both values retain measured fitting, ellipsis and full tooltips when necessary.
 
+The shared card-text observer ignores changes limited to known Lenis scroll
+classes. Resize, font loading, inline root styles and other classes still refit
+text. Keep typography independent of those scroll state classes; revisit the
+filter if that assumption changes. Verify with
+`pnpm --filter @used-books/user-web test:card-text:browser`.
+
 Production builds include a Vite-generated asset hint for the BookDetail route.
 Mouse entry into a real `BookCard`, or keyboard focus on its detail links,
 starts HTTP prefetch for that route's JS/CSS through

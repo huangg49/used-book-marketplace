@@ -4,6 +4,58 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Bỏ đo lại chữ do trạng thái cuộn Lenis
+
+Nhánh `codex/member-web-card-scroll-work`, base `183b457d`.
+[Observer chữ](../../apps/user-web/src/lib/card-text-observer.ts) bỏ qua thay đổi
+root class nếu chỉ khác sáu class cuộn của Lenis1.3.27: `lenis`,
+`lenis-autoToggle`, `lenis-stopped`, `lenis-locked`, `lenis-scrolling`,
+`lenis-smooth`. Các class này hiện chỉ điều khiển cuộn/overflow/iframe, không
+đổi typography. Đổi kích thước slot vẫn qua ResizeObserver; inline root style,
+class khác/kể cả class Lenis chưa biết và font loading vẫn đo lại. Không đổi
+thuật toán fit, cỡ chữ tối thiểu, fallback, animation hoặc vật lý Lenis.
+
+Hai production build, Chromium151, 5 cặp luân phiên mỗi viewport. HTTP fixture
+48 bài, Search hiển thị20 thẻ; giá luân phiên10.000/50.000/1.000.000đ trong miền
+cho phép. Sau font/entrance ổn định, mỗi lượt gồm3 wheel450px và chờ Lenis hết
+cuộn. Width390/DPR2/CPU4× và1440/DPR1/CPU1×, đều bật reduced-motion theo policy.
+
+| Trung vị trong3 lần wheel | Trước | Sau |
+| --- | ---: | ---: |
+| Lượt fit chữ, cả hai viewport | 120 | 0 |
+| Desktop: số sự kiện Layout | 991 | 43 |
+| Desktop: tổng thời gian Layout | 68,6ms | 6,4ms |
+| Desktop: tổng thời gian UpdateLayoutTree | 27,8ms | 14,3ms |
+| Viewport390: tổng thời gian Layout | 18,5ms | 17,3ms |
+| Viewport390: tổng thời gian UpdateLayoutTree | 62,0ms | 61,0ms |
+
+Cả5 cặp mỗi viewport đều fit120→0. Đích cuộn giữ609px/1215px trong mọi lượt.
+Desktop có giá dài phải binary-fit nên tránh nhiều reflow hơn; số đo này không
+đại diện mọi giá/card. Hiệu quả viewport390 nhỏ. Input là wheel ở cả hai profile,
+không suy thành touch/mobile thật, FPS hay tổng latency cuộn. Probe CDP touch
+không làm trang cuộn nên bị loại khỏi evidence hiệu năng. Trace gồm canvas và
+UI khác đang chạy; Layout/UpdateLayoutTree là tổng trong khoảng trace.
+
+- Unit observer9 ca và toàn bộ341 unit test PASS. Kiểm tín hiệu thật/giả,
+  batch hỗn hợp, class Lenis chưa biết, resize/font, cleanup và callback cũ.
+- Bộ [browser chữ](../../apps/user-web/tests/card-text.mjs) bắt bản cũ với60
+  lượt fit khi yêu cầu0; bản sửa PASS390/1440px. Giá và geometry giữ nguyên sau
+  wheel; đổi class typography, biến inline root, tải FontFace WOFF2 thật và
+  resize320/720px vẫn fit hoặc dùng fallback có giới hạn. Không fake font API.
+  Chạy lại: `pnpm --filter @used-books/user-web test:card-text:browser`.
+- Toàn bộ45 CSS production khớp byte bản trước. Bộ chuyển cảnh5 cấu hình giữ
+  ready/440ms/x24px/Back/reduced-motion/fallback; Home focus/leaf pause-resume PASS.
+  Đây là kiểm config/hành vi, không chứng minh mọi frame motion khớp pixel.
+- Build/tsc, lint exit0 và smoke production chỉ GET API local thật1440/390px
+  PASS,0 lỗi JS; luồng Home→Search→trang2→chi tiết→Back. Warning lint/chunk cũ
+  ngoài diff; detector observer0 finding. Docs check và diff check PASS.
+- Harness,20 trace, JSON, probe bị loại và số đo tại
+  `.tmp/member-web-text-performance/`; browser chức năng tại `.tmp/card-text/`.
+  Các file này chỉ ở máy hiện tại; test browser/unit mới được đưa vào Git.
+
+Chỉ ở worktree phát triển. Demo local, DB, API/contract và READINESS giữ nguyên.
+Thiết bị thật, human acceptance, CI remote chưa chạy.
+
 ## Chi phí style khi chuyển từ thẻ sang Chi tiết
 
 Nhánh `codex/member-web-transition-style`, base `8fc33e1f`. Bỏ duy nhất giá trị
