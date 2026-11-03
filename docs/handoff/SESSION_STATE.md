@@ -4,26 +4,32 @@ Owner cho phép cuốn chiếu tối ưu Member web, giữ animation, đo/kiểm
 gói và sửa lỗi liên quan đã tái hiện. Đổi nghiệp vụ, thiết kế/hiệu ứng hoặc
 triển khai cần quyết định riêng; không mở rộng sang DB/provider/checkout demo.
 
-Gói hiện tại `codex/member-web-wallet-popup-watch`, base `5a0ba4c9`.
-[WalletPage](../../apps/user-web/src/pages/WalletPage.tsx) chỉ giữ watcher 500ms
-khi popup mở; tách alive theo vòng đời component để response về muộn vẫn xử lý
-đúng. Không đổi polling/intent/key/body/quy tắc ghi có hoặc UI/motion.
+Owner yêu cầu hoàn tất gói đang làm, lưu tiến trình rồi tạm dừng. Không mở gói
+mới cho tới khi owner yêu cầu tiếp tục; chưa đánh dấu mục tiêu toàn web hoàn tất.
+
+Gói cuối `codex/member-web-auth-cooldown-timers`, base `f22390c4`, subject commit
+`perf(user-web): stop expired account form cooldown timers`.
+[useAccountForm](../../apps/user-web/src/pages/useAccountForm.ts) dùng countdown
+chung, tự dừng sau expiry; giữ mốc60 giây, form/pending/error và thời gian máy.
 [Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Production fixture 8 ca 390/1440: idle 4–5→0 callback/2100ms; đóng/mở lại
-  giữ intent, popup bị chặn/409 dọn watcher, unmount cleanup và response về
-  muộn đóng tab. Provider và API đều giả; không thay browser popup settings.
+- Production fixture 4 ca 390/1440 × Register/ForgotPassword: expiry 5→0
+  callback/5 giây; vẫn khóa ở giây59, mở ở60, lỗi giữ mã nhập, resend thành công
+  tạo cooldown mới, rời form/late response không tạo timer ẩn.
 - Build/typecheck, 361 unit/51 file, scoped lint/detector PASS.
-  Topup credit-cache 8 ca PASS lại; không suy CPU/FPS hoặc tích hợp thật.
+  Auth motion desktop/mobile PASS cả reduced-motion, Back/cleanup/fallback;
+  HTTP là fixture, không email hoặc tài khoản thật. Không suy CPU/FPS thật.
   47 CSS khớp byte; không đổi animation. API/DB/provider/thiết bị thật, native,
   human acceptance và remote CI NOT RUN. Không đổi nghiệp vụ/ledger/contract.
 
 Ứng viên lazy Home bị loại, source đã khôi phục (`901383dd` chỉ lưu đánh giá).
-Đo tiếp cooldown Register/ForgotPassword sau 60 giây trước khi tối ưu. Các gói
-countdown/popup đã kiểm không đồng nghĩa mọi timer trong app đã tối ưu.
+Điểm tiếp tục nếu owner cho chạy lại: đối chiếu báo cáo/source hiện tại để
+chọn việc còn lợi ích rõ hoặc làm audit chốt; chưa thực hiện bước này khi dừng.
+Các gói countdown/popup đã kiểm không đồng nghĩa mọi timer app đã tối ưu.
 ADR0071 giữ bid không giữ tiền; không suy mọi thay đổi tiền bất đồng bộ đã nối.
 
-Gói `5a0ba4c9` dừng countdown đã hết hạn, giữ server offset/tick/motion;
+Gói `f22390c4` chỉ watch popup Wallet khi mở, giữ nhịp500ms và cleanup;
+`5a0ba4c9` dừng countdown đã hết hạn, giữ server offset/tick/motion;
 `e1eafee0` nối view ví sau ACK pay PointOrder, giữ giao nhận/retry;
 `450e0dd3` nối view ví sau pay/cancel Order/Completed, kiểm order/chat;
 `ac71b6dc` nối view ví khi topup credited, kiểm riêng return/checkout;

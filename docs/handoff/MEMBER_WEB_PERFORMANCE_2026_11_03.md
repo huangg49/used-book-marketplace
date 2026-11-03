@@ -4,6 +4,39 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Dừng cooldown Auth sau khi hết thời gian chờ — 04/11/2026
+
+Nhánh `codex/member-web-auth-cooldown-timers`, base `f22390c4`.
+[useAccountForm](../../apps/user-web/src/pages/useAccountForm.ts) cũ giữ interval
+1 giây sau khi remaining về 0. Dùng lại controller countdown đã kiểm, không
+cấp serverTime vì cooldown này theo thời gian máy như trước; giữ ceil giây,
+mốc 60 giây, pending/error/active và các callback form. Không đổi endpoint,
+payload, session, OTP/challenge hoặc logic xác minh/reset tài khoản.
+
+[Production browser fixture](../../apps/user-web/tests/auth-cooldown.mjs) PASS
+trước/sau, 390/1440 × Register/ForgotPassword. Mỗi ca kiểm gửi đầu, giây59 còn
+khóa, giây60 mở gửi lại, lỗi503 giữ mã nhập và không bắt chờ mới, gửi lại thành
+công xóa mã cũ/bắt đầu60 giây mới, rời form rồi response về muộn không tạo
+timer ẩn. Ca cleanup chờ route Login sau hoạt cảnh lật giấy, không coi paper
+Login còn ở lớp preview là đã unmount. Selector Login đối chiếu source `#email`.
+
+- Sau expiry: 1→0 timer; 5→0 callback trong 5 giây mô phỏng. Trước khi gửi
+  mã vẫn 0, trong thời gian chờ vẫn 1 timer, gửi lại thành công khởi động lại.
+  4 request fixture/ca như trước; không auto-send hoặc gửi verify/reset.
+- Build/typecheck, 361 unit/51 file, scoped lint và detector `[]` PASS.
+  Hồi quy Auth motion desktop/mobile PASS cả reduced-motion: lật giấy,
+  paper/gust/fade, cleanup sau native animation completion, Back/rời trang,
+  resize/context-loss và các fallback preparation. Không giảm hiệu ứng.
+- Đã xem ảnh Register390/ForgotPassword1440 mới chạy. Cả 47 CSS production
+  khớp byte; không đổi DOM/class/asset/animation. Đo timer work bằng clock
+  kiểm soát, không suy CPU/FPS/pin hoặc LCP/INP thật.
+
+Evidence `.tmp/member-web-auth-cooldown/` và `motion/` bên trong. Mọi HTTP Auth
+đều là dữ liệu giả, không gửi email hoặc ghi tài khoản thật. API/DB/provider,
+native/thiết bị thật, human acceptance và remote CI NOT RUN. READINESS và
+checkout demo giữ nguyên. Owner yêu cầu lưu tiến trình rồi tạm dừng sau gói
+này; không mở gói mới, chưa làm audit kết thúc toàn bộ mục tiêu tối ưu web.
+
 ## Chỉ kiểm tra tab thanh toán khi popup đang mở — 04/11/2026
 
 Nhánh `codex/member-web-wallet-popup-watch`, base `5a0ba4c9`.
@@ -33,8 +66,8 @@ HTML provider và mọi HTTP API là dữ liệu giả. Không gọi VNPay Sandb
 Evidence `.tmp/member-web-wallet-popup-watch/` và `.tmp/member-web-wallet-credit-cache/`.
 Đo timer work, không là CPU/FPS/pin/LCP/INP hoặc nghiệm thu thanh toán thật.
 API/DB/provider, native/thiết bị thật, human acceptance và remote CI NOT RUN.
-READINESS và checkout demo giữ nguyên. Cooldown Register/ForgotPassword sau
-60 giây còn là ứng viên cần đo riêng; chưa suy mọi timer app đã tối ưu.
+READINESS và checkout demo giữ nguyên. Cooldown Register/ForgotPassword được
+kiểm riêng ở mục mới phía trên; chưa suy mọi timer app đã tối ưu.
 
 ## Dừng timer đếm ngược đã hết hạn — 04/11/2026
 

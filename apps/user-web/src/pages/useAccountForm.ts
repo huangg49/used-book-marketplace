@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { accountError, accountErrorField } from '../services/account-auth';
+import { startServerCountdown } from '../lib/server-countdown';
 
 export function useAccountForm() {
   const active = useRef(true);
@@ -13,11 +14,9 @@ export function useAccountForm() {
   const [remaining, setRemaining] = useState(0);
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
   useEffect(() => {
-    const update = () => setRemaining(Math.max(0, Math.ceil((until - Date.now()) / 1000)));
-    update();
     if (!until) return;
-    const timer = setInterval(update, 1000);
-    return () => clearInterval(timer);
+    return startServerCountdown(new Date(until).toISOString(), undefined,
+      ms => setRemaining(Math.ceil(ms / 1000)));
   }, [until]);
   async function run(task: () => Promise<void>) {
     if (pending.current) return;
