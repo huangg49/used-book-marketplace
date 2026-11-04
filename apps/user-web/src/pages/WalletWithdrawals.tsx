@@ -5,10 +5,13 @@ import {
   ArrowRight,
   ArrowLeft,
   Check,
+  ChevronDown,
+  Clock3,
   Info,
   Landmark,
   LoaderCircle,
   Wallet,
+  X,
 } from "lucide-react";
 import {
   ApiError,
@@ -582,7 +585,7 @@ export function WalletWithdrawals({
         onClose={closeDetail}
         title="Chi tiết rút tiền"
         description="Theo dõi tiến độ và phản hồi xử lý"
-        className={styles.dialog}
+        className={`${styles.dialog} ${styles.detailDialog}`}
       >
         {detail.isPending && validId && <p role="status">Đang tải yêu cầu…</p>}
         {(!validId || detail.isError) && (
@@ -606,56 +609,105 @@ export function WalletWithdrawals({
   );
 }
 function WithdrawalDetail({ row }: { row: Withdrawal }) {
+  const StatusIcon = ["Completed", "Refunded"].includes(row.state)
+    ? Check
+    : ["Rejected", "FailedVerified"].includes(row.state)
+      ? X
+      : Clock3;
   return (
     <div className={styles.detail}>
       <div className={styles.detailAmount}>
-        <span>Rút tiền</span>
-        <strong>{formatVnd(row.amount)}</strong>
+        <div>
+          <span>Số tiền rút</span>
+          <strong>{formatVnd(row.amount)}</strong>
+        </div>
         <span className={styles.status} data-state={row.state}>
+          <StatusIcon size={16} aria-hidden="true" />
           {withdrawalLabels[row.state]}
         </span>
+        <p className={styles.detailFee}>
+          Phí rút tiền <strong>0đ</strong>
+        </p>
       </div>
-      <dl>
-        <div>
-          <dt>Mã yêu cầu</dt>
-          <dd>{row.id}</dd>
-        </div>
-        <div>
-          <dt>Lý do</dt>
-          <dd>
-            {withdrawalReasons[row.reason]}
-            {row.reasonDetail && ` · ${row.reasonDetail}`}
-          </dd>
-        </div>
-        <div>
-          <dt>Nơi nhận</dt>
-          <dd>
-            {row.recipient.bankName} · {row.recipient.accountNumber}
-            <br />
-            {row.recipient.accountHolder}
-          </dd>
-        </div>
-        <div>
-          <dt>Phí</dt>
-          <dd>0đ</dd>
-        </div>
-      </dl>
-      <h3>Tiến độ xử lý</h3>
-      <ol className={styles.timeline}>
-        {row.history.map((h, i) => (
-          <li key={i}>
-            <strong>{withdrawalLabels[h.state]}</strong>
-            <time dateTime={h.at}>{date(h.at)}</time>
-            <p>{h.note}</p>
-          </li>
-        ))}
-      </ol>
+      {row.state === "Requested" && (
+        <p className={styles.detailNotice}>
+          <Clock3 size={18} aria-hidden="true" />
+          <span>
+            Yêu cầu sẽ được xử lý trong <strong>dưới 24 giờ.</strong> Tiền đang
+            được giữ chờ duyệt.
+          </span>
+        </p>
+      )}
+      <div className={styles.detailGrid}>
+        <section
+          className={styles.detailRecipient}
+          aria-label="Thông tin nhận tiền"
+        >
+          <h3>
+            <Landmark size={18} aria-hidden="true" />
+            Thông tin nhận tiền
+          </h3>
+          <dl>
+            <div className={styles.detailAccount}>
+              <dt>Số tài khoản</dt>
+              <dd>{row.recipient.accountNumber}</dd>
+            </div>
+            <div>
+              <dt>Ngân hàng</dt>
+              <dd>{row.recipient.bankName}</dd>
+            </div>
+            <div>
+              <dt>Chủ tài khoản</dt>
+              <dd>{row.recipient.accountHolder}</dd>
+            </div>
+            <div className={styles.detailReason}>
+              <dt>Lý do rút tiền</dt>
+              <dd>
+                {withdrawalReasons[row.reason]}
+                {row.reasonDetail && ` · ${row.reasonDetail}`}
+              </dd>
+            </div>
+          </dl>
+        </section>
+        <section className={styles.detailProgress} aria-label="Tiến độ xử lý">
+          <h3>Tiến độ xử lý</h3>
+          <ol className={styles.timeline}>
+            {row.history.map((h, i) => (
+              <li
+                key={i}
+                data-state={h.state}
+                data-latest={i === row.history.length - 1}
+              >
+                <span className={styles.timelineMark} aria-hidden="true">
+                  {i === row.history.length - 1 ? (
+                    <StatusIcon size={13} />
+                  ) : (
+                    <Check size={13} />
+                  )}
+                </span>
+                <strong>{withdrawalLabels[h.state]}</strong>
+                <time dateTime={h.at}>{date(h.at)}</time>
+                <p>{h.note}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      </div>
       {row.state === "Processing" && (
         <p className={styles.hint}>
           Tiền đang được giữ. Nếu kết quả chưa rõ, hệ thống tiếp tục đối soát
           cùng mã chi; bạn không cần gửi thêm đơn.
         </p>
       )}
+      <details className={styles.detailReference}>
+        <summary>
+          <span>
+            Mã yêu cầu <strong>#{row.id.slice(0, 8).toUpperCase()}</strong>
+          </span>
+          <ChevronDown size={16} aria-hidden="true" />
+        </summary>
+        <p>{row.id}</p>
+      </details>
     </div>
   );
 }

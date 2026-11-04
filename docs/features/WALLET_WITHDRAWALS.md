@@ -305,3 +305,25 @@ Evidence private `.tmp/withdrawal-amount-grouping-evidence/`,
 `.tmp/withdrawal-grouping-{browser,unit,build,lint}.log`. QA teardown/dừng, main
 apps giữ chạy; không mutation owner, push/merge hoặc đổi READINESS. Không suy
 native/human/CI acceptance từ browser.
+
+## Làm gọn popup chi tiết — 04/11/2026
+
+Owner yêu cầu làm đẹp popup chi tiết. Nhánh `codex/withdrawal-detail-popup`, base
+`c792f5c6`; checkpoint subject `refactor(wallet): refine withdrawal detail popup`.
+Header đỏ rượu, nền giấy và opening/microinteraction dùng cùng form rút tiền.
+Khối kem làm rõ tiền/trạng thái thật và phí0; chỉ Requested có nhắc xử lý dưới24h
+và giữ tiền. Thông tin nhận tiền bên trái, timeline thật bên phải; dưới600px xếp
+dọc. Số tài khoản vẫn che từ API, lý do/notes đầy đủ; mã UUID mở từ summary44px
+bằng click hoặc bàn phím. Giữ error/retry, deep link owner và Processing recovery.
+
+Finish review trên screenshot desktop,320px và390px/chữ130%: hierarchy tiền →
+recipient → tiến độ rõ, không ngang tràn; chữ và state có icon/text, không chỉ màu.
+Verdict: refinement phù hợp brief hiện có, không đổi DESIGN/token hoặc thêm raster.
+PASS339Member unit, typecheck/build/lint (warning cũ ngoài phần đổi); browser API/
+Mongo QA thật39captures,0page errors/overflow,111button states. Kiểm disclosure
+Enter/full UUID, Requested/Completed/Rejected, mobile/chữ lớn, notification/deep
+link, lostACK/exact retry và hold/payout/refund. Detector một lượt chỉ advisory
+16px modal đã có. Evidence private `.tmp/withdrawal-detail-evidence/` và
+`.tmp/withdrawal-detail-{browser,build,unit,lint}.log`. QA teardown/dừng; main apps
+bật lại, không sửa .env/migrate hoặc mutation owner để kiểm. Không push/merge,
+đổi READINESS hoặc suy native/human/remote CI PASS.

@@ -1,6 +1,16 @@
 # Rút tiền qua Admin — 04/11/2026
 
-- Hiện tại `codex/withdrawal-amount-grouping`, base `5df75183`; checkpoint subject
+- Hiện tại `codex/withdrawal-detail-popup`, base `c792f5c6`; checkpoint subject
+  `refactor(wallet): refine withdrawal detail popup`. Đồng bộ header/motion với
+  form; tiền/trạng thái rõ, recipient/timeline hai cột desktop và stack mobile,
+  mã đầy đủ trong disclosure bàn phím. Requested có dưới24h/hold; Completed và
+  Rejected không còn copy chờ duyệt. Giữ masking/notes/Processing recovery/API.
+  PASS339Member unit/typecheck/build/lint,39browser captures/0page errors/overflow,
+  keyboard reference và111button states. Đã xem desktop/320/390chữ130%; detector
+  chỉ advisory16px modal đã có. QA teardown/dừng; Member5174/Admin5173/API3000
+  và workers đã bật lại với cấu hình cổng hiện có, không sửa .env/dữ liệu owner.
+  Không push/merge/đổi READINESS; human review/native/remote CI chưa chạy.
+- Gói format trước ở `codex/withdrawal-amount-grouping`, base `5df75183`; checkpoint subject
   `feat(wallet): format withdrawal amounts with thousands separators`. Amount
   display5300500→5.300.500; raw digits/number payload, safe-integer/balance/min và
   key/body giữ nguyên. Caret/paste/edit/delete quanh separator đã kiểm, không đổi

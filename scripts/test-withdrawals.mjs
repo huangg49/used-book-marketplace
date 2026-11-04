@@ -24,7 +24,7 @@ assert.ok(
 );
 const memberOrigin = "http://127.0.0.1:5195",
   adminOrigin = "http://127.0.0.1:5196";
-const evidence = path.join(root, ".tmp/withdrawal-amount-grouping-evidence");
+const evidence = path.join(root, ".tmp/withdrawal-detail-evidence");
 const buttonStates = [];
 let fixture, browser, web, adminVite, member, admin, op;
 const pageErrors = [];
@@ -38,8 +38,8 @@ async function capture(p, name, width = 1440, height = 1000) {
     return document.fonts.ready;
   });
   // Wait for the authored popup/light sequence; ordinary surfaces use the incumbent timing.
-  const animatedForm = await p.locator("dialog[open] form[data-step]").count();
-  await p.waitForTimeout(animatedForm ? 1050 : 350);
+  const animatedDialog = await p.locator("dialog[open]").count();
+  await p.waitForTimeout(animatedDialog ? 1050 : 350);
   const modal = await p.locator("dialog[open]").count();
   await p.screenshot({
     path: path.join(evidence, name + ".png"),
@@ -290,7 +290,22 @@ try {
       .getByText("Chờ duyệt", { exact: true })
       .first(),
   ).toBeVisible();
+  const requestedDetail = member.getByRole("dialog", { name: "Chi tiết rút tiền" });
+  await expect(requestedDetail.getByText("dưới 24 giờ.", { exact: true })).toBeVisible();
+  const reference = requestedDetail.locator("details");
+  await expect(reference).not.toHaveAttribute("open", "");
+  await reference.locator("summary").focus();
+  await member.keyboard.press("Enter");
+  await expect(reference.getByText(id, { exact: true })).toBeVisible();
+  await capture(member, "member-requested-reference-desktop");
+  await member.keyboard.press("Enter");
+  await expect(reference).not.toHaveAttribute("open", "");
+  await capture(member, "member-requested-desktop", 1440, 900);
   await capture(member, "member-requested-mobile", 390);
+  await capture(member, "member-requested-small", 320, 844);
+  await member.evaluate(() => (document.documentElement.style.fontSize = "130%"));
+  await capture(member, "member-requested-large-text", 390);
+  await member.evaluate(() => (document.documentElement.style.fontSize = ""));
   await closePopup(member);
   const pendingNotice = member.getByRole("region", { name: "Bạn đang có 1 đơn rút tiền chờ duyệt" });
   await expect(pendingNotice).toBeVisible();
@@ -373,6 +388,8 @@ try {
       .getByText("Thành công", { exact: true })
       .first(),
   ).toBeVisible();
+  await expect(member.getByRole("dialog").getByText("dưới 24 giờ.", { exact: true })).toHaveCount(0);
+  await capture(member, "member-completed-desktop", 1440, 900);
   await capture(member, "member-completed-mobile", 390);
   await closePopup(member);
   await expect(pendingNotice).toHaveCount(0);
@@ -430,7 +447,9 @@ try {
       .getByText("Bị từ chối", { exact: true })
       .first(),
   ).toBeVisible();
+  await expect(member.getByRole("dialog").getByText("dưới 24 giờ.", { exact: true })).toHaveCount(0);
   await capture(member, "member-rejected-mobile", 390);
+  await capture(member, "member-rejected-small", 320, 844);
   await closePopup(member);
   await expect(pendingNotice).toHaveCount(0);
   // Force real server pagination at one pending request per page.

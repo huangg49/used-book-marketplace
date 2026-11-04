@@ -78,4 +78,15 @@ digit. Do not coerce signed/scientific/letter input to a different positive sum.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 
+Detail refinement04/11: use the incumbent wine header/opening on a700px paper
+dialog. A cream amount block pairs tabular money with the actual icon/text state
+and a quiet fee row. Requested alone shows the owner's under24h message and hold
+explanation. Below it, recipient and real event history share two columns; below
+600px they stack. Keep the server-masked account prominent, bank/holder together,
+reason separate and all event notes intact. A22px marker and connecting rule show
+the recorded timeline, with the latest event/state emphasized; no invented steps.
+Collapse the full UUID under a44px keyboard-operable reference summary. Retain
+Processing recovery copy, owner-only reads, loading/error/retry, native modal
+focus/Back/close and existing body scrolling. Preserve DESIGN.md, API and ledger.
+
 No raster added; preserve DESIGN.md and its token sidecar for this extension.
