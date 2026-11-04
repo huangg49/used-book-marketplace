@@ -160,6 +160,21 @@ describe("createListingRevision", () => {
   });
 
   describe("createDraftSave", () => {
+    it("does not cache a receipt for another listing and retries the same save", async () => {
+      let first = true;
+      request.mockImplementation(async (_path, schema) => {
+        const entityId = first ? media(9) : id;
+        first = false;
+        return schema.parse({ entityId, version: 3 });
+      });
+      const run = createDraftSave({ listingId: id, version: 2,
+        photos: [{ kind: "existing", id: media(1) }], content, bookId: "book-1" });
+      await expect(run()).rejects.toThrow(/không thuộc/);
+      await run();
+      expect(request).toHaveBeenCalledTimes(2);
+      const a = request.mock.calls[0]!, b = request.mock.calls[1]!;
+      expect(a[0] === b[0] && JSON.stringify(a[2]) === JSON.stringify(b[2])).toBe(true);
+    });
     it("saves draft without calling submit", async () => {
       request.mockResolvedValueOnce({ entityId: id, version: 3 });
       const run = createDraftSave({

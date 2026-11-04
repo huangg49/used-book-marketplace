@@ -66,7 +66,8 @@
     "test:listing-cache:browser": "node tests/listing-cache.mjs",
     "test:listing-draft-recovery:browser": "node tests/listing-draft-recovery.mjs",
     "test:listing-action-recovery:browser": "node tests/listing-action-recovery.mjs",
-    "test:editor-photo-lifetime:browser": "node tests/editor-photo-lifetime.mjs"
+    "test:editor-photo-lifetime:browser": "node tests/editor-photo-lifetime.mjs",
+    "test:listing-save-result:browser": "node tests/listing-save-result.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

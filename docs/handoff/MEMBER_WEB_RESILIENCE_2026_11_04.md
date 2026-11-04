@@ -7,6 +7,47 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Sau Save đã ACK: đọc lại để tiếp tục sửa, không upload/lưu lại
+
+Nhánh `codex/member-web-listing-save-result`, base `6569beb7`; commit cùng điểm
+lưu có subject `fix(user-web): reconcile editor state after acknowledged saves`.
+Giữ Save Draft khác Submit/Approved replacement theo ADR0009/0012. Không đổi
+API/contract/provider hoặc tự duyệt bài.
+
+[EditListingPage](../../apps/user-web/src/pages/EditListingPage.tsx) trước báo
+đã lưu nhưng giữ baseline và ảnh mới trong form. GET thành công không reseed vì
+form đã tồn tại: rời trang vẫn cảnh báo chưa lưu; lần lưu tiếp theo upload ảnh đó
+lần nữa. Read sau ACK cũng mở form quá sớm, dễ ghi đè chỉnh sửa mới nếu tự reseed.
+
+| Ca | Sau sửa / bằng chứng |
+| --- | --- |
+| Save có receipt đúng bài → GET thành công | Đọc lại version≥receipt rồi đặt form/baseline/media IDs đã lưu; rời trang không cảnh báo giả |
+| Save đã ACK → GET503 | Region riêng nói bản nháp đã được lưu; chỉ retry GET, không Save/Submit/upload. Giữ nội dung và khóa chỉnh sửa tới khi đọc lại được |
+| GET chậm hoặc trả version cũ hơn receipt | Form tiếp tục khóa; kết quả cũ không được dùng làm baseline, có thể retry đọc |
+| Ảnh mới đã lưu → đọc lỗi/phục hồi → sửa tiếp/lưu | Dùng media IDs đã lưu; fixture số reservation từ2 còn1, không upload lại cùng file |
+| Sau Save → sửa tiếp → rời trang/chọn ở lại → hoàn tác phần sửa thêm | Ẩn thông báo thành công cũ khi sửa; dirty guard vẫn hoạt động, hoàn tác về baseline mới thì không cảnh báo. Giữ lựa chọn cam kết local hiện có |
+| Receipt có entityId của bài khác | [createDraftSave](../../apps/user-web/src/services/listing-revision.ts) validate ngay trong remembered stage; không cache receipt sai; retry đúng key/body/version.1 unit mới, không là bằng chứng backend trả receipt sai |
+
+[Production fixture](../../apps/user-web/tests/listing-save-result.mjs),
+`pnpm --filter @used-books/user-web test:listing-save-result:browser`.
+Baseline6 profile (saved/photo-read-error/slow-read ×390/1440) tái hiện warning giả,
+reservation lặp và form mở trước read. After8 thêm stale-read ×390/1440 PASS.
+Harness đợi ConfirmDialog đóng hoàn toàn trước nhập lại; không sửa dirty guard
+để hợp thức hóa ca nhập trong lúc modal còn đóng. Mọi auth/HTTP/upload ticket,
+bytes/finalize/Ready/media read đều fixture, không có storage/API/worker thật.
+
+PASS build/typecheck,399 unit/53 file, scoped lint exit0 (1 seed-form warning cũ).
+Hồi quy draft14 và photo lifetime4 profile PASS sau phần thay đổi liên quan.
+Detector3 advisory màu cũ;46 CSS khớp byte với base, không sửa motion/asset.
+Đã xem recovery390/1440 và xác nhận khoảng cách CTA bằng class chung hiện có.
+Evidence local `.tmp/member-web-listing-save-result/` before/after/build/CSS/capture.
+
+Actor/listing/alive được kiểm sau read trước khi reseed; không claim đã chạy
+browser đổi tài khoản giữa GET trong gói này. Runner command chưa ACK vẫn trong
+component và có cảnh báo rời; memory không bền qua reload. Không kiểm storage
+thật/native/human, không đóng READINESS hoặc chữa nguyên nhân server thực tế.
+Tiếp theo rà entry đăng mới và địa chỉ trong form; không đổi AI/provider/backend.
+
 ## Ảnh tạm trong editor: chặn preview thừa và thu hồi khi rời trang
 
 Nhánh `codex/member-web-editor-photo-lifetime`, base `060a5eb1`; commit cùng điểm

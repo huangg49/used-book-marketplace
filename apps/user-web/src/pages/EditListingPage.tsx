@@ -33,6 +33,7 @@ import { useSession } from "../hooks/useSession";
 import { useActionCooldown } from "../hooks/useActionCooldown";
 import { useListingActions } from "../hooks/useListingActions";
 import { OwnerListingRecovery } from "../components/OwnerListingRecovery";
+import journeyStyles from "../components/BookJourneyStates.module.css";
 import { session as apiSession } from "../lib/session";
 import { conditions } from "../lib/listing-labels";
 import { ROUTES } from "../lib/routes";
@@ -138,6 +139,9 @@ export function EditListingPage() {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState(false);
+  const [savedAck, setSavedAck] = useState<{ id: string; version: number; owner: string }>();
+  const waitingSavedRead = savedAck?.id === listingId && savedAck.owner === ownerId;
+  const savedHeading = useRef<HTMLHeadingElement>(null);
   const [submitError, setSubmitError] = useState<string>();
   const [done, setDone] = useState(false);
   const completed = useRef(false);
@@ -146,6 +150,11 @@ export function EditListingPage() {
   const activeListing = useRef(listingId);
   useLayoutEffect(() => { activeListing.current = listingId; }, [listingId]);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  useEffect(() => {
+    if (!waitingSavedRead || busy || document.hidden) return;
+    const frame = requestAnimationFrame(() => savedHeading.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [waitingSavedRead, busy]);
   const [confirmHideOpen, setConfirmHideOpen] = useState(false);
   const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
 
@@ -159,7 +168,7 @@ export function EditListingPage() {
   const canArchive = item ? canArchiveListing(item) : false;
 
   async function handleToggleVisibility(to: "Visible" | "Hidden") {
-    if (!item || mutationRunning.current || pending || pendingLifecycle || isHideCoolingDown) return;
+    if (!item || mutationRunning.current || pending || pendingLifecycle || waitingSavedRead || isHideCoolingDown) return;
     mutationRunning.current = true;
     setBusy(true);
     setSubmitError(undefined);
@@ -189,7 +198,7 @@ export function EditListingPage() {
   }
 
   async function handleArchive() {
-    if (!item || mutationRunning.current || pending || pendingLifecycle) return;
+    if (!item || mutationRunning.current || pending || pendingLifecycle || waitingSavedRead) return;
     mutationRunning.current = true;
     setBusy(true);
     setSubmitError(undefined);
@@ -258,6 +267,7 @@ export function EditListingPage() {
   const dirty =
     !!current &&
     !done &&
+    !waitingSavedRead &&
     JSON.stringify({
       next: { ...current, photoCount: initial ? JSON.parse(initial).next.photoCount : 0 },
       ids: photos.map((p) => (p.kind === "existing" ? p.id : "new")),
@@ -300,11 +310,13 @@ export function EditListingPage() {
     attempted ? errors[field] : undefined;
 
   function patch(change: Partial<RevisionFormValue>) {
+    setSaveSuccessMsg(undefined);
     setForm((previous) => (previous ? { ...previous, ...change } : previous));
   }
 
   function addFiles(files: FileList | null) {
     if (!files) return;
+    setSaveSuccessMsg(undefined);
     const next: PhotoItem[] = [];
     const room = Math.max(0, MAX_PHOTOS - photos.length);
     let rejected = false;
@@ -331,10 +343,12 @@ export function EditListingPage() {
   }
 
   function removePhoto(key: string) {
+    setSaveSuccessMsg(undefined);
     setPhotos(previous => previous.filter(p => p.key !== key));
   }
 
   function makeCover(key: string) {
+    setSaveSuccessMsg(undefined);
     setPhotos((previous) => {
       const chosen = previous.find((p) => p.key === key);
       return chosen ? [chosen, ...previous.filter((p) => p.key !== key)] : previous;
@@ -342,7 +356,7 @@ export function EditListingPage() {
   }
 
   function review() {
-    if (mutationRunning.current || pending || pendingLifecycle) return;
+    if (mutationRunning.current || pending || pendingLifecycle || waitingSavedRead) return;
     setAttempted(true);
     setSubmitError(undefined);
     if (Object.keys(errors).length) {
@@ -354,7 +368,7 @@ export function EditListingPage() {
   }
 
   async function submit() {
-    if (mutationRunning.current || pendingLifecycle || (pending && intent.current?.action !== "submit")) return;
+    if (mutationRunning.current || pendingLifecycle || waitingSavedRead || (pending && intent.current?.action !== "submit")) return;
     if (!pending) {
       if (!item || !current || !bookId) return;
       const origin = origins.find((a) => a.id === current.originAddressId);
@@ -456,8 +470,33 @@ export function EditListingPage() {
 
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string>();
 
+  async function readSavedDraft(ack: NonNullable<typeof savedAck>) {
+    const result = await listing.refetch({ cancelRefetch: false });
+    const actor = apiSession.getSnapshot();
+    if (!alive.current || activeListing.current !== ack.id || actor.status !== "authenticated" || actor.user.id !== ack.owner) return;
+    if (result.error || !result.data || result.data.id !== ack.id || result.data.version < ack.version) return;
+    const next = formFromListing(result.data);
+    next.ownershipDeclared = form?.ownershipDeclared ?? false;
+    const ids = result.data.currentRevision.content.mediaIds ?? [];
+    setForm(next);
+    setPhotos(ids.map(id => ({ key: `e-${id}`, kind: "existing" as const, id })));
+    setInitial(JSON.stringify({ next, ids }));
+    setAttempted(false);
+    setSubmitError(undefined);
+    setSavedAck(undefined);
+    setSaveSuccessMsg("Đã lưu bản nháp thành công! Bạn có thể quay lại tiếp tục sửa bất cứ lúc nào.");
+  }
+
+  async function retrySavedRead() {
+    if (!waitingSavedRead || !savedAck || mutationRunning.current) return;
+    mutationRunning.current = true; setBusy(true);
+    try { await readSavedDraft(savedAck); }
+    catch { /* Keep the acknowledged Save and offer only read recovery. */ }
+    finally { mutationRunning.current = false; setBusy(false); }
+  }
+
   async function handleSaveDraftOnly() {
-    if (mutationRunning.current || pendingLifecycle || (pending && intent.current?.action !== "save")) return;
+    if (mutationRunning.current || pendingLifecycle || waitingSavedRead || (pending && intent.current?.action !== "save")) return;
     if (!pending) {
       if (!item || !current || !bookId) return;
       const origin = origins.find((a) => a.id === current.originAddressId);
@@ -485,15 +524,21 @@ export function EditListingPage() {
     setBusy(true);
     setSubmitError(undefined);
     setSaveSuccessMsg(undefined);
+    let acknowledged = false;
     try {
-      await intent.current.run();
+      const receipt = await intent.current.run();
+      if (!item || receipt.entityId !== item.id) throw new Error("Không xác minh được kết quả lưu đúng bài đăng.");
+      const actor = apiSession.getSnapshot();
+      if (!alive.current || activeListing.current !== item.id || actor.status !== "authenticated" || actor.user.id !== ownerId) return;
+      acknowledged = true;
       intent.current = null;
       setPending(false);
-      setSaveSuccessMsg("Đã lưu bản nháp thành công! Bạn có thể quay lại tiếp tục sửa bất cứ lúc nào.");
+      const ack = { id: item.id, version: receipt.version, owner: actor.user.id };
+      setSavedAck(ack);
       void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
-      void queryClient.invalidateQueries({ queryKey: ["my-listing"] });
-      void listing.refetch();
+      await readSavedDraft(ack);
     } catch (error) {
+      if (acknowledged) return; // A failed read never changes the known Save outcome.
       const status = (error as { status?: number }).status;
       const failed = status !== undefined && status >= 400 && status < 500 && ![401, 403, 408, 429].includes(status);
       setPending(!failed);
@@ -513,6 +558,17 @@ export function EditListingPage() {
   const recovery = <OwnerListingRecovery key={listingId} listingId={listingId} onArchived={() => {
     completed.current = true; setDone(true); navigate(ROUTES.myBooks);
   }} />;
+  const SavedHeading = listing.isError ? "h1" : "h2";
+  const savedRecovery = waitingSavedRead && <section className={journeyStyles.filteredEmpty} aria-label="Bản nháp đã lưu">
+    <div className={journeyStyles.emptyMessage}>
+      <SavedHeading ref={savedHeading} tabIndex={-1}>Bản nháp đã được lưu</SavedHeading>
+      <p role="status">{busy ? "Đang tải lại nội dung đã lưu…" : "Chưa tải lại được nội dung đã lưu. Bản nháp của bạn đã được ghi nhận; tải lại để tiếp tục sửa. Thao tác này không gửi lệnh lưu lần nữa."}</p>
+      <div className={journeyStyles.actions}>
+        <button type="button" disabled={busy} onClick={() => void retrySavedRead()}>Tải lại bản nháp đã lưu</button>
+        <Link to={ROUTES.myBooks}>Về kệ sách của tôi</Link>
+      </div>
+    </div>
+  </section>;
   const leaveConfirmation = <ConfirmDialog
     isOpen={blocker.state === "blocked"}
     onClose={() => blocker.reset?.()}
@@ -525,16 +581,21 @@ export function EditListingPage() {
     return (
       <main className={styles.pageState} role="status">
         {recovery}
+        {savedRecovery}
         {leaveConfirmation}
         <div className={styles.spinner} />
         <p>Đang tải thông tin bài đăng…</p>
       </main>
     );
 
+  if ((listing.isError || !item) && waitingSavedRead)
+    return <main className={styles.page}>{recovery}{savedRecovery}{leaveConfirmation}</main>;
+
   if (listing.isError || !item)
     return (
       <main className={styles.pageState}>
         {recovery}
+        {savedRecovery}
         {leaveConfirmation}
         <div className={styles.errorIconWrap}>
           <AlertTriangle size={32} />
@@ -547,6 +608,7 @@ export function EditListingPage() {
           <button
             type="button"
             className={styles.primaryBtn}
+            disabled={busy}
             onClick={() => void listing.refetch()}
           >
             Thử lại
@@ -566,6 +628,7 @@ export function EditListingPage() {
     return (
       <main className={styles.page}>
         {recovery}
+        {savedRecovery}
         {leaveConfirmation}
         <Link className={styles.backLink} to={ROUTES.myBooks}>
           <ArrowLeft size={16} aria-hidden="true" /> Về kệ sách của tôi
@@ -587,6 +650,7 @@ export function EditListingPage() {
   return (
     <main className={styles.page}>
       {recovery}
+      {savedRecovery}
       {/* Top Navigation */}
       <nav className={styles.headerNav}>
         <Link className={styles.backLink} to={ROUTES.myBooks}>
@@ -705,7 +769,7 @@ export function EditListingPage() {
             <button
               type="button"
               className={styles.reloadBtn}
-              disabled={busy || pending || pendingLifecycle}
+              disabled={busy || pending || pendingLifecycle || waitingSavedRead}
               onClick={() => void listing.refetch().then(result => { if (!result.error) setForm(null); })}
             >
               Tải lại bài
@@ -723,7 +787,7 @@ export function EditListingPage() {
           review();
         }}
       >
-        <fieldset className={styles.editFields} disabled={busy || pending || pendingLifecycle} aria-label="Nội dung bản sửa">
+        <fieldset className={styles.editFields} disabled={busy || pending || pendingLifecycle || waitingSavedRead} aria-label="Nội dung bản sửa">
         {form.bundle && <BundleEditor value={form.bundle} error={showError("bundle")} onChange={bundle => patch({ bundle, condition: bundleCondition(bundle), mode: "Sale", exchangeValue: "" })} />}
         {/* CARD 1: Giá và hình thức */}
         <section className={styles.card}>
