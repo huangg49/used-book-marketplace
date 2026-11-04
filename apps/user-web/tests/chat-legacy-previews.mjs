@@ -14,6 +14,8 @@ const build = path.resolve(root, process.env.LEGACY_PREVIEW_BUILD ?? 'apps/user-
 const baseline = process.env.LEGACY_PREVIEW_BASELINE === '1';
 const photoProbe = process.env.EXCHANGE_PHOTO_PROBE === '1';
 const photoBaseline = process.env.EXCHANGE_PHOTO_BASELINE === '1';
+const coverProbe = process.env.BOOK_COVER_PROBE === '1';
+const coverBaseline = process.env.BOOK_COVER_BASELINE === '1';
 const origin = 'http://127.0.0.1:4216';
 const server = await preview({ configFile: false, root: path.join(root, 'apps/user-web'), build: { outDir: build },
   preview: { host: '127.0.0.1', port: 4216, strictPort: true } });
@@ -40,11 +42,15 @@ try {
   browser = await chromium.launch();
   for (const width of [390, 1440]) for (const owner of [1, 2]) {
     if (photoProbe && (width !== 390 || owner !== 1)) continue;
+    if (coverProbe && owner !== 1) continue;
     const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
     await context.routeWebSocket('**/*', socket => socket.close());
     const page = await context.newPage(), errors = [];
+    if (coverProbe) await page.clock.install();
     page.on('pageerror', error => errors.push(error.message));
     let details = 0, photos = 0, failList = false;
+    let coverMode = 'bad', failedImages = 0, releaseImage;
+    const imageGate = coverProbe ? new Promise(resolve => { releaseImage = resolve; }) : Promise.resolve();
     await context.route('**/*', async route => {
       const request = route.request(), url = new URL(request.url()), p = url.pathname;
       if (p === '/api/v1/auth/login') return route.fulfill({ json: { accessToken: 'fixture-access', refreshToken: 'f'.repeat(43), expiresIn: 900,
@@ -59,11 +65,19 @@ try {
       if (row) { details++; return route.fulfill({ json: row }); }
       if (p.includes('/books/') && p.includes('/photos/')) {
         photos++;
+        if (coverProbe) return coverMode === 'unavailable'
+          ? route.fulfill({ status: 503, json: { code: 'QA_UNAVAILABLE' } })
+          : route.fulfill({ json: { url: origin + '/qa-cover/' + coverMode + '.svg',
+            expiresAt: new Date(await page.evaluate(() => Date.now()) + 10000).toISOString() } });
         return route.fulfill({ json: { url: origin + '/qa-cover.svg',
           ...(photoProbe ? { expiresAt: new Date(Date.now() + 60000).toISOString() } : {}) } });
       }
       if (p.endsWith('/messages')) return route.fulfill({ json: [] });
       if (p.startsWith('/api/v1/')) return route.fulfill({ status: 503, json: { code: 'QA_UNAVAILABLE' } });
+      if (url.origin === origin && p.startsWith('/qa-cover/')) {
+        if (p.endsWith('/bad.svg')) { failedImages++; await imageGate; return route.fulfill({ status: 404 }); }
+        return route.fulfill({ contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="160"><rect width="100" height="160" fill="#5c0202"/></svg>' });
+      }
       if (url.origin === origin && p === '/qa-cover.svg') return route.fulfill({ contentType: 'image/svg+xml',
         body: '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="160"><rect width="100" height="160" fill="#5c0202"/></svg>' });
       if (url.origin === origin) return route.continue();
@@ -96,6 +110,52 @@ try {
       await expect.poll(() => photos).toBe(photoBaseline ? 9 : 3);
       photoPolling = { detailReads: details - initial.details, signedPhotoReads: photos - initial.photos };
     }
+    let coverRecovery;
+    if (coverProbe) {
+      const bookImage = page.getByRole('img', { name: 'Sách QA 22', exact: true });
+      await bookImage.scrollIntoViewIfNeeded();
+      await bookImage.evaluate(img => {
+        img.parentElement.dataset.qaCover = 'receive';
+        window.__qaCoverRoot = img.parentElement;
+      });
+      const cover = page.locator('[data-qa-cover="receive"]');
+      releaseImage();
+      await expect.poll(() => failedImages).toBeGreaterThan(0);
+      await expect(cover.locator('img')).toHaveCount(0);
+      await expect(cover).toContainText('Sách QA 22');
+      const failedOnce = failedImages;
+      const tick = async () => {
+        const previous = photos;
+        await page.clock.fastForward(6100);
+        await expect.poll(() => photos).toBeGreaterThanOrEqual(previous + 3);
+      };
+      await tick();
+      await expect(cover.locator('img')).toHaveCount(0);
+      assert.equal(failedImages, failedOnce, 'Same failed URL must not loop on polling');
+      coverMode = 'renewed';
+      await tick();
+      if (coverBaseline) await expect(cover.locator('img')).toHaveCount(0);
+      else {
+        await expect(cover.locator('img')).toHaveAttribute('src', origin + '/qa-cover/renewed.svg');
+        await expect.poll(() => cover.locator('img').evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
+      }
+      const renewedVisible = await cover.locator('img').count() === 1;
+      coverMode = 'unavailable';
+      await tick();
+      await expect(cover.locator('img')).toHaveCount(0);
+      await expect(cover).toContainText('Sách QA 22');
+      coverMode = 'recovered';
+      await tick();
+      if (coverBaseline) await expect(cover.locator('img')).toHaveCount(0);
+      else {
+        await expect(cover.locator('img')).toHaveAttribute('src', origin + '/qa-cover/recovered.svg');
+        await expect.poll(() => cover.locator('img').evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
+      }
+      assert.equal(await cover.evaluate(node => node === window.__qaCoverRoot), true, 'Recovery preserves the mounted cover');
+      await cover.screenshot({ path: path.join(out, `cover-${width}${coverBaseline ? '-before' : '-after'}.png`) });
+      coverRecovery = { sameFailedUrlNoLoop: true, renewedVisible, unavailableFallback: true,
+        recoveredVisible: await cover.locator('img').count() === 1, sameRoot: true };
+    }
     await page.goBack();
     await expect(first).toBeVisible();
     await expect(first.getByRole('heading')).toHaveText(title);
@@ -108,9 +168,9 @@ try {
     await page.getByRole('alert').filter({ hasText: 'Chưa tải được danh sách đổi sách.' }).getByRole('button', { name: 'Thử lại' }).click();
     await expect(page.getByText('Chưa tải được danh sách đổi sách.', { exact: false })).toHaveCount(0);
     assert.deepEqual(errors, []);
-    checks.push({ width, owner, initial, photoPolling, detailEntry: true, back: true, listErrorRetry: true });
+    checks.push({ width, owner, initial, photoPolling, coverRecovery, detailEntry: true, back: true, listErrorRetry: true });
     await context.close();
   }
-  await writeFile(path.join(out, photoProbe ? photoBaseline ? 'photo-before.json' : 'photo-after.json' : baseline ? 'before.json' : 'after.json'), JSON.stringify({ checks }, null, 2));
-  console.log(JSON.stringify({ baseline, photoProbe, checks }));
+  await writeFile(path.join(out, coverProbe ? coverBaseline ? 'cover-before.json' : 'cover-after.json' : photoProbe ? photoBaseline ? 'photo-before.json' : 'photo-after.json' : baseline ? 'before.json' : 'after.json'), JSON.stringify({ checks }, null, 2));
+  console.log(JSON.stringify({ baseline, photoProbe, coverProbe, checks }));
 } finally { await browser?.close(); await new Promise(resolve => server.httpServer.close(resolve)); }

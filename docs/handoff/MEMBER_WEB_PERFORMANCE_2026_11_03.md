@@ -4,6 +4,29 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Phục hồi BookCover sau khi nhận URL mới — 04/11/2026
+
+Nhánh `codex/member-web-book-cover-recovery`, base `f6cadc00`.
+[BookCover](../../apps/user-web/src/components/BookCover/index.tsx) trước đây
+chốt boolean lỗi cho cả lần mount: ảnh404 rồi được cấp URL khác vẫn không hiện.
+Component dùng ở BookCard, compose/mine Exchange, BookInfoCard, accept và context.
+Trạng thái lỗi hiện theo URL đã hỏng, image key theo URL để sự kiện tải cũ không
+gắn lỗi cho ảnh mới; khung bìa/class/title/tag/lazy load giữ nguyên.
+
+[Production browser probe](../../apps/user-web/tests/chat-legacy-previews.mjs),
+bật BOOK_COVER_PROBE=1; baseline bằng BOOK_COVER_BASELINE=1 và LEGACY_PREVIEW_BUILD.
+390/1440px reduced-motion tái hiện cùng book/revision:404 → cùng URL404 → URL mới
+hợp lệ → photo endpoint503 → URL hợp lệ tiếp. Trước sửa hai lần URL hợp lệ đều
+không dựng img; sau sửa ảnh đều decode được. Cùng URL lỗi không tạo vòng lặp,
+503 giữ fallback/title, khung bìa vẫn cùng DOM node. Mở phiếu/Back/list503/retry PASS.
+Local evidence: `.tmp/member-web-chat-legacy-previews/cover-before.json`,
+`cover-after.json` và ảnh cover390 trước/sau đã xem.
+
+Build/typecheck,361 unit/51 file,scoped lint/detector PASS. Search-covers8 ca PASS
+(success/sign failure/expired/image failure/no photos/hidden/hidden during sign/
+first page).46 CSS production khớp byte. Diff không đổi animation/CSS/asset;
+không suy mobile thật/native/Supabase thật hoặc người thật nghiệm thu. READINESS giữ nguyên.
+
 ## Tái sử dụng URL ảnh snapshot Exchange trong hạn server cấp — 04/11/2026
 
 Nhánh `codex/member-web-exchange-photo-cache`, base `7282cb7d`.

@@ -5,26 +5,27 @@ gói và sửa lỗi liên quan đã tái hiện. Đổi nghiệp vụ, thiết 
 triển khai cần quyết định riêng; không mở rộng sang DB/provider/checkout demo.
 
 Owner đã yêu cầu chạy cuốn chiếu lại từ `97ec5388`.
-Gói hiện tại `codex/member-web-exchange-photo-cache`, base `7282cb7d`;
-commit cùng điểm lưu có subject `perf(user-web): reuse signed exchange photos within their lifetime`.
-[Mapper Exchange](../../apps/user-web/src/services/exchange.ts) tái sử dụng URL
-ảnh theo owner/exchange/listing/revision/media trong hạn server cấp trừ5 giây.
-Chi tiết vẫn poll5 giây; lỗi ảnh không thay dữ kiện agreement đã đóng băng.
+Gói hiện tại `codex/member-web-book-cover-recovery`, base `f6cadc00`;
+commit cùng điểm lưu có subject `fix(user-web): recover book covers when their URL changes`.
+[BookCover](../../apps/user-web/src/components/BookCover/index.tsx) giữ lỗi theo
+URL đã hỏng, cho URL mới tải lại mà không remount khung bìa. Giữ fallback/title,
+lazy load và không thử lại liên tục cùng URL lỗi.
 [Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Production fixture:3 lần đọc chi tiết giữ nguyên, số URL ảnh9→3. Unit kiểm
-  expiry/renewal/failure/revision/đổi actor và thiếu expiry không cache tươi.
-- Build/typecheck,361 unit/51 file,scoped lint, chat-guidance và dashboard browser
-  PASS. Bundle chia lại: startup JS thô839982→838071 byte, main JS tăng
-  368412→383607; CSS47→46 file nhưng6017 rule khớp sau chuẩn hóa chia file.
-  HTTP/storage giả lập, không suy nghiệm thu API/DB/provider/native/người thật.
+- Production fixture390/1440 tái hiện bìa cũ không phục hồi khi đổi URL; sau sửa
+  URL mới và lần phục hồi sau503 đều hiện ảnh decode được trên cùng khung bìa.
+  URL lỗi cũ không lặp request; mở phiếu/Back/list503/retry giữ nguyên.
+- Build/typecheck,361 unit/51 file,scoped lint/detector và8 ca search-covers PASS.
+  46 CSS production khớp byte. HTTP/storage giả lập, không suy nghiệm thu
+  API/DB/provider/native/người thật.
 
 Ứng viên lazy Home bị loại, source đã khôi phục (`901383dd` chỉ lưu đánh giá).
-Tiếp theo kiểm lỗi BookCover giữ fallback sau lỗi dù đã nhận URL mới, rồi chốt
-audit source/evidence trên các route chính. Tóm tắt/chi tiết Exchange render thay nhau.
+Tiếp theo chốt audit source/evidence trên các route chính. Tóm tắt/chi tiết
+Exchange render thay nhau.
 ADR0071 giữ bid không giữ tiền; không suy mọi thay đổi tiền bất đồng bộ đã nối.
 
-Gói `7282cb7d` hoãn public listing của thẻ chat:390 đọc12→4;1440 vẫn12;
+Gói `f6cadc00` cache ảnh Exchange theo hạn/revision/actor, URL ảnh9→3 qua3 poll;
+`7282cb7d` hoãn public listing của thẻ chat:390 đọc12→4;1440 vẫn12;
 `c44dc9ca` dựng preview Exchange từ list, bỏ12 detail/33 URL ảnh trong fixture;
 `1c2e8a61` dùng chung poll topup, giảm POST đối soát3→1 trong fixture;
 `4ddbea8f` bỏ interval thẻ trao đổi, giữ các mốc hạn và recovery;
