@@ -13,8 +13,9 @@ import {
 import {
   ArrowDownToLine,
   ArrowLeft,
-  ArrowUpFromLine,
+  ArrowDownWideNarrow,
   ChevronRight,
+  RefreshCw,
   X,
 } from "lucide-react";
 import {
@@ -85,133 +86,185 @@ function Queue({ user, simulator }: { user: CurrentUser; simulator: boolean }) {
   const denied =
     query.error instanceof ApiError && [401, 403].includes(query.error.status);
   return (
-    <section className={styles.page}>
-      <header className="page-heading">
-        <div className={styles.headingIcon}>
-          <ArrowUpFromLine size={24} aria-hidden="true" />
+    <section className={`${styles.page} ${styles.queuePage}`}>
+      <header className={`page-heading ${styles.queueHeading}`}>
+        <div>
+          <h1>{simulator ? "Kết quả chi mô phỏng" : "Yêu cầu rút tiền"}</h1>
+          <p className="intro">
+            {simulator
+              ? "Ghi nhận kết quả cho đúng mã chi. Kết quả chưa rõ tiếp tục giữ tiền để đối soát."
+              : "Đối chiếu thông tin, duyệt từng yêu cầu và theo dõi kết quả chi."}
+          </p>
         </div>
-        <h1>{simulator ? "Kết quả chi mô phỏng" : "Yêu cầu rút tiền"}</h1>
-        <p className="intro">
-          {simulator
-            ? "Ghi nhận kết quả cho đúng mã chi. Kết quả chưa rõ tiếp tục giữ tiền để đối soát."
-            : "Đối chiếu thông tin, duyệt từng yêu cầu và theo dõi kết quả chi."}
-        </p>
-      </header>
-      {feedback && <Notice tone="success">{feedback}</Notice>}
-      <div className={styles.toolbar}>
-        <label htmlFor="withdrawal-filter">
-          Trạng thái
-          <select
-            id="withdrawal-filter"
-            value={state}
-            onChange={(e) => {
-              const next = new URLSearchParams(params);
-              next.set("state", e.target.value);
-              setParams(next);
-            }}
-          >
-            <option value="">Tất cả trạng thái</option>
-            {Object.entries(withdrawalLabels).map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
-            ))}
-          </select>
-        </label>
-        <p>Ưu tiên yêu cầu gửi trước</p>
-        <Button busy={query.isFetching} onClick={() => void query.refetch()}>
+        <Button
+          className={styles.refresh}
+          busy={query.isFetching}
+          onClick={() => void query.refetch()}
+        >
+          {!query.isFetching && <RefreshCw size={16} aria-hidden="true" />}
           Cập nhật danh sách
         </Button>
-      </div>
-      {query.isPending && (
-        <p role="status" className="empty">
-          Đang tải yêu cầu rút tiền…
-        </p>
-      )}
-      {query.isError && (
-        <ErrorNotice error={query.error} retry={() => void query.refetch()} />
-      )}
-      {!query.isPending && !query.isError && !rows.length && (
-        <div className={styles.empty}>
-          <ArrowDownToLine size={32} aria-hidden="true" />
-          <h2>Chưa có yêu cầu trong mục này</h2>
-          <p>Chọn trạng thái khác để xem các đơn đã được xử lý.</p>
-        </div>
-      )}
-      {!denied && rows.length > 0 && (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <caption className={styles.srOnly}>
-              Danh sách yêu cầu rút tiền
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">Yêu cầu / Bạn đọc</th>
-                <th scope="col">Số tiền</th>
-                <th scope="col">Lý do</th>
-                <th scope="col">Trạng thái</th>
-                <th scope="col">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id}>
-                  <td>
-                    <strong>{row.ownerName}</strong>
-                    <span className={styles.code}>
-                      #{row.id.slice(0, 8).toUpperCase()}
-                    </span>
-                    <small>{dateText(row.createdAt)}</small>
-                  </td>
-                  <td className={styles.money}>
-                    {vnd(row.amount)}
-                    <small>Phí 0đ</small>
-                  </td>
-                  <td>{withdrawalReasons[row.reason]}</td>
-                  <td>
-                    <StatusPill tone={tone(row.state)}>
-                      {withdrawalLabels[row.state]}
-                    </StatusPill>
-                  </td>
-                  <td>
-                    {simulator ? (
-                      row.state === "Processing" && row.ownerId !== user.id ? (
-                        <Button onClick={() => setSelected(row)}>
-                          Nhập kết quả
-                        </Button>
-                      ) : (
-                        <span className="muted">
-                          {row.ownerId === user.id
-                            ? "Cần người xử lý độc lập"
-                            : "Không cần thao tác"}
-                        </span>
-                      )
-                    ) : (
-                      <Link
-                        className={styles.openLink}
-                        to={`/withdrawals/${row.id}?${params}`}
-                      >
-                        Xem đơn <ChevronRight size={16} aria-hidden="true" />
-                      </Link>
-                    )}
-                  </td>
-                </tr>
+      </header>
+      {feedback && <Notice tone="success">{feedback}</Notice>}
+      <div className={styles.queuePanel}>
+        <div className={styles.toolbar}>
+          <div className={styles.filter}>
+            <label htmlFor="withdrawal-filter">Trạng thái</label>
+            <select
+              id="withdrawal-filter"
+              value={state}
+              onChange={(e) => {
+                const next = new URLSearchParams(params);
+                next.set("state", e.target.value);
+                setParams(next);
+              }}
+            >
+              <option value="">Tất cả trạng thái</option>
+              {Object.entries(withdrawalLabels).map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
               ))}
-            </tbody>
-          </table>
+            </select>
+          </div>
+          <div className={styles.queueContext}>
+            {query.data && !denied && (
+              <span className={styles.loadedCount}>
+                Đã tải <strong>{rows.length}</strong> yêu cầu
+              </span>
+            )}
+            <p>
+              <ArrowDownWideNarrow size={15} aria-hidden="true" />
+              Ưu tiên yêu cầu gửi trước
+            </p>
+          </div>
         </div>
-      )}
-      {!denied && (
-        <CursorPagination
-          pageCount={query.data?.pages.length ?? 0}
-          hasNextPage={query.hasNextPage}
-          isFetchingNextPage={query.isFetchingNextPage}
-          isFetching={query.isFetching}
-          error={query.isFetchNextPageError ? query.error : undefined}
-          onNextPage={() => void query.fetchNextPage()}
-          nextLabel="Xem thêm yêu cầu"
-        />
-      )}
+        {query.isPending && (
+          <p role="status" className="empty">
+            Đang tải yêu cầu rút tiền…
+          </p>
+        )}
+        {query.isError && (
+          <ErrorNotice error={query.error} retry={() => void query.refetch()} />
+        )}
+        {!query.isPending && !query.isError && !rows.length && (
+          <div className={styles.empty}>
+            <ArrowDownToLine size={32} aria-hidden="true" />
+            <h2>Chưa có yêu cầu trong mục này</h2>
+            <p>Chọn trạng thái khác để xem các đơn đã được xử lý.</p>
+          </div>
+        )}
+        {!denied && rows.length > 0 && (
+          <div className={styles.tableWrap}>
+            <table className={styles.table} role="table">
+              <caption className={styles.srOnly}>
+                Danh sách yêu cầu rút tiền
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Bạn đọc / Yêu cầu</th>
+                  <th scope="col" className={styles.moneyHeading}>
+                    Số tiền
+                  </th>
+                  <th scope="col">Lý do</th>
+                  <th scope="col">Trạng thái</th>
+                  <th scope="col">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id}>
+                    <td className={styles.owner}>
+                      <div className={styles.ownerIdentity}>
+                        <span className={styles.avatar} aria-hidden="true">
+                          {row.ownerName
+                            .trim()
+                            .slice(0, 1)
+                            .toLocaleUpperCase("vi-VN")}
+                        </span>
+                        <div className={styles.ownerInfo}>
+                          <strong>{row.ownerName}</strong>
+                          <div className={styles.rowMeta}>
+                            <span className={styles.code}>
+                              #{row.id.slice(0, 8).toUpperCase()}
+                            </span>
+                            <time dateTime={row.createdAt}>
+                              {dateText(row.createdAt)}
+                            </time>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className={styles.money}>
+                      <span className={styles.mobileLabel} aria-hidden="true">
+                        Số tiền
+                      </span>
+                      <strong>{vnd(row.amount)}</strong>
+                      <small>Phí 0đ</small>
+                    </td>
+                    <td className={styles.rowReason}>
+                      <span className={styles.mobileLabel} aria-hidden="true">
+                        Lý do
+                      </span>
+                      {withdrawalReasons[row.reason]}
+                    </td>
+                    <td className={styles.rowStatus}>
+                      <span className={styles.mobileLabel} aria-hidden="true">
+                        Trạng thái
+                      </span>
+                      <StatusPill
+                        tone={
+                          row.state === "Requested"
+                            ? "warning"
+                            : tone(row.state)
+                        }
+                      >
+                        {withdrawalLabels[row.state]}
+                      </StatusPill>
+                    </td>
+                    <td className={styles.rowAction}>
+                      {simulator ? (
+                        row.state === "Processing" &&
+                        row.ownerId !== user.id ? (
+                          <Button onClick={() => setSelected(row)}>
+                            Nhập kết quả
+                          </Button>
+                        ) : (
+                          <span className="muted">
+                            {row.ownerId === user.id
+                              ? "Cần người xử lý độc lập"
+                              : "Không cần thao tác"}
+                          </span>
+                        )
+                      ) : (
+                        <Link
+                          className={styles.openLink}
+                          to={`/withdrawals/${row.id}?${params}`}
+                        >
+                          Xem đơn <ChevronRight size={16} aria-hidden="true" />
+                        </Link>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {!denied && (
+          <div className={styles.queueFooter}>
+            <CursorPagination
+              pageCount={query.data?.pages.length ?? 0}
+              hasNextPage={query.hasNextPage}
+              isFetchingNextPage={query.isFetchingNextPage}
+              isFetching={query.isFetching}
+              error={query.isFetchNextPageError ? query.error : undefined}
+              onNextPage={() => void query.fetchNextPage()}
+              nextLabel="Xem thêm yêu cầu"
+            />
+          </div>
+        )}
+      </div>
       {selected && (
         <ActionDialog
           row={selected}

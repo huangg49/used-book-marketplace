@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 
 // Read contrast after real pointer/keyboard states. Suppress only the audit click;
 // this check must never submit a payment/withdrawal or navigate away.
-export async function auditWalletButtons(page, scope, label, report) {
-  for (const element of await scope.locator("button").all()) {
+export async function auditWalletButtons(page, scope, label, report, selector = "button") {
+  for (const element of await scope.locator(selector).all()) {
     if (!(await element.isVisible()) || !(await element.isEnabled())) continue;
     const name =
       (await element.getAttribute("aria-label")) ||

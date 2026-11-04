@@ -24,7 +24,7 @@ assert.ok(
 );
 const memberOrigin = "http://127.0.0.1:5195",
   adminOrigin = "http://127.0.0.1:5196";
-const evidence = path.join(root, ".tmp/withdrawal-detail-evidence");
+const evidence = path.join(root, ".tmp/admin-withdrawal-queue-evidence");
 const buttonStates = [];
 let fixture, browser, web, adminVite, member, admin, op;
 const pageErrors = [];
@@ -330,8 +330,26 @@ try {
   await admin
     .getByRole("heading", { name: "Yêu cầu rút tiền", exact: true })
     .waitFor();
+  await expect(admin.getByRole("table").getByRole("link", { name: "Xem đơn" })).toHaveCount(1);
+  await admin.getByLabel("Trạng thái", { exact: true }).selectOption("Completed");
+  await expect(admin.getByRole("heading", { name: "Chưa có yêu cầu trong mục này" })).toBeVisible();
+  await capture(admin, "admin-queue-empty-desktop");
+  await capture(admin, "admin-queue-empty-small", 320);
+  await admin.getByLabel("Trạng thái", { exact: true }).selectOption("Requested");
+  await expect(admin.getByRole("link", { name: "Xem đơn" })).toHaveCount(1);
   await capture(admin, "admin-queue-desktop");
+  const queueScope = admin.locator("section").filter({has: admin.getByRole("heading", {name: "Yêu cầu rút tiền", exact: true})}).first();
+  await auditWalletButtons(admin, queueScope, "admin-withdrawal-queue", buttonStates, "button, a");
+  assertWalletButtonsReadable(buttonStates);
+  await writeFile(path.join(evidence, "button-states.json"), JSON.stringify(buttonStates, null, 2));
+  await expect(admin.getByRole("table").locator("tbody td").nth(1)).toHaveCSS("text-align", "right");
+  await capture(admin, "admin-queue-tablet", 1000);
   await capture(admin, "admin-queue-mobile", 390);
+  await capture(admin, "admin-queue-small", 320);
+  assert.ok(await admin.getByRole("table").evaluate(e => e.scrollWidth <= e.clientWidth + 1), "Queue fits on mobile without a horizontal pan");
+  await admin.evaluate(() => (document.documentElement.style.fontSize = "130%"));
+  await capture(admin, "admin-queue-large-text", 390);
+  await admin.evaluate(() => (document.documentElement.style.fontSize = ""));
   await admin.setViewportSize({ width: 1440, height: 1000 });
   await admin.getByRole("link", { name: "Xem đơn" }).first().click();
   await admin

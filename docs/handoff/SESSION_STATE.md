@@ -1,6 +1,17 @@
 # Rút tiền qua Admin — 04/11/2026
 
-- Hiện tại `codex/withdrawal-detail-popup`, base `c792f5c6`; checkpoint subject
+- Hiện tại `codex/admin-withdrawal-queue-ui`, base `e212c34c`; checkpoint subject
+  `refactor(admin): refine withdrawal review queue`. Làm gọn header, refresh cạnh
+  title, filter/danh sách/phân trang chung một panel; initial/tên/mã/ngày cùng
+  nhóm, tiền căn phải và trạng thái Requested dùng warning, Xem đơn rõ tương tác.
+  Container query dưới720px xếp từng đơn dọc, không kéo ngang. Tách label filter
+  riêng để accessible name chỉ là Trạng thái. Count chỉ là số hàng đã tải.
+  PASS229Admin unit/typecheck/build/lint,44browser captures/0page errors/overflow,
+  empty/filter/Back và117interaction states (6mới trên refresh/link Admin).
+  Đã xem desktop/320/390chữ130%; detector chỉ3advisory giá trị cũ ngoài queue.
+  QA teardown/dừng, main apps giữ chạy. Không API/ledger/token/migration/.env,
+  push/merge/đổi READINESS; human review/native/remote CI chưa chạy.
+- Gói popup trước ở `codex/withdrawal-detail-popup`, base `c792f5c6`; checkpoint subject
   `refactor(wallet): refine withdrawal detail popup`. Đồng bộ header/motion với
   form; tiền/trạng thái rõ, recipient/timeline hai cột desktop và stack mobile,
   mã đầy đủ trong disclosure bàn phím. Requested có dưới24h/hold; Completed và

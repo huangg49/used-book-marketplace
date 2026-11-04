@@ -2,28 +2,94 @@
   max-width: 1280px;
   overflow-wrap: anywhere;
 }
-.headingIcon {
-  display: inline-flex;
-  color: var(--shop-wine);
-  margin-bottom: 12px;
+.queuePage {
+  width: 100%;
+  min-width: 0;
+  container: withdrawal-queue / inline-size;
+}
+.queueHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.queueHeading > div {
+  min-width: 0;
+}
+.queueHeading h1 {
+  font-size: 1.75rem;
+}
+.queueHeading :global(.intro) {
+  margin: 8px 0 0;
+}
+.queueHeading .refresh {
+  flex-shrink: 0;
+  box-shadow: none;
+  background: var(--paper);
+}
+.queueHeading .refresh:hover:not(:disabled) {
+  background: var(--shop-shelf);
+}
+.queuePanel {
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: clip;
+}
+.queuePanel > :global(.notice) {
+  margin: 20px;
 }
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: end;
+  align-items: center;
+  justify-content: space-between;
   gap: 20px;
-  padding: 24px 0;
+  padding: 20px 24px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--shop-line);
 }
-.toolbar label {
-  display: grid;
-  gap: 8px;
-  font-weight: 600;
-  min-width: 210px;
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
-.toolbar p {
-  flex: 1;
+.filter label {
+  font-size: 0.875rem;
   color: var(--muted);
-  margin: 0 0 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.toolbar .filter select {
+  width: 220px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.queueContext {
+  display: grid;
+  gap: 5px;
+  justify-items: end;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.queueContext p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.queueContext svg {
+  flex-shrink: 0;
+}
+.loadedCount {
+  color: var(--ink);
+}
+.loadedCount strong {
+  font-variant-numeric: tabular-nums;
 }
 .page select,
 .form select,
@@ -40,31 +106,63 @@
 }
 .tableWrap {
   overflow-x: auto;
-  background: var(--surface);
-  border: 1px solid var(--shop-line);
-  border-radius: 12px;
 }
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
 }
 .table th {
   text-align: left;
   color: var(--muted);
   font-weight: 600;
-  background: var(--surface-muted, var(--paper));
-  padding: 16px 20px;
+  padding: 14px 24px;
+  font-size: 0.8125rem;
   white-space: nowrap;
 }
 .table td {
-  padding: 20px;
+  padding: 22px 24px;
   border-top: 1px solid var(--shop-line);
   vertical-align: middle;
 }
-.table td:first-child strong {
-  display: block;
-  margin-bottom: 6px;
+.table tbody tr {
+  transition: background-color 160ms ease-out;
+}
+.table tbody tr:hover,
+.table tbody tr:focus-within {
+  background: var(--paper);
+}
+.ownerIdentity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-weight: 700;
+  color: var(--shop-wine);
+  background: var(--shop-cream);
+}
+.ownerInfo {
+  min-width: 0;
+}
+.rowMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.rowMeta time {
+  font-variant-numeric: tabular-nums;
 }
 .table small {
   display: block;
@@ -74,9 +172,16 @@
   line-height: 1.5;
 }
 .money {
-  font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  text-align: right;
+}
+.table .moneyHeading {
+  text-align: right;
+}
+.money > strong {
+  font-size: 1.125rem;
+  color: var(--shop-wine);
 }
 .money small {
   font-weight: 400;
@@ -86,16 +191,67 @@
   overflow-wrap: anywhere;
 }
 .table .code {
-  margin-right: 10px;
-  color: var(--muted);
+  font-size: inherit;
 }
 .openLink {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--shop-line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--shop-wine);
+  text-decoration: none;
+  font-size: 0.8125rem;
   font-weight: 600;
   white-space: nowrap;
+  transition:
+    background-color 160ms ease-out,
+    border-color 160ms ease-out,
+    color 160ms ease-out;
+}
+.openLink > svg {
+  flex-shrink: 0;
+  transition: transform 180ms ease-out;
+}
+.openLink:hover,
+.openLink:active {
+  background: var(--shop-wine);
+  color: var(--paper);
+  border-color: var(--shop-wine);
+}
+@media (hover: hover) and (pointer: fine) {
+  .openLink:hover > svg {
+    transform: translateX(3px);
+  }
+}
+.rowAction {
+  text-align: right;
+}
+.table th:last-child {
+  text-align: right;
+}
+.rowStatus :global(.status-pill) {
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  letter-spacing: 0;
+}
+.mobileLabel {
+  display: none;
+}
+.queueFooter :global(.cursor-pagination) {
+  margin: 0;
+  padding: 16px 24px;
+  background: var(--paper);
+}
+.queueFooter :global(.cursor-pagination) p {
+  font-size: 0.8125rem;
+}
+.queuePage :is(a, button, select):focus-visible {
+  outline: 3px solid var(--shop-wine);
+  outline-offset: 3px;
 }
 .empty {
   text-align: center;
@@ -396,16 +552,6 @@
   .columns {
     grid-template-columns: 1fr;
   }
-  .toolbar {
-    align-items: stretch;
-  }
-  .toolbar label {
-    min-width: 0;
-    flex: 1;
-  }
-  .toolbar p {
-    flex-basis: 100%;
-  }
   .summary {
     align-items: start;
     flex-direction: column;
@@ -422,8 +568,106 @@
   .table td {
     padding: 14px 16px;
   }
+}
+
+@container withdrawal-queue (max-width: 720px) {
+  .queueHeading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .queueHeading h1 {
+    font-size: 1.5rem;
+  }
+  .toolbar {
+    padding: 18px;
+    gap: 14px;
+  }
+  .filter {
+    width: 100%;
+  }
+  .toolbar .filter select {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+  }
+  .queueContext {
+    justify-items: start;
+  }
   .table {
-    min-width: 750px;
+    display: block;
+  }
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .table tbody {
+    display: block;
+  }
+  .table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "owner owner" "money status" "reason reason" "action action";
+    gap: 18px 12px;
+    padding: 20px 18px;
+  }
+  .table tbody tr + tr {
+    border-top: 1px solid var(--shop-line);
+  }
+  .table td {
+    display: block;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+  }
+  .table .owner {
+    grid-area: owner;
+  }
+  .table .money {
+    grid-area: money;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .table .rowStatus {
+    grid-area: status;
+  }
+  .rowStatus :global(.status-pill) {
+    white-space: normal;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .table .rowReason {
+    grid-area: reason;
+    font-size: 0.875rem;
+  }
+  .table .rowAction {
+    grid-area: action;
+  }
+  .mobileLabel {
+    display: block;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    font-weight: 400;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .table .money small {
+    margin-top: 3px;
+  }
+  .rowAction > .openLink,
+  .rowAction > :global(.button) {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .queueFooter :global(.cursor-pagination) {
+    padding: 16px 18px;
   }
 }
 

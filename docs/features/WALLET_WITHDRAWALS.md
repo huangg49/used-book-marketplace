@@ -327,3 +327,34 @@ link, lostACK/exact retry và hold/payout/refund. Detector một lượt chỉ a
 `.tmp/withdrawal-detail-{browser,build,unit,lint}.log`. QA teardown/dừng; main apps
 bật lại, không sửa .env/migrate hoặc mutation owner để kiểm. Không push/merge,
 đổi READINESS hoặc suy native/human/remote CI PASS.
+
+## Làm gọn danh sách Admin — 04/11/2026
+
+Owner yêu cầu làm đẹp trang `/withdrawals` trong shell Admin hiện có. Nhánh
+`codex/admin-withdrawal-queue-ui`, base `e212c34c`; checkpoint subject
+`refactor(admin): refine withdrawal review queue`. Bỏ mũi tên rời trên title;
+header ghép refresh thật, filter/danh sách/phân trang vào một panel giấy phẳng.
+Count ghi rõ số yêu cầu đã tải, không suy tổng hàng đợi từ trang đầu. Nhóm initial
+và tên thật với mã/ngày; tiền tabular căn phải, Requested là warning có nhãn,
+Xem đơn có nền/viền và hover/active/focus rõ. Giữ API/filter URL/cursor/quyền/
+simulator action và dialog approve/reject. Không thêm endpoint, KPI hay số liệu mẫu.
+
+Container dưới720px xếp mỗi hàng thành bạn đọc, tiền/trạng thái, lý do, thao tác;
+giữ một table với headers/labels,44px target, tên dài và trạng thái dài được xuống
+dòng. Label Trạng thái tách khỏi select để tên truy cập không chứa mọi option.
+Lượt browser đầu phát hiện vấn đề label này; đã sửa source và chạy lại toàn bộ.
+
+Finish review đã xem desktop,320px,390px/chữ130%: hàng đợi là phần chính, hàng
+thông tin dễ quét hơn và không kéo ngang. Giữ brand/shell/root DESIGN; verdict
+phù hợp scope refinement, không thêm asset. PASS229Admin unit/typecheck/build/
+lint (warning cũ ngoài phần đổi), final browser44captures/0page errors/overflow,
+filter Requested→Completed trống→Requested, Xem đơn/Back, text scaling và117state
+contrast checks (6mới cho refresh/link Admin). Luồng Member/Admin/hold/payout/
+refund và exact retry vẫn qua API/Mongo QA thật với fixture/storage fake. Detector
+một lượt còn3advisory literal cũ1.2rem/16px/1.35rem trong empty/dialog, không phải
+finding mới của queue. Chưa là human/native/remote CI acceptance.
+
+Evidence private `.tmp/admin-withdrawal-queue-evidence/`,
+`.tmp/admin-withdrawal-queue-browser-final.log`,
+`.tmp/admin-withdrawal-queue-{unit,build,lint}.log`. QA teardown/dừng, main apps
+giữ chạy, không command dữ liệu owner, sửa .env/migration/READINESS hoặc push/merge.
