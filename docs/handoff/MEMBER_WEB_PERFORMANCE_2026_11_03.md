@@ -4,6 +4,32 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Cập nhật thẻ trao đổi tại hạn của bước hiện tại — 04/11/2026
+
+Nhánh `codex/member-web-exchange-deadline`, base `97ec5388`.
+[ActionCard](../../apps/user-web/src/components/exchange/ActionCard/index.tsx)
+trước đây đặt interval 1 giây theo fundingDeadline, kể cả khi đã qua bước
+đặt cọc hoặc deadline đã hết. Thẻ chỉ dùng đồng hồ để phân biệt trước/sau hạn.
+Thay bằng một timeout theo hạn của bước đang hiển thị, đánh giá lại khi tab đổi
+visibility hoặc cửa sổ nhận focus. Đổi deadline hoặc rời thẻ dọn timer cũ.
+Giữ đồng hồ máy, polling server, quyền gửi lệnh và luồng phục hồi hiện có.
+
+[Browser fixture](../../apps/user-web/tests/exchange-deadline.mjs) PASS trước/sau
+trên production build Chromium 390/1440. Qua các bước đặt cọc, gửi sách và kiểm
+tra sách với fundingDeadline cũ còn trong response. Callback interval 1 giây
+giảm từ 2 xuống 0 trong mỗi cửa sổ đo 2 giây, cả trước và sau hạn. Nhãn hết hạn
+vẫn xuất hiện và nút đặt cọc ẩn khi tới hạn. Đây là số callback interval,
+không phải số đo CPU hoặc mọi loại timer trên trang.
+
+- Browser exchange-wallet-cache 6 ca PASS cho ACK, từ chối và mất ACK/thử lại.
+  Build/typecheck và 361 unit/51 file PASS. Detector rỗng. Scoped lint exit 0
+  với warning có sẵn ở effect chọn địa chỉ của ActionCard.
+- Đã xem ảnh thẻ 390/1440 ở chế độ reduced-motion. Toàn bộ 47 CSS production
+  khớp byte. Diff giữ nguyên markup, tài nguyên và định nghĩa animation.
+- Bằng chứng ở `.tmp/member-web-exchange-deadline/`. HTTP giả lập và WebSocket
+  bị chặn trong ca đo deadline. API, DB, vận chuyển thật, thiết bị thật, nghiệm
+  thu người dùng và CI remote chưa chạy. READINESS giữ nguyên.
+
 ## Dừng cooldown Auth sau khi hết thời gian chờ — 04/11/2026
 
 Nhánh `codex/member-web-auth-cooldown-timers`, base `f22390c4`.

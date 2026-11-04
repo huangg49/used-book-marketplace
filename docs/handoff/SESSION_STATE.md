@@ -4,31 +4,25 @@ Owner cho phép cuốn chiếu tối ưu Member web, giữ animation, đo/kiểm
 gói và sửa lỗi liên quan đã tái hiện. Đổi nghiệp vụ, thiết kế/hiệu ứng hoặc
 triển khai cần quyết định riêng; không mở rộng sang DB/provider/checkout demo.
 
-Owner yêu cầu hoàn tất gói đang làm, lưu tiến trình rồi tạm dừng. Không mở gói
-mới cho tới khi owner yêu cầu tiếp tục; chưa đánh dấu mục tiêu toàn web hoàn tất.
-
-Gói cuối `codex/member-web-auth-cooldown-timers`, base `f22390c4`, subject commit
-`perf(user-web): stop expired account form cooldown timers`.
-[useAccountForm](../../apps/user-web/src/pages/useAccountForm.ts) dùng countdown
-chung, tự dừng sau expiry; giữ mốc60 giây, form/pending/error và thời gian máy.
+Owner đã yêu cầu chạy cuốn chiếu lại từ `97ec5388`.
+Gói hiện tại `codex/member-web-exchange-deadline`, base `97ec5388`.
+[ActionCard](../../apps/user-web/src/components/exchange/ActionCard/index.tsx)
+cập nhật cờ hết hạn theo mốc của bước hiện tại thay cho interval mỗi giây.
 [Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Production fixture 4 ca 390/1440 × Register/ForgotPassword: expiry 5→0
-  callback/5 giây; vẫn khóa ở giây59, mở ở60, lỗi giữ mã nhập, resend thành công
-  tạo cooldown mới, rời form/late response không tạo timer ẩn.
-- Build/typecheck, 361 unit/51 file, scoped lint/detector PASS.
-  Auth motion desktop/mobile PASS cả reduced-motion, Back/cleanup/fallback;
-  HTTP là fixture, không email hoặc tài khoản thật. Không suy CPU/FPS thật.
-  47 CSS khớp byte; không đổi animation. API/DB/provider/thiết bị thật, native,
-  human acceptance và remote CI NOT RUN. Không đổi nghiệp vụ/ledger/contract.
+- Production fixture 390/1440: callback interval giảm từ 2 xuống 0 mỗi 2 giây,
+  trước/sau hạn đặt cọc, gửi sách, kiểm tra sách. Nút đặt cọc ẩn khi đến hạn.
+- Build/typecheck, 361 unit, browser 6 ca đặt cọc/retry và detector PASS.
+  Lint có warning sẵn ở effect chọn địa chỉ. 47 CSS khớp byte. HTTP giả lập,
+  không suy nghiệm thu API/DB/provider/thiết bị thật hoặc CI remote.
 
 Ứng viên lazy Home bị loại, source đã khôi phục (`901383dd` chỉ lưu đánh giá).
-Điểm tiếp tục nếu owner cho chạy lại: đối chiếu báo cáo/source hiện tại để
-chọn việc còn lợi ích rõ hoặc làm audit chốt; chưa thực hiện bước này khi dừng.
-Các gói countdown/popup đã kiểm không đồng nghĩa mọi timer app đã tối ưu.
+Rà tiếp các lượt đọc trùng của màn Ví khi URL topup và checkout cùng theo dõi
+một intent. Đo riêng trước khi sửa vì đường return/popup có vòng đời khác nhau.
 ADR0071 giữ bid không giữ tiền; không suy mọi thay đổi tiền bất đồng bộ đã nối.
 
-Gói `f22390c4` chỉ watch popup Wallet khi mở, giữ nhịp500ms và cleanup;
+Gói `97ec5388` dừng cooldown Auth khi hết 60 giây, giữ animation và resend;
+`f22390c4` chỉ watch popup Wallet khi mở, giữ nhịp500ms và cleanup;
 `5a0ba4c9` dừng countdown đã hết hạn, giữ server offset/tick/motion;
 `e1eafee0` nối view ví sau ACK pay PointOrder, giữ giao nhận/retry;
 `450e0dd3` nối view ví sau pay/cancel Order/Completed, kiểm order/chat;

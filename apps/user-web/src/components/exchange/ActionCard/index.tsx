@@ -1,6 +1,6 @@
 import { useExchangeRecovery } from "../../../hooks/useExchangeRecovery";
 import { ExchangeRecoveryPanel } from "../ExchangeRecoveryPanel";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
@@ -79,6 +79,34 @@ const labels: Record<Action, string> = {
   dispute: "Báo sự cố / Khiếu nại",
 };
 
+/** The card shows an expiry flag, so it only needs to update at the deadline. */
+function useDeadlineExpired(deadline: string | undefined) {
+  const at = deadline ? Date.parse(deadline) : NaN;
+  const expired = useCallback(() => at <= Date.now(), [at]);
+  const subscribe = useCallback((notify: () => void) => {
+    if (!Number.isFinite(at)) return () => {};
+    let timer: number | undefined;
+    const schedule = () => {
+      window.clearTimeout(timer);
+      const remaining = at - Date.now();
+      if (remaining > 0) {
+        // Browser timers accept at most a signed 32-bit delay.
+        timer = window.setTimeout(schedule, Math.min(remaining, 2_147_483_647));
+      }
+      notify();
+    };
+    schedule();
+    window.addEventListener("focus", schedule);
+    document.addEventListener("visibilitychange", schedule);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", schedule);
+      document.removeEventListener("visibilitychange", schedule);
+    };
+  }, [at]);
+  return useSyncExternalStore(subscribe, expired, expired);
+}
+
 export function ActionCard(props: Props) {
   const { detail } = props;
   const [action, setAction] = useState<Action>();
@@ -97,7 +125,12 @@ export function ActionCard(props: Props) {
   const pending = pendingExchange(detail.id);
   const acknowledged = exchangeAcknowledged(detail.id);
   const blocked = Boolean(pending || acknowledged);
-  const [now, setNow] = useState(() => Date.now());
+  const deadline =
+    detail.status === "FUNDING" ? detail.fundingDeadline :
+    detail.status === "WAITING_YOU_SEND" ? detail.shippingDeadline :
+    detail.status === "INSPECTING" ? detail.inspectionDeadline :
+    undefined;
+  const expired = useDeadlineExpired(deadline);
 
   const addresses = useQuery({
     queryKey: ["address-book"],
@@ -111,15 +144,6 @@ export function ActionCard(props: Props) {
       setSelectedAddressId(def ? def.id : addresses.data.items[0].id);
     }
   }, [addresses.data, selectedAddressId]);
-
-  useEffect(() => {
-    if (!detail.fundingDeadline) return;
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, [detail.fundingDeadline]);
-
-  const expired =
-    detail.fundingDeadline && Date.parse(detail.fundingDeadline) <= now;
 
   let instructions = "Theo dõi trạng thái trao đổi tại đây.";
   const actions: Action[] = [];
@@ -394,7 +418,7 @@ export function ActionCard(props: Props) {
             <time dateTime={detail.shippingDeadline}>
               {new Date(detail.shippingDeadline).toLocaleString("vi-VN")}
             </time>
-            {Date.parse(detail.shippingDeadline) <= now
+            {expired
               ? " · Đã hết hạn (hệ thống sẽ tự động quét hoàn tiền hoặc chuyển giải quyết)"
               : ""}
           </span>
@@ -427,7 +451,7 @@ export function ActionCard(props: Props) {
             <time dateTime={detail.inspectionDeadline}>
               {new Date(detail.inspectionDeadline).toLocaleString("vi-VN")}
             </time>
-            {Date.parse(detail.inspectionDeadline) <= now
+            {expired
               ? " · Đã hết hạn (hệ thống sẽ tự động tất toán)"
               : ""}
           </span>
