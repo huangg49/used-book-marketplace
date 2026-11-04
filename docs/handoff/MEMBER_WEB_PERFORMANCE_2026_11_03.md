@@ -4,6 +4,38 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Tái sử dụng URL ảnh snapshot Exchange trong hạn server cấp — 04/11/2026
+
+Nhánh `codex/member-web-exchange-photo-cache`, base `7282cb7d`.
+Chi tiết Exchange poll5 giây, mapper trước đây xin lại URL cho mọi sách mỗi lần.
+[Contract MediaRead](../../packages/api-contract/openapi.yaml) và
+[Exchange photo service](../../apps/api/src/modules/exchanges/exchanges.service.ts)
+đã trả expiresAt. [Mapper](../../apps/user-web/src/services/exchange.ts) dùng
+QueryClient hiện có, key theo owner/exchange/listing/revision/media và helper
+signedMediaStaleTime của session-client, trừ5 giây trước expiry; gc120 giây.
+Thiếu expiresAt không giữ cache tươi. URL hết hạn khi vừa nhận bị từ chối;
+lỗi xin ảnh giữ facts snapshot và được xin lại ở lần đọc tiếp. Không đổi API,
+quyền, session store, nhịp poll chi tiết hoặc command.
+
+[Production probe](../../apps/user-web/tests/chat-legacy-previews.mjs), bật
+EXCHANGE_PHOTO_PROBE=1, so với build trước sửa:3 lần đọc chi tiết với3 sách,
+URL ảnh9→3 ở Chromium390px/reduced-motion. Mở phiếu/Back và list503/retry PASS.
+Kết quả local ở `.tmp/member-web-chat-legacy-previews/photo-before.json` và
+`photo-after.json`. Đây là HTTP/storage giả lập, không là Supabase hoặc API thật.
+
+- Build/typecheck,361 unit/51 file,scoped lint PASS. Unit kiểm tái sử dụng,
+  cutoff55 giây của TTL60 giây, lỗi/khôi phục, đổi revision/actor, URL hết hạn
+  ngay khi nhận và thiếu expiry. Ca từ chối detail sau đổi tài khoản vẫn PASS.
+- Chat-guidance đầy đủ PASS; dashboard production browser PASS các nhánh Home,
+  defer dashboard/notifications/sidebar và return/error recovery. Đã xem capture mobile.
+- Bundler chia lại module: main JS368412→383607 byte, tổng static startup graph
+  (entry + HTML modulepreload + static import đệ quy)839982→838071 byte,28→21 file.
+  Không báo main chunk nhỏ đi hoặc suy LCP từ số byte thô.
+- CSS47→46 file,740313→740312 byte do gộp/chia và newline. So sánh6017 rule
+  top-level sau sắp xếp khớp; không sửa CSS/DOM/animation/asset. Không dùng
+  byte hash từng file để kết luận sai rằng style mất khi tên/chunk đổi.
+- Chưa kiểm thiết bị thật/native/provider hoặc người thật nghiệm thu; READINESS giữ nguyên.
+
 ## Đọc dữ liệu thẻ hội thoại mua bán khi tới gần viewport — 04/11/2026
 
 Nhánh `codex/member-web-chat-card-visibility`, base `c44dc9ca`.

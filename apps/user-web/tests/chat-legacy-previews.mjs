@@ -12,6 +12,8 @@ const out = path.join(root, '.tmp/member-web-chat-legacy-previews');
 await mkdir(out, { recursive: true });
 const build = path.resolve(root, process.env.LEGACY_PREVIEW_BUILD ?? 'apps/user-web/dist');
 const baseline = process.env.LEGACY_PREVIEW_BASELINE === '1';
+const photoProbe = process.env.EXCHANGE_PHOTO_PROBE === '1';
+const photoBaseline = process.env.EXCHANGE_PHOTO_BASELINE === '1';
 const origin = 'http://127.0.0.1:4216';
 const server = await preview({ configFile: false, root: path.join(root, 'apps/user-web'), build: { outDir: build },
   preview: { host: '127.0.0.1', port: 4216, strictPort: true } });
@@ -37,6 +39,7 @@ const checks = [];
 try {
   browser = await chromium.launch();
   for (const width of [390, 1440]) for (const owner of [1, 2]) {
+    if (photoProbe && (width !== 390 || owner !== 1)) continue;
     const context = await browser.newContext({ viewport: { width, height: 900 }, reducedMotion: 'reduce' });
     await context.routeWebSocket('**/*', socket => socket.close());
     const page = await context.newPage(), errors = [];
@@ -56,7 +59,8 @@ try {
       if (row) { details++; return route.fulfill({ json: row }); }
       if (p.includes('/books/') && p.includes('/photos/')) {
         photos++;
-        return route.fulfill({ json: { url: origin + '/qa-cover.svg' } });
+        return route.fulfill({ json: { url: origin + '/qa-cover.svg',
+          ...(photoProbe ? { expiresAt: new Date(Date.now() + 60000).toISOString() } : {}) } });
       }
       if (p.endsWith('/messages')) return route.fulfill({ json: [] });
       if (p.startsWith('/api/v1/')) return route.fulfill({ status: 503, json: { code: 'QA_UNAVAILABLE' } });
@@ -86,6 +90,12 @@ try {
     await expect(page.getByRole('heading', { name: title.split(', ')[0], exact: true })).toBeVisible();
     await expect.poll(() => details, { timeout: 8000 }).toBeGreaterThan(initial.details);
     await expect.poll(() => photos, { timeout: 8000 }).toBeGreaterThan(initial.photos);
+    let photoPolling;
+    if (photoProbe) {
+      await expect.poll(() => details, { timeout: 13000 }).toBeGreaterThanOrEqual(initial.details + 3);
+      await expect.poll(() => photos).toBe(photoBaseline ? 9 : 3);
+      photoPolling = { detailReads: details - initial.details, signedPhotoReads: photos - initial.photos };
+    }
     await page.goBack();
     await expect(first).toBeVisible();
     await expect(first.getByRole('heading')).toHaveText(title);
@@ -98,9 +108,9 @@ try {
     await page.getByRole('alert').filter({ hasText: 'Chưa tải được danh sách đổi sách.' }).getByRole('button', { name: 'Thử lại' }).click();
     await expect(page.getByText('Chưa tải được danh sách đổi sách.', { exact: false })).toHaveCount(0);
     assert.deepEqual(errors, []);
-    checks.push({ width, owner, initial, detailEntry: true, back: true, listErrorRetry: true });
+    checks.push({ width, owner, initial, photoPolling, detailEntry: true, back: true, listErrorRetry: true });
     await context.close();
   }
-  await writeFile(path.join(out, baseline ? 'before.json' : 'after.json'), JSON.stringify({ checks }, null, 2));
-  console.log(JSON.stringify({ baseline, checks }));
+  await writeFile(path.join(out, photoProbe ? photoBaseline ? 'photo-before.json' : 'photo-after.json' : baseline ? 'before.json' : 'after.json'), JSON.stringify({ checks }, null, 2));
+  console.log(JSON.stringify({ baseline, photoProbe, checks }));
 } finally { await browser?.close(); await new Promise(resolve => server.httpServer.close(resolve)); }
