@@ -1,16 +1,20 @@
-# Rút tiền qua Admin — 03/11/2026
+# Rút tiền qua Admin — 04/11/2026
 
 Owner làm rõ: nhập số tài khoản bất kỳ, Admin duyệt thì hoàn tất rút tiền trong
 ví, không qua bước vận hành simulator. [ADR0073](../adr/0073-manual-wallet-withdrawals.md)
 thay luồng đơn mới của [ADR0072](../adr/0072-simulated-wallet-withdrawals.md).
 
-Nhánh `codex/wallet-withdrawals`; gói đầu `91e7c011`, phần làm rõ tiếp trên cùng
-nhánh. Contract0.74.1; migration0061không sửa0060hoặc dữ liệu lịch sử.
+Nhánh bàn giao `codex/wallet-withdrawals-ready`:14commit chức năng/UI từ
+`91e7c011` đến `daa2441a`, đồng bộ main `3cfe0c6d` bằng merge `aaf6e6cc` không
+xung đột. Owner04/11 yêu cầu tách commit và push nhánh; chưa giao PR/merge/deploy.
+Gói đầu tại `codex/wallet-withdrawals`. Contract0.74.1; migration0061không sửa
+0060hoặc dữ liệu lịch sử. Bằng chứng mới nhất theo từng refinement ở cuối file;
+sync main chỉ mang cập nhật Flutter, không thay source web/API đã kiểm.
 
 | Vai trò | Entry và thao tác | Kết quả |
 | --- | --- | --- |
 | Member | Ví → Rút tiền, popup số tiền/lý do/ngân hàng/tài khoản/chủ nhận → xác nhận | Requested, giữ khoản rút riêng; không cần cấu hình simulator hoặc xác minh với ngân hàng |
-| Admin độc lập | Yêu cầu rút tiền → Xem đơn → popup lý do → Duyệt | Completed + debit từ hold + thông báo + lịch sử Rút tiền trong cùng transaction |
+| Admin độc lập | Yêu cầu rút tiền → Xem đơn → Duyệt yêu cầu → popup Xác nhận, không nhập lý do duyệt | Completed + debit từ hold + thông báo + lịch sử Rút tiền trong cùng transaction |
 | Admin độc lập | Popup Từ chối có lý do | Rejected + trả hold về khả dụng |
 | Member | Lịch sử/chi tiết/thông báo | Trạng thái, lý do, tài khoản che bớt và tiến độ; owner-only |
 

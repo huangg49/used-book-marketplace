@@ -1,6 +1,17 @@
 # Rút tiền qua Admin — 04/11/2026
 
-- Hiện tại `codex/admin-withdrawal-approval-popup`, base `86ad4573`; checkpoint
+- Bàn giao push theo yêu cầu owner04/11 tại `codex/wallet-withdrawals-ready`.
+  Giữ14commit chức năng/UI từ `91e7c011` đến `daa2441a`, đã đồng bộ
+  `origin/main` tại `3cfe0c6d` bằng merge `aaf6e6cc`, không xung đột; phần main
+  mới là Flutter, không thay source API/Member/Admin đã kiểm trong gói này.
+  Checkpoint subject `docs(wallet): prepare withdrawal push handoff`. Chỉ xuất
+  bản nhánh chức năng, không PR/merge main/deploy. Các ghi chú “chưa push” bên
+  dưới là trạng thái của từng checkpoint trước khi owner cấp quyền lần này.
+  Dùng lại evidence229Admin/339Member unit, build/typecheck/lint,13withdrawal E2E,
+  31Mongo follow-up và final47browser captures/126interaction states; các giới
+  hạn API stress/shutdown, native/human/remote CI và READINESS giữ nguyên.
+  Gói bàn giao chỉ đồng bộ ancestry/docs; không chạy lại gate API/browser đã đạt.
+- Gói popup vừa xong `codex/admin-withdrawal-approval-popup`, base `86ad4573`; checkpoint
   subject `refactor(admin): refine withdrawal approval popup`. Header wine,
   amount/state cream band, account24px và bank/holder có nhãn; chỉ Xác nhận,
   không reason duyệt. Mobile stack, scroll/header sticky; opening420ms/backdrop
