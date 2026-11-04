@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import {
@@ -132,6 +132,7 @@ export function EditListingPage() {
 
   const [form, setForm] = useState<RevisionFormValue | null>(null);
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const ownedPreviews = useRef(new Set<string>());
   const [initial, setInitial] = useState("");
   const [attempted, setAttempted] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -143,7 +144,7 @@ export function EditListingPage() {
   const mutationRunning = useRef(false);
   const alive = useRef(true);
   const activeListing = useRef(listingId);
-  activeListing.current = listingId;
+  useLayoutEffect(() => { activeListing.current = listingId; }, [listingId]);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const [confirmHideOpen, setConfirmHideOpen] = useState(false);
   const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
@@ -280,12 +281,19 @@ export function EditListingPage() {
     }
   });
 
-  useEffect(
-    () => () =>
-      photos.forEach((p) => p.kind === "new" && URL.revokeObjectURL(p.preview)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
+  useLayoutEffect(() => {
+    // Release removed/replaced previews after the photo state commits. Retained
+    // URLs stay valid when reordering, while batched additions also release overflow.
+    const retained = new Set(photos.flatMap(p => p.kind === "new" ? [p.preview] : []));
+    for (const url of ownedPreviews.current) if (!retained.has(url)) {
+      URL.revokeObjectURL(url);
+      ownedPreviews.current.delete(url);
+    }
+  }, [photos]);
+  useEffect(() => () => {
+    ownedPreviews.current.forEach(url => URL.revokeObjectURL(url));
+    ownedPreviews.current.clear();
+  }, []);
 
   const errors = current ? validateRevision(current) : {};
   const showError = (field: keyof typeof errors) =>
@@ -298,17 +306,21 @@ export function EditListingPage() {
   function addFiles(files: FileList | null) {
     if (!files) return;
     const next: PhotoItem[] = [];
+    const room = Math.max(0, MAX_PHOTOS - photos.length);
     let rejected = false;
     for (const file of Array.from(files)) {
       if (!ACCEPTED.includes(file.type) || file.size > 10_000_000) {
         rejected = true;
         continue;
       }
+      if (next.length >= room) continue;
+      const preview = URL.createObjectURL(file);
+      ownedPreviews.current.add(preview);
       next.push({
         key: `n-${crypto.randomUUID()}`,
         kind: "new",
         file,
-        preview: URL.createObjectURL(file),
+        preview,
       });
     }
     setSubmitError(
@@ -319,11 +331,7 @@ export function EditListingPage() {
   }
 
   function removePhoto(key: string) {
-    setPhotos((previous) => {
-      const gone = previous.find((p) => p.key === key);
-      if (gone?.kind === "new") URL.revokeObjectURL(gone.preview);
-      return previous.filter((p) => p.key !== key);
-    });
+    setPhotos(previous => previous.filter(p => p.key !== key));
   }
 
   function makeCover(key: string) {

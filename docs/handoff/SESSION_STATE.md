@@ -3,27 +3,30 @@
 Owner chưa tiện kiểm thật, giao tiếp tục rà tính năng bằng source và kiểm thử
 cô lập. Giữ animation/nghiệp vụ và checkout demo; không DB/provider/dịch vụ demo.
 Owner yêu cầu tự động cuốn chiếu tiếp sau `354f0876`.
-Nhánh `codex/member-web-listing-action-recovery`, base `8036649e`; commit cùng điểm lưu
-có subject `fix(user-web): recover listing lifecycle actions across navigation`.
+Nhánh `codex/member-web-editor-photo-lifetime`, base `060a5eb1`; commit cùng điểm lưu
+có subject `fix(user-web): release editor photo previews after use`.
 
-Gói mới ở [listing-actions](../../apps/user-web/src/lib/listing-actions.ts) giữ
-intent ẩn/gỡ bài trong bộ nhớ phiên qua navigation/remount. Kệ/editor có recovery
-ngoài row và cả khi GET deleted trả404; retry đúng key/body/version, khóa thao tác
-cạnh tranh. Refusal xác định freeze để đối chiếu bằng GET, không tự rebase;
-đọc lỗi giữ pending. Đổi owner/logout xóa intent; late ACK/read không chạm owner mới.
-Cảnh báo rời/reload nói rõ giới hạn memory. Baseline8/after12 browser profile và
-hồi quy draft14 PASS. Build/typecheck,398 unit/53 file,scoped lint PASS;
-detector3 advisory màu cũ;46 CSS khớp byte, không đổi animation.
+Gói mới ở [EditListingPage](../../apps/user-web/src/pages/EditListingPage.tsx)
+thu hồi preview URL ảnh mới khi bỏ/rời editor và không tạo URL cho ảnh vượt giới
+hạn. Baseline/after4 browser profile390/1440 chọn3/10 ảnh, đổi bìa/xóa/rời: trước
+còn2/9 URL, sau0. Ảnh còn dùng vẫn decode. Build/typecheck,398 unit/53 file và
+draft browser14 PASS; scoped lint exit0 còn warning seed-form cũ. Detector3
+advisory màu cũ;46 CSS khớp byte, không đổi animation. Không suy số handle thành
+số đo heap/RAM thực tế.
 [Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md).
 
-Các gói trước: `8036649e` giữ runner Save/retry đúng action và nháp khi reload lỗi;
+Các gói trước: `060a5eb1` giữ intent ẩn/gỡ bài qua remount, recovery khi GET404,
+freeze refusal để đối chiếu, guard actor/late ACK và cảnh báo rời trang;
+`8036649e` giữ runner Save/retry đúng action và nháp khi reload lỗi;
 `460a0a5e` tách giữ/nhả intent lệnh đấu giá khỏi read,
 `80cb8edf` chặn click lặp và phục hồi đúng ID phiếu đã ACK,
 `354f0876` giữ nháp/recovery/đổi email ở hồ sơ; `8e5ef8d1` giữ
 draft và quyền hiện tại ở đánh giá; `3634a8ab` chặn click lặp ở giỏ và kiểm hỗ trợ.
 Source, ca đã chạy và giới hạn giữ ở báo cáo phục hồi được dẫn phía trên.
 
-Tiếp theo rà giới hạn runner Save/Submit còn trong component; rời sau cảnh báo
+Tiếp theo tái hiện editor sau Save đã ACK: baseline form/ảnh mới chưa được
+canonicalize, refetch không tự reseed form. Giữ nháp khi read phục hồi lỗi hoặc
+người dùng sửa tiếp. Runner Save/Submit vẫn component-local; rời sau cảnh báo
 chưa chứng minh giữ intent. Không suy tất cả lệnh đã phục hồi qua remount.
 Avatar upload
 và mail/revoke thật chưa kiểm trong gói trước;

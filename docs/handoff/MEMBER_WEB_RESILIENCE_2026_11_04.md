@@ -7,6 +7,45 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Ảnh tạm trong editor: chặn preview thừa và thu hồi khi rời trang
+
+Nhánh `codex/member-web-editor-photo-lifetime`, base `060a5eb1`; commit cùng điểm
+lưu có subject `fix(user-web): release editor photo previews after use`.
+[EditListingPage](../../apps/user-web/src/pages/EditListingPage.tsx) trước có
+cleanup effect với dependency rỗng nhưng đọc `photos` của render đầu tiên (mảng
+rỗng). Chọn nhiều ảnh còn tạo URL cho cả ảnh bị slice khỏi giới hạn8 ảnh.
+
+[Production browser fixture](../../apps/user-web/tests/editor-photo-lifetime.mjs),
+`pnpm --filter @used-books/user-web test:editor-photo-lifetime:browser`, instrument
+create/revoke để đếm URL còn giữ; không ghi URL, file user hay gọi upload thật.
+Baseline/after4 profile:390/1440 ×chọn3/10 ảnh, có1 ảnh cũ. Đổi ảnh bìa, xóa một
+ảnh mới rồi chấp nhận rời form. Ảnh mới fixture PNG tạo từ Canvas và kiểm decode.
+
+| Ca | Trước | Sau |
+| --- | --- | --- |
+| Chọn3, đổi bìa, xóa1, rời editor |2 URL vẫn được giữ |0 URL còn giữ |
+| Chọn10, còn7 chỗ → hiển thị7 ảnh mới | Tạo10 URL; sau xóa1/rời vẫn giữ9 | Chỉ tạo7 URL; sau rời0 |
+| Đổi bìa/xóa ảnh | Ảnh còn dùng phải tiếp tục hiển thị | PASS: reorder không revoke ảnh giữ lại, ảnh còn lại decode được |
+
+Registry riêng cho preview do editor tạo, dọn URL không còn trong photo state sau
+commit; unmount dọn mọi URL còn sở hữu. Giới hạn slot trước create, giữ validation
+JPEG/PNG/WebP≤10MB và thứ tự chọn. Không chạm signed URL ảnh cũ, upload pipeline,
+API/contract hoặc animation. Ref theo listing hiện tại cập nhật sau commit thay
+vì ghi trong render, vẫn bảo vệ ACK archive sau khi chuyển listing.
+
+PASS build/typecheck,398 unit/53 file, scoped lint exit0 (còn1 warning seed-form
+set-state-in-effect có từ base), draft browser14 profile. Detector vẫn3 advisory
+màu cũ.46 CSS production khớp byte; đã xem capture preview390/1440 với hiệu ứng
+trang còn hoạt động. Evidence `.tmp/member-web-editor-photo-lifetime/`.
+Đây là đếm resource handle, không phải số đo heap/RAM/CPU trên máy người dùng.
+Chưa thử reset photo form qua lỗi command, upload/storage thật hoặc native.
+
+Tiếp theo kiểm trạng thái editor sau Save đã ACK: source hiện chỉ refetch và
+thông báo lưu, không cập nhật baseline form/loại ảnh mới thành ảnh đã lưu. Cần
+tái hiện bằng fixture stage trước khi sửa, tránh ghi đè nháp mới trong lúc đọc
+phục hồi. Runner Save/Submit qua remount vẫn là giới hạn riêng, không tự mở rộng
+nghiệp vụ lưu nháp Approved. READINESS, checkout demo và gate thật giữ nguyên.
+
 ## Ẩn/gỡ bài đăng: phục hồi qua remount và đọc404 sau archive
 
 Nhánh `codex/member-web-listing-action-recovery`, base `8036649e`; commit cùng

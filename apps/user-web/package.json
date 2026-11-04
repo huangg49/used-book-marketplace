@@ -65,7 +65,8 @@
     "test:order-chat:browser": "node tests/order-chat-workspace.mjs",
     "test:listing-cache:browser": "node tests/listing-cache.mjs",
     "test:listing-draft-recovery:browser": "node tests/listing-draft-recovery.mjs",
-    "test:listing-action-recovery:browser": "node tests/listing-action-recovery.mjs"
+    "test:listing-action-recovery:browser": "node tests/listing-action-recovery.mjs",
+    "test:editor-photo-lifetime:browser": "node tests/editor-photo-lifetime.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
