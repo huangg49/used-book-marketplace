@@ -1,7 +1,7 @@
 import { CursorPager } from "../components/Pagination/CursorPager";
 import { useCursorNavigation } from "../components/Pagination/useCursorNavigation";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { Link, useBeforeUnload, useBlocker, useLocation, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import { Plus, LayoutGrid, Rows3, X } from "lucide-react";
 import { useSession } from "../hooks/useSession";
@@ -10,6 +10,9 @@ import { myListingsQuery } from "../lib/owner-listing-queries";
 import { OwnerListingRow } from "../components/OwnerListingRow";
 import styles from "./MyBooksPage.module.css";
 import { EmptyOwnerShelf } from "../components/BookJourneyStates";
+import { OwnerListingRecovery } from "../components/OwnerListingRecovery";
+import { useListingActions } from "../hooks/useListingActions";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 const filters = [
   { value: "", label: "Tất cả" },
@@ -22,6 +25,12 @@ const filters = [
 export function MyBooksPage() {
   const auth = useSession();
   const location = useLocation();
+  const pendingActions = useListingActions().length > 0;
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    pendingActions && currentLocation.pathname !== nextLocation.pathname);
+  useBeforeUnload(event => {
+    if (pendingActions) { event.preventDefault(); event.returnValue = ""; }
+  });
   const [params, setParams] = useSearchParams();
   const navigation = useCursorNavigation(auth.status === "authenticated" ? auth.user.id : "guest");
   const [dismissedBanner, setDismissedBanner] = useState(false);
@@ -82,6 +91,7 @@ export function MyBooksPage() {
           Đăng sách
         </Link>
       </header>
+      <OwnerListingRecovery />
       {showStatusBanner && (
         <div className={styles.revisedBanner} role="status">
           <div>
@@ -220,6 +230,10 @@ export function MyBooksPage() {
         busy={query.isFetching} failed={query.isError} count={query.data?.items.length} label="Trang kệ sách" itemLabel="bài đăng" anchorId="owner-shelf-results" />
         </div>
       </section>
+      <ConfirmDialog isOpen={blocker.state === "blocked"} title="Rời trang khi chưa xác minh?"
+        description="Thao tác bài đăng chưa được xác minh hoặc đối chiếu xong. Thao tác vẫn được giữ khi chuyển trang trong phiên này, nhưng sẽ mất khi tải lại hoặc đóng trang."
+        confirmText="Rời trang" cancelText="Ở lại tiếp tục" isDanger
+        onClose={() => blocker.reset?.()} onConfirm={() => blocker.proceed?.()} />
     </div>
   );
 }

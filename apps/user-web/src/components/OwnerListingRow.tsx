@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { BookOpen, ArrowUpRight, Gavel, Edit, Eye, EyeOff, Trash2, Send } from "lucide-react";
@@ -31,6 +31,7 @@ import {
 import styles from "../pages/MyBooksPage.module.css";
 import { myListingPhotoQuery } from "../lib/owner-listing-queries";
 import { useNearViewport } from "../hooks/useNearViewport";
+import { useListingActions } from "../hooks/useListingActions";
 
 function OwnerPhoto({
   item,
@@ -125,6 +126,8 @@ export function OwnerListingRow({
 
   const queryClient = useQueryClient();
   const [isBusy, setIsBusy] = useState(false);
+  const running = useRef(false);
+  const unresolved = useListingActions(item.id).length > 0;
   const [actionError, setActionError] = useState<string>();
   const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
   const [confirmHideOpen, setConfirmHideOpen] = useState(false);
@@ -140,7 +143,8 @@ export function OwnerListingRow({
   const isHidden = item.state.visibility === "Hidden";
 
   async function handleToggleVisibility(to: "Visible" | "Hidden") {
-    if (isBusy || isHideCoolingDown) return;
+    if (running.current || unresolved || isHideCoolingDown) return;
+    running.current = true;
     setIsBusy(true);
     setActionError(undefined);
     try {
@@ -151,6 +155,7 @@ export function OwnerListingRow({
       void queryClient.invalidateQueries({ queryKey: ["my-listing"] });
       void queryClient.invalidateQueries({ queryKey: ["listings"] });
     } catch (error) {
+      setConfirmHideOpen(false);
       const status = (error as { status?: number }).status;
       setActionError(
         status === 409
@@ -161,11 +166,14 @@ export function OwnerListingRow({
       );
       void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
     } finally {
+      running.current = false;
       setIsBusy(false);
     }
   }
 
   async function handleArchive() {
+    if (running.current || unresolved) return;
+    running.current = true;
     setIsBusy(true);
     setActionError(undefined);
     try {
@@ -175,6 +183,7 @@ export function OwnerListingRow({
       void queryClient.invalidateQueries({ queryKey: ["my-listing"] });
       void queryClient.invalidateQueries({ queryKey: ["listings"] });
     } catch (error) {
+      setConfirmArchiveOpen(false);
       const status = (error as { status?: number }).status;
       setActionError(
         status === 409
@@ -185,6 +194,7 @@ export function OwnerListingRow({
       );
       void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
     } finally {
+      running.current = false;
       setIsBusy(false);
     }
   }
@@ -327,9 +337,9 @@ export function OwnerListingRow({
                   <button
                     type="button"
                     className={`${styles.toggleVisBtn} ${isHidden ? styles.unhideBtn : ""}`}
-                    disabled={isBusy || isHideCoolingDown}
+                    disabled={isBusy || unresolved || isHideCoolingDown}
                     onClick={() => {
-                      if (isBusy || isHideCoolingDown) return;
+                      if (isBusy || unresolved || isHideCoolingDown) return;
                       if (isHidden) void handleToggleVisibility("Visible");
                       else setConfirmHideOpen(true);
                     }}
@@ -352,7 +362,7 @@ export function OwnerListingRow({
                   <button
                     type="button"
                     className={styles.archiveBtn}
-                    disabled={isBusy}
+                    disabled={isBusy || unresolved}
                     onClick={() => setConfirmArchiveOpen(true)}
                     title="Gỡ vĩnh viễn bài đăng này khỏi kệ sách"
                   >
@@ -527,9 +537,9 @@ export function OwnerListingRow({
               <button
                 type="button"
                 className={`${styles.toggleVisBtn} ${isHidden ? styles.unhideBtn : ""}`}
-                disabled={isBusy || isHideCoolingDown}
+                disabled={isBusy || unresolved || isHideCoolingDown}
                 onClick={() => {
-                  if (isBusy || isHideCoolingDown) return;
+                  if (isBusy || unresolved || isHideCoolingDown) return;
                   if (isHidden) void handleToggleVisibility("Visible");
                   else setConfirmHideOpen(true);
                 }}
@@ -552,7 +562,7 @@ export function OwnerListingRow({
               <button
                 type="button"
                 className={styles.archiveBtn}
-                disabled={isBusy}
+                disabled={isBusy || unresolved}
                 onClick={() => setConfirmArchiveOpen(true)}
                 title="Gỡ vĩnh viễn bài đăng này khỏi kệ sách"
               >

@@ -31,6 +31,8 @@ import { BundleEditor } from "../components/BookBundle";
 import { bundleCondition } from "../lib/book-bundle";
 import { useSession } from "../hooks/useSession";
 import { useActionCooldown } from "../hooks/useActionCooldown";
+import { useListingActions } from "../hooks/useListingActions";
+import { OwnerListingRecovery } from "../components/OwnerListingRecovery";
 import { session as apiSession } from "../lib/session";
 import { conditions } from "../lib/listing-labels";
 import { ROUTES } from "../lib/routes";
@@ -100,6 +102,7 @@ export function EditListingPage() {
   const { listingId = "" } = useParams();
   const auth = useSession();
   const ownerId = auth.status === "authenticated" ? auth.user.id : undefined;
+  const pendingLifecycle = useListingActions(listingId).length > 0;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -138,6 +141,10 @@ export function EditListingPage() {
   const [done, setDone] = useState(false);
   const completed = useRef(false);
   const mutationRunning = useRef(false);
+  const alive = useRef(true);
+  const activeListing = useRef(listingId);
+  activeListing.current = listingId;
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const [confirmHideOpen, setConfirmHideOpen] = useState(false);
   const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
 
@@ -151,7 +158,7 @@ export function EditListingPage() {
   const canArchive = item ? canArchiveListing(item) : false;
 
   async function handleToggleVisibility(to: "Visible" | "Hidden") {
-    if (!item || mutationRunning.current || pending || isHideCoolingDown) return;
+    if (!item || mutationRunning.current || pending || pendingLifecycle || isHideCoolingDown) return;
     mutationRunning.current = true;
     setBusy(true);
     setSubmitError(undefined);
@@ -181,18 +188,19 @@ export function EditListingPage() {
   }
 
   async function handleArchive() {
-    if (!item || mutationRunning.current || pending) return;
+    if (!item || mutationRunning.current || pending || pendingLifecycle) return;
     mutationRunning.current = true;
     setBusy(true);
     setSubmitError(undefined);
     try {
       await archiveListing(item.id, item.version);
-      completed.current = true;
-      setDone(true);
-      setConfirmArchiveOpen(false);
       void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
       void queryClient.invalidateQueries({ queryKey: ["my-listing"] });
       void queryClient.invalidateQueries({ queryKey: ["listings"] });
+      if (!alive.current || activeListing.current !== item.id) return;
+      completed.current = true;
+      setDone(true);
+      setConfirmArchiveOpen(false);
       navigate(ROUTES.myBooks);
     } catch (error) {
       setConfirmArchiveOpen(false);
@@ -262,11 +270,11 @@ export function EditListingPage() {
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      !completed.current && (dirty || pending) && currentLocation.pathname !== nextLocation.pathname,
+      !completed.current && (dirty || pending || pendingLifecycle) && currentLocation.pathname !== nextLocation.pathname,
   );
 
   useBeforeUnload((event) => {
-    if (!completed.current && (dirty || pending)) {
+    if (!completed.current && (dirty || pending || pendingLifecycle)) {
       event.preventDefault();
       event.returnValue = "";
     }
@@ -326,7 +334,7 @@ export function EditListingPage() {
   }
 
   function review() {
-    if (mutationRunning.current || pending) return;
+    if (mutationRunning.current || pending || pendingLifecycle) return;
     setAttempted(true);
     setSubmitError(undefined);
     if (Object.keys(errors).length) {
@@ -338,7 +346,7 @@ export function EditListingPage() {
   }
 
   async function submit() {
-    if (mutationRunning.current || (pending && intent.current?.action !== "submit")) return;
+    if (mutationRunning.current || pendingLifecycle || (pending && intent.current?.action !== "submit")) return;
     if (!pending) {
       if (!item || !current || !bookId) return;
       const origin = origins.find((a) => a.id === current.originAddressId);
@@ -441,7 +449,7 @@ export function EditListingPage() {
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string>();
 
   async function handleSaveDraftOnly() {
-    if (mutationRunning.current || (pending && intent.current?.action !== "save")) return;
+    if (mutationRunning.current || pendingLifecycle || (pending && intent.current?.action !== "save")) return;
     if (!pending) {
       if (!item || !current || !bookId) return;
       const origin = origins.find((a) => a.id === current.originAddressId);
@@ -494,9 +502,22 @@ export function EditListingPage() {
     }
   }
 
+  const recovery = <OwnerListingRecovery key={listingId} listingId={listingId} onArchived={() => {
+    completed.current = true; setDone(true); navigate(ROUTES.myBooks);
+  }} />;
+  const leaveConfirmation = <ConfirmDialog
+    isOpen={blocker.state === "blocked"}
+    onClose={() => blocker.reset?.()}
+    title={pendingLifecycle ? "Rời trang khi chưa xác minh?" : "Rời trang khi chưa lưu?"}
+    description={pendingLifecycle ? "Thao tác bài đăng chưa được xác minh hoặc đối chiếu xong. Thao tác vẫn được giữ khi chuyển trang trong phiên này, nhưng sẽ mất khi tải lại hoặc đóng trang." : pending ? "Thao tác với bài đăng chưa có kết quả xác nhận. Nếu rời trang, hãy kiểm tra kệ sách trước khi gửi yêu cầu mới." : "Các thông tin bạn vừa chỉnh sửa sẽ không được lưu nếu rời khỏi trang lúc này."}
+    confirmText="Rời trang" cancelText="Ở lại tiếp tục" isDanger
+    onConfirm={() => blocker.proceed?.()} />;
+
   if (listing.isLoading || !ownerId)
     return (
       <main className={styles.pageState} role="status">
+        {recovery}
+        {leaveConfirmation}
         <div className={styles.spinner} />
         <p>Đang tải thông tin bài đăng…</p>
       </main>
@@ -505,6 +526,8 @@ export function EditListingPage() {
   if (listing.isError || !item)
     return (
       <main className={styles.pageState}>
+        {recovery}
+        {leaveConfirmation}
         <div className={styles.errorIconWrap}>
           <AlertTriangle size={32} />
         </div>
@@ -534,6 +557,8 @@ export function EditListingPage() {
   if (block && !pending)
     return (
       <main className={styles.page}>
+        {recovery}
+        {leaveConfirmation}
         <Link className={styles.backLink} to={ROUTES.myBooks}>
           <ArrowLeft size={16} aria-hidden="true" /> Về kệ sách của tôi
         </Link>
@@ -553,6 +578,7 @@ export function EditListingPage() {
 
   return (
     <main className={styles.page}>
+      {recovery}
       {/* Top Navigation */}
       <nav className={styles.headerNav}>
         <Link className={styles.backLink} to={ROUTES.myBooks}>
@@ -671,7 +697,7 @@ export function EditListingPage() {
             <button
               type="button"
               className={styles.reloadBtn}
-              disabled={busy || pending}
+              disabled={busy || pending || pendingLifecycle}
               onClick={() => void listing.refetch().then(result => { if (!result.error) setForm(null); })}
             >
               Tải lại bài
@@ -689,7 +715,7 @@ export function EditListingPage() {
           review();
         }}
       >
-        <fieldset className={styles.editFields} disabled={busy || pending} aria-label="Nội dung bản sửa">
+        <fieldset className={styles.editFields} disabled={busy || pending || pendingLifecycle} aria-label="Nội dung bản sửa">
         {form.bundle && <BundleEditor value={form.bundle} error={showError("bundle")} onChange={bundle => patch({ bundle, condition: bundleCondition(bundle), mode: "Sale", exchangeValue: "" })} />}
         {/* CARD 1: Giá và hình thức */}
         <section className={styles.card}>
@@ -1400,16 +1426,7 @@ export function EditListingPage() {
         onConfirm={() => void handleArchive()}
       />
 
-      <ConfirmDialog
-        isOpen={blocker.state === "blocked"}
-        onClose={() => blocker.reset?.()}
-        title="Rời trang khi chưa lưu?"
-        description={pending ? "Thao tác với bài đăng chưa có kết quả xác nhận. Nếu rời trang, hãy kiểm tra kệ sách trước khi gửi yêu cầu mới." : "Các thông tin bạn vừa chỉnh sửa sẽ không được lưu nếu rời khỏi trang lúc này."}
-        confirmText="Rời trang"
-        cancelText="Ở lại tiếp tục"
-        isDanger
-        onConfirm={() => blocker.proceed?.()}
-      />
+      {leaveConfirmation}
     </main>
   );
 }

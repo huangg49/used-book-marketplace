@@ -3,25 +3,28 @@
 Owner chưa tiện kiểm thật, giao tiếp tục rà tính năng bằng source và kiểm thử
 cô lập. Giữ animation/nghiệp vụ và checkout demo; không DB/provider/dịch vụ demo.
 Owner yêu cầu tự động cuốn chiếu tiếp sau `354f0876`.
-Nhánh `codex/member-web-listing-draft-recovery`, base `460a0a5e`; commit cùng điểm lưu
-có subject `fix(user-web): retain draft save attempts after lost responses`.
+Nhánh `codex/member-web-listing-action-recovery`, base `8036649e`; commit cùng điểm lưu
+có subject `fix(user-web): recover listing lifecycle actions across navigation`.
 
-Gói mới ở [EditListingPage](../../apps/user-web/src/pages/EditListingPage.tsx)
-giữ runner/action/key/body/version của Save sau ACK mất; retry không nhầm Submit.
-Click lặp2→1; pending khóa nội dung và cảnh báo rời trang. Reload GET lỗi giữ nháp,
-chỉ đọc thành công mới thay form. Baseline8/after14 browser profile PASS, gồm
-409/408/429 và gửi duyệt không lặp save stage. Build/typecheck,380 unit/52 file,
-scoped lint PASS; detector3 advisory màu cũ;46 CSS khớp byte, không đổi animation.
+Gói mới ở [listing-actions](../../apps/user-web/src/lib/listing-actions.ts) giữ
+intent ẩn/gỡ bài trong bộ nhớ phiên qua navigation/remount. Kệ/editor có recovery
+ngoài row và cả khi GET deleted trả404; retry đúng key/body/version, khóa thao tác
+cạnh tranh. Refusal xác định freeze để đối chiếu bằng GET, không tự rebase;
+đọc lỗi giữ pending. Đổi owner/logout xóa intent; late ACK/read không chạm owner mới.
+Cảnh báo rời/reload nói rõ giới hạn memory. Baseline8/after12 browser profile và
+hồi quy draft14 PASS. Build/typecheck,398 unit/53 file,scoped lint PASS;
+detector3 advisory màu cũ;46 CSS khớp byte, không đổi animation.
 [Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md).
 
-Các gói trước: `460a0a5e` tách giữ/nhả intent lệnh đấu giá khỏi read,
+Các gói trước: `8036649e` giữ runner Save/retry đúng action và nháp khi reload lỗi;
+`460a0a5e` tách giữ/nhả intent lệnh đấu giá khỏi read,
 `80cb8edf` chặn click lặp và phục hồi đúng ID phiếu đã ACK,
 `354f0876` giữ nháp/recovery/đổi email ở hồ sơ; `8e5ef8d1` giữ
 draft và quyền hiện tại ở đánh giá; `3634a8ab` chặn click lặp ở giỏ và kiểm hỗ trợ.
 Source, ca đã chạy và giới hạn giữ ở báo cáo phục hồi được dẫn phía trên.
 
-Tiếp theo rà lifecycle intent qua remount, visibility/archive bài đăng. Runner
-Save/Submit còn trong component; rời sau cảnh báo chưa chứng minh giữ intent.
+Tiếp theo rà giới hạn runner Save/Submit còn trong component; rời sau cảnh báo
+chưa chứng minh giữ intent. Không suy tất cả lệnh đã phục hồi qua remount.
 Avatar upload
 và mail/revoke thật chưa kiểm trong gói trước;
 nguyên nhân “rớt server” thực tế vẫn cần browser/log khi tái hiện được.

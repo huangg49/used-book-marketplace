@@ -7,6 +7,53 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Ẩn/gỡ bài đăng: phục hồi qua remount và đọc404 sau archive
+
+Nhánh `codex/member-web-listing-action-recovery`, base `8036649e`; commit cùng
+điểm lưu có subject `fix(user-web): recover listing lifecycle actions across navigation`.
+Đối chiếu [ADR0012](../adr/0012-listing-lifecycle.md) và
+[controller/service](../../apps/api/src/modules/listings/listing-lifecycle.service.ts):
+archive replay kiểm quyền hiện tại nhưng cho đọc target đã deleted trong receipt
+authorization; GET nội dung đã gỡ trả404. Không đổi API/contract/quyền/nghiệp vụ.
+
+[listing-actions](../../apps/user-web/src/lib/listing-actions.ts) giữ một intent
+memory-only cho mỗi bài, dùng session client hiện có. Retry giữ nguyên path,
+method, key, body và expectedVersion; concurrent calls dùng chung flight.
+Không tạo token store hay ghi intent xuống storage. Logout/đổi owner xóa pending;
+auth/generation được kiểm trước dispatch và sau ACK/read, phản hồi owner cũ
+không xóa intent owner mới. Receipt sai entityId giữ pending, không báo thành công.
+
+| Entry / ca | Trước | Sau / bước tiếp |
+| --- | --- | --- |
+| Kệ sách hoặc editor → ẩn/gỡ → mất ACK → chuyển trang/quay lại | Service tạo key mỗi lần; lỗi row/editor không có retry xuyên remount | Recovery chung giữ đúng intent; ref guard chặn click lặp; khóa thao tác cạnh tranh tới ACK/đối chiếu |
+| Archive đã commit → GET404, row biến mất | Không còn nút trên row; editor là trang lỗi đọc | Recovery ở ngoài danh sách và trong nhánh lỗi editor; replay receipt được mà không cần GET deleted content; editor về kệ sau ACK |
+| Lệnh network/schema/401/403/408/429/5xx | Chưa có lifecycle intent dùng chung | Giữ nguyên intent; server vẫn kiểm quyền hiện tại khi retry |
+| Refusal400/404/409/422 | Chưa có đối chiếu lifecycle dùng chung | Freeze intent theo ADR0012; không replay lệnh bị từ chối, không tự rebase. Nút đối chiếu chỉ GET; đọc lỗi giữ pending, đọc thành công hoặc404 mới đóng intent bị từ chối để người dùng quyết định tiếp |
+| Rời trang khi unresolved | Không có cảnh báo riêng ở kệ | Kệ/editor cảnh báo, chọn ở lại giữ yêu cầu; chấp nhận rời vẫn giữ qua navigation trong phiên. Before-unload cảnh báo tại hai trang này; UI nói rõ reload/đóng trang làm mất memory intent |
+
+[Production fixture](../../apps/user-web/tests/listing-action-recovery.mjs),
+`pnpm --filter @used-books/user-web test:listing-action-recovery:browser`:
+baseline8 profile (kệ/editor ×ẩn/gỡ ×390/1440) không có recovery sau remount.
+After12 thêm409 ×2 entry ×2 viewport: lost-ACK replay đúng request sau remount,
+archive404 vẫn phục hồi, đọc lại503 không nhả refusal, thành công mới mở khóa;
+cảnh báo ở lại/rời trang, focus sát mép và không overflow. HTTP/media/auth đều QA
+giả lập, không gọi API/DB/provider thật. Key/body so sánh boolean trong memory.
+Evidence local `.tmp/member-web-listing-action-recovery/` before/after/build,
+CSS và capture; đã xem region recovery390/1440.
+
+PASS production build/typecheck,398 unit/53 file và scoped lint.18 unit lifecycle
+gồm concurrent/replay, refusal/read fail, receipt sai, actor đổi trước dispatch,
+late ACK/read và logout. Hồi quy draft browser14 profile cùng source PASS.
+Detector3 advisory màu inline đã có ở editor/base, không có finding mới ở
+Recovery/Row/MyBooks.46 CSS production khớp byte với base; không sửa motion,
+asset, duration, reduced-motion hay hiệu ứng modal/điều hướng hiện có.
+
+Giới hạn: memory intent không bền qua reload/tab mới; đây không phải kiểm backend
+idempotency/auth/race. Save/Submit runner vẫn component-local, chỉ có cảnh báo
+rời trang (gói trước); chưa chứng minh giữ intent qua remount. Không kiểm storage,
+API/Mongo/provider/native/người thật; không kết luận nguyên nhân server thực tế
+hoặc đóng READINESS. Checkout demo giữ nguyên, không copy/sync/push/PR.
+
 ## Lưu nháp/sửa bài: retry đúng thao tác và giữ nháp khi reload lỗi
 
 Nhánh `codex/member-web-listing-draft-recovery`, base `460a0a5e`; commit cùng
