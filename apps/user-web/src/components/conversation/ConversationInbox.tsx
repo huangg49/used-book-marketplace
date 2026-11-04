@@ -12,8 +12,7 @@ import {
   type InboxFilter,
 } from "./conversation-navigation";
 import { getPublicListing } from "../../services/public-listings";
-import { getExchanges } from "../../services/exchange";
-import { getExchangeDetail } from "../../services/exchangeDetail";
+import { getExchanges, type Exchange } from "../../services/exchange";
 import { ListingPhoto } from "../BookCard";
 import { formatVnd } from "../../lib/routes";
 import styles from "./Conversation.module.css";
@@ -115,18 +114,31 @@ function ConversationCard({
     </article>
   );
 }
-function LegacyCard({ id, userId }: { id: string; userId: string }) {
+function LegacyCard({ exchange, userId }: { exchange: Exchange; userId: string }) {
+  const id = exchange.id;
   const transitioning = useConversationTransition(`/exchange/${id}`);
   const position = useInboxPosition();
   const remember = () => {
     position.save({ scrollY: window.scrollY, selectedId: id });
   };
-  const detail = useQuery({
-    queryKey: ["exchangeDetail", userId, id],
-    queryFn: () => getExchangeDetail(id),
-    retry: false,
-    staleTime: 30000,
-  });
+  const initiator = exchange.initiatorId === userId;
+  const initiatorIds = exchange.initiatorListingIds?.length
+    ? exchange.initiatorListingIds
+    : [exchange.initiatorListingId];
+  const receivedIds = initiator
+    ? [exchange.recipientListingId]
+    : initiatorIds;
+  const snapshots = exchange.agreement
+    ? [...exchange.agreement.initiatorBooks, exchange.agreement.recipientBook]
+    : [];
+  const title = receivedIds.map(listingId => {
+    const book = snapshots.find(snapshot => snapshot.listingId === listingId);
+    return book?.book.title ?? "Hồ sơ cũ — thiếu bản chụp sách";
+  }).join(", ");
+  const partnerName = initiator
+    ? exchange.agreement?.recipientBook.ownerDisplayName
+    : exchange.agreement?.initiatorBooks[0]?.ownerDisplayName;
+  const partner = partnerName ?? "Đối tác trao đổi";
   return (
     <article
       className={styles.legacyCard}
@@ -145,16 +157,11 @@ function LegacyCard({ id, userId }: { id: string; userId: string }) {
               state={{ chatFromInbox: true }}
               onClick={remember}
             >
-              {detail.data?.receiveBooks.map((b) => b.title).join(", ") ||
-                "Cuộc trao đổi sách"}
+              {title || "Cuộc trao đổi sách"}
             </Link>
           </h2>
           <p className={styles.cardPartner}>
-            {detail.data
-              ? `Với ${detail.data.partner.username}`
-              : detail.isError
-                ? "Chưa tải được tên đối tác; mở để thử lại."
-                : "Đang tải thông tin…"}
+            Với {partner}
           </p>
           <p className={styles.cardMode}>Đổi sách</p>
         </div>
@@ -281,7 +288,7 @@ export function ConversationInbox({
           <ConversationCard key={room.id} room={room} userId={userId} />
         ))}
         {legacy.slice(0, Math.max(0, visible - filtered.length)).map((ex) => (
-          <LegacyCard key={ex.id} id={ex.id} userId={userId} />
+          <LegacyCard key={ex.id} exchange={ex} userId={userId} />
         ))}
       </div>
       {filtered.length + legacy.length > visible && (

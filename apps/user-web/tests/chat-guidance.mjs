@@ -162,7 +162,7 @@ try{
       const box=await action.boundingBox();assert.ok(box.y>=left.y&&box.y+box.height<=left.y+left.height+1,'primary action visible without scrolling '+label);
     }
     if(label==='seller-ready'){
-      const value=page.getByRole('definition').filter({hasText:'75.000'}).first(),box=await value.boundingBox(),body=await sheetPanel.boundingBox();
+      const value=sheetPanel.getByText('Đã thống nhất giá: 75.000 ₫',{exact:true}),box=await value.boundingBox(),body=await sheetPanel.boundingBox();
       assert.ok(box.y>=body.y&&box.y+box.height<=body.y+body.height,'accepted price remains readable above action footer');
     }
    }

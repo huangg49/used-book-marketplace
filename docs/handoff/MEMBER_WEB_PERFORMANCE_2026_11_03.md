@@ -4,6 +4,48 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Dựng thẻ hội thoại Exchange từ snapshot danh sách — 04/11/2026
+
+Nhánh `codex/member-web-chat-legacy-previews`, base `1c2e8a61`.
+Khảo sát cho thấy tóm tắt tài chính và phiếu Exchange trong NegotiationWorkspace
+được render thay nhau. Gói này xử lý các request phụ của thẻ Exchange legacy
+trong hộp hội thoại.
+
+[ConversationInbox](../../apps/user-web/src/components/conversation/ConversationInbox.tsx)
+trước đây gọi getExchangeDetail cho từng thẻ. Mapper này đọc lại Exchange và xin
+URL ảnh của mỗi sách, dù thẻ chỉ hiện biểu tượng BookOpen, tiêu đề và đối tác.
+API list/get dùng cùng hàm view trả Exchange, gồm agreement snapshot
+([service](../../apps/api/src/modules/exchanges/exchanges.service.ts)).
+Contract ExchangePage và [ADR0065](../adr/0065-exchange-agreement-snapshots.md)
+cho phép dựng nội dung xem trước từ danh sách đã đọc.
+
+Thẻ hiện lấy tiêu đề sách nhận theo đúng vai trò và thứ tự listing ID, lấy tên
+đối tác từ snapshot, giữ nhãn hồ sơ cũ thiếu bản chụp. Mở phiếu vẫn dùng query
+chi tiết hiện có. Danh sách và lỗi/thử lại tiếp tục theo nguồn list.
+Giữ markup, links, viewTransition và lưu vị trí khi Back.
+
+[Production browser fixture](../../apps/user-web/tests/chat-legacy-previews.mjs)
+PASS 390/1440 × initiator/recipient, mỗi ca12 thẻ gồm11 agreement có3 sách và
+1 hồ sơ thiếu snapshot. Trước sửa đọc12 chi tiết +33 URL ảnh để dựng danh sách.
+Sau sửa cả hai số về0. Title/tên đối tác và nhãn thiếu snapshot khớp trước/sau.
+Mở phiếu đọc chi tiết/ảnh, Back về đúng thẻ, list503 giữ nội dung và có retry.
+Đây là request HTTP fixture, không suy LCP/CPU hoặc kiểm Supabase thật.
+
+- Build/typecheck, 361 unit/51 file, scoped lint và detector rỗng PASS.
+  Suite chat-guidance PASS sau sửa assertion giá đã chốt sang vùng thao tác
+  đang hiển thị. Assertion cũ tìm dd trong phần thông tin đang đóng ở1100px,
+  không phù hợp TransactionFrame hiện tại. Giữ kiểm giá75.000 nằm trong vùng
+  nhìn thấy. Suite kiểm vai trò, thỏa thuận, message/order/payment retry,
+  draft, lịch sử lỗi và desktop/mobile/chữ lớn.
+- Một lượt xác nhận khởi chạy trong lúc build đang tạo lại tài nguyên bị
+  timeout ở Login, đã loại khỏi bằng chứng. Lượt chạy lại sau build PASS đủ4 ca.
+- Đã xem ảnh inbox390/1440.47 CSS production khớp byte. Bằng chứng nằm ở
+  `.tmp/member-web-chat-legacy-previews/`, hồi quy dùng HTTP/Socket.IO giả.
+  API/DB/provider, native/thiết bị thật, human acceptance và remote CI chưa chạy.
+
+READINESS và checkout demo giữ nguyên. Consumer ConversationCard mua bán vẫn
+đọc public listing cho các thẻ đã mount. Đó là ứng viên đo riêng tiếp theo.
+
 ## Dùng chung lượt theo dõi trạng thái nạp ví — 04/11/2026
 
 Nhánh `codex/member-web-wallet-topup-polling`, base `4ddbea8f`.
