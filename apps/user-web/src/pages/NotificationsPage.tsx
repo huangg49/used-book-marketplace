@@ -2,6 +2,7 @@ import { usePagedCollection } from "../components/Pagination/usePagedCollection"
 import { CollectionPager } from "../components/Pagination/CollectionPager";
 import { useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError } from "@used-books/session-client";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -79,8 +80,11 @@ export function NotificationsPage() {
     retry: false,
   });
 
-  const allItems = pages.data?.pages.flatMap((p) => p.items) ?? [];
-  const unreadCount = pages.data?.pages[0]?.unreadCount ?? 0;
+  const readDenied = pages.isError && pages.error instanceof ApiError && [401, 403, 404].includes(pages.error.status);
+  const firstPage = readDenied ? undefined : pages.data?.pages[0];
+  const hasRead = !!firstPage;
+  const allItems = readDenied ? [] : pages.data?.pages.flatMap((p) => p.items) ?? [];
+  const unreadCount = firstPage?.unreadCount ?? 0;
 
   const filterItems = (items: typeof allItems) => items.filter((item) => {
     if (activeFilter === "unread") return !item.readAt;
@@ -93,11 +97,11 @@ export function NotificationsPage() {
     return true;
   });
 
-  const collection = usePagedCollection(pages, JSON.stringify([auth.status === "authenticated" ? auth.user.id : "guest", activeFilter]), source => filterItems(source.flatMap(p => p.items)), 10);
+  const collection = usePagedCollection(pages, JSON.stringify([auth.status === "authenticated" ? auth.user.id : "guest", activeFilter]), source => readDenied ? [] : filterItems(source.flatMap(p => p.items)), 10);
   const filteredItems = collection.items;
 
   async function readAll() {
-    if (reading) return;
+    if (reading || !hasRead || readDenied) return;
     setReading(true);
     setError(undefined);
     try {
@@ -145,7 +149,10 @@ export function NotificationsPage() {
             Thông Báo
           </h1>
           <p className={styles.subtitle}>
-            {unreadCount > 0 ? (
+            {pages.isPending ? "Đang tải trạng thái thông báo…"
+            : !hasRead ? "Chưa xác minh được trạng thái thông báo."
+            : pages.isError && !pages.isFetchNextPageError ? "Chưa cập nhật được thông báo. Đang hiển thị dữ liệu của lần tải trước."
+            : unreadCount > 0 ? (
               <span>
                 Bạn có <strong className="text-[#5c0202]">{unreadCount} thông báo mới</strong> chưa đọc.
               </span>
@@ -155,7 +162,7 @@ export function NotificationsPage() {
           </p>
         </div>
 
-        {unreadCount > 0 && (
+        {hasRead && unreadCount > 0 && (
           <div className={styles.headingActions}>
             <button
               type="button"
@@ -180,7 +187,7 @@ export function NotificationsPage() {
           onClick={() => setActiveFilter("all")}
         >
           <span>Tất cả</span>
-          <span className={styles.filterBadge}>{allItems.length}</span>
+          {hasRead && <span className={styles.filterBadge}>{allItems.length}</span>}
         </button>
 
         <button
@@ -191,7 +198,7 @@ export function NotificationsPage() {
           onClick={() => setActiveFilter("unread")}
         >
           <span>Chưa đọc</span>
-          <span className={styles.filterBadge}>{unreadCount}</span>
+          {hasRead && <span className={styles.filterBadge}>{unreadCount}</span>}
         </button>
 
         <button
@@ -243,7 +250,7 @@ export function NotificationsPage() {
         </div>
       )}
 
-      {pages.isError && !pages.isFetchNextPageError && (
+      {pages.isError && (!pages.isFetchNextPageError || readDenied) && (
         <div className={styles.errorBox} role="alert">
           <h2 className="font-bold text-base mb-1">Chưa tải được danh sách thông báo</h2>
           <p className="text-sm opacity-80 mb-3">Kiểm tra kết nối rồi thử lại giúp mình.</p>
@@ -372,7 +379,7 @@ export function NotificationsPage() {
         </ul>
       )}
 
-      <CollectionPager model={collection} anchorId="notification-results" itemLabel="thông báo" />
+      {!readDenied && <CollectionPager model={collection} anchorId="notification-results" itemLabel="thông báo" />}
     </section>
   );
 }

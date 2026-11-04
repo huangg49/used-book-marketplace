@@ -3,19 +3,20 @@
 Owner chưa tiện kiểm thật, giao tiếp tục rà tính năng bằng source và kiểm thử
 cô lập. Giữ animation/nghiệp vụ và checkout demo; không DB/provider/dịch vụ demo.
 Owner yêu cầu tự động cuốn chiếu tiếp sau `354f0876`.
-Nhánh `codex/member-web-publish-owner-cache`, base `665c90fa`; commit cùng điểm lưu
-có subject `fix(user-web): refresh owner shelf after publishing acknowledgement`.
+Nhánh `codex/member-web-notification-read-states`, base `7871737f`; commit cùng điểm lưu
+có subject `fix(user-web): distinguish unknown notification read states`.
 
-Gói mới ở [SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) invalidate
-cache kệ theo owner sau ACK gửi duyệt, gồm ACK retry; không báo thành công khi
-owner hiện tại khác snapshot gửi. Kệ còn cache15s không còn hiển thị trống sau
-gửi. Baseline/after6 browser profile390/1440 success/lost-ACK/refused PASS;
-giữ đúng stage/key/body/version, không invalidate khi từ chối. Build/typecheck,
-399 unit/53 file PASS; lint exit0 còn1 dependency warning cũ;46 CSS khớp byte.
-Không đổi JSX/style/animation; không chạy detector lại cho diff logic này.
+Gói mới ở [NotificationsPage](../../apps/user-web/src/pages/NotificationsPage.tsx)
+phân biệt chưa tải/đọc lỗi với unread0 thật. GET503 có cache ghi rõ dữ liệu cũ;
+GET403/404 ẩn cache/count/read-all/pager, kể cả denial khi tải trang sau, có retry
+toàn danh sách. Baseline12/after14 browser profile390/1440 PASS; có phục hồi200,
+rỗng thật và retry rồi tiếp tục trang2. Build/typecheck,399 unit/53 file, scoped
+lint và detector0 PASS.46 CSS khớp byte; không sửa motion/asset.401 có predicate
+nhưng browser chỉ kiểm403/404 trong gói này.
 [Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md).
 
-Các gói trước: `665c90fa` phục hồi GET sau Save đã ACK, reseed baseline/media
+Các gói trước: `7871737f` làm mới kệ theo owner sau ACK gửi duyệt;
+`665c90fa` phục hồi GET sau Save đã ACK, reseed baseline/media
 và không upload lại ảnh đã lưu; `6569beb7` dọn preview ảnh mới và chặn URL thừa;
 `060a5eb1` giữ intent ẩn/gỡ bài qua remount, recovery khi GET404,
 freeze refusal để đối chiếu, guard actor/late ACK và cảnh báo rời trang;
@@ -26,8 +27,9 @@ freeze refusal để đối chiếu, guard actor/late ACK và cảnh báo rời 
 draft và quyền hiện tại ở đánh giá; `3634a8ab` chặn click lặp ở giỏ và kiểm hỗ trợ.
 Source, ca đã chạy và giới hạn giữ ở báo cáo phục hồi được dẫn phía trên.
 
-Tiếp theo kiểm header/số đếm thông báo khi GET loading/error, tránh fallback0
-bị diễn đạt thành đã đọc hết. Địa chỉ/AI trong form chưa có browser fixture mới.
+Tiếp theo kiểm fallback0 ở ký quỹ trên thẻ Ví và số đếm Trao đổi ở Tổng quan.
+Cần fixture trước sửa; không đổi ledger/provider/gate. Địa chỉ/AI trong form
+chưa có browser fixture mới.
 Runner Save/Submit chưa ACK vẫn component-local; rời sau cảnh báo
 chưa chứng minh giữ intent. Không suy tất cả lệnh đã phục hồi qua remount.
 Avatar upload

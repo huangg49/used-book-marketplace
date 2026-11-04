@@ -7,6 +7,44 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Thông báo: loading/error không thành đã đọc hết; denial không hiện cache cũ
+
+Nhánh `codex/member-web-notification-read-states`, base `7871737f`; commit cùng
+điểm lưu có subject `fix(user-web): distinguish unknown notification read states`.
+[NotificationsPage](../../apps/user-web/src/pages/NotificationsPage.tsx) trước
+fallback unreadCount0 khi chưa có data: header báo đã đọc hết cả lúc loading/503.
+Refetch403/404 vẫn hiện nội dung đã cache; lỗi403 ở trang sau không có nút retry
+toàn danh sách. Không đổi endpoint, session client, mark-read hay nghiệp vụ.
+
+| Member → entry / ca | Kết quả sau sửa |
+| --- | --- |
+| Menu Thông báo → GET đang chờ | Header đang tải; không số0 giả ở tab hoặc thông báo đã đọc hết |
+| Lần đọc đầu503 → Thử tải lại | Chưa xác minh; retry GET thành công mới hiện count/nội dung |
+| Có cache (cả unread0) → Giỏ sách → Back → GET503 | Giữ dữ liệu cũ và ghi rõ lần tải trước; không kết luận hiện tại đã đọc hết |
+| GET403/404 sau cache | Ẩn body, số đếm, read-all và pager; giữ thông báo lỗi/retry. Không dùng cache để thay quyền hiện tại |
+| Sau trang1 → tải trang2 bị403 → retry → tải trang2 lại | Ẩn cả cache trang1 trong lúc denial, retry toàn danh sách được; trang2 trở lại sau GET hợp lệ |
+| GET200 thực sự rỗng / unread0 | Vẫn hiện trạng thái rỗng và đã đọc hết; không biến mọi zero thành lỗi |
+
+[Production fixture](../../apps/user-web/tests/notification-read-states.mjs),
+`pnpm --filter @used-books/user-web test:notification-read-states:browser`.
+Baseline12/after14 profile390/1440, thêm denial trang sau ở after. Giữ request GET
+để xem trạng thái pending, rồi trả503/403/404 và phục hồi200; không gọi mark-read
+hay ghi DB. Harness đợi trang cũ unmount trước Back, đợi layout motion kết thúc
+trước capture thay vì tắt motion. Không suy ảnh giữa animation là lỗi layout.
+
+PASS build/typecheck,399 unit/53 file, scoped lint và detector0 finding.
+46 CSS production khớp byte; các khai báo motion/AnimatePresence/layout/duration
+giữ nguyên. Đã xem capture loading/error/giữ cache và denial390/1440. Evidence
+local `.tmp/member-web-notification-read-states/` before/after/build/CSS/capture.
+Predicate có401 nhưng browser gói này kiểm403/404, không claim auth-refresh401.
+Backend auth/notification delivery/native/người thật NOT RUN; READINESS không đổi.
+Preview bell/overview đã có error branch riêng; gói này sửa inbox page, không
+claim mọi consumer notification hay toàn bộ permission đã được nghiệm thu.
+
+Tiếp theo kiểm fallback số0 ở ký quỹ trên thẻ Ví và số đếm Trao đổi ở Tổng quan;
+source có nhánh error chưa đồng nhất, cần fixture trước sửa. Không đổi ledger,
+provider hoặc gate thanh toán/giao nhận.
+
 ## Đăng mới → nhận ACK → quay về kệ còn cache mới
 
 Nhánh `codex/member-web-publish-owner-cache`, base `665c90fa`; commit cùng điểm
