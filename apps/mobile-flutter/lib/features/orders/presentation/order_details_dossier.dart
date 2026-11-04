@@ -10,7 +10,9 @@ import '../../../core/widgets/app_widgets.dart';
 
 String _formatOrderDateVi(dynamic dateVal) {
   if (dateVal == null) return '';
-  final dt = dateVal is DateTime ? dateVal : DateTime.tryParse(dateVal.toString());
+  final dt = dateVal is DateTime
+      ? dateVal
+      : DateTime.tryParse(dateVal.toString());
   if (dt == null) return dateVal.toString();
   final dd = dt.day.toString().padLeft(2, '0');
   final mm = dt.month.toString().padLeft(2, '0');
@@ -110,7 +112,8 @@ class OrderDetailsDossier extends ConsumerStatefulWidget {
   final VoidCallback? onBack;
 
   @override
-  ConsumerState<OrderDetailsDossier> createState() => _OrderDetailsDossierState();
+  ConsumerState<OrderDetailsDossier> createState() =>
+      _OrderDetailsDossierState();
 }
 
 class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
@@ -155,7 +158,9 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
     try {
       final results = await Future.wait<dynamic>([
         client.request('/me/orders/${widget.orderId}'),
-        client.request('/me/orders/${widget.orderId}/shipment').catchError((_) => null),
+        client
+            .request('/me/orders/${widget.orderId}/shipment')
+            .catchError((_) => null),
         client
             .request('/me/orders/${widget.orderId}/packaging-evidence')
             .catchError((_) => null),
@@ -168,9 +173,9 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
       if (orderRes is Map) {
         final evidences = (evidenceRes is Map && evidenceRes['items'] is List)
             ? (evidenceRes['items'] as List)
-                .whereType<Map>()
-                .map((e) => Map<String, dynamic>.from(e))
-                .toList()
+                  .whereType<Map>()
+                  .map((e) => Map<String, dynamic>.from(e))
+                  .toList()
             : const <Map<String, dynamic>>[];
 
         setState(() {
@@ -216,10 +221,7 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
         '/orders/${widget.orderId}/$action',
         method: 'POST',
         idempotencyKey: generateIdempotencyKey('order-$action'),
-        body: {
-          'expectedVersion': version,
-          ...?extraBody,
-        },
+        body: {'expectedVersion': version, ...?extraBody},
       );
       await _loadOrder();
       if (!mounted) return;
@@ -241,8 +243,7 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
   }
 
   void _showNonReceiptDialog() {
-    _complaintCtrl.text =
-        'Tôi chưa nhận được sách hoặc sách nhận được bị hư hại nghiêm trọng so với mô tả.';
+    _complaintCtrl.text = 'Tôi chưa nhận được sách hoặc sách nhận được bị hư hại nghiêm trọng so với mô tả.';
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -334,10 +335,9 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
             ),
             onPressed: () {
               Navigator.pop(ctx);
-              _performOrderAction(
-                'cancel-paid',
-                {'reason': 'SellerConfirmationTimeout'},
-              );
+              _performOrderAction('cancel-paid', {
+                'reason': 'SellerConfirmationTimeout',
+              });
             },
             child: const Text('Xác nhận hoàn tiền'),
           ),
@@ -425,8 +425,9 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
           'sha256': hash,
         },
       );
-      final map =
-          created is Map ? Map<String, dynamic>.from(created) : const {};
+      final map = created is Map
+          ? Map<String, dynamic>.from(created)
+          : const {};
       final evidenceId = (map['entityId'] ?? map['id'] ?? '').toString();
       if (evidenceId.isNotEmpty) {
         await client.request(
@@ -525,8 +526,8 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
                   color: isDone
                       ? const Color(0xFF1F7A3E)
                       : isCurrent
-                          ? StitchTokens.wine
-                          : StitchTokens.parchment,
+                      ? StitchTokens.wine
+                      : StitchTokens.parchment,
                   border: Border.all(
                     color: isCurrent ? StitchTokens.gold : Colors.transparent,
                     width: 1.5,
@@ -593,7 +594,11 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
           children: const [
             CircularProgressIndicator(color: StitchTokens.wine),
             SizedBox(height: 12),
-            AppText('Đang tải dữ liệu đơn hàng…', kind: AppTextKind.small, color: AppColors.muted),
+            AppText(
+              'Đang tải dữ liệu đơn hàng…',
+              kind: AppTextKind.small,
+              color: AppColors.muted,
+            ),
           ],
         ),
       );
@@ -640,12 +645,26 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
     final metadata = item['metadata'] is Map
         ? Map<String, dynamic>.from(item['metadata'] as Map)
         : const <String, dynamic>{};
-    final title = (metadata['title'] ?? item['title'] ?? order['title'] ?? 'Ấn bản sách trong đơn').toString();
-    final bookPrice = (amounts['bookPrice'] ?? item['bookPrice'] ?? order['bookPrice'] ?? 0) as num;
+    final title =
+        (metadata['title'] ??
+                item['title'] ??
+                order['title'] ??
+                'Ấn bản sách trong đơn')
+            .toString();
+    final bookPrice =
+        (amounts['bookPrice'] ?? item['bookPrice'] ?? order['bookPrice'] ?? 0)
+            as num;
     final shippingFee =
-        (amounts['shippingFee'] ?? order['shippingFee'] ?? item['shippingFee'] ?? 0) as num;
+        (amounts['shippingFee'] ??
+                order['shippingFee'] ??
+                item['shippingFee'] ??
+                0)
+            as num;
     final buyerTotal =
-        (amounts['buyerTotal'] ?? order['buyerTotal'] ?? (bookPrice + shippingFee)) as num;
+        (amounts['buyerTotal'] ??
+                order['buyerTotal'] ??
+                (bookPrice + shippingFee))
+            as num;
 
     const steps = [
       'Đặt đơn',
@@ -660,10 +679,7 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
       'PendingSellerConfirmation' ||
       'Preparing' ||
       'Accepted' => 2,
-      'InTransit' ||
-      'Shipped' ||
-      'Delivered' ||
-      'Inspection' => 3,
+      'InTransit' || 'Shipped' || 'Delivered' || 'Inspection' => 3,
       'Completed' => 4,
       _ => 0,
     };
@@ -791,11 +807,17 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
                             color: StitchTokens.parchment,
                             child: BookCoverPhoto(
                               item: {
-                                'id': order['listingId'] ?? item['listingId'] ?? '',
+                                'id':
+                                    order['listingId'] ??
+                                    item['listingId'] ??
+                                    '',
                                 'title': title,
-                                if (item['photos'] != null) 'photos': item['photos'],
-                                if (order['photos'] != null) 'photos': order['photos'],
-                                if (item['mediaIds'] != null) 'mediaIds': item['mediaIds'],
+                                if (item['photos'] != null)
+                                  'photos': item['photos'],
+                                if (order['photos'] != null)
+                                  'photos': order['photos'],
+                                if (item['mediaIds'] != null)
+                                  'mediaIds': item['mediaIds'],
                               },
                               fit: BoxFit.cover,
                             ),
@@ -838,7 +860,10 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const AppText('Giá sách:'),
-                              AppText(formatVnd(bookPrice), kind: AppTextKind.bold),
+                              AppText(
+                                formatVnd(bookPrice),
+                                kind: AppTextKind.bold,
+                              ),
                             ],
                           ),
                           if (shippingFee > 0) ...[
@@ -914,12 +939,14 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
                               ),
                               const SizedBox(height: 2),
                               AppText(
-                                (order['ownAddress']['detail'] ?? '').toString(),
+                                (order['ownAddress']['detail'] ?? '')
+                                    .toString(),
                                 kind: AppTextKind.small,
                                 color: AppColors.muted,
                               ),
                             ],
-                            if (order['shippingAddress'] is Map && !isBuyer) ...[
+                            if (order['shippingAddress'] is Map &&
+                                !isBuyer) ...[
                               const Divider(height: 14),
                               Row(
                                 children: const [
@@ -942,7 +969,8 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
                               ),
                               const SizedBox(height: 2),
                               AppText(
-                                (order['shippingAddress']['detail'] ?? '').toString(),
+                                (order['shippingAddress']['detail'] ?? '')
+                                    .toString(),
                                 kind: AppTextKind.small,
                                 color: AppColors.muted,
                               ),
@@ -1002,16 +1030,14 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
                                 wine: true,
                                 busy: _busy,
                                 icon: Icons.credit_card_rounded,
-                                onPressed: () =>
-                                    _performOrderAction('pay'),
+                                onPressed: () => _performOrderAction('pay'),
                               ),
                               const SizedBox(height: 8),
                               AppButton(
                                 title: 'Hủy đơn chưa thanh toán',
                                 secondary: true,
                                 busy: _busy,
-                                onPressed: () =>
-                                    _performOrderAction('cancel'),
+                                onPressed: () => _performOrderAction('cancel'),
                               ),
                               const SizedBox(height: 6),
                               InkWell(
@@ -1078,16 +1104,14 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
                                 wine: true,
                                 busy: _busy,
                                 icon: Icons.check_circle_outline_rounded,
-                                onPressed: () =>
-                                    _performOrderAction('accept'),
+                                onPressed: () => _performOrderAction('accept'),
                               ),
                               const SizedBox(height: 8),
                               AppButton(
                                 title: 'Từ chối đơn',
                                 secondary: true,
                                 busy: _busy,
-                                onPressed: () =>
-                                    _performOrderAction('reject'),
+                                onPressed: () => _performOrderAction('reject'),
                               ),
                             ] else ...[
                               AppButton(
@@ -1142,7 +1166,8 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
                               kind: AppTextKind.small,
                               color: AppColors.ink,
                             ),
-                            if (order['preparation']?['pickupDeadline'] != null ||
+                            if (order['preparation']?['pickupDeadline'] !=
+                                    null ||
                                 order['pickupDeadline'] != null) ...[
                               const SizedBox(height: 8),
                               Container(
@@ -1193,7 +1218,10 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
                                     onPressed: _busy
                                         ? null
                                         : _uploadPackagingEvidence,
-                                    icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                                    icon: const Icon(
+                                      Icons.camera_alt_outlined,
+                                      size: 16,
+                                    ),
                                     label: const Text('Thêm ảnh gói hàng'),
                                   ),
                                 ],
@@ -1444,8 +1472,8 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
                                     state == 'PaymentExpired'
                                         ? 'Đơn hàng tự động hủy do quá hạn thanh toán'
                                         : state == 'SettlementPending'
-                                            ? 'Đang xử lý hoàn tiền về ví'
-                                            : 'Đơn hàng đã kết thúc / Hủy bỏ',
+                                        ? 'Đang xử lý hoàn tiền về ví'
+                                        : 'Đơn hàng đã kết thúc / Hủy bỏ',
                                     kind: AppTextKind.bold,
                                     color: const Color(0xFF991B1B),
                                   ),
@@ -1474,18 +1502,16 @@ class _OrderDetailsDossierState extends ConsumerState<OrderDetailsDossier> {
                     // Shortcut back to conversation if standalone
                     if (!widget.embedded) ...[
                       AppButton(
-                        title: conversationId != null &&
-                                conversationId.isNotEmpty
+                        title:
+                            conversationId != null && conversationId.isNotEmpty
                             ? 'Mở hội thoại thương lượng với đối tác'
                             : 'Nhắn tin trao đổi về đơn hàng này',
                         secondary: true,
                         wine: true,
                         icon: Icons.chat_bubble_outline_rounded,
                         busy: _busy,
-                        onPressed: () => _openOrLinkConversation(
-                          id,
-                          conversationId,
-                        ),
+                        onPressed: () =>
+                            _openOrLinkConversation(id, conversationId),
                       ),
                     ],
                   ],

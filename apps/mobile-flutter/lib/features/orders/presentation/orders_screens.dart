@@ -32,7 +32,8 @@ class OrdersScreen extends ConsumerStatefulWidget {
 
 class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   String _selectedRole = 'all'; // 'all' | 'Buyer' | 'Seller'
-  String _selectedStatus = 'all'; // 'all' | 'in_progress' | 'completed' | 'cancelled'
+  String _selectedStatus =
+      'all'; // 'all' | 'in_progress' | 'completed' | 'cancelled'
   bool _loading = true;
   String? _error;
   List<Map<String, dynamic>> _orders = const [];
@@ -106,14 +107,16 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
         .toList();
     if (toFetch.isEmpty) return;
 
-    await Future.wait(toFetch.map((id) async {
-      try {
-        final res = await client.request('/me/orders/$id');
-        if (res is Map && mounted) {
-          _orderDetailCache[id] = Map<String, dynamic>.from(res);
-        }
-      } catch (_) {}
-    }));
+    await Future.wait(
+      toFetch.map((id) async {
+        try {
+          final res = await client.request('/me/orders/$id');
+          if (res is Map && mounted) {
+            _orderDetailCache[id] = Map<String, dynamic>.from(res);
+          }
+        } catch (_) {}
+      }),
+    );
 
     if (mounted) {
       setState(() {});
@@ -145,28 +148,32 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
   String _getOrderGuidance(Map<String, dynamic> order, bool isBuyer) {
     final state = (order['state'] ?? '').toString();
     return switch (state) {
-      'AwaitingPayment' => isBuyer
-          ? 'Kiểm tra tổng tiền và hạn trong chi tiết rồi thanh toán bằng ví.'
-          : 'Đang chờ người mua thanh toán; mở chi tiết để xem thời hạn.',
-      'PaidAwaitingSellerConfirmation' ||
-      'PendingSellerConfirmation' => isBuyer
-          ? 'Đã thanh toán, đang chờ người bán xác nhận. Theo dõi hạn trong chi tiết.'
-          : 'Người mua đã thanh toán. Mở chi tiết để xem và phản hồi đơn.',
-      'Preparing' || 'Accepted' => isBuyer
-          ? 'Người bán đang chuẩn bị sách. Theo dõi tiến trình trong chi tiết.'
-          : 'Chuẩn bị sách và làm theo bước được phép trong chi tiết đơn.',
-      'InTransit' || 'Shipped' =>
-          'Theo dõi thông tin vận chuyển trong chi tiết đơn.',
-      'Delivered' || 'Inspection' =>
-          'Đọc thời hạn kiểm tra và hướng dẫn xử lý nếu sách có vấn đề trong chi tiết.',
+      'AwaitingPayment' =>
+        isBuyer
+            ? 'Kiểm tra tổng tiền và hạn trong chi tiết rồi thanh toán bằng ví.'
+            : 'Đang chờ người mua thanh toán; mở chi tiết để xem thời hạn.',
+      'PaidAwaitingSellerConfirmation' || 'PendingSellerConfirmation' =>
+        isBuyer
+            ? 'Đã thanh toán, đang chờ người bán xác nhận. Theo dõi hạn trong chi tiết.'
+            : 'Người mua đã thanh toán. Mở chi tiết để xem và phản hồi đơn.',
+      'Preparing' || 'Accepted' =>
+        isBuyer
+            ? 'Người bán đang chuẩn bị sách. Theo dõi tiến trình trong chi tiết.'
+            : 'Chuẩn bị sách và làm theo bước được phép trong chi tiết đơn.',
+      'InTransit' ||
+      'Shipped' => 'Theo dõi thông tin vận chuyển trong chi tiết đơn.',
+      'Delivered' || 'Inspection' => 'Đọc thời hạn kiểm tra và hướng dẫn xử lý nếu sách có vấn đề trong chi tiết.',
       'ResolutionPending' =>
-          'Đang xử lý vướng mắc. Mở hồ sơ để xem yêu cầu bổ sung.',
+        'Đang xử lý vướng mắc. Mở hồ sơ để xem yêu cầu bổ sung.',
       'SettlementPending' =>
-          'Đang xử lý quyết toán. Chờ hệ thống đối soát hoàn tất.',
+        'Đang xử lý quyết toán. Chờ hệ thống đối soát hoàn tất.',
       'Completed' =>
-          'Đã hoàn tất. Bạn có thể xem hoặc viết đánh giá nếu còn đủ điều kiện.',
-      'Cancelled' || 'PaymentExpired' || 'Rejected' || 'ClosedAfterResolution' =>
-          'Đơn đã kết thúc. Mở chi tiết để xem lý do và kết quả.',
+        'Đã hoàn tất. Bạn có thể xem hoặc viết đánh giá nếu còn đủ điều kiện.',
+      'Cancelled' ||
+      'PaymentExpired' ||
+      'Rejected' ||
+      'ClosedAfterResolution' =>
+        'Đơn đã kết thúc. Mở chi tiết để xem lý do và kết quả.',
       _ => 'Mở chi tiết để xem trạng thái hiện tại và thao tác được phép.',
     };
   }
@@ -177,12 +184,15 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
       return _buildOrderFocusView(_focusedOrder!);
     }
 
-    final buyerCount =
-        _orders.where((o) => (o['role'] ?? 'Buyer') == 'Buyer').length;
-    final sellerCount =
-        _orders.where((o) => (o['role'] ?? 'Buyer') == 'Seller').length;
-    final awaitingCount =
-        _orders.where((o) => o['state'] == 'AwaitingPayment').length;
+    final buyerCount = _orders
+        .where((o) => (o['role'] ?? 'Buyer') == 'Buyer')
+        .length;
+    final sellerCount = _orders
+        .where((o) => (o['role'] ?? 'Buyer') == 'Seller')
+        .length;
+    final awaitingCount = _orders
+        .where((o) => o['state'] == 'AwaitingPayment')
+        .length;
 
     // Filter items according to Role & Status
     final filtered = _orders.where((o) {
@@ -412,23 +422,25 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: [
-                (id: 'all', label: 'Tất cả trạng thái'),
-                (id: 'in_progress', label: 'Đang xử lý'),
-                (id: 'completed', label: 'Đã hoàn tất'),
-                (id: 'cancelled', label: 'Đã hủy / hết hạn'),
-              ].map((chip) {
-                final isSelected = _selectedStatus == chip.id;
-                return Padding(
-                  padding: const EdgeInsets.only(right: AppSpace.sm),
-                  child: AppChip(
-                    title: chip.label,
-                    wine: true,
-                    selected: isSelected,
-                    onPressed: () => setState(() => _selectedStatus = chip.id),
-                  ),
-                );
-              }).toList(),
+              children:
+                  [
+                    (id: 'all', label: 'Tất cả trạng thái'),
+                    (id: 'in_progress', label: 'Đang xử lý'),
+                    (id: 'completed', label: 'Đã hoàn tất'),
+                    (id: 'cancelled', label: 'Đã hủy / hết hạn'),
+                  ].map((chip) {
+                    final isSelected = _selectedStatus == chip.id;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: AppSpace.sm),
+                      child: AppChip(
+                        title: chip.label,
+                        wine: true,
+                        selected: isSelected,
+                        onPressed: () =>
+                            setState(() => _selectedStatus = chip.id),
+                      ),
+                    );
+                  }).toList(),
             ),
           ),
           const SizedBox(height: AppSpace.lg),
@@ -445,8 +457,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
               wine: true,
               icon: Icons.receipt_long_outlined,
               title: 'Chưa có đơn hàng trong mục này',
-              message:
-                  'Đơn mua ngay hoặc đơn được tạo từ phòng thương lượng sẽ hiển thị tại đây.',
+              message: 'Đơn mua ngay hoặc đơn được tạo từ phòng thương lượng sẽ hiển thị tại đây.',
               actionLabel: 'Khám phá kệ sách',
               onAction: () => context.go('/search'),
             )
@@ -507,7 +518,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                 '$count',
                 kind: AppTextKind.label,
                 color: selected ? StitchTokens.goldLight : StitchTokens.wine,
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],
@@ -524,7 +538,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     final isBuyer = role == 'Buyer';
     final state = (order['state'] ?? 'AwaitingPayment').toString();
     final isCompleted = state == 'Completed';
-    final isCancelled = state == 'Cancelled' ||
+    final isCancelled =
+        state == 'Cancelled' ||
         state == 'PaymentExpired' ||
         state == 'Rejected';
 
@@ -532,24 +547,30 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     final item = cached?['item'] is Map
         ? Map<String, dynamic>.from(cached!['item'] as Map)
         : (order['item'] is Map
-            ? Map<String, dynamic>.from(order['item'] as Map)
-            : const <String, dynamic>{});
+              ? Map<String, dynamic>.from(order['item'] as Map)
+              : const <String, dynamic>{});
     final amounts = cached?['amounts'] is Map
         ? Map<String, dynamic>.from(cached!['amounts'] as Map)
         : (order['amounts'] is Map
-            ? Map<String, dynamic>.from(order['amounts'] as Map)
-            : const <String, dynamic>{});
+              ? Map<String, dynamic>.from(order['amounts'] as Map)
+              : const <String, dynamic>{});
     final metadata = item['metadata'] is Map
         ? Map<String, dynamic>.from(item['metadata'] as Map)
         : const <String, dynamic>{};
-    final title = (metadata['title'] ?? item['title'] ?? order['title'] ?? 'Ấn bản sách Lật Lại')
-        .toString();
-    final total = (amounts['buyerTotal'] ??
-        order['buyerTotal'] ??
-        order['totalAmount'] ??
-        amounts['bookPrice'] ??
-        item['bookPrice'] ??
-        0) as num;
+    final title =
+        (metadata['title'] ??
+                item['title'] ??
+                order['title'] ??
+                'Ấn bản sách Lật Lại')
+            .toString();
+    final total =
+        (amounts['buyerTotal'] ??
+                order['buyerTotal'] ??
+                order['totalAmount'] ??
+                amounts['bookPrice'] ??
+                item['bookPrice'] ??
+                0)
+            as num;
 
     final conversationId = order['conversationId']?.toString();
     final guidance = _getOrderGuidance(order, isBuyer);
@@ -558,18 +579,18 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
     final statusBg = isCompleted
         ? AppColors.successSurface
         : isCancelled
-            ? const Color(0xFFFDE8E8)
-            : StitchTokens.roseParchment;
+        ? const Color(0xFFFDE8E8)
+        : StitchTokens.roseParchment;
     final statusColor = isCompleted
         ? AppColors.forest
         : isCancelled
-            ? const Color(0xFFC53030)
-            : StitchTokens.wine;
+        ? const Color(0xFFC53030)
+        : StitchTokens.wine;
     final statusIcon = isCompleted
         ? Icons.check_circle_outline_rounded
         : isCancelled
-            ? Icons.cancel_outlined
-            : Icons.schedule_rounded;
+        ? Icons.cancel_outlined
+        : Icons.schedule_rounded;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpace.md),
@@ -666,7 +687,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
               ),
             ),
 
-            const Divider(height: 1, thickness: 0.6, color: StitchTokens.cardBorder),
+            const Divider(
+              height: 1,
+              thickness: 0.6,
+              color: StitchTokens.cardBorder,
+            ),
 
             // Middle: Book Identity + Guidance Text
             Padding(
@@ -751,7 +776,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                 children: [
                   if (conversationId != null && conversationId.isNotEmpty)
                     InkWell(
-                      onTap: () => context.push('/conversation?id=$conversationId'),
+                      onTap: () =>
+                          context.push('/conversation?id=$conversationId'),
                       child: Row(
                         children: [
                           const Icon(
@@ -761,7 +787,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                           ),
                           const SizedBox(width: 4),
                           AppText(
-                            isBuyer ? 'Hội thoại với người bán' : 'Hội thoại với người mua',
+                            isBuyer
+                                ? 'Hội thoại với người bán'
+                                : 'Hội thoại với người mua',
                             kind: AppTextKind.small,
                             color: StitchTokens.wine,
                             style: const TextStyle(fontWeight: FontWeight.w700),
@@ -780,9 +808,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> {
                           secondary: true,
                           wine: true,
                           compact: true,
-                          onPressed: () => context.push(
-                            '/reviews?type=DirectOrder&id=$id',
-                          ),
+                          onPressed: () =>
+                              context.push('/reviews?type=DirectOrder&id=$id'),
                         ),
                       AppButton(
                         title: state == 'AwaitingPayment' && isBuyer

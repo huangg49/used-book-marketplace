@@ -143,22 +143,19 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
             _buildRuleItem(
               icon: Icons.storefront_outlined,
               title: '1. Kiểm định thực tế tại trạm ViaPoint',
-              desc:
-                  'Mọi ấn bản đấu giá bắt buộc phải gửi tới trạm quản lý ViaPoint TP.HCM để chuyên viên xác thực bản sách, tính toàn vẹn và trang bản quyền trước khi mở phiên.',
+              desc: 'Mọi ấn bản đấu giá bắt buộc phải gửi tới trạm quản lý ViaPoint TP.HCM để chuyên viên xác thực bản sách, tính toàn vẹn và trang bản quyền trước khi mở phiên.',
             ),
             const SizedBox(height: 10),
             _buildRuleItem(
               icon: Icons.shield_outlined,
               title: '2. Ký quỹ bảo chứng & Hoàn cọc 100%',
-              desc:
-                  'Bạn đọc cần nạp tiền cọc bảo chứng tương ứng mức khởi điểm để tham gia trả giá. Khoản cọc được lưu giữ an toàn và hoàn trả 100% tự động nếu không thắng phiên.',
+              desc: 'Bạn đọc cần nạp tiền cọc bảo chứng tương ứng mức khởi điểm để tham gia trả giá. Khoản cọc được lưu giữ an toàn và hoàn trả 100% tự động nếu không thắng phiên.',
             ),
             const SizedBox(height: 10),
             _buildRuleItem(
               icon: Icons.flash_on_rounded,
               title: '3. Bước giá & Quyền Mua Ngay',
-              desc:
-                  'Mỗi lượt trả giá tuân theo bước giá quy định (10.000 ₫ – 50.000 ₫). Người tham gia có thể chọn "Mua ngay" để chốt sở hữu ấn bản lập tức mà không cần đợi hết giờ.',
+              desc: 'Mỗi lượt trả giá tuân theo bước giá quy định (10.000 ₫ – 50.000 ₫). Người tham gia có thể chọn "Mua ngay" để chốt sở hữu ấn bản lập tức mà không cần đợi hết giờ.',
             ),
             const SizedBox(height: 18),
             AppButton(
@@ -232,8 +229,9 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
       final q = _searchCtrl.text.trim().toLowerCase();
       if (q.isNotEmpty) {
         final book = a['book'] is Map ? (a['book'] as Map) : const {};
-        final title =
-            (book['title'] ?? a['title'] ?? '').toString().toLowerCase();
+        final title = (book['title'] ?? a['title'] ?? '')
+            .toString()
+            .toLowerCase();
         final authors = book['authors'] is List
             ? (book['authors'] as List).join(' ').toLowerCase()
             : (book['author'] ?? '').toString().toLowerCase();
@@ -285,7 +283,7 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
                 colors: [
                   Color(0xFF680B0B),
                   StitchTokens.wine,
-                  Color(0xFF450606)
+                  Color(0xFF450606),
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -573,10 +571,10 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
                   final count = t.id == 'all'
                       ? _auctions.length
                       : (t.id == 'buy_now'
-                          ? _auctions
-                              .where((a) => a['buyNowPrice'] != null)
-                              .length
-                          : null);
+                            ? _auctions
+                                  .where((a) => a['buyNowPrice'] != null)
+                                  .length
+                            : null);
                   final label = count != null ? '${t.label} ($count)' : t.label;
 
                   return Padding(
@@ -593,8 +591,8 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
                   title: _selectedSort == 'price_asc'
                       ? 'Giá tăng dần'
                       : (_selectedSort == 'price_desc'
-                          ? 'Giá giảm dần'
-                          : 'Mới nhất'),
+                            ? 'Giá giảm dần'
+                            : 'Mới nhất'),
                   icon: Icons.sort_rounded,
                   selected: _selectedSort != 'newest',
                   wine: true,
@@ -699,22 +697,19 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
                         _buildStepRow(
                           number: '1',
                           title: 'Ký gửi:',
-                          desc:
-                              'Đăng ký thông tin ấn bản & gửi tới trạm ViaPoint TP.HCM',
+                          desc: 'Đăng ký thông tin ấn bản & gửi tới trạm ViaPoint TP.HCM',
                         ),
                         const SizedBox(height: 6),
                         _buildStepRow(
                           number: '2',
                           title: 'Kiểm định:',
-                          desc:
-                              'Chuyên viên kiểm tra trang, bìa, bản quyền & chốt giá sàn',
+                          desc: 'Chuyên viên kiểm tra trang, bìa, bản quyền & chốt giá sàn',
                         ),
                         const SizedBox(height: 6),
                         _buildStepRow(
                           number: '3',
                           title: 'Mở sàn:',
-                          desc:
-                              'Đấu giá công khai toàn sàn, bảo lưu tiền cọc an toàn',
+                          desc: 'Đấu giá công khai toàn sàn, bảo lưu tiền cọc an toàn',
                         ),
                       ],
                     ),
@@ -760,21 +755,25 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
                     final title =
                         (book['title'] ?? auction['title'] ?? 'Ấn bản đấu giá')
                             .toString();
-                    final author = (book['authors'] is List
-                            ? (book['authors'] as List).join(', ')
-                            : (book['author'] ?? ''))
-                        .toString();
-                    final currentPrice = (auction['currentPrice'] ??
-                        auction['startingPrice'] ??
-                        0) as num;
+                    final author =
+                        (book['authors'] is List
+                                ? (book['authors'] as List).join(', ')
+                                : (book['author'] ?? ''))
+                            .toString();
+                    final currentPrice =
+                        (auction['currentPrice'] ??
+                                auction['startingPrice'] ??
+                                0)
+                            as num;
                     final buyNow = auction['buyNowPrice'] is num
                         ? (auction['buyNowPrice'] as num)
                         : null;
-                    final bidderCount = (auction['bidderCount'] ??
-                        auction['bidsCount'] ??
-                        0) as num;
-                    final remainingText =
-                        _formatRemainingTime(auction['endAt']?.toString());
+                    final bidderCount =
+                        (auction['bidderCount'] ?? auction['bidsCount'] ?? 0)
+                            as num;
+                    final remainingText = _formatRemainingTime(
+                      auction['endAt']?.toString(),
+                    );
 
                     return SizedBox(
                       width: width,
@@ -823,8 +822,9 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: StitchTokens.wine,
-                                          borderRadius:
-                                              BorderRadius.circular(6),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
@@ -861,8 +861,9 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: const Color(0xCC000000),
-                                          borderRadius:
-                                              BorderRadius.circular(6),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
@@ -966,8 +967,9 @@ class _AuctionsScreenState extends ConsumerState<AuctionsScreen> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: StitchTokens.wine,
-                                            borderRadius:
-                                                BorderRadius.circular(6),
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
                                           ),
                                           child: const Text(
                                             'Đặt giá',
@@ -1154,10 +1156,7 @@ class _AuctionScreenState extends ConsumerState<AuctionScreen> {
         '/auctions/${widget.id}/bids',
         method: 'POST',
         idempotencyKey: generateIdempotencyKey('bid'),
-        body: {
-          'amount': amount,
-          'fulfillmentMethod': 'SelfCollect',
-        },
+        body: {'amount': amount, 'fulfillmentMethod': 'SelfCollect'},
       );
       await _loadAuctionDetail();
       if (!mounted) return;
@@ -1188,10 +1187,7 @@ class _AuctionScreenState extends ConsumerState<AuctionScreen> {
         '/auctions/${widget.id}/auto-bid',
         method: 'PUT',
         idempotencyKey: generateIdempotencyKey('autobid'),
-        body: {
-          'maxAmount': maxAmount,
-          'fulfillmentMethod': 'SelfCollect',
-        },
+        body: {'maxAmount': maxAmount, 'fulfillmentMethod': 'SelfCollect'},
       );
       await _loadAuctionDetail();
       if (!mounted) return;
@@ -1245,8 +1241,9 @@ class _AuctionScreenState extends ConsumerState<AuctionScreen> {
         : const <String, dynamic>{};
     final currentPrice =
         (a?['currentPrice'] ?? a?['startingPrice'] ?? 0) as num;
-    final buyNowPrice =
-        a?['buyNowPrice'] is num ? (a!['buyNowPrice'] as num) : null;
+    final buyNowPrice = a?['buyNowPrice'] is num
+        ? (a!['buyNowPrice'] as num)
+        : null;
 
     return AppScreen(
       header: const TopNavbar(subtitle: 'CHI TIẾT ĐẤU GIÁ'),
@@ -1257,174 +1254,169 @@ class _AuctionScreenState extends ConsumerState<AuctionScreen> {
               title: 'Đang tải phiên đấu giá…',
             )
           : a == null
-              ? StatePanel(
-                  wine: true,
-                  title: 'Không tìm thấy phiên đấu giá',
-                  message: _error,
-                  actionLabel: 'Về sàn đấu giá',
-                  onAction: () => context.go('/auctions'),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    BackAction(
-                      title: 'Quay lại',
-                      onPressed: () => context.canPop()
-                          ? context.pop()
-                          : context.go('/auctions'),
-                    ),
-                    if (_error != null) ...[
-                      Notice(message: _error!, tone: NoticeTone.error),
-                      const SizedBox(height: AppSpace.md),
-                    ],
-                    if (_notice != null) ...[
-                      Notice(message: _notice!, tone: NoticeTone.success),
-                      const SizedBox(height: AppSpace.md),
-                    ],
-                    Container(
-                      padding: const EdgeInsets.all(AppSpace.xl),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: StitchTokens.cardBorder),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AppText(
-                            (book['title'] ?? a['title'] ?? 'Ấn bản đấu giá')
-                                .toString(),
-                            kind: AppTextKind.bookTitle,
-                            color: StitchTokens.wine,
-                          ),
-                          const SizedBox(height: 8),
-                          AppText(
-                            'Giá hiện tại: ${formatVnd(currentPrice)}',
-                            kind: AppTextKind.bookPrice,
-                            color: StitchTokens.wine,
-                          ),
-                          if (_participation != null) ...[
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: _participation!['leading'] == true
-                                    ? AppColors.successSurface
-                                    : AppColors.warningSurface,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: AppText(
-                                _participation!['leading'] == true
-                                    ? 'Bạn đang dẫn giá phiên này!'
-                                    : 'Bạn đã tham gia trả giá trong phiên này.',
-                                kind: AppTextKind.bold,
-                                color: _participation!['leading'] == true
-                                    ? AppColors.forest
-                                    : AppColors.warning,
-                              ),
-                            ),
-                          ],
-                          const Divider(height: 24),
-                          AppTextField(
-                            label: 'Số tiền trả lượt này (VNĐ)',
-                            controller: _bidCtrl,
-                            keyboardType: TextInputType.number,
-                          ),
-                          const SizedBox(height: 10),
-                          AppButton(
-                            title: 'Tiếp tục trả giá',
-                            wine: true,
-                            busy: _busy,
-                            onPressed: _placeManualBid,
-                          ),
-                          const SizedBox(height: 14),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: AppTextField(
-                                  label: 'Đặt giá tự động (Mức tối đa)',
-                                  controller: _autoBidCtrl,
-                                  keyboardType: TextInputType.number,
-                                  placeholder: 'Nhập mức trần tự động…',
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Padding(
-                                padding: const EdgeInsets.only(top: 22),
-                                child: AppButton(
-                                  title: 'Bật tự động',
-                                  secondary: true,
-                                  wine: true,
-                                  compact: true,
-                                  busy: _busy,
-                                  onPressed: _setAutoBid,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (buyNowPrice != null) ...[
-                            const SizedBox(height: 14),
-                            AppButton(
-                              title: 'Mua ngay (${formatVnd(buyNowPrice)})',
-                              busy: _busy,
-                              onPressed: _buyNow,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppSpace.lg),
-                    Container(
-                      padding: const EdgeInsets.all(AppSpace.lg),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: StitchTokens.cardBorder),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const AppText(
-                            'Diễn biến giá',
-                            kind: AppTextKind.heading,
-                            color: StitchTokens.wine,
-                          ),
-                          const SizedBox(height: 8),
-                          if (_history.isEmpty)
-                            const AppText(
-                              'Chưa có lượt trả giá nào.',
-                              kind: AppTextKind.small,
-                            )
-                          else
-                            ..._history.map((h) {
-                              return Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 4),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    AppText(
-                                      (h['bidderAlias'] ?? 'Độc giả')
-                                          .toString(),
-                                      kind: AppTextKind.bold,
-                                    ),
-                                    AppText(
-                                      formatVnd(
-                                        (h['price'] ?? 0) as num,
-                                      ),
-                                      kind: AppTextKind.bold,
-                                      color: StitchTokens.wine,
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
-                        ],
-                      ),
-                    ),
-                  ],
+          ? StatePanel(
+              wine: true,
+              title: 'Không tìm thấy phiên đấu giá',
+              message: _error,
+              actionLabel: 'Về sàn đấu giá',
+              onAction: () => context.go('/auctions'),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                BackAction(
+                  title: 'Quay lại',
+                  onPressed: () => context.canPop()
+                      ? context.pop()
+                      : context.go('/auctions'),
                 ),
+                if (_error != null) ...[
+                  Notice(message: _error!, tone: NoticeTone.error),
+                  const SizedBox(height: AppSpace.md),
+                ],
+                if (_notice != null) ...[
+                  Notice(message: _notice!, tone: NoticeTone.success),
+                  const SizedBox(height: AppSpace.md),
+                ],
+                Container(
+                  padding: const EdgeInsets.all(AppSpace.xl),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: StitchTokens.cardBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(
+                        (book['title'] ?? a['title'] ?? 'Ấn bản đấu giá')
+                            .toString(),
+                        kind: AppTextKind.bookTitle,
+                        color: StitchTokens.wine,
+                      ),
+                      const SizedBox(height: 8),
+                      AppText(
+                        'Giá hiện tại: ${formatVnd(currentPrice)}',
+                        kind: AppTextKind.bookPrice,
+                        color: StitchTokens.wine,
+                      ),
+                      if (_participation != null) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: _participation!['leading'] == true
+                                ? AppColors.successSurface
+                                : AppColors.warningSurface,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: AppText(
+                            _participation!['leading'] == true
+                                ? 'Bạn đang dẫn giá phiên này!'
+                                : 'Bạn đã tham gia trả giá trong phiên này.',
+                            kind: AppTextKind.bold,
+                            color: _participation!['leading'] == true
+                                ? AppColors.forest
+                                : AppColors.warning,
+                          ),
+                        ),
+                      ],
+                      const Divider(height: 24),
+                      AppTextField(
+                        label: 'Số tiền trả lượt này (VNĐ)',
+                        controller: _bidCtrl,
+                        keyboardType: TextInputType.number,
+                      ),
+                      const SizedBox(height: 10),
+                      AppButton(
+                        title: 'Tiếp tục trả giá',
+                        wine: true,
+                        busy: _busy,
+                        onPressed: _placeManualBid,
+                      ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: AppTextField(
+                              label: 'Đặt giá tự động (Mức tối đa)',
+                              controller: _autoBidCtrl,
+                              keyboardType: TextInputType.number,
+                              placeholder: 'Nhập mức trần tự động…',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 22),
+                            child: AppButton(
+                              title: 'Bật tự động',
+                              secondary: true,
+                              wine: true,
+                              compact: true,
+                              busy: _busy,
+                              onPressed: _setAutoBid,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (buyNowPrice != null) ...[
+                        const SizedBox(height: 14),
+                        AppButton(
+                          title: 'Mua ngay (${formatVnd(buyNowPrice)})',
+                          busy: _busy,
+                          onPressed: _buyNow,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpace.lg),
+                Container(
+                  padding: const EdgeInsets.all(AppSpace.lg),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: StitchTokens.cardBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const AppText(
+                        'Diễn biến giá',
+                        kind: AppTextKind.heading,
+                        color: StitchTokens.wine,
+                      ),
+                      const SizedBox(height: 8),
+                      if (_history.isEmpty)
+                        const AppText(
+                          'Chưa có lượt trả giá nào.',
+                          kind: AppTextKind.small,
+                        )
+                      else
+                        ..._history.map((h) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                AppText(
+                                  (h['bidderAlias'] ?? 'Độc giả').toString(),
+                                  kind: AppTextKind.bold,
+                                ),
+                                AppText(
+                                  formatVnd((h['price'] ?? 0) as num),
+                                  kind: AppTextKind.bold,
+                                  color: StitchTokens.wine,
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                    ],
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
@@ -1579,10 +1571,12 @@ class SendToAuctionScreen extends ConsumerStatefulWidget {
 }
 
 class _SendToAuctionScreenState extends ConsumerState<SendToAuctionScreen> {
-  final TextEditingController _startPriceCtrl =
-      TextEditingController(text: '50000');
-  final TextEditingController _buyNowPriceCtrl =
-      TextEditingController(text: '150000');
+  final TextEditingController _startPriceCtrl = TextEditingController(
+    text: '50000',
+  );
+  final TextEditingController _buyNowPriceCtrl = TextEditingController(
+    text: '150000',
+  );
   int _step = 10000;
   String? _selectedPointId;
   String? _selectedListingId;
@@ -1625,16 +1619,16 @@ class _SendToAuctionScreenState extends ConsumerState<SendToAuctionScreen> {
       final pts = results[0] is List
           ? (results[0] as List)
           : (results[0] is Map && (results[0] as Map)['items'] is List
-              ? ((results[0] as Map)['items'] as List)
-              : const []);
+                ? ((results[0] as Map)['items'] as List)
+                : const []);
       final lst = (results[1] is Map && (results[1] as Map)['items'] is List)
           ? ((results[1] as Map)['items'] as List)
           : const [];
       final intk = results[2] is List
           ? (results[2] as List)
           : (results[2] is Map && (results[2] as Map)['items'] is List
-              ? ((results[2] as Map)['items'] as List)
-              : const []);
+                ? ((results[2] as Map)['items'] as List)
+                : const []);
 
       if (!mounted) return;
       final parsedPoints = pts
@@ -1657,10 +1651,9 @@ class _SendToAuctionScreenState extends ConsumerState<SendToAuctionScreen> {
         }
         if (parsedListings.isNotEmpty) {
           _selectedListingId = parsedListings.first['id']?.toString();
-          _selectedListingVersion =
-              (parsedListings.first['version'] is num)
-                  ? (parsedListings.first['version'] as num).toInt()
-                  : 1;
+          _selectedListingVersion = (parsedListings.first['version'] is num)
+              ? (parsedListings.first['version'] as num).toInt()
+              : 1;
         }
         _loading = false;
       });
@@ -1676,8 +1669,7 @@ class _SendToAuctionScreenState extends ConsumerState<SendToAuctionScreen> {
   Future<void> _submitIntake() async {
     if (_selectedListingId == null || _selectedPointId == null) {
       setState(() {
-        _error =
-            'Vui lòng chọn bài đăng kênh đấu giá và điểm tiếp nhận kiểm định ViaPoint TP.HCM.';
+        _error = 'Vui lòng chọn bài đăng kênh đấu giá và điểm tiếp nhận kiểm định ViaPoint TP.HCM.';
       });
       return;
     }
@@ -1777,7 +1769,8 @@ class _SendToAuctionScreenState extends ConsumerState<SendToAuctionScreen> {
                     children: _points.map((pt) {
                       final id = (pt['id'] ?? '').toString();
                       return AppChip(
-                        title: (pt['name'] ?? 'Điểm ViaPoint TP.HCM').toString(),
+                        title: (pt['name'] ?? 'Điểm ViaPoint TP.HCM')
+                            .toString(),
                         wine: true,
                         selected: _selectedPointId == id,
                         onPressed: () => setState(() => _selectedPointId = id),
@@ -1800,8 +1793,9 @@ class _SendToAuctionScreenState extends ConsumerState<SendToAuctionScreen> {
                             ? (lst['book'] as Map)
                             : const {};
                         return AppChip(
-                          title: (book['title'] ?? lst['title'] ?? 'Sách đấu giá')
-                              .toString(),
+                          title:
+                              (book['title'] ?? lst['title'] ?? 'Sách đấu giá')
+                                  .toString(),
                           selected: _selectedListingId == id,
                           onPressed: () => setState(() {
                             _selectedListingId = id;
@@ -1885,4 +1879,3 @@ class _SendToAuctionScreenState extends ConsumerState<SendToAuctionScreen> {
     );
   }
 }
-

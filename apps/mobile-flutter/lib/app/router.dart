@@ -16,10 +16,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/',
     routes: [
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const ShelfScreen(),
-      ),
+      GoRoute(path: '/', builder: (context, state) => const ShelfScreen()),
       GoRoute(
         path: '/search',
         builder: (context, state) => SearchScreen(
@@ -29,14 +26,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/book',
-        builder: (context, state) => BookScreen(
-          id: state.uri.queryParameters['id'] ?? '',
-        ),
+        builder: (context, state) =>
+            BookScreen(id: state.uri.queryParameters['id'] ?? ''),
       ),
-      GoRoute(
-        path: '/guide',
-        builder: (context, state) => const GuideScreen(),
-      ),
+      GoRoute(path: '/guide', builder: (context, state) => const GuideScreen()),
       GoRoute(
         path: '/account',
         builder: (context, state) => AccountScreen(
@@ -57,9 +50,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/drafts',
-        builder: (context, state) => DraftsScreen(
-          initialDraftId: state.uri.queryParameters['id'],
-        ),
+        builder: (context, state) =>
+            DraftsScreen(initialDraftId: state.uri.queryParameters['id']),
       ),
       GoRoute(
         path: '/chat-inbox',
@@ -67,30 +59,30 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/conversation',
-        builder: (context, state) => ConversationScreen(
-          id: state.uri.queryParameters['id'] ?? '',
-        ),
+        builder: (context, state) =>
+            ConversationScreen(id: state.uri.queryParameters['id'] ?? ''),
       ),
       GoRoute(
         path: '/orders',
         builder: (context, state) => OrdersScreen(
-          focusOrderId: state.uri.queryParameters['focus'] ??
+          focusOrderId:
+              state.uri.queryParameters['focus'] ??
               state.uri.queryParameters['id'],
         ),
       ),
       GoRoute(
         path: '/orders/:orderId',
         builder: (context, state) => OrdersScreen(
-          focusOrderId: state.pathParameters['orderId'] ??
+          focusOrderId:
+              state.pathParameters['orderId'] ??
               state.uri.queryParameters['focus'] ??
               state.uri.queryParameters['id'],
         ),
       ),
       GoRoute(
         path: '/chat/orders/:orderId',
-        builder: (context, state) => OrdersScreen(
-          focusOrderId: state.pathParameters['orderId'],
-        ),
+        builder: (context, state) =>
+            OrdersScreen(focusOrderId: state.pathParameters['orderId']),
       ),
       GoRoute(
         path: '/exchanges',
@@ -98,9 +90,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/exchange',
-        builder: (context, state) => ExchangeDetailScreen(
-          id: state.uri.queryParameters['id'] ?? '',
-        ),
+        builder: (context, state) =>
+            ExchangeDetailScreen(id: state.uri.queryParameters['id'] ?? ''),
       ),
       GoRoute(
         path: '/exchange-compose',
@@ -114,9 +105,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/auction',
-        builder: (context, state) => AuctionScreen(
-          id: state.uri.queryParameters['id'] ?? '',
-        ),
+        builder: (context, state) =>
+            AuctionScreen(id: state.uri.queryParameters['id'] ?? ''),
       ),
       GoRoute(
         path: '/my-auctions',
@@ -130,10 +120,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/wallet',
         builder: (context, state) => const WalletScreen(),
       ),
-      GoRoute(
-        path: '/cart',
-        builder: (context, state) => const CartScreen(),
-      ),
+      GoRoute(path: '/cart', builder: (context, state) => const CartScreen()),
       GoRoute(
         path: '/wishlist',
         builder: (context, state) => const WishlistScreen(),
@@ -152,7 +139,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/reputation',
         builder: (context, state) => ReputationScreen(
-          memberId: state.uri.queryParameters['sellerId'] ??
+          memberId:
+              state.uri.queryParameters['sellerId'] ??
               state.uri.queryParameters['id'] ??
               '',
         ),
@@ -164,4 +152,3 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
-

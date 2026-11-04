@@ -118,7 +118,8 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final hasCriteria = _searchCtrl.text.trim().isNotEmpty ||
+    final hasCriteria =
+        _searchCtrl.text.trim().isNotEmpty ||
         _selectedCategory.isNotEmpty ||
         _selectedMode.isNotEmpty ||
         _selectedCondition.isNotEmpty ||
@@ -372,12 +373,15 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
                                   auction['book'] as Map,
                                 )
                               : const <String, dynamic>{};
-                          final currentPrice = (auction['currentPrice'] ??
-                                  auction['startingPrice'] ??
-                                  0) as num;
+                          final currentPrice =
+                              (auction['currentPrice'] ??
+                                      auction['startingPrice'] ??
+                                      0)
+                                  as num;
                           return InkWell(
-                            onTap: () => context
-                                .push('/auction?id=${auction['id'] ?? ''}'),
+                            onTap: () => context.push(
+                              '/auction?id=${auction['id'] ?? ''}',
+                            ),
                             borderRadius: BorderRadius.circular(12),
                             child: Container(
                               width: 240,
@@ -490,9 +494,7 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
                 title: hasCriteria
                     ? 'Không tìm thấy sách phù hợp'
                     : 'Chưa có sách được đăng',
-                message: hasCriteria
-                    ? 'Thử từ khóa khác hoặc bỏ bớt bộ lọc.'
-                    : 'Bạn có thể chuẩn bị bài đăng cho những cuốn đã đọc xong.',
+                message: hasCriteria ? 'Thử từ khóa khác hoặc bỏ bớt bộ lọc.' : 'Bạn có thể chuẩn bị bài đăng cho những cuốn đã đọc xong.',
                 actionLabel: hasCriteria
                     ? 'Xóa tìm kiếm và bộ lọc'
                     : 'Mở kệ sách của tôi',
@@ -517,8 +519,8 @@ class _ShelfScreenState extends ConsumerState<ShelfScreen> {
                   final cols = constraints.maxWidth >= 760
                       ? 4
                       : constraints.maxWidth >= 520
-                          ? 3
-                          : 2;
+                      ? 3
+                      : 2;
                   final spacing = 12.0;
                   final itemWidth =
                       (constraints.maxWidth - spacing * (cols - 1)) / cols;
@@ -659,9 +661,7 @@ void _showInspectionModal(BuildContext context) {
             '2. Kiểm định tại trạm ViaPoint: Bắt buộc đối với sách đấu giá và tùy chọn đối với mua bán / trao đổi thông thường tại 2 điểm quản lý TP.HCM.',
           ),
           SizedBox(height: AppSpace.sm),
-          AppText(
-            '3. Khu vực lưu hành: TP.HCM, Bình Dương và Vũng Tàu.',
-          ),
+          AppText('3. Khu vực lưu hành: TP.HCM, Bình Dương và Vũng Tàu.'),
         ],
       ),
       actions: [
@@ -879,8 +879,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           builder: (context, setModalState) {
             final selectedRoot = draftRootId.isNotEmpty
                 ? CatalogTaxonomy.rootCategories
-                    .cast<TaxonomyCategory?>()
-                    .firstWhere((c) => c?.id == draftRootId, orElse: () => null)
+                      .cast<TaxonomyCategory?>()
+                      .firstWhere(
+                        (c) => c?.id == draftRootId,
+                        orElse: () => null,
+                      )
                 : null;
 
             return Container(
@@ -1021,14 +1024,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           ),
 
                           // 1b. Danh mục con / Nhóm sách
-                          if (selectedRoot != null && selectedRoot.children.isNotEmpty) ...[
+                          if (selectedRoot != null &&
+                              selectedRoot.children.isNotEmpty) ...[
                             const SizedBox(height: 16),
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF7F2EB),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0x2E5C0202)),
+                                border: Border.all(
+                                  color: const Color(0x2E5C0202),
+                                ),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1060,7 +1066,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                     runSpacing: 8,
                                     children: [
                                       _filterChip(
-                                        label: 'Tất cả ${selectedRoot.label.toLowerCase()}',
+                                        label:
+                                            'Tất cả ${selectedRoot.label.toLowerCase()}',
                                         selected: draftChildId.isEmpty,
                                         onTap: () => setModalState(
                                           () => draftChildId = '',
@@ -1087,7 +1094,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           ],
 
                           // 1c. Thể loại / Thuộc tính riêng (Facets)
-                          if (selectedRoot != null && selectedRoot.facets.isNotEmpty) ...[
+                          if (selectedRoot != null &&
+                              selectedRoot.facets.isNotEmpty) ...[
                             for (final facet in selectedRoot.facets) ...[
                               const SizedBox(height: 16),
                               Container(
@@ -1095,10 +1103,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFFAF6F0),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: const Color(0x245C0202)),
+                                  border: Border.all(
+                                    color: const Color(0x245C0202),
+                                  ),
                                 ),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   children: [
                                     Row(
                                       children: [
@@ -1117,7 +1128,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                             letterSpacing: 0.5,
                                           ),
                                         ),
-                                        if (draftFacets[facet.id]?.isNotEmpty == true) ...[
+                                        if (draftFacets[facet.id]?.isNotEmpty ==
+                                            true) ...[
                                           const SizedBox(width: 6),
                                           Text(
                                             '(${draftFacets[facet.id]!.length} đã chọn)',
@@ -1136,8 +1148,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                       runSpacing: 8,
                                       children: facet.options.map((opt) {
                                         final isOptSelected =
-                                            draftFacets[facet.id]?.contains(opt.id) ==
-                                                true;
+                                            draftFacets[facet.id]?.contains(
+                                              opt.id,
+                                            ) ==
+                                            true;
                                         return _filterChip(
                                           label: opt.label,
                                           selected: isOptSelected,
@@ -1177,9 +1191,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               _filterChip(
                                 label: 'Tất cả ngôn ngữ',
                                 selected: draftLanguage.isEmpty,
-                                onTap: () => setModalState(
-                                  () => draftLanguage = '',
-                                ),
+                                onTap: () =>
+                                    setModalState(() => draftLanguage = ''),
                               ),
                               ...CatalogTaxonomy.languageOptions.map((lang) {
                                 final isSelected = draftLanguage == lang.id;
@@ -1187,8 +1200,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                   label: lang.label,
                                   selected: isSelected,
                                   onTap: () => setModalState(
-                                    () => draftLanguage =
-                                        isSelected ? '' : lang.id,
+                                    () => draftLanguage = isSelected
+                                        ? ''
+                                        : lang.id,
                                   ),
                                 );
                               }),
@@ -1208,8 +1222,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 label: cond.title,
                                 selected: isSelected,
                                 onTap: () => setModalState(
-                                  () => draftCondition =
-                                      isSelected ? '' : cond.id,
+                                  () => draftCondition = isSelected
+                                      ? ''
+                                      : cond.id,
                                 ),
                               );
                             }).toList(),
@@ -1230,10 +1245,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               ),
                               const Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 8),
-                                child: Text('—',
-                                    style: TextStyle(
-                                        color: Color(0xFF8A7D73),
-                                        fontSize: 16)),
+                                child: Text(
+                                  '—',
+                                  style: TextStyle(
+                                    color: Color(0xFF8A7D73),
+                                    fontSize: 16,
+                                  ),
+                                ),
                               ),
                               Expanded(
                                 child: _priceTextField(
@@ -1247,11 +1265,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           const SizedBox(height: 8),
                           Wrap(
                             spacing: 8,
-                            children: [50000, 100000, 200000, 500000]
-                                .map((price) {
+                            children: [50000, 100000, 200000, 500000].map((
+                              price,
+                            ) {
                               final isSelected =
                                   minSaleCtrl.text.isEmpty &&
-                                      maxSaleCtrl.text == price.toString();
+                                  maxSaleCtrl.text == price.toString();
                               return InkWell(
                                 onTap: () {
                                   setModalState(() {
@@ -1301,10 +1320,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               ),
                               const Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 8),
-                                child: Text('—',
-                                    style: TextStyle(
-                                        color: Color(0xFF8A7D73),
-                                        fontSize: 16)),
+                                child: Text(
+                                  '—',
+                                  style: TextStyle(
+                                    color: Color(0xFF8A7D73),
+                                    fontSize: 16,
+                                  ),
+                                ),
                               ),
                               Expanded(
                                 child: _priceTextField(
@@ -1318,11 +1340,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                           const SizedBox(height: 8),
                           Wrap(
                             spacing: 8,
-                            children: [50000, 100000, 200000, 500000]
-                                .map((price) {
+                            children: [50000, 100000, 200000, 500000].map((
+                              price,
+                            ) {
                               final isSelected =
                                   minExchangeCtrl.text.isEmpty &&
-                                      maxExchangeCtrl.text == price.toString();
+                                  maxExchangeCtrl.text == price.toString();
                               return InkWell(
                                 onTap: () {
                                   setModalState(() {
@@ -1367,9 +1390,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
                     decoration: const BoxDecoration(
                       color: Colors.white,
-                      border: Border(
-                        top: BorderSide(color: Color(0x1F000000)),
-                      ),
+                      border: Border(top: BorderSide(color: Color(0x1F000000))),
                     ),
                     child: Row(
                       children: [
@@ -1430,10 +1451,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 _condition = draftCondition;
                                 _minSalePrice = minSaleCtrl.text.trim();
                                 _maxSalePrice = maxSaleCtrl.text.trim();
-                                _minExchangeValue =
-                                    minExchangeCtrl.text.trim();
-                                _maxExchangeValue =
-                                    maxExchangeCtrl.text.trim();
+                                _minExchangeValue = minExchangeCtrl.text.trim();
+                                _maxExchangeValue = maxExchangeCtrl.text.trim();
                               });
                               Navigator.of(ctx).pop();
                               _search();
@@ -1518,8 +1537,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         hintStyle: const TextStyle(fontSize: 12, color: Color(0xFFB0A499)),
         filled: true,
         fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: Color(0x335C0202)),
@@ -1659,7 +1677,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                   color: Color(0x225C0202),
                                   blurRadius: 4,
                                   offset: Offset(0, 2),
-                                )
+                                ),
                               ]
                             : null,
                       ),
@@ -1667,8 +1685,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         m.id.isEmpty ? 'Tất cả' : m.title,
                         style: TextStyle(
                           fontSize: 12.5,
-                          fontWeight:
-                              isSelected ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                           color: isSelected
                               ? StitchTokens.gold
                               : const Color(0xFF382E2B),
@@ -1682,11 +1701,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
-            child: Divider(
-              height: 1,
-              thickness: 1,
-              color: Color(0x1F5C0202),
-            ),
+            child: Divider(height: 1, thickness: 1, color: Color(0x1F5C0202)),
           ),
 
           // Horizontal Sort quick selector (outside filter modal)
@@ -1802,8 +1817,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               _selectedFacets[entry.key] ?? [],
                             );
                             current.remove(optId);
-                            final nextFacets =
-                                Map<String, List<String>>.from(_selectedFacets);
+                            final nextFacets = Map<String, List<String>>.from(
+                              _selectedFacets,
+                            );
                             if (current.isEmpty) {
                               nextFacets.remove(entry.key);
                             } else {
@@ -1892,8 +1908,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 final cols = constraints.maxWidth >= 760
                     ? 4
                     : constraints.maxWidth >= 520
-                        ? 3
-                        : 2;
+                    ? 3
+                    : 2;
                 const spacing = 12.0;
                 final width =
                     (constraints.maxWidth - spacing * (cols - 1)) / cols;
@@ -1962,7 +1978,6 @@ class _ActiveFilterTag extends StatelessWidget {
   }
 }
 
-
 /// BookScreen (`/book`) matching `apps/mobile-react-native/src/features/shelf/book-screen.tsx`
 /// Includes whole-bundle manifest (`bundle.items`), exchange criteria, condition dossier,
 /// seller reputation link, Add to Cart, Start Negotiation Chat, Buy Now, and Propose Exchange.
@@ -2003,8 +2018,9 @@ class _BookScreenState extends ConsumerState<BookScreen> {
     });
     final client = ref.read(sessionClientProvider);
     try {
-      final data = await client
-          .publicRequest('/listings/${widget.id}?bundleSupport=whole-v1');
+      final data = await client.publicRequest(
+        '/listings/${widget.id}?bundleSupport=whole-v1',
+      );
       if (!mounted) return;
       setState(() {
         _listing = Map<String, dynamic>.from(data as Map);
@@ -2031,9 +2047,7 @@ class _BookScreenState extends ConsumerState<BookScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => _BuyNowBottomSheet(
-        listing: _listing!,
-      ),
+      builder: (ctx) => _BuyNowBottomSheet(listing: _listing!),
     );
   }
 
@@ -2056,10 +2070,7 @@ class _BookScreenState extends ConsumerState<BookScreen> {
           '/me/wishlist/listings/${widget.id}',
           method: 'PUT',
           idempotencyKey: generateIdempotencyKey('wishlist-add'),
-          body: {
-            'wantsToExchange': false,
-            'receiveNotifications': true,
-          },
+          body: {'wantsToExchange': false, 'receiveNotifications': true},
         );
       }
       if (!mounted) return;
@@ -2091,10 +2102,7 @@ class _BookScreenState extends ConsumerState<BookScreen> {
         '/listings/${widget.id}/purchase-conversations',
         method: 'POST',
         idempotencyKey: generateIdempotencyKey('conv-open'),
-        body: {
-          'expectedVersion': _listing!['version'] ?? 1,
-          'intent': intent,
-        },
+        body: {'expectedVersion': _listing!['version'] ?? 1, 'intent': intent},
       );
       if (!mounted) return;
       setState(() => _actionBusy = false);
@@ -2127,7 +2135,8 @@ class _BookScreenState extends ConsumerState<BookScreen> {
     final seller = item?['seller'] is Map
         ? Map<String, dynamic>.from(item!['seller'] as Map)
         : const <String, dynamic>{};
-    final isOwner = session.isAuthenticated &&
+    final isOwner =
+        session.isAuthenticated &&
         seller['id'] != null &&
         seller['id'].toString() == session.user?.id;
     final mode = (item?['mode'] ?? 'Sale').toString();
@@ -2139,395 +2148,389 @@ class _BookScreenState extends ConsumerState<BookScreen> {
       child: _loading
           ? const StatePanel(loading: true, title: 'Đang tải thông tin sách…')
           : item == null
-              ? StatePanel(
-                  title: 'Không tìm thấy sách',
-                  message: _error ??
-                      'Bài đăng không còn hiển thị ở đường dẫn này. Hãy quay lại kệ sách để khám phá cuốn khác.',
-                  actionLabel: 'Về kệ sách',
-                  onAction: () => context.go('/'),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          ? StatePanel(
+              title: 'Không tìm thấy sách',
+              message: _error ?? 'Bài đăng không còn hiển thị ở đường dẫn này. Hãy quay lại kệ sách để khám phá cuốn khác.',
+              actionLabel: 'Về kệ sách',
+              onAction: () => context.go('/'),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      BackAction(
+                        title: 'Về kệ sách',
+                        compact: true,
+                        onPressed: () =>
+                            context.canPop() ? context.pop() : context.go('/'),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          BackAction(
-                            title: 'Về kệ sách',
-                            compact: true,
-                            onPressed: () => context.canPop()
-                                ? context.pop()
-                                : context.go('/'),
+                          IconButton(
+                            onPressed: _handleToggleWishlist,
+                            iconSize: 18,
+                            padding: const EdgeInsets.all(4),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                            visualDensity: VisualDensity.compact,
+                            icon: Icon(
+                              _savedWishlist
+                                  ? Icons.bookmark_rounded
+                                  : Icons.bookmark_border_rounded,
+                              color: StitchTokens.wine,
+                            ),
+                            tooltip: 'Lưu sách yêu thích',
                           ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                onPressed: _handleToggleWishlist,
-                                iconSize: 18,
-                                padding: const EdgeInsets.all(4),
-                                constraints: const BoxConstraints(
-                                  minWidth: 32,
-                                  minHeight: 32,
-                                ),
-                                visualDensity: VisualDensity.compact,
-                                icon: Icon(
-                                  _savedWishlist
-                                      ? Icons.bookmark_rounded
-                                      : Icons.bookmark_border_rounded,
-                                  color: StitchTokens.wine,
-                                ),
-                                tooltip: 'Lưu sách yêu thích',
-                              ),
-                              const SizedBox(width: 4),
-                              IconButton(
-                                onPressed: () => context.push('/cart'),
-                                iconSize: 18,
-                                padding: const EdgeInsets.all(4),
-                                constraints: const BoxConstraints(
-                                  minWidth: 32,
-                                  minHeight: 32,
-                                ),
-                                visualDensity: VisualDensity.compact,
-                                icon: const Icon(
-                                  Icons.shopping_bag_outlined,
-                                  color: StitchTokens.wine,
-                                ),
-                                tooltip: 'Giỏ sách',
-                              ),
-                            ],
+                          const SizedBox(width: 4),
+                          IconButton(
+                            onPressed: () => context.push('/cart'),
+                            iconSize: 18,
+                            padding: const EdgeInsets.all(4),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(
+                              Icons.shopping_bag_outlined,
+                              color: StitchTokens.wine,
+                            ),
+                            tooltip: 'Giỏ sách',
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: AppSpace.sm),
-                    if (_error != null) ...[
-                      Notice(message: _error!, tone: NoticeTone.error),
-                      const SizedBox(height: AppSpace.md),
                     ],
-                    if (_actionMessage != null) ...[
-                      Notice(
-                        message: _actionMessage!,
-                        tone: NoticeTone.success,
-                      ),
-                      const SizedBox(height: AppSpace.md),
-                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpace.sm),
+                if (_error != null) ...[
+                  Notice(message: _error!, tone: NoticeTone.error),
+                  const SizedBox(height: AppSpace.md),
+                ],
+                if (_actionMessage != null) ...[
+                  Notice(message: _actionMessage!, tone: NoticeTone.success),
+                  const SizedBox(height: AppSpace.md),
+                ],
 
-                    // Main Book Dossier Card
-                    Container(
-                      padding: const EdgeInsets.all(AppSpace.xl),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: StitchTokens.cardBorder),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(
-                            child: Container(
-                              constraints: const BoxConstraints(maxHeight: 260),
-                              child: AspectRatio(
-                                aspectRatio: 3 / 4,
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: BookCoverPhoto(item: item),
-                                ),
-                              ),
+                // Main Book Dossier Card
+                Container(
+                  padding: const EdgeInsets.all(AppSpace.xl),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: StitchTokens.cardBorder),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          constraints: const BoxConstraints(maxHeight: 260),
+                          child: AspectRatio(
+                            aspectRatio: 3 / 4,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: BookCoverPhoto(item: item),
                             ),
                           ),
-                          const SizedBox(height: AppSpace.lg),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: StitchTokens.wine,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: AppText(
-                                  bundle != null
-                                      ? 'BỘ SÁCH NGUYÊN BỘ'
-                                      : formatModeLabel(mode).toUpperCase(),
-                                  kind: AppTextKind.label,
-                                  color: StitchTokens.gold,
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.successSurface,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: AppText(
-                                  'Tình trạng: ${formatConditionLabel(item['condition']?.toString())}',
-                                  kind: AppTextKind.label,
-                                  color: AppColors.forest,
-                                ),
-                              ),
-                            ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSpace.lg),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: StitchTokens.wine,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: AppText(
+                              bundle != null
+                                  ? 'BỘ SÁCH NGUYÊN BỘ'
+                                  : formatModeLabel(mode).toUpperCase(),
+                              kind: AppTextKind.label,
+                              color: StitchTokens.gold,
+                            ),
                           ),
-                          const SizedBox(height: AppSpace.md),
-                          AppText(
-                            (bundle?['title'] ??
-                                    book['title'] ??
-                                    'Ấn bản sách cũ')
-                                .toString(),
-                            kind: AppTextKind.bookTitle,
-                            color: StitchTokens.darkWood,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.successSurface,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: AppText(
+                              'Tình trạng: ${formatConditionLabel(item['condition']?.toString())}',
+                              kind: AppTextKind.label,
+                              color: AppColors.forest,
+                            ),
                           ),
-                          const SizedBox(height: 4),
-                          AppText(
-                            (book['authors'] is List && (book['authors'] as List).isNotEmpty
-                                    ? 'Tác giả: ${(book['authors'] as List).join(' · ')}'
-                                    : (book['authors'] != null && book['authors'].toString().isNotEmpty
-                                        ? 'Tác giả: ${book['authors']}'
-                                        : (book['publisher'] != null
+                        ],
+                      ),
+                      const SizedBox(height: AppSpace.md),
+                      AppText(
+                        (bundle?['title'] ?? book['title'] ?? 'Ấn bản sách cũ')
+                            .toString(),
+                        kind: AppTextKind.bookTitle,
+                        color: StitchTokens.darkWood,
+                      ),
+                      const SizedBox(height: 4),
+                      AppText(
+                        (book['authors'] is List &&
+                                    (book['authors'] as List).isNotEmpty
+                                ? 'Tác giả: ${(book['authors'] as List).join(' · ')}'
+                                : (book['authors'] != null &&
+                                          book['authors'].toString().isNotEmpty
+                                      ? 'Tác giả: ${book['authors']}'
+                                      : (book['publisher'] != null
                                             ? 'NXB: ${book['publisher']}'
                                             : 'Đang cập nhật tác giả')))
-                                .toString(),
-                            kind: AppTextKind.body,
-                            color: AppColors.muted,
-                          ),
-                          const Divider(height: AppSpace.xxl),
-                          if (item['salePrice'] is num)
-                            AppText(
-                              'Giá niêm yết: ${formatVnd(item['salePrice'] as num)}',
-                              kind: AppTextKind.bookPrice,
-                              color: StitchTokens.wine,
-                            ),
-                          if (item['exchangeValue'] is num) ...[
-                            const SizedBox(height: 4),
-                            AppText(
-                              'Giá trị quy đổi: ${formatVnd(item['exchangeValue'] as num)}',
-                              kind: AppTextKind.bold,
-                              color: StitchTokens.warmUmber,
-                            ),
-                          ],
-                          const SizedBox(height: AppSpace.md),
-                          _MetadataRow(
-                            label: 'Bìa & gáy sách',
-                            value: (item['coverAndSpine'] ??
+                            .toString(),
+                        kind: AppTextKind.body,
+                        color: AppColors.muted,
+                      ),
+                      const Divider(height: AppSpace.xxl),
+                      if (item['salePrice'] is num)
+                        AppText(
+                          'Giá niêm yết: ${formatVnd(item['salePrice'] as num)}',
+                          kind: AppTextKind.bookPrice,
+                          color: StitchTokens.wine,
+                        ),
+                      if (item['exchangeValue'] is num) ...[
+                        const SizedBox(height: 4),
+                        AppText(
+                          'Giá trị quy đổi: ${formatVnd(item['exchangeValue'] as num)}',
+                          kind: AppTextKind.bold,
+                          color: StitchTokens.warmUmber,
+                        ),
+                      ],
+                      const SizedBox(height: AppSpace.md),
+                      _MetadataRow(
+                        label: 'Bìa & gáy sách',
+                        value:
+                            (item['coverAndSpine'] ??
                                     item['conditionNotes'] ??
                                     'Còn tốt, nguyên vẹn')
                                 .toString(),
-                          ),
-                          _MetadataRow(
-                            label: 'Ruột & số trang',
-                            value: (item['pages'] ?? 'Đủ trang, rõ chữ')
-                                .toString(),
-                          ),
-                          _MetadataRow(
-                            label: 'Ghi chú người bán',
-                            value: (item['notes'] ??
+                      ),
+                      _MetadataRow(
+                        label: 'Ruột & số trang',
+                        value: (item['pages'] ?? 'Đủ trang, rõ chữ').toString(),
+                      ),
+                      _MetadataRow(
+                        label: 'Ghi chú người bán',
+                        value:
+                            (item['notes'] ??
                                     item['description'] ??
                                     'Sách bảo quản kỹ trên kệ gia đình.')
                                 .toString(),
-                          ),
-                          _MetadataRow(
-                            label: 'Khu vực giao nhận',
-                            value: ((item['fulfillment'] is Map
+                      ),
+                      _MetadataRow(
+                        label: 'Khu vực giao nhận',
+                        value:
+                            ((item['fulfillment'] is Map
                                         ? (item['fulfillment'] as Map)['name']
                                         : null) ??
                                     'TP. Hồ Chí Minh / Bình Dương / Vũng Tàu')
                                 .toString(),
-                          ),
-                        ],
                       ),
-                    ),
+                    ],
+                  ),
+                ),
 
-                    // Whole-Bundle Manifest if present
-                    if (bundle != null && bundle['items'] is List) ...[
-                      const SizedBox(height: AppSpace.lg),
-                      Container(
-                        padding: const EdgeInsets.all(AppSpace.lg),
-                        decoration: BoxDecoration(
-                          color: StitchTokens.roseWarmSurface,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: StitchTokens.peachBorder),
+                // Whole-Bundle Manifest if present
+                if (bundle != null && bundle['items'] is List) ...[
+                  const SizedBox(height: AppSpace.lg),
+                  Container(
+                    padding: const EdgeInsets.all(AppSpace.lg),
+                    decoration: BoxDecoration(
+                      color: StitchTokens.roseWarmSurface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: StitchTokens.peachBorder),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AppText(
+                          'Danh mục bộ sách (${(bundle['items'] as List).length} cuốn · Bán nguyên bộ)',
+                          kind: AppTextKind.card,
+                          color: StitchTokens.wine,
                         ),
+                        const SizedBox(height: AppSpace.sm),
+                        ...(bundle['items'] as List).whereType<Map>().map((
+                          rawBook,
+                        ) {
+                          final b = Map<String, dynamic>.from(rawBook);
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.auto_stories_outlined,
+                                  size: 16,
+                                  color: StitchTokens.wine,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: AppText(
+                                    (b['title'] ?? 'Cuốn trong bộ').toString(),
+                                    kind: AppTextKind.bold,
+                                  ),
+                                ),
+                                AppText(
+                                  formatConditionLabel(
+                                    b['condition']?.toString(),
+                                  ),
+                                  kind: AppTextKind.small,
+                                  color: AppColors.forest,
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ],
+
+                // Seller card
+                const SizedBox(height: AppSpace.lg),
+                Container(
+                  padding: const EdgeInsets.all(AppSpace.lg),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: StitchTokens.cardBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: StitchTokens.wine,
+                        child: AppText(
+                          ((seller['displayName'] ?? 'N').toString().isNotEmpty
+                                  ? (seller['displayName'] ?? 'N').toString()[0]
+                                  : 'N')
+                              .toUpperCase(),
+                          kind: AppTextKind.bold,
+                          color: StitchTokens.gold,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpace.md),
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             AppText(
-                              'Danh mục bộ sách (${(bundle['items'] as List).length} cuốn · Bán nguyên bộ)',
-                              kind: AppTextKind.card,
-                              color: StitchTokens.wine,
+                              (seller['displayName'] ?? 'Người bán Lật Lại')
+                                  .toString(),
+                              kind: AppTextKind.bold,
                             ),
-                            const SizedBox(height: AppSpace.sm),
-                            ...(bundle['items'] as List)
-                                .whereType<Map>()
-                                .map((rawBook) {
-                              final b = Map<String, dynamic>.from(rawBook);
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 6,
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.auto_stories_outlined,
-                                      size: 16,
-                                      color: StitchTokens.wine,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: AppText(
-                                        (b['title'] ?? 'Cuốn trong bộ')
-                                            .toString(),
-                                        kind: AppTextKind.bold,
-                                      ),
-                                    ),
-                                    AppText(
-                                      formatConditionLabel(
-                                        b['condition']?.toString(),
-                                      ),
-                                      kind: AppTextKind.small,
-                                      color: AppColors.forest,
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
+                            const AppText(
+                              'Thành viên giao dịch có bảo đảm ký quỹ 72h',
+                              kind: AppTextKind.small,
+                              color: AppColors.muted,
+                            ),
                           ],
                         ),
                       ),
+                      if (seller['id'] != null)
+                        AppButton(
+                          title: 'Hồ sơ uy tín',
+                          secondary: true,
+                          wine: true,
+                          compact: true,
+                          onPressed: () => context.push(
+                            '/reputation?sellerId=${seller['id']}',
+                          ),
+                        ),
                     ],
+                  ),
+                ),
 
-                    // Seller card
-                    const SizedBox(height: AppSpace.lg),
-                    Container(
-                      padding: const EdgeInsets.all(AppSpace.lg),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: StitchTokens.cardBorder),
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: StitchTokens.wine,
-                            child: AppText(
-                              ((seller['displayName'] ?? 'N').toString().isNotEmpty
-                                      ? (seller['displayName'] ?? 'N')
-                                          .toString()[0]
-                                      : 'N')
-                                  .toUpperCase(),
-                              kind: AppTextKind.bold,
-                              color: StitchTokens.gold,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpace.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                AppText(
-                                  (seller['displayName'] ?? 'Người bán Lật Lại')
-                                      .toString(),
-                                  kind: AppTextKind.bold,
-                                ),
-                                const AppText(
-                                  'Thành viên giao dịch có bảo đảm ký quỹ 72h',
-                                  kind: AppTextKind.small,
-                                  color: AppColors.muted,
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (seller['id'] != null)
-                            AppButton(
-                              title: 'Hồ sơ uy tín',
-                              secondary: true,
-                              wine: true,
-                              compact: true,
-                              onPressed: () => context.push(
-                                '/reputation?sellerId=${seller['id']}',
+                const SizedBox(height: AppSpace.xl),
+
+                // Action Buttons (Matching BookBottomBar)
+                if (isOwner)
+                  Container(
+                    padding: const EdgeInsets.all(AppSpace.lg),
+                    decoration: BoxDecoration(
+                      color: AppColors.infoSurface,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const AppText(
+                          'Đây là bài đăng của bạn.',
+                          kind: AppTextKind.bold,
+                          color: AppColors.info,
+                        ),
+                        const SizedBox(height: AppSpace.sm),
+                        AppButton(
+                          title: 'Quản lý trong Kệ sách của tôi',
+                          wine: true,
+                          onPressed: () => context.push('/drafts'),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (canBuy) ...[
+                        Row(
+                          children: [
+                            Expanded(
+                              child: AppButton(
+                                title: 'Mua ngay',
+                                wine: true,
+                                busy: _actionBusy,
+                                icon: Icons.bolt_rounded,
+                                onPressed: _handleBuyNow,
                               ),
                             ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: AppSpace.xl),
-
-                    // Action Buttons (Matching BookBottomBar)
-                    if (isOwner)
-                      Container(
-                        padding: const EdgeInsets.all(AppSpace.lg),
-                        decoration: BoxDecoration(
-                          color: AppColors.infoSurface,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const AppText(
-                              'Đây là bài đăng của bạn.',
-                              kind: AppTextKind.bold,
-                              color: AppColors.info,
-                            ),
-                            const SizedBox(height: AppSpace.sm),
-                            AppButton(
-                              title: 'Quản lý trong Kệ sách của tôi',
-                              wine: true,
-                              onPressed: () => context.push('/drafts'),
+                            const SizedBox(width: AppSpace.md),
+                            Expanded(
+                              child: AppButton(
+                                title: 'Thương lượng & Mua',
+                                secondary: true,
+                                wine: true,
+                                busy: _actionBusy,
+                                icon: Icons.handshake_outlined,
+                                onPressed: _handleOpenConversation,
+                              ),
                             ),
                           ],
                         ),
-                      )
-                    else
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          if (canBuy) ...[
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: AppButton(
-                                    title: 'Mua ngay',
-                                    wine: true,
-                                    busy: _actionBusy,
-                                    icon: Icons.bolt_rounded,
-                                    onPressed: _handleBuyNow,
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpace.md),
-                                Expanded(
-                                  child: AppButton(
-                                    title: 'Thương lượng & Mua',
-                                    secondary: true,
-                                    wine: true,
-                                    busy: _actionBusy,
-                                    icon: Icons.handshake_outlined,
-                                    onPressed: _handleOpenConversation,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: AppSpace.sm),
-                          ],
-                          if (canExchange)
-                            AppButton(
-                              title: 'Đề nghị đổi sách',
-                              icon: Icons.swap_horiz_rounded,
-                              onPressed: () => context
-                                  .push('/exchange-compose?book=${widget.id}'),
-                            ),
-                        ],
-                      ),
-                  ],
-                ),
+                        const SizedBox(height: AppSpace.sm),
+                      ],
+                      if (canExchange)
+                        AppButton(
+                          title: 'Đề nghị đổi sách',
+                          icon: Icons.swap_horiz_rounded,
+                          onPressed: () => context.push(
+                            '/exchange-compose?book=${widget.id}',
+                          ),
+                        ),
+                    ],
+                  ),
+              ],
+            ),
     );
   }
 }
@@ -2600,8 +2603,9 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
         bookVer = (addrRes['version'] is num)
             ? (addrRes['version'] as num).toInt()
             : 0;
-        final rawItems =
-            addrRes['items'] is List ? (addrRes['items'] as List) : const [];
+        final rawItems = addrRes['items'] is List
+            ? (addrRes['items'] as List)
+            : const [];
         addrList = rawItems
             .whereType<Map>()
             .map((e) => Map<String, dynamic>.from(e))
@@ -2610,10 +2614,12 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
 
       num balance = 0;
       if (walletRes is Map) {
-        balance = (walletRes['available'] ??
-                walletRes['availableBalance'] ??
-                walletRes['balance'] ??
-                0) as num;
+        balance =
+            (walletRes['available'] ??
+                    walletRes['availableBalance'] ??
+                    walletRes['balance'] ??
+                    0)
+                as num;
       }
 
       if (!mounted) return;
@@ -2658,13 +2664,15 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
       final listingVer = (widget.listing['version'] is num)
           ? (widget.listing['version'] as num).toInt()
           : 1;
-      final revisionId = (widget.listing['revisionId'] ??
-              widget.listing['currentRevisionId'] ??
-              '')
-          .toString();
+      final revisionId =
+          (widget.listing['revisionId'] ??
+                  widget.listing['currentRevisionId'] ??
+                  '')
+              .toString();
       final addrId = addr['id']?.toString() ?? '';
-      final addrVer =
-          (addr['version'] is num) ? (addr['version'] as num).toInt() : 1;
+      final addrVer = (addr['version'] is num)
+          ? (addr['version'] as num).toInt()
+          : 1;
       final isBundle = widget.listing['bundle'] != null;
 
       final quoteRes = await client.request(
@@ -2720,8 +2728,10 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
     if (_nameCtrl.text.trim().isEmpty ||
         _phoneCtrl.text.trim().length < 10 ||
         _detailCtrl.text.trim().isEmpty) {
-      setState(() =>
-          _error = 'Vui lòng điền đủ họ tên, SĐT (10 số) và địa chỉ chi tiết.');
+      setState(
+        () => _error =
+            'Vui lòng điền đủ họ tên, SĐT (10 số) và địa chỉ chi tiết.',
+      );
       return;
     }
     setState(() {
@@ -2747,8 +2757,9 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
         },
       );
 
-      final addrRes =
-          await client.request('/me/addresses').catchError((_) => null);
+      final addrRes = await client
+          .request('/me/addresses')
+          .catchError((_) => null);
       if (!mounted) return;
 
       int bookVer = _addressBookVersion + 1;
@@ -2757,8 +2768,9 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
         bookVer = (addrRes['version'] is num)
             ? (addrRes['version'] as num).toInt()
             : bookVer;
-        final rawItems =
-            addrRes['items'] is List ? (addrRes['items'] as List) : const [];
+        final rawItems = addrRes['items'] is List
+            ? (addrRes['items'] as List)
+            : const [];
         addrList = rawItems
             .whereType<Map>()
             .map((e) => Map<String, dynamic>.from(e))
@@ -2768,8 +2780,8 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
       final newAddrId = (res is Map && res['addressId'] != null)
           ? res['addressId'].toString()
           : (res is Map && res['entityId'] != null
-              ? res['entityId'].toString()
-              : null);
+                ? res['entityId'].toString()
+                : null);
 
       Map<String, dynamic>? selected;
       if (newAddrId != null) {
@@ -2811,16 +2823,19 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
       return;
     }
     if (widget.listing['bundle'] != null && !_bundleAcknowledged) {
-      setState(() =>
-          _error = 'Vui lòng xác nhận mua nguyên bộ sách trước khi tiếp tục.');
+      setState(
+        () =>
+            _error = 'Vui lòng xác nhận mua nguyên bộ sách trước khi tiếp tục.',
+      );
       return;
     }
 
     if (_quote == null) {
       await _fetchQuote(_selectedAddress!);
       if (_quote == null) {
-        setState(() => _error = _quoteError ??
-            'Chưa thể lấy báo giá giao dịch. Vui lòng kiểm tra địa chỉ và thử lại.');
+        setState(
+          () => _error = _quoteError ?? 'Chưa thể lấy báo giá giao dịch. Vui lòng kiểm tra địa chỉ và thử lại.',
+        );
         return;
       }
     }
@@ -2833,8 +2848,9 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
     final client = ref.read(sessionClientProvider);
     try {
       final quoteId = _quote!['id']?.toString() ?? '';
-      final quoteVer =
-          (_quote!['version'] is num) ? (_quote!['version'] as num).toInt() : 1;
+      final quoteVer = (_quote!['version'] is num)
+          ? (_quote!['version'] as num).toInt()
+          : 1;
       final listingVer = (_quote!['listingVersion'] is num)
           ? (_quote!['listingVersion'] as num).toInt()
           : 1;
@@ -2860,8 +2876,9 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
         throw Exception('Không nhận được mã đơn hàng từ hệ thống.');
       }
 
-      final amounts =
-          _quote!['amounts'] is Map ? (_quote!['amounts'] as Map) : const {};
+      final amounts = _quote!['amounts'] is Map
+          ? (_quote!['amounts'] as Map)
+          : const {};
       final buyerTotal = (amounts['buyerTotal'] ?? 0) as num;
 
       bool paidSuccess = false;
@@ -2884,9 +2901,9 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(paidSuccess
-              ? '✓ Mua ngay và thanh toán Escrow thành công!'
-              : '✓ Đã tạo đơn mua ngay thành công! Vui lòng hoàn tất thanh toán.'),
+          content: Text(
+            paidSuccess ? '✓ Mua ngay và thanh toán Escrow thành công!' : '✓ Đã tạo đơn mua ngay thành công! Vui lòng hoàn tất thanh toán.',
+          ),
           backgroundColor: AppColors.forest,
           behavior: SnackBarBehavior.floating,
         ),
@@ -2910,11 +2927,13 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
     final bundle = widget.listing['bundle'] is Map
         ? Map<String, dynamic>.from(widget.listing['bundle'] as Map)
         : null;
-    final title = (bundle?['title'] ?? book['title'] ?? 'Ấn bản sách cũ').toString();
-    final author = (book['authors'] is List && (book['authors'] as List).isNotEmpty
-            ? (book['authors'] as List).join(' · ')
-            : (book['authors'] ?? 'Đang cập nhật tác giả'))
+    final title = (bundle?['title'] ?? book['title'] ?? 'Ấn bản sách cũ')
         .toString();
+    final author =
+        (book['authors'] is List && (book['authors'] as List).isNotEmpty
+                ? (book['authors'] as List).join(' · ')
+                : (book['authors'] ?? 'Đang cập nhật tác giả'))
+            .toString();
 
     final salePrice = (widget.listing['salePrice'] is num)
         ? (widget.listing['salePrice'] as num)
@@ -2975,8 +2994,11 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
                       color: StitchTokens.wine.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.bolt_rounded,
-                        color: StitchTokens.wine, size: 22),
+                    child: const Icon(
+                      Icons.bolt_rounded,
+                      color: StitchTokens.wine,
+                      size: 22,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   const Expanded(
@@ -3070,7 +3092,9 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
                                 Row(
                                   children: [
                                     Text(
-                                      formatVnd(widget.listing['salePrice'] as num?),
+                                      formatVnd(
+                                        widget.listing['salePrice'] as num?,
+                                      ),
                                       style: const TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w800,
@@ -3080,13 +3104,18 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
                                     const SizedBox(width: 8),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 6, vertical: 2),
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: AppColors.successSurface,
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
-                                        formatConditionLabel(widget.listing['condition']?.toString()),
+                                        formatConditionLabel(
+                                          widget.listing['condition']
+                                              ?.toString(),
+                                        ),
                                         style: const TextStyle(
                                           fontSize: 10.5,
                                           fontWeight: FontWeight.w600,
@@ -3111,7 +3140,10 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
                         activeColor: StitchTokens.wine,
                         title: const Text(
                           'Tôi xác nhận mua nguyên bộ sách (không hỗ trợ tách lẻ).',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         onChanged: (v) =>
                             setState(() => _bundleAcknowledged = v ?? false),
@@ -3194,21 +3226,23 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
                             Wrap(
                               spacing: 6,
                               runSpacing: 6,
-                              children: [
-                                ('Q1', 'Quận 1'),
-                                ('Q3', 'Quận 3'),
-                                ('THUDUC', 'TP. Thủ Đức'),
-                                ('BINHDUONG', 'Bình Dương'),
-                                ('VUNGTAU', 'Vũng Tàu'),
-                              ].map((loc) {
-                                return AppChip(
-                                  title: loc.$2,
-                                  wine: true,
-                                  selected: _localityCode == loc.$1,
-                                  onPressed: () =>
-                                      setState(() => _localityCode = loc.$1),
-                                );
-                              }).toList(),
+                              children:
+                                  [
+                                    ('Q1', 'Quận 1'),
+                                    ('Q3', 'Quận 3'),
+                                    ('THUDUC', 'TP. Thủ Đức'),
+                                    ('BINHDUONG', 'Bình Dương'),
+                                    ('VUNGTAU', 'Vũng Tàu'),
+                                  ].map((loc) {
+                                    return AppChip(
+                                      title: loc.$2,
+                                      wine: true,
+                                      selected: _localityCode == loc.$1,
+                                      onPressed: () => setState(
+                                        () => _localityCode = loc.$1,
+                                      ),
+                                    );
+                                  }).toList(),
                             ),
                             const SizedBox(height: 10),
                             AppTextField(
@@ -3225,8 +3259,9 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
                                       title: 'Hủy',
                                       secondary: true,
                                       compact: true,
-                                      onPressed: () =>
-                                          setState(() => _addingAddress = false),
+                                      onPressed: () => setState(
+                                        () => _addingAddress = false,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
@@ -3290,8 +3325,9 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
                                   _fetchQuote(addr);
                                 },
                                 child: Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4,
+                                  ),
                                   child: Row(
                                     children: [
                                       Icon(
@@ -3316,28 +3352,37 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
                                                   style: const TextStyle(
                                                     fontSize: 12.5,
                                                     fontWeight: FontWeight.w700,
-                                                    color: StitchTokens.darkWood,
+                                                    color:
+                                                        StitchTokens.darkWood,
                                                   ),
                                                 ),
-                                                if (addr['isDefault'] == true) ...[
+                                                if (addr['isDefault'] ==
+                                                    true) ...[
                                                   const SizedBox(width: 6),
                                                   Container(
                                                     padding:
                                                         const EdgeInsets.symmetric(
-                                                            horizontal: 4,
-                                                            vertical: 1),
+                                                          horizontal: 4,
+                                                          vertical: 1,
+                                                        ),
                                                     decoration: BoxDecoration(
                                                       color: StitchTokens.wine
-                                                          .withValues(alpha: 0.1),
+                                                          .withValues(
+                                                            alpha: 0.1,
+                                                          ),
                                                       borderRadius:
-                                                          BorderRadius.circular(4),
+                                                          BorderRadius.circular(
+                                                            4,
+                                                          ),
                                                     ),
                                                     child: const Text(
                                                       'Mặc định',
                                                       style: TextStyle(
                                                         fontSize: 9.5,
-                                                        color: StitchTokens.wine,
-                                                        fontWeight: FontWeight.w600,
+                                                        color:
+                                                            StitchTokens.wine,
+                                                        fontWeight:
+                                                            FontWeight.w600,
                                                       ),
                                                     ),
                                                   ),
@@ -3379,8 +3424,11 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
                         children: [
                           const Row(
                             children: [
-                              Icon(Icons.receipt_long_outlined,
-                                  size: 16, color: StitchTokens.wine),
+                              Icon(
+                                Icons.receipt_long_outlined,
+                                size: 16,
+                                color: StitchTokens.wine,
+                              ),
                               SizedBox(width: 6),
                               Text(
                                 'CHI TIẾT THANH TOÁN',
@@ -3398,9 +3446,13 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Expanded(
-                                child: Text('Tiền sách:',
-                                    style: TextStyle(
-                                        fontSize: 12.5, color: AppColors.muted)),
+                                child: Text(
+                                  'Tiền sách:',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: AppColors.muted,
+                                  ),
+                                ),
                               ),
                               const SizedBox(width: 8),
                               Text(
@@ -3445,7 +3497,9 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
                                 SizedBox(
                                   width: 12,
                                   height: 12,
-                                  child: CircularProgressIndicator(strokeWidth: 1.5),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 1.5,
+                                  ),
                                 ),
                                 SizedBox(width: 6),
                                 Text(
@@ -3466,13 +3520,18 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
                                 color: AppColors.error.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
-                                  color: AppColors.error.withValues(alpha: 0.25),
+                                  color: AppColors.error.withValues(
+                                    alpha: 0.25,
+                                  ),
                                 ),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.info_outline,
-                                      size: 14, color: AppColors.error),
+                                  const Icon(
+                                    Icons.info_outline,
+                                    size: 14,
+                                    color: AppColors.error,
+                                  ),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
@@ -3486,7 +3545,8 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
                                   if (_selectedAddress != null && !isOwner) ...[
                                     const SizedBox(width: 6),
                                     InkWell(
-                                      onTap: () => _fetchQuote(_selectedAddress!),
+                                      onTap: () =>
+                                          _fetchQuote(_selectedAddress!),
                                       child: const Text(
                                         'Thử lại',
                                         style: TextStyle(
@@ -3622,18 +3682,21 @@ class _BuyNowBottomSheetState extends ConsumerState<_BuyNowBottomSheet> {
                 title: isOwner
                     ? 'Bạn là người bán cuốn sách này'
                     : amounts != null && isWalletSufficient
-                        ? 'Thanh toán & Đặt mua ngay (${formatVnd(buyerTotal)})'
-                        : (amounts != null
-                            ? 'Xác nhận đặt đơn (${formatVnd(buyerTotal)})'
-                            : 'Xác nhận Mua ngay'),
+                    ? 'Thanh toán & Đặt mua ngay (${formatVnd(buyerTotal)})'
+                    : (amounts != null
+                          ? 'Xác nhận đặt đơn (${formatVnd(buyerTotal)})'
+                          : 'Xác nhận Mua ngay'),
                 wine: !isOwner,
                 disabled: isOwner,
                 busy: _submitting,
                 icon: Icons.bolt_rounded,
                 onPressed:
-                    (_quote != null && !_quoteLoading && !_submitting && !isOwner)
-                        ? _submitBuyNow
-                        : null,
+                    (_quote != null &&
+                        !_quoteLoading &&
+                        !_submitting &&
+                        !isOwner)
+                    ? _submitBuyNow
+                    : null,
               ),
             ),
           ],
@@ -3664,12 +3727,7 @@ class _MetadataRow extends StatelessWidget {
               color: AppColors.muted,
             ),
           ),
-          Expanded(
-            child: AppText(
-              value,
-              kind: AppTextKind.bold,
-            ),
-          ),
+          Expanded(child: AppText(value, kind: AppTextKind.bold)),
         ],
       ),
     );
@@ -3689,8 +3747,7 @@ class GuideScreen extends StatelessWidget {
         children: [
           BackAction(
             title: 'Quay lại',
-            onPressed: () =>
-                context.canPop() ? context.pop() : context.go('/'),
+            onPressed: () => context.canPop() ? context.pop() : context.go('/'),
           ),
           const SizedBox(height: AppSpace.sm),
           const AppText(
@@ -3701,30 +3758,27 @@ class GuideScreen extends StatelessWidget {
           const SizedBox(height: AppSpace.md),
           const _GuideStepCard(
             number: '01',
-            title: 'Mua bán & Thương lượng trực tiếp (DirectDelivery / ViaPoint)',
-            description:
-                'Mở trang sách, nhấn "Thương lượng & Mua" để trao đổi tình trạng sách và thống nhất giá với người bán. Khi người mua gửi địa chỉ nhận sách (TP.HCM, Bình Dương, Vũng Tàu) và chốt giá, người bán tạo đơn trực tiếp ngay trong phòng thương lượng.',
+            title:
+                'Mua bán & Thương lượng trực tiếp (DirectDelivery / ViaPoint)',
+            description: 'Mở trang sách, nhấn "Thương lượng & Mua" để trao đổi tình trạng sách và thống nhất giá với người bán. Khi người mua gửi địa chỉ nhận sách (TP.HCM, Bình Dương, Vũng Tàu) và chốt giá, người bán tạo đơn trực tiếp ngay trong phòng thương lượng.',
           ),
           const SizedBox(height: AppSpace.md),
           const _GuideStepCard(
             number: '02',
             title: 'Đổi sách đôi bên (Book Exchange)',
-            description:
-                'Chọn sách có gắn nhãn "Đổi" hoặc "Bán hoặc đổi", chọn cuốn sách đã duyệt trên kệ của bạn để đề nghị đổi kèm phần bù chênh lệch (nếu có). Cả hai bên đặt cọc bảo đảm và có thể hủy đồng thuận trước khi hoàn tất.',
+            description: 'Chọn sách có gắn nhãn "Đổi" hoặc "Bán hoặc đổi", chọn cuốn sách đã duyệt trên kệ của bạn để đề nghị đổi kèm phần bù chênh lệch (nếu có). Cả hai bên đặt cọc bảo đảm và có thể hủy đồng thuận trước khi hoàn tất.',
           ),
           const SizedBox(height: AppSpace.md),
           const _GuideStepCard(
             number: '03',
             title: 'Đấu giá sách hiếm qua trạm ViaPoint',
-            description:
-                'Sách gửi đấu giá bắt buộc được bàn giao và kiểm định thực tế tại 2 điểm quản lý ViaPoint TP.HCM trước khi mở phiên. Người đặt giá có thể đặt thủ công, đặt tự động (Auto-bid) hoặc Mua ngay.',
+            description: 'Sách gửi đấu giá bắt buộc được bàn giao và kiểm định thực tế tại 2 điểm quản lý ViaPoint TP.HCM trước khi mở phiên. Người đặt giá có thể đặt thủ công, đặt tự động (Auto-bid) hoặc Mua ngay.',
           ),
           const SizedBox(height: AppSpace.md),
           const _GuideStepCard(
             number: '04',
             title: 'Quỹ ký quỹ & Quy trình bảo vệ 72h',
-            description:
-                'Tiền thanh toán và tiền cọc được giữ trong sổ cái bất biến (Ledger). Sau khi nhận sách, người mua có 72 giờ để kiểm tra và xác nhận hoàn tất hoặc mở yêu cầu hỗ trợ / khiếu nại.',
+            description: 'Tiền thanh toán và tiền cọc được giữ trong sổ cái bất biến (Ledger). Sau khi nhận sách, người mua có 72 giờ để kiểm tra và xác nhận hoàn tất hoặc mở yêu cầu hỗ trợ / khiếu nại.',
           ),
         ],
       ),

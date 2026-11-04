@@ -9,10 +9,7 @@ import '../../../core/widgets/app_widgets.dart';
 
 /// LoginScreen matching `apps/mobile-react-native/src/features/auth/login-screen.tsx`
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({
-    super.key,
-    this.returnBookId,
-  });
+  const LoginScreen({super.key, this.returnBookId});
 
   final String? returnBookId;
 
@@ -80,11 +77,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            StitchTokens.wine,
-            StitchTokens.wineDark,
-            Color(0xFF220000),
-          ],
+          colors: [StitchTokens.wine, StitchTokens.wineDark, Color(0xFF220000)],
         ),
       ),
       header: const TopNavbar(borderRadius: BorderRadius.zero),
@@ -94,10 +87,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF480202),
-              Color(0xFF2A0000),
-            ],
+            colors: [Color(0xFF480202), Color(0xFF2A0000)],
           ),
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
@@ -115,164 +105,161 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-                const AppText(
-                  'Lại gặp nhau rồi.',
-                  kind: AppTextKind.title,
-                  color: Colors.white,
-                  style: TextStyle(
-                    fontSize: 23,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const AppText(
-                  'Đăng nhập để đăng sách và kết nối người yêu sách Sài Gòn.',
-                  color: StitchTokens.goldLight,
-                  style: TextStyle(fontSize: 12.5),
-                ),
-                const SizedBox(height: AppSpace.lg),
-                if (_error != null) ...[
-                  Notice(message: _error!, tone: NoticeTone.error),
-                  const SizedBox(height: AppSpace.md),
-                ],
-                AppTextField(
-                  label: 'Tên đăng nhập hoặc Email',
-                  labelColor: StitchTokens.gold,
-                  focusedBorderColor: StitchTokens.gold,
-                  placeholder: 'nguyentuan@latlai.vn',
-                  controller: _emailCtrl,
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: AppSpace.md),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const AppText(
-                          'Mật khẩu',
-                          kind: AppTextKind.bold,
-                          color: StitchTokens.gold,
-                        ),
-                        TextButton(
-                          onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword),
-                          child: AppText(
-                            _obscurePassword ? 'Hiện' : 'Ẩn',
-                            kind: AppTextKind.small,
-                            color: StitchTokens.gold,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                        ),
-                      ],
-                    ),
-                    AppTextField(
-                      placeholder: 'Nhập mật khẩu của bạn',
-                      controller: _passwordCtrl,
-                      obscureText: _obscurePassword,
-                      focusedBorderColor: StitchTokens.gold,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpace.sm),
+            const AppText(
+              'Lại gặp nhau rồi.',
+              kind: AppTextKind.title,
+              color: Colors.white,
+              style: TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            const AppText(
+              'Đăng nhập để đăng sách và kết nối người yêu sách Sài Gòn.',
+              color: StitchTokens.goldLight,
+              style: TextStyle(fontSize: 12.5),
+            ),
+            const SizedBox(height: AppSpace.lg),
+            if (_error != null) ...[
+              Notice(message: _error!, tone: NoticeTone.error),
+              const SizedBox(height: AppSpace.md),
+            ],
+            AppTextField(
+              label: 'Tên đăng nhập hoặc Email',
+              labelColor: StitchTokens.gold,
+              focusedBorderColor: StitchTokens.gold,
+              placeholder: 'nguyentuan@latlai.vn',
+              controller: _emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: AppSpace.md),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Checkbox(
-                          value: _rememberSession,
-                          activeColor: StitchTokens.goldDark,
-                          checkColor: Colors.white,
-                          side: BorderSide(
-                            color: StitchTokens.gold.withValues(alpha: 0.6),
-                          ),
-                          onChanged: (v) =>
-                              setState(() => _rememberSession = v ?? true),
-                        ),
-                        const AppText(
-                          'Ghi nhớ phiên',
-                          kind: AppTextKind.small,
-                          color: StitchTokens.goldLight,
-                        ),
-                      ],
+                    const AppText(
+                      'Mật khẩu',
+                      kind: AppTextKind.bold,
+                      color: StitchTokens.gold,
                     ),
                     TextButton(
-                      onPressed: () => context.push('/forgot-password'),
-                      child: const AppText(
-                        'Quên mật khẩu?',
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                      child: AppText(
+                        _obscurePassword ? 'Hiện' : 'Ẩn',
                         kind: AppTextKind.small,
                         color: StitchTokens.gold,
-                        style: TextStyle(fontWeight: FontWeight.w700),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: AppSpace.md),
-                AppButton(
-                  title: 'Đăng nhập',
-                  gold: true,
-                  busy: _busy,
-                  onPressed: _submit,
+                AppTextField(
+                  placeholder: 'Nhập mật khẩu của bạn',
+                  controller: _passwordCtrl,
+                  obscureText: _obscurePassword,
+                  focusedBorderColor: StitchTokens.gold,
                 ),
-                const SizedBox(height: AppSpace.md),
-                Center(
-                  child: TextButton(
-                    onPressed: () => context.push('/register'),
-                    child: const AppText(
-                      'Chưa có tài khoản độc giả? Đăng ký ngay',
-                      kind: AppTextKind.bold,
-                      color: StitchTokens.gold,
-                    ),
-                  ),
-                ),
-                if (kDebugMode) ...[
-                  Divider(
-                    height: AppSpace.xxl,
-                    color: StitchTokens.goldDark.withValues(alpha: 0.35),
-                  ),
-                  const AppText(
-                    'Đăng nhập nhanh (Dev):',
-                    kind: AppTextKind.label,
-                    color: StitchTokens.goldLight,
-                  ),
-                  const SizedBox(height: AppSpace.sm),
-                  Wrap(
-                    spacing: AppSpace.sm,
-                    runSpacing: AppSpace.sm,
-                    children: [
-                      AppChip(
-                        title: 'Nguyễn Đại',
-                        selected: false,
-                        gold: true,
-                        onPressed: () => _quickFill(
-                            'dai.member@latlai.local', 'MemberPass123!'),
-                      ),
-                      AppChip(
-                        title: 'Nguyễn Tú',
-                        selected: false,
-                        gold: true,
-                        onPressed: () => _quickFill(
-                            'tu.member@latlai.local', 'MemberPass123!'),
-                      ),
-                      AppChip(
-                        title: 'Member Seed',
-                        selected: false,
-                        gold: true,
-                        onPressed: () => _quickFill(
-                            'member@latlai.local', 'MemberPass123!'),
-                      ),
-                    ],
-                  ),
-                ],
               ],
             ),
-          ),
-        );
-      }
-    }
+            const SizedBox(height: AppSpace.sm),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Checkbox(
+                      value: _rememberSession,
+                      activeColor: StitchTokens.goldDark,
+                      checkColor: Colors.white,
+                      side: BorderSide(
+                        color: StitchTokens.gold.withValues(alpha: 0.6),
+                      ),
+                      onChanged: (v) =>
+                          setState(() => _rememberSession = v ?? true),
+                    ),
+                    const AppText(
+                      'Ghi nhớ phiên',
+                      kind: AppTextKind.small,
+                      color: StitchTokens.goldLight,
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () => context.push('/forgot-password'),
+                  child: const AppText(
+                    'Quên mật khẩu?',
+                    kind: AppTextKind.small,
+                    color: StitchTokens.gold,
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpace.md),
+            AppButton(
+              title: 'Đăng nhập',
+              gold: true,
+              busy: _busy,
+              onPressed: _submit,
+            ),
+            const SizedBox(height: AppSpace.md),
+            Center(
+              child: TextButton(
+                onPressed: () => context.push('/register'),
+                child: const AppText(
+                  'Chưa có tài khoản độc giả? Đăng ký ngay',
+                  kind: AppTextKind.bold,
+                  color: StitchTokens.gold,
+                ),
+              ),
+            ),
+            if (kDebugMode) ...[
+              Divider(
+                height: AppSpace.xxl,
+                color: StitchTokens.goldDark.withValues(alpha: 0.35),
+              ),
+              const AppText(
+                'Đăng nhập nhanh (Dev):',
+                kind: AppTextKind.label,
+                color: StitchTokens.goldLight,
+              ),
+              const SizedBox(height: AppSpace.sm),
+              Wrap(
+                spacing: AppSpace.sm,
+                runSpacing: AppSpace.sm,
+                children: [
+                  AppChip(
+                    title: 'Nguyễn Đại',
+                    selected: false,
+                    gold: true,
+                    onPressed: () =>
+                        _quickFill('dai.member@latlai.local', 'MemberPass123!'),
+                  ),
+                  AppChip(
+                    title: 'Nguyễn Tú',
+                    selected: false,
+                    gold: true,
+                    onPressed: () =>
+                        _quickFill('tu.member@latlai.local', 'MemberPass123!'),
+                  ),
+                  AppChip(
+                    title: 'Member Seed',
+                    selected: false,
+                    gold: true,
+                    onPressed: () =>
+                        _quickFill('member@latlai.local', 'MemberPass123!'),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// RegisterScreen (`/register`) matching `apps/mobile-react-native/src/features/auth/register-screen.tsx`
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -319,8 +306,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     if (name.isEmpty || email.isEmpty || password.length < 10) {
       setState(() {
-        _error =
-            'Vui lòng nhập họ tên, email và mật khẩu từ 10 đến 128 ký tự.';
+        _error = 'Vui lòng nhập họ tên, email và mật khẩu từ 10 đến 128 ký tự.';
       });
       return;
     }
@@ -381,10 +367,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       await client.publicRequest(
         '/auth/otp/verify-email',
         method: 'POST',
-        body: {
-          'challengeId': _challengeId,
-          'code': code,
-        },
+        body: {'challengeId': _challengeId, 'code': code},
       );
       await client.login(
         email: _emailCtrl.text.trim(),
@@ -414,11 +397,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            StitchTokens.wine,
-            StitchTokens.wineDark,
-            Color(0xFF220000),
-          ],
+          colors: [StitchTokens.wine, StitchTokens.wineDark, Color(0xFF220000)],
         ),
       ),
       header: const TopNavbar(borderRadius: BorderRadius.zero),
@@ -428,10 +407,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF480202),
-              Color(0xFF2A0000),
-            ],
+            colors: [Color(0xFF480202), Color(0xFF2A0000)],
           ),
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
@@ -453,10 +429,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               isOtpStep ? 'Xác minh email' : 'Tạo tài khoản mới',
               kind: AppTextKind.title,
               color: Colors.white,
-              style: const TextStyle(
-                fontSize: 23,
-                fontWeight: FontWeight.w700,
-              ),
+              style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             AppText(
@@ -628,10 +601,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       final res = await client.publicRequest(
         '/auth/otp/request',
         method: 'POST',
-        body: {
-          'email': email,
-          'purpose': 'ResetPassword',
-        },
+        body: {'email': email, 'purpose': 'ResetPassword'},
       );
       if (!mounted) return;
       final map = res is Map ? Map<String, dynamic>.from(res) : const {};
@@ -699,11 +669,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            StitchTokens.wine,
-            StitchTokens.wineDark,
-            Color(0xFF220000),
-          ],
+          colors: [StitchTokens.wine, StitchTokens.wineDark, Color(0xFF220000)],
         ),
       ),
       header: const TopNavbar(borderRadius: BorderRadius.zero),
@@ -713,10 +679,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF480202),
-              Color(0xFF2A0000),
-            ],
+            colors: [Color(0xFF480202), Color(0xFF2A0000)],
           ),
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
@@ -745,10 +708,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               _done ? 'Mật khẩu đã được đổi' : 'Quên mật khẩu',
               kind: AppTextKind.title,
               color: Colors.white,
-              style: const TextStyle(
-                fontSize: 23,
-                fontWeight: FontWeight.w700,
-              ),
+              style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: AppSpace.md),
             if (_error != null) ...[
@@ -757,8 +717,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             ],
             if (_done) ...[
               const Notice(
-                message:
-                    'Mật khẩu mới đã được cập nhật thành công. Bạn có thể đăng nhập ngay.',
+                message: 'Mật khẩu mới đã được cập nhật thành công. Bạn có thể đăng nhập ngay.',
                 tone: NoticeTone.success,
               ),
               const SizedBox(height: AppSpace.lg),
@@ -816,9 +775,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 const SizedBox(height: AppSpace.sm),
               ],
               AppButton(
-                title: _challengeId == null
-                    ? 'Gửi mã khôi phục'
-                    : 'Gửi mã mới',
+                title: _challengeId == null ? 'Gửi mã khôi phục' : 'Gửi mã mới',
                 secondary: _challengeId != null,
                 gold: true,
                 busy: _busy,
@@ -831,4 +788,3 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     );
   }
 }
-
