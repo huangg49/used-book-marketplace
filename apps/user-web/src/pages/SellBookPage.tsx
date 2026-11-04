@@ -3,7 +3,7 @@ import { PriceAssistPanel } from "../components/PriceAssistPanel";
 import { createListingPriceRequest, type PricePhase } from "../services/listing-price-assist";
 import type { CatalogInput } from "../services/listing-submission";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import {
   Navigate,
@@ -142,6 +142,7 @@ export function SellBookPage() {
   }, [photoViewerOpen]);
   const location = useLocation();
   const session = useSession();
+  const queryClient = useQueryClient();
   const addresses = useQuery({
     queryKey: ["address-book"],
     queryFn: () => apiSession.request("/me/addresses", addressBookSchema),
@@ -719,6 +720,9 @@ export function SellBookPage() {
       }, draftAttempt);
       setHasAttempt(true);
       await submission.current();
+      const currentOwner = apiSession.getSnapshot();
+      if (session.status !== "authenticated" || currentOwner.status !== "authenticated" || currentOwner.user.id !== session.user.id) return;
+      void queryClient.invalidateQueries({ queryKey: ["my-listings", currentOwner.user.id] });
       setStep(6);
     } catch (error) {
       setSubmitError(

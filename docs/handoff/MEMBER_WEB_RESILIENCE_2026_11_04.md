@@ -7,6 +7,43 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Đăng mới → nhận ACK → quay về kệ còn cache mới
+
+Nhánh `codex/member-web-publish-owner-cache`, base `665c90fa`; commit cùng điểm
+lưu có subject `fix(user-web): refresh owner shelf after publishing acknowledgement`.
+Giữ ADR0009/0042/0048, các stage và payload hiện có. Source
+[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) trước chỉ đổi sang
+màn thành công; cache `my-listings` còn trong staleTime15s khiến kệ tiếp tục trống.
+Sau ACK, invalidate prefix kệ theo đúng owner; owner hiện tại phải khớp snapshot
+gửi trước khi báo thành công. Không invalidate/publicize bài PendingReview hoặc
+tự cộng số bài vào cache. Không đổi backend, upload/AI, key/body/version hay form.
+
+| Member → entry / ca | Trước | Sau |
+| --- | --- | --- |
+| Kệ trống → Đăng sách → manual/ảnh/tình trạng/Đổi sách/Kiểm tra → gửi → Header về kệ | Receipt thành công nhưng cache mới vẫn trống | Đọc kệ lại khi quay về, hiện đúng bài PendingReview/Chưa công khai |
+| Submit đã commit, mất ACK → Thử gửi lại | Stage protocol đã giữ đúng key; kệ vẫn trống sau ACK retry | Giữ protocol; chỉ ACK retry mới làm stale kệ |
+| Submit409 → chấp nhận cảnh báo rời form → về kệ | Không có thành công | Không invalidate kệ hoặc bịa bài mới |
+
+[Production fixture](../../apps/user-web/tests/publish-owner-cache.mjs),
+`pnpm --filter @used-books/user-web test:publish-owner-cache:browser`.
+Baseline/after6 profile:390/1440 ×success/lost-ACK/refused. Fix Date sau login
+để giữ cache trong cửa sổ15s, không pause timer/RAF/animation. Trước GET kệ1 lần
+kể cả sau ACK; sau2 lần với ACK, vẫn1 khi từ chối. Catalog/draft/reserve/bytes/
+finalize/save mỗi stage1 lần; lost-ACK submit2 request cùng key/body/version.
+Entry manual và Exchange không có tạo địa chỉ; không claim đã kiểm địa chỉ/AI.
+Mọi HTTP/auth/storage/media/Ready là QA giả, không dùng DB/provider thật.
+
+PASS build/typecheck,399 unit/53 file, scoped lint exit0 (1 dependency warning
+`hasValidOriginAddress` có từ base).46 CSS production khớp byte; xem capture kệ
+390/1440, không sửa animation/asset. Không chạy lại detector cho diff chỉ hook và
+cache/identity predicate, không thay JSX/class/style. Evidence local
+`.tmp/member-web-publish-owner-cache/` before/after/build/CSS/capture.
+Guard identity có source nhưng browser đổi actor giữa submit chưa chạy. Native,
+server auth/race, AI và moderation người thật NOT RUN; READINESS giữ nguyên.
+
+Tiếp theo kiểm trạng thái header/số đếm thông báo khi GET loading/error, tránh
+fallback0 bị diễn đạt thành “đã đọc hết”. Không suy đã hoàn tất audit cả web.
+
 ## Sau Save đã ACK: đọc lại để tiếp tục sửa, không upload/lưu lại
 
 Nhánh `codex/member-web-listing-save-result`, base `6569beb7`; commit cùng điểm
