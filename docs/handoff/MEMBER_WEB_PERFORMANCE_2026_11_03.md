@@ -4,6 +4,43 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Dùng chung lượt theo dõi trạng thái nạp ví — 04/11/2026
+
+Nhánh `codex/member-web-wallet-topup-polling`, base `4ddbea8f`.
+[WalletPage](../../apps/user-web/src/pages/WalletPage.tsx) từng theo dõi cùng
+intent hai lần bằng key URL và key popup. Chuyển sang một key theo owner và
+intent, với một observer hoạt động cho mỗi intent. Popup vẫn được theo dõi
+riêng nếu người dùng mở khoản khác từ lịch sử. Cùng intent chỉ có một lịch
+kiểm tra khi đến hạn và một luồng làm mới các view khi máy chủ xác nhận ghi có.
+
+Khi nhận tín hiệu return trong lúc popup đang mở, chuyển sang QueryDR rồi mới
+refetch. Tín hiệu đến muộn khi đã chuyển chế độ dùng chung request đang chạy.
+Giữ nhịp poll 3 giây, nhánh GET khi popup mở, đối soát POST khi trở về, và các
+kiểm tra session, intent, trạng thái ghi có đã có. Không đổi API, key lệnh,
+provider URL, timer phát hiện popup đóng, markup hoặc animation.
+
+[Browser fixture](../../apps/user-web/tests/wallet-credit-cache.mjs) đo trên
+Chromium production build ở 390px và 1440px, bật reduced-motion. Mỗi ca dưới
+dùng một intent và cho popup giả lập đi qua route return thật của web.
+
+| Phép đo mỗi viewport | Trước | Sau |
+| --- | ---: | ---: |
+| GET trạng thái trong một nhịp poll | 2 | 1 |
+| POST QueryDR quan sát từ return đến khi số dư cập nhật | 3 | 1 |
+| GET số dư trong cả ca mobile | 3 | 2 |
+| GET số dư trong cả ca desktop, gồm menu | 5 | 4 |
+
+Phép đo tính request HTTP của trình duyệt trong fixture, không suy số lượt
+gọi VNPay thật. Build/typecheck, 361 unit, scoped lint và detector PASS.
+10 ca credit-cache PASS, gồm mở intent khác qua lịch sử khi popup còn mở.
+Ví vẫn nhận ghi có từ checkout ban đầu, còn thẻ trạng thái tiếp tục hiển thị
+intent trong URL. Ca Succeeded chưa credited giữ số dư cũ.
+Hồi quy popup 8 ca PASS, gồm đóng/mở lại cùng intent, popup bị chặn, 409 và
+response đến sau unmount. Toàn bộ 47 CSS build khớp byte. Bằng chứng trong
+`.tmp/member-web-wallet-credit-cache/` và `.tmp/member-web-wallet-popup-watch/`.
+API/DB/provider, thiết bị thật, human acceptance và CI remote chưa chạy.
+READINESS và checkout demo giữ nguyên.
+
 ## Cập nhật thẻ trao đổi tại hạn của bước hiện tại — 04/11/2026
 
 Nhánh `codex/member-web-exchange-deadline`, base `97ec5388`.

@@ -93,11 +93,14 @@ export function WalletPage() {
         : false,
   });
 
+  // Keep tracking the popup if the wallet URL switches to another intent.
+  // When both point to the same intent, the result query does the polling.
+  const separateCheckoutId = checkoutId === id ? undefined : checkoutId;
   const checkout = useQuery({
-    queryKey: ["wallet-checkout", ownerId, checkoutId],
+    queryKey: ["topup", ownerId, separateCheckoutId],
     queryFn: () =>
-      paymentOpen ? getTopup(checkoutId!) : queryVNPayTopup(checkoutId!),
-    enabled: !!ownerId && !!checkoutId,
+      paymentOpen ? getTopup(separateCheckoutId!) : queryVNPayTopup(separateCheckoutId!),
+    enabled: !!ownerId && !!separateCheckoutId,
     refetchInterval: (q) =>
       document.visibilityState === "visible" &&
       ["Pending", "Processing"].includes(q.state.data?.state ?? "")
@@ -105,8 +108,9 @@ export function WalletPage() {
         : false,
   });
 
+  const checkoutData = checkoutId === id ? result.data : checkout.data;
   const currentCheckout =
-    checkout.data?.id === checkoutId ? checkout.data : undefined;
+    checkoutData?.id === checkoutId ? checkoutData : undefined;
   const checkoutState = currentCheckout?.state;
   const checkoutCredited = currentCheckout?.credited;
   const checkoutExpiresAt = currentCheckout?.expiresAt;
@@ -162,15 +166,17 @@ export function WalletPage() {
       channel.postMessage({ type: "wallet-ready", id: trackedId });
       setPaymentOpen(false);
       window.focus();
-      void client.invalidateQueries({
-        queryKey: ["topup", ownerId, trackedId],
-      });
-      void client.invalidateQueries({
-        queryKey: ["wallet-checkout", ownerId, trackedId],
-      });
+      // The mode-change effect reconciles after the observer switches to QueryDR.
+      // A late return after the popup already closed still needs a fresh check.
+      if (!paymentOpen) {
+        void client.invalidateQueries({
+          queryKey: ["topup", ownerId, trackedId],
+          exact: true,
+        }, { cancelRefetch: false });
+      }
     };
     return () => channel.close();
-  }, [ownerId, checkoutId, id, client]);
+  }, [ownerId, checkoutId, id, client, paymentOpen]);
 
   useEffect(() => {
     if (params.has("vnp_TxnRef"))
@@ -199,15 +205,17 @@ export function WalletPage() {
     intent.current = null;
     setHasIntent(false);
     setCheckoutId(undefined);
-    void client.invalidateQueries({ queryKey: ["topups", ownerId] });
-    if (checkoutCredited) {
-      invalidateMemberWalletViews(client, ownerId);
+    if (checkoutId !== id) {
+      void client.invalidateQueries({ queryKey: ["topups", ownerId] });
+      if (checkoutCredited) {
+        invalidateMemberWalletViews(client, ownerId);
+      }
     }
-  }, [checkoutId, checkoutState, checkoutCredited, client, ownerId]);
+  }, [checkoutId, checkoutState, checkoutCredited, client, ownerId, id]);
 
   useEffect(() => {
     if (
-      !checkoutId ||
+      !separateCheckoutId ||
       !checkoutState ||
       !["Pending", "Processing"].includes(checkoutState) ||
       !checkoutExpiresAt ||
@@ -219,14 +227,14 @@ export function WalletPage() {
     const timeout = window.setTimeout(
       () => {
         void client.invalidateQueries({
-          queryKey: ["wallet-checkout", ownerId, checkoutId],
+          queryKey: ["topup", ownerId, separateCheckoutId],
         });
       },
       Math.max(0, until) + 100,
     );
     return () => window.clearTimeout(timeout);
   }, [
-    checkoutId,
+    separateCheckoutId,
     checkoutState,
     checkoutExpiresAt,
     checkoutServerTime,
@@ -247,15 +255,18 @@ export function WalletPage() {
   }, [awaitingPayment, expiresAt, serverTime, client, ownerId, id]);
 
   useEffect(() => {
-    if (ownerId && !paymentOpen) {
-      if (id)
-        void client.invalidateQueries({ queryKey: ["topup", ownerId, id] });
-      if (checkoutId)
-        void client.invalidateQueries({
-          queryKey: ["wallet-checkout", ownerId, checkoutId],
-        });
+    if (ownerId && id && !paymentOpen) {
+      void client.invalidateQueries({ queryKey: ["topup", ownerId, id] });
     }
-  }, [paymentOpen, ownerId, id, checkoutId, client]);
+  }, [paymentOpen, ownerId, id, client]);
+
+  useEffect(() => {
+    if (ownerId && separateCheckoutId && !paymentOpen) {
+      void client.invalidateQueries({
+        queryKey: ["topup", ownerId, separateCheckoutId],
+      });
+    }
+  }, [paymentOpen, ownerId, separateCheckoutId, client]);
 
   if (!ownerId) {
     return (
@@ -331,10 +342,6 @@ export function WalletPage() {
         return;
       }
       client.setQueryData(["topup", ownerId, response.entityId], current);
-      client.setQueryData(
-        ["wallet-checkout", ownerId, response.entityId],
-        current,
-      );
       setCheckoutId(response.entityId);
       void client.invalidateQueries({ queryKey: ["topups", ownerId] });
       navigate(`/wallet?topup=${response.entityId}`);
