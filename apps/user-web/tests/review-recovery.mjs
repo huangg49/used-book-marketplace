@@ -125,8 +125,9 @@ try {
     await retry.click();
     await expect(retry).toHaveCount(0);
     assert.equal(writes.length, 3);
-    assert.deepEqual(writes[1], writes[2], 'Uncertain ACK retries exact path, body and key despite changed eligibility');
-    assert.notEqual(writes[0].key, writes[1].key, 'Definitive 409 permits an explicit new intent');
+    assert.equal(JSON.stringify(writes[1]) === JSON.stringify(writes[2]), true,
+      'Uncertain ACK retries exact path, body and key despite changed eligibility');
+    assert.equal(writes[0].key !== writes[1].key, true, 'Definitive 409 permits an explicit new intent');
     await expect(panel).toContainText(draft);
 
     data = { ...data, myReview: review(1, { status: 'Published', publishedAt: now }),
@@ -134,6 +135,8 @@ try {
     await refresh();
     const reports = panel.getByRole('link', { name: 'Báo cáo nội dung', exact: true });
     await expect(reports).toHaveCount(baseline ? 4 : 2);
+    for (const reviewId of [id(101), id(102)])
+      await expect(panel.locator(`a[href="/support/new?type=Review&id=${reviewId}&kind=Violation"]`)).toHaveCount(baseline ? 2 : 1);
     await panel.getByRole('button', { name: 'Phản hồi đánh giá', exact: true }).click();
     form = panel.getByRole('form', { name: 'Phản hồi đánh giá', exact: true });
     const replyDraft = 'Phản hồi QA vẫn được giữ khi đánh giá đối tác bị ẩn.';

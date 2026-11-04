@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -60,6 +60,7 @@ function CartContent({ owner }: { owner: string }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [needsRead, setNeedsRead] = useState(false);
+  const running = useRef(false);
 
   const pending = pendingCartCommand(session);
   const disabled = busy || pending || needsRead;
@@ -72,7 +73,8 @@ function CartContent({ owner }: { owner: string }) {
   }
 
   async function remove(listingId?: string) {
-    if (busy) return;
+    if (running.current) return;
+    running.current = true;
     setBusy(true);
     setError("");
     setMessage("");
@@ -88,6 +90,7 @@ function CartContent({ owner }: { owner: string }) {
     } catch (e) {
       setError(accountErrorMessage(e));
     } finally {
+      running.current = false;
       setBusy(false);
     }
   }

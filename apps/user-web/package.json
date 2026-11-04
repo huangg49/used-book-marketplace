@@ -52,6 +52,7 @@
     "test:seller-order:browser": "node tests/seller-order.mjs",
     "test:order-review:browser": "node tests/order-review.mjs",
     "test:review-recovery:browser": "node tests/review-recovery.mjs",
+    "test:resource-recovery:browser": "node tests/member-resource-recovery.mjs",
     "test:exchange:browser": "node tests/exchange-integration.mjs",
     "test:wallet:browser": "node tests/wallet-checkout.mjs",
     "test:wallet-layout:browser": "node tests/wallet-layout.mjs",
