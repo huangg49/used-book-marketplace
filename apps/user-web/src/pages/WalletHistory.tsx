@@ -1,3 +1,4 @@
+import { withdrawalLabels } from "@used-books/session-client";
 import { useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import {
@@ -31,6 +32,7 @@ interface WalletHistoryProps {
 const FILTER_TABS: { id: WalletHistoryType | ""; label: string }[] = [
   { id: "", label: "Tất cả" },
   { id: "Topup", label: "Nạp tiền" },
+  { id: "WithdrawalHold", label: "Rút tiền" },
   { id: "OrderPayment", label: "Mua sách" },
   { id: "OrderSettlement", label: "Bán sách" },
   { id: "OrderRefund", label: "Hoàn tiền" },
@@ -51,7 +53,7 @@ function getTransactionVisuals(type: WalletHistoryType, _amount: number) {
       amountClass: styles.amountInflow,
     };
   }
-  if (type === "OrderRefund" || type === "ListingFeeRefund") {
+  if (type === "WithdrawalRefund" || type === "OrderRefund" || type === "ListingFeeRefund") {
     return {
       Icon: RotateCcw,
       circleClass: styles.iconInflow,
@@ -84,7 +86,7 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
         <header className={styles.receiptHeader}>
           <div className={styles.historyTitleRow}>
             <h2 className={styles.receiptStoreTitle}>Lịch sử giao dịch</h2>
-            <span className={styles.historyBadge}>VNPay Sandbox</span>
+            <span className={styles.historyBadge}>Ví mô phỏng</span>
           </div>
           <p className={styles.receiptSubTitle}>
             Theo dõi chi tiết các khoản nạp ví, tiền bán sách và cọc ký quỹ đơn hàng
@@ -188,8 +190,8 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
                     item.amount,
                   );
                   const isPositive = item.amount > 0;
-                  const rawRef = item.orderId ?? item.topupId ?? item.journalId;
-                  const prefix = item.orderId
+                  const rawRef = item.withdrawalId ?? item.orderId ?? item.topupId ?? item.journalId;
+                  const prefix = item.withdrawalId ? "RÚT" : item.orderId
                     ? "ĐƠN"
                     : item.topupId
                       ? "NẠP"
@@ -205,6 +207,7 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
                       <div className={styles.receiptItemMeta}>
                         <span className={styles.receiptItemTitle}>
                           {walletHistoryLabels[item.type] || item.type}
+                          {item.type === "WithdrawalHold" && item.withdrawalState && <span className={styles.withdrawalHistoryState} data-state={item.withdrawalState}>{withdrawalLabels[item.withdrawalState]}</span>}
                           {item.type === "Topup" && (
                             <span className={styles.vnpayReceiptBadge} style={{ marginLeft: 6 }}>
                               VNPAY

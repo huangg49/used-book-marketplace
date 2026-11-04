@@ -35,11 +35,14 @@ describe("read-only simulated wallet", () => {
     expect(vi.mocked(session.request).mock.calls[0]?.[0]).toBe("/me/wallet");
     expect(vi.mocked(session.request).mock.calls[0]).toHaveLength(2);
   });
+  it("accepts an enabled withdrawal capability and a nonzero dedicated hold", () => {
+    expect(walletSummarySchema.parse({...summary, withdrawalHeld: 50000, withdrawalsEnabled: true}).withdrawalHeld).toBe(50000);
+  });
   it.each([
     { demoOnly: false },
     { available: -1 },
     { transactionHeld: 0.5 },
-    { withdrawalsEnabled: true },
+    { withdrawalsEnabled: "true" },
     { label: "Tiền thật" },
     { serverTime: "invalid" },
   ])("rejects incompatible wallet data %j", (change) => {

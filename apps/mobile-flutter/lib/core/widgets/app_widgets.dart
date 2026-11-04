@@ -100,7 +100,6 @@ class BackAction extends StatelessWidget {
   }
 }
 
-
 class ActionRow extends StatelessWidget {
   const ActionRow({
     super.key,
@@ -125,9 +124,7 @@ class ActionRow extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: AppMetrics.control),
         padding: const EdgeInsets.symmetric(vertical: AppSpace.lg),
         decoration: const BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: AppColors.rule, width: 1),
-          ),
+          border: Border(bottom: BorderSide(color: AppColors.rule, width: 1)),
         ),
         child: Row(
           children: [
@@ -227,30 +224,30 @@ class AppButton extends StatelessWidget {
     final Color bg = destructive
         ? AppColors.error
         : secondary
-            ? (gold ? StitchTokens.gold.withValues(alpha: 0.12) : AppColors.surface)
-            : gold
-                ? StitchTokens.gold
-                : wine
-                    ? StitchTokens.wine
-                    : AppColors.forest;
+        ? (gold ? StitchTokens.gold.withValues(alpha: 0.12) : AppColors.surface)
+        : gold
+        ? StitchTokens.gold
+        : wine
+        ? StitchTokens.wine
+        : AppColors.forest;
     final Color fg = (secondary && !destructive)
         ? (gold
-            ? StitchTokens.goldLight
-            : (wine ? StitchTokens.wine : AppColors.forest))
+              ? StitchTokens.goldLight
+              : (wine ? StitchTokens.wine : AppColors.forest))
         : gold
-            ? StitchTokens.wineDark
-            : wine
-                ? StitchTokens.gold
-                : Colors.white;
+        ? StitchTokens.wineDark
+        : wine
+        ? StitchTokens.gold
+        : Colors.white;
     final Color borderColor = destructive
         ? AppColors.error
         : secondary
-            ? (gold
-                ? StitchTokens.gold.withValues(alpha: 0.45)
-                : (wine ? StitchTokens.peachBorder : AppColors.border))
-            : gold
-                ? StitchTokens.goldDark
-                : bg;
+        ? (gold
+              ? StitchTokens.gold.withValues(alpha: 0.45)
+              : (wine ? StitchTokens.peachBorder : AppColors.border))
+        : gold
+        ? StitchTokens.goldDark
+        : bg;
 
     return Opacity(
       opacity: isDisabled ? 0.55 : 1,
@@ -335,28 +332,28 @@ class AppChip extends StatelessWidget {
     final activeBg = gold
         ? StitchTokens.gold
         : wine
-            ? StitchTokens.wine
-            : AppColors.forest;
+        ? StitchTokens.wine
+        : AppColors.forest;
     final activeColor = gold
         ? StitchTokens.wineDark
         : wine
-            ? Colors.white
-            : AppColors.paper;
+        ? Colors.white
+        : AppColors.paper;
     final inactiveBg = gold
         ? StitchTokens.wineDeep.withValues(alpha: 0.5)
         : selected
-            ? activeBg
-            : StitchTokens.parchment;
+        ? activeBg
+        : StitchTokens.parchment;
     final inactiveColor = gold
         ? StitchTokens.goldLight
         : wine
-            ? StitchTokens.deepCocoa
-            : AppColors.forest;
+        ? StitchTokens.deepCocoa
+        : AppColors.forest;
     final inactiveBorder = gold
         ? StitchTokens.goldDark.withValues(alpha: 0.45)
         : wine
-            ? StitchTokens.peachBorder
-            : AppColors.border;
+        ? StitchTokens.peachBorder
+        : AppColors.border;
 
     return InkWell(
       onTap: disabled ? null : onPressed,
@@ -370,9 +367,7 @@ class AppChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? activeBg : inactiveBg,
           borderRadius: BorderRadius.circular(AppRadius.pill),
-          border: Border.all(
-            color: selected ? activeBg : inactiveBorder,
-          ),
+          border: Border.all(color: selected ? activeBg : inactiveBorder),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -474,7 +469,11 @@ class SearchField extends StatelessWidget {
               },
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Icon(Icons.close_rounded, size: 18, color: Color(0xFF8A7D73)),
+                child: Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: Color(0xFF8A7D73),
+                ),
               ),
             ),
         ],
@@ -482,7 +481,6 @@ class SearchField extends StatelessWidget {
     );
   }
 }
-
 
 class AppTextField extends StatelessWidget {
   const AppTextField({
@@ -601,25 +599,25 @@ class Notice extends StatelessWidget {
   Widget build(BuildContext context) {
     final (bg, fg, icon) = switch (tone) {
       NoticeTone.error => (
-          AppColors.errorSurface,
-          AppColors.error,
-          Icons.error_outline_rounded
-        ),
+        AppColors.errorSurface,
+        AppColors.error,
+        Icons.error_outline_rounded,
+      ),
       NoticeTone.warning => (
-          AppColors.warningSurface,
-          AppColors.warning,
-          Icons.warning_amber_rounded
-        ),
+        AppColors.warningSurface,
+        AppColors.warning,
+        Icons.warning_amber_rounded,
+      ),
       NoticeTone.success => (
-          AppColors.successSurface,
-          AppColors.success,
-          Icons.check_circle_outline_rounded
-        ),
+        AppColors.successSurface,
+        AppColors.success,
+        Icons.check_circle_outline_rounded,
+      ),
       NoticeTone.info => (
-          AppColors.infoSurface,
-          AppColors.info,
-          Icons.info_outline_rounded
-        ),
+        AppColors.infoSurface,
+        AppColors.info,
+        Icons.info_outline_rounded,
+      ),
     };
     return Container(
       padding: const EdgeInsets.all(14),
@@ -634,11 +632,7 @@ class Notice extends StatelessWidget {
           Icon(icon, size: 18, color: fg),
           const SizedBox(width: AppSpace.sm),
           Expanded(
-            child: AppText(
-              message,
-              kind: AppTextKind.small,
-              color: fg,
-            ),
+            child: AppText(message, kind: AppTextKind.small, color: fg),
           ),
           if (onDismiss != null)
             InkWell(
@@ -792,7 +786,6 @@ class _BrandLogoFallback extends StatelessWidget {
   }
 }
 
-
 /// TopNavbar matching `apps/mobile-react-native/src/core/ui/top-navbar.tsx`
 /// Wine background (#5C0202), owl emblem + Lật Lại title + TP. HỒ CHÍ MINH,
 /// notification bell & message inbox action buttons.
@@ -825,7 +818,8 @@ class TopNavbar extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: StitchTokens.wine,
-        borderRadius: borderRadius ??
+        borderRadius:
+            borderRadius ??
             const BorderRadius.vertical(bottom: Radius.circular(18)),
         boxShadow: const [
           BoxShadow(
@@ -865,7 +859,9 @@ class TopNavbar extends ConsumerWidget {
                               Container(
                                 width: 1,
                                 height: 18,
-                                margin: const EdgeInsets.symmetric(horizontal: 10),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                ),
                                 color: const Color(0x66FFDF97),
                               ),
                               Flexible(
@@ -894,7 +890,8 @@ class TopNavbar extends ConsumerWidget {
                         label: 'Thông báo',
                         badgeCount: notificationCount,
                         showDotWhenZero: true,
-                        onTap: onNotificationsPress ??
+                        onTap:
+                            onNotificationsPress ??
                             () => _showNotificationsBottomSheet(context, ref),
                       ),
                       const SizedBox(width: 8),
@@ -902,7 +899,9 @@ class TopNavbar extends ConsumerWidget {
                         icon: Icons.chat_bubble_outline_rounded,
                         label: 'Tin nhắn',
                         badgeCount: messageCount ?? 0,
-                        onTap: onMessagesPress ?? () => context.push('/chat-inbox'),
+                        onTap:
+                            onMessagesPress ??
+                            () => context.push('/chat-inbox'),
                       ),
                     ],
                   ),
@@ -920,8 +919,6 @@ class TopNavbar extends ConsumerWidget {
     );
   }
 }
-
-
 
 class _NavbarCircleIcon extends StatelessWidget {
   const _NavbarCircleIcon({
@@ -1045,7 +1042,8 @@ class _NotificationsSheetView extends StatefulWidget {
   final VoidCallback onClose;
 
   @override
-  State<_NotificationsSheetView> createState() => _NotificationsSheetViewState();
+  State<_NotificationsSheetView> createState() =>
+      _NotificationsSheetViewState();
 }
 
 class _NotificationsSheetViewState extends State<_NotificationsSheetView> {
@@ -1156,12 +1154,14 @@ class _NotificationsSheetViewState extends State<_NotificationsSheetView> {
     Color badgeColor,
     Color badgeBg,
     String category,
-  }) _getMeta(Map<String, dynamic> item) {
+  })
+  _getMeta(Map<String, dynamic> item) {
     final kind = (item['kind'] ?? '').toString().toUpperCase();
     final targetType = (item['targetType'] ?? '').toString().toUpperCase();
     final title = (item['title'] ?? '').toString().toLowerCase();
-    final body =
-        (item['body'] ?? item['message'] ?? '').toString().toLowerCase();
+    final body = (item['body'] ?? item['message'] ?? '')
+        .toString()
+        .toLowerCase();
 
     if (kind.contains('AUCTION') ||
         targetType == 'AUCTION' ||
@@ -1216,12 +1216,14 @@ class _NotificationsSheetViewState extends State<_NotificationsSheetView> {
             ? Icons.check_circle_outline_rounded
             : Icons.local_shipping_outlined,
         iconColor: isSuccess ? const Color(0xFF1F7A3E) : StitchTokens.wine,
-        bgColor:
-            isSuccess ? const Color(0xFFEDF8F1) : StitchTokens.roseWarmSurface,
+        bgColor: isSuccess
+            ? const Color(0xFFEDF8F1)
+            : StitchTokens.roseWarmSurface,
         label: isSell ? 'ĐƠN BÁN SÁCH' : 'ĐƠN MUA SÁCH',
         badgeColor: isSuccess ? const Color(0xFF1F7A3E) : StitchTokens.wine,
-        badgeBg:
-            isSuccess ? const Color(0xFFEDF8F1) : StitchTokens.roseWarmSurface,
+        badgeBg: isSuccess
+            ? const Color(0xFFEDF8F1)
+            : StitchTokens.roseWarmSurface,
         category: 'order',
       );
     }
@@ -1280,8 +1282,7 @@ class _NotificationsSheetViewState extends State<_NotificationsSheetView> {
               wine: true,
               icon: Icons.notifications_none_rounded,
               title: 'Đăng nhập để xem thông báo',
-              message:
-                  'Cập nhật đơn hàng, đề nghị đổi sách, phiên đấu giá và tin nhắn mới sẽ xuất hiện tại đây.',
+              message: 'Cập nhật đơn hàng, đề nghị đổi sách, phiên đấu giá và tin nhắn mới sẽ xuất hiện tại đây.',
               actionLabel: 'Đăng nhập ngay',
               onAction: () {
                 widget.onClose();
@@ -1397,7 +1398,10 @@ class _NotificationsSheetViewState extends State<_NotificationsSheetView> {
                 IconButton(
                   onPressed: widget.onClose,
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
                   icon: const CircleAvatar(
                     radius: 14,
                     backgroundColor: Color(0xFFF2ECE1),
@@ -1458,229 +1462,212 @@ class _NotificationsSheetViewState extends State<_NotificationsSheetView> {
                       title: 'Đang tải thông báo…',
                     )
                   : _error != null
-                      ? StatePanel(
-                          wine: true,
-                          icon: Icons.error_outline_rounded,
-                          title: 'Không thể tải thông báo',
-                          message: _error!,
-                          actionLabel: 'Thử lại',
-                          onAction: _loadNotifications,
-                        )
-                      : filteredItems.isEmpty
-                          ? StatePanel(
-                              wine: true,
-                              icon: Icons.notifications_none_rounded,
-                              title: _selectedFilter == 'all'
-                                  ? 'Chưa có thông báo mới'
-                                  : 'Không có thông báo trong mục này',
-                              message: _selectedFilter == 'all'
-                                  ? 'Khi có cập nhật về đơn hàng, thương lượng, trao đổi hoặc đấu giá, Lật Lại sẽ báo ngay tại đây.'
-                                  : 'Các thông báo thuộc nhóm này sẽ xuất hiện khi có giao dịch mới.',
-                            )
-                          : ListView.builder(
-                              itemCount: filteredItems.length,
-                              itemBuilder: (ctx, index) {
-                                final item = filteredItems[index];
-                                final isUnread = item['readAt'] == null;
-                                final meta = _getMeta(item);
-                                final title = (item['title'] ??
-                                        'Thông báo hệ thống')
-                                    .toString();
-                                final body = (item['body'] ??
-                                        item['message'] ??
-                                        '')
-                                    .toString();
-                                final timeAgo = _formatTimeAgo(
-                                    item['createdAt']?.toString());
+                  ? StatePanel(
+                      wine: true,
+                      icon: Icons.error_outline_rounded,
+                      title: 'Không thể tải thông báo',
+                      message: _error!,
+                      actionLabel: 'Thử lại',
+                      onAction: _loadNotifications,
+                    )
+                  : filteredItems.isEmpty
+                  ? StatePanel(
+                      wine: true,
+                      icon: Icons.notifications_none_rounded,
+                      title: _selectedFilter == 'all'
+                          ? 'Chưa có thông báo mới'
+                          : 'Không có thông báo trong mục này',
+                      message: _selectedFilter == 'all'
+                          ? 'Khi có cập nhật về đơn hàng, thương lượng, trao đổi hoặc đấu giá, Lật Lại sẽ báo ngay tại đây.'
+                          : 'Các thông báo thuộc nhóm này sẽ xuất hiện khi có giao dịch mới.',
+                    )
+                  : ListView.builder(
+                      itemCount: filteredItems.length,
+                      itemBuilder: (ctx, index) {
+                        final item = filteredItems[index];
+                        final isUnread = item['readAt'] == null;
+                        final meta = _getMeta(item);
+                        final title = (item['title'] ?? 'Thông báo hệ thống')
+                            .toString();
+                        final body = (item['body'] ?? item['message'] ?? '')
+                            .toString();
+                        final timeAgo = _formatTimeAgo(
+                          item['createdAt']?.toString(),
+                        );
 
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 9),
-                                  decoration: BoxDecoration(
-                                    color: isUnread
-                                        ? const Color(0xFFFFFBF7)
-                                        : Colors.white,
-                                    borderRadius: BorderRadius.circular(14),
-                                    border: Border.all(
-                                      color: isUnread
-                                          ? const Color(0xFFECCEB6)
-                                          : const Color(0xFFEDE3D5),
-                                      width: isUnread ? 1.2 : 1,
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 9),
+                          decoration: BoxDecoration(
+                            color: isUnread
+                                ? const Color(0xFFFFFBF7)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isUnread
+                                  ? const Color(0xFFECCEB6)
+                                  : const Color(0xFFEDE3D5),
+                              width: isUnread ? 1.2 : 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isUnread
+                                    ? const Color(0x125C0202)
+                                    : const Color(0x08000000),
+                                blurRadius: 5,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  if (isUnread)
+                                    Container(
+                                      width: 3.5,
+                                      color: StitchTokens.wine,
                                     ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: isUnread
-                                            ? const Color(0x125C0202)
-                                            : const Color(0x08000000),
-                                        blurRadius: 5,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: IntrinsicHeight(
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          if (isUnread)
+                                  Expanded(
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(14),
+                                      onTap: () => _handleItemTap(item),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            // Type Avatar
                                             Container(
-                                              width: 3.5,
-                                              color: StitchTokens.wine,
-                                            ),
-                                          Expanded(
-                                            child: InkWell(
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                              onTap: () => _handleItemTap(item),
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(12),
-                                                child: Row(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    // Type Avatar
-                                                    Container(
-                                                      width: 38,
-                                                      height: 38,
-                                                      decoration: BoxDecoration(
-                                                        color: meta.bgColor,
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(10),
-                                                        border: Border.all(
-                                                          color: meta.iconColor
-                                                              .withValues(
-                                                                  alpha: 0.18),
-                                                        ),
-                                                      ),
-                                                      child: Icon(
-                                                        meta.icon,
-                                                        color: meta.iconColor,
-                                                        size: 19,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 10),
-                                                    // Info
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Row(
-                                                            children: [
-                                                              Container(
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                        .symmetric(
-                                                                  horizontal: 6,
-                                                                  vertical: 2,
-                                                                ),
-                                                                decoration:
-                                                                    BoxDecoration(
-                                                                  color: meta
-                                                                      .badgeBg,
-                                                                  borderRadius:
-                                                                      BorderRadius
-                                                                          .circular(
-                                                                              4),
-                                                                ),
-                                                                child: Text(
-                                                                  meta.label,
-                                                                  style:
-                                                                      TextStyle(
-                                                                    fontSize:
-                                                                        9.5,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w800,
-                                                                    color: meta
-                                                                        .badgeColor,
-                                                                    letterSpacing:
-                                                                        0.4,
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                              if (timeAgo
-                                                                  .isNotEmpty) ...[
-                                                                const SizedBox(
-                                                                    width: 6),
-                                                                Text(
-                                                                  '• $timeAgo',
-                                                                  style:
-                                                                      const TextStyle(
-                                                                    fontSize:
-                                                                        10.5,
-                                                                    color: Color(
-                                                                        0xFF8C7E77),
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w500,
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                              const Spacer(),
-                                                              if (isUnread)
-                                                                Container(
-                                                                  width: 7,
-                                                                  height: 7,
-                                                                  decoration:
-                                                                      const BoxDecoration(
-                                                                    color: StitchTokens
-                                                                        .wine,
-                                                                    shape: BoxShape
-                                                                        .circle,
-                                                                  ),
-                                                                ),
-                                                            ],
-                                                          ),
-                                                          const SizedBox(
-                                                              height: 5),
-                                                          Text(
-                                                            title,
-                                                            style: TextStyle(
-                                                              fontSize: 13,
-                                                              fontWeight: isUnread
-                                                                  ? FontWeight
-                                                                      .w800
-                                                                  : FontWeight
-                                                                      .w600,
-                                                              color: isUnread
-                                                                  ? const Color(
-                                                                      0xFF1F1614)
-                                                                  : const Color(
-                                                                      0xFF4A3E39),
-                                                            ),
-                                                          ),
-                                                          const SizedBox(
-                                                              height: 3),
-                                                          Text(
-                                                            body,
-                                                            style:
-                                                                const TextStyle(
-                                                              fontSize: 11.5,
-                                                              color: Color(
-                                                                  0xFF635650),
-                                                              height: 1.35,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ],
+                                              width: 38,
+                                              height: 38,
+                                              decoration: BoxDecoration(
+                                                color: meta.bgColor,
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                border: Border.all(
+                                                  color: meta.iconColor
+                                                      .withValues(alpha: 0.18),
                                                 ),
                                               ),
+                                              child: Icon(
+                                                meta.icon,
+                                                color: meta.iconColor,
+                                                size: 19,
+                                              ),
                                             ),
-                                          ),
-                                        ],
+                                            const SizedBox(width: 10),
+                                            // Info
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    children: [
+                                                      Container(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 6,
+                                                              vertical: 2,
+                                                            ),
+                                                        decoration: BoxDecoration(
+                                                          color: meta.badgeBg,
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                4,
+                                                              ),
+                                                        ),
+                                                        child: Text(
+                                                          meta.label,
+                                                          style: TextStyle(
+                                                            fontSize: 9.5,
+                                                            fontWeight:
+                                                                FontWeight.w800,
+                                                            color:
+                                                                meta.badgeColor,
+                                                            letterSpacing: 0.4,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      if (timeAgo
+                                                          .isNotEmpty) ...[
+                                                        const SizedBox(
+                                                          width: 6,
+                                                        ),
+                                                        Text(
+                                                          '• $timeAgo',
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 10.5,
+                                                                color: Color(
+                                                                  0xFF8C7E77,
+                                                                ),
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w500,
+                                                              ),
+                                                        ),
+                                                      ],
+                                                      const Spacer(),
+                                                      if (isUnread)
+                                                        Container(
+                                                          width: 7,
+                                                          height: 7,
+                                                          decoration:
+                                                              const BoxDecoration(
+                                                                color:
+                                                                    StitchTokens
+                                                                        .wine,
+                                                                shape: BoxShape
+                                                                    .circle,
+                                                              ),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 5),
+                                                  Text(
+                                                    title,
+                                                    style: TextStyle(
+                                                      fontSize: 13,
+                                                      fontWeight: isUnread
+                                                          ? FontWeight.w800
+                                                          : FontWeight.w600,
+                                                      color: isUnread
+                                                          ? const Color(
+                                                              0xFF1F1614,
+                                                            )
+                                                          : const Color(
+                                                              0xFF4A3E39,
+                                                            ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 3),
+                                                  Text(
+                                                    body,
+                                                    style: const TextStyle(
+                                                      fontSize: 11.5,
+                                                      color: Color(0xFF635650),
+                                                      height: 1.35,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
-                                );
-                              },
+                                ],
+                              ),
                             ),
+                          ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),
@@ -1713,14 +1700,10 @@ class _FilterChip extends StatelessWidget {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: selected
-                ? StitchTokens.wine
-                : const Color(0xFFF3EDE2),
+            color: selected ? StitchTokens.wine : const Color(0xFFF3EDE2),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: selected
-                  ? StitchTokens.wineDark
-                  : const Color(0xFFE2D6C6),
+              color: selected ? StitchTokens.wineDark : const Color(0xFFE2D6C6),
             ),
           ),
           child: Row(
@@ -1761,10 +1744,7 @@ class _FilterChip extends StatelessWidget {
 /// - `/auctions` ("Đấu giá")
 /// - `/account` ("Tài khoản")
 class MemberNavigation extends StatelessWidget {
-  const MemberNavigation({
-    super.key,
-    required this.currentPath,
-  });
+  const MemberNavigation({super.key, required this.currentPath});
 
   final String currentPath;
 
@@ -1774,25 +1754,25 @@ class MemberNavigation extends StatelessWidget {
       href: '/search',
       title: 'Tìm sách',
       icon: Icons.search_rounded,
-      primary: false
+      primary: false,
     ),
     (
       href: '/drafts',
       title: 'Đăng sách',
       icon: Icons.add_rounded,
-      primary: true
+      primary: true,
     ),
     (
       href: '/auctions',
       title: 'Đấu giá',
       icon: Icons.gavel_rounded,
-      primary: false
+      primary: false,
     ),
     (
       href: '/account',
       title: 'Tài khoản',
       icon: Icons.person_outline_rounded,
-      primary: false
+      primary: false,
     ),
   ];
 
@@ -1939,7 +1919,8 @@ class AppScreen extends StatelessWidget {
               ?header,
               Expanded(
                 child: SingleChildScrollView(
-                  padding: padding ??
+                  padding:
+                      padding ??
                       const EdgeInsets.symmetric(
                         horizontal: AppSpace.lg,
                         vertical: AppSpace.lg,
@@ -1949,20 +1930,20 @@ class AppScreen extends StatelessWidget {
                       constraints: BoxConstraints(
                         maxWidth: maxWidth ?? double.infinity,
                       ),
-                    child: child,
+                      child: child,
+                    ),
                   ),
                 ),
               ),
-            ),
-            ?footer,
-            if (currentNavPath != null)
-              MemberNavigation(currentPath: currentNavPath!),
-          ],
+              ?footer,
+              if (currentNavPath != null)
+                MemberNavigation(currentPath: currentNavPath!),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 /// BookCard widget matching `apps/mobile-react-native/src/core/ui/book-card.tsx`
@@ -1993,15 +1974,18 @@ class BookCard extends ConsumerWidget {
         ? Map<String, dynamic>.from(item['book'] as Map)
         : const <String, dynamic>{};
 
-    final title = (bundle?['title'] ??
-            book['title'] ??
-            item['title'] ??
-            'Chưa chọn đầu sách')
-        .toString();
+    final title =
+        (bundle?['title'] ??
+                book['title'] ??
+                item['title'] ??
+                'Chưa chọn đầu sách')
+            .toString();
     final rawAuthors = book['authors'];
     final authorText = rawAuthors is List && rawAuthors.isNotEmpty
         ? rawAuthors.join(' · ')
-        : (rawAuthors is String ? rawAuthors : (book['publisher'] ?? '').toString());
+        : (rawAuthors is String
+              ? rawAuthors
+              : (book['publisher'] ?? '').toString());
 
     final condition = (item['condition'] ?? 'Good').toString();
     final (condLabel, condBg) = switch (condition) {
@@ -2012,28 +1996,31 @@ class BookCard extends ConsumerWidget {
       _ => (formatConditionLabel(condition), StitchTokens.goldBronze),
     };
 
-    final moderation = (item['moderation'] ?? item['status'] ?? 'Draft').toString();
+    final moderation = (item['moderation'] ?? item['status'] ?? 'Draft')
+        .toString();
     final (modLabel, modBg, modFg) = switch (moderation) {
       'PendingReview' => (
-          'Chờ duyệt',
-          const Color(0xFFFFF1ED),
-          StitchTokens.goldDark
-        ),
+        'Chờ duyệt',
+        const Color(0xFFFFF1ED),
+        StitchTokens.goldDark,
+      ),
       'Rejected' => (
-          'Cần sửa',
-          const Color(0xFFFFDAD6),
-          const Color(0xFF93000A)
-        ),
+        'Cần sửa',
+        const Color(0xFFFFDAD6),
+        const Color(0xFF93000A),
+      ),
       'Approved' || 'Published' || 'Active' => (
-          'Đang bán',
-          const Color(0xFFE1DEC2),
-          const Color(0xFF1D1C0B)
-        ),
+        'Đang bán',
+        const Color(0xFFE1DEC2),
+        const Color(0xFF1D1C0B),
+      ),
       _ => ('Bản nháp', StitchTokens.parchment, StitchTokens.deepCocoa),
     };
 
     final mode = (item['mode'] ?? '').toString();
-    final bundleItems = bundle?['items'] is List ? (bundle!['items'] as List) : null;
+    final bundleItems = bundle?['items'] is List
+        ? (bundle!['items'] as List)
+        : null;
     final (modeLabel, modeBg) = bundleItems != null
         ? ('Bộ ${bundleItems.length} cuốn · Giá cả bộ', StitchTokens.wine)
         : switch (mode) {
@@ -2044,15 +2031,18 @@ class BookCard extends ConsumerWidget {
             _ => ('', StitchTokens.wine),
           };
 
-    final salePrice = item['salePrice'] is num ? (item['salePrice'] as num) : null;
-    final exchangeValue =
-        item['exchangeValue'] is num ? (item['exchangeValue'] as num) : null;
+    final salePrice = item['salePrice'] is num
+        ? (item['salePrice'] as num)
+        : null;
+    final exchangeValue = item['exchangeValue'] is num
+        ? (item['exchangeValue'] as num)
+        : null;
 
     final fulfillment = item['fulfillment'] is Map
         ? Map<String, dynamic>.from(item['fulfillment'] as Map)
         : null;
-    final locationText =
-        (fulfillment?['name'] ?? item['location'] ?? 'TP.HCM').toString();
+    final locationText = (fulfillment?['name'] ?? item['location'] ?? 'TP.HCM')
+        .toString();
 
     return Material(
       color: StitchTokens.whiteSurface,
@@ -2081,10 +2071,7 @@ class BookCard extends ConsumerWidget {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    BookCoverPhoto(
-                      item: item,
-                      isMine: variant == 'management',
-                    ),
+                    BookCoverPhoto(item: item, isMine: variant == 'management'),
                     Positioned(
                       top: 6,
                       left: 6,
@@ -2100,8 +2087,7 @@ class BookCard extends ConsumerWidget {
                         child: AppText(
                           variant == 'management' ? modLabel : condLabel,
                           kind: AppTextKind.label,
-                          color:
-                              variant == 'management' ? modFg : Colors.white,
+                          color: variant == 'management' ? modFg : Colors.white,
                           style: const TextStyle(fontSize: 9.5),
                         ),
                       ),
@@ -2358,8 +2344,8 @@ class _BookCoverPhotoState extends ConsumerState<BookCoverPhoto> {
       return;
     }
 
-    final listingId =
-        (widget.item['id'] ?? widget.item['listingId'] ?? '').toString();
+    final listingId = (widget.item['id'] ?? widget.item['listingId'] ?? '')
+        .toString();
 
     // 2. Photos / mediaIds inspection
     final mediaId = _extractMediaId(widget.item);
@@ -2461,7 +2447,9 @@ class _BookCoverPhotoState extends ConsumerState<BookCoverPhoto> {
         final ids = obj['mediaIds'] ?? obj['media'];
         if (ids is List && ids.isNotEmpty) {
           final first = ids.first;
-          if (first is Map && first['id'] != null) return first['id'].toString();
+          if (first is Map && first['id'] != null) {
+            return first['id'].toString();
+          }
           if (first != null && first.toString().trim().isNotEmpty) {
             return first.toString().trim();
           }
@@ -2516,5 +2504,3 @@ class _BookCoverPhotoState extends ConsumerState<BookCoverPhoto> {
     return const _BookCoverPlaceholder();
   }
 }
-
-

@@ -8,11 +8,7 @@ import '../../../core/widgets/app_widgets.dart';
 
 /// ReviewsScreen (`/reviews`) matching `apps/mobile-react-native/src/features/reviews/reviews-screen.tsx`
 class ReviewsScreen extends ConsumerStatefulWidget {
-  const ReviewsScreen({
-    super.key,
-    this.initialType,
-    this.initialTransactionId,
-  });
+  const ReviewsScreen({super.key, this.initialType, this.initialTransactionId});
 
   final String? initialType;
   final String? initialTransactionId;
@@ -61,8 +57,9 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
     });
     final client = ref.read(sessionClientProvider);
     try {
-      final res = await client
-          .request('/me/review-transactions?type=$_selectedType&limit=10');
+      final res = await client.request(
+        '/me/review-transactions?type=$_selectedType&limit=10',
+      );
       final list = (res is Map && res['items'] is List)
           ? (res['items'] as List)
           : const [];
@@ -191,8 +188,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
                         title: '$score/5',
                         wine: true,
                         selected: _partnerRating == score,
-                        onPressed: () =>
-                            setState(() => _partnerRating = score),
+                        onPressed: () => setState(() => _partnerRating = score),
                       );
                     }).toList(),
                   ),
@@ -262,8 +258,7 @@ class _ReviewsScreenState extends ConsumerState<ReviewsScreen> {
                 wine: true,
                 icon: Icons.rate_review_outlined,
                 title: 'Chưa có giao dịch hoàn tất để đánh giá',
-                message:
-                    'Chỉ các giao dịch đã hoàn tất thực tế trên hệ thống mới mở quyền viết đánh giá.',
+                message: 'Chỉ các giao dịch đã hoàn tất thực tế trên hệ thống mới mở quyền viết đánh giá.',
               )
             else
               ..._transactions.map((tx) {
@@ -330,8 +325,9 @@ class _ReputationScreenState extends ConsumerState<ReputationScreen> {
     });
     final client = ref.read(sessionClientProvider);
     try {
-      final res = await client
-          .publicRequest('/members/${widget.memberId}/reputation?limit=10');
+      final res = await client.publicRequest(
+        '/members/${widget.memberId}/reputation?limit=10',
+      );
       if (!mounted) return;
       setState(() {
         _reputation = res is Map ? Map<String, dynamic>.from(res) : null;
@@ -358,8 +354,7 @@ class _ReputationScreenState extends ConsumerState<ReputationScreen> {
         children: [
           BackAction(
             title: 'Quay lại',
-            onPressed: () =>
-                context.canPop() ? context.pop() : context.go('/'),
+            onPressed: () => context.canPop() ? context.pop() : context.go('/'),
           ),
           const SizedBox(height: AppSpace.xs),
           const AppText(
@@ -413,7 +408,10 @@ class _ReputationScreenState extends ConsumerState<ReputationScreen> {
               ),
             ),
             const SizedBox(height: AppSpace.lg),
-            const AppText('Đánh giá công khai đã duyệt', kind: AppTextKind.heading),
+            const AppText(
+              'Đánh giá công khai đã duyệt',
+              kind: AppTextKind.heading,
+            ),
             const SizedBox(height: AppSpace.sm),
             if (items.isEmpty)
               const AppText(
@@ -505,19 +503,21 @@ class _SupportCenterScreenState extends ConsumerState<SupportCenterScreen> {
     final client = ref.read(sessionClientProvider);
     try {
       final results = await Future.wait<dynamic>([
-        client.request('/me/support-cases?limit=20').catchError((_) => const {}),
+        client
+            .request('/me/support-cases?limit=20')
+            .catchError((_) => const {}),
         client
             .request('/me/support-targets?type=$_selectedTargetType&limit=10')
             .catchError((_) => const {}),
       ]);
       final caseList =
           (results[0] is Map && (results[0] as Map)['items'] is List)
-              ? ((results[0] as Map)['items'] as List)
-              : const [];
+          ? ((results[0] as Map)['items'] as List)
+          : const [];
       final targetList =
           (results[1] is Map && (results[1] as Map)['items'] is List)
-              ? ((results[1] as Map)['items'] as List)
-              : const [];
+          ? ((results[1] as Map)['items'] as List)
+          : const [];
       if (!mounted) return;
       setState(() {
         _cases = caseList
@@ -543,8 +543,7 @@ class _SupportCenterScreenState extends ConsumerState<SupportCenterScreen> {
     if (_titleCtrl.text.trim().length < 3 ||
         _descCtrl.text.trim().length < 10) {
       setState(() {
-        _error =
-            'Vui lòng nhập tiêu đề (tối thiểu 3 ký tự) và nội dung chi tiết (tối thiểu 10 ký tự).';
+        _error = 'Vui lòng nhập tiêu đề (tối thiểu 3 ký tự) và nội dung chi tiết (tối thiểu 10 ký tự).';
       });
       return;
     }
@@ -666,23 +665,24 @@ class _SupportCenterScreenState extends ConsumerState<SupportCenterScreen> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: [
-                      ('DirectOrder', 'Đơn trực tiếp'),
-                      ('Exchange', 'Đổi sách'),
-                      ('PointOrder', 'Đơn đấu giá'),
-                    ].map((t) {
-                      return AppChip(
-                        title: t.$2,
-                        selected: _selectedTargetType == t.$1,
-                        onPressed: () {
-                          setState(() {
-                            _selectedTargetType = t.$1;
-                            _selectedTargetId = null;
-                          });
-                          _loadCasesAndTargets();
-                        },
-                      );
-                    }).toList(),
+                    children:
+                        [
+                          ('DirectOrder', 'Đơn trực tiếp'),
+                          ('Exchange', 'Đổi sách'),
+                          ('PointOrder', 'Đơn đấu giá'),
+                        ].map((t) {
+                          return AppChip(
+                            title: t.$2,
+                            selected: _selectedTargetType == t.$1,
+                            onPressed: () {
+                              setState(() {
+                                _selectedTargetType = t.$1;
+                                _selectedTargetId = null;
+                              });
+                              _loadCasesAndTargets();
+                            },
+                          );
+                        }).toList(),
                   ),
                   if (_targetOptions.isNotEmpty) ...[
                     const SizedBox(height: 8),
@@ -748,8 +748,7 @@ class _SupportCenterScreenState extends ConsumerState<SupportCenterScreen> {
                 wine: true,
                 icon: Icons.support_agent_rounded,
                 title: 'Chưa có yêu cầu hỗ trợ nào',
-                message:
-                    'Gửi góp ý, báo lỗi kỹ thuật, phản ánh vấn đề giao dịch hoặc báo cáo vi phạm để đội ngũ Lật Lại hỗ trợ bạn.',
+                message: 'Gửi góp ý, báo lỗi kỹ thuật, phản ánh vấn đề giao dịch hoặc báo cáo vi phạm để đội ngũ Lật Lại hỗ trợ bạn.',
               )
             else
               ..._cases.map((c) {
@@ -795,4 +794,3 @@ class _SupportCenterScreenState extends ConsumerState<SupportCenterScreen> {
     );
   }
 }
-

@@ -17,7 +17,7 @@ export function navigationGroups(user: CurrentUser | undefined): NavigationGroup
     groups.push({
       id: "management",
       label: "Quản lý",
-      items: [{ label: "Quản lý người dùng", to: "/users", icon: "users" }, { label: "Trung tâm xử lý", to: "/support", icon: "resolution" }],
+      items: [{ label: "Yêu cầu rút tiền", to: "/withdrawals", icon: "resolution" }, { label: "Quản lý người dùng", to: "/users", icon: "users" }, { label: "Trung tâm xử lý", to: "/support", icon: "resolution" }],
     });
   }
 

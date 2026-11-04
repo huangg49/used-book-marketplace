@@ -25,12 +25,13 @@ export const notificationSchema = z.object({
     'ExchangeCancelled',
     'ExchangeRejected',
     'ExchangeDisputed',
+    'WithdrawalUpdated',
     'SupportUpdated',
     'ReviewModerated',
   ]),
   title: z.string(),
   body: z.string(),
-  targetType: z.enum(['Auction', 'Exchange', 'Order', 'SupportCase', 'TransactionReview']),
+  targetType: z.enum(['Auction', 'Exchange', 'Order', 'SupportCase', 'TransactionReview', 'Withdrawal']),
   targetId: z.string().uuid(),
   createdAt: z.string(),
   readAt: z.string().nullable(),
@@ -47,6 +48,7 @@ export const notificationKeys={
 };
 export function notificationPath(n:Pick<MemberNotification,'targetType'|'targetId'>){
   switch(n.targetType){
+    case 'Withdrawal':return `/wallet?withdrawal=${n.targetId}`;
     case 'SupportCase':return `/support/${n.targetId}`;
     case 'TransactionReview':return `/reviews?reviewId=${encodeURIComponent(n.targetId)}`;
     case 'Order':return `/orders/${n.targetId}`;

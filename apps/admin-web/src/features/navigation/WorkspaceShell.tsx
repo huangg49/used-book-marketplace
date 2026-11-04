@@ -409,7 +409,14 @@ export function WorkspaceShell({
 
   return (
     <div className={styles.shell} data-pinned={pinned}>
-      <a className="skip-link" href="#main">
+      <a className="skip-link" href="#main" onClick={(event) => {
+        if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        const main = document.getElementById("main");
+        if (!main) return;
+        event.preventDefault();
+        main.focus();
+        main.scrollIntoView({block: "start"});
+      }}>
         Đến nội dung chính
       </a>
       <header className={styles.mobileHeader}>

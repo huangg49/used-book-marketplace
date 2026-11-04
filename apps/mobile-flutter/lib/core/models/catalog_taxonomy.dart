@@ -76,10 +76,19 @@ abstract final class CatalogTaxonomy {
         TaxonomyOption(id: 'business.finance', label: 'Tài chính / đầu tư'),
         TaxonomyOption(id: 'business.startup', label: 'Khởi nghiệp'),
         TaxonomyOption(id: 'business.economics', label: 'Kinh tế học'),
-        TaxonomyOption(id: 'business.accounting', label: 'Kế toán / kiểm toán / thuế'),
+        TaxonomyOption(
+          id: 'business.accounting',
+          label: 'Kế toán / kiểm toán / thuế',
+        ),
         TaxonomyOption(id: 'business.hr', label: 'Nhân sự / việc làm'),
-        TaxonomyOption(id: 'business.supply-chain', label: 'Chuỗi cung ứng / logistics'),
-        TaxonomyOption(id: 'business.lessons', label: 'Nhân vật / bài học kinh doanh'),
+        TaxonomyOption(
+          id: 'business.supply-chain',
+          label: 'Chuỗi cung ứng / logistics',
+        ),
+        TaxonomyOption(
+          id: 'business.lessons',
+          label: 'Nhân vật / bài học kinh doanh',
+        ),
       ],
     ),
     TaxonomyCategory(
@@ -162,7 +171,10 @@ abstract final class CatalogTaxonomy {
         TaxonomyOption(id: 'languages.zh', label: 'Tiếng Trung'),
         TaxonomyOption(id: 'languages.fr', label: 'Tiếng Pháp'),
         TaxonomyOption(id: 'languages.de', label: 'Tiếng Đức'),
-        TaxonomyOption(id: 'languages.vi', label: 'Tiếng Việt cho người nước ngoài'),
+        TaxonomyOption(
+          id: 'languages.vi',
+          label: 'Tiếng Việt cho người nước ngoài',
+        ),
         TaxonomyOption(id: 'languages.other', label: 'Ngoại ngữ khác'),
       ],
     ),
@@ -225,7 +237,10 @@ abstract final class CatalogTaxonomy {
       label: 'Khoa học / công nghệ',
       children: [
         TaxonomyOption(id: 'science.natural', label: 'Khoa học tự nhiên'),
-        TaxonomyOption(id: 'science.technology', label: 'Công nghệ / lập trình'),
+        TaxonomyOption(
+          id: 'science.technology',
+          label: 'Công nghệ / lập trình',
+        ),
         TaxonomyOption(id: 'science.space', label: 'Thiên văn / vũ trụ'),
         TaxonomyOption(id: 'science.environment', label: 'Môi trường'),
       ],
@@ -302,10 +317,7 @@ abstract final class CatalogTaxonomy {
         TaxonomyOption(id: 'lifestyle.sports', label: 'Thể thao'),
       ],
     ),
-    TaxonomyCategory(
-      id: 'other',
-      label: 'Sách khác',
-    ),
+    TaxonomyCategory(id: 'other', label: 'Sách khác'),
   ];
 
   static const List<TaxonomyOption> languageOptions = [
@@ -346,4 +358,3 @@ abstract final class CatalogTaxonomy {
     return code;
   }
 }
-

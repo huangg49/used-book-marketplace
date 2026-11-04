@@ -11,10 +11,7 @@ import '../../auth/presentation/auth_screens.dart';
 /// `DashboardGreeting.tsx`, `DashboardStats.tsx`, `DashboardMyBooks.tsx`,
 /// `DashboardOrders.tsx`, `DashboardSidebar.tsx`, and `MemberWorkPage.tsx`.
 class AccountScreen extends ConsumerStatefulWidget {
-  const AccountScreen({
-    super.key,
-    this.returnBookId,
-  });
+  const AccountScreen({super.key, this.returnBookId});
 
   final String? returnBookId;
 
@@ -32,10 +29,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   List<Map<String, dynamic>> _workItems = const [];
   List<Map<String, dynamic>> _myListings = const [];
   List<Map<String, dynamic>> _myOrders = const [];
-  Map<String, dynamic> _wallet = const {
-    'available': 0,
-    'transactionHeld': 0,
-  };
+  Map<String, dynamic> _wallet = const {'available': 0, 'transactionHeld': 0};
 
   bool _logoutBusy = false;
   String? _error;
@@ -63,10 +57,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
   Future<void> _loadDashboardData() async {
     final session = ref.read(sessionProvider);
     if (!session.isAuthenticated) return;
-    await Future.wait([
-      _loadWorkItemsIfAuth(),
-      _loadStatsAndOverview(),
-    ]);
+    await Future.wait([_loadWorkItemsIfAuth(), _loadStatsAndOverview()]);
   }
 
   Future<void> _loadStatsAndOverview() async {
@@ -79,7 +70,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           ? '&moderation=${Uri.encodeQueryComponent(_shelfFilter)}'
           : '';
       final results = await Future.wait<dynamic>([
-        client.request('/me/wallet').catchError((_) => const <String, dynamic>{}),
+        client
+            .request('/me/wallet')
+            .catchError((_) => const <String, dynamic>{}),
         client
             .request('/me/listings?channel=Marketplace&limit=20$modParam')
             .catchError((_) => const <String, dynamic>{}),
@@ -94,12 +87,12 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
           : const <String, dynamic>{};
       final rawListings =
           (results[1] is Map && (results[1] as Map)['items'] is List)
-              ? ((results[1] as Map)['items'] as List)
-              : const [];
+          ? ((results[1] as Map)['items'] as List)
+          : const [];
       final rawOrders =
           (results[2] is Map && (results[2] as Map)['items'] is List)
-              ? ((results[2] as Map)['items'] as List)
-              : const [];
+          ? ((results[2] as Map)['items'] as List)
+          : const [];
 
       setState(() {
         _wallet = walletMap;
@@ -278,10 +271,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFFFFDF9),
-                  Color(0xFFF6EFE6),
-                ],
+                colors: [Color(0xFFFFFDF9), Color(0xFFF6EFE6)],
               ),
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: const Color(0xFFE6D5C3)),
@@ -361,8 +351,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                             isActive
                                 ? 'ĐANG HOẠT ĐỘNG'
                                 : (isLocked
-                                    ? 'KHÓA GIAO DỊCH MỚI'
-                                    : 'HẠN CHẾ GIAO DỊCH'),
+                                      ? 'KHÓA GIAO DỊCH MỚI'
+                                      : 'HẠN CHẾ GIAO DỊCH'),
                             style: TextStyle(
                               fontSize: 10.5,
                               fontWeight: FontWeight.w700,
@@ -542,8 +532,8 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     value: _statsLoading
                         ? '…'
                         : (totalShelfValue > 0
-                            ? formatVnd(totalShelfValue)
-                            : '$totalBooks cuốn'),
+                              ? formatVnd(totalShelfValue)
+                              : '$totalBooks cuốn'),
                     icon: Icons.local_library_outlined,
                     badgeText: '$totalBooks ấn phẩm',
                     actionText: 'Kệ sách',
@@ -624,7 +614,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                         child: Row(
                           children: _lanes.map((lane) {
                             return Padding(
-                              padding: const EdgeInsets.only(right: AppSpace.sm),
+                              padding: const EdgeInsets.only(
+                                right: AppSpace.sm,
+                              ),
                               child: AppChip(
                                 title: lane.label,
                                 wine: true,
@@ -693,16 +685,20 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                                 decoration: BoxDecoration(
                                   color: StitchTokens.roseWarmSurface,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: StitchTokens.peachBorder),
+                                  border: Border.all(
+                                    color: StitchTokens.peachBorder,
+                                  ),
                                 ),
                                 child: Row(
                                   children: [
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           AppText(
-                                            (item['title'] ?? 'Giao dịch đang chờ')
+                                            (item['title'] ??
+                                                    'Giao dịch đang chờ')
                                                 .toString(),
                                             kind: AppTextKind.bold,
                                             color: StitchTokens.wine,
@@ -838,187 +834,194 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                       ),
                       const SizedBox(height: AppSpace.md),
                       if (_myListings.isEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(AppSpace.lg),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFAF7F2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFEDE4D7)),
-                    ),
-                    child: Column(
-                      children: [
-                        const Icon(
-                          Icons.auto_stories_outlined,
-                          size: 28,
-                          color: StitchTokens.wine,
-                        ),
-                        const SizedBox(height: 8),
-                        const AppText(
-                          'Một chỗ trống cho cuốn sách đầu tiên.',
-                          kind: AppTextKind.bold,
-                          color: StitchTokens.wine,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 4),
-                        const AppText(
-                          'Đăng cuốn đã đọc xong để tìm người đọc tiếp theo.',
-                          kind: AppTextKind.small,
-                          color: AppColors.muted,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 12),
-                        AppButton(
-                          title: 'Đăng cuốn đầu tiên',
-                          wine: true,
-                          compact: true,
-                          onPressed: () => context.go('/drafts'),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  ..._myListings.take(3).map((item) {
-                    final price = _listingPrice(item);
-                    final mod = _listingModeration(item);
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpace.sm),
-                      child: InkWell(
-                        onTap: () => context.go('/drafts'),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(AppSpace.lg),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFAF7F2),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE8DFD1)),
+                            border: Border.all(color: const Color(0xFFEDE4D7)),
                           ),
-                          child: Row(
+                          child: Column(
                             children: [
-                              Container(
-                                width: 44,
-                                height: 58,
+                              const Icon(
+                                Icons.auto_stories_outlined,
+                                size: 28,
+                                color: StitchTokens.wine,
+                              ),
+                              const SizedBox(height: 8),
+                              const AppText(
+                                'Một chỗ trống cho cuốn sách đầu tiên.',
+                                kind: AppTextKind.bold,
+                                color: StitchTokens.wine,
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 4),
+                              const AppText(
+                                'Đăng cuốn đã đọc xong để tìm người đọc tiếp theo.',
+                                kind: AppTextKind.small,
+                                color: AppColors.muted,
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 12),
+                              AppButton(
+                                title: 'Đăng cuốn đầu tiên',
+                                wine: true,
+                                compact: true,
+                                onPressed: () => context.go('/drafts'),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        ..._myListings.take(3).map((item) {
+                          final price = _listingPrice(item);
+                          final mod = _listingModeration(item);
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: AppSpace.sm),
+                            child: InkWell(
+                              onTap: () => context.go('/drafts'),
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF0EAE1),
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: const Color(0xFFFAF7F2),
+                                  borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: const Color(0xFFE4DACD),
+                                    color: const Color(0xFFE8DFD1),
                                   ),
                                 ),
-                                clipBehavior: Clip.antiAlias,
-                                child: BookCoverPhoto(
-                                  item: item,
-                                  isMine: true,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                child: Row(
                                   children: [
-                                    AppText(
-                                      _listingTitle(item),
-                                      kind: AppTextKind.bold,
-                                      color: StitchTokens.wine,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                    Container(
+                                      width: 44,
+                                      height: 58,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF0EAE1),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: const Color(0xFFE4DACD),
+                                        ),
+                                      ),
+                                      clipBehavior: Clip.antiAlias,
+                                      child: BookCoverPhoto(
+                                        item: item,
+                                        isMine: true,
+                                        fit: BoxFit.cover,
+                                      ),
                                     ),
-                                    const SizedBox(height: 2),
-                                    AppText(
-                                      _listingAuthor(item),
-                                      kind: AppTextKind.small,
-                                      color: AppColors.muted,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          price > 0
-                                              ? formatVnd(price)
-                                              : 'Thỏa thuận',
-                                          style: const TextStyle(
-                                            fontSize: 12.5,
-                                            fontWeight: FontWeight.w800,
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          AppText(
+                                            _listingTitle(item),
+                                            kind: AppTextKind.bold,
                                             color: StitchTokens.wine,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
+                                          const SizedBox(height: 2),
+                                          AppText(
+                                            _listingAuthor(item),
+                                            kind: AppTextKind.small,
+                                            color: AppColors.muted,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
-                                          decoration: BoxDecoration(
-                                            color: mod == 'Approved'
-                                                ? StitchTokens.likeNewGreenBg
-                                                : const Color(0xFFFFF8E1),
-                                            borderRadius:
-                                                BorderRadius.circular(4),
+                                          const SizedBox(height: 4),
+                                          Row(
+                                            children: [
+                                              Text(
+                                                price > 0
+                                                    ? formatVnd(price)
+                                                    : 'Thỏa thuận',
+                                                style: const TextStyle(
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: StitchTokens.wine,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: mod == 'Approved'
+                                                      ? StitchTokens
+                                                            .likeNewGreenBg
+                                                      : const Color(0xFFFFF8E1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  mod == 'Approved'
+                                                      ? 'Đang mở bán'
+                                                      : mod,
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: mod == 'Approved'
+                                                        ? StitchTokens
+                                                              .likeNewGreen
+                                                        : StitchTokens
+                                                              .tagExchangeText,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          child: Text(
-                                            mod == 'Approved'
-                                                ? 'Đang mở bán'
-                                                : mod,
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w700,
-                                              color: mod == 'Approved'
-                                                  ? StitchTokens.likeNewGreen
-                                                  : StitchTokens.tagExchangeText,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
+                                    ),
+                                    const Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: StitchTokens.wine,
                                     ),
                                   ],
                                 ),
                               ),
-                              const Icon(
-                                Icons.chevron_right_rounded,
+                            ),
+                          );
+                        }),
+                      const SizedBox(height: 6),
+                      InkWell(
+                        onTap: () => context.go('/drafts'),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Quản lý toàn bộ Kệ sách của tôi',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: StitchTokens.wine,
+                                ),
+                              ),
+                              SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 15,
                                 color: StitchTokens.wine,
                               ),
                             ],
                           ),
                         ),
                       ),
-                    );
-                  }),
-                const SizedBox(height: 6),
-                InkWell(
-                  onTap: () => context.go('/drafts'),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Quản lý toàn bộ Kệ sách của tôi',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: StitchTokens.wine,
-                          ),
-                        ),
-                        SizedBox(width: 4),
-                        Icon(
-                          Icons.arrow_forward_rounded,
-                          size: 15,
-                          color: StitchTokens.wine,
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    ),
-    const SizedBox(height: AppSpace.lg),
+          const SizedBox(height: AppSpace.lg),
 
           // 5. DIRECT ORDERS TRACKING (Matches Web DashboardOrders: "Theo dõi đơn hàng")
           Container(
@@ -1056,8 +1059,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                           ('Seller', 'Đơn bán'),
                         ])
                           GestureDetector(
-                            onTap: () =>
-                                setState(() => _orderTab = entry.$1),
+                            onTap: () => setState(() => _orderTab = entry.$1),
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 10,
@@ -1111,7 +1113,9 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                       else
                         ...filteredOrders.take(3).map((order) {
                           final id = (order['id'] ?? '').toString();
-                          final shortId = id.length > 8 ? id.substring(0, 8) : id;
+                          final shortId = id.length > 8
+                              ? id.substring(0, 8)
+                              : id;
                           return Padding(
                             padding: const EdgeInsets.only(bottom: AppSpace.sm),
                             child: InkWell(
@@ -1122,14 +1126,18 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFFAF7F2),
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: const Color(0xFFE8DFD1)),
+                                  border: Border.all(
+                                    color: const Color(0xFFE8DFD1),
+                                  ),
                                 ),
                                 child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           AppText(
                                             (order['title'] ?? 'Đơn #$shortId')
@@ -1211,8 +1219,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               children: [
                 const _RedSectionHeader(
                   title: 'Tiếp tục giao dịch',
-                  subtitle:
-                      'Đơn trực tiếp, trao đổi và đơn đấu giá có nơi theo dõi riêng.',
+                  subtitle: 'Đơn trực tiếp, trao đổi và đơn đấu giá có nơi theo dõi riêng.',
                   icon: Icons.sync_alt_rounded,
                 ),
                 Padding(
@@ -1225,8 +1232,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     children: [
                       _WineMenuRow(
                         title: 'Đơn mua/bán trực tiếp',
-                        description:
-                            'Thanh toán, xác nhận và theo dõi đơn mua hoặc đơn bán.',
+                        description: 'Thanh toán, xác nhận và theo dõi đơn mua hoặc đơn bán.',
                         icon: Icons.shopping_bag_outlined,
                         onTap: () => context.push('/orders'),
                       ),
@@ -1239,24 +1245,21 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                       ),
                       _WineMenuRow(
                         title: 'Đấu giá của tôi',
-                        description:
-                            'Phiên đã tham gia, sách gửi đấu giá và đơn thắng đấu giá.',
+                        description: 'Phiên đã tham gia, sách gửi đấu giá và đơn thắng đấu giá.',
                         icon: Icons.gavel_rounded,
                         onTap: () => context.push('/my-auctions'),
                       ),
                       if (!isLocked)
                         _WineMenuRow(
                           title: 'Trò chuyện',
-                          description:
-                              'Thương lượng và trao đổi trong đúng hội thoại giao dịch.',
+                          description: 'Thương lượng và trao đổi trong đúng hội thoại giao dịch.',
                           icon: Icons.chat_bubble_outline_rounded,
                           onTap: () => context.push('/chat-inbox'),
                         ),
                       if (!isLocked)
                         _WineMenuRow(
                           title: 'Kệ sách của tôi',
-                          description:
-                              'Bản nháp, bài chờ duyệt, bài cần sửa và sách đang hiển thị.',
+                          description: 'Bản nháp, bài chờ duyệt, bài cần sửa và sách đang hiển thị.',
                           icon: Icons.local_library_outlined,
                           onTap: () => context.go('/drafts'),
                           showDivider: false,
@@ -1289,8 +1292,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               children: [
                 const _RedSectionHeader(
                   title: 'Thông tin và đánh giá',
-                  subtitle:
-                      'Hồ sơ cá nhân, ví Lật-Xu, địa chỉ giao nhận và uy tín thành viên.',
+                  subtitle: 'Hồ sơ cá nhân, ví Lật-Xu, địa chỉ giao nhận và uy tín thành viên.',
                   icon: Icons.manage_accounts_outlined,
                 ),
                 Padding(
@@ -1303,23 +1305,20 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                     children: [
                       _WineMenuRow(
                         title: 'Sửa hồ sơ và email',
-                        description:
-                            'Cập nhật tên hiển thị, số điện thoại và bảo mật email.',
+                        description: 'Cập nhật tên hiển thị, số điện thoại và bảo mật email.',
                         icon: Icons.person_outline_rounded,
                         onTap: () => context.push('/profile'),
                       ),
                       _WineMenuRow(
                         title: 'Ví của tôi',
-                        description:
-                            'Số dư khả dụng, khoản tạm giữ (Escrow) và lịch sử biến động.',
+                        description: 'Số dư khả dụng, khoản tạm giữ (Escrow) và lịch sử biến động.',
                         icon: Icons.account_balance_wallet_outlined,
                         onTap: () => context.push('/wallet'),
                       ),
                       if (!isLocked) ...[
                         _WineMenuRow(
                           title: 'Địa chỉ của tôi',
-                          description:
-                              'Quản lý sổ địa chỉ giao nhận tại TP.HCM, Bình Dương & Vũng Tàu.',
+                          description: 'Quản lý sổ địa chỉ giao nhận tại TP.HCM, Bình Dương & Vũng Tàu.',
                           icon: Icons.location_on_outlined,
                           onTap: () => context.push('/addresses'),
                         ),
@@ -1332,23 +1331,20 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
                         ),
                         _WineMenuRow(
                           title: 'Đánh giá giao dịch & hồ sơ uy tín',
-                          description:
-                              'Xem nhận xét từ bạn đọc và đánh giá giao dịch đã hoàn tất.',
+                          description: 'Xem nhận xét từ bạn đọc và đánh giá giao dịch đã hoàn tất.',
                           icon: Icons.star_outline_rounded,
                           onTap: () => context.push('/reviews'),
                         ),
                       ],
                       _WineMenuRow(
                         title: 'Hỗ trợ & phản ánh',
-                        description:
-                            'Gửi yêu cầu hỗ trợ hoặc khiếu nại về đơn hàng, giao dịch.',
+                        description: 'Gửi yêu cầu hỗ trợ hoặc khiếu nại về đơn hàng, giao dịch.',
                         icon: Icons.support_agent_rounded,
                         onTap: () => context.push('/support'),
                       ),
                       _WineMenuRow(
                         title: 'Cách mua, bán, đổi và đấu giá',
-                        description:
-                            'Cẩm nang hướng dẫn quy trình giao dịch và kiểm định ViaPoint.',
+                        description: 'Cẩm nang hướng dẫn quy trình giao dịch và kiểm định ViaPoint.',
                         icon: Icons.help_outline_rounded,
                         onTap: () => context.push('/guide'),
                         showDivider: false,
@@ -1457,11 +1453,7 @@ class _WineStatCard extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF680B0B),
-              StitchTokens.wine,
-              Color(0xFF450202),
-            ],
+            colors: [Color(0xFF680B0B), StitchTokens.wine, Color(0xFF450202)],
           ),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFF831A1A)),
@@ -1508,7 +1500,11 @@ class _WineStatCard extends StatelessWidget {
                           color: Colors.white.withValues(alpha: 0.18),
                         ),
                       ),
-                      child: Icon(icon, size: 13, color: const Color(0xFFFCEEED)),
+                      child: Icon(
+                        icon,
+                        size: 13,
+                        color: const Color(0xFFFCEEED),
+                      ),
                     ),
                   ],
                 ),
@@ -1675,10 +1671,7 @@ class _WhiteStatCard extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  height: 1,
-                  color: const Color(0x80EBD9C8),
-                ),
+                Container(height: 1, color: const Color(0x80EBD9C8)),
                 const SizedBox(height: 6),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1745,9 +1738,7 @@ class _WineMenuRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           border: showDivider
-              ? const Border(
-                  bottom: BorderSide(color: Color(0xFFEDE4D7)),
-                )
+              ? const Border(bottom: BorderSide(color: Color(0xFFEDE4D7)))
               : null,
         ),
         child: Row(
@@ -1817,11 +1808,7 @@ class _RedSectionHeader extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF680B0B),
-            StitchTokens.wine,
-            Color(0xFF450202),
-          ],
+          colors: [Color(0xFF680B0B), StitchTokens.wine, Color(0xFF450202)],
         ),
       ),
       child: Row(
@@ -1834,15 +1821,9 @@ class _RedSectionHeader extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.25),
-                ),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
               ),
-              child: Icon(
-                icon,
-                size: 17,
-                color: Colors.white,
-              ),
+              child: Icon(icon, size: 17, color: Colors.white),
             ),
             const SizedBox(width: 10),
           ],
@@ -1869,10 +1850,7 @@ class _RedSectionHeader extends StatelessWidget {
               ],
             ),
           ),
-          if (trailing != null) ...[
-            const SizedBox(width: 8),
-            trailing!,
-          ],
+          if (trailing != null) ...[const SizedBox(width: 8), trailing!],
         ],
       ),
     );
@@ -1942,7 +1920,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _savedDisplayName = name;
         _savedPhone = phone;
         _currentEmail = (map['email'] ?? '').toString();
-        _version = (map['version'] is num) ? (map['version'] as num).toInt() : 1;
+        _version = (map['version'] is num)
+            ? (map['version'] as num).toInt()
+            : 1;
         _pendingEmailChangeId = pending?['id']?.toString();
         _pendingEmailTarget = pending?['email']?.toString();
         _loading = false;
@@ -2038,8 +2018,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _currentPasswordCtrl.clear();
         _pendingEmailChangeId =
             (map['entityId'] ?? _pendingEmailChangeId ?? 'pending').toString();
-        _success =
-            'Nếu email phù hợp, mã xác nhận đã được gửi đến địa chỉ mới. Email đăng nhập hiện tại chưa thay đổi.';
+        _success = 'Nếu email phù hợp, mã xác nhận đã được gửi đến địa chỉ mới. Email đăng nhập hiện tại chưa thay đổi.';
       });
     } catch (e) {
       if (!mounted) return;
@@ -2078,8 +2057,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _pendingEmailChangeId = null;
         _emailOtpCtrl.clear();
         _newEmailCtrl.clear();
-        _success =
-            'Đã xác minh và đổi email đăng nhập. Các phiên đăng nhập khác đã được thu hồi.';
+        _success = 'Đã xác minh và đổi email đăng nhập. Các phiên đăng nhập khác đã được thu hồi.';
       });
     } catch (e) {
       if (!mounted) return;
@@ -2099,12 +2077,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       'LOCKED' => 'Đang khóa giao dịch mới',
       _ => 'Đang hoạt động',
     };
-    final displayInitial = (_displayNameCtrl.text.trim().isNotEmpty
-            ? _displayNameCtrl.text.trim()
-            : (user?.displayName ?? 'L'))
-        .characters
-        .first
-        .toUpperCase();
+    final displayInitial =
+        (_displayNameCtrl.text.trim().isNotEmpty
+                ? _displayNameCtrl.text.trim()
+                : (user?.displayName ?? 'L'))
+            .characters
+            .first
+            .toUpperCase();
 
     return AppScreen(
       currentNavPath: '/account',
@@ -2188,7 +2167,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             shape: BoxShape.circle,
                             color: const Color(0xFFF0E2CA),
                             border: Border.all(
-                              color: StitchTokens.goldDark.withValues(alpha: 0.4),
+                              color: StitchTokens.goldDark.withValues(
+                                alpha: 0.4,
+                              ),
                               width: 1.5,
                             ),
                           ),
@@ -2260,8 +2241,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     controller: _phoneCtrl,
                     keyboardType: TextInputType.phone,
                     placeholder: '0901234567',
-                    hint:
-                        'Thông tin này không thay địa chỉ hoặc số điện thoại của đơn đã tạo.',
+                    hint: 'Thông tin này không thay địa chỉ hoặc số điện thoại của đơn đã tạo.',
                   ),
                   const SizedBox(height: AppSpace.lg),
                   AppButton(
@@ -2300,9 +2280,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   Container(
                     padding: const EdgeInsets.only(top: AppSpace.xl),
                     decoration: const BoxDecoration(
-                      border: Border(
-                        top: BorderSide(color: Color(0xFFEDE4D7)),
-                      ),
+                      border: Border(top: BorderSide(color: Color(0xFFEDE4D7))),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2380,7 +2358,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             decoration: BoxDecoration(
                               color: StitchTokens.roseWarmSurface,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: StitchTokens.peachBorder),
+                              border: Border.all(
+                                color: StitchTokens.peachBorder,
+                              ),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2419,9 +2399,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   Container(
                     padding: const EdgeInsets.only(top: AppSpace.xl),
                     decoration: const BoxDecoration(
-                      border: Border(
-                        top: BorderSide(color: Color(0xFFEDE4D7)),
-                      ),
+                      border: Border(top: BorderSide(color: Color(0xFFEDE4D7))),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2449,7 +2427,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             decoration: BoxDecoration(
                               color: const Color(0xFFFBF5EF),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFECDACB)),
+                              border: Border.all(
+                                color: const Color(0xFFECDACB),
+                              ),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,

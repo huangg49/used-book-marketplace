@@ -93,6 +93,8 @@ const ExchangeDisputesPage = lazy(() =>
   })),
 );
 
+const WithdrawalsPage = lazy(() => import('./features/withdrawals/WithdrawalsPage').then(m => ({default:m.WithdrawalsPage})));
+const WithdrawalDetailPage = lazy(() => import('./features/withdrawals/WithdrawalsPage').then(m => ({default:m.WithdrawalDetailPage})));
 function Workspace() {
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
   if (state.status !== "authenticated") return <LoginPage />;
@@ -127,6 +129,9 @@ const router = createBrowserRouter([
         children: [{ path: ":id", element: <Detail /> }],
       },
       { path: "/ai-review-checks", element: <AutoReviewChecksPage /> },
+      { path: "/withdrawals", element: <WithdrawalsPage /> },
+      { path: "/withdrawals/:id", element: <WithdrawalDetailPage /> },
+      { path: "/simulator/withdrawals", element: <WithdrawalsPage simulator /> },
       { path: "/users", element: <UserDirectory /> },
       { path: "/users/:id", element: <AccountControls /> },
       { path: "/transaction-reviews", element: <TransactionReviewsPage /> },

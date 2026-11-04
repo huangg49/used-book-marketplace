@@ -1,3 +1,4 @@
+import { withdrawalSpecs } from '../../src/database/mongo/migrations/0060-wallet-withdrawals.js';
 import { exchangeEvidenceSpecs } from '../../src/database/mongo/migrations/0054-exchange-evidence.js';
 import { buyNowNotificationsMigration } from '../../src/database/mongo/migrations/0029-buy-now-notifications.js';
 import { reviewLifecycleSpecs } from '../../src/database/mongo/migrations/0040-transaction-review-lifecycle.js';
@@ -96,6 +97,7 @@ describe('migrations', () => {
       currentCollections().length -
         INFRASTRUCTURE_COLLECTIONS.length -
         // New Mongo-native evidence/assignment collections do not change the PG baseline.
+        withdrawalSpecs.length -
         exchangeEvidenceSpecs.length -
         // MongoDB-native collections with no PostgreSQL model (ADR 0028).
         priceAssistSpecs.length -

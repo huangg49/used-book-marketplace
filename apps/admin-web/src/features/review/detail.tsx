@@ -105,8 +105,14 @@ function DetailContent({
       ?.closest<HTMLElement>("[data-review-dossier]")
       ?.scrollTo({ top: 0, behavior: "instant" });
     decisionArea.current?.scrollTo({ top: 0, behavior: "instant" });
-    heading.current?.focus({ preventScroll: true });
-  }, [loadedId]);
+    const active = document.activeElement;
+    // Only follow the navigation link that opened this dossier. A delayed
+    // response must not steal focus from skip links, filters or a closed menu.
+    const linkPath = active instanceof HTMLAnchorElement && !active.matches(".skip-link")
+      ? new URL(active.href).pathname : undefined;
+    if (active === document.body || linkPath === location.pathname || linkPath === `/review/${kind}`)
+      heading.current?.focus({ preventScroll: true });
+  }, [loadedId, kind, location.pathname]);
   async function reconcile() {
     await invalidateDashboard(queryClient);
     const fresh = await result.refetch();

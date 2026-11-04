@@ -145,20 +145,21 @@ class _MyExchangesScreenState extends ConsumerState<MyExchangesScreen> {
               wine: true,
               icon: Icons.swap_horiz_rounded,
               title: 'Chưa có đề nghị trao đổi nào',
-              message:
-                  'Chọn một cuốn sách có gắn nhãn "Đổi" trên kệ để gửi đề nghị hoán đổi với sách của bạn.',
+              message: 'Chọn một cuốn sách có gắn nhãn "Đổi" trên kệ để gửi đề nghị hoán đổi với sách của bạn.',
               actionLabel: 'Tìm sách để đổi',
               onAction: () => context.go('/search?mode=Both'),
             )
           else
             ...filtered.map((ex) {
               final id = (ex['id'] ?? '').toString();
-              final shortId =
-                  id.length >= 8 ? id.substring(0, 8).toUpperCase() : id;
-              final status =
-                  (ex['status'] ?? ex['state'] ?? 'Proposed').toString();
-              final diffAmount =
-                  (ex['diffAmount'] is num) ? (ex['diffAmount'] as num) : 0;
+              final shortId = id.length >= 8
+                  ? id.substring(0, 8).toUpperCase()
+                  : id;
+              final status = (ex['status'] ?? ex['state'] ?? 'Proposed')
+                  .toString();
+              final diffAmount = (ex['diffAmount'] is num)
+                  ? (ex['diffAmount'] as num)
+                  : 0;
 
               return Padding(
                 padding: const EdgeInsets.only(bottom: AppSpace.md),
@@ -318,11 +319,7 @@ class _ExchangeDetailScreenState extends ConsumerState<ExchangeDetailScreen> {
         '/exchanges/${widget.id}/$endpointSuffix',
         method: 'POST',
         idempotencyKey: generateIdempotencyKey('ex-$endpointSuffix'),
-        body: {
-          'expectedVersion': version,
-          'revision': version,
-          ...?extraBody,
-        },
+        body: {'expectedVersion': version, 'revision': version, ...?extraBody},
       );
       await _loadExchange();
       if (!mounted) return;
@@ -373,220 +370,218 @@ class _ExchangeDetailScreenState extends ConsumerState<ExchangeDetailScreen> {
               title: 'Đang tải hồ sơ trao đổi…',
             )
           : ex == null
-              ? StatePanel(
-                  wine: true,
-                  title: 'Không tìm thấy giao dịch trao đổi',
-                  message: _error,
-                  actionLabel: 'Về danh sách trao đổi',
-                  onAction: () => context.go('/exchanges'),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+          ? StatePanel(
+              wine: true,
+              title: 'Không tìm thấy giao dịch trao đổi',
+              message: _error,
+              actionLabel: 'Về danh sách trao đổi',
+              onAction: () => context.go('/exchanges'),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                BackAction(
+                  title: 'Trao đổi sách của tôi',
+                  onPressed: () => context.canPop()
+                      ? context.pop()
+                      : context.go('/exchanges'),
+                ),
+                const SizedBox(height: AppSpace.sm),
+                Row(
                   children: [
-                    BackAction(
-                      title: 'Trao đổi sách của tôi',
-                      onPressed: () => context.canPop()
-                          ? context.pop()
-                          : context.go('/exchanges'),
+                    AppChip(
+                      title: 'Phiếu trao đổi',
+                      wine: true,
+                      selected: _tab == 'sheet',
+                      onPressed: () => setState(() => _tab = 'sheet'),
                     ),
-                    const SizedBox(height: AppSpace.sm),
-                    Row(
+                    const SizedBox(width: AppSpace.sm),
+                    AppChip(
+                      title: 'Trò chuyện (${_messages.length})',
+                      wine: true,
+                      selected: _tab == 'chat',
+                      onPressed: () => setState(() => _tab = 'chat'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpace.md),
+                if (_error != null) ...[
+                  Notice(message: _error!, tone: NoticeTone.error),
+                  const SizedBox(height: AppSpace.md),
+                ],
+                if (_notice != null) ...[
+                  Notice(message: _notice!, tone: NoticeTone.success),
+                  const SizedBox(height: AppSpace.md),
+                ],
+                if (_tab == 'sheet')
+                  Container(
+                    padding: const EdgeInsets.all(AppSpace.xl),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: StitchTokens.cardBorder),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        AppChip(
-                          title: 'Phiếu trao đổi',
-                          wine: true,
-                          selected: _tab == 'sheet',
-                          onPressed: () => setState(() => _tab = 'sheet'),
+                        AppText(
+                          'Trạng thái hiện tại: $status',
+                          kind: AppTextKind.heading,
+                          color: StitchTokens.wine,
                         ),
-                        const SizedBox(width: AppSpace.sm),
-                        AppChip(
-                          title: 'Trò chuyện (${_messages.length})',
-                          wine: true,
-                          selected: _tab == 'chat',
-                          onPressed: () => setState(() => _tab = 'chat'),
+                        const SizedBox(height: AppSpace.sm),
+                        const AppText(
+                          'Hai bên đặt cọc bảo chứng qua Ví Lật Lại và xác nhận khi nhận sách. Có thể đề nghị hủy đồng thuận (hoàn cọc 100%) trước khi hoàn tất.',
+                          kind: AppTextKind.small,
+                        ),
+                        const Divider(height: AppSpace.xxl),
+                        Wrap(
+                          spacing: AppSpace.sm,
+                          runSpacing: AppSpace.sm,
+                          children: [
+                            if (status == 'Proposed') ...[
+                              AppButton(
+                                title: 'Đồng ý đổi',
+                                wine: true,
+                                busy: _busy,
+                                onPressed: () => _performAction('accept'),
+                              ),
+                              AppButton(
+                                title: 'Từ chối',
+                                secondary: true,
+                                busy: _busy,
+                                onPressed: () => _performAction(
+                                  'reject',
+                                  extraBody: {
+                                    'reason': 'Chưa phù hợp nhu cầu đổi sách',
+                                  },
+                                ),
+                              ),
+                            ],
+                            if (status == 'AcceptedAwaitingFunding')
+                              AppButton(
+                                title: 'Đặt cọc bảo chứng ngay',
+                                wine: true,
+                                busy: _busy,
+                                onPressed: () => _performAction('funding'),
+                              ),
+                            if (status == 'Preparing') ...[
+                              AppButton(
+                                title: '📦 Báo gửi sách & Nhập mã vận đơn',
+                                wine: true,
+                                busy: _busy,
+                                onPressed: () => _performAction(
+                                  'ship',
+                                  extraBody: {
+                                    'method': 'direct',
+                                    'meetupLocation': 'TP. Hồ Chí Minh',
+                                  },
+                                ),
+                              ),
+                              AppButton(
+                                title:
+                                    '🤝 Đề nghị / Đồng ý hủy (Hoàn cọc 100%)',
+                                secondary: true,
+                                busy: _busy,
+                                onPressed: () => _performAction('cancel'),
+                              ),
+                            ],
+                            if (status == 'InTransit')
+                              AppButton(
+                                title: 'Tôi đã nhận được sách an toàn',
+                                wine: true,
+                                busy: _busy,
+                                onPressed: () => _performAction('receive'),
+                              ),
+                            if (status == 'Delivered')
+                              AppButton(
+                                title: 'Xác nhận đã kiểm tra',
+                                wine: true,
+                                busy: _busy,
+                                onPressed: () => _performAction('complete'),
+                              ),
+                            if (status == 'InTransit' || status == 'Delivered')
+                              AppButton(
+                                title: 'Báo cáo khiếu nại sách',
+                                secondary: true,
+                                busy: _busy,
+                                onPressed: () => _performAction(
+                                  'dispute',
+                                  extraBody: {
+                                    'reason': 'Sách nhận được cần kiểm tra lại với mô tả',
+                                  },
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: AppSpace.md),
-                    if (_error != null) ...[
-                      Notice(message: _error!, tone: NoticeTone.error),
-                      const SizedBox(height: AppSpace.md),
-                    ],
-                    if (_notice != null) ...[
-                      Notice(message: _notice!, tone: NoticeTone.success),
-                      const SizedBox(height: AppSpace.md),
-                    ],
-                    if (_tab == 'sheet')
-                      Container(
-                        padding: const EdgeInsets.all(AppSpace.xl),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: StitchTokens.cardBorder),
+                  )
+                else
+                  Container(
+                    padding: const EdgeInsets.all(AppSpace.lg),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: StitchTokens.cardBorder),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const AppText(
+                          'Hộp thoại trao đổi',
+                          kind: AppTextKind.heading,
+                          color: StitchTokens.wine,
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            AppText(
-                              'Trạng thái hiện tại: $status',
-                              kind: AppTextKind.heading,
-                              color: StitchTokens.wine,
-                            ),
-                            const SizedBox(height: AppSpace.sm),
-                            const AppText(
-                              'Hai bên đặt cọc bảo chứng qua Ví Lật Lại và xác nhận khi nhận sách. Có thể đề nghị hủy đồng thuận (hoàn cọc 100%) trước khi hoàn tất.',
+                        const SizedBox(height: AppSpace.md),
+                        if (_messages.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: AppText(
+                              'Chưa có tin nhắn trong phiếu trao đổi này.',
                               kind: AppTextKind.small,
                             ),
-                            const Divider(height: AppSpace.xxl),
-                            Wrap(
-                              spacing: AppSpace.sm,
-                              runSpacing: AppSpace.sm,
-                              children: [
-                                if (status == 'Proposed') ...[
-                                  AppButton(
-                                    title: 'Đồng ý đổi',
-                                    wine: true,
-                                    busy: _busy,
-                                    onPressed: () => _performAction('accept'),
-                                  ),
-                                  AppButton(
-                                    title: 'Từ chối',
-                                    secondary: true,
-                                    busy: _busy,
-                                    onPressed: () => _performAction(
-                                      'reject',
-                                      extraBody: {
-                                        'reason': 'Chưa phù hợp nhu cầu đổi sách'
-                                      },
-                                    ),
-                                  ),
-                                ],
-                                if (status == 'AcceptedAwaitingFunding')
-                                  AppButton(
-                                    title: 'Đặt cọc bảo chứng ngay',
-                                    wine: true,
-                                    busy: _busy,
-                                    onPressed: () => _performAction('funding'),
-                                  ),
-                                if (status == 'Preparing') ...[
-                                  AppButton(
-                                    title: '📦 Báo gửi sách & Nhập mã vận đơn',
-                                    wine: true,
-                                    busy: _busy,
-                                    onPressed: () => _performAction(
-                                      'ship',
-                                      extraBody: {
-                                        'method': 'direct',
-                                        'meetupLocation': 'TP. Hồ Chí Minh',
-                                      },
-                                    ),
-                                  ),
-                                  AppButton(
-                                    title: '🤝 Đề nghị / Đồng ý hủy (Hoàn cọc 100%)',
-                                    secondary: true,
-                                    busy: _busy,
-                                    onPressed: () => _performAction('cancel'),
-                                  ),
-                                ],
-                                if (status == 'InTransit')
-                                  AppButton(
-                                    title: 'Tôi đã nhận được sách an toàn',
-                                    wine: true,
-                                    busy: _busy,
-                                    onPressed: () => _performAction('receive'),
-                                  ),
-                                if (status == 'Delivered')
-                                  AppButton(
-                                    title: 'Xác nhận đã kiểm tra',
-                                    wine: true,
-                                    busy: _busy,
-                                    onPressed: () => _performAction('complete'),
-                                  ),
-                                if (status == 'InTransit' ||
-                                    status == 'Delivered')
-                                  AppButton(
-                                    title: 'Báo cáo khiếu nại sách',
-                                    secondary: true,
-                                    busy: _busy,
-                                    onPressed: () => _performAction(
-                                      'dispute',
-                                      extraBody: {
-                                        'reason':
-                                            'Sách nhận được cần kiểm tra lại với mô tả'
-                                      },
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      Container(
-                        padding: const EdgeInsets.all(AppSpace.lg),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: StitchTokens.cardBorder),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const AppText(
-                              'Hộp thoại trao đổi',
-                              kind: AppTextKind.heading,
-                              color: StitchTokens.wine,
-                            ),
-                            const SizedBox(height: AppSpace.md),
-                            if (_messages.isEmpty)
-                              const Padding(
-                                padding: EdgeInsets.symmetric(vertical: 20),
+                          )
+                        else
+                          ..._messages.map((m) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: StitchTokens.parchment,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                                 child: AppText(
-                                  'Chưa có tin nhắn trong phiếu trao đổi này.',
+                                  (m['body'] ?? '').toString(),
                                   kind: AppTextKind.small,
                                 ),
-                              )
-                            else
-                              ..._messages.map((m) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: StitchTokens.parchment,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: AppText(
-                                      (m['body'] ?? '').toString(),
-                                      kind: AppTextKind.small,
-                                    ),
-                                  ),
-                                );
-                              }),
-                            const SizedBox(height: AppSpace.md),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: AppTextField(
-                                    controller: _msgCtrl,
-                                    placeholder:
-                                        'Nhắn tin về việc đổi sách...',
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                AppButton(
-                                  title: 'Gửi',
-                                  wine: true,
-                                  compact: true,
-                                  onPressed: _sendMessage,
-                                ),
-                              ],
+                              ),
+                            );
+                          }),
+                        const SizedBox(height: AppSpace.md),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: AppTextField(
+                                controller: _msgCtrl,
+                                placeholder: 'Nhắn tin về việc đổi sách...',
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            AppButton(
+                              title: 'Gửi',
+                              wine: true,
+                              compact: true,
+                              onPressed: _sendMessage,
                             ),
                           ],
                         ),
-                      ),
-                  ],
-                ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
     );
   }
 }
@@ -625,8 +620,8 @@ class _ExchangeComposeScreenState extends ConsumerState<ExchangeComposeScreen> {
         : (raw['content'] is Map ? raw['content'] as Map : null);
 
     final mode = (content?['mode'] ?? raw['mode'] ?? '').toString();
-    final condition =
-        (content?['condition'] ?? raw['condition'] ?? 'Good').toString();
+    final condition = (content?['condition'] ?? raw['condition'] ?? 'Good')
+        .toString();
     final salePrice = (content?['salePrice'] ?? raw['salePrice'] ?? 0) as num;
     final exchangeValue =
         (content?['exchangeValue'] ?? raw['exchangeValue'] ?? salePrice) as num;
@@ -642,25 +637,27 @@ class _ExchangeComposeScreenState extends ConsumerState<ExchangeComposeScreen> {
     final cachedBook = (bookId != null && _bookCache.containsKey(bookId))
         ? _bookCache[bookId]
         : null;
-    final book = cachedBook ??
+    final book =
+        cachedBook ??
         (content?['book'] is Map
             ? Map<String, dynamic>.from(content!['book'] as Map)
             : (raw['book'] is Map
-                ? Map<String, dynamic>.from(raw['book'] as Map)
-                : null));
+                  ? Map<String, dynamic>.from(raw['book'] as Map)
+                  : null));
 
-    final title = (bundle is Map &&
+    final title =
+        (bundle is Map &&
             bundle['title'] != null &&
             bundle['title'].toString().isNotEmpty)
         ? bundle['title'].toString()
         : (book?['title'] ??
-                raw['title'] ??
-                content?['title'] ??
-                'Sách của tôi')
-            .toString();
+                  raw['title'] ??
+                  content?['title'] ??
+                  'Sách của tôi')
+              .toString();
 
-    final authors = (book?['authors'] is List &&
-            (book!['authors'] as List).isNotEmpty)
+    final authors =
+        (book?['authors'] is List && (book!['authors'] as List).isNotEmpty)
         ? (book['authors'] as List).join(', ')
         : (book?['author'] ?? raw['author'] ?? '').toString();
 
@@ -689,8 +686,9 @@ class _ExchangeComposeScreenState extends ConsumerState<ExchangeComposeScreen> {
     });
     final client = ref.read(sessionClientProvider);
     try {
-      final res = await client
-          .request('/me/listings?channel=Marketplace&moderation=Approved&limit=20');
+      final res = await client.request(
+        '/me/listings?channel=Marketplace&moderation=Approved&limit=20',
+      );
       final list = (res is Map && res['items'] is List)
           ? (res['items'] as List)
           : const [];
@@ -750,7 +748,9 @@ class _ExchangeComposeScreenState extends ConsumerState<ExchangeComposeScreen> {
 
   Future<void> _submitExchange() async {
     if (_selectedIds.isEmpty) {
-      setState(() => _error = 'Vui lòng chọn ít nhất 1 cuốn sách của bạn để đổi.');
+      setState(
+        () => _error = 'Vui lòng chọn ít nhất 1 cuốn sách của bạn để đổi.',
+      );
       return;
     }
     setState(() {
@@ -826,8 +826,7 @@ class _ExchangeComposeScreenState extends ConsumerState<ExchangeComposeScreen> {
             StatePanel(
               wine: true,
               title: 'Bạn chưa có sách đang bán/đổi để đem hoán đổi',
-              message:
-                  'Hãy đăng ít nhất một cuốn sách lên kệ và được duyệt để bắt đầu trao đổi.',
+              message: 'Hãy đăng ít nhất một cuốn sách lên kệ và được duyệt để bắt đầu trao đổi.',
               actionLabel: 'Mở kệ sách của tôi',
               onAction: () => context.push('/drafts'),
             )
@@ -901,4 +900,3 @@ class _ExchangeComposeScreenState extends ConsumerState<ExchangeComposeScreen> {
     );
   }
 }
-

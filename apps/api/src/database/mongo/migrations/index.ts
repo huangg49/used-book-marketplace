@@ -1,3 +1,5 @@
+import { manualWithdrawalsMigration, withManualWithdrawals } from './0061-manual-wallet-withdrawals.js';
+import { createWithdrawalsMigration, withdrawalSpecs, withWithdrawals } from './0060-wallet-withdrawals.js';
 import { autoReviewV2UpgradeBridgeMigration } from './0056-auto-review-v2-upgrade-bridge.js';
 import { exchangeEvidenceMigration, exchangeEvidenceSpecs } from './0054-exchange-evidence.js';
 import { createLocalDemoCompletionMigration, demoCompletionSpec, withLocalDemoCompletion } from './0054-local-demo-completion.js';
@@ -453,9 +455,9 @@ export const checksumOf = (migration: Migration) =>
     .digest('hex');
 
 // The latest schema, for tests and for the app role privileges.
-export const currentCollections = (): CollectionSpec[] => [
-  ...baselineCollections
-    .filter((spec) => spec.name !== 'direct_orders')
+const baselineBeforeWithdrawals = (select: (spec: CollectionSpec) => boolean): CollectionSpec[] =>
+  baselineCollections
+    .filter(select)
     .map(withTitleKey)
     .map(withAuctionChanges)
     .map(withPointOrderChanges)
@@ -483,7 +485,10 @@ export const currentCollections = (): CollectionSpec[] => [
     .map(withListingAutoReview)
     .map(withSupportCases).map(withLocalDemoCompletion)
     .map(withUncappedAuctionAmounts)
-    .map(withCapitalIncrease),
+    .map(withCapitalIncrease);
+
+const beforeWithdrawals = (): CollectionSpec[] => [
+  ...baselineBeforeWithdrawals(spec => spec.name !== 'direct_orders'),
   ...baselineCollections
     .filter((spec) => spec.name === 'direct_orders')
     .map(withDirectDeliveryCompletionLegacyShape).map(withLocalDemoCompletion),
@@ -546,3 +551,13 @@ export const currentCollections = (): CollectionSpec[] => [
   ...exchangeEvidenceSpecs,
   demoCompletionSpec,
 ];
+
+export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals), ...withdrawalSpecs.map(withManualWithdrawals)];
+// Only the affected predecessor schemas are evaluated eagerly. Building the full
+// catalogue here would read its taxonomy while an import cycle is initializing.
+migrations.push(createWithdrawalsMigration([
+  ...baselineBeforeWithdrawals(spec => ['wallet_accounts','ledger_journals','mutation_receipts','audit_events'].includes(spec.name)),
+  ...notificationSpecs.map(withExchangeNotificationChanges).map(withBuyNowNotifications).map(withExchangePhase6Changes).map(withSupportCases),
+]));
+
+migrations.push(manualWithdrawalsMigration);

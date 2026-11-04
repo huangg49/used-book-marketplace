@@ -1293,10 +1293,48 @@
    ========================================================================== */
 @media (max-width: 960px) {
   .splitLayout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 24px;
   }
   .leftCol {
     position: static;
   }
 }
+
+/* Wallet actions and receipt remain within the phone's document width. */
+.leftCol { min-width: 0; }
+@media (max-width: 600px) {
+  .passActionsBar { flex-wrap: wrap; }
+  .btnPrimaryTopup { flex-basis: 100%; }
+  .btnSecondaryWithdraw { flex: 1; }
+  .testCardTop { flex-wrap: wrap; gap: 8px; }
+  .vnpayBrandGroup { flex-wrap: wrap; }
+  .receiptBody { padding: 22px 18px; min-width: 0; }
+  .historyTitleRow { flex-wrap: wrap; gap: 10px; }
+  .receiptRow { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 10px 12px; }
+  .receiptIconCircle { grid-column: 1; grid-row: 1 / span 2; align-self: start; }
+  .receiptItemMeta { grid-column: 2; }
+  .receiptItemTitle { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+  .receiptItemSub { flex-wrap: wrap; }
+  .receiptAmountCol { grid-column: 2; margin: 0; text-align: left; align-items: flex-start; }
+}
+
+@media (max-width: 600px) {
+  .vnpayHeaderBadge { flex-wrap: wrap; max-width: 100%; min-width: 0; white-space: normal; }
+  .pageHeader { min-width: 0; flex-wrap: wrap; }
+  .testCardDetails { flex-wrap: wrap; }
+}
+
+.withdrawalHistoryState {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-inline-start: 6px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  font: 500 .75rem/1.5 var(--shop-body);
+  white-space: nowrap;
+  background: var(--shop-shelf, #f4eddf);
+  color: var(--shop-ink, #281914);
+}
+.withdrawalHistoryState[data-state="Completed"] { background: var(--shop-mint, #b6dac5); }
+.withdrawalHistoryState[data-state="Rejected"] { color: var(--shop-error, #912b0e); }

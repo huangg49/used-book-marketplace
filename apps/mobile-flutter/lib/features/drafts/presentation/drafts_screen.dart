@@ -51,16 +51,17 @@ class _DraftsScreenState extends ConsumerState<DraftsScreen> {
   }
 
   Map<String, dynamic> _normalizeItem(Map<String, dynamic> raw) {
-    final currentRev =
-        raw['currentRevision'] is Map ? raw['currentRevision'] as Map : null;
+    final currentRev = raw['currentRevision'] is Map
+        ? raw['currentRevision'] as Map
+        : null;
     final content = currentRev?['content'] is Map
         ? currentRev!['content'] as Map
         : (raw['content'] is Map ? raw['content'] as Map : null);
 
     final moderation = _extractModeration(raw);
     final mode = (content?['mode'] ?? raw['mode'] ?? '').toString();
-    final condition =
-        (content?['condition'] ?? raw['condition'] ?? 'Good').toString();
+    final condition = (content?['condition'] ?? raw['condition'] ?? 'Good')
+        .toString();
     final salePrice = content?['salePrice'] ?? raw['salePrice'];
     final exchangeValue = content?['exchangeValue'] ?? raw['exchangeValue'];
     final bundle = content?['bundle'] ?? raw['bundle'];
@@ -73,12 +74,13 @@ class _DraftsScreenState extends ConsumerState<DraftsScreen> {
         : (raw['photos'] ?? const []);
 
     final cachedBook = bookId != null ? _bookCache[bookId] : null;
-    final book = cachedBook ??
+    final book =
+        cachedBook ??
         (content?['book'] is Map
             ? Map<String, dynamic>.from(content!['book'] as Map)
             : (raw['book'] is Map
-                ? Map<String, dynamic>.from(raw['book'] as Map)
-                : null));
+                  ? Map<String, dynamic>.from(raw['book'] as Map)
+                  : null));
 
     return {
       ...raw,
@@ -99,12 +101,12 @@ class _DraftsScreenState extends ConsumerState<DraftsScreen> {
   }
 
   List<({String id, String label, int count})> get _filterTabs => [
-        (id: '', label: 'Tất cả', count: _totalCount),
-        (id: 'Draft', label: 'Bản nháp', count: _draftCount),
-        (id: 'PendingReview', label: 'Chờ duyệt', count: _pendingCount),
-        (id: 'Rejected', label: 'Cần sửa', count: _rejectedCount),
-        (id: 'Approved', label: 'Đang niêm yết', count: _approvedCount),
-      ];
+    (id: '', label: 'Tất cả', count: _totalCount),
+    (id: 'Draft', label: 'Bản nháp', count: _draftCount),
+    (id: 'PendingReview', label: 'Chờ duyệt', count: _pendingCount),
+    (id: 'Rejected', label: 'Cần sửa', count: _rejectedCount),
+    (id: 'Approved', label: 'Đang niêm yết', count: _approvedCount),
+  ];
 
   @override
   void initState() {
@@ -124,8 +126,9 @@ class _DraftsScreenState extends ConsumerState<DraftsScreen> {
     });
     final client = ref.read(sessionClientProvider);
     try {
-      final res =
-          await client.request('/me/listings?channel=Marketplace&limit=50');
+      final res = await client.request(
+        '/me/listings?channel=Marketplace&limit=50',
+      );
       final list = (res is Map && res['items'] is List)
           ? (res['items'] as List)
           : const [];
@@ -137,20 +140,24 @@ class _DraftsScreenState extends ConsumerState<DraftsScreen> {
 
       _allListings = parsed;
       _totalCount = parsed.length;
-      _draftCount =
-          parsed.where((d) => _extractModeration(d) == 'Draft').length;
-      _pendingCount =
-          parsed.where((d) => _extractModeration(d) == 'PendingReview').length;
-      _approvedCount =
-          parsed.where((d) => _extractModeration(d) == 'Approved').length;
-      _rejectedCount =
-          parsed.where((d) => _extractModeration(d) == 'Rejected').length;
+      _draftCount = parsed
+          .where((d) => _extractModeration(d) == 'Draft')
+          .length;
+      _pendingCount = parsed
+          .where((d) => _extractModeration(d) == 'PendingReview')
+          .length;
+      _approvedCount = parsed
+          .where((d) => _extractModeration(d) == 'Approved')
+          .length;
+      _rejectedCount = parsed
+          .where((d) => _extractModeration(d) == 'Rejected')
+          .length;
 
       final filtered = _moderationFilter.isEmpty
           ? parsed
           : parsed
-              .where((d) => _extractModeration(d) == _moderationFilter)
-              .toList();
+                .where((d) => _extractModeration(d) == _moderationFilter)
+                .toList();
 
       _items = filtered.map(_normalizeItem).toList();
       _loading = false;
@@ -253,15 +260,18 @@ class _DraftsScreenState extends ConsumerState<DraftsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Hủy',
-                style: TextStyle(color: StitchTokens.darkWood)),
+            child: const Text(
+              'Hủy',
+              style: TextStyle(color: StitchTokens.darkWood),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: StitchTokens.darkRed,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             onPressed: () {
               Navigator.of(ctx).pop();
@@ -312,12 +322,18 @@ class _DraftsScreenState extends ConsumerState<DraftsScreen> {
     try {
       final detail = await client.request('/me/listings/$id');
       if (!mounted) return;
-      final merged = detail is Map ? Map<String, dynamic>.from(detail) : Map<String, dynamic>.from(item);
+      final merged = detail is Map
+          ? Map<String, dynamic>.from(detail)
+          : Map<String, dynamic>.from(item);
       if (merged['book'] == null && item['book'] != null) {
         merged['book'] = item['book'];
       }
-      final bId = (merged['currentRevision']?['content']?['bookId'] ?? merged['bookId'])?.toString();
-      if (merged['book'] == null && bId != null && _bookCache.containsKey(bId)) {
+      final bId =
+          (merged['currentRevision']?['content']?['bookId'] ?? merged['bookId'])
+              ?.toString();
+      if (merged['book'] == null &&
+          bId != null &&
+          _bookCache.containsKey(bId)) {
         merged['book'] = _bookCache[bId];
       }
       setState(() {
@@ -339,8 +355,7 @@ class _DraftsScreenState extends ConsumerState<DraftsScreen> {
         child: StatePanel(
           wine: true,
           title: 'Đăng nhập để quản lý & đăng sách',
-          message:
-              'Tạo bản nháp, định giá bằng AI và đăng bán hoặc trao đổi sách trên kệ Lật Lại.',
+          message: 'Tạo bản nháp, định giá bằng AI và đăng bán hoặc trao đổi sách trên kệ Lật Lại.',
           actionLabel: 'Đăng nhập ngay',
           onAction: () => context.go('/account'),
         ),
@@ -392,10 +407,7 @@ class _DraftsScreenState extends ConsumerState<DraftsScreen> {
                 const SizedBox(height: AppSpace.md),
                 Row(
                   children: [
-                    _StatPill(
-                      label: 'Tổng ấn bản',
-                      value: '$_totalCount',
-                    ),
+                    _StatPill(label: 'Tổng ấn bản', value: '$_totalCount'),
                     const SizedBox(width: AppSpace.sm),
                     _StatPill(
                       label: 'Chờ duyệt',
@@ -447,9 +459,12 @@ class _DraftsScreenState extends ConsumerState<DraftsScreen> {
                         final filtered = _moderationFilter.isEmpty
                             ? _allListings
                             : _allListings
-                                .where((d) =>
-                                    _extractModeration(d) == _moderationFilter)
-                                .toList();
+                                  .where(
+                                    (d) =>
+                                        _extractModeration(d) ==
+                                        _moderationFilter,
+                                  )
+                                  .toList();
                         _items = filtered.map(_normalizeItem).toList();
                       });
                     },
@@ -476,8 +491,7 @@ class _DraftsScreenState extends ConsumerState<DraftsScreen> {
               wine: true,
               icon: Icons.library_add_outlined,
               title: 'Chưa có bài đăng nào trong mục này',
-              message:
-                  'Các ấn bản bạn tạo, gửi duyệt hoặc đang niêm yết sẽ xuất hiện tại đây.',
+              message: 'Các ấn bản bạn tạo, gửi duyệt hoặc đang niêm yết sẽ xuất hiện tại đây.',
               actionLabel: '+ Đăng Sách Mới Ngay',
               actionBusy: _creating,
               onAction: _createNewDraft,
@@ -488,8 +502,8 @@ class _DraftsScreenState extends ConsumerState<DraftsScreen> {
                 final cols = constraints.maxWidth >= 760
                     ? 4
                     : constraints.maxWidth >= 520
-                        ? 3
-                        : 2;
+                    ? 3
+                    : 2;
                 const spacing = 12.0;
                 final width =
                     (constraints.maxWidth - spacing * (cols - 1)) / cols;
@@ -504,19 +518,20 @@ class _DraftsScreenState extends ConsumerState<DraftsScreen> {
                     final actionLabel = isRejected
                         ? 'Sửa bài'
                         : isPending
-                            ? 'Chi tiết'
-                            : isApproved
-                                ? 'Xem sách'
-                                : 'Hoàn thiện';
+                        ? 'Chi tiết'
+                        : isApproved
+                        ? 'Xem sách'
+                        : 'Hoàn thiện';
                     final version = (item['version'] is num)
                         ? (item['version'] as num).toInt()
                         : 1;
                     final id = (item['id'] ?? '').toString();
-                    final title = (item['bundle']?['title'] ??
-                            item['book']?['title'] ??
-                            item['title'] ??
-                            'Chưa chọn đầu sách')
-                        .toString();
+                    final title =
+                        (item['bundle']?['title'] ??
+                                item['book']?['title'] ??
+                                item['title'] ??
+                                'Chưa chọn đầu sách')
+                            .toString();
 
                     return SizedBox(
                       width: width,
@@ -571,9 +586,7 @@ class _StatPill extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: StitchTokens.gold.withValues(alpha: 0.3),
-          ),
+          border: Border.all(color: StitchTokens.gold.withValues(alpha: 0.3)),
         ),
         child: Column(
           children: [
@@ -618,10 +631,7 @@ class _StatPill extends StatelessWidget {
 /// 5-Step DraftEditor matching `apps/mobile-react-native/src/features/drafts/draft-editor.tsx`
 /// and `apps/user-web/src/features/listings/SellBookPage.tsx` (prominent green check & red X stepper).
 class _DraftEditorScreen extends ConsumerStatefulWidget {
-  const _DraftEditorScreen({
-    required this.draft,
-    required this.onClose,
-  });
+  const _DraftEditorScreen({required this.draft, required this.onClose});
 
   final Map<String, dynamic> draft;
   final VoidCallback onClose;
@@ -751,11 +761,7 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
             ),
           ],
         ),
-        child: const Icon(
-          Icons.check_rounded,
-          size: 16,
-          color: Colors.white,
-        ),
+        child: const Icon(Icons.check_rounded, size: 16, color: Colors.white),
       );
     }
 
@@ -775,11 +781,7 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
             ),
           ],
         ),
-        child: const Icon(
-          Icons.close_rounded,
-          size: 15,
-          color: Colors.white,
-        ),
+        child: const Icon(Icons.close_rounded, size: 15, color: Colors.white),
       );
     }
 
@@ -838,14 +840,15 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
   @override
   void initState() {
     super.initState();
-    final content = widget.draft['currentRevision'] is Map &&
+    final content =
+        widget.draft['currentRevision'] is Map &&
             (widget.draft['currentRevision'] as Map)['content'] is Map
         ? Map<String, dynamic>.from(
             (widget.draft['currentRevision'] as Map)['content'] as Map,
           )
         : (widget.draft['content'] is Map
-            ? Map<String, dynamic>.from(widget.draft['content'] as Map)
-            : widget.draft);
+              ? Map<String, dynamic>.from(widget.draft['content'] as Map)
+              : widget.draft);
     final book = content['book'] is Map
         ? Map<String, dynamic>.from(content['book'] as Map)
         : const <String, dynamic>{};
@@ -861,7 +864,7 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
     _mediaIds = content['mediaIds'] is List
         ? (content['mediaIds'] as List).map((e) => e.toString()).toList()
         : <String>[];
-    
+
     // Bundle restoration
     if (content['bundle'] is Map) {
       final b = Map<String, dynamic>.from(content['bundle'] as Map);
@@ -881,7 +884,8 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
     }
 
     final initialTitle = (book['title'] ?? content['title'] ?? '').toString();
-    _entryMode = (initialTitle.isNotEmpty && (_bookId == null || _bookId!.isEmpty))
+    _entryMode =
+        (initialTitle.isNotEmpty && (_bookId == null || _bookId!.isEmpty))
         ? 'manual'
         : 'catalog';
 
@@ -891,17 +895,16 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
     // Controllers
     _titleCtrl = TextEditingController(text: initialTitle);
     _authorCtrl = TextEditingController(
-      text: (book['authors'] is List
-              ? (book['authors'] as List).join(', ')
-              : (book['author'] ?? ''))
-          .toString(),
+      text:
+          (book['authors'] is List
+                  ? (book['authors'] as List).join(', ')
+                  : (book['author'] ?? ''))
+              .toString(),
     );
     _publisherCtrl = TextEditingController(
       text: (book['publisher'] ?? '').toString(),
     );
-    _isbnCtrl = TextEditingController(
-      text: (book['isbn'] ?? '').toString(),
-    );
+    _isbnCtrl = TextEditingController(text: (book['isbn'] ?? '').toString());
     _seriesCtrl = TextEditingController(
       text: (content['series'] ?? '').toString(),
     );
@@ -926,9 +929,7 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
     _bundleToCtrl = TextEditingController(text: '10');
 
     _salePriceCtrl = TextEditingController(
-      text: content['salePrice'] != null
-          ? content['salePrice'].toString()
-          : '',
+      text: content['salePrice'] != null ? content['salePrice'].toString() : '',
     );
     _exchangeValueCtrl = TextEditingController(
       text: content['exchangeValue'] != null
@@ -951,7 +952,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
 
     _condition = (content['condition'] ?? 'Good').toString();
     _mode = _isBundle ? 'Sale' : (content['mode'] ?? 'Sale').toString();
-    _readable = content['readable'] is bool ? content['readable'] as bool : true;
+    _readable = content['readable'] is bool
+        ? content['readable'] as bool
+        : true;
     _hasMissingPages = content['hasMissingPages'] is bool
         ? content['hasMissingPages'] as bool
         : false;
@@ -1056,15 +1059,20 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
       if (!mounted) return;
       setState(() {
         if (addrs is Map && addrs['items'] is List) {
-          _savedAddresses = List<Map<String, dynamic>>.from(addrs['items'] as List);
+          _savedAddresses = List<Map<String, dynamic>>.from(
+            addrs['items'] as List,
+          );
           if (_selectedOriginAddressId == null && _savedAddresses.isNotEmpty) {
             _selectedOriginAddressId = _savedAddresses.first['id']?.toString();
           }
         }
         if (areas is Map && areas['localities'] is List) {
-          _serviceLocalities = List<Map<String, dynamic>>.from(areas['localities'] as List);
+          _serviceLocalities = List<Map<String, dynamic>>.from(
+            areas['localities'] as List,
+          );
           if (_serviceLocalities.isNotEmpty && _selectedLocalityCode == null) {
-            _selectedLocalityCode = _serviceLocalities.first['code']?.toString();
+            _selectedLocalityCode = _serviceLocalities.first['code']
+                ?.toString();
           }
         }
       });
@@ -1080,11 +1088,15 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
     setState(() => _searchingCatalog = true);
     try {
       final client = ref.read(sessionClientProvider);
-      final res = await client.publicRequest('/catalog/books?q=${Uri.encodeComponent(q)}&limit=6');
+      final res = await client.publicRequest(
+        '/catalog/books?q=${Uri.encodeComponent(q)}&limit=6',
+      );
       if (!mounted) return;
       if (res is Map && res['items'] is List) {
         setState(() {
-          _catalogResults = List<Map<String, dynamic>>.from(res['items'] as List);
+          _catalogResults = List<Map<String, dynamic>>.from(
+            res['items'] as List,
+          );
           _searchingCatalog = false;
         });
       } else {
@@ -1107,7 +1119,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
           ? (b['authors'] as List).join(', ')
           : (b['author'] ?? '').toString();
       _authorCtrl.text = authors;
-      if (b['publisher'] != null) _publisherCtrl.text = b['publisher'].toString();
+      if (b['publisher'] != null) {
+        _publisherCtrl.text = b['publisher'].toString();
+      }
       if (b['isbn'] != null) _isbnCtrl.text = b['isbn'].toString();
       if (b['categoryId'] != null) _categoryId = b['categoryId'].toString();
       _catalogResults = [];
@@ -1185,9 +1199,20 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                           ),
                           child: const Column(
                             children: [
-                              Icon(Icons.camera_alt_outlined, size: 28, color: StitchTokens.wine),
+                              Icon(
+                                Icons.camera_alt_outlined,
+                                size: 28,
+                                color: StitchTokens.wine,
+                              ),
                               SizedBox(height: 6),
-                              Text('Chụp ảnh', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: StitchTokens.darkWood)),
+                              Text(
+                                'Chụp ảnh',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: StitchTokens.darkWood,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -1210,9 +1235,20 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                           ),
                           child: const Column(
                             children: [
-                              Icon(Icons.photo_library_outlined, size: 28, color: StitchTokens.wine),
+                              Icon(
+                                Icons.photo_library_outlined,
+                                size: 28,
+                                color: StitchTokens.wine,
+                              ),
                               SizedBox(height: 6),
-                              Text('Thư viện ảnh', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: StitchTokens.darkWood)),
+                              Text(
+                                'Thư viện ảnh',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: StitchTokens.darkWood,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -1235,9 +1271,20 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                           ),
                           child: const Column(
                             children: [
-                              Icon(Icons.link_rounded, size: 28, color: StitchTokens.wine),
+                              Icon(
+                                Icons.link_rounded,
+                                size: 28,
+                                color: StitchTokens.wine,
+                              ),
                               SizedBox(height: 6),
-                              Text('Nhập link', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: StitchTokens.darkWood)),
+                              Text(
+                                'Nhập link',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: StitchTokens.darkWood,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -1248,7 +1295,11 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                 const SizedBox(height: 18),
                 const Text(
                   'Hoặc chọn nhanh bìa sách mẫu:',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: StitchTokens.darkWood),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: StitchTokens.darkWood,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 SizedBox(
@@ -1287,7 +1338,11 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
     );
   }
 
-  Widget _buildSampleCoverTile(BuildContext ctx, {required String title, required String url}) {
+  Widget _buildSampleCoverTile(
+    BuildContext ctx, {
+    required String title,
+    required String url,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(right: 12),
       child: InkWell(
@@ -1310,8 +1365,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                 url,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
-                    color: StitchTokens.parchment,
-                    child: const Icon(Icons.book, size: 20)),
+                  color: StitchTokens.parchment,
+                  child: const Icon(Icons.book, size: 20),
+                ),
               ),
               Positioned(
                 bottom: 0,
@@ -1325,7 +1381,11 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -1389,11 +1449,20 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
     showDialog<void>(
       context: context,
       builder: (dCtx) => AlertDialog(
-        title: Text(isCover ? 'Nhập link ảnh bìa' : 'Nhập link ảnh phụ', style: const TextStyle(fontWeight: FontWeight.w700, color: StitchTokens.wine)),
+        title: Text(
+          isCover ? 'Nhập link ảnh bìa' : 'Nhập link ảnh phụ',
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            color: StitchTokens.wine,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Dán đường dẫn ảnh trực tiếp (JPG, PNG, WebP):', style: TextStyle(fontSize: 12.5)),
+            const Text(
+              'Dán đường dẫn ảnh trực tiếp (JPG, PNG, WebP):',
+              style: TextStyle(fontSize: 12.5),
+            ),
             const SizedBox(height: 10),
             TextField(
               controller: ctrl,
@@ -1407,9 +1476,15 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dCtx), child: const Text('Hủy')),
+          TextButton(
+            onPressed: () => Navigator.pop(dCtx),
+            child: const Text('Hủy'),
+          ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: StitchTokens.wine, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: StitchTokens.wine,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () {
               final url = ctrl.text.trim();
               if (url.isNotEmpty) {
@@ -1498,9 +1573,20 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                           ),
                           child: const Column(
                             children: [
-                              Icon(Icons.camera_alt_outlined, size: 28, color: StitchTokens.wine),
+                              Icon(
+                                Icons.camera_alt_outlined,
+                                size: 28,
+                                color: StitchTokens.wine,
+                              ),
                               SizedBox(height: 6),
-                              Text('Chụp ảnh', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: StitchTokens.darkWood)),
+                              Text(
+                                'Chụp ảnh',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: StitchTokens.darkWood,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -1523,9 +1609,20 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                           ),
                           child: const Column(
                             children: [
-                              Icon(Icons.photo_library_outlined, size: 28, color: StitchTokens.wine),
+                              Icon(
+                                Icons.photo_library_outlined,
+                                size: 28,
+                                color: StitchTokens.wine,
+                              ),
                               SizedBox(height: 6),
-                              Text('Thư viện ảnh', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: StitchTokens.darkWood)),
+                              Text(
+                                'Thư viện ảnh',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: StitchTokens.darkWood,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -1548,9 +1645,20 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                           ),
                           child: const Column(
                             children: [
-                              Icon(Icons.link_rounded, size: 28, color: StitchTokens.wine),
+                              Icon(
+                                Icons.link_rounded,
+                                size: 28,
+                                color: StitchTokens.wine,
+                              ),
                               SizedBox(height: 6),
-                              Text('Nhập link', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: StitchTokens.darkWood)),
+                              Text(
+                                'Nhập link',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: StitchTokens.darkWood,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -1608,7 +1716,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Không thể chọn ảnh: $e.\nBạn có thể dán link ảnh trực tiếp.'),
+            content: Text(
+              'Không thể chọn ảnh: $e.\nBạn có thể dán link ảnh trực tiếp.',
+            ),
             backgroundColor: StitchTokens.wine,
             duration: const Duration(seconds: 4),
           ),
@@ -1720,31 +1830,36 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
 
   bool _isStepValid(int step) {
     return switch (step) {
-      0 => _isBundle
-          ? (_titleCtrl.text.trim().isNotEmpty && _bundleItems.length >= 2)
-          : (_selectedCatalogBook != null ||
-              (_titleCtrl.text.trim().isNotEmpty &&
-                  _authorCtrl.text.trim().isNotEmpty &&
-                  _categoryId != null &&
-                  _categoryId!.isNotEmpty)),
-      1 => _hasCoverPhoto && _coverPhotoPath != null && _coverPhotoPath!.isNotEmpty,
-      2 => _condition.isNotEmpty &&
-          _pagesNoteCtrl.text.trim().isNotEmpty &&
-          _coverNoteCtrl.text.trim().isNotEmpty &&
-          _notesCtrl.text.trim().isNotEmpty &&
-          _accessoriesCtrl.text.trim().isNotEmpty &&
-          _descriptionCtrl.text.trim().length >= 30 &&
-          _readable == true &&
-          _hasMissingPages != null &&
-          _missingEssentialContent == false,
+      0 =>
+        _isBundle
+            ? (_titleCtrl.text.trim().isNotEmpty && _bundleItems.length >= 2)
+            : (_selectedCatalogBook != null ||
+                  (_titleCtrl.text.trim().isNotEmpty &&
+                      _authorCtrl.text.trim().isNotEmpty &&
+                      _categoryId != null &&
+                      _categoryId!.isNotEmpty)),
+      1 =>
+        _hasCoverPhoto &&
+            _coverPhotoPath != null &&
+            _coverPhotoPath!.isNotEmpty,
+      2 =>
+        _condition.isNotEmpty &&
+            _pagesNoteCtrl.text.trim().isNotEmpty &&
+            _coverNoteCtrl.text.trim().isNotEmpty &&
+            _notesCtrl.text.trim().isNotEmpty &&
+            _accessoriesCtrl.text.trim().isNotEmpty &&
+            _descriptionCtrl.text.trim().length >= 30 &&
+            _readable == true &&
+            _hasMissingPages != null &&
+            _missingEssentialContent == false,
       3 => switch (_mode) {
-          'Sale' => _isPriceValid(_salePriceCtrl.text),
-          'Exchange' => _isPriceValid(_exchangeValueCtrl.text),
-          'Both' =>
-            _isPriceValid(_salePriceCtrl.text) &&
-            _isPriceValid(_exchangeValueCtrl.text),
-          _ => false,
-        },
+        'Sale' => _isPriceValid(_salePriceCtrl.text),
+        'Exchange' => _isPriceValid(_exchangeValueCtrl.text),
+        'Both' =>
+          _isPriceValid(_salePriceCtrl.text) &&
+              _isPriceValid(_exchangeValueCtrl.text),
+        _ => false,
+      },
       4 => _ownershipDeclared,
       _ => false,
     };
@@ -1797,16 +1912,24 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
       'condition': _condition,
       'pages': _pagesNoteCtrl.text.trim(),
       'coverNote': _coverNoteCtrl.text.trim(),
-      'notes': _notesCtrl.text.trim().isEmpty ? 'Không có' : _notesCtrl.text.trim(),
-      'accessories': _accessoriesCtrl.text.trim().isEmpty ? 'Không có' : _accessoriesCtrl.text.trim(),
+      'notes': _notesCtrl.text.trim().isEmpty
+          ? 'Không có'
+          : _notesCtrl.text.trim(),
+      'accessories': _accessoriesCtrl.text.trim().isEmpty
+          ? 'Không có'
+          : _accessoriesCtrl.text.trim(),
       'description': _descriptionCtrl.text.trim(),
       'readable': _readable ?? true,
       'hasMissingPages': _hasMissingPages ?? false,
       'missingEssentialContent': _missingEssentialContent ?? false,
-      'salePrice': (_mode == 'Sale' || _mode == 'Both' || _isBundle) ? salePrice : null,
-      'exchangeValue':
-          (!_isBundle && (_mode == 'Exchange' || _mode == 'Both')) ? exchangeValue : null,
-      'exchangePreferences': !_isBundle &&
+      'salePrice': (_mode == 'Sale' || _mode == 'Both' || _isBundle)
+          ? salePrice
+          : null,
+      'exchangeValue': (!_isBundle && (_mode == 'Exchange' || _mode == 'Both'))
+          ? exchangeValue
+          : null,
+      'exchangePreferences':
+          !_isBundle &&
               _mode != 'Sale' &&
               (_targetCategoryCtrl.text.trim().isNotEmpty ||
                   _targetAuthorCtrl.text.trim().isNotEmpty ||
@@ -1855,14 +1978,12 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
       '/listings',
       method: 'POST',
       idempotencyKey: generateIdempotencyKey('draft-create'),
-      body: {
-        'content': createPayload,
-      },
+      body: {'content': createPayload},
     );
-    final createMap =
-        createRes is Map ? Map<String, dynamic>.from(createRes) : const {};
-    final newId =
-        (createMap['entityId'] ?? createMap['id'] ?? '').toString();
+    final createMap = createRes is Map
+        ? Map<String, dynamic>.from(createRes)
+        : const {};
+    final newId = (createMap['entityId'] ?? createMap['id'] ?? '').toString();
     if (newId.isEmpty) {
       throw Exception('Không tạo được bản nháp trên hệ thống.');
     }
@@ -1969,9 +2090,7 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
         '/listings/$listingId/media/$mediaId/finalize',
         method: 'POST',
         idempotencyKey: finalizeKey,
-        body: {
-          'expectedVersion': mVersion,
-        },
+        body: {'expectedVersion': mVersion},
       );
 
       // Wait for media worker to transition status to Ready
@@ -1989,8 +2108,11 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
               break;
             }
             if (poll['status'] == 'Failed') {
-              final failure = poll['failureCode']?.toString() ?? 'Lỗi xử lý ảnh';
-              throw Exception('Xử lý ảnh không thành công: $failure. Vui lòng chọn ảnh khác.');
+              final failure =
+                  poll['failureCode']?.toString() ?? 'Lỗi xử lý ảnh';
+              throw Exception(
+                'Xử lý ảnh không thành công: $failure. Vui lòng chọn ảnh khác.',
+              );
             }
           }
         } catch (e) {
@@ -1999,7 +2121,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
       }
 
       if (!isReady) {
-        throw Exception('Ảnh chưa xử lý xong trên máy chủ. Vui lòng thử lại sau giây lát.');
+        throw Exception(
+          'Ảnh chưa xử lý xong trên máy chủ. Vui lòng thử lại sau giây lát.',
+        );
       }
 
       return mediaId;
@@ -2032,7 +2156,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
         );
         return;
       }
-      if (!_hasCoverPhoto || _coverPhotoPath == null || _coverPhotoPath!.isEmpty) {
+      if (!_hasCoverPhoto ||
+          _coverPhotoPath == null ||
+          _coverPhotoPath!.isEmpty) {
         _handleValidationError(
           'Vui lòng chọn ảnh bìa thực tế của sách ở Bước 2.',
           1,
@@ -2106,7 +2232,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                     .map((e) => e.trim())
                     .where((e) => e.isNotEmpty)
                     .toList(),
-                'publisher': _publisherCtrl.text.trim().isEmpty ? null : _publisherCtrl.text.trim(),
+                'publisher': _publisherCtrl.text.trim().isEmpty
+                    ? null
+                    : _publisherCtrl.text.trim(),
                 'publicationYear': DateTime.now().year,
                 'language': _language.isNotEmpty ? _language : 'vi',
                 'edition': null,
@@ -2130,7 +2258,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
 
       // Upload photos to server if available
       final validMediaIds = <String>[];
-      if (_coverPhotoPath != null && _coverPhotoPath!.isNotEmpty && _draftId != null) {
+      if (_coverPhotoPath != null &&
+          _coverPhotoPath!.isNotEmpty &&
+          _draftId != null) {
         String? coverMediaId = _uploadedMediaCache[_coverPhotoPath!];
         if (coverMediaId == null) {
           coverMediaId = await _uploadSinglePhoto(
@@ -2176,10 +2306,7 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
         '/listings/$_draftId/draft',
         method: 'PUT',
         idempotencyKey: generateIdempotencyKey('draft-save'),
-        body: {
-          'expectedVersion': _version,
-          'content': _buildContentPayload(),
-        },
+        body: {'expectedVersion': _version, 'content': _buildContentPayload()},
       );
       if (saved is Map && saved['version'] is num) {
         _version = (saved['version'] as num).toInt();
@@ -2192,10 +2319,7 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
           '/listings/$_draftId/submit',
           method: 'POST',
           idempotencyKey: generateIdempotencyKey('draft-submit'),
-          body: {
-            'expectedVersion': _version,
-            'ownershipDeclared': true,
-          },
+          body: {'expectedVersion': _version, 'ownershipDeclared': true},
         );
         if (submitted is Map && submitted['version'] is num) {
           _version = (submitted['version'] as num).toInt();
@@ -2217,9 +2341,11 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
       if (!isAutoSave) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(submitForReview
-                ? '✓ Đã lưu và gửi bài đăng chờ kiểm duyệt thành công!'
-                : '✓ Đã lưu bản nháp thành công.'),
+            content: Text(
+              submitForReview
+                  ? '✓ Đã lưu và gửi bài đăng chờ kiểm duyệt thành công!'
+                  : '✓ Đã lưu bản nháp thành công.',
+            ),
             backgroundColor: AppColors.forest,
             behavior: SnackBarBehavior.floating,
           ),
@@ -2262,10 +2388,7 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              BackAction(
-                title: 'Về sách của tôi',
-                onPressed: _handleClose,
-              ),
+              BackAction(title: 'Về sách của tôi', onPressed: _handleClose),
               if (_autoSaving)
                 Row(
                   mainAxisSize: MainAxisSize.min,
@@ -2319,7 +2442,10 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                       'Lỗi lưu',
                       kind: AppTextKind.small,
                       color: Color(0xFFB42318),
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 )
@@ -2355,7 +2481,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: StitchTokens.gold.withValues(alpha: 0.3)),
+              border: Border.all(
+                color: StitchTokens.gold.withValues(alpha: 0.3),
+              ),
               boxShadow: const [
                 BoxShadow(
                   color: Color(0x255C0202),
@@ -2387,8 +2515,10 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                                       color: i == 0
                                           ? Colors.transparent
                                           : (_isStepValid(i - 1)
-                                              ? const Color(0xFF4ADE80)
-                                              : Colors.white.withValues(alpha: 0.25)),
+                                                ? const Color(0xFF4ADE80)
+                                                : Colors.white.withValues(
+                                                    alpha: 0.25,
+                                                  )),
                                     ),
                                   ),
                                   // Step circle node
@@ -2400,8 +2530,10 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                                       color: i == _steps.length - 1
                                           ? Colors.transparent
                                           : (_isStepValid(i)
-                                              ? const Color(0xFF4ADE80)
-                                              : Colors.white.withValues(alpha: 0.25)),
+                                                ? const Color(0xFF4ADE80)
+                                                : Colors.white.withValues(
+                                                    alpha: 0.25,
+                                                  )),
                                     ),
                                   ),
                                 ],
@@ -2417,16 +2549,18 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                                   fontWeight: _currentStep == i
                                       ? FontWeight.w800
                                       : (_isStepValid(i)
-                                          ? FontWeight.w700
-                                          : FontWeight.w500),
+                                            ? FontWeight.w700
+                                            : FontWeight.w500),
                                   color: _currentStep == i
                                       ? StitchTokens.gold
                                       : (_isStepValid(i)
-                                          ? const Color(0xFF86EFAC)
-                                          : (!_isStepValid(i) &&
-                                                  _visitedSteps.contains(i)
-                                              ? const Color(0xFFFCA5A5)
-                                              : Colors.white.withValues(alpha: 0.75))),
+                                            ? const Color(0xFF86EFAC)
+                                            : (!_isStepValid(i) &&
+                                                      _visitedSteps.contains(i)
+                                                  ? const Color(0xFFFCA5A5)
+                                                  : Colors.white.withValues(
+                                                      alpha: 0.75,
+                                                    ))),
                                 ),
                               ),
                             ],
@@ -2440,8 +2574,13 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                 // Thanh tiến trình loading (Progress Bar)
                 Builder(
                   builder: (context) {
-                    final validCount =
-                        [0, 1, 2, 3, 4].where(_isStepValid).length;
+                    final validCount = [
+                      0,
+                      1,
+                      2,
+                      3,
+                      4,
+                    ].where(_isStepValid).length;
                     final progressRatio = validCount / 5.0;
                     final progressPercent = (progressRatio * 100).toInt();
                     final isCurrentValid = _isStepValid(_currentStep);
@@ -2454,7 +2593,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.22),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: StitchTokens.gold.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: StitchTokens.gold.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2516,8 +2657,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                                   return Align(
                                     alignment: Alignment.centerLeft,
                                     child: AnimatedContainer(
-                                      duration:
-                                          const Duration(milliseconds: 300),
+                                      duration: const Duration(
+                                        milliseconds: 300,
+                                      ),
                                       curve: Curves.easeOutCubic,
                                       width:
                                           constraints.maxWidth * progressRatio,
@@ -2614,16 +2756,25 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                   onTap: () => setState(() => _showPreview = !_showPreview),
                   borderRadius: BorderRadius.circular(14),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 11,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.menu_book_rounded, size: 17, color: StitchTokens.wine),
+                            const Icon(
+                              Icons.menu_book_rounded,
+                              size: 17,
+                              color: StitchTokens.wine,
+                            ),
                             const SizedBox(width: 8),
                             Text(
-                              _showPreview ? 'Thu gọn bản nháp' : 'Xem bản nháp',
+                              _showPreview
+                                  ? 'Thu gọn bản nháp'
+                                  : 'Xem bản nháp',
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -2632,11 +2783,16 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                             ),
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: StitchTokens.parchment,
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: StitchTokens.peachBorder),
+                                border: Border.all(
+                                  color: StitchTokens.peachBorder,
+                                ),
                               ),
                               child: Text(
                                 '${_hasCoverPhoto ? 1 + _supportPhotoPaths.length : 0}/8 ảnh',
@@ -2650,7 +2806,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                           ],
                         ),
                         Icon(
-                          _showPreview ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                          _showPreview
+                              ? Icons.keyboard_arrow_up_rounded
+                              : Icons.keyboard_arrow_down_rounded,
                           color: StitchTokens.wine,
                         ),
                       ],
@@ -2673,7 +2831,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _titleCtrl.text.trim().isEmpty ? 'Chưa có tên sách' : _titleCtrl.text.trim(),
+                          _titleCtrl.text.trim().isEmpty
+                              ? 'Chưa có tên sách'
+                              : _titleCtrl.text.trim(),
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
@@ -2683,7 +2843,10 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                         const SizedBox(height: 4),
                         Text(
                           'Tác giả: ${_authorCtrl.text.trim().isEmpty ? "Chưa có tác giả" : _authorCtrl.text.trim()}',
-                          style: const TextStyle(fontSize: 12.5, color: StitchTokens.darkWood),
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: StitchTokens.darkWood,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         Wrap(
@@ -2691,30 +2854,47 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                           runSpacing: 4,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: StitchTokens.parchment,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 'Tình trạng: ${formatConditionLabel(_condition)}',
-                                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: StitchTokens.parchment,
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
-                                _isBundle ? 'Bộ ${_bundleItems.length} cuốn' : formatModeLabel(_mode),
-                                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+                                _isBundle
+                                    ? 'Bộ ${_bundleItems.length} cuốn'
+                                    : formatModeLabel(_mode),
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                             if (_salePriceCtrl.text.trim().isNotEmpty)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 3,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFE8F5E9),
                                   borderRadius: BorderRadius.circular(6),
@@ -2803,10 +2983,16 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                     Transform.rotate(
                       angle: -0.07,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFF5F5),
-                          border: Border.all(color: StitchTokens.wine, width: 1.2),
+                          border: Border.all(
+                            color: StitchTokens.wine,
+                            width: 1.2,
+                          ),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text(
@@ -2926,8 +3112,12 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                       'Sách lẻ',
                       style: TextStyle(
                         fontSize: 13,
-                        fontWeight: !_isBundle ? FontWeight.w800 : FontWeight.w600,
-                        color: !_isBundle ? StitchTokens.wine : StitchTokens.darkWood,
+                        fontWeight: !_isBundle
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                        color: !_isBundle
+                            ? StitchTokens.wine
+                            : StitchTokens.darkWood,
                       ),
                     ),
                   ),
@@ -2963,8 +3153,12 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                       'Bộ sách',
                       style: TextStyle(
                         fontSize: 13,
-                        fontWeight: _isBundle ? FontWeight.w800 : FontWeight.w600,
-                        color: _isBundle ? StitchTokens.wine : StitchTokens.darkWood,
+                        fontWeight: _isBundle
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                        color: _isBundle
+                            ? StitchTokens.wine
+                            : StitchTokens.darkWood,
                       ),
                     ),
                   ),
@@ -3002,7 +3196,11 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
               children: [
                 const Text(
                   'Tạo nhanh danh sách tập liên tiếp',
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: StitchTokens.wine),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: StitchTokens.wine,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -3030,8 +3228,10 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                         wine: true,
                         compact: true,
                         onPressed: () {
-                          final from = int.tryParse(_bundleFromCtrl.text.trim()) ?? 1;
-                          final to = int.tryParse(_bundleToCtrl.text.trim()) ?? from;
+                          final from =
+                              int.tryParse(_bundleFromCtrl.text.trim()) ?? 1;
+                          final to =
+                              int.tryParse(_bundleToCtrl.text.trim()) ?? from;
                           if (to >= from && to - from <= 50) {
                             setState(() {
                               _bundleItems.clear();
@@ -3058,7 +3258,10 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
             children: [
               Text(
                 'Danh sách ${_bundleItems.length} cuốn sẽ giao (tối thiểu 2 cuốn):',
-                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               InkWell(
                 onTap: () {
@@ -3072,7 +3275,11 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                 },
                 child: const Text(
                   '+ Thêm cuốn',
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: StitchTokens.wine),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: StitchTokens.wine,
+                  ),
                 ),
               ),
             ],
@@ -3095,8 +3302,13 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                       initialValue: _bundleItems[i]['label'],
                       decoration: InputDecoration(
                         isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 8,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
                         labelText: 'Cuốn ${i + 1}',
                       ),
                       onChanged: (v) => _bundleItems[i]['label'] = v,
@@ -3109,24 +3321,50 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                       isDense: true,
                       initialValue: _bundleItems[i]['condition'],
                       items: const [
-                        DropdownMenuItem(value: 'LikeNew', child: Text('Như mới', style: TextStyle(fontSize: 12))),
-                        DropdownMenuItem(value: 'Good', child: Text('Tốt', style: TextStyle(fontSize: 12))),
-                        DropdownMenuItem(value: 'Fair', child: Text('Khá', style: TextStyle(fontSize: 12))),
-                        DropdownMenuItem(value: 'Worn', child: Text('Cũ', style: TextStyle(fontSize: 12))),
+                        DropdownMenuItem(
+                          value: 'LikeNew',
+                          child: Text(
+                            'Như mới',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Good',
+                          child: Text('Tốt', style: TextStyle(fontSize: 12)),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Fair',
+                          child: Text('Khá', style: TextStyle(fontSize: 12)),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Worn',
+                          child: Text('Cũ', style: TextStyle(fontSize: 12)),
+                        ),
                       ],
                       onChanged: (v) {
-                        if (v != null) setState(() => _bundleItems[i]['condition'] = v);
+                        if (v != null) {
+                          setState(() => _bundleItems[i]['condition'] = v);
+                        }
                       },
                       decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 8,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
                       ),
                     ),
                   ),
                   if (_bundleItems.length > 2) ...[
                     const SizedBox(width: 4),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 18, color: Color(0xFFB42318)),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: Color(0xFFB42318),
+                      ),
                       onPressed: () => setState(() => _bundleItems.removeAt(i)),
                     ),
                   ],
@@ -3149,23 +3387,38 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 18),
+                      Icon(
+                        Icons.check_circle_rounded,
+                        color: Color(0xFF16A34A),
+                        size: 18,
+                      ),
                       SizedBox(width: 6),
                       Text(
                         'Đầu sách đã xác nhận trong thư viện Lật Lại',
-                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF16A34A)),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF16A34A),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
                     _selectedCatalogBook!['title']?.toString() ?? '',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: StitchTokens.wine),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: StitchTokens.wine,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Tác giả: ${_authorCtrl.text}',
-                    style: const TextStyle(fontSize: 13, color: StitchTokens.darkWood),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: StitchTokens.darkWood,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   InkWell(
@@ -3177,7 +3430,11 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                     },
                     child: const Text(
                       'Chọn đầu sách khác →',
-                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: StitchTokens.wine),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: StitchTokens.wine,
+                      ),
                     ),
                   ),
                 ],
@@ -3242,7 +3499,13 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
               if (_searchingCatalog)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+                  child: Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
                 ),
               if (_catalogResults.isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -3252,20 +3515,41 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: StitchTokens.peachBorder),
-                    boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 6)],
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x0A000000), blurRadius: 6),
+                    ],
                   ),
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemCount: _catalogResults.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1, color: Color(0xFFEDE4D8)),
+                    separatorBuilder: (_, _) =>
+                        const Divider(height: 1, color: Color(0xFFEDE4D8)),
                     itemBuilder: (ctx, idx) {
                       final b = _catalogResults[idx];
-                      final authors = b['authors'] is List ? (b['authors'] as List).join(', ') : (b['author'] ?? '');
+                      final authors = b['authors'] is List
+                          ? (b['authors'] as List).join(', ')
+                          : (b['author'] ?? '');
                       return ListTile(
                         dense: true,
-                        title: Text(b['title']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                        subtitle: Text(authors.toString(), style: const TextStyle(fontSize: 11.5, color: AppColors.muted)),
-                        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 13, color: StitchTokens.wine),
+                        title: Text(
+                          b['title']?.toString() ?? '',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                        subtitle: Text(
+                          authors.toString(),
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: AppColors.muted,
+                          ),
+                        ),
+                        trailing: const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 13,
+                          color: StitchTokens.wine,
+                        ),
                         onTap: () => _onSelectCatalogBook(b),
                       );
                     },
@@ -3277,7 +3561,11 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                 onTap: () => setState(() => _entryMode = 'manual'),
                 child: const Text(
                   'Không thấy sách? Tự nhập theo bìa →',
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: StitchTokens.wine),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: StitchTokens.wine,
+                  ),
                 ),
               ),
             ] else ...[
@@ -3305,16 +3593,27 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                 isExpanded: true,
                 decoration: InputDecoration(
                   labelText: 'Danh mục sách *',
-                  labelStyle: const TextStyle(color: StitchTokens.darkWood, fontWeight: FontWeight.w600),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  labelStyle: const TextStyle(
+                    color: StitchTokens.darkWood,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                 ),
                 items: CatalogTaxonomy.rootCategories.map((cat) {
                   return DropdownMenuItem(
                     value: cat.id,
-                    child: Text(cat.label, style: const TextStyle(fontSize: 13.5)),
+                    child: Text(
+                      cat.label,
+                      style: const TextStyle(fontSize: 13.5),
+                    ),
                   );
                 }).toList(),
                 onChanged: (val) {
@@ -3335,16 +3634,27 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                 isExpanded: true,
                 decoration: InputDecoration(
                   labelText: 'Ngôn ngữ của sách *',
-                  labelStyle: const TextStyle(color: StitchTokens.darkWood, fontWeight: FontWeight.w600),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  labelStyle: const TextStyle(
+                    color: StitchTokens.darkWood,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                 ),
                 items: CatalogTaxonomy.languageOptions.map((opt) {
                   return DropdownMenuItem(
                     value: opt.id,
-                    child: Text(opt.label, style: const TextStyle(fontSize: 13.5)),
+                    child: Text(
+                      opt.label,
+                      style: const TextStyle(fontSize: 13.5),
+                    ),
                   );
                 }).toList(),
                 onChanged: (val) {
@@ -3357,7 +3667,12 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
               const SizedBox(height: AppSpace.md),
 
               // Bộ truyện / Series (if literature, manga, light-novel, etc.)
-              if (['literature', 'manga', 'light-novel', 'children'].contains(_categoryId)) ...[
+              if ([
+                'literature',
+                'manga',
+                'light-novel',
+                'children',
+              ].contains(_categoryId)) ...[
                 AppTextField(
                   label: 'Bộ truyện / Series (nếu có)',
                   controller: _seriesCtrl,
@@ -3370,33 +3685,53 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
               Builder(
                 builder: (context) {
                   final cat = CatalogTaxonomy.getCategory(_categoryId ?? '');
-                  if (cat == null || cat.facets.isEmpty) return const SizedBox.shrink();
+                  if (cat == null || cat.facets.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       for (final facet in cat.facets) ...[
                         Text(
                           facet.label,
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: StitchTokens.darkWood),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: StitchTokens.darkWood,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         Wrap(
                           spacing: 6,
                           runSpacing: 6,
                           children: facet.options.map((opt) {
-                            final selectedList = _selectedAttributes[facet.id] ?? [];
+                            final selectedList =
+                                _selectedAttributes[facet.id] ?? [];
                             final isSel = selectedList.contains(opt.id);
                             return FilterChip(
-                              label: Text(opt.label, style: TextStyle(fontSize: 11.5, color: isSel ? Colors.white : StitchTokens.darkWood)),
+                              label: Text(
+                                opt.label,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: isSel
+                                      ? Colors.white
+                                      : StitchTokens.darkWood,
+                                ),
+                              ),
                               selected: isSel,
                               selectedColor: StitchTokens.wine,
                               backgroundColor: StitchTokens.parchment,
                               onSelected: (selected) {
                                 setState(() {
                                   if (selected) {
-                                    _selectedAttributes[facet.id] = [...selectedList, opt.id];
+                                    _selectedAttributes[facet.id] = [
+                                      ...selectedList,
+                                      opt.id,
+                                    ];
                                   } else {
-                                    _selectedAttributes[facet.id] = selectedList.where((x) => x != opt.id).toList();
+                                    _selectedAttributes[facet.id] = selectedList
+                                        .where((x) => x != opt.id)
+                                        .toList();
                                   }
                                 });
                               },
@@ -3437,7 +3772,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
   }
 
   Widget _buildStep1Media() {
-    final supportCount = _hasCoverPhoto ? (_mediaIds.length > 1 ? _mediaIds.length - 1 : 0) : _mediaIds.length;
+    final supportCount = _hasCoverPhoto
+        ? (_mediaIds.length > 1 ? _mediaIds.length - 1 : 0)
+        : _mediaIds.length;
     final totalPhotos = (_hasCoverPhoto ? 1 : 0) + supportCount;
 
     return Column(
@@ -3471,16 +3808,30 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                 children: [
                   const Text(
                     'Ảnh bìa bài viết (3:4) *',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: StitchTokens.wine),
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: StitchTokens.wine,
+                    ),
                   ),
                   if (_hasCoverPhoto)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE8F5E9),
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: const Text('✓ Đã có ảnh bìa', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF1F7A3E))),
+                      child: const Text(
+                        '✓ Đã có ảnh bìa',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1F7A3E),
+                        ),
+                      ),
                     ),
                 ],
               ),
@@ -3498,7 +3849,10 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                       decoration: BoxDecoration(
                         color: StitchTokens.parchment,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: StitchTokens.cardBorder, width: 1.5),
+                        border: Border.all(
+                          color: StitchTokens.cardBorder,
+                          width: 1.5,
+                        ),
                       ),
                       child: _hasCoverPhoto
                           ? Stack(
@@ -3506,41 +3860,63 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                               children: [
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(8),
-                                  child: _coverPhotoPath != null && _coverPhotoPath!.isNotEmpty
-                                      ? (_coverPhotoPath!.startsWith('http://') ||
-                                              _coverPhotoPath!.startsWith('https://') ||
-                                              kIsWeb
-                                          ? Image.network(
-                                              _coverPhotoPath!,
-                                              fit: BoxFit.cover,
-                                              alignment: _coverAlign == 'left'
-                                                  ? Alignment.centerLeft
-                                                  : _coverAlign == 'right'
-                                                      ? Alignment.centerRight
-                                                      : Alignment.center,
-                                              errorBuilder: (_, __, ___) => const Center(
-                                                child: Icon(Icons.broken_image_outlined, size: 40, color: AppColors.muted),
-                                              ),
-                                            )
-                                          : Image.file(
-                                              File(_coverPhotoPath!),
-                                              fit: BoxFit.cover,
-                                              alignment: _coverAlign == 'left'
-                                                  ? Alignment.centerLeft
-                                                  : _coverAlign == 'right'
-                                                      ? Alignment.centerRight
-                                                      : Alignment.center,
-                                              errorBuilder: (_, __, ___) => const Center(
-                                                child: Icon(Icons.broken_image_outlined, size: 40, color: AppColors.muted),
-                                              ),
-                                            ))
+                                  child:
+                                      _coverPhotoPath != null &&
+                                          _coverPhotoPath!.isNotEmpty
+                                      ? (_coverPhotoPath!.startsWith(
+                                                  'http://',
+                                                ) ||
+                                                _coverPhotoPath!.startsWith(
+                                                  'https://',
+                                                ) ||
+                                                kIsWeb
+                                            ? Image.network(
+                                                _coverPhotoPath!,
+                                                fit: BoxFit.cover,
+                                                alignment: _coverAlign == 'left'
+                                                    ? Alignment.centerLeft
+                                                    : _coverAlign == 'right'
+                                                    ? Alignment.centerRight
+                                                    : Alignment.center,
+                                                errorBuilder: (_, _, _) =>
+                                                    const Center(
+                                                      child: Icon(
+                                                        Icons
+                                                            .broken_image_outlined,
+                                                        size: 40,
+                                                        color: AppColors.muted,
+                                                      ),
+                                                    ),
+                                              )
+                                            : Image.file(
+                                                File(_coverPhotoPath!),
+                                                fit: BoxFit.cover,
+                                                alignment: _coverAlign == 'left'
+                                                    ? Alignment.centerLeft
+                                                    : _coverAlign == 'right'
+                                                    ? Alignment.centerRight
+                                                    : Alignment.center,
+                                                errorBuilder: (_, _, _) =>
+                                                    const Center(
+                                                      child: Icon(
+                                                        Icons
+                                                            .broken_image_outlined,
+                                                        size: 40,
+                                                        color: AppColors.muted,
+                                                      ),
+                                                    ),
+                                              ))
                                       : Align(
                                           alignment: _coverAlign == 'left'
                                               ? Alignment.centerLeft
                                               : _coverAlign == 'right'
-                                                  ? Alignment.centerRight
-                                                  : Alignment.center,
-                                          child: const Icon(Icons.book_rounded, size: 70, color: StitchTokens.wine),
+                                              ? Alignment.centerRight
+                                              : Alignment.center,
+                                          child: const Icon(
+                                            Icons.book_rounded,
+                                            size: 70,
+                                            color: StitchTokens.wine,
+                                          ),
                                         ),
                                 ),
                                 Positioned(
@@ -3551,7 +3927,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                                       setState(() {
                                         _hasCoverPhoto = false;
                                         _coverPhotoPath = null;
-                                        if (_mediaIds.isNotEmpty) _mediaIds.removeAt(0);
+                                        if (_mediaIds.isNotEmpty) {
+                                          _mediaIds.removeAt(0);
+                                        }
                                       });
                                     },
                                     child: Container(
@@ -3560,7 +3938,11 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                                         color: Colors.black87,
                                         shape: BoxShape.circle,
                                       ),
-                                      child: const Icon(Icons.close_rounded, size: 14, color: Colors.white),
+                                      child: const Icon(
+                                        Icons.close_rounded,
+                                        size: 14,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -3569,9 +3951,20 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                           : Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.add_a_photo_outlined, size: 36, color: StitchTokens.wine),
+                                const Icon(
+                                  Icons.add_a_photo_outlined,
+                                  size: 36,
+                                  color: StitchTokens.wine,
+                                ),
                                 const SizedBox(height: 6),
-                                const Text('Bìa bài viết\n(3:4)', textAlign: TextAlign.center, style: TextStyle(fontSize: 11, color: AppColors.muted)),
+                                const Text(
+                                  'Bìa bài viết\n(3:4)',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.muted,
+                                  ),
+                                ),
                                 const SizedBox(height: 8),
                                 AppButton(
                                   title: '+ Chọn bìa',
@@ -3590,7 +3983,10 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Căn vị trí: ', style: TextStyle(fontSize: 11.5, color: AppColors.muted)),
+                    const Text(
+                      'Căn vị trí: ',
+                      style: TextStyle(fontSize: 11.5, color: AppColors.muted),
+                    ),
                     const SizedBox(width: 6),
                     ChoiceChip(
                       label: const Text('Trái', style: TextStyle(fontSize: 11)),
@@ -3620,7 +4016,11 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
         // Khung Ảnh Phụ (Tối đa 7 ảnh phụ)
         Text(
           'Ảnh chi tiết khác ($supportCount/7 ảnh phụ)',
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: StitchTokens.wine),
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: StitchTokens.wine,
+          ),
         ),
         const SizedBox(height: 8),
         Wrap(
@@ -3643,26 +4043,39 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                       borderRadius: BorderRadius.circular(7),
                       child: i < _supportPhotoPaths.length
                           ? (_supportPhotoPaths[i].startsWith('http://') ||
-                                  _supportPhotoPaths[i].startsWith('https://') ||
-                                  kIsWeb
-                              ? Image.network(
-                                  _supportPhotoPaths[i],
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Center(
-                                    child: Icon(Icons.broken_image_outlined, size: 24, color: AppColors.muted),
-                                  ),
-                                )
-                              : Image.file(
-                                  File(_supportPhotoPaths[i]),
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Center(
-                                    child: Icon(Icons.broken_image_outlined, size: 24, color: AppColors.muted),
-                                  ),
-                                ))
+                                    _supportPhotoPaths[i].startsWith(
+                                      'https://',
+                                    ) ||
+                                    kIsWeb
+                                ? Image.network(
+                                    _supportPhotoPaths[i],
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => const Center(
+                                      child: Icon(
+                                        Icons.broken_image_outlined,
+                                        size: 24,
+                                        color: AppColors.muted,
+                                      ),
+                                    ),
+                                  )
+                                : Image.file(
+                                    File(_supportPhotoPaths[i]),
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => const Center(
+                                      child: Icon(
+                                        Icons.broken_image_outlined,
+                                        size: 24,
+                                        color: AppColors.muted,
+                                      ),
+                                    ),
+                                  ))
                           : Center(
                               child: Text(
                                 'Ảnh ${i + 1}',
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                     ),
@@ -3676,7 +4089,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                               _supportPhotoPaths.removeAt(i);
                             }
                             final removeIdx = _hasCoverPhoto ? i + 1 : i;
-                            if (removeIdx < _mediaIds.length) _mediaIds.removeAt(removeIdx);
+                            if (removeIdx < _mediaIds.length) {
+                              _mediaIds.removeAt(removeIdx);
+                            }
                           });
                         },
                         child: Container(
@@ -3685,7 +4100,11 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                             color: Colors.black87,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.close_rounded, size: 13, color: Colors.white),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            size: 13,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ),
@@ -3702,14 +4121,28 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFFAF6F0),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: StitchTokens.peachBorder, style: BorderStyle.solid),
+                    border: Border.all(
+                      color: StitchTokens.peachBorder,
+                      style: BorderStyle.solid,
+                    ),
                   ),
                   child: const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add_photo_alternate_outlined, size: 24, color: StitchTokens.wine),
+                      Icon(
+                        Icons.add_photo_alternate_outlined,
+                        size: 24,
+                        color: StitchTokens.wine,
+                      ),
                       SizedBox(height: 2),
-                      Text('+ Thêm', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: StitchTokens.wine)),
+                      Text(
+                        '+ Thêm',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: StitchTokens.wine,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -3779,7 +4212,12 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
             children: [
               const Text(
                 'KIỂM TRA ĐIỀU KIỆN ĐĂNG SÁCH *',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: StitchTokens.wine),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                  color: StitchTokens.wine,
+                ),
               ),
               const SizedBox(height: 8),
 
@@ -3788,12 +4226,21 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Expanded(
-                    child: Text('1. Nội dung có đọc rõ không?', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                    child: Text(
+                      '1. Nội dung có đọc rõ không?',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                   Row(
                     children: [
                       ChoiceChip(
-                        label: const Text('Có', style: TextStyle(fontSize: 11.5)),
+                        label: const Text(
+                          'Có',
+                          style: TextStyle(fontSize: 11.5),
+                        ),
                         selected: _readable == true,
                         onSelected: (_) {
                           setState(() => _readable = true);
@@ -3802,7 +4249,10 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                       ),
                       const SizedBox(width: 4),
                       ChoiceChip(
-                        label: const Text('Không', style: TextStyle(fontSize: 11.5)),
+                        label: const Text(
+                          'Không',
+                          style: TextStyle(fontSize: 11.5),
+                        ),
                         selected: _readable == false,
                         onSelected: (_) {
                           setState(() => _readable = false);
@@ -3820,12 +4270,21 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Expanded(
-                    child: Text('2. Sách có thiếu trang không?', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                    child: Text(
+                      '2. Sách có thiếu trang không?',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                   Row(
                     children: [
                       ChoiceChip(
-                        label: const Text('Có', style: TextStyle(fontSize: 11.5)),
+                        label: const Text(
+                          'Có',
+                          style: TextStyle(fontSize: 11.5),
+                        ),
                         selected: _hasMissingPages == true,
                         onSelected: (_) {
                           setState(() => _hasMissingPages = true);
@@ -3834,7 +4293,10 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                       ),
                       const SizedBox(width: 4),
                       ChoiceChip(
-                        label: const Text('Không', style: TextStyle(fontSize: 11.5)),
+                        label: const Text(
+                          'Không',
+                          style: TextStyle(fontSize: 11.5),
+                        ),
                         selected: _hasMissingPages == false,
                         onSelected: (_) {
                           setState(() => _hasMissingPages = false);
@@ -3852,12 +4314,21 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Expanded(
-                    child: Text('3. Có thiếu phần nội dung trọng yếu?', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                    child: Text(
+                      '3. Có thiếu phần nội dung trọng yếu?',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                   Row(
                     children: [
                       ChoiceChip(
-                        label: const Text('Có', style: TextStyle(fontSize: 11.5)),
+                        label: const Text(
+                          'Có',
+                          style: TextStyle(fontSize: 11.5),
+                        ),
                         selected: _missingEssentialContent == true,
                         onSelected: (_) {
                           setState(() => _missingEssentialContent = true);
@@ -3866,7 +4337,10 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                       ),
                       const SizedBox(width: 4),
                       ChoiceChip(
-                        label: const Text('Không', style: TextStyle(fontSize: 11.5)),
+                        label: const Text(
+                          'Không',
+                          style: TextStyle(fontSize: 11.5),
+                        ),
                         selected: _missingEssentialContent == false,
                         onSelected: (_) {
                           setState(() => _missingEssentialContent = false);
@@ -3893,16 +4367,33 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
         const SizedBox(height: 6),
         Wrap(
           spacing: 6,
-          children: ['Giấy đẹp nguyên vẹn', 'Có ố vàng nhẹ theo thời gian', 'Không nếp gấp'].map((txt) {
-            return InkWell(
-              onTap: () => setState(() => _pagesNoteCtrl.text = txt),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: StitchTokens.parchment, borderRadius: BorderRadius.circular(10)),
-                child: Text('+ $txt', style: const TextStyle(fontSize: 10.5, color: StitchTokens.wine)),
-              ),
-            );
-          }).toList(),
+          children:
+              [
+                'Giấy đẹp nguyên vẹn',
+                'Có ố vàng nhẹ theo thời gian',
+                'Không nếp gấp',
+              ].map((txt) {
+                return InkWell(
+                  onTap: () => setState(() => _pagesNoteCtrl.text = txt),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: StitchTokens.parchment,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '+ $txt',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        color: StitchTokens.wine,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
         ),
         const SizedBox(height: AppSpace.md),
 
@@ -3916,16 +4407,30 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
         const SizedBox(height: 6),
         Wrap(
           spacing: 6,
-          children: ['Bìa cứng cáp', 'Mép bìa sờn nhẹ', 'Gáy sách thẳng đẹp'].map((txt) {
-            return InkWell(
-              onTap: () => setState(() => _coverNoteCtrl.text = txt),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: StitchTokens.parchment, borderRadius: BorderRadius.circular(10)),
-                child: Text('+ $txt', style: const TextStyle(fontSize: 10.5, color: StitchTokens.wine)),
-              ),
-            );
-          }).toList(),
+          children: ['Bìa cứng cáp', 'Mép bìa sờn nhẹ', 'Gáy sách thẳng đẹp']
+              .map((txt) {
+                return InkWell(
+                  onTap: () => setState(() => _coverNoteCtrl.text = txt),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: StitchTokens.parchment,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '+ $txt',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        color: StitchTokens.wine,
+                      ),
+                    ),
+                  ),
+                );
+              })
+              .toList(),
         ),
         const SizedBox(height: AppSpace.md),
 
@@ -3933,7 +4438,8 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
           label: 'Ghi chú, đánh dấu *',
           requiredField: true,
           controller: _notesCtrl,
-          placeholder: 'Ghi rõ phần đã viết hoặc tô; không có thì ghi “Không có”.',
+          placeholder:
+              'Ghi rõ phần đã viết hoặc tô; không có thì ghi “Không có”.',
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 6),
@@ -3941,8 +4447,14 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
           onTap: () => setState(() => _notesCtrl.text = 'Không có'),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(color: StitchTokens.parchment, borderRadius: BorderRadius.circular(10)),
-            child: const Text('+ Điền nhanh: "Không có"', style: TextStyle(fontSize: 10.5, color: StitchTokens.wine)),
+            decoration: BoxDecoration(
+              color: StitchTokens.parchment,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              '+ Điền nhanh: "Không có"',
+              style: TextStyle(fontSize: 10.5, color: StitchTokens.wine),
+            ),
           ),
         ),
         const SizedBox(height: AppSpace.md),
@@ -3951,7 +4463,8 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
           label: 'Phụ kiện *',
           requiredField: true,
           controller: _accessoriesCtrl,
-          placeholder: 'Bookmark, bìa áo, quà kèm; không có thì ghi “Không có”.',
+          placeholder:
+              'Bookmark, bìa áo, quà kèm; không có thì ghi “Không có”.',
           onChanged: (_) => setState(() {}),
         ),
         const SizedBox(height: 6),
@@ -3959,8 +4472,14 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
           onTap: () => setState(() => _accessoriesCtrl.text = 'Không có'),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(color: StitchTokens.parchment, borderRadius: BorderRadius.circular(10)),
-            child: const Text('+ Điền nhanh: "Không có"', style: TextStyle(fontSize: 10.5, color: StitchTokens.wine)),
+            decoration: BoxDecoration(
+              color: StitchTokens.parchment,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              '+ Điền nhanh: "Không có"',
+              style: TextStyle(fontSize: 10.5, color: StitchTokens.wine),
+            ),
           ),
         ),
         const SizedBox(height: AppSpace.md),
@@ -3981,7 +4500,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: _descriptionCtrl.text.trim().length >= 30 ? const Color(0xFF1F7A3E) : const Color(0xFFB42318),
+              color: _descriptionCtrl.text.trim().length >= 30
+                  ? const Color(0xFF1F7A3E)
+                  : const Color(0xFFB42318),
             ),
           ),
         ),
@@ -4006,7 +4527,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
         ),
         const SizedBox(height: 4),
         Text(
-          _isBundle ? 'Bộ sách chỉ bán nguyên bộ, không tách cuốn.' : 'Chọn hình thức giao dịch phù hợp cho ấn bản của bạn.',
+          _isBundle
+              ? 'Bộ sách chỉ bán nguyên bộ, không tách cuốn.'
+              : 'Chọn hình thức giao dịch phù hợp cho ấn bản của bạn.',
           style: const TextStyle(fontSize: 12, color: AppColors.muted),
         ),
         const SizedBox(height: AppSpace.md),
@@ -4044,11 +4567,19 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.local_shipping_outlined, color: StitchTokens.wine, size: 18),
+                    Icon(
+                      Icons.local_shipping_outlined,
+                      color: StitchTokens.wine,
+                      size: 18,
+                    ),
                     SizedBox(width: 6),
                     Text(
                       'Nơi gửi sách (Người giao hàng đến lấy) *',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: StitchTokens.wine),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: StitchTokens.wine,
+                      ),
                     ),
                   ],
                 ),
@@ -4058,8 +4589,13 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                     initialValue: _selectedOriginAddressId,
                     isExpanded: true,
                     decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       filled: true,
                       fillColor: Colors.white,
                     ),
@@ -4075,15 +4611,24 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                           ),
                         ),
                     ],
-                    onChanged: (v) => setState(() => _selectedOriginAddressId = v),
+                    onChanged: (v) =>
+                        setState(() => _selectedOriginAddressId = v),
                   ),
                   const SizedBox(height: 6),
                 ],
                 InkWell(
-                  onTap: () => setState(() => _showAddAddressDialog = !_showAddAddressDialog),
+                  onTap: () => setState(
+                    () => _showAddAddressDialog = !_showAddAddressDialog,
+                  ),
                   child: Text(
-                    _showAddAddressDialog ? '▲ Ẩn nhập địa chỉ mới' : '+ Nhập địa chỉ gửi sách mới',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: StitchTokens.wine),
+                    _showAddAddressDialog
+                        ? '▲ Ẩn nhập địa chỉ mới'
+                        : '+ Nhập địa chỉ gửi sách mới',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: StitchTokens.wine,
+                    ),
                   ),
                 ),
                 if (_showAddAddressDialog) ...[
@@ -4106,13 +4651,21 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
                     isExpanded: true,
                     decoration: InputDecoration(
                       labelText: 'Khu vực luân chuyển sách',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
                     ),
                     items: _serviceLocalities.map((loc) {
                       return DropdownMenuItem(
                         value: loc['code']?.toString(),
-                        child: Text(loc['label']?.toString() ?? '', style: const TextStyle(fontSize: 12.5)),
+                        child: Text(
+                          loc['label']?.toString() ?? '',
+                          style: const TextStyle(fontSize: 12.5),
+                        ),
                       );
                     }).toList(),
                     onChanged: (v) => setState(() => _selectedLocalityCode = v),
@@ -4133,7 +4686,9 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
         // Giá bán đề xuất
         if (_mode == 'Sale' || _mode == 'Both' || _isBundle) ...[
           AppTextField(
-            label: _isBundle ? 'GIÁ CHO CẢ BỘ SÁCH (VNĐ) *' : 'GIÁ BÁN ĐỀ XUẤT (VNĐ) *',
+            label: _isBundle
+                ? 'GIÁ CHO CẢ BỘ SÁCH (VNĐ) *'
+                : 'GIÁ BÁN ĐỀ XUẤT (VNĐ) *',
             requiredField: true,
             controller: _salePriceCtrl,
             keyboardType: TextInputType.number,
@@ -4145,11 +4700,24 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
             spacing: 6,
             children: [35000, 50000, 75000, 120000].map((pr) {
               return InkWell(
-                onTap: () => setState(() => _salePriceCtrl.text = pr.toString()),
+                onTap: () =>
+                    setState(() => _salePriceCtrl.text = pr.toString()),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: StitchTokens.parchment, borderRadius: BorderRadius.circular(10)),
-                  child: Text(formatVnd(pr), style: const TextStyle(fontSize: 11, color: StitchTokens.wine)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: StitchTokens.parchment,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    formatVnd(pr),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: StitchTokens.wine,
+                    ),
+                  ),
                 ),
               );
             }).toList(),
@@ -4193,7 +4761,11 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
               children: [
                 const Text(
                   '🎯 Tiêu chí đổi sách mong muốn (Tùy chọn)',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: StitchTokens.wine),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: StitchTokens.wine,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 const Text(
@@ -4249,11 +4821,19 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
           children: [
             _reviewRow('Tên sách', _titleCtrl.text.trim()),
             _reviewRow('Tác giả', _authorCtrl.text.trim()),
-            if (_isBundle) _reviewRow('Quy cách', 'Bộ ${_bundleItems.length} cuốn'),
+            if (_isBundle)
+              _reviewRow('Quy cách', 'Bộ ${_bundleItems.length} cuốn'),
             if (!_isBundle) ...[
-              _reviewRow('Danh mục', CatalogTaxonomy.getLabel(_categoryId ?? '')),
-              _reviewRow('Ngôn ngữ', CatalogTaxonomy.getLanguageLabel(_language)),
-              if (_seriesCtrl.text.trim().isNotEmpty) _reviewRow('Bộ truyện', _seriesCtrl.text.trim()),
+              _reviewRow(
+                'Danh mục',
+                CatalogTaxonomy.getLabel(_categoryId ?? ''),
+              ),
+              _reviewRow(
+                'Ngôn ngữ',
+                CatalogTaxonomy.getLanguageLabel(_language),
+              ),
+              if (_seriesCtrl.text.trim().isNotEmpty)
+                _reviewRow('Bộ truyện', _seriesCtrl.text.trim()),
             ],
           ],
         ),
@@ -4261,10 +4841,14 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
 
         // Section 2: Ảnh bản sách
         _buildReviewSection(
-          title: 'Ảnh bản sách · ${_hasCoverPhoto ? 1 + _supportPhotoPaths.length : 0}/8 ảnh',
+          title:
+              'Ảnh bản sách · ${_hasCoverPhoto ? 1 + _supportPhotoPaths.length : 0}/8 ảnh',
           stepIndex: 1,
           children: [
-            _reviewRow('Ảnh bìa', _hasCoverPhoto ? 'Đã đính kèm (3:4)' : 'Chưa có ảnh bìa'),
+            _reviewRow(
+              'Ảnh bìa',
+              _hasCoverPhoto ? 'Đã đính kèm (3:4)' : 'Chưa có ảnh bìa',
+            ),
             _reviewRow('Ảnh phụ', '${_supportPhotoPaths.length} ảnh đính kèm'),
           ],
         ),
@@ -4281,8 +4865,14 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
             _reviewRow('Ghi chú', _notesCtrl.text.trim()),
             _reviewRow('Phụ kiện', _accessoriesCtrl.text.trim()),
             _reviewRow('Nội dung đọc rõ', _readable == true ? 'Có' : 'Không'),
-            _reviewRow('Thiếu trang', _hasMissingPages == true ? 'Có' : 'Không'),
-            _reviewRow('Thiếu nội dung chính', _missingEssentialContent == true ? 'Có' : 'Không'),
+            _reviewRow(
+              'Thiếu trang',
+              _hasMissingPages == true ? 'Có' : 'Không',
+            ),
+            _reviewRow(
+              'Thiếu nội dung chính',
+              _missingEssentialContent == true ? 'Có' : 'Không',
+            ),
           ],
         ),
         const SizedBox(height: AppSpace.md),
@@ -4292,11 +4882,20 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
           title: _isBundle ? 'Giá cả bộ' : 'Phương thức giao dịch & Giá',
           stepIndex: 3,
           children: [
-            _reviewRow('Hình thức', _isBundle ? 'Bán trọn bộ' : formatModeLabel(_mode)),
+            _reviewRow(
+              'Hình thức',
+              _isBundle ? 'Bán trọn bộ' : formatModeLabel(_mode),
+            ),
             if (_mode == 'Sale' || _mode == 'Both' || _isBundle)
-              _reviewRow('Giá bán', formatVnd(int.tryParse(_salePriceCtrl.text.trim()))),
+              _reviewRow(
+                'Giá bán',
+                formatVnd(int.tryParse(_salePriceCtrl.text.trim())),
+              ),
             if (!_isBundle && (_mode == 'Exchange' || _mode == 'Both'))
-              _reviewRow('Giá trị đổi', formatVnd(int.tryParse(_exchangeValueCtrl.text.trim()))),
+              _reviewRow(
+                'Giá trị đổi',
+                formatVnd(int.tryParse(_exchangeValueCtrl.text.trim())),
+              ),
           ],
         ),
         const SizedBox(height: AppSpace.lg),
@@ -4317,7 +4916,10 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
               Expanded(
                 child: Text(
                   'Chính sách kiểm duyệt Lật Lại: Bài đăng sẽ được đối soát thông tin và ảnh thực tế trước khi hiển thị công khai trên sàn.',
-                  style: TextStyle(fontSize: 11.5, color: StitchTokens.darkWood),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: StitchTokens.darkWood,
+                  ),
                 ),
               ),
             ],
@@ -4359,15 +4961,30 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
             children: [
               Text(
                 title,
-                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: StitchTokens.wine),
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w800,
+                  color: StitchTokens.wine,
+                ),
               ),
               InkWell(
                 onTap: () => _selectStep(stepIndex),
                 child: const Row(
                   children: [
-                    Text('Chỉnh sửa', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: StitchTokens.wine)),
+                    Text(
+                      'Chỉnh sửa',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: StitchTokens.wine,
+                      ),
+                    ),
                     SizedBox(width: 2),
-                    Icon(Icons.arrow_forward_ios_rounded, size: 11, color: StitchTokens.wine),
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      size: 11,
+                      color: StitchTokens.wine,
+                    ),
                   ],
                 ),
               ),
@@ -4388,12 +5005,19 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
         children: [
           SizedBox(
             width: 120,
-            child: Text(label, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: AppColors.muted),
+            ),
           ),
           Expanded(
             child: Text(
               value.isEmpty ? 'Chưa nhập' : value,
-              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: StitchTokens.darkWood),
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: StitchTokens.darkWood,
+              ),
             ),
           ),
         ],
@@ -4401,4 +5025,3 @@ class _DraftEditorScreenState extends ConsumerState<_DraftEditorScreen> {
     );
   }
 }
-

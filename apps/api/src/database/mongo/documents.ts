@@ -303,6 +303,7 @@ export interface ListingAutoReviewCheckDoc extends Lockable {
 // Exactly one target field is set; `principal` is the idempotency identity:
 // `user:<actorId>` or `system:<systemActor>`.
 export interface MutationReceiptDoc {
+  withdrawalId?: string | null;
   supportCaseId?: string | null;
   accountId?: string | null;
   reviewId?: string | null;
@@ -326,6 +327,7 @@ export interface MutationReceiptDoc {
   committedAt: Date;
 }
 export interface AuditEventDoc {
+  withdrawalId?: string | null;
   supportCaseId?: string | null;
   accountId?: string | null;
   reviewId?: string | null;
@@ -649,10 +651,12 @@ export interface CommitmentEventDoc {
 }
 
 export interface WalletAccountDoc {
+  withdrawalId?: string | null;
   _id: string;
   ownerId: string | null;
   orderId: string | null;
   purpose:
+    | 'WithdrawalHold'
     | 'UserAvailable'
     | 'OrderHold'
     | 'SimulatorCapital'
@@ -660,6 +664,20 @@ export interface WalletAccountDoc {
     | 'ListingFeeClearing'
     | 'PlatformCommission';
   currency: 'VND';
+}
+export interface WithdrawalDoc extends Lockable {
+  processingMode?: 'Manual';
+  _id: string; ownerId: string; ownerName: string; amount: number;
+  reason: 'SaleProceeds' | 'Personal' | 'Leaving' | 'Other'; reasonDetail: string;
+  recipient: { bankName: string; accountNumber: string; accountHolder: string };
+  holdId: string; state: 'Requested' | 'Approved' | 'Processing' | 'Completed' | 'Rejected' | 'FailedVerified' | 'Refunded';
+  version: number; approverId: string | null; payoutRef: string | null;
+  createdAt: Date; updatedAt: Date;
+  history: { state: WithdrawalDoc['state']; at: Date; note: string }[];
+}
+export interface WithdrawalEventDoc {
+  _id: string; withdrawalId: string; payoutRef: string; payloadHash: string;
+  outcome: 'Unknown' | 'Succeeded' | 'FailedVerified'; receiptId: string; receivedAt: Date;
 }
 export interface TopupIntentDoc extends Lockable {
   _id: string;
@@ -692,9 +710,13 @@ export interface SimulatedPaymentEventDoc {
   receiptId: string;
 }
 export interface LedgerJournalDoc {
+  withdrawalId?: string | null;
   _id: string;
   sequence: number;
   type:
+    | 'WithdrawalHold'
+    | 'WithdrawalPayout'
+    | 'WithdrawalRefund'
     | 'OpeningCapital'
     | 'CapitalIncrease'
     | 'Topup'
@@ -1399,11 +1421,12 @@ export interface MemberNotificationDoc {
     | 'ExchangeCancelled'
     | 'ExchangeRejected'
     | 'ExchangeDisputed'
+    | 'WithdrawalUpdated'
     | 'SupportUpdated'
     | 'ReviewModerated';
   title: string;
   body: string;
-  targetType: 'Auction' | 'Exchange' | 'Order' | 'SupportCase' | 'TransactionReview';
+  targetType: 'Withdrawal' | 'Auction' | 'Exchange' | 'Order' | 'SupportCase' | 'TransactionReview';
   targetId: string;
   dedupeKey: string;
   createdAt: Date;
