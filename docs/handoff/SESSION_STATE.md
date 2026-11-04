@@ -13,6 +13,10 @@
   PendingReview độc lập; fixture cho phép origin QA riêng để không chiếm FE local.
   CI remote đọc trực tiếp tại PR theo head hiện tại; local PASS không tự thành
   remote/native/human acceptance. Giữ READINESS và chưa merge main/deploy.
+  Lượt remote `310adfda` đã qua các bước lỗi cũ; User Web chạy tiếp tới test đấu
+  giá mới phát hiện thao tác cũ. Follow-up mở panel Bộ lọc trước khi tick buy-now,
+  dùng nút Xóa tất cả hiện có; giữ assertions URL/check state/filter/cache/Back/
+  loading/error/ảnh lỗi. Browser1440/390 local PASS, evidence `.tmp/pr96-auction-stage`.
 - Bàn giao push theo yêu cầu owner04/11 tại `codex/wallet-withdrawals-ready`.
   Giữ14commit chức năng/UI từ `91e7c011` đến `daa2441a`, đã đồng bộ
   `origin/main` tại `3cfe0c6d` bằng merge `aaf6e6cc`, không xung đột; phần main
