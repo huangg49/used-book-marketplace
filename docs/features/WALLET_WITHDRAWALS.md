@@ -417,3 +417,25 @@ Evidence private `.tmp/admin-withdrawal-approval-evidence/`,
 `.tmp/admin-withdrawal-approval-{unit,build,lint}.log`. QA API/Mongo thật với fixture/
 storage fake, teardown/dừng; main apps giữ chạy, không command tiền owner. Không
 push/merge/đổi READINESS hoặc suy native/human/remote CI acceptance.
+
+## Sửa checks PR96 — 04/11/2026
+
+Head ban đầu `af87ed05` có4checks lỗi; nguồn chính thức là
+[PR96](https://github.com/huangg49/used-book-marketplace/pull/96).
+Flutter18file được format và sửa18lint tự động (braces/wildcard), analyze sạch và
+15widget tests PASS. Fixture order-chat đáp ứng profile theo đúng actor cùng
+auth reload; browser PASS và vẫn từ chối route không khai báo. Admin skip-link
+focus tường minh, dossier chỉ tự focus khi theo navigation link phù hợp; phản hồi
+muộn không chiếm focus menu/queue. Test đi theo tab order có queue region, giới
+hạn fault theo moderation Rejected, scope lỗi/retry vào đúng khung. Admin full
+browser/229unit/typecheck/build PASS. Origin QA riêng tránh port5174của Member.
+
+Importer chỉ nhận đúng cặp reference baseline→free-shipping0052, giữ policy mới
+cho giao dịch tương lai và snapshot phí/ledger lịch sử. Báo cáo không đếm policy
+native vào bảng PostgreSQL. Kiểm drift policy/selection và vốn0055 trong7Mongo/
+PostgreSQL cases PASS; API typecheck/lint PASS. Không đổi migration cũ, contract
+hoặc database local chính. RunbookMIG06 được cập nhật theo0052/0055.
+
+Evidence private `.tmp/pr96-ci/`, `.tmp/pr96-{import,order-chat,admin-browser}.log`,
+`.tmp/pr96-flutter-{format-check,analyze,test}.log`. CI remote phải xem theo head
+hiện tại tại PR; không dùng local checks làm human/native/release acceptance.

@@ -1,5 +1,18 @@
 # Rút tiền qua Admin — 04/11/2026
 
+- Sửa CI cho [PR96](https://github.com/huangg49/used-book-marketplace/pull/96)
+  trên `codex/wallet-withdrawals-ready`, base `af87ed05`. Bốn lỗi ở head ban đầu:
+  Flutter format, fixture chat thiếu profile/session read, focus Admin bị dossier
+  tải muộn chiếm lại, importer chưa nhận reference free-shipping0052. Đã sửa
+  từng commit; không sửa migration đã áp dụng hoặc dữ liệu local chính.
+  PASS local: Flutter format/analyze/15tests; User order-chat browser; Admin
+  229unit/typecheck/build và full browser (keyboard/menu/skip, retry/conflict,
+  quyền/session); API typecheck/lint và7PostgreSQL-import Mongo tests, gồm drift
+  policy/selection bị từ chối, snapshot tiền và CapitalIncrease0055đúng một lần.
+  Fault injection Admin nhắm đúng queue Rejected, không đánh hỏng continuation
+  PendingReview độc lập; fixture cho phép origin QA riêng để không chiếm FE local.
+  CI remote đọc trực tiếp tại PR theo head hiện tại; local PASS không tự thành
+  remote/native/human acceptance. Giữ READINESS và chưa merge main/deploy.
 - Bàn giao push theo yêu cầu owner04/11 tại `codex/wallet-withdrawals-ready`.
   Giữ14commit chức năng/UI từ `91e7c011` đến `daa2441a`, đã đồng bộ
   `origin/main` tại `3cfe0c6d` bằng merge `aaf6e6cc`, không xung đột; phần main

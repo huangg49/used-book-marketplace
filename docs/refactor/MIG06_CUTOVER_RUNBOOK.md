@@ -31,7 +31,9 @@
 5. Import: `SOURCE_DATABASE_URL=<postgres> pnpm --filter @used-books/api mongo:import-postgres -- --report=<ngoài repo>`.
    Importer kiểm lịch sử 17 migration nguồn, số lượng từng collection, hash nội dung,
    số thời điểm bị cắt micro giây, rồi chạy toàn bộ kiểm bất biến (`checkIntegrity`)
-   gồm bảo toàn 100.000.000 VND vốn mô phỏng. `ok=false` ⇒ dừng, không mở traffic.
+   gồm bảo toàn vốn mô phỏng: giữ journal mở100.000.000 VND của nguồn, ghi lại
+   đúng một CapitalIncrease0055để tổng vốn đạt1.000.000.000.000 VND theoADR0067.
+   Snapshot nghĩa vụ/ledger nguồn không bị viết lại. `ok=false` ⇒ dừng, không mở traffic.
 6. `pnpm --filter @used-books/api mongo:check` lần nữa trên đích; lưu kết quả.
 7. Chuyển `.env` API/worker sang `MONGODB_URL` (user `latlai_app`), build, khởi động
    API + media worker + order worker cùng bản. Kiểm `/api/v1/health/ready`.
@@ -57,6 +59,13 @@
   của bảng nguồn vẫn chỉ tính hai hàng tương ứng; nguồn PostgreSQL không bị ghi.
   Mọi drift khác ở nguồn hoặc đích vẫn bị từ chối trước khi nhập dữ liệu nghiệp vụ.
   Không sửa migration đã áp dụng hoặc bỏ kiểm tra reference để né lỗi.
+
+- Policy giao hàng ADR0063 (04/11/2026): chỉ chấp nhận source baseline nguyên vẹn
+  cùng target có đúng policy `DIRECT-FREE-SHIPPING-v1` cước0, commission/TTL kế
+  thừa và selection DirectSale trỏ policy này. Giữ policy native cho quote mới;
+  hash/count của bảng policy nguồn chỉ tính hàng PostgreSQL, selection được đối
+  chiếu theo đúng nâng cấp đã biết. Đơn/quote đã nhập giữ phí snapshot lịch sử.
+  Policy/selection lệch ngoài cặp này bị từ chối trước khi nhập business data.
 
 - Thời điểm micro giây bị cắt về mili giây; importer báo số lượng theo collection.
   Validator có thể từ chối một bản ghi nếu hai mốc chỉ khác nhau dưới 1 ms theo chiều
