@@ -358,3 +358,26 @@ Evidence private `.tmp/admin-withdrawal-queue-evidence/`,
 `.tmp/admin-withdrawal-queue-browser-final.log`,
 `.tmp/admin-withdrawal-queue-{unit,build,lint}.log`. QA teardown/dừng, main apps
 giữ chạy, không command dữ liệu owner, sửa .env/migration/READINESS hoặc push/merge.
+
+## Rút gọn trạng thái lọc Admin — 04/11/2026
+
+Owner yêu cầu bỏ các lựa chọn không dùng trong luồng duyệt trực tiếp. Nhánh
+`codex/admin-withdrawal-status-filter`, base `eb443c0e`; checkpoint subject
+`fix(admin): simplify withdrawal status filters`. Menu Admin thông thường chỉ có
+Tất cả trạng thái, Chờ duyệt, Thành công, Bị từ chối. Manual duyệt là Completed;
+Approved/Processing/FailedVerified/Refunded không còn là lựa chọn mặc định.
+Read-only kiểm DB local chỉ thấy Manual Requested/Completed, không ghi dữ liệu.
+Không xóa enum/API/lịch sử hoặc gộp Approved thành Completed: All vẫn đọc mọi đơn,
+deep link trạng thái cũ giữ đúng lựa chọn cho đến khi đổi lọc. Route simulator
+riêng giữ các trạng thái cần cho tương thích cũ. Không đổi ledger/state machine.
+
+PASS229Admin unit/typecheck/build/lint với warning cũ; targeted QA browser kiểm
+đúng4options, lọc Completed/Rejected/All, query URL, deep link Approved qua đăng
+nhập rồi chọn Requested để trở lại menu gọn,320px/0page errors. QA không tạo đơn
+hoặc chạy command tiền; không chạy lại full hold/payout/refund vì không đổi source
+liên quan. Detector TS một lượt0finding. Evidence private
+`.tmp/admin-withdrawal-filter-evidence/`,
+`.tmp/admin-withdrawal-filter-smoke.mjs`,
+`.tmp/admin-withdrawal-filter-browser-final.log` và
+`.tmp/admin-withdrawal-filter-{unit,build,lint}.log`. QA teardown/dừng, main apps
+giữ chạy. Không mutation owner, push/merge/READINESS hoặc native/human/CI claim.

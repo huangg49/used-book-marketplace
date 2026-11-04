@@ -69,6 +69,12 @@ export function WithdrawalsPage({
 function Queue({ user, simulator }: { user: CurrentUser; simulator: boolean }) {
   const [params, setParams] = useSearchParams();
   const state = params.get("state") ?? (simulator ? "Processing" : "Requested");
+  const filterStates = Object.entries(withdrawalLabels).filter(
+    ([value]) =>
+      simulator ||
+      ["Requested", "Completed", "Rejected"].includes(value) ||
+      value === state,
+  );
   const [selected, setSelected] = useState<Withdrawal>();
   const [feedback, setFeedback] = useState("");
   const client = useQueryClient();
@@ -120,7 +126,7 @@ function Queue({ user, simulator }: { user: CurrentUser; simulator: boolean }) {
               }}
             >
               <option value="">Tất cả trạng thái</option>
-              {Object.entries(withdrawalLabels).map(([v, l]) => (
+              {filterStates.map(([v, l]) => (
                 <option key={v} value={v}>
                   {l}
                 </option>

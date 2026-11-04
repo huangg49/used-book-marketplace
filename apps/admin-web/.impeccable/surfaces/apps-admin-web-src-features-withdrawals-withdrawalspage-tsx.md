@@ -41,3 +41,10 @@ and task; no new style draw or asset. Browser44captures had no page errors/root
 overflow; empty/filter/Back and refresh/link contrast at focus/hover/active passed.
 Three detector advisories remain on inherited empty/dialog literals outside the
 queue rules. This is code/browser review, not human/native/remote CI approval.
+
+Filter clarification04/11: the normal Admin menu has All, Requested, Completed,
+Rejected. Manual approval completes immediately, so do not offer intermediate
+approval, payout/reconciliation or refund filters by default. Preserve legacy
+row/history labels and an explicitly selected old-state deep link; leaving that
+selection restores the four-option menu. The separate simulator route retains
+its existing state choices. No data migration or change to the state machine.
