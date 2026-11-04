@@ -5,25 +5,25 @@ gói và sửa lỗi liên quan đã tái hiện. Đổi nghiệp vụ, thiết 
 triển khai cần quyết định riêng; không mở rộng sang DB/provider/checkout demo.
 
 Owner đã yêu cầu chạy cuốn chiếu lại từ `97ec5388`.
-Gói hiện tại `codex/member-web-chat-legacy-previews`, base `1c2e8a61`.
+Gói hiện tại `codex/member-web-chat-card-visibility`, base `c44dc9ca`.
 [ConversationInbox](../../apps/user-web/src/components/conversation/ConversationInbox.tsx)
-dùng snapshot Exchange đã có trong danh sách để dựng thẻ legacy.
+đọc public listing cho thẻ mua bán khi gần viewport hoặc focus/hover, giữ query
+hoạt động sau lần đầu và fallback khi thiếu IntersectionObserver.
 [Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 
-- Production fixture390/1440 ×2 vai trò:12 thẻ,12 GET chi tiết +33 URL ảnh
-  trước sửa về0. Title/đối tác/fallback thiếu snapshot giữ đúng, mở phiếu/Back/
-  list503/thử lại PASS.
-- Build/typecheck,361 unit, scoped lint/detector và chat-guidance PASS.
-  Sửa assertion cũ tìm giá trong phần đóng sang giá đã chốt ở vùng thao tác.
+- Production fixture:390 GET ban đầu12→4,1440 vẫn12 vì cả12 thẻ trong vùng
+  viewport+200px. Cuộn/focus404/Xem thêm/mở phòng/Back PASS. Thiếu observer tải12.
+- Build/typecheck,361 unit,scoped lint/detector và chat-guidance đầy đủ PASS.
   47 CSS khớp byte. HTTP giả lập, không suy nghiệm thu API/DB/provider/thiết bị
   thật hoặc CI remote.
 
 Ứng viên lazy Home bị loại, source đã khôi phục (`901383dd` chỉ lưu đánh giá).
-Tóm tắt/chi tiết Exchange render thay nhau. Rà tiếp request public listing của
-các thẻ ConversationCard mua bán dưới viewport. Đo trước khi chọn cách hoãn đọc.
+Tiếp theo audit source và evidence trên các route chính để chọn việc còn lợi
+ích rõ hoặc chốt phạm vi hiện tại. Tóm tắt/chi tiết Exchange render thay nhau.
 ADR0071 giữ bid không giữ tiền; không suy mọi thay đổi tiền bất đồng bộ đã nối.
 
-Gói `1c2e8a61` dùng chung poll topup, giảm POST đối soát3→1 trong fixture;
+Gói `c44dc9ca` dựng preview Exchange từ list, bỏ12 detail/33 URL ảnh trong fixture;
+`1c2e8a61` dùng chung poll topup, giảm POST đối soát3→1 trong fixture;
 `4ddbea8f` bỏ interval thẻ trao đổi, giữ các mốc hạn và recovery;
 `97ec5388` dừng cooldown Auth khi hết 60 giây, giữ animation và resend;
 `f22390c4` chỉ watch popup Wallet khi mở, giữ nhịp500ms và cleanup;

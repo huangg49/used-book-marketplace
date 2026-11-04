@@ -26,6 +26,7 @@
     "test:auction-input:browser": "node tests/auction-input.mjs",
     "test:chat-input:browser": "node tests/chat-input.mjs",
     "test:chat-legacy-previews:browser": "node tests/chat-legacy-previews.mjs",
+    "test:chat-card-visibility:browser": "node tests/chat-card-visibility.mjs",
     "test:search-recovery:browser": "node tests/search-recovery.mjs",
     "test:search-covers:browser": "node tests/search-covers.mjs",
     "test:list-pagination:browser": "node tests/list-pagination.mjs",

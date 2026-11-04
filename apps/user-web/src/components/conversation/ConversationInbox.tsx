@@ -15,6 +15,7 @@ import { getPublicListing } from "../../services/public-listings";
 import { getExchanges, type Exchange } from "../../services/exchange";
 import { ListingPhoto } from "../BookCard";
 import { formatVnd } from "../../lib/routes";
+import { useNearViewport } from "../../hooks/useNearViewport";
 import styles from "./Conversation.module.css";
 
 const states = {
@@ -34,7 +35,10 @@ function ConversationCard({
   const transitioning = useConversationTransition(href);
   const position = useInboxPosition();
   const cache = useQueryClient();
+  const { ref, active } = useNearViewport<HTMLElement>(false, { once: true });
+  const [engaged, setEngaged] = useState(false);
   const prepare = () => {
+    setEngaged(true);
     void cache.prefetchQuery({
       queryKey: ["purchase-conversation", room.id, userId],
       queryFn: () => getPurchaseConversation(room.id),
@@ -47,6 +51,7 @@ function ConversationCard({
   const book = useQuery({
     queryKey: ["public-listing", room.listingId],
     queryFn: () => getPublicListing(room.listingId),
+    enabled: active || engaged,
     retry: false,
     staleTime: 60000,
   });
@@ -61,6 +66,7 @@ function ConversationCard({
       : null;
   return (
     <article
+      ref={ref}
       className={styles.inboxCard}
       data-room-id={room.id}
       data-chat-morph-card={transitioning || undefined}

@@ -4,6 +4,38 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Đọc dữ liệu thẻ hội thoại mua bán khi tới gần viewport — 04/11/2026
+
+Nhánh `codex/member-web-chat-card-visibility`, base `c44dc9ca`.
+[ConversationCard](../../apps/user-web/src/components/conversation/ConversationInbox.tsx)
+dùng observer dùng chung với biên200px và chế độ once để kích hoạt public
+listing khi thẻ tới gần màn hình. Focus/hover kích hoạt sớm, giữ prefetch phòng
+đã có. Thẻ từng nhìn thấy giữ query hoạt động theo staleTime60 giây như trước.
+Fallback thiếu IntersectionObserver vẫn tải đủ dữ liệu.
+
+[Production browser fixture](../../apps/user-web/tests/chat-card-visibility.mjs)
+PASS trước/sau trên Chromium với reduced-motion, danh sách24 phòng và12 thẻ
+mount ban đầu. Ở390px, public listing GET ban đầu giảm12→4. Ở1440px, cả12
+thẻ trong biên viewport+200px nên vẫn12→12. Đây là giảm tải khi vào mobile,
+chưa đo LCP/CPU/pin trên thiết bị thật.
+
+Các ca kiểm cuộn đọc đủ12 thẻ, focus link với preventScroll để tải thẻ chưa tới,
+404 hiện bài không còn công khai, Xem thêm24 thẻ, mở đúng phòng và Back giữ
+số thẻ/vị trí/nội dung. Ca390 thiếu observer vẫn đọc12. Assertion ban đầu
+giả định desktop phải giảm request đã được điều chỉnh theo geometry thật,
+giữ rootMargin200px của observer hiện có.
+
+- Build/typecheck,361 unit/51 file,scoped lint/detector PASS. Chat-guidance
+  đầy đủ PASS với screenshots tắt, gồm vai trò, command/retry, draft/lịch sử lỗi.
+- Đã xem ảnh inbox390/1440.47 CSS production khớp byte. Diff chỉ thêm ref,
+  query enabled và kích hoạt từ focus/hover. Giữ class/markup/asset/animation.
+- Evidence `.tmp/member-web-chat-card-visibility/`, API/Socket đều giả lập.
+  API/DB/provider thật, native/thiết bị thật, human acceptance và CI remote
+  chưa chạy. READINESS và checkout demo giữ nguyên.
+
+Bước tiếp là audit tổng hợp source và số đo đã có trên các route chính,
+chọn hạng mục còn lợi ích rõ hoặc chốt phạm vi tối ưu hiện tại.
+
 ## Dựng thẻ hội thoại Exchange từ snapshot danh sách — 04/11/2026
 
 Nhánh `codex/member-web-chat-legacy-previews`, base `1c2e8a61`.
@@ -43,8 +75,8 @@ Mở phiếu đọc chi tiết/ảnh, Back về đúng thẻ, list503 giữ nộ
   `.tmp/member-web-chat-legacy-previews/`, hồi quy dùng HTTP/Socket.IO giả.
   API/DB/provider, native/thiết bị thật, human acceptance và remote CI chưa chạy.
 
-READINESS và checkout demo giữ nguyên. Consumer ConversationCard mua bán vẫn
-đọc public listing cho các thẻ đã mount. Đó là ứng viên đo riêng tiếp theo.
+READINESS và checkout demo giữ nguyên. ConversationCard mua bán được đo và
+tối ưu riêng ở mục mới phía trên.
 
 ## Dùng chung lượt theo dõi trạng thái nạp ví — 04/11/2026
 
