@@ -4,6 +4,32 @@ Bằng chứng các gói tối ưu trên worktree phát triển, theo source và
 đo của từng mục. Đây không là nghiệm thu thiết bị thật, human review hoặc
 release readiness. Trạng thái tiếp nhận hiện tại ở [SESSION_STATE](SESSION_STATE.md).
 
+## Chốt vòng cuốn chiếu và audit tổng hợp — 04/11/2026
+
+Code checkpoint `202e4572`, nhánh `codex/member-web-book-cover-recovery`.
+Sau các gói đã ghi bên dưới, lượt rà cuối đối chiếu source với evidence đã có;
+không chạy lại mọi gate chỉ để tăng số ca PASS. Hai phát hiện có lợi ích cụ thể
+trong lượt audit là cache ảnh Exchange (`f6cadc00`) và phục hồi BookCover
+(`202e4572`), đều đã có baseline/after trên production fixture.
+
+| Nhóm đã rà source | Kết quả / bằng chứng áp dụng | Giới hạn |
+| --- | --- | --- |
+| Tải route Home/Auth/dashboard và các trang chức năng | [Router](../../apps/user-web/src/app/router.tsx) giữ lazy boundaries; gói lazy Home đã bị loại theo số đo. Dashboard production browser vừa PASS sau thay đổi cách chia bundle; Auth/asset có evidence riêng bên dưới | Không suy LCP/INP thực tế từ byte hoặc fixture; chunk login-flight lớn vẫn phục vụ hiệu ứng đã duyệt |
+| Tìm sách/chi tiết, danh sách đấu giá, kệ sách và thẻ chat | Public/owner photo visibility, shared observer, card text/clock/render và prefetch đã có số đo từng gói. Lượt cuối search-covers8 ca và BookCover390/1440 PASS | Không mở rộng số dữ liệu nghiệp vụ hoặc xóa animation để giảm tải; giới hạn inbox100 ở SESSION_STATE vẫn là việc riêng |
+| Chat/Exchange, đơn trực tiếp, PointOrder, Wallet | Poll/query/cache đã đối chiếu, giữ nhịp cập nhật hiện tại và ACK/key/body. Chat-guidance đầy đủ PASS sau gói cache ảnh. Wallet/order/point-order có fixture cụ thể trong từng gói trước | Không đổi polling chỉ vì còn request; không suy giao dịch/provider thật từ HTTP fixture |
+| Motion, timer và cleanup | Đối chiếu [Home motion](../../apps/user-web/src/pages/home-motion.ts), [Autumn canvas](../../apps/user-web/src/components/autumn/AutumnLeavesCanvas.tsx), [Auth scene](../../apps/user-web/src/components/auth/PaperStormLayout.tsx), Lenis/card observer và deadline helpers với gói trước. Hai gói cuối không sửa mã animation | Ảnh chụp/CSS không chứng minh độ mượt/pin trên điện thoại thật; giữ chính sách motion kể cả reduced-motion |
+| Đăng/sửa sách, tạo đấu giá, profile, cart, review, support và work inbox | Rà query enable/identity, cursor/lazy route và các nguồn cập nhật ở source hiện có; không thấy ứng viên khác đủ bằng chứng cho thay đổi hiệu năng tiếp trong lượt này | Đây là source audit, không phải vừa kiểm browser/human acceptance toàn bộ các form. Chưa mở rộng sang API/native/Admin/Staff |
+
+Chốt vòng tối ưu có kiểm chứng hiện tại. Không có kết luận hết bug, mọi route
+đều nhanh trên mọi máy hoặc readiness đã đóng. Bước có ích tiếp theo là profile
+một luồng demo cụ thể trên máy/thiết bị thật với dữ liệu và mạng đại diện để tìm
+bottleneck mới; chưa có số đo đó trong gói này. GHN/Forum không thuộc thao tác.
+
+Worktree phát triển giữ commit local; checkout Documents vẫn ở
+`codex/demo-receipt-local-20261103`/`5bd0b360`,40 tracked thay đổi và14 untracked
+file theo status-uall. Không copy, reset, đồng bộ, push/PR/merge hoặc sửa DB/
+provider/dịch vụ. READINESS và phần bàn giao của teammate giữ nguyên.
+
 ## Phục hồi BookCover sau khi nhận URL mới — 04/11/2026
 
 Nhánh `codex/member-web-book-cover-recovery`, base `f6cadc00`.

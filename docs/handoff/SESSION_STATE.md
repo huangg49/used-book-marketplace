@@ -5,8 +5,10 @@ gói và sửa lỗi liên quan đã tái hiện. Đổi nghiệp vụ, thiết 
 triển khai cần quyết định riêng; không mở rộng sang DB/provider/checkout demo.
 
 Owner đã yêu cầu chạy cuốn chiếu lại từ `97ec5388`.
-Gói hiện tại `codex/member-web-book-cover-recovery`, base `f6cadc00`;
-commit cùng điểm lưu có subject `fix(user-web): recover book covers when their URL changes`.
+Vòng cuốn chiếu hiện tại đã chốt sau audit source/evidence; chưa tìm được ứng
+viên khác đủ bằng chứng để sửa tiếp trong phạm vi này. Không suy thành hết bug
+hoặc nghiệm thu toàn web. Nhánh `codex/member-web-book-cover-recovery`, code
+checkpoint `202e4572`, base `f6cadc00`.
 [BookCover](../../apps/user-web/src/components/BookCover/index.tsx) giữ lỗi theo
 URL đã hỏng, cho URL mới tải lại mà không remount khung bìa. Giữ fallback/title,
 lazy load và không thử lại liên tục cùng URL lỗi.
@@ -20,8 +22,10 @@ lazy load và không thử lại liên tục cùng URL lỗi.
   API/DB/provider/native/người thật.
 
 Ứng viên lazy Home bị loại, source đã khôi phục (`901383dd` chỉ lưu đánh giá).
-Tiếp theo chốt audit source/evidence trên các route chính. Tóm tắt/chi tiết
-Exchange render thay nhau.
+Audit đã đối chiếu router, tải asset, vòng motion/timer, media/query và nhóm
+trang tác vụ. Chi tiết cùng giới hạn nằm ở đầu báo cáo hiệu năng. Tối ưu sâu
+hơn cần profile trên máy demo/thiết bị thật theo luồng cụ thể; chưa có số đo
+LCP/INP/CPU/pin mới để kết luận. Tóm tắt/chi tiết Exchange render thay nhau.
 ADR0071 giữ bid không giữ tiền; không suy mọi thay đổi tiền bất đồng bộ đã nối.
 
 Gói `f6cadc00` cache ảnh Exchange theo hạn/revision/actor, URL ảnh9→3 qua3 poll;
