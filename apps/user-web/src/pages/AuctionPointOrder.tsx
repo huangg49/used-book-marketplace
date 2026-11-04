@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from 'react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { formatRemaining, outcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
+import { formatRemaining, commandOutcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import { commandError } from '../lib/auction-errors'
 import { formatVnd } from '../lib/routes'
 import {
@@ -44,7 +44,7 @@ function useOrderStep(onSettled: () => Promise<unknown>) {
       active.onResult?.(result)
       return result
     } catch (caught) {
-      open = outcomeUnknown(caught)
+      open = commandOutcomeUnknown(caught)
       if (!open) { intent.settle(); pending.current = null }
       setError(commandError(caught))
       return undefined

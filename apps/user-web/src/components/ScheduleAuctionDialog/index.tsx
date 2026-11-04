@@ -3,7 +3,7 @@ import { CalendarClock, Flag, Info, Play, X } from 'lucide-react'
 import { lockPageScroll } from '../../lib/page-scroll'
 import { playAuctionMotion, sheetFrames } from '../../lib/auction-motion'
 import { commandError } from '../../lib/auction-errors'
-import { outcomeUnknown, useIntentKey } from '../../hooks/useAuctionClock'
+import { commandOutcomeUnknown, useIntentKey } from '../../hooks/useAuctionClock'
 import {
   AUCTION_MAX_DURATION_S, AUCTION_MIN_DURATION_S, AUCTION_MIN_LEAD_MS, AUCTION_SCHEDULE_HORIZON_MS, publishAuction, rescheduleAuction,
   type ScheduleBody,
@@ -114,7 +114,7 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
       else await rescheduleAuction(target.auctionId, body, key)
       intent.settle(); done = true
     } catch (caught) {
-      pending = outcomeUnknown(caught)
+      pending = commandOutcomeUnknown(caught)
       if (!pending) intent.settle()
       setError(pending ? 'Chưa rõ yêu cầu đã được ghi hay chưa. Hãy thử lại đúng thao tác này.' : commandError(caught))
     } finally {

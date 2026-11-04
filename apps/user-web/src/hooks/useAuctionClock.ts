@@ -47,3 +47,12 @@ export function useIntentKey() {
 export function outcomeUnknown(error: unknown) {
   return !(error instanceof ApiError) || error.status === 0 || error.status >= 500
 }
+
+/** A refused retry does not disprove an earlier commit with a lost ACK.
+ * Keep command identity for auth, timeout and generic rate-limit failures.
+ * Read failures still use outcomeUnknown so denied cached data stays hidden.
+ */
+export function commandOutcomeUnknown(error: unknown) {
+  return outcomeUnknown(error) ||
+    error instanceof ApiError && [401, 403, 408, 429].includes(error.status)
+}

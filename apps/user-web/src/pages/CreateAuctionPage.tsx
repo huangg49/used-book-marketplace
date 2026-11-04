@@ -4,7 +4,7 @@ import { ApiError } from '@used-books/session-client'
 import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import { ArrowRight, BookOpen, Check, EyeOff, Gavel, MapPin, Minus, Plus, Search, ShieldCheck, Store, Tag, X } from 'lucide-react'
 import { useSession } from '../hooks/useSession'
-import { outcomeUnknown, useIntentKey } from '../hooks/useAuctionClock'
+import { commandOutcomeUnknown, useIntentKey } from '../hooks/useAuctionClock'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { getMyBookIdentity, getMyListings, getMyPhoto, type MyListing } from '../services/my-listings'
 import {
@@ -312,7 +312,7 @@ export function CreateAuctionPage() {
       if (intake) { setDone(intake); window.scrollTo({ top: 0 }) }
       else setError('Đã giữ chỗ đấu giá nhưng chưa tải được phiếu gửi sách. Xem trong Đấu giá của tôi.')
     } catch (caught) {
-      stillUnknown = outcomeUnknown(caught)
+      stillUnknown = commandOutcomeUnknown(caught)
       if (!stillUnknown) { intent.settle(); pending.current = null }
       setError(commandError(caught))
       if (!stillUnknown) { void listings.refetch(); void points.refetch() }

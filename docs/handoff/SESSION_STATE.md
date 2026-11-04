@@ -3,22 +3,22 @@
 Owner chưa tiện kiểm thật, giao tiếp tục rà tính năng bằng source và kiểm thử
 cô lập. Giữ animation/nghiệp vụ và checkout demo; không DB/provider/dịch vụ demo.
 Owner yêu cầu tự động cuốn chiếu tiếp sau `354f0876`.
-Nhánh `codex/member-web-auction-intake-recovery`, base `354f0876`; commit cùng điểm lưu
-có subject `fix(user-web): recover confirmed auction intakes without resubmitting`.
+Nhánh `codex/member-web-auction-command-outcomes`, base `80cb8edf`; commit cùng điểm lưu
+có subject `fix(user-web): retain auction intents after uncertain refusals`.
 
-Gói mới ở [CreateAuctionPage](../../apps/user-web/src/pages/CreateAuctionPage.tsx)
-chặn click lặp (POST2→1), giữ ID đã ACK và phục hồi GET đúng phiếu khi đọc lỗi;
-không quay lại tạo yêu cầu mới. Giữ exact replay cho lệnh chưa rõ kết quả, kiểm
-receipt entityType và id phiếu. Màn phục hồi có focus/scroll và link đúng ID.
-Baseline4/after7 profile production browser; build/typecheck,361 unit/51 file,
-scoped lint/detector PASS;46 CSS khớp byte. Không đổi animation/asset/contract.
+Gói mới tách [predicate command đấu giá](../../apps/user-web/src/hooks/useAuctionClock.ts)
+khỏi read: giữ intent qua401/403/408/429/network/5xx; refusal xác định vẫn nhả.
+Read từ chối giữ cách che cache cũ. Probe6 before/6 after390/1440 cho408/429/409,
+12 ca PointOrder pay/wallet và auction-stage390/1440 PASS. Build/typecheck,
+380 unit/52 file,scoped lint PASS;46 CSS khớp byte. Không đổi animation/contract.
 [Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md).
 
-Các gói trước: `354f0876` giữ nháp/recovery/đổi email ở hồ sơ; `8e5ef8d1` giữ
+Các gói trước: `80cb8edf` chặn click lặp và phục hồi đúng ID phiếu đã ACK,
+`354f0876` giữ nháp/recovery/đổi email ở hồ sơ; `8e5ef8d1` giữ
 draft và quyền hiện tại ở đánh giá; `3634a8ab` chặn click lặp ở giỏ và kiểm hỗ trợ.
 Source, ca đã chạy và giới hạn giữ ở báo cáo phục hồi được dẫn phía trên.
 
-Tiếp theo rà phân loại lỗi lệnh đấu giá và lưu nháp/sửa bài đăng. Avatar upload
+Tiếp theo rà lưu nháp/sửa bài đăng và lifecycle intent qua remount. Avatar upload
 và mail/revoke thật chưa kiểm trong gói trước;
 nguyên nhân “rớt server” thực tế vẫn cần browser/log khi tái hiện được.
 API/Mongo/provider/native/CI remote/người thật NOT RUN; READINESS giữ nguyên.

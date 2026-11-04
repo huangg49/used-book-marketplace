@@ -7,6 +7,45 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Giữ intent lệnh đấu giá sau lỗi bất định
+
+Nhánh `codex/member-web-auction-command-outcomes`, base `80cb8edf`; commit cùng
+điểm lưu có subject `fix(user-web): retain auction intents after uncertain refusals`.
+Rà AGENTS/protocol và skill API/Mongo cho invariant auth trước replay, key/body/
+version; không sửa API, OpenAPI, session client, tiền, quyền hay gate giao nhận.
+
+[useAuctionClock](../../apps/user-web/src/hooks/useAuctionClock.ts) trước dùng
+cùng predicate cho lệnh và read. HTTP408/429 khiến lệnh bỏ intent dù có thể là
+lần thử lại sau một ACK đã mất. Predicate command mới giữ401/403/408/429 cùng
+network/schema/5xx. Refusal400/404/409/410/422 vẫn là kết quả xác định. Predicate
+read giữ nguyên:401/403 không dùng nhánh giữ cache để hiện nội dung bị từ chối.
+
+Đã thay đúng nhánh catch lệnh ở CreateAuction, AuctionDetail (bid/auto/buy/pay),
+AuctionPointOrder, MyAuctions (rút/bằng chứng), ScheduleAuctionDialog. Các call
+read ở AuctionDetail/participation, AuctionList và MyAuctions vẫn dùng predicate
+cũ. Không đổi path, body, key, receipt, thời gian, component/animation hay class.
+Giữ intent không tự cấp quyền: server vẫn quyết định quyền hiện tại khi retry.
+
+| Member → entry / ca | Bằng chứng |
+| --- | --- |
+| Tạo intake →408/429 rồi thử lại | Production probe390/1440: trước dùng key mới; sau giữ cùng key/body và khóa lựa chọn khi chưa rõ kết quả |
+| Tạo intake →409 rồi quyết định mới | Trước/sau đều nhả intent xác định; lần gửi mới dùng key mới |
+| Lệnh auth/timeout/rate limit và read từ chối |19 unit bổ sung: command giữ401/403/408/429; read vẫn false cho401/403/404/408/429. Đây là kiểm predicate, không là nghiệm thu auth server |
+| PointOrder → trả tại điểm/giao tận nơi → pay |12 production fixture profile PASS:390/1440 ×2 method ×success/rejected/lost-ACK; retry đúng request và wallet refresh sau ACK |
+| Danh sách đấu giá → lọc/Back/error/ảnh lỗi | Auction-stage frontend fixture PASS390/1440, giữ compact route và điều hướng. runtime.json của harness có date lịch sử cố định; log thực chạy của gói04/11 là bằng chứng lần chạy mới |
+
+Probe dùng [auction-intake-recovery](../../apps/user-web/tests/auction-intake-recovery.mjs)
+với INTAKE_OUTCOME_PROBE=1; baseline thêm INTAKE_OUTCOME_BASELINE=1 và build trước.
+Kết quả6 before/6 after ở `.tmp/member-web-auction-intake-recovery/outcome-*.json`.
+Mọi request là HTTP giả lập; không gọi tiền/provider/DB thật. Key/body so sánh
+trong memory. PASS build/typecheck,380 unit/52 file,scoped lint;46 CSS khớp byte.
+Không chạy lại detector cho diff chỉ thay import/predicate, không JSX/style.
+
+Native, backend auth/race/transactions và human acceptance NOT RUN. READINESS
+và checkout demo giữ nguyên. Các lệnh chưa persist intent qua remount là phạm
+vi cần rà tiếp; gói này chỉ sửa quyết định giữ/nhả intent trong workflow hiện có.
+Tiếp theo lưu nháp/sửa bài đăng; không suy đã hoàn tất audit cả web.
+
 ## Tạo phiếu đấu giá: phân biệt ACK và lần đọc phiếu
 
 Nhánh `codex/member-web-auction-intake-recovery`, base `354f0876`; commit cùng điểm

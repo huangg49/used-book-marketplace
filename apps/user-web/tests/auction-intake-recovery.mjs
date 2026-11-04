@@ -11,6 +11,8 @@ const { preview } = await import(pathToFileURL(require.resolve('vite')).href);
 const out = path.join(root, '.tmp/member-web-auction-intake-recovery');
 await mkdir(out, { recursive: true });
 const baseline = process.env.INTAKE_RECOVERY_BASELINE === '1';
+const outcomeProbe = process.env.INTAKE_OUTCOME_PROBE === '1';
+const outcomeBaseline = process.env.INTAKE_OUTCOME_BASELINE === '1';
 const origin = 'http://127.0.0.1:4221';
 const server = await preview({ configFile: false, root: path.join(root, 'apps/user-web'),
   build: { outDir: path.resolve(root, process.env.INTAKE_RECOVERY_BUILD ?? 'apps/user-web/dist') },
@@ -35,7 +37,7 @@ const checks = [];
 let browser;
 try {
   browser = await chromium.launch();
-  for (const width of [390, 1440]) for (const scenario of ['duplicate', 'ack-read', 'unknown', 'wrong-receipt']) {
+  for (const width of [390, 1440]) for (const scenario of outcomeProbe ? ['timeout', 'rate-limit', 'rejected'] : ['duplicate', 'ack-read', 'unknown', 'wrong-receipt']) {
     if (scenario === 'wrong-receipt' && (baseline || width !== 390)) continue;
     const context = await browser.newContext({ viewport: { width, height: 950 }, reducedMotion: 'reduce' });
     await context.routeWebSocket('**/*', socket => socket.close());
@@ -47,6 +49,8 @@ try {
       if (p === '/api/v1/auth/login') return route.fulfill({ json: { accessToken: 'fixture-access', refreshToken: 'f'.repeat(43), expiresIn: 900, user } });
       if (p === '/api/v1/auction-intakes' && request.method() === 'POST') {
         writes.push({ key: request.headers()['idempotency-key'], body: request.postData() });
+        if (outcomeProbe && writes.length === 1) return route.fulfill({ status: scenario === 'timeout' ? 408 : scenario === 'rate-limit' ? 429 : 409,
+          json: { code: 'QA_REFUSAL', message: 'Phản hồi QA cho phân loại lệnh.' } });
         if (scenario === 'duplicate') return route.abort('failed');
         if (scenario === 'unknown' && writes.length === 1) return route.fulfill({ status: 503, json: { code: 'QA_UNKNOWN' } });
         if (scenario === 'wrong-receipt' && writes.length === 1) return route.fulfill({ json: { ...receipt, entityType: 'PointOrder' } });
@@ -86,6 +90,29 @@ try {
     assert.equal(writes.length, 0, 'Cancel cannot create an intake');
     await submit.click();
     await dialog.getByRole('button', { name: 'Giữ chỗ', exact: true }).evaluate(button => { button.click(); button.click(); });
+    if (outcomeProbe) {
+      const retain = scenario !== 'rejected' && !outcomeBaseline;
+      const retry = page.getByRole('button', { name: 'Thử lại đúng yêu cầu này', exact: true });
+      await expect.poll(() => writes.length).toBe(1);
+      if (retain) {
+        await expect(retry).toBeVisible();
+        await expect(page.getByRole('radio', { name: /Sách đấu giá QA/ })).toBeDisabled();
+        await retry.click();
+      } else {
+        await expect(submit).toBeEnabled();
+        await expect(page.getByRole('radio', { name: /Sách đấu giá QA/ })).toBeEnabled();
+        await submit.click();
+        await dialog.getByRole('button', { name: 'Giữ chỗ', exact: true }).click();
+      }
+      await expect(page.getByRole('heading', { name: 'Mang “Sách đấu giá QA” tới điểm nhận sách', exact: true })).toBeVisible();
+      assert.equal(writes.length, 2);
+      assert.equal(writes[0].body === writes[1].body, true, 'Scenario keeps the same fixture business fields');
+      assert.equal(writes[0].key === writes[1].key, retain, 'Only uncertain outcomes retain the original intent');
+      assert.deepEqual(errors, []);
+      checks.push({ width, scenario, originalIntentRetained: retain, definitiveConflictAllowsNewIntent: scenario === 'rejected' });
+      await context.close();
+      continue;
+    }
     if (scenario === 'duplicate') {
       await expect.poll(() => writes.length).toBe(baseline ? 2 : 1);
       await expect(page.getByRole('button', { name: 'Thử lại đúng yêu cầu này', exact: true })).toBeVisible();
@@ -135,6 +162,6 @@ try {
     await page.screenshot({ path: path.join(out, `${scenario}-${width}-${baseline ? 'before' : 'after'}.png`), fullPage: true });
     await context.close();
   }
-  await writeFile(path.join(out, baseline ? 'before.json' : 'after.json'), JSON.stringify({ checks }, null, 2));
-  console.log(JSON.stringify({ baseline, checks }));
+  await writeFile(path.join(out, outcomeProbe ? outcomeBaseline ? 'outcome-before.json' : 'outcome-after.json' : baseline ? 'before.json' : 'after.json'), JSON.stringify({ checks }, null, 2));
+  console.log(JSON.stringify({ baseline, outcomeProbe, checks }));
 } finally { await browser?.close(); await new Promise(resolve => server.httpServer.close(resolve)); }

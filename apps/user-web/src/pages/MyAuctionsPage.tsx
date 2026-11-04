@@ -11,7 +11,7 @@ import { AuctionPhoto } from '../components/AuctionGallery'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
 import { useSession } from '../hooks/useSession'
-import { formatRemaining, outcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
+import { formatRemaining, outcomeUnknown, commandOutcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import {
   AUCTION_MAX_SCHEDULE_EDITS, EVIDENCE_MIN_LENGTH, auctionPhase, getMyAuctionIntakes, listHandoverPoints, listMyAuctions,
   submitIntakeEvidence, withdrawIntake, getMyAuctionIntake, type MyAuctionItem, type MyIntake,
@@ -182,7 +182,7 @@ function EvidenceForm({ intake, onChanged }: { intake: MyIntake; onChanged: () =
       await submitIntakeEvidence(intake.id, attempt.version, attempt.note, attempt.key)
       intent.settle(); pending.current = null
     } catch (caught) {
-      stillUnknown = outcomeUnknown(caught)
+      stillUnknown = commandOutcomeUnknown(caught)
       if (!stillUnknown) { intent.settle(); pending.current = null }
       setError(!stillUnknown && caught instanceof ApiError
         ? caught.message || 'Chưa gửi được bằng chứng.'
@@ -233,7 +233,7 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
       await withdrawIntake(intake.id, attempt.version, attempt.key)
       intent.settle(); pending.current = null
     } catch (caught) {
-      stillUnknown = outcomeUnknown(caught)
+      stillUnknown = commandOutcomeUnknown(caught)
       if (!stillUnknown) { intent.settle(); pending.current = null }
       setError(!stillUnknown && caught instanceof ApiError
         ? caught.message || 'Chưa rút được sách khỏi đấu giá.'

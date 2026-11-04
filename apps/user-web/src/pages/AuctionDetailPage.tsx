@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { AutoBidDialog } from '../components/AutoBidDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { formatRemaining, outcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
+import { formatRemaining, outcomeUnknown, commandOutcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import { useAuctionLive } from '../hooks/useAuctionLive'
 import { useSession } from '../hooks/useSession'
 import { formatVnd, ROUTES } from '../lib/routes'
@@ -561,7 +561,7 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
       setNoticePrice(next.kind === 'Manual' || next.kind === 'Auto' ? receipt.currentPrice : null)
       setReceipt({ sequence: ++receiptSequence.current, bid: next.kind === 'Manual' || next.kind === 'Auto' })
     } catch (caught) {
-      if (outcomeUnknown(caught)) { setUnknown(next); setAutoDialog(false) }
+      if (commandOutcomeUnknown(caught)) { setUnknown(next); setAutoDialog(false) }
       else { intent.settle(); setUnknown(null) }
       setError(commandError(caught))
     } finally {
@@ -774,7 +774,7 @@ function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged, 
       await withdrawIntake(intake.id, intake.version, key)
       intent.settle()
     } catch (caught) {
-      pending = outcomeUnknown(caught)
+      pending = commandOutcomeUnknown(caught)
       if (!pending) intent.settle()
       setError(commandError(caught))
     } finally {
@@ -877,7 +877,7 @@ function WinnerPanel({ me, auction, ownerId, onChanged, paused }: { me: AuctionP
       intent.settle()
       pendingPayment.current = null
     } catch (caught) {
-      pending = outcomeUnknown(caught)
+      pending = commandOutcomeUnknown(caught)
       if (!pending) { intent.settle(); pendingPayment.current = null }
       setError(commandError(caught))
     } finally {
