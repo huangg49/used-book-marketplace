@@ -11,6 +11,7 @@ import { recoveryKeys } from '../../../common/catalog-recovery-keys.js';
 import { PLATFORM_COMMISSION_ACCOUNT_ID } from '../migrations/auction-constants.js';
 import { LISTING_FEE_CLEARING_ID } from '../migrations/0022-vnpay-wallet-listing-fees.js';
 import { bookCirculationRegions } from '../migrations/0030-book-circulation-regions.js';
+import { FREE_SHIPPING_POLICY } from '../migrations/0052-free-shipping.js';
 import {
   CAPITAL_INCREASE_JOURNAL_ID,
   postCapitalIncrease,
@@ -785,10 +786,14 @@ export function toDocuments(snapshot: Snapshot): Record<string, Document[]> {
   );
   for (const book of out.catalog_books)
     book.titleKey = titleKey(revisions.get(book.currentRevisionId) ?? '');
-  const recoveryRevisions = new Map(out.catalog_revisions.map(r => [r._id, r]));
+  const recoveryRevisions = new Map(
+    out.catalog_revisions.map((r) => [r._id, r]),
+  );
   for (const book of out.catalog_books) {
     const r = recoveryRevisions.get(book.currentRevisionId);
-    book.recoveryKeys = r ? recoveryKeys(String(r.title), r.authors as string[]) : [];
+    book.recoveryKeys = r
+      ? recoveryKeys(String(r.title), r.authors as string[])
+      : [];
   }
   // PostgreSQL had marketplace listings only (ADR 0042).
   for (const listing of out.listings) listing.channel = 'Marketplace';
@@ -810,6 +815,18 @@ export async function importPostgres(
   const docs = toDocuments(snapshot);
   const mismatches: string[] = [];
   let importedLocalityIds: Set<string> | undefined;
+  let importedPolicyIds: Set<string> | undefined;
+  const freeShippingPolicies = [
+    ...referenceData.sale_quote_policies,
+    {
+      ...referenceData.sale_quote_policies[0],
+      _id: FREE_SHIPPING_POLICY,
+      shippingFee: 0,
+    },
+  ];
+  const freeShippingSelection = [
+    { _id: 'DirectSale', policyCode: FREE_SHIPPING_POLICY },
+  ];
   // Target: freshly migrated MongoDB with only known reference/system data.
   for (const spec of TABLES) {
     const existing = await db.collection(spec.collection).countDocuments();
@@ -826,17 +843,43 @@ export async function importPostgres(
   }
   for (const name of REFERENCE) {
     const target = await db.collection(name).find().toArray();
+    // ADR 0063 adds one exact Mongo-native policy and selects it for future
+    // quotes. Imported orders/quotes retain their original fee snapshots.
+    if (name === 'sale_quote_policy_selection' && importedPolicyIds) {
+      if (
+        contentHash(docs[name]) !==
+          contentHash(referenceData.sale_quote_policy_selection) ||
+        contentHash(target) !== contentHash(freeShippingSelection)
+      )
+        throw new Error(
+          `Reference data ${name} differs between the databases.`,
+        );
+      docs[name] = freeShippingSelection;
+      continue;
+    }
     if (contentHash(target) === contentHash(docs[name])) continue;
+    if (
+      name === 'sale_quote_policies' &&
+      contentHash(docs[name]) ===
+        contentHash(referenceData.sale_quote_policies) &&
+      contentHash(target) === contentHash(freeShippingPolicies)
+    ) {
+      importedPolicyIds = new Set(docs[name].map((row) => String(row._id)));
+      continue;
+    }
     // ADR 0039 preserves locality keys but renames A/B and adds Mongo-native C.
     // Accept only this exact known upgrade, never arbitrary source/target drift.
     if (
       name === 'service_localities' &&
-      contentHash(docs[name]) === contentHash(referenceData.service_localities) &&
+      contentHash(docs[name]) ===
+        contentHash(referenceData.service_localities) &&
       contentHash(target) === contentHash(bookCirculationRegions)
     ) {
       const sourceIds = new Set(docs[name].map((row) => String(row._id)));
       importedLocalityIds = sourceIds;
-      docs[name] = bookCirculationRegions.filter((row) => sourceIds.has(row._id));
+      docs[name] = bookCirculationRegions.filter((row) =>
+        sourceIds.has(row._id),
+      );
       continue;
     }
     throw new Error(`Reference data ${name} differs between the databases.`);
@@ -891,11 +934,15 @@ export async function importPostgres(
     ).filter(
       (d) =>
         (spec.collection !== 'service_localities' ||
-          !importedLocalityIds || importedLocalityIds.has(String(d._id))) &&
+          !importedLocalityIds ||
+          importedLocalityIds.has(String(d._id))) &&
+        (spec.collection !== 'sale_quote_policies' ||
+          !importedPolicyIds ||
+          importedPolicyIds.has(String(d._id))) &&
         (spec.collection !== 'wallet_accounts' ||
-        ![PLATFORM_COMMISSION_ACCOUNT_ID, LISTING_FEE_CLEARING_ID].includes(
-          String(d._id),
-        )) &&
+          ![PLATFORM_COMMISSION_ACCOUNT_ID, LISTING_FEE_CLEARING_ID].includes(
+            String(d._id),
+          )) &&
         (spec.collection !== 'ledger_journals' ||
           String(d._id) !== CAPITAL_INCREASE_JOURNAL_ID) &&
         (spec.collection !== 'ledger_entries' ||
