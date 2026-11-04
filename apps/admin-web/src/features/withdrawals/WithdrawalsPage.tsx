@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   ArrowDownWideNarrow,
   ChevronRight,
+  Clock3,
   RefreshCw,
   X,
 } from "lucide-react";
@@ -555,17 +556,44 @@ function ActionDialog({
       }}
     >
       <header className={styles.dialogHead}>
-        <h2 id="withdrawal-action-title">{titles[action]}</h2>
+        <div>
+          <h2 id="withdrawal-action-title">{titles[action]}</h2>
+          {action === "approve" && (
+            <p className={styles.approvalIntro}>
+              {row.processingMode === "Manual"
+                ? "Xác nhận để hoàn tất yêu cầu rút tiền."
+                : "Kiểm tra thông tin trước khi duyệt yêu cầu."}
+            </p>
+          )}
+        </div>
         <Button aria-label="Đóng popup" disabled={locked} onClick={onClose}>
-          <X size={20} />
+          <X size={20} aria-hidden="true" />
         </Button>
       </header>
-      <div className={styles.dialogAmount}>
-        <strong>{vnd(row.amount)}</strong>
-        <span>
-          {row.ownerName} · #{row.id.slice(0, 8).toUpperCase()}
-        </span>
-      </div>
+      {action === "approve" ? (
+        <div className={styles.approvalAmount}>
+          <div className={styles.approvalTotal}>
+            <span>Số tiền rút</span>
+            <strong>{vnd(row.amount)}</strong>
+          </div>
+          <StatusPill
+            tone={row.state === "Requested" ? "warning" : tone(row.state)}
+          >
+            {withdrawalLabels[row.state]}
+          </StatusPill>
+          <p className={styles.approvalMeta}>
+            <span>{row.ownerName}</span>
+            <span>#{row.id.slice(0, 8).toUpperCase()}</span>
+          </p>
+        </div>
+      ) : (
+        <div className={styles.dialogAmount}>
+          <strong>{vnd(row.amount)}</strong>
+          <span>
+            {row.ownerName} · #{row.id.slice(0, 8).toUpperCase()}
+          </span>
+        </div>
+      )}
       <ActionPanel
         label={titles[action]}
         title={
@@ -588,12 +616,20 @@ function ActionDialog({
         fields={(disabled) => (
           <fieldset className={styles.form} disabled={disabled}>
             {action === "approve" ? (
-              <p>
-                {row.recipient.bankName} ·{" "}
-                <strong>{row.recipient.accountNumber}</strong>
-                <br />
-                {row.recipient.accountHolder}
-              </p>
+              <dl className={styles.approvalRecipient}>
+                <div className={styles.approvalAccount}>
+                  <dt>Số tài khoản</dt>
+                  <dd>{row.recipient.accountNumber}</dd>
+                </div>
+                <div>
+                  <dt>Ngân hàng</dt>
+                  <dd>{row.recipient.bankName}</dd>
+                </div>
+                <div>
+                  <dt>Chủ tài khoản</dt>
+                  <dd>{row.recipient.accountHolder}</dd>
+                </div>
+              </dl>
             ) : action === "reject" ? (
               <>
                 <label htmlFor="withdrawal-decision-reason">
@@ -635,8 +671,17 @@ function ActionDialog({
               </p>
             )}
             {action !== "event" && (
-              <small>
-                Thao tác tiền yêu cầu phiên đăng nhập trong 15 phút gần đây.
+              <small
+                className={
+                  action === "approve" ? styles.sessionHint : undefined
+                }
+              >
+                {action === "approve" && (
+                  <Clock3 size={16} aria-hidden="true" />
+                )}
+                <span>
+                  Thao tác tiền yêu cầu phiên đăng nhập trong 15 phút gần đây.
+                </span>
               </small>
             )}
             {error && (

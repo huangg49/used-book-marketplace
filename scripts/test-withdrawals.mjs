@@ -24,7 +24,7 @@ assert.ok(
 );
 const memberOrigin = "http://127.0.0.1:5195",
   adminOrigin = "http://127.0.0.1:5196";
-const evidence = path.join(root, ".tmp/admin-withdrawal-queue-evidence");
+const evidence = path.join(root, ".tmp/admin-withdrawal-approval-evidence");
 const buttonStates = [];
 let fixture, browser, web, adminVite, member, admin, op;
 const pageErrors = [];
@@ -388,10 +388,26 @@ try {
   d = admin.getByRole("dialog", { name: "Duyệt yêu cầu rút tiền" });
   await expect(d.getByRole("textbox")).toHaveCount(0);
   await expect(button(d, "Xác nhận")).toBeEnabled();
+  await admin.keyboard.press("Escape");
+  await expect(d).not.toBeVisible();
+  await expect(button(admin, "Duyệt yêu cầu")).toBeFocused();
+  await button(admin, "Duyệt yêu cầu").click();
+  await expect(d.getByRole("definition").first()).toHaveText("0123456789");
   await capture(admin, "admin-approve-desktop");
+  await auditWalletButtons(admin, d, "admin-approval", buttonStates);
+  assertWalletButtonsReadable(buttonStates);
+  await writeFile(path.join(evidence, "button-states.json"), JSON.stringify(buttonStates, null, 2));
   await capture(admin, "admin-approve-mobile", 390);
+  await capture(admin, "admin-approve-small", 320, 844);
+  await admin.evaluate(() => (document.documentElement.style.fontSize = "130%"));
+  await capture(admin, "admin-approve-large-text", 390);
+  await admin.evaluate(() => (document.documentElement.style.fontSize = ""));
   await button(d, "Xác nhận").click();
   await button(d, "Thử lại thao tác vừa gửi").waitFor();
+  await capture(admin, "admin-approve-retry-mobile", 390);
+  await auditWalletButtons(admin, d, "admin-approval-retry", buttonStates);
+  assertWalletButtonsReadable(buttonStates);
+  await writeFile(path.join(evidence, "button-states.json"), JSON.stringify(buttonStates, null, 2));
   await button(d, "Thử lại thao tác vừa gửi").click();
   await expect(admin.getByText("Yêu cầu đã kết thúc.", {exact:false})).toBeVisible();
   assert.equal(approvedPosts.length,2);assert.deepEqual(approvedPosts[0],approvedPosts[1]);

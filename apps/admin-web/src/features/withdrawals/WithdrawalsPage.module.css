@@ -469,8 +469,19 @@
 .dialog::backdrop {
   background: #28191466;
 }
-.confirmDialog {
-  max-width: 480px;
+.dialog.confirmDialog {
+  max-width: 560px;
+  padding: 0;
+  background: var(--paper);
+  scrollbar-width: thin;
+  scrollbar-color: var(--shop-control) var(--paper);
+}
+.confirmDialog[open] {
+  animation: approvalOpen 420ms cubic-bezier(0.16, 1, 0.3, 1) both !important;
+}
+.confirmDialog::backdrop {
+  backdrop-filter: blur(4px);
+  animation: approvalBackdrop 240ms ease-out both !important;
 }
 .dialogHead {
   display: flex;
@@ -486,6 +497,104 @@
 .dialogHead button {
   padding: 10px;
   flex-shrink: 0;
+}
+.dialogHead > div {
+  min-width: 0;
+}
+.confirmDialog .dialogHead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  align-items: start;
+  padding: 24px 28px;
+  background: var(--shop-wine);
+  color: var(--paper);
+}
+.confirmDialog .dialogHead h2 {
+  color: inherit;
+  font-size: 1.25rem;
+  line-height: 1.5;
+}
+.approvalIntro {
+  margin: 7px 0 0;
+  color: var(--paper);
+  opacity: 0.85;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+}
+.confirmDialog .dialogHead button {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  padding: 0;
+  border-radius: 50%;
+  border-color: #fffcf559;
+  background: transparent;
+  color: var(--paper);
+  box-shadow: none;
+  transform: none;
+  transition:
+    background-color 180ms ease-out,
+    transform 220ms ease-out;
+}
+.confirmDialog .dialogHead button:hover:not(:disabled) {
+  background: #fffcf51f;
+  color: var(--paper);
+  border-color: #fffcf58c;
+}
+.confirmDialog .dialogHead button:active:not(:disabled),
+.confirmDialog .dialogHead button:focus-visible:not(:disabled) {
+  color: var(--paper);
+}
+.confirmDialog .dialogHead button:focus-visible {
+  outline-color: var(--paper);
+}
+.approvalAmount {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 28px 18px;
+  background: var(--shop-cream);
+  font-variant-numeric: tabular-nums;
+}
+.approvalTotal {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.approvalTotal > span {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+.approvalTotal > strong {
+  font-size: 2rem;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  color: var(--shop-wine);
+  overflow-wrap: anywhere;
+}
+.approvalAmount > :global(.status-pill) {
+  font-size: 0.8125rem;
+  letter-spacing: 0;
+}
+.approvalMeta {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px 16px;
+  margin: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--shop-line);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.approvalMeta > span:first-child {
+  color: var(--ink);
+  font-weight: 600;
 }
 .dialogAmount {
   display: grid;
@@ -508,6 +617,111 @@
 .dialog :global(.decision-panel) > h3 {
   font-size: 1rem;
   margin: 0 0 16px;
+}
+.confirmDialog > :global(.decision-panel) {
+  padding: 24px 28px 28px;
+}
+.confirmDialog .form {
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.approvalRecipient {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px 20px;
+  margin: 0;
+  line-height: 1.6;
+}
+.approvalRecipient dt {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  margin-bottom: 4px;
+}
+.approvalRecipient dd {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.approvalAccount {
+  grid-column: 1 / -1;
+}
+.approvalAccount dd {
+  font-size: 1.5rem;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  user-select: all;
+}
+.sessionHint {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--shop-line);
+}
+.sessionHint > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: var(--shop-wine);
+}
+.confirmDialog :global(.actions) {
+  margin: 0;
+}
+.confirmDialog :global(.actions) :global(.button.primary) {
+  min-height: 48px;
+  background: var(--shop-wine);
+  border-color: var(--shop-wine);
+  color: var(--paper);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  box-shadow: none;
+  transform: none;
+  transition:
+    background-color 180ms ease-out,
+    border-color 180ms ease-out,
+    transform 180ms ease-out;
+}
+.confirmDialog :global(.actions) :global(.button.primary):hover:not(:disabled),
+.confirmDialog
+  :global(.actions)
+  :global(.button.primary):active:not(:disabled) {
+  background: var(--shop-wine-hover);
+  border-color: var(--shop-wine-hover);
+  color: var(--paper);
+}
+@media (hover: hover) and (pointer: fine) {
+  .confirmDialog .dialogHead button:hover:not(:disabled) {
+    transform: rotate(90deg);
+  }
+  .confirmDialog
+    :global(.actions)
+    :global(.button.primary):hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+  .confirmDialog
+    :global(.actions)
+    :global(.button.primary):active:not(:disabled) {
+    transform: translateY(0);
+  }
+}
+@keyframes approvalOpen {
+  from {
+    opacity: 0.4;
+    transform: translateY(18px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes approvalBackdrop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 .form {
   border: 0;
@@ -672,6 +886,28 @@
 }
 
 @media (max-width: 480px) {
+  .confirmDialog .dialogHead,
+  .approvalAmount {
+    padding: 20px;
+  }
+  .confirmDialog > :global(.decision-panel) {
+    padding: 20px;
+  }
+  .approvalAmount {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    gap: 12px;
+  }
+  .approvalTotal > strong {
+    font-size: 1.75rem;
+  }
+  .approvalMeta {
+    width: 100%;
+  }
+  .approvalRecipient {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
   .summary,
   .sheet {
     padding: 18px;

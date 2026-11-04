@@ -381,3 +381,35 @@ liên quan. Detector TS một lượt0finding. Evidence private
 `.tmp/admin-withdrawal-filter-browser-final.log` và
 `.tmp/admin-withdrawal-filter-{unit,build,lint}.log`. QA teardown/dừng, main apps
 giữ chạy. Không mutation owner, push/merge/READINESS hoặc native/human/CI claim.
+
+## Popup xác nhận duyệt Admin — 04/11/2026
+
+Owner yêu cầu làm đẹp popup duyệt. Nhánh `codex/admin-withdrawal-approval-popup`,
+base `86ad4573`; checkpoint subject `refactor(admin): refine withdrawal approval popup`.
+Popup560px có header đỏ rượu, dải tiền nền kem với trạng thái thật và bạn đọc/mã
+ngắn. Thông tin nhận tiền dùng nhãn riêng, tài khoản24px giữ số0đầu, ngân hàng/chủ
+tài khoản cạnh nhau; dưới480px xếp dọc. Giữ ghi chú phiên15phút và một CTA Xác
+nhận, không thêm lý do duyệt. Header sticky trong native popup, max-height/scroll
+và20px mobile insets. Opening420ms/backdrop fade240ms với blur4px tĩnh, hover/press
+nhanh và nút đóng xoay trên fine pointer. Foreground close/CTA được cố định cho
+hover/active/focus để CSS chung không làm mất tương phản.
+
+Giữ ActionPanel, pending/unknown-result locks, intent/key/body/version, retry và
+onFinish/ledger cũ. Caption Manual nói hoàn tất yêu cầu; đơn Simulator cũ chỉ nói
+kiểm tra trước duyệt. Các action từ chối/chi/hoàn khác giữ nội dung và style hiện có.
+
+Finish review trên browser desktop/390/320/chữ130% và lostACK: tiền, số tài khoản
+và người nhận dễ đối chiếu; CTA và nhắc phiên rõ, không ngang tràn. Verdict phù hợp
+brand/refinement hiện tại; giữ DESIGN/token, không thêm raster/dependency. PASS
+229Admin unit/typecheck/build/lint (warning cũ), final browser47captures/0page
+errors/overflow,126interaction states gồm close/Xác nhận/retry. Ca đầu phát hiện
+CSS hover chung làm X tối trên nền đỏ; đã cố định foreground, lượt cuối close
+contrast≥10.7 và CTA≥9.6 ở các tương tác. Kiểm Escape/restore focus, không textbox
+duyệt, tài khoản giữ0đầu, lostACK/exact key/body, một payout, reject/refund giữ đúng.
+Detector một lượt còn3advisory1.2rem/16px/1.35rem kế thừa, không có finding mới.
+
+Evidence private `.tmp/admin-withdrawal-approval-evidence/`,
+`.tmp/admin-withdrawal-approval-browser-final.log` và
+`.tmp/admin-withdrawal-approval-{unit,build,lint}.log`. QA API/Mongo thật với fixture/
+storage fake, teardown/dừng; main apps giữ chạy, không command tiền owner. Không
+push/merge/đổi READINESS hoặc suy native/human/remote CI acceptance.

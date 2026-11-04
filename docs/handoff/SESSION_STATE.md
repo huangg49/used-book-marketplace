@@ -1,6 +1,16 @@
 # Rút tiền qua Admin — 04/11/2026
 
-- Hiện tại `codex/admin-withdrawal-status-filter`, base `eb443c0e`; checkpoint subject
+- Hiện tại `codex/admin-withdrawal-approval-popup`, base `86ad4573`; checkpoint
+  subject `refactor(admin): refine withdrawal approval popup`. Header wine,
+  amount/state cream band, account24px và bank/holder có nhãn; chỉ Xác nhận,
+  không reason duyệt. Mobile stack, scroll/header sticky; opening420ms/backdrop
+  fade240ms, hover/press giữ tương phản. Đã sửa close hover bị màu chung đè.
+  PASS229Admin unit/typecheck/build/lint,47browser captures/0page errors/overflow,
+  126interaction states; Escape/focus restore, tài khoản giữ0đầu,320px/chữ130%,
+  lostACK/exact retry/hold/payout/refund. Detector chỉ3advisory literal kế thừa.
+  QA teardown/dừng, main apps giữ chạy. Không API/ledger/.env/migration/READINESS,
+  push/merge; human/native/remote CI chưa chạy.
+- Gói bộ lọc trước ở `codex/admin-withdrawal-status-filter`, base `eb443c0e`; checkpoint subject
   `fix(admin): simplify withdrawal status filters`. Menu Admin mặc định chỉ All,
   Requested/Completed/Rejected; không đưa bước trung gian/hoàn tiền cũ vào menu.
   Giữ enum/history, All, URL lọc cũ và route simulator, không đổi API/ledger.
