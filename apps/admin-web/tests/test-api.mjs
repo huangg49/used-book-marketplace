@@ -7,7 +7,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 export const root = fileURLToPath(new URL("../../../", import.meta.url));
 const req = createRequire(path.join(root, "apps/api/package.json"));
-export const origin = "http://127.0.0.1:5174";
+export const origin = process.env.ADMIN_BROWSER_ORIGIN || "http://127.0.0.1:5174";
 export const base = "http://127.0.0.1:3009/api/v1";
 export const password = "Operations-test-only-2026!";
 const withCredentials = (url, database, user, secret) => {
