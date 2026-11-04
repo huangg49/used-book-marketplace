@@ -7,6 +7,53 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Hồ sơ giữ bản nháp khi phục hồi và hiển thị đúng yêu cầu email
+
+Nhánh `codex/member-web-profile-recovery`, base `3634a8ab`; commit cùng điểm lưu
+có subject `fix(user-web): preserve profile drafts through read recovery`.
+[ADR0058](../adr/0058-member-profile-and-email-change.md), FR-A05 và contract
+`/me/profile`/email-changes giữ nguyên. Chỉ sửa
+[MemberProfileEditor](../../apps/user-web/src/pages/profile/MemberProfileEditor.tsx);
+không đổi API, shared session-client, quyền, password/OTP storage hoặc mail queue.
+Tiếp tục dùng quy trình journey/UI/verify đã đọc cho các gói phía dưới.
+
+| Member → entry | Trước / vấn đề tái hiện | Sau / kết quả và bước tiếp |
+| --- | --- | --- |
+| `/profile` → Lưu thay đổi | Hai click cùng lượt gửi2 POST cùng intent | Ref guard đặt trước await, gửi1. Mất ACK giữ request qua điều hướng/Back và replay đúng path/key/body/version |
+| Sửa tên → refetch503 → Tải lại hồ sơ | Đọc thành công thay nháp bằng bản server | Giữ nháp và expectedVersion ban đầu, kể cả lần retry đầu cũng lỗi. Server đổi version thì Save vẫn nhận409; chỉ Tải bản mới mới thay nháp một cách chủ động |
+| Lưu có ACK → GET503 → Tải lại hồ sơ | Phải đọc lại bản canonical trước lần sửa tiếp | Giữ khóa trong lúc cần đọc; recovery dùng dữ liệu server sau ACK, kể cả tên được normalize khác chuỗi người dùng nhập. Không giữ nháp cũ đè kết quả đã ghi nhận |
+| Đổi email → mất ACK → sang Đánh giá rồi Back | Request còn ghim email nhưng input email trống | Hiện email từ pendingEmailChangeTarget sẵn có; input khóa. Password trống sau remount, phải nhập lại mới gửi đúng yêu cầu cũ |
+| Confirm email → mất ACK → Back | Intent đã giữ code/key trong memory | Replay đúng yêu cầu cũ dù profile mới không còn pending change; input OTP không persist qua remount. Chỉ sau ACK/read mới thấy email mới |
+
+### Bằng chứng
+
+[Production fixture](../../apps/user-web/tests/profile-recovery.mjs):
+`pnpm --filter @used-books/user-web test:profile-recovery:browser`,6 profile
+(save/draft/email ×390/1440), Chromium reduced-motion, toàn bộ API/WS được
+intercept/chặn. Baseline bật PROFILE_RECOVERY_BASELINE=1 và PROFILE_RECOVERY_BUILD
+trỏ build trước sửa. Local before/after/CSS/capture tại
+`.tmp/member-web-profile-recovery/`. Body/key/password chỉ so sánh trong memory,
+không in/ghi ra evidence. Fixture email/OTP chỉ là dữ liệu QA tổng hợp; không gửi mail.
+
+PASS build/typecheck,361 unit/51 file,scoped oxlint,detector0 finding.
+Profile-reputation regression PASS riêng: public scores/summary cache,503 giữ
+dữ liệu,404 concealment/retry, unsaved navigation guard, late response tài khoản
+cũ và1440/1000/390/320/130% chữ.46 CSS production khớp byte với baseline; không
+sửa CSS/animation/asset hoặc giảm motion. Đã xem capture mobile/desktop của form.
+Đổi import shared helper làm bundler chia lại JS; không coi đây là số đo hiệu năng.
+
+Harness đã sửa để chờ scene đăng nhập xong, chờ trang đích thật unmount editor
+trước Back và chỉ mở mobile menu nếu còn đóng. Đợi staleTime trước visibility
+refetch, kiểm thông báo409 qua mapping accountErrorMessage hiện có. Các lần
+harness chưa đúng không tính PASS; không sửa source để né assertion.
+
+Avatar upload/storage pipeline, gửi mail thật, session revoke thật/API/Mongo,
+native và nghiệm thu người thật NOT RUN trong gói này. Không kết luận đã chữa
+nguyên nhân server demo bị rớt. READINESS giữ nguyên; checkout demo bảo toàn.
+Gói trước `3634a8ab` đã lưu riêng giỏ/hỗ trợ; `8e5ef8d1` lưu riêng đánh giá.
+Bước tiếp có thể kiểm một nhóm chức năng khác bằng fixture hoặc đối chiếu
+browser/log khi tái hiện được trên demo; không tự mở rộng nghiệp vụ/gate.
+
 ## Giỏ sách chống bấm lặp; kiểm phục hồi hỗ trợ
 
 Nhánh `codex/member-web-resource-recovery`, base `8e5ef8d1`; commit cùng điểm lưu

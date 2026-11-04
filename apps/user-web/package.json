@@ -47,6 +47,7 @@
     "test:browser": "node tests/integration.mjs",
     "test:reputation:browser": "node tests/member-reputation.mjs",
     "test:profile-reputation:browser": "node tests/profile-reputation.mjs",
+    "test:profile-recovery:browser": "node tests/profile-recovery.mjs",
     "test:buy-now:browser": "node tests/buy-now.mjs",
     "test:demo-completion:browser": "node tests/buy-now.mjs --demo-completion",
     "test:seller-order:browser": "node tests/seller-order.mjs",

@@ -2,8 +2,16 @@
 
 Owner chưa tiện kiểm thật, giao tiếp tục rà tính năng bằng source và kiểm thử
 cô lập. Giữ animation/nghiệp vụ và checkout demo; không DB/provider/dịch vụ demo.
-Nhánh `codex/member-web-resource-recovery`, base `8e5ef8d1`; commit cùng điểm lưu
-có subject `fix(user-web): guard repeated cart actions and verify resource recovery`.
+Nhánh `codex/member-web-profile-recovery`, base `3634a8ab`; commit cùng điểm lưu
+có subject `fix(user-web): preserve profile drafts through read recovery`.
+
+Gói mới ở [MemberProfileEditor](../../apps/user-web/src/pages/profile/MemberProfileEditor.tsx)
+chặn click lặp (POST2→1), giữ nháp/version qua recovery GET503 và vẫn đọc canonical
+sau ACK. Email đang chờ hiện lại sau Back từ intent memory; password phải nhập lại,
+confirm replay giữ yêu cầu cũ. Browser production6 profile save/draft/email ×390/1440
+PASS trước/sau, cùng profile-reputation regression. Build/typecheck,361 unit/51 file,
+scoped lint/detector PASS;46 CSS production khớp byte, không đổi animation.
+[Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md).
 
 [Form đánh giá](../../apps/user-web/src/features/reviews/TransactionReviewPanel.tsx)
 ở `8e5ef8d1` giữ bản nháp khi review/quyền thay đổi, khóa lệnh mới theo can flag và chặn
@@ -11,13 +19,14 @@ dereference null khi peer bị ẩn. Pending replay vẫn đúng path/body/key, 
 quyền mới đã đổi. Bỏ link báo cáo lặp. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md)
 ghi baseline/after cho Exchange390/1440,DirectOrder390,PointOrder390: lỗi GET,
 409/version, bấm lặp, mất ACK/poll/replay, peer ẩn, tạo nơi khác, khóa sửa/xóa.
-Gói mới chặn click lặp trước React commit ở [Cart](../../apps/user-web/src/pages/CartPage.tsx):
+Gói `3634a8ab` chặn click lặp trước React commit ở [Cart](../../apps/user-web/src/pages/CartPage.tsx):
 390/1440 POST2→1, giữ exact replay qua refresh/Back và lỗi đọc sau ACK. Hỗ trợ
 PASS422/nháp/Back,409/version, replay tạo và bổ sung sau đóng hồ sơ,403 ẩn cache.
 Support source không đổi. Review browser PASS lại trên build cuối. Build/typecheck,
 361 unit/51 file,scoped lint/detector PASS;46 CSS khớp byte.
 
-Đã kiểm cô lập3 nhóm đánh giá/giỏ sách/hỗ trợ. Có thể chọn nhóm khác cho lượt sau;
+Đã kiểm cô lập đánh giá/giỏ sách/hỗ trợ và save/read/email ở hồ sơ. Avatar upload
+và mail/revoke thật chưa kiểm trong gói mới. Có thể chọn nhóm khác cho lượt sau;
 nguyên nhân “rớt server” thực tế vẫn cần browser/log khi tái hiện được.
 API/Mongo/provider/native/CI remote/người thật NOT RUN; READINESS giữ nguyên.
 Checkout demo vẫn giữ local work, không copy/sync/push/PR/merge/deploy.
