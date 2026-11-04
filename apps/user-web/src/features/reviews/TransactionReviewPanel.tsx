@@ -177,7 +177,6 @@ export function ReviewContent({
         </>
       )}
 
-      {review.status === 'Published' && <p><SupportLink type="Review" id={review.id} report /></p>}
       {review.status === "Published" && <p><SupportLink type="Review" id={review.id} report /></p>}
       {review.reply && (
         <div className={styles.replyBox}>
@@ -306,6 +305,12 @@ export function TransactionReviewPanel({
   const data = result.data!,
     mine = data.myReview,
     peer = data.partnerReview;
+  const editorAvailable = !result.isError && (
+    editor === "create" ? data.canReview :
+    editor === "edit" ? data.canEdit && !!mine :
+    editor === "delete" ? data.canDelete && !!mine :
+    editor === "reply" ? data.canReply && !!peer : false
+  );
 
   return (
     <section className={styles.panelContainer} aria-label="Đánh giá giao dịch">
@@ -457,18 +462,22 @@ export function TransactionReviewPanel({
 
         {editor && (
           <ReviewForm
-            key={`${editor}:${mine?.id ?? "new"}`}
+            key={editor}
             mode={editor}
             mine={mine}
             peer={peer}
             bookRequired={data.bookRatingRequired}
             busy={busy}
+            available={editorAvailable}
             cancel={() => setEditor(null)}
             send={(body) => {
+              if (!editorAvailable) return Promise.resolve(false);
+              const targetId = editor === "reply" ? peer?.id : mine?.id;
+              if (editor !== "create" && !targetId) return Promise.resolve(false);
               const path =
                 editor === "create"
                   ? `/transactions/${type}/${id}/reviews`
-                  : `/transaction-reviews/${editor === "reply" ? peer!.id : mine!.id}/${editor}`;
+                  : `/transaction-reviews/${targetId}/${editor}`;
               return send(path, body);
             }}
           />
@@ -576,6 +585,7 @@ function ReviewForm({
   peer,
   bookRequired,
   busy,
+  available,
   cancel,
   send,
 }: {
@@ -584,6 +594,7 @@ function ReviewForm({
   peer: TransactionReview | null;
   bookRequired: boolean;
   busy: boolean;
+  available: boolean;
   cancel: () => void;
   send: (body: unknown) => Promise<boolean>;
 }) {
@@ -604,6 +615,7 @@ function ReviewForm({
 
   function submit(e: FormEvent) {
     e.preventDefault();
+    if (busy || !available) return;
     const body =
       mode === "delete"
         ? { expectedVersion: version }
@@ -629,6 +641,12 @@ function ReviewForm({
           ? "Xác nhận xóa"
           : "Soạn đánh giá giao dịch"}
       </h3>
+      {!available && (
+        <p role="status" className={styles.meta}>
+          Chưa thể gửi theo trạng thái hiện tại. Bản nháp vẫn được giữ; tải lại
+          đánh giá để kiểm tra.
+        </p>
+      )}
       <form
         className={styles.formGrid}
         onSubmit={submit}
@@ -703,7 +721,7 @@ function ReviewForm({
           )}
 
         <div className={styles.formActions}>
-          <button type="submit" disabled={busy} className={styles.primaryAction}>
+          <button type="submit" disabled={busy || !available} className={styles.primaryAction}>
             {busy
               ? "Đang gửi…"
               : mode === "delete"

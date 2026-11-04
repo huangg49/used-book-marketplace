@@ -1,52 +1,27 @@
-# Tối ưu Member web — 04/11/2026
+# Gia cố khả năng phục hồi Member web — 04/11/2026
 
-Owner cho phép cuốn chiếu tối ưu Member web, giữ animation, đo/kiểm chứng từng
-gói và sửa lỗi liên quan đã tái hiện. Đổi nghiệp vụ, thiết kế/hiệu ứng hoặc
-triển khai cần quyết định riêng; không mở rộng sang DB/provider/checkout demo.
+Owner chưa tiện kiểm thật, giao tiếp tục rà tính năng bằng source và kiểm thử
+cô lập. Giữ animation/nghiệp vụ và checkout demo; không DB/provider/dịch vụ.
+Nhánh `codex/member-web-review-recovery`, base `11f5810a`; commit cùng điểm lưu
+có subject `fix(user-web): preserve review drafts when eligibility changes`.
 
-Owner đã yêu cầu chạy cuốn chiếu lại từ `97ec5388`.
-Vòng cuốn chiếu hiện tại đã chốt sau audit source/evidence; chưa tìm được ứng
-viên khác đủ bằng chứng để sửa tiếp trong phạm vi này. Không suy thành hết bug
-hoặc nghiệm thu toàn web. Nhánh `codex/member-web-book-cover-recovery`, code
-checkpoint `202e4572`, base `f6cadc00`.
-[BookCover](../../apps/user-web/src/components/BookCover/index.tsx) giữ lỗi theo
-URL đã hỏng, cho URL mới tải lại mà không remount khung bìa. Giữ fallback/title,
-lazy load và không thử lại liên tục cùng URL lỗi.
-[Bằng chứng trước/sau](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
+[Form đánh giá](../../apps/user-web/src/features/reviews/TransactionReviewPanel.tsx)
+giữ bản nháp khi review/quyền thay đổi, khóa lệnh mới theo can flag và chặn
+dereference null khi peer bị ẩn. Pending replay vẫn đúng path/body/key, kể cả
+quyền mới đã đổi. Bỏ link báo cáo lặp. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md)
+ghi baseline/after cho Exchange390/1440,DirectOrder390,PointOrder390: lỗi GET,
+409/version, bấm lặp, mất ACK/poll/replay, peer ẩn, tạo nơi khác, khóa sửa/xóa.
+Build/typecheck,361 unit/51 file,scoped lint/detector PASS;46 CSS khớp byte.
 
-- Production fixture390/1440 tái hiện bìa cũ không phục hồi khi đổi URL; sau sửa
-  URL mới và lần phục hồi sau503 đều hiện ảnh decode được trên cùng khung bìa.
-  URL lỗi cũ không lặp request; mở phiếu/Back/list503/retry giữ nguyên.
-- Build/typecheck,361 unit/51 file,scoped lint/detector và8 ca search-covers PASS.
-  46 CSS production khớp byte. HTTP/storage giả lập, không suy nghiệm thu
-  API/DB/provider/native/người thật.
+Tiếp theo kiểm phục hồi giỏ sách và tạo/bổ sung yêu cầu hỗ trợ bằng fixture.
+API/Mongo/provider/native/CI remote/người thật NOT RUN; READINESS giữ nguyên.
+Checkout demo vẫn giữ local work, không copy/sync/push/PR/merge/deploy.
 
-Ứng viên lazy Home bị loại, source đã khôi phục (`901383dd` chỉ lưu đánh giá).
-Audit đã đối chiếu router, tải asset, vòng motion/timer, media/query và nhóm
-trang tác vụ. Chi tiết cùng giới hạn nằm ở đầu báo cáo hiệu năng. Tối ưu sâu
-hơn cần profile trên máy demo/thiết bị thật theo luồng cụ thể; chưa có số đo
-LCP/INP/CPU/pin mới để kết luận. Tóm tắt/chi tiết Exchange render thay nhau.
-ADR0071 giữ bid không giữ tiền; không suy mọi thay đổi tiền bất đồng bộ đã nối.
-
-Gói `f6cadc00` cache ảnh Exchange theo hạn/revision/actor, URL ảnh9→3 qua3 poll;
-`7282cb7d` hoãn public listing của thẻ chat:390 đọc12→4;1440 vẫn12;
-`c44dc9ca` dựng preview Exchange từ list, bỏ12 detail/33 URL ảnh trong fixture;
-`1c2e8a61` dùng chung poll topup, giảm POST đối soát3→1 trong fixture;
-`4ddbea8f` bỏ interval thẻ trao đổi, giữ các mốc hạn và recovery;
-`97ec5388` dừng cooldown Auth khi hết 60 giây, giữ animation và resend;
-`f22390c4` chỉ watch popup Wallet khi mở, giữ nhịp500ms và cleanup;
-`5a0ba4c9` dừng countdown đã hết hạn, giữ server offset/tick/motion;
-`e1eafee0` nối view ví sau ACK pay PointOrder, giữ giao nhận/retry;
-`450e0dd3` nối view ví sau pay/cancel Order/Completed, kiểm order/chat;
-`ac71b6dc` nối view ví khi topup credited, kiểm riêng return/checkout;
-`9a86b8e9` nối ví sau ACK Exchange/recovery, giữ key/body và actor;
-`19950968` sửa avatar nhận URL mới sau lỗi cùng avatar ID;
-`b5b36d22` hoãn xin link bìa riêng tới gần viewport và sửa retry ảnh;
-`6c5751f8` dùng chung preview thông báo và sửa link sai target;
-`5bbe9685` dừng Lenis idle và giữ cuộn khi reduced-motion;
-`598689fe` tối ưu ảnh nền Auth; `a98db891` nén logo/chữ Hero,
-`ad49aac4` sửa submit từ khóa cũ. Chi tiết ở báo cáo hiệu năng.
-Giữ READINESS. Thay đổi nằm trong worktree phát triển. Checkout demo giữ local work.
+Vòng hiệu năng đã chốt ở `11f5810a`; các gói/số đo và giới hạn được giữ tại
+[báo cáo hiệu năng](MEMBER_WEB_PERFORMANCE_2026_11_03.md), gồm ảnh Exchange,
+chat, ví, timer, asset và animation. Chưa có profile thiết bị thật để kết luận
+LCP/INP/CPU/pin; không suy hết bug. Lazy Home đã loại (`901383dd`). Tóm tắt và
+chi tiết Exchange render thay nhau; ADR0071 giữ bid không giữ tiền.
 
 # Lịch sử tin nhắn Member web —03/11/2026
 
