@@ -7,6 +7,43 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Lưu nháp/sửa bài: retry đúng thao tác và giữ nháp khi reload lỗi
+
+Nhánh `codex/member-web-listing-draft-recovery`, base `460a0a5e`; commit cùng
+điểm lưu có subject `fix(user-web): retain draft save attempts after lost responses`.
+[ADR0009](../adr/0009-listing-submission-moderation.md) và
+[ADR0012](../adr/0012-listing-lifecycle.md) giữ nguyên. Không sửa API, contract,
+quy trình upload hoặc tự chuyển sang Approved. Source chính
+[EditListingPage](../../apps/user-web/src/pages/EditListingPage.tsx).
+
+| Member → entry / ca | Trước | Sau / phục hồi |
+| --- | --- | --- |
+| Kệ sách → sửa Draft → Lưu bản nháp, bấm lặp |2 PUT với key khác nhau | Ref guard chung chặn lần hai trước await,1 PUT |
+| Lưu nháp → server đã ghi nhưng ACK mất | Thử lưu lại tạo runner/key mới, version cũ bị409 | Giữ runner, action và các stage/key/body/version; khóa nội dung/gửi duyệt; retry ngoài form chỉ chạy lại Save, không chuyển thành Submit |
+| Lưu/gửi bị408/429 hoặc lỗi bất định | Có nhánh nhả intent hoặc không ghim save | Giữ đúng intent. Refusal xác định409 vẫn cho sửa nháp, không tự đổi version |
+| Đã mở error → Tải lại bài nhưng GET503 → thử lại GET | setForm(null) dù đọc lỗi, làm mất nháp khi phục hồi | Chỉ reseed form sau GET thành công; đọc lỗi giữ draft đang sửa |
+| Draft → gửi duyệt → save ACK, submit ACK mất | Giao thức runner hiện có | Hồi quy PASS: không gọi lại stage save; submit retry đúng key/body và acknowledged version5, đi PendingReview sau ACK |
+| Rời trang khi còn pending | Guard chỉ xét dirty | Cảnh báo cả khi pending; chọn Ở lại tiếp tục giữ thao tác đang chờ |
+
+[Production fixture](../../apps/user-web/tests/listing-draft-recovery.mjs),
+`pnpm --filter @used-books/user-web test:listing-draft-recovery:browser`.
+Baseline8 profile duplicate/lost-ACK/conflict/reload-error ×390/1440 tái hiện lỗi.
+After14 profile thêm submit-stage,408,429 ×390/1440. Metadata/ảnh/HTTP đều là QA
+giả lập; không có DB/storage/Admin moderation thật. Key/body chỉ so sánh trong
+memory. Evidence local `.tmp/member-web-listing-draft-recovery/` before/after,
+CSS và capture saved draft390/1440 đã xem.
+
+PASS build/typecheck,380 unit/52 file,scoped lint. Detector có3 advisory màu
+inline đã có trong base (`rgba(232,223,208,0.25)`, `#b8860b`, `#9b1c1c`), không
+sửa palette để chạy theo detector.46 CSS khớp byte; không đổi animation/asset.
+Harness sửa selector rời trang sang alertdialog đúng role của ConfirmDialog.
+
+Giới hạn: runner còn trong component; chọn rời trang sau cảnh báo chưa chứng
+minh giữ intent qua remount. Visibility/archive vẫn cần rà key lifecycle riêng.
+Gói này không kiểm upload mới với storage thật, native/permission backend hoặc
+human acceptance; không đóng READINESS. Các vấn đề còn lại ghi rõ để cuốn chiếu
+tiếp, không suy toàn bộ chỉnh sửa bài đã đạt readiness.
+
 ## Giữ intent lệnh đấu giá sau lỗi bất định
 
 Nhánh `codex/member-web-auction-command-outcomes`, base `80cb8edf`; commit cùng

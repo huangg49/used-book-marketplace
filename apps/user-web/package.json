@@ -63,7 +63,8 @@
     "test:auth-motion:browser": "node tests/auth-auction-arrival.mjs",
     "test:chat:browser": "node tests/chat-guidance.mjs",
     "test:order-chat:browser": "node tests/order-chat-workspace.mjs",
-    "test:listing-cache:browser": "node tests/listing-cache.mjs"
+    "test:listing-cache:browser": "node tests/listing-cache.mjs",
+    "test:listing-draft-recovery:browser": "node tests/listing-draft-recovery.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

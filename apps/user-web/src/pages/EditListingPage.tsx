@@ -137,6 +137,7 @@ export function EditListingPage() {
   const [submitError, setSubmitError] = useState<string>();
   const [done, setDone] = useState(false);
   const completed = useRef(false);
+  const mutationRunning = useRef(false);
   const [confirmHideOpen, setConfirmHideOpen] = useState(false);
   const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
 
@@ -150,7 +151,8 @@ export function EditListingPage() {
   const canArchive = item ? canArchiveListing(item) : false;
 
   async function handleToggleVisibility(to: "Visible" | "Hidden") {
-    if (!item || busy || isHideCoolingDown) return;
+    if (!item || mutationRunning.current || pending || isHideCoolingDown) return;
+    mutationRunning.current = true;
     setBusy(true);
     setSubmitError(undefined);
     try {
@@ -173,12 +175,14 @@ export function EditListingPage() {
       );
       void listing.refetch();
     } finally {
+      mutationRunning.current = false;
       setBusy(false);
     }
   }
 
   async function handleArchive() {
-    if (!item) return;
+    if (!item || mutationRunning.current || pending) return;
+    mutationRunning.current = true;
     setBusy(true);
     setSubmitError(undefined);
     try {
@@ -202,6 +206,7 @@ export function EditListingPage() {
       );
       void listing.refetch();
     } finally {
+      mutationRunning.current = false;
       setBusy(false);
     }
   }
@@ -209,6 +214,7 @@ export function EditListingPage() {
   const fileInput = useRef<HTMLInputElement>(null);
   const intent = useRef<{
     signature: string;
+    action: "save" | "submit";
     run: ReturnType<typeof createListingRevision>;
   } | null>(null);
 
@@ -256,11 +262,11 @@ export function EditListingPage() {
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      !completed.current && dirty && currentLocation.pathname !== nextLocation.pathname,
+      !completed.current && (dirty || pending) && currentLocation.pathname !== nextLocation.pathname,
   );
 
   useBeforeUnload((event) => {
-    if (!completed.current && dirty) {
+    if (!completed.current && (dirty || pending)) {
       event.preventDefault();
       event.returnValue = "";
     }
@@ -320,6 +326,7 @@ export function EditListingPage() {
   }
 
   function review() {
+    if (mutationRunning.current || pending) return;
     setAttempted(true);
     setSubmitError(undefined);
     if (Object.keys(errors).length) {
@@ -331,7 +338,7 @@ export function EditListingPage() {
   }
 
   async function submit() {
-    if (busy) return;
+    if (mutationRunning.current || (pending && intent.current?.action !== "submit")) return;
     if (!pending) {
       if (!item || !current || !bookId) return;
       const origin = origins.find((a) => a.id === current.originAddressId);
@@ -366,6 +373,7 @@ export function EditListingPage() {
       if (intent.current?.signature !== signature)
         intent.current = {
           signature,
+          action: "submit",
           run: isDraftOrRejected
             ? createDraftSubmission({
                 listingId: item.id,
@@ -383,6 +391,7 @@ export function EditListingPage() {
         };
     }
     if (!intent.current) return;
+    mutationRunning.current = true;
     setBusy(true);
     setSubmitError(undefined);
     try {
@@ -407,7 +416,7 @@ export function EditListingPage() {
     } catch (error) {
       setConfirming(false);
       const status = (error as { status?: number }).status;
-      const failed = status !== undefined && [400, 401, 403, 404, 409, 422, 429].includes(status);
+      const failed = status !== undefined && status >= 400 && status < 500 && ![401, 403, 408, 429].includes(status);
       setPending(!failed);
       if (failed) intent.current = null;
       const isDraftOrRejected =
@@ -424,6 +433,7 @@ export function EditListingPage() {
               : "Chưa gửi được bản sửa. Hãy thử lại.",
       );
     } finally {
+      mutationRunning.current = false;
       setBusy(false);
     }
   }
@@ -431,11 +441,9 @@ export function EditListingPage() {
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string>();
 
   async function handleSaveDraftOnly() {
-    if (busy || !item || !current || !bookId) return;
-    setBusy(true);
-    setSubmitError(undefined);
-    setSaveSuccessMsg(undefined);
-    try {
+    if (mutationRunning.current || (pending && intent.current?.action !== "save")) return;
+    if (!pending) {
+      if (!item || !current || !bookId) return;
       const origin = origins.find((a) => a.id === current.originAddressId);
       const input: RevisionPhoto[] = photos.map((p) =>
         p.kind === "existing"
@@ -450,25 +458,38 @@ export function EditListingPage() {
       );
       const { mediaIds: _unused, ...rest } = content;
       void _unused;
-      const runner = createDraftSave({
-        listingId: item.id,
-        version: item.version,
-        photos: input,
-        content: rest,
-        bookId,
-      });
-      await runner();
+      intent.current = {
+        signature: JSON.stringify({ v: item.version, rest, photoSignature, action: "save" }),
+        action: "save",
+        run: createDraftSave({ listingId: item.id, version: item.version, photos: input, content: rest, bookId }),
+      };
+    }
+    if (!intent.current) return;
+    mutationRunning.current = true;
+    setBusy(true);
+    setSubmitError(undefined);
+    setSaveSuccessMsg(undefined);
+    try {
+      await intent.current.run();
+      intent.current = null;
+      setPending(false);
       setSaveSuccessMsg("Đã lưu bản nháp thành công! Bạn có thể quay lại tiếp tục sửa bất cứ lúc nào.");
       void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
       void queryClient.invalidateQueries({ queryKey: ["my-listing"] });
       void listing.refetch();
     } catch (error) {
+      const status = (error as { status?: number }).status;
+      const failed = status !== undefined && status >= 400 && status < 500 && ![401, 403, 408, 429].includes(status);
+      setPending(!failed);
+      if (failed) intent.current = null;
       setSubmitError(
-        error instanceof Error
+        !failed ? "Chưa xác nhận được lần lưu nháp. Nội dung đã khóa; thử lại đúng lần lưu này trước khi sửa hoặc gửi duyệt."
+        : error instanceof Error
           ? error.message
           : "Chưa lưu được bản nháp. Hãy thử lại.",
       );
     } finally {
+      mutationRunning.current = false;
       setBusy(false);
     }
   }
@@ -651,7 +672,7 @@ export function EditListingPage() {
               type="button"
               className={styles.reloadBtn}
               disabled={busy || pending}
-              onClick={() => void listing.refetch().then(() => setForm(null))}
+              onClick={() => void listing.refetch().then(result => { if (!result.error) setForm(null); })}
             >
               Tải lại bài
             </button>
@@ -1326,7 +1347,7 @@ export function EditListingPage() {
           type="button"
           className={styles.primaryBtn}
           disabled={busy}
-          onClick={() => void submit()}
+          onClick={() => void (intent.current?.action === "save" ? handleSaveDraftOnly() : submit())}
         >
           Thử lại cùng nội dung này
         </button>
@@ -1383,7 +1404,7 @@ export function EditListingPage() {
         isOpen={blocker.state === "blocked"}
         onClose={() => blocker.reset?.()}
         title="Rời trang khi chưa lưu?"
-        description={pending ? "Yêu cầu gửi bản sửa chưa có kết quả xác nhận. Nếu rời trang, hãy kiểm tra kệ sách trước khi gửi yêu cầu mới." : "Các thông tin bạn vừa chỉnh sửa sẽ không được lưu nếu rời khỏi trang lúc này."}
+        description={pending ? "Thao tác với bài đăng chưa có kết quả xác nhận. Nếu rời trang, hãy kiểm tra kệ sách trước khi gửi yêu cầu mới." : "Các thông tin bạn vừa chỉnh sửa sẽ không được lưu nếu rời khỏi trang lúc này."}
         confirmText="Rời trang"
         cancelText="Ở lại tiếp tục"
         isDanger
