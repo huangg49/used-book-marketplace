@@ -24,6 +24,7 @@
     "test:auth-cooldown:browser": "node tests/auth-cooldown.mjs",
     "test:auction-photo-visibility:browser": "node tests/auction-photo-visibility.mjs",
     "test:auction-input:browser": "node tests/auction-input.mjs",
+    "test:auction-intake-recovery:browser": "node tests/auction-intake-recovery.mjs",
     "test:chat-input:browser": "node tests/chat-input.mjs",
     "test:chat-legacy-previews:browser": "node tests/chat-legacy-previews.mjs",
     "test:chat-card-visibility:browser": "node tests/chat-card-visibility.mjs",

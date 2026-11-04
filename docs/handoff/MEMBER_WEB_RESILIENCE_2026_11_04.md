@@ -7,6 +7,36 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Tạo phiếu đấu giá: phân biệt ACK và lần đọc phiếu
+
+Nhánh `codex/member-web-auction-intake-recovery`, base `354f0876`; commit cùng điểm
+lưu có subject `fix(user-web): recover confirmed auction intakes without resubmitting`.
+[ADR0049](../adr/0049-auction-intake-from-shelf.md) và contract giữ nguyên: giữ
+chỗ tạo AuctionIntake, chưa mở phiên, chưa chứng minh intake/inspection/settlement.
+Chỉ sửa [CreateAuctionPage](../../apps/user-web/src/pages/CreateAuctionPage.tsx).
+
+| Member → entry | Ca trước sửa | Kết quả sau sửa / bước tiếp |
+| --- | --- | --- |
+| `/auctions/new?listing=…` → xác nhận Giữ chỗ |2 click trong cùng lượt gửi2 POST cùng key/body | Ref guard gửi1; Hủy dialog không gửi lệnh; giữ toàn bộ lựa chọn/giá/body |
+| Lệnh đã có receipt nhưng GET phiếu503, kể cả list refresh cũng lỗi | Màn hình vẫn cho mở xác nhận tạo yêu cầu mới | Giữ entityId đã ACK, khóa nhánh tạo; hiện trạng thái đã giữ chỗ, retry chỉ GET đúng ID và deep link `view=selling&intakeId=…` |
+| GET lỗi nhiều lần rồi phục hồi | Thiếu nút đọc lại đúng phiếu | Retry GET không gửi POST; khi đọc được thì hiện phiếu/hạn/điểm từ server. Focus và scroll đưa tới tiêu đề phục hồi sau form dài |
+| POST503 hoặc response sai entityType | Kết quả lệnh chưa xác định | Giữ body/key cũ, khóa chọn sách; thử lại đúng request. Chỉ nhận receipt AuctionIntake; đọc phiếu kiểm đúng id |
+
+[Production fixture](../../apps/user-web/tests/auction-intake-recovery.mjs):
+`pnpm --filter @used-books/user-web test:auction-intake-recovery:browser`.
+Baseline4 profile (duplicate/ACK-read ×390/1440) tái hiện lỗi. After7 profile:
+hai nhóm đó,503 exact replay ×390/1440 và wrong-receipt390. Ca unknown baseline
+không tính PASS vì bấm lặp có thể tự tạo request replay trước nút thử lại.
+Mọi HTTP/WS được intercept/chặn, không API/DB/provider thật. Chỉ so sánh request
+trong memory, không in body/key. Local evidence ở `.tmp/member-web-auction-intake-recovery/`.
+
+PASS build/typecheck,361 unit/51 file,scoped lint và detector0 finding.46 CSS
+production khớp byte, không đổi animation/asset. Đã xem capture mobile/desktop
+phục hồi, sau đó thêm focus/scroll để thông báo xuất hiện đúng vùng đọc.
+Các gate và CHECKOUT demo giữ nguyên; không push/PR/merge/deploy.
+Chưa kiểm intake thật/native/human hoặc xác minh server demo bị rớt.
+Tiếp theo rà phân loại lỗi command đấu giá và lưu nháp/sửa bài, giữ contract.
+
 ## Hồ sơ giữ bản nháp khi phục hồi và hiển thị đúng yêu cầu email
 
 Nhánh `codex/member-web-profile-recovery`, base `3634a8ab`; commit cùng điểm lưu

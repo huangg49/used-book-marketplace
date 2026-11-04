@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@used-books/session-client'
 import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
@@ -191,6 +191,14 @@ export function CreateAuctionPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<MyIntake | null>(null)
+  const [acknowledgedId, setAcknowledgedId] = useState<string | null>(null)
+  const running = useRef(false)
+  const recoveryHeading = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    if (!acknowledgedId || done) return
+    recoveryHeading.current?.focus({ preventScroll: true })
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [acknowledgedId, done])
   const intent = useIntentKey()
   // An unknown outcome freezes the exact body and key so a retry replays the same intent.
   const pending = useRef<{ body: CreateIntakeBody; key: string } | null>(null)
@@ -227,7 +235,7 @@ export function CreateAuctionPage() {
     buyNowPrice: missingBuyNow ? 'Nhập giá mua ngay hoặc bỏ chọn mua ngay.' : priceErrors.buyNowPrice,
   }
   const valid = !Object.values(formErrors).some(Boolean)
-  const locked = busy || unknown
+  const locked = busy || unknown || !!acknowledgedId
 
   const buyNowChips = startPrice && !priceErrors.startPrice
     ? [3, 5, 10].map((n) => startPrice + n * step).filter((v) => v <= AUCTION_MAX_PRICE)
@@ -236,8 +244,48 @@ export function CreateAuctionPage() {
   if (auth.status === 'anonymous') return <Navigate to={`/login?returnUrl=${encodeURIComponent(location.pathname + location.search)}`} replace />
   if (auth.status !== 'authenticated') return <main className={styles.state} role="status">Đang mở bàn đấu giá…</main>
   if (done) return <div className={styles.page}><Receipt intake={done} point={doneIntakePoint} /></div>
+  if (acknowledgedId) return (
+    <div className={styles.page}>
+      <section className={styles.receipt}>
+        <img src="/illustrations/book-journey/auction.webp" width="900" height="600" alt="" aria-hidden="true" decoding="async" />
+        <div>
+          <p className={styles.kicker}><Gavel size={15} aria-hidden="true" /> Đã giữ chỗ đấu giá</p>
+          <h1 ref={recoveryHeading} tabIndex={-1}>Phiếu gửi sách đang chờ tải</h1>
+          <p role="status">Yêu cầu giữ chỗ đã được xác nhận. Tải lại phiếu để xem điểm nhận và hạn gửi sách.</p>
+          {error && <p className={styles.submitError} role="alert">{error}</p>}
+          <div className={styles.receiptActions}>
+            <button type="button" className={styles.primary} disabled={busy} onClick={() => void retryReceipt(acknowledgedId)}>
+              {busy ? 'Đang tải phiếu…' : 'Tải lại phiếu đã giữ chỗ'}
+            </button>
+            <Link className={styles.secondary} to={`${ROUTES.myAuctions}?view=selling&intakeId=${acknowledgedId}`}>Mở đúng phiếu trong Đấu giá của tôi</Link>
+          </div>
+        </div>
+      </section>
+    </div>
+  )
+
+  async function readReceipt(intakeId: string) {
+    const intake = await getMyAuctionIntake(intakeId)
+    if (intake.id !== intakeId) throw new Error('Unexpected intake identity')
+    return intake
+  }
+
+  async function retryReceipt(intakeId: string) {
+    if (running.current) return
+    running.current = true
+    setBusy(true); setError(null)
+    try {
+      setDone(await readReceipt(intakeId))
+      window.scrollTo({ top: 0 })
+    } catch {
+      setError('Chưa tải được phiếu đã giữ chỗ. Kiểm tra kết nối rồi tải lại, hoặc mở phiếu trong Đấu giá của tôi.')
+    } finally {
+      running.current = false; setBusy(false)
+    }
+  }
 
   const submit = async () => {
+    if (running.current || acknowledgedId || (!pending.current && !valid)) return
     const body: CreateIntakeBody = pending.current?.body ?? {
       listingId: listing!.id,
       expectedListingVersion: listing!.version,
@@ -249,12 +297,15 @@ export function CreateAuctionPage() {
     }
     const key = pending.current?.key ?? intent.keyFor(JSON.stringify(body))
     pending.current = { body, key }
+    running.current = true
     let stillUnknown = false
     setBusy(true); setError(null)
     try {
       const receipt = await createAuctionIntake(body, key)
+      if (receipt.entityType !== 'AuctionIntake') throw new Error('Unexpected intake receipt')
+      setAcknowledgedId(receipt.entityId)
       intent.settle(); pending.current = null
-      const intake = await getMyAuctionIntake(receipt.entityId).catch(() => null)
+      const intake = await readReceipt(receipt.entityId).catch(() => null)
       void queryClient.invalidateQueries({ queryKey: ['my-auction-intakes'] })
       void queryClient.invalidateQueries({ queryKey: ['my-listings'] })
       void queryClient.invalidateQueries({ queryKey: ['my-auctions'] })
@@ -266,7 +317,7 @@ export function CreateAuctionPage() {
       setError(commandError(caught))
       if (!stillUnknown) { void listings.refetch(); void points.refetch() }
     } finally {
-      setUnknown(stillUnknown); setBusy(false); setConfirming(false)
+      running.current = false; setUnknown(stillUnknown); setBusy(false); setConfirming(false)
     }
   }
 
