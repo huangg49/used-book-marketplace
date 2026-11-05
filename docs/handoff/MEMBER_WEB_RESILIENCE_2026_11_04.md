@@ -7,6 +7,33 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Hỗ trợ: thông báo và phục hồi danh sách khi cursor bị từ chối quyền —05/11/2026
+
+Nhánh `codex/member-web-support-list-read-access`, base `244bbe9d`; checkpoint
+subject `fix(user-web): recover support list after denied cursor reads`.
+[SupportPages](../../apps/user-web/src/features/support/SupportPages.tsx) đã ẩn
+cached rows/pager khi401/403 nhưng alert chỉ dành lỗi root, nên next403 mất mọi
+thông báo. Sau Cập nhật200, lỗi cũ trong usePagedCollection còn hiện. Nay denied
+luôn có alert với hướng kiểm phiên/Cập nhật, reset activity phân trang qua callback
+ổn định đã có.503 vẫn giữ rows/pager và thử lại đúng cursor; không đổi querykey,
+filter/permission, support command hoặc cơ chế phân trang chung.
+
+[Production fixture](../../apps/user-web/tests/support-list-read-access.mjs),
+`pnpm --filter @used-books/user-web test:support-list-read-access:browser`:
+baseline8/after8 PASS,390/1440 × refresh/next ×403/503. Trước next403 không alert,
+root200 còn báo lỗi cursor cũ; sau denied có alert, root200 dọn lỗi, trang2 vẫn
+đúng rồi sang trang3.503 giữ10rows và retry cursor; giữ state=Open/kind=Bug,
+link detail và Back. `test:list-pagination:browser` PASS shared state/error/race/
+cursor và42screen/viewport checks. Lần gọi nhầm tên thiếu suffix browser không
+có script, đã chạy đúng script tới exit0; không tính lệnh sai thành PASS.
+
+Build/typecheck,449unit/57file, scoped lint JSON0, docs/diff, detector0finding PASS.
+Đã xem capture390/1440,46 CSS khớp byte; không style/motion/asset đổi. Evidence
+`.tmp/member-web-support-list-read-access/`. All-origin mock/chặn WS/external,
+chỉ synthetic login/GET, không support mutation/DB/provider/native/human;
+401refresh thật NOT RUN. Demo54file/status giữ nguyên, READINESS giữ nguyên;
+không push/PR/deploy. Không suy toàn bộ support hoặc server thật đã ổn định.
+
 ## Hỗ trợ: chỉ nhận enum hợp lệ từ URL tạo yêu cầu —05/11/2026
 
 Nhánh `codex/member-web-support-route-params`, base `84cdfa3f`; checkpoint subject

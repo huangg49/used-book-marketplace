@@ -1,6 +1,6 @@
 import { usePagedCollection } from "../../components/Pagination/usePagedCollection";
 import { CollectionPager } from "../../components/Pagination/CollectionPager";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   useInfiniteQuery,
   useQuery,
@@ -59,6 +59,10 @@ export function SupportPage() {
   const denied =
     result.error instanceof ApiError &&
     [401, 403].includes(result.error.status);
+  const resetPagination = collection.reset;
+  useEffect(() => {
+    if (denied) resetPagination();
+  }, [denied, resetPagination]);
   return (
     <div className={styles.page}>
       <header>
@@ -123,9 +127,11 @@ export function SupportPage() {
         </button>
       </div>
       {result.isPending ? <p role="status">Đang tải yêu cầu…</p> : null}
-      {result.isError && !result.isFetchNextPageError ? (
+      {result.isError && (denied || !result.isFetchNextPageError) ? (
         <p role="alert">
-          {supportError(result.error)} Dùng Cập nhật để thử lại.
+          {denied
+            ? "Quyền xem yêu cầu hỗ trợ đã thay đổi. Kiểm tra phiên đăng nhập và dùng Cập nhật để thử lại."
+            : `${supportError(result.error)} Dùng Cập nhật để thử lại.`}
         </p>
       ) : null}
       {!denied &&
