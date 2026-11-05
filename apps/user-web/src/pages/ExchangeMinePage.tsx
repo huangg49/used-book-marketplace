@@ -86,7 +86,7 @@ export default function ExchangeMinePage() {
 
   const rawTab = searchParams.get("tab");
   const currentTab: ExchangeTab =
-    rawTab && rawTab in TAB_CONFIG ? (rawTab as ExchangeTab) : "sent";
+    rawTab && Object.hasOwn(TAB_CONFIG, rawTab) ? (rawTab as ExchangeTab) : "sent";
   const rawPage = Number(searchParams.get("page") ?? 1);
   const currentPage = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
 

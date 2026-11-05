@@ -1,20 +1,21 @@
 # Gia cố khả năng phục hồi Member web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-work-inbox-sparse-pages`, base `d96f1aa6`; checkpoint subject
-`fix(user-web): scope work inbox empty states to loaded pages`.
-[WorkInbox](../../apps/user-web/src/components/WorkInbox.tsx) items0 còn cursor
-chỉ báo chưa thấy trong dữ liệu đã tải, hướng dẫn tải tiếp; hết cursor mới empty
-hoàn chỉnh. Không auto-scan/đổi page size/poll/rule/quyền. Backend resolve ID có
-thể bỏ row mất và vẫn có next, contract cho phép empty+cursor. Baseline8/after8
-production390/1440 PASS (sparse/error retry/empty thật/empty sau refetch),8denial
-regression PASS. Build/typecheck,449unit/57file, scoped lint JSON0, docs/diff và
-detector0finding PASS;46 CSS khớp byte, không style/motion/asset đổi.
-[Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md). Backend fake chỉ login/
-GET, không Mongo race/provider/native/human; READINESS không đổi. Demo54file/status
-giữ nguyên fingerprint; không push/PR/deploy. Tiếp tục chọn lỗi đọc/phục hồi có
-bằng chứng, không suy toàn web hết lỗi hoặc đã xác định nguyên nhân server rớt.
+Nhánh `codex/member-web-exchange-route-params`, base `08b49c41`; checkpoint subject
+`fix(user-web): reject inherited exchange tab names in URLs`.
+[ExchangeMinePage](../../apps/user-web/src/pages/ExchangeMinePage.tsx) chỉ nhận own
+keys sent/received/active/done; constructor/__proto__/toString không còn tạo tab
+ảo không selected/aria target. Giá trị lạ fallback sent. Baseline16/after16 browser
+production390/1440 PASS,4validtabs/unknown/prototype, pagination/Back/ArrowRight/
+focus. Build/typecheck,449unit/57file, scoped lint JSON0, docs/diff PASS;46 CSS khớp
+byte, không JSX/style/motion/asset, skip detector predicate-only.
+[Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Backend synthetic login/GET, không
+command/DB/provider/native/human; không đổi nghiệp vụ hay giới hạn100exchange.
+Rà trạng thái counts tiếp. Demo54file/status giữ nguyên, READINESS không đổi,
+không push/PR/deploy.
 
+Gói trước `08b49c41` WorkInbox empty còn cursor chỉ nói trong dữ liệu đã tải;
+baseline8/after8+8denial regression PASS, không auto-scan hay đổi page size/poll.
 Gói cùng lượt `d96f1aa6` WorkInbox denial ẩn metadata/load-more và refetch root,
 503 giữ dữ liệu/retrycursor; baseline8/after8 PASS, không đổi ADR0053/permission.
 Gói cùng lượt `6505ccf8` phân biệt đọc public listing503 với403/404 ở inbox chat,

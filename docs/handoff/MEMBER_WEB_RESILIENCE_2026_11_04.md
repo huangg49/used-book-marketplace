@@ -7,6 +7,32 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Trao đổi: tham số tab chỉ nhận đúng bốn giá trị —05/11/2026
+
+Nhánh `codex/member-web-exchange-route-params`, base `08b49c41`; checkpoint subject
+`fix(user-web): reject inherited exchange tab names in URLs`.
+[ExchangeMinePage](../../apps/user-web/src/pages/ExchangeMinePage.tsx) trước dùng
+`rawTab in TAB_CONFIG`; constructor/__proto__/toString được chấp nhận từ prototype
+nhưng không phải ExchangeTab. Không tab nào selected/tabIndex0, panel trỏ nhãn
+không tồn tại và lọc ra0giao dịch dù nhóm sent có dữ liệu. Nay Object.hasOwn chỉ
+nhận sent/received/active/done, giá trị lạ fallback sent như intent cũ. Không có
+prototype mutation/exploit được chứng minh; đây là lỗi đọc URL và điều hướng UI.
+
+[Production fixture](../../apps/user-web/tests/exchange-route-params.mjs),
+`pnpm --filter @used-books/user-web test:exchange-route-params:browser`:
+baseline16/after16 PASS,390/1440 ×3prototype names/unknown/4validtabs. Trước6profile
+prototype không selected,0card; sau selected sent và5card/trang đầu. Unknown cũ
+vẫn fallback; các tab hợp lệ giữ1/5card phù hợp. Nhóm sent7item kiểm trang2/Back;
+ArrowRight tới tab tiếp, focus/tabpanel aria đúng. Chỉ synthetic login/GET,
+all-origin HTTP mock/chặn WS/external, không command/DB/provider/native/human.
+
+PASS build/typecheck,449unit/57file, scoped lint JSON0, docs/diff.46 CSS khớp byte,
+không JSX/style/motion/asset đổi; không rerun detector cho predicate URL. Source
+khác không có mẫu rawTab-in-config tương tự qua rg phạm vi Member pages. Evidence
+`.tmp/member-web-exchange-route-params/` before/after/log/preservation. Demo54file/
+status giữ nguyên, READINESS không đổi; không push/PR/deploy. Giới hạn100exchange
+và trạng thái đọc counts là phần riêng, không suy đã xử lý từ whitelist tab.
+
 ## Việc đang chờ: trang rỗng còn cursor chưa là hết việc —05/11/2026
 
 Nhánh `codex/member-web-work-inbox-sparse-pages`, base `d96f1aa6`; checkpoint
