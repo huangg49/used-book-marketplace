@@ -9,6 +9,7 @@ import {
 } from "@used-books/session-client";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { formatVnd } from "../lib/routes";
+import { useExpiryRefresh } from "../hooks/useExpiryRefresh";
 import styles from "./PriceAssistPanel.module.css";
 export function PriceReferencePanel({
   state,
@@ -23,9 +24,19 @@ export function PriceReferencePanel({
   onApply: (amount: number) => void;
   aiReady: boolean;
 }) {
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selected, setSelected] = useState<{
+    amount: number;
+    reference: NonNullable<PriceReferenceState>;
+  } | null>(null);
+  const refreshExpiry = useExpiryRefresh(state?.value.expiresAt);
   const value = currentReference(state, currentKey);
-  if (!value) return null;
+  if (!value) return state?.key === currentKey && !aiReady ? (
+    <p role="status">
+      Khoảng tham chiếu không còn hiệu lực. Bạn có thể yêu cầu gợi ý lại hoặc tự nhập giá.
+    </p>
+  ) : null;
+  // A later response cannot reuse consent for the previous reference/amount.
+  const selectedAmount = selected?.reference === state ? selected.amount : null;
   const canApply = () =>
     !disabled && currentReference(state, currentKey)?.status === "Ready";
   return (
@@ -52,7 +63,8 @@ export function PriceReferencePanel({
                 key={amount}
                 disabled={disabled}
                 onClick={() => {
-                  if (canApply()) setSelected(amount);
+                  if (canApply()) setSelected({ amount, reference: state! });
+                  else refreshExpiry();
                 }}
               >
                 Chọn mức tham chiếu {formatVnd(amount)}
@@ -92,17 +104,17 @@ export function PriceReferencePanel({
         ))}
       </ul>
       <ConfirmDialog
-        isOpen={selected !== null}
+        isOpen={selectedAmount !== null}
         title="Dùng mức giá tham chiếu?"
         description={
-          selected === null
+          selectedAmount === null
             ? ""
-            : `Dùng ${formatVnd(selected)} làm giá bán. Đây là mức tính theo quy tắc, không ghi nhận là bạn đã áp dụng gợi ý AI.`
+            : `Dùng ${formatVnd(selectedAmount)} làm giá bán. Đây là mức tính theo quy tắc, không ghi nhận là bạn đã áp dụng gợi ý AI.`
         }
         confirmText="Dùng giá tham chiếu"
         onClose={() => setSelected(null)}
         onConfirm={() => {
-          if (selected !== null && canApply()) onApply(selected);
+          if (selectedAmount !== null && canApply()) onApply(selectedAmount);
           setSelected(null);
         }}
       />

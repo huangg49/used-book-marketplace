@@ -7,6 +7,41 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Giá tham chiếu: phục hồi khi hết hạn, không xác nhận nhầm kết quả mới —05/11/2026
+
+Nhánh `codex/member-web-price-reference-expiry`, base `3f8a6ba2`; checkpoint
+subject `fix(user-web): bind reference confirmation to its current result`.
+Theo [ADR0056](../adr/0056-listing-assist-fast-paths.md), khoảng theo quy tắc có
+hạn5phút và quyết định áp dụng là thủ công, không attribution AI.
+[PriceReferencePanel](../../apps/user-web/src/components/PriceReferencePanel.tsx)
+đã có guard fresh lúc click/confirm nhưng trước không tự đổi UI khi hết hạn:
+nút có thể còn enabled mà không phản hồi. Nếu response mới về khi modal đang mở,
+selected amount cũ vẫn áp dụng được vào kết quả mới; cùng vấn đề khi kết quả quá
+hạn đã bị unmount rồi được thay bằng kết quả fresh, modal cũ có thể xuất hiện lại.
+
+Panel dùng lại expiry hook của gói trước: hết hạn bỏ lựa chọn cũ khỏi UI, báo cách
+yêu cầu lại hoặc tự nhập giá nếu chưa có AI ready. Click quá hạn khi timer trễ
+cũng refresh trạng thái. Xác nhận được pin vào object kết quả đã chọn; response
+khác đóng xác nhận cũ, người dùng chọn lại mức trong kết quả mới. Không đổi hạn
+dùng, nguồn/rule/giá thủ công, clearAiPriceAttribution, API/quota hoặc tạo request
+mới tự động. Không sửa provider hay AI auto review/readiness.
+
+[Browser component fixture](../../apps/user-web/tests/price-reference-expiry.mjs),
+`pnpm --filter @used-books/user-web test:price-reference-expiry:browser`:
+baseline12/after12 PASS (390/1440 × direct expired/confirm expired/timer expired/
+response replacement/refresh sau expiry/valid). Trước replacement áp dụng40k từ
+modal cũ dù kết quả mới70–90k; sau không đổi55k đã nhập, chọn lại70k mới apply.
+Các ca hết hạn không apply, có hướng dẫn, ca hợp lệ vẫn confirm1lần. PASS lại10ca
+AI expiry trên component build cuối để kiểm consumer chung. Fixture bundle Vite
+production với font/CSS hiện có, chặn external HTTP/WS/API; **không** chứng minh
+toàn wizard/catalog/upload/AI thật, native hoặc human nghiệm thu.
+
+PASS Member build/typecheck,426unit/55file, scoped lint, docs/diff; detector0finding.
+Đã xem capture quá hạn390/1440;46 CSS production khớp byte checkpoint, không đổi
+style/motion/asset. Evidence local `.tmp/member-web-price-reference-expiry/`;
+AI regression giữ log riêng. Demo54file/status giữ nguyên theo fingerprint;
+READINESS không đổi, không DB/provider/push/PR/deploy.
+
 ## Gợi ý giá: kiểm hạn lúc áp dụng và khi hộp xác nhận đang mở —05/11/2026
 
 Nhánh `codex/member-web-price-assist-expiry`, base `865d8266`; checkpoint subject

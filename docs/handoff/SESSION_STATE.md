@@ -1,28 +1,28 @@
 # Gia cố khả năng phục hồi Member web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-price-assist-expiry`, base `865d8266`; checkpoint subject
-`fix(user-web): enforce price suggestion expiry at apply time`.
-[PriceAssistPanel](../../apps/user-web/src/components/PriceAssistPanel.tsx) kiểm hạn
-lại ngay lúc chọn giá/confirm, khóa đúng deadline bằng timeout có cleanup và wake
-khi tab visible, không polling. Quá hạn giữ giá đang nhập; còn hạn vẫn apply và
-nhập tay được. Baseline10/after10 browser component390/1440 PASS; build/typecheck,
+Nhánh `codex/member-web-price-reference-expiry`, base `3f8a6ba2`; checkpoint subject
+`fix(user-web): bind reference confirmation to its current result`.
+[PriceReferencePanel](../../apps/user-web/src/components/PriceReferencePanel.tsx)
+tự cập nhật khi hết hạn, báo cách yêu cầu lại/nhập tay; pin confirmation vào đúng
+kết quả đã chọn, response mới cần chọn lại, không áp dụng/reopen modal amount cũ.
+Không đổi rule/nguồn/hạn5phút, API/quota hoặc attribution AI. Baseline12/after12
+browser component390/1440 và10ca AI expiry hồi quy PASS. Build/typecheck,
 426unit/55file, scoped lint/docs/diff và detector0finding PASS.46 CSS khớp byte,
-không style/motion/asset mới. Không đổi nghiệp vụ/nguồn giá/API/quota/attribution.
-[Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md). Component fixture không
-thay kiểm xuyên wizard/catalog/upload/AI thật; rule reference có guard fresh từ
-trước, UI deadline của nó chưa sửa ở gói này.
+không style/motion/asset đổi. [Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md).
+Component fixture không thay toàn wizard/catalog/upload/AI thật/native/human.
 
-Các gói trước `865d8266` ẩn lịch sử Ví khi denied,503 giữ cache/retry; `cc42b67f`
-chặn cursor lặp và dừng trang tiếp sau rời Ví (không hủy HTTP đang chạy), mỗi gói
-baseline8/after8 browser PASS. `504c4b0b` giữ intent rút khi403 sau mất ACK;
-`57dcf7f2` sửa ký quỹ fallback0, `b1a177ad` sửa inbox, `7871737f` làm mới kệ sau ACK.
-Chi tiết editor/auction/profile/review/cart giữ trong báo cáo trên. Không DB/
-provider/GHN/Forum/migration/seed, không sửa checkout demo, push/PR/merge/deploy.
-Demo54file/status giữ nguyên fingerprint; READINESS không đổi. API/Mongo/native/
-human và401 refresh thật NOT RUN. Pending rút còn component-local, không bền qua
-reload. Hạn chế Save/Submit qua remount, avatar/mail thật và địa chỉ/AI vẫn mở;
-không suy nguyên nhân server rớt đã được xử lý.
+Gói cùng lượt `3f8a6ba2` chặn apply gợi ý AI quá hạn cả direct/confirm, timeout
+có cleanup và wake tab, không polling; baseline10/after10 browser PASS. Các gói
+trước `865d8266` ẩn lịch sử Ví khi denied,503 giữ cache/retry; `cc42b67f` chặn
+cursor lặp/dừng trang tiếp sau rời Ví (không hủy HTTP đang chạy); `504c4b0b` giữ
+intent rút khi403 sau mất ACK; `57dcf7f2` sửa ký quỹ fallback0, `b1a177ad` sửa
+inbox, `7871737f` làm mới kệ sau ACK. Chi tiết editor/auction/profile/review/cart
+giữ trong báo cáo trên. Không DB/provider/GHN/Forum/migration/seed, không sửa
+checkout demo, push/PR/merge/deploy. Demo54file/status giữ nguyên fingerprint;
+READINESS không đổi. API/Mongo/native/human và401 refresh thật NOT RUN. Pending
+rút còn component-local, không bền qua reload. Save/Submit qua remount, avatar/
+mail thật, địa chỉ và kiểm AI xuyên app vẫn mở; chưa xác định nguyên nhân server rớt.
 
 # Tích hợp main vào nhánh phát triển —05/11/2026
 
