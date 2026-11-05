@@ -83,9 +83,6 @@ export function PhotoAutofill({
     (files.length !== resultPhotos.length ||
       files.some((item, index) => item.file !== resultPhotos[index]));
   const filesRef = useRef(files);
-  useEffect(() => {
-    filesRef.current = files;
-  }, [files]);
   useEffect(
     () => () =>
       filesRef.current.forEach((item) => URL.revokeObjectURL(item.url)),
@@ -95,8 +92,9 @@ export function PhotoAutofill({
   function choose(event: React.ChangeEvent<HTMLInputElement>) {
     const picked = Array.from(event.target.files ?? []);
     event.target.value = "";
-    if (!picked.length) return;
-    if (files.length + picked.length > MAX_PHOTOS) {
+    if (!picked.length || disabled || readLock.current) return;
+    const current = filesRef.current;
+    if (current.length + picked.length > MAX_PHOTOS) {
       setError(`Chọn tối đa ${MAX_PHOTOS} ảnh để đọc.`);
       return;
     }
@@ -111,16 +109,20 @@ export function PhotoAutofill({
       return;
     }
     setError(undefined);
-    setFiles((previous) => [
-      ...previous,
+    // Allocate once in the event handler; React may replay state updaters.
+    const next = [
+      ...current,
       ...picked.map((file) => ({ file, url: URL.createObjectURL(file) })),
-    ]);
+    ];
+    filesRef.current = next;
+    setFiles(next);
   }
-  function remove(index: number) {
-    setFiles((previous) => {
-      URL.revokeObjectURL(previous[index]!.url);
-      return previous.filter((_, i) => i !== index);
-    });
+  function remove(url: string) {
+    if (disabled || readLock.current || !filesRef.current.some(item => item.url === url)) return;
+    URL.revokeObjectURL(url);
+    const next = filesRef.current.filter(item => item.url !== url);
+    filesRef.current = next;
+    setFiles(next);
   }
   async function read(forceAi = false) {
     if (disabled || readLock.current || !files.length) return;
@@ -198,7 +200,7 @@ export function PhotoAutofill({
             <button
               type="button"
               className={styles.remove}
-              onClick={() => remove(index)}
+              onClick={() => remove(item.url)}
               disabled={disabled || reading}
               aria-label={`Bỏ ảnh để đọc ${index + 1}`}
             >

@@ -7,6 +7,38 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Ảnh Autofill: thu hồi preview StrictMode và bỏ đúng ảnh khi click lặp —05/11/2026
+
+Nhánh `codex/member-web-autofill-preview-lifetime`, base `76553495`; checkpoint
+subject `fix(user-web): own autofill previews outside state updaters`.
+[PhotoAutofill](../../apps/user-web/src/components/PhotoAutofill/index.tsx) trước
+tạo URL trong updater của setFiles: React dev StrictMode gọi lại updater, chọn3
+ảnh tạo6URL nhưng remove/unmount chỉ thu hồi3. Production không có leak này ở
+ca đã thử. Remove dùng index trong updater: double click cùng node ảnh đầu xóa
+2ảnh khác nhau, tái hiện ở cả dev và production.
+
+Nay handler tạo preview1lần sau validation, filesRef cập nhật đồng bộ với state
+để cleanup luôn thấy selection mới; không cấp URL trong render/updater. Remove
+pin vào URL của ảnh đã bấm, click lặp không xóa ảnh khác. Giữ ảnh còn lại, thứ tự,
+giới hạn3ảnh/10MB/MIME, disabled/read lock và error copy. Không đổi preview render,
+crop/AI/upload/key/body/receipt hoặc motion. Cleanup vẫn thu hồi ảnh khi rời panel.
+
+[Lifetime fixture](../../apps/user-web/tests/autofill-preview-lifetime.mjs),
+`pnpm --filter @used-books/user-web test:autofill-preview-lifetime:browser`:
+baseline8/after8 PASS (StrictMode dev/production ×390/1440 ×1/3ảnh). Trước dev
+live URL1/3 sau unmount; sau mọi profile created=revoked, live0. Batch sai MIME/
+quá3ảnh cấp0URL. Với3ảnh, click lặp Bỏ ảnh1 trước còn1ảnh, sau còn2; cleanup cuối
+thu hồi đủ ảnh được nhận. Harness reset NODE_ENV theo mode để Vite dev không
+làm bundle production dùng nhầm React development; không suy dev PASS thành prod.
+Không auth/API/upload/AI/provider trong fixture; không đo heap máy thật hoặc
+native/human. PASS lại6ca `/sell` ISBN/error/exact AI retry trên production cuối.
+
+PASS build/typecheck,426unit/55file, scoped lint/docs/diff và detector0finding;
+46 CSS production khớp byte baseline, không style/asset/motion đổi. UI không có
+bố cục mới, capture hồi quy `/sell` giữ ở gói read-lock. Local evidence
+`.tmp/member-web-autofill-preview-lifetime/`; demo54file/status giữ nguyên theo
+fingerprint. READINESS không đổi, không DB/provider/push/PR/deploy.
+
 ## Điền nhanh từ ảnh: khóa đọc tức thời, giữ retry sau mất ACK —05/11/2026
 
 Nhánh `codex/member-web-autofill-read-lock`, base `d0ba6b52`; checkpoint subject
