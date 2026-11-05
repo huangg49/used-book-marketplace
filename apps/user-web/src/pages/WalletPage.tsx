@@ -507,13 +507,22 @@ export function WalletPage() {
               <div className={styles.cardHeldInfo}>
                 <span className={styles.cardOwnerLabel}>Đang ký quỹ</span>
                 <span className={styles.cardHeldValue}>
-                  {formatVnd(heldVal)}
+                  {summary.isPending
+                    ? "Đang tải…"
+                    : summary.isError
+                      ? "—"
+                      : formatVnd(heldVal)}
                 </span>
               </div>
             </div>
           </div>
 
           {/* Quick Action Bar under card */}
+          {summary.isError && (
+            <p id="wallet-summary-error" className={styles.alertBox} role="alert">
+              Chưa tải được số dư ví và tiền ký quỹ. Hãy làm mới để thử lại.
+            </p>
+          )}
           <div className={styles.passActionsBar}>
             <button
               type="button"
@@ -539,6 +548,7 @@ export function WalletPage() {
               className={styles.btnMiniRefresh}
               title="Làm mới số dư ví"
               aria-label="Làm mới số dư ví"
+              aria-describedby={summary.isError ? "wallet-summary-error" : undefined}
               disabled={summary.isFetching}
               onClick={() => {
                 void summary.refetch();

@@ -1,21 +1,22 @@
-# Gia cố khả năng phục hồi Member web — 04/11/2026
+# Gia cố khả năng phục hồi Member web — cập nhật05/11/2026
 
 Owner chưa tiện kiểm thật, giao tiếp tục rà tính năng bằng source và kiểm thử
 cô lập. Giữ animation/nghiệp vụ và checkout demo; không DB/provider/dịch vụ demo.
 Owner yêu cầu tự động cuốn chiếu tiếp sau `354f0876`.
-Nhánh `codex/member-web-notification-read-states`, base `7871737f`; commit cùng điểm lưu
-có subject `fix(user-web): distinguish unknown notification read states`.
+Nhánh `codex/member-web-wallet-summary-read-states`, base `b1a177ad`; commit cùng điểm lưu
+có subject `fix(user-web): distinguish unknown wallet held balances`.
 
-Gói mới ở [NotificationsPage](../../apps/user-web/src/pages/NotificationsPage.tsx)
-phân biệt chưa tải/đọc lỗi với unread0 thật. GET503 có cache ghi rõ dữ liệu cũ;
-GET403/404 ẩn cache/count/read-all/pager, kể cả denial khi tải trang sau, có retry
-toàn danh sách. Baseline12/after14 browser profile390/1440 PASS; có phục hồi200,
-rỗng thật và retry rồi tiếp tục trang2. Build/typecheck,399 unit/53 file, scoped
-lint và detector0 PASS.46 CSS khớp byte; không sửa motion/asset.401 có predicate
-nhưng browser chỉ kiểm403/404 trong gói này.
+Owner yêu cầu hoàn tất gói dở. [WalletPage](../../apps/user-web/src/pages/WalletPage.tsx)
+không còn hiển thị ký quỹ0 hoặc số cũ khi GET summary lỗi: chờ khi loading,
+“—” khi lỗi, kèm thông báo và nút làm mới sẵn có. GET200 số0 vẫn đúng0.
+Baseline8/after8 browser profile390/1440 PASS; hồi quy wallet-layout5 profile,
+gồm320px/chữ125%/dialog focus/history filter PASS. Build/typecheck,399 unit/53
+file, scoped lint và detector0 PASS.46 CSS khớp byte; sheen vẫn8000ms,
+không sửa motion/asset/ledger/provider. Hoàn tất gói, không mở gói mới ở lượt này.
 [Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md).
 
-Các gói trước: `7871737f` làm mới kệ theo owner sau ACK gửi duyệt;
+Các gói trước: `b1a177ad` sửa loading/error/denial cache ở inbox thông báo;
+`7871737f` làm mới kệ theo owner sau ACK gửi duyệt;
 `665c90fa` phục hồi GET sau Save đã ACK, reseed baseline/media
 và không upload lại ảnh đã lưu; `6569beb7` dọn preview ảnh mới và chặn URL thừa;
 `060a5eb1` giữ intent ẩn/gỡ bài qua remount, recovery khi GET404,
@@ -27,9 +28,9 @@ freeze refusal để đối chiếu, guard actor/late ACK và cảnh báo rời 
 draft và quyền hiện tại ở đánh giá; `3634a8ab` chặn click lặp ở giỏ và kiểm hỗ trợ.
 Source, ca đã chạy và giới hạn giữ ở báo cáo phục hồi được dẫn phía trên.
 
-Tiếp theo kiểm fallback0 ở ký quỹ trên thẻ Ví và số đếm Trao đổi ở Tổng quan.
-Cần fixture trước sửa; không đổi ledger/provider/gate. Địa chỉ/AI trong form
-chưa có browser fixture mới.
+Ký quỹ Ví đã chốt. DashboardExchangeFocus còn source nhưng không có consumer
+hiện tại và không mount trong AccountOverview; không sửa mã ngoài UI đang chạy.
+Địa chỉ/AI trong form chưa có browser fixture mới; không đổi provider/gate.
 Runner Save/Submit chưa ACK vẫn component-local; rời sau cảnh báo
 chưa chứng minh giữ intent. Không suy tất cả lệnh đã phục hồi qua remount.
 Avatar upload

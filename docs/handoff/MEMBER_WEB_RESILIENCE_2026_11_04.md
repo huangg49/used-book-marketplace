@@ -7,6 +7,48 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Thẻ Ví: chưa đọc được tiền ký quỹ không thành0 — hoàn tất05/11/2026
+
+Nhánh `codex/member-web-wallet-summary-read-states`, base `b1a177ad`; commit cùng
+điểm lưu có subject `fix(user-web): distinguish unknown wallet held balances`.
+Owner yêu cầu xử lý nốt gói đang dở. Baseline8 profile đã có từ04/11;05/11 kiểm
+lại branch/working tree và không còn process fixture chạy. Chỉ harness mới chưa
+tracked, source chưa sửa trước khi tiếp quản.
+
+[WalletPage](../../apps/user-web/src/pages/WalletPage.tsx) trước che số dư khả dụng
+khi GET lỗi nhưng ký quỹ vẫn format fallback0 hoặc giữ số cũ. Sau sửa hai số có
+cùng semantics: đang tải hiện chữ chờ, lỗi hiện “—”; GET200 có0 vẫn hiện0 thật.
+Thông báo lỗi dùng style chung sẵn có, liên kết với nút làm mới qua aria-describedby.
+Nút hiện có chỉ refetch summary/invalidate history; không đổi lệnh hay quyền.
+
+| Member → Ví / ca | Trước | Sau |
+| --- | --- | --- |
+| GET đang chờ, chưa có dữ liệu | Ký quỹ0 | Đang tải… |
+| GET đầu503 | Ký quỹ0 dù khả dụng là “—” | Cả hai “—”, thông báo chưa tải được và làm mới |
+| Đã đọc ký quỹ25.000 → làm mới503 | Ký quỹ cũ vẫn hiện như hiện tại | Không trình bày số cũ như xác nhận mới; “—” tới GET thành công |
+| Làm mới thành200 / số0 hoặc khác0 | Giá trị xác nhận từ API | Giữ đúng0/25.000 và75.000; lỗi biến mất sau phục hồi |
+
+[Production fixture](../../apps/user-web/tests/wallet-summary-read-states.mjs),
+`pnpm --filter @used-books/user-web test:wallet-summary-read-states:browser`:
+baseline8/after8 profile390/1440 ×initial-error/cached-error/zero/nonzero PASS.
+Mọi origin/WS chặn hoặc fixture; recovery chỉ GET, không topup/payment/ledger.
+Hồi quy `test:wallet-layout:browser`5 profile320/390/768/1440, gồm390 chữ125%,
+thao tác/dialog focus/history filter PASS. Sheen vẫn8000ms với keyframe0/0.8/1.
+Đã xem capture phục hồi390/1440; không overflow ở các ca đã kiểm.
+
+PASS build/typecheck,399 unit/53 file, scoped lint, detector0 và docs check.
+46 CSS production khớp byte; không sửa CSS/motion/asset, session/API/contract,
+ledger, provider hoặc READINESS. Evidence local
+`.tmp/member-web-wallet-summary-read-states/` before/after/build/CSS/capture;
+hồi quy bố cục ở `.tmp/member-web-wallet-layout/result.json`.
+
+Không sửa DashboardExchangeFocus: source còn file nhưng tìm consumer hiện tại
+không có, AccountOverview không mount component này. Không suy mã chưa gắn vào
+UI thành lỗi runtime. API/Mongo/provider/native/human acceptance NOT RUN; gói
+này sửa diễn đạt trạng thái đọc, không chứng minh hay sửa nguyên nhân server rớt.
+Đã hoàn tất gói dở, không mở gói mới trong lượt xử lý này. Các giới hạn runner
+qua remount, địa chỉ/AI và môi trường thật vẫn theo SESSION_STATE.
+
 ## Thông báo: loading/error không thành đã đọc hết; denial không hiện cache cũ
 
 Nhánh `codex/member-web-notification-read-states`, base `7871737f`; commit cùng
