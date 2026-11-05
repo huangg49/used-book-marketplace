@@ -1,17 +1,23 @@
 # Gia cố khả năng phục hồi web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-my-auctions-read-access`, base `1674fbd2`; checkpoint
-subject `fix(user-web): hide private auction paging after denied reads`.
-[MyAuctionsPage](../../apps/user-web/src/pages/MyAuctionsPage.tsx) denied ẩn pager/
-count cache;503 giữ rows/stale warning. Baseline12/after12 production390/1440 và
-16step-read hồi quy PASS, retry/view=active/Back đúng.471unit/58file/build/
-typecheck/scoped lint JSON0/docs/diff/detector0 PASS,46CSS khớp byte, không style/
-motion/asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Chỉ fixture đọc,
-không API/DB/provider/native/human/401refresh thật. Demo54file/status giữ,
-READINESS giữ; không push/PR/deploy. Tiếp theo notification ReviewModerated tới
-/reviews?reviewId nhưng client bỏ qua; API target resolver đã có, cần nối đúng.
+Nhánh `codex/member-web-review-notification-target`, base `c6f65aa5`; checkpoint
+subject `fix(user-web): resolve review notification links to current targets`.
+[ReviewsPage](../../apps/user-web/src/pages/ReviewsPage.tsx)/ReviewNotificationTarget
+nối reviewId notification qua GET target hiện có, schema/type/id và owner scoped,
+chờ fresh read kể cả cache rồi replace sang đúng transaction. Invalid/quyền/503/
+schema lỗi có đường về/retry, late response không kéo lại sau rời trang.
+Baseline22/after22 production390/1440 +12list+4review hồi quy PASS.471unit/58file,
+build/typecheck/scoped lint JSON0/docs/diff/detector0 PASS.46CSS khớp byte, không
+style/motion/asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md).
+Contract route/schema đúng nhưng description copy nhầm support; giữ quyền review
+service thật, chưa sửa metadata YAML. Chỉ login/GET fixture, không mark-read/
+review commands/API/DB/provider/native/human/401refresh thật. Demo54file/status giữ,
+READINESS giữ; không push/PR/deploy. Tiếp tục rà deep-link/khôi phục còn lỗi có
+bằng chứng, không suy toàn web đã ổn định hoặc server rớt đã được giải quyết.
 
+Gói cùng lượt `c6f65aa5` MyAuctions denied ẩn pager/count,503giữ rows;
+baseline12/after12+16step-read hồi quy PASS,46CSS nguyên, không đổi poll/command.
 Gói cùng lượt `1674fbd2` MyBooks denied ẩn pager/copy kiểm phiên, baseline12/
 after12+12listing action hồi quy PASS,46CSS nguyên, không đổi command/replay.
 Gói cùng lượt `87b22bfe` Notifications reset activity denied, root200 dọn lỗi cũ;

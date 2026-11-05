@@ -16,6 +16,7 @@ import { session } from "../lib/session";
 import { useSession } from "../hooks/useSession";
 import { TransactionReviewPanel } from "../features/reviews/TransactionReviewPanel";
 import { MemberReputationView } from "../features/reviews/MemberReputationView";
+import { ReviewNotificationTarget } from "../features/reviews/ReviewNotificationTarget";
 import styles from "../features/reviews/reviews.module.css";
 import {
   Star,
@@ -31,6 +32,12 @@ import {
 } from "lucide-react";
 
 export function ReviewsPage() {
+  const [params] = useSearchParams();
+  if (params.has("reviewId")) return <ReviewNotificationTarget key={params.get("reviewId")} reviewId={params.get("reviewId") ?? ""} />;
+  return <ReviewWorkspace />;
+}
+
+function ReviewWorkspace() {
   const auth = useSession(),
     [params] = useSearchParams();
 

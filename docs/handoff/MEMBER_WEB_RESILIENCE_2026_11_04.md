@@ -8,6 +8,50 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Thông báo kiểm duyệt đánh giá: mở đúng giao dịch qua resolver hiện có —05/11/2026
+
+Nhánh `codex/member-web-review-notification-target`, base `c6f65aa5`; checkpoint
+subject `fix(user-web): resolve review notification links to current targets`.
+[notificationPath](../../apps/user-web/src/services/notifications.ts) đã tạo
+/reviews?reviewId nhưng [ReviewsPage](../../apps/user-web/src/pages/ReviewsPage.tsx)
+bỏ qua tham số, chỉ mở hồ sơ uy tín chung. [ReviewNotificationTarget](../../apps/user-web/src/features/reviews/ReviewNotificationTarget.tsx)
+nay đọc endpoint có sẵn `/me/transaction-reviews/{reviewId}/target`, kiểm UUID/type
+schema rồi replace sang transaction review đúng Exchange/DirectOrder/PointOrder.
+Query theo owner/reviewId, stale0/refetchOnMount luôn, chờ read mới kết thúc trước
+Navigate kể cả có cache. Link lỗi không đoán reviewId thành transactionId; lỗi
+quyền/404 có copy chung,503/schema sai có retry; rời trang không bị response muộn
+kéo trở lại. Không đổi notification mark-read, review command/body/key/draft,
+publication, auth/permission hay contract/migration theo ADR0052/0062.
+
+| Vai trò/entry | Kiểm hiện tại và thao tác | Kết quả/bước tiếp |
+| --- | --- | --- |
+| Member → ReviewModerated ở thông báo | GET target theo quyền server, rồi GET review giao dịch | Mở panel đúng type/id; Back về inbox vì resolver replace history |
+| Member → URL reviewId trực tiếp/login return | UUID lỗi chặn read; type/id response phải qua schema | Lỗi có Về thông báo/retry, không rơi vào reputation hoặc đoán ID |
+| Member quay lại cùng notice | Đợi read mới, không navigate từ cached target |403hiện unavailable, chưa đọc transaction lần2 |
+| Member rời resolver khi pending | Response chỉ cập nhật query cũ | Không đổi URL mới hoặc tự mở review; không command side effect |
+
+[Production fixture](../../apps/user-web/tests/review-notification-target.mjs),
+`pnpm --filter @used-books/user-web test:review-notification-target:browser`:
+baseline22/after22 PASS390/1440 ×3success types/403/404/503/bad-type/bad-id/
+malformedlink/leave/revisit-denied. Trước mọi profile không resolver/transaction
+read và chỉ hiện reputation. Sau đúng target; retry từ lỗi chưa đọc transaction
+cho tới200valid. Các notice fixture đã read để không có mark-read POST; không
+ngụ ý trạng thái unread thật. Cached target bị thu quyền có response trì hoãn,
+không dùng cache để điều hướng; late response sau về inbox không chuyển trang.
+12review-list-read +4review-recovery regression PASS, gồm draft/409/exact replay/
+eligibility và tab reputation. Build/typecheck,471unit/58file, scoped lint JSON0,
+docs/diff/detector0finding PASS; captures390/1440 đã xem,46 CSS khớp byte.
+Evidence `.tmp/member-web-review-notification-target/`.
+
+Đối chiếu contract/source: operationId resolveMyReviewNotification và schema
+ReviewNotificationTarget đúng route/type/id; description OpenAPI lại nói support
+cases/locked reply (copy nhầm), trong khi controller MEMBER/service kiểm participant
+và publication của review. Gói chỉ consume endpoint/source hiện hành, không sửa
+quyền theo description sai và chưa sửa metadata contract. Không gọi backend thật;
+all-origin mock/chặn WS/external, synthetic login/GET, không DB/provider/native/
+human/401refresh thật. Demo54file/status giữ, READINESS giữ; không push/PR/deploy.
+Không suy server quyền/nhãn publication hay notification delivery đã được nghiệm thu.
+
 ## Đấu giá của tôi: không giữ phân trang cache sau khi denied —05/11/2026
 
 Nhánh `codex/member-web-my-auctions-read-access`, base `1674fbd2`; checkpoint
