@@ -8,6 +8,30 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Đấu giá của tôi: không giữ phân trang cache sau khi denied —05/11/2026
+
+Nhánh `codex/member-web-my-auctions-read-access`, base `1674fbd2`; checkpoint
+subject `fix(user-web): hide private auction paging after denied reads`.
+[MyAuctionsPage](../../apps/user-web/src/pages/MyAuctionsPage.tsx) đã ẩn cached
+rows khi401/403 nhưng pager ngoài showData vẫn hiện cursor/count. Nay denied
+ẩn pager; retry/read hiện tại, filter/view/Back và503 giữ nguyên. Không đụng
+SellerIntakes query độc lập, poll20giây, bid/pay/cancel/time/permission hoặc motion.
+
+[Production fixture](../../apps/user-web/tests/my-auctions-read-access.mjs),
+`pnpm --filter @used-books/user-web test:my-auctions-read-access:browser`:
+baseline12/after12 PASS390/1440 ×initialcursor/cachedcursor/cachedroot ×403/503.
+Trước cursor403 còn pager, sau ẩn; retry đúng cursor/view=active và Back đúng.
+503 cache vẫn giữ1/2rows kèm stale warning. Synthetic auction dùng step37.000đ
+để giữ tương thích ADR0068. Harness đầu dispatch focus khi cache chưa stale nên
+không tạo lỗi; thêm clock20giây rồi focus đúng policy, không đổi sản phẩm để
+né test.16auction-step-read hồi quy PASS gồm shelf/detail/mine/focusedintake.
+
+Build/typecheck,471unit/58file, scoped lint JSON0/docs/diff/detector0finding PASS.
+Đã xem capture390/1440,46 CSS khớp byte; không style/motion/asset đổi. Evidence
+`.tmp/member-web-my-auctions-read-access/`. All-origin mock/chặn WS/external,
+synthetic login/GET, không auction command/API/DB/provider/native/human hoặc
+401refresh thật. Demo54file/status nguyên, READINESS giữ; không push/PR/deploy.
+
 ## Kệ sách của tôi: ẩn phân trang cache khi quyền đọc bị từ chối —05/11/2026
 
 Nhánh `codex/member-web-owner-shelf-read-access`, base `87b22bfe`; checkpoint

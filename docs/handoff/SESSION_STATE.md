@@ -1,17 +1,19 @@
 # Gia cố khả năng phục hồi web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-owner-shelf-read-access`, base `87b22bfe`; checkpoint
-subject `fix(user-web): hide owner shelf paging after denied reads`.
-[MyBooksPage](../../apps/user-web/src/pages/MyBooksPage.tsx) denied ẩn CursorPager/
-cache count, copy kiểm phiên. Retry đúng cursor/filter;503 giữ hành vi cũ.
-Baseline12/after12 production390/1440 +12listing action hồi quy PASS (hide/archive/
-conflict/remount/exact replay).471unit/58file/build/typecheck/scoped lint JSON0/
-docs/diff/detector0 PASS;46 CSS khớp byte, không style/motion/asset đổi.
-[Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Không API/DB/provider/native/human/
-401refresh thật; chỉ browser fixtures. Demo54file/status giữ, READINESS giữ;
-không push/PR/deploy. Tiếp tục MyAuctions pager có mẫu tương tự, kiểm trước sửa.
+Nhánh `codex/member-web-my-auctions-read-access`, base `1674fbd2`; checkpoint
+subject `fix(user-web): hide private auction paging after denied reads`.
+[MyAuctionsPage](../../apps/user-web/src/pages/MyAuctionsPage.tsx) denied ẩn pager/
+count cache;503 giữ rows/stale warning. Baseline12/after12 production390/1440 và
+16step-read hồi quy PASS, retry/view=active/Back đúng.471unit/58file/build/
+typecheck/scoped lint JSON0/docs/diff/detector0 PASS,46CSS khớp byte, không style/
+motion/asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Chỉ fixture đọc,
+không API/DB/provider/native/human/401refresh thật. Demo54file/status giữ,
+READINESS giữ; không push/PR/deploy. Tiếp theo notification ReviewModerated tới
+/reviews?reviewId nhưng client bỏ qua; API target resolver đã có, cần nối đúng.
 
+Gói cùng lượt `1674fbd2` MyBooks denied ẩn pager/copy kiểm phiên, baseline12/
+after12+12listing action hồi quy PASS,46CSS nguyên, không đổi command/replay.
 Gói cùng lượt `87b22bfe` Notifications reset activity denied, root200 dọn lỗi cũ;
 baseline14/after14+14read-state hồi quy PASS, sparse unread giữ đúng,46CSS nguyên.
 Gói cùng lượt `f7a49021` Search denied ẩn card/count/pager,400/422 nói tham số,

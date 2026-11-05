@@ -426,6 +426,7 @@ export function MyAuctionsPage() {
     setParams(p)
   }
   const stale = query.isError && !!query.data && outcomeUnknown(query.error)
+  const readDenied = query.error instanceof ApiError && [401, 403].includes(query.error.status)
   const showData = !!query.data && (!query.isError || stale)
   return (
     <div className={styles.page}>
@@ -500,8 +501,8 @@ export function MyAuctionsPage() {
             />
           ))}
       </div>
-      <CursorPager navigation={navigation} nextCursor={!query.isError ? query.data?.nextCursor : undefined}
-        busy={query.isFetching} failed={query.isError} count={query.data?.items.length} label="Trang đấu giá của tôi" itemLabel="phiên" anchorId="my-auction-results" />
+      {!readDenied && <CursorPager navigation={navigation} nextCursor={!query.isError ? query.data?.nextCursor : undefined}
+        busy={query.isFetching} failed={query.isError} count={query.data?.items.length} label="Trang đấu giá của tôi" itemLabel="phiên" anchorId="my-auction-results" />}
     </div>
   )
 }
