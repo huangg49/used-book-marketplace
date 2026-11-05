@@ -7,6 +7,48 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Rút tiền: giữ yêu cầu sau mất ACK rồi bị từ chối quyền —05/11/2026
+
+Nhánh `codex/member-web-withdrawal-retry-permission`, base `ebc04445`; commit cùng
+điểm lưu có subject `fix(user-web): retain withdrawal intent after permission refusal`.
+Tiếp tục gia cố sau tích hợp main. Đối chiếu ADR0073, protocol auth trước replay
+và [withdrawal service](../../apps/api/src/modules/wallet/withdrawal.service.ts):
+quyền hiện tại vẫn phải được kiểm trước trả receipt. Không đổi nghiệp vụ/quyền,
+API/contract/ledger/hold, không cho gửi vượt available hoặc bỏ phiên hiện tại.
+
+[WalletWithdrawals](../../apps/user-web/src/pages/WalletWithdrawals.tsx) trước
+nhả pending khi403. Nếu POST đã commit nhưng ACK thất lạc, rồi lần kiểm lại bị403,
+UI mở form và cấp key mới ở lần gửi tiếp;403 không chứng minh POST cũ chưa thành
+công. Bỏ403 khỏi nhóm refusal xác định: giữ payload/key cũ, trạng thái uncertain,
+preview số dư đã pin và khóa chỉnh sửa; chỉ receipt hợp lệ mới kết thúc yêu cầu.
+Người dùng không được tự mở quyền; retry vẫn có thể bị API từ chối tiếp.
+
+| Member → Ví → Rút tiền / ca | Bằng chứng |
+| --- | --- |
+| Submit → ACK mất → kiểm lại403 → gửi tiếp | Baseline390/1440 dùng key mới ở request3; sau sửa3request cùng key/body, giữ số tài khoản có0đầu và chỉ mở detail sau receipt |
+| ACK mất → kiểm lại408/429/503 → receipt | Hồi quy giữ nguyên intent, không cho Chỉnh sửa trong trạng thái chưa rõ kết quả |
+| Submit409 xác định | Giữ hành vi mở lại form, giữ số tiền/nội dung cho người dùng sửa; không tự submit tiếp |
+| Bấm xác nhận2lần cùng lượt | Ref guard hiện có vẫn1POST trước retry; không sửa handler hoặc stage khác |
+
+[Production fixture](../../apps/user-web/tests/withdrawal-retry-permission.mjs),
+`pnpm --filter @used-books/user-web test:withdrawal-retry-permission:browser`.
+Baseline4/after10 profile390/1440 PASS. Fixture mô phỏng commit/hold, mất ACK,
+refusal và receipt; chặn all-origin HTTP ngoài fixture và WS. Key/body chỉ so
+sánh boolean trong memory, không ghi request body vào evidence. Synthetic auth,
+recipient/withdrawal/summary đều không là giao dịch thật hoặc chứng minh API đã
+giữ/chi tiền nguyên tử. Không gọi Admin approval, DB hoặc ngân hàng/provider.
+
+PASS build/typecheck,419 unit/54 file, scoped lint.46 CSS production khớp byte
+với base; không đổi JSX/style/animation/asset. Đã xem capture review pending390/
+1440; input vẫn khóa, preview/copy hiện có giữ nguyên. Không chạy lại detector
+cho diff chỉ sửa predicate và comment, không có JSX/style mới. Evidence local
+`.tmp/member-web-withdrawal-retry-permission/` before/after/build/CSS/capture.
+
+Giới hạn: chưa kiểm401 refresh, actor đổi giữa request, native/thiết bị thật,
+API/Mongo auth/replay/ledger hoặc nghiệm thu người thật trong gói này. Pending
+còn component-local; guard hiện có chặn rời khi uncertain, không bền qua reload.
+Không suy đã đóng mọi lỗi rút tiền hoặc READINESS. Checkout demo không thay đổi.
+
 ## Thẻ Ví: chưa đọc được tiền ký quỹ không thành0 — hoàn tất05/11/2026
 
 Nhánh `codex/member-web-wallet-summary-read-states`, base `b1a177ad`; commit cùng

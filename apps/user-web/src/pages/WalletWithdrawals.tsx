@@ -216,7 +216,9 @@ export function WalletWithdrawals({
       if (!alive.current) return;
       if (
         cause instanceof ApiError &&
-        [400, 403, 404, 409, 422].includes(cause.status)
+        // Current authorization is checked before replay. A permission refusal
+        // cannot disprove an earlier attempt whose response was lost.
+        [400, 404, 409, 422].includes(cause.status)
       ) {
         pending.current = null;
         setUncertain(false);

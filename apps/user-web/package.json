@@ -70,7 +70,8 @@
     "test:listing-save-result:browser": "node tests/listing-save-result.mjs",
     "test:publish-owner-cache:browser": "node tests/publish-owner-cache.mjs",
     "test:notification-read-states:browser": "node tests/notification-read-states.mjs",
-    "test:wallet-summary-read-states:browser": "node tests/wallet-summary-read-states.mjs"
+    "test:wallet-summary-read-states:browser": "node tests/wallet-summary-read-states.mjs",
+    "test:withdrawal-retry-permission:browser": "node tests/withdrawal-retry-permission.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

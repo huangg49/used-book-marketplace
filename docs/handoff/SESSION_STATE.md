@@ -1,3 +1,24 @@
+# Gia cố khả năng phục hồi Member web —05/11/2026
+
+Owner giao tiếp tục tối ưu sau tích hợp main, giữ animation và checkout demo.
+Nhánh `codex/member-web-withdrawal-retry-permission`, base `ebc04445`; checkpoint
+subject `fix(user-web): retain withdrawal intent after permission refusal`.
+[WalletWithdrawals](../../apps/user-web/src/pages/WalletWithdrawals.tsx) không
+nhả intent khi403 sau mất ACK: giữ key/body/nội dung/preview, khóa sửa tới receipt.
+Current auth vẫn qua server; không đổi quyền/ledger/contract hoặc cho gửi mới để
+né từ chối.409 xác định vẫn mở form để sửa. Baseline4/after10 browser profile
+390/1440 PASS, gồm403/408/429/503, exact retry và click lặp. Build/typecheck,
+419unit/54file và scoped lint PASS;46 CSS khớp byte, không JSX/motion/asset mới.
+[Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md).
+
+Gói trước `57dcf7f2` sửa ký quỹ fallback0; `b1a177ad` sửa trạng thái đọc inbox;
+`7871737f` làm mới kệ sau ACK; các gói editor/auction/profile/review/cart giữ
+chi tiết ở báo cáo trên. Không DB/provider/GHN/Forum/migration/seed, không sửa
+checkout demo, push/PR/merge/deploy. READINESS không đổi. Pending rút còn trong
+component, không bền qua reload;401/đổi actor/API/native/human chưa kiểm ở gói này.
+Các giới hạn Save/Submit qua remount, avatar/mail thật và địa chỉ/AI vẫn mở;
+không suy nguyên nhân server rớt đã được xử lý.
+
 # Tích hợp main vào nhánh phát triển —05/11/2026
 
 Owner yêu cầu cập nhật nhánh local, giữ thay đổi riêng và xử lý conflict.
@@ -13,53 +34,6 @@ Flutter SDK không có: format/analyze/test/native NOT RUN, chỉ đối chiếu
 Không DB/migration/seed/provider/demo service/push/PR/remote merge/deploy.
 Checkout demo giữ nguyên54file local; main ref không chuyển nhánh. READINESS giữ.
 [Chi tiết cách ghép và bằng chứng](MAIN_INTEGRATION_2026_11_05.md).
-
-# Gia cố khả năng phục hồi Member web — cập nhật05/11/2026
-
-Owner chưa tiện kiểm thật, giao tiếp tục rà tính năng bằng source và kiểm thử
-cô lập. Giữ animation/nghiệp vụ và checkout demo; không DB/provider/dịch vụ demo.
-Owner yêu cầu tự động cuốn chiếu tiếp sau `354f0876`.
-Nhánh `codex/member-web-wallet-summary-read-states`, base `b1a177ad`; commit cùng điểm lưu
-có subject `fix(user-web): distinguish unknown wallet held balances`.
-
-Owner yêu cầu hoàn tất gói dở. [WalletPage](../../apps/user-web/src/pages/WalletPage.tsx)
-không còn hiển thị ký quỹ0 hoặc số cũ khi GET summary lỗi: chờ khi loading,
-“—” khi lỗi, kèm thông báo và nút làm mới sẵn có. GET200 số0 vẫn đúng0.
-Baseline8/after8 browser profile390/1440 PASS; hồi quy wallet-layout5 profile,
-gồm320px/chữ125%/dialog focus/history filter PASS. Build/typecheck,399 unit/53
-file, scoped lint và detector0 PASS.46 CSS khớp byte; sheen vẫn8000ms,
-không sửa motion/asset/ledger/provider. Hoàn tất gói, không mở gói mới ở lượt này.
-[Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md).
-
-Các gói trước: `b1a177ad` sửa loading/error/denial cache ở inbox thông báo;
-`7871737f` làm mới kệ theo owner sau ACK gửi duyệt;
-`665c90fa` phục hồi GET sau Save đã ACK, reseed baseline/media
-và không upload lại ảnh đã lưu; `6569beb7` dọn preview ảnh mới và chặn URL thừa;
-`060a5eb1` giữ intent ẩn/gỡ bài qua remount, recovery khi GET404,
-freeze refusal để đối chiếu, guard actor/late ACK và cảnh báo rời trang;
-`8036649e` giữ runner Save/retry đúng action và nháp khi reload lỗi;
-`460a0a5e` tách giữ/nhả intent lệnh đấu giá khỏi read,
-`80cb8edf` chặn click lặp và phục hồi đúng ID phiếu đã ACK,
-`354f0876` giữ nháp/recovery/đổi email ở hồ sơ; `8e5ef8d1` giữ
-draft và quyền hiện tại ở đánh giá; `3634a8ab` chặn click lặp ở giỏ và kiểm hỗ trợ.
-Source, ca đã chạy và giới hạn giữ ở báo cáo phục hồi được dẫn phía trên.
-
-Ký quỹ Ví đã chốt. DashboardExchangeFocus còn source nhưng không có consumer
-hiện tại và không mount trong AccountOverview; không sửa mã ngoài UI đang chạy.
-Địa chỉ/AI trong form chưa có browser fixture mới; không đổi provider/gate.
-Runner Save/Submit chưa ACK vẫn component-local; rời sau cảnh báo
-chưa chứng minh giữ intent. Không suy tất cả lệnh đã phục hồi qua remount.
-Avatar upload
-và mail/revoke thật chưa kiểm trong gói trước;
-nguyên nhân “rớt server” thực tế vẫn cần browser/log khi tái hiện được.
-API/Mongo/provider/native/CI remote/người thật NOT RUN; READINESS giữ nguyên.
-Checkout demo vẫn giữ local work, không copy/sync/push/PR/merge/deploy.
-
-Vòng hiệu năng đã chốt ở `11f5810a`; các gói/số đo và giới hạn được giữ tại
-[báo cáo hiệu năng](MEMBER_WEB_PERFORMANCE_2026_11_03.md), gồm ảnh Exchange,
-chat, ví, timer, asset và animation. Chưa có profile thiết bị thật để kết luận
-LCP/INP/CPU/pin; không suy hết bug. Lazy Home đã loại (`901383dd`). Tóm tắt và
-chi tiết Exchange render thay nhau; ADR0071 giữ bid không giữ tiền.
 
 # Lịch sử tin nhắn Member web —03/11/2026
 
