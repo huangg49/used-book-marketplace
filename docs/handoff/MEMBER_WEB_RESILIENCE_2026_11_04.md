@@ -7,6 +7,36 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Đăng cuốn khác: tách trạng thái trợ lý giá của cuốn cũ —05/11/2026
+
+Nhánh `codex/member-web-price-assist-restart`, base `69779bb6`; checkpoint subject
+`fix(user-web): reset price assistance for a new listing attempt`.
+[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) trước giữ assist/
+reference/phase/busy qua reset. Cuốn mới hiển thị range cũ dù đã stale; request
+cuốn cũ còn pending khiến nút cuốn mới tiếp tục disabled. Nay reset về idle/null/
+catalog, tăng token và nhả busy của lượt cũ. Phase/finally chỉ cập nhật nếu token
+còn đúng, không nhả lock hoặc đổi phase của lượt mới khi request cũ kết thúc.
+finish/fail/reference vẫn theo guard token hiện có. Không tự hỏi AI, hủy HTTP,
+đổi receipt/key/body/quota, hoặc sửa dữ liệu gợi ý đã lưu với bài trước.
+
+[Production fixture](../../apps/user-web/tests/price-assist-restart.mjs),
+`pnpm --filter @used-books/user-web test:price-assist-restart:browser`:
+baseline4/after4 PASS,390/1440 × ready/pending. Điền cuốn1→xin gợi ý→gửi duyệt→
+Đăng cuốn khác→điền cuốn2→xin gợi ý mới. Trước giữ40–60k từ cuốn1 hoặc disabled
+tới khi request cũ xong; sau không hiện range cũ, user có thể bấm xin gợi ý cho
+cuốn mới. After pending còn giữ response mới, trả response cũ trước: không ghi
+đè range/trạng thái mới, loading vẫn khóa; release mới mới hiện70–90k. Mỗi cuốn
+có catalog/draft/media/upload/finalize riêng khi user chủ động hỏi; chỉ cuốn1
+save/submit1lần. Harness sửa locator range để chọn paragraph thay parent actions.
+
+Mọi API/upload/AI là synthetic all-origin, không provider/DB thật. API thật vẫn
+có thể từ chối theo quyền/quota hoặc Pending/member; fixture không chứng minh
+được gọi2model đồng thời. PASS build/typecheck,444unit/57file, scoped lint0warning,
+docs/diff.46 CSS khớp byte, không JSX/style/asset/motion đổi; không rerun detector
+cho reset/token guard. Local evidence `.tmp/member-web-price-assist-restart/`.
+Demo54file/status giữ nguyên; READINESS không đổi; native/human NOT RUN, không
+push/PR/deploy. Crop đang xử lý khi gửi bài vẫn là đường tiếp tục kiểm riêng.
+
 ## Đăng cuốn khác: dọn cover và bỏ crop của lượt trước —05/11/2026
 
 Nhánh `codex/member-web-listing-restart-previews`, base `50cf63db`; checkpoint

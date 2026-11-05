@@ -220,11 +220,13 @@ export function SellBookPage() {
     const token = ++priceToken.current;
     setAssist(prev => startLoading(prev, assistKey, token));
     try {
-      const answer = await requestPrice(assistForm, assistCatalog, [...imageFiles], setPricePhase, value => { if (priceToken.current === token) setPriceReference({ key: assistKey, value }); });
+      const answer = await requestPrice(assistForm, assistCatalog, [...imageFiles], phase => {
+        if (priceToken.current === token) setPricePhase(phase);
+      }, value => { if (priceToken.current === token) setPriceReference({ key: assistKey, value }); });
       setAssist(prev => finishLoading(prev, token, answer.listingId, answer.suggestion));
     } catch (error) {
       setAssist(prev => failLoading(prev, token, assistError(error)));
-    } finally { priceBusy.current = false; }
+    } finally { if (priceToken.current === token) priceBusy.current = false; }
   }
   const needsOrigin = !auction && formData.mode !== "Exchange";
 
@@ -1383,6 +1385,11 @@ export function SellBookPage() {
             auction={auction}
             title={bundle?.title || formData.title}
             onPostAnother={() => {
+              priceToken.current += 1;
+              priceBusy.current = false;
+              setAssist({ status: "idle" });
+              setPriceReference(null);
+              setPricePhase("catalog");
               coverCrops.invalidate();
               formData.images.forEach((url) => URL.revokeObjectURL(url));
               if (coverCropMetaRef.current) {

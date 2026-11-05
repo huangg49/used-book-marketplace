@@ -1,19 +1,21 @@
 # Gia cố khả năng phục hồi Member web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-listing-restart-previews`, base `50cf63db`; checkpoint
-subject `fix(user-web): release cover state when restarting a listing`.
-[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) ACK→Đăng cuốn khác
-invalidate crop cũ, thu hồi raw cover và xóa meta/ref. Không còn ảnh cũ xuất hiện
-lại trong form mới. Baseline6/after6 production `/sell`390/1440 PASS: success,
-submit mất ACK/retry exact, pending crop trả sau reset; live URL1/1/2→0/0/0,
-không lặp catalog/draft/upload/save đã ACK và title mới trống. Build/typecheck,
-444unit/57file, scoped lint0warning, docs/diff PASS;46 CSS khớp byte, không JSX/
-style/motion/asset đổi, không rerun detector reset-only.
-[Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md). Publishing/backend/
-storage mô phỏng, không DB/provider/native/human; AI trợ lý qua reset và submit
-khi crop còn pending cần kiểm tiếp.
+Nhánh `codex/member-web-price-assist-restart`, base `69779bb6`; checkpoint subject
+`fix(user-web): reset price assistance for a new listing attempt`.
+[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) Đăng cuốn khác dọn
+assist/reference/phase/busy và tăng token; phase/finally cũ không tác động lượt mới.
+Baseline4/after4 production `/sell`390/1440 PASS: ready/pending từ cuốn1→gửi duyệt→
+cuốn2, không range cũ hoặc busy cũ; trả response cũ trong lúc request mới pending
+không ghi đè/nhả trạng thái mới. Xin gợi ý cuốn2 vẫn do user bấm; không tự hỏi AI
+hoặc đổi key/body/receipt/quota. Build/typecheck,444unit/57file, scoped lint0warning,
+docs/diff PASS;46 CSS khớp byte, không JSX/style/motion/asset đổi, skip detector
+reset/token-only. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). API/upload/AI mô
+phỏng; server thật có thể từ chối do Pending/member/quota, không suy2model chạy
+đồng thời. Không DB/provider/native/human. Crop khi gửi bài còn cần kiểm tiếp.
 
+Gói cùng lượt `69779bb6` dọn raw/meta cover và invalidate crop khi Đăng cuốn khác;
+baseline6/after6 production success/submit lostACK/pending crop PASS, live0 sau reset.
 Gói cùng lượt `50cf63db` sửa memo tiến độ nơi gửi, baseline8/after8 browser PASS,
 chọn/sửa địa chỉ và GET mới bỏ địa chỉ/khu vực cập nhật đúng số mục hợp lệ.
 Gói cùng lượt `817ac3f5` giữ lượt crop mới nhất và thu hồi khi xóa/rời, baseline8/
