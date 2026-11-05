@@ -7,6 +7,36 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Hộp hội thoại: lỗi tên sách không thành bài đăng đã gỡ —05/11/2026
+
+Nhánh `codex/member-web-chat-listing-read-recovery`, base `23632beb`; checkpoint
+subject `fix(user-web): recover inbox listing reads without false unavailability`.
+[ConversationInbox](../../apps/user-web/src/components/conversation/ConversationInbox.tsx)
+trước mọi lỗi đọc public listing đều hiện “Bài đăng không còn công khai”, không
+retry; refetch403 vẫn giữ tên/ảnh cache. Nay403/404 ẩn public cache và giữ nhãn
+không công khai, các lỗi khác chưa có dữ liệu hiện chưa tải được tên sách.503 có
+cache giữ tên và báo thông tin lần trước. Alert có nút tải lại thông tin riêng;
+200 bỏ alert và hiện tên. Hội thoại/partner/status/link mở phòng giữ nguyên:
+listing public không quyết định quyền participant đọc giao dịch. Không đổi API,
+room/message/history/schema hoặc tạo mutation/giới hạn dữ liệu mới.
+
+[Production fixture](../../apps/user-web/tests/chat-listing-read-recovery.mjs),
+`pnpm --filter @used-books/user-web test:chat-listing-read-recovery:browser`:
+baseline8/after8 PASS,390/1440 × initial503/initial404/cached403/cached503. Kiểm
+title/alert→retry200→Mở cuộc trao đổi→Thỏa thuận giao dịch thật trong client.
+Visibility và Date giả lập kiểm refetch stale60giây, không tắt animation.3profile
+chat-card-visibility hồi quy PASS: lazy/focus404/loadMore/room/Back, gồm fallback
+không IntersectionObserver. Không sửa legacy card hoặc suy hội thoại paging đã
+thoát giới hạn100rooms. All-origin API mock/chặn WS/external; chỉ synthetic login/
+GET, không chat/order/payment/DB/provider thật hoặc native/human nghiệm thu.
+
+PASS build/typecheck,449unit/57file, scoped lint JSON0, docs/diff, detector0finding.
+46 CSS production khớp byte base, không style/motion/asset đổi; thêm alert/retry
+bằng class hiện có, đã xem capture390/1440. Evidence
+`.tmp/member-web-chat-listing-read-recovery/` before/after/capture/log/preservation.
+Demo54file/status giữ nguyên, READINESS không đổi; không push/PR/deploy. Tình trạng
+đọc WorkInbox/legacy cache được rà riêng, không suy mọi lỗi chat đã được xử lý.
+
 ## Danh sách đơn: ẩn cache bị từ chối quyền và phục hồi phân trang —05/11/2026
 
 Nhánh `codex/member-web-order-list-read-access`, base `09e809d7`; checkpoint subject

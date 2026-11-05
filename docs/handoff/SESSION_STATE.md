@@ -1,21 +1,21 @@
 # Gia cố khả năng phục hồi Member web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-order-list-read-access`, base `09e809d7`; checkpoint subject
-`fix(user-web): recover denied order list reads without stale cards`.
-[DirectOrderListPage](../../apps/user-web/src/pages/DirectOrderPage.tsx) ẩn thẻ/
-badge/pager khi401/403, alert quyền/phiên và refetch phục hồi; không empty/fallback0.
-503 giữ dữ liệu cũ, next503 retry cursor cũ. Hook collection thêm reset callback
-để dọn scan/error sau denial, tránh alert còn sót khi refetch200. Baseline8/after8
-production390/1440 PASS; list-pagination shared state/error/race/cursor và42screen/
-viewport PASS. Fixture cũ thiếu data router cho MyBooks useBlocker đã sửa wrapper,
-giữ assertion. Build/typecheck,449unit/57file, scoped lint JSON0, docs/diff và
-detector0finding PASS;46 CSS khớp byte, không style/motion/asset đổi.
-[Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md). Backend fake chỉ login/
-GET, không mutation/DB/provider;401 refresh/session revoke/native/human NOT RUN.
-Demo54file/status giữ nguyên; READINESS không đổi; không push/PR/deploy. Tiếp theo
-rà hội thoại và lỗi dữ liệu public bổ sung, không suy toàn web hết lỗi.
+Nhánh `codex/member-web-chat-listing-read-recovery`, base `23632beb`; checkpoint
+subject `fix(user-web): recover inbox listing reads without false unavailability`.
+[ConversationInbox](../../apps/user-web/src/components/conversation/ConversationInbox.tsx)
+phân biệt lỗi đọc public listing với403/404 không công khai; denied ẩn tên/ảnh cache,
+503 giữ dữ liệu cũ có cảnh báo. Alert/retry riêng,200 hồi phục, vẫn mở phòng đúng
+participant/transaction. Baseline8/after8 browser390/1440+3cardvisibility regression
+PASS. Build/typecheck,449unit/57file, scoped lint JSON0, docs/diff/detector0finding
+PASS;46 CSS khớp byte, không style/motion/asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md).
+Backend giả lập chỉ login/GET, không mutation/DB/provider/native/human. Không đổi
+phân trang phòng hay giới hạn100rooms. Rà WorkInbox/legacy cache tiếp.
 
+Gói cùng lượt `23632beb` ẩn đơn/badge/pager khi denied và dọn phân trang lỗi,
+503 retry đúng cursor; baseline8/after8+42screen viewport pagination PASS. Fixture
+pagination đã dùng data router đúng useBlocker, không bỏ assertion.
+Demo54file/status giữ nguyên fingerprint; READINESS không đổi; không push/PR/deploy.
 Gói trước `09e809d7` pin target ảnh, sync URL/tệp, baseline10/after10+22hồi quy
 PASS; click lặp/chooser dịch index không xóa/thay nhầm, limit8 và upload order đúng.
 Gói cùng lượt `bd9e5a95` rollback vị trí crop lỗi về bản đã chấp nhận, retry dọn
