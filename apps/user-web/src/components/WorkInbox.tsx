@@ -100,7 +100,12 @@ export function WorkInbox({
           </button>
         </div>
       )}
-      {result.isSuccess && items.length === 0 && (
+      {result.isSuccess && items.length === 0 && result.hasNextPage && (
+        <p role="status">
+          Chưa thấy việc trong dữ liệu đã tải. Bấm “Xem thêm việc trong nhóm” để kiểm tra những trang còn lại.
+        </p>
+      )}
+      {result.isSuccess && items.length === 0 && !result.hasNextPage && (
         <p role="status">
           Chưa có việc trong nhóm này. Những nhóm khác và đánh giá sau giao dịch
           có nơi theo dõi riêng bên dưới.

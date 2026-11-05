@@ -7,6 +7,34 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Việc đang chờ: trang rỗng còn cursor chưa là hết việc —05/11/2026
+
+Nhánh `codex/member-web-work-inbox-sparse-pages`, base `d96f1aa6`; checkpoint
+subject `fix(user-web): scope work inbox empty states to loaded pages`.
+[WorkInboxService](../../apps/api/src/modules/work-inbox/work-inbox.service.ts)
+resolve danh sách ID từ cursor thành items, bỏ row không còn tìm được và vẫn
+trả nextCursor. Contract cho items rỗng với cursor. [WorkInbox](../../apps/user-web/src/components/WorkInbox.tsx)
+trước nhìn items.length0 để báo cả nhóm không có việc dù còn trang sau. Nay chỉ
+empty hoàn chỉnh khi không next; nếu còn cursor báo chưa thấy trong dữ liệu đã
+tải và hướng dẫn nút tải thêm hiện có. Không auto-scan/thay request/page size,
+poll/filter/lanes/rule/permission hay thêm nghiệp vụ.
+
+[Production fixture](../../apps/user-web/tests/work-inbox-sparse-pages.mjs),
+`pnpm --filter @used-books/user-web test:work-inbox-sparse-pages:browser`:
+baseline8/after8 PASS,390/1440 ×2trang rỗng rồi thấy việc/lỗi trang2 retry/empty
+thực từ đầu/có việc rồi refetch thành empty. Còn cursor không kết luận hết nhóm;
+retry vẫn cursor cũ, không request tự động để tìm hết. Hết cursor và GET mới
+items0 vẫn empty thực; item/link mới hiện sau user tải trang kế tiếp.8ca denial/
+503/dedupe/recovery gói trước PASS lại. Backend chỉ synthetic login/GET all-origin,
+không obligation/order/payment/DB/provider thật hoặc native/human nghiệm thu.
+
+PASS build/typecheck,449unit/57file, scoped lint JSON0, docs/diff, detector0finding.
+46 CSS khớp byte; không style/asset/motion đổi, đã xem sparse390/1440 capture.
+Evidence `.tmp/member-web-work-inbox-sparse-pages/` before/after/regression/log/
+preservation. Demo54file/status nguyên vẹn, READINESS không đổi; không push/PR/
+deploy. Backend mutation giữa2lần đọc là tình huống fixture, không là integration
+race test Mongo; không suy readiness hoặc nguyên nhân server rớt đã được giải quyết.
+
 ## Việc đang chờ: denial không để cursor và mốc cập nhật cũ —05/11/2026
 
 Nhánh `codex/member-web-work-inbox-read-access`, base `6505ccf8`; checkpoint subject
