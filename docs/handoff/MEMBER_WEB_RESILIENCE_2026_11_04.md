@@ -7,6 +7,45 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Danh sách đơn: ẩn cache bị từ chối quyền và phục hồi phân trang —05/11/2026
+
+Nhánh `codex/member-web-order-list-read-access`, base `09e809d7`; checkpoint subject
+`fix(user-web): recover denied order list reads without stale cards`.
+[DirectOrderListPage](../../apps/user-web/src/pages/DirectOrderPage.tsx) trước vẫn
+hiện thẻ/số đếm/pager sau refetch hoặc next-page403, mô tả như server gián đoạn.
+[Orders controller](../../apps/api/src/modules/orders/orders.controller.ts) dùng
+ExistingObligation cho list nhưng service/current auth vẫn quyết định quyền;
+không đổi API/contract/permission để hợp thức hóa giao diện.
+
+Nay401/403 ẩn thẻ/cache, badge vai trò và pager, không báo0đơn/empty. Alert giải
+thích quyền/phiên và Thử lại qua refetch.503 giữ dòng đã tải và copy báo thông tin
+lần trước; lỗi next-page503 vẫn retry cursor cũ. Filter/số trang đã xem giữ qua
+phục hồi. [usePagedCollection](../../apps/user-web/src/components/Pagination/usePagedCollection.ts)
+thêm reset callback ổn định để cancel scan/clear lỗi transient khi consumer thấy
+denial; consumer khác không gọi thì giữ hành vi cũ. Test đầu phát hiện next-page
+error còn sót sau refetch200; reset xử lý đúng lỗi đó, không che lỗi khi bị từ chối.
+
+[Production fixture](../../apps/user-web/tests/order-list-read-access.mjs),
+`pnpm --filter @used-books/user-web test:order-list-read-access:browser`:
+baseline8/after8 PASS (390/1440 × refresh/next-page ×403/503). Đọc20đơn→trang3→
+lỗi→retry→đổi role filter. Denied ẩn cả thẻ/badge/pager, không empty;200 hiển thị
+lại trang3,503 giữ4thẻ. Next denial refetch root,503 retry đúng cursor; sau phục
+hồi không alert cũ, filter Đơn mua vẫn đúng. Fixture all-origin chỉ login giả lập/
+GET, chặn WS và HTTP ngoài; không order/payment/chat mutation/DB/provider thật.
+401 có predicate nhưng refresh/session revoke thật NOT RUN.
+
+Hồi quy [list-pagination](../../apps/user-web/tests/list-pagination.mjs) ban đầu
+FAIL vì fixture dùng BrowserRouter trong khi MyBooksPage mới có useBlocker cần
+data router. Fixture đã chuyển RouterProvider/createBrowserRouter, giữ toàn bộ
+assertion và mock transport; không bỏ guard hoặc sửa product để làm test xanh.
+Chạy cuối PASS shared state/error/race/cursor và42screen/viewport checks; không
+suy production API/native/human từ fixture. PASS Member build/typecheck,
+449unit/57file, scoped lint JSON0,
+detector0finding.46 CSS khớp byte base; không style/motion/asset đổi, đã xem alert
+390/1440. Evidence `.tmp/member-web-order-list-read-access/` before/after/log/
+capture/preservation. Demo54file/status nguyên vẹn; READINESS không đổi, không
+push/PR/deploy.
+
 ## Quản lý ảnh: pin đúng target và đồng bộ URL với tệp gửi —05/11/2026
 
 Nhánh `codex/member-web-listing-photo-identity`, base `bd9e5a95`; checkpoint subject

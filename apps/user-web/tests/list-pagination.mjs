@@ -16,7 +16,7 @@ await fs.writeFile(path.join(out, 'index.html'), '<html lang="vi"><head><meta na
 await fs.writeFile(path.join(out, 'fixture.tsx'), `
 import React,{useState}from'react';import{createRoot}from'react-dom/client';
 import{QueryClient,QueryClientProvider,useInfiniteQuery}from'@tanstack/react-query';
-import{BrowserRouter,Routes,Route,Link,Outlet,useParams,useLocation}from'react-router-dom';
+import{createBrowserRouter,RouterProvider,Routes,Route,Link,Outlet,useParams,useLocation}from'react-router-dom';
 import{usePagedCollection}from'/@fs/${source}/apps/user-web/src/components/Pagination/usePagedCollection.ts';
 import{CollectionPager}from'/@fs/${source}/apps/user-web/src/components/Pagination/CollectionPager.tsx';
 import{useCursorNavigation}from'/@fs/${source}/apps/user-web/src/components/Pagination/useCursorNavigation.ts';
@@ -75,7 +75,7 @@ function Generic(){const[filter,setFilter]=useState('all');const[owner,setOwner]
 function Cursor(){const navigation=useCursorNavigation('qa');return <><Link to="/detail">Chi tiết QA</Link><Link to="/cursor?q=new">Đổi bộ lọc QA</Link><CursorPager navigation={navigation} nextCursor={navigation.cursor==='c9'?null:'c'+((Number(navigation.cursor.slice(1))||0)+1)} count={10} busy={false} label="Cursor QA"/></>}
 function Member(){return <MemberReputationView memberId={useParams().id}/>}
 function App(){return <main style={{padding:16,maxWidth:1280,margin:'auto',fontFamily:'var(--shop-body)'}}><p>QA giao diện — dữ liệu giả, không ghi DB</p><Routes><Route element={<Outlet context={{...user,roles:new URLSearchParams(location.search).has("denied")?["MEMBER"]:["ADMIN"]}}/>}><Route path="/operations-support" element={<AdminSupportQueuePage/>}/></Route><Route path="/" element={<Generic/>}/><Route path="/cursor" element={<Cursor/>}/><Route path="/detail" element={<p>Chi tiết QA</p>}/><Route path="/my-books" element={<MyBooksPage/>}/><Route path="/auctions/new" element={<CreateAuctionPage/>}/><Route path="/auctions/mine" element={<MyAuctionsPage/>}/><Route path="/orders" element={<DirectOrderListPage/>}/><Route path="/notifications" element={<NotificationsPage/>}/><Route path="/reviews" element={<ReviewsPage/>}/><Route path="/support" element={<SupportPage/>}/><Route path="/members/:id" element={<Member/>}/><Route path="/auctions" element={<AuctionListPage/>}/><Route path="/exchange/mine" element={<ExchangeMinePage/>}/><Route path="/books" element={<BookSearchPage/>}/></Routes></main>};
-createRoot(document.getElementById('root')).render(<QueryClientProvider client={queryClient}><BrowserRouter><App/></BrowserRouter></QueryClientProvider>);
+createRoot(document.getElementById('root')).render(<QueryClientProvider client={queryClient}><RouterProvider router={createBrowserRouter([{path:'*',element:<App/>}])}/></QueryClientProvider>);
 `);
 const server = await createServer({ configFile: false, root: out, publicDir: path.join(root, 'apps/user-web/public'), plugins: [react()], cacheDir: path.join(out, 'vite'),
   resolve: { alias: Object.fromEntries(['react','react-dom','@tanstack/react-query','react-router-dom'].map(n => [n,path.join(root,'apps/user-web/node_modules',n)])), dedupe: ['react','react-dom'] },

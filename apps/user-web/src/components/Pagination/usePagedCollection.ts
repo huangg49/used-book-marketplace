@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 interface PagedData<P> { pages: P[] }
@@ -20,6 +20,11 @@ export function usePagedCollection<P extends { nextCursor?: string | null }, T>(
   const [activity, setActivity] = useState<{ scope: string; busy?: boolean; error?: string }>();
   const operation = useRef(0);
   const lock = useRef(false);
+  const reset = useCallback(() => {
+    operation.current += 1;
+    lock.current = false;
+    setActivity(undefined);
+  }, []);
   useEffect(() => {
     if (lastScope.current !== scope) {
       lastScope.current = scope;
@@ -84,6 +89,7 @@ export function usePagedCollection<P extends { nextCursor?: string | null }, T>(
   }
 
   return {
+    reset,
     items, loadedCount: all.length, visible: !!all.length || !!query.hasNextPage,
     error: activity?.scope === scope ? activity.error : undefined,
     busy,

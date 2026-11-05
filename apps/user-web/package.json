@@ -85,7 +85,8 @@
     "test:price-assist-restart:browser": "node tests/price-assist-restart.mjs",
     "test:cover-crop-submit-guard:browser": "node tests/cover-crop-submit-guard.mjs",
     "test:cover-position-recovery:browser": "node tests/cover-position-recovery.mjs",
-    "test:listing-photo-identity:browser": "node tests/listing-photo-identity.mjs"
+    "test:listing-photo-identity:browser": "node tests/listing-photo-identity.mjs",
+    "test:order-list-read-access:browser": "node tests/order-list-read-access.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

@@ -1,19 +1,23 @@
 # Gia cố khả năng phục hồi Member web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-listing-photo-identity`, base `bd9e5a95`; checkpoint subject
-`fix(user-web): keep listing photo edits bound to their targets`.
-[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) remove/replace theo
-URL target và cập nhật URL/tệp cùng snapshot refs/state. Click lặp không xóa ảnh
-kế tiếp; chooser khi cover chèn giữ đúng target, target mất báo chọn lại, không
-cấp URL. Baseline10/after10 production390/1440 PASS, gồm body bytes/order đúng,
-limit8 giữ nguyên và live0 sau Back (trước click lặp live1).22profile hồi quy
-crop/reset/submit guard PASS. Build/typecheck,449unit/57file, scoped lint JSON0,
-docs/diff PASS; detector3color advisory cũ,46 CSS khớp byte, không style/motion/
-asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Backend/upload/publishing
-mô phỏng, không DB/provider/native/human/heap máy thật. Tiếp tục rà danh sách và
-phục hồi dữ liệu; không suy đã hết lỗi toàn web.
+Nhánh `codex/member-web-order-list-read-access`, base `09e809d7`; checkpoint subject
+`fix(user-web): recover denied order list reads without stale cards`.
+[DirectOrderListPage](../../apps/user-web/src/pages/DirectOrderPage.tsx) ẩn thẻ/
+badge/pager khi401/403, alert quyền/phiên và refetch phục hồi; không empty/fallback0.
+503 giữ dữ liệu cũ, next503 retry cursor cũ. Hook collection thêm reset callback
+để dọn scan/error sau denial, tránh alert còn sót khi refetch200. Baseline8/after8
+production390/1440 PASS; list-pagination shared state/error/race/cursor và42screen/
+viewport PASS. Fixture cũ thiếu data router cho MyBooks useBlocker đã sửa wrapper,
+giữ assertion. Build/typecheck,449unit/57file, scoped lint JSON0, docs/diff và
+detector0finding PASS;46 CSS khớp byte, không style/motion/asset đổi.
+[Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md). Backend fake chỉ login/
+GET, không mutation/DB/provider;401 refresh/session revoke/native/human NOT RUN.
+Demo54file/status giữ nguyên; READINESS không đổi; không push/PR/deploy. Tiếp theo
+rà hội thoại và lỗi dữ liệu public bổ sung, không suy toàn web hết lỗi.
 
+Gói trước `09e809d7` pin target ảnh, sync URL/tệp, baseline10/after10+22hồi quy
+PASS; click lặp/chooser dịch index không xóa/thay nhầm, limit8 và upload order đúng.
 Gói cùng lượt `bd9e5a95` rollback vị trí crop lỗi về bản đã chấp nhận, retry dọn
 đúng crop error và giữ alert khác; baseline6/after6+6failure regression PASS.
 Gói cùng lượt `c7455f48` chặn gửi khi current crop pending bằng state+guard đồng bộ,
