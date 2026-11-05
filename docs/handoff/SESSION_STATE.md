@@ -1,19 +1,21 @@
 # Gia cố khả năng phục hồi Member web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-price-assist-restart`, base `69779bb6`; checkpoint subject
-`fix(user-web): reset price assistance for a new listing attempt`.
-[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) Đăng cuốn khác dọn
-assist/reference/phase/busy và tăng token; phase/finally cũ không tác động lượt mới.
-Baseline4/after4 production `/sell`390/1440 PASS: ready/pending từ cuốn1→gửi duyệt→
-cuốn2, không range cũ hoặc busy cũ; trả response cũ trong lúc request mới pending
-không ghi đè/nhả trạng thái mới. Xin gợi ý cuốn2 vẫn do user bấm; không tự hỏi AI
-hoặc đổi key/body/receipt/quota. Build/typecheck,444unit/57file, scoped lint0warning,
-docs/diff PASS;46 CSS khớp byte, không JSX/style/motion/asset đổi, skip detector
-reset/token-only. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). API/upload/AI mô
-phỏng; server thật có thể từ chối do Pending/member/quota, không suy2model chạy
-đồng thời. Không DB/provider/native/human. Crop khi gửi bài còn cần kiểm tiếp.
+Nhánh `codex/member-web-cover-crop-submit-guard`, base `d689f33d`; checkpoint subject
+`fix(user-web): wait for the current cover crop before publishing`.
+[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) khóa Gửi duyệt khi
+crop hiện tại pending, status/busy giải thích; handler kiểm pending đồng bộ. Không
+tự gửi sau crop. Lượt obsolete không giữ lock, error/remove/reset nhả guard.
+Baseline8/after8 `/sell`390/1440 PASS, bytes upload đúng crop mới; pending0command,
+current lỗi phục hồi, obsolete không chặn gửi.5unit mới và6reset/lostACK regression
+PASS. Build/typecheck,449unit/57file, scoped lint0warning, docs/diff PASS. Detector
+3color advisory cũ,46 CSS khớp byte; chỉ thêm status class help, không style/motion/
+asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Backend/upload mô phỏng,
+không DB/provider/native/human. Preview vị trí optimistic khi crop lỗi cần kiểm tiếp.
 
+Gói cùng lượt `d689f33d` dọn assist/reference/busy/token khi Đăng cuốn khác và
+chặn callback cuốn cũ; baseline4/after4 ready/pending/new response PASS. Server
+vẫn quyết định quyền/quota/Pending/member, không suy2model chạy đồng thời.
 Gói cùng lượt `69779bb6` dọn raw/meta cover và invalidate crop khi Đăng cuốn khác;
 baseline6/after6 production success/submit lostACK/pending crop PASS, live0 sau reset.
 Gói cùng lượt `50cf63db` sửa memo tiến độ nơi gửi, baseline8/after8 browser PASS,

@@ -21,6 +21,28 @@ function fixture() {
 afterEach(() => vi.restoreAllMocks());
 
 describe('cover crop lifecycle', () => {
+  it.each(['resolve', 'reject'] as const)('a stale %s cannot release the current pending guard', async outcome => {
+    const f = fixture(), old = deferred(), latest = deferred();
+    f.crop.mockReturnValueOnce(old.promise).mockReturnValueOnce(latest.promise);
+    expect(f.lifecycle.isPending()).toBe(false);
+    const first = f.lifecycle.run(file, 25), second = f.lifecycle.run(file, 75);
+    expect(f.lifecycle.isPending()).toBe(true);
+    if (outcome === 'resolve') old.resolve(result('old')); else old.reject(new Error('Synthetic obsolete failure'));
+    await expect(first).resolves.toBeNull(); expect(f.lifecycle.isPending()).toBe(true);
+    latest.resolve(result('latest')); await second; expect(f.lifecycle.isPending()).toBe(false);
+  });
+  it.each(['invalidate', 'dispose'] as const)('%s releases the guard without waiting for canceled work', async action => {
+    const f = fixture(), pending = deferred(); f.crop.mockReturnValueOnce(pending.promise);
+    const task = f.lifecycle.run(file, 50); expect(f.lifecycle.isPending()).toBe(true);
+    f.lifecycle[action](); expect(f.lifecycle.isPending()).toBe(false);
+    pending.resolve(result('old')); await task; expect(f.lifecycle.isPending()).toBe(false);
+  });
+  it('releases the guard after a current failure', async () => {
+    const f = fixture(), pending = deferred(); f.crop.mockReturnValueOnce(pending.promise);
+    const task = f.lifecycle.run(file, 50); expect(f.lifecycle.isPending()).toBe(true);
+    pending.reject(new Error('Synthetic current failure')); await expect(task).rejects.toThrow();
+    expect(f.lifecycle.isPending()).toBe(false);
+  });
   it('drops a first response delivered after the newer selection and releases its two owned URLs', async () => {
     const f = fixture(), old = deferred(), latest = deferred();
     f.crop.mockReturnValueOnce(old.promise).mockReturnValueOnce(latest.promise);

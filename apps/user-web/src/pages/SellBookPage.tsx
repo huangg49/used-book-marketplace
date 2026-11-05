@@ -130,6 +130,7 @@ export function SellBookPage() {
   const [coverCropMeta, setCoverCropMeta] = useState<CoverCropResult | null>(null);
   const coverCropMetaRef = useRef<CoverCropResult | null>(null);
   const coverCrops = useMemo(() => createCoverCropLifecycle(), []);
+  const [coverCropBusy, setCoverCropBusy] = useState(false);
   useEffect(() => {
     coverCrops.activate();
     return () => coverCrops.dispose();
@@ -366,10 +367,16 @@ export function SellBookPage() {
   const isDraggingCover = useRef(false);
   const dragStartPos = useRef({ x: 0, y: 0, offset: 50 });
 
+  async function runCoverCrop(file: File, position: CoverPosition, existingRawUrl?: string) {
+    setCoverCropBusy(true);
+    try { return await coverCrops.run(file, position, existingRawUrl); }
+    finally { setCoverCropBusy(coverCrops.isPending()); }
+  }
+
   const handleCoverPositionChange = async (position: CoverPosition) => {
     if (!coverCropMeta || hasAttempt || submitting) return;
     try {
-      const result = await coverCrops.run(
+      const result = await runCoverCrop(
         coverCropMeta.rawFile,
         position,
         coverCropMeta.rawUrl,
@@ -515,7 +522,7 @@ export function SellBookPage() {
     if (kind === "cover") {
       photoFocusTarget.current = "images";
       const file = selected[0]!;
-      coverCrops.run(file, "center")
+      runCoverCrop(file, "center")
         .then((result) => {
           if (!result) return;
           if (coverCropMetaRef.current) {
@@ -567,7 +574,7 @@ export function SellBookPage() {
   };
 
   const handleSubmit = async () => {
-    if (submitting) return;
+    if (submitting || coverCropBusy || coverCrops.isPending()) return;
     const selectedOrigin = addresses.data?.items.find(
       (item) => item.id === originAddressId,
     );
@@ -860,6 +867,7 @@ export function SellBookPage() {
           : "add-support-photo";
     if (hasCoverPhoto && index === 0) {
       coverCrops.invalidate();
+      setCoverCropBusy(false);
       setHasCoverPhoto(false);
       if (coverCropMetaRef.current?.rawUrl) {
         URL.revokeObjectURL(coverCropMetaRef.current.rawUrl);
@@ -1391,6 +1399,7 @@ export function SellBookPage() {
               setPriceReference(null);
               setPricePhase("catalog");
               coverCrops.invalidate();
+              setCoverCropBusy(false);
               formData.images.forEach((url) => URL.revokeObjectURL(url));
               if (coverCropMetaRef.current) {
                 URL.revokeObjectURL(coverCropMetaRef.current.rawUrl);
@@ -2987,6 +2996,11 @@ export function SellBookPage() {
                         setAssist(prev => prev.status === "ready" && prev.key === assistKey ? { ...prev, appliedPrice: amount } : prev);
                       }} />
                     </div> : null}
+                    {coverCropBusy && (
+                      <p role="status" className={styles.help}>
+                        Đang xử lý ảnh bìa. Chờ ảnh hoàn tất rồi kiểm tra lại trước khi gửi.
+                      </p>
+                    )}
                     {visibleSubmitError && (
                       <div
                         role="alert"
@@ -3070,7 +3084,8 @@ export function SellBookPage() {
                       <button
                         type="submit"
                         className={styles.primary}
-                        disabled={submitting}
+                        disabled={submitting || (step === 5 && coverCropBusy)}
+                        aria-busy={submitting || (step === 5 && coverCropBusy)}
                       >
                         {step < 5
                           ? "Tiếp tục"

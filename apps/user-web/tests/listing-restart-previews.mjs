@@ -54,6 +54,12 @@ try{
   if(mode==='pending-crop'){
    await page.evaluate(()=>{window.qaHoldRestartCrop=true});await page.locator('#cover-file').setInputFiles({name:'qa-pending.png',mimeType:'image/png',buffer:png});
    await expect.poll(()=>page.evaluate(()=>window.qaRestartGates.length)).toBe(1);
+   if(!baseline){
+    // Current work must settle before submit. Keep an older crop pending instead.
+    await page.locator('#cover-file').setInputFiles({name:'qa-latest.png',mimeType:'image/png',buffer:png});
+    await expect.poll(()=>page.evaluate(()=>window.qaRestartGates.length)).toBe(2);
+    await page.evaluate(()=>window.qaRestartGates[1]());
+   }
   }
   await step(/Tình trạng/).click();for(const label of ['Ruột sách','Bìa và gáy','Ghi chú, đánh dấu','Phụ kiện'])await page.getByLabel(label,{exact:true}).fill('Thông tin QA');
   await page.getByLabel('Mô tả chung',{exact:true}).fill('Mô tả QA đầy đủ cho sách kiểm reset ảnh sau khi gửi duyệt.');

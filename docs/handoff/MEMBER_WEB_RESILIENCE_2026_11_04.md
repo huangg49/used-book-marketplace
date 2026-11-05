@@ -7,6 +7,40 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Gửi duyệt chờ đúng lượt crop hiện tại —05/11/2026
+
+Nhánh `codex/member-web-cover-crop-submit-guard`, base `d689f33d`; checkpoint subject
+`fix(user-web): wait for the current cover crop before publishing`.
+[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) trước cho Gửi duyệt
+khi crop mới đang pending, nên upload ảnh/vị trí cũ rồi crop mới mới cập nhật UI.
+Nay [lifecycle](../../apps/user-web/src/lib/cover-crop-lifecycle.ts) theo dõi pending
+của generation hiện tại. UI khóa Gửi duyệt ở bước5, có status/busy giải thích;
+handler kiểm cả state và pending đồng bộ để chặn submit event đến trước render.
+Vẫn chuyển bước/kéo/cắt bình thường. Lượt cũ đã obsolete không giữ lock, lỗi/
+invalidate/remove/reset nhả guard, không tự gửi khi crop xong. Chỉ user bấm lại
+sau kiểm tra. Không đổi payload/key/version/receipt hoặc nghiệp vụ gửi duyệt.
+
+[Production fixture](../../apps/user-web/tests/cover-crop-submit-guard.mjs),
+`pnpm --filter @used-books/user-web test:cover-crop-submit-guard:browser`:
+baseline8/after8 PASS,390/1440 × thay ảnh/đổi vị trí/obsolete còn pending/current
+crop lỗi. Trước2ca đầu gửi bytes của crop cũ, sau tất cả đúng crop được chấp nhận;
+so SHA trong memory, không in bytes/hash/body. Trong pending mới, submit event
+thủ công vẫn0catalog/draft/media/upload/save/submit; resolve rồi user mới gửi1lần.
+Lượt cũ pending không cản gửi current đã xong; failure mở lại nút, giữ cover đã
+chấp nhận.5unit guard mới kiểm stale resolve/reject không nhả lock current,
+invalidate/dispose và current failure.6ca reset/lostACK hồi quy PASS; ca reset
+pending cập nhật để giữ một lượt obsolete, settle current trước submit theo gate
+mới. Không bỏ assertion pending: suite mới kiểm trực tiếp0command khi pending.
+
+PASS build/typecheck,449unit/57file, scoped lint0warning, docs/diff. Detector3color
+advisory đã có, literal giữ nguyên;46 CSS khớp byte, không style/asset/motion đổi.
+Thêm status bằng class help hiện có, đã xem capture390/1440; không giảm hiệu ứng.
+Evidence `.tmp/member-web-cover-crop-submit-guard/` before/after/unit/regression/
+capture/log/preservation. Backend/upload all-origin giả lập, không DB/provider/
+native/human/heap máy thật; READINESS giữ. Demo54file/status giữ nguyên, không
+push/PR/deploy. Preview vị trí cắt optimistic khi xử lý lỗi còn cần đối chiếu
+với crop đã chấp nhận; không suy đã hết lỗi editor.
+
 ## Đăng cuốn khác: tách trạng thái trợ lý giá của cuốn cũ —05/11/2026
 
 Nhánh `codex/member-web-price-assist-restart`, base `69779bb6`; checkpoint subject

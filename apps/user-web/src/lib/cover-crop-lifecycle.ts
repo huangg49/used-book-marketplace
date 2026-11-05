@@ -4,12 +4,15 @@ import { cropImageToCover, type CoverPosition } from './image-crop';
 export function createCoverCropLifecycle(crop = cropImageToCover) {
   let active = true;
   let generation = 0;
+  let pending: number | null = null;
   return {
     activate() { active = true; },
-    invalidate() { generation += 1; },
-    dispose() { active = false; generation += 1; },
+    invalidate() { generation += 1; pending = null; },
+    dispose() { active = false; generation += 1; pending = null; },
+    isPending() { return active && pending !== null; },
     async run(file: File, position: CoverPosition, existingRawUrl?: string) {
       const current = ++generation;
+      pending = current;
       try {
         const result = await crop(file, position, existingRawUrl);
         if (active && current === generation) return result;
@@ -22,6 +25,8 @@ export function createCoverCropLifecycle(crop = cropImageToCover) {
         // replace the error state or move focus after a newer action/navigation.
         if (!active || current !== generation) return null;
         throw error;
+      } finally {
+        if (pending === current) pending = null;
       }
     },
   };

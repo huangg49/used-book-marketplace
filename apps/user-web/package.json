@@ -82,7 +82,8 @@
     "test:cover-crop-lifecycle:browser": "node tests/cover-crop-lifecycle.mjs",
     "test:origin-progress:browser": "node tests/origin-progress.mjs",
     "test:listing-restart-previews:browser": "node tests/listing-restart-previews.mjs",
-    "test:price-assist-restart:browser": "node tests/price-assist-restart.mjs"
+    "test:price-assist-restart:browser": "node tests/price-assist-restart.mjs",
+    "test:cover-crop-submit-guard:browser": "node tests/cover-crop-submit-guard.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
