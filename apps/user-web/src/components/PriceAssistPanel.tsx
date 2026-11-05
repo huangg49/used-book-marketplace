@@ -11,6 +11,7 @@ import {
 } from "@used-books/session-client";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { formatVnd } from "../lib/routes";
+import { useExpiryRefresh } from "../hooks/useExpiryRefresh";
 import type { PricePhase } from "../services/listing-price-assist";
 import styles from "./PriceAssistPanel.module.css";
 const phases: Record<PricePhase, string> = {
@@ -52,7 +53,17 @@ export function PriceAssistPanel({
         ? state.previous
         : undefined;
   const value = ready?.suggestion;
+  const refreshExpiry = useExpiryRefresh(value?.expiresAt);
   const locked = disabled || loading || stale;
+  const canApply = () => {
+    if (disabled || loading) return false;
+    // Recheck at the action boundary too: timers can be delayed in background tabs.
+    if (isStale(state, currentKey)) {
+      refreshExpiry();
+      return false;
+    }
+    return true;
+  };
   const sourceLabels = new Map(value?.sources.map((s) => [s.ref, s.label]));
   return (
     <section className={styles.panel} aria-labelledby="price-assist-title">
@@ -120,6 +131,7 @@ export function PriceAssistPanel({
                     key={amount}
                     disabled={locked}
                     onClick={() => {
+                      if (!canApply()) return;
                       if (
                         currentPrice.trim() &&
                         Number(currentPrice) !== amount
@@ -205,7 +217,7 @@ export function PriceAssistPanel({
         }
         confirmText="Dùng giá gợi ý"
         onConfirm={() => {
-          if (replace !== null && !locked) onApply(replace);
+          if (replace !== null && canApply()) onApply(replace);
           setReplace(null);
         }}
       />

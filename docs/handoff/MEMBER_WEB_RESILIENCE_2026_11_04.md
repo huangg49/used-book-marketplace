@@ -7,6 +7,42 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Gợi ý giá: kiểm hạn lúc áp dụng và khi hộp xác nhận đang mở —05/11/2026
+
+Nhánh `codex/member-web-price-assist-expiry`, base `865d8266`; checkpoint subject
+`fix(user-web): enforce price suggestion expiry at apply time`.
+Theo [ADR0028](../adr/0028-listing-price-assistant.md) và `isStale` của shared
+session-client, gợi ý hết hạn không được áp dụng; seller vẫn tự nhập giá được.
+[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) bước4 nhận onApply
+từ [PriceAssistPanel](../../apps/user-web/src/components/PriceAssistPanel.tsx).
+Panel trước chỉ tính stale trong render: để màn hình yên hoặc mở xác nhận chờ
+qua expiresAt vẫn áp dụng được giá cũ. Không là lỗi tiền/ledger hoặc auto review.
+
+Panel nay kiểm `isStale` ngay lúc bấm chọn và lúc xác nhận; quá hạn giữ nguyên giá
+đang nhập, hiện cảnh báo cũ và khóa nút áp dụng. [Expiry hook](../../apps/user-web/src/hooks/useExpiryRefresh.ts)
+đặt một timeout tới deadline, kiểm lại khi tab visible, có cleanup timer/listener
+và giới hạn delay32bit; không thêm polling/rerender mỗi giây. Guard lúc bấm vẫn
+bắt được hết hạn khi timer bị trì hoãn. Không đổi rule/nguồn giá, API/quota/model,
+key/body/receipt, save attribution, hoặc quyền seller nhập tay/thoát màn hình.
+
+[Browser component fixture](../../apps/user-web/tests/price-assist-expiry.mjs),
+`pnpm --filter @used-books/user-web test:price-assist-expiry:browser`: baseline10/
+after10 PASS,390/1440 × direct quá hạn/confirm quá hạn/timer quá hạn/direct còn
+hạn/confirm còn hạn. Fixed Date kiểm race mà không chạy timer; Playwright clock
+runFor kiểm deadline tự khóa. Bản trước dùng giá quá hạn trong cả2 đường, nút
+không tự khóa; bản sau không thay ô giá hoặc đếm apply, ca hợp lệ vẫn apply1lần,
+nhập tay vẫn được. Bundle component thật qua Vite production, CSS/font hiện có;
+chặn external HTTP/WS và mọi API. Đây là component cô lập, **chưa kiểm entry toàn
+wizard**, không auth/upload/catalog/provider/AI thật và không nghiệm thu human.
+
+PASS Member build/typecheck,426unit/55file, scoped lint, docs/diff; detector0finding.
+Đã xem capture390/1440 của trạng thái quá hạn.46 CSS production khớp byte với
+checkpoint trước; không style/motion/asset đổi. Local evidence
+`.tmp/member-web-price-assist-expiry/` before/after build/JSON/capture/log và
+preservation; fixture tạm ở app `.tmp/` ignored. Demo54file/status giữ nguyên;
+READINESS không đổi, không DB/provider/push/PR/deploy. Rule-based reference đã có
+guard fresh ở mỗi click/confirm, chưa sửa UI deadline của nó trong gói này.
+
 ## Lịch sử Ví: ẩn cache khi bị từ chối quyền đọc —05/11/2026
 
 Nhánh `codex/member-web-wallet-history-access`, base `cc42b67f`; checkpoint
