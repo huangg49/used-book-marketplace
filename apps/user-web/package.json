@@ -72,7 +72,8 @@
     "test:notification-read-states:browser": "node tests/notification-read-states.mjs",
     "test:wallet-summary-read-states:browser": "node tests/wallet-summary-read-states.mjs",
     "test:withdrawal-retry-permission:browser": "node tests/withdrawal-retry-permission.mjs",
-    "test:pending-withdrawal-pagination:browser": "node tests/pending-withdrawal-pagination.mjs"
+    "test:pending-withdrawal-pagination:browser": "node tests/pending-withdrawal-pagination.mjs",
+    "test:wallet-history-access:browser": "node tests/wallet-history-access.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

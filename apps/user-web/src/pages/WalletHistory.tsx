@@ -1,4 +1,4 @@
-import { withdrawalLabels } from "@used-books/session-client";
+import { ApiError, withdrawalLabels } from "@used-books/session-client";
 import { useId, useRef, useState } from "react";
 import { usePaginationFocus } from "../components/Pagination/usePaginationFocus";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -86,7 +86,9 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
     getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
 
-  const items = history.data?.pages.flatMap((page) => page.items) ?? [];
+  const inaccessible = history.error instanceof ApiError &&
+    [401, 403].includes(history.error.status);
+  const items = inaccessible ? [] : history.data?.pages.flatMap((page) => page.items) ?? [];
   const loadedPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   const safePage = Math.min(currentPage, loadedPages);
   const historyAnchor = useId();
@@ -94,7 +96,7 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
   const pagedItems = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   async function changePage(next: number) {
-    if (changingPage.current === scope || history.isFetching || next < 1) return;
+    if (inaccessible || changingPage.current === scope || history.isFetching || next < 1) return;
     if (next <= loadedPages) {
       setPosition({ scope, page: next });
       return;
@@ -180,11 +182,13 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
           ) : (
             <>
               {/* Error State */}
-              {history.isError && !history.isFetchNextPageError && (
+              {history.isError && (!history.isFetchNextPageError || inaccessible) && (
                 <div className={styles.alertBox} role="alert" style={{ marginBottom: 16 }}>
                   <AlertCircle size={16} aria-hidden="true" />
                   <span>
-                    {items.length
+                    {inaccessible
+                      ? "Quyền xem lịch sử ví đã thay đổi. Kiểm tra phiên đăng nhập và thử lại."
+                      : items.length
                       ? "Biên lai chưa thể cập nhật thêm giao dịch."
                       : "Chưa tải được dữ liệu sổ cái lúc này."}{" "}
                   </span>
@@ -288,7 +292,7 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
                 </ul>
               )}
 
-              {history.isFetchNextPageError && (
+              {history.isFetchNextPageError && !inaccessible && (
                 <div className={styles.alertBox} role="alert" style={{ marginTop: 14 }}>
                   <span>Chưa tải được trang tiếp theo. Các giao dịch hiện tại vẫn được giữ. Bấm “Sau” để thử lại.</span>
                 </div>

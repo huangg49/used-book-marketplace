@@ -7,6 +7,43 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Lịch sử Ví: ẩn cache khi bị từ chối quyền đọc —05/11/2026
+
+Nhánh `codex/member-web-wallet-history-access`, base `cc42b67f`; checkpoint
+subject `fix(user-web): hide wallet history after denied reads`.
+[WalletHistory](../../apps/user-web/src/pages/WalletHistory.tsx) trước vẫn render
+các giao dịch/số dư sau giao dịch đã cache khi refetch403. Nếu fetch trang tiếp
+403 còn giữ dòng cũ và hướng dẫn bấm Sau như lỗi mạng. [Controller](../../apps/api/src/modules/wallet/wallet.controller.ts)
+và [history service](../../apps/api/src/modules/wallet/wallet.service.ts) vẫn yêu
+cầu Member/current actor qua readObligation; ExistingObligation không tự cấp mọi
+quyền. Đây là trạng thái từ chối đọc ở UI, không sửa backend/ledger/contract.
+
+Sau sửa401/403 ẩn các dòng/số dư lịch sử và pager, không hiện empty hay hướng dẫn
+giữ cache. Alert hiện có giải thích quyền/phiên và có Thử lại. Cả refetch và next
+page denial đều dùng đường phục hồi refetch hiện có; chỉ đọc thành công mới cho
+hiện dữ liệu lại. Giữ filter, numeric pagination/focus và withdrawal state badge.
+503 giữ các dòng đã tải cùng alert; next page503 vẫn retry đúng cursor, không tự
+đổi trang hoặc hiện trống. Không xóa cache chung hay đổi session/token transport.
+
+[Production browser fixture](../../apps/user-web/tests/wallet-history-access.mjs),
+`pnpm --filter @used-books/user-web test:wallet-history-access:browser`: baseline8/
+after8 profile PASS (390/1440 × refetch/next-page ×403/503). Các ca tải20 dòng,
+mở trang2, gây lỗi, kiểm cache/pager/error/empty, phục hồi rồi kiểm dòng/badge.
+Next-page403 phục hồi từ root,503 retry cursor cũ; mọi thao tác sau synthetic
+login chỉ GET. Mock all-origin HTTP, chặn WS/provider. Không body/key/PII thật.
+Harness đầu gọi số trang3 chưa tải và timeout; sửa selector theo component thật:
+chỉ các trang đã tải có số, dùng nút Sau để mở trang mới; không sửa product để
+phù hợp test. Baseline và after cuối cùng đều PASS cùng harness đã sửa.
+
+PASS build/typecheck,426unit/55file, scoped lint, docs/diff; detector WalletHistory
+0finding. Đã xem capture lỗi403390/1440: error/retry trong receipt hiện có, không
+overflow;46 CSS production khớp byte base, không style/animation/asset thay đổi.
+Evidence local `.tmp/member-web-wallet-history-access/` before/after JSON/capture,
+build/typecheck/unit/lint/detector và preservation. Demo54file/status giữ nguyên
+theo fingerprint.401 có predicate nhưng refresh/revoke session thật, API/Mongo,
+provider/native/người thật NOT RUN; fixture403 không chứng minh server thực tế
+đang có lỗi phân quyền. READINESS không đổi, không push/PR/merge/deploy.
+
 ## Ví: chặn vòng cursor và dừng tải đếm đơn khi rời trang —05/11/2026
 
 Nhánh `codex/member-web-pending-withdrawal-pagination`, base `504c4b0b`; checkpoint

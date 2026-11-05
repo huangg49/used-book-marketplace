@@ -1,25 +1,27 @@
 # Gia cố khả năng phục hồi Member web —05/11/2026
 
 Owner giao tiếp tục cuốn chiếu tối ưu web, giữ animation và checkout demo.
-Nhánh `codex/member-web-pending-withdrawal-pagination`, base `504c4b0b`;
-checkpoint subject `fix(user-web): bound pending withdrawal pagination lifecycle`.
-[PendingWithdrawalNotice](../../apps/user-web/src/pages/PendingWithdrawalNotice.tsx)
-chặn cursor lặp, dừng trang tiếp khi query bị hủy sau rời Ví. Không hủy HTTP đang
-chạy vì transport chung sở hữu timeout riêng; không giới hạn số trang hợp lệ,
-không đổi polling15giây/quyền/contract/ledger. Tổng chỉ hiện sau đọc trọn danh sách,
-ID trùng tính1, lỗi dùng error/retry hiện có. Baseline8/after8 browser390/1440 PASS,
-7unit mới kiểm cursor/abort/deferred race/partial error/retry/empty. Build/typecheck,
-426unit/55file và scoped lint PASS;46 CSS khớp byte, không JSX/motion/asset mới.
+Nhánh `codex/member-web-wallet-history-access`, base `cc42b67f`; checkpoint
+subject `fix(user-web): hide wallet history after denied reads`.
+[WalletHistory](../../apps/user-web/src/pages/WalletHistory.tsx) ẩn dòng/số dư sau
+lịch sử và pager khi401/403 kể cả lỗi trang tiếp; error/retry hiện có phục hồi
+bằng refetch. Không hiện empty hoặc hướng dẫn giữ cache khi bị từ chối quyền.
+503 vẫn giữ dòng đã đọc và retry cursor cũ. Baseline8/after8 browser390/1440 PASS;
+build/typecheck,426unit/55file, scoped lint/docs/diff và detector0finding PASS.
+46 CSS khớp byte, không style/motion/asset mới. Không đổi quyền/ledger/contract.
 [Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md).
 
-Gói trước `504c4b0b` giữ intent rút tiền khi403 sau mất ACK; `57dcf7f2` sửa ký
+Gói cùng lượt `cc42b67f` chặn vòng cursor đếm đơn rút chờ, dừng trang tiếp khi
+rời Ví; HTTP đang chạy vẫn hoàn tất/timeout, không giới hạn số trang hợp lệ.
+Baseline8/after8 browser PASS,7unit mới kiểm abort/race/cursor/partial/retry/empty.
+Các gói trước `504c4b0b` giữ intent rút khi403 sau mất ACK; `57dcf7f2` sửa ký
 quỹ fallback0, `b1a177ad` sửa trạng thái đọc inbox, `7871737f` làm mới kệ sau ACK.
 Chi tiết editor/auction/profile/review/cart giữ trong báo cáo trên. Không DB/
 provider/GHN/Forum/migration/seed, không sửa checkout demo, push/PR/merge/deploy.
-Demo54file giữ nguyên theo fingerprint; READINESS không đổi. API/Mongo/native/
-human NOT RUN. Pending lệnh rút còn component-local, không bền qua reload. Các
-hạn chế Save/Submit qua remount, avatar/mail thật và địa chỉ/AI vẫn mở; không suy
-nguyên nhân server rớt đã được xử lý.
+Demo54file/status giữ nguyên theo fingerprint; READINESS không đổi. API/Mongo/
+native/human và401 refresh thật NOT RUN. Pending lệnh rút còn component-local,
+không bền qua reload. Các hạn chế Save/Submit qua remount, avatar/mail thật và
+địa chỉ/AI vẫn mở; không suy nguyên nhân server rớt đã được xử lý.
 
 # Tích hợp main vào nhánh phát triển —05/11/2026
 
