@@ -64,8 +64,8 @@ import purchaseStyles from "./PurchaseFlow.module.css";
 import styles from "./SellBookPage.module.css";
 import { BundleEditor, BundleManifest } from '../components/BookBundle';
 import { bundleCondition, bundleError, type BookBundle } from '../lib/book-bundle';
+import { createCoverCropLifecycle } from '../lib/cover-crop-lifecycle';
 import {
-  cropImageToCover,
   calculateCoverCrop,
   type CoverCropResult,
   type CoverPosition,
@@ -129,6 +129,11 @@ export function SellBookPage() {
   const [hasCoverPhoto, setHasCoverPhoto] = useState(false);
   const [coverCropMeta, setCoverCropMeta] = useState<CoverCropResult | null>(null);
   const coverCropMetaRef = useRef<CoverCropResult | null>(null);
+  const coverCrops = useMemo(() => createCoverCropLifecycle(), []);
+  useEffect(() => {
+    coverCrops.activate();
+    return () => coverCrops.dispose();
+  }, [coverCrops]);
   const coverInput = useRef<HTMLInputElement>(null);
   const supportInput = useRef<HTMLInputElement>(null);
   const replacementInput = useRef<HTMLInputElement>(null);
@@ -362,13 +367,14 @@ export function SellBookPage() {
   const handleCoverPositionChange = async (position: CoverPosition) => {
     if (!coverCropMeta || hasAttempt || submitting) return;
     try {
-      const result = await cropImageToCover(
+      const result = await coverCrops.run(
         coverCropMeta.rawFile,
         position,
         coverCropMeta.rawUrl,
       );
-      if (formData.images[0]) {
-        URL.revokeObjectURL(formData.images[0]);
+      if (!result) return;
+      if (coverCropMetaRef.current) {
+        URL.revokeObjectURL(coverCropMetaRef.current.croppedUrl);
       }
       setCoverCropMeta(result);
       coverCropMetaRef.current = result;
@@ -507,13 +513,12 @@ export function SellBookPage() {
     if (kind === "cover") {
       photoFocusTarget.current = "images";
       const file = selected[0]!;
-      cropImageToCover(file, "center")
+      coverCrops.run(file, "center")
         .then((result) => {
-          if (hasCoverPhoto) {
-            URL.revokeObjectURL(formData.images[0]!);
-            if (coverCropMetaRef.current?.rawUrl) {
-              URL.revokeObjectURL(coverCropMetaRef.current.rawUrl);
-            }
+          if (!result) return;
+          if (coverCropMetaRef.current) {
+            URL.revokeObjectURL(coverCropMetaRef.current.croppedUrl);
+            URL.revokeObjectURL(coverCropMetaRef.current.rawUrl);
           }
           const offset = Number(hasCoverPhoto);
           setCoverCropMeta(result);
@@ -852,6 +857,7 @@ export function SellBookPage() {
           ? `support-remove-${Math.min(index - Number(hasCoverPhoto), supportCount - 2)}`
           : "add-support-photo";
     if (hasCoverPhoto && index === 0) {
+      coverCrops.invalidate();
       setHasCoverPhoto(false);
       if (coverCropMetaRef.current?.rawUrl) {
         URL.revokeObjectURL(coverCropMetaRef.current.rawUrl);

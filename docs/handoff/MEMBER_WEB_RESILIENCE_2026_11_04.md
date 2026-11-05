@@ -7,6 +7,40 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Ảnh bìa: giữ lượt cắt mới nhất, bỏ kết quả sau xóa/rời trang —05/11/2026
+
+Nhánh `codex/member-web-cover-crop-lifecycle`, base `012cfde5`; checkpoint subject
+`fix(user-web): discard obsolete cover crop results`.
+[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) trước áp dụng mọi
+crop response theo thứ tự trả về: ảnh/vị trí cũ ghi đè mới, xóa rồi ảnh xuất hiện
+lại, hoặc ảnh tạo URL sau unmount không còn owner. [Lifecycle](../../apps/user-web/src/lib/cover-crop-lifecycle.ts)
+gắn generation mỗi lượt; chỉ lượt mới nhất khi còn mounted được áp dụng. Xóa
+cover invalidate, cleanup dispose, activate giữ StrictMode cũ không sống lại.
+Response stale thu hồi cropped URL, raw URL chỉ thu hồi nếu chính lượt đó tạo;
+reposition mượn raw hiện tại giữ nó. Error stale không thay error/focus mới; error
+current vẫn theo đường lỗi có sẵn. Khi accept, revoke crop thực sự đang giữ ở ref
+thay snapshot render cũ. Không khóa/rút ngắn kéo cắt hoặc đổi chất lượng/crop rule.
+
+[Production `/sell` fixture](../../apps/user-web/tests/cover-crop-lifecycle.mjs),
+`pnpm --filter @used-books/user-web test:cover-crop-lifecycle:browser`:
+baseline8/after8 PASS,390/1440 ×2ảnh đảo thứ tự/Trái→Phải đảo thứ tự/xóa khi pending/
+Back xác nhận Rời trang khi pending. Giữ toBlob callbacks rồi trả lượt sau trước.
+Trước ảnh đầu/vị trí Trái ghi đè lựa chọn sau; sau giữ ảnh mới/Phải100. Live URL
+trước4/3/2/2 theo4ca; sau2/2/0/0,2là raw+crop đang dùng. Browser đi qua entry
+login→kệ→Đăng sách, thao tác và modal rời thật; backend synthetic all-origin,
+không upload/draft/save/submit/provider. [8unit lifecycle](../../apps/user-web/src/lib/cover-crop-lifecycle.test.ts)
+kiểm order, borrowed URL, invalidate/dispose/reactivate và late/current error.
+6ca failure/recovery gói trước PASS lại trên production cuối.
+
+PASS build/typecheck,444unit/57file, scoped lint exit0 (1warning memo dependency
+đã có), docs/diff. Detector3 advisory literal color đã có ở base; không có thay
+đổi palette/JSX/style/asset/motion.46 CSS production khớp byte, so block memo và
+literal xác nhận cảnh báo không do diff này. Evidence
+`.tmp/member-web-cover-crop-lifecycle/` before/after/unit/regression/log/preservation.
+Demo54file/status giữ nguyên; READINESS không đổi. Native/human/heap máy thật
+NOT RUN. Reset sau Đăng cuốn khác, crop đang chạy khi submit và memo theo địa chỉ
+là các đường caller còn cần kiểm riêng; không suy hoàn tất toàn bộ wizard.
+
 ## Ảnh bìa: thu hồi URL khi crop lỗi, giữ ảnh gốc khi đổi vị trí —05/11/2026
 
 Nhánh `codex/member-web-cover-crop-failure`, base `bde3c790`; checkpoint subject

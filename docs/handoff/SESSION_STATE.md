@@ -1,18 +1,21 @@
 # Gia cố khả năng phục hồi Member web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-cover-crop-failure`, base `bde3c790`; checkpoint subject
-`fix(user-web): release failed cover crop previews`.
-[cropImageToCover](../../apps/user-web/src/lib/image-crop.ts) thu hồi raw URL tự
-cấp nếu decode/Canvas/encode lỗi; giữ URL caller đưa khi đổi vị trí và chuyển đủ
-ownership khi thành công. Ảnh hỏng có thông báo tiếng Việt.10unit ownership mới
-baseline4fail/6pass→10pass. Baseline6/after6 production `/sell`390/1440 PASS: lỗi
-rồi chọn ảnh tốt/xóa, live URL1→0, giữ title và error phục hồi. Build/typecheck,
-436unit/56file, scoped lint/docs/diff PASS;46 CSS khớp byte, không JSX/style/motion/
-asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Async crop trả về muộn
-sau rời trang/các crop chồng nhau còn cần kiểm riêng ở caller. Không native/human/
-heap máy thật; backend/provider mô phỏng, không upload/save/submit/DB thật.
+Nhánh `codex/member-web-cover-crop-lifecycle`, base `012cfde5`; checkpoint subject
+`fix(user-web): discard obsolete cover crop results`.
+[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) dùng generation cho
+crop: giữ lượt mới nhất, invalidate khi xóa, dispose/activate theo mount/StrictMode.
+Stale response thu hồi URL riêng, giữ raw mượn; stale error không đổi error/focus.
+Baseline8/after8 `/sell`390/1440 PASS: ảnh/vị trí đảo response, xóa/rời khi pending.
+Live URL4/3/2/2→2/2/0/0 (2là cover hiện tại).8unit lifecycle mới,6failure regression
+PASS. Build/typecheck,444unit/57file, scoped lint exit0, docs/diff PASS.1warning memo
+và3color advisory detector đã có ở base;46 CSS khớp byte, không JSX/style/motion/
+asset đổi. [Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md). Reset sau
+Đăng cuốn khác, crop đang chạy khi submit và memo theo địa chỉ cần kiểm tiếp.
+Không native/human hoặc heap máy thật; backend/provider mô phỏng, không mutation.
 
+Gói cùng lượt `012cfde5` thu hồi raw URL crop fail, giữ raw caller khi reposition,
+10unit mới và6production error/recovery PASS; decode error có hướng dẫn tiếng Việt.
 Gói cùng lượt `bde3c790` thu hồi đủ ảnh Autofill StrictMode, remove theo URL tránh
 click lặp xóa ảnh khác; baseline8/after8 dev/prod, `/sell` read regression6ca PASS.
 Gói cùng lượt `76553495` khóa đọc Autofill trước await, ISBN click lặp2→1POST,
