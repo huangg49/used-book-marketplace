@@ -2,7 +2,7 @@ import { clearAiPriceAttribution, type PriceReferenceState, assistError, decisio
 import { PriceAssistPanel } from "../components/PriceAssistPanel";
 import { createListingPriceRequest, type PricePhase } from "../services/listing-price-assist";
 import type { CatalogInput } from "../services/listing-submission";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import {
@@ -831,7 +831,7 @@ export function SellBookPage() {
     const value = Number(raw);
     return Number.isInteger(value) && value >= 10_000 && value <= 1_000_000;
   }
-  function hasValidOriginAddress() {
+  const hasValidOriginAddress = useCallback(() => {
     if (addresses.data?.items.some((item) => item.id === originAddressId))
       return true;
     return (
@@ -842,7 +842,7 @@ export function SellBookPage() {
       /^0\d{9}$/.test(originForm.phone.trim()) &&
       originForm.detail.trim().length >= 5
     );
-  }
+  }, [addresses.data, serviceAreas.data, originAddressId, originForm]);
   function changeOriginForm(field: keyof typeof originForm, value: string) {
     originAddressIntent.current = null;
     setOriginForm((previous) => ({ ...previous, [field]: value }));
@@ -1136,6 +1136,7 @@ export function SellBookPage() {
     classification,
     hasCoverPhoto,
     needsOrigin,
+    hasValidOriginAddress,
     ownershipDeclared,
   ]);
 

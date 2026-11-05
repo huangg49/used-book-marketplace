@@ -7,6 +7,34 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Tiến độ đăng sách theo đúng địa chỉ hiện tại —05/11/2026
+
+Nhánh `codex/member-web-origin-progress`, base `817ac3f5`; checkpoint subject
+`fix(user-web): refresh listing progress with origin validity`.
+[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) memo progressFields
+trước bỏ dependency của hasValidOriginAddress. Sửa/chọn nơi gửi không tăng tiến
+độ, hoặc GET mới bỏ địa chỉ/khu vực nhưng tiến độ vẫn tính là hợp lệ. Nay callback
+ổn định theo addresses.data/serviceAreas.data/selected ID/form, memo phụ thuộc
+callback đó. Giữ nguyên validation, vùng luân chuyển, guard gửi/tiếp tục, dữ liệu
+form và API; không tự lưu địa chỉ hoặc đổi quy tắc fallback của địa chỉ.
+
+[Production fixture](../../apps/user-web/tests/origin-progress.mjs),
+`pnpm --filter @used-books/user-web test:origin-progress:browser`: baseline8/
+after8 PASS (390/1440 × chọn/bỏ địa chỉ đã lưu/nhập mới+invalid phone/địa chỉ bị bỏ
+sau GET mới/khu vực bị bỏ sau GET mới). Trước5→5 dù chọn/nhập hợp lệ; sau5→6,
+invalid trở về5. Sau xác lập memo hợp lệ, refetch bỏ dữ liệu trước giữ6, sau về5.
+Refetch đi qua visibility và cache hết staleTime bằng Date giả lập, không tắt
+timer/animation; fixture không POST ngoài synthetic login và không ghi DB/provider.
+Harness ban đầu thiếu hậu tố `(VNĐ)` ở label giá, sửa selector theo source; không
+sửa product cho phù hợp test. Lượt cuối baseline/after dùng cùng selector đúng.
+
+PASS build/typecheck,444unit/57file, scoped lint0warning, docs/diff.46 CSS khớp
+byte, không JSX/style/asset/motion đổi. Không chạy lại detector cho dependency/
+callback diff;3color advisory đã ghi ở gói trước giữ nguyên literal tại base.
+Evidence local `.tmp/member-web-origin-progress/` before/after/log/preservation.
+Không là native/human hoặc xác minh API/address storage thật. Demo54file/status
+giữ nguyên; READINESS không đổi, không push/PR/deploy.
+
 ## Ảnh bìa: giữ lượt cắt mới nhất, bỏ kết quả sau xóa/rời trang —05/11/2026
 
 Nhánh `codex/member-web-cover-crop-lifecycle`, base `012cfde5`; checkpoint subject

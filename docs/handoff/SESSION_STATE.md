@@ -1,19 +1,20 @@
 # Gia cố khả năng phục hồi Member web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-cover-crop-lifecycle`, base `012cfde5`; checkpoint subject
-`fix(user-web): discard obsolete cover crop results`.
-[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) dùng generation cho
-crop: giữ lượt mới nhất, invalidate khi xóa, dispose/activate theo mount/StrictMode.
-Stale response thu hồi URL riêng, giữ raw mượn; stale error không đổi error/focus.
-Baseline8/after8 `/sell`390/1440 PASS: ảnh/vị trí đảo response, xóa/rời khi pending.
-Live URL4/3/2/2→2/2/0/0 (2là cover hiện tại).8unit lifecycle mới,6failure regression
-PASS. Build/typecheck,444unit/57file, scoped lint exit0, docs/diff PASS.1warning memo
-và3color advisory detector đã có ở base;46 CSS khớp byte, không JSX/style/motion/
-asset đổi. [Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md). Reset sau
-Đăng cuốn khác, crop đang chạy khi submit và memo theo địa chỉ cần kiểm tiếp.
-Không native/human hoặc heap máy thật; backend/provider mô phỏng, không mutation.
+Nhánh `codex/member-web-origin-progress`, base `817ac3f5`; checkpoint subject
+`fix(user-web): refresh listing progress with origin validity`.
+[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) memo tiến độ theo
+callback validity địa chỉ hiện tại: sửa/chọn địa chỉ và GET mới bỏ địa chỉ/khu vực
+đều cập nhật đúng số mục hợp lệ. Không đổi validation/vùng/guard hay tự lưu địa chỉ.
+Baseline8/after8 production `/sell`390/1440 PASS. Build/typecheck,444unit/57file,
+scoped lint0warning, docs/diff PASS;46 CSS khớp byte, không JSX/style/motion/asset.
+3color advisory cũ giữ literal, không rerun detector cho dependency-only diff.
+[Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md). Backend synthetic,
+không DB/provider/native/human. Reset sau Đăng cuốn khác và crop khi submit cần
+kiểm tiếp; chưa suy hoàn tất wizard.
 
+Gói cùng lượt `817ac3f5` giữ lượt crop mới nhất và thu hồi khi xóa/rời, baseline8/
+after8+6failure regression,8unit mới PASS; live URL4/3/2/2→2/2/0/0 theo4ca.
 Gói cùng lượt `012cfde5` thu hồi raw URL crop fail, giữ raw caller khi reposition,
 10unit mới và6production error/recovery PASS; decode error có hướng dẫn tiếng Việt.
 Gói cùng lượt `bde3c790` thu hồi đủ ảnh Autofill StrictMode, remove theo URL tránh
