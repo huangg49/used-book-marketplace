@@ -7,6 +7,36 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Hỗ trợ: phục hồi bộ chọn giao dịch và trang trống còn cursor —05/11/2026
+
+Nhánh `codex/member-web-support-target-recovery`, base `a43ee000`; checkpoint subject
+`fix(user-web): preserve support target choices across transient page errors`.
+[SupportTargetPicker](../../apps/user-web/src/features/support/SupportTargetPicker.tsx)
+trước ẩn mọi radio khi trang sau503 và retry root thay vì cursor lỗi; empty chỉ
+nhìn trang đầu nên vẫn nói chưa có giao dịch sau khi trang sau đã trả lựa chọn.
+Nay lỗi tạm thời giữ lựa chọn đã tải, retry đúng cursor;401/403/404 ẩn lựa chọn/
+load-more và retry root. Flatten toàn bộ pages để xét empty, còn cursor chỉ nói
+trong dữ liệu đã tải; khóa nút khi fetching và không cancel/refetch chồng nhau.
+Không đổi quyền chọn target, detail validation, support command hay ADR0062.
+
+[Fixture production](../../apps/user-web/tests/support-target-recovery.mjs),
+`pnpm --filter @used-books/user-web test:support-target-recovery:browser`:
+baseline8/after8 PASS,390/1440 × next503/next403/sparse/complete-empty.503 giữ2
+lựa chọn rồi thêm thứ3 bằng retry cursor,3GET thay vì4;403 ẩn và đọc lại root.
+Trang đầu trống/trang sau2lựa chọn không còn câu empty sai. Tiêu đề/nội dung giữ
+nguyên, chọn target đọc detail và trả focus đúng. Baseline harness ban đầu dùng
+radio.check đợi actionability sau khi picker đã unmount; sửa thành click label,
+giữ nguyên assertions và baseline cuối PASS.4profile resource-recovery hồi quy
+PASS (cart/support, replay create/reply và remount), không bỏ assertion.
+
+PASS build/typecheck,449unit/57file, scoped lint JSON0, docs/diff, detector0finding.
+Đã xem captures390/1440;46 CSS khớp byte, không style/motion/asset đổi. Evidence
+`.tmp/member-web-support-target-recovery/`. All-origin HTTP mock/chặn WS/external,
+synthetic login/GET, không support mutation/DB/provider/native/human;401 refresh
+thật NOT RUN. Demo54file/status giữ nguyên fingerprint, READINESS giữ nguyên;
+không push/PR/deploy. Đây là phục hồi UI với responses kiểm soát, chưa chứng minh
+hệ thống thật không rớt server hay mọi giao dịch đã được liệt kê.
+
 ## Trao đổi: phục hồi số lượng cùng danh sách sau lỗi đọc —05/11/2026
 
 Nhánh `codex/member-web-exchange-count-recovery`, base `b9c98749`; checkpoint subject

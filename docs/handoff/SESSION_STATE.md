@@ -1,20 +1,20 @@
 # Gia cố khả năng phục hồi Member web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-exchange-count-recovery`, base `b9c98749`; checkpoint subject
-`fix(user-web): recover exchange counts together with the list`.
-[ExchangeMinePage](../../apps/user-web/src/pages/ExchangeMinePage.tsx) counts lỗi
-hoặc list401/403 không giữ số cũ, hiện “—”; lỗi chỉ counts có alert/retry nhưng
-list vẫn mở. Thử lại refetch cả2query, fetching khóa nút,0thật giữ0. Baseline10/
-after10 production390/1440 PASS, initial503/cached403/cached503/counts-only/zero,
-retry list2card+count2/0/0/0 đúng.16route/keyboard/pagination/Back hồi quy PASS.
+Nhánh `codex/member-web-support-target-recovery`, base `a43ee000`; checkpoint subject
+`fix(user-web): preserve support target choices across transient page errors`.
+[SupportTargetPicker](../../apps/user-web/src/features/support/SupportTargetPicker.tsx)
+giữ radio/draft khi trang sau503, retry cursor;401/403/404 ẩn lựa chọn/load-more
+và retry root. Empty xét mọi trang và còn cursor không kết luận hết dữ liệu.
+Baseline8/after8 production390/1440 PASS;4resource-recovery regression PASS.
 Build/typecheck,449unit/57file, scoped lint JSON0, docs/diff/detector0finding PASS;
 46 CSS khớp byte, không style/motion/asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md).
-Backend giả lập login/GET, không mutation/DB/provider/native/human;401 refresh
-thật NOT RUN.2query vẫn read riêng, không snapshot chung. Không đổi100exchange/
-quyền/contract. Demo54file/status giữ nguyên, READINESS không đổi, không push/PR/
-deploy. Tiếp tục chọn lỗi có evidence, không suy toàn web hết lỗi.
+Backend fixture cô lập, không API/Mongo/provider/native/human;401 refresh thật
+NOT RUN. Demo54file/status giữ nguyên, READINESS giữ; không push/PR/deploy.
+Tiếp tục rà tham số URL hỗ trợ; không suy toàn web hết lỗi hoặc server đã ổn.
 
+Gói cùng lượt `a43ee000` counts Exchange lỗi hoặc list401/403 hiện “—”, retry
+cả counts/list; baseline10/after10+16route regression PASS. Hai read vẫn độc lập.
 Gói cùng lượt `b9c98749` whitelist own tab keys: constructor/__proto__/toString
 fallback sent, không còn tabảo/aria sai; baseline16/after16 PASS,4validtabs và
 unknown giữ đúng hành vi. Không là prototype mutation/exploit được chứng minh.

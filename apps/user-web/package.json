@@ -91,7 +91,8 @@
     "test:work-inbox-read-access:browser": "node tests/work-inbox-read-access.mjs",
     "test:work-inbox-sparse-pages:browser": "node tests/work-inbox-sparse-pages.mjs",
     "test:exchange-route-params:browser": "node tests/exchange-route-params.mjs",
-    "test:exchange-count-recovery:browser": "node tests/exchange-count-recovery.mjs"
+    "test:exchange-count-recovery:browser": "node tests/exchange-count-recovery.mjs",
+    "test:support-target-recovery:browser": "node tests/support-target-recovery.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
