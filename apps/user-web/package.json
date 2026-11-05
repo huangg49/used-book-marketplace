@@ -100,7 +100,8 @@
     "test:search-condition-label-recovery:browser": "node tests/search-condition-label-recovery.mjs",
     "test:review-list-read-recovery:browser": "node tests/review-list-read-recovery.mjs",
     "test:search-read-access:browser": "node tests/search-read-access.mjs",
-    "test:notification-list-read-recovery:browser": "node tests/notification-list-read-recovery.mjs"
+    "test:notification-list-read-recovery:browser": "node tests/notification-list-read-recovery.mjs",
+    "test:owner-shelf-read-access:browser": "node tests/owner-shelf-read-access.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

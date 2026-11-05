@@ -8,6 +8,32 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Kệ sách của tôi: ẩn phân trang cache khi quyền đọc bị từ chối —05/11/2026
+
+Nhánh `codex/member-web-owner-shelf-read-access`, base `87b22bfe`; checkpoint
+subject `fix(user-web): hide owner shelf paging after denied reads`.
+[MyBooksPage](../../apps/user-web/src/pages/MyBooksPage.tsx) đã ẩn row khi query
+lỗi nhưng CursorPager ngoài error branch vẫn hiện trên URL có cursor; cache
+count còn nguyên sau401/403. Nay denied ẩn pager và hướng kiểm phiên/tài khoản.
+Retry vẫn đọc cursor hiện tại;503 giữ cách hiển thị lỗi/pager cũ. Không thay
+owner querykey, filter, listing commands/draft/blocker/replay hoặc style/motion.
+
+[Production fixture](../../apps/user-web/tests/owner-shelf-read-access.mjs),
+`pnpm --filter @used-books/user-web test:owner-shelf-read-access:browser`:
+baseline12/after12 PASS390/1440 × initialcursor/cachedcursor/cachedroot ×403/503.
+Trước cursor403 vẫn pager, sau ẩn; retry200 đúng cursor và1row hoặc root2rows,
+Approved filter/Back và cursor paste Về đầu đúng. Harness đầu dùng article thay
+li và nhầm visible label Về đầu với aria-label Về trang đầu; sửa selector đúng
+DOM, giữ click thật và assertions, baseline/after cuối exit0.12listing-action-
+recovery hồi quy PASS shelf/editor ×hide/archive/conflict, exact replay/remount/
+refusal frozen/opposite action vẫn đúng (mutation chỉ fixture).
+
+Build/typecheck,471unit/58file, scoped lint JSON0/docs/diff/detector0finding PASS.
+Đã xem capture390/1440,46 CSS khớp byte, không style/motion/asset đổi. Evidence
+`.tmp/member-web-owner-shelf-read-access/`. All-origin HTTP mock/chặn WS/external,
+synthetic login/GET trong fixture mới, không API/DB/provider/native/human hoặc
+401refresh thật. Demo54file/status giữ nguyên, READINESS giữ; không push/PR/deploy.
+
 ## Thông báo: dọn lỗi phân trang cũ sau khi tải lại quyền đọc —05/11/2026
 
 Nhánh `codex/member-web-notification-list-read-recovery`, base `f7a49021`;

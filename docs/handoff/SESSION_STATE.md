@@ -1,18 +1,19 @@
 # Gia cố khả năng phục hồi web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-notification-list-read-recovery`, base `f7a49021`;
-checkpoint subject `fix(user-web): reset notification paging after denied reads`.
-[NotificationsPage](../../apps/user-web/src/pages/NotificationsPage.tsx) reset
-activity khi denied để root200 không còn alert cursor cũ; lỗi hướng kiểm phiên.
-503giữ rows/retrycursor, empty sparse đã đúng nên giữ nguyên. Baseline14/after14
-production390/1440 +14read-state hồi quy PASS.471unit/58file/build/typecheck/
-scoped lint JSON0/docs/diff/detector0 PASS;46 CSS khớp byte, không style/motion/
-asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Chỉ login/GET mock,
-không mark-read/API/DB/provider/native/human/401refresh thật. Demo54file/status
-giữ, READINESS giữ; không push/PR/deploy. Tiếp tục owner-shelf cursor metadata
-khi denied; MyAuctions tương tự cần kiểm bằng browser trước sửa.
+Nhánh `codex/member-web-owner-shelf-read-access`, base `87b22bfe`; checkpoint
+subject `fix(user-web): hide owner shelf paging after denied reads`.
+[MyBooksPage](../../apps/user-web/src/pages/MyBooksPage.tsx) denied ẩn CursorPager/
+cache count, copy kiểm phiên. Retry đúng cursor/filter;503 giữ hành vi cũ.
+Baseline12/after12 production390/1440 +12listing action hồi quy PASS (hide/archive/
+conflict/remount/exact replay).471unit/58file/build/typecheck/scoped lint JSON0/
+docs/diff/detector0 PASS;46 CSS khớp byte, không style/motion/asset đổi.
+[Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Không API/DB/provider/native/human/
+401refresh thật; chỉ browser fixtures. Demo54file/status giữ, READINESS giữ;
+không push/PR/deploy. Tiếp tục MyAuctions pager có mẫu tương tự, kiểm trước sửa.
 
+Gói cùng lượt `87b22bfe` Notifications reset activity denied, root200 dọn lỗi cũ;
+baseline14/after14+14read-state hồi quy PASS, sparse unread giữ đúng,46CSS nguyên.
 Gói cùng lượt `f7a49021` Search denied ẩn card/count/pager,400/422 nói tham số,
 503 giữ dữ liệu; baseline16/after16+18condition+9search hồi quy PASS,46CSS nguyên.
 Gói cùng lượt `7274dcc2` Reviews list denied có retry, giữ tabs/reputation riêng,

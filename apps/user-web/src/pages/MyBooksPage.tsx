@@ -1,6 +1,7 @@
 import { CursorPager } from "../components/Pagination/CursorPager";
 import { useCursorNavigation } from "../components/Pagination/useCursorNavigation";
 import { useQuery } from "@tanstack/react-query";
+import { ApiError } from "@used-books/session-client";
 import { Link, useBeforeUnload, useBlocker, useLocation, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import { Plus, LayoutGrid, Rows3, X } from "lucide-react";
@@ -69,6 +70,7 @@ export function MyBooksPage() {
       cursor,
     ),
   );
+  const readDenied = query.error instanceof ApiError && [401, 403].includes(query.error.status);
 
   function selectFilter(value: string) {
     const next = new URLSearchParams();
@@ -143,8 +145,9 @@ export function MyBooksPage() {
             <div className={styles.state} role="alert">
               <h2>Chưa tải được kệ sách</h2>
               <p>
-                Kiểm tra kết nối rồi thử lại. Các bài đăng của bạn vẫn được giữ
-                trên máy chủ.
+                {readDenied
+                  ? "Quyền xem kệ sách của bạn đã thay đổi. Kiểm tra phiên đăng nhập hoặc trạng thái tài khoản rồi thử lại."
+                  : "Kiểm tra kết nối rồi thử lại. Các bài đăng của bạn vẫn được giữ trên máy chủ."}
               </p>
               <button
                 type="button"
@@ -226,8 +229,8 @@ export function MyBooksPage() {
             />
           )}
 
-      <CursorPager navigation={navigation} nextCursor={!query.isError ? query.data?.nextCursor : undefined}
-        busy={query.isFetching} failed={query.isError} count={query.data?.items.length} label="Trang kệ sách" itemLabel="bài đăng" anchorId="owner-shelf-results" />
+      {!readDenied && <CursorPager navigation={navigation} nextCursor={!query.isError ? query.data?.nextCursor : undefined}
+        busy={query.isFetching} failed={query.isError} count={query.data?.items.length} label="Trang kệ sách" itemLabel="bài đăng" anchorId="owner-shelf-results" />}
         </div>
       </section>
       <ConfirmDialog isOpen={blocker.state === "blocked"} title="Rời trang khi chưa xác minh?"
