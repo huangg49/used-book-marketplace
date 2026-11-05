@@ -8,6 +8,33 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Tìm sách: ẩn cache khi bị từ chối và phân biệt tham số sai —05/11/2026
+
+Nhánh `codex/member-web-search-read-access`, base `7274dcc2`; checkpoint subject
+`fix(user-web): scope catalog cached data to current read access`.
+[BookSearchPage](../../apps/user-web/src/pages/BookSearchPage.tsx) trước vẫn hiện
+cached cards/count và cursor pager sau401/403, thông báo chỉ như lỗi mạng. Nay
+inaccessible ẩn cả3phần, có hướng kiểm phiên/tài khoản;400/422 hướng kiểm từ
+khóa/bộ lọc/trang thay vì chỉ kết nối.503 vẫn giữ data kèm cảnh báo cũ. Retry
+refetch trang hiện tại, không đổi cursor/filter hoặc quyền API, query/cache keys,
+previewdata, ảnh, sort, form hay motion. Không tự bỏ tham số không hợp lệ.
+
+[Production fixture](../../apps/user-web/tests/search-read-access.mjs),
+`pnpm --filter @used-books/user-web test:search-read-access:browser`: baseline16/
+after16 PASS390/1440, initial/root-refresh/cursor-refresh403/503 và initial400/
+422. Cache root2cards/trang sau1card trước403 vẫn hiện; sau ẩn card/count/pager,
+200retry trả đúng trang và Back/query giữ.503 giữ data,400/422 không thành empty.
+Fixture đầu kiểm overflow ngay giữa slide entrance nên FAIL; thay bằng poll tối
+đa5giây chờ animation tự hoàn tất, không bỏ kiểm geometry. Baseline cuối PASS.
+18condition-label +9search-recovery regression PASS, gồm IME/focus/network/timeout.
+
+Build/typecheck,471unit/58file, scoped lint JSON0/docs/diff/detector0finding PASS;
+đã xem capture390/1440,46 CSS khớp byte, giữ AnimatePresence/exit/leaf effects.
+Evidence `.tmp/member-web-search-read-access/`. All-origin mock/chặn WS/external,
+public GET only; không API/DB/provider/native/human/401refresh thật. Response400/
+422 là fixture, không suy từng thông báo backend thật hoặc server đã ổn định.
+Demo54file/status giữ nguyên, READINESS giữ; không push/PR/deploy.
+
 ## Đánh giá: lỗi đọc danh sách không khóa cả trang và tab uy tín —05/11/2026
 
 Nhánh `codex/member-web-review-list-read-recovery`, base `f4d0f0cb`; checkpoint

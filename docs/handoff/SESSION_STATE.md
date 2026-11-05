@@ -1,18 +1,21 @@
 # Gia cố khả năng phục hồi web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-review-list-read-recovery`, base `f4d0f0cb`; checkpoint
-subject `fix(user-web): scope denied review list reads and allow recovery`.
-[ReviewsPage](../../apps/user-web/src/pages/ReviewsPage.tsx) list denied có retry,
-ẩn cached cards/pager và dọn activity cũ, giữ tabs/reputation độc lập.503 vẫn
-giữ data/retrycursor. Baseline12/after12 production390/1440 +4review-recovery
-regression PASS, gồm draft/409/exact replay/hidden peer/eligibility.471unit/58file,
-build/typecheck/scoped lint JSON0/docs/diff/detector0 PASS.46 CSS khớp byte,
-không style/motion/asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md).
-Chỉ fixture cô lập, không API/DB/provider/native/human/401refresh thật. Demo54file/
-status giữ, READINESS giữ; không push/PR/deploy. Tiếp theo rà search cached-read
-và cách báo lỗi validation khác lỗi mạng.
+Nhánh `codex/member-web-search-read-access`, base `7274dcc2`; checkpoint subject
+`fix(user-web): scope catalog cached data to current read access`.
+[BookSearchPage](../../apps/user-web/src/pages/BookSearchPage.tsx) denied ẩn cached
+cards/count/pager,503 giữ data/cảnh báo;400/422 hướng kiểm tham số. Retry giữ
+cursor/filter. Baseline16/after16 production390/1440,18condition-label +9search
+recovery regression PASS.471unit/58file/build/typecheck/scoped lint JSON0/docs/
+diff/detector0 PASS.46 CSS khớp byte, giữ motion/leaf/exit, không asset/style đổi.
+[Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Chỉ HTTP mock, không API/DB/provider/
+native/human/401refresh thật. Demo54file/status giữ, READINESS giữ; không push/PR/
+deploy. Tiếp theo Notifications cursor denied còn activity cũ và empty trước hết
+cursor cần kiểm lại; MyBooks/MyAuctions pager còn metadata cache khi denied.
 
+Gói cùng lượt `7274dcc2` Reviews list denied có retry, giữ tabs/reputation riêng,
+reset activity cũ; baseline12/after12+4review mutation fixture regression PASS,
+471unit/58file và46CSS khớp byte; không đổi eligibility/command/motion.
 Gói cùng lượt `f4d0f0cb` condition chip own key, baseline18/after18,2crash→0,
 9search regression PASS; giữ query/API validation và animation,46CSS khớp byte.
 Gói cùng lượt `6352589f` own-key auction sort/price/ends;42baseline/42after,

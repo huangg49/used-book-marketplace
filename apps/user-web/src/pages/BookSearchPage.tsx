@@ -2,6 +2,7 @@ import { CursorPager } from "../components/Pagination/CursorPager";
 import { useCursorNavigation } from "../components/Pagination/useCursorNavigation";
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError } from "@used-books/session-client";
 import { preload } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -505,6 +506,8 @@ export function BookSearchPage() {
     staleTime: 30_000,
     gcTime: 300_000,
   });
+  const inaccessible = result.error instanceof ApiError && [401, 403].includes(result.error.status);
+  const invalidReadParameters = result.error instanceof ApiError && [400, 422].includes(result.error.status);
   const filterKey = JSON.stringify(initial);
 
   const navigation = useCursorNavigation("catalog");
@@ -918,7 +921,9 @@ export function BookSearchPage() {
                   ? "Kiểm tra lại bộ lọc đã chọn."
                   : result.isFetching || searchPending
                     ? "Đang tìm sách…"
-                    : result.data
+                    : inaccessible
+                      ? "Chưa xác nhận được quyền xem kệ sách."
+                      : result.data
                       ? `${result.data.items.length} ${preview ? "sách xem trước" : "tin đăng"} trên trang này`
                       : "Ảnh, tình trạng và giá của từng bản sách."}
               </p>
@@ -983,8 +988,12 @@ export function BookSearchPage() {
                 <div className={styles.state} role="alert">
                   <h3>Chưa tải được kệ sách</h3>
                   <p>
-                    Kiểm tra kết nối rồi thử lại.
-                    {result.data
+                    {inaccessible
+                      ? "Bạn hiện không có quyền xem kệ sách này. Kiểm tra phiên đăng nhập hoặc trạng thái tài khoản rồi thử lại."
+                      : invalidReadParameters
+                        ? "Từ khóa, bộ lọc hoặc trang đang xem chưa hợp lệ. Hãy kiểm tra lựa chọn hoặc quay về trang đầu."
+                        : "Kiểm tra kết nối rồi thử lại."}
+                    {result.data && !inaccessible
                       ? " Danh sách bên dưới có thể chưa được cập nhật."
                       : ""}
                   </p>
@@ -1016,7 +1025,7 @@ export function BookSearchPage() {
                 </div>
               )}
               <AnimatePresence mode="wait" custom={transitionDirection} initial={false}>
-                {!searchPending && result.data && result.data.items.length > 0 && (
+                {!searchPending && !inaccessible && result.data && result.data.items.length > 0 && (
                   <motion.div
                     key={`${params.get("cursor") || "first"}-${params.get("q") || ""}-${params.get("mode") || ""}-${params.get("sort") || ""}-${initial.categoryId}-${params.get("condition") || ""}`}
                     custom={transitionDirection}
@@ -1034,7 +1043,7 @@ export function BookSearchPage() {
                   </motion.div>
                 )}
               </AnimatePresence>
-              {!searchPending && <CursorPager navigation={navigation}
+              {!searchPending && !inaccessible && <CursorPager navigation={navigation}
                 nextCursor={!result.isError ? result.data?.nextCursor : undefined}
                 busy={result.isFetching} count={result.data?.items.length}
                 label="Phân trang sách" itemLabel={preview ? "sách xem trước" : "bài đăng"}
