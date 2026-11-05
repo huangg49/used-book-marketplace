@@ -12,6 +12,8 @@ import {
 } from "./contracts";
 
 export const historyLabels = {
+  WithdrawalHold: "Rút tiền",
+  WithdrawalRefund: "Rút tiền · Hoàn khoản giữ",
   Topup: "Nạp tiền ví",
   OrderPayment: "Giữ tiền cho đơn sách",
   OrderRefund: "Hoàn tiền đơn sách",

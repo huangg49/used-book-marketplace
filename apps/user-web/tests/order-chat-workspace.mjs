@@ -134,7 +134,15 @@ try {
       if (routePath === "/auth/login") return send({ accessToken: "fixture-" + actor,
         refreshToken: "q".repeat(43), expiresIn: 900,
         user: { ...(role === "Buyer" ? buyer : seller), email: actor + "@example.test", roles: ["MEMBER"], status: "ACTIVE" } });
-      if (routePath === "/auth/me") return send({...(role==='Buyer'?buyer:seller),email:actor+'@example.test',roles:['MEMBER'],status:'ACTIVE'});
+      if (routePath === "/me/profile" && method === "GET") return send({
+        ...(role === "Buyer" ? buyer : seller), version: 1, email: actor + "@example.test",
+        contactPhone: null, avatarId: null, pendingEmailChange: null,
+      });
+      if (routePath === "/auth/me" && method === "GET") return send({
+        ...(role === "Buyer" ? buyer : seller), email: actor + "@example.test",
+        roles: ["MEMBER"], status: "ACTIVE",
+      });
+
       if (routePath === "/me/orders") return send({ items: [...orders.values()].map((order) => ({
         id: order.id, title: order.item.metadata.title, listingId: order.item.listingId,
         version: order.version, state: order.state, role, createdAt: order.createdAt,

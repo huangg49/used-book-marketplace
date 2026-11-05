@@ -13,3 +13,5 @@ export { exchangeAgreementSchema, exchangeBookSnapshotSchema, type ExchangeBookS
 export * from './exchange-commands';
 export * from './support';
 export * from "./exchange-evidence";
+
+export * from './withdrawals';

@@ -245,6 +245,7 @@ type EvidenceChange = {
   decidedAt: Date;
   reason?: string;
 };
+export type WithdrawalChange = { entityType: 'Withdrawal'; entityId: string; version: number; state: Wire['WithdrawalState']; decidedAt: Date; event: string; reason?: string };
 type CommandChange =
   | EvidenceChange
   | SupportChange
@@ -258,6 +259,7 @@ type CommandChange =
   | AddressChange
   | QuoteChange
   | OrderChange
+  | WithdrawalChange
   | WalletChange
   | PackagingChange
   | ShipmentChange
@@ -827,6 +829,11 @@ export class MongoCommandService {
       }),
     );
   }
+  runWithdrawal<C>(context: CommandContext, operation: string, target: string | null, body: unknown, options: Options<C, WithdrawalChange>) {
+    return this.execute(context, operation, target, body, options, (change, id, now): Wire['WithdrawalReceipt'] => ({
+      id, entityType: 'Withdrawal', entityId: change.entityId, version: change.version, state: change.state, serverTime: now.toISOString(), demoOnly: true,
+    }));
+  }
   runWallet<C>(
     context: CommandContext,
     operation:
@@ -1176,6 +1183,7 @@ export class MongoCommandService {
         change.entityType === 'OrderPackagingEvidence' ||
         change.entityType === 'Shipment' ||
         change.entityType === 'CarrierEvent' ||
+        change.entityType === 'Withdrawal' ||
         change.entityType === 'TopupIntent' ||
         change.entityType === 'AuctionIntake' ||
         change.entityType === 'Auction' ||
@@ -1199,7 +1207,9 @@ export class MongoCommandService {
         topupId: null as string | null,
         pointId: null as string | null,
       };
-      if (change.entityType === 'SupportCase')
+      if (change.entityType === 'Withdrawal')
+        Object.assign(targets, { withdrawalId: change.entityId });
+      else if (change.entityType === 'SupportCase')
         Object.assign(targets, { supportCaseId: change.entityId });
       else if ('accountId' in change)
         Object.assign(targets, { accountId: change.accountId });
@@ -1322,6 +1332,7 @@ export class MongoCommandService {
 
 function auditAfter(change: CommandChange): Json {
   switch (change.entityType) {
+    case 'Withdrawal':
     case 'SupportCase':
       return {
         entityId: change.entityId,

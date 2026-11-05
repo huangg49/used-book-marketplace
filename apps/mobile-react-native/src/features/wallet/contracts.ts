@@ -1,7 +1,8 @@
+import { withdrawalStateSchema } from "@used-books/session-client";
 import type { components } from "@used-books/api-contract";
 import { z } from "zod";
 
-const money = z.number().int().min(0).max(100_000_000);
+const money = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 const demo = {
   demoOnly: z.literal(true),
   label: z.literal("Mô phỏng đồ án"),
@@ -12,12 +13,12 @@ export const walletSummary = z.object({
   ...demo,
   available: money,
   transactionHeld: money,
-  withdrawalHeld: z.literal(0),
+  withdrawalHeld: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
   total: money,
   serverTime: z.iso.datetime({ offset: true }),
   topupEnabled: z.boolean(),
   paymentsEnabled: z.boolean(),
-  withdrawalsEnabled: z.literal(false),
+  withdrawalsEnabled: z.boolean(),
   listingSubmissionFee: money.optional(),
   atomicCheckout: z.boolean().optional(),
   vnpayEnabled: z.boolean().optional(),
@@ -26,6 +27,8 @@ export const walletSummary = z.object({
 export const walletHistoryItem = z.object({
   ...demo,
   journalId: z.uuid(),
+  withdrawalId: z.uuid().nullable().optional(),
+  withdrawalState: withdrawalStateSchema.nullable().optional(),
   topupId: z.uuid().nullable(),
   orderId: z.uuid().nullable(),
   type: z.enum([
@@ -36,8 +39,10 @@ export const walletHistoryItem = z.object({
     "ListingFeeCharge",
     "ListingFeeRefund",
     "ListingFeeSettlement",
+    "WithdrawalHold",
+    "WithdrawalRefund",
   ]),
-  amount: z.number().int().min(-100_000_000).max(100_000_000),
+  amount: z.number().int().min(-Number.MAX_SAFE_INTEGER).max(Number.MAX_SAFE_INTEGER),
   balanceAfter: money,
   postedAt: z.iso.datetime({ offset: true }),
 }) satisfies z.ZodType<components["schemas"]["WalletHistoryItem"]>;

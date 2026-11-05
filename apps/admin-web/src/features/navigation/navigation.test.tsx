@@ -24,6 +24,7 @@ describe("workspace navigation permissions", () => {
   it("does not give an Admin without Staff the custody desks or carrier simulator", () => {
     expect(paths({ ...base, roles: ["ADMIN"] })).toEqual([
       "/dashboard",
+      "/withdrawals",
       "/users",
       "/support",
       "/review/catalog-requests",
@@ -51,7 +52,7 @@ describe("workspace navigation permissions", () => {
   it("combines actual roles without duplicate links or a guessed account role", () => {
     const user = { ...base, roles: ["ADMIN", "STAFF", "TEST_OPERATOR"] } satisfies CurrentUser;
     const links = paths(user);
-    expect(links).toHaveLength(19);
+    expect(links).toHaveLength(20);
     expect(new Set(links).size).toBe(links.length);
     expect(workspaceRole(user)).toBe("Quản trị viên · Nhân viên · Vận hành thử");
     expect(workspaceRole(undefined)).toBe("Chờ xác minh quyền");

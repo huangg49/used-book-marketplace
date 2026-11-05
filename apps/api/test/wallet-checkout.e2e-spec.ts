@@ -1294,16 +1294,16 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
   );
   it('creates an unpaid Seller order and refuses underfunded Buyer payment without a hold', async () => {
     const f = await sale();
-    await fund(f.buyer, 50000);
+    await fund(f.buyer, 40000);
     const created = (await post('/orders', f.body, f.seller).expect(200)).body;
     expect(created).toMatchObject({ state: 'AwaitingPayment', version: 1 });
     await post(`/orders/${created.entityId}/pay`, { expectedVersion: 1 }, f.buyer).expect(409);
     expect(await db.c.direct_orders.findOne({ _id: created.entityId })).toMatchObject({ state: 'AwaitingPayment' });
-    expect((await wallet(f.buyer))).toMatchObject({ available: 50000, transactionHeld: 0 });
+    expect((await wallet(f.buyer))).toMatchObject({ available: 40000, transactionHeld: 0 });
     expect(await db.c.ledger_journals.countDocuments({ orderId: created.entityId })).toBe(0);
     expect(await db.c.exclusive_commitments.countDocuments({ listingId: f.l.entityId, status: 'Active' })).toBe(1);
   });
-  it('holds P+S only on Buyer payment, replays each command and refunds a legal cancellation', async () => {
+  it('holds P with shipping zero only on Buyer payment, replays each command and refunds a legal cancellation', async () => {
     const f = await sale();
     await fund(f.buyer, 80000);
     const key = randomUUID(), r = await post('/orders', f.body, f.seller, key).expect(200);
@@ -1315,7 +1315,7 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
     const paid = await post(`/orders/${r.body.entityId}/pay`, { expectedVersion: 1 }, f.buyer, payKey).expect(200);
     expect(paid.body).toMatchObject({ state: 'PendingSellerConfirmation', version: 2 });
     expect((await post(`/orders/${r.body.entityId}/pay`, { expectedVersion: 1 }, f.buyer, payKey).expect(200)).body).toEqual(paid.body);
-    expect(await wallet(f.buyer)).toMatchObject({ available: 0, transactionHeld: 80000 });
+    expect(await wallet(f.buyer)).toMatchObject({ available: 30000, transactionHeld: 50000 });
     await post(`/orders/${r.body.entityId}/cancel-paid`, { expectedVersion: 2 }, f.buyer).expect(200);
     await app.get(OrdersService).refund(r.body.entityId);
     expect(await wallet(f.buyer)).toMatchObject({ available: 80000, transactionHeld: 0 });
@@ -1328,9 +1328,10 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
     const created = (await post('/orders', f.body, f.seller).expect(200)).body;
     const before = (await get(`/me/orders/${created.entityId}`, f.buyer).expect(200)).body;
     expect(before.amounts.bookPrice).toBe(agreedBookPrice);
-    expect(before.amounts.buyerTotal).toBe(agreedBookPrice + 30000);
+    expect(before.amounts.shippingFee).toBe(0);
+    expect(before.amounts.buyerTotal).toBe(agreedBookPrice);
     await post(`/orders/${created.entityId}/pay`, { expectedVersion: 1 }, f.buyer).expect(200);
-    expect(await wallet(f.buyer)).toMatchObject({ available: 200000 - agreedBookPrice - 30000, transactionHeld: agreedBookPrice + 30000 });
+    expect(await wallet(f.buyer)).toMatchObject({ available: 200000 - agreedBookPrice, transactionHeld: agreedBookPrice });
     await post(`/orders/${created.entityId}/cancel-paid`, { expectedVersion: 2 }, f.buyer).expect(200);
     await app.get(OrdersService).refund(created.entityId);
     expect(await wallet(f.buyer)).toMatchObject({ available: 200000, transactionHeld: 0 });
@@ -1356,7 +1357,7 @@ describe('VNPay sandbox / free capped listings / seller-selected wallet checkout
       b = post(`/orders/${second.entityId}/pay`, { expectedVersion: 1 }, buyer).then((r) => r);
     try { await gate.contended(2); } finally { await gate.close(); }
     expect((await Promise.all([a, b])).map((r) => r.status).sort()).toEqual([200, 409]);
-    expect(await wallet(buyer)).toMatchObject({ available: 0, transactionHeld: 80000 });
+    expect(await wallet(buyer)).toMatchObject({ available: 30000, transactionHeld: 50000 });
   });
   async function shippedSale(buyer?: Reader) {
     const f = await sale(buyer);

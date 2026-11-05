@@ -21,6 +21,13 @@ export class PaymentSimulator {
       );
     return this.config.getOrThrow<string>('PAYMENT_SIMULATOR_SECRET');
   }
+  signWithdrawal(event: Wire['SimulatedWithdrawalEvent']) {
+    return createHmac('sha256', this.secret()).update('LatLaiWithdrawal-v1\n' + canonicalJson(event)).digest('hex');
+  }
+  verifyWithdrawal(event: Wire['SimulatedWithdrawalEvent'], signature: string) {
+    if (!/^[a-f0-9]{64}$/.test(signature) || !timingSafeEqual(Buffer.from(this.signWithdrawal(event), 'hex'), Buffer.from(signature, 'hex')))
+      throw new DomainError(403, 'FORBIDDEN', 'Sự kiện chi mô phỏng không được xác thực.');
+  }
   sign(event: Wire['SimulatedTopupEvent']) {
     return createHmac('sha256', this.secret())
       .update('LatLaiSimulator-v1\n' + canonicalJson(event))

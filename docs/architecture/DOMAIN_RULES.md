@@ -277,7 +277,10 @@ Simulated wallet/topup backend is implemented in OpenAPI 0.13.0; read ADR 0018 a
 `docs/features/SIMULATED_WALLET_REPORT.md`. The finite 100M VND source is journalled;
 it is not the POL-42 incident fund. Only independent TEST_OPERATOR events may credit
 an intent through the signed simulator adapter. Balance comes from immutable entries.
-No withdrawal/adjustment handlers exist. RN/Expo web now has an opt-in internal
+New manual withdrawal requests reserve a dedicated hold; independent Admin approval
+completes the wallet withdrawal without a bank API or simulator configuration.
+See [ADR0073](../adr/0073-manual-wallet-withdrawals.md); legacy requests retain ADR0072 semantics.
+No direct balance-adjustment handler exists. RN/Expo web now has an opt-in internal
 read-only wallet/history screen; see [C01 evidence](../handoff/C01_WALLET_2026_09_30.md).
 It does not enable topup/checkout or close release gates. ReviewRequired
 is sticky; daily reconciliation and resolution remain planned. Use `wallet:check`

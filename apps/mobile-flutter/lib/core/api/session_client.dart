@@ -26,11 +26,19 @@ class ApiError implements Exception {
 }
 
 String _friendlyFieldPathName(String path) {
-  if (path.contains('mediaIds')) return 'Ảnh bản sách (cần tối thiểu 1 ảnh bìa)';
-  if (path.contains('description')) return 'Mô tả bản sách (tối thiểu 30 ký tự)';
+  if (path.contains('mediaIds')) {
+    return 'Ảnh bản sách (cần tối thiểu 1 ảnh bìa)';
+  }
+  if (path.contains('description')) {
+    return 'Mô tả bản sách (tối thiểu 30 ký tự)';
+  }
   if (path.contains('salePrice')) return 'Giá bán (10.000đ - 1.000.000đ)';
-  if (path.contains('exchangeValue')) return 'Giá trị trao đổi (10.000đ - 1.000.000đ)';
-  if (path.contains('originAddressId') || path.contains('fulfillment')) return 'Địa chỉ lấy hàng';
+  if (path.contains('exchangeValue')) {
+    return 'Giá trị trao đổi (10.000đ - 1.000.000đ)';
+  }
+  if (path.contains('originAddressId') || path.contains('fulfillment')) {
+    return 'Địa chỉ lấy hàng';
+  }
   if (path.contains('bookId')) return 'Đầu sách trong thư viện';
   if (path.contains('pages')) return 'Tình trạng trang sách';
   if (path.contains('coverNote')) return 'Tình trạng bìa sách';
@@ -109,7 +117,8 @@ class CurrentUser {
     return CurrentUser(
       id: (json['id'] ?? '').toString(),
       email: (json['email'] ?? '').toString(),
-      displayName: (json['displayName'] ?? json['email'] ?? 'Bạn đọc').toString(),
+      displayName: (json['displayName'] ?? json['email'] ?? 'Bạn đọc')
+          .toString(),
       roles: roles,
       status: (json['status'] ?? 'ACTIVE').toString(),
       phone: json['phone']?.toString(),
@@ -139,18 +148,14 @@ class CurrentUser {
 enum SessionStatus { loading, anonymous, authenticated, unavailable }
 
 class SessionState {
-  const SessionState._({
-    required this.status,
-    this.user,
-    this.message,
-  });
+  const SessionState._({required this.status, this.user, this.message});
 
   const SessionState.loading() : this._(status: SessionStatus.loading);
   const SessionState.anonymous() : this._(status: SessionStatus.anonymous);
   const SessionState.authenticated(CurrentUser user)
-      : this._(status: SessionStatus.authenticated, user: user);
+    : this._(status: SessionStatus.authenticated, user: user);
   const SessionState.unavailable(String message)
-      : this._(status: SessionStatus.unavailable, message: message);
+    : this._(status: SessionStatus.unavailable, message: message);
 
   final SessionStatus status;
   final CurrentUser? user;
@@ -171,7 +176,7 @@ abstract interface class TokenStorage {
 /// - Native stores refresh token in SecureStorage; Web keeps tokens memory-only.
 class PlatformTokenStorage implements TokenStorage {
   PlatformTokenStorage([FlutterSecureStorage? secureStorage])
-      : _secureStorage = secureStorage ?? const FlutterSecureStorage();
+    : _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   static const _refreshKey = 'latlai.refresh_token.v1';
   final FlutterSecureStorage _secureStorage;
@@ -236,21 +241,21 @@ String generateIdempotencyKey([String? prefix]) {
 }
 
 class SessionClient {
-  SessionClient({
-    String? baseUrl,
-    TokenStorage? storage,
-    Dio? dio,
-  })  : baseUrl = (baseUrl ?? resolveDefaultApiBaseUrl())
-            .replaceAll(RegExp(r'/$'), ''),
-        _storage = storage ?? PlatformTokenStorage(),
-        _dio = dio ??
-            Dio(
-              BaseOptions(
-                connectTimeout: const Duration(seconds: 15),
-                receiveTimeout: const Duration(seconds: 15),
-                headers: const {'Content-Type': 'application/json'},
-              ),
-            );
+  SessionClient({String? baseUrl, TokenStorage? storage, Dio? dio})
+    : baseUrl = (baseUrl ?? resolveDefaultApiBaseUrl()).replaceAll(
+        RegExp(r'/$'),
+        '',
+      ),
+      _storage = storage ?? PlatformTokenStorage(),
+      _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              connectTimeout: const Duration(seconds: 15),
+              receiveTimeout: const Duration(seconds: 15),
+              headers: const {'Content-Type': 'application/json'},
+            ),
+          );
 
   final String baseUrl;
   final TokenStorage _storage;
@@ -310,9 +315,10 @@ class SessionClient {
         throw ApiError(
           status: statusCode,
           code: (map['code'] ?? 'HTTP_ERROR').toString(),
-          message: (map['message'] ??
-                  'Yêu cầu chưa thực hiện được. Vui lòng thử lại.')
-              .toString(),
+          message:
+              (map['message'] ??
+                      'Yêu cầu chưa thực hiện được. Vui lòng thử lại.')
+                  .toString(),
           requestId: map['requestId']?.toString(),
           details: map['fieldErrors'] ?? map['errors'] ?? map['details'],
         );
@@ -372,18 +378,11 @@ class SessionClient {
         await _discard();
         return;
       }
-      _publish(
-        SessionState.unavailable(
-          presentErrorMessage(error),
-        ),
-      );
+      _publish(SessionState.unavailable(presentErrorMessage(error)));
     }
   }
 
-  Future<void> login({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> login({required String email, required String password}) async {
     if (_signingOut) {
       throw const ApiError(
         status: 401,
@@ -436,12 +435,7 @@ class SessionClient {
     Object? body,
     Map<String, String>? headers,
   }) {
-    return _send(
-      path,
-      method: method,
-      body: body,
-      headers: headers,
-    );
+    return _send(path, method: method, body: body, headers: headers);
   }
 
   Future<dynamic> request(
@@ -550,12 +544,15 @@ class SessionClient {
     return '$baseUrl/$rawUrl';
   }
 
-  static final Map<String, ({String url, DateTime expiresAt})> _mediaUrlCache = {};
+  static final Map<String, ({String url, DateTime expiresAt})> _mediaUrlCache =
+      {};
 
   static String? getCachedMediaUrl(String key) {
     final cached = _mediaUrlCache[key];
     if (cached != null &&
-        cached.expiresAt.isAfter(DateTime.now().add(const Duration(seconds: 30)))) {
+        cached.expiresAt.isAfter(
+          DateTime.now().add(const Duration(seconds: 30)),
+        )) {
       return cached.url;
     }
     return null;
@@ -580,7 +577,7 @@ class SessionClient {
         final expiresAtStr = res['expiresAt'] as String?;
         final expiresAt = expiresAtStr != null
             ? DateTime.tryParse(expiresAtStr) ??
-                DateTime.now().add(const Duration(minutes: 5))
+                  DateTime.now().add(const Duration(minutes: 5))
             : DateTime.now().add(const Duration(minutes: 5));
         _mediaUrlCache[key] = (url: url, expiresAt: expiresAt);
         return url;
@@ -589,7 +586,6 @@ class SessionClient {
     return '';
   }
 }
-
 
 final sessionClientProvider = Provider<SessionClient>((ref) {
   return SessionClient();
@@ -616,6 +612,6 @@ class SessionNotifier extends Notifier<SessionState> {
   SessionClient get client => _client;
 }
 
-final sessionProvider =
-    NotifierProvider<SessionNotifier, SessionState>(SessionNotifier.new);
-
+final sessionProvider = NotifierProvider<SessionNotifier, SessionState>(
+  SessionNotifier.new,
+);

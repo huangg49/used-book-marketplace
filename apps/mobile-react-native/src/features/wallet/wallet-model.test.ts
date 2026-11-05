@@ -115,7 +115,7 @@ describe("wallet response compatibility", () => {
       walletHistoryPage.parse({ items: [], nextCursor: null }).items,
     ).toEqual([]);
   });
-  it.each([-1, 100000001, 0.5])(
+  it.each([-1, Number.MAX_SAFE_INTEGER + 1, 0.5])(
     "rejects invalid available amount %s",
     (available) => {
       expect(walletSummary.safeParse({ ...summary, available }).success).toBe(

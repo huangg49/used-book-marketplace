@@ -1384,3 +1384,28 @@
     min-height: 44px;
   }
 }
+
+/* Additional withdrawal receipt containment from main. */
+.leftCol { min-width: 0; }
+@media (max-width: 600px) {
+  .vnpayBrandGroup, .testCardDetails { flex-wrap: wrap; }
+  .vnpayHeaderBadge, .pageHeader, .receiptBody { min-width: 0; }
+  .receiptIconCircle { grid-column: 1; grid-row: 1 / span 2; align-self: start; }
+  .receiptItemMeta { grid-column: 2; }
+  .receiptItemTitle { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+  .receiptAmountCol { margin: 0; }
+}
+
+.withdrawalHistoryState {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-inline-start: 6px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  font: 500 .75rem/1.5 var(--shop-body);
+  white-space: nowrap;
+  background: var(--shop-shelf, #f4eddf);
+  color: var(--shop-ink, #281914);
+}
+.withdrawalHistoryState[data-state="Completed"] { background: var(--shop-mint, #b6dac5); }
+.withdrawalHistoryState[data-state="Rejected"] { color: var(--shop-error, #912b0e); }

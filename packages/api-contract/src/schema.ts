@@ -1913,7 +1913,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Derived simulated available + transaction-held balance. LOCKED may read, but cannot pay. Withdrawal not implemented. A payment capability is not a checkout UI release gate. */
+        /** @description Derived simulated available + transaction-held balance. LOCKED may read, but cannot pay. Withdrawal uses a dedicated hold and independent Admin approval. A payment capability is not a checkout UI release gate. */
         get: operations["getMyWallet"];
         put?: never;
         post?: never;
@@ -4110,6 +4110,190 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/withdrawals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * listMyWithdrawals
+         * @description Owner only, including locked accounts. Recipient account number is masked.
+         */
+        get: operations["listMyWithdrawals"];
+        put?: never;
+        /**
+         * createWithdrawal
+         * @description Verified MEMBER; LOCKED denied. No simulator secret or bank verification required. New Manual requests reserve available in a dedicated hold. Other requires a description. Same key and body replay the original receipt.
+         */
+        post: operations["createWithdrawal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/withdrawals/{withdrawalId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * getMyWithdrawal
+         * @description Owner only, including locked accounts. Recipient account number is masked.
+         */
+        get: operations["getMyWithdrawal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/withdrawals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * listAdminWithdrawals
+         * @description ACTIVE ADMIN only. Oldest requests first.
+         */
+        get: operations["listAdminWithdrawals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/withdrawals/{withdrawalId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * getAdminWithdrawal
+         * @description ACTIVE ADMIN only. Full immutable recipient snapshot.
+         */
+        get: operations["getAdminWithdrawal"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/withdrawals/{withdrawalId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * decideWithdrawal
+         * @description Independent ACTIVE ADMIN with a session created within 15 minutes. Required reason. Approve completes a Manual wallet withdrawal atomically without a bank API or operator event. Reject returns this hold. Legacy Simulator requests retain their prior processing semantics.
+         */
+        post: operations["decideWithdrawal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/withdrawals/{withdrawalId}/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * processWithdrawal
+         * @description Independent ACTIVE ADMIN, recent session. Approved only; creates one immutable payoutRef. Never starts a second payout for uncertain results.
+         */
+        post: operations["processWithdrawal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/withdrawals/{withdrawalId}/refund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * refundWithdrawal
+         * @description Independent ACTIVE ADMIN, recent session. FailedVerified only; returns this hold once, atomically.
+         */
+        post: operations["refundWithdrawal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/simulator/withdrawals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * listSimulatedWithdrawals
+         * @description ACTIVE TEST_OPERATOR; recipient account number is masked.
+         */
+        get: operations["listSimulatedWithdrawals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/simulator/withdrawal-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * emitSimulatedWithdrawalEvent
+         * @description Independent ACTIVE TEST_OPERATOR only. Trusted server adapter authenticates evidence; exact amount, currency, recipient and immutable payoutRef required. Unknown retains Processing and hold. Success posts once; verified failure enables refund. No live bank transfer.
+         */
+        post: operations["emitSimulatedWithdrawalEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4933,11 +5117,11 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "SupportUpdated" | "ReviewModerated";
+            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "WithdrawalUpdated" | "SupportUpdated" | "ReviewModerated";
             title: string;
             body: string;
             /** @enum {string} */
-            targetType: "Auction" | "Exchange" | "Order" | "SupportCase" | "TransactionReview";
+            targetType: "Auction" | "Exchange" | "Order" | "SupportCase" | "TransactionReview" | "Withdrawal";
             /**
              * Format: uuid
              * @description Opens with GET /auctions/{id} or GET /exchanges/{id}; the caller's own view comes from participation or point-order reads.
@@ -5863,6 +6047,104 @@ export interface components {
             /** @constant */
             currency: "VND";
         };
+        /** @enum {string} */
+        WithdrawalState: "Requested" | "Approved" | "Processing" | "Completed" | "Rejected" | "FailedVerified" | "Refunded";
+        WithdrawalRecipient: {
+            bankName: string;
+            accountNumber: string;
+            accountHolder: string;
+        };
+        CreateWithdrawal: {
+            amount: number;
+            /** @enum {string} */
+            reason: "SaleProceeds" | "Personal" | "Leaving" | "Other";
+            reasonDetail: string;
+            recipient: components["schemas"]["WithdrawalRecipient"];
+        };
+        DecideWithdrawal: {
+            expectedVersion: number;
+            /** @enum {string} */
+            decision: "Approve" | "Reject";
+            reason: string;
+        };
+        WithdrawalVersion: {
+            expectedVersion: number;
+        };
+        SimulatedWithdrawalEvent: {
+            /** Format: uuid */
+            eventId: string;
+            /** Format: uuid */
+            withdrawalId: string;
+            expectedVersion: number;
+            /** Format: uuid */
+            payoutRef: string;
+            /** Format: uuid */
+            recipientId: string;
+            amount: number;
+            /** @constant */
+            currency: "VND";
+            /** @enum {string} */
+            outcome: "Unknown" | "Succeeded" | "FailedVerified";
+        };
+        Withdrawal: {
+            /**
+             * @description New requests complete on Admin approval. Simulator is legacy only.
+             * @enum {string}
+             */
+            processingMode: "Manual" | "Simulator";
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            ownerId: string;
+            ownerName: string;
+            amount: number;
+            /** @constant */
+            fee: 0;
+            reason: string;
+            reasonDetail: string;
+            recipient: {
+                bankName: string;
+                accountNumber: string;
+                accountHolder: string;
+            };
+            state: components["schemas"]["WithdrawalState"];
+            version: number;
+            /** Format: uuid */
+            approverId: string | null;
+            /** Format: uuid */
+            payoutRef: string | null;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            history: {
+                state: components["schemas"]["WithdrawalState"];
+                /** Format: date-time */
+                at: string;
+                note: string;
+            }[];
+            /** @constant */
+            demoOnly: true;
+        };
+        WithdrawalPage: {
+            items: components["schemas"]["Withdrawal"][];
+            /** Format: uuid */
+            nextCursor: string | null;
+        };
+        WithdrawalReceipt: {
+            /** Format: uuid */
+            id: string;
+            /** @constant */
+            entityType: "Withdrawal";
+            /** Format: uuid */
+            entityId: string;
+            version: number;
+            state: components["schemas"]["WithdrawalState"];
+            /** Format: date-time */
+            serverTime: string;
+            /** @constant */
+            demoOnly: true;
+        };
         WalletSummary: {
             /** @description Always 0; new listing submissions and approved content edits are free. Retained for client compatibility. */
             listingSubmissionFee?: number;
@@ -5876,15 +6158,13 @@ export interface components {
             currency: "VND";
             available: number;
             transactionHeld: number;
-            /** @constant */
-            withdrawalHeld: 0;
+            withdrawalHeld: number;
             total: number;
             /** Format: date-time */
             serverTime: string;
             topupEnabled: boolean;
             paymentsEnabled: boolean;
-            /** @constant */
-            withdrawalsEnabled: false;
+            withdrawalsEnabled: boolean;
         };
         WalletCommandReceipt: {
             /**
@@ -5921,12 +6201,15 @@ export interface components {
             nextCursor: string | null;
         };
         WalletHistoryItem: {
+            withdrawalState?: components["schemas"]["WithdrawalState"] | null;
+            /** Format: uuid */
+            withdrawalId?: string | null;
             /** Format: uuid */
             journalId: string;
             /** Format: uuid */
             topupId: string | null;
             /** @enum {string} */
-            type: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement";
+            type: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund";
             amount: number;
             balanceAfter: number;
             /** Format: date-time */
@@ -11514,7 +11797,7 @@ export interface operations {
                 cursor?: string;
                 from?: string;
                 to?: string;
-                type?: "Topup" | "OrderPayment" | "OrderRefund" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "OrderSettlement";
+                type?: "Topup" | "OrderPayment" | "OrderRefund" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund" | "OrderSettlement";
                 topupId?: string;
                 orderId?: string;
             };
@@ -15882,6 +16165,333 @@ export interface operations {
             401: components["responses"]["Error"];
             403: components["responses"]["Error"];
             404: components["responses"]["Error"];
+        };
+    };
+    listMyWithdrawals: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+                state?: components["schemas"]["WithdrawalState"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Simulated withdrawal; approval is not successful payout. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawalPage"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    createWithdrawal: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWithdrawal"];
+            };
+        };
+        responses: {
+            /** @description Simulated withdrawal; approval is not successful payout. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawalReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getMyWithdrawal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                withdrawalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Simulated withdrawal; approval is not successful payout. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Withdrawal"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listAdminWithdrawals: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+                state?: components["schemas"]["WithdrawalState"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Simulated withdrawal; approval is not successful payout. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawalPage"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getAdminWithdrawal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                withdrawalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Simulated withdrawal; approval is not successful payout. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Withdrawal"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    decideWithdrawal: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                withdrawalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecideWithdrawal"];
+            };
+        };
+        responses: {
+            /** @description Simulated withdrawal; approval is not successful payout. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawalReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    processWithdrawal: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                withdrawalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WithdrawalVersion"];
+            };
+        };
+        responses: {
+            /** @description Simulated withdrawal; approval is not successful payout. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawalReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    refundWithdrawal: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                withdrawalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WithdrawalVersion"];
+            };
+        };
+        responses: {
+            /** @description Simulated withdrawal; approval is not successful payout. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawalReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    listSimulatedWithdrawals: {
+        parameters: {
+            query?: {
+                limit?: number;
+                cursor?: string;
+                state?: components["schemas"]["WithdrawalState"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Simulated withdrawal; approval is not successful payout. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawalPage"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    emitSimulatedWithdrawalEvent: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SimulatedWithdrawalEvent"];
+            };
+        };
+        responses: {
+            /** @description Simulated withdrawal; approval is not successful payout. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawalReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
         };
     };
 }

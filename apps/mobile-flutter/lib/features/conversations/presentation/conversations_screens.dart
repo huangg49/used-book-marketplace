@@ -85,14 +85,14 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
       final convList = rawConvs is List
           ? rawConvs
           : (rawConvs is Map && rawConvs['items'] is List
-              ? (rawConvs['items'] as List)
-              : const []);
+                ? (rawConvs['items'] as List)
+                : const []);
 
       final exchangeList = rawExchanges is List
           ? rawExchanges
           : (rawExchanges is Map && rawExchanges['items'] is List
-              ? (rawExchanges['items'] as List)
-              : const []);
+                ? (rawExchanges['items'] as List)
+                : const []);
 
       final parsedConvs = convList
           .whereType<Map>()
@@ -114,9 +114,10 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
       // Asynchronously resolve listings for all conversations to populate book thumbnails & titles
       final listingIds = <String>{};
       for (final c in parsedConvs) {
-        final lid = (c['listingId'] ??
-                (c['listing'] is Map ? (c['listing'] as Map)['id'] : null))
-            ?.toString();
+        final lid =
+            (c['listingId'] ??
+                    (c['listing'] is Map ? (c['listing'] as Map)['id'] : null))
+                ?.toString();
         if (lid != null && lid.isNotEmpty) listingIds.add(lid);
       }
       for (final x in parsedExchanges) {
@@ -128,18 +129,22 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
         }
       }
 
-      final missing =
-          listingIds.where((id) => !_listingCache.containsKey(id)).toList();
+      final missing = listingIds
+          .where((id) => !_listingCache.containsKey(id))
+          .toList();
       if (missing.isNotEmpty) {
-        await Future.wait(missing.map((lid) async {
-          try {
-            final res = await client
-                .publicRequest('/listings/$lid?bundleSupport=whole-v1');
-            if (res is Map) {
-              _listingCache[lid] = Map<String, dynamic>.from(res);
-            }
-          } catch (_) {}
-        }));
+        await Future.wait(
+          missing.map((lid) async {
+            try {
+              final res = await client.publicRequest(
+                '/listings/$lid?bundleSupport=whole-v1',
+              );
+              if (res is Map) {
+                _listingCache[lid] = Map<String, dynamic>.from(res);
+              }
+            } catch (_) {}
+          }),
+        );
         if (mounted) setState(() {});
       }
     } catch (e) {
@@ -188,16 +193,19 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
     }
 
     final filteredConvs = _conversations.where((c) {
-      final listingId = (c['listingId'] ??
-              (c['listing'] is Map ? (c['listing'] as Map)['id'] : ''))
-          ?.toString() ??
+      final listingId =
+          (c['listingId'] ??
+                  (c['listing'] is Map ? (c['listing'] as Map)['id'] : ''))
+              ?.toString() ??
           '';
-      final cachedListing = _listingCache[listingId] ??
+      final cachedListing =
+          _listingCache[listingId] ??
           (c['listing'] is Map
               ? Map<String, dynamic>.from(c['listing'] as Map)
               : null);
 
-      final bookTitle = cachedListing?['bundle']?['title']?.toString() ??
+      final bookTitle =
+          cachedListing?['bundle']?['title']?.toString() ??
           cachedListing?['book']?['title']?.toString() ??
           cachedListing?['title']?.toString() ??
           c['bookTitle']?.toString() ??
@@ -209,13 +217,15 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
       final sellerObj = c['seller'] is Map
           ? Map<String, dynamic>.from(c['seller'] as Map)
           : const <String, dynamic>{};
-      final isBuyer = userId != null &&
+      final isBuyer =
+          userId != null &&
           (buyerObj['id'] ?? c['buyerId'] ?? '').toString() == userId;
       final partner = isBuyer ? sellerObj : buyerObj;
       final partnerName = (partner['displayName'] ?? '').toString();
 
       if (query.isNotEmpty) {
-        final matches = bookTitle.toLowerCase().contains(query) ||
+        final matches =
+            bookTitle.toLowerCase().contains(query) ||
             partnerName.toLowerCase().contains(query) ||
             (c['id'] ?? '').toString().toLowerCase().contains(query);
         if (!matches) return false;
@@ -240,17 +250,19 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
       return true;
     }).toList();
 
-    final filteredExchanges = (_selectedTab == 'all' ||
-            _selectedTab == 'exchange')
+    final filteredExchanges =
+        (_selectedTab == 'all' || _selectedTab == 'exchange')
         ? _exchanges.where((x) {
             if (query.isEmpty) return true;
-            final targetId = (x['recipientListingId'] ?? x['listingId'])?.toString() ?? '';
+            final targetId =
+                (x['recipientListingId'] ?? x['listingId'])?.toString() ?? '';
             final cached = _listingCache[targetId];
-            final title = (cached?['bundle']?['title'] ??
-                    cached?['book']?['title'] ??
-                    cached?['title'] ??
-                    '')
-                .toString();
+            final title =
+                (cached?['bundle']?['title'] ??
+                        cached?['book']?['title'] ??
+                        cached?['title'] ??
+                        '')
+                    .toString();
             return title.toLowerCase().contains(query) ||
                 (x['id'] ?? '').toString().toLowerCase().contains(query);
           }).toList()
@@ -259,7 +271,10 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
     final totalItemsCount = filteredConvs.length + filteredExchanges.length;
 
     final tabs = [
-      (id: 'all', label: 'Tất cả (${_conversations.length + _exchanges.length})'),
+      (
+        id: 'all',
+        label: 'Tất cả (${_conversations.length + _exchanges.length})',
+      ),
       (id: 'action', label: 'Cần phản hồi ($actionCount)'),
       (id: 'exchange', label: 'Trao đổi sách ($exchangeCount)'),
       (id: 'negotiating', label: 'Đang thương lượng ($negotiatingCount)'),
@@ -389,19 +404,27 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
                       icon: Icon(
                         Icons.view_agenda_outlined,
                         size: 20,
-                        color: !_isGridView ? StitchTokens.wine : AppColors.muted,
+                        color: !_isGridView
+                            ? StitchTokens.wine
+                            : AppColors.muted,
                       ),
                       tooltip: 'Xem dạng danh sách',
                       padding: const EdgeInsets.symmetric(horizontal: 10),
                       constraints: const BoxConstraints(),
                       onPressed: () => setState(() => _isGridView = false),
                     ),
-                    Container(width: 1, height: 20, color: const Color(0xFFEDE4D8)),
+                    Container(
+                      width: 1,
+                      height: 20,
+                      color: const Color(0xFFEDE4D8),
+                    ),
                     IconButton(
                       icon: Icon(
                         Icons.grid_view_rounded,
                         size: 20,
-                        color: _isGridView ? StitchTokens.wine : AppColors.muted,
+                        color: _isGridView
+                            ? StitchTokens.wine
+                            : AppColors.muted,
                       ),
                       tooltip: 'Xem dạng lưới (Grid)',
                       padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -434,8 +457,7 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
               wine: true,
               icon: Icons.chat_bubble_outline_rounded,
               title: 'Chưa có cuộc trò chuyện nào',
-              message:
-                  'Mở trang chi tiết một cuốn sách và bấm "Thương lượng & Mua" để trao đổi trực tiếp với người bán.',
+              message: 'Mở trang chi tiết một cuốn sách và bấm "Thương lượng & Mua" để trao đổi trực tiếp với người bán.',
               actionLabel: 'Tìm sách trên kệ',
               onAction: () => context.go('/search'),
             )
@@ -452,15 +474,23 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
               ),
               itemBuilder: (context, index) {
                 if (index < filteredConvs.length) {
-                  return _buildConversationGridCard(filteredConvs[index], userId);
+                  return _buildConversationGridCard(
+                    filteredConvs[index],
+                    userId,
+                  );
                 } else {
                   final exIndex = index - filteredConvs.length;
-                  return _buildExchangeGridCard(filteredExchanges[exIndex], userId);
+                  return _buildExchangeGridCard(
+                    filteredExchanges[exIndex],
+                    userId,
+                  );
                 }
               },
             ),
           ] else ...[
-            ...filteredConvs.map((conv) => _buildConversationCard(conv, userId)),
+            ...filteredConvs.map(
+              (conv) => _buildConversationCard(conv, userId),
+            ),
             ...filteredExchanges.map((ex) => _buildExchangeCard(ex, userId)),
           ],
         ],
@@ -475,17 +505,20 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
     String? currentUserId,
   ) {
     final id = (conv['id'] ?? '').toString();
-    final listingId = (conv['listingId'] ??
-            (conv['listing'] is Map ? (conv['listing'] as Map)['id'] : ''))
-        ?.toString() ??
+    final listingId =
+        (conv['listingId'] ??
+                (conv['listing'] is Map ? (conv['listing'] as Map)['id'] : ''))
+            ?.toString() ??
         '';
-    final cachedListing = _listingCache[listingId] ??
+    final cachedListing =
+        _listingCache[listingId] ??
         (conv['listing'] is Map
             ? Map<String, dynamic>.from(conv['listing'] as Map)
             : null);
 
     // Book title and author
-    final bookTitle = cachedListing?['bundle']?['title']?.toString() ??
+    final bookTitle =
+        cachedListing?['bundle']?['title']?.toString() ??
         cachedListing?['book']?['title']?.toString() ??
         cachedListing?['title']?.toString() ??
         conv['bookTitle']?.toString() ??
@@ -508,8 +541,9 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
     final partnerName =
         (partner['displayName'] ?? (isBuyer ? 'Người bán' : 'Người mua'))
             .toString();
-    final partnerInitial =
-        partnerName.isNotEmpty ? partnerName[0].toUpperCase() : (isBuyer ? 'B' : 'M');
+    final partnerInitial = partnerName.isNotEmpty
+        ? partnerName[0].toUpperCase()
+        : (isBuyer ? 'B' : 'M');
 
     // Terms, proposals & status
     final terms = conv['terms'] is Map
@@ -519,11 +553,14 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
         ? Map<String, dynamic>.from(terms['pendingProposal'] as Map)
         : null;
     final isActionNeeded =
-        proposal != null && proposal['proposedById']?.toString() != currentUserId;
+        proposal != null &&
+        proposal['proposedById']?.toString() != currentUserId;
     final isWaitingPartner =
-        proposal != null && proposal['proposedById']?.toString() == currentUserId;
-    final agreedPrice =
-        terms['agreedPrice'] is num ? (terms['agreedPrice'] as num) : null;
+        proposal != null &&
+        proposal['proposedById']?.toString() == currentUserId;
+    final agreedPrice = terms['agreedPrice'] is num
+        ? (terms['agreedPrice'] as num)
+        : null;
     final isExchange = terms['mode'] == 'Exchange';
     final status = (conv['status'] ?? 'Active').toString();
     final orderId = conv['orderId']?.toString();
@@ -533,8 +570,9 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
     String snippet;
     bool snippetHighlight = false;
     if (isActionNeeded) {
-      final amount =
-          proposal['amount'] is num ? (proposal['amount'] as num) : null;
+      final amount = proposal['amount'] is num
+          ? (proposal['amount'] as num)
+          : null;
       snippet = amount != null
           ? '⚡ Đối tác đề nghị giá ${formatVnd(amount)} — Cần bạn phản hồi'
           : '⚡ Đối tác đề xuất đổi sách — Cần bạn phản hồi';
@@ -557,15 +595,15 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
     // Status Badge Info
     final (statusLabel, statusColor, statusBg) = switch (status) {
       'OrderCreated' => (
-          'ĐÃ TẠO ĐƠN',
-          AppColors.forest,
-          AppColors.successSurface,
-        ),
+        'ĐÃ TẠO ĐƠN',
+        AppColors.forest,
+        AppColors.successSurface,
+      ),
       'Active' => (
-          isActionNeeded ? 'CẦN PHẢN HỒI' : 'ĐANG THƯƠNG LƯỢNG',
-          isActionNeeded ? StitchTokens.wine : StitchTokens.darkWood,
-          isActionNeeded ? StitchTokens.roseParchment : StitchTokens.parchment,
-        ),
+        isActionNeeded ? 'CẦN PHẢN HỒI' : 'ĐANG THƯƠNG LƯỢNG',
+        isActionNeeded ? StitchTokens.wine : StitchTokens.darkWood,
+        isActionNeeded ? StitchTokens.roseParchment : StitchTokens.parchment,
+      ),
       'Expired' => ('HẾT HẠN', AppColors.muted, StitchTokens.parchment),
       'Cancelled' => ('ĐÃ ĐÓNG', AppColors.muted, StitchTokens.parchment),
       _ => (status, StitchTokens.wine, StitchTokens.roseParchment),
@@ -588,8 +626,9 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black
-                    .withValues(alpha: isActionNeeded ? 0.06 : 0.02),
+                color: Colors.black.withValues(
+                  alpha: isActionNeeded ? 0.06 : 0.02,
+                ),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -681,7 +720,11 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
                 ),
               ),
 
-              const Divider(height: 1, thickness: 0.6, color: StitchTokens.cardBorder),
+              const Divider(
+                height: 1,
+                thickness: 0.6,
+                color: StitchTokens.cardBorder,
+              ),
 
               // Middle: Book Identity (Shopee Chat style)
               Padding(
@@ -696,11 +739,9 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
                         height: 58,
                         color: StitchTokens.parchment,
                         child: BookCoverPhoto(
-                          item: cachedListing ??
-                              {
-                                'id': listingId,
-                                'title': bookTitle,
-                              },
+                          item:
+                              cachedListing ??
+                              {'id': listingId, 'title': bookTitle},
                           fit: BoxFit.cover,
                         ),
                       ),
@@ -833,12 +874,13 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
     final targetListingId = isInitiator
         ? (ex['recipientListingId'] ?? ex['listingId'])?.toString() ?? ''
         : (ex['initiatorListingIds'] is List &&
-                (ex['initiatorListingIds'] as List).isNotEmpty
-            ? ex['initiatorListingIds'][0].toString()
-            : (ex['initiatorListingId'] ?? '').toString());
+                  (ex['initiatorListingIds'] as List).isNotEmpty
+              ? ex['initiatorListingIds'][0].toString()
+              : (ex['initiatorListingId'] ?? '').toString());
 
     final cachedListing = _listingCache[targetListingId];
-    final bookTitle = cachedListing?['bundle']?['title']?.toString() ??
+    final bookTitle =
+        cachedListing?['bundle']?['title']?.toString() ??
         cachedListing?['book']?['title']?.toString() ??
         cachedListing?['title']?.toString() ??
         'Yêu cầu trao đổi sách';
@@ -918,7 +960,11 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
                   ],
                 ),
               ),
-              const Divider(height: 1, thickness: 0.6, color: StitchTokens.cardBorder),
+              const Divider(
+                height: 1,
+                thickness: 0.6,
+                color: StitchTokens.cardBorder,
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
                 child: Row(
@@ -930,7 +976,9 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
                         height: 58,
                         color: StitchTokens.parchment,
                         child: BookCoverPhoto(
-                          item: cachedListing ?? {'id': targetListingId, 'title': bookTitle},
+                          item:
+                              cachedListing ??
+                              {'id': targetListingId, 'title': bookTitle},
                           fit: BoxFit.cover,
                         ),
                       ),
@@ -1017,16 +1065,19 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
     String? currentUserId,
   ) {
     final id = (conv['id'] ?? '').toString();
-    final listingId = (conv['listingId'] ??
-            (conv['listing'] is Map ? (conv['listing'] as Map)['id'] : ''))
-        ?.toString() ??
+    final listingId =
+        (conv['listingId'] ??
+                (conv['listing'] is Map ? (conv['listing'] as Map)['id'] : ''))
+            ?.toString() ??
         '';
-    final cachedListing = _listingCache[listingId] ??
+    final cachedListing =
+        _listingCache[listingId] ??
         (conv['listing'] is Map
             ? Map<String, dynamic>.from(conv['listing'] as Map)
             : null);
 
-    final bookTitle = cachedListing?['bundle']?['title']?.toString() ??
+    final bookTitle =
+        cachedListing?['bundle']?['title']?.toString() ??
         cachedListing?['book']?['title']?.toString() ??
         cachedListing?['title']?.toString() ??
         conv['bookTitle']?.toString() ??
@@ -1048,8 +1099,9 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
     final partnerName =
         (partner['displayName'] ?? (isBuyer ? 'Người bán' : 'Người mua'))
             .toString();
-    final partnerInitial =
-        partnerName.isNotEmpty ? partnerName[0].toUpperCase() : (isBuyer ? 'B' : 'M');
+    final partnerInitial = partnerName.isNotEmpty
+        ? partnerName[0].toUpperCase()
+        : (isBuyer ? 'B' : 'M');
 
     final terms = conv['terms'] is Map
         ? Map<String, dynamic>.from(conv['terms'] as Map)
@@ -1058,9 +1110,11 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
         ? Map<String, dynamic>.from(terms['pendingProposal'] as Map)
         : null;
     final isActionNeeded =
-        proposal != null && proposal['proposedById']?.toString() != currentUserId;
-    final agreedPrice =
-        terms['agreedPrice'] is num ? (terms['agreedPrice'] as num) : null;
+        proposal != null &&
+        proposal['proposedById']?.toString() != currentUserId;
+    final agreedPrice = terms['agreedPrice'] is num
+        ? (terms['agreedPrice'] as num)
+        : null;
     final isExchange = terms['mode'] == 'Exchange';
 
     final statusBg = isActionNeeded
@@ -1086,7 +1140,9 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: isActionNeeded ? 0.06 : 0.02),
+              color: Colors.black.withValues(
+                alpha: isActionNeeded ? 0.06 : 0.02,
+              ),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -1126,9 +1182,14 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
-                      color: isBuyer ? StitchTokens.roseParchment : AppColors.successSurface,
+                      color: isBuyer
+                          ? StitchTokens.roseParchment
+                          : AppColors.successSurface,
                       borderRadius: BorderRadius.circular(3),
                     ),
                     child: Text(
@@ -1159,7 +1220,9 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
                         height: 52,
                         color: StitchTokens.parchment,
                         child: BookCoverPhoto(
-                          item: cachedListing ?? {'id': listingId, 'title': bookTitle},
+                          item:
+                              cachedListing ??
+                              {'id': listingId, 'title': bookTitle},
                           fit: BoxFit.cover,
                         ),
                       ),
@@ -1186,7 +1249,10 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
                               author,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 10, color: AppColors.muted),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: AppColors.muted,
+                              ),
                             ),
                           ],
                           const SizedBox(height: 4),
@@ -1202,7 +1268,10 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
                           else
                             Text(
                               isExchange ? 'Đổi sách' : 'Mua bán',
-                              style: const TextStyle(fontSize: 10, color: AppColors.muted),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: AppColors.muted,
+                              ),
                             ),
                         ],
                       ),
@@ -1239,18 +1308,22 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
   }
 
   /// Renders a compact, aesthetic 2-column Grid Card for Exchanges
-  Widget _buildExchangeGridCard(Map<String, dynamic> ex, String? currentUserId) {
+  Widget _buildExchangeGridCard(
+    Map<String, dynamic> ex,
+    String? currentUserId,
+  ) {
     final id = (ex['id'] ?? '').toString();
     final isInitiator = ex['initiatorId']?.toString() == currentUserId;
     final targetListingId = isInitiator
         ? (ex['recipientListingId'] ?? ex['listingId'])?.toString() ?? ''
         : (ex['initiatorListingIds'] is List &&
-                (ex['initiatorListingIds'] as List).isNotEmpty
-            ? ex['initiatorListingIds'][0].toString()
-            : (ex['initiatorListingId'] ?? '').toString());
+                  (ex['initiatorListingIds'] as List).isNotEmpty
+              ? ex['initiatorListingIds'][0].toString()
+              : (ex['initiatorListingId'] ?? '').toString());
 
     final cachedListing = _listingCache[targetListingId];
-    final bookTitle = cachedListing?['bundle']?['title']?.toString() ??
+    final bookTitle =
+        cachedListing?['bundle']?['title']?.toString() ??
         cachedListing?['book']?['title']?.toString() ??
         cachedListing?['title']?.toString() ??
         'Yêu cầu trao đổi sách';
@@ -1330,7 +1403,9 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
                         height: 52,
                         color: StitchTokens.parchment,
                         child: BookCoverPhoto(
-                          item: cachedListing ?? {'id': targetListingId, 'title': bookTitle},
+                          item:
+                              cachedListing ??
+                              {'id': targetListingId, 'title': bookTitle},
                           fit: BoxFit.cover,
                         ),
                       ),
@@ -1355,7 +1430,11 @@ class _ChatInboxScreenState extends ConsumerState<ChatInboxScreen> {
                           const SizedBox(height: 4),
                           const Text(
                             'Trao đổi sách',
-                            style: TextStyle(fontSize: 10, color: StitchTokens.wine, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: StitchTokens.wine,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
@@ -1460,23 +1539,26 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
       final msgList = msgData is List
           ? msgData
           : (msgData is Map && msgData['items'] is List
-              ? (msgData['items'] as List)
-              : const []);
+                ? (msgData['items'] as List)
+                : const []);
 
-      final convMap =
-          convData is Map ? Map<String, dynamic>.from(convData) : null;
+      final convMap = convData is Map
+          ? Map<String, dynamic>.from(convData)
+          : null;
       Map<String, dynamic>? linkedEx;
       if (convMap != null) {
-        final lid = (convMap['listingId'] ??
-                (convMap['listing'] is Map
-                    ? (convMap['listing'] as Map)['id']
-                    : null))
-            ?.toString();
+        final lid =
+            (convMap['listingId'] ??
+                    (convMap['listing'] is Map
+                        ? (convMap['listing'] as Map)['id']
+                        : null))
+                ?.toString();
         if (lid != null && lid.isNotEmpty) {
           if (!_listingCache.containsKey(lid)) {
             try {
-              final lRes = await client
-                  .publicRequest('/listings/$lid?bundleSupport=whole-v1');
+              final lRes = await client.publicRequest(
+                '/listings/$lid?bundleSupport=whole-v1',
+              );
               if (lRes is Map) {
                 _listingCache[lid] = Map<String, dynamic>.from(lRes);
               }
@@ -1489,16 +1571,18 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
             final exList = exRes is List
                 ? exRes
                 : (exRes is Map && exRes['items'] is List
-                    ? (exRes['items'] as List)
-                    : const []);
+                      ? (exRes['items'] as List)
+                      : const []);
             for (final item in exList) {
               if (item is Map) {
-                final recId = (item['recipientListingId'] ??
-                        item['recipientListing']?['id'])
-                    ?.toString();
-                final initId = (item['initiatorListingId'] ??
-                        item['initiatorListing']?['id'])
-                    ?.toString();
+                final recId =
+                    (item['recipientListingId'] ??
+                            item['recipientListing']?['id'])
+                        ?.toString();
+                final initId =
+                    (item['initiatorListingId'] ??
+                            item['initiatorListing']?['id'])
+                        ?.toString();
                 if (recId == lid || initId == lid) {
                   linkedEx = Map<String, dynamic>.from(item);
                   break;
@@ -1548,8 +1632,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
         : (raw['content'] is Map ? raw['content'] as Map : null);
 
     final mode = (content?['mode'] ?? raw['mode'] ?? '').toString();
-    final condition =
-        (content?['condition'] ?? raw['condition'] ?? 'Good').toString();
+    final condition = (content?['condition'] ?? raw['condition'] ?? 'Good')
+        .toString();
     final salePrice = (content?['salePrice'] ?? raw['salePrice'] ?? 0) as num;
     final exchangeValue =
         (content?['exchangeValue'] ?? raw['exchangeValue'] ?? salePrice) as num;
@@ -1565,25 +1649,27 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     final cachedBook = (bookId != null && _bookCache.containsKey(bookId))
         ? _bookCache[bookId]
         : null;
-    final book = cachedBook ??
+    final book =
+        cachedBook ??
         (content?['book'] is Map
             ? Map<String, dynamic>.from(content!['book'] as Map)
             : (raw['book'] is Map
-                ? Map<String, dynamic>.from(raw['book'] as Map)
-                : null));
+                  ? Map<String, dynamic>.from(raw['book'] as Map)
+                  : null));
 
-    final title = (bundle is Map &&
+    final title =
+        (bundle is Map &&
             bundle['title'] != null &&
             bundle['title'].toString().isNotEmpty)
         ? bundle['title'].toString()
         : (book?['title'] ??
-                raw['title'] ??
-                content?['title'] ??
-                'Sách của tôi')
-            .toString();
+                  raw['title'] ??
+                  content?['title'] ??
+                  'Sách của tôi')
+              .toString();
 
-    final authors = (book?['authors'] is List &&
-            (book!['authors'] as List).isNotEmpty)
+    final authors =
+        (book?['authors'] is List && (book!['authors'] as List).isNotEmpty)
         ? (book['authors'] as List).join(', ')
         : (book?['author'] ?? raw['author'] ?? '').toString();
 
@@ -1669,7 +1755,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
   Future<void> _submitInlineExchange(String recipientListingId) async {
     if (_selectedExchangeIds.isEmpty) {
-      setState(() => _error = 'Vui lòng chọn ít nhất 1 cuốn sách của bạn để đổi.');
+      setState(
+        () => _error = 'Vui lòng chọn ít nhất 1 cuốn sách của bạn để đổi.',
+      );
       return;
     }
     setState(() {
@@ -1830,11 +1918,15 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     final session = ref.watch(sessionProvider);
     final userId = session.user?.id;
     final conv = _conv;
-    final listingId = (conv?['listingId'] ??
-            (conv?['listing'] is Map ? (conv!['listing'] as Map)['id'] : ''))
-        ?.toString() ??
+    final listingId =
+        (conv?['listingId'] ??
+                (conv?['listing'] is Map
+                    ? (conv!['listing'] as Map)['id']
+                    : ''))
+            ?.toString() ??
         '';
-    final listing = _listingCache[listingId] ??
+    final listing =
+        _listingCache[listingId] ??
         (conv?['listing'] is Map
             ? Map<String, dynamic>.from(conv!['listing'] as Map)
             : const <String, dynamic>{});
@@ -1847,9 +1939,11 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     final agreedPrice = terms['agreedPrice'] is num
         ? (terms['agreedPrice'] as num)
         : null;
-    final listedPrice = (listing['salePrice'] ?? conv?['listedPrice'] ?? 50000) as num;
+    final listedPrice =
+        (listing['salePrice'] ?? conv?['listedPrice'] ?? 50000) as num;
     final effectivePrice = agreedPrice ?? listedPrice;
-    final isSeller = userId != null &&
+    final isSeller =
+        userId != null &&
         (conv?['sellerId']?.toString() == userId ||
             listing['sellerId']?.toString() == userId);
     final shortCode = widget.id.length >= 8
@@ -1866,112 +1960,112 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
               title: 'Đang mở hồ sơ thỏa thuận…',
             )
           : conv == null
-              ? StatePanel(
-                  wine: true,
-                  title: 'Không tìm thấy cuộc trò chuyện',
-                  message: _error,
-                  actionLabel: 'Về hộp thư',
-                  onAction: () => context.go('/chat-inbox'),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    BackAction(
-                      title: 'Hội thoại của bạn',
-                      onPressed: () => context.canPop()
-                          ? context.pop()
-                          : context.go('/chat-inbox'),
-                    ),
-                    if (_error != null) ...[
-                      Notice(message: _error!, tone: NoticeTone.error),
-                      const SizedBox(height: AppSpace.md),
-                    ],
-                    if (_notice != null) ...[
-                      Notice(message: _notice!, tone: NoticeTone.success),
-                      const SizedBox(height: AppSpace.md),
-                    ],
+          ? StatePanel(
+              wine: true,
+              title: 'Không tìm thấy cuộc trò chuyện',
+              message: _error,
+              actionLabel: 'Về hộp thư',
+              onAction: () => context.go('/chat-inbox'),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                BackAction(
+                  title: 'Hội thoại của bạn',
+                  onPressed: () => context.canPop()
+                      ? context.pop()
+                      : context.go('/chat-inbox'),
+                ),
+                if (_error != null) ...[
+                  Notice(message: _error!, tone: NoticeTone.error),
+                  const SizedBox(height: AppSpace.md),
+                ],
+                if (_notice != null) ...[
+                  Notice(message: _notice!, tone: NoticeTone.success),
+                  const SizedBox(height: AppSpace.md),
+                ],
 
-                    // Segmented 2 Tabs: "Đơn sách" vs "Chatbox"
-                    _buildDetailTabBar(
-                      activeTab: _activeTab,
-                      onTabChanged: (idx) => setState(() => _activeTab = idx),
-                      hasPendingProposal: pendingProposal != null,
-                      messageCount: _messages.length,
-                    ),
+                // Segmented 2 Tabs: "Đơn sách" vs "Chatbox"
+                _buildDetailTabBar(
+                  activeTab: _activeTab,
+                  onTabChanged: (idx) => setState(() => _activeTab = idx),
+                  hasPendingProposal: pendingProposal != null,
+                  messageCount: _messages.length,
+                ),
 
-                    LayoutBuilder(
-                      builder: (context, constraints) {
-                        final isWide = constraints.maxWidth >= 880;
-                        final bookCard = _buildBookDossierCard(
-                          listing: listing,
-                          listedPrice: listedPrice,
-                          agreedPrice: agreedPrice,
-                          effectivePrice: effectivePrice,
-                        );
-                        final orderId = (conv['orderId'] ?? '').toString();
-                        final agreementCard = _buildAgreementDossierCard(
-                          shortCode: shortCode,
-                          isSeller: isSeller,
-                          agreedPrice: agreedPrice,
-                          effectivePrice: effectivePrice,
-                          pendingProposal: pendingProposal,
-                          userId: userId,
-                          listingId: (listing['id'] ?? conv['listingId'] ?? '')
-                              .toString(),
-                          orderId: orderId,
-                        );
-                        final chatCard = _buildChatPanelCard(
-                          isSeller: isSeller,
-                          userId: userId,
-                        );
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isWide = constraints.maxWidth >= 880;
+                    final bookCard = _buildBookDossierCard(
+                      listing: listing,
+                      listedPrice: listedPrice,
+                      agreedPrice: agreedPrice,
+                      effectivePrice: effectivePrice,
+                    );
+                    final orderId = (conv['orderId'] ?? '').toString();
+                    final agreementCard = _buildAgreementDossierCard(
+                      shortCode: shortCode,
+                      isSeller: isSeller,
+                      agreedPrice: agreedPrice,
+                      effectivePrice: effectivePrice,
+                      pendingProposal: pendingProposal,
+                      userId: userId,
+                      listingId: (listing['id'] ?? conv['listingId'] ?? '')
+                          .toString(),
+                      orderId: orderId,
+                    );
+                    final chatCard = _buildChatPanelCard(
+                      isSeller: isSeller,
+                      userId: userId,
+                    );
 
-                        final dossierWorkspace = orderId.isNotEmpty
-                            ? OrderDetailsDossier(
-                                orderId: orderId,
-                                embedded: true,
-                                onOrderChanged: _loadConversation,
-                              )
-                            : Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  bookCard,
-                                  const SizedBox(height: AppSpace.md),
-                                  agreementCard,
-                                ],
-                              );
-
-                        if (isWide) {
-                          return Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(flex: 5, child: dossierWorkspace),
-                              const SizedBox(width: AppSpace.md),
-                              Expanded(flex: 5, child: chatCard),
-                            ],
-                          );
-                        }
-
-                        // Mobile View: Switch between 2 tabs (Tab 0: Đơn sách, Tab 1: Chatbox)
-                        if (_activeTab == 0) {
-                          return dossierWorkspace;
-                        } else {
-                          return Column(
+                    final dossierWorkspace = orderId.isNotEmpty
+                        ? OrderDetailsDossier(
+                            orderId: orderId,
+                            embedded: true,
+                            onOrderChanged: _loadConversation,
+                          )
+                        : Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              _buildCompactBookBar(
-                                listing: listing,
-                                effectivePrice: effectivePrice,
-                                agreedPrice: agreedPrice,
-                                orderId: orderId,
-                              ),
-                              chatCard,
+                              bookCard,
+                              const SizedBox(height: AppSpace.md),
+                              agreementCard,
                             ],
                           );
-                        }
-                      },
-                    ),
-                  ],
+
+                    if (isWide) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 5, child: dossierWorkspace),
+                          const SizedBox(width: AppSpace.md),
+                          Expanded(flex: 5, child: chatCard),
+                        ],
+                      );
+                    }
+
+                    // Mobile View: Switch between 2 tabs (Tab 0: Đơn sách, Tab 1: Chatbox)
+                    if (_activeTab == 0) {
+                      return dossierWorkspace;
+                    } else {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildCompactBookBar(
+                            listing: listing,
+                            effectivePrice: effectivePrice,
+                            agreedPrice: agreedPrice,
+                            orderId: orderId,
+                          ),
+                          chatCard,
+                        ],
+                      );
+                    }
+                  },
                 ),
+              ],
+            ),
     );
   }
 
@@ -1982,15 +2076,17 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     required num? agreedPrice,
     required num effectivePrice,
   }) {
-    final title = (listing['bundle']?['title'] ??
-            listing['book']?['title'] ??
-            listing['title'] ??
-            'Ấn bản sách cũ')
-        .toString();
-    final author = (listing['book']?['authors'] is List
-            ? (listing['book']['authors'] as List).join(' · ')
-            : (listing['author'] ?? 'Tác giả Lật Lại'))
-        .toString();
+    final title =
+        (listing['bundle']?['title'] ??
+                listing['book']?['title'] ??
+                listing['title'] ??
+                'Ấn bản sách cũ')
+            .toString();
+    final author =
+        (listing['book']?['authors'] is List
+                ? (listing['book']['authors'] as List).join(' · ')
+                : (listing['author'] ?? 'Tác giả Lật Lại'))
+            .toString();
     final listingId = (listing['id'] ?? '').toString();
 
     return Container(
@@ -2049,8 +2145,10 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                     ),
                   ),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(16),
@@ -2146,9 +2244,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                                   'Xem bài đăng gốc ↗',
                                   kind: AppTextKind.small,
                                   color: StitchTokens.wine,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                                  style: TextStyle(fontWeight: FontWeight.w700),
                                 ),
                               ),
                             ],
@@ -2280,7 +2376,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     final proposalAmount = pendingProposal?['amount'] is num
         ? (pendingProposal!['amount'] as num)
         : null;
-    final proposedByPartner = pendingProposal != null &&
+    final proposedByPartner =
+        pendingProposal != null &&
         userId != null &&
         pendingProposal['proposedById']?.toString() != userId;
 
@@ -2346,8 +2443,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                     orderId.isNotEmpty
                         ? 'Đã tạo đơn'
                         : agreedPrice != null
-                            ? 'Đã chốt giá'
-                            : 'Đang thương lượng',
+                        ? 'Đã chốt giá'
+                        : 'Đang thương lượng',
                     kind: AppTextKind.label,
                     color: (orderId.isNotEmpty || agreedPrice != null)
                         ? const Color(0xFF1B5E20)
@@ -2362,10 +2459,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const AppText(
-                  'Hình thức giao dịch:',
-                  kind: AppTextKind.bold,
-                ),
+                const AppText('Hình thức giao dịch:', kind: AppTextKind.bold),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(4),
@@ -2393,7 +2487,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                               boxShadow: _transactionMode == 'Buy'
                                   ? [
                                       BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.05),
+                                        color: Colors.black.withValues(
+                                          alpha: 0.05,
+                                        ),
                                         blurRadius: 4,
                                         offset: const Offset(0, 1),
                                       ),
@@ -2418,7 +2514,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                           onTap: () {
                             if (_transactionMode != 'Exchange') {
                               setState(() => _transactionMode = 'Exchange');
-                              if (_myExchangeBooks.isEmpty && !_loadingInventory) {
+                              if (_myExchangeBooks.isEmpty &&
+                                  !_loadingInventory) {
                                 _loadMyExchangeInventory();
                               }
                             }
@@ -2434,7 +2531,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                               boxShadow: _transactionMode == 'Exchange'
                                   ? [
                                       BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.05),
+                                        color: Colors.black.withValues(
+                                          alpha: 0.05,
+                                        ),
                                         blurRadius: 4,
                                         offset: const Offset(0, 1),
                                       ),
@@ -2648,8 +2747,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                         title: 'Bổ sung / sửa nơi gửi trong bài đăng',
                         secondary: true,
                         compact: true,
-                        onPressed: () =>
-                            context.push('/drafts?id=$listingId'),
+                        onPressed: () => context.push('/drafts?id=$listingId'),
                       ),
                   ] else ...[
                     Container(
@@ -2738,7 +2836,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                         width: 28,
                         height: 28,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1F7A3E).withValues(alpha: 0.12),
+                          color: const Color(0xFF1F7A3E)
+                              .withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(
@@ -2777,10 +2876,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
       }
     }
 
-    final linkedId = (_linkedExchange?['id'] ??
-            _linkedExchange?['entityId'] ??
-            '')
-        .toString();
+    final linkedId =
+        (_linkedExchange?['id'] ?? _linkedExchange?['entityId'] ?? '')
+            .toString();
     final linkedStatus = (_linkedExchange?['status'] ?? 'Pending').toString();
 
     return Column(
@@ -2825,8 +2923,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                         linkedStatus == 'Pending'
                             ? 'Chờ phản hồi'
                             : linkedStatus == 'Accepted'
-                                ? 'Đã chấp nhận'
-                                : linkedStatus,
+                            ? 'Đã chấp nhận'
+                            : linkedStatus,
                         kind: AppTextKind.label,
                         color: const Color(0xFF15803D),
                       ),
@@ -2949,10 +3047,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _myExchangeBooks.length,
-              separatorBuilder: (context, index) => const Divider(
-                height: 1,
-                color: StitchTokens.cardBorder,
-              ),
+              separatorBuilder: (context, index) =>
+                  const Divider(height: 1, color: StitchTokens.cardBorder),
               itemBuilder: (context, idx) {
                 final book = _myExchangeBooks[idx];
                 final id = (book['id'] ?? '').toString();
@@ -3060,10 +3156,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
           // Total counter & CTA button
           if (_selectedExchangeIds.isNotEmpty) ...[
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: StitchTokens.parchment,
                 borderRadius: BorderRadius.circular(8),
@@ -3199,18 +3292,16 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? (badgeIsAlert
-                          ? const Color(0xFFFF5252)
-                          : StitchTokens.gold.withValues(alpha: 0.28))
-                      : (badgeIsAlert
-                          ? const Color(0xFFFFEBEE)
-                          : Colors.white),
+                            ? const Color(0xFFFF5252)
+                            : StitchTokens.gold.withValues(alpha: 0.28))
+                      : (badgeIsAlert ? const Color(0xFFFFEBEE) : Colors.white),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: isSelected
                         ? Colors.transparent
                         : (badgeIsAlert
-                            ? const Color(0xFFEF9A9A)
-                            : StitchTokens.cardBorder),
+                              ? const Color(0xFFEF9A9A)
+                              : StitchTokens.cardBorder),
                   ),
                 ),
                 child: Text(
@@ -3221,8 +3312,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                     color: isSelected
                         ? (badgeIsAlert ? Colors.white : StitchTokens.gold)
                         : (badgeIsAlert
-                            ? const Color(0xFFC62828)
-                            : StitchTokens.wine),
+                              ? const Color(0xFFC62828)
+                              : StitchTokens.wine),
                   ),
                 ),
               ),
@@ -3240,20 +3331,23 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     required num? agreedPrice,
     String? orderId,
   }) {
-    final title = (listing['bundle']?['title'] ??
-            listing['book']?['title'] ??
-            listing['title'] ??
-            'Ấn bản sách cũ')
-        .toString();
-    final author = (listing['book']?['authors'] is List
-            ? (listing['book']['authors'] as List).join(' · ')
-            : (listing['author'] ?? 'Tác giả Lật Lại'))
-        .toString();
-    final coverUrl = (listing['coverImageUrl'] ??
-            listing['book']?['coverUrl'] ??
-            listing['coverUrl'] ??
-            '')
-        .toString();
+    final title =
+        (listing['bundle']?['title'] ??
+                listing['book']?['title'] ??
+                listing['title'] ??
+                'Ấn bản sách cũ')
+            .toString();
+    final author =
+        (listing['book']?['authors'] is List
+                ? (listing['book']['authors'] as List).join(' · ')
+                : (listing['author'] ?? 'Tác giả Lật Lại'))
+            .toString();
+    final coverUrl =
+        (listing['coverImageUrl'] ??
+                listing['book']?['coverUrl'] ??
+                listing['coverUrl'] ??
+                '')
+            .toString();
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpace.md),
@@ -3407,10 +3501,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   }
 
   /// Card 3: Chat Panel (`ChatMessagesPanel`)
-  Widget _buildChatPanelCard({
-    required bool isSeller,
-    String? userId,
-  }) {
+  Widget _buildChatPanelCard({required bool isSeller, String? userId}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -3436,7 +3527,10 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const AppText('Hộp thoại thương lượng', kind: AppTextKind.bold),
+                    const AppText(
+                      'Hộp thoại thương lượng',
+                      kind: AppTextKind.bold,
+                    ),
                     AppText(
                       isSeller
                           ? 'Người mua · Bạn đang bán sách'
@@ -3494,13 +3588,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                 separatorBuilder: (_, _) => const SizedBox(height: 8),
                 itemBuilder: (context, index) {
                   final m = _messages[index];
-                  final isOwn = userId != null &&
-                      m['senderId']?.toString() == userId;
+                  final isOwn =
+                      userId != null && m['senderId']?.toString() == userId;
                   final text = (m['body'] ?? m['text'] ?? '').toString();
 
                   return Align(
-                    alignment:
-                        isOwn ? Alignment.centerRight : Alignment.centerLeft,
+                    alignment: isOwn
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
                     child: Container(
                       constraints: const BoxConstraints(maxWidth: 280),
                       padding: const EdgeInsets.symmetric(
@@ -3548,19 +3643,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
               ),
               const SizedBox(width: 8),
               IconButton.filled(
-                style: IconButton.styleFrom(
-                  backgroundColor: StitchTokens.wine,
-                ),
+                style: IconButton.styleFrom(backgroundColor: StitchTokens.wine),
                 onPressed: () {
                   final text = _msgCtrl.text.trim();
                   if (text.isEmpty) return;
                   setState(() {
                     _messages = [
                       ..._messages,
-                      {
-                        'body': text,
-                        'senderId': ?userId,
-                      }
+                      {'body': text, 'senderId': ?userId},
                     ];
                     _msgCtrl.clear();
                   });
@@ -3598,4 +3688,3 @@ class _DossierRow extends StatelessWidget {
     );
   }
 }
-

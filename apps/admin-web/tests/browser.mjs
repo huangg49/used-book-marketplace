@@ -22,7 +22,7 @@ try {
       "--host",
       "127.0.0.1",
       "--port",
-      "5174",
+      new URL(origin).port,
       "--strictPort",
     ],
     {
@@ -78,7 +78,16 @@ try {
     p.getByRole("button", { name, exact: true }).click();
   // Modal effects/native focus restoration may finish after visibility on CI.
   // Keep the actual focus requirement with a bounded, retrying DOM assertion.
-  const focused = (locator) => expectBrowser(locator).toBeFocused({ timeout: 2000 });
+  const focused = async (locator) => {
+    try { await expectBrowser(locator).toBeFocused({ timeout: 2000 }); }
+    catch (error) {
+      console.error('Unexpected focus target', await locator.page().evaluate(() => {
+        const node = document.activeElement;
+        return { tag: node?.tagName, id: node?.id, label: node?.getAttribute('aria-label'), role: node?.getAttribute('role') };
+      }));
+      throw error;
+    }
+  };
   const shot = async (p, name) => {
     await p.evaluate(() => document.fonts.ready);
     assert.equal(
@@ -258,6 +267,8 @@ try {
   await skip.focus();
   await p.keyboard.press("Enter");
   await focused(p.locator("#main"));
+  await p.keyboard.press("Tab");
+  await focused(p.getByRole("region", { name: "Hàng chờ kiểm duyệt", exact: true }));
   await p.keyboard.press("Tab");
   await focused(p.getByRole("button", { name: "Cập nhật danh sách", exact: true }));
   await p.setViewportSize({ width: 320, height: 780 });
@@ -511,18 +522,25 @@ try {
   await click(p, "Đã từ chối");
   await p.locator(".queue-row").first().waitFor();
   let offline = true;
-  await p.route("**/operations/listings?*", (route) =>
-    offline ? route.abort("failed") : route.continue(),
-  );
+  await p.route("**/operations/listings?*", (route) => {
+    const url = new URL(route.request().url());
+    // Only fail the selected queue refresh, not the dossier's independent
+    // PendingReview continuation queue.
+    if (url.pathname !== "/api/v1/operations/listings" || url.searchParams.get("moderation") !== "Rejected")
+      return route.fallback();
+    return offline ? route.abort("failed") : route.continue();
+  });
   await click(p, "Cập nhật danh sách");
-  await p
+  const queueResults = p.getByRole("region", { name: "Danh sách hồ sơ", exact: true });
+  await queueResults
     .getByText("Chưa kết nối được máy chủ. Kiểm tra mạng và thử lại.")
     .waitFor();
   assert((await p.locator(".queue-row").count()) > 0);
   await shot(p, "queue-refresh-error-1440");
   offline = false;
-  await click(p, "Thử tải lại");
-  await p.getByRole("alert").waitFor({ state: "hidden" });
+  await click(queueResults, "Thử tải lại");
+  await queueResults.getByRole("alert").waitFor({ state: "hidden" });
+  await expectBrowser(p.getByRole("region", {name: "Bàn đọc hồ sơ", exact: true}).getByRole("alert")).toHaveCount(0);
   const staff = await page();
   await login(staff, "/review/catalog-requests", "staff@operations.test");
   await staff

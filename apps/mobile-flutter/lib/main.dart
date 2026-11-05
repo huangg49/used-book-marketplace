@@ -5,11 +5,7 @@ import 'app/router.dart';
 import 'core/theme/app_theme.dart';
 
 void main() {
-  runApp(
-    const ProviderScope(
-      child: UsedBooksApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: UsedBooksApp()));
 }
 
 class UsedBooksApp extends ConsumerWidget {

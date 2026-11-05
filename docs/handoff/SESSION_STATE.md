@@ -1,3 +1,19 @@
+# Tích hợp main vào nhánh phát triển —05/11/2026
+
+Owner yêu cầu cập nhật nhánh local, giữ thay đổi riêng và xử lý conflict.
+Nhánh `codex/member-web-wallet-summary-read-states`: merge `origin/main`
+`ef7091e1e24eeff186eb0db3329a4682aa4f0e63` vào local `57dcf7f2`, giữ ancestry;
+backup `codex/backup-before-main-20261105-57dcf7f2`. Merge checkpoint subject
+`merge: integrate latest main while preserving local web improvements`.
+Đã ghép9file conflict, giữ phân trang/focus/motion/recovery local cùng withdrawal
+main; không có ý định nghiệp vụ chưa rõ cần chọn lại. Regenerate OpenAPI0.74.1,
+257operations/39controllers. PASS1442unit, workspace typecheck/build/lint,
+contract/docs/diff, wallet read10/layout5, auction2, order-chat và web-motion5checks.
+Flutter SDK không có: format/analyze/test/native NOT RUN, chỉ đối chiếu source.
+Không DB/migration/seed/provider/demo service/push/PR/remote merge/deploy.
+Checkout demo giữ nguyên54file local; main ref không chuyển nhánh. READINESS giữ.
+[Chi tiết cách ghép và bằng chứng](MAIN_INTEGRATION_2026_11_05.md).
+
 # Gia cố khả năng phục hồi Member web — cập nhật05/11/2026
 
 Owner chưa tiện kiểm thật, giao tiếp tục rà tính năng bằng source và kiểm thử
@@ -389,6 +405,184 @@ Không push/PR/merge mới hoặc đóng READINESS. Native/human/remoteCI NOT RU
 Checkout app kích hoạt d03bd5ce và commit bàn giao cùng gói (giữ field tiêu chí
 tùy chọn + bằng chứng demo), nhánh `codex/demo-receipt-local-20261103`;
 API/worker3000, Admin5173, Member5174 giữ chạy; các checkpoint cũ giữ bên dưới.
+
+# Rút tiền qua Admin — 04/11/2026
+
+- Sửa CI cho [PR96](https://github.com/huangg49/used-book-marketplace/pull/96)
+  trên `codex/wallet-withdrawals-ready`, base `af87ed05`. Bốn lỗi ở head ban đầu:
+  Flutter format, fixture chat thiếu profile/session read, focus Admin bị dossier
+  tải muộn chiếm lại, importer chưa nhận reference free-shipping0052. Đã sửa
+  từng commit; không sửa migration đã áp dụng hoặc dữ liệu local chính.
+  PASS local: Flutter format/analyze/15tests; User order-chat browser; Admin
+  229unit/typecheck/build và full browser (keyboard/menu/skip, retry/conflict,
+  quyền/session); API typecheck/lint và7PostgreSQL-import Mongo tests, gồm drift
+  policy/selection bị từ chối, snapshot tiền và CapitalIncrease0055đúng một lần.
+  Fault injection Admin nhắm đúng queue Rejected, không đánh hỏng continuation
+  PendingReview độc lập; fixture cho phép origin QA riêng để không chiếm FE local.
+  CI remote đọc trực tiếp tại PR theo head hiện tại; local PASS không tự thành
+  remote/native/human acceptance. Giữ READINESS và chưa merge main/deploy.
+  Lượt remote `310adfda` đã qua các bước lỗi cũ; User Web chạy tiếp tới test đấu
+  giá mới phát hiện thao tác cũ. Follow-up mở panel Bộ lọc trước khi tick buy-now,
+  dùng nút Xóa tất cả hiện có; giữ assertions URL/check state/filter/cache/Back/
+  loading/error/ảnh lỗi. Browser1440/390 local PASS, evidence `.tmp/pr96-auction-stage`.
+- Bàn giao push theo yêu cầu owner04/11 tại `codex/wallet-withdrawals-ready`.
+  Giữ14commit chức năng/UI từ `91e7c011` đến `daa2441a`, đã đồng bộ
+  `origin/main` tại `3cfe0c6d` bằng merge `aaf6e6cc`, không xung đột; phần main
+  mới là Flutter, không thay source API/Member/Admin đã kiểm trong gói này.
+  Checkpoint subject `docs(wallet): prepare withdrawal push handoff`. Chỉ xuất
+  bản nhánh chức năng, không PR/merge main/deploy. Các ghi chú “chưa push” bên
+  dưới là trạng thái của từng checkpoint trước khi owner cấp quyền lần này.
+  Dùng lại evidence229Admin/339Member unit, build/typecheck/lint,13withdrawal E2E,
+  31Mongo follow-up và final47browser captures/126interaction states; các giới
+  hạn API stress/shutdown, native/human/remote CI và READINESS giữ nguyên.
+  Gói bàn giao chỉ đồng bộ ancestry/docs; không chạy lại gate API/browser đã đạt.
+- Gói popup vừa xong `codex/admin-withdrawal-approval-popup`, base `86ad4573`; checkpoint
+  subject `refactor(admin): refine withdrawal approval popup`. Header wine,
+  amount/state cream band, account24px và bank/holder có nhãn; chỉ Xác nhận,
+  không reason duyệt. Mobile stack, scroll/header sticky; opening420ms/backdrop
+  fade240ms, hover/press giữ tương phản. Đã sửa close hover bị màu chung đè.
+  PASS229Admin unit/typecheck/build/lint,47browser captures/0page errors/overflow,
+  126interaction states; Escape/focus restore, tài khoản giữ0đầu,320px/chữ130%,
+  lostACK/exact retry/hold/payout/refund. Detector chỉ3advisory literal kế thừa.
+  QA teardown/dừng, main apps giữ chạy. Không API/ledger/.env/migration/READINESS,
+  push/merge; human/native/remote CI chưa chạy.
+- Gói bộ lọc trước ở `codex/admin-withdrawal-status-filter`, base `eb443c0e`; checkpoint subject
+  `fix(admin): simplify withdrawal status filters`. Menu Admin mặc định chỉ All,
+  Requested/Completed/Rejected; không đưa bước trung gian/hoàn tiền cũ vào menu.
+  Giữ enum/history, All, URL lọc cũ và route simulator, không đổi API/ledger.
+  Read-only DB local xác nhận chỉ Manual Requested/Completed. PASS229Admin unit,
+  typecheck/build/lint; targeted QA browser bốn options, lọc/query URL, legacy
+  URL rồi quay về menu gọn,320px,0page errors và không tạo/duyệt/rút tiền.
+  Detector TS0finding, docs/diff PASS. Không chạy lại full luồng tiền do không
+  đổi command/state machine; QA teardown/dừng, main apps giữ chạy. Không sửa
+  .env/migration/READINESS hoặc push/merge; chưa human/native/remote CI review.
+- Gói danh sách trước ở `codex/admin-withdrawal-queue-ui`, base `e212c34c`; checkpoint subject
+  `refactor(admin): refine withdrawal review queue`. Làm gọn header, refresh cạnh
+  title, filter/danh sách/phân trang chung một panel; initial/tên/mã/ngày cùng
+  nhóm, tiền căn phải và trạng thái Requested dùng warning, Xem đơn rõ tương tác.
+  Container query dưới720px xếp từng đơn dọc, không kéo ngang. Tách label filter
+  riêng để accessible name chỉ là Trạng thái. Count chỉ là số hàng đã tải.
+  PASS229Admin unit/typecheck/build/lint,44browser captures/0page errors/overflow,
+  empty/filter/Back và117interaction states (6mới trên refresh/link Admin).
+  Đã xem desktop/320/390chữ130%; detector chỉ3advisory giá trị cũ ngoài queue.
+  QA teardown/dừng, main apps giữ chạy. Không API/ledger/token/migration/.env,
+  push/merge/đổi READINESS; human review/native/remote CI chưa chạy.
+- Gói popup trước ở `codex/withdrawal-detail-popup`, base `c792f5c6`; checkpoint subject
+  `refactor(wallet): refine withdrawal detail popup`. Đồng bộ header/motion với
+  form; tiền/trạng thái rõ, recipient/timeline hai cột desktop và stack mobile,
+  mã đầy đủ trong disclosure bàn phím. Requested có dưới24h/hold; Completed và
+  Rejected không còn copy chờ duyệt. Giữ masking/notes/Processing recovery/API.
+  PASS339Member unit/typecheck/build/lint,39browser captures/0page errors/overflow,
+  keyboard reference và111button states. Đã xem desktop/320/390chữ130%; detector
+  chỉ advisory16px modal đã có. QA teardown/dừng; Member5174/Admin5173/API3000
+  và workers đã bật lại với cấu hình cổng hiện có, không sửa .env/dữ liệu owner.
+  Không push/merge/đổi READINESS; human review/native/remote CI chưa chạy.
+- Gói format trước ở `codex/withdrawal-amount-grouping`, base `5df75183`; checkpoint subject
+  `feat(wallet): format withdrawal amounts with thousands separators`. Amount
+  display5300500→5.300.500; raw digits/number payload, safe-integer/balance/min và
+  key/body giữ nguyên. Caret/paste/edit/delete quanh separator đã kiểm, không đổi
+  account/API/DB. PASS339Member unit/typecheck/build/lint, browser33captures với
+  0page errors/overflow,111button states và POST100000number/exact retry. Đã xem
+  desktop; QA dừng, main apps chạy. Không mutation owner/push/merge/đổi READINESS.
+- Gói textarea trước ở `codex/withdrawal-textarea-no-resize`, base `e1c70627`;
+  subject `fix(wallet): disable manual resizing of withdrawal reason`.
+  Bỏ grip kéo giãn ô lý do bằng resize none; nội dung dài cuộn trong ô. CSS fixture
+  browser PASS computed style/drag không đổi height; không API command hoặc QA DB.
+  PASS320Member unit/typecheck/build/lint, docs/diff check; giữ main apps chạy,
+  không push/merge hoặc đổi READINESS.
+- Gói xác nhận trước ở `codex/withdrawal-confirmation-layout`, base `6008f1c2`;
+  subject `refactor(wallet): clarify withdrawal confirmation layout`. Owner yêu
+  cầu làm đẹp bước xác nhận. Tách financial cream/recipient paper, tiền28–36px,
+  tài khoản24px, note riêng và nút Back gọn; mobile một cột, giữ màu/motion/draft.
+  Preview snapshot số dư lúc review để mất ACK không trừ lặp trên màn hình;
+  server/ledger/API/key/body giữ nguyên. PASS320Member unit/typecheck/build/lint,
+  33browser captures/0page errors/overflow,111button-state cases; kiểm hold thật
+  và preview400k sau lostACK, back/edit và approve/reject/refund/owner-only.
+  Đã xem desktop/390/320; QA dừng, main apps chạy. Không push/merge/đổi READINESS.
+- Gói màu nút trước ở `codex/wallet-button-interaction-colors`, base `bd985543`;
+  subject `fix(wallet): keep popup buttons readable in every interaction state`.
+  Tái hiện Tiếp tục/guard draft mất màu khi thiếu token portal, contrast1:1;
+  đã thêm fallback và foreground cho hover/active/focus, ring đóng header rõ hơn.
+  Không đổi handler/API/key/body/disabled/motion. PASS111button-state cases ở8
+  context, min contrast5.08:1;30browser captures/0page errors/overflow và320Member
+  unit/typecheck/build/lint. QA riêng, không mutation owner; main apps giữ chạy,
+  QA đã dừng. Không push/merge/native/human/CI PASS hoặc đổi READINESS.
+- Gói form trước ở `codex/withdrawal-form-motion`, base `6c81c12a`; subject
+  `feat(wallet): refine withdrawal form with receipt transitions`. Owner yêu cầu
+  làm đẹp popup và nhiều hiệu ứng. Entry760px wine/cream,2cột desktop/1cột mobile,
+  preset tiền thật và receipt kiểm tra; giữ input khi chỉnh sửa và retry cùng key.
+  Motion popup/backdrop/header/field/step/receipt/focus/hover/spinner trong phạm vi
+  form, giữ cả hai OS preferences; không đổi PurchaseDialog chung/API/DB.
+- Gói form PASS320Member unit/typecheck/build/lint,30browser captures với0page
+  errors/overflow: preset, back/edit,2OS motion, exact retry và duyệt/refund/detail.
+  Visual desktop/320px/receipt mobile đã xem; input bị global CSS đè đã sửa scoped.
+  Smoke hover/focus/OS preference PASS sau bổ sung token trong portal; không gửi
+  đơn ở smoke. QA dừng, main3000/5173/5174 giữ chạy. Không push/merge/đổi READINESS.
+- Gói bỏ list trước ở `codex/wallet-remove-withdrawal-list`, base `4876c54c`;
+  subject `refactor(wallet): remove separate withdrawal request list`. Owner yêu
+  cầu bỏ khối “Yêu cầu rút tiền” dưới lịch sử; đã bỏ UI/query phân trang/CSS riêng.
+  Giữ banner chờ duyệt, lịch sử Rút tiền và popup/deep link. Polling banner cập
+  nhật số dư/lịch sử thay list cũ; không xóa dữ liệu hoặc đổi API/contract/DB.
+- Gói bỏ list PASS320Member unit/typecheck/build/lint, browser30captures với
+  0page errors/overflow, form/banner/history/notification detail, exact retry,
+  duyệt/refund/owner-only. Đã xem desktop/320px. Các lượt harness đầu vướng429
+  do thêm login, selector notification và menu timeout; runner cuối dùng đúng
+  notification và entry `/wallet`, giữ timeout/policy. Không tính lượt lỗi PASS.
+  QA đã dừng; main apps giữ chạy, không mutation owner/push/merge/đổi READINESS.
+- Gói banner trước ở `codex/wallet-pending-withdrawal-notice`, base `cec2fc6f`;
+  subject `feat(wallet): highlight pending withdrawal requests`. Owner yêu cầu
+  hiện số đơn chờ duyệt và thời gian xử lý dưới24giờ rõ trên đầu trang Ví.
+- Banner trên thẻ ví/lịch sử đếm toàn bộ Requested qua endpoint/filter/cursor có
+  sẵn, cache theo owner; nút mở chi tiết, kiểm lại15giây và sau thay đổi đơn. Không
+  đếm Completed/Rejected hoặc suy zero khi đọc lỗi; không sửa API/contract/DB.
+- PASS320Member unit/typecheck/build/lint (cảnh báo cũ ngoài feature), browser30
+  captures1440/1000/390/320/chữ130%,0page errors/overflow; count1/2 qua phân trang
+  API thật, SLA copy, detail link, ẩn sau duyệt/từ chối, lostACK/exact retry và
+  owner-only. Đã xem desktop/320px và nhiều đơn; giữ DESIGN/token, không ảnh mới.
+  Browser đầu vướng race chuyển trang sau login; helper nay chờ đúng URL thay vì
+  assert trên màn login, giữ timeout/motion. Lượt chạy lại PASS. QA đã dừng;
+  main apps giữ chạy, không mutation owner, push/merge hoặc đổi READINESS.
+- UI Admin trước ở `codex/admin-withdrawal-detail-ui`, base `cf23cc66`; subject
+  `refactor(admin): compact withdrawal review and confirmation`. Owner yêu cầu UI
+  gọn hơn và popup duyệt chỉ bấm “Xác nhận”, không nhập lý do duyệt.
+- Admin detail gom số tiền/trạng thái/nút xử lý ở đầu, nhận tiền và thông tin đơn
+  trong một sheet, nhật ký ở bên; mã tham chiếu mở rộng. Popup duyệt480px chỉ xem
+  thông tin nhận và xác nhận; command dùng ghi nhận cố định, không giả lý do do
+  Admin nhập. Lý do từ chối/Member và session/key/body/version giữ nguyên.
+- Gói nghiệp vụ trước ở `codex/wallet-withdrawals`, commit `91e7c011`/`cf23cc66`:
+  owner làm rõ nhập tài khoản bất kỳ, không cần bước vận hành simulator.
+- Đơn mới Manual: popup bắt buộc lý do/thông tin nhận, giữ tiền riêng khi gửi;
+  Admin độc lập duyệt là Completed + debit + lịch sử Rút tiền nguyên tử. Từ chối
+  trả hold. Không xác minh tài khoản hoặc gọi ngân hàng; không phụ thuộc simulator.
+  Đơn Simulator cũ giữ semantics cũ, không tự xử lý khoản chi chưa rõ kết quả.
+- Contract0.74.1/256operations/39controllers, migration0061 thêm field tùy chọn;
+  không sửa0060/checksum cũ. Current auth, recent Admin session, version/key/body,
+  receipt và ledger invariants giữ nguyên. RN chưa có form rút native.
+- Follow-up PASS13withdrawal E2E,31Mongo schema/upgrade,320Member/229Admin unit;
+  API/Member/Admin typecheck/build, contract/routes và docs check. Browser thật
+  API/Mongo QA:22captures1440/390/320/chữ130%,0page errors/overflow; arbitrary
+  account, simulator tắt, lostACK/exact retry, một payout, reject/refund, owner-only.
+  Đã xem form desktop, Admin completed và Member completed mobile; giữ style cũ.
+- Gói UI mới PASS229Admin unit/typecheck/build/lint (cảnh báo cũ), browser25captures
+  1440/1000/390/320/chữ130%,0page errors/overflow; duyệt không textarea, quyết định
+  ngay màn đầu1440×900, mở mã tham chiếu, lostACK/exact retry, một payout/refund.
+  Lượt browser đầu timeout lúc cold-start Member20s; retry giữ nguyên timeout PASS,
+  lượt kiểm sau thay đổi popup xác nhận cũng PASS. Không sửa API/contract/DB.
+- Đã thử0060/0061 trên bản sao QA riêng,4628bản ghi cũ nguyên vẹn và ledger cân.
+  Sau backup private, đã áp hai migration và quyền collection vào DB local chính;
+  bản ghi/mật khẩu cũ nguyên vẹn, ledger cân. Không seed/reset/đổi `.env`.
+  API3000, Admin5173, Member5174 và hai worker hiện chạy source mới; GET xác nhận
+  withdrawalsEnabled=true và đọc được yêu cầu của owner. Không gửi/duyệt đơn hoặc
+  trừ tiền owner khi kiểm tra.
+- Lượt tiếp tục phải bật lại Docker/app đã dừng; lỗi socket tạm Docker được giải
+  quyết bằng đóng/mở lại Docker Desktop, không xóa socket/reset/volume/đổi DB.
+  Container Mongo local cũ healthy; QA vẫn dừng. Bước dùng tiếp: tải lại `/wallet`.
+- Gói đầu còn Windows shutdown unit timeout và stress100topup503; follow-up không
+  chạy lại hoặc tính full API suite PASS. Native/human/bank/CI NOT RUN.
+- [Hành trình/evidence/kích hoạt](../features/WALLET_WITHDRAWALS.md),
+  [ADR0073](../adr/0073-manual-wallet-withdrawals.md). Chưa push/merge;
+  READINESS giữ nguyên. Backup/evidence private trong `.tmp`, không commit.
+
 
 # Đồng bộ main và bảo toàn checkout local — 03/11/2026
 

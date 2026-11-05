@@ -1,19 +1,20 @@
+import { withdrawalStateSchema } from "@used-books/session-client";
 import { z } from "zod";
 import { session } from "../lib/session";
 
-const money = z.number().int().min(0).max(100_000_000);
+const money = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 export const walletSummarySchema = z.object({
   demoOnly: z.literal(true),
   label: z.literal("Mô phỏng đồ án"),
   currency: z.literal("VND"),
   available: money,
   transactionHeld: money,
-  withdrawalHeld: z.literal(0),
+  withdrawalHeld: money,
   total: money,
   serverTime: z.iso.datetime({ offset: true }),
   topupEnabled: z.boolean(),
   paymentsEnabled: z.boolean(),
-  withdrawalsEnabled: z.literal(false),
+  withdrawalsEnabled: z.boolean(),
   listingSubmissionFee: money.optional(),
   atomicCheckout: z.boolean().optional(),
   vnpayEnabled: z.boolean().optional(),
@@ -24,6 +25,8 @@ export function getWalletSummary() {
 }
 export const walletHistoryLabels = {
   Topup: "Nạp tiền",
+  WithdrawalHold: "Rút tiền",
+  WithdrawalRefund: "Rút tiền · Hoàn khoản giữ",
   OrderPayment: "Thanh toán đơn hàng",
   OrderRefund: "Hoàn tiền đơn hàng",
   OrderSettlement: "Nhận tiền bán sách",
@@ -34,6 +37,8 @@ export const walletHistoryLabels = {
 export type WalletHistoryType = keyof typeof walletHistoryLabels;
 const walletHistoryItemSchema = z.object({
   journalId: z.uuid(),
+  withdrawalId: z.uuid().nullable().optional(),
+  withdrawalState: withdrawalStateSchema.nullable().optional(),
   topupId: z.uuid().nullable(),
   orderId: z.uuid().nullable(),
   type: z.enum(
@@ -42,7 +47,7 @@ const walletHistoryItemSchema = z.object({
       ...WalletHistoryType[],
     ],
   ),
-  amount: z.number().int().min(-100_000_000).max(100_000_000),
+  amount: z.number().int().min(-Number.MAX_SAFE_INTEGER).max(Number.MAX_SAFE_INTEGER),
   balanceAfter: money,
   postedAt: z.iso.datetime({ offset: true }),
   demoOnly: z.literal(true),

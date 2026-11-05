@@ -102,20 +102,21 @@ export class WalletService {
       member(actor);
       const available = await this.ledger.available(tx, actor._id);
       const transactionHeld = await this.ledger.held(tx, actor._id);
+      const withdrawalHeld = await this.ledger.withdrawalHeld(tx, actor._id);
       const now = await tx.now();
       await this.session(tx, auth, now);
       return {
         ...DEMO,
         available,
-        total: available + transactionHeld,
+        total: available + transactionHeld + withdrawalHeld,
         transactionHeld,
-        withdrawalHeld: 0,
+        withdrawalHeld,
         serverTime: now.toISOString(),
         topupEnabled:
           actor.status !== 'LOCKED' &&
           (this.simulator.enabled() || this.vnpay.enabled()),
         paymentsEnabled: actor.status !== 'LOCKED',
-        withdrawalsEnabled: false,
+        withdrawalsEnabled: actor.status !== 'LOCKED',
         listingSubmissionFee: this.policy.listingFee,
         atomicCheckout: this.policy.atomicCheckout,
         vnpayEnabled: actor.status !== 'LOCKED' && this.vnpay.enabled(),
@@ -606,6 +607,7 @@ export class WalletService {
         .aggregate<{
           _id: string;
           topupId: string | null;
+          withdrawalId: string | null;
           orderId: string | null;
           type: Wire['WalletHistoryItem']['type'];
           postedAt: Date;
@@ -626,6 +628,7 @@ export class WalletService {
             $project: {
               _id: '$j._id',
               topupId: '$j.topupId',
+              withdrawalId: { $ifNull: ['$j.withdrawalId', null] },
               orderId: '$j.orderId',
               type: '$j.type',
               sequence: '$j.sequence',
@@ -651,11 +654,16 @@ export class WalletService {
         .toArray();
       const more = rows.length > Number(q.limit);
       if (more) rows.pop();
+      const withdrawalIds = rows.flatMap(row => row.withdrawalId ? [row.withdrawalId] : []);
+      const withdrawals = withdrawalIds.length ? await tx.c.withdrawals.find({_id:{$in:withdrawalIds},ownerId:actor._id}).toArray() : [];
+      const withdrawalStates = new Map(withdrawals.map(row => [row._id,row.state]));
       return {
         items: rows.map((row) => ({
           ...DEMO,
+          withdrawalState: row.withdrawalId ? withdrawalStates.get(row.withdrawalId) ?? null : null,
           journalId: row._id,
           topupId: row.topupId,
+          withdrawalId: row.withdrawalId,
           orderId: row.orderId,
           type: row.type,
           amount: row.amount,

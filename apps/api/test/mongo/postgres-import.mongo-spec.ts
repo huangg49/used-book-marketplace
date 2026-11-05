@@ -10,6 +10,11 @@ import {
 import { OPENING_JOURNAL_ID } from '../../src/database/mongo/migrations/0002-reference-data.js';
 import { LISTING_FEE_CLEARING_ID } from '../../src/database/mongo/migrations/0022-vnpay-wallet-listing-fees.js';
 import { bookCirculationRegions } from '../../src/database/mongo/migrations/0030-book-circulation-regions.js';
+import { FREE_SHIPPING_POLICY } from '../../src/database/mongo/migrations/0052-free-shipping.js';
+import {
+  CAPITAL_INCREASE_JOURNAL_ID,
+  SIMULATED_CAPITAL,
+} from '../../src/database/mongo/migrations/0055-simulator-capital-increase.js';
 import { prepareDatabase, testUrl } from './harness.js';
 import { postgresOrderFixture } from './postgres-order-fixture.js';
 import { runTransaction } from '../../src/database/mongo/transaction.js';
@@ -169,7 +174,10 @@ describe.skipIf(!pgUrl)('PostgreSQL import', () => {
     const original = await localities.findOne({ _id: id as never });
     const before = await readSnapshot(source);
     try {
-      await localities.updateOne({ _id: id as never }, { $set: { label: 'Unexpected drift' } });
+      await localities.updateOne(
+        { _id: id as never },
+        { $set: { label: 'Unexpected drift' } },
+      );
       await expect(importPostgres(source, mongo, mongo.db())).rejects.toThrow(
         'Reference data service_localities differs',
       );
@@ -181,7 +189,9 @@ describe.skipIf(!pgUrl)('PostgreSQL import', () => {
   });
 
   it('refuses unknown source locality labels instead of normalizing arbitrary edits', async () => {
-    const { rows: [original] } = await source.query<{ label: string }>(
+    const {
+      rows: [original],
+    } = await source.query<{ label: string }>(
       "SELECT label FROM service_localities WHERE area_code='HCM-DEMO-v1' AND code='DEMO-A'",
     );
     try {
@@ -200,6 +210,38 @@ describe.skipIf(!pgUrl)('PostgreSQL import', () => {
     }
   });
 
+  it('refuses drift in the Mongo-native free shipping policy before importing data', async () => {
+    const policies = mongo.db().collection('sale_quote_policies');
+    const filter = { _id: FREE_SHIPPING_POLICY as never };
+    const original = await policies.findOne(filter);
+    try {
+      await policies.updateOne(filter, { $set: { shippingFee: 1 } });
+      await expect(importPostgres(source, mongo, mongo.db())).rejects.toThrow(
+        'Reference data sale_quote_policies differs',
+      );
+      expect(await mongo.db().collection('users').countDocuments()).toBe(0);
+    } finally {
+      await policies.replaceOne(filter, original!);
+    }
+  });
+
+  it('refuses a reverted policy selection even when it matches the old source', async () => {
+    const selection = mongo.db().collection('sale_quote_policy_selection');
+    const filter = { _id: 'DirectSale' as never };
+    const original = await selection.findOne(filter);
+    try {
+      await selection.updateOne(filter, {
+        $set: { policyCode: 'HCM-DIRECT-v1' },
+      });
+      await expect(importPostgres(source, mongo, mongo.db())).rejects.toThrow(
+        'Reference data sale_quote_policy_selection differs',
+      );
+      expect(await mongo.db().collection('users').countDocuments()).toBe(0);
+    } finally {
+      await selection.replaceOne(filter, original!);
+    }
+  });
+
   it('imports every table with matching counts, hashes and integrity', async () => {
     const before = await readSnapshot(source);
     const feeAccount = await mongo
@@ -213,9 +255,34 @@ describe.skipIf(!pgUrl)('PostgreSQL import', () => {
       currency: 'VND',
     });
     const report = await importPostgres(source, mongo, mongo.db());
-    expect(await mongo.db().collection('service_localities').find().sort({ _id: 1 }).toArray())
-      .toEqual(bookCirculationRegions);
-    expect(report.collections.service_localities).toMatchObject({ rows: 2, documents: 2 });
+    expect(
+      await mongo
+        .db()
+        .collection('sale_quote_policies')
+        .findOne({ _id: FREE_SHIPPING_POLICY as never }),
+    ).toMatchObject({ shippingFee: 0, commissionBps: 500, ttlSeconds: 300 });
+    expect(
+      await mongo
+        .db()
+        .collection('sale_quote_policy_selection')
+        .findOne({ _id: 'DirectSale' as never }),
+    ).toMatchObject({ policyCode: FREE_SHIPPING_POLICY });
+    expect(report.collections.sale_quote_policies).toMatchObject({
+      rows: 1,
+      documents: 1,
+    });
+    expect(
+      await mongo
+        .db()
+        .collection('service_localities')
+        .find()
+        .sort({ _id: 1 })
+        .toArray(),
+    ).toEqual(bookCirculationRegions);
+    expect(report.collections.service_localities).toMatchObject({
+      rows: 2,
+      documents: 2,
+    });
     expect(
       await mongo
         .db()
@@ -231,7 +298,7 @@ describe.skipIf(!pgUrl)('PostgreSQL import', () => {
     expect(report.mismatches).toEqual([]);
     expect(report.integrity?.failures).toEqual([]);
     expect(report.integrity?.ledger).toMatchObject({
-      sourceRemaining: 99_000_000,
+      sourceRemaining: SIMULATED_CAPITAL - 1_000_000,
       memberAvailable: 310_000,
       transactionHeld: 690_000,
       balanced: true,
@@ -285,9 +352,19 @@ describe.skipIf(!pgUrl)('PostgreSQL import', () => {
     })) as unknown as { postedAt: Date; sequence: number };
     expect(journal.postedAt.getTime()).toBe(posted_at.getTime());
     expect(
+      await c('ledger_journals').countDocuments({
+        _id: CAPITAL_INCREASE_JOURNAL_ID,
+      }),
+    ).toBe(1);
+    expect(
+      await c('ledger_entries').countDocuments({
+        journalId: CAPITAL_INCREASE_JOURNAL_ID,
+      }),
+    ).toBe(2);
+    expect(
       await c('counters').findOne({ _id: 'ledger_journal_sequence' }),
     ).toMatchObject({
-      value: 5,
+      value: 6,
     });
   });
 
@@ -356,7 +433,7 @@ describe.skipIf(!pgUrl)('PostgreSQL import', () => {
       expect(sweep.failures).toEqual([]);
       expect(sweep.ledger).toMatchObject({
         balanced: true,
-        sourceRemaining: 99_000_000,
+        sourceRemaining: SIMULATED_CAPITAL - 1_000_000,
         memberAvailable: 310_000,
         transactionHeld: 690_000,
       });

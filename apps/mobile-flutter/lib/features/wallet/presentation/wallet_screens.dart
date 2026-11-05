@@ -199,8 +199,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
           ),
           const SizedBox(height: AppSpace.sm),
           const Notice(
-            message:
-                'Mô phỏng đồ án. Số liệu thử nghiệm sổ cái bất biến (Ledger), không phải tiền thật.',
+            message: 'Mô phỏng đồ án. Số liệu thử nghiệm sổ cái bất biến (Ledger), không phải tiền thật.',
             tone: NoticeTone.info,
           ),
           const SizedBox(height: AppSpace.md),
@@ -377,8 +376,7 @@ class _WalletScreenState extends ConsumerState<WalletScreen> {
                     AppText(
                       formatVnd(amount.abs()),
                       kind: AppTextKind.bold,
-                      color:
-                          amount >= 0 ? AppColors.forest : StitchTokens.wine,
+                      color: amount >= 0 ? AppColors.forest : StitchTokens.wine,
                     ),
                   ],
                 ),
@@ -422,7 +420,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       final list = map['items'] is List ? (map['items'] as List) : const [];
       if (!mounted) return;
       setState(() {
-        _version = (map['version'] is num) ? (map['version'] as num).toInt() : 0;
+        _version = (map['version'] is num)
+            ? (map['version'] as num).toInt()
+            : 0;
         _items = list
             .whereType<Map>()
             .map((e) => Map<String, dynamic>.from(e))
@@ -552,8 +552,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           title: 'Xem bài đăng',
                           wine: true,
                           compact: true,
-                          onPressed: () =>
-                              context.push('/book?id=$listingId'),
+                          onPressed: () => context.push('/book?id=$listingId'),
                         ),
                         AppButton(
                           title: 'Xóa khỏi giỏ',
@@ -677,15 +676,14 @@ class _WishlistScreenState extends ConsumerState<WishlistScreen> {
               wine: true,
               icon: Icons.bookmark_border_rounded,
               title: 'Chưa có sách đã lưu',
-              message:
-                  'Nhấn biểu tượng lưu trên thẻ sách để theo dõi giá hoặc nhận thông báo.',
+              message: 'Nhấn biểu tượng lưu trên thẻ sách để theo dõi giá hoặc nhận thông báo.',
               actionLabel: 'Khám phá kệ sách',
               onAction: () => context.go('/search'),
             )
           else
             ..._items.map((w) {
-              final listingId =
-                  (w['listingId'] ?? w['subjectId'] ?? '').toString();
+              final listingId = (w['listingId'] ?? w['subjectId'] ?? '')
+                  .toString();
               final title = (w['title'] ?? 'Ấn bản đã lưu').toString();
               return Container(
                 margin: const EdgeInsets.only(bottom: AppSpace.md),
@@ -775,8 +773,9 @@ class _AddressesScreenState extends ConsumerState<AddressesScreen> {
       final list = map['items'] is List ? (map['items'] as List) : const [];
       if (!mounted) return;
       setState(() {
-        _bookVersion =
-            (map['version'] is num) ? (map['version'] as num).toInt() : 0;
+        _bookVersion = (map['version'] is num)
+            ? (map['version'] as num).toInt()
+            : 0;
         _items = list
             .whereType<Map>()
             .map((e) => Map<String, dynamic>.from(e))
@@ -796,7 +795,9 @@ class _AddressesScreenState extends ConsumerState<AddressesScreen> {
     if (_nameCtrl.text.trim().isEmpty ||
         _phoneCtrl.text.trim().isEmpty ||
         _detailCtrl.text.trim().isEmpty) {
-      setState(() => _error = 'Vui lòng điền đầy đủ người nhận, SĐT và địa chỉ.');
+      setState(
+        () => _error = 'Vui lòng điền đầy đủ người nhận, SĐT và địa chỉ.',
+      );
       return;
     }
     setState(() {
@@ -905,21 +906,22 @@ class _AddressesScreenState extends ConsumerState<AddressesScreen> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: [
-                      ('Q1', 'Quận 1, TP.HCM'),
-                      ('Q3', 'Quận 3, TP.HCM'),
-                      ('THUDUC', 'TP. Thủ Đức, TP.HCM'),
-                      ('BINHDUONG', 'Bình Dương'),
-                      ('VUNGTAU', 'Vũng Tàu'),
-                    ].map((loc) {
-                      return AppChip(
-                        title: loc.$2,
-                        wine: true,
-                        selected: _localityCode == loc.$1,
-                        onPressed: () =>
-                            setState(() => _localityCode = loc.$1),
-                      );
-                    }).toList(),
+                    children:
+                        [
+                          ('Q1', 'Quận 1, TP.HCM'),
+                          ('Q3', 'Quận 3, TP.HCM'),
+                          ('THUDUC', 'TP. Thủ Đức, TP.HCM'),
+                          ('BINHDUONG', 'Bình Dương'),
+                          ('VUNGTAU', 'Vũng Tàu'),
+                        ].map((loc) {
+                          return AppChip(
+                            title: loc.$2,
+                            wine: true,
+                            selected: _localityCode == loc.$1,
+                            onPressed: () =>
+                                setState(() => _localityCode = loc.$1),
+                          );
+                        }).toList(),
                   ),
                   const SizedBox(height: 12),
                   AppTextField(
@@ -933,8 +935,7 @@ class _AddressesScreenState extends ConsumerState<AddressesScreen> {
                     value: _makeDefault,
                     activeColor: StitchTokens.wine,
                     title: const AppText('Đặt làm địa chỉ mặc định'),
-                    onChanged: (v) =>
-                        setState(() => _makeDefault = v ?? true),
+                    onChanged: (v) => setState(() => _makeDefault = v ?? true),
                   ),
                   const SizedBox(height: 12),
                   AppButton(
@@ -964,8 +965,7 @@ class _AddressesScreenState extends ConsumerState<AddressesScreen> {
                 wine: true,
                 icon: Icons.location_on_outlined,
                 title: 'Chưa có địa chỉ lưu trong sổ',
-                message:
-                    'Thêm địa chỉ tại TP.HCM, Bình Dương hoặc Vũng Tàu để đặt mua và gửi sách.',
+                message: 'Thêm địa chỉ tại TP.HCM, Bình Dương hoặc Vũng Tàu để đặt mua và gửi sách.',
               )
             else
               ..._items.asMap().entries.map((entry) {
@@ -988,9 +988,7 @@ class _AddressesScreenState extends ConsumerState<AddressesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       AppText(
-                        isDef
-                            ? 'ĐỊA CHỈ $idx · MẶC ĐỊNH'
-                            : 'ĐỊA CHỈ $idx',
+                        isDef ? 'ĐỊA CHỈ $idx · MẶC ĐỊNH' : 'ĐỊA CHỈ $idx',
                         kind: AppTextKind.label,
                         color: StitchTokens.wine,
                       ),
@@ -1013,4 +1011,3 @@ class _AddressesScreenState extends ConsumerState<AddressesScreen> {
     );
   }
 }
-

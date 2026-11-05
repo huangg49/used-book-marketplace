@@ -85,8 +85,10 @@ try {
     await page.goto(origin + '/auctions')
     await cards(page).nth(2).waitFor()
     await compact(page)
-    // The shipped filter panel starts collapsed when no filters are active.
-    await page.getByRole('button', { name: /^Bộ lọc/ }).click()
+    const filterButton = page.getByRole('button', { name: /^Bộ lọc/ })
+    await filterButton.click()
+    await expectBrowser(filterButton).toHaveAttribute('aria-expanded', 'true')
+
     await page.getByRole('checkbox', { name: /có giá mua ngay/i }).click()
     await page.waitForURL('**/auctions?buyNow=1')
     await expectBrowser(page.getByRole('checkbox', { name: /có giá mua ngay/i })).toBeChecked()

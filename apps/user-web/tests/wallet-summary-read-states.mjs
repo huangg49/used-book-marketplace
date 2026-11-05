@@ -21,7 +21,7 @@ const checks = [];
 let browser;
 try {
   browser = await chromium.launch();
-  for (const width of [390, 1440]) for (const mode of ['initial-error', 'cached-error', 'zero', 'nonzero']) {
+  for (const width of [390, 1440]) for (const mode of ['initial-error', 'cached-error', 'zero', 'nonzero', ...baseline ? [] : ['withdrawal-held']]) {
     const context = await browser.newContext({ viewport: { width, height: 950 }, reducedMotion: 'reduce' });
     await context.routeWebSocket('**/*', socket => socket.close());
     const page = await context.newPage(), errors = [];
@@ -29,7 +29,8 @@ try {
     let status = 200, reads = 0, hold = true, release;
     const summary = { demoOnly: true, label: 'Mô phỏng đồ án', currency: 'VND',
       available: mode === 'zero' ? 0 : 75000, transactionHeld: mode === 'zero' ? 0 : 25000,
-      withdrawalHeld: 0, total: mode === 'zero' ? 0 : 100000, serverTime: new Date().toISOString(),
+      withdrawalHeld: !baseline && ['cached-error', 'withdrawal-held'].includes(mode) ? 15000 : 0,
+      total: mode === 'zero' ? 0 : !baseline && ['cached-error', 'withdrawal-held'].includes(mode) ? 115000 : 100000, serverTime: new Date().toISOString(),
       topupEnabled: true, paymentsEnabled: true, withdrawalsEnabled: false, vnpayEnabled: false };
     await context.route('**/*', async route => {
       const request = route.request(), url = new URL(request.url()), p = url.pathname;
@@ -40,6 +41,10 @@ try {
         if (hold) await new Promise(resolve => { release = resolve; });
         return route.fulfill(status === 200 ? { json: summary } : { status, json: { code: 'QA_UNAVAILABLE' } });
       }
+      if (p === '/api/v1/me/wallet/history' && mode === 'withdrawal-held') return route.fulfill({ json: {
+        items: Array.from({ length: 11 }, (_, i) => ({ journalId: id(100 + i), withdrawalId: id(200 + i),
+          withdrawalState: 'Requested', topupId: null, orderId: null, type: 'WithdrawalHold', amount: -15000,
+          balanceAfter: 75000, postedAt: summary.serverTime, demoOnly: true, label: 'Mô phỏng đồ án', currency: 'VND' })), nextCursor: null } });
       if (p === '/api/v1/me/topups' || p === '/api/v1/me/wallet/history') return route.fulfill({ json: { items: [], nextCursor: null } });
       if (p === '/api/v1/me/notifications') return route.fulfill({ json: { items: [], unreadCount: 0, nextCursor: null } });
       if (p.startsWith('/api/v1/')) return route.fulfill({ status: 503, json: { code: 'QA_UNAVAILABLE' } });
@@ -64,6 +69,7 @@ try {
     if (mode !== 'initial-error') {
       await expect(held).toHaveText(mode === 'zero' ? /^0\D*$/ : /25\.000/);
       await expect(available).toHaveText(mode === 'zero' ? /^0\D*$/ : /75\.000/);
+      if (!baseline && ['cached-error', 'withdrawal-held'].includes(mode)) await expect(card.getByText(/Chờ rút:.*15\.000/)).toBeVisible();
       if (mode === 'cached-error') { status = 503; await refresh.click(); }
     }
     if (mode.endsWith('error')) {
@@ -71,6 +77,7 @@ try {
       if (baseline) await expect(held).toHaveText(mode === 'initial-error' ? /^0\D*$/ : /25\.000/);
       else {
         await expect(held).toHaveText('—');
+        await expect(card.getByText(/Chờ rút:/)).toHaveCount(0);
         await expect(page.getByText('Chưa tải được số dư ví và tiền ký quỹ. Hãy làm mới để thử lại.', { exact: true })).toBeVisible();
         await expect(refresh).toHaveAttribute('aria-describedby', 'wallet-summary-error');
       }
@@ -81,10 +88,24 @@ try {
       await expect(available).toHaveText(/75\.000/);
       if (!baseline) await expect(page.locator('#wallet-summary-error')).toHaveCount(0);
     }
+    if (mode === 'withdrawal-held') {
+      await card.screenshot({ path: path.join(out, `withdrawal-held-${width}.png`) });
+      const history = page.getByRole('region', { name: 'Lịch sử giao dịch', exact: true });
+      await history.getByRole('tab', { name: 'Rút tiền', exact: true }).click();
+      await expect(history.locator('li')).toHaveCount(10);
+      await expect(history.getByText('Chờ duyệt', { exact: true })).toHaveCount(10);
+      const pager = page.getByRole('navigation', { name: 'Điều hướng phân trang', exact: true });
+      await pager.getByRole('button', { name: 'Trang 2', exact: true }).click();
+      await expect(history.locator('li')).toHaveCount(1);
+      await pager.getByRole('button', { name: 'Trang 1', exact: true }).click();
+      await expect(history.locator('li')).toHaveCount(10);
+      await history.screenshot({ path: path.join(out, `withdrawal-history-${width}.png`) });
+    }
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     assert.deepEqual(errors, []);
     checks.push({ width, mode, reads, loadingIsUnknown: !baseline, errorIsUnknown: !baseline,
-      confirmedZeroPreserved: mode === 'zero', recoveryReadOnly: true });
+      confirmedZeroPreserved: mode === 'zero', recoveryReadOnly: true,
+      withdrawalHistoryPagination: mode === 'withdrawal-held' || undefined });
     await context.close();
   }
   await writeFile(path.join(out, baseline ? 'before.json' : 'after.json'), JSON.stringify({ checks }, null, 2));
