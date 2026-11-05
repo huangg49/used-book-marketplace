@@ -7,6 +7,38 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Trao đổi: phục hồi số lượng cùng danh sách sau lỗi đọc —05/11/2026
+
+Nhánh `codex/member-web-exchange-count-recovery`, base `b9c98749`; checkpoint subject
+`fix(user-web): recover exchange counts together with the list`.
+[ExchangeMinePage](../../apps/user-web/src/pages/ExchangeMinePage.tsx) counts và
+list là2query riêng cùng đọc `/exchanges`. Trước counts lỗi bị bỏ qua, lỗi sau
+cache giữ số cũ; nút Thử tải lại chỉ refetch list, nên list đã mới còn số cũ hoặc
+“—” không phục hồi. Nay counts lỗi hoặc list401/403 ẩn số cache thành “—”, không
+thành0; list denied có copy quyền/phiên rõ. Khi chỉ counts lỗi, vẫn mở danh sách
+và có alert/nút thử lại riêng; retry cập nhật cả2query, khóa trong lúc fetching.
+Kết quả0thật vẫn hiển thị0. Không đổi service/cache keys/actor scope, tab/count
+phân loại,100exchange hiện có, contract/quyền hay trạng thái giao dịch.
+
+[Production fixture](../../apps/user-web/tests/exchange-count-recovery.mjs),
+`pnpm --filter @used-books/user-web test:exchange-count-recovery:browser`:
+baseline10/after10 PASS,390/1440 × initial503/cached403/cached503/counts-only/
+confirmedzero. Cố định responses ban đầu7/1/1/1, sau retry2/0/0/0: trước retry
+chỉ list2card, counts vẫn cũ/unknown; sau cả list2card và counts2/0/0/0. Lỗi chỉ
+counts trước không alert/retry, sau có và đọc lại cả2query. Counts-only fixture
+gây lỗi request đầu ứng với hook counts đăng ký trước, list request2 vẫn200;
+không suy API thực phân biệt hai query hoặc endpoint mới. Tab nhận được sau phục
+hồi0và empty đúng.16route-param/keyboard/page/Back hồi quy PASS trên build cuối.
+
+PASS build/typecheck,449unit/57file, scoped lint JSON0, docs/diff, detector0finding.
+46 CSS khớp byte; không style/motion/asset đổi; thêm alert/retry bằng lớp hiện có,
+đã xem capture390/1440. Evidence `.tmp/member-web-exchange-count-recovery/`.
+All-origin HTTP mock/chặn WS/external, chỉ synthetic login/GET, không Exchange
+command/DB/provider/native/human;401 refresh thật NOT RUN. Demo54file/status nguyên
+vẹn, READINESS không đổi; không push/PR/deploy. Counts/list vẫn là2read độc lập,
+không cùng snapshot transaction; không suy số lượng luôn đồng bộ khi backend đang
+đổi hoặc hết mọi lỗi Exchange từ fixture ổn định này.
+
 ## Trao đổi: tham số tab chỉ nhận đúng bốn giá trị —05/11/2026
 
 Nhánh `codex/member-web-exchange-route-params`, base `08b49c41`; checkpoint subject

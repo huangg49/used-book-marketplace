@@ -3,6 +3,7 @@ import { Pagination } from "../components/Pagination";
 import { usePaginationFocus } from "../components/Pagination/usePaginationFocus";
 import { useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { ApiError } from "@used-books/session-client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "../hooks/useSession";
 import {
@@ -90,7 +91,7 @@ export default function ExchangeMinePage() {
   const rawPage = Number(searchParams.get("page") ?? 1);
   const currentPage = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
 
-  const { data: countsData } = useQuery({
+  const counts = useQuery({
     queryKey: ["exchangeCounts", actor],
     queryFn: getExchangeCounts,
     enabled: !!actor,
@@ -101,12 +102,16 @@ export default function ExchangeMinePage() {
     isLoading,
     isFetching,
     isError,
+    error: listError,
     refetch,
   } = useQuery({
     queryKey: ["exchangeTransactions", actor, currentTab, currentPage],
     queryFn: () => getExchangeTransactions(currentTab, currentPage),
     enabled: !!actor,
   });
+  const inaccessible = listError instanceof ApiError && [401, 403].includes(listError.status);
+  const countsData = counts.isError || inaccessible ? undefined : counts.data;
+  const refreshExchanges = () => void Promise.all([counts.refetch(), refetch()]);
 
   useEffect(() => {
     if (!listData) return;
@@ -195,6 +200,15 @@ export default function ExchangeMinePage() {
         </div>
       </header>
 
+      {counts.isError && !isError && (
+        <div className={styles.errorBox} role="alert">
+          <p>Chưa cập nhật được số lượng trao đổi. Danh sách bên dưới vẫn mở được; hãy tải lại để kiểm tra số lượng.</p>
+          <button type="button" className={styles.retryBtn}
+            disabled={counts.isFetching || isFetching} onClick={refreshExchanges}>
+            Tải lại số lượng và danh sách
+          </button>
+        </div>
+      )}
       {/* 2. Modern Segmented Tab Bar */}
       <div
         className={styles.tabBar}
@@ -246,10 +260,15 @@ export default function ExchangeMinePage() {
 
         {isError && (
           <div className={styles.errorBox} role="alert">
-            <p className="font-semibold">Đã xảy ra lỗi khi tải danh sách trao đổi.</p>
+            <p className="font-semibold">{inaccessible
+              ? "Quyền xem trao đổi đã thay đổi. Kiểm tra phiên đăng nhập và thử lại."
+              : counts.isError
+                ? "Chưa tải được số lượng và danh sách trao đổi. Kiểm tra kết nối và thử lại."
+                : "Đã xảy ra lỗi khi tải danh sách trao đổi."}</p>
             <button
               type="button"
-              onClick={() => refetch()}
+              onClick={refreshExchanges}
+              disabled={counts.isFetching || isFetching}
               className={styles.retryBtn}
             >
               Thử tải lại

@@ -90,7 +90,8 @@
     "test:chat-listing-read-recovery:browser": "node tests/chat-listing-read-recovery.mjs",
     "test:work-inbox-read-access:browser": "node tests/work-inbox-read-access.mjs",
     "test:work-inbox-sparse-pages:browser": "node tests/work-inbox-sparse-pages.mjs",
-    "test:exchange-route-params:browser": "node tests/exchange-route-params.mjs"
+    "test:exchange-route-params:browser": "node tests/exchange-route-params.mjs",
+    "test:exchange-count-recovery:browser": "node tests/exchange-count-recovery.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
