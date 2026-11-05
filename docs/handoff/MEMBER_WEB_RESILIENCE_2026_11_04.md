@@ -7,6 +7,45 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Quản lý ảnh: pin đúng target và đồng bộ URL với tệp gửi —05/11/2026
+
+Nhánh `codex/member-web-listing-photo-identity`, base `bd9e5a95`; checkpoint subject
+`fix(user-web): keep listing photo edits bound to their targets`.
+[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) trước remove/replace
+theo index render. Click lặp xóa2ảnh; URL ảnh thứ2 bị bỏ không revoke khi rời.
+Chooser ảnh phụ đợi trong lúc cover crop trả về chèn index0 có thể thay nhầm cover;
+gửi duyệt sau đó chứa thứ tự/bytes khác ảnh người dùng muốn thay. Target đã xóa
+trước chooser trả còn làm thay nhầm ảnh kế tiếp.
+
+Nay remove/replace pin URL đã chọn. Mỗi lần cập nhật giữ URL/tệp trong snapshot
+ref đồng bộ và cùng cập nhật React state; crop accept/reposition/append/remove/
+replace/reset dùng cùng đường này. Cover đến muộn giữ các ảnh phụ vừa sửa, index
+được tính lại tại thao tác thay, mất target báo chọn lại trước cấp preview. Click
+lặp cùng URL chỉ xóa1ảnh. Focus vẫn theo vị trí hiện tại sau đổi, cleanup luôn
+thấy danh sách mới. Không đổi giới hạn1cover+7ảnh phụ/10MB/MIME, body/key/version/
+receipt, crop chất lượng, model/storage hoặc animation.
+
+[Production fixture](../../apps/user-web/tests/listing-photo-identity.mjs),
+`pnpm --filter @used-books/user-web test:listing-photo-identity:browser`:
+baseline10/after10 PASS,390/1440 × cover-double/support-double/chooser khi cover
+chèn/mất target/giới hạn. Trước click lặp xóa2 và để live1 sau Back; sau xóa đúng1,
+live0. Chooser khi crop chèn trước thay nhầm cover,3ảnh upload sai intent; sau
+cover giữ2URL, thay đúng ảnh phụ,3digest theo đúng thứ tự. Chỉ so boolean trong
+memory, không in bytes/hash/body. Mất target trước thay ảnh kế tiếp; sau báo rõ và
+cấp0URL thừa. Batch8ảnh phụ bị từ chối trước cấp URL;7ảnh phụ+cover vẫn đủ8.
+Chooser completion/target removal là thứ tự sự kiện cô lập; không suy người dùng
+thao tác được vào trang khi native OS picker đang khóa tương tác.
+
+22profile hồi quy PASS trên build cuối: crop lifecycle8/reset-lostACK6/submit
+guard8.2profile target-removed capture riêng, không ghi đè JSON10ca đầy đủ.
+PASS build/typecheck,449unit/57file, scoped lint JSON0diagnostic, docs/diff.
+Detector3color advisory cũ,46 CSS khớp byte, không style/asset/motion đổi; đã xem
+capture alert390/1440. Evidence `.tmp/member-web-listing-photo-identity/`.
+Toàn bộ API/upload/publishing all-origin fake, không DB/provider/native/human/
+heap máy thật; không suy nghiệm thu listing thực. Demo54file/status giữ nguyên,
+READINESS không đổi, không push/PR/deploy. Tiếp theo rà màn danh sách/phục hồi
+dữ liệu; không suy toàn web hết lỗi từ gói ảnh.
+
 ## Vị trí cắt lỗi: khôi phục preview đã chấp nhận và dọn đúng lỗi —05/11/2026
 
 Nhánh `codex/member-web-cover-position-recovery`, base `c7455f48`; checkpoint subject

@@ -1,17 +1,21 @@
 # Gia cố khả năng phục hồi Member web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-cover-position-recovery`, base `c7455f48`; checkpoint
-subject `fix(user-web): restore accepted cover positioning after crop failure`.
-[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) rollback vị trí
-optimistic về crop đã chấp nhận khi lỗi; retry xóa đúng lỗi crop, giữ alert khác.
-Baseline6/after6 keyboard `/sell`390/1440 PASS: decode/Canvas/encode failure,
-Home/End retry và lỗi MIME độc lập; raw/file đang dùng giữ nguyên.6first-crop
-failure regression PASS. Build/typecheck,449unit/57file, scoped lint JSON0diagnostic,
-docs/diff PASS;46 CSS khớp byte, không JSX/style/motion/asset, skip detector logic-
-only (3advisory cũ). [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Backend/provider
-mô phỏng, không upload/save/submit/DB/native/human. Ảnh phụ/thao tác index kiểm tiếp.
+Nhánh `codex/member-web-listing-photo-identity`, base `bd9e5a95`; checkpoint subject
+`fix(user-web): keep listing photo edits bound to their targets`.
+[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) remove/replace theo
+URL target và cập nhật URL/tệp cùng snapshot refs/state. Click lặp không xóa ảnh
+kế tiếp; chooser khi cover chèn giữ đúng target, target mất báo chọn lại, không
+cấp URL. Baseline10/after10 production390/1440 PASS, gồm body bytes/order đúng,
+limit8 giữ nguyên và live0 sau Back (trước click lặp live1).22profile hồi quy
+crop/reset/submit guard PASS. Build/typecheck,449unit/57file, scoped lint JSON0,
+docs/diff PASS; detector3color advisory cũ,46 CSS khớp byte, không style/motion/
+asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Backend/upload/publishing
+mô phỏng, không DB/provider/native/human/heap máy thật. Tiếp tục rà danh sách và
+phục hồi dữ liệu; không suy đã hết lỗi toàn web.
 
+Gói cùng lượt `bd9e5a95` rollback vị trí crop lỗi về bản đã chấp nhận, retry dọn
+đúng crop error và giữ alert khác; baseline6/after6+6failure regression PASS.
 Gói cùng lượt `c7455f48` chặn gửi khi current crop pending bằng state+guard đồng bộ,
 không tự gửi sau resolve; baseline8/after8+6reset regression,5unit mới PASS.
 Gói cùng lượt `d689f33d` dọn assist/reference/busy/token khi Đăng cuốn khác và
