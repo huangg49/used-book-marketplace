@@ -75,7 +75,8 @@
     "test:pending-withdrawal-pagination:browser": "node tests/pending-withdrawal-pagination.mjs",
     "test:wallet-history-access:browser": "node tests/wallet-history-access.mjs",
     "test:price-assist-expiry:browser": "node tests/price-assist-expiry.mjs",
-    "test:price-reference-expiry:browser": "node tests/price-reference-expiry.mjs"
+    "test:price-reference-expiry:browser": "node tests/price-reference-expiry.mjs",
+    "test:autofill-read-lock:browser": "node tests/autofill-read-lock.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

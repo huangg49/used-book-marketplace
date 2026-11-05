@@ -1,28 +1,30 @@
 # Gia cố khả năng phục hồi Member web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-price-reference-expiry`, base `3f8a6ba2`; checkpoint subject
-`fix(user-web): bind reference confirmation to its current result`.
-[PriceReferencePanel](../../apps/user-web/src/components/PriceReferencePanel.tsx)
-tự cập nhật khi hết hạn, báo cách yêu cầu lại/nhập tay; pin confirmation vào đúng
-kết quả đã chọn, response mới cần chọn lại, không áp dụng/reopen modal amount cũ.
-Không đổi rule/nguồn/hạn5phút, API/quota hoặc attribution AI. Baseline12/after12
-browser component390/1440 và10ca AI expiry hồi quy PASS. Build/typecheck,
-426unit/55file, scoped lint/docs/diff và detector0finding PASS.46 CSS khớp byte,
-không style/motion/asset đổi. [Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md).
-Component fixture không thay toàn wizard/catalog/upload/AI thật/native/human.
+Nhánh `codex/member-web-autofill-read-lock`, base `d0ba6b52`; checkpoint subject
+`fix(user-web): guard repeated photo autofill reads`.
+[PhotoAutofill](../../apps/user-web/src/components/PhotoAutofill/index.tsx) dùng
+ref lock trước await, tránh2POST ISBN khi click lặp cùng lượt, nhả finally và kiểm
+disabled. Giữ ISBN trước AI, ảnh/nháp khi lỗi, forced AI sau mất ACK và key/body
+cũ; draft/upload stages coalesce vẫn1lần, không tự áp dụng title. Baseline6/after6
+browser production `/sell`390/1440 PASS, gồm lookup503/retry, AI mất ACK và xác nhận
+ghi đè tên. Build/typecheck,426unit/55file, scoped lint/docs/diff/detector0finding
+PASS;46 CSS khớp byte, không JSX/style/motion/asset đổi.
+[Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md). Backend/storage/AI mô
+phỏng; không save/submit/DB/provider thật hoặc native/human nghiệm thu. Lifecycle
+object URL ảnh là phần tiếp tục rà, chưa suy PASS từ gói khóa đọc này.
 
-Gói cùng lượt `3f8a6ba2` chặn apply gợi ý AI quá hạn cả direct/confirm, timeout
-có cleanup và wake tab, không polling; baseline10/after10 browser PASS. Các gói
-trước `865d8266` ẩn lịch sử Ví khi denied,503 giữ cache/retry; `cc42b67f` chặn
-cursor lặp/dừng trang tiếp sau rời Ví (không hủy HTTP đang chạy); `504c4b0b` giữ
-intent rút khi403 sau mất ACK; `57dcf7f2` sửa ký quỹ fallback0, `b1a177ad` sửa
-inbox, `7871737f` làm mới kệ sau ACK. Chi tiết editor/auction/profile/review/cart
-giữ trong báo cáo trên. Không DB/provider/GHN/Forum/migration/seed, không sửa
-checkout demo, push/PR/merge/deploy. Demo54file/status giữ nguyên fingerprint;
-READINESS không đổi. API/Mongo/native/human và401 refresh thật NOT RUN. Pending
-rút còn component-local, không bền qua reload. Save/Submit qua remount, avatar/
-mail thật, địa chỉ và kiểm AI xuyên app vẫn mở; chưa xác định nguyên nhân server rớt.
+Cùng lượt `d0ba6b52` pin xác nhận tham chiếu vào đúng response và phục hồi expiry,
+baseline12/after12; `3f8a6ba2` chặn apply AI hết hạn direct/confirm, baseline10/
+after10, timeout có cleanup/wake tab, không polling. Các gói trước `865d8266` ẩn
+lịch sử Ví khi denied,503 giữ cache/retry; `cc42b67f` chặn vòng cursor/dừng trang
+tiếp sau rời Ví; `504c4b0b` giữ intent rút khi403 sau mất ACK. Chi tiết các gói
+editor/auction/profile/review/cart giữ ở báo cáo. Không DB/provider/GHN/Forum/
+migration/seed, không sửa checkout demo, push/PR/merge/deploy. Demo54file/status
+giữ nguyên fingerprint; READINESS không đổi. API/Mongo/native/human và401 refresh
+thật NOT RUN. Pending rút còn component-local, không bền qua reload; Save/Submit
+qua remount, avatar/mail thật, địa chỉ và AI xuyên app còn giới hạn. Chưa xác định
+nguyên nhân server rớt.
 
 # Tích hợp main vào nhánh phát triển —05/11/2026
 

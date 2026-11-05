@@ -7,6 +7,38 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Điền nhanh từ ảnh: khóa đọc tức thời, giữ retry sau mất ACK —05/11/2026
+
+Nhánh `codex/member-web-autofill-read-lock`, base `d0ba6b52`; checkpoint subject
+`fix(user-web): guard repeated photo autofill reads`.
+[PhotoAutofill](../../apps/user-web/src/components/PhotoAutofill/index.tsx) trước
+chỉ dùng reading state làm guard;2click cùng lượt JavaScript vượt guard trước
+React commit, gây2POST ISBN. Draft/upload stages và AI ask đã coalesce ở service;
+không suy có2draft/media hoặc gọi model2lần. Theo [ADR0048](../adr/0048-listing-photo-autofill.md)
+và [ADR0056](../adr/0056-listing-assist-fast-paths.md), giữ ISBN trước AI, không
+tự điền, xác nhận trước ghi đè. Nay ref lock đặt đồng bộ trước await, nhả finally;
+đồng thời kiểm disabled từ parent. Không đổi phase/copy/JSX/motion hoặc services.
+
+[Production app fixture](../../apps/user-web/tests/autofill-read-lock.mjs),
+`pnpm --filter @used-books/user-web test:autofill-read-lock:browser`: baseline6/
+after6 PASS, Member login→`/sell`→Tự nhập→chọn ảnh→Đọc,390/1440 × ISBN nhiều mã/
+lookup503 rồi retry/force AI mất ACK rồi retry. ISBN mỗi lần bấm lặp2→1request;
+lookup lỗi rồi thử lại3→2 tổng. Mỗi profile vẫn1draft/media/upload/finalize, không
+upload lại; lỗi giữ ảnh và tên đang nhập. ISBN Ambiguous không gọi AI tự động.
+Force AI mất ACK có2HTTP tổng (thử đầu+retry), key/body y nguyên; retry giữ ý định
+AI và không quay lại ISBN. AI trả title không tự ghi đè; người dùng bấm Dùng rồi
+xác nhận mới đổi tên. Key/body chỉ so sánh boolean trong memory, không in payload.
+
+Mọi API/upload all-origin mô phỏng, HTTP ngoài fixture/WS bị chặn. Không gọi AI,
+barcode/storage thật, save/submit, DB hay provider. Đây là production Member web
+entry với synthetic backend, không thay native/AI chất lượng/human nghiệm thu.
+PASS build/typecheck,426unit/55file, scoped lint/docs/diff và detector0finding.
+46 CSS production khớp byte baseline; đã xem capture sau phục hồi390/1440, không
+đổi style/asset/motion. Evidence local `.tmp/member-web-autofill-read-lock/`.
+Demo54file/status giữ nguyên theo fingerprint; READINESS không đổi, không push/
+PR/deploy. Các vấn đề object URL/lifecycle ảnh được rà riêng, không suy gói này
+đã xử lý mọi lỗi Autofill hoặc nguyên nhân server rớt.
+
 ## Giá tham chiếu: phục hồi khi hết hạn, không xác nhận nhầm kết quả mới —05/11/2026
 
 Nhánh `codex/member-web-price-reference-expiry`, base `3f8a6ba2`; checkpoint

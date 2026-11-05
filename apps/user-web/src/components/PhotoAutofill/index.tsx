@@ -72,6 +72,7 @@ export function PhotoAutofill({
   const forcedAiPhotos = useRef<File[] | null>(null);
   const barcodeStale = files.length !== barcodePhotos.length || files.some((p, i) => p.file !== barcodePhotos[i]);
   const [reading, setReading] = useState(false);
+  const readLock = useRef(false);
   const [error, setError] = useState<string>();
   const [result, setResult] = useState<AutofillSuggestion | null>(null);
   const [used, setUsed] = useState<AutofillField[]>([]);
@@ -122,7 +123,8 @@ export function PhotoAutofill({
     });
   }
   async function read(forceAi = false) {
-    if (reading || !files.length) return;
+    if (disabled || readLock.current || !files.length) return;
+    readLock.current = true;
     setReading(true);
     setError(undefined);
     try {
@@ -147,6 +149,7 @@ export function PhotoAutofill({
           : "Chưa đọc được ảnh. Bạn vẫn có thể tự nhập thông tin sách.",
       );
     } finally {
+      readLock.current = false;
       setReading(false);
     }
   }
