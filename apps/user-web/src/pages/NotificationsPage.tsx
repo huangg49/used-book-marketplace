@@ -1,6 +1,6 @@
 import { usePagedCollection } from "../components/Pagination/usePagedCollection";
 import { CollectionPager } from "../components/Pagination/CollectionPager";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@used-books/session-client";
 import { Link } from "react-router-dom";
@@ -98,6 +98,10 @@ export function NotificationsPage() {
   });
 
   const collection = usePagedCollection(pages, JSON.stringify([auth.status === "authenticated" ? auth.user.id : "guest", activeFilter]), source => readDenied ? [] : filterItems(source.flatMap(p => p.items)), 10);
+  const resetPagination = collection.reset;
+  useEffect(() => {
+    if (readDenied) resetPagination();
+  }, [readDenied, resetPagination]);
   const filteredItems = collection.items;
 
   async function readAll() {
@@ -253,7 +257,9 @@ export function NotificationsPage() {
       {pages.isError && (!pages.isFetchNextPageError || readDenied) && (
         <div className={styles.errorBox} role="alert">
           <h2 className="font-bold text-base mb-1">Chưa tải được danh sách thông báo</h2>
-          <p className="text-sm opacity-80 mb-3">Kiểm tra kết nối rồi thử lại giúp mình.</p>
+          <p className="text-sm opacity-80 mb-3">{readDenied
+            ? "Kiểm tra phiên đăng nhập hoặc thử lại sau."
+            : "Kiểm tra kết nối rồi thử lại giúp mình."}</p>
           <button
             type="button"
             className={styles.readAllBtn}

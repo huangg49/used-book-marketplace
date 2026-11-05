@@ -1,18 +1,20 @@
 # Gia cố khả năng phục hồi web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-search-read-access`, base `7274dcc2`; checkpoint subject
-`fix(user-web): scope catalog cached data to current read access`.
-[BookSearchPage](../../apps/user-web/src/pages/BookSearchPage.tsx) denied ẩn cached
-cards/count/pager,503 giữ data/cảnh báo;400/422 hướng kiểm tham số. Retry giữ
-cursor/filter. Baseline16/after16 production390/1440,18condition-label +9search
-recovery regression PASS.471unit/58file/build/typecheck/scoped lint JSON0/docs/
-diff/detector0 PASS.46 CSS khớp byte, giữ motion/leaf/exit, không asset/style đổi.
-[Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Chỉ HTTP mock, không API/DB/provider/
-native/human/401refresh thật. Demo54file/status giữ, READINESS giữ; không push/PR/
-deploy. Tiếp theo Notifications cursor denied còn activity cũ và empty trước hết
-cursor cần kiểm lại; MyBooks/MyAuctions pager còn metadata cache khi denied.
+Nhánh `codex/member-web-notification-list-read-recovery`, base `f7a49021`;
+checkpoint subject `fix(user-web): reset notification paging after denied reads`.
+[NotificationsPage](../../apps/user-web/src/pages/NotificationsPage.tsx) reset
+activity khi denied để root200 không còn alert cursor cũ; lỗi hướng kiểm phiên.
+503giữ rows/retrycursor, empty sparse đã đúng nên giữ nguyên. Baseline14/after14
+production390/1440 +14read-state hồi quy PASS.471unit/58file/build/typecheck/
+scoped lint JSON0/docs/diff/detector0 PASS;46 CSS khớp byte, không style/motion/
+asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Chỉ login/GET mock,
+không mark-read/API/DB/provider/native/human/401refresh thật. Demo54file/status
+giữ, READINESS giữ; không push/PR/deploy. Tiếp tục owner-shelf cursor metadata
+khi denied; MyAuctions tương tự cần kiểm bằng browser trước sửa.
 
+Gói cùng lượt `f7a49021` Search denied ẩn card/count/pager,400/422 nói tham số,
+503 giữ dữ liệu; baseline16/after16+18condition+9search hồi quy PASS,46CSS nguyên.
 Gói cùng lượt `7274dcc2` Reviews list denied có retry, giữ tabs/reputation riêng,
 reset activity cũ; baseline12/after12+4review mutation fixture regression PASS,
 471unit/58file và46CSS khớp byte; không đổi eligibility/command/motion.

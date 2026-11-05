@@ -8,6 +8,34 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Thông báo: dọn lỗi phân trang cũ sau khi tải lại quyền đọc —05/11/2026
+
+Nhánh `codex/member-web-notification-list-read-recovery`, base `f7a49021`;
+checkpoint subject `fix(user-web): reset notification paging after denied reads`.
+[NotificationsPage](../../apps/user-web/src/pages/NotificationsPage.tsx) đã ẩn
+cache/pager khi401/403/404; nhưng activity lỗi cursor trong usePagedCollection
+còn hiện sau root200. Nay denied gọi reset ổn định đã có; thông báo lỗi hướng
+kiểm phiên/thử lại sau.503 giữ cache/retry cursor. Empty còn cursor đã đúng trong
+source trước sửa, giữ nguyên; không đổi unread count/mark-read/querykeys/poll/
+quyền hay motion. Bell preview là query riêng, không suy quyền từ inbox response.
+
+[Production fixture](../../apps/user-web/tests/notification-list-read-recovery.mjs),
+`pnpm --filter @used-books/user-web test:notification-list-read-recovery:browser`:
+baseline14/after14 PASS390/1440 × refresh/next403/404/503 +sparse unread. Trước
+next403/404 root200 còn alert cũ; sau root200 sạch rồi tải trang4 đúng.503 giữ10
+rows và retrycursor. Sparse read page30đã đọc vẫn chỉ nói trong dữ liệu đã tải,
+Sau tìm thấy1unread, không mark-read mutation.14notification-read-states hồi quy
+PASS (initial/empty/cache503/403/404/next403). Harness đầu đổi clock gây scroll/
+motion hit-test không ổn định, bỏ fixed-clock không cần thiết vì query stale0;
+lần sau dùng nhầm role button cho tab Chưa đọc, sửa đúng role tab. Giữ kiểm click
+thật và assertions, baseline/after cuối đều exit0.
+
+Build/typecheck,471unit/58file, scoped lint JSON0/docs/diff/detector0finding PASS.
+Đã xem capture390/1440;46 CSS khớp byte, không style/motion/asset đổi. Evidence
+`.tmp/member-web-notification-list-read-recovery/`. All-origin HTTP mock/chặn WS/
+external, synthetic login/GET only; không API/DB/provider/native/human/401refresh
+thật. Demo54file/status giữ nguyên, READINESS giữ; không push/PR/deploy.
+
 ## Tìm sách: ẩn cache khi bị từ chối và phân biệt tham số sai —05/11/2026
 
 Nhánh `codex/member-web-search-read-access`, base `7274dcc2`; checkpoint subject
