@@ -103,7 +103,8 @@
     "test:notification-list-read-recovery:browser": "node tests/notification-list-read-recovery.mjs",
     "test:owner-shelf-read-access:browser": "node tests/owner-shelf-read-access.mjs",
     "test:my-auctions-read-access:browser": "node tests/my-auctions-read-access.mjs",
-    "test:review-notification-target:browser": "node tests/review-notification-target.mjs"
+    "test:review-notification-target:browser": "node tests/review-notification-target.mjs",
+    "test:support-refresh-paging:browser": "node tests/support-refresh-paging.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

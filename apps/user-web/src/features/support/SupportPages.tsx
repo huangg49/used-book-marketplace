@@ -60,9 +60,16 @@ export function SupportPage() {
     result.error instanceof ApiError &&
     [401, 403].includes(result.error.status);
   const resetPagination = collection.reset;
+  const refreshRevision = useRef(0);
+  useEffect(() => () => { refreshRevision.current += 1; }, [owner, state, kind]);
   useEffect(() => {
     if (denied) resetPagination();
   }, [denied, resetPagination]);
+  async function refreshList() {
+    const revision = refreshRevision.current;
+    const refreshed = await result.refetch({ cancelRefetch: false });
+    if (!refreshed.isError && revision === refreshRevision.current) resetPagination();
+  }
   return (
     <div className={styles.page}>
       <header>
@@ -121,7 +128,7 @@ export function SupportPage() {
         </label>
         <button
           disabled={result.isFetching}
-          onClick={() => void result.refetch()}
+          onClick={() => void refreshList()}
         >
           Cập nhật
         </button>

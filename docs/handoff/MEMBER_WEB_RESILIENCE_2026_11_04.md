@@ -8,6 +8,33 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Hỗ trợ: cập nhật root thành công dọn thông báo cursor cũ —05/11/2026
+
+Nhánh `codex/member-web-support-refresh-paging`, base `76ec933b`; checkpoint
+subject `fix(user-web): clear obsolete support paging errors on refresh`.
+[SupportPages](../../apps/user-web/src/features/support/SupportPages.tsx) sau
+next503 rồi Cập nhật200 vẫn giữ activity lỗi cursor, kể cả response mới chỉ2
+rows và nextCursor=null: nhắc bấm Sau nhưng Sau disabled. Nay explicit refresh
+thành công mới reset activity, refetch cancelRefetch=false; failure vẫn báo lỗi.
+Revision theo owner/state/kind và unmount chặn callback root cũ dọn nhầm activity
+của bộ lọc mới. Không đổi shared hook, list query/filter/pagination size, form/
+commands/permission/API/contract hoặc motion.
+
+[Production fixture](../../apps/user-web/tests/support-refresh-paging.mjs),
+`pnpm --filter @used-books/user-web test:support-refresh-paging:browser`:
+baseline8/after8 PASS390/1440 ×terminal/more/retry-failed/filter-change. Trước
+6profile giữ alert cursor cũ sau200; sau sạch,2rows terminal/Sau disabled đúng,
+hoặc tiếp cursor mới219 thêm row3. Refresh503 vẫn giữ error/data. Race đổi Bug→
+Feedback trong lúc root Bug pending, tạo lỗi next mới rồi trả Bug200: không dọn
+lỗi Feedback; case này là hồi quy bảo toàn hành vi baseline.8support-list-read-
+access hồi quy PASS, gồm denial/temporary lỗi và filter/Back.
+
+Build/typecheck,471unit/58file, scoped lint JSON0/docs/diff/detector0finding PASS.
+Đã xem captures390/1440;46 CSS khớp byte, không style/motion/asset đổi. Evidence
+`.tmp/member-web-support-refresh-paging/`. All-origin HTTP mock/chặn WS/external,
+synthetic login/GET, không support command/API/DB/provider/native/human/401refresh
+thật. Demo54file/status giữ nguyên fingerprint, READINESS giữ; không push/PR/deploy.
+
 ## Thông báo kiểm duyệt đánh giá: mở đúng giao dịch qua resolver hiện có —05/11/2026
 
 Nhánh `codex/member-web-review-notification-target`, base `c6f65aa5`; checkpoint

@@ -1,21 +1,23 @@
 # Gia cố khả năng phục hồi web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-review-notification-target`, base `c6f65aa5`; checkpoint
-subject `fix(user-web): resolve review notification links to current targets`.
-[ReviewsPage](../../apps/user-web/src/pages/ReviewsPage.tsx)/ReviewNotificationTarget
-nối reviewId notification qua GET target hiện có, schema/type/id và owner scoped,
-chờ fresh read kể cả cache rồi replace sang đúng transaction. Invalid/quyền/503/
-schema lỗi có đường về/retry, late response không kéo lại sau rời trang.
-Baseline22/after22 production390/1440 +12list+4review hồi quy PASS.471unit/58file,
-build/typecheck/scoped lint JSON0/docs/diff/detector0 PASS.46CSS khớp byte, không
-style/motion/asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md).
-Contract route/schema đúng nhưng description copy nhầm support; giữ quyền review
-service thật, chưa sửa metadata YAML. Chỉ login/GET fixture, không mark-read/
-review commands/API/DB/provider/native/human/401refresh thật. Demo54file/status giữ,
-READINESS giữ; không push/PR/deploy. Tiếp tục rà deep-link/khôi phục còn lỗi có
-bằng chứng, không suy toàn web đã ổn định hoặc server rớt đã được giải quyết.
+Nhánh `codex/member-web-support-refresh-paging`, base `76ec933b`; checkpoint
+subject `fix(user-web): clear obsolete support paging errors on refresh`.
+[SupportPages](../../apps/user-web/src/features/support/SupportPages.tsx) explicit
+root refresh200 reset activity lỗi cursor cũ,503giữ error/data; revision theo
+owner/state/kind/unmount chặn callback cũ dọn nhầm scope mới. Baseline8/after8
+production390/1440 (terminal/more/retryfailed/filterrace) +8support-list hồi quy
+PASS.471unit/58file/build/typecheck/scoped lint JSON0/docs/diff/detector0 PASS;
+46 CSS khớp byte, không style/motion/asset đổi.
+[Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Chỉ login/GET fixtures, không
+support command/API/DB/provider/native/human/401refresh thật. Demo54file/status
+giữ, READINESS giữ; không push/PR/deploy. Còn cần kiểm hệ thống thật/nguyên nhân
+server rớt; không suy mọi tính năng đã hết lỗi. Metadata description OpenAPI
+resolveMyReviewNotification copy nhầm support đã ghi báo cáo, chưa sửa YAML.
 
+Gói cùng lượt `76ec933b` review notification resolver:22baseline/22after và
+12list+4review hồi quy PASS, chờ fresh access/type/id, xử lý malformed/503/403/
+404/schema/leave/revisit denied;46CSS nguyên, không đổi mark-read/command/quyền.
 Gói cùng lượt `c6f65aa5` MyAuctions denied ẩn pager/count,503giữ rows;
 baseline12/after12+16step-read hồi quy PASS,46CSS nguyên, không đổi poll/command.
 Gói cùng lượt `1674fbd2` MyBooks denied ẩn pager/copy kiểm phiên, baseline12/
