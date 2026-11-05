@@ -8,6 +8,37 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Đánh giá: lỗi đọc danh sách không khóa cả trang và tab uy tín —05/11/2026
+
+Nhánh `codex/member-web-review-list-read-recovery`, base `f4d0f0cb`; checkpoint
+subject `fix(user-web): scope denied review list reads and allow recovery`.
+[ReviewsPage](../../apps/user-web/src/pages/ReviewsPage.tsx) trước early-return
+khi list401/403, mất header/tabs/retry; đổi URL về reputation vẫn bị error cache
+của query đang disabled chặn. Nay error chỉ ở danh sách pending, denied ẩn cards/
+pager và có retry root, giữ header/tab/đọc reputation độc lập. Reset activity
+phân trang qua callback ổn định để root200 không báo lỗi cursor cũ.503 giữ data/
+retry cursor. Không đổi eligibility/publication/điểm/command/session hoặc quyền
+server theo [ADR0052](../adr/0052-transaction-reviews-and-reputation.md).
+
+[Production fixture](../../apps/user-web/tests/review-list-read-recovery.mjs),
+`pnpm --filter @used-books/user-web test:review-list-read-recovery:browser`:
+baseline12/after12 PASS390/1440 ×initial/refresh/next ×403/503. Trước6denied
+profile không retry/tabs, kể cả về /reviews qua sidebar vẫn bị chặn; sau mở tab
+uy tín GET200 riêng, trở lại pending403 rồi retryroot200, sạch activity cũ,
+phân trang và đổi DirectOrder đúng.503 giữ10cards/retrycursor, không review
+mutation. Harness baseline đầu quên mở menu mobile trước click sidebar; đã sửa
+đúng thao tác hiện hành, giữ assertions. Bổ sung chờ tab aria-selected/font800
+và retry enabled trước capture: ảnh đầu nằm giữa transition, không là lỗi CSS.
+4review-recovery production regression PASS: giữ draft,409, single-flight,
+exact replay sau eligibility đổi/hidden peer/revoked actions cho3transactiontypes.
+
+Build/typecheck,471unit/58file, scoped lint JSON0, docs/diff/detector0finding PASS.
+Đã xem capture390/1440 sau transition,46 CSS khớp byte; không style/motion/asset
+đổi. Evidence `.tmp/member-web-review-list-read-recovery/`. All-origin HTTP mock/
+chặn WS/external; không API/DB/provider/native/human/401refresh thật. Public
+reputation vẫn theo response quyền riêng, không suy quyền từ list. Demo54file/
+status giữ, READINESS giữ; không push/PR/deploy.
+
 ## Tìm sách: chip tình trạng không render giá trị từ prototype —05/11/2026
 
 Nhánh `codex/member-web-search-condition-label-recovery`, base `6352589f`;

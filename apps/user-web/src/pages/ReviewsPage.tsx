@@ -2,6 +2,7 @@ import { usePagedCollection } from "../components/Pagination/usePagedCollection"
 import { CollectionPager } from "../components/Pagination/CollectionPager";
 import { reviewDate } from "../features/reviews/format";
 import type { ReviewTransactionsPage } from "@used-books/session-client";
+import { useEffect } from "react";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -72,21 +73,13 @@ export function ReviewsPage() {
   });
 
   const collection = usePagedCollection(result, `${owner}:${type}`, pages => pages.flatMap(page => page.items));
-  if (
+  const inaccessible =
     result.error instanceof ApiError &&
-    [401, 403].includes(result.error.status)
-  )
-    return (
-      <div role="alert" className={styles.errorCard}>
-        <div className={styles.errorIconWrap}>
-          <AlertCircle size={24} />
-        </div>
-        <div className={styles.errorContent}>
-          <h3>Phiên làm việc đã thay đổi</h3>
-          <p>Quyền truy cập hoặc phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để xem giao dịch.</p>
-        </div>
-      </div>
-    );
+    [401, 403].includes(result.error.status);
+  const resetPagination = collection.reset;
+  useEffect(() => {
+    if (inaccessible) resetPagination();
+  }, [inaccessible, resetPagination]);
 
   return (
     <div className={styles.page}>
@@ -195,14 +188,16 @@ export function ReviewsPage() {
             )}
 
             {/* Lỗi tải */}
-            {result.isError && !result.isFetchNextPageError && (
+            {result.isError && (inaccessible || !result.isFetchNextPageError) && (
               <div className={styles.errorCard} role="alert">
                 <div className={styles.errorIconWrap}>
                   <AlertCircle size={24} />
                 </div>
                 <div className={styles.errorContent}>
-                  <h3>Chưa tải được danh sách giao dịch</h3>
-                  <p>Kiểm tra kết nối mạng và thử lại.</p>
+                  <h3>{inaccessible ? "Quyền xem giao dịch đã thay đổi" : "Chưa tải được danh sách giao dịch"}</h3>
+                  <p>{inaccessible
+                    ? "Kiểm tra phiên đăng nhập hoặc trạng thái tài khoản rồi thử tải lại."
+                    : "Kiểm tra kết nối mạng và thử lại."}</p>
                   <button
                     type="button"
                     disabled={result.isFetching}
@@ -234,7 +229,7 @@ export function ReviewsPage() {
             )}
 
             {/* Danh sách thẻ giao dịch */}
-            {result.data && collection.items.length > 0 && (
+            {!inaccessible && result.data && collection.items.length > 0 && (
               <div className={styles.cardList} id="review-transaction-results">
                 {collection.items.map((item) => {
                     const initial = item.partnerName.trim().charAt(0).toUpperCase() || "B";
@@ -298,7 +293,7 @@ export function ReviewsPage() {
               </div>
             )}
 
-            <CollectionPager model={collection} anchorId="review-transaction-results" itemLabel="giao dịch" />
+            {!inaccessible && <CollectionPager model={collection} anchorId="review-transaction-results" itemLabel="giao dịch" />}
           </>
         )
       )}

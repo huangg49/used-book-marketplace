@@ -1,18 +1,20 @@
 # Gia cố khả năng phục hồi web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-search-condition-label-recovery`, base `6352589f`;
-checkpoint subject `fix(user-web): safely label unknown catalog condition filters`.
-[BookSearchPage](../../apps/user-web/src/pages/BookSearchPage.tsx) own-key label
-condition tránh object crash/function chip rỗng, giữ chuỗi lạ và API validation.
-Baseline18/after18 production390/1440,2crash→0; xóa chip/Back/query giữ đúng.
-9search recovery regression PASS, harness chặn external/WS/socket polling.
-Build/typecheck,471unit/58file, scoped lint JSON0/docs/diff/detector0 PASS;46 CSS
-khớp byte, không style/motion/asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md).
-Capture đã đợi motion tự hoàn tất; không tắt/giảm animation. Chỉ HTTP mock, không
-API/DB/provider/native/human. Demo54file/status giữ, READINESS giữ; không push/PR/
-deploy. Tiếp theo ReviewsPage list denied đang chặn cả tab uy tín và thiếu retry.
+Nhánh `codex/member-web-review-list-read-recovery`, base `f4d0f0cb`; checkpoint
+subject `fix(user-web): scope denied review list reads and allow recovery`.
+[ReviewsPage](../../apps/user-web/src/pages/ReviewsPage.tsx) list denied có retry,
+ẩn cached cards/pager và dọn activity cũ, giữ tabs/reputation độc lập.503 vẫn
+giữ data/retrycursor. Baseline12/after12 production390/1440 +4review-recovery
+regression PASS, gồm draft/409/exact replay/hidden peer/eligibility.471unit/58file,
+build/typecheck/scoped lint JSON0/docs/diff/detector0 PASS.46 CSS khớp byte,
+không style/motion/asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md).
+Chỉ fixture cô lập, không API/DB/provider/native/human/401refresh thật. Demo54file/
+status giữ, READINESS giữ; không push/PR/deploy. Tiếp theo rà search cached-read
+và cách báo lỗi validation khác lỗi mạng.
 
+Gói cùng lượt `f4d0f0cb` condition chip own key, baseline18/after18,2crash→0,
+9search regression PASS; giữ query/API validation và animation,46CSS khớp byte.
 Gói cùng lượt `6352589f` own-key auction sort/price/ends;42baseline/42after,
 6crash→0,16step read regression,471unit/58file/build/typecheck/docs PASS;
 lint0error/1Date.now purity warning có trước,46 CSS khớp byte.
