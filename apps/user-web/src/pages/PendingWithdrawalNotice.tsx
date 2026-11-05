@@ -2,11 +2,9 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { Clock3, ChevronRight } from "lucide-react";
-import {
-  withdrawalPageSchema,
-  type Withdrawal,
-} from "@used-books/session-client";
+import { withdrawalPageSchema } from "@used-books/session-client";
 import { session } from "../lib/session";
+import { collectPendingWithdrawalIds } from "../lib/pending-withdrawals";
 import styles from "./WalletWithdrawals.module.css";
 
 export function PendingWithdrawalNotice({ ownerId }: { ownerId: string }) {
@@ -15,23 +13,16 @@ export function PendingWithdrawalNotice({ ownerId }: { ownerId: string }) {
   const pending = useQuery({
     queryKey: ["withdrawals", ownerId, "pending"],
     enabled: !!ownerId,
-    queryFn: async () => {
+    queryFn: ({ signal }) =>
       // Use the state filter, independently of the paginated history below.
-      const ids = new Set<string>();
-      let cursor: string | null = null;
-      do {
-        const page: { items: Withdrawal[]; nextCursor: string | null } =
-          await session.request(
+      collectPendingWithdrawalIds(
+        (cursor) =>
+          session.request(
             `/me/withdrawals?state=Requested&limit=100${cursor ? `&cursor=${cursor}` : ""}`,
             withdrawalPageSchema,
-          );
-        for (const row of page.items) {
-          if (row.state === "Requested") ids.add(row.id);
-        }
-        cursor = page.nextCursor;
-      } while (cursor);
-      return [...ids];
-    },
+          ),
+        signal,
+      ),
     refetchInterval: () =>
       document.visibilityState === "visible" ? 15000 : false,
   });

@@ -7,6 +7,45 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Ví: chặn vòng cursor và dừng tải đếm đơn khi rời trang —05/11/2026
+
+Nhánh `codex/member-web-pending-withdrawal-pagination`, base `504c4b0b`; checkpoint
+subject `fix(user-web): bound pending withdrawal pagination lifecycle`.
+[PendingWithdrawalNotice](../../apps/user-web/src/pages/PendingWithdrawalNotice.tsx)
+trước tải liên tiếp mọi trang Requested mà không kiểm cursor lặp hoặc query bị
+hủy. Source backend [withdrawal service](../../apps/api/src/modules/wallet/withdrawal.service.ts)
+lọc owner/state, sắp createdAt/id và trả cursor; không đổi contract/giới hạn/quyền.
+
+[Collector](../../apps/user-web/src/lib/pending-withdrawals.ts) giữ thứ tự ID đầu
+tiên, loại trùng, chỉ đếm Requested và chỉ trả tổng khi đọc trọn danh sách. Cursor
+đã đọc xuất hiện lại thì reject qua error/retry hiện có, không gửi lại trang đó.
+Query signal được kiểm trước/sau mỗi await: rời Ví dừng trang kế tiếp. Shared
+session transport hiện sở hữu AbortController timeout riêng; gói này **không hủy
+HTTP đang chạy**, không sửa transport/session hoặc tự giới hạn số trang hợp lệ.
+Polling15giây theo visibility và invalidate summary/history giữ nguyên.
+
+| Ca390/1440 / production fixture | Trước → sau |
+| --- | --- |
+| Cursor A→B→A | Trước fixture phải chặn ở request6 bằng503; sau dừng ở3 và hiện error, không hiện tổng thiếu |
+| Rời Ví sang Giỏ sách khi trang đầu chưa trả | Trước tiếp tục đủ3 request; sau1 request đang chạy hoàn tất, không đọc A/B |
+| Trang2 lỗi rồi Thử lại | Không xuất bản tổng thiếu; retry từ đầu đọc đủ3 trang và đếm4 ID duy nhất |
+| Ba trang hợp lệ, có ID trùng | Vẫn3 request, tổng4; không cắt dữ liệu để giảm request |
+
+[Browser fixture](../../apps/user-web/tests/pending-withdrawal-pagination.mjs),
+`pnpm --filter @used-books/user-web test:pending-withdrawal-pagination:browser`:
+baseline8/after8 profile PASS, mock all-origin HTTP và chặn WS/provider. Timing
+rời trang được tái hiện bằng giữ response đầu; unit deferred race kiểm xác định
+signal hủy trước resolve không được đọc tiếp.7unit mới còn kiểm abort trước đọc,
+vòng cursor, trang rỗng có cursor, empty hoàn chỉnh, lọc/dedupe và retry sạch.
+
+PASS Member build/typecheck,426unit/55file, scoped lint, docs/diff.46 CSS production
+khớp byte với base; không JSX/style/animation mới, không chạy lại detector cho
+diff điều phối. Đã xem capture error/retry390/1440. Evidence local
+`.tmp/member-web-pending-withdrawal-pagination/` gồm before/after JSON/capture,
+build/typecheck/unit và CSS. Không API/Mongo/provider/native/người thật nghiệm
+thu trong gói này, không suy nguyên nhân server rớt đã được giải quyết. Demo giữ
+nguyên54file theo fingerprint; không push/PR/deploy, READINESS không đổi.
+
 ## Rút tiền: giữ yêu cầu sau mất ACK rồi bị từ chối quyền —05/11/2026
 
 Nhánh `codex/member-web-withdrawal-retry-permission`, base `ebc04445`; commit cùng

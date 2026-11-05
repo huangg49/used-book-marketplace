@@ -1,23 +1,25 @@
 # Gia cố khả năng phục hồi Member web —05/11/2026
 
-Owner giao tiếp tục tối ưu sau tích hợp main, giữ animation và checkout demo.
-Nhánh `codex/member-web-withdrawal-retry-permission`, base `ebc04445`; checkpoint
-subject `fix(user-web): retain withdrawal intent after permission refusal`.
-[WalletWithdrawals](../../apps/user-web/src/pages/WalletWithdrawals.tsx) không
-nhả intent khi403 sau mất ACK: giữ key/body/nội dung/preview, khóa sửa tới receipt.
-Current auth vẫn qua server; không đổi quyền/ledger/contract hoặc cho gửi mới để
-né từ chối.409 xác định vẫn mở form để sửa. Baseline4/after10 browser profile
-390/1440 PASS, gồm403/408/429/503, exact retry và click lặp. Build/typecheck,
-419unit/54file và scoped lint PASS;46 CSS khớp byte, không JSX/motion/asset mới.
+Owner giao tiếp tục cuốn chiếu tối ưu web, giữ animation và checkout demo.
+Nhánh `codex/member-web-pending-withdrawal-pagination`, base `504c4b0b`;
+checkpoint subject `fix(user-web): bound pending withdrawal pagination lifecycle`.
+[PendingWithdrawalNotice](../../apps/user-web/src/pages/PendingWithdrawalNotice.tsx)
+chặn cursor lặp, dừng trang tiếp khi query bị hủy sau rời Ví. Không hủy HTTP đang
+chạy vì transport chung sở hữu timeout riêng; không giới hạn số trang hợp lệ,
+không đổi polling15giây/quyền/contract/ledger. Tổng chỉ hiện sau đọc trọn danh sách,
+ID trùng tính1, lỗi dùng error/retry hiện có. Baseline8/after8 browser390/1440 PASS,
+7unit mới kiểm cursor/abort/deferred race/partial error/retry/empty. Build/typecheck,
+426unit/55file và scoped lint PASS;46 CSS khớp byte, không JSX/motion/asset mới.
 [Evidence và giới hạn](MEMBER_WEB_RESILIENCE_2026_11_04.md).
 
-Gói trước `57dcf7f2` sửa ký quỹ fallback0; `b1a177ad` sửa trạng thái đọc inbox;
-`7871737f` làm mới kệ sau ACK; các gói editor/auction/profile/review/cart giữ
-chi tiết ở báo cáo trên. Không DB/provider/GHN/Forum/migration/seed, không sửa
-checkout demo, push/PR/merge/deploy. READINESS không đổi. Pending rút còn trong
-component, không bền qua reload;401/đổi actor/API/native/human chưa kiểm ở gói này.
-Các giới hạn Save/Submit qua remount, avatar/mail thật và địa chỉ/AI vẫn mở;
-không suy nguyên nhân server rớt đã được xử lý.
+Gói trước `504c4b0b` giữ intent rút tiền khi403 sau mất ACK; `57dcf7f2` sửa ký
+quỹ fallback0, `b1a177ad` sửa trạng thái đọc inbox, `7871737f` làm mới kệ sau ACK.
+Chi tiết editor/auction/profile/review/cart giữ trong báo cáo trên. Không DB/
+provider/GHN/Forum/migration/seed, không sửa checkout demo, push/PR/merge/deploy.
+Demo54file giữ nguyên theo fingerprint; READINESS không đổi. API/Mongo/native/
+human NOT RUN. Pending lệnh rút còn component-local, không bền qua reload. Các
+hạn chế Save/Submit qua remount, avatar/mail thật và địa chỉ/AI vẫn mở; không suy
+nguyên nhân server rớt đã được xử lý.
 
 # Tích hợp main vào nhánh phát triển —05/11/2026
 
