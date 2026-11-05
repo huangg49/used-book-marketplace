@@ -77,7 +77,8 @@ export function AuctionListPage() {
 
   const filters = readFilters(params)
   const { point, buyNow: buyNowOnly } = filters
-  const sort = SORTS[params.get('sort') ?? ''] ? params.get('sort')! : 'endingSoon'
+  const rawSort = params.get('sort') ?? ''
+  const sort = Object.hasOwn(SORTS, rawSort) ? rawSort : 'endingSoon'
   const all = result.data?.items ?? []
   const points = [...new Set([...all.map((a) => a.pointName), ...(point ? [point] : [])])].sort()
   const now = result.data ? Date.parse(result.data.serverTime) : Date.now()

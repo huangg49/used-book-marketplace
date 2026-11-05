@@ -1,20 +1,21 @@
 # Gia cố khả năng phục hồi web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/operations-web-auction-step-read-contract`, base `b8a535e0`;
-checkpoint subject `fix(admin-web): align operations auction steps with ADR0068`.
-[Operations contracts](../../apps/admin-web/src/features/operations/contracts.ts)
-nhận số nguyên1.000–10.000.000 bội1.000 đúng ADR0068, thay union2mức cũ. Staff
-intake/Admin auction queue đọc7step mới/cũ đúng. Baseline8/after8 production390/
-1440,17unit mới (trước5FAIL/12PASS, sau17PASS), tổng246unit/35file, pagination
-hồi quy4width PASS. Build+bundle budget/typecheck/scoped lint JSON0/docs/diff
-PASS;16 CSS Admin khớp byte, không JSX/style/motion/asset đổi.
-[Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Chỉ browser fixture, không receive/
-cancel/inspection/DB/provider/native/human; server role/independence chưa nghiệm
-thu. Demo54file/status giữ, READINESS giữ; không push/PR/deploy.
-Tiếp tục URL filters/sort kệ đấu giá có predicate nhận prototype keys. RN còn
-union bước cũ nhưng ngoài lượt tối ưu web, chưa sửa/native test.
+Nhánh `codex/member-web-auction-filter-route-params`, base `cf445432`;
+checkpoint subject `fix(user-web): reject inherited auction filter and sort keys`.
+[AuctionListPage](../../apps/user-web/src/pages/AuctionListPage.tsx)/auction-filters
+chỉ nhận own keys cho sort/price/ends.42baseline/42after production390/1440 PASS,
+6URL ends crash trước→0sau;4sort/4price/3ends hợp lệ đúng.5unit mới trước FAIL,
+sau PASS, tổng471unit/58file.16step-read hồi quy/build/typecheck/docs/diff/detector0
+PASS; lint0error/1Date.now purity warning có trước.46 CSS khớp byte, không JSX/
+style/motion/asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md).
+Chỉ GET mock all-origin, không API/DB/provider/native/human. Demo54file/status
+giữ, READINESS giữ; không push/PR/deploy. Tiếp tục kiểm chip condition URL tìm
+sách có lookup prototype tương tự; không suy toàn web hết lỗi.
 
+Gói cùng lượt `cf445432` Admin/Staff step parser đúng ADR0068; baseline8/after8,
+246unit/35file (17mới), pagination4width/build/typecheck/bundle/lint/docs PASS,
+16CSS khớp byte. Không receive/cancel/inspection/DB; RN union cũ chưa sửa.
 Gói cùng lượt `b8a535e0` Member2schema đọc bước ADR0068, baseline16/after16+
 7intake regression,466unit/58file (17mới) PASS. Không thay nghiệp vụ/motion.
 Gói cùng lượt `9d44530e` support cursor denied có alert và dọn activity cũ;

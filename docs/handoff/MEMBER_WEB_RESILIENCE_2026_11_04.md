@@ -8,6 +8,34 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Kệ đấu giá: bỏ prototype keys ở filter/sort URL —05/11/2026
+
+Nhánh `codex/member-web-auction-filter-route-params`, base `cf445432`;
+checkpoint subject `fix(user-web): reject inherited auction filter and sort keys`.
+[AuctionListPage](../../apps/user-web/src/pages/AuctionListPage.tsx) và
+[auction-filters](../../apps/user-web/src/lib/auction-filters.ts) nhận nhầm keys
+prototype qua dictionary truthiness/`in`. ends=constructor/__proto__/toString
+làm `.label.toLowerCase()` crash vào RouteError; price tạo chip thiếu nhãn, sort
+mất lựa chọn/sắp thứ tự mặc định của JS thay vì endingSoon. Nay Object.hasOwn
+chỉ nhận4sort/4price/3ends đã có, unknown giữ fallback cũ, không sửa URL/contract/
+queries, điều kiện giao dịch, interval hay animation. Surface brief13/10 còn mô
+tả Hero/Entrance đã được main bỏ27/10; giữ source compact hiện hành, không khôi
+phục artwork cũ trong gói predicate URL.
+
+[Production fixture](../../apps/user-web/tests/auction-filter-route-params.mjs),
+`pnpm --filter @used-books/user-web test:auction-filter-route-params:browser`:
+baseline42/after42 PASS390/1440:9prototype profiles +unknown +11validsort/filter
+mỗi width.6profile crash trước,0sau; thứ tự4sort, phạm vi4price/3ends và chip
+đúng.5unit mới trước5FAIL/3cũPASS, sau8PASS; tổng471unit/58file PASS.16auction
+step read browser hồi quy PASS. Build/typecheck/docs/diff/detector0finding PASS;
+scoped lint0error/1warning react(purity) Date.now đã có trước sửa (đã lint bản
+HEAD baseline và đối chiếu), không che warning hoặc sửa clock trong gói này.
+Đã xem captures390/1440,46 CSS khớp byte; không JSX/style/motion/asset đổi.
+Evidence `.tmp/member-web-auction-filter-route-params/`. All-origin mock/chặn WS/
+external, public GET only; không API/DB/provider/native/human. Demo54file/status
+giữ, READINESS giữ; không push/PR/deploy. Không là prototype exploit được chứng
+minh hoặc full auction acceptance.
+
 ## Admin/Staff web: hàng đợi đọc đúng bước giá ADR0068 —05/11/2026
 
 Nhánh `codex/operations-web-auction-step-read-contract`, base `b8a535e0`;

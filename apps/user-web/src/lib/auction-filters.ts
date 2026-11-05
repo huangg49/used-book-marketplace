@@ -32,8 +32,8 @@ export interface AuctionFilters {
   ending: Ending | ''
 }
 
-const isPrice = (v: string | null): v is PriceRange => !!v && v in PRICE_RANGES
-const isEnding = (v: string | null): v is Ending => !!v && v in ENDING
+const isPrice = (v: string | null): v is PriceRange => !!v && Object.hasOwn(PRICE_RANGES, v)
+const isEnding = (v: string | null): v is Ending => !!v && Object.hasOwn(ENDING, v)
 
 export function readFilters(params: URLSearchParams): AuctionFilters {
   return {

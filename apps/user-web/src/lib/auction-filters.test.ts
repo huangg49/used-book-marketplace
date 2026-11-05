@@ -34,6 +34,15 @@ describe('auction filters', () => {
     expect(matches(auction({ buyNowPrice: null }), f('buyNow=1'), now)).toBe(false)
   })
 
+  it.each(['constructor', '__proto__', 'toString', 'hasOwnProperty', 'valueOf'])(
+    'ignores inherited price and ending keys (%s)', value => {
+      const filters = readFilters(new URLSearchParams({ price: value, ends: value }))
+      expect(filters).toMatchObject({ price: '', ending: '' })
+      expect(activeFilterCount(filters)).toBe(0)
+      expect(matches(auction(), filters, now)).toBe(true)
+    },
+  )
+
   it('ignores unknown values and counts active filters without the search', () => {
     const filters = f('q=x&cond=Bad,Good&price=huge&ends=2d&point=Điểm A&buyNow=1')
     expect(filters).toMatchObject({ conditions: ['Good'], price: '', ending: '' })
