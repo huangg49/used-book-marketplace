@@ -33,8 +33,14 @@ try {
   let listingRequests = 0;
   let pendingRoute;
   const queries = [];
-  await page.route("**/api/v1/**", async route => {
+  await page.routeWebSocket("**/*", socket => socket.close());
+  await page.route("**/*", async route => {
     const url = new URL(route.request().url());
+    if (url.pathname.startsWith("/socket.io/"))
+      return route.fulfill({ status: 503, json: { code: "QA_NO_REALTIME" } });
+    if (!url.pathname.startsWith("/api/v1/")) {
+      return url.origin === origin ? route.continue() : route.abort();
+    }
     if (url.pathname !== "/api/v1/listings") {
       await route.fulfill({ status: 401, json: { code: "UNAUTHORIZED", message: "QA anonymous" } });
       return;

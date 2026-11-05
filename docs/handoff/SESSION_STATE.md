@@ -1,18 +1,21 @@
 # Gia cố khả năng phục hồi web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-auction-filter-route-params`, base `cf445432`;
-checkpoint subject `fix(user-web): reject inherited auction filter and sort keys`.
-[AuctionListPage](../../apps/user-web/src/pages/AuctionListPage.tsx)/auction-filters
-chỉ nhận own keys cho sort/price/ends.42baseline/42after production390/1440 PASS,
-6URL ends crash trước→0sau;4sort/4price/3ends hợp lệ đúng.5unit mới trước FAIL,
-sau PASS, tổng471unit/58file.16step-read hồi quy/build/typecheck/docs/diff/detector0
-PASS; lint0error/1Date.now purity warning có trước.46 CSS khớp byte, không JSX/
-style/motion/asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md).
-Chỉ GET mock all-origin, không API/DB/provider/native/human. Demo54file/status
-giữ, READINESS giữ; không push/PR/deploy. Tiếp tục kiểm chip condition URL tìm
-sách có lookup prototype tương tự; không suy toàn web hết lỗi.
+Nhánh `codex/member-web-search-condition-label-recovery`, base `6352589f`;
+checkpoint subject `fix(user-web): safely label unknown catalog condition filters`.
+[BookSearchPage](../../apps/user-web/src/pages/BookSearchPage.tsx) own-key label
+condition tránh object crash/function chip rỗng, giữ chuỗi lạ và API validation.
+Baseline18/after18 production390/1440,2crash→0; xóa chip/Back/query giữ đúng.
+9search recovery regression PASS, harness chặn external/WS/socket polling.
+Build/typecheck,471unit/58file, scoped lint JSON0/docs/diff/detector0 PASS;46 CSS
+khớp byte, không style/motion/asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md).
+Capture đã đợi motion tự hoàn tất; không tắt/giảm animation. Chỉ HTTP mock, không
+API/DB/provider/native/human. Demo54file/status giữ, READINESS giữ; không push/PR/
+deploy. Tiếp theo ReviewsPage list denied đang chặn cả tab uy tín và thiếu retry.
 
+Gói cùng lượt `6352589f` own-key auction sort/price/ends;42baseline/42after,
+6crash→0,16step read regression,471unit/58file/build/typecheck/docs PASS;
+lint0error/1Date.now purity warning có trước,46 CSS khớp byte.
 Gói cùng lượt `cf445432` Admin/Staff step parser đúng ADR0068; baseline8/after8,
 246unit/35file (17mới), pagination4width/build/typecheck/bundle/lint/docs PASS,
 16CSS khớp byte. Không receive/cancel/inspection/DB; RN union cũ chưa sửa.

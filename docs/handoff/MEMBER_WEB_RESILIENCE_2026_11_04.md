@@ -8,6 +8,34 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Tìm sách: chip tình trạng không render giá trị từ prototype —05/11/2026
+
+Nhánh `codex/member-web-search-condition-label-recovery`, base `6352589f`;
+checkpoint subject `fix(user-web): safely label unknown catalog condition filters`.
+[BookSearchPage](../../apps/user-web/src/pages/BookSearchPage.tsx) lookup nhãn
+condition bằng dictionary truthiness, nên __proto__ thành React child object và
+crash, constructor/toString/hasOwnProperty thành function khiến chip rỗng/aria
+sai. Nay chỉ own keys dùng nhãn tiếng Việt; giá trị lạ dùng chuỗi URL như fallback
+cũ với unknown. Không đổi query/validator/API hoặc im lặng bỏ điều kiện tìm;
+giá trị không hợp lệ vẫn do server từ chối, chip có thể xóa để phục hồi.
+
+[Production fixture](../../apps/user-web/tests/search-condition-label-recovery.mjs),
+`pnpm --filter @used-books/user-web test:search-condition-label-recovery:browser`:
+baseline18/after18 PASS390/1440 ×4prototype names/unknown/4condition hợp lệ.
+2crash trước→0sau, chip đủ nhãn và aria. Fixture invalid400 không thành empty;
+xóa chip đọc200 empty xác nhận, giữ q/mode/sort/data và Back phục hồi bộ lọc.
+Backend thật trả400/422 thế nào chưa được kiểm trong gói này.9search-recovery
+regression PASS gồm IME/blur/mobile/focus geometry/network/timeout; fixture cũ
+được mở rộng chặn all-origin external/WS/socket polling, giữ mọi assertions.
+
+Build/typecheck,471unit/58file, scoped lint JSON0/docs/diff/detector0finding PASS.
+46 CSS khớp byte, không style/motion/asset đổi. Capture đầu chụp giữa entrance
+nên mờ; harness đã đợi ancestor opacity ổn định rồi chạy lại18profile, xem cả390/
+1440 rõ; không tắt hoặc rút ngắn animation. Evidence
+`.tmp/member-web-search-condition-label-recovery/`. All-origin mock, GET only;
+không API/DB/provider/native/human, không chứng minh prototype exploit. Demo54
+file/status giữ, READINESS giữ; không push/PR/deploy.
+
 ## Kệ đấu giá: bỏ prototype keys ở filter/sort URL —05/11/2026
 
 Nhánh `codex/member-web-auction-filter-route-params`, base `cf445432`;

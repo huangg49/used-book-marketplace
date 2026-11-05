@@ -647,8 +647,9 @@ export function BookSearchPage() {
         {
           key: "condition",
           label:
-            conditions[params.get("condition") as keyof typeof conditions] ||
-            params.get("condition")!,
+            Object.hasOwn(conditions, initial.condition)
+              ? conditions[initial.condition as keyof typeof conditions]
+              : initial.condition,
         },
       ]
       : []),

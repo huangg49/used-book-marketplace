@@ -96,7 +96,8 @@
     "test:support-route-params:browser": "node tests/support-route-params.mjs",
     "test:support-list-read-access:browser": "node tests/support-list-read-access.mjs",
     "test:auction-step-read-contract:browser": "node tests/auction-step-read-contract.mjs",
-    "test:auction-filter-route-params:browser": "node tests/auction-filter-route-params.mjs"
+    "test:auction-filter-route-params:browser": "node tests/auction-filter-route-params.mjs",
+    "test:search-condition-label-recovery:browser": "node tests/search-condition-label-recovery.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
