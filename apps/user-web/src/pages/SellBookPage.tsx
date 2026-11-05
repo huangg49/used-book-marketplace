@@ -129,6 +129,7 @@ export function SellBookPage() {
   const [hasCoverPhoto, setHasCoverPhoto] = useState(false);
   const [coverCropMeta, setCoverCropMeta] = useState<CoverCropResult | null>(null);
   const coverCropMetaRef = useRef<CoverCropResult | null>(null);
+  const coverCropError = useRef<string | undefined>(undefined);
   const coverCrops = useMemo(() => createCoverCropLifecycle(), []);
   const [coverCropBusy, setCoverCropBusy] = useState(false);
   useEffect(() => {
@@ -367,6 +368,20 @@ export function SellBookPage() {
   const isDraggingCover = useRef(false);
   const dragStartPos = useRef({ x: 0, y: 0, offset: 50 });
 
+  function clearCoverCropError() {
+    const message = coverCropError.current;
+    if (message !== undefined) {
+      setSubmitError(current => current === message ? undefined : current);
+      coverCropError.current = undefined;
+    }
+  }
+  function reportCoverCropError(error: unknown, fallback: string) {
+    const message = error instanceof Error ? error.message : fallback;
+    coverCropError.current = message;
+    setValidationFailure(false);
+    setSubmitError(message);
+  }
+
   async function runCoverCrop(file: File, position: CoverPosition, existingRawUrl?: string) {
     setCoverCropBusy(true);
     try { return await coverCrops.run(file, position, existingRawUrl); }
@@ -375,6 +390,7 @@ export function SellBookPage() {
 
   const handleCoverPositionChange = async (position: CoverPosition) => {
     if (!coverCropMeta || hasAttempt || submitting) return;
+    clearCoverCropError();
     try {
       const result = await runCoverCrop(
         coverCropMeta.rawFile,
@@ -393,11 +409,8 @@ export function SellBookPage() {
       }));
       setImageFiles((files) => [result.croppedFile, ...files.slice(1)]);
     } catch (err) {
-      setSubmitError(
-        err instanceof Error
-          ? err.message
-          : "Chưa cập nhật được vị trí cắt ảnh bìa.",
-      );
+      setCoverCropMeta(coverCropMetaRef.current);
+      reportCoverCropError(err, "Chưa cập nhật được vị trí cắt ảnh bìa.");
     }
   };
 
@@ -520,6 +533,7 @@ export function SellBookPage() {
     setSubmitError(undefined);
 
     if (kind === "cover") {
+      coverCropError.current = undefined;
       photoFocusTarget.current = "images";
       const file = selected[0]!;
       runCoverCrop(file, "center")
@@ -540,10 +554,7 @@ export function SellBookPage() {
           setHasCoverPhoto(true);
         })
         .catch((err) => {
-          setValidationFailure(false);
-          setSubmitError(
-            err instanceof Error ? err.message : "Chưa xử lý được ảnh bìa.",
-          );
+          reportCoverCropError(err, "Chưa xử lý được ảnh bìa.");
         });
       return;
     }
@@ -866,6 +877,7 @@ export function SellBookPage() {
           ? `support-remove-${Math.min(index - Number(hasCoverPhoto), supportCount - 2)}`
           : "add-support-photo";
     if (hasCoverPhoto && index === 0) {
+      clearCoverCropError();
       coverCrops.invalidate();
       setCoverCropBusy(false);
       setHasCoverPhoto(false);
@@ -1393,6 +1405,7 @@ export function SellBookPage() {
             auction={auction}
             title={bundle?.title || formData.title}
             onPostAnother={() => {
+              coverCropError.current = undefined;
               priceToken.current += 1;
               priceBusy.current = false;
               setAssist({ status: "idle" });

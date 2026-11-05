@@ -1,18 +1,19 @@
 # Gia cố khả năng phục hồi Member web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-cover-crop-submit-guard`, base `d689f33d`; checkpoint subject
-`fix(user-web): wait for the current cover crop before publishing`.
-[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) khóa Gửi duyệt khi
-crop hiện tại pending, status/busy giải thích; handler kiểm pending đồng bộ. Không
-tự gửi sau crop. Lượt obsolete không giữ lock, error/remove/reset nhả guard.
-Baseline8/after8 `/sell`390/1440 PASS, bytes upload đúng crop mới; pending0command,
-current lỗi phục hồi, obsolete không chặn gửi.5unit mới và6reset/lostACK regression
-PASS. Build/typecheck,449unit/57file, scoped lint0warning, docs/diff PASS. Detector
-3color advisory cũ,46 CSS khớp byte; chỉ thêm status class help, không style/motion/
-asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Backend/upload mô phỏng,
-không DB/provider/native/human. Preview vị trí optimistic khi crop lỗi cần kiểm tiếp.
+Nhánh `codex/member-web-cover-position-recovery`, base `c7455f48`; checkpoint
+subject `fix(user-web): restore accepted cover positioning after crop failure`.
+[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) rollback vị trí
+optimistic về crop đã chấp nhận khi lỗi; retry xóa đúng lỗi crop, giữ alert khác.
+Baseline6/after6 keyboard `/sell`390/1440 PASS: decode/Canvas/encode failure,
+Home/End retry và lỗi MIME độc lập; raw/file đang dùng giữ nguyên.6first-crop
+failure regression PASS. Build/typecheck,449unit/57file, scoped lint JSON0diagnostic,
+docs/diff PASS;46 CSS khớp byte, không JSX/style/motion/asset, skip detector logic-
+only (3advisory cũ). [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Backend/provider
+mô phỏng, không upload/save/submit/DB/native/human. Ảnh phụ/thao tác index kiểm tiếp.
 
+Gói cùng lượt `c7455f48` chặn gửi khi current crop pending bằng state+guard đồng bộ,
+không tự gửi sau resolve; baseline8/after8+6reset regression,5unit mới PASS.
 Gói cùng lượt `d689f33d` dọn assist/reference/busy/token khi Đăng cuốn khác và
 chặn callback cuốn cũ; baseline4/after4 ready/pending/new response PASS. Server
 vẫn quyết định quyền/quota/Pending/member, không suy2model chạy đồng thời.

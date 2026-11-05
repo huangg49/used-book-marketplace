@@ -7,6 +7,34 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Vị trí cắt lỗi: khôi phục preview đã chấp nhận và dọn đúng lỗi —05/11/2026
+
+Nhánh `codex/member-web-cover-position-recovery`, base `c7455f48`; checkpoint subject
+`fix(user-web): restore accepted cover positioning after crop failure`.
+[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) trước giữ optimistic
+offset mới khi decode/Canvas/encode lỗi, dù file đang giữ vẫn crop cũ; retry thành
+công vẫn giữ alert lỗi cũ. Nay catch current rollback meta về ref đã chấp nhận,
+giữ raw/cropped URL và file cũ. Error crop có owner message riêng: thử lại/bỏ cover
+chỉ xóa alert đang khớp lỗi crop đó, không xóa lỗi khác; reset dọn ref. New-cover
+error dùng cùng reporter, giữ copy hiện có. Stale error vẫn bị lifecycle loại.
+
+[Production keyboard fixture](../../apps/user-web/tests/cover-position-recovery.mjs),
+`pnpm --filter @used-books/user-web test:cover-position-recovery:browser`:
+baseline6/after6 PASS,390/1440 × decode/context/blob failure. End từ50→100 bị lỗi:
+trước giữ100 sai với file, sau về50; raw URL/2preview đang dùng không bị revoke.
+Home/End retry thành công: trước còn alert, sau hết. Chọn tệp sai MIME rồi crop
+thành công vẫn giữ lỗi tệp đó; không dọn nhầm alert. Các retry cuối created5/
+revoked3/live2,2là cover còn dùng.6ca first-crop error/recovery hồi quy PASS lại.
+Fixture chỉ synthetic login/GET, không upload/save/submit/DB/provider thật.
+
+PASS build/typecheck,449unit/57file, scoped lint JSON0diagnostic, docs/diff.46 CSS
+khớp byte, không JSX/style/asset/motion đổi; đã xem alert capture390/1440. Không
+rerun detector cho rollback/error-owner logic,3color advisory cũ giữ nguyên ở
+source. Evidence `.tmp/member-web-cover-position-recovery/` before/after/log/
+capture/preservation. Demo54file/status giữ nguyên; READINESS không đổi. Native/
+human/heap máy thật NOT RUN, không push/PR/deploy. Ảnh phụ và thao tác theo index
+được rà riêng, không suy đã hết lỗi quản lý ảnh.
+
 ## Gửi duyệt chờ đúng lượt crop hiện tại —05/11/2026
 
 Nhánh `codex/member-web-cover-crop-submit-guard`, base `d689f33d`; checkpoint subject
