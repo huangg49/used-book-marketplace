@@ -44,7 +44,7 @@ export function WorkInbox({
   const items = inaccessible
     ? []
     : uniqueWorkItems(result.data?.pages.flatMap((page) => page.items) ?? []);
-  const observed = result.data?.pages[0]?.serverTime;
+  const observed = inaccessible ? undefined : result.data?.pages[0]?.serverTime;
   return (
     <section aria-labelledby="work-inbox-title" className={styles.inbox}>
       <div className={styles.heading}>
@@ -81,16 +81,17 @@ export function WorkInbox({
       {result.error && (
         <div role="alert">
           <p>
-            Chưa cập nhật được danh sách.{" "}
-            {items.length
+            {inaccessible
+              ? "Quyền xem nhóm việc đã thay đổi. Kiểm tra phiên đăng nhập và thử lại."
+              : <>Chưa cập nhật được danh sách.{" "}{items.length
               ? "Các mục bên dưới là thông tin lần tải trước."
-              : "Chưa thể kết luận bạn có việc cần làm hay không."}
+              : "Chưa thể kết luận bạn có việc cần làm hay không."}</>}
           </p>
           <button
             type="button"
             disabled={result.isFetching}
             onClick={() =>
-              void (result.isFetchNextPageError
+              void (result.isFetchNextPageError && !inaccessible
                 ? result.fetchNextPage()
                 : result.refetch())
             }
@@ -134,7 +135,7 @@ export function WorkInbox({
           );
         })}
       </ul>
-      {result.hasNextPage && (
+      {result.hasNextPage && !inaccessible && (
         <button
           type="button"
           disabled={result.isFetching}

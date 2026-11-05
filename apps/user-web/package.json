@@ -87,7 +87,8 @@
     "test:cover-position-recovery:browser": "node tests/cover-position-recovery.mjs",
     "test:listing-photo-identity:browser": "node tests/listing-photo-identity.mjs",
     "test:order-list-read-access:browser": "node tests/order-list-read-access.mjs",
-    "test:chat-listing-read-recovery:browser": "node tests/chat-listing-read-recovery.mjs"
+    "test:chat-listing-read-recovery:browser": "node tests/chat-listing-read-recovery.mjs",
+    "test:work-inbox-read-access:browser": "node tests/work-inbox-read-access.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

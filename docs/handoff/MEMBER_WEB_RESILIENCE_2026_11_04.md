@@ -7,6 +7,33 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Việc đang chờ: denial không để cursor và mốc cập nhật cũ —05/11/2026
+
+Nhánh `codex/member-web-work-inbox-read-access`, base `6505ccf8`; checkpoint subject
+`fix(user-web): reset denied work inbox reads to the first page`.
+Theo [ADR0053](../adr/0053-state-derived-work-inbox.md), inbox là lời nhắc từ trạng
+thái hiện tại, không quyền thực hiện nghĩa vụ. [WorkInbox](../../apps/user-web/src/components/WorkInbox.tsx)
+đã ẩn item401/403 nhưng còn load-more/serverTime cache, next-page denial Thử lại
+vẫn đi cursor cũ. Nay denial ẩn load-more/time, copy quyền/phiên rõ và refetch root;
+503 giữ item/time lần trước và retry cursor cũ. Không đổi filter/lanes/status,
+quyền ExistingObligation, poll30giây, schema hoặc `workTarget`.
+
+[Production fixture](../../apps/user-web/tests/work-inbox-read-access.mjs),
+`pnpm --filter @used-books/user-web test:work-inbox-read-access:browser`:
+baseline8/after8 PASS,390/1440 × refresh/next-page ×403/503.5item→lỗi→retry→tải
+trang2: denial không item/load-more/time/empty,200 refetch root rồi mở tiếp đúng;
+503 giữ5item, next retry cursor cũ. Trang2 có ID trùng version2 và1ID mới, dedupe
+đúng6item, hết cursor ẩn load-more; link đầu đúng order ID. Chỉ login giả lập/GET,
+all-origin HTTP mock và chặn WS/external, không obligation/payment/order mutation,
+DB/provider/native/human.401 refresh thật NOT RUN, không suy API real auth PASS.
+
+PASS build/typecheck,449unit/57file, scoped lint JSON0, docs/diff, detector0finding.
+46 CSS khớp byte; không style/asset/motion đổi. Đã xem capture denial390/1440,
+error/retry dùng layout hiện có. Evidence `.tmp/member-web-work-inbox-read-access/`.
+Demo54file/status giữ nguyên; READINESS không đổi, không push/PR/deploy. Trang rỗng
+còn cursor và dữ liệu thay đổi giữa lần tải là ca rà kế tiếp, không suy tất cả
+state đọc đã được xác minh từ ca denial này.
+
 ## Hộp hội thoại: lỗi tên sách không thành bài đăng đã gỡ —05/11/2026
 
 Nhánh `codex/member-web-chat-listing-read-recovery`, base `23632beb`; checkpoint
