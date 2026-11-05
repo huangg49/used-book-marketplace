@@ -1383,7 +1383,13 @@ export function SellBookPage() {
             auction={auction}
             title={bundle?.title || formData.title}
             onPostAnother={() => {
+              coverCrops.invalidate();
               formData.images.forEach((url) => URL.revokeObjectURL(url));
+              if (coverCropMetaRef.current) {
+                URL.revokeObjectURL(coverCropMetaRef.current.rawUrl);
+              }
+              coverCropMetaRef.current = null;
+              setCoverCropMeta(null);
               submission.current = null;
               // A fresh draft: the old stage keys would replay the sent listing.
               setDraftAttempt(createDraftAttempt());

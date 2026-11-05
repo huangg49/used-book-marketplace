@@ -7,6 +7,32 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Đăng cuốn khác: dọn cover và bỏ crop của lượt trước —05/11/2026
+
+Nhánh `codex/member-web-listing-restart-previews`, base `50cf63db`; checkpoint
+subject `fix(user-web): release cover state when restarting a listing`.
+[SellBookPage](../../apps/user-web/src/pages/SellBookPage.tsx) sau ACK→Đăng cuốn
+khác trước chỉ thu hồi cropped URL của form; raw cover/meta còn giữ. Crop pending
+từ lượt cũ trả về còn có thể đưa ảnh vào form mới. Nay reset invalidate crop,
+thu hồi raw hiện tại và xóa metadata/ref cùng phần reset cũ; không đổi receipt,
+fresh DraftAttempt, catalog/upload stage keys, guard hay hiệu ứng confirmation.
+
+[Production fixture](../../apps/user-web/tests/listing-restart-previews.mjs),
+`pnpm --filter @used-books/user-web test:listing-restart-previews:browser`:
+baseline6/after6 PASS (390/1440 × success/mất ACK submit/crop pending tới sau reset).
+Đi từ login→Đăng sách→điền các bước→Gửi duyệt→Đã gửi duyệt→Đăng cuốn khác. Trước
+live1/1/2, sau0/0/0; title form mới trống, không lặp catalog/draft/media/bytes/
+finalize/save đã ACK. Mất ACK vẫn đúng key/body cho submit retry. Pending crop
+trong fixture dùng canvas callback giữ lại, không là evidence đã khóa submit khi
+đang crop; đường đó còn kiểm riêng. Mọi publishing/upload/backend là all-origin
+fixture, không ghi DB/storage/provider hoặc chứng minh review Staff/AI thật.
+
+PASS build/typecheck,444unit/57file, scoped lint0warning, docs/diff.46 CSS khớp
+byte, không JSX/style/asset/motion đổi; không rerun detector cho reset handler.
+Local evidence `.tmp/member-web-listing-restart-previews/` before/after/log/
+preservation. Demo54file/status giữ nguyên; READINESS không đổi. Native/human/
+heap máy thật và AI trợ lý xuyên reset chưa kiểm ở gói này; không push/PR/deploy.
+
 ## Tiến độ đăng sách theo đúng địa chỉ hiện tại —05/11/2026
 
 Nhánh `codex/member-web-origin-progress`, base `817ac3f5`; checkpoint subject
