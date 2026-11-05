@@ -7,6 +7,36 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Hỗ trợ: chỉ nhận enum hợp lệ từ URL tạo yêu cầu —05/11/2026
+
+Nhánh `codex/member-web-support-route-params`, base `84cdfa3f`; checkpoint subject
+`fix(user-web): validate support form URL enums with own keys`.
+[SupportPages](../../apps/user-web/src/features/support/SupportPages.tsx) dùng
+`kind in supportKinds`/`type in supportTargets` nên constructor/__proto__/toString
+được chấp nhận dù không có trong enum contract. Kind lạ có thể lọt vào body gửi,
+type lạ mở picker rỗng/link thiếu nhãn. Nay Object.hasOwn giữ fallback Feedback/
+không gắn đối tượng cho mọi giá trị ngoài enum như intent cũ với unknown.
+Không đổi kind/type hợp lệ, targetId/ownership, pending intent/body/key, form draft,
+quyền API hoặc semantics ADR0062. Không có prototype mutation/exploit được chứng minh.
+
+[Production fixture](../../apps/user-web/tests/support-route-params.mjs),
+`pnpm --filter @used-books/user-web test:support-route-params:browser`:
+baseline30/after30 PASS,390/1440 ×3prototype names/unknown cho kind và type +7
+validtypes ghép đủ4validkinds. Trước kind prototype lọt vào synthetic POST, type
+prototype mở picker rỗng; sau kind Feedback/target null và không picker, giữ draft
+khi503. Các link Auction/Listing/Review/Member và GET3transactiontypes đúng.
+Fixture POST bị chặn bằng503 tại all-origin route, không tới API thật; không in
+body/key. Lần harness đầu nhầm target undefined, sửa assertion thành null theo
+source/contract, không sửa sản phẩm để né failure.4resource-recovery regression
+PASS: create/reply exact replay/remount và denied detail vẫn đúng.
+
+Build/typecheck,449unit/57file, scoped lint JSON0, docs/diff, detector0finding PASS.
+Đã xem captures390/1440,46 CSS khớp byte; không style/motion/asset đổi. Evidence
+`.tmp/member-web-support-route-params/`. All-origin HTTP mock/chặn WS/external;
+không DB/provider/native/human hoặc401refresh thật, không kết luận backend đã
+chấp nhận enum sai hay mất an toàn từ fixture UI này. Demo54file/status giữ nguyên,
+READINESS không đổi; không push/PR/deploy.
+
 ## Hỗ trợ: phục hồi bộ chọn giao dịch và trang trống còn cursor —05/11/2026
 
 Nhánh `codex/member-web-support-target-recovery`, base `a43ee000`; checkpoint subject

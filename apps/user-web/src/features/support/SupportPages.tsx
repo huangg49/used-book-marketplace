@@ -191,13 +191,13 @@ function NewSupportForm({
     kind = params.get("kind");
   const initial: SupportDraft = {
     kind:
-      kind && kind in supportKinds
+      kind && Object.hasOwn(supportKinds, kind)
         ? (kind as SupportDraft["kind"])
         : "Feedback",
     title: "",
     description: "",
     targetType:
-      type && type in supportTargets
+      type && Object.hasOwn(supportTargets, type)
         ? (type as SupportDraft["targetType"])
         : "",
     targetId: params.get("id") ?? "",

@@ -1,18 +1,21 @@
 # Gia cố khả năng phục hồi Member web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-support-target-recovery`, base `a43ee000`; checkpoint subject
-`fix(user-web): preserve support target choices across transient page errors`.
-[SupportTargetPicker](../../apps/user-web/src/features/support/SupportTargetPicker.tsx)
-giữ radio/draft khi trang sau503, retry cursor;401/403/404 ẩn lựa chọn/load-more
-và retry root. Empty xét mọi trang và còn cursor không kết luận hết dữ liệu.
-Baseline8/after8 production390/1440 PASS;4resource-recovery regression PASS.
+Nhánh `codex/member-web-support-route-params`, base `84cdfa3f`; checkpoint subject
+`fix(user-web): validate support form URL enums with own keys`.
+[SupportPages](../../apps/user-web/src/features/support/SupportPages.tsx) chỉ nhận
+own keys cho kind/type từ URL, tránh prototype names lọt vào draft/body hoặc
+picker rỗng. Baseline30/after30 production390/1440 và4resource hồi quy PASS,
+kiểm3prototype/unknown/7type/4kind hợp lệ, giữ draft khi synthetic503.
 Build/typecheck,449unit/57file, scoped lint JSON0, docs/diff/detector0finding PASS;
 46 CSS khớp byte, không style/motion/asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md).
-Backend fixture cô lập, không API/Mongo/provider/native/human;401 refresh thật
-NOT RUN. Demo54file/status giữ nguyên, READINESS giữ; không push/PR/deploy.
-Tiếp tục rà tham số URL hỗ trợ; không suy toàn web hết lỗi hoặc server đã ổn.
+Chỉ frontend/backend fixture cô lập, không DB/provider/native/human/401refresh
+thật. Demo54file/status giữ, READINESS không đổi; không push/PR/deploy.
+Tiếp tục danh sách hỗ trợ mất thông báo khi cursor denied, không suy hết lỗi.
 
+Gói cùng lượt `84cdfa3f` picker giữ radio/draft khi trang sau503, retry cursor;
+401/403/404 ẩn và refetch root, empty xét mọi trang/cursor. Baseline8/after8+
+4resource hồi quy PASS. Không đổi quyền/contract/command hoặc animation.
 Gói cùng lượt `a43ee000` counts Exchange lỗi hoặc list401/403 hiện “—”, retry
 cả counts/list; baseline10/after10+16route regression PASS. Hai read vẫn độc lập.
 Gói cùng lượt `b9c98749` whitelist own tab keys: constructor/__proto__/toString
