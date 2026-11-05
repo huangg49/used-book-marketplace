@@ -1,18 +1,20 @@
 # Gia cố khả năng phục hồi Member web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-autofill-preview-lifetime`, base `76553495`; checkpoint
-subject `fix(user-web): own autofill previews outside state updaters`.
-[PhotoAutofill](../../apps/user-web/src/components/PhotoAutofill/index.tsx) cấp URL
-ngoài updater và sync filesRef, thu hồi đủ preview khi bỏ/rời panel. Remove theo
-URL, click lặp một node không xóa ảnh khác. Baseline StrictMode dev3ảnh tạo6URL/
-thu hồi3, sau3/3/live0; production hồi quy giữ0leak. Bỏ ảnh click lặp trước mất2,
-sau đúng1. Baseline8/after8 dev/prod390/1440 PASS; invalid MIME/quá3ảnh cấp0URL.
-Build/typecheck,426unit/55file, scoped lint/docs/diff/detector0finding PASS;46 CSS
-khớp byte, không style/motion/asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md).
-Fixture ảnh cô lập không auth/API/provider; production `/sell` ISBN/error/exact
-AI retry hồi quy6ca PASS. Không native/human hoặc đo heap máy thật.
+Nhánh `codex/member-web-cover-crop-failure`, base `bde3c790`; checkpoint subject
+`fix(user-web): release failed cover crop previews`.
+[cropImageToCover](../../apps/user-web/src/lib/image-crop.ts) thu hồi raw URL tự
+cấp nếu decode/Canvas/encode lỗi; giữ URL caller đưa khi đổi vị trí và chuyển đủ
+ownership khi thành công. Ảnh hỏng có thông báo tiếng Việt.10unit ownership mới
+baseline4fail/6pass→10pass. Baseline6/after6 production `/sell`390/1440 PASS: lỗi
+rồi chọn ảnh tốt/xóa, live URL1→0, giữ title và error phục hồi. Build/typecheck,
+436unit/56file, scoped lint/docs/diff PASS;46 CSS khớp byte, không JSX/style/motion/
+asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Async crop trả về muộn
+sau rời trang/các crop chồng nhau còn cần kiểm riêng ở caller. Không native/human/
+heap máy thật; backend/provider mô phỏng, không upload/save/submit/DB thật.
 
+Gói cùng lượt `bde3c790` thu hồi đủ ảnh Autofill StrictMode, remove theo URL tránh
+click lặp xóa ảnh khác; baseline8/after8 dev/prod, `/sell` read regression6ca PASS.
 Gói cùng lượt `76553495` khóa đọc Autofill trước await, ISBN click lặp2→1POST,
 giữ ảnh/nháp và exact AI retry sau mất ACK; baseline6/after6 production `/sell`.
 Cùng lượt `d0ba6b52` pin xác nhận tham chiếu vào đúng response và phục hồi expiry,

@@ -77,7 +77,8 @@
     "test:price-assist-expiry:browser": "node tests/price-assist-expiry.mjs",
     "test:price-reference-expiry:browser": "node tests/price-reference-expiry.mjs",
     "test:autofill-read-lock:browser": "node tests/autofill-read-lock.mjs",
-    "test:autofill-preview-lifetime:browser": "node tests/autofill-preview-lifetime.mjs"
+    "test:autofill-preview-lifetime:browser": "node tests/autofill-preview-lifetime.mjs",
+    "test:cover-crop-failure:browser": "node tests/cover-crop-failure.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

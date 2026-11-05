@@ -7,6 +7,36 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Ảnh bìa: thu hồi URL khi crop lỗi, giữ ảnh gốc khi đổi vị trí —05/11/2026
+
+Nhánh `codex/member-web-cover-crop-failure`, base `bde3c790`; checkpoint subject
+`fix(user-web): release failed cover crop previews`.
+[cropImageToCover](../../apps/user-web/src/lib/image-crop.ts) trước tạo raw URL
+rồi decode/Canvas/encode; nếu lỗi, URL không được trả cho caller nên không có
+owner thu hồi. `/sell` vẫn cho chọn lại ảnh tốt nhưng URL lỗi bị sót lại. Nay
+wrapper thu hồi raw URL do chính lần gọi tạo khi crop thất bại; caller đưa raw
+URL có sẵn để đổi vị trí thì không thu hồi nó, giữ ảnh cũ dùng được. Thành công
+vẫn chuyển ownership raw/cropped URL cho SellBookPage. Decode error có thông báo
+tiếng Việt hướng dẫn chọn ảnh khác, giữ cause; không đổi crop/format/chất lượng.
+
+[Unit](../../apps/user-web/src/lib/image-crop-failure.test.ts):10ca ownership,
+decode/context/blob-null/encode-throw cho URL mới/caller, success/reposition.
+Baseline4fail/6pass; sau10pass. [Production `/sell` fixture](../../apps/user-web/tests/cover-crop-failure.mjs),
+`pnpm --filter @used-books/user-web test:cover-crop-failure:browser`: baseline6/
+after6 PASS,390/1440 × ảnh hỏng/Canvas-null/toBlob-null, rồi chọn ảnh tốt, xóa và
+về bước1. Mỗi ca trước created3/revoked2/live1; sau3/3/0, title giữ nguyên,
+error phục hồi và không pageerror. Chỉ synthetic login, GET; API/upload/catalog/
+AI/provider không ghi hay gọi thật. Canvas lỗi là fault injection trong fixture,
+không thay cài đặt máy hoặc chứng minh browser mọi thiết bị đã được kiểm.
+
+PASS build/typecheck,436unit/56file, scoped lint/docs/diff.46 CSS production khớp
+byte base; không JSX/style/asset/motion đổi. Đã xem capture decode error390/1440;
+không chạy lại detector cho helper/copy lỗi, không có layout mới. Evidence local
+`.tmp/member-web-cover-crop-failure/` baseline/after/unit/capture/log/preservation.
+Demo54file/status giữ nguyên; READINESS không đổi. Không native/human/heap máy
+thật/push/PR/deploy. Async crop trả về sau rời trang hoặc nhiều crop chồng nhau
+là vòng đời caller riêng, chưa suy đã giải quyết từ cleanup failure này.
+
 ## Ảnh Autofill: thu hồi preview StrictMode và bỏ đúng ảnh khi click lặp —05/11/2026
 
 Nhánh `codex/member-web-autofill-preview-lifetime`, base `76553495`; checkpoint

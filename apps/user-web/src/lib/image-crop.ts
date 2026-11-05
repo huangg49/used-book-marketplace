@@ -91,10 +91,28 @@ export async function cropImageToCover(
   existingRawUrl?: string,
 ): Promise<CoverCropResult> {
   const rawUrl = existingRawUrl ?? URL.createObjectURL(file);
+  try {
+    return await renderCoverCrop(file, position, rawUrl);
+  } catch (error) {
+    // A failed first crop has no caller that can release its raw preview. A
+    // reposition uses the caller's existing preview and must keep it usable.
+    if (existingRawUrl === undefined) URL.revokeObjectURL(rawUrl);
+    throw error;
+  }
+}
 
+async function renderCoverCrop(
+  file: File,
+  position: CoverPosition,
+  rawUrl: string,
+): Promise<CoverCropResult> {
   const img = new Image();
   img.src = rawUrl;
-  await img.decode();
+  try {
+    await img.decode();
+  } catch (cause) {
+    throw new Error("Không đọc được ảnh bìa. Hãy chọn một ảnh JPEG, PNG hoặc WebP khác.", { cause });
+  }
 
   const naturalWidth = img.naturalWidth;
   const naturalHeight = img.naturalHeight;
