@@ -94,7 +94,8 @@
     "test:exchange-count-recovery:browser": "node tests/exchange-count-recovery.mjs",
     "test:support-target-recovery:browser": "node tests/support-target-recovery.mjs",
     "test:support-route-params:browser": "node tests/support-route-params.mjs",
-    "test:support-list-read-access:browser": "node tests/support-list-read-access.mjs"
+    "test:support-list-read-access:browser": "node tests/support-list-read-access.mjs",
+    "test:auction-step-read-contract:browser": "node tests/auction-step-read-contract.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

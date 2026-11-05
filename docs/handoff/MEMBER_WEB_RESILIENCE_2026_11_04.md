@@ -7,6 +7,40 @@ Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
 
+## Đấu giá Member web: đọc đúng bước giá ADR0068 —05/11/2026
+
+Nhánh `codex/member-web-auction-step-read-contract`, base `9d44530e`; checkpoint
+subject `fix(user-web): align auction read steps with ADR0068`.
+[auctions service](../../apps/user-web/src/services/auctions.ts) còn union literal
+10.000/50.000 ở auctionSummary và myIntake, trái [ADR0068](../adr/0068-auction-step-options.md)
+và OpenAPI hiện tại: số nguyên1.000–10.000.000, bội số1.000. Chỉ một bản ghi bước
+hợp lệ mới cũng làm parse cả response lỗi, UI báo chưa tải được dù fixture200.
+Nay hai schema dùng cùng predicate đúng contract; constants bước giá đã có đưa
+lên trước schema để dùng chung. Không đổi business bounds, contract, command,
+price grid, permission/ownership, migration hoặc API. Comment version0.27 ở đầu
+service là mốc lịch sử, không mô tả version contract hiện hành.
+
+[17unit mới](../../apps/user-web/src/services/auction-step-contract.test.ts) kiểm
+6read entry live/upcoming/detail/my-auctions/intakes/focused-intake:7legacy/preset/
+custom hợp lệ giữ nguyên step và10ca sai (ngoài khoảng/lệch lưới/thập phân/string/
+NaN/Infinity) bị từ chối. Trước5FAIL/12PASS đúng5step mới bị từ chối; sau17PASS.
+[Production fixture](../../apps/user-web/tests/auction-step-read-contract.mjs),
+`pnpm --filter @used-books/user-web test:auction-step-read-contract:browser`:
+baseline16/after16 PASS,390/1440 × legacy/custom × shelf/detail/mine/focus.
+Trước8custom profile báo lỗi200; sau đều đọc được, list7phiên/7intakes và focus
+1intake, step min hiển thị1.000đ. Legacy2bản ghi vẫn đúng.7intake-recovery browser
+regression PASS, giữ duplicate/replay/ACK-read/wrong-receipt assertions.
+
+PASS build/typecheck,466unit/58file, scoped lint JSON0, docs/diff. Không đổi JSX/
+CSS/asset/motion nên không detector lại; đã xem captures mobile focus/desktop shelf,
+46 CSS khớp byte. Evidence `.tmp/member-web-auction-step-read-contract/`.
+All-origin HTTP mock/chặn WS/external; chỉ synthetic login/GET trong fixture mới,
+regression mutation cũng chỉ mock. Không API/Mongo/provider/native/human/worker,
+không suy phiên thật đã mở hay DB đã migration. Demo54file/status giữ, READINESS
+không đổi; không push/PR/deploy. Rà source phát hiện union cũ tương tự ở Admin/
+Staff operations và RN; chưa sửa trong checkpoint Member này, sẽ xử lý web tiếp.
+RN nằm ngoài lượt tối ưu web, chưa có native evidence.
+
 ## Hỗ trợ: thông báo và phục hồi danh sách khi cursor bị từ chối quyền —05/11/2026
 
 Nhánh `codex/member-web-support-list-read-access`, base `244bbe9d`; checkpoint

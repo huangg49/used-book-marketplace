@@ -1,18 +1,21 @@
-# Gia cố khả năng phục hồi Member web —05/11/2026
+# Gia cố khả năng phục hồi web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
-Nhánh `codex/member-web-support-list-read-access`, base `244bbe9d`; checkpoint
-subject `fix(user-web): recover support list after denied cursor reads`.
-[SupportPages](../../apps/user-web/src/features/support/SupportPages.tsx) denied
-cursor có alert rõ, reset activity phân trang để root200 không giữ lỗi cũ.503
-giữ rows/retry cursor; filter/Back đúng. Baseline8/after8 production390/1440 và
-42screen/viewport pagination/shared state/error/race/cursor regression PASS.
-Build/typecheck,449unit/57file, scoped lint JSON0, docs/diff/detector0finding PASS;
-46 CSS khớp byte, không style/motion/asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md).
-Chỉ browser fixtures, không API/Mongo/provider/native/human/401refresh thật.
-Demo54file/status nguyên, READINESS không đổi; không push/PR/deploy.
-Tiếp theo đối chiếu schema đọc bước giá đấu giá ADR0068 đang giới hạn hai giá cũ.
+Nhánh `codex/member-web-auction-step-read-contract`, base `9d44530e`; checkpoint
+subject `fix(user-web): align auction read steps with ADR0068`.
+[Member auction service](../../apps/user-web/src/services/auctions.ts) bỏ union
+10.000/50.000 cũ ở2read schema, dùng số nguyên1.000–10.000.000 bội1.000 đúng
+ADR0068/OpenAPI. Baseline16/after16 production390/1440,7intake regression PASS;
+17unit mới (trước5FAIL/12PASS, sau17PASS) kiểm6read và cả bước sai. Tổng466unit/
+58file, build/typecheck/scoped lint JSON0/docs/diff PASS.46 CSS khớp byte, không
+JSX/style/motion/asset đổi. [Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md).
+Chỉ fixture, không API/Mongo/provider/worker/native/human; không suy DB đã áp
+migration. Demo54file/status giữ, READINESS không đổi; không push/PR/deploy.
+Tiếp tục Admin/Staff operations có union bước giá cũ tương tự. RN cũng có mẫu cũ
+nhưng ngoài lượt tối ưu web, chưa sửa/native test; không suy native PASS.
 
+Gói cùng lượt `9d44530e` support cursor denied có alert và dọn activity cũ;
+baseline8/after8+42screen/viewport pagination/shared state/error/race PASS.
 Gói cùng lượt `244bbe9d` own-key kind/type URL hỗ trợ, baseline30/after30+
 4resource regression PASS, giữ4kind/7type hợp lệ và draft khi fixture503.
 Gói cùng lượt `84cdfa3f` picker giữ radio/draft khi trang sau503, retry cursor;

@@ -3,6 +3,15 @@ import { session } from '../lib/session'
 
 // Auction reads and commands (OpenAPI 0.27.0, tag Auctions). Ceilings are never
 // public; the caller's own ceiling only comes from /me/auctions/{id}/participation.
+// ADR 0068: bid steps a Seller may choose before the auction opens.
+export const AUCTION_STEPS = [10_000, 20_000, 50_000, 100_000] as const
+// A Seller may also enter their own step: a multiple of 1.000đ in this range.
+export const AUCTION_STEP_MIN = 1_000
+export const AUCTION_STEP_MAX = 10_000_000
+export const AUCTION_STEP_UNIT = 1_000
+export type AuctionStep = number
+
+const auctionStepSchema = z.number().int().min(AUCTION_STEP_MIN).max(AUCTION_STEP_MAX).multipleOf(AUCTION_STEP_UNIT)
 const money = z.number().int()
 const auctionState = z.enum(['Active', 'BuyNowPending', 'AwaitingWinnerPayment', 'Sold', 'Unsold', 'OnHold', 'Cancelled', 'PaymentExpired'])
 const auctionBookSchema = z.object({
@@ -12,7 +21,7 @@ const auctionBookSchema = z.object({
 })
 export const auctionSummarySchema = z.object({
   id: z.string().uuid(), listingId: z.string().uuid(), title: z.string(), state: auctionState,
-  startPrice: money, step: z.union([z.literal(10000), z.literal(50000)]), buyNowPrice: money.nullable(),
+  startPrice: money, step: auctionStepSchema, buyNowPrice: money.nullable(),
   currentPrice: money.nullable(), minimumBid: money.nullable(), bidderCount: z.number().int(),
   startAt: z.string(), endAt: z.string(), pointName: z.string(), demoOnly: z.literal(true),
   // ADR 0043: when Buy Now opened the 60-second window (endAt already shortened).
@@ -89,16 +98,6 @@ export type PublicAuction = z.infer<typeof auctionSchema>
 export type AuctionParticipation = z.infer<typeof participationSchema>
 export type PointOrder = z.infer<typeof pointOrderSchema>
 
-// ADR 0067: auction prices and declared values have no business ceiling, only
-// the exact-integer limit. Inputs accept 15 digits, which always stay below it.
-// ADR 0068: bid steps a Seller may choose before the auction opens.
-export const AUCTION_STEPS = [10_000, 20_000, 50_000, 100_000] as const
-// A Seller may also enter their own step: a multiple of 1.000đ in this range.
-export const AUCTION_STEP_MIN = 1_000
-export const AUCTION_STEP_MAX = 10_000_000
-export const AUCTION_STEP_UNIT = 1_000
-export type AuctionStep = number
-
 export function auctionStepError(step: number | null) {
   if (!step) return 'Nhập bước giá.'
   if (step < AUCTION_STEP_MIN || step > AUCTION_STEP_MAX) return 'Bước giá từ 1.000đ đến 10.000.000đ.'
@@ -106,6 +105,8 @@ export function auctionStepError(step: number | null) {
   return undefined
 }
 
+// ADR 0067: auction prices and declared values have no business ceiling, only
+// the exact-integer limit. Inputs accept 15 digits, which always stay below it.
 export const AUCTION_MAX_PRICE = Number.MAX_SAFE_INTEGER
 export const AUCTION_PRICE_DIGITS = 15
 
@@ -202,7 +203,7 @@ const intakeState = z.enum(['AwaitingDropoff', 'Received', 'NeedsEvidence', 'Pas
 const myIntakeSchema = z.object({
   id: z.string().uuid(), auctionId: z.string().uuid().nullable(), state: intakeState, version: z.number().int(),
   listingId: z.string().uuid(), title: z.string(), pointId: z.string().uuid(),
-  startPrice: money, step: z.union([z.literal(10000), z.literal(50000)]), buyNowPrice: money.nullable(), protectiveValue: money,
+  startPrice: money, step: auctionStepSchema, buyNowPrice: money.nullable(), protectiveValue: money,
   createdAt: z.string(), dropoffDeadline: z.string(), receivedAt: z.string().nullable(), inspectedAt: z.string().nullable(),
   inspectionOutcome: z.enum(['Pass', 'Fail', 'NeedsEvidence']).nullable(), inspectionNote: z.string().nullable(),
   reclaimReason: z.string().nullable(), closedAt: z.string().nullable(),
