@@ -1,11 +1,41 @@
-# Gia cố khả năng phục hồi Member web — 04/11/2026
+# Gia cố khả năng phục hồi web — 04/11/2026
 
 Owner chưa tiện kiểm hệ thống thật và giao tiếp tục rà các tính năng khác bằng
-source/kiểm thử cô lập. Phạm vi Member React/Vite, giữ animation và nghiệp vụ;
+source/kiểm thử cô lập. Phạm vi ban đầu Member React/Vite, các gói Admin/Staff
+web mở rộng theo yêu cầu tối ưu toàn web được ghi riêng; giữ animation/nghiệp vụ;
 không thao tác DB/provider/GHN, bật API/Mongo/worker hoặc sửa checkout demo.
 Harness chỉ mở preview frontend tạm và tự đóng khi kết thúc.
 Đây là vòng gia cố hành vi lỗi, tách với [vòng hiệu năng đã chốt](MEMBER_WEB_PERFORMANCE_2026_11_03.md).
 Không suy browser fixture thành API/Mongo/native/người thật nghiệm thu.
+
+## Admin/Staff web: hàng đợi đọc đúng bước giá ADR0068 —05/11/2026
+
+Nhánh `codex/operations-web-auction-step-read-contract`, base `b8a535e0`;
+checkpoint subject `fix(admin-web): align operations auction steps with ADR0068`.
+[Operations contracts](../../apps/admin-web/src/features/operations/contracts.ts)
+cũng còn union10.000/50.000 ở shared step cho intake và operationsAuction, làm
+parse lỗi toàn queue nếu có bước custom/preset mới. Nay đọc số nguyên1.000–
+10.000.000 bội1.000 đúng ADR0068/OpenAPI, không thay request/API/role/action/
+inspection/custody/settlement hay gate. Đây là nối tương thích dữ liệu đọc giữa
+Member tạo intake và Staff/Admin xem, chưa là nghiệm thu workflow thật.
+
+[17unit mới](../../apps/admin-web/src/features/operations/auction-step-contract.test.ts)
+kiểm7legacy/preset/custom hợp lệ ở4schema row/list và10bước sai bị từ chối;
+baseline5FAIL/12PASS, sau17PASS. Tổng246unit/35file PASS. [Production fixture](../../apps/admin-web/tests/auction-step-read-contract.mjs),
+`pnpm --filter @used-books/admin-web test:auction-step-read-contract:browser`:
+baseline8/after8 PASS,390/1440 ×legacy/custom × Staff intake/Admin auctions.
+Trước4custom profile lỗi dù200, sau7rows đúng step và Cập nhật đọc lại đúng.
+Không bấm Nhận sách/Hủy phiên hoặc thêm role; backend mock không chứng minh
+server authorization/independence. `test:pagination:browser` hồi quy PASS directory
+retry/support isolation4width và queue footer. Build gồm manifest budget check,
+typecheck, scoped lint JSON0, docs/diff PASS. Không sửa JSX nên không detector lại.
+
+Đã xem capture mobile Staff/desktop Admin;16 CSS Admin khớp byte, không style/
+motion/asset đổi. Evidence `.tmp/operations-web-auction-step-read-contract/`;
+baseline build mới từ source trước sửa, không lấy dist cũ làm chuẩn. All-origin
+HTTP mock/chặn WS/external, synthetic login/GET; không API/Mongo/provider/native/
+human hoặc command. Demo54file/status giữ nguyên, READINESS giữ; không push/PR/
+deploy. RN còn union cũ, chưa sửa vì ngoài lượt tối ưu web/native evidence.
 
 ## Đấu giá Member web: đọc đúng bước giá ADR0068 —05/11/2026
 
