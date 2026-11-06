@@ -422,6 +422,11 @@ try {
     .findOne({ buyerId: buyer.user.id });
   assert(order);
   assert.equal(order._id, createReceipt.entityId);
+  const orderContextToggle = buyerOrderDetails.getByRole("button", {
+    name: "Sách và thỏa thuận", exact: true,
+  });
+  if (await orderContextToggle.isVisible() && await orderContextToggle.getAttribute("aria-expanded") !== "true")
+    await orderContextToggle.click();
   await buyerOrderDetails.getByRole("heading", {
     name: fixture.metadata.title, exact: true,
   }).waitFor();

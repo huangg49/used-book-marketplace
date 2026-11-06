@@ -69,6 +69,13 @@ viewport390/1440 PASS retained-status/retry/no-money-command. Đã nối vào CI
 471unit/58file, Member rebuild/typecheck/scoped lint0error PASS. Full browser/API
 E2E trên head sửa vẫn phải chạy và đọc lại, không lấy các head giữa làm finalPASS.
 
+CI21974d34: API đầy đủ PASS, cùng9/11checks tổng đã xanh; Member browser qua
+smoke, seller-order lộ context sách thu gọn trên mobile (nay mở qua toggle thật
+trước kiểm title); operations qua cart, dừng support ở link hồ sơ uy tín đổi copy.
+Chỉ sửa harness cho2entry này, giữ route/permission/draft/financial assertions.
+Wallet credit regression10profiles PASS local sau read-error UI; human review
+vẫn OPEN, chưa merge. Head chứa2selector sửa phải chạy lại CI đủ trước squash.
+
 Không local API/Mongo/
 worker/provider, migration/seed/deploy. Bước tiếp: đọc đủ CI đúng SHA cuối, xử lý
 lỗi nếu còn; chờ owner vùng ảnh hưởng +reviewer thứ hai tiền/quyền/dispute, rồi squash.
