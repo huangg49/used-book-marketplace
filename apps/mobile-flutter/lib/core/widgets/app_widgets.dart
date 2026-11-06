@@ -455,7 +455,11 @@ class _SearchFieldState extends State<SearchField> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.search_rounded, size: 20, color: Color(0xFF214B40)),
+            const Icon(
+              Icons.search_rounded,
+              size: 20,
+              color: Color(0xFF214B40),
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: TextField(

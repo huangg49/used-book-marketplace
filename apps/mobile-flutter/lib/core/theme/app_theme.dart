@@ -302,7 +302,9 @@ ThemeData buildLatLaiTheme() {
     }
     return const BorderSide(color: StitchTokens.wine, width: 2);
   });
-  final onWineFocusSide = WidgetStateProperty.resolveWith<BorderSide?>((states) {
+  final onWineFocusSide = WidgetStateProperty.resolveWith<BorderSide?>((
+    states,
+  ) {
     if (!states.contains(WidgetState.focused) ||
         states.contains(WidgetState.disabled)) {
       return null;

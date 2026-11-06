@@ -1,3 +1,39 @@
+# Xuất bản chuỗi tối ưu —06/11/2026
+
+Owner yêu cầu push và merge cẩn thận. Nhánh xuất bản
+`codex/web-hardening-release-20261106`, nguồn `ba8713bb`, main đã xác minh remote
+`ef7091e1e24eeff186eb0db3329a4682aa4f0e63`; main là ancestor, không conflict mới.
+Đây là toàn bộ123commit/330file local tích lũy, gồm receipt/review/API/shared/RN,
+không chỉ5gói phục hồi mới nhất. Backup `codex/backup-before-publish-20261106-ba8713bb`.
+Đã push và mở [PR97](https://github.com/huangg49/used-book-marketplace/pull/97).
+Chưa merge: CI và review người thật theo TEAMWORK còn phải xác minh trên head cuối.
+
+Local publication checks tại nguồn trên: contract/types/routes257operations/
+39controllers, workspace lint/typecheck/build, docs/diff PASS. Default `pnpm test`
+FAIL hai lần ở shutdown child10s Windows không đổi source; chạy riêng shutdown
+PASS, API bounded2workers419PASS, client RN224/Admin246/Member471 và session151
+PASS (1511unit tổng, không nhận default command PASS). Browser production resolver22,
+pagination42screen/viewport +shared state/error/race, motion5checks PASS. Đây là
+fixture/mock hoặc web export, không thay API/native/provider/human nghiệm thu.
+
+CI head `ba8713bb`: Flutter format FAIL2file; chỉ chuẩn hóa whitespace/comma bằng
+Dart3.13.7 chính thức verified SHA,18file/0changes recheck PASS, Flutter analyze/test
+local NOT RUN. User-web listing-cache FAIL do fake performance clock trước native
+IntersectionObserver; dời clock sau initial cover, giữ lazy/cache/expiry assertions,
+2viewport rerun PASS. Operations profile FAIL do selector tên cũ: đổi selector web
+đúng UI hiện tại, giữ RN riêng; thêm accessible name ô OTP bị thiếu, không đổi style.
+Profile recovery6ca390/1440 PASS (draft/conflict/exact replay/email/remount); alert
+selector nay phân biệt conflict với notice unsaved. User-web rebuild/typecheck PASS;
+CI API vẫn E2E đang chạy tại checkpoint. CI trên commit sửa phải chạy/đọc lại;
+không dùng kết quả head cũ để nhận head mới xanh. Chi tiết ở PR97.
+
+Demo branch/HEAD `codex/demo-receipt-local-20261103`/`5bd0b360` giữ nguyên:
+54file và status fingerprint khớp; không sync/build/stash/reset demo.46CSS Member
+khớp byte trước/sau gói cuối; không đổi animation/duration/keyframe của gói xuất bản.
+Không local API/Mongo/worker/provider, migration/seed/deploy; READINESS giữ nguyên.
+Bước tiếp: push checkpoint sửa CI, đọc toàn bộ checks đúng SHA và chờ review người
+thật (owner vùng ảnh hưởng +reviewer thứ hai cho tiền/quyền/dispute) trước squash.
+
 # Gia cố khả năng phục hồi web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.

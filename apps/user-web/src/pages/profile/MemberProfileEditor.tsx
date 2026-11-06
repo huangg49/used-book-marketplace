@@ -821,6 +821,7 @@ export function MemberProfileEditor({
                     <div className={styles.fieldGroup}>
                       <input
                         id="profile-email-code"
+                        aria-label="Mã xác nhận"
                         className={styles.otpInput}
                         inputMode="numeric"
                         autoComplete="one-time-code"

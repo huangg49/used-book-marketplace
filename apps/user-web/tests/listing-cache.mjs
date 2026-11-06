@@ -120,7 +120,6 @@ async function fixtures(width) {
     held = [],
     errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.clock.install({ time: now });
   await page.route(`${origin}/qa-cover/**`, (route) =>
     route.fulfill({ contentType: "image/png", body: png }),
   );
@@ -186,6 +185,9 @@ async function fixtures(width) {
       "offscreen covers should not all request signing",
     );
     await settledShelf(page);
+    // Let native IntersectionObserver activate the initial covers before the
+    // fake performance clock starts. Expiry timers are installed on detail/Back.
+    await page.clock.install({ time: now });
     const beforeDetail = photoReads.length;
     await page.locator("article h3 a").first().click();
     await page.waitForURL(`${origin}/books/${listings[0].id}`);

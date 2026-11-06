@@ -38,7 +38,7 @@ const qaTargetAllowed=()=>{
 assert.ok(qaTargetAllowed(),'Use only the dedicated loopback rs-test QA replica set.');
 const button = (p, name) => p.getByRole("button", { name, exact: true });
 const reopenWebProfile = async (p) => {
-  const heading = p.getByRole("heading", { name: "Hồ sơ của tôi", exact: true });
+  const heading = p.getByRole("heading", { name: "Hồ sơ & Bảo mật", exact: true });
   await p.getByRole("link", { name: "Tổng quan", exact: true }).first().click();
   await p.waitForURL(webOrigin + "/account");
   // Lazy route transitions can still expose the previous screen's sidebar.
@@ -113,13 +113,13 @@ try {
     .first()
     .click();
   await p
-    .getByRole("heading", { name: "Hồ sơ của tôi", exact: true })
+    .getByRole("heading", { name: "Hồ sơ & Bảo mật", exact: true })
     .waitFor();
   await p
     .getByLabel("Tên hiển thị", { exact: true })
     .fill("Người đọc hồ sơ QA");
   await p.getByLabel(/Số điện thoại liên hệ/).fill("+84 900 000 001");
-  await button(p, "Lưu hồ sơ").click();
+  await button(p, "Lưu thay đổi").click();
   await p.getByRole("status").filter({ hasText: "Đã lưu hồ sơ." }).waitFor();
   const saved = await fixture.api("/me/profile", readToken);
   assert.equal(saved.displayName, "Người đọc hồ sơ QA");
@@ -143,7 +143,7 @@ try {
     await p
       .getByText("Ảnh đã tải. Chọn Lưu hồ sơ để dùng ảnh này.", { exact: true })
       .waitFor();
-    await button(p, "Lưu hồ sơ").waitFor();
+    await button(p, "Lưu thay đổi").waitFor();
   }
   assert.equal(
     await fixture.db
@@ -157,7 +157,7 @@ try {
       .countDocuments({ ownerId: fixture.member.user.id, state: "Retired" }),
     3,
   );
-  await button(p, "Lưu hồ sơ").click();
+  await button(p, "Lưu thay đổi").click();
   await p.getByRole("status").filter({ hasText: "Đã lưu hồ sơ." }).waitFor();
   const pictured = await fixture.api("/me/profile", readToken);
   assert.ok(pictured.avatarId);
@@ -179,7 +179,7 @@ try {
   await p
     .getByLabel("Tên hiển thị", { exact: true })
     .fill("Tên sau mất phản hồi QA");
-  await button(p, "Lưu hồ sơ").click();
+  await button(p, "Lưu thay đổi").click();
   await button(p, "Xác minh lần lưu trước").waitFor();
   await reopenWebProfile(p);
   await button(p, "Xác minh lần lưu trước").click();
@@ -197,7 +197,7 @@ try {
   await p
     .getByLabel("Mật khẩu hiện tại", { exact: true })
     .fill("wrong-password-42");
-  await button(p, "Gửi mã đến email mới").click();
+  await button(p, "Gửi mã xác nhận").click();
   await p.getByText("Mật khẩu hiện tại chưa đúng.", { exact: true }).waitFor();
   await reopenWebProfile(p);
   assert.equal(
@@ -216,7 +216,7 @@ try {
   const mail = await fixture.readAccountMail(pending.pendingEmailChange.id);
   assert.ok(mail?.code);
   await p.getByLabel("Mã xác nhận", { exact: true }).fill(mail.code);
-  await button(p, "Xác minh và đổi email").click();
+  await button(p, "Xác minh & Đổi email").click();
   await p
     .getByRole("status")
     .filter({ hasText: "Đã xác minh và đổi email đăng nhập." })

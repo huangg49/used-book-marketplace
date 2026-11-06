@@ -86,6 +86,7 @@ try {
       readStatus = 200;
       await main.getByRole('button', { name: 'Thử lại', exact: true }).click();
     }
+    await expect(main.getByRole('heading', { name: 'Hồ sơ & Bảo mật', exact: true })).toBeVisible();
     await expect(name).toBeVisible();
     await page.waitForFunction(() => !document.querySelector('[data-paper-storm]'));
     await page.clock.install();
@@ -153,7 +154,7 @@ try {
         mode = 'conflict';
         await main.getByRole('button', { name: 'Lưu thay đổi', exact: true }).click();
         await expect.poll(() => writes.length).toBe(1);
-        await expect(main.getByRole('alert').filter({ hasText: 'thay đổi' })).toBeVisible();
+        await expect(main.getByRole('alert').filter({ hasText: 'Thông tin đã thay đổi ở nơi' })).toBeVisible();
         assert.equal(JSON.parse(writes[0].body).expectedVersion, 1, 'Read recovery does not silently rebase the draft');
         await expect(name).toHaveValue(draft);
       }
@@ -188,13 +189,13 @@ try {
       await expect(main.getByText(oldEmail, { exact: true })).toBeVisible();
       const confirm = main.getByRole('button', { name: 'Xác minh & Đổi email', exact: true });
       await expect(confirm).toBeVisible();
-      await main.locator('input[autocomplete="one-time-code"]').fill('123456');
+      await main.getByLabel('Mã xác nhận', { exact: true }).fill('123456');
       mode = 'lost';
       await confirm.click();
       const confirmRetry = main.getByRole('button', { name: 'Xác minh kết quả trước', exact: true });
       await expect(confirmRetry).toBeVisible();
       await navigateAwayAndBack();
-      await expect(main.locator('input[autocomplete="one-time-code"]')).toHaveValue('');
+      await expect(main.getByLabel('Mã xác nhận', { exact: true })).toHaveValue('');
       await confirmRetry.click();
       await expect(confirmRetry).toHaveCount(0);
       assert.equal(writes.length, 4);
