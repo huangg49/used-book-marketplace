@@ -1,78 +1,58 @@
 # Xuất bản chuỗi tối ưu —06/11/2026
 
-Owner yêu cầu push và merge cẩn thận. Nhánh xuất bản
-`codex/web-hardening-release-20261106`, nguồn `ba8713bb`, main đã xác minh remote
-`ef7091e1e24eeff186eb0db3329a4682aa4f0e63`; main là ancestor, không conflict mới.
-Đây là toàn bộ123commit/330file local tích lũy, gồm receipt/review/API/shared/RN,
-không chỉ5gói phục hồi mới nhất. Backup `codex/backup-before-publish-20261106-ba8713bb`.
-Đã push và mở [PR97](https://github.com/huangg49/used-book-marketplace/pull/97).
-Chưa merge: CI và review người thật theo TEAMWORK còn phải xác minh trên head cuối.
+Owner yêu cầu push và merge cẩn thận. Nhánh
+`codex/web-hardening-release-20261106`, nguồn tích lũy `ba8713bb`, main remote đã
+xác minh `ef7091e1e24eeff186eb0db3329a4682aa4f0e63` là ancestor, không conflict mới.
+Toàn bộ123commit/330file local ban đầu được giữ (receipt/review/API/shared/RN,
+conversation/pagination/focus và tối ưu), thêm các sửa CI bên dưới. Backup
+`codex/backup-before-publish-20261106-ba8713bb`. Đã push và mở
+[PR97](https://github.com/huangg49/used-book-marketplace/pull/97); chưa merge.
+Checkpoint subject `fix: constrain book title tooltips and refresh cart browser entry`.
+CI head cuối và review người thật theo TEAMWORK còn phải xác minh trước squash.
+Không coi CI/AI review là human sign-off hoặc đóng READINESS.
 
-Local publication checks tại nguồn trên: contract/types/routes257operations/
-39controllers, workspace lint/typecheck/build, docs/diff PASS. Default `pnpm test`
-FAIL hai lần ở shutdown child10s Windows không đổi source; chạy riêng shutdown
-PASS, API bounded2workers419PASS, client RN224/Admin246/Member471 và session151
-PASS (1511unit tổng, không nhận default command PASS). Browser production resolver22,
-pagination42screen/viewport +shared state/error/race, motion5checks PASS. Đây là
-fixture/mock hoặc web export, không thay API/native/provider/human nghiệm thu.
+Local tại ba8713bb: contract/types/routes257operations/39controllers, workspace
+lint/typecheck/build và docs/diff PASS. Default `pnpm test` FAIL2lần shutdown child
+10s Windows không đổi source; riêng shutdown PASS, API maxWorkers2:419PASS,
+RN224/Admin246/Member471/session151PASS (1511total, không nhận default command PASS).
+Publication browser: resolver22, pagination42screen/viewport +shared error/race,
+motion5checks PASS. Evidence theo nguồn và job/SHA cụ thể ghi ở PR97.
 
-CI head `ba8713bb`: Flutter format FAIL2file; chỉ chuẩn hóa whitespace/comma bằng
-Dart3.13.7 chính thức verified SHA,18file/0changes recheck PASS, Flutter analyze/test
-local NOT RUN. User-web listing-cache FAIL do fake performance clock trước native
-IntersectionObserver; dời clock sau initial cover, giữ lazy/cache/expiry assertions,
-2viewport rerun PASS. Operations profile FAIL do selector tên cũ: đổi selector web
-đúng UI hiện tại, giữ RN riêng; thêm accessible name ô OTP bị thiếu, không đổi style.
-Profile recovery6ca390/1440 PASS (draft/conflict/exact replay/email/remount); alert
-selector nay phân biệt conflict với notice unsaved. User-web rebuild/typecheck PASS;
-CI API vẫn E2E đang chạy tại checkpoint. CI trên commit sửa phải chạy/đọc lại;
-không dùng kết quả head cũ để nhận head mới xanh. Chi tiết ở PR97.
+CI đã lộ và xử lý: Flutter formatter2file (Dart3.13.7 SHA verified,18files/0changes
+recheck; Flutter analyze/test PASS remote ở các head giữa, NOT RUN local); clock
+fixture trước native IntersectionObserver; assertion mua khi title/cover cache
+hiện trước fresh-detail render (nay chờ badge held rồi assert không có Mua ngay);
+selector web card/profile/cart cũ (RN giữ riêng); Admin palette mở trước lazy route
+Dashboard hoàn tất (nay đợi heading, giữ focus2s); thêm accessible name ô OTP thiếu.
+Không bỏ assertion, tăng timeout hoặc đổi API/quyền để làm xanh.
 
-Demo branch/HEAD `codex/demo-receipt-local-20261103`/`5bd0b360` giữ nguyên:
-54file và status fingerprint khớp; không sync/build/stash/reset demo.46CSS Member
-khớp byte trước/sau gói cuối; không đổi animation/duration/keyframe của gói xuất bản.
-Không local API/Mongo/worker/provider, migration/seed/deploy; READINESS giữ nguyên.
-CI tiếp theo `32f086ce`: Flutter/Admin/RN/demo/docs/offline/startup2OS PASS;
-user-web smoke còn selector link card cũ; operations còn copy save-status cũ.
-Đã sửa selector theo cover-link hiện hành, mở dialog lọc trước chọn radio, copy
-web success; giữ RN và mọi assertion. Profile fixture thêm assert copy save mới.
-API CI `ba8713bb` E2E FAIL17/931 (910PASS/4skip):4upgrade tests còn kỳ vọng chỉ
-policy HCM trong khi migration0052 thêm FREE và đổi selection;13withdrawal cases
-bị fixture review DirectOrder thiếu financial chain lưu ở DB dùng chung. Sửa chỉ
-harness: assert đầy đủ2policy theo sort và selection FREE; tách transaction-reviews
-sang DB QA random riêng, API/fixture cùng target, teardown xác minh prefix rồi
-xóa DB/users/roles do suite sở hữu. Không sửa migration/product/ledger; giữ mọi
-withdrawal negative/replay/race assertion. API typecheck/scoped lint PASS; E2E mới
-NOT RUN local (không bật DB); phải đọc CI head sau commit sửa. Bước tiếp: push
-checkpoint, đọc toàn bộ checks đúng SHA và chờ review người thật (owner vùng ảnh
-hưởng +reviewer thứ hai cho tiền/quyền/dispute) trước squash.
+API E2E f0c467a0:3upgrade suites đã qua; quote-upgrade còn count policy1→2. Tests
+nay assert đầy đủ policy HCM nguyên vẹn +policy FREE0052 và selection hiện hành.
+Review, support/work-inbox fixture có Order lịch sử tối giản, không phải financial
+chain đầy đủ. Review và withdrawal suites nay mỗi suite sở hữu DB QA random riêng,
+API/fixture cùng target; teardown xác minh prefix rồi xóa DB/users/roles đã tạo,
+restore config dù failure. Giữ full withdrawal reconciliation/permission/replay/race.
+Không sửa migration/product/ledger; API typecheck/scoped lint0error PASS; E2E trên
+head mới vẫn chờ remote, không bật DB/API local. Main ef7091e1 cũng FAIL API/web
+smoke/member-profile trước PR97 (đã đối chiếu logs), không quy hết lỗi cho tối ưu.
 
-Head xuất bản mới `47abfb81`: smoke desktop bỏ bước mở dialog mobile thêm nhầm,
-giữ radio/apply/assertion; probe HTTP-only1440/390 apply/reset PASS, mobile tự áp
-dụng khi chọn. Admin harness chờ heading Dashboard trước mở palette để tránh
-click trong lúc lazy route chuyển; giữ assertion focus2s. Remote main ef7091e1
-cũng FAIL API/web smoke/member-profile trước PR này (đã đọc logs); không quy hết
-CI lỗi cho tối ưu mới. CI cuối vẫn phải đọc đúng head, chưa merge/review người thật.
+Operations87f03fba đã qua profile thật (save/upload/replay/email/font130), rồi lộ
+cart selector cũ. Cart test dùng entry hiện hành qua menu tài khoản, giữ các kiểm
+tra mất ACK/exact replay/không giữ chỗ; chờ CI trên head chứa sửa entry này.
+Profile overflow390/130 tái hiện scroll422: sửa min-width/max-width/wrap label và
+email, không clip/giảm font.6recovery +16layout combinations1440/768/390/320 ×100/130
+với email dài PASS local; ảnh320/130 kiểm. Home CI scroll448/320: diagnostic chỉ ra
+tooltip tên dài trong suốt vẫn gây scroll. Fixture tên dài tái hiện456/320; đổi duy
+nhất max-width tooltip theo thẻ, sau305/320. Card typography2profiles +16layout/
+hover tooltip và Home4layouts PASS; giữ toàn bộ text, opacity/transform/160ms.
 
-CI bổ sung: `f0c467a0` API E2E còn14FAIL (3upgrade suites đã qua): quote-upgrade
-còn count policy1→2; withdrawal vẫn gặp partial Order từ support/work-inbox,
-không chỉ review. Tách cả withdrawal sang DB QA random owned riêng theo pattern
-wallet-checkout, giữ full money/permission/replay/race và cuối suite reconcile;
-teardown xác minh prefix/DB/users/roles và restore config dù failure. APItypecheck
-và scoped lint0error PASS; E2E thay đổi này chờ remote CI, không chạy DB local.
-
-Operations đã qua save/upload/replay/email trên `f0c467a0`, lộ overflow profile
-390px/font130%. Tái hiện frontend: scroll422/viewport390; sửa duy nhất min-width,
-max-width, wrap label/email trong Profile CSS, không clip/giảm font/motion. Probe
-320px/130% sau sửa scroll305 PASS;6profile recovery và16layout combinations
-1440/768/390/320 ×100/130% PASS local, thêm label OTP ở checkpoint trước.
-Chỉ Profile CSS đổi lần này, không còn nhận46CSS byte-identical cho cả gói mới;
-không animation/transition/keyframe/asset bị sửa. Home320/130 CI vẫn overflow,
-chưa tái hiện local với13card/route transition; harness đợi font+2RAF và ghi chỉ
-layout metadata khi fail, giữ nguyên overflow assertion. Không nhận Home đã sửa
-trước khi CI xác minh. Head87f03fba listing-cache có race assertion: title/cover
-cache hiện trước fresh-detail render, counter request chưa chứng minh UI đã cập
-nhật. Thêm chờ badge Đang giao dịch trước assertion không có link Mua ngay, giữ
-mọi assertion và timeout. Phải đọc đúng SHA cuối/review người thật trước squash.
+Demo branch/HEAD `codex/demo-receipt-local-20261103`/`5bd0b360` giữ nguyên54file và
+status fingerprint. Không sync/build/stash/reset demo.44CSS Member còn khớp byte;
+2CSS đổi có chủ đích Profile sizing/wrapping và BookCard tooltip max-width, không
+animation/transition/keyframe/asset đổi trong gói xuất bản. Các fixture HTTP/storage
+fake/web export không là native/provider/human nghiệm thu. Không local API/Mongo/
+worker/provider, migration/seed/deploy. Bước tiếp: đọc đủ CI đúng SHA cuối, xử lý
+lỗi nếu còn; chờ owner vùng ảnh hưởng +reviewer thứ hai tiền/quyền/dispute, rồi squash.
 
 # Gia cố khả năng phục hồi web —05/11/2026
 

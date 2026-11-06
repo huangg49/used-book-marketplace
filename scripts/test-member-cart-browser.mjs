@@ -23,6 +23,11 @@ const button = (p, name) => p.getByRole("button", { name, exact: true }),
       history.pushState({}, "", url);
       dispatchEvent(new PopStateEvent("popstate"));
     }, url);
+const openWebCart = async (p) => {
+  await p.getByRole("button", { name: /^Tài khoản của/ }).click();
+  await p.getByRole("link", { name: "Giỏ sách", exact: true }).first().click();
+  await p.waitForURL(webOrigin + "/cart");
+};
 let f, vite, staticServer, browser;
 const errors = [];
 try {
@@ -111,7 +116,7 @@ try {
   });
   await button(p, "Thêm vào giỏ sách").click();
   await button(p, "Xác minh thao tác giỏ trước").waitFor();
-  await p.getByRole("link", { name: "Mở giỏ sách", exact: true }).click();
+  await openWebCart(p);
   await expect(
     p.getByRole("link", { name: "Mua bài đăng này", exact: true }),
   ).toHaveCount(0);
@@ -142,7 +147,7 @@ try {
   await p
     .getByText("Đã cập nhật giỏ sách. Sách chưa được giữ chỗ.", { exact: true })
     .waitFor();
-  await p.getByRole("link", { name: "Mở giỏ sách", exact: true }).click();
+  await openWebCart(p);
   await p.getByText("2/50 bài đăng trong giỏ.", { exact: false }).waitFor();
   // Current price is read again, while original add price remains informational.
   const l = await f.api(`/me/listings/${id}`, f.seller.accessToken);

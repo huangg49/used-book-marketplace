@@ -36,7 +36,7 @@ const listing = {
 };
 const listings = Array.from({ length: 20 }, (_, i) => ({
   ...listing, id: uuid(100 + i), revisionId: uuid(200 + i),
-  book: { ...listing.book, id: uuid(300 + i), title: 'Sách QA ' + (i + 1) },
+  book: { ...listing.book, id: uuid(300 + i), title: 'Tên cuốn sách QA dài để kiểm tra tooltip trên thẻ sách ' + (i + 1) },
   salePrice: [10000, 50000, 1000000][i % 3],
 }));
 const frameSelector = '[class*="fitFrame"]';
@@ -140,6 +140,31 @@ try {
     await page.setViewportSize({ width: width === 390 ? 320 : 720, height: 844 });
     await expect.poll(() => page.evaluate(() => window.cardTextFits)).toBeGreaterThan(0);
     readable(await measurements(page));
+    for (const layoutWidth of [320, 390, 768, 1440]) for (const scale of [100, 130]) {
+      await page.setViewportSize({ width: layoutWidth, height: 844 });
+      await page.evaluate(async scale => {
+        document.documentElement.style.fontSize = scale + '%';
+        await document.fonts.ready;
+      }, scale);
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+        { message: `Long-title cards fit ${layoutWidth}px/${scale}%` }).toBe(true);
+      const title = page.locator('article h3 a').first();
+      await title.hover();
+      const tooltip = page.locator('article [role="tooltip"]').first();
+      await expect.poll(() => tooltip.evaluate(node => getComputedStyle(node).opacity)).toBe('1');
+      const tooltipLayout = await tooltip.evaluate(node => {
+        const rect = node.getBoundingClientRect();
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const text = range.getBoundingClientRect();
+        return { left: rect.left, right: rect.right, viewport: innerWidth,
+          textFits: text.left >= rect.left - 1 && text.right <= rect.right + 1 &&
+            text.top >= rect.top - 1 && text.bottom <= rect.bottom + 1 };
+      });
+      assert.ok(tooltipLayout.left >= -1 && tooltipLayout.right <= tooltipLayout.viewport + 1 &&
+        tooltipLayout.textFits,
+        `Hovered tooltip stays in the viewport and keeps the full title ${layoutWidth}px/${scale}%: ${JSON.stringify(tooltipLayout)}`);
+    }
     assert.deepEqual(errors, []);
     checks.push({ width, wheelRefits: 0, typographyClass: true, rootStyle: true, fontLoad: true, resize: true, pageErrors: 0 });
     await page.close();
