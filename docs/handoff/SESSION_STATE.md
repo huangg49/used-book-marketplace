@@ -109,6 +109,10 @@ và màu retry trong ExchangeDetailPage CSS, không đổi motion/transition/key
 Production HTTP fixture390/1440,130% chữ kiểm stale/denied/retry/no command và
 chiều rộng đọc được;23finance unit và471Member unit/build/scoped lint PASS local.
 Đã xem ảnh mobile. CI head chứa sửa này vẫn phải xác minh, không suy từ4e1.
+Wallet harness còn5heading cũ và2copy validation/popup-block khác source; nay
+theo heading Ví & Ký Quỹ Thư Quán và copy thực, không đổi runtime/giới hạn tiền.
+Mở rộng fixture status để kiểm chính các entry/validation/popup-block đó ở cả
+390/1440: PASS, không phát money command. API4e1d32f6 đã PASS đầy đủ.
 
 Không local API/Mongo/
 worker/provider, migration/seed/deploy. Bước tiếp: đọc đủ CI đúng SHA cuối, xử lý

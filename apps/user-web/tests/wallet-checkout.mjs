@@ -166,7 +166,7 @@ try {
   await page.getByLabel(/^Mật khẩu/).fill(password);
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await page
-    .getByRole("heading", { name: "Ví của tôi", exact: true })
+    .getByRole("heading", { name: "Ví & Ký Quỹ Thư Quán", exact: true })
     .waitFor();
   const header = page.locator("header").first();
   const chatIcon = header.getByRole("link", {
@@ -193,7 +193,7 @@ try {
   const walletNavigation = await openWalletNavigation();
   await walletNavigation.entry.click();
   await page
-    .getByRole("heading", { name: "Ví của tôi", exact: true })
+    .getByRole("heading", { name: "Ví & Ký Quỹ Thư Quán", exact: true })
     .waitFor();
   const ledgerHistory = page.getByRole("region", {
     name: "Lịch sử giao dịch",
@@ -372,7 +372,7 @@ try {
     .click();
   await page
     .getByRole("alert")
-    .filter({ hasText: "Nhập số tiền từ" })
+    .filter({ hasText: "Nhập số tiền hợp lệ từ" })
     .waitFor();
   await page.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).fill("50000");
   await page.evaluate(() => {
@@ -383,7 +383,7 @@ try {
     .click();
   await page
     .getByRole("alert")
-    .filter({ hasText: "Trình duyệt đã chặn tab thanh toán" })
+    .filter({ hasText: "Trình duyệt đã chặn mở tab thanh toán" })
     .waitFor();
   assert.equal(
     (await fixture.api("/me/topups?limit=10", fixture.member.accessToken)).items
@@ -422,7 +422,7 @@ try {
   assert.equal(new URL(page.url()).searchParams.get("topup"), id);
   assert.equal(
     await page
-      .getByRole("heading", { name: "Ví của tôi", exact: true })
+      .getByRole("heading", { name: "Ví & Ký Quỹ Thư Quán", exact: true })
       .isVisible(),
     true,
   );
@@ -439,7 +439,7 @@ try {
   await popupClosed;
   assert.equal(
     await page
-      .getByRole("heading", { name: "Ví của tôi", exact: true })
+      .getByRole("heading", { name: "Ví & Ký Quỹ Thư Quán", exact: true })
       .isVisible(),
     true,
   );
@@ -784,7 +784,7 @@ try {
   await page.getByLabel(/^Mật khẩu/).fill(password);
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await page
-    .getByRole("heading", { name: "Ví của tôi", exact: true })
+    .getByRole("heading", { name: "Ví & Ký Quỹ Thư Quán", exact: true })
     .waitFor();
   const requests = [];
   queryMode = "pending";

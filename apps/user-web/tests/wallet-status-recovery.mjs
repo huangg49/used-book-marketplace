@@ -77,6 +77,17 @@ try {
     await alert.getByRole('button', { name: 'Kiểm tra lại', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Đã nạp ví thành công', exact: true })).toBeVisible();
     await expect(alert).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Ví & Ký Quỹ Thư Quán', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Nạp tiền VNPay', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Nạp tiền vào ví', exact: true });
+    await dialog.getByLabel('Hoặc nhập số tiền tùy chọn:', { exact: true }).fill('4999');
+    await dialog.getByRole('button', { name: 'Tiếp tục thanh toán', exact: true }).click();
+    await expect(dialog.getByRole('alert')).toContainText('Nhập số tiền hợp lệ từ');
+    await dialog.getByLabel('Hoặc nhập số tiền tùy chọn:', { exact: true }).fill('75000');
+    await page.evaluate(() => window.open = () => null);
+    await dialog.getByRole('button', { name: 'Tiếp tục thanh toán', exact: true }).click();
+    await expect(dialog.getByRole('alert')).toContainText('Trình duyệt đã chặn mở tab thanh toán');
+    await dialog.getByRole('button', { name: 'Đóng popup' }).click();
     assert.ok(reads > previous);
     assert.deepEqual(commands, []);
     assert.deepEqual(errors, []);
