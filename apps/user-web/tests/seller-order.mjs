@@ -484,7 +484,7 @@ try {
     .getByRole("button", { name: /^Thanh toán ngay 90\.000\s*₫$/ })
     .click();
   await buyerOrderDetails
-    .getByText("Chờ người bán xác nhận", {exact: true})
+    .getByRole("heading", { name: "Chờ người bán xác nhận", exact: true })
     .waitFor();
   const wallet = await fixture.api("/me/wallet", buyer.accessToken);
   assert.equal(wallet.transactionHeld, 90000);

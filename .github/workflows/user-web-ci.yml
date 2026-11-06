@@ -96,6 +96,7 @@ jobs:
             apps/user-web/test-results/
             .impeccable/review/integration-main/
             .tmp/wallet-checkout-browser/
+            .tmp/wallet-status-recovery/
             .tmp/listing-cache-qa/
             .tmp/order-chat-workspace-qa/
       - if: always()

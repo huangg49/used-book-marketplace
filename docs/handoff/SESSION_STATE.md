@@ -72,7 +72,10 @@ E2E trên head sửa vẫn phải chạy và đọc lại, không lấy các hea
 CI21974d34: API đầy đủ PASS, cùng9/11checks tổng đã xanh; Member browser qua
 smoke, seller-order lộ context sách thu gọn trên mobile (nay mở qua toggle thật
 trước kiểm title); operations qua cart, dừng support ở link hồ sơ uy tín đổi copy.
-Chỉ sửa harness cho2entry này, giữ route/permission/draft/financial assertions.
+Harness dùng các entry hiện hành; phase sau thanh toán được tìm bằng heading,
+tránh trùng label với pill trạng thái. Giữ route/permission/draft/financial assertions.
+Wallet status fixture thêm130% text, no-overflow, focus retry và ảnh390/1440:
+PASS local, đã xem ảnh error mobile; không đổi runtime/style/motion.
 Wallet credit regression10profiles PASS local sau read-error UI; human review
 vẫn OPEN, chưa merge. Head chứa2selector sửa phải chạy lại CI đủ trước squash.
 

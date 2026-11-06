@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
+import { mkdir } from 'node:fs/promises';
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const require = createRequire(path.join(root, 'apps/admin-web/package.json'));
 const { chromium, expect } = require('playwright/test');
@@ -11,6 +12,8 @@ const origin = 'http://127.0.0.1:4293';
 const server = await preview({ configFile: false, root: path.join(root, 'apps/user-web'),
   preview: { host: '127.0.0.1', port: 4293, strictPort: true } });
 const id = n => '00000000-0000-4000-8000-' + String(n).padStart(12, '0');
+const evidence = path.join(root, ".tmp/wallet-status-recovery");
+await mkdir(evidence, { recursive: true });
 let browser;
 const checks = [];
 try {
@@ -59,6 +62,15 @@ try {
     const alert = page.getByRole('alert').filter({ hasText: 'Chưa xác minh được yêu cầu nạp này.' });
     await expect(alert).toBeVisible({ timeout: 10000 });
     await expect(status).toBeVisible();
+    await page.evaluate(async () => {
+      document.documentElement.style.fontSize = '130%';
+      await document.fonts.ready;
+    });
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+      `Wallet status error fits ${width}px with enlarged text`);
+    await alert.screenshot({ path: path.join(evidence, `status-error-${width}.png`) });
+    await alert.getByRole('button', { name: 'Kiểm tra lại', exact: true }).focus();
+    await expect(alert.getByRole('button', { name: 'Kiểm tra lại', exact: true })).toBeFocused();
     await expect(page.getByRole('timer', { name: 'Thời gian thanh toán còn lại', exact: true })).toBeVisible();
     const previous = reads;
     mode = 'paid';
