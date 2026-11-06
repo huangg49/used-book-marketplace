@@ -78,7 +78,9 @@ tránh trùng label với pill trạng thái. Giữ route/permission/draft/finan
 Wallet status fixture thêm130% text, no-overflow, focus retry và ảnh390/1440:
 PASS local, đã xem ảnh error mobile; không đổi runtime/style/motion.
 Wallet credit regression10profiles PASS local sau read-error UI; human review
-vẫn OPEN, chưa merge. Head chứa2selector sửa phải chạy lại CI đủ trước squash.
+vẫn OPEN, chưa merge. Head chứa selector sửa phải chạy lại CI đủ trước squash. CI5c08e9f4 seller-order
+đã qua; buy-now lộ cùng context mobile thu gọn, nay đợi aside rồi mở bằng toggle
+cho cả buyer/seller trước kiểm badge/title. Không bỏ snapshot/payment/ledger assertions.
 
 Không local API/Mongo/
 worker/provider, migration/seed/deploy. Bước tiếp: đọc đủ CI đúng SHA cuối, xử lý

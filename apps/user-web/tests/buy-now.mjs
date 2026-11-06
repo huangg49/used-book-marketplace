@@ -30,6 +30,12 @@ Object.assign(process.env, {
 });
 const artifacts = path.join(root, "apps/user-web/test-results/buy-now");
 await mkdir(artifacts, { recursive: true });
+const openOrderContext = async (region) => {
+  await region.getByRole("complementary", { name: "Sách và thỏa thuận", exact: true }).waitFor();
+  const toggle = region.getByRole("button", { name: "Sách và thỏa thuận", exact: true });
+  if (await toggle.isVisible() && await toggle.getAttribute("aria-expanded") !== "true")
+    await toggle.click();
+};
 const captureDialog = async (page, filename) => {
   const dialog = page.locator("dialog[open]");
   await dialog.waitFor();
@@ -380,6 +386,7 @@ try {
     name: "Chi tiết đơn hàng",
     exact: true,
   });
+  await openOrderContext(buyerOrderDetails);
   await buyerOrderDetails.getByText("Mua ngay", { exact: true }).waitFor();
   await buyerOrderDetails.getByRole("heading", {
     name: order.item.metadata.title, exact: true,
@@ -552,6 +559,7 @@ try {
     name: "Chi tiết đơn hàng",
     exact: true,
   });
+  await openOrderContext(sellerOrderDetails);
   await sellerOrderDetails.getByText("Mua ngay", { exact: true }).waitFor();
   await sellerOrderDetails
     .getByText("Người bán đang chuẩn bị gửi", { exact: true })
