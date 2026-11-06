@@ -227,7 +227,9 @@ try {
     });
   }
   async function openTopup() {
-    await topupButton.click();
+    // The current UI retains this dialog while the payment tab is open/returns.
+    // Reuse it rather than clicking the inert page behind the native modal.
+    if (!await topupDialog.isVisible()) await topupButton.click();
     await topupDialog.waitFor();
     await settleDialog(topupDialog);
   }

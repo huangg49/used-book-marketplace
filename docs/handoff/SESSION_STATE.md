@@ -123,6 +123,10 @@ như harness cũ. Nay assert quick amount disabled, cả click/Enter với0balan
 vượt số dư và không phát withdrawal command, thay vì suy chỉ từ trạng thái nút.
 Fixture HTTP-only390/1440 kiểm lại guard này; không đổi runtime/permission/tiền.
 Đưa wallet lên đầu nhóm Member E2E để phản hồi sớm; giữ đủ mọi bước còn lại.
+CI334 wallet đã qua guards và callback giả không ghi có; dừng khi helper click
+nút nền lúc modal nạp vẫn được UI giữ mở sau Return. openTopup nay dùng modal
+đang mở, chỉ click entry khi chưa mở; vẫn chờ animation và giữ các assert intent/
+số tiền/disabled/callback/ledger, không force-click hoặc đổi runtime.
 
 Không local API/Mongo/
 worker/provider, migration/seed/deploy. Bước tiếp: đọc đủ CI đúng SHA cuối, xử lý
