@@ -127,6 +127,9 @@ CI334 wallet đã qua guards và callback giả không ghi có; dừng khi helpe
 nút nền lúc modal nạp vẫn được UI giữ mở sau Return. openTopup nay dùng modal
 đang mở, chỉ click entry khi chưa mở; vẫn chờ animation và giữ các assert intent/
 số tiền/disabled/callback/ledger, không force-click hoặc đổi runtime.
+CI0d6 đã tới ledger sau2lần nạp giả lập/90000balance; harness cần đóng modal bằng
+nút thật trước click tab lịch sử. Bổ sung bước đóng này, giữ filter/cursor/retry/
+ledger/expiry assertions và runtime; full CI head sửa vẫn phải đọc lại.
 
 Không local API/Mongo/
 worker/provider, migration/seed/deploy. Bước tiếp: đọc đủ CI đúng SHA cuối, xử lý

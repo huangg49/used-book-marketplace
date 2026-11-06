@@ -535,6 +535,10 @@ try {
     90000,
   );
   await expectAvailableBalance(90000);
+  if (await topupDialog.isVisible()) {
+    await topupDialog.getByRole("button", { name: "Đóng popup" }).click();
+    await topupDialog.waitFor({ state: "hidden" });
+  }
   // The settled payment has two query observers (result + owned checkout).
   // Wait for checkout release and its actual invalidations, not the page's
   // already-fired networkidle navigation event, before the pagination fixture.
