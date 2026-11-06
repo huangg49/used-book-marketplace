@@ -195,6 +195,8 @@ async function fixtures(width) {
       .getByRole("heading", { level: 1, name: "Sách QA 1", exact: true })
       .waitFor();
     await loadedCover(page);
+    // Cached title/cover may render before the fresh detail response commits.
+    await page.getByText("Đang giao dịch", { exact: true }).first().waitFor();
     assert.equal(detailReads, 1);
     assert.equal(
       await page.getByRole("link", { name: /^Mua ngay/ }).count(),

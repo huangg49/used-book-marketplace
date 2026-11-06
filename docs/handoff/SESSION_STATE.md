@@ -69,7 +69,10 @@ Chỉ Profile CSS đổi lần này, không còn nhận46CSS byte-identical cho 
 không animation/transition/keyframe/asset bị sửa. Home320/130 CI vẫn overflow,
 chưa tái hiện local với13card/route transition; harness đợi font+2RAF và ghi chỉ
 layout metadata khi fail, giữ nguyên overflow assertion. Không nhận Home đã sửa
-trước khi CI xác minh. Phải đọc đúng SHA cuối và review người thật trước squash.
+trước khi CI xác minh. Head87f03fba listing-cache có race assertion: title/cover
+cache hiện trước fresh-detail render, counter request chưa chứng minh UI đã cập
+nhật. Thêm chờ badge Đang giao dịch trước assertion không có link Mua ngay, giữ
+mọi assertion và timeout. Phải đọc đúng SHA cuối/review người thật trước squash.
 
 # Gia cố khả năng phục hồi web —05/11/2026
 
