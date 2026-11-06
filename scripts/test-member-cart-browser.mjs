@@ -148,7 +148,7 @@ try {
     .getByText("Đã cập nhật giỏ sách. Sách chưa được giữ chỗ.", { exact: true })
     .waitFor();
   await openWebCart(p);
-  await p.getByText("2/50 bài đăng trong giỏ.", { exact: false }).waitFor();
+  await p.getByText(/Hiện có\s+2\s*\/\s*50 bài đăng trong giỏ/).waitFor();
   // Current price is read again, while original add price remains informational.
   const l = await f.api(`/me/listings/${id}`, f.seller.accessToken);
   await f.api(`/listings/${id}/revision`, f.seller.accessToken, {
@@ -157,7 +157,7 @@ try {
     content: { ...l.currentRevision.content, salePrice: 140000 },
   });
   await f.approve(id);
-  await button(p, "Cập nhật giỏ sách").click();
+  await button(p, "Cập nhật giỏ").click();
   await expect(p.getByText(/Chưa tải được giỏ/)).toHaveCount(0);
   await p
     .getByText(/Giá đã thay đổi; kiểm tra giá mới trước khi mua/)
@@ -168,7 +168,7 @@ try {
       json: { code: "UNAVAILABLE", message: "QA read error" },
     }),
   );
-  await button(p, "Cập nhật giỏ sách").click();
+  await button(p, "Cập nhật giỏ").click();
   await p.getByText(/Chưa tải được giỏ/).waitFor();
   await expect(
     p.getByRole("heading", { name: "Giỏ sách đang trống", exact: true }),
@@ -177,7 +177,7 @@ try {
     p.getByRole("link", { name: "Mua bài đăng này", exact: true }),
   ).toHaveCount(0);
   await p.unroute("**/me/cart");
-  await button(p, "Cập nhật giỏ sách").click();
+  await button(p, "Cập nhật giỏ").click();
   await expect(p.getByRole("alert")).toHaveCount(0);
   for (const width of [1440, 390, 320]) {
     await p.setViewportSize({ width, height: 1000 });

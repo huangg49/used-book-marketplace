@@ -37,7 +37,8 @@ head mới vẫn chờ remote, không bật DB/API local. Main ef7091e1 cũng FA
 smoke/member-profile trước PR97 (đã đối chiếu logs), không quy hết lỗi cho tối ưu.
 
 Operations87f03fba đã qua profile thật (save/upload/replay/email/font130), rồi lộ
-cart selector cũ. Cart test dùng entry hiện hành qua menu tài khoản, giữ các kiểm
+cart selector cũ. Cart test dùng entry hiện hành qua menu tài khoản và copy Cập nhật giỏ/count mới,
+giữ các kiểm
 tra mất ACK/exact replay/không giữ chỗ; chờ CI trên head chứa sửa entry này.
 Profile overflow390/130 tái hiện scroll422: sửa min-width/max-width/wrap label và
 email, không clip/giảm font.6recovery +16layout combinations1440/768/390/320 ×100/130
