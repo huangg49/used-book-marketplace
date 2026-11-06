@@ -7,14 +7,15 @@ Toàn bộ123commit/330file local ban đầu được giữ (receipt/review/API/
 conversation/pagination/focus và tối ưu), thêm các sửa CI bên dưới. Backup
 `codex/backup-before-publish-20261106-ba8713bb`. Đã push và mở
 [PR97](https://github.com/huangg49/used-book-marketplace/pull/97); chưa merge.
-Checkpoint subject `fix: constrain book title tooltips and refresh cart browser entry`.
-CI head cuối và review người thật theo TEAMWORK còn phải xác minh trước squash.
+PR97 là đầu mối source/CI/merge hiện hành; các mốc bên dưới là evidence theo SHA.
+Khi ghi checkpoint, CI head cuối và review người thật theo TEAMWORK còn phải xác minh trước squash.
 Không coi CI/AI review là human sign-off hoặc đóng READINESS.
 
 Local tại ba8713bb: contract/types/routes257operations/39controllers, workspace
 lint/typecheck/build và docs/diff PASS. Default `pnpm test` FAIL2lần shutdown child
 10s Windows không đổi source; riêng shutdown PASS, API maxWorkers2:419PASS,
-RN224/Admin246/Member471/session151PASS (1511total, không nhận default command PASS).
+RN224/Admin246/Member471/session151PASS. Lượt cuối trên44e544fc chạy riêng default
+`pnpm test` PASS1511/1511 (không sửa test/timeout shutdown), ghi rõ lịch sử FAIL/PASS.
 Publication browser: resolver22, pagination42screen/viewport +shared error/race,
 motion5checks PASS. Evidence theo nguồn và job/SHA cụ thể ghi ở PR97.
 
@@ -83,6 +84,13 @@ vẫn OPEN, chưa merge. Head chứa selector sửa phải chạy lại CI đủ
 cho cả buyer/seller trước kiểm badge/title. Không bỏ snapshot/payment/ledger assertions. CI81f5b564 support đã tới bước cuối
 thông báo kiểm duyệt → exact review; chỉ cập nhật heading Chi tiết đánh giá giao
 dịch (region vẫn Đánh giá giao dịch), giữ deep-link và kiểm bản ghi hidden.
+
+Admin AI harness có race vào hàng chờ: sidebar cố ý tự mở hồ sơ đầu, test lọc
+ngay trong chuyển route nên compact pane có thể ẩn empty/list. Nay chờ hồ sơ,
+dùng Về danh sách để lấy overview thật; AI None tự mở đúng id rồi Mở hàng chờ
+nếu pane compact. Giữ assert empty/đúng hồ sơ/exact recall key-body/audit; không
+đổi AI worker/model/quyền/checklist hoặc tăng timeout. Scoped syntax/lint PASS,
+chờ CI. Admin/Staff AI readiness vẫn giữ gate/cờ tắt, test chỉ seed QA kết quả.
 
 Không local API/Mongo/
 worker/provider, migration/seed/deploy. Bước tiếp: đọc đủ CI đúng SHA cuối, xử lý

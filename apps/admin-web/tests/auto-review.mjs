@@ -247,12 +247,20 @@ try {
   await expect(page.getByText(/Người kiểm duyệt thu hồi: Người kiểm duyệt: có vấn đề/)).toBeVisible();
   await fits("history-1440");
 
-  // The queue can show listings by what the AI concluded.
+  // The queue deliberately opens its first dossier. Use the explicit Back
+  // entry to inspect filters without racing that initial navigation.
   await page.getByRole("link", { name: "Bài đăng sách", exact: true }).click();
+  await page.waitForURL(url => url.pathname === `/review/listings/${id}`);
+  await page.getByRole("link", { name: "← Về danh sách", exact: true }).click();
+  await page.waitForURL(url => url.pathname === "/review/listings");
   await page.getByRole("button", { name: "AI chuyển người duyệt", exact: true }).click();
   await expect(page).toHaveURL(/ai=Escalated/);
   await expect(page.getByText("Chưa có hồ sơ ở mục này.")).toBeVisible();
   await page.getByRole("button", { name: "AI chưa xem", exact: true }).click();
+  await page.waitForURL(url => url.pathname === `/review/listings/${id}` && url.searchParams.get("ai") === "None");
+  await page.getByRole("region", { name: "Bàn đọc hồ sơ", exact: true }).waitFor();
+  const openQueue = page.getByRole("button", { name: "Mở hàng chờ", exact: true });
+  if (await openQueue.isVisible()) await openQueue.click();
   await page.locator(`a[href*="/review/listings/${id}"]`).first().waitFor();
   assert.deepEqual(errors, []);
   console.log("Admin AI review browser checks: PASS");
