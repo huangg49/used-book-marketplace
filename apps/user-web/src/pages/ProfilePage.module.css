@@ -702,6 +702,7 @@
    RIGHT COLUMN - CONTENT CARDS
    ========================================================================== */
 .contentCard {
+  min-width: 0;
   background: var(--shop-paper);
   border: 1px solid var(--shop-line);
   border-radius: 16px;
@@ -721,6 +722,10 @@
   margin-bottom: 24px;
   padding-bottom: 18px;
   border-bottom: 1px solid var(--shop-line);
+}
+
+.cardHeader > :last-child {
+  min-width: 0;
 }
 
 .cardHeaderIcon {
@@ -770,6 +775,7 @@
 }
 
 .fieldGroup label {
+  flex-wrap: wrap;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
@@ -965,9 +971,15 @@
 }
 
 .credentialLeft {
+  min-width: 0;
+  max-width: 100%;
   display: flex;
   align-items: center;
   gap: 14px;
+}
+
+.credentialLeft > :last-child {
+  min-width: 0;
 }
 
 .credentialIconWrap {
@@ -991,6 +1003,7 @@
 }
 
 .credentialValue {
+  overflow-wrap: anywhere;
   font-size: 1rem;
   font-weight: 700;
   color: var(--shop-ink);

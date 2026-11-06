@@ -200,11 +200,25 @@ try {
     .first()
     .click();
   await p.getByLabel("Bạn muốn tìm cuốn nào?").waitFor();
+  await p.evaluate(async () => {
+    await document.fonts.ready;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  const homeLayout = await p.evaluate(() => ({
+    width: innerWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    // Record only layout metadata, never text, account data or request bodies.
+    overflowing: [...document.querySelectorAll("main *")].filter(node => {
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.right > innerWidth + 1;
+    }).slice(0, 16).map(node => ({ tag: node.tagName, className: node.className,
+      width: node.getBoundingClientRect().width, right: node.getBoundingClientRect().right })),
+  }));
   assert.ok(
     await p.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,
     ),
-    "Home overflow at320px130%",
+    "Home overflow at320px130%: " + JSON.stringify(homeLayout),
   );
   await p.screenshot({
     path: path.join(artifacts, "home-320-130.png"),

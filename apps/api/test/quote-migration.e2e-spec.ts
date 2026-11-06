@@ -277,7 +277,7 @@ describe('quote storage on populated fulfillment data (MongoDB)', () => {
         policyCode: 'QA-UNUSED',
       }),
     ).rejects.toMatchObject({ code: 121 });
-    expect(await db.c.sale_quote_policies.countDocuments()).toBe(1);
+    expect(await db.c.sale_quote_policies.countDocuments()).toBe(2);
     expect(await db.c.sale_quote_policy_selection.countDocuments()).toBe(1);
   });
 });

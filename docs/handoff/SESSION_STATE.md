@@ -53,6 +53,24 @@ click trong lúc lazy route chuyển; giữ assertion focus2s. Remote main ef709
 cũng FAIL API/web smoke/member-profile trước PR này (đã đọc logs); không quy hết
 CI lỗi cho tối ưu mới. CI cuối vẫn phải đọc đúng head, chưa merge/review người thật.
 
+CI bổ sung: `f0c467a0` API E2E còn14FAIL (3upgrade suites đã qua): quote-upgrade
+còn count policy1→2; withdrawal vẫn gặp partial Order từ support/work-inbox,
+không chỉ review. Tách cả withdrawal sang DB QA random owned riêng theo pattern
+wallet-checkout, giữ full money/permission/replay/race và cuối suite reconcile;
+teardown xác minh prefix/DB/users/roles và restore config dù failure. APItypecheck
+và scoped lint0error PASS; E2E thay đổi này chờ remote CI, không chạy DB local.
+
+Operations đã qua save/upload/replay/email trên `f0c467a0`, lộ overflow profile
+390px/font130%. Tái hiện frontend: scroll422/viewport390; sửa duy nhất min-width,
+max-width, wrap label/email trong Profile CSS, không clip/giảm font/motion. Probe
+320px/130% sau sửa scroll305 PASS;6profile recovery và16layout combinations
+1440/768/390/320 ×100/130% PASS local, thêm label OTP ở checkpoint trước.
+Chỉ Profile CSS đổi lần này, không còn nhận46CSS byte-identical cho cả gói mới;
+không animation/transition/keyframe/asset bị sửa. Home320/130 CI vẫn overflow,
+chưa tái hiện local với13card/route transition; harness đợi font+2RAF và ghi chỉ
+layout metadata khi fail, giữ nguyên overflow assertion. Không nhận Home đã sửa
+trước khi CI xác minh. Phải đọc đúng SHA cuối và review người thật trước squash.
+
 # Gia cố khả năng phục hồi web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.

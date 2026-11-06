@@ -17,7 +17,7 @@ const server = await preview({ configFile: false, root: path.join(root, 'apps/us
   preview: { host: '127.0.0.1', port: 4220, strictPort: true } });
 const id = n => '00000000-0000-4000-8000-' + String(n).padStart(12, '0');
 const now = '2026-11-04T03:00:00.000Z';
-const oldEmail = 'reader@example.test', newEmail = 'new-reader@example.test';
+const oldEmail = 'reader@example.test', newEmail = 'profile-updated@operations.test';
 const remember = request => ({ path: new URL(request.url()).pathname,
   key: request.headers()['idempotency-key'], body: request.postData() });
 const sameRequest = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -204,6 +204,19 @@ try {
       await expect(main.getByText(newEmail, { exact: true })).toBeVisible();
       checks.push({ scenario, width, pinnedEmailVisibleAfterRemount: !baseline, passwordNotRetained: true,
         explicitPasswordReentry: true, exactEmailReplay: true, oldEmailUntilConfirmation: true, exactConfirmReplay: true });
+    }
+    if (scenario === 'email') {
+      for (const layoutWidth of [1440, 768, 390, 320]) for (const scale of [100, 130]) {
+        await page.setViewportSize({ width: layoutWidth, height: 950 });
+        await page.evaluate(async scale => {
+          document.documentElement.style.fontSize = scale + '%';
+          await document.fonts.ready;
+        }, scale);
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
+          `Profile overflow at ${layoutWidth}px/${scale}%`);
+      }
+      await page.setViewportSize({ width, height: 950 });
+      await page.evaluate(() => document.documentElement.style.fontSize = '100%');
     }
     assert.deepEqual(errors, []);
     await main.screenshot({ path: path.join(out, `${scenario}-${width}-${baseline ? 'before' : 'after'}.png`) });
