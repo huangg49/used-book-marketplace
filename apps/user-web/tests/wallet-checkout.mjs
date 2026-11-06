@@ -170,8 +170,7 @@ try {
     .waitFor();
   const header = page.locator("header").first();
   const chatIcon = header.getByRole("link", {
-    name: "Chat, hội thoại của bạn",
-    exact: true,
+    name: /^Chat, /,
   });
   assert.equal((await chatIcon.textContent()).trim(), "");
   const chatBounds = await chatIcon.boundingBox();
@@ -181,10 +180,10 @@ try {
     const account = header.getByRole("button", { name: /^Tài khoản của .+$/, exact: true });
     const desktop = await account.isVisible();
     await (desktop ? account : header.getByRole("button", { name: "Mở menu", exact: true })).click();
-    const navigation = page.getByRole("navigation", {
-      name: desktop ? "Tài khoản cá nhân" : "Điều hướng trên điện thoại", exact: true,
+    const navigation = page.getByRole(desktop ? "region" : "navigation", {
+      name: desktop ? "Menu tài khoản" : "Điều hướng trên điện thoại", exact: true,
     });
-    const entry = navigation.getByRole("link", { name: "Ví của tôi", exact: true });
+    const entry = navigation.getByRole("link", { name: /^Ví của tôi(?:\s|$)/ });
     await entry.waitFor();
     assert.equal(await entry.getAttribute("href"), "/wallet");
     const bounds = await entry.boundingBox();
@@ -747,15 +746,10 @@ try {
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.getByRole("button", { name: /^Tài khoản của .+$/, exact: true }).click();
   await page
-    .getByRole("navigation", { name: "Tài khoản cá nhân", exact: true })
-    .getByRole("link", { name: "Ví của tôi", exact: true })
+    .getByRole("region", { name: "Menu tài khoản", exact: true })
+    .getByRole("link", { name: /^Ví của tôi(?:\s|$)/ })
     .click();
-  await page
-    .locator('dl')
-    .filter({ has: page.getByText('Số dư khả dụng', { exact: true }) })
-    .locator('dd')
-    .filter({ hasText: /90\.000/ })
-    .waitFor();
+  await expectAvailableBalance(90000);
   assert.equal(await page.getByLabel(/^Email/).count(), 0);
   // A callback tab without the original wallet never exposes wallet data or
   // inherits credentials; the fallback login URL contains only the intent ID.

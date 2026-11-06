@@ -92,6 +92,13 @@ nếu pane compact. Giữ assert empty/đúng hồ sơ/exact recall key-body/aud
 đổi AI worker/model/quyền/checklist hoặc tăng timeout. Scoped syntax/lint PASS,
 chờ CI. Admin/Staff AI readiness vẫn giữ gate/cờ tắt, test chỉ seed QA kết quả.
 
+CI44e544fc Member đã qua buy-now/order-review/socket và tới exchange. UX helper
+Exchange dùng menu/Chat label cũ, lại restore trong finally nên lỗi restore có
+thể che assertion gốc. Nay dùng Menu tài khoản → Trao đổi, Chat prefix hỗ trợ
+active-room count; restore là bước sau success, outer suite vẫn đóng browser/API
+khi fail. Wallet helper dùng cùng menu thực, wallet link gồm balance và region
+thẻ ví cho balance90000; giữ mọi assertion số dư và menu/focus. Chờ full CI.
+
 Không local API/Mongo/
 worker/provider, migration/seed/deploy. Bước tiếp: đọc đủ CI đúng SHA cuối, xử lý
 lỗi nếu còn; chờ owner vùng ảnh hưởng +reviewer thứ hai tiền/quyền/dispute, rồi squash.
