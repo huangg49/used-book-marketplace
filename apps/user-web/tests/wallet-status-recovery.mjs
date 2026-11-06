@@ -88,6 +88,10 @@ try {
     await dialog.getByRole('button', { name: 'Tiếp tục thanh toán', exact: true }).click();
     await expect(dialog.getByRole('alert')).toContainText('Trình duyệt đã chặn mở tab thanh toán');
     await dialog.getByRole('button', { name: 'Đóng popup' }).click();
+    await page.getByRole('button', { name: 'Rút tiền', exact: true }).click();
+    const withdrawal = page.getByRole('dialog', { name: 'Rút tiền từ ví', exact: true });
+    await expect(withdrawal.getByText('Tối thiểu 50.000đ', { exact: true })).toBeVisible();
+    await withdrawal.getByRole('button', { name: 'Đóng popup' }).click();
     assert.ok(reads > previous);
     assert.deepEqual(commands, []);
     assert.deepEqual(errors, []);

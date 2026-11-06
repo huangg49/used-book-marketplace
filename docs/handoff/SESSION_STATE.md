@@ -111,8 +111,9 @@ chiều rộng đọc được;23finance unit và471Member unit/build/scoped lin
 Đã xem ảnh mobile. CI head chứa sửa này vẫn phải xác minh, không suy từ4e1.
 Wallet harness còn5heading cũ và2copy validation/popup-block khác source; nay
 theo heading Ví & Ký Quỹ Thư Quán và copy thực, không đổi runtime/giới hạn tiền.
-Mở rộng fixture status để kiểm chính các entry/validation/popup-block đó ở cả
-390/1440: PASS, không phát money command. API4e1d32f6 đã PASS đầy đủ.
+Mở rộng fixture status để kiểm chính các entry/validation/popup-block và nhãn
+tối thiểu rút tiền ở cả390/1440: PASS, không phát money command. Selector mức
+tối thiểu dùng đúng nhãn thay regex trùng nút chọn nhanh. API4e1d32f6 đã PASS đầy đủ.
 
 Không local API/Mongo/
 worker/provider, migration/seed/deploy. Bước tiếp: đọc đủ CI đúng SHA cuối, xử lý

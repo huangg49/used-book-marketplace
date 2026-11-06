@@ -306,7 +306,7 @@ try {
   await withdrawalButton.click();
   await withdrawalDialog.waitFor();
   await settleDialog(withdrawalDialog);
-  await withdrawalDialog.getByText(/50\.000/).waitFor();
+  await withdrawalDialog.getByText("Tối thiểu 50.000đ", { exact: true }).waitFor();
   assert.equal(
     await withdrawalDialog
       .getByRole("button", { name: "Tiếp tục", exact: true })
