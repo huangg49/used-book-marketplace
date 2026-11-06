@@ -1,3 +1,4 @@
+import { FREE_SHIPPING_POLICY } from '../src/database/mongo/migrations/0052-free-shipping.js';
 import { randomUUID } from 'node:crypto';
 import { Test } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
@@ -162,7 +163,13 @@ describe('quote storage on populated fulfillment data (MongoDB)', () => {
         $or: [{ sellerId: owner.id }, { buyerId: owner.id }, { listingId }],
       }),
     ).toBe(0);
-    expect(await db.c.sale_quote_policies.find({}).toArray()).toEqual([
+    expect(await db.c.sale_quote_policies.find({}).sort({ _id: 1 }).toArray()).toEqual([
+      {
+        _id: FREE_SHIPPING_POLICY,
+        shippingFee: 0,
+        commissionBps: 500,
+        ttlSeconds: 300,
+      },
       {
         _id: 'HCM-DIRECT-v1',
         shippingFee: 30000,
@@ -171,7 +178,7 @@ describe('quote storage on populated fulfillment data (MongoDB)', () => {
       },
     ]);
     expect(await db.c.sale_quote_policy_selection.find({}).toArray()).toEqual([
-      { _id: 'DirectSale', policyCode: 'HCM-DIRECT-v1' },
+      { _id: 'DirectSale', policyCode: FREE_SHIPPING_POLICY },
     ]);
 
     // Listing versions only advance through a write naming the current

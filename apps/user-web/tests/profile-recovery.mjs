@@ -116,6 +116,7 @@ try {
         await navigateAwayAndBack();
         await retry.click();
         await expect(retry).toHaveCount(0);
+        await expect(main.getByRole('status').filter({ hasText: 'Đã lưu hồ sơ thành công.' })).toBeVisible();
         await expect(name).toHaveValue(draft);
         assert.equal(writes.length, 2);
         assert.equal(sameRequest(writes[0], writes[1]), true, 'Profile replay keeps the original request after remount');

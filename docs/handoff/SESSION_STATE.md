@@ -31,8 +31,20 @@ Demo branch/HEAD `codex/demo-receipt-local-20261103`/`5bd0b360` giữ nguyên:
 54file và status fingerprint khớp; không sync/build/stash/reset demo.46CSS Member
 khớp byte trước/sau gói cuối; không đổi animation/duration/keyframe của gói xuất bản.
 Không local API/Mongo/worker/provider, migration/seed/deploy; READINESS giữ nguyên.
-Bước tiếp: push checkpoint sửa CI, đọc toàn bộ checks đúng SHA và chờ review người
-thật (owner vùng ảnh hưởng +reviewer thứ hai cho tiền/quyền/dispute) trước squash.
+CI tiếp theo `32f086ce`: Flutter/Admin/RN/demo/docs/offline/startup2OS PASS;
+user-web smoke còn selector link card cũ; operations còn copy save-status cũ.
+Đã sửa selector theo cover-link hiện hành, mở dialog lọc trước chọn radio, copy
+web success; giữ RN và mọi assertion. Profile fixture thêm assert copy save mới.
+API CI `ba8713bb` E2E FAIL17/931 (910PASS/4skip):4upgrade tests còn kỳ vọng chỉ
+policy HCM trong khi migration0052 thêm FREE và đổi selection;13withdrawal cases
+bị fixture review DirectOrder thiếu financial chain lưu ở DB dùng chung. Sửa chỉ
+harness: assert đầy đủ2policy theo sort và selection FREE; tách transaction-reviews
+sang DB QA random riêng, API/fixture cùng target, teardown xác minh prefix rồi
+xóa DB/users/roles do suite sở hữu. Không sửa migration/product/ledger; giữ mọi
+withdrawal negative/replay/race assertion. API typecheck/scoped lint PASS; E2E mới
+NOT RUN local (không bật DB); phải đọc CI head sau commit sửa. Bước tiếp: push
+checkpoint, đọc toàn bộ checks đúng SHA và chờ review người thật (owner vùng ảnh
+hưởng +reviewer thứ hai cho tiền/quyền/dispute) trước squash.
 
 # Gia cố khả năng phục hồi web —05/11/2026
 

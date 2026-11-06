@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Test } from '@nestjs/testing';
+import { MongoClient } from 'mongodb';
+import { prepareDatabase, testUrl } from './mongo/harness.js';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { MongoService } from '../src/database/mongo/mongo.service.js';
@@ -18,6 +20,7 @@ import {
 
 type Reader = { id: string; token: string; sessionId: string };
 describe('Transaction reviews lifecycle — real Mongo HTTP', () => {
+  let scopedRootUrl: string | undefined;
   let app: INestApplication,
     db: MongoFixtures,
     a: Reader,
@@ -107,10 +110,17 @@ describe('Transaction reviews lifecycle — real Mongo HTTP', () => {
     );
   }
   beforeAll(async () => {
-    db = await MongoFixtures.connect();
+    // Review-only historical aggregates omit financial chains. Keep them out of
+    // other suites' real ledger reconciliation, using an owned QA database.
+    scopedRootUrl = testUrl(`transaction_reviews_${randomUUID().replaceAll('-', '')}_test`);
+    const { appUrl, migratorUrl } = await prepareDatabase(scopedRootUrl);
+    db = await MongoFixtures.connect(migratorUrl);
     const mod = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(MongoService)
+      .useValue(new MongoService(new ConfigService({ MONGODB_URL: appUrl })))
+      .compile();
     app = mod.createNestApplication();
     configureApp(app, { docs: false, logRequests: false });
     await app.init();
@@ -125,9 +135,34 @@ describe('Transaction reviews lifecycle — real Mongo HTTP', () => {
     b = await user();
   });
   afterAll(async () => {
-    await app?.close();
-    await db?.close();
-  });
+    try {
+      await app?.close();
+    } finally {
+      try {
+        await db?.close();
+      } finally {
+        if (scopedRootUrl) {
+          const root = new MongoClient(scopedRootUrl);
+          try {
+            await root.connect();
+            const owned = root.db();
+            if (!/^transaction_reviews_[a-f0-9]{32}_test$/.test(owned.databaseName))
+              throw new Error('Refusing cleanup outside the owned review QA database');
+            await owned.dropDatabase();
+            await owned.command({ dropAllUsersFromDatabase: 1 });
+            await owned.command({ dropAllRolesFromDatabase: 1 });
+            expect((await owned.command({ usersInfo: 1 })).users).toEqual([]);
+            expect((await owned.command({ rolesInfo: 1 })).roles).toEqual([]);
+            expect((await root.db('admin').command({
+              listDatabases: 1, nameOnly: true, filter: { name: owned.databaseName },
+            })).databases).toEqual([]);
+          } finally {
+            await root.close();
+          }
+        }
+      }
+    }
+  }, 60000);
 
   it('opens an Exchange draft only for the participant who acknowledged receipt; keeps it blind and freezes edits during a dispute', async () => {
     const id = await exchange(null, 'InTransit'),

@@ -120,7 +120,7 @@ try {
     .fill("Người đọc hồ sơ QA");
   await p.getByLabel(/Số điện thoại liên hệ/).fill("+84 900 000 001");
   await button(p, "Lưu thay đổi").click();
-  await p.getByRole("status").filter({ hasText: "Đã lưu hồ sơ." }).waitFor();
+  await p.getByRole("status").filter({ hasText: "Đã lưu hồ sơ thành công." }).waitFor();
   const saved = await fixture.api("/me/profile", readToken);
   assert.equal(saved.displayName, "Người đọc hồ sơ QA");
   assert.equal(saved.contactPhone, "+84 900 000 001");
@@ -158,7 +158,7 @@ try {
     3,
   );
   await button(p, "Lưu thay đổi").click();
-  await p.getByRole("status").filter({ hasText: "Đã lưu hồ sơ." }).waitFor();
+  await p.getByRole("status").filter({ hasText: "Đã lưu hồ sơ thành công." }).waitFor();
   const pictured = await fixture.api("/me/profile", readToken);
   assert.ok(pictured.avatarId);
   const calls = [];
@@ -183,7 +183,7 @@ try {
   await button(p, "Xác minh lần lưu trước").waitFor();
   await reopenWebProfile(p);
   await button(p, "Xác minh lần lưu trước").click();
-  await p.getByRole("status").filter({ hasText: "Đã lưu hồ sơ." }).waitFor();
+  await p.getByRole("status").filter({ hasText: "Đã lưu hồ sơ thành công." }).waitFor();
   assert.ok(
     calls.length === 2 &&
       calls[0].key === calls[1].key &&

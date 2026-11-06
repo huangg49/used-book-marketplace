@@ -1,3 +1,4 @@
+import { FREE_SHIPPING_POLICY } from '../src/database/mongo/migrations/0052-free-shipping.js';
 import { randomUUID } from 'node:crypto';
 import {
   applyCollectionSpecs,
@@ -115,7 +116,13 @@ describe('order storage on populated quote data (MongoDB)', () => {
       expect(row).toMatchObject({ contextId: null, systemActor: null });
     expect((await sweep()).failures).toEqual([]);
     expect(await rootDb.collection('sale_quotes').countDocuments()).toBe(0);
-    expect(await db.c.sale_quote_policies.find({}).toArray()).toEqual([
+    expect(await db.c.sale_quote_policies.find({}).sort({ _id: 1 }).toArray()).toEqual([
+      {
+        _id: FREE_SHIPPING_POLICY,
+        shippingFee: 0,
+        commissionBps: 500,
+        ttlSeconds: 300,
+      },
       {
         _id: 'HCM-DIRECT-v1',
         shippingFee: 30000,

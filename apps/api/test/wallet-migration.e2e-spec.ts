@@ -1,3 +1,4 @@
+import { FREE_SHIPPING_POLICY } from '../src/database/mongo/migrations/0052-free-shipping.js';
 import { randomUUID } from 'node:crypto';
 import { MongoClient, type Db, type Document } from 'mongodb';
 import { bindCollections } from '../src/database/mongo/collections.js';
@@ -265,8 +266,14 @@ it('upgrades from the baseline without changing existing address/listing/receipt
     expect(await rootDb.collection('topup_intents').countDocuments()).toBe(0);
     expect(await rootDb.collection('sale_quotes').countDocuments()).toBe(0);
     expect(
-      await rootDb.collection('sale_quote_policies').find().toArray(),
+      await rootDb.collection('sale_quote_policies').find().sort({ _id: 1 }).toArray(),
     ).toEqual([
+      {
+        _id: FREE_SHIPPING_POLICY,
+        shippingFee: 0,
+        commissionBps: 500,
+        ttlSeconds: 300,
+      },
       {
         _id: 'HCM-DIRECT-v1',
         shippingFee: 30000,

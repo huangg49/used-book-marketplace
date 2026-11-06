@@ -104,11 +104,11 @@ try {
   await p.goto(origin);
   console.log("QA: home/search");
   await p
-    .getByRole("link", { name: "Xem sách", exact: true })
+    .getByRole("link", { name: /^Xem chi tiết / })
     .first()
     .waitFor();
   // Covers below the Home hero now request signing only near the viewport.
-  await p.getByRole("link", { name: "Xem sách", exact: true }).first().scrollIntoViewIfNeeded();
+  await p.getByRole("link", { name: /^Xem chi tiết / }).first().scrollIntoViewIfNeeded();
   await p
     .getByRole("img", { name: /^Bìa sách/ })
     .first()
@@ -125,10 +125,12 @@ try {
   await p.getByLabel("Tìm sách", { exact: true }).fill("");
   await p.getByText("13 tin đăng trên trang này").waitFor();
   assert.equal(await button("Trang tiếp theo").count(), 0);
+  await button("Bộ lọc").click();
   await p.getByRole("radio", { name: "Cũ nhiều", exact: true }).click();
   await button("Áp dụng").click();
   await p.waitForURL((url) => url.searchParams.has("condition"));
   await p.getByText("Chưa có cuốn sách nào phù hợp.").waitFor();
+  await p.getByRole("button", { name: /^Bộ lọc/ }).click();
   await p
     .getByRole("radio", { name: "Tất cả tình trạng", exact: true })
     .click();
@@ -137,13 +139,13 @@ try {
   await p.getByText("13 tin đăng trên trang này").waitFor();
   await button("Đổi sách").click();
   await p
-    .getByRole("link", { name: "Xem sách", exact: true })
+    .getByRole("link", { name: /^Xem chi tiết / })
     .first()
     .waitFor();
   assert.equal(new URL(p.url()).searchParams.get("mode"), "Exchange");
   await p.getByRole("button", { name: /^Sắp xếp / }).click();
   await p.getByRole("menuitemradio", { name: "Giá bán giảm dần" }).click();
-  await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
+  await p.getByRole("link", { name: /^Xem chi tiết / }).first().click();
   await p
     .getByRole("heading", { level: 1, name: fixture.metadata.title })
     .waitFor();
@@ -173,7 +175,7 @@ try {
   await p.getByText("Chưa có cuốn sách nào phù hợp.").waitFor();
   await p.getByLabel("Tìm sách", { exact: true }).fill("");
   await p
-    .getByRole("link", { name: "Xem sách", exact: true })
+    .getByRole("link", { name: /^Xem chi tiết / })
     .first()
     .waitFor();
   await p.setViewportSize({ width: 390, height: 844 });
@@ -211,7 +213,7 @@ try {
     fullPage: true,
     animations: "disabled",
   });
-  await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
+  await p.getByRole("link", { name: /^Xem chi tiết / }).first().click();
   await button("Chat với người bán").waitFor();
   assert.ok(
     await p.evaluate(
@@ -1006,11 +1008,11 @@ try {
   await button("Đăng nhập").click();
   await p.waitForURL(origin + "/");
   const selectedPath = await p
-    .getByRole("link", { name: "Xem sách", exact: true })
+    .getByRole("link", { name: /^Xem chi tiết / })
     .first()
     .getAttribute("href");
   const selectedListing = selectedPath.split("/").at(-1);
-  await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
+  await p.getByRole("link", { name: /^Xem chi tiết / }).first().click();
   const reserveAttempts = [];
   let reserveLost = false;
   await p.route(
