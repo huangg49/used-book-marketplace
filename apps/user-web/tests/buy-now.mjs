@@ -642,7 +642,7 @@ try {
   await buyerOrderDetails.getByText("Người bán đã đăng ký vận đơn", { exact: true }).waitFor();
   for (const details of [sellerOrderDetails, buyerOrderDetails]) {
     assert.equal(await details.locator('[aria-current="step"]').innerText(), "4\nVận chuyển");
-    await details.getByText("Chờ bàn giao vận chuyển", { exact: true }).waitFor();
+    await details.getByRole("heading", { name: "Chờ bàn giao vận chuyển", exact: true }).waitFor();
   }
   await captureProgress("registered");
   assert.equal(
@@ -681,7 +681,7 @@ try {
       response.request().method() === 'GET' && response.ok());
     await sellerPage.goBack();
     assert.equal((await (await authorizedView).json()).demoCompletionEnabled, true);
-    await sellerOrderDetails.getByText('Chờ bàn giao vận chuyển', { exact: true }).waitFor();
+    await sellerOrderDetails.getByRole('heading', { name: 'Chờ bàn giao vận chuyển', exact: true }).waitFor();
     await sellerOrderDetails.getByRole('button', { name: 'Hoàn tất và giải ngân sau 5 giây', exact: true }).waitFor();
     const buyerBefore = await fixture.api('/me/wallet', buyer.accessToken);
     const sellerBefore = await fixture.api('/me/wallet', seller.accessToken);
