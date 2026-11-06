@@ -46,6 +46,13 @@ NOT RUN local (không bật DB); phải đọc CI head sau commit sửa. Bước
 checkpoint, đọc toàn bộ checks đúng SHA và chờ review người thật (owner vùng ảnh
 hưởng +reviewer thứ hai cho tiền/quyền/dispute) trước squash.
 
+Head xuất bản mới `47abfb81`: smoke desktop bỏ bước mở dialog mobile thêm nhầm,
+giữ radio/apply/assertion; probe HTTP-only1440/390 apply/reset PASS, mobile tự áp
+dụng khi chọn. Admin harness chờ heading Dashboard trước mở palette để tránh
+click trong lúc lazy route chuyển; giữ assertion focus2s. Remote main ef7091e1
+cũng FAIL API/web smoke/member-profile trước PR này (đã đọc logs); không quy hết
+CI lỗi cho tối ưu mới. CI cuối vẫn phải đọc đúng head, chưa merge/review người thật.
+
 # Gia cố khả năng phục hồi web —05/11/2026
 
 Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
