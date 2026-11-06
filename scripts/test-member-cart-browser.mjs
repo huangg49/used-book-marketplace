@@ -159,9 +159,11 @@ try {
   await f.approve(id);
   await button(p, "Cập nhật giỏ").click();
   await expect(p.getByText(/Chưa tải được giỏ/)).toHaveCount(0);
-  await p
-    .getByText(/Giá đã thay đổi; kiểm tra giá mới trước khi mua/)
-    .waitFor();
+  const changedItem = p.getByRole("listitem").filter({
+    has: p.locator(`a[href="/books/${id}"]`),
+  });
+  await changedItem.getByText(/Giá khi thêm:.*\(đã đổi\)/).waitFor();
+  await changedItem.getByText(/140\.000\s*₫/).waitFor();
   await p.route("**/me/cart", (route) =>
     route.fulfill({
       status: 503,

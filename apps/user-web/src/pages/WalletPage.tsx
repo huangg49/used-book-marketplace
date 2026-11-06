@@ -630,6 +630,18 @@ export function WalletPage() {
             </div>
           </div>
 
+          {id && result.isError && (
+            <div className={styles.alertBox} role="alert">
+              <div>
+                <p>Chưa xác minh được yêu cầu nạp này. Kiểm tra lại để nhận trạng thái mới nhất.</p>
+                <button type="button" className={styles.btnSecondaryWithdraw}
+                  disabled={result.isFetching} onClick={() => void result.refetch()}>
+                  Kiểm tra lại
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Live Payment Tracking Card (when a topup is pending / completed) */}
           {id && result.data && (
             <div
@@ -676,7 +688,7 @@ export function WalletPage() {
 
               {awaitingPayment && result.data.expiresAt && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span className={styles.countdownBadge}>
+                  <span className={styles.countdownBadge} role="timer" aria-label="Thời gian thanh toán còn lại" aria-live="off">
                     <Clock size={12} aria-hidden="true" />
                     <span>
                       {remaining > 0

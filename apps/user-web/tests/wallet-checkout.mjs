@@ -200,9 +200,9 @@ try {
     name: "Lịch sử giao dịch",
     exact: true,
   });
-  await ledgerHistory.getByText(/Chưa có giao dịch ví/).waitFor();
+  await ledgerHistory.getByRole("heading", { name: "Chưa có biến động số dư", exact: true }).waitFor();
   const topupButton = page.getByRole("button", {
-    name: "Nạp tiền",
+    name: "Nạp tiền VNPay",
     exact: true,
   });
   const withdrawalButton = page.getByRole("button", {
@@ -210,11 +210,11 @@ try {
     exact: true,
   });
   const topupDialog = page.getByRole("dialog", {
-    name: "Nạp tiền",
+    name: "Nạp tiền vào ví",
     exact: true,
   });
   const withdrawalDialog = page.getByRole("dialog", {
-    name: "Rút tiền",
+    name: "Rút tiền từ ví",
     exact: true,
   });
   async function settleDialog(dialog) {
@@ -262,9 +262,18 @@ try {
       .count(),
     0,
   );
-  const walletBanner = page.locator("header").filter({
-    has: page.getByRole("heading", { name: "Ví của tôi", exact: true }),
+  const walletBanner = page.getByRole("region", {
+    name: "Thẻ ví thành viên Lật Lại liên kết VNPay", exact: true,
   });
+  async function expectTracking(label, amount) {
+    const status = page.getByRole("status").filter({
+      has: page.getByRole("heading", { name: label, exact: true }),
+    });
+    await status.getByRole("heading", { name: label, exact: true }).waitFor();
+    if (amount !== undefined) await status.getByText(new Intl.NumberFormat("vi-VN", {
+      style: "currency", currency: "VND", maximumFractionDigits: 0,
+    }).format(amount), { exact: true }).waitFor();
+  }
   async function expectAvailableBalance(amount) {
     await walletBanner.getByText("Số dư khả dụng", { exact: true }).waitFor();
     await walletBanner.getByText(
@@ -278,9 +287,8 @@ try {
   }
   await expectAvailableBalance(0);
   assert.equal(
-    await walletBanner.getByRole("group", { name: "Thao tác ví", exact: true })
-      .getByRole("button").count(),
-    2,
+    await walletBanner.getByRole("button").count(),
+    3, // Current pass includes topup, withdrawal and an explicit refresh control.
   );
   assert.equal(
     await page.getByText("Đang giữ cho giao dịch", { exact: true }).count(),
@@ -302,7 +310,7 @@ try {
   await withdrawalDialog.getByText(/50\.000/).waitFor();
   assert.equal(
     await withdrawalDialog
-      .getByRole("button", { name: "Gửi yêu cầu rút", exact: true })
+      .getByRole("button", { name: "Tiếp tục", exact: true })
       .isDisabled(),
     true,
   );
@@ -310,8 +318,8 @@ try {
     path: path.join(evidence, "wallet-withdrawal-modal-desktop.png"),
     fullPage: true,
   });
-  await withdrawalDialog.getByLabel("Số tiền rút (đồng)").fill("50000");
-  await withdrawalDialog.getByLabel("Số tiền rút (đồng)").press("Enter");
+  await withdrawalDialog.getByLabel("Số tiền muốn rút", { exact: true }).fill("50000");
+  await withdrawalDialog.getByLabel("Số tiền muốn rút", { exact: true }).press("Enter");
   await checkDialogKeyboard(withdrawalDialog);
   await page.keyboard.press("Escape");
   await withdrawalDialog.waitFor({ state: "hidden" });
@@ -330,12 +338,12 @@ try {
   );
   page.off("request", trackWithdrawalWrite);
   await openTopup();
-  await topupDialog.getByText(/5\.000.*10\.000\.000/).waitFor();
+  await topupDialog.getByText(/5\.000.*9\.999\.999\.999/).waitFor();
   await page.screenshot({
     path: path.join(evidence, "wallet-topup-modal-desktop.png"),
     fullPage: true,
   });
-  await topupDialog.getByLabel("Số tiền nạp (đồng)").fill("75000");
+  await topupDialog.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).fill("75000");
   await checkDialogKeyboard(topupDialog);
   await page.keyboard.press("Escape");
   await topupDialog.waitFor({ state: "hidden" });
@@ -349,7 +357,7 @@ try {
   );
   await openTopup();
   assert.equal(
-    await topupDialog.getByLabel("Số tiền nạp (đồng)").inputValue(),
+    await topupDialog.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).inputValue(),
     "75000",
   );
   await topupDialog.getByRole("button", { name: "Đóng popup" }).click();
@@ -359,7 +367,7 @@ try {
     true,
   );
   await openTopup();
-  await page.getByLabel("Số tiền nạp (đồng)").fill("4999");
+  await page.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).fill("4999");
   await page
     .getByRole("button", { name: "Tiếp tục thanh toán", exact: true })
     .click();
@@ -367,7 +375,7 @@ try {
     .getByRole("alert")
     .filter({ hasText: "Nhập số tiền từ" })
     .waitFor();
-  await page.getByLabel("Số tiền nạp (đồng)").fill("50000");
+  await page.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).fill("50000");
   await page.evaluate(() => {
     window.__qaBlockPayment = true;
   });
@@ -437,9 +445,7 @@ try {
     true,
   );
   assert.equal(await page.getByLabel(/^Email/).count(), 0);
-  await page
-    .getByText(/Chờ thanh toán · 50/)
-    .waitFor()
+  await expectTracking("Chờ thanh toán", 50000)
     .catch(async (error) => {
       await page.screenshot({
         path: path.join(evidence, "failure.png"),
@@ -461,11 +467,11 @@ try {
     .getByRole("button", { name: "Tiếp tục thanh toán", exact: true })
     .waitFor();
   assert.equal(
-    await topupDialog.getByLabel("Số tiền nạp (đồng)").inputValue(),
+    await topupDialog.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).inputValue(),
     "50000",
   );
   assert.equal(
-    await topupDialog.getByLabel("Số tiền nạp (đồng)").isDisabled(),
+    await topupDialog.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).isDisabled(),
     true,
   );
   await page.screenshot({
@@ -484,7 +490,7 @@ try {
   );
   queryMode = "paid";
   await page.getByRole("button", { name: "Kiểm tra lại", exact: true }).click();
-  await page.getByText(/Đã nạp ví · 50/).waitFor();
+  await expectTracking("Đã nạp ví thành công", 50000);
   assert.equal(
     (await fixture.api("/me/wallet", fixture.member.accessToken)).available,
     50000,
@@ -493,7 +499,7 @@ try {
   // A successful Return closes only the payment tab, preserves the wallet
   // session and automatically shows the confirmed credit without another login.
   await openTopup();
-  await page.getByLabel("Số tiền nạp (đồng)").fill("40000");
+  await page.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).fill("40000");
   const happyPopupCreated = page.context().waitForEvent("page");
   await page
     .getByRole("button", { name: "Tiếp tục thanh toán", exact: true })
@@ -511,7 +517,7 @@ try {
     { waitUntil: "commit" },
   );
   await happyClosed;
-  await page.getByText(/Đã nạp ví · 40/).waitFor();
+  await expectTracking("Đã nạp ví thành công", 40000);
   assert.equal(new URL(page.url()).pathname, "/wallet");
   assert.equal(await page.getByLabel(/^Email/).count(), 0);
   assert.equal(
@@ -575,55 +581,50 @@ try {
     await route.fulfill({ response });
   });
   await page
-    .getByLabel("Loại giao dịch", { exact: true })
-    .selectOption("Topup");
+    .getByRole("tab", { name: "Nạp tiền", exact: true }).click();
   await ledgerHistory.locator("li").first().waitFor();
   assert.equal(await ledgerHistory.locator("li").count(), 1);
   await ledgerHistory
-    .getByRole("button", { name: "Xem thêm giao dịch", exact: true })
+    .getByRole("button", { name: "Đến trang tiếp theo", exact: true })
     .click();
   await ledgerHistory
     .getByRole("alert")
-    .filter({ hasText: "Chưa tải được các giao dịch tiếp theo" })
+    .filter({ hasText: "Chưa tải được trang tiếp theo." })
     .waitFor();
   assert.equal(await ledgerHistory.locator("li").count(), 1);
-  // A successful background refresh can clear the transient pagination error
-  // before this click. Both labels issue the same next-page command; verify
-  // its cursor and real ledger rows, rather than racing the error label.
+  // A background refresh can clear the transient error before retry. The
+  // numbered pager keeps the same Next control and original failed cursor.
   await page.evaluate(async () => {
     const { queryClient } = await import("/src/lib/session.ts");
     await queryClient.invalidateQueries({ queryKey: ["wallet-history"] });
   });
   assert.equal(await ledgerHistory.locator("li").count(), 1, "a background refresh preserves the loaded ledger page");
   await ledgerHistory
-    .getByRole("button", { name: /^(Thử tải thêm|Xem thêm) giao dịch$/ })
+    .getByRole("button", { name: "Đến trang tiếp theo", exact: true })
     .click();
   await ledgerHistory.locator("li").nth(1).waitFor();
   assert.equal(await ledgerHistory.locator("li").count(), 2);
   assert.ok(nextPageCursors[0], "the failed read had a real cursor");
   assert.deepEqual(nextPageCursors.slice(0, 2), [nextPageCursors[0], nextPageCursors[0]], "manual retry keeps the exact failed cursor after a background refresh");
   await page
-    .getByLabel("Loại giao dịch", { exact: true })
-    .selectOption("OrderPayment");
+    .getByRole("tab", { name: "Mua sách", exact: true }).click();
   await ledgerHistory
-    .getByText("Chưa có giao dịch thuộc loại này.", { exact: true })
+    .getByText("Chưa có giao dịch thuộc nhóm này", { exact: true })
     .waitFor();
   await page
-    .getByLabel("Loại giao dịch", { exact: true })
-    .selectOption("OrderRefund");
+    .getByRole("tab", { name: "Hoàn tiền", exact: true }).click();
   await ledgerHistory
     .getByRole("alert")
-    .filter({ hasText: "Chưa tải được lịch sử giao dịch" })
+    .filter({ hasText: "Chưa tải được dữ liệu sổ cái lúc này." })
     .waitFor();
   await ledgerHistory
-    .getByRole("button", { name: "Thử lại lịch sử", exact: true })
+    .getByRole("button", { name: "Thử lại", exact: true })
     .click();
   await ledgerHistory
-    .getByText("Chưa có giao dịch thuộc loại này.", { exact: true })
+    .getByText("Chưa có giao dịch thuộc nhóm này", { exact: true })
     .waitFor();
   await page
-    .getByLabel("Loại giao dịch", { exact: true })
-    .selectOption("Topup");
+    .getByRole("tab", { name: "Nạp tiền", exact: true }).click();
   await ledgerHistory.locator("li").nth(1).waitFor();
   const realHistory = await fixture.api(
     "/me/wallet/history?limit=20&type=Topup",
@@ -807,24 +808,24 @@ try {
     } else await route.continue();
   });
   await openTopup();
-  await page.getByLabel("Số tiền nạp (đồng)").fill("20000");
+  await page.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).fill("20000");
   await page
     .getByRole("button", { name: "Tiếp tục thanh toán", exact: true })
     .click();
-  await page.getByText(/Chưa xác nhận được yêu cầu nạp/).waitFor();
+  await topupDialog.getByRole("alert").filter({ hasText: "Không kết nối được máy chủ." }).waitFor();
   await topupDialog.getByRole("button", { name: "Đóng popup" }).click();
   await topupDialog.waitFor({ state: "hidden" });
   await openTopup();
   assert.equal(
-    await topupDialog.getByLabel("Số tiền nạp (đồng)").inputValue(),
+    await topupDialog.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).inputValue(),
     "20000",
   );
   assert.equal(
-    await topupDialog.getByLabel("Số tiền nạp (đồng)").isDisabled(),
+    await topupDialog.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).isDisabled(),
     true,
   );
   const retryPopupCreated = page.context().waitForEvent("page");
-  await page.getByRole("button", { name: "Thử lại yêu cầu nạp" }).click();
+  await page.getByRole("button", { name: "Tiếp tục thanh toán" }).click();
   const retryPopup = await retryPopupCreated;
   await retryPopup.waitForURL("https://sandbox.vnpayment.vn/**");
   assert.equal(new URL(page.url()).pathname, "/wallet");
@@ -891,11 +892,11 @@ try {
   }
   async function checkCancelledWithoutLedger(topupId) {
     await page
-      .getByText("Đã hết 5 phút thanh toán. Bạn có thể tạo yêu cầu nạp mới.", {
-        exact: true,
+      .getByText("Phiên nạp tiền đã hết hạn (5 phút).", {
+        exact: false,
       })
       .waitFor({ timeout: 20_000 });
-    await page.getByText(/Đã hủy ·/).waitFor();
+    await expectTracking("Đã hết hạn / Đã hủy");
     assert.equal(await timer.count(), 0);
     const topup = await fixture.api(
       `/me/topups/${topupId}`,
@@ -925,7 +926,7 @@ try {
     );
     await openTopup();
     assert.equal(
-      await topupDialog.getByLabel("Số tiền nạp (đồng)").isDisabled(),
+      await topupDialog.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).isDisabled(),
       false,
     );
     await topupDialog
@@ -937,12 +938,12 @@ try {
   const retryTopup = await checkFiveMinuteCheckout(retryPopup);
   await openTopup();
   assert.equal(
-    await topupDialog.getByLabel("Số tiền nạp (đồng)").isDisabled(),
+    await topupDialog.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).isDisabled(),
     true,
   );
   await topupDialog.getByRole("button", { name: "Đóng popup" }).click();
   await shortenDisposableDeadline(retryTopup.id);
-  await page.getByText(/Còn 00:1\d để thanh toán/).waitFor();
+  await timer.getByText(/^Còn 00:1\d$/).waitFor();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.evaluate(() => {
     document.documentElement.style.fontSize = "130%";
@@ -963,7 +964,7 @@ try {
   await openTopup();
   await topupDialog.locator(`a[href="/wallet?topup=${happyId}"]`).click();
   await topupDialog.waitFor({ state: "hidden" });
-  await page.getByText(/Đã nạp ví · 40/).waitFor();
+  await expectTracking("Đã nạp ví thành công", 40000);
   assert.equal(retryPopup.isClosed(), false);
   await openTopup();
   const cancelledRecent = topupDialog
@@ -972,7 +973,7 @@ try {
   await cancelledRecent.waitFor({ timeout: 20_000 });
   assert.equal(new URL(page.url()).searchParams.get("topup"), happyId);
   assert.equal(
-    await topupDialog.getByLabel("Số tiền nạp (đồng)").isDisabled(),
+    await topupDialog.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).isDisabled(),
     false,
   );
   await cancelledRecent.click();
@@ -988,7 +989,7 @@ try {
 
   // A fresh request after cancellation receives a new deadline. Reload keeps
   // the same intent/deadline; signing back in cannot renew an expired checkout.
-  await topupDialog.getByLabel("Số tiền nạp (đồng)").fill("35000");
+  await topupDialog.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).fill("35000");
   const resumedPopupCreated = page.context().waitForEvent("page");
   await page
     .getByRole("button", { name: "Tiếp tục thanh toán", exact: true })
@@ -1003,7 +1004,7 @@ try {
   await page.getByLabel(/^Email/).fill(fixture.member.user.email);
   await page.getByLabel(/^Mật khẩu/).fill(password);
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
-  await page.getByText(/Chờ thanh toán · 35/).waitFor();
+  await expectTracking("Chờ thanh toán", 35000);
   assert.equal(page.url(), resumedUrl);
   assert.equal(
     (
@@ -1040,11 +1041,11 @@ try {
   });
   const checkoutCountBeforeExpiredReplay = checkoutAmounts.size;
   await openTopup();
-  await topupDialog.getByLabel("Số tiền nạp (đồng)").fill("45000");
+  await topupDialog.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).fill("45000");
   await topupDialog
     .getByRole("button", { name: "Tiếp tục thanh toán", exact: true })
     .click();
-  await page.getByText(/Chưa xác nhận được yêu cầu nạp/).waitFor();
+  await topupDialog.getByRole("alert").filter({ hasText: "Không kết nối được máy chủ." }).waitFor();
   const committedButUnacknowledged = await fixture.api(
     `/me/topups/${expiredAckId}`,
     fixture.member.accessToken,
@@ -1057,7 +1058,7 @@ try {
     );
   const expiredAckPopupCreated = page.context().waitForEvent("page");
   await topupDialog
-    .getByRole("button", { name: "Thử lại yêu cầu nạp", exact: true })
+    .getByRole("button", { name: "Tiếp tục thanh toán", exact: true })
     .click();
   const expiredAckPopup = await expiredAckPopupCreated;
   await checkCancelledWithoutLedger(expiredAckId);

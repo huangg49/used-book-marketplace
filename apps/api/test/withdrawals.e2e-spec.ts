@@ -126,6 +126,8 @@ describe('Withdrawal: HTTP, real Mongo ledger, permission and concurrency', () =
       .useValue(new MongoService(new ConfigService({ MONGODB_URL: appUrl })))
       .compile();
     app = module.createNestApplication();
+    // Config validation can snapshot environment before beforeAll runs.
+    app.get(ConfigService).set('PAYMENT_SIMULATOR_SECRET', process.env.PAYMENT_SIMULATOR_SECRET);
     configureApp(app, { docs: false, logRequests: false });
     await app.init();
     await app.listen(0, '127.0.0.1');

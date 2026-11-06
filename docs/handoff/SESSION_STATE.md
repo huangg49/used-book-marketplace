@@ -51,7 +51,25 @@ Demo branch/HEAD `codex/demo-receipt-local-20261103`/`5bd0b360` giữ nguyên54f
 status fingerprint. Không sync/build/stash/reset demo.44CSS Member còn khớp byte;
 2CSS đổi có chủ đích Profile sizing/wrapping và BookCard tooltip max-width, không
 animation/transition/keyframe/asset đổi trong gói xuất bản. Các fixture HTTP/storage
-fake/web export không là native/provider/human nghiệm thu. Không local API/Mongo/
+fake/web export không là native/provider/human nghiệm thu. CI36aef3cd đã qua full Member smoke (gồm Home320/130), rồi seller-order gặp
+heading cũ; dùng phase heading hiện hành Thanh toán đơn sách. Cart đã qua
+lost-ACK/exact replay, gặp price notice đổi copy; nay kiểm tag giá lúc thêm và cả
+giá hiện hành140000. API87f03fba:42file E2E PASS/1FAIL/1skip; mọi migration qua,
+withdrawal cuối suite reconcile đã qua, còn funding503 do ConfigModule validate
+env trước beforeAll. Fixture nay set simulator config trên app ConfigService như
+wallet-checkout; không đổi code tiền. APItypecheck PASS, full E2E mới chờ CI.
+
+Rà Wallet E2E: giữ UI hiện hành (tab/pager/nút/label/modal và tracking card),
+giữ kiểm tra số dư, cursor, key/body, callback, expiry. Range VNPay mới lấy đúng
+OpenAPI5000–9999999999, không đổi business. WalletPage lộ thiếu read-error/retry
+khi status query503: thêm alert/nút refetch query hiện hành, giữ pending data;
+đặt role/tên cho timer, không đổi poll/command/amount/key/style/motion.
+Fixture HTTP-only mới wallet-status-recovery: baseline FAIL thiếu alert; after2
+viewport390/1440 PASS retained-status/retry/no-money-command. Đã nối vào CI;
+471unit/58file, Member rebuild/typecheck/scoped lint0error PASS. Full browser/API
+E2E trên head sửa vẫn phải chạy và đọc lại, không lấy các head giữa làm finalPASS.
+
+Không local API/Mongo/
 worker/provider, migration/seed/deploy. Bước tiếp: đọc đủ CI đúng SHA cuối, xử lý
 lỗi nếu còn; chờ owner vùng ảnh hưởng +reviewer thứ hai tiền/quyền/dispute, rồi squash.
 

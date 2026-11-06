@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:wallet-status-recovery:browser": "node tests/wallet-status-recovery.mjs",
     "test:book-detail:browser": "node tests/book-detail.mjs",
     "test:book-detail-prefetch:browser": "node tests/book-detail-prefetch.mjs",
     "test:book-transition:browser": "node tests/book-transition.mjs",

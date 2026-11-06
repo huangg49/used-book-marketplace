@@ -415,7 +415,7 @@ try {
     exact: true,
   });
   await buyerPage.waitForURL(`**/chat/${conversationId}`);
-  await buyerOrderDetails.getByRole("heading", { name: "Thủ tục đơn hàng", exact: true }).waitFor();
+  await buyerOrderDetails.getByRole("heading", { name: "Thanh toán đơn sách", exact: true }).waitFor();
   await buyerOrderDetails.getByText("Chờ thanh toán", {exact: true}).waitFor();
   const order = await fixture.db
     .collection("direct_orders")
