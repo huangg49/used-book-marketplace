@@ -113,7 +113,11 @@ Wallet harness còn5heading cũ và2copy validation/popup-block khác source; na
 theo heading Ví & Ký Quỹ Thư Quán và copy thực, không đổi runtime/giới hạn tiền.
 Mở rộng fixture status để kiểm chính các entry/validation/popup-block và nhãn
 tối thiểu rút tiền ở cả390/1440: PASS, không phát money command. Selector mức
-tối thiểu dùng đúng nhãn thay regex trùng nút chọn nhanh. API4e1d32f6 đã PASS đầy đủ.
+tối thiểu dùng đúng nhãn thay regex trùng nút chọn nhanh. CIb802 lộ số0 trùng
+số dư khả dụng/ký quỹ; helper nay kiểm đúng ô số dư, vẫn assert chính xác số tiền.
+Các action nằm cạnh thẻ, nên kiểm refresh theo tên cùng topup/withdraw thay đếm
+button trong region chỉ chứa khoản tiền. Fixture local kiểm lại các locator này.
+API4e1d32f6 đã PASS đầy đủ; Exchange real-API browser đã PASS trênbad82 vàb802.
 
 Không local API/Mongo/
 worker/provider, migration/seed/deploy. Bước tiếp: đọc đủ CI đúng SHA cuối, xử lý

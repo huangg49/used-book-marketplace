@@ -17,6 +17,7 @@ const require = createRequire(
 );
 const webRequire = createRequire(new URL("../package.json", import.meta.url));
 const { chromium } = require("playwright");
+const { expect } = require("playwright/test");
 const { createServer } = await import(
   pathToFileURL(webRequire.resolve("vite")).href
 );
@@ -275,19 +276,18 @@ try {
   }
   async function expectAvailableBalance(amount) {
     await walletBanner.getByText("Số dư khả dụng", { exact: true }).waitFor();
-    await walletBanner.getByText(
+    await expect(walletBanner.locator('[class*="cardAvailableValue"]')).toHaveText(
       new Intl.NumberFormat("vi-VN", {
         style: "currency",
         currency: "VND",
         maximumFractionDigits: 0,
       }).format(amount),
-      { exact: true },
-    ).waitFor();
+    );
   }
   await expectAvailableBalance(0);
   assert.equal(
-    await walletBanner.getByRole("button").count(),
-    3, // Current pass includes topup, withdrawal and an explicit refresh control.
+    await page.getByRole("button", { name: "Làm mới số dư ví", exact: true }).count(),
+    1, // Actions are adjacent to the financial card, outside its named region.
   );
   assert.equal(
     await page.getByText("Đang giữ cho giao dịch", { exact: true }).count(),

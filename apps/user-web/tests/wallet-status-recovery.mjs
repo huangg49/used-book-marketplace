@@ -78,6 +78,9 @@ try {
     await expect(page.getByRole('heading', { name: 'Đã nạp ví thành công', exact: true })).toBeVisible();
     await expect(alert).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Ví & Ký Quỹ Thư Quán', exact: true })).toBeVisible();
+    const card = page.getByRole('region', { name: 'Thẻ ví thành viên Lật Lại liên kết VNPay', exact: true });
+    await expect(card.locator('[class*="cardAvailableValue"]')).toHaveText('100.000\u00a0₫');
+    await expect(page.getByRole('button', { name: 'Làm mới số dư ví', exact: true })).toHaveCount(1);
     await page.getByRole('button', { name: 'Nạp tiền VNPay', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Nạp tiền vào ví', exact: true });
     await dialog.getByLabel('Hoặc nhập số tiền tùy chọn:', { exact: true }).fill('4999');
