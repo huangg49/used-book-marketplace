@@ -125,12 +125,10 @@ try {
   await p.getByLabel("Tìm sách", { exact: true }).fill("");
   await p.getByText("13 tin đăng trên trang này").waitFor();
   assert.equal(await button("Trang tiếp theo").count(), 0);
-  await button("Bộ lọc").click();
   await p.getByRole("radio", { name: "Cũ nhiều", exact: true }).click();
   await button("Áp dụng").click();
   await p.waitForURL((url) => url.searchParams.has("condition"));
   await p.getByText("Chưa có cuốn sách nào phù hợp.").waitFor();
-  await p.getByRole("button", { name: /^Bộ lọc/ }).click();
   await p
     .getByRole("radio", { name: "Tất cả tình trạng", exact: true })
     .click();

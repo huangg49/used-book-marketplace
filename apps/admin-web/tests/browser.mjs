@@ -183,6 +183,9 @@ try {
   await p.waitForURL(origin + "/users");
   assert.equal(await directorySearch.inputValue(), "");
   await p.getByRole("link", { name: "Dashboard", exact: true }).click();
+  // Wait for the lazy destination before opening a shell modal: the route's
+  // completion deliberately closes palettes belonging to the previous page.
+  await p.getByRole("heading", { name: /^Tổng quan\.?$/, exact: true }).waitFor();
   await p.getByRole("button", { name: "Tìm kiếm nhanh", exact: true }).click();
   await focused(p.getByRole("combobox", { name: "Tìm chức năng quản trị", exact: true }));
   await p.keyboard.press("Escape");
