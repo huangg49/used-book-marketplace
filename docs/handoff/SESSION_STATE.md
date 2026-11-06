@@ -80,7 +80,9 @@ PASS local, đã xem ảnh error mobile; không đổi runtime/style/motion.
 Wallet credit regression10profiles PASS local sau read-error UI; human review
 vẫn OPEN, chưa merge. Head chứa selector sửa phải chạy lại CI đủ trước squash. CI5c08e9f4 seller-order
 đã qua; buy-now lộ cùng context mobile thu gọn, nay đợi aside rồi mở bằng toggle
-cho cả buyer/seller trước kiểm badge/title. Không bỏ snapshot/payment/ledger assertions.
+cho cả buyer/seller trước kiểm badge/title. Không bỏ snapshot/payment/ledger assertions. CI81f5b564 support đã tới bước cuối
+thông báo kiểm duyệt → exact review; chỉ cập nhật heading Chi tiết đánh giá giao
+dịch (region vẫn Đánh giá giao dịch), giữ deep-link và kiểm bản ghi hidden.
 
 Không local API/Mongo/
 worker/provider, migration/seed/deploy. Bước tiếp: đọc đủ CI đúng SHA cuối, xử lý
