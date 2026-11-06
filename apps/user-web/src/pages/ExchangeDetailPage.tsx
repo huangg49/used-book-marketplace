@@ -4,6 +4,7 @@ import {
   TransactionDisclosure,
 } from "../components/conversation/TransactionFrame";
 import { ExchangeContext } from "../components/conversation/ExchangeContext";
+import { ExchangeFinanceSummary } from "../components/conversation/ExchangeFinanceSummary";
 import { exchangeStage } from "../lib/transaction-stage";
 import { ExchangeEvidencePanel } from "../components/exchange/ExchangeEvidencePanel";
 import { useEffect, useState } from "react";
@@ -253,6 +254,7 @@ function ExchangeDetailContent({
   if (isDetailError) {
     return (
       <div
+        id={"exchange-recovery-" + id}
         className={styles.errorContainer}
         data-chat-morph-room={transitioning || undefined}
       >
@@ -268,6 +270,15 @@ function ExchangeDetailContent({
         <button className={styles.retryBtn} onClick={() => refetchDetail()}>
           Thử lại
         </button>
+        {embedded && id && auth.status === "authenticated" && (
+          <div className={styles.recoveryFinance}>
+            <ExchangeFinanceSummary
+              id={id}
+              userId={auth.user.id}
+              sheetId={"exchange-recovery-" + id}
+            />
+          </div>
+        )}
       </div>
     );
   }

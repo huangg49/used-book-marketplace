@@ -370,7 +370,14 @@ try {
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await page.unroute(`**/api/v1/exchanges/${id}`);
   await finance.getByRole("button", { name: "Tải lại khoản trao đổi", exact: true }).click();
-  await finance.locator("dt").filter({ hasText: /^Cọc bảo chứng của bạn$/ }).waitFor();
+  const restoredDetail = page.getByRole("region", { name: "Chi tiết trao đổi", exact: true });
+  const restoredContext = restoredDetail.getByRole("complementary", { name: "Sách và thỏa thuận", exact: true });
+  await restoredContext.waitFor();
+  const toggle = restoredContext.getByRole("button", { name: "Sách và thỏa thuận", exact: true });
+  if (await toggle.isVisible() && await toggle.getAttribute("aria-expanded") !== "true")
+    await toggle.click();
+  await restoredContext.locator("dt").filter({ hasText: /^Cọc của bạn$/ }).waitFor();
+  assert.equal(await page.getByRole("heading", { name: "Chưa tải được trạng thái hiện tại", exact: true }).count(), 0);
   assert.deepEqual(errors, []);
   console.log(
     "PASS exchange browser: real create/accept/cancel; lost ACK retains intent; funding rejection stays open; 403 hides data; desktop/mobile.",

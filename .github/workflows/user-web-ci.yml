@@ -58,6 +58,7 @@ jobs:
       - run: pnpm --filter @used-books/api build
       - run: pnpm --filter @used-books/admin-web exec playwright install --with-deps chromium
       - run: pnpm --filter @used-books/user-web test:wallet-status-recovery:browser
+      - run: pnpm --filter @used-books/user-web test:exchange-finance-recovery:browser
       - run: pnpm --filter @used-books/user-web test:listing-cache:browser
       - run: pnpm --filter @used-books/user-web test:order-chat:browser
       - run: pnpm --filter @used-books/user-web test:auth-motion:browser
@@ -94,6 +95,7 @@ jobs:
           name: user-web-browser-evidence
           path: |
             apps/user-web/test-results/
+            .tmp/exchange-finance-recovery/
             .impeccable/review/integration-main/
             .tmp/wallet-checkout-browser/
             .tmp/wallet-status-recovery/

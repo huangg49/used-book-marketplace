@@ -99,6 +99,17 @@ active-room count; restore là bước sau success, outer suite vẫn đóng bro
 khi fail. Wallet helper dùng cùng menu thực, wallet link gồm balance và region
 thẻ ví cho balance90000; giữ mọi assertion số dư và menu/focus. Chờ full CI.
 
+CI4e1d32f6 operations PASS đầy đủ; Member qua UX helper rồi phát hiện hồi quy
+workspace Exchange: lỗi đọc làm mất summary tài chính sau refactor. Nhúng lại
+component summary hiện có ở error view:503 giữ khoản có nhãn stale,403 ẩn khoản
+riêng tư; không hiển thị sách/actions cache hoặc phát money command. Retry thành
+công trở về context hiện hành. Nút Thử lại dùng token wine/ink hiện có thay biến
+legacy không định nghĩa (ảnh cho thấy chữ trắng mất nền). Chỉ thêm layout wrapper
+và màu retry trong ExchangeDetailPage CSS, không đổi motion/transition/keyframe.
+Production HTTP fixture390/1440,130% chữ kiểm stale/denied/retry/no command và
+chiều rộng đọc được;23finance unit và471Member unit/build/scoped lint PASS local.
+Đã xem ảnh mobile. CI head chứa sửa này vẫn phải xác minh, không suy từ4e1.
+
 Không local API/Mongo/
 worker/provider, migration/seed/deploy. Bước tiếp: đọc đủ CI đúng SHA cuối, xử lý
 lỗi nếu còn; chờ owner vùng ảnh hưởng +reviewer thứ hai tiền/quyền/dispute, rồi squash.
