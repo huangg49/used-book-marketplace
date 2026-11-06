@@ -309,16 +309,25 @@ try {
   await withdrawalDialog.getByText("Tối thiểu 50.000đ", { exact: true }).waitFor();
   assert.equal(
     await withdrawalDialog
-      .getByRole("button", { name: "Tiếp tục", exact: true })
+      .getByRole("button", { name: "50.000", exact: true })
       .isDisabled(),
     true,
   );
+  await withdrawalDialog.getByRole("button", { name: "Tiếp tục", exact: true }).click();
+  assert.equal(await withdrawalDialog.getByLabel("Số tiền muốn rút", { exact: true }).evaluate(node => node.validity.valueMissing), true);
   await page.screenshot({
     path: path.join(evidence, "wallet-withdrawal-modal-desktop.png"),
     fullPage: true,
   });
   await withdrawalDialog.getByLabel("Số tiền muốn rút", { exact: true }).fill("50000");
+  await withdrawalDialog.getByRole("combobox", { name: "Lý do rút tiền", exact: true }).selectOption({ label: "Nhu cầu cá nhân" });
+  await withdrawalDialog.getByLabel("Ngân hàng", { exact: true }).fill("Ngân hàng QA");
+  await withdrawalDialog.getByLabel("Số tài khoản", { exact: true }).fill("000000000000");
+  await withdrawalDialog.getByLabel("Tên chủ tài khoản", { exact: true }).fill("QA TEST");
+  await withdrawalDialog.getByRole("button", { name: "Tiếp tục", exact: true }).click();
+  await expect(withdrawalDialog.getByRole("alert")).toContainText("Nhập số tiền từ 50.000đ và không vượt số dư khả dụng.");
   await withdrawalDialog.getByLabel("Số tiền muốn rút", { exact: true }).press("Enter");
+  await expect(withdrawalDialog.getByRole("alert")).toContainText("Nhập số tiền từ 50.000đ và không vượt số dư khả dụng.");
   await checkDialogKeyboard(withdrawalDialog);
   await page.keyboard.press("Escape");
   await withdrawalDialog.waitFor({ state: "hidden" });

@@ -21,7 +21,7 @@ try {
   for (const width of [390, 1440]) {
     const context = await browser.newContext({ viewport: { width, height: 950 }, reducedMotion: 'reduce' });
     await context.routeWebSocket('**/*', socket => socket.close());
-    let mode = 'pending', reads = 0, denied = 0;
+    let mode = 'pending', reads = 0, denied = 0, available = 100000, withdrawalsEnabled = false;
     const errors = [], commands = [];
     const now = new Date().toISOString(), expiresAt = new Date(Date.now() + 300000).toISOString();
     const actor = { id: id(1), displayName: 'Bạn đọc QA', email: 'reader@example.test', status: 'ACTIVE', roles: ['MEMBER'] };
@@ -40,9 +40,9 @@ try {
         if (request.method() !== 'GET') commands.push(p);
         if (p === '/api/v1/auth/me') return route.fulfill({ json: actor });
         if (p === '/api/v1/me/wallet') return route.fulfill({ json: {
-          demoOnly: true, label: 'Mô phỏng đồ án', currency: 'VND', available: 100000,
-          transactionHeld: 0, withdrawalHeld: 0, total: 100000, serverTime: now,
-          topupEnabled: true, paymentsEnabled: true, withdrawalsEnabled: false, vnpayEnabled: true,
+          demoOnly: true, label: 'Mô phỏng đồ án', currency: 'VND', available,
+          transactionHeld: 0, withdrawalHeld: 0, total: available, serverTime: now,
+          topupEnabled: true, paymentsEnabled: true, withdrawalsEnabled, vnpayEnabled: true,
         } });
         if (['/api/v1/me/topups', '/api/v1/me/wallet/history'].includes(p)) return route.fulfill({ json: { items: [], nextCursor: null } });
         return route.fulfill({ status: 503, json: { code: 'QA_UNAVAILABLE' } });
@@ -91,9 +91,25 @@ try {
     await dialog.getByRole('button', { name: 'Tiếp tục thanh toán', exact: true }).click();
     await expect(dialog.getByRole('alert')).toContainText('Trình duyệt đã chặn mở tab thanh toán');
     await dialog.getByRole('button', { name: 'Đóng popup' }).click();
+    available = 0;
+    withdrawalsEnabled = true;
+    await page.getByRole('button', { name: 'Làm mới số dư ví', exact: true }).click();
+    await expect(card.locator('[class*="cardAvailableValue"]')).toHaveText('0\u00a0₫');
     await page.getByRole('button', { name: 'Rút tiền', exact: true }).click();
     const withdrawal = page.getByRole('dialog', { name: 'Rút tiền từ ví', exact: true });
     await expect(withdrawal.getByText('Tối thiểu 50.000đ', { exact: true })).toBeVisible();
+    await expect(withdrawal.getByRole('button', { name: '50.000', exact: true })).toBeDisabled();
+    await withdrawal.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
+    assert.equal(await withdrawal.getByLabel('Số tiền muốn rút', { exact: true }).evaluate(node => node.validity.valueMissing), true);
+    await withdrawal.getByLabel('Số tiền muốn rút', { exact: true }).fill('50000');
+    await withdrawal.getByRole('combobox', { name: 'Lý do rút tiền', exact: true }).selectOption({ label: 'Nhu cầu cá nhân' });
+    await withdrawal.getByLabel('Ngân hàng', { exact: true }).fill('Ngân hàng QA');
+    await withdrawal.getByLabel('Số tài khoản', { exact: true }).fill('000000000000');
+    await withdrawal.getByLabel('Tên chủ tài khoản', { exact: true }).fill('QA TEST');
+    await withdrawal.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
+    await expect(withdrawal.getByRole('alert')).toContainText('Nhập số tiền từ 50.000đ và không vượt số dư khả dụng.');
+    await withdrawal.getByLabel('Số tiền muốn rút', { exact: true }).press('Enter');
+    await expect(withdrawal.getByRole('alert')).toContainText('Nhập số tiền từ 50.000đ và không vượt số dư khả dụng.');
     await withdrawal.getByRole('button', { name: 'Đóng popup' }).click();
     assert.ok(reads > previous);
     assert.deepEqual(commands, []);

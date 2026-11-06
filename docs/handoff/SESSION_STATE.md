@@ -117,7 +117,12 @@ tối thiểu dùng đúng nhãn thay regex trùng nút chọn nhanh. CIb802 l�
 số dư khả dụng/ký quỹ; helper nay kiểm đúng ô số dư, vẫn assert chính xác số tiền.
 Các action nằm cạnh thẻ, nên kiểm refresh theo tên cùng topup/withdraw thay đếm
 button trong region chỉ chứa khoản tiền. Fixture local kiểm lại các locator này.
-API4e1d32f6 đã PASS đầy đủ; Exchange real-API browser đã PASS trênbad82 vàb802.
+API4e1d32f6 đã PASS đầy đủ; Exchange real-API browser đã PASS trênbad82/b802/6bc.
+CI6bc wallet: Continue cho phép submit để báo validation, không phải nút disabled
+như harness cũ. Nay assert quick amount disabled, cả click/Enter với0balance báo
+vượt số dư và không phát withdrawal command, thay vì suy chỉ từ trạng thái nút.
+Fixture HTTP-only390/1440 kiểm lại guard này; không đổi runtime/permission/tiền.
+Đưa wallet lên đầu nhóm Member E2E để phản hồi sớm; giữ đủ mọi bước còn lại.
 
 Không local API/Mongo/
 worker/provider, migration/seed/deploy. Bước tiếp: đọc đủ CI đúng SHA cuối, xử lý

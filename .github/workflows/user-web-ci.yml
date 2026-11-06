@@ -68,6 +68,10 @@ jobs:
         env:
           AUCTION_MOTION_EVIDENCE: apps/user-web/test-results/auction-stage
       - run: pnpm infra:mongo:test:up
+      # Keep the full E2E set; run payment recovery first for earlier feedback.
+      - run: pnpm --filter @used-books/user-web test:wallet:browser
+        env:
+          MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_browser_test?replicaSet=rs-test&authSource=admin
       - run: pnpm --filter @used-books/user-web test:browser
         env:
           MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_browser_test?replicaSet=rs-test&authSource=admin
@@ -84,9 +88,6 @@ jobs:
         env:
           MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_browser_test?replicaSet=rs-test&authSource=admin
       - run: pnpm --filter @used-books/user-web test:exchange:browser
-        env:
-          MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_browser_test?replicaSet=rs-test&authSource=admin
-      - run: pnpm --filter @used-books/user-web test:wallet:browser
         env:
           MONGO_TEST_URL: mongodb://latlai_qa_root:local_test_only@127.0.0.1:57017/latlai_browser_test?replicaSet=rs-test&authSource=admin
       - if: failure()
