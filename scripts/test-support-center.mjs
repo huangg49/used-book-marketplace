@@ -503,7 +503,7 @@ try {
     .click();
   await member.waitForURL(memberOrigin + "/reviews");
   await member
-    .getByRole("link", { name: "Xem hồ sơ uy tín", exact: true })
+    .getByRole("link", { name: "Xem trang công khai", exact: true })
     .click();
   await member.waitForURL(memberOrigin + "/members/" + owner);
   await member
