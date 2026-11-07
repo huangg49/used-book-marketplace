@@ -904,6 +904,9 @@ try {
     return expiresAt;
   }
   async function checkCancelledWithoutLedger(topupId) {
+    // A previous cancelled request can remain visible while an exact replay is
+    // resolving. Assert cancellation for the intended route, not that old view.
+    await page.waitForURL(url => url.pathname === "/wallet" && url.searchParams.get("topup") === topupId);
     await page
       .getByText("Phiên nạp tiền đã hết hạn (5 phút).", {
         exact: false,
@@ -938,10 +941,7 @@ try {
       0,
     );
     await openTopup();
-    assert.equal(
-      await topupDialog.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true }).isDisabled(),
-      false,
-    );
+    await expect(topupDialog.getByLabel("Hoặc nhập số tiền tùy chọn:", { exact: true })).toBeEnabled();
     await topupDialog
       .locator(`a[href="/wallet?topup=${topupId}"]`)
       .filter({ hasText: "Đã hủy" })

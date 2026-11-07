@@ -69,6 +69,10 @@ Kiểm chứng đã thực chạy:
   CI74efbb80 đã PASS11/11, gồm đầy đủ API/Mongo/E2E, Member (toàn bộ Wallet,
   deadline/expiry/lost-ACK/ledger) và Operations. Commit review tiếp theo chỉ đổi
   tài liệu; CI đúng head cuối và trạng thái merge lấy tại PR97.
+  CI25cce765 phát hiện race harness ở expired-ACK: caption Cancelled của request
+  trước vẫn hiện lúc replay mới chưa xong. Nay đợi đúng topupId trên URL rồi kiểm
+  form enabled bằng assertion chờ render; giữ nguyên key/body/tiền/ledger/expiry,
+  không tăng timeout hoặc đổi runtime. CI head sửa tiếp tục phải xác minh.
   Main ef7091e1 cũng từng FAIL API/web-smoke/member-profile trước PR97; đã đối
   chiếu logs, không quy tất cả lỗi cho tối ưu.
 
