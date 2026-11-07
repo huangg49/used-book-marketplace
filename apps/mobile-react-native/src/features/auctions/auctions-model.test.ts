@@ -207,4 +207,56 @@ describe("ADR 0047 scheduled auctions", () => {
       "/auctions/a/schedule",
     );
   });
+  it("matches auction filters correctly", async () => {
+    const { matchesAuctionFilters, activeFilterCount, DEFAULT_AUCTION_FILTERS } = await import(
+      "./auctions-model"
+    );
+    const item = auction({
+      title: "Dế Mèn Phiêu Lưu Ký",
+      pointName: "Điểm Thủ Đức",
+      buyNowPrice: 500_000,
+      currentPrice: 200_000,
+      bidderCount: 1,
+      endAt: new Date(start + 2 * 3600_000).toISOString(),
+      book: {
+        revisionId: "33333333-3333-4333-8333-333333333333",
+        authors: ["Tô Hoài"],
+        condition: "Good",
+        photos: [],
+      },
+    });
+
+    // Default filters match
+    expect(matchesAuctionFilters(item, DEFAULT_AUCTION_FILTERS, start)).toBe(true);
+
+    // Diacritic-insensitive search
+    expect(matchesAuctionFilters(item, { ...DEFAULT_AUCTION_FILTERS, q: "de men" }, start)).toBe(true);
+    expect(matchesAuctionFilters(item, { ...DEFAULT_AUCTION_FILTERS, q: "to hoai" }, start)).toBe(true);
+    expect(matchesAuctionFilters(item, { ...DEFAULT_AUCTION_FILTERS, q: "nam cao" }, start)).toBe(false);
+
+    // Filter by point
+    expect(matchesAuctionFilters(item, { ...DEFAULT_AUCTION_FILTERS, point: "Điểm Thủ Đức" }, start)).toBe(true);
+    expect(matchesAuctionFilters(item, { ...DEFAULT_AUCTION_FILTERS, point: "Điểm Quận 1" }, start)).toBe(false);
+
+    // Filter by buy now
+    expect(matchesAuctionFilters(item, { ...DEFAULT_AUCTION_FILTERS, buyNow: true }, start)).toBe(true);
+    const noBuyNow = auction({ buyNowPrice: null });
+    expect(matchesAuctionFilters(noBuyNow, { ...DEFAULT_AUCTION_FILTERS, buyNow: true }, start)).toBe(false);
+
+    // Filter by condition
+    expect(matchesAuctionFilters(item, { ...DEFAULT_AUCTION_FILTERS, conditions: ["Good"] }, start)).toBe(true);
+    expect(matchesAuctionFilters(item, { ...DEFAULT_AUCTION_FILTERS, conditions: ["LikeNew"] }, start)).toBe(false);
+
+    // Filter by price
+    expect(matchesAuctionFilters(item, { ...DEFAULT_AUCTION_FILTERS, price: "100-300" }, start)).toBe(true);
+    expect(matchesAuctionFilters(item, { ...DEFAULT_AUCTION_FILTERS, price: "lt100" }, start)).toBe(false);
+
+    // Filter by ending time
+    expect(matchesAuctionFilters(item, { ...DEFAULT_AUCTION_FILTERS, ending: "6h" }, start)).toBe(true);
+    expect(matchesAuctionFilters(item, { ...DEFAULT_AUCTION_FILTERS, ending: "1h" }, start)).toBe(false);
+
+    // Active filter count
+    expect(activeFilterCount(DEFAULT_AUCTION_FILTERS)).toBe(0);
+    expect(activeFilterCount({ ...DEFAULT_AUCTION_FILTERS, point: "A", buyNow: true })).toBe(2);
+  });
 });
