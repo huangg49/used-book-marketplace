@@ -1,139 +1,74 @@
-# Xuất bản chuỗi tối ưu —06/11/2026
+# Xuất bản chuỗi tối ưu —06–07/11/2026
 
-Owner yêu cầu push và merge cẩn thận. Nhánh
-`codex/web-hardening-release-20261106`, nguồn tích lũy `ba8713bb`, main remote đã
-xác minh `ef7091e1e24eeff186eb0db3329a4682aa4f0e63` là ancestor, không conflict mới.
-Toàn bộ123commit/330file local ban đầu được giữ (receipt/review/API/shared/RN,
-conversation/pagination/focus và tối ưu), thêm các sửa CI bên dưới. Backup
-`codex/backup-before-publish-20261106-ba8713bb`. Đã push và mở
+Owner yêu cầu push và merge cẩn thận. Nhánh `codex/web-hardening-release-20261106`,
+nguồn tích lũy `ba8713bb`, main remote xác minh `ef7091e1e24eeff186eb0db3329a4682aa4f0e63`
+là ancestor, không conflict mới. Giữ toàn bộ123commit/330file local ban đầu
+(receipt/private-review/API/shared/RN, conversation/pagination/focus và tối ưu).
+Backup `codex/backup-before-publish-20261106-ba8713bb`. Đã push và mở
 [PR97](https://github.com/huangg49/used-book-marketplace/pull/97); chưa merge.
-PR97 là đầu mối source/CI/merge hiện hành; các mốc bên dưới là evidence theo SHA.
-Khi ghi checkpoint, CI head cuối và review người thật theo TEAMWORK còn phải xác minh trước squash.
-Không coi CI/AI review là human sign-off hoặc đóng READINESS.
+PR97 là đầu mối diff, SHA, CI và trạng thái merge hiện hành. Evidence bên dưới
+thuộc nguồn được ghi; phải đọc CI đúng head cuối trước squash. Owner vùng ảnh
+hưởng +reviewer thứ hai tiền/quyền/dispute theo TEAMWORK còn thiếu, không lấy
+AI/CI thay human sign-off hoặc đóng READINESS.
 
-Local tại ba8713bb: contract/types/routes257operations/39controllers, workspace
-lint/typecheck/build và docs/diff PASS. Default `pnpm test` FAIL2lần shutdown child
-10s Windows không đổi source; riêng shutdown PASS, API maxWorkers2:419PASS,
-RN224/Admin246/Member471/session151PASS. Lượt cuối trên44e544fc chạy riêng default
-`pnpm test` PASS1511/1511 (không sửa test/timeout shutdown), ghi rõ lịch sử FAIL/PASS.
-Publication browser: resolver22, pagination42screen/viewport +shared error/race,
-motion5checks PASS. Evidence theo nguồn và job/SHA cụ thể ghi ở PR97.
+Các sửa publication đã triển khai:
+- Khớp harness với entry/heading/nhãn/region/disclosure hiện hành của Member và
+  Admin; RN giữ nhãn riêng. Dashboard chờ lazy route trước kiểm palette focus2s.
+  Fake clock chỉ bắt đầu sau native IntersectionObserver; listing-cache chờ fresh
+  held-detail render trước assert không có Mua ngay. Không tăng timeout/bỏ assertion.
+- Flutter formatter2file; official Dart3.13.7 SHA verified,18files/0changes recheck.
+  Historical upgrade tests assert cả policy HCM cũ và FREE0052 mới, không sửa
+  migration đã áp dụng. Review/withdrawal E2E mỗi suite sở hữu DB QA random riêng,
+  API/fixture cùng target, kiểm prefix khi teardown DB/users/roles, restore config
+  cả khi fail. Test simulator config được đặt sau Nest validation; giữ đầy đủ
+  reconciliation/permission/replay/race, không sửa ledger/product/DB local.
+- Profile: thêm tên accessible ô OTP; min/max-width và wrap label/email cho chữ
+  lớn, không clip/giảm font. Home: tooltip tên dài vô hình gây scroll456/320;
+  giới hạn width theo thẻ, giữ toàn bộ text và hover160ms.
+- Wallet: status-query lỗi có alert +retry query hiện hành, giữ pending data;
+  timer có role/tên, giữ poll/command/amount/key. Exchange error view nhúng lại
+  summary hiện có sau refactor:503 giữ khoản cọc có nhãn stale,403 ẩn khoản riêng
+  tư và sách/actions cache; retry thành công về context. Retry button dùng token
+  wine/ink đã định nghĩa. Chỉ3CSS source đổi sizing/wrapping/retry-color;
+  43CSS asset Member còn lại khớp byte, không đổi motion/transition/keyframe/asset.
+- Admin AI queue harness chờ đúng hồ sơ/overview, mở pane compact bằng entry thật;
+  giữ empty/exact recall key-body/audit, không đổi worker/model/quyền/checklist.
+  Exchange UX restore chỉ sau success để không che lỗi gốc; outer suite luôn cleanup.
+- Wallet browser dùng ô khả dụng riêng (số0 cũng xuất hiện ở ký quỹ), kiểm action
+  theo tên ở cạnh thẻ; validation/copy/heading theo UI và range OpenAPI hiện hành.
+  Form rút tiền: kiểm native required-field, quick amount disabled và cả click/
+  Enter vượt số dư với thông tin QA hợp lệ, không phát command; không suy chỉ từ
+  Continue disabled. Dùng/đóng modal bằng UI thật trước thao tác nền, chờ animation;
+  không force-click. Wallet chạy đầu nhóm Member E2E, vẫn giữ đủ các bài còn lại.
 
-CI đã lộ và xử lý: Flutter formatter2file (Dart3.13.7 SHA verified,18files/0changes
-recheck; Flutter analyze/test PASS remote ở các head giữa, NOT RUN local); clock
-fixture trước native IntersectionObserver; assertion mua khi title/cover cache
-hiện trước fresh-detail render (nay chờ badge held rồi assert không có Mua ngay);
-selector web card/profile/cart cũ (RN giữ riêng); Admin palette mở trước lazy route
-Dashboard hoàn tất (nay đợi heading, giữ focus2s); thêm accessible name ô OTP thiếu.
-Không bỏ assertion, tăng timeout hoặc đổi API/quyền để làm xanh.
+Kiểm chứng đã thực chạy:
+- Contract/types/routes257operations/39controllers, workspace lint/typecheck/build
+  và docs/diff PASS tại nguồn tích lũy. Default Windows `pnpm test` PASS1511/1511
+  trên44e544fc (session151/API419/RN224/Admin246/Member471). Hai lượt trước hit
+  shutdown child10s khi tải đồng thời; isolated/bounded-worker PASS rồi default
+  chạy riêng cũng PASS, không sửa shutdown test/timeout. Sau Exchange UI sửa:
+  Member471unit/58file,23finance unit/build/typecheck/scoped lint PASS.
+- Browser fixtures PASS: resolver22; pagination42screen/viewport +shared error/race;
+  motion5; listing-cache2width; profile6recovery +16layout (1440/768/390/320,
+  100/130% text); card2profiles/16layout-hover và Home4; Wallet credit10profiles;
+  Wallet status390/1440 (130%, focus/no-overflow, entry/validation/popup-block,
+  zero-balance withdrawal/no command); Exchange finance390/1440 stale/denied/retry.
+  Wallet history8ca refresh/next-page ×403/503 ×390/1440 PASS lại với pager hiện hành.
+  Đã xem ảnh lỗi mobile/desktop. Các fixture này là HTTP/storage/provider giả.
+- CI f0d0bebd:10/11checks PASS, gồm API unit/Mongo/full E2E, Operations đầy đủ,
+  Admin/RN/Flutter/demo/docs/startup/offline. Member qua motion và thanh toán giả
+  lập2lần/90000balance; dừng ở locator pager nằm ngoài region biên lai. Harness nay
+  lấy navigation Điều hướng phân trang, giữ lỗi trang sau/background refresh/
+  exact cursor retry/ledger/expiry assertions. Full CI head sửa còn phải xác minh.
+  Main ef7091e1 cũng từng FAIL API/web-smoke/member-profile trước PR97; đã đối
+  chiếu logs, không quy tất cả lỗi cho tối ưu.
 
-API E2E f0c467a0:3upgrade suites đã qua; quote-upgrade còn count policy1→2. Tests
-nay assert đầy đủ policy HCM nguyên vẹn +policy FREE0052 và selection hiện hành.
-Review, support/work-inbox fixture có Order lịch sử tối giản, không phải financial
-chain đầy đủ. Review và withdrawal suites nay mỗi suite sở hữu DB QA random riêng,
-API/fixture cùng target; teardown xác minh prefix rồi xóa DB/users/roles đã tạo,
-restore config dù failure. Giữ full withdrawal reconciliation/permission/replay/race.
-Không sửa migration/product/ledger; API typecheck/scoped lint0error PASS; E2E trên
-head mới vẫn chờ remote, không bật DB/API local. Main ef7091e1 cũng FAIL API/web
-smoke/member-profile trước PR97 (đã đối chiếu logs), không quy hết lỗi cho tối ưu.
-
-Operations87f03fba đã qua profile thật (save/upload/replay/email/font130), rồi lộ
-cart selector cũ. Cart test dùng entry hiện hành qua menu tài khoản và copy Cập nhật giỏ/count mới,
-giữ các kiểm
-tra mất ACK/exact replay/không giữ chỗ; chờ CI trên head chứa sửa entry này.
-Profile overflow390/130 tái hiện scroll422: sửa min-width/max-width/wrap label và
-email, không clip/giảm font.6recovery +16layout combinations1440/768/390/320 ×100/130
-với email dài PASS local; ảnh320/130 kiểm. Home CI scroll448/320: diagnostic chỉ ra
-tooltip tên dài trong suốt vẫn gây scroll. Fixture tên dài tái hiện456/320; đổi duy
-nhất max-width tooltip theo thẻ, sau305/320. Card typography2profiles +16layout/
-hover tooltip và Home4layouts PASS; giữ toàn bộ text, opacity/transform/160ms.
-
-Demo branch/HEAD `codex/demo-receipt-local-20261103`/`5bd0b360` giữ nguyên54file và
-status fingerprint. Không sync/build/stash/reset demo.44CSS Member còn khớp byte;
-2CSS đổi có chủ đích Profile sizing/wrapping và BookCard tooltip max-width, không
-animation/transition/keyframe/asset đổi trong gói xuất bản. Các fixture HTTP/storage
-fake/web export không là native/provider/human nghiệm thu. CI36aef3cd đã qua full Member smoke (gồm Home320/130), rồi seller-order gặp
-heading cũ; dùng phase heading hiện hành Thanh toán đơn sách. Cart đã qua
-lost-ACK/exact replay, gặp price notice đổi copy; nay kiểm tag giá lúc thêm và cả
-giá hiện hành140000. API87f03fba:42file E2E PASS/1FAIL/1skip; mọi migration qua,
-withdrawal cuối suite reconcile đã qua, còn funding503 do ConfigModule validate
-env trước beforeAll. Fixture nay set simulator config trên app ConfigService như
-wallet-checkout; không đổi code tiền. APItypecheck PASS, full E2E mới chờ CI.
-
-Rà Wallet E2E: giữ UI hiện hành (tab/pager/nút/label/modal và tracking card),
-giữ kiểm tra số dư, cursor, key/body, callback, expiry. Range VNPay mới lấy đúng
-OpenAPI5000–9999999999, không đổi business. WalletPage lộ thiếu read-error/retry
-khi status query503: thêm alert/nút refetch query hiện hành, giữ pending data;
-đặt role/tên cho timer, không đổi poll/command/amount/key/style/motion.
-Fixture HTTP-only mới wallet-status-recovery: baseline FAIL thiếu alert; after2
-viewport390/1440 PASS retained-status/retry/no-money-command. Đã nối vào CI;
-471unit/58file, Member rebuild/typecheck/scoped lint0error PASS. Full browser/API
-E2E trên head sửa vẫn phải chạy và đọc lại, không lấy các head giữa làm finalPASS.
-
-CI21974d34: API đầy đủ PASS, cùng9/11checks tổng đã xanh; Member browser qua
-smoke, seller-order lộ context sách thu gọn trên mobile (nay mở qua toggle thật
-trước kiểm title); operations qua cart, dừng support ở link hồ sơ cũ. Reviews hiện nhúng hồ sơ đầy đủ và có CTA
-Xem trang công khai; harness theo CTA này, vẫn assert đúng /members/owner.
-Harness dùng các entry hiện hành; phase sau thanh toán được tìm bằng heading,
-tránh trùng label với pill trạng thái. Giữ route/permission/draft/financial assertions.
-Wallet status fixture thêm130% text, no-overflow, focus retry và ảnh390/1440:
-PASS local, đã xem ảnh error mobile; không đổi runtime/style/motion.
-Wallet credit regression10profiles PASS local sau read-error UI; human review
-vẫn OPEN, chưa merge. Head chứa selector sửa phải chạy lại CI đủ trước squash. CI5c08e9f4 seller-order
-đã qua; buy-now lộ cùng context mobile thu gọn, nay đợi aside rồi mở bằng toggle
-cho cả buyer/seller trước kiểm badge/title. Không bỏ snapshot/payment/ledger assertions. CI81f5b564 support đã tới bước cuối
-thông báo kiểm duyệt → exact review; chỉ cập nhật heading Chi tiết đánh giá giao
-dịch (region vẫn Đánh giá giao dịch), giữ deep-link và kiểm bản ghi hidden.
-
-Admin AI harness có race vào hàng chờ: sidebar cố ý tự mở hồ sơ đầu, test lọc
-ngay trong chuyển route nên compact pane có thể ẩn empty/list. Nay chờ hồ sơ,
-dùng Về danh sách để lấy overview thật; AI None tự mở đúng id rồi Mở hàng chờ
-nếu pane compact. Giữ assert empty/đúng hồ sơ/exact recall key-body/audit; không
-đổi AI worker/model/quyền/checklist hoặc tăng timeout. Scoped syntax/lint PASS,
-chờ CI. Admin/Staff AI readiness vẫn giữ gate/cờ tắt, test chỉ seed QA kết quả.
-
-CI44e544fc Member đã qua buy-now/order-review/socket và tới exchange. UX helper
-Exchange dùng menu/Chat label cũ, lại restore trong finally nên lỗi restore có
-thể che assertion gốc. Nay dùng Menu tài khoản → Trao đổi, Chat prefix hỗ trợ
-active-room count; restore là bước sau success, outer suite vẫn đóng browser/API
-khi fail. Wallet helper dùng cùng menu thực, wallet link gồm balance và region
-thẻ ví cho balance90000; giữ mọi assertion số dư và menu/focus. Chờ full CI.
-
-CI4e1d32f6 operations PASS đầy đủ; Member qua UX helper rồi phát hiện hồi quy
-workspace Exchange: lỗi đọc làm mất summary tài chính sau refactor. Nhúng lại
-component summary hiện có ở error view:503 giữ khoản có nhãn stale,403 ẩn khoản
-riêng tư; không hiển thị sách/actions cache hoặc phát money command. Retry thành
-công trở về context hiện hành. Nút Thử lại dùng token wine/ink hiện có thay biến
-legacy không định nghĩa (ảnh cho thấy chữ trắng mất nền). Chỉ thêm layout wrapper
-và màu retry trong ExchangeDetailPage CSS, không đổi motion/transition/keyframe.
-Production HTTP fixture390/1440,130% chữ kiểm stale/denied/retry/no command và
-chiều rộng đọc được;23finance unit và471Member unit/build/scoped lint PASS local.
-Đã xem ảnh mobile. CI head chứa sửa này vẫn phải xác minh, không suy từ4e1.
-Wallet harness còn5heading cũ và2copy validation/popup-block khác source; nay
-theo heading Ví & Ký Quỹ Thư Quán và copy thực, không đổi runtime/giới hạn tiền.
-Mở rộng fixture status để kiểm chính các entry/validation/popup-block và nhãn
-tối thiểu rút tiền ở cả390/1440: PASS, không phát money command. Selector mức
-tối thiểu dùng đúng nhãn thay regex trùng nút chọn nhanh. CIb802 lộ số0 trùng
-số dư khả dụng/ký quỹ; helper nay kiểm đúng ô số dư, vẫn assert chính xác số tiền.
-Các action nằm cạnh thẻ, nên kiểm refresh theo tên cùng topup/withdraw thay đếm
-button trong region chỉ chứa khoản tiền. Fixture local kiểm lại các locator này.
-API4e1d32f6 đã PASS đầy đủ; Exchange real-API browser đã PASS trênbad82/b802/6bc.
-CI6bc wallet: Continue cho phép submit để báo validation, không phải nút disabled
-như harness cũ. Nay assert quick amount disabled, cả click/Enter với0balance báo
-vượt số dư và không phát withdrawal command, thay vì suy chỉ từ trạng thái nút.
-Fixture HTTP-only390/1440 kiểm lại guard này; không đổi runtime/permission/tiền.
-Đưa wallet lên đầu nhóm Member E2E để phản hồi sớm; giữ đủ mọi bước còn lại.
-CI334 wallet đã qua guards và callback giả không ghi có; dừng khi helper click
-nút nền lúc modal nạp vẫn được UI giữ mở sau Return. openTopup nay dùng modal
-đang mở, chỉ click entry khi chưa mở; vẫn chờ animation và giữ các assert intent/
-số tiền/disabled/callback/ledger, không force-click hoặc đổi runtime.
-CI0d6 đã tới ledger sau2lần nạp giả lập/90000balance; harness cần đóng modal bằng
-nút thật trước click tab lịch sử. Bổ sung bước đóng này, giữ filter/cursor/retry/
-ledger/expiry assertions và runtime; full CI head sửa vẫn phải đọc lại.
-
-Không local API/Mongo/
-worker/provider, migration/seed/deploy. Bước tiếp: đọc đủ CI đúng SHA cuối, xử lý
-lỗi nếu còn; chờ owner vùng ảnh hưởng +reviewer thứ hai tiền/quyền/dispute, rồi squash.
+Demo `codex/demo-receipt-local-20261103`/`5bd0b360` giữ54file tracked/untracked và
+status fingerprint; không sync/build/stash/reset checkout Documents. Không local
+API/Mongo/worker/provider, migration/seed/deploy. Local Flutter analyze/test,
+full native/live-provider/human acceptance NOT RUN; READINESS giữ nguyên.
+Bước tiếp: đọc đủ CI đúng SHA cuối, sửa lỗi nếu còn; hoàn tất review theo TEAMWORK
+rồi squash PR97. Không tự bật AI auto-review hoặc mở rộng gate nghiệp vụ.
 
 # Gia cố khả năng phục hồi web —05/11/2026
 

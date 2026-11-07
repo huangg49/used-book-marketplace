@@ -200,6 +200,10 @@ try {
     name: "Lịch sử giao dịch",
     exact: true,
   });
+  const ledgerPager = page.getByRole("navigation", {
+    name: "Điều hướng phân trang",
+    exact: true,
+  });
   await ledgerHistory.getByRole("heading", { name: "Chưa có biến động số dư", exact: true }).waitFor();
   const topupButton = page.getByRole("button", {
     name: "Nạp tiền VNPay",
@@ -598,7 +602,7 @@ try {
     .getByRole("tab", { name: "Nạp tiền", exact: true }).click();
   await ledgerHistory.locator("li").first().waitFor();
   assert.equal(await ledgerHistory.locator("li").count(), 1);
-  await ledgerHistory
+  await ledgerPager
     .getByRole("button", { name: "Đến trang tiếp theo", exact: true })
     .click();
   await ledgerHistory
@@ -613,7 +617,7 @@ try {
     await queryClient.invalidateQueries({ queryKey: ["wallet-history"] });
   });
   assert.equal(await ledgerHistory.locator("li").count(), 1, "a background refresh preserves the loaded ledger page");
-  await ledgerHistory
+  await ledgerPager
     .getByRole("button", { name: "Đến trang tiếp theo", exact: true })
     .click();
   await ledgerHistory.locator("li").nth(1).waitFor();
