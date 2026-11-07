@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
 import * as Crypto from "expo-crypto";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +12,7 @@ import {
   Button,
   Chip,
   ConfirmDialog,
+  Icon,
   Notice,
   Screen,
   StatePanel,
@@ -21,7 +22,10 @@ import {
   presentError,
   radius,
   space,
+  stitchTokens,
 } from "../../core/ui";
+import { AuctionCover } from "./components/auction-cover";
+import { conditions as conditionLabels } from "../shelf/contracts";
 import {
   AUCTION_MAX_PRICE,
   amountError,
@@ -227,40 +231,307 @@ function AuctionBody({
   const open = isOpen(auction, now);
   const scheduled = isScheduled(auction, now);
   const price = auction.currentPrice ?? auction.startPrice;
+  const photos = auction.book?.photos ?? [];
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
+  const selectedMediaId = photos[selectedPhotoIndex]?.id ?? photos[0]?.id;
+  const authors = auction.book?.authors.join(", ");
+
   return (
-    <View style={{ gap: space.xl }}>
-      <View style={{ gap: space.sm }}>
-        <AppText kind="label" color={colors.rustText}>
-          {STATE_LABEL[auction.state].toUpperCase()}
-        </AppText>
-        <AppText kind="bookTitle" color={colors.forest} accessibilityRole="header">
+    <View style={{ gap: space.lg }}>
+      {/* 1. Large Cover Gallery with Badges */}
+      <View style={{ gap: 8 }}>
+        <View
+          style={{
+            width: "100%",
+            aspectRatio: 3 / 4,
+            maxHeight: 340,
+            borderRadius: radius.card * 2,
+            overflow: "hidden",
+            backgroundColor: stitchTokens.parchment,
+            borderWidth: 1,
+            borderColor: stitchTokens.cardBorder,
+            position: "relative",
+            alignSelf: "center",
+          }}
+        >
+          <AuctionCover
+            auctionId={auction.id}
+            mediaId={selectedMediaId}
+            label={auction.title}
+            iconSize={48}
+          />
+
+          {/* Floating State Badge */}
+          <View
+            style={{
+              position: "absolute",
+              top: 12,
+              left: 12,
+              backgroundColor: open
+                ? stitchTokens.wineDark
+                : scheduled
+                  ? stitchTokens.wineAlpha85
+                  : stitchTokens.subtleGray,
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              borderRadius: 6,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 5,
+            }}
+          >
+            {open && (
+              <View
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: 3,
+                  backgroundColor: stitchTokens.likeNewGreen,
+                }}
+              />
+            )}
+            <AppText
+              kind="small"
+              style={{
+                color: stitchTokens.white,
+                fontWeight: "700",
+                fontSize: 11,
+              }}
+            >
+              {STATE_LABEL[auction.state].toUpperCase()}
+            </AppText>
+          </View>
+
+          {/* Floating Countdown Pill */}
+          <View
+            style={{
+              position: "absolute",
+              bottom: 12,
+              right: 12,
+              backgroundColor: stitchTokens.scrimDark,
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              borderRadius: 6,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 5,
+            }}
+          >
+            <Icon name="clock" size={13} color={stitchTokens.goldAccent} />
+            <AppText
+              kind="small"
+              style={{
+                color: stitchTokens.white,
+                fontWeight: "700",
+                fontSize: 11,
+              }}
+            >
+              {scheduled
+                ? `Mở sau ${formatRemaining(Date.parse(auction.startAt) - now)}`
+                : open
+                  ? `Còn ${formatRemaining(Date.parse(auction.endAt) - now)}`
+                  : `Đã kết thúc`}
+            </AppText>
+          </View>
+        </View>
+
+        {/* Thumbnail Row if multiple photos */}
+        {photos.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
+          >
+            {photos.map((photo, idx) => {
+              const active = idx === selectedPhotoIndex;
+              return (
+                <Pressable
+                  key={photo.id}
+                  onPress={() => setSelectedPhotoIndex(idx)}
+                  style={{
+                    width: 54,
+                    height: 54,
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    borderWidth: 2,
+                    borderColor: active
+                      ? stitchTokens.wineDark
+                      : stitchTokens.cardBorder,
+                    opacity: active ? 1 : 0.65,
+                  }}
+                >
+                  <AuctionCover
+                    auctionId={auction.id}
+                    mediaId={photo.id}
+                    label={`${auction.title} - ảnh ${idx + 1}`}
+                    iconSize={16}
+                  />
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
+      </View>
+
+      {/* 2. Title & Author & Condition */}
+      <View style={{ gap: space.xs }}>
+        <AppText kind="bookTitle" color={colors.ink} accessibilityRole="header">
           {auction.title}
         </AppText>
-        <AppText kind="small" color={colors.muted}>
-          Đã kiểm tra tình trạng tại {auction.pointName}. Người thắng tự nhận sách tại điểm.
-        </AppText>
+        {authors ? (
+          <AppText kind="reading" color={colors.muted}>
+            Tác giả: <AppText kind="bold" color={colors.ink}>{authors}</AppText>
+          </AppText>
+        ) : null}
+
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+          {auction.book?.condition && (
+            <View
+              style={{
+                backgroundColor: stitchTokens.roseWarmSurface,
+                borderWidth: 1,
+                borderColor: stitchTokens.peachBorder,
+                borderRadius: 6,
+                paddingHorizontal: 8,
+                paddingVertical: 3,
+              }}
+            >
+              <AppText kind="small" style={{ color: stitchTokens.wineDark, fontWeight: "600" }}>
+                Tình trạng: {conditionLabels[auction.book.condition] ?? auction.book.condition}
+              </AppText>
+            </View>
+          )}
+
+          <View
+            style={{
+              backgroundColor: stitchTokens.parchment,
+              borderWidth: 1,
+              borderColor: stitchTokens.cardBorder,
+              borderRadius: 6,
+              paddingHorizontal: 8,
+              paddingVertical: 3,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 4,
+            }}
+          >
+            <Icon name="pin" size={12} color={stitchTokens.wineDark} />
+            <AppText kind="small" style={{ color: stitchTokens.deepCocoa }}>
+              {auction.pointName}
+            </AppText>
+          </View>
+        </View>
       </View>
-      <View style={{ gap: space.xs, padding: space.lg, borderRadius: radius.card, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.rule }}>
-        <AppText kind="small" color={colors.muted}>
-          {auction.currentPrice === null
-            ? "Giá khởi điểm"
-            : open
-              ? "Giá hiện tại"
-              : CLOSED_PRICE[auction.state] ?? "Giá cuối"}
-        </AppText>
-        <AppText kind="bookPrice" color={colors.ink} selectable accessibilityLiveRegion="polite">
-          {formatVnd(price)}
-        </AppText>
-        <AppText kind="small" color={colors.muted}>
-          {auction.bidderCount} người trả giá · bước giá {formatVnd(auction.step)}
-        </AppText>
-        <AppText kind="small" color={colors.muted}>
-          {scheduled
-            ? `Mở lúc ${time(auction.startAt)} · còn ${formatRemaining(Date.parse(auction.startAt) - now)} · kết thúc ${time(auction.endAt)}`
-            : open
-            ? `Còn ${formatRemaining(Date.parse(auction.endAt) - now)} · kết thúc ${time(auction.endAt)}`
-            : `Phiên kết thúc lúc ${time(auction.endAt)}`}
-        </AppText>
+
+      {/* 3. Inspection & Trust Banner */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "flex-start",
+          gap: 10,
+          padding: 12,
+          borderRadius: radius.card,
+          backgroundColor: stitchTokens.roseWarmSurface,
+          borderWidth: 1,
+          borderColor: stitchTokens.peachBorder,
+        }}
+      >
+        <Icon name="verified" size={18} color={stitchTokens.wineDark} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <AppText kind="bold" style={{ fontSize: 13, color: stitchTokens.wineDark }}>
+            Đã kiểm định trước khi lên sàn
+          </AppText>
+          <AppText kind="small" color={colors.muted} style={{ lineHeight: 16 }}>
+            Bản sách đã được nhân viên kiểm tra đạt chuẩn tại điểm giao nhận {auction.pointName}. Người thắng nhận sách an tâm trực tiếp tại điểm.
+          </AppText>
+        </View>
+      </View>
+
+      {/* 4. Price & Bid Stats Card */}
+      <View
+        style={{
+          gap: space.sm,
+          padding: space.lg,
+          borderRadius: radius.card * 1.5,
+          backgroundColor: stitchTokens.whiteSurface,
+          borderWidth: 1.5,
+          borderColor: stitchTokens.peachBorder,
+          shadowColor: stitchTokens.black,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 5,
+          elevation: 2,
+        }}
+      >
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <View>
+            <AppText kind="small" color={colors.muted}>
+              {auction.currentPrice === null
+                ? "Giá khởi điểm"
+                : open
+                  ? "Giá hiện tại"
+                  : CLOSED_PRICE[auction.state] ?? "Giá cuối"}
+            </AppText>
+            <AppText
+              kind="bookPrice"
+              color={stitchTokens.wineDark}
+              style={{ fontSize: 26, fontWeight: "800", marginVertical: 2 }}
+              selectable
+              accessibilityLiveRegion="polite"
+            >
+              {formatVnd(price)}
+            </AppText>
+          </View>
+
+          {auction.buyNowPrice !== null && open && (
+            <View
+              style={{
+                backgroundColor: stitchTokens.roseWarmSurface,
+                borderWidth: 1,
+                borderColor: stitchTokens.peachBorder,
+                borderRadius: 8,
+                paddingHorizontal: 8,
+                paddingVertical: 5,
+                alignItems: "flex-end",
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                <Icon name="bolt" size={13} color={stitchTokens.wineDark} />
+                <AppText kind="small" style={{ color: stitchTokens.wineDark, fontWeight: "700" }}>
+                  Mua ngay
+                </AppText>
+              </View>
+              <AppText kind="bold" style={{ color: stitchTokens.wineDark, fontSize: 13 }}>
+                {formatVnd(auction.buyNowPrice)}
+              </AppText>
+            </View>
+          )}
+        </View>
+
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingTop: space.xs,
+            borderTopWidth: 1,
+            borderTopColor: stitchTokens.cardBorder,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Icon name="gavel" size={13} color={stitchTokens.subtleGray} />
+            <AppText kind="small" color={colors.muted}>
+              {auction.bidderCount} người trả giá · bước {formatVnd(auction.step)}
+            </AppText>
+          </View>
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Icon name="clock" size={13} color={stitchTokens.subtleGray} />
+            <AppText kind="small" color={colors.muted}>
+              {time(auction.endAt)}
+            </AppText>
+          </View>
+        </View>
       </View>
       {open && auction.buyNowAt ? (
         <Notice tone="warning">

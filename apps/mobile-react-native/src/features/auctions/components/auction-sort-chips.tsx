@@ -7,6 +7,8 @@ export interface AuctionSortChipsProps {
   readonly onSelectSort: (sort: string) => void;
   readonly filterHasBuyNow: boolean;
   readonly onToggleBuyNow: () => void;
+  readonly onOpenFilterModal?: () => void;
+  readonly activeFilterCount?: number;
 }
 
 const SORTS = [
@@ -21,6 +23,8 @@ export function AuctionSortChips({
   onSelectSort,
   filterHasBuyNow,
   onToggleBuyNow,
+  onOpenFilterModal,
+  activeFilterCount = 0,
 }: AuctionSortChipsProps) {
   return (
     <ScrollView
@@ -28,10 +32,39 @@ export function AuctionSortChips({
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.filterChipsScroll}
     >
+      {onOpenFilterModal && (
+        <Pressable
+          onPress={onOpenFilterModal}
+          style={[
+            styles.sortChip,
+            activeFilterCount > 0 && styles.sortChipActive,
+          ]}
+        >
+          <Icon
+            name="tune"
+            size={13}
+            color={
+              activeFilterCount > 0
+                ? stitchTokens.whiteSurface
+                : stitchTokens.wineDark
+            }
+          />
+          <AppText
+            kind="small"
+            style={[
+              styles.sortChipText,
+              activeFilterCount > 0 && styles.sortChipTextActive,
+            ]}
+          >
+            {activeFilterCount > 0 ? `Bộ lọc (${activeFilterCount})` : "Bộ lọc"}
+          </AppText>
+        </Pressable>
+      )}
+
       <View style={styles.filterPrefix}>
         <Icon name="filterList" size={14} color={stitchTokens.subtleGray} />
         <AppText kind="small" style={styles.filterPrefixText}>
-          Lọc:
+          Sắp xếp:
         </AppText>
       </View>
 

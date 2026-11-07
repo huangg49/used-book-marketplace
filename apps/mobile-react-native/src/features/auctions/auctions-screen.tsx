@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "../../core/session/session-provider";
@@ -20,23 +20,34 @@ import {
 import { MemberNavigation } from "../navigation/member-navigation";
 import {
   AUCTIONS_QUERY_KEY,
+  AUCTION_ENDING,
+  AUCTION_PRICE_RANGES,
+  DEFAULT_AUCTION_FILTERS,
+  activeFilterCount,
   isOpen,
+  matchesAuctionFilters,
   myAuctionsOptions,
   usePublicAuctions,
+  useUpcomingAuctions,
+  type AuctionFilters,
 } from "./auctions-model";
 import type { PublicAuctionSummary } from "./contracts";
 import {
   AuctionCard,
   AuctionCategoryTabs,
+  AuctionFilterModal,
+  AuctionGuideModal,
   AuctionHeroCard,
   AuctionOutbidAlert,
   AuctionSearchBar,
   AuctionSortChips,
+  UpcomingAuctionsShelf,
   type CategoryTabId,
 } from "./components";
 import { AuctionQuickBidModal } from "./auction-quick-bid-modal";
 import { HomeNotificationsModal } from "../shelf/home-components/home-notifications-modal";
 import { useNotifications } from "../notifications/notifications-model";
+import { conditions as conditionLabels } from "../shelf/contracts";
 
 export function AuctionsScreen() {
   const { client, state } = useSession();
@@ -54,6 +65,13 @@ export function AuctionsScreen() {
   // Open auctions, soonest end first (server order).
   const result = usePublicAuctions(client, foreground);
   const allAuctions = useMemo(() => result.data?.items ?? [], [result.data]);
+
+  // ADR 0047: scheduled auctions shown separately
+  const upcomingResult = useUpcomingAuctions(client, foreground);
+  const upcomingAuctions = useMemo(
+    () => upcomingResult.data?.items ?? [],
+    [upcomingResult.data],
+  );
 
   // The member's own open activity, for the outbid alert and history badge.
   const mine = useInfiniteQuery({
@@ -79,6 +97,16 @@ export function AuctionsScreen() {
   const [selectedTab, setSelectedTab] = useState<CategoryTabId>("all");
   const [selectedSort, setSelectedSort] = useState<string>("newest");
   const [filterHasBuyNow, setFilterHasBuyNow] = useState(false);
+  const [filters, setFilters] = useState<AuctionFilters>(DEFAULT_AUCTION_FILTERS);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [guideModalOpen, setGuideModalOpen] = useState(false);
+
+  // Available points for filter
+  const availablePoints = useMemo(
+    () =>
+      [...new Set(allAuctions.map((a) => a.pointName).filter(Boolean))].sort(),
+    [allAuctions],
+  );
 
   // Watchlist (bookmarked auction IDs, kept on this screen only)
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(
@@ -107,14 +135,14 @@ export function AuctionsScreen() {
   const displayedAuctions = useMemo(() => {
     let list = [...allAuctions];
 
-    // Search query
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      list = list.filter(
-        (a) =>
-          a.title.toLowerCase().includes(q) ||
-          a.book?.authors.some((name) => name.toLowerCase().includes(q)),
-      );
+    // Search query & advanced filters
+    list = list.filter((a) =>
+      matchesAuctionFilters(a, { ...filters, q: search }, now),
+    );
+
+    // Quick Buy Now toggle
+    if (filterHasBuyNow && !filters.buyNow) {
+      list = list.filter((a) => a.buyNowPrice !== null);
     }
 
     // Category tabs
@@ -127,11 +155,6 @@ export function AuctionsScreen() {
       list = list.filter((a) => bookmarkedIds.has(a.id));
     } else if (selectedTab === "zero_vnd") {
       list = list.filter((a) => a.startPrice <= 100000);
-    }
-
-    // Quick filter chips
-    if (filterHasBuyNow) {
-      list = list.filter((a) => a.buyNowPrice !== null);
     }
 
     // Sorting
@@ -155,9 +178,10 @@ export function AuctionsScreen() {
   }, [
     allAuctions,
     search,
+    filters,
+    filterHasBuyNow,
     selectedTab,
     selectedSort,
-    filterHasBuyNow,
     now,
     bookmarkedIds,
   ]);
@@ -195,6 +219,8 @@ export function AuctionsScreen() {
     setToastMessage(`Đã đặt giá thành công mức ${formatVnd(amount)}!`);
   };
 
+  const activeFiltersNum = activeFilterCount(filters);
+
   return (
     <Screen
       appearance="home"
@@ -214,7 +240,7 @@ export function AuctionsScreen() {
           onMessagesPress={() => router.push("/chat-inbox")}
         />
 
-        {/* 2. Search & Shortcuts Sub-Header */}
+        {/* 2. Search & Shortcuts Sub-Header (seller banner on top, search bar below) */}
         <AuctionSearchBar
           search={search}
           onSearchChange={setSearch}
@@ -222,6 +248,9 @@ export function AuctionsScreen() {
           historyCount={attentionCount}
           isMember={isMember}
           onSendToAuctionPress={handleSendToAuction}
+          onFilterPress={() => setFilterModalVisible(true)}
+          activeFilterCount={activeFiltersNum}
+          onGuidePress={() => setGuideModalOpen(true)}
         />
 
         {/* 3. Outbid alert from the member's own open bids */}
@@ -232,7 +261,7 @@ export function AuctionsScreen() {
           }}
         />
 
-        {/* 4. The open auction that ends soonest */}
+        {/* 5. The open auction that ends soonest */}
         {heroAuction && (
           <AuctionHeroCard
             auction={heroAuction}
@@ -242,13 +271,150 @@ export function AuctionsScreen() {
           />
         )}
 
-        {/* 5. PHÂN KHU 2: TIÊU ĐỀ SÁCH CŨ ĐANG ĐẤU GIÁ */}
+        {/* 6. Upcoming Auctions (Lịch hẹn sàn) */}
+        {upcomingAuctions.length > 0 && (
+          <UpcomingAuctionsShelf
+            items={upcomingAuctions}
+            now={now}
+            onOpenAuction={handleOpenAuction}
+          />
+        )}
+
+        {/* 7. Quick Category Tabs */}
+        <AuctionCategoryTabs
+          selectedTab={selectedTab}
+          onSelectTab={setSelectedTab}
+          totalCount={allAuctions.length}
+          watchlistCount={bookmarkedIds.size}
+        />
+
+        {/* 8. Sort & Filter Chips */}
+        <AuctionSortChips
+          selectedSort={selectedSort}
+          onSelectSort={setSelectedSort}
+          filterHasBuyNow={filterHasBuyNow || filters.buyNow}
+          onToggleBuyNow={() => {
+            setFilterHasBuyNow((v) => !v);
+            setFilters((prev) => ({ ...prev, buyNow: !prev.buyNow }));
+          }}
+          onOpenFilterModal={() => setFilterModalVisible(true)}
+          activeFilterCount={activeFiltersNum}
+        />
+
+        {/* 10. Active Filter Chips Bar */}
+        {(activeFiltersNum > 0 || search.trim().length > 0) && (
+          <View style={styles.activeFiltersBar}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.activeFiltersScroll}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <AppText kind="small" style={styles.activeFiltersCountText}>
+                  {displayedAuctions.length} kết quả
+                </AppText>
+              </View>
+
+              {filters.point ? (
+                <Pressable
+                  onPress={() => setFilters((prev) => ({ ...prev, point: "" }))}
+                  style={styles.activeChip}
+                >
+                  <AppText kind="small" style={styles.activeChipText}>
+                    {filters.point}
+                  </AppText>
+                  <Icon name="close" size={12} color={stitchTokens.wineDark} />
+                </Pressable>
+              ) : null}
+
+              {filters.conditions.map((c) => (
+                <Pressable
+                  key={c}
+                  onPress={() =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      conditions: prev.conditions.filter((item) => item !== c),
+                    }))
+                  }
+                  style={styles.activeChip}
+                >
+                  <AppText kind="small" style={styles.activeChipText}>
+                    {conditionLabels[c] ?? c}
+                  </AppText>
+                  <Icon name="close" size={12} color={stitchTokens.wineDark} />
+                </Pressable>
+              ))}
+
+              {filters.price ? (
+                <Pressable
+                  onPress={() => setFilters((prev) => ({ ...prev, price: "" }))}
+                  style={styles.activeChip}
+                >
+                  <AppText kind="small" style={styles.activeChipText}>
+                    {AUCTION_PRICE_RANGES[filters.price]?.label}
+                  </AppText>
+                  <Icon name="close" size={12} color={stitchTokens.wineDark} />
+                </Pressable>
+              ) : null}
+
+              {filters.ending ? (
+                <Pressable
+                  onPress={() => setFilters((prev) => ({ ...prev, ending: "" }))}
+                  style={styles.activeChip}
+                >
+                  <AppText kind="small" style={styles.activeChipText}>
+                    {AUCTION_ENDING[filters.ending]?.label}
+                  </AppText>
+                  <Icon name="close" size={12} color={stitchTokens.wineDark} />
+                </Pressable>
+              ) : null}
+
+              {filters.buyNow ? (
+                <Pressable
+                  onPress={() => setFilters((prev) => ({ ...prev, buyNow: false }))}
+                  style={styles.activeChip}
+                >
+                  <AppText kind="small" style={styles.activeChipText}>
+                    Mua ngay
+                  </AppText>
+                  <Icon name="close" size={12} color={stitchTokens.wineDark} />
+                </Pressable>
+              ) : null}
+
+              {filters.noBids ? (
+                <Pressable
+                  onPress={() => setFilters((prev) => ({ ...prev, noBids: false }))}
+                  style={styles.activeChip}
+                >
+                  <AppText kind="small" style={styles.activeChipText}>
+                    Chưa ai trả giá
+                  </AppText>
+                  <Icon name="close" size={12} color={stitchTokens.wineDark} />
+                </Pressable>
+              ) : null}
+
+              <Pressable
+                onPress={() => {
+                  setFilters(DEFAULT_AUCTION_FILTERS);
+                  setSearch("");
+                }}
+                style={styles.clearAllBtn}
+              >
+                <AppText kind="small" style={styles.clearAllBtnText}>
+                  Xóa tất cả
+                </AppText>
+              </Pressable>
+            </ScrollView>
+          </View>
+        )}
+
+        {/* 9. Tiêu đề Sách Cũ Đang Đấu Giá - Đặt dưới hàng Mới nhất / Sắp xếp */}
         <View style={styles.gridSectionHeaderContainer}>
           <View style={styles.gridSectionHeader}>
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
             >
-              <Icon name="gavel" size={18} color={stitchTokens.wine} />
+              <Icon name="gavel" size={17} color={stitchTokens.wine} />
               <AppText kind="bold" style={styles.gridSectionTitle}>
                 Sách Cũ Đang Đấu Giá
               </AppText>
@@ -259,23 +425,7 @@ export function AuctionsScreen() {
           </View>
         </View>
 
-        {/* 6. Quick Category Tabs */}
-        <AuctionCategoryTabs
-          selectedTab={selectedTab}
-          onSelectTab={setSelectedTab}
-          totalCount={allAuctions.length}
-          watchlistCount={bookmarkedIds.size}
-        />
-
-        {/* 7. Sort & Filter Chips */}
-        <AuctionSortChips
-          selectedSort={selectedSort}
-          onSelectSort={setSelectedSort}
-          filterHasBuyNow={filterHasBuyNow}
-          onToggleBuyNow={() => setFilterHasBuyNow((v) => !v)}
-        />
-
-        {/* 8. Loading / error / empty */}
+        {/* 10. Loading / error / empty */}
         <View style={styles.sectionContainer}>
           {result.isPending && (
             <StatePanel loading title="Đang tải phiên đấu giá" />
@@ -341,6 +491,25 @@ export function AuctionsScreen() {
         onSuccess={handleBidSuccess}
       />
 
+      {/* Filter Modal */}
+      <AuctionFilterModal
+        visible={filterModalVisible}
+        filters={filters}
+        availablePoints={availablePoints}
+        totalMatchesCount={displayedAuctions.length}
+        onClose={() => setFilterModalVisible(false)}
+        onApply={(nextFilters) => {
+          setFilters(nextFilters);
+          if (nextFilters.buyNow) setFilterHasBuyNow(true);
+        }}
+      />
+
+      {/* 3-Step Guide Modal (toggled by '?' in seller banner) */}
+      <AuctionGuideModal
+        visible={guideModalOpen}
+        onClose={() => setGuideModalOpen(false)}
+      />
+
       {/* Real Notifications Modal */}
       <HomeNotificationsModal
         visible={notificationsOpen}
@@ -363,6 +532,45 @@ const styles = StyleSheet.create({
   sectionContainer: {
     paddingHorizontal: 16,
     marginBottom: 16,
+  },
+  activeFiltersBar: {
+    marginBottom: 10,
+  },
+  activeFiltersScroll: {
+    paddingHorizontal: 16,
+    gap: 8,
+    alignItems: "center",
+  },
+  activeFiltersCountText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: stitchTokens.wineDark,
+    marginRight: 4,
+  },
+  activeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: stitchTokens.roseWarmSurface,
+    borderWidth: 1,
+    borderColor: stitchTokens.peachBorder,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  activeChipText: {
+    fontSize: 12,
+    color: stitchTokens.wineDark,
+    fontWeight: "600",
+  },
+  clearAllBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  clearAllBtnText: {
+    fontSize: 12,
+    color: stitchTokens.subtleGray,
+    textDecorationLine: "underline",
   },
   gridSectionHeaderContainer: {
     paddingHorizontal: 16,

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { View, Linking } from "react-native";
 import { useQuery } from "@tanstack/react-query";
-import * as DocumentPicker from "expo-document-picker";
 import * as Crypto from "expo-crypto";
 import { File } from "expo-file-system";
 import {
@@ -15,6 +14,45 @@ import {
 } from "@used-books/session-client";
 import { useSession } from "../../core/session/session-provider";
 import { AppText, Button, Notice, space } from "../../core/ui";
+
+async function pickEvidenceAsset() {
+  try {
+    const DocumentPicker = await import("expo-document-picker");
+    const result = await DocumentPicker.getDocumentAsync({
+      type: [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "application/pdf",
+        "video/mp4",
+      ],
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+    if (result.canceled || !result.assets?.[0]) return null;
+    return result.assets[0];
+  } catch {
+    const ImagePicker = await import("expo-image-picker");
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images", "videos"],
+      allowsEditing: false,
+      quality: 1,
+    });
+    if (res.canceled || !res.assets?.[0]) return null;
+    const a = res.assets[0];
+    return {
+      uri: a.uri,
+      name:
+        a.fileName || (a.type === "video" ? "evidence.mp4" : "evidence.jpg"),
+      mimeType: (a.mimeType ||
+        (a.type === "video"
+          ? "video/mp4"
+          : "image/jpeg")) as EvidenceInput["mimeType"],
+      size: a.fileSize || 0,
+      file: (a as { file?: File }).file,
+    };
+  }
+}
 export function ExchangeEvidenceCard({
   id,
   revision,
@@ -44,21 +82,10 @@ export function ExchangeEvidenceCard({
     try {
       let input: EvidenceInput | null = null;
       if (!pending) {
-        const result = await DocumentPicker.getDocumentAsync({
-          type: [
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-            "application/pdf",
-            "video/mp4",
-          ],
-          copyToCacheDirectory: true,
-          multiple: false,
-        });
-        if (result.canceled) return;
+        const asset = await pickEvidenceAsset();
+        if (!asset) return;
         if (evidenceIdentity(client) !== userId) return;
-        const asset = result.assets[0],
-          mime = asset.mimeType as EvidenceInput["mimeType"];
+        const mime = asset.mimeType as EvidenceInput["mimeType"];
         if (
           ![
             "image/jpeg",
