@@ -194,7 +194,7 @@ try {
   const openNewestOrder = async (id) => {
     await button(p, "Về kệ sách").click();
     await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
-    await p.getByRole("button", { name: /^Đơn mua\/bán trực tiếp/ }).click();
+    await p.getByRole("button", { name: "Đơn hàng của tôi", exact: true }).click();
     const card = p
       .getByText("#" + id.slice(0, 8).toUpperCase(), { exact: true })
       .filter({ visible: true })

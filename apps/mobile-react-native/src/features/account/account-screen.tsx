@@ -564,6 +564,7 @@ export function AccountScreen() {
                 {/* Stat 3: Giá trị kệ sách */}
                 <Pressable
                   accessibilityRole="button"
+                  disabled={isLocked}
                   onPress={() => router.push("./drafts")}
                   style={({ pressed }) => [
                     styles.statCardParchment,
