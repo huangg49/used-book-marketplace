@@ -252,7 +252,7 @@ try {
   await rn.getByLabel("Email", { exact: true }).last().fill(newEmail);
   await rn.getByLabel("Mật khẩu", { exact: true }).last().fill(password);
   await button(rn, "Đăng nhập").click();
-  await button(rn, "Sửa hồ sơ và email").click();
+  await button(rn, "Hồ sơ & Bảo mật").click();
   await rn
     .getByRole("heading", { name: "Hồ sơ của tôi", exact: true })
     .waitFor();
@@ -294,7 +294,7 @@ try {
   await button(rn, "Lưu hồ sơ").click();
   await button(rn, "Xác minh lần lưu trước").waitFor();
   await button(rn, "Về tài khoản").click();
-  await button(rn, "Sửa hồ sơ và email").click();
+  await button(rn, "Hồ sơ & Bảo mật").click();
   await button(rn, "Xác minh lần lưu trước").click();
   await rn.getByText("Đã lưu hồ sơ.", { exact: true }).waitFor();
   assert.ok(
@@ -322,7 +322,7 @@ try {
   await button(rn, "Về tài khoản").click();
   await rn.waitForURL(rnOrigin + "/account");
   await rn.getByRole("heading", { name: "Hồ sơ của tôi", exact: true }).waitFor({ state: "hidden" });
-  await button(rn, "Sửa hồ sơ và email").click();
+  await button(rn, "Hồ sơ & Bảo mật").click();
   await rn.waitForURL(rnOrigin + "/profile");
   await rn.getByRole("heading", { name: "Hồ sơ của tôi", exact: true }).waitFor();
   assert.equal(

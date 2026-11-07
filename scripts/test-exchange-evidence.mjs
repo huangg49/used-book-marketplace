@@ -482,7 +482,7 @@ try {
   await rn.getByLabel("Mật khẩu", { exact: true }).last().fill(password);
   await rn.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await rn
-    .getByRole("heading", { name: "Việc của tôi", exact: true })
+    .getByRole("button", { name: "Sách của tôi", exact: true })
     .waitFor();
   await rn.evaluate((url) => {
     history.pushState({}, "", url);

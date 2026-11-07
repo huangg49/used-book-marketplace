@@ -212,7 +212,7 @@ try {
     await page.getByLabel("Mật khẩu", { exact: true }).last().fill(password);
     await button(page, "Đăng nhập").click();
     await page
-      .getByRole("heading", { name: "Việc của tôi", exact: true })
+      .getByRole("button", { name: "Sách của tôi", exact: true })
       .waitFor();
   };
   const openListing = async (id) => {
