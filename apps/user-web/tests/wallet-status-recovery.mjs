@@ -72,6 +72,7 @@ try {
     await alert.getByRole('button', { name: 'Kiểm tra lại', exact: true }).focus();
     await expect(alert.getByRole('button', { name: 'Kiểm tra lại', exact: true })).toBeFocused();
     await expect(page.getByRole('timer', { name: 'Thời gian thanh toán còn lại', exact: true })).toBeVisible();
+    await expect(page.getByRole('timer', { name: 'Thời gian thanh toán còn lại', exact: true })).toHaveText(/^Còn 0[45]:\d{2}$/);
     const previous = reads;
     mode = 'paid';
     await alert.getByRole('button', { name: 'Kiểm tra lại', exact: true }).click();

@@ -887,7 +887,7 @@ try {
     );
     assert.ok(Date.parse(topup.serverTime) < Date.parse(topup.expiresAt));
     await timer.waitFor();
-    assert.match(await timer.textContent(), /^0[45]:\d{2}$/);
+    assert.match(await timer.textContent(), /^Còn 0[45]:\d{2}$/);
     return topup;
   }
   async function shortenDisposableDeadline(topupId) {

@@ -59,7 +59,10 @@ Kiểm chứng đã thực chạy:
   Admin/RN/Flutter/demo/docs/startup/offline. Member qua motion và thanh toán giả
   lập2lần/90000balance; dừng ở locator pager nằm ngoài region biên lai. Harness nay
   lấy navigation Điều hướng phân trang, giữ lỗi trang sau/background refresh/
-  exact cursor retry/ledger/expiry assertions. Full CI head sửa còn phải xác minh.
+  exact cursor retry/ledger/expiry assertions. CIc2e đã qua ledger/layout/return/
+  lost-ACK, dừng timer: UI có prefix Còn, assertion cũ chỉ MM:SS. Nay assert đủ
+  prefix, vẫn giữ signed provider delta và server delta chính xác300000ms.
+  Full CI head sửa còn phải xác minh.
   Main ef7091e1 cũng từng FAIL API/web-smoke/member-profile trước PR97; đã đối
   chiếu logs, không quy tất cả lỗi cho tối ưu.
 
