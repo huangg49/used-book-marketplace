@@ -12,7 +12,6 @@ import type { CurrentUser } from "@used-books/session-client";
 import {
   BookCheck,
   BookPlus,
-  ChartNoAxesCombined,
   ChevronDown,
   ClipboardCheck,
   Clock,
@@ -27,6 +26,7 @@ import {
   PanelLeftOpen,
   Scale,
   Search,
+  ChartNoAxesCombined,
   TriangleAlert,
   Truck,
   UsersRound,
@@ -60,6 +60,7 @@ const subscribeShort = (listener: () => void) => {
 const getShort = () => window.matchMedia("(max-height: 720px)").matches;
 const icons: Record<NavigationIcon, typeof LayoutDashboard> = {
   dashboard: LayoutDashboard,
+  statistics: ChartNoAxesCombined,
   books: BookCheck,
   catalog: BookPlus,
   intake: PackageCheck,

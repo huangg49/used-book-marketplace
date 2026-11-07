@@ -2,11 +2,23 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   dailyPipeline,
   moderationWindow,
+  revenueWindow,
   OperationsDashboardService,
 } from './operations-dashboard.service.js';
 import type { MongoCommandService } from '../commands/mongo-command.service.js';
 
 describe('moderation calendar and authorization', () => {
+  it('includes both local dates and rejects impossible dates', () => {
+    const window = revenueWindow('2026-11-04', '2026-11-07');
+    expect(window.dates).toEqual([
+      '2026-11-04',
+      '2026-11-05',
+      '2026-11-06',
+      '2026-11-07',
+    ]);
+    expect(() => revenueWindow('2026-02-30', '2026-03-01')).toThrow();
+    expect(() => revenueWindow('2026-11-08', '2026-11-07')).toThrow();
+  });
   it('uses local midnight, fills calendar days and ignores the host timezone', () => {
     const before = moderationWindow(new Date('2026-10-26T16:59:59Z'), 7);
     const after = moderationWindow(new Date('2026-10-26T17:00:00Z'), 7);

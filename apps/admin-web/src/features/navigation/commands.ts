@@ -14,6 +14,10 @@ const details: Record<string, [string, string]> = {
     "Kệ sách chờ duyệt và các khu vực vận hành",
     "tong quan ban bien tap ke sach home",
   ],
+  "/statistics": [
+    "Xem doanh thu nền tảng theo khoảng ngày",
+    "thong ke doanh thu tai chinh settlement bao cao",
+  ],
   "/review/listings": [
     "Đọc hồ sơ, đối chiếu ảnh và kiểm duyệt bài đăng",
     "sach duyet bai ban doi phe duyet",

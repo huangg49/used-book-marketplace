@@ -18,4 +18,12 @@ export class OperationsDashboardController {
       this.input.query('getModerationOverview', query),
     );
   }
+  @Get('revenue-overview')
+  @Roles('STAFF', 'ADMIN')
+  revenue(@Req() req: AuthenticatedRequest, @Query() query: unknown) {
+    return this.dashboard.revenue(
+      req.auth,
+      this.input.query('getRevenueOverview', query),
+    );
+  }
 }
