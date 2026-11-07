@@ -1,18 +1,18 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useOutletContext } from "react-router-dom";
-import type { CurrentUser } from "@used-books/session-client";
-import { session } from "../../core/session";
-import { canReview } from "../../core/session";
+import { ApiError, type CurrentUser } from "@used-books/session-client";
+import { canReview, session } from "../../core/session";
 import { ErrorNotice } from "../../core/ui";
+import { dashboardKeys } from "../../core/dashboard-cache";
 import { dashboardRevenueQuery } from "./queries";
-import { dateInputInHcm, formatRevenueDate, subtractDays } from "./revenue";
+import { dateInputInHcm, formatRevenueDate, formatVnd, subtractDays } from "./revenue";
 import styles from "./StatisticsPage.module.css";
 import { CalendarRange, RefreshCw } from "lucide-react";
-import { formatVnd } from "./revenue";
 
 export function StatisticsPage() {
   const user = useOutletContext<CurrentUser>();
+  const queryClient = useQueryClient();
   const today = dateInputInHcm();
   const [range, setRange] = useState({
     from: subtractDays(today, 6),
@@ -29,6 +29,16 @@ export function StatisticsPage() {
       session.request.bind(session),
     ),
   );
+  const denied =
+    revenue.error instanceof ApiError && [401, 403].includes(revenue.error.status);
+  useEffect(() => {
+    if (denied) {
+      queryClient.removeQueries({
+        queryKey: dashboardKeys.revenueScope(user),
+        type: "inactive",
+      });
+    }
+  }, [denied, queryClient, user]);
   const canApply =
     draft.from.length === 10 &&
     draft.to.length === 10 &&
@@ -54,12 +64,16 @@ export function StatisticsPage() {
     });
   const labelStep = Math.max(1, Math.ceil(daily.length / 12));
 
-  if (!canReview(user)) {
+  if (!canReview(user) || denied) {
     return (
       <main className={styles.page}>
         <section className={styles.denied} aria-labelledby="statistics-denied">
           <h1 id="statistics-denied">Không có quyền xem thống kê</h1>
-          <p>Khu vực này chỉ dành cho nhân viên và quản trị viên.</p>
+          <p>
+            {revenue.error instanceof ApiError && revenue.error.status === 401
+              ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+              : "Khu vực này chỉ dành cho nhân viên và quản trị viên."}
+          </p>
         </section>
       </main>
     );
@@ -164,7 +178,9 @@ export function StatisticsPage() {
               </div>
               <div>
                 <span>Trạng thái dữ liệu</span>
-                <strong>{revenue.isFetching ? "Đang cập nhật" : "Đã cập nhật"}</strong>
+                <strong>
+                  {revenue.isFetching ? "Đang cập nhật" : revenue.isError ? "Dữ liệu lần trước" : "Đã cập nhật"}
+                </strong>
                 <small>Múi giờ TP.HCM</small>
               </div>
             </div>
