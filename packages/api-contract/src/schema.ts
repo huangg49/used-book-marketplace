@@ -1239,6 +1239,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/revenue-overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Platform revenue by settlement date
+         * @description ACTIVE STAFF/ADMIN only. Snapshot-consistent read of immutable ledger settlements in Asia/Ho_Chi_Minh. The selected dates are inclusive. Only OrderSettlement and ListingFeeSettlement entries posted in the range are counted; unpaid, cancelled and refunded orders are excluded.
+         */
+        get: operations["getRevenueOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/listings": {
         parameters: {
             query?: never;
@@ -7181,6 +7201,38 @@ export interface components {
                 catalogRejected: number | null;
             }[];
         };
+        RevenueOverview: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** @constant */
+            timezone: "Asia/Ho_Chi_Minh";
+            /** Format: date-time */
+            serverTime: string;
+            total: number;
+            orderSettlements: number;
+            daily: {
+                /** Format: date */
+                date: string;
+                amount: number;
+                orderSettlements: number;
+            }[];
+            page: number;
+            /** @constant */
+            pageSize: 10;
+            totalTransactions: number;
+            transactions: {
+                id: string;
+                /** @enum {string} */
+                type: "OrderSettlement" | "ListingFeeSettlement";
+                label: string;
+                amount: number;
+                /** Format: date-time */
+                postedAt: string;
+                referenceId: string | null;
+            }[];
+        };
         OperationsPoint: {
             /** Format: uuid */
             id: string;
@@ -10178,6 +10230,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModerationOverview"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getRevenueOverview: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revenue totals, zero-filled daily settlement series and immutable settlement details. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevenueOverview"];
                 };
             };
             400: components["responses"]["ListingError"];

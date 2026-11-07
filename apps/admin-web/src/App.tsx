@@ -22,6 +22,11 @@ const DashboardPage = lazy(() =>
     default: m.DashboardPage,
   })),
 );
+const StatisticsPage = lazy(() =>
+  import("./features/dashboard/StatisticsPage").then((m) => ({
+    default: m.StatisticsPage,
+  })),
+);
 const Queue = lazy(() =>
   import("./features/review/queue").then((m) => ({ default: m.Queue })),
 );
@@ -123,6 +128,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: "/dashboard", element: <DashboardPage /> },
+      { path: "/statistics", element: <StatisticsPage /> },
       {
         path: "/review/:kind",
         element: <Queue />,

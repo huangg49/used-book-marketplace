@@ -1,7 +1,7 @@
 import type { CurrentUser } from "@used-books/session-client";
 import { canEnterWorkspace, canOperatePoint, canResolve, canReview, canReviewCatalog, canSimulate } from "../../core/session";
 
-export type NavigationIcon = "dashboard" | "books" | "catalog" | "intake" | "collection" | "incident" | "resolution" | "auction" | "overdue" | "point" | "users" | "carrier";
+export type NavigationIcon = "dashboard" | "statistics" | "books" | "catalog" | "intake" | "collection" | "incident" | "resolution" | "auction" | "overdue" | "point" | "users" | "carrier";
 export type NavigationItem = { label: string; to: string; icon: NavigationIcon };
 export type NavigationGroup = { id: string; label: string; items: NavigationItem[] };
 
@@ -10,6 +10,9 @@ export function navigationGroups(user: CurrentUser | undefined): NavigationGroup
   if (!user || !canEnterWorkspace(user)) return [];
   const groups: NavigationGroup[] = [{ id: "workspace", label: "Không gian làm việc", items: [
     { label: "Dashboard", to: "/dashboard", icon: "dashboard" },
+    ...(canReview(user)
+      ? [{ label: "Thống kê", to: "/statistics", icon: "statistics" as const }]
+      : []),
   ] }];
 
   // 1. Quản lý người dùng: Đưa lên vị trí ưu tiên cao, trực tiếp dưới Dashboard cho Quản trị viên
