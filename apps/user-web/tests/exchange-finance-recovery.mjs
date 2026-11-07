@@ -39,14 +39,27 @@ try {
     await context.routeWebSocket('**/*', socket => socket.close());
     const page = await context.newPage(), errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    let failure = 0;
+    let failure = 0, standalone = false, messagesFailure = 0;
+    const messageCursors = [];
     await context.route('**/api/v1/**', route => {
       const request = route.request(), p = new URL(request.url()).pathname.slice('/api/v1'.length);
       if (p === '/auth/login') return route.fulfill({ json: { accessToken: 'fixture-access', refreshToken: 'f'.repeat(43), expiresIn: 900, user } });
       assert.equal(request.method(), 'GET', 'Recovery must only read existing state');
       if (p === '/auth/me') return route.fulfill({ json: user });
-      if (p === '/me/purchase-conversations') return route.fulfill({ json: [room] });
+      if (p === '/me/purchase-conversations') return route.fulfill({ json: standalone ? [] : [room] });
       if (p === `/me/purchase-conversations/${room.id}`) return route.fulfill({ json: room });
+      if (p === `/exchanges/${exchange.id}/messages`) {
+        const search = new URL(request.url()).searchParams;
+        assert.equal(search.get('limit'), '40');
+        const before = search.get('before');
+        messageCursors.push(before);
+        if (messagesFailure) return route.fulfill({ status: messagesFailure, json: { code: 'QA_READ_FAILURE' } });
+        const numbers = before ? [461] : Array.from({ length: 40 }, (_, i) => 462 + i);
+        return route.fulfill({ json: {
+          items: numbers.map(n => ({ id: id(n), exchangeId: exchange.id, senderId: other.id, body: 'Tin thử ' + n, sentAt: now })),
+          olderCursor: before ? null : 'older-fixture-cursor',
+        } });
+      }
       if (p.endsWith('/messages/history')) return route.fulfill({ json: { items: [], olderCursor: null } });
       if (p.endsWith('/events')) return route.fulfill({ json: [] });
       if (p === `/exchanges/${exchange.id}`) return failure
@@ -89,6 +102,25 @@ try {
     await finance.getByRole('button', { name: 'Tải lại khoản trao đổi', exact: true }).click();
     await expect(detail).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Chưa tải được trạng thái hiện tại', exact: true })).toHaveCount(0);
+    standalone = true;
+    await page.goto(origin + '/login?returnUrl=' + encodeURIComponent('/exchange/' + exchange.id));
+    await page.getByLabel(/^Email/).fill(user.email);
+    await page.getByLabel(/^Mật khẩu/).fill('fixture-password');
+    await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+    await page.getByRole('link', { name: 'Nhắn với đối tác', exact: true }).click();
+    const chat = page.getByRole('region', { name: /Tin nhắn Đổi sách/ });
+    await expect(chat.getByText('Tin thử 501', { exact: true })).toBeVisible();
+    await expect(chat.getByText('Tin thử 461', { exact: true })).toHaveCount(0);
+    await page.waitForFunction(() => !document.querySelector('[data-paper-storm]'));
+    await chat.getByRole('log').evaluate(node => node.scrollTo(0, 0));
+    await chat.getByRole('button', { name: 'Tải tin nhắn cũ', exact: true }).click();
+    await expect(chat.getByText('Tin thử 461', { exact: true })).toBeVisible();
+    await expect(chat.getByText('Tin thử 501', { exact: true })).toHaveCount(1);
+    assert.ok(messageCursors.includes('older-fixture-cursor'));
+    messagesFailure = 403;
+    await expect(chat.getByRole('alert')).toContainText('Bạn hiện không thể xem tin nhắn', { timeout: 16000 });
+    await expect(chat.getByText('Tin thử 501', { exact: true })).toHaveCount(0);
+    await expect(chat.getByRole('button', { name: 'Gửi tin nhắn', exact: true })).toHaveCount(0);
     assert.deepEqual(errors, []);
     console.log(`PASS exchange finance recovery ${width}: stale warning/amounts, denied redaction, read-only retry`);
     await context.close();

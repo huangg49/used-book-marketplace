@@ -405,6 +405,36 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       return { a, b, exchange: response.body };
     }
 
+    it('accepts 2,000 characters and serializes concurrent sends at the shared limit', async () => {
+      const { exchange } = await propose();
+      const path = '/exchanges/' + exchange.id + '/messages';
+      const body = String.fromCodePoint(0x1f4d6).repeat(2000);
+      await post(path, { body: body + 'a' }, user1).expect(422);
+      await post(path, { body }, user1).expect(201);
+      const sentAt = new Date();
+      await db.c.exchange_messages.insertMany(Array.from({ length: 19 }, (_, index) => ({
+        _id: randomUUID(),
+        exchangeId: exchange.id,
+        senderId: user1.id,
+        body: 'QA seeded chat row',
+        sentAt,
+        ...(index < 18 ? { memberAuthored: true } : {}),
+      })));
+      const gate = await Gate.lockUser(db.client, user1.id);
+      try {
+        const sends = [1, 2].map((index) =>
+          post(path, { body: 'Concurrent send ' + index }, user1).then((result) => result),
+        );
+        await gate.contended(2);
+        await gate.commit();
+        const results = await Promise.all(sends);
+        expect(results.map((response) => response.status).sort()).toEqual([201, 429]);
+        expect(await db.c.exchange_messages.countDocuments({
+          exchangeId: exchange.id, senderId: user1.id, memberAuthored: true,
+        })).toBe(20);
+      } finally { await gate.close(); }
+    });
+
     it('pins books and server-computed money through replacement, acceptance and replay', async () => {
       const { a, b, exchange } = await propose();
       expect(exchange.agreement.initiatorBooks[0]).toMatchObject({ listingId: a.listingId, listingVersion: a.version, exchangeValue: 100000, condition: 'Good' });

@@ -17,7 +17,7 @@ import {
 import { memo, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
-import { ApiError } from "@used-books/session-client";
+import { ApiError, CHAT_MESSAGE_LIMIT, CHAT_RATE_LIMIT_TEXT, chatSendWasRateLimited, clipChatMessage } from "@used-books/session-client";
 import { z } from "zod";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { ArrowUp, ArrowUpRight, Send } from "lucide-react";
@@ -296,7 +296,7 @@ function ChatRoom({
     const socket = socketRef.current;
     if (sending || expired || !socket || connection !== "online") return;
     const text = body.trim();
-    if (!text || text.length > 1000) return;
+    if (!text || [...text].length > CHAT_MESSAGE_LIMIT) return;
     const command = attemptRef.current ?? {
       messageId: crypto.randomUUID(),
       conversationId: room.id,
@@ -315,6 +315,12 @@ function ChatRoom({
         )
           return;
         setSending(false);
+        if (!failure && chatSendWasRateLimited(reply)) {
+          attemptRef.current = undefined;
+          setAttempt(undefined);
+          setError(CHAT_RATE_LIMIT_TEXT);
+          return;
+        }
         const parsed = purchaseMessageSchema.safeParse(reply);
         if (
           failure ||
@@ -794,10 +800,9 @@ function ChatRoom({
                   ref={textareaRef}
                   id="chat-message"
                   rows={1}
-                  maxLength={1000}
                   value={body}
                   disabled={!!attempt}
-                  onChange={(event) => setBody(event.target.value)}
+                  onChange={(event) => setBody(clipChatMessage(event.target.value))}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && !event.shiftKey) {
                       event.preventDefault();

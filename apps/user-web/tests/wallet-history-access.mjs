@@ -27,6 +27,7 @@ try {
     const page = await context.newPage(), errors = [], cursors = [];
     page.on('pageerror', error => errors.push(error.message));
     let status = 200;
+    const filteredRequests = [];
     const now = new Date().toISOString();
     const summary = { demoOnly: true, label: 'Mô phỏng đồ án', currency: 'VND', available: 75000,
       transactionHeld: 0, withdrawalHeld: 0, total: 75000, serverTime: now,
@@ -44,6 +45,10 @@ try {
         cursors.push(cursor);
         if (status !== 200) return route.fulfill({ status, json: { code: 'QA_READ_FAILURE' } });
         assert.equal(url.searchParams.get('limit'), '20');
+        if (url.searchParams.has('reference')) {
+          filteredRequests.push(Object.fromEntries(url.searchParams));
+          return route.fulfill({ json: { items: rows(120, 1), nextCursor: null } });
+        }
         if (cursor) assert.equal(cursor, id(119));
         return route.fulfill({ json: { items: cursor ? rows(120, 1) : rows(100, 20), nextCursor: cursor ? null : id(119) } });
       }
@@ -85,6 +90,24 @@ try {
     if (mode === 'next-page') assert.equal(cursors[readsBeforeRetry], hidden ? null : id(119), 'Denied reads recover through refetch; temporary next-page errors retry the same cursor');
     await expect(pager).toBeVisible();
     await expect(history.getByText('Chờ duyệt', { exact: true })).toHaveCount(mode === 'next-page' && !hidden ? 1 : 10);
+    if (!baseline && mode === 'refresh' && failure === 403) {
+      await history.getByText('Lọc theo ngày hoặc mã giao dịch', { exact: true }).click();
+      await history.getByLabel('Từ ngày', { exact: true }).fill('2026-10-08');
+      await history.getByLabel('Đến ngày', { exact: true }).fill('2026-10-07');
+      await history.getByLabel('Mã giao dịch', { exact: true }).fill('RÚT-000000');
+      await history.getByRole('button', { name: 'Áp dụng bộ lọc' }).click();
+      await expect(history.getByRole('alert')).toContainText('Ngày bắt đầu phải trước hoặc trùng ngày kết thúc.');
+      assert.equal(filteredRequests.length, 0);
+      await history.getByLabel('Đến ngày', { exact: true }).fill('2026-10-08');
+      await history.getByRole('button', { name: 'Áp dụng bộ lọc' }).click();
+      await expect(history.locator('li')).toHaveCount(1);
+      assert.deepEqual(filteredRequests.at(-1), {
+        limit: '20', from: '2026-10-08T00:00:00+07:00', to: '2026-10-08T23:59:59.999+07:00',
+        reference: '000000',
+      });
+      await history.getByRole('button', { name: 'Xóa bộ lọc' }).click();
+      await expect(history.locator('li')).toHaveCount(10);
+    }
     assert.deepEqual(errors, []);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     checks.push({ width, mode, failure, deniedCacheHidden: hidden, recoveryReadOnly: true, reads: cursors.length });

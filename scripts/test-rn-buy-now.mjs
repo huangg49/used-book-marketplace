@@ -191,20 +191,27 @@ try {
         await route.abort().catch(() => {});
       }
     });
-  const openNewestOrder = async (id) => {
-    await button(p, "Về kệ sách").click();
-    await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
-    await p.getByRole("button", { name: /^Đơn mua\/bán trực tiếp/ }).click();
-    const card = p
+  const openOrderFromList = async (page, id) => {
+    await page.waitForURL((url) => url.pathname === "/orders");
+    const card = page
       .getByText("#" + id.slice(0, 8).toUpperCase(), { exact: true })
       .filter({ visible: true })
       .locator("xpath=ancestor::div[.//*[@role='button']][1]");
     await card
       .getByRole("button", { name: "Mở chi tiết đơn", exact: true })
       .click();
-    await p
+    await page
       .getByRole("heading", { name: "Đơn #" + id.slice(0, 8), exact: true })
       .waitFor();
+  };
+  const openOrderFromAccount = async (page, id) => {
+    await button(page, "Đơn hàng của tôi").click();
+    await openOrderFromList(page, id);
+  };
+  const openNewestOrder = async (id) => {
+    await button(p, "Về kệ sách").click();
+    await p.getByRole("tab", { name: "Tài khoản", exact: true }).click();
+    await openOrderFromAccount(p, id);
   };
   const login = async (page, email) => {
     await page.goto(origin + "/account");
@@ -212,7 +219,7 @@ try {
     await page.getByLabel("Mật khẩu", { exact: true }).last().fill(password);
     await button(page, "Đăng nhập").click();
     await page
-      .getByRole("heading", { name: "Việc của tôi", exact: true })
+      .getByRole("button", { name: "Sách của tôi", exact: true })
       .waitFor();
   };
   const openListing = async (id) => {
@@ -450,7 +457,7 @@ try {
   });
   console.log("QA: seller continuation");
   await login(sellerPage, "member@operations.test");
-  await button(sellerPage, new RegExp(orderId.slice(0, 8))).click();
+  await openOrderFromAccount(sellerPage, orderId);
   assert.equal(
     await button(sellerPage, "Xác nhận bán").count(),
     0,
@@ -513,13 +520,7 @@ try {
   await button(sellerPage, "Thử lại lưu ảnh đóng gói").waitFor();
   const reopenSeller = async () => {
     await button(sellerPage, "Về danh sách đơn trực tiếp").click();
-    await button(sellerPage, "Mở chi tiết đơn").first().click();
-    await sellerPage
-      .getByRole("heading", {
-        name: "Đơn #" + orderId.slice(0, 8),
-        exact: true,
-      })
-      .waitFor();
+    await openOrderFromList(sellerPage, orderId);
   };
   await reopenSeller();
   await button(sellerPage, "Thử lại lưu ảnh đóng gói").click();

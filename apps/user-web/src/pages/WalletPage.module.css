@@ -879,6 +879,53 @@
   box-shadow: 0 2px 6px rgba(92, 2, 2, 0.08);
 }
 
+.historyFilters {
+  margin-bottom: 16px;
+  font-size: 0.8125rem;
+  color: var(--shop-ink, #281914);
+}
+
+.historyFilters summary {
+  width: fit-content;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.historyFilterFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 8px;
+  margin-block: 8px;
+}
+
+.historyFilterFields label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.historyFilterFields input {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding-inline: 8px;
+  border: 1px solid var(--shop-control, #8e7564);
+  border-radius: 8px;
+  background: var(--shop-paper, #fffcf5);
+  color: inherit;
+  font: inherit;
+}
+
+.historyFilterActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.historyFilters [role="alert"] {
+  color: var(--shop-error, #912b0e);
+}
+
 /* Receipt Feed Items */
 .receiptItemList {
   display: flex;

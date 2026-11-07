@@ -8,7 +8,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppText, AppTextInput, Icon, space, stitchTokens } from "../../core/ui";
 import { useSession } from "../../core/session/session-provider";
 import {
@@ -16,6 +16,7 @@ import {
   type ExchangeMessage,
 } from "./contracts";
 import { z } from "zod";
+import { ApiError, CHAT_RATE_LIMIT_TEXT, clipChatMessage } from "@used-books/session-client";
 
 interface ExchangeChatBoxProps {
   exchangeId: string;
@@ -47,16 +48,26 @@ export function ExchangeChatBox({
   const [inputText, setInputText] = useState("");
   const flatListRef = useRef<FlatList>(null);
 
-  const messagesQuery = useQuery({
-    queryKey: ["exchange-messages", exchangeId],
-    queryFn: () =>
-      client.request(
-        `/exchanges/${exchangeId}/messages`,
+  const latestShown = useRef<string | undefined>(undefined);
+  const nearBottom = useRef(true);
+  const messagesKey = ["exchange-messages", currentUserId, exchangeId] as const;
+  const messagesQuery = useInfiniteQuery({
+    queryKey: messagesKey,
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) => {
+      const query = new URLSearchParams({ limit: "40" });
+      if (pageParam !== undefined) query.set("before", pageParam);
+      return client.request(
+        `/exchanges/${exchangeId}/messages?${query}`,
         exchangeMessagePageSchema,
-      ),
-    enabled: Boolean(exchangeId) && state.status === "authenticated",
-    refetchInterval: 3500,
+      );
+    },
+    getNextPageParam: (page) => page.olderCursor ?? undefined,
+    enabled: Boolean(exchangeId) && currentUserId !== null,
+    refetchInterval: (query) => 3500 * Math.max(1, query.state.data?.pages.length ?? 0),
   });
+  const denied = messagesQuery.error instanceof ApiError
+    && [401, 403, 404].includes(messagesQuery.error.status);
 
   const sendMutation = useMutation({
     mutationFn: async (bodyText: string) => {
@@ -71,19 +82,19 @@ export function ExchangeChatBox({
     },
     onSuccess: () => {
       setInputText("");
-      void queryClient.invalidateQueries({
-        queryKey: ["exchange-messages", exchangeId],
-      });
+      nearBottom.current = true;
+      void queryClient.invalidateQueries({ queryKey: messagesKey });
     },
   });
 
   const handleSend = () => {
     const trimmed = inputText.trim();
-    if (!trimmed || sendMutation.isPending || isReadOnly) return;
+    if (!trimmed || sendMutation.isPending || isReadOnly || denied) return;
     sendMutation.mutate(trimmed);
   };
 
-  const messages = messagesQuery.data?.items ?? [];
+  const messages = denied ? [] : messagesQuery.data?.pages.slice().reverse().flatMap((page) => page.items) ?? [];
+  const latest = messages.at(-1)?.id;
 
   return (
     <View style={styles.card}>
@@ -115,6 +126,12 @@ export function ExchangeChatBox({
         </Pressable>
       </View>
 
+      {messagesQuery.isError && (denied || !messagesQuery.isFetchNextPageError) && (
+        <AppText accessibilityRole="alert" style={styles.emptySubtitle}>
+          {denied ? "Bạn hiện không thể xem tin nhắn trong giao dịch này." : "Chưa tải được tin nhắn. Dùng nút làm mới để thử lại."}
+        </AppText>
+      )}
+
       {/* Messages List */}
       <View style={styles.messageListContainer}>
         {messagesQuery.isPending && messages.length === 0 ? (
@@ -122,7 +139,7 @@ export function ExchangeChatBox({
             <ActivityIndicator size="small" color={stitchTokens.wine} />
             <AppText style={styles.loadingText}>Đang tải tin nhắn...</AppText>
           </View>
-        ) : messages.length === 0 ? (
+        ) : messages.length === 0 && messagesQuery.isError ? null : messages.length === 0 ? (
           <View style={styles.emptyBox}>
             <Icon name="message" size={26} color={stitchTokens.roseBrown} />
             <AppText style={styles.emptyTitle}>Chưa có tin nhắn</AppText>
@@ -136,9 +153,33 @@ export function ExchangeChatBox({
             data={messages}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.messagesList}
-            onContentSizeChange={() =>
-              flatListRef.current?.scrollToEnd({ animated: true })
-            }
+            maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
+            onScroll={({ nativeEvent }) => {
+              nearBottom.current = nativeEvent.contentSize.height
+                - nativeEvent.contentOffset.y - nativeEvent.layoutMeasurement.height < 120;
+            }}
+            scrollEventThrottle={32}
+            onContentSizeChange={() => {
+              if (latestShown.current === latest) return;
+              const firstLoad = latestShown.current === undefined;
+              latestShown.current = latest;
+              if (firstLoad || nearBottom.current) {
+                flatListRef.current?.scrollToEnd({ animated: true });
+              }
+            }}
+            ListHeaderComponent={messagesQuery.hasNextPage ? (
+              <Pressable
+                accessibilityRole="button"
+                disabled={messagesQuery.isFetching}
+                onPress={() => void messagesQuery.fetchNextPage({ cancelRefetch: false })}
+              >
+                <AppText style={styles.emptySubtitle}>
+                  {messagesQuery.isFetchingNextPage
+                    ? "Đang tải tin nhắn cũ…"
+                    : messagesQuery.isFetchNextPageError ? "Thử tải lại tin nhắn cũ" : "Tải tin nhắn cũ"}
+                </AppText>
+              </Pressable>
+            ) : null}
             renderItem={({ item }: { item: ExchangeMessage }) => {
               const isMe = item.senderId === currentUserId;
               const isVerdict = item.body.startsWith("[Phán quyết của Quản trị viên]");
@@ -225,6 +266,14 @@ export function ExchangeChatBox({
         )}
       </View>
 
+      {sendMutation.isError && !denied && (
+        <AppText accessibilityRole="alert" style={styles.emptySubtitle}>
+          {sendMutation.error instanceof ApiError && sendMutation.error.status === 429
+            ? CHAT_RATE_LIMIT_TEXT
+            : "Chưa xác nhận tin nhắn đã gửi. Nội dung vẫn còn để bạn kiểm tra và thử lại."}
+        </AppText>
+      )}
+
       {/* Input Bar */}
       {!isReadOnly ? (
         <KeyboardAvoidingView
@@ -236,11 +285,11 @@ export function ExchangeChatBox({
               <AppTextInput
                 style={styles.textInput}
                 value={inputText}
-                onChangeText={setInputText}
+                onChangeText={(text) => setInputText(clipChatMessage(text))}
+                editable={!denied && !sendMutation.isPending}
                 placeholder="Nhắn tin về việc đổi sách..."
                 placeholderTextColor={stitchTokens.subtleGray}
                 multiline
-                maxLength={1000}
               />
             </View>
 
@@ -248,7 +297,7 @@ export function ExchangeChatBox({
               accessibilityRole="button"
               accessibilityLabel="Gửi tin nhắn"
               onPress={handleSend}
-              disabled={!inputText.trim() || sendMutation.isPending}
+              disabled={!inputText.trim() || sendMutation.isPending || denied}
               style={({ pressed }) => [
                 styles.sendBtn,
                 inputText.trim()

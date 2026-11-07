@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { emptyWalletHistoryFilters, walletHistoryFilters, type WalletHistoryFilters } from "@used-books/session-client";
 import { View, ScrollView, Pressable, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +12,7 @@ import {
   Notice,
   Screen,
   StatePanel,
+  TextField,
   colors,
   formatVnd,
   presentError,
@@ -48,6 +50,11 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
 
   const [topupModalVisible, setTopupModalVisible] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterDraft, setFilterDraft] = useState(emptyWalletHistoryFilters);
+  const [historyFilters, setHistoryFilters] = useState<WalletHistoryFilters>({});
+  const [filterError, setFilterError] = useState<string>();
+  const hasHistoryFilters = Object.keys(historyFilters).length > 0;
   const [checkingTopupId, setCheckingTopupId] = useState<string | null>(null);
 
   const summary = useQuery({
@@ -56,7 +63,7 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
   });
 
   const history = useInfiniteQuery({
-    ...historyOptions(client, ownerId, typeFilter),
+    ...historyOptions(client, ownerId, typeFilter, historyFilters),
     enabled: foreground,
   });
 
@@ -433,6 +440,49 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
             </ScrollView>
           </View>
 
+          <View style={{ gap: space.sm }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: filterOpen }}
+              onPress={() => setFilterOpen((open) => !open)}
+              style={{ minHeight: 44, justifyContent: "center" }}
+            >
+              <AppText kind="bold" color={stitchTokens.wineDark}>
+                Lọc theo ngày hoặc mã giao dịch{hasHistoryFilters ? " · Đang áp dụng" : ""}
+              </AppText>
+            </Pressable>
+            {filterOpen && (
+              <View style={{ gap: space.sm }}>
+                <TextField label="Từ ngày" placeholder="YYYY-MM-DD" maxLength={10}
+                  value={filterDraft.from}
+                  onChangeText={(from) => setFilterDraft({ ...filterDraft, from })} />
+                <TextField label="Đến ngày" placeholder="YYYY-MM-DD" maxLength={10}
+                  value={filterDraft.to}
+                  onChangeText={(to) => setFilterDraft({ ...filterDraft, to })} />
+                <TextField label="Mã giao dịch" placeholder="Ví dụ: ĐƠN-4A2B1C"
+                  autoCapitalize="characters" autoCorrect={false} maxLength={42}
+                  value={filterDraft.reference}
+                  onChangeText={(reference) => setFilterDraft({ ...filterDraft, reference })} />
+                {filterError && <Notice tone="error">{filterError}</Notice>}
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+                  <Button title="Áp dụng bộ lọc" onPress={() => {
+                    const result = walletHistoryFilters(filterDraft);
+                    if (result.error !== undefined) setFilterError(result.error);
+                    else {
+                      setHistoryFilters(result.filters);
+                      setFilterError(undefined);
+                    }
+                  }} />
+                  <Button title="Xóa bộ lọc" secondary onPress={() => {
+                    setFilterDraft(emptyWalletHistoryFilters);
+                    setHistoryFilters({});
+                    setFilterError(undefined);
+                  }} />
+                </View>
+              </View>
+            )}
+          </View>
+
           {history.isPending ? (
             <StatePanel loading title="Đang tải lịch sử" />
           ) : null}
@@ -458,7 +508,7 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
             <StatePanel
               title="Chưa có khoản ghi nhận"
               message={
-                typeFilter === "all"
+                typeFilter === "all" && !hasHistoryFilters
                   ? "Khi có khoản nạp ví, thanh toán hoặc hoàn tiền đã hoàn tất, bạn có thể xem lại ở đây."
                   : "Không có giao dịch nào khớp với bộ lọc đã chọn."
               }
@@ -500,6 +550,13 @@ export function WalletScreen({ ownerId }: { ownerId: string }) {
               </View>
               <AppText kind="small" color={stitchTokens.subtleGray}>
                 {walletDate(item.postedAt)}
+              </AppText>
+              <AppText kind="small" color={stitchTokens.subtleGray} selectable>
+                Mã giao dịch {item.withdrawalId
+                  ? `RÚT-${item.withdrawalId.slice(0, 6).toUpperCase()}`
+                  : item.orderId ? `ĐƠN-${item.orderId.slice(0, 6).toUpperCase()}`
+                    : item.topupId ? `NẠP-${item.topupId.slice(0, 6).toUpperCase()}`
+                      : `SỔ-${item.journalId.slice(0, 6).toUpperCase()}`}
               </AppText>
               <AppText kind="small" color={stitchTokens.subtleGray}>
                 Số dư sau ghi nhận: {formatVnd(item.balanceAfter)}

@@ -8,7 +8,7 @@ import { ExchangeFinanceSummary } from "../components/conversation/ExchangeFinan
 import { exchangeStage } from "../lib/transaction-stage";
 import { ExchangeEvidencePanel } from "../components/exchange/ExchangeEvidencePanel";
 import { useEffect, useState } from "react";
-import { confirmExchangeRead } from "@used-books/session-client";
+import { ApiError, confirmExchangeRead } from "@used-books/session-client";
 import { session } from "../services/api";
 import { useExchangeRecovery } from "../hooks/useExchangeRecovery";
 import { ExchangeRecoveryPanel } from "../components/exchange/ExchangeRecoveryPanel";
@@ -18,13 +18,13 @@ import { useParams, Link, Navigate, useLocation } from "react-router-dom";
 import { useConversationTransition } from "../components/conversation/conversation-navigation";
 import { ConversationBackLink } from "../components/conversation/ConversationBackLink";
 import { getPurchaseConversations } from "../services/purchase-conversations";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ROUTES } from "../lib/routes";
 import { useSession } from "../hooks/useSession";
 import { exchangeAcknowledged, pendingExchange } from "../services/exchange";
 import {
   getExchangeDetail,
-  getMessages,
+  getMessagePage,
   sendMessage,
   cancelExchange,
   acceptExchange,
@@ -124,17 +124,23 @@ function ExchangeDetailContent({
       confirmExchangeRead(session, id, detail.revision);
   }, [id, detail, auth, detailUpdatedAt]);
 
-  const messagesQuery = useQuery({
+  const messagesQuery = useInfiniteQuery({
     queryKey: [
       "exchangeMessages",
       auth.status === "authenticated" ? auth.user.id : undefined,
       id,
     ],
-    queryFn: () => getMessages(id!),
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) => getMessagePage(id!, pageParam),
+    getNextPageParam: (page) => page.olderCursor ?? undefined,
     enabled: !embedded && !!id && auth.status === "authenticated",
-    refetchInterval: 3000,
+    // Each refresh walks the loaded pages. Bound the average request rate.
+    refetchInterval: (query) => 3000 * Math.max(1, query.state.data?.pages.length ?? 0),
     refetchIntervalInBackground: false,
   });
+  const messagesDenied =
+    messagesQuery.error instanceof ApiError &&
+    [401, 403, 404].includes(messagesQuery.error.status);
 
   // Mutations
   const invalidate = () => {
@@ -526,10 +532,14 @@ function ExchangeDetailContent({
           >
             <ChatPanel
               key={id}
-              messages={messagesQuery.data ?? []}
+              messages={messagesDenied ? [] : messagesQuery.data?.pages.slice().reverse().flatMap((page) => page.items) ?? []}
               isLoading={messagesQuery.isPending}
-              loadError={messagesQuery.isError}
+              loadError={messagesDenied || (messagesQuery.isError && !messagesQuery.isFetchNextPageError)}
               isRefreshing={messagesQuery.isFetching}
+              hasOlder={!messagesDenied && messagesQuery.hasNextPage}
+              isLoadingOlder={messagesQuery.isFetchingNextPage}
+              olderError={!messagesDenied && messagesQuery.isFetchNextPageError}
+              onLoadOlder={() => messagesQuery.fetchNextPage({ cancelRefetch: false })}
               onRetry={() => void messagesQuery.refetch()}
               giveBooks={detail.giveBooks.map((book) => book.title)}
               receiveBooks={detail.receiveBooks.map((book) => book.title)}
@@ -543,7 +553,7 @@ function ExchangeDetailContent({
                 "REJECTED",
                 "EXPIRED",
               ].includes(detail.status)}
-              unavailable={false}
+              unavailable={messagesDenied}
             />
           </div>
         )}

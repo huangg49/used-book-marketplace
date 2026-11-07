@@ -103,6 +103,7 @@ export type ExchangeMessage = z.infer<typeof exchangeMessageSchema>;
 
 export const exchangeMessagePageSchema = z.object({
   items: z.array(exchangeMessageSchema),
+  olderCursor: z.string().nullable().optional(),
 });
 
 export const exchangeReceiptSchema = z

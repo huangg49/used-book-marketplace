@@ -1476,6 +1476,7 @@ export interface AuthEventDoc {
 
 export interface ExchangeMessageDoc {
   _id: string;
+  memberAuthored?: boolean;
   exchangeId: string;
   senderId: string;
   body: string;

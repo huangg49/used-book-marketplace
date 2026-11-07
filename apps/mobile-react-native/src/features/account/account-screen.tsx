@@ -211,13 +211,13 @@ export function AccountScreen() {
     }, []),
   );
 
+  const ownerId = state.status === "authenticated" ? state.user.id : "";
   const profile = useQuery({
-    queryKey: ["me"],
+    queryKey: ["me", ownerId],
     queryFn: () => client.request("/auth/me", currentUserSchema),
-    enabled: foreground,
+    enabled: foreground && !!ownerId,
+    retry: false,
   });
-
-  const ownerId = profile.data?.id || (state.status === "authenticated" ? state.user.id : "");
 
   // 1. Wallet Data (Escrow & Available balance)
   const wallet = useQuery({
@@ -235,9 +235,9 @@ export function AccountScreen() {
     enabled: foreground && !!ownerId,
   });
 
-  // 4. Orders Data
+  // The dashboard preview uses a single page; OrdersScreen caches infinite pages.
   const ordersQuery = useQuery({
-    queryKey: ["my-orders", ownerId],
+    queryKey: ["my-orders", ownerId, "account-preview", 15],
     queryFn: () => client.request("/me/orders?limit=15", ordersPageSchema),
     enabled: foreground && !!ownerId,
     staleTime: 5_000,
@@ -564,6 +564,7 @@ export function AccountScreen() {
                 {/* Stat 3: Giá trị kệ sách */}
                 <Pressable
                   accessibilityRole="button"
+                  disabled={isLocked}
                   onPress={() => router.push("./drafts")}
                   style={({ pressed }) => [
                     styles.statCardParchment,

@@ -1,3 +1,4 @@
+import type { WalletHistoryFilters } from "@used-books/session-client";
 import type { SessionClient } from "../../core/api/session-client";
 import { ApiError } from "../../core/api/session-client";
 import { formatVnd } from "../../core/ui/format";
@@ -44,6 +45,7 @@ export function walletDate(value: string) {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Asia/Ho_Chi_Minh",
   }).format(new Date(value));
 }
 
@@ -65,18 +67,20 @@ export function historyOptions(
   client: SessionClient,
   ownerId: string,
   typeFilter?: string,
+  filters: WalletHistoryFilters = {},
 ) {
   return {
-    queryKey: ["wallet", ownerId, "history", typeFilter ?? "all"] as const,
+    queryKey: ["wallet", ownerId, "history", typeFilter ?? "all", ...(Object.keys(filters).length ? [filters] : [])] as const,
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }: { pageParam: string | null }) => {
       const params = new URLSearchParams({ limit: "10" });
       if (typeFilter && typeFilter !== "all") {
         params.set("type", typeFilter);
       }
-      if (pageParam) {
-        params.set("cursor", pageParam);
-      }
+      if (pageParam) params.set("cursor", pageParam);
+      if (filters.from) params.set("from", filters.from);
+      if (filters.to) params.set("to", filters.to);
+      if (filters.reference) params.set("reference", filters.reference);
       return client.request(
         `/me/wallet/history?${params.toString()}`,
         walletHistoryPage,

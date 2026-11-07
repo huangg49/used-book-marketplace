@@ -25,7 +25,7 @@ export class CartService {
       async (tx, actor): Promise<Wire['MemberCart']> => {
         member(actor);
         const row = await tx.c.member_carts.findOne({ _id: actor._id }),
-          views = await this.listings.forCart(
+          views = await this.listings.publicViews(
             tx,
             row?.items.map((i) => i.listingId) ?? [],
           );
@@ -85,7 +85,7 @@ export class CartService {
           if (adding) {
             await tx.lock('listings', [body.listingId]);
             const listing = (
-              await this.listings.forCart(tx, [body.listingId])
+              await this.listings.publicViews(tx, [body.listingId])
             ).get(body.listingId);
             if (!listing) throw notFound();
             if (

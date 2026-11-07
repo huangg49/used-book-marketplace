@@ -1,4 +1,10 @@
-import { ApiError, withdrawalLabels } from "@used-books/session-client";
+import {
+  ApiError,
+  emptyWalletHistoryFilters,
+  walletHistoryFilters,
+  withdrawalLabels,
+  type WalletHistoryFilters,
+} from "@used-books/session-client";
 import { useId, useRef, useState } from "react";
 import { usePaginationFocus } from "../components/Pagination/usePaginationFocus";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -24,6 +30,7 @@ import styles from "./WalletPage.module.css";
 const dateFormat = new Intl.DateTimeFormat("vi-VN", {
   dateStyle: "short",
   timeStyle: "short",
+  timeZone: "Asia/Ho_Chi_Minh",
 });
 
 interface WalletHistoryProps {
@@ -73,16 +80,22 @@ function getTransactionVisuals(type: WalletHistoryType, _amount: number) {
 
 export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
   const [type, setType] = useState<WalletHistoryType | "">("");
-  const scope = `${ownerId}:${type}`;
+  const [draft, setDraft] = useState(emptyWalletHistoryFilters);
+  const [filters, setFilters] = useState<WalletHistoryFilters>({});
+  const [filterError, setFilterError] = useState<string>();
+  const scopeFor = (kind: WalletHistoryType | "", selected: WalletHistoryFilters) =>
+    JSON.stringify([ownerId, kind, selected.from, selected.to, selected.reference]);
+  const scope = scopeFor(type, filters);
+  const hasFilters = Object.keys(filters).length > 0;
   const [position, setPosition] = useState({ scope, page: 1 });
   const currentPage = position.scope === scope ? position.page : 1;
   const changingPage = useRef<string | null>(null);
   const requestGeneration = useRef(0);
   const history = useInfiniteQuery({
-    queryKey: ["wallet-history", ownerId, type],
+    queryKey: ["wallet-history", ownerId, type, ...(hasFilters ? [filters] : [])],
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
-      getWalletHistory({ type: type || undefined, cursor: pageParam }),
+      getWalletHistory({ ...filters, type: type || undefined, cursor: pageParam }),
     getNextPageParam: (page) => page.nextCursor ?? undefined,
   });
 
@@ -94,6 +107,14 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
   const historyAnchor = useId();
   const requestPageFocus = usePaginationFocus(safePage, scope, historyAnchor, history.isFetching, history.isError);
   const pagedItems = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  function applyFilters(next: WalletHistoryFilters) {
+    requestGeneration.current += 1;
+    changingPage.current = null;
+    setFilters(next);
+    setPosition({ scope: scopeFor(type, next), page: 1 });
+    setFilterError(undefined);
+  }
 
   async function changePage(next: number) {
     if (inaccessible || changingPage.current === scope || history.isFetching || next < 1) return;
@@ -158,7 +179,7 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
                       requestGeneration.current += 1;
                       changingPage.current = null;
                       setType(tab.id);
-                      setPosition({ scope: `${ownerId}:${tab.id}`, page: 1 });
+                      setPosition({ scope: scopeFor(tab.id, filters), page: 1 });
                     }
                   }}
                 >
@@ -167,6 +188,42 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
               );
             })}
           </div>
+
+          <details className={styles.historyFilters}>
+            <summary>
+              Lọc theo ngày hoặc mã giao dịch
+              {hasFilters && " · Đang áp dụng"}
+            </summary>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                const result = walletHistoryFilters(draft);
+                if (result.error !== undefined) setFilterError(result.error);
+                else applyFilters(result.filters);
+              }}
+            >
+              <div className={styles.historyFilterFields}>
+                <label>Từ ngày<input type="date" value={draft.from}
+                  onChange={(event) => setDraft({ ...draft, from: event.target.value })} /></label>
+                <label>Đến ngày<input type="date" value={draft.to}
+                  onChange={(event) => setDraft({ ...draft, to: event.target.value })} /></label>
+                <label>Mã giao dịch<input type="text" value={draft.reference}
+                  maxLength={42} placeholder="Ví dụ: ĐƠN-4A2B1C"
+                  onChange={(event) => setDraft({ ...draft, reference: event.target.value })} /></label>
+              </div>
+              {filterError && <p role="alert">{filterError}</p>}
+              <div className={styles.historyFilterActions}>
+                <button type="submit" className={styles.stampTab}>Áp dụng bộ lọc</button>
+                <button type="button" className={styles.stampTab}
+                  onClick={() => {
+                    setDraft(emptyWalletHistoryFilters);
+                    applyFilters({});
+                  }}>
+                  Xóa bộ lọc
+                </button>
+              </div>
+            </form>
+          </details>
 
           {/* Loading State */}
           {history.isPending ? (
@@ -211,16 +268,16 @@ export function WalletHistory({ ownerId, onOpenTopup }: WalletHistoryProps) {
                     <Receipt size={26} aria-hidden="true" />
                   </div>
                   <h3 className={styles.emptyReceiptTitle}>
-                    {type
+                    {hasFilters ? "Không có giao dịch khớp bộ lọc" : type
                       ? "Chưa có giao dịch thuộc nhóm này"
                       : "Chưa có biến động số dư"}
                   </h3>
                   <p className={styles.emptyReceiptSub}>
-                    {type
+                    {hasFilters ? "Đổi khoảng ngày hoặc mã giao dịch, hoặc xóa bộ lọc để xem lại lịch sử." : type
                       ? "Hãy chọn 'Tất cả giao dịch' để xem toàn bộ lịch sử."
                       : "Mọi khoản nạp tiền, tiền bán sách nhận được và cọc ký quỹ sách sẽ hiển thị tại đây."}
                   </p>
-                  {onOpenTopup && !type && (
+                  {onOpenTopup && !type && !hasFilters && (
                     <button
                       type="button"
                       className={styles.btnEmptyTopup}

@@ -3445,7 +3445,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Get messages in the exchange chat thread. */
+        /** @description Read exchange messages in chronological order. Without pagination parameters, returns up to 500 most recent messages. */
         get: operations["getExchangeMessages"];
         put?: never;
         /** @description Send a message in the exchange chat thread. */
@@ -7686,6 +7686,8 @@ export interface components {
         };
         ExchangeMessagesResponse: {
             items: components["schemas"]["ExchangeMessage"][];
+            /** @description Present when the caller opts into pagination. Null means there are no older messages. */
+            olderCursor?: string | null;
         };
         /** @description The responding Member replaces their own books or negotiates compensation; the server derives deposits from reviewed book values while compensation can be customized within bounds. Recipient replaces exactly one listing, initiator one to five. The other party's frozen books must remain eligible and unchanged. */
         CounterExchangeProposal: {
@@ -11883,6 +11885,8 @@ export interface operations {
                 type?: "Topup" | "OrderPayment" | "OrderRefund" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund" | "OrderSettlement";
                 topupId?: string;
                 orderId?: string;
+                /** @description Full journal, order, top-up or withdrawal ID, or the first six hexadecimal characters shown on a receipt. Matches only the caller's own history. */
+                reference?: string;
             };
             header?: never;
             path?: never;
@@ -14887,7 +14891,12 @@ export interface operations {
     };
     getExchangeMessages: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Number of recent messages per page when opting into history pagination. */
+                limit?: number;
+                /** @description Opaque olderCursor returned by a previous page of this exchange. */
+                before?: string;
+            };
             header?: never;
             path: {
                 id: string;
@@ -14905,6 +14914,7 @@ export interface operations {
                     "application/json": components["schemas"]["ExchangeMessagesResponse"];
                 };
             };
+            400: components["responses"]["ListingError"];
             401: components["responses"]["ListingError"];
             403: components["responses"]["ListingError"];
             404: components["responses"]["ListingError"];
@@ -14940,6 +14950,7 @@ export interface operations {
             403: components["responses"]["ListingError"];
             404: components["responses"]["ListingError"];
             409: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
         };
     };

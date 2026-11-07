@@ -337,6 +337,13 @@ describe('Simulated wallet: real MongoDB and HTTP', () => {
     await get('/me/topups/' + body.intentId, b).expect(404);
     const h = (await get('/me/wallet/history', a).expect(200)).body.items[0];
     await get('/me/wallet/history?cursor=' + h.journalId, b).expect(404);
+    const time = encodeURIComponent(h.postedAt);
+    for (const reference of [h.journalId, body.intentId, body.intentId.slice(0, 6).toUpperCase()]) {
+      const query = '/me/wallet/history?reference=' + reference + '&from=' + time + '&to=' + time;
+      expect((await get(query, a).expect(200)).body.items).toEqual([h]);
+      expect((await get(query, b).expect(200)).body.items).toEqual([]);
+    }
+    await get('/me/wallet/history?reference=.*', a).expect(400);
     await get('/me/topups?cursor=' + body.intentId, b).expect(404);
     expect((await get('/me/topups', b).expect(200)).body.items).toEqual([]);
     await get('/me/wallet/history?ownerId=' + a.id, b).expect(400);

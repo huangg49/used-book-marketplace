@@ -103,6 +103,7 @@ export function findCommands(commands: WorkspaceCommand[], query: string) {
       const rest = foldCommandText(
         `${command.description} ${command.keywords} ${command.group}`,
       );
+      const words = new Set(`${label} ${rest}`.match(/[\p{L}\p{N}]+/gu) ?? []);
       const scores = tokens.map((token) =>
         label.startsWith(token)
           ? 0
@@ -116,10 +117,15 @@ export function findCommands(commands: WorkspaceCommand[], query: string) {
         command,
         order,
         score: scores.reduce((sum, score) => sum + score, 0),
+        wholeWordMatches: tokens.filter((token) => words.has(token)).length,
       };
     })
     .filter((result) => Number.isFinite(result.score))
-    .sort((a, b) => a.score - b.score || a.order - b.order)
+    .sort((a, b) =>
+      a.score - b.score ||
+      b.wholeWordMatches - a.wholeWordMatches ||
+      a.order - b.order,
+    )
     .map((result) => result.command);
 }
 export function nextCommandIndex(

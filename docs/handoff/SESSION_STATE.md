@@ -1,3 +1,41 @@
+# Sửa lỗi từ khảo sát nghiệp vụ — 07/11/2026
+
+Nhánh `codex/audit-business-fixes` từ `9c858da7`, main đối chiếu
+`a972cdd053411702fe5356963e4c99cde22e7fdd`. Owner xác nhận React Native là app
+di động của dự án. Gói này gồm Member web, RN, Admin và API dùng chung.
+
+- Chat mua bán kiểm lại người nhận trước khi gửi realtime. Socket mất quyền
+  rời phòng, người còn quyền tiếp tục nhận tin. Gửi đã ghi nhận vẫn có ACK để
+  lịch sử khôi phục nếu phát realtime lỗi.
+- Wishlist tái dùng projection listing công khai trong cùng snapshot. Mục đã
+  lưu vẫn quản lý được khi listing tạm ẩn. Cursor theo thời gian và ID, nhận
+  được cursor timestamp cũ; cursor mới đi qua các mục trùng timestamp.
+- Doanh thu Admin ẩn dữ liệu khi máy chủ trả 401/403, xóa báo cáo không còn
+  được xem theo các kỳ đã lưu. Lỗi tạm thời giữ số cũ với nhãn tương ứng.
+- Chat trao đổi mở 40 tin mới nhất, tải tin cũ trên web/RN. API cũ trả tối đa
+  500 tin mới nhất theo thứ tự đọc. FR-M02 giới hạn 2.000 ký tự và 20 lượt
+  gửi do Member tạo trong 60 giây dùng chung hai loại chat. Mua bán replay
+  cùng ID/body trước kiểm hạn mức. Thông báo tự động ở chat đổi không tính.
+  Migration `0062-message-send-limits` mở validator và thêm index. Tin trao đổi
+  cũ thiếu dấu nguồn vẫn đọc được và không tính vào hạn mức trong phút cắt chuyển.
+- Lịch sử ví web/RN lọc ngày theo giờ TP.HCM và mã đầy đủ hoặc sáu ký tự
+  trên biên lai. Số dư sau giao dịch được tính trước khi lọc, dữ liệu chỉ
+  thuộc ví người đang đăng nhập. Áp dụng/xóa bộ lọc quay về đầu danh sách.
+
+Kiểm chứng local gồm API 435, Member web 471, RN 224, Admin 249 và session-client
+154 unit tests. Build API/Member web/Admin, RN typecheck, OpenAPI 258
+operations/39 controllers PASS. Browser fixture Member 390/1440 đã qua đọc tin
+501/tải cũ/403 và lịch sử ví lỗi/phục hồi/lọc/xóa. QA Mongo và E2E có ghi DB
+NOT RUN vì Docker engine không sẵn, gồm migration 0062, race hạn mức và lọc
+lịch sử ví thực. Thiết bị RN và người thật NOT RUN. Demo Documents giữ 54
+thay đổi tracked/untracked, chưa nhận gói này.
+
+Còn mở: 48h kháng nghị và thời điểm thực thi quyết định ViaPoint cần gói
+nghiệp vụ tiền/quyền với QA và gate tương ứng. FR-L07 gỡ bài đang giao dịch
+kèm hồ sơ, FR-C03/C07 catalog/banner, FR-N02 thông báo theo dõi, chặn/báo cáo
+chat, FR-W08 đối soát hằng ngày và phần còn lại của FR-G03 chưa triển khai.
+Các gate DirectDelivery/Exchange/AI tự duyệt theo READINESS.
+
 # Xuất bản chuỗi tối ưu —06–07/11/2026
 
 Owner yêu cầu push và merge cẩn thận. Nhánh `codex/web-hardening-release-20261106`,
@@ -5,7 +43,8 @@ nguồn tích lũy `ba8713bb`, main remote xác minh `ef7091e1e24eeff186eb0db332
 là ancestor, không conflict mới. Giữ toàn bộ123commit/330file local ban đầu
 (receipt/private-review/API/shared/RN, conversation/pagination/focus và tối ưu).
 Backup `codex/backup-before-publish-20261106-ba8713bb`. Đã push và mở
-[PR97](https://github.com/huangg49/used-book-marketplace/pull/97); chưa merge.
+[PR97](https://github.com/huangg49/used-book-marketplace/pull/97), đã squash vào
+main tại `2e5db222` sau CI11/11 trên `f43b5897`.
 PR97 là đầu mối diff, SHA, CI và trạng thái merge hiện hành. Evidence bên dưới
 thuộc nguồn được ghi; phải đọc CI đúng head cuối trước squash. Ngày07/11 owner
 yêu cầu assistant tự review rồi merge, cho phép ngoại lệ review người thật riêng
@@ -80,8 +119,13 @@ Demo `codex/demo-receipt-local-20261103`/`5bd0b360` giữ54file tracked/untracke
 status fingerprint; không sync/build/stash/reset checkout Documents. Không local
 API/Mongo/worker/provider, migration/seed/deploy. Local Flutter analyze/test,
 full native/live-provider/human acceptance NOT RUN; READINESS giữ nguyên.
-Bước tiếp: xác minh CI đúng SHA cuối rồi squash PR97 theo quyền owner07/11,
-kiểm SHA main/merge thực. Không tự bật AI auto-review hoặc mở rộng gate nghiệp vụ.
+Đồng bộ ngày 07/11. Main local fast-forward lên `a972cdd0`, bổ sung thống kê
+doanh thu phân trang ([PR98](https://github.com/huangg49/used-book-marketplace/pull/98)).
+CI Admin và Operations cùng dừng ở test tìm “tài khoản” do Thống kê trùng điểm
+khớp chuỗi con. Nhánh local `codex/admin-command-search-ranking` ưu tiên khớp
+nguyên từ khi bằng điểm. Admin 246 unit, build và lint phần sửa đều PASS.
+API dashboard 8 unit và contract/routes 258 operations PASS local. E2E của
+nhánh sửa chưa chạy. Checkout demo giữ nguyên.
 
 # Gia cố khả năng phục hồi web —05/11/2026
 
