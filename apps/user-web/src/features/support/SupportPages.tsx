@@ -1,4 +1,6 @@
-import { useRef, useState, type FormEvent } from "react";
+import { usePagedCollection } from "../../components/Pagination/usePagedCollection";
+import { CollectionPager } from "../../components/Pagination/CollectionPager";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   useInfiniteQuery,
   useQuery,
@@ -53,9 +55,21 @@ export function SupportPage() {
     enabled: !!owner,
     retry: false,
   });
+  const collection = usePagedCollection(result, `${owner}:${state}:${kind}`, pages => pages.flatMap(page => page.items));
   const denied =
     result.error instanceof ApiError &&
     [401, 403].includes(result.error.status);
+  const resetPagination = collection.reset;
+  const refreshRevision = useRef(0);
+  useEffect(() => () => { refreshRevision.current += 1; }, [owner, state, kind]);
+  useEffect(() => {
+    if (denied) resetPagination();
+  }, [denied, resetPagination]);
+  async function refreshList() {
+    const revision = refreshRevision.current;
+    const refreshed = await result.refetch({ cancelRefetch: false });
+    if (!refreshed.isError && revision === refreshRevision.current) resetPagination();
+  }
   return (
     <div className={styles.page}>
       <header>
@@ -114,22 +128,22 @@ export function SupportPage() {
         </label>
         <button
           disabled={result.isFetching}
-          onClick={() => void result.refetch()}
+          onClick={() => void refreshList()}
         >
           Cập nhật
         </button>
       </div>
       {result.isPending ? <p role="status">Đang tải yêu cầu…</p> : null}
-      {result.isError ? (
+      {result.isError && (denied || !result.isFetchNextPageError) ? (
         <p role="alert">
-          {supportError(result.error)} Dùng Cập nhật để thử lại.
+          {denied
+            ? "Quyền xem yêu cầu hỗ trợ đã thay đổi. Kiểm tra phiên đăng nhập và dùng Cập nhật để thử lại."
+            : `${supportError(result.error)} Dùng Cập nhật để thử lại.`}
         </p>
       ) : null}
       {!denied &&
-        result.data?.pages
-          .flatMap((p) => p.items)
-          .map((item) => (
-            <article className={styles.row} key={item.id}>
+        collection.items.map((item, index) => (
+            <article className={styles.row} key={item.id} id={index === 0 ? "support-list-start" : undefined}>
               <div>
                 <p className={styles.meta}>
                   {supportKinds[item.kind]} · {date(item.createdAt)}
@@ -151,7 +165,7 @@ export function SupportPage() {
               </span>
             </article>
           ))}
-      {result.isSuccess && !result.data.pages[0].items.length ? (
+      {result.isSuccess && collection.loadedCount === 0 && !result.hasNextPage ? (
         <section>
           <h2>Chưa có yêu cầu trong mục này</h2>
           <p>
@@ -159,14 +173,7 @@ export function SupportPage() {
           </p>
         </section>
       ) : null}
-      {!denied && result.hasNextPage ? (
-        <button
-          disabled={result.isFetchingNextPage}
-          onClick={() => void result.fetchNextPage()}
-        >
-          {result.isFetchingNextPage ? "Đang tải…" : "Xem thêm yêu cầu"}
-        </button>
-      ) : null}
+      {!denied && <CollectionPager model={collection} anchorId="support-list-start" itemLabel="yêu cầu" />}
     </div>
   );
 }
@@ -197,13 +204,13 @@ function NewSupportForm({
     kind = params.get("kind");
   const initial: SupportDraft = {
     kind:
-      kind && kind in supportKinds
+      kind && Object.hasOwn(supportKinds, kind)
         ? (kind as SupportDraft["kind"])
         : "Feedback",
     title: "",
     description: "",
     targetType:
-      type && type in supportTargets
+      type && Object.hasOwn(supportTargets, type)
         ? (type as SupportDraft["targetType"])
         : "",
     targetId: params.get("id") ?? "",

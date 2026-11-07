@@ -85,8 +85,11 @@ không thay contract hiện hành hoặc READINESS.
 
 ## Đánh giá giao dịch và uy tín
 
-[ADR0052](../adr/0052-transaction-reviews-and-reputation.md), contract0.57:
-`Exchange`/`DirectOrder`/`PointOrder` phải Completed với mốc hoàn tất hợp lệ;
+[ADR0052](../adr/0052-transaction-reviews-and-reputation.md), bổ sung0.74 owner03/11:
+`Exchange`/`DirectOrder`/`PointOrder` được viết riêng sau nhận sách hợp lệ hoặc Completed;
+Exchange theo own receivedAt, DirectOrder Inspection có BuyerReceived,
+PointOrder Inspection có collectedAt. Tranh chấp/hủy khóa tạo/sửa/xóa.
+Chỉ công bố/tính điểm sau Completed với mốc hoàn tất hợp lệ;
 review không thực hiện completion/settlement. Mỗi participant một lần tạo, kể
 cả đã xóa. Hạn gửi168h; sửa/xóa48h từ lần đầu, không gia hạn. Buyer/Exchange
 chấm sách và đối tác; Seller Order chỉ chấm đối tác. Chỉ công bố khi hai bên đã
@@ -230,9 +233,11 @@ LOCKED/RESTRICTED Buyer may report; Seller/operations roles cannot report for Bu
 Worker OrderDeliveryExpiry scans100 without candidate locks, retries failures and logs
 deliveryRemaining/openDeliveryReviews/oldestDeliveryReviewAgeSeconds. Keep original
 review identity and pickup history; no refund/restock/custody conclusion from a report.
-Delivered/Buyer receipt/72h inspection source exists, but new completion commands
-and settlement are release-blocked by [ADR0064](../adr/0064-direct-delivery-completion-release-gate.md).
-Current auth precedes read-only historical replay; canConfirmReceipt is false.
+Buyer receipt/72h inspection được mở có giới hạn theo owner03/11/ADR0052, chỉ
+InTransit v4 còn hạn, pickup hợp lệ và không carrier/delivery review, giữ nguyên hold.
+Carrier Delivered và settlement vẫn bị chặn bởi [ADR0064](../adr/0064-direct-delivery-completion-release-gate.md).
+Current auth precedes read-only historical replay; canConfirmReceipt follows the
+limited Buyer acknowledgement eligibility above, not carrier delivery or settlement.
 Worker reports blocked Inspection separately from executable backlog, preserving
 holds/books/history. Carrier-delivered denial and quality claims are still incomplete.
 These review tasks are intake/blockers, not a completed dispute/adjudication workflow.

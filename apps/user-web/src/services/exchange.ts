@@ -8,6 +8,9 @@ import {
   retryExchangeCommand,
   sendExchangeCommand,
   sendExchangeProposal,
+  PUBLIC_MEDIA_GC_MS,
+  signedMediaRemainingMs,
+  signedMediaStaleTime,
   type ExchangeCommand,
 } from "@used-books/session-client";
 import { z } from "zod";
@@ -17,6 +20,8 @@ import {
   type ExchangeBookSnapshot,
 } from "@used-books/session-client";
 import { session } from "./api";
+import { queryClient } from "../lib/session";
+import { invalidateMemberWalletViews } from "../lib/wallet-cache";
 import type {
   ExchangeTab,
   ExchangeItem,
@@ -255,12 +260,24 @@ export async function exchangeBook(
     let coverUrl: string | undefined;
     if (exchangeId && snapshot.mediaIds[0]) {
       try {
-        coverUrl = (
-          await session.request(
-            `/exchanges/${exchangeId}/books/${id}/photos/${snapshot.mediaIds[0]}`,
-            z.object({ url: z.string().url() }),
-          )
-        ).url;
+        const ownerId = exchangeActor().id;
+        const mediaId = snapshot.mediaIds[0];
+        const photo = await queryClient.fetchQuery({
+          queryKey: ["exchange-book-photo", ownerId, exchangeId, id, snapshot.revisionId, mediaId],
+          queryFn: async () => {
+            const result = await session.request(
+              `/exchanges/${exchangeId}/books/${id}/photos/${mediaId}`,
+              z.object({ url: z.string().url(), expiresAt: z.iso.datetime({ offset: true }).optional() }),
+            );
+            if (result.expiresAt && !signedMediaRemainingMs(result.expiresAt))
+              throw new Error("The exchange image link expired before it arrived.");
+            return result;
+          },
+          staleTime: query => signedMediaStaleTime(query.state.data?.expiresAt, query.state.dataUpdatedAt),
+          gcTime: PUBLIC_MEDIA_GC_MS,
+          retry: false,
+        });
+        coverUrl = photo.url;
       } catch {
         /* Photo failure does not replace frozen agreement facts. */
       }
@@ -402,12 +419,17 @@ export function pendingExchange(id: string) {
   return pendingExchangeIntent(session, id);
 }
 export function retryExchange(id: string) {
+  const actor = session.getSnapshot();
+  const ownerId = actor.status === "authenticated" ? actor.user.id : undefined;
   return retryExchangeCommand(
     session,
     id,
     () => crypto.randomUUID(),
     exchangeSchema,
-  );
+  ).then(result => {
+    invalidateMemberWalletViews(queryClient, ownerId);
+    return result;
+  });
 }
 export function exchangeCommand(path: string, body: object) {
   if (path === "/exchanges")
@@ -422,6 +444,8 @@ export function exchangeCommand(path: string, body: object) {
       path,
     );
   if (!match) throw new Error("Thao tác trao đổi không hợp lệ.");
+  const actor = session.getSnapshot();
+  const ownerId = actor.status === "authenticated" ? actor.user.id : undefined;
   return sendExchangeCommand(
     session,
     match[1],
@@ -429,7 +453,10 @@ export function exchangeCommand(path: string, body: object) {
     body,
     () => crypto.randomUUID(),
     exchangeSchema,
-  );
+  ).then(result => {
+    invalidateMemberWalletViews(queryClient, ownerId);
+    return result;
+  });
 }
 export function exchangeError(error: unknown) {
   if (!(error instanceof ApiError) || error.status === 0 || error.status >= 500)

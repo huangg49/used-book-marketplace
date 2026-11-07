@@ -1,3 +1,4 @@
+import { ReviewEntry } from "../reviews/review-entry";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 import * as Crypto from "expo-crypto";
@@ -168,6 +169,7 @@ export function WinnerSteps({ orderId, boughtNow, paused = false }: { orderId: s
           {o.state === "ReadyForCollection" && o.fulfillmentMethod === "SelfCollect" && (
             <Collection order={o} issued={issued} locked={locked} onRequest={() => ask("collection-code", "Lấy mã nhận sách?", `Mã có hiệu lực 10 phút và chỉ hiển thị một lần. Hãy lấy mã khi bạn đã ở ${o.pointName}.`, "Lấy mã")} />
           )}
+          {["Inspection","Completed"].includes(o.state) && <ReviewEntry type="PointOrder" id={o.id} version={o.version} />}
           {o.state === "Inspection" && <Claim order={o} locked={locked} ask={ask} />}
         </>
       )}

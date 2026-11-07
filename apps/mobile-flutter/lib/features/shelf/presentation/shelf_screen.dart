@@ -1544,7 +1544,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: StitchTokens.wine, width: 1.5),
+          borderSide: const BorderSide(color: StitchTokens.wine, width: 2),
         ),
         isDense: true,
       ),

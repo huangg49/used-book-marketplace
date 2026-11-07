@@ -415,13 +415,18 @@ try {
     exact: true,
   });
   await buyerPage.waitForURL(`**/chat/${conversationId}`);
-  await buyerOrderDetails.getByRole("heading", { name: "Thủ tục đơn hàng", exact: true }).waitFor();
+  await buyerOrderDetails.getByRole("heading", { name: "Thanh toán đơn sách", exact: true }).waitFor();
   await buyerOrderDetails.getByText("Chờ thanh toán", {exact: true}).waitFor();
   const order = await fixture.db
     .collection("direct_orders")
     .findOne({ buyerId: buyer.user.id });
   assert(order);
   assert.equal(order._id, createReceipt.entityId);
+  const orderContextToggle = buyerOrderDetails.getByRole("button", {
+    name: "Sách và thỏa thuận", exact: true,
+  });
+  if (await orderContextToggle.isVisible() && await orderContextToggle.getAttribute("aria-expanded") !== "true")
+    await orderContextToggle.click();
   await buyerOrderDetails.getByRole("heading", {
     name: fixture.metadata.title, exact: true,
   }).waitFor();
@@ -479,7 +484,7 @@ try {
     .getByRole("button", { name: /^Thanh toán ngay 90\.000\s*₫$/ })
     .click();
   await buyerOrderDetails
-    .getByText("Chờ người bán xác nhận", {exact: true})
+    .getByRole("heading", { name: "Chờ người bán xác nhận", exact: true })
     .waitFor();
   const wallet = await fixture.api("/me/wallet", buyer.accessToken);
   assert.equal(wallet.transactionHeld, 90000);

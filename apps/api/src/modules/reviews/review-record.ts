@@ -33,12 +33,35 @@ export async function reviewTransaction(
         ? row.completedAt
         : row.closedAt
       : null;
+  // Acknowledgement permits a private draft; completion still controls disclosure.
+  let receivedAt: Date | null = null;
+  if ('initiatorId' in row && ['InTransit', 'Delivered'].includes(state)) {
+    receivedAt =
+      authorId === row.initiatorId
+        ? row.initiatorReceivedAt
+        : row.recipientReceivedAt;
+  } else if (type === 'DirectOrder' && state === 'Inspection') {
+    receivedAt =
+      (
+        await tx.c.direct_delivery_events.findOne({
+          orderId: id,
+          source: 'BuyerReceived',
+        })
+      )?.occurredAt ?? null;
+  } else if (
+    type === 'PointOrder' &&
+    state === 'Inspection' &&
+    'collectedAt' in row
+  ) {
+    receivedAt = row.collectedAt;
+  }
   return {
     type,
     id,
     authorId,
     partnerId: authorId === a ? b : a,
     completedAt: completedAt ?? null,
+    reviewableAt: completedAt ?? receivedAt,
     bookRatingRequired: type === 'Exchange' || authorId === a,
   };
 }

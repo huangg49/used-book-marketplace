@@ -5,6 +5,7 @@ import { MotionConfig } from 'framer-motion';
 import { Providers } from './app/providers';
 import { router } from './app/router';
 import './styles/global.css';
+import '../../../packages/brand/v1.1/focus.css';
 import { installViewTransitionFallback } from './lib/view-transition-fallback';
 
 installViewTransitionFallback(document);

@@ -1,3 +1,5 @@
+import { CursorPager } from "../components/Pagination/CursorPager";
+import { useCursorNavigation } from "../components/Pagination/useCursorNavigation";
 import { formatDuration } from '../components/DurationInput'
 import { AuctionEmptyArt } from '../components/AuctionEmptyArt'
 import { useRef, useState } from 'react'
@@ -9,7 +11,7 @@ import { AuctionPhoto } from '../components/AuctionGallery'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
 import { useSession } from '../hooks/useSession'
-import { formatRemaining, outcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
+import { formatRemaining, outcomeUnknown, commandOutcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import {
   AUCTION_MAX_SCHEDULE_EDITS, EVIDENCE_MIN_LENGTH, auctionPhase, getMyAuctionIntakes, listHandoverPoints, listMyAuctions,
   submitIntakeEvidence, withdrawIntake, getMyAuctionIntake, type MyAuctionItem, type MyIntake,
@@ -180,7 +182,7 @@ function EvidenceForm({ intake, onChanged }: { intake: MyIntake; onChanged: () =
       await submitIntakeEvidence(intake.id, attempt.version, attempt.note, attempt.key)
       intent.settle(); pending.current = null
     } catch (caught) {
-      stillUnknown = outcomeUnknown(caught)
+      stillUnknown = commandOutcomeUnknown(caught)
       if (!stillUnknown) { intent.settle(); pending.current = null }
       setError(!stillUnknown && caught instanceof ApiError
         ? caught.message || 'Chưa gửi được bằng chứng.'
@@ -231,7 +233,7 @@ function IntakeRow({ intake, pointName, onChanged }: { intake: MyIntake; pointNa
       await withdrawIntake(intake.id, attempt.version, attempt.key)
       intent.settle(); pending.current = null
     } catch (caught) {
-      stillUnknown = outcomeUnknown(caught)
+      stillUnknown = commandOutcomeUnknown(caught)
       if (!stillUnknown) { intent.settle(); pending.current = null }
       setError(!stillUnknown && caught instanceof ApiError
         ? caught.message || 'Chưa rút được sách khỏi đấu giá.'
@@ -316,6 +318,7 @@ function SellerIntakes({
   userId: string | undefined;
 }) {
   const [params, setParams] = useSearchParams();
+
   const focusId = params.get("intakeId");
   const queryClient = useQueryClient();
   const focus = useQuery({
@@ -404,6 +407,7 @@ export function MyAuctionsPage() {
   const queryClient = useQueryClient()
   const userId = auth.status === 'authenticated' ? auth.user.id : undefined
   const [params, setParams] = useSearchParams()
+  const navigation = useCursorNavigation(auth.status === "authenticated" ? auth.user.id : "guest")
   const view = views.some((v) => v.value === params.get('view'))
     ? params.get('view')!
     : 'all'
@@ -422,6 +426,7 @@ export function MyAuctionsPage() {
     setParams(p)
   }
   const stale = query.isError && !!query.data && outcomeUnknown(query.error)
+  const readDenied = query.error instanceof ApiError && [401, 403].includes(query.error.status)
   const showData = !!query.data && (!query.isError || stale)
   return (
     <div className={styles.page}>
@@ -450,7 +455,7 @@ export function MyAuctionsPage() {
         ))}
       </nav>
       <SellerIntakes userId={userId} enabled={!!userId && (view === 'all' || view === 'selling') && !cursor} />
-      <div className={styles.results} aria-busy={query.isFetching}>
+      <div className={styles.results} id="my-auction-results" tabIndex={-1} aria-busy={query.isFetching}>
         {query.isPending && <p role="status">Đang tải các phiên của bạn…</p>}
         {query.isError && (
           <div className={stale ? styles.refreshError : styles.empty} role="alert">
@@ -496,34 +501,8 @@ export function MyAuctionsPage() {
             />
           ))}
       </div>
-      {(cursor || (!query.isError && query.data?.nextCursor)) && (
-        <nav className={styles.pagination} aria-label="Trang đấu giá của tôi">
-          {cursor && (
-            <button
-              type="button"
-              onClick={() => {
-                const p = new URLSearchParams(params)
-                p.delete('cursor')
-                setParams(p)
-              }}
-            >
-              Về trang đầu
-            </button>
-          )}
-          {!query.isError && query.data?.nextCursor && (
-            <button
-              type="button"
-              onClick={() => {
-                const p = new URLSearchParams(params)
-                p.set('cursor', query.data!.nextCursor!)
-                setParams(p)
-              }}
-            >
-              Trang tiếp <ArrowRight size={16} aria-hidden="true" />
-            </button>
-          )}
-        </nav>
-      )}
+      {!readDenied && <CursorPager navigation={navigation} nextCursor={!query.isError ? query.data?.nextCursor : undefined}
+        busy={query.isFetching} failed={query.isError} count={query.data?.items.length} label="Trang đấu giá của tôi" itemLabel="phiên" anchorId="my-auction-results" />}
     </div>
   )
 }

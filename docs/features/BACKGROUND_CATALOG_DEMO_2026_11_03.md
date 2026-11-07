@@ -75,3 +75,13 @@ và kết quả API lưu riêng trong `.tmp/background-catalog-400/`, không đ�
 credentials hay ảnh bìa vào Git. Không chạy lại script để reset dữ liệu đã dùng.
 Muốn tái tạo trên máy khác phải chuẩn bị nguồn/storage và đích riêng có kiểm soát;
 commit tài liệu này không tự cung cấp400listing cho clone khác.
+
+## Hiệu chỉnh quota sau import — 03/11/2026
+
+Lượt chuẩn bị demo trao đổi phát hiện import giữ mỗi ảnh Ready thêm2MB thay vì
+dung lượng derivative thật, khiến upload mới bị429. Đã đọc lại đủ400original+
+400WebP, xác nhận hash/size, thử sửa trên bản sao QA trước khi hiệu chỉnh atomic
+400reservation từ821.590.869 xuống34.514.743byte. Không xóa/đổi ảnh hoặc tăng
+budget cấu hình; ledger/nội dung bài giữ nguyên, có backup/audit. Khi tái tạo,
+reservation Ready cần input+derivative bytes đã xác minh như MediaWorker, không
+chép công thức giữ thừa của importer private cũ. [Bằng chứng và giới hạn](RECEIPT_REVIEW_DEMO_2026_11_03.md).

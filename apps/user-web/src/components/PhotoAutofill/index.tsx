@@ -72,6 +72,7 @@ export function PhotoAutofill({
   const forcedAiPhotos = useRef<File[] | null>(null);
   const barcodeStale = files.length !== barcodePhotos.length || files.some((p, i) => p.file !== barcodePhotos[i]);
   const [reading, setReading] = useState(false);
+  const readLock = useRef(false);
   const [error, setError] = useState<string>();
   const [result, setResult] = useState<AutofillSuggestion | null>(null);
   const [used, setUsed] = useState<AutofillField[]>([]);
@@ -82,9 +83,6 @@ export function PhotoAutofill({
     (files.length !== resultPhotos.length ||
       files.some((item, index) => item.file !== resultPhotos[index]));
   const filesRef = useRef(files);
-  useEffect(() => {
-    filesRef.current = files;
-  }, [files]);
   useEffect(
     () => () =>
       filesRef.current.forEach((item) => URL.revokeObjectURL(item.url)),
@@ -94,8 +92,9 @@ export function PhotoAutofill({
   function choose(event: React.ChangeEvent<HTMLInputElement>) {
     const picked = Array.from(event.target.files ?? []);
     event.target.value = "";
-    if (!picked.length) return;
-    if (files.length + picked.length > MAX_PHOTOS) {
+    if (!picked.length || disabled || readLock.current) return;
+    const current = filesRef.current;
+    if (current.length + picked.length > MAX_PHOTOS) {
       setError(`Chọn tối đa ${MAX_PHOTOS} ảnh để đọc.`);
       return;
     }
@@ -110,19 +109,24 @@ export function PhotoAutofill({
       return;
     }
     setError(undefined);
-    setFiles((previous) => [
-      ...previous,
+    // Allocate once in the event handler; React may replay state updaters.
+    const next = [
+      ...current,
       ...picked.map((file) => ({ file, url: URL.createObjectURL(file) })),
-    ]);
+    ];
+    filesRef.current = next;
+    setFiles(next);
   }
-  function remove(index: number) {
-    setFiles((previous) => {
-      URL.revokeObjectURL(previous[index]!.url);
-      return previous.filter((_, i) => i !== index);
-    });
+  function remove(url: string) {
+    if (disabled || readLock.current || !filesRef.current.some(item => item.url === url)) return;
+    URL.revokeObjectURL(url);
+    const next = filesRef.current.filter(item => item.url !== url);
+    filesRef.current = next;
+    setFiles(next);
   }
   async function read(forceAi = false) {
-    if (reading || !files.length) return;
+    if (disabled || readLock.current || !files.length) return;
+    readLock.current = true;
     setReading(true);
     setError(undefined);
     try {
@@ -147,6 +151,7 @@ export function PhotoAutofill({
           : "Chưa đọc được ảnh. Bạn vẫn có thể tự nhập thông tin sách.",
       );
     } finally {
+      readLock.current = false;
       setReading(false);
     }
   }
@@ -195,7 +200,7 @@ export function PhotoAutofill({
             <button
               type="button"
               className={styles.remove}
-              onClick={() => remove(index)}
+              onClick={() => remove(item.url)}
               disabled={disabled || reading}
               aria-label={`Bỏ ảnh để đọc ${index + 1}`}
             >
@@ -204,7 +209,7 @@ export function PhotoAutofill({
           </figure>
         ))}
         {files.length < MAX_PHOTOS && (
-          <label className={styles.add} aria-disabled={disabled || reading}>
+          <label data-focus-surface className={styles.add} aria-disabled={disabled || reading}>
             <Camera size={18} aria-hidden="true" />
             <span>{files.length ? "Thêm ảnh" : "Chọn ảnh"}</span>
             <input

@@ -503,7 +503,7 @@ try {
     .click();
   await member.waitForURL(memberOrigin + "/reviews");
   await member
-    .getByRole("link", { name: "Xem hồ sơ uy tín của tôi", exact: true })
+    .getByRole("link", { name: "Xem trang công khai", exact: true })
     .click();
   await member.waitForURL(memberOrigin + "/members/" + owner);
   await member
@@ -579,7 +579,7 @@ try {
     .click();
   await member.waitForURL(/\/reviews\?reviewId=/);
   await expect(
-    member.getByRole("heading", { name: "Đánh giá giao dịch", exact: true }),
+    member.getByRole("heading", { name: "Chi tiết đánh giá giao dịch", exact: true }),
   ).toBeVisible();
   assert.equal(
     await fixture.db

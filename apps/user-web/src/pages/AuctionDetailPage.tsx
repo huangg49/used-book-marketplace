@@ -1,3 +1,4 @@
+import { ReviewEntry } from "../features/reviews/ReviewEntry";
 import { formatDuration } from '../components/DurationInput';
 import {SupportLink} from '../features/support/SupportLink';
 import { useEffect, useId, useRef, useState } from 'react'
@@ -9,11 +10,12 @@ import {
 } from 'lucide-react'
 import { AutoBidDialog } from '../components/AutoBidDialog'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import { formatRemaining, outcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
+import { formatRemaining, outcomeUnknown, commandOutcomeUnknown, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import { useAuctionLive } from '../hooks/useAuctionLive'
 import { useSession } from '../hooks/useSession'
 import { formatVnd, ROUTES } from '../lib/routes'
 import { getWalletSummary } from '../services/wallet'
+import { invalidateMemberWalletViews } from '../lib/wallet-cache'
 import {
   AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation,
   getMyPointOrder, getPointOrderDeliveryQuote, payPointOrder, placeBid, setAutoBid, withdrawIntake, type DeliveryChoice, type MyIntake,
@@ -163,7 +165,7 @@ export function AuctionDetailPage() {
   if (authed && intakes.isPending) action = <p role="status">Đang kiểm tra vai trò của bạn trong phiên…</p>
   else if (authed && intakes.isError && !intakes.data) action = null
   else if (sellerIntake) action = <SellerPanel auction={auction} intake={sellerIntake} open={open} scheduled={scheduled} serverTime={detail.data.serverTime} onChanged={refresh} paused={intakes.isError} />
-  else if (me?.won) action = <WinnerPanel me={me} auction={auction} onChanged={refresh} paused={intakes.isError} />
+  else if (me?.won) action = <WinnerPanel me={me} auction={auction} ownerId={authed ? session.user.id : undefined} onChanged={refresh} paused={intakes.isError} />
   else if (auction.state === 'OnHold')
     action = (
       <div className={`${styles.standing} ${styles.standingOut}`}>
@@ -467,7 +469,7 @@ function AmountField({ id, label, value, onChange, disabled, hint, error }: {
   return (
     <div className={styles.field}>
       <label htmlFor={id} className="sr-only">{label}</label>
-      <div className={`${styles.inputWrap} ${error ? styles.inputInvalid : ''}`}>
+      <div data-focus-surface data-focus-invalid={!!error} className={`${styles.inputWrap} ${error ? styles.inputInvalid : ''}`}>
         <input
           id={id}
           inputMode="numeric"
@@ -559,7 +561,7 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
       setNoticePrice(next.kind === 'Manual' || next.kind === 'Auto' ? receipt.currentPrice : null)
       setReceipt({ sequence: ++receiptSequence.current, bid: next.kind === 'Manual' || next.kind === 'Auto' })
     } catch (caught) {
-      if (outcomeUnknown(caught)) { setUnknown(next); setAutoDialog(false) }
+      if (commandOutcomeUnknown(caught)) { setUnknown(next); setAutoDialog(false) }
       else { intent.settle(); setUnknown(null) }
       setError(commandError(caught))
     } finally {
@@ -772,7 +774,7 @@ function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged, 
       await withdrawIntake(intake.id, intake.version, key)
       intent.settle()
     } catch (caught) {
-      pending = outcomeUnknown(caught)
+      pending = commandOutcomeUnknown(caught)
       if (!pending) intent.settle()
       setError(commandError(caught))
     } finally {
@@ -830,7 +832,7 @@ function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged, 
   )
 }
 
-function WinnerPanel({ me, auction, onChanged, paused }: { me: AuctionParticipation; auction: AuctionSummary; onChanged: () => Promise<unknown>; paused: boolean }) {
+function WinnerPanel({ me, auction, ownerId, onChanged, paused }: { me: AuctionParticipation; auction: AuctionSummary; ownerId: string | undefined; onChanged: () => Promise<unknown>; paused: boolean }) {
   const queryClient = useQueryClient()
   const order = useQuery({
     queryKey: ['point-order', me.orderId], queryFn: () => getMyPointOrder(me.orderId!), enabled: !!me.orderId, retry: false, staleTime: 0,
@@ -871,10 +873,11 @@ function WinnerPanel({ me, auction, onChanged, paused }: { me: AuctionParticipat
     setBusy(true); setError(null)
     try {
       await payPointOrder(payment.id, payment.version, payment.key, payment.delivery)
+      invalidateMemberWalletViews(queryClient, ownerId)
       intent.settle()
       pendingPayment.current = null
     } catch (caught) {
-      pending = outcomeUnknown(caught)
+      pending = commandOutcomeUnknown(caught)
       if (!pending) { intent.settle(); pendingPayment.current = null }
       setError(commandError(caught))
     } finally {
@@ -906,6 +909,7 @@ function WinnerPanel({ me, auction, onChanged, paused }: { me: AuctionParticipat
   if (o.state !== 'AwaitingPayment')
     return (
       <><p><SupportLink type='PointOrder' id={o.id}/></p>
+      {['Inspection','Completed'].includes(o.state) && <ReviewEntry type="PointOrder" id={o.id} version={o.version} />}
       <PointOrderSteps
         order={o}
         onChanged={async () => { await queryClient.invalidateQueries({ queryKey: ['point-order', me.orderId] }); await onChanged() }}

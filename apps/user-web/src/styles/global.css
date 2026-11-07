@@ -2,9 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face{font-family:'Be Vietnam Pro';src:url('/fonts/BeVietnamPro-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
-@font-face{font-family:'Be Vietnam Pro';src:url('/fonts/BeVietnamPro-Bold.ttf') format('truetype');font-weight:700;font-display:swap}
-@font-face{font-family:Anton;src:url('/fonts/Anton-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
+@font-face{font-family:'Be Vietnam Pro';src:url('/fonts/BeVietnamPro-Regular.woff2') format('woff2'),url('/fonts/BeVietnamPro-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
+@font-face{font-family:'Be Vietnam Pro';src:url('/fonts/BeVietnamPro-Bold.woff2') format('woff2'),url('/fonts/BeVietnamPro-Bold.ttf') format('truetype');font-weight:700;font-display:swap}
+@font-face{font-family:Anton;src:url('/fonts/Anton-Regular.woff2') format('woff2'),url('/fonts/Anton-Regular.ttf') format('truetype');font-weight:400;font-display:swap}
 :root{
   --shop-wine:#5c0202;--shop-cream:#fcf8db;--shop-paper:#fffcf5;--shop-ink:#281914;
   --shop-muted:#716157;--shop-line:#d9cbbd;--shop-orange:#f68b51;--shop-yellow:#f4cb67;

@@ -2,8 +2,8 @@ import { clearAiPriceAttribution, type PriceReferenceState, assistError, decisio
 import { PriceAssistPanel } from "../components/PriceAssistPanel";
 import { createListingPriceRequest, type PricePhase } from "../services/listing-price-assist";
 import type { CatalogInput } from "../services/listing-submission";
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import {
   Navigate,
@@ -64,8 +64,8 @@ import purchaseStyles from "./PurchaseFlow.module.css";
 import styles from "./SellBookPage.module.css";
 import { BundleEditor, BundleManifest } from '../components/BookBundle';
 import { bundleCondition, bundleError, type BookBundle } from '../lib/book-bundle';
+import { createCoverCropLifecycle } from '../lib/cover-crop-lifecycle';
 import {
-  cropImageToCover,
   calculateCoverCrop,
   type CoverCropResult,
   type CoverPosition,
@@ -129,10 +129,17 @@ export function SellBookPage() {
   const [hasCoverPhoto, setHasCoverPhoto] = useState(false);
   const [coverCropMeta, setCoverCropMeta] = useState<CoverCropResult | null>(null);
   const coverCropMetaRef = useRef<CoverCropResult | null>(null);
+  const coverCropError = useRef<string | undefined>(undefined);
+  const coverCrops = useMemo(() => createCoverCropLifecycle(), []);
+  const [coverCropBusy, setCoverCropBusy] = useState(false);
+  useEffect(() => {
+    coverCrops.activate();
+    return () => coverCrops.dispose();
+  }, [coverCrops]);
   const coverInput = useRef<HTMLInputElement>(null);
   const supportInput = useRef<HTMLInputElement>(null);
   const replacementInput = useRef<HTMLInputElement>(null);
-  const replacementIndex = useRef<number | null>(null);
+  const replacementUrl = useRef<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const photoViewer = useRef<HTMLDialogElement>(null);
   const photoViewerOpen = previewImage !== null;
@@ -142,6 +149,7 @@ export function SellBookPage() {
   }, [photoViewerOpen]);
   const location = useLocation();
   const session = useSession();
+  const queryClient = useQueryClient();
   const addresses = useQuery({
     queryKey: ["address-book"],
     queryFn: () => apiSession.request("/me/addresses", addressBookSchema),
@@ -214,17 +222,20 @@ export function SellBookPage() {
     const token = ++priceToken.current;
     setAssist(prev => startLoading(prev, assistKey, token));
     try {
-      const answer = await requestPrice(assistForm, assistCatalog, [...imageFiles], setPricePhase, value => { if (priceToken.current === token) setPriceReference({ key: assistKey, value }); });
+      const answer = await requestPrice(assistForm, assistCatalog, [...imageFiles], phase => {
+        if (priceToken.current === token) setPricePhase(phase);
+      }, value => { if (priceToken.current === token) setPriceReference({ key: assistKey, value }); });
       setAssist(prev => finishLoading(prev, token, answer.listingId, answer.suggestion));
     } catch (error) {
       setAssist(prev => failLoading(prev, token, assistError(error)));
-    } finally { priceBusy.current = false; }
+    } finally { if (priceToken.current === token) priceBusy.current = false; }
   }
   const needsOrigin = !auction && formData.mode !== "Exchange";
 
   const heading = useRef<HTMLHeadingElement>(null);
   const errorBox = useRef<HTMLDivElement>(null);
   const imageRefs = useRef<string[]>([]);
+  const imageFilesRef = useRef<File[]>([]);
   const lastPhotoRemove = useRef<HTMLButtonElement>(null);
   const focusLastPhoto = useRef(false);
   const photoFocusTarget = useRef<string | null>(null);
@@ -338,9 +349,6 @@ export function SellBookPage() {
       event.returnValue = "";
     }
   });
-  useEffect(() => {
-    imageRefs.current = formData.images;
-  }, [formData.images]);
   useEffect(
     () => () => {
       imageRefs.current.forEach((url) => URL.revokeObjectURL(url));
@@ -358,30 +366,58 @@ export function SellBookPage() {
   const isDraggingCover = useRef(false);
   const dragStartPos = useRef({ x: 0, y: 0, offset: 50 });
 
+  function clearCoverCropError() {
+    const message = coverCropError.current;
+    if (message !== undefined) {
+      setSubmitError(current => current === message ? undefined : current);
+      coverCropError.current = undefined;
+    }
+  }
+  function reportCoverCropError(error: unknown, fallback: string) {
+    const message = error instanceof Error ? error.message : fallback;
+    coverCropError.current = message;
+    setValidationFailure(false);
+    setSubmitError(message);
+  }
+
+  function updatePhotos(urls: string[], files: File[]) {
+    imageRefs.current = urls;
+    imageFilesRef.current = files;
+    setFormData(previous => ({ ...previous, images: urls }));
+    setImageFiles(files);
+  }
+  async function runCoverCrop(file: File, position: CoverPosition, existingRawUrl?: string) {
+    setCoverCropBusy(true);
+    try { return await coverCrops.run(file, position, existingRawUrl); }
+    finally { setCoverCropBusy(coverCrops.isPending()); }
+  }
+
   const handleCoverPositionChange = async (position: CoverPosition) => {
     if (!coverCropMeta || hasAttempt || submitting) return;
+    clearCoverCropError();
     try {
-      const result = await cropImageToCover(
+      const result = await runCoverCrop(
         coverCropMeta.rawFile,
         position,
         coverCropMeta.rawUrl,
       );
-      if (formData.images[0]) {
-        URL.revokeObjectURL(formData.images[0]);
+      if (!result) return;
+      const previous = coverCropMetaRef.current;
+      const index = previous ? imageRefs.current.indexOf(previous.croppedUrl) : -1;
+      if (!previous || index < 0) {
+        URL.revokeObjectURL(result.croppedUrl);
+        return;
       }
+      URL.revokeObjectURL(previous.croppedUrl);
       setCoverCropMeta(result);
       coverCropMetaRef.current = result;
-      setFormData((prev) => ({
-        ...prev,
-        images: [result.croppedUrl, ...prev.images.slice(1)],
-      }));
-      setImageFiles((files) => [result.croppedFile, ...files.slice(1)]);
-    } catch (err) {
-      setSubmitError(
-        err instanceof Error
-          ? err.message
-          : "Chưa cập nhật được vị trí cắt ảnh bìa.",
+      updatePhotos(
+        imageRefs.current.map((url, i) => i === index ? result.croppedUrl : url),
+        imageFilesRef.current.map((file, i) => i === index ? result.croppedFile : file),
       );
+    } catch (err) {
+      setCoverCropMeta(coverCropMetaRef.current);
+      reportCoverCropError(err, "Chưa cập nhật được vị trí cắt ảnh bìa.");
     }
   };
 
@@ -471,18 +507,27 @@ export function SellBookPage() {
   const handleImageUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
     kind: "cover" | "support",
-    replaceAt?: number,
+    replaceUrl?: string,
   ) => {
     const selected = Array.from(e.target.files ?? []);
     e.target.value = "";
-    addSelectedImages(selected, kind, replaceAt);
+    addSelectedImages(selected, kind, replaceUrl);
   };
-  const addSelectedImages = (selected: File[], kind: "cover" | "support", replaceAt?: number) => {
+  const addSelectedImages = (selected: File[], kind: "cover" | "support", replaceUrl?: string) => {
     if (!selected.length || hasAttempt || submitting) return;
+    const urls = imageRefs.current;
+    const files = imageFilesRef.current;
+    const replaceAt = replaceUrl === undefined ? undefined : urls.indexOf(replaceUrl);
+    if (replaceAt === -1) {
+      setValidationFailure(false);
+      setSubmitError("Ảnh cần thay không còn trong bản nháp. Chọn lại ảnh muốn thay.");
+      return;
+    }
+    const currentCover = !!coverCropMetaRef.current && urls[0] === coverCropMetaRef.current.croppedUrl;
     const remaining =
       kind === "cover" || replaceAt !== undefined
         ? 1
-        : 7 - (imageFiles.length - Number(hasCoverPhoto));
+        : 7 - (urls.length - Number(currentCover));
     if (selected.length > remaining) {
       setValidationFailure(false);
       setSubmitError(
@@ -504,31 +549,27 @@ export function SellBookPage() {
     setSubmitError(undefined);
 
     if (kind === "cover") {
+      coverCropError.current = undefined;
       photoFocusTarget.current = "images";
       const file = selected[0]!;
-      cropImageToCover(file, "center")
+      runCoverCrop(file, "center")
         .then((result) => {
-          if (hasCoverPhoto) {
-            URL.revokeObjectURL(formData.images[0]!);
-            if (coverCropMetaRef.current?.rawUrl) {
-              URL.revokeObjectURL(coverCropMetaRef.current.rawUrl);
-            }
+          if (!result) return;
+          const previous = coverCropMetaRef.current;
+          const oldIndex = previous ? imageRefs.current.indexOf(previous.croppedUrl) : -1;
+          const retainedUrls = imageRefs.current.filter((_, i) => i !== oldIndex);
+          const retainedFiles = imageFilesRef.current.filter((_, i) => i !== oldIndex);
+          if (previous) {
+            URL.revokeObjectURL(previous.croppedUrl);
+            URL.revokeObjectURL(previous.rawUrl);
           }
-          const offset = Number(hasCoverPhoto);
           setCoverCropMeta(result);
           coverCropMetaRef.current = result;
-          setFormData((prev) => ({
-            ...prev,
-            images: [result.croppedUrl, ...prev.images.slice(offset)],
-          }));
-          setImageFiles((files) => [result.croppedFile, ...files.slice(offset)]);
+          updatePhotos([result.croppedUrl, ...retainedUrls], [result.croppedFile, ...retainedFiles]);
           setHasCoverPhoto(true);
         })
         .catch((err) => {
-          setValidationFailure(false);
-          setSubmitError(
-            err instanceof Error ? err.message : "Chưa xử lý được ảnh bìa.",
-          );
+          reportCoverCropError(err, "Chưa xử lý được ảnh bìa.");
         });
       return;
     }
@@ -536,30 +577,21 @@ export function SellBookPage() {
     // Validate the whole batch before allocating previews; retain upload order.
     const previews = selected.map((file) => URL.createObjectURL(file));
     if (replaceAt !== undefined) {
-      URL.revokeObjectURL(formData.images[replaceAt]!);
-      photoFocusTarget.current = `support-photo-${replaceAt - Number(hasCoverPhoto)}`;
-      setFormData((prev) => ({
-        ...prev,
-        images: prev.images.map((url, index) =>
-          index === replaceAt ? previews[0]! : url,
-        ),
-      }));
-      setImageFiles((files) =>
-        files.map((file, index) => (index === replaceAt ? selected[0]! : file)),
+      URL.revokeObjectURL(urls[replaceAt]!);
+      photoFocusTarget.current = `support-photo-${replaceAt - Number(currentCover)}`;
+      updatePhotos(
+        urls.map((url, index) => index === replaceAt ? previews[0]! : url),
+        files.map((file, index) => index === replaceAt ? selected[0]! : file),
       );
     } else {
       focusLastPhoto.current =
-        imageFiles.length - Number(hasCoverPhoto) + selected.length === 7;
-      setFormData((prev) => ({
-        ...prev,
-        images: [...prev.images, ...previews],
-      }));
-      setImageFiles((files) => [...files, ...selected]);
+        urls.length - Number(currentCover) + selected.length === 7;
+      updatePhotos([...urls, ...previews], [...files, ...selected]);
     }
   };
 
   const handleSubmit = async () => {
-    if (submitting) return;
+    if (submitting || coverCropBusy || coverCrops.isPending()) return;
     const selectedOrigin = addresses.data?.items.find(
       (item) => item.id === originAddressId,
     );
@@ -719,6 +751,9 @@ export function SellBookPage() {
       }, draftAttempt);
       setHasAttempt(true);
       await submission.current();
+      const currentOwner = apiSession.getSnapshot();
+      if (session.status !== "authenticated" || currentOwner.status !== "authenticated" || currentOwner.user.id !== session.user.id) return;
+      void queryClient.invalidateQueries({ queryKey: ["my-listings", currentOwner.user.id] });
       setStep(6);
     } catch (error) {
       setSubmitError(
@@ -822,7 +857,7 @@ export function SellBookPage() {
     const value = Number(raw);
     return Number.isInteger(value) && value >= 10_000 && value <= 1_000_000;
   }
-  function hasValidOriginAddress() {
+  const hasValidOriginAddress = useCallback(() => {
     if (addresses.data?.items.some((item) => item.id === originAddressId))
       return true;
     return (
@@ -833,21 +868,30 @@ export function SellBookPage() {
       /^0\d{9}$/.test(originForm.phone.trim()) &&
       originForm.detail.trim().length >= 5
     );
-  }
+  }, [addresses.data, serviceAreas.data, originAddressId, originForm]);
   function changeOriginForm(field: keyof typeof originForm, value: string) {
     originAddressIntent.current = null;
     setOriginForm((previous) => ({ ...previous, [field]: value }));
   }
-  function removePhoto(index: number) {
+  function removePhoto(url: string) {
     if (hasAttempt || submitting) return;
-    const supportCount = imageFiles.length - Number(hasCoverPhoto);
+    const urls = imageRefs.current;
+    const files = imageFilesRef.current;
+    const index = urls.indexOf(url);
+    if (index < 0) return;
+    const currentCover = !!coverCropMetaRef.current && urls[0] === coverCropMetaRef.current.croppedUrl;
+    const removingCover = currentCover && index === 0;
+    const supportCount = urls.length - Number(currentCover);
     photoFocusTarget.current =
-      hasCoverPhoto && index === 0
+      removingCover
         ? "images"
         : supportCount > 1
-          ? `support-remove-${Math.min(index - Number(hasCoverPhoto), supportCount - 2)}`
+          ? `support-remove-${Math.min(index - Number(currentCover), supportCount - 2)}`
           : "add-support-photo";
-    if (hasCoverPhoto && index === 0) {
+    if (removingCover) {
+      clearCoverCropError();
+      coverCrops.invalidate();
+      setCoverCropBusy(false);
       setHasCoverPhoto(false);
       if (coverCropMetaRef.current?.rawUrl) {
         URL.revokeObjectURL(coverCropMetaRef.current.rawUrl);
@@ -855,14 +899,8 @@ export function SellBookPage() {
       setCoverCropMeta(null);
       coverCropMetaRef.current = null;
     }
-    URL.revokeObjectURL(formData.images[index]!);
-    setFormData((previous) => ({
-      ...previous,
-      images: previous.images.filter((_, position) => position !== index),
-    }));
-    setImageFiles((previous) =>
-      previous.filter((_, position) => position !== index),
-    );
+    URL.revokeObjectURL(url);
+    updatePhotos(urls.filter((_, i) => i !== index), files.filter((_, i) => i !== index));
   }
   const fieldErrors: Record<string, string | undefined> = {
     bundle: bundle ? bundleError(bundle) : undefined,
@@ -1126,6 +1164,7 @@ export function SellBookPage() {
     classification,
     hasCoverPhoto,
     needsOrigin,
+    hasValidOriginAddress,
     ownershipDeclared,
   ]);
 
@@ -1372,7 +1411,23 @@ export function SellBookPage() {
             auction={auction}
             title={bundle?.title || formData.title}
             onPostAnother={() => {
-              formData.images.forEach((url) => URL.revokeObjectURL(url));
+              coverCropError.current = undefined;
+              priceToken.current += 1;
+              priceBusy.current = false;
+              setAssist({ status: "idle" });
+              setPriceReference(null);
+              setPricePhase("catalog");
+              coverCrops.invalidate();
+              setCoverCropBusy(false);
+              imageRefs.current.forEach((url) => URL.revokeObjectURL(url));
+              imageRefs.current = [];
+              imageFilesRef.current = [];
+              replacementUrl.current = null;
+              if (coverCropMetaRef.current) {
+                URL.revokeObjectURL(coverCropMetaRef.current.rawUrl);
+              }
+              coverCropMetaRef.current = null;
+              setCoverCropMeta(null);
               submission.current = null;
               // A fresh draft: the old stage keys would replay the sent listing.
               setDraftAttempt(createDraftAttempt());
@@ -1949,7 +2004,7 @@ export function SellBookPage() {
                                       disabled={hasAttempt || submitting}
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        removePhoto(0);
+                                        removePhoto(formData.images[0]!);
                                       }}
                                       title="Xóa ảnh bìa"
                                     >
@@ -2132,7 +2187,7 @@ export function SellBookPage() {
                                     className={styles.removePhoto}
                                     aria-label="Xóa ảnh bìa"
                                     disabled={hasAttempt || submitting}
-                                    onClick={() => removePhoto(0)}
+                                    onClick={() => removePhoto(formData.images[0]!)}
                                   >
                                     <X size={18} aria-hidden="true" />
                                   </button>
@@ -2182,8 +2237,7 @@ export function SellBookPage() {
                                         aria-label={`Thay ảnh phụ ${index + 1}`}
                                         disabled={hasAttempt || submitting}
                                         onClick={() => {
-                                          replacementIndex.current =
-                                            index + Number(hasCoverPhoto);
+                                          replacementUrl.current = url;
                                           replacementInput.current?.click();
                                         }}
                                       >
@@ -2207,9 +2261,7 @@ export function SellBookPage() {
                                         aria-label={`Xóa ảnh phụ ${index + 1}`}
                                         disabled={hasAttempt || submitting}
                                         onClick={() =>
-                                          removePhoto(
-                                            index + Number(hasCoverPhoto),
-                                          )
+                                          removePhoto(url)
                                         }
                                       >
                                         <X size={18} aria-hidden="true" />
@@ -2266,10 +2318,11 @@ export function SellBookPage() {
                                 accept="image/jpeg,image/png,image/webp"
                                 disabled={hasAttempt || submitting}
                                 onChange={(event) => {
-                                  const index = replacementIndex.current;
-                                  replacementIndex.current = null;
-                                  if (index !== null)
-                                    handleImageUpload(event, "support", index);
+                                  const url = replacementUrl.current;
+                                  replacementUrl.current = null;
+                                  if (url !== null)
+                                    handleImageUpload(event, "support", url);
+                                  else event.target.value = "";
                                 }}
                               />
                             </div>
@@ -2963,6 +3016,11 @@ export function SellBookPage() {
                         setAssist(prev => prev.status === "ready" && prev.key === assistKey ? { ...prev, appliedPrice: amount } : prev);
                       }} />
                     </div> : null}
+                    {coverCropBusy && (
+                      <p role="status" className={styles.help}>
+                        Đang xử lý ảnh bìa. Chờ ảnh hoàn tất rồi kiểm tra lại trước khi gửi.
+                      </p>
+                    )}
                     {visibleSubmitError && (
                       <div
                         role="alert"
@@ -3046,7 +3104,8 @@ export function SellBookPage() {
                       <button
                         type="submit"
                         className={styles.primary}
-                        disabled={submitting}
+                        disabled={submitting || (step === 5 && coverCropBusy)}
+                        aria-busy={submitting || (step === 5 && coverCropBusy)}
                       >
                         {step < 5
                           ? "Tiếp tục"

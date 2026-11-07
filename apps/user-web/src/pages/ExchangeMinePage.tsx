@@ -1,5 +1,9 @@
+import { useEffect } from "react";
+import { Pagination } from "../components/Pagination";
+import { usePaginationFocus } from "../components/Pagination/usePaginationFocus";
 import { useSearchParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { ApiError } from "@used-books/session-client";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "../hooks/useSession";
 import {
@@ -11,8 +15,6 @@ import {
   CheckCircle2,
   X,
   Star,
-  ChevronLeft,
-  ChevronRight,
   Plus,
   BookOpen,
   Truck,
@@ -85,11 +87,11 @@ export default function ExchangeMinePage() {
 
   const rawTab = searchParams.get("tab");
   const currentTab: ExchangeTab =
-    rawTab && rawTab in TAB_CONFIG ? (rawTab as ExchangeTab) : "sent";
+    rawTab && Object.hasOwn(TAB_CONFIG, rawTab) ? (rawTab as ExchangeTab) : "sent";
   const rawPage = Number(searchParams.get("page") ?? 1);
   const currentPage = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
 
-  const { data: countsData } = useQuery({
+  const counts = useQuery({
     queryKey: ["exchangeCounts", actor],
     queryFn: getExchangeCounts,
     enabled: !!actor,
@@ -98,19 +100,33 @@ export default function ExchangeMinePage() {
   const {
     data: listData,
     isLoading,
+    isFetching,
     isError,
+    error: listError,
     refetch,
   } = useQuery({
     queryKey: ["exchangeTransactions", actor, currentTab, currentPage],
     queryFn: () => getExchangeTransactions(currentTab, currentPage),
     enabled: !!actor,
   });
+  const inaccessible = listError instanceof ApiError && [401, 403].includes(listError.status);
+  const countsData = counts.isError || inaccessible ? undefined : counts.data;
+  const refreshExchanges = () => void Promise.all([counts.refetch(), refetch()]);
+
+  useEffect(() => {
+    if (!listData) return;
+    const last = Math.max(1, Math.ceil(listData.total / 5));
+    if (currentPage > last) setSearchParams({ tab: currentTab, page: String(last) }, { replace: true });
+  }, [listData, currentPage, currentTab, setSearchParams]);
+
+  const requestPageFocus = usePaginationFocus(currentPage, `${actor}:${currentTab}`, `panel-${currentTab}`, isFetching, isError);
 
   const setTab = (tab: ExchangeTab) => {
     setSearchParams({ tab, page: "1" });
   };
 
   const setPage = (page: number) => {
+    requestPageFocus();
     setSearchParams({ tab: currentTab, page: page.toString() });
   };
 
@@ -184,6 +200,15 @@ export default function ExchangeMinePage() {
         </div>
       </header>
 
+      {counts.isError && !isError && (
+        <div className={styles.errorBox} role="alert">
+          <p>Chưa cập nhật được số lượng trao đổi. Danh sách bên dưới vẫn mở được; hãy tải lại để kiểm tra số lượng.</p>
+          <button type="button" className={styles.retryBtn}
+            disabled={counts.isFetching || isFetching} onClick={refreshExchanges}>
+            Tải lại số lượng và danh sách
+          </button>
+        </div>
+      )}
       {/* 2. Modern Segmented Tab Bar */}
       <div
         className={styles.tabBar}
@@ -220,6 +245,7 @@ export default function ExchangeMinePage() {
       <div
         role="tabpanel"
         id={`panel-${currentTab}`}
+        tabIndex={-1}
         aria-labelledby={`tab-${currentTab}`}
         aria-live="polite"
       >
@@ -234,10 +260,15 @@ export default function ExchangeMinePage() {
 
         {isError && (
           <div className={styles.errorBox} role="alert">
-            <p className="font-semibold">Đã xảy ra lỗi khi tải danh sách trao đổi.</p>
+            <p className="font-semibold">{inaccessible
+              ? "Quyền xem trao đổi đã thay đổi. Kiểm tra phiên đăng nhập và thử lại."
+              : counts.isError
+                ? "Chưa tải được số lượng và danh sách trao đổi. Kiểm tra kết nối và thử lại."
+                : "Đã xảy ra lỗi khi tải danh sách trao đổi."}</p>
             <button
               type="button"
-              onClick={() => refetch()}
+              onClick={refreshExchanges}
+              disabled={counts.isFetching || isFetching}
               className={styles.retryBtn}
             >
               Thử tải lại
@@ -315,42 +346,13 @@ export default function ExchangeMinePage() {
           </div>
         )}
 
-        {/* Pagination */}
-        {!isLoading && !isError && listData && listData.total > 5 && (
-          <nav className={styles.pagination} aria-label="Phân trang trao đổi">
-            <button
-              type="button"
-              className={styles.pageBtn}
-              disabled={currentPage <= 1}
-              onClick={() => setPage(currentPage - 1)}
-              aria-label="Trang trước"
-            >
-              <ChevronLeft size={18} />
-            </button>
-
-            {Array.from({ length: Math.ceil(listData.total / 5) }).map((_, i) => (
-              <button
-                type="button"
-                key={i + 1}
-                className={`${styles.pageBtn} ${currentPage === i + 1 ? styles.pageBtnActive : ""}`}
-                onClick={() => setPage(i + 1)}
-                aria-label={`Trang ${i + 1}`}
-                aria-current={currentPage === i + 1 ? "page" : undefined}
-              >
-                {i + 1}
-              </button>
-            ))}
-
-            <button
-              type="button"
-              className={styles.pageBtn}
-              disabled={currentPage >= Math.ceil(listData.total / 5)}
-              onClick={() => setPage(currentPage + 1)}
-              aria-label="Trang sau"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </nav>
+        {countsData && Object.values(countsData).reduce((sum, count) => sum + count, 0) >= 100 && (
+          <p className={styles.subtitle}>Máy chủ hiện trả tối đa 100 trao đổi gần nhất. Tổng và bộ lọc trên trang áp dụng trong phạm vi đó.</p>
+        )}
+        {!isLoading && !isError && listData && (
+          <Pagination page={currentPage} totalItems={listData.total} pageSize={5}
+            itemLabel="trao đổi đã tải" onPageChange={setPage} hideOnSinglePage
+            ariaLabel="Phân trang trao đổi" bordered />
         )}
       </div>
     </div>

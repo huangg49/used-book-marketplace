@@ -1,5 +1,8 @@
+import { CursorPager } from "../components/Pagination/CursorPager";
+import { useCursorNavigation } from "../components/Pagination/useCursorNavigation";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { ApiError } from "@used-books/session-client";
+import { Link, useBeforeUnload, useBlocker, useLocation, useSearchParams } from "react-router-dom";
 import { useState } from "react";
 import { Plus, LayoutGrid, Rows3, X } from "lucide-react";
 import { useSession } from "../hooks/useSession";
@@ -8,6 +11,9 @@ import { myListingsQuery } from "../lib/owner-listing-queries";
 import { OwnerListingRow } from "../components/OwnerListingRow";
 import styles from "./MyBooksPage.module.css";
 import { EmptyOwnerShelf } from "../components/BookJourneyStates";
+import { OwnerListingRecovery } from "../components/OwnerListingRecovery";
+import { useListingActions } from "../hooks/useListingActions";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 const filters = [
   { value: "", label: "Tất cả" },
@@ -20,7 +26,14 @@ const filters = [
 export function MyBooksPage() {
   const auth = useSession();
   const location = useLocation();
+  const pendingActions = useListingActions().length > 0;
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    pendingActions && currentLocation.pathname !== nextLocation.pathname);
+  useBeforeUnload(event => {
+    if (pendingActions) { event.preventDefault(); event.returnValue = ""; }
+  });
   const [params, setParams] = useSearchParams();
+  const navigation = useCursorNavigation(auth.status === "authenticated" ? auth.user.id : "guest");
   const [dismissedBanner, setDismissedBanner] = useState(false);
   const navState = location.state as {
     revised?: boolean;
@@ -57,6 +70,7 @@ export function MyBooksPage() {
       cursor,
     ),
   );
+  const readDenied = query.error instanceof ApiError && [401, 403].includes(query.error.status);
 
   function selectFilter(value: string) {
     const next = new URLSearchParams();
@@ -64,12 +78,6 @@ export function MyBooksPage() {
     setParams(next);
   }
 
-  function page(nextCursor?: string) {
-    const next = new URLSearchParams(params);
-    if (nextCursor) next.set("cursor", nextCursor);
-    else next.delete("cursor");
-    setParams(next);
-  }
 
   return (
     <div className={styles.root}>
@@ -85,6 +93,7 @@ export function MyBooksPage() {
           Đăng sách
         </Link>
       </header>
+      <OwnerListingRecovery />
       {showStatusBanner && (
         <div className={styles.revisedBanner} role="status">
           <div>
@@ -127,7 +136,7 @@ export function MyBooksPage() {
           ))}
         </div>
 
-        <div className={styles.results} aria-busy={query.isLoading}>
+        <div className={styles.results} id="owner-shelf-results" tabIndex={-1} aria-busy={query.isLoading}>
           {query.isLoading ? (
             <p className={styles.state} role="status">
               Đang tải kệ sách…
@@ -136,8 +145,9 @@ export function MyBooksPage() {
             <div className={styles.state} role="alert">
               <h2>Chưa tải được kệ sách</h2>
               <p>
-                Kiểm tra kết nối rồi thử lại. Các bài đăng của bạn vẫn được giữ
-                trên máy chủ.
+                {readDenied
+                  ? "Quyền xem kệ sách của bạn đã thay đổi. Kiểm tra phiên đăng nhập hoặc trạng thái tài khoản rồi thử lại."
+                  : "Kiểm tra kết nối rồi thử lại. Các bài đăng của bạn vẫn được giữ trên máy chủ."}
               </p>
               <button
                 type="button"
@@ -219,25 +229,14 @@ export function MyBooksPage() {
             />
           )}
 
-          {(cursor || query.data?.nextCursor) && (
-            <nav className={styles.pagination} aria-label="Trang kệ sách">
-              {cursor && (
-                <button type="button" onClick={() => page()}>
-                  Về trang đầu
-                </button>
-              )}
-              {query.data?.nextCursor && (
-                <button
-                  type="button"
-                  onClick={() => page(query.data!.nextCursor!)}
-                >
-                  Trang tiếp theo
-                </button>
-              )}
-            </nav>
-          )}
+      {!readDenied && <CursorPager navigation={navigation} nextCursor={!query.isError ? query.data?.nextCursor : undefined}
+        busy={query.isFetching} failed={query.isError} count={query.data?.items.length} label="Trang kệ sách" itemLabel="bài đăng" anchorId="owner-shelf-results" />}
         </div>
       </section>
+      <ConfirmDialog isOpen={blocker.state === "blocked"} title="Rời trang khi chưa xác minh?"
+        description="Thao tác bài đăng chưa được xác minh hoặc đối chiếu xong. Thao tác vẫn được giữ khi chuyển trang trong phiên này, nhưng sẽ mất khi tải lại hoặc đóng trang."
+        confirmText="Rời trang" cancelText="Ở lại tiếp tục" isDanger
+        onClose={() => blocker.reset?.()} onConfirm={() => blocker.proceed?.()} />
     </div>
   );
 }

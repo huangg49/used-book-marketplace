@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-vi.mock("./api", () => ({ session: { request: vi.fn() } }));
+vi.mock("./api", () => ({ session: { request: vi.fn(),
+  getSnapshot: () => ({ status: "authenticated", user: { id: "owner" } }), subscribe: () => () => {} } }));
 import { session } from "./api";
 import {
   myListingSchema,

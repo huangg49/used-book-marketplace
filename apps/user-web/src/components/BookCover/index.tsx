@@ -11,18 +11,20 @@ export interface BookCoverProps {
 }
 
 export function BookCover({ title, index = 0, tag, coverUrl, className = '' }: BookCoverProps) {
-    const [imgError, setImgError] = useState(false)
+    const [failedUrl, setFailedUrl] = useState<string>()
+    const imgError = Boolean(coverUrl && failedUrl === coverUrl)
     const coverClass = styles[`cover${index % 4}`] ?? ''
     
     return (
         <div className={`${styles.cover} ${coverClass} ${className}`.trim()}>
             {coverUrl && !imgError && (
                 <img 
+                    key={coverUrl}
                     src={coverUrl} 
                     alt={title} 
                     className={styles.coverImage} 
                     loading="lazy" 
-                    onError={() => setImgError(true)} 
+                    onError={() => setFailedUrl(coverUrl)}
                 />
             )}
             

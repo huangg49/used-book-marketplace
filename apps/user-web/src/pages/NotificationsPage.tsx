@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { usePagedCollection } from "../components/Pagination/usePagedCollection";
+import { CollectionPager } from "../components/Pagination/CollectionPager";
+import { useEffect, useState } from "react";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError } from "@used-books/session-client";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -77,10 +80,13 @@ export function NotificationsPage() {
     retry: false,
   });
 
-  const allItems = pages.data?.pages.flatMap((p) => p.items) ?? [];
-  const unreadCount = pages.data?.pages[0]?.unreadCount ?? 0;
+  const readDenied = pages.isError && pages.error instanceof ApiError && [401, 403, 404].includes(pages.error.status);
+  const firstPage = readDenied ? undefined : pages.data?.pages[0];
+  const hasRead = !!firstPage;
+  const allItems = readDenied ? [] : pages.data?.pages.flatMap((p) => p.items) ?? [];
+  const unreadCount = firstPage?.unreadCount ?? 0;
 
-  const filteredItems = allItems.filter((item) => {
+  const filterItems = (items: typeof allItems) => items.filter((item) => {
     if (activeFilter === "unread") return !item.readAt;
     if (activeFilter === "exchange")
       return item.targetType === "Exchange" || item.kind.startsWith("Exchange");
@@ -91,8 +97,15 @@ export function NotificationsPage() {
     return true;
   });
 
+  const collection = usePagedCollection(pages, JSON.stringify([auth.status === "authenticated" ? auth.user.id : "guest", activeFilter]), source => readDenied ? [] : filterItems(source.flatMap(p => p.items)), 10);
+  const resetPagination = collection.reset;
+  useEffect(() => {
+    if (readDenied) resetPagination();
+  }, [readDenied, resetPagination]);
+  const filteredItems = collection.items;
+
   async function readAll() {
-    if (reading) return;
+    if (reading || !hasRead || readDenied) return;
     setReading(true);
     setError(undefined);
     try {
@@ -140,7 +153,10 @@ export function NotificationsPage() {
             Thông Báo
           </h1>
           <p className={styles.subtitle}>
-            {unreadCount > 0 ? (
+            {pages.isPending ? "Đang tải trạng thái thông báo…"
+            : !hasRead ? "Chưa xác minh được trạng thái thông báo."
+            : pages.isError && !pages.isFetchNextPageError ? "Chưa cập nhật được thông báo. Đang hiển thị dữ liệu của lần tải trước."
+            : unreadCount > 0 ? (
               <span>
                 Bạn có <strong className="text-[#5c0202]">{unreadCount} thông báo mới</strong> chưa đọc.
               </span>
@@ -150,7 +166,7 @@ export function NotificationsPage() {
           </p>
         </div>
 
-        {unreadCount > 0 && (
+        {hasRead && unreadCount > 0 && (
           <div className={styles.headingActions}>
             <button
               type="button"
@@ -175,7 +191,7 @@ export function NotificationsPage() {
           onClick={() => setActiveFilter("all")}
         >
           <span>Tất cả</span>
-          <span className={styles.filterBadge}>{allItems.length}</span>
+          {hasRead && <span className={styles.filterBadge}>{allItems.length}</span>}
         </button>
 
         <button
@@ -186,7 +202,7 @@ export function NotificationsPage() {
           onClick={() => setActiveFilter("unread")}
         >
           <span>Chưa đọc</span>
-          <span className={styles.filterBadge}>{unreadCount}</span>
+          {hasRead && <span className={styles.filterBadge}>{unreadCount}</span>}
         </button>
 
         <button
@@ -238,10 +254,12 @@ export function NotificationsPage() {
         </div>
       )}
 
-      {pages.isError && (
+      {pages.isError && (!pages.isFetchNextPageError || readDenied) && (
         <div className={styles.errorBox} role="alert">
           <h2 className="font-bold text-base mb-1">Chưa tải được danh sách thông báo</h2>
-          <p className="text-sm opacity-80 mb-3">Kiểm tra kết nối rồi thử lại giúp mình.</p>
+          <p className="text-sm opacity-80 mb-3">{readDenied
+            ? "Kiểm tra phiên đăng nhập hoặc thử lại sau."
+            : "Kiểm tra kết nối rồi thử lại giúp mình."}</p>
           <button
             type="button"
             className={styles.readAllBtn}
@@ -273,7 +291,9 @@ export function NotificationsPage() {
             )}
           </div>
           <h2 className={styles.emptyTitle}>
-            {activeFilter === "unread"
+            {pages.hasNextPage
+              ? "Chưa thấy thông báo phù hợp trong dữ liệu đã tải"
+              : activeFilter === "unread"
               ? "Không có thông báo chưa đọc"
               : activeFilter === "exchange"
               ? "Chưa có thông báo trao đổi nào"
@@ -284,7 +304,9 @@ export function NotificationsPage() {
               : "Hộp thư thông báo đang trống"}
           </h2>
           <p className={styles.emptyDesc}>
-            {activeFilter === "unread"
+            {pages.hasNextPage
+              ? "Bấm Sau để tìm tiếp trong các thông báo cũ hơn."
+              : activeFilter === "unread"
               ? "Tất cả thông báo đều đã được bạn xem qua. Chúng tôi sẽ thông báo ngay khi có sự kiện mới!"
               : "Mọi cập nhật trạng thái đơn mua, đề xuất trao đổi hay diễn biến trả giá đấu giá sẽ xuất hiện tại đây."}
           </p>
@@ -297,8 +319,8 @@ export function NotificationsPage() {
       )}
 
       {/* Notification List */}
-      {!pages.isPending && !pages.isError && filteredItems.length > 0 && (
-        <ul className={styles.list}>
+      {!pages.isPending && filteredItems.length > 0 && (
+        <ul className={styles.list} id="notification-results">
           <AnimatePresence mode="popLayout">
             {filteredItems.map((n) => {
               const isUnread = !n.readAt;
@@ -363,26 +385,7 @@ export function NotificationsPage() {
         </ul>
       )}
 
-      {/* Infinite Scroll / More */}
-      {pages.hasNextPage && (
-        <div className={styles.moreContainer}>
-          <button
-            className={styles.moreBtn}
-            type="button"
-            disabled={pages.isFetchingNextPage}
-            onClick={() => void pages.fetchNextPage()}
-          >
-            {pages.isFetchingNextPage ? (
-              <span className="flex items-center gap-2">
-                <RefreshCw size={16} className="animate-spin" />
-                Đang tải…
-              </span>
-            ) : (
-              "Xem thông báo cũ hơn"
-            )}
-          </button>
-        </div>
-      )}
+      {!readDenied && <CollectionPager model={collection} anchorId="notification-results" itemLabel="thông báo" />}
     </section>
   );
 }

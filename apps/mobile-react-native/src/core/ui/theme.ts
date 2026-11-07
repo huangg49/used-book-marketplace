@@ -14,7 +14,7 @@ export const colorRoles = {
   decorativeAccent: colors.terracotta,
   inputBorder: colors.border,
   divider: colors.rule,
-  focus: colors.forest,
+  focus: "#5C0202",
   scrim: "rgba(20,36,28,.45)",
   shelfCanvas: "#F6F8F3",
   shelfEdge: "#B5C3AC",
@@ -235,4 +235,3 @@ export const stitchTokens = {
   videoBadgeBg: "rgba(0, 0, 0, 0.65)",
   whiteAlpha25: "rgba(255, 255, 255, 0.25)",
 } as const;
-  

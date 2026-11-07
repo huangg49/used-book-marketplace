@@ -638,7 +638,7 @@
 }
 
 /* 5. Phân trang: Đưa về trạng thái cân đối, không đường kẻ thô */
-.cursor-pagination {
+.directory-pagination .cursor-pagination {
   border-top: none !important;
   margin-top: 8px !important;
   padding: 10px 0 24px !important;
@@ -648,7 +648,7 @@
   gap: 12px !important;
 }
 
-.cursor-pagination p {
+.directory-pagination .cursor-pagination p {
   color: #8c7766 !important;
   font-size: 12px !important;
   letter-spacing: 0.02em;

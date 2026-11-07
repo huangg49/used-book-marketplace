@@ -1,5 +1,37 @@
 # Luật giao diện Lật lại
 
+## Focus chuẩn — chủ dự án duyệt03/11/2026
+
+Mẫu là ô tìm kiếm Admin Users: viền wine sát mép, không outline có khoảng hở;
+ô nhập border1px + shadow1px, chuyển màu140ms. Giữ radius, bố cục, input và state
+hiện có. Nút/tab/link vẫn có focus bàn phím; nền wine có cạnh sáng phía trong
+để đủ tương phản. Error giữ sắc error, disabled không tự thành enabled, checked/
+selected không bị đổi vì focus. Forced-colors dùng viền hệ thống sát mép.
+
+Ngoại lệ màu theo owner03/11: ô tìm kiếm Hero Home dùng vàng trên nền wine cho
+hover/focus, cùng một viền ngoài sát mép và140ms; input con không vẽ thêm viền.
+Nút submit vẫn giữ focus có tương phản trên nền cam. Không lan màu vàng sang
+các ô nhập ở trang khác.
+
+- Member web, Admin/Staff và Expo web import nguồn chung
+  [focus.css](../../packages/brand/v1.1/focus.css). Layer `latlai-focus` chỉ cưỡng
+  chế focus paint/field transition để CSS lazy/vendor không khôi phục kiểu cũ.
+  Không thêm outline/ring rời tại page. Không bỏ indicator để làm UI sạch.
+- Composite field có icon/đơn vị: gắn `data-focus-surface` vào đúng wrapper; input
+  bên trong không vẽ viền thứ hai. Wrapper lỗi dùng `data-focus-invalid` hoặc
+  aria-invalid trên input. Đây là marker giao diện, không thay quyền/API.
+- RN dùng colorRoles.focus và layout.focus; border không đổi độ dày khi focus,
+  shadow/outline sát mép, không đổi padding để giả lập ring. Expo dùng CSS chung;
+  native giữ cách vẽ được nền tảng hỗ trợ, không nhận web export là native PASS.
+- Flutter dùng buildLatLaiTheme/AppTextField/SearchField, focusedBorder wine2px
+  và error border riêng; filled button có cạnh sáng. Custom input không được tự
+  thêm focus vàng/xanh hoặc gạch chân khác chuẩn.
+- Kiểm browser: `pnpm test:focus:browser` (fixture, không DB), gồm CSS lazy, lỗi,
+  composite, keyboard, disabled/selected, màn hẹp, reduced-motion và forced-colors.
+  Chạy thêm hành trình thực khi sửa wrapper/component; policy motion trong AGENTS
+  vẫn ưu tiên, không đổi cài đặt OS. Quy chuẩn này chỉ đổi focus, không thay toàn
+  bộ màu/nền/typography của các client.
+
 09/10/2026: [brief mới](../../DESIGN.md) được chủ dự án duyệt, ưu tiên hơn các
 quyết định thẩm mỹ UI-1/brand bên dưới. Lora không còn bắt buộc; hướng sans-serif
 cần kiểm bằng màn thật trước đổi runtime. Invariant/accessibility/data vẫn giữ.

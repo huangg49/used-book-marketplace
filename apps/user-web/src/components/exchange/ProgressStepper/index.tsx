@@ -5,13 +5,14 @@ import styles from './ProgressStepper.module.css';
 export interface ProgressStepperProps {
     status: ExchangeStatus;
     compact?: boolean;
+    summary?: boolean;
     failedAtStep?: number;
     closedBy?: 'viewer' | 'partner' | 'both';
     partnerUsername?: string;
     hasReceived?: boolean;
 }
 
-export function ProgressStepper({ status, compact = false, failedAtStep, closedBy, partnerUsername: _partnerUsername, hasReceived }: ProgressStepperProps) {
+export function ProgressStepper({ status, compact = false, summary: propsSummary = true, failedAtStep, closedBy, partnerUsername: _partnerUsername, hasReceived }: ProgressStepperProps) {
     const steps = [
         { id: 1, label: 'Gửi đề nghị', shortLabel: 'Đề nghị' },
         { id: 2, label: 'Phản hồi và đặt cọc', shortLabel: 'Phản hồi' },
@@ -72,7 +73,7 @@ export function ProgressStepper({ status, compact = false, failedAtStep, closedB
 
     return (
         <div className={compact ? `${styles.stepperContainer} ${styles.compact}` : styles.stepperContainer}>
-            {compact && (
+            {compact && propsSummary && (
                 <div className={styles.compactHeader}>
                     <div className={styles.compactStepInfo}>
                         <span className={styles.compactStepBadge}>Bước {currentStepIndex}/5</span>

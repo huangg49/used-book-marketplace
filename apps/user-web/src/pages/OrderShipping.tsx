@@ -177,7 +177,7 @@ export function OrderShipping({
   }
   const missing = shipment.data === null;
   return (
-    <div>
+    <div className={styles.shippingWorkflow}>
       {shipment.data ? (
         <p>
           Mã vận đơn: <strong>{shipment.data.trackingCode}</strong>
@@ -212,20 +212,27 @@ export function OrderShipping({
               <button onClick={() => void evidence.refetch()}>Thử lại</button>
             </p>
           )}
-          <p role="status">
+          <form className={styles.form} onSubmit={(e) => void uploadPhoto(e)} aria-label="Lưu ảnh đóng gói">
+          <h4 className={styles.shippingGroupTitle}>1. Ảnh đóng gói</h4>
+          <p role="status" className={styles.shippingHint}>
             Ảnh đóng gói đã lưu:{" "}
             {evidence.data?.items.filter((e) => e.status === "Ready").length ??
               0}
           </p>
-          <form className={styles.form} onSubmit={(e) => void uploadPhoto(e)}>
             <label>
               Ảnh đóng gói
+              <span data-focus-surface className={styles.filePicker}>
+                <span>Chọn ảnh</span>
+                <span className={styles.fileName}>{file?.name || "Chưa chọn ảnh"}</span>
               <input
+                aria-label="Ảnh đóng gói"
+                className={styles.fileInput}
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 disabled={busy || uploadPending || registerPending}
                 onChange={(e) => setFile(e.target.files?.[0])}
               />
+              </span>
             </label>
             <button
               className={styles.secondary}
@@ -237,7 +244,9 @@ export function OrderShipping({
           <form
             className={styles.form}
             onSubmit={(e) => void registerShipment(e)}
+            aria-label="Đăng ký vận đơn"
           >
+            <h4 className={styles.shippingGroupTitle}>2. Đăng ký vận đơn</h4>
             <label>
               Mã vận đơn mô phỏng
               <input
@@ -245,11 +254,13 @@ export function OrderShipping({
                 pattern="LL-[A-Z0-9]{8,32}"
                 maxLength={35}
                 placeholder="LL-12345678"
+                aria-describedby={`shipment-hint-${order.id}`}
                 disabled={busy || registerPending}
                 value={tracking}
                 onChange={(e) => setTracking(e.target.value)}
               />
             </label>
+            <p id={`shipment-hint-${order.id}`} className={styles.shippingHint}>Mã bắt đầu bằng LL-, theo sau là 8–32 chữ in hoa hoặc chữ số. Chỉ đăng ký sau khi ảnh đã được lưu.</p>
             <button
               className={styles.primary}
               disabled={

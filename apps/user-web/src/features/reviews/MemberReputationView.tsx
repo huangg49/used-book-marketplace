@@ -1,3 +1,5 @@
+import { usePagedCollection } from "../../components/Pagination/usePagedCollection";
+import { CollectionPager } from "../../components/Pagination/CollectionPager";
 import { SupportLink } from '../support/SupportLink';
 import type { MemberReputation, TransactionReview } from '@used-books/session-client';
 import { ApiError, memberReputationSchema } from '@used-books/session-client';
@@ -149,8 +151,9 @@ export function MemberReputationView({
 
   const unavailable =
     result.error instanceof ApiError && [403, 404].includes(result.error.status);
+  const collection = usePagedCollection(result, memberId, pages => pages.flatMap(page => page.items));
   const data = unavailable ? undefined : result.data?.pages[0];
-  const reviews = result.data?.pages.flatMap((page) => page.items) ?? [];
+  const reviews = collection.items;
 
   const showAvatar = isOwnerView && currentAvatar.avatarUrl;
 
@@ -420,7 +423,7 @@ export function MemberReputationView({
                 </div>
               )}
 
-              <div className={styles.reviewList}>
+              <div className={styles.reviewList} id="public-reviews-results">
                 {reviews.map((review) => (
                   <PublicReview
                     key={review.id}
@@ -430,30 +433,7 @@ export function MemberReputationView({
                 ))}
               </div>
 
-              {result.isFetchNextPageError && (
-                <p className={styles.notice} role="alert">
-                  Chưa tải được các nhận xét tiếp theo. Những nhận xét đã mở vẫn
-                  được giữ bên trên.
-                </p>
-              )}
-
-              {result.hasNextPage && (
-                <div className={styles.loadMore}>
-                  <button
-                    type="button"
-                    className={styles.button}
-                    disabled={result.isFetching}
-                    aria-busy={result.isFetchingNextPage}
-                    onClick={() => void result.fetchNextPage()}
-                  >
-                    {result.isFetchingNextPage
-                      ? 'Đang tải thêm…'
-                      : result.isFetchNextPageError
-                        ? 'Thử tải thêm lần nữa'
-                        : 'Xem thêm đánh giá'}
-                  </button>
-                </div>
-              )}
+              <CollectionPager model={collection} anchorId="public-reviews-results" itemLabel="đánh giá" />
             </section>
 
             <aside className={styles.guideCard} aria-labelledby="reputation-guide-title">

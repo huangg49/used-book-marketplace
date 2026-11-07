@@ -1841,3 +1841,61 @@
 }
 
 
+
+/* Transaction workspace: context and current work have distinct scroll owners. */
+.workspacePage { display:flex; flex-direction:column; min-height:0; min-width:0; height:100%; padding:0; gap:0; }
+.workspacePage > p { margin:0; padding:8px 20px; font-size:.8rem; flex-shrink:0; }
+.workspacePage .bookInfoCard,.workspacePage .orderProceduresCard { border:0; padding:0; border-radius:0; box-shadow:none; background:transparent; gap:0; }
+.workspacePage .cardHeader { background:none; color:var(--shop-ink); box-shadow:none; border-radius:0; border:0; margin:0 0 16px; padding:0; gap:8px; align-items:flex-start; }
+.workspacePage .cardHeaderIcon { display:none; }
+.workspacePage .cardTitle { color:var(--shop-wine); font-size:1rem; }
+.workspacePage .cardSubtitle { color:var(--shop-muted); font-size:.75rem; line-height:1.6; }
+.workspacePage .cardContent { gap:20px; }
+.workspacePage .cardContent > details { margin-top:0; }
+.workspacePage .bookCoverWrapper { width:48px; min-width:48px; height:70px; }
+.workspacePage .bookTitle { font-size:.95rem; }
+.workspacePage .bookProfileRow { gap:12px; }
+.workspacePage .specList { border:0; padding:0; background:transparent; }
+.workspacePage .descriptionText { overflow-wrap:anywhere; word-break:normal; }
+.workspacePage .specItem { display:block; }
+.workspacePage .specLabel { display:block; font-size:.75rem; margin-bottom:4px; }
+.workspacePage .specVal { text-align:left; font-weight:400; font-size:.8rem; }
+.workspacePage .paymentCard { margin:0; padding:14px 0; border:0; border-top:1px solid var(--shop-line); border-radius:0; background:transparent; }
+.workspacePage .addressBox { margin:0; }
+.workspacePage .orderCodeBadge { background:var(--shop-shelf,#f4eddf); color:var(--shop-muted); border:0; }
+.workspacePage .proceduresTitleRow { align-items:flex-start; flex-wrap:wrap; gap:10px; }
+.workspacePage .preparationBox,.workspacePage .sellerShippingTools { padding:0; background:transparent; border:0; }
+.workspacePage .form { display:grid; gap:12px; margin:0; }
+.workspacePage .form label { display:grid; gap:8px; font-size:.875rem; line-height:1.5; }
+.workspacePage .form button { margin:0; min-height:44px; }
+.workspacePage .form input { font:inherit; }
+.shippingWorkflow { display:grid; gap:24px; font-size:.875rem; line-height:1.55; }
+.shippingWorkflow p { margin:0; }
+.shippingGroupTitle { margin:0; font-size:1rem; font-weight:700; line-height:1.5; color:var(--shop-ink); }
+.filePicker { display:flex; align-items:center; gap:12px; min-height:48px; padding:10px 12px; position:relative; border:1px solid var(--shop-line); border-radius:6px; background:var(--shop-paper); }
+.filePicker > span:first-child { flex-shrink:0; font-weight:600; color:var(--shop-wine); }
+.filePicker .fileName { min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:var(--shop-muted); font-size:.8125rem; }
+.filePicker { transition:border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease; }
+.filePicker:focus-within { border-color:var(--shop-wine); box-shadow:0 0 0 1px var(--shop-wine); background:#fff; }
+@media (forced-colors:active) { .filePicker:focus-within { outline:2px solid Highlight; outline-offset:2px; } }
+.filePicker .fileInput { position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; }
+.shippingHint { color:var(--shop-muted); font-size:.8125rem; line-height:1.5; }
+.workspacePage .form input[type=file]::file-selector-button { margin-right:12px; border:1px solid var(--shop-line); border-radius:4px; padding:6px 10px; color:var(--shop-wine); background:var(--shop-paper); font:inherit; }
+.workspacePage .form input[type=file] { font-size:.875rem; width:100%; min-width:0; }
+.workspacePage .form input { min-width:0; }
+.workspacePage .stepperContainer { padding:4px 0 12px; }
+.workspacePage .stepLabel { font-size:.65rem; }
+.workspacePage .stepCircle { width:22px; height:22px; font-size:.65rem; box-shadow:none; border:1px solid var(--shop-line); }
+.workspacePage .stepperContainer::before { top:14px; }
+.workspacePage .deadlineBadge { font-size:.8rem; padding:10px 12px; }
+.workspacePage .trustBanner { border:0; padding:0; background:transparent; }
+.workspacePage .primaryActionBtn,.workspacePage .secondaryActionBtn,.workspacePage .primary,.workspacePage .secondary { font-size:.875rem; }
+.workspacePage .primary { background:var(--shop-wine); border-color:var(--shop-wine); }
+
+.workspacePage .procedureNoticeInfo { background:transparent; border:0; padding:16px 0; color:var(--shop-ink); }
+.workspacePage .procedureNoticeInfo>svg { display:none; }
+.workspacePage .procedureNoticeInfo h4 { color:var(--shop-wine); margin:0 0 6px; }
+.workspacePage .procedureNoticeInfo p { color:var(--shop-muted); line-height:1.65; }
+.workspacePage .stepLabel { font-size:.75rem; }
+
+.workspacePage .bookTitle { white-space:normal; overflow:visible; text-overflow:clip; }

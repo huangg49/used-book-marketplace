@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import {
+  ApiError,
   supportTargetOptionSchema,
   supportTargetOptionsPageSchema,
   supportRelatedState,
@@ -83,6 +84,8 @@ export function SupportTargetPicker({
     refetchOnMount: "always",
     retry: false,
   });
+  const inaccessible = options.error instanceof ApiError && [401, 403, 404].includes(options.error.status);
+  const items = inaccessible ? [] : options.data?.pages.flatMap(page => page.items) ?? [];
   const destinations = {
     Listing: { to: "/books", label: "Tìm bài đăng sách" },
     Auction: { to: "/auctions", label: "Xem các phiên đấu giá" },
@@ -152,20 +155,20 @@ export function SupportTargetPicker({
           {options.isError ? (
             <p role="alert">
               {supportError(options.error)}{" "}
-              <button type="button" onClick={() => void options.refetch()}>
+              <button type="button" disabled={options.isFetching}
+                onClick={() => void (options.isFetchNextPageError && !inaccessible
+                  ? options.fetchNextPage({ cancelRefetch: false }) : options.refetch())}>
                 Tải lại giao dịch
               </button>
             </p>
           ) : null}
-          {!options.isError ? (
+          {!inaccessible ? (
             <div
               className={styles.targetOptions}
               role="radiogroup"
               aria-label="Giao dịch của bạn"
             >
-              {options.data?.pages
-                .flatMap((page) => page.items)
-                .map((option) => (
+              {items.map((option) => (
                   <label
                     key={option.target.id}
                     className={styles.targetOption}
@@ -184,18 +187,23 @@ export function SupportTargetPicker({
                 ))}
             </div>
           ) : null}
-          {options.isSuccess && !options.data.pages[0].items.length ? (
+          {options.isSuccess && !items.length && options.hasNextPage ? (
+            <p role="status">
+              Chưa thấy giao dịch trong dữ liệu đã tải. Bấm “Xem thêm giao dịch” để kiểm tra những trang còn lại.
+            </p>
+          ) : null}
+          {options.isSuccess && !items.length && !options.hasNextPage ? (
             <p role="status">
               {search
                 ? "Không có giao dịch khớp tìm kiếm. Thử tên khác hoặc xóa từ khóa."
                 : "Bạn chưa có giao dịch thuộc loại này. Chọn loại khác hoặc gửi góp ý không gắn giao dịch."}
             </p>
           ) : null}
-          {options.hasNextPage ? (
+          {options.hasNextPage && !inaccessible ? (
             <button
               type="button"
-              disabled={options.isFetchingNextPage}
-              onClick={() => void options.fetchNextPage()}
+              disabled={options.isFetching}
+              onClick={() => void options.fetchNextPage({ cancelRefetch: false })}
             >
               {options.isFetchingNextPage ? "Đang tải…" : "Xem thêm giao dịch"}
             </button>

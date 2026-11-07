@@ -251,6 +251,11 @@ describe('catalog and listing drafts through HTTP with MongoDB', () => {
       ...draft(b.entityId),
       description: 'Đang viết dở',
       pages: 'Đủ trang',
+      exchangePreferences: {
+        targetAuthor: 'Masashi Kishimoto',
+        targetCategory: 'Manga',
+        targetDescription: 'Muốn đổi Naruto.',
+      },
     };
     await put(created.entityId, { expectedVersion: 1, content }, m1).expect(
       200,

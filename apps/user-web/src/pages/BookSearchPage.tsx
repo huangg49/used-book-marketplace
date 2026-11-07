@@ -1,13 +1,15 @@
+import { CursorPager } from "../components/Pagination/CursorPager";
+import { useCursorNavigation } from "../components/Pagination/useCursorNavigation";
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError } from "@used-books/session-client";
+import { preload } from "react-dom";
 import { useSearchParams } from "react-router-dom";
 import {
   Search,
   Filter,
   X,
   ArrowRight,
-  ArrowLeft,
-  BookOpen,
   Menu,
 } from "lucide-react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
@@ -33,6 +35,7 @@ import {
 } from "@used-books/api-contract/catalog-taxonomy";
 import { catalogQueryKeys, readAttributes } from "../lib/catalog-filters";
 import { observeHeaderScroll } from "../lib/header-scroll";
+import { publicListingPhotoOptions } from "../hooks/usePublicListingPhoto";
 import { AutumnLeavesCanvas } from "../components/autumn/AutumnLeavesCanvas";
 import styles from "./BookSearchPage.module.css";
 
@@ -146,7 +149,7 @@ function FilterForm({
           )}
         </legend>
         <div className={styles.priceFields}>
-          <label>
+          <label data-focus-surface>
             <span>Từ</span>
             <input
               aria-label={title + " từ"}
@@ -169,7 +172,7 @@ function FilterForm({
               aria-describedby={error ? id + "-" + kind + "-error" : undefined}
             />
           </label>
-          <label>
+          <label data-focus-surface>
             <span>Đến</span>
             <input
               aria-label={title + " đến"}
@@ -387,6 +390,7 @@ const pageVariants: Variants = {
 };
 
 export function BookSearchPage() {
+  const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const searchTerm = params.get("q") || "";
   const [settledSearch, setSettledSearch] = useState(searchTerm);
@@ -475,24 +479,39 @@ export function BookSearchPage() {
   const priceInvalid = invalidFilters(initial);
   const result = useQuery({
     queryKey: ["catalog-search", taxonomyVersion, preview, query.toString()],
-    queryFn: () => getSearchShelf(query, preview),
+    queryFn: async () => {
+      const page = await getSearchShelf(query, preview);
+      // Warm the opening pair while the previous page's exit animation runs.
+      if (query.has("cursor") && document.visibilityState !== "hidden") {
+        for (const book of page.items.slice(0, 2)) {
+          if ("preview" in book || !book.photos[0]) continue;
+          const options = publicListingPhotoOptions(
+            book.id, book.revisionId, book.photos[0].id,
+          );
+          void queryClient.prefetchQuery({
+            ...options,
+            queryFn: async () => {
+              const photo = await options.queryFn();
+              if (document.visibilityState !== "hidden")
+                preload(photo.url, { as: "image" });
+              return photo;
+            },
+          });
+        }
+      }
+      return page;
+    },
     enabled: !priceInvalid && !searchPending,
     retry: false,
     staleTime: 30_000,
     gcTime: 300_000,
   });
+  const inaccessible = result.error instanceof ApiError && [401, 403].includes(result.error.status);
+  const invalidReadParameters = result.error instanceof ApiError && [400, 422].includes(result.error.status);
   const filterKey = JSON.stringify(initial);
 
-  const [pageHistory, setPageHistory] = useState<string[]>([]);
+  const navigation = useCursorNavigation("catalog");
   const [transitionDirection, setTransitionDirection] = useState<number>(1);
-
-  useEffect(() => {
-    if (!params.get("cursor") && pageHistory.length > 0) {
-      setPageHistory([]);
-    }
-  }, [params.get("cursor")]);
-
-  const pageNumber = pageHistory.length + 1;
 
   function scrollToCatalogHeading() {
     const lenis = getLenis();
@@ -509,48 +528,9 @@ export function BookSearchPage() {
     heading?.focus({ preventScroll: true });
   }
 
-  function handleNextPage() {
-    if (!result.data?.nextCursor) return;
-    const currentCursor = params.get("cursor") || "";
-    setPageHistory((prev) => [...prev, currentCursor]);
-    setTransitionDirection(1);
-    const next = new URLSearchParams(params);
-    next.set("cursor", result.data.nextCursor);
-    setParams(next);
-    requestAnimationFrame(() => scrollToCatalogHeading());
-  }
-
-  function handlePrevPage() {
-    if (pageHistory.length === 0) {
-      handleFirstPage();
-      return;
-    }
-    const prevCursor = pageHistory[pageHistory.length - 1] ?? "";
-    setPageHistory((prev) => prev.slice(0, -1));
-    setTransitionDirection(-1);
-    const next = new URLSearchParams(params);
-    if (prevCursor) {
-      next.set("cursor", prevCursor);
-    } else {
-      next.delete("cursor");
-    }
-    setParams(next);
-    requestAnimationFrame(() => scrollToCatalogHeading());
-  }
-
-  function handleFirstPage() {
-    setPageHistory([]);
-    setTransitionDirection(-1);
-    const next = new URLSearchParams(params);
-    next.delete("cursor");
-    setParams(next);
-    requestAnimationFrame(() => scrollToCatalogHeading());
-  }
-
-  function update(key: string, value: string, replace = false) {
-    setPageHistory([]);
+  function update(key: string, value: string, replace = false, source = params) {
     setTransitionDirection(0);
-    const next = new URLSearchParams(params);
+    const next = new URLSearchParams(source);
     next.delete("cursor");
     if (key === "categoryId") {
       next.delete("facets");
@@ -572,7 +552,6 @@ export function BookSearchPage() {
     setParams(next, { replace });
   }
   function clear() {
-    setPageHistory([]);
     setTransitionDirection(0);
     const next = new URLSearchParams();
     if (params.get("q")) next.set("q", params.get("q")!);
@@ -585,7 +564,6 @@ export function BookSearchPage() {
     setFilterOpen(false);
   }
   function apply(values: FilterValues, shouldScroll = false) {
-    setPageHistory([]);
     setTransitionDirection(0);
     const next = new URLSearchParams(params);
     next.delete("cursor");
@@ -672,8 +650,9 @@ export function BookSearchPage() {
         {
           key: "condition",
           label:
-            conditions[params.get("condition") as keyof typeof conditions] ||
-            params.get("condition")!,
+            Object.hasOwn(conditions, initial.condition)
+              ? conditions[initial.condition as keyof typeof conditions]
+              : initial.condition,
         },
       ]
       : []),
@@ -864,15 +843,18 @@ export function BookSearchPage() {
             </AnimatePresence>
             <form
               role="search"
-              className={styles.search}
+              data-focus-surface className={styles.search}
               onSubmit={(event) => {
                 event.preventDefault();
                 // Explicit submit also recovers an interrupted IME session.
                 // Enter used to commit a character is handled on the input.
                 setComposing(false);
-                const value = searchTerm.trim();
+                // History can already contain the last edit while React is
+                // still rendering the previous URL-controlled input value.
+                const latest = new URLSearchParams(window.location.search);
+                const value = (latest.get("q") ?? "").trim();
                 setSettledSearch(value);
-                update("q", value);
+                update("q", value, false, latest);
               }}
             >
               <Search size={21} aria-hidden="true" />
@@ -939,7 +921,9 @@ export function BookSearchPage() {
                   ? "Kiểm tra lại bộ lọc đã chọn."
                   : result.isFetching || searchPending
                     ? "Đang tìm sách…"
-                    : result.data
+                    : inaccessible
+                      ? "Chưa xác nhận được quyền xem kệ sách."
+                      : result.data
                       ? `${result.data.items.length} ${preview ? "sách xem trước" : "tin đăng"} trên trang này`
                       : "Ảnh, tình trạng và giá của từng bản sách."}
               </p>
@@ -1004,8 +988,12 @@ export function BookSearchPage() {
                 <div className={styles.state} role="alert">
                   <h3>Chưa tải được kệ sách</h3>
                   <p>
-                    Kiểm tra kết nối rồi thử lại.
-                    {result.data
+                    {inaccessible
+                      ? "Bạn hiện không có quyền xem kệ sách này. Kiểm tra phiên đăng nhập hoặc trạng thái tài khoản rồi thử lại."
+                      : invalidReadParameters
+                        ? "Từ khóa, bộ lọc hoặc trang đang xem chưa hợp lệ. Hãy kiểm tra lựa chọn hoặc quay về trang đầu."
+                        : "Kiểm tra kết nối rồi thử lại."}
+                    {result.data && !inaccessible
                       ? " Danh sách bên dưới có thể chưa được cập nhật."
                       : ""}
                   </p>
@@ -1037,7 +1025,7 @@ export function BookSearchPage() {
                 </div>
               )}
               <AnimatePresence mode="wait" custom={transitionDirection} initial={false}>
-                {!searchPending && result.data && result.data.items.length > 0 && (
+                {!searchPending && !inaccessible && result.data && result.data.items.length > 0 && (
                   <motion.div
                     key={`${params.get("cursor") || "first"}-${params.get("q") || ""}-${params.get("mode") || ""}-${params.get("sort") || ""}-${initial.categoryId}-${params.get("condition") || ""}`}
                     custom={transitionDirection}
@@ -1055,53 +1043,15 @@ export function BookSearchPage() {
                   </motion.div>
                 )}
               </AnimatePresence>
-              {!searchPending && (params.has("cursor") || result.data?.nextCursor) && (
-                <nav className={styles.pagination} aria-label="Phân trang sách">
-                  {params.has("cursor") && (
-                    <>
-                      <motion.button
-                        type="button"
-                        disabled={result.isFetching}
-                        onClick={handleFirstPage}
-                        whileHover={{ scale: 1.04, y: -2 }}
-                        whileTap={{ scale: 0.96 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                      >
-                        Về trang đầu
-                      </motion.button>
-                      <motion.button
-                        type="button"
-                        disabled={result.isFetching}
-                        onClick={handlePrevPage}
-                        whileHover={{ scale: 1.04, y: -2 }}
-                        whileTap={{ scale: 0.96 }}
-                        transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                      >
-                        <ArrowLeft size={16} aria-hidden="true" />
-                        Trang trước
-                      </motion.button>
-                    </>
-                  )}
-                  <div className={styles.pageIndicatorBadge}>
-                    <BookOpen size={15} aria-hidden="true" />
-                    <span>Trang {pageNumber}</span>
-                  </div>
-                  {result.data?.nextCursor && (
-                    <motion.button
-                      type="button"
-                      className={styles.paginationNextBtn}
-                      disabled={result.isFetching}
-                      onClick={handleNextPage}
-                      whileHover={{ scale: 1.04, y: -2 }}
-                      whileTap={{ scale: 0.96 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    >
-                      Trang tiếp theo{" "}
-                      <ArrowRight size={16} aria-hidden="true" />
-                    </motion.button>
-                  )}
-                </nav>
-              )}
+              {!searchPending && !inaccessible && <CursorPager navigation={navigation}
+                nextCursor={!result.isError ? result.data?.nextCursor : undefined}
+                busy={result.isFetching} count={result.data?.items.length}
+                label="Phân trang sách" itemLabel={preview ? "sách xem trước" : "bài đăng"}
+                onDirection={direction => {
+                  setTransitionDirection(direction);
+                  requestAnimationFrame(scrollToCatalogHeading);
+                }} />}
+
             </div>
           )}
         </section>

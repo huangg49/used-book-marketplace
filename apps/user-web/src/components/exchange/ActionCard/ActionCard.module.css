@@ -8,6 +8,11 @@
     flex-direction: column;
     gap: 16px;
 }
+.inspectionDetails { font-size:.8125rem; color:var(--shop-muted); }
+.inspectionDetails summary { cursor:pointer; min-height:44px; padding:12px 0; }
+.card[data-compact] { font-size:.875rem; line-height:1.55; }
+.card[data-compact] p { font-size:.875rem; line-height:1.55; }
+.card[data-compact] .calloutBox { padding:12px; background:var(--shop-shelf); }
 
 .headerRow {
     display: flex;

@@ -16,6 +16,13 @@ quyền khiếu nại có đường thực thi và chặn settlement tương ứ
 
 ## Quyết định
 
+**Ngoại lệ owner03/11/2026:** riêng Buyer acknowledgement được mở theo
+[bổ sung ADR0052](0052-transaction-reviews-and-reputation.md), để nhận sách và
+viết đánh giá riêng trong72h. `canConfirmReceipt` đọc quyền/trạng thái thật;
+tiền/commitment giữ nguyên. Các quy định Completed-only receipt/projection bên
+dưới là baseline01/11, được thay riêng phần này. Carrier Delivered, settlement,
+worker và điều kiện mở gate còn lại không đổi; không reset Inspection lịch sử.
+
 - Giữ route và request schema receipt/delivery để client cũ giữ intent. Quyền,
   phiên hiện tại, owner và tính độc lập kiểm trước receipt replay. Mọi command
   **mới** trả409 InvalidState sau authorization và trước mutation; không ghi event,

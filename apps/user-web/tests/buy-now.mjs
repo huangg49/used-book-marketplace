@@ -1,7 +1,7 @@
 // Real HTTP/Mongo and two browser sessions; QA-only accounts/storage/funding.
 import assert from "node:assert/strict";
 import { parseArgs } from "node:util";
-const { values: { "checkout-only": checkoutOnly, "demo-completion": demoCompletion } } = parseArgs({ options: { "checkout-only": { type: "boolean", default: false }, "demo-completion": { type: "boolean", default: false } } });
+const { values: { "checkout-only": checkoutOnly, "demo-completion": demoCompletion, "receipt-review": receiptReview } } = parseArgs({ options: { "checkout-only": { type: "boolean", default: false }, "demo-completion": { type: "boolean", default: false }, "receipt-review": { type: "boolean", default: false } } });
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
@@ -30,6 +30,12 @@ Object.assign(process.env, {
 });
 const artifacts = path.join(root, "apps/user-web/test-results/buy-now");
 await mkdir(artifacts, { recursive: true });
+const openOrderContext = async (region) => {
+  await region.getByRole("complementary", { name: "Sách và thỏa thuận", exact: true }).waitFor();
+  const toggle = region.getByRole("button", { name: "Sách và thỏa thuận", exact: true });
+  if (await toggle.isVisible() && await toggle.getAttribute("aria-expanded") !== "true")
+    await toggle.click();
+};
 const captureDialog = async (page, filename) => {
   const dialog = page.locator("dialog[open]");
   await dialog.waitFor();
@@ -380,6 +386,7 @@ try {
     name: "Chi tiết đơn hàng",
     exact: true,
   });
+  await openOrderContext(buyerOrderDetails);
   await buyerOrderDetails.getByText("Mua ngay", { exact: true }).waitFor();
   await buyerOrderDetails.getByRole("heading", {
     name: order.item.metadata.title, exact: true,
@@ -552,6 +559,7 @@ try {
     name: "Chi tiết đơn hàng",
     exact: true,
   });
+  await openOrderContext(sellerOrderDetails);
   await sellerOrderDetails.getByText("Mua ngay", { exact: true }).waitFor();
   await sellerOrderDetails
     .getByText("Người bán đang chuẩn bị gửi", { exact: true })
@@ -634,7 +642,7 @@ try {
   await buyerOrderDetails.getByText("Người bán đã đăng ký vận đơn", { exact: true }).waitFor();
   for (const details of [sellerOrderDetails, buyerOrderDetails]) {
     assert.equal(await details.locator('[aria-current="step"]').innerText(), "4\nVận chuyển");
-    await details.getByText("Chờ bàn giao vận chuyển", { exact: true }).waitFor();
+    await details.getByRole("heading", { name: "Chờ bàn giao vận chuyển", exact: true }).waitFor();
   }
   await captureProgress("registered");
   assert.equal(
@@ -673,7 +681,7 @@ try {
       response.request().method() === 'GET' && response.ok());
     await sellerPage.goBack();
     assert.equal((await (await authorizedView).json()).demoCompletionEnabled, true);
-    await sellerOrderDetails.getByText('Chờ bàn giao vận chuyển', { exact: true }).waitFor();
+    await sellerOrderDetails.getByRole('heading', { name: 'Chờ bàn giao vận chuyển', exact: true }).waitFor();
     await sellerOrderDetails.getByRole('button', { name: 'Hoàn tất và giải ngân sau 5 giây', exact: true }).waitFor();
     const buyerBefore = await fixture.api('/me/wallet', buyer.accessToken);
     const sellerBefore = await fixture.api('/me/wallet', seller.accessToken);
@@ -772,6 +780,41 @@ try {
     path: path.join(artifacts, "buyer-in-transit-mobile.png"),
     fullPage: true,
   });
+  if (receiptReview) {
+    const before = await fixture.api('/me/wallet', buyer.accessToken);
+    const endpoint = `/orders/${orderId}/confirm-receipt`;
+    const posts = [];
+    await buyerPage.route(`**/api/v1${endpoint}`, async route => {
+      posts.push({ key: route.request().headers()['idempotency-key'], body: route.request().postData() });
+      if (posts.length === 1) { await route.fetch(); await route.abort('failed'); }
+      else await route.continue();
+    });
+    await buyerOrderDetails.getByRole('button', { name: 'Tôi đã nhận được sách', exact: true }).click();
+    await buyerPage.getByRole('button', { name: 'Xác nhận đã nhận sách', exact: true }).click();
+    await buyerOrderDetails.getByRole('button', { name: 'Thử lại xác nhận nhận sách', exact: true }).click();
+    assert.equal(posts.length, 2); assert.deepEqual(posts[0], posts[1]);
+    const read = await fixture.api(`/me/orders/${orderId}`, buyer.accessToken);
+    assert.equal(read.state, 'Inspection'); assert.equal(read.moneyHeld, before.transactionHeld);
+    assert.equal(await fixture.db.collection('direct_delivery_events').countDocuments({ orderId, source: 'BuyerReceived' }), 1);
+    await buyerOrderDetails.getByRole('link', { name: 'Viết đánh giá', exact: true }).click();
+    await buyerPage.waitForURL(url => url.pathname === '/reviews' && url.searchParams.get('transaction') === orderId);
+    assert.equal(new URL(buyerPage.url()).searchParams.get('transaction'), orderId);
+    await buyerPage.getByRole('button', { name: 'Viết đánh giá', exact: true }).click();
+    await buyerPage.getByLabel('Nhận xét chi tiết (không bắt buộc)').fill('QA: đã nhận sách, đánh giá riêng trong thời gian kiểm tra.');
+    await buyerPage.getByRole('button', { name: 'Lưu đánh giá', exact: true }).click();
+    await buyerPage.getByText('QA: đã nhận sách, đánh giá riêng trong thời gian kiểm tra.', { exact: true }).waitFor();
+    await buyerPage.getByText('Chờ công bố', { exact: true }).waitFor();
+    const ownReview = await fixture.api(`/transactions/DirectOrder/${orderId}/reviews`, buyer.accessToken);
+    const peerReview = await fixture.api(`/transactions/DirectOrder/${orderId}/reviews`, seller.accessToken);
+    assert.equal(ownReview.awaitingCompletion, true); assert.equal(peerReview.partnerReview, null);
+    assert.equal((await fixture.api('/me/wallet', buyer.accessToken)).transactionHeld, before.transactionHeld);
+    for (const width of [1440, 390, 320]) {
+      await buyerPage.setViewportSize({ width, height: 900 });
+      assert(await buyerPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await buyerPage.screenshot({ path: path.join(artifacts, `receipt-review-${width}.png`), fullPage: true });
+    }
+    console.log('PASS received → private review from ordinary order UI; lost ACK exact key/body, one receipt event, 72h Inspection and funds retained, partner blind; 1440/390/320, real API/Mongo with QA storage/funding/carrier.');
+  }
   }
   }
   assert.equal(

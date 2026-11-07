@@ -88,6 +88,7 @@ try {
     const filterButton = page.getByRole('button', { name: /^Bộ lọc/ })
     await filterButton.click()
     await expectBrowser(filterButton).toHaveAttribute('aria-expanded', 'true')
+
     await page.getByRole('checkbox', { name: /có giá mua ngay/i }).click()
     await page.waitForURL('**/auctions?buyNow=1')
     await expectBrowser(page.getByRole('checkbox', { name: /có giá mua ngay/i })).toBeChecked()

@@ -5,7 +5,8 @@ const uuid = z.uuid(),
   time = z.iso.datetime({ offset: true }),
   version = z.number().int().positive(),
   price = z.number().int(),
-  step = z.union([z.literal(10000), z.literal(50000)]);
+  // ADR0068: the read contract includes preset and custom bid steps.
+  step = z.number().int().min(1000).max(10000000).multipleOf(1000);
 
 export const intakeStates = [
   "AwaitingDropoff",

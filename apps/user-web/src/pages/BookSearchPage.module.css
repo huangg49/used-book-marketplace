@@ -92,14 +92,10 @@
   border: 1px solid var(--shop-line);
   border-radius: 10px;
   background: #fffdf8;
-  box-shadow: 0 3px 12px rgb(67 17 14 / 7%);
+  /* Same centered shadow geometry as the shared focus ring: no apparent lift. */
+  box-shadow: 0 0 0 0 var(--shop-wine);
   color: var(--shop-wine);
-  transition: border-color 150ms ease, box-shadow 150ms ease;
-}
-
-.search:focus-within {
-  border-color: var(--shop-wine);
-  box-shadow: 0 0 0 3px rgb(94 7 5 / 10%);
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
 
 .search input {
@@ -771,8 +767,7 @@
 }
 
 .state button,
-.empty button,
-.pagination button {
+.empty button {
   min-height: 44px;
   padding: 10px 18px;
   border: 1px solid var(--shop-wine);
@@ -785,60 +780,9 @@
 }
 
 .state button:hover,
-.empty button:hover,
-.pagination button:hover {
+.empty button:hover {
   background: var(--shop-wine);
   color: var(--shop-cream);
-}
-
-.pagination {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 12px;
-  margin-top: 36px;
-  padding: 16px;
-  background: rgba(255, 253, 248, 0.72);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(107, 25, 23, 0.1);
-  border-radius: 16px;
-  box-shadow: 0 4px 16px rgba(40, 25, 20, 0.05);
-}
-
-.pagination button {
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-}
-
-.pageIndicatorBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 8px 20px;
-  border-radius: 999px;
-  background: rgba(107, 25, 23, 0.08);
-  border: 1px solid rgba(107, 25, 23, 0.16);
-  color: var(--shop-wine);
-  font-weight: 700;
-  font-size: 0.875rem;
-  box-shadow: 0 2px 8px rgba(107, 25, 23, 0.04);
-}
-
-.paginationNextBtn {
-  background: linear-gradient(135deg, #6b1917 0%, #4a0d0c 100%) !important;
-  color: #fff9f0 !important;
-  border-color: #4a0d0c !important;
-  box-shadow: 0 4px 14px rgba(107, 25, 23, 0.22);
-}
-
-.paginationNextBtn:hover {
-  background: linear-gradient(135deg, #7c2320 0%, #59100e 100%) !important;
-  box-shadow: 0 6px 18px rgba(107, 25, 23, 0.3);
 }
 
 .error,

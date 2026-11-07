@@ -1,7 +1,5 @@
 import type { ExchangeDetail } from "../../../lib/mock/exchangeDetail";
-import { TransactionReviewPanel } from "../../../features/reviews/TransactionReviewPanel";
+import { ReviewEntry } from "../../../features/reviews/ReviewEntry";
 export function ReviewCard({ detail }: { detail: ExchangeDetail }) {
-  return detail.status === "COMPLETED" ? (
-    <TransactionReviewPanel type="Exchange" id={detail.id} />
-  ) : null;
+  return (!!detail.viewerShipping.receivedAt || detail.status === "COMPLETED") ? <ReviewEntry type="Exchange" id={detail.id} version={detail.revision} /> : null;
 }

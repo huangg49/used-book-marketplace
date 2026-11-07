@@ -6,6 +6,17 @@ let resizeObserver: ResizeObserver | undefined;
 let rootObserver: MutationObserver | undefined;
 let animationFrame = 0;
 
+// Lenis changes scrolling/overflow, not typography. Width changes still reach
+// ResizeObserver; unknown classes and every root style change keep refitting.
+const scrollClasses = new Set([
+  "lenis", "lenis-autoToggle", "lenis-stopped",
+  "lenis-locked", "lenis-scrolling", "lenis-smooth",
+]);
+function nonScrollClasses(value: string | null) {
+  return (value ?? "").split(/\s+/)
+    .filter(name => name && !scrollClasses.has(name)).sort().join(" ");
+}
+
 function queue(subscription: Subscription) {
   pending.add(subscription);
   if (animationFrame) return;
@@ -33,10 +44,16 @@ export function observeCardText(frame: HTMLElement, fit: () => void) {
         if (subscription) queue(subscription);
       }
     });
-    rootObserver = new MutationObserver(queueAll);
+    rootObserver = new MutationObserver(records => {
+      const currentClasses = nonScrollClasses(document.documentElement.className);
+      if (records.some(record =>
+        record.attributeName !== "class" || nonScrollClasses(record.oldValue) !== currentClasses
+      )) queueAll();
+    });
     rootObserver.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["style", "class"],
+      attributeOldValue: true,
     });
     window.addEventListener("resize", queueAll);
     document.fonts.addEventListener("loadingdone", queueAll);

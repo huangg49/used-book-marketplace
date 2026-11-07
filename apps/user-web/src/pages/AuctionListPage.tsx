@@ -1,3 +1,5 @@
+import { Pagination } from "../components/Pagination";
+import { usePaginationFocus } from "../components/Pagination/usePaginationFocus";
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AuctionEmptyArt } from '../components/AuctionEmptyArt'
@@ -68,17 +70,35 @@ export function AuctionListPage() {
 
   const update = (key: string, value: string) => {
     const next = new URLSearchParams(params)
+    next.delete('auctionPage')
     if (value) next.set(key, value); else next.delete(key)
     setParams(next, { replace: true })
   }
 
   const filters = readFilters(params)
   const { point, buyNow: buyNowOnly } = filters
-  const sort = SORTS[params.get('sort') ?? ''] ? params.get('sort')! : 'endingSoon'
+  const rawSort = params.get('sort') ?? ''
+  const sort = Object.hasOwn(SORTS, rawSort) ? rawSort : 'endingSoon'
   const all = result.data?.items ?? []
   const points = [...new Set([...all.map((a) => a.pointName), ...(point ? [point] : [])])].sort()
   const now = result.data ? Date.parse(result.data.serverTime) : Date.now()
   const items = all.filter((a) => matches(a, filters, now)).sort(SORTS[sort]!.compare)
+  const size = 8
+  const normalizePage = (key: string, total: number) => {
+    const value = Number(params.get(key) || 1)
+    return Math.min(Number.isSafeInteger(value) && value > 0 ? value : 1, Math.max(1, Math.ceil(total / size)))
+  }
+  const currentPage = normalizePage('auctionPage', items.length)
+  const upcomingItems = upcoming.data?.items ?? []
+  const upcomingPage = normalizePage('upcomingPage', upcomingItems.length)
+  const requestActiveFocus = usePaginationFocus(currentPage, JSON.stringify([filters, sort]), 'auction-list-title', result.isFetching)
+  const requestUpcomingFocus = usePaginationFocus(upcomingPage, 'upcoming', 'auction-upcoming-title', upcoming.isFetching)
+  const selectPage = (key: string, page: number) => {
+    if (key === 'auctionPage') requestActiveFocus(); else requestUpcomingFocus();
+    const next = new URLSearchParams(params)
+    if (page > 1) next.set(key, String(page)); else next.delete(key)
+    setParams(next)
+  }
   const activeCount = activeFilterCount(filters)
   const filtered = activeCount > 0 || !!filters.q
   // The search box types freely; the URL follows after a short pause.
@@ -91,6 +111,7 @@ export function AuctionListPage() {
   const clearFilters = () => {
     const next = new URLSearchParams(params)
     FILTER_KEYS.forEach((key) => next.delete(key))
+    next.delete('auctionPage')
     setParams(next, { replace: true })
     setQuery('')
   }
@@ -369,11 +390,14 @@ export function AuctionListPage() {
 
           {result.data && showData && items.length > 0 && (
             <AuctionGrid className={styles.grid} orderKey={layoutKey}>
-              {items.map((auction) => (
+              {items.slice((currentPage - 1) * size, currentPage * size).map((auction) => (
                 <AuctionCard key={auction.id} auction={auction} serverTime={result.data.serverTime} />
               ))}
             </AuctionGrid>
           )}
+
+          {showData && <Pagination page={currentPage} totalItems={items.length} pageSize={size}
+            onPageChange={page => selectPage('auctionPage', page)} hideOnSinglePage itemLabel="phiên trong danh sách" ariaLabel="Phân trang đấu giá đang mở" bordered />}
 
           {all.length >= 50 && (
             <p className={styles.limit}>
@@ -387,7 +411,7 @@ export function AuctionListPage() {
           <section aria-labelledby="auction-upcoming-title" className={styles.upcomingSection}>
             <div className={styles.sectionHeading}>
               <div className={styles.headingLeft}>
-                <h2 id="auction-upcoming-title">Sắp mở phiên</h2>
+                <h2 id="auction-upcoming-title" tabIndex={-1}>Sắp mở phiên</h2>
                 <span className={styles.countBadgeUpcoming}>
                   {upcoming.data.items.length} phiên đã hẹn giờ
                 </span>
@@ -397,10 +421,12 @@ export function AuctionListPage() {
               Người bán đã qua kiểm định và hẹn giờ mở các phiên này. Bạn có thể xem trước và chuẩn bị tham gia trả giá khi phiên mở.
             </p>
             <AuctionGrid className={styles.grid} orderKey={upcoming.data.items.map((a) => a.id).join(':')}>
-              {upcoming.data.items.map((auction) => (
+              {upcomingItems.slice((upcomingPage - 1) * size, upcomingPage * size).map((auction) => (
                 <AuctionCard key={auction.id} auction={auction} serverTime={upcoming.data.serverTime} />
               ))}
             </AuctionGrid>
+            <Pagination page={upcomingPage} totalItems={upcomingItems.length} pageSize={size}
+              onPageChange={page => selectPage('upcomingPage', page)} hideOnSinglePage itemLabel="phiên đã hẹn" ariaLabel="Phân trang đấu giá sắp mở" bordered />
           </section>
         )}
 

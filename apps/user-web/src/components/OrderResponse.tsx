@@ -28,7 +28,7 @@ export function OrderResponse({
     null,
   );
   const pending = pendingOrderResponse(session, order.id);
-  async function act(action: "accept" | "reject" | "cancel" | "pay") {
+  async function act(action: "accept" | "reject" | "cancel" | "pay" | "confirm-receipt") {
     if (busy) return;
     setBusy(true);
     setError("");
@@ -49,6 +49,7 @@ export function OrderResponse({
       void cache.invalidateQueries({ queryKey: ["work-inbox"] });
     }
   }
+  if (pending === "confirm-receipt") return null;
   if (!order.sellerAcceptanceEnabled && !order.canReject && !pending)
     return null;
   return (

@@ -2,44 +2,47 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { BookOpen, ArrowRight, ArrowUpRight, Edit, Eye, ImageOff } from "lucide-react";
-import { myListingsQuery } from "../../../lib/owner-listing-queries";
-import { getMyPhoto } from "../../../services/my-listings";
+import { myListingsQuery, myListingPhotoQuery } from "../../../lib/owner-listing-queries";
+import { useNearViewport } from "../../../hooks/useNearViewport";
 import { ROUTES, formatVnd } from "../../../lib/routes";
 import { DashboardSectionHeading } from "./DashboardSectionHeading";
 
-function MyListingPhoto({ listingId, mediaId }: { listingId: string; mediaId: string }) {
+function MyListingPhoto({ ownerId, listingId, revisionId, mediaId }: { ownerId: string; listingId: string; revisionId: string; mediaId: string }) {
+  const { ref, active } = useNearViewport<HTMLDivElement>(false, { once: true });
+  const [failedUrl, setFailedUrl] = useState<string>();
   const photo = useQuery({
-    queryKey: ["my-photo", listingId, mediaId],
-    queryFn: () => getMyPhoto(listingId, mediaId),
+    ...myListingPhotoQuery(ownerId, listingId, revisionId, mediaId),
+    enabled: active && !!ownerId,
   });
-
-  if (photo.isLoading) {
-    return <div className="w-full h-full bg-surface-container-high animate-pulse" />;
-  }
-
-  if (photo.isError || !photo.data?.url) {
-    return (
-      <div className="w-full h-full bg-surface-container-high flex flex-col items-center justify-center text-on-surface-variant gap-1">
-        <ImageOff size={20} />
-        {photo.isError && (
-          <button
-            type="button"
-            onClick={() => void photo.refetch()}
-            className="text-[10px] underline text-primary font-medium"
-          >
-            Tải lại ảnh
-          </button>
-        )}
-      </div>
-    );
-  }
+  const url = photo.data?.url;
+  const failed = photo.isError || (!!url && url === failedUrl);
 
   return (
-    <img
-      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-      src={photo.data.url}
-      alt="Ảnh bản sách"
-    />
+    <div ref={ref} className="w-full h-full">
+      {photo.isPending ? (
+        <div className="w-full h-full bg-surface-container-high animate-pulse" />
+      ) : failed || !url ? (
+        <div className="w-full h-full bg-surface-container-high flex flex-col items-center justify-center text-on-surface-variant gap-1">
+          <ImageOff size={20} />
+          {failed && (
+            <button
+              type="button"
+              onClick={() => { setFailedUrl(undefined); void photo.refetch(); }}
+              className="text-[10px] underline text-primary font-medium"
+            >
+              Tải lại ảnh
+            </button>
+          )}
+        </div>
+      ) : (
+        <img
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          src={url}
+          alt="Ảnh bản sách"
+          onError={() => setFailedUrl(url)}
+        />
+      )}
+    </div>
   );
 }
 
@@ -174,7 +177,7 @@ export function DashboardMyBooks({ ownerId }: DashboardMyBooksProps) {
                 <div className="flex flex-col gap-3">
                   <div className="w-full aspect-[3/4] rounded-lg bg-surface-container-high overflow-hidden relative shadow-sm">
                     {firstMediaId ? (
-                      <MyListingPhoto listingId={item.id} mediaId={firstMediaId} />
+                      <MyListingPhoto ownerId={ownerId} listingId={item.id} revisionId={item.currentRevision.id} mediaId={firstMediaId} />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-on-surface-variant opacity-50">
                         <BookOpen size={36} />

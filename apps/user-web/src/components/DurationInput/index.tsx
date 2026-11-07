@@ -100,7 +100,7 @@ export function DurationInput({ id, label, value, presets, disabled, onChange }:
         <span id={`${id}-label`} className={styles.label}>{label}</span>
         <span className={styles.total} aria-live="polite">{formatDuration(value)}</span>
       </div>
-      <div ref={clock} className={styles.clock} data-disabled={disabled || undefined} data-lenis-prevent="">
+      <div ref={clock} data-focus-surface className={styles.clock} data-disabled={disabled || undefined} data-lenis-prevent="">
         {UNITS.map((u, i) => (
           <div key={u.key} className={styles.segment} data-unit={u.key} title="Cuộn chuột hoặc dùng ↑/↓ để đổi">
             {i > 0 && <span className={styles.colon} aria-hidden="true">:</span>}

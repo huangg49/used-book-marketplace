@@ -171,7 +171,7 @@ export function ExchangeEvidencePanel({
           đè nội dung.
         </p>
       )}
-      <label className={ui.picker}>
+      <label data-focus-surface className={ui.picker}>
         Chọn tệp từ thiết bị
         <input
           aria-label="Chọn bằng chứng"

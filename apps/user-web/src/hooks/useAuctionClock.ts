@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ApiError } from '@used-books/session-client'
+import { startServerCountdown } from '../lib/server-countdown'
 
 /**
  * Remaining time to `endAt` measured on the server clock: `serverTime` from the
@@ -10,11 +11,7 @@ export function useCountdown(endAt: string | undefined, serverTime: string | und
   const [ms, setMs] = useState(() => (endAt ? Math.max(0, Date.parse(endAt) - Date.parse(serverTime ?? endAt)) : 0))
   useEffect(() => {
     if (!endAt) return
-    const offset = serverTime ? Date.parse(serverTime) - Date.now() : 0
-    const tick = () => setMs(Math.max(0, Date.parse(endAt) - (Date.now() + offset)))
-    tick()
-    const timer = window.setInterval(tick, 1000)
-    return () => window.clearInterval(timer)
+    return startServerCountdown(endAt, serverTime, setMs)
   }, [endAt, serverTime])
   return ms
 }
@@ -49,4 +46,13 @@ export function useIntentKey() {
 /** True when the server may or may not have committed the command. */
 export function outcomeUnknown(error: unknown) {
   return !(error instanceof ApiError) || error.status === 0 || error.status >= 500
+}
+
+/** A refused retry does not disprove an earlier commit with a lost ACK.
+ * Keep command identity for auth, timeout and generic rate-limit failures.
+ * Read failures still use outcomeUnknown so denied cached data stays hidden.
+ */
+export function commandOutcomeUnknown(error: unknown) {
+  return outcomeUnknown(error) ||
+    error instanceof ApiError && [401, 403, 408, 429].includes(error.status)
 }

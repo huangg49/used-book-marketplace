@@ -1,3 +1,545 @@
+# Xuất bản chuỗi tối ưu —06–07/11/2026
+
+Owner yêu cầu push và merge cẩn thận. Nhánh `codex/web-hardening-release-20261106`,
+nguồn tích lũy `ba8713bb`, main remote xác minh `ef7091e1e24eeff186eb0db3329a4682aa4f0e63`
+là ancestor, không conflict mới. Giữ toàn bộ123commit/330file local ban đầu
+(receipt/private-review/API/shared/RN, conversation/pagination/focus và tối ưu).
+Backup `codex/backup-before-publish-20261106-ba8713bb`. Đã push và mở
+[PR97](https://github.com/huangg49/used-book-marketplace/pull/97); chưa merge.
+PR97 là đầu mối diff, SHA, CI và trạng thái merge hiện hành. Evidence bên dưới
+thuộc nguồn được ghi; phải đọc CI đúng head cuối trước squash. Ngày07/11 owner
+yêu cầu assistant tự review rồi merge, cho phép ngoại lệ review người thật riêng
+PR97. Đây vẫn là AI self-review, không human sign-off hoặc đóng READINESS; quy
+tắc TEAMWORK cho các PR khác không đổi. Rà soát trọng điểm auth/replay, receipt/
+hold, review riêng/công bố, cursor phòng chat và recovery/motion không thấy lỗi
+chặn merge. Sửa câu canConfirmReceipt=false cũ trong DOMAIN_RULES cho khớp ngoại
+lệ ADR0052 đã có, không đổi source/contract/gate nghiệp vụ.
+
+Các sửa publication đã triển khai:
+- Khớp harness với entry/heading/nhãn/region/disclosure hiện hành của Member và
+  Admin; RN giữ nhãn riêng. Dashboard chờ lazy route trước kiểm palette focus2s.
+  Fake clock chỉ bắt đầu sau native IntersectionObserver; listing-cache chờ fresh
+  held-detail render trước assert không có Mua ngay. Không tăng timeout/bỏ assertion.
+- Flutter formatter2file; official Dart3.13.7 SHA verified,18files/0changes recheck.
+  Historical upgrade tests assert cả policy HCM cũ và FREE0052 mới, không sửa
+  migration đã áp dụng. Review/withdrawal E2E mỗi suite sở hữu DB QA random riêng,
+  API/fixture cùng target, kiểm prefix khi teardown DB/users/roles, restore config
+  cả khi fail. Test simulator config được đặt sau Nest validation; giữ đầy đủ
+  reconciliation/permission/replay/race, không sửa ledger/product/DB local.
+- Profile: thêm tên accessible ô OTP; min/max-width và wrap label/email cho chữ
+  lớn, không clip/giảm font. Home: tooltip tên dài vô hình gây scroll456/320;
+  giới hạn width theo thẻ, giữ toàn bộ text và hover160ms.
+- Wallet: status-query lỗi có alert +retry query hiện hành, giữ pending data;
+  timer có role/tên, giữ poll/command/amount/key. Exchange error view nhúng lại
+  summary hiện có sau refactor:503 giữ khoản cọc có nhãn stale,403 ẩn khoản riêng
+  tư và sách/actions cache; retry thành công về context. Retry button dùng token
+  wine/ink đã định nghĩa. Chỉ3CSS source đổi sizing/wrapping/retry-color;
+  43CSS asset Member còn lại khớp byte, không đổi motion/transition/keyframe/asset.
+- Admin AI queue harness chờ đúng hồ sơ/overview, mở pane compact bằng entry thật;
+  giữ empty/exact recall key-body/audit, không đổi worker/model/quyền/checklist.
+  Exchange UX restore chỉ sau success để không che lỗi gốc; outer suite luôn cleanup.
+- Wallet browser dùng ô khả dụng riêng (số0 cũng xuất hiện ở ký quỹ), kiểm action
+  theo tên ở cạnh thẻ; validation/copy/heading theo UI và range OpenAPI hiện hành.
+  Form rút tiền: kiểm native required-field, quick amount disabled và cả click/
+  Enter vượt số dư với thông tin QA hợp lệ, không phát command; không suy chỉ từ
+  Continue disabled. Dùng/đóng modal bằng UI thật trước thao tác nền, chờ animation;
+  không force-click. Wallet chạy đầu nhóm Member E2E, vẫn giữ đủ các bài còn lại.
+
+Kiểm chứng đã thực chạy:
+- Contract/types/routes257operations/39controllers, workspace lint/typecheck/build
+  và docs/diff PASS tại nguồn tích lũy. Default Windows `pnpm test` PASS1511/1511
+  trên44e544fc (session151/API419/RN224/Admin246/Member471). Hai lượt trước hit
+  shutdown child10s khi tải đồng thời; isolated/bounded-worker PASS rồi default
+  chạy riêng cũng PASS, không sửa shutdown test/timeout. Sau Exchange UI sửa:
+  Member471unit/58file,23finance unit/build/typecheck/scoped lint PASS.
+- Browser fixtures PASS: resolver22; pagination42screen/viewport +shared error/race;
+  motion5; listing-cache2width; profile6recovery +16layout (1440/768/390/320,
+  100/130% text); card2profiles/16layout-hover và Home4; Wallet credit10profiles;
+  Wallet status390/1440 (130%, focus/no-overflow, entry/validation/popup-block,
+  zero-balance withdrawal/no command); Exchange finance390/1440 stale/denied/retry.
+  Wallet history8ca refresh/next-page ×403/503 ×390/1440 PASS lại với pager hiện hành.
+  Đã xem ảnh lỗi mobile/desktop. Các fixture này là HTTP/storage/provider giả.
+- CI f0d0bebd:10/11checks PASS, gồm API unit/Mongo/full E2E, Operations đầy đủ,
+  Admin/RN/Flutter/demo/docs/startup/offline. Member qua motion và thanh toán giả
+  lập2lần/90000balance; dừng ở locator pager nằm ngoài region biên lai. Harness nay
+  lấy navigation Điều hướng phân trang, giữ lỗi trang sau/background refresh/
+  exact cursor retry/ledger/expiry assertions. CIc2e đã qua ledger/layout/return/
+  lost-ACK, dừng timer: UI có prefix Còn, assertion cũ chỉ MM:SS. Nay assert đủ
+  prefix, vẫn giữ signed provider delta và server delta chính xác300000ms.
+  CI74efbb80 đã PASS11/11, gồm đầy đủ API/Mongo/E2E, Member (toàn bộ Wallet,
+  deadline/expiry/lost-ACK/ledger) và Operations. Commit review tiếp theo chỉ đổi
+  tài liệu; CI đúng head cuối và trạng thái merge lấy tại PR97.
+  CI25cce765 phát hiện race harness ở expired-ACK: caption Cancelled của request
+  trước vẫn hiện lúc replay mới chưa xong. Nay đợi đúng topupId trên URL rồi kiểm
+  form enabled bằng assertion chờ render; giữ nguyên key/body/tiền/ledger/expiry,
+  không tăng timeout hoặc đổi runtime. CI head sửa tiếp tục phải xác minh.
+  Main ef7091e1 cũng từng FAIL API/web-smoke/member-profile trước PR97; đã đối
+  chiếu logs, không quy tất cả lỗi cho tối ưu.
+
+Demo `codex/demo-receipt-local-20261103`/`5bd0b360` giữ54file tracked/untracked và
+status fingerprint; không sync/build/stash/reset checkout Documents. Không local
+API/Mongo/worker/provider, migration/seed/deploy. Local Flutter analyze/test,
+full native/live-provider/human acceptance NOT RUN; READINESS giữ nguyên.
+Bước tiếp: xác minh CI đúng SHA cuối rồi squash PR97 theo quyền owner07/11,
+kiểm SHA main/merge thực. Không tự bật AI auto-review hoặc mở rộng gate nghiệp vụ.
+
+# Gia cố khả năng phục hồi web —05/11/2026
+
+Owner giao tự động cuốn chiếu tối ưu toàn web, phát hiện lỗi thì sửa, giữ animation.
+Nhánh `codex/member-web-support-refresh-paging`, base `76ec933b`; checkpoint
+subject `fix(user-web): clear obsolete support paging errors on refresh`.
+[SupportPages](../../apps/user-web/src/features/support/SupportPages.tsx) explicit
+root refresh200 reset activity lỗi cursor cũ,503giữ error/data; revision theo
+owner/state/kind/unmount chặn callback cũ dọn nhầm scope mới. Baseline8/after8
+production390/1440 (terminal/more/retryfailed/filterrace) +8support-list hồi quy
+PASS.471unit/58file/build/typecheck/scoped lint JSON0/docs/diff/detector0 PASS;
+46 CSS khớp byte, không style/motion/asset đổi.
+[Evidence](MEMBER_WEB_RESILIENCE_2026_11_04.md). Chỉ login/GET fixtures, không
+support command/API/DB/provider/native/human/401refresh thật. Demo54file/status
+giữ, READINESS giữ; không push/PR/deploy. Còn cần kiểm hệ thống thật/nguyên nhân
+server rớt; không suy mọi tính năng đã hết lỗi. Metadata description OpenAPI
+resolveMyReviewNotification copy nhầm support đã ghi báo cáo, chưa sửa YAML.
+
+Gói cùng lượt `76ec933b` review notification resolver:22baseline/22after và
+12list+4review hồi quy PASS, chờ fresh access/type/id, xử lý malformed/503/403/
+404/schema/leave/revisit denied;46CSS nguyên, không đổi mark-read/command/quyền.
+Gói cùng lượt `c6f65aa5` MyAuctions denied ẩn pager/count,503giữ rows;
+baseline12/after12+16step-read hồi quy PASS,46CSS nguyên, không đổi poll/command.
+Gói cùng lượt `1674fbd2` MyBooks denied ẩn pager/copy kiểm phiên, baseline12/
+after12+12listing action hồi quy PASS,46CSS nguyên, không đổi command/replay.
+Gói cùng lượt `87b22bfe` Notifications reset activity denied, root200 dọn lỗi cũ;
+baseline14/after14+14read-state hồi quy PASS, sparse unread giữ đúng,46CSS nguyên.
+Gói cùng lượt `f7a49021` Search denied ẩn card/count/pager,400/422 nói tham số,
+503 giữ dữ liệu; baseline16/after16+18condition+9search hồi quy PASS,46CSS nguyên.
+Gói cùng lượt `7274dcc2` Reviews list denied có retry, giữ tabs/reputation riêng,
+reset activity cũ; baseline12/after12+4review mutation fixture regression PASS,
+471unit/58file và46CSS khớp byte; không đổi eligibility/command/motion.
+Gói cùng lượt `f4d0f0cb` condition chip own key, baseline18/after18,2crash→0,
+9search regression PASS; giữ query/API validation và animation,46CSS khớp byte.
+Gói cùng lượt `6352589f` own-key auction sort/price/ends;42baseline/42after,
+6crash→0,16step read regression,471unit/58file/build/typecheck/docs PASS;
+lint0error/1Date.now purity warning có trước,46 CSS khớp byte.
+Gói cùng lượt `cf445432` Admin/Staff step parser đúng ADR0068; baseline8/after8,
+246unit/35file (17mới), pagination4width/build/typecheck/bundle/lint/docs PASS,
+16CSS khớp byte. Không receive/cancel/inspection/DB; RN union cũ chưa sửa.
+Gói cùng lượt `b8a535e0` Member2schema đọc bước ADR0068, baseline16/after16+
+7intake regression,466unit/58file (17mới) PASS. Không thay nghiệp vụ/motion.
+Gói cùng lượt `9d44530e` support cursor denied có alert và dọn activity cũ;
+baseline8/after8+42screen/viewport pagination/shared state/error/race PASS.
+Gói cùng lượt `244bbe9d` own-key kind/type URL hỗ trợ, baseline30/after30+
+4resource regression PASS, giữ4kind/7type hợp lệ và draft khi fixture503.
+Gói cùng lượt `84cdfa3f` picker giữ radio/draft khi trang sau503, retry cursor;
+401/403/404 ẩn và refetch root, empty xét mọi trang/cursor. Baseline8/after8+
+4resource hồi quy PASS. Không đổi quyền/contract/command hoặc animation.
+Gói cùng lượt `a43ee000` counts Exchange lỗi hoặc list401/403 hiện “—”, retry
+cả counts/list; baseline10/after10+16route regression PASS. Hai read vẫn độc lập.
+Gói cùng lượt `b9c98749` whitelist own tab keys: constructor/__proto__/toString
+fallback sent, không còn tabảo/aria sai; baseline16/after16 PASS,4validtabs và
+unknown giữ đúng hành vi. Không là prototype mutation/exploit được chứng minh.
+Gói trước `08b49c41` WorkInbox empty còn cursor chỉ nói trong dữ liệu đã tải;
+baseline8/after8+8denial regression PASS, không auto-scan hay đổi page size/poll.
+Gói cùng lượt `d96f1aa6` WorkInbox denial ẩn metadata/load-more và refetch root,
+503 giữ dữ liệu/retrycursor; baseline8/after8 PASS, không đổi ADR0053/permission.
+Gói cùng lượt `6505ccf8` phân biệt đọc public listing503 với403/404 ở inbox chat,
+retry thông tin riêng, vẫn mở phòng; baseline8/after8+3cardvisibility regression PASS.
+Gói cùng lượt `23632beb` ẩn đơn/badge/pager khi denied và dọn phân trang lỗi,
+503 retry đúng cursor; baseline8/after8+42screen viewport pagination PASS. Fixture
+pagination đã dùng data router đúng useBlocker, không bỏ assertion.
+Demo54file/status giữ nguyên fingerprint; READINESS không đổi; không push/PR/deploy.
+Gói trước `09e809d7` pin target ảnh, sync URL/tệp, baseline10/after10+22hồi quy
+PASS; click lặp/chooser dịch index không xóa/thay nhầm, limit8 và upload order đúng.
+Gói cùng lượt `bd9e5a95` rollback vị trí crop lỗi về bản đã chấp nhận, retry dọn
+đúng crop error và giữ alert khác; baseline6/after6+6failure regression PASS.
+Gói cùng lượt `c7455f48` chặn gửi khi current crop pending bằng state+guard đồng bộ,
+không tự gửi sau resolve; baseline8/after8+6reset regression,5unit mới PASS.
+Gói cùng lượt `d689f33d` dọn assist/reference/busy/token khi Đăng cuốn khác và
+chặn callback cuốn cũ; baseline4/after4 ready/pending/new response PASS. Server
+vẫn quyết định quyền/quota/Pending/member, không suy2model chạy đồng thời.
+Gói cùng lượt `69779bb6` dọn raw/meta cover và invalidate crop khi Đăng cuốn khác;
+baseline6/after6 production success/submit lostACK/pending crop PASS, live0 sau reset.
+Gói cùng lượt `50cf63db` sửa memo tiến độ nơi gửi, baseline8/after8 browser PASS,
+chọn/sửa địa chỉ và GET mới bỏ địa chỉ/khu vực cập nhật đúng số mục hợp lệ.
+Gói cùng lượt `817ac3f5` giữ lượt crop mới nhất và thu hồi khi xóa/rời, baseline8/
+after8+6failure regression,8unit mới PASS; live URL4/3/2/2→2/2/0/0 theo4ca.
+Gói cùng lượt `012cfde5` thu hồi raw URL crop fail, giữ raw caller khi reposition,
+10unit mới và6production error/recovery PASS; decode error có hướng dẫn tiếng Việt.
+Gói cùng lượt `bde3c790` thu hồi đủ ảnh Autofill StrictMode, remove theo URL tránh
+click lặp xóa ảnh khác; baseline8/after8 dev/prod, `/sell` read regression6ca PASS.
+Gói cùng lượt `76553495` khóa đọc Autofill trước await, ISBN click lặp2→1POST,
+giữ ảnh/nháp và exact AI retry sau mất ACK; baseline6/after6 production `/sell`.
+Cùng lượt `d0ba6b52` pin xác nhận tham chiếu vào đúng response và phục hồi expiry,
+baseline12/after12; `3f8a6ba2` chặn apply AI hết hạn direct/confirm, baseline10/
+after10, timeout có cleanup/wake tab, không polling. Các gói trước `865d8266` ẩn
+lịch sử Ví khi denied,503 giữ cache/retry; `cc42b67f` chặn vòng cursor/dừng trang
+tiếp sau rời Ví; `504c4b0b` giữ intent rút khi403 sau mất ACK. Chi tiết các gói
+editor/auction/profile/review/cart giữ ở báo cáo. Không DB/provider/GHN/Forum/
+migration/seed, không sửa checkout demo, push/PR/merge/deploy. Demo54file/status
+giữ nguyên fingerprint; READINESS không đổi. API/Mongo/native/human và401 refresh
+thật NOT RUN. Pending rút còn component-local, không bền qua reload; Save/Submit
+qua remount, avatar/mail thật, địa chỉ và AI xuyên app còn giới hạn. Chưa xác định
+nguyên nhân server rớt.
+
+# Tích hợp main vào nhánh phát triển —05/11/2026
+
+Owner yêu cầu cập nhật nhánh local, giữ thay đổi riêng và xử lý conflict.
+Nhánh `codex/member-web-wallet-summary-read-states`: merge `origin/main`
+`ef7091e1e24eeff186eb0db3329a4682aa4f0e63` vào local `57dcf7f2`, giữ ancestry;
+backup `codex/backup-before-main-20261105-57dcf7f2`. Merge checkpoint subject
+`merge: integrate latest main while preserving local web improvements`.
+Đã ghép9file conflict, giữ phân trang/focus/motion/recovery local cùng withdrawal
+main; không có ý định nghiệp vụ chưa rõ cần chọn lại. Regenerate OpenAPI0.74.1,
+257operations/39controllers. PASS1442unit, workspace typecheck/build/lint,
+contract/docs/diff, wallet read10/layout5, auction2, order-chat và web-motion5checks.
+Flutter SDK không có: format/analyze/test/native NOT RUN, chỉ đối chiếu source.
+Không DB/migration/seed/provider/demo service/push/PR/remote merge/deploy.
+Checkout demo giữ nguyên54file local; main ref không chuyển nhánh. READINESS giữ.
+[Chi tiết cách ghép và bằng chứng](MAIN_INTEGRATION_2026_11_05.md).
+
+# Lịch sử tin nhắn Member web —03/11/2026
+
+Owner duyệt xử lý lịch sử chat trước sau rà pagination. Nhánh
+`codex/chat-message-history`, base0ad4f1d4. [ADR0041](../adr/0041-unified-conversation-workspace.md)
+ghi endpoint mới dùng chung, trang đầu40 tin mới nhất, cursor theo thời điểm/ID
+và hội thoại, gộp lịch sử Exchange đã liên kết. Quyền participant/LOCKED đọc
+nghĩa vụ vẫn qua service hiện có. `/messages` giữ mảng và sửa thành 500 tin gần
+nhất. Web tải tin cũ và giữ vị trí đọc, retry cùng cursor, gộp tin socket theo ID.
+
+PASS contract/generated/routes247, API typecheck, Member web build/typecheck, lint phạm vi và
+detector. Mongo replica set `latlai_chat_history_test` PASS21 test qua Nest HTTP,
+gồm505 tin, timestamp trùng, tin mới đến giữa hai lượt đọc, cursor sai phạm vi,
+participant/LOCKED và nguồn Exchange liên kết. Browser fixture HTTP/Socket.IO
+PASS 1440/390px cho tải mới nhất, lỗi/retry, scroll anchor, tin đến và hết lịch sử.
+Suite chat hiện có PASS các luồng mua/đổi, nháp và retry lệnh. Đã cập nhật thư mục
+Documents có sao lưu. Member `/chat` HTTP200, API readiness200, route lịch sử
+trả401 cho khách. Dữ liệu test chạy riêng và replica set QA đã dừng.
+UI tải tin cũ đã nối Member web. RN/Flutter dùng contract cũ tương thích và chưa
+kiểm native. Hộp hội thoại, route Exchange legacy và hàng việc vận hành thuộc
+phạm vi riêng. Không có migration mới. READINESS giữ nguyên.
+
+Các điểm còn mở từ lượt rà, để đối chiếu lại trước khi nhận việc mới:
+
+- Hộp hội thoại Member chỉ mở thêm dữ liệu đã tải. API hộp thư hiện giới hạn
+  100 hội thoại. Phân trang tin nhắn trong phòng không thay đổi giới hạn này.
+- Các hàng việc tiếp nhận, giao nhận, phân giải tại điểm, quản lý đấu giá, sự cố
+  và chuyển cấp cần kiểm contract và phạm vi dữ liệu trước khi thêm nút tải tiếp.
+- Nhóm sách chờ đăng phiên vẫn lấy từ 50 lần gửi gần nhất. Bộ chọn đầu sách
+  trong luồng đăng có nút đi tiếp, chưa có nút về trang trước.
+
+Các mục trên là kết quả khảo sát, chưa có phạm vi triển khai được giao cho gói mới.
+
+# Phân trang đánh số và rà consumer —03/11/2026
+
+Owner yêu cầu kết hợp thiết kế Antigravity và logic cursor, bỏ UI chỉ Trước/Sau
+và form nhập trang. Nhánh `codex/pagination-direct-page-jump`, base099e3340:
+dãy số wine/cream,1/2 luôn hiện khi tồn tại, dấu “…” chọn khoảng trang, mobile
+44px/container nhỏ chia hàng. Cursor giữ toàn bộ trail/index để10→2 một lần bấm,
+quay lại10 được; cache collection/ví chọn thẳng trang đã tải, không bịa tổng.
+PASS build/typecheck,13unit Pagination, scoped lint/detector0; browser wallet8ca,
+list42 màn/viewport cùng cursor/cache10→2, Back/Forward/reload/filter/race/retry.
+Transport giả, không DB/API/provider/native/human acceptance. Chi tiết trong
+[báo cáo pagination](../ui/LIST_PAGINATION_ROLLOUT_2026_11_03.md).
+Đưa vào Documents bằng copy có kiểm nguồn/backup, giữ thay đổi reputation/support
+của Antigravity và branch runtime. FE5174/Admin5173/API3000 đang chạy theo yêu cầu
+owner; không restart DB. Chưa push/PR/CI mới, READINESS giữ nguyên.
+
+Follow-up owner giao rà mọi trang dùng pager: nhánh `codex/pagination-consumer-audit`,
+base92c7b178.12 cụm Member/11 màn và8 consumer Operations đã đối chiếu source.
+Sửa gap24px ở hai kệ đấu giá/trao đổi; dãy ngắn≤4 hiện đủ số mobile, bỏ gap đơn;
+popup tự chia cột/chọn phía còn chỗ. Thêm scroll/focus sau kết quả ở kệ/đấu giá
+cá nhân, đấu giá công khai, trao đổi/ví; lỗi/filter không cướp focus. Wrap review
+màn nhỏ; cô lập CSS Users đang lan sang footer Admin khác. Giữ page sizes/cursor,
+tải thêm Operations và API/quỹ. PASS hai app build/typecheck,338unit Member và
+10unit Admin; list42case, wallet8case + popup hẹp, reputation privacy/cache/HTTP
+fixture, Users→Support4width + review queue footer.8 Operations chỉ có source
+audit và các browser đại diện này, không full integration từng màn. Không DB/
+provider/native/human/CI mới; readiness giữ nguyên. Đã áp dụng vào Documents có
+sao lưu, giữ CSS riêng của hồ sơ uy tín. Member5174/Admin5173/API3000 đã chạy lại,
+Search live đọc1→2→1 PASS ở1440/390px. Chi tiết trong báo cáo trên.
+
+# Phân trang các danh sách web —03/11/2026
+
+Owner giao chạy cuốn chiếu theo nhu cầu thực. Nhánh
+`codex/web-list-pagination-rollout`, base7366b792:11 màn Member web gồm Search,
+kệ, đơn, trao đổi, thông báo, giao dịch đánh giá, uy tín, hỗ trợ, đấu giá công
+khai/cá nhân và picker mở phiên. URL cursor giữ trail/Back; collection cache8/10
+mục, giữ page/rows khi lỗi, retry cùng cursor, tìm qua filter thưa, chặn lặp/trùng,
+reset owner/filter và giữ vị trí detail→Back. Picker tải thêm giữ sách/giá/intent;
+Admin Support dùng pager Operations, review Next không hủy refresh. Giữ Home,
+chat/picker/queue có tải thêm hợp ngữ cảnh; không đưa CSS web vào RN/Flutter.
+
+PASS Member build/typecheck/unit336, Admin build/bundle/typecheck/unit229; browser
+42 màn/viewport + model race/history/sparse/cycle + picker draft + Admin role,
+wallet8ca, reputation HTTP/privacy/320px130%, Search recovery9ca. Detector0 và lint
+chỉ1warning Date.now có trước. Có sửa wrap identity/nhãn profile sau khi harness
+phát hiện overflow thật; không bỏ assertion. Không đổi API/contract/DB/quỹ/72h/48h,
+không mở READINESS hoặc nhận fake/browser thành native/human acceptance.
+
+[Ma trận/evidence/giới hạn](../ui/LIST_PAGINATION_ROLLOUT_2026_11_03.md). API trao
+đổi vẫn cap100 và đấu giá cap50: UI ghi scope đã tải, không bịa tổng/cursor. Local
+Documents được cập nhật có backup và sửa đúng đoạn trong bản uy tín Antigravity;
+giữ layout/support khác, không di chuyển branch runtime5bd0b360 hoặc commit gộp
+work ngoài phạm vi. Không push/PR/CI mới; app services vốn dừng không tự bật lại.
+
+# Hoàn thiện Pagination Member web —03/11/2026
+
+Owner duyệt sửa component Antigravity sau khảo sát. Nhánh
+`codex/pagination-cursor-refinement`, base5bd0b360: tiếp nhận Pagination và phần
+wrapper ví từ local Documents, giữ nguyên công việc reputation/support khác.
+Full/simple/compact rõ hành vi, page/empty clamp, mobile container520px dùng
+Trước/Sau44px, focus chung; ví cache10mục/trang trên cursor20mục, không đếm số đã
+load thành tổng, giữ rows/page khi lỗi và retry cùng cursor. Filter/owner reset,
+không để response cũ đổi trang filter mới. Không sửa API/contract/DB/quỹ.
+
+PASS build/typecheck,336unit (12Pagination), scoped lint0, detector0; browser8case
+1440/768/390/320 × chữ100/130% và motion normal/reduce, keyboard/forced-colors,
+cache/next/back/retry/duplicate/filter-focus/stale-response/owner/empty. Dùng
+component thật và transport giả riêng, không phải QA API/DB hoặc native PASS.
+Đã đưa đúng source vào Documents bằng copy có đối chiếu hash (không di chuyển
+branch runtime5bd0b360), giữ4file reputation/support khác byte-for-byte; build và
+336unit cùng local work còn lại PASS. Canonical có commit riêng cho gói, runtime
+vẫn có local changes chưa commit. Ứng dụng chưa chạy tại lúc kiểm; không tự khởi
+động API/DB. Cách dùng và
+lệnh kiểm lại ở [UI components](../design/UI_COMPONENTS.md#member-web--pagination-và-lịch-sử-ví-03112026).
+Chưa push/PR/CI mới, READINESS/human gates giữ mở.
+
+# Quy chuẩn focus toàn dự án — 03/11/2026
+
+Owner yêu cầu áp mẫu Admin Users cho mọi focus. Nhánh `codex/project-focus-standard`,
+base156bba25, code1dd524bb: Member web/Admin/Staff/Expo dùng shared focus.css;
+viền wine sát mép, field140ms, composite/file owner không vòng lồng, giữ error/
+disabled/selected, keyboard và forced-colors. RN token/field/action và Flutter
+theme/search/auth/filter đã cập nhật source chung; không đổi API/contract/DB.
+PASS Member/Admin build, RN typecheck/export QA, unit777, scoped lint exit0,
+browser focus8case/13targets, Search recovery và Order/chat; Expo browser thật
+từ export PASS, không gửi OTP. Localhost Order4ca + Search/Admin login PASS,
+0pageerror/0transaction command. Đã đưa vào Documents, giữ5file local tracked
+và Pagination untracked của việc khác. Chi tiết [evidence/giới hạn](../ui/PROJECT_FOCUS_STANDARD_2026_11_03.md).
+Flutter SDK không tìm thấy nên format/analyze/test NOT RUN; RN native runtime
+NOT RUN, không suy từ Expo web. Chưa push/PR/CI mới; READINESS/human gates giữ mở.
+
+Follow-up `codex/search-focus-smoothness`, codee84bbfb3: owner thấy thanh search
+nhấc lên khi focus. Đo RAF localhost: geometry không đổi, nhưng shadow cũ lệch
+Y3px/blur12 đổi về ringY0/blur0. Đổi resting shadow sang tâm0/spread0, giữ140ms
+cả focus/blur, bỏ focus-within glow cũ. PASS build và Search recovery9checks,
+0pageerror; thêm đo từng frame về y/height/scroll/paint/timing. Local after giữ
+y100/h62 và delta0, shadow chỉ tăng spread0→1. Đã đưa vào Documents, giữ local
+work khác; không đổi API/DB/autocomplete settings hoặc push.
+
+Follow-up `codex/home-hero-search-focus`, codec00de137: owner chọn hover vàng cho
+Hero Home. Thêm composite owner vào form, bỏ outline vàng rời và viền input con;
+vàng hover/focus trên nền wine, shadow tâm0 và140ms, nút vẫn có focus tương phản.
+PASS build và browser Home thật+HTTP fixture1440/390 × normal/reduce, keyboard,
+Enter/button giữ query; local2view0pageerror/0transaction command. Đã cập nhật
+Documents, giữ local work khác. `test:home-search-focus:browser` để chạy lại;
+không push hoặc đổi gate/DB.
+
+# Chuẩn hóa nhịp bố cục hội thoại — 03/11/2026
+
+Owner duyệt khảo sát và triển khai. Nhánh `codex/conversation-rhythm-refinement`,
+base5384daeb, codeb75dda85: context288px/stage linh hoạt/chat320px; hồ sơ thu gọn
+dưới1280, không đảo lại grid khi hẹp hơn; toolbar hỗ trợ và header cùng trục.
+Form ảnh/vận đơn chia nhóm, grid/gap thật, file picker tiếng Việt; composer hết
+scrollbar rỗng, giữ draft/resize; Exchange bớt lặp trạng thái, mốc từng bên mở khi
+cần, giữ hạn chung/review/quyền/tiền/retry/motion. Không đổi API/DB/contract.
+PASS build/typecheck,unit324,lint exit0/1warning cũ, Order/chat retries/snapshot,
+fullchat+motion, Exchange64case, scroll20case và review entry hai vai trò.
+Localhost read-only24view:0pageerror/0transaction command; stage1440 tăng661→727px,
+formgap12/group24 và textarea scrollHeight=clientHeight. Đã đưa code vào Documents,
+giữ nguyên4file local chưa commit của công việc uy tín/reviews/support khác.
+[Báo cáo, source, số đo và tiêu chí sửa](../ui/CONVERSATION_RHYTHM_AUDIT_2026_11_03.md).
+Chưa push/PR/merge remote. Native/provider/CI mới/human acceptance NOT RUN;
+READINESS giữ nguyên. Owner xem trực tiếp localhost5174/chat.
+
+Follow-up focus `codex/conversation-input-focus`, code454d8c7c: owner chọn kiểu
+focus trang Admin Users. Scope TransactionFrame inputs/textarea/select và file
+picker: viền wine + shadow1px sát mép, bỏ outline rời, transition140ms; giữ focus
+bàn phím và fallback forced-colors. PASS build, browser localhost1440/390px ×
+motion thường/reduced, keyboard Tab/Shift+Tab, kích thước không đổi,0pageerror/
+0transaction command; đã xem ảnh crop và đưa vào Documents, giữ local work khác.
+Không chạy lại harness tiền/quyền vì chỉ đổi CSS; không push hoặc đóng gate.
+
+# Đồng bộ main PR95 vào local — 03/11/2026
+
+Owner yêu cầu tiếp tục sau khi tạm dừng để demo. Nhánh
+`codex/sync-main-flutter-20261103` merge `origin/main` tại
+`3cfe0c6df0bfb1b06dee0c4aa0c306e1a4517a19` (PR95), commit tích hợp `452d0d14`.
+Không conflict; giữ 15 commit local trước đó, gồm refactor workspace giao dịch.
+Checkout Documents đã fast-forward tới cùng commit khi working tree sạch.
+Diff từ `deaeaf65` chỉ có 35 file Flutter; API, Member web, Admin, contract và
+migration không đổi. Không đổi DB, cấu hình riêng hoặc khởi động lại dịch vụ.
+
+CI trên đúng SHA main: [Docs PASS](https://github.com/huangg49/used-book-marketplace/actions/runs/41560279505),
+[Flutter FAIL](https://github.com/huangg49/used-book-marketplace/actions/runs/41560279570)
+ở `dart format --output=none --set-exit-if-changed .`; analyze/test SKIPPED.
+Local không tìm thấy Flutter/Dart trên PATH nên analyze/test NOT RUN; chưa kiểm
+UI/native Flutter. `git diff --check deaeaf65 452d0d14` phát hiện whitespace/EOF
+đã có trong PR95; giữ nguyên source main, không tự sửa ngoài phạm vi đồng bộ.
+Không suy tên PR parity thành nghiệm thu, không đóng READINESS; chưa push remote.
+
+# Refactor trang phiếu và hội thoại — 03/11/2026
+
+Owner đã duyệt gói từ khảo sát. Nhánh `codex/transaction-workspace-refactor`,
+base `af6e6887`, UI `65ac1439` + fixture clock `5ab51c41`. Member web thật dùng
+ba vai trò context/thao tác/chat; bỏ lớp nhúng Exchange nguyên trang trong thẻ
+cha, thu gọn mô tả/tracking/hướng dẫn; màn hẹp cuộn một vùng với bước hiện tại
+đứng trước hồ sơ dài. Header/composer không trôi, giữ nháp/pending/motion.
+Local shipment cache không còn chứng minh đã gửi; chỉ dùng server sentAt.
+Sửa thêm nút tiếp tục yêu cầu tạo đơn sau mất ACK + đóng dialog + mất báo giá;
+retry giữ đúng key/body/version. Không đổi API/contract/DB/quỹ/72h/công bố review.
+
+PASS build/typecheck, unit324/47files; lint scope exit0/1warning effect cũ;
+HTTP/Socket.IO fixture Order/Chat mất ACK, quyền, snapshot, upload và giữ nháp;
+Exchange64state-role-size cases, review entry hai vai trò và scroll20cases;
+320px130%, màn thấp/Back, View Transition cả reduced-motion; detector0findings.
+Một fixture unit cần truyền clock bắt buộc, đã sửa và build/unit lại PASS;
+không bỏ assertion tiền/quyền/idempotency. Selector browser cập nhật nhãn UI
+hiện có; fixture Order bổ sung field nullable contract đang yêu cầu.
+
+Đã đưa cùng source `5ab51c41` vào checkout Documents bằng fast-forward khi sạch;
+API3000/Member5174/Mongo27017 đang chạy. Browser read-only trên dữ liệu local
+PASS12views (Order Buyer/Seller, Exchange hai bên,1440/1000/390px), cuộn/tab/nháp,
+0pageerror/0transaction command; Exchange hiện đúng nút review theo server.
+Không seed/migrate/đổi tiền hoặc submit review/ảnh trong gói này. Chi tiết và
+phạm vi kiểm chứng ở [báo cáo](../ui/TRANSACTION_WORKSPACE_AUDIT_2026_11_03.md).
+Chưa push/PR/merge remote, không chạy CI mới, không đóng READINESS; native,
+Supabase/provider thật và human usability acceptance chưa kiểm trong gói này.
+Standalone Exchange không tìm được linked room vẫn giữ fallback trước đó;
+phạm vi refactor là workspace `/chat/:roomId` đang dùng cho Order/Exchange.
+
+# Bản thử không gian giao dịch Minh An — 03/11/2026
+
+Owner yêu cầu mock vì chat gộp quá nhiều phiếu/trao đổi/đơn. Nhánh
+`codex/transaction-workspace-preview`, basefe63acd8, tạo HTML entry riêng
+`apps/user-web/design-previews/transaction-workspace/` trên Vite Member5174.
+Persona Minh An/user1, toàn bộ giao dịch/tin/tiền là minh họa, không API/session/
+DB hoặc provider. Hai vùng inbox+main, ba tab Tổng quan/Hội thoại/Chi tiết,
+mobile list→detail/Back. Có3hồ sơ,5tình huống Exchange, tin/review trong RAM;
+không nhúng lại toàn phiếu vào chat. Brand và ảnh minh họa từ repo giữ provenance.
+PASS typecheck riêng, lint exit0/warnings, detector0finding và browser1440/950/
+390/320px/màn thấp/chữ130%: chuyển tab/hồ sơ, giữ draft theo hội thoại, wheel,
+review/message mock và không API write. Đã kiểm ảnh desktop/chat/mobile.
+Entry preview đã được đưa vào checkout ứng dụng để owner xem trên localhost.
+Chưa áp thiết kế vào ChatPage/ExchangeDetail/OrderDetails thật, không push/gate.
+[Phạm vi và cách xem](../../apps/user-web/design-previews/transaction-workspace/README.md).
+
+# Tinh chỉnh dropdown thông báo — 03/11/2026
+
+Owner duyệt làm gọn dropdown Member web. Nhánh
+`codex/notification-dropdown-refinement`, basebbcb9534: danh sách liền mạch,
+title trước/body nhấn tên sách đã có trong dấu ngoặc kép/category và time phụ;
+unread dùng nền nhẹ+dot, icon phân biệt hủy/vượt giá. Đổi nhãn đánh dấu tất cả
+đã đọc, pending/error/retry theo ACK; Escape trả focus về bell. Panel tránh Lenis
+nuốt wheel, chỉ body list cuộn, header/footer không co. Giữ motion và API/session.
+PASS typecheck/build/lint scope, detector0finding; browser HTTP fixture
+1440/390/320px/màn950×400/chữ130%, wheel/keyboard/read-all failure-retry/serverACK,
+empty/error/deep link. Không DB write hoặc provider trong fixture.
+Đã đưa cùng source vào checkout ứng dụng; localhost5174 phục vụ dropdown mới.
+Không push/remote merge hoặc đổi READINESS.
+
+Follow-up `codex/notification-badge-fix`, base2d1185cd: owner báo số đè chuông.
+Biến shop-error/shelf/exchange-ink chỉ có trong page khác nên Header thiếu nền.
+Khai báo scoped trên wrap, đưa badge góc ngoài, căn giữa chữ và viền giấy.
+PASS browser nền computed không transparent,3/12/99+ không che glyph/tràn chữ,
+cùng các ca responsive/cuộn/read-error/retry/deep link của dropdown. Build PASS;
+đã cập nhật checkout ứng dụng, không đổi DB hoặc API.
+Owner yêu cầu gọn hơn: follow-up `codex/compact-notification-badge` thu badge
+20→16px, chữ9px, bỏ vòng giấy dày, đặt sát góc chuông. Giữ motion; PASS lại
+browser3/12/99+, responsive và các thao tác dropdown; cập nhật localhost.
+
+# Đồng bộ PR94 vào worktree — 03/11/2026
+
+Owner yêu cầu lấy code main mới. Nhánh `codex/sync-main-20261103-auctions`
+tích hợp `origin/main` 93289df5993b5d856d6529e03b24343d32d10335 (PR94) trên
+base local 3558422f, giữ cả 5 commit local. Conflict duy nhất ở import
+AuctionDetailPage: giữ ReviewEntry và formatDuration. Contract 0.74 vẫn giữ
+review sau receipt và nhận thay đổi đấu giá. Không sửa nghiệp vụ của PR94.
+PASS build API/Member/Admin, typecheck API/RN, unit API419/Member319/Admin229/
+RN224; lint API/Member/Admin có warning; contract246operations/38controllers.
+Mongo QA61 PASS/6 SKIP. E2E đấu giá/ví/review138 PASS/1 FAIL do lỗi commit
+trong fixture khi Mongo fault injection chạy đồng thời; chạy riêng ca lỗi
+PASS1/78 SKIP. Không sửa test; lần sau không chạy fault injection cùng suite
+khác trên một mongod dù dùng DB riêng. Browser fixture review entry và scroll
+PASS; không submit review, không phải native/human evidence.
+Bản sao QA của DB hiện tại áp đủ 6 migration mới, giữ 5.818 bản ghi cũ;
+counter sequence tăng1 và thêm journal tăng vốn mô phỏng cân bằng, không sửa
+ledger cũ hoặc làm dữ liệu vi phạm validator. Primary không có write.
+CI main đúng SHA có API Mongo, User Web order-chat browser và Operations
+Admin browser FAIL; không suy local PASS là remote CI PASS.
+Follow-up owner yêu cầu giao diện mới trên localhost: đã backup private mới,
+dừng API/worker, áp6migration trên DB local rồi fast-forward checkout ứng dụng
+tới1d59ee10 và khởi động lại API/worker. Giữ5.838bản ghi cũ (chỉ counter sequence
+tăng1), ledger cũ/5env nguyên vẹn; journal tăng vốn cân bằng,0pending migration,
+0bản ghi vi phạm validator. PASS browser localhost trang đấu giá mới1440/390px,
+API200/0pageerror;5Member demo login/profile/wallet/reviews và ledger reconcile.
+Chưa có phiên công khai nên browser chỉ kiểm được empty state/toolbar, không
+phải nghiệm thu toàn luồng đấu giá. Không push/PR/remote merge hoặc đổi READINESS.
+QA đã dừng; dịch vụ ứng dụng giữ chạy.
+[Bằng chứng và bước kích hoạt còn lại](../features/LOCAL_MAIN_SYNC_2026_11_03.md#tích-hợp-pr94-vào-worktree).
+
+# Thêm một bài trao đổi để demo lượt2 — 03/11/2026
+
+Owner yêu cầu thêm1bài như lượt trước. Nhánh `codex/demo-extra-exchange-listing`,
+base99a82f44, chỉ docs/data: thêm Spy x Family Vol.1 mới của Member demo thứ hai,
+Exchange50k/Approved/Visible/Available, địa chỉ có sẵn và tiêu chí Tsugumi Ohba/
+Death Note Vol.1 của người thứ nhất (còn Available50k). Dùng media ID/key mới,
+không chép key ảnh của bài cũ; ảnh bìa thư viện/tình trạng/approval là fixture.
+PASS cùng chuỗi API trên QA riêng trước apply; backup primary, ledger trước/sau
+giống hệt;1761bản ghi cũ giữ nguyên. Không tạo chat/proposal/exchange/review hoặc
+nạp thêm tiền. Người đăng dùng4/5slot, bài cũ/giao dịch đang kiểm tra giữ nguyên.
+PASS browser local User4→bài mới của User5 thấy tiêu chí và nút gửi đề nghị;
+2bài ngang giá/author khớp, signed ảnh thật. Hướng dẫn lượt2 lưu private Desktop.
+Không sửa source/API/migration/env/push/merge hoặc gate; QA đã dừng.
+
+# Nút đánh giá Exchange sau nhận sách — 03/11/2026
+
+Owner demo User4/User5 đã nhận/kiểm tra nhưng không có nút. Đối chiếu thật:
+API canReview=true cho cả hai, UI0link. Trang cha còn bọc ReviewCard trong
+Completed dù component/API đã hỗ trợ own receipt. Nhánh
+`codex/exchange-received-review-entry`, baseed3cc1e6: đưa card ngay sau Hành động
+tiếp theo, giữ quyền server/private72h và không đụng tiền/timer/DB. PASS browser
+fixture cả2vai/own receipt/refusal/read retry/deep link/form1440/950/390px,
+21unit liên quan,typecheck/build/lint. Không submit review thay owner, không
+push/merge hoặc đổi readiness. [Evidence](../features/RECEIPT_REVIEW_DEMO_2026_11_03.md).
+
+# Sửa cuộn phiếu/hội thoại khi chia đôi cửa sổ — 03/11/2026
+
+Owner báo chat không lăn chuột ở màn hẹp. Nhánh `codex/chat-scroll-containment`,
+base4e77f4e5: viewport room bị khóa nhưng CSS≤960px cho sheet height:auto,
+nội dung phình rồi bị cắt. Giữ sheet/chat theo chiều cao viewport, body riêng
+cuộn; composer/tab nằm trong màn hình, header72/76px. Không đổi giao dịch/DB.
+Tái hiện FAIL bản cũ tại960px; PASS20browser fixture cases (18buyer/seller+
+2embedded Order), wheel/keyboard/focus/Back/draft,1440→320px/chữ130%/màn thấp;
+typecheck/build/lint scope. Native/human NOT RUN, không push/merge hoặc đóng gate.
+[Nguyên nhân, sửa và evidence](../ui/CHAT_SCROLL_2026_11_03.md).
+
+# Nhận sách → đánh giá và chuẩn bị demo trao đổi — 03/11/2026
+
+Owner chốt viết review ngay sau nhận sách, giữ tiền/điều kiện công bố/48h sửa;
+cấp TEST_OPERATOR cho Admin demo local; thêm hai Member trao đổi vào DB local
+chính. Nhánh `codex/receipt-review-demo-readiness`, baseb447dbab sau PR93.
+Contract0.74 mở private review theo receipt, nút/deep link trên Member web/RN,
+Buyer acknowledgement có giới hạn; carrier/settlement/worker gate vẫn đóng.
+PASS14review E2E,8receipt/release E2E (40ngoài filter SKIP),6policy,151session,
+315Member unit, browser thật API/Mongo QA nhận→review/lostACK/tiền giữ nguyên,
+typecheckAPI/web/RN,buildAPI/web,lintscope vàcontract246operations/38controllers.
+PASS20catalog/draft E2E gồm mở lại tiêu chí đổi sách sau restart, giữ response
+cũ cho bài chưa có tiêu chí. Không sửa migration hoặc tắt quota.
+Đã thử QA rồi bổ sung hai Member/11listing/địa chỉ/wishlist vào DB local chính:
+5+3bài sẵn đổi,3nháp, mỗi ví1triệu, không exchange; giữ cap5. Admin demo được
+thêm TEST_OPERATOR, menu Mô phỏng→Nạp tiền mô phỏng. PASS browser QA matching
+trong phiếu đề nghị; không có engine matching wishlist toàn hệ thống. PASS
+browser app chính5174/5173, login5Member, ví/đơn cũ giữ nguyên và public409bài.
+Phát hiện400ảnh nền giữ thừa quota gây429: kiểm live checksum đủ400gốc+400WebP,
+thử validator/index/ledger trên clone QA rồi hiệu chỉnh atomic metadata giữ chỗ
+từ821,6MB xuống34,5MB; không đổi file ảnh/budget/ledger. Backup/audit private,
+3308bản ghi cũ giữ nội dung; ngoại lệ role Admin và metadata quota được đối chiếu.
+5env giữ nguyên; không gọi AI cho11bài. Hướng dẫn demo private trên Desktop.
+Không push/PR/merge mới hoặc đóng READINESS. Native/human/remoteCI NOT RUN.
+[Phạm vi, thao tác và bằng chứng](../features/RECEIPT_REVIEW_DEMO_2026_11_03.md).
+Checkout app kích hoạt d03bd5ce và commit bàn giao cùng gói (giữ field tiêu chí
+tùy chọn + bằng chứng demo), nhánh `codex/demo-receipt-local-20261103`;
+API/worker3000, Admin5173, Member5174 giữ chạy; các checkpoint cũ giữ bên dưới.
+
 # Rút tiền qua Admin — 04/11/2026
 
 - Sửa CI cho [PR96](https://github.com/huangg49/used-book-marketplace/pull/96)
@@ -174,6 +716,7 @@
 - [Hành trình/evidence/kích hoạt](../features/WALLET_WITHDRAWALS.md),
   [ADR0073](../adr/0073-manual-wallet-withdrawals.md). Chưa push/merge;
   READINESS giữ nguyên. Backup/evidence private trong `.tmp`, không commit.
+
 
 # Đồng bộ main và bảo toàn checkout local — 03/11/2026
 

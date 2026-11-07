@@ -18,7 +18,7 @@ export const orderCommandReceiptSchema = z.object({
   version: z.number().int().positive(),
   state: z.string(),
 });
-type Action = "accept" | "reject" | "cancel" | "pay";
+type Action = "accept" | "reject" | "cancel" | "pay" | "confirm-receipt";
 
 export type BuyNowOrderInput = {
   quoteId: string;

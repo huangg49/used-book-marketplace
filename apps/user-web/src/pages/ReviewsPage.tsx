@@ -1,5 +1,8 @@
+import { usePagedCollection } from "../components/Pagination/usePagedCollection";
+import { CollectionPager } from "../components/Pagination/CollectionPager";
 import { reviewDate } from "../features/reviews/format";
 import type { ReviewTransactionsPage } from "@used-books/session-client";
+import { useEffect } from "react";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -13,6 +16,7 @@ import { session } from "../lib/session";
 import { useSession } from "../hooks/useSession";
 import { TransactionReviewPanel } from "../features/reviews/TransactionReviewPanel";
 import { MemberReputationView } from "../features/reviews/MemberReputationView";
+import { ReviewNotificationTarget } from "../features/reviews/ReviewNotificationTarget";
 import styles from "../features/reviews/reviews.module.css";
 import {
   Star,
@@ -28,6 +32,12 @@ import {
 } from "lucide-react";
 
 export function ReviewsPage() {
+  const [params] = useSearchParams();
+  if (params.has("reviewId")) return <ReviewNotificationTarget key={params.get("reviewId")} reviewId={params.get("reviewId") ?? ""} />;
+  return <ReviewWorkspace />;
+}
+
+function ReviewWorkspace() {
   const auth = useSession(),
     [params] = useSearchParams();
 
@@ -38,7 +48,7 @@ export function ReviewsPage() {
   const selected = params.get("transaction");
   const tabParam = params.get("tab");
   const activeTab: "reputation" | "pending" =
-    tabParam === "pending" || !!selected ? "pending" : "reputation";
+    tabParam === "pending" || !!selected || params.has("type") ? "pending" : "reputation";
 
   const owner = auth.status === "authenticated" ? auth.user.id : undefined;
 
@@ -69,21 +79,14 @@ export function ReviewsPage() {
     retry: false,
   });
 
-  if (
+  const collection = usePagedCollection(result, `${owner}:${type}`, pages => pages.flatMap(page => page.items));
+  const inaccessible =
     result.error instanceof ApiError &&
-    [401, 403].includes(result.error.status)
-  )
-    return (
-      <div role="alert" className={styles.errorCard}>
-        <div className={styles.errorIconWrap}>
-          <AlertCircle size={24} />
-        </div>
-        <div className={styles.errorContent}>
-          <h3>Phiên làm việc đã thay đổi</h3>
-          <p>Quyền truy cập hoặc phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để xem giao dịch.</p>
-        </div>
-      </div>
-    );
+    [401, 403].includes(result.error.status);
+  const resetPagination = collection.reset;
+  useEffect(() => {
+    if (inaccessible) resetPagination();
+  }, [inaccessible, resetPagination]);
 
   return (
     <div className={styles.page}>
@@ -192,14 +195,16 @@ export function ReviewsPage() {
             )}
 
             {/* Lỗi tải */}
-            {result.isError && (
+            {result.isError && (inaccessible || !result.isFetchNextPageError) && (
               <div className={styles.errorCard} role="alert">
                 <div className={styles.errorIconWrap}>
                   <AlertCircle size={24} />
                 </div>
                 <div className={styles.errorContent}>
-                  <h3>Chưa tải được danh sách giao dịch</h3>
-                  <p>Kiểm tra kết nối mạng và thử lại.</p>
+                  <h3>{inaccessible ? "Quyền xem giao dịch đã thay đổi" : "Chưa tải được danh sách giao dịch"}</h3>
+                  <p>{inaccessible
+                    ? "Kiểm tra phiên đăng nhập hoặc trạng thái tài khoản rồi thử tải lại."
+                    : "Kiểm tra kết nối mạng và thử lại."}</p>
                   <button
                     type="button"
                     disabled={result.isFetching}
@@ -214,15 +219,14 @@ export function ReviewsPage() {
             )}
 
             {/* Trạng thái trống */}
-            {result.isSuccess && result.data.pages[0].items.length === 0 && (
+            {result.isSuccess && collection.loadedCount === 0 && !result.hasNextPage && (
               <div className={styles.emptyCard}>
                 <div className={styles.emptyIconWrap}>
                   <BookOpen size={32} />
                 </div>
-                <h2 className={styles.emptyTitle}>Chưa có giao dịch hoàn tất ở mục này</h2>
+                <h2 className={styles.emptyTitle}>Chưa có giao dịch đủ điều kiện đánh giá ở mục này</h2>
                 <p className={styles.emptyText}>
-                  Giao dịch đang vận chuyển hoặc đang xử lý sự cố chưa đủ điều kiện
-                  đánh giá. Sau khi nhận sách thành công, các giao dịch sẽ hiển thị tại đây để bạn gửi phản hồi.
+                  Xác nhận đã nhận sách trong giao dịch để bắt đầu viết đánh giá, không cần chờ hết 72 giờ. Giao dịch chưa nhận hoặc đang xử lý sự cố chưa mở đánh giá.
                 </p>
                 <Link to="/orders" className={styles.emptyBtn}>
                   <Package size={16} />
@@ -232,11 +236,9 @@ export function ReviewsPage() {
             )}
 
             {/* Danh sách thẻ giao dịch */}
-            {result.isSuccess && result.data.pages[0].items.length > 0 && (
-              <div className={styles.cardList}>
-                {result.data.pages
-                  .flatMap((p) => p.items)
-                  .map((item) => {
+            {!inaccessible && result.data && collection.items.length > 0 && (
+              <div className={styles.cardList} id="review-transaction-results">
+                {collection.items.map((item) => {
                     const initial = item.partnerName.trim().charAt(0).toUpperCase() || "B";
                     const typeLabel =
                       item.transactionType === "Exchange"
@@ -270,7 +272,7 @@ export function ReviewsPage() {
                               </span>
                               <span className={styles.metaTime}>
                                 <Clock size={13} />
-                                <span>Hoàn tất {reviewDate(item.completedAt)}</span>
+                                <span>{item.completedAt ? `Hoàn tất ${reviewDate(item.completedAt)}` : `Đã nhận sách ${reviewDate(item.reviewableAt!)} · Chờ hoàn tất`}</span>
                               </span>
                             </div>
                           </div>
@@ -298,26 +300,7 @@ export function ReviewsPage() {
               </div>
             )}
 
-            {/* Phân trang / Xem thêm */}
-            {result.hasNextPage && (
-              <div className={styles.loadMoreWrap}>
-                <button
-                  type="button"
-                  disabled={result.isFetchingNextPage}
-                  onClick={() => void result.fetchNextPage()}
-                  className={styles.loadMoreBtn}
-                >
-                  {result.isFetchingNextPage ? (
-                    <>
-                      <RefreshCw size={14} className={styles.spin} />
-                      <span>Đang tải thêm…</span>
-                    </>
-                  ) : (
-                    <span>Xem thêm giao dịch</span>
-                  )}
-                </button>
-              </div>
-            )}
+            {!inaccessible && <CollectionPager model={collection} anchorId="review-transaction-results" itemLabel="giao dịch" />}
           </>
         )
       )}

@@ -5,6 +5,9 @@ import {
   categoryFor,
 } from "@used-books/api-contract/catalog-taxonomy";
 
+// Vite removes the sample editions from the production bundle.
+export const previewCatalogItems = import.meta.env.DEV ? catalog.items : [];
+
 export interface CatalogBook {
   id: string;
   title: string;
@@ -93,7 +96,7 @@ export function previewShelf(query: URLSearchParams): {
   const max = query.get("maxSalePrice");
   const q = fold(query.get("q")?.trim() ?? "");
   const topic = previewTopics.find((item) => item.id === query.get("topic"));
-  const books = catalog.items.map((book, index): PreviewShelfBook => {
+  const books = previewCatalogItems.map((book, index): PreviewShelfBook => {
     const mode = (["Sale", "Exchange", "Both"] as const)[index % 3];
     const price = 35000 + (index % 12) * 10000;
     return {
@@ -140,7 +143,7 @@ export function previewShelf(query: URLSearchParams): {
               ].join(" "),
             ).includes(q)),
       )
-      .slice(0, Number(query.get("limit")) || catalog.items.length),
+      .slice(0, Number(query.get("limit")) || previewCatalogCount),
     nextCursor: null,
   };
 }
@@ -153,7 +156,7 @@ export async function getHomeShelf(
   return preview ? previewShelf(query) : getPublicListings(query);
 }
 
-export const previewCatalogCount = catalog.items.length;
+export const previewCatalogCount = previewCatalogItems.length;
 export function previewTopicBooks(topicId: string) {
   const topic = previewTopics.find((item) => item.id === topicId);
   // Skip the opening shelf, keeping these shelves useful rather than repeating
@@ -169,12 +172,10 @@ export function previewTopicBooks(topicId: string) {
     )
     .slice(0, homeShelfPageSize);
 }
+// Live Home uses these four Open Library covers as decorative banner art.
 export const budgetCoverUrls = [
-  "The Great Gatsby",
-  "Atomic Habits",
-  "A Brief History of Time",
-  "Matilda",
-].map(
-  (series) =>
-    catalog.items.find((book) => book.series === series)?.coverUrl ?? "",
-);
+  "https://covers.openlibrary.org/b/id/14635758-L.jpg?default=false",
+  "https://covers.openlibrary.org/b/id/15247577-L.jpg?default=false",
+  "https://covers.openlibrary.org/b/id/15139590-L.jpg?default=false",
+  "https://covers.openlibrary.org/b/id/12895022-L.jpg?default=false",
+];

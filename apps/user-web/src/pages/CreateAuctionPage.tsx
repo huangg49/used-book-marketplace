@@ -1,10 +1,10 @@
-import { useMemo, useRef, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@used-books/session-client'
 import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import { ArrowRight, BookOpen, Check, EyeOff, Gavel, MapPin, Minus, Plus, Search, ShieldCheck, Store, Tag, X } from 'lucide-react'
 import { useSession } from '../hooks/useSession'
-import { outcomeUnknown, useIntentKey } from '../hooks/useAuctionClock'
+import { commandOutcomeUnknown, useIntentKey } from '../hooks/useAuctionClock'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { getMyBookIdentity, getMyListings, getMyPhoto, type MyListing } from '../services/my-listings'
 import {
@@ -105,7 +105,7 @@ function PriceInput({ id, label, value, step, min, max = AUCTION_MAX_PRICE, digi
   return (
     <div className={styles.field}>
       <label htmlFor={id}>{label}</label>
-      <div className={`${styles.money} ${error ? styles.invalid : ''}`}>
+      <div data-focus-surface data-focus-invalid={!!error} className={`${styles.money} ${error ? styles.invalid : ''}`}>
         {/* The input grows with its digits so "đ" sits right after the amount. */}
         <label htmlFor={id} className={styles.moneyValue}>
           <input
@@ -160,14 +160,16 @@ export function CreateAuctionPage() {
   const ownerId = auth.status === 'authenticated' ? auth.user.id : undefined
 
   // Sách được chọn trực tiếp từ kệ của người bán (đã duyệt, chưa bị khoá/bán).
-  const listings = useQuery({
-    queryKey: ['my-listings', ownerId, 'shelf-for-auction'],
-    queryFn: () => getMyListings(undefined, undefined, 50),
+  const listings = useInfiniteQuery({
+    queryKey: ['my-listings', ownerId, 'shelf-for-auction', 'cursor'],
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) => getMyListings(undefined, pageParam, 50),
+    getNextPageParam: page => page.nextCursor ?? undefined,
     enabled: !!ownerId, retry: false, staleTime: 0,
   })
   const points = useQuery({ queryKey: ['handover-points'], queryFn: listHandoverPoints, enabled: !!ownerId, retry: false, staleTime: 0 })
 
-  const eligible = useMemo(() => (listings.data?.items ?? []).filter(auctionEligible), [listings.data])
+  const eligible = useMemo(() => (listings.data?.pages.flatMap(page => page.items) ?? []).filter(auctionEligible), [listings.data])
   const [listingId, setListingId] = useState(params.get('listing') ?? '')
   const [bookQuery, setBookQuery] = useState('')
   const [pointChoice, setPointId] = useState('')
@@ -189,13 +191,21 @@ export function CreateAuctionPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<MyIntake | null>(null)
+  const [acknowledgedId, setAcknowledgedId] = useState<string | null>(null)
+  const running = useRef(false)
+  const recoveryHeading = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    if (!acknowledgedId || done) return
+    recoveryHeading.current?.focus({ preventScroll: true })
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [acknowledgedId, done])
   const intent = useIntentKey()
   // An unknown outcome freezes the exact body and key so a retry replays the same intent.
   const pending = useRef<{ body: CreateIntakeBody; key: string } | null>(null)
   const [unknown, setUnknown] = useState(false)
 
   const listing = eligible.find((l) => l.id === listingId)
-  const preselectedMissing = !!params.get('listing') && listings.isSuccess && !listing && listingId === params.get('listing')
+  const preselectedMissing = !!params.get('listing') && listings.isSuccess && !listings.hasNextPage && !listing && listingId === params.get('listing')
 
   const defaultDeclared = listing
     ? listing.currentRevision.content.salePrice ?? listing.currentRevision.content.exchangeValue ?? 50000
@@ -225,7 +235,7 @@ export function CreateAuctionPage() {
     buyNowPrice: missingBuyNow ? 'Nhập giá mua ngay hoặc bỏ chọn mua ngay.' : priceErrors.buyNowPrice,
   }
   const valid = !Object.values(formErrors).some(Boolean)
-  const locked = busy || unknown
+  const locked = busy || unknown || !!acknowledgedId
 
   const buyNowChips = startPrice && !priceErrors.startPrice
     ? [3, 5, 10].map((n) => startPrice + n * step).filter((v) => v <= AUCTION_MAX_PRICE)
@@ -234,8 +244,48 @@ export function CreateAuctionPage() {
   if (auth.status === 'anonymous') return <Navigate to={`/login?returnUrl=${encodeURIComponent(location.pathname + location.search)}`} replace />
   if (auth.status !== 'authenticated') return <main className={styles.state} role="status">Đang mở bàn đấu giá…</main>
   if (done) return <div className={styles.page}><Receipt intake={done} point={doneIntakePoint} /></div>
+  if (acknowledgedId) return (
+    <div className={styles.page}>
+      <section className={styles.receipt}>
+        <img src="/illustrations/book-journey/auction.webp" width="900" height="600" alt="" aria-hidden="true" decoding="async" />
+        <div>
+          <p className={styles.kicker}><Gavel size={15} aria-hidden="true" /> Đã giữ chỗ đấu giá</p>
+          <h1 ref={recoveryHeading} tabIndex={-1}>Phiếu gửi sách đang chờ tải</h1>
+          <p role="status">Yêu cầu giữ chỗ đã được xác nhận. Tải lại phiếu để xem điểm nhận và hạn gửi sách.</p>
+          {error && <p className={styles.submitError} role="alert">{error}</p>}
+          <div className={styles.receiptActions}>
+            <button type="button" className={styles.primary} disabled={busy} onClick={() => void retryReceipt(acknowledgedId)}>
+              {busy ? 'Đang tải phiếu…' : 'Tải lại phiếu đã giữ chỗ'}
+            </button>
+            <Link className={styles.secondary} to={`${ROUTES.myAuctions}?view=selling&intakeId=${acknowledgedId}`}>Mở đúng phiếu trong Đấu giá của tôi</Link>
+          </div>
+        </div>
+      </section>
+    </div>
+  )
+
+  async function readReceipt(intakeId: string) {
+    const intake = await getMyAuctionIntake(intakeId)
+    if (intake.id !== intakeId) throw new Error('Unexpected intake identity')
+    return intake
+  }
+
+  async function retryReceipt(intakeId: string) {
+    if (running.current) return
+    running.current = true
+    setBusy(true); setError(null)
+    try {
+      setDone(await readReceipt(intakeId))
+      window.scrollTo({ top: 0 })
+    } catch {
+      setError('Chưa tải được phiếu đã giữ chỗ. Kiểm tra kết nối rồi tải lại, hoặc mở phiếu trong Đấu giá của tôi.')
+    } finally {
+      running.current = false; setBusy(false)
+    }
+  }
 
   const submit = async () => {
+    if (running.current || acknowledgedId || (!pending.current && !valid)) return
     const body: CreateIntakeBody = pending.current?.body ?? {
       listingId: listing!.id,
       expectedListingVersion: listing!.version,
@@ -247,24 +297,27 @@ export function CreateAuctionPage() {
     }
     const key = pending.current?.key ?? intent.keyFor(JSON.stringify(body))
     pending.current = { body, key }
+    running.current = true
     let stillUnknown = false
     setBusy(true); setError(null)
     try {
       const receipt = await createAuctionIntake(body, key)
+      if (receipt.entityType !== 'AuctionIntake') throw new Error('Unexpected intake receipt')
+      setAcknowledgedId(receipt.entityId)
       intent.settle(); pending.current = null
-      const intake = await getMyAuctionIntake(receipt.entityId).catch(() => null)
+      const intake = await readReceipt(receipt.entityId).catch(() => null)
       void queryClient.invalidateQueries({ queryKey: ['my-auction-intakes'] })
       void queryClient.invalidateQueries({ queryKey: ['my-listings'] })
       void queryClient.invalidateQueries({ queryKey: ['my-auctions'] })
       if (intake) { setDone(intake); window.scrollTo({ top: 0 }) }
       else setError('Đã giữ chỗ đấu giá nhưng chưa tải được phiếu gửi sách. Xem trong Đấu giá của tôi.')
     } catch (caught) {
-      stillUnknown = outcomeUnknown(caught)
+      stillUnknown = commandOutcomeUnknown(caught)
       if (!stillUnknown) { intent.settle(); pending.current = null }
       setError(commandError(caught))
       if (!stillUnknown) { void listings.refetch(); void points.refetch() }
     } finally {
-      setUnknown(stillUnknown); setBusy(false); setConfirming(false)
+      running.current = false; setUnknown(stillUnknown); setBusy(false); setConfirming(false)
     }
   }
 
@@ -309,19 +362,19 @@ export function CreateAuctionPage() {
             <p className={styles.stepHint}>Chọn một cuốn sách đã được duyệt từ kệ của bạn. Sau khi gửi yêu cầu, sách sẽ tạm ngừng hiển thị trên kệ mua bán công khai và chuyển sang trạng thái chờ tiếp nhận tại điểm.</p>
             <div className={styles.inlineActions}><Link to={ROUTES.sell}>Đăng sách mới lên kệ</Link></div>
             {loadingBooks && <div className={styles.skeletonList} aria-busy="true" aria-label="Đang tải sách của bạn">{[0, 1].map((i) => <div key={i} />)}</div>}
-            {listings.isError && <div className={styles.inlineState} role="alert"><p>Chưa tải được sách trên kệ của bạn.</p><button type="button" onClick={() => void listings.refetch()}>Thử lại</button></div>}
+            {listings.isError && !listings.isFetchNextPageError && <div className={styles.inlineState} role="alert"><p>Chưa tải được sách trên kệ của bạn.</p><button type="button" onClick={() => void listings.refetch()}>Thử lại</button></div>}
             {listings.isSuccess && eligible.length === 0 && (
               <div className={styles.inlineState}>
                 <BookOpen size={28} aria-hidden="true" />
-                <p><strong>Chưa có sách trên kệ đủ điều kiện đấu giá.</strong> Hãy đăng sách mới lên kệ và chờ duyệt, rồi quay lại đây.</p>
+                <p><strong>Chưa thấy sách đủ điều kiện trong phần kệ đã tải.</strong> Tải tiếp sách cũ hơn nếu còn, hoặc đăng sách mới và chờ duyệt.</p>
               </div>
             )}
             {preselectedMissing && <p className={styles.error} role="alert">Cuốn sách bạn chọn hiện không đưa lên đấu giá được. Hãy chọn một cuốn khác bên dưới.</p>}
             {eligible.length > 3 && (
-              <div className={styles.bookSearch}>
+              <div data-focus-surface className={styles.bookSearch}>
                 <Search size={16} aria-hidden="true" />
                 <input type="search" value={bookQuery} disabled={locked} onChange={(e) => setBookQuery(e.target.value)}
-                  placeholder="Tìm theo tên sách hoặc tác giả" aria-label={`Tìm trong ${eligible.length} sách trên kệ`} autoComplete="off" />
+                  placeholder="Tìm theo tên sách hoặc tác giả" aria-label={`Tìm trong ${eligible.length} sách đã tải`} autoComplete="off" />
                 {bookQuery && <button type="button" onClick={() => setBookQuery('')} aria-label="Xóa từ khóa tìm sách"><X size={16} aria-hidden="true" /></button>}
               </div>
             )}
@@ -340,8 +393,16 @@ export function CreateAuctionPage() {
                 ))}
               </div>
             )}
-            {eligible.length > 0 && <p className={styles.noMatch} role="status">Không tìm thấy sách khớp “{bookQuery.trim()}” trên kệ của bạn.</p>}
-            {listings.data?.nextCursor && <p className={styles.stepHint}>Đang hiển thị 50 sách mới nhất trên kệ.</p>}
+            {eligible.length > 0 && <p className={styles.noMatch} role="status">Không tìm thấy sách khớp “{bookQuery.trim()}” trong sách đã tải. {listings.hasNextPage ? "Bạn có thể tải tiếp sách cũ hơn." : ""}</p>}
+            {listings.hasNextPage && <div className={styles.inlineState}>
+              <p role={listings.isFetchNextPageError ? 'alert' : 'status'}>{listings.isFetchNextPageError
+                ? 'Chưa tải được sách cũ hơn. Sách đã chọn và giá đang nhập vẫn được giữ.'
+                : `Đã tải ${listings.data?.pages.reduce((sum, page) => sum + page.items.length, 0) ?? 0} sách từ kệ. Bạn có thể tải tiếp để tìm sách cũ hơn.`}</p>
+              <button type="button" disabled={locked || listings.isFetching}
+                onClick={() => void listings.fetchNextPage({ cancelRefetch: false })}>
+                {listings.isFetchingNextPage ? 'Đang tải sách…' : listings.isFetchNextPageError ? 'Thử tải sách cũ hơn' : 'Tải thêm sách từ kệ'}
+              </button>
+            </div>}
             {touched && formErrors.listing && eligible.length > 0 && <p className={styles.error} role="alert">{formErrors.listing}</p>}
           </fieldset>
 
@@ -396,7 +457,7 @@ export function CreateAuctionPage() {
                 ))}
                 {customStepOn ? (
                   // The chosen "Tự nhập" chip becomes the step input itself.
-                  <span className={`${styles.segmentOn} ${styles.stepCustom} ${stepError ? styles.stepCustomInvalid : ''}`}>
+                  <span data-focus-surface data-focus-invalid={!!stepError} className={`${styles.segmentOn} ${styles.stepCustom} ${stepError ? styles.stepCustomInvalid : ''}`}>
                     <input
                       // eslint-disable-next-line jsx-a11y/no-autofocus -- focus follows the user's own "Tự nhập" choice
                       autoFocus inputMode="numeric" autoComplete="off" placeholder="0" disabled={locked}

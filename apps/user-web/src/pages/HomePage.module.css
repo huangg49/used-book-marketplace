@@ -272,6 +272,8 @@
   }
 }
 .search {
+  /* Gold is the accessible focus/hover accent against the wine hero. */
+  --latlai-focus-color: var(--shop-yellow);
   grid-column: 1 / -1;
   grid-row: 2;
   justify-self: center;
@@ -286,7 +288,13 @@
   color: var(--shop-wine);
   padding: 8px 8px 8px 22px;
   border-radius: 12px;
-  box-shadow: 0 12px 28px #2f00002e;
+  border: 1px solid transparent;
+  box-shadow: 0 0 0 0 var(--shop-yellow);
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+.search:hover {
+  border-color: var(--shop-yellow);
+  box-shadow: 0 0 0 1px var(--shop-yellow);
 }
 .search input {
   border: 0 !important;
@@ -306,11 +314,8 @@
   outline: none !important;
   box-shadow: none !important;
 }
-.search:has(input:focus-visible) {
-  outline: 2px solid var(--shop-yellow);
-  outline-offset: 4px;
-}
 .search button {
+  --latlai-focus-color: var(--shop-wine);
   display: flex;
   align-items: center;
   justify-content: center;

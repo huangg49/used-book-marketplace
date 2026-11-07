@@ -45,3 +45,23 @@ Chủ dự án gửi `Truyện kiều.webp` (Truyện Kiều — Nguyễn Du): d
 `truyen-kieu.webp` thay vị trí Chúa nhẫn thứ hai, góc dưới bên phải hero.
 Giữ một Chúa nhẫn ở góc trên bên trái, tổng tám bìa; không đổi bố cục/hiệu ứng.
 Tối ưu toàn ảnh trong400×560; provenance/hash ở `truyen-kieu.webp.json`.
+
+## Bản ảnh đáp ứng cho Hero Home — 03/11/2026
+
+Hero dùng các bản WebP trong `home-hero-covers/` cùng URL ảnh gốc trong
+`srcset`. Tạo `frieren-{200,400}.webp` từ `frieren.jpg`,
+`one-piece-200.webp` từ `one-piece.webp` và `duoc-su-{200,400}.webp` từ
+`duoc-su.webp`. Tất cả giữ toàn khung ảnh và kế thừa nguồn từ sidecar của
+ảnh gốc. Ảnh gốc là lựa chọn cho màn hình cần thêm độ phân giải và được
+dùng lại nếu bản nhỏ tải lỗi.
+
+Để tái tạo, dùng Sharp 0.35.4 với libvips 8.18.6 và libwebp 1.6.0. Cho mỗi
+cặp đầu vào và chiều rộng đã ghi, dùng chuỗi thao tác sau:
+
+```js
+await sharp(input)
+  .resize({ width, withoutEnlargement: true })
+  .withIccProfile('srgb', { attach: false })
+  .webp({ quality: 92, smartSubsample: true, effort: 6 })
+  .toFile(output);
+```

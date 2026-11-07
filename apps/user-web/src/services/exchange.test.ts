@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "@used-books/session-client";
 const mock = vi.hoisted(() => ({
   request: vi.fn(),
   publicListing: vi.fn(),
   photo: vi.fn(),
+  wallet: vi.fn(),
   listener: () => {},
   actor: "11111111-1111-4111-8111-111111111111",
   authenticated: true,
@@ -28,6 +29,7 @@ vi.mock("./public-listings", () => ({
   getPublicListing: mock.publicListing,
   getPublicPhoto: mock.photo,
 }));
+vi.mock("../lib/wallet-cache", () => ({ invalidateMemberWalletViews: mock.wallet }));
 import {
   exchangeCommand,
   getExchangeCounts,
@@ -39,6 +41,7 @@ import {
   type Exchange,
 } from "./exchange";
 import { getExchangeDetail, getMessages } from "./exchangeDetail";
+import { queryClient } from "../lib/session";
 const row: Exchange = {
   id: "33333333-3333-4333-8333-333333333333",
   initiatorId: "11111111-1111-4111-8111-111111111111",
@@ -55,17 +58,43 @@ const row: Exchange = {
   updatedAt: "2026-10-12T00:00:00Z",
 };
 beforeEach(() => {
+  queryClient.clear();
   mock.request.mockReset();
   mock.publicListing.mockReset();
   mock.photo.mockReset();
+  mock.wallet.mockClear();
   mock.authenticated = false;
   mock.listener();
   mock.actor = row.initiatorId;
   mock.authenticated = true;
   mock.listener();
 });
+afterEach(() => {
+  queryClient.clear();
+  vi.useRealTimers();
+});
 describe("exchange integration", () => {
-  it("renders frozen agreement values without fetching today's public listings", async () => {
+  it("refreshes wallet views only after a confirmed command or recovery ACK", async () => {
+    mock.request.mockRejectedValueOnce(new Error('lost ACK')).mockResolvedValue({
+      ...row, status: 'AcceptedAwaitingFunding', initiatorFundedAt: row.createdAt,
+    });
+    await expect(exchangeCommand(`/exchanges/${row.id}/funding`, {})).rejects.toThrow();
+    expect(mock.wallet).not.toHaveBeenCalled();
+    await retryExchange(row.id);
+    expect(mock.wallet).toHaveBeenCalledOnce();
+    expect(mock.wallet).toHaveBeenCalledWith(expect.anything(), row.initiatorId);
+  });
+  it("does not refresh a different account after a late command response", async () => {
+    let resolve!: (value: unknown) => void;
+    mock.request.mockReturnValueOnce(new Promise(r => { resolve = r; }));
+    const sending = exchangeCommand(`/exchanges/${row.id}/funding`, {});
+    mock.actor = row.recipientId;
+    mock.listener();
+    resolve({ ...row, status: 'AcceptedAwaitingFunding', initiatorFundedAt: row.createdAt });
+    await expect(sending).rejects.toThrow();
+    expect(mock.wallet).not.toHaveBeenCalled();
+  });
+  it("renders frozen values and scopes photo reuse to owner, revision and lifetime", async () => {
     const book = (id: string, ownerId: string, value: number) => ({
       listingId: id,
       ownerId,
@@ -100,11 +129,18 @@ describe("exchange integration", () => {
       initiatorBooks: [book(row.initiatorListingId, row.initiatorId, 100000)],
       recipientBook: book(row.recipientListingId, row.recipientId, 150000),
     };
-    mock.request.mockImplementation((path) =>
-      path.includes("/photos/")
-        ? Promise.resolve({ url: "https://storage.test/frozen.png" })
-        : Promise.resolve({ ...row, agreement }),
-    );
+    vi.useFakeTimers({ toFake: ["Date"] });
+    let photoFailure = false;
+    let expiredResponse = false;
+    let omitExpiry = false;
+    mock.request.mockImplementation((path) => {
+      if (!path.includes("/photos/")) return Promise.resolve({ ...row, agreement });
+      if (photoFailure) return Promise.reject(new Error("storage unavailable"));
+      return Promise.resolve({
+        url: "https://storage.test/frozen.png",
+        ...(omitExpiry ? {} : { expiresAt: new Date(Date.now() + (expiredResponse ? -1 : 60000)).toISOString() }),
+      });
+    });
     mock.publicListing.mockResolvedValue({ exchangeValue: 600000 });
     const detail = await getExchangeDetail(row.id);
     expect(detail.receiveBooks[0]).toMatchObject({
@@ -121,6 +157,39 @@ describe("exchange integration", () => {
     expect(
       mock.request.mock.calls.filter(([path]) => path.includes("/photos/")),
     ).toHaveLength(2);
+    const photoReads = () => mock.request.mock.calls.filter(([path]) => path.includes("/photos/")).length;
+    await getExchangeDetail(row.id);
+    expect(photoReads()).toBe(2);
+    vi.setSystemTime(Date.now() + 55000);
+    photoFailure = true;
+    const unavailable = await getExchangeDetail(row.id);
+    expect(photoReads()).toBe(4);
+    expect(unavailable.receiveBooks[0].coverUrl).toBeUndefined();
+    expect(unavailable.receiveBooks[0].title).toBe("Ấn bản đã thỏa thuận");
+    photoFailure = false;
+    await getExchangeDetail(row.id);
+    expect(photoReads()).toBe(6);
+    agreement.recipientBook.revisionId = row.id;
+    await getExchangeDetail(row.id);
+    expect(photoReads()).toBe(7);
+    mock.actor = row.recipientId;
+    mock.listener();
+    await getExchangeDetail(row.id);
+    expect(photoReads()).toBe(9);
+    await queryClient.invalidateQueries({ queryKey: ["exchange-book-photo"], refetchType: "none" });
+    expiredResponse = true;
+    const expired = await getExchangeDetail(row.id);
+    expect(expired.receiveBooks[0].coverUrl).toBeUndefined();
+    expect(photoReads()).toBe(11);
+    expiredResponse = false;
+    const recovered = await getExchangeDetail(row.id);
+    expect(recovered.receiveBooks[0].coverUrl).toBe("https://storage.test/frozen.png");
+    expect(photoReads()).toBe(13);
+    await queryClient.invalidateQueries({ queryKey: ["exchange-book-photo"], refetchType: "none" });
+    omitExpiry = true;
+    await getExchangeDetail(row.id);
+    await getExchangeDetail(row.id);
+    expect(photoReads()).toBe(17);
   });
 
   it("maps recipient deposit and funding without deducting the compensation they will receive", async () => {

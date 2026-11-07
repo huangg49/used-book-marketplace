@@ -1,3 +1,4 @@
+import { TransactionFrame, TransactionDisclosure } from '../components/conversation/TransactionFrame';
 import { ExchangeFinanceSummary } from "../components/conversation/ExchangeFinanceSummary";
 import { useExchangeRecovery } from "../hooks/useExchangeRecovery";
 import { createdExchange, pendingProposal } from "../services/exchange";
@@ -7,8 +8,8 @@ import { ApiError } from "@used-books/session-client";
 import {
   BookOpen,
   Handshake,
-  Check,
   CheckCircle2,
+  Check,
   ExternalLink,
   MapPin,
   Package,
@@ -60,7 +61,7 @@ export function NegotiationWorkspace({
   onOpenOrderDialog: () => void;
   historyExchange: string | null;
   setHistoryExchange: (id: string | null) => void;
-  now?: number;
+  now: number;
   expired?: boolean;
 }) {
   const identity = useExchangeRecovery();
@@ -134,12 +135,20 @@ export function NegotiationWorkspace({
     createdExchange(room.listingId);
   const exchangeSheetId = "exchange-sheet-" + room.id;
   const conditionLabel = book ? conditions[book.condition] : undefined;
+  const quoteCurrent = Boolean(room.hasQuote && room.quotePreview && Date.parse(room.quotePreview.expiresAt) > now);
 
+  if (mode === 'Exchange' && (historyExchange || room.terms?.activeExchangeId)) {
+    const currentId = historyExchange ?? room.terms!.activeExchangeId!;
+    const navigation = <>
+      <TransactionDisclosure title={`Lịch sử đề nghị đổi sách (${room.terms?.exchangeIds.length ?? 0})`}>
+        {room.terms?.exchangeIds.map((id,i)=><button type="button" className={styles.secondaryActionBtn} key={id} onClick={()=>setHistoryExchange(id===room.terms?.activeExchangeId?null:id)}>Xem đề nghị lần {i+1}{id===room.terms?.activeExchangeId?' — hiện tại':''}</button>)}
+      </TransactionDisclosure>
+    </>;
+    return <ExchangeDetailPage key={currentId} exchangeId={currentId} embedded workspaceNavigation={navigation} workspaceNotice={historyExchange?<p role="status">Đang xem đề nghị trước đó. <button type="button" className={styles.secondaryActionBtn} onClick={()=>setHistoryExchange(null)}>Về phiếu hiện tại</button></p>:undefined}/>;
+  }
   return (
-    <div className={styles.orderTwoColumns}>
-      {/* ========================================================
-          KHUNG 1 (BÊN TRÁI): THÔNG TIN SÁCH
-          ======================================================== */}
+    <div className={styles.workspacePage} data-transaction-page>
+    <TransactionFrame preview={book ? <ListingPhoto book={book} eager fallbackCover /> : <BookOpen size={24} />} context={
       <article
         className={styles.bookInfoCard}
         aria-labelledby="negotiation-book-heading"
@@ -160,7 +169,7 @@ export function NegotiationWorkspace({
         <div className={styles.cardContent}>
           {/* Ảnh & thông tin tiêu đề sách */}
           <div className={styles.bookProfileRow}>
-            <div className={styles.bookCoverWrapper}>
+            <div className={styles.bookCoverWrapper} data-conversation-cover>
               {book ? (
                 <ListingPhoto book={book} eager fallbackCover />
               ) : (
@@ -209,14 +218,14 @@ export function NegotiationWorkspace({
           )}
 
           {/* Chi tiết tình trạng & số trang */}
-          <div className={styles.specList}>
+          <TransactionDisclosure title="Tình trạng và ghi chú bản sách"><div className={styles.specList}>
             <div className={styles.specItem}>
               <span className={styles.specLabel}>Bìa & gáy:</span>
-              <span className={styles.specVal}>{book?.coverNote || "Tốt"}</span>
+              <span className={styles.specVal}>{book?.coverNote || "Chưa có dữ liệu"}</span>
             </div>
             <div className={styles.specItem}>
               <span className={styles.specLabel}>Số trang:</span>
-              <span className={styles.specVal}>{book?.pages || "Tốt"}</span>
+              <span className={styles.specVal}>{book?.pages || "Chưa có dữ liệu"}</span>
             </div>
             {(book?.notes || book?.description) && (
               <div className={styles.descriptionBlock}>
@@ -261,6 +270,7 @@ export function NegotiationWorkspace({
               )}
           </div>
 
+          </TransactionDisclosure>
           {isExchange ? (
             <ExchangeFinanceSummary
               id={exchangeSummaryId}
@@ -339,8 +349,10 @@ export function NegotiationWorkspace({
                           : "Chưa chốt giá sách"}
                       </p>
                       <p className={styles.escrowSubtitle}>
-                        {room.hasQuote
-                          ? "Đã có báo giá vận chuyển. Hai bên có thể tiến hành tạo đơn hàng."
+                        {frozen
+                          ? "Yêu cầu tạo đơn đang chờ xác nhận. Tiếp tục đúng yêu cầu đã gửi ở phần thao tác."
+                          : quoteCurrent
+                          ? "Đã có thông tin giao nhận còn hiệu lực. Người bán có thể kiểm tra để tạo đơn."
                           : "Sau khi thống nhất giá và nhận thông tin giao nhận, đơn sẽ được tạo và bảo chứng bởi Lật Lại."}
                       </p>
                     </div>
@@ -372,6 +384,8 @@ export function NegotiationWorkspace({
           )}
         </div>
       </article>
+    }>
+
 
       {/* ========================================================
           KHUNG 2 (BÊN PHẢI): THỎA THUẬN GIAO DỊCH
@@ -440,6 +454,16 @@ export function NegotiationWorkspace({
 
         <div className={styles.cardContent}>
           {/* 1. Bộ chuyển đổi hình thức giao dịch (Mode Switcher) */}
+          {frozen && seller && (
+            <div className={styles.procedureNoticeWarning} role="status">
+              <div>
+                <p>Chưa xác nhận được yêu cầu tạo đơn trước đó. Tiếp tục để kiểm tra đúng yêu cầu đã gửi.</p>
+                <button type="button" className={styles.primaryActionBtn} onClick={onOpenOrderDialog}>
+                  Tiếp tục yêu cầu tạo đơn
+                </button>
+              </div>
+            </div>
+          )}
           <div className={styles.modeSwitchWrapper}>
             <div className={styles.modeSwitchHeader}>
               <span>Hình thức giao dịch:</span>
@@ -749,82 +773,6 @@ export function NegotiationWorkspace({
                   <h4>{guidance.title}</h4>
                   <p>{guidance.description}</p>
 
-                  {/* Tiến trình 4 bước chuẩn bị tạo đơn */}
-                  <div className={styles.stepperMini}>
-                    <div
-                      className={`${styles.stepperMiniItem} ${terms?.agreedPrice != null ? styles.stepperMiniDone : styles.stepperMiniActive}`}
-                    >
-                      <span className={styles.stepperMiniDot}>
-                        {terms?.agreedPrice != null ? (
-                          <Check size={11} strokeWidth={3} />
-                        ) : (
-                          "1"
-                        )}
-                      </span>
-                      <span>
-                        {terms?.agreedPrice != null
-                          ? `Đã thống nhất giá: ${formatVnd(terms.agreedPrice)}`
-                          : "1. Thống nhất giá sách"}
-                      </span>
-                    </div>
-
-                    <div
-                      className={`${styles.stepperMiniItem} ${
-                        guidance.action === "edit-listing"
-                          ? styles.stepperMiniError
-                          : styles.stepperMiniDone
-                      }`}
-                    >
-                      <span className={styles.stepperMiniDot}>
-                        {guidance.action === "edit-listing" ? (
-                          <AlertCircle size={11} />
-                        ) : (
-                          <Check size={11} strokeWidth={3} />
-                        )}
-                      </span>
-                      <span>
-                        {guidance.action === "edit-listing"
-                          ? "2. Cần cập nhật nơi gửi sách"
-                          : "2. Nơi gửi sách của người bán"}
-                      </span>
-                    </div>
-
-                    <div
-                      className={`${styles.stepperMiniItem} ${
-                        room.hasQuote && room.quotePreview
-                          ? styles.stepperMiniDone
-                          : terms?.agreedPrice != null &&
-                              guidance.action !== "edit-listing"
-                            ? styles.stepperMiniActive
-                            : ""
-                      }`}
-                    >
-                      <span className={styles.stepperMiniDot}>
-                        {room.hasQuote && room.quotePreview ? (
-                          <Check size={11} strokeWidth={3} />
-                        ) : (
-                          "3"
-                        )}
-                      </span>
-                      <span>
-                        {room.hasQuote && room.quotePreview
-                          ? "3. Đã có địa chỉ nhận sách"
-                          : "3. Địa chỉ nhận sách"}
-                      </span>
-                    </div>
-
-                    <div
-                      className={`${styles.stepperMiniItem} ${
-                        guidance.action === "create-order"
-                          ? styles.stepperMiniActive
-                          : ""
-                      }`}
-                    >
-                      <span className={styles.stepperMiniDot}>4</span>
-                      <span>4. Người bán tạo đơn hàng</span>
-                    </div>
-                  </div>
-
                   <div style={{ marginTop: 12 }}>
                     {guidance.action === "edit-listing" && (
                       <Link
@@ -848,7 +796,7 @@ export function NegotiationWorkspace({
                       </Link>
                     )}
 
-                    {guidance.action === "create-order" && (
+                    {guidance.action === "create-order" && !frozen && (
                       <button
                         className={styles.primaryActionBtn}
                         type="button"
@@ -882,57 +830,7 @@ export function NegotiationWorkspace({
           {/* 3. Nếu là Đổi sách (Exchange) */}
           {mode === "Exchange" && (
             <div className={styles.procedureSection}>
-              {historyExchange ? (
-                <div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: 12,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "0.875rem",
-                        fontWeight: 700,
-                        color: "#5c0202",
-                      }}
-                    >
-                      Đang xem đề nghị đổi sách trước đó
-                    </span>
-                    <button
-                      type="button"
-                      className={styles.secondaryActionBtn}
-                      style={{
-                        minHeight: 32,
-                        padding: "4px 12px",
-                        fontSize: "0.75rem",
-                      }}
-                      onClick={() => setHistoryExchange(null)}
-                    >
-                      Về phiếu hiện tại
-                    </button>
-                  </div>
-                  <section aria-label="Chi tiết trao đổi">
-                    <ExchangeDetailPage
-                      key={historyExchange}
-                      exchangeId={historyExchange}
-                      embedded
-                    />
-                  </section>
-                </div>
-              ) : room.terms?.activeExchangeId ? (
-                <section aria-label="Chi tiết trao đổi">
-                  <ExchangeDetailPage
-                    key={room.terms.activeExchangeId}
-                    exchangeId={room.terms.activeExchangeId}
-                    embedded
-                  />
-                </section>
-              ) : book &&
-                !room.terms?.pendingProposal &&
-                !room.terms?.locked ? (
+              {book && !room.terms?.pendingProposal && !room.terms?.locked ? (
                 <ExchangeOffer
                   key={identity + ":" + room.id}
                   room={room}
@@ -1041,6 +939,7 @@ export function NegotiationWorkspace({
           </div>
         </div>
       </article>
+    </TransactionFrame>
     </div>
   );
 }

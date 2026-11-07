@@ -30,7 +30,7 @@ import {
   type SupportPage,
 } from "@used-books/session-client";
 import { session, canResolve } from "../../core/session";
-import { Button, Notice } from "../../core/ui";
+import { Button, CursorPagination, Notice } from "../../core/ui";
 import { dateText } from "../../core/format";
 import styles from "./support.module.css";
 import { EmptyArt } from "../../core/EmptyArt";
@@ -132,7 +132,7 @@ function SupportQueue({ owner }: { owner: string }) {
         </Button>
       </div>
       {result.isPending ? <p role="status">Đang tải hồ sơ…</p> : null}
-      {result.isError ? (
+      {result.isError && !result.isFetchNextPageError ? (
         <Notice tone="error">
           {supportError(result.error)} Dùng Cập nhật danh sách để thử lại.
         </Notice>
@@ -181,14 +181,12 @@ function SupportQueue({ owner }: { owner: string }) {
           </p>
         </section>
       ) : null}
-      {!denied && result.hasNextPage ? (
-        <Button
-          busy={result.isFetchingNextPage}
-          onClick={() => void result.fetchNextPage()}
-        >
-          Xem thêm hồ sơ
-        </Button>
-      ) : null}
+      {!denied && <CursorPagination pageCount={result.data?.pages.length ?? 0}
+        hasNextPage={!!result.hasNextPage} isFetching={result.isFetching}
+        isFetchingNextPage={result.isFetchingNextPage}
+        error={result.isFetchNextPageError ? result.error : undefined}
+        onNextPage={() => void result.fetchNextPage({ cancelRefetch: false })}
+        nextLabel="Xem thêm hồ sơ" />}
     </div>
   );
 }

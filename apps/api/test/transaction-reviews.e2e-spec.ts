@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Test } from '@nestjs/testing';
+import { MongoClient } from 'mongodb';
+import { prepareDatabase, testUrl } from './mongo/harness.js';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { MongoService } from '../src/database/mongo/mongo.service.js';
@@ -18,6 +20,7 @@ import {
 
 type Reader = { id: string; token: string; sessionId: string };
 describe('Transaction reviews lifecycle — real Mongo HTTP', () => {
+  let scopedRootUrl: string | undefined;
   let app: INestApplication,
     db: MongoFixtures,
     a: Reader,
@@ -107,10 +110,17 @@ describe('Transaction reviews lifecycle — real Mongo HTTP', () => {
     );
   }
   beforeAll(async () => {
-    db = await MongoFixtures.connect();
+    // Review-only historical aggregates omit financial chains. Keep them out of
+    // other suites' real ledger reconciliation, using an owned QA database.
+    scopedRootUrl = testUrl(`transaction_reviews_${randomUUID().replaceAll('-', '')}_test`);
+    const { appUrl, migratorUrl } = await prepareDatabase(scopedRootUrl);
+    db = await MongoFixtures.connect(migratorUrl);
     const mod = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(MongoService)
+      .useValue(new MongoService(new ConfigService({ MONGODB_URL: appUrl })))
+      .compile();
     app = mod.createNestApplication();
     configureApp(app, { docs: false, logRequests: false });
     await app.init();
@@ -125,8 +135,89 @@ describe('Transaction reviews lifecycle — real Mongo HTTP', () => {
     b = await user();
   });
   afterAll(async () => {
-    await app?.close();
-    await db?.close();
+    try {
+      await app?.close();
+    } finally {
+      try {
+        await db?.close();
+      } finally {
+        if (scopedRootUrl) {
+          const root = new MongoClient(scopedRootUrl);
+          try {
+            await root.connect();
+            const owned = root.db();
+            if (!/^transaction_reviews_[a-f0-9]{32}_test$/.test(owned.databaseName))
+              throw new Error('Refusing cleanup outside the owned review QA database');
+            await owned.dropDatabase();
+            await owned.command({ dropAllUsersFromDatabase: 1 });
+            await owned.command({ dropAllRolesFromDatabase: 1 });
+            expect((await owned.command({ usersInfo: 1 })).users).toEqual([]);
+            expect((await owned.command({ rolesInfo: 1 })).roles).toEqual([]);
+            expect((await root.db('admin').command({
+              listDatabases: 1, nameOnly: true, filter: { name: owned.databaseName },
+            })).databases).toEqual([]);
+          } finally {
+            await root.close();
+          }
+        }
+      }
+    }
+  }, 60000);
+
+  it('opens an Exchange draft only for the participant who acknowledged receipt; keeps it blind and freezes edits during a dispute', async () => {
+    const id = await exchange(null, 'InTransit'),
+      url = `/transactions/Exchange/${id}/reviews`,
+      now = new Date();
+    expect((await get(url, a).expect(200)).body.canReview).toBe(false);
+    await db.c.exchanges.updateOne(
+      { _id: id },
+      {
+        $set: {
+          initiatorReceivedAt: now,
+          initiatorInspectionDeadline: new Date(+now + 72 * 3600000),
+        },
+      },
+    );
+    expect((await get(url, a).expect(200)).body).toMatchObject({
+      canReview: true,
+      awaitingCompletion: true,
+      deadline: null,
+    });
+    expect((await get(url, b).expect(200)).body.canReview).toBe(false);
+    await post(url, input, b).expect(409);
+    await post(url, input, outsider).expect(404);
+    const key = randomUUID(),
+      created = (await post(url, input, a, key).expect(200)).body;
+    expect((await post(url, input, a, key).expect(200)).body).toEqual(created);
+    const page = (
+      await get('/me/review-transactions?type=Exchange&limit=50', a).expect(200)
+    ).body;
+    expect(page.items.find((x: any) => x.transactionId === id)).toMatchObject({
+      completedAt: null,
+      reviewableAt: now.toISOString(),
+    });
+    expect(
+      (await get(`/members/${b.id}/reputation`).expect(200)).body.reviewCount,
+    ).toBe(0);
+    await db.c.exchanges.updateOne(
+      { _id: id },
+      { $set: { status: 'ResolutionPending' } },
+    );
+    expect((await get(url, a).expect(200)).body).toMatchObject({
+      canReview: false,
+      canEdit: false,
+      canDelete: false,
+    });
+    await post(
+      `/transaction-reviews/${created.id}/edit`,
+      { ...input, expectedVersion: created.version },
+      a,
+    ).expect(409);
+    await post(
+      `/transaction-reviews/${created.id}/delete`,
+      { expectedVersion: created.version },
+      a,
+    ).expect(409);
   });
 
   async function demoPair(both = true) {
@@ -712,6 +803,43 @@ describe('Transaction reviews lifecycle — real Mongo HTTP', () => {
     expect(profile.partnerRatingCount).toBe(2);
     expect(profile.bookRatingCount).toBe(0);
     expect(profile.bookRating).toBeNull();
+    const inspectingPoint = randomUUID();
+    const pointRow = (await db.c.point_orders.findOne({ _id: point }))!;
+    await db.c.point_orders.insertOne({
+      ...pointRow,
+      _id: inspectingPoint,
+      auctionId: randomUUID(),
+      intakeId: randomUUID(),
+      contextId: randomUUID(),
+      listingId: randomUUID(),
+      state: 'Inspection',
+      version: 4,
+      closedAt: null,
+    });
+    const earlyUrl = `/transactions/PointOrder/${inspectingPoint}/reviews`;
+    expect((await get(earlyUrl, a).expect(200)).body).toMatchObject({
+      canReview: true,
+      awaitingCompletion: true,
+      deadline: null,
+    });
+    await post(earlyUrl, input, a).expect(200);
+    await post(earlyUrl, { partnerRating: 4 }, b).expect(200);
+    await age(inspectingPoint);
+    expect((await get(earlyUrl, b).expect(200)).body.partnerReview).toBeNull();
+    expect(
+      (await get(`/members/${a.id}/reputation`).expect(200)).body.reviewCount,
+    ).toBe(2);
+    const inspectingList = (
+      await get('/me/review-transactions?type=PointOrder', a).expect(200)
+    ).body;
+    expect(
+      inspectingList.items.find(
+        (item: any) => item.transactionId === inspectingPoint,
+      ),
+    ).toMatchObject({
+      completedAt: null,
+      reviewableAt: delivered.toISOString(),
+    });
     // Seller-to-buyer reviews have no book score. One Exchange review adds a
     // third partner score but only the first book score, even on a 1-item page.
     const ex = await exchange(),

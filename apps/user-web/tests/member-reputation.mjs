@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 
@@ -65,7 +65,7 @@ try {
   await page.getByRole('heading', { name: profile.displayName, exact: true }).waitFor();
   const region = page.getByRole('region', { name: `Hồ sơ uy tín của ${profile.displayName}`, exact: true });
   assert.equal(await region.getByText('3.5', { exact: true }).count(), 1);
-  assert.equal(await region.getByText('Từ 11 đánh giá', { exact: true }).count(), 1);
+  assert.equal(await region.getByText('Từ 11 đánh giá đã công bố', { exact: true }).count(), 1);
   assert.equal(await page.getByRole('article').count(), 10);
   assert.equal(await page.getByText('PRIVATE_PENDING_REPLY_MUST_NOT_BE_VISIBLE').count(), 0);
   await page.getByRole('heading', { name: `Phản hồi từ ${profile.displayName}`, exact: true }).waitFor();
@@ -73,7 +73,14 @@ try {
     await page.setViewportSize({ width, height: 1000 });
     await page.evaluate(() => window.scrollTo(0, 0));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `No horizontal overflow at ${width}`);
-    assert.equal(await region.evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
+    const fits = await region.evaluate(el => el.scrollWidth <= el.clientWidth + 1);
+    if (!fits) {
+      await writeFile(path.join(artifacts, 'profile-overflow.json'), JSON.stringify(await region.evaluate(el => {
+        const parent=el.getBoundingClientRect();return {width:innerWidth,region:{width:parent.width,scroll:el.scrollWidth},elements:[...el.querySelectorAll('*')].filter(n=>n.getBoundingClientRect().right>parent.right+1).map(n=>({tag:n.tagName,classes:n.className,width:n.getBoundingClientRect().width,minWidth:getComputedStyle(n).minWidth,display:getComputedStyle(n).display}))};
+      }), null, 2));
+      await page.screenshot({path:path.join(artifacts,'profile-overflow.png'),fullPage:true});
+    }
+    assert.equal(fits, true, 'Profile summary fits without internal horizontal overflow');
     const layout = await page.getByRole('navigation', { name: 'Điều hướng hồ sơ' }).locator('..').evaluate(el => {
       const r = el.getBoundingClientRect();
       return { left: r.left, right: innerWidth - r.right, internalScrollers: [...el.querySelectorAll('*')].filter(n => ['auto', 'scroll'].includes(getComputedStyle(n).overflowY) && n.scrollHeight > n.clientHeight + 1).length };
@@ -86,21 +93,22 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
   if (capture) await page.screenshot({ path: path.join(artifacts, 'profile-320-large-text.png'), fullPage: false });
   await page.evaluate(() => document.documentElement.style.fontSize = '');
-  await page.getByText('Cách tính điểm và công bố', { exact: true }).click();
-  await page.getByText(/Đánh giá không hài lòng và khiếu nại chưa kết luận/).waitFor({ state: 'visible' });
-  await page.getByRole('button', { name: 'Xem thêm đánh giá', exact: true }).click();
-  await page.getByRole('button', { name: 'Thử tải thêm lần nữa', exact: true }).waitFor();
+  await page.getByText('Quy chế tính điểm & minh bạch ✦', { exact: true }).click();
+  await page.getByText(/Khiếu nại chưa kết luận không được tính là vi phạm/).waitFor({ state: 'visible' });
+  await page.getByRole('button', { name: 'Đến trang tiếp theo', exact: true }).click();
+  await page.getByRole('alert').filter({hasText:'Dữ liệu đang xem vẫn được giữ'}).waitFor();
   assert.equal(await page.getByRole('article').count(), 10);
   assert.equal(await region.getByText('3.5', { exact: true }).count(), 1);
-  await page.getByRole('button', { name: 'Thử tải thêm lần nữa', exact: true }).click();
-  await page.waitForFunction(() => document.querySelectorAll('article').length === 12);
+  await page.getByRole('button', { name: 'Đến trang tiếp theo', exact: true }).click();
+  await page.waitForFunction(() => document.querySelectorAll('article').length === 2);
   // The account summary uses a regular Query with this old key. Public paging
   // must use its own InfiniteQuery cache shape, including when viewing oneself.
   await page.evaluate(async ({ memberId, summary }) => {
     const { queryClient } = await import('/src/lib/session.ts');
     queryClient.setQueryData(['memberReputation', memberId], summary);
   }, { memberId: id, summary: profile });
-  assert.equal(await page.getByRole('article').count(), 12);
+  assert.equal(await page.getByRole('article').count(), 2);
+  assert.equal(await page.evaluate(async memberId => { const {queryClient}=await import('/src/lib/session.ts'); return queryClient.getQueryData(['memberReputation','public',memberId]).pages.flatMap(p=>p.items).length; }, id), 12, 'All loaded reviews remain cached');
   const refresh = () => page.evaluate(async memberId => {
     const { queryClient } = await import('/src/lib/session.ts');
     await queryClient.invalidateQueries({ queryKey: ['memberReputation', 'public', memberId] });
@@ -108,7 +116,7 @@ try {
   mode = 'offline';
   await refresh();
   await page.getByText('Chưa cập nhật được hồ sơ. Bạn đang xem thông tin đã tải trước đó.', { exact: true }).waitFor();
-  assert.equal(await page.getByRole('article').count(), 12, 'Network error preserves loaded reviews');
+  assert.equal(await page.getByRole('article').count(), 2, 'Network error preserves the current review page');
   mode = 'unavailable';
   await refresh();
   await page.getByRole('heading', { name: 'Chưa tìm thấy hồ sơ này', exact: true }).waitFor();

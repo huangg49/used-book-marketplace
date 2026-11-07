@@ -29,6 +29,10 @@ describe('review publication and immutable first-submission windows', () => {
     expect(reviewIsEditable(b, new Date(+at - 1))).toBe(true);
     expect(reviewIsEditable(b, at)).toBe(false);
   });
+  it('never dates publication before actual completion for reviews drafted during inspection', () => {
+    const a=record(+completion-72*3600000), b=record(+completion-71*3600000);
+    expect(publicationTime(completion,[a,b])).toEqual(completion);
+  });
   it('gives a review sent at the end of day 7 its entire 48 hours', () => {
     const r = record(+completion + REVIEW_SUBMISSION_MS - 1);
     expect(+publicationTime(completion, [r])!).toBe(+r.editDeadline);

@@ -85,6 +85,7 @@ const orderDetails = paymentOrderSchema.extend({
   canReject: z.boolean(),
   sellerConfirmationDeadline: z.string().nullable(),
   shipmentRegistrationEnabled: z.boolean(),
+  canConfirmReceipt: z.boolean().optional().default(false),
   demoCompletionEnabled: z.boolean().optional().default(false),
   demoCompletionAt: z.string().nullable().optional().default(null),
   deliveredAt: z.iso.datetime().nullable(),

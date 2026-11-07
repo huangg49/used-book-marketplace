@@ -1,5 +1,8 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { Test } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
+import { MongoClient } from 'mongodb';
+import { prepareDatabase, testUrl } from './mongo/harness.js';
 import { JwtService } from '@nestjs/jwt';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -14,6 +17,7 @@ import { validates } from './helpers/contract.js';
 
 type Actor = { id: string; token: string; sessionId: string };
 describe('Withdrawal: HTTP, real Mongo ledger, permission and concurrency', () => {
+  let scopedRootUrl: string | undefined;
   let app: INestApplication, db: MongoFixtures, admin: Actor, operator: Actor;
   const users: string[] = [];
   const oldSecret = process.env.PAYMENT_SIMULATOR_SECRET;
@@ -110,11 +114,20 @@ describe('Withdrawal: HTTP, real Mongo ledger, permission and concurrency', () =
   });
   beforeAll(async () => {
     process.env.PAYMENT_SIMULATOR_SECRET = randomBytes(32).toString('hex');
-    db = await MongoFixtures.connect();
+    // Financial reconciliation must see complete chains from this suite, not
+    // partial historical aggregates inserted by support/work-inbox fixtures.
+    scopedRootUrl = testUrl(`withdrawals_${randomUUID().replaceAll('-', '')}_test`);
+    const { appUrl, migratorUrl } = await prepareDatabase(scopedRootUrl);
+    db = await MongoFixtures.connect(migratorUrl);
     const module = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(MongoService)
+      .useValue(new MongoService(new ConfigService({ MONGODB_URL: appUrl })))
+      .compile();
     app = module.createNestApplication();
+    // Config validation can snapshot environment before beforeAll runs.
+    app.get(ConfigService).set('PAYMENT_SIMULATOR_SECRET', process.env.PAYMENT_SIMULATOR_SECRET);
     configureApp(app, { docs: false, logRequests: false });
     await app.init();
     await app.listen(0, '127.0.0.1');
@@ -122,46 +135,40 @@ describe('Withdrawal: HTTP, real Mongo ledger, permission and concurrency', () =
     operator = await actor(['TEST_OPERATOR']);
   }, 60000);
   afterAll(async () => {
-    if (db) {
-      const ids = (
-        await db.c.withdrawals.find({ ownerId: { $in: users } }).toArray()
-      ).map((w) => w._id);
-      const topups = (
-        await db.c.topup_intents.find({ ownerId: { $in: users } }).toArray()
-      ).map((t) => t._id);
-      const journals = (
-        await db.c.ledger_journals
-          .find({
-            $or: [{ withdrawalId: { $in: ids } }, { topupId: { $in: topups } }],
-          })
-          .toArray()
-      ).map((j) => j._id);
-      await db.c.ledger_entries.deleteMany({ journalId: { $in: journals } });
-      await db.c.ledger_journals.deleteMany({ _id: { $in: journals } });
-      await db.c.wallet_accounts.deleteMany({
-        $or: [{ ownerId: { $in: users } }, { withdrawalId: { $in: ids } }],
-      });
-      await db.c.withdrawal_events.deleteMany({ withdrawalId: { $in: ids } });
-      await db.c.withdrawals.deleteMany({ _id: { $in: ids } });
-      await db.c.simulated_payment_events.deleteMany({
-        intentId: { $in: topups },
-      });
-      await db.c.topup_intents.deleteMany({ _id: { $in: topups } });
-      await db.c.member_notifications.deleteMany({ userId: { $in: users } });
-      const auditIds = (
-        await db.c.audit_events.find({ actorId: { $in: users } }).toArray()
-      ).map((a) => a._id);
-      await db.c.outbox_events.deleteMany({ auditId: { $in: auditIds } });
-      await db.c.audit_events.deleteMany({ actorId: { $in: users } });
-      await db.c.mutation_receipts.deleteMany({ actorId: { $in: users } });
-      await db.c.auth_sessions.deleteMany({ userId: { $in: users } });
-      await db.c.users.deleteMany({ _id: { $in: users } });
+    try {
+      try {
+        await app?.close();
+      } finally {
+        try {
+          await db?.close();
+        } finally {
+          if (scopedRootUrl) {
+            const root = new MongoClient(scopedRootUrl);
+            try {
+              await root.connect();
+              const owned = root.db();
+              if (!/^withdrawals_[a-f0-9]{32}_test$/.test(owned.databaseName))
+                throw new Error('Refusing cleanup outside the owned withdrawal QA database');
+              await owned.dropDatabase();
+              await owned.command({ dropAllUsersFromDatabase: 1 });
+              await owned.command({ dropAllRolesFromDatabase: 1 });
+              expect((await owned.command({ usersInfo: 1 })).users).toEqual([]);
+              expect((await owned.command({ rolesInfo: 1 })).roles).toEqual([]);
+              expect((await root.db('admin').command({
+                listDatabases: 1, nameOnly: true, filter: { name: owned.databaseName },
+              })).databases).toEqual([]);
+            } finally {
+              await root.close();
+            }
+          }
+        }
+      }
+    } finally {
+      if (oldSecret === undefined) delete process.env.PAYMENT_SIMULATOR_SECRET;
+      else process.env.PAYMENT_SIMULATOR_SECRET = oldSecret;
     }
-    await app?.close();
-    await db?.close();
-    if (oldSecret === undefined) delete process.env.PAYMENT_SIMULATOR_SECRET;
-    else process.env.PAYMENT_SIMULATOR_SECRET = oldSecret;
   }, 60000);
+
   it('accepts an arbitrary account without simulator config; Admin approval completes and debits exactly once', async () => {
     const u = await funded(),
       key = randomUUID();

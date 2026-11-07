@@ -9,6 +9,7 @@ import {
   discardReadyProfileAvatar,
   readMemberProfile,
   pendingAccountCommand,
+  pendingEmailChangeTarget,
   pendingProfileAvatar,
   profileAvatarReadSchema,
   readyProfileAvatar,
@@ -93,6 +94,9 @@ export function MemberProfileEditor({
   const [code, setCode] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
+  const running = useRef(false);
+  // An acknowledged write needs the canonical read, even if its first GET failed.
+  const replaceDraftOnRecovery = useRef(false);
 
   const draft = draftOverride ?? (profile.data ? draftOf(profile.data) : null);
   const pendingSave = pendingAccountCommand(session, "profile-update");
@@ -148,14 +152,16 @@ export function MemberProfileEditor({
     gcTime: 0,
   });
 
-  async function refresh() {
+  async function refresh(preserveDraft = false) {
     const result = await profile.refetch();
     if (!current()) return;
     if (result.error || !result.data) {
       setNeedsRead(true);
       throw result.error ?? new Error("Read unavailable");
     }
-    setDraft(draftOf(result.data));
+    const keepDraft = preserveDraft && !replaceDraftOnRecovery.current;
+    setDraft(previous => keepDraft && previous ? previous : draftOf(result.data));
+    replaceDraftOnRecovery.current = false;
     if (current()) setNeedsRead(false);
     void cache.invalidateQueries({ queryKey: ["me", ownerId] });
     void cache.invalidateQueries({ queryKey: ["member-profile"] });
@@ -163,7 +169,8 @@ export function MemberProfileEditor({
   }
 
   async function perform(action: () => Promise<void>) {
-    if (busy) return;
+    if (running.current) return;
+    running.current = true;
     setBusy(true);
     setError("");
     setMessage("");
@@ -172,6 +179,7 @@ export function MemberProfileEditor({
     } catch (e) {
       if (current()) setError(errorText(e));
     } finally {
+      running.current = false;
       if (current()) setBusy(false);
     }
   }
@@ -205,6 +213,7 @@ export function MemberProfileEditor({
         throw new Error("Unexpected receipt");
       const ready = readyProfileAvatar(session);
       if (ready) clearReadyProfileAvatar(session, ready);
+      replaceDraftOnRecovery.current = true;
       setNeedsRead(true);
       setMessage("Đã lưu hồ sơ thành công.");
       await refresh();
@@ -309,6 +318,7 @@ export function MemberProfileEditor({
       );
       if (!current()) return;
       setPassword("");
+      replaceDraftOnRecovery.current = true;
       setNeedsRead(true);
       setMessage(
         "Nếu email phù hợp, mã xác nhận đã được gửi đến địa chỉ mới. Email đăng nhập hiện tại chưa thay đổi.",
@@ -333,6 +343,7 @@ export function MemberProfileEditor({
       if (!current()) return;
       setCode("");
       setEmail("");
+      replaceDraftOnRecovery.current = true;
       setNeedsRead(true);
       setMessage(
         "Đã xác minh và đổi email đăng nhập. Các phiên đăng nhập khác đã được thu hồi.",
@@ -423,7 +434,7 @@ export function MemberProfileEditor({
             type="button"
             className={styles.ghostButton}
             disabled={busy}
-            onClick={() => void perform(refresh)}
+            onClick={() => void perform(() => refresh(true))}
           >
             Tải lại hồ sơ
           </button>
@@ -725,7 +736,7 @@ export function MemberProfileEditor({
                       autoComplete="email"
                       placeholder="nhap.email.moi@latlai.vn"
                       required={!pendingEmail}
-                      value={email}
+                      value={pendingEmail ? pendingEmailChangeTarget(session) ?? email : email}
                       disabled={locked}
                       onChange={(event) => setEmail(event.target.value)}
                       maxLength={254}
@@ -810,6 +821,7 @@ export function MemberProfileEditor({
                     <div className={styles.fieldGroup}>
                       <input
                         id="profile-email-code"
+                        aria-label="Mã xác nhận"
                         className={styles.otpInput}
                         inputMode="numeric"
                         autoComplete="one-time-code"

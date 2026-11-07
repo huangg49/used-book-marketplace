@@ -2,6 +2,7 @@ import { useLayoutEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ArrowUpRight, BookOpen, MessageCircle } from "lucide-react";
+import { ApiError } from "@used-books/session-client";
 import {
   getPurchaseConversation,
   type PurchaseConversation,
@@ -12,10 +13,10 @@ import {
   type InboxFilter,
 } from "./conversation-navigation";
 import { getPublicListing } from "../../services/public-listings";
-import { getExchanges } from "../../services/exchange";
-import { getExchangeDetail } from "../../services/exchangeDetail";
+import { getExchanges, type Exchange } from "../../services/exchange";
 import { ListingPhoto } from "../BookCard";
 import { formatVnd } from "../../lib/routes";
+import { useNearViewport } from "../../hooks/useNearViewport";
 import styles from "./Conversation.module.css";
 
 const states = {
@@ -35,7 +36,10 @@ function ConversationCard({
   const transitioning = useConversationTransition(href);
   const position = useInboxPosition();
   const cache = useQueryClient();
+  const { ref, active } = useNearViewport<HTMLElement>(false, { once: true });
+  const [engaged, setEngaged] = useState(false);
   const prepare = () => {
+    setEngaged(true);
     void cache.prefetchQuery({
       queryKey: ["purchase-conversation", room.id, userId],
       queryFn: () => getPurchaseConversation(room.id),
@@ -48,9 +52,12 @@ function ConversationCard({
   const book = useQuery({
     queryKey: ["public-listing", room.listingId],
     queryFn: () => getPublicListing(room.listingId),
+    enabled: active || engaged,
     retry: false,
     staleTime: 60000,
   });
+  const unavailable = book.error instanceof ApiError && [403, 404].includes(book.error.status);
+  const visibleBook = unavailable ? undefined : book.data;
   const buyer = room.buyer.id === userId,
     partner = buyer ? room.seller : room.buyer;
   const hint = room.terms?.pendingProposal
@@ -62,6 +69,7 @@ function ConversationCard({
       : null;
   return (
     <article
+      ref={ref}
       className={styles.inboxCard}
       data-room-id={room.id}
       data-chat-morph-card={transitioning || undefined}
@@ -70,8 +78,8 @@ function ConversationCard({
     >
       <div className={styles.cardIdentity}>
         <div className={styles.cardCover} data-conversation-cover>
-          {book.data ? (
-            <ListingPhoto book={book.data} />
+          {visibleBook ? (
+            <ListingPhoto book={visibleBook} />
           ) : (
             <BookOpen size={28} aria-hidden="true" />
           )}
@@ -84,10 +92,10 @@ function ConversationCard({
               state={{ chatFromInbox: true }}
               onClick={remember}
             >
-              {book.data?.bundle?.title ?? book.data?.book.title ??
+              {visibleBook?.bundle?.title ?? visibleBook?.book.title ??
                 (book.isPending
                   ? "Đang tải tên sách…"
-                  : "Bài đăng không còn công khai")}
+                  : unavailable ? "Bài đăng không còn công khai" : "Chưa tải được tên sách")}
             </Link>
           </h2>
           <p className={styles.cardPartner}>
@@ -99,6 +107,19 @@ function ConversationCard({
           </p>
         </div>
       </div>
+      {book.isError && (
+        <div role="alert" className={styles.cardHint}>
+          <p>{unavailable
+            ? "Thông tin bài đăng hiện không truy cập được. Bạn vẫn có thể mở hội thoại."
+            : visibleBook
+              ? "Chưa cập nhật được thông tin sách. Tên sách đang hiện là lần tải trước."
+              : "Chưa tải được thông tin sách. Kiểm tra kết nối và thử lại; hội thoại vẫn mở được."}</p>
+          <button className={styles.textButton} type="button" disabled={book.isFetching}
+            onClick={() => void book.refetch()}>
+            Tải lại thông tin sách
+          </button>
+        </div>
+      )}
       {hint && <p className={styles.cardHint}>{hint}</p>}
       <div className={styles.cardFooter}>
         <p className={styles.cardStatus}>{states[room.status]}</p>
@@ -115,18 +136,31 @@ function ConversationCard({
     </article>
   );
 }
-function LegacyCard({ id, userId }: { id: string; userId: string }) {
+function LegacyCard({ exchange, userId }: { exchange: Exchange; userId: string }) {
+  const id = exchange.id;
   const transitioning = useConversationTransition(`/exchange/${id}`);
   const position = useInboxPosition();
   const remember = () => {
     position.save({ scrollY: window.scrollY, selectedId: id });
   };
-  const detail = useQuery({
-    queryKey: ["exchangeDetail", userId, id],
-    queryFn: () => getExchangeDetail(id),
-    retry: false,
-    staleTime: 30000,
-  });
+  const initiator = exchange.initiatorId === userId;
+  const initiatorIds = exchange.initiatorListingIds?.length
+    ? exchange.initiatorListingIds
+    : [exchange.initiatorListingId];
+  const receivedIds = initiator
+    ? [exchange.recipientListingId]
+    : initiatorIds;
+  const snapshots = exchange.agreement
+    ? [...exchange.agreement.initiatorBooks, exchange.agreement.recipientBook]
+    : [];
+  const title = receivedIds.map(listingId => {
+    const book = snapshots.find(snapshot => snapshot.listingId === listingId);
+    return book?.book.title ?? "Hồ sơ cũ — thiếu bản chụp sách";
+  }).join(", ");
+  const partnerName = initiator
+    ? exchange.agreement?.recipientBook.ownerDisplayName
+    : exchange.agreement?.initiatorBooks[0]?.ownerDisplayName;
+  const partner = partnerName ?? "Đối tác trao đổi";
   return (
     <article
       className={styles.legacyCard}
@@ -145,16 +179,11 @@ function LegacyCard({ id, userId }: { id: string; userId: string }) {
               state={{ chatFromInbox: true }}
               onClick={remember}
             >
-              {detail.data?.receiveBooks.map((b) => b.title).join(", ") ||
-                "Cuộc trao đổi sách"}
+              {title || "Cuộc trao đổi sách"}
             </Link>
           </h2>
           <p className={styles.cardPartner}>
-            {detail.data
-              ? `Với ${detail.data.partner.username}`
-              : detail.isError
-                ? "Chưa tải được tên đối tác; mở để thử lại."
-                : "Đang tải thông tin…"}
+            Với {partner}
           </p>
           <p className={styles.cardMode}>Đổi sách</p>
         </div>
@@ -281,7 +310,7 @@ export function ConversationInbox({
           <ConversationCard key={room.id} room={room} userId={userId} />
         ))}
         {legacy.slice(0, Math.max(0, visible - filtered.length)).map((ex) => (
-          <LegacyCard key={ex.id} id={ex.id} userId={userId} />
+          <LegacyCard key={ex.id} exchange={ex} userId={userId} />
         ))}
       </div>
       {filtered.length + legacy.length > visible && (

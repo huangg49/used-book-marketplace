@@ -1,0 +1,60 @@
+.entry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  background: var(--shop-paper);
+  color: var(--shop-ink);
+}
+.entry > div {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.entry h3 {
+  margin: 0 0 8px;
+  font-size: 1.125rem;
+}
+.entry p {
+  margin: 0;
+  line-height: 1.6;
+  max-width: 68ch;
+}
+.entry a,
+.entry > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--shop-wine);
+  color: var(--shop-cream);
+  font-weight: 700;
+  text-decoration: none;
+}
+.entry a:focus-visible,
+.entry > button:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 4px;
+}
+@media (max-width: 420px) {
+  .entry a,
+  .entry > button {
+    width: 100%;
+  }
+}
+
+.entry > button {
+  border: 0;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.entry > button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

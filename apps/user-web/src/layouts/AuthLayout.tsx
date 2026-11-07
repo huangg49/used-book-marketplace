@@ -36,6 +36,12 @@ function PaperFrame({ path, children }: { path: string; children: ReactNode }) {
   </>;
 }
 
+const scenePhoto = "/photography/bookshop-barcelona.jpg";
+const sceneSources = "/photography/bookshop-barcelona-960.webp 960w, " +
+  "/photography/bookshop-barcelona-1920.webp 1920w, " + scenePhoto + " 3000w";
+// Match the width needed for cover fitting of a 3000:2818 photo, plus the 1.035 CSS scale.
+const sceneSizes = "max(103.5vw, 110.2vh)";
+
 export function AuthLayout() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -51,6 +57,7 @@ export function AuthLayout() {
   const draft = useRef<AuthDraft>({ email: "", password: "", registerName: "", registerEmail: "", registerPassword: "", registerConfirmation: "", recoveryEmail: "" });
   const [transition, setTransition] = useState<Turn | null>(null);
   const [departing, setDeparting] = useState(false);
+  const [useOriginalScene, setUseOriginalScene] = useState(false);
   const turning = transition?.from === location.key;
   const success = departing;
   const [annotation] = useState(() => annotations[Math.floor(Math.random() * annotations.length)]);
@@ -165,7 +172,21 @@ export function AuthLayout() {
   return <PaperContext.Provider value={{ turnTo, complete, draft,
     updateDraft: (field, value) => { draft.current[field] = value; } }}>
     <main className={styles.root}>
-      <div className={styles.scene} aria-hidden="true"><img src="/photography/bookshop-barcelona.jpg" alt="" width="3000" height="2818" fetchPriority="high" /></div>
+      <div className={styles.scene} aria-hidden="true">
+        <img
+          sizes={useOriginalScene ? undefined : sceneSizes}
+          srcSet={useOriginalScene ? undefined : sceneSources}
+          src={scenePhoto}
+          alt=""
+          width="3000"
+          height="2818"
+          fetchPriority="high"
+          onError={useOriginalScene ? undefined : event => {
+            const image = event.currentTarget;
+            if (image.currentSrc !== image.src) setUseOriginalScene(true);
+          }}
+        />
+      </div>
       <svg aria-hidden="true" width="0" height="0" className={styles.filterDefs}><defs>
         <filter id="auth-logo-ink" colorInterpolationFilters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 .360784 0 0 0 0 .007843 0 0 0 0 .007843 1.59375 0 0 0 -.575" /></filter>
       </defs></svg>

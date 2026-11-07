@@ -1,6 +1,5 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
-import { DashboardLayout } from '../layouts/DashboardLayout';
 import HomePage from '../pages/HomePage';
 import { VNPayReturnGate } from '../pages/VNPayReturnGate';
 import { NotFoundPage } from '../pages/NotFoundPage';
@@ -46,7 +45,7 @@ export const router = createBrowserRouter([
         element: <VNPayReturnGate />,
         children: [
           {
-            element: <DashboardLayout />,
+            lazy: () => import('../layouts/DashboardLayout').then(m => ({ Component: m.DashboardLayout })),
             children: [
               { path: '/account', lazy: () => import('../pages/AccountOverviewPage').then(m => ({ Component: m.AccountOverviewPage })) },
               { path: '/account/work', lazy: () => import('../pages/MemberWorkPage').then(m => ({ Component: m.MemberWorkPage })) },

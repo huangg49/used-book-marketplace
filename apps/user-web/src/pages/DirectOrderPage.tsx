@@ -1,6 +1,9 @@
+import { usePagedCollection } from "../components/Pagination/usePagedCollection";
+import { CollectionPager } from "../components/Pagination/CollectionPager";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { ApiError } from "@used-books/session-client";
 import {
   ArrowRight,
   BookOpen,
@@ -63,13 +66,13 @@ export function DirectOrderListPage() {
     retry: false,
   });
 
+  const inaccessible = pages.error instanceof ApiError && [401, 403].includes(pages.error.status);
   const allItems = useMemo(
-    () => pages.data?.pages.flatMap((p) => p.items) ?? [],
-    [pages.data],
+    () => inaccessible ? [] : pages.data?.pages.flatMap((p) => p.items) ?? [],
+    [pages.data, inaccessible],
   );
 
-  const filteredItems = useMemo(() => {
-    return allItems.filter((o) => {
+  const filterItems = (items: typeof allItems) => items.filter((o) => {
       if (roleFilter !== "all" && o.role !== roleFilter) return false;
       if (statusFilter === "in_progress") {
         if (!IN_PROGRESS_STATES.includes(o.state)) return false;
@@ -80,7 +83,13 @@ export function DirectOrderListPage() {
       }
       return true;
     });
-  }, [allItems, roleFilter, statusFilter]);
+  const collection = usePagedCollection(pages, JSON.stringify([auth.status === "authenticated" ? auth.user.id : "guest", roleFilter, statusFilter]), source => inaccessible ? [] : filterItems(source.flatMap(p => p.items)), 8);
+  const resetPagination = collection.reset;
+  useEffect(() => {
+    // A denied cursor read recovers through refetch, not the obsolete Next action.
+    if (inaccessible) resetPagination();
+  }, [inaccessible, resetPagination]);
+  const filteredItems = collection.items;
 
   const buyerCount = useMemo(
     () => allItems.filter((o) => o.role === "Buyer").length,
@@ -105,7 +114,7 @@ export function DirectOrderListPage() {
         {allItems.length > 0 && (
           <div className={styles.statsBadge}>
             <span className={styles.statsNum}>{allItems.length}</span>
-            <span className={styles.statsLabel}>Tổng số đơn</span>
+            <span className={styles.statsLabel}>{pages.hasNextPage ? "Đơn đã tải" : "Tổng số đơn"}</span>
           </div>
         )}
       </header>
@@ -134,7 +143,7 @@ export function DirectOrderListPage() {
                 onClick={() => setRoleFilter("all")}
               >
                 <span>Tất cả</span>
-                <span className={styles.tabBadge}>{allItems.length}</span>
+                {!inaccessible && <span className={styles.tabBadge}>{allItems.length}</span>}
               </button>
               <button
                 type="button"
@@ -145,7 +154,7 @@ export function DirectOrderListPage() {
               >
                 <ShoppingBag size={14} aria-hidden="true" />
                 <span>Đơn mua</span>
-                <span className={styles.tabBadge}>{buyerCount}</span>
+                {!inaccessible && <span className={styles.tabBadge}>{buyerCount}</span>}
               </button>
               <button
                 type="button"
@@ -156,7 +165,7 @@ export function DirectOrderListPage() {
               >
                 <Store size={14} aria-hidden="true" />
                 <span>Đơn bán</span>
-                <span className={styles.tabBadge}>{sellerCount}</span>
+                {!inaccessible && <span className={styles.tabBadge}>{sellerCount}</span>}
               </button>
             </div>
 
@@ -195,16 +204,21 @@ export function DirectOrderListPage() {
           )}
 
           {/* Error State */}
-          {pages.isError && (
+          {pages.isError && (!pages.isFetchNextPageError || inaccessible) && (
             <div className={styles.errorBox} role="alert">
               <XCircle size={28} aria-hidden="true" />
               <div>
                 <h3>Chưa tải được danh sách đơn hàng</h3>
-                <p>Máy chủ tạm thời gián đoạn. Vui lòng bấm thử lại.</p>
+                <p>{inaccessible
+                  ? "Quyền xem đơn hàng đã thay đổi. Kiểm tra phiên đăng nhập và thử lại."
+                  : allItems.length
+                    ? "Chưa cập nhật được đơn hàng. Thông tin bên dưới là lần tải trước; vui lòng thử lại."
+                    : "Chưa kết nối được để tải đơn hàng. Vui lòng bấm thử lại."}</p>
               </div>
               <button
                 type="button"
                 className={styles.retryButton}
+                disabled={pages.isFetching}
                 onClick={() => void pages.refetch()}
               >
                 Thử lại
@@ -219,12 +233,16 @@ export function DirectOrderListPage() {
                 <BookOpen size={36} aria-hidden="true" />
               </div>
               <h3>
-                {allItems.length === 0
+                {pages.hasNextPage
+                  ? "Chưa thấy đơn phù hợp trong dữ liệu đã tải"
+                  : allItems.length === 0
                   ? "Bạn chưa có đơn hàng nào"
                   : "Không có đơn hàng phù hợp bộ lọc"}
               </h3>
               <p>
-                {allItems.length === 0
+                {pages.hasNextPage
+                  ? "Bấm Sau để tìm tiếp trong những đơn cũ hơn, hoặc đổi bộ lọc."
+                  : allItems.length === 0
                   ? "Khám phá hàng ngàn bản sách cũ trên kệ hoặc đăng cuốn sách của bạn để kết nối với người đọc khác."
                   : "Thử thay đổi bộ lọc vai trò hoặc trạng thái để xem các đơn hàng khác."}
               </p>
@@ -242,7 +260,7 @@ export function DirectOrderListPage() {
           )}
 
           {/* Order Cards List */}
-          <div className={styles.orderList}>
+          <div className={styles.orderList} id="direct-order-results">
             {filteredItems.map((o) => {
               const isBuyer = o.role === "Buyer";
               const isCompleted = o.state === "Completed";
@@ -342,19 +360,7 @@ export function DirectOrderListPage() {
             })}
           </div>
 
-          {/* Load More Button */}
-          {pages.hasNextPage && (
-            <div className={styles.loadMoreWrap}>
-              <button
-                type="button"
-                className={styles.loadMoreBtn}
-                disabled={pages.isFetchingNextPage}
-                onClick={() => void pages.fetchNextPage()}
-              >
-                {pages.isFetchingNextPage ? "Đang tải thêm…" : "Xem thêm đơn hàng cũ hơn"}
-              </button>
-            </div>
-          )}
+          {!inaccessible && <CollectionPager model={collection} anchorId="direct-order-results" itemLabel="đơn hàng" />}
         </>
       )}
     </div>

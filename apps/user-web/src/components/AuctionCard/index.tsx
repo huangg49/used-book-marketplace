@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Flag, MapPin, Play, Timer, Users, Zap } from 'lucide-react'
 import { AuctionPrice } from '../AuctionPrice'
@@ -6,26 +7,39 @@ import { formatRemaining, useCountdown } from '../../hooks/useAuctionClock'
 import { formatVnd, ROUTES } from '../../lib/routes'
 import { auctionPhase, type AuctionSummary } from '../../services/auctions'
 import styles from './AuctionCard.module.css'
+import { useNearViewport } from '../../hooks/useNearViewport'
 
 const HOUR = 3_600_000
 const endsAt = (iso: string) =>
   new Date(iso).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
 
-export function AuctionCard({ auction, serverTime }: { auction: AuctionSummary; serverTime: string }) {
+// Only the badge changes each second; price/photo feedback follows server data.
+function AuctionCountdown({ endAt, serverTime, scheduled }: {
+  endAt: string; serverTime: string; scheduled: boolean
+}) {
+  const remaining = useCountdown(endAt, serverTime)
+  return (
+    <span className={`${styles.timer} ${!scheduled && remaining < HOUR ? styles.timerSoon : ''}`}>
+      <Timer size={13} aria-hidden="true" />
+      {scheduled ? `Mở sau ${formatRemaining(remaining, true)}` : formatRemaining(remaining, true)}
+    </span>
+  )
+}
+
+// Default prop comparison keeps typing/filter UI from rebuilding unchanged cards.
+// New auction data/server time and the card's own state still update normally.
+export const AuctionCard = memo(function AuctionCard({ auction, serverTime }: { auction: AuctionSummary; serverTime: string }) {
+  const { ref: coverRef, active: coverActive } = useNearViewport<HTMLAnchorElement>()
   // ADR 0047: a scheduled card counts down to the start, not the end.
   const scheduled = auctionPhase(auction, serverTime) === 'Scheduled'
-  const remaining = useCountdown(scheduled ? auction.startAt : auction.endAt, serverTime)
   const hasBids = auction.bidderCount > 0
   const price = auction.currentPrice ?? auction.startPrice
   const to = ROUTES.auctionDetail(auction.id)
   return (
     <article className={styles.card} data-auction-id={auction.id}>
-      <Link to={to} className={styles.cover} aria-label={`Xem phiên đấu giá ${auction.title}`}>
-        <AuctionPhoto auction={auction} interactive={false} />
-        <span className={`${styles.timer} ${!scheduled && remaining < HOUR ? styles.timerSoon : ''}`}>
-            <Timer size={13} aria-hidden="true" />
-            {scheduled ? `Mở sau ${formatRemaining(remaining, true)}` : formatRemaining(remaining, true)}
-        </span>
+      <Link ref={coverRef} to={to} className={styles.cover} aria-label={`Xem phiên đấu giá ${auction.title}`}>
+        <AuctionPhoto auction={auction} interactive={false} active={coverActive} />
+        <AuctionCountdown endAt={scheduled ? auction.startAt : auction.endAt} serverTime={serverTime} scheduled={scheduled} />
       </Link>
       <div className={styles.meta}>
         <h3 className={styles.title} title={auction.title}>
@@ -58,4 +72,4 @@ export function AuctionCard({ auction, serverTime }: { auction: AuctionSummary; 
       </div>
     </article>
   )
-}
+})

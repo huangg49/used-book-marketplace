@@ -173,6 +173,7 @@ export function Button({
         secondary && s.secondary,
         destructive && { backgroundColor: c.error, borderColor: c.error },
         focused && s.focus,
+        focused && !secondary && { boxShadow: `inset 0 0 0 2px ${c.surface}` },
         disabled && { opacity: 0.5 },
         pressed && { opacity: 0.8 },
       ]}

@@ -11,6 +11,7 @@ import { conditions } from "../lib/listing-labels";
 import { usePublicListingPhoto } from "../hooks/usePublicListingPhoto";
 import { useNearViewport } from "../hooks/useNearViewport";
 import { BookCover } from "./BookCover";
+import { prefetchBookDetail } from "../lib/book-detail-prefetch";
 import "./BookTransition.css";
 
 export function ListingPhoto({
@@ -119,6 +120,14 @@ export function BookCard({ book, compact = false }: BookCardProps) {
     <article
       className={[styles.card, compact ? styles.compact : ""].join(" ")}
       data-book-morph-card={isMorphActive ? "true" : undefined}
+      onPointerEnter={event => {
+        if (event.pointerType === "mouse") prefetchBookDetail();
+      }}
+      onFocusCapture={event => {
+        if (event.target instanceof HTMLAnchorElement &&
+          event.target.getAttribute("href") === detailUrl &&
+          event.target.matches(":focus-visible")) prefetchBookDetail();
+      }}
     >
       <div className={styles.cover} data-book-cover="true">
         <ListingPhoto book={book} />

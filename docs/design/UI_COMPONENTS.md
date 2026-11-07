@@ -350,8 +350,17 @@ all-node stock/native/human acceptance is not implied.
 the React Native foundation above. Source:
 [OwnerListingRow.tsx](../../apps/user-web/src/components/OwnerListingRow.tsx),
 with styles in [MyBooksPage.module.css](../../apps/user-web/src/pages/MyBooksPage.module.css).
-The actual examples are `/my-books` (full row) and `/account` (compact preview);
-no RN `/ui` example or native acceptance is implied.
+Owner row and DashboardMyBooks covers share `myListingPhotoQuery`, keyed by
+owner/listing/revision/media. Signing starts within the shared 200 px viewport
+margin. `useNearViewport(..., { once: true })` retains activation after first
+entry, so scrolling out/back does not restart a stale query. Missing
+IntersectionObserver falls back to the existing eager behavior. Keep reserved
+cover frames, hover scale and image/signing error retry. Dashboard image decode
+errors now expose the same retry path. Verify with
+`pnpm --filter @used-books/user-web test:owner-photo-visibility:browser`.
+Current consumers are `/my-books` (row/grid); `/account` uses DashboardMyBooks
+cards with the same photo query. The snippet below demonstrates the optional
+compact variant. No RN `/ui` example or native acceptance is implied.
 
 ```tsx
 <ul>
@@ -466,6 +475,17 @@ Both contexts use wine/cream, Be Vietnam Pro and44px controls with visible focus
 See the [chat surface record](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-chatpage-tsx.md)
 for scoped browser evidence and verification limits.
 
+03/11/2026 performance: ChatPage's private `ChatMessage` memoizes unchanged
+message rows using default prop comparison of message object, sender label and
+ownership. Composer drafts do not reconstruct old timestamp formatters. New
+message representations and participant names still render; no ID-only comparator
+or separate data cache. DOM/CSS, scroll/history/send behavior and motion stay intact.
+Production fixture regression: `pnpm --filter @used-books/user-web test:chat-input:browser`
+(after build), covering390/1440px, draft/focus, socket/dedup, changed fields,
+partner rename and forbidden-history cache removal. See the
+[performance evidence](../handoff/MEMBER_WEB_PERFORMANCE_2026_11_03.md) for measurements
+and the existing full chat layout-capture failure; fixture PASS is not live acceptance.
+
 ## Member web conversation workspace —19/10/2026
 
 `components/conversation/AgreementTerms` renders real mode/price proposals and
@@ -547,6 +567,42 @@ Author and location now share one horizontal line with24px text slots and center
 icons. Location has a screen-reader-only label; no visible “Khu vực” caption.
 Both values retain measured fitting, ellipsis and full tooltips when necessary.
 
+The shared card-text observer ignores changes limited to known Lenis scroll
+classes. Resize, font loading, inline root styles and other classes still refit
+text. Keep typography independent of those scroll state classes; revisit the
+filter if that assumption changes. Verify with
+`pnpm --filter @used-books/user-web test:card-text:browser`.
+
+Member web uses [`DemandScroll`](../../apps/user-web/src/lib/demand-scroll.ts)
+to drive the existing Lenis physics while a smooth scroll is active. Wheel
+input and programmatic anchors wake it; idle/native scrolling does not need
+a continuous Lenis frame loop. Keep duration/easing/multipliers and modal
+stop/start behavior. The hook destroys the instance in Chat/order rooms and
+on route cleanup. `respectReducedMotion: false` preserves the owner's motion
+policy under both OS preferences. Verify idle frames, smooth intermediate
+positions, nested scrolling and Back with
+`pnpm --filter @used-books/user-web test:smooth-scroll:browser`.
+
+Production builds include a Vite-generated asset hint for the BookDetail route.
+Mouse entry into a real `BookCard`, or keyboard focus on its detail links,
+starts HTTP prefetch for that route's JS/CSS through
+[`prefetchBookDetail`](../../apps/user-web/src/lib/book-detail-prefetch.ts).
+Existing script/stylesheet/preload links are reused. A failed prefetch link is
+removed so later intent can retry. Wishlist focus and direct touch navigation
+use their normal behavior. Detail still revalidates listing state on entry.
+Build the app before `pnpm --filter @used-books/user-web test:book-detail-prefetch:browser`
+to verify production hints, keyboard/touch, fresh state and failure recovery.
+
+The BookDetail page clips horizontal overflow at its own boundary. Its full
+24px article entrance otherwise expands the mobile layout viewport during
+snapshot capture, causing Chromium to abort the cover View Transition. Keep
+the entrance and cover timing intact, including under reduced-motion settings.
+`pnpm --filter @used-books/user-web test:book-transition:browser` checks native
+transition readiness, stable viewport, the return link and unsupported browsers.
+The default440ms duration comes from the snapshot pseudo-elements' fallback,
+so selecting a card does not change an inherited duration variable on `:root`.
+Keep that default local to the snapshots; the directional360ms override remains.
+
 `WishlistButton` is an authenticated feature control using the existing Member
 wishlist endpoints, not a primitive or an optimistic success indicator. It uses
 the shared session/query client, an owner-keyed saved-ID query, exact intended
@@ -555,6 +611,91 @@ retry; mutation errors stay inline. Guests get the existing login route with a
 book return URL. Non-Members/inactive accounts cannot mutate, and catalog previews
 have no heart. `ListingPhoto` keeps its reusable loading/missing/error/retry states
 for detail, checkout and conversation consumers. RN `/ui` remains unchanged.
+
+## Member web — Thẻ đấu giá ổn định khi nhập liệu —03/11/2026
+
+`AuctionCard` uses React.memo's default prop comparison to avoid rebuilding
+unchanged cards for parent input/filter UI. Keep immutable auction updates;
+new auction data/serverTime must still reach the card. Do not compare by ID
+alone. Local visibility, query image results and the child countdown still
+update; retain price500ms and position220ms feedback. Verify typing, focus,
+empty recovery, sorting and fresh fields with unchanged serverTime through
+`pnpm --filter @used-books/user-web test:auction-input:browser`.
+
+## Member web — Ảnh thẻ đấu giá theo viewport —03/11/2026
+
+`AuctionCard` observes its existing cover link with a200px root margin and
+passes visibility to `AuctionPhoto.active`. This defers signed-photo reads for
+distant cards while retaining the direct-child img selector and all cover
+motion. The query key/cache/retry stay unchanged; in-flight reads can finish
+and revisiting a fresh cached cover reuses its URL. `active` defaults true for
+other consumers, including the eager detail gallery/viewer. Missing observer
+falls back to the existing full loading behavior. The shared `useNearViewport`
+observer also serves book cards and listing thumbnails with the same margin.
+Targets unsubscribe on unmount and the last target disconnects the observer.
+Verify scroll, cache, revision, error recovery and cleanup on Back with
+`pnpm --filter @used-books/user-web test:auction-photo-visibility:browser`.
+
+## Member web — Đồng hồ trên thẻ đấu giá —03/11/2026
+
+`AuctionCard` keeps `useCountdown` inside a badge component so clock ticks do
+not render price/photo/date facts again. The same1000ms server-offset clock,
+Scheduled start deadline and under-one-hour color still apply. Server props
+continue to update the whole card and retain price feedback. Keep timer zero
+as display only; server state/eligibility still decide commands. Verify with
+`pnpm --filter @used-books/user-web test:auction-countdown:browser`.
+
+## Member web — Tải khung tài khoản theo route —03/11/2026
+
+`DashboardLayout` uses React Router route `lazy`, matching its child pages.
+Home does not load its JS or sidebar CSS. The first matching account route
+loads both before rendering; direct-link pending/error/reload use the existing
+route feedback. Component, sidebar motion and session guard stay unchanged.
+Verify login return URLs, desktop/mobile navigation and JS/CSS load recovery
+with `pnpm --filter @used-books/user-web test:dashboard-chunk:browser`.
+
+The payment return gate imports only the shared
+[wallet frame](../../apps/user-web/src/pages/WalletFrame.module.css).
+Wallet content and receipt styles belong to the wallet route asset. Keep
+the frame usable for a guest return and the wallet stylesheet out of Home
+and Notifications. The dashboard browser check covers the return URL and
+reload recovery when the wallet stylesheet fails.
+
+Exchange command and recovery ACKs call
+[`invalidateMemberWalletViews`](../../apps/user-web/src/lib/wallet-cache.ts).
+It invalidates the current owner's summary, mini balance, history and cashflow
+history, plus exact legacy flat keys. It does not set balances or run for
+pending/rejected commands, and an old actor cannot refresh a new actor's views.
+Inactive views re-read when revisited. Keep this at the acknowledged service
+result so recovery retries have the same behavior as the original command.
+Verify with `pnpm --filter @used-books/user-web test:exchange-wallet-cache:browser`.
+
+Compact notification consumers use
+[`notificationPreviewQuery`](../../apps/user-web/src/services/notifications.ts):
+one owner-scoped first page of eight rows for the bell, sidebar count, greeting
+and recent activity. Only the bell owns the existing 30 s poll; activity uses
+the first four rows, with three list links as before. Infinite Notifications
+pages keep their separate key and cursor. Opening activity follows
+`notificationPath`, including Order/Exchange/Support/Review targets; classify
+outbid warnings by kind/type, not title text. A preview is not proof a session
+is LIVE or that its row count is the total inbox count. Keep motion and
+read/error/retry states; verify with
+`pnpm --filter @used-books/user-web test:notification-preview:browser`.
+
+[`useCurrentMemberAvatar`](../../apps/user-web/src/hooks/useCurrentMemberAvatar.ts)
+remembers a failed owner/avatar/URL source, not a permanently failed avatar ID.
+A newly issued URL can display the same avatar again; the unchanged broken URL
+still uses initials without a retry loop. Header/Sidebar retain their shared
+profile/avatar queries and existing refresh policy. Verify renewal and mobile
+disclosure with `pnpm --filter @used-books/user-web test:avatar-recovery:browser`.
+
+At up to 960 px the wallet grid can shrink to the content frame. At up to
+600 px the header badge and primary action get their own lines. Sandbox
+details can wrap, receipt amounts have a dedicated row, and deposit presets
+adapt their column count. The filter strip scrolls independently. The card
+keeps its 8 s sheen. Run
+`pnpm --filter @used-books/user-web test:wallet-layout:browser` after a
+production build to check amounts, controls, focus and responsive geometry.
 
 ## Admin — Dashboard biểu đồ —27/10/2026
 
@@ -798,3 +939,59 @@ dùng lại texture/font Login. Không thêm ảnh gen, dependency hoặc sample
 - PASS70unit/10file,2HTTP/Mongo QA cho Dashboard/ảnh/quyền, lint/typecheck/build.
   Browser harness bổ sung ảnh lỗi/retry, chọn bằng Enter, mobile Back/focus và
  320px/chữ lớn; chỉ syntax check vì browser bị tắt. Visual/focus thực tế NOT RUN.
+
+
+## Member web — Pagination và lịch sử ví —03/11/2026
+
+[Pagination](../../apps/user-web/src/components/Pagination/Pagination.tsx) là UI
+controlled, không gọi API. Các variant đều giữ dãy số; `compact` mặc định ẩn
+summary, có thể bật lại bằng `showSummary`. Tổng đã biết dùng `totalPages` hoặc
+`totalItems`; API cursor dùng `reachablePages` cho các trang đã truy cập/cache.
+Trang1/2 luôn có nút riêng khi tồn tại; dấu “…” mở bảng chọn các trang trong
+khoảng, hỗ trợ bàn phím/mũi tên/Escape và trả focus. Không dùng form nhập số/Đi.
+Khi chưa biết tổng, truyền `itemCount` của trang đang
+xem cùng `pageSize`, `hasNext`/`hasPrev`; không truyền số mục đã tải làm totalItems.
+`totalItems` chỉ dành cho tổng thực sự biết. Component chuẩn hóa page/pageSize/
+empty, có hideOnSinglePage và khóa nút khi loading. Focus lấy từ CSS chung.
+
+Container rộng hơn520px hiện số đầu, lân cận, cuối; container hẹp giữ1/2, dấu
+“…” và trang hiện tại với target44px, gồm cả cột hẹp trên desktop. Dưới280px,
+dãy số và Trước/Sau tách hai hàng để không tràn. Nút không dịch chuyển khi
+hover. Ví dụ thực thi các variant và ca loading trong
+[browser fixture](../../apps/user-web/tests/pagination.mjs), chạy
+`pnpm --filter @used-books/user-web test:pagination:browser`.
+
+Dãy ngắn≤4 trang hiện tất cả số trên mobile; desktop không dùng dấu “…” chỉ để
+giấu một trang. Bảng chọn tự chia cột44px theo bề rộng, mở về phía còn chỗ và có
+chiều cao theo viewport. `bordered` chừa24px phía trên và16px dưới đường phân cách.
+`usePaginationFocus` dùng cho kệ/đấu giá cá nhân, hai kệ đấu giá công khai, trao
+đổi và ví: chỉ scroll/focus sau thao tác đổi trang đã hiện kết quả; hủy ý định
+khi đổi owner/filter hoặc đọc lỗi. Giữ motion/Lenis và focus chung.
+
+[WalletHistory](../../apps/user-web/src/pages/WalletHistory.tsx) hiện10mục/trang,
+cache các trang cursor20mục của API. Chỉ fetch khi đi quá dữ liệu đã tải, giữ trang
+và hàng khi lỗi, retry bằng cùng cursor, không dùng đồng thời Load more. Chỉ hiện
+tổng khi đã đọc hết cursor. Đổi bộ lọc/owner về trang1, giữ focus bộ lọc; phản hồi
+cũ không chuyển trang của bộ lọc mới. Đây là UI đọc ledger, không đổi tiền/API.
+
+
+### Áp dụng cho danh sách web —03/11/2026
+
+[Rollout](../ui/LIST_PAGINATION_ROLLOUT_2026_11_03.md) ghi ma trận màn, nguồn dữ
+liệu, điều hướng và giới hạn API. `CursorPager/useCursorNavigation` dành cho URL
+cursor; `CollectionPager/usePagedCollection` dành cho cache infinite query, gồm
+filter thưa, retry cùng cursor, đổi identity và Back. Hook collection dùng router
+của Member web, không dùng cho native hoặc bên ngoài Router. `anchorId` đưa focus
+về kết quả sau phân trang được xác nhận, không cướp focus khi đổi filter.
+
+Không lấy loaded count làm total. Snapshot đấu giá/trao đổi chỉ phân trang trong
+phạm vi API hiện trả; các cap50/100 vẫn được ghi rõ. Picker mở đấu giá dùng tải
+thêm để giữ radio/giá/intent, các queue Operations giữ component của Admin. Chạy
+`pnpm --filter @used-books/user-web test:list-pagination:browser` để kiểm các màn
+và thao tác, cùng test wallet/reputation/search khi nguồn chung thay đổi.
+
+Operations giữ `CursorPagination` tải thêm trong8 vị trí hàng việc/lịch sử,
+không giả lập tổng hoặc thay bằng số trang Member. CSS của Users chỉ áp dưới
+`.directory-pagination`; không làm đổi footer Support/queue sau khi đổi route.
+`pnpm --filter @used-books/admin-web test:pagination:browser` kiểm Users/Support
+với transport giả và footer review queue, gồm lỗi/retry và4 kích thước.

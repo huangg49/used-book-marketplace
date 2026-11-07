@@ -150,7 +150,8 @@ export function createDraftSave(value: DraftSubmissionInput) {
       index += 1;
     }
     return remember("save-draft-only", (key) =>
-      session.request(`/listings/${input.listingId}/draft`, receipt, {
+      session.request(`/listings/${input.listingId}/draft`, receipt.refine(value => value.entityId === input.listingId,
+        "Kết quả lưu không thuộc bài đăng này."), {
         method: "PUT",
         headers: { "Idempotency-Key": key },
         body: JSON.stringify({

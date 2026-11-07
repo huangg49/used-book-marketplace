@@ -28,7 +28,9 @@ import {
 } from "../services/wallet";
 import { formatVnd } from "../lib/routes";
 import styles from "./WalletPage.module.css";
+import frame from "./WalletFrame.module.css";
 import { paymentChannel } from "../lib/payment-return";
+import { invalidateMemberWalletViews } from "../lib/wallet-cache";
 import { WalletHistory } from "./WalletHistory";
 
 const labels: Record<string, string> = {
@@ -92,11 +94,14 @@ export function WalletPage() {
         : false,
   });
 
+  // Keep tracking the popup if the wallet URL switches to another intent.
+  // When both point to the same intent, the result query does the polling.
+  const separateCheckoutId = checkoutId === id ? undefined : checkoutId;
   const checkout = useQuery({
-    queryKey: ["wallet-checkout", ownerId, checkoutId],
+    queryKey: ["topup", ownerId, separateCheckoutId],
     queryFn: () =>
-      paymentOpen ? getTopup(checkoutId!) : queryVNPayTopup(checkoutId!),
-    enabled: !!ownerId && !!checkoutId,
+      paymentOpen ? getTopup(separateCheckoutId!) : queryVNPayTopup(separateCheckoutId!),
+    enabled: !!ownerId && !!separateCheckoutId,
     refetchInterval: (q) =>
       document.visibilityState === "visible" &&
       ["Pending", "Processing"].includes(q.state.data?.state ?? "")
@@ -104,8 +109,9 @@ export function WalletPage() {
         : false,
   });
 
+  const checkoutData = checkoutId === id ? result.data : checkout.data;
   const currentCheckout =
-    checkout.data?.id === checkoutId ? checkout.data : undefined;
+    checkoutData?.id === checkoutId ? checkoutData : undefined;
   const checkoutState = currentCheckout?.state;
   const checkoutCredited = currentCheckout?.credited;
   const checkoutExpiresAt = currentCheckout?.expiresAt;
@@ -133,17 +139,19 @@ export function WalletPage() {
 
   useEffect(() => {
     alive.current = true;
+    return () => { alive.current = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!paymentOpen) return;
     const check = window.setInterval(() => {
       if (paymentWindow.current?.closed) {
         paymentWindow.current = null;
         setPaymentOpen(false);
       }
     }, 500);
-    return () => {
-      alive.current = false;
-      window.clearInterval(check);
-    };
-  }, []);
+    return () => window.clearInterval(check);
+  }, [paymentOpen]);
 
   useEffect(() => {
     const trackedId = checkoutId ?? id;
@@ -159,15 +167,17 @@ export function WalletPage() {
       channel.postMessage({ type: "wallet-ready", id: trackedId });
       setPaymentOpen(false);
       window.focus();
-      void client.invalidateQueries({
-        queryKey: ["topup", ownerId, trackedId],
-      });
-      void client.invalidateQueries({
-        queryKey: ["wallet-checkout", ownerId, trackedId],
-      });
+      // The mode-change effect reconciles after the observer switches to QueryDR.
+      // A late return after the popup already closed still needs a fresh check.
+      if (!paymentOpen) {
+        void client.invalidateQueries({
+          queryKey: ["topup", ownerId, trackedId],
+          exact: true,
+        }, { cancelRefetch: false });
+      }
     };
     return () => channel.close();
-  }, [ownerId, checkoutId, id, client]);
+  }, [ownerId, checkoutId, id, client, paymentOpen]);
 
   useEffect(() => {
     if (params.has("vnp_TxnRef"))
@@ -179,8 +189,7 @@ export function WalletPage() {
       void client.invalidateQueries({ queryKey: ["topups", ownerId] });
     }
     if (credited) {
-      void client.invalidateQueries({ queryKey: ["wallet-summary", ownerId] });
-      void client.invalidateQueries({ queryKey: ["wallet-history", ownerId] });
+      invalidateMemberWalletViews(client, ownerId);
     }
   }, [resultState, credited, client, ownerId, id]);
 
@@ -197,16 +206,17 @@ export function WalletPage() {
     intent.current = null;
     setHasIntent(false);
     setCheckoutId(undefined);
-    void client.invalidateQueries({ queryKey: ["topups", ownerId] });
-    if (checkoutCredited) {
-      void client.invalidateQueries({ queryKey: ["wallet-summary", ownerId] });
-      void client.invalidateQueries({ queryKey: ["wallet-history", ownerId] });
+    if (checkoutId !== id) {
+      void client.invalidateQueries({ queryKey: ["topups", ownerId] });
+      if (checkoutCredited) {
+        invalidateMemberWalletViews(client, ownerId);
+      }
     }
-  }, [checkoutId, checkoutState, checkoutCredited, client, ownerId]);
+  }, [checkoutId, checkoutState, checkoutCredited, client, ownerId, id]);
 
   useEffect(() => {
     if (
-      !checkoutId ||
+      !separateCheckoutId ||
       !checkoutState ||
       !["Pending", "Processing"].includes(checkoutState) ||
       !checkoutExpiresAt ||
@@ -218,14 +228,14 @@ export function WalletPage() {
     const timeout = window.setTimeout(
       () => {
         void client.invalidateQueries({
-          queryKey: ["wallet-checkout", ownerId, checkoutId],
+          queryKey: ["topup", ownerId, separateCheckoutId],
         });
       },
       Math.max(0, until) + 100,
     );
     return () => window.clearTimeout(timeout);
   }, [
-    checkoutId,
+    separateCheckoutId,
     checkoutState,
     checkoutExpiresAt,
     checkoutServerTime,
@@ -246,19 +256,22 @@ export function WalletPage() {
   }, [awaitingPayment, expiresAt, serverTime, client, ownerId, id]);
 
   useEffect(() => {
-    if (ownerId && !paymentOpen) {
-      if (id)
-        void client.invalidateQueries({ queryKey: ["topup", ownerId, id] });
-      if (checkoutId)
-        void client.invalidateQueries({
-          queryKey: ["wallet-checkout", ownerId, checkoutId],
-        });
+    if (ownerId && id && !paymentOpen) {
+      void client.invalidateQueries({ queryKey: ["topup", ownerId, id] });
     }
-  }, [paymentOpen, ownerId, id, checkoutId, client]);
+  }, [paymentOpen, ownerId, id, client]);
+
+  useEffect(() => {
+    if (ownerId && separateCheckoutId && !paymentOpen) {
+      void client.invalidateQueries({
+        queryKey: ["topup", ownerId, separateCheckoutId],
+      });
+    }
+  }, [paymentOpen, ownerId, separateCheckoutId, client]);
 
   if (!ownerId) {
     return (
-      <section className={styles.page}>
+      <section className={frame.page}>
         <div className={styles.emptyCard}>
           <div className={styles.emptyIconWrap}>
             <Wallet size={32} />
@@ -330,10 +343,6 @@ export function WalletPage() {
         return;
       }
       client.setQueryData(["topup", ownerId, response.entityId], current);
-      client.setQueryData(
-        ["wallet-checkout", ownerId, response.entityId],
-        current,
-      );
       setCheckoutId(response.entityId);
       void client.invalidateQueries({ queryKey: ["topups", ownerId] });
       navigate(`/wallet?topup=${response.entityId}`);
@@ -379,7 +388,7 @@ export function WalletPage() {
   const withdrawalHeld = summary.data?.withdrawalHeld ?? 0;
 
   return (
-    <section className={styles.page}>
+    <section className={frame.page}>
       <header className={styles.pageHeader}>
         <div className={styles.titleCol}>
           <h1 className={styles.pageTitle}>Ví & Ký Quỹ Thư Quán</h1>
@@ -502,13 +511,23 @@ export function WalletPage() {
               <div className={styles.cardHeldInfo}>
                 <span className={styles.cardOwnerLabel}>Đang ký quỹ</span>
                 <span className={styles.cardHeldValue}>
-                  {formatVnd(heldVal)}{withdrawalHeld > 0 && <small style={{display:"block"}}>Chờ rút: {formatVnd(withdrawalHeld)}</small>}
+                  {summary.isPending
+                    ? "Đang tải…"
+                    : summary.isError
+                      ? "—"
+                      : formatVnd(heldVal)}
+                  {!summary.isPending && !summary.isError && withdrawalHeld > 0 && <small style={{display:"block"}}>Chờ rút: {formatVnd(withdrawalHeld)}</small>}
                 </span>
               </div>
             </div>
           </div>
 
           {/* Quick Action Bar under card */}
+          {summary.isError && (
+            <p id="wallet-summary-error" className={styles.alertBox} role="alert">
+              Chưa tải được số dư ví và tiền ký quỹ. Hãy làm mới để thử lại.
+            </p>
+          )}
           <div className={styles.passActionsBar}>
             <button
               type="button"
@@ -534,6 +553,7 @@ export function WalletPage() {
               className={styles.btnMiniRefresh}
               title="Làm mới số dư ví"
               aria-label="Làm mới số dư ví"
+              aria-describedby={summary.isError ? "wallet-summary-error" : undefined}
               disabled={summary.isFetching}
               onClick={() => {
                 void summary.refetch();
@@ -610,6 +630,18 @@ export function WalletPage() {
             </div>
           </div>
 
+          {id && result.isError && (
+            <div className={styles.alertBox} role="alert">
+              <div>
+                <p>Chưa xác minh được yêu cầu nạp này. Kiểm tra lại để nhận trạng thái mới nhất.</p>
+                <button type="button" className={styles.btnSecondaryWithdraw}
+                  disabled={result.isFetching} onClick={() => void result.refetch()}>
+                  Kiểm tra lại
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Live Payment Tracking Card (when a topup is pending / completed) */}
           {id && result.data && (
             <div
@@ -656,7 +688,7 @@ export function WalletPage() {
 
               {awaitingPayment && result.data.expiresAt && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span className={styles.countdownBadge}>
+                  <span className={styles.countdownBadge} role="timer" aria-label="Thời gian thanh toán còn lại" aria-live="off">
                     <Clock size={12} aria-hidden="true" />
                     <span>
                       {remaining > 0

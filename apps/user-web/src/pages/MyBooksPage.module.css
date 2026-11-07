@@ -869,8 +869,7 @@
   margin: 0 0 16px;
 }
 .state a,
-.state button,
-.pagination button {
+.state button {
   display: inline-flex;
   gap: 6px;
   align-items: center;
@@ -885,16 +884,8 @@
   cursor: pointer;
   text-decoration: none;
 }
-.state :is(a, button):hover,
-.pagination button:hover {
+.state :is(a, button):hover {
   background: #efe3cf;
-}
-.pagination {
-  padding: 20px 0;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
 }
 .root button:disabled {
   opacity: 0.55;

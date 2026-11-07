@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { session } from "./api";
 import { bundleSchema } from "../lib/book-bundle";
+import { createListingActions } from "../lib/listing-actions";
+
+export const listingActions = createListingActions(session);
 
 const mediaReadSchema = z.object({
   id: z.string().uuid(),
@@ -81,34 +84,23 @@ export function getMyListing(id: string) {
   return session.request(`/me/listings/${id}`, myListingSchema);
 }
 
-const mutationReceiptSchema = z.object({
-  entityId: z.string().uuid(),
-  version: z.number().int(),
-});
-
 export function setListingVisibility(
   listingId: string,
   expectedVersion: number,
   visibility: "Visible" | "Hidden",
-  idempotencyKey: string = crypto.randomUUID(),
+  idempotencyKey?: string,
 ) {
-  return session.request(`/listings/${listingId}/visibility`, mutationReceiptSchema, {
-    method: "PUT",
-    headers: { "Idempotency-Key": idempotencyKey },
-    body: JSON.stringify({ expectedVersion, visibility }),
-  });
+  return listingActions.send({ listingId, kind: "visibility", visibility }, expectedVersion,
+    () => idempotencyKey ?? crypto.randomUUID());
 }
 
 export function archiveListing(
   listingId: string,
   expectedVersion: number,
-  idempotencyKey: string = crypto.randomUUID(),
+  idempotencyKey?: string,
 ) {
-  return session.request(`/listings/${listingId}/archive`, mutationReceiptSchema, {
-    method: "POST",
-    headers: { "Idempotency-Key": idempotencyKey },
-    body: JSON.stringify({ expectedVersion }),
-  });
+  return listingActions.send({ listingId, kind: "archive" }, expectedVersion,
+    () => idempotencyKey ?? crypto.randomUUID());
 }
 
 

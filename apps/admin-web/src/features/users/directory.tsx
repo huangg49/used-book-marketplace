@@ -346,15 +346,17 @@ function UserDirectoryContent() {
         </div>
       )}
 
-      <CursorPagination
-        pageCount={result.data?.pages.length ?? 0}
-        hasNextPage={result.hasNextPage}
-        isFetchingNextPage={result.isFetchingNextPage}
-        isFetching={result.isFetching}
-        error={result.isFetchNextPageError ? result.error : undefined}
-        onNextPage={() => void result.fetchNextPage({ cancelRefetch: false })}
-        nextLabel="Xem thêm người dùng"
-      />
+      <div className="directory-pagination">
+        <CursorPagination
+          pageCount={result.data?.pages.length ?? 0}
+          hasNextPage={result.hasNextPage}
+          isFetchingNextPage={result.isFetchingNextPage}
+          isFetching={result.isFetching}
+          error={result.isFetchNextPageError ? result.error : undefined}
+          onNextPage={() => void result.fetchNextPage({ cancelRefetch: false })}
+          nextLabel="Xem thêm người dùng"
+        />
+      </div>
     </>
   );
 }

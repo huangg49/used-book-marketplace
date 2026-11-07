@@ -6,6 +6,25 @@ không mở completion/settlement hoặc thay GHN/carrier/Driver.
 
 ## Phạm vi và điều kiện
 
+**Bổ sung owner03/11/2026, contract0.74:** cho viết riêng ngay sau nhận sách,
+giữ tiền và quy tắc công bố. Nội dung này thay điều kiện tạo Completed-only bên
+dưới của quyết định28/10. Exchange mở cho từng người sau own receivedAt;
+DirectOrder mở cho hai bên khi Buyer xác nhận nhận sách (BuyerReceived);
+PointOrder Inspection cần collectedAt. Giao dịch tranh chấp/hủy không cho tạo,
+sửa hoặc xóa; giữ revision. Completed vẫn là điều kiện bắt buộc cho công bố và
+tính điểm. Thời điểm công bố không sớm hơn Completed hoặc hạn sửa của bất cứ
+bản nào. Hạn gửi168h vẫn từ Completed; hạn sửa48h từ lần tạo đầu kể cả viết sớm.
+`awaitingCompletion` phân biệt bản riêng đang chờ, danh sách trả completedAt=null
+và reviewableAt thật khi chưa hoàn tất. Không bịa timestamp hoàn tất.
+
+Ngoại lệ có giới hạn với ADR0064: Buyer ACTIVE được xác nhận InTransit v4 khi
+pickup hợp lệ, còn hạn giao, chưa có delivery/carrier review, commitment/hold
+còn nguyên. Lệnh Buyer-only dùng key/version/receipt và chuyển Inspection v5,
+mở72h; không giải ngân. Carrier Delivered/settlement và worker gate vẫn đóng.
+Inspection lịch sử chỉ có carrier event không được gán thêm BuyerReceived hoặc
+reset hạn. Không mở claim/return/settlement hoặc đóng READINESS qua gói này.
+Evidence mới xem [gói demo03/11](../features/RECEIPT_REVIEW_DEMO_2026_11_03.md).
+
 - Dùng chung review cho `Exchange`, `DirectOrder`, `PointOrder` đã `Completed`
   và có mốc hoàn tất hợp lệ. Review không được tự đưa giao dịch tới Completed.
   DirectDelivery vẫn chịu gate F2h; fixture Completed chỉ là dữ liệu QA để kiểm

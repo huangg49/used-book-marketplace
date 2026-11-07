@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Gavel, Bell, ArrowRight, Timer, ShieldCheck } from "lucide-react";
-import { listNotifications, markNotificationsRead } from "../../../services/notifications";
+import { notificationPreviewQuery, notificationPath, markNotificationsRead } from "../../../services/notifications";
 import { queryClient } from "../../../lib/session";
 import { ROUTES } from "../../../lib/routes";
 import { DashboardSectionHeading } from "./DashboardSectionHeading";
@@ -19,10 +19,7 @@ interface DashboardLiveAuctionsProps {
 }
 
 export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
-  const query = useQuery({
-    queryKey: ["notifications", ownerId, "overview", 4],
-    queryFn: () => listNotifications(undefined, 4),
-  });
+  const query = useQuery(notificationPreviewQuery(ownerId));
 
   function read(id: string, readAt: string | null) {
     if (!readAt) {
@@ -34,8 +31,8 @@ export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
     }
   }
 
-  const items = query.data?.items || [];
-  const outbidNotices = items.filter((n) => n.kind === "AuctionOutbid" || n.title?.toLowerCase().includes("trả giá"));
+  const items = query.data?.items.slice(0, 4) || [];
+  const outbidNotices = items.filter((n) => n.targetType === "Auction" && n.kind === "AuctionOutbid");
 
   return (
     <section
@@ -45,7 +42,7 @@ export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm border-b border-surface-container-high/40 pb-space-sm">
         <DashboardSectionHeading id="overview-activity-title" title="Hoạt động gần đây"
-          description="Thông báo từ các phiên đấu giá." icon={<Gavel size={20} />} />
+          description="Thông báo về giao dịch và hoạt động của bạn." icon={<Gavel size={20} />} />
         <Link
           to={ROUTES.notifications}
           className="shrink-0 self-start sm:self-center min-h-11 font-label-md text-label-md text-primary hover:text-secondary inline-flex items-center gap-1 font-semibold transition-colors"
@@ -78,7 +75,7 @@ export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
           </div>
           <h3 className="m-0 font-headline-sm text-headline-sm text-primary font-bold">Chưa có thông báo</h3>
           <p className="font-body-sm text-body-sm text-on-surface-variant max-w-sm mt-1">
-            Khi có cập nhật về phiên đấu giá của bạn, thông báo sẽ nằm ở đây.
+            Khi có cập nhật về hoạt động của bạn, thông báo sẽ nằm ở đây.
           </p>
         </div>
       ) : (
@@ -127,7 +124,7 @@ export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
 
                 <div className="p-space-md pt-0">
                   <Link
-                    to={ROUTES.auctionDetail(outbidNotices[0].targetId)}
+                    to={notificationPath(outbidNotices[0])}
                     onClick={() => read(outbidNotices[0].id, outbidNotices[0].readAt)}
                     className="w-full py-2 px-space-md rounded bg-secondary text-on-secondary font-title-md text-sm hover:bg-on-secondary-container transition-colors shadow-sm flex items-center justify-center gap-1.5"
                   >
@@ -142,11 +139,11 @@ export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
                   <div className="flex items-center gap-2">
                     <ShieldCheck size={16} className="text-primary-fixed" />
                     <span className="font-label-md text-label-md uppercase tracking-wider font-semibold">
-                      Theo dõi phiên đấu giá
+                      Thông báo gần đây
                     </span>
                   </div>
                   <span className="font-label-sm text-label-sm bg-on-primary/20 text-on-primary px-2 py-0.5 rounded font-mono">
-                    LIVE
+                    CẬP NHẬT
                   </span>
                 </div>
                 <div className="p-space-md flex flex-col gap-2">
@@ -162,11 +159,11 @@ export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
                 </div>
                 <div className="p-space-md pt-0">
                   <Link
-                    to={ROUTES.auctionDetail(items[0].targetId)}
+                    to={notificationPath(items[0])}
                     onClick={() => read(items[0].id, items[0].readAt)}
                     className="w-full py-2 px-space-md rounded bg-surface-container-high text-primary font-title-md text-sm hover:bg-surface-dim transition-colors flex items-center justify-center gap-1.5"
                   >
-                    <span>Xem chi tiết phiên</span>
+                    <span>Xem chi tiết</span>
                     <ArrowRight size={15} />
                   </Link>
                 </div>
@@ -179,7 +176,7 @@ export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
                 {items.slice(0, 3).map((n) => (
                   <li key={n.id} className="p-2.5 rounded-lg bg-surface-container-lowest/80 hover:bg-surface-container-lowest transition-colors border border-outline-variant/20">
                     <Link
-                      to={ROUTES.auctionDetail(n.targetId)}
+                      to={notificationPath(n)}
                       onClick={() => read(n.id, n.readAt)}
                       className="flex flex-col gap-0.5 no-underline"
                     >
@@ -201,7 +198,7 @@ export function DashboardLiveAuctions({ ownerId }: DashboardLiveAuctionsProps) {
               </ul>
               <div className="pt-2 text-right">
                 <Link to={ROUTES.notifications} className="text-xs font-semibold text-primary hover:text-secondary underline">
-                  Xem tất cả thông báo ({items.length})
+                  Xem tất cả thông báo
                 </Link>
               </div>
             </div>

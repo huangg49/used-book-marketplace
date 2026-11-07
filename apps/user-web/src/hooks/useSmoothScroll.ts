@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
-import Lenis from "lenis";
+import type Lenis from "lenis";
+import { DemandScroll } from "../lib/demand-scroll";
 import "lenis/dist/lenis.css";
 
 let activeLenis: Lenis | null = null;
@@ -42,7 +43,7 @@ export function useGlobalSmoothScroll() {
     }
 
     if (!lenisRef.current) {
-      const lenis = new Lenis({
+      const lenis = new DemandScroll({
         duration: 1.15,
         easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
         orientation: "vertical",
@@ -51,22 +52,16 @@ export function useGlobalSmoothScroll() {
         wheelMultiplier: 0.9,
         touchMultiplier: 1.5,
         infinite: false,
+        // Owner policy: preserve authored scrolling under either OS preference.
+        respectReducedMotion: false,
       });
 
       lenisRef.current = lenis;
       activeLenis = lenis;
 
-      let rafId: number;
-      function raf(time: number) {
-        lenis.raf(time);
-        rafId = requestAnimationFrame(raf);
-      }
-      rafId = requestAnimationFrame(raf);
-
       lenis.scrollTo(0, { immediate: true });
 
       return () => {
-        cancelAnimationFrame(rafId);
         lenis.destroy();
         if (activeLenis === lenis) {
           activeLenis = null;

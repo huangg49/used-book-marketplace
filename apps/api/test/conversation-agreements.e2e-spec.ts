@@ -466,6 +466,39 @@ describe('Unified conversation agreements / isolated Mongo HTTP', () => {
       ).body,
     ).toHaveLength(1);
   });
+  it('reads the newest messages first and pages across tied timestamps without skips', async () => {
+    const f = await setup();
+    const path = `/me/purchase-conversations/${f.id}/messages`;
+    const empty = await get(`${path}/history`, f.buyer).expect(200);
+    expect(empty.body).toEqual({ items: [], olderCursor: null });
+    const epoch = Date.now() - 10_000;
+    const rows = Array.from({ length: 505 }, (_, index) => ({
+      _id: randomUUID(), conversationId: f.id, senderId: f.buyer.id,
+      body: 'QA history fixture', sentAt: new Date(epoch + Math.floor(index / 3)),
+    }));
+    await db.c.purchase_messages.insertMany(rows);
+    const expected = rows.sort((a, b) => +a.sentAt - +b.sentAt || a._id.localeCompare(b._id)).map(row => row._id);
+    const first = await get(`${path}/history?limit=100`, f.seller).expect(200);
+    expect(first.headers['cache-control']).toContain('no-store');
+    expect(first.body.items.map((item: { id: string }) => item.id)).toEqual(expected.slice(-100));
+    expect((await get(path, f.buyer).expect(200)).body.map((item: { id: string }) => item.id)).toEqual(expected.slice(-500));
+    await get(`${path}/history?before=invalid`, f.buyer).expect(400);
+    await get(`${path}/history?limit=101`, f.buyer).expect(400);
+    await get(`${path}/history?before=${first.body.olderCursor}`, await reader()).expect(404);
+    const another = await setup();
+    await get(`/me/purchase-conversations/${another.id}/messages/history?before=${first.body.olderCursor}`, another.buyer).expect(400);
+    await db.c.purchase_messages.insertOne({ ...rows[0]!, _id: randomUUID(), sentAt: new Date(epoch + 5000) });
+    let cursor = first.body.olderCursor;
+    let seen = first.body.items.map((item: { id: string }) => item.id);
+    for (let page = 0; page < 5; page++) {
+      expect(cursor).toEqual(expect.any(String));
+      const older = await get(`${path}/history?limit=100&before=${cursor}`, f.buyer).expect(200);
+      seen = [...older.body.items.map((item: { id: string }) => item.id), ...seen];
+      cursor = older.body.olderCursor;
+    }
+    expect(cursor).toBeNull();
+    expect(seen).toEqual(expected);
+  });
   it('mode changes and order creation compete atomically; only one intent succeeds', async () => {
     const f = await setup();
     await attachQuote(f);
@@ -524,6 +557,19 @@ describe('Unified conversation agreements / isolated Mongo HTTP', () => {
     current = await room(f.id, f.seller);
     expect(current.terms.activeExchangeId).toBe(created.id);
     expect(current.terms.exchangeIds).toEqual([created.id]);
+    const sentAt = new Date();
+    const linkedMessage = randomUUID(), roomMessage = randomUUID();
+    await db.c.exchange_messages.insertOne({
+      _id: linkedMessage, exchangeId: created.id, senderId: f.buyer.id, body: 'QA linked history', sentAt,
+    });
+    await db.c.purchase_messages.insertOne({
+      _id: roomMessage, conversationId: f.id, senderId: f.seller.id, body: 'QA current history', sentAt,
+    });
+    const history = `/me/purchase-conversations/${f.id}/messages/history?limit=1`;
+    const newest = (await get(history, f.seller).expect(200)).body;
+    const previous = (await get(`${history}&before=${newest.olderCursor}`, f.buyer).expect(200)).body;
+    expect([previous.items[0].id, newest.items[0].id]).toEqual([linkedMessage, roomMessage].sort());
+    expect(previous.olderCursor).toBeNull();
     await post(
       `/me/purchase-conversations/${f.id}/terms`,
       { expectedVersion: current.version, kind: 'Mode', mode: 'Negotiation' },

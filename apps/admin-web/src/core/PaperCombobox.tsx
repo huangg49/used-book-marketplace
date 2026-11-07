@@ -78,7 +78,7 @@ export function PaperCombobox({
   return (
     <div ref={root} className={styles.combo}>
       <label htmlFor={`${id}-input`}>{label}</label>
-      <div className={styles.control}>
+      <div data-focus-surface className={styles.control}>
         <Search size={16} aria-hidden="true" />
         <input
           id={`${id}-input`}

@@ -33,8 +33,14 @@ try {
   let listingRequests = 0;
   let pendingRoute;
   const queries = [];
-  await page.route("**/api/v1/**", async route => {
+  await page.routeWebSocket("**/*", socket => socket.close());
+  await page.route("**/*", async route => {
     const url = new URL(route.request().url());
+    if (url.pathname.startsWith("/socket.io/"))
+      return route.fulfill({ status: 503, json: { code: "QA_NO_REALTIME" } });
+    if (!url.pathname.startsWith("/api/v1/")) {
+      return url.origin === origin ? route.continue() : route.abort();
+    }
     if (url.pathname !== "/api/v1/listings") {
       await route.fulfill({ status: 401, json: { code: "UNAUTHORIZED", message: "QA anonymous" } });
       return;
@@ -53,6 +59,29 @@ try {
   await expect(empty).toBeVisible();
   await expect(loading).toHaveCount(0);
   checks.push("no-match response ends loading and shows the empty state");
+
+  // Focus paint must grow around the same perimeter, never animate a drop shadow upwards.
+  const focusFrames = await input.evaluate(async field => {
+    const owner = field.closest('[data-focus-surface]');
+    const read = () => {
+      const r = owner.getBoundingClientRect(), s = getComputedStyle(owner);
+      return { x:r.x, y:r.y, width:r.width, height:r.height, scroll:scrollY, shadow:s.boxShadow, duration:s.transitionDuration };
+    };
+    const before = read(), frames = [];
+    for (const focused of [true, false]) {
+      if (focused) field.focus({preventScroll:true}); else field.blur();
+      for (let n=0;n<14;n++) { await new Promise(requestAnimationFrame); frames.push(read()); }
+    }
+    return {before,frames};
+  });
+  for (const frame of [focusFrames.before, ...focusFrames.frames]) {
+    assert.equal(frame.y, focusFrames.before.y, 'focus does not move the search bar');
+    assert.equal(frame.height, focusFrames.before.height, 'focus does not resize the search bar');
+    assert.equal(frame.scroll, focusFrames.before.scroll, 'focus does not scroll the page');
+    assert.ok(frame.duration.split(',').every(v => v.trim()==='0.14s'), 'focus and blur share 140ms timing');
+    assert.ok(/0px 0px 0px/.test(frame.shadow), `focus paint stays centered with zero blur: ${frame.shadow}`);
+  }
+  checks.push('focus/blur retain geometry and centered shadow throughout the transition');
 
   await input.focus();
   await input.dispatchEvent("compositionstart");
@@ -85,12 +114,20 @@ try {
 
   await input.focus();
   await input.dispatchEvent("compositionstart");
-  await input.fill("  explicit-submit-qa  ");
-  // Submit without blur or compositionend, including keyboard/assistive submit.
-  await page.getByRole("search").evaluate(form => form.requestSubmit());
+  // Submit in the same browser task as the last input event, before a
+  // concurrent React Router render can catch up. No blur/compositionend.
+  await input.evaluate(field => {
+    const value = "  explicit-submit-qa  ";
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(field, value);
+    field.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: value }));
+    field.form.requestSubmit();
+  });
   await expect.poll(() => queries.at(-1)).toBe("explicit-submit-qa");
   await expect(empty).toBeVisible();
   await expect(input).toHaveValue("explicit-submit-qa");
+  const submittedParams = new URL(page.url()).searchParams;
+  assert.equal(submittedParams.get("q"), "explicit-submit-qa");
+  assert.equal(submittedParams.get("data"), "live");
   assert.equal(queries.at(-1), "explicit-submit-qa");
   checks.push("explicit submit clears stale composition and searches trimmed text");
 

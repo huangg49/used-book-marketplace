@@ -142,6 +142,7 @@ try {
         ...(role === "Buyer" ? buyer : seller), email: actor + "@example.test",
         roles: ["MEMBER"], status: "ACTIVE",
       });
+
       if (routePath === "/me/orders") return send({ items: [...orders.values()].map((order) => ({
         id: order.id, title: order.item.metadata.title, listingId: order.item.listingId,
         version: order.version, state: order.state, role, createdAt: order.createdAt,
@@ -197,9 +198,13 @@ try {
         evidence.set(packing[2], [{ id: id(601), status: method === "PUT" ? "Ready" : "Pending" }]);
         return send({ entityId: id(601) });
       }
+      if (routePath === "/me/profile") return send({id:(actor==='buyer'?buyer:seller).id,version:1,displayName:(actor==='buyer'?buyer:seller).displayName,email:actor+'@example.test',contactPhone:null,avatarId:null,pendingEmailChange:null});
       if (routePath === "/me/purchase-conversations") return send([...rooms.values()]);
-      const roomMatch = routePath.match(/^\/me\/purchase-conversations\/([^/]+)(?:\/(messages|events))?$/);
+      const roomMatch = routePath.match(/^\/me\/purchase-conversations\/([^/]+)(?:\/(messages\/history|messages|events))?$/);
       if (roomMatch && rooms.has(roomMatch[1])) {
+        if (roomMatch[2] === "messages/history") return historyFailures.has(roomMatch[1])
+          ? send({ code: "Unavailable", message: "QA history unavailable" }, 503)
+          : send({ items: messages.get(roomMatch[1]) ?? [], olderCursor: null });
         if (roomMatch[2] === "messages") return historyFailures.has(roomMatch[1])
           ? send({ code: "Unavailable", message: "QA history unavailable" }, 503)
           : send(messages.get(roomMatch[1]) ?? []);
@@ -244,6 +249,7 @@ try {
   await b.locator(`a[href="/chat/orders/${negotiated.id}"]`).click();
   await b.waitForURL(`**/chat/${negotiated.conversationId}`);
   const br = orderRegion(b);
+  await br.getByText("Địa chỉ nhận sách", { exact: true }).click();
   await br.getByText("Địa chỉ nhận riêng của đơn QA", { exact: false }).waitFor();
   assert.equal(commands.ensure.length, 0, "linked order skips creation and selects its exact room");
   await br.getByRole("heading", { name: negotiated.item.metadata.title, exact: true }).waitFor();
@@ -283,7 +289,7 @@ try {
 
   await b.setViewportSize({ width: 1440, height: 1100 });
   await b.evaluate(() => document.documentElement.style.fontSize = "100%");
-  historyFailures.add(negotiated.conversationId); await refresh(b, "purchase-messages");
+  historyFailures.add(negotiated.conversationId); await refresh(b, "purchase-message-history");
   await b.getByText("Chưa tải được lịch sử tin nhắn.", { exact: true }).waitFor();
   await b.getByText(oldMessage.body, { exact: true }).waitFor();
   historyFailures.clear(); await b.getByRole("button", { name: "Tải lại tin nhắn", exact: true }).click();
@@ -296,6 +302,7 @@ try {
   assert.equal(await br.getByText("Địa chỉ nhận riêng của đơn QA", { exact: false }).count(), 0, "cached private address hidden on403");
   assert.equal(await br.getByRole("button", { name: /Thanh toán|Hủy đơn/ }).count(), 0, "403 hides private actions");
   denied.clear(); await br.getByRole("button", { name: "Thử lại", exact: true }).click();
+  await br.getByText("Địa chỉ nhận sách", { exact: true }).click();
   await br.getByText("Địa chỉ nhận riêng của đơn QA", { exact: false }).waitFor();
   await b.getByRole("link", { name: "Về đơn hàng của tôi", exact: true }).click();
   await b.waitForURL("**/orders");
@@ -307,6 +314,7 @@ try {
   assert.equal(commands.ensure.length, 2); assert.deepEqual(commands.ensure[0], commands.ensure[1], "ensure retry preserves key/body after committed lost response");
   assert.equal(commands.ensure[0].body, "{}"); assert.ok(commands.ensure[0].key);
   await orderRegion(b).getByRole("heading", { name: buyNow.item.metadata.title, exact: true }).waitFor();
+  await orderRegion(b).getByText("Tình trạng và ghi chú bản sách", { exact: true }).click();
   await orderRegion(b).getByText("Mô tả bản sách được lưu tại thời điểm đặt đơn QA.", { exact: true }).waitFor();
   await goto(b, `/orders/${buyNow.id}`); await b.waitForURL(`**/chat/${buyNow.conversationId}`);
   assert.equal(commands.ensure.length, 2, "legacy URL reuses linked order room");
@@ -315,6 +323,7 @@ try {
   await goto(s, "/orders"); await s.locator(`a[href="/chat/orders/${buyNow.id}"]`).click();
   await s.waitForURL(`**/chat/${buyNow.conversationId}`);
   const sr = orderRegion(s);
+  await sr.getByText("Nơi gửi sách", { exact: true }).click();
   await sr.getByText("Địa chỉ gửi riêng của đơn QA", { exact: false }).waitFor();
   await sr.getByText("Địa chỉ nhận riêng của đơn QA", { exact: false }).waitFor();
   assert.equal(await sr.getByRole("button", { name: /Thanh toán|Hủy đơn/ }).count(), 0, "seller never gets buyer payment/cancel actions");
@@ -338,6 +347,26 @@ try {
   assert.ok(await s.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "seller320px large text has no overflow");
   await s.setViewportSize({ width: 1440, height: 1100 });
   await s.evaluate(() => document.documentElement.style.fontSize = "100%");
+  const photoForm = sr.getByRole("form", { name: "Lưu ảnh đóng gói", exact: true });
+  const shipmentForm = sr.getByRole("form", { name: "Đăng ký vận đơn", exact: true });
+  const photoBounds = await photoForm.boundingBox(), shipmentBounds = await shipmentForm.boundingBox();
+  assert.ok(shipmentBounds.y - photoBounds.y - photoBounds.height >= 20, "separate upload and registration groups");
+  const fieldBounds = await tracking.boundingBox();
+  const registerBounds = await shipmentForm.getByRole("button").boundingBox();
+  assert.ok(registerBounds.y - fieldBounds.y - fieldBounds.height >= 8, "registration action does not touch its field");
+  for (const width of [1440, 1280, 1279, 1100, 1000, 961, 960]) {
+    await s.setViewportSize({ width, height: 900 });
+    const layout = await sr.locator('[data-transaction-scroll]').evaluate(n => getComputedStyle(n).display);
+    assert.equal(layout, width >= 1280 ? "grid" : "flex", "context never reopens into columns as the viewport narrows");
+    assert.ok(await s.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "intermediate viewport has no horizontal overflow");
+    const composer = s.locator("#chat-message");
+    if (width <= 960) await s.getByRole("button", { name: "Hội thoại", exact: true }).click();
+    await composer.fill("");
+    await s.waitForFunction(() => { const n = document.getElementById("chat-message"); return n.scrollHeight <= n.clientHeight; });
+    await composer.fill("[QA] Bản nháp của người bán.");
+    if (width <= 960) await s.getByRole("button", { name: "Đơn hàng", exact: true }).click();
+  }
+  await s.setViewportSize({ width: 1440, height: 1100 });
   await s.screenshot({ path: path.join(out, "seller-order-desktop.png"), fullPage: true });
   await sr.getByRole("button", { name: "Đăng ký vận đơn", exact: true }).click();
   await sr.getByRole("button", { name: "Thử lại đăng ký vận đơn", exact: true }).waitFor();

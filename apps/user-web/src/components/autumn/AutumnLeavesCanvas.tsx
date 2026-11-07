@@ -28,6 +28,9 @@ const PALETTE = [
   { color: "#d96534", dark: "#a34318" }, // Burnt Coral
 ];
 
+// Include shadows and room for scrolling between frames.
+const PAINT_OVERSCAN = 192;
+
 // Vector drawing helpers centered at (0, 0)
 function drawBirchLeaf(ctx: CanvasRenderingContext2D, size: number) {
   const w = size * 0.52;
@@ -110,11 +113,13 @@ export function AutumnLeavesCanvas() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    let animId = 0;
-    let isVisible = true;
+    let animId: number | null = null;
+    let inView = false;
     let width = 0;
     let height = 0;
     let dpr = Math.min(window.devicePixelRatio || 1, 2);
+    let drawnTop = 0;
+    let drawnHeight = 0;
 
     // Resize handling
     const updateSize = () => {
@@ -125,6 +130,7 @@ export function AutumnLeavesCanvas() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.floor(width * dpr);
       canvas.height = Math.floor(height * dpr);
+      drawnHeight = 0;
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
     };
@@ -171,11 +177,9 @@ export function AutumnLeavesCanvas() {
     let lastTime = performance.now();
 
     const render = (now: number) => {
-      if (!isVisible) {
-        animId = requestAnimationFrame(render);
-        return;
-      }
-
+      const { top } = canvas.getBoundingClientRect();
+      const paintTop = -top - PAINT_OVERSCAN;
+      const paintBottom = window.innerHeight - top + PAINT_OVERSCAN;
       const dt = Math.min((now - lastTime) / 1000, 0.1);
       lastTime = now;
       const t = now;
@@ -189,9 +193,18 @@ export function AutumnLeavesCanvas() {
       }
       windGust += (targetGust - windGust) * 0.03;
 
+      // Work in backing-store pixels so the clip and the next clear share an edge.
+      const bandTop = Math.max(0, Math.floor(paintTop * dpr));
+      const bandBottom = Math.min(canvas.height, Math.ceil(paintBottom * dpr));
+      const bandHeight = Math.max(0, bandBottom - bandTop);
+      ctx.clearRect(0, drawnTop, canvas.width, drawnHeight);
+      drawnTop = bandTop;
+      drawnHeight = bandHeight;
       ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, bandTop, canvas.width, bandHeight);
+      ctx.clip();
       ctx.scale(dpr, dpr);
-      ctx.clearRect(0, 0, width, height);
 
       // Sort leaves by depth (z) for correct visual layering
       leaves.sort((a, b) => a.z - b.z);
@@ -215,6 +228,9 @@ export function AutumnLeavesCanvas() {
           }
           continue;
         }
+
+        // Keep simulating all leaves so scrolling reveals their current positions.
+        if (l.y < paintTop || l.y > paintBottom) continue;
 
         // 3D flip ratio: cos gives range -1 to 1
         const flipCos = Math.cos(l.flip);
@@ -252,7 +268,19 @@ export function AutumnLeavesCanvas() {
       animId = requestAnimationFrame(render);
     };
 
-    animId = requestAnimationFrame(render);
+    const stopAnimation = () => {
+      if (animId !== null) {
+        cancelAnimationFrame(animId);
+        animId = null;
+      }
+    };
+    const syncAnimation = () => {
+      if (!inView || document.hidden) {
+        stopAnimation();
+      } else if (animId === null) {
+        animId = requestAnimationFrame(render);
+      }
+    };
 
     // ResizeObserver
     const resizeObserver = new ResizeObserver(() => {
@@ -262,27 +290,20 @@ export function AutumnLeavesCanvas() {
       resizeObserver.observe(canvas.parentElement);
     }
 
-    // IntersectionObserver to pause when off-screen
-    const io = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-        isVisible = entry?.isIntersecting ?? true;
-      },
-      { threshold: 0.05 }
-    );
+    const io = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      syncAnimation();
+    });
     io.observe(canvas);
 
-    // Tab visibility handling
-    const handleVisibilityChange = () => {
-      isVisible = !document.hidden;
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener("visibilitychange", syncAnimation);
 
     return () => {
-      cancelAnimationFrame(animId);
+      stopAnimation();
       resizeObserver.disconnect();
       io.disconnect();
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      io.takeRecords();
+      document.removeEventListener("visibilitychange", syncAnimation);
     };
   }, []);
 

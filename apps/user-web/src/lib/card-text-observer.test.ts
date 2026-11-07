@@ -9,7 +9,7 @@ describe("shared card text observation", () => {
   let windowEvents: EventTarget;
   let fontEvents: EventTarget;
   let cleanup: (() => void)[];
-  const element = () => ({}) as HTMLElement;
+  const element = () => ({ className: "" }) as HTMLElement;
   const observer = {
     observe: vi.fn(), unobserve: vi.fn(), disconnect: vi.fn(),
   };
@@ -78,7 +78,7 @@ describe("shared card text observation", () => {
     expect(fontEvents.addEventListener).toHaveBeenCalledTimes(1);
     windowEvents.dispatchEvent(new Event("resize"));
     fontEvents.dispatchEvent(new Event("loadingdone"));
-    rootChanged([], rootObserver as unknown as MutationObserver);
+    rootChanged([{ attributeName: "style" }] as MutationRecord[], rootObserver as unknown as MutationObserver);
     expect(frames.size).toBe(1);
     flush();
     slots.forEach(({ fit }) => expect(fit).toHaveBeenCalledTimes(1));
@@ -92,6 +92,49 @@ describe("shared card text observation", () => {
     flush();
     expect(first.fit).toHaveBeenCalledTimes(1);
     expect(second.fit).not.toHaveBeenCalled();
+  });
+
+  function classesChanged(before: string, after: string) {
+    document.documentElement.className = after;
+    rootChanged([{ attributeName: "class", oldValue: before }] as MutationRecord[], rootObserver as unknown as MutationObserver);
+  }
+
+  it("ignores Lenis scroll state changes while keeping resize and font signals", () => {
+    const slot = subscribe();
+    classesChanged("brand lenis", "lenis lenis-scrolling lenis-smooth brand");
+    classesChanged("brand lenis lenis-scrolling lenis-smooth", "brand lenis lenis-stopped lenis-locked lenis-autoToggle");
+    expect(frames.size).toBe(0);
+    resized(slot.frame);
+    flush();
+    expect(slot.fit).toHaveBeenCalledTimes(1);
+    fontEvents.dispatchEvent(new Event("loadingdone"));
+    flush();
+    expect(slot.fit).toHaveBeenCalledTimes(2);
+  });
+
+  it("refits for typography classes, unknown Lenis classes and inline root styles", () => {
+    const slot = subscribe();
+    classesChanged("lenis", "large-text lenis lenis-scrolling");
+    flush();
+    expect(slot.fit).toHaveBeenCalledTimes(1);
+    classesChanged("large-text lenis", "large-text lenis lenis-new-state");
+    flush();
+    expect(slot.fit).toHaveBeenCalledTimes(2);
+    rootChanged([{ attributeName: "style" }] as MutationRecord[], rootObserver as unknown as MutationObserver);
+    flush();
+    expect(slot.fit).toHaveBeenCalledTimes(3);
+  });
+
+  it("keeps real class changes when batched with scrolling changes", () => {
+    const slot = subscribe();
+    document.documentElement.className = "large-text lenis lenis-scrolling";
+    rootChanged([
+      { attributeName: "class", oldValue: "lenis" },
+      { attributeName: "class", oldValue: "large-text lenis" },
+    ] as MutationRecord[], rootObserver as unknown as MutationObserver);
+    expect(frames.size).toBe(1);
+    flush();
+    expect(slot.fit).toHaveBeenCalledTimes(1);
   });
 
   it("does not fit a removed slot while other slots remain", () => {

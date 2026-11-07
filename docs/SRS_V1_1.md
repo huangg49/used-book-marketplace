@@ -294,7 +294,7 @@ Mọi yêu cầu trong mục này là M trừ khi ghi E. Các tiêu chí AC ở 
 
 | Mã | Yêu cầu |
 |---|---|
-| FR-R01 | Chỉ giao dịch Completed và trong POL-18 mới được tạo đánh giá; mỗi participant có một đánh giá cho giao dịch, không tạo lại để kéo dài hạn sửa. |
+| FR-R01 | Theo bổ sung owner03/11/2026 (ADR0052), participant được viết đánh giá riêng ngay sau xác nhận nhận sách hợp lệ, hoặc khi giao dịch Completed trong POL-18; mỗi participant có một đánh giá, không tạo lại để kéo dài hạn sửa. Không công bố/tính điểm trước Completed, không hoàn tất hay giải ngân từ review. |
 | FR-R02 | Buyer chấm chất lượng sách và đối tác; Seller chấm đối tác; Exchange mỗi bên chấm sách nhận và đối tác. Thang 1–5 nguyên; không ép Seller chấm chất lượng sách do Buyer không gửi sách ở Order. |
 | FR-R03 | Chỉ công bố khi cả hai đã gửi và đều hết hạn sửa/xóa, hoặc khi đã hết hạn gửi và mọi đánh giá đã gửi đều hết hạn sửa/xóa. Trước đó chỉ tác giả thấy bản mình và hệ thống có quyền đọc theo nhiệm vụ. Không cho sửa điểm sau khi đã xem đánh giá đối phương. |
 | FR-R04 | Cho sửa/xóa công khai trong POL-19, lưu revision; không cho xóa khi được giữ làm bằng chứng. Sau hạn khóa sửa; người bị đánh giá được một phản hồi, có kiểm duyệt. |
@@ -672,10 +672,10 @@ Mỗi use case dưới đây xác định trigger, tiền điều kiện, luồn
 
 ### UC-14 Đánh giá giao dịch
 
-**Actor:** Participant. **Tiền điều kiện:** Completed, trong 168 giờ và chưa có review.
+**Actor:** Participant. **Tiền điều kiện:** đã xác nhận nhận sách hợp lệ hoặc Completed trong168giờ; chưa có review. Bổ sung owner03/11/2026 theo ADR0052: viết sớm không thay thời điểm hoàn tất, giữ tiền hoặc điều kiện công bố.
 
 1. Chọn điểm phù hợp vai và nội dung; hệ thống gắn transaction, reviewer và đối tác.
-2. Lưu bản chưa công bố; chỉ công bố khi cả hai đã gửi và hết quyền sửa/xóa, hoặc đã hết hạn gửi và mọi review hiện có đều hết quyền sửa/xóa. Review tạo sát cuối hạn gửi có thể được công bố tối đa 48 giờ sau hạn gửi.
+2. Lưu bản chưa công bố; chỉ công bố sau Completed và khi cả hai đã gửi và hết quyền sửa/xóa, hoặc đã hết hạn gửi và mọi review hiện có đều hết quyền sửa/xóa. Review tạo sát cuối hạn gửi có thể được công bố tối đa48giờ sau hạn gửi. Hạn gửi168giờ vẫn tính từ Completed;48giờ sửa tính từ lần tạo đầu kể cả viết sớm.
 3. Tác giả sửa/xóa công khai trong 48 giờ từ lúc tạo, nếu không bị giữ làm bằng chứng.
 4. Staff ẩn vi phạm; hệ thống tính lại điểm từ bản công khai hiện hành.
 

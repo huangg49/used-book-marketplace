@@ -926,6 +926,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/purchase-conversations/{conversationId}/messages/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Same participant and existing-obligation checks as listPurchaseMessages. Starts with the most recent messages. Follow olderCursor to read earlier messages, including linked Exchange history. */
+        get: operations["listPurchaseMessageHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/purchase-conversations/{conversationId}/quote": {
         parameters: {
             query?: never;
@@ -5225,6 +5242,10 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
         };
+        PurchaseMessageHistory: {
+            items: components["schemas"]["PurchaseMessage"][];
+            olderCursor: string | null;
+        };
         PurchaseMessage: {
             /** Format: uuid */
             id: string;
@@ -5927,11 +5948,8 @@ export interface components {
             inspectionDeadline: string | null;
             /** Format: date-time */
             completedAt: string | null;
-            /**
-             * @description Always false while DirectDelivery completion is release-blocked; historical delivery/inspection timestamps do not grant a new command or settlement.
-             * @constant
-             */
-            canConfirmReceipt: false;
+            /** @description Buyer may acknowledge receipt after validated pickup. Opens the 72-hour inspection window without settlement. */
+            canConfirmReceipt: boolean;
             /** Format: uuid */
             quoteId: string;
             item: components["schemas"]["OrderItemSnapshot"];
@@ -7708,6 +7726,8 @@ export interface components {
             pairToken: string | null;
         };
         TransactionReviewsResponse: {
+            /** @description A received transaction may be reviewed privately before completion; no public score or settlement yet. */
+            awaitingCompletion: boolean;
             demoTimeAdvance?: components["schemas"]["DemoReviewTimeAdvance"];
             /** Format: uuid */
             partnerId: string;
@@ -7736,7 +7756,9 @@ export interface components {
                 /** Format: uuid */
                 transactionId: string;
                 /** Format: date-time */
-                completedAt: string;
+                completedAt: string | null;
+                /** Format: date-time */
+                reviewableAt: string;
                 /** Format: uuid */
                 partnerId: string;
                 partnerName: string;
@@ -9557,7 +9579,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Messages in a conversation the current user participates in. */
+            /** @description Up to the 500 most recent messages, in chronological order. */
             200: {
                 headers: {
                     "Cache-Control"?: "no-store";
@@ -9567,6 +9589,36 @@ export interface operations {
                     "application/json": components["schemas"]["PurchaseMessage"][];
                 };
             };
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+        };
+    };
+    listPurchaseMessageHistory: {
+        parameters: {
+            query?: {
+                before?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                conversationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A slice of messages in chronological order, with an optional cursor for older messages. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseMessageHistory"];
+                };
+            };
+            400: components["responses"]["ListingError"];
             401: components["responses"]["ListingError"];
             403: components["responses"]["ListingError"];
             404: components["responses"]["ListingError"];

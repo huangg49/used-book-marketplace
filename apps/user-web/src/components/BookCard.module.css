@@ -350,7 +350,7 @@
   left: 0;
   z-index: 50;
   width: max-content;
-  max-width: min(290px, calc(100vw - 32px));
+  max-width: min(290px, 100%);
   padding: 8px 12px;
   background: var(--shop-paper, #fffdf8);
   color: var(--shop-ink, #281914);

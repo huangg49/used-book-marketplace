@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, Param, Post, Body, Req, Res } from '@nestjs/common';
+import { Controller, Get, HttpCode, Param, Post, Body, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../auth/auth.guard.js';
 import { Roles } from '../auth/roles.guard.js';
@@ -16,6 +16,13 @@ export class PurchasesController {
   }
   @Get('me/purchase-conversations') @Roles('MEMBER') @ExistingObligation() list(@Req() req: AuthenticatedRequest) { return this.purchases.list(req.auth); }
   @Get('me/purchase-conversations/:conversationId/messages') @Roles('MEMBER') @ExistingObligation() messages(@Param('conversationId') id: string, @Req() req: AuthenticatedRequest) { return this.purchases.messages(req.auth, this.input.uuid(id)); }
+  @Get('me/purchase-conversations/:conversationId/messages/history')
+  @Roles('MEMBER')
+  @ExistingObligation()
+  messageHistory(@Param('conversationId') id: string, @Query() query: unknown, @Req() req: AuthenticatedRequest) {
+    const { before, limit } = this.input.query('listPurchaseMessageHistory', query);
+    return this.purchases.messageHistory(req.auth, this.input.uuid(id), typeof before === 'string' ? before : undefined, Number(limit ?? 40));
+  }
   @Post('me/purchase-conversations/:conversationId/quote') @Roles('MEMBER') @HttpCode(200)
   attachQuote(@Param('conversationId') id: string, @Body() body: unknown, @Req() req: AuthenticatedRequest, @Res({ passthrough: true }) res: Response) {
     return commandResponse(this.purchases.attachQuote(commandContext(this.input, req, res), this.input.uuid(id), this.input.body('AttachPurchaseConversationQuote', body)), res);

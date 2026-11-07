@@ -119,7 +119,7 @@ export function AutoBidDialog(props: AutoBidDialogProps) {
             <div className={styles.entry}>
               <div className={styles.field}>
                 <label htmlFor={`${ids}-amount`} className="sr-only">Mức tối đa cho đặt giá tự động</label>
-                <div className={`${styles.inputWrap} ${error ? styles.invalid : ''}`}>
+                <div data-focus-surface data-focus-invalid={!!error} className={`${styles.inputWrap} ${error ? styles.invalid : ''}`}>
                   <input
                     id={`${ids}-amount`}
                     inputMode="numeric"

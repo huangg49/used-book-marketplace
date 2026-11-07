@@ -57,6 +57,13 @@ Messages đọc gộp cả purchase_messages và exchange_messages của các li
 thực, giữ id/tác giả/thời điểm; không copy hoặc viết lại tin nhắn. Socket vẫn dùng
 namespace hiện có, không tạo token store hay transport song song.
 
+Member web mở 40 tin mới nhất qua `GET /me/purchase-conversations/{conversationId}/messages/history`.
+`olderCursor` tải về phía tin cũ, giữ thứ tự theo thời điểm và ID qua cả hai nguồn.
+Cursor chỉ có hiệu lực trong hội thoại tương ứng. Mỗi lượt đọc kiểm lại participant
+và quyền đọc nghĩa vụ hiện có. Client đang dùng `/messages` tiếp tục nhận mảng
+tối đa 500 tin mới nhất theo thứ tự thời gian. Web giữ vị trí khi chèn tin cũ và
+chỉ tự cuộn theo tin đến khi người đọc đang ở cuối khung.
+
 ## Kiểm chứng và giới hạn
 
 Negative/replay/race tests chạy trên replica set QA và database *_test. Có ca

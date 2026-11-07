@@ -9,6 +9,7 @@ import {
 import { ArrowUpRight, ArrowRight, Search, Repeat2, Plus } from "lucide-react";
 import { ROUTES } from "../lib/routes";
 import { CategoryDiscovery } from "../components/CategoryDiscovery";
+import { BrandArtwork } from "../components/BrandArtwork";
 import { HomeBookCard } from "../components/HomeBookCard";
 import { AutumnLeavesCanvas } from "../components/autumn/AutumnLeavesCanvas";
 import {
@@ -77,6 +78,24 @@ const heroCovers = [
   "/illustrations/truyen-kieu.webp",
 ];
 
+// Approximate the visible image widths from the hero CSS, including desktop hover.
+const heroCoverRenditions: Partial<Record<string, { srcSet: string; sizes: string }>> = {
+  "/illustrations/frieren.jpg": {
+    srcSet: "/illustrations/home-hero-covers/frieren-200.webp 200w, " +
+      "/illustrations/home-hero-covers/frieren-400.webp 400w, /illustrations/frieren.jpg 682w",
+    sizes: "(max-width: 1100px) 100px, 136px",
+  },
+  "/illustrations/one-piece.webp": {
+    srcSet: "/illustrations/home-hero-covers/one-piece-200.webp 200w, /illustrations/one-piece.webp 400w",
+    sizes: "(max-width: 1100px) 100px, 148px",
+  },
+  "/illustrations/duoc-su.webp": {
+    srcSet: "/illustrations/home-hero-covers/duoc-su-200.webp 200w, " +
+      "/illustrations/home-hero-covers/duoc-su-400.webp 400w, /illustrations/duoc-su.webp 731w",
+    sizes: "(max-width: 1100px) 100px, 192px",
+  },
+};
+
 function BookmarkPaper() {
   const paperId = useId();
   const paperShape =
@@ -126,6 +145,7 @@ function BookmarkPaper() {
 function HeroCovers() {
   const gallery = useRef<HTMLDivElement>(null);
   const [moving, setMoving] = useState(false);
+  const [failedRenditions, setFailedRenditions] = useState<string[]>([]);
   useEffect(() => {
     const hero = gallery.current?.closest("section");
     if (!hero) return;
@@ -154,23 +174,34 @@ function HeroCovers() {
           className={group === 0 ? styles.leftCovers : styles.rightCovers}
           key={group}
         >
-          {heroCovers.slice(group * 4, group * 4 + 4).map((src, index) => (
-            <span
-              className={`${styles.heroCover} ${index === 2 ? styles.featuredCover : ""}`}
-              key={src + index}
-            >
-              <span className={styles.coverMotion}>
-                <img
-                  src={src}
-                  alt=""
-                  width="120"
-                  height="176"
-                  draggable={false}
-                  decoding="async"
-                />
+          {heroCovers.slice(group * 4, group * 4 + 4).map((src, index) => {
+            const rendition = failedRenditions.includes(src) ? undefined : heroCoverRenditions[src];
+            return (
+              <span
+                className={`${styles.heroCover} ${index === 2 ? styles.featuredCover : ""}`}
+                key={src + index}
+              >
+                <span className={styles.coverMotion}>
+                  <img
+                    sizes={rendition?.sizes}
+                    srcSet={rendition?.srcSet}
+                    src={src}
+                    alt=""
+                    width="120"
+                    height="176"
+                    draggable={false}
+                    decoding="async"
+                    onError={rendition ? (event) => {
+                      const image = event.currentTarget;
+                      if (image.currentSrc !== image.src) {
+                        setFailedRenditions(previous => [...previous, src]);
+                      }
+                    } : undefined}
+                  />
+                </span>
               </span>
-            </span>
-          ))}
+            );
+          })}
         </div>
       ))}
     </div>
@@ -534,9 +565,9 @@ export function HomePage() {
               <span className="sr-only">
                 SÁCH MỚI. CHƯƠNG MỚI. CÙNG LẬT LẠI.
               </span>
-              <img
+              <BrandArtwork
                 className={styles.heroLettering}
-                src="/brand/hero-lettering.png"
+                artwork="hero-lettering"
                 alt=""
                 aria-hidden="true"
                 width="1313"
@@ -554,6 +585,7 @@ export function HomePage() {
           </div>
           <form
             role="search"
+            data-focus-surface
             className={styles.search}
             onSubmit={(event) => {
               event.preventDefault();

@@ -10,18 +10,20 @@ export function AuctionPhoto({
   index = 0,
   interactive = true,
   eager = false,
+  active = true,
 }: {
   auction: AuctionSummary
   index?: number
   interactive?: boolean
   eager?: boolean
+  active?: boolean
 }) {
   const mediaId = auction.book?.photos[index]?.id
   const [failed, setFailed] = useState<string>()
   const photo = useQuery({
     queryKey: ['auction-photo', auction.id, auction.book?.revisionId, mediaId],
     queryFn: () => getAuctionPhoto(auction.id, mediaId!),
-    enabled: !!mediaId,
+    enabled: active && !!mediaId,
     retry: false,
     staleTime: 60_000,
   })

@@ -355,6 +355,7 @@ describe('Admin account controls: real HTTP/Mongo and current permission', () =>
     ).toEqual([]);
     await get(`/me/purchase-conversations/${id}`, target).expect(403);
     await get(`/me/purchase-conversations/${id}/messages`, target).expect(403);
+    await get(`/me/purchase-conversations/${id}/messages/history`, target).expect(403);
     await expect(
       app.get(PurchasesService).send(auth, {
         messageId: randomUUID(),

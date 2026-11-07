@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import {
@@ -31,6 +31,9 @@ import { BundleEditor } from "../components/BookBundle";
 import { bundleCondition } from "../lib/book-bundle";
 import { useSession } from "../hooks/useSession";
 import { useActionCooldown } from "../hooks/useActionCooldown";
+import { useListingActions } from "../hooks/useListingActions";
+import { OwnerListingRecovery } from "../components/OwnerListingRecovery";
+import journeyStyles from "../components/BookJourneyStates.module.css";
 import { session as apiSession } from "../lib/session";
 import { conditions } from "../lib/listing-labels";
 import { ROUTES } from "../lib/routes";
@@ -100,6 +103,7 @@ export function EditListingPage() {
   const { listingId = "" } = useParams();
   const auth = useSession();
   const ownerId = auth.status === "authenticated" ? auth.user.id : undefined;
+  const pendingLifecycle = useListingActions(listingId).length > 0;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -129,14 +133,28 @@ export function EditListingPage() {
 
   const [form, setForm] = useState<RevisionFormValue | null>(null);
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const ownedPreviews = useRef(new Set<string>());
   const [initial, setInitial] = useState("");
   const [attempted, setAttempted] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState(false);
+  const [savedAck, setSavedAck] = useState<{ id: string; version: number; owner: string }>();
+  const waitingSavedRead = savedAck?.id === listingId && savedAck.owner === ownerId;
+  const savedHeading = useRef<HTMLHeadingElement>(null);
   const [submitError, setSubmitError] = useState<string>();
   const [done, setDone] = useState(false);
   const completed = useRef(false);
+  const mutationRunning = useRef(false);
+  const alive = useRef(true);
+  const activeListing = useRef(listingId);
+  useLayoutEffect(() => { activeListing.current = listingId; }, [listingId]);
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
+  useEffect(() => {
+    if (!waitingSavedRead || busy || document.hidden) return;
+    const frame = requestAnimationFrame(() => savedHeading.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [waitingSavedRead, busy]);
   const [confirmHideOpen, setConfirmHideOpen] = useState(false);
   const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
 
@@ -150,7 +168,8 @@ export function EditListingPage() {
   const canArchive = item ? canArchiveListing(item) : false;
 
   async function handleToggleVisibility(to: "Visible" | "Hidden") {
-    if (!item || busy || isHideCoolingDown) return;
+    if (!item || mutationRunning.current || pending || pendingLifecycle || waitingSavedRead || isHideCoolingDown) return;
+    mutationRunning.current = true;
     setBusy(true);
     setSubmitError(undefined);
     try {
@@ -173,22 +192,25 @@ export function EditListingPage() {
       );
       void listing.refetch();
     } finally {
+      mutationRunning.current = false;
       setBusy(false);
     }
   }
 
   async function handleArchive() {
-    if (!item) return;
+    if (!item || mutationRunning.current || pending || pendingLifecycle || waitingSavedRead) return;
+    mutationRunning.current = true;
     setBusy(true);
     setSubmitError(undefined);
     try {
       await archiveListing(item.id, item.version);
-      completed.current = true;
-      setDone(true);
-      setConfirmArchiveOpen(false);
       void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
       void queryClient.invalidateQueries({ queryKey: ["my-listing"] });
       void queryClient.invalidateQueries({ queryKey: ["listings"] });
+      if (!alive.current || activeListing.current !== item.id) return;
+      completed.current = true;
+      setDone(true);
+      setConfirmArchiveOpen(false);
       navigate(ROUTES.myBooks);
     } catch (error) {
       setConfirmArchiveOpen(false);
@@ -202,6 +224,7 @@ export function EditListingPage() {
       );
       void listing.refetch();
     } finally {
+      mutationRunning.current = false;
       setBusy(false);
     }
   }
@@ -209,6 +232,7 @@ export function EditListingPage() {
   const fileInput = useRef<HTMLInputElement>(null);
   const intent = useRef<{
     signature: string;
+    action: "save" | "submit";
     run: ReturnType<typeof createListingRevision>;
   } | null>(null);
 
@@ -243,6 +267,7 @@ export function EditListingPage() {
   const dirty =
     !!current &&
     !done &&
+    !waitingSavedRead &&
     JSON.stringify({
       next: { ...current, photoCount: initial ? JSON.parse(initial).next.photoCount : 0 },
       ids: photos.map((p) => (p.kind === "existing" ? p.id : "new")),
@@ -256,45 +281,58 @@ export function EditListingPage() {
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      !completed.current && dirty && currentLocation.pathname !== nextLocation.pathname,
+      !completed.current && (dirty || pending || pendingLifecycle) && currentLocation.pathname !== nextLocation.pathname,
   );
 
   useBeforeUnload((event) => {
-    if (!completed.current && dirty) {
+    if (!completed.current && (dirty || pending || pendingLifecycle)) {
       event.preventDefault();
       event.returnValue = "";
     }
   });
 
-  useEffect(
-    () => () =>
-      photos.forEach((p) => p.kind === "new" && URL.revokeObjectURL(p.preview)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
+  useLayoutEffect(() => {
+    // Release removed/replaced previews after the photo state commits. Retained
+    // URLs stay valid when reordering, while batched additions also release overflow.
+    const retained = new Set(photos.flatMap(p => p.kind === "new" ? [p.preview] : []));
+    for (const url of ownedPreviews.current) if (!retained.has(url)) {
+      URL.revokeObjectURL(url);
+      ownedPreviews.current.delete(url);
+    }
+  }, [photos]);
+  useEffect(() => () => {
+    ownedPreviews.current.forEach(url => URL.revokeObjectURL(url));
+    ownedPreviews.current.clear();
+  }, []);
 
   const errors = current ? validateRevision(current) : {};
   const showError = (field: keyof typeof errors) =>
     attempted ? errors[field] : undefined;
 
   function patch(change: Partial<RevisionFormValue>) {
+    setSaveSuccessMsg(undefined);
     setForm((previous) => (previous ? { ...previous, ...change } : previous));
   }
 
   function addFiles(files: FileList | null) {
     if (!files) return;
+    setSaveSuccessMsg(undefined);
     const next: PhotoItem[] = [];
+    const room = Math.max(0, MAX_PHOTOS - photos.length);
     let rejected = false;
     for (const file of Array.from(files)) {
       if (!ACCEPTED.includes(file.type) || file.size > 10_000_000) {
         rejected = true;
         continue;
       }
+      if (next.length >= room) continue;
+      const preview = URL.createObjectURL(file);
+      ownedPreviews.current.add(preview);
       next.push({
         key: `n-${crypto.randomUUID()}`,
         kind: "new",
         file,
-        preview: URL.createObjectURL(file),
+        preview,
       });
     }
     setSubmitError(
@@ -305,14 +343,12 @@ export function EditListingPage() {
   }
 
   function removePhoto(key: string) {
-    setPhotos((previous) => {
-      const gone = previous.find((p) => p.key === key);
-      if (gone?.kind === "new") URL.revokeObjectURL(gone.preview);
-      return previous.filter((p) => p.key !== key);
-    });
+    setSaveSuccessMsg(undefined);
+    setPhotos(previous => previous.filter(p => p.key !== key));
   }
 
   function makeCover(key: string) {
+    setSaveSuccessMsg(undefined);
     setPhotos((previous) => {
       const chosen = previous.find((p) => p.key === key);
       return chosen ? [chosen, ...previous.filter((p) => p.key !== key)] : previous;
@@ -320,6 +356,7 @@ export function EditListingPage() {
   }
 
   function review() {
+    if (mutationRunning.current || pending || pendingLifecycle || waitingSavedRead) return;
     setAttempted(true);
     setSubmitError(undefined);
     if (Object.keys(errors).length) {
@@ -331,7 +368,7 @@ export function EditListingPage() {
   }
 
   async function submit() {
-    if (busy) return;
+    if (mutationRunning.current || pendingLifecycle || waitingSavedRead || (pending && intent.current?.action !== "submit")) return;
     if (!pending) {
       if (!item || !current || !bookId) return;
       const origin = origins.find((a) => a.id === current.originAddressId);
@@ -366,6 +403,7 @@ export function EditListingPage() {
       if (intent.current?.signature !== signature)
         intent.current = {
           signature,
+          action: "submit",
           run: isDraftOrRejected
             ? createDraftSubmission({
                 listingId: item.id,
@@ -383,6 +421,7 @@ export function EditListingPage() {
         };
     }
     if (!intent.current) return;
+    mutationRunning.current = true;
     setBusy(true);
     setSubmitError(undefined);
     try {
@@ -407,7 +446,7 @@ export function EditListingPage() {
     } catch (error) {
       setConfirming(false);
       const status = (error as { status?: number }).status;
-      const failed = status !== undefined && [400, 401, 403, 404, 409, 422, 429].includes(status);
+      const failed = status !== undefined && status >= 400 && status < 500 && ![401, 403, 408, 429].includes(status);
       setPending(!failed);
       if (failed) intent.current = null;
       const isDraftOrRejected =
@@ -424,18 +463,42 @@ export function EditListingPage() {
               : "Chưa gửi được bản sửa. Hãy thử lại.",
       );
     } finally {
+      mutationRunning.current = false;
       setBusy(false);
     }
   }
 
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string>();
 
-  async function handleSaveDraftOnly() {
-    if (busy || !item || !current || !bookId) return;
-    setBusy(true);
+  async function readSavedDraft(ack: NonNullable<typeof savedAck>) {
+    const result = await listing.refetch({ cancelRefetch: false });
+    const actor = apiSession.getSnapshot();
+    if (!alive.current || activeListing.current !== ack.id || actor.status !== "authenticated" || actor.user.id !== ack.owner) return;
+    if (result.error || !result.data || result.data.id !== ack.id || result.data.version < ack.version) return;
+    const next = formFromListing(result.data);
+    next.ownershipDeclared = form?.ownershipDeclared ?? false;
+    const ids = result.data.currentRevision.content.mediaIds ?? [];
+    setForm(next);
+    setPhotos(ids.map(id => ({ key: `e-${id}`, kind: "existing" as const, id })));
+    setInitial(JSON.stringify({ next, ids }));
+    setAttempted(false);
     setSubmitError(undefined);
-    setSaveSuccessMsg(undefined);
-    try {
+    setSavedAck(undefined);
+    setSaveSuccessMsg("Đã lưu bản nháp thành công! Bạn có thể quay lại tiếp tục sửa bất cứ lúc nào.");
+  }
+
+  async function retrySavedRead() {
+    if (!waitingSavedRead || !savedAck || mutationRunning.current) return;
+    mutationRunning.current = true; setBusy(true);
+    try { await readSavedDraft(savedAck); }
+    catch { /* Keep the acknowledged Save and offer only read recovery. */ }
+    finally { mutationRunning.current = false; setBusy(false); }
+  }
+
+  async function handleSaveDraftOnly() {
+    if (mutationRunning.current || pendingLifecycle || waitingSavedRead || (pending && intent.current?.action !== "save")) return;
+    if (!pending) {
+      if (!item || !current || !bookId) return;
       const origin = origins.find((a) => a.id === current.originAddressId);
       const input: RevisionPhoto[] = photos.map((p) =>
         p.kind === "existing"
@@ -450,40 +513,90 @@ export function EditListingPage() {
       );
       const { mediaIds: _unused, ...rest } = content;
       void _unused;
-      const runner = createDraftSave({
-        listingId: item.id,
-        version: item.version,
-        photos: input,
-        content: rest,
-        bookId,
-      });
-      await runner();
-      setSaveSuccessMsg("Đã lưu bản nháp thành công! Bạn có thể quay lại tiếp tục sửa bất cứ lúc nào.");
+      intent.current = {
+        signature: JSON.stringify({ v: item.version, rest, photoSignature, action: "save" }),
+        action: "save",
+        run: createDraftSave({ listingId: item.id, version: item.version, photos: input, content: rest, bookId }),
+      };
+    }
+    if (!intent.current) return;
+    mutationRunning.current = true;
+    setBusy(true);
+    setSubmitError(undefined);
+    setSaveSuccessMsg(undefined);
+    let acknowledged = false;
+    try {
+      const receipt = await intent.current.run();
+      if (!item || receipt.entityId !== item.id) throw new Error("Không xác minh được kết quả lưu đúng bài đăng.");
+      const actor = apiSession.getSnapshot();
+      if (!alive.current || activeListing.current !== item.id || actor.status !== "authenticated" || actor.user.id !== ownerId) return;
+      acknowledged = true;
+      intent.current = null;
+      setPending(false);
+      const ack = { id: item.id, version: receipt.version, owner: actor.user.id };
+      setSavedAck(ack);
       void queryClient.invalidateQueries({ queryKey: ["my-listings"] });
-      void queryClient.invalidateQueries({ queryKey: ["my-listing"] });
-      void listing.refetch();
+      await readSavedDraft(ack);
     } catch (error) {
+      if (acknowledged) return; // A failed read never changes the known Save outcome.
+      const status = (error as { status?: number }).status;
+      const failed = status !== undefined && status >= 400 && status < 500 && ![401, 403, 408, 429].includes(status);
+      setPending(!failed);
+      if (failed) intent.current = null;
       setSubmitError(
-        error instanceof Error
+        !failed ? "Chưa xác nhận được lần lưu nháp. Nội dung đã khóa; thử lại đúng lần lưu này trước khi sửa hoặc gửi duyệt."
+        : error instanceof Error
           ? error.message
           : "Chưa lưu được bản nháp. Hãy thử lại.",
       );
     } finally {
+      mutationRunning.current = false;
       setBusy(false);
     }
   }
 
+  const recovery = <OwnerListingRecovery key={listingId} listingId={listingId} onArchived={() => {
+    completed.current = true; setDone(true); navigate(ROUTES.myBooks);
+  }} />;
+  const SavedHeading = listing.isError ? "h1" : "h2";
+  const savedRecovery = waitingSavedRead && <section className={journeyStyles.filteredEmpty} aria-label="Bản nháp đã lưu">
+    <div className={journeyStyles.emptyMessage}>
+      <SavedHeading ref={savedHeading} tabIndex={-1}>Bản nháp đã được lưu</SavedHeading>
+      <p role="status">{busy ? "Đang tải lại nội dung đã lưu…" : "Chưa tải lại được nội dung đã lưu. Bản nháp của bạn đã được ghi nhận; tải lại để tiếp tục sửa. Thao tác này không gửi lệnh lưu lần nữa."}</p>
+      <div className={journeyStyles.actions}>
+        <button type="button" disabled={busy} onClick={() => void retrySavedRead()}>Tải lại bản nháp đã lưu</button>
+        <Link to={ROUTES.myBooks}>Về kệ sách của tôi</Link>
+      </div>
+    </div>
+  </section>;
+  const leaveConfirmation = <ConfirmDialog
+    isOpen={blocker.state === "blocked"}
+    onClose={() => blocker.reset?.()}
+    title={pendingLifecycle ? "Rời trang khi chưa xác minh?" : "Rời trang khi chưa lưu?"}
+    description={pendingLifecycle ? "Thao tác bài đăng chưa được xác minh hoặc đối chiếu xong. Thao tác vẫn được giữ khi chuyển trang trong phiên này, nhưng sẽ mất khi tải lại hoặc đóng trang." : pending ? "Thao tác với bài đăng chưa có kết quả xác nhận. Nếu rời trang, hãy kiểm tra kệ sách trước khi gửi yêu cầu mới." : "Các thông tin bạn vừa chỉnh sửa sẽ không được lưu nếu rời khỏi trang lúc này."}
+    confirmText="Rời trang" cancelText="Ở lại tiếp tục" isDanger
+    onConfirm={() => blocker.proceed?.()} />;
+
   if (listing.isLoading || !ownerId)
     return (
       <main className={styles.pageState} role="status">
+        {recovery}
+        {savedRecovery}
+        {leaveConfirmation}
         <div className={styles.spinner} />
         <p>Đang tải thông tin bài đăng…</p>
       </main>
     );
 
+  if ((listing.isError || !item) && waitingSavedRead)
+    return <main className={styles.page}>{recovery}{savedRecovery}{leaveConfirmation}</main>;
+
   if (listing.isError || !item)
     return (
       <main className={styles.pageState}>
+        {recovery}
+        {savedRecovery}
+        {leaveConfirmation}
         <div className={styles.errorIconWrap}>
           <AlertTriangle size={32} />
         </div>
@@ -495,6 +608,7 @@ export function EditListingPage() {
           <button
             type="button"
             className={styles.primaryBtn}
+            disabled={busy}
             onClick={() => void listing.refetch()}
           >
             Thử lại
@@ -513,6 +627,9 @@ export function EditListingPage() {
   if (block && !pending)
     return (
       <main className={styles.page}>
+        {recovery}
+        {savedRecovery}
+        {leaveConfirmation}
         <Link className={styles.backLink} to={ROUTES.myBooks}>
           <ArrowLeft size={16} aria-hidden="true" /> Về kệ sách của tôi
         </Link>
@@ -532,6 +649,8 @@ export function EditListingPage() {
 
   return (
     <main className={styles.page}>
+      {recovery}
+      {savedRecovery}
       {/* Top Navigation */}
       <nav className={styles.headerNav}>
         <Link className={styles.backLink} to={ROUTES.myBooks}>
@@ -650,8 +769,8 @@ export function EditListingPage() {
             <button
               type="button"
               className={styles.reloadBtn}
-              disabled={busy || pending}
-              onClick={() => void listing.refetch().then(() => setForm(null))}
+              disabled={busy || pending || pendingLifecycle || waitingSavedRead}
+              onClick={() => void listing.refetch().then(result => { if (!result.error) setForm(null); })}
             >
               Tải lại bài
             </button>
@@ -668,7 +787,7 @@ export function EditListingPage() {
           review();
         }}
       >
-        <fieldset className={styles.editFields} disabled={busy || pending} aria-label="Nội dung bản sửa">
+        <fieldset className={styles.editFields} disabled={busy || pending || pendingLifecycle || waitingSavedRead} aria-label="Nội dung bản sửa">
         {form.bundle && <BundleEditor value={form.bundle} error={showError("bundle")} onChange={bundle => patch({ bundle, condition: bundleCondition(bundle), mode: "Sale", exchangeValue: "" })} />}
         {/* CARD 1: Giá và hình thức */}
         <section className={styles.card}>
@@ -1326,7 +1445,7 @@ export function EditListingPage() {
           type="button"
           className={styles.primaryBtn}
           disabled={busy}
-          onClick={() => void submit()}
+          onClick={() => void (intent.current?.action === "save" ? handleSaveDraftOnly() : submit())}
         >
           Thử lại cùng nội dung này
         </button>
@@ -1379,16 +1498,7 @@ export function EditListingPage() {
         onConfirm={() => void handleArchive()}
       />
 
-      <ConfirmDialog
-        isOpen={blocker.state === "blocked"}
-        onClose={() => blocker.reset?.()}
-        title="Rời trang khi chưa lưu?"
-        description={pending ? "Yêu cầu gửi bản sửa chưa có kết quả xác nhận. Nếu rời trang, hãy kiểm tra kệ sách trước khi gửi yêu cầu mới." : "Các thông tin bạn vừa chỉnh sửa sẽ không được lưu nếu rời khỏi trang lúc này."}
-        confirmText="Rời trang"
-        cancelText="Ở lại tiếp tục"
-        isDanger
-        onConfirm={() => blocker.proceed?.()}
-      />
+      {leaveConfirmation}
     </main>
   );
 }

@@ -346,6 +346,15 @@ describe("order decisions across navigation and uncertain responses", () => {
     expect(f.calls[1]).toEqual(f.calls[0]);
     expect(pendingOrderResponse(f.client, id)).toBeUndefined();
   });
+  it("keeps a receipt acknowledgement intent across lost response and a newer order read", async () => {
+    const f=fake();
+    await expect(sendOrderResponse(f.client,id,"confirm-receipt",4,()=>"receipt-key")).rejects.toBeInstanceOf(ApiError);
+    expect(f.calls[0]).toMatchObject({path:`/orders/${id}/confirm-receipt`,key:"receipt-key",body:JSON.stringify({expectedVersion:4})});
+    f.fail(null);
+    await sendOrderResponse(f.client,id,"confirm-receipt",5,()=>{throw Error("must retain key");});
+    expect(f.calls[1]).toEqual(f.calls[0]);
+    expect(pendingOrderResponse(f.client,id)).toBeUndefined();
+  });
   it("retains malformed-success/network outcomes but releases a definitive rejection", async () => {
     const f = fake();
     f.fail(null);

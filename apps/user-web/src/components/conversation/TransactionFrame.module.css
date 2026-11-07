@@ -1,0 +1,160 @@
+.frame {
+  --shop-shelf: #f4eddf;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  color: var(--shop-ink);
+  font-size: .875rem;
+  line-height: 1.55;
+}
+.columns {
+  display: grid;
+  grid-template-areas: "context stage";
+  grid-template-columns: 288px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+.context,
+.stage {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--shop-line) transparent;
+  scroll-padding-block: 16px;
+}
+.context {
+  grid-area: context;
+  padding: 20px;
+  background: var(--shop-paper);
+  border-right: 1px solid var(--shop-line);
+}
+.stage {
+  grid-area: stage;
+  padding: 20px;
+  background: #fffdf9;
+}
+.disclosure > summary {
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+.disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.disclosure > summary > svg {
+  margin-left: auto;
+  transition: transform 160ms ease;
+}
+.disclosure[open] > summary > svg {
+  transform: rotate(180deg);
+}
+.disclosure {
+  border-top: 1px solid var(--shop-line);
+  margin-top: 24px;
+}
+.disclosure > summary {
+  display: flex;
+  min-height: 48px;
+  padding: 10px 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--shop-wine);
+}
+.disclosure > div {
+  padding: 4px 0 16px;
+}
+.frame :where(p, dd, h2, h3, h4, span, a) {
+  overflow-wrap: anywhere;
+}
+.frame :where(button, input, textarea, select) {
+  max-width: 100%;
+}
+/* Match the Users directory: one continuous wine border, no detached outline. */
+.frame :is(input:not([type="file"]):not([type="checkbox"]):not([type="radio"]), textarea, select) {
+  transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+}
+.frame :is(input:not([type="file"]):not([type="checkbox"]):not([type="radio"]), textarea, select):focus {
+  outline: none;
+  border-color: var(--shop-wine);
+  box-shadow: 0 0 0 1px var(--shop-wine);
+  background: #fff;
+}
+@media (forced-colors: active) {
+  .frame :is(input:not([type="file"]):not([type="checkbox"]):not([type="radio"]), textarea, select):focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+}
+.frame summary:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: 3px;
+}
+.frame [data-stage-heading] {
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--shop-line);
+}
+.frame [data-stage-heading] h3 {
+  font-size: 1.25rem;
+  margin: 0;
+  line-height: 1.45;
+  color: var(--shop-wine);
+}
+.frame [data-stage-heading] p {
+  margin: 6px 0 0;
+  color: var(--shop-muted);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+.frame [data-stage-heading] > a {
+  font-size: .8125rem;
+  line-height: 1.6;
+}
+.contextToggle { display: none; }
+.contextPreview { width:28px; height:40px; overflow:hidden; flex-shrink:0; display:block; }
+.contextPreview > div { width:100%; height:100%; }
+.contextPreview img { width:100%; height:100%; object-fit:contain; }
+@media (max-width: 1279px) {
+  .columns {
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--shop-line) transparent;
+  }
+  .stage {
+    order: 1;
+    overflow: visible;
+    flex-shrink: 0;
+    padding: 16px;
+  }
+  .context {
+    order: 0;
+    overflow: visible;
+    flex-shrink: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--shop-line);
+    padding: 0 16px;
+  }
+  .contextToggle { display:flex; align-items:center; gap:12px; width:100%; min-height:44px; padding:8px 0; background:none; border:0; color:var(--shop-wine); font:600 .8125rem/1.5 var(--shop-body); text-align:left; }
+  .contextToggle > svg { margin-left:auto; }
+  .contextToggle[aria-expanded="true"] svg { transform:rotate(180deg); }
+  .contextContent[data-open="false"] { display:none; }
+  .contextContent[data-open="true"] { padding:8px 0 16px; }
+}
+@media (max-width:960px) {
+  .stage { order:0; }
+  .context { order:1; border-bottom:0; border-top:1px solid var(--shop-line); }
+}
+
+.context:focus-visible,
+.stage:focus-visible,
+.columns:focus-visible {
+  outline: 2px solid var(--shop-wine);
+  outline-offset: -3px;
+}

@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import type { ExchangeDetail } from '../../../lib/mock/exchangeDetail';
 import {
-    getExchangeShipment,
     getTrackingUrl,
     CARRIERS,
     type ShipmentData
@@ -56,10 +55,7 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
     const [copiedCode, setCopiedCode] = useState<string | null>(null);
     const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
-    // Retrieve server tracking info with local fallback
-    const viewerRole = detail.viewerRole; // 'proposer' (initiator) | 'recipient'
-    const initiatorRole = viewerRole === 'proposer' ? 'initiator' : 'recipient';
-    const recipientRole = viewerRole === 'proposer' ? 'recipient' : 'initiator';
+    // Only the server may confirm a shipment; a saved local draft is not evidence.
 
     const serverViewerShipment: ShipmentData | null = detail.viewerShipment
         ? {
@@ -89,11 +85,11 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
         }
         : null;
 
-    const viewerShipment: ShipmentData | null = serverViewerShipment ?? getExchangeShipment(detail.id, initiatorRole);
-    const partnerShipment: ShipmentData | null = serverPartnerShipment ?? getExchangeShipment(detail.id, recipientRole);
+    const viewerShipment: ShipmentData | null = serverViewerShipment;
+    const partnerShipment: ShipmentData | null = serverPartnerShipment;
 
-    const viewerSentAt = detail.viewerShipping.sentAt || viewerShipment?.shippedAt;
-    const partnerSentAt = detail.partnerShipping.sentAt || partnerShipment?.shippedAt;
+    const viewerSentAt = detail.viewerShipping.sentAt;
+    const partnerSentAt = detail.partnerShipping.sentAt;
     const partnerReceivedAt = detail.partnerShipping.receivedAt;
     const viewerReceivedAt = detail.viewerShipping.receivedAt;
 

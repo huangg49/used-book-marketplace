@@ -295,6 +295,30 @@ String formatModeLabel(String? mode) {
 }
 
 ThemeData buildLatLaiTheme() {
+  final focusSide = WidgetStateProperty.resolveWith<BorderSide?>((states) {
+    if (!states.contains(WidgetState.focused) ||
+        states.contains(WidgetState.disabled)) {
+      return null;
+    }
+    return const BorderSide(color: StitchTokens.wine, width: 2);
+  });
+  final onWineFocusSide = WidgetStateProperty.resolveWith<BorderSide?>((
+    states,
+  ) {
+    if (!states.contains(WidgetState.focused) ||
+        states.contains(WidgetState.disabled)) {
+      return null;
+    }
+    return const BorderSide(color: AppColors.surface, width: 2);
+  });
+  final focusStyle = ButtonStyle(
+    side: focusSide,
+    animationDuration: const Duration(milliseconds: 140),
+  );
+  final filledFocusStyle = ButtonStyle(
+    side: onWineFocusSide,
+    animationDuration: const Duration(milliseconds: 140),
+  );
   return ThemeData(
     useMaterial3: true,
     scaffoldBackgroundColor: StitchTokens.creamBg,
@@ -309,6 +333,23 @@ ThemeData buildLatLaiTheme() {
       onError: Colors.white,
     ),
     dividerColor: AppColors.rule,
+    focusColor: StitchTokens.wine.withValues(alpha: 0.12),
+    inputDecorationTheme: InputDecorationThemeData(
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        borderSide: const BorderSide(color: StitchTokens.wine, width: 2),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        borderSide: const BorderSide(color: AppColors.error, width: 2),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(style: focusStyle),
+    outlinedButtonTheme: OutlinedButtonThemeData(style: focusStyle),
+    iconButtonTheme: IconButtonThemeData(style: focusStyle),
+    filledButtonTheme: FilledButtonThemeData(style: filledFocusStyle),
+    elevatedButtonTheme: ElevatedButtonThemeData(style: filledFocusStyle),
+    segmentedButtonTheme: SegmentedButtonThemeData(style: focusStyle),
     appBarTheme: const AppBarTheme(
       backgroundColor: StitchTokens.wine,
       foregroundColor: Colors.white,

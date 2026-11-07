@@ -50,6 +50,7 @@ export const transactionReviewsSchema = z.object({
   demoTimeAdvance: z.object({
     available: z.boolean(), applied: z.boolean(), pairToken: z.string().nullable(),
   }).optional(),
+  awaitingCompletion: z.boolean().optional().default(false),
   partnerId: z.uuid(),
   canReview: z.boolean(),
   canEdit: z.boolean(),
@@ -68,7 +69,8 @@ export const reviewTransactionsSchema = z.object({
       transactionId: z.uuid(),
       partnerId: z.uuid(),
       partnerName: z.string(),
-      completedAt: z.string(),
+      completedAt: z.string().nullable(),
+      reviewableAt: z.string().optional(),
     }),
   ),
   nextCursor: z.string().nullable(),

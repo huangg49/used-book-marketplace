@@ -104,11 +104,11 @@ try {
   await p.goto(origin);
   console.log("QA: home/search");
   await p
-    .getByRole("link", { name: "Xem sách", exact: true })
+    .getByRole("link", { name: /^Xem chi tiết / })
     .first()
     .waitFor();
   // Covers below the Home hero now request signing only near the viewport.
-  await p.getByRole("link", { name: "Xem sách", exact: true }).first().scrollIntoViewIfNeeded();
+  await p.getByRole("link", { name: /^Xem chi tiết / }).first().scrollIntoViewIfNeeded();
   await p
     .getByRole("img", { name: /^Bìa sách/ })
     .first()
@@ -137,13 +137,13 @@ try {
   await p.getByText("13 tin đăng trên trang này").waitFor();
   await button("Đổi sách").click();
   await p
-    .getByRole("link", { name: "Xem sách", exact: true })
+    .getByRole("link", { name: /^Xem chi tiết / })
     .first()
     .waitFor();
   assert.equal(new URL(p.url()).searchParams.get("mode"), "Exchange");
   await p.getByRole("button", { name: /^Sắp xếp / }).click();
   await p.getByRole("menuitemradio", { name: "Giá bán giảm dần" }).click();
-  await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
+  await p.getByRole("link", { name: /^Xem chi tiết / }).first().click();
   await p
     .getByRole("heading", { level: 1, name: fixture.metadata.title })
     .waitFor();
@@ -173,7 +173,7 @@ try {
   await p.getByText("Chưa có cuốn sách nào phù hợp.").waitFor();
   await p.getByLabel("Tìm sách", { exact: true }).fill("");
   await p
-    .getByRole("link", { name: "Xem sách", exact: true })
+    .getByRole("link", { name: /^Xem chi tiết / })
     .first()
     .waitFor();
   await p.setViewportSize({ width: 390, height: 844 });
@@ -200,18 +200,32 @@ try {
     .first()
     .click();
   await p.getByLabel("Bạn muốn tìm cuốn nào?").waitFor();
+  await p.evaluate(async () => {
+    await document.fonts.ready;
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+  const homeLayout = await p.evaluate(() => ({
+    width: innerWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+    // Record only layout metadata, never text, account data or request bodies.
+    overflowing: [...document.querySelectorAll("main *")].filter(node => {
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.right > innerWidth + 1;
+    }).slice(0, 16).map(node => ({ tag: node.tagName, className: node.className,
+      width: node.getBoundingClientRect().width, right: node.getBoundingClientRect().right })),
+  }));
   assert.ok(
     await p.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,
     ),
-    "Home overflow at320px130%",
+    "Home overflow at320px130%: " + JSON.stringify(homeLayout),
   );
   await p.screenshot({
     path: path.join(artifacts, "home-320-130.png"),
     fullPage: true,
     animations: "disabled",
   });
-  await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
+  await p.getByRole("link", { name: /^Xem chi tiết / }).first().click();
   await button("Chat với người bán").waitFor();
   assert.ok(
     await p.evaluate(
@@ -1006,11 +1020,11 @@ try {
   await button("Đăng nhập").click();
   await p.waitForURL(origin + "/");
   const selectedPath = await p
-    .getByRole("link", { name: "Xem sách", exact: true })
+    .getByRole("link", { name: /^Xem chi tiết / })
     .first()
     .getAttribute("href");
   const selectedListing = selectedPath.split("/").at(-1);
-  await p.getByRole("link", { name: "Xem sách", exact: true }).first().click();
+  await p.getByRole("link", { name: /^Xem chi tiết / }).first().click();
   const reserveAttempts = [];
   let reserveLost = false;
   await p.route(

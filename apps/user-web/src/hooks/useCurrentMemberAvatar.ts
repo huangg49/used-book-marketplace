@@ -9,7 +9,7 @@ import { useSession } from "./useSession";
 
 export function useCurrentMemberAvatar() {
   const auth = useSession();
-  const [failedAvatarId, setFailedAvatarId] = useState<string | null>(null);
+  const [failedSource, setFailedSource] = useState<{ ownerId: string; avatarId: string; url: string }>();
   const ownerId = auth.status === "authenticated" ? auth.user.id : undefined;
 
   const profileQuery = useQuery({
@@ -39,10 +39,11 @@ export function useCurrentMemberAvatar() {
   const initial =
     Array.from(displayName.trim())[0]?.toLocaleUpperCase("vi-VN") || "L";
 
-  const avatarUrl =
-    avatarId && failedAvatarId !== avatarId && avatarQuery.data?.url
-      ? avatarQuery.data.url
-      : null;
+  const sourceUrl = avatarQuery.data?.url;
+  // Renewing a signed URL does not change the avatar ID.
+  const failed = failedSource?.ownerId === ownerId &&
+    failedSource?.avatarId === avatarId && failedSource?.url === sourceUrl;
+  const avatarUrl = avatarId && sourceUrl && !failed ? sourceUrl : null;
 
   return {
     avatarUrl,
@@ -52,7 +53,7 @@ export function useCurrentMemberAvatar() {
     isLoading:
       profileQuery.isPending || (Boolean(avatarId) && avatarQuery.isPending),
     onImageError: () => {
-      if (avatarId) setFailedAvatarId(avatarId);
+      if (ownerId && avatarId && sourceUrl) setFailedSource({ ownerId, avatarId, url: sourceUrl });
     },
   };
 }
