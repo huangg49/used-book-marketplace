@@ -44,6 +44,91 @@ export function usePublicAuctions(client: SessionClient, enabled = true) {
     enabled,
   });
 }
+
+export const UPCOMING_AUCTIONS_QUERY_KEY = ["auctions", "upcoming"] as const;
+
+export function useUpcomingAuctions(client: SessionClient, enabled = true) {
+  return useQuery<PublicAuctionList, Error>({
+    queryKey: UPCOMING_AUCTIONS_QUERY_KEY,
+    queryFn: () => client.publicRequest("/auctions?phase=upcoming", publicAuctionList),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    enabled,
+  });
+}
+
+export type AuctionCondition = "LikeNew" | "Good" | "Fair" | "Worn";
+export const AUCTION_CONDITIONS: AuctionCondition[] = ["LikeNew", "Good", "Fair", "Worn"];
+
+export const AUCTION_PRICE_RANGES = {
+  lt100: { label: "Dưới 100.000 ₫", min: 0, max: 99_999 },
+  "100-300": { label: "100.000–300.000 ₫", min: 100_000, max: 300_000 },
+  "300-1m": { label: "300.000 ₫–1 triệu", min: 300_001, max: 1_000_000 },
+  gt1m: { label: "Trên 1 triệu", min: 1_000_001, max: Number.POSITIVE_INFINITY },
+} as const;
+export type AuctionPriceRange = keyof typeof AUCTION_PRICE_RANGES;
+
+export const AUCTION_ENDING = {
+  "1h": { label: "Trong 1 giờ", ms: 3_600_000 },
+  "6h": { label: "Trong 6 giờ", ms: 6 * 3_600_000 },
+  "24h": { label: "Trong 24 giờ", ms: 24 * 3_600_000 },
+} as const;
+export type AuctionEnding = keyof typeof AUCTION_ENDING;
+
+export interface AuctionFilters {
+  q: string;
+  point: string;
+  buyNow: boolean;
+  noBids: boolean;
+  conditions: AuctionCondition[];
+  price: AuctionPriceRange | "";
+  ending: AuctionEnding | "";
+}
+
+export const DEFAULT_AUCTION_FILTERS: AuctionFilters = {
+  q: "",
+  point: "",
+  buyNow: false,
+  noBids: false,
+  conditions: [],
+  price: "",
+  ending: "",
+};
+
+export const activeFilterCount = (f: AuctionFilters) =>
+  [f.point, f.buyNow, f.noBids, f.conditions.length > 0, f.price, f.ending].filter(Boolean).length;
+
+export function foldSearchText(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/gi, "d")
+    .toLowerCase()
+    .trim();
+}
+
+export function matchesAuctionFilters(
+  a: PublicAuctionSummary,
+  f: AuctionFilters,
+  now: number,
+) {
+  const price = a.currentPrice ?? a.startPrice;
+  if (f.q.trim()) {
+    const haystack = foldSearchText([a.title, ...(a.book?.authors ?? [])].join(" "));
+    const words = foldSearchText(f.q).split(/\s+/).filter(Boolean);
+    if (!words.every((word) => haystack.includes(word))) return false;
+  }
+  if (f.point && a.pointName !== f.point) return false;
+  if (f.buyNow && a.buyNowPrice === null) return false;
+  if (f.noBids && a.bidderCount > 0) return false;
+  if (f.conditions.length && !(a.book && f.conditions.includes(a.book.condition as AuctionCondition))) return false;
+  if (f.price) {
+    const range = AUCTION_PRICE_RANGES[f.price];
+    if (price < range.min || price > range.max) return false;
+  }
+  if (f.ending && Date.parse(a.endAt) - now > AUCTION_ENDING[f.ending].ms) return false;
+  return true;
+}
 export const auctionKey = (id: string) => ["auction", id] as const;
 export const participationKey = (id: string, userId: string) =>
   ["auction-participation", id, userId] as const;

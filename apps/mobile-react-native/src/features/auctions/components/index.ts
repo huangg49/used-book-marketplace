@@ -12,3 +12,7 @@ export { AuctionTrustBanner } from "./auction-trust-banner";
 export { AuctionOutbidAlert, type AuctionOutbidAlertProps } from "./auction-outbid-alert";
 export { AuctionCommitments } from "./auction-commitments";
 export { ScheduleAuctionSheet, type ScheduleTarget } from "./schedule-auction-sheet";
+export { AuctionFilterModal, type AuctionFilterModalProps } from "./auction-filter-modal";
+export { AuctionGuideCard } from "./auction-guide-card";
+export { AuctionGuideModal, type AuctionGuideModalProps } from "./auction-guide-modal";
+export { UpcomingAuctionsShelf, type UpcomingAuctionsShelfProps } from "./upcoming-auctions-shelf";
