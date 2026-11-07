@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { Send, ArrowDown } from 'lucide-react';
+import { ApiError, CHAT_MESSAGE_LIMIT, CHAT_RATE_LIMIT_TEXT, clipChatMessage } from '@used-books/session-client';
 import type { ExchangeUser } from '../../../lib/mock/exchangeMine';
 import type { ChatMessage } from '../../../lib/mock/exchangeDetail';
 import styles from './ChatPanel.module.css';
@@ -18,14 +19,36 @@ interface ChatPanelProps {
     loadError?: boolean;
     isRefreshing?: boolean;
     onRetry: () => void;
+    hasOlder?: boolean;
+    isLoadingOlder?: boolean;
+    olderError?: boolean;
+    onLoadOlder?: () => Promise<{ isFetchNextPageError: boolean }>;
 }
 
-export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavailable, giveBooks, receiveBooks, statusText, guidance, isLoading, loadError, isRefreshing, onRetry }: ChatPanelProps) {
+export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavailable, giveBooks, receiveBooks, statusText, guidance, isLoading, loadError, isRefreshing, onRetry, hasOlder, isLoadingOlder, olderError, onLoadOlder }: ChatPanelProps) {
     const [inputText, setInputText] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [showScrollBtn, setShowScrollBtn] = useState(false);
     const [sendError, setSendError] = useState<string>();
     const scrollRef = useRef<HTMLDivElement>(null);
+    const anchor = useRef<{ first: string; height: number; top: number } | null>(null);
+
+    useLayoutEffect(() => {
+        const area = scrollRef.current;
+        const previous = anchor.current;
+        if (!area || !previous || previous.first === messages[0]?.id) return;
+        anchor.current = null;
+        area.scrollTop = previous.top + area.scrollHeight - previous.height;
+        setShowScrollBtn(area.scrollHeight - area.scrollTop - area.clientHeight >= 120);
+    }, [messages]);
+
+    const loadOlder = async () => {
+        const area = scrollRef.current;
+        if (!area || !messages[0] || !onLoadOlder || isRefreshing) return;
+        anchor.current = { first: messages[0].id, height: area.scrollHeight, top: area.scrollTop };
+        const result = await onLoadOlder();
+        if (result.isFetchNextPageError) anchor.current = null;
+    };
 
     const checkScroll = () => {
         if (!scrollRef.current) return;
@@ -64,8 +87,10 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavai
             await onSendMessage(text);
             setInputText('');
             scrollToBottom();
-        } catch {
-            setSendError('Chưa xác nhận được tin nhắn đã gửi. Nội dung vẫn ở đây; kiểm tra lịch sử trước khi gửi lại.');
+        } catch (error) {
+            setSendError(error instanceof ApiError && error.status === 429
+                ? CHAT_RATE_LIMIT_TEXT
+                : 'Chưa xác nhận được tin nhắn đã gửi. Nội dung vẫn ở đây; kiểm tra lịch sử trước khi gửi lại.');
         } finally {
             setIsSending(false);
         }
@@ -97,7 +122,7 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavai
                 <p>{guidance}</p>
                 {!isReadOnly && <a href="#exchange-actions">Xem bước tiếp theo trong giao dịch</a>}
             </div>
-            {loadError && <div className={styles.loadError} role="alert"><p>Chưa tải được tin nhắn. Lịch sử đã tải vẫn được giữ lại.</p><button type="button" onClick={onRetry} disabled={isRefreshing}>Tải lại tin nhắn</button></div>}
+            {loadError && <div className={styles.loadError} role="alert"><p>{unavailable ? "Bạn hiện không thể xem tin nhắn trong giao dịch này." : "Chưa tải được tin nhắn. Lịch sử đã tải vẫn được giữ lại."}</p><button type="button" onClick={onRetry} disabled={isRefreshing}>Tải lại tin nhắn</button></div>}
 
             <div 
                 className={styles.messagesArea}
@@ -106,6 +131,14 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavai
                 role="log"
                 aria-live="polite"
             >
+                {hasOlder && (
+                    <div className={styles.loadError}>
+                        {olderError && <p role="alert">Chưa tải được tin nhắn cũ.</p>}
+                        <button type="button" onClick={() => void loadOlder()} disabled={isRefreshing}>
+                            {isLoadingOlder ? 'Đang tải tin nhắn cũ…' : olderError ? 'Thử tải tin nhắn cũ' : 'Tải tin nhắn cũ'}
+                        </button>
+                    </div>
+                )}
                 {isLoading && <p role="status">Đang tải tin nhắn trao đổi…</p>}
                 {!isLoading && !loadError && messages.length === 0 && <div className={styles.emptyState}><h3>Trao đổi về những cuốn sách này</h3><p>Hỏi về tình trạng sách hoặc thông tin giao nhận. Các thay đổi đề nghị cần được xác nhận trong phần Hành động của bạn.</p></div>}
                 {messages.map((msg) => {
@@ -143,7 +176,7 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavai
             </div>
 
             <div className={styles.inputArea}>
-                {isReadOnly ? (
+                {isReadOnly || unavailable ? (
                     <div className={styles.readOnlyMsg}>
                         {unavailable ? 'Nhắn tin trong trao đổi chưa khả dụng.' : 'Cuộc trao đổi đã kết thúc. Lịch sử tin nhắn vẫn được giữ lại.'}
                     </div>
@@ -155,12 +188,11 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavai
                         <textarea 
                             id="chatInput"
                             value={inputText}
-                            onChange={(e) => { setInputText(e.target.value); setSendError(undefined); }}
+                            onChange={(e) => { setInputText(clipChatMessage(e.target.value)); setSendError(undefined); }}
                             onKeyDown={handleKeyDown}
                             placeholder="Trao đổi về sách hoặc việc giao nhận…"
                             className={styles.textarea}
                             rows={1}
-                            maxLength={1000}
                             disabled={isSending}
                         />
                         <button type="submit" disabled={!inputText.trim() || isSending || unavailable} className={styles.sendBtn} aria-label={isSending ? "Đang gửi tin nhắn" : "Gửi tin nhắn"}>
@@ -169,8 +201,8 @@ export function ChatPanel({ messages, partner, onSendMessage, isReadOnly, unavai
                         </div>
                     </form>
                 )}
-                {!isReadOnly && (
-                    <div className={styles.charCount}>{inputText.length}/1000</div>
+                {!isReadOnly && !unavailable && (
+                    <div className={styles.charCount}>{[...inputText].length}/{CHAT_MESSAGE_LIMIT}</div>
                 )}
             </div>
         </section>

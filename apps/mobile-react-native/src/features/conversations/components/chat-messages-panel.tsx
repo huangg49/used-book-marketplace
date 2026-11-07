@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { CHAT_RATE_LIMIT_TEXT, chatSendWasRateLimited, clipChatMessage } from "@used-books/session-client";
 import {
   ActivityIndicator,
   FlatList,
@@ -315,6 +316,10 @@ export function ChatMessagesPanel({
         .timeout(10000)
         .emit("purchase:send", payload, (err: unknown, reply: unknown) => {
           setSending(false);
+          if (!err && chatSendWasRateLimited(reply)) {
+            setSendError(CHAT_RATE_LIMIT_TEXT);
+            return;
+          }
           const parsed = purchaseMessageSchema.safeParse(reply);
           if (err || !parsed.success) {
             setSendError("Chưa xác nhận được tin nhắn. Vui lòng thử lại.");
@@ -675,7 +680,7 @@ export function ChatMessagesPanel({
             <AppTextInput
               style={styles.textInput}
               value={inputBody}
-              onChangeText={setInputBody}
+              onChangeText={(value) => setInputBody(clipChatMessage(value))}
               placeholder={
                 isBuyer
                   ? "Hỏi về sách hoặc trao đổi giá…"
@@ -683,7 +688,6 @@ export function ChatMessagesPanel({
               }
               placeholderTextColor={colors.muted}
               multiline
-              maxLength={1000}
               editable={!sending}
             />
 

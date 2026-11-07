@@ -1,3 +1,5 @@
+import { messageBoundary } from '../commands/message-history.js';
+import { checkMessageSendRate, MESSAGE_MAX_LENGTH } from '../commands/message-send-limits.js';
 import { MediaStorage } from '../media/media-storage.js';
 import { agreementBooks, agreementMatches, eligibleExchangeMember, exchangeAmounts, snapshotExchangeBook } from './exchange-agreement.js';
 import { ConversationAgreementsService } from '../purchases/conversation-agreements.service.js';
@@ -895,21 +897,45 @@ export class ExchangesService {
     );
   }
 
-  getMessages(auth: Actor, id: string) {
+  getMessages(
+    auth: Actor,
+    id: string,
+    before?: string,
+    limit?: number,
+  ): Promise<Wire['ExchangeMessagesResponse']> {
     return this.commands.read(auth, async (tx, actor) => {
       const exchange = await this.exchange(tx, id);
       this.participant(exchange, actor._id);
+      const paginated = before !== undefined || limit !== undefined;
+      const size = limit ?? (paginated ? 40 : 500);
+      const boundary = before === undefined ? undefined : messageBoundary(before, id);
+      const older = boundary ? {
+        $or: [
+          { sentAt: { $lt: boundary.sentAt } },
+          { sentAt: boundary.sentAt, _id: { $lt: boundary.id } },
+        ],
+      } : {};
       const rows = await tx.c.exchange_messages
-        .find({ exchangeId: id }, { sort: { sentAt: 1, _id: 1 }, limit: 500 })
+        .find({ exchangeId: id, ...older }, {
+          sort: { sentAt: -1, _id: -1 },
+          limit: size + (paginated ? 1 : 0),
+        })
         .toArray();
+      const items = rows.slice(0, size).reverse().map((message) => ({
+        id: message._id,
+        exchangeId: message.exchangeId,
+        senderId: message.senderId,
+        body: message.body,
+        sentAt: message.sentAt.toISOString(),
+      }));
+      const oldest = items[0];
       return {
-        items: rows.map((m) => ({
-          id: m._id,
-          exchangeId: m.exchangeId,
-          senderId: m.senderId,
-          body: m.body,
-          sentAt: m.sentAt.toISOString(),
-        })),
+        items,
+        ...(paginated ? {
+          olderCursor: rows.length > size && oldest
+            ? Buffer.from(`${id}/${oldest.sentAt}/${oldest.id}`).toString('base64url')
+            : null,
+        } : {}),
       };
     });
   }
@@ -921,14 +947,16 @@ export class ExchangesService {
   ) {
     return this.commands.read(auth, async (tx, actor) => {
       const text = body.body.trim();
-      if (!text || [...text].length > 1000) throw invalidState();
+      if (!text || [...text].length > MESSAGE_MAX_LENGTH) throw invalidState();
 
       const exchange = await this.exchange(tx, id);
       this.participant(exchange, actor._id);
 
       const now = await tx.now();
+      await checkMessageSendRate(tx, actor._id, now);
       const messageId = randomUUID();
       await tx.c.exchange_messages.insertOne({
+        memberAuthored: true,
         _id: messageId,
         exchangeId: exchange._id,
         senderId: actor._id,

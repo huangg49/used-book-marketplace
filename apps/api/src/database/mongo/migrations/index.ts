@@ -1,3 +1,4 @@
+import { createMessageSendLimitsMigration, withMessageSendLimits } from './0062-message-send-limits.js';
 import { manualWithdrawalsMigration, withManualWithdrawals } from './0061-manual-wallet-withdrawals.js';
 import { createWithdrawalsMigration, withdrawalSpecs, withWithdrawals } from './0060-wallet-withdrawals.js';
 import { autoReviewV2UpgradeBridgeMigration } from './0056-auto-review-v2-upgrade-bridge.js';
@@ -158,6 +159,7 @@ import {
 } from './0013-auction-business-rules.js';
 import {
   purchaseConversationsMigration,
+  purchaseConversationSpecs,
   withPurchaseConversationChanges,
 } from './0014-purchase-conversations.js';
 import {
@@ -552,7 +554,7 @@ const beforeWithdrawals = (): CollectionSpec[] => [
   demoCompletionSpec,
 ];
 
-export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals), ...withdrawalSpecs.map(withManualWithdrawals)];
+export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits), ...withdrawalSpecs.map(withManualWithdrawals)];
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
 migrations.push(createWithdrawalsMigration([
@@ -560,4 +562,7 @@ migrations.push(createWithdrawalsMigration([
   ...notificationSpecs.map(withExchangeNotificationChanges).map(withBuyNowNotifications).map(withExchangePhase6Changes).map(withSupportCases),
 ]));
 
-migrations.push(manualWithdrawalsMigration);
+migrations.push(manualWithdrawalsMigration, createMessageSendLimitsMigration([
+  ...purchaseConversationSpecs.filter((spec) => spec.name === 'purchase_messages'),
+  ...exchangeMessageSpecs,
+]));

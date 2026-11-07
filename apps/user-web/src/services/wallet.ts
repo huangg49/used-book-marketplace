@@ -1,4 +1,4 @@
-import { withdrawalStateSchema } from "@used-books/session-client";
+import { withdrawalStateSchema, type WalletHistoryFilters } from "@used-books/session-client";
 import { z } from "zod";
 import { session } from "../lib/session";
 
@@ -59,11 +59,14 @@ export const walletHistoryPageSchema = z.object({
   nextCursor: z.uuid().nullable(),
 });
 export function getWalletHistory(
-  options: { type?: WalletHistoryType; cursor?: string } = {},
+  options: WalletHistoryFilters & { type?: WalletHistoryType; cursor?: string } = {},
 ) {
   const params = new URLSearchParams({ limit: "20" });
   if (options.type) params.set("type", options.type);
   if (options.cursor) params.set("cursor", options.cursor);
+  if (options.from) params.set("from", options.from);
+  if (options.to) params.set("to", options.to);
+  if (options.reference) params.set("reference", options.reference);
   return session.request(
     `/me/wallet/history?${params}`,
     walletHistoryPageSchema,

@@ -5706,6 +5706,12 @@ paths:
           schema:
             type: string
             format: uuid
+        - in: query
+          name: reference
+          description: Full journal, order, top-up or withdrawal ID, or the first six hexadecimal characters shown on a receipt. Matches only the caller's own history.
+          schema:
+            type: string
+            pattern: '^(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})$'
       responses:
         "200":
           description: Successful simulated operation.
@@ -10430,7 +10436,7 @@ paths:
       operationId: getExchangeMessages
       tags:
         - Exchanges
-      description: Get messages in the exchange chat thread.
+      description: Read exchange messages in chronological order. Without pagination parameters, returns up to 500 most recent messages.
       security:
         - bearerAuth: []
       parameters:
@@ -10440,6 +10446,19 @@ paths:
           schema:
             type: string
             format: uuid
+        - in: query
+          name: limit
+          description: Number of recent messages per page when opting into history pagination.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: before
+          description: Opaque olderCursor returned by a previous page of this exchange.
+          schema:
+            type: string
+            maxLength: 256
       responses:
         "200":
           description: OK
@@ -10447,6 +10466,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExchangeMessagesResponse"
+        "400":
+          $ref: "#/components/responses/ListingError"
         "401":
           $ref: "#/components/responses/ListingError"
         "403":
@@ -10491,6 +10512,8 @@ paths:
         "404":
           $ref: "#/components/responses/ListingError"
         "409":
+          $ref: "#/components/responses/ListingError"
+        "429":
           $ref: "#/components/responses/ListingError"
         "500":
           $ref: "#/components/responses/ListingError"
@@ -15624,7 +15647,7 @@ components:
         id: { type: string, format: uuid }
         conversationId: { type: string, format: uuid }
         senderId: { type: string, format: uuid }
-        body: { type: string, minLength: 1, maxLength: 1000 }
+        body: { type: string, minLength: 1, maxLength: 2000 }
         sentAt: { type: string, format: date-time }
     ListingMedia:
       type: object
@@ -22302,7 +22325,7 @@ components:
         body:
           type: string
           minLength: 1
-          maxLength: 1000
+          maxLength: 2000
     ExchangeMessagesResponse:
       type: object
       additionalProperties: false
@@ -22313,6 +22336,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ExchangeMessage"
+        olderCursor:
+          description: Present when the caller opts into pagination. Null means there are no older messages.
+          type: [string, "null"]
     CounterExchangeProposal:
       type: object
       additionalProperties: false

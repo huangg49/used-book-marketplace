@@ -601,6 +601,15 @@ export class WalletService {
         };
       if (q.topupId) filters.topupId = String(q.topupId).toLowerCase();
       if (q.orderId) filters.orderId = String(q.orderId).toLowerCase();
+      if (q.reference) {
+        const reference = String(q.reference).toLowerCase();
+        // The contract only accepts hex prefixes or UUIDs. Filter after the
+        // running balance and only within this member's available account.
+        const value = reference.length === 6 ? { $regex: `^${reference}` } : reference;
+        filters.$or = ['_id', 'orderId', 'topupId', 'withdrawalId'].map(
+          (field) => ({ [field]: value }),
+        );
+      }
       if (q.type) filters.type = String(q.type);
       if (cursor) filters.sequence = { $lt: cursor.sequence };
       const rows = await tx.c.ledger_entries

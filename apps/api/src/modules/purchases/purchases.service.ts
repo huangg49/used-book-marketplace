@@ -4,21 +4,11 @@ import { randomUUID } from 'node:crypto';
 import type { PurchaseConversationDoc, UserDoc } from '../../database/mongo/documents.js';
 import type { Tx } from '../../database/mongo/transaction.js';
 import { MongoCommandService, member, requireActive, type Actor, type CommandContext } from '../commands/mongo-command.service.js';
-import { conflict, DomainError, invalidState, notFound, type Wire } from '../commands/domain-error.js';
+import { conflict, invalidState, notFound, type Wire } from '../commands/domain-error.js';
+import { messageBoundary } from '../commands/message-history.js';
+import { checkMessageSendRate, MESSAGE_MAX_LENGTH } from '../commands/message-send-limits.js';
 import { requireMarketplace } from '../listings/listing-channel.js';
 import { ListingCommitmentPolicy } from '../listings/listing-commitment-policy.service.js';
-
-function messageBoundary(cursor: string, conversationId: string) {
-  const decoded = Buffer.from(cursor, 'base64url');
-  const [room, time, id, extra] = decoded.toString('utf8').split('/');
-  const sentAt = new Date(time ?? '');
-  if (decoded.toString('base64url') !== cursor || extra !== undefined || room !== conversationId
-    || !id || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)
-    || !Number.isFinite(sentAt.getTime()) || sentAt.toISOString() !== time) {
-    throw new DomainError(400, 'VALIDATION_ERROR', 'Vị trí lịch sử tin nhắn không hợp lệ.');
-  }
-  return { sentAt, id };
-}
 
 @Injectable()
 export class PurchasesService {
@@ -237,11 +227,21 @@ export class PurchasesService {
       return visible;
     });
   }
+  private async readableConversation(tx: Tx, actor: UserDoc, id: string) {
+    const row = await this.conversation(tx, id);
+    this.participant(row, actor._id);
+    member(actor);
+    if (actor.status === 'LOCKED') await this.existingContact(tx, row, actor);
+    return row;
+  }
   get(auth: Actor, id: string) {
+    return this.commands.readObligation(auth, async (tx, actor) =>
+      this.view(tx, await this.readableConversation(tx, actor, id)),
+    );
+  }
+  authorizeMessageRead(auth: Actor, id: string) {
     return this.commands.readObligation(auth, async (tx, actor) => {
-      const row = await this.conversation(tx, id); this.participant(row, actor._id);
-      member(actor); if(actor.status==='LOCKED') await this.existingContact(tx,row,actor);
-      return this.view(tx, row);
+      await this.readableConversation(tx, actor, id);
     });
   }
   async messages(auth: Actor, id: string) {
@@ -250,8 +250,7 @@ export class PurchasesService {
 
   messageHistory(auth: Actor, id: string, before: string | undefined, limit: number): Promise<Wire['PurchaseMessageHistory']> {
     return this.commands.readObligation(auth, async (tx, actor) => {
-      const row = await this.conversation(tx, id); this.participant(row, actor._id);
-      member(actor); if(actor.status==='LOCKED') await this.existingContact(tx,row,actor);
+      await this.readableConversation(tx, actor, id);
       const boundary = before ? messageBoundary(before, id) : undefined;
       const older = boundary ? { $or: [
         { sentAt: { $lt: boundary.sentAt } },
@@ -282,7 +281,7 @@ export class PurchasesService {
   send(auth: Actor, input: { messageId: string; conversationId: string; body: string }) {
     return this.commands.readObligation(auth, async (tx, actor) => {
       const body = input.body.trim();
-      if (!body || [...body].length > 1000) throw invalidState();
+      if (!body || [...body].length > MESSAGE_MAX_LENGTH) throw invalidState();
       await tx.lock('purchase_conversations', [input.conversationId]);
       const row = await this.conversation(tx, input.conversationId); this.participant(row, actor._id);
       const now = await tx.now();
@@ -293,6 +292,7 @@ export class PurchasesService {
         if (existing.conversationId !== row._id || existing.senderId !== actor._id || existing.body !== body) throw conflict();
         return { id: existing._id, conversationId: existing.conversationId, senderId: existing.senderId, body: existing.body, sentAt: existing.sentAt.toISOString() } satisfies Wire['PurchaseMessage'];
       }
+      await checkMessageSendRate(tx, actor._id, now);
       await tx.c.purchase_messages.insertOne({ _id: input.messageId, conversationId: row._id, senderId: actor._id, body, sentAt: now });
       const updated = await tx.c.purchase_conversations.updateOne({ _id: row._id, version: row.version, status: row.status }, { $set: { updatedAt: now }, $inc: { version: 1 } });
       if (updated.matchedCount !== 1) throw conflict();

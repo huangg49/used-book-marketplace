@@ -243,20 +243,34 @@ const exchangeMessagesSchema = z.object({
       sentAt: z.string(),
     }),
   ),
+  olderCursor: z.string().nullable().optional(),
 });
 
 export async function getMessages(id: string): Promise<ChatMessage[]> {
+  return (await readMessages(id)).items;
+}
+
+export function getMessagePage(id: string, before?: string) {
+  const query = new URLSearchParams({ limit: "40" });
+  if (before !== undefined) query.set("before", before);
+  return readMessages(id, `?${query}`);
+}
+
+async function readMessages(id: string, search = "") {
   const actor = exchangeActor();
   const res = await session.request(
-    `/exchanges/${id}/messages`,
+    `/exchanges/${id}/messages${search}`,
     exchangeMessagesSchema,
   );
-  return res.items.map((message) => ({
-    id: message.id,
-    senderRole: message.senderId === actor.id ? "viewer" : "partner",
-    text: message.body,
-    sentAt: message.sentAt,
-  }));
+  return {
+    items: res.items.map((message): ChatMessage => ({
+      id: message.id,
+      senderRole: message.senderId === actor.id ? "viewer" : "partner",
+      text: message.body,
+      sentAt: message.sentAt,
+    })),
+    olderCursor: res.olderCursor ?? null,
+  };
 }
 
 export async function sendMessage(id: string, text: string): Promise<void> {

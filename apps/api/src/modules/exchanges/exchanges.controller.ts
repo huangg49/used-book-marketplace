@@ -84,7 +84,13 @@ export class ExchangesController {
   @Get(':id/messages')
   @Roles('MEMBER')
   getMessages(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
-    return this.exchanges.getMessages(req.auth, this.input.uuid(id));
+    const query = this.input.query('getExchangeMessages', req.query);
+    return this.exchanges.getMessages(
+      req.auth,
+      this.input.uuid(id),
+      query.before as string | undefined,
+      query.limit as number | undefined,
+    );
   }
 
   @Post(':id/messages')
