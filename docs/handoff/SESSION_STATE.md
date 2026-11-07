@@ -5,7 +5,8 @@ nguồn tích lũy `ba8713bb`, main remote xác minh `ef7091e1e24eeff186eb0db332
 là ancestor, không conflict mới. Giữ toàn bộ123commit/330file local ban đầu
 (receipt/private-review/API/shared/RN, conversation/pagination/focus và tối ưu).
 Backup `codex/backup-before-publish-20261106-ba8713bb`. Đã push và mở
-[PR97](https://github.com/huangg49/used-book-marketplace/pull/97); chưa merge.
+[PR97](https://github.com/huangg49/used-book-marketplace/pull/97), đã squash vào
+main tại `2e5db222` sau CI11/11 trên `f43b5897`.
 PR97 là đầu mối diff, SHA, CI và trạng thái merge hiện hành. Evidence bên dưới
 thuộc nguồn được ghi; phải đọc CI đúng head cuối trước squash. Ngày07/11 owner
 yêu cầu assistant tự review rồi merge, cho phép ngoại lệ review người thật riêng
@@ -80,8 +81,13 @@ Demo `codex/demo-receipt-local-20261103`/`5bd0b360` giữ54file tracked/untracke
 status fingerprint; không sync/build/stash/reset checkout Documents. Không local
 API/Mongo/worker/provider, migration/seed/deploy. Local Flutter analyze/test,
 full native/live-provider/human acceptance NOT RUN; READINESS giữ nguyên.
-Bước tiếp: xác minh CI đúng SHA cuối rồi squash PR97 theo quyền owner07/11,
-kiểm SHA main/merge thực. Không tự bật AI auto-review hoặc mở rộng gate nghiệp vụ.
+Đồng bộ ngày 07/11. Main local fast-forward lên `a972cdd0`, bổ sung thống kê
+doanh thu phân trang ([PR98](https://github.com/huangg49/used-book-marketplace/pull/98)).
+CI Admin và Operations cùng dừng ở test tìm “tài khoản” do Thống kê trùng điểm
+khớp chuỗi con. Nhánh local `codex/admin-command-search-ranking` ưu tiên khớp
+nguyên từ khi bằng điểm. Admin 246 unit, build và lint phần sửa đều PASS.
+API dashboard 8 unit và contract/routes 258 operations PASS local. E2E của
+nhánh sửa chưa chạy. Checkout demo giữ nguyên.
 
 # Gia cố khả năng phục hồi web —05/11/2026
 
