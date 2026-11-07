@@ -236,7 +236,8 @@ review identity and pickup history; no refund/restock/custody conclusion from a 
 Buyer receipt/72h inspection được mở có giới hạn theo owner03/11/ADR0052, chỉ
 InTransit v4 còn hạn, pickup hợp lệ và không carrier/delivery review, giữ nguyên hold.
 Carrier Delivered và settlement vẫn bị chặn bởi [ADR0064](../adr/0064-direct-delivery-completion-release-gate.md).
-Current auth precedes read-only historical replay; canConfirmReceipt is false.
+Current auth precedes read-only historical replay; canConfirmReceipt follows the
+limited Buyer acknowledgement eligibility above, not carrier delivery or settlement.
 Worker reports blocked Inspection separately from executable backlog, preserving
 holds/books/history. Carrier-delivered denial and quality claims are still incomplete.
 These review tasks are intake/blockers, not a completed dispute/adjudication workflow.

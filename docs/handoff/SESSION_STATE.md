@@ -7,9 +7,13 @@ là ancestor, không conflict mới. Giữ toàn bộ123commit/330file local ban
 Backup `codex/backup-before-publish-20261106-ba8713bb`. Đã push và mở
 [PR97](https://github.com/huangg49/used-book-marketplace/pull/97); chưa merge.
 PR97 là đầu mối diff, SHA, CI và trạng thái merge hiện hành. Evidence bên dưới
-thuộc nguồn được ghi; phải đọc CI đúng head cuối trước squash. Owner vùng ảnh
-hưởng +reviewer thứ hai tiền/quyền/dispute theo TEAMWORK còn thiếu, không lấy
-AI/CI thay human sign-off hoặc đóng READINESS.
+thuộc nguồn được ghi; phải đọc CI đúng head cuối trước squash. Ngày07/11 owner
+yêu cầu assistant tự review rồi merge, cho phép ngoại lệ review người thật riêng
+PR97. Đây vẫn là AI self-review, không human sign-off hoặc đóng READINESS; quy
+tắc TEAMWORK cho các PR khác không đổi. Rà soát trọng điểm auth/replay, receipt/
+hold, review riêng/công bố, cursor phòng chat và recovery/motion không thấy lỗi
+chặn merge. Sửa câu canConfirmReceipt=false cũ trong DOMAIN_RULES cho khớp ngoại
+lệ ADR0052 đã có, không đổi source/contract/gate nghiệp vụ.
 
 Các sửa publication đã triển khai:
 - Khớp harness với entry/heading/nhãn/region/disclosure hiện hành của Member và
@@ -62,7 +66,9 @@ Kiểm chứng đã thực chạy:
   exact cursor retry/ledger/expiry assertions. CIc2e đã qua ledger/layout/return/
   lost-ACK, dừng timer: UI có prefix Còn, assertion cũ chỉ MM:SS. Nay assert đủ
   prefix, vẫn giữ signed provider delta và server delta chính xác300000ms.
-  Full CI head sửa còn phải xác minh.
+  CI74efbb80 đã PASS11/11, gồm đầy đủ API/Mongo/E2E, Member (toàn bộ Wallet,
+  deadline/expiry/lost-ACK/ledger) và Operations. Commit review tiếp theo chỉ đổi
+  tài liệu; CI đúng head cuối và trạng thái merge lấy tại PR97.
   Main ef7091e1 cũng từng FAIL API/web-smoke/member-profile trước PR97; đã đối
   chiếu logs, không quy tất cả lỗi cho tối ưu.
 
@@ -70,8 +76,8 @@ Demo `codex/demo-receipt-local-20261103`/`5bd0b360` giữ54file tracked/untracke
 status fingerprint; không sync/build/stash/reset checkout Documents. Không local
 API/Mongo/worker/provider, migration/seed/deploy. Local Flutter analyze/test,
 full native/live-provider/human acceptance NOT RUN; READINESS giữ nguyên.
-Bước tiếp: đọc đủ CI đúng SHA cuối, sửa lỗi nếu còn; hoàn tất review theo TEAMWORK
-rồi squash PR97. Không tự bật AI auto-review hoặc mở rộng gate nghiệp vụ.
+Bước tiếp: xác minh CI đúng SHA cuối rồi squash PR97 theo quyền owner07/11,
+kiểm SHA main/merge thực. Không tự bật AI auto-review hoặc mở rộng gate nghiệp vụ.
 
 # Gia cố khả năng phục hồi web —05/11/2026
 
