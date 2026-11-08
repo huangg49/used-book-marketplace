@@ -386,6 +386,7 @@ export function WalletPage() {
   const availableVal = summary.data?.available ?? 0;
   const heldVal = summary.data?.transactionHeld ?? 0;
   const withdrawalHeld = summary.data?.withdrawalHeld ?? 0;
+  const auctionHeld = summary.data?.auctionHeld ?? 0;
 
   return (
     <section className={frame.page}>
@@ -517,6 +518,7 @@ export function WalletPage() {
                       ? "—"
                       : formatVnd(heldVal)}
                   {!summary.isPending && !summary.isError && withdrawalHeld > 0 && <small style={{display:"block"}}>Chờ rút: {formatVnd(withdrawalHeld)}</small>}
+                  {!summary.isPending && !summary.isError && auctionHeld > 0 && <small style={{display:"block"}}>Giữ cho đấu giá: {formatVnd(auctionHeld)}</small>}
                 </span>
               </div>
             </div>

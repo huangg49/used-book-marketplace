@@ -4873,9 +4873,144 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       await fund(x, 500_000);
       await bid(first._id, x, 300_000).expect(200);
       const refused = await bid(second._id, x, 300_000).expect(409);
-      expect(refused.body.message).toMatch(/đang cam kết/);
+      // ADR 0075: the first lead is held, so it shows as held, not "open".
+      expect(refused.body.message).toMatch(/đang được giữ 300\.000đ/);
       await fund(x, 100_000);
       await bid(second._id, x, 300_000).expect(200);
+    });
+
+    // ADR 0075: the leader's level is held in the wallet and released when
+    // outbid, cancelled, expired, closed above the final price, or paid.
+    const wallet = async (a: Actor) =>
+      (await call('get', '/me/wallet', a).expect(200)).body as {
+        available: number;
+        auctionHeld: number;
+        total: number;
+      };
+    const heldFor = async (auctionId: string, a: Actor) =>
+      (await call('get', `/me/auctions/${auctionId}/participation`, a).expect(200))
+        .body.heldAmount as number;
+    const kinds = async (a: Actor, auctionId: string) =>
+      (
+        await db.c.member_notifications
+          .find({ userId: a.id, targetId: auctionId })
+          .sort({ createdAt: 1 })
+          .toArray()
+      ).map((n) => n.kind);
+
+    it('ADR 0075: the leader is held; an outbid leader gets the money back at once', async () => {
+      const a = await live();
+      const [x, y] = [await actor(), await actor()];
+      await fund(x, 500_000);
+      await fund(y, 500_000);
+      await bid(a._id, x, 300_000).expect(200);
+      expect(await wallet(x)).toMatchObject({ available: 200_000, auctionHeld: 300_000, total: 500_000 });
+      expect(await heldFor(a._id, x)).toBe(300_000);
+      await bid(a._id, y, 350_000).expect(200);
+      expect(await wallet(x)).toMatchObject({ available: 500_000, auctionHeld: 0 });
+      expect(await heldFor(a._id, x)).toBe(0);
+      expect(await wallet(y)).toMatchObject({ available: 150_000, auctionHeld: 350_000 });
+      expect(await kinds(x, a._id)).toEqual(['AuctionFundsHeld', 'AuctionOutbid', 'AuctionFundsReleased']);
+      const released = await db.c.member_notifications.findOne({ userId: x.id, kind: 'AuctionFundsReleased' });
+      expect(released!.body).toContain('300.000đ');
+      // The rival never sees x's amounts.
+      expect(JSON.stringify(await db.c.member_notifications.find({ userId: y.id }).toArray())).not.toContain('300.000đ đã về');
+      expect(await reconciled()).toBe(true);
+    });
+
+    it('ADR 0075: an Auto ceiling is held in full and Auto off lowers it to the price', async () => {
+      const a = await live();
+      const [x, y] = [await actor(), await actor()];
+      await fund(x, 500_000);
+      await fund(y, 300_000);
+      await auto(a._id, x, 500_000).expect(200);
+      expect(await heldFor(a._id, x)).toBe(500_000);
+      // A rival below the ceiling moves the price, not x's hold.
+      await bid(a._id, y, 300_000).expect(200);
+      expect((await db.c.auctions.findOne({ _id: a._id }))!).toMatchObject({ leaderId: x.id, currentPrice: 350_000 });
+      expect(await heldFor(a._id, x)).toBe(500_000);
+      expect(await wallet(y)).toMatchObject({ available: 300_000, auctionHeld: 0 });
+      await cmd('post', `/auctions/${a._id}/auto-bid/disable`, {}, x).expect(200);
+      expect(await heldFor(a._id, x)).toBe(350_000);
+      expect(await wallet(x)).toMatchObject({ available: 150_000, auctionHeld: 350_000 });
+      expect(await reconciled()).toBe(true);
+    });
+
+    it('ADR 0075: held money cannot be bid again elsewhere; a retried key holds once', async () => {
+      const [first, second] = [await live(), await live()];
+      const x = await actor();
+      await fund(x, 400_000);
+      const key = randomUUID();
+      await bid(first._id, x, 300_000, key).expect(200);
+      const replay = await bid(first._id, x, 300_000, key).expect(200);
+      expect(replay.headers['idempotency-replayed']).toBe('true');
+      expect(await wallet(x)).toMatchObject({ available: 100_000, auctionHeld: 300_000 });
+      expect(await db.c.ledger_journals.countDocuments({ auctionId: first._id, type: 'AuctionBidHold' })).toBe(1);
+      expect((await bid(second._id, x, 200_000).expect(409)).body.code).toBe('InvalidState');
+      expect(await db.c.auction_bids.countDocuments({ auctionId: second._id })).toBe(0);
+    });
+
+    it('ADR 0075: close keeps the final price for the winner; payment uses the hold once', async () => {
+      const a = await live();
+      const [x, y] = [await actor(), await actor()];
+      await fund(x, 500_000);
+      await fund(y, 300_000);
+      await auto(a._id, x, 500_000).expect(200);
+      await bid(a._id, y, 300_000).expect(200);
+      const closed = await closeAt(a._id);
+      expect(closed).toMatchObject({ state: 'AwaitingWinnerPayment', winnerId: x.id, finalPrice: 350_000 });
+      expect(await wallet(x)).toMatchObject({ available: 150_000, auctionHeld: 350_000, total: 500_000 });
+      expect(await kinds(x, a._id)).toContain('AuctionFundsReleased');
+      await longSession(x);
+      pinClock(new Date(closed.closedAt!.getTime() + 60_000));
+      await payOrder(closed.orderId!, x).expect(200);
+      vi.restoreAllMocks();
+      // 350,000 moved from the hold into the Order hold: nothing charged twice.
+      expect(await wallet(x)).toMatchObject({ available: 150_000, auctionHeld: 0 });
+      expect(await reconciled()).toBe(true);
+    });
+
+    it('ADR 0075: payment expiry and Admin cancel give the money back', async () => {
+      const a = await live();
+      const x = await actor();
+      await fund(x, 300_000);
+      await bid(a._id, x, 300_000).expect(200);
+      const closed = await closeAt(a._id);
+      expect(await wallet(x)).toMatchObject({ available: 0, auctionHeld: 300_000 });
+      pinClock(new Date(closed.paymentDeadline!.getTime() + 1_000));
+      await app.get(AuctionWorker).tick();
+      vi.restoreAllMocks();
+      expect((await db.c.auctions.findOne({ _id: a._id }))!.state).toBe('PaymentExpired');
+      expect(await wallet(x)).toMatchObject({ available: 300_000, auctionHeld: 0 });
+
+      const b = await live();
+      const y = await actor();
+      await fund(y, 300_000);
+      await bid(b._id, y, 250_000).expect(200);
+      const v = (await db.c.auctions.findOne({ _id: b._id }))!.version;
+      await cmd(
+        'post',
+        `/operations/auctions/${b._id}/cancel`,
+        { expectedVersion: v, reason: 'Nghi ngờ gian lận trong phiên' },
+        admin,
+      ).expect(200);
+      expect(await wallet(y)).toMatchObject({ available: 300_000, auctionHeld: 0 });
+      expect(await kinds(y, b._id)).toContain('AuctionFundsReleased');
+      expect(await reconciled()).toBe(true);
+    });
+
+    it('ADR 0075 race: simultaneous bids end with exactly the leader held', async () => {
+      const a = await live();
+      const bidders = await Promise.all([actor(), actor(), actor(), actor()]);
+      for (const b of bidders) await fund(b, 1_000_000);
+      await Promise.all(bidders.map((b, i) => bid(a._id, b, 300_000 + i * 50_000)));
+      const after = (await db.c.auctions.findOne({ _id: a._id }))!;
+      // Refused bidders have no participation row; the wallet shows 0 held.
+      const held = await Promise.all(bidders.map(async (b) => (await wallet(b)).auctionHeld));
+      const leaderIndex = bidders.findIndex((b) => b.id === after.leaderId);
+      const leaderLevel = (await db.c.auction_bidders.findOne({ _id: `${a._id}:${after.leaderId}` }))!.level;
+      held.forEach((h, i) => expect(h).toBe(i === leaderIndex ? leaderLevel : 0));
+      expect(await reconciled()).toBe(true);
     });
 
     it('disabling Auto never needs funds', async () => {

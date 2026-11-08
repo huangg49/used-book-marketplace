@@ -40,7 +40,11 @@ import {
   type EngineAction,
 } from './auction-engine.js';
 import { checkAuction } from './auction-invariants.js';
-import { notifyAuction } from './auction-notifications.js';
+import {
+  notifyAuction,
+  notifyAuctionFunds,
+  type FundsReason,
+} from './auction-notifications.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
 import { HandoverPointsService } from './handover-points.service.js';
 import { recordViolation, requireUnrestricted } from './member-violations.js';
@@ -217,7 +221,13 @@ export class AuctionBiddingService {
     auctionId: string,
     amount: number,
   ) {
-    const leading = await tx.c.auctions
+    // ADR 0075: held amounts already left `available`; only commitments with
+    // no hold (made before holds existed) still count as open here, and the
+    // amount already held for this auction is reused.
+    const heldHere = await this.ledger.auctionHeld(tx, userId, auctionId);
+    const unheld = async (otherAuctionId: string) =>
+      (await this.ledger.auctionHeld(tx, userId, otherAuctionId)) === 0;
+    const leadingAll = await tx.c.auctions
       .find(
         {
           leaderId: userId,
@@ -227,17 +237,23 @@ export class AuctionBiddingService {
         { projection: { currentPrice: 1 } },
       )
       .toArray();
-    const unpaid = await tx.c.point_orders
+    const unpaidAll = await tx.c.point_orders
       .find(
         { buyerId: userId, state: 'AwaitingPayment' },
-        { projection: { buyerTotal: 1 } },
+        { projection: { buyerTotal: 1, auctionId: 1 } },
       )
       .toArray();
+    const leading = [];
+    for (const x of leadingAll) if (await unheld(x._id)) leading.push(x);
+    const unpaid = [];
+    for (const o of unpaidAll) if (await unheld(o.auctionId)) unpaid.push(o);
+    const heldElsewhere =
+      (await this.ledger.auctionHeld(tx, userId)) - heldHere;
     const open =
       leading.reduce((sum, x) => sum + (x.currentPrice ?? 0), 0) +
       unpaid.reduce((sum, o) => sum + o.buyerTotal, 0);
     const available = await this.ledger.available(tx, userId);
-    if (available >= amount + open) return;
+    if (available + heldHere >= amount + open) return;
     const vnd = (n: number) => `${n.toLocaleString('vi-VN')}đ`;
     throw new DomainError(
       409,
@@ -245,6 +261,9 @@ export class AuctionBiddingService {
       `Số dư khả dụng ${vnd(available)} chưa đủ cho mức ${vnd(amount)}` +
         (open
           ? ` cộng ${vnd(open)} đang cam kết ở phiên khác hoặc đơn chờ thanh toán`
+          : '') +
+        (heldElsewhere > 0
+          ? ` (ví đang được giữ ${vnd(heldElsewhere)} cho phiên bạn dẫn giá hoặc đã thắng)`
           : '') +
         '. Hãy nạp thêm ví rồi thử lại.',
     );
@@ -446,6 +465,43 @@ export class AuctionBiddingService {
           );
           if (updated.modifiedCount !== 1) throw conflict();
         } else await tx.c.auction_bidders.insertOne(bidder);
+        // ADR 0075: only the leader's level is held. The lead only ever moves
+        // to the actor, so a rival's bid never depends on the leader's wallet:
+        // the displaced leader is released, the actor holds their new level
+        // (Auto off lowers a leader's hold to the current price).
+        const holdMoves: {
+          holderId: string;
+          delta: number;
+          reason: FundsReason;
+        }[] = [];
+        if (this.fundsCheck) {
+          if (a.leaderId && a.leaderId !== result.leaderId)
+            holdMoves.push({
+              holderId: a.leaderId,
+              reason: 'Outbid',
+              delta: await this.ledger.setAuctionHold(
+                tx,
+                a._id,
+                a.leaderId,
+                0,
+                receiptId,
+                now,
+              ),
+            });
+          if (result.leaderId === actor._id)
+            holdMoves.push({
+              holderId: actor._id,
+              reason: 'Leading',
+              delta: await this.ledger.setAuctionHold(
+                tx,
+                a._id,
+                actor._id,
+                result.bidder.level,
+                receiptId,
+                now,
+              ),
+            });
+        }
         await tx.c.auction_bids.insertOne({
           _id: randomUUID(),
           auctionId: a._id,
@@ -486,6 +542,8 @@ export class AuctionBiddingService {
         );
         if (a.leaderId && next.leaderId !== a.leaderId)
           await notifyAuction(tx, next, 'AuctionOutbid', [a.leaderId], now);
+        for (const m of holdMoves)
+          await notifyAuctionFunds(tx, next, m.holderId, m.delta, m.reason, now);
         if (endsByBuyNow) {
           await notifyAuction(tx, next, 'AuctionBoughtNow', [a.sellerId], now);
           return this.change(next, now, 'AuctionBoughtNow', actor._id);
@@ -585,7 +643,7 @@ export class AuctionBiddingService {
           );
         return a;
       },
-      mutate: async (tx, actor, _before, _receiptId) => {
+      mutate: async (tx, actor, _before, receiptId) => {
         await tx.lock('auctions', [id]);
         const a = await this.auction(tx, id);
         if (a.version !== body.expectedVersion) throw conflict();
@@ -616,6 +674,7 @@ export class AuctionBiddingService {
           [a.sellerId, ...bidders.map((b) => b.bidderId)],
           now,
         );
+        await this.releaseHolds(tx, next, null, 'Cancelled', receiptId, now);
         return this.change(next, now, 'AuctionCancelled', actor._id, reason);
       },
     });
@@ -728,6 +787,14 @@ export class AuctionBiddingService {
           },
           now,
         );
+        await this.releaseHolds(
+          tx,
+          next,
+          expired ? null : { holderId: a.leaderId, amount: a.currentPrice! },
+          expired ? 'Expired' : 'Closed',
+          receiptId,
+          now,
+        );
         if (expired) {
           await this.reclaim(tx, a, 'PaymentExpired', now);
           await notifyAuction(
@@ -776,6 +843,7 @@ export class AuctionBiddingService {
           receiptId,
         });
         const next = await this.update(tx, a, { state: 'PaymentExpired' }, now);
+        await this.releaseHolds(tx, next, null, 'Expired', receiptId, now);
         await this.reclaim(tx, a, 'PaymentExpired', now);
         await notifyAuction(
           tx,
@@ -787,6 +855,34 @@ export class AuctionBiddingService {
         return this.change(next, now, 'AuctionPaymentExpired', null);
       },
     });
+  }
+  // ADR 0075: release every hold on the auction except `keep` (the winner's
+  // final price until payment). Each holder hears about their own release.
+  private async releaseHolds(
+    tx: Tx,
+    a: AuctionDoc,
+    keep: { holderId: string; amount: number } | null,
+    reason: FundsReason,
+    receiptId: string,
+    now: Date,
+  ) {
+    const holds = await tx.c.wallet_accounts
+      .find({ purpose: 'AuctionBidHold', auctionId: a._id })
+      .toArray();
+    for (const h of holds) {
+      const target = keep && h.holderId === keep.holderId ? keep.amount : 0;
+      const delta = await this.ledger.setAuctionHold(
+        tx,
+        a._id,
+        h.holderId!,
+        target,
+        receiptId,
+        now,
+      );
+      // A winner whose hold covered more than the final price gets the rest.
+      if (delta < 0)
+        await notifyAuctionFunds(tx, a, h.holderId!, delta, reason, now);
+    }
   }
   private reclaim(tx: Tx, a: AuctionDoc, reason: ReclaimReason, now: Date) {
     return this.intakes.requireReclaim(tx, a.intakeId, reason, now);
@@ -1089,6 +1185,7 @@ export class AuctionBiddingService {
         alias: own?.alias ?? null,
         mode: own?.mode ?? null,
         ownLevel: own?.level ?? null,
+        heldAmount: await this.ledger.auctionHeld(tx, actor._id, a._id),
         boughtNow,
         leading: a.leaderId === actor._id,
         state: a.state,

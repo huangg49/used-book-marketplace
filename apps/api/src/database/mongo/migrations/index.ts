@@ -1,5 +1,6 @@
 import { createMessageSendLimitsMigration, withMessageSendLimits } from './0062-message-send-limits.js';
 import { createBuyNowModeMigration, withBuyNowMode } from './0063-auction-buy-now-mode.js';
+import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { manualWithdrawalsMigration, withManualWithdrawals } from './0061-manual-wallet-withdrawals.js';
 import { createWithdrawalsMigration, withdrawalSpecs, withWithdrawals } from './0060-wallet-withdrawals.js';
 import { autoReviewV2UpgradeBridgeMigration } from './0056-auto-review-v2-upgrade-bridge.js';
@@ -556,13 +557,14 @@ const beforeWithdrawals = (): CollectionSpec[] => [
   demoCompletionSpec,
 ];
 
-export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits), ...withdrawalSpecs.map(withManualWithdrawals)];
+export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds), ...withdrawalSpecs.map(withManualWithdrawals)];
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
-migrations.push(createWithdrawalsMigration([
+const withdrawalsMigration = createWithdrawalsMigration([
   ...baselineBeforeWithdrawals(spec => ['wallet_accounts','ledger_journals','mutation_receipts','audit_events'].includes(spec.name)),
   ...notificationSpecs.map(withExchangeNotificationChanges).map(withBuyNowNotifications).map(withExchangePhase6Changes).map(withSupportCases),
-]));
+]);
+migrations.push(withdrawalsMigration);
 
 migrations.push(manualWithdrawalsMigration, createMessageSendLimitsMigration([
   ...purchaseConversationSpecs.filter((spec) => spec.name === 'purchase_messages'),
@@ -571,4 +573,8 @@ migrations.push(manualWithdrawalsMigration, createMessageSendLimitsMigration([
 // ADR 0074: Buy Now mode on the 0058 snapshots of auction_intakes/auctions.
 migrations.push(
   createBuyNowModeMigration(buyNowRivalWindowMigration.definition.collections),
+);
+// ADR 0075: leader holds on the 0060 snapshots of wallet/ledger/notifications.
+migrations.push(
+  createAuctionBidHoldsMigration(withdrawalsMigration.definition.collections),
 );

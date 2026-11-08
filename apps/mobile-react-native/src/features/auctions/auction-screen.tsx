@@ -626,7 +626,9 @@ function BidPanel({
     enabled: state.status === "authenticated",
     retry: false,
   });
-  const available = wallet.data?.available ?? null;
+  // ADR 0075: the amount already held for this auction counts toward a raise.
+  const heldHere = me?.heldAmount ?? 0;
+  const available = wallet.data ? wallet.data.available + heldHere : null;
   const price = auction.currentPrice ?? auction.startPrice;
 
   const run = async (command: AuctionCommand) => {
@@ -648,6 +650,8 @@ function BidPanel({
       setConfirming(null);
       if (state.status === "authenticated")
         void queryClient.invalidateQueries({ queryKey: participationKey(auction.id, state.user.id) });
+      // ADR 0075: bids move wallet holds.
+      void queryClient.invalidateQueries({ queryKey: ["wallet"] });
       void refresh();
     }
   };
@@ -712,7 +716,7 @@ function BidPanel({
             value={manual ?? String(minimum)}
             editable={!locked}
             onChangeText={(text) => setManual(text.replace(/\D/g, ""))}
-            hint={`Lượt tiếp theo tối thiểu ${formatVnd(minimum)}. ${fundsHint(manualAmount, available) ?? ""}`.trim()}
+            hint={`Lượt tiếp theo tối thiểu ${formatVnd(minimum)}. ${heldHere > 0 ? `Ví đang giữ ${formatVnd(heldHere)} cho phiên này; bị vượt giá thì tiền về lại ví. ` : "Khi dẫn giá, ví giữ đúng mức bạn cam kết. "}${fundsHint(manualAmount, available) ?? ""}`.trim()}
             error={manualError ?? (fundsShortfall(manualAmount, available) ? (fundsHint(manualAmount, available) ?? undefined) : undefined)}
           />
           <Button

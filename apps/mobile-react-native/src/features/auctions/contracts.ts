@@ -87,6 +87,8 @@ export const participation = z.object({
   alias: z.number().int().nullable(),
   mode: z.enum(["Manual", "Auto"]).nullable(),
   ownLevel: z.number().int().nullable(),
+  // ADR 0075: wallet amount held for this auction (absent on older servers).
+  heldAmount: z.number().int().min(0).optional(),
   boughtNow: z.boolean(),
   leading: z.boolean(),
   state: z.enum(auctionStates),

@@ -2,7 +2,7 @@ import { LocalDemoCompletionPolicy } from './local-demo-completion.policy.js';
 import { LOCAL_DEMO_COMPLETION_POLICY } from '../../database/mongo/demo-completion-policy.js';
 import { Injectable } from '@nestjs/common';
 import { orderAmounts } from '../orders/order-amounts.js';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type {
   ExchangeDoc,
   LedgerJournalDoc,
@@ -35,6 +35,14 @@ import {
 } from '../../database/mongo/migrations/0022-vnpay-wallet-listing-fees.js';
 
 export const CLEARING_ID = CLEARING_ACCOUNT_ID;
+
+// ADR 0075: the journal receipt id for one holder's hold move in a command.
+export const auctionHoldReceiptId = (receiptId: string, holderId: string) => {
+  const h = createHash('sha256')
+    .update(`auction-hold:${receiptId}:${holderId}`)
+    .digest('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+};
 
 // Balance is always derived from immutable entries (never a stored column).
 export async function balanceOf(tx: Tx, accountId: string) {
@@ -96,6 +104,30 @@ export async function checkJournal(tx: Tx, journalId: string) {
       )
     )
       throw new Error('Invalid finite simulator capital');
+  } else if (j.type === 'AuctionBidHold' || j.type === 'AuctionBidRelease') {
+    // ADR 0075: between the holder's available account and their hold for
+    // exactly this auction; a hold never goes negative.
+    const hold = accounts.find((a) => a.purpose === 'AuctionBidHold');
+    const available = accounts.find(
+      (a) => a.purpose === 'UserAvailable' && a.ownerId === hold?.holderId,
+    );
+    const amount = entries[0].debit + entries[0].credit;
+    const [from, to] =
+      j.type === 'AuctionBidHold'
+        ? [available?._id, hold?._id]
+        : [hold?._id, available?._id];
+    if (
+      !hold ||
+      !available ||
+      !j.receiptId ||
+      hold.auctionId !== j.auctionId ||
+      amount <= 0 ||
+      !entries.some((e) => e.accountId === from && e.credit === amount && e.debit === 0) ||
+      !entries.some((e) => e.accountId === to && e.debit === amount && e.credit === 0) ||
+      (await balanceOf(tx, hold._id)) < 0 ||
+      !(await tx.c.auctions.findOne({ _id: j.auctionId! }, { projection: { _id: 1 } }))
+    )
+      throw new Error('Auction hold journal source mismatch');
   } else if (j.type.startsWith('Withdrawal')) {
     const w = await tx.c.withdrawals.findOne({ _id: j.withdrawalId! });
     const available = w && accounts.find(a => a.ownerId === w.ownerId && a.purpose === 'UserAvailable');
@@ -508,6 +540,7 @@ export class LedgerService {
     const withdrawals = await tx.c.withdrawals.find({}).toArray();
     for (const w of withdrawals) await checkWithdrawal(tx, w._id);
     const withdrawalHeld = await this.withdrawalHeld(tx);
+    const auctionHeld = await this.auctionHeld(tx);
     const orphanWithdrawal = await tx.c.wallet_accounts.countDocuments({ purpose: 'WithdrawalHold', withdrawalId: { $nin: withdrawals.map(w => w._id) } });
     if (orphanWithdrawal) throw new Error('Orphan withdrawal hold');
     const sourceRemaining = await balanceOf(tx, CLEARING_ID);
@@ -526,6 +559,7 @@ export class LedgerService {
         row.available +
         row.held +
         withdrawalHeld +
+        auctionHeld +
         platformCommission +
         listingFeeHeld !==
         SIMULATED_CAPITAL
@@ -539,6 +573,7 @@ export class LedgerService {
       memberAvailable: row.available,
       transactionHeld: row.held,
       withdrawalHeld,
+      auctionHeld,
       platformCommission,
       listingFeeHeld,
       sourceRemaining,
@@ -910,6 +945,86 @@ export class LedgerService {
       { $group: { _id: null, amount: { $sum: { $subtract: ['$entries.debit', '$entries.credit'] } } } },
     ]).toArray();
     return row?.amount ?? 0;
+  }
+  // ADR 0075: total held for auctions, for one holder or for everyone.
+  async auctionHeld(tx: Tx, holderId?: string, auctionId?: string) {
+    const [row] = await tx.c.wallet_accounts
+      .aggregate<{ amount: number }>([
+        {
+          $match: {
+            purpose: 'AuctionBidHold',
+            ...(holderId ? { holderId } : {}),
+            ...(auctionId ? { auctionId } : {}),
+          },
+        },
+        { $lookup: { from: 'ledger_entries', localField: '_id', foreignField: 'accountId', as: 'e' } },
+        { $unwind: '$e' },
+        { $group: { _id: null, amount: { $sum: { $subtract: ['$e.debit', '$e.credit'] } } } },
+      ])
+      .toArray();
+    return row?.amount ?? 0;
+  }
+  /**
+   * ADR 0075: moves the holder's hold for one auction to `target`, posting one
+   * AuctionBidHold (increase, from available) or AuctionBidRelease (decrease,
+   * back to available) journal for the difference. Caller holds the auction
+   * lock. Returns the signed change (0 when nothing moved).
+   */
+  async setAuctionHold(
+    tx: Tx,
+    auctionId: string,
+    holderId: string,
+    target: number,
+    receiptId: string,
+    now: Date,
+  ) {
+    let hold = await tx.c.wallet_accounts.findOne({ auctionId, holderId });
+    if (!hold && target <= 0) return 0;
+    if (!hold) {
+      hold = {
+        _id: randomUUID(),
+        ownerId: null,
+        orderId: null,
+        auctionId,
+        holderId,
+        purpose: 'AuctionBidHold',
+        currency: 'VND',
+      };
+      await tx.c.wallet_accounts.insertOne(hold);
+    }
+    const available = await this.account(tx, { ownerId: holderId });
+    await this.lockAccounts(tx, [available._id, hold._id]);
+    const delta = target - (await balanceOf(tx, hold._id));
+    if (delta === 0) return 0;
+    if (delta > 0 && (await balanceOf(tx, available._id)) < delta) {
+      const vnd = (n: number) => `${n.toLocaleString('vi-VN')}đ`;
+      throw new DomainError(
+        409,
+        'InvalidState',
+        `Cần giữ thêm ${vnd(delta)} trong ví cho phiên này nhưng số dư khả dụng chưa đủ. Hãy nạp thêm ví rồi thử lại.`,
+      );
+    }
+    const [from, to] =
+      delta > 0 ? [available._id, hold._id] : [hold._id, available._id];
+    await this.journal(
+      tx,
+      {
+        type: delta > 0 ? 'AuctionBidHold' : 'AuctionBidRelease',
+        auctionId,
+        topupId: null,
+        eventId: null,
+        orderId: null,
+        // One journal per receipt id (baseline index). A command may move two
+        // holds and pay an Order, so each hold journal gets an id derived from
+        // the command receipt and the holder: unique, and recomputable.
+        receiptId: auctionHoldReceiptId(receiptId, holderId),
+        postedAt: now,
+      },
+      from,
+      to,
+      Math.abs(delta),
+    );
+    return delta;
   }
   async postWithdrawal(tx: Tx, row: WithdrawalDoc, type: 'WithdrawalHold' | 'WithdrawalPayout' | 'WithdrawalRefund', receiptId: string, now: Date) {
     const available = await this.account(tx, { ownerId: row.ownerId });

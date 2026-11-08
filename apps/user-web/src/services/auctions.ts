@@ -57,7 +57,10 @@ export const auctionSchema = z.object({
 })
 const participationSchema = z.object({
   auctionId: z.string().uuid(), alias: z.number().int().nullable(), mode: z.enum(['Manual', 'Auto']).nullable(),
-  ownLevel: money.nullable(), boughtNow: z.boolean(), leading: z.boolean(), state: auctionState,
+  ownLevel: money.nullable(),
+  // ADR 0075: wallet amount held for this auction (absent on older servers).
+  heldAmount: z.number().int().min(0).optional(),
+  boughtNow: z.boolean(), leading: z.boolean(), state: auctionState,
   currentPrice: money.nullable(), minimumBid: money.nullable(), fulfillmentMethod: z.literal('SelfCollect'),
   won: z.boolean(), orderId: z.string().uuid().nullable(), finalPrice: money.nullable(),
   paymentDeadline: z.string().nullable(), serverTime: z.string(),

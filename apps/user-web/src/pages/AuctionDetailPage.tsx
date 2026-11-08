@@ -121,6 +121,8 @@ export function AuctionDetailPage() {
     queryClient.invalidateQueries({ queryKey: ['auction', id] }),
     queryClient.invalidateQueries({ queryKey: ['auction-participation', id] }),
     queryClient.invalidateQueries({ queryKey: ['auctions'] }),
+    // ADR 0075: bids move wallet holds.
+    queryClient.invalidateQueries({ queryKey: ['wallet-summary'] }),
   ])
   const ended = remaining === 0 && detail.data?.auction.state === 'Active'
   const starting = !!detail.data && detail.data.auction.phase === 'Scheduled' && untilStart === 0
@@ -514,11 +516,11 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
   const [unknown, setUnknown] = useState<Intent | null>(null)
   const intent = useIntentKey()
   const ids = useId()
-  // ADR 0071: the server refuses a commitment the wallet cannot cover. This is
-  // only an early hint from the member's own available balance; the server also
-  // counts prices they lead at elsewhere and unpaid auction orders.
+  // ADR 0075: the leader's level is held in the wallet. The amount already held
+  // for this auction counts toward a raise; the server stays authoritative.
   const wallet = useQuery({ queryKey: ['wallet-summary'], queryFn: getWalletSummary, staleTime: 15_000 })
-  const available = wallet.data?.available ?? null
+  const heldHere = me?.heldAmount ?? 0
+  const available = wallet.data ? wallet.data.available + heldHere : null
   const shortOf = (amount: number | null | undefined) =>
     available !== null && amount != null && amount > available ? amount - available : 0
   const locked = busy || !!unknown
@@ -623,6 +625,11 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
               hint={`Lượt tiếp theo tối thiểu ${formatVnd(minimumBid)}`} error={manualError}
             />
             <WalletLine available={available} short={shortOf(manualAmount)} />
+            <p className={styles.walletLine}>
+              {heldHere > 0
+                ? <>Ví đang giữ <b>{formatVnd(heldHere)}</b> cho phiên này. Bị vượt giá hoặc phiên bị hủy, tiền về lại ví ngay.</>
+                : 'Khi bạn dẫn giá, ví sẽ giữ đúng mức bạn cam kết; bị vượt giá thì tiền được trả lại ngay.'}
+            </p>
             <button
               type="button" className={styles.continue} disabled={locked || !!manualError || shortOf(manualAmount) > 0}
               onClick={() => manualAmount && setConfirming({ kind: 'Manual', amount: manualAmount })}

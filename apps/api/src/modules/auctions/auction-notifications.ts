@@ -40,7 +40,12 @@ async function context(tx: Tx, a: AuctionDoc) {
 type Text = { title: string; body: string };
 type Message = (c: { title: string; point: string }, a: AuctionDoc) => Text;
 
+// ADR 0075: hold/release rows go to one holder and carry the moved amount,
+// so they are written by notifyAuctionFunds; the shared map stays silent.
+const silent = { default: () => ({ title: '', body: '' }), seller: () => ({ title: '', body: '' }) };
 const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
+  AuctionFundsHeld: silent,
+  AuctionFundsReleased: silent,
   AuctionOutbid: {
     default: (c, a) => {
       const next = nextMinimumBid(a);
@@ -167,4 +172,50 @@ export async function notifyAuction(
     });
   }
   if (rows.length) await tx.c.member_notifications.insertMany(rows);
+}
+
+export type FundsReason = 'Leading' | 'Outbid' | 'Closed' | 'Cancelled' | 'Expired';
+const RELEASE_REASON: Record<Exclude<FundsReason, 'Leading'>, string> = {
+  Outbid: 'Bạn đã bị vượt giá nên khoản giữ được trả lại ví.',
+  Closed: 'Phiên đã chốt; phần giữ vượt giá chốt được trả lại ví.',
+  Cancelled: 'Phiên đã bị hủy nên khoản giữ được trả lại ví.',
+  Expired: 'Đơn không được thanh toán đúng hạn nên khoản giữ được trả lại ví.',
+};
+/**
+ * ADR 0075: tells one holder that their wallet hold for this auction moved.
+ * `delta` is the signed change; only the holder ever sees the amount.
+ */
+export async function notifyAuctionFunds(
+  tx: Tx,
+  a: AuctionDoc,
+  holderId: string,
+  delta: number,
+  reason: FundsReason,
+  now: Date,
+) {
+  if (delta === 0) return;
+  const c = await context(tx, a);
+  const kind: Kind = delta > 0 ? 'AuctionFundsHeld' : 'AuctionFundsReleased';
+  const text =
+    delta > 0
+      ? {
+          title: 'Ví đã giữ tiền cho lượt trả giá',
+          body: `${c.title}: đã giữ thêm ${vnd(delta)} khỏi số dư khả dụng trong lúc bạn dẫn giá. Nếu bị vượt giá hoặc phiên bị hủy, tiền được trả lại ví.`,
+        }
+      : {
+          title: 'Đã trả lại tiền giữ vào ví',
+          body: `${c.title}: ${vnd(-delta)} đã về số dư khả dụng. ${RELEASE_REASON[reason as Exclude<FundsReason, 'Leading'>] ?? ''}`.trim(),
+        };
+  await tx.c.member_notifications.insertOne({
+    _id: randomUUID(),
+    userId: holderId,
+    kind,
+    title: text.title,
+    body: text.body.slice(0, 400),
+    targetType: 'Auction',
+    targetId: a._id,
+    dedupeKey: `${kind}:${a._id}:${a.version}:${holderId}`,
+    createdAt: now,
+    readAt: null,
+  });
 }

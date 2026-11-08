@@ -8700,7 +8700,7 @@ paths:
       description: ACTIVE verified MEMBER other than the seller or the Staff handling the book. Amount
         must be on the start + n*step grid, at least the minimum bid (no upper ceiling, ADR 0067). The leader
         cannot bid manually. Rejected at or after endAt even if the close worker has not run. No money
-        is held at bid time. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers this commitment plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold.
+        is held at bid time. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers this commitment plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. ADR 0075 replaces this — when the caller becomes or stays leader, their level (manual amount, Auto ceiling or Buy Now price) is held in the wallet, so the available balance must cover the increase over what is already held for this auction (409 InvalidState otherwise). The previous leader's hold is released in the same transaction.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -8767,7 +8767,7 @@ paths:
       tags:
         - Auctions
       description: Sets or raises a private Auto ceiling on the price grid. A new ceiling must reach the
-        minimum bid; the leader may only raise, which never raises the price. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the new ceiling plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold.
+        minimum bid; the leader may only raise, which never raises the price. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the new ceiling plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. ADR 0075 replaces this — when the caller becomes or stays leader, their level (manual amount, Auto ceiling or Buy Now price) is held in the wallet, so the available balance must cover the increase over what is already held for this auction (409 InvalidState otherwise). The previous leader's hold is released in the same transaction.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -9831,7 +9831,7 @@ paths:
         min(endAt, now + 5 min) when the buyer was not (ADR 0070). Others may outbid from Buy Now price +
         step in that window; the normal close then forms the winner's Order (24-hour payment). The
         receipt reports state Active and no orderId. Auctions already BuyNowPending keep their
-        15-minute Order. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the Buy Now price plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold.
+        15-minute Order. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the Buy Now price plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. ADR 0075 replaces this — when the caller becomes or stays leader, their level (manual amount, Auto ceiling or Buy Now price) is held in the wallet, so the available balance must cover the increase over what is already held for this auction (409 InvalidState otherwise). The previous leader's hold is released in the same transaction.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -15466,6 +15466,8 @@ components:
           type: string
           enum:
             - AuctionOutbid
+            - AuctionFundsHeld
+            - AuctionFundsReleased
             - AuctionWon
             - AuctionSold
             - AuctionBoughtNow
@@ -18256,6 +18258,13 @@ components:
           type: integer
           minimum: 0
           maximum: 9007199254740991
+        auctionHeld:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+          description: ADR 0075. Held while the caller leads auctions (their committed level) or has
+            won and not yet paid; released to available when outbid, cancelled, unsold, expired, or
+            used for the payment. Included in total. Optional for older servers.
         total:
           type: integer
           minimum: 0
@@ -20754,6 +20763,13 @@ components:
           minimum: 10000
           maximum: 9007199254740991
           description: Own manual amount or own private Auto ceiling.
+        heldAmount:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+          description: ADR 0075. Wallet amount currently held for this auction for the caller (their
+            level while leading, the final price after winning until payment); 0 once outbid or
+            released. Optional for older servers.
         boughtNow:
           type: boolean
         leading:

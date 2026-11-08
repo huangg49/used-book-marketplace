@@ -652,10 +652,14 @@ export interface CommitmentEventDoc {
 
 export interface WalletAccountDoc {
   withdrawalId?: string | null;
+  // ADR 0075: AuctionBidHold accounts name their auction and holder.
+  auctionId?: string | null;
+  holderId?: string | null;
   _id: string;
   ownerId: string | null;
   orderId: string | null;
   purpose:
+    | 'AuctionBidHold'
     | 'WithdrawalHold'
     | 'UserAvailable'
     | 'OrderHold'
@@ -711,9 +715,12 @@ export interface SimulatedPaymentEventDoc {
 }
 export interface LedgerJournalDoc {
   withdrawalId?: string | null;
+  auctionId?: string | null;
   _id: string;
   sequence: number;
   type:
+    | 'AuctionBidHold'
+    | 'AuctionBidRelease'
     | 'WithdrawalHold'
     | 'WithdrawalPayout'
     | 'WithdrawalRefund'
@@ -1408,6 +1415,8 @@ export interface MemberNotificationDoc {
   userId: string;
   kind:
     | 'AuctionOutbid'
+    | 'AuctionFundsHeld'
+    | 'AuctionFundsReleased'
     | 'AuctionWon'
     | 'AuctionSold'
     | 'AuctionBoughtNow'

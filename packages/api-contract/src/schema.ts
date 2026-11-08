@@ -2919,7 +2919,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ACTIVE verified MEMBER other than the seller or the Staff handling the book. Amount must be on the start + n*step grid, at least the minimum bid (no upper ceiling, ADR 0067). The leader cannot bid manually. Rejected at or after endAt even if the close worker has not run. No money is held at bid time. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers this commitment plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. */
+        /** @description ACTIVE verified MEMBER other than the seller or the Staff handling the book. Amount must be on the start + n*step grid, at least the minimum bid (no upper ceiling, ADR 0067). The leader cannot bid manually. Rejected at or after endAt even if the close worker has not run. No money is held at bid time. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers this commitment plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. ADR 0075 replaces this — when the caller becomes or stays leader, their level (manual amount, Auto ceiling or Buy Now price) is held in the wallet, so the available balance must cover the increase over what is already held for this auction (409 InvalidState otherwise). The previous leader's hold is released in the same transaction. */
         post: operations["placeAuctionBid"];
         delete?: never;
         options?: never;
@@ -2935,7 +2935,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** @description Sets or raises a private Auto ceiling on the price grid. A new ceiling must reach the minimum bid; the leader may only raise, which never raises the price. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the new ceiling plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. */
+        /** @description Sets or raises a private Auto ceiling on the price grid. A new ceiling must reach the minimum bid; the leader may only raise, which never raises the price. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the new ceiling plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. ADR 0075 replaces this — when the caller becomes or stays leader, their level (manual amount, Auto ceiling or Buy Now price) is held in the wallet, so the available balance must cover the increase over what is already held for this auction (409 InvalidState otherwise). The previous leader's hold is released in the same transaction. */
         put: operations["setAuctionAutoBid"];
         post?: never;
         delete?: never;
@@ -3225,7 +3225,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ADR 0047 — offered while the auction is live, Buy Now has not been used and the current price is below the Buy Now price, also after bids. ADR 0070 — the current leader may use it too and keeps the lead at the Buy Now price. ADR 0074 — with buyNowMode Instant the auction ends at the Buy Now moment (endAt = now) and the close worker forms the Order within seconds; any bid that reaches the Buy Now price triggers the same end rule in either mode. Decided under the same auction lock as bids so exactly one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer offered and the auction ends at min(endAt, now + 60 s) when the buyer was already leading, or min(endAt, now + 5 min) when the buyer was not (ADR 0070). Others may outbid from Buy Now price + step in that window; the normal close then forms the winner's Order (24-hour payment). The receipt reports state Active and no orderId. Auctions already BuyNowPending keep their 15-minute Order. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the Buy Now price plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. */
+        /** @description ADR 0047 — offered while the auction is live, Buy Now has not been used and the current price is below the Buy Now price, also after bids. ADR 0070 — the current leader may use it too and keeps the lead at the Buy Now price. ADR 0074 — with buyNowMode Instant the auction ends at the Buy Now moment (endAt = now) and the close worker forms the Order within seconds; any bid that reaches the Buy Now price triggers the same end rule in either mode. Decided under the same auction lock as bids so exactly one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer offered and the auction ends at min(endAt, now + 60 s) when the buyer was already leading, or min(endAt, now + 5 min) when the buyer was not (ADR 0070). Others may outbid from Buy Now price + step in that window; the normal close then forms the winner's Order (24-hour payment). The receipt reports state Active and no orderId. Auctions already BuyNowPending keep their 15-minute Order. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the Buy Now price plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. ADR 0075 replaces this — when the caller becomes or stays leader, their level (manual amount, Auto ceiling or Buy Now price) is held in the wallet, so the available balance must cover the increase over what is already held for this auction (409 InvalidState otherwise). The previous leader's hold is released in the same transaction. */
         post: operations["buyAuctionNow"];
         delete?: never;
         options?: never;
@@ -5137,7 +5137,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "AuctionOutbid" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "WithdrawalUpdated" | "SupportUpdated" | "ReviewModerated";
+            kind: "AuctionOutbid" | "AuctionFundsHeld" | "AuctionFundsReleased" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "WithdrawalUpdated" | "SupportUpdated" | "ReviewModerated";
             title: string;
             body: string;
             /** @enum {string} */
@@ -6179,6 +6179,8 @@ export interface components {
             available: number;
             transactionHeld: number;
             withdrawalHeld: number;
+            /** @description ADR 0075. Held while the caller leads auctions (their committed level) or has won and not yet paid; released to available when outbid, cancelled, unsold, expired, or used for the payment. Included in total. Optional for older servers. */
+            auctionHeld?: number;
             total: number;
             /** Format: date-time */
             serverTime: string;
@@ -7104,6 +7106,8 @@ export interface components {
             mode: "Manual" | "Auto" | null;
             /** @description Own manual amount or own private Auto ceiling. */
             ownLevel: number | null;
+            /** @description ADR 0075. Wallet amount currently held for this auction for the caller (their level while leading, the final price after winning until payment); 0 once outbid or released. Optional for older servers. */
+            heldAmount?: number;
             boughtNow: boolean;
             leading: boolean;
             /** @enum {string} */
