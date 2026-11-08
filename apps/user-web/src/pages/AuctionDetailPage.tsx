@@ -208,7 +208,7 @@ export function AuctionDetailPage() {
         <p>
           {ended
             ? 'Hệ thống đang chốt người thắng. Trang sẽ tự cập nhật.'
-            : me ? 'Bạn không thắng phiên này. Lượt trả giá không giữ tiền nên ví của bạn không thay đổi.' : STATE_LABEL[auction.state] + '.'}
+            : me ? 'Bạn không thắng phiên này. Tiền cọc và khoản giữ (nếu có) đã về lại ví.' : STATE_LABEL[auction.state] + '.'}
         </p>
         <Link className={styles.secondaryBlock} to={ROUTES.auctions}>Xem các phiên khác</Link>
       </div>

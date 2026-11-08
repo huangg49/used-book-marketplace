@@ -5406,7 +5406,8 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       expect(await kinds(seller, a._id)).not.toContain('AuctionDepositForfeited');
       expect((await wallet(seller)).available).toBe(0);
       expect(await reconciled()).toBe(true);
-    });
+      // The full-ledger reconcile scans every journal written by this file.
+    }, 30_000);
 
     it('Dutch: acceptance needs the minimum registered; one acceptance then sells', async () => {
       const { a } = await liveOf({
@@ -5424,6 +5425,43 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       const closed = await closeAt(a._id);
       expect(closed).toMatchObject({ state: 'AwaitingWinnerPayment', winnerId: x.id });
       expect(await wallet(y)).toMatchObject({ available: 500_000, auctionHeld: 0 });
+    });
+
+    it('review fixes: no reschedule after a deposit; a registered Admin cannot cancel; refund wording', async () => {
+      const { seller, a } = await liveOf();
+      const [x, y, z] = [await funded(500_000), await funded(500_000), await funded(500_000)];
+      await register(a._id, x).expect(200);
+      // Bug 1: members paid a deposit for this timing.
+      const v1 = (await db.c.auctions.findOne({ _id: a._id }))!.version;
+      const moved = await reschedule(a._id, seller, { expectedVersion: v1, startAt: null, durationSeconds: 2 * 3600 }).expect(409);
+      expect(moved.body.message).toMatch(/đặt cọc/);
+      // Bug 2: an Admin who registered is involved.
+      const registeredAdmin = await actor(['MEMBER', 'ADMIN']);
+      await fund(registeredAdmin, 100_000);
+      await register(a._id, registeredAdmin).expect(200);
+      const v2 = (await db.c.auctions.findOne({ _id: a._id }))!.version;
+      expect((await cmd('post', `/operations/auctions/${a._id}/cancel`, { expectedVersion: v2, reason: 'Sách không đúng mô tả kiểm định' }, registeredAdmin).expect(403)).body.code).toBe('SelfReviewForbidden');
+      // Bug 3: a loser's refund says they did not win.
+      await register(a._id, y).expect(200);
+      await register(a._id, z).expect(200);
+      await bid(a._id, x, 200_000).expect(200);
+      await bid(a._id, y, 250_000).expect(200);
+      await closeAt(a._id);
+      const zRefund = await db.c.member_notifications.findOne({ userId: z.id, targetId: a._id, kind: 'AuctionFundsReleased' });
+      expect(zRefund!.body).toMatch(/không thắng/);
+      expect(zRefund!.body).not.toMatch(/vượt giá chốt/);
+    });
+
+    it('cancel notifies registrants who never bid', async () => {
+      const { a } = await liveOf();
+      const [x, y] = [await funded(500_000), await funded(100_000)];
+      await register(a._id, x).expect(200);
+      await register(a._id, y).expect(200);
+      await bid(a._id, x, 200_000).expect(200);
+      const v = (await db.c.auctions.findOne({ _id: a._id }))!.version;
+      await cmd('post', `/operations/auctions/${a._id}/cancel`, { expectedVersion: v, reason: 'Sách không đúng mô tả kiểm định' }, admin).expect(200);
+      const note = await db.c.member_notifications.findOne({ userId: y.id, targetId: a._id, kind: 'AuctionCancelled' });
+      expect(note!.body).toMatch(/được trả lại ví/);
     });
 
     it('cancel refunds every deposit', async () => {

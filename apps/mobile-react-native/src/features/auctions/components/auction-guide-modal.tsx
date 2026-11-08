@@ -12,7 +12,7 @@ const STEPS = [
   {
     step: "02",
     title: "Trả giá theo lịch phiên",
-    body: "Người bán chọn thời lượng 1–168 giờ. Trả giá theo bước hoặc chọn mua ngay; mức tự động chỉ bạn xem được, không giữ tiền trong ví.",
+    body: "Người bán chọn thời lượng 1–168 giờ. Trả giá theo bước hoặc chọn mua ngay; mức tự động chỉ bạn xem được. Phiên cần đủ người đăng ký và đặt cọc; ví giữ tiền cọc và mức bạn đang dẫn, hoàn lại khi bạn không thắng.",
     icon: "gavel" as const,
   },
   {

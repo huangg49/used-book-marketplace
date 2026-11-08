@@ -671,6 +671,13 @@ export class AuctionBiddingService {
         if (a.version !== body.expectedVersion) throw conflict();
         const now = await this.clock.decision(tx, context.auth);
         await requireUnrestricted(tx, actor._id, now);
+        // ADR 0077: members registered and paid a deposit for this timing.
+        if ((a.registeredCount ?? 0) > 0)
+          throw new DomainError(
+            409,
+            'InvalidState',
+            'Đã có người đăng ký và đặt cọc nên không đổi được thời gian phiên.',
+          );
         const { startAt, plannedEndAt } = reschedule(a, body, now);
         const next = await this.update(
           tx,
@@ -703,7 +710,12 @@ export class AuctionBiddingService {
         const a = await this.auction(tx, id);
         if (
           actor._id === a.sellerId ||
-          (await tx.c.auction_bidders.findOne({ _id: `${id}:${actor._id}` }))
+          (await tx.c.auction_bidders.findOne({ _id: `${id}:${actor._id}` })) ||
+          // ADR 0077: a registrant (deposit held) is involved too.
+          (await tx.c.auction_registrations.findOne({
+            _id: `${id}:${actor._id}`,
+            state: { $ne: 'Withdrawn' },
+          }))
         )
           throw new DomainError(
             403,
@@ -740,7 +752,11 @@ export class AuctionBiddingService {
           tx,
           next,
           'AuctionCancelled',
-          [a.sellerId, ...bidders.map((b) => b.bidderId)],
+          [
+            a.sellerId,
+            ...bidders.map((b) => b.bidderId),
+            ...(await this.registrantIds(tx, a)),
+          ],
           now,
         );
         await this.releaseHolds(tx, next, null, 'Cancelled', receiptId, now);
@@ -1017,7 +1033,16 @@ export class AuctionBiddingService {
       );
       // A winner whose hold covered more than the final price gets the rest.
       if (delta < 0)
-        await notifyAuctionFunds(tx, a, h.holderId!, delta, reason, now);
+        await notifyAuctionFunds(
+          tx,
+          a,
+          h.holderId!,
+          delta,
+          reason === 'Closed' && h.holderId !== keep?.holderId
+            ? 'NotWon'
+            : reason,
+          now,
+        );
     }
   }
   private async registrantIds(tx: Tx, a: AuctionDoc) {
@@ -1555,6 +1580,13 @@ export class AuctionBiddingService {
       for (const a of rows) {
         if (items.length === 50) break;
         if (await tx.c.auction_bidders.findOne({ _id: `${a._id}:${actor._id}` }))
+          continue;
+        if (
+          await tx.c.auction_registrations.findOne({
+            _id: `${a._id}:${actor._id}`,
+            state: { $ne: 'Withdrawn' },
+          })
+        )
           continue;
         const item = await tx.c.workflow_items.findOne({
           _id: `${a.contextId}:${a.listingId}`,

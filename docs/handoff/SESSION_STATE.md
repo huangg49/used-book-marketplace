@@ -29,6 +29,11 @@ Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
   Full API E2E sau ADR0077: 943/961, 14 lỗi ở assist-fast-paths/carrier-pickup/
   delivery-overdue/order-preparation/shipments/wallet (9 timeout 15 giây); chạy lại
   riêng sáu file đó 195/195 PASS (nghi do tải máy, chưa chứng minh).
+  Sửa 4 lỗi từ rà soát nghiệp vụ: chặn đổi lịch khi đã có người đặt cọc; Admin đã đăng ký
+  không được hủy; thông báo hoàn cọc/hủy đúng nội dung và tới cả người đăng ký; bỏ câu
+  "trả giá không giữ tiền" cũ trên web/RN. E2E auctions 110/110, web 475, RN 225 PASS.
+  Còn mở (cần quyết định): giá Dutch giảm khi chờ đủ người, Mua ngay "Kết thúc ngay" ngay
+  khi đủ người, tài khoản phụ của người bán đẩy giá, cọc treo khi phiên OnHold.
 
 Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
 auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web

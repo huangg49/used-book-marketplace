@@ -40,7 +40,12 @@ settlement.
     việc đăng lại phiên và vi phạm của người thắng.
   - Worker đóng phiên trễ hơn hạn thanh toán (không lỗi của người thắng) hoàn cọc, không
     phạt.
-- Hủy phiên bởi Admin hoàn mọi cọc.
+- Hủy phiên bởi Admin hoàn mọi cọc và báo cả người đăng ký chưa trả giá. Admin đã đăng ký
+  (chưa rút) không được hủy và không thấy phiên trong hàng hủy, như người trả giá.
+- Có người đăng ký thì người bán không đổi được thời gian phiên nữa (họ đặt cọc theo lịch
+  đã công bố).
+- Thông báo hoàn tiền cho người không thắng nói rõ "không thắng", không dùng câu
+  "phần giữ vượt giá chốt" dành cho người thắng.
 
 ## Persistence và contract
 

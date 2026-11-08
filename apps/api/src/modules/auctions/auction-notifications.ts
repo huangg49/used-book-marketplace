@@ -128,7 +128,7 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
   AuctionCancelled: {
     default: (c) => ({
       title: 'Phiên đấu giá đã bị hủy',
-      body: `${c.title} đã bị quản trị viên hủy. Lượt trả giá của bạn hết hiệu lực; không có khoản tiền nào bị giữ.`,
+      body: `${c.title} đã bị quản trị viên hủy. Lượt trả giá và đăng ký của bạn hết hiệu lực; tiền cọc và khoản giữ (nếu có) được trả lại ví.`,
     }),
     seller: (c) => ({
       title: 'Phiên đấu giá đã bị hủy',
@@ -211,12 +211,14 @@ export type FundsReason =
   // ADR 0077
   | 'Registered'
   | 'Withdrawn'
-  | 'NotEnoughBidders';
+  | 'NotEnoughBidders'
+  | 'NotWon';
 const RELEASE_REASON: Record<Exclude<FundsReason, 'Leading' | 'Registered'>, string> = {
   Withdrawn: 'Bạn đã rút đăng ký nên tiền cọc được trả lại ví.',
   NotEnoughBidders: 'Phiên không đủ người tham gia nên tiền cọc và khoản giữ được trả lại ví.',
   Outbid: 'Bạn đã bị vượt giá nên khoản giữ được trả lại ví.',
   Closed: 'Phiên đã chốt; phần giữ vượt giá chốt được trả lại ví.',
+  NotWon: 'Phiên đã kết thúc và bạn không thắng nên tiền cọc và khoản giữ được trả lại ví.',
   Cancelled: 'Phiên đã bị hủy nên khoản giữ được trả lại ví.',
   Expired: 'Đơn không được thanh toán đúng hạn nên khoản giữ được trả lại ví.',
 };
