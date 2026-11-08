@@ -922,6 +922,7 @@ export class AuctionIntakesService {
       closeReason: null,
       openMode: this.registration ? (schedule.openMode ?? null) : null,
       heldAt: null,
+      resumedAt: null,
       buyNowAt: null,
       startAt: schedule.startAt,
       endAt: schedule.plannedEndAt,

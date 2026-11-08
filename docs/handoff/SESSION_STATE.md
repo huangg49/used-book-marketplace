@@ -56,6 +56,19 @@ Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
   unit 450 (1 ca shutdown timeout khi chạy cả bộ, chạy riêng PASS), web 477, admin 249, RN 230,
   session-client 158, contract check PASS. 72 giờ/48 giờ chưa được chủ dự án xác nhận riêng.
   Trình duyệt thật, native, Flutter, human review tiền NOT RUN. Chưa push.
+- [ADR0080](../adr/0080-auction-resume-and-live-close.md): Admin độc lập tiếp tục phiên OnHold
+  một lần (trước trần 48 giờ, khi người bán/người dẫn giá đủ điều kiện lại), không dời mốc thời
+  gian nào; `hold`/`close` của worker khóa theo `stepKey(id, version)` để phiên đã tiếp tục được
+  giữ/chốt lại. Admin đóng phiên từ báo cáo, hủy và tiếp tục phiên gọi `nudge()` nên kênh trực
+  tiếp phát ngay. Sửa hộp thư web/RN thiếu 6 loại thông báo (làm hỏng cả trang), thêm kiểm tra
+  kiểu bằng enum contract. Migration `0068-auction-resume`, thao tác `resumeAuction` (267
+  operations khớp route). Admin web: "Xử lý phiên" (tiếp tục hoặc hủy). Kiểm chứng: E2E 4 ca
+  mới (tiếp tục một lần/từ chối/replay, chốt sau khi tiếp tục, quá 48 giờ, kênh trực tiếp qua
+  socket thật) PASS; cả file auctions 112/129, 17 ca timeout 15 giây, không ca nào sai kết quả;
+  chạy riêng theo nhóm đều PASS trừ "owner auction lookup…" (cũng timeout trên commit trước,
+  3773cb59) nên là máy chậm, không do thay đổi này. Support 14/14, API unit auctions/support 64,
+  Mongo 61, web 477, admin 250, RN 230, contract/routes PASS. Trình duyệt thật, native NOT RUN.
+  Chưa push.
 
 Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
 auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web

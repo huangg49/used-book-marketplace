@@ -3,6 +3,7 @@ import { createBuyNowModeMigration, withBuyNowMode } from './0063-auction-buy-no
 import { createAuctionTypesMigration, withAuctionTypes } from './0065-auction-types.js';
 import { createAuctionRegistrationMigration, registrationSpec, withAuctionRegistration } from './0066-auction-registration.js';
 import { createAuctionLifecycleMigration, withAuctionLifecycle } from './0067-auction-lifecycle.js';
+import { createAuctionResumeMigration, withAuctionResume } from './0068-auction-resume.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { manualWithdrawalsMigration, withManualWithdrawals } from './0061-manual-wallet-withdrawals.js';
 import { createWithdrawalsMigration, withdrawalSpecs, withWithdrawals } from './0060-wallet-withdrawals.js';
@@ -561,7 +562,7 @@ const beforeWithdrawals = (): CollectionSpec[] => [
   demoCompletionSpec,
 ];
 
-export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
+export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
 const withdrawalsMigration = createWithdrawalsMigration([
@@ -596,6 +597,11 @@ const registrationMigration = createAuctionRegistrationMigration([
 ]);
 migrations.push(registrationMigration);
 // ADR 0079: bounded registration lifecycle on the 0066 snapshots.
+const lifecycleMigration = createAuctionLifecycleMigration(
+  registrationMigration.definition.collections,
+);
+migrations.push(lifecycleMigration);
+// ADR 0080: one Admin resume of an OnHold auction, on the 0067 snapshots.
 migrations.push(
-  createAuctionLifecycleMigration(registrationMigration.definition.collections),
+  createAuctionResumeMigration(lifecycleMigration.definition.collections),
 );

@@ -14,6 +14,7 @@ import { Roles } from '../auth/roles.guard.js';
 import { ExistingObligation } from '../auth/obligations.decorator.js';
 import { ContractInput } from '../commands/contract-input.service.js';
 import { commandContext, commandResponse } from '../commands/command-http.js';
+import { AuctionLiveService } from '../auctions/auction-live.service.js';
 import { SupportService } from './support.service.js';
 import { SupportTargetsService } from './support-targets.service.js';
 
@@ -103,6 +104,7 @@ export class OperationsSupportController {
   constructor(
     private readonly support: SupportService,
     private readonly input: ContractInput,
+    private readonly live: AuctionLiveService,
   ) {}
   @Get()
   list(@Req() req: AuthenticatedRequest) {
@@ -134,16 +136,17 @@ export class OperationsSupportController {
       res,
     );
   }
-  // ADR 0079: close the reported auction with a message.
+  // ADR 0079: close the reported auction with a message. ADR 0080: pushed to
+  // live watchers of the auction right after the commit, not at the next poll.
   @Post(':caseId/close-auction')
   @HttpCode(200)
-  closeAuction(
+  async closeAuction(
     @Param('caseId') id: string,
     @Body() body: unknown,
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return commandResponse(
+    const receipt = await commandResponse(
       this.support.closeAuction(
         commandContext(this.input, req, res),
         this.input.uuid(id),
@@ -151,6 +154,8 @@ export class OperationsSupportController {
       ),
       res,
     );
+    this.live.nudge();
+    return receipt;
   }
   @Post(':caseId/actions')
   @HttpCode(200)

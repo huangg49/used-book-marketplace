@@ -58,7 +58,7 @@ export class AuctionWorker {
           {
             limit: 200,
             sort: { endAt: 1, _id: 1 },
-            projection: { sellerId: 1, leaderId: 1 },
+            projection: { sellerId: 1, leaderId: 1, version: 1 },
           },
         )
         .toArray();
@@ -200,7 +200,7 @@ export class AuctionWorker {
     });
     const { attempt, result } = this.runner();
     for (const a of holds)
-      await attempt('hold', a._id, () => this.bidding.hold(a._id));
+      await attempt('hold', a._id, () => this.bidding.hold(a._id, a.version));
     for (const a of registrations)
       await attempt('registrationExpiry', a._id, () =>
         this.bidding.expireRegistration(a._id, a.version),
@@ -210,7 +210,9 @@ export class AuctionWorker {
         this.bidding.expireHold(a._id, a.version),
       );
     for (const a of endings)
-      await attempt('close', a._id, () => this.bidding.close(a._id));
+      await attempt('close', a._id, () =>
+        this.bidding.close(a._id, a.version),
+      );
     for (const a of payments)
       await attempt('paymentExpiry', a._id, () =>
         this.bidding.expirePayment(a._id),
@@ -266,13 +268,19 @@ export class AuctionWorker {
       return tx.c.auctions
         .find(
           { _id: { $nin: blocked }, state: 'Active', endAt: { $lte: now } },
-          { limit: 100, sort: { endAt: 1, _id: 1 }, projection: { _id: 1 } },
+          {
+            limit: 100,
+            sort: { endAt: 1, _id: 1 },
+            projection: { _id: 1, version: 1 },
+          },
         )
         .toArray();
     });
     const { attempt, result } = this.runner();
     for (const a of endings)
-      await attempt('close', a._id, () => this.bidding.close(a._id));
+      await attempt('close', a._id, () =>
+        this.bidding.close(a._id, a.version),
+      );
     return { ...result, backedOff: blocked.length };
   }
 

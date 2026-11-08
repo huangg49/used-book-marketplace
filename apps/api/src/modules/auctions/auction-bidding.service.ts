@@ -750,35 +750,43 @@ export class AuctionBiddingService {
     });
   }
 
+  // An ACTIVE ADMIN who is not the seller, a bidder or a registrant.
+  private async independentAdmin(
+    tx: Tx,
+    actor: CurrentActor,
+    id: string,
+    verb: string,
+  ) {
+    requireActive(actor);
+    if (!actor.roles.some((r) => r.role === 'ADMIN'))
+      throw new DomainError(
+        403,
+        'FORBIDDEN',
+        `Chỉ quản trị viên được ${verb} phiên.`,
+      );
+    const a = await this.auction(tx, id);
+    if (
+      actor._id === a.sellerId ||
+      (await tx.c.auction_bidders.findOne({ _id: `${id}:${actor._id}` })) ||
+      // ADR 0077: a registrant (deposit held) is involved too.
+      (await tx.c.auction_registrations.findOne({
+        _id: `${id}:${actor._id}`,
+        state: { $ne: 'Withdrawn' },
+      }))
+    )
+      throw new DomainError(
+        403,
+        'SelfReviewForbidden',
+        `Bạn đang liên quan đến phiên này nên không được ${verb}.`,
+      );
+    return a;
+  }
+
   // ADMIN independent of the seller and every bidder; never picks a winner.
   cancel(context: CommandContext, id: string, body: Wire['CancelAuction']) {
     return this.commands.runAuction(context, 'cancelAuction', id, body, {
       discover: async (tx) => [(await this.auction(tx, id)).sellerId],
-      authorize: async (tx, actor) => {
-        requireActive(actor);
-        if (!actor.roles.some((r) => r.role === 'ADMIN'))
-          throw new DomainError(
-            403,
-            'FORBIDDEN',
-            'Chỉ quản trị viên được hủy phiên.',
-          );
-        const a = await this.auction(tx, id);
-        if (
-          actor._id === a.sellerId ||
-          (await tx.c.auction_bidders.findOne({ _id: `${id}:${actor._id}` })) ||
-          // ADR 0077: a registrant (deposit held) is involved too.
-          (await tx.c.auction_registrations.findOne({
-            _id: `${id}:${actor._id}`,
-            state: { $ne: 'Withdrawn' },
-          }))
-        )
-          throw new DomainError(
-            403,
-            'SelfReviewForbidden',
-            'Bạn đang liên quan đến phiên này nên không được hủy.',
-          );
-        return a;
-      },
+      authorize: (tx, actor) => this.independentAdmin(tx, actor, id, 'hủy'),
       mutate: async (tx, actor, _before, receiptId) => {
         await tx.lock('auctions', [id]);
         const a = await this.auction(tx, id);
@@ -790,6 +798,70 @@ export class AuctionBiddingService {
           invalidField('reason', 'Hãy ghi lý do hủy ít nhất 10 ký tự.');
         const next = await this.cancelNow(tx, a, reason, null, receiptId, now);
         return this.change(next, now, 'AuctionCancelled', actor._id, reason);
+      },
+    });
+  }
+
+  /**
+   * ADR 0080: an independent Admin returns an OnHold auction to Active, once,
+   * before the 48 h hold ceiling and only when the seller and the leader are
+   * eligible again. Nothing moves: startAt, endAt, the Buy Now window and the
+   * Dutch clock keep their stored times, so the paused time is not given back
+   * and no ceiling grows. An auction whose end passed is closed next.
+   */
+  resume(context: CommandContext, id: string, body: Wire['ResumeAuction']) {
+    return this.commands.runAuction(context, 'resumeAuction', id, body, {
+      // The eligibility read below needs the seller and leader locked.
+      discover: async (tx) => {
+        const a = await this.auction(tx, id);
+        return [a.sellerId, ...(a.leaderId ? [a.leaderId] : [])];
+      },
+      authorize: (tx, actor) =>
+        this.independentAdmin(tx, actor, id, 'tiếp tục'),
+      mutate: async (tx, actor, before) => {
+        await tx.lock('auctions', [id]);
+        const a = await this.auction(tx, id);
+        if (a.version !== body.expectedVersion) throw conflict();
+        if (a.leaderId !== before.leaderId) throw conflict();
+        if (a.state !== 'OnHold')
+          throw invalidState('Chỉ tiếp tục được phiên đang tạm dừng.');
+        const now = await this.clock.decision(tx, context.auth);
+        const reason = body.reason.trim();
+        if (reason.length < 10)
+          invalidField('reason', 'Hãy ghi lý do tiếp tục ít nhất 10 ký tự.');
+        if (a.resumedAt)
+          throw invalidState(
+            'Phiên đã được tiếp tục một lần; lần tạm dừng này chỉ có thể hủy.',
+          );
+        if (!a.heldAt || now.getTime() >= a.heldAt.getTime() + AUCTION_HOLD_MAX_MS)
+          throw invalidState(
+            'Phiên đã tạm dừng quá 48 giờ nên sẽ bị hủy, không tiếp tục được.',
+          );
+        if (!(await this.partiesEligible(tx, a)))
+          throw invalidState(
+            'Người bán hoặc người dẫn giá vẫn chưa đủ điều kiện nên chưa tiếp tục được.',
+          );
+        const next = await this.update(
+          tx,
+          a,
+          { state: 'Active', resumedAt: now },
+          now,
+        );
+        const bidders = await tx.c.auction_bidders
+          .find({ auctionId: a._id }, { projection: { bidderId: 1 } })
+          .toArray();
+        await notifyAuction(
+          tx,
+          next,
+          'AuctionResumed',
+          [
+            a.sellerId,
+            ...bidders.map((b) => b.bidderId),
+            ...(await this.registrantIds(tx, a)),
+          ],
+          now,
+        );
+        return this.change(next, now, 'AuctionResumed', actor._id, reason);
       },
     });
   }
@@ -1084,9 +1156,11 @@ export class AuctionBiddingService {
 
   // FR-AU09: an Active auction whose seller or leader lost eligibility is held
   // at once, not only at the close. Bids are kept and no runner-up is promoted;
-  // an independent Admin decides (cancel). Keyed by the auction: held once.
-  hold(id: string) {
-    return this.commands.systemAuction('AuctionHold', id, {
+  // an independent Admin decides (cancel, or resume once: ADR 0080). Keyed by
+  // the version the sweep read: a retry replays, a resumed auction (a later
+  // version) can be held again.
+  hold(id: string, version: number) {
+    return this.commands.systemAuction('AuctionHold', stepKey(id, version), {
       discover: async (tx) => {
         const a = await this.auction(tx, id);
         return [a.sellerId, ...(a.leaderId ? [a.leaderId] : [])];
@@ -1117,10 +1191,12 @@ export class AuctionBiddingService {
     });
   }
 
-  // FR-AU07/09: idempotent close keyed by the auction id. Payment deadline is
-  // endAt + 24h whenever the worker runs; a late worker records the expiry.
-  close(id: string) {
-    return this.commands.systemAuction('AuctionClose', id, {
+  // FR-AU07/09: idempotent close keyed by the version the sweep read (ADR
+  // 0080: a close that held the auction is not replayed after a resume).
+  // Payment deadline is endAt + 24h whenever the worker runs; a late worker
+  // records the expiry.
+  close(id: string, version: number) {
+    return this.commands.systemAuction('AuctionClose', stepKey(id, version), {
       discover: async (tx) => {
         const a = await this.auction(tx, id);
         return [a.sellerId, ...(a.leaderId ? [a.leaderId] : [])];
@@ -1942,6 +2018,7 @@ export class AuctionBiddingService {
           version: a.version,
           phase: phaseOf(a, now),
           holdExpiresAt: holdExpiry(a),
+          resumedAt: a.resumedAt?.toISOString() ?? null,
           title: String((item?.snapshot as { title?: string })?.title ?? ''),
           state: a.state as 'Active' | 'OnHold',
           startPrice: a.startPrice,

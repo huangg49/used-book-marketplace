@@ -162,6 +162,17 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
     }),
     seller: () => ({ title: '', body: '' }),
   },
+  // ADR 0080: the deadlines did not move while it was paused.
+  AuctionResumed: {
+    default: (c, a) => ({
+      title: 'Phiên đấu giá tiếp tục',
+      body: `${c.title} tiếp tục sau khi quản trị viên xem xét. Lượt trả giá, đăng ký và tiền cọc được giữ nguyên; phiên vẫn kết thúc lúc ${when(a.endAt)}.`,
+    }),
+    seller: (c, a) => ({
+      title: 'Phiên đấu giá tiếp tục',
+      body: `${c.title} tiếp tục sau khi quản trị viên xem xét; phiên vẫn kết thúc lúc ${when(a.endAt)}.`,
+    }),
+  },
   AuctionOnHold: {
     default: (c) => ({
       title: 'Phiên đấu giá tạm dừng',

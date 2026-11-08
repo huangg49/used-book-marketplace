@@ -15,6 +15,7 @@ import { commandContext, commandResponse } from '../commands/command-http.js';
 import { ContractInput } from '../commands/contract-input.service.js';
 import { AuctionBiddingService } from './auction-bidding.service.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
+import { AuctionLiveService } from './auction-live.service.js';
 import { PointCollectionService } from './point-collection.service.js';
 import { PointOrderCompletionService } from './point-order-completion.service.js';
 import { PointOrderResolutionService } from './point-order-resolution.service.js';
@@ -30,7 +31,15 @@ export class AuctionOperationsController {
     private readonly resolutions: PointOrderResolutionService,
     private readonly completion: PointOrderCompletionService,
     private readonly input: ContractInput,
+    private readonly live: AuctionLiveService,
   ) {}
+
+  // Push committed auction changes to live watchers without waiting for the poll.
+  private async notify<T>(result: Promise<T>) {
+    const receipt = await result;
+    this.live.nudge();
+    return receipt;
+  }
 
   @Get('point-order-resolutions')
   @Roles('ADMIN')
@@ -254,13 +263,36 @@ export class AuctionOperationsController {
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return commandResponse(
-      this.bidding.cancel(
-        commandContext(this.input, req, res),
-        this.input.uuid(id),
-        this.input.body('CancelAuction', body),
+    return this.notify(
+      commandResponse(
+        this.bidding.cancel(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('CancelAuction', body),
+        ),
+        res,
       ),
-      res,
+    );
+  }
+  // ADR 0080: resume an OnHold auction once.
+  @Post('auctions/:auctionId/resume')
+  @Roles('ADMIN')
+  @HttpCode(200)
+  resume(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.resume(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('ResumeAuction', body),
+        ),
+        res,
+      ),
     );
   }
 }

@@ -1123,6 +1123,8 @@ export interface AuctionDoc extends Lockable {
   openMode: 'WhenReady' | 'Scheduled' | null;
   // ADR 0079: when the auction was last put OnHold (48 h ceiling).
   heldAt: Date | null;
+  // ADR 0080: when an Admin resumed it from OnHold; an auction resumes once.
+  resumedAt: Date | null;
   // ADR 0043: set when Buy Now opened the 60-second challenge window.
   buyNowAt: Date | null;
   startAt: Date;
@@ -1467,6 +1469,7 @@ export interface MemberNotificationDoc {
     | 'AuctionNotEnoughBidders'
     | 'AuctionDepositForfeited'
     | 'AuctionRescheduled'
+    | 'AuctionResumed'
     | 'AuctionWon'
     | 'AuctionSold'
     | 'AuctionBoughtNow'

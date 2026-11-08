@@ -36,8 +36,8 @@ Không đổi READINESS; không là bằng chứng đóng gate settlement.
   Lệnh rút hồ sơ cũ (`/auction-intakes/{id}/cancel`) bị từ chối với phiên có đăng ký, vì nó
   không hoàn cọc (lỗi tiềm ẩn từ ADR0077 được chặn).
 - OnHold lưu `heldAt`; quá 48 giờ không được xử lý thì worker hủy (`HoldExpired`), hoàn mọi
-  khoản giữ và cọc, trả sách. Admin vẫn hủy được sớm hơn; không có lệnh gia hạn hay tiếp tục
-  phiên (phụ lục v1.1 vẫn không resume phiên OnHold).
+  khoản giữ và cọc, trả sách. Admin vẫn hủy được sớm hơn; không có lệnh gia hạn. Lệnh tiếp tục
+  một lần, không dời mốc thời gian, được thêm ở [ADR0080](0080-auction-resume-and-live-close.md).
 - Admin đóng phiên từ báo cáo (`POST /operations/support-cases/{caseId}/close-auction`):
   - chỉ Admin đang phụ trách hồ sơ, độc lập với người bán, người đăng ký và người trả giá;
   - kèm lời nhắn 10–1.000 ký tự;
@@ -93,8 +93,8 @@ Không đổi READINESS; không là bằng chứng đóng gate settlement.
 
 - 24 giờ, 72 giờ và 48 giờ là mặc định do phiên đề xuất; chủ dự án đồng ý tóm tắt nhưng chưa
   xác nhận riêng hai con số 72 và 48.
-- Admin đóng phiên từ báo cáo chưa phát realtime qua gateway; client thấy thay đổi khi tải
-  lại (polling hiện có).
+- Admin đóng phiên từ báo cáo phát qua kênh trực tiếp ngay sau commit từ
+  [ADR0080](0080-auction-resume-and-live-close.md).
 - RN chưa có màn hình hồ sơ hỗ trợ (ADR0078); Flutter chưa có. Chưa kiểm chứng trình duyệt
   thật hay thiết bị native.
 - Bộ kiểm thử ngẫu nhiên dùng seed cố định (4 phiên, 40 thao tác, nhảy đồng hồ), không phải

@@ -2670,6 +2670,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/auctions/{auctionId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0080. ACTIVE ADMIN independent of the seller, bidders and registrants returns an OnHold auction to Active with a reason, once per auction, before its 48-hour hold ceiling and only when the seller and the leader are eligible again. No deadline moves (startAt, endAt, the Buy Now window and the Dutch clock keep their stored times); an auction whose end already passed is closed by the worker next. Bids, holds and deposits are kept. */
+        post: operations["resumeAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auctions": {
         parameters: {
             query?: never;
@@ -5273,7 +5290,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "AuctionOutbid" | "AuctionFundsHeld" | "AuctionFundsReleased" | "AuctionBiddingStarted" | "AuctionNotEnoughBidders" | "AuctionDepositForfeited" | "AuctionRescheduled" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "WithdrawalUpdated" | "SupportUpdated" | "ReviewModerated";
+            kind: "AuctionOutbid" | "AuctionFundsHeld" | "AuctionFundsReleased" | "AuctionBiddingStarted" | "AuctionNotEnoughBidders" | "AuctionDepositForfeited" | "AuctionRescheduled" | "AuctionResumed" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "WithdrawalUpdated" | "SupportUpdated" | "ReviewModerated";
             title: string;
             body: string;
             /** @enum {string} */
@@ -7045,6 +7062,10 @@ export interface components {
             expectedVersion: number;
             reason: string;
         };
+        ResumeAuction: {
+            expectedVersion: number;
+            reason: string;
+        };
         PlaceAuctionBid: {
             amount: number;
             /** @enum {string} */
@@ -7396,6 +7417,11 @@ export interface components {
              * @description ADR 0079. When an OnHold auction auto-cancels; null otherwise. Optional.
              */
             holdExpiresAt?: string | null;
+            /**
+             * Format: date-time
+             * @description ADR 0080. When an Admin resumed this auction; an auction resumes at most once. Optional.
+             */
+            resumedAt?: string | null;
             title: string;
             /** @enum {string} */
             state: "Active" | "OnHold";
@@ -13451,6 +13477,46 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CancelAuction"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    resumeAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResumeAuction"];
             };
         };
         responses: {

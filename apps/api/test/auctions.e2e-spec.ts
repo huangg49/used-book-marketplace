@@ -16,6 +16,8 @@ import {
 import { MediaStorage } from '../src/modules/media/media-storage.js';
 import { AuctionClock } from '../src/modules/auctions/auction-clock.js';
 import { AuctionWorker } from '../src/modules/auctions/auction-worker.service.js';
+import { AuctionLiveService } from '../src/modules/auctions/auction-live.service.js';
+import { stepKey } from '../src/modules/auctions/system-key.js';
 import { isPointOpen } from '../src/modules/auctions/point-hours.js';
 import { MongoService } from '../src/database/mongo/mongo.service.js';
 import { LedgerService } from '../src/modules/wallet/ledger.service.js';
@@ -1766,10 +1768,11 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     expect(closed.paymentDeadline!.getTime()).toBe(
       doc.endAt.getTime() + 24 * HOUR,
     );
+    // ADR 0080: keyed by the version the sweep read (one before the close).
     expect(
       await db.c.mutation_receipts.countDocuments({
         operation: 'closeAuction',
-        key: auctionId,
+        key: stepKey(auctionId, closed.version - 1),
       }),
     ).toBe(1);
     const won = await call(
@@ -5828,6 +5831,160 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         for (const r of runs)
           expect(await db.c.auction_registrations.countDocuments({ auctionId: r.a._id, state: 'Registered' })).toBe(0);
       }, 180_000);
+
+      // ADR 0080: an Admin resumes an OnHold auction once; no deadline moves.
+      describe('ADR 0080: Admin resume and live pushes', () => {
+        const resume = (id: string, who: Actor, version: number, key?: string, reason = 'Người bán đã xác minh lại tài khoản.') =>
+          cmd('post', `/operations/auctions/${id}/resume`, { expectedVersion: version, reason }, who, key);
+        const heldAuction = async () => {
+          const { seller, a } = await liveOf();
+          const [x, y] = [await funded(500_000), await funded(500_000)];
+          const fillers = await fill(a._id, x, y);
+          await bid(a._id, x, 200_000).expect(200);
+          await bid(a._id, y, 250_000).expect(200);
+          return { seller, a, x, y, fillers };
+        };
+
+        it('resumes an OnHold auction once without moving any deadline; refused while still ineligible', async () => {
+          const { seller, a, x, y, fillers } = await heldAuction();
+          await db.setStatus(seller.id, 'LOCKED');
+          await app.get(AuctionWorker).tick();
+          const held = await doc(a._id);
+          expect(held.state).toBe('OnHold');
+          expect((await resume(a._id, admin, held.version).expect(409)).body.message).toMatch(/chưa đủ điều kiện/);
+          await db.setStatus(seller.id, 'ACTIVE');
+          await resume(a._id, x, held.version).expect(403);
+          await resume(a._id, admin, held.version - 1).expect(409);
+          await resume(a._id, admin, held.version, undefined, 'ngắn').expect(422);
+          expect((await doc(a._id)).state).toBe('OnHold');
+          const money = await wallet(y);
+          const nudge = vi.spyOn(app.get(AuctionLiveService), 'nudge');
+          const key = randomUUID();
+          const done = await resume(a._id, admin, held.version, key).expect(200);
+          expect(nudge).toHaveBeenCalled();
+          nudge.mockRestore();
+          validates('AuctionCommandReceipt', done.body);
+          const again = await resume(a._id, admin, held.version, key).expect(200);
+          expect(again.headers['idempotency-replayed']).toBe('true');
+          expect(again.body).toEqual(done.body);
+          const back = await doc(a._id);
+          expect(back).toMatchObject({ state: 'Active', leaderId: y.id, currentPrice: held.currentPrice, heldAt: held.heldAt });
+          expect(back.resumedAt).not.toBeNull();
+          for (const k of ['startAt', 'endAt', 'plannedEndAt', 'biddingOpenedAt', 'buyNowAt'] as const)
+            expect(back[k]).toEqual(held[k]);
+          expect(await wallet(y)).toMatchObject({ auctionHeld: money.auctionHeld });
+          for (const m of [seller, x, y]) expect(await kinds(m, a._id)).toContain('AuctionResumed');
+          const queue = await call('get', '/operations/auctions', admin).expect(200);
+          validates('OperationsAuctionList', queue.body);
+          expect(queue.body.items.find((i: { id: string }) => i.id === a._id)).toMatchObject({
+            state: 'Active',
+            resumedAt: back.resumedAt!.toISOString(),
+          });
+          // Bidding continues on the same clock.
+          await bid(a._id, x, 300_000).expect(200);
+          // A second hold is recorded (not replayed), but only a cancel or the
+          // 48 h ceiling can end it.
+          await db.setStatus(seller.id, 'LOCKED');
+          await app.get(AuctionWorker).tick();
+          const second = await doc(a._id);
+          expect(second.state).toBe('OnHold');
+          expect(second.heldAt!.getTime()).toBeGreaterThan(held.heldAt!.getTime());
+          await db.setStatus(seller.id, 'ACTIVE');
+          expect((await resume(a._id, admin, second.version).expect(409)).body.message).toMatch(/một lần/);
+          await tickAt(new Date(second.heldAt!.getTime() + 48 * H));
+          expect(await doc(a._id)).toMatchObject({ state: 'Cancelled', closeReason: 'HoldExpired', winnerId: null });
+          await noHolds(x, y, ...fillers);
+        });
+
+        it('a resume after the end lets the worker close it; the close that held it is not replayed', async () => {
+          const { a, x, y } = await heldAuction();
+          const open = await doc(a._id);
+          await db.setStatus(y.id, 'RESTRICTED');
+          await tickAt(open.endAt);
+          const held = await doc(a._id);
+          expect(held).toMatchObject({ state: 'OnHold', orderId: null, leaderId: y.id });
+          await db.setStatus(y.id, 'ACTIVE');
+          for (const m of [admin, x]) await longSession(m);
+          pinClock(new Date(open.endAt.getTime() + H));
+          try {
+            await resume(a._id, admin, held.version).expect(200);
+            // The end already passed: nobody bids, the worker closes next.
+            expect((await bid(a._id, x, 300_000).expect(409)).body.code).toBe('AuctionClosed');
+          } finally {
+            vi.restoreAllMocks();
+          }
+          await tickAt(new Date(open.endAt.getTime() + H + 60_000));
+          const closed = await doc(a._id);
+          expect(closed).toMatchObject({ state: 'AwaitingWinnerPayment', winnerId: y.id, finalPrice: 250_000 });
+          expect(closed.paymentDeadline!.getTime()).toBe(open.endAt.getTime() + 24 * H);
+          expect(await db.c.point_orders.countDocuments({ _id: closed.orderId! })).toBe(1);
+          expect(
+            await db.c.mutation_receipts.countDocuments({
+              operation: 'closeAuction',
+              key: { $in: [stepKey(a._id, open.version), stepKey(a._id, held.version + 1)] },
+            }),
+          ).toBe(2);
+        });
+
+        it('refuses a resume once the 48 h hold ceiling passed; the worker cancels instead', async () => {
+          const { seller, a, x, y, fillers } = await heldAuction();
+          await db.setStatus(seller.id, 'LOCKED');
+          await app.get(AuctionWorker).tick();
+          const held = await doc(a._id);
+          await db.setStatus(seller.id, 'ACTIVE');
+          await longSession(admin);
+          const ceiling = new Date(held.heldAt!.getTime() + 48 * H);
+          pinClock(ceiling);
+          try {
+            expect((await resume(a._id, admin, held.version).expect(409)).body.message).toMatch(/48 giờ/);
+          } finally {
+            vi.restoreAllMocks();
+          }
+          await tickAt(ceiling);
+          expect(await doc(a._id)).toMatchObject({ state: 'Cancelled', closeReason: 'HoldExpired' });
+          await noHolds(x, y, ...fillers);
+        });
+
+        it('the Admin close from a report reaches live watchers right after the commit', async () => {
+          const { a, y } = await heldAuction();
+          const flagged = await cmd('post', '/me/support-cases', {
+            kind: 'Violation',
+            title: 'Nghi ngờ trả giá gian lận: phiên thử',
+            description: 'Một tài khoản lạ liên tục đẩy giá phiên này.',
+            target: { type: 'Auction', id: a._id },
+          }, y).expect(200);
+          const caseId = flagged.body.entityId as string;
+          await cmd('post', `/operations/support-cases/${caseId}/actions`, { expectedVersion: 1, action: 'Assign', text: 'Admin đã nhận hồ sơ.' }, admin).expect(200);
+          const { port } = app.getHttpServer().address() as { port: number };
+          const watcher = await new Promise<Socket>((resolve, reject) => {
+            const s = io(`http://127.0.0.1:${port}/auctions`, { transports: ['websocket'], forceNew: true, reconnection: false });
+            s.once('connect', () => resolve(s));
+            s.once('connect_error', reject);
+          });
+          try {
+            const updates: { auction: { state: string; closeReason?: string | null } }[] = [];
+            watcher.on('auction:update', (u: (typeof updates)[number]) => updates.push(u));
+            expect((await watcher.emitWithAck('auction:watch', a._id)).ok).toBe(true);
+            const nudge = vi.spyOn(app.get(AuctionLiveService), 'nudge');
+            await cmd('post', `/operations/support-cases/${caseId}/close-auction`, {
+              expectedVersion: 2,
+              auctionVersion: await v(a._id),
+              message: 'Phiên có dấu hiệu đẩy giá bằng tài khoản phụ.',
+            }, admin).expect(200);
+            expect(nudge).toHaveBeenCalled();
+            nudge.mockRestore();
+            const until = Date.now() + 8000;
+            while (!updates.some((u) => u.auction.state === 'Cancelled')) {
+              if (Date.now() > until) throw new Error('Timed out waiting for push');
+              await new Promise((r) => setTimeout(r, 50));
+            }
+            for (const u of updates) validates('PublicAuction', u);
+            expect(updates.at(-1)!.auction).toMatchObject({ state: 'Cancelled', closeReason: 'Reported' });
+          } finally {
+            watcher.disconnect();
+          }
+        });
+      });
     });
 
     // ADR 0078: the seller and members who registered or bid flag the auction to Admin.

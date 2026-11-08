@@ -7906,6 +7906,76 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /operations/auctions/{auctionId}/resume:
+    post:
+      operationId: resumeAuction
+      tags:
+        - Auctions
+      description: ADR 0080. ACTIVE ADMIN independent of the seller, bidders and registrants returns an
+        OnHold auction to Active with a reason, once per auction, before its 48-hour hold ceiling and
+        only when the seller and the leader are eligible again. No deadline moves (startAt, endAt,
+        the Buy Now window and the Dutch clock keep their stored times); an auction whose end already
+        passed is closed by the worker next. Bids, holds and deposits are kept.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResumeAuction"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /auctions:
     get:
       operationId: listAuctions
@@ -16019,6 +16089,7 @@ components:
             - AuctionNotEnoughBidders
             - AuctionDepositForfeited
             - AuctionRescheduled
+            - AuctionResumed
             - AuctionWon
             - AuctionSold
             - AuctionBoughtNow
@@ -20774,6 +20845,21 @@ components:
           type: string
           minLength: 10
           maxLength: 1000
+    ResumeAuction:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - reason
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 1000
     PlaceAuctionBid:
       type: object
       additionalProperties: false
@@ -21746,6 +21832,12 @@ components:
             - "null"
           format: date-time
           description: ADR 0079. When an OnHold auction auto-cancels; null otherwise. Optional.
+        resumedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: ADR 0080. When an Admin resumed this auction; an auction resumes at most once. Optional.
         title:
           type: string
         state:
