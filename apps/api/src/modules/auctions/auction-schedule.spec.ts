@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { AuctionDoc } from '../../database/mongo/documents.js';
 import { DomainError } from '../commands/domain-error.js';
 import {
+  buyNowEndAt,
   buyNowOffered,
+  commitmentCap,
+  reachesBuyNow,
   phaseOf,
   publishSchedule,
   reschedule,
@@ -146,5 +149,41 @@ describe('reschedule', () => {
       expect(code(() => reschedule(auction(over), input, now))).toBe(
         'InvalidState',
       );
+  });
+});
+
+describe('ADR 0074 Buy Now mode', () => {
+  const MIN = 60_000;
+  it('ends at the Buy Now moment for Instant', () => {
+    const a = auction({ buyNowMode: 'Instant' });
+    expect(buyNowEndAt(a, false, now)).toEqual(now);
+    expect(buyNowEndAt(a, true, now)).toEqual(now);
+  });
+  it('keeps the 60 s / 5 min window for Challenge', () => {
+    const a = auction({ buyNowMode: 'Challenge' });
+    expect(buyNowEndAt(a, true, now)).toEqual(at(MIN));
+    expect(buyNowEndAt(a, false, now)).toEqual(at(5 * MIN));
+  });
+  it('never extends past endAt', () => {
+    const a = auction({ buyNowMode: 'Challenge', endAt: at(30_000) });
+    expect(buyNowEndAt(a, false, now)).toEqual(at(30_000));
+  });
+  it('treats a decided price at or above Buy Now as reaching it', () => {
+    const a = auction();
+    expect(reachesBuyNow(a, 90_000)).toBe(false);
+    expect(reachesBuyNow(a, 100_000)).toBe(true);
+    expect(reachesBuyNow(a, 120_000)).toBe(true);
+    expect(reachesBuyNow(a, null)).toBe(false);
+  });
+  it('does not re-trigger once Buy Now was used or without a Buy Now price', () => {
+    expect(reachesBuyNow(auction({ buyNowAt: at(-MIN) }), 120_000)).toBe(false);
+    expect(reachesBuyNow(auction({ buyNowPrice: null }), 120_000)).toBe(false);
+  });
+  it('caps commitments at the Buy Now price only for Instant', () => {
+    expect(commitmentCap(auction({ buyNowMode: 'Instant' }))).toBe(100_000);
+    expect(commitmentCap(auction({ buyNowMode: 'Challenge' }))).toBeNull();
+    expect(
+      commitmentCap(auction({ buyNowMode: 'Instant', buyNowPrice: null })),
+    ).toBeNull();
   });
 });

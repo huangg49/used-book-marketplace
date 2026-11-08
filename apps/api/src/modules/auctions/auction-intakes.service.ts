@@ -376,6 +376,7 @@ export class AuctionIntakesService {
             startPrice: body.startPrice,
             step: body.step,
             buyNowPrice: body.buyNowPrice,
+            buyNowMode: body.buyNowMode ?? 'Challenge',
             protectiveValue:
               body.declaredValue ?? r.salePrice ?? r.exchangeValue ?? body.startPrice,
             policyCode: 'HCM-AUCTION-v1',
@@ -462,7 +463,12 @@ export class AuctionIntakesService {
           'buyNowPrice',
           'Giá mua ngay phải bằng giá khởi điểm cộng một số bước giá.',
         );
-    }
+    } else if (body.buyNowMode === 'Instant')
+      // ADR 0074: the mode only governs Buy Now, so it needs a Buy Now price.
+      invalidField(
+        'buyNowMode',
+        'Chọn "Mua ngay kết thúc ngay" cần nhập giá mua ngay.',
+      );
   }
 
   cancel(
@@ -841,6 +847,7 @@ export class AuctionIntakesService {
       startPrice: i.startPrice,
       step: i.step,
       buyNowPrice: i.buyNowPrice,
+      buyNowMode: i.buyNowMode,
       buyNowAt: null,
       startAt: schedule.startAt,
       endAt: schedule.plannedEndAt,
@@ -994,6 +1001,7 @@ export class AuctionIntakesService {
       startPrice: i.startPrice,
       step: i.step as AuctionStep,
       buyNowPrice: i.buyNowPrice,
+      buyNowMode: i.buyNowMode,
       protectiveValue: i.protectiveValue,
       state: i.state,
       version: i.version,

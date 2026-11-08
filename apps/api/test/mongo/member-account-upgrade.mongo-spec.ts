@@ -43,6 +43,7 @@ const suffix = [
   '0060-wallet-withdrawals',
   '0061-manual-wallet-withdrawals',
   '0062-message-send-limits',
+  '0063-auction-buy-now-mode',
 ];
 const sha = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');

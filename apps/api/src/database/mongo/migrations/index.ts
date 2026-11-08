@@ -1,4 +1,5 @@
 import { createMessageSendLimitsMigration, withMessageSendLimits } from './0062-message-send-limits.js';
+import { createBuyNowModeMigration, withBuyNowMode } from './0063-auction-buy-now-mode.js';
 import { manualWithdrawalsMigration, withManualWithdrawals } from './0061-manual-wallet-withdrawals.js';
 import { createWithdrawalsMigration, withdrawalSpecs, withWithdrawals } from './0060-wallet-withdrawals.js';
 import { autoReviewV2UpgradeBridgeMigration } from './0056-auto-review-v2-upgrade-bridge.js';
@@ -509,7 +510,8 @@ const beforeWithdrawals = (): CollectionSpec[] => [
     .map(withUncappedAuctionAmounts)
     .map(withAuctionStepOptions)
     .map(withCustomAuctionStep)
-    .map(withBuyNowRivalWindow),
+    .map(withBuyNowRivalWindow)
+    .map(withBuyNowMode),
   ...pointOrderCollectionSpecs
     .map(withPointCollectionChanges)
     .map(withResolutionChanges)
@@ -566,3 +568,7 @@ migrations.push(manualWithdrawalsMigration, createMessageSendLimitsMigration([
   ...purchaseConversationSpecs.filter((spec) => spec.name === 'purchase_messages'),
   ...exchangeMessageSpecs,
 ]));
+// ADR 0074: Buy Now mode on the 0058 snapshots of auction_intakes/auctions.
+migrations.push(
+  createBuyNowModeMigration(buyNowRivalWindowMigration.definition.collections),
+);

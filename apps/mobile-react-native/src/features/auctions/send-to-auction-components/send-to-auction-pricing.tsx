@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LayoutAnimation, Platform, Pressable, StyleSheet, Switch, UIManager, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { AppTextInput as TextInput, Icon, formatVnd, stitchTokens } from "../../../core/ui";
-import { AUCTION_STEP_MAX, AUCTION_STEPS, type AuctionStep } from "../auctions-model";
+import { AUCTION_STEP_MAX, AUCTION_STEPS, BUY_NOW_MODES, type AuctionStep, type BuyNowMode } from "../auctions-model";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -24,6 +24,8 @@ export interface SendToAuctionPricingProps {
   readonly buyNowPriceText: string;
   readonly onChangeBuyNowPriceText: (text: string) => void;
   readonly buyNowPriceError?: string;
+  readonly buyNowMode: BuyNowMode;
+  readonly onChangeBuyNowMode: (mode: BuyNowMode) => void;
   readonly disabled?: boolean;
   readonly defaultExpanded?: boolean;
 }
@@ -44,6 +46,8 @@ export function SendToAuctionPricing({
   buyNowPriceText,
   onChangeBuyNowPriceText,
   buyNowPriceError,
+  buyNowMode,
+  onChangeBuyNowMode,
   disabled = false,
   defaultExpanded = true,
 }: SendToAuctionPricingProps) {
@@ -235,7 +239,7 @@ export function SendToAuctionPricing({
               Cho phép mua ngay
             </AppText>
             <AppText kind="small" style={styles.buyNowSubtitle}>
-              Còn dùng được sau lượt trả giá khi giá hiện tại thấp hơn giá mua ngay. Người khác có 5 phút để trả cao hơn (60 giây nếu người bấm đang dẫn).
+              Còn dùng được sau lượt trả giá khi giá hiện tại thấp hơn giá mua ngay. Lượt trả giá chạm giá mua ngay cũng tính như mua ngay.
             </AppText>
           </View>
           <Switch
@@ -249,6 +253,44 @@ export function SendToAuctionPricing({
 
         {buyNowOn && (
           <View style={[styles.fieldGroup, { marginTop: 10 }]}>
+            <AppText kind="bold" style={styles.fieldLabel}>
+              Khi có người mua ngay
+            </AppText>
+            <View style={styles.stepGrid} accessibilityRole="radiogroup">
+              {BUY_NOW_MODES.map((m) => {
+                const isSelected = buyNowMode === m.value;
+                return (
+                  <Pressable
+                    key={m.value}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: isSelected, disabled }}
+                    accessibilityLabel={`${m.label}. ${m.hint}`}
+                    disabled={disabled}
+                    onPress={() => onChangeBuyNowMode(m.value)}
+                    style={[
+                      styles.stepButton,
+                      isSelected && styles.stepButtonActive,
+                      disabled && { opacity: 0.6 },
+                    ]}
+                  >
+                    <Icon
+                      name={isSelected ? "check" : "radio_button_unchecked" as any}
+                      size={14}
+                      color={isSelected ? stitchTokens.gold : stitchTokens.subtleGray}
+                    />
+                    <AppText
+                      kind="bold"
+                      style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}
+                    >
+                      {m.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <AppText kind="small" style={[styles.infoText, { marginBottom: 10 }]}>
+              {BUY_NOW_MODES.find((m) => m.value === buyNowMode)!.hint}
+            </AppText>
             <AppText kind="bold" style={styles.fieldLabel}>
               Giá mua ngay
             </AppText>

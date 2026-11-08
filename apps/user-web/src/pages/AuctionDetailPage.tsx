@@ -377,6 +377,7 @@ function SessionFacts({ auction, remaining, open, scheduled, untilStart }: { auc
         </div>
         <p className={styles.windowNote} role={open && auction.buyNowAt ? 'status' : undefined}>{scheduled ? `Mở sau ${formatRemaining(untilStart)} · phiên kéo dài ${formatDuration(Math.round(span / 1000))}`
           : !open ? 'Phiên đã đóng'
+          : auction.buyNowAt && auction.buyNowMode === 'Instant' ? 'Đã có người mua ngay · phiên đang chốt'
           : auction.buyNowAt ? `Đã có người chọn mua ngay · còn ${formatRemaining(remaining)} để trả cao hơn; hết giờ, người dẫn đầu thắng`
             : `Còn ${formatRemaining(remaining)} · phiên kéo dài ${formatDuration(Math.round(span / 1000))}`}</p>
       </div>
@@ -551,7 +552,9 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
       intent.settle(); setUnknown(null); setManual(undefined); setAutoDialog(false)
       const price = receipt.currentPrice !== null ? formatVnd(receipt.currentPrice) : ''
       setNotice(
-        next.kind === 'BuyNow' ? `Bạn đang dẫn với giá mua ngay. Người khác còn ${buyNowWindow(leading)} để trả cao hơn; nếu không ai vượt, bạn thắng phiên.`
+        next.kind === 'BuyNow' ? (auction.buyNowMode === 'Instant'
+          ? 'Bạn đã mua ngay. Phiên kết thúc; hệ thống đang chốt đơn để bạn thanh toán từ ví.'
+          : `Bạn đang dẫn với giá mua ngay. Người khác còn ${buyNowWindow(leading)} để trả cao hơn; nếu không ai vượt, bạn thắng phiên.`)
         : next.kind === 'Disable' ? 'Đã tắt đặt giá tự động.'
         : receipt.leading ? `Bạn đang dẫn giá ở ${price}.`
         : receipt.currentPrice === next.amount
@@ -669,7 +672,7 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
 
       {auction.buyNowPrice !== null && !unknown && (
         <div className={styles.buyNow}>
-          <span>Mua ngay <strong>{formatVnd(auction.buyNowPrice)}</strong><small>{leading ? 'Kết thúc sớm: người khác còn 60 giây để trả cao hơn.' : 'Người khác còn 5 phút để trả cao hơn sau khi bạn bấm.'}</small></span>
+          <span>Mua ngay <strong>{formatVnd(auction.buyNowPrice)}</strong><small>{auction.buyNowMode === 'Instant' ? 'Bạn thắng ngay và phiên kết thúc.' : leading ? 'Kết thúc sớm: người khác còn 60 giây để trả cao hơn.' : 'Người khác còn 5 phút để trả cao hơn sau khi bạn bấm.'}</small></span>
           <button type="button" className={styles.secondary} disabled={busy || shortOf(auction.buyNowPrice) > 0} onClick={() => setConfirming({ kind: 'BuyNow', amount: auction.buyNowPrice! })}>
             Mua ngay
           </button>
@@ -735,7 +738,9 @@ function dialogCopy(intent: Intent, auction: AuctionSummary, leading: boolean) {
     case 'BuyNow':
       return {
         title: `Mua ngay với ${formatVnd(intent.amount)}?`,
-        description: `Bạn cam kết mua với giá này và ${leading ? 'giữ vị trí dẫn đầu; giá hiện tại tăng lên giá mua ngay' : 'dẫn đầu'}. Người khác còn ${buyNowWindow(leading)} để trả cao hơn; nếu không ai vượt, bạn thắng và thanh toán từ ví trong 24 giờ sau khi phiên kết thúc, rồi tự nhận sách tại ${auction.pointName}. Lượt mua ngay không thể rút lại; không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`,
+        description: auction.buyNowMode === 'Instant'
+          ? `Bạn thắng ngay với giá này và phiên kết thúc. Thanh toán từ ví trong 24 giờ, rồi tự nhận sách tại ${auction.pointName}. Lượt mua ngay không thể rút lại; không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`
+          : `Bạn cam kết mua với giá này và ${leading ? 'giữ vị trí dẫn đầu; giá hiện tại tăng lên giá mua ngay' : 'dẫn đầu'}. Người khác còn ${buyNowWindow(leading)} để trả cao hơn; nếu không ai vượt, bạn thắng và thanh toán từ ví trong 24 giờ sau khi phiên kết thúc, rồi tự nhận sách tại ${auction.pointName}. Lượt mua ngay không thể rút lại; không thanh toán đúng hạn sẽ bị ghi nhận vi phạm.`,
         confirm: 'Mua ngay',
       }
   }

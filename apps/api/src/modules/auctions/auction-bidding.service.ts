@@ -8,8 +8,6 @@ import type {
 } from '../../database/mongo/documents.js';
 import {
   AUCTION_PAYMENT_MS,
-  BUY_NOW_CHALLENGE_MS,
-  BUY_NOW_RIVAL_CHALLENGE_MS,
 } from '../../database/mongo/migrations/auction-constants.js';
 import type { AuctionStep } from '../../database/mongo/migrations/auction-constants.js';
 import { MongoService } from '../../database/mongo/mongo.service.js';
@@ -50,7 +48,10 @@ import { PointOrdersService } from './point-orders.service.js';
 import { AuctionBookService } from './auction-book.service.js';
 import { MongoPageService } from '../commands/mongo-page.service.js';
 import {
+  buyNowEndAt,
   buyNowOffered,
+  commitmentCap,
+  reachesBuyNow,
   notStarted,
   phaseOf,
   reschedule,
@@ -357,6 +358,17 @@ export class AuctionBiddingService {
             'Mua ngay không còn khả dụng: giá hiện tại đã chạm giá mua ngay hoặc đã có người mua ngay.',
           );
         const act = action(actor._id, a);
+        const cap = commitmentCap(a);
+        if (
+          cap !== null &&
+          (act.kind === 'Manual' || act.kind === 'AutoSet') &&
+          (act.kind === 'Manual' ? act.amount : act.max) > cap
+        )
+          throw new DomainError(
+            409,
+            'InvalidState',
+            `Phiên này kết thúc ngay khi chạm giá mua ngay; mức tối đa là ${cap.toLocaleString('vi-VN')}đ.`,
+          );
         const bidders = await tx.c.auction_bidders
           .find({ auctionId: a._id })
           .toArray();
@@ -394,6 +406,8 @@ export class AuctionBiddingService {
             a._id,
             act.kind === 'AutoSet' ? act.max : act.amount,
           );
+        const endsByBuyNow =
+          buyNow || reachesBuyNow(a, result.currentPrice);
         const bidder: AuctionBidderDoc = own
           ? {
               ...own,
@@ -459,19 +473,12 @@ export class AuctionBiddingService {
             nextSequence: result.nextSequence,
             bidderCount: a.bidderCount + (own ? 0 : 1),
             bidCount: a.bidCount + 1,
-            ...(buyNow
+            // ADR 0074: Buy Now, or any decided price that reaches it, ends by
+            // the seller's mode (Instant: now; Challenge: ADR 0070 window).
+            ...(endsByBuyNow
               ? {
                   buyNowAt: now,
-                  endAt: new Date(
-                    Math.min(
-                      a.endAt.getTime(),
-                      now.getTime() +
-                        // ADR 0070: a rival's Buy Now gives others 5 minutes.
-                        (a.leaderId === actor._id
-                          ? BUY_NOW_CHALLENGE_MS
-                          : BUY_NOW_RIVAL_CHALLENGE_MS),
-                    ),
-                  ),
+                  endAt: buyNowEndAt(a, a.leaderId === actor._id, now),
                 }
               : {}),
           },
@@ -479,7 +486,7 @@ export class AuctionBiddingService {
         );
         if (a.leaderId && next.leaderId !== a.leaderId)
           await notifyAuction(tx, next, 'AuctionOutbid', [a.leaderId], now);
-        if (buyNow) {
+        if (endsByBuyNow) {
           await notifyAuction(tx, next, 'AuctionBoughtNow', [a.sellerId], now);
           return this.change(next, now, 'AuctionBoughtNow', actor._id);
         }
@@ -809,6 +816,7 @@ export class AuctionBiddingService {
       buyNowPrice:
         phase === 'Scheduled' || buyNowOffered(a, now) ? a.buyNowPrice : null,
       buyNowAt: a.buyNowAt?.toISOString() ?? null,
+      buyNowMode: a.buyNowMode,
       currentPrice: a.currentPrice,
       minimumBid: phase !== 'Ended' ? nextMinimumBid(a) : null,
       bidderCount: a.bidderCount,

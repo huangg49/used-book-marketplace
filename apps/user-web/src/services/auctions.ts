@@ -19,6 +19,13 @@ const auctionBookSchema = z.object({
   pages: z.string(), coverNote: z.string(), notes: z.string(), accessories: z.string(), description: z.string(),
   hasMissingPages: z.boolean(), photos: z.array(z.object({ id: z.string().uuid(), width: z.number().positive(), height: z.number().positive() })),
 })
+export const buyNowModeSchema = z.enum(['Challenge', 'Instant'])
+export type BuyNowMode = z.infer<typeof buyNowModeSchema>
+/** ADR 0074: the seller's choice of what Buy Now does. */
+export const BUY_NOW_MODES: { value: BuyNowMode; label: string; short: string; hint: string }[] = [
+  { value: 'Challenge', label: 'Chờ thách đấu', short: '60 giây / 5 phút', hint: 'Khi có người mua ngay, người khác còn 5 phút để trả cao hơn (60 giây nếu người bấm đang dẫn).' },
+  { value: 'Instant', label: 'Kết thúc ngay', short: 'Bán ngay', hint: 'Người mua ngay thắng luôn và phiên kết thúc. Không ai trả được cao hơn giá mua ngay.' },
+]
 export const auctionSummarySchema = z.object({
   id: z.string().uuid(), listingId: z.string().uuid(), title: z.string(), state: auctionState,
   startPrice: money, step: auctionStepSchema, buyNowPrice: money.nullable(),
@@ -26,6 +33,8 @@ export const auctionSummarySchema = z.object({
   startAt: z.string(), endAt: z.string(), pointName: z.string(), demoOnly: z.literal(true),
   // ADR 0043: when Buy Now opened the 60-second window (endAt already shortened).
   buyNowAt: z.string().nullish(),
+  // ADR 0074: absent on older servers means Challenge.
+  buyNowMode: buyNowModeSchema.nullish(),
   // ADR 0047: Scheduled before startAt; version lets the seller edit the time.
   phase: z.enum(['Scheduled', 'Live', 'Ended']).nullish(),
   version: z.number().int().nullish(),
@@ -204,6 +213,7 @@ const myIntakeSchema = z.object({
   id: z.string().uuid(), auctionId: z.string().uuid().nullable(), state: intakeState, version: z.number().int(),
   listingId: z.string().uuid(), title: z.string(), pointId: z.string().uuid(),
   startPrice: money, step: auctionStepSchema, buyNowPrice: money.nullable(), protectiveValue: money,
+  buyNowMode: buyNowModeSchema.nullish(),
   createdAt: z.string(), dropoffDeadline: z.string(), receivedAt: z.string().nullable(), inspectedAt: z.string().nullable(),
   inspectionOutcome: z.enum(['Pass', 'Fail', 'NeedsEvidence']).nullable(), inspectionNote: z.string().nullable(),
   reclaimReason: z.string().nullable(), closedAt: z.string().nullable(),
@@ -245,6 +255,7 @@ export function listHandoverPoints() {
 export type CreateIntakeBody = {
   listingId: string; expectedListingVersion: number; pointId: string
   startPrice: number; step: AuctionStep; buyNowPrice: number | null
+  buyNowMode?: BuyNowMode
   declaredValue?: number | null
 }
 export function createAuctionIntake(body: CreateIntakeBody, key: string) {

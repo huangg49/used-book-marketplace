@@ -8,8 +8,8 @@ import { commandOutcomeUnknown, useIntentKey } from '../hooks/useAuctionClock'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { getMyBookIdentity, getMyListings, getMyPhoto, type MyListing } from '../services/my-listings'
 import {
-  AUCTION_MAX_PRICE, AUCTION_MIN_PRICE, AUCTION_PRICE_DIGITS, AUCTION_STEP_MAX, AUCTION_STEPS, auctionStepError, createAuctionIntake, getMyAuctionIntake, intakePriceErrors, listHandoverPoints,
-  type AuctionStep, type CreateIntakeBody, type HandoverPoint, type MyIntake,
+  AUCTION_MAX_PRICE, BUY_NOW_MODES, AUCTION_MIN_PRICE, AUCTION_PRICE_DIGITS, AUCTION_STEP_MAX, AUCTION_STEPS, auctionStepError, createAuctionIntake, getMyAuctionIntake, intakePriceErrors, listHandoverPoints,
+  type AuctionStep, type BuyNowMode, type CreateIntakeBody, type HandoverPoint, type MyIntake,
 } from '../services/auctions'
 import { conditions } from '../lib/listing-labels'
 import { auctionEligible } from '../lib/owner-listing-labels'
@@ -140,7 +140,7 @@ function Receipt({ intake, point }: { intake: MyIntake; point?: HandoverPoint })
           <div><dt>Điểm gửi sách</dt><dd>{point ? <>{point.name}<span>{point.displayAddress}</span></> : 'Điểm đã chọn'}</dd></div>
           <div><dt>Hạn gửi sách</dt><dd>{when(intake.dropoffDeadline)}</dd></div>
           <div><dt>Giá khởi điểm · bước</dt><dd>{formatVnd(intake.startPrice)} · {formatVnd(intake.step)}</dd></div>
-          <div><dt>Mua ngay</dt><dd>{intake.buyNowPrice === null ? 'Không đặt' : formatVnd(intake.buyNowPrice)}</dd></div>
+          <div><dt>Mua ngay</dt><dd>{intake.buyNowPrice === null ? 'Không đặt' : `${formatVnd(intake.buyNowPrice)}${intake.buyNowMode === 'Instant' ? ' · kết thúc ngay' : ''}`}</dd></div>
         </dl>
         <div className={styles.receiptActions}>
           <Link className={styles.primary} to={`${ROUTES.myAuctions}?view=selling`}>Theo dõi trong Đấu giá của tôi <ArrowRight size={16} aria-hidden="true" /></Link>
@@ -186,6 +186,8 @@ export function CreateAuctionPage() {
   const [startDraft, setStartPrice] = useState<number | null | undefined>(undefined)
   const [buyNowOn, setBuyNowOn] = useState(false)
   const [buyNowPrice, setBuyNowPrice] = useState<number | null>(null)
+  // ADR 0074: Challenge keeps the 60 s / 5 min window, Instant ends the auction.
+  const [buyNowMode, setBuyNowMode] = useState<BuyNowMode>('Challenge')
   const [touched, setTouched] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -293,6 +295,7 @@ export function CreateAuctionPage() {
       startPrice: startPrice!,
       step,
       buyNowPrice: buyNowOn ? buyNowPrice : null,
+      buyNowMode: buyNowOn ? buyNowMode : 'Challenge',
       declaredValue: declaredValue ?? undefined,
     }
     const key = pending.current?.key ?? intent.keyFor(JSON.stringify(body))
@@ -485,11 +488,15 @@ export function CreateAuctionPage() {
               hint={declaredValue !== null ? `Gợi ý theo giá trị khai báo ${formatVnd(declaredValue)}. Giá khởi điểm hợp lý thu hút nhiều người trả giá hơn.` : 'Lượt trả giá đầu tiên bằng đúng giá khởi điểm.'} />
             <label className={styles.toggle}>
               <input type="checkbox" checked={buyNowOn} disabled={locked} onChange={() => { setBuyNowOn(!buyNowOn); if (!buyNowOn && buyNowPrice === null && buyNowChips[1]) setBuyNowPrice(buyNowChips[1]) }} />
-              <span><strong>Cho phép mua ngay</strong><span>Còn dùng được sau lượt trả giá nếu giá hiện tại thấp hơn giá mua ngay. Khi bấm, người khác còn 5 phút để trả cao hơn (60 giây nếu người bấm đang dẫn).</span></span>
+              <span><strong>Cho phép mua ngay</strong><span>Còn dùng được sau lượt trả giá nếu giá hiện tại thấp hơn giá mua ngay. Lượt trả giá chạm giá mua ngay cũng tính như mua ngay.</span></span>
             </label>
             {buyNowOn && <>
               <PriceInput id="auction-buy-now" label="Giá mua ngay" value={buyNowPrice} step={step} min={(startPrice ?? AUCTION_MIN_PRICE - step) + step} disabled={locked}
                 onChange={setBuyNowPrice} error={touched || buyNowPrice !== null ? formErrors.buyNowPrice : undefined} hint="Phải cao hơn giá khởi điểm và nằm trên lưới giá." />
+              <div className={styles.chips} role="group" aria-label="Khi có người mua ngay">
+                {BUY_NOW_MODES.map((m) => <button type="button" key={m.value} aria-pressed={buyNowMode === m.value} disabled={locked} onClick={() => setBuyNowMode(m.value)}>{m.label}<span>{m.short}</span></button>)}
+              </div>
+              <p className={styles.stepHint}>{BUY_NOW_MODES.find((m) => m.value === buyNowMode)!.hint}</p>
               {buyNowChips.length > 0 && (
                 <div className={styles.chips} aria-label="Gợi ý giá mua ngay">
                   {buyNowChips.map((v, i) => <button type="button" key={v} aria-pressed={buyNowPrice === v} disabled={locked} onClick={() => setBuyNowPrice(v)}>{formatVnd(v)}<span>+{[3, 5, 10][i]} bước</span></button>)}
@@ -522,7 +529,7 @@ export function CreateAuctionPage() {
             <dl className={styles.ticketPrices}>
               <div className={styles.ticketMain}><dt>Giá khởi điểm</dt><dd>{startPrice && !priceErrors.startPrice ? formatVnd(startPrice) : '—'}</dd></div>
               <div><dt>Bước giá</dt><dd>+{formatVnd(step)}</dd></div>
-              <div><dt>Mua ngay</dt><dd>{buyNowOn && buyNowPrice && !formErrors.buyNowPrice ? formatVnd(buyNowPrice) : 'Không đặt'}</dd></div>
+              <div><dt>Mua ngay</dt><dd>{buyNowOn && buyNowPrice && !formErrors.buyNowPrice ? `${formatVnd(buyNowPrice)} · ${buyNowMode === 'Instant' ? 'kết thúc ngay' : 'chờ thách đấu'}` : 'Không đặt'}</dd></div>
               <div><dt>Giá trị bảo vệ</dt><dd>{declaredValue !== null && !priceErrors.declaredValue ? formatVnd(declaredValue) : '—'}</dd></div>
             </dl>
             <p className={styles.protect}>Giá trị bảo vệ bồi thường khi sách mất hoặc hỏng lúc điểm đang giữ. Khi giữ chỗ, sách sẽ ngừng hiển thị trên kệ mua bán công khai.</p>
@@ -550,7 +557,7 @@ export function CreateAuctionPage() {
           <dl className={styles.confirmPrices}>
             <div><dt>Khởi điểm</dt><dd>{startPrice ? formatVnd(startPrice) : '—'}</dd></div>
             <div><dt>Bước giá</dt><dd>+{formatVnd(step)}</dd></div>
-            <div><dt>Mua ngay</dt><dd>{buyNowOn && buyNowPrice ? formatVnd(buyNowPrice) : 'Không đặt'}</dd></div>
+            <div><dt>Mua ngay</dt><dd>{buyNowOn && buyNowPrice ? `${formatVnd(buyNowPrice)} · ${buyNowMode === 'Instant' ? 'kết thúc ngay' : 'chờ thách đấu'}` : 'Không đặt'}</dd></div>
             <div><dt>Giá trị bảo vệ</dt><dd>{declaredValue ? formatVnd(declaredValue) : '—'}</dd></div>
           </dl>
           <p className={styles.confirmLabel}>Sau khi giữ chỗ</p>

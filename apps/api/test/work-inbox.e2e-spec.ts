@@ -363,6 +363,7 @@ describe('work inbox — HTTP and Mongo snapshot', () => {
       startPrice: 10000,
       step: 10000,
       buyNowPrice: null,
+      buyNowMode: 'Challenge',
       protectiveValue: 10000,
       policyCode: 'HCM-AUCTION-v1',
       state: 'AwaitingDropoff',

@@ -9823,7 +9823,9 @@ paths:
         - Auctions
       description: ADR 0047 — offered while the auction is live, Buy Now has not been used and the current
         price is below the Buy Now price, also after bids. ADR 0070 — the current leader may use it too
-        and keeps the lead at the Buy Now price. Decided under the same auction lock as bids so exactly
+        and keeps the lead at the Buy Now price. ADR 0074 — with buyNowMode Instant the auction ends at
+        the Buy Now moment (endAt = now) and the close worker forms the Order within seconds; any bid
+        that reaches the Buy Now price triggers the same end rule in either mode. Decided under the same auction lock as bids so exactly
         one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer
         offered and the auction ends at min(endAt, now + 60 s) when the buyer was already leading, or
         min(endAt, now + 5 min) when the buyer was not (ADR 0070). Others may outbid from Buy Now price +
@@ -20013,6 +20015,15 @@ components:
         serverTime:
           type: string
           format: date-time
+    AuctionBuyNowMode:
+      type: string
+      enum:
+        - Challenge
+        - Instant
+      description: ADR 0074. Seller's choice at intake, copied to the auction. Challenge (default) keeps
+        the ADR 0043/0070 window (60 s for the leader, 5 min for a rival) after Buy Now; Instant ends
+        the auction at the Buy Now moment, and bids and Auto ceilings may not exceed the Buy Now price.
+        Optional in responses for older servers; absent means Challenge.
     CreateAuctionIntake:
       type: object
       additionalProperties: false
@@ -20050,6 +20061,8 @@ components:
             - "null"
           minimum: 10000
           maximum: 9007199254740991
+        buyNowMode:
+          $ref: "#/components/schemas/AuctionBuyNowMode"
         declaredValue:
           type: integer
           minimum: 10000
@@ -20337,6 +20350,8 @@ components:
             - "null"
           minimum: 10000
           maximum: 9007199254740991
+        buyNowMode:
+          $ref: "#/components/schemas/AuctionBuyNowMode"
         protectiveValue:
           type: integer
           minimum: 0
@@ -20566,6 +20581,8 @@ components:
           format: date-time
           description: ADR 0043. When Buy Now opened the 60-second window; endAt already holds the
             shortened end. Null without Buy Now. Optional for older servers.
+        buyNowMode:
+          $ref: "#/components/schemas/AuctionBuyNowMode"
         listingId:
           type: string
           format: uuid

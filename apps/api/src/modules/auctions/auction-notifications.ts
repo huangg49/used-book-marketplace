@@ -69,7 +69,13 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
     default: () => ({ title: '', body: '' }),
     // ADR 0043: Buy Now opens a 60-second window; legacy rows had an Order.
     seller: (c, a) =>
-      a.buyNowAt
+      // ADR 0074: Instant ends at the Buy Now moment; the close follows.
+      a.buyNowAt && a.buyNowMode === 'Instant'
+        ? {
+            title: 'Sách của bạn đã được mua ngay',
+            body: `${c.title} với giá ${vnd(a.currentPrice)}. Phiên kết thúc ngay; hệ thống đang chốt đơn cho người mua.`,
+          }
+        : a.buyNowAt
         ? {
             title: 'Có người chọn mua ngay sách của bạn',
             body: `${c.title} với giá ${vnd(a.currentPrice)}. Người khác còn đến ${when(a.endAt)} để trả cao hơn; sau đó người dẫn đầu thắng phiên.`,

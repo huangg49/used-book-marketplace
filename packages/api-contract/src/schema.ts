@@ -3225,7 +3225,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ADR 0047 — offered while the auction is live, Buy Now has not been used and the current price is below the Buy Now price, also after bids. ADR 0070 — the current leader may use it too and keeps the lead at the Buy Now price. Decided under the same auction lock as bids so exactly one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer offered and the auction ends at min(endAt, now + 60 s) when the buyer was already leading, or min(endAt, now + 5 min) when the buyer was not (ADR 0070). Others may outbid from Buy Now price + step in that window; the normal close then forms the winner's Order (24-hour payment). The receipt reports state Active and no orderId. Auctions already BuyNowPending keep their 15-minute Order. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the Buy Now price plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. */
+        /** @description ADR 0047 — offered while the auction is live, Buy Now has not been used and the current price is below the Buy Now price, also after bids. ADR 0070 — the current leader may use it too and keeps the lead at the Buy Now price. ADR 0074 — with buyNowMode Instant the auction ends at the Buy Now moment (endAt = now) and the close worker forms the Order within seconds; any bid that reaches the Buy Now price triggers the same end rule in either mode. Decided under the same auction lock as bids so exactly one wins. ADR 0043 — the buyer commits to the Buy Now price and leads, Buy Now is no longer offered and the auction ends at min(endAt, now + 60 s) when the buyer was already leading, or min(endAt, now + 5 min) when the buyer was not (ADR 0070). Others may outbid from Buy Now price + step in that window; the normal close then forms the winner's Order (24-hour payment). The receipt reports state Active and no orderId. Auctions already BuyNowPending keep their 15-minute Order. ADR 0071 — refused with 409 InvalidState unless the wallet's available balance covers the Buy Now price plus the caller's open commitments (current price of other live auctions they lead and their unpaid auction orders); this is a check, not a hold. */
         post: operations["buyAuctionNow"];
         delete?: never;
         options?: never;
@@ -6840,6 +6840,11 @@ export interface components {
             /** Format: date-time */
             serverTime: string;
         };
+        /**
+         * @description ADR 0074. Seller's choice at intake, copied to the auction. Challenge (default) keeps the ADR 0043/0070 window (60 s for the leader, 5 min for a rival) after Buy Now; Instant ends the auction at the Buy Now moment, and bids and Auto ceilings may not exceed the Buy Now price. Optional in responses for older servers; absent means Challenge.
+         * @enum {string}
+         */
+        AuctionBuyNowMode: "Challenge" | "Instant";
         CreateAuctionIntake: {
             /** Format: uuid */
             listingId: string;
@@ -6850,6 +6855,7 @@ export interface components {
             /** @description Bid step chosen by the Seller (ADR 0068). */
             step: number;
             buyNowPrice: number | null;
+            buyNowMode?: components["schemas"]["AuctionBuyNowMode"];
             /** @description Protective value snapshotted at intake (ADR 0049). Not capped by the auction price ceiling (ADR 0067); the maximum is the exact-integer limit. Does not change the shelf price or set a bid. If omitted for compatibility, uses the revision salePrice, then exchangeValue, then startPrice. Never recalculated from later bids. */
             declaredValue?: number;
         };
@@ -6941,6 +6947,7 @@ export interface components {
             /** @description Bid step chosen by the Seller (ADR 0068). */
             step: number;
             buyNowPrice: number | null;
+            buyNowMode?: components["schemas"]["AuctionBuyNowMode"];
             protectiveValue: number;
             /** @enum {string} */
             state: "AwaitingDropoff" | "Received" | "Passed" | "NeedsEvidence" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Sold";
@@ -7045,6 +7052,7 @@ export interface components {
              * @description ADR 0043. When Buy Now opened the 60-second window; endAt already holds the shortened end. Null without Buy Now. Optional for older servers.
              */
             buyNowAt?: string | null;
+            buyNowMode?: components["schemas"]["AuctionBuyNowMode"];
             /** Format: uuid */
             listingId: string;
             title: string;

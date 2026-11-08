@@ -980,6 +980,8 @@ export interface AuctionIntakeDoc extends Lockable {
   startPrice: number;
   step: number;
   buyNowPrice: number | null;
+  // ADR 0074: Challenge keeps the ADR 0043/0070 window; Instant ends at Buy Now.
+  buyNowMode: AuctionBuyNowMode;
   protectiveValue: number;
   policyCode: 'HCM-AUCTION-v1';
   state: AuctionIntakeState;
@@ -1067,6 +1069,7 @@ export type AuctionState =
   | 'OnHold'
   | 'Cancelled'
   | 'PaymentExpired';
+export type AuctionBuyNowMode = 'Challenge' | 'Instant';
 export interface AuctionDoc extends Lockable {
   _id: string;
   intakeId: string;
@@ -1077,6 +1080,8 @@ export interface AuctionDoc extends Lockable {
   startPrice: number;
   step: number;
   buyNowPrice: number | null;
+  // ADR 0074: Challenge keeps the ADR 0043/0070 window; Instant ends at Buy Now.
+  buyNowMode: AuctionBuyNowMode;
   // ADR 0043: set when Buy Now opened the 60-second challenge window.
   buyNowAt: Date | null;
   startAt: Date;

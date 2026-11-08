@@ -26,6 +26,7 @@ import {
   EVIDENCE_MIN_LENGTH,
   auctionStepError,
   type AuctionStep,
+  type BuyNowMode,
 } from "./auctions-model";
 import {
   handoverPoints,
@@ -144,6 +145,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const step = customStepOn && !stepError ? digits(customStep)! : presetStep;
   const [buyNowOn, setBuyNowOn] = useState(false);
   const [buyNow, setBuyNow] = useState("");
+  const [buyNowMode, setBuyNowMode] = useState<BuyNowMode>("Challenge");
   const [touched, setTouched] = useState(false);
 
   // 3. Modal & Action states
@@ -245,6 +247,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
         startPrice,
         step,
         buyNowPrice,
+        buyNowMode: buyNowPrice !== null ? buyNowMode : "Challenge",
       }),
     });
   };
@@ -431,6 +434,8 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
               buyNowPriceText={buyNow}
               onChangeBuyNowPriceText={setBuyNow}
               buyNowPriceError={touched ? priceErrors.buyNowPrice : undefined}
+              buyNowMode={buyNowMode}
+              onChangeBuyNowMode={setBuyNowMode}
               disabled={locked}
             />
 

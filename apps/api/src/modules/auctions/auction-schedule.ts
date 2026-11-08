@@ -9,6 +9,8 @@ import {
   AUCTION_MIN_LEAD_MS,
   AUCTION_MIN_REMAINING_MS,
   AUCTION_SCHEDULE_HORIZON_MS,
+  BUY_NOW_CHALLENGE_MS,
+  BUY_NOW_RIVAL_CHALLENGE_MS,
 } from '../../database/mongo/migrations/auction-constants.js';
 import { DomainError, invalidField } from '../commands/domain-error.js';
 
@@ -44,6 +46,44 @@ export const buyNowOffered = (
   a.buyNowPrice !== null &&
   a.buyNowAt === null &&
   (a.currentPrice === null || a.currentPrice < a.buyNowPrice);
+
+// ADR 0074: a decided price at or above the Buy Now price ends the auction by
+// the Buy Now rule even when it came from a bid or an Auto ceiling. Before,
+// such a bid only withdrew Buy Now and the auction ran to plannedEndAt (the
+// "waiting game"). Also catches auctions already left in that state.
+export const reachesBuyNow = (
+  a: Pick<AuctionDoc, 'buyNowPrice' | 'buyNowAt'>,
+  priceAfter: number | null,
+) =>
+  a.buyNowPrice !== null &&
+  a.buyNowAt === null &&
+  priceAfter !== null &&
+  priceAfter >= a.buyNowPrice;
+
+// ADR 0074 Instant ends at the Buy Now moment; Challenge keeps ADR 0070:
+// 60 s when the actor already led, 5 min for a rival. Never after endAt.
+export const buyNowEndAt = (
+  a: Pick<AuctionDoc, 'endAt' | 'buyNowMode'>,
+  actorLed: boolean,
+  now: Date,
+) =>
+  new Date(
+    Math.min(
+      a.endAt.getTime(),
+      now.getTime() +
+        (a.buyNowMode === 'Instant'
+          ? 0
+          : actorLed
+            ? BUY_NOW_CHALLENGE_MS
+            : BUY_NOW_RIVAL_CHALLENGE_MS),
+    ),
+  );
+
+// ADR 0074: with Instant the Buy Now price is the highest commitment; a bid or
+// Auto ceiling above it could never be reached because the auction ends there.
+export const commitmentCap = (
+  a: Pick<AuctionDoc, 'buyNowPrice' | 'buyNowMode'>,
+) => (a.buyNowMode === 'Instant' ? a.buyNowPrice : null);
 
 export interface ScheduleInput {
   startAt?: string | null;

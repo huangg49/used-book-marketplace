@@ -317,6 +317,13 @@ export function fundsHint(amount: number | null | undefined, available: number |
     : `Số dư khả dụng ${formatVnd(available)}.`;
 }
 
+// ADR 0074: the seller's choice of what Buy Now does.
+export type BuyNowMode = "Challenge" | "Instant";
+export const BUY_NOW_MODES: { value: BuyNowMode; label: string; hint: string }[] = [
+  { value: "Challenge", label: "Chờ thách đấu", hint: "Khi có người mua ngay, người khác còn 5 phút để trả cao hơn (60 giây nếu người bấm đang dẫn)." },
+  { value: "Instant", label: "Kết thúc ngay", hint: "Người mua ngay thắng luôn và phiên kết thúc. Không ai trả được cao hơn giá mua ngay." },
+];
+
 // ADR 0070: the leader's Buy Now leaves others 60 seconds; anyone else's, 5 minutes.
 export const buyNowWindow = (leading: boolean) => (leading ? "60 giây" : "5 phút");
 
@@ -325,8 +332,11 @@ export function receiptMessage(
   amount: number,
   receipt: { currentPrice: number | null; leading: boolean | null },
   wasLeading = false,
+  buyNowMode: BuyNowMode = "Challenge",
 ) {
   const price = receipt.currentPrice !== null ? formatVnd(receipt.currentPrice) : "";
+  if (kind === "BuyNow" && buyNowMode === "Instant")
+    return "Bạn đã mua ngay. Phiên kết thúc; hệ thống đang chốt đơn để bạn thanh toán từ ví.";
   if (kind === "BuyNow")
     return `Bạn đang dẫn với giá mua ngay. Người khác còn ${buyNowWindow(wasLeading)} để trả cao hơn; nếu không ai vượt, bạn thắng phiên.`;
   if (kind === "Disable") return "Đã tắt đặt giá tự động.";

@@ -638,7 +638,7 @@ function BidPanel({
       setPending(null);
       setManual(null);
       setAuto("");
-      setNotice(receiptMessage(command.kind, command.amount, receipt, !!me?.leading));
+      setNotice(receiptMessage(command.kind, command.amount, receipt, !!me?.leading, auction?.buyNowMode ?? "Challenge"));
     } catch (caught) {
       // An unknown outcome keeps the frozen request for "Thử lại".
       setPending(outcomeUnknown(caught) ? command : null);

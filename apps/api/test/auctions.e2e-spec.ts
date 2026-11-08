@@ -118,6 +118,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       buyNowPrice: number | null;
       pointId: string;
       declaredValue: number | null;
+      buyNowMode: 'Challenge' | 'Instant';
     }> = {},
   ) => ({
     listingId: l.id,
@@ -2290,19 +2291,98 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       expect((await db.c.auctions.findOne({ _id: a._id }))!.leaderId).toBe(y.id);
     });
 
-    it('Buy Now is withdrawn once the price reaches it', async () => {
+    it('ADR 0074: a bid reaching Buy Now ends by the Challenge window instead of waiting for plannedEndAt', async () => {
       const { seller, intakeId } = await passedIntake();
       await publish(intakeId, seller).expect(200);
       const a = (await db.c.auctions.findOne({ intakeId }))!;
+      expect(a.buyNowMode).toBe('Challenge');
       const [x, y] = [await actor(), await actor()];
       await bid(a._id, x, 300_000).expect(200);
       await bid(a._id, y, 600_000).expect(200);
       const pub = await call('get', `/auctions/${a._id}`).expect(200);
-      expect(pub.body.auction.buyNowPrice).toBeNull();
+      validates('PublicAuction', pub.body);
+      expect(pub.body.auction).toMatchObject({ buyNowPrice: null, buyNowMode: 'Challenge' });
       expect((await buyNowCmd(a._id, x).expect(409)).body.code).toBe('InvalidState');
+      const after = (await db.c.auctions.findOne({ _id: a._id }))!;
+      expect(after.buyNowAt).not.toBeNull();
+      // y was not leading: the ADR 0070 rival window, far before plannedEndAt.
+      expect(after.endAt.getTime() - after.buyNowAt!.getTime()).toBe(5 * 60_000);
+      expect(after.endAt.getTime()).toBeLessThan(after.plannedEndAt.getTime());
+      // A normal bid row, not a fabricated Buy Now.
+      expect(await db.c.auction_bids.countDocuments({ auctionId: a._id, kind: 'BuyNow' })).toBe(0);
+      // Others may still outbid inside the window; the end does not move again.
+      await bid(a._id, x, 650_000).expect(200);
+      expect((await db.c.auctions.findOne({ _id: a._id }))!.endAt).toEqual(after.endAt);
+    });
+
+    it('ADR 0074: an Auto ceiling pushed to Buy Now by a rival also ends the auction', async () => {
+      const { seller, intakeId } = await passedIntake();
+      await publish(intakeId, seller).expect(200);
+      const a = (await db.c.auctions.findOne({ intakeId }))!;
+      const [x, y] = [await actor(), await actor()];
+      await auto(a._id, x, 900_000).expect(200);
+      await bid(a._id, y, 550_000).expect(200);
+      const after = (await db.c.auctions.findOne({ _id: a._id }))!;
+      expect(after).toMatchObject({ leaderId: x.id, currentPrice: 600_000 });
+      expect(after.buyNowAt).not.toBeNull();
+      expect(after.endAt.getTime() - after.buyNowAt!.getTime()).toBe(5 * 60_000);
+    });
+
+    it('ADR 0074: Instant Buy Now ends the auction at once and the buyer wins', async () => {
+      const { seller, intakeId } = await passedIntake({ buyNowMode: 'Instant' });
+      const intake = await call('get', `/me/auction-intakes/${intakeId}`, seller).expect(200);
+      expect(intake.body.buyNowMode ?? intake.body.intake?.buyNowMode).toBe('Instant');
+      await publish(intakeId, seller).expect(200);
+      const a = (await db.c.auctions.findOne({ intakeId }))!;
+      expect(a.buyNowMode).toBe('Instant');
+      const [x, buyer] = [await actor(), await actor()];
+      await bid(a._id, x, 300_000).expect(200);
+      await buyNowCmd(a._id, buyer).expect(200);
+      const after = (await db.c.auctions.findOne({ _id: a._id }))!;
+      expect(after).toMatchObject({ leaderId: buyer.id, currentPrice: 600_000 });
+      expect(after.endAt).toEqual(after.buyNowAt);
+      // No window: later bids and a second Buy Now are refused.
+      expect((await bid(a._id, x, 650_000).expect(409)).body.code).toBe('AuctionClosed');
+      await buyNowCmd(a._id, x).expect(409);
+      const closed = await closeAt(a._id);
+      expect(closed).toMatchObject({
+        state: 'AwaitingWinnerPayment',
+        winnerId: buyer.id,
+        finalPrice: 600_000,
+      });
+    });
+
+    it('ADR 0074: Instant caps bids and Auto at the Buy Now price; reaching it ends at once', async () => {
+      const { seller, intakeId } = await passedIntake({ buyNowMode: 'Instant' });
+      await publish(intakeId, seller).expect(200);
+      const a = (await db.c.auctions.findOne({ intakeId }))!;
+      const [x, y] = [await actor(), await actor()];
+      expect((await bid(a._id, x, 650_000).expect(409)).body.code).toBe('InvalidState');
+      expect((await auto(a._id, x, 650_000).expect(409)).body.code).toBe('InvalidState');
+      expect(await db.c.auction_bids.countDocuments({ auctionId: a._id })).toBe(0);
+      await auto(a._id, x, 600_000).expect(200);
+      await bid(a._id, y, 550_000).expect(200);
+      const after = (await db.c.auctions.findOne({ _id: a._id }))!;
+      // x's ceiling meets the Buy Now price: x wins at it, now.
+      expect(after).toMatchObject({ leaderId: x.id, currentPrice: 600_000 });
+      expect(after.endAt).toEqual(after.buyNowAt);
+      expect((await closeAt(a._id))).toMatchObject({ winnerId: x.id, finalPrice: 600_000 });
+    });
+
+    it('ADR 0074: Instant needs a Buy Now price; the mode defaults to Challenge', async () => {
+      const seller = await actor();
+      const l = await saleListing(seller);
+      const bad = await cmd(
+        'post',
+        '/auction-intakes',
+        intakeBody(l, { buyNowPrice: null, buyNowMode: 'Instant' }),
+        seller,
+      ).expect(422);
+      expect(JSON.stringify(bad.body)).toContain('buyNowMode');
+      const created = await cmd('post', '/auction-intakes', intakeBody(l), seller).expect(200);
       expect(
-        (await db.c.auctions.findOne({ _id: a._id }))!.buyNowAt,
-      ).toBeNull();
+        (await db.c.auction_intakes.findOne({ _id: created.body.intakeId }))!.buyNowMode,
+      ).toBe('Challenge');
     });
 
     it('an auction without a Buy Now price can still be published and never offers it', async () => {
