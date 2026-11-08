@@ -10,6 +10,11 @@ Thực hiện yêu cầu BA về bằng chứng đóng gói 2 chiều và đối
 - **UI Web Trao đổi & Theo dõi 2 chiều**:
   - `ShippingTrackingCard`: Xóa connector chèn nhầm vào Grid khiến chiều về bị đẩy xuống dòng 2 tạo khoảng trống lớn. Chiều đi và chiều về hiển thị song song 2 cột cân xứng (50% / 50%) khi ở màn hình máy tính.
   - Cột "Sách và thỏa thuận" (`TransactionFrame`): Nới rộng từ 288px lên `clamp(320px, 22vw, 360px)`, điều chỉnh `.row dt` và `.row dd` trong `ExchangeFinanceSummary` giúp nhãn "Sách bạn giao (1 cuốn)" và số tiền hiển thị trên một dòng liền mạch, không còn bị ngắt dòng chật chội.
+- **Xử lý triệt để Race Condition giao nhận 2 chiều độc lập (Optimistic Concurrency)**:
+  - Khi một bên gửi sách trước (revision tăng từ N lên N+1), bên còn lại trước đây gửi với `expectedVersion: N` sẽ bị máy chủ ném `409 Conflict`.
+  - Đã tối ưu hóa cả 2 đầu:
+    + Client (`ExchangeDetailPage.tsx`): Trước khi bấm xác nhận (`handleConfirmSent`, `handleConfirmReceived`, `handleComplete`), client tự động fetch revision mới nhất từ server thay vì dùng revision lưu trong state cũ.
+    + Backend (`exchanges.service.ts`): Tại các bước 2 chiều độc lập (`ship`, `receive`, `complete`), cho phép `expectedVersion` chấp nhận phiên bản `revision - 1` (do bên kia đã thực hiện trước đó). Đảm bảo giao dịch của bên thứ hai luôn thành công trơn tru, không còn tình trạng bị kẹt lại bảng cảnh báo cứu hộ.
 
 Kiểm chứng local:
 - `@used-books/api-contract`: generate code 0
