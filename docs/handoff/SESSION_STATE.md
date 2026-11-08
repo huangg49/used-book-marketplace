@@ -16,8 +16,9 @@ Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
 
 Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
 auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web
-typecheck + 475 tests, RN typecheck + 225 tests PASS. Full API E2E trên mã cuối
-xem commit/PR. Thiết bị RN, Flutter, trình duyệt thật và human review NOT RUN.
+typecheck + 475 tests, RN typecheck + 225 tests PASS. Full API E2E trên mã cuối:
+938/949 pass, 7 lỗi timeout 15 giây ở carrier-pickup/delivery-overdue/shipments/wallet
+khi chạy cả bộ; chạy lại riêng bốn file đó 142/142 PASS (nghi do tải máy, chưa chứng minh). Thiết bị RN, Flutter, trình duyệt thật và human review NOT RUN.
 Chưa push/PR.
 
 # Sửa lỗi từ khảo sát nghiệp vụ — 07/11/2026
