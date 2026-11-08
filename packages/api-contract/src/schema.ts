@@ -3284,6 +3284,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auctions/{auctionId}/open-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0079 - seller of a registration auction starts it now while waiting, once registeredCount reached minBidders. expectedVersion is the auction version. */
+        post: operations["openAuctionNow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/min-bidders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0079 - seller lowers minBidders (never below 4) while waiting and before it was reached; reaching it opens a WhenReady auction at once. */
+        post: operations["setAuctionMinBidders"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0079 - seller closes their auction before it starts (waiting phase only). Cancelled with closeReason SellerClosed; every deposit is refunded and the book is reclaimed. Refused (409) once started. */
+        post: operations["closeAuctionBeforeStart"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auctions/{auctionId}/registration/withdraw": {
         parameters: {
             query?: never;
@@ -4020,6 +4071,23 @@ export interface paths {
         put?: never;
         /** @description ACTIVE ADMIN, independent of reporter and linked participants. Current authorization before replay. Case responses do not move money or adjudicate a transaction. */
         post: operations["messageSupportCase"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/support-cases/{caseId}/close-auction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0079. Assigned ACTIVE ADMIN, independent of the seller, registrants and bidders, closes the reported auction (Active or OnHold) in one transaction - Cancelled with closeReason Reported, every hold and deposit released, book reclaimed, message sent to the seller and every participant and recorded as the case answer. */
+        post: operations["closeReportedAuction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5205,7 +5273,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "AuctionOutbid" | "AuctionFundsHeld" | "AuctionFundsReleased" | "AuctionBiddingStarted" | "AuctionNotEnoughBidders" | "AuctionDepositForfeited" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "WithdrawalUpdated" | "SupportUpdated" | "ReviewModerated";
+            kind: "AuctionOutbid" | "AuctionFundsHeld" | "AuctionFundsReleased" | "AuctionBiddingStarted" | "AuctionNotEnoughBidders" | "AuctionDepositForfeited" | "AuctionRescheduled" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "WithdrawalUpdated" | "SupportUpdated" | "ReviewModerated";
             title: string;
             body: string;
             /** @enum {string} */
@@ -6931,7 +6999,7 @@ export interface components {
             dutchTopPrice?: number | null;
             /** @description ADR 0076. Seconds between Dutch price drops of one step. Null for other types. */
             dutchIntervalSeconds?: number | null;
-            /** @description ADR 0077. Registered bidders the auction needs before bidding opens. Default 2. */
+            /** @description ADR 0077/0079. Registered bidders the auction needs before it opens. Default 4, at least 4; no business maximum (1000 is a technical guard). */
             minBidders?: number;
             /** @description Protective value snapshotted at intake (ADR 0049). Not capped by the auction price ceiling (ADR 0067); the maximum is the exact-integer limit. Does not change the shelf price or set a bid. If omitted for compatibility, uses the revision salePrice, then exchangeValue, then startPrice. Never recalculated from later bids. */
             declaredValue?: number;
@@ -6944,7 +7012,7 @@ export interface components {
             expectedVersion: number;
             /**
              * Format: date-time
-             * @description Null starts now; otherwise 5 minutes to 7 days ahead.
+             * @description Null starts now; otherwise 5 minutes to 7 days ahead. ADR 0079 registration auctions - null publishes WhenReady (opens when minBidders registered, cancelled if too few within 24 h); a time publishes Scheduled (5 minutes to 72 hours ahead).
              */
             startAt: string | null;
             /** @description Session length in seconds, 1 hour to 7 days (ADR 0069). */
@@ -6955,7 +7023,7 @@ export interface components {
             expectedVersion: number;
             /**
              * Format: date-time
-             * @description Scheduled only; null starts now. Must be null once live.
+             * @description Scheduled only; null starts now. Must be null once live. ADR 0079 registration auctions - required while waiting (use openAuctionNow to start now), at most publish + 72 h, and not in the last 30 minutes before the current start; a WhenReady auction becomes Scheduled.
              */
             startAt: string | null;
             /** @description Session length in seconds, 1 hour to 7 days (ADR 0069). */
@@ -6993,11 +7061,23 @@ export interface components {
             deposit: number;
         };
         WithdrawAuctionRegistration: Record<string, never>;
+        SetAuctionMinBidders: {
+            expectedVersion: number;
+            /** @description ADR 0079. Only lower than the current value, never below 4. */
+            minBidders: number;
+        };
+        CloseReportedAuction: {
+            /** @description Support case version. */
+            expectedVersion: number;
+            auctionVersion: number;
+            /** @description Sent to the seller and every participant and recorded as the case answer. */
+            message: string;
+        };
         /**
-         * @description ADR 0077. Why an Unsold auction did not sell; null otherwise.
+         * @description ADR 0077 NotEnoughBidders (Unsold). ADR 0079 cancellations - RegistrationExpired (too few registrants at the start), SellerClosed (seller closed before the start), HoldExpired (OnHold for 48 h), Reported (Admin closed it from a report). Null otherwise.
          * @enum {string|null}
          */
-        AuctionCloseReason: "NotEnoughBidders" | null;
+        AuctionCloseReason: "NotEnoughBidders" | "RegistrationExpired" | "SellerClosed" | "HoldExpired" | "Reported" | null;
         /**
          * @description ADR 0077. The caller's registration; Applied is a winner's deposit counted in the price held for payment. Null when the caller never registered.
          * @enum {string|null}
@@ -7061,7 +7141,7 @@ export interface components {
             dutchTopPrice?: number | null;
             /** @description ADR 0076. Seconds between Dutch price drops of one step. Null for other types. */
             dutchIntervalSeconds?: number | null;
-            /** @description ADR 0077. Registered bidders needed. Optional for older servers. */
+            /** @description ADR 0077. Registered bidders needed (intakes from before ADR 0079 may hold 2-3; they publish with 4). Optional for older servers. */
             minBidders?: number;
             protectiveValue: number;
             /** @enum {string} */
@@ -7182,6 +7262,21 @@ export interface components {
             dutchNextDropAt?: string | null;
             /** @description ADR 0077. Registered bidders needed before bidding opens; null on auctions without registration. Optional for older servers. */
             minBidders?: number | null;
+            /**
+             * @description ADR 0079. WhenReady opens as soon as minBidders registered, at the latest startAt (publish + 24 h); Scheduled opens at startAt (at most publish + 72 h). While waiting (phase Scheduled), too few registrants at startAt cancels the auction. Null on auctions without the bounded lifecycle. Optional for older servers.
+             * @enum {string|null}
+             */
+            openMode?: "WhenReady" | "Scheduled" | null;
+            /**
+             * Format: date-time
+             * @description ADR 0079. Fixed ceiling for a rescheduled start (publish + 72 h); null without the bounded lifecycle. Optional for older servers.
+             */
+            latestStartAt?: string | null;
+            /**
+             * Format: date-time
+             * @description ADR 0079. OnHold auto-cancels here (held + 48 h); null unless OnHold. Optional for older servers.
+             */
+            holdExpiresAt?: string | null;
             /** @description ADR 0077. Refundable registration deposit; null without registration. */
             depositAmount?: number | null;
             /** @description ADR 0077. Members registered (withdrawals excluded). */
@@ -7296,6 +7391,11 @@ export interface components {
              * @enum {string}
              */
             phase?: "Scheduled" | "Live" | "Ended";
+            /**
+             * Format: date-time
+             * @description ADR 0079. When an OnHold auction auto-cancels; null otherwise. Optional.
+             */
+            holdExpiresAt?: string | null;
             title: string;
             /** @enum {string} */
             state: "Active" | "OnHold";
@@ -14748,6 +14848,126 @@ export interface operations {
             503: components["responses"]["ListingError"];
         };
     };
+    openAuctionNow: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuctionVersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    setAuctionMinBidders: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetAuctionMinBidders"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    closeAuctionBeforeStart: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuctionVersionCommand"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
     withdrawAuctionRegistration: {
         parameters: {
             query?: never;
@@ -16196,6 +16416,44 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SupportMessageCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Exact intent replay. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    closeReportedAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloseReportedAuction"];
             };
         };
         responses: {

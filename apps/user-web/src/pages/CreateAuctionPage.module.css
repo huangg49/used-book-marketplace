@@ -206,3 +206,6 @@
   .segment label { min-width: 0; padding-inline: 12px; }
   .submitRow .primary { width: 100%; }
 }
+/* ADR 0079: any minimum from 4 up, next to the quick choices. */
+.minCustom { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px 0 14px; border: 1px solid var(--shop-line); border-radius: 8px; background: var(--shop-paper); font-weight: 700; font-size: .875rem; color: var(--shop-ink); }
+.minCustom input { width: 72px; min-height: 36px; padding: 0 8px; border: 1px solid var(--shop-control); border-radius: 6px; background: var(--shop-paper); color: var(--shop-ink); font: inherit; font-variant-numeric: tabular-nums; }

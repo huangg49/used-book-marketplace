@@ -8,7 +8,7 @@ import { commandOutcomeUnknown, useIntentKey } from '../hooks/useAuctionClock'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { getMyBookIdentity, getMyListings, getMyPhoto, type MyListing } from '../services/my-listings'
 import {
-  AUCTION_MAX_PRICE, AUCTION_TYPES, BUY_NOW_MODES, MIN_BIDDER_OPTIONS, auctionDepositFor, AUCTION_MIN_PRICE, AUCTION_PRICE_DIGITS, AUCTION_STEP_MAX, AUCTION_STEPS, auctionStepError, createAuctionIntake, getMyAuctionIntake, intakePriceErrors, listHandoverPoints,
+  AUCTION_MAX_PRICE, AUCTION_TYPES, BUY_NOW_MODES, MIN_BIDDER_OPTIONS, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_MIN_BIDDERS_CAP, auctionDepositFor, AUCTION_MIN_PRICE, AUCTION_PRICE_DIGITS, AUCTION_STEP_MAX, AUCTION_STEPS, auctionStepError, createAuctionIntake, getMyAuctionIntake, intakePriceErrors, listHandoverPoints,
   type AuctionStep, type AuctionType, type BuyNowMode, type CreateIntakeBody, type HandoverPoint, type MyIntake,
 } from '../services/auctions'
 import { conditions } from '../lib/listing-labels'
@@ -191,7 +191,7 @@ export function CreateAuctionPage() {
   // ADR 0076: format; Dutch adds an opening price and a drop interval.
   const [auctionType, setAuctionType] = useState<AuctionType>('English')
   // ADR 0077: how many registered bidders open the auction.
-  const [minBidders, setMinBidders] = useState<number>(2)
+  const [minBidders, setMinBidders] = useState<number>(AUCTION_MIN_BIDDERS_FLOOR)
   const [dutchTop, setDutchTop] = useState<number | null>(null)
   const [dutchEvery, setDutchEvery] = useState<number>(60)
   const english = auctionType === 'English'
@@ -508,10 +508,16 @@ export function CreateAuctionPage() {
             <p className={styles.stepHint}>{AUCTION_TYPES.find((t) => t.value === auctionType)!.hint}</p>
             <div className={styles.chips} role="group" aria-label="Số người đăng ký tối thiểu">
               {MIN_BIDDER_OPTIONS.map((n) => <button type="button" key={n} aria-pressed={minBidders === n} disabled={locked} onClick={() => setMinBidders(n)}>{n} người<span>tối thiểu</span></button>)}
+              <label className={styles.minCustom}>
+                Khác
+                <input type="number" inputMode="numeric" aria-label="Số người đăng ký tối thiểu" min={AUCTION_MIN_BIDDERS_FLOOR} max={AUCTION_MIN_BIDDERS_CAP} value={minBidders} disabled={locked}
+                  onChange={(e) => setMinBidders(Math.min(AUCTION_MIN_BIDDERS_CAP, Math.max(AUCTION_MIN_BIDDERS_FLOOR, Math.trunc(Number(e.target.value) || AUCTION_MIN_BIDDERS_FLOOR))))} />
+              </label>
             </div>
             <p className={styles.stepHint}>
               Người mua đăng ký và đặt cọc {startPrice !== null ? formatVnd(auctionDepositFor(startPrice)) : '10% giá khởi điểm'} trước khi trả giá.
-              Phiên mở trả giá khi đủ {minBidders} người và chỉ bán khi có ít nhất hai người trả giá; nếu không, sách được trả lại và tiền cọc được hoàn.
+              Phiên mở khi đủ {minBidders} người (ít nhất {AUCTION_MIN_BIDDERS_FLOOR}); không đủ trong 24 giờ, hoặc tới giờ mở bạn hẹn (tối đa 72 giờ), thì phiên bị hủy và hoàn cọc.
+              Phiên chỉ bán khi có ít nhất hai người trả giá.
             </p>
             <PriceInput id="auction-start" label={auctionType === 'Dutch' ? 'Giá sàn (thấp nhất)' : 'Giá khởi điểm'} value={startPrice} step={step} min={AUCTION_MIN_PRICE} disabled={locked}
               onChange={setStartPrice} error={touched || startPrice !== null ? formErrors.startPrice : undefined}

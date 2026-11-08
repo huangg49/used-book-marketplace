@@ -131,6 +131,12 @@ export async function checkAuction(tx: Tx, auctionId: string) {
         )
   )
     fail('auction bidder without registration');
+  // ADR 0079: every exit settles registrations in the same transaction.
+  if (
+    ['Cancelled', 'Unsold'].includes(a.state) &&
+    registrations.some((r) => r.state === 'Registered')
+  )
+    fail('closed auction keeps a deposit');
   // ADR 0047: a scheduled auction takes no bid before its start.
   if (
     await tx.c.auction_bids.findOne({

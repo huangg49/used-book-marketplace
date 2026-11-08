@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { MongoService } from '../../database/mongo/mongo.service.js';
+import { AUCTION_HOLD_MAX_MS } from '../../database/mongo/migrations/auction-constants.js';
 import { DomainError } from '../commands/domain-error.js';
 import { AuctionBiddingService } from './auction-bidding.service.js';
 import { AuctionClock } from './auction-clock.js';
@@ -36,6 +37,8 @@ export class AuctionWorker {
     const ready = { _id: { $nin: blocked } };
     const {
       holds,
+      registrations,
+      expiredHolds,
       dropoffs,
       endings,
       payments,
@@ -82,6 +85,38 @@ export class AuctionWorker {
             ineligible.has(a.sellerId) ||
             (a.leaderId !== null && ineligible.has(a.leaderId)),
         ),
+        // ADR 0079 ceilings: the start passed with too few registrants, or
+        // OnHold for 48 h. Commands already refuse past these; this records it.
+        registrations: await tx.c.auctions
+          .find(
+            {
+              ...ready,
+              state: 'Active',
+              openMode: { $ne: null },
+              startAt: { $lte: now },
+              $expr: { $lt: ['$registeredCount', '$minBidders'] },
+            },
+            {
+              limit: 100,
+              sort: { startAt: 1, _id: 1 },
+              projection: { _id: 1, version: 1, startAt: 1 },
+            },
+          )
+          .toArray(),
+        expiredHolds: await tx.c.auctions
+          .find(
+            {
+              ...ready,
+              state: 'OnHold',
+              heldAt: { $lte: new Date(now.getTime() - AUCTION_HOLD_MAX_MS) },
+            },
+            {
+              limit: 100,
+              sort: { heldAt: 1, _id: 1 },
+              projection: { _id: 1, version: 1, heldAt: 1 },
+            },
+          )
+          .toArray(),
         dropoffs: await tx.c.auction_intakes
           .find(
             {
@@ -166,6 +201,14 @@ export class AuctionWorker {
     const { attempt, result } = this.runner();
     for (const a of holds)
       await attempt('hold', a._id, () => this.bidding.hold(a._id));
+    for (const a of registrations)
+      await attempt('registrationExpiry', a._id, () =>
+        this.bidding.expireRegistration(a._id, a.version),
+      );
+    for (const a of expiredHolds)
+      await attempt('holdExpiry', a._id, () =>
+        this.bidding.expireHold(a._id, a.version),
+      );
     for (const a of endings)
       await attempt('close', a._id, () => this.bidding.close(a._id));
     for (const a of payments)
@@ -183,6 +226,10 @@ export class AuctionWorker {
     for (const o of settlements)
       await attempt('settlement', o._id, () => this.completion.settle(o._id));
     const oldest = [
+      ...registrations.map((a) => a.startAt),
+      ...expiredHolds.map(
+        (a) => new Date(a.heldAt!.getTime() + AUCTION_HOLD_MAX_MS),
+      ),
       ...endings.map((a) => a.endAt),
       ...payments.map((a) => a.paymentDeadline!),
       ...dropoffs.map((i) => i.dropoffDeadline),

@@ -57,10 +57,16 @@ export const AuctionCard = memo(function AuctionCard({ auction, serverTime }: { 
           </span>
         </div>
         <ul className={styles.facts}>
-          {scheduled && (
-            <li><Play size={14} aria-hidden="true" /><span>Mở lúc</span><b>{endsAt(auction.startAt)}</b></li>
+          {scheduled && auction.openMode != null && (
+            <li><Users size={14} aria-hidden="true" /><span>Đăng ký</span><b>{auction.registeredCount ?? 0}/{auction.minBidders} người</b></li>
           )}
-          <li><Flag size={14} aria-hidden="true" /><span>Kết thúc</span><b>{endsAt(auction.endAt)}</b></li>
+          {scheduled && (
+            // ADR 0079: WhenReady opens as soon as enough register; startAt is its deadline.
+            <li><Play size={14} aria-hidden="true" /><span>{auction.openMode === 'WhenReady' ? 'Hạn đăng ký' : 'Mở lúc'}</span><b>{endsAt(auction.startAt)}</b></li>
+          )}
+          {!(scheduled && auction.openMode === 'WhenReady') && (
+            <li><Flag size={14} aria-hidden="true" /><span>Kết thúc</span><b>{endsAt(auction.endAt)}</b></li>
+          )}
           <li><MapPin size={14} aria-hidden="true" /><span>Điểm giữ</span><b title={auction.pointName}>{auction.pointName}</b></li>
           {auction.buyNowPrice !== null && (
             <li className={styles.buyNow}><Zap size={14} aria-hidden="true" /><span>Mua ngay</span><b>{formatVnd(auction.buyNowPrice)}</b></li>

@@ -1110,7 +1110,19 @@ export interface AuctionDoc extends Lockable {
   // ADR 0077: when registeredCount first reached minBidders (never before
   // startAt); the Dutch price clock starts here.
   biddingOpenedAt: Date | null;
-  closeReason: 'NotEnoughBidders' | null;
+  closeReason:
+    | 'NotEnoughBidders'
+    // ADR 0079 cancellations: too few at the start, seller closed before the
+    // start, OnHold past 48 h, Admin closed from a report.
+    | 'RegistrationExpired'
+    | 'SellerClosed'
+    | 'HoldExpired'
+    | 'Reported'
+    | null;
+  // ADR 0079: null on auctions without the bounded lifecycle (ADR 0077 rows).
+  openMode: 'WhenReady' | 'Scheduled' | null;
+  // ADR 0079: when the auction was last put OnHold (48 h ceiling).
+  heldAt: Date | null;
   // ADR 0043: set when Buy Now opened the 60-second challenge window.
   buyNowAt: Date | null;
   startAt: Date;
@@ -1454,6 +1466,7 @@ export interface MemberNotificationDoc {
     | 'AuctionBiddingStarted'
     | 'AuctionNotEnoughBidders'
     | 'AuctionDepositForfeited'
+    | 'AuctionRescheduled'
     | 'AuctionWon'
     | 'AuctionSold'
     | 'AuctionBoughtNow'

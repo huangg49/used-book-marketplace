@@ -7,6 +7,10 @@ viên: không có phiên đấu giá chỉ một người). Bổ sung FR-AU01–
 [ADR0076](0076-auction-formats.md). Không đổi READINESS; không là bằng chứng đóng gate
 settlement.
 
+> Bổ sung bởi [ADR0079](0079-bounded-auction-lifecycle.md): tối thiểu ít nhất 4 người; phiên
+> chờ đăng ký có hạn (24 giờ hoặc giờ hẹn ≤ 72 giờ), thiếu người tới hạn thì hủy và hoàn cọc;
+> người bán mở ngay, đổi giờ, giảm số người hoặc đóng phiên khi đang chờ; OnHold tự hủy sau 48 giờ.
+
 ## Quyết định
 
 - Người bán chọn `minBidders` (2–10, mặc định 2) khi gửi sách. Khi đăng, phiên chép

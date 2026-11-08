@@ -7,6 +7,7 @@ import type {
   ReclaimReason,
 } from '../../database/mongo/documents.js';
 import {
+  AUCTION_HOLD_MAX_MS,
   AUCTION_PAYMENT_MS,
 } from '../../database/mongo/migrations/auction-constants.js';
 import type { AuctionStep } from '../../database/mongo/migrations/auction-constants.js';
@@ -66,9 +67,20 @@ import {
   notStarted,
   phaseOf,
   reschedule,
+  latestStartAt,
+  lifecycleReschedule,
+  openNowFields,
+  registrationExpired,
+  requireWaiting,
 } from './auction-schedule.js';
+import { stepKey } from './system-key.js';
 
 const RATE_LIMIT_PER_MINUTE = 30;
+// ADR 0079: when an OnHold auction auto-cancels.
+const holdExpiry = (a: AuctionDoc) =>
+  a.state === 'OnHold' && a.heldAt
+    ? new Date(a.heldAt.getTime() + AUCTION_HOLD_MAX_MS).toISOString()
+    : null;
 const MAX_OPEN_PARTICIPATIONS = 5;
 const closed = () =>
   new DomainError(
@@ -686,6 +698,34 @@ export class AuctionBiddingService {
         if (a.version !== body.expectedVersion) throw conflict();
         const now = await this.clock.decision(tx, context.auth);
         await requireUnrestricted(tx, actor._id, now);
+        // ADR 0079: a waiting registration auction moves its start within the
+        // fixed publish + 72 h ceiling; registrants hear about every change.
+        if (a.openMode) {
+          const s = lifecycleReschedule(a, body, now);
+          const reached =
+            a.minBidders !== null && a.registeredCount >= a.minBidders;
+          const next = await this.update(
+            tx,
+            a,
+            {
+              openMode: s.openMode,
+              startAt: s.startAt,
+              plannedEndAt: s.plannedEndAt,
+              endAt: s.plannedEndAt,
+              scheduleRevision: a.scheduleRevision + 1,
+              ...(reached ? { biddingOpenedAt: s.startAt } : {}),
+            },
+            now,
+          );
+          await notifyAuction(
+            tx,
+            next,
+            'AuctionRescheduled',
+            await this.registrantIds(tx, next),
+            now,
+          );
+          return this.change(next, now, 'AuctionRescheduled', actor._id);
+        }
         // ADR 0077: members registered and paid a deposit for this timing.
         if ((a.registeredCount ?? 0) > 0)
           throw new DomainError(
@@ -748,34 +788,285 @@ export class AuctionBiddingService {
         const reason = body.reason.trim();
         if (reason.length < 10)
           invalidField('reason', 'Hãy ghi lý do hủy ít nhất 10 ký tự.');
-        const next = await this.update(
-          tx,
-          a,
-          { state: 'Cancelled', closedAt: now, cancelReason: reason },
-          now,
-        );
-        await this.intakes.requireReclaim(
-          tx,
-          a.intakeId,
-          'AuctionCancelled',
-          now,
-        );
-        const bidders = await tx.c.auction_bidders
-          .find({ auctionId: a._id }, { projection: { bidderId: 1 } })
-          .toArray();
+        const next = await this.cancelNow(tx, a, reason, null, receiptId, now);
+        return this.change(next, now, 'AuctionCancelled', actor._id, reason);
+      },
+    });
+  }
+
+  // Every cancellation (Admin, seller, report, ADR 0079 ceilings) ends here:
+  // one transaction cancels, reclaims the book, notifies everyone involved
+  // and releases every hold and deposit (registrations become Refunded).
+  private async cancelNow(
+    tx: Tx,
+    a: AuctionDoc,
+    reason: string,
+    closeReason: AuctionDoc['closeReason'],
+    receiptId: string,
+    now: Date,
+  ) {
+    const next = await this.update(
+      tx,
+      a,
+      { state: 'Cancelled', closedAt: now, cancelReason: reason, closeReason },
+      now,
+    );
+    await this.intakes.requireReclaim(tx, a.intakeId, 'AuctionCancelled', now);
+    const bidders = await tx.c.auction_bidders
+      .find({ auctionId: a._id }, { projection: { bidderId: 1 } })
+      .toArray();
+    await notifyAuction(
+      tx,
+      next,
+      'AuctionCancelled',
+      [
+        a.sellerId,
+        ...bidders.map((b) => b.bidderId),
+        ...(await this.registrantIds(tx, a)),
+      ],
+      now,
+    );
+    await this.releaseHolds(tx, next, null, 'Cancelled', receiptId, now);
+    return next;
+  }
+
+  // ADR 0077/0079: what changes when registeredCount reaches minBidders.
+  // WhenReady opens now (same length); Scheduled bids from its start; an
+  // ADR 0077 auction starts its Dutch clock here, never before startAt.
+  private gateFields(a: AuctionDoc, now: Date): Partial<AuctionDoc> {
+    if (a.openMode === 'WhenReady') return openNowFields(a, now);
+    if (a.openMode === 'Scheduled') return { biddingOpenedAt: a.startAt };
+    return { biddingOpenedAt: now > a.startAt ? now : a.startAt };
+  }
+
+  private sellerOf = async (
+    tx: Tx,
+    actor: Parameters<typeof member>[0],
+    id: string,
+  ) => {
+    member(actor);
+    const a = await this.auction(tx, id);
+    if (a.sellerId !== actor._id) throw notFound();
+    return a;
+  };
+
+  // ADR 0079: the seller of a waiting registration auction starts it now once
+  // enough members registered.
+  openNow(
+    context: CommandContext,
+    id: string,
+    body: Wire['AuctionVersionCommand'],
+  ) {
+    return this.commands.runAuction(context, 'openAuctionNow', id, body, {
+      authorize: (tx, actor) => this.sellerOf(tx, actor, id),
+      mutate: async (tx, actor) => {
+        requireActive(actor);
+        await tx.lock('auctions', [id]);
+        const a = await this.auction(tx, id);
+        if (a.version !== body.expectedVersion) throw conflict();
+        const now = await this.clock.decision(tx, context.auth);
+        if (!a.openMode || a.minBidders === null)
+          throw invalidState('Phiên này mở theo thời gian đã đăng.');
+        requireWaiting(a, now);
+        if (a.registeredCount < a.minBidders)
+          throw invalidState(
+            `Cần đủ ${a.minBidders} người đăng ký trước khi mở (hiện có ${a.registeredCount}).`,
+          );
+        const next = await this.update(tx, a, openNowFields(a, now), now);
         await notifyAuction(
           tx,
           next,
-          'AuctionCancelled',
-          [
-            a.sellerId,
-            ...bidders.map((b) => b.bidderId),
-            ...(await this.registrantIds(tx, a)),
-          ],
+          'AuctionBiddingStarted',
+          await this.registrantIds(tx, next),
           now,
         );
-        await this.releaseHolds(tx, next, null, 'Cancelled', receiptId, now);
-        return this.change(next, now, 'AuctionCancelled', actor._id, reason);
+        return this.change(next, now, 'AuctionOpened', actor._id);
+      },
+    });
+  }
+
+  // ADR 0079: the seller only lowers the minimum (never below 4), while waiting
+  // and before it was reached; reaching it applies the gate at once.
+  setMinBidders(
+    context: CommandContext,
+    id: string,
+    body: Wire['SetAuctionMinBidders'],
+  ) {
+    return this.commands.runAuction(context, 'setAuctionMinBidders', id, body, {
+      authorize: (tx, actor) => this.sellerOf(tx, actor, id),
+      mutate: async (tx, actor) => {
+        requireActive(actor);
+        await tx.lock('auctions', [id]);
+        const a = await this.auction(tx, id);
+        if (a.version !== body.expectedVersion) throw conflict();
+        const now = await this.clock.decision(tx, context.auth);
+        if (!a.openMode || a.minBidders === null)
+          throw invalidState('Phiên này không đổi được số người tối thiểu.');
+        requireWaiting(a, now);
+        if (a.registeredCount >= a.minBidders)
+          throw invalidState(
+            'Phiên đã đủ người đăng ký nên số người tối thiểu được giữ nguyên.',
+          );
+        if (body.minBidders >= a.minBidders)
+          invalidField(
+            'minBidders',
+            `Chỉ giảm được số người tối thiểu (hiện là ${a.minBidders}).`,
+          );
+        const reached = a.registeredCount >= body.minBidders;
+        const lowered = { ...a, minBidders: body.minBidders };
+        const next = await this.update(
+          tx,
+          a,
+          {
+            minBidders: body.minBidders,
+            ...(reached ? this.gateFields(lowered, now) : {}),
+          },
+          now,
+        );
+        if (reached)
+          await notifyAuction(
+            tx,
+            next,
+            'AuctionBiddingStarted',
+            await this.registrantIds(tx, next),
+            now,
+          );
+        return this.change(
+          next,
+          now,
+          reached && a.openMode === 'WhenReady'
+            ? 'AuctionOpened'
+            : 'AuctionMinBiddersChanged',
+          actor._id,
+        );
+      },
+    });
+  }
+
+  // ADR 0079: the seller may close their auction at any time before it
+  // starts; afterwards only an Admin can (refused with 409).
+  closeBeforeStart(
+    context: CommandContext,
+    id: string,
+    body: Wire['AuctionVersionCommand'],
+  ) {
+    return this.commands.runAuction(
+      context,
+      'closeAuctionBeforeStart',
+      id,
+      body,
+      {
+        discover: async (tx) => [(await this.auction(tx, id)).sellerId],
+        authorize: (tx, actor) => this.sellerOf(tx, actor, id),
+        mutate: async (tx, actor, _before, receiptId) => {
+          requireActive(actor);
+          await tx.lock('auctions', [id]);
+          const a = await this.auction(tx, id);
+          if (a.version !== body.expectedVersion) throw conflict();
+          const now = await this.clock.decision(tx, context.auth);
+          requireWaiting(a, now);
+          const reason = 'Người bán đã đóng phiên trước giờ mở.';
+          const next = await this.cancelNow(
+            tx,
+            a,
+            reason,
+            'SellerClosed',
+            receiptId,
+            now,
+          );
+          return this.change(next, now, 'AuctionCancelled', actor._id, reason);
+        },
+      },
+    );
+  }
+
+  /**
+   * ADR 0079: an assigned, independent Admin closes a reported auction from
+   * the support case, inside the support command's transaction.
+   */
+  async cancelReported(
+    tx: Tx,
+    id: string,
+    version: number,
+    actorId: string,
+    message: string,
+    receiptId: string,
+    now: Date,
+  ) {
+    await tx.lock('users', [(await this.auction(tx, id)).sellerId]);
+    await tx.lock('auctions', [id]);
+    const a = await this.auction(tx, id);
+    if (
+      actorId === a.sellerId ||
+      (await tx.c.auction_bidders.findOne({ _id: `${id}:${actorId}` })) ||
+      (await tx.c.auction_registrations.findOne({ _id: `${id}:${actorId}` }))
+    )
+      throw new DomainError(
+        403,
+        'SelfReviewForbidden',
+        'Bạn đang liên quan đến phiên này nên không được đóng.',
+      );
+    if (a.version !== version) throw conflict();
+    // An Active auction past its end waits for the close (a winner may exist).
+    if (
+      !(a.state === 'OnHold' || (a.state === 'Active' && now < a.endAt))
+    )
+      throw invalidState(
+        'Phiên đã kết thúc hoặc đang chốt kết quả nên không còn đóng được.',
+      );
+    return this.cancelNow(tx, a, message, 'Reported', receiptId, now);
+  }
+
+  // ADR 0079 worker safety net: the start passed with too few registrants.
+  // Keyed by the auction version, so a second run on the same row replays.
+  expireRegistration(id: string, version: number) {
+    return this.commands.systemAuction('AuctionClose', stepKey(id, version), {
+      discover: async (tx) => [(await this.auction(tx, id)).sellerId],
+      authorize: (tx) => this.auction(tx, id),
+      mutate: async (tx, _before, receiptId) => {
+        await tx.lock('auctions', [id]);
+        const a = await this.auction(tx, id);
+        const now = await this.clock.now(tx);
+        if (a.version !== version || !registrationExpired(a, now))
+          throw invalidState();
+        const next = await this.cancelNow(
+          tx,
+          a,
+          'Không đủ người đăng ký trước giờ mở.',
+          'RegistrationExpired',
+          receiptId,
+          now,
+        );
+        return this.change(next, now, 'AuctionCancelled', null);
+      },
+    });
+  }
+
+  // ADR 0079: OnHold never lasts more than 48 h; an Admin can cancel earlier.
+  expireHold(id: string, version: number) {
+    return this.commands.systemAuction('AuctionClose', stepKey(id, version), {
+      discover: async (tx) => [(await this.auction(tx, id)).sellerId],
+      authorize: (tx) => this.auction(tx, id),
+      mutate: async (tx, _before, receiptId) => {
+        await tx.lock('auctions', [id]);
+        const a = await this.auction(tx, id);
+        const now = await this.clock.now(tx);
+        if (
+          a.version !== version ||
+          a.state !== 'OnHold' ||
+          !a.heldAt ||
+          now.getTime() < a.heldAt.getTime() + AUCTION_HOLD_MAX_MS
+        )
+          throw invalidState();
+        const next = await this.cancelNow(
+          tx,
+          a,
+          'Phiên tạm dừng quá 48 giờ mà chưa được xử lý.',
+          'HoldExpired',
+          receiptId,
+          now,
+        );
+        return this.change(next, now, 'AuctionCancelled', null);
       },
     });
   }
@@ -808,7 +1099,12 @@ export class AuctionBiddingService {
         const now = await this.clock.now(tx);
         if (a.state !== 'Active' || now >= a.endAt) throw invalidState();
         if (await this.partiesEligible(tx, a)) throw invalidState();
-        const next = await this.update(tx, a, { state: 'OnHold' }, now);
+        const next = await this.update(
+          tx,
+          a,
+          { state: 'OnHold', heldAt: now },
+          now,
+        );
         await notifyAuction(
           tx,
           next,
@@ -836,6 +1132,19 @@ export class AuctionBiddingService {
         if (a.leaderId !== before.leaderId) throw conflict();
         const now = await this.clock.now(tx);
         if (a.state !== 'Active' || now < a.endAt) throw invalidState();
+        // ADR 0079: too few registrants at the start is a cancellation even
+        // when the expiry sweep did not run before the end.
+        if (registrationExpired(a, now)) {
+          const next = await this.cancelNow(
+            tx,
+            a,
+            'Không đủ người đăng ký trước giờ mở.',
+            'RegistrationExpired',
+            receiptId,
+            now,
+          );
+          return this.change(next, now, 'AuctionCancelled', null);
+        }
         // ADR 0077: an auction with registration never sells to a lone
         // bidder: it needs minBidders registered and, unless a price was
         // accepted outright (Buy Now, Dutch), at least two members who bid.
@@ -877,7 +1186,12 @@ export class AuctionBiddingService {
         }
         if (!(await this.partiesEligible(tx, a))) {
           // Never silently drop bids or promote the runner-up.
-          const next = await this.update(tx, a, { state: 'OnHold' }, now);
+          const next = await this.update(
+            tx,
+            a,
+            { state: 'OnHold', heldAt: now },
+            now,
+          );
           await notifyAuction(
             tx,
             next,
@@ -1205,7 +1519,8 @@ export class AuctionBiddingService {
         await tx.lock('auction_registrations', [`${id}:${actor._id}`]);
         const a = await this.auction(tx, id);
         const now = await this.clock.decision(tx, context.auth);
-        if (a.state !== 'Active' || now >= a.endAt) throw closed();
+        // ADR 0079: phaseOf is Ended once the start passed with too few.
+        if (phaseOf(a, now) === 'Ended') throw closed();
         if (a.minBidders === null || a.depositAmount === null)
           throw new DomainError(
             409,
@@ -1267,10 +1582,7 @@ export class AuctionBiddingService {
           a,
           {
             registeredCount: a.registeredCount + 1,
-            // The Dutch clock starts here, never before the published start.
-            ...(opens
-              ? { biddingOpenedAt: now > a.startAt ? now : a.startAt }
-              : {}),
+            ...(opens ? this.gateFields(a, now) : {}),
           },
           now,
         );
@@ -1317,7 +1629,7 @@ export class AuctionBiddingService {
           await tx.lock('auction_registrations', [`${id}:${actor._id}`]);
           const a = await this.auction(tx, id);
           const now = await this.clock.decision(tx, context.auth);
-          if (a.state !== 'Active' || now >= a.endAt) throw closed();
+          if (phaseOf(a, now) === 'Ended') throw closed();
           const own = await this.registrationOf(tx, a, actor._id);
           if (own?.state !== 'Registered')
             throw new DomainError(
@@ -1530,6 +1842,10 @@ export class AuctionBiddingService {
       depositAmount: a.depositAmount ?? null,
       registeredCount: a.registeredCount ?? 0,
       closeReason: a.closeReason ?? null,
+      // ADR 0079: open mode and the fixed ceilings.
+      openMode: a.openMode ?? null,
+      latestStartAt: a.openMode ? latestStartAt(a).toISOString() : null,
+      holdExpiresAt: holdExpiry(a),
       // ADR 0076: a running sealed auction shows only the start and count.
       currentPrice: sealedLive ? null : a.currentPrice,
       minimumBid:
@@ -1562,7 +1878,14 @@ export class AuctionBiddingService {
           limit: 50,
         },
       )
-      .toArray();
+      .toArray()
+      // ADR 0079: an auction that reached its start with too few registrants
+      // is over at once, before the worker records the cancellation.
+      .then((found) =>
+        found.filter(
+          (a) => phaseOf(a, now) === (upcoming ? 'Scheduled' : 'Live'),
+        ),
+      );
     const items: Wire['PublicAuctionSummary'][] = [];
     // Bound concurrent snapshot reads instead of serially opening up to 50 sessions.
     for (let offset = 0; offset < rows.length; offset += 4) {
@@ -1618,6 +1941,7 @@ export class AuctionBiddingService {
           id: a._id,
           version: a.version,
           phase: phaseOf(a, now),
+          holdExpiresAt: holdExpiry(a),
           title: String((item?.snapshot as { title?: string })?.title ?? ''),
           state: a.state as 'Active' | 'OnHold',
           startPrice: a.startPrice,

@@ -3,15 +3,17 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { ArrowRight, EyeOff, TrendingDown, Users, Wallet } from 'lucide-react'
+import { ArrowRight, CalendarClock, CircleSlash, EyeOff, Minus, Play, TrendingDown, Users, Wallet } from 'lucide-react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
 import { commandOutcomeUnknown, formatRemaining, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import { commandError } from '../lib/auction-errors'
 import { formatVnd, ROUTES } from '../lib/routes'
 import { getWalletSummary } from '../services/wallet'
 import {
-  AUCTION_PRICE_DIGITS, acceptDutch, placeSealedBid, registerForAuction, withdrawAuctionRegistration,
-  type AuctionParticipation, type AuctionSummary,
+  AUCTION_MAX_SCHEDULE_EDITS, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_PRICE_DIGITS, AUCTION_RESCHEDULE_FREEZE_MS, acceptDutch,
+  closeAuctionBeforeStart, openAuctionNow, openRuleText, placeSealedBid, registerForAuction, setAuctionMinBidders,
+  withdrawAuctionRegistration, type AuctionParticipation, type AuctionSummary,
 } from '../services/auctions'
 import styles from './AuctionDetailPage.module.css'
 
@@ -84,7 +86,7 @@ export function RegistrationPanel({ auction, me, onChanged }: PanelProps) {
       <div className={styles.notice}>
         <strong><Users size={16} aria-hidden="true" /> {registered ? 'Bạn đã đăng ký phiên này' : 'Đăng ký để tham gia đấu giá'}</strong>
         <p>
-          Phiên mở trả giá khi có ít nhất {need} người đăng ký; hiện có <b>{count}/{need}</b>.
+          {auction.openMode ? openRuleText(auction) : `Phiên mở trả giá khi có ít nhất ${need} người đăng ký.`} Hiện có <b>{count}/{need}</b>.
           Phiên chỉ bán khi có ít nhất hai người trả giá.
         </p>
         <progress max={need} value={Math.min(count, need)} aria-label={`${count} trên ${need} người đã đăng ký`} />
@@ -120,7 +122,9 @@ export function RegistrationPanel({ auction, me, onChanged }: PanelProps) {
         isBusy={busy}
         onConfirm={() => void run(`register:${deposit}`, (key) => registerForAuction(auction.id, deposit, key), () => {
           setConfirming(false)
-          setNotice(count + 1 >= need ? 'Đã đăng ký. Phiên đủ người, bạn có thể trả giá.' : 'Đã đăng ký. Bạn sẽ nhận thông báo khi phiên đủ người.')
+          setNotice(count + 1 >= need
+            ? auction.openMode === 'Scheduled' ? 'Đã đăng ký. Phiên đủ người và mở theo giờ đã hẹn.' : 'Đã đăng ký. Phiên đủ người, bạn có thể trả giá.'
+            : 'Đã đăng ký. Bạn sẽ nhận thông báo khi phiên đủ người.')
         }).finally(() => setConfirming(false))}
       />
     </div>
@@ -255,6 +259,95 @@ export function SealedPanel({ auction, me, onChanged }: PanelProps) {
         onConfirm={() => amount !== null && void run(`sealed:${amount}`, (key) => placeSealedBid(auction.id, amount, key), () => {
           setNotice(`Đã ghi nhận giá kín ${formatVnd(amount)}. Kết quả công bố khi phiên kết thúc.`)
         }).finally(() => setConfirming(false))}
+      />
+    </div>
+  )
+}
+
+/**
+ * ADR 0079: the seller's controls while the auction waits for registrants:
+ * open now once enough registered, schedule or move the start (5 changes,
+ * never in the last 30 minutes, within publish + 72 h), lower the minimum
+ * (never below 4, locked once reached) and close before the start.
+ */
+export function WaitingSellerControls({ auction, serverTime, onChanged, paused }: PanelProps & { paused: boolean }) {
+  const need = auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR
+  const count = auction.registeredCount ?? 0
+  const reached = count >= need
+  const version = auction.version ?? 0
+  const offset = serverTime ? Date.parse(serverTime) - Date.now() : 0
+  const frozen = Date.parse(auction.startAt) - (Date.now() + offset) <= AUCTION_RESCHEDULE_FREEZE_MS
+  const editsLeft = AUCTION_MAX_SCHEDULE_EDITS - (auction.scheduleRevision ?? 0)
+  const [lower, setLower] = useState(Math.max(AUCTION_MIN_BIDDERS_FLOOR, need - 1))
+  const [editing, setEditing] = useState(false)
+  const [closing, setClosing] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+  const ids = useId()
+  const { busy, error, unknown, run } = useCommand(onChanged)
+  const canLower = !reached && need > AUCTION_MIN_BIDDERS_FLOOR
+  return (
+    <div className={styles.bidPanel}>
+      <div className={styles.notice}>
+        <strong><Users size={16} aria-hidden="true" /> Đang chờ người đăng ký: {count}/{need}</strong>
+        <p>{openRuleText(auction)}</p>
+        <progress max={need} value={Math.min(count, need)} aria-label={`${count} trên ${need} người đã đăng ký`} />
+      </div>
+      {notice && <p className={styles.walletLine} role="status">{notice}</p>}
+      {error && <p className={styles.walletShort} role="alert">{error}</p>}
+      {unknown ? (
+        <button type="button" className={styles.primaryBlock} disabled={busy} onClick={() => void unknown()}>
+          {busy ? 'Đang thử lại…' : 'Thử lại đúng lệnh vừa rồi'}
+        </button>
+      ) : (
+        <>
+          <button type="button" className={styles.ownerPrimary} disabled={busy || paused || !reached}
+            aria-describedby={reached ? undefined : `${ids}-open`}
+            onClick={() => void run(`open-now:${version}`, (key) => openAuctionNow(auction.id, version, key), () => setNotice('Phiên đã mở; người đăng ký có thể trả giá ngay.'))}>
+            <Play size={17} aria-hidden="true" />Mở ngay
+          </button>
+          {!reached && <p id={`${ids}-open`} className={styles.muted}>Mở ngay khi đủ {need} người đăng ký.</p>}
+          <button type="button" className={styles.ownerPrimary} disabled={busy || paused || frozen || editsLeft <= 0} onClick={() => setEditing(true)}>
+            <CalendarClock size={17} aria-hidden="true" />{auction.openMode === 'Scheduled' ? 'Đổi giờ mở' : 'Hẹn giờ mở'}
+          </button>
+          <p className={styles.muted}>
+            {frozen ? 'Không đổi giờ trong 30 phút cuối trước giờ mở.' : editsLeft <= 0 ? 'Đã đổi giờ tối đa 5 lần.' : `Còn ${editsLeft} lần đổi giờ, trong 72 giờ kể từ lúc đăng.`}
+          </p>
+          {canLower && (
+            <div className={styles.lowerRow}>
+              <label htmlFor={`${ids}-min`}>Giảm số người tối thiểu còn</label>
+              <input id={`${ids}-min`} type="number" inputMode="numeric" min={AUCTION_MIN_BIDDERS_FLOOR} max={need - 1} value={lower} disabled={busy || paused}
+                onChange={(e) => setLower(Math.min(need - 1, Math.max(AUCTION_MIN_BIDDERS_FLOOR, Math.trunc(Number(e.target.value) || AUCTION_MIN_BIDDERS_FLOOR))))} />
+              <button type="button" className={styles.secondary} disabled={busy || paused}
+                onClick={() => void run(`min:${version}:${lower}`, (key) => setAuctionMinBidders(auction.id, version, lower, key), () => setNotice(`Đã giảm số người tối thiểu còn ${lower}.`))}>
+                <Minus size={15} aria-hidden="true" />Giảm
+              </button>
+            </div>
+          )}
+          {!canLower && !reached && <p className={styles.muted}>Số người tối thiểu không thấp hơn {AUCTION_MIN_BIDDERS_FLOOR}.</p>}
+          {reached && <p className={styles.muted}>Đã đủ người nên số người tối thiểu được giữ nguyên.</p>}
+          <button type="button" className={styles.ownerDanger} disabled={busy || paused} onClick={() => setClosing(true)}>
+            <CircleSlash size={17} aria-hidden="true" />Đóng phiên
+          </button>
+        </>
+      )}
+      <ScheduleAuctionDialog
+        isOpen={editing}
+        paused={paused}
+        onClose={() => setEditing(false)}
+        onDone={onChanged}
+        title={auction.title}
+        serverTime={serverTime}
+        target={{ kind: 'reschedule', auctionId: auction.id, version, live: false, startAt: auction.startAt, endAt: auction.endAt, latestStartAt: auction.latestStartAt ?? null }}
+      />
+      <ConfirmDialog
+        isOpen={closing && !paused}
+        onClose={() => !busy && setClosing(false)}
+        title="Đóng phiên trước giờ mở?"
+        description={`Phiên bị hủy ngay, ${count} người đăng ký được hoàn cọc và nhận thông báo, sách được trả lại cho bạn tại ${auction.pointName}. Sau khi phiên mở, bạn không đóng được nữa.`}
+        confirmText="Đóng phiên"
+        isBusy={busy}
+        isDanger
+        onConfirm={() => void run(`close:${version}`, (key) => closeAuctionBeforeStart(auction.id, version, key), () => setClosing(false)).finally(() => setClosing(false))}
       />
     </div>
   )

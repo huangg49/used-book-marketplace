@@ -10102,6 +10102,204 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}/open-now:
+    post:
+      operationId: openAuctionNow
+      tags:
+        - Auctions
+      description: ADR 0079 - seller of a registration auction starts it now while waiting, once registeredCount reached minBidders. expectedVersion is the auction version.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionVersionCommand"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}/min-bidders:
+    post:
+      operationId: setAuctionMinBidders
+      tags:
+        - Auctions
+      description: ADR 0079 - seller lowers minBidders (never below 4) while waiting and before it was reached; reaching it opens a WhenReady auction at once.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetAuctionMinBidders"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}/close:
+    post:
+      operationId: closeAuctionBeforeStart
+      tags:
+        - Auctions
+      description: ADR 0079 - seller closes their auction before it starts (waiting phase only). Cancelled with closeReason SellerClosed; every deposit is refunded and the book is reclaimed. Refused (409) once started.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionVersionCommand"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /auctions/{auctionId}/registration/withdraw:
     post:
       operationId: withdrawAuctionRegistration
@@ -12019,6 +12217,54 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/SupportMessageCommand"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCaseReceipt"
+          headers:
+            Idempotency-Replayed:
+              description: Exact intent replay.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /operations/support-cases/{caseId}/close-auction:
+    post:
+      operationId: closeReportedAuction
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: ADR 0079. Assigned ACTIVE ADMIN, independent of the seller, registrants and bidders,
+        closes the reported auction (Active or OnHold) in one transaction - Cancelled with closeReason
+        Reported, every hold and deposit released, book reclaimed, message sent to the seller and every
+        participant and recorded as the case answer.
+      parameters:
+        - *a2
+        - *a3
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloseReportedAuction"
       responses:
         "200":
           description: OK
@@ -15772,6 +16018,7 @@ components:
             - AuctionBiddingStarted
             - AuctionNotEnoughBidders
             - AuctionDepositForfeited
+            - AuctionRescheduled
             - AuctionWon
             - AuctionSold
             - AuctionBoughtNow
@@ -20394,9 +20641,10 @@ components:
           description: ADR 0076. Seconds between Dutch price drops of one step. Null for other types.
         minBidders:
           type: integer
-          minimum: 2
-          maximum: 10
-          description: ADR 0077. Registered bidders the auction needs before bidding opens. Default 2.
+          minimum: 4
+          maximum: 1000
+          description: ADR 0077/0079. Registered bidders the auction needs before it opens. Default 4, at
+            least 4; no business maximum (1000 is a technical guard).
         declaredValue:
           type: integer
           minimum: 10000
@@ -20433,7 +20681,9 @@ components:
             - string
             - "null"
           format: date-time
-          description: Null starts now; otherwise 5 minutes to 7 days ahead.
+          description: Null starts now; otherwise 5 minutes to 7 days ahead. ADR 0079 registration
+            auctions - null publishes WhenReady (opens when minBidders registered, cancelled if too few
+            within 24 h); a time publishes Scheduled (5 minutes to 72 hours ahead).
         durationSeconds:
           type: integer
           minimum: 3600
@@ -20457,7 +20707,10 @@ components:
             - string
             - "null"
           format: date-time
-          description: Scheduled only; null starts now. Must be null once live.
+          description: Scheduled only; null starts now. Must be null once live. ADR 0079 registration
+            auctions - required while waiting (use openAuctionNow to start now), at most publish + 72 h,
+            and not in the last 30 minutes before the current start; a WhenReady auction becomes
+            Scheduled.
         durationSeconds:
           type: integer
           minimum: 3600
@@ -20572,14 +20825,58 @@ components:
       additionalProperties: false
       required: []
       properties: {}
+    SetAuctionMinBidders:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - minBidders
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        minBidders:
+          type: integer
+          minimum: 4
+          maximum: 1000
+          description: ADR 0079. Only lower than the current value, never below 4.
+    CloseReportedAuction:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - auctionVersion
+        - message
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+          description: Support case version.
+        auctionVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        message:
+          type: string
+          minLength: 10
+          maxLength: 1000
+          description: Sent to the seller and every participant and recorded as the case answer.
     AuctionCloseReason:
       type:
         - string
         - "null"
       enum:
         - NotEnoughBidders
+        - RegistrationExpired
+        - SellerClosed
+        - HoldExpired
+        - Reported
         - null
-      description: ADR 0077. Why an Unsold auction did not sell; null otherwise.
+      description: ADR 0077 NotEnoughBidders (Unsold). ADR 0079 cancellations - RegistrationExpired (too
+        few registrants at the start), SellerClosed (seller closed before the start), HoldExpired (OnHold
+        for 48 h), Reported (Admin closed it from a report). Null otherwise.
     AuctionRegistrationState:
       type:
         - string
@@ -20783,8 +21080,9 @@ components:
         minBidders:
           type: integer
           minimum: 2
-          maximum: 10
-          description: ADR 0077. Registered bidders needed. Optional for older servers.
+          maximum: 1000
+          description: ADR 0077. Registered bidders needed (intakes from before ADR 0079 may hold 2-3; they
+            publish with 4). Optional for older servers.
         protectiveValue:
           type: integer
           minimum: 0
@@ -21050,9 +21348,35 @@ components:
             - integer
             - "null"
           minimum: 2
-          maximum: 10
+          maximum: 1000
           description: ADR 0077. Registered bidders needed before bidding opens; null on auctions without
             registration. Optional for older servers.
+        openMode:
+          type:
+            - string
+            - "null"
+          enum:
+            - WhenReady
+            - Scheduled
+            - null
+          description: ADR 0079. WhenReady opens as soon as minBidders registered, at the latest startAt
+            (publish + 24 h); Scheduled opens at startAt (at most publish + 72 h). While waiting
+            (phase Scheduled), too few registrants at startAt cancels the auction. Null on auctions
+            without the bounded lifecycle. Optional for older servers.
+        latestStartAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: ADR 0079. Fixed ceiling for a rescheduled start (publish + 72 h); null without the
+            bounded lifecycle. Optional for older servers.
+        holdExpiresAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: ADR 0079. OnHold auto-cancels here (held + 48 h); null unless OnHold. Optional for
+            older servers.
         depositAmount:
           type:
             - integer
@@ -21416,6 +21740,12 @@ components:
             - Live
             - Ended
           description: ADR 0047. Optional for older servers.
+        holdExpiresAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: ADR 0079. When an OnHold auction auto-cancels; null otherwise. Optional.
         title:
           type: string
         state:

@@ -1,4 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
+import { z } from "zod";
 import {
   useInfiniteQuery,
   useQuery,
@@ -448,6 +449,20 @@ function SupportRecord({
               ) : null}
             </aside>
           </div>
+          {data.canManage &&
+          data.case.target?.type === "Auction" &&
+          data.case.state !== "Closed" &&
+          (data.relatedState === "Active" || data.relatedState === "OnHold") ? (
+            <CloseReportedAuction
+              key={`${data.case.target.id}:${data.case.version}`}
+              data={data}
+              blocked={pending || busy || reviewPending}
+              refresh={async () => {
+                await query.refetch();
+                await cache.invalidateQueries({ queryKey: ["operations-support"] });
+              }}
+            />
+          ) : null}
           {data.review ? (
             <ModerateReview
               key={data.review.id}
@@ -460,6 +475,114 @@ function SupportRecord({
         </>
       ) : null}
     </div>
+  );
+}
+const auctionVersionSchema = z.object({
+  auction: z.object({ version: z.number().int(), state: z.string(), title: z.string() }).passthrough(),
+}).passthrough();
+/**
+ * ADR 0079: the assigned Admin closes the reported auction with a message.
+ * One server transaction cancels it, refunds every deposit and hold, returns
+ * the book and answers this case; the message reaches every participant.
+ */
+function CloseReportedAuction({
+  data,
+  blocked,
+  refresh,
+}: {
+  data: SupportDetail;
+  blocked: boolean;
+  refresh: () => Promise<unknown>;
+}) {
+  const auctionId = data.case.target!.id;
+  const auction = useQuery({
+    queryKey: ["support-auction", auctionId],
+    queryFn: () => session.publicRequest(`/auctions/${auctionId}`, auctionVersionSchema),
+    staleTime: 0,
+    retry: false,
+  });
+  const scope = `support-close-auction:${data.case.id}`;
+  const pending = pendingSupportIntent(session, scope);
+  const [message, setMessage] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const short = message.trim().length < 10;
+  async function close() {
+    if (busy || (!pending && (short || !auction.data))) return;
+    setBusy(true);
+    setError("");
+    try {
+      await sendSupportIntent(
+        session,
+        scope,
+        `/operations/support-cases/${data.case.id}/close-auction`,
+        {
+          expectedVersion: data.case.version,
+          auctionVersion: auction.data?.auction.version ?? 0,
+          message: message.trim(),
+        },
+        () => crypto.randomUUID(),
+      );
+      setMessage("");
+      setConfirming(false);
+      await refresh();
+    } catch (e) {
+      setError(supportError(e));
+      if (e instanceof ApiError && e.status === 409) void auction.refetch();
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section className={styles.actions} aria-labelledby="close-auction-title">
+      <h2 id="close-auction-title">Đóng phiên đấu giá</h2>
+      <p className="muted">
+        Hủy phiên{auction.data ? ` “${auction.data.auction.title}”` : ""} ngay. Mọi tiền cọc và khoản giữ được
+        hoàn, sách trả lại người bán, và lời nhắn dưới đây gửi tới người bán cùng mọi người tham gia. Hồ sơ
+        chuyển sang “Đã phản hồi”. Không hoàn tác được.
+      </p>
+      {error ? <Notice tone="error">{error}</Notice> : null}
+      {auction.isError ? (
+        <Notice tone="error">
+          Chưa tải được phiên. <Button onClick={() => void auction.refetch()}>Tải lại</Button>
+        </Notice>
+      ) : null}
+      {pending ? (
+        <Notice tone="warning">
+          Kết quả đóng phiên chưa rõ. Thử lại gửi đúng yêu cầu đó, không đóng hai lần.{" "}
+          <Button busy={busy} onClick={() => void close()}>Thử lại yêu cầu đã gửi</Button>
+        </Notice>
+      ) : (
+        <div className={styles.form}>
+          <label>
+            Lời nhắn gửi người bán và người tham gia
+            <textarea
+              rows={4}
+              minLength={10}
+              maxLength={1000}
+              disabled={busy || blocked}
+              aria-invalid={!!error && short}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
+          </label>
+          <p className="muted">Ít nhất 10 ký tự. Nêu lý do đóng; không ghi thông tin cá nhân.</p>
+          {confirming ? (
+            <div className={styles.buttons}>
+              <Button variant="danger" busy={busy} disabled={blocked || short || !auction.data} onClick={() => void close()}>
+                Xác nhận đóng phiên
+              </Button>
+              <Button disabled={busy} onClick={() => setConfirming(false)}>Thôi</Button>
+            </div>
+          ) : (
+            <Button variant="danger" disabled={blocked || short || !auction.data} onClick={() => setConfirming(true)}>
+              Đóng phiên với lời nhắn
+            </Button>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 function Related({ data }: { data: SupportDetail }) {

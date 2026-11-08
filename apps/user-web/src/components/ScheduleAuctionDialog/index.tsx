@@ -5,11 +5,12 @@ import { playAuctionMotion, sheetFrames } from '../../lib/auction-motion'
 import { commandError } from '../../lib/auction-errors'
 import { commandOutcomeUnknown, useIntentKey } from '../../hooks/useAuctionClock'
 import {
-  AUCTION_MAX_DURATION_S, AUCTION_MIN_DURATION_S, AUCTION_MIN_LEAD_MS, AUCTION_SCHEDULE_HORIZON_MS, publishAuction, rescheduleAuction,
+  AUCTION_MAX_DURATION_S, AUCTION_MIN_DURATION_S, AUCTION_MIN_LEAD_MS, AUCTION_READY_WINDOW_MS, AUCTION_SCHEDULE_HORIZON_MS,
+  AUCTION_START_CEILING_MS, publishAuction, rescheduleAuction,
   type ScheduleBody,
 } from '../../services/auctions'
 import { DateTimePicker } from '../DateTimePicker'
-import { DurationInput } from '../DurationInput'
+import { DurationInput, formatDuration } from '../DurationInput'
 import styles from './ScheduleAuctionDialog.module.css'
 
 const HOUR = 3_600_000
@@ -20,7 +21,9 @@ const MIN_REMAINING_MS = HOUR
 /** Publish a Passed intake, or edit the time of the seller's auction before its first bid. */
 export type ScheduleTarget =
   | { kind: 'publish'; intakeId: string; version: number }
-  | { kind: 'reschedule'; auctionId: string; version: number; live: boolean; startAt: string; endAt: string }
+  | { kind: 'reschedule'; auctionId: string; version: number; live: boolean; startAt: string; endAt: string
+      /** ADR 0079: set for a waiting registration auction (fixed start ceiling). */
+      latestStartAt?: string | null }
 
 const pad = (n: number) => String(n).padStart(2, '0')
 // <input type="datetime-local"> works in the device's local time.
@@ -46,6 +49,10 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
   const ids = useId()
   const intent = useIntentKey()
   const live = target.kind === 'reschedule' && target.live
+  // ADR 0079: publishing waits for registrants ("Mở khi đủ người", 24 h) or
+  // opens at a chosen time within 72 h; a waiting auction moves to a new time.
+  const lifecycle = target.kind === 'publish' || (target.kind === 'reschedule' && !target.live && !!target.latestStartAt)
+  const fixedLater = target.kind === 'reschedule' && lifecycle
   const currentSeconds = target.kind === 'reschedule'
     ? Math.round((Date.parse(target.endAt) - Date.parse(target.startAt)) / 1000)
     : 24 * 3600
@@ -58,6 +65,11 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
   const [unknown, setUnknown] = useState<ScheduleBody | null>(null)
   const offset = serverTime ? Date.parse(serverTime) - Date.now() : 0
   const now = Date.now() + offset
+  const horizon = target.kind === 'publish'
+    ? now + AUCTION_START_CEILING_MS
+    : lifecycle && target.kind === 'reschedule'
+      ? Date.parse(target.latestStartAt!)
+      : now + AUCTION_SCHEDULE_HORIZON_MS
 
   useEffect(() => isOpen && !paused ? lockPageScroll() : undefined, [isOpen, paused])
   useEffect(() => {
@@ -97,13 +109,13 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
     ? endMs < now + MIN_REMAINING_MS ? 'Phiên đang mở phải còn ít nhất 1 giờ. Chọn thời lượng dài hơn.' : null
     : later && Number.isNaN(startMs) ? 'Chọn ngày giờ mở phiên.'
       : later && startMs < now + AUCTION_MIN_LEAD_MS ? 'Hẹn giờ mở ít nhất 5 phút sau bây giờ.'
-        : later && startMs > now + AUCTION_SCHEDULE_HORIZON_MS ? 'Chỉ hẹn trong vòng 7 ngày tới.'
+        : later && startMs > horizon ? (lifecycle ? 'Giờ mở phải trong vòng 72 giờ kể từ lúc đăng phiên.' : 'Chỉ hẹn trong vòng 7 ngày tới.')
           : null
 
   const submit = async () => {
     const body: ScheduleBody = unknown ?? {
       expectedVersion: target.version,
-      startAt: !live && later ? new Date(startMs).toISOString() : null,
+      startAt: !live && (later || fixedLater) ? new Date(startMs).toISOString() : null,
       durationSeconds: seconds,
     }
     const key = intent.keyFor(JSON.stringify(body))
@@ -144,15 +156,15 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
             <p className={styles.note}>Phiên đã mở lúc {when(Date.parse((target as { startAt: string }).startAt))}. Khi chưa có ai trả giá, bạn có thể đổi thời lượng; giờ mở giữ nguyên.</p>
           ) : (
             <fieldset className={styles.choice} disabled={locked}>
-              <legend>Khi nào mở phiên?</legend>
-              <label><input type="radio" name={`${ids}-when`} checked={!later} onChange={() => setLater(false)} /> Mở ngay</label>
-              <label><input type="radio" name={`${ids}-when`} checked={later} onChange={() => setLater(true)} /> Hẹn giờ mở</label>
-              {later && (
+              <legend>{fixedLater ? 'Giờ mở mới' : 'Khi nào mở phiên?'}</legend>
+              {!fixedLater && <label><input type="radio" name={`${ids}-when`} checked={!later} onChange={() => setLater(false)} /> {lifecycle ? 'Mở khi đủ người' : 'Mở ngay'}</label>}
+              {!fixedLater && <label><input type="radio" name={`${ids}-when`} checked={later} onChange={() => setLater(true)} /> Hẹn giờ mở</label>}
+              {(later || fixedLater) && (
                 <div className={styles.field}>
                   <label htmlFor={`${ids}-start`}>Giờ mở phiên</label>
                   <DateTimePicker
                     id={`${ids}-start`} label="Giờ mở phiên" value={startInput}
-                    min={toLocalInput(now + AUCTION_MIN_LEAD_MS)} max={toLocalInput(now + AUCTION_SCHEDULE_HORIZON_MS)}
+                    min={toLocalInput(now + AUCTION_MIN_LEAD_MS)} max={toLocalInput(horizon)}
                     onChange={setStartInput}
                   />
                 </div>
@@ -169,21 +181,23 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
             <dl className={styles.summary}>
               <div>
                 <dt><Play size={14} aria-hidden="true" /> Mở phiên</dt>
-                <dd>{later || live ? when(startMs) : 'Ngay khi xác nhận'}</dd>
+                <dd>{later || live || fixedLater ? when(startMs) : lifecycle ? `Khi đủ người · hạn ${when(now + AUCTION_READY_WINDOW_MS)}` : 'Ngay khi xác nhận'}</dd>
               </div>
               <div>
                 <dt><Flag size={14} aria-hidden="true" /> Kết thúc</dt>
-                <dd>{when(endMs)}</dd>
+                <dd>{lifecycle && !later && !fixedLater ? `${formatDuration(seconds)} sau khi mở` : when(endMs)}</dd>
               </div>
             </dl>
           )}
           <p className={styles.note}>
             <Info size={15} aria-hidden="true" />
-            <span>Bạn đổi được thời gian <strong>tối đa 5 lần</strong>, chỉ khi chưa có lượt trả giá. Sau lượt trả giá đầu tiên, thời gian phiên được giữ nguyên.</span>
+            {lifecycle
+              ? <span>Người mua đăng ký và đặt cọc trước. <strong>Không đủ người</strong> đến hạn đăng ký hoặc giờ mở thì phiên bị hủy và hoàn cọc. Bạn đổi giờ mở <strong>tối đa 5 lần</strong> trong 72 giờ kể từ lúc đăng, không đổi trong 30 phút cuối; người đăng ký được báo mỗi lần đổi.</span>
+              : <span>Bạn đổi được thời gian <strong>tối đa 5 lần</strong>, chỉ khi chưa có lượt trả giá. Sau lượt trả giá đầu tiên, thời gian phiên được giữ nguyên.</span>}
           </p>
           {error && <p role="alert" className={styles.error}>{error}</p>}
           <button type="button" className={styles.confirm} disabled={busy || (!unknown && !!fieldError)} onClick={() => void submit()}>
-            {busy ? 'Đang gửi…' : unknown ? 'Thử lại' : target.kind === 'publish' ? (later ? 'Hẹn giờ mở phiên' : 'Mở phiên ngay') : 'Lưu thời gian mới'}
+            {busy ? 'Đang gửi…' : unknown ? 'Thử lại' : target.kind === 'publish' ? (later ? 'Hẹn giờ mở phiên' : 'Đăng phiên, mở khi đủ người') : 'Lưu thời gian mới'}
           </button>
         </div>
       </div>

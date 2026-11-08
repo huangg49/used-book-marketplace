@@ -469,4 +469,67 @@ export class AuctionsController {
       ),
     );
   }
+  // ADR 0079: seller lifecycle command.
+  @Post('auctions/:auctionId/open-now')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  openNow(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.openNow(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('AuctionVersionCommand', body),
+        ),
+        res,
+      ),
+    );
+  }
+  // ADR 0079: seller lifecycle command.
+  @Post('auctions/:auctionId/min-bidders')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  setMinBidders(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.setMinBidders(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('SetAuctionMinBidders', body),
+        ),
+        res,
+      ),
+    );
+  }
+  // ADR 0079: seller lifecycle command.
+  @Post('auctions/:auctionId/close')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  closeBeforeStart(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.closeBeforeStart(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('AuctionVersionCommand', body),
+        ),
+        res,
+      ),
+    );
+  }
 }

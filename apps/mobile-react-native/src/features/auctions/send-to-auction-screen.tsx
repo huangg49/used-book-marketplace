@@ -152,7 +152,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const [dutchTop, setDutchTop] = useState("");
   const [dutchEvery, setDutchEvery] = useState("60");
   // ADR 0077: registered bidders that open the auction.
-  const [minBidders, setMinBidders] = useState(2);
+  const [minBidders, setMinBidders] = useState(4);
   const [touched, setTouched] = useState(false);
 
   // 3. Modal & Action states

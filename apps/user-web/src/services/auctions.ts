@@ -54,7 +54,11 @@ export const auctionSummarySchema = z.object({
   minBidders: z.number().int().nullish(),
   depositAmount: money.nullish(),
   registeredCount: z.number().int().nullish(),
-  closeReason: z.enum(['NotEnoughBidders']).nullish(),
+  closeReason: z.enum(['NotEnoughBidders', 'RegistrationExpired', 'SellerClosed', 'HoldExpired', 'Reported']).nullish(),
+  // ADR 0079: open mode and the fixed ceilings (null/absent on older auctions).
+  openMode: z.enum(['WhenReady', 'Scheduled']).nullish(),
+  latestStartAt: z.string().nullish(),
+  holdExpiresAt: z.string().nullish(),
   // ADR 0047: Scheduled before startAt; version lets the seller edit the time.
   phase: z.enum(['Scheduled', 'Live', 'Ended']).nullish(),
   version: z.number().int().nullish(),
@@ -190,6 +194,33 @@ export function placeSealedBid(id: string, amount: number, key: string) { return
 // ADR 0077: registration with the deposit the member saw, and its withdrawal.
 export function registerForAuction(id: string, deposit: number, key: string) { return command(`/auctions/${id}/registration`, key, { deposit }) }
 export function withdrawAuctionRegistration(id: string, key: string) { return command(`/auctions/${id}/registration/withdraw`, key, {}) }
+// ADR 0079: seller commands while the auction waits for registrants.
+export function openAuctionNow(id: string, expectedVersion: number, key: string) { return command(`/auctions/${id}/open-now`, key, { expectedVersion }) }
+export function setAuctionMinBidders(id: string, expectedVersion: number, minBidders: number, key: string) { return command(`/auctions/${id}/min-bidders`, key, { expectedVersion, minBidders }) }
+export function closeAuctionBeforeStart(id: string, expectedVersion: number, key: string) { return command(`/auctions/${id}/close`, key, { expectedVersion }) }
+/** ADR 0079: a bounded-lifecycle auction still waiting for registrants. */
+export function waitingForRegistrants(a: AuctionSummary) {
+  return a.openMode != null && a.state === 'Active' && a.phase === 'Scheduled'
+}
+const at = (iso: string) => new Date(iso).toLocaleString('vi-VN', { weekday: 'short', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+/** ADR 0079: one sentence on when a waiting auction opens or is cancelled. */
+export function openRuleText(a: AuctionSummary) {
+  const need = a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR
+  return a.openMode === 'WhenReady'
+    ? `Phiên tự mở ngay khi đủ ${need} người đăng ký. Hạn đăng ký: ${at(a.startAt)}; quá hạn chưa đủ người thì phiên bị hủy và hoàn cọc.`
+    : `Phiên mở lúc ${at(a.startAt)} nếu đủ ${need} người đăng ký; không đủ thì phiên bị hủy và hoàn cọc.`
+}
+/** ADR 0079: why a cancelled or unsold auction ended, for every viewer. */
+export function closeReasonText(a: AuctionSummary): string | null {
+  switch (a.closeReason) {
+    case 'NotEnoughBidders': return `Phiên kết thúc mà chưa đủ người trả giá nên không bán. Mọi tiền cọc và khoản giữ đã về lại ví.`
+    case 'RegistrationExpired': return `Phiên không đủ ${a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người đăng ký trước giờ mở nên đã bị hủy. Mọi tiền cọc đã về lại ví.`
+    case 'SellerClosed': return 'Người bán đã đóng phiên trước giờ mở. Mọi tiền cọc đã về lại ví.'
+    case 'HoldExpired': return 'Phiên tạm dừng quá 48 giờ mà chưa được xử lý nên đã tự hủy. Mọi tiền cọc và khoản giữ đã về lại ví.'
+    case 'Reported': return 'Quản trị viên đã đóng phiên sau khi xem xét báo cáo. Mọi tiền cọc và khoản giữ đã về lại ví.'
+    default: return null
+  }
+}
 /** ADR 0077: true while a registration gate keeps this member from bidding. */
 export function registrationBlocks(a: AuctionSummary, me: AuctionParticipation | null) {
   if (a.minBidders == null) return false
@@ -301,11 +332,18 @@ export type CreateIntakeBody = {
   auctionType?: AuctionType
   dutchTopPrice?: number | null
   dutchIntervalSeconds?: number | null
-  // ADR 0077: registered bidders needed before bidding opens (2–10).
+  // ADR 0077/0079: registered bidders needed before it opens (at least 4).
   minBidders?: number
   declaredValue?: number | null
 }
-export const MIN_BIDDER_OPTIONS = [2, 3, 4, 5, 10] as const
+// ADR 0079: at least 4, no business maximum (1000 is the server's technical guard).
+export const AUCTION_MIN_BIDDERS_FLOOR = 4
+export const AUCTION_MIN_BIDDERS_CAP = 1000
+export const MIN_BIDDER_OPTIONS = [4, 5, 6, 8, 10] as const
+// ADR 0079 ceilings, mirrored for the forms; the server stays authoritative.
+export const AUCTION_READY_WINDOW_MS = 24 * 3_600_000
+export const AUCTION_START_CEILING_MS = 72 * 3_600_000
+export const AUCTION_RESCHEDULE_FREEZE_MS = 30 * 60_000
 /** ADR 0077: the refundable deposit the server will ask for (10%, ≥ 10.000đ). */
 export const auctionDepositFor = (startPrice: number) => Math.max(10_000, Math.ceil(startPrice / 10 / 1000) * 1000)
 export function createAuctionIntake(body: CreateIntakeBody, key: string) {

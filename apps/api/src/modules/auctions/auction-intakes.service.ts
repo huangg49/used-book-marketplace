@@ -11,6 +11,7 @@ import type {
 } from '../../database/mongo/documents.js';
 import {
   AUCTION_DEFAULT_MIN_BIDDERS,
+  AUCTION_MIN_BIDDERS_FLOOR,
   auctionDeposit,
   AUCTION_DROPOFF_MS,
   AUCTION_DURATION_MS,
@@ -52,7 +53,7 @@ import {
 import { checkAuction, checkIntake } from './auction-invariants.js';
 import { HandoverPointsService } from './handover-points.service.js';
 import { requireUnrestricted } from './member-violations.js';
-import { publishSchedule } from './auction-schedule.js';
+import { lifecyclePublish, publishSchedule } from './auction-schedule.js';
 
 // POL-41 counts intakes whose auction has not ended: before opening, or
 // opened and still Active/OnHold. A closed auction (sold, unsold, expired)
@@ -538,6 +539,14 @@ export class AuctionIntakesService {
               'InvalidState',
               'Chỉ rút được phiên đang mở và chưa có lượt trả giá nào.',
             );
+          // ADR 0079: deposits must be refunded in the same transaction, which
+          // only the auction's own close does (before the start, never after).
+          if (a.minBidders !== null)
+            throw new DomainError(
+              409,
+              'InvalidState',
+              'Phiên có đăng ký đặt cọc: dùng "Đóng phiên" trước giờ mở để hoàn cọc cho người đăng ký.',
+            );
           const withdrawn = await tx.c.auctions.findOneAndUpdate(
             { _id: a._id, version: a.version, state: 'Active', bidderCount: 0 },
             {
@@ -818,7 +827,13 @@ export class AuctionIntakesService {
           tx,
           i,
           now,
-          { startAt: now, plannedEndAt: plus(now, AUCTION_DURATION_MS) },
+          // ADR 0079: with registration a Staff open waits for registrants.
+          this.registration
+            ? lifecyclePublish(
+                { startAt: null, durationSeconds: AUCTION_DURATION_MS / 1000 },
+                now,
+              )
+            : { startAt: now, plannedEndAt: plus(now, AUCTION_DURATION_MS) },
           'Staff',
         ),
       event: 'AuctionOpened',
@@ -853,7 +868,11 @@ export class AuctionIntakesService {
             'Chỉ đăng phiên được sách đã kiểm định đạt và chưa lên phiên.',
           );
         await requireUnrestricted(tx, actor._id, now);
-        const schedule = publishSchedule(body, now);
+        // ADR 0079: a registration auction waits for registrants in one of two
+        // open modes; it never starts before minBidders registered.
+        const schedule = this.registration
+          ? lifecyclePublish(body, now)
+          : publishSchedule(body, now);
         const next = await this.startAuction(tx, i, now, schedule, 'Seller');
         return AuctionIntakesService.change(
           next,
@@ -868,7 +887,11 @@ export class AuctionIntakesService {
     tx: Tx,
     i: AuctionIntakeDoc,
     now: Date,
-    schedule: { startAt: Date; plannedEndAt: Date },
+    schedule: {
+      startAt: Date;
+      plannedEndAt: Date;
+      openMode?: AuctionDoc['openMode'];
+    },
     publishedBy: AuctionDoc['publishedBy'],
   ) {
     const listing = await tx.c.listings.findOne({ _id: i.listingId });
@@ -889,11 +912,16 @@ export class AuctionIntakesService {
       dutchTopPrice: i.dutchTopPrice,
       dutchIntervalSeconds: i.dutchIntervalSeconds,
       // ADR 0077: registration gate copied from the intake, deposit by policy.
-      minBidders: this.registration ? i.minBidders : null,
+      // ADR 0079: intakes from before the floor of 4 publish with 4.
+      minBidders: this.registration
+        ? Math.max(AUCTION_MIN_BIDDERS_FLOOR, i.minBidders)
+        : null,
       depositAmount: this.registration ? auctionDeposit(i.startPrice) : null,
       registeredCount: 0,
       biddingOpenedAt: null,
       closeReason: null,
+      openMode: this.registration ? (schedule.openMode ?? null) : null,
+      heldAt: null,
       buyNowAt: null,
       startAt: schedule.startAt,
       endAt: schedule.plannedEndAt,

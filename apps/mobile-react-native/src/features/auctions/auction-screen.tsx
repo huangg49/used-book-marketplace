@@ -50,6 +50,9 @@ import {
   isSealedFormat,
   registrationBlocks,
   instantNeedsRival,
+  waitingForRegistrants,
+  openRuleText,
+  closeReasonText,
   type AuctionCommand,
   type AuctionCommandKind,
 } from "./auctions-model";
@@ -63,6 +66,7 @@ import {
 } from "./contracts";
 import { WinnerSteps } from "./winner-steps";
 import { AuctionFlag } from "./auction-flag";
+import { WaitingSellerBlock } from "./waiting-seller-block";
 import { walletSummary } from "../wallet/contracts";
 
 const STATE_LABEL: Record<AuctionState, string> = {
@@ -553,11 +557,17 @@ function AuctionBody({
       <View style={ownerError ? { display: "none" } : undefined}>
       {ownerLoading ? (
         <StatePanel loading title="Đang kiểm tra vai trò của bạn trong phiên" />
-      ) : signedIn && !ownerKnown ? null : ownerIntake ? (
+      ) : signedIn && !ownerKnown ? null : ownerIntake && waitingForRegistrants(auction, now) ? (
+        <WaitingSellerBlock auction={auction} now={now} refresh={refresh} />
+      ) : ownerIntake ? (
         <View style={{ gap: space.sm }}>
           <Notice>
             <AppText kind="bold">Đây là phiên của bạn</AppText>{"\n"}
-            {scheduled
+            {closeReasonText(auction)
+              ? closeReasonText(auction)
+              : auction.minBidders != null && open
+              ? "Phiên đã mở nên bạn không đóng được nữa. Cần hỗ trợ, hãy dùng Báo cáo sự cố cho Admin."
+              : scheduled
               ? `Phiên hẹn mở lúc ${time(auction.startAt)}. Bạn có thể đổi thời gian trong Phiên của tôi khi chưa có lượt trả giá.`
               : open && auction.bidderCount === 0
                 ? "Chưa có lượt trả giá. Bạn có thể đổi thời gian trong Phiên của tôi. Người bán không tham gia trả giá."
@@ -591,10 +601,8 @@ function AuctionBody({
       ) : (
         <Notice>
           {auction.state === "OnHold"
-            ? "Phiên tạm dừng để quản trị viên xem xét; phiên không nhận thêm giá."
-            : auction.closeReason === "NotEnoughBidders"
-              ? `Phiên không đủ người tham gia (cần ${auction.minBidders ?? 2} người đăng ký và hai người trả giá) nên không bán. Tiền cọc và khoản giữ đã về lại ví.`
-              : "Phiên không còn nhận trả giá."}
+            ? `Phiên tạm dừng để quản trị viên xem xét; phiên không nhận thêm giá.${auction.holdExpiresAt ? ` Nếu chưa được xử lý trước ${time(auction.holdExpiresAt)}, phiên tự hủy và mọi khoản giữ được hoàn.` : ""}`
+            : closeReasonText(auction) ?? "Phiên không còn nhận trả giá."}
         </Notice>
       )}
       </View>
@@ -901,7 +909,7 @@ function RegisterBlock({ auction, me, available, locked, onRegister, onWithdraw 
     <View style={{ gap: space.sm }}>
       <AppText kind="bold">{registered ? "Bạn đã đăng ký phiên này" : "Đăng ký để tham gia đấu giá"}</AppText>
       <AppText kind="small" color={colors.muted}>
-        {`Phiên mở trả giá khi có ít nhất ${need} người đăng ký; hiện có ${count}/${need}. Phiên chỉ bán khi có ít nhất hai người trả giá.`}
+        {`${auction.openMode ? openRuleText(auction) : `Phiên mở trả giá khi có ít nhất ${need} người đăng ký.`} Hiện có ${count}/${need}. Phiên chỉ bán khi có ít nhất hai người trả giá.`}
       </AppText>
       <AppText kind="small" color={colors.muted}>
         {registered

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LayoutAnimation, Platform, Pressable, StyleSheet, Switch, UIManager, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { AppTextInput as TextInput, Icon, formatVnd, stitchTokens } from "../../../core/ui";
-import { AUCTION_FORMATS, auctionDepositFor, MIN_BIDDER_OPTIONS, AUCTION_STEP_MAX, AUCTION_STEPS, BUY_NOW_MODES, type AuctionFormat, type AuctionStep, type BuyNowMode } from "../auctions-model";
+import { AUCTION_FORMATS, auctionDepositFor, MIN_BIDDER_OPTIONS, AUCTION_MIN_BIDDERS_CAP, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_STEP_MAX, AUCTION_STEPS, BUY_NOW_MODES, type AuctionFormat, type AuctionStep, type BuyNowMode } from "../auctions-model";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -314,8 +314,30 @@ export function SendToAuctionPricing({
             );
           })}
         </View>
+        {/* ADR 0079: any number from 4 up beside the quick choices. */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 8 }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Giảm số người tối thiểu"
+            disabled={disabled || minBidders <= AUCTION_MIN_BIDDERS_FLOOR}
+            onPress={() => onChangeMinBidders(Math.max(AUCTION_MIN_BIDDERS_FLOOR, minBidders - 1))}
+            style={[styles.stepButton, { minWidth: 48 }, (disabled || minBidders <= AUCTION_MIN_BIDDERS_FLOOR) && { opacity: 0.5 }]}
+          >
+            <AppText kind="bold" style={styles.stepButtonText}>−</AppText>
+          </Pressable>
+          <AppText kind="bold" accessibilityLiveRegion="polite">{`${minBidders} người`}</AppText>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Tăng số người tối thiểu"
+            disabled={disabled || minBidders >= AUCTION_MIN_BIDDERS_CAP}
+            onPress={() => onChangeMinBidders(Math.min(AUCTION_MIN_BIDDERS_CAP, minBidders + 1))}
+            style={[styles.stepButton, { minWidth: 48 }, disabled && { opacity: 0.5 }]}
+          >
+            <AppText kind="bold" style={styles.stepButtonText}>+</AppText>
+          </Pressable>
+        </View>
         <AppText kind="small" style={styles.infoText}>
-          {`Người mua đặt cọc ${startPriceDeposit(startPriceText)} trước khi trả giá. Phiên mở trả giá khi đủ ${minBidders} người và chỉ bán khi có ít nhất hai người trả giá; nếu không, sách được trả lại và tiền cọc được hoàn.`}
+          {`Người mua đặt cọc ${startPriceDeposit(startPriceText)} trước khi trả giá. Phiên mở khi đủ ${minBidders} người (ít nhất ${AUCTION_MIN_BIDDERS_FLOOR}); không đủ trong 24 giờ, hoặc tới giờ mở bạn hẹn (tối đa 72 giờ), thì phiên bị hủy và hoàn cọc. Phiên chỉ bán khi có ít nhất hai người trả giá.`}
         </AppText>
       </View>
 

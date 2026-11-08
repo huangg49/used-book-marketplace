@@ -5,6 +5,7 @@ import { useSession } from "../../../core/session/session-provider";
 import { AppText, Button, Chip, Notice, Sheet, colors, space } from "../../../core/ui";
 import { auctionReceipt } from "../contracts";
 import {
+  AUCTION_START_CEILING_MS,
   DURATION_CHOICES,
   auctionErrorText,
   createScheduleCommand,
@@ -21,7 +22,9 @@ const when = (ms: number) =>
 /** ADR 0047: publish a Passed intake, or edit an auction's time before its first bid. */
 export type ScheduleTarget =
   | { kind: "publish"; intakeId: string; version: number }
-  | { kind: "reschedule"; auctionId: string; version: number; live: boolean; startAt: string; endAt: string };
+  | { kind: "reschedule"; auctionId: string; version: number; live: boolean; startAt: string; endAt: string;
+      /** ADR 0079: set for a waiting registration auction (fixed start ceiling). */
+      latestStartAt?: string | null };
 
 export function ScheduleAuctionSheet({
   visible,
@@ -49,7 +52,13 @@ export function ScheduleAuctionSheet({
     target?.kind === "reschedule"
       ? Math.round((Date.parse(target.endAt) - Date.parse(target.startAt)) / 1000)
       : 24 * 3600;
-  const choices = startChoices(now);
+  const lifecycle =
+    target?.kind === "publish"
+      ? { ceiling: now + AUCTION_START_CEILING_MS, whenReady: true }
+      : target?.kind === "reschedule" && !target.live && target.latestStartAt
+        ? { ceiling: Date.parse(target.latestStartAt), whenReady: false }
+        : undefined;
+  const choices = startChoices(now, lifecycle);
   const [start, setStart] = useState(0);
   const [seconds, setSeconds] = useState(currentSeconds);
   const [busy, setBusy] = useState(false);

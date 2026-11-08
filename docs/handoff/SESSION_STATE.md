@@ -45,6 +45,17 @@ Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
   độc lập Admin, replay/race) + support-cases 14/14, web 475 + 2 test render, RN typecheck +
   225, session-client 158, contract check PASS. Trình duyệt thật/native NOT RUN; RN chưa có
   màn hình hồ sơ hỗ trợ; Staff không nhận báo cáo (hàng hỗ trợ chỉ Admin).
+- [ADR0079](../adr/0079-bounded-auction-lifecycle.md): vòng đời phiên có trần. Tối thiểu ≥4
+  người; đăng "Mở khi đủ người" (hạn 24 giờ, đủ là mở) hoặc "Hẹn giờ mở" (≤72 giờ từ lúc đăng);
+  thiếu người tới hạn thì `Cancelled`/`RegistrationExpired`, hoàn cọc. Người bán: mở ngay, đổi giờ
+  (5 lần, không trong 30 phút cuối), chỉ giảm số người (khóa khi đủ), đóng trước giờ mở. OnHold tự
+  hủy sau 48 giờ. Admin đóng phiên từ hồ sơ báo cáo kèm lời nhắn trong một transaction. Chặn lệnh
+  rút hồ sơ cũ với phiên có cọc (trước đây không hoàn cọc). Migration `0067-auction-lifecycle`,
+  4 thao tác mới (266 operations khớp route). Kiểm chứng: E2E auctions 125/125 (chạy riêng; có ca
+  trần, lệnh sau hạn, race/replay, ngẫu nhiên seed cố định), support-cases 14/14, Mongo 61, API
+  unit 450 (1 ca shutdown timeout khi chạy cả bộ, chạy riêng PASS), web 477, admin 249, RN 230,
+  session-client 158, contract check PASS. 72 giờ/48 giờ chưa được chủ dự án xác nhận riêng.
+  Trình duyệt thật, native, Flutter, human review tiền NOT RUN. Chưa push.
 
 Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
 auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web

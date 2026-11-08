@@ -24,6 +24,8 @@ import {
   type Wire,
 } from '../commands/domain-error.js';
 import { reviewPublicationPipeline } from '../reviews/review-queries.service.js';
+import { AuctionBiddingService } from '../auctions/auction-bidding.service.js';
+import { AuctionClock } from '../auctions/auction-clock.js';
 import { reviewItem } from '../reviews/review-record.js';
 
 const summary = (r: Case): Wire['SupportCaseSummary'] => ({
@@ -64,6 +66,8 @@ export class SupportService {
   constructor(
     private readonly commands: MongoCommandService,
     private readonly pages: MongoPageService,
+    private readonly auctions: AuctionBiddingService,
+    private readonly clock: AuctionClock,
   ) {}
   list(
     auth: Actor,
@@ -378,6 +382,63 @@ export class SupportService {
           now,
           ['Answer', 'Close'].includes(body.action),
         );
+        await this.save(tx, row, now);
+        await this.notify(tx, row, now);
+        return this.change(row, now);
+      },
+    });
+  }
+  // ADR 0079: the assigned, independent Admin closes the reported auction and
+  // answers the case in one transaction; the message reaches every participant.
+  closeAuction(
+    context: CommandContext,
+    id: string,
+    body: Wire['CloseReportedAuction'],
+  ) {
+    return this.commands.runSupport(context, 'closeReportedAuction', id, body, {
+      authorize: async (tx, actor) =>
+        this.access(
+          tx,
+          await tx.c.support_cases.findOne({ _id: id }),
+          actor,
+          true,
+        ),
+      mutate: async (tx, actor, _before, receiptId) => {
+        await tx.lock('support_cases', [id]);
+        const row = await this.access(
+          tx,
+          await tx.c.support_cases.findOne({ _id: id }),
+          actor,
+          true,
+        );
+        this.version(row, body.expectedVersion);
+        if (row.state === 'Closed') throw invalidState('Hồ sơ đã đóng.');
+        if (row.assigneeId !== actor._id)
+          throw invalidState('Nhận phụ trách hồ sơ trước khi đóng phiên.');
+        if (row.target?.type !== 'Auction')
+          throw invalidState('Hồ sơ này không gắn với phiên đấu giá.');
+        const message = text(body.message, 'message', 10);
+        const now = await this.clock.now(tx);
+        await this.auctions.cancelReported(
+          tx,
+          row.target.id,
+          body.auctionVersion,
+          actor._id,
+          message,
+          receiptId,
+          now,
+        );
+        await this.append(
+          tx,
+          row,
+          actor,
+          `Admin đã đóng phiên đấu giá: ${message}`,
+          false,
+          'System',
+          now,
+          true,
+        );
+        row.state = 'Answered';
         await this.save(tx, row, now);
         await this.notify(tx, row, now);
         return this.change(row, now);

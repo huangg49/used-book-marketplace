@@ -273,7 +273,9 @@ function AuctionQueueContent() {
         id: item.id,
         status:
           item.state === "OnHold"
-            ? "Tạm giữ, chờ quyết định"
+            ? item.holdExpiresAt
+              ? `Tạm giữ, chờ quyết định · tự hủy ${dateText(item.holdExpiresAt)}`
+              : "Tạm giữ, chờ quyết định"
             : item.phase === "Scheduled"
               ? `Hẹn mở ${dateText(item.startAt)} · kết thúc ${dateText(item.endAt)}`
               : `Kết thúc ${dateText(item.endAt)}`,

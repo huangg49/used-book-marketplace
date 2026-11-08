@@ -18,6 +18,10 @@ import {
   fundsShortfall,
   receiptMessage,
   standingOf,
+  closeReasonText,
+  createSellerCommand,
+  openRuleText,
+  waitingForRegistrants,
 } from "./auctions-model";
 import type { Participation, PublicAuctionSummary } from "./contracts";
 
@@ -258,5 +262,60 @@ describe("ADR 0047 scheduled auctions", () => {
     // Active filter count
     expect(activeFilterCount(DEFAULT_AUCTION_FILTERS)).toBe(0);
     expect(activeFilterCount({ ...DEFAULT_AUCTION_FILTERS, point: "A", buyNow: true })).toBe(2);
+  });
+});
+
+describe("ADR 0079 bounded registration lifecycle", () => {
+  const H = 3_600_000;
+  const now = Date.parse("2026-10-13T00:00:00Z");
+  const waiting = (over: Partial<PublicAuctionSummary> = {}) =>
+    auction({
+      openMode: "WhenReady",
+      minBidders: 4,
+      registeredCount: 1,
+      bidderCount: 0,
+      currentPrice: null,
+      phase: "Scheduled",
+      version: 3,
+      scheduleRevision: 0,
+      startAt: new Date(now + 20 * H).toISOString(),
+      endAt: new Date(now + 44 * H).toISOString(),
+      latestStartAt: new Date(now + 68 * H).toISOString(),
+      ...over,
+    });
+  it("knows a waiting auction and is never open once the server says Ended", () => {
+    expect(waitingForRegistrants(waiting(), now)).toBe(true);
+    expect(waitingForRegistrants(waiting({ openMode: null }), now)).toBe(false);
+    const expired = waiting({ phase: "Ended", startAt: new Date(now - H).toISOString() });
+    expect(isOpen(expired, now)).toBe(false);
+  });
+  it("publishing offers WhenReady and times within 72 h; a reschedule never offers now", () => {
+    const publish = startChoices(now, { ceiling: now + 72 * H, whenReady: true });
+    expect(publish[0]).toEqual({ label: "Mở khi đủ người", at: null });
+    expect(publish.every((c) => c.at === null || c.at <= now + 72 * H)).toBe(true);
+    const move = startChoices(now, { ceiling: now + 4 * H, whenReady: false });
+    expect(move.some((c) => c.at === null)).toBe(false);
+    expect(move.every((c) => c.at! <= now + 4 * H)).toBe(true);
+  });
+  it("reschedule: only while waiting, under 5 changes and outside the last 30 minutes", () => {
+    expect(canReschedule(waiting(), now)).toBe(true);
+    expect(canReschedule(waiting({ scheduleRevision: 5 }), now)).toBe(false);
+    expect(canReschedule(waiting({ startAt: new Date(now + 20 * 60_000).toISOString() }), now)).toBe(false);
+    expect(canReschedule(waiting({ phase: "Live", startAt: new Date(now - H).toISOString() }), now)).toBe(false);
+  });
+  it("explains the open rule and every close reason", () => {
+    expect(openRuleText(waiting())).toMatch(/tự mở ngay khi đủ 4 người/);
+    expect(openRuleText(waiting({ openMode: "Scheduled" }))).toMatch(/nếu đủ 4 người/);
+    expect(closeReasonText(waiting({ closeReason: "RegistrationExpired" }))).toMatch(/không đủ 4 người/);
+    expect(closeReasonText(waiting({ closeReason: "SellerClosed" }))).toMatch(/Người bán đã đóng/);
+    expect(closeReasonText(waiting({ closeReason: "HoldExpired" }))).toMatch(/48 giờ/);
+    expect(closeReasonText(waiting({ closeReason: "Reported" }))).toMatch(/báo cáo/);
+    expect(closeReasonText(waiting())).toBeNull();
+  });
+  it("freezes seller commands with their version and key", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    expect(createSellerCommand(id, "OpenNow", 3, "k")).toEqual({ kind: "OpenNow", path: `/auctions/${id}/open-now`, body: JSON.stringify({ expectedVersion: 3 }), key: "k" });
+    expect(JSON.parse(createSellerCommand(id, "LowerMin", 3, "k", 4).body)).toEqual({ expectedVersion: 3, minBidders: 4 });
+    expect(createSellerCommand(id, "Close", 3, "k").path).toBe(`/auctions/${id}/close`);
   });
 });

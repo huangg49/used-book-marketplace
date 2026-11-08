@@ -18,7 +18,7 @@ import { formatVnd, ROUTES } from '../lib/routes'
 import { getWalletSummary } from '../services/wallet'
 import { invalidateMemberWalletViews } from '../lib/wallet-cache'
 import {
-  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation, instantNeedsRival, registrationBlocks,
+  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation, instantNeedsRival, registrationBlocks, waitingForRegistrants, closeReasonText,
   getMyPointOrder, getPointOrderDeliveryQuote, payPointOrder, placeBid, setAutoBid, withdrawIntake, type DeliveryChoice, type MyIntake,
   type AuctionParticipation, type AuctionState, type AuctionSummary,
 } from '../services/auctions'
@@ -32,9 +32,17 @@ import { rowFrames, standingFrames } from '../lib/auction-motion'
 import { commandError } from '../lib/auction-errors'
 import { PointOrderSteps } from './AuctionPointOrder'
 import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
-import { DutchPanel, RegistrationPanel, SealedPanel } from './AuctionFormatPanels'
+import { DutchPanel, RegistrationPanel, SealedPanel, WaitingSellerControls } from './AuctionFormatPanels'
 
 const HOUR = 3_600_000
+// ADR 0077/0079: headline for an auction that ended for a stated reason.
+const CLOSE_TITLE: Record<NonNullable<AuctionSummary['closeReason']>, string> = {
+  NotEnoughBidders: 'Phiên không đủ người tham gia',
+  RegistrationExpired: 'Phiên không đủ người đăng ký',
+  SellerClosed: 'Người bán đã đóng phiên',
+  HoldExpired: 'Phiên đã tự hủy',
+  Reported: 'Phiên đã bị quản trị viên đóng',
+}
 // Only a won or bought auction has a final price; a held or cancelled one does not.
 const CLOSED_PRICE: Partial<Record<AuctionState, string>> = {
   BuyNowPending: 'Giá mua ngay',
@@ -157,7 +165,8 @@ export function AuctionDetailPage() {
   if (!detail.data) return <div className={styles.state}>Đang mở phiên đấu giá…</div>
 
   const { auction, history, leaderAlias } = detail.data
-  const open = auction.state === 'Active' && remaining > 0 && !scheduled
+  // ADR 0079: the server marks a start reached with too few registrants Ended.
+  const open = auction.state === 'Active' && remaining > 0 && !scheduled && auction.phase !== 'Ended'
   const participationStale = participation.isError && participation.data !== undefined && outcomeUnknown(participation.error)
   const me = participation.isError && !participationStale ? null : participation.data ?? null
   const hasBids = auction.bidderCount > 0
@@ -177,6 +186,7 @@ export function AuctionDetailPage() {
         <span>
           Quản trị viên đang xem xét vì người bán hoặc người đang dẫn giá không còn đủ điều kiện. Lượt trả giá được giữ
           nguyên, chưa có người thắng và không có khoản tiền nào bị trừ.
+          {auction.holdExpiresAt ? ` Nếu chưa được xử lý trước ${when(auction.holdExpiresAt)}, phiên tự hủy và mọi khoản giữ được hoàn.` : ''}
         </span>
       </div>
     )
@@ -194,11 +204,11 @@ export function AuctionDetailPage() {
         </p>
       </div>
     )
-  else if (!open && auction.closeReason === 'NotEnoughBidders')
+  else if (!open && closeReasonText(auction))
     action = (
       <div className={styles.notice}>
-        <strong>Phiên không đủ người tham gia</strong>
-        <p>Phiên kết thúc mà chưa đủ {auction.minBidders ?? 2} người đăng ký hoặc chưa có hai người trả giá, nên không bán. Mọi tiền cọc và khoản giữ đã về lại ví.</p>
+        <strong>{CLOSE_TITLE[auction.closeReason!]}</strong>
+        <p>{closeReasonText(auction)}</p>
         <Link className={styles.secondaryBlock} to={ROUTES.auctions}>Xem các phiên khác</Link>
       </div>
     )
@@ -798,7 +808,10 @@ function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged, 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [unknown, setUnknown] = useState(false)
-  const canWithdraw = (open || scheduled) && auction.bidderCount === 0
+  // ADR 0079: a registration auction closes only before its start (refunding
+  // deposits); the older withdrawal stays for auctions without registration.
+  const waiting = waitingForRegistrants(auction)
+  const canWithdraw = (open || scheduled) && auction.bidderCount === 0 && auction.minBidders == null
   // ADR 0047: the time can change only before the first bid and any Buy Now.
   const canEdit = canWithdraw && !auction.buyNowAt && auction.version != null
     && (auction.scheduleRevision ?? 0) < AUCTION_MAX_SCHEDULE_EDITS
@@ -823,16 +836,21 @@ function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged, 
       <div className={`${styles.standing} ${styles.standingLead} ${styles.ownerNote}`}>
         <strong><UserRound size={16} aria-hidden="true" />Đây là phiên của bạn</strong>
         <span>
-          {scheduled
+          {waiting
+            ? <>Phiên đang nhận đăng ký. Bạn có thể <b>mở ngay</b> khi đủ người, <b>hẹn hoặc đổi giờ mở</b>, <b>giảm số người tối thiểu</b> hoặc <b>đóng phiên</b> trước giờ mở.</>
+            : auction.minBidders != null && open
+            ? <>Phiên đã mở nên bạn <b>không đóng được nữa</b>. Cần hỗ trợ, hãy dùng <b>Báo cáo sự cố cho Admin</b>.</>
+            : scheduled
             ? <>Phiên hẹn mở lúc <b>{when(auction.startAt)}</b>. Trước <b>lượt trả giá đầu tiên</b>, bạn có thể <b>đổi thời gian</b> hoặc <b>rút phiên</b>.</>
             : open
             ? auction.bidderCount === 0
               ? <><b>Chưa có lượt trả giá.</b> Bạn có thể <b>đổi thời lượng</b> hoặc <b>rút phiên</b> trước lượt trả giá đầu tiên.</>
               : <>Đã có <b>{auction.bidderCount} người trả giá</b> nên phiên <b>không thể rút</b>. Người bán không tham gia trả giá.</>
-            : SELLER_STATE[auction.state] ?? STATE_LABEL[auction.state]}
+            : closeReasonText(auction) ?? SELLER_STATE[auction.state] ?? STATE_LABEL[auction.state]}
         </span>
       </div>
       {error && <p role="alert" className={styles.fieldError}>{error}</p>}
+      {waiting && <WaitingSellerControls auction={auction} me={null} serverTime={serverTime} onChanged={onChanged} paused={paused} />}
       {canEdit && !unknown && (
         <button type="button" className={styles.ownerPrimary} disabled={busy} onClick={() => setEditing(true)}>
           <CalendarClock size={17} aria-hidden="true" />Đổi thời gian phiên

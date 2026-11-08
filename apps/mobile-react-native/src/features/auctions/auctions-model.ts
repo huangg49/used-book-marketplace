@@ -201,7 +201,56 @@ export const registrationBlocks = (
 ) =>
   auction.minBidders != null &&
   (me?.registrationState !== "Registered" || (auction.registeredCount ?? 0) < auction.minBidders);
-export const MIN_BIDDER_OPTIONS = [2, 3, 4, 5, 10] as const;
+// ADR 0079: at least 4, no business maximum (1000 is the server's technical guard).
+export const AUCTION_MIN_BIDDERS_FLOOR = 4;
+export const AUCTION_MIN_BIDDERS_CAP = 1000;
+export const MIN_BIDDER_OPTIONS = [4, 5, 6, 8, 10] as const;
+export const AUCTION_READY_WINDOW_MS = 24 * 3_600_000;
+export const AUCTION_START_CEILING_MS = 72 * 3_600_000;
+export const AUCTION_RESCHEDULE_FREEZE_MS = 30 * 60_000;
+const at = (ms: number) =>
+  new Date(ms).toLocaleString("vi-VN", { weekday: "short", hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
+/** ADR 0079: a bounded-lifecycle auction still waiting for registrants. */
+export const waitingForRegistrants = (auction: PublicAuctionSummary, now: number) =>
+  auction.openMode != null && auction.phase !== "Ended" && isScheduled(auction, now);
+/** ADR 0079: one sentence on when a waiting auction opens or is cancelled. */
+export function openRuleText(auction: PublicAuctionSummary) {
+  const need = auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR;
+  return auction.openMode === "WhenReady"
+    ? `Phiên tự mở ngay khi đủ ${need} người đăng ký. Hạn đăng ký ${at(Date.parse(auction.startAt))}; quá hạn chưa đủ người thì phiên bị hủy và hoàn cọc.`
+    : `Phiên mở lúc ${at(Date.parse(auction.startAt))} nếu đủ ${need} người đăng ký; không đủ thì phiên bị hủy và hoàn cọc.`;
+}
+/** ADR 0077/0079: why an auction ended without a sale, for every viewer. */
+export function closeReasonText(auction: PublicAuctionSummary): string | null {
+  switch (auction.closeReason) {
+    case "NotEnoughBidders":
+      return "Phiên kết thúc mà chưa đủ người trả giá nên không bán. Tiền cọc và khoản giữ đã về lại ví.";
+    case "RegistrationExpired":
+      return `Phiên không đủ ${auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người đăng ký trước giờ mở nên đã bị hủy. Tiền cọc đã về lại ví.`;
+    case "SellerClosed":
+      return "Người bán đã đóng phiên trước giờ mở. Tiền cọc đã về lại ví.";
+    case "HoldExpired":
+      return "Phiên tạm dừng quá 48 giờ mà chưa được xử lý nên đã tự hủy. Tiền cọc và khoản giữ đã về lại ví.";
+    case "Reported":
+      return "Quản trị viên đã đóng phiên sau khi xem xét báo cáo. Tiền cọc và khoản giữ đã về lại ví.";
+    default:
+      return null;
+  }
+}
+export type SellerCommand = { kind: "OpenNow" | "LowerMin" | "Close"; path: string; body: string; key: string };
+// ADR 0079: frozen like other commands; a retry after an unknown outcome resends it.
+export function createSellerCommand(
+  auctionId: string,
+  kind: SellerCommand["kind"],
+  expectedVersion: number,
+  key: string,
+  minBidders?: number,
+): SellerCommand {
+  const base = `/auctions/${auctionId}`;
+  if (kind === "OpenNow") return { kind, path: `${base}/open-now`, body: JSON.stringify({ expectedVersion }), key };
+  if (kind === "Close") return { kind, path: `${base}/close`, body: JSON.stringify({ expectedVersion }), key };
+  return { kind, path: `${base}/min-bidders`, body: JSON.stringify({ expectedVersion, minBidders }), key };
+}
 // ADR 0077: an Instant end would sell to this member alone (no other bidder yet).
 export const instantNeedsRival = (
   auction: PublicAuctionSummary,
@@ -233,12 +282,23 @@ export function isScheduled(auction: PublicAuctionSummary, now: number) {
 export function isOpen(auction: PublicAuctionSummary, now: number) {
   return (
     auction.state === "Active" &&
+    // ADR 0079: the server marks a start reached with too few registrants Ended.
+    auction.phase !== "Ended" &&
     now >= Date.parse(auction.startAt) &&
     now < Date.parse(auction.endAt)
   );
 }
 // The seller edits the time only before the first bid and any Buy Now.
 export function canReschedule(auction: PublicAuctionSummary, now: number) {
+  // ADR 0079: a registration auction moves its start only while waiting.
+  if (auction.openMode != null)
+    return (
+      waitingForRegistrants(auction, now) &&
+      auction.version != null &&
+      (auction.scheduleRevision ?? 0) < AUCTION_MAX_SCHEDULE_EDITS &&
+      Date.parse(auction.startAt) - now > AUCTION_RESCHEDULE_FREEZE_MS
+    );
+  if (auction.minBidders != null && (auction.registeredCount ?? 0) > 0) return false;
   return (
     (isScheduled(auction, now) || isOpen(auction, now)) &&
     auction.bidderCount === 0 &&
@@ -545,8 +605,18 @@ export function durationLabel(seconds: number) {
  * Start choices for the schedule sheet: now, a few hours ahead, or 09:00 on the
  * next days. Every choice sits inside the 5-minute lead and 7-day horizon.
  */
-export function startChoices(now: number) {
-  const choices: { label: string; at: number | null }[] = [{ label: "Mở ngay", at: null }];
+export function startChoices(
+  now: number,
+  // ADR 0079: publishing offers "Mở khi đủ người" and starts within 72 h; a
+  // waiting auction moves to a time before its fixed ceiling (no "now").
+  lifecycle?: { ceiling: number; whenReady: boolean },
+) {
+  const choices: { label: string; at: number | null }[] = lifecycle
+    ? lifecycle.whenReady
+      ? [{ label: "Mở khi đủ người", at: null }]
+      : []
+    : [{ label: "Mở ngay", at: null }];
+  const horizon = lifecycle ? lifecycle.ceiling : now + AUCTION_SCHEDULE_HORIZON_MS;
   for (const h of [1, 3, 6]) choices.push({ label: `Sau ${h} giờ`, at: now + h * HOUR_MS });
   for (const days of [1, 2, 3]) {
     const d = new Date(now);
@@ -556,7 +626,7 @@ export function startChoices(now: number) {
     choices.push({ label, at: d.getTime() });
   }
   return choices.filter(
-    (c) => c.at === null || (c.at >= now + AUCTION_MIN_LEAD_MS && c.at <= now + AUCTION_SCHEDULE_HORIZON_MS),
+    (c) => c.at === null || (c.at >= now + AUCTION_MIN_LEAD_MS && c.at <= horizon),
   );
 }
 /** A live auction keeps its start; the new end must leave at least one hour. */

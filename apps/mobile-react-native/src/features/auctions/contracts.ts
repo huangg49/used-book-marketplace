@@ -60,7 +60,11 @@ export const publicAuctionSummary = z.object({
   minBidders: z.number().int().nullable().optional(),
   depositAmount: z.number().int().nullable().optional(),
   registeredCount: z.number().int().nullable().optional(),
-  closeReason: z.enum(["NotEnoughBidders"]).nullable().optional(),
+  closeReason: z.enum(["NotEnoughBidders", "RegistrationExpired", "SellerClosed", "HoldExpired", "Reported"]).nullable().optional(),
+  // ADR 0079: open mode and the fixed ceilings; absent on older servers.
+  openMode: z.enum(["WhenReady", "Scheduled"]).nullable().optional(),
+  latestStartAt: z.string().nullable().optional(),
+  holdExpiresAt: z.string().nullable().optional(),
   // ADR 0047: Scheduled before startAt; version lets the seller edit the time.
   phase: z.enum(["Scheduled", "Live", "Ended"]).nullable().optional(),
   version: z.number().int().nullable().optional(),

@@ -134,6 +134,24 @@ export class OperationsSupportController {
       res,
     );
   }
+  // ADR 0079: close the reported auction with a message.
+  @Post(':caseId/close-auction')
+  @HttpCode(200)
+  closeAuction(
+    @Param('caseId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return commandResponse(
+      this.support.closeAuction(
+        commandContext(this.input, req, res),
+        this.input.uuid(id),
+        this.input.body('CloseReportedAuction', body),
+      ),
+      res,
+    );
+  }
   @Post(':caseId/actions')
   @HttpCode(200)
   act(

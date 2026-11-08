@@ -93,6 +93,7 @@ export function MyAuctionsScreen({ userId }: { userId: string }) {
                 live: !isScheduled(edited, now),
                 startAt: edited.startAt,
                 endAt: edited.endAt,
+                latestStartAt: edited.latestStartAt ?? null,
               }
             : null
         }

@@ -2,6 +2,7 @@ import { createMessageSendLimitsMigration, withMessageSendLimits } from './0062-
 import { createBuyNowModeMigration, withBuyNowMode } from './0063-auction-buy-now-mode.js';
 import { createAuctionTypesMigration, withAuctionTypes } from './0065-auction-types.js';
 import { createAuctionRegistrationMigration, registrationSpec, withAuctionRegistration } from './0066-auction-registration.js';
+import { createAuctionLifecycleMigration, withAuctionLifecycle } from './0067-auction-lifecycle.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { manualWithdrawalsMigration, withManualWithdrawals } from './0061-manual-wallet-withdrawals.js';
 import { createWithdrawalsMigration, withdrawalSpecs, withWithdrawals } from './0060-wallet-withdrawals.js';
@@ -560,7 +561,7 @@ const beforeWithdrawals = (): CollectionSpec[] => [
   demoCompletionSpec,
 ];
 
-export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
+export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
 const withdrawalsMigration = createWithdrawalsMigration([
@@ -589,9 +590,12 @@ const auctionTypesMigration = createAuctionTypesMigration(
 );
 migrations.push(auctionTypesMigration);
 // ADR 0077: registration on the 0065 auction and 0064 ledger/notification snapshots.
+const registrationMigration = createAuctionRegistrationMigration([
+  ...auctionTypesMigration.definition.collections,
+  ...bidHoldsMigration.definition.collections,
+]);
+migrations.push(registrationMigration);
+// ADR 0079: bounded registration lifecycle on the 0066 snapshots.
 migrations.push(
-  createAuctionRegistrationMigration([
-    ...auctionTypesMigration.definition.collections,
-    ...bidHoldsMigration.definition.collections,
-  ]),
+  createAuctionLifecycleMigration(registrationMigration.definition.collections),
 );

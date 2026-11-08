@@ -8,7 +8,10 @@ import {
   AUCTION_MIN_DURATION_MS,
   AUCTION_MIN_LEAD_MS,
   AUCTION_MIN_REMAINING_MS,
+  AUCTION_READY_WINDOW_MS,
+  AUCTION_RESCHEDULE_FREEZE_MS,
   AUCTION_SCHEDULE_HORIZON_MS,
+  AUCTION_START_CEILING_MS,
   BUY_NOW_CHALLENGE_MS,
   BUY_NOW_RIVAL_CHALLENGE_MS,
 } from '../../database/mongo/migrations/auction-constants.js';
@@ -16,11 +19,26 @@ import { DomainError, invalidField } from '../commands/domain-error.js';
 
 export type AuctionPhase = 'Scheduled' | 'Live' | 'Ended';
 
+type Lifecycle = Partial<
+  Pick<AuctionDoc, 'openMode' | 'minBidders' | 'registeredCount'>
+>;
+// ADR 0079: a bounded-lifecycle auction that reached its start with too few
+// registrants is over at once; the worker only records the cancellation.
+export const registrationExpired = (
+  a: Pick<AuctionDoc, 'state' | 'startAt'> & Lifecycle,
+  now: Date,
+) =>
+  a.state === 'Active' &&
+  !!a.openMode &&
+  a.minBidders != null &&
+  (a.registeredCount ?? 0) < a.minBidders &&
+  now >= a.startAt;
+
 export const phaseOf = (
-  a: Pick<AuctionDoc, 'state' | 'startAt' | 'endAt'>,
+  a: Pick<AuctionDoc, 'state' | 'startAt' | 'endAt'> & Lifecycle,
   now: Date,
 ): AuctionPhase =>
-  a.state !== 'Active' || now >= a.endAt
+  a.state !== 'Active' || now >= a.endAt || registrationExpired(a, now)
     ? 'Ended'
     : now < a.startAt
       ? 'Scheduled'
@@ -155,4 +173,92 @@ export function reschedule(a: AuctionDoc, input: ScheduleInput, now: Date) {
       'Phiên đang mở phải còn ít nhất 1 giờ sau khi đổi.',
     );
   return { startAt: a.startAt, plannedEndAt };
+}
+
+// ---------------------------------------------------------------- ADR 0079
+// Bounded registration lifecycle. Every ceiling is measured from the fixed
+// publishedAt, so rescheduling can never move it.
+const lifecycleError = (message: string) =>
+  new DomainError(409, 'InvalidState', message);
+
+/** Publishing a registration auction: null = WhenReady, a time = Scheduled. */
+export function lifecyclePublish(input: ScheduleInput, now: Date) {
+  const length = durationMs(input.durationSeconds);
+  if (!input.startAt) {
+    const startAt = new Date(now.getTime() + AUCTION_READY_WINDOW_MS);
+    return {
+      openMode: 'WhenReady' as const,
+      startAt,
+      plannedEndAt: new Date(startAt.getTime() + length),
+    };
+  }
+  const startAt = ceilingStart(input.startAt, now, now);
+  return {
+    openMode: 'Scheduled' as const,
+    startAt,
+    plannedEndAt: new Date(startAt.getTime() + length),
+  };
+}
+
+function ceilingStart(raw: string, now: Date, publishedAt: Date) {
+  const startAt = new Date(raw);
+  if (Number.isNaN(startAt.getTime()))
+    invalidField('startAt', 'Thời điểm bắt đầu không hợp lệ.');
+  if (startAt.getTime() < now.getTime() + AUCTION_MIN_LEAD_MS)
+    invalidField(
+      'startAt',
+      'Hẹn giờ bắt đầu ít nhất 5 phút sau thời điểm hiện tại.',
+    );
+  if (startAt.getTime() > publishedAt.getTime() + AUCTION_START_CEILING_MS)
+    invalidField(
+      'startAt',
+      'Giờ mở phải trong vòng 72 giờ kể từ lúc đăng phiên.',
+    );
+  return startAt;
+}
+
+/** The latest start a bounded-lifecycle auction can ever have. */
+export const latestStartAt = (a: Pick<AuctionDoc, 'publishedAt'>) =>
+  new Date(a.publishedAt.getTime() + AUCTION_START_CEILING_MS);
+
+/** The seller acts on a waiting auction only before its fixed start. */
+export function requireWaiting(a: AuctionDoc, now: Date) {
+  if (a.state !== 'Active' || phaseOf(a, now) !== 'Scheduled')
+    throw lifecycleError(
+      'Phiên đã bắt đầu hoặc đã kết thúc; thao tác này chỉ dùng khi phiên đang chờ người đăng ký.',
+    );
+}
+
+/** Rescheduling a waiting registration auction (WhenReady becomes Scheduled). */
+export function lifecycleReschedule(
+  a: AuctionDoc,
+  input: ScheduleInput,
+  now: Date,
+) {
+  requireWaiting(a, now);
+  if (a.scheduleRevision >= AUCTION_MAX_SCHEDULE_EDITS)
+    throw lifecycleError('Phiên này đã đổi thời gian tối đa 5 lần.');
+  if (now.getTime() >= a.startAt.getTime() - AUCTION_RESCHEDULE_FREEZE_MS)
+    throw lifecycleError(
+      'Không đổi giờ trong 30 phút cuối trước giờ mở; người đăng ký đã chuẩn bị theo giờ này.',
+    );
+  if (!input.startAt)
+    invalidField(
+      'startAt',
+      'Chọn giờ mở mới. Muốn mở ngay khi đủ người, dùng "Mở ngay".',
+    );
+  const length = durationMs(input.durationSeconds);
+  const startAt = ceilingStart(input.startAt, now, a.publishedAt);
+  return {
+    openMode: 'Scheduled' as const,
+    startAt,
+    plannedEndAt: new Date(startAt.getTime() + length),
+  };
+}
+
+/** Opening now keeps the length chosen at publish (or the last reschedule). */
+export function openNowFields(a: AuctionDoc, now: Date) {
+  const length = a.plannedEndAt.getTime() - a.startAt.getTime();
+  const end = new Date(now.getTime() + length);
+  return { startAt: now, endAt: end, plannedEndAt: end, biddingOpenedAt: now };
 }

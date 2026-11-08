@@ -38,6 +38,25 @@ async function context(tx: Tx, a: AuctionDoc) {
 }
 
 type Text = { title: string; body: string };
+// ADR 0079: one sentence on why a cancelled auction ended; an Admin's own
+// reason is quoted (it is public moderation text, never private data).
+function cancelCause(a: AuctionDoc, seller: boolean) {
+  const reason = (a.cancelReason ?? '').slice(0, 160);
+  switch (a.closeReason) {
+    case 'RegistrationExpired':
+      return `không đủ ${a.minBidders ?? 4} người đăng ký trước giờ mở nên đã bị hủy.`;
+    case 'SellerClosed':
+      return seller
+        ? 'đã được bạn đóng trước giờ mở.'
+        : 'đã được người bán đóng trước giờ mở.';
+    case 'HoldExpired':
+      return 'tạm dừng quá 48 giờ mà chưa được xử lý nên đã tự hủy.';
+    case 'Reported':
+      return `đã bị quản trị viên đóng sau khi xem xét báo cáo: “${reason}”.`;
+    default:
+      return 'đã bị quản trị viên hủy.';
+  }
+}
 type Message = (c: { title: string; point: string }, a: AuctionDoc) => Text;
 
 // ADR 0075: hold/release rows go to one holder and carry the moved amount,
@@ -50,7 +69,7 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
   AuctionBiddingStarted: {
     default: (c, a) => ({
       title: 'Phiên đấu giá đã mở trả giá',
-      body: `${c.title} đã đủ ${a.minBidders ?? 2} người đăng ký. Bạn có thể trả giá đến ${when(a.endAt)}.`,
+      body: `${c.title} đã đủ ${a.minBidders ?? 2} người đăng ký. Bạn trả giá được từ ${when(a.startAt)} đến ${when(a.endAt)}.`,
     }),
     seller: (c, a) => ({
       title: 'Phiên của bạn đã đủ người đăng ký',
@@ -125,15 +144,23 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
       body: `${c.title} kết thúc không có lượt trả giá. Sách được trả lại cho bạn tại ${c.point}.`,
     }),
   },
+  // ADR 0079: the wording follows why the auction was cancelled.
   AuctionCancelled: {
-    default: (c) => ({
+    default: (c, a) => ({
       title: 'Phiên đấu giá đã bị hủy',
-      body: `${c.title} đã bị quản trị viên hủy. Lượt trả giá và đăng ký của bạn hết hiệu lực; tiền cọc và khoản giữ (nếu có) được trả lại ví.`,
+      body: `${c.title} ${cancelCause(a, false)} Lượt trả giá và đăng ký của bạn hết hiệu lực; tiền cọc và khoản giữ (nếu có) được trả lại ví.`,
     }),
-    seller: (c) => ({
+    seller: (c, a) => ({
       title: 'Phiên đấu giá đã bị hủy',
-      body: `${c.title} đã bị quản trị viên hủy. Sách được trả lại cho bạn tại ${c.point}.`,
+      body: `${c.title} ${cancelCause(a, true)} Sách được trả lại cho bạn tại ${c.point}.`,
     }),
+  },
+  AuctionRescheduled: {
+    default: (c, a) => ({
+      title: 'Phiên đấu giá đổi giờ mở',
+      body: `${c.title} nay mở lúc ${when(a.startAt)} và kết thúc ${when(a.endAt)}. Bạn có thể rút đăng ký trước khi phiên đủ người.`,
+    }),
+    seller: () => ({ title: '', body: '' }),
   },
   AuctionOnHold: {
     default: (c) => ({
