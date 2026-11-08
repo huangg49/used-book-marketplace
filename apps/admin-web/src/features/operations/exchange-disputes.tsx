@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useQuery } from "@tanstack/react-query";
-import { useOutletContext } from "react-router-dom";
-import type { CurrentUser } from "@used-books/session-client";
+import { Link, useOutletContext, useParams } from "react-router-dom";
+import {
+  type CurrentUser,
+  exchangeEvidenceAccessSchema,
+  exchangeEvidenceListSchema,
+  exchangeEvidenceReadSchema,
+} from "@used-books/session-client";
 import { dateText, money } from "../../core/format";
 import { canReview, session } from "../../core/session";
 import { Notice } from "../../core/ui";
-import { ActionPanel } from "./action-panel";
+import { ActionPanel, type Outcome } from "./action-panel";
 import {
   exchangeDisputeResolutionsList,
   exchangeDisputeResolution,
@@ -63,9 +68,7 @@ function ExchangeDisputesContent() {
         detail: <DisputeSummary item={item} />,
         action: {
           label: "Đối soát chứng cứ",
-          render: (context) => (
-            <DisputeResolutionWorkspace item={item} userId={user.id} {...context} />
-          ),
+          to: `/operations/exchange-disputes/${item.id}`,
         },
       }))}
       empty={{
@@ -180,6 +183,127 @@ function useEvidenceMedia(exchangeId: string) {
   return media;
 }
 
+const evidenceReceiptSchema = z.object({ entityId: z.string(), state: z.string() });
+
+function useDisputeEvidence(exchangeId: string, userId: string) {
+  const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
+  const [loadingMedia, setLoadingMedia] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+
+  const access = useQuery({
+    queryKey: ["operations", "exchange-evidence-access", userId, exchangeId],
+    queryFn: () =>
+      session.request(
+        `/operations/exchanges/${exchangeId}/evidence-access`,
+        exchangeEvidenceAccessSchema,
+      ),
+    retry: false,
+  });
+
+  const assigned = !access.isError && access.data?.assigneeId === userId;
+
+  useEffect(() => {
+    if (!access.data || assigning || assigned) return;
+    if (!access.data.assigneeId) {
+      setAssigning(true);
+      const command = {
+        key: crypto.randomUUID(),
+        body: {
+          expectedVersion: access.data.version,
+          reason: "Quản trị viên tiếp nhận đối soát chứng cứ khiếu nại",
+        },
+      };
+      session
+        .request(
+          `/operations/exchanges/${exchangeId}/evidence-access`,
+          evidenceReceiptSchema,
+          {
+            method: "POST",
+            headers: { "Idempotency-Key": command.key },
+            body: JSON.stringify(command.body),
+          },
+        )
+        .then(() => access.refetch())
+        .catch(() => {})
+        .finally(() => setAssigning(false));
+    }
+  }, [access.data, assigned, assigning, exchangeId]);
+
+  const list = useQuery({
+    queryKey: ["operations", "exchange-evidence", userId, exchangeId],
+    queryFn: () =>
+      session.request(
+        `/operations/exchanges/${exchangeId}/evidence`,
+        exchangeEvidenceListSchema,
+      ),
+    enabled: assigned,
+    retry: false,
+  });
+
+  useEffect(() => {
+    const readyItems = (list.data?.items ?? []).filter(
+      (item) => item.status === "Ready" && !mediaUrls[item.id],
+    );
+    if (readyItems.length === 0) return;
+
+    let mounted = true;
+    setLoadingMedia(true);
+
+    Promise.all(
+      readyItems.map((item) =>
+        session
+          .request(
+            `/operations/exchanges/${exchangeId}/evidence/${item.id}/read`,
+            exchangeEvidenceReadSchema,
+            {
+              method: "POST",
+              body: JSON.stringify({
+                reason: "Đối soát chứng cứ mở kiện và đóng gói trao đổi",
+              }),
+            },
+          )
+          .then((res) => ({ id: item.id, url: res.url }))
+          .catch(() => null),
+      ),
+    ).then((results) => {
+      if (!mounted) return;
+      const map: Record<string, string> = {};
+      results.forEach((r) => {
+        if (r) map[r.id] = r.url;
+      });
+      setMediaUrls((prev) => ({ ...prev, ...map }));
+      setLoadingMedia(false);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [list.data?.items, exchangeId, mediaUrls]);
+
+  const items = list.data?.items ?? [];
+  const readyItems = items.filter((i) => i.status === "Ready");
+
+  const videoItem = readyItems.find((i) => i.mimeType.startsWith("video/"));
+  const imageItem = readyItems.find((i) => i.mimeType.startsWith("image/"));
+
+  const videoSrc = videoItem ? mediaUrls[videoItem.id] : undefined;
+  const imageSrc = imageItem ? mediaUrls[imageItem.id] : undefined;
+
+  return {
+    access,
+    assigned,
+    list,
+    items,
+    readyItems,
+    videoItem,
+    imageItem,
+    videoSrc,
+    imageSrc,
+    mediaUrls,
+    loadingMedia,
+  };
+}
+
 function DisputeSummary({ item }: { item: ExchangeDisputeItem }) {
   const parsed = parseDisputeReason(item.disputeReason || "");
   const hasMedia = Boolean(parsed.imageName || parsed.videoName);
@@ -236,6 +360,7 @@ type WorkspaceProps = { item: ExchangeDisputeItem; userId: string } & ActionCont
 function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps) {
   const parsed = parseDisputeReason(item.disputeReason || "");
   const evidence = useEvidenceMedia(item.id);
+  const evidenceHook = useDisputeEvidence(item.id, userId);
 
   const [decision, setDecision] = useState<DisputeDecision | null>(null);
   const [reason, setReason] = useState("");
@@ -291,6 +416,7 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
 
   // Complaint / Unboxing media (Receiver)
   const receiverImageSrc =
+    evidenceHook.imageSrc ||
     evidence.image ||
     (parsed.imageName
       ? parsed.imageName.startsWith("data:") ||
@@ -300,7 +426,13 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
         : "/demo-evidence/sample-book-damage.jpg"
       : undefined);
 
+  const receiverImageName =
+    evidenceHook.imageItem?.fileName ||
+    parsed.imageName ||
+    "Ảnh sự cố sách";
+
   const receiverVideoSrc =
+    evidenceHook.videoSrc ||
     evidence.video ||
     (parsed.videoName
       ? parsed.videoName.startsWith("data:") ||
@@ -309,6 +441,11 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
         ? parsed.videoName
         : "/demo-evidence/sample-unboxing.mp4"
       : undefined);
+
+  const receiverVideoName =
+    evidenceHook.videoItem?.fileName ||
+    parsed.videoName ||
+    "Video mở hộp";
 
   const handleApplyPreset = (text: string, dec: DisputeDecision) => {
     setReason(text);
@@ -446,6 +583,11 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
                     Sự cố: <strong>{parsed.category}</strong>
                   </span>
                 )}
+                {evidenceHook.readyItems.length > 0 && (
+                  <span className={styles.readyPill}>
+                    Đã nạp {evidenceHook.readyItems.length} tệp chứng cứ
+                  </span>
+                )}
               </div>
             </div>
 
@@ -454,20 +596,24 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
               <div className={styles.mediaBox}>
                 <div className={styles.mediaBoxHeader}>
                   <span>📸 Ảnh hiện trạng sách lúc nhận:</span>
-                  <small title={parsed.imageName || "Ảnh khiếu nại"}>
-                    {parsed.imageName || "Ảnh sự cố sách"}
+                  <small title={receiverImageName}>
+                    {receiverImageName}
                   </small>
                 </div>
                 {receiverImageSrc ? (
                   <div className={styles.imageWrapper}>
                     <img
                       src={receiverImageSrc}
-                      alt={parsed.imageName || "Ảnh chứng cứ sự cố"}
+                      alt={receiverImageName}
                       className={styles.evidenceImg}
                       onClick={() => window.open(receiverImageSrc, "_blank")}
                       title="Bấm để mở ảnh kích thước lớn"
                     />
                     <span className={styles.zoomPill}>🔍 Bấm để phóng to</span>
+                  </div>
+                ) : evidenceHook.loadingMedia ? (
+                  <div className={styles.mediaLoadingPlaceholder}>
+                    <span>⏳ Đang tải ảnh từ kho bằng chứng…</span>
                   </div>
                 ) : (
                   <div className={styles.mediaEmptyPlaceholder}>
@@ -480,8 +626,8 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
               <div className={styles.mediaBox}>
                 <div className={styles.mediaBoxHeader}>
                   <span>🎥 Video mở kiện hàng (Unboxing):</span>
-                  <small title={parsed.videoName || "Video mở kiện"}>
-                    {parsed.videoName || "Video mở hộp"}
+                  <small title={receiverVideoName}>
+                    {receiverVideoName}
                   </small>
                 </div>
                 {receiverVideoSrc ? (
@@ -496,12 +642,50 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
                       Trình duyệt không hỗ trợ phát video.
                     </video>
                   </div>
+                ) : evidenceHook.loadingMedia ? (
+                  <div className={styles.mediaLoadingPlaceholder}>
+                    <span>⏳ Đang tải video unboxing từ kho bằng chứng…</span>
+                  </div>
                 ) : (
                   <div className={styles.mediaEmptyPlaceholder}>
                     <span>Chưa có video unboxing từ người nhận</span>
                   </div>
                 )}
               </div>
+
+              {/* Danh sách tệp đính kèm đầy đủ */}
+              {evidenceHook.readyItems.length > 0 && (
+                <div className={styles.evidenceFileList}>
+                  <div className={styles.fileListHeader}>
+                    <strong>📁 Danh sách tệp chứng cứ ({evidenceHook.readyItems.length}):</strong>
+                  </div>
+                  <ul>
+                    {evidenceHook.readyItems.map((fi) => {
+                      const url = evidenceHook.mediaUrls[fi.id];
+                      return (
+                        <li key={fi.id} className={styles.fileListItem}>
+                          <span className={styles.fileName}>{fi.fileName}</span>
+                          <span className={styles.fileMeta}>
+                            ({Math.ceil(fi.byteSize / 1024)} KB)
+                          </span>
+                          {url ? (
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={styles.fileOpenBtn}
+                            >
+                              Mở tệp ↗
+                            </a>
+                          ) : (
+                            <span className={styles.fileLoading}>Đang nạp URL…</span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -726,6 +910,107 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
           close: true,
         })}
       />
+    </div>
+  );
+}
+
+export function ExchangeDisputeDetailPage() {
+  const user = useOutletContext<CurrentUser>();
+  if (!canReview(user)) return <Forbidden />;
+
+  return <ExchangeDisputeDetailContent user={user} />;
+}
+
+function ExchangeDisputeDetailContent({ user }: { user: CurrentUser }) {
+  const { id } = useParams<{ id: string }>();
+  const [outcome, setOutcome] = useState<Omit<Outcome, "close"> | undefined>();
+  const [_pending, setPending] = useState(false);
+
+  const result = useQuery({
+    queryKey: ["operations", "exchange-disputes", user.id],
+    queryFn: () =>
+      session.request("/operations/exchanges/resolutions", exchangeDisputeResolutionsList),
+  });
+
+  const item = result.data?.find((i) => i.id === id);
+
+  return (
+    <div className={styles.detailPageContainer}>
+      <div className={styles.detailHeader}>
+        <Link to="/operations/exchange-disputes" className={styles.backLink}>
+          ← Danh sách khiếu nại
+        </Link>
+        <div className={styles.detailTitleRow}>
+          <div>
+            <h1>Hồ sơ đối soát khiếu nại trao đổi</h1>
+            <p className={styles.detailSubtitle}>
+              Mã giao dịch: <code>#{id}</code>
+              {item && (
+                <>
+                  {" · "}Trạng thái: <strong>{item.status}</strong>
+                  {item.disputedAt && ` · Mở lúc ${dateText(item.disputedAt)}`}
+                </>
+              )}
+            </p>
+          </div>
+          {item && (
+            <div className={styles.detailMetaPills}>
+              <span className={styles.metaBadge}>
+                Tiền cọc: {money(item.initiatorDeposit)} / {money(item.recipientDeposit)}
+              </span>
+              {item.diffAmount > 0 ? (
+                <span className={styles.metaBadge}>
+                  Bù chênh lệch: {money(item.diffAmount)}
+                </span>
+              ) : (
+                <span className={styles.metaBadge}>Không bù tiền</span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {outcome && (
+        <Notice tone={outcome.tone}>
+          {outcome.text}
+        </Notice>
+      )}
+
+      {result.isPending && (
+        <p role="status">Đang tải chi tiết hồ sơ khiếu nại…</p>
+      )}
+
+      {result.isError && (
+        <Notice tone="error">
+          Chưa tải được hồ sơ khiếu nại.{" "}
+          <button onClick={() => void result.refetch()}>Tải lại</button>
+        </Notice>
+      )}
+
+      {result.isSuccess && !item && (
+        <div className={styles.reasonBox}>
+          <strong>Không tìm thấy giao dịch khiếu nại này.</strong>
+          <p className={styles.reasonDetailText}>
+            Giao dịch có thể đã được giải quyết xong, hoặc bạn không có quyền xem giao dịch này.
+          </p>
+          <Link to="/operations/exchange-disputes" className={styles.backLink}>
+            ← Quay lại danh sách khiếu nại
+          </Link>
+        </div>
+      )}
+
+      {item && (
+        <DisputeResolutionWorkspace
+          item={item}
+          userId={user.id}
+          onFinish={(newOutcome) => {
+            setOutcome(newOutcome);
+            void result.refetch();
+          }}
+          onPending={setPending}
+          reconcile={() => result.refetch()}
+        />
+      )}
     </div>
   );
 }
