@@ -1,3 +1,20 @@
+# Chứng cứ đóng gói và đối soát khiếu nại trao đổi sách — 08/11/2026
+
+Nhánh `feat/exchange-dispute-resolution` rebase sạch trên `563dc6e6` (`origin/main`).
+Thực hiện yêu cầu BA về bằng chứng đóng gói 2 chiều và đối soát khiếu nại:
+
+- **Tạo đơn vận chuyển (ShipmentDialog)**: Bắt buộc cả 2 bên nộp bằng chứng đóng gói gồm ảnh chụp hiện trạng sách (JPG/PNG/WebP) và video quay niêm phong bưu kiện cùng mã vận đơn (MP4/WebM). Có nút nạp nhanh dữ liệu mẫu phục vụ demo.
+- **Contract & API**: Cập nhật `openapi.yaml` với `packagingPhotoUrl`, `packagingVideoUrl`, `packagingPhotoName`, `packagingVideoName` trên `ShipExchangeCommand` và `ExchangeShipmentInfo`. MongoDB lưu snapshot và `view()` chiếu đầy đủ. Đã áp dụng migrations 0054-0062.
+- **Admin đối soát 2 chiều (ExchangeDisputesPage)**: Bảng so sánh 2 cột (Bên gửi đóng gói vs Bên nhận mở hộp), kèm 3 tiêu chuẩn trọng tài và 2 nút mẫu phán quyết nhanh (`RefundBoth` hoàn cọc 100% hai bên / `CompleteExchange` tất toán cọc).
+- **Mobile RN & User-Web Service**: Đồng bộ schema `exchangeShipmentInfo` trên `contracts.ts`, `exchange.ts` và hiển thị badge bảo chứng đóng gói trên `exchange-shipping-card.tsx`.
+
+Kiểm chứng local:
+- `@used-books/api-contract`: generate code 0
+- `@used-books/api`: nest build code 0
+- `@used-books/admin-web`: vite build code 0
+- `@used-books/user-web`: vite build code 0
+- `@used-books/mobile-react-native`: tsc typecheck code 0
+
 # Sửa lỗi từ khảo sát nghiệp vụ — 07/11/2026
 
 Nhánh `codex/audit-business-fixes` từ `9c858da7`, main đối chiếu
