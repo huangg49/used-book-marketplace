@@ -224,6 +224,8 @@ export type AuctionOperation =
   | 'setAuctionAutoBid'
   | 'disableAuctionAutoBid'
   | 'buyAuctionNow'
+  | 'acceptDutchAuction'
+  | 'placeSealedBid'
   | 'payPointOrder'
   | 'acceptPointOrderReport'
   | 'rejectPointOrderReport'

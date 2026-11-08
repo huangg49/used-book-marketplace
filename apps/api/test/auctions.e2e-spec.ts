@@ -119,6 +119,9 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       pointId: string;
       declaredValue: number | null;
       buyNowMode: 'Challenge' | 'Instant';
+      auctionType: 'English' | 'Dutch' | 'SealedFirst' | 'SealedSecond';
+      dutchTopPrice: number | null;
+      dutchIntervalSeconds: number | null;
     }> = {},
   ) => ({
     listingId: l.id,
@@ -4826,6 +4829,168 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       expect(await reconciled()).toBe(true);
     });
   });
+
+  // ADR 0076: Dutch and sealed-bid formats (with ADR 0075 holds switched on).
+  describe('ADR 0076: auction formats', () => {
+    const toggle = (on: boolean) => {
+      (app.get(AuctionBiddingService) as unknown as { fundsCheck: boolean }).fundsCheck = on;
+    };
+    beforeAll(() => toggle(true));
+    afterAll(() => toggle(false));
+    const accept = (auctionId: string, a: Actor, price: number) =>
+      cmd('post', `/auctions/${auctionId}/dutch-accept`, { price, fulfillmentMethod: 'SelfCollect' }, a);
+    const sealed = (auctionId: string, a: Actor, amount: number) =>
+      cmd('post', `/auctions/${auctionId}/sealed-bid`, { amount, fulfillmentMethod: 'SelfCollect' }, a);
+    const buyNowCmd = (auctionId: string, a: Actor) =>
+      cmd('post', `/auctions/${auctionId}/buy-now`, { fulfillmentMethod: 'SelfCollect' }, a);
+    const heldOf = async (a: Actor) =>
+      (await call('get', '/me/wallet', a).expect(200)).body.auctionHeld as number;
+    const liveOf = async (over: Parameters<typeof intakeBody>[1]) => {
+      const { seller, intakeId } = await passedIntake(over);
+      await publish(intakeId, seller).expect(200);
+      return (await db.c.auctions.findOne({ intakeId }))!;
+    };
+    const dutchOver = {
+      auctionType: 'Dutch' as const,
+      startPrice: 200_000,
+      step: 50_000,
+      buyNowPrice: null,
+      dutchTopPrice: 400_000,
+      dutchIntervalSeconds: 60,
+    };
+
+    it('Dutch: the price falls on schedule; the first acceptance wins now and closes', async () => {
+      const a = await liveOf(dutchOver);
+      expect(a).toMatchObject({ auctionType: 'Dutch', buyNowMode: 'Instant', startPrice: 200_000, dutchTopPrice: 400_000 });
+      const pub = await call('get', `/auctions/${a._id}`).expect(200);
+      validates('PublicAuction', pub.body);
+      expect(pub.body.auction).toMatchObject({ auctionType: 'Dutch', dutchPrice: 400_000, minimumBid: null, buyNowPrice: null });
+      const [x, y] = [await actor(), await actor()];
+      await fund(x, 300_000);
+      await fund(y, 400_000);
+      // English commands are refused for a Dutch auction.
+      expect((await bid(a._id, x, 400_000).expect(409)).body.code).toBe('InvalidState');
+      expect((await auto(a._id, x, 400_000).expect(409)).body.code).toBe('InvalidState');
+      expect((await buyNowCmd(a._id, x).expect(409)).body.code).toBe('InvalidState');
+      // Two drops after 125 s on the decision clock: 400,000 → 300,000.
+      pinClock(new Date(a.startAt.getTime() + 125_000));
+      // Accepting a lower price than the server price is refused.
+      const low = await accept(a._id, x, 250_000).expect(409);
+      expect(low.body.message).toContain('300.000đ');
+      const won = await accept(a._id, x, 300_000).expect(200);
+      validates('AuctionCommandReceipt', won.body);
+      // Same instant: the auction already ended for everyone else.
+      expect((await accept(a._id, y, 400_000).expect(409)).body.code).toBe('AuctionClosed');
+      vi.restoreAllMocks();
+      const after = (await db.c.auctions.findOne({ _id: a._id }))!;
+      expect(after).toMatchObject({ leaderId: x.id, currentPrice: 300_000, bidderCount: 1 });
+      expect(after.endAt).toEqual(after.buyNowAt);
+      expect(await heldOf(x)).toBe(300_000);
+      const closed = await closeAt(a._id);
+      expect(closed).toMatchObject({ state: 'AwaitingWinnerPayment', winnerId: x.id, finalPrice: 300_000 });
+      expect(await heldOf(x)).toBe(300_000);
+      expect(await reconciled()).toBe(true);
+    });
+
+    it('Dutch: nobody accepts by the end, so it closes Unsold at the floor', async () => {
+      const a = await liveOf(dutchOver);
+      const closed = await closeAt(a._id);
+      expect(closed).toMatchObject({ state: 'Unsold', bidderCount: 0 });
+    });
+
+    it('Dutch: unfunded acceptance is refused; race of two acceptances has one winner', async () => {
+      const a = await liveOf(dutchOver);
+      const poor = await actor();
+      expect((await accept(a._id, poor, 400_000).expect(409)).body.code).toBe('InvalidState');
+      const [x, y] = [await actor(), await actor()];
+      await fund(x, 400_000);
+      await fund(y, 400_000);
+      const results = await Promise.all([accept(a._id, x, 400_000), accept(a._id, y, 400_000)]);
+      expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+      const after = (await db.c.auctions.findOne({ _id: a._id }))!;
+      expect(after.bidderCount).toBe(1);
+      expect((await heldOf(x)) + (await heldOf(y))).toBe(400_000);
+      expect(await reconciled()).toBe(true);
+    });
+
+    it('format validation: Dutch needs a schedule above the floor and no Buy Now', async () => {
+      const seller = await actor();
+      const l = await saleListing(seller);
+      const post = (over: Parameters<typeof intakeBody>[1]) =>
+        cmd('post', '/auction-intakes', intakeBody(l, over), seller);
+      const field = async (over: Parameters<typeof intakeBody>[1]) =>
+        JSON.stringify((await post(over).expect(422)).body);
+      expect(await field({ ...dutchOver, buyNowPrice: 600_000 })).toContain('buyNowPrice');
+      expect(await field({ ...dutchOver, dutchTopPrice: 200_000 })).toContain('dutchTopPrice');
+      expect(await field({ ...dutchOver, dutchTopPrice: 420_000 })).toContain('dutchTopPrice');
+      // Below the contract minimum: refused by request validation.
+      expect((await post({ ...dutchOver, dutchIntervalSeconds: 5 }).expect(422)).body.code).toBe('VALIDATION_ERROR');
+      expect(await field({ auctionType: 'SealedFirst' })).toContain('buyNowPrice');
+      expect(await field({ dutchTopPrice: 400_000, dutchIntervalSeconds: 60 })).toContain('auctionType');
+    });
+
+    it('sealed first price: bids stay hidden; highest wins and pays it; losers are refunded', async () => {
+      const a = await liveOf({ auctionType: 'SealedFirst', buyNowPrice: null });
+      const [x, y, z] = [await actor(), await actor(), await actor()];
+      for (const m of [x, y, z]) await fund(m, 500_000);
+      const rx = await sealed(a._id, x, 300_000).expect(200);
+      expect(rx.body).toMatchObject({ currentPrice: null, leading: null, minimumBid: 200_000 });
+      await sealed(a._id, y, 250_000).expect(200);
+      await sealed(a._id, z, 300_000).expect(200); // tie: x was first
+      // Nothing reveals who leads or at what price.
+      const pub = await call('get', `/auctions/${a._id}`).expect(200);
+      validates('PublicAuction', pub.body);
+      expect(pub.body).toMatchObject({ leaderAlias: null, history: [] });
+      expect(pub.body.auction).toMatchObject({ currentPrice: null, minimumBid: 200_000, bidderCount: 3 });
+      const own = await call('get', `/me/auctions/${a._id}/participation`, y).expect(200);
+      expect(own.body).toMatchObject({ leading: false, currentPrice: null, ownLevel: 250_000, heldAmount: 250_000 });
+      expect(await db.c.member_notifications.countDocuments({ targetId: a._id, kind: 'AuctionOutbid' })).toBe(0);
+      // Each bidder's whole bid is held.
+      expect([await heldOf(x), await heldOf(y), await heldOf(z)]).toEqual([300_000, 250_000, 300_000]);
+      // Raise only; English commands refused.
+      expect((await sealed(a._id, z, 300_000).expect(409)).body.code).toBe('InvalidState');
+      expect((await bid(a._id, z, 400_000).expect(409)).body.code).toBe('InvalidState');
+      expect((await sealed(a._id, z, 330_000).expect(422)).body.code).toBe('VALIDATION_ERROR');
+      await sealed(a._id, z, 350_000).expect(200);
+      const closed = await closeAt(a._id);
+      expect(closed).toMatchObject({ state: 'AwaitingWinnerPayment', winnerId: z.id, finalPrice: 350_000 });
+      expect([await heldOf(x), await heldOf(y), await heldOf(z)]).toEqual([0, 0, 350_000]);
+      // After the close the history and winner may be shown.
+      const ended = await call('get', `/auctions/${a._id}`).expect(200);
+      expect(ended.body.auction.currentPrice).toBe(350_000);
+      expect(await reconciled()).toBe(true);
+    });
+
+    it('sealed second price: the winner pays the second bid, or the start price alone', async () => {
+      const a = await liveOf({ auctionType: 'SealedSecond', buyNowPrice: null });
+      const [x, y] = [await actor(), await actor()];
+      await fund(x, 500_000);
+      await fund(y, 500_000);
+      await sealed(a._id, x, 400_000).expect(200);
+      await sealed(a._id, y, 300_000).expect(200);
+      const closed = await closeAt(a._id);
+      expect(closed).toMatchObject({ winnerId: x.id, finalPrice: 300_000 });
+      // x held 400,000 and gets 100,000 back; y gets everything back.
+      expect([await heldOf(x), await heldOf(y)]).toEqual([300_000, 0]);
+
+      const solo = await liveOf({ auctionType: 'SealedSecond', buyNowPrice: null });
+      const z = await actor();
+      await fund(z, 500_000);
+      await sealed(solo._id, z, 450_000).expect(200);
+      expect(await closeAt(solo._id)).toMatchObject({ winnerId: z.id, finalPrice: 200_000 });
+      expect(await heldOf(z)).toBe(200_000);
+      expect(await reconciled()).toBe(true);
+    });
+
+    it('sealed: Dutch acceptance is refused and an English auction refuses sealed bids', async () => {
+      const s1 = await liveOf({ auctionType: 'SealedFirst', buyNowPrice: null });
+      const e1 = await liveOf({});
+      const x = await actor();
+      await fund(x, 500_000);
+      expect((await accept(s1._id, x, 300_000).expect(409)).body.code).toBe('InvalidState');
+      expect((await sealed(e1._id, x, 300_000).expect(409)).body.code).toBe('InvalidState');
+    });
+  });
   // ADR 0071: bids, Auto ceilings and Buy Now need available balance for the
   // commitment plus open ones. Historical suites run with the check off
   // (test-env.ts); this block switches it on for the real service.
@@ -4910,7 +5075,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       expect(await wallet(x)).toMatchObject({ available: 500_000, auctionHeld: 0 });
       expect(await heldFor(a._id, x)).toBe(0);
       expect(await wallet(y)).toMatchObject({ available: 150_000, auctionHeld: 350_000 });
-      expect(await kinds(x, a._id)).toEqual(['AuctionFundsHeld', 'AuctionOutbid', 'AuctionFundsReleased']);
+      expect((await kinds(x, a._id)).sort()).toEqual(['AuctionFundsHeld', 'AuctionFundsReleased', 'AuctionOutbid']);
       const released = await db.c.member_notifications.findOne({ userId: x.id, kind: 'AuctionFundsReleased' });
       expect(released!.body).toContain('300.000đ');
       // The rival never sees x's amounts.

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LayoutAnimation, Platform, Pressable, StyleSheet, Switch, UIManager, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { AppTextInput as TextInput, Icon, formatVnd, stitchTokens } from "../../../core/ui";
-import { AUCTION_STEP_MAX, AUCTION_STEPS, BUY_NOW_MODES, type AuctionStep, type BuyNowMode } from "../auctions-model";
+import { AUCTION_FORMATS, AUCTION_STEP_MAX, AUCTION_STEPS, BUY_NOW_MODES, type AuctionFormat, type AuctionStep, type BuyNowMode } from "../auctions-model";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -26,6 +26,13 @@ export interface SendToAuctionPricingProps {
   readonly buyNowPriceError?: string;
   readonly buyNowMode: BuyNowMode;
   readonly onChangeBuyNowMode: (mode: BuyNowMode) => void;
+  readonly auctionType: AuctionFormat;
+  readonly onChangeAuctionType: (t: AuctionFormat) => void;
+  readonly dutchTopText: string;
+  readonly onChangeDutchTopText: (text: string) => void;
+  readonly dutchEveryText: string;
+  readonly onChangeDutchEveryText: (text: string) => void;
+  readonly dutchError?: string;
   readonly disabled?: boolean;
   readonly defaultExpanded?: boolean;
 }
@@ -48,6 +55,13 @@ export function SendToAuctionPricing({
   buyNowPriceError,
   buyNowMode,
   onChangeBuyNowMode,
+  auctionType,
+  onChangeAuctionType,
+  dutchTopText,
+  onChangeDutchTopText,
+  dutchEveryText,
+  onChangeDutchEveryText,
+  dutchError,
   disabled = false,
   defaultExpanded = true,
 }: SendToAuctionPricingProps) {
@@ -231,7 +245,52 @@ export function SendToAuctionPricing({
         )}
       </View>
 
+      {/* ADR 0076: auction format */}
+      <View style={[styles.fieldGroup, { marginTop: 10 }]}>
+        <AppText kind="bold" style={styles.fieldLabel}>Kiểu đấu giá</AppText>
+        <View style={styles.stepGrid} accessibilityRole="radiogroup">
+          {AUCTION_FORMATS.map((m) => {
+            const isSelected = auctionType === m.value;
+            return (
+              <Pressable
+                key={m.value}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: isSelected, disabled }}
+                accessibilityLabel={`${m.label}. ${m.hint}`}
+                disabled={disabled}
+                onPress={() => onChangeAuctionType(m.value)}
+                style={[styles.stepButton, isSelected && styles.stepButtonActive, disabled && { opacity: 0.6 }]}
+              >
+                <Icon name={isSelected ? "check" : "radio_button_unchecked" as any} size={14} color={isSelected ? stitchTokens.gold : stitchTokens.subtleGray} />
+                <AppText kind="bold" style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}>{m.label}</AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+        <AppText kind="small" style={styles.infoText}>{AUCTION_FORMATS.find((m) => m.value === auctionType)!.hint}</AppText>
+        {auctionType === "Dutch" && (
+          <View style={{ gap: 8, marginTop: 8 }}>
+            <AppText kind="bold" style={styles.fieldLabel}>Giá mở đầu (cao nhất)</AppText>
+            <View style={[styles.inputWrapper, Boolean(dutchError) && styles.inputWrapperError]}>
+              <TextInput value={dutchTopText} onChangeText={(t) => onChangeDutchTopText(t.replace(/\D/g, ""))} keyboardType="number-pad"
+                editable={!disabled} placeholder="0" placeholderTextColor={stitchTokens.subtleGray} style={styles.textInput} accessibilityLabel="Giá mở đầu" />
+              <AppText kind="bold" style={styles.currencySuffix}>VNĐ</AppText>
+            </View>
+            <AppText kind="bold" style={styles.fieldLabel}>Giảm một bước sau mỗi</AppText>
+            <View style={[styles.inputWrapper, Boolean(dutchError) && styles.inputWrapperError]}>
+              <TextInput value={dutchEveryText} onChangeText={(t) => onChangeDutchEveryText(t.replace(/\D/g, "").slice(0, 4))} keyboardType="number-pad"
+                editable={!disabled} placeholder="60" placeholderTextColor={stitchTokens.subtleGray} style={styles.textInput} accessibilityLabel="Số giây giữa hai lần giảm giá" />
+              <AppText kind="bold" style={styles.currencySuffix}>giây</AppText>
+            </View>
+            <AppText kind="small" style={dutchError ? styles.errorText : styles.infoText}>
+              {dutchError ?? "Giá khởi điểm phía trên là giá sàn. Mỗi lần giảm một bước giá, 10 giây đến 1 giờ."}
+            </AppText>
+          </View>
+        )}
+      </View>
+
       {/* 3. Buy Now Option (Mua ngay) */}
+      {auctionType === "English" && (
       <View style={styles.buyNowSection}>
         <View style={styles.buyNowToggleRow}>
           <View style={{ flex: 1, marginRight: 10 }}>
@@ -330,6 +389,7 @@ export function SendToAuctionPricing({
           </View>
         )}
       </View>
+      )}
         </>
       )}
     </View>

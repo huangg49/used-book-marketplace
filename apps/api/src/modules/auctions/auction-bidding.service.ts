@@ -41,6 +41,13 @@ import {
 } from './auction-engine.js';
 import { checkAuction } from './auction-invariants.js';
 import {
+  SealedError,
+  applySealed,
+  dutchNextDropAt,
+  dutchPrice,
+  isSealed,
+} from './auction-types.js';
+import {
   notifyAuction,
   notifyAuctionFunds,
   type FundsReason,
@@ -117,6 +124,8 @@ export class AuctionBiddingService {
     reason?: string,
   ): AuctionChange {
     const open = phaseOf(a, decidedAt) !== 'Ended';
+    // ADR 0076: a running sealed auction shows no price or standing.
+    const hidden = open && isSealed(a.auctionType);
     return {
       entityType: 'Auction',
       entityId: a._id,
@@ -127,9 +136,16 @@ export class AuctionBiddingService {
       version: a.version,
       state: a.state,
       decidedAt,
-      currentPrice: a.currentPrice,
-      minimumBid: open ? nextMinimumBid(a) : null,
-      leading: actorId && a.state === 'Active' ? a.leaderId === actorId : null,
+      currentPrice: hidden ? null : a.currentPrice,
+      minimumBid: hidden
+        ? a.startPrice
+        : open && a.auctionType !== 'Dutch'
+          ? nextMinimumBid(a)
+          : null,
+      leading:
+        actorId && a.state === 'Active' && !hidden
+          ? a.leaderId === actorId
+          : null,
       event,
       reason,
     };
@@ -370,6 +386,14 @@ export class AuctionBiddingService {
           id,
           operation !== 'disableAuctionAutoBid',
         );
+        if ((a.auctionType ?? 'English') !== 'English')
+          throw new DomainError(
+            409,
+            'InvalidState',
+            a.auctionType === 'Dutch'
+              ? 'Phiên kiểu Hà Lan chỉ nhận lệnh chấp nhận giá hiện tại.'
+              : 'Phiên đấu giá kín chỉ nhận một giá kín cho mỗi người.',
+          );
         if (buyNow && !buyNowOffered(a, now))
           throw new DomainError(
             409,
@@ -889,6 +913,213 @@ export class AuctionBiddingService {
   }
 
   // ------------------------------------------------------------- reads
+  // ADR 0076: Dutch acceptance. The first member to accept the descending
+  // price wins at the server price of that moment and the auction ends now.
+  acceptDutch(
+    context: CommandContext,
+    id: string,
+    body: Wire['AcceptDutchAuction'],
+  ) {
+    return this.commands.runAuction(context, 'acceptDutchAuction', id, body, {
+      discover: async (tx) => [(await this.auction(tx, id)).sellerId],
+      authorize: async (tx, actor) => {
+        const a = await this.auction(tx, id);
+        await this.eligibleBidder(tx, actor, a);
+        return a;
+      },
+      mutate: async (tx, actor, _before, receiptId) => {
+        const { a, now } = await this.lockForBid(
+          tx,
+          context.auth,
+          actor._id,
+          id,
+          true,
+        );
+        if (a.auctionType !== 'Dutch' || a.leaderId) throw invalidState();
+        const price = dutchPrice(a, now);
+        if (price > body.price)
+          throw new DomainError(
+            409,
+            'InvalidState',
+            `Giá hiện tại là ${price.toLocaleString('vi-VN')}đ, cao hơn mức bạn chấp nhận.`,
+          );
+        if (this.fundsCheck) {
+          await this.requireFunds(tx, actor._id, a._id, price);
+          await this.ledger.setAuctionHold(
+            tx,
+            a._id,
+            actor._id,
+            price,
+            receiptId,
+            now,
+          );
+        }
+        await tx.c.auction_bidders.insertOne({
+          _id: `${a._id}:${actor._id}`,
+          auctionId: a._id,
+          bidderId: actor._id,
+          alias: a.bidderCount + 1,
+          mode: 'Manual',
+          level: price,
+          levelSequence: a.nextSequence,
+          fulfillmentMethod: 'SelfCollect',
+          firstBidAt: now,
+          updatedAt: now,
+          version: 1,
+          lockSeq: 0,
+        });
+        await tx.c.auction_bids.insertOne({
+          _id: randomUUID(),
+          auctionId: a._id,
+          bidderId: actor._id,
+          kind: 'Manual',
+          amount: price,
+          levelSequence: a.nextSequence,
+          priceBefore: null,
+          priceAfter: price,
+          leaderAfter: actor._id,
+          receiptId,
+          decidedAt: now,
+        });
+        // Stored as an Instant Buy Now end (ADR 0074): buyNowAt = endAt = now.
+        const next = await this.update(
+          tx,
+          a,
+          {
+            currentPrice: price,
+            leaderId: actor._id,
+            nextSequence: a.nextSequence + 1,
+            bidderCount: a.bidderCount + 1,
+            bidCount: a.bidCount + 1,
+            buyNowAt: now,
+            endAt: buyNowEndAt(a, false, now),
+          },
+          now,
+        );
+        await notifyAuction(tx, next, 'AuctionBoughtNow', [a.sellerId], now);
+        if (this.fundsCheck)
+          await notifyAuctionFunds(tx, next, actor._id, price, 'Leading', now);
+        return this.change(next, now, 'AuctionBoughtNow', actor._id);
+      },
+    });
+  }
+
+  // ADR 0076: one hidden bid per member, raise only. Every sealed bidder's
+  // whole bid is held (holding only the leader would reveal who leads); the
+  // close keeps the winner's price and refunds everyone else.
+  sealedBid(
+    context: CommandContext,
+    id: string,
+    body: Wire['PlaceSealedBid'],
+  ) {
+    return this.commands.runAuction(context, 'placeSealedBid', id, body, {
+      discover: async (tx) => [(await this.auction(tx, id)).sellerId],
+      authorize: async (tx, actor) => {
+        const a = await this.auction(tx, id);
+        await this.eligibleBidder(tx, actor, a);
+        return a;
+      },
+      mutate: async (tx, actor, _before, receiptId) => {
+        const { a, now, own } = await this.lockForBid(
+          tx,
+          context.auth,
+          actor._id,
+          id,
+          true,
+        );
+        if (!isSealed(a.auctionType)) throw invalidState();
+        const bidders = await tx.c.auction_bidders
+          .find({ auctionId: a._id })
+          .toArray();
+        let result;
+        try {
+          result = applySealed(a, bidders, actor._id, body.amount);
+        } catch (e) {
+          if (!(e instanceof SealedError)) throw e;
+          if (e.reason === 'NotIncreasing')
+            throw new DomainError(
+              409,
+              'InvalidState',
+              'Giá kín mới phải cao hơn giá kín bạn đã gửi.',
+            );
+          invalidField(
+            'amount',
+            e.reason === 'OffGrid'
+              ? 'Giá phải bằng giá khởi điểm cộng một số bước giá.'
+              : `Giá kín tối thiểu ${a.startPrice.toLocaleString('vi-VN')}đ.`,
+          );
+        }
+        let held = 0;
+        if (this.fundsCheck) {
+          await this.requireFunds(tx, actor._id, a._id, body.amount);
+          held = await this.ledger.setAuctionHold(
+            tx,
+            a._id,
+            actor._id,
+            body.amount,
+            receiptId,
+            now,
+          );
+        }
+        if (own) {
+          const updated = await tx.c.auction_bidders.updateOne(
+            { _id: own._id, version: own.version },
+            {
+              $set: {
+                level: result.bidder.level,
+                levelSequence: result.bidder.levelSequence,
+                updatedAt: now,
+              },
+              $inc: { version: 1 },
+            },
+          );
+          if (updated.modifiedCount !== 1) throw conflict();
+        } else
+          await tx.c.auction_bidders.insertOne({
+            _id: `${a._id}:${actor._id}`,
+            auctionId: a._id,
+            bidderId: actor._id,
+            alias: a.bidderCount + 1,
+            mode: 'Manual',
+            level: result.bidder.level,
+            levelSequence: result.bidder.levelSequence,
+            fulfillmentMethod: 'SelfCollect',
+            firstBidAt: now,
+            updatedAt: now,
+            version: 1,
+            lockSeq: 0,
+          });
+        await tx.c.auction_bids.insertOne({
+          _id: randomUUID(),
+          auctionId: a._id,
+          bidderId: actor._id,
+          kind: 'Manual',
+          amount: body.amount,
+          levelSequence: result.bidder.levelSequence,
+          priceBefore: a.currentPrice,
+          priceAfter: result.currentPrice,
+          leaderAfter: result.leaderId,
+          receiptId,
+          decidedAt: now,
+        });
+        const next = await this.update(
+          tx,
+          a,
+          {
+            currentPrice: result.currentPrice,
+            leaderId: result.leaderId,
+            nextSequence: result.nextSequence,
+            bidderCount: a.bidderCount + (own ? 0 : 1),
+            bidCount: a.bidCount + 1,
+          },
+          now,
+        );
+        await notifyAuctionFunds(tx, next, actor._id, held, 'Leading', now);
+        return this.change(next, now, 'AuctionCommitmentChanged', actor._id);
+      },
+    });
+  }
+
   private async summary(
     a: AuctionDoc,
     now: Date,
@@ -899,6 +1130,7 @@ export class AuctionBiddingService {
     });
     const point = await c.handover_points.findOne({ _id: a.pointId });
     const phase = phaseOf(a, now);
+    const sealedLive = phase !== 'Ended' && isSealed(a.auctionType);
     return {
       id: a._id,
       phase,
@@ -913,8 +1145,23 @@ export class AuctionBiddingService {
         phase === 'Scheduled' || buyNowOffered(a, now) ? a.buyNowPrice : null,
       buyNowAt: a.buyNowAt?.toISOString() ?? null,
       buyNowMode: a.buyNowMode,
-      currentPrice: a.currentPrice,
-      minimumBid: phase !== 'Ended' ? nextMinimumBid(a) : null,
+      auctionType: a.auctionType,
+      dutchTopPrice: a.dutchTopPrice,
+      dutchIntervalSeconds: a.dutchIntervalSeconds,
+      dutchPrice:
+        a.auctionType === 'Dutch' && phase === 'Live' ? dutchPrice(a, now) : null,
+      dutchNextDropAt:
+        a.auctionType === 'Dutch' && phase === 'Live'
+          ? (dutchNextDropAt(a, now)?.toISOString() ?? null)
+          : null,
+      // ADR 0076: a running sealed auction shows only the start and count.
+      currentPrice: sealedLive ? null : a.currentPrice,
+      minimumBid:
+        phase === 'Ended' || a.auctionType === 'Dutch'
+          ? null
+          : sealedLive
+            ? a.startPrice
+            : nextMinimumBid(a),
       bidderCount: a.bidderCount,
       startAt: a.startAt.toISOString(),
       endAt: a.endAt.toISOString(),
@@ -1147,10 +1394,13 @@ export class AuctionBiddingService {
         bidderAlias: alias.get(b.leaderAfter!)!,
         at: b.decidedAt.toISOString(),
       }));
+    const sealedLive =
+      phaseOf(a, now) !== 'Ended' && isSealed(a.auctionType);
     return {
       auction: await this.summary(a, now),
-      leaderAlias: a.leaderId ? (alias.get(a.leaderId) ?? null) : null,
-      history,
+      leaderAlias:
+        a.leaderId && !sealedLive ? (alias.get(a.leaderId) ?? null) : null,
+      history: sealedLive ? [] : history,
       serverTime: now.toISOString(),
     };
   }
@@ -1180,6 +1430,7 @@ export class AuctionBiddingService {
       const now = await tx.now();
       const open = phaseOf(a, now) === 'Live';
       const won = a.winnerId === actor._id;
+      const sealedLive = phaseOf(a, now) !== 'Ended' && isSealed(a.auctionType);
       return {
         auctionId: a._id,
         alias: own?.alias ?? null,
@@ -1187,10 +1438,16 @@ export class AuctionBiddingService {
         ownLevel: own?.level ?? null,
         heldAmount: await this.ledger.auctionHeld(tx, actor._id, a._id),
         boughtNow,
-        leading: a.leaderId === actor._id,
+        leading: !sealedLive && a.leaderId === actor._id,
         state: a.state,
-        currentPrice: a.currentPrice,
-        minimumBid: open ? nextMinimumBid(a) : null,
+        currentPrice: sealedLive ? null : a.currentPrice,
+        minimumBid: !open
+          ? null
+          : sealedLive
+            ? a.startPrice
+            : a.auctionType === 'Dutch'
+              ? null
+              : nextMinimumBid(a),
         fulfillmentMethod: 'SelfCollect',
         won,
         orderId: won ? a.orderId : null,

@@ -3233,6 +3233,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auctions/{auctionId}/dutch-accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0076 — Dutch auction. Accepts the current descending price; the first member to accept wins and the auction ends at once (buyNowAt = endAt = now), then the close worker forms the Order. `price` is the price the member saw; the server price at decision time must not be higher (it only falls), otherwise 409 InvalidState with the current price. Refused for other types, before the start or after the end. ADR 0075 — the accepted price is held in the wallet. */
+        post: operations["acceptDutchAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auctions/{auctionId}/sealed-bid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0076 — sealed-bid auction (first or second price). Places or raises the caller's one hidden bid (≥ start price, on the start + n × step grid, above their own previous bid). The receipt never says whether the caller leads and shows no price while the auction runs. ADR 0075 — the caller's whole bid is held in the wallet until the close; losers are refunded at the close, the winner keeps the price they pay (own bid, or the second bid for second price). */
+        post: operations["placeSealedBid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/exchanges": {
         parameters: {
             query?: never;
@@ -6858,6 +6892,11 @@ export interface components {
             step: number;
             buyNowPrice: number | null;
             buyNowMode?: components["schemas"]["AuctionBuyNowMode"];
+            auctionType?: components["schemas"]["AuctionType"];
+            /** @description ADR 0076. Dutch opening price; startPrice is the floor. Null for other types. */
+            dutchTopPrice?: number | null;
+            /** @description ADR 0076. Seconds between Dutch price drops of one step. Null for other types. */
+            dutchIntervalSeconds?: number | null;
             /** @description Protective value snapshotted at intake (ADR 0049). Not capped by the auction price ceiling (ADR 0067); the maximum is the exact-integer limit. Does not change the shelf price or set a bid. If omitted for compatibility, uses the revision salePrice, then exchangeValue, then startPrice. Never recalculated from later bids. */
             declaredValue?: number;
         };
@@ -6913,6 +6952,22 @@ export interface components {
             fulfillmentMethod: "SelfCollect";
         };
         DisableAuctionAutoBid: Record<string, never>;
+        /**
+         * @description ADR 0076. English (default, proxy bidding with Auto and optional Buy Now); Dutch (descending price, first acceptance wins); SealedFirst / SealedSecond (one hidden bid each, winner pays own bid / second-highest bid or the start price). Absent means English.
+         * @enum {string}
+         */
+        AuctionType: "English" | "Dutch" | "SealedFirst" | "SealedSecond";
+        AcceptDutchAuction: {
+            /** @description The descending price the member accepted; the server price must not exceed it. */
+            price: number;
+            /** @enum {string} */
+            fulfillmentMethod: "SelfCollect";
+        };
+        PlaceSealedBid: {
+            amount: number;
+            /** @enum {string} */
+            fulfillmentMethod: "SelfCollect";
+        };
         BuyAuctionNow: {
             /** @enum {string} */
             fulfillmentMethod: "SelfCollect";
@@ -6950,6 +7005,11 @@ export interface components {
             step: number;
             buyNowPrice: number | null;
             buyNowMode?: components["schemas"]["AuctionBuyNowMode"];
+            auctionType?: components["schemas"]["AuctionType"];
+            /** @description ADR 0076. Dutch opening price; startPrice is the floor. Null for other types. */
+            dutchTopPrice?: number | null;
+            /** @description ADR 0076. Seconds between Dutch price drops of one step. Null for other types. */
+            dutchIntervalSeconds?: number | null;
             protectiveValue: number;
             /** @enum {string} */
             state: "AwaitingDropoff" | "Received" | "Passed" | "NeedsEvidence" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Sold";
@@ -7055,6 +7115,18 @@ export interface components {
              */
             buyNowAt?: string | null;
             buyNowMode?: components["schemas"]["AuctionBuyNowMode"];
+            auctionType?: components["schemas"]["AuctionType"];
+            /** @description ADR 0076. Dutch opening price; startPrice is the floor. Null for other types. */
+            dutchTopPrice?: number | null;
+            /** @description ADR 0076. Seconds between Dutch price drops of one step. Null for other types. */
+            dutchIntervalSeconds?: number | null;
+            /** @description ADR 0076. Current Dutch price by server time while live; null otherwise. */
+            dutchPrice?: number | null;
+            /**
+             * Format: date-time
+             * @description ADR 0076. When the Dutch price next falls; null on the floor or when not live.
+             */
+            dutchNextDropAt?: string | null;
             /** Format: uuid */
             listingId: string;
             title: string;
@@ -14468,6 +14540,86 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["BuyAuctionNow"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    acceptDutchAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptDutchAuction"];
+            };
+        };
+        responses: {
+            /** @description Committed receipt (including replay). */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    "Idempotency-Replayed"?: "true" | "false";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuctionCommandReceipt"];
+                };
+            };
+            400: components["responses"]["ListingError"];
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
+            409: components["responses"]["ListingError"];
+            422: components["responses"]["ListingError"];
+            429: components["responses"]["ListingError"];
+            500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    placeSealedBid: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description One key per intent; scoped by actor and operationId. Same key and body replays the stored receipt; a different body returns 409. */
+                "Idempotency-Key": string;
+            };
+            path: {
+                auctionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlaceSealedBid"];
             };
         };
         responses: {

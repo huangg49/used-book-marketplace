@@ -989,6 +989,11 @@ export interface AuctionIntakeDoc extends Lockable {
   buyNowPrice: number | null;
   // ADR 0074: Challenge keeps the ADR 0043/0070 window; Instant ends at Buy Now.
   buyNowMode: AuctionBuyNowMode;
+  // ADR 0076: format; Dutch keeps its opening price and drop interval here
+  // (startPrice is the Dutch floor). Both null for other formats.
+  auctionType: AuctionFormat;
+  dutchTopPrice: number | null;
+  dutchIntervalSeconds: number | null;
   protectiveValue: number;
   policyCode: 'HCM-AUCTION-v1';
   state: AuctionIntakeState;
@@ -1077,6 +1082,7 @@ export type AuctionState =
   | 'Cancelled'
   | 'PaymentExpired';
 export type AuctionBuyNowMode = 'Challenge' | 'Instant';
+export type AuctionFormat = 'English' | 'Dutch' | 'SealedFirst' | 'SealedSecond';
 export interface AuctionDoc extends Lockable {
   _id: string;
   intakeId: string;
@@ -1089,6 +1095,11 @@ export interface AuctionDoc extends Lockable {
   buyNowPrice: number | null;
   // ADR 0074: Challenge keeps the ADR 0043/0070 window; Instant ends at Buy Now.
   buyNowMode: AuctionBuyNowMode;
+  // ADR 0076: format; Dutch keeps its opening price and drop interval here
+  // (startPrice is the Dutch floor). Both null for other formats.
+  auctionType: AuctionFormat;
+  dutchTopPrice: number | null;
+  dutchIntervalSeconds: number | null;
   // ADR 0043: set when Buy Now opened the 60-second challenge window.
   buyNowAt: Date | null;
   startAt: Date;

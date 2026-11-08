@@ -9892,6 +9892,146 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}/dutch-accept:
+    post:
+      operationId: acceptDutchAuction
+      tags:
+        - Auctions
+      description: ADR 0076 — Dutch auction. Accepts the current descending price; the first member to
+        accept wins and the auction ends at once (buyNowAt = endAt = now), then the close worker forms
+        the Order. `price` is the price the member saw; the server price at decision time must not be
+        higher (it only falls), otherwise 409 InvalidState with the current price. Refused for other types,
+        before the start or after the end. ADR 0075 — the accepted price is held in the wallet.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptDutchAuction"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}/sealed-bid:
+    post:
+      operationId: placeSealedBid
+      tags:
+        - Auctions
+      description: ADR 0076 — sealed-bid auction (first or second price). Places or raises the caller's
+        one hidden bid (≥ start price, on the start + n × step grid, above their own previous bid).
+        The receipt never says whether the caller leads and shows no price while the auction runs.
+        ADR 0075 — the caller's whole bid is held in the wallet until the close; losers are refunded
+        at the close, the winner keeps the price they pay (own bid, or the second bid for second price).
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceSealedBid"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /exchanges:
     post:
       operationId: createExchangeProposal
@@ -20072,6 +20212,22 @@ components:
           maximum: 9007199254740991
         buyNowMode:
           $ref: "#/components/schemas/AuctionBuyNowMode"
+        auctionType:
+          $ref: "#/components/schemas/AuctionType"
+        dutchTopPrice:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 9007199254740991
+          description: ADR 0076. Dutch opening price; startPrice is the floor. Null for other types.
+        dutchIntervalSeconds:
+          type:
+            - integer
+            - "null"
+          minimum: 10
+          maximum: 3600
+          description: ADR 0076. Seconds between Dutch price drops of one step. Null for other types.
         declaredValue:
           type: integer
           minimum: 10000
@@ -20231,6 +20387,47 @@ components:
       additionalProperties: false
       required: []
       properties: {}
+    AuctionType:
+      type: string
+      enum:
+        - English
+        - Dutch
+        - SealedFirst
+        - SealedSecond
+      description: ADR 0076. English (default, proxy bidding with Auto and optional Buy Now); Dutch
+        (descending price, first acceptance wins); SealedFirst / SealedSecond (one hidden bid each,
+        winner pays own bid / second-highest bid or the start price). Absent means English.
+    AcceptDutchAuction:
+      type: object
+      additionalProperties: false
+      required:
+        - price
+        - fulfillmentMethod
+      properties:
+        price:
+          type: integer
+          minimum: 10000
+          maximum: 9007199254740991
+          description: The descending price the member accepted; the server price must not exceed it.
+        fulfillmentMethod:
+          type: string
+          enum:
+            - SelfCollect
+    PlaceSealedBid:
+      type: object
+      additionalProperties: false
+      required:
+        - amount
+        - fulfillmentMethod
+      properties:
+        amount:
+          type: integer
+          minimum: 10000
+          maximum: 9007199254740991
+        fulfillmentMethod:
+          type: string
+          enum:
+            - SelfCollect
     BuyAuctionNow:
       type: object
       additionalProperties: false
@@ -20361,6 +20558,22 @@ components:
           maximum: 9007199254740991
         buyNowMode:
           $ref: "#/components/schemas/AuctionBuyNowMode"
+        auctionType:
+          $ref: "#/components/schemas/AuctionType"
+        dutchTopPrice:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 9007199254740991
+          description: ADR 0076. Dutch opening price; startPrice is the floor. Null for other types.
+        dutchIntervalSeconds:
+          type:
+            - integer
+            - "null"
+          minimum: 10
+          maximum: 3600
+          description: ADR 0076. Seconds between Dutch price drops of one step. Null for other types.
         protectiveValue:
           type: integer
           minimum: 0
@@ -20592,6 +20805,35 @@ components:
             shortened end. Null without Buy Now. Optional for older servers.
         buyNowMode:
           $ref: "#/components/schemas/AuctionBuyNowMode"
+        auctionType:
+          $ref: "#/components/schemas/AuctionType"
+        dutchTopPrice:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 9007199254740991
+          description: ADR 0076. Dutch opening price; startPrice is the floor. Null for other types.
+        dutchIntervalSeconds:
+          type:
+            - integer
+            - "null"
+          minimum: 10
+          maximum: 3600
+          description: ADR 0076. Seconds between Dutch price drops of one step. Null for other types.
+        dutchPrice:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 9007199254740991
+          description: ADR 0076. Current Dutch price by server time while live; null otherwise.
+        dutchNextDropAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: ADR 0076. When the Dutch price next falls; null on the floor or when not live.
         listingId:
           type: string
           format: uuid

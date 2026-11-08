@@ -19,6 +19,15 @@ const auctionBookSchema = z.object({
   pages: z.string(), coverNote: z.string(), notes: z.string(), accessories: z.string(), description: z.string(),
   hasMissingPages: z.boolean(), photos: z.array(z.object({ id: z.string().uuid(), width: z.number().positive(), height: z.number().positive() })),
 })
+export const auctionTypeSchema = z.enum(['English', 'Dutch', 'SealedFirst', 'SealedSecond'])
+export type AuctionType = z.infer<typeof auctionTypeSchema>
+/** ADR 0076: the formats a seller can choose. */
+export const AUCTION_TYPES: { value: AuctionType; label: string; short: string; hint: string }[] = [
+  { value: 'English', label: 'Trả giá lên', short: 'Kiểu Anh', hint: 'Người mua trả giá tăng dần, có đặt giá tự động và có thể bật mua ngay. Giá cao nhất khi hết giờ thắng.' },
+  { value: 'Dutch', label: 'Giá giảm dần', short: 'Kiểu Hà Lan', hint: 'Giá bắt đầu cao và giảm một bước sau mỗi khoảng thời gian tới giá sàn. Người đầu tiên chấp nhận thắng ngay.' },
+  { value: 'SealedFirst', label: 'Giá kín · giá thứ nhất', short: 'Kín', hint: 'Mỗi người gửi một giá kín, chỉ được nâng. Giá cao nhất thắng và trả đúng giá đã gửi.' },
+  { value: 'SealedSecond', label: 'Giá kín · giá thứ hai', short: 'Vickrey', hint: 'Mỗi người gửi một giá kín. Giá cao nhất thắng nhưng trả bằng giá cao thứ hai (hoặc giá khởi điểm nếu chỉ một người).' },
+]
 export const buyNowModeSchema = z.enum(['Challenge', 'Instant'])
 export type BuyNowMode = z.infer<typeof buyNowModeSchema>
 /** ADR 0074: the seller's choice of what Buy Now does. */
@@ -35,6 +44,12 @@ export const auctionSummarySchema = z.object({
   buyNowAt: z.string().nullish(),
   // ADR 0074: absent on older servers means Challenge.
   buyNowMode: buyNowModeSchema.nullish(),
+  // ADR 0076: format; absent means English. Dutch price fields only while live.
+  auctionType: auctionTypeSchema.nullish(),
+  dutchTopPrice: money.nullish(),
+  dutchIntervalSeconds: z.number().int().nullish(),
+  dutchPrice: money.nullish(),
+  dutchNextDropAt: z.string().nullish(),
   // ADR 0047: Scheduled before startAt; version lets the seller edit the time.
   phase: z.enum(['Scheduled', 'Live', 'Ended']).nullish(),
   version: z.number().int().nullish(),
@@ -161,6 +176,9 @@ export function getMyPointOrder(id: string) { return session.request(`/me/point-
 function command(path: string, key: string, body: object, method = 'POST') {
   return session.request(path, receiptSchema, { method, headers: { 'Idempotency-Key': key }, body: JSON.stringify(body) })
 }
+// ADR 0076: Dutch acceptance at the price the member saw, and sealed bids.
+export function acceptDutch(id: string, price: number, key: string) { return command(`/auctions/${id}/dutch-accept`, key, { price, fulfillmentMethod: 'SelfCollect' }) }
+export function placeSealedBid(id: string, amount: number, key: string) { return command(`/auctions/${id}/sealed-bid`, key, { amount, fulfillmentMethod: 'SelfCollect' }) }
 export function placeBid(id: string, amount: number, key: string) { return command(`/auctions/${id}/bids`, key, { amount, fulfillmentMethod: 'SelfCollect' }) }
 export function setAutoBid(id: string, maxAmount: number, key: string) { return command(`/auctions/${id}/auto-bid`, key, { maxAmount, fulfillmentMethod: 'SelfCollect' }, 'PUT') }
 export function disableAutoBid(id: string, key: string) { return command(`/auctions/${id}/auto-bid/disable`, key, {}) }
@@ -217,6 +235,7 @@ const myIntakeSchema = z.object({
   listingId: z.string().uuid(), title: z.string(), pointId: z.string().uuid(),
   startPrice: money, step: auctionStepSchema, buyNowPrice: money.nullable(), protectiveValue: money,
   buyNowMode: buyNowModeSchema.nullish(),
+  auctionType: auctionTypeSchema.nullish(), dutchTopPrice: money.nullish(), dutchIntervalSeconds: z.number().int().nullish(),
   createdAt: z.string(), dropoffDeadline: z.string(), receivedAt: z.string().nullable(), inspectedAt: z.string().nullable(),
   inspectionOutcome: z.enum(['Pass', 'Fail', 'NeedsEvidence']).nullable(), inspectionNote: z.string().nullable(),
   reclaimReason: z.string().nullable(), closedAt: z.string().nullable(),
@@ -259,6 +278,9 @@ export type CreateIntakeBody = {
   listingId: string; expectedListingVersion: number; pointId: string
   startPrice: number; step: AuctionStep; buyNowPrice: number | null
   buyNowMode?: BuyNowMode
+  auctionType?: AuctionType
+  dutchTopPrice?: number | null
+  dutchIntervalSeconds?: number | null
   declaredValue?: number | null
 }
 export function createAuctionIntake(body: CreateIntakeBody, key: string) {

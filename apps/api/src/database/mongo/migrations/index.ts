@@ -1,5 +1,6 @@
 import { createMessageSendLimitsMigration, withMessageSendLimits } from './0062-message-send-limits.js';
 import { createBuyNowModeMigration, withBuyNowMode } from './0063-auction-buy-now-mode.js';
+import { createAuctionTypesMigration, withAuctionTypes } from './0065-auction-types.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { manualWithdrawalsMigration, withManualWithdrawals } from './0061-manual-wallet-withdrawals.js';
 import { createWithdrawalsMigration, withdrawalSpecs, withWithdrawals } from './0060-wallet-withdrawals.js';
@@ -512,7 +513,8 @@ const beforeWithdrawals = (): CollectionSpec[] => [
     .map(withAuctionStepOptions)
     .map(withCustomAuctionStep)
     .map(withBuyNowRivalWindow)
-    .map(withBuyNowMode),
+    .map(withBuyNowMode)
+    .map(withAuctionTypes),
   ...pointOrderCollectionSpecs
     .map(withPointCollectionChanges)
     .map(withResolutionChanges)
@@ -571,10 +573,15 @@ migrations.push(manualWithdrawalsMigration, createMessageSendLimitsMigration([
   ...exchangeMessageSpecs,
 ]));
 // ADR 0074: Buy Now mode on the 0058 snapshots of auction_intakes/auctions.
-migrations.push(
-  createBuyNowModeMigration(buyNowRivalWindowMigration.definition.collections),
+const buyNowModeMigration = createBuyNowModeMigration(
+  buyNowRivalWindowMigration.definition.collections,
 );
+migrations.push(buyNowModeMigration);
 // ADR 0075: leader holds on the 0060 snapshots of wallet/ledger/notifications.
 migrations.push(
   createAuctionBidHoldsMigration(withdrawalsMigration.definition.collections),
+);
+// ADR 0076: auction formats on the 0063 snapshots of auction_intakes/auctions.
+migrations.push(
+  createAuctionTypesMigration(buyNowModeMigration.definition.collections),
 );

@@ -8,8 +8,8 @@ import { commandOutcomeUnknown, useIntentKey } from '../hooks/useAuctionClock'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { getMyBookIdentity, getMyListings, getMyPhoto, type MyListing } from '../services/my-listings'
 import {
-  AUCTION_MAX_PRICE, BUY_NOW_MODES, AUCTION_MIN_PRICE, AUCTION_PRICE_DIGITS, AUCTION_STEP_MAX, AUCTION_STEPS, auctionStepError, createAuctionIntake, getMyAuctionIntake, intakePriceErrors, listHandoverPoints,
-  type AuctionStep, type BuyNowMode, type CreateIntakeBody, type HandoverPoint, type MyIntake,
+  AUCTION_MAX_PRICE, AUCTION_TYPES, BUY_NOW_MODES, AUCTION_MIN_PRICE, AUCTION_PRICE_DIGITS, AUCTION_STEP_MAX, AUCTION_STEPS, auctionStepError, createAuctionIntake, getMyAuctionIntake, intakePriceErrors, listHandoverPoints,
+  type AuctionStep, type AuctionType, type BuyNowMode, type CreateIntakeBody, type HandoverPoint, type MyIntake,
 } from '../services/auctions'
 import { conditions } from '../lib/listing-labels'
 import { auctionEligible } from '../lib/owner-listing-labels'
@@ -188,6 +188,11 @@ export function CreateAuctionPage() {
   const [buyNowPrice, setBuyNowPrice] = useState<number | null>(null)
   // ADR 0074: Challenge keeps the 60 s / 5 min window, Instant ends the auction.
   const [buyNowMode, setBuyNowMode] = useState<BuyNowMode>('Challenge')
+  // ADR 0076: format; Dutch adds an opening price and a drop interval.
+  const [auctionType, setAuctionType] = useState<AuctionType>('English')
+  const [dutchTop, setDutchTop] = useState<number | null>(null)
+  const [dutchEvery, setDutchEvery] = useState<number>(60)
+  const english = auctionType === 'English'
   const [touched, setTouched] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -226,8 +231,14 @@ export function CreateAuctionPage() {
     : Math.min(AUCTION_MAX_PRICE, Math.max(AUCTION_MIN_PRICE, Math.floor((declaredValue * 0.6) / step) * step))
   const startPrice = startDraft === undefined ? suggested : startDraft
 
-  const priceErrors = intakePriceErrors(startPrice, step, buyNowOn ? buyNowPrice : null, declaredValue)
-  const missingBuyNow = buyNowOn && buyNowPrice === null
+  const priceErrors = intakePriceErrors(startPrice, step, english && buyNowOn ? buyNowPrice : null, declaredValue)
+  const missingBuyNow = english && buyNowOn && buyNowPrice === null
+  const dutchTopError = auctionType !== 'Dutch' ? undefined
+    : dutchTop === null ? 'Nhập giá mở đầu.'
+    : startPrice !== null && dutchTop <= startPrice ? 'Giá mở đầu phải cao hơn giá sàn.'
+    : startPrice !== null && (dutchTop - startPrice) % step !== 0 ? 'Giá mở đầu phải bằng giá sàn cộng một số bước giá.'
+    : undefined
+  const dutchEveryError = auctionType === 'Dutch' && (dutchEvery < 10 || dutchEvery > 3600) ? 'Từ 10 giây đến 3.600 giây.' : undefined
   const formErrors = {
     listing: !listing ? 'Chọn một cuốn sách trên kệ để đưa lên đấu giá.' : undefined,
     point: !point ? 'Chọn điểm gửi sách.' : point.status !== 'Active' || point.availableSlots < 1 ? 'Điểm này đang hết chỗ, hãy chọn điểm khác.' : undefined,
@@ -235,6 +246,8 @@ export function CreateAuctionPage() {
     step: stepError,
     startPrice: priceErrors.startPrice,
     buyNowPrice: missingBuyNow ? 'Nhập giá mua ngay hoặc bỏ chọn mua ngay.' : priceErrors.buyNowPrice,
+    dutchTopPrice: dutchTopError,
+    dutchIntervalSeconds: dutchEveryError,
   }
   const valid = !Object.values(formErrors).some(Boolean)
   const locked = busy || unknown || !!acknowledgedId
@@ -294,8 +307,11 @@ export function CreateAuctionPage() {
       pointId: point!.id,
       startPrice: startPrice!,
       step,
-      buyNowPrice: buyNowOn ? buyNowPrice : null,
-      buyNowMode: buyNowOn ? buyNowMode : 'Challenge',
+      buyNowPrice: english && buyNowOn ? buyNowPrice : null,
+      buyNowMode: english && buyNowOn ? buyNowMode : 'Challenge',
+      auctionType,
+      dutchTopPrice: auctionType === 'Dutch' ? dutchTop : null,
+      dutchIntervalSeconds: auctionType === 'Dutch' ? dutchEvery : null,
       declaredValue: declaredValue ?? undefined,
     }
     const key = pending.current?.key ?? intent.keyFor(JSON.stringify(body))
@@ -483,14 +499,35 @@ export function CreateAuctionPage() {
                 </p>
               )}
             </div>
-            <PriceInput id="auction-start" label="Giá khởi điểm" value={startPrice} step={step} min={AUCTION_MIN_PRICE} disabled={locked}
+            <div className={styles.chips} role="group" aria-label="Kiểu đấu giá">
+              {AUCTION_TYPES.map((t) => <button type="button" key={t.value} aria-pressed={auctionType === t.value} disabled={locked} onClick={() => setAuctionType(t.value)}>{t.label}<span>{t.short}</span></button>)}
+            </div>
+            <p className={styles.stepHint}>{AUCTION_TYPES.find((t) => t.value === auctionType)!.hint}</p>
+            <PriceInput id="auction-start" label={auctionType === 'Dutch' ? 'Giá sàn (thấp nhất)' : 'Giá khởi điểm'} value={startPrice} step={step} min={AUCTION_MIN_PRICE} disabled={locked}
               onChange={setStartPrice} error={touched || startPrice !== null ? formErrors.startPrice : undefined}
               hint={declaredValue !== null ? `Gợi ý theo giá trị khai báo ${formatVnd(declaredValue)}. Giá khởi điểm hợp lý thu hút nhiều người trả giá hơn.` : 'Lượt trả giá đầu tiên bằng đúng giá khởi điểm.'} />
-            <label className={styles.toggle}>
+            {auctionType === 'Dutch' && <>
+              <PriceInput id="auction-dutch-top" label="Giá mở đầu (cao nhất)" value={dutchTop} step={step} min={(startPrice ?? AUCTION_MIN_PRICE - step) + step} disabled={locked}
+                onChange={setDutchTop} error={touched || dutchTop !== null ? formErrors.dutchTopPrice : undefined} hint="Giá bắt đầu cao, giảm một bước giá mỗi lần tới giá sàn." />
+              <div className={styles.field}>
+                <label htmlFor="auction-dutch-every">Giảm một bước sau mỗi</label>
+                <div data-focus-surface data-focus-invalid={!!dutchEveryError} className={`${styles.money} ${dutchEveryError ? styles.invalid : ''}`}>
+                  <label htmlFor="auction-dutch-every" className={styles.moneyValue}>
+                    <input id="auction-dutch-every" inputMode="numeric" autoComplete="off" disabled={locked} value={dutchEvery || ''}
+                      style={{ width: `${Math.max(String(dutchEvery || '').length, 1) + 0.15}ch` }}
+                      aria-invalid={!!dutchEveryError} aria-describedby="auction-dutch-every-help"
+                      onChange={(e) => setDutchEvery(Number(e.target.value.replace(/\D/g, '').slice(0, 4)) || 0)} />
+                    <span className={styles.unit} aria-hidden="true">giây</span>
+                  </label>
+                </div>
+                <p id="auction-dutch-every-help" className={dutchEveryError ? styles.error : styles.hint}>{dutchEveryError ?? 'Từ 10 giây đến 1 giờ.'}</p>
+              </div>
+            </>}
+            {english && <label className={styles.toggle}>
               <input type="checkbox" checked={buyNowOn} disabled={locked} onChange={() => { setBuyNowOn(!buyNowOn); if (!buyNowOn && buyNowPrice === null && buyNowChips[1]) setBuyNowPrice(buyNowChips[1]) }} />
               <span><strong>Cho phép mua ngay</strong><span>Còn dùng được sau lượt trả giá nếu giá hiện tại thấp hơn giá mua ngay. Lượt trả giá chạm giá mua ngay cũng tính như mua ngay.</span></span>
-            </label>
-            {buyNowOn && <>
+            </label>}
+            {english && buyNowOn && <>
               <PriceInput id="auction-buy-now" label="Giá mua ngay" value={buyNowPrice} step={step} min={(startPrice ?? AUCTION_MIN_PRICE - step) + step} disabled={locked}
                 onChange={setBuyNowPrice} error={touched || buyNowPrice !== null ? formErrors.buyNowPrice : undefined} hint="Phải cao hơn giá khởi điểm và nằm trên lưới giá." />
               <div className={styles.chips} role="group" aria-label="Khi có người mua ngay">

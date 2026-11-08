@@ -376,7 +376,16 @@ export class AuctionIntakesService {
             startPrice: body.startPrice,
             step: body.step,
             buyNowPrice: body.buyNowPrice,
-            buyNowMode: body.buyNowMode ?? 'Challenge',
+            // ADR 0076: Dutch acceptance ends at once, like an Instant Buy Now.
+            buyNowMode:
+              (body.auctionType ?? 'English') === 'Dutch'
+                ? 'Instant'
+                : (body.buyNowMode ?? 'Challenge'),
+            auctionType: body.auctionType ?? 'English',
+            dutchTopPrice:
+              body.auctionType === 'Dutch' ? body.dutchTopPrice! : null,
+            dutchIntervalSeconds:
+              body.auctionType === 'Dutch' ? body.dutchIntervalSeconds! : null,
             protectiveValue:
               body.declaredValue ?? r.salePrice ?? r.exchangeValue ?? body.startPrice,
             policyCode: 'HCM-AUCTION-v1',
@@ -463,12 +472,27 @@ export class AuctionIntakesService {
           'buyNowPrice',
           'Giá mua ngay phải bằng giá khởi điểm cộng một số bước giá.',
         );
-    } else if (body.buyNowMode === 'Instant')
+    } else if (body.buyNowMode === 'Instant' && (body.auctionType ?? 'English') === 'English')
       // ADR 0074: the mode only governs Buy Now, so it needs a Buy Now price.
       invalidField(
         'buyNowMode',
         'Chọn "Mua ngay kết thúc ngay" cần nhập giá mua ngay.',
       );
+    // ADR 0076: only English auctions have Buy Now; Dutch needs its schedule.
+    const type = body.auctionType ?? 'English';
+    if (type !== 'English' && body.buyNowPrice !== null)
+      invalidField('buyNowPrice', 'Chỉ đấu giá kiểu Anh (trả giá lên) có mua ngay.');
+    if (type === 'Dutch') {
+      const top = body.dutchTopPrice;
+      if (top == null || top <= body.startPrice || top > MONEY_MAX)
+        invalidField('dutchTopPrice', 'Giá mở đầu phải cao hơn giá sàn (giá khởi điểm).');
+      else if ((top - body.startPrice) % body.step !== 0)
+        invalidField('dutchTopPrice', 'Giá mở đầu phải bằng giá sàn cộng một số bước giá.');
+      const every = body.dutchIntervalSeconds;
+      if (every == null || every < 10 || every > 3600)
+        invalidField('dutchIntervalSeconds', 'Mỗi lần giảm giá cách nhau 10 giây đến 1 giờ.');
+    } else if (body.dutchTopPrice != null || body.dutchIntervalSeconds != null)
+      invalidField('auctionType', 'Giá mở đầu và nhịp giảm chỉ dùng cho đấu giá kiểu Hà Lan.');
   }
 
   cancel(
@@ -848,6 +872,9 @@ export class AuctionIntakesService {
       step: i.step,
       buyNowPrice: i.buyNowPrice,
       buyNowMode: i.buyNowMode,
+      auctionType: i.auctionType,
+      dutchTopPrice: i.dutchTopPrice,
+      dutchIntervalSeconds: i.dutchIntervalSeconds,
       buyNowAt: null,
       startAt: schedule.startAt,
       endAt: schedule.plannedEndAt,
@@ -1002,6 +1029,9 @@ export class AuctionIntakesService {
       step: i.step as AuctionStep,
       buyNowPrice: i.buyNowPrice,
       buyNowMode: i.buyNowMode,
+      auctionType: i.auctionType,
+      dutchTopPrice: i.dutchTopPrice,
+      dutchIntervalSeconds: i.dutchIntervalSeconds,
       protectiveValue: i.protectiveValue,
       state: i.state,
       version: i.version,

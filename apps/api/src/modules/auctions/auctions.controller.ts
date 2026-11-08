@@ -387,4 +387,45 @@ export class AuctionsController {
       ),
     );
   }
+  // ADR 0076: Dutch acceptance and sealed bids.
+  @Post('auctions/:auctionId/dutch-accept')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  acceptDutch(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.acceptDutch(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('AcceptDutchAuction', body),
+        ),
+        res,
+      ),
+    );
+  }
+  @Post('auctions/:auctionId/sealed-bid')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  sealedBid(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.sealedBid(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('PlaceSealedBid', body),
+        ),
+        res,
+      ),
+    );
+  }
 }

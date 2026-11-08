@@ -50,6 +50,12 @@ export const publicAuctionSummary = z.object({
   buyNowAt: z.string().nullable().optional(),
   // ADR 0074: absent on older servers means Challenge.
   buyNowMode: z.enum(["Challenge", "Instant"]).nullable().optional(),
+  // ADR 0076: format; absent means English. Dutch price fields only while live.
+  auctionType: z.enum(["English", "Dutch", "SealedFirst", "SealedSecond"]).nullable().optional(),
+  dutchTopPrice: z.number().int().nullable().optional(),
+  dutchIntervalSeconds: z.number().int().nullable().optional(),
+  dutchPrice: z.number().int().nullable().optional(),
+  dutchNextDropAt: z.string().nullable().optional(),
   // ADR 0047: Scheduled before startAt; version lets the seller edit the time.
   phase: z.enum(["Scheduled", "Live", "Ended"]).nullable().optional(),
   version: z.number().int().nullable().optional(),

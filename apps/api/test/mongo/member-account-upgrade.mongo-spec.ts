@@ -45,6 +45,7 @@ const suffix = [
   '0062-message-send-limits',
   '0063-auction-buy-now-mode',
   '0064-auction-bid-holds',
+  '0065-auction-types',
 ];
 const sha = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');

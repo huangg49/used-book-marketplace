@@ -194,6 +194,8 @@ export function autoFloor(
 }
 
 export type Standing = "lead" | "tied" | "outbid";
+export const isSealedFormat = (auction: PublicAuctionSummary) =>
+  auction.auctionType === "SealedFirst" || auction.auctionType === "SealedSecond";
 // FR-AU04: equal commitments rank by who reached the level first, so an equal
 // level that does not lead is a tie lost on order, not a higher rival amount.
 export function standingOf(
@@ -201,6 +203,8 @@ export function standingOf(
   me: Participation | null,
 ): Standing | null {
   if (!me || me.ownLevel === null) return null;
+  // ADR 0076: a running sealed auction reveals no standing.
+  if (isSealedFormat(auction)) return null;
   if (me.leading) return "lead";
   return me.ownLevel === auction.currentPrice ? "tied" : "outbid";
 }
@@ -235,7 +239,8 @@ export function formatRemaining(ms: number) {
   return h > 0 ? `${h} giờ ${m} phút` : `${m}:${sec}`;
 }
 
-export type AuctionCommandKind = "Manual" | "Auto" | "Disable" | "BuyNow";
+// ADR 0076: DutchAccept and Sealed for the other auction formats.
+export type AuctionCommandKind = "Manual" | "Auto" | "Disable" | "BuyNow" | "DutchAccept" | "Sealed";
 export type AuctionCommand = {
   kind: AuctionCommandKind;
   amount: number;
@@ -278,6 +283,16 @@ export function createAuctionCommand(
       return command(`${base}/buy-now`, "POST", {
         fulfillmentMethod: "SelfCollect",
       });
+    case "DutchAccept":
+      return command(`${base}/dutch-accept`, "POST", {
+        price: amount,
+        fulfillmentMethod: "SelfCollect",
+      });
+    case "Sealed":
+      return command(`${base}/sealed-bid`, "POST", {
+        amount,
+        fulfillmentMethod: "SelfCollect",
+      });
   }
 }
 export function sendAuctionCommand(
@@ -317,6 +332,15 @@ export function fundsHint(amount: number | null | undefined, available: number |
     : `Số dư khả dụng ${formatVnd(available)}.`;
 }
 
+// ADR 0076: the auction formats a seller can choose.
+export type AuctionFormat = "English" | "Dutch" | "SealedFirst" | "SealedSecond";
+export const AUCTION_FORMATS: { value: AuctionFormat; label: string; hint: string }[] = [
+  { value: "English", label: "Trả giá lên", hint: "Người mua trả giá tăng dần, có đặt giá tự động và có thể bật mua ngay." },
+  { value: "Dutch", label: "Giá giảm dần", hint: "Giá bắt đầu cao, giảm một bước sau mỗi khoảng thời gian tới giá sàn. Người đầu tiên chấp nhận thắng ngay." },
+  { value: "SealedFirst", label: "Kín · giá thứ nhất", hint: "Mỗi người gửi một giá kín, chỉ được nâng. Giá cao nhất thắng và trả đúng giá đã gửi." },
+  { value: "SealedSecond", label: "Kín · giá thứ hai", hint: "Mỗi người gửi một giá kín. Giá cao nhất thắng nhưng trả bằng giá cao thứ hai." },
+];
+
 // ADR 0074: the seller's choice of what Buy Now does.
 export type BuyNowMode = "Challenge" | "Instant";
 export const BUY_NOW_MODES: { value: BuyNowMode; label: string; hint: string }[] = [
@@ -335,6 +359,10 @@ export function receiptMessage(
   buyNowMode: BuyNowMode = "Challenge",
 ) {
   const price = receipt.currentPrice !== null ? formatVnd(receipt.currentPrice) : "";
+  if (kind === "DutchAccept")
+    return "Bạn đã thắng phiên. Hệ thống đang chốt đơn để bạn thanh toán từ ví.";
+  if (kind === "Sealed")
+    return `Đã ghi nhận giá kín ${formatVnd(amount)}. Kết quả công bố khi phiên kết thúc.`;
   if (kind === "BuyNow" && buyNowMode === "Instant")
     return "Bạn đã mua ngay. Phiên kết thúc; hệ thống đang chốt đơn để bạn thanh toán từ ví.";
   if (kind === "BuyNow")

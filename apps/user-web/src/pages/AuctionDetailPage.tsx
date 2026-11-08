@@ -31,6 +31,7 @@ import { rowFrames, standingFrames } from '../lib/auction-motion'
 import { commandError } from '../lib/auction-errors'
 import { PointOrderSteps } from './AuctionPointOrder'
 import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
+import { DutchPanel, SealedPanel } from './AuctionFormatPanels'
 
 const HOUR = 3_600_000
 // Only a won or bought auction has a final price; a held or cancelled one does not.
@@ -205,7 +206,7 @@ export function AuctionDetailPage() {
     action = (
       <div className={styles.notice}>
         <strong>Đăng nhập để trả giá</strong>
-        <p>Trả giá không giữ tiền trong ví. Nếu thắng, bạn thanh toán từ ví và nhận sách tại {auction.pointName}.</p>
+        <p>Khi bạn dẫn giá, ví giữ đúng mức bạn cam kết; bị vượt giá hoặc phiên bị hủy, tiền về lại ví. Nếu thắng, bạn thanh toán từ ví và nhận sách tại {auction.pointName}.</p>
         <Link className={styles.primaryBlock} to={`${ROUTES.login}?returnUrl=${encodeURIComponent(location.pathname + location.search)}`}>Đăng nhập để trả giá <ArrowRight size={16} aria-hidden="true" /></Link>
       </div>
     )
@@ -217,6 +218,9 @@ export function AuctionDetailPage() {
         <button type="button" className={styles.secondaryBlock} onClick={() => void participation.refetch()}>Thử lại</button>
       </div>
     )
+  // ADR 0076: Dutch and sealed auctions have their own panels.
+  else if (auction.auctionType === 'Dutch') action = <DutchPanel auction={auction} me={me} serverTime={detail.data.serverTime} onChanged={refresh} />
+  else if (auction.auctionType === 'SealedFirst' || auction.auctionType === 'SealedSecond') action = <SealedPanel auction={auction} me={me} serverTime={detail.data.serverTime} onChanged={refresh} />
   else action = <BidPanel auction={auction} me={me} onChanged={refresh} paused={intakes.isError} />
 
   return (
