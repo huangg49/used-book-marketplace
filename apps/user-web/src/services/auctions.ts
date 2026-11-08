@@ -195,6 +195,10 @@ export function registrationBlocks(a: AuctionSummary, me: AuctionParticipation |
   if (a.minBidders == null) return false
   return me?.registrationState !== 'Registered' || (a.registeredCount ?? 0) < a.minBidders
 }
+/** ADR 0077: an Instant end would sell to this member alone (no other bidder yet). */
+export function instantNeedsRival(a: AuctionSummary, me: AuctionParticipation | null) {
+  return a.minBidders != null && a.buyNowMode === 'Instant' && a.bidderCount - (me?.alias != null ? 1 : 0) < 1
+}
 export function placeBid(id: string, amount: number, key: string) { return command(`/auctions/${id}/bids`, key, { amount, fulfillmentMethod: 'SelfCollect' }) }
 export function setAutoBid(id: string, maxAmount: number, key: string) { return command(`/auctions/${id}/auto-bid`, key, { maxAmount, fulfillmentMethod: 'SelfCollect' }, 'PUT') }
 export function disableAutoBid(id: string, key: string) { return command(`/auctions/${id}/auto-bid/disable`, key, {}) }

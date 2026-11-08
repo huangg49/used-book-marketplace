@@ -32,8 +32,11 @@ Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
   Sửa 4 lỗi từ rà soát nghiệp vụ: chặn đổi lịch khi đã có người đặt cọc; Admin đã đăng ký
   không được hủy; thông báo hoàn cọc/hủy đúng nội dung và tới cả người đăng ký; bỏ câu
   "trả giá không giữ tiền" cũ trên web/RN. E2E auctions 110/110, web 475, RN 225 PASS.
-  Còn mở (cần quyết định): giá Dutch giảm khi chờ đủ người, Mua ngay "Kết thúc ngay" ngay
-  khi đủ người, tài khoản phụ của người bán đẩy giá, cọc treo khi phiên OnHold.
+  Đã sửa thêm: giá Dutch chỉ giảm từ lúc đủ người đăng ký (`biddingOpenedAt`); Mua ngay
+  "Kết thúc ngay" cần đã có người khác trả giá. E2E auctions 112/112 (lần chạy riêng, không
+  song song), unit auctions 64, Mongo 61, web 475, RN 225 PASS. Các lần chạy song song với
+  bộ khác khi máy còn ~1,6 GB RAM có timeout/503 ngẫu nhiên ở ca cũ, khác nhau mỗi lần.
+  Còn mở: tài khoản phụ của người bán đẩy giá, cọc treo khi phiên OnHold.
 
 Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
 auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web

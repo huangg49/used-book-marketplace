@@ -496,6 +496,21 @@ export class AuctionBiddingService {
           );
         const endsByBuyNow =
           buyNow || reachesBuyNow(a, result.currentPrice);
+        // ADR 0077: an Instant end never sells to a lone bidder; it needs
+        // another member's bid first (Challenge still leaves a window).
+        if (
+          endsByBuyNow &&
+          a.minBidders !== null &&
+          a.buyNowMode === 'Instant' &&
+          a.bidderCount + (own ? 0 : 1) < 2
+        )
+          throw new DomainError(
+            409,
+            'InvalidState',
+            buyNow
+              ? 'Mua ngay ở phiên này kết thúc phiên ngay, nên chỉ dùng được khi đã có người khác trả giá.'
+              : 'Mức này chạm giá mua ngay và sẽ kết thúc phiên ngay; cần có người khác trả giá trước.',
+          );
         const bidder: AuctionBidderDoc = own
           ? {
               ...own,
@@ -1246,10 +1261,17 @@ export class AuctionBiddingService {
             version: 1,
             lockSeq: 0,
           });
+        const opens = a.registeredCount + 1 === a.minBidders;
         const next = await this.update(
           tx,
           a,
-          { registeredCount: a.registeredCount + 1 },
+          {
+            registeredCount: a.registeredCount + 1,
+            // The Dutch clock starts here, never before the published start.
+            ...(opens
+              ? { biddingOpenedAt: now > a.startAt ? now : a.startAt }
+              : {}),
+          },
           now,
         );
         await notifyAuctionFunds(tx, next, actor._id, delta, 'Registered', now);

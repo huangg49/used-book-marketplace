@@ -36,6 +36,20 @@ describe('ADR 0076 Dutch price', () => {
   });
 });
 
+describe('ADR 0077 Dutch clock with registration', () => {
+  const gated = { ...dutch, minBidders: 2, biddingOpenedAt: null } as AuctionDoc;
+  it('holds the top price until enough members registered', () => {
+    expect(dutchPrice(gated, at(600))).toBe(150_000);
+    expect(dutchNextDropAt(gated, at(600))).toBeNull();
+  });
+  it('counts drops from the moment bidding opened', () => {
+    const opened = { ...gated, biddingOpenedAt: at(600) } as AuctionDoc;
+    expect(dutchPrice(opened, at(659))).toBe(150_000);
+    expect(dutchPrice(opened, at(700))).toBe(140_000);
+    expect(dutchNextDropAt(opened, at(700))).toEqual(at(720));
+  });
+});
+
 describe('ADR 0076 sealed bids', () => {
   const sealed = (auctionType: 'SealedFirst' | 'SealedSecond') =>
     ({ auctionType, startPrice: 100_000, step: 10_000, nextSequence: 1 }) as AuctionDoc;

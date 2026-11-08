@@ -28,7 +28,10 @@ settlement.
     `Unsold` với `closeReason = NotEnoughBidders`, sách về người bán, mọi khoản giữ và cọc
     hoàn lại, kèm `AuctionNotEnoughBidders`;
   - Mua ngay (kể cả lượt trả chạm giá mua ngay) và chấp nhận Dutch được coi là chấp nhận
-    giá trực tiếp sau khi đã đủ người đăng ký, nên không cần người trả giá thứ hai;
+    giá trực tiếp sau khi đã đủ người đăng ký, nên không cần người trả giá thứ hai khi
+    đóng. Riêng Mua ngay "Kết thúc ngay" (Instant) bị từ chối 409 khi chưa có người khác
+    trả giá (cả lượt trả chạm giá mua ngay), vì nó bán ngay cho một người; chế độ "Chờ
+    thách đấu" vẫn để người khác trả cao hơn trong cửa sổ 60 giây/5 phút;
   - giá kín thứ hai vì thế không còn trường hợp một người trả giá khởi điểm.
 - Người thua được hoàn cọc khi đóng (đăng ký `Refunded`). Cọc của người thắng nằm trong
   khoản giữ giá chốt (`Applied`) và được dùng khi thanh toán, không trả thêm.
@@ -69,9 +72,14 @@ settlement.
 
 ## Giới hạn
 
+- `biddingOpenedAt` ghi lúc số đăng ký đạt `minBidders` (không sớm hơn `startAt`). Giá Dutch
+  của phiên có đăng ký đứng ở giá mở đầu tới mốc này rồi mới giảm, nên người bán không mất
+  giá trong lúc chờ người. `endAt` không đổi: đủ người muộn thì có thể chưa tới giá sàn khi
+  hết giờ.
 - Đăng ký không khóa ở `startAt`: phiên mở ngay khi đăng không có cửa sổ đăng ký riêng, nên
-  luật dùng số người đăng ký thay cho mốc giờ. Dutch vẫn giảm giá theo `startAt` trong lúc
-  chờ đủ người.
+  luật dùng số người đăng ký thay cho mốc giờ.
+- Migration 0066 được sửa thêm `biddingOpenedAt` trước khi push (chưa áp dụng ở DB dùng
+  chung nào; chỉ DB `_test` cục bộ).
 - Harness kiểm thử tắt đăng ký cho các bộ cũ (`AUCTION_REGISTRATION=Off`, chỉ khi
   `NODE_ENV=test`), như cờ kiểm số dư ADR0071; bộ ADR0077 bật cả hai.
 - Member web và RN có giao diện đăng ký; Flutter chưa có (scaffold). Chưa kiểm chứng native

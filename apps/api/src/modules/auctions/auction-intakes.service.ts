@@ -892,6 +892,7 @@ export class AuctionIntakesService {
       minBidders: this.registration ? i.minBidders : null,
       depositAmount: this.registration ? auctionDeposit(i.startPrice) : null,
       registeredCount: 0,
+      biddingOpenedAt: null,
       closeReason: null,
       buyNowAt: null,
       startAt: schedule.startAt,

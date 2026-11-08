@@ -25,34 +25,35 @@ export const DUTCH_MAX_INTERVAL_S = 3600;
 export const isSealed = (t: AuctionType | undefined | null) =>
   t === 'SealedFirst' || t === 'SealedSecond';
 
+type DutchFields = Pick<
+  AuctionDoc,
+  'startAt' | 'startPrice' | 'step' | 'dutchTopPrice' | 'dutchIntervalSeconds'
+> &
+  Partial<Pick<AuctionDoc, 'minBidders' | 'biddingOpenedAt'>>;
+// ADR 0077: with registration the price only starts falling once enough
+// members registered (biddingOpenedAt); before that it stays at the top.
+export const dutchClock = (a: DutchFields) =>
+  a.minBidders == null ? a.startAt : (a.biddingOpenedAt ?? null);
+
 // The Dutch price at `now`: top − ⌊elapsed / interval⌋ × step, never below the
-// floor. Before the start it is the top price.
-export function dutchPrice(
-  a: Pick<
-    AuctionDoc,
-    'startAt' | 'startPrice' | 'step' | 'dutchTopPrice' | 'dutchIntervalSeconds'
-  >,
-  now: Date,
-) {
+// floor. Before the clock starts it is the top price.
+export function dutchPrice(a: DutchFields, now: Date) {
   const top = a.dutchTopPrice!;
-  const elapsed = Math.max(0, now.getTime() - a.startAt.getTime());
+  const clock = dutchClock(a);
+  if (!clock) return top;
+  const elapsed = Math.max(0, now.getTime() - clock.getTime());
   const drops = Math.floor(elapsed / (a.dutchIntervalSeconds! * 1000));
   return Math.max(a.startPrice, top - drops * a.step);
 }
 
 // When the Dutch price next drops, or null once it sits on the floor.
-export function dutchNextDropAt(
-  a: Pick<
-    AuctionDoc,
-    'startAt' | 'startPrice' | 'step' | 'dutchTopPrice' | 'dutchIntervalSeconds'
-  >,
-  now: Date,
-) {
-  if (dutchPrice(a, now) <= a.startPrice) return null;
+export function dutchNextDropAt(a: DutchFields, now: Date) {
+  const clock = dutchClock(a);
+  if (!clock || dutchPrice(a, now) <= a.startPrice) return null;
   const interval = a.dutchIntervalSeconds! * 1000;
-  const elapsed = Math.max(0, now.getTime() - a.startAt.getTime());
+  const elapsed = Math.max(0, now.getTime() - clock.getTime());
   return new Date(
-    a.startAt.getTime() + (Math.floor(elapsed / interval) + 1) * interval,
+    clock.getTime() + (Math.floor(elapsed / interval) + 1) * interval,
   );
 }
 

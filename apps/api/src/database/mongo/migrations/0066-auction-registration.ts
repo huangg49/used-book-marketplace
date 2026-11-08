@@ -68,14 +68,24 @@ export const registrationSpec: CollectionSpec = {
   ],
 };
 
+// biddingOpenedAt is set exactly when the registered count reaches the
+// minimum (the Dutch clock starts there; withdrawals stop there).
 const auctionRule = and(
   or(
     and(
       isNull('minBidders'),
       isNull('depositAmount'),
       eq(f('registeredCount'), 0),
+      isNull('biddingOpenedAt'),
     ),
-    and(notNull('minBidders'), notNull('depositAmount')),
+    and(
+      notNull('minBidders'),
+      notNull('depositAmount'),
+      eq(
+        { $lt: [f('registeredCount'), f('minBidders')] },
+        isNull('biddingOpenedAt'),
+      ),
+    ),
   ),
   or(isNull('closeReason'), eq(f('state'), 'Unsold')),
 );
@@ -136,6 +146,7 @@ export function withAuctionRegistration(spec: CollectionSpec): CollectionSpec {
         minBidders: t.nint(2, 10),
         depositAmount: { ...money, bsonType: [...money.bsonType, 'null'] },
         registeredCount: t.int(0),
+        biddingOpenedAt: t.ndate(),
         closeReason: t.nenum(...CLOSE_REASONS),
       }),
       expr: and(relaxed.value, auctionRule),
@@ -194,6 +205,7 @@ const NEW_FIELDS = [
   'minBidders',
   'depositAmount',
   'registeredCount',
+  'biddingOpenedAt',
   'closeReason',
 ];
 
@@ -247,6 +259,7 @@ export function createAuctionRegistrationMigration(
                   minBidders: null,
                   depositAmount: null,
                   registeredCount: 0,
+                  biddingOpenedAt: null,
                   closeReason: null,
                 },
               },

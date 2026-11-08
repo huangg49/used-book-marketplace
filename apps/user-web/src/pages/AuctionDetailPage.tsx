@@ -17,7 +17,7 @@ import { formatVnd, ROUTES } from '../lib/routes'
 import { getWalletSummary } from '../services/wallet'
 import { invalidateMemberWalletViews } from '../lib/wallet-cache'
 import {
-  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation, registrationBlocks,
+  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation, instantNeedsRival, registrationBlocks,
   getMyPointOrder, getPointOrderDeliveryQuote, payPointOrder, placeBid, setAutoBid, withdrawIntake, type DeliveryChoice, type MyIntake,
   type AuctionParticipation, type AuctionState, type AuctionSummary,
 } from '../services/auctions'
@@ -696,9 +696,12 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
       {auction.buyNowPrice !== null && !unknown && (
         <div className={styles.buyNow}>
           <span>Mua ngay <strong>{formatVnd(auction.buyNowPrice)}</strong><small>{auction.buyNowMode === 'Instant' ? 'Bạn thắng ngay và phiên kết thúc.' : leading ? 'Kết thúc sớm: người khác còn 60 giây để trả cao hơn.' : 'Người khác còn 5 phút để trả cao hơn sau khi bạn bấm.'}</small></span>
-          <button type="button" className={styles.secondary} disabled={busy || shortOf(auction.buyNowPrice) > 0} onClick={() => setConfirming({ kind: 'BuyNow', amount: auction.buyNowPrice! })}>
+          <button type="button" className={styles.secondary} disabled={busy || shortOf(auction.buyNowPrice) > 0 || instantNeedsRival(auction, me)} onClick={() => setConfirming({ kind: 'BuyNow', amount: auction.buyNowPrice! })}>
             Mua ngay
           </button>
+          {instantNeedsRival(auction, me) && (
+            <small className={styles.muted}>Mua ngay kết thúc phiên ngay, nên chỉ dùng được khi đã có người khác trả giá.</small>
+          )}
           {shortOf(auction.buyNowPrice) > 0 && (
             <small className={styles.walletShort}>
               Cần thêm {formatVnd(shortOf(auction.buyNowPrice))} để mua ngay. <Link to={ROUTES.wallet}>Nạp ví</Link>

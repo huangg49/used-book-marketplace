@@ -202,6 +202,14 @@ export const registrationBlocks = (
   auction.minBidders != null &&
   (me?.registrationState !== "Registered" || (auction.registeredCount ?? 0) < auction.minBidders);
 export const MIN_BIDDER_OPTIONS = [2, 3, 4, 5, 10] as const;
+// ADR 0077: an Instant end would sell to this member alone (no other bidder yet).
+export const instantNeedsRival = (
+  auction: PublicAuctionSummary,
+  me: { alias: number | null } | null,
+) =>
+  auction.minBidders != null &&
+  auction.buyNowMode === "Instant" &&
+  auction.bidderCount - (me?.alias != null ? 1 : 0) < 1;
 export const auctionDepositFor = (startPrice: number) => Math.max(10_000, Math.ceil(startPrice / 10 / 1000) * 1000);
 export const isSealedFormat = (auction: PublicAuctionSummary) =>
   auction.auctionType === "SealedFirst" || auction.auctionType === "SealedSecond";

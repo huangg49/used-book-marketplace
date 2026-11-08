@@ -49,6 +49,7 @@ import {
   standingOf,
   isSealedFormat,
   registrationBlocks,
+  instantNeedsRival,
   type AuctionCommand,
   type AuctionCommandKind,
 } from "./auctions-model";
@@ -795,10 +796,15 @@ function BidPanel({
               {fundsHint(auction.buyNowPrice, available)}
             </AppText>
           )}
+          {instantNeedsRival(auction, me) && (
+            <AppText kind="small" color={colors.muted}>
+              Mua ngay kết thúc phiên ngay, nên chỉ dùng được khi đã có người khác trả giá.
+            </AppText>
+          )}
           <Button
             secondary
             title="Mua ngay"
-            disabled={locked || fundsShortfall(auction.buyNowPrice, available) > 0}
+            disabled={locked || fundsShortfall(auction.buyNowPrice, available) > 0 || instantNeedsRival(auction, me)}
             onPress={() => setConfirming({ kind: "BuyNow", amount: auction.buyNowPrice! })}
           />
         </View>

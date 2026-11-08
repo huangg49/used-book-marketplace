@@ -5427,6 +5427,48 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       expect(await wallet(y)).toMatchObject({ available: 500_000, auctionHeld: 0 });
     });
 
+    it('Dutch: the price only starts falling once enough members registered', async () => {
+      const { a } = await liveOf({
+        auctionType: 'Dutch',
+        buyNowPrice: null,
+        dutchTopPrice: 400_000,
+        dutchIntervalSeconds: 60,
+      });
+      const [x, y] = [await funded(500_000), await funded(500_000)];
+      await register(a._id, x).expect(200);
+      // Ten minutes in, the minimum is reached: the clock starts now, not at startAt.
+      const opened = new Date(a.startAt.getTime() + 10 * 60_000);
+      pinClock(opened);
+      await register(a._id, y).expect(200);
+      vi.restoreAllMocks();
+      expect((await db.c.auctions.findOne({ _id: a._id }))!.biddingOpenedAt).toEqual(opened);
+      // 125 s after opening: two drops (300,000), not twelve (floor).
+      pinClock(new Date(opened.getTime() + 125_000));
+      const low = await cmd('post', `/auctions/${a._id}/dutch-accept`, { price: 250_000, fulfillmentMethod: 'SelfCollect' }, x).expect(409);
+      expect(low.body.message).toContain('300.000đ');
+      await cmd('post', `/auctions/${a._id}/dutch-accept`, { price: 300_000, fulfillmentMethod: 'SelfCollect' }, x).expect(200);
+      vi.restoreAllMocks();
+      expect((await db.c.auctions.findOne({ _id: a._id }))!.currentPrice).toBe(300_000);
+    });
+
+    it('Instant Buy Now needs another bidder first; then it ends the auction', async () => {
+      const { a } = await liveOf({ buyNowMode: 'Instant' });
+      const [x, y] = [await funded(1_000_000), await funded(1_000_000)];
+      await register(a._id, x).expect(200);
+      await register(a._id, y).expect(200);
+      const lone = await cmd('post', `/auctions/${a._id}/buy-now`, { fulfillmentMethod: 'SelfCollect' }, x).expect(409);
+      expect(lone.body.message).toMatch(/người khác trả giá/);
+      // A bid that reaches the Buy Now price is the same Instant end.
+      expect((await bid(a._id, x, 600_000).expect(409)).body.message).toMatch(/người khác trả giá/);
+      expect(await db.c.auction_bids.countDocuments({ auctionId: a._id })).toBe(0);
+      await bid(a._id, y, 200_000).expect(200);
+      await cmd('post', `/auctions/${a._id}/buy-now`, { fulfillmentMethod: 'SelfCollect' }, x).expect(200);
+      const after = (await db.c.auctions.findOne({ _id: a._id }))!;
+      expect(after).toMatchObject({ leaderId: x.id, currentPrice: 600_000, bidderCount: 2 });
+      expect(after.endAt).toEqual(after.buyNowAt);
+      expect(await closeAt(a._id)).toMatchObject({ state: 'AwaitingWinnerPayment', winnerId: x.id });
+    });
+
     it('review fixes: no reschedule after a deposit; a registered Admin cannot cancel; refund wording', async () => {
       const { seller, a } = await liveOf();
       const [x, y, z] = [await funded(500_000), await funded(500_000), await funded(500_000)];

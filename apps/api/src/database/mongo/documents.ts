@@ -1107,6 +1107,9 @@ export interface AuctionDoc extends Lockable {
   minBidders: number | null;
   depositAmount: number | null;
   registeredCount: number;
+  // ADR 0077: when registeredCount first reached minBidders (never before
+  // startAt); the Dutch price clock starts here.
+  biddingOpenedAt: Date | null;
   closeReason: 'NotEnoughBidders' | null;
   // ADR 0043: set when Buy Now opened the 60-second challenge window.
   buyNowAt: Date | null;
