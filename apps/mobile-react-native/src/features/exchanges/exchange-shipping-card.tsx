@@ -128,7 +128,7 @@ export function ExchangeShippingCard({
           </View>
           <AppText style={styles.cardTitle}>Tiến trình giao nhận 2 chiều</AppText>
           <AppText style={styles.cardSubtitle}>
-            Mỗi bên chủ động gửi sách của chiều mình. Hệ thống không thu phí giao hàng.
+            Mỗi bên chủ động gửi sách và tự thanh toán cước phí chiều đi
           </AppText>
         </View>
       </View>
@@ -144,12 +144,12 @@ export function ExchangeShippingCard({
           {isDeliveredOrCompleted
             ? "Cả 2 gói sách đã đến nơi · Sẵn sàng kiểm tra và tất toán"
             : bothSent
-            ? "Cả 2 kiện sách đang trên đường vận chuyển · Hãy chú ý điện thoại"
-            : mySentAt && !partnerSentAt
-            ? `Bạn đã gửi sách · Đang chờ @${partnerName} tạo đơn gửi sách`
-            : !mySentAt && partnerSentAt
-            ? `@${partnerName} đã gửi sách · Vui lòng gửi sách sớm (hạn 72h)`
-            : "Chờ cả hai bên hoàn tất đóng gói và tạo đơn vận chuyển"}
+              ? "Cả 2 kiện sách đang trên đường vận chuyển · Hãy chú ý điện thoại"
+              : mySentAt && !partnerSentAt
+                ? `Bạn đã gửi sách · Đang chờ @${partnerName} tạo đơn gửi sách`
+                : !mySentAt && partnerSentAt
+                  ? `@${partnerName} đã gửi sách · Vui lòng gửi sách sớm (hạn 72h)`
+                  : "Chờ cả hai bên hoàn tất đóng gói và tạo đơn vận chuyển"}
         </AppText>
       </View>
 
@@ -178,8 +178,8 @@ export function ExchangeShippingCard({
               {isDeliveredOrCompleted
                 ? "Đối tác đã nhận"
                 : mySentAt
-                ? "Đang giao tới đối tác"
-                : "Chờ bạn tạo đơn"}
+                  ? "Đang giao tới đối tác"
+                  : "Chờ bạn tạo đơn"}
             </AppText>
           </View>
         </View>
@@ -356,7 +356,7 @@ export function ExchangeShippingCard({
                       style={[
                         styles.copyBtnLargeText,
                         copiedCode === myShipment.trackingCode &&
-                          styles.copyBtnTextSuccess,
+                        styles.copyBtnTextSuccess,
                       ]}
                     >
                       {copiedCode === myShipment.trackingCode
@@ -425,8 +425,8 @@ export function ExchangeShippingCard({
               {isDeliveredOrCompleted
                 ? "Bạn đã nhận sách"
                 : partnerSentAt
-                ? "Đang giao tới bạn"
-                : "Chờ đối tác gửi"}
+                  ? "Đang giao tới bạn"
+                  : "Chờ đối tác gửi"}
             </AppText>
           </View>
         </View>
@@ -607,7 +607,7 @@ export function ExchangeShippingCard({
                       style={[
                         styles.copyBtnLargeText,
                         copiedCode === partnerShipment.trackingCode &&
-                          styles.copyBtnTextSuccess,
+                        styles.copyBtnTextSuccess,
                       ]}
                     >
                       {copiedCode === partnerShipment.trackingCode
