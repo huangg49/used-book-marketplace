@@ -20,6 +20,10 @@ export const exchangeShipmentInfo = z.object({
   trackingCode: z.string().nullable().optional(),
   meetupLocation: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  packagingPhotoUrl: z.string().nullable().optional(),
+  packagingVideoUrl: z.string().nullable().optional(),
+  packagingPhotoName: z.string().nullable().optional(),
+  packagingVideoName: z.string().nullable().optional(),
   shippedAt: dateIso,
 });
 

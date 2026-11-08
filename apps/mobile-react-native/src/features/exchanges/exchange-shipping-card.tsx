@@ -385,6 +385,15 @@ export function ExchangeShippingCard({
                 Ghi chú: {myShipment.notes}
               </AppText>
             ) : null}
+
+            {myShipment.packagingPhotoUrl || myShipment.packagingVideoUrl ? (
+              <View style={styles.packagingEvidenceBadge}>
+                <Icon name="shield" size={12} color={stitchTokens.likeNewGreen} />
+                <AppText style={styles.packagingEvidenceText}>
+                  Đã đính kèm ảnh &amp; video đóng gói niêm phong
+                </AppText>
+              </View>
+            ) : null}
           </View>
         ) : (
           <View style={styles.emptyNoticeBox}>
@@ -627,6 +636,21 @@ export function ExchangeShippingCard({
                 <Icon name="pin" size={13} color={stitchTokens.wineDark} />
                 <AppText style={styles.meetupText}>
                   Điểm hẹn: {partnerShipment.meetupLocation}
+                </AppText>
+              </View>
+            ) : null}
+
+            {partnerShipment.notes ? (
+              <AppText style={styles.notesText}>
+                Ghi chú: {partnerShipment.notes}
+              </AppText>
+            ) : null}
+
+            {partnerShipment.packagingPhotoUrl || partnerShipment.packagingVideoUrl ? (
+              <View style={styles.packagingEvidenceBadge}>
+                <Icon name="shield" size={12} color={stitchTokens.likeNewGreen} />
+                <AppText style={styles.packagingEvidenceText}>
+                  Đối tác đã đính kèm ảnh &amp; video đóng gói niêm phong
                 </AppText>
               </View>
             ) : null}
@@ -1040,6 +1064,24 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: stitchTokens.wineDark,
     lineHeight: 15,
+  },
+  packagingEvidenceBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: stitchTokens.likeNewGreenBg,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: stitchTokens.likeNewGreen,
+    alignSelf: "flex-start",
+    marginTop: 4,
+  },
+  packagingEvidenceText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: stitchTokens.likeNewGreen,
   },
   pressed: {
     opacity: 0.7,
