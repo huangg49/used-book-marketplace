@@ -190,22 +190,30 @@ function ExchangeDetailContent({
   };
 
   const handleDispute = async (reason: string) => {
-    await reportIssue(id!, detail!.revision!, reason);
+    const latest = await getExchangeDetail(id!).catch(() => detail);
+    const rev = latest?.revision ?? detail!.revision!;
+    await reportIssue(id!, rev, reason);
     invalidate();
   };
 
   const handleConfirmSent = async (shipmentData?: ShipmentData) => {
-    await confirmSent(id!, detail!.revision!, shipmentData);
+    const latest = await getExchangeDetail(id!).catch(() => detail);
+    const rev = latest?.revision ?? detail!.revision!;
+    await confirmSent(id!, rev, shipmentData);
     invalidate();
   };
 
   const handleConfirmReceived = async () => {
-    await confirmReceived(id!, detail!.revision!);
+    const latest = await getExchangeDetail(id!).catch(() => detail);
+    const rev = latest?.revision ?? detail!.revision!;
+    await confirmReceived(id!, rev);
     invalidate();
   };
 
   const handleComplete = async () => {
-    await completeExchange(id!, detail!.revision!);
+    const latest = await getExchangeDetail(id!).catch(() => detail);
+    const rev = latest?.revision ?? detail!.revision!;
+    await completeExchange(id!, rev);
     invalidate();
   };
 

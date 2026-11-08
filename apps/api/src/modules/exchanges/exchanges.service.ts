@@ -1441,19 +1441,23 @@ export class ExchangesService {
         member(actor);
         this.participant(exchange, actor._id);
 
-        if (
-          !['Preparing', 'InTransit'].includes(exchange.status) ||
-          exchange.revision !== body.expectedVersion
-        ) {
-          throw conflict();
-        }
-
         const isInitiator = exchange.initiatorId === actor._id;
         if (
           (isInitiator && exchange.initiatorShippedAt) ||
           (!isInitiator && exchange.recipientShippedAt)
         ) {
           throw invalidState();
+        }
+
+        // Allow expectedVersion to be either the current revision or the revision right before
+        // the other party shipped their leg, as both parties ship independently.
+        const minAcceptableVersion = exchange.revision - 1;
+        if (
+          !['Preparing', 'InTransit'].includes(exchange.status) ||
+          body.expectedVersion < minAcceptableVersion ||
+          body.expectedVersion > exchange.revision
+        ) {
+          throw conflict();
         }
 
         const now = await tx.now();
@@ -1539,19 +1543,21 @@ export class ExchangesService {
         member(actor);
         this.participant(exchange, actor._id);
 
-        if (
-          !['InTransit', 'Delivered'].includes(exchange.status) ||
-          exchange.revision !== body.expectedVersion
-        ) {
-          throw conflict();
-        }
-
         const isInitiator = exchange.initiatorId === actor._id;
         if (
           (isInitiator && exchange.initiatorReceivedAt) ||
           (!isInitiator && exchange.recipientReceivedAt)
         ) {
           throw invalidState();
+        }
+
+        const minAcceptableVersion = exchange.revision - 1;
+        if (
+          !['InTransit', 'Delivered'].includes(exchange.status) ||
+          body.expectedVersion < minAcceptableVersion ||
+          body.expectedVersion > exchange.revision
+        ) {
+          throw conflict();
         }
 
         const now = await tx.now();
@@ -1627,16 +1633,20 @@ export class ExchangesService {
         ) {
           throw invalidState();
         }
-        if (exchange.revision !== body.expectedVersion) {
-          throw conflict();
-        }
-
         const isInitiator = exchange.initiatorId === actor._id;
         if (
           (isInitiator && exchange.initiatorCompletedAt) ||
           (!isInitiator && exchange.recipientCompletedAt)
         ) {
           throw invalidState();
+        }
+
+        const minAcceptableVersion = exchange.revision - 1;
+        if (
+          body.expectedVersion < minAcceptableVersion ||
+          body.expectedVersion > exchange.revision
+        ) {
+          throw conflict();
         }
 
         const now = await tx.now();
