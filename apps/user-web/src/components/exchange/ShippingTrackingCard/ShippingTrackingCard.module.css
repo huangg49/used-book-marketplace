@@ -168,43 +168,13 @@
     margin-bottom: 20px;
 }
 
-@container (min-width: 680px) {
+@container (min-width: 580px) {
     .legsGrid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 18px;
+        gap: 16px;
         align-items: stretch;
     }
-
-    .flowConnector {
-        display: none;
-    }
-}
-
-.flowConnector {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: -4px 0;
-}
-
-.connectorLine {
-    flex: 1;
-    height: 1px;
-    background: #ebd9c8;
-}
-
-.connectorBadge {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--shop-muted, #716157);
-    background: #faf6f0;
-    border: 1px solid #ebd9c8;
-    padding: 3px 10px;
-    border-radius: 999px;
-    white-space: nowrap;
 }
 
 /* Leg Card */
@@ -217,6 +187,7 @@
     flex-direction: column;
     gap: 14px;
     position: relative;
+    min-width: 0;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 

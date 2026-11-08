@@ -514,14 +514,6 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
                     books: detail.giveBooks
                 })}
 
-                <div className={styles.flowConnector}>
-                    <div className={styles.connectorLine} />
-                    <div className={styles.connectorBadge}>
-                        <span>⇄ Trao đổi 2 chiều</span>
-                    </div>
-                    <div className={styles.connectorLine} />
-                </div>
-
                 {renderLegCard({
                     direction: 'incoming',
                     title: `Sách @${detail.partner.username} gửi cho bạn`,
