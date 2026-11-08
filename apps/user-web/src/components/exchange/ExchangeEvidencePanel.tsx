@@ -160,10 +160,12 @@ export function ExchangeEvidencePanel({
 
       {/* Upload & Preview Area */}
       <div className={ui.uploadArea}>
-        {!file && !resumeId ? (
+        {!file ? (
           <label className={ui.dropzone}>
-            <span className={ui.dropzoneTitle}>Chọn ảnh hoặc video</span>
-            <span className={ui.dropzoneHint}>JPG, PNG, MP4 (tối đa 10 tệp)</span>
+            <span className={ui.dropzoneTitle}>
+              {resumeId ? "Chọn lại tệp để gửi tiếp" : "Chọn ảnh hoặc video"}
+            </span>
+            <span className={ui.dropzoneHint}>JPG, PNG, MP4</span>
             <input
               aria-label="Chọn bằng chứng"
               className={ui.hiddenFileInput}
