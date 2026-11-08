@@ -13,6 +13,22 @@ Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
 - [ADR0076](../adr/0076-auction-formats.md): kiểu Hà Lan (giá giảm dần, người đầu tiên
   chấp nhận thắng) và đấu giá kín giá thứ nhất/thứ hai; ẩn giá/người dẫn khi đang chạy.
   Migration `0065-auction-types`.
+- [ADR0077](../adr/0077-auction-registration-deposit.md) (commit thứ tư, góp ý giảng
+  viên "không có phiên chỉ một người"): đăng ký tham gia có tiền cọc 10% (≥10.000đ),
+  người bán chọn tối thiểu 2–10 người; phiên mở trả giá khi đủ người, chỉ bán khi có
+  ít nhất hai người trả giá (trừ Mua ngay/Dutch), nếu không `Unsold`
+  `NotEnoughBidders` và hoàn cọc. Người thua được hoàn cọc; người thắng không thanh
+  toán mất cọc cho **nền tảng** (không cho người bán, tránh người bán dùng tài khoản phụ
+  đẩy giá). Migration `0066-auction-registration`, collection `auction_registrations`,
+  journal `AuctionDepositForfeit`. Thay đổi tiền mô phỏng: cần human review.
+  Kiểm chứng ADR0077: E2E auctions 108/108 (12 ca mới: happy, từ chối, replay, race,
+  rút đăng ký, không đủ người, một người trả giá, kín giá thứ hai, thanh toán, mất cọc,
+  Dutch, hủy), Mongo schema 28/28, unit auctions 62, contract 262 operations, web
+  typecheck + 475, RN typecheck + 225 PASS. Ghi chú: `reconciled()` quét mọi journal nên
+  chậm dần cuối file; bộ ADR0077 chỉ gọi ở hai ca tiền chính để không vượt 15 giây.
+  Full API E2E sau ADR0077: 943/961, 14 lỗi ở assist-fast-paths/carrier-pickup/
+  delivery-overdue/order-preparation/shipments/wallet (9 timeout 15 giây); chạy lại
+  riêng sáu file đó 195/195 PASS (nghi do tải máy, chưa chứng minh).
 
 Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
 auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web

@@ -48,6 +48,7 @@ import {
   sendAuctionCommand,
   standingOf,
   isSealedFormat,
+  registrationBlocks,
   type AuctionCommand,
   type AuctionCommandKind,
 } from "./auctions-model";
@@ -576,6 +577,8 @@ function AuctionBody({
         ) : (
           <Button title="Đăng nhập để trả giá" onPress={() => router.push("/account")} />
         )
+      ) : scheduled && signedIn && !meLoading && auction.state === "Active" && registrationBlocks(auction, me) ? (
+        <BidPanel auction={auction} me={me} refresh={refresh} paused={ownerError} />
       ) : scheduled ? (
         <Notice>
           {`Phiên chưa mở. Người bán hẹn mở lúc ${time(auction.startAt)}; khi đó bạn có thể trả giá${auction.buyNowPrice !== null ? ` hoặc mua ngay với ${formatVnd(auction.buyNowPrice)}` : ""}.`}
@@ -584,7 +587,9 @@ function AuctionBody({
         <Notice>
           {auction.state === "OnHold"
             ? "Phiên tạm dừng để quản trị viên xem xét; phiên không nhận thêm giá."
-            : "Phiên không còn nhận trả giá."}
+            : auction.closeReason === "NotEnoughBidders"
+              ? `Phiên không đủ người tham gia (cần ${auction.minBidders ?? 2} người đăng ký và hai người trả giá) nên không bán. Tiền cọc và khoản giữ đã về lại ví.`
+              : "Phiên không còn nhận trả giá."}
         </Notice>
       )}
       </View>
@@ -691,6 +696,10 @@ function BidPanel({
           <Button title="Thử lại thao tác vừa rồi" busy={busy} onPress={() => void run(pending)} />
           <Button secondary title="Cập nhật trạng thái phiên" disabled={busy} onPress={() => void refresh()} />
         </View>
+      ) : registrationBlocks(auction, me) ? (
+        <RegisterBlock auction={auction} me={me} available={available} locked={locked}
+          onRegister={(deposit) => setConfirming({ kind: "Register", amount: deposit })}
+          onWithdraw={() => setConfirming({ kind: "Withdraw", amount: 0 })} />
       ) : auction.auctionType === "Dutch" ? (
         <DutchBlock auction={auction} available={available} locked={locked} refresh={refresh}
           onAccept={(price) => setConfirming({ kind: "DutchAccept", amount: price })} />
@@ -827,6 +836,18 @@ function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuc
         message: "Hệ thống ngừng trả thay bạn. Nếu bạn đang dẫn, bạn vẫn cam kết mua ở giá hiện tại.",
         confirm: "Tắt tự động",
       };
+    case "Register":
+      return {
+        title: `Đặt cọc ${formatVnd(amount)} để đăng ký?`,
+        message: `Ví giữ ${formatVnd(amount)} ngay. Tiền cọc được hoàn khi bạn không thắng, phiên không đủ người hoặc bị hủy; bạn có thể rút đăng ký trước khi phiên đủ ${auction.minBidders ?? 2} người. Nếu thắng mà không thanh toán trong 24 giờ, tiền cọc chuyển cho nền tảng.`,
+        confirm: "Đặt cọc và đăng ký",
+      };
+    case "Withdraw":
+      return {
+        title: "Rút đăng ký?",
+        message: "Tiền cọc về lại ví ngay. Bạn có thể đăng ký lại khi phiên còn mở.",
+        confirm: "Rút đăng ký",
+      };
     case "DutchAccept":
       return {
         title: `Mua với ${formatVnd(amount)}?`,
@@ -846,6 +867,41 @@ function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuc
         confirm: "Mua ngay",
       };
   }
+}
+
+// ADR 0077: register with a refundable deposit; bidding opens at minBidders.
+function RegisterBlock({ auction, me, available, locked, onRegister, onWithdraw }: {
+  auction: PublicAuctionSummary;
+  me: Participation | null;
+  available: number | null;
+  locked: boolean;
+  onRegister: (deposit: number) => void;
+  onWithdraw: () => void;
+}) {
+  const deposit = auction.depositAmount ?? 0;
+  const need = auction.minBidders ?? 2;
+  const count = auction.registeredCount ?? 0;
+  const registered = me?.registrationState === "Registered";
+  const short = registered ? 0 : fundsShortfall(deposit, available);
+  return (
+    <View style={{ gap: space.sm }}>
+      <AppText kind="bold">{registered ? "Bạn đã đăng ký phiên này" : "Đăng ký để tham gia đấu giá"}</AppText>
+      <AppText kind="small" color={colors.muted}>
+        {`Phiên mở trả giá khi có ít nhất ${need} người đăng ký; hiện có ${count}/${need}. Phiên chỉ bán khi có ít nhất hai người trả giá.`}
+      </AppText>
+      <AppText kind="small" color={colors.muted}>
+        {registered
+          ? `Ví đang giữ ${formatVnd(me?.deposit ?? deposit)} tiền cọc. Bạn có thể rút đăng ký khi phiên chưa đủ người.`
+          : `Tiền cọc ${formatVnd(deposit)} được hoàn khi bạn không thắng hoặc phiên không đủ người. Nếu thắng, tiền cọc tính vào giá; thắng mà không thanh toán đúng hạn thì không được hoàn.`}
+      </AppText>
+      {short > 0 && <AppText kind="small" color={colors.error}>{fundsHint(deposit, available)}</AppText>}
+      {registered ? (
+        <Button secondary title="Rút đăng ký và nhận lại tiền cọc" disabled={locked} onPress={onWithdraw} />
+      ) : (
+        <Button wine title={`Đặt cọc ${formatVnd(deposit)} và đăng ký`} disabled={locked || short > 0} onPress={() => onRegister(deposit)} />
+      )}
+    </View>
+  );
 }
 
 // ADR 0076: the descending price; refetches when it drops.

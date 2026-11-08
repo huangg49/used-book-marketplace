@@ -222,12 +222,57 @@ export class AuctionBiddingService {
         'Bạn thao tác đấu giá quá nhanh. Hãy thử lại sau ít phút.',
       );
     const own = await tx.c.auction_bidders.findOne({ _id: `${id}:${actorId}` });
+    if (mayLead) await this.requireRegistered(tx, a, actorId);
     if (mayLead && a.leaderId !== actorId) {
       await requireUnrestricted(tx, actorId, now);
       await this.checkParticipationQuota(tx, actorId, id);
     }
     return { a, now, own };
   }
+  // ADR 0077: an auction with registration takes commitments only from
+  // registered members, and only once enough members have registered.
+  private registrationOf(tx: Tx, a: AuctionDoc, userId: string) {
+    if (a.minBidders === null) return Promise.resolve(null);
+    return tx.c.auction_registrations.findOne({ _id: `${a._id}:${userId}` });
+  }
+  private async requireRegistered(tx: Tx, a: AuctionDoc, userId: string) {
+    if (a.minBidders === null) return;
+    const r = await this.registrationOf(tx, a, userId);
+    if (r?.state !== 'Registered')
+      throw new DomainError(
+        409,
+        'InvalidState',
+        'Bạn cần đăng ký tham gia và đặt cọc trước khi trả giá ở phiên này.',
+      );
+    if (a.registeredCount < a.minBidders)
+      throw new DomainError(
+        409,
+        'InvalidState',
+        `Phiên mở trả giá khi đủ ${a.minBidders} người đăng ký (hiện có ${a.registeredCount}).`,
+      );
+  }
+  // ADR 0077: a registered member's hold never falls below their deposit
+  // while the registration stands (one hold per member and auction).
+  private async holdTo(
+    tx: Tx,
+    a: AuctionDoc,
+    holderId: string,
+    level: number,
+    receiptId: string,
+    now: Date,
+  ) {
+    const r = await this.registrationOf(tx, a, holderId);
+    const floor = r?.state === 'Registered' ? r.deposit : 0;
+    return this.ledger.setAuctionHold(
+      tx,
+      a._id,
+      holderId,
+      Math.max(level, floor),
+      receiptId,
+      now,
+    );
+  }
+
   // ADR 0071: the wallet must cover this commitment plus the caller's open
   // ones (live auctions they lead elsewhere, unpaid auction orders). A check
   // at command time, not a hold: no ledger entry, PaymentExpired stays the net.
@@ -503,9 +548,9 @@ export class AuctionBiddingService {
             holdMoves.push({
               holderId: a.leaderId,
               reason: 'Outbid',
-              delta: await this.ledger.setAuctionHold(
+              delta: await this.holdTo(
                 tx,
-                a._id,
+                a,
                 a.leaderId,
                 0,
                 receiptId,
@@ -516,9 +561,9 @@ export class AuctionBiddingService {
             holdMoves.push({
               holderId: actor._id,
               reason: 'Leading',
-              delta: await this.ledger.setAuctionHold(
+              delta: await this.holdTo(
                 tx,
-                a._id,
+                a,
                 actor._id,
                 result.bidder.level,
                 receiptId,
@@ -760,15 +805,43 @@ export class AuctionBiddingService {
         if (a.leaderId !== before.leaderId) throw conflict();
         const now = await this.clock.now(tx);
         if (a.state !== 'Active' || now < a.endAt) throw invalidState();
-        if (!a.leaderId) {
+        // ADR 0077: an auction with registration never sells to a lone
+        // bidder: it needs minBidders registered and, unless a price was
+        // accepted outright (Buy Now, Dutch), at least two members who bid.
+        const tooFew =
+          a.minBidders !== null &&
+          (a.registeredCount < a.minBidders ||
+            (!a.buyNowAt && a.bidderCount > 0 && a.bidderCount < 2));
+        if (!a.leaderId || tooFew) {
           const next = await this.update(
             tx,
             a,
-            { state: 'Unsold', closedAt: now },
+            {
+              state: 'Unsold',
+              closedAt: now,
+              closeReason: tooFew ? 'NotEnoughBidders' : null,
+            },
             now,
           );
           await this.reclaim(tx, a, 'Unsold', now);
-          await notifyAuction(tx, next, 'AuctionUnsold', [a.sellerId], now);
+          await this.releaseHolds(
+            tx,
+            next,
+            null,
+            tooFew ? 'NotEnoughBidders' : 'Closed',
+            receiptId,
+            now,
+          );
+          if (tooFew)
+            await notifyAuction(
+              tx,
+              next,
+              'AuctionNotEnoughBidders',
+              [a.sellerId, ...(await this.registrantIds(tx, a))],
+              now,
+            );
+          else
+            await notifyAuction(tx, next, 'AuctionUnsold', [a.sellerId], now);
           return this.change(next, now, 'AuctionUnsold', null);
         }
         if (!(await this.partiesEligible(tx, a))) {
@@ -867,7 +940,19 @@ export class AuctionBiddingService {
           receiptId,
         });
         const next = await this.update(tx, a, { state: 'PaymentExpired' }, now);
+        // ADR 0077: the winner's deposit goes to the platform (not the
+        // seller, so a seller's own account cannot win, default and recover
+        // it); the rest of their hold is released below.
+        const forfeited = await this.forfeitDeposit(tx, next, receiptId, now);
         await this.releaseHolds(tx, next, null, 'Expired', receiptId, now);
+        if (forfeited)
+          await notifyAuction(
+            tx,
+            next,
+            'AuctionDepositForfeited',
+            [a.winnerId],
+            now,
+          );
         await this.reclaim(tx, a, 'PaymentExpired', now);
         await notifyAuction(
           tx,
@@ -893,8 +978,35 @@ export class AuctionBiddingService {
     const holds = await tx.c.wallet_accounts
       .find({ purpose: 'AuctionBidHold', auctionId: a._id })
       .toArray();
+    // ADR 0077: open registrations end with the auction; the winner's deposit
+    // is part of the price kept for payment.
+    await tx.c.auction_registrations.updateMany(
+      { auctionId: a._id, state: 'Registered' },
+      [
+        {
+          $set: {
+            state: {
+              $cond: [
+                { $eq: ['$userId', keep?.holderId ?? null] },
+                'Applied',
+                'Refunded',
+              ],
+            },
+            updatedAt: now,
+            version: { $add: ['$version', 1] },
+          },
+        },
+      ],
+    );
     for (const h of holds) {
-      const target = keep && h.holderId === keep.holderId ? keep.amount : 0;
+      // A release never raises a hold (the winner keeps at most what is held).
+      const target =
+        keep && h.holderId === keep.holderId
+          ? Math.min(
+              keep.amount,
+              await this.ledger.auctionHeld(tx, h.holderId, a._id),
+            )
+          : 0;
       const delta = await this.ledger.setAuctionHold(
         tx,
         a._id,
@@ -907,6 +1019,43 @@ export class AuctionBiddingService {
       if (delta < 0)
         await notifyAuctionFunds(tx, a, h.holderId!, delta, reason, now);
     }
+  }
+  private async registrantIds(tx: Tx, a: AuctionDoc) {
+    const rows = await tx.c.auction_registrations
+      .find(
+        { auctionId: a._id, state: { $ne: 'Withdrawn' } },
+        { projection: { userId: 1 } },
+      )
+      .toArray();
+    return rows.map((r) => r.userId);
+  }
+  // ADR 0077: moves the non-paying winner's deposit to the platform account.
+  private async forfeitDeposit(
+    tx: Tx,
+    a: AuctionDoc,
+    receiptId: string,
+    now: Date,
+  ) {
+    if (a.minBidders === null || !a.winnerId) return false;
+    const r = await this.registrationOf(tx, a, a.winnerId);
+    if (r?.state !== 'Applied') return false;
+    const held = await this.ledger.auctionHeld(tx, a.winnerId, a._id);
+    const amount = Math.min(r.deposit, held);
+    const updated = await tx.c.auction_registrations.updateOne(
+      { _id: r._id, version: r.version },
+      { $set: { state: 'Forfeited', updatedAt: now }, $inc: { version: 1 } },
+    );
+    if (updated.modifiedCount !== 1) throw conflict();
+    if (amount > 0)
+      await this.ledger.forfeitAuctionDeposit(
+        tx,
+        a._id,
+        a.winnerId,
+        amount,
+        receiptId,
+        now,
+      );
+    return true;
   }
   private reclaim(tx: Tx, a: AuctionDoc, reason: ReclaimReason, now: Date) {
     return this.intakes.requireReclaim(tx, a.intakeId, reason, now);
@@ -945,14 +1094,7 @@ export class AuctionBiddingService {
           );
         if (this.fundsCheck) {
           await this.requireFunds(tx, actor._id, a._id, price);
-          await this.ledger.setAuctionHold(
-            tx,
-            a._id,
-            actor._id,
-            price,
-            receiptId,
-            now,
-          );
+          await this.holdTo(tx, a, actor._id, price, receiptId, now);
         }
         await tx.c.auction_bidders.insertOne({
           _id: `${a._id}:${actor._id}`,
@@ -1004,6 +1146,188 @@ export class AuctionBiddingService {
     });
   }
 
+  // ADR 0077: registration holds the auction's deposit. Locks the auction
+  // like bids, so the count that opens bidding is serialized with them.
+  register(
+    context: CommandContext,
+    id: string,
+    body: Wire['RegisterForAuction'],
+  ) {
+    return this.commands.runAuction(context, 'registerForAuction', id, body, {
+      discover: async (tx) => [(await this.auction(tx, id)).sellerId],
+      authorize: async (tx, actor) => {
+        const a = await this.auction(tx, id);
+        await this.eligibleBidder(tx, actor, a);
+        return a;
+      },
+      mutate: async (tx, actor, _before, receiptId) => {
+        await tx.lock('auctions', [id]);
+        await tx.lock('auction_registrations', [`${id}:${actor._id}`]);
+        const a = await this.auction(tx, id);
+        const now = await this.clock.decision(tx, context.auth);
+        if (a.state !== 'Active' || now >= a.endAt) throw closed();
+        if (a.minBidders === null || a.depositAmount === null)
+          throw new DomainError(
+            409,
+            'InvalidState',
+            'Phiên này không cần đăng ký trước khi trả giá.',
+          );
+        if (body.deposit !== a.depositAmount)
+          throw new DomainError(
+            409,
+            'InvalidState',
+            `Tiền cọc của phiên là ${a.depositAmount.toLocaleString('vi-VN')}đ. Hãy tải lại rồi thử lại.`,
+          );
+        await requireUnrestricted(tx, actor._id, now);
+        const own = await tx.c.auction_registrations.findOne({
+          _id: `${id}:${actor._id}`,
+        });
+        if (own && own.state !== 'Withdrawn')
+          throw new DomainError(
+            409,
+            'InvalidState',
+            'Bạn đã đăng ký phiên này.',
+          );
+        const delta = await this.ledger.setAuctionHold(
+          tx,
+          a._id,
+          actor._id,
+          a.depositAmount,
+          receiptId,
+          now,
+        );
+        if (own) {
+          const updated = await tx.c.auction_registrations.updateOne(
+            { _id: own._id, version: own.version, state: 'Withdrawn' },
+            {
+              $set: {
+                state: 'Registered',
+                deposit: a.depositAmount,
+                updatedAt: now,
+              },
+              $inc: { version: 1 },
+            },
+          );
+          if (updated.modifiedCount !== 1) throw conflict();
+        } else
+          await tx.c.auction_registrations.insertOne({
+            _id: `${id}:${actor._id}`,
+            auctionId: a._id,
+            userId: actor._id,
+            deposit: a.depositAmount,
+            state: 'Registered',
+            createdAt: now,
+            updatedAt: now,
+            version: 1,
+            lockSeq: 0,
+          });
+        const next = await this.update(
+          tx,
+          a,
+          { registeredCount: a.registeredCount + 1 },
+          now,
+        );
+        await notifyAuctionFunds(tx, next, actor._id, delta, 'Registered', now);
+        if (next.registeredCount === a.minBidders)
+          await notifyAuction(
+            tx,
+            next,
+            'AuctionBiddingStarted',
+            [a.sellerId, ...(await this.registrantIds(tx, next))],
+            now,
+          );
+        return this.change(next, now, 'AuctionRegistered', actor._id);
+      },
+    });
+  }
+  // ADR 0077: refund before bidding opens; afterwards the deposit stays
+  // until the close, so the count that opened bidding cannot fall.
+  withdrawRegistration(
+    context: CommandContext,
+    id: string,
+    body: Wire['WithdrawAuctionRegistration'],
+  ) {
+    return this.commands.runAuction(
+      context,
+      'withdrawAuctionRegistration',
+      id,
+      body,
+      {
+        discover: async (tx) => [(await this.auction(tx, id)).sellerId],
+        authorize: async (tx, actor) => {
+          member(actor);
+          const a = await this.auction(tx, id);
+          if (
+            !(await tx.c.auction_registrations.findOne({
+              _id: `${id}:${actor._id}`,
+            }))
+          )
+            throw notFound();
+          return a;
+        },
+        mutate: async (tx, actor, _before, receiptId) => {
+          await tx.lock('auctions', [id]);
+          await tx.lock('auction_registrations', [`${id}:${actor._id}`]);
+          const a = await this.auction(tx, id);
+          const now = await this.clock.decision(tx, context.auth);
+          if (a.state !== 'Active' || now >= a.endAt) throw closed();
+          const own = await this.registrationOf(tx, a, actor._id);
+          if (own?.state !== 'Registered')
+            throw new DomainError(
+              409,
+              'InvalidState',
+              'Bạn không còn đăng ký ở phiên này.',
+            );
+          if (
+            a.registeredCount >= a.minBidders! ||
+            (await tx.c.auction_bidders.findOne({ _id: `${id}:${actor._id}` }))
+          )
+            throw new DomainError(
+              409,
+              'InvalidState',
+              'Phiên đã mở trả giá; tiền cọc được giữ đến khi phiên kết thúc.',
+            );
+          const delta = await this.ledger.setAuctionHold(
+            tx,
+            a._id,
+            actor._id,
+            0,
+            receiptId,
+            now,
+          );
+          const updated = await tx.c.auction_registrations.updateOne(
+            { _id: own._id, version: own.version, state: 'Registered' },
+            {
+              $set: { state: 'Withdrawn', updatedAt: now },
+              $inc: { version: 1 },
+            },
+          );
+          if (updated.modifiedCount !== 1) throw conflict();
+          const next = await this.update(
+            tx,
+            a,
+            { registeredCount: a.registeredCount - 1 },
+            now,
+          );
+          await notifyAuctionFunds(
+            tx,
+            next,
+            actor._id,
+            delta,
+            'Withdrawn',
+            now,
+          );
+          return this.change(
+            next,
+            now,
+            'AuctionRegistrationWithdrawn',
+            actor._id,
+          );
+        },
+      },
+    );
+  }
+
   // ADR 0076: one hidden bid per member, raise only. Every sealed bidder's
   // whole bid is held (holding only the leader would reveal who leads); the
   // close keeps the winner's price and refunds everyone else.
@@ -1052,9 +1376,9 @@ export class AuctionBiddingService {
         let held = 0;
         if (this.fundsCheck) {
           await this.requireFunds(tx, actor._id, a._id, body.amount);
-          held = await this.ledger.setAuctionHold(
+          held = await this.holdTo(
             tx,
-            a._id,
+            a,
             actor._id,
             body.amount,
             receiptId,
@@ -1154,6 +1478,11 @@ export class AuctionBiddingService {
         a.auctionType === 'Dutch' && phase === 'Live'
           ? (dutchNextDropAt(a, now)?.toISOString() ?? null)
           : null,
+      // ADR 0077: registration gate (null on auctions without registration).
+      minBidders: a.minBidders ?? null,
+      depositAmount: a.depositAmount ?? null,
+      registeredCount: a.registeredCount ?? 0,
+      closeReason: a.closeReason ?? null,
       // ADR 0076: a running sealed auction shows only the start and count.
       currentPrice: sealedLive ? null : a.currentPrice,
       minimumBid:
@@ -1270,11 +1599,24 @@ export class AuctionBiddingService {
             },
           },
           {
+            $lookup: {
+              from: 'auction_registrations',
+              localField: '_id',
+              foreignField: 'auctionId',
+              pipeline: [
+                { $match: { userId: actor._id, state: { $ne: 'Withdrawn' } } },
+                { $limit: 1 },
+              ],
+              as: 'reg',
+            },
+          },
+          {
             $match: {
               $or: [
                 { sellerId: actor._id },
                 { winnerId: actor._id },
                 { 'own.0': { $exists: true } },
+                { 'reg.0': { $exists: true } },
               ],
             },
           },
@@ -1340,7 +1682,11 @@ export class AuctionBiddingService {
         });
         const seller = a.sellerId === actor._id;
         const won = a.winnerId === actor._id;
-        if (!seller && !own && !won) continue;
+        const registered = await tx.c.auction_registrations.findOne({
+          _id: `${a._id}:${actor._id}`,
+          state: { $ne: 'Withdrawn' },
+        });
+        if (!seller && !own && !won && !registered) continue;
         const order =
           won && a.orderId
             ? await tx.c.point_orders.findOne({
@@ -1426,7 +1772,10 @@ export class AuctionBiddingService {
               bidderId: actor._id,
               kind: 'BuyNow',
             }))));
-      if (!a || (!own && !boughtNow)) throw notFound();
+      const reg = await tx.c.auction_registrations.findOne({
+        _id: `${id}:${actor._id}`,
+      });
+      if (!a || (!own && !boughtNow && !reg)) throw notFound();
       const now = await tx.now();
       const open = phaseOf(a, now) === 'Live';
       const won = a.winnerId === actor._id;
@@ -1437,6 +1786,8 @@ export class AuctionBiddingService {
         mode: own?.mode ?? null,
         ownLevel: own?.level ?? null,
         heldAmount: await this.ledger.auctionHeld(tx, actor._id, a._id),
+        registrationState: reg?.state ?? null,
+        deposit: reg?.deposit ?? null,
         boughtNow,
         leading: !sealedLive && a.leaderId === actor._id,
         state: a.state,

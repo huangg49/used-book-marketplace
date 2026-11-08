@@ -46,6 +46,34 @@ const silent = { default: () => ({ title: '', body: '' }), seller: () => ({ titl
 const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
   AuctionFundsHeld: silent,
   AuctionFundsReleased: silent,
+  // ADR 0077: registration gate and deposit outcomes.
+  AuctionBiddingStarted: {
+    default: (c, a) => ({
+      title: 'Phiên đấu giá đã mở trả giá',
+      body: `${c.title} đã đủ ${a.minBidders ?? 2} người đăng ký. Bạn có thể trả giá đến ${when(a.endAt)}.`,
+    }),
+    seller: (c, a) => ({
+      title: 'Phiên của bạn đã đủ người đăng ký',
+      body: `${c.title} đã có ${a.registeredCount} người đăng ký; người mua bắt đầu trả giá được.`,
+    }),
+  },
+  AuctionNotEnoughBidders: {
+    default: (c, a) => ({
+      title: 'Phiên đấu giá không đủ người tham gia',
+      body: `${c.title} kết thúc mà chưa đủ ${a.minBidders ?? 2} người đăng ký hoặc chưa có hai người trả giá, nên không bán. Tiền cọc của bạn đã về lại ví.`,
+    }),
+    seller: (c) => ({
+      title: 'Phiên đấu giá không đủ người tham gia',
+      body: `${c.title} không đủ người tham gia nên không bán. Sách được trả lại cho bạn tại ${c.point}.`,
+    }),
+  },
+  AuctionDepositForfeited: {
+    default: (c, a) => ({
+      title: 'Tiền cọc không được hoàn',
+      body: `${c.title}: bạn không thanh toán đúng hạn nên tiền cọc ${vnd(a.depositAmount)} được chuyển cho nền tảng theo quy định phiên. Phần tiền giữ còn lại đã về ví.`,
+    }),
+    seller: () => ({ title: '', body: '' }),
+  },
   AuctionOutbid: {
     default: (c, a) => {
       const next = nextMinimumBid(a);
@@ -174,8 +202,19 @@ export async function notifyAuction(
   if (rows.length) await tx.c.member_notifications.insertMany(rows);
 }
 
-export type FundsReason = 'Leading' | 'Outbid' | 'Closed' | 'Cancelled' | 'Expired';
-const RELEASE_REASON: Record<Exclude<FundsReason, 'Leading'>, string> = {
+export type FundsReason =
+  | 'Leading'
+  | 'Outbid'
+  | 'Closed'
+  | 'Cancelled'
+  | 'Expired'
+  // ADR 0077
+  | 'Registered'
+  | 'Withdrawn'
+  | 'NotEnoughBidders';
+const RELEASE_REASON: Record<Exclude<FundsReason, 'Leading' | 'Registered'>, string> = {
+  Withdrawn: 'Bạn đã rút đăng ký nên tiền cọc được trả lại ví.',
+  NotEnoughBidders: 'Phiên không đủ người tham gia nên tiền cọc và khoản giữ được trả lại ví.',
   Outbid: 'Bạn đã bị vượt giá nên khoản giữ được trả lại ví.',
   Closed: 'Phiên đã chốt; phần giữ vượt giá chốt được trả lại ví.',
   Cancelled: 'Phiên đã bị hủy nên khoản giữ được trả lại ví.',
@@ -197,14 +236,19 @@ export async function notifyAuctionFunds(
   const c = await context(tx, a);
   const kind: Kind = delta > 0 ? 'AuctionFundsHeld' : 'AuctionFundsReleased';
   const text =
-    delta > 0
+    delta > 0 && reason === 'Registered'
+      ? {
+          title: 'Đã giữ tiền cọc đăng ký đấu giá',
+          body: `${c.title}: đã giữ ${vnd(delta)} tiền cọc. Tiền cọc được hoàn khi bạn không thắng hoặc phiên không đủ người; nếu thắng mà không thanh toán đúng hạn, tiền cọc không được hoàn.`,
+        }
+      : delta > 0
       ? {
           title: 'Ví đã giữ tiền cho lượt trả giá',
           body: `${c.title}: đã giữ thêm ${vnd(delta)} khỏi số dư khả dụng trong lúc bạn dẫn giá. Nếu bị vượt giá hoặc phiên bị hủy, tiền được trả lại ví.`,
         }
       : {
           title: 'Đã trả lại tiền giữ vào ví',
-          body: `${c.title}: ${vnd(-delta)} đã về số dư khả dụng. ${RELEASE_REASON[reason as Exclude<FundsReason, 'Leading'>] ?? ''}`.trim(),
+          body: `${c.title}: ${vnd(-delta)} đã về số dư khả dụng. ${RELEASE_REASON[reason as keyof typeof RELEASE_REASON] ?? ''}`.trim(),
         };
   await tx.c.member_notifications.insertOne({
     _id: randomUUID(),

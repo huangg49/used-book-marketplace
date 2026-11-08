@@ -57,3 +57,10 @@ export const POINT_INSPECTION_MS = 24 * 3_600_000; // POL-31
 export const EVIDENCE_DECISION_MS = 48 * 3_600_000; // POL-09, after the answer
 export const OWNER_RECLAIM_MS = 72 * 3_600_000; // POL-34
 export const RECLAIM_ESCALATION_MS = 14 * 24 * 3_600_000; // POL-34, after Overdue
+// ADR 0077: registration before bidding. The seller picks how many registered
+// bidders the auction needs; the refundable deposit is 10% of the start price
+// (the Dutch floor), rounded up to 1.000đ and at least 10.000đ.
+export const AUCTION_DEFAULT_MIN_BIDDERS = 2;
+export const AUCTION_MAX_MIN_BIDDERS = 10;
+export const auctionDeposit = (startPrice: number) =>
+  Math.max(AUCTION_MIN_PRICE, Math.ceil(startPrice / 10 / 1000) * 1000);

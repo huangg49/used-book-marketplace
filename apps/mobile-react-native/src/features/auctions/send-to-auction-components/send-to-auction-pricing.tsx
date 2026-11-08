@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LayoutAnimation, Platform, Pressable, StyleSheet, Switch, UIManager, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { AppTextInput as TextInput, Icon, formatVnd, stitchTokens } from "../../../core/ui";
-import { AUCTION_FORMATS, AUCTION_STEP_MAX, AUCTION_STEPS, BUY_NOW_MODES, type AuctionFormat, type AuctionStep, type BuyNowMode } from "../auctions-model";
+import { AUCTION_FORMATS, auctionDepositFor, MIN_BIDDER_OPTIONS, AUCTION_STEP_MAX, AUCTION_STEPS, BUY_NOW_MODES, type AuctionFormat, type AuctionStep, type BuyNowMode } from "../auctions-model";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -33,6 +33,8 @@ export interface SendToAuctionPricingProps {
   readonly dutchEveryText: string;
   readonly onChangeDutchEveryText: (text: string) => void;
   readonly dutchError?: string;
+  readonly minBidders: number;
+  readonly onChangeMinBidders: (n: number) => void;
   readonly disabled?: boolean;
   readonly defaultExpanded?: boolean;
 }
@@ -62,6 +64,8 @@ export function SendToAuctionPricing({
   dutchEveryText,
   onChangeDutchEveryText,
   dutchError,
+  minBidders,
+  onChangeMinBidders,
   disabled = false,
   defaultExpanded = true,
 }: SendToAuctionPricingProps) {
@@ -287,6 +291,32 @@ export function SendToAuctionPricing({
             </AppText>
           </View>
         )}
+      </View>
+
+      {/* ADR 0077: minimum registered bidders */}
+      <View style={[styles.fieldGroup, { marginTop: 10 }]}>
+        <AppText kind="bold" style={styles.fieldLabel}>Số người đăng ký tối thiểu</AppText>
+        <View style={styles.stepGrid} accessibilityRole="radiogroup">
+          {MIN_BIDDER_OPTIONS.map((n) => {
+            const isSelected = minBidders === n;
+            return (
+              <Pressable
+                key={n}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: isSelected, disabled }}
+                accessibilityLabel={`Tối thiểu ${n} người đăng ký`}
+                disabled={disabled}
+                onPress={() => onChangeMinBidders(n)}
+                style={[styles.stepButton, isSelected && styles.stepButtonActive, disabled && { opacity: 0.6 }]}
+              >
+                <AppText kind="bold" style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}>{`${n} người`}</AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+        <AppText kind="small" style={styles.infoText}>
+          {`Người mua đặt cọc ${startPriceDeposit(startPriceText)} trước khi trả giá. Phiên mở trả giá khi đủ ${minBidders} người và chỉ bán khi có ít nhất hai người trả giá; nếu không, sách được trả lại và tiền cọc được hoàn.`}
+        </AppText>
       </View>
 
       {/* 3. Buy Now Option (Mua ngay) */}
@@ -586,3 +616,9 @@ const styles = StyleSheet.create({
     lineHeight: 15,
   },
 });
+
+// ADR 0077: the deposit the server will ask for (10% of the start price, ≥ 10.000đ).
+function startPriceDeposit(text: string) {
+  const n = Number(text.replace(/\D/g, ""));
+  return n > 0 ? `${auctionDepositFor(n).toLocaleString("vi-VN")}đ` : "10% giá khởi điểm";
+}

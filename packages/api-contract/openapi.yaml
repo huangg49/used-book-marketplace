@@ -10032,6 +10032,143 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}/registration:
+    post:
+      operationId: registerForAuction
+      tags:
+        - Auctions
+      description: ADR 0077 — registers the caller for an auction with a refundable deposit (the auction's
+        depositAmount, which the body repeats so a changed amount is refused). The deposit is held in the
+        wallet; bids, Dutch acceptance and sealed bids need a registration, and bidding opens once
+        registeredCount reaches minBidders. Losers and an unmet minimum are refunded at the close; a
+        non-paying winner's deposit goes to the platform.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterForAuction"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}/registration/withdraw:
+    post:
+      operationId: withdrawAuctionRegistration
+      tags:
+        - Auctions
+      description: ADR 0077 — withdraws the caller's registration and refunds the deposit, only while bidding
+        has not opened (registeredCount below minBidders) and the caller has not bid.
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawAuctionRegistration"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /exchanges:
     post:
       operationId: createExchangeProposal
@@ -15608,6 +15745,9 @@ components:
             - AuctionOutbid
             - AuctionFundsHeld
             - AuctionFundsReleased
+            - AuctionBiddingStarted
+            - AuctionNotEnoughBidders
+            - AuctionDepositForfeited
             - AuctionWon
             - AuctionSold
             - AuctionBoughtNow
@@ -20228,6 +20368,11 @@ components:
           minimum: 10
           maximum: 3600
           description: ADR 0076. Seconds between Dutch price drops of one step. Null for other types.
+        minBidders:
+          type: integer
+          minimum: 2
+          maximum: 10
+          description: ADR 0077. Registered bidders the auction needs before bidding opens. Default 2.
         declaredValue:
           type: integer
           minimum: 10000
@@ -20387,6 +20532,43 @@ components:
       additionalProperties: false
       required: []
       properties: {}
+    RegisterForAuction:
+      type: object
+      additionalProperties: false
+      required:
+        - deposit
+      properties:
+        deposit:
+          type: integer
+          minimum: 10000
+          maximum: 9007199254740991
+          description: The depositAmount the caller saw; a different server amount is refused (409).
+    WithdrawAuctionRegistration:
+      type: object
+      additionalProperties: false
+      required: []
+      properties: {}
+    AuctionCloseReason:
+      type:
+        - string
+        - "null"
+      enum:
+        - NotEnoughBidders
+        - null
+      description: ADR 0077. Why an Unsold auction did not sell; null otherwise.
+    AuctionRegistrationState:
+      type:
+        - string
+        - "null"
+      enum:
+        - Registered
+        - Withdrawn
+        - Refunded
+        - Applied
+        - Forfeited
+        - null
+      description: ADR 0077. The caller's registration; Applied is a winner's deposit counted in the
+        price held for payment. Null when the caller never registered.
     AuctionType:
       type: string
       enum:
@@ -20574,6 +20756,11 @@ components:
           minimum: 10
           maximum: 3600
           description: ADR 0076. Seconds between Dutch price drops of one step. Null for other types.
+        minBidders:
+          type: integer
+          minimum: 2
+          maximum: 10
+          description: ADR 0077. Registered bidders needed. Optional for older servers.
         protectiveValue:
           type: integer
           minimum: 0
@@ -20834,6 +21021,28 @@ components:
             - "null"
           format: date-time
           description: ADR 0076. When the Dutch price next falls; null on the floor or when not live.
+        minBidders:
+          type:
+            - integer
+            - "null"
+          minimum: 2
+          maximum: 10
+          description: ADR 0077. Registered bidders needed before bidding opens; null on auctions without
+            registration. Optional for older servers.
+        depositAmount:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 9007199254740991
+          description: ADR 0077. Refundable registration deposit; null without registration.
+        registeredCount:
+          type: integer
+          minimum: 0
+          maximum: 2147483647
+          description: ADR 0077. Members registered (withdrawals excluded).
+        closeReason:
+          $ref: "#/components/schemas/AuctionCloseReason"
         listingId:
           type: string
           format: uuid
@@ -21012,6 +21221,15 @@ components:
           description: ADR 0075. Wallet amount currently held for this auction for the caller (their
             level while leading, the final price after winning until payment); 0 once outbid or
             released. Optional for older servers.
+        registrationState:
+          $ref: "#/components/schemas/AuctionRegistrationState"
+        deposit:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 9007199254740991
+          description: ADR 0077. The caller's registration deposit; null when not registered.
         boughtNow:
           type: boolean
         leading:

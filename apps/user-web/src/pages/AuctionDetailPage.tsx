@@ -17,7 +17,7 @@ import { formatVnd, ROUTES } from '../lib/routes'
 import { getWalletSummary } from '../services/wallet'
 import { invalidateMemberWalletViews } from '../lib/wallet-cache'
 import {
-  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation,
+  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation, registrationBlocks,
   getMyPointOrder, getPointOrderDeliveryQuote, payPointOrder, placeBid, setAutoBid, withdrawIntake, type DeliveryChoice, type MyIntake,
   type AuctionParticipation, type AuctionState, type AuctionSummary,
 } from '../services/auctions'
@@ -31,7 +31,7 @@ import { rowFrames, standingFrames } from '../lib/auction-motion'
 import { commandError } from '../lib/auction-errors'
 import { PointOrderSteps } from './AuctionPointOrder'
 import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
-import { DutchPanel, SealedPanel } from './AuctionFormatPanels'
+import { DutchPanel, RegistrationPanel, SealedPanel } from './AuctionFormatPanels'
 
 const HOUR = 3_600_000
 // Only a won or bought auction has a final price; a held or cancelled one does not.
@@ -179,6 +179,10 @@ export function AuctionDetailPage() {
         </span>
       </div>
     )
+  // ADR 0077: registration comes first (also while scheduled); the panel stays
+  // until enough members registered, then the format's own panel takes over.
+  else if (authed && (scheduled || open) && !participation.isPending && registrationBlocks(auction, me))
+    action = <RegistrationPanel auction={auction} me={me} serverTime={detail.data.serverTime} onChanged={refresh} />
   else if (scheduled)
     action = (
       <div className={styles.notice}>
@@ -187,6 +191,14 @@ export function AuctionDetailPage() {
           Người bán hẹn mở phiên lúc {when(auction.startAt)}. Khi phiên mở, bạn có thể trả giá
           {auction.buyNowPrice !== null ? ` hoặc mua ngay với ${formatVnd(auction.buyNowPrice)}` : ''}.
         </p>
+      </div>
+    )
+  else if (!open && auction.closeReason === 'NotEnoughBidders')
+    action = (
+      <div className={styles.notice}>
+        <strong>Phiên không đủ người tham gia</strong>
+        <p>Phiên kết thúc mà chưa đủ {auction.minBidders ?? 2} người đăng ký hoặc chưa có hai người trả giá, nên không bán. Mọi tiền cọc và khoản giữ đã về lại ví.</p>
+        <Link className={styles.secondaryBlock} to={ROUTES.auctions}>Xem các phiên khác</Link>
       </div>
     )
   else if (!open)

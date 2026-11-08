@@ -50,6 +50,11 @@ export const auctionSummarySchema = z.object({
   dutchIntervalSeconds: z.number().int().nullish(),
   dutchPrice: money.nullish(),
   dutchNextDropAt: z.string().nullish(),
+  // ADR 0077: registration gate; null/absent means no registration needed.
+  minBidders: z.number().int().nullish(),
+  depositAmount: money.nullish(),
+  registeredCount: z.number().int().nullish(),
+  closeReason: z.enum(['NotEnoughBidders']).nullish(),
   // ADR 0047: Scheduled before startAt; version lets the seller edit the time.
   phase: z.enum(['Scheduled', 'Live', 'Ended']).nullish(),
   version: z.number().int().nullish(),
@@ -75,6 +80,9 @@ const participationSchema = z.object({
   ownLevel: money.nullable(),
   // ADR 0075: wallet amount held for this auction (absent on older servers).
   heldAmount: z.number().int().min(0).optional(),
+  // ADR 0077: the caller's registration (absent on older servers).
+  registrationState: z.enum(['Registered', 'Withdrawn', 'Refunded', 'Applied', 'Forfeited']).nullish(),
+  deposit: money.nullish(),
   boughtNow: z.boolean(), leading: z.boolean(), state: auctionState,
   currentPrice: money.nullable(), minimumBid: money.nullable(), fulfillmentMethod: z.literal('SelfCollect'),
   won: z.boolean(), orderId: z.string().uuid().nullable(), finalPrice: money.nullable(),
@@ -179,6 +187,14 @@ function command(path: string, key: string, body: object, method = 'POST') {
 // ADR 0076: Dutch acceptance at the price the member saw, and sealed bids.
 export function acceptDutch(id: string, price: number, key: string) { return command(`/auctions/${id}/dutch-accept`, key, { price, fulfillmentMethod: 'SelfCollect' }) }
 export function placeSealedBid(id: string, amount: number, key: string) { return command(`/auctions/${id}/sealed-bid`, key, { amount, fulfillmentMethod: 'SelfCollect' }) }
+// ADR 0077: registration with the deposit the member saw, and its withdrawal.
+export function registerForAuction(id: string, deposit: number, key: string) { return command(`/auctions/${id}/registration`, key, { deposit }) }
+export function withdrawAuctionRegistration(id: string, key: string) { return command(`/auctions/${id}/registration/withdraw`, key, {}) }
+/** ADR 0077: true while a registration gate keeps this member from bidding. */
+export function registrationBlocks(a: AuctionSummary, me: AuctionParticipation | null) {
+  if (a.minBidders == null) return false
+  return me?.registrationState !== 'Registered' || (a.registeredCount ?? 0) < a.minBidders
+}
 export function placeBid(id: string, amount: number, key: string) { return command(`/auctions/${id}/bids`, key, { amount, fulfillmentMethod: 'SelfCollect' }) }
 export function setAutoBid(id: string, maxAmount: number, key: string) { return command(`/auctions/${id}/auto-bid`, key, { maxAmount, fulfillmentMethod: 'SelfCollect' }, 'PUT') }
 export function disableAutoBid(id: string, key: string) { return command(`/auctions/${id}/auto-bid/disable`, key, {}) }
@@ -281,8 +297,13 @@ export type CreateIntakeBody = {
   auctionType?: AuctionType
   dutchTopPrice?: number | null
   dutchIntervalSeconds?: number | null
+  // ADR 0077: registered bidders needed before bidding opens (2–10).
+  minBidders?: number
   declaredValue?: number | null
 }
+export const MIN_BIDDER_OPTIONS = [2, 3, 4, 5, 10] as const
+/** ADR 0077: the refundable deposit the server will ask for (10%, ≥ 10.000đ). */
+export const auctionDepositFor = (startPrice: number) => Math.max(10_000, Math.ceil(startPrice / 10 / 1000) * 1000)
 export function createAuctionIntake(body: CreateIntakeBody, key: string) {
   return command('/auction-intakes', key, body)
 }

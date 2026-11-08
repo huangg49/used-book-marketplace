@@ -20,6 +20,7 @@ import { isPointOpen } from '../src/modules/auctions/point-hours.js';
 import { MongoService } from '../src/database/mongo/mongo.service.js';
 import { LedgerService } from '../src/modules/wallet/ledger.service.js';
 import { AuctionBiddingService } from '../src/modules/auctions/auction-bidding.service.js';
+import { AuctionIntakesService } from '../src/modules/auctions/auction-intakes.service.js';
 import { validates } from './helpers/contract.js';
 import {
   CHECKLIST,
@@ -122,6 +123,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       auctionType: 'English' | 'Dutch' | 'SealedFirst' | 'SealedSecond';
       dutchTopPrice: number | null;
       dutchIntervalSeconds: number | null;
+      minBidders: number;
     }> = {},
   ) => ({
     listingId: l.id,
@@ -5186,5 +5188,254 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       await cmd('post', `/auctions/${a._id}/auto-bid/disable`, {}, x).expect(200);
     });
   });
-});
 
+  // ADR 0077: registration with a refundable deposit (holds and registration on).
+  describe('ADR 0077: bidder registration and deposits', () => {
+    const toggle = (on: boolean) => {
+      (app.get(AuctionBiddingService) as unknown as { fundsCheck: boolean }).fundsCheck = on;
+      (app.get(AuctionIntakesService) as unknown as { registration: boolean }).registration = on;
+    };
+    beforeAll(() => toggle(true));
+    afterAll(() => toggle(false));
+    const DEPOSIT = 20_000; // 10% of the 200,000 start price
+    const register = (auctionId: string, a: Actor, deposit = DEPOSIT, key?: string) =>
+      cmd('post', `/auctions/${auctionId}/registration`, { deposit }, a, key);
+    const withdraw = (auctionId: string, a: Actor) =>
+      cmd('post', `/auctions/${auctionId}/registration/withdraw`, {}, a);
+    const wallet = async (a: Actor) =>
+      (await call('get', '/me/wallet', a).expect(200)).body as { available: number; auctionHeld: number };
+    const kinds = async (a: Actor, auctionId: string) =>
+      (await db.c.member_notifications.find({ userId: a.id, targetId: auctionId }).toArray()).map((n) => n.kind).sort();
+    const regState = async (auctionId: string, a: Actor) =>
+      (await db.c.auction_registrations.findOne({ _id: `${auctionId}:${a.id}` }))?.state;
+    const platform = () =>
+      app.get(MongoService).tx((tx) => app.get(LedgerService).balance(tx, PLATFORM_COMMISSION_ACCOUNT_ID));
+    const liveOf = async (over: Parameters<typeof intakeBody>[1] & { minBidders?: number } = {}) => {
+      const { seller, intakeId } = await passedIntake(over);
+      await publish(intakeId, seller).expect(200);
+      return { seller, a: (await db.c.auctions.findOne({ intakeId }))! };
+    };
+    const funded = async (amount: number) => {
+      const x = await actor();
+      await fund(x, amount);
+      return x;
+    };
+
+    it('publishes with the seller minimum and the 10% deposit; bidding opens at the minimum', async () => {
+      const { seller, a } = await liveOf({ minBidders: 3 });
+      expect(a).toMatchObject({ minBidders: 3, depositAmount: DEPOSIT, registeredCount: 0, closeReason: null });
+      const pub = await call('get', `/auctions/${a._id}`).expect(200);
+      validates('PublicAuction', pub.body);
+      expect(pub.body.auction).toMatchObject({ minBidders: 3, depositAmount: DEPOSIT, registeredCount: 0 });
+      const [x, y, z] = [await funded(500_000), await funded(500_000), await funded(500_000)];
+      // Unregistered: refused; registered but below the minimum: refused.
+      expect((await bid(a._id, x, 200_000).expect(409)).body.message).toMatch(/đăng ký/);
+      const r = await register(a._id, x).expect(200);
+      validates('AuctionCommandReceipt', r.body);
+      expect(await wallet(x)).toMatchObject({ available: 480_000, auctionHeld: DEPOSIT });
+      const part = await call('get', `/me/auctions/${a._id}/participation`, x).expect(200);
+      validates('AuctionParticipation', part.body);
+      expect(part.body).toMatchObject({ registrationState: 'Registered', deposit: DEPOSIT, heldAmount: DEPOSIT, ownLevel: null });
+      expect((await bid(a._id, x, 200_000).expect(409)).body.message).toMatch(/đủ 3 người/);
+      await register(a._id, y).expect(200);
+      await register(a._id, z).expect(200);
+      expect(await kinds(x, a._id)).toEqual(['AuctionBiddingStarted', 'AuctionFundsHeld']);
+      expect(await kinds(seller, a._id)).toEqual(['AuctionBiddingStarted']);
+      // The hold is max(deposit, level): leading raises it, outbid returns it to the deposit.
+      await bid(a._id, x, 200_000).expect(200);
+      expect((await wallet(x)).auctionHeld).toBe(200_000);
+      await bid(a._id, y, 250_000).expect(200);
+      expect((await wallet(x)).auctionHeld).toBe(DEPOSIT);
+      expect((await wallet(y)).auctionHeld).toBe(250_000);
+      const closed = await closeAt(a._id);
+      expect(closed).toMatchObject({ state: 'AwaitingWinnerPayment', winnerId: y.id, finalPrice: 250_000 });
+      // Losers (bid or not) get the deposit back; the winner's is part of the price.
+      expect(await wallet(x)).toMatchObject({ available: 500_000, auctionHeld: 0 });
+      expect(await wallet(z)).toMatchObject({ available: 500_000, auctionHeld: 0 });
+      expect((await wallet(y)).auctionHeld).toBe(250_000);
+      expect([await regState(a._id, x), await regState(a._id, y), await regState(a._id, z)]).toEqual(['Refunded', 'Applied', 'Refunded']);
+      expect(await reconciled()).toBe(true);
+    });
+
+    it('unhappy: seller, wrong deposit, twice, unfunded and no-registration auctions are refused', async () => {
+      const { seller, a } = await liveOf();
+      expect((await register(a._id, seller).expect(403)).body.code).toBe('SelfReviewForbidden');
+      const x = await funded(100_000);
+      expect((await register(a._id, x, 30_000).expect(409)).body.message).toContain('20.000đ');
+      await register(a._id, x).expect(200);
+      expect((await register(a._id, x).expect(409)).body.message).toMatch(/đã đăng ký/);
+      const poor = await actor();
+      expect((await register(a._id, poor).expect(409)).body.message).toMatch(/nạp thêm/);
+      expect(await db.c.auction_registrations.countDocuments({ auctionId: a._id })).toBe(1);
+      // Validation: minBidders outside 2–10 is rejected by the contract.
+      const s2 = await actor();
+      const l = await saleListing(s2);
+      await cmd('post', '/auction-intakes', { ...intakeBody(l), minBidders: 1 }, s2).expect(422);
+      await cmd('post', '/auction-intakes', { ...intakeBody(l), minBidders: 11 }, s2).expect(422);
+      // An auction published without registration (legacy) refuses registration.
+      toggle(false);
+      const legacy = await openAuction();
+      toggle(true);
+      expect((await register(legacy.auctionId, x).expect(409)).body.message).toMatch(/không cần đăng ký/);
+    });
+
+    it('replay: the same key returns the same receipt and holds the deposit once', async () => {
+      const { a } = await liveOf();
+      const x = await funded(100_000);
+      const key = randomUUID();
+      const first = await register(a._id, x, DEPOSIT, key).expect(200);
+      const again = await register(a._id, x, DEPOSIT, key).expect(200);
+      expect(again.headers['idempotency-replayed']).toBe('true');
+      expect(again.body).toEqual(first.body);
+      expect((await wallet(x)).auctionHeld).toBe(DEPOSIT);
+      // A different body with the same key is refused.
+      await register(a._id, x, 30_000, key).expect(409);
+    });
+
+    it('race: one member registering twice at once holds one deposit', async () => {
+      const { a } = await liveOf();
+      const x = await funded(100_000);
+      const results = await Promise.all([register(a._id, x), register(a._id, x)]);
+      expect(results.map((r) => r.status).sort()).toEqual([200, 409]);
+      expect((await db.c.auctions.findOne({ _id: a._id }))!.registeredCount).toBe(1);
+      expect((await wallet(x)).auctionHeld).toBe(DEPOSIT);
+    });
+
+    it('withdrawal refunds before bidding opens and is refused afterwards', async () => {
+      const { a } = await liveOf();
+      const [x, y] = [await funded(100_000), await funded(100_000)];
+      await register(a._id, x).expect(200);
+      await withdraw(a._id, x).expect(200);
+      expect(await wallet(x)).toMatchObject({ available: 100_000, auctionHeld: 0 });
+      expect(await regState(a._id, x)).toBe('Withdrawn');
+      expect((await withdraw(a._id, x).expect(409)).body.message).toMatch(/không còn đăng ký/);
+      await withdraw(a._id, y).expect(404);
+      // Re-registering is allowed; the minimum is then reached and withdrawal locks.
+      await register(a._id, x).expect(200);
+      await register(a._id, y).expect(200);
+      expect((await withdraw(a._id, x).expect(409)).body.message).toMatch(/đã mở trả giá/);
+      expect((await db.c.auctions.findOne({ _id: a._id }))!.registeredCount).toBe(2);
+    });
+
+    it('closes NotEnoughBidders when the minimum was never reached; deposits come back', async () => {
+      const { seller, a } = await liveOf({ minBidders: 3 });
+      const [x, y] = [await funded(100_000), await funded(100_000)];
+      await register(a._id, x).expect(200);
+      await register(a._id, y).expect(200);
+      const closed = await closeAt(a._id);
+      expect(closed).toMatchObject({ state: 'Unsold', closeReason: 'NotEnoughBidders', winnerId: null });
+      expect(await wallet(x)).toMatchObject({ available: 100_000, auctionHeld: 0 });
+      expect(await kinds(x, a._id)).toEqual(['AuctionFundsHeld', 'AuctionFundsReleased', 'AuctionNotEnoughBidders']);
+      expect(await kinds(seller, a._id)).toEqual(['AuctionNotEnoughBidders']);
+      expect(await regState(a._id, y)).toBe('Refunded');
+      const pub = await call('get', `/auctions/${a._id}`).expect(200);
+      expect(pub.body.auction.closeReason).toBe('NotEnoughBidders');
+    });
+
+    it('a lone bidder never wins: two registered but one bid closes NotEnoughBidders', async () => {
+      const { a } = await liveOf();
+      const [x, y] = [await funded(500_000), await funded(500_000)];
+      await register(a._id, x).expect(200);
+      await register(a._id, y).expect(200);
+      await bid(a._id, x, 300_000).expect(200);
+      const closed = await closeAt(a._id);
+      expect(closed).toMatchObject({ state: 'Unsold', closeReason: 'NotEnoughBidders', orderId: null });
+      expect(await wallet(x)).toMatchObject({ available: 500_000, auctionHeld: 0 });
+      expect(await wallet(y)).toMatchObject({ available: 500_000, auctionHeld: 0 });
+    });
+
+    it('sealed second price needs two sealed bids; with two the winner pays the second', async () => {
+      const sealedOver = { auctionType: 'SealedSecond' as const, buyNowPrice: null };
+      const lone = await liveOf(sealedOver);
+      const [x, y] = [await funded(500_000), await funded(500_000)];
+      await register(lone.a._id, x).expect(200);
+      await register(lone.a._id, y).expect(200);
+      await cmd('post', `/auctions/${lone.a._id}/sealed-bid`, { amount: 400_000, fulfillmentMethod: 'SelfCollect' }, x).expect(200);
+      expect(await closeAt(lone.a._id)).toMatchObject({ state: 'Unsold', closeReason: 'NotEnoughBidders' });
+      const pair = await liveOf(sealedOver);
+      await register(pair.a._id, x).expect(200);
+      await register(pair.a._id, y).expect(200);
+      await cmd('post', `/auctions/${pair.a._id}/sealed-bid`, { amount: 400_000, fulfillmentMethod: 'SelfCollect' }, x).expect(200);
+      await cmd('post', `/auctions/${pair.a._id}/sealed-bid`, { amount: 250_000, fulfillmentMethod: 'SelfCollect' }, y).expect(200);
+      expect(await closeAt(pair.a._id)).toMatchObject({ state: 'AwaitingWinnerPayment', winnerId: x.id, finalPrice: 250_000 });
+      expect(await wallet(y)).toMatchObject({ available: 500_000, auctionHeld: 0 });
+      expect((await wallet(x)).auctionHeld).toBe(250_000);
+    });
+
+    it('a paying winner pays the price once; the deposit is part of it', async () => {
+      const { a } = await liveOf();
+      const [x, y] = [await funded(500_000), await funded(500_000)];
+      await register(a._id, x).expect(200);
+      await register(a._id, y).expect(200);
+      await bid(a._id, x, 200_000).expect(200);
+      await bid(a._id, y, 300_000).expect(200);
+      const closed = await closeAt(a._id);
+      await longSession(y);
+      pinClock(new Date(closed.closedAt!.getTime() + 60_000));
+      await payOrder(closed.orderId!, y).expect(200);
+      vi.restoreAllMocks();
+      const order = (await db.c.point_orders.findOne({ _id: closed.orderId! }))!;
+      expect(await wallet(y)).toMatchObject({ available: 500_000 - order.buyerTotal, auctionHeld: 0 });
+      expect(await regState(a._id, y)).toBe('Applied');
+    });
+
+    it('a non-paying winner forfeits the deposit to the platform; the rest is released', async () => {
+      const { seller, a } = await liveOf();
+      const [x, y] = [await funded(500_000), await funded(500_000)];
+      await register(a._id, x).expect(200);
+      await register(a._id, y).expect(200);
+      await bid(a._id, x, 200_000).expect(200);
+      await bid(a._id, y, 300_000).expect(200);
+      const closed = await closeAt(a._id);
+      const before = await platform();
+      pinClock(closed.paymentDeadline!);
+      await app.get(AuctionWorker).tick();
+      vi.restoreAllMocks();
+      expect((await db.c.auctions.findOne({ _id: a._id }))!.state).toBe('PaymentExpired');
+      expect(await regState(a._id, y)).toBe('Forfeited');
+      expect(await wallet(y)).toMatchObject({ available: 500_000 - DEPOSIT, auctionHeld: 0 });
+      // The tick may expire earlier unpaid wins of this block too, so the
+      // platform gains at least this deposit, posted by one journal here.
+      expect((await platform()) - before).toBeGreaterThanOrEqual(DEPOSIT);
+      const journals = await db.c.ledger_journals.find({ auctionId: a._id, type: 'AuctionDepositForfeit' }).toArray();
+      expect(journals).toHaveLength(1);
+      const entries = await db.c.ledger_entries.find({ journalId: journals[0]._id }).toArray();
+      expect(entries.find((e) => e.accountId === PLATFORM_COMMISSION_ACCOUNT_ID)?.debit).toBe(DEPOSIT);
+      expect(await kinds(y, a._id)).toContain('AuctionDepositForfeited');
+      // The seller is not paid the deposit.
+      expect(await kinds(seller, a._id)).not.toContain('AuctionDepositForfeited');
+      expect((await wallet(seller)).available).toBe(0);
+      expect(await reconciled()).toBe(true);
+    });
+
+    it('Dutch: acceptance needs the minimum registered; one acceptance then sells', async () => {
+      const { a } = await liveOf({
+        auctionType: 'Dutch',
+        buyNowPrice: null,
+        dutchTopPrice: 400_000,
+        dutchIntervalSeconds: 60,
+      });
+      const [x, y] = [await funded(500_000), await funded(500_000)];
+      await register(a._id, x).expect(200);
+      const early = await cmd('post', `/auctions/${a._id}/dutch-accept`, { price: 400_000, fulfillmentMethod: 'SelfCollect' }, x).expect(409);
+      expect(early.body.message).toMatch(/đủ 2 người/);
+      await register(a._id, y).expect(200);
+      await cmd('post', `/auctions/${a._id}/dutch-accept`, { price: 400_000, fulfillmentMethod: 'SelfCollect' }, x).expect(200);
+      const closed = await closeAt(a._id);
+      expect(closed).toMatchObject({ state: 'AwaitingWinnerPayment', winnerId: x.id });
+      expect(await wallet(y)).toMatchObject({ available: 500_000, auctionHeld: 0 });
+    });
+
+    it('cancel refunds every deposit', async () => {
+      const { a } = await liveOf();
+      const [x, y] = [await funded(100_000), await funded(100_000)];
+      await register(a._id, x).expect(200);
+      await register(a._id, y).expect(200);
+      const v = (await db.c.auctions.findOne({ _id: a._id }))!.version;
+      await cmd('post', `/operations/auctions/${a._id}/cancel`, { expectedVersion: v, reason: 'Sách không đúng mô tả kiểm định' }, admin).expect(200);
+      expect(await wallet(x)).toMatchObject({ available: 100_000, auctionHeld: 0 });
+      expect(await wallet(y)).toMatchObject({ available: 100_000, auctionHeld: 0 });
+      expect(await regState(a._id, x)).toBe('Refunded');
+    });
+  });
+});

@@ -8,7 +8,7 @@ import { commandOutcomeUnknown, useIntentKey } from '../hooks/useAuctionClock'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { getMyBookIdentity, getMyListings, getMyPhoto, type MyListing } from '../services/my-listings'
 import {
-  AUCTION_MAX_PRICE, AUCTION_TYPES, BUY_NOW_MODES, AUCTION_MIN_PRICE, AUCTION_PRICE_DIGITS, AUCTION_STEP_MAX, AUCTION_STEPS, auctionStepError, createAuctionIntake, getMyAuctionIntake, intakePriceErrors, listHandoverPoints,
+  AUCTION_MAX_PRICE, AUCTION_TYPES, BUY_NOW_MODES, MIN_BIDDER_OPTIONS, auctionDepositFor, AUCTION_MIN_PRICE, AUCTION_PRICE_DIGITS, AUCTION_STEP_MAX, AUCTION_STEPS, auctionStepError, createAuctionIntake, getMyAuctionIntake, intakePriceErrors, listHandoverPoints,
   type AuctionStep, type AuctionType, type BuyNowMode, type CreateIntakeBody, type HandoverPoint, type MyIntake,
 } from '../services/auctions'
 import { conditions } from '../lib/listing-labels'
@@ -190,6 +190,8 @@ export function CreateAuctionPage() {
   const [buyNowMode, setBuyNowMode] = useState<BuyNowMode>('Challenge')
   // ADR 0076: format; Dutch adds an opening price and a drop interval.
   const [auctionType, setAuctionType] = useState<AuctionType>('English')
+  // ADR 0077: how many registered bidders open the auction.
+  const [minBidders, setMinBidders] = useState<number>(2)
   const [dutchTop, setDutchTop] = useState<number | null>(null)
   const [dutchEvery, setDutchEvery] = useState<number>(60)
   const english = auctionType === 'English'
@@ -310,6 +312,7 @@ export function CreateAuctionPage() {
       buyNowPrice: english && buyNowOn ? buyNowPrice : null,
       buyNowMode: english && buyNowOn ? buyNowMode : 'Challenge',
       auctionType,
+      minBidders,
       dutchTopPrice: auctionType === 'Dutch' ? dutchTop : null,
       dutchIntervalSeconds: auctionType === 'Dutch' ? dutchEvery : null,
       declaredValue: declaredValue ?? undefined,
@@ -503,6 +506,13 @@ export function CreateAuctionPage() {
               {AUCTION_TYPES.map((t) => <button type="button" key={t.value} aria-pressed={auctionType === t.value} disabled={locked} onClick={() => setAuctionType(t.value)}>{t.label}<span>{t.short}</span></button>)}
             </div>
             <p className={styles.stepHint}>{AUCTION_TYPES.find((t) => t.value === auctionType)!.hint}</p>
+            <div className={styles.chips} role="group" aria-label="Số người đăng ký tối thiểu">
+              {MIN_BIDDER_OPTIONS.map((n) => <button type="button" key={n} aria-pressed={minBidders === n} disabled={locked} onClick={() => setMinBidders(n)}>{n} người<span>tối thiểu</span></button>)}
+            </div>
+            <p className={styles.stepHint}>
+              Người mua đăng ký và đặt cọc {startPrice !== null ? formatVnd(auctionDepositFor(startPrice)) : '10% giá khởi điểm'} trước khi trả giá.
+              Phiên mở trả giá khi đủ {minBidders} người và chỉ bán khi có ít nhất hai người trả giá; nếu không, sách được trả lại và tiền cọc được hoàn.
+            </p>
             <PriceInput id="auction-start" label={auctionType === 'Dutch' ? 'Giá sàn (thấp nhất)' : 'Giá khởi điểm'} value={startPrice} step={step} min={AUCTION_MIN_PRICE} disabled={locked}
               onChange={setStartPrice} error={touched || startPrice !== null ? formErrors.startPrice : undefined}
               hint={declaredValue !== null ? `Gợi ý theo giá trị khai báo ${formatVnd(declaredValue)}. Giá khởi điểm hợp lý thu hút nhiều người trả giá hơn.` : 'Lượt trả giá đầu tiên bằng đúng giá khởi điểm.'} />

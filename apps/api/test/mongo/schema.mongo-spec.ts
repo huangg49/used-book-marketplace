@@ -98,6 +98,8 @@ describe('migrations', () => {
         INFRASTRUCTURE_COLLECTIONS.length -
         // New Mongo-native evidence/assignment collections do not change the PG baseline.
         withdrawalSpecs.length -
+        // ADR 0077: auction_registrations is Mongo-native.
+        1 -
         exchangeEvidenceSpecs.length -
         // MongoDB-native collections with no PostgreSQL model (ADR 0028).
         priceAssistSpecs.length -

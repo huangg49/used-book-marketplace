@@ -151,6 +151,8 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const [auctionType, setAuctionType] = useState<AuctionFormat>("English");
   const [dutchTop, setDutchTop] = useState("");
   const [dutchEvery, setDutchEvery] = useState("60");
+  // ADR 0077: registered bidders that open the auction.
+  const [minBidders, setMinBidders] = useState(2);
   const [touched, setTouched] = useState(false);
 
   // 3. Modal & Action states
@@ -268,6 +270,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
         buyNowPrice: auctionType === "English" ? buyNowPrice : null,
         buyNowMode: auctionType === "English" && buyNowPrice !== null ? buyNowMode : "Challenge",
         auctionType,
+        minBidders,
         dutchTopPrice: auctionType === "Dutch" ? digits(dutchTop) : null,
         dutchIntervalSeconds: auctionType === "Dutch" ? Number(dutchEvery) || null : null,
       }),
@@ -465,6 +468,8 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
               dutchEveryText={dutchEvery}
               onChangeDutchEveryText={setDutchEvery}
               dutchError={touched ? (dutchError ?? undefined) : undefined}
+              minBidders={minBidders}
+              onChangeMinBidders={setMinBidders}
               disabled={locked}
             />
 

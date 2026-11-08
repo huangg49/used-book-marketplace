@@ -721,6 +721,7 @@ export interface LedgerJournalDoc {
   type:
     | 'AuctionBidHold'
     | 'AuctionBidRelease'
+    | 'AuctionDepositForfeit'
     | 'WithdrawalHold'
     | 'WithdrawalPayout'
     | 'WithdrawalRefund'
@@ -994,6 +995,8 @@ export interface AuctionIntakeDoc extends Lockable {
   auctionType: AuctionFormat;
   dutchTopPrice: number | null;
   dutchIntervalSeconds: number | null;
+  // ADR 0077: registered bidders the auction needs (2–10).
+  minBidders: number;
   protectiveValue: number;
   policyCode: 'HCM-AUCTION-v1';
   state: AuctionIntakeState;
@@ -1100,6 +1103,11 @@ export interface AuctionDoc extends Lockable {
   auctionType: AuctionFormat;
   dutchTopPrice: number | null;
   dutchIntervalSeconds: number | null;
+  // ADR 0077: registration gate; both null on auctions without registration.
+  minBidders: number | null;
+  depositAmount: number | null;
+  registeredCount: number;
+  closeReason: 'NotEnoughBidders' | null;
   // ADR 0043: set when Buy Now opened the 60-second challenge window.
   buyNowAt: Date | null;
   startAt: Date;
@@ -1123,6 +1131,18 @@ export interface AuctionDoc extends Lockable {
   orderId: string | null;
   version: number;
   updatedAt: Date;
+}
+// ADR 0077: _id = `${auctionId}:${userId}`; the deposit lives in the ADR 0075
+// hold account for this auction and member.
+export interface AuctionRegistrationDoc extends Lockable {
+  _id: string;
+  auctionId: string;
+  userId: string;
+  deposit: number;
+  state: 'Registered' | 'Withdrawn' | 'Refunded' | 'Applied' | 'Forfeited';
+  createdAt: Date;
+  updatedAt: Date;
+  version: number;
 }
 // _id = `${auctionId}:${bidderId}`; level is the private commitment ceiling.
 export interface AuctionBidderDoc extends Lockable {
@@ -1428,6 +1448,9 @@ export interface MemberNotificationDoc {
     | 'AuctionOutbid'
     | 'AuctionFundsHeld'
     | 'AuctionFundsReleased'
+    | 'AuctionBiddingStarted'
+    | 'AuctionNotEnoughBidders'
+    | 'AuctionDepositForfeited'
     | 'AuctionWon'
     | 'AuctionSold'
     | 'AuctionBoughtNow'

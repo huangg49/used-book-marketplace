@@ -128,6 +128,34 @@ export async function checkJournal(tx: Tx, journalId: string) {
       !(await tx.c.auctions.findOne({ _id: j.auctionId! }, { projection: { _id: 1 } }))
     )
       throw new Error('Auction hold journal source mismatch');
+  } else if (j.type === 'AuctionDepositForfeit') {
+    // ADR 0077: a non-paying winner's registration deposit, from their hold
+    // for this auction to the platform account, exactly the registered amount.
+    const hold = accounts.find((a) => a.purpose === 'AuctionBidHold');
+    const amount = entries[0].debit + entries[0].credit;
+    const reg = hold
+      ? await tx.c.auction_registrations.findOne({
+          _id: `${hold.auctionId}:${hold.holderId}`,
+        })
+      : null;
+    if (
+      !hold ||
+      !reg ||
+      !j.receiptId ||
+      hold.auctionId !== j.auctionId ||
+      reg.state !== 'Forfeited' ||
+      amount <= 0 ||
+      amount > reg.deposit ||
+      !entries.some((e) => e.accountId === hold._id && e.credit === amount && e.debit === 0) ||
+      !entries.some(
+        (e) =>
+          e.accountId === PLATFORM_COMMISSION_ACCOUNT_ID &&
+          e.debit === amount &&
+          e.credit === 0,
+      ) ||
+      (await balanceOf(tx, hold._id)) < 0
+    )
+      throw new Error('Auction deposit forfeit source mismatch');
   } else if (j.type.startsWith('Withdrawal')) {
     const w = await tx.c.withdrawals.findOne({ _id: j.withdrawalId! });
     const available = w && accounts.find(a => a.ownerId === w.ownerId && a.purpose === 'UserAvailable');
@@ -1025,6 +1053,39 @@ export class LedgerService {
       Math.abs(delta),
     );
     return delta;
+  }
+  /**
+   * ADR 0077: moves `amount` (the forfeited registration deposit) from the
+   * holder's hold for this auction to the platform account. Caller holds the
+   * auction lock and has marked the registration Forfeited.
+   */
+  async forfeitAuctionDeposit(
+    tx: Tx,
+    auctionId: string,
+    holderId: string,
+    amount: number,
+    receiptId: string,
+    now: Date,
+  ) {
+    const hold = await tx.c.wallet_accounts.findOne({ auctionId, holderId });
+    if (!hold) throw invalidState();
+    await this.lockAccounts(tx, [hold._id, PLATFORM_COMMISSION_ACCOUNT_ID]);
+    if ((await balanceOf(tx, hold._id)) < amount) throw invalidState();
+    return this.journal(
+      tx,
+      {
+        type: 'AuctionDepositForfeit',
+        auctionId,
+        topupId: null,
+        eventId: null,
+        orderId: null,
+        receiptId: auctionHoldReceiptId(`forfeit:${receiptId}`, holderId),
+        postedAt: now,
+      },
+      hold._id,
+      PLATFORM_COMMISSION_ACCOUNT_ID,
+      amount,
+    );
   }
   async postWithdrawal(tx: Tx, row: WithdrawalDoc, type: 'WithdrawalHold' | 'WithdrawalPayout' | 'WithdrawalRefund', receiptId: string, now: Date) {
     const available = await this.account(tx, { ownerId: row.ownerId });

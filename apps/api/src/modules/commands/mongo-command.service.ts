@@ -226,6 +226,8 @@ export type AuctionOperation =
   | 'buyAuctionNow'
   | 'acceptDutchAuction'
   | 'placeSealedBid'
+  | 'registerForAuction'
+  | 'withdrawAuctionRegistration'
   | 'payPointOrder'
   | 'acceptPointOrderReport'
   | 'rejectPointOrderReport'

@@ -56,6 +56,11 @@ export const publicAuctionSummary = z.object({
   dutchIntervalSeconds: z.number().int().nullable().optional(),
   dutchPrice: z.number().int().nullable().optional(),
   dutchNextDropAt: z.string().nullable().optional(),
+  // ADR 0077: registration gate; null/absent means no registration needed.
+  minBidders: z.number().int().nullable().optional(),
+  depositAmount: z.number().int().nullable().optional(),
+  registeredCount: z.number().int().nullable().optional(),
+  closeReason: z.enum(["NotEnoughBidders"]).nullable().optional(),
   // ADR 0047: Scheduled before startAt; version lets the seller edit the time.
   phase: z.enum(["Scheduled", "Live", "Ended"]).nullable().optional(),
   version: z.number().int().nullable().optional(),
@@ -95,6 +100,9 @@ export const participation = z.object({
   ownLevel: z.number().int().nullable(),
   // ADR 0075: wallet amount held for this auction (absent on older servers).
   heldAmount: z.number().int().min(0).optional(),
+  // ADR 0077: the caller's registration (absent on older servers).
+  registrationState: z.enum(["Registered", "Withdrawn", "Refunded", "Applied", "Forfeited"]).nullable().optional(),
+  deposit: z.number().int().nullable().optional(),
   boughtNow: z.boolean(),
   leading: z.boolean(),
   state: z.enum(auctionStates),

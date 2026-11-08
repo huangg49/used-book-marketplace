@@ -3,14 +3,14 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { ArrowRight, EyeOff, TrendingDown, Wallet } from 'lucide-react'
+import { ArrowRight, EyeOff, TrendingDown, Users, Wallet } from 'lucide-react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { commandOutcomeUnknown, formatRemaining, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
 import { commandError } from '../lib/auction-errors'
 import { formatVnd, ROUTES } from '../lib/routes'
 import { getWalletSummary } from '../services/wallet'
 import {
-  AUCTION_PRICE_DIGITS, acceptDutch, placeSealedBid,
+  AUCTION_PRICE_DIGITS, acceptDutch, placeSealedBid, registerForAuction, withdrawAuctionRegistration,
   type AuctionParticipation, type AuctionSummary,
 } from '../services/auctions'
 import styles from './AuctionDetailPage.module.css'
@@ -66,6 +66,65 @@ function useCommand(onChanged: () => Promise<unknown>) {
     await attempt()
   }
   return { busy, error, unknown, run }
+}
+
+// ADR 0077: register with a refundable deposit; bidding opens at minBidders.
+export function RegistrationPanel({ auction, me, onChanged }: PanelProps) {
+  const deposit = auction.depositAmount ?? 0
+  const need = auction.minBidders ?? 2
+  const count = auction.registeredCount ?? 0
+  const registered = me?.registrationState === 'Registered'
+  const available = useAvailable(me)
+  const [confirming, setConfirming] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
+  const { busy, error, unknown, run } = useCommand(onChanged)
+  const short = !registered && available !== null && deposit > available
+  return (
+    <div className={styles.bidPanel}>
+      <div className={styles.notice}>
+        <strong><Users size={16} aria-hidden="true" /> {registered ? 'Bạn đã đăng ký phiên này' : 'Đăng ký để tham gia đấu giá'}</strong>
+        <p>
+          Phiên mở trả giá khi có ít nhất {need} người đăng ký; hiện có <b>{count}/{need}</b>.
+          Phiên chỉ bán khi có ít nhất hai người trả giá.
+        </p>
+        <progress max={need} value={Math.min(count, need)} aria-label={`${count} trên ${need} người đã đăng ký`} />
+        <p>
+          {registered
+            ? `Ví đang giữ ${formatVnd(me?.deposit ?? deposit)} tiền cọc. Bạn có thể rút đăng ký và nhận lại tiền cọc khi phiên chưa đủ người.`
+            : `Tiền cọc ${formatVnd(deposit)} được giữ trong ví, hoàn lại khi bạn không thắng hoặc phiên không đủ người. Nếu thắng, tiền cọc tính vào giá phải trả; thắng mà không thanh toán đúng hạn thì không được hoàn.`}
+        </p>
+      </div>
+      {!registered && <Shortfall available={available} amount={deposit} />}
+      {notice && <p className={styles.walletLine} role="status">{notice}</p>}
+      {error && <p className={styles.walletShort} role="alert">{error}</p>}
+      {unknown ? (
+        <button type="button" className={styles.primaryBlock} disabled={busy} onClick={() => void unknown()}>
+          {busy ? 'Đang thử lại…' : 'Thử lại đúng lệnh vừa rồi'}
+        </button>
+      ) : registered ? (
+        <button type="button" className={styles.secondaryBlock} disabled={busy}
+          onClick={() => void run('withdraw-registration', (key) => withdrawAuctionRegistration(auction.id, key), () => setNotice('Đã rút đăng ký; tiền cọc đã về lại ví.'))}>
+          {busy ? 'Đang rút…' : 'Rút đăng ký và nhận lại tiền cọc'}
+        </button>
+      ) : (
+        <button type="button" className={styles.continue} disabled={busy || short} onClick={() => setConfirming(true)}>
+          Đặt cọc {formatVnd(deposit)} và đăng ký <ArrowRight size={16} aria-hidden="true" />
+        </button>
+      )}
+      <ConfirmDialog
+        isOpen={confirming}
+        onClose={() => !busy && setConfirming(false)}
+        title={`Đặt cọc ${formatVnd(deposit)} để đăng ký?`}
+        description={`Ví giữ ${formatVnd(deposit)} ngay. Tiền cọc được hoàn khi bạn không thắng, phiên không đủ người hoặc bị hủy, và bạn có thể rút đăng ký trước khi phiên đủ ${need} người. Nếu thắng mà không thanh toán trong 24 giờ, tiền cọc chuyển cho nền tảng.`}
+        confirmText="Đặt cọc và đăng ký"
+        isBusy={busy}
+        onConfirm={() => void run(`register:${deposit}`, (key) => registerForAuction(auction.id, deposit, key), () => {
+          setConfirming(false)
+          setNotice(count + 1 >= need ? 'Đã đăng ký. Phiên đủ người, bạn có thể trả giá.' : 'Đã đăng ký. Bạn sẽ nhận thông báo khi phiên đủ người.')
+        }).finally(() => setConfirming(false))}
+      />
+    </div>
+  )
 }
 
 export function DutchPanel({ auction, me, serverTime, onChanged }: PanelProps) {

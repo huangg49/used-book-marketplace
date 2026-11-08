@@ -194,6 +194,15 @@ export function autoFloor(
 }
 
 export type Standing = "lead" | "tied" | "outbid";
+// ADR 0077: true while a registration gate keeps this member from bidding.
+export const registrationBlocks = (
+  auction: PublicAuctionSummary,
+  me: { registrationState?: string | null } | null,
+) =>
+  auction.minBidders != null &&
+  (me?.registrationState !== "Registered" || (auction.registeredCount ?? 0) < auction.minBidders);
+export const MIN_BIDDER_OPTIONS = [2, 3, 4, 5, 10] as const;
+export const auctionDepositFor = (startPrice: number) => Math.max(10_000, Math.ceil(startPrice / 10 / 1000) * 1000);
 export const isSealedFormat = (auction: PublicAuctionSummary) =>
   auction.auctionType === "SealedFirst" || auction.auctionType === "SealedSecond";
 // FR-AU04: equal commitments rank by who reached the level first, so an equal
@@ -240,7 +249,8 @@ export function formatRemaining(ms: number) {
 }
 
 // ADR 0076: DutchAccept and Sealed for the other auction formats.
-export type AuctionCommandKind = "Manual" | "Auto" | "Disable" | "BuyNow" | "DutchAccept" | "Sealed";
+// ADR 0077: Register (amount = the deposit) and Withdraw for registration.
+export type AuctionCommandKind = "Manual" | "Auto" | "Disable" | "BuyNow" | "DutchAccept" | "Sealed" | "Register" | "Withdraw";
 export type AuctionCommand = {
   kind: AuctionCommandKind;
   amount: number;
@@ -293,6 +303,10 @@ export function createAuctionCommand(
         amount,
         fulfillmentMethod: "SelfCollect",
       });
+    case "Register":
+      return command(`${base}/registration`, "POST", { deposit: amount });
+    case "Withdraw":
+      return command(`${base}/registration/withdraw`, "POST", {});
   }
 }
 export function sendAuctionCommand(
@@ -359,6 +373,9 @@ export function receiptMessage(
   buyNowMode: BuyNowMode = "Challenge",
 ) {
   const price = receipt.currentPrice !== null ? formatVnd(receipt.currentPrice) : "";
+  if (kind === "Register")
+    return `Đã đặt cọc ${formatVnd(amount)} và đăng ký. Bạn sẽ được báo khi phiên đủ người.`;
+  if (kind === "Withdraw") return "Đã rút đăng ký; tiền cọc đã về lại ví.";
   if (kind === "DutchAccept")
     return "Bạn đã thắng phiên. Hệ thống đang chốt đơn để bạn thanh toán từ ví.";
   if (kind === "Sealed")

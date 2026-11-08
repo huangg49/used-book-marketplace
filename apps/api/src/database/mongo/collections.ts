@@ -109,6 +109,7 @@ export interface CollectionTypes {
   auction_intakes: D.AuctionIntakeDoc;
   auctions: D.AuctionDoc;
   auction_bidders: D.AuctionBidderDoc;
+  auction_registrations: D.AuctionRegistrationDoc;
   auction_bids: D.AuctionBidDoc;
   point_orders: D.PointOrderDoc;
   collection_codes: D.CollectionCodeDoc;
@@ -299,6 +300,7 @@ const NAMES: CollectionName[] = [
   'auction_intakes',
   'auctions',
   'auction_bidders',
+  'auction_registrations',
   'auction_bids',
   'point_orders',
   'collection_codes',

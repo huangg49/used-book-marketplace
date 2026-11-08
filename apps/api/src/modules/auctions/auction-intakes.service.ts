@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
 import type {
   AuctionDoc,
@@ -9,6 +10,8 @@ import type {
   ReclaimReason,
 } from '../../database/mongo/documents.js';
 import {
+  AUCTION_DEFAULT_MIN_BIDDERS,
+  auctionDeposit,
   AUCTION_DROPOFF_MS,
   AUCTION_DURATION_MS,
   EVIDENCE_DECISION_MS,
@@ -117,7 +120,16 @@ export class AuctionIntakesService {
     private readonly reservations: ReservationsService,
     private readonly points: HandoverPointsService,
     private readonly clock: AuctionClock,
-  ) {}
+    config: ConfigService,
+  ) {
+    // ADR 0077: only the test harness may publish auctions without
+    // registration, for historical suites; a dedicated suite keeps it on.
+    this.registration = !(
+      config.get<string>('NODE_ENV') === 'test' &&
+      config.get<string>('AUCTION_REGISTRATION') === 'Off'
+    );
+  }
+  private readonly registration: boolean;
 
   // ------------------------------------------------------------- helpers
   static change(
@@ -386,6 +398,7 @@ export class AuctionIntakesService {
               body.auctionType === 'Dutch' ? body.dutchTopPrice! : null,
             dutchIntervalSeconds:
               body.auctionType === 'Dutch' ? body.dutchIntervalSeconds! : null,
+            minBidders: body.minBidders ?? AUCTION_DEFAULT_MIN_BIDDERS,
             protectiveValue:
               body.declaredValue ?? r.salePrice ?? r.exchangeValue ?? body.startPrice,
             policyCode: 'HCM-AUCTION-v1',
@@ -875,6 +888,11 @@ export class AuctionIntakesService {
       auctionType: i.auctionType,
       dutchTopPrice: i.dutchTopPrice,
       dutchIntervalSeconds: i.dutchIntervalSeconds,
+      // ADR 0077: registration gate copied from the intake, deposit by policy.
+      minBidders: this.registration ? i.minBidders : null,
+      depositAmount: this.registration ? auctionDeposit(i.startPrice) : null,
+      registeredCount: 0,
+      closeReason: null,
       buyNowAt: null,
       startAt: schedule.startAt,
       endAt: schedule.plannedEndAt,
@@ -1032,6 +1050,7 @@ export class AuctionIntakesService {
       auctionType: i.auctionType,
       dutchTopPrice: i.dutchTopPrice,
       dutchIntervalSeconds: i.dutchIntervalSeconds,
+      minBidders: i.minBidders,
       protectiveValue: i.protectiveValue,
       state: i.state,
       version: i.version,

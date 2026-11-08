@@ -367,6 +367,7 @@ describe('work inbox — HTTP and Mongo snapshot', () => {
       auctionType: 'English',
       dutchTopPrice: null,
       dutchIntervalSeconds: null,
+      minBidders: 2,
       protectiveValue: 10000,
       policyCode: 'HCM-AUCTION-v1',
       state: 'AwaitingDropoff',

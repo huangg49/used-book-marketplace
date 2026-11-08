@@ -428,4 +428,45 @@ export class AuctionsController {
       ),
     );
   }
+  // ADR 0077: registration with a refundable deposit, and its withdrawal.
+  @Post('auctions/:auctionId/registration')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  register(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.register(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('RegisterForAuction', body),
+        ),
+        res,
+      ),
+    );
+  }
+  @Post('auctions/:auctionId/registration/withdraw')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  withdrawRegistration(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.withdrawRegistration(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('WithdrawAuctionRegistration', body),
+        ),
+        res,
+      ),
+    );
+  }
 }

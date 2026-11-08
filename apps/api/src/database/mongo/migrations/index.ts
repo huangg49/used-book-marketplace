@@ -1,6 +1,7 @@
 import { createMessageSendLimitsMigration, withMessageSendLimits } from './0062-message-send-limits.js';
 import { createBuyNowModeMigration, withBuyNowMode } from './0063-auction-buy-now-mode.js';
 import { createAuctionTypesMigration, withAuctionTypes } from './0065-auction-types.js';
+import { createAuctionRegistrationMigration, registrationSpec, withAuctionRegistration } from './0066-auction-registration.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { manualWithdrawalsMigration, withManualWithdrawals } from './0061-manual-wallet-withdrawals.js';
 import { createWithdrawalsMigration, withdrawalSpecs, withWithdrawals } from './0060-wallet-withdrawals.js';
@@ -559,7 +560,7 @@ const beforeWithdrawals = (): CollectionSpec[] => [
   demoCompletionSpec,
 ];
 
-export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds), ...withdrawalSpecs.map(withManualWithdrawals)];
+export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
 const withdrawalsMigration = createWithdrawalsMigration([
@@ -578,10 +579,19 @@ const buyNowModeMigration = createBuyNowModeMigration(
 );
 migrations.push(buyNowModeMigration);
 // ADR 0075: leader holds on the 0060 snapshots of wallet/ledger/notifications.
-migrations.push(
-  createAuctionBidHoldsMigration(withdrawalsMigration.definition.collections),
+const bidHoldsMigration = createAuctionBidHoldsMigration(
+  withdrawalsMigration.definition.collections,
 );
+migrations.push(bidHoldsMigration);
 // ADR 0076: auction formats on the 0063 snapshots of auction_intakes/auctions.
+const auctionTypesMigration = createAuctionTypesMigration(
+  buyNowModeMigration.definition.collections,
+);
+migrations.push(auctionTypesMigration);
+// ADR 0077: registration on the 0065 auction and 0064 ledger/notification snapshots.
 migrations.push(
-  createAuctionTypesMigration(buyNowModeMigration.definition.collections),
+  createAuctionRegistrationMigration([
+    ...auctionTypesMigration.definition.collections,
+    ...bidHoldsMigration.definition.collections,
+  ]),
 );
