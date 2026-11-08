@@ -16,6 +16,12 @@ Thực hiện yêu cầu BA về bằng chứng đóng gói 2 chiều và đối
     + Khung thông tin vận chuyển chia grid 2 cột gọn gàng, mã vận đơn và nút tra cứu/sao chép luôn nằm ngang ngay ngắn, mã không bị ngắt đôi xuống dòng.
     + Nhãn nhà vận chuyển trong phiếu vận đơn điện tử thu gọn tinh tế (`GHN Express`).
   - Cột "Sách và thỏa thuận" (`TransactionFrame`): Nới rộng từ 288px lên `clamp(320px, 22vw, 360px)`, điều chỉnh `.row dt` và `.row dd` trong `ExchangeFinanceSummary` giúp nhãn "Sách bạn giao (1 cuốn)" và số tiền hiển thị trên một dòng liền mạch, không còn bị ngắt dòng chật chội.
+  - Bảng "Bằng chứng sự cố" (`ExchangeEvidencePanel`):
+    + Tái cấu trúc giao diện rõ ràng, thân thiện, loại bỏ văn phong kỹ thuật backend gây khó hiểu.
+    + Thêm khung xem trước trực quan (Visual Preview) cho ảnh (JPG/PNG/WebP) và video (MP4) ngay khi người dùng chọn tệp.
+    + Bổ sung nút "Đổi tệp khác", hiển thị dung lượng/định dạng tệp rõ ràng, và nút bấm chính nổi bật "Gửi bằng chứng này".
+    + Danh sách bằng chứng đã gửi hiển thị dạng thẻ lịch sử minh bạch kèm trạng thái ghi nhận và nút xem tệp an toàn.
+    + Phân quyền MongoDB: cấp quyền find/insert/update trên `exchange_evidence` và `exchange_evidence_assignments` cho `latlai_app`.
 - **Xử lý triệt để Race Condition giao nhận 2 chiều độc lập (Optimistic Concurrency)**:
   - Khi một bên gửi sách trước (revision tăng từ N lên N+1), bên còn lại trước đây gửi với `expectedVersion: N` sẽ bị máy chủ ném `409 Conflict`.
   - Đã tối ưu hóa cả 2 đầu:
