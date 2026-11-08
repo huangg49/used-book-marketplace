@@ -7,6 +7,9 @@ Thực hiện yêu cầu BA về bằng chứng đóng gói 2 chiều và đối
 - **Contract & API**: Cập nhật `openapi.yaml` với `packagingPhotoUrl`, `packagingVideoUrl`, `packagingPhotoName`, `packagingVideoName` trên `ShipExchangeCommand` và `ExchangeShipmentInfo`. MongoDB lưu snapshot và `view()` chiếu đầy đủ. Đã áp dụng migrations 0054-0062.
 - **Admin đối soát 2 chiều (ExchangeDisputesPage)**: Bảng so sánh 2 cột (Bên gửi đóng gói vs Bên nhận mở hộp), kèm 3 tiêu chuẩn trọng tài và 2 nút mẫu phán quyết nhanh (`RefundBoth` hoàn cọc 100% hai bên / `CompleteExchange` tất toán cọc).
 - **Mobile RN & User-Web Service**: Đồng bộ schema `exchangeShipmentInfo` trên `contracts.ts`, `exchange.ts` và hiển thị badge bảo chứng đóng gói trên `exchange-shipping-card.tsx`.
+- **UI Web Trao đổi & Theo dõi 2 chiều**:
+  - `ShippingTrackingCard`: Xóa connector chèn nhầm vào Grid khiến chiều về bị đẩy xuống dòng 2 tạo khoảng trống lớn. Chiều đi và chiều về hiển thị song song 2 cột cân xứng (50% / 50%) khi ở màn hình máy tính.
+  - Cột "Sách và thỏa thuận" (`TransactionFrame`): Nới rộng từ 288px lên `clamp(320px, 22vw, 360px)`, điều chỉnh `.row dt` và `.row dd` trong `ExchangeFinanceSummary` giúp nhãn "Sách bạn giao (1 cuốn)" và số tiền hiển thị trên một dòng liền mạch, không còn bị ngắt dòng chật chội.
 
 Kiểm chứng local:
 - `@used-books/api-contract`: generate code 0
