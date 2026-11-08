@@ -9,6 +9,12 @@ Thực hiện yêu cầu BA về bằng chứng đóng gói 2 chiều và đối
 - **Mobile RN & User-Web Service**: Đồng bộ schema `exchangeShipmentInfo` trên `contracts.ts`, `exchange.ts` và hiển thị badge bảo chứng đóng gói trên `exchange-shipping-card.tsx`.
 - **UI Web Trao đổi & Theo dõi 2 chiều**:
   - `ShippingTrackingCard`: Xóa connector chèn nhầm vào Grid khiến chiều về bị đẩy xuống dòng 2 tạo khoảng trống lớn. Chiều đi và chiều về hiển thị song song 2 cột cân xứng (50% / 50%) khi ở màn hình máy tính.
+  - Tinh chỉnh cân xứng, chống nhấp nhô và xô lệch chữ:
+    + Header thẻ bưu phẩm tách hàng trên (`.legTopRow`) gồm nhãn hướng và trạng thái giao hàng; hàng dưới tiêu đề full-width đồng đều chiều cao tối thiểu (`min-height: 42px`), chấm dứt hiện tượng ngắt dòng cụt từ.
+    + Stepper tiến trình 3 bước hiển thị đầy đủ nhãn không bị cắt xén dấu 3 chấm (`...`), đường line nối căn giữa chuẩn xác với tâm các mốc tròn.
+    + Khung địa chỉ nhận cố định chiều cao tối thiểu 86px, giúp dòng cuối của cả 2 cột luôn cân bằng thẳng hàng.
+    + Khung thông tin vận chuyển chia grid 2 cột gọn gàng, mã vận đơn và nút tra cứu/sao chép luôn nằm ngang ngay ngắn, mã không bị ngắt đôi xuống dòng.
+    + Nhãn nhà vận chuyển trong phiếu vận đơn điện tử thu gọn tinh tế (`GHN Express`).
   - Cột "Sách và thỏa thuận" (`TransactionFrame`): Nới rộng từ 288px lên `clamp(320px, 22vw, 360px)`, điều chỉnh `.row dt` và `.row dd` trong `ExchangeFinanceSummary` giúp nhãn "Sách bạn giao (1 cuốn)" và số tiền hiển thị trên một dòng liền mạch, không còn bị ngắt dòng chật chội.
 - **Xử lý triệt để Race Condition giao nhận 2 chiều độc lập (Optimistic Concurrency)**:
   - Khi một bên gửi sách trước (revision tăng từ N lên N+1), bên còn lại trước đây gửi với `expectedVersion: N` sẽ bị máy chủ ném `409 Conflict`.
