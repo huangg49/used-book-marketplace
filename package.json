@@ -36,6 +36,7 @@
     "db:bootstrap": "pnpm --filter @used-books/api mongo:bootstrap",
     "db:migrate": "pnpm --filter @used-books/api mongo:migrate",
     "db:seed": "pnpm --filter @used-books/api mongo:seed",
+    "db:seed-auctions": "pnpm --filter @used-books/api mongo:seed-auctions",
     "test:api:e2e": "pnpm --filter @used-books/api test:e2e",
     "infra:test:up": "docker compose -f infra/docker-compose.test.yml up -d --wait",
     "infra:test:stop": "docker compose -f infra/docker-compose.test.yml stop",

@@ -33,6 +33,7 @@
     "mongo:bootstrap": "tsx src/mongo-bootstrap.ts",
     "mongo:migrate": "tsx src/mongo-migrate.ts",
     "mongo:seed": "tsx src/mongo-seed.ts",
+    "mongo:seed-auctions": "nest build && node dist/seed-auction-demo.js",
     "mongo:seed-exchange": "tsx src/seed-exchange-data.ts",
     "mongo:seed-preferences": "tsx src/seed-exchange-preferences.ts",
     "price-refs:import": "tsx src/price-refs-import.ts",
