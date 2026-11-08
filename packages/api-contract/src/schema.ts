@@ -3933,7 +3933,7 @@ export interface paths {
         /** @description Own support cases only. Creation requires ACTIVE MEMBER; read and reply on existing owned cases permit locked members. No escrow, refund or transaction-state side effects. */
         get: operations["listMySupportCases"];
         put?: never;
-        /** @description Own support cases only. Creation requires ACTIVE MEMBER; read and reply on existing owned cases permit locked members. No escrow, refund or transaction-state side effects. */
+        /** @description Own support cases only. Creation requires ACTIVE MEMBER; read and reply on existing owned cases permit locked members. No escrow, refund or transaction-state side effects. ADR 0078 auction flags - TransactionIssue may target an Auction only for its seller or a member who registered or bid there; one open case per member and auction (409 InvalidState otherwise). Seller, registrants and bidders are involved, so none of them can handle the case. */
         post: operations["createSupportCase"];
         delete?: never;
         options?: never;
@@ -15985,6 +15985,9 @@ export interface operations {
                 limit?: number;
                 state?: components["schemas"]["SupportState"];
                 kind?: components["schemas"]["SupportKind"];
+                /** @description ADR 0078. Only cases whose target has this type, e.g. the member's flag on one auction together with targetId. */
+                targetType?: "DirectOrder" | "Exchange" | "PointOrder" | "Auction" | "Listing" | "Review" | "Member";
+                targetId?: string;
             };
             header?: never;
             path?: never;

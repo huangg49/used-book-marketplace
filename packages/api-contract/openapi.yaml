@@ -11735,6 +11735,27 @@ paths:
           required: false
           schema:
             $ref: "#/components/schemas/SupportKind"
+        - in: query
+          name: targetType
+          required: false
+          description: ADR 0078. Only cases whose target has this type, e.g. the member's
+            flag on one auction together with targetId.
+          schema:
+            type: string
+            enum:
+              - DirectOrder
+              - Exchange
+              - PointOrder
+              - Auction
+              - Listing
+              - Review
+              - Member
+        - in: query
+          name: targetId
+          required: false
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: OK
@@ -11767,7 +11788,10 @@ paths:
         - bearerAuth: []
       description: Own support cases only. Creation requires ACTIVE MEMBER; read and
         reply on existing owned cases permit locked members. No escrow, refund or
-        transaction-state side effects.
+        transaction-state side effects. ADR 0078 auction flags - TransactionIssue may
+        target an Auction only for its seller or a member who registered or bid there;
+        one open case per member and auction (409 InvalidState otherwise). Seller,
+        registrants and bidders are involved, so none of them can handle the case.
       parameters:
         - &a3
           in: header

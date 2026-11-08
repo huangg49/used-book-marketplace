@@ -1,6 +1,7 @@
 import { ReviewEntry } from "../features/reviews/ReviewEntry";
 import { formatDuration } from '../components/DurationInput';
 import {SupportLink} from '../features/support/SupportLink';
+import { AuctionFlag } from '../features/support/AuctionFlag';
 import { useEffect, useId, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError } from '@used-books/session-client'
@@ -249,7 +250,11 @@ export function AuctionDetailPage() {
 
         <header className={styles.head}>
           <h1>{auction.title}</h1>
-          <p><SupportLink type='Auction' id={auction.id} report/></p>
+          {/* ADR 0078: the seller and members who registered or bid flag a
+              problem to Admin; anyone else can still report the content. */}
+          {authed && (sellerIntake || me)
+            ? <AuctionFlag auction={auction} ownerId={session.user.id} />
+            : <p><SupportLink type='Auction' id={auction.id} report/></p>}
           {!!auction.book?.authors.length && <p className={styles.authors}>{auction.book.authors.join(', ')}</p>}
           <span className={`${styles.status} ${open ? '' : styles.statusClosed}`}>
             {open ? <Gavel size={14} aria-hidden="true" /> : null}

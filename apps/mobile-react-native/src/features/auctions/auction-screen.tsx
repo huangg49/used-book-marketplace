@@ -62,6 +62,7 @@ import {
   type PublicAuctionSummary,
 } from "./contracts";
 import { WinnerSteps } from "./winner-steps";
+import { AuctionFlag } from "./auction-flag";
 import { walletSummary } from "../wallet/contracts";
 
 const STATE_LABEL: Record<AuctionState, string> = {
@@ -189,6 +190,7 @@ export function AuctionScreen({ id }: { id: string }) {
               me={me.data ?? null}
               meLoading={!!member && me.isPending}
               signedIn={!!member}
+              memberId={member}
               ownerIntake={ownIntakes.data?.items.find((item) => item.auctionId === id) ?? null}
               ownerLoading={!!member && ownIntakes.isPending}
               ownerError={!!member && ownIntakes.isError}
@@ -211,6 +213,7 @@ function AuctionBody({
   me,
   meLoading,
   signedIn,
+  memberId,
   ownerIntake,
   ownerLoading,
   ownerError,
@@ -223,6 +226,7 @@ function AuctionBody({
   me: Participation | null;
   meLoading: boolean;
   signedIn: boolean;
+  memberId: string | null;
   ownerIntake: MyIntake | null;
   ownerLoading: boolean;
   ownerError: boolean;
@@ -594,6 +598,10 @@ function AuctionBody({
         </Notice>
       )}
       </View>
+      {/* ADR 0078: the seller and members who registered or bid flag a problem to Admin. */}
+      {memberId && !ownerError && (ownerIntake || me) ? (
+        <AuctionFlag auction={auction} owner={memberId} />
+      ) : null}
       <History history={history} state={auction.state} leaderAlias={leaderAlias} myAlias={me?.alias ?? null} startPrice={auction.startPrice} />
     </View>
   );

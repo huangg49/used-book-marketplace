@@ -5517,5 +5517,111 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       expect(await wallet(y)).toMatchObject({ available: 100_000, auctionHeld: 0 });
       expect(await regState(a._id, x)).toBe('Refunded');
     });
+
+    // ADR 0078: the seller and members who registered or bid flag the auction to Admin.
+    describe('ADR 0078: auction flags', () => {
+      const flag = (auctionId: string, a: Actor, kind = 'TransactionIssue', key?: string) =>
+        cmd('post', '/me/support-cases', {
+          kind,
+          title: 'Tiền cọc, khoản giữ hoặc thanh toán: phiên thử',
+          description: 'Khoản giữ trong ví không khớp với giá tôi đang dẫn.',
+          target: { type: 'Auction', id: auctionId },
+        }, a, key);
+      const mine = async (auctionId: string, a: Actor) =>
+        (await call('get', `/me/support-cases?targetType=Auction&targetId=${auctionId}`, a).expect(200)).body as { items: { id: string; state: string }[] };
+      const act = (id: string, version: number, action: string, who: Actor) =>
+        cmd('post', `/operations/support-cases/${id}/actions`, { expectedVersion: version, action, text: 'Admin đã đối chiếu phiên.' }, who);
+
+      it('seller, registrant and bidder flag it; Admin sees the auction state; nothing else moves', async () => {
+        const { seller, a } = await liveOf();
+        const [x, y] = [await funded(500_000), await funded(500_000)];
+        await register(a._id, x).expect(200);
+        await register(a._id, y).expect(200);
+        await bid(a._id, y, 200_000).expect(200);
+        const before = { auction: await db.c.auctions.findOne({ _id: a._id }), x: await wallet(x), y: await wallet(y) };
+        const ids: string[] = [];
+        for (const who of [seller, x, y]) {
+          const r = await flag(a._id, who).expect(200);
+          validates('SupportCaseReceipt', r.body);
+          ids.push(r.body.entityId);
+        }
+        // Everyone with a stake is involved, whoever filed it.
+        const row = await db.c.support_cases.findOne({ _id: ids[1] });
+        expect([...row!.involvedUserIds].sort()).toEqual([seller.id, x.id, y.id].sort());
+        // The member finds their own flag on this auction only.
+        const list = await mine(a._id, x);
+        validates('SupportCasePage', list);
+        expect(list.items.map((i) => i.id)).toEqual([ids[1]]);
+        const other = await liveOf();
+        expect((await mine(other.a._id, x)).items).toEqual([]);
+        const detail = await call('get', `/operations/support-cases/${ids[2]}`, admin).expect(200);
+        validates('SupportCaseDetail', detail.body);
+        expect(detail.body).toMatchObject({ relatedState: 'Active', relatedAuctionId: a._id });
+        // A flag never pauses the auction or moves money.
+        const after = await db.c.auctions.findOne({ _id: a._id });
+        expect(after).toMatchObject({ state: 'Active', version: before.auction!.version });
+        const money = (w: { available: number; auctionHeld: number }) => ({ available: w.available, auctionHeld: w.auctionHeld });
+        expect(money(await wallet(x))).toEqual(money(before.x));
+        expect(money(await wallet(y))).toEqual(money(before.y));
+      });
+
+      it('unhappy: an outsider cannot raise a money issue, one open flag per member, closed allows a new one', async () => {
+        const { a } = await liveOf();
+        const x = await funded(100_000);
+        await register(a._id, x).expect(200);
+        const outsider = await actor();
+        const refused = await flag(a._id, outsider).expect(422);
+        expect(refused.body.fieldErrors[0].message).toMatch(/Chỉ người bán/);
+        // Anyone may still report a violation on a public auction.
+        await flag(a._id, outsider, 'Violation').expect(200);
+        const first = await flag(a._id, x).expect(200);
+        const dup = await flag(a._id, x, 'Bug').expect(409);
+        expect(dup.body.message).toContain(first.body.entityId.slice(0, 8).toUpperCase());
+        expect(await db.c.support_cases.countDocuments({ reporterId: x.id, 'target.id': a._id })).toBe(1);
+        const id = first.body.entityId as string;
+        await act(id, 1, 'Assign', admin).expect(200);
+        await act(id, 2, 'Answer', admin).expect(200);
+        await act(id, 3, 'Close', admin).expect(200);
+        await flag(a._id, x, 'Bug').expect(200);
+        // A missing auction is not found.
+        await flag(randomUUID(), x).expect(404);
+      });
+
+      it('an Admin who registered or bid cannot read or handle the flag, even one filed earlier', async () => {
+        const { a } = await liveOf();
+        const x = await funded(100_000);
+        await register(a._id, x).expect(200);
+        const early = (await flag(a._id, x).expect(200)).body.entityId as string;
+        const adminMember = await actor(['ADMIN', 'MEMBER']);
+        await fund(adminMember, 100_000);
+        await register(a._id, adminMember).expect(200);
+        expect((await call('get', `/operations/support-cases/${early}`, adminMember).expect(403)).body.code).toBe('SelfReviewForbidden');
+        expect((await act(early, 1, 'Assign', adminMember).expect(403)).body.code).toBe('SelfReviewForbidden');
+        // A flag filed after they joined lists them as involved: not in their queue.
+        const y = await funded(100_000);
+        await register(a._id, y).expect(200);
+        const late = (await flag(a._id, y).expect(200)).body.entityId as string;
+        const queue = (await call('get', '/operations/support-cases?limit=50', adminMember).expect(200)).body as { items: { id: string }[] };
+        expect(queue.items.map((i) => i.id)).not.toContain(late);
+        // An independent Admin still handles both.
+        await act(early, 1, 'Assign', admin).expect(200);
+        await call('get', `/operations/support-cases/${late}`, admin).expect(200);
+      });
+
+      it('replay returns the same receipt; two keys at once create one open flag', async () => {
+        const { a } = await liveOf();
+        const [x, y] = [await funded(100_000), await funded(100_000)];
+        await register(a._id, x).expect(200);
+        await register(a._id, y).expect(200);
+        const key = randomUUID();
+        const r1 = await flag(a._id, x, 'TransactionIssue', key).expect(200);
+        const r2 = await flag(a._id, x, 'TransactionIssue', key).expect(200);
+        expect(r2.headers['idempotency-replayed']).toBe('true');
+        expect(r2.body).toEqual(r1.body);
+        const raced = await Promise.all([flag(a._id, y), flag(a._id, y, 'Bug')]);
+        expect(raced.map((r) => r.status).sort()).toEqual([200, 409]);
+        expect(await db.c.support_cases.countDocuments({ 'target.id': a._id })).toBe(2);
+      });
+    });
   });
 });

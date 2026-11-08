@@ -81,6 +81,10 @@ export class SupportService {
         : { reporterId: actor._id };
       if (query.state) match.state = query.state as Case['state'];
       if (query.kind) match.kind = query.kind as Case['kind'];
+      // ADR 0078: lets a client find the member's open flag on one auction.
+      if (query.targetType)
+        Object.assign(match, { 'target.type': query.targetType });
+      if (query.targetId) Object.assign(match, { 'target.id': query.targetId });
       if (operations && query.assignedToMe === true)
         match.assigneeId = actor._id;
       const page = await this.pages.page(
@@ -113,7 +117,8 @@ export class SupportService {
       ? this.commands.read.bind(this.commands)
       : this.commands.readObligation.bind(this.commands);
     return read(auth, async (tx, actor) => {
-      const row = allowed(
+      const row = await this.access(
+          tx,
           await tx.c.support_cases.findOne({ _id: id }),
           actor,
           operations,
@@ -170,13 +175,13 @@ export class SupportService {
           if (
             body.kind === 'TransactionIssue' &&
             (!body.target ||
-              !['DirectOrder', 'Exchange', 'PointOrder'].includes(
+              !['DirectOrder', 'Exchange', 'PointOrder', 'Auction'].includes(
                 body.target.type,
               ))
           )
             invalidField(
               'target',
-              'Chọn giao dịch mua bán, trao đổi hoặc đơn thắng đấu giá của bạn.',
+              'Chọn giao dịch mua bán, trao đổi, đơn thắng đấu giá hoặc phiên đấu giá bạn tham gia.',
             );
           if (body.kind === 'Violation' && !body.target)
             invalidField(
@@ -188,6 +193,29 @@ export class SupportService {
             body.target,
             actor._id,
           );
+          if (body.target?.type === 'Auction') {
+            // ADR 0078: a money or hold issue is only for the seller and members who
+            // registered or bid; anyone may still report a violation.
+            if (
+              body.kind === 'TransactionIssue' &&
+              !involved.includes(actor._id)
+            )
+              invalidField(
+                'target',
+                'Chỉ người bán và thành viên đã đăng ký hoặc trả giá trong phiên mới phản ánh được tiền cọc, khoản giữ hay thanh toán của phiên.',
+              );
+            // One open flag per member and auction; the actor lock below serializes it.
+            const open = await tx.c.support_cases.findOne({
+              reporterId: actor._id,
+              'target.type': 'Auction',
+              'target.id': body.target.id,
+              state: { $ne: 'Closed' },
+            });
+            if (open)
+              throw invalidState(
+                `Bạn đã có hồ sơ đang mở về phiên này (mã ${open._id.slice(0, 8).toUpperCase()}). Bổ sung trong hồ sơ đó để Admin xem cùng một chỗ.`,
+              );
+          }
           const now = await tx.now();
           // The actor lock also serializes concurrent case creation and this bound.
           if (
@@ -235,7 +263,8 @@ export class SupportService {
       body,
       {
         authorize: async (tx, actor) => {
-          const row = allowed(
+          const row = await this.access(
+            tx,
             await tx.c.support_cases.findOne({ _id: id }),
             actor,
             operations,
@@ -250,7 +279,8 @@ export class SupportService {
         },
         mutate: async (tx, actor) => {
           await tx.lock('support_cases', [id]);
-          const row = allowed(
+          const row = await this.access(
+            tx,
             await tx.c.support_cases.findOne({ _id: id }),
             actor,
             operations,
@@ -284,10 +314,16 @@ export class SupportService {
   act(context: CommandContext, id: string, body: Wire['SupportActionCommand']) {
     return this.commands.runSupport(context, 'actOnSupportCase', id, body, {
       authorize: async (tx, actor) =>
-        allowed(await tx.c.support_cases.findOne({ _id: id }), actor, true),
+        this.access(
+          tx,
+          await tx.c.support_cases.findOne({ _id: id }),
+          actor,
+          true,
+        ),
       mutate: async (tx, actor) => {
         await tx.lock('support_cases', [id]);
-        const row = allowed(
+        const row = await this.access(
+          tx,
           await tx.c.support_cases.findOne({ _id: id }),
           actor,
           true,
@@ -424,6 +460,44 @@ export class SupportService {
       readAt: null,
     });
   }
+  /** Seller excluded: members who ever registered or bid in the auction. */
+  private async auctionParticipants(tx: Tx, auctionId: string) {
+    const bidders = await tx.c.auction_bidders
+      .find({ auctionId }, { projection: { bidderId: 1 } })
+      .toArray();
+    const registrants = await tx.c.auction_registrations
+      .find({ auctionId }, { projection: { userId: 1 } })
+      .toArray();
+    return [
+      ...bidders.map((b) => b.bidderId),
+      ...registrants.map((r) => r.userId),
+    ];
+  }
+  /**
+   * `allowed` plus ADR 0078: an Admin who registered or bid in a flagged auction
+   * after the flag was filed is involved too, so they cannot read or handle it.
+   */
+  private async access(
+    tx: Tx,
+    row: Case | null,
+    actor: UserDoc,
+    operations: boolean,
+  ): Promise<Case> {
+    const result = allowed(row, actor, operations);
+    if (operations && result.target?.type === 'Auction') {
+      const key = `${result.target.id}:${actor._id}`;
+      if (
+        (await tx.c.auction_bidders.findOne({ _id: key })) ||
+        (await tx.c.auction_registrations.findOne({ _id: key }))
+      )
+        throw new DomainError(
+          403,
+          'SelfReviewForbidden',
+          'Bạn không được xử lý hồ sơ liên quan đến mình.',
+        );
+    }
+    return result;
+  }
   async validateTarget(
     tx: Tx,
     target: Case['target'],
@@ -480,7 +554,9 @@ export class SupportService {
           ].includes(row.state))
       )
         throw notFound();
-      return [row.sellerId];
+      // ADR 0078: everyone with money or a stake in the auction is involved, so an
+      // Admin who registered or bid cannot handle a flag about it.
+      return [row.sellerId, ...(await this.auctionParticipants(tx, id))];
     }
     const collection =
       type === 'DirectOrder'
@@ -534,6 +610,12 @@ export class SupportService {
               operations || owner === r.targetUserId,
             ),
           }
+        : empty;
+    }
+    if (target.type === 'Auction') {
+      const auction = await tx.c.auctions.findOne({ _id: target.id });
+      return auction
+        ? { ...empty, relatedState: auction.state, relatedAuctionId: auction._id }
         : empty;
     }
     if (!['DirectOrder', 'Exchange', 'PointOrder'].includes(target.type))

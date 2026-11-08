@@ -37,6 +37,14 @@ Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
   song song), unit auctions 64, Mongo 61, web 475, RN 225 PASS. Các lần chạy song song với
   bộ khác khi máy còn ~1,6 GB RAM có timeout/503 ngẫu nhiên ở ca cũ, khác nhau mỗi lần.
   Còn mở: tài khoản phụ của người bán đẩy giá, cọc treo khi phiên OnHold.
+- [ADR0078](../adr/0078-auction-flag.md): nút "Báo cáo sự cố cho Admin" cho người bán và
+  người đã đăng ký/trả giá, trên web và RN. Dùng hồ sơ hỗ trợ đã có (không migration):
+  `TransactionIssue` nhận phiên đấu giá chỉ cho người tham gia, một hồ sơ mở mỗi người mỗi
+  phiên, mọi người tham gia là `involvedUserIds`, Admin tham gia sau vẫn bị chặn; list có
+  `targetType`/`targetId`. Không đổi phiên hay tiền. E2E 4 ca mới (happy, từ chối/trùng,
+  độc lập Admin, replay/race) + support-cases 14/14, web 475 + 2 test render, RN typecheck +
+  225, session-client 158, contract check PASS. Trình duyệt thật/native NOT RUN; RN chưa có
+  màn hình hồ sơ hỗ trợ; Staff không nhận báo cáo (hàng hỗ trợ chỉ Admin).
 
 Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
 auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web
