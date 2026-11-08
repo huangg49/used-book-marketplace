@@ -273,6 +273,10 @@ export class ExchangesService {
             trackingCode: row.initiatorShipment.trackingCode ?? null,
             meetupLocation: row.initiatorShipment.meetupLocation ?? null,
             notes: row.initiatorShipment.notes ?? null,
+            packagingPhotoUrl: row.initiatorShipment.packagingPhotoUrl ?? null,
+            packagingVideoUrl: row.initiatorShipment.packagingVideoUrl ?? null,
+            packagingPhotoName: row.initiatorShipment.packagingPhotoName ?? null,
+            packagingVideoName: row.initiatorShipment.packagingVideoName ?? null,
             shippedAt: row.initiatorShipment.shippedAt
               ? new Date(row.initiatorShipment.shippedAt).toISOString()
               : null,
@@ -290,6 +294,10 @@ export class ExchangesService {
             trackingCode: row.recipientShipment.trackingCode ?? null,
             meetupLocation: row.recipientShipment.meetupLocation ?? null,
             notes: row.recipientShipment.notes ?? null,
+            packagingPhotoUrl: row.recipientShipment.packagingPhotoUrl ?? null,
+            packagingVideoUrl: row.recipientShipment.packagingVideoUrl ?? null,
+            packagingPhotoName: row.recipientShipment.packagingPhotoName ?? null,
+            packagingVideoName: row.recipientShipment.packagingVideoName ?? null,
             shippedAt: row.recipientShipment.shippedAt
               ? new Date(row.recipientShipment.shippedAt).toISOString()
               : null,
@@ -1457,6 +1465,10 @@ export class ExchangesService {
           trackingCode: body.trackingCode ?? null,
           meetupLocation: body.meetupLocation ?? null,
           notes: body.notes ?? null,
+          packagingPhotoUrl: body.packagingPhotoUrl ?? null,
+          packagingVideoUrl: body.packagingVideoUrl ?? null,
+          packagingPhotoName: body.packagingPhotoName ?? null,
+          packagingVideoName: body.packagingVideoName ?? null,
           shippedAt: now,
         };
 

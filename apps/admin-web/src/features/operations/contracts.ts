@@ -477,6 +477,22 @@ export const escalationLabels: Record<
   ],
 };
 
+export const exchangeShipmentInfo = z.object({
+  method: z.string().optional(),
+  carrierCode: z.string().nullable().optional(),
+  carrierName: z.string().nullable().optional(),
+  trackingCode: z.string().nullable().optional(),
+  meetupLocation: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  packagingPhotoUrl: z.string().nullable().optional(),
+  packagingVideoUrl: z.string().nullable().optional(),
+  packagingPhotoName: z.string().nullable().optional(),
+  packagingVideoName: z.string().nullable().optional(),
+  shippedAt: time.nullable().optional(),
+  lastEvent: z.string().nullable().optional(),
+  lastEventAt: time.nullable().optional(),
+}).passthrough();
+
 export const exchangeDisputeResolution = z.object({
   id: uuid,
   initiatorId: uuid,
@@ -502,6 +518,8 @@ export const exchangeDisputeResolution = z.object({
   recipientShippedAt: time.nullable().optional(),
   initiatorReceivedAt: time.nullable().optional(),
   recipientReceivedAt: time.nullable().optional(),
+  initiatorShipment: exchangeShipmentInfo.nullable().optional(),
+  recipientShipment: exchangeShipmentInfo.nullable().optional(),
   inspectionDeadline: time.nullable().optional(),
   completedAt: time.nullable().optional(),
   initiatorCompletedAt: time.nullable().optional(),

@@ -7563,6 +7563,10 @@ export interface components {
             trackingCode?: string | null;
             meetupLocation?: string | null;
             notes?: string | null;
+            packagingPhotoUrl?: string | null;
+            packagingVideoUrl?: string | null;
+            packagingPhotoName?: string | null;
+            packagingVideoName?: string | null;
             /** Format: date-time */
             shippedAt?: string | null;
             lastEvent?: string | null;
@@ -7598,6 +7602,10 @@ export interface components {
             trackingCode?: string;
             meetupLocation?: string;
             notes?: string;
+            packagingPhotoUrl?: string;
+            packagingVideoUrl?: string;
+            packagingPhotoName?: string;
+            packagingVideoName?: string;
         };
         RejectExchangeCommand: {
             expectedVersion: number;

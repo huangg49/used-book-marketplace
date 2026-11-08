@@ -1337,6 +1337,10 @@ export interface ExchangeShipmentSnapshot {
   trackingCode?: string | null;
   notes?: string | null;
   meetupLocation?: string | null;
+  packagingPhotoUrl?: string | null;
+  packagingVideoUrl?: string | null;
+  packagingPhotoName?: string | null;
+  packagingVideoName?: string | null;
   shippedAt?: Date | null;
   lastEvent?: string | null;
   lastEventAt?: Date | null;
