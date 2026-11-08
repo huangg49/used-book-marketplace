@@ -1,3 +1,25 @@
+# Đại tu đấu giá: chế độ Mua ngay, giữ tiền, kiểu Hà Lan/kín — 08/11/2026
+
+Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
+
+- [ADR0074](../adr/0074-auction-buy-now-mode.md): người bán chọn Mua ngay "Chờ thách
+  đấu" (60 giây/5 phút) hoặc "Kết thúc ngay". Sửa lỗi "chờ hết phiên": lượt trả/Auto
+  đẩy giá chạm giá mua ngay nay kết thúc theo quy tắc Mua ngay thay vì chạy tới
+  `plannedEndAt`. Migration `0063-auction-buy-now-mode`.
+- [ADR0075](../adr/0075-auction-leader-wallet-hold.md): giữ tiền của người dẫn trong
+  ví (thay điểm 4 của ADR0071); người bị vượt/hủy/hết hạn được hoàn ngay, thanh toán
+  dùng khoản giữ một lần, thông báo giữ/hoàn riêng cho chủ ví. Migration
+  `0064-auction-bid-holds`. Thay đổi tiền mô phỏng: cần human review.
+- [ADR0076](../adr/0076-auction-formats.md): kiểu Hà Lan (giá giảm dần, người đầu tiên
+  chấp nhận thắng) và đấu giá kín giá thứ nhất/thứ hai; ẩn giá/người dẫn khi đang chạy.
+  Migration `0065-auction-types`.
+
+Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
+auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web
+typecheck + 475 tests, RN typecheck + 225 tests PASS. Full API E2E trên mã cuối
+xem commit/PR. Thiết bị RN, Flutter, trình duyệt thật và human review NOT RUN.
+Chưa push/PR.
+
 # Sửa lỗi từ khảo sát nghiệp vụ — 07/11/2026
 
 Nhánh `codex/audit-business-fixes` từ `9c858da7`, main đối chiếu
