@@ -81,6 +81,10 @@
 .full .slots { color: var(--shop-muted); }
 
 .field { display: grid; gap: 8px; max-width: 420px; }
+/* A labelled choice group (chips) with its explanation underneath. */
+.group { display: grid; gap: 8px; }
+.rules { display: grid; gap: 6px; margin: 4px 0 0; padding: 12px 16px; list-style: none; border-left: 3px solid var(--shop-wine); border-radius: 0 8px 8px 0; background: var(--auction-paper-soft, #fbf3e0); font-size: .8125rem; line-height: 1.65; color: var(--shop-ink); max-width: 70ch; }
+.rules strong { color: var(--shop-wine); font-weight: 700; }
 .field > label, .label { font-size: .85rem; font-weight: 700; }
 /* Options size to their labels and wrap as whole chips instead of squeezing text. */
 .segment { display: flex; flex-wrap: wrap; width: 100%; max-width: 560px; padding: 4px; border-radius: 8px; background: var(--shop-shelf); gap: 4px; }

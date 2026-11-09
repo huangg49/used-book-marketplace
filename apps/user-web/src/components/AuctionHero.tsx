@@ -76,7 +76,7 @@ export function AuctionHero({ auctions, serverTime, pending, stale, failed }: Pr
             <div className={styles.pillarItem} role="listitem">
               <Clock3 size={16} className={styles.pillarIcon} aria-hidden="true" />
               <div>
-                <strong>Phiên mở 24 giờ</strong>
+                <strong>Phiên 1 giờ đến 7 ngày</strong>
                 <span>Trả giá công khai, bước giá rõ ràng</span>
               </div>
             </div>

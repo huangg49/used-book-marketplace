@@ -274,17 +274,20 @@ export function AuctionDetailPage() {
 
         <header className={styles.head}>
           <h1>{auction.title}</h1>
-          {/* ADR 0078: the seller and members who registered or bid flag a
-              problem to Admin; anyone else can still report the content. */}
-          {authed && (sellerIntake || me)
-            ? <AuctionFlag auction={auction} ownerId={session.user.id} />
-            : <p><SupportLink type='Auction' id={auction.id} report/></p>}
           {!!auction.book?.authors.length && <p className={styles.authors}>{auction.book.authors.join(', ')}</p>}
           <span className={`${styles.status} ${open ? '' : styles.statusClosed}`}>
             {open ? <Gavel size={14} aria-hidden="true" /> : null}
             {scheduled ? 'Sắp mở' : ended ? 'Đã hết giờ, đang chốt kết quả' : STATE_LABEL[auction.state]}
           </span>
           {auction.book && <span className={styles.inspected}><ShieldCheck size={15} aria-hidden="true" /> Đã kiểm tra tại điểm giao nhận</span>}
+          {/* ADR 0078: the seller and members who registered or bid flag a
+              problem to Admin; anyone else can still report the content.
+              It follows the book's identity so the title and author stay together. */}
+          <div className={styles.report}>
+            {authed && (sellerIntake || me)
+              ? <AuctionFlag auction={auction} ownerId={session.user.id} />
+              : <p><SupportLink type='Auction' id={auction.id} report/></p>}
+          </div>
         </header>
 
         <aside className={styles.side} aria-label="Trả giá">
@@ -562,7 +565,10 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
   const [receipt, setReceipt] = useState<{ sequence: number; bid: boolean } | null>(null)
   const receiptSequence = useRef(0)
   const standing = useRef<HTMLDivElement>(null)
-  useAuctionChangeMotion(auction.id, me ? leading : undefined, standing, standingFrames, 270)
+  // A registered bidder has a participation before their first bid; only a
+  // bid of their own can lead or be outbid (ADR 0077 registration).
+  const hasBid = !!me && (leading || me.ownLevel !== null)
+  useAuctionChangeMotion(auction.id, hasBid ? leading : undefined, standing, standingFrames, 270)
   const [unknown, setUnknown] = useState<Intent | null>(null)
   const intent = useIntentKey()
   const ids = useId()
@@ -570,6 +576,12 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
   // for this auction counts toward a raise; the server stays authoritative.
   const wallet = useQuery({ queryKey: ['wallet-summary'], queryFn: getWalletSummary, staleTime: 15_000 })
   const heldHere = me?.heldAmount ?? 0
+  // A rival's bid arrives by push and releases this hold; re-read the wallet
+  // so the available amount does not stay at the value cached while leading.
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    void queryClient.invalidateQueries({ queryKey: ['wallet-summary'] })
+  }, [heldHere, queryClient])
   const available = wallet.data ? wallet.data.available + heldHere : null
   const shortOf = (amount: number | null | undefined) =>
     available !== null && amount != null && amount > available ? amount - available : 0
@@ -628,7 +640,7 @@ function BidPanel({ auction, me, onChanged, paused }: { auction: AuctionSummary;
   const dialog = confirming && dialogCopy(confirming, auction, leading)
   return (
     <div className={styles.bidPanel}>
-      {me && (
+      {hasBid && me && (
         <div ref={standing} role="status" className={`${styles.standing} ${leading ? styles.standingLead : styles.standingOut}`}>
           <strong>
             {leading ? <Check size={16} aria-hidden="true" /> : <AlertTriangle size={16} aria-hidden="true" />}

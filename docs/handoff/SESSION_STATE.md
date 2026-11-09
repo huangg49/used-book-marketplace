@@ -1,3 +1,28 @@
+# Rà soát trình duyệt luồng đấu giá (Member web) — 10/11/2026
+
+Nhánh `fix/auction-ui-review` từ `origin/main` (`71ba3257`). Đi trọn luồng bằng trình duyệt
+trên QA replica set (`*_test`, storage giả, ví mô phỏng): người bán giữ chỗ → nhân viên nhận và
+kiểm Đạt (admin web) → người bán hẹn giờ → 4 người đăng ký và đặt cọc → trả giá, bị vượt giá
+trực tiếp, mua ngay (chờ thách đấu và kết thúc ngay) → worker chốt → thanh toán → đồng ý biên
+bản → mã nhận sách. Người thua được hoàn đủ cọc; người thắng bị giữ đúng 120.000 đ cho đơn.
+
+- Lỗi đã sửa (user-web): "Sớm nhất" chọn giờ thiếu vài giây so với 5 phút nên hộp thoại tự báo
+  lỗi; Đấu giá của tôi hiện hạn đăng ký (opensAt + 24 giờ) như giờ mở và cho "Đổi thời gian"
+  kiểu cũ với phiên có đăng ký; người đã đăng ký nhưng chưa trả giá thấy "Bạn đã bị vượt giá";
+  số dư khả dụng không làm mới khi bị vượt giá qua push; tiêu đề tab giữ "Đăng nhập" sau khi
+  đăng nhập; lấy được mã nhận sách 10 phút ngoài giờ 09:00–18:00 (nay khóa nút, báo giờ mở lại).
+- UX/nội dung: danh sách hiện ghi chú gọn thay trạng thái trống lớn khi có phiên sắp mở; nhãn
+  cho nhóm chọn hình thức, số người tối thiểu, chế độ mua ngay; quy tắc đăng ký thành danh sách;
+  phiếu xem trước có tiền cọc, hình thức, số người; bỏ chữ "mở ngay"/"24 giờ" lỗi thời (ADR 0081);
+  tiền cọc mất "không được hoàn" (ADR 0087); nút báo cáo đặt sau tác giả; "sau khi mở" không còn
+  Title Case; Đấu giá của tôi ẩn khối người bán với người chỉ mua.
+- Kiểm tra: typecheck; vitest user-web 485 PASS (thêm `lib/point-hours.test.ts`); stage
+  `apps/user-web/tests/auction-stage.mjs` PASS; kiểm lại từng sửa trên trình duyệt 1366/390px.
+  `scripts/test-auction-journey.mjs` FAIL ở bước đầu: còn kỳ vọng 409 khi đăng phiên không có giờ
+  (nay 422 theo ADR 0081) và chưa có bước đăng ký 4 người — kịch bản lỗi thời, cần viết lại.
+- Chưa làm: bàn giao tại quầy (cần giờ mở cửa), nhánh Không đạt/Cần bằng chứng bằng tay, admin
+  `/operations/auctions`, giá kín/Hà Lan, RN/native. Khung nhận sách admin còn hộp lồng hộp.
+
 # Chứng cứ đóng gói và đối soát khiếu nại trao đổi sách — 08-09/11/2026
 
 Nhánh `feat/exchange-dispute-resolution` tích hợp cùng `origin/main` (`0a420d5c`).

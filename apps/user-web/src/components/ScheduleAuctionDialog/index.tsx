@@ -33,6 +33,10 @@ const toLocalInput = (ms: number) => {
   const d = new Date(ms)
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
+// The picker offers 5-minute slots. The earliest start is rounded up to the
+// next slot so "Sớm nhất" never lands seconds short of the 5-minute lead.
+const SLOT_MS = 5 * 60_000
+const ceilSlot = (ms: number) => Math.ceil(ms / SLOT_MS) * SLOT_MS
 const when = (ms: number) =>
   new Date(ms).toLocaleString('vi-VN', { weekday: 'short', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
 
@@ -81,7 +85,7 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
     if (!isOpen) prepared.current = false
     if (isOpen && !paused && !dialog.open) {
       if (!prepared.current) {
-        const start = target.kind === 'reschedule' && !target.live ? Date.parse(target.startAt) : now + HOUR
+        const start = target.kind === 'reschedule' && !target.live ? Date.parse(target.startAt) : ceilSlot(now + HOUR)
         setLater(lifecycle || (target.kind === 'reschedule' && !target.live))
         setStartInput(toLocalInput(start)); setSeconds(currentSeconds); setError(null)
         prepared.current = true
@@ -168,7 +172,7 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
                   <label htmlFor={`${ids}-start`}>Giờ mở phiên</label>
                   <DateTimePicker
                     id={`${ids}-start`} label="Giờ mở phiên" value={startInput}
-                    min={toLocalInput(now + AUCTION_MIN_LEAD_MS)} max={toLocalInput(horizon)}
+                    min={toLocalInput(ceilSlot(now + AUCTION_MIN_LEAD_MS))} max={toLocalInput(horizon)}
                     onChange={setStartInput}
                   />
                 </div>
