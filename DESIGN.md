@@ -811,6 +811,15 @@ Step-change focus reaches the heading; failed validation focuses the error summa
 
 Historical evidence for the preceding three-column desk: seven `sell-desk-*.jpg` captures and the [finish review](.impeccable/review/web-member/sell-desk-finish.md) document the scoped desk. Independent AI review returned **ship** after four control boundaries changed to the existing `shop-control` token; contrast is 4.201:1 on paper and 3.394:1 on the upload ground. The reviewer checked source/captures and the correction, without rerunning the implementer's execution evidence. Reported CUA checks covered four widths without overflow, validation/retention, photo addition/removal, exit cancellation, success and reset. Real Nest/Mongo `*_test` with fake storage produced exactly one PendingReview listing, one uploaded photo and 75,000/90,000 VNĐ values. Build/typecheck and 25 unit tests passed; lint had 0 errors/6 existing warnings. The single detector's six advisories do not require another scan. Full integration, actual browser lost-response retry,200% text/zoom, native, browser beforeunload prompt and human acceptance remain NOT RUN; READINESS gates are unchanged.
 
+### Sell book-information slip — step 1 refinement 10/11
+
+Step 1 follows the [Sell surface brief](apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-sellbookpage-tsx.md).
+A compact photo entry expands with selected images. The catalog and manual
+paths retain their controls. Manual title and author use the same bordered
+control, with classification before the optional edition disclosure. This
+replaces the ruled title treatment in the earlier recipe below. Validation
+points to the relevant field, and listing-limit details are disclosed on demand.
+
 ### Sell book-information slip — approved 12/10
 
 This ordinary Operate extension preserves the paper desk, background, five steps and preview topology above. A ruled header reuses the original Logo as an inert, aria-hidden decorative wine mark; **Bản nháp** is a truthful tilted stamp (1px wine boundary, −4°), never proof of saving or publication. Two native pressed buttons choose **Tìm sách có sẵn** or **Tự nhập thông tin**; they retain 48px minimum height, a quiet ground and a wine selected underline (2px). The catalog search is a 56px minimum field with an existing decorative search icon and a 44px text recovery action. A confirmed choice replaces entry controls with a wrapping title (26px/1.45), author and category/language facts; the title receives focus. **Chọn đầu sách khác** restores and focuses catalog search; **Không thấy sách? Tự nhập theo bìa** opens and focuses the manual title. The existing cleanup-owned animation frame performs these focus transfers after render.

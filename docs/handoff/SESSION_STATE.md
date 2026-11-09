@@ -1,3 +1,18 @@
+# Phân cấp thông tin bước 1 Đăng sách — 10/11/2026
+
+Nhánh `codex/sell-step-one-hierarchy` từ `dc5c02e8`. Member web thu gọn khay
+ảnh lúc trống, xếp trường bắt buộc trước thông tin ấn bản và mở riêng quy định
+đăng bài khi cần. Lỗi nằm cạnh trường liên quan. Khi Tiếp tục bị chặn, focus
+tới chỗ sửa đầu tiên và tôn trọng focus người dùng vừa chuyển. Ảnh, kết quả
+đọc và dữ liệu nhập được giữ khi chuyển bước trong cùng bản nháp. Chi tiết ở
+[brief Đăng sách](../../apps/user-web/.impeccable/surfaces/apps-user-web-src-pages-sellbookpage-tsx.md).
+
+Kiểm chứng gồm build/typecheck, 481 unit, lint với cảnh báo sẵn có và 42 ca
+Chromium. Kiểm bố cục/lỗi ở 320, 390 và 1440 px. Các ca API trong browser
+dùng dữ liệu giả lập. Bản xem trước local cổng 5175 trả 200 cho trang Đăng
+sách, health và tra danh mục. Chưa nghiệm thu với tài khoản hoặc AI thật.
+Bước 2 là phạm vi tiếp theo sau khi xem lại bước 1.
+
 # Autofill tự đọc vùng chữ nhỏ — 10/11/2026
 
 Profile `listing-text-v2` dùng cùng thao tác chọn ảnh và bấm đọc. Backend

@@ -16,6 +16,8 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  CircleAlert,
+  ChevronDown,
   BookOpen,
   ImagePlus,
   PencilLine,
@@ -312,15 +314,27 @@ export function SellBookPage() {
     target:
       | "heading"
       | "error"
+      | "book-info-error"
       | "selected-book"
       | "catalog-search"
       | "manual-title",
   ) {
     if (focusFrame.current !== undefined)
       cancelAnimationFrame(focusFrame.current);
+    const previousFocus = document.activeElement;
     focusFrame.current = requestAnimationFrame(() => {
+      // The next field may already have focus by the time React paints.
+      const active = document.activeElement;
+      if (active && active !== document.body && active !== previousFocus) return;
       if (target === "heading" || target === "error") {
         (target === "heading" ? heading : errorBox).current?.focus();
+      } else if (target === "book-info-error") {
+        const field = document.querySelector<HTMLElement>(
+          '#bundle[aria-invalid="true"], #sell-book-entry [aria-invalid="true"], #sell-change-book[aria-describedby]',
+        );
+        const disclosure = field?.closest("details");
+        if (disclosure) disclosure.open = true;
+        (field ?? heading.current)?.focus();
       } else {
         const ids = {
           "selected-book": "sell-selected-title",
@@ -665,6 +679,7 @@ export function SellBookPage() {
       if (invalidStep === 1 && !selectedBook) setEntryMode("manual");
       setCheckedSteps([1, 2, 3, 4, 5]);
       if (invalidStep) setStep(invalidStep);
+      if (invalidStep === 1) focusAfterRender("book-info-error");
       setSubmitError(`Cần bổ sung: ${missing.join(", ")}.`);
       return;
     }
@@ -852,23 +867,26 @@ export function SellBookPage() {
     setStep(next);
     focusAfterRender("heading");
   }
+  const bundleIssue = bundle ? bundleError(bundle) : undefined;
+  const bookInfoErrors = {
+    title: !formData.title.trim() ? "Nhập tên sách." : undefined,
+    author: !formData.author.trim() ? "Nhập tên tác giả." : undefined,
+    "sell-category":
+      !selectedBook && !classification.categoryId
+        ? "Chọn danh mục sách."
+        : !selectedBook &&
+            classificationErrors(classification.categoryId, classification.attributes).length
+          ? "Chọn lại danh mục và kiểm tra thuộc tính của sách."
+          : undefined,
+    "sell-publicationYear":
+      !selectedBook && invalidEditionYear
+        ? `Nhập năm từ 1400 đến ${new Date().getUTCFullYear()} hoặc để trống.`
+        : undefined,
+  };
+  const bookInfoError = Object.values(bookInfoErrors).find(Boolean);
   function stepError(forStep: number) {
-    if (forStep === 1 && bundle && bundleError(bundle)) return bundleError(bundle);
+    if (forStep === 1) return bundleIssue || bookInfoError;
     let message: string | undefined;
-    if (
-      forStep === 1 &&
-      !selectedBook &&
-      (!classification.categoryId ||
-        classificationErrors(
-          classification.categoryId,
-          classification.attributes,
-        ).length)
-    )
-      return "Chọn danh mục và kiểm tra thuộc tính của đầu sách.";
-    if (forStep === 1 && (!formData.title.trim() || !formData.author.trim()))
-      message = "Nhập tên sách và tác giả trước khi tiếp tục.";
-    if (forStep === 1 && !selectedBook && invalidEditionYear)
-      message = "Nhập năm xuất bản hợp lệ hoặc để trống nếu chưa xác định được.";
     if (forStep === 2 && !hasCoverPhoto) message = "Thêm ảnh bìa bản sách.";
     if (forStep === 3) {
       if (
@@ -897,12 +915,11 @@ export function SellBookPage() {
   }
   function continueStep() {
     const message = stepError(step);
-    if (step === 1 && message && !selectedBook) setEntryMode("manual");
     setCheckedSteps((previous) => [...new Set([...previous, step])]);
     setSubmitError(message);
     setValidationFailure(!!message);
     if (!message) changeStep(step + 1);
-    else focusAfterRender("error");
+    else focusAfterRender(step === 1 ? "book-info-error" : "error");
   }
   function validPrice(raw: string) {
     const value = Number(raw);
@@ -954,22 +971,17 @@ export function SellBookPage() {
     updatePhotos(urls.filter((_, i) => i !== index), files.filter((_, i) => i !== index));
   }
   const fieldErrors: Record<string, string | undefined> = {
-    bundle: bundle ? bundleError(bundle) : undefined,
-    title: !formData.title.trim() ? "Nhập tên sách như trên bìa." : undefined,
-    author: !formData.author.trim()
-      ? "Nhập tên tác giả như trên bìa."
-      : undefined,
-    images: !hasCoverPhoto ? "Thêm ảnh bìa bản sách." : undefined,
-    "sell-category":
-      !selectedBook &&
-      stepError(1) &&
-      (!classification.categoryId ||
-        classificationErrors(
-          classification.categoryId,
-          classification.attributes,
-        ).length)
-        ? "Chọn danh mục và kiểm tra các thuộc tính đã chọn."
+    ...bookInfoErrors,
+    bundle: bundleIssue,
+    "sell-catalog-search":
+      !selectedBook && entryMode === "catalog" && bookInfoError
+        ? "Chọn một kết quả hoặc chuyển sang Tự nhập thông tin."
         : undefined,
+    "sell-change-book":
+      selectedBook && bookInfoError
+        ? "Đầu sách này thiếu tên hoặc tác giả. Hãy chọn đầu sách khác hoặc tự nhập."
+        : undefined,
+    images: !hasCoverPhoto ? "Thêm ảnh bìa bản sách." : undefined,
     salePrice:
       formData.mode !== "Exchange" && !validPrice(formData.salePrice)
         ? "Nhập số nguyên từ 10.000 đến 1.000.000 VNĐ."
@@ -1011,14 +1023,19 @@ export function SellBookPage() {
     ),
   };
   function shownError(key: string) {
-    return checkedSteps.includes(step) || touched.includes(key)
+    const checkOnBlur = step !== 1 || key === "sell-publicationYear";
+    return checkedSteps.includes(step) || (checkOnBlur && touched.includes(key))
       ? fieldErrors[key]
       : undefined;
   }
   function fieldFeedback(key: string) {
     const message = shownError(key);
     return message ? (
-      <p id={`${key}-error`} className={styles.fieldError}>
+      <p
+        id={`${key}-error`}
+        className={step === 1 ? styles.bookFieldError : styles.fieldError}
+      >
+        {step === 1 && <CircleAlert size={15} aria-hidden="true" />}
         {message}
       </p>
     ) : null;
@@ -1032,8 +1049,10 @@ export function SellBookPage() {
           .join(" ") || undefined,
     };
   }
+  const postingLimit =
+    "Đăng bài miễn phí. Mỗi tài khoản có tối đa 5 bài đang hiển thị trên trang chủ hoặc chờ admin duyệt. Bản nháp, bài bị từ chối, bài đã duyệt nhưng đang ẩn, bài đã bán/đổi hoặc đã lưu trữ không tính vào giới hạn.";
   const stepHelp = [
-    "Chọn đầu sách đã có, hoặc bổ sung thông tin như trên bìa.",
+    null,
     "Ảnh thật giúp người đọc nhìn rõ bản sách của bạn.",
     "Kể rõ những dấu vết đã có trên cuốn sách.",
     auction
@@ -1073,21 +1092,21 @@ export function SellBookPage() {
     return "Chưa hoàn thành";
   }
   const stepFields: string[] =
-    step === 1
-      ? ["title", "author", "sell-category"]
-      : step === 2
-        ? ["images"]
-        : step === 3
-          ? [
-              ...textFields.map(([key]) => key),
-              ...questions.map(([key]) => key),
-            ]
-          : step === 4
-            ? ["salePrice", "exchangeValue", "originAddress"]
-            : ["ownership"];
-  const visibleSubmitError = validationFailure
-    ? stepError(step) || (step === 5 ? fieldErrors.ownership : undefined)
-    : submitError;
+    step === 2
+      ? ["images"]
+      : step === 3
+        ? [
+            ...textFields.map(([key]) => key),
+            ...questions.map(([key]) => key),
+          ]
+        : step === 4
+          ? ["salePrice", "exchangeValue", "originAddress"]
+          : ["ownership"];
+  const visibleSubmitError = !validationFailure
+    ? submitError
+    : step === 1
+      ? undefined
+      : stepError(step) || (step === 5 ? fieldErrors.ownership : undefined);
 
   const progressFields = useMemo(() => {
     const list: { key: string; label: string; valid: boolean }[] = [];
@@ -1685,7 +1704,9 @@ export function SellBookPage() {
                   <h2 ref={heading} tabIndex={-1}>
                     {steps[step - 1]}
                   </h2>
-                  <p className={styles.stepHelp}>{stepHelp[step - 1]}</p>
+                  {stepHelp[step - 1] && (
+                    <p className={styles.stepHelp}>{stepHelp[step - 1]}</p>
+                  )}
                   <form
                     onBlurCapture={(event) => {
                       const target = event.target;
@@ -1715,26 +1736,28 @@ export function SellBookPage() {
                     >
                       <div className={styles.bookInfoFields} hidden={step !== 1}>
                           {!auction && <>
-                            <div className={styles.entryChoice} role="group" aria-label="Sách lẻ hoặc bộ sách">
-                              <button type="button" aria-pressed={!bundle} onClick={() => {
-                                if (!bundle) return;
-                                bundleDraft.current = bundle;
-                                bundlePrice.current = formData.salePrice;
-                                setBundle(null);
-                                setOwnershipDeclared(false);
-                                if (singleTerms.current) setFormData(previous => ({ ...previous, ...singleTerms.current! }));
-                              }}>Sách lẻ</button>
-                              <button type="button" aria-pressed={!!bundle} onClick={() => {
-                                if (bundle) return;
-                                singleTerms.current = { mode: formData.mode, salePrice: formData.salePrice, exchangeValue: formData.exchangeValue, condition: formData.condition };
-                                const restored = bundleDraft.current || { title: '', wholeOnly: true as const, exclusiveOwnershipDeclared: true as const,
-                                  items: [{ label: '', condition: 'Good' as const, notes: '' }, { label: '', condition: 'Good' as const, notes: '' }] };
-                                setBundle(restored);
-                                setOwnershipDeclared(false);
-                                setFormData(previous => ({ ...previous, mode: 'Sale', salePrice: bundlePrice.current, exchangeValue: '', condition: bundleCondition(restored) }));
-                              }}>Bộ sách</button>
+                            <div className={styles.bookType}>
+                              <span id="sell-book-type">Bạn đăng</span>
+                              <div className={styles.typeChoice} role="group" aria-labelledby="sell-book-type">
+                                <button type="button" aria-pressed={!bundle} onClick={() => {
+                                  if (!bundle) return;
+                                  bundleDraft.current = bundle;
+                                  bundlePrice.current = formData.salePrice;
+                                  setBundle(null);
+                                  setOwnershipDeclared(false);
+                                  if (singleTerms.current) setFormData(previous => ({ ...previous, ...singleTerms.current! }));
+                                }}>Sách lẻ</button>
+                                <button type="button" aria-pressed={!!bundle} onClick={() => {
+                                  if (bundle) return;
+                                  singleTerms.current = { mode: formData.mode, salePrice: formData.salePrice, exchangeValue: formData.exchangeValue, condition: formData.condition };
+                                  const restored = bundleDraft.current || { title: '', wholeOnly: true as const, exclusiveOwnershipDeclared: true as const,
+                                    items: [{ label: '', condition: 'Good' as const, notes: '' }, { label: '', condition: 'Good' as const, notes: '' }] };
+                                  setBundle(restored);
+                                  setOwnershipDeclared(false);
+                                  setFormData(previous => ({ ...previous, mode: 'Sale', salePrice: bundlePrice.current, exchangeValue: '', condition: bundleCondition(restored) }));
+                                }}>Bộ sách</button>
+                              </div>
                             </div>
-                            <p className={styles.help}>Đổi lựa chọn vẫn giữ thông tin bộ trong phiên này. Bộ sách chỉ bán nguyên bộ, không đổi sách hoặc đấu giá.</p>
                             {bundle && <BundleEditor value={bundle} error={shownError('bundle')} onChange={next => {
                               setBundle(next);
                               setOwnershipDeclared(false);
@@ -1751,6 +1774,9 @@ export function SellBookPage() {
                               onUseField={applyAutofillField}
                               onPickBook={(match) => chooseBook(match.book)}
                             />
+                          )}
+                          {bundle && !selectedBook && (
+                            <h3 className={styles.bookEntryHeading}>Đầu sách đại diện</h3>
                           )}
                           {!selectedBook && (
                             <div
@@ -1786,13 +1812,11 @@ export function SellBookPage() {
                               <div className={styles.catalogEntry}>
                                 <CatalogBookPicker
                                   compact
-                                  label="Tìm cuốn sách trong thư viện"
+                                  label="Tìm trong danh mục"
+                                  feedback={feedbackProps("sell-catalog-search")}
+                                  feedbackMessage={fieldFeedback("sell-catalog-search")}
                                   onSelect={chooseBook}
                                 />
-                                <p className={styles.help}>
-                                  Chọn đúng đầu sách để điền sẵn tên, tác giả và
-                                  phân loại.
-                                </p>
                                 <button
                                   className={styles.textAction}
                                   type="button"
@@ -1833,9 +1857,12 @@ export function SellBookPage() {
                                     </dd>
                                   </div>
                                 </dl>
+                                {fieldFeedback("sell-change-book")}
                                 <button
+                                  id="sell-change-book"
                                   type="button"
                                   className={styles.textAction}
+                                  aria-describedby={shownError("sell-change-book") ? "sell-change-book-error" : undefined}
                                   onClick={() => {
                                     setSelectedBook(null);
                                     setEntryMode("catalog");
@@ -1849,78 +1876,44 @@ export function SellBookPage() {
                             )}
                             {!selectedBook && entryMode === "manual" && (
                               <>
-                                <p className={styles.manualHint}>
-                                  Ghi tên sách và tác giả đúng như trên bìa.
-                                </p>
-                                {(
-                                  [
-                                    ["title", "Tên sách", "Ví dụ: Truyện Kiều"],
-                                    ["author", "Tác giả", "Ví dụ: Nguyễn Du"],
-                                  ] as const
-                                ).map(([key, label, placeholder]) => (
-                                  <div
-                                    className={`${styles.field} ${key === "title" ? styles.titleField : ""}`}
-                                    key={key}
-                                  >
-                                    <label htmlFor={key}>{label}</label>
-                                    <input
-                                      id={key}
-                                      required
-                                      {...feedbackProps(key)}
-                                      value={formData[key]}
-                                      disabled={!!selectedBook}
-                                      onChange={(event) => {
-                                        const value = event.currentTarget.value;
-                                        setFormData((previous) => ({
-                                          ...previous,
-                                          [key]: value,
-                                        }));
-                                      }}
-                                      placeholder={placeholder}
-                                    />
-                                    {fieldFeedback(key)}
-                                  </div>
-                                ))}
-                                <details className={styles.editionFacts} open={autofillFactRows(autofillFacts).length ? true : undefined}>
-                                  <summary>Thông tin ấn bản</summary>
-                                  <p className={styles.help}>Sửa hoặc xóa từng mục. Để trống nếu chưa xác định được.</p>
-                                  {([
-                                    ["publisher", "Nhà xuất bản", 200],
-                                    ["publicationYear", "Năm xuất bản", 4],
-                                    ["edition", "Lần xuất bản", 200],
-                                    ["isbn", "ISBN", 30],
-                                  ] as const).map(([key, label, maxLength]) => (
-                                    <div key={key} className={styles.field}>
-                                      <label htmlFor={`sell-${key}`}>{label}</label>
+                                <div className={styles.bookIdentity}>
+                                  <p className={styles.help}>Ghi tên sách và tác giả như trên bìa.</p>
+                                  {(
+                                    [
+                                      ["title", "Tên sách", "Ví dụ: Truyện Kiều"],
+                                      ["author", "Tác giả", "Ví dụ: Nguyễn Du"],
+                                    ] as const
+                                  ).map(([key, label, placeholder]) => (
+                                    <div
+                                      className={styles.field}
+                                      key={key}
+                                    >
+                                      <label htmlFor={key}>{label}</label>
                                       <input
-                                        id={`sell-${key}`}
-                                        type={key === "publicationYear" ? "number" : "text"}
-                                        maxLength={key === "publicationYear" ? undefined : maxLength}
-                                        value={autofillFacts[key] ?? ""}
+                                        id={key}
+                                        required
+                                        {...feedbackProps(key)}
+                                        value={formData[key]}
                                         onChange={(event) => {
                                           const value = event.currentTarget.value;
-                                          setAutofillFacts((previous) => ({
+                                          setFormData((previous) => ({
                                             ...previous,
-                                            [key]: key === "publicationYear" && value ? Number(value) : value || null,
+                                            [key]: value,
                                           }));
                                         }}
+                                        placeholder={placeholder}
                                       />
+                                      {fieldFeedback(key)}
                                     </div>
                                   ))}
-                                </details>
-                                <fieldset
-                                  disabled={!!selectedBook}
-                                  className={styles.classification}
-                                  aria-describedby={
-                                    shownError("sell-category")
-                                      ? "sell-category-error"
-                                      : undefined
-                                  }
-                                >
+                                </div>
+                                <fieldset className={styles.classification}>
                                   <legend>Phân loại đầu sách</legend>
                                   <CatalogClassificationFields
                                     editing
                                     collapseOptional
+                                    categoryFeedback={feedbackProps("sell-category")}
+                                    categoryMessage={fieldFeedback("sell-category")}
                                     secondaryField={
                                       <div className={styles.languageField}>
                                         <label htmlFor="sell-language">
@@ -1952,11 +1945,44 @@ export function SellBookPage() {
                                     value={classification}
                                     onChange={setClassification}
                                   />
-                                  {fieldFeedback("sell-category")}
                                 </fieldset>
-                                <p className={styles.marginNote}>
-                                  Đúng tên trên bìa, dễ tìm nhau hơn.
-                                </p>
+                                <details
+                                  className={styles.editionFacts}
+                                  open={autofillFactRows(autofillFacts).length ? true : undefined}
+                                >
+                                  <summary>
+                                    <span>Thông tin ấn bản</span>
+                                    <span className={styles.disclosureHint}>Tùy chọn</span>
+                                    <ChevronDown size={16} aria-hidden="true" />
+                                  </summary>
+                                  <div className={styles.editionFields}>
+                                    {([
+                                      ["publisher", "Nhà xuất bản", 200],
+                                      ["publicationYear", "Năm xuất bản", 4],
+                                      ["edition", "Lần xuất bản", 200],
+                                      ["isbn", "ISBN", 30],
+                                    ] as const).map(([key, label, maxLength]) => (
+                                      <div key={key} className={styles.field}>
+                                        <label htmlFor={`sell-${key}`}>{label}</label>
+                                        <input
+                                          id={`sell-${key}`}
+                                          type={key === "publicationYear" ? "number" : "text"}
+                                          maxLength={key === "publicationYear" ? undefined : maxLength}
+                                          {...feedbackProps(`sell-${key}`)}
+                                          value={autofillFacts[key] ?? ""}
+                                          onChange={(event) => {
+                                            const value = event.currentTarget.value;
+                                            setAutofillFacts((previous) => ({
+                                              ...previous,
+                                              [key]: key === "publicationYear" && value ? Number(value) : value || null,
+                                            }));
+                                          }}
+                                        />
+                                        {fieldFeedback(`sell-${key}`)}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </details>
                               </>
                             )}
                           </div>
@@ -3099,6 +3125,9 @@ export function SellBookPage() {
                         Đang xử lý ảnh bìa. Chờ ảnh hoàn tất rồi kiểm tra lại trước khi gửi.
                       </p>
                     )}
+                    {step === 1 && validationFailure && stepError(1) && (
+                      <p role="alert" className="sr-only">Kiểm tra các mục được đánh dấu.</p>
+                    )}
                     {visibleSubmitError && (
                       <div
                         role="alert"
@@ -3160,12 +3189,17 @@ export function SellBookPage() {
                         )}
                       </div>
                     )}
-                    <p className={styles.help}>
-                      Đăng bài miễn phí. Mỗi tài khoản có tối đa 5 bài đang hiển
-                      thị trên trang chủ hoặc chờ admin duyệt. Bản nháp, bài bị
-                      từ chối, bài đã duyệt nhưng đang ẩn, bài đã bán/đổi hoặc
-                      đã lưu trữ không tính vào giới hạn.
-                    </p>
+                    {step === 1 ? (
+                      <details className={styles.postingLimit}>
+                        <summary>
+                          <span>Giới hạn đăng bài</span>
+                          <ChevronDown size={16} aria-hidden="true" />
+                        </summary>
+                        <p className={styles.help}>{postingLimit}</p>
+                      </details>
+                    ) : (
+                      <p className={styles.help}>{postingLimit}</p>
+                    )}
                     {hasAttempt && (
                       <p role="status" className={styles.help}>
                         Thông tin đã khóa cho lần gửi này để giữ đúng dữ liệu
@@ -3184,7 +3218,7 @@ export function SellBookPage() {
                         </button>
                       ) : (
                         <span className={styles.sessionNote}>
-                          Chưa có tự động lưu nháp.
+                          Bản nháp chưa tự lưu.
                         </span>
                       )}
                       <button

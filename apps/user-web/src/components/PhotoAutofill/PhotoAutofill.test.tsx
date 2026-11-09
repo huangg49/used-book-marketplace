@@ -6,7 +6,7 @@ import { PhotoAutofill } from ".";
 vi.mock("../../services/api", () => ({ session: { request: vi.fn() } }));
 
 describe("photo autofill panel", () => {
-  it("starts with a labelled photo picker and a disabled read action, never applying anything", () => {
+  it("starts with a labelled photo picker and reveals read actions only after adding photos", () => {
     const onUseField = vi.fn();
     const onPickBook = vi.fn();
     const html = renderToStaticMarkup(
@@ -19,8 +19,8 @@ describe("photo autofill panel", () => {
     expect(html).toContain('aria-labelledby="photo-autofill-title"');
     expect(html).toContain("Điền nhanh từ ảnh");
     expect(html).toContain('accept="image/jpeg,image/png,image/webp"');
-    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Đọc thông tin<\/button>/);
-    expect(html).toContain('role="status"');
+    expect(html).toContain("Chọn ảnh");
+    expect(html).not.toContain("Đọc thông tin");
     expect(html).not.toContain("Gợi ý từ ảnh");
     expect(onUseField).not.toHaveBeenCalled();
     expect(onPickBook).not.toHaveBeenCalled();

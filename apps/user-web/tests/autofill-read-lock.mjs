@@ -18,7 +18,9 @@ const user={id:id(1),displayName:'Bạn đọc QA',email:'reader@example.test',r
 const checks=[];let browser;
 try{
  browser=await chromium.launch();
- for(const width of [390,1440])for(const mode of ['isbn','lookup-fail','ai-lost-ack',...baseline?[]:['lookup-ai-bypass','ai-direct','catalog-match']]){
+ const modes = ['isbn', 'lookup-fail', 'ai-lost-ack', ...baseline ? [] : ['lookup-ai-bypass', 'ai-direct', 'catalog-match', 'step-one']];
+ const viewports = baseline ? [390, 1440] : [320, 390, 1440];
+ for (const width of viewports) for (const mode of width === 320 ? ['step-one'] : modes) {
   const context=await browser.newContext({viewport:{width,height:950},reducedMotion:'reduce'});
   await context.routeWebSocket('**/*',socket=>socket.close());
   const page=await context.newPage(),errors=[],gates=[],aiGates=[],intents=[];
@@ -58,6 +60,9 @@ try{
     return route.fulfill({json:{items,truncated:false,serverTime:new Date().toISOString()}});
    }
    assert.equal(m,'GET','No submit/save/provider commands in autofill fixture');
+   if (p === '/api/v1/catalog/books' && mode === 'step-one') {
+    return route.fulfill({ json: { items: [], nextCursor: null } });
+   }
    if(p==='/api/v1/me/addresses')return route.fulfill({json:{version:0,items:[]}});
    if(p==='/api/v1/service-areas')return route.fulfill({json:{code:'HCM-DEMO-v1',localities:[]}});
    if(p==='/api/v1/me/notifications')return route.fulfill({json:{items:[],nextCursor:null,unreadCount:0}});
@@ -69,6 +74,81 @@ try{
   await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
   const panel=page.locator('section[aria-labelledby="photo-autofill-title"]');
   await expect(panel).toBeVisible();await page.waitForFunction(()=>!document.querySelector('[data-paper-storm]'),undefined,{timeout:15000});
+  if (mode === 'step-one') {
+   const next = page.getByRole('button', { name: 'Tiếp tục', exact: true });
+   const search = page.getByRole('searchbox', { name: 'Tìm trong danh mục' });
+   const manual = page.getByRole('button', { name: 'Tự nhập thông tin', exact: true });
+   const title = page.getByLabel('Tên sách', { exact: true });
+   const author = page.getByLabel('Tác giả', { exact: true });
+   const category = page.getByRole('combobox', { name: 'Danh mục sách', exact: true });
+   const edition = page.locator('summary').filter({ hasText: 'Thông tin ấn bản' });
+   const year = page.getByLabel('Năm xuất bản', { exact: true });
+   const form = next.locator('xpath=ancestor::form');
+   await expect(panel.getByRole('button', { name: 'Đọc thông tin', exact: true })).toHaveCount(0);
+   await expect(search).toBeVisible();
+   await form.screenshot({ path: path.join(out, `step-one-catalog-${width}.png`) });
+   await manual.click();
+   await title.focus();
+   await page.keyboard.press('Tab');
+   await expect(author).toBeFocused();
+   await expect(title).not.toHaveAttribute('aria-invalid', 'true');
+   await form.screenshot({ path: path.join(out, `step-one-manual-${width}.png`) });
+   await page.getByRole('button', { name: 'Tìm sách có sẵn', exact: true }).click();
+   await search.fill('QA không có kết quả');
+   await expect(page.getByText('Chưa tìm thấy sách phù hợp.')).toBeVisible();
+   await next.click();
+   await expect(search).toBeFocused();
+   await expect(search).toHaveAccessibleDescription('Chọn một kết quả hoặc chuyển sang Tự nhập thông tin.');
+   await page.getByRole('button', { name: 'Không thấy sách? Tự nhập theo bìa' }).click();
+   await expect(title).toBeFocused();
+   await title.fill('Tên đầu sách QA');
+   await next.click();
+   await expect(author).toBeFocused();
+   await expect(author).toHaveAccessibleDescription('Nhập tên tác giả.');
+   await expect(page.getByText('Nhập tên tác giả.', { exact: true })).toHaveCount(1);
+   await form.screenshot({ path: path.join(out, `step-one-errors-${width}.png`) });
+   await author.fill('Tác giả QA');
+   await next.click();
+   await expect(category).toBeFocused();
+   await expect(category).toHaveAccessibleDescription('Chọn danh mục sách.');
+   await category.selectOption({ index: 1 });
+   await expect(year).toBeHidden();
+   await edition.focus();
+   await page.keyboard.press('Enter');
+   await year.fill('195');
+   await edition.click();
+   await next.click();
+   await expect(year).toBeFocused();
+   await expect(year).toHaveAttribute('aria-invalid', 'true');
+   await year.fill('1963');
+   await expect(year).not.toHaveAttribute('aria-invalid', 'true');
+   await next.click();
+   await expect(page.getByRole('heading', { name: 'Ảnh bản sách', exact: true })).toBeFocused();
+   await page.getByRole('button', { name: 'Quay lại', exact: true }).click();
+   await expect(title).toHaveValue('Tên đầu sách QA');
+   await expect(year).toHaveValue('1963');
+   const policy = page.getByText('Giới hạn đăng bài', { exact: true });
+   await expect(page.getByText(/Đăng bài miễn phí/)).toBeHidden();
+   await policy.click();
+   await expect(page.getByText(/Đăng bài miễn phí/)).toBeVisible();
+   await page.getByRole('button', { name: 'Bộ sách', exact: true }).click();
+   await expect(page.getByRole('heading', { name: 'Đầu sách đại diện' })).toBeVisible();
+   await next.click();
+   await expect(page.locator('#bundle')).toBeFocused();
+   await page.getByLabel('Tên bộ sách', { exact: true }).fill('Bộ QA');
+   await page.getByRole('button', { name: 'Sách lẻ', exact: true }).click();
+   await expect(title).toHaveValue('Tên đầu sách QA');
+   await page.getByRole('button', { name: 'Bộ sách', exact: true }).click();
+   await expect(page.getByLabel('Tên bộ sách', { exact: true })).toHaveValue('Bộ QA');
+   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+   assert.equal(await form.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
+   assert.equal(await manual.getAttribute('aria-pressed'), 'true');
+   assert.deepEqual(errors, []);
+   assert.ok(Object.values(counts).every(count => count === 0));
+   checks.push({ width, mode, inlineErrors: true, draftPreserved: true, fitsViewport: true });
+   await context.close();
+   continue;
+  }
   if (mode === 'ai-direct') {
    await panel.screenshot({path:path.join(out,`step-one-empty-${width}.png`)});
   }
