@@ -2160,12 +2160,19 @@ export class ExchangesService {
 
           const decisionText =
             body.decision === 'RefundBoth'
-              ? 'Hủy giao dịch & Hoàn tiền cọc cho 2 bên'
+              ? 'Hủy giao dịch & Hoàn tiền cọc cho 2 bên (Sự cố khách quan)'
               : body.decision === 'CompleteExchange'
               ? 'Công nhận hoàn tất trao đổi & Tất toán'
               : body.decision === 'CompensateInitiator'
-              ? 'Phạt cọc Bên B (Đối tác) & Bồi thường cho Bên A (Khởi tạo)'
-              : 'Phạt cọc Bên A (Khởi tạo) & Bồi thường cho Bên B (Đối tác)';
+              ? 'Chấp thuận khiếu nại của Bên A (Khởi tạo) — Lỗi thuộc về Bên B (Đối tác)'
+              : 'Chấp thuận khiếu nại của Bên B (Đối tác) — Lỗi thuộc về Bên A (Khởi tạo)';
+
+          const actionSummary =
+            body.decision === 'CompleteExchange'
+              ? 'Biện pháp: Công nhận giao dịch hoàn tất. Sổ cái tất toán tiền bù và hoàn cọc cho hai bên.'
+              : body.decision === 'RefundBoth'
+              ? 'Biện pháp: Hủy giao dịch trao đổi. Sổ cái hoàn 100% tiền cọc và tiền bù cho hai bên.'
+              : 'Biện pháp: Hủy giao dịch trao đổi. Sổ cái hoàn 100% tiền cọc và tiền bù để bảo vệ bên khiếu nại; ghi nhận biên bản vi phạm quy chế sàn đối với bên có lỗi.';
 
           // Gửi thông báo đến cả hai bên tham gia giao dịch
           await notifyExchange(
@@ -2175,7 +2182,7 @@ export class ExchangesService {
             [next.initiatorId, next.recipientId],
             now,
             {
-              reason: `Phán quyết từ quản trị viên: ${decisionText}. Căn cứ: ${trimmedReason}`,
+              reason: `Phán quyết từ quản trị viên: ${decisionText}. ${actionSummary} Căn cứ: ${trimmedReason}`,
             },
           );
 
@@ -2184,7 +2191,7 @@ export class ExchangesService {
             _id: randomUUID(),
             exchangeId: exchange._id,
             senderId: actor._id,
-            body: `[Phán quyết của Quản trị viên]\nQuyết định: ${decisionText}\nCăn cứ đối soát: ${trimmedReason}`,
+            body: `[Phán quyết của Quản trị viên]\nQuyết định: ${decisionText}\n${actionSummary}\nCăn cứ đối soát: ${trimmedReason}`,
             sentAt: now,
           });
 

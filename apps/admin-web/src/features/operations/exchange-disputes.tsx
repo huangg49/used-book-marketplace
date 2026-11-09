@@ -358,14 +358,14 @@ const decisionDetails: Record<
       "Chứng cứ cho thấy bên gửi đóng gói đúng chuẩn, khiếu nại không đủ căn cứ. Công nhận giao dịch hoàn tất, Ledger tất toán cọc và chuyển tiền bù.",
   },
   CompensateInitiator: {
-    label: "Phạt cọc Bên B & Bồi thường cho Bên A (Compensate Initiator)",
+    label: "Chấp thuận khiếu nại — Lỗi Bên B (Đối tác) & Bảo vệ quyền lợi Bên A",
     effect:
-      "Xác định vi phạm thuộc về Bên B (Đối tác). Sổ cái Ledger tịch thu 100% tiền cọc của Bên B chuyển sang ví Bên A để bồi thường; hoàn cọc cho Bên A.",
+      "Xác định Bên B vi phạm cam kết (sách hỏng nặng, sai mô tả). Hủy giao dịch: Sổ cái hoàn 100% tiền cọc và tiền bù cho Bên A; ghi nhận vi phạm đối với Bên B.",
   },
   CompensateRecipient: {
-    label: "Phạt cọc Bên A & Bồi thường cho Bên B (Compensate Recipient)",
+    label: "Chấp thuận khiếu nại — Lỗi Bên A (Khởi tạo) & Bảo vệ quyền lợi Bên B",
     effect:
-      "Xác định vi phạm thuộc về Bên A (Khởi tạo). Sổ cái Ledger tịch thu 100% tiền cọc của Bên A chuyển sang ví Bên B để bồi thường; hoàn cọc cho Bên B.",
+      "Xác định Bên A vi phạm cam kết (sách hỏng nặng, sai mô tả). Hủy giao dịch: Sổ cái hoàn 100% tiền cọc và tiền bù cho Bên B; ghi nhận vi phạm đối với Bên A.",
   },
 };
 
@@ -428,28 +428,28 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
       badge: "Hòa giải",
       label: "Hòa giải / Sự cố khách quan — Hủy giao dịch & Hoàn cọc cả 2 bên (Refund Both)",
       effect:
-        "Sự cố ngoài ý muốn (vận chuyển / thời tiết / 2 bên đồng thuận). Sổ cái Ledger hoàn 100% tiền cọc và tiền bù cho cả hai bên; sách mở khóa để nhận lại.",
+        "Sự cố ngoài ý muốn (vận chuyển / thời tiết / 2 bên đồng thuận). Hủy giao dịch: Sổ cái Ledger hoàn 100% tiền cọc và tiền bù cho cả hai bên; sách mở khóa để nhận lại.",
     },
     {
       value: "CompleteExchange",
       badge: "Bác khiếu nại",
       label: "Bác khiếu nại & Hoàn tất trao đổi (Complete Exchange)",
       effect:
-        "Chứng cứ cho thấy bên gửi đóng gói đúng chuẩn, khiếu nại không đủ căn cứ. Công nhận giao dịch hoàn tất, Ledger tất toán cọc và chuyển tiền bù.",
+        "Chứng cứ cho thấy bên gửi đóng gói đúng chuẩn, khiếu nại không đủ căn cứ. Công nhận giao dịch hoàn tất, Sổ cái tất toán cọc và chuyển tiền bù.",
     },
     {
       value: faultSenderDecision,
-      badge: "Phạt bên gửi",
-      label: `Lỗi Bên gửi (${senderRoleTitle}) — Tịch thu cọc đền bù cho Bên nhận`,
+      badge: "Lỗi bên gửi",
+      label: `Chấp thuận khiếu nại — Xác định lỗi Bên gửi (${senderRoleTitle})`,
       effect:
-        "Xác định bên gửi vi phạm (sách hư hỏng nặng, sai mô tả hoặc sách giả). Sổ cái Ledger tịch thu 100% tiền cọc của bên gửi chuyển thẳng vào ví bên nhận để bồi thường thiệt hại; hoàn trả cọc cho bên nhận.",
+        "Xác định bên gửi vi phạm cam kết (sách hư hỏng nặng, sai mô tả hoặc sách giả). Hủy giao dịch: Sổ cái hoàn 100% tiền cọc và tiền bù để bảo vệ quyền lợi Bên nhận; lập biên bản ghi nhận vi phạm đối với bên gửi.",
     },
     {
       value: faultReceiverDecision,
-      badge: "Phạt bên nhận",
-      label: `Lỗi Bên nhận (${receiverRoleTitle}) — Tịch thu cọc đền bù cho Bên gửi`,
+      badge: "Lỗi bên nhận",
+      label: `Bác khiếu nại & Xử lý gian lận — Lỗi Bên nhận (${receiverRoleTitle})`,
       effect:
-        "Xác định bên nhận có hành vi gian lận (tráo hàng, cố tình phá hỏng sách hoặc vu khống vô căn cứ). Sổ cái Ledger tịch thu 100% tiền cọc của bên nhận chuyển thẳng vào ví bên gửi để bồi thường; hoàn trả cọc cho bên gửi.",
+        "Xác định bên nhận có hành vi gian lận (tráo hàng, cố tình phá hỏng sách hoặc vu khống vô căn cứ). Hủy giao dịch hoàn cọc; lập biên bản ghi nhận vi phạm gian lận đối với bên nhận.",
     },
   ];
 
@@ -899,12 +899,12 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
                 disabled={locked}
                 onClick={() =>
                   handleApplyPreset(
-                    "Đối soát chứng cứ 2 chiều: Sự cố hư hỏng khách quan trong quá trình vận chuyển bưu gửi. Hai bên đều đóng gói và mở kiện đúng quy định. Phán quyết: Hủy giao dịch (Refund Both), hoàn trả 100% tiền cọc và tiền bù cho hai bên theo đúng quy chế.",
+                    "Đối soát sự cố khách quan: Trục trặc phát sinh từ quá trình vận chuyển hoặc các yếu tố ngoại cảnh ngoài ý muốn, không xác định được lỗi chủ quan từ hai bên. Phán quyết: Hòa giải (Refund Both), hủy giao dịch trao đổi, Sổ cái hoàn 100% tiền cọc bảo chứng và tiền bù cho hai bên, mở khóa sách để nhận lại.",
                     "RefundBoth",
                   )
                 }
               >
-                ⚡ Mẫu 1: Sự cố khách quan — Hủy giao dịch &amp; Hoàn cọc cả 2 bên (Refund Both)
+                ⚡ Mẫu 1: Sự cố khách quan / Hòa giải — Hủy giao dịch &amp; Hoàn cọc (Refund Both)
               </button>
 
               <button
@@ -927,12 +927,12 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
                 disabled={locked}
                 onClick={() =>
                   handleApplyPreset(
-                    `Đối soát chứng cứ 2 chiều: Video mở kiện và ảnh chụp chi tiết cho thấy sách bị rách nát, hư hỏng nặng hoặc sai khác hoàn toàn cam kết. Video đóng gói của bên gửi không chứng minh được hiện trạng tốt trước lúc gửi. Phán quyết: Lỗi thuộc về bên gửi (${senderRoleTitle}). Tịch thu toàn bộ tiền cọc bảo chứng của bên gửi chuyển vào ví bên nhận để bồi thường; hoàn cọc cho bên nhận.`,
+                    `Đối soát chứng cứ 2 chiều: Video mở kiện và ảnh chụp chi tiết cho thấy sách bị rách nát, hư hỏng nặng hoặc sai khác hoàn toàn cam kết. Video đóng gói của bên gửi không chứng minh được hiện trạng tốt trước lúc gửi. Phán quyết: Chấp thuận khiếu nại, xác định lỗi thuộc về bên gửi (${senderRoleTitle}). Hủy giao dịch trao đổi, Sổ cái hoàn trả 100% tiền cọc và tiền bù cho Bên nhận; lập biên bản ghi nhận vi phạm quy chuẩn chất lượng đối với bên gửi.`,
                     faultSenderDecision,
                   )
                 }
               >
-                ⚡ Mẫu 3: Lỗi Bên gửi — Tịch thu cọc bên gửi &amp; Bồi thường thiệt hại cho bên nhận
+                ⚡ Mẫu 3: Chấp thuận khiếu nại — Lỗi Bên gửi &amp; Bảo vệ quyền lợi Bên nhận
               </button>
 
               <button
@@ -941,12 +941,12 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
                 disabled={locked}
                 onClick={() =>
                   handleApplyPreset(
-                    `Đối soát chứng cứ 2 chiều: Hồ sơ đối soát ghi nhận bên gửi đóng gói nguyên vẹn và niêm phong chuẩn. Bên nhận có dấu hiệu tráo đổi sách hoặc cố ý tạo sự cố để khiếu nại trục lợi, không cung cấp được video mở kiện hàng liên tục từ lúc niêm phong. Phán quyết: Lỗi thuộc về bên nhận (${receiverRoleTitle}). Tịch thu toàn bộ tiền cọc của bên nhận chuyển cho bên gửi để bồi thường; hoàn cọc cho bên gửi.`,
+                    `Đối soát chứng cứ 2 chiều: Hồ sơ đối soát ghi nhận bên gửi đóng gói nguyên vẹn và niêm phong chuẩn. Bên nhận có dấu hiệu tráo đổi sách hoặc cố ý tạo sự cố để khiếu nại trục lợi, không cung cấp được video mở kiện hàng liên tục từ lúc niêm phong. Phán quyết: Bác khiếu nại, xác định lỗi thuộc về bên nhận (${receiverRoleTitle}). Hủy giao dịch trao đổi; lập biên bản ghi nhận vi phạm gian lận đối với bên nhận để xử lý tài khoản.`,
                     faultReceiverDecision,
                   )
                 }
               >
-                ⚡ Mẫu 4: Lỗi Bên nhận (Gian lận) — Tịch thu cọc bên nhận &amp; Bồi thường cho bên gửi
+                ⚡ Mẫu 4: Bác khiếu nại &amp; Xử lý vi phạm — Bên nhận gian lận / tráo hàng
               </button>
             </div>
 
@@ -994,8 +994,8 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
               : decision === "CompleteExchange"
               ? "Bác khiếu nại & Hoàn tất trao đổi, tất toán cọc thành công."
               : decision === "CompensateInitiator"
-              ? "Phạt tịch thu cọc Bên B & Chuyển tiền bồi thường thiệt hại cho Bên A thành công."
-              : "Phạt tịch thu cọc Bên A & Chuyển tiền bồi thường thiệt hại cho Bên B thành công."
+              ? "Chấp thuận khiếu nại — Lỗi Bên B (Đối tác): Đã hoàn 100% cọc cho Bên A và ghi nhận vi phạm Bên B."
+              : "Chấp thuận khiếu nại — Lỗi Bên A (Khởi tạo): Đã hoàn 100% cọc cho Bên B và ghi nhận vi phạm Bên A."
           }`,
           close: true,
         })}
