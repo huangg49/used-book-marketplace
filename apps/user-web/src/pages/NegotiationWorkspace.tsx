@@ -145,11 +145,11 @@ export function NegotiationWorkspace({
   const currentExchangeId =
     historyExchange === "new"
       ? null
-      : (historyExchange ?? latestExchangeId);
+      : (historyExchange ?? room.terms?.activeExchangeId ?? null);
 
   if (mode === 'Exchange' && currentExchangeId) {
     const navigation = (
-      <TransactionDisclosure title={`Lịch sử đề nghị đổi sách (${room.terms?.exchangeIds?.length ?? 0})`}>
+      <TransactionDisclosure title={`Lịch sử các đề nghị đổi sách (${room.terms?.exchangeIds?.length ?? 0} lần)`}>
         {room.terms?.exchangeIds?.map((id, i) => (
           <button
             type="button"

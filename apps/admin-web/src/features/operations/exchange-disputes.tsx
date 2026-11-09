@@ -6,7 +6,6 @@ import {
   type CurrentUser,
   exchangeEvidenceAccessSchema,
   exchangeEvidenceListSchema,
-  exchangeEvidenceReadSchema,
 } from "@used-books/session-client";
 import { dateText, money } from "../../core/format";
 import { canReview, session } from "../../core/session";
@@ -183,12 +182,9 @@ function useEvidenceMedia(exchangeId: string) {
   return media;
 }
 
-const evidenceReceiptSchema = z.object({ entityId: z.string(), state: z.string() });
-
 function useDisputeEvidence(exchangeId: string, userId: string) {
-  const [mediaUrls, setMediaUrls] = useState<Record<string, string>>({});
-  const [loadingMedia, setLoadingMedia] = useState(false);
-  const [assigning, setAssigning] = useState(false);
+  const [mediaUrls] = useState<Record<string, string>>({});
+  const [loadingMedia] = useState(false);
 
   const access = useQuery({
     queryKey: ["operations", "exchange-evidence-access", userId, exchangeId],
@@ -202,33 +198,6 @@ function useDisputeEvidence(exchangeId: string, userId: string) {
 
   const assigned = !access.isError && access.data?.assigneeId === userId;
 
-  useEffect(() => {
-    if (!access.data || assigning || assigned) return;
-    if (!access.data.assigneeId) {
-      setAssigning(true);
-      const command = {
-        key: crypto.randomUUID(),
-        body: {
-          expectedVersion: access.data.version,
-          reason: "Quản trị viên tiếp nhận đối soát chứng cứ khiếu nại",
-        },
-      };
-      session
-        .request(
-          `/operations/exchanges/${exchangeId}/evidence-access`,
-          evidenceReceiptSchema,
-          {
-            method: "POST",
-            headers: { "Idempotency-Key": command.key },
-            body: JSON.stringify(command.body),
-          },
-        )
-        .then(() => access.refetch())
-        .catch(() => {})
-        .finally(() => setAssigning(false));
-    }
-  }, [access.data, assigned, assigning, exchangeId]);
-
   const list = useQuery({
     queryKey: ["operations", "exchange-evidence", userId, exchangeId],
     queryFn: () =>
@@ -239,46 +208,6 @@ function useDisputeEvidence(exchangeId: string, userId: string) {
     enabled: assigned,
     retry: false,
   });
-
-  useEffect(() => {
-    const readyItems = (list.data?.items ?? []).filter(
-      (item) => item.status === "Ready" && !mediaUrls[item.id],
-    );
-    if (readyItems.length === 0) return;
-
-    let mounted = true;
-    setLoadingMedia(true);
-
-    Promise.all(
-      readyItems.map((item) =>
-        session
-          .request(
-            `/operations/exchanges/${exchangeId}/evidence/${item.id}/read`,
-            exchangeEvidenceReadSchema,
-            {
-              method: "POST",
-              body: JSON.stringify({
-                reason: "Đối soát chứng cứ mở kiện và đóng gói trao đổi",
-              }),
-            },
-          )
-          .then((res) => ({ id: item.id, url: res.url }))
-          .catch(() => null),
-      ),
-    ).then((results) => {
-      if (!mounted) return;
-      const map: Record<string, string> = {};
-      results.forEach((r) => {
-        if (r) map[r.id] = r.url;
-      });
-      setMediaUrls((prev) => ({ ...prev, ...map }));
-      setLoadingMedia(false);
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, [list.data?.items, exchangeId, mediaUrls]);
 
   const items = list.data?.items ?? [];
   const readyItems = items.filter((i) => i.status === "Ready");

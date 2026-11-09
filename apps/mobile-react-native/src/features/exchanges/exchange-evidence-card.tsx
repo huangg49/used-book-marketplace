@@ -110,7 +110,7 @@ export function ExchangeEvidenceCard({
 
   const pending = pendingEvidence(client, id);
 
-  async function chooseFile() {
+  async function chooseAndSend() {
     if (busy || pending) return;
     setError("");
     setMessage("");
@@ -140,12 +140,13 @@ export function ExchangeEvidenceCard({
         return;
       }
       setSelectedAsset(asset);
+      await send(asset);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Chưa chọn được tệp.");
     }
   }
 
-  async function send() {
+  async function send(directAsset?: PickedEvidenceAsset) {
     if (busy) return;
     setBusy(true);
     setError("");
@@ -153,7 +154,7 @@ export function ExchangeEvidenceCard({
     try {
       let input: EvidenceInput | null = null;
       if (!pending) {
-        const asset = selectedAsset ?? (await pickEvidenceAsset());
+        const asset = directAsset ?? selectedAsset ?? (await pickEvidenceAsset());
         if (!asset) return;
         if (evidenceIdentity(client) !== userId) return;
         const mime = asset.mimeType;
@@ -201,7 +202,7 @@ export function ExchangeEvidenceCard({
       setSelectedAsset(null);
       setResumeId(undefined);
       setMessage(
-        "Đã gửi thành công. Máy chủ đã ghi nhận tệp để Quản trị viên thẩm định.",
+        "Máy chủ đã ghi nhận tệp. Nhóm vận hành có thể xem sau khi nhận phụ trách.",
       );
       await list.refetch();
     } catch (e) {
@@ -268,9 +269,9 @@ export function ExchangeEvidenceCard({
       {!selectedAsset && !pending ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Chọn bằng chứng"
+          accessibilityLabel="Chọn và gửi bằng chứng"
           disabled={busy}
-          onPress={() => void chooseFile()}
+          onPress={() => void chooseAndSend()}
           style={({ pressed }) => [
             styles.dropzone,
             pressed && { opacity: 0.85 },

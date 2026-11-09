@@ -127,7 +127,7 @@ export function ExchangeEvidencePanel({
       if (evidenceIdentity(session) !== userId) return;
       setFile(null);
       setResumeId(undefined);
-      setMessage("Đã gửi thành công.");
+      setMessage("Đã gửi thành công. Máy chủ đã ghi nhận tệp.");
       await list.refetch();
     } catch (e) {
       if (evidenceIdentity(session) === userId)
@@ -160,7 +160,7 @@ export function ExchangeEvidencePanel({
 
       {/* Upload & Preview Area */}
       <div className={ui.uploadArea}>
-        {!file ? (
+        {!file && !pending ? (
           <label className={ui.dropzone}>
             <span className={ui.dropzoneTitle}>
               {resumeId ? "Chọn lại tệp để gửi tiếp" : "Chọn ảnh hoặc video"}
@@ -188,7 +188,7 @@ export function ExchangeEvidencePanel({
                   {file ? formatBytes(file.size) : ""}
                 </span>
               </div>
-              {!busy && (
+              {!busy && !pending && (
                 <button
                   type="button"
                   className={ui.changeFileBtn}
@@ -227,7 +227,11 @@ export function ExchangeEvidencePanel({
                 disabled={busy || pending?.busy || (!file && !pending)}
                 onClick={() => void upload()}
               >
-                {busy ? "Đang gửi..." : "Gửi bằng chứng"}
+                {busy
+                  ? "Đang gửi..."
+                  : pending
+                    ? "Thử lại gửi bằng chứng"
+                    : "Gửi bằng chứng"}
               </button>
             </div>
           </div>
@@ -235,13 +239,13 @@ export function ExchangeEvidencePanel({
 
         {/* Status Alerts */}
         {busy && <div className={ui.busyAlert}>Đang gửi tệp lên hệ thống...</div>}
-        {message && <div className={ui.successAlert}>{message}</div>}
-        {error && <div className={ui.errorAlert}>{error}</div>}
+        {message && <div role="status" className={ui.successAlert}>{message}</div>}
+        {error && <div role="alert" className={ui.errorAlert}>{error}</div>}
 
         {!list.isError && download && (
           <div className={ui.successAlert}>
             <a href={download.url} target="_blank" rel="noopener noreferrer" style={{ color: "#166534", fontWeight: 700 }}>
-              Mở xem tệp
+              Tải tệp đã được cấp quyền
             </a>
           </div>
         )}
@@ -276,7 +280,12 @@ export function ExchangeEvidencePanel({
                   {e.status === "Ready" ? (
                     <>
                       <span className={ui.badgeReady}>Đã nhận</span>
-                      <button type="button" className={ui.viewFileBtn} onClick={() => void read(e.id)}>
+                      <button
+                        type="button"
+                        aria-label={`Tải tệp ${e.fileName}`}
+                        className={ui.viewFileBtn}
+                        onClick={() => void read(e.id)}
+                      >
                         Xem
                       </button>
                     </>
@@ -287,6 +296,7 @@ export function ExchangeEvidencePanel({
                         <button
                           disabled={!!pending || busy}
                           type="button"
+                          aria-label={`Gửi tiếp ${e.fileName}`}
                           className={ui.viewFileBtn}
                           onClick={() => {
                             setResumeId(e.id);
