@@ -143,9 +143,9 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
 
         return (
             <div className={`${styles.legCard} ${isOutgoing ? styles.legCardOutgoing : styles.legCardIncoming} ${isSent ? styles.legCardSent : ''}`}>
-                {/* Header */}
+                {/* Header with balanced 2-row layout */}
                 <div className={styles.legHeader}>
-                    <div className={styles.legTitleGroup}>
+                    <div className={styles.legTopRow}>
                         <div className={`${styles.directionPill} ${isOutgoing ? styles.pillOutgoing : styles.pillIncoming}`}>
                             {isOutgoing ? (
                                 <>
@@ -159,27 +159,26 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
                                 </>
                             )}
                         </div>
-                        <h4 className={styles.legTitle}>{title}</h4>
+                        <div className={styles.legStatusWrap}>
+                            {isReceived ? (
+                                <span className={styles.badgeSuccess}>
+                                    <CheckCircle2 size={13} /> {isOutgoing ? 'Đối tác đã nhận' : 'Bạn đã nhận sách'}
+                                </span>
+                            ) : isSent ? (
+                                <span className={bothSent ? styles.badgeShipping : styles.badgePending}>
+                                    {bothSent ? <Truck size={13} /> : <Clock size={13} />}
+                                    {bothSent
+                                        ? (isOutgoing ? 'Đang giao tới đối tác' : 'Đang giao tới bạn')
+                                        : (isOutgoing ? 'Đã tạo đơn · Chờ bưu tá lấy' : 'Đối tác đã tạo đơn')}
+                                </span>
+                            ) : (
+                                <span className={styles.badgePending}>
+                                    <Clock size={13} /> {isOutgoing ? 'Chờ bạn tạo đơn' : 'Chờ đối tác tạo đơn'}
+                                </span>
+                            )}
+                        </div>
                     </div>
-
-                    <div className={styles.legStatusWrap}>
-                        {isReceived ? (
-                            <span className={styles.badgeSuccess}>
-                                <CheckCircle2 size={13} /> {isOutgoing ? 'Đối tác đã nhận' : 'Bạn đã nhận sách'}
-                            </span>
-                        ) : isSent ? (
-                            <span className={bothSent ? styles.badgeShipping : styles.badgePending}>
-                                {bothSent ? <Truck size={13} /> : <Clock size={13} />}
-                                {bothSent
-                                    ? (isOutgoing ? 'Đang giao tới đối tác' : 'Đang giao tới bạn')
-                                    : (isOutgoing ? 'Đã tạo đơn · Chờ bưu tá lấy' : 'Đối tác đã tạo đơn')}
-                            </span>
-                        ) : (
-                            <span className={styles.badgePending}>
-                                <Clock size={13} /> {isOutgoing ? 'Chờ bạn tạo đơn' : 'Chờ đối tác tạo đơn'}
-                            </span>
-                        )}
-                    </div>
+                    <h4 className={styles.legTitle}>{title}</h4>
                 </div>
 
                 {/* Book summary bar */}
@@ -207,7 +206,7 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
                             {isSent ? <Check size={11} strokeWidth={3} /> : <span className={styles.markerDot} />}
                         </div>
                         <span className={styles.stepLabel}>
-                            {isSent ? 'Đã tạo đơn' : (isOutgoing ? 'Đóng gói & Tạo đơn' : 'Đối tác chuẩn bị')}
+                            {isSent ? 'Đã tạo đơn' : (isOutgoing ? 'Chờ tạo đơn' : 'Chờ gửi')}
                         </span>
                     </div>
 
@@ -217,7 +216,7 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
                         <div className={styles.stepMarker}>
                             {isReceived ? <Check size={11} strokeWidth={3} /> : bothSent ? <span className={styles.markerDot} /> : 2}
                         </div>
-                        <span className={styles.stepLabel}>Vận chuyển</span>
+                        <span className={styles.stepLabel}>Đang giao</span>
                     </div>
 
                     <div className={`${styles.stepperLine} ${isReceived ? styles.lineCompleted : ''}`} />
@@ -227,7 +226,7 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
                             {isReceived ? <Check size={11} strokeWidth={3} /> : 3}
                         </div>
                         <span className={styles.stepLabel}>
-                            {isOutgoing ? 'Đối tác đã nhận' : 'Đồng kiểm 72h'}
+                            {isOutgoing ? 'Đối tác nhận' : 'Đồng kiểm 72h'}
                         </span>
                     </div>
                 </div>
@@ -273,26 +272,27 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
                     {/* Sent Details or Empty Prompt */}
                     {isSent ? (
                         <div className={styles.shipmentDetailsBox}>
-                            <div className={styles.infoRow}>
-                                <span className={styles.infoLabel}>Thời gian xác nhận gửi:</span>
-                                <span className={styles.infoValue}>
-                                    {new Date(sentAt!).toLocaleString('vi-VN')}
-                                </span>
-                            </div>
-
-                            <div className={styles.infoRow}>
-                                <span className={styles.infoLabel}>Hình thức vận chuyển:</span>
-                                <span className={styles.infoValue}>
-                                    {shipment?.method === 'direct' ? (
-                                        <span className={styles.methodBadgeDirect}>
-                                            <MapPin size={13} /> Gặp mặt trực tiếp tại TP.HCM
-                                        </span>
-                                    ) : (
-                                        <span className={styles.methodBadgeCarrier}>
-                                            <Truck size={13} /> {shipment?.carrierName || 'Đơn vị chuyển phát'}
-                                        </span>
-                                    )}
-                                </span>
+                            <div className={styles.shipmentMetaGrid}>
+                                <div className={styles.metaCol}>
+                                    <span className={styles.metaLabel}>Thời gian gửi:</span>
+                                    <span className={styles.metaValue}>
+                                        {new Date(sentAt!).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · {new Date(sentAt!).toLocaleDateString('vi-VN')}
+                                    </span>
+                                </div>
+                                <div className={styles.metaCol}>
+                                    <span className={styles.metaLabel}>Hình thức vận chuyển:</span>
+                                    <span className={styles.metaValue}>
+                                        {shipment?.method === 'direct' ? (
+                                            <span className={styles.methodBadgeDirect}>
+                                                <MapPin size={12} /> Trực tiếp tại TP.HCM
+                                            </span>
+                                        ) : (
+                                            <span className={styles.methodBadgeCarrier}>
+                                                <Truck size={12} /> {shipment?.carrierName || 'Giao Hàng Nhanh (GHN Express)'}
+                                            </span>
+                                        )}
+                                    </span>
+                                </div>
                             </div>
 
                             {shipment?.method === 'direct' ? (
@@ -331,11 +331,11 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
                                                 >
                                                     {copiedCode === trackingCode ? (
                                                         <>
-                                                            <Check size={13} className={styles.iconGreen} /> Đã chép
+                                                            <Check size={12} className={styles.iconGreen} /> Đã chép
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <Copy size={13} /> Sao chép mã
+                                                            <Copy size={12} /> Sao chép
                                                         </>
                                                     )}
                                                 </button>
@@ -347,7 +347,7 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
                                                         className={styles.trackLink}
                                                         title="Tra cứu bưu phẩm trên website vận chuyển"
                                                     >
-                                                        <ExternalLink size={13} /> Tra cứu
+                                                        <ExternalLink size={12} /> Tra cứu
                                                     </a>
                                                 )}
                                             </div>
@@ -363,7 +363,11 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
                                         <div className={styles.barcodeBox}>
                                             <div className={styles.barcodeHeader}>
                                                 <span className={styles.barcodeTag}>PHIẾU VẬN ĐƠN ĐIỆN TỬ</span>
-                                                <span className={styles.carrierTag}>{shipment?.carrierName || 'GHN Express'}</span>
+                                                <span className={styles.carrierTag}>
+                                                    {shipment?.carrierCode === 'GHN' || shipment?.carrierName?.includes('GHN')
+                                                        ? 'GHN Express'
+                                                        : (shipment?.carrierName || 'GHN Express')}
+                                                </span>
                                             </div>
                                             <div className={styles.barcodeGraphic}>
                                                 <BarcodeSvg value={trackingCode} />
@@ -513,14 +517,6 @@ export function ShippingTrackingCard({ detail }: ShippingTrackingCardProps) {
                     address: detail.partnerAddress,
                     books: detail.giveBooks
                 })}
-
-                <div className={styles.flowConnector}>
-                    <div className={styles.connectorLine} />
-                    <div className={styles.connectorBadge}>
-                        <span>⇄ Trao đổi 2 chiều</span>
-                    </div>
-                    <div className={styles.connectorLine} />
-                </div>
 
                 {renderLegCard({
                     direction: 'incoming',

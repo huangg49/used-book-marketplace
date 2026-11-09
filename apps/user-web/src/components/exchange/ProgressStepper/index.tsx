@@ -10,9 +10,10 @@ export interface ProgressStepperProps {
     closedBy?: 'viewer' | 'partner' | 'both';
     partnerUsername?: string;
     hasReceived?: boolean;
+    cancelReason?: string | null;
 }
 
-export function ProgressStepper({ status, compact = false, summary: propsSummary = true, failedAtStep, closedBy, partnerUsername: _partnerUsername, hasReceived }: ProgressStepperProps) {
+export function ProgressStepper({ status, compact = false, summary: propsSummary = true, failedAtStep, closedBy, partnerUsername: _partnerUsername, hasReceived, cancelReason }: ProgressStepperProps) {
     const steps = [
         { id: 1, label: 'Gửi đề nghị', shortLabel: 'Đề nghị' },
         { id: 2, label: 'Phản hồi và đặt cọc', shortLabel: 'Phản hồi' },
@@ -61,7 +62,7 @@ export function ProgressStepper({ status, compact = false, summary: propsSummary
         statusBadgeText = 'Đang khiếu nại / sự cố';
         statusBadgeType = 'failed';
     } else if (status === 'CANCELLED') {
-        statusBadgeText = 'Đã hủy';
+        statusBadgeText = cancelReason === 'DisputeResolvedRefund' ? 'Đã giải quyết khiếu nại (Đã hủy)' : 'Đã hủy';
         statusBadgeType = 'failed';
     } else if (status === 'REJECTED') {
         statusBadgeText = 'Từ chối';

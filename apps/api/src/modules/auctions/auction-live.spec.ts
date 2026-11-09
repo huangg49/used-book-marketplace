@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuctionLiveService, LIST_ROOM } from './auction-live.service.js';
 
-type Row = { _id: string; version: number; state: string };
+type Row = { _id: string; version: number; state: string; buyNowAt?: Date | null; endAt?: Date };
 
 function setup(initial: Row[]) {
   const rows = new Map(initial.map((r) => [r._id, { ...r }]));
@@ -15,7 +15,7 @@ function setup(initial: Row[]) {
       async (q: Record<string, unknown>) =>
         [...rows.values()].find((r) => matches(r, q)) ?? null,
     ),
-    find: vi.fn((q: Record<string, unknown>) => ({
+    find: vi.fn((q: Record<string, unknown>, _options?: unknown) => ({
       toArray: async () => [...rows.values()].filter((r) => matches(r, q)),
     })),
   };
@@ -45,6 +45,7 @@ function setup(initial: Row[]) {
     bump,
     add,
     readPublic,
+    find: auctions.find,
     stop: () => live.onModuleDestroy(),
   };
 }
@@ -122,5 +123,65 @@ describe('AuctionLiveService', () => {
     t.live.nudge();
     await t.live.tick();
     expect(t.emitted).toHaveLength(1);
+  });
+
+  // ADR 0088 (M6): 0.5 s pass for watched auctions in a Buy Now window.
+  const inWindow = () => ({ buyNowAt: new Date(), endAt: new Date(Date.now() + 60_000) });
+
+  it('re-reads only watched auctions inside a Buy Now window on the fast pass', async () => {
+    const t = setup([
+      { _id: A, version: 1, state: 'Active', ...inWindow() },
+      { _id: B, version: 1, state: 'Active' },
+    ]);
+    cleanup = t.stop;
+    await t.live.watch(A);
+    await t.live.watch(B);
+    expect(t.live.fastPolling).toBe(false);
+    await t.live.tick();
+    expect(t.live.fastPolling).toBe(true);
+
+    t.find.mockClear();
+    t.bump(A);
+    t.bump(B);
+    await t.live.fastTick();
+    expect(t.find).toHaveBeenCalledTimes(1);
+    expect(t.find.mock.calls[0]![0]).toEqual({ _id: { $in: [A] } });
+    expect(t.emitted.map(([room]) => room)).toEqual([`auction:${A}`]);
+    // B's change waits for the full 2 s pass.
+    await t.live.tick();
+    expect(t.emitted.map(([room]) => room)).toEqual([`auction:${A}`, `auction:${B}`]);
+  });
+
+  it('stops the fast pass when the window ends or nobody watches', async () => {
+    const t = setup([{ _id: A, version: 1, state: 'Active', ...inWindow() }]);
+    cleanup = t.stop;
+    await t.live.watch(A);
+    await t.live.tick();
+    expect(t.live.fastPolling).toBe(true);
+    t.bump(A, { state: 'AwaitingWinnerPayment' });
+    await t.live.fastTick();
+    expect(t.emitted).toHaveLength(1);
+    expect(t.live.fastPolling).toBe(false);
+
+    const u = setup([{ _id: B, version: 1, state: 'Active', ...inWindow() }]);
+    await u.live.watch(B);
+    await u.live.tick();
+    expect(u.live.fastPolling).toBe(true);
+    u.live.unwatch(B);
+    expect(u.live.fastPolling).toBe(false);
+    u.stop();
+  });
+
+  it('keeps 2 s for an Instant Buy Now, an expired window and list-only auctions', async () => {
+    const now = new Date();
+    const t = setup([
+      { _id: A, version: 1, state: 'Active', buyNowAt: now, endAt: now },
+      { _id: B, version: 1, state: 'Active', ...inWindow() },
+    ]);
+    cleanup = t.stop;
+    await t.live.watch(A);
+    await t.live.watchList();
+    await t.live.tick();
+    expect(t.live.fastPolling).toBe(false);
   });
 });

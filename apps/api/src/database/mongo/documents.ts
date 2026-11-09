@@ -722,6 +722,8 @@ export interface LedgerJournalDoc {
     | 'AuctionBidHold'
     | 'AuctionBidRelease'
     | 'AuctionDepositForfeit'
+    // ADR 0087: platform → seller, the seller's share when the book went unsold.
+    | 'AuctionDepositSellerShare'
     | 'WithdrawalHold'
     | 'WithdrawalPayout'
     | 'WithdrawalRefund'
@@ -997,6 +999,8 @@ export interface AuctionIntakeDoc extends Lockable {
   dutchIntervalSeconds: number | null;
   // ADR 0077: registered bidders the auction needs (2–10).
   minBidders: number;
+  // ADR 0087: the seller-set registration deposit; null = the 10% default.
+  depositAmount: number | null;
   protectiveValue: number;
   policyCode: 'HCM-AUCTION-v1';
   state: AuctionIntakeState;
@@ -1083,7 +1087,9 @@ export type AuctionState =
   | 'Unsold'
   | 'OnHold'
   | 'Cancelled'
-  | 'PaymentExpired';
+  | 'PaymentExpired'
+  // ADR 0086: the winner did not pay; the runner-up has 24 h to buy.
+  | 'SecondChanceOffered';
 export type AuctionBuyNowMode = 'Challenge' | 'Instant';
 export type AuctionFormat = 'English' | 'Dutch' | 'SealedFirst' | 'SealedSecond';
 export interface AuctionDoc extends Lockable {
@@ -1128,8 +1134,28 @@ export interface AuctionDoc extends Lockable {
   opensAt: Date | null;
   // ADR 0079: when the auction was last put OnHold (48 h ceiling).
   heldAt: Date | null;
-  // ADR 0080: when an Admin resumed it from OnHold; an auction resumes once.
+  // ADR 0080: when an Admin last resumed it from OnHold (ADR 0084: any number
+  // of times within the pause budget).
   resumedAt: Date | null;
+  // ADR 0084: why it is OnHold (null unless OnHold): a party lost eligibility,
+  // or the Admin on a report froze it for review.
+  holdReason: 'Eligibility' | 'Review' | null;
+  // ADR 0084: when this hold auto-cancels (null unless OnHold): heldAt + the
+  // smaller of 48 h and the pause budget left.
+  holdUntil: Date | null;
+  // ADR 0084: total time given back by resumes; every stored time moved by
+  // it, and the fixed ceilings (from publishedAt) grow by it. ≤ 72 h.
+  pausedMs: number;
+  // ADR 0086: the one runner-up offer after the winner did not pay. The
+  // winner fields keep the defaulted winner while it runs; accepting makes
+  // the runner-up the winner (new Order). defaultedOrderId is the first
+  // winner's expired Order. All null when no offer was made.
+  runnerUpId: string | null;
+  runnerUpPrice: number | null;
+  runnerUpOfferedAt: Date | null;
+  runnerUpDeadline: Date | null;
+  runnerUpOutcome: 'Offered' | 'Accepted' | 'Declined' | 'Expired' | 'Cancelled' | null;
+  defaultedOrderId: string | null;
   // ADR 0043: set when Buy Now opened the 60-second challenge window.
   buyNowAt: Date | null;
   startAt: Date;
@@ -1402,6 +1428,10 @@ export interface ExchangeShipmentSnapshot {
   trackingCode?: string | null;
   notes?: string | null;
   meetupLocation?: string | null;
+  packagingPhotoUrl?: string | null;
+  packagingVideoUrl?: string | null;
+  packagingPhotoName?: string | null;
+  packagingVideoName?: string | null;
   shippedAt?: Date | null;
   lastEvent?: string | null;
   lastEventAt?: Date | null;
@@ -1475,6 +1505,8 @@ export interface MemberNotificationDoc {
     | 'AuctionDepositForfeited'
     | 'AuctionRescheduled'
     | 'AuctionResumed'
+    | 'AuctionSecondChanceOffered'
+    | 'AuctionDepositShareReceived'
     | 'AuctionWon'
     | 'AuctionSold'
     | 'AuctionBoughtNow'

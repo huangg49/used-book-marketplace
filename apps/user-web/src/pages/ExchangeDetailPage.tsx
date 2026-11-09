@@ -190,22 +190,30 @@ function ExchangeDetailContent({
   };
 
   const handleDispute = async (reason: string) => {
-    await reportIssue(id!, detail!.revision!, reason);
+    const latest = await getExchangeDetail(id!).catch(() => detail);
+    const rev = latest?.revision ?? detail!.revision!;
+    await reportIssue(id!, rev, reason);
     invalidate();
   };
 
   const handleConfirmSent = async (shipmentData?: ShipmentData) => {
-    await confirmSent(id!, detail!.revision!, shipmentData);
+    const latest = await getExchangeDetail(id!).catch(() => detail);
+    const rev = latest?.revision ?? detail!.revision!;
+    await confirmSent(id!, rev, shipmentData);
     invalidate();
   };
 
   const handleConfirmReceived = async () => {
-    await confirmReceived(id!, detail!.revision!);
+    const latest = await getExchangeDetail(id!).catch(() => detail);
+    const rev = latest?.revision ?? detail!.revision!;
+    await confirmReceived(id!, rev);
     invalidate();
   };
 
   const handleComplete = async () => {
-    await completeExchange(id!, detail!.revision!);
+    const latest = await getExchangeDetail(id!).catch(() => detail);
+    const rev = latest?.revision ?? detail!.revision!;
+    await completeExchange(id!, rev);
     invalidate();
   };
 
@@ -403,14 +411,19 @@ function ExchangeDetailContent({
               closedBy={detail.closedBy}
               partnerUsername={detail.partner.username}
               hasReceived={Boolean(detail.viewerShipping.receivedAt)}
+              cancelReason={detail.cancelReason}
             />
           </div>
           {actionSection}
           <ReviewCard detail={detail} />
           {detail.status === "COMPLETED" && <SettlementCard detail={detail} />}
-          {!["PENDING", "FUNDING", "CANCELLED", "REJECTED", "EXPIRED"].includes(
+          {(!["PENDING", "FUNDING", "REJECTED", "EXPIRED"].includes(
             detail.status,
-          ) && (
+          ) &&
+            !(
+              detail.status === "CANCELLED" &&
+              detail.cancelReason !== "DisputeResolvedRefund"
+            )) && (
             <TransactionDisclosure
               title="Theo dõi giao nhận hai chiều"
               open={[
@@ -461,6 +474,7 @@ function ExchangeDetailContent({
           closedBy={detail.closedBy}
           partnerUsername={detail.partner.username}
           hasReceived={Boolean(detail.viewerShipping.receivedAt)}
+          cancelReason={detail.cancelReason}
         />
       </div>
 

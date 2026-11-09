@@ -83,16 +83,19 @@
 }
 .money > div {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: space-between;
+  align-items: baseline;
   gap: 8px;
 }
 .money dt {
   color: var(--shop-muted);
+  white-space: nowrap;
 }
 .money dd {
   margin: 0;
   font-weight: 700;
+  white-space: nowrap;
 }
 .context .notice {
   margin-top: 14px;

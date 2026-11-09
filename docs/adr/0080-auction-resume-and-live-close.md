@@ -1,5 +1,8 @@
 # ADR0080: Admin tiếp tục phiên tạm giữ một lần; đóng phiên từ báo cáo đi qua kênh trực tiếp
 
+> Luật "tiếp tục một lần, không dời mốc" được thay bởi [ADR0084](0084-auction-pause-model.md):
+> tiếp tục nhiều lần trong ngân sách 72 giờ và cộng lại thời gian tạm dừng.
+
 08/11/2026. Accepted theo yêu cầu của chủ dự án trong phiên làm việc ("add this" cho lệnh tiếp
 tục phiên OnHold; "make it use live service" cho việc Admin đóng phiên từ báo cáo). Bổ sung
 [ADR0079](0079-bounded-auction-lifecycle.md) (trần 48 giờ của OnHold) và

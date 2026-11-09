@@ -1,17 +1,19 @@
 .row {
+  display: flex;
+  justify-content: space-between;
   gap: 12px;
   align-items: baseline;
 }
 
 .row dt {
-  flex: 1 1 50%;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
 .row dd {
-  flex: 0 1 50%;
+  flex: 0 0 auto;
   text-align: right;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 
 .note {

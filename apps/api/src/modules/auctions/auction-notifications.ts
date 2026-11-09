@@ -52,7 +52,7 @@ function cancelCause(a: AuctionDoc, seller: boolean) {
         ? 'đã được bạn đóng trước giờ mở.'
         : 'đã được người bán đóng trước giờ mở.';
     case 'HoldExpired':
-      return 'tạm dừng quá 48 giờ mà chưa được xử lý nên đã tự hủy.';
+      return 'hết thời gian tạm dừng mà chưa được xử lý nên đã tự hủy.';
     case 'Reported':
       return `đã bị quản trị viên đóng sau khi xem xét báo cáo: “${reason}”.`;
     default:
@@ -68,9 +68,11 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
   AuctionFundsHeld: silent,
   AuctionFundsReleased: silent,
   // ADR 0077: registration gate and deposit outcomes.
+  // ADR 0085: a late-reached auction opens 10 minutes later (07:00 at night),
+  // so the text names the opening time rather than saying it is open now.
   AuctionBiddingStarted: {
     default: (c, a) => ({
-      title: 'Phiên đấu giá đã mở trả giá',
+      title: 'Phiên đấu giá đã đủ người đăng ký',
       body: `${c.title} đã đủ ${a.minBidders ?? 2} người đăng ký. Bạn trả giá được từ ${when(a.startAt)} đến ${when(a.endAt)}.`,
     }),
     seller: (c, a) => ({
@@ -91,10 +93,12 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
   AuctionDepositForfeited: {
     default: (c, a) => ({
       title: 'Tiền cọc không được hoàn',
-      body: `${c.title}: bạn không thanh toán đúng hạn nên tiền cọc ${vnd(a.depositAmount)} được chuyển cho nền tảng theo quy định phiên. Phần tiền giữ còn lại đã về ví.`,
+      body: `${c.title}: bạn không thanh toán đúng hạn nên tiền cọc ${vnd(a.depositAmount)} không được hoàn theo quy định phiên (nếu sách không bán được, một nửa được chuyển cho người bán, phần còn lại cho nền tảng). Phần tiền giữ còn lại đã về ví.`,
     }),
     seller: () => ({ title: '', body: '' }),
   },
+  // ADR 0087: written by notifyDepositShare with the paid amount.
+  AuctionDepositShareReceived: silent,
   AuctionOutbid: {
     default: (c, a) => {
       const next = nextMinimumBid(a);
@@ -172,32 +176,61 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
   AuctionResumed: {
     default: (c, a) => ({
       title: 'Phiên đấu giá tiếp tục',
-      body: `${c.title} tiếp tục sau khi quản trị viên xem xét. Lượt trả giá, đăng ký và tiền cọc được giữ nguyên; phiên vẫn kết thúc lúc ${when(a.endAt)}.`,
+      body: `${c.title} tiếp tục sau khi quản trị viên xem xét. Lượt trả giá, đăng ký và tiền cọc được giữ nguyên; thời gian tạm dừng được cộng lại, phiên nay kết thúc lúc ${when(a.endAt)}.`,
     }),
     seller: (c, a) => ({
       title: 'Phiên đấu giá tiếp tục',
-      body: `${c.title} tiếp tục sau khi quản trị viên xem xét; phiên vẫn kết thúc lúc ${when(a.endAt)}.`,
+      body: `${c.title} tiếp tục sau khi quản trị viên xem xét; thời gian tạm dừng được cộng lại, phiên nay kết thúc lúc ${when(a.endAt)}.`,
     }),
   },
+  // ADR 0084: the hold reason decides the wording; the paused time comes
+  // back on a resume.
   AuctionOnHold: {
-    default: (c) => ({
+    default: (c, a) => ({
       title: 'Phiên đấu giá tạm dừng',
-      body: `${c.title} tạm dừng để quản trị viên xem xét. Lượt trả giá không bị xóa và chưa có người thắng.`,
+      body: `${c.title} tạm dừng để quản trị viên xem xét${a.holdReason === 'Review' ? ' một báo cáo về phiên' : ''}. Lượt trả giá, đăng ký và tiền cọc được giữ nguyên, chưa có người thắng; nếu phiên tiếp tục, thời gian tạm dừng được cộng lại.`,
     }),
-    seller: (c) => ({
+    seller: (c, a) => ({
       title: 'Phiên đấu giá tạm dừng',
-      body: `${c.title} tạm dừng để quản trị viên xem xét; phiên không nhận thêm giá.`,
+      body: `${c.title} tạm dừng để quản trị viên xem xét${a.holdReason === 'Review' ? ' một báo cáo về phiên' : ''}; phiên không nhận thêm giá. Nếu phiên tiếp tục, thời gian tạm dừng được cộng lại.`,
     }),
   },
+  // ADR 0086: the wording follows what happens next: a runner-up offer, or
+  // the end of one (declined or unanswered), or the book going back.
   AuctionPaymentExpired: {
-    default: (c) => ({
-      title: 'Đã quá hạn thanh toán',
-      body: `${c.title}: hạn thanh toán đã qua. Sách được trả lại người bán và lượt không thanh toán đã được ghi nhận.`,
+    default: (c, a) =>
+      a.runnerUpOutcome === 'Declined' || a.runnerUpOutcome === 'Expired'
+        ? {
+            title: 'Lời mời mua đã kết thúc',
+            body: `${c.title}: ${a.runnerUpOutcome === 'Declined' ? 'bạn đã từ chối' : 'đã hết hạn'} lời mời mua với giá ${vnd(a.runnerUpPrice)}. Phiên kết thúc, không có khoản nào bị trừ.`,
+          }
+        : {
+            title: 'Đã quá hạn thanh toán',
+            body: `${c.title}: hạn thanh toán đã qua. ${a.state === 'SecondChanceOffered' ? 'Sách được mời người trả giá cao thứ hai mua' : 'Sách được trả lại người bán'} và lượt không thanh toán đã được ghi nhận.`,
+          },
+    seller: (c, a) =>
+      a.state === 'SecondChanceOffered'
+        ? {
+            title: 'Người thắng không thanh toán',
+            body: `${c.title}: người thắng không thanh toán đúng hạn. Người trả giá cao thứ hai được mời mua với giá ${vnd(a.runnerUpPrice)} đến ${when(a.runnerUpDeadline)}; nếu họ không nhận, sách được trả lại cho bạn tại ${c.point}.`,
+          }
+        : a.runnerUpOutcome === 'Declined' || a.runnerUpOutcome === 'Expired'
+          ? {
+              title: 'Người trả giá cao thứ hai không nhận mua',
+              body: `${c.title}: lời mời mua ${a.runnerUpOutcome === 'Declined' ? 'đã bị từ chối' : 'đã hết hạn'}. Phiên kết thúc; sách được trả lại cho bạn tại ${c.point}.`,
+            }
+          : {
+              title: 'Người thắng không thanh toán',
+              body: `${c.title}: người thắng không thanh toán đúng hạn. Sách được trả lại cho bạn tại ${c.point}.`,
+            },
+  },
+  // ADR 0086: to the runner-up only; their own level, never another member's.
+  AuctionSecondChanceOffered: {
+    default: (c, a) => ({
+      title: 'Bạn được mời mua sách đấu giá',
+      body: `${c.title}: người thắng không thanh toán. Bạn có thể mua với giá trả cao nhất của bạn, ${vnd(a.runnerUpPrice)}, nếu nhận trước ${when(a.runnerUpDeadline)}; sau khi nhận, thanh toán trong 24 giờ. Không nhận thì không có khoản nào bị trừ.`,
     }),
-    seller: (c) => ({
-      title: 'Người thắng không thanh toán',
-      body: `${c.title}: người thắng không thanh toán đúng hạn. Sách được trả lại cho bạn tại ${c.point}.`,
-    }),
+    seller: () => ({ title: '', body: '' }),
   },
   AuctionPaid: {
     default: () => ({ title: '', body: '' }),
@@ -213,19 +246,64 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
  * the change: its version makes the dedupe key unique per event, so a retried
  * transaction cannot notify twice. The seller gets the seller wording.
  */
-export async function notifyAuction(
+const NOTIFICATION_BODY_MAX = 400;
+export function withNote(body: string, note?: string) {
+  const clean = note?.replace(/\s+/g, ' ').trim();
+  if (!clean) return body.slice(0, NOTIFICATION_BODY_MAX);
+  const lead = `${body} Lời nhắn của quản trị viên: “`;
+  const room = NOTIFICATION_BODY_MAX - lead.length - 1;
+  if (room < 10) return body.slice(0, NOTIFICATION_BODY_MAX);
+  const quoted = [...clean].length > room ? `${[...clean].slice(0, room - 1).join('')}…` : clean;
+  return `${lead}${quoted}”`;
+}
+export function notifyAuction(
   tx: Tx,
   a: AuctionDoc,
   kind: Kind,
   recipients: (string | null | undefined)[],
   now: Date,
+  // ADR 0083: an Admin's note for the members (the resume reason), appended
+  // after the standard text and shortened to fit the 400-character body.
+  note?: string,
+) {
+  return write(tx, a, kind, MESSAGES[kind], recipients, now, note);
+}
+
+// ADR 0085 (N1): a withdrawal took a full auction below its minimum before
+// its open time. Sent as AuctionRescheduled (the times changed) with its own
+// wording, so no new notification kind is needed.
+const BELOW_MINIMUM: Record<'default' | 'seller', Message> = {
+  default: (c, a) => ({
+    title: 'Phiên đấu giá chưa đủ người đăng ký',
+    body: `${c.title} không còn đủ ${a.minBidders ?? 4} người đăng ký vì có người rút đăng ký. Phiên vẫn mở lúc ${when(a.opensAt)} nếu đủ người lại; chưa đủ thì chờ thêm tới ${when(a.startAt)} rồi hủy. Bạn có thể rút đăng ký trước khi phiên đủ người.`,
+  }),
+  seller: (c, a) => ({
+    title: 'Phiên đấu giá chưa đủ người đăng ký',
+    body: `${c.title} không còn đủ ${a.minBidders ?? 4} người đăng ký vì có người rút đăng ký. Phiên mở lúc ${when(a.opensAt)} nếu đủ người lại; chưa đủ thì chờ thêm tới ${when(a.startAt)} rồi tự hủy.`,
+  }),
+};
+export const notifyBelowMinimum = (
+  tx: Tx,
+  a: AuctionDoc,
+  recipients: (string | null | undefined)[],
+  now: Date,
+) => write(tx, a, 'AuctionRescheduled', BELOW_MINIMUM, recipients, now);
+
+async function write(
+  tx: Tx,
+  a: AuctionDoc,
+  kind: Kind,
+  messages: Record<'default' | 'seller', Message>,
+  recipients: (string | null | undefined)[],
+  now: Date,
+  note?: string,
 ) {
   const users = [...new Set(recipients.filter((u): u is string => !!u))];
   if (!users.length) return;
   const c = await context(tx, a);
   const rows: MemberNotificationDoc[] = [];
   for (const userId of users) {
-    const text = MESSAGES[kind][userId === a.sellerId ? 'seller' : 'default'](
+    const text = messages[userId === a.sellerId ? 'seller' : 'default'](
       c,
       a,
     );
@@ -235,7 +313,7 @@ export async function notifyAuction(
       userId,
       kind,
       title: text.title,
-      body: text.body.slice(0, 400),
+      body: withNote(text.body, note),
       targetType: 'Auction',
       targetId: a._id,
       dedupeKey: `${kind}:${a._id}:${a.version}:${userId}`,
@@ -244,6 +322,32 @@ export async function notifyAuction(
     });
   }
   if (rows.length) await tx.c.member_notifications.insertMany(rows);
+}
+
+/**
+ * ADR 0087: tells the seller that half of the non-paying winner's deposit
+ * reached their wallet because the book ended unsold.
+ */
+export async function notifyDepositShare(
+  tx: Tx,
+  a: AuctionDoc,
+  amount: number,
+  now: Date,
+) {
+  const c = await context(tx, a);
+  const kind: Kind = 'AuctionDepositShareReceived';
+  await tx.c.member_notifications.insertOne({
+    _id: randomUUID(),
+    userId: a.sellerId,
+    kind,
+    title: 'Bạn nhận một phần tiền cọc',
+    body: `${c.title}: sách không bán được vì người thắng không thanh toán, nên ${vnd(amount)} (một nửa tiền cọc của người thắng) đã về số dư khả dụng của bạn.`.slice(0, NOTIFICATION_BODY_MAX),
+    targetType: 'Auction',
+    targetId: a._id,
+    dedupeKey: `${kind}:${a._id}:${a.version}:${a.sellerId}`,
+    createdAt: now,
+    readAt: null,
+  });
 }
 
 export type FundsReason =
@@ -256,8 +360,10 @@ export type FundsReason =
   | 'Registered'
   | 'Withdrawn'
   | 'NotEnoughBidders'
-  | 'NotWon';
-const RELEASE_REASON: Record<Exclude<FundsReason, 'Leading' | 'Registered'>, string> = {
+  | 'NotWon'
+  // ADR 0086: an accepted runner-up offer holds the price until payment.
+  | 'SecondChance';
+const RELEASE_REASON: Record<Exclude<FundsReason, 'Leading' | 'Registered' | 'SecondChance'>, string> = {
   Withdrawn: 'Bạn đã rút đăng ký nên tiền cọc được trả lại ví.',
   NotEnoughBidders: 'Phiên không đủ người tham gia nên tiền cọc và khoản giữ được trả lại ví.',
   Outbid: 'Bạn đã bị vượt giá nên khoản giữ được trả lại ví.',
@@ -286,6 +392,11 @@ export async function notifyAuctionFunds(
       ? {
           title: 'Đã giữ tiền cọc đăng ký đấu giá',
           body: `${c.title}: đã giữ ${vnd(delta)} tiền cọc. Tiền cọc được hoàn khi bạn không thắng hoặc phiên không đủ người; nếu thắng mà không thanh toán đúng hạn, tiền cọc không được hoàn.`,
+        }
+      : delta > 0 && reason === 'SecondChance'
+      ? {
+          title: 'Ví đã giữ tiền cho lời mời mua',
+          body: `${c.title}: đã giữ ${vnd(delta)} khỏi số dư khả dụng. Thanh toán trước hạn để nhận sách; quá hạn thì tiền được trả lại ví.`,
         }
       : delta > 0
       ? {

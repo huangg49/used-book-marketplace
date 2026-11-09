@@ -16,10 +16,12 @@ import {
 import { auctionReceipt, type PublicAuctionSummary } from "./contracts";
 import {
   AUCTION_MAX_OPEN_CHANGES,
+  AUCTION_MIN_BIDDERS_CAP,
   AUCTION_MIN_BIDDERS_FLOOR,
   AUCTION_RESCHEDULE_FREEZE_MS,
   auctionErrorText,
   createSellerCommand,
+  lateOpenText,
   openRuleText,
   openTimeOf,
   outcomeUnknown,
@@ -28,7 +30,8 @@ import {
 import { ScheduleAuctionSheet } from "./components";
 
 const DONE: Record<SellerCommand["kind"], string> = {
-  LowerMin: "Đã giảm số người đăng ký tối thiểu.",
+  LowerMin: "Đã giảm số người tối thiểu.",
+  RaiseMin: "Đã tăng số người tối thiểu.",
   Close: "Đã đóng phiên; người đăng ký được hoàn cọc.",
 };
 
@@ -60,11 +63,12 @@ export function WaitingSellerBlock({
   const length = Date.parse(auction.endAt) - Date.parse(auction.startAt);
   const editsLeft = Math.max(0, AUCTION_MAX_OPEN_CHANGES - (auction.scheduleRevision ?? 0));
   const defaultLower = Math.max(AUCTION_MIN_BIDDERS_FLOOR, need - 1);
+  // ADR 0085 (L5): raising is allowed only while nobody is registered.
+  const canRaise = count === 0 && need < AUCTION_MIN_BIDDERS_CAP;
   const [targetMin, setTargetMin] = useState(defaultLower);
   useEffect(() => {
     setTargetMin(Math.max(AUCTION_MIN_BIDDERS_FLOOR, need - 1));
   }, [need]);
-
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -247,12 +251,12 @@ export function WaitingSellerBlock({
 
             <AppText kind="small" color={colors.muted} style={{ lineHeight: 17 }}>
               {passed
-                ? `Đã qua giờ mở nên không đổi giờ được nữa. Phiên mở ngay khi đủ ${need} người đăng ký.`
+                ? `Đã qua giờ mở nên không đổi giờ được nữa. Phiên ${lateOpenText(need)}.`
                 : frozen
                   ? "Không đổi giờ trong 30 phút cuối trước giờ mở."
                   : editsLeft <= 0
                     ? "Đã đổi giờ mở tối đa 2 lần."
-                    : `Còn ${editsLeft} lần đổi giờ mở, trong 30 ngày kể từ lúc đăng.`}
+                    : `Còn ${editsLeft} lần đổi giờ mở, trong 30 ngày kể từ lúc đăng.${reached ? " Phiên đã đủ người nên chỉ dời giờ mở sớm hơn." : ""}`}
             </AppText>
 
             <Button
@@ -264,7 +268,7 @@ export function WaitingSellerBlock({
             />
           </View>
 
-          {/* 2. Lower Minimum Registrants */}
+          {/* 2. Lower / Raise Minimum Registrants */}
           {!reached && need > AUCTION_MIN_BIDDERS_FLOOR ? (
             <View
               style={{
@@ -338,6 +342,30 @@ export function WaitingSellerBlock({
             </AppText>
           ) : null}
 
+          {canRaise && (
+            <View
+              style={{
+                backgroundColor: stitchTokens.parchment,
+                borderRadius: 12,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: stitchTokens.cardBorder,
+                gap: 8,
+              }}
+            >
+              <Button
+                wine
+                secondary
+                title={`Tăng tối thiểu lên ${need + 1} người`}
+                disabled={busy}
+                onPress={() => run("RaiseMin", need + 1)}
+              />
+              <AppText kind="small" color={colors.muted}>
+                Chưa có ai đăng ký nên còn tăng được số người tối thiểu; khi đã có người đăng ký thì chỉ giảm được.
+              </AppText>
+            </View>
+          )}
+
           {/* 3. Close Auction Before Start */}
           <Button
             destructive
@@ -360,7 +388,10 @@ export function WaitingSellerBlock({
           live: false,
           startAt: openTime,
           endAt: new Date(Date.parse(openTime) + length).toISOString(),
-          latestStartAt: auction.latestStartAt ?? null,
+          // ADR 0085 (H4): a full auction only moves earlier than its open time.
+          latestStartAt: reached
+            ? new Date(Date.parse(openTime) - 60_000).toISOString()
+            : auction.latestStartAt ?? null,
         }}
         onClose={() => setEditing(false)}
         onDone={() => void refresh()}

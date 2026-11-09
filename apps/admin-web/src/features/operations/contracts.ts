@@ -220,8 +220,12 @@ export const operationsAuction = z.object({
   phase: z.enum(["Scheduled", "Live", "Ended"]).optional(),
   // ADR 0079: when an OnHold auction auto-cancels; optional for older servers.
   holdExpiresAt: time.nullable().optional(),
-  // ADR 0080: set once an Admin resumed it; an auction resumes at most once.
+  // ADR 0080/0084: when an Admin last resumed it (any number of times within
+  // the pause budget).
   resumedAt: time.nullable().optional(),
+  // ADR 0084: why it is held, and the pause time it may still use.
+  holdReason: z.enum(["Eligibility", "Review"]).nullable().optional(),
+  pauseBudgetLeftSeconds: z.number().int().nonnegative().optional(),
 }) satisfies z.ZodType<Schema["OperationsAuctionItem"]>;
 export type OperationsAuction = z.infer<typeof operationsAuction>;
 export const operationsAuctionList = z.object({
@@ -246,6 +250,8 @@ export const commandReceipt = z.object({
     "Unsold",
     "OnHold",
     "PaymentExpired",
+    // ADR 0086
+    "SecondChanceOffered",
     "AwaitingPayment",
     "Fulfilling",
     "ReadyForCollection",
@@ -481,6 +487,22 @@ export const escalationLabels: Record<
   ],
 };
 
+export const exchangeShipmentInfo = z.object({
+  method: z.string().optional(),
+  carrierCode: z.string().nullable().optional(),
+  carrierName: z.string().nullable().optional(),
+  trackingCode: z.string().nullable().optional(),
+  meetupLocation: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  packagingPhotoUrl: z.string().nullable().optional(),
+  packagingVideoUrl: z.string().nullable().optional(),
+  packagingPhotoName: z.string().nullable().optional(),
+  packagingVideoName: z.string().nullable().optional(),
+  shippedAt: time.nullable().optional(),
+  lastEvent: z.string().nullable().optional(),
+  lastEventAt: time.nullable().optional(),
+}).passthrough();
+
 export const exchangeDisputeResolution = z.object({
   id: uuid,
   initiatorId: uuid,
@@ -506,6 +528,8 @@ export const exchangeDisputeResolution = z.object({
   recipientShippedAt: time.nullable().optional(),
   initiatorReceivedAt: time.nullable().optional(),
   recipientReceivedAt: time.nullable().optional(),
+  initiatorShipment: exchangeShipmentInfo.nullable().optional(),
+  recipientShipment: exchangeShipmentInfo.nullable().optional(),
   inspectionDeadline: time.nullable().optional(),
   completedAt: time.nullable().optional(),
   initiatorCompletedAt: time.nullable().optional(),

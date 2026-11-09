@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  auctionDepositError,
+  depositChoices,
+  canWithdrawRegistration,
   amountError,
   autoFloor,
   bidOptions,
+  AUCTION_FORMATS,
   createAuctionCommand,
   createOrderCommand,
   auctionEligible,
@@ -331,7 +335,7 @@ describe("ADR 0079 bounded registration lifecycle", () => {
     expect(openRuleText(waiting({ openMode: "Scheduled" }))).toMatch(/nếu đủ 4 người/);
     expect(closeReasonText(waiting({ closeReason: "RegistrationExpired" }))).toMatch(/không đủ 4 người/);
     expect(closeReasonText(waiting({ closeReason: "SellerClosed" }))).toMatch(/Người bán đã đóng/);
-    expect(closeReasonText(waiting({ closeReason: "HoldExpired" }))).toMatch(/48 giờ/);
+    expect(closeReasonText(waiting({ closeReason: "HoldExpired" }))).toMatch(/hết thời gian tạm dừng/);
     expect(closeReasonText(waiting({ closeReason: "Reported" }))).toMatch(/báo cáo/);
     expect(closeReasonText(waiting())).toBeNull();
   });
@@ -339,5 +343,59 @@ describe("ADR 0079 bounded registration lifecycle", () => {
     const id = "11111111-1111-4111-8111-111111111111";
     expect(JSON.parse(createSellerCommand(id, "LowerMin", 3, "k", 4).body)).toEqual({ expectedVersion: 3, minBidders: 4 });
     expect(createSellerCommand(id, "Close", 3, "k").path).toBe(`/auctions/${id}/close`);
+  });
+});
+
+// ADR 0085 (N1): withdrawing is allowed below the minimum, or from a full
+// auction until 72 h before its open time; never after the member bid.
+describe("canWithdrawRegistration", () => {
+  const now = Date.parse("2026-11-09T03:00:00.000Z");
+  const auction = (over: Partial<PublicAuctionSummary> = {}) =>
+    ({ state: "Active", phase: "Scheduled", minBidders: 4, registeredCount: 3, fullWithdrawUntil: null, ...over }) as PublicAuctionSummary;
+  const me = (over: Partial<Participation> = {}) => ({ registrationState: "Registered", alias: null, ...over }) as Participation;
+  it("is allowed below the minimum", () => {
+    expect(canWithdrawRegistration(auction(), me(), now)).toBe(true);
+  });
+  it("is allowed from a full auction only before fullWithdrawUntil", () => {
+    const full = auction({ registeredCount: 4, fullWithdrawUntil: new Date(now + 60_000).toISOString() });
+    expect(canWithdrawRegistration(full, me(), now)).toBe(true);
+    expect(canWithdrawRegistration(full, me(), now + 60_000)).toBe(false);
+    expect(canWithdrawRegistration(auction({ registeredCount: 4 }), me(), now)).toBe(false);
+  });
+  it("is refused after a bid, when not registered, or once ended", () => {
+    expect(canWithdrawRegistration(auction(), me({ alias: 1 }), now)).toBe(false);
+    expect(canWithdrawRegistration(auction(), me({ registrationState: "Withdrawn" }), now)).toBe(false);
+    expect(canWithdrawRegistration(auction(), null, now)).toBe(false);
+    expect(canWithdrawRegistration(auction({ phase: "Ended" }), me(), now)).toBe(false);
+  });
+});
+
+// ADR 0086: the runner-up's answer carries the auction version it saw.
+describe("second-chance commands", () => {
+  it("accept and decline post the expected version", () => {
+    const a = createAuctionCommand("00000000-0000-4000-8000-000000000001", "SecondChanceAccept", 200_000, "k1", 7);
+    expect(a).toMatchObject({ path: "/auctions/00000000-0000-4000-8000-000000000001/second-chance/accept", method: "POST" });
+    expect(JSON.parse(a.body)).toEqual({ expectedVersion: 7 });
+    const d = createAuctionCommand("00000000-0000-4000-8000-000000000001", "SecondChanceDecline", 200_000, "k2", 7);
+    expect(d.path).toMatch(/second-chance\/decline$/);
+    expect(receiptMessage("SecondChanceDecline", 0, { currentPrice: null, leading: null })).toMatch(/từ chối/);
+  });
+  it("the create form no longer offers second-price sealed auctions", () => {
+    expect(AUCTION_FORMATS.filter((f) => !f.retired).map((f) => f.value)).not.toContain("SealedSecond");
+  });
+});
+
+// ADR 0087: the seller-set deposit mirrors the server bounds.
+describe("seller deposit", () => {
+  it("offers picks from the default to half the start price", () => {
+    expect(depositChoices(200_000).map((c) => c.amount)).toEqual([20_000, 40_000, 60_000, 100_000]);
+    expect(depositChoices(10_000).map((c) => c.amount)).toEqual([10_000]);
+  });
+  it("refuses amounts outside the bounds", () => {
+    expect(auctionDepositError(200_000, null)).toBeNull();
+    expect(auctionDepositError(200_000, 60_000)).toBeNull();
+    expect(auctionDepositError(200_000, 19_000)).toMatch(/20\.000đ đến 100\.000đ/);
+    expect(auctionDepositError(200_000, 101_000)).not.toBeNull();
+    expect(auctionDepositError(200_000, 25_500)).not.toBeNull();
   });
 });

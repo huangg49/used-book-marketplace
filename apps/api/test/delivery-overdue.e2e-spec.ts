@@ -709,6 +709,8 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
     actor = f.f.buyer,
     version = 1,
   ) => post(`/orders/${f.id}/pay`, { expectedVersion: version }, actor, key);
+  // Full-history reconciliation includes retained fixtures from preceding E2E suites.
+  const fullHistoryTimeoutMs = 60_000;
   const reconcile = () =>
     app.get(MongoService).tx((tx) => app.get(LedgerService).reconcile(tx));
 
@@ -902,7 +904,7 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
       canReportNonReceipt: false,
     });
     expect((await reconcile()).balanced).toBe(true);
-  });
+  }, fullHistoryTimeoutMs);
   it('worker opens exactly one durable delivery review at pinned deadline, retaining money/book/canonical pickup', async () => {
     const { f, p, event } = await overdue(),
       before = await stable(f);
@@ -942,7 +944,7 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
       r.receipt,
     );
     expect((await reconcile()).balanced).toBe(true);
-  });
+  }, fullHistoryTimeoutMs);
   it('Buyer report at deadline creates one review and report with no attachment dependency', async () => {
     const { f, p } = await overdue(),
       before = await stable(f);
@@ -973,7 +975,7 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
     expect(JSON.stringify(audit)).not.toContain(description);
     await expect(app.get(OrdersService).expireDelivery(f.id)).rejects.toThrow();
     expect((await reconcile()).balanced).toBe(true);
-  });
+  }, fullHistoryTimeoutMs);
   it('Buyer supplements worker review without changing its opening identity or incrementing Order again', async () => {
     const { f } = await overdue();
     await app.get(OrdersService).expireDelivery(f.id);
@@ -989,7 +991,7 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
     ).toBe(1);
     await report(f, 5).expect(409);
     expect((await reconcile()).balanced).toBe(true);
-  });
+  }, fullHistoryTimeoutMs);
   it('T-1ms rejects worker and Buyer; exact deadline opens and late worker does not extend it', async () => {
     const { f, p } = await transit();
     await freeze(f, new Date(p.deliveryDeadline!.getTime() - 1));
@@ -1164,7 +1166,7 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
     ).toEqual(before);
     await report(f, 5).expect(200);
     expect((await reconcile()).balanced).toBe(true);
-  });
+  }, fullHistoryTimeoutMs);
   it('an existing conflicting-pickup review is retained alongside later overdue evidence', async () => {
     const { f, event, p } = await transit();
     await emit({
@@ -1181,7 +1183,7 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
     ).toEqual(review);
     expect((await orderView(f.id, f.f.buyer)).version).toBe(5);
     expect((await reconcile()).balanced).toBe(true);
-  });
+  }, fullHistoryTimeoutMs);
   it('20 same-key reports commit one report/receipt while different keys cannot duplicate it', async () => {
     const { f } = await overdue(),
       key = randomUUID();
@@ -1222,7 +1224,7 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
       await db.c.order_delivery_reviews.countDocuments({ orderId: f.id }),
     ).toBe(1);
     expect((await reconcile()).balanced).toBe(true);
-  });
+  }, fullHistoryTimeoutMs);
   it.each(['worker', 'buyer'] as const)(
     '%s wins deterministically against the other path blocked at the actual ledger row',
     async (first) => {
@@ -1268,6 +1270,7 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
       ).toBe(1);
       expect((await reconcile()).balanced).toBe(true);
     },
+    fullHistoryTimeoutMs,
   );
   it('two workers dedupe through a real Buyer lock', async () => {
     const { f } = await overdue(),
@@ -1380,7 +1383,7 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
     });
     await app.get(OrdersService).expireDelivery(f.id);
     expect((await reconcile()).balanced).toBe(true);
-  });
+  }, fullHistoryTimeoutMs);
   it('worker skips ineligible Orders and surfaces open review counts/age without repeatedly mutating them', async () => {
     const x = await transit(),
       future = await transit(),
@@ -1451,7 +1454,7 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
     );
     await app.get(OrdersService).expireDelivery(f.id);
     expect((await reconcile()).balanced).toBe(true);
-  });
+  }, fullHistoryTimeoutMs);
   it('database rejects forged review, cross-Order pickup and missing receipts; retained records are immutable', async () => {
     const one = await transit(),
       two = await transit(),
@@ -1501,5 +1504,5 @@ describe('Delivery overdue: real MongoDB and HTTP', () => {
     ).rejects.toMatchObject({ code: 13 });
     await expect(app.get(OrdersService).refund(one.f.id)).rejects.toThrow();
     expect((await reconcile()).balanced).toBe(true);
-  });
+  }, fullHistoryTimeoutMs);
 });

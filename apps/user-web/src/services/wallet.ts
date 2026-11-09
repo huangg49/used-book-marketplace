@@ -35,6 +35,10 @@ export const walletHistoryLabels = {
   ListingFeeCharge: "Phí đăng bài trước đây",
   ListingFeeRefund: "Hoàn phí đăng bài",
   ListingFeeSettlement: "Quyết toán phí đăng bài",
+  // ADR 0075/0087: auction holds, their releases and a seller's deposit share.
+  AuctionBidHold: "Đấu giá · Giữ tiền",
+  AuctionBidRelease: "Đấu giá · Trả lại tiền giữ",
+  AuctionDepositSellerShare: "Đấu giá · Nhận một phần tiền cọc",
 } as const;
 export type WalletHistoryType = keyof typeof walletHistoryLabels;
 const walletHistoryItemSchema = z.object({
