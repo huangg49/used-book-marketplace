@@ -536,6 +536,11 @@
   display: grid;
   gap: 24px;
 }
+.bookInfoFields:not([hidden]) {
+  display: grid;
+  gap: inherit;
+  min-width: 0;
+}
 .field {
   min-width: 0;
 }
