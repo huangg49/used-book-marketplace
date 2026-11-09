@@ -18971,7 +18971,6 @@ components:
         - withdrawalId
         - expectedVersion
         - payoutRef
-        - proofId
         - recipientId
         - amount
         - currency
