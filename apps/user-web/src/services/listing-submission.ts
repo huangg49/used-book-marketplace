@@ -1,4 +1,4 @@
-import { createAssistRequest } from "@used-books/session-client";
+import { ApiError, createAssistRequest } from "@used-books/session-client";
 import { z } from "zod";
 import { session } from "./api";
 import type { Attributes } from "@used-books/api-contract/catalog-taxonomy";
@@ -53,6 +53,7 @@ export type DraftAttempt = {
   uploaded: Map<File, string>;
   index: WeakMap<File, number>;
   next: number;
+  draft?: z.infer<typeof receipt>;
 };
 export function createDraftAttempt(): DraftAttempt {
   return {
@@ -66,8 +67,9 @@ export function createDraftAttempt(): DraftAttempt {
 }
 
 export function ensureDraft(attempt: DraftAttempt, channel?: "Auction") {
-  return attempt.remember("draft", (key) =>
-    session.request("/listings", receipt, {
+  if (attempt.draft) return Promise.resolve(attempt.draft);
+  return attempt.remember("draft", async (key) => {
+    const created = await session.request("/listings", receipt, {
       method: "POST",
       headers: { "Idempotency-Key": key },
       body: JSON.stringify({
@@ -90,8 +92,34 @@ export function ensureDraft(attempt: DraftAttempt, channel?: "Auction") {
           mediaIds: [],
         },
       }),
-    }),
-  );
+    });
+    attempt.draft = created;
+    return created;
+  });
+}
+
+class ListingPhotoRejected extends Error {}
+
+export function isListingRefusal(error: unknown) {
+  return error instanceof ListingPhotoRejected || (error instanceof ApiError &&
+    [400, 409, 413, 415, 422].includes(error.status) &&
+    !["HTTP_ERROR", "IdempotencyConflict", "IDEMPOTENCY_CONFLICT"].includes(error.code));
+}
+
+const draftState = z.object({
+  id: z.string().uuid(),
+  version: z.number().int(),
+  state: z.object({ moderation: z.string() }),
+});
+
+// Reload only an existing, editable owner draft. The caller keeps the form
+// and may deliberately save a new version after a definitive refusal.
+export async function reloadEditableListingDraft(attempt: DraftAttempt) {
+  if (!attempt.draft) return;
+  const latest = await session.request(`/me/listings/${attempt.draft.entityId}`, draftState);
+  if (latest.id !== attempt.draft.entityId || !["Draft", "Rejected"].includes(latest.state.moderation))
+    throw new Error("Bài này đã chuyển trạng thái. Mở bài trên kệ sách để kiểm tra.");
+  attempt.draft = { entityId: latest.id, version: latest.version };
 }
 
 // Stable per-file stage index, so a retry resumes the same upload keys.
@@ -191,11 +219,10 @@ export async function upload(
     }),
   );
   const base = `/listings/${listingId}/media/${created.entityId}`;
-  const grant = await remember(`photo-${index}-ticket`, () =>
-    session.request(`${base}/upload-ticket`, ticket),
-  );
-  await remember(`photo-${index}-bytes`, (key) =>
-    session.request(
+  // Upload grants expire. Refresh the grant on a retry without changing the byte command key.
+  await remember(`photo-${index}-bytes`, async (key) => {
+    const grant = await session.request(`${base}/upload-ticket`, ticket);
+    return session.request(
       grant.path,
       z.unknown(),
       {
@@ -204,8 +231,8 @@ export async function upload(
         body: bytes,
       },
       120_000,
-    ),
-  );
+    );
+  });
   let current = await remember(`photo-${index}-uploaded`, () =>
     session.request(`/me${base}`, media),
   );
@@ -220,7 +247,7 @@ export async function upload(
     current = await session.request(`/me${base}`, media);
     if (current.status === "Ready") return current.id;
     if (current.status === "Failed")
-      throw new Error("Ảnh không đạt yêu cầu xử lý.");
+      throw new ListingPhotoRejected("Ảnh không đạt yêu cầu xử lý. Hãy thay ảnh rồi gửi lại.");
     await wait(1000);
   }
   throw new Error("Ảnh đang xử lý, hãy thử gửi lại sau ít phút.");
@@ -288,11 +315,12 @@ export function createListingSubmission(
     bundle: value.bundle ? structuredClone(value.bundle) : null,
     files: [...value.files],
   };
-  const { remember } = attempt;
+  const remember = rememberCommands();
+  let draftReceipt: Awaited<ReturnType<typeof ensureDraft>> | undefined;
   return async () => {
     if (!input.files.length) throw new Error("Cần ít nhất một ảnh sách.");
     const catalog = await ensureCatalog(attempt, input);
-    const draft = await ensureDraft(attempt, input.channel);
+    const draft = (draftReceipt ??= await ensureDraft(attempt, input.channel));
     const mediaIds: string[] = [];
     for (const file of input.files.slice(0, 8))
       mediaIds.push(await uploadOnce(attempt, draft, file));
@@ -325,6 +353,7 @@ export function createListingSubmission(
         }),
       }),
     );
+    attempt.draft = saved;
     await remember("submit", (key) =>
       session.request(`/listings/${draft.entityId}/submit`, receipt, {
         method: "POST",

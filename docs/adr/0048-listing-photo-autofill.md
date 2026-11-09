@@ -21,7 +21,7 @@ xác nhận từng trường. Không gì được lưu vào bài đăng hay danh
    `{ mediaIds: 1–3 }`. Chỉ chủ bài đăng ACTIVE, bài đăng ở cùng trạng thái được phép
    như gợi ý giá (Draft/Rejected, hoặc Approved và Available), không phải bộ sách.
    Ảnh phải thuộc bài đăng, `Ready`, chưa purge.
-2. Gửi provider **chỉ ảnh sách** (bản derivative đã bỏ EXIF/GPS, thu nhỏ ≤ 1024 px JPEG)
+2. Gửi provider **chỉ ảnh sách** (bản derivative đã bỏ EXIF/GPS, thu nhỏ JPEG tối đa 1536 px và ≤ 180 KB mỗi ảnh)
    và lời dặn cố định. Không gửi id người dùng/bài đăng, email, địa chỉ, ghi chú tình
    trạng, session hay token.
 3. Provider **NVIDIA NIM**, model mặc định `nvidia/nemotron-3.5-super-vl-120b-a12b`
@@ -38,7 +38,7 @@ xác nhận từng trường. Không gì được lưu vào bài đăng hay danh
    gợi ý chụp bìa/trang bản quyền rõ hơn). Lỗi provider/timeout/hết hạn mức → 503,
    giới hạn → 429; client luôn giữ nhập tay và dữ liệu đã gõ.
 7. Gọi provider **sau commit**: cùng một transaction kiểm quyền, replay theo key, cache
-   theo dấu vân tay (sha256 các ảnh + model) trong 24 giờ, giữ chỗ hạn mức và ghi bản
+   theo dấu vân tay (sha256 các ảnh, model, lời dặn và cấu hình thu ảnh) trong 24 giờ, giữ chỗ hạn mức và ghi bản
    `Pending`. Một yêu cầu đang chạy/người; 3 lần/bài đăng/phút; mặc định 10 lần/người/
    ngày (`AUTOFILL_USER_DAILY_LIMIT`). Chi phí cộng vào **ngân sách ngày chung** với trợ
    lý gợi ý giá (`price_assist_usage`, `global:<ngày>`).
@@ -66,7 +66,7 @@ theo điều khoản công bố — cần chủ dự án kiểm lại khi lên p
   trước khi bật demo (ngưỡng đề xuất: ≥ 80% đúng tên sách, 0 ISBN sai checksum lọt ra).
 - Bản trial build.nvidia.com có giới hạn tốc độ, không SLA.
 
-## 6. Triển khai (27/10/2026)
+## 6. Triển khai (27/10/2026) và cập nhật 09/11/2026
 
 - OpenAPI 0.53.0 `requestAutofillSuggestion`; migration `0038-listing-autofill` tạo
   `autofill_suggestions`. Sau `pnpm db:migrate` phải chạy lại `pnpm db:bootstrap` để
@@ -74,6 +74,16 @@ theo điều khoản công bố — cần chủ dự án kiểm lại khi lên p
 - Module `apps/api/src/modules/autofill-assist`; adapter NIM dùng chung
   `price-assist/nvidia-chat.ts`. Ảnh lấy từ derivative trên kho ảnh, thu về JPEG
   ≤ 180 KB (giới hạn ảnh inline của NIM hosted).
+- **09/11, Member web**: có đường gọi AI khi riêng tra ISBN lỗi, sửa gợi ý và dùng
+  dữ liệu đã sửa dù danh mục không khớp. Form nhập tay cho sửa hoặc bỏ thông tin
+  ấn bản. Lỗi gửi đã xác định có bước đọc lại bản nháp để sửa. Mất phản hồi giữ
+  nguyên yêu cầu để thử lại. Biên nhận mở đúng bài vừa gửi.
+- **09/11, xử lý ảnh và lời dặn**: thử giữ đến 1536 px trước khi giảm về mức cũ
+  để giữ chữ nhỏ. Lời dặn ghép tựa in rời và số in dọc, tách mốc trong tựa khỏi
+  năm xuất bản. Giữ cấu hình ảnh của pipeline tự duyệt. Thử trực tiếp NVIDIA với
+  cùng hai ảnh *Cao-Lãnh đến 1954*: cấu hình cũ đọc thiếu, chỉ sửa lời dặn vẫn thiếu,
+  cấu hình mới đọc đủ phần tựa ở 2/2 lượt, bỏ dấu gạch nối, giữ ISBN và năm xuất bản
+  trống. Bằng chứng giới hạn ở một cuốn và chưa đạt bộ thử ảnh thật của §5.
 - Kiểm: unit (chuẩn hóa output, adapter, thu ảnh), e2e với provider/ảnh giả trên replica
   set QA (quyền, ảnh không hợp lệ, replay/xung đột key, cache, lỗi lưu lại, model dự
   phòng, giới hạn/phút, một yêu cầu đang chạy khi gửi song song, ngân sách chung).

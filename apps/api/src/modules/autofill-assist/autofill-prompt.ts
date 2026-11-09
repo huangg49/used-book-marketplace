@@ -5,7 +5,13 @@ Bỏ qua chữ viết tay, tem/nhãn giá, mã vạch của cửa hàng, tên ho
 Trả về DUY NHẤT một đối tượng JSON, không giải thích, đúng các khóa:
 {"title": string|null, "authors": string[], "publisher": string|null, "publicationYear": integer|null,
  "language": string|null, "edition": string|null, "isbn": string|null, "missing": string[]}
-- title: tên sách đúng chính tả và dấu như in; không kèm khẩu hiệu quảng cáo.
+- title: chép đủ tựa và phụ đề thực sự thuộc tựa, đúng chính tả, dấu và dấu nối như in. Đọc cả
+  các cụm in tách dòng, khác cỡ chữ hoặc viết dọc. Nếu bìa in “SÔNG HẬU”, rồi “từ” và “1900”
+  như các phần của cùng tựa thì chép “Sông Hậu từ 1900”. Bỏ khẩu hiệu, tên tác giả và tên NXB.
+  Khi số thuộc tựa in từng chữ số theo cột dọc, đọc từ trên xuống. Ví dụ khung số dọc nối
+  với chữ “đến” thì chép cả “đến” và số trong khung vào title.
+- publicationYear: chỉ ghi năm khi dòng thông tin xuất bản hoặc in ấn xác định rõ. Giữ mốc năm
+  thuộc tựa trong title; năm trong tựa, lời đề tặng hoặc dòng kiểm duyệt không đủ để điền năm xuất bản.
 - Chữ in TOÀN CHỮ HOA thì viết lại kiểu chữ thường như tên sách/tên người thông dụng, giữ đúng
   từng chữ và dấu (ví dụ "PROJECT HAIL MARY" → "Project Hail Mary", "TÔ HOÀI" → "Tô Hoài").
 - authors: tên tác giả, không kèm "Tác giả:", không gồm người dịch/minh họa.

@@ -909,6 +909,25 @@
   gap: 0;
   padding-top: 8px;
 }
+.editionFacts {
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+
+.editionFacts summary {
+  width: fit-content;
+  padding-block: 12px;
+  color: var(--shop-wine);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.editionFacts > p,
+.editionFacts > div {
+  margin-block-end: 12px;
+}
+
 .questions fieldset,
 .mode {
   border: 0;

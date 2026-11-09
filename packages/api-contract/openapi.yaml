@@ -2838,8 +2838,8 @@ paths:
         books or the caller's own Pending request. Advisory only: nothing is written to the listing
         or catalog and every field needs the seller's confirmation. Only the downscaled photos are
         sent to the provider; no account, listing, address, session or token data. ISBNs failing the
-        checksum are dropped. Same listing + photos + model within 24 h returns the stored
-        suggestion (cached=true) without a new model call. Idempotency-Key is one per ask: same key
+        checksum are dropped. Same listing + photos + model + reading instructions and image profile
+        within 24 h returns the stored suggestion (cached=true) without a new model call. Idempotency-Key is one per ask: same key
         and body replays that outcome (or its stored failure as 503); same key with another
         listing/body is 409 IdempotencyConflict. 429 per-user/per-listing limits or a request still
         running; 503 when disabled, over the shared daily AI budget, timed out or invalid output.

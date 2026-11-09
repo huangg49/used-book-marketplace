@@ -4,6 +4,8 @@ import { MAX_DERIVATIVE_BYTES, MediaStorage } from '../media/media-storage.js';
 
 // Hosted NIM vision endpoints take small inline images; stay under this.
 export const MAX_INLINE_IMAGE_BYTES = 180_000;
+export const AUTOFILL_IMAGE_PROFILE = 'listing-text-v1';
+type Profile = typeof AUTOFILL_IMAGE_PROFILE;
 const STEPS: [number, number][] = [
   [1024, 80],
   [1024, 65],
@@ -14,11 +16,15 @@ const STEPS: [number, number][] = [
 // Turns a Ready photo's derivative (EXIF already stripped) into a small JPEG
 // data URL for the provider. Tests replace this with a fake.
 export abstract class AutofillImages {
-  abstract dataUrl(derivativeKey: string): Promise<string>;
+  abstract dataUrl(derivativeKey: string, profile?: Profile): Promise<string>;
 }
 
-export async function shrinkForModel(bytes: Buffer): Promise<string> {
-  for (const [size, quality] of STEPS) {
+// The interactive reader can use more pixels for fine print without changing
+// the input used by the separately versioned moderation pipeline.
+const TEXT_STEPS: [number, number][] = [[1536, 80], ...STEPS];
+
+export async function shrinkForModel(bytes: Buffer, profile?: Profile): Promise<string> {
+  for (const [size, quality] of profile === AUTOFILL_IMAGE_PROFILE ? TEXT_STEPS : STEPS) {
     const out = await sharp(bytes, { limitInputPixels: 40_000_000 })
       .resize({ width: size, height: size, fit: 'inside', withoutEnlargement: true })
       .jpeg({ quality, mozjpeg: true })
@@ -35,7 +41,7 @@ export class StorageAutofillImages extends AutofillImages {
   constructor(private readonly storage: MediaStorage) {
     super();
   }
-  async dataUrl(derivativeKey: string) {
-    return shrinkForModel(await this.storage.read(derivativeKey, MAX_DERIVATIVE_BYTES));
+  async dataUrl(derivativeKey: string, profile?: Profile) {
+    return shrinkForModel(await this.storage.read(derivativeKey, MAX_DERIVATIVE_BYTES), profile);
   }
 }

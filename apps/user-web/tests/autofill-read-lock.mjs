@@ -18,12 +18,13 @@ const user={id:id(1),displayName:'Bạn đọc QA',email:'reader@example.test',r
 const checks=[];let browser;
 try{
  browser=await chromium.launch();
- for(const width of [390,1440])for(const mode of ['isbn','lookup-fail','ai-lost-ack']){
+ for(const width of [390,1440])for(const mode of ['isbn','lookup-fail','ai-lost-ack',...baseline?[]:['lookup-ai-bypass']]){
   const context=await browser.newContext({viewport:{width,height:950},reducedMotion:'reduce'});
   await context.routeWebSocket('**/*',socket=>socket.close());
   const page=await context.newPage(),errors=[],gates=[],aiGates=[],intents=[];
   const counts={draft:0,media:0,bytes:0,finalize:0,isbn:0,ai:0};
-  page.on('pageerror',e=>errors.push(e.message));let holdIsbn=true,failIsbn=mode==='lookup-fail',holdAi=true;
+  page.on('pageerror',e=>errors.push(e.message));let holdIsbn=true,failIsbn=mode==='lookup-fail'||mode==='lookup-ai-bypass',holdAi=mode!=='lookup-ai-bypass';
+  let searchedTitle;
   await context.route('**/*',async route=>{
    const request=route.request(),url=new URL(request.url()),p=url.pathname,m=request.method();
    const receipt=entityId=>route.fulfill({json:{entityId,version:1}});
@@ -42,11 +43,14 @@ try{
    if(p.endsWith('/autofill-suggestions')&&m==='POST'){
     const at=++counts.ai;intents.push({key:request.headers()['idempotency-key'],body:request.postData()});
     if(holdAi)await new Promise(resolve=>aiGates.push(resolve));
-    if(at===1)return route.abort('failed');
+    if(at===1&&mode==='ai-lost-ack')return route.abort('failed');
     return route.fulfill({json:{id:id(20),status:'Suggested',fields:{title:'Tên đọc từ ảnh QA',authors:[],publisher:null,
-     publicationYear:null,language:null,edition:null,isbn:null},matches:[],missing:[],cached:false}});
+     publicationYear:null,language:null,edition:null,isbn:null},matches:[],missing:[],cached:mode==='lookup-ai-bypass'&&at>1}});
    }
-   if(p.endsWith('/catalog-matches')&&m==='POST')return route.fulfill({json:{items:[],truncated:false}});
+   if(p.endsWith('/catalog-matches')&&m==='POST'){
+    searchedTitle=request.postDataJSON().title;
+    return route.fulfill({json:{items:[],truncated:false,serverTime:new Date().toISOString()}});
+   }
    assert.equal(m,'GET','No submit/save/provider commands in autofill fixture');
    if(p==='/api/v1/me/addresses')return route.fulfill({json:{version:0,items:[]}});
    if(p==='/api/v1/service-areas')return route.fulfill({json:{code:'HCM-DEMO-v1',localities:[]}});
@@ -72,8 +76,27 @@ try{
    await expect(panel.getByRole('img',{name:'Ảnh để đọc 1',exact:true})).toBeVisible();
    failIsbn=false;await panel.getByRole('button',{name:'Đọc thông tin',exact:true}).click();
   }
-  await expect(panel.getByRole('heading',{name:'Đối chiếu từ mã vạch ISBN',exact:true})).toBeVisible();
   assert.equal(counts.ai,0,'ISBN results never call AI automatically');
+  if(mode==='lookup-ai-bypass'){
+   await expect(panel.getByRole('alert')).toBeVisible();
+   await panel.getByRole('button',{name:'Đọc chữ bằng AI',exact:true}).click();
+   await expect(panel.getByRole('button',{name:'Dùng Tên sách',exact:true})).toBeVisible();
+   await panel.getByText(/Chưa tìm thấy đầu sách phù hợp/).waitFor();
+   const corrected='Tựa QA đã bổ sung phần còn thiếu';
+   await panel.getByLabel('Tên sách để tìm').fill(corrected);
+   await panel.getByRole('button',{name:'Tìm lại trong danh mục'}).click();
+   await expect.poll(()=>searchedTitle).toBe(corrected);
+   await panel.getByRole('button',{name:'Đọc lại',exact:true}).click();
+   await expect(panel.getByText(/Đã dùng lại kết quả/)).toBeVisible();
+   await expect(panel.getByLabel('Tên sách để tìm')).toHaveValue(corrected);
+   await expect(title).toHaveValue('Tên đang nhập QA');
+   await panel.getByRole('button',{name:'Dùng thông tin đã sửa',exact:true}).click();
+   await page.getByRole('button',{name:'Dùng gợi ý đã chọn',exact:true}).click();
+   await expect(title).toHaveValue(corrected);
+   assert.equal(counts.ai,2,'The same photos can return cached results without losing edits');
+  }else {
+   await expect(panel.getByRole('heading',{name:'Đối chiếu từ mã vạch ISBN',exact:true})).toBeVisible();
+  }
   if(mode==='ai-lost-ack'){
    await panel.getByRole('button',{name:'Đọc chữ bằng AI',exact:true}).evaluate(button=>{button.click();button.click()});
    await expect.poll(()=>counts.ai).toBe(1);holdAi=false;aiGates.forEach(release=>release());
@@ -85,7 +108,7 @@ try{
    await panel.getByRole('button',{name:'Dùng Tên sách',exact:true}).click();
    await expect(page.getByRole('dialog')).toBeVisible();
    await page.getByRole('button',{name:'Dùng gợi ý đã chọn',exact:true}).click();await expect(title).toHaveValue('Tên đọc từ ảnh QA');
-  }else await expect(title).toHaveValue('Tên đang nhập QA');
+  }else if(mode!=='lookup-ai-bypass') await expect(title).toHaveValue('Tên đang nhập QA');
   assert.equal(counts.isbn,(baseline?2:1)+(mode==='lookup-fail'?1:0));
   for(const stage of ['draft','media','bytes','finalize'])assert.equal(counts[stage],1,'Acknowledged upload stages reused');
   await panel.screenshot({path:path.join(out,`${baseline?'before':'after'}-${mode}-${width}.png`)});

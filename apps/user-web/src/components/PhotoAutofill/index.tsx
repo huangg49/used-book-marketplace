@@ -4,11 +4,12 @@ import { Camera, Check, ScanText, X } from "lucide-react";
 import {
   createAutofillRequest,
   createIsbnLookup,
+  IsbnLookupUnavailable,
   type AutofillSuggestion,
 } from "../../services/listing-autofill";
 import type { DraftAttempt } from "../../services/listing-submission";
 import styles from "./PhotoAutofill.module.css";
-import type { CatalogMatch, IsbnMatches } from "@used-books/session-client";
+import { catalogHints, initialCatalogFields, type CatalogMatch, type CatalogSearchFields, type IsbnMatches } from "@used-books/session-client";
 import { CatalogRecovery } from './CatalogRecovery';
 
 export type AutofillField =
@@ -36,7 +37,7 @@ const MAX_PHOTOS = 3;
 
 function shown(fields: Fields, key: AutofillField): string | null {
   const value = fields[key];
-  if (Array.isArray(value)) return value.length ? value.join(", ") : null;
+  if (Array.isArray(value)) return value.length ? value.join("; ") : null;
   return value === null ? null : String(value);
 }
 
@@ -74,6 +75,9 @@ export function PhotoAutofill({
   const [reading, setReading] = useState(false);
   const readLock = useRef(false);
   const [error, setError] = useState<string>();
+  const [canSkipIsbn, setCanSkipIsbn] = useState(false);
+  const [readNotice, setReadNotice] = useState<string>();
+  const [edits, setEdits] = useState<CatalogSearchFields | null>(null);
   const [result, setResult] = useState<AutofillSuggestion | null>(null);
   const [used, setUsed] = useState<AutofillField[]>([]);
   const [replace, setReplace] = useState<AutofillField[]>([]);
@@ -109,6 +113,8 @@ export function PhotoAutofill({
       return;
     }
     setError(undefined);
+    setCanSkipIsbn(false);
+    setReadNotice(undefined);
     // Allocate once in the event handler; React may replay state updaters.
     const next = [
       ...current,
@@ -119,6 +125,9 @@ export function PhotoAutofill({
   }
   function remove(url: string) {
     if (disabled || readLock.current || !filesRef.current.some(item => item.url === url)) return;
+    setError(undefined);
+    setCanSkipIsbn(false);
+    setReadNotice(undefined);
     URL.revokeObjectURL(url);
     const next = filesRef.current.filter(item => item.url !== url);
     filesRef.current = next;
@@ -129,22 +138,34 @@ export function PhotoAutofill({
     readLock.current = true;
     setReading(true);
     setError(undefined);
+    setCanSkipIsbn(false);
+    setReadNotice(undefined);
     try {
       if (forceAi) forcedAiPhotos.current = files.map(item => item.file);
       const sameForcedPhotos = forcedAiPhotos.current?.length === files.length && files.every((item, i) => item.file === forcedAiPhotos.current?.[i]);
       if (!forceAi && !sameForcedPhotos) {
-        setReadPhase('Đang tìm mã vạch ISBN trên ảnh…');
-        const found = await lookupIsbn(files.map(item => item.file));
+        setReadPhase("Đang tải và xử lý ảnh…");
+        const found = await lookupIsbn(files.map(item => item.file), () => setReadPhase("Đang tìm mã vạch ISBN trên ảnh…"));
         if (found.status === 'Ambiguous' || (found.status === 'Found' && found.catalog?.items.length)) {
-          setBarcode(found); setBarcodeIsbn(found.isbns.length === 1 ? found.isbns[0]! : ''); setBarcodePhotos(files.map(item => item.file)); setResult(null); return;
+          setBarcode(found);
+          setBarcodeIsbn(found.isbns.length === 1 ? found.isbns[0]! : "");
+          setBarcodePhotos(files.map(item => item.file));
+          setResult(null);
+          setEdits(null);
+          return;
         }
       }
-      setBarcode(null); setReadPhase('Đang đọc thông tin bằng AI…');
-      const next = await ask(files.map((item) => item.file));
+      setBarcode(null);
+      setReadPhase("Đang chuẩn bị ảnh…");
+      const next = await ask(files.map((item) => item.file), () => setReadPhase("Đang đọc thông tin bằng AI…"));
+      if (next.cached) setReadNotice("Đã dùng lại kết quả của bộ ảnh này. Thêm hoặc thay ảnh để đọc dữ liệu mới.");
+      if (result && next.cached && !stale) return;
       setResult(next);
       setResultPhotos(files.map((item) => item.file));
+      setEdits(null);
       setUsed([]);
     } catch (e) {
+      setCanSkipIsbn(e instanceof IsbnLookupUnavailable);
       setError(
         e instanceof Error && e.message
           ? e.message
@@ -155,23 +176,37 @@ export function PhotoAutofill({
       setReading(false);
     }
   }
+  const corrected = edits ? catalogHints(edits) : null;
+  const reviewed = result && corrected
+    ? { ...result.fields, title: corrected.title, authors: corrected.authors, isbn: corrected.isbn, edition: corrected.edition }
+    : result?.fields;
+
+  function review(next: CatalogSearchFields) {
+    const before = edits ?? initialCatalogFields(result?.fields);
+    const changed = (Object.keys(next) as (keyof CatalogSearchFields)[]).filter((field) => next[field] !== before[field]);
+    setEdits(next);
+    setUsed((previous) => previous.filter((field) => !changed.some((key) => key === field)));
+  }
+
   function use(field: AutofillField) {
-    if (!result || stale || disabled || reading) return;
-    onUseField(field, result.fields);
+    if (!reviewed || stale || disabled || reading) return;
+    onUseField(field, reviewed);
     setUsed((previous) => [...new Set([...previous, field])]);
   }
   function chooseFields(fields: AutofillField[]) {
-    if (!result || stale || disabled || reading) return;
+    if (!reviewed || stale || disabled || reading) return;
     const changed = fields.filter(
       (field) =>
         currentValue?.(field)?.trim() &&
-        currentValue(field).trim() !== shown(result.fields, field),
+        currentValue(field).trim() !== shown(reviewed, field),
     );
     if (changed.length) setReplace(fields);
     else fields.forEach(use);
   }
-  const readable = result
-    ? ORDER.filter((key) => shown(result.fields, key))
+  const readable = reviewed ? ORDER.filter((key) => shown(reviewed, key)) : [];
+  const unapplied = readable.filter((field) => !used.includes(field));
+  const revisedFields = result && reviewed && edits
+    ? unapplied.filter((field) => shown(reviewed, field) !== shown(result.fields, field))
     : [];
 
   return (
@@ -181,8 +216,7 @@ export function PhotoAutofill({
         <h3 id="photo-autofill-title">Điền nhanh từ ảnh</h3>
       </div>
       <p className={styles.help}>
-        Chụp bìa trước, gáy hoặc trang bản quyền. Trợ lý chỉ đọc chữ in trên
-        sách; bạn kiểm tra và chọn từng thông tin.
+        Chụp rõ bìa trước, gáy hoặc trang bản quyền. Nếu tựa in rải trên bìa, thêm ảnh cận đủ các phần của tựa. Bạn kiểm tra thông tin trước khi dùng.
       </p>
       {reading ? <p role="status">{readPhase}</p> : null}
       {barcode ? <div className={styles.recovery}>
@@ -255,16 +289,33 @@ export function PhotoAutofill({
             : ""}
       </p>
       {error && (
-        <p className={styles.error} role="alert">
-          {error}
-        </p>
+        <div className={styles.actions}>
+          <p className={styles.error} role="alert">{error}</p>
+          {canSkipIsbn && (
+            <button type="button" className={styles.useAll} disabled={disabled || reading} onClick={() => void read(true)}>
+              Đọc chữ bằng AI
+            </button>
+          )}
+        </div>
       )}
+      {readNotice && <p className={styles.help} role="status">{readNotice}</p>}
       {stale ? (
         <p role="status" className={styles.help}>
           Ảnh để đọc đã thay đổi. Đọc lại trước khi dùng gợi ý.
         </p>
       ) : null}
-      {result || error ? <CatalogRecovery key={result?.id ?? attempt.id} attempt={attempt} channel={channel} suggestion={result} disabled={!!disabled || reading || stale} onPickBook={onPickBook} /> : null}
+      {result || error ? (
+        <CatalogRecovery
+          key={result?.id ?? attempt.id}
+          attempt={attempt}
+          channel={channel}
+          suggestion={result}
+          disabled={!!disabled || reading || stale}
+          onPickBook={onPickBook}
+          onFieldsChange={result ? review : undefined}
+          onUseReviewed={revisedFields.length ? () => chooseFields(revisedFields) : undefined}
+        />
+      ) : null}
       <ConfirmDialog
         isOpen={replace.length > 0}
         onClose={() => setReplace([])}
@@ -276,10 +327,10 @@ export function PhotoAutofill({
           setReplace([]);
         }}
       />
-      {result && (
+      {result && reviewed && (
         <div className={styles.result}>
           <p className={styles.stamp}>
-            Gợi ý từ ảnh — kiểm tra lại trước khi đăng
+            {edits ? "Thông tin sau khi rà soát" : "Gợi ý từ ảnh — kiểm tra lại trước khi đăng"}
           </p>
           {readable.length > 0 ? (
             <dl className={styles.fields}>
@@ -288,7 +339,7 @@ export function PhotoAutofill({
                 return (
                   <div key={key}>
                     <dt>{LABELS[key]}</dt>
-                    <dd>{shown(result.fields, key)}</dd>
+                    <dd>{shown(reviewed, key)}</dd>
                     <button
                       type="button"
                       onClick={() => chooseFields([key])}
@@ -309,15 +360,15 @@ export function PhotoAutofill({
             <button
               type="button"
               className={styles.useAll}
-              onClick={() => chooseFields(readable)}
+              onClick={() => chooseFields(unapplied)}
               disabled={
                 disabled ||
                 reading ||
                 stale ||
-                readable.every((key) => used.includes(key))
+                !unapplied.length
               }
             >
-              Dùng tất cả thông tin đọc được
+              {edits ? "Dùng tất cả thông tin đã rà soát" : "Dùng tất cả thông tin đọc được"}
             </button>
           )}
           {result.missing.length > 0 && (

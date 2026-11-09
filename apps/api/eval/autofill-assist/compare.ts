@@ -8,7 +8,7 @@ import {
   AUTOFILL_USER,
 } from '../../src/modules/autofill-assist/autofill-prompt.js';
 import { checkAutofill } from '../../src/modules/autofill-assist/autofill-check.js';
-import { shrinkForModel } from '../../src/modules/autofill-assist/autofill-images.js';
+import { AUTOFILL_IMAGE_PROFILE, shrinkForModel } from '../../src/modules/autofill-assist/autofill-images.js';
 import { processImage } from '../../src/modules/media/image-processor.js';
 import {
   PriceModelError,
@@ -128,7 +128,7 @@ try {
         sha256: hash(bytes),
         mimeType: mime[format ?? ''] ?? 'unsupported',
       });
-      images.push(await shrinkForModel(image.bytes));
+      images.push(await shrinkForModel(image.bytes, AUTOFILL_IMAGE_PROFILE));
     }
     prepared.set(c.id, images);
   }

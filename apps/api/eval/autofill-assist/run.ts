@@ -28,7 +28,7 @@ import {
   checkAutofill,
   type CheckedAutofill,
 } from '../../src/modules/autofill-assist/autofill-check.js';
-import { shrinkForModel } from '../../src/modules/autofill-assist/autofill-images.js';
+import { AUTOFILL_IMAGE_PROFILE, shrinkForModel } from '../../src/modules/autofill-assist/autofill-images.js';
 import { autofillModelFromConfig } from '../../src/modules/autofill-assist/autofill-model.js';
 import {
   AUTOFILL_SYSTEM,
@@ -290,7 +290,7 @@ async function asProvided(path: string) {
     sha256: digest(bytes),
     mimeType: MIME[format ?? ''] ?? 'unsupported',
   });
-  return shrinkForModel(derivative);
+  return shrinkForModel(derivative, AUTOFILL_IMAGE_PROFILE);
 }
 
 const results = [];

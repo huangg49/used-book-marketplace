@@ -26,6 +26,8 @@ export function CatalogRecovery({
   compact = false,
   disabled,
   onPickBook,
+  onFieldsChange,
+  onUseReviewed,
 }: {
   attempt: DraftAttempt;
   channel?: "Auction";
@@ -34,6 +36,8 @@ export function CatalogRecovery({
   compact?: boolean;
   disabled: boolean;
   onPickBook: (match: CatalogMatch) => void;
+  onFieldsChange?: (fields: CatalogSearchFields) => void;
+  onUseReviewed?: () => void;
 }) {
   const [fields, setFields] = useState(() =>
     initialCatalogFields(initialHints ?? suggestion?.fields),
@@ -73,7 +77,9 @@ export function CatalogRecovery({
   }, []);
   const stale = signature !== answer.signature;
   function edit(key: keyof CatalogSearchFields, value: string) {
-    setFields((f) => ({ ...f, [key]: value }));
+    const next = { ...fields, [key]: value };
+    setFields(next);
+    onFieldsChange?.(next);
     setSelected(null);
   }
   async function search() {
@@ -118,7 +124,9 @@ export function CatalogRecovery({
       <p className={styles.help}>
         {compact
           ? "Đối chiếu tác giả, tập và ấn bản trước khi chọn."
-          : "Sửa chữ bị đọc sai rồi tìm trong danh mục. Tìm lại không gọi AI và không thay thông tin bài đăng."}
+          : onFieldsChange
+            ? "Sửa chữ bị đọc sai tại đây. Bạn có thể tìm lại hoặc dùng thông tin đã sửa để điền vào bài đăng."
+            : "Nhập tên hoặc ISBN để tra danh mục. Bạn cũng có thể tự nhập theo bìa."}
       </p>
       <SearchShell className={styles.searchControls}>
         {compact ? <summary>Sửa thông tin tìm</summary> : null}
@@ -155,17 +163,22 @@ export function CatalogRecovery({
           Nhiều tác giả: ngăn cách bằng dấu chấm phẩy (;). Không có ISBN thì để
           trống.
         </p>
-        <button
-          className={styles.useAll}
-          type="button"
-          disabled={
-            disabled || busy || (!fields.title.trim() && !fields.isbn.trim())
-          }
-          onClick={() => void search()}
-          aria-busy={busy}
-        >
-          {busy ? "Đang tìm đầu sách…" : "Tìm lại trong danh mục"}
-        </button>
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className={styles.useAll}
+            disabled={disabled || busy || (!fields.title.trim() && !fields.isbn.trim())}
+            onClick={() => void search()}
+            aria-busy={busy}
+          >
+            {busy ? "Đang tìm đầu sách…" : "Tìm lại trong danh mục"}
+          </button>
+          {onUseReviewed && (
+            <button type="button" className={styles.useAll} disabled={disabled} onClick={onUseReviewed}>
+              Dùng thông tin đã sửa
+            </button>
+          )}
+        </div>
       </SearchShell>
       <p role="status" className={styles.help}>
         {busy

@@ -37,7 +37,7 @@ import {
   InvalidAutofillOutput,
   type CheckedAutofill,
 } from './autofill-check.js';
-import { AutofillImages } from './autofill-images.js';
+import { AUTOFILL_IMAGE_PROFILE, AutofillImages } from './autofill-images.js';
 import { AutofillModel } from './autofill-model.js';
 import { AUTOFILL_SYSTEM, AUTOFILL_USER } from './autofill-prompt.js';
 
@@ -170,7 +170,12 @@ export class AutofillAssistService {
         );
       const now = await tx.now();
       const fp = createHash('sha256')
-        .update(canonicalJson({ photos: ordered.map((m) => m.sha256), model: this.model.model }))
+        .update(canonicalJson({
+          photos: ordered.map((m) => m.sha256),
+          model: this.model.model,
+          instructions: [AUTOFILL_SYSTEM, AUTOFILL_USER],
+          imageProfile: AUTOFILL_IMAGE_PROFILE,
+        }))
         .digest('hex');
       const id = randomUUID();
       const base = {
@@ -286,7 +291,7 @@ export class AutofillAssistService {
       }
     };
     try {
-      const images = await timings.measure('images', () => Promise.all(p.keys.map((k) => this.images!.dataUrl(k))));
+      const images = await timings.measure('images', () => Promise.all(p.keys.map((k) => this.images!.dataUrl(k, AUTOFILL_IMAGE_PROFILE))));
       let first: CheckedAutofill | null = null;
       try {
         first = await attempt(images, false);

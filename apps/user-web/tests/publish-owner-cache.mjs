@@ -22,14 +22,14 @@ const checks = [];
 let browser;
 try {
   browser = await chromium.launch();
-  for (const width of [390, 1440]) for (const outcome of ['success', 'lost-ack', 'refused']) {
+  for (const width of [390, 1440]) for (const outcome of ['success', 'lost-ack', 'refused', ...baseline ? [] : ['revised', 'autofill']]) {
     const context = await browser.newContext({ viewport: { width, height: 950 }, reducedMotion: 'reduce' });
     await context.routeWebSocket('**/*', socket => socket.close());
     const page = await context.newPage(), errors = [], submissions = [];
     page.on('pageerror', error => errors.push(error.message));
-    let submitted = false, shelfReads = 0, commandCounts = { catalog: 0, draft: 0, media: 0, bytes: 0, finalize: 0, save: 0 };
-    let content;
-    const currentListing = () => ({ id: id(10), version: 3, channel: 'Marketplace', catalogStatus: 'Pending',
+    let submitted = false, shelfReads = 0, draftReads = 0, saves = [], commandCounts = { catalog: 0, draft: 0, media: 0, bytes: 0, finalize: 0, save: 0 };
+    let content, outgoingTitle;
+    const currentListing = () => ({ id: id(10), version: outcome === 'revised' ? 5 : 3, channel: 'Marketplace', catalogStatus: 'Pending',
       state: { moderation: 'PendingReview', visibility: 'Visible', trade: 'Available' },
       currentRevision: { id: id(11), bookId: id(12), content } });
     await context.route('**/*', route => {
@@ -37,26 +37,44 @@ try {
       if (p === '/api/v1/auth/login') return route.fulfill({ json: { accessToken: 'fixture-access', refreshToken: 'f'.repeat(43), expiresIn: 900, user } });
       if (p === `/api/v1/listings/${id(10)}/submit` && request.method() === 'POST') {
         submissions.push({ key: request.headers()['idempotency-key'], body: request.postData() });
-        if (outcome === 'refused') return route.fulfill({ status: 409, json: { code: 'VERSION_CONFLICT', message: 'Bản sách QA đã đổi phiên bản.' } });
+        if (outcome === 'refused' || (outcome === 'revised' && submissions.length === 1)) return route.fulfill({ status: 409, json: { code: 'VERSION_CONFLICT', message: 'Bản sách QA đã đổi phiên bản.' } });
         submitted = true;
         if (outcome === 'lost-ack' && submissions.length === 1) return route.abort('failed');
-        return route.fulfill({ json: { entityId: id(10), version: 3 } });
+        return route.fulfill({ json: { entityId: id(10), version: outcome === 'revised' ? 5 : 3 } });
       }
-      if (p === '/api/v1/catalog/requests' && request.method() === 'POST') { commandCounts.catalog++; return route.fulfill({ json: { entityId: id(12), version: 1 } }); }
+      if (p.endsWith('/isbn-matches') && outcome === 'autofill') {
+        return route.fulfill({ json: { listingId: id(10), status: 'NotFound', isbns: [], catalog: null, serverTime: new Date().toISOString() } });
+      }
+      if (p.endsWith('/autofill-suggestions') && outcome === 'autofill') {
+        return route.fulfill({ json: { id: id(20), status: 'Suggested', cached: false, matches: [], missing: [],
+          fields: { title: 'Sách QA', authors: [], isbn: null, publisher: null, publicationYear: null, language: null, edition: null } } });
+      }
+      if (p.endsWith('/catalog-matches') && outcome === 'autofill') {
+        return route.fulfill({ json: { items: [], truncated: false, serverTime: new Date().toISOString() } });
+      }
+      if (p === '/api/v1/catalog/requests' && request.method() === 'POST') { commandCounts.catalog++; outgoingTitle = request.postDataJSON().metadata.title; return route.fulfill({ json: { entityId: id(12), version: 1 } }); }
       if (p === '/api/v1/listings' && request.method() === 'POST') { commandCounts.draft++; return route.fulfill({ json: { entityId: id(10), version: 1 } }); }
-      if (p === `/api/v1/listings/${id(10)}/media` && request.method() === 'POST') { commandCounts.media++; return route.fulfill({ json: { entityId: id(13), version: 1 } }); }
-      if (p.endsWith(`/media/${id(13)}/upload-ticket`)) return route.fulfill({ json: { path: '/qa-upload', headers: {} } });
+      if (p === `/api/v1/listings/${id(10)}/media` && request.method() === 'POST') { commandCounts.media++; return route.fulfill({ json: { entityId: id(12 + commandCounts.media), version: 1 } }); }
+      if (p.endsWith('/upload-ticket')) return route.fulfill({ json: { path: '/qa-upload', headers: {} } });
       if (p === '/api/v1/qa-upload' && request.method() === 'PUT') { commandCounts.bytes++; return route.fulfill({ json: null }); }
-      if (p.endsWith(`/media/${id(13)}/finalize`) && request.method() === 'POST') { commandCounts.finalize++; return route.fulfill({ json: { entityId: id(13), version: 2 } }); }
+      if (p.endsWith('/finalize') && request.method() === 'POST') { commandCounts.finalize++; return route.fulfill({ json: { entityId: id(13), version: 2 } }); }
       if (p === `/api/v1/listings/${id(10)}/draft` && request.method() === 'PUT') {
-        commandCounts.save++; content = request.postDataJSON().content;
-        return route.fulfill({ json: { entityId: id(10), version: 2 } });
+        commandCounts.save++;
+        const body = request.postDataJSON();
+        content = body.content;
+        saves.push({ key: request.headers()['idempotency-key'], body });
+        return route.fulfill({ json: { entityId: id(10), version: commandCounts.save === 2 ? 4 : 2 } });
       }
       assert.equal(request.method(), 'GET', 'Only the existing publishing commands are permitted');
+      if (p === `/api/v1/me/listings/${id(10)}` && outcome === 'revised') {
+        draftReads++;
+        return route.fulfill({ json: { id: id(10), version: 3, state: { moderation: 'Draft' } } });
+      }
+      if (p === `/api/v1/me/listings/${id(10)}` && outcome === 'autofill' && submitted) return route.fulfill({ json: currentListing() });
       if (p === '/api/v1/me/listings') { shelfReads++; return route.fulfill({ json: { items: submitted ? [currentListing()] : [], nextCursor: null } }); }
-      if (p === `/api/v1/me/listings/${id(10)}/media/${id(13)}/read`) return route.fulfill({ json: { id: id(13), width: 80, height: 120,
+      if (p.includes(`/api/v1/me/listings/${id(10)}/media/`) && p.endsWith('/read')) return route.fulfill({ json: { id: id(13), width: 80, height: 120,
         url: origin + '/qa-cover.svg', expiresAt: new Date(Date.now() + 120000).toISOString() } });
-      if (p === `/api/v1/me/listings/${id(10)}/media/${id(13)}`) return route.fulfill({ json: { id: id(13), version: 1, status: 'Ready' } });
+      if (p.startsWith(`/api/v1/me/listings/${id(10)}/media/`)) return route.fulfill({ json: { id: p.split('/').at(-1), version: 1, status: 'Ready' } });
       if (p === `/api/v1/me/catalog-requests/${id(12)}`) return route.fulfill({ json: { currentRevision: { metadata: { title, authors: ['Tác giả QA'], category: 'Sách khác' } } } });
       if (p === '/api/v1/me/addresses') return route.fulfill({ json: { version: 0, items: [] } });
       if (p === '/api/v1/service-areas') return route.fulfill({ json: { code: 'HCM-DEMO-v1', localities: [] } });
@@ -78,7 +96,19 @@ try {
     await page.locator('main').getByRole('link', { name: 'Đăng sách', exact: true }).click();
     const step = name => page.getByRole('navigation', { name: 'Các bước đăng sách', exact: true }).getByRole('button', { name });
     await page.getByRole('button', { name: 'Không thấy sách? Tự nhập theo bìa', exact: true }).click();
-    await page.getByLabel('Tên sách', { exact: true }).fill(title);
+    const titleInput = page.getByLabel('Tên sách', { exact: true });
+    if (outcome === 'autofill') {
+      const panel = page.locator('section[aria-labelledby="photo-autofill-title"]');
+      const bytes = Buffer.from(await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 80; c.height = 120; return c.toDataURL('image/png').split(',')[1]; }), 'base64');
+      await panel.locator('input[type=file]').setInputFiles({ name: 'qa-reading.png', mimeType: 'image/png', buffer: bytes });
+      await panel.getByRole('button', { name: 'Đọc thông tin', exact: true }).click();
+      await panel.getByText(/Chưa tìm thấy đầu sách phù hợp/).waitFor();
+      await panel.getByLabel('Tên sách để tìm').fill(title);
+      await panel.getByRole('button', { name: 'Dùng thông tin đã sửa' }).click();
+      await expect(titleInput).toHaveValue(title);
+    } else {
+      await titleInput.fill(title);
+    }
     await page.getByLabel('Tác giả', { exact: true }).fill('Tác giả QA');
     await page.getByRole('combobox', { name: 'Danh mục sách', exact: true }).selectOption({ label: 'Sách khác' });
     await step(/Ảnh bản sách/).click();
@@ -96,16 +126,49 @@ try {
     await page.getByLabel('Tôi có quyền sở hữu và đăng bán hoặc trao đổi cuốn sách này.').check();
     await page.getByRole('button', { name: 'Gửi duyệt', exact: true }).click();
     await expect.poll(() => submissions.length).toBe(1);
-    if (outcome !== 'success') {
+    if (outcome !== 'success' && outcome !== 'autofill') {
       await expect(page.getByRole('alert')).toBeVisible();
       assert.equal(shelfReads, 1, 'Unknown/refused command does not report refreshed success');
       if (outcome === 'lost-ack') {
+        await expect(page.getByRole('button', { name: 'Tải bản nháp để sửa', exact: true })).toHaveCount(0);
         await page.getByRole('button', { name: 'Thử gửi lại', exact: true }).click();
         await expect.poll(() => submissions.length).toBe(2);
         assert.equal(JSON.stringify(submissions[0]) === JSON.stringify(submissions[1]), true, 'Submit retry keeps its original key/body/version');
       }
     }
-    if (outcome !== 'refused') await expect(page.getByRole('heading', { name: 'Đã gửi duyệt', exact: true })).toBeVisible();
+    if (outcome === 'revised') {
+      const recovery = page.getByRole('button', { name: 'Tải bản nháp để sửa', exact: true });
+      await expect(recovery).toBeVisible();
+      await recovery.click();
+      await expect(page.getByLabel('Tên sách', { exact: true })).toHaveValue(title);
+      await step(/Tình trạng/).click();
+      const revisedPages = 'Nội dung đã sửa sau khi tải lại bản nháp';
+      await page.getByLabel('Ruột sách', { exact: true }).fill(revisedPages);
+      await step(/Kiểm tra/).click();
+      await page.getByRole('button', { name: 'Gửi duyệt', exact: true }).click();
+      await expect.poll(() => submissions.length).toBe(2);
+      assert.equal(draftReads, 1);
+      assert.equal(saves[1].body.expectedVersion, 3);
+      assert.equal(saves[1].body.content.pages, revisedPages);
+      assert.notEqual(saves[1].key, saves[0].key);
+      assert.notEqual(submissions[1].key, submissions[0].key);
+      assert.equal(JSON.parse(submissions[1].body).expectedVersion, 4);
+    }
+    if (outcome !== 'refused') {
+      await expect(page.getByRole('heading', { name: 'Đã gửi duyệt', exact: true })).toBeVisible();
+      if (!baseline) await expect(page.getByRole('link', { name: 'Xem bài vừa gửi' })).toHaveAttribute('href', `/my-books/${id(10)}/edit`);
+      if (outcome === 'autofill') {
+        assert.equal(outgoingTitle, title, 'The corrected title is persisted to the catalog request');
+        await page.getByRole('link', { name: 'Xem bài vừa gửi' }).click();
+        await expect(page.getByText('Bài đang chờ duyệt. Hãy chờ kết quả rồi sửa tiếp.', { exact: true })).toBeVisible();
+        assert.equal(commandCounts.media, 2, 'Reading image and listing cover are separate uploads');
+        assert.equal(commandCounts.draft, 1);
+        assert.deepEqual(errors, []);
+        checks.push({ width, outcome, exactOwnerDetail: true, correctedTitleSent: true, stageCommands: commandCounts });
+        await context.close();
+        continue;
+      }
+    }
     if (width === 390) await page.getByRole('button', { name: 'Mở menu', exact: true }).click();
     else await page.getByRole('button', { name: /^Tài khoản của / }).click();
     await page.getByRole('link', { name: 'Kệ sách của tôi', exact: true }).click();
@@ -114,7 +177,8 @@ try {
     const visible = !baseline && outcome !== 'refused';
     await expect(page.getByRole('heading', { name: title, exact: true })).toHaveCount(visible ? 1 : 0);
     assert.equal(shelfReads, visible ? 2 : 1);
-    assert.equal(Object.values(commandCounts).every(count => count === 1), true, 'Retries never repeat acknowledged upload/save stages');
+    assert.deepEqual(commandCounts, { catalog: 1, draft: 1, media: 1, bytes: 1, finalize: 1, save: outcome === 'revised' ? 2 : 1 },
+      'A revised submission reuses the draft and acknowledged upload; a lost ACK also reuses the save');
     assert.deepEqual(errors, []);
     await page.locator('main').screenshot({ path: path.join(out, `${baseline ? 'before' : 'after'}-${outcome}-${width}.png`) });
     checks.push({ width, outcome, shelfReads, freshShelfUpdated: visible, stageCommands: commandCounts, submitRequests: submissions.length });

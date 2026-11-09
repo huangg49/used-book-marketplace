@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 import { PriceModelError } from '../price-assist/price-model.js';
-import { MAX_INLINE_IMAGE_BYTES, shrinkForModel } from './autofill-images.js';
+import { AUTOFILL_IMAGE_PROFILE, MAX_INLINE_IMAGE_BYTES, shrinkForModel } from './autofill-images.js';
 import { autofillModelFromConfig, NvidiaAutofillModel } from './autofill-model.js';
 
 // Adapter-only tests with a stubbed fetch: no network, no real key.
@@ -78,15 +78,22 @@ describe('NVIDIA autofill adapter', () => {
 });
 
 describe('photo shrinking for the provider', () => {
-  it('produces a JPEG data URL under the inline limit from a large noisy photo', async () => {
+  it.each([undefined, AUTOFILL_IMAGE_PROFILE] as const)('produces a JPEG under the inline limit (%s)', async (profile) => {
     const raw = Buffer.alloc(1600 * 1600 * 3);
     for (let i = 0; i < raw.length; i++) raw[i] = (i * 2654435761) >>> 24;
     const webp = await sharp(raw, { raw: { width: 1600, height: 1600, channels: 3 } })
       .webp({ quality: 90 })
       .toBuffer();
-    const url = await shrinkForModel(webp);
+    const url = await shrinkForModel(webp, profile);
     expect(url.startsWith('data:image/jpeg;base64,')).toBe(true);
     const bytes = Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
     expect(bytes.length).toBeLessThanOrEqual(MAX_INLINE_IMAGE_BYTES);
+  });
+
+  it('keeps more detail for interactive reading without changing moderation images', async () => {
+    const cover = await sharp({ create: { width: 1600, height: 901, channels: 3, background: '#eedfbf' } }).webp().toBuffer();
+    const width = async (url: string) => (await sharp(Buffer.from(url.split(',')[1]!, 'base64')).metadata()).width;
+    expect(await width(await shrinkForModel(cover, AUTOFILL_IMAGE_PROFILE))).toBe(1536);
+    expect(await width(await shrinkForModel(cover))).toBe(1024);
   });
 });

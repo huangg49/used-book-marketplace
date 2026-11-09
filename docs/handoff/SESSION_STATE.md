@@ -1,3 +1,23 @@
+# Autofill và phục hồi gửi bài trên Member web — 09/11/2026
+
+Gói `codex/autofill-listing-recovery-20261109` trên nền main local `c5c232bd`.
+
+- `/sell` → ảnh sẵn sàng → ISBN hoặc đọc AI → soát và áp dụng → kiểm tra → gửi
+  duyệt → mở đúng bài trên kệ bằng ID. Bỏ qua được lỗi riêng bước tra ISBN.
+  Tựa đã sửa dùng được cả khi không khớp danh mục. Các mục ấn bản có thể sửa hoặc
+  bỏ. Gửi bị từ chối rõ ràng thì đọc lại phiên bản bản nháp để sửa. Mất phản hồi
+  tiếp tục giữ key, body và version của lần gửi.
+- [ADR0048](../adr/0048-listing-photo-autofill.md) cập nhật ảnh đọc tối đa 1536 px
+  trong cùng giới hạn 180 KB và lời dặn ghép tựa in rời. Cache phân biệt lời dặn và
+  cấu hình ảnh. Hai lượt NVIDIA với hai ảnh *Cao-Lãnh đến 1954* đọc đủ phần tựa,
+  bỏ dấu gạch nối, để trống ISBN và năm xuất bản.
+- Kiểm chứng trong gói gồm contract/routes, typecheck API/web, build Member web,
+  66 unit API/eval, 26 unit web, 27 E2E API trên Mongo QA và 18 ca Chromium
+  giả lập ở 390/1440 px. Ca xuyên suốt kiểm tra tựa đã sửa trong yêu cầu tạo đầu sách
+  và mở đúng bài vừa gửi. Suite fast paths bỏ một ca import dữ liệu vùng gửi sách yêu cầu port
+  QA mặc định, vì Windows giữ cổng đó. Native, tập ảnh thật đủ cỡ mẫu và vòng duyệt
+  bằng người thật vẫn cần bằng chứng riêng.
+
 # Đại tu đấu giá: chế độ Mua ngay, giữ tiền, kiểu Hà Lan/kín — 08/11/2026
 
 Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:

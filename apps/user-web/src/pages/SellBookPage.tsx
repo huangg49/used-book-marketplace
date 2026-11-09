@@ -33,6 +33,8 @@ import { session as apiSession } from "../lib/session";
 import {
   createDraftAttempt,
   createListingSubmission,
+  isListingRefusal,
+  reloadEditableListingDraft,
 } from "../services/listing-submission";
 import {
   autofillFactRows,
@@ -101,10 +103,17 @@ export function SellBookPage() {
   const [searchParams] = useSearchParams();
   const auction = searchParams.get("channel") === "Auction";
   const submission = useRef<ReturnType<typeof createListingSubmission>>(null);
+  const submissionBusy = useRef(false);
+  const submissionUnknown = useRef(false);
+  const [canReviseSubmission, setCanReviseSubmission] = useState(false);
+  const [submittedListingId, setSubmittedListingId] = useState<string>();
   // One server draft shared by photo autofill and submission (ADR 0048).
   const [draftAttempt, setDraftAttempt] = useState(createDraftAttempt);
   // Catalog-request facts the seller accepted from photo autofill.
   const [autofillFacts, setAutofillFacts] = useState<AutofillFacts>({});
+  const year = autofillFacts.publicationYear;
+  const invalidEditionYear = year != null &&
+    (!Number.isInteger(year) || year < 1400 || year > new Date().getUTCFullYear());
   const [classification, setClassification] = useState<ClassificationValue>({
     categoryId: "",
     attributes: {},
@@ -273,8 +282,8 @@ export function SellBookPage() {
     focusAfterRender("selected-book");
   }
   function applyAutofillField(field: AutofillField, fields: AutofillFields) {
+    setEntryMode("manual");
     if (field === "title" || field === "authors") {
-      setEntryMode("manual");
       setFormData((previous) => ({
         ...previous,
         ...(field === "title" && fields.title ? { title: fields.title } : {}),
@@ -285,8 +294,7 @@ export function SellBookPage() {
       return;
     }
     if (field === "language") {
-      if (fields.language && languageOptions.some((option) => option.id === fields.language))
-        setLanguage(fields.language);
+      if (fields.language) setLanguage(fields.language);
       return;
     }
     setAutofillFacts((previous) => ({ ...previous, [field]: fields[field] }));
@@ -591,7 +599,7 @@ export function SellBookPage() {
   };
 
   const handleSubmit = async () => {
-    if (submitting || coverCropBusy || coverCrops.isPending()) return;
+    if (submissionBusy.current || canReviseSubmission || submitting || coverCropBusy || coverCrops.isPending()) return;
     const selectedOrigin = addresses.data?.items.find(
       (item) => item.id === originAddressId,
     );
@@ -609,6 +617,7 @@ export function SellBookPage() {
       formData.missingEssentialContent === true &&
         "đủ nội dung trọng yếu để đủ điều kiện đăng",
       !classification.categoryId && !selectedBook && "danh mục sách",
+      !selectedBook && invalidEditionYear && "năm xuất bản hợp lệ",
       !formData.title.trim() && "tên sách",
       !formData.author.trim() && "tác giả",
       !formData.pages.trim() && "mô tả ruột sách",
@@ -650,7 +659,9 @@ export function SellBookPage() {
       setSubmitError(`Cần bổ sung: ${missing.join(", ")}.`);
       return;
     }
+    submissionBusy.current = true;
     setSubmitting(true);
+    setCanReviseSubmission(false);
     setValidationFailure(false);
     setSubmitError(undefined);
     try {
@@ -750,19 +761,48 @@ export function SellBookPage() {
           : null,
       }, draftAttempt);
       setHasAttempt(true);
-      await submission.current();
+      const listingId = await submission.current();
       const currentOwner = apiSession.getSnapshot();
       if (session.status !== "authenticated" || currentOwner.status !== "authenticated" || currentOwner.user.id !== session.user.id) return;
       void queryClient.invalidateQueries({ queryKey: ["my-listings", currentOwner.user.id] });
+      setSubmittedListingId(listingId);
       setStep(6);
     } catch (error) {
+      const refused = isListingRefusal(error);
+      if (submission.current) {
+        setCanReviseSubmission(refused && !submissionUnknown.current);
+        if (!refused) submissionUnknown.current = true;
+      }
       setSubmitError(
         error instanceof Error ? error.message : "Chưa gửi được bài đăng.",
       );
     } finally {
+      submissionBusy.current = false;
       setSubmitting(false);
     }
   };
+
+  async function reviseSubmission() {
+    if (!canReviseSubmission || submissionBusy.current) return;
+    submissionBusy.current = true;
+    setSubmitting(true);
+    try {
+      await reloadEditableListingDraft(draftAttempt);
+      const actor = apiSession.getSnapshot();
+      if (session.status !== "authenticated" || actor.status !== "authenticated" || actor.user.id !== session.user.id) return;
+      submission.current = null;
+      submissionUnknown.current = false;
+      setHasAttempt(false);
+      setCanReviseSubmission(false);
+      setSubmitError(undefined);
+      changeStep(1);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Chưa tải lại được bản nháp.");
+    } finally {
+      submissionBusy.current = false;
+      setSubmitting(false);
+    }
+  }
 
   const steps = [
     "Thông tin sách",
@@ -818,6 +858,8 @@ export function SellBookPage() {
       return "Chọn danh mục và kiểm tra thuộc tính của đầu sách.";
     if (forStep === 1 && (!formData.title.trim() || !formData.author.trim()))
       message = "Nhập tên sách và tác giả trước khi tiếp tục.";
+    if (forStep === 1 && !selectedBook && invalidEditionYear)
+      message = "Nhập năm xuất bản hợp lệ hoặc để trống nếu chưa xác định được.";
     if (forStep === 2 && !hasCoverPhoto) message = "Thêm ảnh bìa bản sách.";
     if (forStep === 3) {
       if (
@@ -1410,6 +1452,7 @@ export function SellBookPage() {
           <ListingSubmissionConfirmation
             auction={auction}
             title={bundle?.title || formData.title}
+            listingId={submittedListingId}
             onPostAnother={() => {
               coverCropError.current = undefined;
               priceToken.current += 1;
@@ -1429,6 +1472,9 @@ export function SellBookPage() {
               coverCropMetaRef.current = null;
               setCoverCropMeta(null);
               submission.current = null;
+              submissionUnknown.current = false;
+              setCanReviseSubmission(false);
+              setSubmittedListingId(undefined);
               // A fresh draft: the old stage keys would replay the sent listing.
               setDraftAttempt(createDraftAttempt());
               setAutofillFacts({});
@@ -1829,6 +1875,33 @@ export function SellBookPage() {
                                     {fieldFeedback(key)}
                                   </div>
                                 ))}
+                                <details className={styles.editionFacts} open={autofillFactRows(autofillFacts).length ? true : undefined}>
+                                  <summary>Thông tin ấn bản</summary>
+                                  <p className={styles.help}>Sửa hoặc xóa từng mục. Để trống nếu chưa xác định được.</p>
+                                  {([
+                                    ["publisher", "Nhà xuất bản", 200],
+                                    ["publicationYear", "Năm xuất bản", 4],
+                                    ["edition", "Lần xuất bản", 200],
+                                    ["isbn", "ISBN", 30],
+                                  ] as const).map(([key, label, maxLength]) => (
+                                    <div key={key} className={styles.field}>
+                                      <label htmlFor={`sell-${key}`}>{label}</label>
+                                      <input
+                                        id={`sell-${key}`}
+                                        type={key === "publicationYear" ? "number" : "text"}
+                                        maxLength={key === "publicationYear" ? undefined : maxLength}
+                                        value={autofillFacts[key] ?? ""}
+                                        onChange={(event) => {
+                                          const value = event.currentTarget.value;
+                                          setAutofillFacts((previous) => ({
+                                            ...previous,
+                                            [key]: key === "publicationYear" && value ? Number(value) : value || null,
+                                          }));
+                                        }}
+                                      />
+                                    </div>
+                                  ))}
+                                </details>
                                 <fieldset
                                   disabled={!!selectedBook}
                                   className={styles.classification}
@@ -3029,6 +3102,14 @@ export function SellBookPage() {
                         className={styles.error}
                       >
                         <p>{visibleSubmitError}</p>
+                        {canReviseSubmission && (
+                          <>
+                            <p>Tải phiên bản mới nhất của bản nháp. Nội dung đang nhập vẫn được giữ để bạn rà soát và quyết định có gửi lại hay không.</p>
+                            <button type="button" className={styles.textAction} disabled={submitting} onClick={() => void reviseSubmission()}>
+                              {submitting ? "Đang tải bản nháp…" : "Tải bản nháp để sửa"}
+                            </button>
+                          </>
+                        )}
                         {validationFailure && (
                           <ul>
                             {Object.entries(fieldErrors)
@@ -3104,14 +3185,16 @@ export function SellBookPage() {
                       <button
                         type="submit"
                         className={styles.primary}
-                        disabled={submitting || (step === 5 && coverCropBusy)}
+                        disabled={submitting || (step === 5 && (coverCropBusy || canReviseSubmission))}
                         aria-busy={submitting || (step === 5 && coverCropBusy)}
                       >
                         {step < 5
                           ? "Tiếp tục"
                           : submitting
-                            ? "Đang gửi…"
-                            : hasAttempt
+                            ? "Đang xử lý…"
+                            : canReviseSubmission
+                              ? "Cần rà soát lại"
+                              : hasAttempt
                               ? "Thử gửi lại"
                               : "Gửi duyệt"}
                         <ArrowRight size={18} aria-hidden="true" />
