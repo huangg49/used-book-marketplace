@@ -2141,8 +2141,8 @@ export class ExchangesService {
                   cancelReason: 'DisputeResolvedRefund',
                   cancelledBy: 'Staff',
                   cancelledAt: now,
-                  resolutionDecision: body.decision,
-                  resolutionReason: trimmedReason,
+                  resolutionDecision: 'RefundBoth',
+                  resolutionReason: `[${body.decision}] ${trimmedReason}`.slice(0, 500),
                   resolvedBy: actor._id,
                   resolvedAt: now,
                   updatedAt: now,
@@ -2151,6 +2151,9 @@ export class ExchangesService {
               },
               { returnDocument: 'after' },
             );
+            if (next) {
+              (next as any).resolutionDecision = body.decision;
+            }
           }
 
           if (!next) throw conflict();
