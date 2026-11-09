@@ -82,13 +82,13 @@ export function AuctionCancel({ item, ...context }: Props) {
 
 type Decision = "Resume" | "Cancel";
 
-// ADR 0080: a held auction is resumed once or cancelled, with a reason. Resume
-// keeps every stored time, so the paused time is not given back; the server
-// refuses it while the seller or the leader is still ineligible, after the
-// 48-hour hold ceiling, or for an auction already resumed once.
+// ADR 0080/0084: a held auction is resumed or cancelled, with a reason. A
+// resume gives the paused time back (at least 10 minutes of bidding); the
+// server refuses it while the seller or the leader is still ineligible or
+// once the hold expired. Every pause of an auction fits in 72 hours.
 export function AuctionHoldDecision({ item, ...context }: Props) {
-  const resumable = !item.resumedAt;
-  const [decision, setDecision] = useState<Decision | null>(resumable ? null : "Cancel");
+  const budget = item.pauseBudgetLeftSeconds;
+  const [decision, setDecision] = useState<Decision | null>(null);
   const [reason, setReason] = useState("");
   const [problem, setProblem] = useState<"decision" | "reason" | null>(null);
   const first = useRef<HTMLInputElement>(null);
@@ -103,14 +103,15 @@ export function AuctionHoldDecision({ item, ...context }: Props) {
       title="Tiếp tục hoặc hủy phiên tạm giữ."
       intro={
         <>
-          Phiên tạm giữ vì người bán hoặc người dẫn giá không còn đủ điều kiện.
+          {item.holdReason === "Review"
+            ? "Phiên tạm dừng để xem xét một báo cáo."
+            : "Phiên tạm giữ vì người bán hoặc người dẫn giá không còn đủ điều kiện."}
           {item.holdExpiresAt ? ` Nếu chưa xử lý trước ${new Date(item.holdExpiresAt).toLocaleString("vi-VN")}, phiên tự hủy và hoàn mọi khoản giữ.` : ""}
-          {resumable
-            ? " Chỉ tiếp tục được một lần, khi người bán và người dẫn giá đã đủ điều kiện lại."
-            : " Phiên đã được tiếp tục một lần, nên lần này chỉ có thể hủy."}
+          {" Tiếp tục được khi người bán và người dẫn giá đủ điều kiện."}
+          {budget !== undefined ? ` Phiên còn ${Math.floor(budget / 3600)} giờ ${Math.floor((budget % 3600) / 60)} phút tạm dừng (tổng 72 giờ).` : ""}
         </>
       }
-      dirty={reason !== "" || (resumable && decision !== null)}
+      dirty={reason !== "" || decision !== null}
       fields={(locked) => (
         <>
           <fieldset disabled={locked}>
@@ -121,13 +122,12 @@ export function AuctionHoldDecision({ item, ...context }: Props) {
                 type="radio"
                 name={`hold-${item.id}`}
                 checked={resume}
-                disabled={!resumable}
                 onChange={() => {
                   setDecision("Resume");
                   setProblem(null);
                 }}
               />
-              Tiếp tục phiên: giữ nguyên lượt trả giá, tiền cọc và giờ kết thúc
+              Tiếp tục phiên: giữ nguyên lượt trả giá và tiền cọc, cộng lại thời gian tạm dừng
             </label>
             <label className="check">
               <input
@@ -147,7 +147,7 @@ export function AuctionHoldDecision({ item, ...context }: Props) {
             <p className="muted">
               {ended
                 ? "Giờ kết thúc đã qua: phiên không nhận thêm giá và được chốt ngay cho người dẫn giá."
-                : `Thời gian tạm giữ không được cộng lại; phiên vẫn kết thúc ${new Date(item.endAt).toLocaleString("vi-VN")}.`}
+                : "Thời gian còn lại lúc tạm dừng được cộng lại (ít nhất 10 phút đấu giá, trong tổng 72 giờ tạm dừng); các mốc giờ của phiên lùi theo."}
             </p>
           )}
           <div className="field">
@@ -194,7 +194,7 @@ export function AuctionHoldDecision({ item, ...context }: Props) {
         <>
           <p>
             {resume
-              ? `Phiên “${item.title}” trở lại như trước khi tạm giữ. Người bán, người trả giá và người đăng ký được báo kèm lý do dưới đây. Phiên không được tiếp tục lần thứ hai.`
+              ? `Phiên “${item.title}” tiếp tục với thời gian còn lại lúc tạm dừng. Người bán, người trả giá và người đăng ký được báo kèm lý do dưới đây.`
               : `Phiên “${item.title}” sẽ kết thúc ngay, không có người thắng. Không hoàn tác được.`}
           </p>
           <blockquote className="prose">{trimmed}</blockquote>

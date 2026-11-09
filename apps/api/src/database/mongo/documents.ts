@@ -1128,8 +1128,18 @@ export interface AuctionDoc extends Lockable {
   opensAt: Date | null;
   // ADR 0079: when the auction was last put OnHold (48 h ceiling).
   heldAt: Date | null;
-  // ADR 0080: when an Admin resumed it from OnHold; an auction resumes once.
+  // ADR 0080: when an Admin last resumed it from OnHold (ADR 0084: any number
+  // of times within the pause budget).
   resumedAt: Date | null;
+  // ADR 0084: why it is OnHold (null unless OnHold): a party lost eligibility,
+  // or the Admin on a report froze it for review.
+  holdReason: 'Eligibility' | 'Review' | null;
+  // ADR 0084: when this hold auto-cancels (null unless OnHold): heldAt + the
+  // smaller of 48 h and the pause budget left.
+  holdUntil: Date | null;
+  // ADR 0084: total time given back by resumes; every stored time moved by
+  // it, and the fixed ceilings (from publishedAt) grow by it. ≤ 72 h.
+  pausedMs: number;
   // ADR 0043: set when Buy Now opened the 60-second challenge window.
   buyNowAt: Date | null;
   startAt: Date;

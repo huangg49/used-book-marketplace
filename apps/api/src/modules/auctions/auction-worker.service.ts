@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { MongoService } from '../../database/mongo/mongo.service.js';
-import { AUCTION_HOLD_MAX_MS } from '../../database/mongo/migrations/auction-constants.js';
 import { DomainError } from '../commands/domain-error.js';
 import { AuctionBiddingService } from './auction-bidding.service.js';
 import { AuctionClock } from './auction-clock.js';
@@ -86,7 +85,7 @@ export class AuctionWorker {
             (a.leaderId !== null && ineligible.has(a.leaderId)),
         ),
         // ADR 0079 ceilings: the start passed with too few registrants, or
-        // OnHold for 48 h. Commands already refuse past these; this records it.
+        // OnHold until holdUntil (ADR 0084). Commands already refuse past these; this records it.
         registrations: await tx.c.auctions
           .find(
             {
@@ -108,12 +107,13 @@ export class AuctionWorker {
             {
               ...ready,
               state: 'OnHold',
-              heldAt: { $lte: new Date(now.getTime() - AUCTION_HOLD_MAX_MS) },
+              // ADR 0084: each hold stores when it auto-cancels.
+              holdUntil: { $lte: now },
             },
             {
               limit: 100,
-              sort: { heldAt: 1, _id: 1 },
-              projection: { _id: 1, version: 1, heldAt: 1 },
+              sort: { holdUntil: 1, _id: 1 },
+              projection: { _id: 1, version: 1, holdUntil: 1 },
             },
           )
           .toArray(),
@@ -229,9 +229,7 @@ export class AuctionWorker {
       await attempt('settlement', o._id, () => this.completion.settle(o._id));
     const oldest = [
       ...registrations.map((a) => a.startAt),
-      ...expiredHolds.map(
-        (a) => new Date(a.heldAt!.getTime() + AUCTION_HOLD_MAX_MS),
-      ),
+      ...expiredHolds.map((a) => a.holdUntil!),
       ...endings.map((a) => a.endAt),
       ...payments.map((a) => a.paymentDeadline!),
       ...dropoffs.map((i) => i.dropoffDeadline),

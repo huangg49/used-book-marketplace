@@ -188,8 +188,8 @@ export function AuctionDetailPage() {
       <div className={`${styles.standing} ${styles.standingOut}`}>
         <strong>Phiên tạm dừng</strong>
         <span>
-          Quản trị viên đang xem xét vì người bán hoặc người đang dẫn giá không còn đủ điều kiện. Lượt trả giá được giữ
-          nguyên, chưa có người thắng và không có khoản tiền nào bị trừ.
+          Quản trị viên đang xem xét phiên này. Lượt trả giá, đăng ký và tiền cọc được giữ nguyên, chưa có người
+          thắng và không có khoản tiền nào bị trừ. Nếu phiên tiếp tục, thời gian tạm dừng được cộng lại.
           {auction.holdExpiresAt ? ` Nếu chưa được xử lý trước ${when(auction.holdExpiresAt)}, phiên tự hủy và mọi khoản giữ được hoàn.` : ''}
         </span>
       </div>

@@ -6012,7 +6012,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
           return { seller, a, x, y, fillers };
         };
 
-        it('resumes an OnHold auction once without moving any deadline; refused while still ineligible', async () => {
+        it('ADR 0084: a resume gives the paused time back on every stored time; it can resume again within the budget', async () => {
           const { seller, a, x, y, fillers } = await heldAuction();
           await db.setStatus(seller.id, 'LOCKED');
           await app.get(AuctionWorker).tick();
@@ -6024,43 +6024,166 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
           await resume(a._id, admin, held.version - 1).expect(409);
           await resume(a._id, admin, held.version, undefined, 'ngắn').expect(422);
           expect((await doc(a._id)).state).toBe('OnHold');
+          expect(held).toMatchObject({ holdReason: 'Eligibility', pausedMs: 0 });
+          expect(held.holdUntil!.getTime()).toBe(held.heldAt!.getTime() + 48 * H);
           const money = await wallet(y);
-          const nudge = vi.spyOn(app.get(AuctionLiveService), 'nudge');
-          const key = randomUUID();
-          const done = await resume(a._id, admin, held.version, key).expect(200);
-          expect(nudge).toHaveBeenCalled();
-          nudge.mockRestore();
-          validates('AuctionCommandReceipt', done.body);
-          const again = await resume(a._id, admin, held.version, key).expect(200);
-          expect(again.headers['idempotency-replayed']).toBe('true');
-          expect(again.body).toEqual(done.body);
-          const back = await doc(a._id);
-          expect(back).toMatchObject({ state: 'Active', leaderId: y.id, currentPrice: held.currentPrice, heldAt: held.heldAt });
-          expect(back.resumedAt).not.toBeNull();
-          for (const k of ['startAt', 'endAt', 'plannedEndAt', 'biddingOpenedAt', 'buyNowAt'] as const)
-            expect(back[k]).toEqual(held[k]);
-          expect(await wallet(y)).toMatchObject({ auctionHeld: money.auctionHeld });
-          for (const m of [seller, x, y]) expect(await kinds(m, a._id)).toContain('AuctionResumed');
-          const queue = await call('get', '/operations/auctions', admin).expect(200);
-          validates('OperationsAuctionList', queue.body);
-          expect(queue.body.items.find((i: { id: string }) => i.id === a._id)).toMatchObject({
-            state: 'Active',
-            resumedAt: back.resumedAt!.toISOString(),
-          });
-          // Bidding continues on the same clock.
-          await bid(a._id, x, 300_000).expect(200);
-          // A second hold is recorded (not replayed), but only a cancel or the
-          // 48 h ceiling can end it.
+          for (const m of [admin, x, y, seller]) await longSession(m);
+          // Resumed two hours after the hold: every stored time moves by 2 h.
+          const at = new Date(held.heldAt!.getTime() + 2 * H);
+          pinClock(at);
+          let back;
+          try {
+            const nudge = vi.spyOn(app.get(AuctionLiveService), 'nudge');
+            const key = randomUUID();
+            const done = await resume(a._id, admin, held.version, key).expect(200);
+            expect(nudge).toHaveBeenCalled();
+            nudge.mockRestore();
+            validates('AuctionCommandReceipt', done.body);
+            const again = await resume(a._id, admin, held.version, key).expect(200);
+            expect(again.headers['idempotency-replayed']).toBe('true');
+            expect(again.body).toEqual(done.body);
+            back = await doc(a._id);
+            expect(back).toMatchObject({ state: 'Active', leaderId: y.id, currentPrice: held.currentPrice, heldAt: held.heldAt, holdReason: null, holdUntil: null, pausedMs: 2 * H });
+            expect(back.resumedAt).toEqual(at);
+            for (const k of ['startAt', 'endAt', 'plannedEndAt', 'biddingOpenedAt', 'opensAt'] as const)
+              expect(back[k]!.getTime()).toBe(held[k]!.getTime() + 2 * H);
+            expect(back.buyNowAt).toBeNull();
+            expect(await wallet(y)).toMatchObject({ auctionHeld: money.auctionHeld });
+            for (const m of [seller, x, y]) expect(await kinds(m, a._id)).toContain('AuctionResumed');
+            const queue = await call('get', '/operations/auctions', admin).expect(200);
+            validates('OperationsAuctionList', queue.body);
+            expect(queue.body.items.find((i: { id: string }) => i.id === a._id)).toMatchObject({
+              state: 'Active',
+              resumedAt: at.toISOString(),
+              holdReason: null,
+              pauseBudgetLeftSeconds: 70 * 3600,
+            });
+            // Bidding continues where it paused.
+            await bid(a._id, x, 300_000).expect(200);
+            // A second hold is recorded (not replayed) and may be resumed too.
+            await db.setStatus(seller.id, 'LOCKED');
+            await app.get(AuctionWorker).tick();
+          } finally {
+            vi.restoreAllMocks();
+          }
+          const second = await doc(a._id);
+          expect(second).toMatchObject({ state: 'OnHold', holdReason: 'Eligibility' });
+          expect(second.heldAt).toEqual(at);
+          await db.setStatus(seller.id, 'ACTIVE');
+          pinClock(new Date(at.getTime() + H));
+          try {
+            await resume(a._id, admin, second.version).expect(200);
+          } finally {
+            vi.restoreAllMocks();
+          }
+          const third = await doc(a._id);
+          expect(third).toMatchObject({ state: 'Active', pausedMs: 3 * H });
+          expect(third.endAt.getTime()).toBe(back.endAt.getTime() + H);
+          await closeAt(a._id);
+          expect(await doc(a._id)).toMatchObject({ state: 'AwaitingWinnerPayment', winnerId: x.id });
+          void fillers;
+        });
+
+        it('ADR 0084: the pause budget shortens the last hold and refuses a freeze once spent', async () => {
+          const { seller, a, x, y, fillers } = await heldAuction();
+          // 71 h of the 72 h budget already used (fixture), so a hold lasts 1 h.
+          await db.c.auctions.updateOne({ _id: a._id }, { $set: { pausedMs: 71 * H } });
           await db.setStatus(seller.id, 'LOCKED');
           await app.get(AuctionWorker).tick();
-          const second = await doc(a._id);
-          expect(second.state).toBe('OnHold');
-          expect(second.heldAt!.getTime()).toBeGreaterThan(held.heldAt!.getTime());
+          const held = await doc(a._id);
+          expect(held.state).toBe('OnHold');
+          expect(held.holdUntil!.getTime()).toBe(held.heldAt!.getTime() + H);
+          expect((await call('get', `/auctions/${a._id}`).expect(200)).body.auction.holdExpiresAt).toBe(held.holdUntil!.toISOString());
           await db.setStatus(seller.id, 'ACTIVE');
-          expect((await resume(a._id, admin, second.version).expect(409)).body.message).toMatch(/một lần/);
-          await tickAt(new Date(second.heldAt!.getTime() + 48 * H));
-          expect(await doc(a._id)).toMatchObject({ state: 'Cancelled', closeReason: 'HoldExpired', winnerId: null });
+          await longSession(admin);
+          pinClock(held.holdUntil!);
+          try {
+            expect((await resume(a._id, admin, held.version).expect(409)).body.message).toMatch(/hết thời gian tạm dừng/);
+          } finally {
+            vi.restoreAllMocks();
+          }
+          await tickAt(held.holdUntil!);
+          expect(await doc(a._id)).toMatchObject({ state: 'Cancelled', closeReason: 'HoldExpired' });
           await noHolds(x, y, ...fillers);
+          // With the whole budget spent, the Admin on a report cannot freeze.
+          const spent = await liveOf();
+          const [p, q] = [await funded(500_000), await funded(500_000)];
+          await fill(spent.a._id, p, q);
+          await db.c.auctions.updateOne({ _id: spent.a._id }, { $set: { pausedMs: 72 * H } });
+          const caseId = (await cmd('post', '/me/support-cases', {
+            kind: 'Violation',
+            title: 'Nghi ngờ trả giá gian lận: phiên thử',
+            description: 'Một tài khoản lạ liên tục đẩy giá phiên này.',
+            target: { type: 'Auction', id: spent.a._id },
+          }, p).expect(200)).body.entityId as string;
+          await cmd('post', `/operations/support-cases/${caseId}/actions`, { expectedVersion: 1, action: 'Assign', text: 'Admin đã nhận hồ sơ.' }, admin).expect(200);
+          const refused = await cmd('post', `/operations/support-cases/${caseId}/freeze-auction`, {
+            expectedVersion: 2,
+            auctionVersion: await v(spent.a._id),
+            message: 'Tạm dừng để đối chiếu các tài khoản trả giá.',
+          }, admin).expect(409);
+          expect(refused.body.message).toMatch(/hết 72 giờ/);
+          expect((await doc(spent.a._id)).state).toBe('Active');
+        });
+
+        it('ADR 0084: the Admin on a report freezes the auction for review, then resumes it with the time back', async () => {
+          const { seller, a } = await liveOf();
+          const [x, y] = [await funded(500_000), await funded(500_000)];
+          await fill(a._id, x, y);
+          await bid(a._id, x, 200_000).expect(200);
+          const caseId = (await cmd('post', '/me/support-cases', {
+            kind: 'Violation',
+            title: 'Nghi ngờ trả giá gian lận: phiên thử',
+            description: 'Một tài khoản lạ liên tục đẩy giá phiên này.',
+            target: { type: 'Auction', id: a._id },
+          }, y).expect(200)).body.entityId as string;
+          const message = 'Tạm dừng để đối chiếu các tài khoản trả giá.';
+          const freeze = (who: Actor, body: { expectedVersion?: number; auctionVersion: number; message?: string }, key?: string) =>
+            cmd('post', `/operations/support-cases/${caseId}/freeze-auction`, { expectedVersion: 2, message, ...body }, who, key);
+          // Not assigned yet; involved Admins, stale versions and short messages are refused.
+          await freeze(admin, { expectedVersion: 1, auctionVersion: await v(a._id) }).expect(409);
+          await cmd('post', `/operations/support-cases/${caseId}/actions`, { expectedVersion: 1, action: 'Assign', text: 'Admin đã nhận hồ sơ.' }, admin).expect(200);
+          const involved = await actor(['ADMIN', 'MEMBER']);
+          await fund(involved, 100_000);
+          await register(a._id, involved).expect(200);
+          const av = await v(a._id);
+          expect((await freeze(involved, { auctionVersion: av }).expect(403)).body.code).toBe('SelfReviewForbidden');
+          await freeze(admin, { auctionVersion: av - 1 }).expect(409);
+          await freeze(admin, { auctionVersion: av, message: 'ngắn' }).expect(422);
+          expect((await doc(a._id)).state).toBe('Active');
+          const before = { x: await wallet(x), live: await doc(a._id) };
+          const key = randomUUID();
+          const done = await freeze(admin, { auctionVersion: av }, key).expect(200);
+          validates('SupportCaseReceipt', done.body);
+          const again = await freeze(admin, { auctionVersion: av }, key).expect(200);
+          expect(again.headers['idempotency-replayed']).toBe('true');
+          const held = await doc(a._id);
+          expect(held).toMatchObject({ state: 'OnHold', holdReason: 'Review', leaderId: x.id, currentPrice: 200_000 });
+          expect(held.holdUntil!.getTime()).toBe(held.heldAt!.getTime() + 48 * H);
+          expect(await wallet(x)).toMatchObject({ auctionHeld: before.x.auctionHeld });
+          // Bids wait; the case stays open for the decision.
+          expect((await bid(a._id, y, 250_000).expect(409)).body.code).toBe('AuctionClosed');
+          expect((await db.c.support_cases.findOne({ _id: caseId }))!.state).toBe('InReview');
+          for (const m of [seller, x, y]) {
+            const n = await db.c.member_notifications.findOne({ userId: m.id, targetId: a._id, kind: 'AuctionOnHold' });
+            expect(n!.body).toContain('báo cáo về phiên');
+            expect(n!.body).toContain(message);
+          }
+          const queue = await call('get', '/operations/auctions', admin).expect(200);
+          expect(queue.body.items.find((i: { id: string }) => i.id === a._id)).toMatchObject({ state: 'OnHold', holdReason: 'Review' });
+          // A second freeze on a held auction is refused.
+          await freeze(admin, { expectedVersion: 3, auctionVersion: held.version }).expect(409);
+          for (const m of [admin, x, y]) await longSession(m);
+          pinClock(new Date(held.heldAt!.getTime() + 30 * 60_000));
+          try {
+            await cmd('post', `/operations/auctions/${a._id}/resume`, { expectedVersion: held.version, reason: 'Đã đối chiếu, không có gian lận.' }, admin).expect(200);
+            const back = await doc(a._id);
+            expect(back).toMatchObject({ state: 'Active', pausedMs: 30 * 60_000, holdReason: null });
+            expect(back.endAt.getTime()).toBe(before.live.endAt.getTime() + 30 * 60_000);
+            await bid(a._id, y, 250_000).expect(200);
+          } finally {
+            vi.restoreAllMocks();
+          }
         });
 
         it('ADR 0083: members read the Admin resume reason in the notification', async () => {
@@ -6118,7 +6241,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
           const ceiling = new Date(held.heldAt!.getTime() + 48 * H);
           pinClock(ceiling);
           try {
-            expect((await resume(a._id, admin, held.version).expect(409)).body.message).toMatch(/48 giờ/);
+            expect((await resume(a._id, admin, held.version).expect(409)).body.message).toMatch(/hết thời gian tạm dừng/);
           } finally {
             vi.restoreAllMocks();
           }

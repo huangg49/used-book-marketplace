@@ -52,7 +52,7 @@ function cancelCause(a: AuctionDoc, seller: boolean) {
         ? 'đã được bạn đóng trước giờ mở.'
         : 'đã được người bán đóng trước giờ mở.';
     case 'HoldExpired':
-      return 'tạm dừng quá 48 giờ mà chưa được xử lý nên đã tự hủy.';
+      return 'hết thời gian tạm dừng mà chưa được xử lý nên đã tự hủy.';
     case 'Reported':
       return `đã bị quản trị viên đóng sau khi xem xét báo cáo: “${reason}”.`;
     default:
@@ -172,21 +172,23 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
   AuctionResumed: {
     default: (c, a) => ({
       title: 'Phiên đấu giá tiếp tục',
-      body: `${c.title} tiếp tục sau khi quản trị viên xem xét. Lượt trả giá, đăng ký và tiền cọc được giữ nguyên; phiên vẫn kết thúc lúc ${when(a.endAt)}.`,
+      body: `${c.title} tiếp tục sau khi quản trị viên xem xét. Lượt trả giá, đăng ký và tiền cọc được giữ nguyên; thời gian tạm dừng được cộng lại, phiên nay kết thúc lúc ${when(a.endAt)}.`,
     }),
     seller: (c, a) => ({
       title: 'Phiên đấu giá tiếp tục',
-      body: `${c.title} tiếp tục sau khi quản trị viên xem xét; phiên vẫn kết thúc lúc ${when(a.endAt)}.`,
+      body: `${c.title} tiếp tục sau khi quản trị viên xem xét; thời gian tạm dừng được cộng lại, phiên nay kết thúc lúc ${when(a.endAt)}.`,
     }),
   },
+  // ADR 0084: the hold reason decides the wording; the paused time comes
+  // back on a resume.
   AuctionOnHold: {
-    default: (c) => ({
+    default: (c, a) => ({
       title: 'Phiên đấu giá tạm dừng',
-      body: `${c.title} tạm dừng để quản trị viên xem xét. Lượt trả giá không bị xóa và chưa có người thắng.`,
+      body: `${c.title} tạm dừng để quản trị viên xem xét${a.holdReason === 'Review' ? ' một báo cáo về phiên' : ''}. Lượt trả giá, đăng ký và tiền cọc được giữ nguyên, chưa có người thắng; nếu phiên tiếp tục, thời gian tạm dừng được cộng lại.`,
     }),
-    seller: (c) => ({
+    seller: (c, a) => ({
       title: 'Phiên đấu giá tạm dừng',
-      body: `${c.title} tạm dừng để quản trị viên xem xét; phiên không nhận thêm giá.`,
+      body: `${c.title} tạm dừng để quản trị viên xem xét${a.holdReason === 'Review' ? ' một báo cáo về phiên' : ''}; phiên không nhận thêm giá. Nếu phiên tiếp tục, thời gian tạm dừng được cộng lại.`,
     }),
   },
   AuctionPaymentExpired: {

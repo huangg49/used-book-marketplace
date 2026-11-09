@@ -91,6 +91,12 @@ Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
   1 phút để đăng ký lại); Admin thấy và lọc các báo cáo cùng đối tượng (`otherOpenOnTarget`,
   migration `0071-support-target-index`). Kết quả kiểm chứng ở ADR0083/commit. DB local chính
   chưa chạy khi làm nên `pnpm db:migrate` (0071) chưa áp dụng ở đó. Chưa push.
+- [ADR0084](../adr/0084-auction-pause-model.md) (09/11, cùng nhánh): nhóm B, một mô hình tạm dừng.
+  Tiếp tục cộng lại thời gian (mọi mốc lùi cùng khoảng, ít nhất 10 phút đấu giá), tiếp tục nhiều lần
+  trong ngân sách 72 giờ (mỗi lần ≤ 48 giờ), Admin trên báo cáo tạm dừng phiên để xem xét
+  (`freezeReportedAuction`). Migration `0072-auction-pause-budget` (`holdReason`, `holdUntil`,
+  `pausedMs`, trần theo `publishedAt` cộng `pausedMs`). 48/72 giờ và 10 phút là mặc định của kế
+  hoạch, chủ dự án chưa chọn khác. Kết quả kiểm chứng ở ADR0084/commit. Chưa push.
 
 Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
 auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web

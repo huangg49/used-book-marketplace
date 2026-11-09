@@ -259,7 +259,7 @@ export function closeReasonText(auction: PublicAuctionSummary): string | null {
     case "SellerClosed":
       return "Người bán đã đóng phiên trước giờ mở. Tiền cọc đã về lại ví.";
     case "HoldExpired":
-      return "Phiên tạm dừng quá 48 giờ mà chưa được xử lý nên đã tự hủy. Tiền cọc và khoản giữ đã về lại ví.";
+      return "Phiên hết thời gian tạm dừng mà chưa được xử lý nên đã tự hủy. Tiền cọc và khoản giữ đã về lại ví.";
     case "Reported":
       return "Quản trị viên đã đóng phiên sau khi xem xét báo cáo. Tiền cọc và khoản giữ đã về lại ví.";
     default:

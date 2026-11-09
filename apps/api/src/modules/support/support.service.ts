@@ -403,6 +403,61 @@ export class SupportService {
       },
     });
   }
+  // ADR 0084 (H2): the assigned, independent Admin freezes the reported
+  // auction for review; the message reaches every participant and is added to
+  // the case, which stays open for the decision (resume or close).
+  freezeAuction(
+    context: CommandContext,
+    id: string,
+    body: Wire['FreezeReportedAuction'],
+  ) {
+    return this.commands.runSupport(context, 'freezeReportedAuction', id, body, {
+      authorize: async (tx, actor) =>
+        this.access(
+          tx,
+          await tx.c.support_cases.findOne({ _id: id }),
+          actor,
+          true,
+        ),
+      mutate: async (tx, actor) => {
+        await tx.lock('support_cases', [id]);
+        const row = await this.access(
+          tx,
+          await tx.c.support_cases.findOne({ _id: id }),
+          actor,
+          true,
+        );
+        this.version(row, body.expectedVersion);
+        if (row.state === 'Closed') throw invalidState('Hồ sơ đã đóng.');
+        if (row.assigneeId !== actor._id)
+          throw invalidState('Nhận phụ trách hồ sơ trước khi tạm dừng phiên.');
+        if (row.target?.type !== 'Auction')
+          throw invalidState('Hồ sơ này không gắn với phiên đấu giá.');
+        const message = text(body.message, 'message', 10);
+        const now = await this.clock.now(tx);
+        await this.auctions.freezeReported(
+          tx,
+          row.target.id,
+          body.auctionVersion,
+          actor._id,
+          message,
+          now,
+        );
+        await this.append(
+          tx,
+          row,
+          actor,
+          `Admin đã tạm dừng phiên đấu giá để xem xét: ${message}`,
+          false,
+          'System',
+          now,
+        );
+        await this.save(tx, row, now);
+        await this.notify(tx, row, now);
+        return this.change(row, now);
+      },
+    });
+  }
   // ADR 0079: the assigned, independent Admin closes the reported auction and
   // answers the case in one transaction; the message reaches every participant.
   closeAuction(

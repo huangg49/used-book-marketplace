@@ -602,7 +602,7 @@ function AuctionBody({
       ) : (
         <Notice>
           {auction.state === "OnHold"
-            ? `Phiên tạm dừng để quản trị viên xem xét; phiên không nhận thêm giá.${auction.holdExpiresAt ? ` Nếu chưa được xử lý trước ${time(auction.holdExpiresAt)}, phiên tự hủy và mọi khoản giữ được hoàn.` : ""}`
+            ? `Phiên tạm dừng để quản trị viên xem xét; phiên không nhận thêm giá. Nếu phiên tiếp tục, thời gian tạm dừng được cộng lại.${auction.holdExpiresAt ? ` Nếu chưa được xử lý trước ${time(auction.holdExpiresAt)}, phiên tự hủy và mọi khoản giữ được hoàn.` : ""}`
             : closeReasonText(auction) ?? "Phiên không còn nhận trả giá."}
         </Notice>
       )}

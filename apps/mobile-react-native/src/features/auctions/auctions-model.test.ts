@@ -331,7 +331,7 @@ describe("ADR 0079 bounded registration lifecycle", () => {
     expect(openRuleText(waiting({ openMode: "Scheduled" }))).toMatch(/nếu đủ 4 người/);
     expect(closeReasonText(waiting({ closeReason: "RegistrationExpired" }))).toMatch(/không đủ 4 người/);
     expect(closeReasonText(waiting({ closeReason: "SellerClosed" }))).toMatch(/Người bán đã đóng/);
-    expect(closeReasonText(waiting({ closeReason: "HoldExpired" }))).toMatch(/48 giờ/);
+    expect(closeReasonText(waiting({ closeReason: "HoldExpired" }))).toMatch(/hết thời gian tạm dừng/);
     expect(closeReasonText(waiting({ closeReason: "Reported" }))).toMatch(/báo cáo/);
     expect(closeReasonText(waiting())).toBeNull();
   });

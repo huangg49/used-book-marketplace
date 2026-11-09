@@ -137,11 +137,15 @@ export async function checkAuction(tx: Tx, auctionId: string) {
     registrations.some((r) => r.state === 'Registered')
   )
     fail('closed auction keeps a deposit');
-  // ADR 0047: a scheduled auction takes no bid before its start.
+  // ADR 0047: a scheduled auction takes no bid before its start. ADR 0084:
+  // a resume moves startAt later by the time it gives back, so bids placed
+  // before a pause may precede it by at most pausedMs.
   if (
     await tx.c.auction_bids.findOne({
       auctionId: a._id,
-      decidedAt: { $lt: a.startAt },
+      decidedAt: {
+        $lt: new Date(a.startAt.getTime() - (a.pausedMs ?? 0)),
+      },
     })
   )
     fail('auction bid before start');

@@ -7911,12 +7911,14 @@ paths:
       operationId: resumeAuction
       tags:
         - Auctions
-      description: ADR 0080. ACTIVE ADMIN independent of the seller, bidders and registrants returns an
-        OnHold auction to Active with a reason, once per auction, before its 48-hour hold ceiling and
-        only when the seller and the leader are eligible again. No deadline moves (startAt, endAt,
-        the Buy Now window and the Dutch clock keep their stored times); an auction whose end already
-        passed is closed by the worker next. Bids, holds and deposits are kept. ADR 0083 - the reason is
-        quoted in the AuctionResumed notification to the seller, bidders and registrants.
+      description: ADR 0080/0084. ACTIVE ADMIN independent of the seller, bidders and registrants returns
+        an OnHold auction to Active with a reason, before the hold auto-cancels (holdExpiresAt) and only
+        when the seller and the leader are eligible. Any number of resumes within the pause budget (each
+        hold at most 48 hours, all holds of an auction at most 72 hours). The paused time is given back,
+        at least 10 minutes of bidding within the budget - startAt, endAt, the open time, the Buy Now
+        window and the Dutch clock all move by the same amount. An auction held at or after its end gets
+        no time back and is closed by the worker next. Bids, holds and deposits are kept. ADR 0083 - the
+        reason is quoted in the AuctionResumed notification to the seller, bidders and registrants.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -12295,6 +12297,56 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/CloseReportedAuction"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportCaseReceipt"
+          headers:
+            Idempotency-Replayed:
+              description: Exact intent replay.
+              schema:
+                type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+  /operations/support-cases/{caseId}/freeze-auction:
+    post:
+      operationId: freezeReportedAuction
+      tags:
+        - Support
+      security:
+        - bearerAuth: []
+      description: ADR 0084. Assigned ACTIVE ADMIN, independent of the seller, registrants and bidders,
+        freezes the reported auction for review - Active (waiting, live, or past its end until the worker
+        closes it) with pause budget left becomes OnHold with holdReason Review. Bids, holds and deposits
+        are kept; the message is sent to the seller and every participant and added to the case, which
+        stays open. An Admin then resumes it (paused time given back), closes it from the case, or it
+        auto-cancels at holdExpiresAt.
+      parameters:
+        - *a2
+        - *a3
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FreezeReportedAuction"
       responses:
         "200":
           description: OK
@@ -20913,6 +20965,29 @@ components:
           minLength: 10
           maxLength: 1000
           description: Sent to the seller and every participant and recorded as the case answer.
+    FreezeReportedAuction:
+      type: object
+      additionalProperties: false
+      required:
+        - expectedVersion
+        - auctionVersion
+        - message
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+          description: Support case version.
+        auctionVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        message:
+          type: string
+          minLength: 10
+          maxLength: 1000
+          description: ADR 0084. Quoted (shortened to fit) in the AuctionOnHold notification to the seller
+            and every participant, and added to the case.
     AuctionCloseReason:
       type:
         - string
@@ -21814,7 +21889,24 @@ components:
             - string
             - "null"
           format: date-time
-          description: ADR 0080. When an Admin resumed this auction; an auction resumes at most once. Optional.
+          description: ADR 0080. When an Admin last resumed this auction (ADR 0084 - any number of times
+            within the pause budget). Optional.
+        holdReason:
+          type:
+            - string
+            - "null"
+          enum:
+            - Eligibility
+            - Review
+            - null
+          description: ADR 0084. Why it is OnHold - the seller or leader lost eligibility, or the Admin on a
+            report froze it for review. Null unless OnHold. Optional for older servers.
+        pauseBudgetLeftSeconds:
+          type: integer
+          minimum: 0
+          maximum: 259200
+          description: ADR 0084. Pause time this auction may still use (72 hours in total, given back on
+            resume). Optional for older servers.
         title:
           type: string
         state:

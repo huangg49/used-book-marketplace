@@ -11,7 +11,10 @@ import {
   AUCTION_MIN_REMAINING_MS,
   AUCTION_OPEN_CEILING_MS,
   AUCTION_OPEN_GRACE_MS,
+  AUCTION_HOLD_MAX_MS,
+  AUCTION_PAUSE_BUDGET_MS,
   AUCTION_RESCHEDULE_FREEZE_MS,
+  AUCTION_RESUME_MIN_MS,
   AUCTION_SCHEDULE_HORIZON_MS,
   BUY_NOW_CHALLENGE_MS,
   BUY_NOW_RIVAL_CHALLENGE_MS,
@@ -230,9 +233,14 @@ function ceilingStart(raw: string, now: Date, publishedAt: Date) {
   return startAt;
 }
 
+// ADR 0084: the fixed ceilings grow by the time resumes gave back.
+const ceilingBase = (a: Pick<AuctionDoc, 'publishedAt'> & Partial<Pick<AuctionDoc, 'pausedMs'>>) =>
+  new Date(a.publishedAt.getTime() + (a.pausedMs ?? 0));
+
 /** The latest open time a waiting registration auction can be moved to. */
-export const latestStartAt = (a: Pick<AuctionDoc, 'publishedAt'>) =>
-  new Date(a.publishedAt.getTime() + AUCTION_OPEN_CEILING_MS);
+export const latestStartAt = (
+  a: Pick<AuctionDoc, 'publishedAt'> & Partial<Pick<AuctionDoc, 'pausedMs'>>,
+) => new Date(ceilingBase(a).getTime() + AUCTION_OPEN_CEILING_MS);
 
 /** The seller acts on a waiting auction only before its fixed start. */
 export function requireWaiting(a: AuctionDoc, now: Date) {
@@ -271,7 +279,7 @@ export function lifecycleReschedule(
     );
   if (!input.startAt) invalidField('startAt', 'Chọn giờ mở mới.');
   const length = durationMs(input.durationSeconds);
-  return graceSchedule(ceilingStart(input.startAt, now, a.publishedAt), length);
+  return graceSchedule(ceilingStart(input.startAt, now, ceilingBase(a)), length);
 }
 
 /**
@@ -284,4 +292,83 @@ export function reachedFields(a: AuctionDoc, now: Date) {
   const start = a.opensAt && a.opensAt > now ? a.opensAt : now;
   const end = new Date(start.getTime() + length);
   return { startAt: start, endAt: end, plannedEndAt: end, biddingOpenedAt: start };
+}
+
+// ------------------------------------------------------------------ pauses
+// ADR 0084: one pause model for both hold reasons. Each hold lasts at most
+// 48 h and all of an auction's pauses together at most 72 h (the budget,
+// counted as the time resumes gave back). A resume moves every stored time by
+// the same amount, so the bidding time, the Buy Now window, the Dutch clock
+// and a waiting auction's open time and deadline continue where they paused.
+
+/** When a hold that starts now auto-cancels. */
+export const holdUntilOf = (a: Pick<AuctionDoc, 'pausedMs'>, heldAt: Date) =>
+  new Date(
+    heldAt.getTime() +
+      Math.min(
+        AUCTION_HOLD_MAX_MS,
+        Math.max(0, AUCTION_PAUSE_BUDGET_MS - (a.pausedMs ?? 0)),
+      ),
+  );
+
+/** Budget left for further pauses. */
+export const pauseBudgetLeft = (a: Pick<AuctionDoc, 'pausedMs'>) =>
+  Math.max(0, AUCTION_PAUSE_BUDGET_MS - (a.pausedMs ?? 0));
+
+export function holdFields(
+  a: Pick<AuctionDoc, 'pausedMs'>,
+  now: Date,
+  reason: 'Eligibility' | 'Review',
+): Partial<AuctionDoc> {
+  return {
+    state: 'OnHold',
+    heldAt: now,
+    holdReason: reason,
+    holdUntil: holdUntilOf(a, now),
+  };
+}
+
+type Movable = Pick<
+  AuctionDoc,
+  | 'heldAt'
+  | 'pausedMs'
+  | 'startAt'
+  | 'endAt'
+  | 'plannedEndAt'
+  | 'opensAt'
+  | 'buyNowAt'
+  | 'biddingOpenedAt'
+>;
+
+/**
+ * Resuming at `now`: the time that was left when the auction was held comes
+ * back, at least 10 minutes when it was live (within the budget). An auction
+ * held at or after its end gets nothing back; the worker closes it next.
+ */
+export function resumeFields(a: Movable, now: Date): Partial<AuctionDoc> {
+  const base: Partial<AuctionDoc> = {
+    state: 'Active',
+    resumedAt: now,
+    holdReason: null,
+    holdUntil: null,
+  };
+  const heldAt = a.heldAt!;
+  const left = a.endAt.getTime() - heldAt.getTime();
+  if (left <= 0) return base;
+  const pause = Math.max(0, now.getTime() - heldAt.getTime());
+  const topUp = Math.max(0, AUCTION_RESUME_MIN_MS - left);
+  const delta = Math.min(pause + topUp, pauseBudgetLeft(a));
+  if (delta <= 0) return base;
+  const move = (d: Date) => new Date(d.getTime() + delta);
+  const nullable = (d: Date | null) => (d ? move(d) : null);
+  return {
+    ...base,
+    pausedMs: (a.pausedMs ?? 0) + delta,
+    startAt: move(a.startAt),
+    endAt: move(a.endAt),
+    plannedEndAt: move(a.plannedEndAt),
+    opensAt: nullable(a.opensAt),
+    buyNowAt: nullable(a.buyNowAt),
+    biddingOpenedAt: nullable(a.biddingOpenedAt),
+  };
 }

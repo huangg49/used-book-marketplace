@@ -84,3 +84,7 @@ export const AUCTION_OPEN_GRACE_MS = 24 * HOUR_MS;
 export const AUCTION_RESCHEDULE_FREEZE_MS = 30 * 60_000;
 // OnHold auto-cancels 48 h after it was held.
 export const AUCTION_HOLD_MAX_MS = 48 * HOUR_MS;
+// ADR 0084: one pause model. All pauses of an auction together are bounded by
+// a budget; a resume gives the time back, at least 10 minutes of bidding.
+export const AUCTION_PAUSE_BUDGET_MS = 72 * HOUR_MS;
+export const AUCTION_RESUME_MIN_MS = 10 * 60_000;

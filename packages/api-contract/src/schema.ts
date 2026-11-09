@@ -2679,7 +2679,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ADR 0080. ACTIVE ADMIN independent of the seller, bidders and registrants returns an OnHold auction to Active with a reason, once per auction, before its 48-hour hold ceiling and only when the seller and the leader are eligible again. No deadline moves (startAt, endAt, the Buy Now window and the Dutch clock keep their stored times); an auction whose end already passed is closed by the worker next. Bids, holds and deposits are kept. ADR 0083 - the reason is quoted in the AuctionResumed notification to the seller, bidders and registrants. */
+        /** @description ADR 0080/0084. ACTIVE ADMIN independent of the seller, bidders and registrants returns an OnHold auction to Active with a reason, before the hold auto-cancels (holdExpiresAt) and only when the seller and the leader are eligible. Any number of resumes within the pause budget (each hold at most 48 hours, all holds of an auction at most 72 hours). The paused time is given back, at least 10 minutes of bidding within the budget - startAt, endAt, the open time, the Buy Now window and the Dutch clock all move by the same amount. An auction held at or after its end gets no time back and is closed by the worker next. Bids, holds and deposits are kept. ADR 0083 - the reason is quoted in the AuctionResumed notification to the seller, bidders and registrants. */
         post: operations["resumeAuction"];
         delete?: never;
         options?: never;
@@ -4088,6 +4088,23 @@ export interface paths {
         put?: never;
         /** @description ADR 0079. Assigned ACTIVE ADMIN, independent of the seller, registrants and bidders, closes the reported auction (Active, including past its end until the worker closes it, ADR 0083; or OnHold) in one transaction - Cancelled with closeReason Reported, every hold and deposit released, book reclaimed, message sent to the seller and every participant and recorded as the case answer. */
         post: operations["closeReportedAuction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operations/support-cases/{caseId}/freeze-auction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description ADR 0084. Assigned ACTIVE ADMIN, independent of the seller, registrants and bidders, freezes the reported auction for review - Active (waiting, live, or past its end until the worker closes it) with pause budget left becomes OnHold with holdReason Review. Bids, holds and deposits are kept; the message is sent to the seller and every participant and added to the case, which stays open. An Admin then resumes it (paused time given back), closes it from the case, or it auto-cancels at holdExpiresAt. */
+        post: operations["freezeReportedAuction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7078,6 +7095,13 @@ export interface components {
             /** @description Sent to the seller and every participant and recorded as the case answer. */
             message: string;
         };
+        FreezeReportedAuction: {
+            /** @description Support case version. */
+            expectedVersion: number;
+            auctionVersion: number;
+            /** @description ADR 0084. Quoted (shortened to fit) in the AuctionOnHold notification to the seller and every participant, and added to the case. */
+            message: string;
+        };
         /**
          * @description ADR 0077 NotEnoughBidders (Unsold). ADR 0079 cancellations - RegistrationExpired (too few registrants at the start), SellerClosed (seller closed before the start), HoldExpired (OnHold for 48 h), Reported (Admin closed it from a report). Null otherwise.
          * @enum {string|null}
@@ -7408,9 +7432,16 @@ export interface components {
             holdExpiresAt?: string | null;
             /**
              * Format: date-time
-             * @description ADR 0080. When an Admin resumed this auction; an auction resumes at most once. Optional.
+             * @description ADR 0080. When an Admin last resumed this auction (ADR 0084 - any number of times within the pause budget). Optional.
              */
             resumedAt?: string | null;
+            /**
+             * @description ADR 0084. Why it is OnHold - the seller or leader lost eligibility, or the Admin on a report froze it for review. Null unless OnHold. Optional for older servers.
+             * @enum {string|null}
+             */
+            holdReason?: "Eligibility" | "Review" | null;
+            /** @description ADR 0084. Pause time this auction may still use (72 hours in total, given back on resume). Optional for older servers. */
+            pauseBudgetLeftSeconds?: number;
             title: string;
             /** @enum {string} */
             state: "Active" | "OnHold";
@@ -16474,6 +16505,44 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CloseReportedAuction"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    /** @description Exact intent replay. */
+                    "Idempotency-Replayed"?: boolean;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCaseReceipt"];
+                };
+            };
+            400: components["responses"]["Error"];
+            401: components["responses"]["Error"];
+            403: components["responses"]["Error"];
+            404: components["responses"]["Error"];
+            409: components["responses"]["Error"];
+            422: components["responses"]["Error"];
+            429: components["responses"]["Error"];
+            503: components["responses"]["Error"];
+        };
+    };
+    freezeReportedAuction: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                caseId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FreezeReportedAuction"];
             };
         };
         responses: {

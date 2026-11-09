@@ -263,7 +263,7 @@ function AuctionQueueContent() {
     <OperationsQueue
       number="04"
       title="Phiên đang mở hoặc tạm giữ."
-      intro="Theo dõi các phiên còn có thể hủy. Chỉ hủy khi có sự cố hoặc gian lận, kèm lý do; hệ thống không tự chọn người thắng. Phiên tạm giữ được tiếp tục một lần hoặc hủy."
+      intro="Theo dõi các phiên còn có thể hủy. Chỉ hủy khi có sự cố hoặc gian lận, kèm lý do; hệ thống không tự chọn người thắng. Phiên tạm giữ được tiếp tục (cộng lại thời gian tạm dừng) hoặc hủy; mỗi phiên tạm dừng tối đa 72 giờ."
       order="Xếp theo giờ kết thúc, gần nhất trước."
       unit="phiên"
       result={result}
@@ -273,9 +273,7 @@ function AuctionQueueContent() {
         id: item.id,
         status:
           item.state === "OnHold"
-            ? item.holdExpiresAt
-              ? `Tạm giữ, chờ quyết định · tự hủy ${dateText(item.holdExpiresAt)}`
-              : "Tạm giữ, chờ quyết định"
+            ? `${item.holdReason === "Review" ? "Tạm dừng vì báo cáo" : "Tạm giữ"}, chờ quyết định${item.holdExpiresAt ? ` · tự hủy ${dateText(item.holdExpiresAt)}` : ""}`
             : item.phase === "Scheduled"
               ? `Hẹn mở ${dateText(item.startAt)} · kết thúc ${dateText(item.endAt)}`
               : `Kết thúc ${dateText(item.endAt)}`,

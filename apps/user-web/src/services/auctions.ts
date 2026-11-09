@@ -242,7 +242,7 @@ export function closeReasonText(a: AuctionSummary): string | null {
       ? `Phiên không đủ ${a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người đăng ký trong 24 giờ sau giờ mở nên đã bị hủy. Mọi tiền cọc đã về lại ví.`
       : `Phiên không đủ ${a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người đăng ký trước giờ mở nên đã bị hủy. Mọi tiền cọc đã về lại ví.`
     case 'SellerClosed': return 'Người bán đã đóng phiên trước giờ mở. Mọi tiền cọc đã về lại ví.'
-    case 'HoldExpired': return 'Phiên tạm dừng quá 48 giờ mà chưa được xử lý nên đã tự hủy. Mọi tiền cọc và khoản giữ đã về lại ví.'
+    case 'HoldExpired': return 'Phiên hết thời gian tạm dừng mà chưa được xử lý nên đã tự hủy. Mọi tiền cọc và khoản giữ đã về lại ví.'
     case 'Reported': return 'Quản trị viên đã đóng phiên sau khi xem xét báo cáo. Mọi tiền cọc và khoản giữ đã về lại ví.'
     default: return null
   }

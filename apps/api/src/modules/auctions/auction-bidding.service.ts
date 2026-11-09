@@ -8,7 +8,6 @@ import type {
   ReclaimReason,
 } from '../../database/mongo/documents.js';
 import {
-  AUCTION_HOLD_MAX_MS,
   AUCTION_PAYMENT_MS,
 } from '../../database/mongo/migrations/auction-constants.js';
 import type { AuctionStep } from '../../database/mongo/migrations/auction-constants.js';
@@ -73,15 +72,16 @@ import {
   reachedFields,
   registrationExpired,
   requireWaiting,
+  holdFields,
+  pauseBudgetLeft,
+  resumeFields,
 } from './auction-schedule.js';
 import { stepKey } from './system-key.js';
 
 const RATE_LIMIT_PER_MINUTE = 30;
-// ADR 0079: when an OnHold auction auto-cancels.
+// ADR 0079/0084: when an OnHold auction auto-cancels.
 const holdExpiry = (a: AuctionDoc) =>
-  a.state === 'OnHold' && a.heldAt
-    ? new Date(a.heldAt.getTime() + AUCTION_HOLD_MAX_MS).toISOString()
-    : null;
+  a.state === 'OnHold' && a.holdUntil ? a.holdUntil.toISOString() : null;
 const MAX_OPEN_PARTICIPATIONS = 5;
 const closed = () =>
   new DomainError(
@@ -870,11 +870,11 @@ export class AuctionBiddingService {
   }
 
   /**
-   * ADR 0080: an independent Admin returns an OnHold auction to Active, once,
-   * before the 48 h hold ceiling and only when the seller and the leader are
-   * eligible again. Nothing moves: startAt, endAt, the Buy Now window and the
-   * Dutch clock keep their stored times, so the paused time is not given back
-   * and no ceiling grows. An auction whose end passed is closed next.
+   * ADR 0080/0084: an independent Admin returns an OnHold auction to Active
+   * before its hold auto-cancels, and only when the seller and the leader are
+   * eligible. Any number of resumes fit in the pause budget. The paused time
+   * comes back (at least 10 minutes of bidding): every stored time moves by
+   * the same amount. An auction held at or after its end is closed next.
    */
   resume(context: CommandContext, id: string, body: Wire['ResumeAuction']) {
     return this.commands.runAuction(context, 'resumeAuction', id, body, {
@@ -896,13 +896,9 @@ export class AuctionBiddingService {
         const reason = body.reason.trim();
         if (reason.length < 10)
           invalidField('reason', 'Hãy ghi lý do tiếp tục ít nhất 10 ký tự.');
-        if (a.resumedAt)
+        if (!a.heldAt || !a.holdUntil || now >= a.holdUntil)
           throw invalidState(
-            'Phiên đã được tiếp tục một lần; lần tạm dừng này chỉ có thể hủy.',
-          );
-        if (!a.heldAt || now.getTime() >= a.heldAt.getTime() + AUCTION_HOLD_MAX_MS)
-          throw invalidState(
-            'Phiên đã tạm dừng quá 48 giờ nên sẽ bị hủy, không tiếp tục được.',
+            'Phiên đã hết thời gian tạm dừng nên sẽ bị hủy, không tiếp tục được.',
           );
         if (!(await this.partiesEligible(tx, a)))
           throw invalidState(
@@ -911,7 +907,7 @@ export class AuctionBiddingService {
         const next = await this.update(
           tx,
           a,
-          { state: 'Active', resumedAt: now },
+          resumeFields(a, now),
           now,
         );
         const bidders = await tx.c.auction_bidders
@@ -949,7 +945,15 @@ export class AuctionBiddingService {
     const next = await this.update(
       tx,
       a,
-      { state: 'Cancelled', closedAt: now, cancelReason: reason, closeReason },
+      {
+        state: 'Cancelled',
+        closedAt: now,
+        cancelReason: reason,
+        closeReason,
+        // ADR 0084: hold details exist only while OnHold.
+        holdReason: null,
+        holdUntil: null,
+      },
       now,
     );
     await this.intakes.requireReclaim(tx, a.intakeId, 'AuctionCancelled', now);
@@ -1105,16 +1109,7 @@ export class AuctionBiddingService {
     await tx.lock('users', [(await this.auction(tx, id)).sellerId]);
     await tx.lock('auctions', [id]);
     const a = await this.auction(tx, id);
-    if (
-      actorId === a.sellerId ||
-      (await tx.c.auction_bidders.findOne({ _id: `${id}:${actorId}` })) ||
-      (await tx.c.auction_registrations.findOne({ _id: `${id}:${actorId}` }))
-    )
-      throw new DomainError(
-        403,
-        'SelfReviewForbidden',
-        'Bạn đang liên quan đến phiên này nên không được đóng.',
-      );
+    await this.requireUninvolved(tx, a, actorId, 'đóng');
     if (a.version !== version) throw conflict();
     // ADR 0083: until the worker closes it (no winner or Order exists yet), an
     // Active auction past its end can still be closed from the report, as
@@ -1125,6 +1120,71 @@ export class AuctionBiddingService {
         'Phiên đã chốt kết quả nên không còn đóng được từ báo cáo.',
       );
     return this.cancelNow(tx, a, message, 'Reported', receiptId, now);
+  }
+
+  // The Admin on a report is none of the seller, bidders or registrants.
+  private async requireUninvolved(
+    tx: Tx,
+    a: AuctionDoc,
+    actorId: string,
+    verb: string,
+  ) {
+    if (
+      actorId === a.sellerId ||
+      (await tx.c.auction_bidders.findOne({ _id: `${a._id}:${actorId}` })) ||
+      (await tx.c.auction_registrations.findOne({ _id: `${a._id}:${actorId}` }))
+    )
+      throw new DomainError(
+        403,
+        'SelfReviewForbidden',
+        `Bạn đang liên quan đến phiên này nên không được ${verb}.`,
+      );
+  }
+
+  /**
+   * ADR 0084 (H2): the assigned, independent Admin on a report freezes the
+   * auction for review, inside the support command's transaction. It is
+   * Active (waiting, live, or past its end until the worker closes it) and
+   * has pause budget left. The hold then follows the one pause model: an
+   * Admin resumes it (time given back) or closes it, or it auto-cancels.
+   */
+  async freezeReported(
+    tx: Tx,
+    id: string,
+    version: number,
+    actorId: string,
+    message: string,
+    now: Date,
+  ) {
+    await tx.lock('auctions', [id]);
+    const a = await this.auction(tx, id);
+    await this.requireUninvolved(tx, a, actorId, 'tạm dừng');
+    if (a.version !== version) throw conflict();
+    if (a.state !== 'Active')
+      throw invalidState(
+        'Chỉ tạm dừng được phiên đang chờ người đăng ký hoặc đang diễn ra.',
+      );
+    if (pauseBudgetLeft(a) <= 0)
+      throw invalidState(
+        'Phiên đã dùng hết 72 giờ tạm dừng; chỉ có thể đóng hoặc để phiên tiếp tục.',
+      );
+    const next = await this.update(tx, a, holdFields(a, now, 'Review'), now);
+    const bidders = await tx.c.auction_bidders
+      .find({ auctionId: a._id }, { projection: { bidderId: 1 } })
+      .toArray();
+    await notifyAuction(
+      tx,
+      next,
+      'AuctionOnHold',
+      [
+        a.sellerId,
+        ...bidders.map((b) => b.bidderId),
+        ...(await this.registrantIds(tx, a)),
+      ],
+      now,
+      message,
+    );
+    return next;
   }
 
   // ADR 0079 worker safety net: the start passed with too few registrants.
@@ -1152,7 +1212,8 @@ export class AuctionBiddingService {
     });
   }
 
-  // ADR 0079: OnHold never lasts more than 48 h; an Admin can cancel earlier.
+  // ADR 0079/0084: a hold ends at holdUntil (48 h, or less once the pause
+  // budget is nearly spent); an Admin can cancel earlier.
   expireHold(id: string, version: number) {
     return this.commands.systemAuction('AuctionClose', stepKey(id, version, 'expireHold'), {
       discover: async (tx) => [(await this.auction(tx, id)).sellerId],
@@ -1164,14 +1225,14 @@ export class AuctionBiddingService {
         if (
           a.version !== version ||
           a.state !== 'OnHold' ||
-          !a.heldAt ||
-          now.getTime() < a.heldAt.getTime() + AUCTION_HOLD_MAX_MS
+          !a.holdUntil ||
+          now < a.holdUntil
         )
           throw invalidState();
         const next = await this.cancelNow(
           tx,
           a,
-          'Phiên tạm dừng quá 48 giờ mà chưa được xử lý.',
+          'Phiên hết thời gian tạm dừng mà chưa được xử lý.',
           'HoldExpired',
           receiptId,
           now,
@@ -1214,7 +1275,7 @@ export class AuctionBiddingService {
         const next = await this.update(
           tx,
           a,
-          { state: 'OnHold', heldAt: now },
+          holdFields(a, now, 'Eligibility'),
           now,
         );
         await notifyAuction(
@@ -1303,7 +1364,7 @@ export class AuctionBiddingService {
           const next = await this.update(
             tx,
             a,
-            { state: 'OnHold', heldAt: now },
+            holdFields(a, now, 'Eligibility'),
             now,
           );
           await notifyAuction(
@@ -2061,6 +2122,9 @@ export class AuctionBiddingService {
           phase: phaseOf(a, now),
           holdExpiresAt: holdExpiry(a),
           resumedAt: a.resumedAt?.toISOString() ?? null,
+          // ADR 0084: why it is held and the pause time it may still use.
+          holdReason: a.state === 'OnHold' ? (a.holdReason ?? null) : null,
+          pauseBudgetLeftSeconds: Math.floor(pauseBudgetLeft(a) / 1000),
           title: String((item?.snapshot as { title?: string })?.title ?? ''),
           state: a.state as 'Active' | 'OnHold',
           startPrice: a.startPrice,
