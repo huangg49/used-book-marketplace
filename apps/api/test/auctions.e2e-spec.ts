@@ -18,6 +18,7 @@ import { AuctionClock } from '../src/modules/auctions/auction-clock.js';
 import { AuctionWorker } from '../src/modules/auctions/auction-worker.service.js';
 import { AuctionLiveService } from '../src/modules/auctions/auction-live.service.js';
 import { stepKey } from '../src/modules/auctions/system-key.js';
+import { lateOpening } from '../src/modules/auctions/auction-schedule.js';
 import { isPointOpen } from '../src/modules/auctions/point-hours.js';
 import { MongoService } from '../src/database/mongo/mongo.service.js';
 import { LedgerService } from '../src/modules/wallet/ledger.service.js';
@@ -5218,8 +5219,9 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     // ADR 0081: the seller always picks an open time, at least 5 minutes
     // ahead. Without a time in publishBody the test starts where waiting
     // leads: the open time passed with too few registrants (fixture: opensAt
-    // moved back to publishedAt, deadline 24 h later), so reaching the
-    // minimum opens it at once.
+    // moved back to publishedAt, deadline 24 h later). Reaching the minimum
+    // then opens it after the ADR 0085 notice; `fill` moves that opening to
+    // the reach so a test can bid at once.
     const liveOf = async (
       over: Parameters<typeof intakeBody>[1] & { minBidders?: number } = {},
       publishBody: Parameters<typeof publish>[2] = {},
@@ -5259,7 +5261,22 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         await register(auctionId, f).expect(200);
         extra.push(f);
       }
+      await openReached(auctionId);
       return extra;
+    };
+    // ADR 0085: a minimum reached after the open time opens 10 minutes later
+    // (07:00 at night). A fixture write (like liveOf's) moves that opening to
+    // the reach, keeping the length; the "ADR 0085" cases test the delay.
+    const openReached = async (auctionId: string) => {
+      const d = await doc(auctionId);
+      const now = await app.get(MongoService).tx((tx) => app.get(AuctionClock).now(tx));
+      if (!d.biddingOpenedAt || !d.opensAt || d.opensAt > now || d.startAt <= now) return;
+      const back = d.startAt.getTime() - now.getTime();
+      const early = (x: Date) => new Date(x.getTime() - back);
+      await db.c.auctions.updateOne(
+        { _id: auctionId },
+        { $set: { startAt: now, biddingOpenedAt: now, endAt: early(d.endAt), plannedEndAt: early(d.plannedEndAt) } },
+      );
     };
 
     it('publishes with the seller minimum and the 10% deposit; bidding opens at the minimum', async () => {
@@ -5479,12 +5496,14 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       });
       const [x, y, f1, f2] = [await funded(500_000), await funded(500_000), await funded(100_000), await funded(100_000)];
       await register(a._id, x).expect(200);
+      await longSession(x);
       // Ten minutes after the open time passed the minimum is reached: the
-      // auction opens then, and the Dutch clock starts there.
-      const opened = new Date(a.publishedAt.getTime() + 10 * 60_000);
-      pinClock(opened);
+      // auction opens after the ADR 0085 notice, and the Dutch clock starts there.
+      const reached = new Date(a.publishedAt.getTime() + 10 * 60_000);
+      pinClock(reached);
       for (const m of [y, f1, f2]) await register(a._id, m).expect(200);
       vi.restoreAllMocks();
+      const opened = lateOpening(reached);
       expect(await doc(a._id)).toMatchObject({ biddingOpenedAt: opened, startAt: opened });
       // 125 s after opening: two drops (300,000), not twelve (floor).
       pinClock(new Date(opened.getTime() + 125_000));
@@ -5677,11 +5696,14 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         expect((await call('get', `/auctions/${few.a._id}`).expect(200)).body.auction.phase).toBe('Scheduled');
         pinClock(new Date(at.getTime() + H));
         expect((await bid(late.a._id, lateMembers[0], 200_000).expect(409)).body.code).toBe('AuctionNotStarted');
-        // Reached 5 h after the open time: it opens at that moment, same length.
+        // Reached 5 h after the open time: ADR 0085 opens it 10 minutes later
+        // (07:00 at night), same length.
         const reached = new Date(at.getTime() + 5 * H);
         pinClock(reached);
         for (const m of lateMembers.slice(1)) await register(late.a._id, m).expect(200);
-        expect(await doc(late.a._id)).toMatchObject({ startAt: reached, endAt: new Date(reached.getTime() + H), biddingOpenedAt: reached });
+        const opened = lateOpening(reached);
+        expect(await doc(late.a._id)).toMatchObject({ startAt: opened, endAt: new Date(opened.getTime() + H), biddingOpenedAt: opened });
+        pinClock(opened);
         await bid(late.a._id, lateMembers[0], 200_000).expect(200);
         vi.restoreAllMocks();
         await tickAt(new Date(at.getTime() + 24 * H - 60_000));
@@ -5718,23 +5740,174 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         expect((await moveTo(due.a._id, due.seller, new Date(Date.now() + 3 * H), await v(due.a._id)).expect(409)).body.message).toMatch(/Đã qua giờ mở/);
       });
 
-      it('minimum: only lowered, never below 4, locked once reached; reaching it past the open time opens at once', async () => {
+      it('minimum: lowered (never below 4), raised only before anyone registered, locked once reached; reaching it past the open time opens after the notice', async () => {
         const { seller, a } = await liveOf({ minBidders: 6 });
         const members = [await funded(500_000), await funded(100_000), await funded(100_000), await funded(100_000)];
         for (const m of members) await register(a._id, m).expect(200);
-        await setMin(a._id, seller, 7, await v(a._id)).expect(422);
+        // ADR 0085 (L5): registrants joined under 6, so it cannot go up.
+        expect(JSON.stringify((await setMin(a._id, seller, 7, await v(a._id)).expect(422)).body)).toMatch(/Đã có người đăng ký/);
         await setMin(a._id, seller, 3, await v(a._id)).expect(422);
         await setMin(a._id, members[0], 5, await v(a._id)).expect(404);
         await setMin(a._id, seller, 5, await v(a._id)).expect(200);
         expect(await doc(a._id)).toMatchObject({ minBidders: 5, biddingOpenedAt: null });
+        const lowered = Date.now();
         await setMin(a._id, seller, 4, await v(a._id)).expect(200);
         const d = await doc(a._id);
         expect(d.biddingOpenedAt).toEqual(d.startAt);
-        expect(d.startAt.getTime()).toBeLessThanOrEqual(Date.now());
+        // ADR 0085: at least 10 minutes' notice before bidding opens.
+        expect(d.startAt.getTime()).toBeGreaterThanOrEqual(lowered + 10 * 60_000 - 2_000);
+        expect((await bid(a._id, members[0], 200_000).expect(409)).body.code).toBe('AuctionNotStarted');
+        await longSession(members[0]);
+        pinClock(d.startAt);
         await bid(a._id, members[0], 200_000).expect(200);
+        vi.restoreAllMocks();
         const sched = await liveOf({ minBidders: 5 }, { startAt: new Date(Date.now() + 2 * H).toISOString() });
         await fill(sched.a._id);
         expect((await setMin(sched.a._id, sched.seller, 4, await v(sched.a._id)).expect(409)).body.message).toMatch(/giữ nguyên/);
+      });
+
+      // ADR 0085 (M3): next local (UTC+7) moment at `hour`:00 at least `ahead` from now.
+      const nextLocal = (hour: number, ahead = 0) => {
+        const d = new Date(Date.now() + ahead);
+        const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), hour - 7));
+        while (t.getTime() <= d.getTime()) t.setTime(t.getTime() + 24 * H);
+        return t;
+      };
+      const registerAll = async (auctionId: string, members: Actor[]) => {
+        for (const m of members) {
+          await longSession(m);
+          await register(auctionId, m).expect(200);
+        }
+      };
+
+      it('ADR 0085: a minimum reached after the open time opens 10 minutes later; registrants are told the time', async () => {
+        const { seller, a } = await liveOf();
+        const members = [await funded(500_000), await funded(100_000), await funded(100_000), await funded(100_000)];
+        await longSession(seller);
+        const reached = nextLocal(14);
+        pinClock(reached);
+        try {
+          await registerAll(a._id, members);
+          const opened = new Date(reached.getTime() + 10 * 60_000);
+          expect(await doc(a._id)).toMatchObject({ startAt: opened, biddingOpenedAt: opened, registeredCount: 4 });
+          expect((await call('get', `/auctions/${a._id}`).expect(200)).body.auction.phase).toBe('Scheduled');
+          pinClock(new Date(reached.getTime() + 5 * 60_000));
+          expect((await bid(a._id, members[0], 200_000).expect(409)).body.code).toBe('AuctionNotStarted');
+          // Full and past the open time: the deposit stays.
+          await withdraw(a._id, members[1]).expect(409);
+          pinClock(opened);
+          await bid(a._id, members[0], 200_000).expect(200);
+        } finally {
+          vi.restoreAllMocks();
+        }
+        const note = await db.c.member_notifications.findOne({ userId: members[1].id, targetId: a._id, kind: 'AuctionBiddingStarted' });
+        expect(note).toMatchObject({ title: 'Phiên đấu giá đã đủ người đăng ký' });
+        expect(note!.body).toContain('14:10');
+      });
+
+      it('ADR 0085: reached at night it opens at 07:00, even past the 24-hour deadline', async () => {
+        const { a } = await liveOf({}, {});
+        // Fixture: the deadline (opensAt + 24 h) falls at 03:00 local time.
+        const deadline = nextLocal(3, 2 * H);
+        const length = a.plannedEndAt.getTime() - a.startAt.getTime();
+        await db.c.auctions.updateOne(
+          { _id: a._id },
+          { $set: { opensAt: new Date(deadline.getTime() - 24 * H), startAt: deadline, plannedEndAt: new Date(deadline.getTime() + length), endAt: new Date(deadline.getTime() + length) } },
+        );
+        const members = [await funded(500_000), await funded(100_000), await funded(100_000), await funded(100_000)];
+        const reached = new Date(deadline.getTime() - H); // 02:00
+        pinClock(reached);
+        try {
+          await registerAll(a._id, members);
+          const seven = new Date(deadline.getTime() + 4 * H);
+          expect(await doc(a._id)).toMatchObject({ state: 'Active', startAt: seven, biddingOpenedAt: seven, endAt: new Date(seven.getTime() + length) });
+          // The worker does not cancel it at the deadline: the minimum was reached.
+          await app.get(AuctionWorker).tick();
+          pinClock(new Date(deadline.getTime() + H));
+          await app.get(AuctionWorker).tick();
+          expect((await doc(a._id)).state).toBe('Active');
+          expect((await bid(a._id, members[0], 200_000).expect(409)).body.code).toBe('AuctionNotStarted');
+          pinClock(seven);
+          await bid(a._id, members[0], 200_000).expect(200);
+        } finally {
+          vi.restoreAllMocks();
+        }
+      });
+
+      it('ADR 0085: a full auction refunds a withdrawal until 72 h before its open time and then waits again', async () => {
+        const opensAt = new Date(Date.now() + 5 * 24 * H);
+        const { seller, a } = await liveOf({}, { startAt: opensAt.toISOString(), durationSeconds: 3600 });
+        const [x, y, z] = [await funded(100_000), await funded(100_000), await funded(100_000)];
+        const extra = await fill(a._id, x, y);
+        expect(await doc(a._id)).toMatchObject({ startAt: opensAt, biddingOpenedAt: opensAt, registeredCount: 4 });
+        const until = new Date(opensAt.getTime() - 72 * H);
+        const pub = await call('get', `/auctions/${a._id}`).expect(200);
+        validates('PublicAuction', pub.body);
+        expect(pub.body.auction.fullWithdrawUntil).toBe(until.toISOString());
+        // Below the minimum again: it waits until opensAt + 24 h, nobody bids.
+        const r = await withdraw(a._id, x).expect(200);
+        validates('AuctionCommandReceipt', r.body);
+        expect(await wallet(x)).toMatchObject({ available: 100_000, auctionHeld: 0 });
+        expect(await doc(a._id)).toMatchObject({
+          registeredCount: 3,
+          biddingOpenedAt: null,
+          startAt: new Date(opensAt.getTime() + 24 * H),
+          endAt: new Date(opensAt.getTime() + 25 * H),
+        });
+        expect((await call('get', `/auctions/${a._id}`).expect(200)).body.auction.fullWithdrawUntil).toBeNull();
+        for (const who of [seller, y, extra[0]]) {
+          const n = await db.c.member_notifications.findOne({ userId: who.id, targetId: a._id, kind: 'AuctionRescheduled' });
+          expect(n?.title).toBe('Phiên đấu giá chưa đủ người đăng ký');
+        }
+        expect(await db.c.member_notifications.findOne({ userId: x.id, targetId: a._id, kind: 'AuctionRescheduled' })).toBeNull();
+        // Full again: it opens at the seller's time once more.
+        await register(a._id, z).expect(200);
+        expect(await doc(a._id)).toMatchObject({ startAt: opensAt, biddingOpenedAt: opensAt });
+        // Within 72 h of the open time the deposit stays.
+        await longSession(y);
+        pinClock(new Date(until.getTime() + 60_000));
+        try {
+          expect((await withdraw(a._id, y).expect(409)).body.message).toMatch(/dưới 72 giờ/);
+        } finally {
+          vi.restoreAllMocks();
+        }
+      });
+
+      it('ADR 0085: a full auction only moves its open time earlier', async () => {
+        const opensAt = new Date(Date.now() + 2 * 24 * H);
+        const { seller, a } = await liveOf({}, { startAt: opensAt.toISOString(), durationSeconds: 3600 });
+        const x = await funded(100_000);
+        await fill(a._id, x);
+        const later = await moveTo(a._id, seller, new Date(opensAt.getTime() + H), await v(a._id)).expect(422);
+        expect(JSON.stringify(later.body)).toMatch(/sớm hơn/);
+        await moveTo(a._id, seller, opensAt, await v(a._id)).expect(422);
+        const earlier = new Date(opensAt.getTime() - 24 * H);
+        await moveTo(a._id, seller, earlier, await v(a._id)).expect(200);
+        expect(await doc(a._id)).toMatchObject({ opensAt: earlier, startAt: earlier, biddingOpenedAt: earlier, scheduleRevision: 1 });
+        expect(await kinds(x, a._id)).toContain('AuctionRescheduled');
+      });
+
+      it('ADR 0085: the minimum goes up only while nobody is registered', async () => {
+        const { seller, a } = await liveOf({ minBidders: 5 });
+        await setMin(a._id, seller, 6, await v(a._id)).expect(200);
+        expect((await doc(a._id)).minBidders).toBe(6);
+        expect(JSON.stringify((await setMin(a._id, seller, 6, await v(a._id)).expect(422)).body)).toMatch(/đang là 6/);
+        await register(a._id, await funded(100_000)).expect(200);
+        expect(JSON.stringify((await setMin(a._id, seller, 7, await v(a._id)).expect(422)).body)).toMatch(/Đã có người đăng ký/);
+        await setMin(a._id, seller, 5, await v(a._id)).expect(200);
+      });
+
+      it('ADR 0085 (M4): the leader holds the larger of price and deposit, never both', async () => {
+        const { a } = await liveOf();
+        const [x, y] = [await funded(500_000), await funded(500_000)];
+        await fill(a._id, x, y);
+        expect((await wallet(x)).auctionHeld).toBe(DEPOSIT);
+        await bid(a._id, x, 200_000).expect(200);
+        expect(await wallet(x)).toMatchObject({ available: 300_000, auctionHeld: 200_000 });
+        await bid(a._id, y, 250_000).expect(200);
+        // Outbid: back to the deposit only.
+        expect(await wallet(x)).toMatchObject({ available: 500_000 - DEPOSIT, auctionHeld: DEPOSIT });
+        expect(await wallet(y)).toMatchObject({ available: 250_000, auctionHeld: 250_000 });
       });
 
       it('the seller closes before the start (refunds, book back, registrants told), never after', async () => {

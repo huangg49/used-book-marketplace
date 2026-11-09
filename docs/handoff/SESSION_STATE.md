@@ -97,6 +97,12 @@ Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
   (`freezeReportedAuction`). Migration `0072-auction-pause-budget` (`holdReason`, `holdUntil`,
   `pausedMs`, trần theo `publishedAt` cộng `pausedMs`). 48/72 giờ và 10 phút là mặc định của kế
   hoạch, chủ dự án chưa chọn khác. Kết quả kiểm chứng ở ADR0084/commit. Chưa push.
+- [ADR0085](../adr/0085-auction-registration-deposits.md) (09/11, cùng nhánh): nhóm C, đăng ký và
+  tiền cọc. Phiên đủ người chỉ dời giờ mở sớm hơn; rút đăng ký khỏi phiên đủ người tới 72 giờ trước
+  giờ mở (dưới tối thiểu thì phiên về chờ, `fullWithdrawUntil`); đủ người sau giờ mở thì mở sau 10
+  phút, khung 23:00–07:00 thì 07:00 (migration `0073-auction-reached-notice`); tăng số tối thiểu khi
+  chưa ai đăng ký; người dẫn giá không bị giữ hai lần (đã đúng, thêm kiểm thử). Mặc định của kế
+  hoạch, chủ dự án chưa chọn khác. Kết quả kiểm chứng ở ADR0085/commit. Chưa push.
 
 Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
 auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web

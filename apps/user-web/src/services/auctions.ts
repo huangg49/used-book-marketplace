@@ -60,6 +60,8 @@ export const auctionSummarySchema = z.object({
   // ADR 0081: the seller's open time; startAt is the deadline until enough register.
   opensAt: z.string().nullish(),
   latestStartAt: z.string().nullish(),
+  // ADR 0085: a full auction still refunds a withdrawal until this time.
+  fullWithdrawUntil: z.string().nullish(),
   holdExpiresAt: z.string().nullish(),
   // ADR 0047: Scheduled before startAt; version lets the seller edit the time.
   phase: z.enum(['Scheduled', 'Live', 'Ended']).nullish(),
@@ -210,9 +212,10 @@ export function openRuleText(a: AuctionSummary) {
   if (a.openMode === 'ScheduledGrace' && a.opensAt) {
     const reached = (a.registeredCount ?? 0) >= need
     if (reached) return `Phiên đã đủ ${need} người đăng ký và mở lúc ${at(a.startAt)}.`
+    // ADR 0085: reached after the open time, it opens after a short notice.
     return Date.parse(a.opensAt) > Date.now()
-      ? `Phiên mở lúc ${at(a.opensAt)} nếu đủ ${need} người đăng ký. Chưa đủ thì phiên chờ thêm tới ${at(a.startAt)} và mở ngay khi đủ; hết hạn vẫn chưa đủ thì phiên bị hủy và hoàn cọc.`
-      : `Đã qua giờ mở nhưng chưa đủ ${need} người đăng ký. Phiên mở ngay khi đủ người; tới ${at(a.startAt)} vẫn chưa đủ thì bị hủy và hoàn cọc.`
+      ? `Phiên mở lúc ${at(a.opensAt)} nếu đủ ${need} người đăng ký. Chưa đủ thì phiên chờ thêm tới ${at(a.startAt)} và mở 10 phút sau khi đủ (đủ trong khung 23:00–07:00 thì mở lúc 07:00); hết hạn vẫn chưa đủ thì phiên bị hủy và hoàn cọc.`
+      : `Đã qua giờ mở nhưng chưa đủ ${need} người đăng ký. Phiên mở 10 phút sau khi đủ (đủ trong khung 23:00–07:00 thì mở lúc 07:00); tới ${at(a.startAt)} vẫn chưa đủ thì bị hủy và hoàn cọc.`
   }
   return a.openMode === 'WhenReady'
     ? `Phiên tự mở ngay khi đủ ${need} người đăng ký. Hạn đăng ký: ${at(a.startAt)}; quá hạn chưa đủ người thì phiên bị hủy và hoàn cọc.`
@@ -246,6 +249,16 @@ export function closeReasonText(a: AuctionSummary): string | null {
     case 'Reported': return 'Quản trị viên đã đóng phiên sau khi xem xét báo cáo. Mọi tiền cọc và khoản giữ đã về lại ví.'
     default: return null
   }
+}
+/**
+ * ADR 0077/0085: a registrant who has not bid may withdraw while the auction
+ * is below its minimum, or while a full auction is more than 72 h before its
+ * open time (fullWithdrawUntil). The server decides at its own clock.
+ */
+export function canWithdrawRegistration(a: AuctionSummary, me: AuctionParticipation | null, nowMs: number) {
+  if (me?.registrationState !== 'Registered' || me.alias != null || a.state !== 'Active' || a.phase === 'Ended') return false
+  if ((a.registeredCount ?? 0) < (a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR)) return true
+  return !!a.fullWithdrawUntil && nowMs < Date.parse(a.fullWithdrawUntil)
 }
 /** ADR 0077: true while a registration gate keeps this member from bidding. */
 export function registrationBlocks(a: AuctionSummary, me: AuctionParticipation | null) {

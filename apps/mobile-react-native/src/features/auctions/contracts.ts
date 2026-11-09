@@ -66,6 +66,8 @@ export const publicAuctionSummary = z.object({
   // ADR 0081: the seller's open time; startAt is the deadline until enough register.
   opensAt: z.string().nullable().optional(),
   latestStartAt: z.string().nullable().optional(),
+  // ADR 0085: a full auction still refunds a withdrawal until this time.
+  fullWithdrawUntil: z.string().nullable().optional(),
   holdExpiresAt: z.string().nullable().optional(),
   // ADR 0047: Scheduled before startAt; version lets the seller edit the time.
   phase: z.enum(["Scheduled", "Live", "Ended"]).nullable().optional(),

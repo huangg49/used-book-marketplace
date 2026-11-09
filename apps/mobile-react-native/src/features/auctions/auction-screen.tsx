@@ -50,6 +50,7 @@ import {
   standingOf,
   isSealedFormat,
   registrationBlocks,
+  canWithdrawRegistration,
   instantNeedsRival,
   waitingForRegistrants,
   openRuleText,
@@ -593,7 +594,8 @@ function AuctionBody({
         ) : (
           <Button title="Đăng nhập để trả giá" onPress={() => router.push("/account")} />
         )
-      ) : scheduled && signedIn && !meLoading && auction.state === "Active" && registrationBlocks(auction, me) ? (
+      ) : scheduled && signedIn && !meLoading && auction.state === "Active"
+        && (registrationBlocks(auction, me) || canWithdrawRegistration(auction, me, Date.now())) ? (
         <BidPanel auction={auction} me={me} refresh={refresh} paused={ownerError} />
       ) : scheduled ? (
         <Notice>
@@ -714,7 +716,7 @@ function BidPanel({
           <Button title="Thử lại thao tác vừa rồi" busy={busy} onPress={() => void run(pending)} />
           <Button secondary title="Cập nhật trạng thái phiên" disabled={busy} onPress={() => void refresh()} />
         </View>
-      ) : registrationBlocks(auction, me) ? (
+      ) : registrationBlocks(auction, me) || canWithdrawRegistration(auction, me, Date.now()) ? (
         <RegisterBlock auction={auction} me={me} available={available} locked={locked}
           onRegister={(deposit) => setConfirming({ kind: "Register", amount: deposit })}
           onWithdraw={() => setConfirming({ kind: "Withdraw", amount: 0 })} />
@@ -906,6 +908,11 @@ function RegisterBlock({ auction, me, available, locked, onRegister, onWithdraw 
   const count = auction.registeredCount ?? 0;
   const registered = me?.registrationState === "Registered";
   const short = registered ? 0 : fundsShortfall(deposit, available);
+  // ADR 0085: below the minimum, or a full auction until 72 h before it opens.
+  const withdrawable = canWithdrawRegistration(auction, me, Date.now());
+  const fullUntil = count >= need && auction.fullWithdrawUntil
+    ? new Date(auction.fullWithdrawUntil).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
+    : null;
   return (
     <View style={{ gap: space.sm }}>
       <AppText kind="bold">{registered ? "Bạn đã đăng ký phiên này" : "Đăng ký để tham gia đấu giá"}</AppText>
@@ -914,12 +921,16 @@ function RegisterBlock({ auction, me, available, locked, onRegister, onWithdraw 
       </AppText>
       <AppText kind="small" color={colors.muted}>
         {registered
-          ? `Ví đang giữ ${formatVnd(me?.deposit ?? deposit)} tiền cọc. Bạn có thể rút đăng ký khi phiên chưa đủ người.`
+          ? `Ví đang giữ ${formatVnd(me?.deposit ?? deposit)} tiền cọc. ${withdrawable
+            ? fullUntil
+              ? `Phiên đã đủ người; bạn vẫn rút đăng ký được tới ${fullUntil} (72 giờ trước giờ mở).`
+              : "Bạn có thể rút đăng ký khi phiên chưa đủ người."
+            : "Phiên đã đủ người nên tiền cọc được giữ đến khi phiên kết thúc."}`
           : `Tiền cọc ${formatVnd(deposit)} được hoàn khi bạn không thắng hoặc phiên không đủ người. Nếu thắng, tiền cọc tính vào giá; thắng mà không thanh toán đúng hạn thì không được hoàn.`}
       </AppText>
       {short > 0 && <AppText kind="small" color={colors.error}>{fundsHint(deposit, available)}</AppText>}
       {registered ? (
-        <Button secondary title="Rút đăng ký và nhận lại tiền cọc" disabled={locked} onPress={onWithdraw} />
+        withdrawable && <Button secondary title="Rút đăng ký và nhận lại tiền cọc" disabled={locked} onPress={onWithdraw} />
       ) : (
         <Button wine title={`Đặt cọc ${formatVnd(deposit)} và đăng ký`} disabled={locked || short > 0} onPress={() => onRegister(deposit)} />
       )}

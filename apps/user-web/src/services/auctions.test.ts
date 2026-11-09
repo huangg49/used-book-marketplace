@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { formatRemaining } from '../hooks/useAuctionClock'
-import { AUCTION_MAX_PRICE, bidOptions } from './auctions'
+import { AUCTION_MAX_PRICE, bidOptions, canWithdrawRegistration, type AuctionParticipation, type AuctionSummary } from './auctions'
 
 describe('bidOptions', () => {
   it('steps up from the minimum bid on the price grid', () => {
@@ -26,5 +26,30 @@ describe('formatRemaining', () => {
   })
   it('reports a finished timer', () => {
     expect(formatRemaining(0)).toBe('Đã hết giờ')
+  })
+})
+
+// ADR 0085 (N1): withdrawing is allowed below the minimum, or from a full
+// auction until 72 h before its open time; never after the member bid.
+describe('canWithdrawRegistration', () => {
+  const now = Date.parse('2026-11-09T03:00:00.000Z')
+  const auction = (over: Partial<AuctionSummary> = {}) =>
+    ({ state: 'Active', phase: 'Scheduled', minBidders: 4, registeredCount: 3, fullWithdrawUntil: null, ...over }) as AuctionSummary
+  const me = (over: Partial<AuctionParticipation> = {}) =>
+    ({ registrationState: 'Registered', alias: null, ...over }) as AuctionParticipation
+  it('is allowed below the minimum', () => {
+    expect(canWithdrawRegistration(auction(), me(), now)).toBe(true)
+  })
+  it('is allowed from a full auction only before fullWithdrawUntil', () => {
+    const full = auction({ registeredCount: 4, fullWithdrawUntil: new Date(now + 60_000).toISOString() })
+    expect(canWithdrawRegistration(full, me(), now)).toBe(true)
+    expect(canWithdrawRegistration(full, me(), now + 60_000)).toBe(false)
+    expect(canWithdrawRegistration(auction({ registeredCount: 4 }), me(), now)).toBe(false)
+  })
+  it('is refused after a bid, when not registered, or once ended', () => {
+    expect(canWithdrawRegistration(auction(), me({ alias: 1 }), now)).toBe(false)
+    expect(canWithdrawRegistration(auction(), me({ registrationState: 'Withdrawn' }), now)).toBe(false)
+    expect(canWithdrawRegistration(auction(), null, now)).toBe(false)
+    expect(canWithdrawRegistration(auction({ phase: 'Ended' }), me(), now)).toBe(false)
   })
 })

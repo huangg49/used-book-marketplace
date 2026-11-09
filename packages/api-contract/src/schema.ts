@@ -2506,7 +2506,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ADR 0047. Seller edits the time of an Active auction before the first bid and before any Buy Now, at most 5 times. Scheduled: startAt (null = now) and durationSeconds. Live: only durationSeconds (end = startAt + duration, at least 1 hour from now); startAt must be null. expectedVersion is the auction version. */
+        /** @description ADR 0047. Seller edits the time of an Active auction before the first bid and before any Buy Now, at most 5 times. Scheduled: startAt (null = now) and durationSeconds. Live: only durationSeconds (end = startAt + duration, at least 1 hour from now); startAt must be null. expectedVersion is the auction version. ADR 0081/0082: a registration auction moves its open time (startAt required) at most twice, within publish + 30 days. ADR 0085: once it has enough registrants the new open time must be earlier than the current one (422 otherwise). */
         post: operations["rescheduleAuction"];
         delete?: never;
         options?: never;
@@ -3310,7 +3310,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ADR 0079 - seller lowers minBidders (never below 4) while waiting and before it was reached. ADR 0081 - reaching it opens the auction at its opensAt, or at once when opensAt already passed. */
+        /** @description ADR 0079 - seller lowers minBidders (never below 4) while waiting and before it was reached. ADR 0081 - reaching it opens the auction at its opensAt, or (ADR 0085) 10 minutes after reaching it when opensAt already passed, moved to 07:00 Vietnam time when that falls between 23:00 and 07:00. ADR 0085 - raising minBidders is allowed only while nobody is registered; the same value is refused (422). */
         post: operations["setAuctionMinBidders"];
         delete?: never;
         options?: never;
@@ -3344,7 +3344,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ADR 0077 — withdraws the caller's registration and refunds the deposit, only while bidding has not opened (registeredCount below minBidders) and the caller has not bid. */
+        /** @description ADR 0077 — withdraws the caller's registration and refunds the deposit while the caller has not bid and either registeredCount is below minBidders or (ADR 0085) the auction is a full ScheduledGrace auction more than 72 hours before opensAt (see fullWithdrawUntil). A withdrawal that takes a full auction below the minimum returns it to waiting for registrants (startAt = opensAt + 24 h, biddingOpenedAt null) and notifies the seller and the remaining registrants. */
         post: operations["withdrawAuctionRegistration"];
         delete?: never;
         options?: never;
@@ -7085,7 +7085,7 @@ export interface components {
         WithdrawAuctionRegistration: Record<string, never>;
         SetAuctionMinBidders: {
             expectedVersion: number;
-            /** @description ADR 0079. Only lower than the current value, never below 4. */
+            /** @description ADR 0079/0085. Never below 4; higher than the current value only while nobody is registered. */
             minBidders: number;
         };
         CloseReportedAuction: {
@@ -7306,6 +7306,11 @@ export interface components {
              * @description ADR 0079/0082. Fixed ceiling for a rescheduled open time (publish + 30 days); null without the bounded lifecycle. Optional for older servers.
              */
             latestStartAt?: string | null;
+            /**
+             * Format: date-time
+             * @description ADR 0085. When a ScheduledGrace auction already has enough registrants, a registrant may still withdraw (deposit refunded) until this time, 72 hours before opensAt. Null when the auction is not full or has no open time. Below the minimum a registrant withdraws until it fills. Optional for older servers.
+             */
+            fullWithdrawUntil?: string | null;
             /**
              * Format: date-time
              * @description ADR 0079. OnHold auto-cancels here (held + 48 h); null unless OnHold. Optional for older servers.

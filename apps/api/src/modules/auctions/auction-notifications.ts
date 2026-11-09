@@ -68,9 +68,11 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
   AuctionFundsHeld: silent,
   AuctionFundsReleased: silent,
   // ADR 0077: registration gate and deposit outcomes.
+  // ADR 0085: a late-reached auction opens 10 minutes later (07:00 at night),
+  // so the text names the opening time rather than saying it is open now.
   AuctionBiddingStarted: {
     default: (c, a) => ({
-      title: 'Phiên đấu giá đã mở trả giá',
+      title: 'Phiên đấu giá đã đủ người đăng ký',
       body: `${c.title} đã đủ ${a.minBidders ?? 2} người đăng ký. Bạn trả giá được từ ${when(a.startAt)} đến ${when(a.endAt)}.`,
     }),
     seller: (c, a) => ({
@@ -225,7 +227,7 @@ export function withNote(body: string, note?: string) {
   const quoted = [...clean].length > room ? `${[...clean].slice(0, room - 1).join('')}…` : clean;
   return `${lead}${quoted}”`;
 }
-export async function notifyAuction(
+export function notifyAuction(
   tx: Tx,
   a: AuctionDoc,
   kind: Kind,
@@ -235,12 +237,44 @@ export async function notifyAuction(
   // after the standard text and shortened to fit the 400-character body.
   note?: string,
 ) {
+  return write(tx, a, kind, MESSAGES[kind], recipients, now, note);
+}
+
+// ADR 0085 (N1): a withdrawal took a full auction below its minimum before
+// its open time. Sent as AuctionRescheduled (the times changed) with its own
+// wording, so no new notification kind is needed.
+const BELOW_MINIMUM: Record<'default' | 'seller', Message> = {
+  default: (c, a) => ({
+    title: 'Phiên đấu giá chưa đủ người đăng ký',
+    body: `${c.title} không còn đủ ${a.minBidders ?? 4} người đăng ký vì có người rút đăng ký. Phiên vẫn mở lúc ${when(a.opensAt)} nếu đủ người lại; chưa đủ thì chờ thêm tới ${when(a.startAt)} rồi hủy. Bạn có thể rút đăng ký trước khi phiên đủ người.`,
+  }),
+  seller: (c, a) => ({
+    title: 'Phiên đấu giá chưa đủ người đăng ký',
+    body: `${c.title} không còn đủ ${a.minBidders ?? 4} người đăng ký vì có người rút đăng ký. Phiên mở lúc ${when(a.opensAt)} nếu đủ người lại; chưa đủ thì chờ thêm tới ${when(a.startAt)} rồi tự hủy.`,
+  }),
+};
+export const notifyBelowMinimum = (
+  tx: Tx,
+  a: AuctionDoc,
+  recipients: (string | null | undefined)[],
+  now: Date,
+) => write(tx, a, 'AuctionRescheduled', BELOW_MINIMUM, recipients, now);
+
+async function write(
+  tx: Tx,
+  a: AuctionDoc,
+  kind: Kind,
+  messages: Record<'default' | 'seller', Message>,
+  recipients: (string | null | undefined)[],
+  now: Date,
+  note?: string,
+) {
   const users = [...new Set(recipients.filter((u): u is string => !!u))];
   if (!users.length) return;
   const c = await context(tx, a);
   const rows: MemberNotificationDoc[] = [];
   for (const userId of users) {
-    const text = MESSAGES[kind][userId === a.sellerId ? 'seller' : 'default'](
+    const text = messages[userId === a.sellerId ? 'seller' : 'default'](
       c,
       a,
     );

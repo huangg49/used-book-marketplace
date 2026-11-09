@@ -88,3 +88,17 @@ export const AUCTION_HOLD_MAX_MS = 48 * HOUR_MS;
 // a budget; a resume gives the time back, at least 10 minutes of bidding.
 export const AUCTION_PAUSE_BUDGET_MS = 72 * HOUR_MS;
 export const AUCTION_RESUME_MIN_MS = 10 * 60_000;
+// ADR 0085: registration and deposits.
+// A full auction's registrants may still withdraw until 72 h before its open
+// time (it then waits for registrants again when below the minimum).
+export const AUCTION_FULL_WITHDRAW_MS = 72 * HOUR_MS;
+// Reaching the minimum after the open time opens the auction 10 minutes later,
+// moved to 07:00 when that falls between 23:00 and 07:00 (Vietnam time).
+export const AUCTION_REACHED_NOTICE_MS = 10 * 60_000;
+export const AUCTION_NIGHT_START_HOUR = 23;
+export const AUCTION_NIGHT_END_HOUR = 7;
+export const AUCTION_LOCAL_OFFSET_MS = 7 * HOUR_MS; // Asia/Ho_Chi_Minh, no DST
+// The longest delay that rule adds past the 24 h deadline (validator bound).
+export const AUCTION_NIGHT_ALLOWANCE_MS =
+  AUCTION_REACHED_NOTICE_MS +
+  (24 - AUCTION_NIGHT_START_HOUR + AUCTION_NIGHT_END_HOUR) * HOUR_MS;

@@ -201,6 +201,24 @@ export const registrationBlocks = (
 ) =>
   auction.minBidders != null &&
   (me?.registrationState !== "Registered" || (auction.registeredCount ?? 0) < auction.minBidders);
+/**
+ * ADR 0077/0085: a registrant who has not bid may withdraw while the auction
+ * is below its minimum, or while a full auction is more than 72 h before its
+ * open time (fullWithdrawUntil). The server decides at its own clock.
+ */
+export function canWithdrawRegistration(
+  auction: PublicAuctionSummary,
+  me: { registrationState?: string | null; alias: number | null } | null,
+  now: number,
+) {
+  if (me?.registrationState !== "Registered" || me.alias != null || auction.state !== "Active" || auction.phase === "Ended")
+    return false;
+  if ((auction.registeredCount ?? 0) < (auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR)) return true;
+  return !!auction.fullWithdrawUntil && now < Date.parse(auction.fullWithdrawUntil);
+}
+// ADR 0085: a minimum reached after the open time opens after a short notice.
+export const lateOpenText = (need: number) =>
+  `mở 10 phút sau khi đủ ${need} người đăng ký (khung 23:00–07:00 thì lúc 07:00)`;
 // ADR 0079: at least 4, no business maximum (1000 is the server's technical guard).
 export const AUCTION_MIN_BIDDERS_FLOOR = 4;
 export const AUCTION_MIN_BIDDERS_CAP = 1000;
@@ -240,8 +258,8 @@ export function openRuleText(auction: PublicAuctionSummary, now = Date.now()) {
     if ((auction.registeredCount ?? 0) >= need)
       return `Phiên đã đủ ${need} người đăng ký và mở lúc ${at(Date.parse(auction.startAt))}.`;
     return Date.parse(auction.opensAt) > now
-      ? `Phiên mở lúc ${at(Date.parse(auction.opensAt))} nếu đủ ${need} người đăng ký. Chưa đủ thì phiên chờ thêm tới ${at(Date.parse(auction.startAt))} và mở ngay khi đủ; hết hạn vẫn chưa đủ thì phiên bị hủy và hoàn cọc.`
-      : `Đã qua giờ mở nhưng chưa đủ ${need} người đăng ký. Phiên mở ngay khi đủ người; tới ${at(Date.parse(auction.startAt))} vẫn chưa đủ thì bị hủy và hoàn cọc.`;
+      ? `Phiên mở lúc ${at(Date.parse(auction.opensAt))} nếu đủ ${need} người đăng ký. Chưa đủ thì phiên chờ thêm tới ${at(Date.parse(auction.startAt))} và ${lateOpenText(need)}; hết hạn vẫn chưa đủ thì phiên bị hủy và hoàn cọc.`
+      : `Đã qua giờ mở nhưng chưa đủ ${need} người đăng ký. Phiên ${lateOpenText(need)}; tới ${at(Date.parse(auction.startAt))} vẫn chưa đủ thì bị hủy và hoàn cọc.`;
   }
   return auction.openMode === "WhenReady"
     ? `Phiên tự mở ngay khi đủ ${need} người đăng ký. Hạn đăng ký ${at(Date.parse(auction.startAt))}; quá hạn chưa đủ người thì phiên bị hủy và hoàn cọc.`
@@ -267,7 +285,8 @@ export function closeReasonText(auction: PublicAuctionSummary): string | null {
   }
 }
 // ADR 0081: there is no "open now"; the auction opens at its time once enough registered.
-export type SellerCommand = { kind: "LowerMin" | "Close"; path: string; body: string; key: string };
+// ADR 0085: RaiseMin only while nobody is registered (same endpoint).
+export type SellerCommand = { kind: "LowerMin" | "RaiseMin" | "Close"; path: string; body: string; key: string };
 // ADR 0079: frozen like other commands; a retry after an unknown outcome resends it.
 export function createSellerCommand(
   auctionId: string,

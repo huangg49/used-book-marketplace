@@ -51,6 +51,7 @@ import {
 import {
   notifyAuction,
   notifyAuctionFunds,
+  notifyBelowMinimum,
   type FundsReason,
 } from './auction-notifications.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
@@ -68,8 +69,10 @@ import {
   phaseOf,
   reschedule,
   latestStartAt,
+  fullWithdrawUntil,
   lifecycleReschedule,
   reachedFields,
+  unreachedFields,
   registrationExpired,
   requireWaiting,
   holdFields,
@@ -997,8 +1000,10 @@ export class AuctionBiddingService {
     return a;
   };
 
-  // ADR 0079: the seller only lowers the minimum (never below 4), while waiting
+  // ADR 0079: the seller lowers the minimum (never below 4), while waiting
   // and before it was reached; reaching it applies the gate at once.
+  // ADR 0085 (L5): raising it is allowed only while nobody is registered, so
+  // no registrant's terms change after they joined.
   setMinBidders(
     context: CommandContext,
     id: string,
@@ -1019,10 +1024,15 @@ export class AuctionBiddingService {
           throw invalidState(
             'Phiên đã đủ người đăng ký nên số người tối thiểu được giữ nguyên.',
           );
-        if (body.minBidders >= a.minBidders)
+        if (body.minBidders === a.minBidders)
           invalidField(
             'minBidders',
-            `Chỉ giảm được số người tối thiểu (hiện là ${a.minBidders}).`,
+            `Số người tối thiểu đang là ${a.minBidders}.`,
+          );
+        if (body.minBidders > a.minBidders && a.registeredCount > 0)
+          invalidField(
+            'minBidders',
+            `Đã có người đăng ký nên chỉ giảm được số người tối thiểu (hiện là ${a.minBidders}).`,
           );
         const reached = a.registeredCount >= body.minBidders;
         const lowered = { ...a, minBidders: body.minBidders };
@@ -1777,6 +1787,9 @@ export class AuctionBiddingService {
   }
   // ADR 0077: refund before bidding opens; afterwards the deposit stays
   // until the close, so the count that opened bidding cannot fall.
+  // ADR 0085 (N1): a full ScheduledGrace auction still refunds until 72 h
+  // before its open time; below the minimum it then waits for registrants
+  // again (deadline opensAt + 24 h) and everyone involved is told.
   withdrawRegistration(
     context: CommandContext,
     id: string,
@@ -1813,15 +1826,20 @@ export class AuctionBiddingService {
               'InvalidState',
               'Bạn không còn đăng ký ở phiên này.',
             );
-          if (
-            a.registeredCount >= a.minBidders! ||
-            (await tx.c.auction_bidders.findOne({ _id: `${id}:${actor._id}` }))
-          )
+          const full = a.registeredCount >= a.minBidders!;
+          const until = fullWithdrawUntil(a);
+          const bidder = await tx.c.auction_bidders.findOne({
+            _id: `${id}:${actor._id}`,
+          });
+          if (bidder || (full && !(until && now < until)))
             throw new DomainError(
               409,
               'InvalidState',
-              'Phiên đã mở trả giá; tiền cọc được giữ đến khi phiên kết thúc.',
+              !bidder && until && phaseOf(a, now) === 'Scheduled'
+                ? 'Phiên đã đủ người đăng ký và còn dưới 72 giờ tới giờ mở; tiền cọc được giữ đến khi phiên kết thúc.'
+                : 'Phiên đã mở trả giá; tiền cọc được giữ đến khi phiên kết thúc.',
             );
+          const drops = full && a.registeredCount - 1 < a.minBidders!;
           const delta = await this.ledger.setAuctionHold(
             tx,
             a._id,
@@ -1841,7 +1859,10 @@ export class AuctionBiddingService {
           const next = await this.update(
             tx,
             a,
-            { registeredCount: a.registeredCount - 1 },
+            {
+              registeredCount: a.registeredCount - 1,
+              ...(drops ? unreachedFields(a) : {}),
+            },
             now,
           );
           await notifyAuctionFunds(
@@ -1852,6 +1873,13 @@ export class AuctionBiddingService {
             'Withdrawn',
             now,
           );
+          if (drops)
+            await notifyBelowMinimum(
+              tx,
+              next,
+              [a.sellerId, ...(await this.registrantIds(tx, next))],
+              now,
+            );
           return this.change(
             next,
             now,
@@ -2024,6 +2052,8 @@ export class AuctionBiddingService {
       // deadline until the minimum is reached).
       opensAt: a.opensAt?.toISOString() ?? null,
       latestStartAt: a.openMode ? latestStartAt(a).toISOString() : null,
+      // ADR 0085 (N1): a full auction still refunds a withdrawal until then.
+      fullWithdrawUntil: fullWithdrawUntil(a)?.toISOString() ?? null,
       holdExpiresAt: holdExpiry(a),
       // ADR 0076: a running sealed auction shows only the start and count.
       currentPrice: sealedLive ? null : a.currentPrice,

@@ -18,7 +18,7 @@ import { formatVnd, ROUTES } from '../lib/routes'
 import { getWalletSummary } from '../services/wallet'
 import { invalidateMemberWalletViews } from '../lib/wallet-cache'
 import {
-  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation, instantNeedsRival, registrationBlocks, waitingForRegistrants, waitingTime, openRuleText, closeReasonText,
+  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation, instantNeedsRival, registrationBlocks, canWithdrawRegistration, waitingForRegistrants, waitingTime, openRuleText, closeReasonText,
   getMyPointOrder, getPointOrderDeliveryQuote, payPointOrder, placeBid, setAutoBid, withdrawIntake, type DeliveryChoice, type MyIntake,
   type AuctionParticipation, type AuctionState, type AuctionSummary,
 } from '../services/auctions'
@@ -196,7 +196,10 @@ export function AuctionDetailPage() {
     )
   // ADR 0077: registration comes first (also while scheduled); the panel stays
   // until enough members registered, then the format's own panel takes over.
-  else if (authed && (scheduled || open) && !participation.isPending && registrationBlocks(auction, me))
+  // ADR 0085: a registrant of a full auction keeps the panel while it still
+  // refunds a withdrawal (until 72 h before the open time).
+  else if (authed && (scheduled || open) && !participation.isPending
+    && (registrationBlocks(auction, me) || (scheduled && canWithdrawRegistration(auction, me, Date.now()))))
     action = <RegistrationPanel auction={auction} me={me} serverTime={detail.data.serverTime} onChanged={refresh} />
   else if (scheduled)
     action = (
@@ -848,7 +851,7 @@ function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged, 
         <strong><UserRound size={16} aria-hidden="true" />Đây là phiên của bạn</strong>
         <span>
           {waiting
-            ? <>Phiên đang nhận đăng ký và <b>chỉ mở khi đủ người</b>, đúng giờ đã hẹn hoặc ngay khi đủ nếu đã qua giờ đó. Bạn có thể <b>đổi giờ mở</b> trước giờ đó, <b>giảm số người tối thiểu</b> hoặc <b>đóng phiên</b> trước khi phiên mở.</>
+            ? <>Phiên đang nhận đăng ký và <b>chỉ mở khi đủ người</b>, đúng giờ đã hẹn hoặc 10 phút sau khi đủ nếu đã qua giờ đó (không mở trong khung 23:00–07:00). Bạn có thể <b>đổi giờ mở</b> trước giờ đó (khi đã đủ người thì chỉ sớm hơn), <b>đổi số người tối thiểu</b> hoặc <b>đóng phiên</b> trước khi phiên mở.</>
             : auction.minBidders != null && open
             ? <>Phiên đã mở nên bạn <b>không đóng được nữa</b>. Cần hỗ trợ, hãy dùng <b>Báo cáo sự cố cho Admin</b>.</>
             : scheduled
