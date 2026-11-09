@@ -134,17 +134,19 @@ function Row({ item, now, onEdit }: { item: MyAuctionItem; now: number; onEdit: 
       ? `${waiting.label} ${time(waiting.at)}`
       : item.won
         ? "Bạn đã thắng phiên"
-        : item.role === "Seller"
-          ? auction.state === "Active"
-            ? "Phiên của bạn đang mở"
-            : closeReasonText(auction) ?? "Sách bạn bán"
-          : auction.state === "Active"
-            ? isSealed
-              ? "Đã gửi giá kín"
-              : item.leading
-                ? "Bạn đang dẫn giá"
-                : "Bạn chưa dẫn giá"
-            : closeReasonText(auction) ?? "Phiên đã kết thúc";
+        : auction.state === "SecondChanceOffered"
+          ? "Đang mời người trả giá cao thứ hai"
+          : item.role === "Seller"
+            ? auction.state === "Active"
+              ? "Phiên của bạn đang mở"
+              : closeReasonText(auction) ?? "Sách bạn bán"
+            : auction.state === "Active"
+              ? isSealed
+                ? "Đã gửi giá kín"
+                : item.leading
+                  ? "Bạn đang dẫn giá"
+                  : "Bạn chưa dẫn giá"
+              : closeReasonText(auction) ?? "Phiên đã kết thúc";
 
   const isLeadOrWon = item.won || (auction.state === "Active" && item.leading);
 

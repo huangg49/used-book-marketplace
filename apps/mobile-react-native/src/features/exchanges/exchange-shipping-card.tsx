@@ -92,15 +92,16 @@ export function ExchangeShippingCard({
     }
   };
 
-  // Only display for active shipping/delivered/completed exchanges
+  // Only display for active shipping/delivered/completed/disputed exchanges
   if (
     [
       "Proposed",
       "AcceptedAwaitingFunding",
-      "Cancelled",
       "Rejected",
       "Expired",
-    ].includes(exchange.status)
+    ].includes(exchange.status) ||
+    (exchange.status === "Cancelled" &&
+      exchange.cancelReason !== "DisputeResolvedRefund")
   ) {
     return null;
   }
@@ -389,9 +390,18 @@ export function ExchangeShippingCard({
             {myShipment.packagingPhotoUrl || myShipment.packagingVideoUrl ? (
               <View style={styles.packagingEvidenceBadge}>
                 <Icon name="shield" size={12} color={stitchTokens.likeNewGreen} />
-                <AppText style={styles.packagingEvidenceText}>
-                  Đã đính kèm ảnh &amp; video đóng gói niêm phong
-                </AppText>
+                <View style={{ flex: 1 }}>
+                  <AppText style={styles.packagingEvidenceText}>
+                    Đã đính kèm ảnh &amp; video đóng gói niêm phong
+                  </AppText>
+                  {(myShipment.packagingPhotoName || myShipment.packagingVideoName) ? (
+                    <AppText style={{ fontSize: 10, color: stitchTokens.subtleGray }}>
+                      {[myShipment.packagingPhotoName, myShipment.packagingVideoName]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </AppText>
+                  ) : null}
+                </View>
               </View>
             ) : null}
           </View>
@@ -649,9 +659,18 @@ export function ExchangeShippingCard({
             {partnerShipment.packagingPhotoUrl || partnerShipment.packagingVideoUrl ? (
               <View style={styles.packagingEvidenceBadge}>
                 <Icon name="shield" size={12} color={stitchTokens.likeNewGreen} />
-                <AppText style={styles.packagingEvidenceText}>
-                  Đối tác đã đính kèm ảnh &amp; video đóng gói niêm phong
-                </AppText>
+                <View style={{ flex: 1 }}>
+                  <AppText style={styles.packagingEvidenceText}>
+                    Đối tác đã đính kèm ảnh &amp; video đóng gói niêm phong
+                  </AppText>
+                  {(partnerShipment.packagingPhotoName || partnerShipment.packagingVideoName) ? (
+                    <AppText style={{ fontSize: 10, color: stitchTokens.subtleGray }}>
+                      {[partnerShipment.packagingPhotoName, partnerShipment.packagingVideoName]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </AppText>
+                  ) : null}
+                </View>
               </View>
             ) : null}
           </View>

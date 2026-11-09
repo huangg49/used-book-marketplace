@@ -336,7 +336,7 @@ export function SendToAuctionPricing({
           <AppText kind="bold" style={styles.fieldLabel}>Số người đăng ký tối thiểu</AppText>
           <View style={styles.durationPill}>
             <AppText kind="small" style={styles.durationPillText}>
-              {`Cọc: ${startPriceDeposit(startPriceText)}`}
+              {`Cọc: ${deposit !== null ? `${deposit.toLocaleString("vi-VN")}đ` : startPriceDeposit(startPriceText)}`}
             </AppText>
           </View>
         </View>

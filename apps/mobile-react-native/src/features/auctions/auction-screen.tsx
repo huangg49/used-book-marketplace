@@ -1827,7 +1827,9 @@ function RegisterBlock({
               {registered ? "Bạn đã đăng ký phiên này" : "Đăng ký tham gia đấu giá"}
             </AppText>
             <AppText kind="small" color={colors.muted}>
-              {registered ? "Đã giữ tiền cọc hợp lệ trong ví" : "Đặt cọc 10% trước khi vào sàn trả giá"}
+              {registered
+                ? "Đã giữ tiền cọc hợp lệ trong ví"
+                : `Đặt cọc ${auction.startPrice > 0 ? Math.round((deposit / auction.startPrice) * 100) : 10}% trước khi vào sàn trả giá`}
             </AppText>
           </View>
         </View>
@@ -1850,7 +1852,9 @@ function RegisterBlock({
               color: registered ? stitchTokens.likeNewGreen : stitchTokens.wineDark,
             }}
           >
-            {registered ? "ĐÃ ĐĂNG KÝ" : "CỌC 10%"}
+            {registered
+              ? "ĐÃ ĐĂNG KÝ"
+              : `CỌC ${auction.startPrice > 0 ? Math.round((deposit / auction.startPrice) * 100) : 10}%`}
           </AppText>
         </View>
       </View>
