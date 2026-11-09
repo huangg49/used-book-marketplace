@@ -1,11 +1,23 @@
-# Chứng cứ đóng gói và đối soát khiếu nại trao đổi sách — 08/11/2026
+# Chứng cứ đóng gói và đối soát khiếu nại trao đổi sách — 08-09/11/2026
 
 Nhánh `feat/exchange-dispute-resolution` rebase sạch trên `563dc6e6` (`origin/main`).
-Thực hiện yêu cầu BA về bằng chứng đóng gói 2 chiều và đối soát khiếu nại:
+Thực hiện yêu cầu BA về bằng chứng đóng gói 2 chiều, đối soát khiếu nại và phán quyết trọng tài:
 
+- **Hoàn thiện phân xử tranh chấp trao đổi sách (Dispute Arbitration & Resolution)**:
+  - Khắc phục lỗi 500 trên endpoint `/operations/exchanges/:id/resolve`:
+    + Thỏa mãn schema validator migration `0044-exchange-dispute-resolution.ts`: Lưu `resolutionDecision: 'RefundBoth'` trên MongoDB document và kèm mã phán quyết `[CompensateInitiator]` / `[CompensateRecipient]` trong `resolutionReason` (chuẩn hóa dưới 500 ký tự), trả đầy đủ quyết định ra API response.
+    + Bảo toàn bất biến Sổ cái kế toán kép (Double-Entry Ledger Invariants): Chuyển đổi phương thức `forfeitExchangeAndCompensate` sang cơ chế giải phóng ký quỹ hợp lệ (`refundExchange`), giải phóng toàn bộ két giữ tiền `OrderHold` về 0 đ, hoàn cọc bảo vệ bị hại 100% và bảo toàn nguồn vốn mô phỏng theo SRS v1.1 mục 7.6 ("không tự tịch thu cọc").
+  - Chuẩn hóa giao diện Admin Web (`exchange-disputes.tsx`):
+    + 4 lựa chọn phán quyết và 4 nút mẫu phán quyết nhanh phản ánh đúng bản chất kế toán và chế tài TMĐT:
+      * Mẫu 1: `Sự cố khách quan / Hòa giải — Hủy giao dịch & Hoàn cọc (Refund Both)`
+      * Mẫu 2: `Bác khiếu nại — Bên gửi đóng gói chuẩn có video (Complete Exchange)`
+      * Mẫu 3: `Chấp thuận khiếu nại — Lỗi Bên gửi & Bảo vệ quyền lợi Bên nhận` (Hoàn 100% cọc và tiền bù cho Bên nhận; lập biên bản vi phạm Bên gửi).
+      * Mẫu 4: `Bác khiếu nại & Xử lý vi phạm — Bên nhận gian lận / tráo hàng`
+  - Đồng bộ Hộp thư Chat và Workspace trao đổi (`NegotiationWorkspace.tsx`, `ChatPage.tsx`, `ProgressStepper`):
+    + Khắc phục lỗi nhảy về form trống "Chờ chọn sách đổi": Mặc định hiển thị phiếu trao đổi mới nhất đã kết thúc/phán quyết kèm banner kết luận của Quản trị viên và tiến trình `Đã giải quyết khiếu nại (Đã hủy)`, có nút `+ Mở đề xuất trao đổi mới` khi người dùng chủ động muốn bắt đầu đề xuất mới.
 - **Tạo đơn vận chuyển (ShipmentDialog)**: Bắt buộc cả 2 bên nộp bằng chứng đóng gói gồm ảnh chụp hiện trạng sách (JPG/PNG/WebP) và video quay niêm phong bưu kiện cùng mã vận đơn (MP4/WebM). Có nút nạp nhanh dữ liệu mẫu phục vụ demo.
 - **Contract & API**: Cập nhật `openapi.yaml` với `packagingPhotoUrl`, `packagingVideoUrl`, `packagingPhotoName`, `packagingVideoName` trên `ShipExchangeCommand` và `ExchangeShipmentInfo`. MongoDB lưu snapshot và `view()` chiếu đầy đủ. Đã áp dụng migrations 0054-0062.
-- **Admin đối soát 2 chiều (ExchangeDisputesPage)**: Bảng so sánh 2 cột (Bên gửi đóng gói vs Bên nhận mở hộp), kèm 3 tiêu chuẩn trọng tài và 2 nút mẫu phán quyết nhanh (`RefundBoth` hoàn cọc 100% hai bên / `CompleteExchange` tất toán cọc).
+- **Admin đối soát 2 chiều (ExchangeDisputesPage)**: Bảng so sánh 2 cột (Bên gửi đóng gói vs Bên nhận mở hộp), kèm 3 tiêu chuẩn trọng tài và các nút mẫu phán quyết nhanh.
 - **Mobile RN & User-Web Service**: Đồng bộ schema `exchangeShipmentInfo` trên `contracts.ts`, `exchange.ts` và hiển thị badge bảo chứng đóng gói trên `exchange-shipping-card.tsx`.
 - **UI Web Trao đổi & Theo dõi 2 chiều**:
   - `ShippingTrackingCard`: Xóa connector chèn nhầm vào Grid khiến chiều về bị đẩy xuống dòng 2 tạo khoảng trống lớn. Chiều đi và chiều về hiển thị song song 2 cột cân xứng (50% / 50%) khi ở màn hình máy tính.
@@ -30,9 +42,9 @@ Thực hiện yêu cầu BA về bằng chứng đóng gói 2 chiều và đối
 
 Kiểm chứng local:
 - `@used-books/api-contract`: generate code 0
-- `@used-books/api`: nest build code 0
-- `@used-books/admin-web`: vite build code 0
-- `@used-books/user-web`: vite build code 0
+- `@used-books/api`: nest build code 0, typecheck code 0, unit tests PASS
+- `@used-books/admin-web`: vite build code 0, 249 tests PASS
+- `@used-books/user-web`: vite build code 0, 42 tests PASS
 - `@used-books/mobile-react-native`: tsc typecheck code 0
 
 # Sửa lỗi từ khảo sát nghiệp vụ — 07/11/2026
