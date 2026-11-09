@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LayoutAnimation, Platform, Pressable, StyleSheet, Switch, UIManager, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { AppTextInput as TextInput, Icon, formatVnd, stitchTokens } from "../../../core/ui";
-import { AUCTION_FORMATS, auctionDepositFor, MIN_BIDDER_OPTIONS, AUCTION_MIN_BIDDERS_CAP, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_STEP_MAX, AUCTION_STEPS, BUY_NOW_MODES, type AuctionFormat, type AuctionStep, type BuyNowMode } from "../auctions-model";
+import { AUCTION_FORMATS, auctionDepositFor, auctionDepositMaxFor, depositChoices, MIN_BIDDER_OPTIONS, AUCTION_MIN_BIDDERS_CAP, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_STEP_MAX, AUCTION_STEPS, BUY_NOW_MODES, type AuctionFormat, type AuctionStep, type BuyNowMode } from "../auctions-model";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -35,6 +35,10 @@ export interface SendToAuctionPricingProps {
   readonly dutchError?: string;
   readonly minBidders: number;
   readonly onChangeMinBidders: (n: number) => void;
+  // ADR 0087: null = the 10% default.
+  readonly deposit?: number | null;
+  readonly onChangeDeposit?: (n: number | null) => void;
+  readonly depositError?: string;
   readonly disabled?: boolean;
   readonly defaultExpanded?: boolean;
 }
@@ -66,6 +70,9 @@ export function SendToAuctionPricing({
   dutchError,
   minBidders,
   onChangeMinBidders,
+  deposit = null,
+  onChangeDeposit,
+  depositError,
   disabled = false,
   defaultExpanded = true,
 }: SendToAuctionPricingProps) {
@@ -253,7 +260,7 @@ export function SendToAuctionPricing({
       <View style={[styles.fieldGroup, { marginTop: 10 }]}>
         <AppText kind="bold" style={styles.fieldLabel}>Kiểu đấu giá</AppText>
         <View style={styles.stepGrid} accessibilityRole="radiogroup">
-          {AUCTION_FORMATS.map((m) => {
+          {AUCTION_FORMATS.filter((m) => !m.retired || m.value === auctionType).map((m) => {
             const isSelected = auctionType === m.value;
             return (
               <Pressable
@@ -337,9 +344,40 @@ export function SendToAuctionPricing({
           </Pressable>
         </View>
         <AppText kind="small" style={styles.infoText}>
-          {`Người mua đặt cọc ${startPriceDeposit(startPriceText)} trước khi trả giá. Phiên mở khi đủ ${minBidders} người (ít nhất ${AUCTION_MIN_BIDDERS_FLOOR}); không đủ trong 24 giờ, hoặc tới giờ mở bạn hẹn (tối đa 72 giờ), thì phiên bị hủy và hoàn cọc. Phiên chỉ bán khi có ít nhất hai người trả giá.`}
+          {`Người mua đặt cọc ${deposit !== null ? `${deposit.toLocaleString("vi-VN")}đ` : startPriceDeposit(startPriceText)} trước khi trả giá. Phiên mở khi đủ ${minBidders} người (ít nhất ${AUCTION_MIN_BIDDERS_FLOOR}); không đủ trong 24 giờ, hoặc tới giờ mở bạn hẹn (tối đa 72 giờ), thì phiên bị hủy và hoàn cọc. Phiên chỉ bán khi có ít nhất hai người trả giá.`}
         </AppText>
       </View>
+
+      {/* ADR 0087: the seller may raise the registration deposit. */}
+      {parsedStart >= 10_000 && onChangeDeposit && (
+        <View style={[styles.fieldGroup, { marginTop: 10 }]}>
+          <AppText kind="bold" style={styles.fieldLabel}>Tiền cọc đăng ký</AppText>
+          <View style={styles.stepGrid} accessibilityRole="radiogroup">
+            {depositChoices(parsedStart).map((c) => {
+              const current = deposit ?? auctionDepositFor(parsedStart);
+              const isSelected = current === c.amount;
+              return (
+                <Pressable
+                  key={c.amount}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: isSelected, disabled }}
+                  accessibilityLabel={`Tiền cọc ${c.amount.toLocaleString("vi-VN")} đồng, ${c.label}`}
+                  disabled={disabled}
+                  onPress={() => onChangeDeposit(c.amount === auctionDepositFor(parsedStart) ? null : c.amount)}
+                  style={[styles.stepButton, isSelected && styles.stepButtonActive, disabled && { opacity: 0.6 }]}
+                >
+                  <AppText kind="bold" style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}>{`${c.amount.toLocaleString("vi-VN")}đ`}</AppText>
+                  <AppText kind="small" style={[styles.stepButtonText, isSelected && styles.stepButtonTextActive]}>{c.label}</AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+          <AppText kind="small" style={depositError ? { color: stitchTokens.flashRed } : styles.infoText}>
+            {depositError ??
+              `Mặc định ${auctionDepositFor(parsedStart).toLocaleString("vi-VN")}đ (10% giá khởi điểm), tăng được tới ${auctionDepositMaxFor(parsedStart).toLocaleString("vi-VN")}đ (một nửa giá khởi điểm). Cọc cao có thể làm ít người đăng ký hơn. Người không thắng được hoàn cọc; người thắng không thanh toán thì mất cọc, và nếu sách không bán được bạn nhận một nửa số đó.`}
+          </AppText>
+        </View>
+      )}
 
       {/* 3. Buy Now Option (Mua ngay) */}
       {auctionType === "English" && (

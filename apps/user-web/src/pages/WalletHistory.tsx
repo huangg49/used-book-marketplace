@@ -57,14 +57,14 @@ function getTransactionVisuals(type: WalletHistoryType, _amount: number) {
       amountClass: styles.amountInflow,
     };
   }
-  if (type === "OrderSettlement") {
+  if (type === "OrderSettlement" || type === "AuctionDepositSellerShare") {
     return {
       Icon: Coins,
       circleClass: styles.iconInflow,
       amountClass: styles.amountInflow,
     };
   }
-  if (type === "WithdrawalRefund" || type === "OrderRefund" || type === "ListingFeeRefund") {
+  if (type === "WithdrawalRefund" || type === "OrderRefund" || type === "ListingFeeRefund" || type === "AuctionBidRelease") {
     return {
       Icon: RotateCcw,
       circleClass: styles.iconInflow,
