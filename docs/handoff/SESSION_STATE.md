@@ -117,6 +117,10 @@ Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
   phiên thì không. Người bán chọn tiền cọc khi tạo hồ sơ (mặc định 10% tới một nửa giá khởi điểm,
   bội số 1.000đ). Sửa kèm lịch sử ví thiếu loại `AuctionBidHold`/`AuctionBidRelease`. Migration
   `0075-auction-deposit-share`. Thay đổi tiền mô phỏng: cần human review. Chưa push.
+- [ADR0088](../adr/0088-auction-phase-e.md) (09/11, cùng nhánh): nhóm E cuối. M6: phiên đang có
+  người xem và đang trong khung Mua ngay được kiểm thêm mỗi 0,5 giây (lượt đầy đủ vẫn 2 giây). L2:
+  giữ nguyên, báo cáo vẫn tới Admin (cần chủ dự án quyết nếu muốn Staff xem). C1 không làm (đã bỏ).
+  Không migration, không đổi contract.
 
 Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
 auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web

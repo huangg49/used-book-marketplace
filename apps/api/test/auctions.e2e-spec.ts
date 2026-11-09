@@ -3622,6 +3622,49 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       lister.disconnect();
     }
   });
+  it('ADR 0088 (M6): a watched Buy Now window gets changes from another process within about half a second', async () => {
+    // Point A's 200 test slots are taken by other cases.
+    const opened = await openAuction({ pointId: HANDOVER_POINT_B });
+    const id = opened.auctionId;
+    const live = app.get(AuctionLiveService);
+    const { port } = app.getHttpServer().address() as { port: number };
+    const watcher = await new Promise<Socket>((resolve, reject) => {
+      const s = io(`http://127.0.0.1:${port}/auctions`, { transports: ['websocket'], forceNew: true, reconnection: false });
+      s.once('connect', () => resolve(s));
+      s.once('connect_error', reject);
+    });
+    const waitFor = async (check: () => boolean, ms = 8000) => {
+      const until = Date.now() + ms;
+      while (!check()) {
+        if (Date.now() > until) throw new Error('Timed out waiting for push');
+        await new Promise((r) => setTimeout(r, 20));
+      }
+    };
+    try {
+      const updates: Array<{ auction: { currentPrice: number | null; buyNowAt: string | null } }> = [];
+      watcher.on('auction:update', (u: (typeof updates)[number]) => updates.push(u));
+      expect((await watcher.emitWithAck('auction:watch', id)).ok).toBe(true);
+      expect(live.fastPolling).toBe(false);
+      await cmd('post', `/auctions/${id}/buy-now`, { fulfillmentMethod: 'SelfCollect' }, await actor()).expect(200);
+      await waitFor(() => updates.some((u) => u.auction.buyNowAt !== null));
+      await waitFor(() => live.fastPolling);
+      // A counter-bid committed by another instance: no nudge in this process.
+      const nudge = vi.spyOn(live, 'nudge').mockImplementation(() => undefined);
+      try {
+        await bid(id, await actor(), 650_000).expect(200);
+        const at = Date.now();
+        await waitFor(() => updates.some((u) => u.auction.currentPrice === 650_000), 3000);
+        expect(Date.now() - at).toBeLessThan(1200);
+        expect(nudge).toHaveBeenCalled();
+      } finally {
+        nudge.mockRestore();
+      }
+      expect(await watcher.emitWithAck('auction:unwatch', id)).toEqual({ ok: true });
+      expect(live.fastPolling).toBe(false);
+    } finally {
+      watcher.disconnect();
+    }
+  });
   describe('concurrency and auction scope', () => {
     // ---- Concurrency: requests fired together over real HTTP; each auction is
     // serialized by its document lock, so every result must equal some serial order.
