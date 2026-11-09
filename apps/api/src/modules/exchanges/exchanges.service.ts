@@ -2010,8 +2010,8 @@ export class ExchangesService {
           requireActive(actor);
           staff(actor);
 
-          if (!body.decision || !['RefundBoth', 'CompleteExchange'].includes(body.decision)) {
-            invalidField('/decision', 'Quyết định phân xử phải là RefundBoth hoặc CompleteExchange.');
+          if (!body.decision || !['RefundBoth', 'CompleteExchange', 'CompensateInitiator', 'CompensateRecipient'].includes(body.decision)) {
+            invalidField('/decision', 'Quyết định phân xử phải là RefundBoth, CompleteExchange, CompensateInitiator hoặc CompensateRecipient.');
           }
           if (!body.reason || body.reason.trim().length < 5 || body.reason.trim().length > 500) {
             invalidField('/reason', 'Lý do phân xử phải từ 5 đến 500 ký tự.');
@@ -2066,7 +2066,7 @@ export class ExchangesService {
               },
               { returnDocument: 'after' },
             );
-          } else {
+          } else if (body.decision === 'CompleteExchange') {
             // CompleteExchange: Phán quyết công nhận hoàn tất giao dịch
             const updatedForSettlement: ExchangeDoc = {
               ...exchange,
@@ -2116,19 +2116,63 @@ export class ExchangesService {
               },
               { returnDocument: 'after' },
             );
+          } else {
+            // CompensateInitiator hoặc CompensateRecipient: Phạt cọc bên vi phạm & bồi thường cho bên bị hại
+            const compensatedParty = body.decision === 'CompensateInitiator' ? 'Initiator' : 'Recipient';
+            await this.ledger.forfeitExchangeAndCompensate(tx, exchange, compensatedParty, now);
+
+            // Giải phóng khóa sách
+            const initIds = this.getInitiatorListingIds(exchange);
+            const allIds = [...initIds, exchange.recipientListingId];
+            const lockedMap = await this.lockAllListingsOrdered(tx, allIds);
+            for (const listingId of allIds) {
+              const listing = lockedMap.get(listingId);
+              if (listing) {
+                await this.safeReleaseListing(tx, exchange._id, listing);
+              }
+            }
+
+            // Cập nhật trạng thái Cancelled do phán quyết xử phạt bồi thường
+            next = await tx.c.exchanges.findOneAndUpdate(
+              { _id: exchange._id, revision: exchange.revision, status: 'ResolutionPending' },
+              {
+                $set: {
+                  status: 'Cancelled',
+                  cancelReason: 'DisputeResolvedRefund',
+                  cancelledBy: 'Staff',
+                  cancelledAt: now,
+                  resolutionDecision: body.decision,
+                  resolutionReason: trimmedReason,
+                  resolvedBy: actor._id,
+                  resolvedAt: now,
+                  updatedAt: now,
+                },
+                $inc: { revision: 1 },
+              },
+              { returnDocument: 'after' },
+            );
           }
 
           if (!next) throw conflict();
+
+          const decisionText =
+            body.decision === 'RefundBoth'
+              ? 'Hủy giao dịch & Hoàn tiền cọc cho 2 bên'
+              : body.decision === 'CompleteExchange'
+              ? 'Công nhận hoàn tất trao đổi & Tất toán'
+              : body.decision === 'CompensateInitiator'
+              ? 'Phạt cọc Bên B (Đối tác) & Bồi thường cho Bên A (Khởi tạo)'
+              : 'Phạt cọc Bên A (Khởi tạo) & Bồi thường cho Bên B (Đối tác)';
 
           // Gửi thông báo đến cả hai bên tham gia giao dịch
           await notifyExchange(
             tx,
             next,
-            body.decision === 'RefundBoth' ? 'ExchangeCancelled' : 'ExchangeCompleted',
+            body.decision === 'CompleteExchange' ? 'ExchangeCompleted' : 'ExchangeCancelled',
             [next.initiatorId, next.recipientId],
             now,
             {
-              reason: `Phán quyết từ quản trị viên: ${trimmedReason}`,
+              reason: `Phán quyết từ quản trị viên: ${decisionText}. Căn cứ: ${trimmedReason}`,
             },
           );
 
@@ -2137,11 +2181,7 @@ export class ExchangesService {
             _id: randomUUID(),
             exchangeId: exchange._id,
             senderId: actor._id,
-            body: `[Phán quyết của Quản trị viên]\nQuyết định: ${
-              body.decision === 'RefundBoth'
-                ? 'Hủy giao dịch & Hoàn tiền cho 2 bên'
-                : 'Công nhận hoàn tất trao đổi & Tất toán'
-            }\nLý do: ${trimmedReason}`,
+            body: `[Phán quyết của Quản trị viên]\nQuyết định: ${decisionText}\nCăn cứ đối soát: ${trimmedReason}`,
             sentAt: now,
           });
 

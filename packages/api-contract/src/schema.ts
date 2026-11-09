@@ -7807,7 +7807,7 @@ export interface components {
         ResolveExchangeDisputeCommand: {
             expectedVersion: number;
             /** @enum {string} */
-            decision: "RefundBoth" | "CompleteExchange";
+            decision: "RefundBoth" | "CompleteExchange" | "CompensateInitiator" | "CompensateRecipient";
             reason: string;
         };
         ExchangeReviewsResponse: components["schemas"]["TransactionReviewsResponse"];

@@ -337,21 +337,35 @@ function DisputeSummary({ item }: { item: ExchangeDisputeItem }) {
   );
 }
 
-type DisputeDecision = "RefundBoth" | "CompleteExchange";
+type DisputeDecision =
+  | "RefundBoth"
+  | "CompleteExchange"
+  | "CompensateInitiator"
+  | "CompensateRecipient";
 
 const decisionDetails: Record<
   DisputeDecision,
   { label: string; effect: string }
 > = {
   RefundBoth: {
-    label: "Hủy giao dịch & Hoàn tiền cọc cả 2 bên (Refund Both)",
+    label: "Hòa giải / Sự cố khách quan — Hủy giao dịch & Hoàn cọc cả 2 bên (Refund Both)",
     effect:
-      "Hủy giao dịch do sự cố giao nhận / hư hỏng sách. Sổ cái Ledger hoàn 100% tiền cọc và tiền bù cho cả hai bên; sách mở khóa để nhận lại.",
+      "Hủy giao dịch do sự cố giao nhận / hư hỏng khách quan. Sổ cái Ledger hoàn 100% tiền cọc và tiền bù cho cả hai bên; sách mở khóa để nhận lại.",
   },
   CompleteExchange: {
     label: "Bác khiếu nại & Hoàn tất trao đổi (Complete Exchange)",
     effect:
       "Chứng cứ cho thấy bên gửi đóng gói đúng chuẩn, khiếu nại không đủ căn cứ. Công nhận giao dịch hoàn tất, Ledger tất toán cọc và chuyển tiền bù.",
+  },
+  CompensateInitiator: {
+    label: "Phạt cọc Bên B & Bồi thường cho Bên A (Compensate Initiator)",
+    effect:
+      "Xác định vi phạm thuộc về Bên B (Đối tác). Sổ cái Ledger tịch thu 100% tiền cọc của Bên B chuyển sang ví Bên A để bồi thường; hoàn cọc cho Bên A.",
+  },
+  CompensateRecipient: {
+    label: "Phạt cọc Bên A & Bồi thường cho Bên B (Compensate Recipient)",
+    effect:
+      "Xác định vi phạm thuộc về Bên A (Khởi tạo). Sổ cái Ledger tịch thu 100% tiền cọc của Bên A chuyển sang ví Bên B để bồi thường; hoàn cọc cho Bên B.",
   },
 };
 
@@ -394,6 +408,50 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
     : isRecipientDisputing
     ? "Bên B (Người nhận & Báo cáo khiếu nại)"
     : "Bên khiếu nại";
+
+  const faultSenderDecision: DisputeDecision = isInitiatorDisputing
+    ? "CompensateInitiator"
+    : "CompensateRecipient";
+
+  const faultReceiverDecision: DisputeDecision = isInitiatorDisputing
+    ? "CompensateRecipient"
+    : "CompensateInitiator";
+
+  const decisionOptions: {
+    value: DisputeDecision;
+    badge: string;
+    label: string;
+    effect: string;
+  }[] = [
+    {
+      value: "RefundBoth",
+      badge: "Hòa giải",
+      label: "Hòa giải / Sự cố khách quan — Hủy giao dịch & Hoàn cọc cả 2 bên (Refund Both)",
+      effect:
+        "Sự cố ngoài ý muốn (vận chuyển / thời tiết / 2 bên đồng thuận). Sổ cái Ledger hoàn 100% tiền cọc và tiền bù cho cả hai bên; sách mở khóa để nhận lại.",
+    },
+    {
+      value: "CompleteExchange",
+      badge: "Bác khiếu nại",
+      label: "Bác khiếu nại & Hoàn tất trao đổi (Complete Exchange)",
+      effect:
+        "Chứng cứ cho thấy bên gửi đóng gói đúng chuẩn, khiếu nại không đủ căn cứ. Công nhận giao dịch hoàn tất, Ledger tất toán cọc và chuyển tiền bù.",
+    },
+    {
+      value: faultSenderDecision,
+      badge: "Phạt bên gửi",
+      label: `Lỗi Bên gửi (${senderRoleTitle}) — Tịch thu cọc đền bù cho Bên nhận`,
+      effect:
+        "Xác định bên gửi vi phạm (sách hư hỏng nặng, sai mô tả hoặc sách giả). Sổ cái Ledger tịch thu 100% tiền cọc của bên gửi chuyển thẳng vào ví bên nhận để bồi thường thiệt hại; hoàn trả cọc cho bên nhận.",
+    },
+    {
+      value: faultReceiverDecision,
+      badge: "Phạt bên nhận",
+      label: `Lỗi Bên nhận (${receiverRoleTitle}) — Tịch thu cọc đền bù cho Bên gửi`,
+      effect:
+        "Xác định bên nhận có hành vi gian lận (tráo hàng, cố tình phá hỏng sách hoặc vu khống vô căn cứ). Sổ cái Ledger tịch thu 100% tiền cọc của bên nhận chuyển thẳng vào ví bên gửi để bồi thường; hoàn trả cọc cho bên gửi.",
+    },
+  ];
 
   // Packaging media (Sender)
   const packagingPhotoSrc =
@@ -791,22 +849,22 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
               disabled={locked}
               aria-invalid={problem === "decision"}
             >
-              <legend>Lựa chọn phán quyết</legend>
-              {(["RefundBoth", "CompleteExchange"] as DisputeDecision[]).map((value, index) => (
-                <label className="check" key={value}>
+              <legend>Lựa chọn phán quyết trọng tài</legend>
+              {decisionOptions.map((opt, index) => (
+                <label className="check" key={opt.value}>
                   <input
                     ref={index === 0 ? firstDecision : undefined}
                     type="radio"
                     name={`decision-${item.id}`}
-                    checked={decision === value}
+                    checked={decision === opt.value}
                     onChange={() => {
-                      setDecision(value);
+                      setDecision(opt.value);
                       setProblem(null);
                     }}
                   />
                   <span>
-                    <strong>{decisionDetails[value].label}</strong>
-                    <small className="muted"> — {decisionDetails[value].effect}</small>
+                    <strong>{opt.label}</strong>
+                    <small className="muted"> — {opt.effect}</small>
                   </span>
                 </label>
               ))}
@@ -841,12 +899,12 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
                 disabled={locked}
                 onClick={() =>
                   handleApplyPreset(
-                    "Đối soát chứng cứ 2 chiều: Đối chiếu video đóng gói của bên gửi và video mở kiện của bên nhận cho thấy sách bị rách nát, hư hỏng trong quá trình vận chuyển. Phán quyết: Hủy giao dịch (Refund Both), hoàn trả 100% tiền cọc và tiền bù cho hai bên theo đúng quy chế.",
+                    "Đối soát chứng cứ 2 chiều: Sự cố hư hỏng khách quan trong quá trình vận chuyển bưu gửi. Hai bên đều đóng gói và mở kiện đúng quy định. Phán quyết: Hủy giao dịch (Refund Both), hoàn trả 100% tiền cọc và tiền bù cho hai bên theo đúng quy chế.",
                     "RefundBoth",
                   )
                 }
               >
-                ⚡ Mẫu 1: Xác nhận hư hỏng — Hủy giao dịch &amp; Hoàn cọc cả 2 bên (Refund Both)
+                ⚡ Mẫu 1: Sự cố khách quan — Hủy giao dịch &amp; Hoàn cọc cả 2 bên (Refund Both)
               </button>
 
               <button
@@ -861,6 +919,34 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
                 }
               >
                 ⚡ Mẫu 2: Bác khiếu nại — Bên gửi đóng gói chuẩn có video (Complete Exchange)
+              </button>
+
+              <button
+                type="button"
+                className={styles.presetBtn}
+                disabled={locked}
+                onClick={() =>
+                  handleApplyPreset(
+                    `Đối soát chứng cứ 2 chiều: Video mở kiện và ảnh chụp chi tiết cho thấy sách bị rách nát, hư hỏng nặng hoặc sai khác hoàn toàn cam kết. Video đóng gói của bên gửi không chứng minh được hiện trạng tốt trước lúc gửi. Phán quyết: Lỗi thuộc về bên gửi (${senderRoleTitle}). Tịch thu toàn bộ tiền cọc bảo chứng của bên gửi chuyển vào ví bên nhận để bồi thường; hoàn cọc cho bên nhận.`,
+                    faultSenderDecision,
+                  )
+                }
+              >
+                ⚡ Mẫu 3: Lỗi Bên gửi — Tịch thu cọc bên gửi &amp; Bồi thường thiệt hại cho bên nhận
+              </button>
+
+              <button
+                type="button"
+                className={styles.presetBtn}
+                disabled={locked}
+                onClick={() =>
+                  handleApplyPreset(
+                    `Đối soát chứng cứ 2 chiều: Hồ sơ đối soát ghi nhận bên gửi đóng gói nguyên vẹn và niêm phong chuẩn. Bên nhận có dấu hiệu tráo đổi sách hoặc cố ý tạo sự cố để khiếu nại trục lợi, không cung cấp được video mở kiện hàng liên tục từ lúc niêm phong. Phán quyết: Lỗi thuộc về bên nhận (${receiverRoleTitle}). Tịch thu toàn bộ tiền cọc của bên nhận chuyển cho bên gửi để bồi thường; hoàn cọc cho bên gửi.`,
+                    faultReceiverDecision,
+                  )
+                }
+              >
+                ⚡ Mẫu 4: Lỗi Bên nhận (Gian lận) — Tịch thu cọc bên nhận &amp; Bồi thường cho bên gửi
               </button>
             </div>
 
@@ -905,7 +991,11 @@ function DisputeResolutionWorkspace({ item, userId, ...context }: WorkspaceProps
           text: `Đã thực thi phán quyết cho giao dịch #${item.id.slice(0, 8)}: ${
             decision === "RefundBoth"
               ? "Hủy giao dịch & Hoàn tiền cọc cả 2 bên thành công."
-              : "Bác khiếu nại & Hoàn tất trao đổi, tất toán cọc thành công."
+              : decision === "CompleteExchange"
+              ? "Bác khiếu nại & Hoàn tất trao đổi, tất toán cọc thành công."
+              : decision === "CompensateInitiator"
+              ? "Phạt tịch thu cọc Bên B & Chuyển tiền bồi thường thiệt hại cho Bên A thành công."
+              : "Phạt tịch thu cọc Bên A & Chuyển tiền bồi thường thiệt hại cho Bên B thành công."
           }`,
           close: true,
         })}

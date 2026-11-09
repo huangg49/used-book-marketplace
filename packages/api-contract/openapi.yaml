@@ -22724,6 +22724,8 @@ components:
           enum:
             - RefundBoth
             - CompleteExchange
+            - CompensateInitiator
+            - CompensateRecipient
         reason:
           type: string
           minLength: 5
