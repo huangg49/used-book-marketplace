@@ -254,6 +254,7 @@ export function PhotoAutofill({
     : [];
   const hasEdits = !!result && !!reviewed &&
     ORDER.some((key) => shown(reviewed, key) !== shown(result.fields, key));
+  const compact = !files.length && !result && !barcode;
   const showPhotoGuide = (!result && !barcode) || stale || (!!barcode && barcodeStale);
   const readComplete = !showPhotoGuide && !reading && !error;
   const showReadCheck = readComplete && !!result && !readNotice;
@@ -313,14 +314,17 @@ export function PhotoAutofill({
   }
 
   return (
-    <section className={styles.panel} aria-labelledby="photo-autofill-title">
+    <section className={styles.panel} data-empty={compact} aria-labelledby="photo-autofill-title">
       <div className={styles.head}>
         <ScanText size={20} aria-hidden="true" />
-        <h3 id="photo-autofill-title">Điền nhanh từ ảnh</h3>
+        <div>
+          <h3 id="photo-autofill-title">Điền nhanh từ ảnh</h3>
+          {compact && <p className={styles.help}>Thêm tối đa 3 ảnh bìa, gáy hoặc trang bản quyền.</p>}
+        </div>
       </div>
       <div className={styles.readDesk} data-read-complete={readComplete}>
         <div className={styles.photoTray}>
-          <p className={styles.trayLabel}>Ảnh để đọc <span>{files.length}/{MAX_PHOTOS}</span></p>
+          {files.length > 0 && <p className={styles.trayLabel}>Ảnh để đọc <span>{files.length}/{MAX_PHOTOS}</span></p>}
           <div className={styles.photos} data-empty={!files.length}>
             {files.map((item, index) => (
               <figure key={item.url} className={styles.thumb}>
@@ -343,6 +347,7 @@ export function PhotoAutofill({
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
+                  aria-describedby="photo-file-format"
                   multiple
                   onChange={choose}
                   disabled={disabled || reading}
@@ -357,50 +362,50 @@ export function PhotoAutofill({
               <ImagePlus size={16} aria-hidden="true" />
               Dùng ảnh đầu làm bìa bản sách
             </button>
-          ) : (
-            <p className={styles.help}>JPEG, PNG hoặc WebP · Tối đa 10 MB mỗi ảnh</p>
-          )}
+          ) : null}
+          <span id="photo-file-format" className="sr-only">JPEG, PNG hoặc WebP, tối đa 10 MB mỗi ảnh.</span>
         </div>
-        <div className={styles.readControls}>
-          {showPhotoGuide && (
-            <p className={styles.guide}>
-              Chụp cận đủ chữ và số trên bìa. Thêm trang nhan đề hoặc trang bản quyền để đọc các mục còn thiếu.
+        {!compact && (
+          <div className={styles.readControls}>
+            <p role="status" className={styles.readStatus} data-read-done={showReadCheck}>
+              {showReadCheck && <Check size={16} aria-hidden="true" />}
+              {reading ? readPhase
+                : stale || (barcode && barcodeStale) ? "Ảnh đã đổi. Đọc lại trước khi dùng kết quả."
+                : readNotice || (result && !error ? "Đã đọc xong ảnh." : "")}
             </p>
-          )}
-          <p role="status" className={styles.readStatus} data-read-done={showReadCheck}>
-            {showReadCheck && <Check size={16} aria-hidden="true" />}
-            {reading ? readPhase
-              : stale || (barcode && barcodeStale) ? "Ảnh đã đổi. Đọc lại trước khi dùng kết quả."
-              : readNotice || (result && !error ? "Đã đọc xong ảnh." : "")}
-          </p>
-          <div className={styles.actions}>
-            <button type="button" className={readComplete ? styles.useAll : styles.read} onClick={() => void read()}
-              disabled={disabled || reading || !files.length} aria-busy={reading}>
-              {reading ? "Đang đọc…" : result || barcode ? "Đọc lại" : "Đọc thông tin"}
-            </button>
-            {files.length > 0 && (canSkipIsbn || barcode || !result || stale) && (
-              <button type="button" className={styles.useAll} disabled={disabled || reading}
-                onClick={() => void read(true)}>
-                Đọc chữ bằng AI
+            <div className={styles.actions}>
+              <button type="button" className={readComplete ? styles.useAll : styles.read} onClick={() => void read()}
+                disabled={disabled || reading || !files.length} aria-busy={reading}>
+                {reading ? "Đang đọc…" : result || barcode ? "Đọc lại" : "Đọc thông tin"}
               </button>
+              {files.length > 0 && (canSkipIsbn || barcode || !result || stale) && (
+                <button type="button" className={styles.useAll} disabled={disabled || reading}
+                  onClick={() => void read(true)}>
+                  Đọc chữ bằng AI
+                </button>
+              )}
+            </div>
+            {showPhotoGuide && files.length > 0 && (
+              <details className={styles.readHelp}>
+                <summary>Chọn cách đọc</summary>
+                <ul>
+                  <li><strong>Đọc thông tin</strong> tra ISBN trước, sau đó đọc chữ nếu chưa có kết quả phù hợp.</li>
+                  <li><strong>Đọc chữ bằng AI</strong> phù hợp khi sách không có mã vạch.</li>
+                </ul>
+                <p className={styles.help}>Chụp cận để thấy rõ chữ. Ảnh đọc không kèm thông tin tài khoản.</p>
+              </details>
             )}
           </div>
-          {!result && !barcode && (
-            <p className={styles.help}>
-              Đọc thông tin tra mã vạch trước. Sách không có mã có thể đọc bằng AI ngay.
-              Ảnh đọc không kèm thông tin tài khoản.
-            </p>
-          )}
-          {error && <p className={styles.error} role="alert">{error}</p>}
-        </div>
+        )}
       </div>
+      {error && <p className={styles.readError} role="alert">{error}</p>}
       {result && reviewed && (
         <section className={styles.result} aria-labelledby="photo-result-title">
           <div className={styles.resultHead}>
             <h4 id="photo-result-title">Thông tin đọc từ ảnh</h4>
             <p>{readFields.length}/{ORDER.length} mục đọc được</p>
           </div>
-          <p className={styles.help}>Sửa ngay tại đây nếu cần. Chọn Dùng để đưa thông tin vào bài đăng.</p>
+          <p className={styles.help}>Kiểm tra rồi chọn Dùng để điền vào bài đăng.</p>
           {readFields.length > 0 && <div className={styles.fields}>{readFields.map((field) => renderField(field))}</div>}
           {missingFields.length > 0 && (
             <details className={styles.more}>
@@ -409,12 +414,12 @@ export function PhotoAutofill({
                 <ChevronDown size={16} aria-hidden="true" />
               </summary>
               <div className={styles.fields}>{missingFields.map((field) => renderField(field, true))}</div>
+              {result.missing.length > 0 && (
+                <ul className={styles.missing}>
+                  {result.missing.map((hint) => <li key={hint}>{hint}</li>)}
+                </ul>
+              )}
             </details>
-          )}
-          {result.missing.length > 0 && (
-            <ul className={styles.missing}>
-              {result.missing.map((hint) => <li key={hint}>{hint}</li>)}
-            </ul>
           )}
           {(readFields.length > 1 || hasEdits) && (
             <button type="button" className={styles.read}
@@ -424,17 +429,16 @@ export function PhotoAutofill({
             </button>
           )}
           <p className={styles.readStatus} role="status">
-            {used.length > 0 && !stale ? "Đã điền thông tin được chọn vào phần Tự nhập thông tin bên dưới." : ""}
+            {used.length > 0 && !stale ? "Đã điền vào phần Tự nhập thông tin." : ""}
           </p>
         </section>
       )}
       {barcode ? (
         <div className={styles.recovery}>
           <h4>Đối chiếu từ mã vạch ISBN</h4>
-          <p className={styles.help}>Đối chiếu cuốn sách với thông tin danh mục trước khi chọn.</p>
           {barcode.status === "Ambiguous" && (
             <>
-              <p className={styles.help}>Có nhiều ISBN trên ảnh. Chọn mã thuộc cuốn sách đang đăng.</p>
+              <p className={styles.help}>Chọn ISBN của cuốn sách bạn đăng.</p>
               <div className={styles.actions}>
                 {barcode.isbns.map((isbn) => (
                   <button className={styles.useAll} type="button" key={isbn}

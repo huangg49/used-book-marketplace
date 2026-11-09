@@ -7,6 +7,19 @@ related_targets: ["apps/user-web/src/pages/SellBookPage.module.css", "apps/user-
 
 # Đăng sách —11/10/2026
 
+## Phân cấp thông tin ở bước 1 — 10/11/2026
+
+Member web giữ nền giấy, màu wine và năm bước. Bước 1 đặt lựa chọn sách lẻ/bộ
+sách trong một hàng gọn. Khi chưa có ảnh, Điền nhanh từ ảnh chỉ hiện mô tả ngắn và
+nút Chọn ảnh. Khi có ảnh mới hiện hai lệnh đọc, tiến độ và phần Chọn cách đọc có
+thể mở. Gợi ý chụp bổ sung nằm cùng phần mục chưa đọc được.
+
+Tên sách và tác giả có cùng kiểu ô nhập, xếp cạnh nhau trên màn rộng. Danh mục
+và ngôn ngữ nằm trước phần ấn bản tùy chọn. Giới hạn đăng bài mở riêng gần chân
+form. Lỗi ở bước này hiện cạnh ô, với viền lỗi và mô tả liên kết. Khi Tiếp tục
+thất bại, focus tới chỗ sửa đầu tiên, kể cả khi cần mở lại mục ấn bản. Ở nhánh
+tìm sách, người dùng có thể chọn kết quả hoặc chủ động chuyển sang nhập tay.
+
 ## Điền nhanh từ ảnh ở bước 1 — 09/11/2026
 
 Cụm giấy màu kem đặt ảnh đọc, số ảnh, hai cách đọc và tiến độ trên cùng một mặt.
