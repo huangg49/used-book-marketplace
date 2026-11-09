@@ -360,10 +360,27 @@ function ChatRoom({
             {other.displayName}
           </span>
         )}
-        {(room.orderId || (isExchange && (historyExchange || room.terms?.activeExchangeId))) ? <span className={styles.roomSupport}>
-          <SupportLink type={room.orderId ? "DirectOrder" : "Exchange"}
-            id={room.orderId || historyExchange || room.terms!.activeExchangeId!} />
-        </span> : null}
+        {Boolean(
+          room.orderId ||
+            (isExchange &&
+              (historyExchange ||
+                room.terms?.activeExchangeId ||
+                room.terms?.exchangeIds?.length)),
+        ) ? (
+          <span className={styles.roomSupport}>
+            <SupportLink
+              type={room.orderId ? "DirectOrder" : "Exchange"}
+              id={
+                room.orderId ||
+                (historyExchange && historyExchange !== "new"
+                  ? historyExchange
+                  : room.terms?.activeExchangeId ??
+                    room.terms?.exchangeIds?.[room.terms.exchangeIds.length - 1] ??
+                    "")
+              }
+            />
+          </span>
+        ) : null}
       </header>
       <nav
         className={`${sheet.mobileTabs} ${sheet.bookTabs}`}

@@ -411,14 +411,19 @@ function ExchangeDetailContent({
               closedBy={detail.closedBy}
               partnerUsername={detail.partner.username}
               hasReceived={Boolean(detail.viewerShipping.receivedAt)}
+              cancelReason={detail.cancelReason}
             />
           </div>
           {actionSection}
           <ReviewCard detail={detail} />
           {detail.status === "COMPLETED" && <SettlementCard detail={detail} />}
-          {!["PENDING", "FUNDING", "CANCELLED", "REJECTED", "EXPIRED"].includes(
+          {(!["PENDING", "FUNDING", "REJECTED", "EXPIRED"].includes(
             detail.status,
-          ) && (
+          ) &&
+            !(
+              detail.status === "CANCELLED" &&
+              detail.cancelReason !== "DisputeResolvedRefund"
+            )) && (
             <TransactionDisclosure
               title="Theo dõi giao nhận hai chiều"
               open={[
@@ -469,6 +474,7 @@ function ExchangeDetailContent({
           closedBy={detail.closedBy}
           partnerUsername={detail.partner.username}
           hasReceived={Boolean(detail.viewerShipping.receivedAt)}
+          cancelReason={detail.cancelReason}
         />
       </div>
 
