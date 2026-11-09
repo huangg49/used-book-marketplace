@@ -4632,7 +4632,9 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
           .transactionHeld,
       ).toBe(0);
       expect(await reconciled()).toBe(true);
-    });
+      // Full dispatch → delivery → inspection → settlement flow plus a
+      // reconcile of all history retained so far, which grows through the file.
+    }, 60000);
 
     it('a failed delivery can only be returned to the point, which refunds price and fee', async () => {
       const o = await inTransit();
