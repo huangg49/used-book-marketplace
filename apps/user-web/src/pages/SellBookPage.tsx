@@ -1,4 +1,4 @@
-import { clearAiPriceAttribution, type PriceReferenceState, assistError, decisionFor, failLoading, finishLoading, startLoading, suggestionInput, type AssistForm, type AssistState } from "@used-books/session-client";
+import { ApiError, clearAiPriceAttribution, type PriceReferenceState, assistError, decisionFor, failLoading, finishLoading, startLoading, suggestionInput, type AssistForm, type AssistState } from "@used-books/session-client";
 import { PriceAssistPanel } from "../components/PriceAssistPanel";
 import { createListingPriceRequest, type PricePhase } from "../services/listing-price-assist";
 import type { CatalogInput } from "../services/listing-submission";
@@ -793,8 +793,10 @@ export function SellBookPage() {
       setStep(6);
     } catch (error) {
       const refused = isListingRefusal(error);
+      const quotaReached = error instanceof ApiError && error.code === "ListingLimitReached";
       if (submission.current) {
-        setCanReviseSubmission(refused && !submissionUnknown.current);
+        // After freeing a slot, retry the same saved draft and submit command.
+        setCanReviseSubmission(refused && !quotaReached && !submissionUnknown.current);
         if (!refused) submissionUnknown.current = true;
       }
       setSubmitError(
