@@ -255,6 +255,8 @@ export function PhotoAutofill({
   const hasEdits = !!result && !!reviewed &&
     ORDER.some((key) => shown(reviewed, key) !== shown(result.fields, key));
   const showPhotoGuide = (!result && !barcode) || stale || (!!barcode && barcodeStale);
+  const readComplete = !showPhotoGuide && !reading && !error;
+  const showReadCheck = readComplete && !!result && !readNotice;
 
   function renderField(field: AutofillField, missing = false) {
     if (!result || !reviewed) return null;
@@ -316,7 +318,7 @@ export function PhotoAutofill({
         <ScanText size={20} aria-hidden="true" />
         <h3 id="photo-autofill-title">Điền nhanh từ ảnh</h3>
       </div>
-      <div className={styles.readDesk}>
+      <div className={styles.readDesk} data-read-complete={readComplete}>
         <div className={styles.photoTray}>
           <p className={styles.trayLabel}>Ảnh để đọc <span>{files.length}/{MAX_PHOTOS}</span></p>
           <div className={styles.photos} data-empty={!files.length}>
@@ -365,8 +367,14 @@ export function PhotoAutofill({
               Chụp cận đủ chữ và số trên bìa. Thêm trang nhan đề hoặc trang bản quyền để đọc các mục còn thiếu.
             </p>
           )}
+          <p role="status" className={styles.readStatus} data-read-done={showReadCheck}>
+            {showReadCheck && <Check size={16} aria-hidden="true" />}
+            {reading ? readPhase
+              : stale || (barcode && barcodeStale) ? "Ảnh đã đổi. Đọc lại trước khi dùng kết quả."
+              : readNotice || (result && !error ? "Đã đọc xong ảnh." : "")}
+          </p>
           <div className={styles.actions}>
-            <button type="button" className={styles.read} onClick={() => void read()}
+            <button type="button" className={readComplete ? styles.useAll : styles.read} onClick={() => void read()}
               disabled={disabled || reading || !files.length} aria-busy={reading}>
               {reading ? "Đang đọc…" : result || barcode ? "Đọc lại" : "Đọc thông tin"}
             </button>
@@ -383,11 +391,6 @@ export function PhotoAutofill({
               Ảnh đọc không kèm thông tin tài khoản.
             </p>
           )}
-          <p role="status" className={styles.readStatus}>
-            {reading ? readPhase
-              : stale || (barcode && barcodeStale) ? "Ảnh đã đổi. Đọc lại trước khi dùng kết quả."
-              : readNotice || (result && !error ? "Đã đọc xong ảnh." : "")}
-          </p>
           {error && <p className={styles.error} role="alert">{error}</p>}
         </div>
       </div>
