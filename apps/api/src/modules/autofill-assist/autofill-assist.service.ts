@@ -39,7 +39,7 @@ import {
 } from './autofill-check.js';
 import { AUTOFILL_IMAGE_PROFILE, AutofillImages } from './autofill-images.js';
 import { AutofillModel } from './autofill-model.js';
-import { AUTOFILL_SYSTEM, AUTOFILL_USER } from './autofill-prompt.js';
+import { AUTOFILL_DETAIL_USER, AUTOFILL_SYSTEM, AUTOFILL_USER } from './autofill-prompt.js';
 
 const DAY_MS = 86_400_000;
 const SUGGESTION_TTL_MS = DAY_MS;
@@ -173,7 +173,7 @@ export class AutofillAssistService {
         .update(canonicalJson({
           photos: ordered.map((m) => m.sha256),
           model: this.model.model,
-          instructions: [AUTOFILL_SYSTEM, AUTOFILL_USER],
+          instructions: [AUTOFILL_SYSTEM, AUTOFILL_USER, AUTOFILL_DETAIL_USER],
           imageProfile: AUTOFILL_IMAGE_PROFILE,
         }))
         .digest('hex');
@@ -275,7 +275,8 @@ export class AutofillAssistService {
     const attempt = async (images: string[], useFallback: boolean) => {
       const id = useFallback ? model.fallback! : model.model;
       try {
-        const draft = await timings.measure('model', () => model.read(AUTOFILL_SYSTEM, AUTOFILL_USER, images, useFallback));
+        const userPrompt = images.length > p.keys.length ? AUTOFILL_DETAIL_USER : AUTOFILL_USER;
+        const draft = await timings.measure('model', () => model.read(AUTOFILL_SYSTEM, userPrompt, images, useFallback));
         usage.inputTokens += draft.inputTokens;
         usage.outputTokens += draft.outputTokens;
         cost += costMicroUsd(rateFor(id, null), draft.inputTokens, draft.outputTokens);
@@ -291,7 +292,7 @@ export class AutofillAssistService {
       }
     };
     try {
-      const images = await timings.measure('images', () => Promise.all(p.keys.map((k) => this.images!.dataUrl(k, AUTOFILL_IMAGE_PROFILE))));
+      const images = await timings.measure('images', () => this.images!.readingImages(p.keys, model.supportsDetail));
       let first: CheckedAutofill | null = null;
       try {
         first = await attempt(images, false);
@@ -302,7 +303,7 @@ export class AutofillAssistService {
       // One fallback call when the first model read no title or failed.
       if (model.fallback && !first?.fields.title) {
         try {
-          const second = await attempt(images, true);
+          const second = await attempt(images.slice(0, p.keys.length), true);
           if (second.fields.title || !first) checked = second;
         } catch (e) {
           if (!first) throw e;

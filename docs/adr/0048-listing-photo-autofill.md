@@ -22,8 +22,9 @@ xác nhận từng trường. Không gì được lưu vào bài đăng hay danh
    như gợi ý giá (Draft/Rejected, hoặc Approved và Available), không phải bộ sách.
    Ảnh phải thuộc bài đăng, `Ready`, chưa purge.
 2. Gửi provider **chỉ ảnh sách** (bản derivative đã bỏ EXIF/GPS, thu nhỏ JPEG tối đa 1536 px và ≤ 180 KB mỗi ảnh)
-   và lời dặn cố định. Không gửi id người dùng/bài đăng, email, địa chỉ, ghi chú tình
-   trạng, session hay token.
+   và lời dặn cố định. Với model mặc định, có thể gửi kèm tối đa một ảnh cận
+   sinh từ cùng bộ ảnh trong một lần gọi. Không gửi id người dùng/bài đăng, email,
+   địa chỉ, ghi chú tình trạng, session hay token.
 3. Provider **NVIDIA NIM**, model mặc định `nvidia/nemotron-3.5-super-vl-120b-a12b`
    (model VL v1 dự kiến ban đầu đã hết hạn 26/08/2026). Một model dự phòng tùy chọn chỉ được gọi **một lần** khi lần đầu
    không đọc được tên sách và còn hạn mức; cả hai tính vào ngân sách.
@@ -150,3 +151,21 @@ và cuồng nộ*. Không gợi ý ISBN cho cả bốn cuốn. Hai biến thể 
 
 Các cuốn này dùng để kiểm phát triển và chọn ca trình bày. Tập nghiệm thu ảnh
 thật ở §5 và việc gửi/duyệt bài bằng tài khoản thật vẫn cần bằng chứng riêng.
+
+### Đọc chữ nhỏ tự động — 10/11/2026
+
+Profile `listing-text-v2` giữ ảnh toàn trang và tự dò cụm chữ in nhỏ, gọn,
+cách biệt với phần chữ còn lại. Nếu đạt ngưỡng, lấy tối đa một vùng từ bộ
+ảnh đã chọn, phóng ảnh cận lên cạnh dài tối đa 640 px và gửi cùng lượt đọc
+cho model mặc định. Các cấu hình model khác và lượt gọi dự phòng dùng ảnh
+toàn trang. Mỗi ảnh vẫn chịu giới hạn 180 KB. Khi không có vùng phù hợp
+hoặc không tạo được ảnh cận, đọc bằng bộ ảnh toàn trang. Dấu vân tay cache
+bao gồm profile và lời dặn cho ảnh cận.
+
+Thử phát triển bằng cùng model NVIDIA trên bốn cuốn của chủ dự án. Với bộ
+`1.jpg`, `4.jpg`, `5.jpg` của *Cao Lãnh*, ảnh cận đọc đúng năm in 1963 ở 2/2
+lượt, so với 0/2 lượt toàn trang. Với *Âm thanh và cuồng nộ*, năm 1972 đạt
+2/2 so với 0/2. *Á-Nam thi tuyển* và *9 đêm* dùng đầu vào toàn trang giống
+cấu hình cũ. Một lượt *Cao Lãnh* còn sai khác dấu câu trong tựa. Bốn lượt
+có ảnh cận tăng khoảng 4–9% chi phí ước tính theo token. Đây là mẫu phát
+triển nhỏ, chưa đạt bộ nghiệm thu ở §5.
