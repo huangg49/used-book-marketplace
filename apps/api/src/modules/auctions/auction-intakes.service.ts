@@ -53,7 +53,11 @@ import {
 import { checkAuction, checkIntake } from './auction-invariants.js';
 import { HandoverPointsService } from './handover-points.service.js';
 import { requireUnrestricted } from './member-violations.js';
-import { lifecyclePublish, publishSchedule } from './auction-schedule.js';
+import {
+  lifecyclePublish,
+  publishSchedule,
+  staffLifecycleOpen,
+} from './auction-schedule.js';
 
 // POL-41 counts intakes whose auction has not ended: before opening, or
 // opened and still Active/OnHold. A closed auction (sold, unsold, expired)
@@ -827,12 +831,10 @@ export class AuctionIntakesService {
           tx,
           i,
           now,
-          // ADR 0079: with registration a Staff open waits for registrants.
+          // ADR 0079/0081: with registration a Staff open waits for
+          // registrants from now (opens the moment the minimum is reached).
           this.registration
-            ? lifecyclePublish(
-                { startAt: null, durationSeconds: AUCTION_DURATION_MS / 1000 },
-                now,
-              )
+            ? staffLifecycleOpen(now, AUCTION_DURATION_MS)
             : { startAt: now, plannedEndAt: plus(now, AUCTION_DURATION_MS) },
           'Staff',
         ),
@@ -868,8 +870,8 @@ export class AuctionIntakesService {
             'Chỉ đăng phiên được sách đã kiểm định đạt và chưa lên phiên.',
           );
         await requireUnrestricted(tx, actor._id, now);
-        // ADR 0079: a registration auction waits for registrants in one of two
-        // open modes; it never starts before minBidders registered.
+        // ADR 0081: a registration auction opens at the seller's time and
+        // never before minBidders registered; there is no "open now".
         const schedule = this.registration
           ? lifecyclePublish(body, now)
           : publishSchedule(body, now);
@@ -891,6 +893,7 @@ export class AuctionIntakesService {
       startAt: Date;
       plannedEndAt: Date;
       openMode?: AuctionDoc['openMode'];
+      opensAt?: Date;
     },
     publishedBy: AuctionDoc['publishedBy'],
   ) {
@@ -921,6 +924,7 @@ export class AuctionIntakesService {
       biddingOpenedAt: null,
       closeReason: null,
       openMode: this.registration ? (schedule.openMode ?? null) : null,
+      opensAt: this.registration ? (schedule.opensAt ?? null) : null,
       heldAt: null,
       resumedAt: null,
       buyNowAt: null,

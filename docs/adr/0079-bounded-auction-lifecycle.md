@@ -10,7 +10,9 @@ Không đổi READINESS; không là bằng chứng đóng gate settlement.
 
 - Số người đăng ký tối thiểu: ít nhất **4**, mặc định 4, không có trần nghiệp vụ (1.000 là
   giới hạn kỹ thuật của validator). Hồ sơ gửi sách cũ có 2–3 người được đăng với 4.
-- Khi đăng phiên có đăng ký, người bán chọn một trong hai chế độ (`openMode`):
+- Khi đăng phiên có đăng ký, người bán chọn một trong hai chế độ (`openMode`). Từ
+  [ADR0081](0081-auction-scheduled-open-grace.md) phiên đăng mới luôn hẹn giờ (`ScheduledGrace`),
+  không còn "Mở ngay" và "Mở khi đủ người"; hai chế độ dưới chỉ còn trên phiên cũ:
   - **Mở khi đủ người** (`WhenReady`, `startAt: null` khi đăng): `startAt` = lúc đăng + 24 giờ
     và là hạn đăng ký. Đủ người thì phiên mở ngay lúc đó (`startAt` = lúc đủ, giữ nguyên thời
     lượng đã chọn).

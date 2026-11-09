@@ -129,9 +129,10 @@ Dữ liệu thử đấu giá (chỉ `NODE_ENV=development`, DB đã migrate, sa
 `dev:api` (lệnh build lại `dist/`) rồi chạy `pnpm db:seed-auctions`. Lệnh tạo tài khoản mẫu
 `seller.demo*`, `seller.hold`, `bidder.a`…`bidder.h@latlai.local` (mật khẩu `DEV_SEED_PASSWORD`,
 không đổi tài khoản đã có), nạp ví mô phỏng tới 3.000.000đ cho `member@latlai.local` và các
-bidder, rồi tạo 9 phiên qua API thật: chờ đăng ký, bạn bán (đủ người/thiếu người), đang diễn ra,
-sắp kết thúc, Dutch, đấu giá kín, OnHold chờ Admin, phiên bị báo cáo. Sách/listing ghi như
-fixture với ảnh bìa tạo tự động lưu vào bucket media của máy. Chạy lại bỏ qua phiên đã có;
+bidder, rồi tạo 10 phiên qua API thật: chờ đăng ký, bạn bán (đủ người/thiếu người), đang diễn ra,
+sắp kết thúc, Dutch, đấu giá kín, OnHold chờ Admin, phiên bị báo cáo, phiên đã qua giờ hẹn còn
+thiếu người (ADR0081). Sách/listing ghi như fixture với ảnh bìa tạo tự động lưu vào bucket media
+của máy; phiên cần mở ngay được dời giờ hẹn về lúc đăng (fixture). Chạy lại bỏ qua phiên đã có;
 `-- --refresh-covers` vẽ lại ảnh bìa. Nên sao lưu DB trước khi chạy.
 
 Bằng chứng Exchange thêm0054 và hai collection riêng: khi được duyệt áp dụng, dừng

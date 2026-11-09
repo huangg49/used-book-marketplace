@@ -1120,7 +1120,11 @@ export interface AuctionDoc extends Lockable {
     | 'Reported'
     | null;
   // ADR 0079: null on auctions without the bounded lifecycle (ADR 0077 rows).
-  openMode: 'WhenReady' | 'Scheduled' | null;
+  // ADR 0081: new registration auctions are ScheduledGrace (no "open now").
+  openMode: 'WhenReady' | 'Scheduled' | 'ScheduledGrace' | null;
+  // ADR 0081: the seller's open time; set exactly on ScheduledGrace. Until the
+  // minimum is reached startAt is the deadline opensAt + 24 h.
+  opensAt: Date | null;
   // ADR 0079: when the auction was last put OnHold (48 h ceiling).
   heldAt: Date | null;
   // ADR 0080: when an Admin resumed it from OnHold; an auction resumes once.

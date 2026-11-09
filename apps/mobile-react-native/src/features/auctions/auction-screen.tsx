@@ -35,6 +35,7 @@ import {
   bidOptions,
   createAuctionCommand,
   formatRemaining,
+  waitingTime,
   isOpen,
   isScheduled,
   minimumBidOf,
@@ -338,7 +339,7 @@ function AuctionBody({
               }}
             >
               {scheduled
-                ? `Mở sau ${formatRemaining(Date.parse(auction.startAt) - now)}`
+                ? `${waitingTime(auction, now).label === "Mở lúc" ? "Mở sau" : "Hết hạn đăng ký sau"} ${formatRemaining(Date.parse(waitingTime(auction, now).at) - now)}`
                 : open
                   ? `Còn ${formatRemaining(Date.parse(auction.endAt) - now)}`
                   : `Đã kết thúc`}

@@ -69,6 +69,15 @@ Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
   3773cb59) nên là máy chậm, không do thay đổi này. Support 14/14, API unit auctions/support 64,
   Mongo 61, web 477, admin 250, RN 230, contract/routes PASS. Trình duyệt thật, native NOT RUN.
   Chưa push.
+- [ADR0081](../adr/0081-auction-scheduled-open-grace.md) (09/11): bỏ "Mở ngay" và "Mở khi đủ
+  người" của người bán; phiên có đăng ký bắt buộc hẹn giờ mở (≤ lúc đăng + 72 giờ), chỉ mở khi đủ
+  người: đủ trước giờ hẹn thì mở đúng giờ, thiếu thì chờ thêm 24 giờ và mở ngay khi đủ, hết hạn
+  thì hủy `RegistrationExpired` và hoàn cọc. `openMode = ScheduledGrace` + `opensAt`; migration
+  `0069-auction-scheduled-open`; gỡ `openAuctionNow` (266 operations khớp route). Web/RN cập nhật
+  hộp hẹn giờ, khối người bán, thẻ và trang phiên. Seed thêm S10 (đã qua giờ hẹn, 2/4). Kiểm
+  chứng: unit schedule 19, E2E nhóm đăng ký/vòng đời 33/33 (replica `_test`), Mongo 61, web 477,
+  RN auctions 22, contract/routes PASS, lint không lỗi mới; trang phiên S10 xem qua trình duyệt
+  trong app. Hộp đăng phiên chưa xem trên trình duyệt; full E2E auctions, native NOT RUN. Chưa push.
 
 Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
 auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web

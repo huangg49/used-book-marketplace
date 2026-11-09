@@ -205,7 +205,8 @@ export const registrationBlocks = (
 export const AUCTION_MIN_BIDDERS_FLOOR = 4;
 export const AUCTION_MIN_BIDDERS_CAP = 1000;
 export const MIN_BIDDER_OPTIONS = [4, 5, 6, 8, 10] as const;
-export const AUCTION_READY_WINDOW_MS = 24 * 3_600_000;
+// ADR 0081: past the open time a registration auction waits 24 h more.
+export const AUCTION_OPEN_GRACE_MS = 24 * 3_600_000;
 export const AUCTION_START_CEILING_MS = 72 * 3_600_000;
 export const AUCTION_RESCHEDULE_FREEZE_MS = 30 * 60_000;
 const at = (ms: number) =>
@@ -213,9 +214,32 @@ const at = (ms: number) =>
 /** ADR 0079: a bounded-lifecycle auction still waiting for registrants. */
 export const waitingForRegistrants = (auction: PublicAuctionSummary, now: number) =>
   auction.openMode != null && auction.phase !== "Ended" && isScheduled(auction, now);
-/** ADR 0079: one sentence on when a waiting auction opens or is cancelled. */
-export function openRuleText(auction: PublicAuctionSummary) {
+/** ADR 0081: the open time to show and edit (opensAt, else the stored start). */
+export const openTimeOf = (auction: PublicAuctionSummary) => auction.opensAt ?? auction.startAt;
+/**
+ * ADR 0081: what a waiting auction shows - its open time, or the
+ * registration deadline once that time passed (or on older WhenReady rows).
+ * The end is only known once the minimum is reached.
+ */
+export function waitingTime(auction: PublicAuctionSummary, now: number) {
+  const reached = (auction.registeredCount ?? 0) >= (auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR);
+  if (auction.openMode === "WhenReady" && !reached) return { label: "Hạn đăng ký", at: auction.startAt, endKnown: false };
+  if (auction.openMode === "ScheduledGrace" && auction.opensAt && !reached)
+    return Date.parse(auction.opensAt) > now
+      ? { label: "Mở lúc", at: auction.opensAt, endKnown: false }
+      : { label: "Hạn đăng ký", at: auction.startAt, endKnown: false };
+  return { label: "Mở lúc", at: auction.startAt, endKnown: true };
+}
+/** ADR 0079/0081: one sentence on when a waiting auction opens or is cancelled. */
+export function openRuleText(auction: PublicAuctionSummary, now = Date.now()) {
   const need = auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR;
+  if (auction.openMode === "ScheduledGrace" && auction.opensAt) {
+    if ((auction.registeredCount ?? 0) >= need)
+      return `Phiên đã đủ ${need} người đăng ký và mở lúc ${at(Date.parse(auction.startAt))}.`;
+    return Date.parse(auction.opensAt) > now
+      ? `Phiên mở lúc ${at(Date.parse(auction.opensAt))} nếu đủ ${need} người đăng ký. Chưa đủ thì phiên chờ thêm tới ${at(Date.parse(auction.startAt))} và mở ngay khi đủ; hết hạn vẫn chưa đủ thì phiên bị hủy và hoàn cọc.`
+      : `Đã qua giờ mở nhưng chưa đủ ${need} người đăng ký. Phiên mở ngay khi đủ người; tới ${at(Date.parse(auction.startAt))} vẫn chưa đủ thì bị hủy và hoàn cọc.`;
+  }
   return auction.openMode === "WhenReady"
     ? `Phiên tự mở ngay khi đủ ${need} người đăng ký. Hạn đăng ký ${at(Date.parse(auction.startAt))}; quá hạn chưa đủ người thì phiên bị hủy và hoàn cọc.`
     : `Phiên mở lúc ${at(Date.parse(auction.startAt))} nếu đủ ${need} người đăng ký; không đủ thì phiên bị hủy và hoàn cọc.`;
@@ -226,7 +250,9 @@ export function closeReasonText(auction: PublicAuctionSummary): string | null {
     case "NotEnoughBidders":
       return "Phiên kết thúc mà chưa đủ người trả giá nên không bán. Tiền cọc và khoản giữ đã về lại ví.";
     case "RegistrationExpired":
-      return `Phiên không đủ ${auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người đăng ký trước giờ mở nên đã bị hủy. Tiền cọc đã về lại ví.`;
+      return auction.opensAt
+        ? `Phiên không đủ ${auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người đăng ký trong 24 giờ sau giờ mở nên đã bị hủy. Tiền cọc đã về lại ví.`
+        : `Phiên không đủ ${auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người đăng ký trước giờ mở nên đã bị hủy. Tiền cọc đã về lại ví.`;
     case "SellerClosed":
       return "Người bán đã đóng phiên trước giờ mở. Tiền cọc đã về lại ví.";
     case "HoldExpired":
@@ -237,7 +263,8 @@ export function closeReasonText(auction: PublicAuctionSummary): string | null {
       return null;
   }
 }
-export type SellerCommand = { kind: "OpenNow" | "LowerMin" | "Close"; path: string; body: string; key: string };
+// ADR 0081: there is no "open now"; the auction opens at its time once enough registered.
+export type SellerCommand = { kind: "LowerMin" | "Close"; path: string; body: string; key: string };
 // ADR 0079: frozen like other commands; a retry after an unknown outcome resends it.
 export function createSellerCommand(
   auctionId: string,
@@ -247,7 +274,6 @@ export function createSellerCommand(
   minBidders?: number,
 ): SellerCommand {
   const base = `/auctions/${auctionId}`;
-  if (kind === "OpenNow") return { kind, path: `${base}/open-now`, body: JSON.stringify({ expectedVersion }), key };
   if (kind === "Close") return { kind, path: `${base}/close`, body: JSON.stringify({ expectedVersion }), key };
   return { kind, path: `${base}/min-bidders`, body: JSON.stringify({ expectedVersion, minBidders }), key };
 }
@@ -290,13 +316,14 @@ export function isOpen(auction: PublicAuctionSummary, now: number) {
 }
 // The seller edits the time only before the first bid and any Buy Now.
 export function canReschedule(auction: PublicAuctionSummary, now: number) {
-  // ADR 0079: a registration auction moves its start only while waiting.
+  // ADR 0079/0081: a registration auction moves its open time only while
+  // waiting and before that time (outside its last 30 minutes).
   if (auction.openMode != null)
     return (
       waitingForRegistrants(auction, now) &&
       auction.version != null &&
       (auction.scheduleRevision ?? 0) < AUCTION_MAX_SCHEDULE_EDITS &&
-      Date.parse(auction.startAt) - now > AUCTION_RESCHEDULE_FREEZE_MS
+      Date.parse(openTimeOf(auction)) - now > AUCTION_RESCHEDULE_FREEZE_MS
     );
   if (auction.minBidders != null && (auction.registeredCount ?? 0) > 0) return false;
   return (
@@ -607,15 +634,11 @@ export function durationLabel(seconds: number) {
  */
 export function startChoices(
   now: number,
-  // ADR 0079: publishing offers "Mở khi đủ người" and starts within 72 h; a
-  // waiting auction moves to a time before its fixed ceiling (no "now").
-  lifecycle?: { ceiling: number; whenReady: boolean },
+  // ADR 0081: a registration auction always opens at a chosen time before
+  // its fixed ceiling (publish + 72 h); there is no "now".
+  lifecycle?: { ceiling: number },
 ) {
-  const choices: { label: string; at: number | null }[] = lifecycle
-    ? lifecycle.whenReady
-      ? [{ label: "Mở khi đủ người", at: null }]
-      : []
-    : [{ label: "Mở ngay", at: null }];
+  const choices: { label: string; at: number | null }[] = lifecycle ? [] : [{ label: "Mở ngay", at: null }];
   const horizon = lifecycle ? lifecycle.ceiling : now + AUCTION_SCHEDULE_HORIZON_MS;
   for (const h of [1, 3, 6]) choices.push({ label: `Sau ${h} giờ`, at: now + h * HOUR_MS });
   for (const days of [1, 2, 3]) {

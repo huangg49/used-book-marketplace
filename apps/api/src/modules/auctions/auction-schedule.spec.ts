@@ -6,9 +6,14 @@ import {
   buyNowOffered,
   commitmentCap,
   reachesBuyNow,
+  lifecyclePublish,
+  lifecycleReschedule,
   phaseOf,
   publishSchedule,
+  reachedFields,
+  registrationExpired,
   reschedule,
+  staffLifecycleOpen,
 } from './auction-schedule.js';
 
 const HOUR = 3_600_000;
@@ -185,5 +190,56 @@ describe('ADR 0074 Buy Now mode', () => {
     expect(
       commitmentCap(auction({ buyNowMode: 'Instant', buyNowPrice: null })),
     ).toBeNull();
+  });
+});
+
+// ADR 0081: the seller always picks the open time; the auction opens there
+// only with enough registrants, waits 24 h more otherwise, then is cancelled.
+describe('scheduled open with a 24 h grace', () => {
+  const opensAt = at(2 * HOUR);
+  const published = (over: Partial<AuctionDoc> = {}) =>
+    ({
+      ...lifecyclePublish({ startAt: opensAt.toISOString(), durationSeconds: 3 * 3600 }, now),
+      endAt: at(2 * HOUR + 27 * HOUR),
+      state: 'Active',
+      publishedAt: now,
+      minBidders: 4,
+      registeredCount: 0,
+      biddingOpenedAt: null,
+      scheduleRevision: 0,
+      ...over,
+    }) as AuctionDoc;
+
+  it('publishing needs a time; the deadline is the open time + 24 h; the length is kept', () => {
+    expect(code(() => lifecyclePublish({ startAt: null, durationSeconds: 3600 }, now))).toBe('VALIDATION_ERROR');
+    expect(code(() => lifecyclePublish({ startAt: at(73 * HOUR).toISOString(), durationSeconds: 3600 }, now))).toBe('VALIDATION_ERROR');
+    const a = published();
+    expect(a).toMatchObject({ openMode: 'ScheduledGrace', opensAt, startAt: at(26 * HOUR), plannedEndAt: at(29 * HOUR) });
+  });
+
+  it('reached before the open time opens there; reached in the grace opens at once; never reached expires at the deadline', () => {
+    const a = published();
+    expect(reachedFields(a, at(HOUR))).toEqual({ startAt: opensAt, endAt: at(5 * HOUR), plannedEndAt: at(5 * HOUR), biddingOpenedAt: opensAt });
+    expect(reachedFields(a, at(10 * HOUR))).toEqual({ startAt: at(10 * HOUR), endAt: at(13 * HOUR), plannedEndAt: at(13 * HOUR), biddingOpenedAt: at(10 * HOUR) });
+    expect(phaseOf(a, at(10 * HOUR))).toBe('Scheduled');
+    expect(registrationExpired(a, at(26 * HOUR - 1))).toBe(false);
+    expect(registrationExpired(a, at(26 * HOUR))).toBe(true);
+    expect(phaseOf(a, at(26 * HOUR))).toBe('Ended');
+  });
+
+  it('a reschedule moves the open time before it passes, never in the last 30 minutes or the grace', () => {
+    const a = published();
+    expect(lifecycleReschedule(a, { startAt: at(5 * HOUR).toISOString(), durationSeconds: 3600 }, now)).toMatchObject({
+      opensAt: at(5 * HOUR),
+      startAt: at(29 * HOUR),
+      plannedEndAt: at(30 * HOUR),
+    });
+    expect(code(() => lifecycleReschedule(a, { startAt: null, durationSeconds: 3600 }, now))).toBe('VALIDATION_ERROR');
+    expect(code(() => lifecycleReschedule(a, { startAt: at(5 * HOUR).toISOString(), durationSeconds: 3600 }, at(2 * HOUR - 60_000)))).toBe('InvalidState');
+    expect(code(() => lifecycleReschedule(a, { startAt: at(5 * HOUR).toISOString(), durationSeconds: 3600 }, at(3 * HOUR)))).toBe('InvalidState');
+  });
+
+  it('a Staff open waits for registrants from now', () => {
+    expect(staffLifecycleOpen(now, 24 * HOUR)).toEqual({ openMode: 'ScheduledGrace', opensAt: now, startAt: at(24 * HOUR), plannedEndAt: at(48 * HOUR) });
   });
 });

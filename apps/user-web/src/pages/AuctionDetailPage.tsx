@@ -18,7 +18,7 @@ import { formatVnd, ROUTES } from '../lib/routes'
 import { getWalletSummary } from '../services/wallet'
 import { invalidateMemberWalletViews } from '../lib/wallet-cache'
 import {
-  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation, instantNeedsRival, registrationBlocks, waitingForRegistrants, closeReasonText,
+  AUCTION_MAX_PRICE, AUCTION_MAX_SCHEDULE_EDITS, AUCTION_PRICE_DIGITS, auctionPhase, bidOptions, buyNow, disableAutoBid, getAuction, getMyAddresses, getMyAuctionIntakes, getMyParticipation, instantNeedsRival, registrationBlocks, waitingForRegistrants, waitingTime, openRuleText, closeReasonText,
   getMyPointOrder, getPointOrderDeliveryQuote, payPointOrder, placeBid, setAutoBid, withdrawIntake, type DeliveryChoice, type MyIntake,
   type AuctionParticipation, type AuctionState, type AuctionSummary,
 } from '../services/auctions'
@@ -126,6 +126,10 @@ export function AuctionDetailPage() {
   // ADR 0047: before startAt the auction is listed but takes no bids yet.
   const untilStart = useCountdown(detail.data?.auction.startAt, detail.data?.serverTime)
   const scheduled = !!detail.data && auctionPhase(detail.data.auction, detail.data.serverTime) === 'Scheduled' && untilStart > 0
+  // ADR 0081: a waiting auction shows its open time, or the registration
+  // deadline once that time passed with too few registrants.
+  const waitingAt = detail.data ? waitingTime(detail.data.auction, Date.parse(detail.data.serverTime)) : null
+  const untilWaiting = useCountdown(waitingAt?.at, detail.data?.serverTime)
   const refresh = () => Promise.all([
     queryClient.invalidateQueries({ queryKey: ['my-auction-intakes'] }),
     queryClient.invalidateQueries({ queryKey: ['auction', id] }),
@@ -199,7 +203,9 @@ export function AuctionDetailPage() {
       <div className={styles.notice}>
         <strong>Phiên chưa mở</strong>
         <p>
-          Người bán hẹn mở phiên lúc {when(auction.startAt)}. Khi phiên mở, bạn có thể trả giá
+          {/* ADR 0081: a waiting registration auction opens only with enough registrants. */}
+          {auction.openMode ? `${openRuleText(auction)} ` : `Người bán hẹn mở phiên lúc ${when(auction.startAt)}. `}
+          Khi phiên mở, bạn có thể trả giá
           {auction.buyNowPrice !== null ? ` hoặc mua ngay với ${formatVnd(auction.buyNowPrice)}` : ''}.
         </p>
       </div>
@@ -275,7 +281,7 @@ export function AuctionDetailPage() {
 
         <aside className={styles.side} aria-label="Trả giá">
           {scheduled
-            ? <div className={styles.timerCard}><span className={styles.timerClosed}>Mở lúc {when(auction.startAt)} · còn {formatRemaining(untilStart)}</span></div>
+            ? <div className={styles.timerCard}><span className={styles.timerClosed}>{waitingAt!.label} {when(waitingAt!.at)} · còn {formatRemaining(untilWaiting)}</span></div>
             : <Countdown ms={remaining} open={open} endAt={auction.endAt} live={pushing} state={auction.state} />}
           <section className={styles.bidCard}>
             <p className={styles.priceLabel}>{priceLabel}</p>
@@ -301,7 +307,7 @@ export function AuctionDetailPage() {
 
         <div className={styles.body}>
           <BookCondition book={auction.book ?? null} />
-          <SessionFacts auction={auction} remaining={remaining} open={open} scheduled={scheduled} untilStart={untilStart} />
+          <SessionFacts auction={auction} remaining={remaining} open={open} scheduled={scheduled} untilStart={untilWaiting} waiting={waitingAt!} />
 
           <BidHistory auctionId={auction.id} history={history} leaderAlias={leaderAlias} myAlias={me?.alias ?? null} badge={TOP_BADGE[auction.state] ?? null} startPrice={auction.startPrice} />
 
@@ -382,8 +388,9 @@ const day = (iso: string) => new Date(iso).toLocaleDateString('vi-VN', { weekday
 
 // Prices as tiles, the session window as a track (progress from the server-aligned
 // countdown, never the device clock), and the pickup point as its own callout.
-function SessionFacts({ auction, remaining, open, scheduled, untilStart }: { auction: AuctionSummary; remaining: number; open: boolean; scheduled: boolean; untilStart: number }) {
+function SessionFacts({ auction, remaining, open, scheduled, untilStart, waiting }: { auction: AuctionSummary; remaining: number; open: boolean; scheduled: boolean; untilStart: number; waiting: ReturnType<typeof waitingTime> }) {
   const span = Date.parse(auction.endAt) - Date.parse(auction.startAt)
+  const endKnown = !scheduled || waiting.endKnown
   const progress = scheduled ? 0 : !open ? 100 : span > 0 ? Math.min(100, Math.max(0, (1 - remaining / span) * 100)) : 0
   return (
     <section className={styles.sessionCard} aria-labelledby="auction-session-title">
@@ -402,13 +409,17 @@ function SessionFacts({ auction, remaining, open, scheduled, untilStart }: { auc
       </dl>
       <div className={styles.window}>
         <div className={styles.windowEnds}>
-          <p><span>Mở phiên</span><strong>{clock(auction.startAt)}</strong><small>{day(auction.startAt)}</small></p>
-          <p><span>Kết thúc</span><strong>{clock(auction.endAt)}</strong><small>{day(auction.endAt)}</small></p>
+          {scheduled
+            ? <p><span>{waiting.label}</span><strong>{clock(waiting.at)}</strong><small>{day(waiting.at)}</small></p>
+            : <p><span>Mở phiên</span><strong>{clock(auction.startAt)}</strong><small>{day(auction.startAt)}</small></p>}
+          {endKnown
+            ? <p><span>Kết thúc</span><strong>{clock(auction.endAt)}</strong><small>{day(auction.endAt)}</small></p>
+            : <p><span>Kết thúc</span><strong>{formatDuration(Math.round(span / 1000))}</strong><small>sau khi mở</small></p>}
         </div>
         <div className={styles.track} data-live={open || undefined} role="progressbar" aria-label="Thời gian phiên đã trôi qua" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
           <span style={{ width: `${progress}%` }} />
         </div>
-        <p className={styles.windowNote} role={open && auction.buyNowAt ? 'status' : undefined}>{scheduled ? `Mở sau ${formatRemaining(untilStart)} · phiên kéo dài ${formatDuration(Math.round(span / 1000))}`
+        <p className={styles.windowNote} role={open && auction.buyNowAt ? 'status' : undefined}>{scheduled ? `${waiting.label === 'Mở lúc' ? 'Mở sau' : 'Hết hạn đăng ký sau'} ${formatRemaining(untilStart)} · phiên kéo dài ${formatDuration(Math.round(span / 1000))}`
           : !open ? 'Phiên đã đóng'
           : auction.buyNowAt && auction.buyNowMode === 'Instant' ? 'Đã có người mua ngay · phiên đang chốt'
           : auction.buyNowAt ? `Đã có người chọn mua ngay · còn ${formatRemaining(remaining)} để trả cao hơn; hết giờ, người dẫn đầu thắng`
@@ -837,7 +848,7 @@ function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged, 
         <strong><UserRound size={16} aria-hidden="true" />Đây là phiên của bạn</strong>
         <span>
           {waiting
-            ? <>Phiên đang nhận đăng ký. Bạn có thể <b>mở ngay</b> khi đủ người, <b>hẹn hoặc đổi giờ mở</b>, <b>giảm số người tối thiểu</b> hoặc <b>đóng phiên</b> trước giờ mở.</>
+            ? <>Phiên đang nhận đăng ký và <b>chỉ mở khi đủ người</b>, đúng giờ đã hẹn hoặc ngay khi đủ nếu đã qua giờ đó. Bạn có thể <b>đổi giờ mở</b> trước giờ đó, <b>giảm số người tối thiểu</b> hoặc <b>đóng phiên</b> trước khi phiên mở.</>
             : auction.minBidders != null && open
             ? <>Phiên đã mở nên bạn <b>không đóng được nữa</b>. Cần hỗ trợ, hãy dùng <b>Báo cáo sự cố cho Admin</b>.</>
             : scheduled

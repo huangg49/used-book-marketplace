@@ -21,6 +21,7 @@ import {
   closeReasonText,
   createSellerCommand,
   openRuleText,
+  waitingTime,
   waitingForRegistrants,
 } from "./auctions-model";
 import type { Participation, PublicAuctionSummary } from "./contracts";
@@ -289,11 +290,11 @@ describe("ADR 0079 bounded registration lifecycle", () => {
     const expired = waiting({ phase: "Ended", startAt: new Date(now - H).toISOString() });
     expect(isOpen(expired, now)).toBe(false);
   });
-  it("publishing offers WhenReady and times within 72 h; a reschedule never offers now", () => {
-    const publish = startChoices(now, { ceiling: now + 72 * H, whenReady: true });
-    expect(publish[0]).toEqual({ label: "Mở khi đủ người", at: null });
-    expect(publish.every((c) => c.at === null || c.at <= now + 72 * H)).toBe(true);
-    const move = startChoices(now, { ceiling: now + 4 * H, whenReady: false });
+  it("ADR 0081: publishing and rescheduling only offer times within the ceiling, never now", () => {
+    const publish = startChoices(now, { ceiling: now + 72 * H });
+    expect(publish.some((c) => c.at === null)).toBe(false);
+    expect(publish.every((c) => c.at! <= now + 72 * H)).toBe(true);
+    const move = startChoices(now, { ceiling: now + 4 * H });
     expect(move.some((c) => c.at === null)).toBe(false);
     expect(move.every((c) => c.at! <= now + 4 * H)).toBe(true);
   });
@@ -302,6 +303,22 @@ describe("ADR 0079 bounded registration lifecycle", () => {
     expect(canReschedule(waiting({ scheduleRevision: 5 }), now)).toBe(false);
     expect(canReschedule(waiting({ startAt: new Date(now + 20 * 60_000).toISOString() }), now)).toBe(false);
     expect(canReschedule(waiting({ phase: "Live", startAt: new Date(now - H).toISOString() }), now)).toBe(false);
+    // ADR 0081: the open time counts, not the deadline; past it there is no move.
+    const grace = { openMode: "ScheduledGrace" as const, startAt: new Date(now + 26 * H).toISOString() };
+    expect(canReschedule(waiting({ ...grace, opensAt: new Date(now + 2 * H).toISOString() }), now)).toBe(true);
+    expect(canReschedule(waiting({ ...grace, opensAt: new Date(now + 20 * 60_000).toISOString() }), now)).toBe(false);
+    expect(canReschedule(waiting({ ...grace, opensAt: new Date(now - H).toISOString() }), now)).toBe(false);
+  });
+  it("ADR 0081: shows the open time, then the deadline once it passed with too few", () => {
+    const opensAt = new Date(now + 2 * H).toISOString();
+    const deadline = new Date(now + 26 * H).toISOString();
+    const a = waiting({ openMode: "ScheduledGrace", opensAt, startAt: deadline });
+    expect(waitingTime(a, now)).toEqual({ label: "Mở lúc", at: opensAt, endKnown: false });
+    expect(waitingTime(a, now + 3 * H)).toEqual({ label: "Hạn đăng ký", at: deadline, endKnown: false });
+    expect(waitingTime({ ...a, registeredCount: 4, startAt: opensAt }, now)).toEqual({ label: "Mở lúc", at: opensAt, endKnown: true });
+    expect(openRuleText(a, now)).toMatch(/chờ thêm tới/);
+    expect(openRuleText(a, now + 3 * H)).toMatch(/Đã qua giờ mở/);
+    expect(closeReasonText({ ...a, closeReason: "RegistrationExpired" })).toMatch(/trong 24 giờ sau giờ mở/);
   });
   it("explains the open rule and every close reason", () => {
     expect(openRuleText(waiting())).toMatch(/tự mở ngay khi đủ 4 người/);
@@ -314,7 +331,6 @@ describe("ADR 0079 bounded registration lifecycle", () => {
   });
   it("freezes seller commands with their version and key", () => {
     const id = "11111111-1111-4111-8111-111111111111";
-    expect(createSellerCommand(id, "OpenNow", 3, "k")).toEqual({ kind: "OpenNow", path: `/auctions/${id}/open-now`, body: JSON.stringify({ expectedVersion: 3 }), key: "k" });
     expect(JSON.parse(createSellerCommand(id, "LowerMin", 3, "k", 4).body)).toEqual({ expectedVersion: 3, minBidders: 4 });
     expect(createSellerCommand(id, "Close", 3, "k").path).toBe(`/auctions/${id}/close`);
   });

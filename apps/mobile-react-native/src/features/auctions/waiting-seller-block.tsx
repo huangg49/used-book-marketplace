@@ -11,22 +11,23 @@ import {
   auctionErrorText,
   createSellerCommand,
   openRuleText,
+  openTimeOf,
   outcomeUnknown,
   type SellerCommand,
 } from "./auctions-model";
 import { ScheduleAuctionSheet } from "./components";
 
 const DONE: Record<SellerCommand["kind"], string> = {
-  OpenNow: "Phiên đã mở; người đăng ký có thể trả giá ngay.",
   LowerMin: "Đã giảm số người tối thiểu.",
   Close: "Đã đóng phiên; người đăng ký được hoàn cọc.",
 };
 
 /**
- * ADR 0079: the seller's controls while the auction waits for registrants:
- * open now once enough registered, schedule or move the start (5 changes,
- * never in the last 30 minutes, within publish + 72 h), lower the minimum
- * (never below 4, locked once reached) and close before the start.
+ * ADR 0079/0081: the seller's controls while the auction waits for
+ * registrants: move the open time (5 changes, before it and never in its last
+ * 30 minutes, within publish + 72 h), lower the minimum (never below 4,
+ * locked once reached) and close before the start. There is no "open now":
+ * the auction opens at its time once enough registered.
  */
 export function WaitingSellerBlock({
   auction,
@@ -42,7 +43,11 @@ export function WaitingSellerBlock({
   const count = auction.registeredCount ?? 0;
   const reached = count >= need;
   const version = auction.version ?? 0;
-  const frozen = Date.parse(auction.startAt) - now <= AUCTION_RESCHEDULE_FREEZE_MS;
+  const openTime = openTimeOf(auction);
+  const passed = Date.parse(openTime) <= now;
+  const frozen = Date.parse(openTime) - now <= AUCTION_RESCHEDULE_FREEZE_MS;
+  // The sheet edits the open time and keeps the chosen length.
+  const length = Date.parse(auction.endAt) - Date.parse(auction.startAt);
   const editsLeft = AUCTION_MAX_SCHEDULE_EDITS - (auction.scheduleRevision ?? 0);
   const lowered = Math.max(AUCTION_MIN_BIDDERS_FLOOR, need - 1);
   const [busy, setBusy] = useState(false);
@@ -80,7 +85,7 @@ export function WaitingSellerBlock({
       <Notice>
         <AppText kind="bold">{`Đang chờ người đăng ký: ${count}/${need}`}</AppText>
         {"\n"}
-        {openRuleText(auction)}
+        {openRuleText(auction, now)}
       </Notice>
       {notice && <Notice tone="success">{notice}</Notice>}
       {error && <Notice tone="error">{error}</Notice>}
@@ -88,19 +93,17 @@ export function WaitingSellerBlock({
         <Button title="Thử lại đúng lệnh vừa rồi" busy={busy} onPress={() => void send(pending)} />
       ) : (
         <>
-          <Button wine title="Mở ngay" busy={busy} disabled={!reached} onPress={() => run("OpenNow")} />
-          {!reached && (
-            <AppText kind="small" color={colors.muted}>{`Mở ngay được khi đủ ${need} người đăng ký.`}</AppText>
-          )}
           <Button
             wine
             secondary
-            title={auction.openMode === "Scheduled" ? "Đổi giờ mở" : "Hẹn giờ mở"}
+            title="Đổi giờ mở"
             disabled={busy || frozen || editsLeft <= 0}
             onPress={() => setEditing(true)}
           />
           <AppText kind="small" color={colors.muted}>
-            {frozen
+            {passed
+              ? `Đã qua giờ mở nên không đổi giờ được nữa. Phiên mở ngay khi đủ ${need} người đăng ký.`
+              : frozen
               ? "Không đổi giờ trong 30 phút cuối trước giờ mở."
               : editsLeft <= 0
                 ? "Đã đổi giờ tối đa 5 lần."
@@ -130,8 +133,8 @@ export function WaitingSellerBlock({
           auctionId: auction.id,
           version,
           live: false,
-          startAt: auction.startAt,
-          endAt: auction.endAt,
+          startAt: openTime,
+          endAt: new Date(Date.parse(openTime) + length).toISOString(),
           latestStartAt: auction.latestStartAt ?? null,
         }}
         onClose={() => setEditing(false)}

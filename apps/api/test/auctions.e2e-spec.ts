@@ -5213,12 +5213,31 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       (await db.c.auction_registrations.findOne({ _id: `${auctionId}:${a.id}` }))?.state;
     const platform = () =>
       app.get(MongoService).tx((tx) => app.get(LedgerService).balance(tx, PLATFORM_COMMISSION_ACCOUNT_ID));
+    // ADR 0081: the seller always picks an open time, at least 5 minutes
+    // ahead. Without a time in publishBody the test starts where waiting
+    // leads: the open time passed with too few registrants (fixture: opensAt
+    // moved back to publishedAt, deadline 24 h later), so reaching the
+    // minimum opens it at once.
     const liveOf = async (
       over: Parameters<typeof intakeBody>[1] & { minBidders?: number } = {},
       publishBody: Parameters<typeof publish>[2] = {},
     ) => {
       const { seller, intakeId } = await passedIntake(over);
-      await publish(intakeId, seller, publishBody).expect(200);
+      const timed = publishBody.startAt !== undefined;
+      await publish(
+        intakeId,
+        seller,
+        timed ? publishBody : { ...publishBody, startAt: new Date(Date.now() + 10 * 60_000).toISOString() },
+      ).expect(200);
+      const a = (await db.c.auctions.findOne({ intakeId }))!;
+      if (timed) return { seller, a };
+      const length = a.plannedEndAt.getTime() - a.startAt.getTime();
+      const startAt = new Date(a.publishedAt.getTime() + 24 * 3_600_000);
+      const end = new Date(startAt.getTime() + length);
+      await db.c.auctions.updateOne(
+        { _id: a._id },
+        { $set: { opensAt: a.publishedAt, startAt, plannedEndAt: end, endAt: end } },
+      );
       return { seller, a: (await db.c.auctions.findOne({ intakeId }))! };
     };
     const funded = async (amount: number) => {
@@ -5243,10 +5262,10 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
 
     it('publishes with the seller minimum and the 10% deposit; bidding opens at the minimum', async () => {
       const { seller, a } = await liveOf({ minBidders: 5 });
-      expect(a).toMatchObject({ minBidders: 5, depositAmount: DEPOSIT, registeredCount: 0, closeReason: null, openMode: 'WhenReady' });
+      expect(a).toMatchObject({ minBidders: 5, depositAmount: DEPOSIT, registeredCount: 0, closeReason: null, openMode: 'ScheduledGrace' });
       const pub = await call('get', `/auctions/${a._id}`).expect(200);
       validates('PublicAuction', pub.body);
-      expect(pub.body.auction).toMatchObject({ minBidders: 5, depositAmount: DEPOSIT, registeredCount: 0, openMode: 'WhenReady', phase: 'Scheduled' });
+      expect(pub.body.auction).toMatchObject({ minBidders: 5, depositAmount: DEPOSIT, registeredCount: 0, openMode: 'ScheduledGrace', opensAt: a.opensAt!.toISOString(), phase: 'Scheduled' });
       const [x, y, z] = [await funded(500_000), await funded(500_000), await funded(500_000)];
       // Waiting for registrants: no bid before the auction opens.
       expect((await bid(a._id, x, 200_000).expect(409)).body.code).toBe('AuctionNotStarted');
@@ -5451,8 +5470,8 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       });
       const [x, y, f1, f2] = [await funded(500_000), await funded(500_000), await funded(100_000), await funded(100_000)];
       await register(a._id, x).expect(200);
-      // Ten minutes after publishing the minimum is reached: WhenReady opens
-      // then, and the Dutch clock starts there.
+      // Ten minutes after the open time passed the minimum is reached: the
+      // auction opens then, and the Dutch clock starts there.
       const opened = new Date(a.publishedAt.getTime() + 10 * 60_000);
       pinClock(opened);
       for (const m of [y, f1, f2]) await register(a._id, m).expect(200);
@@ -5485,16 +5504,18 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     });
 
     it('review fixes: reschedule notifies registrants; a registered Admin cannot cancel; refund wording', async () => {
-      const { seller, a } = await liveOf();
+      const { seller, a } = await liveOf({}, { startAt: new Date(Date.now() + 3600_000).toISOString() });
       const [x, y, z] = [await funded(500_000), await funded(500_000), await funded(500_000)];
       await register(a._id, x).expect(200);
-      // ADR 0079: a waiting auction may move its start (a time is required).
+      // ADR 0079/0081: a waiting auction may move its open time (a time is required).
       const v1 = (await db.c.auctions.findOne({ _id: a._id }))!.version;
       await reschedule(a._id, seller, { expectedVersion: v1, startAt: null, durationSeconds: 2 * 3600 }).expect(422);
       const at = new Date(Date.now() + 2 * 3600_000).toISOString();
       await reschedule(a._id, seller, { expectedVersion: v1, startAt: at, durationSeconds: 2 * 3600 }).expect(200);
-      expect(await doc(a._id)).toMatchObject({ openMode: 'Scheduled', startAt: new Date(at), scheduleRevision: 1 });
+      expect(await doc(a._id)).toMatchObject({ openMode: 'ScheduledGrace', opensAt: new Date(at), startAt: new Date(Date.parse(at) + 24 * 3600_000), scheduleRevision: 1 });
       expect(await kinds(x, a._id)).toContain('AuctionRescheduled');
+      const moved = await db.c.member_notifications.findOne({ userId: x.id, targetId: a._id, kind: 'AuctionRescheduled' });
+      expect(moved!.body).toMatch(/chờ thêm tới/);
       // Bug 2: an Admin who registered is involved.
       const registeredAdmin = await actor(['MEMBER', 'ADMIN']);
       await fund(registeredAdmin, 100_000);
@@ -5504,10 +5525,14 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       // Bug 3: a loser's refund says they did not win.
       await register(a._id, y).expect(200);
       await register(a._id, z).expect(200);
-      // Enough registered: the seller opens early instead of waiting.
-      await cmd('post', `/auctions/${a._id}/open-now`, { expectedVersion: (await doc(a._id)).version }, seller).expect(200);
+      // Enough registered: it opens at the open time (no open-now command).
+      await cmd('post', `/auctions/${a._id}/open-now`, { expectedVersion: (await doc(a._id)).version }, seller).expect(404);
+      expect(await doc(a._id)).toMatchObject({ startAt: new Date(at), biddingOpenedAt: new Date(at) });
+      for (const m of [x, y]) await longSession(m);
+      pinClock(new Date(at));
       await bid(a._id, x, 200_000).expect(200);
       await bid(a._id, y, 250_000).expect(200);
+      vi.restoreAllMocks();
       await closeAt(a._id);
       const zRefund = await db.c.member_notifications.findOne({ userId: z.id, targetId: a._id, kind: 'AuctionFundsReleased' });
       expect(zRefund!.body).toMatch(/không thắng/);
@@ -5543,8 +5568,6 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       const H = 3_600_000;
       const v = async (id: string) => (await doc(id)).version;
       // Callers pass the current version (await v(id)) so .expect chains.
-      const openNow = (id: string, who: Actor, version: number) =>
-        cmd('post', `/auctions/${id}/open-now`, { expectedVersion: version }, who);
       const setMin = (id: string, who: Actor, minBidders: number, version: number) =>
         cmd('post', `/auctions/${id}/min-bidders`, { expectedVersion: version, minBidders }, who);
       const sellerClose = (id: string, who: Actor, version: number) =>
@@ -5563,16 +5586,19 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         for (const m of members) expect((await wallet(m)).auctionHeld).toBe(0);
       };
 
-      it('WhenReady waits at most 24 h from publish and opens the moment the minimum registers', async () => {
+      it('ADR 0081: publishing needs an open time; past it with too few the auction waits 24 h and opens the moment the minimum registers', async () => {
+        const none = await passedIntake();
+        await publish(none.intakeId, none.seller, { startAt: null }).expect(422);
         const { a } = await liveOf({}, { durationSeconds: 2 * 3600 });
-        expect(a.openMode).toBe('WhenReady');
-        expect(a.startAt.getTime()).toBe(a.publishedAt.getTime() + 24 * H);
+        expect(a.openMode).toBe('ScheduledGrace');
+        expect(a.startAt.getTime()).toBe(a.opensAt!.getTime() + 24 * H);
         expect(a.plannedEndAt.getTime() - a.startAt.getTime()).toBe(2 * H);
         const pub = (await call('get', `/auctions/${a._id}`).expect(200)).body;
         validates('PublicAuction', pub);
         expect(pub.auction).toMatchObject({
           phase: 'Scheduled',
-          openMode: 'WhenReady',
+          openMode: 'ScheduledGrace',
+          opensAt: a.opensAt!.toISOString(),
           latestStartAt: new Date(a.publishedAt.getTime() + 72 * H).toISOString(),
           holdExpiresAt: null,
         });
@@ -5595,7 +5621,6 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         expect((await register(a._id, z).expect(409)).body.code).toBe('AuctionClosed');
         expect((await withdraw(a._id, x).expect(409)).body.code).toBe('AuctionClosed');
         await bid(a._id, x, 200_000).expect(409);
-        await openNow(a._id, seller, await v(a._id)).expect(409);
         await moveTo(a._id, seller, new Date(a.startAt.getTime() + H), await v(a._id)).expect(409);
         await setMin(a._id, seller, 4, await v(a._id)).expect(409);
         await sellerClose(a._id, seller, await v(a._id)).expect(409);
@@ -5613,32 +5638,52 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         expect((await doc(a._id)).version).toBe(after.version);
       });
 
-      it('Scheduled: start within 72 h of publish; enough people start then; too few cancel then', async () => {
+      it('ADR 0081: open time within 72 h; enough people open then; too few wait 24 h more, open on reaching it, else cancel', async () => {
         const far = await passedIntake();
         await publish(far.intakeId, far.seller, { startAt: new Date(Date.now() + 73 * H).toISOString() }).expect(422);
         const at = new Date(Date.now() + 3 * H);
         const { a } = await liveOf({}, { startAt: at.toISOString(), durationSeconds: 3600 });
-        expect(a).toMatchObject({ openMode: 'Scheduled', startAt: at });
+        expect(a).toMatchObject({ openMode: 'ScheduledGrace', opensAt: at, startAt: new Date(at.getTime() + 24 * H) });
         const x = await funded(500_000);
         await fill(a._id, x);
-        expect(await doc(a._id)).toMatchObject({ startAt: at, biddingOpenedAt: at });
+        expect(await doc(a._id)).toMatchObject({ startAt: at, endAt: new Date(at.getTime() + H), biddingOpenedAt: at });
         expect((await bid(a._id, x, 200_000).expect(409)).body.code).toBe('AuctionNotStarted');
         await longSession(x);
         pinClock(at);
         await bid(a._id, x, 200_000).expect(200);
         vi.restoreAllMocks();
+        // Too few at the open time: still waiting, nobody can bid yet.
+        const late = await liveOf({}, { startAt: at.toISOString(), durationSeconds: 3600 });
         const few = await liveOf({}, { startAt: at.toISOString(), durationSeconds: 3600 });
+        const lateMembers = [await funded(500_000), await funded(100_000), await funded(100_000), await funded(100_000)];
         const y = await funded(100_000);
+        for (const m of [...lateMembers, y]) await longSession(m);
+        await register(late.a._id, lateMembers[0]).expect(200);
         await register(few.a._id, y).expect(200);
         await tickAt(at);
+        for (const id of [late.a._id, few.a._id]) expect(await doc(id)).toMatchObject({ state: 'Active', closeReason: null });
+        expect((await call('get', `/auctions/${few.a._id}`).expect(200)).body.auction.phase).toBe('Scheduled');
+        pinClock(new Date(at.getTime() + H));
+        expect((await bid(late.a._id, lateMembers[0], 200_000).expect(409)).body.code).toBe('AuctionNotStarted');
+        // Reached 5 h after the open time: it opens at that moment, same length.
+        const reached = new Date(at.getTime() + 5 * H);
+        pinClock(reached);
+        for (const m of lateMembers.slice(1)) await register(late.a._id, m).expect(200);
+        expect(await doc(late.a._id)).toMatchObject({ startAt: reached, endAt: new Date(reached.getTime() + H), biddingOpenedAt: reached });
+        await bid(late.a._id, lateMembers[0], 200_000).expect(200);
+        vi.restoreAllMocks();
+        await tickAt(new Date(at.getTime() + 24 * H - 60_000));
+        expect((await doc(few.a._id)).state).toBe('Active');
+        await tickAt(new Date(at.getTime() + 24 * H));
         expect(await doc(few.a._id)).toMatchObject({ state: 'Cancelled', closeReason: 'RegistrationExpired' });
-        expect((await doc(a._id)).state).toBe('Active');
+        const note = await db.c.member_notifications.findOne({ userId: y.id, targetId: few.a._id, kind: 'AuctionCancelled' });
+        expect(note!.body).toMatch(/trong 24 giờ sau giờ mở/);
         await noHolds(y);
       });
 
-      it('Mở ngay needs the minimum; rescheduling has a 5-change limit, a 30-minute freeze and the 72 h ceiling', async () => {
+      it('no open-now; rescheduling has a 5-change limit, a 30-minute freeze, the 72 h ceiling and stops once the open time passed', async () => {
         const { seller, a } = await liveOf({}, { startAt: new Date(Date.now() + 2 * H).toISOString() });
-        expect((await openNow(a._id, seller, await v(a._id)).expect(409)).body.message).toMatch(/Cần đủ 4 người/);
+        await cmd('post', `/auctions/${a._id}/open-now`, { expectedVersion: await v(a._id) }, seller).expect(404);
         const x = await funded(100_000);
         await register(a._id, x).expect(200);
         await moveTo(a._id, seller, new Date(a.publishedAt.getTime() + 72 * H + 60_000), await v(a._id)).expect(422);
@@ -5649,20 +5694,19 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         expect((await kinds(x, a._id)).filter((k) => k === 'AuctionRescheduled')).toHaveLength(5);
         const second = await liveOf({}, { startAt: new Date(Date.now() + 2 * H).toISOString() });
         await longSession(second.seller);
-        pinClock(new Date(second.a.startAt.getTime() - 20 * 60_000));
-        expect((await moveTo(second.a._id, second.seller, new Date(second.a.startAt.getTime() + H), await v(second.a._id)).expect(409)).body.message).toMatch(/30 phút/);
+        pinClock(new Date(second.a.opensAt!.getTime() - 20 * 60_000));
+        expect((await moveTo(second.a._id, second.seller, new Date(second.a.opensAt!.getTime() + H), await v(second.a._id)).expect(409)).body.message).toMatch(/30 phút/);
         vi.restoreAllMocks();
-        const extra = await fill(second.a._id);
-        await openNow(second.a._id, extra[0], await v(second.a._id)).expect(404);
-        const opened = await openNow(second.a._id, second.seller, await v(second.a._id)).expect(200);
-        validates('AuctionCommandReceipt', opened.body);
+        await fill(second.a._id);
         const d = await doc(second.a._id);
-        expect(d.startAt.getTime()).toBeLessThanOrEqual(Date.now());
+        expect(d).toMatchObject({ startAt: second.a.opensAt, biddingOpenedAt: second.a.opensAt });
         expect(d.endAt.getTime() - d.startAt.getTime()).toBe(24 * H);
-        await openNow(second.a._id, second.seller, await v(second.a._id)).expect(409);
+        // Past the open time the auction only waits; it cannot be moved again.
+        const due = await liveOf();
+        expect((await moveTo(due.a._id, due.seller, new Date(Date.now() + 3 * H), await v(due.a._id)).expect(409)).body.message).toMatch(/Đã qua giờ mở/);
       });
 
-      it('minimum: only lowered, never below 4, locked once reached; reaching it opens WhenReady', async () => {
+      it('minimum: only lowered, never below 4, locked once reached; reaching it past the open time opens at once', async () => {
         const { seller, a } = await liveOf({ minBidders: 6 });
         const members = [await funded(500_000), await funded(100_000), await funded(100_000), await funded(100_000)];
         for (const m of members) await register(a._id, m).expect(200);
@@ -5792,7 +5836,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         const published = Math.min(...runs.map((r) => r.a.publishedAt.getTime()));
         let clock = Date.now();
         let committed = 0;
-        const actions = ['register', 'register', 'register', 'withdraw', 'bid', 'bid', 'open', 'move', 'lower', 'close', 'cancel', 'jump', 'jump'] as const;
+        const actions = ['register', 'register', 'register', 'withdraw', 'bid', 'bid', 'move', 'lower', 'close', 'cancel', 'jump', 'jump'] as const;
         for (let step = 0; step < 40; step++) {
           const r = pick(runs);
           const a = await doc(r.a._id);
@@ -5803,7 +5847,6 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
           if (action === 'register') res = await register(a._id, m);
           else if (action === 'withdraw') res = await withdraw(a._id, m);
           else if (action === 'bid') res = await bid(a._id, m, a.currentPrice === null ? a.startPrice : a.currentPrice + a.step);
-          else if (action === 'open') res = await openNow(a._id, r.seller, await v(a._id));
           else if (action === 'move') res = await moveTo(a._id, r.seller, new Date(clock + (1 + Math.floor(rnd() * 80)) * H), await v(a._id));
           else if (action === 'lower') res = await setMin(a._id, r.seller, 4, await v(a._id));
           else if (action === 'close') res = await sellerClose(a._id, r.seller, await v(a._id));
@@ -5821,8 +5864,9 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
           }
         }
         expect(committed).toBeGreaterThan(0);
-        // Longest possible life: start ceiling 72 h + 1 h auction + 24 h payment.
-        const bound = Math.max(...runs.map((r) => r.a.publishedAt.getTime())) + 97 * H;
+        // Longest possible life: open time ceiling 72 h + 24 h waiting +
+        // 1 h auction + 24 h payment.
+        const bound = Math.max(...runs.map((r) => r.a.publishedAt.getTime())) + 121 * H;
         await tickAt(new Date(bound));
         await tickAt(new Date(bound));
         for (const r of runs)

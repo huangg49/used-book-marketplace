@@ -10172,78 +10172,12 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
-  /auctions/{auctionId}/open-now:
-    post:
-      operationId: openAuctionNow
-      tags:
-        - Auctions
-      description: ADR 0079 - seller of a registration auction starts it now while waiting, once registeredCount reached minBidders. expectedVersion is the auction version.
-      x-implementation-status: implemented
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: auctionId
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - in: header
-          name: Idempotency-Key
-          required: true
-          schema:
-            type: string
-            format: uuid
-          description: One key per intent; scoped by actor and operationId. Same key and body replays the
-            stored receipt; a different body returns 409.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AuctionVersionCommand"
-      responses:
-        "200":
-          description: Committed receipt (including replay).
-          headers:
-            Cache-Control:
-              schema:
-                type: string
-                const: no-store
-            Idempotency-Replayed:
-              schema:
-                type: string
-                enum:
-                  - "true"
-                  - "false"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuctionCommandReceipt"
-        "400":
-          $ref: "#/components/responses/ListingError"
-        "401":
-          $ref: "#/components/responses/ListingError"
-        "403":
-          $ref: "#/components/responses/ListingError"
-        "404":
-          $ref: "#/components/responses/ListingError"
-        "409":
-          $ref: "#/components/responses/ListingError"
-        "422":
-          $ref: "#/components/responses/ListingError"
-        "429":
-          $ref: "#/components/responses/ListingError"
-        "500":
-          $ref: "#/components/responses/ListingError"
-        "503":
-          $ref: "#/components/responses/ListingError"
   /auctions/{auctionId}/min-bidders:
     post:
       operationId: setAuctionMinBidders
       tags:
         - Auctions
-      description: ADR 0079 - seller lowers minBidders (never below 4) while waiting and before it was reached; reaching it opens a WhenReady auction at once.
+      description: ADR 0079 - seller lowers minBidders (never below 4) while waiting and before it was reached. ADR 0081 - reaching it opens the auction at its opensAt, or at once when opensAt already passed.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -20752,9 +20686,10 @@ components:
             - string
             - "null"
           format: date-time
-          description: Null starts now; otherwise 5 minutes to 7 days ahead. ADR 0079 registration
-            auctions - null publishes WhenReady (opens when minBidders registered, cancelled if too few
-            within 24 h); a time publishes Scheduled (5 minutes to 72 hours ahead).
+          description: Null starts now; otherwise 5 minutes to 7 days ahead. ADR 0081 registration
+            auctions - required (null is refused with 422), 5 minutes to 72 hours ahead; publishes
+            ScheduledGrace with this time as opensAt. The auction opens there only when minBidders
+            registered, otherwise as soon as they do within 24 h after it, and is cancelled after that.
         durationSeconds:
           type: integer
           minimum: 3600
@@ -20778,10 +20713,10 @@ components:
             - string
             - "null"
           format: date-time
-          description: Scheduled only; null starts now. Must be null once live. ADR 0079 registration
-            auctions - required while waiting (use openAuctionNow to start now), at most publish + 72 h,
-            and not in the last 30 minutes before the current start; a WhenReady auction becomes
-            Scheduled.
+          description: Scheduled only; null starts now. Must be null once live. ADR 0081 registration
+            auctions - the new opensAt, required while waiting and before the current open time, at most
+            publish + 72 h, and not in the last 30 minutes before the current open time; the auction
+            becomes ScheduledGrace. There is no open-now command.
         durationSeconds:
           type: integer
           minimum: 3600
@@ -21444,11 +21379,22 @@ components:
           enum:
             - WhenReady
             - Scheduled
+            - ScheduledGrace
             - null
           description: ADR 0079. WhenReady opens as soon as minBidders registered, at the latest startAt
             (publish + 24 h); Scheduled opens at startAt (at most publish + 72 h). While waiting
-            (phase Scheduled), too few registrants at startAt cancels the auction. Null on auctions
-            without the bounded lifecycle. Optional for older servers.
+            (phase Scheduled), too few registrants at startAt cancels the auction. ADR 0081 publishes
+            only ScheduledGrace - it opens at opensAt when minBidders registered, otherwise as soon as
+            they do; until then startAt is the registration deadline (opensAt + 24 h). WhenReady and
+            Scheduled remain on older auctions. Null on auctions without the bounded lifecycle.
+            Optional for older servers.
+        opensAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: ADR 0081. The seller's open time on a ScheduledGrace auction (at most publish +
+            72 h); null on other modes. Optional for older servers.
         latestStartAt:
           type:
             - string

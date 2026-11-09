@@ -69,7 +69,7 @@ import {
   reschedule,
   latestStartAt,
   lifecycleReschedule,
-  openNowFields,
+  reachedFields,
   registrationExpired,
   requireWaiting,
 } from './auction-schedule.js';
@@ -698,22 +698,28 @@ export class AuctionBiddingService {
         if (a.version !== body.expectedVersion) throw conflict();
         const now = await this.clock.decision(tx, context.auth);
         await requireUnrestricted(tx, actor._id, now);
-        // ADR 0079: a waiting registration auction moves its start within the
-        // fixed publish + 72 h ceiling; registrants hear about every change.
+        // ADR 0079/0081: a waiting registration auction moves its open time
+        // within the fixed publish + 72 h ceiling; registrants hear about
+        // every change. Already enough registrants: it opens at that time.
         if (a.openMode) {
           const s = lifecycleReschedule(a, body, now);
           const reached =
             a.minBidders !== null && a.registeredCount >= a.minBidders;
+          const startAt = reached ? s.opensAt : s.startAt;
+          const end = new Date(
+            startAt.getTime() + (s.plannedEndAt.getTime() - s.startAt.getTime()),
+          );
           const next = await this.update(
             tx,
             a,
             {
               openMode: s.openMode,
-              startAt: s.startAt,
-              plannedEndAt: s.plannedEndAt,
-              endAt: s.plannedEndAt,
+              opensAt: s.opensAt,
+              startAt,
+              plannedEndAt: end,
+              endAt: end,
               scheduleRevision: a.scheduleRevision + 1,
-              ...(reached ? { biddingOpenedAt: s.startAt } : {}),
+              ...(reached ? { biddingOpenedAt: startAt } : {}),
             },
             now,
           );
@@ -902,11 +908,13 @@ export class AuctionBiddingService {
     return next;
   }
 
-  // ADR 0077/0079: what changes when registeredCount reaches minBidders.
-  // WhenReady opens now (same length); Scheduled bids from its start; an
-  // ADR 0077 auction starts its Dutch clock here, never before startAt.
+  // ADR 0077/0079/0081: what changes when registeredCount reaches minBidders.
+  // ScheduledGrace opens at the seller's time, or now once it passed (same
+  // length); older WhenReady opens now; older Scheduled bids from its start;
+  // an ADR 0077 auction starts its Dutch clock here, never before startAt.
   private gateFields(a: AuctionDoc, now: Date): Partial<AuctionDoc> {
-    if (a.openMode === 'WhenReady') return openNowFields(a, now);
+    if (a.openMode === 'ScheduledGrace' || a.openMode === 'WhenReady')
+      return reachedFields(a, now);
     if (a.openMode === 'Scheduled') return { biddingOpenedAt: a.startAt };
     return { biddingOpenedAt: now > a.startAt ? now : a.startAt };
   }
@@ -921,41 +929,6 @@ export class AuctionBiddingService {
     if (a.sellerId !== actor._id) throw notFound();
     return a;
   };
-
-  // ADR 0079: the seller of a waiting registration auction starts it now once
-  // enough members registered.
-  openNow(
-    context: CommandContext,
-    id: string,
-    body: Wire['AuctionVersionCommand'],
-  ) {
-    return this.commands.runAuction(context, 'openAuctionNow', id, body, {
-      authorize: (tx, actor) => this.sellerOf(tx, actor, id),
-      mutate: async (tx, actor) => {
-        requireActive(actor);
-        await tx.lock('auctions', [id]);
-        const a = await this.auction(tx, id);
-        if (a.version !== body.expectedVersion) throw conflict();
-        const now = await this.clock.decision(tx, context.auth);
-        if (!a.openMode || a.minBidders === null)
-          throw invalidState('Phiên này mở theo thời gian đã đăng.');
-        requireWaiting(a, now);
-        if (a.registeredCount < a.minBidders)
-          throw invalidState(
-            `Cần đủ ${a.minBidders} người đăng ký trước khi mở (hiện có ${a.registeredCount}).`,
-          );
-        const next = await this.update(tx, a, openNowFields(a, now), now);
-        await notifyAuction(
-          tx,
-          next,
-          'AuctionBiddingStarted',
-          await this.registrantIds(tx, next),
-          now,
-        );
-        return this.change(next, now, 'AuctionOpened', actor._id);
-      },
-    });
-  }
 
   // ADR 0079: the seller only lowers the minimum (never below 4), while waiting
   // and before it was reached; reaching it applies the gate at once.
@@ -986,12 +959,13 @@ export class AuctionBiddingService {
           );
         const reached = a.registeredCount >= body.minBidders;
         const lowered = { ...a, minBidders: body.minBidders };
+        const gate = reached ? this.gateFields(lowered, now) : {};
         const next = await this.update(
           tx,
           a,
           {
             minBidders: body.minBidders,
-            ...(reached ? this.gateFields(lowered, now) : {}),
+            ...gate,
           },
           now,
         );
@@ -1006,7 +980,7 @@ export class AuctionBiddingService {
         return this.change(
           next,
           now,
-          reached && a.openMode === 'WhenReady'
+          reached && next.startAt <= now
             ? 'AuctionOpened'
             : 'AuctionMinBiddersChanged',
           actor._id,
@@ -1920,6 +1894,9 @@ export class AuctionBiddingService {
       closeReason: a.closeReason ?? null,
       // ADR 0079: open mode and the fixed ceilings.
       openMode: a.openMode ?? null,
+      // ADR 0081: the seller's open time (startAt is the registration
+      // deadline until the minimum is reached).
+      opensAt: a.opensAt?.toISOString() ?? null,
       latestStartAt: a.openMode ? latestStartAt(a).toISOString() : null,
       holdExpiresAt: holdExpiry(a),
       // ADR 0076: a running sealed auction shows only the start and count.

@@ -44,7 +44,9 @@ function cancelCause(a: AuctionDoc, seller: boolean) {
   const reason = (a.cancelReason ?? '').slice(0, 160);
   switch (a.closeReason) {
     case 'RegistrationExpired':
-      return `không đủ ${a.minBidders ?? 4} người đăng ký trước giờ mở nên đã bị hủy.`;
+      return a.opensAt
+        ? `không đủ ${a.minBidders ?? 4} người đăng ký trong 24 giờ sau giờ mở nên đã bị hủy.`
+        : `không đủ ${a.minBidders ?? 4} người đăng ký trước giờ mở nên đã bị hủy.`;
     case 'SellerClosed':
       return seller
         ? 'đã được bạn đóng trước giờ mở.'
@@ -158,7 +160,11 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
   AuctionRescheduled: {
     default: (c, a) => ({
       title: 'Phiên đấu giá đổi giờ mở',
-      body: `${c.title} nay mở lúc ${when(a.startAt)} và kết thúc ${when(a.endAt)}. Bạn có thể rút đăng ký trước khi phiên đủ người.`,
+      // ADR 0081: until the minimum is reached startAt is the deadline.
+      body:
+        a.opensAt && a.biddingOpenedAt === null
+          ? `${c.title} nay mở lúc ${when(a.opensAt)} nếu đủ ${a.minBidders ?? 4} người đăng ký; chưa đủ thì chờ thêm tới ${when(a.startAt)} rồi hủy. Bạn có thể rút đăng ký trước khi phiên đủ người.`
+          : `${c.title} nay mở lúc ${when(a.startAt)} và kết thúc ${when(a.endAt)}. Bạn có thể rút đăng ký trước khi phiên đủ người.`,
     }),
     seller: () => ({ title: '', body: '' }),
   },

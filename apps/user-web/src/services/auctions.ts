@@ -56,7 +56,9 @@ export const auctionSummarySchema = z.object({
   registeredCount: z.number().int().nullish(),
   closeReason: z.enum(['NotEnoughBidders', 'RegistrationExpired', 'SellerClosed', 'HoldExpired', 'Reported']).nullish(),
   // ADR 0079: open mode and the fixed ceilings (null/absent on older auctions).
-  openMode: z.enum(['WhenReady', 'Scheduled']).nullish(),
+  openMode: z.enum(['WhenReady', 'Scheduled', 'ScheduledGrace']).nullish(),
+  // ADR 0081: the seller's open time; startAt is the deadline until enough register.
+  opensAt: z.string().nullish(),
   latestStartAt: z.string().nullish(),
   holdExpiresAt: z.string().nullish(),
   // ADR 0047: Scheduled before startAt; version lets the seller edit the time.
@@ -194,8 +196,7 @@ export function placeSealedBid(id: string, amount: number, key: string) { return
 // ADR 0077: registration with the deposit the member saw, and its withdrawal.
 export function registerForAuction(id: string, deposit: number, key: string) { return command(`/auctions/${id}/registration`, key, { deposit }) }
 export function withdrawAuctionRegistration(id: string, key: string) { return command(`/auctions/${id}/registration/withdraw`, key, {}) }
-// ADR 0079: seller commands while the auction waits for registrants.
-export function openAuctionNow(id: string, expectedVersion: number, key: string) { return command(`/auctions/${id}/open-now`, key, { expectedVersion }) }
+// ADR 0079: seller commands while the auction waits for registrants (ADR 0081: no open-now).
 export function setAuctionMinBidders(id: string, expectedVersion: number, minBidders: number, key: string) { return command(`/auctions/${id}/min-bidders`, key, { expectedVersion, minBidders }) }
 export function closeAuctionBeforeStart(id: string, expectedVersion: number, key: string) { return command(`/auctions/${id}/close`, key, { expectedVersion }) }
 /** ADR 0079: a bounded-lifecycle auction still waiting for registrants. */
@@ -206,15 +207,40 @@ const at = (iso: string) => new Date(iso).toLocaleString('vi-VN', { weekday: 'sh
 /** ADR 0079: one sentence on when a waiting auction opens or is cancelled. */
 export function openRuleText(a: AuctionSummary) {
   const need = a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR
+  if (a.openMode === 'ScheduledGrace' && a.opensAt) {
+    const reached = (a.registeredCount ?? 0) >= need
+    if (reached) return `Phiên đã đủ ${need} người đăng ký và mở lúc ${at(a.startAt)}.`
+    return Date.parse(a.opensAt) > Date.now()
+      ? `Phiên mở lúc ${at(a.opensAt)} nếu đủ ${need} người đăng ký. Chưa đủ thì phiên chờ thêm tới ${at(a.startAt)} và mở ngay khi đủ; hết hạn vẫn chưa đủ thì phiên bị hủy và hoàn cọc.`
+      : `Đã qua giờ mở nhưng chưa đủ ${need} người đăng ký. Phiên mở ngay khi đủ người; tới ${at(a.startAt)} vẫn chưa đủ thì bị hủy và hoàn cọc.`
+  }
   return a.openMode === 'WhenReady'
     ? `Phiên tự mở ngay khi đủ ${need} người đăng ký. Hạn đăng ký: ${at(a.startAt)}; quá hạn chưa đủ người thì phiên bị hủy và hoàn cọc.`
     : `Phiên mở lúc ${at(a.startAt)} nếu đủ ${need} người đăng ký; không đủ thì phiên bị hủy và hoàn cọc.`
+}
+/** ADR 0081: the open time to show and edit (opensAt, else the stored start). */
+export const openTimeOf = (a: AuctionSummary) => a.opensAt ?? a.startAt
+/**
+ * ADR 0081: what a waiting auction shows - its open time, or the
+ * registration deadline once that time passed (or on older WhenReady rows).
+ * The end is only known once the minimum is reached.
+ */
+export function waitingTime(a: AuctionSummary, nowMs: number) {
+  const reached = (a.registeredCount ?? 0) >= (a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR)
+  if (a.openMode === 'WhenReady' && !reached) return { label: 'Hạn đăng ký', at: a.startAt, endKnown: false }
+  if (a.openMode === 'ScheduledGrace' && a.opensAt && !reached)
+    return Date.parse(a.opensAt) > nowMs
+      ? { label: 'Mở lúc', at: a.opensAt, endKnown: false }
+      : { label: 'Hạn đăng ký', at: a.startAt, endKnown: false }
+  return { label: 'Mở lúc', at: a.startAt, endKnown: true }
 }
 /** ADR 0079: why a cancelled or unsold auction ended, for every viewer. */
 export function closeReasonText(a: AuctionSummary): string | null {
   switch (a.closeReason) {
     case 'NotEnoughBidders': return `Phiên kết thúc mà chưa đủ người trả giá nên không bán. Mọi tiền cọc và khoản giữ đã về lại ví.`
-    case 'RegistrationExpired': return `Phiên không đủ ${a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người đăng ký trước giờ mở nên đã bị hủy. Mọi tiền cọc đã về lại ví.`
+    case 'RegistrationExpired': return a.opensAt
+      ? `Phiên không đủ ${a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người đăng ký trong 24 giờ sau giờ mở nên đã bị hủy. Mọi tiền cọc đã về lại ví.`
+      : `Phiên không đủ ${a.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người đăng ký trước giờ mở nên đã bị hủy. Mọi tiền cọc đã về lại ví.`
     case 'SellerClosed': return 'Người bán đã đóng phiên trước giờ mở. Mọi tiền cọc đã về lại ví.'
     case 'HoldExpired': return 'Phiên tạm dừng quá 48 giờ mà chưa được xử lý nên đã tự hủy. Mọi tiền cọc và khoản giữ đã về lại ví.'
     case 'Reported': return 'Quản trị viên đã đóng phiên sau khi xem xét báo cáo. Mọi tiền cọc và khoản giữ đã về lại ví.'
@@ -341,7 +367,8 @@ export const AUCTION_MIN_BIDDERS_FLOOR = 4
 export const AUCTION_MIN_BIDDERS_CAP = 1000
 export const MIN_BIDDER_OPTIONS = [4, 5, 6, 8, 10] as const
 // ADR 0079 ceilings, mirrored for the forms; the server stays authoritative.
-export const AUCTION_READY_WINDOW_MS = 24 * 3_600_000
+// ADR 0081: past the open time a registration auction waits 24 h more.
+export const AUCTION_OPEN_GRACE_MS = 24 * 3_600_000
 export const AUCTION_START_CEILING_MS = 72 * 3_600_000
 export const AUCTION_RESCHEDULE_FREEZE_MS = 30 * 60_000
 /** ADR 0077: the refundable deposit the server will ask for (10%, ≥ 10.000đ). */

@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { ArrowRight, CalendarClock, CircleSlash, EyeOff, Minus, Play, TrendingDown, Users, Wallet } from 'lucide-react'
+import { ArrowRight, CalendarClock, CircleSlash, EyeOff, Minus, TrendingDown, Users, Wallet } from 'lucide-react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
 import { commandOutcomeUnknown, formatRemaining, useCountdown, useIntentKey } from '../hooks/useAuctionClock'
@@ -12,7 +12,7 @@ import { formatVnd, ROUTES } from '../lib/routes'
 import { getWalletSummary } from '../services/wallet'
 import {
   AUCTION_MAX_SCHEDULE_EDITS, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_PRICE_DIGITS, AUCTION_RESCHEDULE_FREEZE_MS, acceptDutch,
-  closeAuctionBeforeStart, openAuctionNow, openRuleText, placeSealedBid, registerForAuction, setAuctionMinBidders,
+  closeAuctionBeforeStart, openRuleText, openTimeOf, placeSealedBid, registerForAuction, setAuctionMinBidders,
   withdrawAuctionRegistration, type AuctionParticipation, type AuctionSummary,
 } from '../services/auctions'
 import styles from './AuctionDetailPage.module.css'
@@ -123,7 +123,9 @@ export function RegistrationPanel({ auction, me, onChanged }: PanelProps) {
         onConfirm={() => void run(`register:${deposit}`, (key) => registerForAuction(auction.id, deposit, key), () => {
           setConfirming(false)
           setNotice(count + 1 >= need
-            ? auction.openMode === 'Scheduled' ? 'Đã đăng ký. Phiên đủ người và mở theo giờ đã hẹn.' : 'Đã đăng ký. Phiên đủ người, bạn có thể trả giá.'
+            ? auction.openMode === 'Scheduled' || (auction.openMode === 'ScheduledGrace' && Date.parse(openTimeOf(auction)) > Date.now())
+              ? 'Đã đăng ký. Phiên đủ người và mở theo giờ đã hẹn.'
+              : 'Đã đăng ký. Phiên đủ người, bạn có thể trả giá.'
             : 'Đã đăng ký. Bạn sẽ nhận thông báo khi phiên đủ người.')
         }).finally(() => setConfirming(false))}
       />
@@ -265,10 +267,11 @@ export function SealedPanel({ auction, me, onChanged }: PanelProps) {
 }
 
 /**
- * ADR 0079: the seller's controls while the auction waits for registrants:
- * open now once enough registered, schedule or move the start (5 changes,
- * never in the last 30 minutes, within publish + 72 h), lower the minimum
- * (never below 4, locked once reached) and close before the start.
+ * ADR 0079/0081: the seller's controls while the auction waits for
+ * registrants: move the open time (5 changes, before it and never in its last
+ * 30 minutes, within publish + 72 h), lower the minimum (never below 4,
+ * locked once reached) and close before the start. There is no "open now":
+ * the auction opens at its time once enough registered.
  */
 export function WaitingSellerControls({ auction, serverTime, onChanged, paused }: PanelProps & { paused: boolean }) {
   const need = auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR
@@ -276,7 +279,12 @@ export function WaitingSellerControls({ auction, serverTime, onChanged, paused }
   const reached = count >= need
   const version = auction.version ?? 0
   const offset = serverTime ? Date.parse(serverTime) - Date.now() : 0
-  const frozen = Date.parse(auction.startAt) - (Date.now() + offset) <= AUCTION_RESCHEDULE_FREEZE_MS
+  const openTime = openTimeOf(auction)
+  const untilOpen = Date.parse(openTime) - (Date.now() + offset)
+  const passed = untilOpen <= 0
+  const frozen = untilOpen <= AUCTION_RESCHEDULE_FREEZE_MS
+  // The dialog edits the open time and keeps the chosen length.
+  const length = Date.parse(auction.endAt) - Date.parse(auction.startAt)
   const editsLeft = AUCTION_MAX_SCHEDULE_EDITS - (auction.scheduleRevision ?? 0)
   const [lower, setLower] = useState(Math.max(AUCTION_MIN_BIDDERS_FLOOR, need - 1))
   const [editing, setEditing] = useState(false)
@@ -300,17 +308,13 @@ export function WaitingSellerControls({ auction, serverTime, onChanged, paused }
         </button>
       ) : (
         <>
-          <button type="button" className={styles.ownerPrimary} disabled={busy || paused || !reached}
-            aria-describedby={reached ? undefined : `${ids}-open`}
-            onClick={() => void run(`open-now:${version}`, (key) => openAuctionNow(auction.id, version, key), () => setNotice('Phiên đã mở; người đăng ký có thể trả giá ngay.'))}>
-            <Play size={17} aria-hidden="true" />Mở ngay
-          </button>
-          {!reached && <p id={`${ids}-open`} className={styles.muted}>Mở ngay khi đủ {need} người đăng ký.</p>}
           <button type="button" className={styles.ownerPrimary} disabled={busy || paused || frozen || editsLeft <= 0} onClick={() => setEditing(true)}>
-            <CalendarClock size={17} aria-hidden="true" />{auction.openMode === 'Scheduled' ? 'Đổi giờ mở' : 'Hẹn giờ mở'}
+            <CalendarClock size={17} aria-hidden="true" />Đổi giờ mở
           </button>
           <p className={styles.muted}>
-            {frozen ? 'Không đổi giờ trong 30 phút cuối trước giờ mở.' : editsLeft <= 0 ? 'Đã đổi giờ tối đa 5 lần.' : `Còn ${editsLeft} lần đổi giờ, trong 72 giờ kể từ lúc đăng.`}
+            {passed
+              ? `Đã qua giờ mở nên không đổi giờ được nữa. Phiên mở ngay khi đủ ${need} người đăng ký.`
+              : frozen ? 'Không đổi giờ trong 30 phút cuối trước giờ mở.' : editsLeft <= 0 ? 'Đã đổi giờ tối đa 5 lần.' : `Còn ${editsLeft} lần đổi giờ, trong 72 giờ kể từ lúc đăng.`}
           </p>
           {canLower && (
             <div className={styles.lowerRow}>
@@ -337,7 +341,7 @@ export function WaitingSellerControls({ auction, serverTime, onChanged, paused }
         onDone={onChanged}
         title={auction.title}
         serverTime={serverTime}
-        target={{ kind: 'reschedule', auctionId: auction.id, version, live: false, startAt: auction.startAt, endAt: auction.endAt, latestStartAt: auction.latestStartAt ?? null }}
+        target={{ kind: 'reschedule', auctionId: auction.id, version, live: false, startAt: openTime, endAt: new Date(Date.parse(openTime) + length).toISOString(), latestStartAt: auction.latestStartAt ?? null }}
       />
       <ConfirmDialog
         isOpen={closing && !paused}

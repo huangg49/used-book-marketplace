@@ -5,7 +5,7 @@ import { AuctionPrice } from '../AuctionPrice'
 import { AuctionPhoto } from '../AuctionGallery'
 import { formatRemaining, useCountdown } from '../../hooks/useAuctionClock'
 import { formatVnd, ROUTES } from '../../lib/routes'
-import { auctionPhase, type AuctionSummary } from '../../services/auctions'
+import { auctionPhase, waitingTime, type AuctionSummary } from '../../services/auctions'
 import styles from './AuctionCard.module.css'
 import { useNearViewport } from '../../hooks/useNearViewport'
 
@@ -32,6 +32,7 @@ export const AuctionCard = memo(function AuctionCard({ auction, serverTime }: { 
   const { ref: coverRef, active: coverActive } = useNearViewport<HTMLAnchorElement>()
   // ADR 0047: a scheduled card counts down to the start, not the end.
   const scheduled = auctionPhase(auction, serverTime) === 'Scheduled'
+  const waiting = waitingTime(auction, Date.parse(serverTime))
   const hasBids = auction.bidderCount > 0
   const price = auction.currentPrice ?? auction.startPrice
   const to = ROUTES.auctionDetail(auction.id)
@@ -39,7 +40,7 @@ export const AuctionCard = memo(function AuctionCard({ auction, serverTime }: { 
     <article className={styles.card} data-auction-id={auction.id}>
       <Link ref={coverRef} to={to} className={styles.cover} aria-label={`Xem phiên đấu giá ${auction.title}`}>
         <AuctionPhoto auction={auction} interactive={false} active={coverActive} />
-        <AuctionCountdown endAt={scheduled ? auction.startAt : auction.endAt} serverTime={serverTime} scheduled={scheduled} />
+        <AuctionCountdown endAt={scheduled ? waiting.at : auction.endAt} serverTime={serverTime} scheduled={scheduled} />
       </Link>
       <div className={styles.meta}>
         <h3 className={styles.title} title={auction.title}>
@@ -61,10 +62,11 @@ export const AuctionCard = memo(function AuctionCard({ auction, serverTime }: { 
             <li><Users size={14} aria-hidden="true" /><span>Đăng ký</span><b>{auction.registeredCount ?? 0}/{auction.minBidders} người</b></li>
           )}
           {scheduled && (
-            // ADR 0079: WhenReady opens as soon as enough register; startAt is its deadline.
-            <li><Play size={14} aria-hidden="true" /><span>{auction.openMode === 'WhenReady' ? 'Hạn đăng ký' : 'Mở lúc'}</span><b>{endsAt(auction.startAt)}</b></li>
+            // ADR 0079/0081: until enough register, the open time or (once it
+            // passed) the registration deadline; the end is not known yet.
+            <li><Play size={14} aria-hidden="true" /><span>{waiting.label}</span><b>{endsAt(waiting.at)}</b></li>
           )}
-          {!(scheduled && auction.openMode === 'WhenReady') && (
+          {!(scheduled && !waiting.endKnown) && (
             <li><Flag size={14} aria-hidden="true" /><span>Kết thúc</span><b>{endsAt(auction.endAt)}</b></li>
           )}
           <li><MapPin size={14} aria-hidden="true" /><span>Điểm giữ</span><b title={auction.pointName}>{auction.pointName}</b></li>

@@ -229,7 +229,6 @@ export type AuctionOperation =
   | 'placeSealedBid'
   | 'registerForAuction'
   | 'withdrawAuctionRegistration'
-  | 'openAuctionNow'
   | 'setAuctionMinBidders'
   | 'closeAuctionBeforeStart'
   | 'payPointOrder'

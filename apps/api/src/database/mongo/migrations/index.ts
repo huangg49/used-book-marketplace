@@ -4,6 +4,7 @@ import { createAuctionTypesMigration, withAuctionTypes } from './0065-auction-ty
 import { createAuctionRegistrationMigration, registrationSpec, withAuctionRegistration } from './0066-auction-registration.js';
 import { createAuctionLifecycleMigration, withAuctionLifecycle } from './0067-auction-lifecycle.js';
 import { createAuctionResumeMigration, withAuctionResume } from './0068-auction-resume.js';
+import { createAuctionScheduledOpenMigration, withAuctionScheduledOpen } from './0069-auction-scheduled-open.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { manualWithdrawalsMigration, withManualWithdrawals } from './0061-manual-wallet-withdrawals.js';
 import { createWithdrawalsMigration, withdrawalSpecs, withWithdrawals } from './0060-wallet-withdrawals.js';
@@ -562,7 +563,7 @@ const beforeWithdrawals = (): CollectionSpec[] => [
   demoCompletionSpec,
 ];
 
-export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
+export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
 const withdrawalsMigration = createWithdrawalsMigration([
@@ -602,6 +603,11 @@ const lifecycleMigration = createAuctionLifecycleMigration(
 );
 migrations.push(lifecycleMigration);
 // ADR 0080: one Admin resume of an OnHold auction, on the 0067 snapshots.
+const resumeMigration = createAuctionResumeMigration(
+  lifecycleMigration.definition.collections,
+);
+migrations.push(resumeMigration);
+// ADR 0081: the seller's open time, gated by registrants, on the 0068 snapshots.
 migrations.push(
-  createAuctionResumeMigration(lifecycleMigration.definition.collections),
+  createAuctionScheduledOpenMigration(resumeMigration.definition.collections),
 );

@@ -8,7 +8,7 @@ import {
   AUCTION_MIN_DURATION_MS,
   AUCTION_MIN_LEAD_MS,
   AUCTION_MIN_REMAINING_MS,
-  AUCTION_READY_WINDOW_MS,
+  AUCTION_OPEN_GRACE_MS,
   AUCTION_RESCHEDULE_FREEZE_MS,
   AUCTION_SCHEDULE_HORIZON_MS,
   AUCTION_START_CEILING_MS,
@@ -181,24 +181,35 @@ export function reschedule(a: AuctionDoc, input: ScheduleInput, now: Date) {
 const lifecycleError = (message: string) =>
   new DomainError(409, 'InvalidState', message);
 
-/** Publishing a registration auction: null = WhenReady, a time = Scheduled. */
-export function lifecyclePublish(input: ScheduleInput, now: Date) {
-  const length = durationMs(input.durationSeconds);
-  if (!input.startAt) {
-    const startAt = new Date(now.getTime() + AUCTION_READY_WINDOW_MS);
-    return {
-      openMode: 'WhenReady' as const,
-      startAt,
-      plannedEndAt: new Date(startAt.getTime() + length),
-    };
-  }
-  const startAt = ceilingStart(input.startAt, now, now);
+// ADR 0081: a registration auction always opens at the seller's time
+// (opensAt) and only with enough registrants; there is no "open now". Until
+// the minimum is reached startAt is the registration deadline, opensAt + 24 h:
+// reached before opensAt it opens at opensAt, reached later it opens at that
+// moment, never reached it is cancelled at the deadline.
+function graceSchedule(opensAt: Date, length: number) {
+  const startAt = new Date(opensAt.getTime() + AUCTION_OPEN_GRACE_MS);
   return {
-    openMode: 'Scheduled' as const,
+    openMode: 'ScheduledGrace' as const,
+    opensAt,
     startAt,
     plannedEndAt: new Date(startAt.getTime() + length),
   };
 }
+
+/** Publishing a registration auction: the seller must pick the open time. */
+export function lifecyclePublish(input: ScheduleInput, now: Date) {
+  const length = durationMs(input.durationSeconds);
+  if (!input.startAt)
+    invalidField(
+      'startAt',
+      'Chọn giờ mở phiên. Phiên chỉ mở khi đủ số người đăng ký tối thiểu.',
+    );
+  return graceSchedule(ceilingStart(input.startAt, now, now), length);
+}
+
+/** A Staff open (no time chosen) waits for registrants from now. */
+export const staffLifecycleOpen = (now: Date, length: number) =>
+  graceSchedule(now, length);
 
 function ceilingStart(raw: string, now: Date, publishedAt: Date) {
   const startAt = new Date(raw);
@@ -229,7 +240,15 @@ export function requireWaiting(a: AuctionDoc, now: Date) {
     );
 }
 
-/** Rescheduling a waiting registration auction (WhenReady becomes Scheduled). */
+/** The open time a seller chose (older rows: their stored start). */
+export const openTimeOf = (a: Pick<AuctionDoc, 'opensAt' | 'startAt'>) =>
+  a.opensAt ?? a.startAt;
+
+/**
+ * Rescheduling a waiting registration auction moves the open time; every
+ * older open mode becomes ScheduledGrace. Refused once the open time passed
+ * (the auction then only waits for registrants until its deadline).
+ */
 export function lifecycleReschedule(
   a: AuctionDoc,
   input: ScheduleInput,
@@ -238,27 +257,28 @@ export function lifecycleReschedule(
   requireWaiting(a, now);
   if (a.scheduleRevision >= AUCTION_MAX_SCHEDULE_EDITS)
     throw lifecycleError('Phiên này đã đổi thời gian tối đa 5 lần.');
-  if (now.getTime() >= a.startAt.getTime() - AUCTION_RESCHEDULE_FREEZE_MS)
+  const openTime = openTimeOf(a);
+  if (now >= openTime)
+    throw lifecycleError(
+      'Đã qua giờ mở; phiên mở khi đủ người đăng ký hoặc tự hủy khi hết hạn chờ.',
+    );
+  if (now.getTime() >= openTime.getTime() - AUCTION_RESCHEDULE_FREEZE_MS)
     throw lifecycleError(
       'Không đổi giờ trong 30 phút cuối trước giờ mở; người đăng ký đã chuẩn bị theo giờ này.',
     );
-  if (!input.startAt)
-    invalidField(
-      'startAt',
-      'Chọn giờ mở mới. Muốn mở ngay khi đủ người, dùng "Mở ngay".',
-    );
+  if (!input.startAt) invalidField('startAt', 'Chọn giờ mở mới.');
   const length = durationMs(input.durationSeconds);
-  const startAt = ceilingStart(input.startAt, now, a.publishedAt);
-  return {
-    openMode: 'Scheduled' as const,
-    startAt,
-    plannedEndAt: new Date(startAt.getTime() + length),
-  };
+  return graceSchedule(ceilingStart(input.startAt, now, a.publishedAt), length);
 }
 
-/** Opening now keeps the length chosen at publish (or the last reschedule). */
-export function openNowFields(a: AuctionDoc, now: Date) {
+/**
+ * Reaching the minimum: a ScheduledGrace auction opens at its open time, or
+ * now when that time already passed. The length chosen at publish (or the
+ * last reschedule) is kept.
+ */
+export function reachedFields(a: AuctionDoc, now: Date) {
   const length = a.plannedEndAt.getTime() - a.startAt.getTime();
-  const end = new Date(now.getTime() + length);
-  return { startAt: now, endAt: end, plannedEndAt: end, biddingOpenedAt: now };
+  const start = a.opensAt && a.opensAt > now ? a.opensAt : now;
+  const end = new Date(start.getTime() + length);
+  return { startAt: start, endAt: end, plannedEndAt: end, biddingOpenedAt: start };
 }

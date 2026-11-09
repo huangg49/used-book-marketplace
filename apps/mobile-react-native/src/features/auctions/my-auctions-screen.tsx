@@ -19,7 +19,7 @@ import {
   space,
 } from "../../core/ui";
 import { MemberNavigation } from "../navigation/member-navigation";
-import { canReschedule, isScheduled, myAuctionsOptions, type MyAuctionView } from "./auctions-model";
+import { canReschedule, isScheduled, myAuctionsOptions, openTimeOf, type MyAuctionView } from "./auctions-model";
 import { ScheduleAuctionSheet } from "./components";
 import type { MyAuctionItem } from "./contracts";
 
@@ -91,8 +91,9 @@ export function MyAuctionsScreen({ userId }: { userId: string }) {
                 auctionId: edited.id,
                 version: edited.version!,
                 live: !isScheduled(edited, now),
-                startAt: edited.startAt,
-                endAt: edited.endAt,
+                // ADR 0081: a waiting registration auction edits its open time.
+                startAt: openTimeOf(edited),
+                endAt: new Date(Date.parse(openTimeOf(edited)) + Date.parse(edited.endAt) - Date.parse(edited.startAt)).toISOString(),
                 latestStartAt: edited.latestStartAt ?? null,
               }
             : null

@@ -74,6 +74,8 @@ export const AUCTION_MIN_BIDDERS_CAP = 1000;
 export const AUCTION_READY_WINDOW_MS = 24 * HOUR_MS;
 // "Hẹn giờ mở": the start is at most publish + 72 h, rescheduling included.
 export const AUCTION_START_CEILING_MS = 72 * HOUR_MS;
+// ADR 0081: a scheduled open waits at most 24 h more for registrants.
+export const AUCTION_OPEN_GRACE_MS = 24 * HOUR_MS;
 // No reschedule in the last 30 minutes before the start.
 export const AUCTION_RESCHEDULE_FREEZE_MS = 30 * 60_000;
 // OnHold auto-cancels 48 h after it was held.

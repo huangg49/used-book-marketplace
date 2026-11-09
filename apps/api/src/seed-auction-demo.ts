@@ -353,7 +353,11 @@ type Scenario = {
   seller: Actor;
   book: Book;
   intake: Json;
-  publish: { startAt: string | null; durationSeconds: number };
+  // ADR 0081: the seller always picks an open time. `due` publishes 10
+  // minutes ahead and then moves the open time back to the publish moment
+  // (local demo fixture, as if the time passed with too few registrants), so
+  // reaching the minimum opens the auction at once.
+  publish: { startAt: string; durationSeconds: number; due?: boolean };
   registrants: Actor[];
   then?: (auctionId: string) => Promise<void>;
   test: string;
@@ -381,6 +385,7 @@ try {
 
   const english = (start: number, buyNow: number | null) => ({ startPrice: start, step: 10_000, buyNowPrice: buyNow, buyNowMode: 'Challenge', auctionType: 'English' });
   const inHours = (n: number) => new Date(Date.now() + n * H).toISOString();
+  const due = (durationSeconds: number) => ({ startAt: inHours(1 / 6), durationSeconds, due: true });
   const bid = (id: string, who: Actor, amount: number) =>
     call('POST', `/auctions/${id}/bids`, who, { amount, fulfillmentMethod: 'SelfCollect' });
 
@@ -389,28 +394,28 @@ try {
       key: 'S1', seller, registrants: [a, b],
       book: { title: 'Dế Mèn phiêu lưu ký', author: 'Tô Hoài', publisher: 'Kim Đồng', year: 2019, value: 150_000, condition: 'Good' },
       intake: { ...english(120_000, 400_000), minBidders: 4 },
-      publish: { startAt: null, durationSeconds: 4 * 3600 },
-      test: 'Chờ đăng ký 2/4 (Mở khi đủ người, hạn 24 giờ). Bạn đăng ký và đặt cọc; đủ 4 người thì phiên mở ngay.',
+      publish: { startAt: inHours(1), durationSeconds: 4 * 3600 },
+      test: 'Chờ đăng ký 2/4, hẹn mở sau 1 giờ. Bạn đăng ký và đặt cọc; đủ 4 người thì phiên mở đúng giờ hẹn, chưa đủ thì chờ thêm 24 giờ rồi hủy.',
     },
     {
       key: 'S2', seller: tester, registrants: [cc, d, e, f],
       book: { title: 'Số đỏ', author: 'Vũ Trọng Phụng', publisher: 'Văn học', year: 2016, value: 180_000, condition: 'LikeNew' },
       intake: { ...english(150_000, 500_000), minBidders: 4 },
       publish: { startAt: inHours(3), durationSeconds: 2 * 3600 },
-      test: 'Bạn là người bán: hẹn mở sau 3 giờ, đã đủ 4/4. Thử Mở ngay, Đổi giờ mở hoặc Đóng phiên.',
+      test: 'Bạn là người bán: hẹn mở sau 3 giờ, đã đủ 4/4 nên phiên mở đúng giờ đó. Thử Đổi giờ mở hoặc Đóng phiên (không còn Mở ngay).',
     },
     {
       key: 'S3', seller: tester, registrants: [g],
       book: { title: 'Tắt đèn', author: 'Ngô Tất Tố', publisher: 'Văn học', year: 2015, value: 120_000, condition: 'Fair' },
       intake: { ...english(100_000, null), minBidders: 6 },
-      publish: { startAt: null, durationSeconds: 3 * 3600 },
-      test: 'Bạn là người bán: chờ đăng ký 1/6. Thử Giảm tối thiểu (không dưới 4), Hẹn giờ mở, Đóng phiên.',
+      publish: { startAt: inHours(2), durationSeconds: 3 * 3600 },
+      test: 'Bạn là người bán: hẹn mở sau 2 giờ, chờ đăng ký 1/6. Thử Giảm tối thiểu (không dưới 4), Đổi giờ mở, Đóng phiên.',
     },
     {
       key: 'S4', seller, registrants: [tester, a, b, cc],
       book: { title: 'Nhà giả kim', author: 'Paulo Coelho', publisher: 'Nhã Nam', year: 2020, value: 200_000, condition: 'LikeNew' },
       intake: { ...english(150_000, 500_000), minBidders: 4 },
-      publish: { startAt: null, durationSeconds: 6 * 3600 },
+      publish: due(6 * 3600),
       then: async (id) => {
         await bid(id, a, 150_000);
         await call('PUT', `/auctions/${id}/auto-bid`, b, { maxAmount: 250_000, fulfillmentMethod: 'SelfCollect' });
@@ -421,7 +426,7 @@ try {
       key: 'S5', seller: seller2, registrants: [tester, d, e, f],
       book: { title: 'Đất rừng phương Nam', author: 'Đoàn Giỏi', publisher: 'Kim Đồng', year: 2018, value: 160_000, condition: 'Good' },
       intake: { ...english(100_000, null), minBidders: 4 },
-      publish: { startAt: null, durationSeconds: 3600 },
+      publish: due(3600),
       then: async (id) => {
         await bid(id, d, 100_000);
         await bid(id, tester, 150_000);
@@ -432,14 +437,14 @@ try {
       key: 'S6', seller: seller2, registrants: [tester, g, h, a],
       book: { title: 'Cho tôi xin một vé đi tuổi thơ', author: 'Nguyễn Nhật Ánh', publisher: 'Trẻ', year: 2021, value: 140_000, condition: 'LikeNew' },
       intake: { startPrice: 100_000, step: 10_000, buyNowPrice: null, auctionType: 'Dutch', dutchTopPrice: 300_000, dutchIntervalSeconds: 120, minBidders: 4 },
-      publish: { startAt: null, durationSeconds: 2 * 3600 },
+      publish: due(2 * 3600),
       test: 'Đấu giá giảm dần: từ 300.000đ, giảm 10.000đ mỗi 2 phút, sàn 100.000đ. Chấp nhận giá là thắng ngay.',
     },
     {
       key: 'S7', seller: seller3, registrants: [tester, b, cc, d],
       book: { title: 'Truyện Kiều', author: 'Nguyễn Du', publisher: 'Giáo dục', year: 2017, value: 220_000, condition: 'Good' },
       intake: { startPrice: 100_000, step: 10_000, buyNowPrice: null, auctionType: 'SealedFirst', minBidders: 4 },
-      publish: { startAt: null, durationSeconds: 3 * 3600 },
+      publish: due(3 * 3600),
       then: async (id) => {
         await call('POST', `/auctions/${id}/sealed-bid`, b, { amount: 180_000, fulfillmentMethod: 'SelfCollect' });
       },
@@ -449,7 +454,7 @@ try {
       key: 'S8', seller: holdSeller, registrants: [e, f, g, h],
       book: { title: 'Chí Phèo', author: 'Nam Cao', publisher: 'Văn học', year: 2014, value: 130_000, condition: 'Fair' },
       intake: { ...english(100_000, 400_000), minBidders: 4 },
-      publish: { startAt: null, durationSeconds: 6 * 3600 },
+      publish: due(6 * 3600),
       then: async (id) => {
         await bid(id, e, 100_000);
         await bid(id, f, 150_000);
@@ -468,7 +473,7 @@ try {
       key: 'S9', seller: seller3, registrants: [a, b, cc, h],
       book: { title: 'Mắt biếc', author: 'Nguyễn Nhật Ánh', publisher: 'Trẻ', year: 2019, value: 150_000, condition: 'Good' },
       intake: { ...english(120_000, 450_000), minBidders: 4 },
-      publish: { startAt: null, durationSeconds: 6 * 3600 },
+      publish: due(6 * 3600),
       then: async (id) => {
         await bid(id, a, 120_000);
         await call('POST', '/me/support-cases', b, {
@@ -479,6 +484,13 @@ try {
         });
       },
       test: 'Bị báo cáo (hồ sơ hỗ trợ chưa ai nhận). Admin → Hỗ trợ: nhận hồ sơ rồi Đóng phiên kèm lời nhắn; người đang xem phiên thấy ngay.',
+    },
+    {
+      key: 'S10', seller: holdSeller, registrants: [g, h],
+      book: { title: 'Bỉ vỏ', author: 'Nguyên Hồng', publisher: 'Văn học', year: 2016, value: 140_000, condition: 'Good' },
+      intake: { ...english(100_000, 350_000), minBidders: 4 },
+      publish: due(2 * 3600),
+      test: 'Đã qua giờ mở mà mới 2/4 người: phiên chờ thêm tối đa 24 giờ. Bạn đăng ký (cần thêm 2 người); đủ 4 thì phiên mở ngay, hết hạn chưa đủ thì bị hủy và hoàn cọc.',
     },
   ];
 
@@ -500,8 +512,19 @@ try {
     const intakeId = created.intakeId as string;
     await call('POST', `/operations/auction-intakes/${intakeId}/receive`, staff, { expectedVersion: 1, shelfCode: `DEMO-${s.key}` });
     await call('POST', `/operations/auction-intakes/${intakeId}/inspect`, staff, { expectedVersion: 2, outcome: 'Pass', note: null });
-    await call('POST', `/auction-intakes/${intakeId}/publish`, s.seller, { expectedVersion: 3, ...s.publish });
-    const auction = (await c.auctions.findOne({ intakeId }))!;
+    const { due: moveBack, ...publishBody } = s.publish;
+    await call('POST', `/auction-intakes/${intakeId}/publish`, s.seller, { expectedVersion: 3, ...publishBody });
+    let auction = (await c.auctions.findOne({ intakeId }))!;
+    if (moveBack) {
+      const length = auction.plannedEndAt.getTime() - auction.startAt.getTime();
+      const startAt = new Date(auction.publishedAt.getTime() + 24 * H);
+      const end = new Date(startAt.getTime() + length);
+      await c.auctions.updateOne(
+        { _id: auction._id },
+        { $set: { opensAt: auction.publishedAt, startAt, plannedEndAt: end, endAt: end } },
+      );
+      auction = (await c.auctions.findOne({ intakeId }))!;
+    }
     for (const r of s.registrants)
       await call('POST', `/auctions/${auction._id}/registration`, r, { deposit: auction.depositAmount });
     await s.then?.(auction._id);
