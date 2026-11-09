@@ -14,11 +14,6 @@ sách trong một hàng gọn. Khi chưa có ảnh, Điền nhanh từ ảnh ch�
 nút Chọn ảnh. Khi có ảnh mới hiện hai lệnh đọc, tiến độ và phần Chọn cách đọc có
 thể mở. Gợi ý chụp bổ sung nằm cùng phần mục chưa đọc được.
 
-Theo góp ý của chủ dự án, toàn khối Điền nhanh từ ảnh dùng nền đỏ rượu vang,
-chữ kem và ô nhập sáng. Nút đọc hoặc áp dụng chính có nền kem. Vàng dùng cho
-chỉ dấu đọc và focus bàn phím trên nền tối. Khay ảnh, kết quả và đối chiếu
-danh mục cùng nằm trong khối này.
-
 Tên sách và tác giả có cùng kiểu ô nhập, xếp cạnh nhau trên màn rộng. Danh mục
 và ngôn ngữ nằm trước phần ấn bản tùy chọn. Giới hạn đăng bài mở riêng gần chân
 form. Lỗi ở bước này hiện cạnh ô, với viền lỗi và mô tả liên kết. Khi Tiếp tục
