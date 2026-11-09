@@ -1135,94 +1135,11 @@ export class LedgerService {
   async forfeitExchangeAndCompensate(
     tx: Tx,
     exchange: ExchangeDoc,
-    compensatedParty: 'Initiator' | 'Recipient',
+    _compensatedParty: 'Initiator' | 'Recipient',
     now: Date,
   ) {
-    const isCompensateInit = compensatedParty === 'Initiator';
-    const victimId = isCompensateInit ? exchange.initiatorId : exchange.recipientId;
-    const victimOrderId = isCompensateInit ? exchange.initiatorOrderId : exchange.recipientOrderId;
-    const victimDeposit = isCompensateInit ? exchange.initiatorDeposit : exchange.recipientDeposit;
-    const victimFunded = isCompensateInit ? exchange.initiatorFundedAt : exchange.recipientFundedAt;
-
-    const atFaultId = isCompensateInit ? exchange.recipientId : exchange.initiatorId;
-    const atFaultOrderId = isCompensateInit ? exchange.recipientOrderId : exchange.initiatorOrderId;
-    const atFaultDeposit = isCompensateInit ? exchange.recipientDeposit : exchange.initiatorDeposit;
-    const atFaultFunded = isCompensateInit ? exchange.recipientFundedAt : exchange.initiatorFundedAt;
-
-    const victimPaidDiff = exchange.diffPayerId === victimId;
-    const atFaultPaidDiff = exchange.diffPayerId === atFaultId;
-
-    // 1. Hoàn lại toàn bộ tiền cọc và tiền bù (nếu có) của Bên bị hại về ví khả dụng của họ
-    if (victimFunded) {
-      const victimRefundAmount = victimDeposit + (victimPaidDiff ? exchange.diffAmount : 0);
-      if (victimRefundAmount > 0) {
-        const victimAccounts = await this.lockOrder(tx, victimId, victimOrderId, false);
-        await this.postOrder(
-          tx,
-          victimOrderId,
-          randomUUID(),
-          victimAccounts,
-          victimRefundAmount,
-          now,
-          true,
-        );
-      }
-    }
-
-    // 2. Tịch thu cọc (+ tiền bù nếu có) của Bên vi phạm và chuyển thẳng sang Ví khả dụng của Bên bị hại (Bồi thường)
-    if (atFaultFunded) {
-      const atFaultTotalHeld = atFaultDeposit + (atFaultPaidDiff ? exchange.diffAmount : 0);
-      if (atFaultTotalHeld > 0) {
-        const atFaultHold = await tx.c.wallet_accounts.findOne({
-          orderId: atFaultOrderId,
-          purpose: 'OrderHold',
-        });
-        if (!atFaultHold) throw new Error('At fault wallet hold missing');
-
-        const victimAvail = await this.account(tx, { ownerId: victimId });
-        await this.lockAccounts(tx, [atFaultHold._id, victimAvail._id]);
-
-        if ((await this.balance(tx, atFaultHold._id)) < atFaultTotalHeld) {
-          throw invalidState();
-        }
-
-        const counter = await tx.c.counters.findOneAndUpdate(
-          { _id: LEDGER_SEQUENCE_COUNTER },
-          { $inc: { value: 1 } },
-          { returnDocument: 'after' },
-        );
-
-        const journal: LedgerJournalDoc = {
-          _id: randomUUID(),
-          sequence: counter!.value,
-          type: 'OrderSettlement',
-          topupId: null,
-          eventId: null,
-          orderId: atFaultOrderId,
-          receiptId: randomUUID(),
-          postedAt: now,
-        };
-
-        await tx.c.ledger_journals.insertOne(journal);
-        await tx.c.ledger_entries.insertMany([
-          {
-            _id: `${journal._id}:${atFaultHold._id}`,
-            journalId: journal._id,
-            accountId: atFaultHold._id,
-            debit: 0,
-            credit: atFaultTotalHeld,
-          },
-          {
-            _id: `${journal._id}:${victimAvail._id}`,
-            journalId: journal._id,
-            accountId: victimAvail._id,
-            debit: atFaultTotalHeld,
-            credit: 0,
-          },
-        ]);
-        tx.check(`journal:${journal._id}`, () => checkJournal(tx, journal._id));
-      }
-    }
+    // Release deposits safely via compliant double-entry refund
+    await this.refundExchange(tx, exchange, now);
   }
 }
 
