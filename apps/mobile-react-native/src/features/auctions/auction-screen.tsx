@@ -1373,10 +1373,6 @@ function BidPanel({
           />
         </View>
       )}
-            onPress={() => setConfirming({ kind: "BuyNow", amount: auction.buyNowPrice! })}
-          />
-        </View>
-      )}
       <ConfirmDialog
         visible={!!copy && !paused}
         title={copy?.title ?? ""}
