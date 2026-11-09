@@ -213,12 +213,25 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
  * the change: its version makes the dedupe key unique per event, so a retried
  * transaction cannot notify twice. The seller gets the seller wording.
  */
+const NOTIFICATION_BODY_MAX = 400;
+export function withNote(body: string, note?: string) {
+  const clean = note?.replace(/\s+/g, ' ').trim();
+  if (!clean) return body.slice(0, NOTIFICATION_BODY_MAX);
+  const lead = `${body} Lời nhắn của quản trị viên: “`;
+  const room = NOTIFICATION_BODY_MAX - lead.length - 1;
+  if (room < 10) return body.slice(0, NOTIFICATION_BODY_MAX);
+  const quoted = [...clean].length > room ? `${[...clean].slice(0, room - 1).join('')}…` : clean;
+  return `${lead}${quoted}”`;
+}
 export async function notifyAuction(
   tx: Tx,
   a: AuctionDoc,
   kind: Kind,
   recipients: (string | null | undefined)[],
   now: Date,
+  // ADR 0083: an Admin's note for the members (the resume reason), appended
+  // after the standard text and shortened to fit the 400-character body.
+  note?: string,
 ) {
   const users = [...new Set(recipients.filter((u): u is string => !!u))];
   if (!users.length) return;
@@ -235,7 +248,7 @@ export async function notifyAuction(
       userId,
       kind,
       title: text.title,
-      body: text.body.slice(0, 400),
+      body: withNote(text.body, note),
       targetType: 'Auction',
       targetId: a._id,
       dedupeKey: `${kind}:${a._id}:${a.version}:${userId}`,

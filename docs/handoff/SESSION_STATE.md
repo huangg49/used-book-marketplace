@@ -84,6 +84,13 @@ Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
   Web/RN cập nhật trần, số lần còn lại và chữ; RN thêm lựa chọn 1/2/4 tuần.
   Kiểm chứng: unit schedule 19, E2E nhóm đăng ký/vòng đời 33/33, Mongo 61, web 477, RN auctions 22,
   contract/routes PASS. Hộp hẹn giờ trên trình duyệt, full E2E, native NOT RUN. Chưa push.
+- [ADR0083](../adr/0083-auction-phase-a-fixes.md) (09/11, nhánh `fix/auction-phase-a` từ main
+  `c5c232bd`): nhóm A của kế hoạch lỗi đấu giá. Báo cáo đóng được phiên đã qua giờ kết thúc tới
+  lúc worker chốt (hủy Order chờ thanh toán chuyển nhóm D); lý do tiếp tục phiên có trong thông
+  báo cho thành viên; khóa worker có tên bước; đăng ký theo POL-41 (5 phiên, 30 lượt/phút, chờ
+  1 phút để đăng ký lại); Admin thấy và lọc các báo cáo cùng đối tượng (`otherOpenOnTarget`,
+  migration `0071-support-target-index`). Kết quả kiểm chứng ở ADR0083/commit. DB local chính
+  chưa chạy khi làm nên `pnpm db:migrate` (0071) chưa áp dụng ở đó. Chưa push.
 
 Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
 auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web

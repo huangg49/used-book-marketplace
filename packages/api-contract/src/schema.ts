@@ -2679,7 +2679,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ADR 0080. ACTIVE ADMIN independent of the seller, bidders and registrants returns an OnHold auction to Active with a reason, once per auction, before its 48-hour hold ceiling and only when the seller and the leader are eligible again. No deadline moves (startAt, endAt, the Buy Now window and the Dutch clock keep their stored times); an auction whose end already passed is closed by the worker next. Bids, holds and deposits are kept. */
+        /** @description ADR 0080. ACTIVE ADMIN independent of the seller, bidders and registrants returns an OnHold auction to Active with a reason, once per auction, before its 48-hour hold ceiling and only when the seller and the leader are eligible again. No deadline moves (startAt, endAt, the Buy Now window and the Dutch clock keep their stored times); an auction whose end already passed is closed by the worker next. Bids, holds and deposits are kept. ADR 0083 - the reason is quoted in the AuctionResumed notification to the seller, bidders and registrants. */
         post: operations["resumeAuction"];
         delete?: never;
         options?: never;
@@ -3293,7 +3293,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ADR 0077 — registers the caller for an auction with a refundable deposit (the auction's depositAmount, which the body repeats so a changed amount is refused). The deposit is held in the wallet; bids, Dutch acceptance and sealed bids need a registration, and bidding opens once registeredCount reaches minBidders. Losers and an unmet minimum are refunded at the close; a non-paying winner's deposit goes to the platform. */
+        /** @description ADR 0077 — registers the caller for an auction with a refundable deposit (the auction's depositAmount, which the body repeats so a changed amount is refused). The deposit is held in the wallet; bids, Dutch acceptance and sealed bids need a registration, and bidding opens once registeredCount reaches minBidders. Losers and an unmet minimum are refunded at the close; a non-paying winner's deposit goes to the platform. ADR 0083 (POL-41) - 429 RATE_LIMITED when the caller already has 5 open participations (standing registrations, auctions they lead, wins awaiting payment), after 30 registrations or withdrawals in the last minute, or within a minute of withdrawing from this auction. */
         post: operations["registerForAuction"];
         delete?: never;
         options?: never;
@@ -4086,7 +4086,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ADR 0079. Assigned ACTIVE ADMIN, independent of the seller, registrants and bidders, closes the reported auction (Active or OnHold) in one transaction - Cancelled with closeReason Reported, every hold and deposit released, book reclaimed, message sent to the seller and every participant and recorded as the case answer. */
+        /** @description ADR 0079. Assigned ACTIVE ADMIN, independent of the seller, registrants and bidders, closes the reported auction (Active, including past its end until the worker closes it, ADR 0083; or OnHold) in one transaction - Cancelled with closeReason Reported, every hold and deposit released, book reclaimed, message sent to the seller and every participant and recorded as the case answer. */
         post: operations["closeReportedAuction"];
         delete?: never;
         options?: never;
@@ -7047,6 +7047,7 @@ export interface components {
         };
         ResumeAuction: {
             expectedVersion: number;
+            /** @description ADR 0083. Recorded in the audit log and quoted (shortened to fit) in the notification members receive. */
             reason: string;
         };
         PlaceAuctionBid: {
@@ -8168,6 +8169,8 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            /** @description ADR 0083. Operations reads only - how many other cases about the same target are not Closed (cases involving the reading Admin excluded, as in the queue). Never sent to members, so a reporter cannot tell whether others reported. Absent without a target or on older servers. */
+            otherOpenOnTarget?: number;
         };
         CreateSupportCase: {
             /** @enum {string} */
@@ -16360,6 +16363,9 @@ export interface operations {
                 state?: components["schemas"]["SupportState"];
                 kind?: components["schemas"]["SupportKind"];
                 assignedToMe?: boolean;
+                /** @description ADR 0083. Only cases about this target, with targetId, to see every open report on one auction or listing together. */
+                targetType?: "DirectOrder" | "Exchange" | "PointOrder" | "Auction" | "Listing" | "Review" | "Member";
+                targetId?: string;
             };
             header?: never;
             path?: never;

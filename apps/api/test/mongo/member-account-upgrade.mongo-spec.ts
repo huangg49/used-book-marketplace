@@ -51,6 +51,7 @@ const suffix = [
   '0068-auction-resume',
   '0069-auction-scheduled-open',
   '0070-auction-open-month',
+  '0071-support-target-index',
 ];
 const sha = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');

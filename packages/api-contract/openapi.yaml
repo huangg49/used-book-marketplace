@@ -7915,7 +7915,8 @@ paths:
         OnHold auction to Active with a reason, once per auction, before its 48-hour hold ceiling and
         only when the seller and the leader are eligible again. No deadline moves (startAt, endAt,
         the Buy Now window and the Dutch clock keep their stored times); an auction whose end already
-        passed is closed by the worker next. Bids, holds and deposits are kept.
+        passed is closed by the worker next. Bids, holds and deposits are kept. ADR 0083 - the reason is
+        quoted in the AuctionResumed notification to the seller, bidders and registrants.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -10111,7 +10112,10 @@ paths:
         depositAmount, which the body repeats so a changed amount is refused). The deposit is held in the
         wallet; bids, Dutch acceptance and sealed bids need a registration, and bidding opens once
         registeredCount reaches minBidders. Losers and an unmet minimum are refunded at the close; a
-        non-paying winner's deposit goes to the platform.
+        non-paying winner's deposit goes to the platform. ADR 0083 (POL-41) - 429 RATE_LIMITED when the
+        caller already has 5 open participations (standing registrations, auctions they lead, wins
+        awaiting payment), after 30 registrations or withdrawals in the last minute, or within a minute
+        of withdrawing from this auction.
       x-implementation-status: implemented
       security:
         - bearerAuth: []
@@ -12144,6 +12148,27 @@ paths:
           required: false
           schema:
             type: boolean
+        - in: query
+          name: targetType
+          required: false
+          description: ADR 0083. Only cases about this target, with targetId, to see every open report
+            on one auction or listing together.
+          schema:
+            type: string
+            enum:
+              - DirectOrder
+              - Exchange
+              - PointOrder
+              - Auction
+              - Listing
+              - Review
+              - Member
+        - in: query
+          name: targetId
+          required: false
+          schema:
+            type: string
+            format: uuid
       responses:
         "200":
           description: OK
@@ -12257,7 +12282,8 @@ paths:
       security:
         - bearerAuth: []
       description: ADR 0079. Assigned ACTIVE ADMIN, independent of the seller, registrants and bidders,
-        closes the reported auction (Active or OnHold) in one transaction - Cancelled with closeReason
+        closes the reported auction (Active, including past its end until the worker closes it, ADR 0083;
+        or OnHold) in one transaction - Cancelled with closeReason
         Reported, every hold and deposit released, book reclaimed, message sent to the seller and every
         participant and recorded as the case answer.
       parameters:
@@ -20796,6 +20822,8 @@ components:
           type: string
           minLength: 10
           maxLength: 1000
+          description: ADR 0083. Recorded in the audit log and quoted (shortened to fit) in the
+            notification members receive.
     PlaceAuctionBid:
       type: object
       additionalProperties: false
@@ -23879,6 +23907,13 @@ components:
           type: string
           format: date-time
         updatedAt: *a5
+        otherOpenOnTarget:
+          type: integer
+          minimum: 0
+          description: ADR 0083. Operations reads only - how many other cases about the same target are
+            not Closed (cases involving the reading Admin excluded, as in the queue). Never sent to
+            members, so a reporter cannot tell whether others reported. Absent without a target or on
+            older servers.
     CreateSupportCase:
       type: object
       additionalProperties: false

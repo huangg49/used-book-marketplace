@@ -170,7 +170,9 @@ export function AuctionHoldDecision({ item, ...context }: Props) {
           <p id={`hold-hint-${item.id}`} className={problem === "reason" ? "field-error" : "muted"}>
             {problem === "reason"
               ? "Nhập lý do từ 10 đến 1.000 ký tự."
-              : "Bắt buộc, 10–1.000 ký tự. Được ghi vào nhật ký quản trị."}
+              : resume
+                ? "Bắt buộc, 10–1.000 ký tự. Được ghi vào nhật ký quản trị và gửi kèm thông báo cho người bán, người trả giá và người đăng ký; không ghi thông tin cá nhân."
+                : "Bắt buộc, 10–1.000 ký tự. Được ghi vào nhật ký quản trị."}
           </p>
         </>
       )}
@@ -192,7 +194,7 @@ export function AuctionHoldDecision({ item, ...context }: Props) {
         <>
           <p>
             {resume
-              ? `Phiên “${item.title}” trở lại như trước khi tạm giữ. Người bán, người trả giá và người đăng ký được báo. Phiên không được tiếp tục lần thứ hai.`
+              ? `Phiên “${item.title}” trở lại như trước khi tạm giữ. Người bán, người trả giá và người đăng ký được báo kèm lý do dưới đây. Phiên không được tiếp tục lần thứ hai.`
               : `Phiên “${item.title}” sẽ kết thúc ngay, không có người thắng. Không hoàn tác được.`}
           </p>
           <blockquote className="prose">{trimmed}</blockquote>

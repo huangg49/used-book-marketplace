@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import type {
   AuctionBidderDoc,
   AuctionDoc,
+  AuctionRegistrationDoc,
   ReclaimReason,
 } from '../../database/mongo/documents.js';
 import {
@@ -363,6 +364,66 @@ export class AuctionBiddingService {
         429,
         'RATE_LIMITED',
         'Bạn đang dẫn giá hoặc chờ thanh toán ở tối đa 5 phiên đấu giá.',
+      );
+  }
+  // ADR 0083: registration takes the POL-41 limits bids already have. A
+  // standing registration (its deposit is held) counts as an open
+  // participation, with auctions led or won awaiting payment; registering and
+  // withdrawing share the per-minute limit; re-registering on the same
+  // auction waits a minute after a withdrawal.
+  private async checkRegistrationLimits(
+    tx: Tx,
+    userId: string,
+    auctionId: string,
+    own: AuctionRegistrationDoc | null,
+    now: Date,
+  ) {
+    const minuteAgo = new Date(now.getTime() - 60_000);
+    const tooFast = () =>
+      new DomainError(
+        429,
+        'RATE_LIMITED',
+        'Bạn thao tác đăng ký đấu giá quá nhanh. Hãy thử lại sau ít phút.',
+      );
+    if (own?.state === 'Withdrawn' && own.updatedAt > minuteAgo)
+      throw tooFast();
+    if (
+      (await tx.c.auction_registrations.countDocuments({
+        userId,
+        updatedAt: { $gt: minuteAgo },
+      })) >= RATE_LIMIT_PER_MINUTE
+    )
+      throw tooFast();
+    const registered = await tx.c.auction_registrations
+      .find(
+        { userId, state: 'Registered', auctionId: { $ne: auctionId } },
+        { projection: { auctionId: 1 } },
+      )
+      .toArray();
+    const engaged = await tx.c.auctions
+      .find(
+        {
+          _id: { $ne: auctionId },
+          $or: [
+            { leaderId: userId, state: { $in: ['Active', 'OnHold'] } },
+            {
+              winnerId: userId,
+              state: { $in: ['BuyNowPending', 'AwaitingWinnerPayment'] },
+            },
+          ],
+        },
+        { projection: { _id: 1 } },
+      )
+      .toArray();
+    const open = new Set([
+      ...registered.map((r) => r.auctionId),
+      ...engaged.map((a) => a._id),
+    ]);
+    if (open.size >= MAX_OPEN_PARTICIPATIONS)
+      throw new DomainError(
+        429,
+        'RATE_LIMITED',
+        'Bạn đang đăng ký, dẫn giá hoặc chờ thanh toán ở tối đa 5 phiên đấu giá.',
       );
   }
 
@@ -866,6 +927,8 @@ export class AuctionBiddingService {
             ...(await this.registrantIds(tx, a)),
           ],
           now,
+          // ADR 0083: members learn why the Admin resumed the auction.
+          reason,
         );
         return this.change(next, now, 'AuctionResumed', actor._id, reason);
       },
@@ -1053,12 +1116,13 @@ export class AuctionBiddingService {
         'Bạn đang liên quan đến phiên này nên không được đóng.',
       );
     if (a.version !== version) throw conflict();
-    // An Active auction past its end waits for the close (a winner may exist).
-    if (
-      !(a.state === 'OnHold' || (a.state === 'Active' && now < a.endAt))
-    )
+    // ADR 0083: until the worker closes it (no winner or Order exists yet), an
+    // Active auction past its end can still be closed from the report, as
+    // the plain Admin cancel already allows; the auction lock decides a race
+    // with the close. An unpaid winner's Order is not cancelled here.
+    if (a.state !== 'OnHold' && a.state !== 'Active')
       throw invalidState(
-        'Phiên đã kết thúc hoặc đang chốt kết quả nên không còn đóng được.',
+        'Phiên đã chốt kết quả nên không còn đóng được từ báo cáo.',
       );
     return this.cancelNow(tx, a, message, 'Reported', receiptId, now);
   }
@@ -1066,7 +1130,7 @@ export class AuctionBiddingService {
   // ADR 0079 worker safety net: the start passed with too few registrants.
   // Keyed by the auction version, so a second run on the same row replays.
   expireRegistration(id: string, version: number) {
-    return this.commands.systemAuction('AuctionClose', stepKey(id, version), {
+    return this.commands.systemAuction('AuctionClose', stepKey(id, version, 'expireRegistration'), {
       discover: async (tx) => [(await this.auction(tx, id)).sellerId],
       authorize: (tx) => this.auction(tx, id),
       mutate: async (tx, _before, receiptId) => {
@@ -1090,7 +1154,7 @@ export class AuctionBiddingService {
 
   // ADR 0079: OnHold never lasts more than 48 h; an Admin can cancel earlier.
   expireHold(id: string, version: number) {
-    return this.commands.systemAuction('AuctionClose', stepKey(id, version), {
+    return this.commands.systemAuction('AuctionClose', stepKey(id, version, 'expireHold'), {
       discover: async (tx) => [(await this.auction(tx, id)).sellerId],
       authorize: (tx) => this.auction(tx, id),
       mutate: async (tx, _before, receiptId) => {
@@ -1170,7 +1234,7 @@ export class AuctionBiddingService {
   // Payment deadline is endAt + 24h whenever the worker runs; a late worker
   // records the expiry.
   close(id: string, version: number) {
-    return this.commands.systemAuction('AuctionClose', stepKey(id, version), {
+    return this.commands.systemAuction('AuctionClose', stepKey(id, version, 'close'), {
       discover: async (tx) => {
         const a = await this.auction(tx, id);
         return [a.sellerId, ...(a.leaderId ? [a.leaderId] : [])];
@@ -1593,6 +1657,7 @@ export class AuctionBiddingService {
             'InvalidState',
             'Bạn đã đăng ký phiên này.',
           );
+        await this.checkRegistrationLimits(tx, actor._id, id, own, now);
         const delta = await this.ledger.setAuctionHold(
           tx,
           a._id,

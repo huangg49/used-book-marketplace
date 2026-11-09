@@ -51,14 +51,20 @@ function SupportQueue({ owner }: { owner: string }) {
   const state = params.get("state") ?? "",
     kind = params.get("kind") ?? "",
     mine = params.get("mine") === "true";
+  // ADR 0083: every open report about one target, reached from a case.
+  const targetType = params.get("targetType") ?? "",
+    targetId = params.get("targetId") ?? "";
+  const byTarget =
+    targetType in supportTargets && /^[0-9a-f-]{36}$/i.test(targetId);
   const query = new URLSearchParams({
     limit: "20",
     ...(state ? { state } : {}),
     ...(kind ? { kind } : {}),
     ...(mine ? { assignedToMe: "true" } : {}),
+    ...(byTarget ? { targetType, targetId } : {}),
   });
   const result = useInfiniteQuery({
-    queryKey: ["operations-support", owner, state, kind, mine],
+    queryKey: ["operations-support", owner, state, kind, mine, byTarget ? `${targetType}:${targetId}` : ""],
     staleTime: 0,
     refetchOnMount: "always",
     initialPageParam: undefined as string | undefined,
@@ -132,6 +138,23 @@ function SupportQueue({ owner }: { owner: string }) {
           Cập nhật danh sách
         </Button>
       </div>
+      {byTarget ? (
+        <p className="muted" role="status">
+          Đang xem mọi hồ sơ về {supportTargets[targetType as keyof typeof supportTargets].toLowerCase()} mã{" "}
+          {targetId.slice(0, 8).toUpperCase()}.{" "}
+          <Button
+            onClick={() =>
+              setParams((p) => {
+                p.delete("targetType");
+                p.delete("targetId");
+                return p;
+              })
+            }
+          >
+            Bỏ lọc
+          </Button>
+        </p>
+      ) : null}
       {result.isPending ? <p role="status">Đang tải hồ sơ…</p> : null}
       {result.isError && !result.isFetchNextPageError ? (
         <Notice tone="error">
@@ -164,6 +187,7 @@ function SupportQueue({ owner }: { owner: string }) {
                       : "Admin khác đang phụ trách"
                     : "Chưa có người phụ trách"}
                 </p>
+                {!byTarget ? <SameTarget item={item} /> : null}
               </div>
               <span className={styles.status}>
                 {item.state === "AwaitingMember"
@@ -189,6 +213,19 @@ function SupportQueue({ owner }: { owner: string }) {
         onNextPage={() => void result.fetchNextPage({ cancelRefetch: false })}
         nextLabel="Xem thêm hồ sơ" />}
     </div>
+  );
+}
+// ADR 0083: other open reports about the same target, so Admins handle them
+// together. Only operations reads carry the count; members never see it.
+function SameTarget({ item }: { item: SupportCase }) {
+  if (!item.target || !item.otherOpenOnTarget) return null;
+  const to = `/support?${new URLSearchParams({ targetType: item.target.type, targetId: item.target.id })}`;
+  return (
+    <p className="muted">
+      Còn {item.otherOpenOnTarget} hồ sơ khác đang mở về cùng{" "}
+      {supportTargets[item.target.type].toLowerCase()}.{" "}
+      <Link to={to}>Xem cùng lúc</Link>
+    </p>
   );
 }
 export function SupportDetailPage() {
@@ -598,6 +635,7 @@ function Related({ data }: { data: SupportDetail }) {
     Member: `/users/${target.id}`,
   };
   return (
+    <>
     <p className="muted">
       {supportTargets[target.type]} · {target.id}
       {data.relatedState
@@ -610,6 +648,8 @@ function Related({ data }: { data: SupportDetail }) {
         </>
       ) : null}
     </p>
+    <SameTarget item={data.case} />
+    </>
   );
 }
 function ModerateReview({

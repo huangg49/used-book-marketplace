@@ -6,6 +6,7 @@ import { createAuctionLifecycleMigration, withAuctionLifecycle } from './0067-au
 import { createAuctionResumeMigration, withAuctionResume } from './0068-auction-resume.js';
 import { createAuctionScheduledOpenMigration, withAuctionScheduledOpen } from './0069-auction-scheduled-open.js';
 import { createAuctionOpenMonthMigration, withAuctionOpenMonth } from './0070-auction-open-month.js';
+import { createSupportTargetIndexMigration, withSupportTargetIndex } from './0071-support-target-index.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { manualWithdrawalsMigration, withManualWithdrawals } from './0061-manual-wallet-withdrawals.js';
 import { createWithdrawalsMigration, withdrawalSpecs, withWithdrawals } from './0060-wallet-withdrawals.js';
@@ -564,7 +565,7 @@ const beforeWithdrawals = (): CollectionSpec[] => [
   demoCompletionSpec,
 ];
 
-export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
+export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth).map(withSupportTargetIndex), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
 const withdrawalsMigration = createWithdrawalsMigration([
@@ -617,3 +618,5 @@ migrations.push(scheduledOpenMigration);
 migrations.push(
   createAuctionOpenMonthMigration(scheduledOpenMigration.definition.collections),
 );
+// ADR 0083: open reports grouped and filtered by target, on the 0050 spec.
+migrations.push(createSupportTargetIndexMigration(supportSpecs));
