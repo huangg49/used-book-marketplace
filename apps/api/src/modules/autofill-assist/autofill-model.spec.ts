@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 import { PriceModelError } from '../price-assist/price-model.js';
-import { AUTOFILL_IMAGE_PROFILE, MAX_INLINE_IMAGE_BYTES, shrinkForModel } from './autofill-images.js';
+import { AUTOFILL_IMAGE_PROFILE, MAX_INLINE_IMAGE_BYTES, prepareAutofillImages, shrinkForModel } from './autofill-images.js';
 import { autofillModelFromConfig, NvidiaAutofillModel } from './autofill-model.js';
 
 // Adapter-only tests with a stubbed fetch: no network, no real key.
@@ -74,6 +74,10 @@ describe('NVIDIA autofill adapter', () => {
     const on = autofillModelFromConfig(cfg({ AUTOFILL_ENABLED: 'true', AUTOFILL_API_KEY: 'k' }));
     expect(on?.model).toBe('nvidia/nemotron-3.5-super-vl-120b-a12b');
     expect(on?.fallback).toBeNull();
+    expect(on?.supportsDetail).toBe(true);
+    expect(autofillModelFromConfig(cfg({
+      AUTOFILL_ENABLED: 'true', AUTOFILL_API_KEY: 'k', AUTOFILL_MODEL: 'nvidia/custom-vision',
+    }))?.supportsDetail).toBe(false);
   });
 });
 
@@ -96,4 +100,33 @@ describe('photo shrinking for the provider', () => {
     expect(await width(await shrinkForModel(cover, AUTOFILL_IMAGE_PROFILE))).toBe(1536);
     expect(await width(await shrinkForModel(cover))).toBe(1024);
   });
+
+  it('adds one enlarged detail from an isolated block, after all full photos', async () => {
+    const compact = await printedPage(5);
+    const prose = await printedPage(26);
+    const input = [prose, compact, compact];
+    const full = await prepareAutofillImages(input, false);
+    const enhanced = await prepareAutofillImages(input, true);
+    expect(enhanced.slice(0, 3)).toEqual(full);
+    expect(enhanced).toHaveLength(4);
+    const detail = Buffer.from(enhanced[3]!.split(',')[1]!, 'base64');
+    expect(detail.length).toBeLessThanOrEqual(MAX_INLINE_IMAGE_BYTES);
+    expect(await sharp(detail).metadata()).toMatchObject({ width: 640 });
+    expect(await prepareAutofillImages([prose], true)).toEqual(full.slice(0, 1));
+  });
 });
+
+function printedPage(lineCount: number) {
+  // Fixed glyph shapes avoid a dependency on installed fonts.
+  const letters = Array.from({ length: lineCount }, (_, row) =>
+    Array.from({ length: 18 }, (_, column) =>
+      `<path d="M${240 + column * 8} ${80 + row * 12}h5v7h-2v-4h-3z"/>`,
+    ).join(''),
+  ).join('');
+  return sharp(Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="520">
+      <rect width="720" height="520" fill="#f1dfbf"/>
+      <g fill="#231d12">${letters}</g>
+    </svg>`,
+  )).webp().toBuffer();
+}

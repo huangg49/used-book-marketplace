@@ -26,3 +26,7 @@ Trường nào không chắc chắn thì để null hoặc mảng rỗng.`;
 
 export const AUTOFILL_USER =
   'Đọc thông tin in trên cuốn sách trong các ảnh sau và trả về JSON theo hướng dẫn.';
+
+export const AUTOFILL_DETAIL_USER =
+  AUTOFILL_USER +
+  ' Ảnh cuối phóng cận từ một ảnh trước đó của cùng cuốn sách. Đối chiếu với ảnh toàn cảnh và đọc hết dòng thông tin in ấn. Khi thấy rõ dòng “In xong … năm …” của cuốn sách, dùng năm in xong cho publicationYear. Ngày cấp phép và năm trong tựa không phải năm in xong.';

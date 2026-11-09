@@ -10,6 +10,7 @@ import { PriceModelError, type ModelDraft } from '../price-assist/price-model.js
 export abstract class AutofillModel {
   abstract readonly model: string;
   abstract readonly fallback: string | null;
+  readonly supportsDetail: boolean = false;
   // images: data URLs, best first. useFallback picks the second model.
   abstract read(
     system: string,
@@ -24,12 +25,15 @@ export const AUTOFILL_DEFAULT_MODEL = 'nvidia/nemotron-3.5-super-vl-120b-a12b';
 export class NvidiaAutofillModel extends AutofillModel {
   readonly model: string;
   readonly fallback: string | null;
+  override readonly supportsDetail: boolean;
   constructor(
     private readonly options: NvidiaChatOptions & { fallbackModel?: string | null },
   ) {
     super();
     this.model = options.model;
     this.fallback = options.fallbackModel || null;
+    // The deployed model is verified with three photos plus one close-up.
+    this.supportsDetail = this.model === AUTOFILL_DEFAULT_MODEL;
   }
   async read(system: string, user: string, images: string[], useFallback = false) {
     const model = useFallback && this.fallback ? this.fallback : this.model;

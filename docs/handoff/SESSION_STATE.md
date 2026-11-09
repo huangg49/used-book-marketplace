@@ -1,3 +1,14 @@
+# Autofill tự đọc vùng chữ nhỏ — 10/11/2026
+
+Profile `listing-text-v2` dùng cùng thao tác chọn ảnh và bấm đọc. Backend
+tìm cụm chữ nhỏ trong bộ ảnh và gửi tối đa một ảnh cận cùng ảnh toàn trang
+trong lần gọi chính của model mặc định. Cache cũ theo ảnh được phân biệt
+bằng profile và lời dặn mới. Xem kết quả đối chiếu bốn cuốn trong [ADR0048](../adr/0048-listing-photo-autofill.md).
+Kiểm chứng gồm 51 unit, 9 ca HTTP với MongoDB QA, typecheck, build và kiểm
+OpenAPI. Lượt đối chiếu NVIDIA gọi qua bộ đọc ảnh của API, còn kiểm thử HTTP
+dùng provider và ảnh giả. Không dùng hai loại bằng chứng này để đóng gate
+ảnh thật.
+
 # Đọc chữ bằng AI trực tiếp trên Member web — 09/11/2026
 
 Tiếp nối `d1ad5d42`. Từ `/sell`, chọn ảnh và bấm **Đọc chữ bằng AI** để bỏ
