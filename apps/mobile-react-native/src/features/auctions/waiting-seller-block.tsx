@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Pressable, View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useSession } from "../../core/session/session-provider";
@@ -65,10 +65,9 @@ export function WaitingSellerBlock({
   const defaultLower = Math.max(AUCTION_MIN_BIDDERS_FLOOR, need - 1);
   // ADR 0085 (L5): raising is allowed only while nobody is registered.
   const canRaise = count === 0 && need < AUCTION_MIN_BIDDERS_CAP;
-  const [targetMin, setTargetMin] = useState(defaultLower);
-  useEffect(() => {
-    setTargetMin(Math.max(AUCTION_MIN_BIDDERS_FLOOR, need - 1));
-  }, [need]);
+  const [selectedMin, setSelectedMin] = useState<number | null>(null);
+  const targetMin = selectedMin ?? defaultLower;
+  const setTargetMin = (val: number) => setSelectedMin(val);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
