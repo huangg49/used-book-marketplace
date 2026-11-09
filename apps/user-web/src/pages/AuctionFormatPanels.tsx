@@ -12,7 +12,7 @@ import { formatVnd, ROUTES } from '../lib/routes'
 import { getWalletSummary } from '../services/wallet'
 import {
   AUCTION_MAX_OPEN_CHANGES, AUCTION_MIN_BIDDERS_CAP, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_PRICE_DIGITS, AUCTION_RESCHEDULE_FREEZE_MS, acceptDutch,
-  canWithdrawRegistration, closeAuctionBeforeStart, openRuleText, openTimeOf, placeSealedBid, registerForAuction, setAuctionMinBidders,
+  acceptSecondChance, canWithdrawRegistration, closeAuctionBeforeStart, declineSecondChance, openRuleText, openTimeOf, placeSealedBid, registerForAuction, setAuctionMinBidders,
   withdrawAuctionRegistration, type AuctionParticipation, type AuctionSummary,
 } from '../services/auctions'
 import styles from './AuctionDetailPage.module.css'
@@ -141,6 +141,67 @@ export function RegistrationPanel({ auction, me, serverTime, onChanged }: PanelP
               : 'Đã đăng ký. Phiên đủ người và mở trả giá sau 10 phút (khung 23:00–07:00 thì lúc 07:00).'
             : 'Đã đăng ký. Bạn sẽ nhận thông báo khi phiên đủ người.')
         }).finally(() => setConfirming(false))}
+      />
+    </div>
+  )
+}
+
+/**
+ * ADR 0086: the runner-up's one offer after the winner did not pay. They buy
+ * at their own highest bid (the wallet holds it, 24 h to pay) or decline; the
+ * server checks the deadline, the version and the wallet.
+ */
+export function SecondChancePanel({ auction, me, serverTime, onChanged }: PanelProps) {
+  const offer = me?.secondChance
+  const deadline = useCountdown(offer?.deadline, serverTime)
+  const available = useAvailable(me)
+  const [confirming, setConfirming] = useState<'accept' | 'decline' | null>(null)
+  const { busy, error, unknown, run } = useCommand(onChanged)
+  if (!offer) return null
+  const version = auction.version ?? 0
+  const short = available !== null && offer.price > available
+  const until = new Date(offer.deadline).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
+  return (
+    <div className={styles.bidPanel}>
+      <div className={styles.notice}>
+        <strong><Wallet size={16} aria-hidden="true" /> Bạn được mời mua sách này</strong>
+        <p>
+          Người thắng không thanh toán đúng hạn. Bạn có thể mua với giá trả cao nhất của bạn, <b>{formatVnd(offer.price)}</b>,
+          nếu nhận trước <b>{until}</b> (còn {formatRemaining(deadline)}). Khi nhận, ví giữ số tiền này và bạn thanh toán trong 24 giờ.
+          Không nhận thì không có khoản nào bị trừ.
+        </p>
+      </div>
+      <Shortfall available={available} amount={offer.price} />
+      {error && <p className={styles.walletShort} role="alert">{error}</p>}
+      {unknown ? (
+        <button type="button" className={styles.primaryBlock} disabled={busy} onClick={() => void unknown()}>
+          {busy ? 'Đang thử lại…' : 'Thử lại đúng lệnh vừa rồi'}
+        </button>
+      ) : (
+        <>
+          <button type="button" className={styles.continue} disabled={busy || short || deadline <= 0} onClick={() => setConfirming('accept')}>
+            Mua với giá {formatVnd(offer.price)} <ArrowRight size={16} aria-hidden="true" />
+          </button>
+          <button type="button" className={styles.secondaryBlock} disabled={busy || deadline <= 0} onClick={() => setConfirming('decline')}>
+            Không mua
+          </button>
+        </>
+      )}
+      <ConfirmDialog
+        isOpen={confirming !== null}
+        onClose={() => !busy && setConfirming(null)}
+        title={confirming === 'accept' ? `Mua với giá ${formatVnd(offer.price)}?` : 'Từ chối lời mời mua?'}
+        description={confirming === 'accept'
+          ? `Ví giữ ${formatVnd(offer.price)} ngay và bạn thanh toán trong 24 giờ để nhận sách tại ${auction.pointName}. Không thanh toán đúng hạn thì lượt không thanh toán được ghi nhận.`
+          : 'Phiên kết thúc và sách được trả lại người bán. Bạn không thể nhận lại lời mời này.'}
+        confirmText={confirming === 'accept' ? 'Mua sách' : 'Không mua'}
+        isBusy={busy}
+        isDanger={confirming === 'decline'}
+        onConfirm={() => void run(
+          `second-chance:${confirming}:${version}`,
+          (key) => confirming === 'accept' ? acceptSecondChance(auction.id, version, key) : declineSecondChance(auction.id, version, key),
+          () => setConfirming(null),
+        ).finally(() => setConfirming(null))}
       />
     </div>
   )

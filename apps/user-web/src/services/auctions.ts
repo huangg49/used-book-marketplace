@@ -13,7 +13,7 @@ export type AuctionStep = number
 
 const auctionStepSchema = z.number().int().min(AUCTION_STEP_MIN).max(AUCTION_STEP_MAX).multipleOf(AUCTION_STEP_UNIT)
 const money = z.number().int()
-const auctionState = z.enum(['Active', 'BuyNowPending', 'AwaitingWinnerPayment', 'Sold', 'Unsold', 'OnHold', 'Cancelled', 'PaymentExpired'])
+const auctionState = z.enum(['Active', 'BuyNowPending', 'AwaitingWinnerPayment', 'Sold', 'Unsold', 'OnHold', 'Cancelled', 'PaymentExpired', 'SecondChanceOffered'])
 const auctionBookSchema = z.object({
   revisionId: z.string().uuid(), authors: z.array(z.string()), condition: z.enum(['LikeNew', 'Good', 'Fair', 'Worn']),
   pages: z.string(), coverNote: z.string(), notes: z.string(), accessories: z.string(), description: z.string(),
@@ -22,11 +22,12 @@ const auctionBookSchema = z.object({
 export const auctionTypeSchema = z.enum(['English', 'Dutch', 'SealedFirst', 'SealedSecond'])
 export type AuctionType = z.infer<typeof auctionTypeSchema>
 /** ADR 0076: the formats a seller can choose. */
-export const AUCTION_TYPES: { value: AuctionType; label: string; short: string; hint: string }[] = [
+// ADR 0086: SealedSecond is retired for new auctions (a draft keeps its label).
+export const AUCTION_TYPES: { value: AuctionType; label: string; short: string; hint: string; retired?: boolean }[] = [
   { value: 'English', label: 'Trả giá lên', short: 'Kiểu Anh', hint: 'Người mua trả giá tăng dần, có đặt giá tự động và có thể bật mua ngay. Giá cao nhất khi hết giờ thắng.' },
   { value: 'Dutch', label: 'Giá giảm dần', short: 'Kiểu Hà Lan', hint: 'Giá bắt đầu cao và giảm một bước sau mỗi khoảng thời gian tới giá sàn. Người đầu tiên chấp nhận thắng ngay.' },
   { value: 'SealedFirst', label: 'Giá kín · giá thứ nhất', short: 'Kín', hint: 'Mỗi người gửi một giá kín, chỉ được nâng. Giá cao nhất thắng và trả đúng giá đã gửi.' },
-  { value: 'SealedSecond', label: 'Giá kín · giá thứ hai', short: 'Vickrey', hint: 'Mỗi người gửi một giá kín. Giá cao nhất thắng nhưng trả bằng giá cao thứ hai (hoặc giá khởi điểm nếu chỉ một người).' },
+  { value: 'SealedSecond', label: 'Giá kín · giá thứ hai', short: 'Vickrey', hint: 'Mỗi người gửi một giá kín. Giá cao nhất thắng nhưng trả bằng giá cao thứ hai (hoặc giá khởi điểm nếu chỉ một người).', retired: true },
 ]
 export const buyNowModeSchema = z.enum(['Challenge', 'Instant'])
 export type BuyNowMode = z.infer<typeof buyNowModeSchema>
@@ -60,6 +61,8 @@ export const auctionSummarySchema = z.object({
   // ADR 0081: the seller's open time; startAt is the deadline until enough register.
   opensAt: z.string().nullish(),
   latestStartAt: z.string().nullish(),
+  // ADR 0086: while the runner-up offer runs.
+  secondChanceDeadline: z.string().nullish(),
   // ADR 0085: a full auction still refunds a withdrawal until this time.
   fullWithdrawUntil: z.string().nullish(),
   holdExpiresAt: z.string().nullish(),
@@ -91,6 +94,11 @@ const participationSchema = z.object({
   // ADR 0077: the caller's registration (absent on older servers).
   registrationState: z.enum(['Registered', 'Withdrawn', 'Refunded', 'Applied', 'Forfeited']).nullish(),
   deposit: money.nullish(),
+  // ADR 0086: the caller's runner-up offer (absent on older servers).
+  secondChance: z.object({
+    price: money, offeredAt: z.string(), deadline: z.string(),
+    outcome: z.enum(['Offered', 'Accepted', 'Declined', 'Expired', 'Cancelled']),
+  }).nullish(),
   boughtNow: z.boolean(), leading: z.boolean(), state: auctionState,
   currentPrice: money.nullable(), minimumBid: money.nullable(), fulfillmentMethod: z.literal('SelfCollect'),
   won: z.boolean(), orderId: z.string().uuid().nullable(), finalPrice: money.nullable(),
@@ -198,6 +206,9 @@ export function placeSealedBid(id: string, amount: number, key: string) { return
 // ADR 0077: registration with the deposit the member saw, and its withdrawal.
 export function registerForAuction(id: string, deposit: number, key: string) { return command(`/auctions/${id}/registration`, key, { deposit }) }
 export function withdrawAuctionRegistration(id: string, key: string) { return command(`/auctions/${id}/registration/withdraw`, key, {}) }
+// ADR 0086: the runner-up's answer to the offer.
+export function acceptSecondChance(id: string, expectedVersion: number, key: string) { return command(`/auctions/${id}/second-chance/accept`, key, { expectedVersion }) }
+export function declineSecondChance(id: string, expectedVersion: number, key: string) { return command(`/auctions/${id}/second-chance/decline`, key, { expectedVersion }) }
 // ADR 0079: seller commands while the auction waits for registrants (ADR 0081: no open-now).
 export function setAuctionMinBidders(id: string, expectedVersion: number, minBidders: number, key: string) { return command(`/auctions/${id}/min-bidders`, key, { expectedVersion, minBidders }) }
 export function closeAuctionBeforeStart(id: string, expectedVersion: number, key: string) { return command(`/auctions/${id}/close`, key, { expectedVersion }) }

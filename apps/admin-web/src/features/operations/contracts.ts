@@ -250,6 +250,8 @@ export const commandReceipt = z.object({
     "Unsold",
     "OnHold",
     "PaymentExpired",
+    // ADR 0086
+    "SecondChanceOffered",
     "AwaitingPayment",
     "Fulfilling",
     "ReadyForCollection",

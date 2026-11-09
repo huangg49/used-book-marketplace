@@ -10312,6 +10312,138 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}/second-chance/accept:
+    post:
+      operationId: acceptAuctionSecondChance
+      tags:
+        - Auctions
+      description: "ADR 0086 - the runner-up accepts the one offer made after the winner did not pay, before its deadline: the auction returns to AwaitingWinnerPayment with the caller as winner at the offered price, a ViaPoint Order forms (pay within 24 hours) and the price is held in the wallet (409 when the wallet cannot cover it). expectedVersion is the auction version."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionVersionCommand"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
+  /auctions/{auctionId}/second-chance/decline:
+    post:
+      operationId: declineAuctionSecondChance
+      tags:
+        - Auctions
+      description: "ADR 0086 - the runner-up declines the offer: the auction ends PaymentExpired and the book is reclaimed for the seller. expectedVersion is the auction version."
+      x-implementation-status: implemented
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: auctionId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: One key per intent; scoped by actor and operationId. Same key and body replays the
+            stored receipt; a different body returns 409.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionVersionCommand"
+      responses:
+        "200":
+          description: Committed receipt (including replay).
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                const: no-store
+            Idempotency-Replayed:
+              schema:
+                type: string
+                enum:
+                  - "true"
+                  - "false"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuctionCommandReceipt"
+        "400":
+          $ref: "#/components/responses/ListingError"
+        "401":
+          $ref: "#/components/responses/ListingError"
+        "403":
+          $ref: "#/components/responses/ListingError"
+        "404":
+          $ref: "#/components/responses/ListingError"
+        "409":
+          $ref: "#/components/responses/ListingError"
+        "422":
+          $ref: "#/components/responses/ListingError"
+        "429":
+          $ref: "#/components/responses/ListingError"
+        "500":
+          $ref: "#/components/responses/ListingError"
+        "503":
+          $ref: "#/components/responses/ListingError"
   /auctions/{auctionId}/registration/withdraw:
     post:
       operationId: withdrawAuctionRegistration
@@ -12290,9 +12422,10 @@ paths:
         - bearerAuth: []
       description: ADR 0079. Assigned ACTIVE ADMIN, independent of the seller, registrants and bidders,
         closes the reported auction (Active, including past its end until the worker closes it, ADR 0083;
-        or OnHold) in one transaction - Cancelled with closeReason
-        Reported, every hold and deposit released, book reclaimed, message sent to the seller and every
-        participant and recorded as the case answer.
+        or OnHold; ADR 0086 also AwaitingWinnerPayment before the winner paid, whose Order closes
+        Cancelled without payment, and SecondChanceOffered) in one transaction - Cancelled with closeReason
+        Reported, every hold and deposit released (an unpaid winner's deposit is refunded, not forfeited),
+        book reclaimed, message sent to the seller and every participant and recorded as the case answer.
       parameters:
         - *a2
         - *a3
@@ -16107,6 +16240,7 @@ components:
             - AuctionDepositForfeited
             - AuctionRescheduled
             - AuctionResumed
+            - AuctionSecondChanceOffered
             - AuctionWon
             - AuctionSold
             - AuctionBoughtNow
@@ -20603,6 +20737,7 @@ components:
             - Unsold
             - OnHold
             - PaymentExpired
+            - SecondChanceOffered
             - AwaitingPayment
             - Fulfilling
             - ReadyForCollection
@@ -21030,7 +21165,8 @@ components:
         - SealedSecond
       description: ADR 0076. English (default, proxy bidding with Auto and optional Buy Now); Dutch
         (descending price, first acceptance wins); SealedFirst / SealedSecond (one hidden bid each,
-        winner pays own bid / second-highest bid or the start price). Absent means English.
+        winner pays own bid / second-highest bid or the start price). Absent means English. ADR 0086 - new
+        intakes refuse SealedSecond (422); existing SealedSecond intakes and auctions finish normally.
     AcceptDutchAuction:
       type: object
       additionalProperties: false
@@ -21513,6 +21649,13 @@ components:
           format: date-time
           description: ADR 0079/0082. Fixed ceiling for a rescheduled open time (publish + 30 days); null
             without the bounded lifecycle. Optional for older servers.
+        secondChanceDeadline:
+          type:
+            - string
+            - "null"
+          format: date-time
+          description: ADR 0086. While state is SecondChanceOffered, when the runner-up offer expires;
+            null otherwise. Optional for older servers.
         fullWithdrawUntil:
           type:
             - string
@@ -21560,6 +21703,7 @@ components:
             - OnHold
             - Cancelled
             - PaymentExpired
+            - SecondChanceOffered
         startPrice:
           type: integer
           minimum: 10000
@@ -21670,6 +21814,35 @@ components:
         serverTime:
           type: string
           format: date-time
+    AuctionSecondChance:
+      type: object
+      additionalProperties: false
+      required:
+        - price
+        - offeredAt
+        - deadline
+        - outcome
+      properties:
+        price:
+          type: integer
+          minimum: 10000
+          maximum: 9007199254740991
+          description: The caller's own highest level (English) or sealed bid.
+        offeredAt:
+          type: string
+          format: date-time
+        deadline:
+          type: string
+          format: date-time
+          description: offeredAt + 24 hours; after it the offer expires.
+        outcome:
+          type: string
+          enum:
+            - Offered
+            - Accepted
+            - Declined
+            - Expired
+            - Cancelled
     AuctionParticipation:
       type: object
       additionalProperties: false
@@ -21724,6 +21897,12 @@ components:
             released. Optional for older servers.
         registrationState:
           $ref: "#/components/schemas/AuctionRegistrationState"
+        secondChance:
+          description: ADR 0086. The one offer to the caller as runner-up after the winner did not pay;
+            null when the caller has none. Optional for older servers.
+          oneOf:
+            - type: "null"
+            - $ref: "#/components/schemas/AuctionSecondChance"
         deposit:
           type:
             - integer
@@ -21746,6 +21925,7 @@ components:
             - OnHold
             - Cancelled
             - PaymentExpired
+            - SecondChanceOffered
         currentPrice:
           type:
             - integer

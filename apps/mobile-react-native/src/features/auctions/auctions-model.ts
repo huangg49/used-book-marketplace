@@ -367,7 +367,10 @@ export function formatRemaining(ms: number) {
 
 // ADR 0076: DutchAccept and Sealed for the other auction formats.
 // ADR 0077: Register (amount = the deposit) and Withdraw for registration.
-export type AuctionCommandKind = "Manual" | "Auto" | "Disable" | "BuyNow" | "DutchAccept" | "Sealed" | "Register" | "Withdraw";
+// ADR 0086: SecondChanceAccept / SecondChanceDecline answer a runner-up offer.
+export type AuctionCommandKind =
+  | "Manual" | "Auto" | "Disable" | "BuyNow" | "DutchAccept" | "Sealed" | "Register" | "Withdraw"
+  | "SecondChanceAccept" | "SecondChanceDecline";
 export type AuctionCommand = {
   kind: AuctionCommandKind;
   amount: number;
@@ -383,6 +386,7 @@ export function createAuctionCommand(
   kind: AuctionCommandKind,
   amount: number,
   key: string,
+  expectedVersion = 0,
 ): AuctionCommand {
   const base = `/auctions/${auctionId}`;
   const command = (path: string, method: "POST" | "PUT", body: object) => ({
@@ -424,6 +428,10 @@ export function createAuctionCommand(
       return command(`${base}/registration`, "POST", { deposit: amount });
     case "Withdraw":
       return command(`${base}/registration/withdraw`, "POST", {});
+    case "SecondChanceAccept":
+      return command(`${base}/second-chance/accept`, "POST", { expectedVersion });
+    case "SecondChanceDecline":
+      return command(`${base}/second-chance/decline`, "POST", { expectedVersion });
   }
 }
 export function sendAuctionCommand(
@@ -465,11 +473,12 @@ export function fundsHint(amount: number | null | undefined, available: number |
 
 // ADR 0076: the auction formats a seller can choose.
 export type AuctionFormat = "English" | "Dutch" | "SealedFirst" | "SealedSecond";
-export const AUCTION_FORMATS: { value: AuctionFormat; label: string; hint: string }[] = [
+export const AUCTION_FORMATS: { value: AuctionFormat; label: string; hint: string; retired?: boolean }[] = [
   { value: "English", label: "Trả giá lên", hint: "Người mua trả giá tăng dần, có đặt giá tự động và có thể bật mua ngay." },
   { value: "Dutch", label: "Giá giảm dần", hint: "Giá bắt đầu cao, giảm một bước sau mỗi khoảng thời gian tới giá sàn. Người đầu tiên chấp nhận thắng ngay." },
   { value: "SealedFirst", label: "Kín · giá thứ nhất", hint: "Mỗi người gửi một giá kín, chỉ được nâng. Giá cao nhất thắng và trả đúng giá đã gửi." },
-  { value: "SealedSecond", label: "Kín · giá thứ hai", hint: "Mỗi người gửi một giá kín. Giá cao nhất thắng nhưng trả bằng giá cao thứ hai." },
+  // ADR 0086: retired for new auctions; a draft keeps its label.
+  { value: "SealedSecond", label: "Kín · giá thứ hai", hint: "Mỗi người gửi một giá kín. Giá cao nhất thắng nhưng trả bằng giá cao thứ hai.", retired: true },
 ];
 
 // ADR 0074: the seller's choice of what Buy Now does.
@@ -493,6 +502,9 @@ export function receiptMessage(
   if (kind === "Register")
     return `Đã đặt cọc ${formatVnd(amount)} và đăng ký. Bạn sẽ được báo khi phiên đủ người.`;
   if (kind === "Withdraw") return "Đã rút đăng ký; tiền cọc đã về lại ví.";
+  if (kind === "SecondChanceAccept")
+    return `Bạn đã nhận mua với giá ${formatVnd(amount)}. Thanh toán từ ví trong 24 giờ để nhận sách.`;
+  if (kind === "SecondChanceDecline") return "Bạn đã từ chối lời mời mua; không có khoản nào bị trừ.";
   if (kind === "DutchAccept")
     return "Bạn đã thắng phiên. Hệ thống đang chốt đơn để bạn thanh toán từ ví.";
   if (kind === "Sealed")

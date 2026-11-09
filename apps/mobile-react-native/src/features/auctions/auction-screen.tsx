@@ -80,6 +80,7 @@ const STATE_LABEL: Record<AuctionState, string> = {
   OnHold: "Tạm dừng để xem xét",
   Cancelled: "Đã hủy",
   PaymentExpired: "Người thắng không thanh toán đúng hạn",
+  SecondChanceOffered: "Người thắng không thanh toán; đang mời người trả giá cao thứ hai",
 };
 // Same wording as user-web: only a won or bought auction has a final price.
 const CLOSED_PRICE: Partial<Record<AuctionState, string>> = {
@@ -87,6 +88,7 @@ const CLOSED_PRICE: Partial<Record<AuctionState, string>> = {
   AwaitingWinnerPayment: "Giá chốt",
   Sold: "Giá chốt",
   PaymentExpired: "Giá thắng (chưa thanh toán)",
+  SecondChanceOffered: "Giá thắng (chưa thanh toán)",
   OnHold: "Giá khi tạm dừng",
   Cancelled: "Giá khi hủy",
 };
@@ -578,6 +580,9 @@ function AuctionBody({
           <Button wine secondary title="Xem hồ sơ gửi sách" onPress={() => router.push({ pathname: "/send-to-auction", params: { intakeId: ownerIntake.id } })} />
           <Button wine secondary title="Phiên của tôi" onPress={() => router.push("/my-auctions")} />
         </View>
+      ) : signedIn && auction.state === "SecondChanceOffered" && me?.secondChance?.outcome === "Offered" ? (
+        // ADR 0086: the runner-up answers the one offer.
+        <BidPanel auction={auction} me={me} refresh={refresh} paused={ownerError} />
       ) : me?.won ? (
         me.orderId ? (
           <WinnerSteps orderId={me.orderId} boughtNow={me.boughtNow} paused={ownerError} />
@@ -716,6 +721,10 @@ function BidPanel({
           <Button title="Thử lại thao tác vừa rồi" busy={busy} onPress={() => void run(pending)} />
           <Button secondary title="Cập nhật trạng thái phiên" disabled={busy} onPress={() => void refresh()} />
         </View>
+      ) : auction.state === "SecondChanceOffered" && me?.secondChance?.outcome === "Offered" ? (
+        <SecondChanceBlock offer={me.secondChance} available={available} locked={locked} pointName={auction.pointName}
+          onAccept={() => setConfirming({ kind: "SecondChanceAccept", amount: me.secondChance!.price })}
+          onDecline={() => setConfirming({ kind: "SecondChanceDecline", amount: me.secondChance!.price })} />
       ) : registrationBlocks(auction, me) || canWithdrawRegistration(auction, me, Date.now()) ? (
         <RegisterBlock auction={auction} me={me} available={available} locked={locked}
           onRegister={(deposit) => setConfirming({ kind: "Register", amount: deposit })}
@@ -837,7 +846,7 @@ function BidPanel({
         onCancel={() => !busy && setConfirming(null)}
         onConfirm={() =>
           confirming &&
-          void run(createAuctionCommand(auction.id, confirming.kind, confirming.amount, Crypto.randomUUID()))
+          void run(createAuctionCommand(auction.id, confirming.kind, confirming.amount, Crypto.randomUUID(), auction.version ?? 0))
         }
       />
     </View>
@@ -867,6 +876,18 @@ function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuc
         message: `Ví giữ ${formatVnd(amount)} ngay. Tiền cọc được hoàn khi bạn không thắng, phiên không đủ người hoặc bị hủy; bạn có thể rút đăng ký trước khi phiên đủ ${auction.minBidders ?? 2} người. Nếu thắng mà không thanh toán trong 24 giờ, tiền cọc chuyển cho nền tảng.`,
         confirm: "Đặt cọc và đăng ký",
       };
+    case "SecondChanceAccept":
+      return {
+        title: `Mua với giá ${formatVnd(amount)}?`,
+        message: `Ví giữ ${formatVnd(amount)} ngay và bạn thanh toán trong 24 giờ để nhận sách tại ${auction.pointName}. Không thanh toán đúng hạn thì lượt không thanh toán được ghi nhận.`,
+        confirm: "Mua sách",
+      };
+    case "SecondChanceDecline":
+      return {
+        title: "Từ chối lời mời mua?",
+        message: "Phiên kết thúc và sách được trả lại người bán. Bạn không thể nhận lại lời mời này.",
+        confirm: "Không mua",
+      };
     case "Withdraw":
       return {
         title: "Rút đăng ký?",
@@ -892,6 +913,30 @@ function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuc
         confirm: "Mua ngay",
       };
   }
+}
+
+// ADR 0086: the runner-up's one offer after the winner did not pay.
+function SecondChanceBlock({ offer, available, locked, pointName, onAccept, onDecline }: {
+  offer: NonNullable<Participation["secondChance"]>;
+  available: number | null;
+  locked: boolean;
+  pointName: string;
+  onAccept: () => void;
+  onDecline: () => void;
+}) {
+  const short = fundsShortfall(offer.price, available);
+  const until = new Date(offer.deadline).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
+  return (
+    <View style={{ gap: space.sm }}>
+      <AppText kind="bold">Bạn được mời mua sách này</AppText>
+      <AppText kind="small" color={colors.muted}>
+        {`Người thắng không thanh toán đúng hạn. Bạn có thể mua với giá trả cao nhất của bạn, ${formatVnd(offer.price)}, nếu nhận trước ${until}. Khi nhận, ví giữ số tiền này và bạn thanh toán trong 24 giờ để nhận sách tại ${pointName}. Không nhận thì không có khoản nào bị trừ.`}
+      </AppText>
+      {short > 0 && <AppText kind="small" color={colors.error}>{fundsHint(offer.price, available)}</AppText>}
+      <Button wine title={`Mua với giá ${formatVnd(offer.price)}`} disabled={locked || short > 0} onPress={onAccept} />
+      <Button secondary title="Không mua" disabled={locked} onPress={onDecline} />
+    </View>
+  );
 }
 
 // ADR 0077: register with a refundable deposit; bidding opens at minBidders.

@@ -141,13 +141,18 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
   async function passedIntake(over: Parameters<typeof intakeBody>[1] = {}) {
     const seller = await actor();
     const l = await saleListing(seller);
+    // ADR 0086: new intakes refuse SealedSecond; a test of one stands for an
+    // intake created before that (fixture write of the stored format).
+    const legacySecond = over.auctionType === 'SealedSecond';
     const created = await cmd(
       'post',
       '/auction-intakes',
-      intakeBody(l, over),
+      intakeBody(l, legacySecond ? { ...over, auctionType: 'SealedFirst' } : over),
       seller,
     ).expect(200);
     const intakeId = created.body.intakeId as string;
+    if (legacySecond)
+      await db.c.auction_intakes.updateOne({ _id: intakeId }, { $set: { auctionType: 'SealedSecond' } });
     const pointStaff = over.pointId === HANDOVER_POINT_B ? otherStaff : staff;
     await cmd(
       'post',
@@ -1802,8 +1807,18 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
     vi.restoreAllMocks();
     pinClock(new Date(doc.endAt.getTime() + 24 * HOUR));
     await worker.tick();
+    // ADR 0086: b, the runner-up, is offered the book first (never sold to
+    // them without their acceptance); unanswered, the offer ends in 24 h.
+    expect(await db.c.auctions.findOne({ _id: auctionId })).toMatchObject({
+      state: 'SecondChanceOffered',
+      runnerUpId: b.id,
+    });
+    vi.restoreAllMocks();
+    pinClock(new Date(doc.endAt.getTime() + 48 * HOUR));
+    await worker.tick();
     expect(await db.c.auctions.findOne({ _id: auctionId })).toMatchObject({
       state: 'PaymentExpired',
+      runnerUpOutcome: 'Expired',
     });
     expect(await db.c.point_orders.findOne({ _id: order._id })).toMatchObject({
       state: 'PaymentExpired',
@@ -5451,7 +5466,8 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       pinClock(closed.paymentDeadline!);
       await app.get(AuctionWorker).tick();
       vi.restoreAllMocks();
-      expect((await db.c.auctions.findOne({ _id: a._id }))!.state).toBe('PaymentExpired');
+      // ADR 0086: x, the runner-up, is offered the book (tested below).
+      expect((await db.c.auctions.findOne({ _id: a._id }))!).toMatchObject({ state: 'SecondChanceOffered', runnerUpId: x.id });
       expect(await regState(a._id, y)).toBe('Forfeited');
       expect(await wallet(y)).toMatchObject({ available: 500_000 - DEPOSIT, auctionHeld: 0 });
       // The tick may expire earlier unpaid wins of this block too, so the
@@ -6069,6 +6085,203 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
           expect(await db.c.point_orders.countDocuments({ auctionId: a._id })).toBe(1);
           expect((await db.c.support_cases.findOne({ _id: caseId }))!.state).toBe('InReview');
         }
+      });
+
+      // ADR 0086: a non-paying winner's runner-up gets one offer.
+      const wonBy = async (over: Parameters<typeof liveOf>[0] = {}) => {
+        const { seller, a } = await liveOf(over);
+        const [x, y] = [await funded(500_000), await funded(500_000)];
+        const fillers = await fill(a._id, x, y);
+        await bid(a._id, x, 200_000).expect(200);
+        await bid(a._id, y, 300_000).expect(200);
+        const closed = await closeAt(a._id);
+        expect(closed).toMatchObject({ state: 'AwaitingWinnerPayment', winnerId: y.id, finalPrice: 300_000 });
+        return { seller, a: closed, x, y, fillers };
+      };
+      const offerFor = async (over: Parameters<typeof liveOf>[0] = {}) => {
+        const won = await wonBy(over);
+        for (const m of [won.x, won.y, won.seller]) await longSession(m);
+        await tickAt(won.a.paymentDeadline!);
+        return { ...won, offered: await doc(won.a._id) };
+      };
+      const acceptOffer = (id: string, who: Actor, version: number, key?: string) =>
+        cmd('post', `/auctions/${id}/second-chance/accept`, { expectedVersion: version }, who, key);
+      const declineOffer = (id: string, who: Actor, version: number) =>
+        cmd('post', `/auctions/${id}/second-chance/decline`, { expectedVersion: version }, who);
+      const intakeState = async (intakeId: string) =>
+        (await db.c.auction_intakes.findOne({ _id: intakeId }))!.state;
+
+      it('ADR 0086: the runner-up is offered the book at their own level; accepting forms their Order and paying sells it', async () => {
+        const { seller, a, x, y, offered } = await offerFor();
+        expect(offered).toMatchObject({
+          state: 'SecondChanceOffered',
+          winnerId: y.id,
+          runnerUpId: x.id,
+          runnerUpPrice: 200_000,
+          runnerUpOutcome: 'Offered',
+          runnerUpOfferedAt: a.paymentDeadline,
+          runnerUpDeadline: new Date(a.paymentDeadline!.getTime() + 24 * H),
+          defaultedOrderId: a.orderId,
+        });
+        expect(await intakeState(a.intakeId)).toBe('Auctioning');
+        expect(await regState(a._id, y)).toBe('Forfeited');
+        expect(await kinds(x, a._id)).toContain('AuctionSecondChanceOffered');
+        const told = await db.c.member_notifications.findOne({ userId: seller.id, targetId: a._id, kind: 'AuctionPaymentExpired' });
+        expect(told!.body).toMatch(/cao thứ hai/);
+        const pub = await call('get', `/auctions/${a._id}`).expect(200);
+        validates('PublicAuction', pub.body);
+        expect(pub.body.auction).toMatchObject({ state: 'SecondChanceOffered', secondChanceDeadline: offered.runnerUpDeadline!.toISOString() });
+        const mine = await call('get', `/me/auctions/${a._id}/participation`, x).expect(200);
+        validates('AuctionParticipation', mine.body);
+        expect(mine.body.secondChance).toMatchObject({ price: 200_000, outcome: 'Offered' });
+        expect((await call('get', `/me/auctions/${a._id}/participation`, y).expect(200)).body.secondChance).toBeNull();
+        // Only the runner-up answers, at the current version.
+        await acceptOffer(a._id, y, offered.version).expect(404);
+        await acceptOffer(a._id, seller, offered.version).expect(404);
+        await acceptOffer(a._id, x, offered.version - 1).expect(409);
+        const at = new Date(offered.runnerUpOfferedAt!.getTime() + H);
+        pinClock(at);
+        try {
+          const key = randomUUID();
+          const r = await acceptOffer(a._id, x, offered.version, key).expect(200);
+          validates('AuctionCommandReceipt', r.body);
+          const again = await acceptOffer(a._id, x, offered.version, key).expect(200);
+          expect(again.headers['idempotency-replayed']).toBe('true');
+          await declineOffer(a._id, x, (await doc(a._id)).version).expect(409);
+          const accepted = await doc(a._id);
+          expect(accepted).toMatchObject({
+            state: 'AwaitingWinnerPayment',
+            winnerId: x.id,
+            finalPrice: 200_000,
+            runnerUpOutcome: 'Accepted',
+            paymentDeadline: new Date(at.getTime() + 24 * H),
+          });
+          expect(accepted.orderId).not.toBe(a.orderId);
+          expect(await wallet(x)).toMatchObject({ available: 300_000, auctionHeld: 200_000 });
+          expect((await db.c.point_orders.findOne({ _id: a.orderId! }))!.state).toBe('PaymentExpired');
+          expect(await db.c.point_orders.findOne({ _id: accepted.orderId! })).toMatchObject({ buyerId: x.id, bookPrice: 200_000, state: 'AwaitingPayment' });
+          expect(await kinds(x, a._id)).toContain('AuctionWon');
+          await payOrder(accepted.orderId!, x).expect(200);
+        } finally {
+          vi.restoreAllMocks();
+        }
+        expect((await doc(a._id)).state).toBe('Sold');
+        expect(await reconciled()).toBe(true);
+      }, 30_000);
+
+      it('ADR 0086: declining or an unanswered offer ends the auction; the runner-up not paying ends it too', async () => {
+        const declined = await offerFor();
+        await declineOffer(declined.a._id, declined.x, declined.offered.version).expect(200);
+        expect(await doc(declined.a._id)).toMatchObject({ state: 'PaymentExpired', runnerUpOutcome: 'Declined', winnerId: declined.y.id });
+        expect(await intakeState(declined.a.intakeId)).toBe('ReclaimRequired');
+        const told = await db.c.member_notifications.findOne({ userId: declined.seller.id, targetId: declined.a._id, kind: 'AuctionPaymentExpired', title: 'Người trả giá cao thứ hai không nhận mua' });
+        expect(told).not.toBeNull();
+        await noHolds(declined.x);
+
+        const silent = await offerFor();
+        await tickAt(new Date(silent.offered.runnerUpDeadline!.getTime() - 60_000));
+        expect((await doc(silent.a._id)).state).toBe('SecondChanceOffered');
+        await tickAt(silent.offered.runnerUpDeadline!);
+        expect(await doc(silent.a._id)).toMatchObject({ state: 'PaymentExpired', runnerUpOutcome: 'Expired' });
+        expect(await intakeState(silent.a.intakeId)).toBe('ReclaimRequired');
+        pinClock(silent.offered.runnerUpDeadline!);
+        try {
+          await acceptOffer(silent.a._id, silent.x, (await doc(silent.a._id)).version).expect(409);
+        } finally {
+          vi.restoreAllMocks();
+        }
+
+        const unpaid = await offerFor();
+        pinClock(new Date(unpaid.offered.runnerUpOfferedAt!.getTime() + 60_000));
+        try {
+          await acceptOffer(unpaid.a._id, unpaid.x, unpaid.offered.version).expect(200);
+        } finally {
+          vi.restoreAllMocks();
+        }
+        const accepted = await doc(unpaid.a._id);
+        await tickAt(accepted.paymentDeadline!);
+        expect(await doc(unpaid.a._id)).toMatchObject({ state: 'PaymentExpired', winnerId: unpaid.x.id, runnerUpOutcome: 'Accepted' });
+        expect(await intakeState(unpaid.a.intakeId)).toBe('ReclaimRequired');
+        expect(await db.c.point_orders.countDocuments({ auctionId: unpaid.a._id, state: 'PaymentExpired' })).toBe(2);
+        expect(await db.c.member_violations.findOne({ userId: unpaid.x.id, kind: 'AuctionNonPayment', sourceId: accepted.orderId! })).not.toBeNull();
+        // The runner-up had no deposit left to forfeit.
+        expect(await regState(unpaid.a._id, unpaid.x)).toBe('Refunded');
+        await noHolds(unpaid.x);
+        expect(await reconciled()).toBe(true);
+      }, 60_000);
+
+      it('ADR 0086: no offer when the runner-up can no longer trade', async () => {
+        const won = await wonBy();
+        await db.c.users.updateOne({ _id: won.x.id }, { $set: { status: 'LOCKED' } });
+        try {
+          await tickAt(won.a.paymentDeadline!);
+          expect(await doc(won.a._id)).toMatchObject({ state: 'PaymentExpired', runnerUpOutcome: null, runnerUpId: null });
+          expect(await intakeState(won.a.intakeId)).toBe('ReclaimRequired');
+        } finally {
+          await db.c.users.updateOne({ _id: won.x.id }, { $set: { status: 'ACTIVE' } });
+        }
+      });
+
+      it('ADR 0086: a report closes an unpaid winner\'s auction; the Order is cancelled unpaid and the deposit refunded', async () => {
+        const { seller, a, x, y } = await wonBy();
+        const caseId = (await cmd('post', '/me/support-cases', {
+          kind: 'Violation',
+          title: 'Nghi ngờ trả giá gian lận: phiên thử',
+          description: 'Người thắng dùng tài khoản phụ để đẩy giá phiên này.',
+          target: { type: 'Auction', id: a._id },
+        }, x).expect(200)).body.entityId as string;
+        await cmd('post', `/operations/support-cases/${caseId}/actions`, { expectedVersion: 1, action: 'Assign', text: 'Admin đã nhận hồ sơ.' }, admin).expect(200);
+        const message = 'Phiên bị đóng vì người thắng đẩy giá bằng tài khoản phụ.';
+        await longSession(admin);
+        pinClock(new Date(a.closedAt!.getTime() + 60_000));
+        let r;
+        try {
+          r = await cmd('post', `/operations/support-cases/${caseId}/close-auction`, { expectedVersion: 2, auctionVersion: a.version, message }, admin).expect(200);
+        } finally {
+          vi.restoreAllMocks();
+        }
+        validates('SupportCaseReceipt', r.body);
+        expect(await doc(a._id)).toMatchObject({ state: 'Cancelled', closeReason: 'Reported', winnerId: y.id, closedAt: a.closedAt });
+        const order = (await db.c.point_orders.findOne({ _id: a.orderId! }))!;
+        expect(order).toMatchObject({ state: 'Cancelled', paidAt: null });
+        expect(await db.c.ledger_journals.countDocuments({ orderId: order._id })).toBe(0);
+        expect(await regState(a._id, y)).toBe('Refunded');
+        expect(await wallet(y)).toMatchObject({ available: 500_000, auctionHeld: 0 });
+        expect(await intakeState(a.intakeId)).toBe('ReclaimRequired');
+        expect(await kinds(seller, a._id)).toContain('AuctionCancelled');
+        // Nothing left for the payment worker. (The tick at that future time
+        // also processes earlier tests' due auctions, hence the timeout.)
+        await tickAt(a.paymentDeadline!);
+        expect((await doc(a._id)).state).toBe('Cancelled');
+        expect(await reconciled()).toBe(true);
+      }, 60_000);
+
+      it('ADR 0086: a report closes the auction during a runner-up offer', async () => {
+        const { a, x, offered } = await offerFor();
+        const caseId = (await cmd('post', '/me/support-cases', {
+          kind: 'Violation',
+          title: 'Nghi ngờ trả giá gian lận: phiên thử',
+          description: 'Người thắng dùng tài khoản phụ để đẩy giá phiên này.',
+          target: { type: 'Auction', id: a._id },
+        }, x).expect(200)).body.entityId as string;
+        await cmd('post', `/operations/support-cases/${caseId}/actions`, { expectedVersion: 1, action: 'Assign', text: 'Admin đã nhận hồ sơ.' }, admin).expect(200);
+        await longSession(admin);
+        pinClock(new Date(offered.runnerUpOfferedAt!.getTime() + 60_000));
+        try {
+          await cmd('post', `/operations/support-cases/${caseId}/close-auction`, { expectedVersion: 2, auctionVersion: offered.version, message: 'Phiên bị đóng sau khi xem xét báo cáo.' }, admin).expect(200);
+          expect(await doc(a._id)).toMatchObject({ state: 'Cancelled', closeReason: 'Reported', runnerUpOutcome: 'Cancelled' });
+          await acceptOffer(a._id, x, (await doc(a._id)).version).expect(409);
+        } finally {
+          vi.restoreAllMocks();
+        }
+        expect(await intakeState(a.intakeId)).toBe('ReclaimRequired');
+      });
+
+      it('ADR 0086 (C2): new second-price sealed intakes are refused', async () => {
+        const seller = await actor();
+        const l = await saleListing(seller);
+        const r = await cmd('post', '/auction-intakes', intakeBody(l, { auctionType: 'SealedSecond', buyNowPrice: null }), seller).expect(422);
+        expect(JSON.stringify(r.body)).toMatch(/giá thứ hai/);
       });
 
       // ADR 0083 (M5): registration takes the POL-41 limits.

@@ -713,6 +713,9 @@ export class SupportService {
             'Unsold',
             'Cancelled',
             'OnHold',
+            // ADR 0086: a report may still close it before the winner paid.
+            'AwaitingWinnerPayment',
+            'SecondChanceOffered',
           ].includes(row.state))
       )
         throw notFound();

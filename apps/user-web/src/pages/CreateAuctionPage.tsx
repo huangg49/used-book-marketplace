@@ -503,7 +503,7 @@ export function CreateAuctionPage() {
               )}
             </div>
             <div className={styles.chips} role="group" aria-label="Kiểu đấu giá">
-              {AUCTION_TYPES.map((t) => <button type="button" key={t.value} aria-pressed={auctionType === t.value} disabled={locked} onClick={() => setAuctionType(t.value)}>{t.label}<span>{t.short}</span></button>)}
+              {AUCTION_TYPES.filter((t) => !t.retired || t.value === auctionType).map((t) => <button type="button" key={t.value} aria-pressed={auctionType === t.value} disabled={locked} onClick={() => setAuctionType(t.value)}>{t.label}<span>{t.short}</span></button>)}
             </div>
             <p className={styles.stepHint}>{AUCTION_TYPES.find((t) => t.value === auctionType)!.hint}</p>
             <div className={styles.chips} role="group" aria-label="Số người đăng ký tối thiểu">

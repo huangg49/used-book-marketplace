@@ -13,6 +13,7 @@ export const memberNotification = z.object({
     "AuctionDepositForfeited",
     "AuctionRescheduled",
     "AuctionResumed",
+    "AuctionSecondChanceOffered",
     "AuctionWon",
     "AuctionSold",
     "AuctionBoughtNow",

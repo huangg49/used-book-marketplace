@@ -84,10 +84,13 @@ export async function checkIntake(tx: Tx, intakeId: string) {
   )
     fail('intake auction mismatch');
   // A settled Order closes its intake Sold; nothing else does.
+  // ADR 0086: during a runner-up offer the book stays with the auction.
   if (
     order &&
     (orderClosed
-      ? i.state !== 'ReclaimRequired' && i.state !== 'Reclaimed'
+      ? auction?.state === 'SecondChanceOffered'
+        ? i.state !== 'Auctioning'
+        : i.state !== 'ReclaimRequired' && i.state !== 'Reclaimed'
       : order.state === 'Completed'
         ? i.state !== 'Sold'
         : i.state !== 'Auctioning')

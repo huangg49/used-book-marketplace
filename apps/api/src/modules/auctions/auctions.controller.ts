@@ -469,6 +469,48 @@ export class AuctionsController {
       ),
     );
   }
+  // ADR 0086: the runner-up's answer to the offer made after the winner
+  // did not pay.
+  @Post('auctions/:auctionId/second-chance/accept')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  acceptSecondChance(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.acceptSecondChance(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('AuctionVersionCommand', body),
+        ),
+        res,
+      ),
+    );
+  }
+  @Post('auctions/:auctionId/second-chance/decline')
+  @Roles('MEMBER')
+  @HttpCode(200)
+  declineSecondChance(
+    @Param('auctionId') id: string,
+    @Body() body: unknown,
+    @Req() req: AuthenticatedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.notify(
+      commandResponse(
+        this.bidding.declineSecondChance(
+          commandContext(this.input, req, res),
+          this.input.uuid(id),
+          this.input.body('AuctionVersionCommand', body),
+        ),
+        res,
+      ),
+    );
+  }
   // ADR 0079: seller lifecycle command.
   @Post('auctions/:auctionId/min-bidders')
   @Roles('MEMBER')

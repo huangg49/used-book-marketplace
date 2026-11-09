@@ -29,6 +29,8 @@ export const auctionStates = [
   "OnHold",
   "Cancelled",
   "PaymentExpired",
+  // ADR 0086: the winner did not pay; the runner-up has 24 h to buy.
+  "SecondChanceOffered",
 ] as const;
 export type AuctionState = (typeof auctionStates)[number];
 
@@ -66,6 +68,8 @@ export const publicAuctionSummary = z.object({
   // ADR 0081: the seller's open time; startAt is the deadline until enough register.
   opensAt: z.string().nullable().optional(),
   latestStartAt: z.string().nullable().optional(),
+  // ADR 0086: while the runner-up offer runs.
+  secondChanceDeadline: z.string().nullable().optional(),
   // ADR 0085: a full auction still refunds a withdrawal until this time.
   fullWithdrawUntil: z.string().nullable().optional(),
   holdExpiresAt: z.string().nullable().optional(),
@@ -111,6 +115,16 @@ export const participation = z.object({
   // ADR 0077: the caller's registration (absent on older servers).
   registrationState: z.enum(["Registered", "Withdrawn", "Refunded", "Applied", "Forfeited"]).nullable().optional(),
   deposit: z.number().int().nullable().optional(),
+  // ADR 0086: the caller's runner-up offer (absent on older servers).
+  secondChance: z
+    .object({
+      price: z.number().int(),
+      offeredAt: z.string(),
+      deadline: z.string(),
+      outcome: z.enum(["Offered", "Accepted", "Declined", "Expired", "Cancelled"]),
+    })
+    .nullable()
+    .optional(),
   boughtNow: z.boolean(),
   leading: z.boolean(),
   state: z.enum(auctionStates),

@@ -489,7 +489,8 @@ function SupportRecord({
           {data.canManage &&
           data.case.target?.type === "Auction" &&
           data.case.state !== "Closed" &&
-          (data.relatedState === "Active" || data.relatedState === "OnHold") ? (
+          // ADR 0086: also before the winner paid, or during a runner-up offer.
+          ["Active", "OnHold", "AwaitingWinnerPayment", "SecondChanceOffered"].includes(data.relatedState ?? "") ? (
             <>
               {data.relatedState === "Active" ? (
                 <CloseReportedAuction
@@ -606,6 +607,11 @@ function CloseReportedAuction({
           Hủy phiên{auction.data ? ` “${auction.data.auction.title}”` : ""} ngay. Mọi tiền cọc và khoản giữ được
           hoàn, sách trả lại người bán, và lời nhắn dưới đây gửi tới người bán cùng mọi người tham gia. Hồ sơ
           chuyển sang “Đã phản hồi”. Không hoàn tác được.
+          {data.relatedState === "AwaitingWinnerPayment"
+            ? " Người thắng chưa thanh toán: đơn nhận sách của họ bị hủy và tiền cọc được hoàn, không bị giữ lại."
+            : data.relatedState === "SecondChanceOffered"
+              ? " Lời mời mua đang gửi người trả giá cao thứ hai cũng chấm dứt."
+              : ""}
         </p>
       )}
       {error ? <Notice tone="error">{error}</Notice> : null}

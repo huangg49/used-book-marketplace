@@ -9,6 +9,7 @@ import { createAuctionOpenMonthMigration, withAuctionOpenMonth } from './0070-au
 import { createSupportTargetIndexMigration, withSupportTargetIndex } from './0071-support-target-index.js';
 import { createAuctionPauseBudgetMigration, withAuctionPauseBudget } from './0072-auction-pause-budget.js';
 import { createAuctionReachedNoticeMigration, withAuctionReachedNotice } from './0073-auction-reached-notice.js';
+import { createAuctionSecondChanceMigration, withAuctionSecondChance } from './0074-auction-second-chance.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { manualWithdrawalsMigration, withManualWithdrawals } from './0061-manual-wallet-withdrawals.js';
 import { createWithdrawalsMigration, withdrawalSpecs, withWithdrawals } from './0060-wallet-withdrawals.js';
@@ -567,7 +568,7 @@ const beforeWithdrawals = (): CollectionSpec[] => [
   demoCompletionSpec,
 ];
 
-export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth).map(withSupportTargetIndex).map(withAuctionPauseBudget).map(withAuctionReachedNotice), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
+export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth).map(withSupportTargetIndex).map(withAuctionPauseBudget).map(withAuctionReachedNotice).map(withAuctionSecondChance), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
 const withdrawalsMigration = createWithdrawalsMigration([
@@ -629,6 +630,16 @@ const pauseBudgetMigration = createAuctionPauseBudgetMigration(
 );
 migrations.push(pauseBudgetMigration);
 // ADR 0085: a late-reached auction opens after a notice, never at night.
+const reachedNoticeMigration = createAuctionReachedNoticeMigration(
+  pauseBudgetMigration.definition.collections,
+);
+migrations.push(reachedNoticeMigration);
+// ADR 0086: runner-up offer and unpaid report cancel, on the 0073 auctions,
+// 0059 point_orders and 0068 member_notifications snapshots.
 migrations.push(
-  createAuctionReachedNoticeMigration(pauseBudgetMigration.definition.collections),
+  createAuctionSecondChanceMigration([
+    ...reachedNoticeMigration.definition.collections,
+    ...auctionFreeShippingReconcileMigration.definition.collections,
+    ...resumeMigration.definition.collections.filter((s) => s.name === 'member_notifications'),
+  ]),
 );

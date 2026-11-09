@@ -41,6 +41,7 @@ export class AuctionWorker {
       dropoffs,
       endings,
       payments,
+      offers,
       decisions,
       collections,
       returns,
@@ -143,6 +144,21 @@ export class AuctionWorker {
             { limit: 100, sort: { paymentDeadline: 1, _id: 1 } },
           )
           .toArray(),
+        // ADR 0086: runner-up offers nobody answered in 24 h.
+        offers: await tx.c.auctions
+          .find(
+            {
+              ...ready,
+              state: 'SecondChanceOffered',
+              runnerUpDeadline: { $lte: now },
+            },
+            {
+              limit: 100,
+              sort: { runnerUpDeadline: 1, _id: 1 },
+              projection: { _id: 1, version: 1, runnerUpDeadline: 1 },
+            },
+          )
+          .toArray(),
         // Paid ViaPoint Orders past the report decision / collection deadline.
         decisions: await tx.c.point_orders
           .find(
@@ -215,7 +231,11 @@ export class AuctionWorker {
       );
     for (const a of payments)
       await attempt('paymentExpiry', a._id, () =>
-        this.bidding.expirePayment(a._id),
+        this.bidding.expirePayment(a._id, a.orderId),
+      );
+    for (const a of offers)
+      await attempt('secondChanceExpiry', a._id, () =>
+        this.bidding.expireSecondChance(a._id, a.version),
       );
     for (const i of dropoffs)
       await attempt('dropoffExpiry', i._id, () =>
@@ -232,6 +252,7 @@ export class AuctionWorker {
       ...expiredHolds.map((a) => a.holdUntil!),
       ...endings.map((a) => a.endAt),
       ...payments.map((a) => a.paymentDeadline!),
+      ...offers.map((a) => a.runnerUpDeadline!),
       ...dropoffs.map((i) => i.dropoffDeadline),
       ...decisions.map((o) => o.acceptanceDeadline!),
       ...collections.map((o) => o.collectionDeadline!),

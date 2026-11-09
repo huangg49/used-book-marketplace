@@ -16,9 +16,14 @@ export class AuctionBookService {
 
   private async eligible(tx: Tx, a: AuctionDoc) {
     if (
-      !['Active', 'BuyNowPending', 'AwaitingWinnerPayment', 'Sold'].includes(
-        a.state,
-      )
+      // ADR 0086: the runner-up still sees the book while deciding.
+      ![
+        'Active',
+        'BuyNowPending',
+        'AwaitingWinnerPayment',
+        'SecondChanceOffered',
+        'Sold',
+      ].includes(a.state)
     )
       return null;
     const c = tx.c;

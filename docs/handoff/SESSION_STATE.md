@@ -103,6 +103,14 @@ Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
   phút, khung 23:00–07:00 thì 07:00 (migration `0073-auction-reached-notice`); tăng số tối thiểu khi
   chưa ai đăng ký; người dẫn giá không bị giữ hai lần (đã đúng, thêm kiểm thử). Mặc định của kế
   hoạch, chủ dự án chưa chọn khác. Kết quả kiểm chứng ở ADR0085/commit. Chưa push.
+- [ADR0086](../adr/0086-auction-payment-failures.md) (09/11, cùng nhánh): nhóm D. Người thắng không
+  thanh toán thì người trả giá cao thứ hai được mời mua một lần ở giá của họ trong 24 giờ
+  (`SecondChanceOffered`, `acceptAuctionSecondChance`/`declineAuctionSecondChance`, Order thứ hai);
+  báo cáo đóng được phiên chưa thanh toán (Order `Cancelled` không thanh toán, tiền cọc hoàn) và
+  phiên đang mời; ngừng nhận phiên kín giá thứ hai mới. Migration `0074-auction-second-chance`
+  (đổi khóa duy nhất `point_orders` sang `{auctionId, buyerId}`). Quyết định tự chọn, cần chủ dự
+  án xem: tiền cọc mất vẫn về nền tảng (không về người bán, vì đã bỏ liên kết tài khoản) và chọn
+  phương án ngừng kín giá thứ hai. Kết quả kiểm chứng ở ADR0086/commit. Chưa push.
 
 Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
 auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web

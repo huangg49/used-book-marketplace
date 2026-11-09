@@ -4,6 +4,7 @@ import {
   amountError,
   autoFloor,
   bidOptions,
+  AUCTION_FORMATS,
   createAuctionCommand,
   createOrderCommand,
   auctionEligible,
@@ -364,5 +365,20 @@ describe("canWithdrawRegistration", () => {
     expect(canWithdrawRegistration(auction(), me({ registrationState: "Withdrawn" }), now)).toBe(false);
     expect(canWithdrawRegistration(auction(), null, now)).toBe(false);
     expect(canWithdrawRegistration(auction({ phase: "Ended" }), me(), now)).toBe(false);
+  });
+});
+
+// ADR 0086: the runner-up's answer carries the auction version it saw.
+describe("second-chance commands", () => {
+  it("accept and decline post the expected version", () => {
+    const a = createAuctionCommand("00000000-0000-4000-8000-000000000001", "SecondChanceAccept", 200_000, "k1", 7);
+    expect(a).toMatchObject({ path: "/auctions/00000000-0000-4000-8000-000000000001/second-chance/accept", method: "POST" });
+    expect(JSON.parse(a.body)).toEqual({ expectedVersion: 7 });
+    const d = createAuctionCommand("00000000-0000-4000-8000-000000000001", "SecondChanceDecline", 200_000, "k2", 7);
+    expect(d.path).toMatch(/second-chance\/decline$/);
+    expect(receiptMessage("SecondChanceDecline", 0, { currentPrice: null, leading: null })).toMatch(/từ chối/);
+  });
+  it("the create form no longer offers second-price sealed auctions", () => {
+    expect(AUCTION_FORMATS.filter((f) => !f.retired).map((f) => f.value)).not.toContain("SealedSecond");
   });
 });

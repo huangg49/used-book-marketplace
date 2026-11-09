@@ -499,6 +499,13 @@ export class AuctionIntakesService {
       );
     // ADR 0076: only English auctions have Buy Now; Dutch needs its schedule.
     const type = body.auctionType ?? 'English';
+    // ADR 0086 (C2): a seller's hidden bid could set a second-price winner's
+    // price, and accounts are not linked, so new auctions use other formats.
+    if (type === 'SealedSecond')
+      invalidField(
+        'auctionType',
+        'Đấu giá kín giá thứ hai không còn nhận phiên mới; hãy chọn đấu giá kín giá cao nhất hoặc kiểu khác.',
+      );
     if (type !== 'English' && body.buyNowPrice !== null)
       invalidField('buyNowPrice', 'Chỉ đấu giá kiểu Anh (trả giá lên) có mua ngay.');
     if (type === 'Dutch') {
@@ -931,6 +938,13 @@ export class AuctionIntakesService {
       holdReason: null,
       holdUntil: null,
       pausedMs: 0,
+      // ADR 0086: no runner-up offer yet.
+      runnerUpId: null,
+      runnerUpPrice: null,
+      runnerUpOfferedAt: null,
+      runnerUpDeadline: null,
+      runnerUpOutcome: null,
+      defaultedOrderId: null,
       buyNowAt: null,
       startAt: schedule.startAt,
       endAt: schedule.plannedEndAt,

@@ -253,7 +253,7 @@ export function SendToAuctionPricing({
       <View style={[styles.fieldGroup, { marginTop: 10 }]}>
         <AppText kind="bold" style={styles.fieldLabel}>Kiểu đấu giá</AppText>
         <View style={styles.stepGrid} accessibilityRole="radiogroup">
-          {AUCTION_FORMATS.map((m) => {
+          {AUCTION_FORMATS.filter((m) => !m.retired || m.value === auctionType).map((m) => {
             const isSelected = auctionType === m.value;
             return (
               <Pressable

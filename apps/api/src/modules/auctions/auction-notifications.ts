@@ -193,15 +193,42 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
       body: `${c.title} tạm dừng để quản trị viên xem xét${a.holdReason === 'Review' ? ' một báo cáo về phiên' : ''}; phiên không nhận thêm giá. Nếu phiên tiếp tục, thời gian tạm dừng được cộng lại.`,
     }),
   },
+  // ADR 0086: the wording follows what happens next: a runner-up offer, or
+  // the end of one (declined or unanswered), or the book going back.
   AuctionPaymentExpired: {
-    default: (c) => ({
-      title: 'Đã quá hạn thanh toán',
-      body: `${c.title}: hạn thanh toán đã qua. Sách được trả lại người bán và lượt không thanh toán đã được ghi nhận.`,
+    default: (c, a) =>
+      a.runnerUpOutcome === 'Declined' || a.runnerUpOutcome === 'Expired'
+        ? {
+            title: 'Lời mời mua đã kết thúc',
+            body: `${c.title}: ${a.runnerUpOutcome === 'Declined' ? 'bạn đã từ chối' : 'đã hết hạn'} lời mời mua với giá ${vnd(a.runnerUpPrice)}. Phiên kết thúc, không có khoản nào bị trừ.`,
+          }
+        : {
+            title: 'Đã quá hạn thanh toán',
+            body: `${c.title}: hạn thanh toán đã qua. ${a.state === 'SecondChanceOffered' ? 'Sách được mời người trả giá cao thứ hai mua' : 'Sách được trả lại người bán'} và lượt không thanh toán đã được ghi nhận.`,
+          },
+    seller: (c, a) =>
+      a.state === 'SecondChanceOffered'
+        ? {
+            title: 'Người thắng không thanh toán',
+            body: `${c.title}: người thắng không thanh toán đúng hạn. Người trả giá cao thứ hai được mời mua với giá ${vnd(a.runnerUpPrice)} đến ${when(a.runnerUpDeadline)}; nếu họ không nhận, sách được trả lại cho bạn tại ${c.point}.`,
+          }
+        : a.runnerUpOutcome === 'Declined' || a.runnerUpOutcome === 'Expired'
+          ? {
+              title: 'Người trả giá cao thứ hai không nhận mua',
+              body: `${c.title}: lời mời mua ${a.runnerUpOutcome === 'Declined' ? 'đã bị từ chối' : 'đã hết hạn'}. Phiên kết thúc; sách được trả lại cho bạn tại ${c.point}.`,
+            }
+          : {
+              title: 'Người thắng không thanh toán',
+              body: `${c.title}: người thắng không thanh toán đúng hạn. Sách được trả lại cho bạn tại ${c.point}.`,
+            },
+  },
+  // ADR 0086: to the runner-up only; their own level, never another member's.
+  AuctionSecondChanceOffered: {
+    default: (c, a) => ({
+      title: 'Bạn được mời mua sách đấu giá',
+      body: `${c.title}: người thắng không thanh toán. Bạn có thể mua với giá trả cao nhất của bạn, ${vnd(a.runnerUpPrice)}, nếu nhận trước ${when(a.runnerUpDeadline)}; sau khi nhận, thanh toán trong 24 giờ. Không nhận thì không có khoản nào bị trừ.`,
     }),
-    seller: (c) => ({
-      title: 'Người thắng không thanh toán',
-      body: `${c.title}: người thắng không thanh toán đúng hạn. Sách được trả lại cho bạn tại ${c.point}.`,
-    }),
+    seller: () => ({ title: '', body: '' }),
   },
   AuctionPaid: {
     default: () => ({ title: '', body: '' }),
@@ -305,8 +332,10 @@ export type FundsReason =
   | 'Registered'
   | 'Withdrawn'
   | 'NotEnoughBidders'
-  | 'NotWon';
-const RELEASE_REASON: Record<Exclude<FundsReason, 'Leading' | 'Registered'>, string> = {
+  | 'NotWon'
+  // ADR 0086: an accepted runner-up offer holds the price until payment.
+  | 'SecondChance';
+const RELEASE_REASON: Record<Exclude<FundsReason, 'Leading' | 'Registered' | 'SecondChance'>, string> = {
   Withdrawn: 'Bạn đã rút đăng ký nên tiền cọc được trả lại ví.',
   NotEnoughBidders: 'Phiên không đủ người tham gia nên tiền cọc và khoản giữ được trả lại ví.',
   Outbid: 'Bạn đã bị vượt giá nên khoản giữ được trả lại ví.',
@@ -335,6 +364,11 @@ export async function notifyAuctionFunds(
       ? {
           title: 'Đã giữ tiền cọc đăng ký đấu giá',
           body: `${c.title}: đã giữ ${vnd(delta)} tiền cọc. Tiền cọc được hoàn khi bạn không thắng hoặc phiên không đủ người; nếu thắng mà không thanh toán đúng hạn, tiền cọc không được hoàn.`,
+        }
+      : delta > 0 && reason === 'SecondChance'
+      ? {
+          title: 'Ví đã giữ tiền cho lời mời mua',
+          body: `${c.title}: đã giữ ${vnd(delta)} khỏi số dư khả dụng. Thanh toán trước hạn để nhận sách; quá hạn thì tiền được trả lại ví.`,
         }
       : delta > 0
       ? {

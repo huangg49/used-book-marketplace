@@ -32,7 +32,7 @@ import { rowFrames, standingFrames } from '../lib/auction-motion'
 import { commandError } from '../lib/auction-errors'
 import { PointOrderSteps } from './AuctionPointOrder'
 import { ScheduleAuctionDialog } from '../components/ScheduleAuctionDialog'
-import { DutchPanel, RegistrationPanel, SealedPanel, WaitingSellerControls } from './AuctionFormatPanels'
+import { DutchPanel, RegistrationPanel, SealedPanel, SecondChancePanel, WaitingSellerControls } from './AuctionFormatPanels'
 
 const HOUR = 3_600_000
 // ADR 0077/0079: headline for an auction that ended for a stated reason.
@@ -49,6 +49,7 @@ const CLOSED_PRICE: Partial<Record<AuctionState, string>> = {
   AwaitingWinnerPayment: 'Giá chốt',
   Sold: 'Giá chốt',
   PaymentExpired: 'Giá thắng (chưa thanh toán)',
+  SecondChanceOffered: 'Giá thắng (chưa thanh toán)',
   OnHold: 'Giá khi tạm dừng',
   Cancelled: 'Giá khi hủy',
 }
@@ -69,6 +70,7 @@ const STATE_LABEL: Record<AuctionState, string> = {
   OnHold: 'Tạm dừng',
   Cancelled: 'Đã hủy',
   PaymentExpired: 'Người thắng không thanh toán đúng hạn',
+  SecondChanceOffered: 'Người thắng không thanh toán; đang mời người trả giá cao thứ hai',
 }
 
 function when(iso: string) {
@@ -182,6 +184,9 @@ export function AuctionDetailPage() {
   if (authed && intakes.isPending) action = <p role="status">Đang kiểm tra vai trò của bạn trong phiên…</p>
   else if (authed && intakes.isError && !intakes.data) action = null
   else if (sellerIntake) action = <SellerPanel auction={auction} intake={sellerIntake} open={open} scheduled={scheduled} serverTime={detail.data.serverTime} onChanged={refresh} paused={intakes.isError} />
+  // ADR 0086: the runner-up answers the one offer made after the winner did not pay.
+  else if (auction.state === 'SecondChanceOffered' && me?.secondChance?.outcome === 'Offered')
+    action = <SecondChancePanel auction={auction} me={me} serverTime={detail.data.serverTime} onChanged={refresh} />
   else if (me?.won) action = <WinnerPanel me={me} auction={auction} ownerId={authed ? session.user.id : undefined} onChanged={refresh} paused={intakes.isError} />
   else if (auction.state === 'OnHold')
     action = (
@@ -808,6 +813,7 @@ const SELLER_STATE: Partial<Record<AuctionState, string>> = {
   Unsold: 'Phiên kết thúc không có lượt trả giá. Sách được trả lại cho bạn tại điểm.',
   Cancelled: 'Phiên đã hủy. Sách được trả lại cho bạn tại điểm.',
   PaymentExpired: 'Người thắng không thanh toán đúng hạn. Sách được trả lại cho bạn tại điểm.',
+  SecondChanceOffered: 'Người thắng không thanh toán đúng hạn. Người trả giá cao thứ hai được mời mua với giá trả cao nhất của họ trong 24 giờ; nếu họ không nhận, sách được trả lại cho bạn tại điểm.',
   OnHold: 'Phiên tạm dừng để quản trị viên xem xét; phiên không nhận thêm giá.',
 }
 

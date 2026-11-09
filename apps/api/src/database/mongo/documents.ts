@@ -1083,7 +1083,9 @@ export type AuctionState =
   | 'Unsold'
   | 'OnHold'
   | 'Cancelled'
-  | 'PaymentExpired';
+  | 'PaymentExpired'
+  // ADR 0086: the winner did not pay; the runner-up has 24 h to buy.
+  | 'SecondChanceOffered';
 export type AuctionBuyNowMode = 'Challenge' | 'Instant';
 export type AuctionFormat = 'English' | 'Dutch' | 'SealedFirst' | 'SealedSecond';
 export interface AuctionDoc extends Lockable {
@@ -1140,6 +1142,16 @@ export interface AuctionDoc extends Lockable {
   // ADR 0084: total time given back by resumes; every stored time moved by
   // it, and the fixed ceilings (from publishedAt) grow by it. ≤ 72 h.
   pausedMs: number;
+  // ADR 0086: the one runner-up offer after the winner did not pay. The
+  // winner fields keep the defaulted winner while it runs; accepting makes
+  // the runner-up the winner (new Order). defaultedOrderId is the first
+  // winner's expired Order. All null when no offer was made.
+  runnerUpId: string | null;
+  runnerUpPrice: number | null;
+  runnerUpOfferedAt: Date | null;
+  runnerUpDeadline: Date | null;
+  runnerUpOutcome: 'Offered' | 'Accepted' | 'Declined' | 'Expired' | 'Cancelled' | null;
+  defaultedOrderId: string | null;
   // ADR 0043: set when Buy Now opened the 60-second challenge window.
   buyNowAt: Date | null;
   startAt: Date;
@@ -1485,6 +1497,7 @@ export interface MemberNotificationDoc {
     | 'AuctionDepositForfeited'
     | 'AuctionRescheduled'
     | 'AuctionResumed'
+    | 'AuctionSecondChanceOffered'
     | 'AuctionWon'
     | 'AuctionSold'
     | 'AuctionBoughtNow'
