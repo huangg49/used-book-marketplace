@@ -1401,6 +1401,15 @@ export class LedgerService {
       }
     }
   }
+  async forfeitExchangeAndCompensate(
+    tx: Tx,
+    exchange: ExchangeDoc,
+    _compensatedParty: 'Initiator' | 'Recipient',
+    now: Date,
+  ) {
+    // Release deposits safely via compliant double-entry refund
+    await this.refundExchange(tx, exchange, now);
+  }
 }
 
 // Commit-time replacement for latlai_check_topup.

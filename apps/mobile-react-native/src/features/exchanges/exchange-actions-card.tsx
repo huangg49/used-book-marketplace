@@ -1,6 +1,7 @@
 import {
   exchangeCommandIdentity,
   pendingExchangeIntent,
+  readExchange,
   sendExchangeCommand,
   type ExchangeCommand,
 } from "@used-books/session-client";
@@ -10,7 +11,7 @@ import {
 } from "./exchange-recovery";
 import { ExchangeCounterForm } from "./exchange-counter-form";
 import React, { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import { z } from "zod";
 import * as Crypto from "expo-crypto";
@@ -148,6 +149,12 @@ function ExchangeActionsContent({
   const [shipFormError, setShipFormError] = useState<string | null>(null);
   const [isCreatingGhn, setIsCreatingGhn] = useState(false);
   const [ghnSuccessMsg, setGhnSuccessMsg] = useState<string | null>(null);
+
+  // BA Requirement: Packaging Photo & Video Evidence
+  const [packagingPhoto, setPackagingPhoto] = useState<string>("");
+  const [packagingPhotoName, setPackagingPhotoName] = useState<string>("");
+  const [packagingVideo, setPackagingVideo] = useState<string>("");
+  const [packagingVideoName, setPackagingVideoName] = useState<string>("");
 
   // Queries
   const walletQuery = useQuery({
@@ -315,14 +322,24 @@ function ExchangeActionsContent({
     onError: failure,
   });
   const shipMutation = useMutation({
-    mutationFn: (data: {
+    mutationFn: async (data: {
       method: "carrier" | "direct";
       carrierCode?: string;
       carrierName?: string;
       trackingCode?: string;
       meetupLocation?: string;
       notes?: string;
-    }) => command("ship", { expectedVersion: exchange.revision, ...data }),
+      packagingPhotoUrl?: string;
+      packagingPhotoName?: string;
+      packagingVideoUrl?: string;
+      packagingVideoName?: string;
+    }) => {
+      const latest = await readExchange(client, exchange.id, exchangeSchema).catch(
+        () => null,
+      );
+      const rev = latest?.revision ?? exchange.revision;
+      return command("ship", { expectedVersion: rev, ...data });
+    },
     onSuccess: () => {
       if (exchangeCommandIdentity(client) !== identity) return;
       setGhnSuccessMsg(null);
@@ -331,20 +348,35 @@ function ExchangeActionsContent({
     onError: failure,
   });
   const receiveMutation = useMutation({
-    mutationFn: () =>
-      command("receive", { expectedVersion: exchange.revision }),
+    mutationFn: async () => {
+      const latest = await readExchange(client, exchange.id, exchangeSchema).catch(
+        () => null,
+      );
+      const rev = latest?.revision ?? exchange.revision;
+      return command("receive", { expectedVersion: rev });
+    },
     onSuccess: success,
     onError: failure,
   });
   const completeMutation = useMutation({
-    mutationFn: () =>
-      command("complete", { expectedVersion: exchange.revision }),
+    mutationFn: async () => {
+      const latest = await readExchange(client, exchange.id, exchangeSchema).catch(
+        () => null,
+      );
+      const rev = latest?.revision ?? exchange.revision;
+      return command("complete", { expectedVersion: rev });
+    },
     onSuccess: success,
     onError: failure,
   });
   const disputeMutation = useMutation({
-    mutationFn: (reason: string) =>
-      command("dispute", { expectedVersion: exchange.revision, reason }),
+    mutationFn: async (reason: string) => {
+      const latest = await readExchange(client, exchange.id, exchangeSchema).catch(
+        () => null,
+      );
+      const rev = latest?.revision ?? exchange.revision;
+      return command("dispute", { expectedVersion: rev, reason });
+    },
     onSuccess: () => {
       if (exchangeCommandIdentity(client) !== identity) return;
       setDisputeError(null);
@@ -431,6 +463,93 @@ function ExchangeActionsContent({
     null;
   const effectiveAcceptAddressId = selectedAcceptAddressId ?? defaultAddressId;
 
+  const handlePickPackagingPhoto = async () => {
+    setShipFormError(null);
+    try {
+      const ImagePicker = await import("expo-image-picker");
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.85,
+      });
+      if (!res.canceled && res.assets?.[0]) {
+        const asset = res.assets[0];
+        if ((asset.fileSize ?? 0) > 10 * 1024 * 1024) {
+          setShipFormError("Dung lượng ảnh tối đa là 10MB.");
+          return;
+        }
+        setPackagingPhoto(asset.uri);
+        setPackagingPhotoName(asset.fileName || "anh-sach-chua-dong-hop.jpg");
+        return;
+      }
+    } catch {
+      try {
+        const DocumentPicker = await import("expo-document-picker");
+        const res = await DocumentPicker.getDocumentAsync({
+          type: ["image/jpeg", "image/png", "image/webp"],
+          copyToCacheDirectory: true,
+        });
+        if (!res.canceled && res.assets?.[0]) {
+          const asset = res.assets[0];
+          setPackagingPhoto(asset.uri);
+          setPackagingPhotoName(asset.name || "anh-sach-chua-dong-hop.jpg");
+        }
+      } catch {
+        setShipFormError("Không mở được bộ chọn ảnh trên thiết bị.");
+      }
+    }
+  };
+
+  const handlePickPackagingVideo = async () => {
+    setShipFormError(null);
+    try {
+      const ImagePicker = await import("expo-image-picker");
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["videos"],
+        allowsEditing: false,
+        quality: 0.85,
+      });
+      if (!res.canceled && res.assets?.[0]) {
+        const asset = res.assets[0];
+        if ((asset.fileSize ?? 0) > 100 * 1024 * 1024) {
+          setShipFormError("Dung lượng video tối đa là 100MB.");
+          return;
+        }
+        setPackagingVideo(asset.uri);
+        setPackagingVideoName(asset.fileName || "video-dong-goi-niem-phong.mp4");
+        return;
+      }
+    } catch {
+      try {
+        const DocumentPicker = await import("expo-document-picker");
+        const res = await DocumentPicker.getDocumentAsync({
+          type: ["video/mp4", "video/webm"],
+          copyToCacheDirectory: true,
+        });
+        if (!res.canceled && res.assets?.[0]) {
+          const asset = res.assets[0];
+          setPackagingVideo(asset.uri);
+          setPackagingVideoName(asset.name || "video-dong-goi-niem-phong.mp4");
+        }
+      } catch {
+        setShipFormError("Không mở được bộ chọn video trên thiết bị.");
+      }
+    }
+  };
+
+  const handleApplyDemoEvidence = () => {
+    setPackagingPhoto("/demo-evidence/sample-book-damage.jpg");
+    setPackagingPhotoName("anh-sach-chua-dong-hop.jpg");
+    setPackagingVideo("/demo-evidence/sample-unboxing.mp4");
+    setPackagingVideoName("video-dong-goi-niem-phong.mp4");
+    if (!shipNotes) {
+      setShipNotes(
+        "Đã chụp ảnh kiểm tra 4 góc sách và quay video đóng gói bọc chống sốc 2 lớp kỹ càng.",
+      );
+    }
+    setShipFormError(null);
+  };
+
   const handleShipSubmit = () => {
     setShipFormError(null);
     if (shipMethod === "carrier") {
@@ -440,32 +559,54 @@ function ExchangeActionsContent({
         );
         return;
       }
-      const selectedOption = CARRIER_OPTIONS.find(
-        (c) => c.code === shipCarrierCode,
-      );
-      const carrierName =
-        shipCarrierCode === "OTHER"
-          ? shipCustomCarrier.trim() || "Đơn vị vận chuyển khác"
-          : (selectedOption?.name ?? shipCarrierCode);
-
-      shipMutation.mutate({
-        method: "carrier",
-        carrierCode: shipCarrierCode,
-        carrierName,
-        trackingCode: shipTrackingCode.trim(),
-        notes: shipNotes.trim() || undefined,
-      });
+      if (shipCarrierCode === "OTHER" && !shipCustomCarrier.trim()) {
+        setShipFormError("Vui lòng nhập tên đơn vị vận chuyển.");
+        return;
+      }
     } else {
       if (!shipMeetupLocation.trim()) {
         setShipFormError("Vui lòng nhập địa điểm hẹn gặp để bàn giao sách.");
         return;
       }
-      shipMutation.mutate({
-        method: "direct",
-        meetupLocation: shipMeetupLocation.trim(),
-        notes: shipNotes.trim() || undefined,
-      });
     }
+
+    if (!packagingPhoto) {
+      setShipFormError(
+        "Bắt buộc: Vui lòng tải lên ảnh chụp hiện trạng sách trước khi đóng gói.",
+      );
+      return;
+    }
+    if (!packagingVideo) {
+      setShipFormError(
+        "Bắt buộc: Vui lòng tải lên video quay quá trình đóng gói bưu kiện và dán mã.",
+      );
+      return;
+    }
+
+    const selectedOption = CARRIER_OPTIONS.find(
+      (c) => c.code === shipCarrierCode,
+    );
+    const carrierName =
+      shipMethod === "carrier"
+        ? shipCarrierCode === "OTHER"
+          ? shipCustomCarrier.trim() || "Đơn vị vận chuyển khác"
+          : (selectedOption?.name ?? shipCarrierCode)
+        : "Gặp mặt trực tiếp tại TP.HCM";
+
+    shipMutation.mutate({
+      method: shipMethod,
+      carrierCode: shipMethod === "carrier" ? shipCarrierCode : "DIRECT",
+      carrierName,
+      trackingCode:
+        shipMethod === "carrier" ? shipTrackingCode.trim().toUpperCase() : undefined,
+      meetupLocation:
+        shipMethod === "direct" ? shipMeetupLocation.trim() : undefined,
+      notes: shipNotes.trim() || undefined,
+      packagingPhotoUrl: packagingPhoto,
+      packagingPhotoName: packagingPhotoName || "anh-dong-goi.jpg",
+      packagingVideoUrl: packagingVideo,
+      packagingVideoName: packagingVideoName || "video-dong-goi.mp4",
+    });
   };
 
   const handleAutoCreateGhn = async () => {
@@ -863,9 +1004,27 @@ function ExchangeActionsContent({
             </View>
           )}
 
-          {/* State: IN_TRANSIT (RECEIVE OR DISPUTE) */}
+          {/* State: IN_TRANSIT (SHIP IF NOT YET, RECEIVE OR DISPUTE) */}
           {exchange.status === "InTransit" && (
             <View style={styles.actionsBox}>
+              {!isShippedByMe && (
+                <View style={[styles.buttonGroup, { marginBottom: 8 }]}>
+                  <AppText style={styles.hintText}>
+                    Đối tác đã báo gửi sách chiều về. Vui lòng đóng gói cẩn thận
+                    và gửi sách chiều đi của bạn trước thời hạn 72 giờ:
+                  </AppText>
+                  <Button
+                    title="📦 Báo gửi sách & Nhập mã vận đơn"
+                    wine
+                    busy={isBusy}
+                    onPress={() => {
+                      setShipFormError(null);
+                      setGhnSuccessMsg(null);
+                      setShipModalOpen(true);
+                    }}
+                  />
+                </View>
+              )}
               {isReceivedByMe ? (
                 <View style={styles.successNote}>
                   <Icon
@@ -1088,52 +1247,90 @@ function ExchangeActionsContent({
           {exchange.status === "Cancelled" && (
             <View style={{ gap: space.sm }}>
               {exchange.cancelReason === "DisputeResolvedRefund" ? (
-                <View
-                  style={[
-                    styles.disputeBox,
-                    {
-                      backgroundColor: stitchTokens.amberBg,
-                      borderColor: stitchTokens.goldBorder,
-                    },
-                  ]}
-                >
-                  <Icon name="sync" size={18} color={stitchTokens.wineDark} />
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <AppText
+                (() => {
+                  const isCompInit =
+                    exchange.resolutionDecision === "CompensateInitiator" ||
+                    Boolean(
+                      exchange.resolutionReason?.startsWith(
+                        "[CompensateInitiator]",
+                      ),
+                    );
+                  const isCompRecip =
+                    exchange.resolutionDecision === "CompensateRecipient" ||
+                    Boolean(
+                      exchange.resolutionReason?.startsWith(
+                        "[CompensateRecipient]",
+                      ),
+                    );
+                  const cleanReason = exchange.resolutionReason
+                    ? exchange.resolutionReason
+                        .replace(
+                          /^\[(CompensateInitiator|CompensateRecipient)\]\s*/,
+                          "",
+                        )
+                        .trim()
+                    : null;
+
+                  const decisionTitle = isCompInit
+                    ? "Phán quyết Quản trị viên: Chấp thuận khiếu nại của Bên khởi tạo"
+                    : isCompRecip
+                      ? "Phán quyết Quản trị viên: Chấp thuận khiếu nại của Bên đối tác"
+                      : "Phán quyết Quản trị viên: Hủy đơn & Hoàn tiền (RefundBoth)";
+
+                  const decisionDesc =
+                    isCompInit || isCompRecip
+                      ? "Giao dịch đã được hủy theo phán quyết bảo vệ bên khiếu nại. Sổ cái đã hoàn trả 100% tiền cọc bảo chứng cùng tiền bù và ghi nhận biên bản vi phạm quy chế sàn đối với bên có lỗi."
+                      : "Toàn bộ tiền cọc bảo chứng và tiền bù đã được hoàn lại 100% về ví mô phỏng của cả hai bên. Sách đã được mở lại trên kệ.";
+
+                  return (
+                    <View
                       style={[
-                        styles.disputeTitle,
-                        { color: stitchTokens.wineDark },
+                        styles.disputeBox,
+                        {
+                          backgroundColor: stitchTokens.amberBg,
+                          borderColor: stitchTokens.goldBorder,
+                        },
                       ]}
                     >
-                      Phán quyết Quản trị viên: Hủy đơn &amp; Hoàn tiền
-                      (RefundBoth)
-                    </AppText>
-                    <AppText
-                      style={{
-                        fontSize: 12,
-                        color: stitchTokens.darkWood,
-                        marginTop: 2,
-                      }}
-                    >
-                      Toàn bộ tiền cọc bảo chứng và tiền bù đã được hoàn lại
-                      100% về ví mô phỏng của cả hai bên. Sách đã được mở lại
-                      trên kệ.
-                    </AppText>
-                    {exchange.resolutionReason && (
-                      <AppText
-                        style={{
-                          fontSize: 13,
-                          fontWeight: "600",
-                          color: stitchTokens.wineDark,
-                          marginTop: 4,
-                        }}
-                      >
-                        Căn cứ phán quyết: &quot;{exchange.resolutionReason}
-                        &quot;
-                      </AppText>
-                    )}
-                  </View>
-                </View>
+                      <Icon
+                        name="sync"
+                        size={18}
+                        color={stitchTokens.wineDark}
+                      />
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <AppText
+                          style={[
+                            styles.disputeTitle,
+                            { color: stitchTokens.wineDark },
+                          ]}
+                        >
+                          {decisionTitle}
+                        </AppText>
+                        <AppText
+                          style={{
+                            fontSize: 12,
+                            color: stitchTokens.darkWood,
+                            marginTop: 2,
+                          }}
+                        >
+                          {decisionDesc}
+                        </AppText>
+                        {cleanReason && (
+                          <AppText
+                            style={{
+                              fontSize: 13,
+                              fontWeight: "600",
+                              color: stitchTokens.wineDark,
+                              marginTop: 4,
+                            }}
+                          >
+                            Căn cứ phán quyết: &quot;{cleanReason}&quot;
+                          </AppText>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })()
               ) : (
                 <View style={styles.cancelledBox}>
                   <Icon name="close" size={16} color={stitchTokens.flashRed} />
@@ -1996,6 +2193,384 @@ function ExchangeActionsContent({
                   </View>
                 </View>
               )}
+
+              {/* =========================================================================
+                  BA Requirement: Packaging Evidence (Photos & Video)
+                  ========================================================================= */}
+              <View
+                style={{
+                  gap: 10,
+                  padding: 12,
+                  borderRadius: 12,
+                  backgroundColor: stitchTokens.roseWarmSurface,
+                  borderWidth: 1,
+                  borderColor: stitchTokens.peachBorder,
+                }}
+              >
+                <View style={{ gap: 4 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <Icon
+                        name="shield"
+                        size={16}
+                        color={stitchTokens.wineDark}
+                      />
+                      <AppText
+                        style={{
+                          fontSize: 13,
+                          fontWeight: "800",
+                          color: stitchTokens.wineDark,
+                        }}
+                      >
+                        Bằng chứng đóng gói bưu phẩm
+                      </AppText>
+                    </View>
+                    <View
+                      style={{
+                        backgroundColor: stitchTokens.wineDark,
+                        borderRadius: 8,
+                        paddingHorizontal: 7,
+                        paddingVertical: 2,
+                      }}
+                    >
+                      <AppText
+                        style={{
+                          fontSize: 10,
+                          fontWeight: "800",
+                          color: stitchTokens.white,
+                        }}
+                      >
+                        BẮT BUỘC
+                      </AppText>
+                    </View>
+                  </View>
+                  <AppText
+                    style={{
+                      fontSize: 11,
+                      color: stitchTokens.darkWood,
+                      lineHeight: 16,
+                    }}
+                  >
+                    Chụp ảnh tình trạng sách và quay video quá trình đóng gói để
+                    Admin đối chiếu, bảo vệ quyền lợi nếu đối tác khiếu nại sách
+                    hỏng.
+                  </AppText>
+                </View>
+
+                {/* 1. Photo Evidence Card */}
+                <View
+                  style={{
+                    padding: 10,
+                    borderRadius: 10,
+                    backgroundColor: stitchTokens.whiteSurface,
+                    borderWidth: 1,
+                    borderColor: packagingPhoto
+                      ? stitchTokens.greenBorderSoft
+                      : stitchTokens.peachBorder,
+                    gap: 8,
+                  }}
+                >
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <AppText
+                      style={{
+                        fontSize: 12,
+                        fontWeight: "700",
+                        color: stitchTokens.wineDark,
+                      }}
+                    >
+                      1. Ảnh hiện trạng sách *
+                    </AppText>
+                    {packagingPhoto ? (
+                      <Pressable
+                        onPress={() => {
+                          setPackagingPhoto("");
+                          setPackagingPhotoName("");
+                        }}
+                      >
+                        <AppText
+                          style={{
+                            fontSize: 11,
+                            fontWeight: "700",
+                            color: stitchTokens.crimson,
+                          }}
+                        >
+                          Xóa ảnh
+                        </AppText>
+                      </Pressable>
+                    ) : null}
+                  </View>
+
+                  {packagingPhoto ? (
+                    <View style={{ gap: 6 }}>
+                      {packagingPhoto.startsWith("http") ||
+                      packagingPhoto.startsWith("file:") ||
+                      packagingPhoto.startsWith("data:") ? (
+                        <Image
+                          source={{ uri: packagingPhoto }}
+                          style={{
+                            width: "100%",
+                            height: 110,
+                            borderRadius: 8,
+                            backgroundColor: stitchTokens.parchment,
+                          }}
+                          resizeMode="cover"
+                        />
+                      ) : null}
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <Icon
+                          name="check"
+                          size={14}
+                          color={stitchTokens.likeNewGreen}
+                        />
+                        <AppText
+                          numberOfLines={1}
+                          style={{
+                            fontSize: 12,
+                            fontWeight: "700",
+                            color: stitchTokens.likeNewGreen,
+                            flex: 1,
+                          }}
+                        >
+                          {packagingPhotoName || "Ảnh hiện trạng"}
+                        </AppText>
+                      </View>
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={() => void handlePickPackagingPhoto()}
+                      style={{
+                        paddingVertical: 12,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderStyle: "dashed",
+                        borderColor: stitchTokens.wineDark,
+                        backgroundColor: stitchTokens.parchment,
+                        alignItems: "center",
+                        gap: 2,
+                      }}
+                    >
+                      <AppText
+                        style={{
+                          fontSize: 12,
+                          fontWeight: "700",
+                          color: stitchTokens.wineDark,
+                        }}
+                      >
+                        + Tải ảnh chụp sách
+                      </AppText>
+                      <AppText
+                        style={{
+                          fontSize: 10,
+                          color: stitchTokens.subtleGray,
+                        }}
+                      >
+                        JPG, PNG, WebP tối đa 10MB
+                      </AppText>
+                    </Pressable>
+                  )}
+                </View>
+
+                {/* 2. Video Evidence Card */}
+                <View
+                  style={{
+                    padding: 10,
+                    borderRadius: 10,
+                    backgroundColor: stitchTokens.whiteSurface,
+                    borderWidth: 1,
+                    borderColor: packagingVideo
+                      ? stitchTokens.greenBorderSoft
+                      : stitchTokens.peachBorder,
+                    gap: 8,
+                  }}
+                >
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <AppText
+                      style={{
+                        fontSize: 12,
+                        fontWeight: "700",
+                        color: stitchTokens.wineDark,
+                      }}
+                    >
+                      2. Video đóng gói *
+                    </AppText>
+                    {packagingVideo ? (
+                      <Pressable
+                        onPress={() => {
+                          setPackagingVideo("");
+                          setPackagingVideoName("");
+                        }}
+                      >
+                        <AppText
+                          style={{
+                            fontSize: 11,
+                            fontWeight: "700",
+                            color: stitchTokens.crimson,
+                          }}
+                        >
+                          Xóa video
+                        </AppText>
+                      </Pressable>
+                    ) : null}
+                  </View>
+
+                  {packagingVideo ? (
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                        paddingVertical: 4,
+                      }}
+                    >
+                      <Icon
+                        name="check"
+                        size={14}
+                        color={stitchTokens.likeNewGreen}
+                      />
+                      <AppText
+                        numberOfLines={1}
+                        style={{
+                          fontSize: 12,
+                          fontWeight: "700",
+                          color: stitchTokens.likeNewGreen,
+                          flex: 1,
+                        }}
+                      >
+                        {packagingVideoName || "Video đóng gói"}
+                      </AppText>
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={() => void handlePickPackagingVideo()}
+                      style={{
+                        paddingVertical: 12,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderStyle: "dashed",
+                        borderColor: stitchTokens.wineDark,
+                        backgroundColor: stitchTokens.parchment,
+                        alignItems: "center",
+                        gap: 2,
+                      }}
+                    >
+                      <AppText
+                        style={{
+                          fontSize: 12,
+                          fontWeight: "700",
+                          color: stitchTokens.wineDark,
+                        }}
+                      >
+                        + Tải video đóng gói
+                      </AppText>
+                      <AppText
+                        style={{
+                          fontSize: 10,
+                          color: stitchTokens.subtleGray,
+                        }}
+                      >
+                        MP4, WebM tối đa 100MB
+                      </AppText>
+                    </Pressable>
+                  )}
+                </View>
+
+                {/* Demo Quick Preset Button */}
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handleApplyDemoEvidence}
+                  style={({ pressed }) => [
+                    {
+                      paddingVertical: 9,
+                      paddingHorizontal: 10,
+                      borderRadius: 8,
+                      backgroundColor: stitchTokens.goldLight,
+                      borderWidth: 1,
+                      borderColor: stitchTokens.goldBorder,
+                      alignItems: "center",
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}
+                >
+                  <AppText
+                    style={{
+                      fontSize: 11,
+                      fontWeight: "800",
+                      color: stitchTokens.wineDark,
+                      textAlign: "center",
+                    }}
+                  >
+                    ⚡ Nạp nhanh chứng cứ đóng gói mẫu (Ảnh sách + Video niêm
+                    phong)
+                  </AppText>
+                </Pressable>
+              </View>
+
+              {/* Policy Notice Box */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "flex-start",
+                  gap: 8,
+                  padding: 10,
+                  borderRadius: 10,
+                  backgroundColor: stitchTokens.parchment,
+                  borderWidth: 1,
+                  borderColor: stitchTokens.peachBorder,
+                }}
+              >
+                <Icon name="info" size={15} color={stitchTokens.wineDark} />
+                <AppText
+                  style={{
+                    flex: 1,
+                    fontSize: 11,
+                    color: stitchTokens.darkWood,
+                    lineHeight: 16,
+                  }}
+                >
+                  <AppText
+                    style={{
+                      fontSize: 11,
+                      fontWeight: "700",
+                      color: stitchTokens.wineDark,
+                    }}
+                  >
+                    Nguyên tắc trao đổi hai chiều:{" "}
+                  </AppText>
+                  Mỗi bên chủ động gửi sách của chiều mình. Hệ thống không thu
+                  phí giao hàng. Tiền đặt cọc bảo chứng vẫn được Lật Lại giữ an
+                  toàn cho đến khi cả hai bên xác nhận đã nhận sách.
+                </AppText>
+              </View>
             </ScrollView>
 
             <View style={styles.modalActionRow}>

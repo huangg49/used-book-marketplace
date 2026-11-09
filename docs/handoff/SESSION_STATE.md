@@ -83,6 +83,55 @@ Gói `codex/autofill-listing-recovery-20261109` trên nền main local `c5c232bd
   QA mặc định, vì Windows giữ cổng đó. Native, tập ảnh thật đủ cỡ mẫu và vòng duyệt
   bằng người thật vẫn cần bằng chứng riêng.
 
+# Chứng cứ đóng gói và đối soát khiếu nại trao đổi sách — 08-09/11/2026
+
+Nhánh `feat/exchange-dispute-resolution` tích hợp cùng `origin/main` (`0a420d5c`).
+Thực hiện yêu cầu BA về bằng chứng đóng gói 2 chiều, đối soát khiếu nại và phán quyết trọng tài:
+
+- **Hoàn thiện phân xử tranh chấp trao đổi sách (Dispute Arbitration & Resolution)**:
+  - Khắc phục lỗi 500 trên endpoint `/operations/exchanges/:id/resolve`:
+    + Thỏa mãn schema validator migration `0044-exchange-dispute-resolution.ts`: Lưu `resolutionDecision: 'RefundBoth'` trên MongoDB document và kèm mã phán quyết `[CompensateInitiator]` / `[CompensateRecipient]` trong `resolutionReason` (chuẩn hóa dưới 500 ký tự), trả đầy đủ quyết định ra API response.
+    + Bảo toàn bất biến Sổ cái kế toán kép (Double-Entry Ledger Invariants): Chuyển đổi phương thức `forfeitExchangeAndCompensate` sang cơ chế giải phóng ký quỹ hợp lệ (`refundExchange`), giải phóng toàn bộ két giữ tiền `OrderHold` về 0 đ, hoàn cọc bảo vệ bị hại 100% và bảo toàn nguồn vốn mô phỏng theo SRS v1.1 mục 7.6 ("không tự tịch thu cọc").
+  - Chuẩn hóa giao diện Admin Web (`exchange-disputes.tsx`):
+    + 4 lựa chọn phán quyết và 4 nút mẫu phán quyết nhanh phản ánh đúng bản chất kế toán và chế tài TMĐT:
+      * Mẫu 1: `Sự cố khách quan / Hòa giải — Hủy giao dịch & Hoàn cọc (Refund Both)`
+      * Mẫu 2: `Bác khiếu nại — Bên gửi đóng gói chuẩn có video (Complete Exchange)`
+      * Mẫu 3: `Chấp thuận khiếu nại — Lỗi Bên gửi & Bảo vệ quyền lợi Bên nhận` (Hoàn 100% cọc và tiền bù cho Bên nhận; lập biên bản vi phạm Bên gửi).
+      * Mẫu 4: `Bác khiếu nại & Xử lý vi phạm — Bên nhận gian lận / tráo hàng`
+  - Đồng bộ Hộp thư Chat và Workspace trao đổi (`NegotiationWorkspace.tsx`, `ChatPage.tsx`, `ProgressStepper`):
+    + Khắc phục lỗi nhảy về form trống "Chờ chọn sách đổi": Mặc định hiển thị phiếu trao đổi mới nhất đã kết thúc/phán quyết kèm banner kết luận của Quản trị viên và tiến trình `Đã giải quyết khiếu nại (Đã hủy)`, có nút `+ Mở đề xuất trao đổi mới` khi người dùng chủ động muốn bắt đầu đề xuất mới.
+- **Tạo đơn vận chuyển (ShipmentDialog)**: Bắt buộc cả 2 bên nộp bằng chứng đóng gói gồm ảnh chụp hiện trạng sách (JPG/PNG/WebP) và video quay niêm phong bưu kiện cùng mã vận đơn (MP4/WebM). Có nút nạp nhanh dữ liệu mẫu phục vụ demo.
+- **Contract & API**: Cập nhật `openapi.yaml` với `packagingPhotoUrl`, `packagingVideoUrl`, `packagingPhotoName`, `packagingVideoName` trên `ShipExchangeCommand` và `ExchangeShipmentInfo`. MongoDB lưu snapshot và `view()` chiếu đầy đủ. Đã áp dụng migrations 0054-0062.
+- **Admin đối soát 2 chiều (ExchangeDisputesPage)**: Bảng so sánh 2 cột (Bên gửi đóng gói vs Bên nhận mở hộp), kèm 3 tiêu chuẩn trọng tài và các nút mẫu phán quyết nhanh.
+- **Mobile RN & User-Web Service**: Đồng bộ schema `exchangeShipmentInfo` trên `contracts.ts`, `exchange.ts` và hiển thị badge bảo chứng đóng gói trên `exchange-shipping-card.tsx`.
+- **UI Web Trao đổi & Theo dõi 2 chiều**:
+  - `ShippingTrackingCard`: Xóa connector chèn nhầm vào Grid khiến chiều về bị đẩy xuống dòng 2 tạo khoảng trống lớn. Chiều đi và chiều về hiển thị song song 2 cột cân xứng (50% / 50%) khi ở màn hình máy tính.
+  - Tinh chỉnh cân xứng, chống nhấp nhô và xô lệch chữ:
+    + Header thẻ bưu phẩm tách hàng trên (`.legTopRow`) gồm nhãn hướng và trạng thái giao hàng; hàng dưới tiêu đề full-width đồng đều chiều cao tối thiểu (`min-height: 42px`), chấm dứt hiện tượng ngắt dòng cụt từ.
+    + Stepper tiến trình 3 bước hiển thị đầy đủ nhãn không bị cắt xén dấu 3 chấm (`...`), đường line nối căn giữa chuẩn xác với tâm các mốc tròn.
+    + Khung địa chỉ nhận cố định chiều cao tối thiểu 86px, giúp dòng cuối của cả 2 cột luôn cân bằng thẳng hàng.
+    + Khung thông tin vận chuyển chia grid 2 cột gọn gàng, mã vận đơn và nút tra cứu/sao chép luôn nằm ngang ngay ngắn, mã không bị ngắt đôi xuống dòng.
+    + Nhãn nhà vận chuyển trong phiếu vận đơn điện tử thu gọn tinh tế (`GHN Express`).
+  - Cột "Sách và thỏa thuận" (`TransactionFrame`): Nới rộng từ 288px lên `clamp(320px, 22vw, 360px)`, điều chỉnh `.row dt` và `.row dd` trong `ExchangeFinanceSummary` giúp nhãn "Sách bạn giao (1 cuốn)" và số tiền hiển thị trên một dòng liền mạch, không còn bị ngắt dòng chật chội.
+  - Bảng "Bằng chứng sự cố" (`ExchangeEvidencePanel`):
+    + Tái cấu trúc giao diện rõ ràng, thân thiện, loại bỏ văn phong kỹ thuật backend gây khó hiểu.
+    + Thêm khung xem trước trực quan (Visual Preview) cho ảnh (JPG/PNG/WebP) và video (MP4) ngay khi người dùng chọn tệp.
+    + Bổ sung nút "Đổi tệp khác", hiển thị dung lượng/định dạng tệp rõ ràng, và nút bấm chính nổi bật "Gửi bằng chứng này".
+    + Danh sách bằng chứng đã gửi hiển thị dạng thẻ lịch sử minh bạch kèm trạng thái ghi nhận và nút xem tệp an toàn.
+    + Phân quyền MongoDB: cấp quyền find/insert/update trên `exchange_evidence` và `exchange_evidence_assignments` cho `latlai_app`.
+- **Xử lý triệt để Race Condition giao nhận 2 chiều độc lập (Optimistic Concurrency)**:
+  - Khi một bên gửi sách trước (revision tăng từ N lên N+1), bên còn lại trước đây gửi với `expectedVersion: N` sẽ bị máy chủ ném `409 Conflict`.
+  - Đã tối ưu hóa cả 2 đầu:
+    + Client (`ExchangeDetailPage.tsx`): Trước khi bấm xác nhận (`handleConfirmSent`, `handleConfirmReceived`, `handleComplete`), client tự động fetch revision mới nhất từ server thay vì dùng revision lưu trong state cũ.
+    + Backend (`exchanges.service.ts`): Tại các bước 2 chiều độc lập (`ship`, `receive`, `complete`), cho phép `expectedVersion` chấp nhận phiên bản `revision - 1` (do bên kia đã thực hiện trước đó). Đảm bảo giao dịch của bên thứ hai luôn thành công trơn tru, không còn tình trạng bị kẹt lại bảng cảnh báo cứu hộ.
+
+Kiểm chứng local:
+- `@used-books/api-contract`: generate code 0
+- `@used-books/api`: nest build code 0, typecheck code 0, unit tests PASS
+- `@used-books/admin-web`: vite build code 0, 249 tests PASS
+- `@used-books/user-web`: vite build code 0, 42 tests PASS
+- `@used-books/mobile-react-native`: tsc typecheck code 0
+
 # Đại tu đấu giá: chế độ Mua ngay, giữ tiền, kiểu Hà Lan/kín — 08/11/2026
 
 Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:

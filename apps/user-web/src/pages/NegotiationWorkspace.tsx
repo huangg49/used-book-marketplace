@@ -137,17 +137,82 @@ export function NegotiationWorkspace({
   const conditionLabel = book ? conditions[book.condition] : undefined;
   const quoteCurrent = Boolean(room.hasQuote && room.quotePreview && Date.parse(room.quotePreview.expiresAt) > now);
 
-  if (mode === 'Exchange' && (historyExchange || room.terms?.activeExchangeId)) {
-    const currentId = historyExchange ?? room.terms!.activeExchangeId!;
-    const navigation = <>
-      <TransactionDisclosure title={`Lịch sử đề nghị đổi sách (${room.terms?.exchangeIds.length ?? 0})`}>
-        {room.terms?.exchangeIds.map((id,i)=><button type="button" className={styles.secondaryActionBtn} key={id} onClick={()=>setHistoryExchange(id===room.terms?.activeExchangeId?null:id)}>Xem đề nghị lần {i+1}{id===room.terms?.activeExchangeId?' — hiện tại':''}</button>)}
+  const latestExchangeId =
+    room.terms?.activeExchangeId ??
+    (room.terms?.exchangeIds?.length
+      ? room.terms.exchangeIds[room.terms.exchangeIds.length - 1]
+      : null);
+  const currentExchangeId =
+    historyExchange === "new"
+      ? null
+      : (historyExchange ?? room.terms?.activeExchangeId ?? null);
+
+  if (mode === 'Exchange' && currentExchangeId) {
+    const navigation = (
+      <TransactionDisclosure title={`Lịch sử các đề nghị đổi sách (${room.terms?.exchangeIds?.length ?? 0} lần)`}>
+        {room.terms?.exchangeIds?.map((id, i) => (
+          <button
+            type="button"
+            className={styles.secondaryActionBtn}
+            key={id}
+            onClick={() => setHistoryExchange(id === latestExchangeId ? null : id)}
+          >
+            Xem đề nghị lần {i + 1}
+            {id === latestExchangeId ? ' — mới nhất' : ''}
+          </button>
+        ))}
+        {Boolean(latestExchangeId && !room.terms?.activeExchangeId) && (
+          <button
+            type="button"
+            className={styles.secondaryActionBtn}
+            onClick={() => setHistoryExchange("new")}
+            style={{ marginTop: 6, display: "block" }}
+          >
+            + Mở đề xuất trao đổi mới
+          </button>
+        )}
       </TransactionDisclosure>
-    </>;
-    return <ExchangeDetailPage key={currentId} exchangeId={currentId} embedded workspaceNavigation={navigation} workspaceNotice={historyExchange?<p role="status">Đang xem đề nghị trước đó. <button type="button" className={styles.secondaryActionBtn} onClick={()=>setHistoryExchange(null)}>Về phiếu hiện tại</button></p>:undefined}/>;
+    );
+
+    return (
+      <ExchangeDetailPage
+        key={currentExchangeId}
+        exchangeId={currentExchangeId}
+        embedded
+        workspaceNavigation={navigation}
+        workspaceNotice={
+          historyExchange && historyExchange !== "new" && historyExchange !== latestExchangeId ? (
+            <p role="status">
+              Đang xem đề nghị trước đó.{" "}
+              <button
+                type="button"
+                className={styles.secondaryActionBtn}
+                onClick={() => setHistoryExchange(null)}
+              >
+                Về đề nghị mới nhất
+              </button>
+            </p>
+          ) : undefined
+        }
+      />
+    );
   }
   return (
     <div className={styles.workspacePage} data-transaction-page>
+      {historyExchange === "new" && (
+        <div className={styles.procedureNoticeInfo} style={{ margin: "12px 16px" }}>
+          <p>
+            Bạn đang tạo một đề xuất trao đổi mới.{" "}
+            <button
+              type="button"
+              className={styles.secondaryActionBtn}
+              onClick={() => setHistoryExchange(null)}
+            >
+              Quay lại xem giao dịch trước đó
+            </button>
+          </p>
+        </div>
+      )}
     <TransactionFrame preview={book ? <ListingPhoto book={book} eager fallbackCover /> : <BookOpen size={24} />} context={
       <article
         className={styles.bookInfoCard}

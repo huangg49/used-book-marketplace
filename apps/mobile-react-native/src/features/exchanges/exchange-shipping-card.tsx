@@ -92,15 +92,16 @@ export function ExchangeShippingCard({
     }
   };
 
-  // Only display for active shipping/delivered/completed exchanges
+  // Only display for active shipping/delivered/completed/disputed exchanges
   if (
     [
       "Proposed",
       "AcceptedAwaitingFunding",
-      "Cancelled",
       "Rejected",
       "Expired",
-    ].includes(exchange.status)
+    ].includes(exchange.status) ||
+    (exchange.status === "Cancelled" &&
+      exchange.cancelReason !== "DisputeResolvedRefund")
   ) {
     return null;
   }
@@ -128,7 +129,7 @@ export function ExchangeShippingCard({
           </View>
           <AppText style={styles.cardTitle}>Tiến trình giao nhận 2 chiều</AppText>
           <AppText style={styles.cardSubtitle}>
-            Mỗi bên chủ động gửi sách của chiều mình. Hệ thống không thu phí giao hàng.
+            Mỗi bên chủ động gửi sách và tự thanh toán cước phí chiều đi
           </AppText>
         </View>
       </View>
@@ -144,12 +145,12 @@ export function ExchangeShippingCard({
           {isDeliveredOrCompleted
             ? "Cả 2 gói sách đã đến nơi · Sẵn sàng kiểm tra và tất toán"
             : bothSent
-            ? "Cả 2 kiện sách đang trên đường vận chuyển · Hãy chú ý điện thoại"
-            : mySentAt && !partnerSentAt
-            ? `Bạn đã gửi sách · Đang chờ @${partnerName} tạo đơn gửi sách`
-            : !mySentAt && partnerSentAt
-            ? `@${partnerName} đã gửi sách · Vui lòng gửi sách sớm (hạn 72h)`
-            : "Chờ cả hai bên hoàn tất đóng gói và tạo đơn vận chuyển"}
+              ? "Cả 2 kiện sách đang trên đường vận chuyển · Hãy chú ý điện thoại"
+              : mySentAt && !partnerSentAt
+                ? `Bạn đã gửi sách · Đang chờ @${partnerName} tạo đơn gửi sách`
+                : !mySentAt && partnerSentAt
+                  ? `@${partnerName} đã gửi sách · Vui lòng gửi sách sớm (hạn 72h)`
+                  : "Chờ cả hai bên hoàn tất đóng gói và tạo đơn vận chuyển"}
         </AppText>
       </View>
 
@@ -178,8 +179,8 @@ export function ExchangeShippingCard({
               {isDeliveredOrCompleted
                 ? "Đối tác đã nhận"
                 : mySentAt
-                ? "Đang giao tới đối tác"
-                : "Chờ bạn tạo đơn"}
+                  ? "Đang giao tới đối tác"
+                  : "Chờ bạn tạo đơn"}
             </AppText>
           </View>
         </View>
@@ -356,7 +357,7 @@ export function ExchangeShippingCard({
                       style={[
                         styles.copyBtnLargeText,
                         copiedCode === myShipment.trackingCode &&
-                          styles.copyBtnTextSuccess,
+                        styles.copyBtnTextSuccess,
                       ]}
                     >
                       {copiedCode === myShipment.trackingCode
@@ -384,6 +385,24 @@ export function ExchangeShippingCard({
               <AppText style={styles.notesText}>
                 Ghi chú: {myShipment.notes}
               </AppText>
+            ) : null}
+
+            {myShipment.packagingPhotoUrl || myShipment.packagingVideoUrl ? (
+              <View style={styles.packagingEvidenceBadge}>
+                <Icon name="shield" size={12} color={stitchTokens.likeNewGreen} />
+                <View style={{ flex: 1 }}>
+                  <AppText style={styles.packagingEvidenceText}>
+                    Đã đính kèm ảnh &amp; video đóng gói niêm phong
+                  </AppText>
+                  {(myShipment.packagingPhotoName || myShipment.packagingVideoName) ? (
+                    <AppText style={{ fontSize: 10, color: stitchTokens.subtleGray }}>
+                      {[myShipment.packagingPhotoName, myShipment.packagingVideoName]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </AppText>
+                  ) : null}
+                </View>
+              </View>
             ) : null}
           </View>
         ) : (
@@ -425,8 +444,8 @@ export function ExchangeShippingCard({
               {isDeliveredOrCompleted
                 ? "Bạn đã nhận sách"
                 : partnerSentAt
-                ? "Đang giao tới bạn"
-                : "Chờ đối tác gửi"}
+                  ? "Đang giao tới bạn"
+                  : "Chờ đối tác gửi"}
             </AppText>
           </View>
         </View>
@@ -607,7 +626,7 @@ export function ExchangeShippingCard({
                       style={[
                         styles.copyBtnLargeText,
                         copiedCode === partnerShipment.trackingCode &&
-                          styles.copyBtnTextSuccess,
+                        styles.copyBtnTextSuccess,
                       ]}
                     >
                       {copiedCode === partnerShipment.trackingCode
@@ -628,6 +647,30 @@ export function ExchangeShippingCard({
                 <AppText style={styles.meetupText}>
                   Điểm hẹn: {partnerShipment.meetupLocation}
                 </AppText>
+              </View>
+            ) : null}
+
+            {partnerShipment.notes ? (
+              <AppText style={styles.notesText}>
+                Ghi chú: {partnerShipment.notes}
+              </AppText>
+            ) : null}
+
+            {partnerShipment.packagingPhotoUrl || partnerShipment.packagingVideoUrl ? (
+              <View style={styles.packagingEvidenceBadge}>
+                <Icon name="shield" size={12} color={stitchTokens.likeNewGreen} />
+                <View style={{ flex: 1 }}>
+                  <AppText style={styles.packagingEvidenceText}>
+                    Đối tác đã đính kèm ảnh &amp; video đóng gói niêm phong
+                  </AppText>
+                  {(partnerShipment.packagingPhotoName || partnerShipment.packagingVideoName) ? (
+                    <AppText style={{ fontSize: 10, color: stitchTokens.subtleGray }}>
+                      {[partnerShipment.packagingPhotoName, partnerShipment.packagingVideoName]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </AppText>
+                  ) : null}
+                </View>
               </View>
             ) : null}
           </View>
@@ -1040,6 +1083,24 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: stitchTokens.wineDark,
     lineHeight: 15,
+  },
+  packagingEvidenceBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: stitchTokens.likeNewGreenBg,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: stitchTokens.likeNewGreen,
+    alignSelf: "flex-start",
+    marginTop: 4,
+  },
+  packagingEvidenceText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: stitchTokens.likeNewGreen,
   },
   pressed: {
     opacity: 0.7,

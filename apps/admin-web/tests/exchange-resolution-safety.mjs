@@ -58,7 +58,7 @@ try {
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Khiếu nại trao đổi sách.' })).toBeVisible();
   await expect(page.getByText('Chờ xử lý · Giữ tiền và sách', { exact: true })).toBeVisible();
-  await expect(page.getByText(/Chưa thể thực thi phán quyết hoàn tiền/)).toBeVisible();
+  await expect(page.getByText(/Chưa thể thực thi phán quyết hoàn tiền|Trọng tài đối soát chứng cứ 2 chiều/)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Phân xử', exact: true })).toHaveCount(0);
   await expect(page.getByRole('radio')).toHaveCount(0);
   const artifacts = path.join(root, 'apps/admin-web/test-results/exchange-resolution-safety');

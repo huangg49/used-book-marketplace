@@ -13,7 +13,11 @@ export interface Row {
   meta: string[];
   title: string;
   detail?: ReactNode;
-  action?: { label: string; render: (context: ActionContext) => ReactNode };
+  action?: {
+    label: string;
+    to?: string;
+    render?: (context: ActionContext) => ReactNode;
+  };
 }
 // Shared by a queue page and its query: an open panel pauses the auto refresh,
 // so a row cannot disappear while its command is being confirmed.

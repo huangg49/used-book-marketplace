@@ -97,6 +97,11 @@ const ExchangeDisputesPage = lazy(() =>
     default: m.ExchangeDisputesPage,
   })),
 );
+const ExchangeDisputeDetailPage = lazy(() =>
+  import("./features/operations/exchange-disputes").then((m) => ({
+    default: m.ExchangeDisputeDetailPage,
+  })),
+);
 
 const WithdrawalsPage = lazy(() => import('./features/withdrawals/WithdrawalsPage').then(m => ({default:m.WithdrawalsPage})));
 const WithdrawalDetailPage = lazy(() => import('./features/withdrawals/WithdrawalsPage').then(m => ({default:m.WithdrawalDetailPage})));
@@ -151,6 +156,7 @@ const router = createBrowserRouter([
       { path: "/operations/incidents", element: <IncidentsPage /> },
       { path: "/operations/escalations", element: <EscalationsPage /> },
       { path: "/operations/exchange-disputes", element: <ExchangeDisputesPage /> },
+      { path: "/operations/exchange-disputes/:id", element: <ExchangeDisputeDetailPage /> },
       { path: "/simulator/deliveries", element: <DeliverySimulator /> },
       { path: "/simulator/events/:kind", element: <SimulatorEventsPage /> },
       {

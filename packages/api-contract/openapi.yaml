@@ -23348,6 +23348,22 @@ components:
           type:
             - string
             - "null"
+        packagingPhotoUrl:
+          type:
+            - string
+            - "null"
+        packagingVideoUrl:
+          type:
+            - string
+            - "null"
+        packagingPhotoName:
+          type:
+            - string
+            - "null"
+        packagingVideoName:
+          type:
+            - string
+            - "null"
         shippedAt:
           type:
             - string
@@ -23422,6 +23438,14 @@ components:
         meetupLocation:
           type: string
         notes:
+          type: string
+        packagingPhotoUrl:
+          type: string
+        packagingVideoUrl:
+          type: string
+        packagingPhotoName:
+          type: string
+        packagingVideoName:
           type: string
     RejectExchangeCommand:
       type: object
@@ -23931,6 +23955,8 @@ components:
           enum:
             - RefundBoth
             - CompleteExchange
+            - CompensateInitiator
+            - CompensateRecipient
         reason:
           type: string
           minLength: 5
