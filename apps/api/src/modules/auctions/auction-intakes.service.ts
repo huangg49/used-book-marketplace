@@ -127,8 +127,9 @@ export class AuctionIntakesService {
     private readonly clock: AuctionClock,
     config: ConfigService,
   ) {
-    // ADR 0077: only the test harness may publish auctions without
-    // registration, for historical suites; a dedicated suite keeps it on.
+    // ADR 0077/0082: registration is mandatory on every auction. Only the test
+    // harness (NODE_ENV=test) may switch it off, for suites written before
+    // registration; no seller, Staff or server setting can.
     this.registration = !(
       config.get<string>('NODE_ENV') === 'test' &&
       config.get<string>('AUCTION_REGISTRATION') === 'Off'

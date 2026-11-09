@@ -11,7 +11,11 @@ chờ thêm 24 giờ rồi hủy giữ nguyên. Không đổi READINESS.
   72 giờ). "1 tháng" được hiểu là 30 ngày cố định, tính từ `publishedAt`.
 - Mỗi phiên có đăng ký **đổi giờ mở tối đa 2 lần** (trước đây 5). Lần thứ 3 trả 409. Các luật
   khác của việc đổi giờ giữ nguyên: chỉ trước giờ mở, không trong 30 phút cuối, báo người đăng ký.
-- Phiên không có đăng ký (cờ đăng ký tắt, ADR0047) giữ 7 ngày và 5 lần đổi.
+- Mọi phiên đều bắt buộc có đăng ký (chủ dự án 09/11: "registration is not an option its a
+  must"); người bán, Staff và cấu hình máy chủ không tắt được. Luật 7 ngày/5 lần đổi của
+  ADR0047 chỉ còn cho phiên cũ đăng trước ADR0077 (`minBidders = null`; DB local có 2 phiên,
+  đều đã kết thúc) và cho các bộ E2E cũ: harness tắt đăng ký bằng `AUCTION_REGISTRATION=Off`,
+  chỉ có hiệu lực khi `NODE_ENV=test`.
 - Phiên `WhenReady`/`Scheduled` cũ giữ trần của ADR0079 cho tới khi được đổi giờ; lần đổi đó
   chuyển phiên sang `ScheduledGrace` với trần mới.
 - Vòng đời dài nhất của phiên mới: 30 ngày + 24 giờ chờ + thời lượng (≤ 7 ngày) + 24 giờ thanh

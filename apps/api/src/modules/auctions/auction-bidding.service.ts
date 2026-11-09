@@ -1887,7 +1887,7 @@ export class AuctionBiddingService {
         a.auctionType === 'Dutch' && phase === 'Live'
           ? (dutchNextDropAt(a, now)?.toISOString() ?? null)
           : null,
-      // ADR 0077: registration gate (null on auctions without registration).
+      // ADR 0077: registration gate (null only on legacy pre-0077 auctions).
       minBidders: a.minBidders ?? null,
       depositAmount: a.depositAmount ?? null,
       registeredCount: a.registeredCount ?? 0,

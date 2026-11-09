@@ -1103,7 +1103,8 @@ export interface AuctionDoc extends Lockable {
   auctionType: AuctionFormat;
   dutchTopPrice: number | null;
   dutchIntervalSeconds: number | null;
-  // ADR 0077: registration gate; both null on auctions without registration.
+  // ADR 0077: registration gate, mandatory on every auction (ADR 0082). Both
+  // null only on legacy pre-0077 rows and in the E2E harness (registration Off).
   minBidders: number | null;
   depositAmount: number | null;
   registeredCount: number;

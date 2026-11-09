@@ -85,6 +85,7 @@ settlement.
 - Migration 0066 được sửa thêm `biddingOpenedAt` trước khi push (chưa áp dụng ở DB dùng
   chung nào; chỉ DB `_test` cục bộ).
 - Harness kiểm thử tắt đăng ký cho các bộ cũ (`AUCTION_REGISTRATION=Off`, chỉ khi
-  `NODE_ENV=test`), như cờ kiểm số dư ADR0071; bộ ADR0077 bật cả hai.
+  `NODE_ENV=test`), như cờ kiểm số dư ADR0071; bộ ADR0077 bật cả hai. Đây không phải lựa chọn
+  sản phẩm: ngoài harness mọi phiên đều có đăng ký ([ADR0082](0082-auction-open-month-two-changes.md)).
 - Member web và RN có giao diện đăng ký; Flutter chưa có (scaffold). Chưa kiểm chứng native
   hay trình duyệt thật.

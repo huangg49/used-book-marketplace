@@ -7264,7 +7264,7 @@ export interface components {
              * @description ADR 0076. When the Dutch price next falls; null on the floor or when not live.
              */
             dutchNextDropAt?: string | null;
-            /** @description ADR 0077. Registered bidders needed before bidding opens; null on auctions without registration. Optional for older servers. */
+            /** @description ADR 0077. Registered bidders needed before bidding opens (at least 4, ADR 0079). Every auction requires registration (ADR 0082); null only on legacy auctions published before ADR 0077. Optional for older servers. */
             minBidders?: number | null;
             /**
              * @description ADR 0079. WhenReady opens as soon as minBidders registered, at the latest startAt (publish + 24 h); Scheduled opens at startAt (at most publish + 72 h). While waiting (phase Scheduled), too few registrants at startAt cancels the auction. ADR 0081 publishes only ScheduledGrace - it opens at opensAt when minBidders registered, otherwise as soon as they do; until then startAt is the registration deadline (opensAt + 24 h). WhenReady and Scheduled remain on older auctions. Null on auctions without the bounded lifecycle. Optional for older servers.
@@ -7286,7 +7286,7 @@ export interface components {
              * @description ADR 0079. OnHold auto-cancels here (held + 48 h); null unless OnHold. Optional for older servers.
              */
             holdExpiresAt?: string | null;
-            /** @description ADR 0077. Refundable registration deposit; null without registration. */
+            /** @description ADR 0077. Refundable registration deposit. Every auction requires registration (ADR 0082); null only on legacy auctions published before ADR 0077. */
             depositAmount?: number | null;
             /** @description ADR 0077. Members registered (withdrawals excluded). */
             registeredCount?: number;

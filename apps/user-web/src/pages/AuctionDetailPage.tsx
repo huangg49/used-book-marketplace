@@ -820,7 +820,7 @@ function SellerPanel({ auction, intake, open, scheduled, serverTime, onChanged, 
   const [error, setError] = useState<string | null>(null)
   const [unknown, setUnknown] = useState(false)
   // ADR 0079: a registration auction closes only before its start (refunding
-  // deposits); the older withdrawal stays for auctions without registration.
+  // deposits); the older withdrawal stays for legacy pre-registration auctions.
   const waiting = waitingForRegistrants(auction)
   const canWithdraw = (open || scheduled) && auction.bidderCount === 0 && auction.minBidders == null
   // ADR 0047: the time can change only before the first bid and any Buy Now.

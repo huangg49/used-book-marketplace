@@ -21371,8 +21371,9 @@ components:
             - "null"
           minimum: 2
           maximum: 1000
-          description: ADR 0077. Registered bidders needed before bidding opens; null on auctions without
-            registration. Optional for older servers.
+          description: ADR 0077. Registered bidders needed before bidding opens (at least 4, ADR 0079).
+            Every auction requires registration (ADR 0082); null only on legacy auctions published
+            before ADR 0077. Optional for older servers.
         openMode:
           type:
             - string
@@ -21416,7 +21417,8 @@ components:
             - "null"
           minimum: 10000
           maximum: 9007199254740991
-          description: ADR 0077. Refundable registration deposit; null without registration.
+          description: ADR 0077. Refundable registration deposit. Every auction requires registration
+            (ADR 0082); null only on legacy auctions published before ADR 0077.
         registeredCount:
           type: integer
           minimum: 0
