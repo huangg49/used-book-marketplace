@@ -109,12 +109,27 @@ try {
     } else {
       await titleInput.fill(title);
     }
-    await page.getByLabel('Tác giả', { exact: true }).fill('Tác giả QA');
+    const authorInput = page.getByLabel('Tác giả', { exact: true });
+    await authorInput.pressSequentially('Tác giả QA');
     await page.getByRole('combobox', { name: 'Danh mục sách', exact: true }).selectOption({ label: 'Sách khác' });
+    await expect(authorInput).toHaveValue('Tác giả QA');
     await step(/Ảnh bản sách/).click();
     const png = Buffer.from(await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 80; c.height = 120; return c.toDataURL('image/png').split(',')[1]; }), 'base64');
     await page.locator('#cover-file').setInputFiles({ name: 'qa-cover.png', mimeType: 'image/png', buffer: png });
     await expect(page.getByRole('img', { name: /^Ảnh bìa (?:bản sách|gốc đã chọn)$/ })).toBeVisible();
+    if (outcome === 'autofill') {
+      const panel = page.locator('section[aria-labelledby="photo-autofill-title"]');
+      await expect(panel).toBeHidden();
+      await page.getByRole('button', { name: 'Quay lại', exact: true }).click();
+      await expect(panel.getByRole('img', { name: 'Ảnh để đọc 1' })).toBeVisible();
+      await expect(panel.getByLabel('Tên sách từ ảnh', { exact: true })).toHaveValue(title);
+      await expect(panel.getByRole('button', { name: 'Đã dùng Tên sách' })).toBeVisible();
+      await expect(titleInput).toHaveValue(title);
+      await expect(authorInput).toHaveValue('Tác giả QA');
+      await expect(page.getByRole('combobox', { name: 'Danh mục sách', exact: true }).locator('option:checked')).toHaveText('Sách khác');
+      await page.getByRole('button', { name: 'Tiếp tục', exact: true }).click();
+      await expect(page.getByRole('img', { name: /^Ảnh bìa (?:bản sách|gốc đã chọn)$/ })).toBeVisible();
+    }
     await step(/Tình trạng/).click();
     for (const label of ['Ruột sách', 'Bìa và gáy', 'Ghi chú, đánh dấu', 'Phụ kiện']) await page.getByLabel(label, { exact: true }).fill('Thông tin QA');
     await page.getByLabel('Mô tả chung', { exact: true }).fill('Mô tả QA đầy đủ cho bản sách dùng kiểm luồng gửi duyệt.');
@@ -125,7 +140,7 @@ try {
     await step(/Kiểm tra/).click();
     await page.getByLabel('Tôi có quyền sở hữu và đăng bán hoặc trao đổi cuốn sách này.').check();
     await page.getByRole('button', { name: 'Gửi duyệt', exact: true }).click();
-    await expect.poll(() => submissions.length).toBe(1);
+    await expect.poll(() => submissions.length, { message: `Submit request at ${width}px, ${outcome}` }).toBe(1);
     if (outcome !== 'success' && outcome !== 'autofill') {
       await expect(page.getByRole('alert')).toBeVisible();
       assert.equal(shelfReads, 1, 'Unknown/refused command does not report refreshed success');

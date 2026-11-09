@@ -2,7 +2,7 @@ import { clearAiPriceAttribution, type PriceReferenceState, assistError, decisio
 import { PriceAssistPanel } from "../components/PriceAssistPanel";
 import { createListingPriceRequest, type PricePhase } from "../services/listing-price-assist";
 import type { CatalogInput } from "../services/listing-submission";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import {
@@ -123,6 +123,15 @@ export function SellBookPage() {
   const [selectedBook, setSelectedBook] = useState<PickedBook | null>(null);
   const [entryMode, setEntryMode] = useState<"catalog" | "manual">("catalog");
   const [step, setStep] = useState(1);
+  const stepBody = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    // Replay the entry animation without remounting the draft's fields.
+    const animation = stepBody.current?.getAnimations?.()[0];
+    if (animation) {
+      animation.currentTime = 0;
+      animation.play();
+    }
+  }, [step]);
   const [bundle, setBundle] = useState<BookBundle | null>(null);
   const bundleDraft = useRef<BookBundle | null>(null);
   const singleTerms = useRef<{mode: typeof formData.mode; salePrice: string; exchangeValue: string; condition: typeof formData.condition} | null>(null);
@@ -1658,7 +1667,7 @@ export function SellBookPage() {
                 {preview}
               </details>
               <div className={styles.formArea}>
-                <div key={step} className={styles.stepBody}>
+                <div ref={stepBody} className={styles.stepBody}>
                   <div className={styles.slipHeader}>
                     <div className={styles.slipBrand}>
                       <span
@@ -1704,8 +1713,7 @@ export function SellBookPage() {
                       disabled={submitting || hasAttempt}
                       className={styles.fields}
                     >
-                      {step === 1 && (
-                        <>
+                      <div className={styles.bookInfoFields} hidden={step !== 1}>
                           {!auction && <>
                             <div className={styles.entryChoice} role="group" aria-label="Sách lẻ hoặc bộ sách">
                               <button type="button" aria-pressed={!bundle} onClick={() => {
@@ -1861,12 +1869,13 @@ export function SellBookPage() {
                                       {...feedbackProps(key)}
                                       value={formData[key]}
                                       disabled={!!selectedBook}
-                                      onChange={(event) =>
+                                      onChange={(event) => {
+                                        const value = event.currentTarget.value;
                                         setFormData((previous) => ({
                                           ...previous,
-                                          [key]: event.target.value,
-                                        }))
-                                      }
+                                          [key]: value,
+                                        }));
+                                      }}
                                       placeholder={placeholder}
                                     />
                                     {fieldFeedback(key)}
@@ -1951,8 +1960,7 @@ export function SellBookPage() {
                               </>
                             )}
                           </div>
-                        </>
-                      )}
+                      </div>
                       {step === 2 && (
                         <>
                           <p className={styles.help}>
