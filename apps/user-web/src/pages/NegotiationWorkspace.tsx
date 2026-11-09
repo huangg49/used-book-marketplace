@@ -145,7 +145,7 @@ export function NegotiationWorkspace({
   const currentExchangeId =
     historyExchange === "new"
       ? null
-      : (historyExchange ?? room.terms?.activeExchangeId ?? null);
+      : (historyExchange ?? latestExchangeId);
 
   if (mode === 'Exchange' && currentExchangeId) {
     const navigation = (

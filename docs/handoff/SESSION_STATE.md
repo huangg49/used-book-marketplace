@@ -13,6 +13,12 @@ dùng dữ liệu giả lập. Bản xem trước local cổng 5175 trả 200 ch
 sách, health và tra danh mục. Chưa nghiệm thu với tài khoản hoặc AI thật.
 Bước 2 là phạm vi tiếp theo sau khi xem lại bước 1.
 
+Đồng bộ `main` tại `86e6b2bb` trong PR #105. Giữ cả hai phần bàn giao khi
+gộp tài liệu. Bản tích hợp dùng nền sáng đã chọn cho Autofill. Sửa lỗi mở
+đề nghị trao đổi mới nhất khi giao dịch đã kết thúc. Ca trao đổi chạy qua
+API thật trên MongoDB QA, gồm khôi phục khi lỗi tải và ẩn thông tin khi bị
+từ chối truy cập.
+
 # Autofill tự đọc vùng chữ nhỏ — 10/11/2026
 
 Profile `listing-text-v2` dùng cùng thao tác chọn ảnh và bấm đọc. Backend
