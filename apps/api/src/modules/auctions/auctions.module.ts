@@ -53,6 +53,11 @@ import { PointIncidentsService } from './point-incidents.service.js';
     AuctionOperationsController,
     PointAdministrationController,
   ],
-  exports: [AuctionWorker, AuctionClock],
+  exports: [
+    AuctionWorker,
+    AuctionClock,
+    AuctionBiddingService,
+    AuctionLiveService,
+  ],
 })
 export class AuctionsModule {}

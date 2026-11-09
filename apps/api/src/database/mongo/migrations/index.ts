@@ -1,4 +1,12 @@
 import { createMessageSendLimitsMigration, withMessageSendLimits } from './0062-message-send-limits.js';
+import { createBuyNowModeMigration, withBuyNowMode } from './0063-auction-buy-now-mode.js';
+import { createAuctionTypesMigration, withAuctionTypes } from './0065-auction-types.js';
+import { createAuctionRegistrationMigration, registrationSpec, withAuctionRegistration } from './0066-auction-registration.js';
+import { createAuctionLifecycleMigration, withAuctionLifecycle } from './0067-auction-lifecycle.js';
+import { createAuctionResumeMigration, withAuctionResume } from './0068-auction-resume.js';
+import { createAuctionScheduledOpenMigration, withAuctionScheduledOpen } from './0069-auction-scheduled-open.js';
+import { createAuctionOpenMonthMigration, withAuctionOpenMonth } from './0070-auction-open-month.js';
+import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { manualWithdrawalsMigration, withManualWithdrawals } from './0061-manual-wallet-withdrawals.js';
 import { createWithdrawalsMigration, withdrawalSpecs, withWithdrawals } from './0060-wallet-withdrawals.js';
 import { autoReviewV2UpgradeBridgeMigration } from './0056-auto-review-v2-upgrade-bridge.js';
@@ -509,7 +517,9 @@ const beforeWithdrawals = (): CollectionSpec[] => [
     .map(withUncappedAuctionAmounts)
     .map(withAuctionStepOptions)
     .map(withCustomAuctionStep)
-    .map(withBuyNowRivalWindow),
+    .map(withBuyNowRivalWindow)
+    .map(withBuyNowMode)
+    .map(withAuctionTypes),
   ...pointOrderCollectionSpecs
     .map(withPointCollectionChanges)
     .map(withResolutionChanges)
@@ -554,15 +564,56 @@ const beforeWithdrawals = (): CollectionSpec[] => [
   demoCompletionSpec,
 ];
 
-export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits), ...withdrawalSpecs.map(withManualWithdrawals)];
+export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
-migrations.push(createWithdrawalsMigration([
+const withdrawalsMigration = createWithdrawalsMigration([
   ...baselineBeforeWithdrawals(spec => ['wallet_accounts','ledger_journals','mutation_receipts','audit_events'].includes(spec.name)),
   ...notificationSpecs.map(withExchangeNotificationChanges).map(withBuyNowNotifications).map(withExchangePhase6Changes).map(withSupportCases),
-]));
+]);
+migrations.push(withdrawalsMigration);
 
 migrations.push(manualWithdrawalsMigration, createMessageSendLimitsMigration([
   ...purchaseConversationSpecs.filter((spec) => spec.name === 'purchase_messages'),
   ...exchangeMessageSpecs,
 ]));
+// ADR 0074: Buy Now mode on the 0058 snapshots of auction_intakes/auctions.
+const buyNowModeMigration = createBuyNowModeMigration(
+  buyNowRivalWindowMigration.definition.collections,
+);
+migrations.push(buyNowModeMigration);
+// ADR 0075: leader holds on the 0060 snapshots of wallet/ledger/notifications.
+const bidHoldsMigration = createAuctionBidHoldsMigration(
+  withdrawalsMigration.definition.collections,
+);
+migrations.push(bidHoldsMigration);
+// ADR 0076: auction formats on the 0063 snapshots of auction_intakes/auctions.
+const auctionTypesMigration = createAuctionTypesMigration(
+  buyNowModeMigration.definition.collections,
+);
+migrations.push(auctionTypesMigration);
+// ADR 0077: registration on the 0065 auction and 0064 ledger/notification snapshots.
+const registrationMigration = createAuctionRegistrationMigration([
+  ...auctionTypesMigration.definition.collections,
+  ...bidHoldsMigration.definition.collections,
+]);
+migrations.push(registrationMigration);
+// ADR 0079: bounded registration lifecycle on the 0066 snapshots.
+const lifecycleMigration = createAuctionLifecycleMigration(
+  registrationMigration.definition.collections,
+);
+migrations.push(lifecycleMigration);
+// ADR 0080: one Admin resume of an OnHold auction, on the 0067 snapshots.
+const resumeMigration = createAuctionResumeMigration(
+  lifecycleMigration.definition.collections,
+);
+migrations.push(resumeMigration);
+// ADR 0081: the seller's open time, gated by registrants, on the 0068 snapshots.
+const scheduledOpenMigration = createAuctionScheduledOpenMigration(
+  resumeMigration.definition.collections,
+);
+migrations.push(scheduledOpenMigration);
+// ADR 0082: open up to 30 days ahead, at most two open-time changes.
+migrations.push(
+  createAuctionOpenMonthMigration(scheduledOpenMigration.definition.collections),
+);

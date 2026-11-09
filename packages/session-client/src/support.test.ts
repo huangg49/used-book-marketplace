@@ -6,10 +6,15 @@ import {
   type SessionState,
 } from "./session-client";
 import {
+  auctionFlagBody,
+  auctionFlagCasesPath,
+  auctionFlagCategories,
+  openAuctionFlag,
   pendingSupportIntent,
   pendingSupportCreateDraft,
   sendSupportIntent,
   supportDraft,
+  supportRelatedState,
 } from "./support";
 const owner = "1101d28c-80c3-4223-b289-e9446ba940be",
   other = "2201d28c-80c3-4223-b289-e9446ba940be",
@@ -170,5 +175,45 @@ describe("support exact intents and private memory drafts", () => {
       sendSupportIntent(f.client, "s", "/me/support-cases", {}, () => owner),
     ).rejects.toBeDefined();
     expect(pendingSupportIntent(f.client, "s")).toBe(true);
+  });
+});
+
+describe("ADR 0078 auction flag", () => {
+  const auction = { id, title: "Truyện Kiều bản 1925" };
+  it("maps each category to a support kind aimed at the auction", () => {
+    const money = auctionFlagCategories.find((c) => c.id === "MoneyIssue")!;
+    expect(auctionFlagBody(money, auction, "  Tiền cọc chưa được hoàn sau khi phiên kết thúc  ")).toEqual({
+      kind: "TransactionIssue",
+      title: "Tiền cọc, khoản giữ hoặc thanh toán: Truyện Kiều bản 1925",
+      description: "Tiền cọc chưa được hoàn sau khi phiên kết thúc",
+      target: { type: "Auction", id },
+    });
+    expect(auctionFlagCategories.map((c) => c.kind)).toEqual([
+      "Violation",
+      "Violation",
+      "TransactionIssue",
+      "Bug",
+      "Feedback",
+    ]);
+  });
+  it("keeps the title within the contract limit", () => {
+    const body = auctionFlagBody(auctionFlagCategories[0], { id, title: "x".repeat(300) }, "Nội dung đủ dài để gửi");
+    expect(body.title).toHaveLength(160);
+  });
+  it("finds only an open case and asks the server for this auction", () => {
+    expect(auctionFlagCasesPath(id)).toBe(`/me/support-cases?targetType=Auction&targetId=${id}&limit=20`);
+    const row = (state: "Closed" | "Open") => ({
+      id, kind: "Bug" as const, title: "t", reporterId: owner, reporterName: "A",
+      target: { type: "Auction" as const, id }, assigneeId: null, state, version: 1,
+      createdAt: "2026-11-08T00:00:00.000Z", updatedAt: "2026-11-08T00:00:00.000Z",
+    });
+    const page = (items: ReturnType<typeof row>[]) => ({ items, nextCursor: null, serverTime: "2026-11-08T00:00:00.000Z" });
+    expect(openAuctionFlag(page([row("Closed")]))).toBeNull();
+    expect(openAuctionFlag(page([row("Closed"), row("Open")]))?.state).toBe("Open");
+    expect(openAuctionFlag(undefined)).toBeNull();
+  });
+  it("labels auction states on a case", () => {
+    expect(supportRelatedState("OnHold")).toBe("Phiên tạm dừng để xem xét");
+    expect(supportRelatedState("Unsold")).toBe("Phiên không bán được");
   });
 });

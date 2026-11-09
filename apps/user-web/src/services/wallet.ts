@@ -10,6 +10,8 @@ export const walletSummarySchema = z.object({
   available: money,
   transactionHeld: money,
   withdrawalHeld: money,
+  // ADR 0075: leading/won-unpaid auction holds; absent on older servers.
+  auctionHeld: money.optional(),
   total: money,
   serverTime: z.iso.datetime({ offset: true }),
   topupEnabled: z.boolean(),

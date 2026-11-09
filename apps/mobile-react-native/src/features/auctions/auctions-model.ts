@@ -194,6 +194,103 @@ export function autoFloor(
 }
 
 export type Standing = "lead" | "tied" | "outbid";
+// ADR 0077: true while a registration gate keeps this member from bidding.
+export const registrationBlocks = (
+  auction: PublicAuctionSummary,
+  me: { registrationState?: string | null } | null,
+) =>
+  auction.minBidders != null &&
+  (me?.registrationState !== "Registered" || (auction.registeredCount ?? 0) < auction.minBidders);
+// ADR 0079: at least 4, no business maximum (1000 is the server's technical guard).
+export const AUCTION_MIN_BIDDERS_FLOOR = 4;
+export const AUCTION_MIN_BIDDERS_CAP = 1000;
+export const MIN_BIDDER_OPTIONS = [4, 5, 6, 8, 10] as const;
+// ADR 0081: past the open time a registration auction waits 24 h more.
+export const AUCTION_OPEN_GRACE_MS = 24 * 3_600_000;
+// ADR 0082: a registration auction opens at most 30 days after publishing
+// and its open time changes at most twice.
+export const AUCTION_OPEN_CEILING_MS = 30 * 24 * 3_600_000;
+export const AUCTION_MAX_OPEN_CHANGES = 2;
+export const AUCTION_RESCHEDULE_FREEZE_MS = 30 * 60_000;
+const at = (ms: number) =>
+  new Date(ms).toLocaleString("vi-VN", { weekday: "short", hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
+/** ADR 0079: a bounded-lifecycle auction still waiting for registrants. */
+export const waitingForRegistrants = (auction: PublicAuctionSummary, now: number) =>
+  auction.openMode != null && auction.phase !== "Ended" && isScheduled(auction, now);
+/** ADR 0081: the open time to show and edit (opensAt, else the stored start). */
+export const openTimeOf = (auction: PublicAuctionSummary) => auction.opensAt ?? auction.startAt;
+/**
+ * ADR 0081: what a waiting auction shows - its open time, or the
+ * registration deadline once that time passed (or on older WhenReady rows).
+ * The end is only known once the minimum is reached.
+ */
+export function waitingTime(auction: PublicAuctionSummary, now: number) {
+  const reached = (auction.registeredCount ?? 0) >= (auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR);
+  if (auction.openMode === "WhenReady" && !reached) return { label: "Hạn đăng ký", at: auction.startAt, endKnown: false };
+  if (auction.openMode === "ScheduledGrace" && auction.opensAt && !reached)
+    return Date.parse(auction.opensAt) > now
+      ? { label: "Mở lúc", at: auction.opensAt, endKnown: false }
+      : { label: "Hạn đăng ký", at: auction.startAt, endKnown: false };
+  return { label: "Mở lúc", at: auction.startAt, endKnown: true };
+}
+/** ADR 0079/0081: one sentence on when a waiting auction opens or is cancelled. */
+export function openRuleText(auction: PublicAuctionSummary, now = Date.now()) {
+  const need = auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR;
+  if (auction.openMode === "ScheduledGrace" && auction.opensAt) {
+    if ((auction.registeredCount ?? 0) >= need)
+      return `Phiên đã đủ ${need} người đăng ký và mở lúc ${at(Date.parse(auction.startAt))}.`;
+    return Date.parse(auction.opensAt) > now
+      ? `Phiên mở lúc ${at(Date.parse(auction.opensAt))} nếu đủ ${need} người đăng ký. Chưa đủ thì phiên chờ thêm tới ${at(Date.parse(auction.startAt))} và mở ngay khi đủ; hết hạn vẫn chưa đủ thì phiên bị hủy và hoàn cọc.`
+      : `Đã qua giờ mở nhưng chưa đủ ${need} người đăng ký. Phiên mở ngay khi đủ người; tới ${at(Date.parse(auction.startAt))} vẫn chưa đủ thì bị hủy và hoàn cọc.`;
+  }
+  return auction.openMode === "WhenReady"
+    ? `Phiên tự mở ngay khi đủ ${need} người đăng ký. Hạn đăng ký ${at(Date.parse(auction.startAt))}; quá hạn chưa đủ người thì phiên bị hủy và hoàn cọc.`
+    : `Phiên mở lúc ${at(Date.parse(auction.startAt))} nếu đủ ${need} người đăng ký; không đủ thì phiên bị hủy và hoàn cọc.`;
+}
+/** ADR 0077/0079: why an auction ended without a sale, for every viewer. */
+export function closeReasonText(auction: PublicAuctionSummary): string | null {
+  switch (auction.closeReason) {
+    case "NotEnoughBidders":
+      return "Phiên kết thúc mà chưa đủ người trả giá nên không bán. Tiền cọc và khoản giữ đã về lại ví.";
+    case "RegistrationExpired":
+      return auction.opensAt
+        ? `Phiên không đủ ${auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người đăng ký trong 24 giờ sau giờ mở nên đã bị hủy. Tiền cọc đã về lại ví.`
+        : `Phiên không đủ ${auction.minBidders ?? AUCTION_MIN_BIDDERS_FLOOR} người đăng ký trước giờ mở nên đã bị hủy. Tiền cọc đã về lại ví.`;
+    case "SellerClosed":
+      return "Người bán đã đóng phiên trước giờ mở. Tiền cọc đã về lại ví.";
+    case "HoldExpired":
+      return "Phiên tạm dừng quá 48 giờ mà chưa được xử lý nên đã tự hủy. Tiền cọc và khoản giữ đã về lại ví.";
+    case "Reported":
+      return "Quản trị viên đã đóng phiên sau khi xem xét báo cáo. Tiền cọc và khoản giữ đã về lại ví.";
+    default:
+      return null;
+  }
+}
+// ADR 0081: there is no "open now"; the auction opens at its time once enough registered.
+export type SellerCommand = { kind: "LowerMin" | "Close"; path: string; body: string; key: string };
+// ADR 0079: frozen like other commands; a retry after an unknown outcome resends it.
+export function createSellerCommand(
+  auctionId: string,
+  kind: SellerCommand["kind"],
+  expectedVersion: number,
+  key: string,
+  minBidders?: number,
+): SellerCommand {
+  const base = `/auctions/${auctionId}`;
+  if (kind === "Close") return { kind, path: `${base}/close`, body: JSON.stringify({ expectedVersion }), key };
+  return { kind, path: `${base}/min-bidders`, body: JSON.stringify({ expectedVersion, minBidders }), key };
+}
+// ADR 0077: an Instant end would sell to this member alone (no other bidder yet).
+export const instantNeedsRival = (
+  auction: PublicAuctionSummary,
+  me: { alias: number | null } | null,
+) =>
+  auction.minBidders != null &&
+  auction.buyNowMode === "Instant" &&
+  auction.bidderCount - (me?.alias != null ? 1 : 0) < 1;
+export const auctionDepositFor = (startPrice: number) => Math.max(10_000, Math.ceil(startPrice / 10 / 1000) * 1000);
+export const isSealedFormat = (auction: PublicAuctionSummary) =>
+  auction.auctionType === "SealedFirst" || auction.auctionType === "SealedSecond";
 // FR-AU04: equal commitments rank by who reached the level first, so an equal
 // level that does not lead is a tie lost on order, not a higher rival amount.
 export function standingOf(
@@ -201,6 +298,8 @@ export function standingOf(
   me: Participation | null,
 ): Standing | null {
   if (!me || me.ownLevel === null) return null;
+  // ADR 0076: a running sealed auction reveals no standing.
+  if (isSealedFormat(auction)) return null;
   if (me.leading) return "lead";
   return me.ownLevel === auction.currentPrice ? "tied" : "outbid";
 }
@@ -212,12 +311,24 @@ export function isScheduled(auction: PublicAuctionSummary, now: number) {
 export function isOpen(auction: PublicAuctionSummary, now: number) {
   return (
     auction.state === "Active" &&
+    // ADR 0079: the server marks a start reached with too few registrants Ended.
+    auction.phase !== "Ended" &&
     now >= Date.parse(auction.startAt) &&
     now < Date.parse(auction.endAt)
   );
 }
 // The seller edits the time only before the first bid and any Buy Now.
 export function canReschedule(auction: PublicAuctionSummary, now: number) {
+  // ADR 0079/0081: a registration auction moves its open time only while
+  // waiting and before that time (outside its last 30 minutes).
+  if (auction.openMode != null)
+    return (
+      waitingForRegistrants(auction, now) &&
+      auction.version != null &&
+      (auction.scheduleRevision ?? 0) < AUCTION_MAX_OPEN_CHANGES &&
+      Date.parse(openTimeOf(auction)) - now > AUCTION_RESCHEDULE_FREEZE_MS
+    );
+  if (auction.minBidders != null && (auction.registeredCount ?? 0) > 0) return false;
   return (
     (isScheduled(auction, now) || isOpen(auction, now)) &&
     auction.bidderCount === 0 &&
@@ -235,7 +346,9 @@ export function formatRemaining(ms: number) {
   return h > 0 ? `${h} giờ ${m} phút` : `${m}:${sec}`;
 }
 
-export type AuctionCommandKind = "Manual" | "Auto" | "Disable" | "BuyNow";
+// ADR 0076: DutchAccept and Sealed for the other auction formats.
+// ADR 0077: Register (amount = the deposit) and Withdraw for registration.
+export type AuctionCommandKind = "Manual" | "Auto" | "Disable" | "BuyNow" | "DutchAccept" | "Sealed" | "Register" | "Withdraw";
 export type AuctionCommand = {
   kind: AuctionCommandKind;
   amount: number;
@@ -278,6 +391,20 @@ export function createAuctionCommand(
       return command(`${base}/buy-now`, "POST", {
         fulfillmentMethod: "SelfCollect",
       });
+    case "DutchAccept":
+      return command(`${base}/dutch-accept`, "POST", {
+        price: amount,
+        fulfillmentMethod: "SelfCollect",
+      });
+    case "Sealed":
+      return command(`${base}/sealed-bid`, "POST", {
+        amount,
+        fulfillmentMethod: "SelfCollect",
+      });
+    case "Register":
+      return command(`${base}/registration`, "POST", { deposit: amount });
+    case "Withdraw":
+      return command(`${base}/registration/withdraw`, "POST", {});
   }
 }
 export function sendAuctionCommand(
@@ -317,6 +444,22 @@ export function fundsHint(amount: number | null | undefined, available: number |
     : `Số dư khả dụng ${formatVnd(available)}.`;
 }
 
+// ADR 0076: the auction formats a seller can choose.
+export type AuctionFormat = "English" | "Dutch" | "SealedFirst" | "SealedSecond";
+export const AUCTION_FORMATS: { value: AuctionFormat; label: string; hint: string }[] = [
+  { value: "English", label: "Trả giá lên", hint: "Người mua trả giá tăng dần, có đặt giá tự động và có thể bật mua ngay." },
+  { value: "Dutch", label: "Giá giảm dần", hint: "Giá bắt đầu cao, giảm một bước sau mỗi khoảng thời gian tới giá sàn. Người đầu tiên chấp nhận thắng ngay." },
+  { value: "SealedFirst", label: "Kín · giá thứ nhất", hint: "Mỗi người gửi một giá kín, chỉ được nâng. Giá cao nhất thắng và trả đúng giá đã gửi." },
+  { value: "SealedSecond", label: "Kín · giá thứ hai", hint: "Mỗi người gửi một giá kín. Giá cao nhất thắng nhưng trả bằng giá cao thứ hai." },
+];
+
+// ADR 0074: the seller's choice of what Buy Now does.
+export type BuyNowMode = "Challenge" | "Instant";
+export const BUY_NOW_MODES: { value: BuyNowMode; label: string; hint: string }[] = [
+  { value: "Challenge", label: "Chờ thách đấu", hint: "Khi có người mua ngay, người khác còn 5 phút để trả cao hơn (60 giây nếu người bấm đang dẫn)." },
+  { value: "Instant", label: "Kết thúc ngay", hint: "Người mua ngay thắng luôn và phiên kết thúc. Không ai trả được cao hơn giá mua ngay." },
+];
+
 // ADR 0070: the leader's Buy Now leaves others 60 seconds; anyone else's, 5 minutes.
 export const buyNowWindow = (leading: boolean) => (leading ? "60 giây" : "5 phút");
 
@@ -325,8 +468,18 @@ export function receiptMessage(
   amount: number,
   receipt: { currentPrice: number | null; leading: boolean | null },
   wasLeading = false,
+  buyNowMode: BuyNowMode = "Challenge",
 ) {
   const price = receipt.currentPrice !== null ? formatVnd(receipt.currentPrice) : "";
+  if (kind === "Register")
+    return `Đã đặt cọc ${formatVnd(amount)} và đăng ký. Bạn sẽ được báo khi phiên đủ người.`;
+  if (kind === "Withdraw") return "Đã rút đăng ký; tiền cọc đã về lại ví.";
+  if (kind === "DutchAccept")
+    return "Bạn đã thắng phiên. Hệ thống đang chốt đơn để bạn thanh toán từ ví.";
+  if (kind === "Sealed")
+    return `Đã ghi nhận giá kín ${formatVnd(amount)}. Kết quả công bố khi phiên kết thúc.`;
+  if (kind === "BuyNow" && buyNowMode === "Instant")
+    return "Bạn đã mua ngay. Phiên kết thúc; hệ thống đang chốt đơn để bạn thanh toán từ ví.";
   if (kind === "BuyNow")
     return `Bạn đang dẫn với giá mua ngay. Người khác còn ${buyNowWindow(wasLeading)} để trả cao hơn; nếu không ai vượt, bạn thắng phiên.`;
   if (kind === "Disable") return "Đã tắt đặt giá tự động.";
@@ -482,8 +635,14 @@ export function durationLabel(seconds: number) {
  * Start choices for the schedule sheet: now, a few hours ahead, or 09:00 on the
  * next days. Every choice sits inside the 5-minute lead and 7-day horizon.
  */
-export function startChoices(now: number) {
-  const choices: { label: string; at: number | null }[] = [{ label: "Mở ngay", at: null }];
+export function startChoices(
+  now: number,
+  // ADR 0081/0082: a registration auction always opens at a chosen time
+  // before its fixed ceiling (publish + 30 days); there is no "now".
+  lifecycle?: { ceiling: number },
+) {
+  const choices: { label: string; at: number | null }[] = lifecycle ? [] : [{ label: "Mở ngay", at: null }];
+  const horizon = lifecycle ? lifecycle.ceiling : now + AUCTION_SCHEDULE_HORIZON_MS;
   for (const h of [1, 3, 6]) choices.push({ label: `Sau ${h} giờ`, at: now + h * HOUR_MS });
   for (const days of [1, 2, 3]) {
     const d = new Date(now);
@@ -492,8 +651,16 @@ export function startChoices(now: number) {
     const label = days === 1 ? "9:00 ngày mai" : `9:00 ${d.toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" })}`;
     choices.push({ label, at: d.getTime() });
   }
+  // ADR 0082: registration auctions may open up to a month ahead.
+  if (lifecycle)
+    for (const [days, label] of [[7, "9:00 sau 1 tuần"], [14, "9:00 sau 2 tuần"], [28, "9:00 sau 4 tuần"]] as const) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + days);
+      d.setHours(9, 0, 0, 0);
+      choices.push({ label, at: d.getTime() });
+    }
   return choices.filter(
-    (c) => c.at === null || (c.at >= now + AUCTION_MIN_LEAD_MS && c.at <= now + AUCTION_SCHEDULE_HORIZON_MS),
+    (c) => c.at === null || (c.at >= now + AUCTION_MIN_LEAD_MS && c.at <= horizon),
   );
 }
 /** A live auction keeps its start; the new end must leave at least one hour. */

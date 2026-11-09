@@ -1,0 +1,49 @@
+/* ADR 0078 auction flag: a quiet trigger in the auction header and a sheet in
+   the same visual language as the schedule dialog. Focus paint comes from
+   packages/brand/v1.1/focus.css. */
+.flag { margin: 0; }
+.trigger { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; border: 1px solid var(--shop-control); border-radius: 8px; background: var(--shop-paper); color: var(--shop-wine); font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; }
+.trigger:hover { border-color: var(--shop-wine); background: var(--shop-shelf, #f4eddf); }
+.trigger:disabled { opacity: .6; cursor: progress; }
+.sent { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; font-size: .875rem; color: var(--shop-muted); }
+.sent svg { color: var(--shop-wine); }
+.sent a { color: var(--shop-wine); font-weight: 700; }
+
+.dialog { --shop-error: #912b0e; padding: 0; border: 0; background: transparent; width: min(480px, calc(100% - 24px)); max-height: calc(100dvh - 24px); margin: auto; accent-color: var(--shop-wine); color-scheme: light; }
+.dialog::backdrop { background: rgba(36, 35, 31, .5); }
+.sheet { background: var(--shop-paper); border-radius: 12px; overflow: hidden; color: var(--shop-ink); display: flex; flex-direction: column; max-height: calc(100dvh - 24px); }
+.header { display: flex; align-items: flex-start; gap: 14px; padding: 22px 16px 18px 22px; background: var(--shop-wine); color: var(--shop-cream); }
+.heading { flex: 1; min-width: 0; display: grid; gap: 6px; padding-top: 4px; }
+.heading strong { display: inline-flex; align-items: center; gap: 6px; font-size: 1.35rem; line-height: 1.2; letter-spacing: -0.01em; }
+.heading small { font-size: .875rem; opacity: .85; padding-left: 26px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.close { flex: none; margin-top: -6px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; border-radius: 50%; background: transparent; color: var(--shop-cream); cursor: pointer; }
+.close:hover { background: rgba(255, 255, 255, .12); }
+.body { padding: 20px 22px 22px; display: flex; flex-direction: column; gap: 18px; overflow-y: auto; min-height: 0; }
+
+.choice { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.choice legend, .field label { margin-bottom: 8px; font-size: .8125rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--shop-muted); }
+.choice > label { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--shop-control); border-radius: 6px; cursor: pointer; line-height: 1.35; }
+.choice > label:hover { border-color: var(--shop-wine); background: var(--shop-shelf, #f4eddf); }
+.choice > label:has(input:checked) { border-color: var(--shop-wine); box-shadow: inset 0 0 0 1px var(--shop-wine); color: var(--shop-wine); font-weight: 600; background: var(--shop-paper); }
+.choice input[type="radio"] { appearance: none; flex: none; display: grid; place-items: center; width: 20px; height: 20px; margin: 0; border: 2px solid var(--shop-control); border-radius: 50%; background: var(--shop-paper); cursor: pointer; transition: border-color 140ms ease-out; }
+.choice input[type="radio"]::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--shop-wine); transform: scale(0); transition: transform 140ms ease-out; }
+.choice input[type="radio"]:checked { border-color: var(--shop-wine); }
+.choice input[type="radio"]:checked::before { transform: scale(1); }
+.choice:disabled > label { opacity: .6; cursor: not-allowed; }
+
+.field { display: grid; gap: 6px; }
+.field label { margin-bottom: 0; }
+.field textarea { min-height: 120px; padding: 10px 12px; border: 1px solid var(--shop-control); border-radius: 6px; background: var(--shop-paper); color: var(--shop-ink); font: inherit; line-height: 1.5; resize: vertical; }
+.field textarea:hover { border-color: var(--shop-wine); }
+.field textarea:disabled { opacity: .6; cursor: not-allowed; }
+.field small { font-size: .82rem; line-height: 1.5; color: var(--shop-muted); }
+
+.note { display: flex; gap: 8px; align-items: flex-start; margin: 0; padding-top: 14px; border-top: 1px solid var(--shop-line, #d9cbbd); font-size: .82rem; line-height: 1.5; color: var(--shop-muted); }
+.note > svg { flex: none; margin-top: 2px; color: var(--shop-wine); }
+.note strong { color: var(--shop-ink); }
+.warning { margin: 0; padding: 10px 12px; border-left: 3px solid var(--shop-wine); border-radius: 6px; background: var(--shop-shelf, #f4eddf); font-size: .875rem; line-height: 1.5; }
+.error { margin: 0; font-size: .875rem; font-weight: 700; color: var(--shop-error); }
+.confirm { min-height: 52px; border: 0; border-radius: 10px; background: var(--shop-wine); color: var(--shop-cream); font: inherit; font-weight: 700; font-size: 1rem; letter-spacing: .01em; cursor: pointer; }
+.confirm:not(:disabled):hover { background: #7c2320; }
+.confirm:disabled { opacity: .6; cursor: not-allowed; }
+@media (max-width: 420px) { .heading strong { font-size: 1.15rem; } }

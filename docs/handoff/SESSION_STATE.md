@@ -1,3 +1,97 @@
+# Đại tu đấu giá: chế độ Mua ngay, giữ tiền, kiểu Hà Lan/kín — 08/11/2026
+
+Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
+
+- [ADR0074](../adr/0074-auction-buy-now-mode.md): người bán chọn Mua ngay "Chờ thách
+  đấu" (60 giây/5 phút) hoặc "Kết thúc ngay". Sửa lỗi "chờ hết phiên": lượt trả/Auto
+  đẩy giá chạm giá mua ngay nay kết thúc theo quy tắc Mua ngay thay vì chạy tới
+  `plannedEndAt`. Migration `0063-auction-buy-now-mode`.
+- [ADR0075](../adr/0075-auction-leader-wallet-hold.md): giữ tiền của người dẫn trong
+  ví (thay điểm 4 của ADR0071); người bị vượt/hủy/hết hạn được hoàn ngay, thanh toán
+  dùng khoản giữ một lần, thông báo giữ/hoàn riêng cho chủ ví. Migration
+  `0064-auction-bid-holds`. Thay đổi tiền mô phỏng: cần human review.
+- [ADR0076](../adr/0076-auction-formats.md): kiểu Hà Lan (giá giảm dần, người đầu tiên
+  chấp nhận thắng) và đấu giá kín giá thứ nhất/thứ hai; ẩn giá/người dẫn khi đang chạy.
+  Migration `0065-auction-types`.
+- [ADR0077](../adr/0077-auction-registration-deposit.md) (commit thứ tư, góp ý giảng
+  viên "không có phiên chỉ một người"): đăng ký tham gia có tiền cọc 10% (≥10.000đ),
+  người bán chọn tối thiểu 2–10 người; phiên mở trả giá khi đủ người, chỉ bán khi có
+  ít nhất hai người trả giá (trừ Mua ngay/Dutch), nếu không `Unsold`
+  `NotEnoughBidders` và hoàn cọc. Người thua được hoàn cọc; người thắng không thanh
+  toán mất cọc cho **nền tảng** (không cho người bán, tránh người bán dùng tài khoản phụ
+  đẩy giá). Migration `0066-auction-registration`, collection `auction_registrations`,
+  journal `AuctionDepositForfeit`. Thay đổi tiền mô phỏng: cần human review.
+  Kiểm chứng ADR0077: E2E auctions 108/108 (12 ca mới: happy, từ chối, replay, race,
+  rút đăng ký, không đủ người, một người trả giá, kín giá thứ hai, thanh toán, mất cọc,
+  Dutch, hủy), Mongo schema 28/28, unit auctions 62, contract 262 operations, web
+  typecheck + 475, RN typecheck + 225 PASS. Ghi chú: `reconciled()` quét mọi journal nên
+  chậm dần cuối file; bộ ADR0077 chỉ gọi ở hai ca tiền chính để không vượt 15 giây.
+  Full API E2E sau ADR0077: 943/961, 14 lỗi ở assist-fast-paths/carrier-pickup/
+  delivery-overdue/order-preparation/shipments/wallet (9 timeout 15 giây); chạy lại
+  riêng sáu file đó 195/195 PASS (nghi do tải máy, chưa chứng minh).
+  Sửa 4 lỗi từ rà soát nghiệp vụ: chặn đổi lịch khi đã có người đặt cọc; Admin đã đăng ký
+  không được hủy; thông báo hoàn cọc/hủy đúng nội dung và tới cả người đăng ký; bỏ câu
+  "trả giá không giữ tiền" cũ trên web/RN. E2E auctions 110/110, web 475, RN 225 PASS.
+  Đã sửa thêm: giá Dutch chỉ giảm từ lúc đủ người đăng ký (`biddingOpenedAt`); Mua ngay
+  "Kết thúc ngay" cần đã có người khác trả giá. E2E auctions 112/112 (lần chạy riêng, không
+  song song), unit auctions 64, Mongo 61, web 475, RN 225 PASS. Các lần chạy song song với
+  bộ khác khi máy còn ~1,6 GB RAM có timeout/503 ngẫu nhiên ở ca cũ, khác nhau mỗi lần.
+  Còn mở: tài khoản phụ của người bán đẩy giá, cọc treo khi phiên OnHold.
+- [ADR0078](../adr/0078-auction-flag.md): nút "Báo cáo sự cố cho Admin" cho người bán và
+  người đã đăng ký/trả giá, trên web và RN. Dùng hồ sơ hỗ trợ đã có (không migration):
+  `TransactionIssue` nhận phiên đấu giá chỉ cho người tham gia, một hồ sơ mở mỗi người mỗi
+  phiên, mọi người tham gia là `involvedUserIds`, Admin tham gia sau vẫn bị chặn; list có
+  `targetType`/`targetId`. Không đổi phiên hay tiền. E2E 4 ca mới (happy, từ chối/trùng,
+  độc lập Admin, replay/race) + support-cases 14/14, web 475 + 2 test render, RN typecheck +
+  225, session-client 158, contract check PASS. Trình duyệt thật/native NOT RUN; RN chưa có
+  màn hình hồ sơ hỗ trợ; Staff không nhận báo cáo (hàng hỗ trợ chỉ Admin).
+- [ADR0079](../adr/0079-bounded-auction-lifecycle.md): vòng đời phiên có trần. Tối thiểu ≥4
+  người; đăng "Mở khi đủ người" (hạn 24 giờ, đủ là mở) hoặc "Hẹn giờ mở" (≤72 giờ từ lúc đăng);
+  thiếu người tới hạn thì `Cancelled`/`RegistrationExpired`, hoàn cọc. Người bán: mở ngay, đổi giờ
+  (5 lần, không trong 30 phút cuối), chỉ giảm số người (khóa khi đủ), đóng trước giờ mở. OnHold tự
+  hủy sau 48 giờ. Admin đóng phiên từ hồ sơ báo cáo kèm lời nhắn trong một transaction. Chặn lệnh
+  rút hồ sơ cũ với phiên có cọc (trước đây không hoàn cọc). Migration `0067-auction-lifecycle`,
+  4 thao tác mới (266 operations khớp route). Kiểm chứng: E2E auctions 125/125 (chạy riêng; có ca
+  trần, lệnh sau hạn, race/replay, ngẫu nhiên seed cố định), support-cases 14/14, Mongo 61, API
+  unit 450 (1 ca shutdown timeout khi chạy cả bộ, chạy riêng PASS), web 477, admin 249, RN 230,
+  session-client 158, contract check PASS. 72 giờ/48 giờ chưa được chủ dự án xác nhận riêng.
+  Trình duyệt thật, native, Flutter, human review tiền NOT RUN. Chưa push.
+- [ADR0080](../adr/0080-auction-resume-and-live-close.md): Admin độc lập tiếp tục phiên OnHold
+  một lần (trước trần 48 giờ, khi người bán/người dẫn giá đủ điều kiện lại), không dời mốc thời
+  gian nào; `hold`/`close` của worker khóa theo `stepKey(id, version)` để phiên đã tiếp tục được
+  giữ/chốt lại. Admin đóng phiên từ báo cáo, hủy và tiếp tục phiên gọi `nudge()` nên kênh trực
+  tiếp phát ngay. Sửa hộp thư web/RN thiếu 6 loại thông báo (làm hỏng cả trang), thêm kiểm tra
+  kiểu bằng enum contract. Migration `0068-auction-resume`, thao tác `resumeAuction` (267
+  operations khớp route). Admin web: "Xử lý phiên" (tiếp tục hoặc hủy). Kiểm chứng: E2E 4 ca
+  mới (tiếp tục một lần/từ chối/replay, chốt sau khi tiếp tục, quá 48 giờ, kênh trực tiếp qua
+  socket thật) PASS; cả file auctions 112/129, 17 ca timeout 15 giây, không ca nào sai kết quả;
+  chạy riêng theo nhóm đều PASS trừ "owner auction lookup…" (cũng timeout trên commit trước,
+  3773cb59) nên là máy chậm, không do thay đổi này. Support 14/14, API unit auctions/support 64,
+  Mongo 61, web 477, admin 250, RN 230, contract/routes PASS. Trình duyệt thật, native NOT RUN.
+  Chưa push.
+- [ADR0081](../adr/0081-auction-scheduled-open-grace.md) (09/11): bỏ "Mở ngay" và "Mở khi đủ
+  người" của người bán; phiên có đăng ký bắt buộc hẹn giờ mở (≤ lúc đăng + 72 giờ), chỉ mở khi đủ
+  người: đủ trước giờ hẹn thì mở đúng giờ, thiếu thì chờ thêm 24 giờ và mở ngay khi đủ, hết hạn
+  thì hủy `RegistrationExpired` và hoàn cọc. `openMode = ScheduledGrace` + `opensAt`; migration
+  `0069-auction-scheduled-open`; gỡ `openAuctionNow` (266 operations khớp route). Web/RN cập nhật
+  hộp hẹn giờ, khối người bán, thẻ và trang phiên. Seed thêm S10 (đã qua giờ hẹn, 2/4). Kiểm
+  chứng: unit schedule 19, E2E nhóm đăng ký/vòng đời 33/33 (replica `_test`), Mongo 61, web 477,
+  RN auctions 22, contract/routes PASS, lint không lỗi mới; trang phiên S10 xem qua trình duyệt
+  trong app. Hộp đăng phiên chưa xem trên trình duyệt; full E2E auctions, native NOT RUN. Chưa push.
+- [ADR0082](../adr/0082-auction-open-month-two-changes.md) (09/11): giờ mở tới lúc đăng + 30 ngày,
+  đổi giờ mở tối đa 2 lần (phiên có đăng ký). Migration `0070-auction-open-month` (thay luật 7 ngày
+  của 0037 và 72 giờ của 0069 cho `ScheduledGrace`, thêm trần 2 lần đổi); contract chỉ đổi mô tả.
+  Web/RN cập nhật trần, số lần còn lại và chữ; RN thêm lựa chọn 1/2/4 tuần.
+  Kiểm chứng: unit schedule 19, E2E nhóm đăng ký/vòng đời 33/33, Mongo 61, web 477, RN auctions 22,
+  contract/routes PASS. Hộp hẹn giờ trên trình duyệt, full E2E, native NOT RUN. Chưa push.
+
+Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
+auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web
+typecheck + 475 tests, RN typecheck + 225 tests PASS. Full API E2E trên mã cuối:
+938/949 pass, 7 lỗi timeout 15 giây ở carrier-pickup/delivery-overdue/shipments/wallet
+khi chạy cả bộ; chạy lại riêng bốn file đó 142/142 PASS (nghi do tải máy, chưa chứng minh). Thiết bị RN, Flutter, trình duyệt thật và human review NOT RUN.
+Chưa push/PR.
+
 # Sửa lỗi từ khảo sát nghiệp vụ — 07/11/2026
 
 Nhánh `codex/audit-business-fixes` từ `9c858da7`, main đối chiếu

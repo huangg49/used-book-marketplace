@@ -667,12 +667,18 @@ describe('Simulated wallet: real MongoDB and HTTP', () => {
       mongo = app.get(MongoService);
     const good = await mongo.tx((tx) => ledger.reconcile(tx));
     expect(good.balanced).toBe(true);
-    // Settled platform commission (auction Orders) stays in the capital.
+    // Every bucket reconcile() reports stays in the capital: settled platform
+    // commission (auction Orders), withdrawal holds, auction leader holds and
+    // registration deposits (ADR 0075/0077) and pending listing fees. Earlier
+    // suites sharing this database can leave any of them non-zero.
     expect(
       good.sourceRemaining +
         good.memberAvailable +
         good.transactionHeld +
-        good.platformCommission,
+        good.withdrawalHeld +
+        good.auctionHeld +
+        good.platformCommission +
+        good.listingFeeHeld,
     ).toBe(SIMULATED_CAPITAL);
     // Only a privileged writer (the migrator here, a DB owner before) can
     // alter a posted entry; done inside a transaction that is rolled back.

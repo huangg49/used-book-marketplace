@@ -218,6 +218,10 @@ export const operationsAuction = z.object({
   pointName: z.string(),
   // ADR 0047: Scheduled before startAt; optional for older servers.
   phase: z.enum(["Scheduled", "Live", "Ended"]).optional(),
+  // ADR 0079: when an OnHold auction auto-cancels; optional for older servers.
+  holdExpiresAt: time.nullable().optional(),
+  // ADR 0080: set once an Admin resumed it; an auction resumes at most once.
+  resumedAt: time.nullable().optional(),
 }) satisfies z.ZodType<Schema["OperationsAuctionItem"]>;
 export type OperationsAuction = z.infer<typeof operationsAuction>;
 export const operationsAuctionList = z.object({

@@ -116,6 +116,27 @@ export async function checkAuction(tx: Tx, auctionId: string) {
     )
   )
     fail('auction ranking mismatch');
+  // ADR 0077: the stored count matches the registrations, and with
+  // registration every bidder is a (non-withdrawn) registrant.
+  const registrations = await tx.c.auction_registrations
+    .find({ auctionId: a._id, state: { $ne: 'Withdrawn' } })
+    .toArray();
+  if ((a.registeredCount ?? 0) !== registrations.length)
+    fail('auction registration count mismatch');
+  if (
+    a.minBidders === null
+      ? registrations.length > 0
+      : bidders.some(
+          (b) => !registrations.some((r) => r.userId === b.bidderId),
+        )
+  )
+    fail('auction bidder without registration');
+  // ADR 0079: every exit settles registrations in the same transaction.
+  if (
+    ['Cancelled', 'Unsold'].includes(a.state) &&
+    registrations.some((r) => r.state === 'Registered')
+  )
+    fail('closed auction keeps a deposit');
   // ADR 0047: a scheduled auction takes no bid before its start.
   if (
     await tx.c.auction_bids.findOne({

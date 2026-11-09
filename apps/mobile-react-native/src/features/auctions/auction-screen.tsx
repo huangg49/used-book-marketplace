@@ -35,6 +35,7 @@ import {
   bidOptions,
   createAuctionCommand,
   formatRemaining,
+  waitingTime,
   isOpen,
   isScheduled,
   minimumBidOf,
@@ -47,6 +48,12 @@ import {
   receiptMessage,
   sendAuctionCommand,
   standingOf,
+  isSealedFormat,
+  registrationBlocks,
+  instantNeedsRival,
+  waitingForRegistrants,
+  openRuleText,
+  closeReasonText,
   type AuctionCommand,
   type AuctionCommandKind,
 } from "./auctions-model";
@@ -59,6 +66,8 @@ import {
   type PublicAuctionSummary,
 } from "./contracts";
 import { WinnerSteps } from "./winner-steps";
+import { AuctionFlag } from "./auction-flag";
+import { WaitingSellerBlock } from "./waiting-seller-block";
 import { walletSummary } from "../wallet/contracts";
 
 const STATE_LABEL: Record<AuctionState, string> = {
@@ -186,6 +195,7 @@ export function AuctionScreen({ id }: { id: string }) {
               me={me.data ?? null}
               meLoading={!!member && me.isPending}
               signedIn={!!member}
+              memberId={member}
               ownerIntake={ownIntakes.data?.items.find((item) => item.auctionId === id) ?? null}
               ownerLoading={!!member && ownIntakes.isPending}
               ownerError={!!member && ownIntakes.isError}
@@ -208,6 +218,7 @@ function AuctionBody({
   me,
   meLoading,
   signedIn,
+  memberId,
   ownerIntake,
   ownerLoading,
   ownerError,
@@ -220,6 +231,7 @@ function AuctionBody({
   me: Participation | null;
   meLoading: boolean;
   signedIn: boolean;
+  memberId: string | null;
   ownerIntake: MyIntake | null;
   ownerLoading: boolean;
   ownerError: boolean;
@@ -327,7 +339,7 @@ function AuctionBody({
               }}
             >
               {scheduled
-                ? `Mở sau ${formatRemaining(Date.parse(auction.startAt) - now)}`
+                ? `${waitingTime(auction, now).label === "Mở lúc" ? "Mở sau" : "Hết hạn đăng ký sau"} ${formatRemaining(Date.parse(waitingTime(auction, now).at) - now)}`
                 : open
                   ? `Còn ${formatRemaining(Date.parse(auction.endAt) - now)}`
                   : `Đã kết thúc`}
@@ -546,11 +558,17 @@ function AuctionBody({
       <View style={ownerError ? { display: "none" } : undefined}>
       {ownerLoading ? (
         <StatePanel loading title="Đang kiểm tra vai trò của bạn trong phiên" />
-      ) : signedIn && !ownerKnown ? null : ownerIntake ? (
+      ) : signedIn && !ownerKnown ? null : ownerIntake && waitingForRegistrants(auction, now) ? (
+        <WaitingSellerBlock auction={auction} now={now} refresh={refresh} />
+      ) : ownerIntake ? (
         <View style={{ gap: space.sm }}>
           <Notice>
             <AppText kind="bold">Đây là phiên của bạn</AppText>{"\n"}
-            {scheduled
+            {closeReasonText(auction)
+              ? closeReasonText(auction)
+              : auction.minBidders != null && open
+              ? "Phiên đã mở nên bạn không đóng được nữa. Cần hỗ trợ, hãy dùng Báo cáo sự cố cho Admin."
+              : scheduled
               ? `Phiên hẹn mở lúc ${time(auction.startAt)}. Bạn có thể đổi thời gian trong Phiên của tôi khi chưa có lượt trả giá.`
               : open && auction.bidderCount === 0
                 ? "Chưa có lượt trả giá. Bạn có thể đổi thời gian trong Phiên của tôi. Người bán không tham gia trả giá."
@@ -575,6 +593,8 @@ function AuctionBody({
         ) : (
           <Button title="Đăng nhập để trả giá" onPress={() => router.push("/account")} />
         )
+      ) : scheduled && signedIn && !meLoading && auction.state === "Active" && registrationBlocks(auction, me) ? (
+        <BidPanel auction={auction} me={me} refresh={refresh} paused={ownerError} />
       ) : scheduled ? (
         <Notice>
           {`Phiên chưa mở. Người bán hẹn mở lúc ${time(auction.startAt)}; khi đó bạn có thể trả giá${auction.buyNowPrice !== null ? ` hoặc mua ngay với ${formatVnd(auction.buyNowPrice)}` : ""}.`}
@@ -582,11 +602,15 @@ function AuctionBody({
       ) : (
         <Notice>
           {auction.state === "OnHold"
-            ? "Phiên tạm dừng để quản trị viên xem xét; phiên không nhận thêm giá."
-            : "Phiên không còn nhận trả giá."}
+            ? `Phiên tạm dừng để quản trị viên xem xét; phiên không nhận thêm giá.${auction.holdExpiresAt ? ` Nếu chưa được xử lý trước ${time(auction.holdExpiresAt)}, phiên tự hủy và mọi khoản giữ được hoàn.` : ""}`
+            : closeReasonText(auction) ?? "Phiên không còn nhận trả giá."}
         </Notice>
       )}
       </View>
+      {/* ADR 0078: the seller and members who registered or bid flag a problem to Admin. */}
+      {memberId && !ownerError && (ownerIntake || me) ? (
+        <AuctionFlag auction={auction} owner={memberId} />
+      ) : null}
       <History history={history} state={auction.state} leaderAlias={leaderAlias} myAlias={me?.alias ?? null} startPrice={auction.startPrice} />
     </View>
   );
@@ -626,7 +650,9 @@ function BidPanel({
     enabled: state.status === "authenticated",
     retry: false,
   });
-  const available = wallet.data?.available ?? null;
+  // ADR 0075: the amount already held for this auction counts toward a raise.
+  const heldHere = me?.heldAmount ?? 0;
+  const available = wallet.data ? wallet.data.available + heldHere : null;
   const price = auction.currentPrice ?? auction.startPrice;
 
   const run = async (command: AuctionCommand) => {
@@ -638,7 +664,7 @@ function BidPanel({
       setPending(null);
       setManual(null);
       setAuto("");
-      setNotice(receiptMessage(command.kind, command.amount, receipt, !!me?.leading));
+      setNotice(receiptMessage(command.kind, command.amount, receipt, !!me?.leading, auction?.buyNowMode ?? "Challenge"));
     } catch (caught) {
       // An unknown outcome keeps the frozen request for "Thử lại".
       setPending(outcomeUnknown(caught) ? command : null);
@@ -648,10 +674,13 @@ function BidPanel({
       setConfirming(null);
       if (state.status === "authenticated")
         void queryClient.invalidateQueries({ queryKey: participationKey(auction.id, state.user.id) });
+      // ADR 0075: bids move wallet holds.
+      void queryClient.invalidateQueries({ queryKey: ["wallet"] });
       void refresh();
     }
   };
   const copy = confirming && dialogCopy(confirming.kind, confirming.amount, auction, !!me?.leading);
+  const english = (auction.auctionType ?? "English") === "English";
   return (
     <View style={{ gap: space.lg }}>
       {standing && (
@@ -685,6 +714,16 @@ function BidPanel({
           <Button title="Thử lại thao tác vừa rồi" busy={busy} onPress={() => void run(pending)} />
           <Button secondary title="Cập nhật trạng thái phiên" disabled={busy} onPress={() => void refresh()} />
         </View>
+      ) : registrationBlocks(auction, me) ? (
+        <RegisterBlock auction={auction} me={me} available={available} locked={locked}
+          onRegister={(deposit) => setConfirming({ kind: "Register", amount: deposit })}
+          onWithdraw={() => setConfirming({ kind: "Withdraw", amount: 0 })} />
+      ) : auction.auctionType === "Dutch" ? (
+        <DutchBlock auction={auction} available={available} locked={locked} refresh={refresh}
+          onAccept={(price) => setConfirming({ kind: "DutchAccept", amount: price })} />
+      ) : isSealedFormat(auction) ? (
+        <SealedBlock auction={auction} me={me} available={available} locked={locked}
+          onSubmit={(amount) => setConfirming({ kind: "Sealed", amount })} />
       ) : standing === "lead" ? (
         <AppText color={colors.muted}>
           Bạn không cần trả thêm. Muốn giữ vị trí khi có người trả cao hơn, hãy đặt hoặc nâng mức tự động.
@@ -712,7 +751,7 @@ function BidPanel({
             value={manual ?? String(minimum)}
             editable={!locked}
             onChangeText={(text) => setManual(text.replace(/\D/g, ""))}
-            hint={`Lượt tiếp theo tối thiểu ${formatVnd(minimum)}. ${fundsHint(manualAmount, available) ?? ""}`.trim()}
+            hint={`Lượt tiếp theo tối thiểu ${formatVnd(minimum)}. ${heldHere > 0 ? `Ví đang giữ ${formatVnd(heldHere)} cho phiên này; bị vượt giá thì tiền về lại ví. ` : "Khi dẫn giá, ví giữ đúng mức bạn cam kết. "}${fundsHint(manualAmount, available) ?? ""}`.trim()}
             error={manualError ?? (fundsShortfall(manualAmount, available) ? (fundsHint(manualAmount, available) ?? undefined) : undefined)}
           />
           <Button
@@ -723,7 +762,7 @@ function BidPanel({
           />
         </View>
       )}
-      {!pending && floor <= AUCTION_MAX_PRICE && (
+      {!pending && english && floor <= AUCTION_MAX_PRICE && (
         <View style={{ gap: space.sm, paddingTop: space.md, borderTopWidth: 1, borderColor: colors.rule }}>
           <AppText kind="bold">{me?.mode === "Auto" ? "Nâng mức tự động" : "Đặt giá tự động"}</AppText>
           <AppText kind="small" color={colors.muted}>
@@ -761,7 +800,7 @@ function BidPanel({
           )}
         </View>
       )}
-      {!pending && auction.buyNowPrice !== null && (
+      {!pending && english && auction.buyNowPrice !== null && (
         <View style={{ gap: space.sm, paddingTop: space.md, borderTopWidth: 1, borderColor: colors.rule }}>
           <AppText kind="bold">Mua ngay {formatVnd(auction.buyNowPrice)}</AppText>
           <AppText kind="small" color={colors.muted}>
@@ -774,10 +813,15 @@ function BidPanel({
               {fundsHint(auction.buyNowPrice, available)}
             </AppText>
           )}
+          {instantNeedsRival(auction, me) && (
+            <AppText kind="small" color={colors.muted}>
+              Mua ngay kết thúc phiên ngay, nên chỉ dùng được khi đã có người khác trả giá.
+            </AppText>
+          )}
           <Button
             secondary
             title="Mua ngay"
-            disabled={locked || fundsShortfall(auction.buyNowPrice, available) > 0}
+            disabled={locked || fundsShortfall(auction.buyNowPrice, available) > 0 || instantNeedsRival(auction, me)}
             onPress={() => setConfirming({ kind: "BuyNow", amount: auction.buyNowPrice! })}
           />
         </View>
@@ -815,6 +859,30 @@ function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuc
         message: "Hệ thống ngừng trả thay bạn. Nếu bạn đang dẫn, bạn vẫn cam kết mua ở giá hiện tại.",
         confirm: "Tắt tự động",
       };
+    case "Register":
+      return {
+        title: `Đặt cọc ${formatVnd(amount)} để đăng ký?`,
+        message: `Ví giữ ${formatVnd(amount)} ngay. Tiền cọc được hoàn khi bạn không thắng, phiên không đủ người hoặc bị hủy; bạn có thể rút đăng ký trước khi phiên đủ ${auction.minBidders ?? 2} người. Nếu thắng mà không thanh toán trong 24 giờ, tiền cọc chuyển cho nền tảng.`,
+        confirm: "Đặt cọc và đăng ký",
+      };
+    case "Withdraw":
+      return {
+        title: "Rút đăng ký?",
+        message: "Tiền cọc về lại ví ngay. Bạn có thể đăng ký lại khi phiên còn mở.",
+        confirm: "Rút đăng ký",
+      };
+    case "DutchAccept":
+      return {
+        title: `Mua với ${formatVnd(amount)}?`,
+        message: `Nếu giá đã giảm khi lệnh tới máy chủ, bạn trả giá thấp hơn đó. Ví giữ số tiền này ngay; phiên kết thúc và bạn thanh toán từ ví trong 24 giờ, rồi tự nhận sách tại ${auction.pointName}. Không thể rút lại.`,
+        confirm: "Chấp nhận giá",
+      };
+    case "Sealed":
+      return {
+        title: `Gửi giá kín ${formatVnd(amount)}?`,
+        message: `Giá kín không thể rút hay hạ, chỉ có thể nâng. Ví giữ toàn bộ số tiền này đến khi phiên chốt; nếu không thắng, tiền về lại ví. ${pay}`,
+        confirm: "Gửi giá kín",
+      };
     case "BuyNow":
       return {
         title: `Mua ngay với ${formatVnd(amount)}?`,
@@ -822,6 +890,114 @@ function dialogCopy(kind: AuctionCommandKind, amount: number, auction: PublicAuc
         confirm: "Mua ngay",
       };
   }
+}
+
+// ADR 0077: register with a refundable deposit; bidding opens at minBidders.
+function RegisterBlock({ auction, me, available, locked, onRegister, onWithdraw }: {
+  auction: PublicAuctionSummary;
+  me: Participation | null;
+  available: number | null;
+  locked: boolean;
+  onRegister: (deposit: number) => void;
+  onWithdraw: () => void;
+}) {
+  const deposit = auction.depositAmount ?? 0;
+  const need = auction.minBidders ?? 2;
+  const count = auction.registeredCount ?? 0;
+  const registered = me?.registrationState === "Registered";
+  const short = registered ? 0 : fundsShortfall(deposit, available);
+  return (
+    <View style={{ gap: space.sm }}>
+      <AppText kind="bold">{registered ? "Bạn đã đăng ký phiên này" : "Đăng ký để tham gia đấu giá"}</AppText>
+      <AppText kind="small" color={colors.muted}>
+        {`${auction.openMode ? openRuleText(auction) : `Phiên mở trả giá khi có ít nhất ${need} người đăng ký.`} Hiện có ${count}/${need}. Phiên chỉ bán khi có ít nhất hai người trả giá.`}
+      </AppText>
+      <AppText kind="small" color={colors.muted}>
+        {registered
+          ? `Ví đang giữ ${formatVnd(me?.deposit ?? deposit)} tiền cọc. Bạn có thể rút đăng ký khi phiên chưa đủ người.`
+          : `Tiền cọc ${formatVnd(deposit)} được hoàn khi bạn không thắng hoặc phiên không đủ người. Nếu thắng, tiền cọc tính vào giá; thắng mà không thanh toán đúng hạn thì không được hoàn.`}
+      </AppText>
+      {short > 0 && <AppText kind="small" color={colors.error}>{fundsHint(deposit, available)}</AppText>}
+      {registered ? (
+        <Button secondary title="Rút đăng ký và nhận lại tiền cọc" disabled={locked} onPress={onWithdraw} />
+      ) : (
+        <Button wine title={`Đặt cọc ${formatVnd(deposit)} và đăng ký`} disabled={locked || short > 0} onPress={() => onRegister(deposit)} />
+      )}
+    </View>
+  );
+}
+
+// ADR 0076: the descending price; refetches when it drops.
+function DutchBlock({ auction, available, locked, refresh, onAccept }: {
+  auction: PublicAuctionSummary;
+  available: number | null;
+  locked: boolean;
+  refresh: () => Promise<unknown>;
+  onAccept: (price: number) => void;
+}) {
+  const price = auction.dutchPrice ?? null;
+  useEffect(() => {
+    if (!auction.dutchNextDropAt) return;
+    const wait = Math.max(0, Date.parse(auction.dutchNextDropAt) - Date.now()) + 250;
+    const timer = setTimeout(() => void refresh(), wait);
+    return () => clearTimeout(timer);
+  }, [auction.dutchNextDropAt, refresh]);
+  if (price === null) return <AppText color={colors.muted}>Giá kiểu Hà Lan hiện khi phiên mở.</AppText>;
+  const short = fundsShortfall(price, available);
+  return (
+    <View style={{ gap: space.sm }}>
+      <AppText kind="bold">Giá hiện tại {formatVnd(price)}</AppText>
+      <AppText kind="small" color={colors.muted}>
+        {auction.dutchNextDropAt
+          ? `Giảm ${formatVnd(auction.step)} lúc ${time(auction.dutchNextDropAt)}, xuống tối đa giá sàn ${formatVnd(auction.startPrice)}.`
+          : `Đã ở giá sàn ${formatVnd(auction.startPrice)}.`}{" "}
+        Người đầu tiên chấp nhận thắng ngay và phiên kết thúc.
+      </AppText>
+      {short > 0 && <AppText kind="small" color={colors.error}>{fundsHint(price, available)}</AppText>}
+      <Button wine title={`Chấp nhận ${formatVnd(price)}`} disabled={locked || short > 0} onPress={() => onAccept(price)} />
+    </View>
+  );
+}
+
+// ADR 0076: one hidden bid, raise only; the whole bid is held until the close.
+function SealedBlock({ auction, me, available, locked, onSubmit }: {
+  auction: PublicAuctionSummary;
+  me: Participation | null;
+  available: number | null;
+  locked: boolean;
+  onSubmit: (amount: number) => void;
+}) {
+  const second = auction.auctionType === "SealedSecond";
+  const own = me?.ownLevel ?? null;
+  const floor = own !== null ? own + auction.step : auction.startPrice;
+  const [text, setText] = useState(String(floor));
+  const amount = Number(text) || null;
+  const error =
+    amountError(amount, floor, auction.startPrice, auction.step) ??
+    (fundsShortfall(amount, available) ? fundsHint(amount, available) : null);
+  return (
+    <View style={{ gap: space.sm }}>
+      <AppText kind="bold">Đấu giá kín · {second ? "giá thứ hai" : "giá thứ nhất"}</AppText>
+      <AppText kind="small" color={colors.muted}>
+        Không ai thấy giá của người khác cho tới khi phiên kết thúc. Giá cao nhất thắng
+        {second ? " nhưng chỉ trả bằng giá cao thứ hai (hoặc giá khởi điểm nếu chỉ một người)." : " và trả đúng giá mình gửi."}
+        {" "}Ví giữ toàn bộ giá kín; nếu không thắng, tiền về lại ví khi phiên chốt.
+      </AppText>
+      {own !== null && (
+        <AppText kind="small">{`Giá kín của bạn: ${formatVnd(own)}${me?.heldAmount ? ` · ví đang giữ ${formatVnd(me.heldAmount)}` : ""}. Chỉ có thể nâng.`}</AppText>
+      )}
+      <TextField
+        label={own === null ? "Giá kín của bạn" : "Nâng giá kín lên"}
+        keyboardType="number-pad"
+        value={text}
+        editable={!locked}
+        onChangeText={(t) => setText(t.replace(/\D/g, ""))}
+        hint={`Tối thiểu ${formatVnd(floor)}, bước ${formatVnd(auction.step)}.`}
+        error={error ?? undefined}
+      />
+      <Button wine title={amount ? `Gửi giá kín ${formatVnd(amount)}` : "Gửi giá kín"} disabled={locked || !!error || !amount} onPress={() => amount && onSubmit(amount)} />
+    </View>
+  );
 }
 
 function History({

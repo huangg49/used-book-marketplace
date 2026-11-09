@@ -38,7 +38,7 @@ const STEPS = [
   {
     step: '02',
     title: 'Trả giá theo lịch phiên',
-    body: 'Người bán chọn thời lượng 1–168 giờ. Trả giá theo bước hoặc chọn mua ngay nếu còn khả dụng; mức tự động chỉ mình bạn xem được, trả giá không giữ tiền trong ví.',
+    body: 'Người bán chọn thời lượng 1–168 giờ. Trả giá theo bước hoặc chọn mua ngay nếu còn khả dụng; mức tự động chỉ mình bạn xem được. Phiên cần đủ người đăng ký (ít nhất 4) và đặt cọc, không đủ trước hạn thì phiên bị hủy và hoàn cọc; ví giữ tiền cọc và mức bạn đang dẫn, hoàn lại khi bạn không thắng.',
     icon: Gavel,
   },
   {
@@ -411,14 +411,14 @@ export function AuctionListPage() {
           <section aria-labelledby="auction-upcoming-title" className={styles.upcomingSection}>
             <div className={styles.sectionHeading}>
               <div className={styles.headingLeft}>
-                <h2 id="auction-upcoming-title" tabIndex={-1}>Sắp mở phiên</h2>
+                <h2 id="auction-upcoming-title" tabIndex={-1}>Đang nhận đăng ký</h2>
                 <span className={styles.countBadgeUpcoming}>
-                  {upcoming.data.items.length} phiên đã hẹn giờ
+                  {upcoming.data.items.length} phiên chờ đủ người
                 </span>
               </div>
             </div>
             <p className={styles.upcomingHint}>
-              Người bán đã qua kiểm định và hẹn giờ mở các phiên này. Bạn có thể xem trước và chuẩn bị tham gia trả giá khi phiên mở.
+              Sách đã qua kiểm định. Đăng ký và đặt cọc để giữ chỗ; phiên mở khi đủ số người tối thiểu (tự mở ngay hoặc theo giờ người bán hẹn). Không đủ người trước hạn thì phiên bị hủy và hoàn cọc.
             </p>
             <AuctionGrid className={styles.grid} orderKey={upcoming.data.items.map((a) => a.id).join(':')}>
               {upcomingItems.slice((upcomingPage - 1) * size, upcomingPage * size).map((auction) => (

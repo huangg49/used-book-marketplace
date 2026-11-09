@@ -103,14 +103,17 @@ export class WalletService {
       const available = await this.ledger.available(tx, actor._id);
       const transactionHeld = await this.ledger.held(tx, actor._id);
       const withdrawalHeld = await this.ledger.withdrawalHeld(tx, actor._id);
+      // ADR 0075: leader and unpaid-winner holds, shown on their own line.
+      const auctionHeld = await this.ledger.auctionHeld(tx, actor._id);
       const now = await tx.now();
       await this.session(tx, auth, now);
       return {
         ...DEMO,
         available,
-        total: available + transactionHeld + withdrawalHeld,
+        total: available + transactionHeld + withdrawalHeld + auctionHeld,
         transactionHeld,
         withdrawalHeld,
+        auctionHeld,
         serverTime: now.toISOString(),
         topupEnabled:
           actor.status !== 'LOCKED' &&

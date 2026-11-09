@@ -271,6 +271,16 @@ export class PointOrdersService {
             ? await deliverySnapshot(tx, o, body, now, receiptId)
             : null;
         const outboundFee = delivery?.outboundFee ?? 0;
+        // ADR 0075: the winner's hold returns to available and is paid out
+        // with the fee in this same transaction; never two charges.
+        await this.ledger.setAuctionHold(
+          tx,
+          o.auctionId,
+          o.buyerId,
+          0,
+          receiptId,
+          now,
+        );
         await this.ledger.postOrder(
           tx,
           o._id,

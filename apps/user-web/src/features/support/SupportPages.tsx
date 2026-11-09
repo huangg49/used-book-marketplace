@@ -244,10 +244,10 @@ function NewSupportForm({
     if (!pending) {
       if (
         draft.kind === "TransactionIssue" &&
-        !["DirectOrder", "Exchange", "PointOrder"].includes(draft.targetType)
+        !["DirectOrder", "Exchange", "PointOrder", "Auction"].includes(draft.targetType)
       ) {
         setError(
-          "Phản ánh giao dịch cần chọn đơn mua bán, trao đổi hoặc đơn thắng đấu giá của bạn.",
+          "Phản ánh giao dịch cần chọn đơn mua bán, trao đổi, đơn thắng đấu giá hoặc phiên đấu giá bạn tham gia.",
         );
         return;
       }
@@ -536,7 +536,7 @@ function SupportDetail({
             />
             {data.relatedState ? (
               <p>
-                Trạng thái giao dịch: {supportRelatedState(data.relatedState)}.
+                {data.case.target?.type === "Auction" ? "Hiện tại" : "Trạng thái giao dịch"}: {supportRelatedState(data.relatedState)}.
                 Kết quả hỗ trợ không thay thế quyết định tiền/hàng.
               </p>
             ) : null}

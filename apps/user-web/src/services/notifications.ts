@@ -1,12 +1,21 @@
 import { z } from 'zod'
+import type { components } from '@used-books/api-contract'
 import { session } from '../lib/session'
 
 // Durable inbox (FR-N03/N04, OpenAPI 0.30.0). The server writes rows in the same
 // transaction as the event; pages only read and mark them read.
 export const notificationSchema = z.object({
   id: z.string().uuid(),
+  // Every kind in the contract: one unknown kind would fail the whole page.
   kind: z.enum([
     'AuctionOutbid',
+    'AuctionFundsHeld',
+    'AuctionFundsReleased',
+    'AuctionBiddingStarted',
+    'AuctionNotEnoughBidders',
+    'AuctionDepositForfeited',
+    'AuctionRescheduled',
+    'AuctionResumed',
     'AuctionWon',
     'AuctionSold',
     'AuctionBoughtNow',
@@ -40,6 +49,10 @@ const pageSchema = z.object({ items: z.array(notificationSchema), unreadCount: z
 const unreadSchema = z.object({ unreadCount: z.number().int() })
 
 export type MemberNotification = z.infer<typeof notificationSchema>
+// Fails to compile when the contract gains or drops a kind this list lacks.
+type ContractKind = components['schemas']['MemberNotification']['kind']
+type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false
+export const notificationKindsMatchContract: Same<MemberNotification['kind'], ContractKind> = true
 export type NotificationPage = z.infer<typeof pageSchema>
 export const notificationKeys={
   pages:(owner:string|undefined)=>['notifications',owner,'pages'] as const,

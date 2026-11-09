@@ -48,6 +48,25 @@ export const publicAuctionSummary = z.object({
   pointName: z.string(),
   // ADR 0043: when Buy Now opened the 60-second window (endAt already shortened).
   buyNowAt: z.string().nullable().optional(),
+  // ADR 0074: absent on older servers means Challenge.
+  buyNowMode: z.enum(["Challenge", "Instant"]).nullable().optional(),
+  // ADR 0076: format; absent means English. Dutch price fields only while live.
+  auctionType: z.enum(["English", "Dutch", "SealedFirst", "SealedSecond"]).nullable().optional(),
+  dutchTopPrice: z.number().int().nullable().optional(),
+  dutchIntervalSeconds: z.number().int().nullable().optional(),
+  dutchPrice: z.number().int().nullable().optional(),
+  dutchNextDropAt: z.string().nullable().optional(),
+  // ADR 0077: registration gate; null/absent means no registration needed.
+  minBidders: z.number().int().nullable().optional(),
+  depositAmount: z.number().int().nullable().optional(),
+  registeredCount: z.number().int().nullable().optional(),
+  closeReason: z.enum(["NotEnoughBidders", "RegistrationExpired", "SellerClosed", "HoldExpired", "Reported"]).nullable().optional(),
+  // ADR 0079: open mode and the fixed ceilings; absent on older servers.
+  openMode: z.enum(["WhenReady", "Scheduled", "ScheduledGrace"]).nullable().optional(),
+  // ADR 0081: the seller's open time; startAt is the deadline until enough register.
+  opensAt: z.string().nullable().optional(),
+  latestStartAt: z.string().nullable().optional(),
+  holdExpiresAt: z.string().nullable().optional(),
   // ADR 0047: Scheduled before startAt; version lets the seller edit the time.
   phase: z.enum(["Scheduled", "Live", "Ended"]).nullable().optional(),
   version: z.number().int().nullable().optional(),
@@ -85,6 +104,11 @@ export const participation = z.object({
   alias: z.number().int().nullable(),
   mode: z.enum(["Manual", "Auto"]).nullable(),
   ownLevel: z.number().int().nullable(),
+  // ADR 0075: wallet amount held for this auction (absent on older servers).
+  heldAmount: z.number().int().min(0).optional(),
+  // ADR 0077: the caller's registration (absent on older servers).
+  registrationState: z.enum(["Registered", "Withdrawn", "Refunded", "Applied", "Forfeited"]).nullable().optional(),
+  deposit: z.number().int().nullable().optional(),
   boughtNow: z.boolean(),
   leading: z.boolean(),
   state: z.enum(auctionStates),

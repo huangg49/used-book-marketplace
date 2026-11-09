@@ -2,10 +2,18 @@ import { describe, expect, it } from 'vitest';
 import type { AuctionDoc } from '../../database/mongo/documents.js';
 import { DomainError } from '../commands/domain-error.js';
 import {
+  buyNowEndAt,
   buyNowOffered,
+  commitmentCap,
+  reachesBuyNow,
+  lifecyclePublish,
+  lifecycleReschedule,
   phaseOf,
   publishSchedule,
+  reachedFields,
+  registrationExpired,
   reschedule,
+  staffLifecycleOpen,
 } from './auction-schedule.js';
 
 const HOUR = 3_600_000;
@@ -146,5 +154,98 @@ describe('reschedule', () => {
       expect(code(() => reschedule(auction(over), input, now))).toBe(
         'InvalidState',
       );
+  });
+});
+
+describe('ADR 0074 Buy Now mode', () => {
+  const MIN = 60_000;
+  it('ends at the Buy Now moment for Instant', () => {
+    const a = auction({ buyNowMode: 'Instant' });
+    expect(buyNowEndAt(a, false, now)).toEqual(now);
+    expect(buyNowEndAt(a, true, now)).toEqual(now);
+  });
+  it('keeps the 60 s / 5 min window for Challenge', () => {
+    const a = auction({ buyNowMode: 'Challenge' });
+    expect(buyNowEndAt(a, true, now)).toEqual(at(MIN));
+    expect(buyNowEndAt(a, false, now)).toEqual(at(5 * MIN));
+  });
+  it('never extends past endAt', () => {
+    const a = auction({ buyNowMode: 'Challenge', endAt: at(30_000) });
+    expect(buyNowEndAt(a, false, now)).toEqual(at(30_000));
+  });
+  it('treats a decided price at or above Buy Now as reaching it', () => {
+    const a = auction();
+    expect(reachesBuyNow(a, 90_000)).toBe(false);
+    expect(reachesBuyNow(a, 100_000)).toBe(true);
+    expect(reachesBuyNow(a, 120_000)).toBe(true);
+    expect(reachesBuyNow(a, null)).toBe(false);
+  });
+  it('does not re-trigger once Buy Now was used or without a Buy Now price', () => {
+    expect(reachesBuyNow(auction({ buyNowAt: at(-MIN) }), 120_000)).toBe(false);
+    expect(reachesBuyNow(auction({ buyNowPrice: null }), 120_000)).toBe(false);
+  });
+  it('caps commitments at the Buy Now price only for Instant', () => {
+    expect(commitmentCap(auction({ buyNowMode: 'Instant' }))).toBe(100_000);
+    expect(commitmentCap(auction({ buyNowMode: 'Challenge' }))).toBeNull();
+    expect(
+      commitmentCap(auction({ buyNowMode: 'Instant', buyNowPrice: null })),
+    ).toBeNull();
+  });
+});
+
+// ADR 0081: the seller always picks the open time; the auction opens there
+// only with enough registrants, waits 24 h more otherwise, then is cancelled.
+describe('scheduled open with a 24 h grace', () => {
+  const opensAt = at(2 * HOUR);
+  const published = (over: Partial<AuctionDoc> = {}) =>
+    ({
+      ...lifecyclePublish({ startAt: opensAt.toISOString(), durationSeconds: 3 * 3600 }, now),
+      endAt: at(2 * HOUR + 27 * HOUR),
+      state: 'Active',
+      publishedAt: now,
+      minBidders: 4,
+      registeredCount: 0,
+      biddingOpenedAt: null,
+      scheduleRevision: 0,
+      ...over,
+    }) as AuctionDoc;
+
+  it('publishing needs a time; the deadline is the open time + 24 h; the length is kept', () => {
+    expect(code(() => lifecyclePublish({ startAt: null, durationSeconds: 3600 }, now))).toBe('VALIDATION_ERROR');
+    expect(code(() => lifecyclePublish({ startAt: at(30 * 24 * HOUR + 1).toISOString(), durationSeconds: 3600 }, now))).toBe('VALIDATION_ERROR');
+    expect(lifecyclePublish({ startAt: at(30 * 24 * HOUR).toISOString(), durationSeconds: 3600 }, now).opensAt).toEqual(at(30 * 24 * HOUR));
+    const a = published();
+    expect(a).toMatchObject({ openMode: 'ScheduledGrace', opensAt, startAt: at(26 * HOUR), plannedEndAt: at(29 * HOUR) });
+  });
+
+  it('reached before the open time opens there; reached in the grace opens at once; never reached expires at the deadline', () => {
+    const a = published();
+    expect(reachedFields(a, at(HOUR))).toEqual({ startAt: opensAt, endAt: at(5 * HOUR), plannedEndAt: at(5 * HOUR), biddingOpenedAt: opensAt });
+    expect(reachedFields(a, at(10 * HOUR))).toEqual({ startAt: at(10 * HOUR), endAt: at(13 * HOUR), plannedEndAt: at(13 * HOUR), biddingOpenedAt: at(10 * HOUR) });
+    expect(phaseOf(a, at(10 * HOUR))).toBe('Scheduled');
+    expect(registrationExpired(a, at(26 * HOUR - 1))).toBe(false);
+    expect(registrationExpired(a, at(26 * HOUR))).toBe(true);
+    expect(phaseOf(a, at(26 * HOUR))).toBe('Ended');
+  });
+
+  it('a reschedule moves the open time before it passes, never in the last 30 minutes or the grace', () => {
+    const a = published();
+    expect(lifecycleReschedule(a, { startAt: at(5 * HOUR).toISOString(), durationSeconds: 3600 }, now)).toMatchObject({
+      opensAt: at(5 * HOUR),
+      startAt: at(29 * HOUR),
+      plannedEndAt: at(30 * HOUR),
+    });
+    expect(code(() => lifecycleReschedule(a, { startAt: null, durationSeconds: 3600 }, now))).toBe('VALIDATION_ERROR');
+    expect(code(() => lifecycleReschedule(a, { startAt: at(5 * HOUR).toISOString(), durationSeconds: 3600 }, at(2 * HOUR - 60_000)))).toBe('InvalidState');
+    expect(code(() => lifecycleReschedule(a, { startAt: at(5 * HOUR).toISOString(), durationSeconds: 3600 }, at(3 * HOUR)))).toBe('InvalidState');
+    // ADR 0082: at most two changes, up to 30 days after publishing.
+    const move = { startAt: at(5 * HOUR).toISOString(), durationSeconds: 3600 };
+    expect(lifecycleReschedule({ ...a, scheduleRevision: 1 }, move, now).opensAt).toEqual(at(5 * HOUR));
+    expect(code(() => lifecycleReschedule({ ...a, scheduleRevision: 2 }, move, now))).toBe('InvalidState');
+    expect(code(() => lifecycleReschedule(a, { startAt: at(30 * 24 * HOUR + 1).toISOString(), durationSeconds: 3600 }, now))).toBe('VALIDATION_ERROR');
+  });
+
+  it('a Staff open waits for registrants from now', () => {
+    expect(staffLifecycleOpen(now, 24 * HOUR)).toEqual({ openMode: 'ScheduledGrace', opensAt: now, startAt: at(24 * HOUR), plannedEndAt: at(48 * HOUR) });
   });
 });

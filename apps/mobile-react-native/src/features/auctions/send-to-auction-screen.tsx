@@ -26,6 +26,8 @@ import {
   EVIDENCE_MIN_LENGTH,
   auctionStepError,
   type AuctionStep,
+  type BuyNowMode,
+  type AuctionFormat,
 } from "./auctions-model";
 import {
   handoverPoints,
@@ -144,6 +146,13 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const step = customStepOn && !stepError ? digits(customStep)! : presetStep;
   const [buyNowOn, setBuyNowOn] = useState(false);
   const [buyNow, setBuyNow] = useState("");
+  const [buyNowMode, setBuyNowMode] = useState<BuyNowMode>("Challenge");
+  // ADR 0076: format; Dutch adds an opening price and a drop interval.
+  const [auctionType, setAuctionType] = useState<AuctionFormat>("English");
+  const [dutchTop, setDutchTop] = useState("");
+  const [dutchEvery, setDutchEvery] = useState("60");
+  // ADR 0077: registered bidders that open the auction.
+  const [minBidders, setMinBidders] = useState(4);
   const [touched, setTouched] = useState(false);
 
   // 3. Modal & Action states
@@ -171,8 +180,22 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
   const priceErrors = intakePriceErrors(
     startPrice,
     step,
-    buyNowOn ? (buyNowPrice ?? 0) : null,
+    auctionType === "English" && buyNowOn ? (buyNowPrice ?? 0) : null,
   );
+  const dutchTopPrice = digits(dutchTop);
+  const dutchSeconds = Number(dutchEvery) || 0;
+  const dutchError =
+    auctionType !== "Dutch"
+      ? null
+      : dutchTopPrice === null
+        ? "Nhập giá mở đầu."
+        : startPrice !== null && dutchTopPrice <= startPrice
+          ? "Giá mở đầu phải cao hơn giá sàn."
+          : startPrice !== null && (dutchTopPrice - startPrice) % step !== 0
+            ? "Giá mở đầu phải bằng giá sàn cộng một số bước giá."
+            : dutchSeconds < 10 || dutchSeconds > 3600
+              ? "Mỗi lần giảm cách nhau 10 giây đến 1 giờ."
+              : null;
 
   const formError = !selectedListing
     ? "Vui lòng chọn một sách đấu giá đã được duyệt."
@@ -180,7 +203,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
         selectedPoint.availableSlots < 1 ||
         selectedPoint.status !== "Active"
       ? "Vui lòng chọn trạm tiếp nhận còn chỗ tại TP.HCM."
-      : (stepError ?? priceErrors.startPrice ?? priceErrors.buyNowPrice ?? null);
+      : (stepError ?? priceErrors.startPrice ?? priceErrors.buyNowPrice ?? dutchError ?? null);
 
   const locked = busy || Boolean(pending);
 
@@ -244,7 +267,12 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
         pointId: selectedPoint.id,
         startPrice,
         step,
-        buyNowPrice,
+        buyNowPrice: auctionType === "English" ? buyNowPrice : null,
+        buyNowMode: auctionType === "English" && buyNowPrice !== null ? buyNowMode : "Challenge",
+        auctionType,
+        minBidders,
+        dutchTopPrice: auctionType === "Dutch" ? digits(dutchTop) : null,
+        dutchIntervalSeconds: auctionType === "Dutch" ? Number(dutchEvery) || null : null,
       }),
     });
   };
@@ -431,6 +459,17 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
               buyNowPriceText={buyNow}
               onChangeBuyNowPriceText={setBuyNow}
               buyNowPriceError={touched ? priceErrors.buyNowPrice : undefined}
+              buyNowMode={buyNowMode}
+              onChangeBuyNowMode={setBuyNowMode}
+              auctionType={auctionType}
+              onChangeAuctionType={setAuctionType}
+              dutchTopText={dutchTop}
+              onChangeDutchTopText={setDutchTop}
+              dutchEveryText={dutchEvery}
+              onChangeDutchEveryText={setDutchEvery}
+              dutchError={touched ? (dutchError ?? undefined) : undefined}
+              minBidders={minBidders}
+              onChangeMinBidders={setMinBidders}
               disabled={locked}
             />
 
