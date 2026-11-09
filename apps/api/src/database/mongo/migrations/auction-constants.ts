@@ -65,6 +65,23 @@ export const AUCTION_DEFAULT_MIN_BIDDERS = 4;
 export const AUCTION_MAX_MIN_BIDDERS = 10;
 export const auctionDeposit = (startPrice: number) =>
   Math.max(AUCTION_MIN_PRICE, Math.ceil(startPrice / 10 / 1000) * 1000);
+// ADR 0087: the seller may raise the deposit, never lower it: from the 10%
+// default above up to half the start price, in whole 1.000đ (the start price
+// is the lowest possible winning price, so the deposit is always inside it).
+export const AUCTION_DEPOSIT_UNIT = 1000;
+export const AUCTION_DEPOSIT_MAX_PERCENT = 50;
+export const auctionDepositMax = (startPrice: number) =>
+  Math.max(
+    auctionDeposit(startPrice),
+    Math.floor((startPrice * AUCTION_DEPOSIT_MAX_PERCENT) / 100 / AUCTION_DEPOSIT_UNIT) *
+      AUCTION_DEPOSIT_UNIT,
+  );
+// ADR 0087: when a non-paying winner leaves the book unsold, the seller gets
+// this share of the forfeited deposit; the platform keeps the rest, so a
+// seller's own account winning and defaulting still costs them money.
+export const AUCTION_SELLER_DEPOSIT_SHARE_PERCENT = 50;
+export const sellerDepositShare = (forfeited: number) =>
+  Math.floor((forfeited * AUCTION_SELLER_DEPOSIT_SHARE_PERCENT) / 100);
 // ADR 0079: bounded registration lifecycle. Every waiting or held auction has a
 // fixed ceiling measured from a stored timestamp that never moves.
 export const AUCTION_MIN_BIDDERS_FLOOR = 4;

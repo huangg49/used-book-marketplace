@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  auctionDepositError,
+  depositChoices,
   canWithdrawRegistration,
   amountError,
   autoFloor,
@@ -380,5 +382,20 @@ describe("second-chance commands", () => {
   });
   it("the create form no longer offers second-price sealed auctions", () => {
     expect(AUCTION_FORMATS.filter((f) => !f.retired).map((f) => f.value)).not.toContain("SealedSecond");
+  });
+});
+
+// ADR 0087: the seller-set deposit mirrors the server bounds.
+describe("seller deposit", () => {
+  it("offers picks from the default to half the start price", () => {
+    expect(depositChoices(200_000).map((c) => c.amount)).toEqual([20_000, 40_000, 60_000, 100_000]);
+    expect(depositChoices(10_000).map((c) => c.amount)).toEqual([10_000]);
+  });
+  it("refuses amounts outside the bounds", () => {
+    expect(auctionDepositError(200_000, null)).toBeNull();
+    expect(auctionDepositError(200_000, 60_000)).toBeNull();
+    expect(auctionDepositError(200_000, 19_000)).toMatch(/20\.000đ đến 100\.000đ/);
+    expect(auctionDepositError(200_000, 101_000)).not.toBeNull();
+    expect(auctionDepositError(200_000, 25_500)).not.toBeNull();
   });
 });

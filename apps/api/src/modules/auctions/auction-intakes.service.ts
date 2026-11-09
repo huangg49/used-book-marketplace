@@ -13,6 +13,8 @@ import {
   AUCTION_DEFAULT_MIN_BIDDERS,
   AUCTION_MIN_BIDDERS_FLOOR,
   auctionDeposit,
+  auctionDepositMax,
+  AUCTION_DEPOSIT_UNIT,
   AUCTION_DROPOFF_MS,
   AUCTION_DURATION_MS,
   EVIDENCE_DECISION_MS,
@@ -405,6 +407,8 @@ export class AuctionIntakesService {
             dutchIntervalSeconds:
               body.auctionType === 'Dutch' ? body.dutchIntervalSeconds! : null,
             minBidders: body.minBidders ?? AUCTION_DEFAULT_MIN_BIDDERS,
+            // ADR 0087: null keeps the 10% default at publish.
+            depositAmount: body.depositAmount ?? null,
             protectiveValue:
               body.declaredValue ?? r.salePrice ?? r.exchangeValue ?? body.startPrice,
             policyCode: 'HCM-AUCTION-v1',
@@ -473,6 +477,24 @@ export class AuctionIntakesService {
     // ADR 0067: no business ceiling, only the exact-integer limit.
     if (body.startPrice < AUCTION_MIN_PRICE || body.startPrice > MONEY_MAX)
       invalidField('startPrice', 'Giá khởi điểm tối thiểu 10.000đ.');
+    // ADR 0087: the seller may raise the registration deposit (never below the
+    // 10% default, at most half the start price, whole 1.000đ).
+    if (body.depositAmount !== undefined && body.depositAmount !== null) {
+      const min = auctionDeposit(body.startPrice);
+      const max = auctionDepositMax(body.startPrice);
+      if (
+        !Number.isSafeInteger(body.depositAmount) ||
+        body.depositAmount % AUCTION_DEPOSIT_UNIT !== 0 ||
+        body.depositAmount < min ||
+        body.depositAmount > max
+      )
+        invalidField(
+          'depositAmount',
+          min === max
+            ? `Tiền cọc của giá khởi điểm này là ${min.toLocaleString('vi-VN')}đ.`
+            : `Tiền cọc từ ${min.toLocaleString('vi-VN')}đ đến ${max.toLocaleString('vi-VN')}đ, theo bội số 1.000đ.`,
+        );
+    }
     if (body.declaredValue !== undefined && body.declaredValue !== null) {
       if (
         body.declaredValue < AUCTION_MIN_PRICE ||
@@ -927,7 +949,9 @@ export class AuctionIntakesService {
       minBidders: this.registration
         ? Math.max(AUCTION_MIN_BIDDERS_FLOOR, i.minBidders)
         : null,
-      depositAmount: this.registration ? auctionDeposit(i.startPrice) : null,
+      depositAmount: this.registration
+        ? (i.depositAmount ?? auctionDeposit(i.startPrice))
+        : null,
       registeredCount: 0,
       biddingOpenedAt: null,
       closeReason: null,
@@ -1103,6 +1127,8 @@ export class AuctionIntakesService {
       dutchTopPrice: i.dutchTopPrice,
       dutchIntervalSeconds: i.dutchIntervalSeconds,
       minBidders: i.minBidders,
+      // ADR 0087: the deposit bidders will pay (the seller's or the default).
+      depositAmount: i.depositAmount ?? auctionDeposit(i.startPrice),
       protectiveValue: i.protectiveValue,
       state: i.state,
       version: i.version,

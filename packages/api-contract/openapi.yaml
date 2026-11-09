@@ -5696,6 +5696,9 @@ paths:
               - WithdrawalHold
               - WithdrawalRefund
               - OrderSettlement
+              - AuctionBidHold
+              - AuctionBidRelease
+              - AuctionDepositSellerShare
         - in: query
           name: topupId
           schema:
@@ -10116,7 +10119,8 @@ paths:
         depositAmount, which the body repeats so a changed amount is refused). The deposit is held in the
         wallet; bids, Dutch acceptance and sealed bids need a registration, and bidding opens once
         registeredCount reaches minBidders. Losers and an unmet minimum are refunded at the close; a
-        non-paying winner's deposit goes to the platform. ADR 0083 (POL-41) - 429 RATE_LIMITED when the
+        non-paying winner's deposit is forfeited; the platform keeps it if the runner-up buys, and the
+        Seller receives half if the book ends unsold (ADR 0087). ADR 0083 (POL-41) - 429 RATE_LIMITED when the
         caller already has 5 open participations (standing registrations, auctions they lead, wins
         awaiting payment), after 30 registrations or withdrawals in the last minute, or within a minute
         of withdrawing from this auction.
@@ -16241,6 +16245,7 @@ components:
             - AuctionRescheduled
             - AuctionResumed
             - AuctionSecondChanceOffered
+            - AuctionDepositShareReceived
             - AuctionWon
             - AuctionSold
             - AuctionBoughtNow
@@ -19173,6 +19178,11 @@ components:
             - ListingFeeSettlement
             - WithdrawalHold
             - WithdrawalRefund
+            - AuctionBidHold
+            - AuctionBidRelease
+            - AuctionDepositSellerShare
+          description: ADR 0075/0087. Auction rows are wallet holds for bids and deposits, their
+            releases, and a Seller's share of a non-paying winner's deposit.
         amount:
           type: integer
           minimum: -9007199254740991
@@ -20868,6 +20878,17 @@ components:
           maximum: 1000
           description: ADR 0077/0079. Registered bidders the auction needs before it opens. Default 4, at
             least 4; no business maximum (1000 is a technical guard).
+        depositAmount:
+          type:
+            - integer
+            - "null"
+          minimum: 10000
+          maximum: 9007199254740991
+          multipleOf: 1000
+          description: ADR 0087. Registration deposit chosen by the Seller. Omitted or null uses the
+            default (10% of startPrice rounded up to 1.000đ, at least 10.000đ). Otherwise from that
+            default up to half of startPrice (never below the default), in whole 1.000đ; outside that
+            range is a 422 on depositAmount.
         declaredValue:
           type: integer
           minimum: 10000
@@ -21350,6 +21371,12 @@ components:
           maximum: 1000
           description: ADR 0077. Registered bidders needed (intakes from before ADR 0079 may hold 2-3; they
             publish with 4). Optional for older servers.
+        depositAmount:
+          type: integer
+          minimum: 10000
+          maximum: 9007199254740991
+          description: ADR 0087. Registration deposit the auction will use (the Seller's choice or the
+            default). Optional for older servers.
         protectiveValue:
           type: integer
           minimum: 0

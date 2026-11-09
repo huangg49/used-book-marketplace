@@ -3293,7 +3293,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description ADR 0077 — registers the caller for an auction with a refundable deposit (the auction's depositAmount, which the body repeats so a changed amount is refused). The deposit is held in the wallet; bids, Dutch acceptance and sealed bids need a registration, and bidding opens once registeredCount reaches minBidders. Losers and an unmet minimum are refunded at the close; a non-paying winner's deposit goes to the platform. ADR 0083 (POL-41) - 429 RATE_LIMITED when the caller already has 5 open participations (standing registrations, auctions they lead, wins awaiting payment), after 30 registrations or withdrawals in the last minute, or within a minute of withdrawing from this auction. */
+        /** @description ADR 0077 — registers the caller for an auction with a refundable deposit (the auction's depositAmount, which the body repeats so a changed amount is refused). The deposit is held in the wallet; bids, Dutch acceptance and sealed bids need a registration, and bidding opens once registeredCount reaches minBidders. Losers and an unmet minimum are refunded at the close; a non-paying winner's deposit is forfeited; the platform keeps it if the runner-up buys, and the Seller receives half if the book ends unsold (ADR 0087). ADR 0083 (POL-41) - 429 RATE_LIMITED when the caller already has 5 open participations (standing registrations, auctions they lead, wins awaiting payment), after 30 registrations or withdrawals in the last minute, or within a minute of withdrawing from this auction. */
         post: operations["registerForAuction"];
         delete?: never;
         options?: never;
@@ -5324,7 +5324,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            kind: "AuctionOutbid" | "AuctionFundsHeld" | "AuctionFundsReleased" | "AuctionBiddingStarted" | "AuctionNotEnoughBidders" | "AuctionDepositForfeited" | "AuctionRescheduled" | "AuctionResumed" | "AuctionSecondChanceOffered" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "WithdrawalUpdated" | "SupportUpdated" | "ReviewModerated";
+            kind: "AuctionOutbid" | "AuctionFundsHeld" | "AuctionFundsReleased" | "AuctionBiddingStarted" | "AuctionNotEnoughBidders" | "AuctionDepositForfeited" | "AuctionRescheduled" | "AuctionResumed" | "AuctionSecondChanceOffered" | "AuctionDepositShareReceived" | "AuctionWon" | "AuctionSold" | "AuctionBoughtNow" | "AuctionUnsold" | "AuctionCancelled" | "AuctionOnHold" | "AuctionPaymentExpired" | "AuctionPaid" | "OrderBuyNowPaid" | "ExchangeProposed" | "ExchangeAccepted" | "ExchangeFunded" | "ExchangeShipped" | "ExchangeReceived" | "ExchangeCompleted" | "ExchangeCancelled" | "ExchangeRejected" | "ExchangeDisputed" | "WithdrawalUpdated" | "SupportUpdated" | "ReviewModerated";
             title: string;
             body: string;
             /** @enum {string} */
@@ -6417,8 +6417,11 @@ export interface components {
             journalId: string;
             /** Format: uuid */
             topupId: string | null;
-            /** @enum {string} */
-            type: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund";
+            /**
+             * @description ADR 0075/0087. Auction rows are wallet holds for bids and deposits, their releases, and a Seller's share of a non-paying winner's deposit.
+             * @enum {string}
+             */
+            type: "Topup" | "OrderPayment" | "OrderRefund" | "OrderSettlement" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund" | "AuctionBidHold" | "AuctionBidRelease" | "AuctionDepositSellerShare";
             amount: number;
             balanceAfter: number;
             /** Format: date-time */
@@ -7052,6 +7055,8 @@ export interface components {
             dutchIntervalSeconds?: number | null;
             /** @description ADR 0077/0079. Registered bidders the auction needs before it opens. Default 4, at least 4; no business maximum (1000 is a technical guard). */
             minBidders?: number;
+            /** @description ADR 0087. Registration deposit chosen by the Seller. Omitted or null uses the default (10% of startPrice rounded up to 1.000đ, at least 10.000đ). Otherwise from that default up to half of startPrice (never below the default), in whole 1.000đ; outside that range is a 422 on depositAmount. */
+            depositAmount?: number | null;
             /** @description Protective value snapshotted at intake (ADR 0049). Not capped by the auction price ceiling (ADR 0067); the maximum is the exact-integer limit. Does not change the shelf price or set a bid. If omitted for compatibility, uses the revision salePrice, then exchangeValue, then startPrice. Never recalculated from later bids. */
             declaredValue?: number;
         };
@@ -7206,6 +7211,8 @@ export interface components {
             dutchIntervalSeconds?: number | null;
             /** @description ADR 0077. Registered bidders needed (intakes from before ADR 0079 may hold 2-3; they publish with 4). Optional for older servers. */
             minBidders?: number;
+            /** @description ADR 0087. Registration deposit the auction will use (the Seller's choice or the default). Optional for older servers. */
+            depositAmount?: number;
             protectiveValue: number;
             /** @enum {string} */
             state: "AwaitingDropoff" | "Received" | "Passed" | "NeedsEvidence" | "Auctioning" | "ReclaimRequired" | "Reclaimed" | "Cancelled" | "Sold";
@@ -12236,7 +12243,7 @@ export interface operations {
                 cursor?: string;
                 from?: string;
                 to?: string;
-                type?: "Topup" | "OrderPayment" | "OrderRefund" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund" | "OrderSettlement";
+                type?: "Topup" | "OrderPayment" | "OrderRefund" | "ListingFeeCharge" | "ListingFeeRefund" | "ListingFeeSettlement" | "WithdrawalHold" | "WithdrawalRefund" | "OrderSettlement" | "AuctionBidHold" | "AuctionBidRelease" | "AuctionDepositSellerShare";
                 topupId?: string;
                 orderId?: string;
                 /** @description Full journal, order, top-up or withdrawal ID, or the first six hexadecimal characters shown on a receipt. Matches only the caller's own history. */

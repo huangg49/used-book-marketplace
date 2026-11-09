@@ -308,6 +308,31 @@ export const instantNeedsRival = (
   auction.buyNowMode === "Instant" &&
   auction.bidderCount - (me?.alias != null ? 1 : 0) < 1;
 export const auctionDepositFor = (startPrice: number) => Math.max(10_000, Math.ceil(startPrice / 10 / 1000) * 1000);
+/** ADR 0087: the seller may raise the deposit up to half the start price (whole 1.000đ). */
+export const auctionDepositMaxFor = (startPrice: number) =>
+  Math.max(auctionDepositFor(startPrice), Math.floor(startPrice / 2 / 1000) * 1000);
+/** ADR 0087: client mirror of the server's deposit bounds; the server stays authoritative. */
+export function auctionDepositError(startPrice: number | null, deposit: number | null) {
+  if (deposit === null || startPrice === null) return null;
+  const min = auctionDepositFor(startPrice);
+  const max = auctionDepositMaxFor(startPrice);
+  if (deposit % 1000 !== 0 || deposit < min || deposit > max)
+    return min === max
+      ? `Tiền cọc của giá khởi điểm này là ${min.toLocaleString("vi-VN")}đ.`
+      : `Tiền cọc từ ${min.toLocaleString("vi-VN")}đ đến ${max.toLocaleString("vi-VN")}đ, theo bội số 1.000đ.`;
+  return null;
+}
+/** ADR 0087: quick picks between the 10% default and half the start price. */
+export function depositChoices(startPrice: number) {
+  const min = auctionDepositFor(startPrice);
+  const max = auctionDepositMaxFor(startPrice);
+  const picks = [{ amount: min, label: "Mặc định" }];
+  for (const pct of [20, 30, 50]) {
+    const amount = Math.min(max, Math.ceil((startPrice * pct) / 100 / 1000) * 1000);
+    if (amount > picks[picks.length - 1]!.amount) picks.push({ amount, label: `${pct}%` });
+  }
+  return picks;
+}
 export const isSealedFormat = (auction: PublicAuctionSummary) =>
   auction.auctionType === "SealedFirst" || auction.auctionType === "SealedSecond";
 // FR-AU04: equal commitments rank by who reached the level first, so an equal

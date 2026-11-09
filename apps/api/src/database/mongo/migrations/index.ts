@@ -10,6 +10,7 @@ import { createSupportTargetIndexMigration, withSupportTargetIndex } from './007
 import { createAuctionPauseBudgetMigration, withAuctionPauseBudget } from './0072-auction-pause-budget.js';
 import { createAuctionReachedNoticeMigration, withAuctionReachedNotice } from './0073-auction-reached-notice.js';
 import { createAuctionSecondChanceMigration, withAuctionSecondChance } from './0074-auction-second-chance.js';
+import { createAuctionDepositShareMigration, withAuctionDepositShare } from './0075-auction-deposit-share.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { manualWithdrawalsMigration, withManualWithdrawals } from './0061-manual-wallet-withdrawals.js';
 import { createWithdrawalsMigration, withdrawalSpecs, withWithdrawals } from './0060-wallet-withdrawals.js';
@@ -568,7 +569,7 @@ const beforeWithdrawals = (): CollectionSpec[] => [
   demoCompletionSpec,
 ];
 
-export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth).map(withSupportTargetIndex).map(withAuctionPauseBudget).map(withAuctionReachedNotice).map(withAuctionSecondChance), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
+export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth).map(withSupportTargetIndex).map(withAuctionPauseBudget).map(withAuctionReachedNotice).map(withAuctionSecondChance).map(withAuctionDepositShare), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
 const withdrawalsMigration = createWithdrawalsMigration([
@@ -636,10 +637,19 @@ const reachedNoticeMigration = createAuctionReachedNoticeMigration(
 migrations.push(reachedNoticeMigration);
 // ADR 0086: runner-up offer and unpaid report cancel, on the 0073 auctions,
 // 0059 point_orders and 0068 member_notifications snapshots.
+const secondChanceMigration = createAuctionSecondChanceMigration([
+  ...reachedNoticeMigration.definition.collections,
+  ...auctionFreeShippingReconcileMigration.definition.collections,
+  ...resumeMigration.definition.collections.filter((s) => s.name === 'member_notifications'),
+]);
+migrations.push(secondChanceMigration);
+// ADR 0087: seller share of a forfeited deposit and a seller-set deposit, on
+// the 0074 auctions/member_notifications, 0067 auction_intakes and 0066
+// ledger_journals snapshots.
 migrations.push(
-  createAuctionSecondChanceMigration([
-    ...reachedNoticeMigration.definition.collections,
-    ...auctionFreeShippingReconcileMigration.definition.collections,
-    ...resumeMigration.definition.collections.filter((s) => s.name === 'member_notifications'),
+  createAuctionDepositShareMigration([
+    ...secondChanceMigration.definition.collections.filter((s) => s.name !== 'point_orders'),
+    ...lifecycleMigration.definition.collections.filter((s) => s.name === 'auction_intakes'),
+    ...registrationMigration.definition.collections.filter((s) => s.name === 'ledger_journals'),
   ]),
 );

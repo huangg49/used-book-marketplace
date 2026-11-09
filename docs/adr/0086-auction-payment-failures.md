@@ -13,7 +13,8 @@ phương án khả thi nhất và ghi lại":
    chuyển 100% cho người bán, nhưng đề xuất đó dựa trên kiểm tra liên kết tài khoản (C1), đã bị bỏ
    khỏi kế hoạch. Không có C1, người bán có thể dùng tài khoản phụ thắng rồi không thanh toán mà
    lấy lại tiền cọc, tức là đẩy giá không tốn gì. Giữ lý do của ADR0077. Có thể xem lại nếu C1
-   được làm.
+   được làm. *Đã thay bởi [ADR0087](0087-auction-deposit-share.md): người bán nhận 50% khi sách
+   không bán được.*
 2. **Mời người trả giá cao thứ hai (quyết định 2): có, 24 giờ, một lần**, ở mức giá cao nhất của
    chính họ.
 3. **Đấu giá kín giá thứ hai (quyết định 3): ngừng nhận phiên mới (phương án 2).** Không có liên

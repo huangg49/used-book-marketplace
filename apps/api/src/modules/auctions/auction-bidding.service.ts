@@ -53,6 +53,7 @@ import {
 import {
   notifyAuction,
   notifyAuctionFunds,
+  notifyDepositShare,
   notifyBelowMinimum,
   type FundsReason,
 } from './auction-notifications.js';
@@ -1491,7 +1492,8 @@ export class AuctionBiddingService {
   expirePayment(id: string, orderId?: string | null) {
     const key = orderId ? stepKey(orderId, 0, 'expirePayment') : id;
     return this.commands.systemAuction('AuctionPaymentExpiry', key, {
-      discover: async () => [],
+      // ADR 0087: the seller's wallet may receive their deposit share.
+      discover: async (tx) => [(await this.auction(tx, id)).sellerId],
       authorize: (tx) => this.auction(tx, id),
       mutate: async (tx, _before, receiptId) => {
         await tx.lock('auctions', [id]);
@@ -1515,9 +1517,10 @@ export class AuctionBiddingService {
           receiptId,
         });
         const next = await this.update(tx, a, { state: 'PaymentExpired' }, now);
-        // ADR 0077: the winner's deposit goes to the platform (not the
-        // seller, so a seller's own account cannot win, default and recover
-        // it); the rest of their hold is released below.
+        // ADR 0077/0087: the winner's deposit goes to the platform; the
+        // seller gets half of it only if the book ends unsold (below and in
+        // endOffer), so a seller's own account that wins and defaults still
+        // costs them half. The rest of the winner's hold is released below.
         const forfeited = await this.forfeitDeposit(tx, next, receiptId, now);
         await this.releaseHolds(tx, next, null, 'Expired', receiptId, now);
         if (forfeited)
@@ -1571,6 +1574,7 @@ export class AuctionBiddingService {
           [a.winnerId, a.sellerId],
           now,
         );
+        await this.payDepositShare(tx, next, now);
         return this.change(next, now, 'AuctionPaymentExpired', null);
       },
     });
@@ -1729,7 +1733,7 @@ export class AuctionBiddingService {
       'AuctionPaymentExpiry',
       stepKey(id, version, 'expireSecondChance'),
       {
-        discover: async () => [],
+        discover: async (tx) => [(await this.auction(tx, id)).sellerId],
         authorize: (tx) => this.auction(tx, id),
         mutate: async (tx) => {
           await tx.lock('auctions', [id]);
@@ -1768,7 +1772,24 @@ export class AuctionBiddingService {
       [a.sellerId, a.runnerUpId],
       now,
     );
+    await this.payDepositShare(tx, next, now);
     return next;
+  }
+
+  /**
+   * ADR 0087: the book ended unsold after a non-paying winner, so the seller
+   * gets their share of the forfeited deposit (none if nothing was forfeited,
+   * e.g. a legacy auction without registration). Never on a sale or a
+   * report close.
+   */
+  private async payDepositShare(tx: Tx, a: AuctionDoc, now: Date) {
+    const paid = await this.ledger.payAuctionDepositShare(
+      tx,
+      a._id,
+      a.sellerId,
+      now,
+    );
+    if (paid > 0) await notifyDepositShare(tx, a, paid, now);
   }
 
   // ADR 0075: release every hold on the auction except `keep` (the winner's

@@ -8,7 +8,7 @@ import { commandOutcomeUnknown, useIntentKey } from '../hooks/useAuctionClock'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { getMyBookIdentity, getMyListings, getMyPhoto, type MyListing } from '../services/my-listings'
 import {
-  AUCTION_MAX_PRICE, AUCTION_TYPES, BUY_NOW_MODES, MIN_BIDDER_OPTIONS, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_MIN_BIDDERS_CAP, auctionDepositFor, AUCTION_MIN_PRICE, AUCTION_PRICE_DIGITS, AUCTION_STEP_MAX, AUCTION_STEPS, auctionStepError, createAuctionIntake, getMyAuctionIntake, intakePriceErrors, listHandoverPoints,
+  AUCTION_MAX_PRICE, AUCTION_TYPES, BUY_NOW_MODES, MIN_BIDDER_OPTIONS, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_MIN_BIDDERS_CAP, auctionDepositError, auctionDepositFor, auctionDepositMaxFor, AUCTION_MIN_PRICE, AUCTION_PRICE_DIGITS, AUCTION_STEP_MAX, AUCTION_STEPS, auctionStepError, createAuctionIntake, getMyAuctionIntake, intakePriceErrors, listHandoverPoints,
   type AuctionStep, type AuctionType, type BuyNowMode, type CreateIntakeBody, type HandoverPoint, type MyIntake,
 } from '../services/auctions'
 import { conditions } from '../lib/listing-labels'
@@ -91,6 +91,17 @@ function BookOption({ item, checked, disabled, query, onSelect }: { item: MyList
       <Check className={styles.tick} size={18} aria-hidden="true" />
     </label>
   )
+}
+
+// ADR 0087: quick picks between the 10% default and half the start price.
+function depositChips(startPrice: number) {
+  const min = auctionDepositFor(startPrice), max = auctionDepositMaxFor(startPrice)
+  const picks = [{ amount: min, label: 'mặc định' }]
+  for (const pct of [20, 30, 50]) {
+    const amount = Math.min(max, Math.ceil((startPrice * pct) / 100 / 1000) * 1000)
+    if (amount > picks[picks.length - 1]!.amount) picks.push({ amount, label: `${pct}% giá khởi điểm` })
+  }
+  return picks
 }
 
 function PriceInput({ id, label, value, step, min, max = AUCTION_MAX_PRICE, digits = AUCTION_PRICE_DIGITS, onChange, disabled, error, hint }: {
@@ -192,6 +203,8 @@ export function CreateAuctionPage() {
   const [auctionType, setAuctionType] = useState<AuctionType>('English')
   // ADR 0077: how many registered bidders open the auction.
   const [minBidders, setMinBidders] = useState<number>(AUCTION_MIN_BIDDERS_FLOOR)
+  // ADR 0087: null follows the 10% default of the start price.
+  const [depositDraft, setDepositDraft] = useState<number | null>(null)
   const [dutchTop, setDutchTop] = useState<number | null>(null)
   const [dutchEvery, setDutchEvery] = useState<number>(60)
   const english = auctionType === 'English'
@@ -240,6 +253,9 @@ export function CreateAuctionPage() {
     : startPrice !== null && dutchTop <= startPrice ? 'Giá mở đầu phải cao hơn giá sàn.'
     : startPrice !== null && (dutchTop - startPrice) % step !== 0 ? 'Giá mở đầu phải bằng giá sàn cộng một số bước giá.'
     : undefined
+  const depositDefault = startPrice !== null ? auctionDepositFor(startPrice) : null
+  const deposit = depositDraft ?? depositDefault
+  const depositError = depositDraft === null ? undefined : auctionDepositError(startPrice, depositDraft)
   const dutchEveryError = auctionType === 'Dutch' && (dutchEvery < 10 || dutchEvery > 3600) ? 'Từ 10 giây đến 3.600 giây.' : undefined
   const formErrors = {
     listing: !listing ? 'Chọn một cuốn sách trên kệ để đưa lên đấu giá.' : undefined,
@@ -250,6 +266,7 @@ export function CreateAuctionPage() {
     buyNowPrice: missingBuyNow ? 'Nhập giá mua ngay hoặc bỏ chọn mua ngay.' : priceErrors.buyNowPrice,
     dutchTopPrice: dutchTopError,
     dutchIntervalSeconds: dutchEveryError,
+    depositAmount: depositError,
   }
   const valid = !Object.values(formErrors).some(Boolean)
   const locked = busy || unknown || !!acknowledgedId
@@ -313,6 +330,7 @@ export function CreateAuctionPage() {
       buyNowMode: english && buyNowOn ? buyNowMode : 'Challenge',
       auctionType,
       minBidders,
+      depositAmount: depositDraft ?? undefined,
       dutchTopPrice: auctionType === 'Dutch' ? dutchTop : null,
       dutchIntervalSeconds: auctionType === 'Dutch' ? dutchEvery : null,
       declaredValue: declaredValue ?? undefined,
@@ -515,13 +533,23 @@ export function CreateAuctionPage() {
               </label>
             </div>
             <p className={styles.stepHint}>
-              Người mua đăng ký và đặt cọc {startPrice !== null ? formatVnd(auctionDepositFor(startPrice)) : '10% giá khởi điểm'} trước khi trả giá.
+              Người mua đăng ký và đặt cọc {deposit !== null ? formatVnd(deposit) : '10% giá khởi điểm'} trước khi trả giá.
+              Người thắng không thanh toán thì mất tiền cọc; nếu sách không bán được, bạn nhận một nửa số đó.
               Bạn hẹn giờ mở (tối đa 30 ngày sau khi đăng, đổi được 2 lần). Phiên mở đúng giờ khi đủ {minBidders} người (ít nhất {AUCTION_MIN_BIDDERS_FLOOR}); chưa đủ thì chờ thêm 24 giờ và mở ngay khi đủ, hết hạn thì bị hủy và hoàn cọc.
               Phiên chỉ bán khi có ít nhất hai người trả giá.
             </p>
             <PriceInput id="auction-start" label={auctionType === 'Dutch' ? 'Giá sàn (thấp nhất)' : 'Giá khởi điểm'} value={startPrice} step={step} min={AUCTION_MIN_PRICE} disabled={locked}
               onChange={setStartPrice} error={touched || startPrice !== null ? formErrors.startPrice : undefined}
               hint={declaredValue !== null ? `Gợi ý theo giá trị khai báo ${formatVnd(declaredValue)}. Giá khởi điểm hợp lý thu hút nhiều người trả giá hơn.` : 'Lượt trả giá đầu tiên bằng đúng giá khởi điểm.'} />
+            {startPrice !== null && !formErrors.startPrice && <>
+              <PriceInput id="auction-deposit" label="Tiền cọc đăng ký" value={deposit} step={1000} min={depositDefault!} max={auctionDepositMaxFor(startPrice)} disabled={locked}
+                onChange={(v) => setDepositDraft(v === depositDefault ? null : v)} error={depositError}
+                hint={`Mặc định ${formatVnd(depositDefault!)} (10% giá khởi điểm). Bạn có thể tăng tới ${formatVnd(auctionDepositMaxFor(startPrice))} (một nửa giá khởi điểm) để người đăng ký cân nhắc hơn; cọc cao có thể làm ít người đăng ký hơn. Người không thắng được hoàn cọc.`} />
+              <div className={styles.chips} role="group" aria-label="Gợi ý tiền cọc">
+                {depositChips(startPrice).map((c) => <button type="button" key={c.amount} aria-pressed={deposit === c.amount} disabled={locked}
+                  onClick={() => setDepositDraft(c.amount === depositDefault ? null : c.amount)}>{formatVnd(c.amount)}<span>{c.label}</span></button>)}
+              </div>
+            </>}
             {auctionType === 'Dutch' && <>
               <PriceInput id="auction-dutch-top" label="Giá mở đầu (cao nhất)" value={dutchTop} step={step} min={(startPrice ?? AUCTION_MIN_PRICE - step) + step} disabled={locked}
                 onChange={setDutchTop} error={touched || dutchTop !== null ? formErrors.dutchTopPrice : undefined} hint="Giá bắt đầu cao, giảm một bước giá mỗi lần tới giá sàn." />
@@ -610,6 +638,7 @@ export function CreateAuctionPage() {
           <dl className={styles.confirmPrices}>
             <div><dt>Khởi điểm</dt><dd>{startPrice ? formatVnd(startPrice) : '—'}</dd></div>
             <div><dt>Bước giá</dt><dd>+{formatVnd(step)}</dd></div>
+            <div><dt>Tiền cọc</dt><dd>{deposit !== null ? formatVnd(deposit) : '—'}</dd></div>
             <div><dt>Mua ngay</dt><dd>{buyNowOn && buyNowPrice ? `${formatVnd(buyNowPrice)} · ${buyNowMode === 'Instant' ? 'kết thúc ngay' : 'chờ thách đấu'}` : 'Không đặt'}</dd></div>
             <div><dt>Giá trị bảo vệ</dt><dd>{declaredValue ? formatVnd(declaredValue) : '—'}</dd></div>
           </dl>

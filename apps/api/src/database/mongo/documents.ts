@@ -722,6 +722,8 @@ export interface LedgerJournalDoc {
     | 'AuctionBidHold'
     | 'AuctionBidRelease'
     | 'AuctionDepositForfeit'
+    // ADR 0087: platform → seller, the seller's share when the book went unsold.
+    | 'AuctionDepositSellerShare'
     | 'WithdrawalHold'
     | 'WithdrawalPayout'
     | 'WithdrawalRefund'
@@ -997,6 +999,8 @@ export interface AuctionIntakeDoc extends Lockable {
   dutchIntervalSeconds: number | null;
   // ADR 0077: registered bidders the auction needs (2–10).
   minBidders: number;
+  // ADR 0087: the seller-set registration deposit; null = the 10% default.
+  depositAmount: number | null;
   protectiveValue: number;
   policyCode: 'HCM-AUCTION-v1';
   state: AuctionIntakeState;
@@ -1498,6 +1502,7 @@ export interface MemberNotificationDoc {
     | 'AuctionRescheduled'
     | 'AuctionResumed'
     | 'AuctionSecondChanceOffered'
+    | 'AuctionDepositShareReceived'
     | 'AuctionWon'
     | 'AuctionSold'
     | 'AuctionBoughtNow'

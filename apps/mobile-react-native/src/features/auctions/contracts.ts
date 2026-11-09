@@ -279,6 +279,8 @@ export const myIntake = z.object({
   startPrice: z.number().int(),
   step: z.union([z.literal(10000), z.literal(50000)]),
   buyNowPrice: z.number().int().nullable(),
+  // ADR 0087: the deposit bidders will pay (absent on older servers).
+  depositAmount: z.number().int().nullable().optional(),
   dropoffDeadline: z.string(),
   inspectionOutcome: z.enum(["Pass", "Fail", "NeedsEvidence"]).nullable(),
   inspectionNote: z.string().nullable(),

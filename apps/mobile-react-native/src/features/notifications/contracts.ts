@@ -14,6 +14,7 @@ export const memberNotification = z.object({
     "AuctionRescheduled",
     "AuctionResumed",
     "AuctionSecondChanceOffered",
+    "AuctionDepositShareReceived",
     "AuctionWon",
     "AuctionSold",
     "AuctionBoughtNow",

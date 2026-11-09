@@ -17,6 +17,7 @@ export const notificationSchema = z.object({
     'AuctionRescheduled',
     'AuctionResumed',
     'AuctionSecondChanceOffered',
+    'AuctionDepositShareReceived',
     'AuctionWon',
     'AuctionSold',
     'AuctionBoughtNow',

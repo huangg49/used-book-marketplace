@@ -337,6 +337,8 @@ const myIntakeSchema = z.object({
   startPrice: money, step: auctionStepSchema, buyNowPrice: money.nullable(), protectiveValue: money,
   buyNowMode: buyNowModeSchema.nullish(),
   auctionType: auctionTypeSchema.nullish(), dutchTopPrice: money.nullish(), dutchIntervalSeconds: z.number().int().nullish(),
+  // ADR 0087: the deposit bidders will pay (absent on older servers).
+  depositAmount: money.nullish(),
   createdAt: z.string(), dropoffDeadline: z.string(), receivedAt: z.string().nullable(), inspectedAt: z.string().nullable(),
   inspectionOutcome: z.enum(['Pass', 'Fail', 'NeedsEvidence']).nullable(), inspectionNote: z.string().nullable(),
   reclaimReason: z.string().nullable(), closedAt: z.string().nullable(),
@@ -384,6 +386,8 @@ export type CreateIntakeBody = {
   dutchIntervalSeconds?: number | null
   // ADR 0077/0079: registered bidders needed before it opens (at least 4).
   minBidders?: number
+  // ADR 0087: the seller's registration deposit; omitted = the 10% default.
+  depositAmount?: number | null
   declaredValue?: number | null
 }
 // ADR 0079: at least 4, no business maximum (1000 is the server's technical guard).
@@ -400,6 +404,19 @@ export const AUCTION_MAX_OPEN_CHANGES = 2
 export const AUCTION_RESCHEDULE_FREEZE_MS = 30 * 60_000
 /** ADR 0077: the refundable deposit the server will ask for (10%, ≥ 10.000đ). */
 export const auctionDepositFor = (startPrice: number) => Math.max(10_000, Math.ceil(startPrice / 10 / 1000) * 1000)
+/** ADR 0087: the seller may raise the deposit up to half the start price (whole 1.000đ). */
+export const auctionDepositMaxFor = (startPrice: number) =>
+  Math.max(auctionDepositFor(startPrice), Math.floor(startPrice / 2 / 1000) * 1000)
+/** ADR 0087: client mirror of the server's deposit bounds; the server stays authoritative. */
+export function auctionDepositError(startPrice: number | null, deposit: number | null) {
+  if (deposit === null || startPrice === null) return undefined
+  const min = auctionDepositFor(startPrice), max = auctionDepositMaxFor(startPrice)
+  if (deposit % 1000 !== 0 || deposit < min || deposit > max)
+    return min === max
+      ? `Tiền cọc của giá khởi điểm này là ${min.toLocaleString('vi-VN')}đ.`
+      : `Tiền cọc từ ${min.toLocaleString('vi-VN')}đ đến ${max.toLocaleString('vi-VN')}đ, theo bội số 1.000đ.`
+  return undefined
+}
 export function createAuctionIntake(body: CreateIntakeBody, key: string) {
   return command('/auction-intakes', key, body)
 }

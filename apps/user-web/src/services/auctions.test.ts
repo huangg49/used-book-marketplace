@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { formatRemaining } from '../hooks/useAuctionClock'
-import { AUCTION_MAX_PRICE, bidOptions, canWithdrawRegistration, type AuctionParticipation, type AuctionSummary } from './auctions'
+import { AUCTION_MAX_PRICE, auctionDepositError, auctionDepositMaxFor, bidOptions, canWithdrawRegistration, type AuctionParticipation, type AuctionSummary } from './auctions'
 
 describe('bidOptions', () => {
   it('steps up from the minimum bid on the price grid', () => {
@@ -51,5 +51,19 @@ describe('canWithdrawRegistration', () => {
     expect(canWithdrawRegistration(auction(), me({ registrationState: 'Withdrawn' }), now)).toBe(false)
     expect(canWithdrawRegistration(auction(), null, now)).toBe(false)
     expect(canWithdrawRegistration(auction({ phase: 'Ended' }), me(), now)).toBe(false)
+  })
+})
+
+// ADR 0087: the seller-set deposit mirrors the server bounds.
+describe('auctionDepositError', () => {
+  it('accepts the default up to half the start price in whole thousands', () => {
+    expect(auctionDepositMaxFor(200_000)).toBe(100_000)
+    expect(auctionDepositError(200_000, null)).toBeUndefined()
+    expect(auctionDepositError(200_000, 20_000)).toBeUndefined()
+    expect(auctionDepositError(200_000, 100_000)).toBeUndefined()
+    expect(auctionDepositError(200_000, 19_000)).toMatch(/20\.000đ đến 100\.000đ/)
+    expect(auctionDepositError(200_000, 101_000)).toBeTruthy()
+    expect(auctionDepositError(200_000, 25_500)).toBeTruthy()
+    expect(auctionDepositError(10_000, 11_000)).toMatch(/là 10\.000đ/)
   })
 })

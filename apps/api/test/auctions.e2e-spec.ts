@@ -127,6 +127,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
       dutchTopPrice: number | null;
       dutchIntervalSeconds: number | null;
       minBidders: number;
+      depositAmount: number | null;
     }> = {},
   ) => ({
     listingId: l.id,
@@ -6283,6 +6284,140 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         const r = await cmd('post', '/auction-intakes', intakeBody(l, { auctionType: 'SealedSecond', buyNowPrice: null }), seller).expect(422);
         expect(JSON.stringify(r.body)).toMatch(/giá thứ hai/);
       });
+
+      // ADR 0087: the seller's share of a forfeited deposit, only when unsold.
+      const shareOf = async (auctionId: string) => {
+        const journals = await db.c.ledger_journals.find({ auctionId, type: 'AuctionDepositSellerShare' }).toArray();
+        if (!journals.length) return { count: 0, amount: 0 };
+        const entries = await db.c.ledger_entries.find({ journalId: { $in: journals.map((j) => j._id) } }).toArray();
+        return { count: journals.length, amount: entries.reduce((sum, e) => sum + e.debit, 0) };
+      };
+      // Point A's 200 test slots are taken by the earlier cases.
+      const onB = { pointId: HANDOVER_POINT_B };
+
+      it('ADR 0087: with no runner-up the seller gets half of the forfeited deposit, once', async () => {
+        const won = await wonBy(onB);
+        await db.c.users.updateOne({ _id: won.x.id }, { $set: { status: 'LOCKED' } });
+        const sellerBefore = (await wallet(won.seller)).available;
+        try {
+          await tickAt(won.a.paymentDeadline!);
+        } finally {
+          await db.c.users.updateOne({ _id: won.x.id }, { $set: { status: 'ACTIVE' } });
+        }
+        expect(await doc(won.a._id)).toMatchObject({ state: 'PaymentExpired', runnerUpOutcome: null });
+        expect(await regState(won.a._id, won.y)).toBe('Forfeited');
+        expect(await shareOf(won.a._id)).toEqual({ count: 1, amount: DEPOSIT / 2 });
+        expect((await wallet(won.seller)).available - sellerBefore).toBe(DEPOSIT / 2);
+        // The platform received the whole deposit and paid half of it on.
+        const forfeit = await db.c.ledger_journals.find({ auctionId: won.a._id, type: 'AuctionDepositForfeit' }).toArray();
+        expect(forfeit).toHaveLength(1);
+        const forfeitEntry = await db.c.ledger_entries.findOne({ journalId: forfeit[0]._id, accountId: PLATFORM_COMMISSION_ACCOUNT_ID });
+        expect(forfeitEntry).toMatchObject({ debit: DEPOSIT, credit: 0 });
+        expect(await kinds(won.seller, won.a._id)).toContain('AuctionDepositShareReceived');
+        const told = await db.c.member_notifications.findOne({ userId: won.seller.id, targetId: won.a._id, kind: 'AuctionDepositShareReceived' });
+        expect(told!.body).toMatch(/10\.000đ/);
+        const forfeitText = await db.c.member_notifications.findOne({ userId: won.y.id, targetId: won.a._id, kind: 'AuctionDepositForfeited' });
+        expect(forfeitText!.body).toMatch(/một nửa được chuyển cho người bán/);
+        // Both wallets list the auction rows inside the contract.
+        const sellerHistory = await call('get', '/me/wallet/history?limit=5', won.seller).expect(200);
+        validates('WalletHistoryPage', sellerHistory.body);
+        expect(sellerHistory.body.items[0]).toMatchObject({ type: 'AuctionDepositSellerShare', amount: DEPOSIT / 2 });
+        const winnerHistory = await call('get', '/me/wallet/history?limit=10', won.y).expect(200);
+        validates('WalletHistoryPage', winnerHistory.body);
+        expect(winnerHistory.body.items.map((i: { type: string }) => i.type)).toEqual(expect.arrayContaining(['AuctionBidHold', 'AuctionBidRelease']));
+        const filtered = await call('get', '/me/wallet/history?type=AuctionDepositSellerShare', won.seller).expect(200);
+        expect(filtered.body.items).toHaveLength(1);
+        // A second worker pass pays nothing more.
+        await tickAt(new Date(won.a.paymentDeadline!.getTime() + 60_000));
+        expect(await shareOf(won.a._id)).toEqual({ count: 1, amount: DEPOSIT / 2 });
+        expect(await reconciled()).toBe(true);
+      }, 60_000);
+
+      it('ADR 0087: a declined, unanswered or unpaid runner-up offer pays the seller half; a runner-up sale or a report close pays nothing', async () => {
+        const declined = await offerFor(onB);
+        expect(await shareOf(declined.a._id)).toEqual({ count: 0, amount: 0 });
+        await declineOffer(declined.a._id, declined.x, declined.offered.version).expect(200);
+        expect(await shareOf(declined.a._id)).toEqual({ count: 1, amount: DEPOSIT / 2 });
+        expect(await kinds(declined.seller, declined.a._id)).toContain('AuctionDepositShareReceived');
+
+        const silent = await offerFor(onB);
+        await tickAt(silent.offered.runnerUpDeadline!);
+        expect((await doc(silent.a._id)).runnerUpOutcome).toBe('Expired');
+        expect(await shareOf(silent.a._id)).toEqual({ count: 1, amount: DEPOSIT / 2 });
+
+        const sold = await offerFor(onB);
+        const platformBefore = await platform();
+        pinClock(new Date(sold.offered.runnerUpOfferedAt!.getTime() + 60_000));
+        try {
+          await acceptOffer(sold.a._id, sold.x, sold.offered.version).expect(200);
+          await payOrder((await doc(sold.a._id)).orderId!, sold.x).expect(200);
+        } finally {
+          vi.restoreAllMocks();
+        }
+        expect((await doc(sold.a._id)).state).toBe('Sold');
+        expect(await shareOf(sold.a._id)).toEqual({ count: 0, amount: 0 });
+        expect(await kinds(sold.seller, sold.a._id)).not.toContain('AuctionDepositShareReceived');
+        // The platform kept the whole forfeited deposit (no settlement yet).
+        expect(await platform()).toBe(platformBefore);
+
+        const unpaid = await offerFor(onB);
+        pinClock(new Date(unpaid.offered.runnerUpOfferedAt!.getTime() + 60_000));
+        try {
+          await acceptOffer(unpaid.a._id, unpaid.x, unpaid.offered.version).expect(200);
+        } finally {
+          vi.restoreAllMocks();
+        }
+        await tickAt((await doc(unpaid.a._id)).paymentDeadline!);
+        expect((await doc(unpaid.a._id)).state).toBe('PaymentExpired');
+        expect(await shareOf(unpaid.a._id)).toEqual({ count: 1, amount: DEPOSIT / 2 });
+
+        const reported = await offerFor(onB);
+        const caseId = (await cmd('post', '/me/support-cases', {
+          kind: 'Violation',
+          title: 'Nghi ngờ trả giá gian lận: phiên thử',
+          description: 'Người thắng dùng tài khoản phụ để đẩy giá phiên này.',
+          target: { type: 'Auction', id: reported.a._id },
+        }, reported.x).expect(200)).body.entityId as string;
+        await cmd('post', `/operations/support-cases/${caseId}/actions`, { expectedVersion: 1, action: 'Assign', text: 'Admin đã nhận hồ sơ.' }, admin).expect(200);
+        await longSession(admin);
+        pinClock(new Date(reported.offered.runnerUpOfferedAt!.getTime() + 60_000));
+        try {
+          await cmd('post', `/operations/support-cases/${caseId}/close-auction`, { expectedVersion: 2, auctionVersion: reported.offered.version, message: 'Phiên bị đóng sau khi xem xét báo cáo.' }, admin).expect(200);
+        } finally {
+          vi.restoreAllMocks();
+        }
+        expect((await doc(reported.a._id)).state).toBe('Cancelled');
+        expect(await shareOf(reported.a._id)).toEqual({ count: 0, amount: 0 });
+        expect(await reconciled()).toBe(true);
+      }, 120_000);
+
+      it('ADR 0087: the seller may raise the registration deposit within bounds; bidders pay that amount', async () => {
+        const seller = await actor();
+        // 200,000 start: from the 20,000 default to 100,000 in whole thousands.
+        for (const depositAmount of [19_000, 101_000]) {
+          const l = await saleListing(seller);
+          const r = await cmd('post', '/auction-intakes', intakeBody(l, { ...onB, depositAmount }), seller).expect(422);
+          expect(JSON.stringify(r.body)).toMatch(/20\.000đ đến 100\.000đ/);
+        }
+        const l = await saleListing(seller);
+        const odd = await cmd('post', '/auction-intakes', intakeBody(l, { ...onB, depositAmount: 25_500 }), seller);
+        expect([400, 422]).toContain(odd.status);
+        const { seller: owner, a } = await liveOf({ ...onB, depositAmount: 60_000 });
+        expect(a.depositAmount).toBe(60_000);
+        const mine = await call('get', `/me/auction-intakes?auctionId=${a._id}`, owner).expect(200);
+        validates('AuctionIntakeList', mine.body);
+        expect(mine.body.items[0]).toMatchObject({ depositAmount: 60_000 });
+        const pub = await call('get', `/auctions/${a._id}`).expect(200);
+        expect(pub.body.auction.depositAmount).toBe(60_000);
+        const m = await funded(500_000);
+        await register(a._id, m, DEPOSIT).expect(409);
+        await register(a._id, m, 60_000).expect(200);
+        expect(await wallet(m)).toMatchObject({ available: 440_000, auctionHeld: 60_000 });
+        // Omitting the field keeps the default.
+        const { a: plain } = await liveOf(onB);
+        expect(plain.depositAmount).toBe(DEPOSIT);
+        expect(await reconciled()).toBe(true);
+      }, 60_000);
 
       // ADR 0083 (M5): registration takes the POL-41 limits.
       it('ADR 0083: a 6th open registration, a quick re-registration and too many registrations a minute are refused', async () => {

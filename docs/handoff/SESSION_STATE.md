@@ -111,6 +111,12 @@ Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
   (đổi khóa duy nhất `point_orders` sang `{auctionId, buyerId}`). Quyết định tự chọn, cần chủ dự
   án xem: tiền cọc mất vẫn về nền tảng (không về người bán, vì đã bỏ liên kết tài khoản) và chọn
   phương án ngừng kín giá thứ hai. Kết quả kiểm chứng ở ADR0086/commit. Chưa push.
+- [ADR0087](../adr/0087-auction-deposit-share.md) (09/11, cùng nhánh, chủ dự án chọn qua phiên
+  phụ): tiền cọc mất vẫn về nền tảng khi người thứ hai mua; sách không bán được thì người bán nhận
+  50% (bút toán `AuctionDepositSellerShare`, thông báo `AuctionDepositShareReceived`), báo cáo đóng
+  phiên thì không. Người bán chọn tiền cọc khi tạo hồ sơ (mặc định 10% tới một nửa giá khởi điểm,
+  bội số 1.000đ). Sửa kèm lịch sử ví thiếu loại `AuctionBidHold`/`AuctionBidRelease`. Migration
+  `0075-auction-deposit-share`. Thay đổi tiền mô phỏng: cần human review. Chưa push.
 
 Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
 auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web

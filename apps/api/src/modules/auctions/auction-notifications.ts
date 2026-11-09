@@ -93,10 +93,12 @@ const MESSAGES: Record<Kind, Record<'default' | 'seller', Message>> = {
   AuctionDepositForfeited: {
     default: (c, a) => ({
       title: 'Tiền cọc không được hoàn',
-      body: `${c.title}: bạn không thanh toán đúng hạn nên tiền cọc ${vnd(a.depositAmount)} được chuyển cho nền tảng theo quy định phiên. Phần tiền giữ còn lại đã về ví.`,
+      body: `${c.title}: bạn không thanh toán đúng hạn nên tiền cọc ${vnd(a.depositAmount)} không được hoàn theo quy định phiên (nếu sách không bán được, một nửa được chuyển cho người bán, phần còn lại cho nền tảng). Phần tiền giữ còn lại đã về ví.`,
     }),
     seller: () => ({ title: '', body: '' }),
   },
+  // ADR 0087: written by notifyDepositShare with the paid amount.
+  AuctionDepositShareReceived: silent,
   AuctionOutbid: {
     default: (c, a) => {
       const next = nextMinimumBid(a);
@@ -320,6 +322,32 @@ async function write(
     });
   }
   if (rows.length) await tx.c.member_notifications.insertMany(rows);
+}
+
+/**
+ * ADR 0087: tells the seller that half of the non-paying winner's deposit
+ * reached their wallet because the book ended unsold.
+ */
+export async function notifyDepositShare(
+  tx: Tx,
+  a: AuctionDoc,
+  amount: number,
+  now: Date,
+) {
+  const c = await context(tx, a);
+  const kind: Kind = 'AuctionDepositShareReceived';
+  await tx.c.member_notifications.insertOne({
+    _id: randomUUID(),
+    userId: a.sellerId,
+    kind,
+    title: 'Bạn nhận một phần tiền cọc',
+    body: `${c.title}: sách không bán được vì người thắng không thanh toán, nên ${vnd(amount)} (một nửa tiền cọc của người thắng) đã về số dư khả dụng của bạn.`.slice(0, NOTIFICATION_BODY_MAX),
+    targetType: 'Auction',
+    targetId: a._id,
+    dedupeKey: `${kind}:${a._id}:${a.version}:${a.sellerId}`,
+    createdAt: now,
+    readAt: null,
+  });
 }
 
 export type FundsReason =
