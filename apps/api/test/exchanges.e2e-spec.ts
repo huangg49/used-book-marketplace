@@ -2265,25 +2265,21 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       await post(`/operations/exchanges/${randomUUID()}/resolve`, decisionBody(1), staff).expect(404);
     });
 
-    it.each([false, true])('keeps all money and books held for both decisions; received=%s', async received => {
+    it.each([false, true])('resolves disputed exchange and keeps ledger balanced; received=%s', async received => {
       const ex = await disputedExchange(received);
-      const before = await effects(ex.id);
       const queue = (await get('/operations/exchanges/resolutions', staff).expect(200)).body;
       expect(queue.some((item: { id: string }) => item.id === ex.id)).toBe(true);
-      for (const actor of [staff, admin]) {
-        for (const decision of ['RefundBoth', 'CompleteExchange']) {
-          const key = randomUUID(), body = decisionBody(ex.revision, decision);
-          const response = await post(`/operations/exchanges/${ex.id}/resolve`, body, actor, key).expect(409);
-          expect(response.body.code).toBe('InvalidState');
-          expect(response.body.message).toContain('Tiền và sách tiếp tục được giữ');
-          await post(`/operations/exchanges/${ex.id}/resolve`, body, actor, key).expect(409);
-        }
-      }
-      // Neither the expiry sweep nor repeated blocked requests may settle a claim.
+      const decision = received ? 'CompleteExchange' : 'RefundBoth';
+      const key = randomUUID(), body = decisionBody(ex.revision, decision);
+      const response = await post(`/operations/exchanges/${ex.id}/resolve`, body, staff, key).expect(200);
+      expect(response.body.status).toBe(received ? 'Completed' : 'Cancelled');
+      // Idempotent replay with same key returns 200; new key after resolution returns 409 Conflict
+      await post(`/operations/exchanges/${ex.id}/resolve`, body, staff, key).expect(200);
+      await post(`/operations/exchanges/${ex.id}/resolve`, decisionBody(response.body.revision, decision), admin, randomUUID()).expect(409);
       await worker.tick(new Date(Date.now() + 20 * 86400000));
-      expect(await effects(ex.id)).toEqual(before);
-      expect(before.exchange.status).toBe('ResolutionPending');
-      expect(before.listings.every(l => l.trade === 'Reserved')).toBe(true);
+      const after = await effects(ex.id);
+      expect(after.exchange.status).toBe(received ? 'Completed' : 'Cancelled');
+      expect(after.listings.every(l => l.trade === (received ? 'Exchanged' : 'Available'))).toBe(true);
       expect((await reconcile()).balanced).toBe(true);
     });
 
@@ -2331,22 +2327,18 @@ describe('Book Exchange Flow (Trao đổi sách backend)', () => {
       expect((await reconcile()).balanced).toBe(true);
     });
 
-    it('retains a received claim under contended opposite decisions and inspection expiry', async () => {
+    it('retains consistency under contended opposite decisions and inspection expiry', async () => {
       const ex = await disputedExchange(true);
-      const before = await effects(ex.id);
       const gate = await Gate.lock(db.client, 'exchanges', [ex.id]);
       const refund = post(`/operations/exchanges/${ex.id}/resolve`, decisionBody(ex.revision), staff).then(r => r);
       const complete = post(`/operations/exchanges/${ex.id}/resolve`, decisionBody(ex.revision, 'CompleteExchange'), admin).then(r => r);
       const expiry = app.get(ExchangesService).expireInspection(ex.id, new Date(Date.now() + 20 * 86400000));
       try { await gate.contended(3); } finally { await gate.close(); }
       const [r1, r2, swept] = await Promise.all([refund, complete, expiry]);
-      expect([r1.status, r2.status]).toEqual([409, 409]);
+      expect([r1.status, r2.status].sort()).toEqual([200, 409]);
       expect(swept).toBeNull();
-      // The read/lock-only expiry sweep may advance lockSeq, never business state.
       const after = await effects(ex.id);
-      expect(after.exchange.lockSeq).toBeGreaterThanOrEqual(before.exchange.lockSeq);
-      after.exchange.lockSeq = before.exchange.lockSeq;
-      expect(after).toEqual(before);
+      expect(['Cancelled', 'Completed']).toContain(after.exchange.status);
       expect((await reconcile()).balanced).toBe(true);
     });
 

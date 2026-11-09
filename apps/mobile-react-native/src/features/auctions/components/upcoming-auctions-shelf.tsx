@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { Icon, formatVnd, stitchTokens } from "../../../core/ui";
-import { formatRemaining } from "../auctions-model";
+import { formatRemaining, waitingTime } from "../auctions-model";
 import type { PublicAuctionSummary } from "../contracts";
 import { AuctionCover } from "./auction-cover";
 import { conditions as conditionLabels } from "../../shelf/contracts";
@@ -29,13 +29,13 @@ export function UpcomingAuctionsShelf({
           </AppText>
           <View style={styles.badgeCount}>
             <AppText kind="small" style={styles.badgeCountText}>
-              {items.length} phiên đã hẹn giờ
+              {items.length} phiên đang chờ mở
             </AppText>
           </View>
         </View>
       </View>
       <AppText kind="small" style={styles.subtitle}>
-        Người bán đã qua kiểm định tại điểm giao nhận TP.HCM và hẹn giờ mở sàn. Bạn có thể xem trước thông tin và lưu theo dõi.
+        Sách đã kiểm định tại điểm giao nhận TP.HCM. Đặt cọc 10% để đăng ký tham gia trước giờ mở phiên.
       </AppText>
 
       <ScrollView
@@ -44,7 +44,8 @@ export function UpcomingAuctionsShelf({
         contentContainerStyle={styles.scrollList}
       >
         {items.map((item) => {
-          const msUntilStart = Math.max(0, Date.parse(item.startAt) - now);
+          const waiting = waitingTime(item, now);
+          const msUntilStart = Math.max(0, Date.parse(waiting.at) - now);
           const authors = item.book?.authors.join(", ");
 
           return (
@@ -67,7 +68,9 @@ export function UpcomingAuctionsShelf({
                 <View style={styles.timerBadge}>
                   <Icon name="clock" size={11} color={stitchTokens.wineDark} />
                   <AppText kind="small" style={styles.timerBadgeText}>
-                    {`Mở sau ${formatRemaining(msUntilStart)}`}
+                    {waiting.label === "Hạn đăng ký"
+                      ? `Hạn ĐK ${formatRemaining(msUntilStart)}`
+                      : `Mở sau ${formatRemaining(msUntilStart)}`}
                   </AppText>
                 </View>
                 {item.book && (
@@ -96,14 +99,21 @@ export function UpcomingAuctionsShelf({
                       {formatVnd(item.startPrice)}
                     </AppText>
                   </View>
-                  {item.buyNowPrice !== null && (
+                  {item.minBidders != null ? (
+                    <View style={styles.buyNowChip}>
+                      <Icon name="person" size={10} color={stitchTokens.wineDark} />
+                      <AppText kind="small" style={styles.buyNowText}>
+                        {`${item.registeredCount ?? 0}/${item.minBidders}`}
+                      </AppText>
+                    </View>
+                  ) : item.buyNowPrice !== null ? (
                     <View style={styles.buyNowChip}>
                       <Icon name="bolt" size={10} color={stitchTokens.wineDark} />
                       <AppText kind="small" style={styles.buyNowText}>
                         {formatVnd(item.buyNowPrice)}
                       </AppText>
                     </View>
-                  )}
+                  ) : null}
                 </View>
 
                 <View style={styles.pointRow}>

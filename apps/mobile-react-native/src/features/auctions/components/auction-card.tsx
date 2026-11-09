@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { AppText } from "../../../core/ui/text";
 import { Icon, formatVnd, stitchTokens } from "../../../core/ui";
 import { conditions } from "../../shelf/contracts";
-import { formatRemaining } from "../auctions-model";
+import { formatRemaining, isSealedFormat } from "../auctions-model";
 import type { PublicAuctionSummary } from "../contracts";
 import { AuctionCover } from "./auction-cover";
 
@@ -23,8 +23,17 @@ export function AuctionCard({
   onPress,
   onQuickBid,
 }: AuctionCardProps) {
-  const price = item.currentPrice ?? item.startPrice;
+  const formatType = item.auctionType ?? "English";
+  const isDutch = formatType === "Dutch";
+  const isSealed = isSealedFormat(item);
+  const price = isDutch
+    ? (item.dutchPrice ?? item.dutchTopPrice ?? item.buyNowPrice ?? item.startPrice)
+    : isSealed
+      ? item.startPrice
+      : (item.currentPrice ?? item.startPrice);
   const authors = item.book?.authors.join(", ");
+  const waitingReg =
+    item.minBidders != null && (item.registeredCount ?? 0) < item.minBidders;
 
   return (
     <View style={styles.gridCell}>
@@ -76,6 +85,20 @@ export function AuctionCard({
               </AppText>
             </View>
           )}
+
+          {/* Format Badge on Bottom Right if Dutch or Sealed */}
+          {(isDutch || isSealed) && (
+            <View style={styles.cardFormatTag}>
+              <Icon
+                name={isDutch ? "flame" : "lock"}
+                size={9}
+                color={stitchTokens.gold}
+              />
+              <AppText kind="small" style={styles.cardFormatText}>
+                {isDutch ? "HÀ LAN" : formatType === "SealedSecond" ? "KÍN #2" : "KÍN #1"}
+              </AppText>
+            </View>
+          )}
         </View>
 
         {/* Card Body */}
@@ -98,10 +121,12 @@ export function AuctionCard({
               }}
             >
               <AppText kind="small" style={styles.bidCountLabel}>
-                Người trả giá:
+                {waitingReg ? "Đăng ký:" : "Người trả giá:"}
               </AppText>
               <AppText kind="small" style={styles.bidCountValue}>
-                {item.bidderCount}
+                {waitingReg
+                  ? `${item.registeredCount ?? 0}/${item.minBidders}`
+                  : item.bidderCount}
               </AppText>
             </View>
 
@@ -110,7 +135,27 @@ export function AuctionCard({
             </AppText>
 
             <AppText kind="small" style={styles.buyNowHint} numberOfLines={1}>
-              {item.buyNowPrice !== null ? (
+              {isDutch ? (
+                <>
+                  Giá sàn:{" "}
+                  <AppText
+                    kind="bold"
+                    style={{ fontSize: 11, color: stitchTokens.wineDark }}
+                  >
+                    {formatVnd(item.startPrice)}
+                  </AppText>
+                </>
+              ) : isSealed ? (
+                <>
+                  Giá kín • Bước{" "}
+                  <AppText
+                    kind="bold"
+                    style={{ fontSize: 11, color: stitchTokens.wineDark }}
+                  >
+                    +{formatVnd(item.step)}
+                  </AppText>
+                </>
+              ) : item.buyNowPrice !== null ? (
                 <>
                   Mua ngay:{" "}
                   <AppText
@@ -133,21 +178,35 @@ export function AuctionCard({
               )}
             </AppText>
 
-            {/* Quick Bid CTA Button */}
+            {/* Quick Bid / Format Action CTA Button */}
             <Pressable
               accessibilityRole="button"
               onPress={(e) => {
                 e.stopPropagation();
-                onQuickBid();
+                if (isDutch || isSealed || waitingReg || item.minBidders != null) {
+                  onPress();
+                } else {
+                  onQuickBid();
+                }
               }}
               style={({ pressed }) => [
                 styles.cardQuickBidBtn,
                 pressed && { opacity: 0.85 },
               ]}
             >
-              <Icon name="gavel" size={13} color={stitchTokens.wineDark} />
+              <Icon
+                name={isDutch ? "flame" : isSealed ? "lock" : waitingReg ? "shield" : "gavel"}
+                size={13}
+                color={stitchTokens.wineDark}
+              />
               <AppText kind="bold" style={styles.cardQuickBidText}>
-                Đấu +{formatVnd(item.step)}
+                {isDutch
+                  ? "Chấp nhận giá"
+                  : isSealed
+                    ? "Gửi giá kín"
+                    : waitingReg
+                      ? "Đăng ký cọc"
+                      : `Đấu +${formatVnd(item.step)}`}
               </AppText>
             </Pressable>
           </View>
@@ -233,6 +292,23 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "700",
     color: stitchTokens.wine,
+  },
+  cardFormatTag: {
+    position: "absolute",
+    bottom: 6,
+    right: 6,
+    backgroundColor: stitchTokens.wineDark,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  cardFormatText: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: stitchTokens.gold,
   },
   cardBody: {
     padding: 10,

@@ -20,6 +20,7 @@ import { DraftEditor } from "../drafts/draft-editor";
 import { BackAction, Button, StatePanel } from "../../core/ui";
 import {
   auctionDepositError,
+  auctionDepositFor,
   auctionErrorText,
   auctionEligible,
   intakePriceErrors,
@@ -583,6 +584,7 @@ export function SendToAuctionScreen({ userId }: { userId: string }) {
         startPrice={startPrice}
         step={step}
         buyNowPrice={buyNowPrice}
+        depositAmount={deposit ?? (startPrice !== null ? auctionDepositFor(startPrice) : null)}
         withdrawTarget={withdrawTarget}
         onCancelWithdraw={() => !busy && setWithdrawTarget(null)}
         onConfirmWithdraw={handleConfirmWithdraw}

@@ -268,5 +268,24 @@ export const stitchTokens = {
   peachLightPale: "#fbe9e7",
   borderParchmentSoft: "#f0ebe1",
   warmIvorySoft: "#fdfbf7",
+
+  // 3D Ombre Red Card tokens
+  cardBorderHighlightTop: "rgba(255, 200, 215, 0.5)",
+  cardBorderHighlightLeft: "rgba(255, 180, 200, 0.3)",
+  cardBorderShadowRight: "rgba(50, 8, 14, 0.6)",
+  cardBorderShadowBottom: "rgba(35, 5, 10, 0.8)",
+  shadowDeepCrimson: "#5A0E1C",
+  ombreStop0: "#A31D36",
+  ombreStop30: "#821428",
+  ombreStop70: "#550D1B",
+  ombreStop100: "#35060E",
+  whitePinkText: "rgba(255, 230, 235, 0.9)",
+  whitePinkTextMuted: "rgba(255, 240, 242, 0.95)",
+  textShadowDeep: "rgba(35, 5, 10, 0.8)",
+  goldCardBorder: "#F5C26B",
+  goldCardBorderBottom: "#D19628",
+  crimsonBolt: "#8E1E32",
+  crimsonDeepText: "#721022",
+  scrimDarkCrimson: "rgba(28, 5, 9, 0.55)",
 } as const;
 

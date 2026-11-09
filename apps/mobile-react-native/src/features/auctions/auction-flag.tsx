@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import * as Crypto from "expo-crypto";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -27,7 +27,9 @@ import {
   Sheet,
   TextField,
   colors,
+  radius,
   space,
+  stitchTokens,
 } from "../../core/ui";
 
 export const auctionFlagKey = (owner: string, auctionId: string) =>
@@ -100,35 +102,88 @@ export function AuctionFlag({
   return (
     <View style={{ gap: space.xs }}>
       {current ? (
-        <Notice>
-          {`Bạn đã báo cáo phiên này cho Admin (mã ${current.id.slice(0, 8).toUpperCase()}, ${supportStates[current.state].toLowerCase()}). Admin trả lời qua thông báo và mục Yêu cầu hỗ trợ trên web Lật lại.`}
-        </Notice>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: 10,
+            padding: space.md,
+            borderRadius: radius.card * 1.5,
+            backgroundColor: stitchTokens.amberBg,
+            borderWidth: 1,
+            borderColor: stitchTokens.orangeBorderSoft,
+          }}
+        >
+          <Icon name="shield" size={17} color={colors.warning} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <AppText kind="bold" style={{ color: stitchTokens.wineDark, fontSize: 13 }}>
+              {`Hồ sơ báo cáo #${current.id.slice(0, 8).toUpperCase()} (${supportStates[current.state]})`}
+            </AppText>
+            <AppText kind="small" color={colors.ink} style={{ lineHeight: 17 }}>
+              Bạn đã báo cáo phiên này cho Admin. Admin trả lời qua thông báo và mục Yêu cầu hỗ trợ trên web Lật lại.
+            </AppText>
+          </View>
+        </View>
       ) : (
-        <Button
-          secondary
-          wine
-          title="Báo cáo sự cố cho Admin"
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Báo cáo sự cố cho Admin"
           disabled={existing.isPending}
           onPress={() => setVisible(true)}
-        />
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingHorizontal: space.md,
+            paddingVertical: 11,
+            borderRadius: radius.card * 1.5,
+            backgroundColor: stitchTokens.parchment,
+            borderWidth: 1,
+            borderColor: stitchTokens.peachBorder,
+            opacity: existing.isPending ? 0.6 : pressed ? 0.8 : 1,
+          })}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Icon name="shield" size={16} color={stitchTokens.wineDark} />
+            <AppText kind="bold" style={{ fontSize: 13, color: stitchTokens.wineDark }}>
+              Báo cáo sự cố cho Admin
+            </AppText>
+          </View>
+          <Icon name="chevronRight" size={16} color={stitchTokens.subtleGray} />
+        </Pressable>
       )}
       <Sheet
-        title="Báo cáo sự cố"
+        title="Báo cáo sự cố cho Admin"
         visible={visible}
         onClose={() => !busy && setVisible(false)}
         dismissible={!busy}
         footer={
           <Button
-            title={busy ? "Đang gửi…" : pending ? "Thử lại báo cáo đã gửi" : "Gửi cho Admin"}
+            wine
+            title={busy ? "Đang gửi…" : pending ? "Thử lại báo cáo đã gửi" : "Gửi báo cáo cho Admin"}
             busy={busy}
             onPress={() => void submit()}
           />
         }
       >
         <View style={{ gap: space.lg }}>
-          <AppText kind="bold" numberOfLines={2}>
-            {auction.title}
-          </AppText>
+          <View
+            style={{
+              backgroundColor: stitchTokens.parchment,
+              padding: 12,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: stitchTokens.cardBorder,
+              gap: 2,
+            }}
+          >
+            <AppText kind="small" color={colors.muted}>
+              Phiên đang báo cáo:
+            </AppText>
+            <AppText kind="bold" numberOfLines={2} style={{ color: stitchTokens.wineDark }}>
+              {auction.title}
+            </AppText>
+          </View>
           {pending && (
             <Notice tone="warning">
               Báo cáo trước chưa xác định được kết quả. Thử lại sẽ gửi đúng nội dung đó một lần nữa, không tạo hồ sơ trùng.
@@ -171,9 +226,20 @@ export function AuctionFlag({
                 : undefined
             }
           />
-          <View style={{ flexDirection: "row", gap: space.sm, alignItems: "flex-start" }}>
-            <Icon name="info" size={15} color={colors.muted} />
-            <AppText kind="small" color={colors.muted} style={{ flex: 1 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              gap: space.sm,
+              alignItems: "flex-start",
+              backgroundColor: stitchTokens.roseWarmSurface,
+              padding: 10,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: stitchTokens.peachBorder,
+            }}
+          >
+            <Icon name="info" size={15} color={stitchTokens.wineDark} />
+            <AppText kind="small" color={colors.muted} style={{ flex: 1, lineHeight: 17 }}>
               Báo cáo được gửi tới Admin, không tự dừng phiên hay hoàn tiền. Admin đối chiếu lượt giá, tiền cọc và khoản giữ rồi phản hồi qua thông báo. Mỗi phiên bạn có một hồ sơ đang mở.
             </AppText>
           </View>
