@@ -15,6 +15,15 @@ tài khoản thật trong lượt này.
 Kiểm chứng Member web gồm typecheck/build, 6 unit và 20 ca Chromium ở 390/1440 px.
 Ca đọc trực tiếp ghi nhận 0 lượt ISBN và 1 lượt AI khi bấm liên tiếp.
 
+## Hướng chỉnh giao diện bước 1 Đăng sách
+
+- Giữ nhận diện giấy và màu rượu vang. Gom ảnh, lệnh đọc và tiến độ cùng một chỗ.
+- Hiện kết quả đọc ngay sau ảnh. Dùng tên ngôn ngữ dễ hiểu, cho sửa ngay trên
+  gợi ý và chỉ rõ ảnh nào cần bổ sung cho trường chưa đọc được.
+- Đặt tra danh mục sau kết quả. Hiện ứng viên khi có và cho áp dụng thông tin
+  đã rà soát khi không có kết quả. Gọn các ô tìm thêm vào phần mở khi cần.
+- Đây là hướng thiết kế để xem lại sau. Chưa triển khai chỉnh bố cục.
+
 # Autofill và phục hồi gửi bài trên Member web — 09/11/2026
 
 Gói `codex/autofill-listing-recovery-20261109` trên nền main local `c5c232bd`.
