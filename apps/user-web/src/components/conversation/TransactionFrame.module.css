@@ -11,7 +11,7 @@
 .columns {
   display: grid;
   grid-template-areas: "context stage";
-  grid-template-columns: 288px minmax(0, 1fr);
+  grid-template-columns: clamp(320px, 22vw, 360px) minmax(0, 1fr);
   height: 100%;
   min-height: 0;
 }

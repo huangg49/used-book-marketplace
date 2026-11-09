@@ -1,6 +1,7 @@
 import { WithdrawalController } from './withdrawal.controller.js';
 import { WithdrawalService } from './withdrawal.service.js';
 import { LocalDemoCompletionPolicy } from './local-demo-completion.policy.js';
+import { MediaModule } from '../media/media.module.js';
 import { Module } from '@nestjs/common';
 import { CommandsModule } from '../commands/commands.module.js';
 import { DatabaseModule } from '../../database/database.module.js';
@@ -15,7 +16,7 @@ import { WalletClock } from './wallet-clock.js';
 import { WalletExpiryWorker } from './wallet-expiry.service.js';
 import { DirectOrderReleasePolicy } from './direct-order-release.policy.js';
 @Module({
-  imports: [CommandsModule, DatabaseModule],
+  imports: [CommandsModule, DatabaseModule, MediaModule],
   controllers: [WalletController, WithdrawalController],
   providers: [
     WalletService,

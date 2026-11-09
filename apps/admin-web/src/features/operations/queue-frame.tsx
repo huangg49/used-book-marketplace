@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { Link } from "react-router-dom";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { dateText } from "../../core/format";
 import { Button, Notice } from "../../core/ui";
@@ -143,22 +144,28 @@ export function OperationsQueue({
                   {row.detail && <div className="muted">{row.detail}</div>}
                 </div>
                 {row.action ? (
-                  <Button
-                    className="row-action"
-                    aria-expanded={expanded}
-                    aria-controls={expanded ? panelId : undefined}
-                    disabled={pending}
-                    onClick={() => {
-                      setNotice(undefined);
-                      setOpen(expanded ? undefined : row.id);
-                    }}
-                  >
-                    {expanded ? "Đóng" : row.action.label}
-                  </Button>
+                  row.action.to ? (
+                    <Link to={row.action.to} className="button row-action">
+                      {row.action.label}
+                    </Link>
+                  ) : (
+                    <Button
+                      className="row-action"
+                      aria-expanded={expanded}
+                      aria-controls={expanded ? panelId : undefined}
+                      disabled={pending}
+                      onClick={() => {
+                        setNotice(undefined);
+                        setOpen(expanded ? undefined : row.id);
+                      }}
+                    >
+                      {expanded ? "Đóng" : row.action.label}
+                    </Button>
+                  )
                 ) : (
                   <span />
                 )}
-                {row.action && (
+                {row.action?.render && (
                   <MotionPanel
                     open={expanded}
                     id={panelId}

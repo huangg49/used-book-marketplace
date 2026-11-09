@@ -48,6 +48,13 @@
     border-radius: 6px;
 }
 
+.recoverySection {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
 .calloutBox {
     background: var(--shop-paper, #fdfbf7);
     border: 1px solid var(--shop-line, #ebd9c8);

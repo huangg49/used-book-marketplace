@@ -1239,6 +1239,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operations/users/{userId}/avatar/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a user's attached avatar for operations UI
+         * @description ACTIVE STAFF/ADMIN only. Returns a short-lived signed avatar URL.
+         */
+        get: operations["getOperationsUserAvatarRead"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operations/revenue-overview": {
         parameters: {
             query?: never;
@@ -4421,6 +4441,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/withdrawals/{withdrawalId}/proof": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** createWithdrawalProof */
+        post: operations["createWithdrawalProof"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/withdrawals/{withdrawalId}/proof/{proofId}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** uploadWithdrawalProof */
+        put: operations["uploadWithdrawalProof"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/withdrawals/{withdrawalId}/proof/{proofId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** readWithdrawalProof */
+        get: operations["readWithdrawalProof"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/withdrawals/{withdrawalId}/process": {
         parameters: {
             query?: never;
@@ -6273,6 +6344,32 @@ export interface components {
             /** @enum {string} */
             decision: "Approve" | "Reject";
             reason: string;
+            /**
+             * Format: uuid
+             * @description Required when approving a manual withdrawal.
+             */
+            proofId?: string | null;
+        };
+        CreateWithdrawalProof: {
+            /** @enum {string} */
+            mimeType: "image/jpeg" | "image/png" | "image/webp";
+            byteSize: number;
+            sha256: string;
+        };
+        WithdrawalProofReceipt: {
+            /** Format: uuid */
+            id: string;
+            /** @constant */
+            entityType: "WithdrawalProof";
+            /** Format: uuid */
+            entityId: string;
+            version: number;
+            /** @enum {string} */
+            state: "Pending" | "Ready";
+            /** Format: date-time */
+            serverTime: string;
+            /** @constant */
+            demoOnly: true;
         };
         WithdrawalVersion: {
             expectedVersion: number;
@@ -6320,6 +6417,8 @@ export interface components {
             approverId: string | null;
             /** Format: uuid */
             payoutRef: string | null;
+            /** Format: uuid */
+            proofId?: string | null;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -7591,6 +7690,26 @@ export interface components {
                 postedAt: string;
                 referenceId: string | null;
             }[];
+            topRevenueAccount: {
+                accountId: string;
+                displayName: string;
+                revenue: number;
+                /** Format: uuid */
+                avatarId: string | null;
+            } | null;
+            highestPricedBooks: {
+                /** @enum {string} */
+                type: "Sale" | "Exchange" | "Auction";
+                label: string;
+                title: string;
+                amount: number;
+                sellerName: string;
+                referenceId: string;
+                /** Format: uuid */
+                listingId: string;
+                /** Format: uuid */
+                mediaId: string | null;
+            }[];
         };
         OperationsPoint: {
             /** Format: uuid */
@@ -7922,6 +8041,10 @@ export interface components {
             trackingCode?: string | null;
             meetupLocation?: string | null;
             notes?: string | null;
+            packagingPhotoUrl?: string | null;
+            packagingVideoUrl?: string | null;
+            packagingPhotoName?: string | null;
+            packagingVideoName?: string | null;
             /** Format: date-time */
             shippedAt?: string | null;
             lastEvent?: string | null;
@@ -7957,6 +8080,10 @@ export interface components {
             trackingCode?: string;
             meetupLocation?: string;
             notes?: string;
+            packagingPhotoUrl?: string;
+            packagingVideoUrl?: string;
+            packagingPhotoName?: string;
+            packagingVideoName?: string;
         };
         RejectExchangeCommand: {
             expectedVersion: number;
@@ -8158,7 +8285,7 @@ export interface components {
         ResolveExchangeDisputeCommand: {
             expectedVersion: number;
             /** @enum {string} */
-            decision: "RefundBoth" | "CompleteExchange";
+            decision: "RefundBoth" | "CompleteExchange" | "CompensateInitiator" | "CompensateRecipient";
             reason: string;
         };
         ExchangeReviewsResponse: components["schemas"]["TransactionReviewsResponse"];
@@ -10600,6 +10727,37 @@ export interface operations {
             403: components["responses"]["ListingError"];
             429: components["responses"]["ListingError"];
             500: components["responses"]["ListingError"];
+            503: components["responses"]["ListingError"];
+        };
+    };
+    getOperationsUserAvatarRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed avatar URL. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** Format: uri */
+                        url: string;
+                        /** Format: date-time */
+                        expiresAt: string;
+                    };
+                };
+            };
+            401: components["responses"]["ListingError"];
+            403: components["responses"]["ListingError"];
+            404: components["responses"]["ListingError"];
             503: components["responses"]["ListingError"];
         };
     };
@@ -17244,6 +17402,84 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WithdrawalReceipt"];
+                };
+            };
+        };
+    };
+    createWithdrawalProof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                withdrawalId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWithdrawalProof"];
+            };
+        };
+        responses: {
+            /** @description Reserved proof */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawalProofReceipt"];
+                };
+            };
+        };
+    };
+    uploadWithdrawalProof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                withdrawalId: string;
+                proofId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "image/jpeg": string;
+                "image/png": string;
+                "image/webp": string;
+            };
+        };
+        responses: {
+            /** @description Uploaded proof */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WithdrawalProofReceipt"];
+                };
+            };
+        };
+    };
+    readWithdrawalProof: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                withdrawalId: string;
+                proofId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Signed proof preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaRead"];
                 };
             };
             400: components["responses"]["ListingError"];

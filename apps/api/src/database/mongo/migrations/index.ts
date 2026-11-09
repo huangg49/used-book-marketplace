@@ -12,6 +12,8 @@ import { createAuctionReachedNoticeMigration, withAuctionReachedNotice } from '.
 import { createAuctionSecondChanceMigration, withAuctionSecondChance } from './0074-auction-second-chance.js';
 import { createAuctionDepositShareMigration, withAuctionDepositShare } from './0075-auction-deposit-share.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
+import { withdrawalProofMigration, withdrawalProofSpecs, withWithdrawalProofReference } from './0063-withdrawal-proofs.js';
+import { withdrawalProofReferenceMigration } from './0064-withdrawal-proof-reference.js';
 import { manualWithdrawalsMigration, withManualWithdrawals } from './0061-manual-wallet-withdrawals.js';
 import { createWithdrawalsMigration, withdrawalSpecs, withWithdrawals } from './0060-wallet-withdrawals.js';
 import { autoReviewV2UpgradeBridgeMigration } from './0056-auto-review-v2-upgrade-bridge.js';
@@ -569,7 +571,7 @@ const beforeWithdrawals = (): CollectionSpec[] => [
   demoCompletionSpec,
 ];
 
-export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth).map(withSupportTargetIndex).map(withAuctionPauseBudget).map(withAuctionReachedNotice).map(withAuctionSecondChance).map(withAuctionDepositShare), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
+export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth).map(withSupportTargetIndex).map(withAuctionPauseBudget).map(withAuctionReachedNotice).map(withAuctionSecondChance).map(withAuctionDepositShare), ...withdrawalSpecs.map(withManualWithdrawals).map(withWithdrawalProofReference), registrationSpec, ...withdrawalProofSpecs];
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
 const withdrawalsMigration = createWithdrawalsMigration([
@@ -653,3 +655,4 @@ migrations.push(
     ...registrationMigration.definition.collections.filter((s) => s.name === 'ledger_journals'),
   ]),
 );
+migrations.push(withdrawalProofMigration, withdrawalProofReferenceMigration);

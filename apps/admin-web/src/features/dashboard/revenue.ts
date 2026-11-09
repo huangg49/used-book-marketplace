@@ -2,6 +2,10 @@ import { z } from "zod";
 import type { components } from "@used-books/api-contract";
 
 const money = z.number().int().nonnegative();
+export const signedImage = z.object({
+  url: z.string().url(),
+});
+export type SignedImage = z.infer<typeof signedImage>;
 export const revenueOverview = z.object({
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -30,6 +34,26 @@ export const revenueOverview = z.object({
       amount: money,
       postedAt: z.string().datetime(),
       referenceId: z.string().nullable(),
+    }),
+  ),
+  topRevenueAccount: z
+    .object({
+      accountId: z.string(),
+      displayName: z.string(),
+      revenue: money,
+      avatarId: z.string().uuid().nullable(),
+    })
+    .nullable(),
+  highestPricedBooks: z.array(
+    z.object({
+      type: z.enum(["Sale", "Exchange", "Auction"]),
+      label: z.string(),
+      title: z.string(),
+      amount: money,
+      sellerName: z.string(),
+      referenceId: z.string(),
+      listingId: z.string().uuid(),
+      mediaId: z.string().uuid().nullable(),
     }),
   ),
 }) satisfies z.ZodType<components["schemas"]["RevenueOverview"]>;

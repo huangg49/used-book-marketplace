@@ -346,8 +346,151 @@ export function AgreementSheetPanel({
         </View>
       )}
 
-      {/* 3. BẢNG GIÁ THỎA THUẬN (PRICE SUMMARY) */}
-      {!isExchange && (
+      {/* 3. BẢNG GIÁ THỎA THUẬN (PRICE SUMMARY) HOẶC PHIẾU ĐỀ NGHỊ TRAO ĐỔI */}
+      {isExchange ? (
+        <View style={styles.card}>
+          <View style={styles.cardHeaderRow}>
+            <View style={styles.rowAlign}>
+              <Icon name="book" size={16} color={stitchTokens.wineDark} />
+              <AppText style={styles.cardTitle}>Phiếu đề nghị trao đổi sách</AppText>
+            </View>
+            <View
+              style={[
+                styles.modeTag,
+                terms?.activeExchangeId
+                  ? { backgroundColor: stitchTokens.likeNewGreenBg }
+                  : { backgroundColor: stitchTokens.goldLight },
+              ]}
+            >
+              <AppText
+                style={[
+                  styles.modeTagText,
+                  terms?.activeExchangeId
+                    ? { color: stitchTokens.likeNewGreen }
+                    : { color: stitchTokens.wineDark },
+                ]}
+              >
+                {terms?.activeExchangeId
+                  ? "Đang thực hiện"
+                  : terms?.exchangeIds?.length
+                    ? "Đã kết thúc / Hoàn tất"
+                    : "Chưa có phiếu"}
+              </AppText>
+            </View>
+          </View>
+
+          {(() => {
+            const exchangeIds = terms?.exchangeIds ?? [];
+            const latestExchangeId =
+              terms?.activeExchangeId ??
+              (exchangeIds.length > 0 ? exchangeIds[exchangeIds.length - 1] : null);
+
+            if (!latestExchangeId) {
+              return (
+                <View style={{ gap: space.sm, marginTop: 4 }}>
+                  <AppText style={styles.cardNoticeDesc}>
+                    Hai bên đã thống nhất chuyển sang hình thức trao đổi sách hai chiều. Hãy mở phiếu đề nghị để chọn cuốn sách đối ứng và nhập thông tin giao nhận.
+                  </AppText>
+                  {!isLocked && (
+                    <Button
+                      title="+ Tạo đề nghị đổi sách mới"
+                      onPress={() =>
+                        router.push({
+                          pathname: "/exchange-compose",
+                          params: { book: room.listingId },
+                        })
+                      }
+                    />
+                  )}
+                </View>
+              );
+            }
+
+            return (
+              <View style={{ gap: space.sm, marginTop: 4 }}>
+                <AppText style={styles.cardNoticeDesc}>
+                  {terms?.activeExchangeId
+                    ? "Phiếu trao đổi đang diễn ra. Bấm vào bên dưới để xem trạng thái vận chuyển, tải bằng chứng đóng gói hoặc xác nhận nhận sách."
+                    : "Phiếu trao đổi trước đó đã hoàn tất hoặc được giải quyết. Bạn vẫn có thể xem lại toàn bộ chi tiết vận đơn và lịch sử phân xử bất cứ lúc nào."}
+                </AppText>
+
+                <Button
+                  title="Mở chi tiết phiếu trao đổi"
+                  onPress={() =>
+                    router.push({
+                      pathname: "/exchange",
+                      params: { id: latestExchangeId },
+                    })
+                  }
+                />
+
+                {exchangeIds.length > 1 && (
+                  <View style={{ gap: 6, marginTop: 4 }}>
+                    <AppText kind="small" color={colors.muted}>
+                      Lịch sử các lần đề nghị trao đổi ({exchangeIds.length}):
+                    </AppText>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+                      {exchangeIds.map((exId, idx) => {
+                        const isLatest = exId === latestExchangeId;
+                        return (
+                          <Pressable
+                            key={exId}
+                            accessibilityRole="button"
+                            onPress={() =>
+                              router.push({
+                                pathname: "/exchange",
+                                params: { id: exId },
+                              })
+                            }
+                            style={({ pressed }) => [
+                              {
+                                paddingHorizontal: 10,
+                                paddingVertical: 6,
+                                borderRadius: radius.pill,
+                                borderWidth: 1,
+                                borderColor: isLatest
+                                  ? stitchTokens.wineDark
+                                  : colors.border,
+                                backgroundColor: isLatest
+                                  ? stitchTokens.roseWarmSurface
+                                  : stitchTokens.parchment,
+                              },
+                              pressed && { opacity: 0.75 },
+                            ]}
+                          >
+                            <AppText
+                              kind="small"
+                              style={{
+                                fontWeight: isLatest ? "700" : "600",
+                                color: isLatest ? stitchTokens.wineDark : colors.ink,
+                              }}
+                            >
+                              {`Đề nghị lần ${idx + 1}${isLatest ? " (mới nhất)" : ""}`}
+                            </AppText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                )}
+
+                {!terms?.activeExchangeId && !isLocked && (
+                  <Button
+                    secondary
+                    title="+ Tạo đề nghị đổi sách mới"
+                    onPress={() =>
+                      router.push({
+                        pathname: "/exchange-compose",
+                        params: { book: room.listingId },
+                      })
+                    }
+                  />
+                )}
+              </View>
+            );
+          })()}
+        </View>
+      ) : (
         <View style={styles.card}>
           <AppText style={styles.cardTitle}>Giá sách giao dịch</AppText>
 

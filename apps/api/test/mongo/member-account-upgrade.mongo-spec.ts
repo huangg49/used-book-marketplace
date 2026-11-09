@@ -18,45 +18,6 @@ import {
 } from './harness.js';
 import { CAPITAL_INCREASE_JOURNAL_ID } from '../../src/database/mongo/migrations/0055-simulator-capital-increase.js';
 
-// An upgrade from main's 59 applied migrations, not a fresh-current-schema test.
-const suffix = [
-  '0047-member-profiles',
-  '0048-account-controls',
-  '0049-member-cart',
-  '0050-listing-auto-review',
-  '0050-support-cases',
-  '0051-support-auto-review-union',
-  '0056-auto-review-v2-upgrade-bridge',
-  '0052-listing-auto-review-v2',
-  '0053-exchange-agreement',
-  '0054-exchange-evidence',
-  '0052-free-shipping',
-  '0054-exchange-negotiated-diff',
-  '0055-exchange-negotiated-diff-payer',
-  '0054-local-demo-completion',
-  '0054-uncapped-auction-amounts',
-  '0055-simulator-capital-increase',
-  '0056-auction-step-options',
-  '0057-custom-auction-step',
-  '0058-buy-now-rival-window',
-  '0059-auction-free-shipping-reconcile',
-  '0060-wallet-withdrawals',
-  '0061-manual-wallet-withdrawals',
-  '0062-message-send-limits',
-  '0063-auction-buy-now-mode',
-  '0064-auction-bid-holds',
-  '0065-auction-types',
-  '0066-auction-registration',
-  '0067-auction-lifecycle',
-  '0068-auction-resume',
-  '0069-auction-scheduled-open',
-  '0070-auction-open-month',
-  '0071-support-target-index',
-  '0072-auction-pause-budget',
-  '0073-auction-reached-notice',
-  '0074-auction-second-chance',
-  '0075-auction-deposit-share',
-];
 const sha = (value: unknown) =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');
 describe('main → member profile/account/cart schema upgrade', () => {
@@ -68,7 +29,7 @@ describe('main → member profile/account/cart schema upgrade', () => {
     let app: MongoClient | undefined;
     try {
       expect(new URL(url).hostname).toBe('127.0.0.1');
-      expect(new URL(url).port).toBe('57017');
+      expect(new URL(url).port).toBe(process.env.TEST_MONGO_PORT ?? '57017');
       expect((await root.db('admin').command({ hello: 1 })).setName).toBe(
         'rs-test',
       );
@@ -76,8 +37,6 @@ describe('main → member profile/account/cart schema upgrade', () => {
         app: TEST_APP_PASSWORD,
         migrator: TEST_MIGRATOR_PASSWORD,
       });
-      const base = migrations.filter((m) => !suffix.includes(m.id));
-      expect(base).toHaveLength(59);
       const main = JSON.parse(
         readFileSync(
           new URL(
@@ -88,9 +47,12 @@ describe('main → member profile/account/cart schema upgrade', () => {
         ),
       );
       expect(main.source).toBe('be581aeca4afaf3a7cea8b4b047281fd78e661de');
+      expect(main.migrations).toHaveLength(59);
+      const base = migrations.slice(0, main.migrations.length);
       expect(base.map((m) => ({ id: m.id, checksum: checksumOf(m) }))).toEqual(
         main.migrations,
       );
+      const suffix = migrations.slice(base.length).map((m) => m.id);
       // Model the role installed by main, before these three collections existed.
       await db.command({
         updateRole: 'latlai_app',

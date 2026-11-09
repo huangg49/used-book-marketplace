@@ -19,6 +19,7 @@ import {
   withdrawalReasons,
   withdrawalSchema,
   withdrawalReceiptSchema,
+  withdrawalProofReadSchema,
   type CreateWithdrawal,
   type Withdrawal,
 } from "@used-books/session-client";
@@ -227,7 +228,7 @@ export function WalletWithdrawals({
         void refresh();
       } else
         setError(
-          "Chưa xác định yêu cầu đã được tiếp nhận. Bấm “Kiểm tra lại yêu cầu” để gửi lại cùng mã; thông tin của bạn được giữ nguyên.",
+          "Chưa xác định được kết quả gửi. Bấm “Kiểm tra lại yêu cầu” để kiểm tra lại bằng cùng mã; không tạo thêm yêu cầu mới và thông tin của bạn được giữ nguyên.",
         );
     } finally {
       inFlight.current = false;
@@ -288,6 +289,7 @@ export function WalletWithdrawals({
           onSubmit={submit}
           className={styles.form}
           data-step={review ? "review" : "entry"}
+          autoComplete="off"
         >
           <ol className={styles.steps} aria-label="Các bước rút tiền">
             <li
@@ -318,6 +320,10 @@ export function WalletWithdrawals({
               <div className={styles.amountInput}>
                 <input
                   id="withdraw-amount"
+                  name="withdraw-amount"
+                  autoComplete="off"
+                  spellCheck={false}
+                  aria-autocomplete="none"
                   inputMode="numeric"
                   type="text"
                   required
@@ -540,7 +546,12 @@ export function WalletWithdrawals({
             </p>
           )}
           {error && (
-            <p className={styles.error} role="alert">
+            <p
+              className={styles.error}
+              data-state={uncertain ? "uncertain" : "invalid"}
+              role="alert"
+            >
+              {uncertain && <Info size={18} aria-hidden="true" />}
               {error}
             </p>
           )}
@@ -611,6 +622,15 @@ export function WalletWithdrawals({
   );
 }
 function WithdrawalDetail({ row }: { row: Withdrawal }) {
+  const proof = useQuery({
+    queryKey: ["withdrawal-proof", row.id, row.proofId],
+    queryFn: () =>
+      session.request(
+        `/me/withdrawals/${row.id}/proof/${row.proofId}/read`,
+        withdrawalProofReadSchema,
+      ),
+    enabled: !!row.proofId,
+  });
   const StatusIcon = ["Completed", "Refunded"].includes(row.state)
     ? Check
     : ["Rejected", "FailedVerified"].includes(row.state)
@@ -700,6 +720,18 @@ function WithdrawalDetail({ row }: { row: Withdrawal }) {
           Tiền đang được giữ. Nếu kết quả chưa rõ, hệ thống tiếp tục đối soát
           cùng mã chi; bạn không cần gửi thêm đơn.
         </p>
+      )}
+      {row.proofId && (
+        <section className={styles.proof} aria-label="Chứng từ chuyển khoản">
+          <h3>Chứng từ chuyển khoản</h3>
+          {proof.isPending && <p>Đang tải ảnh chứng từ…</p>}
+          {proof.isError && <p role="alert">Chưa tải được ảnh chứng từ. Vui lòng thử lại sau.</p>}
+          {proof.data && (
+            <a href={proof.data.url} target="_blank" rel="noreferrer">
+              <img src={proof.data.url} alt="Ảnh chứng từ chuyển khoản" />
+            </a>
+          )}
+        </section>
       )}
       <details className={styles.detailReference}>
         <summary>

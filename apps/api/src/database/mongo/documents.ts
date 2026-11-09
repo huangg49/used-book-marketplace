@@ -678,6 +678,25 @@ export interface WithdrawalDoc extends Lockable {
   version: number; approverId: string | null; payoutRef: string | null;
   createdAt: Date; updatedAt: Date;
   history: { state: WithdrawalDoc['state']; at: Date; note: string }[];
+  proofId: string | null;
+}
+export interface WithdrawalProofDoc {
+  _id: string;
+  withdrawalId: string;
+  uploaderId: string;
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+  byteSize: number;
+  sha256: string;
+  reservedBytes: number;
+  status: 'Pending' | 'Ready';
+  version: 1 | 2;
+  createdAt: Date;
+  uploadedAt: Date | null;
+  derivativeBytes: number | null;
+  width: number | null;
+  height: number | null;
+  createReceiptId: string;
+  uploadReceiptId: string | null;
 }
 export interface WithdrawalEventDoc {
   _id: string; withdrawalId: string; payoutRef: string; payloadHash: string;
@@ -1428,6 +1447,10 @@ export interface ExchangeShipmentSnapshot {
   trackingCode?: string | null;
   notes?: string | null;
   meetupLocation?: string | null;
+  packagingPhotoUrl?: string | null;
+  packagingVideoUrl?: string | null;
+  packagingPhotoName?: string | null;
+  packagingVideoName?: string | null;
   shippedAt?: Date | null;
   lastEvent?: string | null;
   lastEventAt?: Date | null;

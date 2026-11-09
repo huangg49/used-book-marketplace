@@ -54,6 +54,10 @@ export interface ShipmentData {
     notes?: string;
     meetupLocation?: string;
     meetupTime?: string;
+    packagingPhotoUrl?: string;
+    packagingVideoUrl?: string;
+    packagingPhotoName?: string;
+    packagingVideoName?: string;
     shippedAt?: string; // ISO string
     lastEvent?: string;
     lastEventAt?: string;

@@ -3088,6 +3088,35 @@ paths:
           $ref: "#/components/responses/ListingError"
         "503":
           $ref: "#/components/responses/ListingError"
+  /operations/users/{userId}/avatar/read:
+    get:
+      operationId: getOperationsUserAvatarRead
+      tags: [Operations]
+      summary: Read a user's attached avatar for operations UI
+      description: ACTIVE STAFF/ADMIN only. Returns a short-lived signed avatar URL.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: *a1
+      responses:
+        "200":
+          description: Signed avatar URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [url, expiresAt]
+                properties:
+                  url: { type: string, format: uri }
+                  expiresAt: { type: string, format: date-time }
+        "401": {$ref: "#/components/responses/ListingError"}
+        "403": {$ref: "#/components/responses/ListingError"}
+        "404": {$ref: "#/components/responses/ListingError"}
+        "503": {$ref: "#/components/responses/ListingError"}
   /operations/revenue-overview:
     get:
       operationId: getRevenueOverview
@@ -13167,6 +13196,77 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WithdrawalReceipt"
+  /admin/withdrawals/{withdrawalId}/proof:
+    post:
+      tags: [Wallet]
+      operationId: createWithdrawalProof
+      summary: createWithdrawalProof
+      parameters:
+        - name: withdrawalId
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWithdrawalProof"
+      responses:
+        "200":
+          description: Reserved proof
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WithdrawalProofReceipt"
+  /admin/withdrawals/{withdrawalId}/proof/{proofId}/content:
+    put:
+      tags: [Wallet]
+      operationId: uploadWithdrawalProof
+      summary: uploadWithdrawalProof
+      parameters:
+        - name: withdrawalId
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+        - name: proofId
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      requestBody:
+        required: true
+        content:
+          image/jpeg: {schema: {type: string, format: binary}}
+          image/png: {schema: {type: string, format: binary}}
+          image/webp: {schema: {type: string, format: binary}}
+      responses:
+        "200":
+          description: Uploaded proof
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WithdrawalProofReceipt"
+  /me/withdrawals/{withdrawalId}/proof/{proofId}/read:
+    get:
+      tags: [Wallet]
+      operationId: readWithdrawalProof
+      summary: readWithdrawalProof
+      parameters:
+        - name: withdrawalId
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+        - name: proofId
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        "200":
+          description: Signed proof preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaRead"
         "400":
           $ref: "#/components/responses/ListingError"
         "401":
@@ -18813,6 +18913,47 @@ components:
           type: string
           minLength: 3
           maxLength: 500
+        proofId:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Required when approving a manual withdrawal.
+    CreateWithdrawalProof:
+      type: object
+      additionalProperties: false
+      required: [mimeType, byteSize, sha256]
+      properties:
+        mimeType:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+        byteSize:
+          type: integer
+          minimum: 1
+          maximum: 10000000
+        sha256:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+    WithdrawalProofReceipt:
+      type: object
+      additionalProperties: false
+      required: [id, entityType, entityId, version, state, serverTime, demoOnly]
+      properties:
+        id: *a1
+        entityType:
+          type: string
+          const: WithdrawalProof
+        entityId: *a1
+        version:
+          type: integer
+          minimum: 1
+        state:
+          type: string
+          enum: [Pending, Ready]
+        serverTime: *a2
+        demoOnly:
+          type: boolean
+          const: true
     WithdrawalVersion:
       type: object
       additionalProperties: false
@@ -18921,6 +19062,11 @@ components:
             - "null"
           format: uuid
         payoutRef:
+          type:
+            - string
+            - "null"
+          format: uuid
+        proofId:
           type:
             - string
             - "null"
@@ -22243,7 +22389,7 @@ components:
     RevenueOverview:
       type: object
       additionalProperties: false
-      required: [from, to, timezone, serverTime, total, orderSettlements, daily, page, pageSize, totalTransactions, transactions]
+      required: [from, to, timezone, serverTime, total, orderSettlements, daily, page, pageSize, totalTransactions, transactions, topRevenueAccount, highestPricedBooks]
       properties:
         from: { type: string, format: date }
         to: { type: string, format: date }
@@ -22282,6 +22428,33 @@ components:
               amount: { type: integer, minimum: 0 }
               postedAt: { type: string, format: date-time }
               referenceId: { type: [string, "null"] }
+        topRevenueAccount:
+          type: [object, "null"]
+          additionalProperties: false
+          required: [accountId, displayName, revenue, avatarId]
+          properties:
+            accountId: { type: string }
+            displayName: { type: string }
+            revenue: { type: integer, minimum: 0 }
+            avatarId: { type: [string, "null"], format: uuid }
+        highestPricedBooks:
+          type: array
+          maxItems: 3
+          items:
+            type: object
+            additionalProperties: false
+            required: [type, label, title, amount, sellerName, referenceId, listingId, mediaId]
+            properties:
+              type:
+                type: string
+                enum: [Sale, Exchange, Auction]
+              label: { type: string }
+              title: { type: string }
+              amount: { type: integer, minimum: 0 }
+              sellerName: { type: string }
+              referenceId: { type: string }
+              listingId: { type: string, format: uuid }
+              mediaId: { type: [string, "null"], format: uuid }
     OperationsPoint:
       type: object
       additionalProperties: false
@@ -23348,6 +23521,22 @@ components:
           type:
             - string
             - "null"
+        packagingPhotoUrl:
+          type:
+            - string
+            - "null"
+        packagingVideoUrl:
+          type:
+            - string
+            - "null"
+        packagingPhotoName:
+          type:
+            - string
+            - "null"
+        packagingVideoName:
+          type:
+            - string
+            - "null"
         shippedAt:
           type:
             - string
@@ -23422,6 +23611,14 @@ components:
         meetupLocation:
           type: string
         notes:
+          type: string
+        packagingPhotoUrl:
+          type: string
+        packagingVideoUrl:
+          type: string
+        packagingPhotoName:
+          type: string
+        packagingVideoName:
           type: string
     RejectExchangeCommand:
       type: object
@@ -23931,6 +24128,8 @@ components:
           enum:
             - RefundBoth
             - CompleteExchange
+            - CompensateInitiator
+            - CompensateRecipient
         reason:
           type: string
           minLength: 5

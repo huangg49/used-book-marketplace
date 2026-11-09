@@ -20,6 +20,10 @@ export const exchangeShipmentInfo = z.object({
   trackingCode: z.string().nullable().optional(),
   meetupLocation: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  packagingPhotoUrl: z.string().nullable().optional(),
+  packagingVideoUrl: z.string().nullable().optional(),
+  packagingPhotoName: z.string().nullable().optional(),
+  packagingVideoName: z.string().nullable().optional(),
   shippedAt: dateIso,
 });
 
@@ -75,7 +79,10 @@ export const exchangeSchema = z.object({
   cancelReason: z.string().nullable().optional(),
   cancelledBy: z.string().nullable().optional(),
   cancelledAt: dateIso,
-  resolutionDecision: z.enum(["RefundBoth", "CompleteExchange"]).nullable().optional(),
+  resolutionDecision: z
+    .enum(["RefundBoth", "CompleteExchange", "CompensateInitiator", "CompensateRecipient"])
+    .nullable()
+    .optional(),
   resolutionReason: z.string().nullable().optional(),
   resolvedBy: uuid.nullable().optional(),
   resolvedAt: dateIso,
