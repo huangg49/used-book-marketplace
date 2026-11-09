@@ -1,4 +1,5 @@
 import { withdrawalSpecs } from '../../src/database/mongo/migrations/0060-wallet-withdrawals.js';
+import { withdrawalProofSpecs } from '../../src/database/mongo/migrations/0063-withdrawal-proofs.js';
 import { exchangeEvidenceSpecs } from '../../src/database/mongo/migrations/0054-exchange-evidence.js';
 import { buyNowNotificationsMigration } from '../../src/database/mongo/migrations/0029-buy-now-notifications.js';
 import { reviewLifecycleSpecs } from '../../src/database/mongo/migrations/0040-transaction-review-lifecycle.js';
@@ -98,6 +99,7 @@ describe('migrations', () => {
         INFRASTRUCTURE_COLLECTIONS.length -
         // New Mongo-native evidence/assignment collections do not change the PG baseline.
         withdrawalSpecs.length -
+        withdrawalProofSpecs.length -
         // ADR 0077: auction_registrations is Mongo-native.
         1 -
         exchangeEvidenceSpecs.length -
