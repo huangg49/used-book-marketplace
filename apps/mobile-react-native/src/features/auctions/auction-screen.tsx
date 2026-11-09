@@ -582,7 +582,7 @@ function AuctionBody({
         </View>
       ) : signedIn && auction.state === "SecondChanceOffered" && me?.secondChance?.outcome === "Offered" ? (
         // ADR 0086: the runner-up answers the one offer.
-        <BidPanel auction={auction} me={me} refresh={refresh} paused={ownerError} />
+        <BidPanel auction={auction} me={me} now={now} refresh={refresh} paused={ownerError} />
       ) : me?.won ? (
         me.orderId ? (
           <WinnerSteps orderId={me.orderId} boughtNow={me.boughtNow} paused={ownerError} />
@@ -594,14 +594,14 @@ function AuctionBody({
           meLoading ? (
             <StatePanel loading title="Đang tải lượt trả giá của bạn" />
           ) : (
-            <BidPanel auction={auction} me={me} refresh={refresh} paused={ownerError} />
+            <BidPanel auction={auction} me={me} now={now} refresh={refresh} paused={ownerError} />
           )
         ) : (
           <Button title="Đăng nhập để trả giá" onPress={() => router.push("/account")} />
         )
       ) : scheduled && signedIn && !meLoading && auction.state === "Active"
-        && (registrationBlocks(auction, me) || canWithdrawRegistration(auction, me, Date.now())) ? (
-        <BidPanel auction={auction} me={me} refresh={refresh} paused={ownerError} />
+        && (registrationBlocks(auction, me) || canWithdrawRegistration(auction, me, now)) ? (
+        <BidPanel auction={auction} me={me} now={now} refresh={refresh} paused={ownerError} />
       ) : scheduled ? (
         <Notice>
           {`Phiên chưa mở. Người bán hẹn mở lúc ${time(auction.startAt)}; khi đó bạn có thể trả giá${auction.buyNowPrice !== null ? ` hoặc mua ngay với ${formatVnd(auction.buyNowPrice)}` : ""}.`}
@@ -626,11 +626,14 @@ function AuctionBody({
 function BidPanel({
   auction,
   me,
+  now,
   refresh,
   paused,
 }: {
   auction: PublicAuctionSummary;
   me: Participation | null;
+  // Server-corrected clock from the screen (render stays pure).
+  now: number;
   refresh: () => Promise<unknown>;
   paused: boolean;
 }) {
@@ -725,8 +728,8 @@ function BidPanel({
         <SecondChanceBlock offer={me.secondChance} available={available} locked={locked} pointName={auction.pointName}
           onAccept={() => setConfirming({ kind: "SecondChanceAccept", amount: me.secondChance!.price })}
           onDecline={() => setConfirming({ kind: "SecondChanceDecline", amount: me.secondChance!.price })} />
-      ) : registrationBlocks(auction, me) || canWithdrawRegistration(auction, me, Date.now()) ? (
-        <RegisterBlock auction={auction} me={me} available={available} locked={locked}
+      ) : registrationBlocks(auction, me) || canWithdrawRegistration(auction, me, now) ? (
+        <RegisterBlock auction={auction} me={me} now={now} available={available} locked={locked}
           onRegister={(deposit) => setConfirming({ kind: "Register", amount: deposit })}
           onWithdraw={() => setConfirming({ kind: "Withdraw", amount: 0 })} />
       ) : auction.auctionType === "Dutch" ? (
@@ -940,9 +943,10 @@ function SecondChanceBlock({ offer, available, locked, pointName, onAccept, onDe
 }
 
 // ADR 0077: register with a refundable deposit; bidding opens at minBidders.
-function RegisterBlock({ auction, me, available, locked, onRegister, onWithdraw }: {
+function RegisterBlock({ auction, me, now, available, locked, onRegister, onWithdraw }: {
   auction: PublicAuctionSummary;
   me: Participation | null;
+  now: number;
   available: number | null;
   locked: boolean;
   onRegister: (deposit: number) => void;
@@ -954,7 +958,7 @@ function RegisterBlock({ auction, me, available, locked, onRegister, onWithdraw 
   const registered = me?.registrationState === "Registered";
   const short = registered ? 0 : fundsShortfall(deposit, available);
   // ADR 0085: below the minimum, or a full auction until 72 h before it opens.
-  const withdrawable = canWithdrawRegistration(auction, me, Date.now());
+  const withdrawable = canWithdrawRegistration(auction, me, now);
   const fullUntil = count >= need && auction.fullWithdrawUntil
     ? new Date(auction.fullWithdrawUntil).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
     : null;
