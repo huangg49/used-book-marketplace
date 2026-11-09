@@ -18,12 +18,13 @@ const user={id:id(1),displayName:'Bạn đọc QA',email:'reader@example.test',r
 const checks=[];let browser;
 try{
  browser=await chromium.launch();
- for(const width of [390,1440])for(const mode of ['isbn','lookup-fail','ai-lost-ack',...baseline?[]:['lookup-ai-bypass','ai-direct']]){
+ for(const width of [390,1440])for(const mode of ['isbn','lookup-fail','ai-lost-ack',...baseline?[]:['lookup-ai-bypass','ai-direct','catalog-match']]){
   const context=await browser.newContext({viewport:{width,height:950},reducedMotion:'reduce'});
   await context.routeWebSocket('**/*',socket=>socket.close());
   const page=await context.newPage(),errors=[],gates=[],aiGates=[],intents=[];
   const counts={draft:0,media:0,bytes:0,finalize:0,isbn:0,ai:0};
-  page.on('pageerror',e=>errors.push(e.message));let holdIsbn=true,failIsbn=mode==='lookup-fail'||mode==='lookup-ai-bypass',holdAi=mode!=='lookup-ai-bypass'&&mode!=='ai-direct';
+  const directAi = mode === 'ai-direct' || mode === 'catalog-match';
+  page.on('pageerror',e=>errors.push(e.message));let holdIsbn=true,failIsbn=mode==='lookup-fail'||mode==='lookup-ai-bypass',holdAi=mode!=='lookup-ai-bypass'&&!directAi;
   let searchedTitle;
   await context.route('**/*',async route=>{
    const request=route.request(),url=new URL(request.url()),p=url.pathname,m=request.method();
@@ -45,11 +46,16 @@ try{
     if(holdAi)await new Promise(resolve=>aiGates.push(resolve));
     if(at===1&&mode==='ai-lost-ack')return route.abort('failed');
     return route.fulfill({json:{id:id(20),status:'Suggested',fields:{title:'Tên đọc từ ảnh QA',authors:[],publisher:null,
-     publicationYear:null,language:null,edition:null,isbn:null},matches:[],missing:[],cached:mode==='lookup-ai-bypass'&&at>1}});
+     publicationYear:null,language:directAi?'vi':null,edition:null,isbn:null},matches:[],missing:[],cached:mode==='lookup-ai-bypass'&&at>1}});
    }
    if(p.endsWith('/catalog-matches')&&m==='POST'){
     searchedTitle=request.postDataJSON().title;
-    return route.fulfill({json:{items:[],truncated:false,serverTime:new Date().toISOString()}});
+    const items = mode === 'catalog-match' ? [{
+      book: { id: id(22), title: 'Tên đọc từ ảnh QA', authors: ['Tác giả danh mục QA'],
+        publisher: null, publicationYear: null, language: 'vi', edition: null, category: 'Sách khác', isbn: null },
+      matchedBy: 'SimilarTitle', pending: false, warnings: ['CheckEdition'],
+    }] : [];
+    return route.fulfill({json:{items,truncated:false,serverTime:new Date().toISOString()}});
    }
    assert.equal(m,'GET','No submit/save/provider commands in autofill fixture');
    if(p==='/api/v1/me/addresses')return route.fulfill({json:{version:0,items:[]}});
@@ -63,18 +69,60 @@ try{
   await page.getByRole('button',{name:'Đăng nhập',exact:true}).click();
   const panel=page.locator('section[aria-labelledby="photo-autofill-title"]');
   await expect(panel).toBeVisible();await page.waitForFunction(()=>!document.querySelector('[data-paper-storm]'),undefined,{timeout:15000});
+  if (mode === 'ai-direct') {
+   await panel.screenshot({path:path.join(out,`step-one-empty-${width}.png`)});
+  }
   await page.getByRole('button',{name:'Tự nhập thông tin',exact:true}).click();
   const title=page.getByLabel('Tên sách',{exact:true});await title.fill('Tên đang nhập QA');
   const png=Buffer.from(await page.evaluate(()=>{const c=document.createElement('canvas');c.width=80;c.height=120;return c.toDataURL('image/png').split(',')[1]}),'base64');
   await panel.locator('input[type=file]').setInputFiles({name:'qa-book.png',mimeType:'image/png',buffer:png});
-  if(mode==='ai-direct'){
+  if(directAi){
    await panel.getByRole('button',{name:'Đọc chữ bằng AI',exact:true}).evaluate(button=>{button.click();button.click()});
    await expect(panel.getByRole('button',{name:'Dùng Tên sách',exact:true})).toBeVisible();
    await expect(title).toHaveValue('Tên đang nhập QA');
+   const result = panel.getByRole('region', { name: 'Thông tin đọc từ ảnh' });
+   const suggestionTitle = result.getByLabel('Tên sách từ ảnh', { exact: true });
+   await expect(suggestionTitle).toHaveValue('Tên đọc từ ảnh QA');
+   await expect(result.getByRole('combobox', { name: 'Ngôn ngữ từ ảnh' }).locator('option:checked')).toHaveText('Tiếng Việt');
+   assert.equal(await panel.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true, 'No horizontal clipping in the reading panel');
+   if (mode === 'catalog-match') {
+    const candidate = panel.getByRole('button', { name: 'Chọn đầu sách: Tên đọc từ ảnh QA' });
+    await expect(candidate).toBeVisible();
+    await suggestionTitle.fill('Tên khác để đối chiếu');
+    await expect(candidate).toHaveCount(0);
+    await suggestionTitle.fill('Tên đọc từ ảnh QA');
+    await candidate.click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button', { name: 'Xác nhận chọn đầu sách' }).click();
+    await expect(page.locator('#sell-selected-title')).toHaveText('Tên đọc từ ảnh QA');
+    await expect(page.locator('#sell-selected-title')).toBeFocused();
+   } else {
+    await expect(result.getByText('2/7 mục đọc được')).toBeVisible();
+    await panel.getByText(/Chưa tìm thấy đầu sách phù hợp/).waitFor();
+    await panel.screenshot({path:path.join(out,`after-ai-direct-${width}.png`)});
+    const more = result.locator('summary').filter({ hasText: 'Bổ sung 5 mục chưa đọc được' });
+    await more.focus();
+    await page.keyboard.press('Enter');
+    const author = result.getByLabel('Tác giả từ ảnh', { exact: true });
+    await expect(author).toBeVisible();
+    await author.fill('Tác giả bổ sung QA');
+    const year = result.getByLabel('Năm xuất bản từ ảnh', { exact: true });
+    await year.fill('195');
+    await expect(year).toHaveAttribute('aria-invalid', 'true');
+    const apply = result.getByRole('button', { name: 'Dùng tất cả thông tin đã rà soát' });
+    await expect(apply).toBeDisabled();
+    await year.fill('1963');
+    await apply.click();
+    await page.getByRole('button', { name: 'Dùng gợi ý đã chọn', exact: true }).click();
+    await expect(page.getByLabel('Tác giả', { exact: true })).toHaveValue('Tác giả bổ sung QA');
+    await expect(page.getByLabel('Năm xuất bản', { exact: true })).toHaveValue('1963');
+    await panel.getByRole('button', { name: 'Bỏ ảnh để đọc 1' }).click();
+    await expect(panel.getByText(/Ảnh đã đổi/)).toBeVisible();
+    await expect(suggestionTitle).toBeDisabled();
+   }
    assert.deepEqual(counts,{draft:1,media:1,bytes:1,finalize:1,isbn:0,ai:1});
    assert.deepEqual(errors,[]);
    checks.push({width,mode,counts,manualDraftPreserved:true});
-   await panel.screenshot({path:path.join(out,`after-ai-direct-${width}.png`)});
    await context.close();
    continue;
   }
@@ -94,14 +142,14 @@ try{
    await expect(panel.getByRole('button',{name:'Dùng Tên sách',exact:true})).toBeVisible();
    await panel.getByText(/Chưa tìm thấy đầu sách phù hợp/).waitFor();
    const corrected='Tựa QA đã bổ sung phần còn thiếu';
-   await panel.getByLabel('Tên sách để tìm').fill(corrected);
+   await panel.getByLabel('Tên sách từ ảnh', { exact: true }).fill(corrected);
    await panel.getByRole('button',{name:'Tìm lại trong danh mục'}).click();
    await expect.poll(()=>searchedTitle).toBe(corrected);
    await panel.getByRole('button',{name:'Đọc lại',exact:true}).click();
    await expect(panel.getByText(/Đã dùng lại kết quả/)).toBeVisible();
-   await expect(panel.getByLabel('Tên sách để tìm')).toHaveValue(corrected);
+   await expect(panel.getByLabel('Tên sách từ ảnh', { exact: true })).toHaveValue(corrected);
    await expect(title).toHaveValue('Tên đang nhập QA');
-   await panel.getByRole('button',{name:'Dùng thông tin đã sửa',exact:true}).click();
+   await panel.getByRole('button',{name:'Dùng tất cả thông tin đã rà soát',exact:true}).click();
    await page.getByRole('button',{name:'Dùng gợi ý đã chọn',exact:true}).click();
    await expect(title).toHaveValue(corrected);
    assert.equal(counts.ai,2,'The same photos can return cached results without losing edits');
