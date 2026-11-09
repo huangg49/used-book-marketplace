@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useRef, useState, useId } from "react";
+import { ChevronDown } from "lucide-react";
 import {
   catalogBookFacts,
   catalogHints,
@@ -21,27 +22,20 @@ import styles from "./PhotoAutofill.module.css";
 export function CatalogRecovery({
   attempt,
   channel,
-  suggestion,
   initialHints,
-  compact = false,
+  reviewed,
   disabled,
   onPickBook,
-  onFieldsChange,
-  onUseReviewed,
 }: {
   attempt: DraftAttempt;
   channel?: "Auction";
-  suggestion: AutofillSuggestion | null;
+  reviewed?: AutofillSuggestion["fields"] | null;
   initialHints?: AutofillSuggestion["fields"];
-  compact?: boolean;
   disabled: boolean;
   onPickBook: (match: CatalogMatch) => void;
-  onFieldsChange?: (fields: CatalogSearchFields) => void;
-  onUseReviewed?: () => void;
 }) {
-  const [fields, setFields] = useState(() =>
-    initialCatalogFields(initialHints ?? suggestion?.fields),
-  );
+  const [manualFields, setManualFields] = useState(() => initialCatalogFields(initialHints));
+  const fields = reviewed ? initialCatalogFields(reviewed) : manualFields;
   const [answer, setAnswer] = useState({
     items: [] as CatalogMatch[],
     truncated: false,
@@ -62,7 +56,7 @@ export function CatalogRecovery({
   // cached AI matches cannot bypass current ISBN/volume filters.
   const searchInitial = useEffectEvent(() => {
     if (
-      (suggestion || initialHints) &&
+      (reviewed || initialHints) &&
       (fields.title.trim() || fields.isbn.trim())
     )
       void search();
@@ -77,9 +71,7 @@ export function CatalogRecovery({
   }, []);
   const stale = signature !== answer.signature;
   function edit(key: keyof CatalogSearchFields, value: string) {
-    const next = { ...fields, [key]: value };
-    setFields(next);
-    onFieldsChange?.(next);
+    setManualFields((previous) => ({ ...previous, [key]: value }));
     setSelected(null);
   }
   async function search() {
@@ -105,7 +97,7 @@ export function CatalogRecovery({
         setSearched(true);
       }
     } catch {
-      if (active.current && sequence.current === run)
+      if (active.current && sequence.current === run && current.current === at)
         setError(
           "Chưa tìm được danh mục. Kiểm tra tên/ISBN rồi thử lại; nội dung đã nhập vẫn được giữ.",
         );
@@ -116,91 +108,94 @@ export function CatalogRecovery({
       }
     }
   }
-  const SearchShell = compact ? "details" : "div";
-  const chooseLocked = disabled || busy || stale || !!error;
+  const currentAnswer = !stale && !error;
+  const chooseLocked = disabled || busy || !currentAnswer;
+  const hasSearch = !!(fields.title.trim() || fields.isbn.trim());
+  let status = "";
+  if (busy) {
+    status = "Đang đối chiếu danh mục…";
+  } else if (stale) {
+    status = hasSearch
+      ? "Thông tin tìm đã đổi. Bấm tìm lại để cập nhật kết quả."
+      : "Nhập tên hoặc ISBN để tìm.";
+  } else if (searched && !error) {
+    status = answer.items.length
+      ? `Tìm thấy ${answer.items.length} đầu sách để đối chiếu.`
+      : "Chưa tìm thấy đầu sách phù hợp. Bạn vẫn có thể dùng thông tin từ ảnh hoặc tự nhập.";
+  }
+  const searchAction = (
+    <button
+      type="button"
+      className={styles.useAll}
+      disabled={disabled || busy || !hasSearch}
+      onClick={() => void search()}
+      aria-busy={busy}
+    >
+      {busy ? "Đang tìm đầu sách…" : "Tìm lại trong danh mục"}
+    </button>
+  );
   return (
     <div className={styles.recovery} aria-label="Đối chiếu đầu sách">
-      <h4>Chọn đúng đầu sách</h4>
+      <h4>Đối chiếu với danh mục</h4>
       <p className={styles.help}>
-        {compact
-          ? "Đối chiếu tác giả, tập và ấn bản trước khi chọn."
-          : onFieldsChange
-            ? "Sửa chữ bị đọc sai tại đây. Bạn có thể tìm lại hoặc dùng thông tin đã sửa để điền vào bài đăng."
-            : "Nhập tên hoặc ISBN để tra danh mục. Bạn cũng có thể tự nhập theo bìa."}
+        {reviewed
+          ? "Dùng tên, tác giả, ISBN và ấn bản ở phần trên để tìm đầu sách."
+          : "Kiểm tra tên, tác giả, tập và ấn bản trước khi chọn đầu sách."}
       </p>
-      <SearchShell className={styles.searchControls}>
-        {compact ? <summary>Sửa thông tin tìm</summary> : null}
-        <div
-          className={styles.searchFields}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              if (fields.title.trim() || fields.isbn.trim()) void search();
-            }
-          }}
-        >
-          {(
-            [
-              ["title", "Tên sách để tìm", 300],
-              ["authors", "Tác giả để tìm", 2010],
-              ["isbn", "ISBN để tìm", 30],
-              ["edition", "Tập hoặc ấn bản để tìm", 200],
-            ] as const
-          ).map(([key, label, maxLength]) => (
-            <label key={key} htmlFor={`${id}-${key}`}>
-              <span>{label}</span>
-              <input
-                id={`${id}-${key}`}
-                value={fields[key]}
-                maxLength={maxLength}
-                disabled={disabled || busy}
-                onChange={(event) => edit(key, event.target.value)}
-              />
-            </label>
-          ))}
-        </div>
-        <p className={styles.help}>
-          Nhiều tác giả: ngăn cách bằng dấu chấm phẩy (;). Không có ISBN thì để
-          trống.
-        </p>
-        <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.useAll}
-            disabled={disabled || busy || (!fields.title.trim() && !fields.isbn.trim())}
-            onClick={() => void search()}
-            aria-busy={busy}
+      {reviewed ? searchAction : (
+        <details className={styles.more}>
+          <summary>
+            <span>{initialHints ? "Sửa thông tin tìm" : "Nhập thông tin để tìm"}</span>
+            <ChevronDown size={16} aria-hidden="true" />
+          </summary>
+          <div
+            className={styles.searchFields}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                if (hasSearch) void search();
+              }
+            }}
           >
-            {busy ? "Đang tìm đầu sách…" : "Tìm lại trong danh mục"}
-          </button>
-          {onUseReviewed && (
-            <button type="button" className={styles.useAll} disabled={disabled} onClick={onUseReviewed}>
-              Dùng thông tin đã sửa
-            </button>
-          )}
-        </div>
-      </SearchShell>
-      <p role="status" className={styles.help}>
-        {busy
-          ? "Đang đối chiếu danh mục…"
-          : stale
-            ? "Thông tin tìm đã đổi. Tìm lại trước khi chọn kết quả."
-            : searched && !answer.items.length
-              ? "Chưa tìm thấy đầu sách phù hợp trong phạm vi đã tìm. Thử sửa tên, bổ sung tác giả hoặc ISBN; bạn vẫn có thể nhập tay."
-              : ""}
-      </p>
+            {(
+              [
+                ["title", "Tên sách để tìm", 300],
+                ["authors", "Tác giả để tìm", 2010],
+                ["isbn", "ISBN để tìm", 30],
+                ["edition", "Tập hoặc ấn bản để tìm", 200],
+              ] as const
+            ).map(([key, label, maxLength]) => (
+              <label key={key} htmlFor={`${id}-${key}`}>
+                <span>{label}</span>
+                <input
+                  id={`${id}-${key}`}
+                  value={fields[key]}
+                  maxLength={maxLength}
+                  disabled={disabled || busy}
+                  onChange={(event) => edit(key, event.target.value)}
+                />
+              </label>
+            ))}
+          </div>
+          <p className={styles.help}>
+            Ngăn cách nhiều tác giả bằng dấu chấm phẩy. Để trống nếu sách không có ISBN.
+          </p>
+          {searchAction}
+        </details>
+      )}
+      <p role="status" className={styles.readStatus}>{status}</p>
       {error ? (
         <p role="alert" className={styles.error}>
           {error}
         </p>
       ) : null}
-      {answer.truncated ? (
+      {currentAnswer && answer.truncated ? (
         <p className={styles.help}>
           Chỉ hiển thị các gợi ý trong phạm vi đã tìm. Thêm tác giả, tập hoặc
           ISBN để tìm cụ thể hơn.
         </p>
       ) : null}
-      <ul className={styles.candidates}>
+      {currentAnswer && answer.items.length > 0 && <ul className={styles.candidates}>
         {answer.items.map((match) => (
           <li key={match.book.id}>
             <strong>{match.book.title}</strong>
@@ -224,7 +219,7 @@ export function CatalogRecovery({
             </button>
           </li>
         ))}
-      </ul>
+      </ul>}
       <ConfirmDialog
         isOpen={!!selected}
         onClose={() => setSelected(null)}

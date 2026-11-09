@@ -1733,6 +1733,17 @@ export function SellBookPage() {
                               setFormData(previous => ({ ...previous, condition: bundleCondition(next), mode: 'Sale', exchangeValue: '' }));
                             }} />}
                           </>}
+                          {!selectedBook && !bundle && (
+                            <PhotoAutofill
+                              onUseCover={file => addSelectedImages([file], "cover")}
+                              currentValue={field => field === "title" ? formData.title : field === "authors" ? formData.author : field === "language" ? language : String(autofillFacts[field] ?? "")}
+                              attempt={draftAttempt}
+                              channel={auction ? "Auction" : undefined}
+                              disabled={submitting || hasAttempt}
+                              onUseField={applyAutofillField}
+                              onPickBook={(match) => chooseBook(match.book)}
+                            />
+                          )}
                           {!selectedBook && (
                             <div
                               className={styles.entryChoice}
@@ -1758,17 +1769,6 @@ export function SellBookPage() {
                                 Tự nhập thông tin
                               </button>
                             </div>
-                          )}
-                          {!selectedBook && !bundle && (
-                            <PhotoAutofill
-                              onUseCover={file => addSelectedImages([file], "cover")}
-                              currentValue={field => field === "title" ? formData.title : field === "authors" ? formData.author : field === "language" ? language : String(autofillFacts[field] ?? "")}
-                              attempt={draftAttempt}
-                              channel={auction ? "Auction" : undefined}
-                              disabled={submitting || hasAttempt}
-                              onUseField={applyAutofillField}
-                              onPickBook={(match) => chooseBook(match.book)}
-                            />
                           )}
                           <div
                             id="sell-book-entry"
@@ -1796,9 +1796,6 @@ export function SellBookPage() {
                                   Không thấy sách? Tự nhập theo bìa{" "}
                                   <ArrowRight size={16} aria-hidden="true" />
                                 </button>
-                                <p className={styles.marginNote}>
-                                  Mỗi cuốn sách, một câu chuyện.
-                                </p>
                               </div>
                             )}
                             {selectedBook && (

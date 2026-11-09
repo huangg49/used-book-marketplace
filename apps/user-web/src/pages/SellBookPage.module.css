@@ -423,14 +423,6 @@
   font-size: 0.875rem;
   font-weight: 700;
 }
-.marginNote {
-  font-family: "Auth Melody", var(--shop-body);
-  font-size: 1.5rem;
-  color: var(--shop-wine);
-  margin: 8px 0 0;
-  text-align: right;
-  line-height: 1.6;
-}
 .selectedEntry h3 {
   font-size: 1.625rem;
   line-height: 1.45;
@@ -516,9 +508,6 @@
   }
   .entryChoice svg {
     display: none;
-  }
-  .marginNote {
-    text-align: left;
   }
   .selectedFacts {
     grid-template-columns: minmax(0, 1fr);

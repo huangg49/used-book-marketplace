@@ -1,6 +1,7 @@
 import { ConfirmDialog } from "../ConfirmDialog";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Camera, Check, ScanText, X } from "lucide-react";
+import { Camera, Check, ChevronDown, ImagePlus, ScanText, X } from "lucide-react";
+import { languageOptions } from "@used-books/api-contract/catalog-taxonomy";
 import {
   createAutofillRequest,
   createIsbnLookup,
@@ -9,7 +10,7 @@ import {
 } from "../../services/listing-autofill";
 import type { DraftAttempt } from "../../services/listing-submission";
 import styles from "./PhotoAutofill.module.css";
-import { catalogHints, initialCatalogFields, type CatalogMatch, type CatalogSearchFields, type IsbnMatches } from "@used-books/session-client";
+import { catalogHints, initialCatalogFields, type CatalogMatch, type IsbnMatches } from "@used-books/session-client";
 import { CatalogRecovery } from './CatalogRecovery';
 
 export type AutofillField =
@@ -34,11 +35,58 @@ const LABELS: Record<AutofillField, string> = {
 };
 const ORDER = Object.keys(LABELS) as AutofillField[];
 const MAX_PHOTOS = 3;
+const MAX_LENGTH: Record<Exclude<AutofillField, "language">, number> = {
+  title: 300,
+  authors: 2010,
+  publisher: 200,
+  publicationYear: 4,
+  edition: 200,
+  isbn: 30,
+};
+const PHOTO_HINT: Record<AutofillField, string> = {
+  title: "Chụp rõ bìa trước hoặc trang nhan đề.",
+  authors: "Chụp trang nhan đề hoặc gáy có tên tác giả. Ngăn cách nhiều tên bằng dấu chấm phẩy.",
+  publisher: "Chụp trang bản quyền hoặc trang in ấn.",
+  publicationYear: "Chụp dòng ghi năm xuất bản trên trang bản quyền.",
+  language: "Chụp trang có nội dung chữ rõ.",
+  edition: "Chụp dòng ghi tập hoặc lần xuất bản.",
+  isbn: "Chụp mã vạch hoặc dòng ISBN nếu sách có.",
+};
+type Edits = Partial<Record<AutofillField, string>>;
 
-function shown(fields: Fields, key: AutofillField): string | null {
+function shown(fields: Fields, key: AutofillField): string {
   const value = fields[key];
-  if (Array.isArray(value)) return value.length ? value.join("; ") : null;
-  return value === null ? null : String(value);
+  return Array.isArray(value) ? value.join("; ") : String(value ?? "");
+}
+
+function reviewFields(fields: Fields, edits: Edits): Fields {
+  const search = initialCatalogFields(fields);
+  const normalized = catalogHints({
+    title: edits.title ?? search.title,
+    authors: edits.authors ?? search.authors,
+    edition: edits.edition ?? search.edition,
+    isbn: edits.isbn ?? search.isbn,
+  });
+  const year = edits.publicationYear;
+  return {
+    ...normalized,
+    publisher: edits.publisher === undefined ? fields.publisher : edits.publisher.trim() || null,
+    publicationYear: year === undefined ? fields.publicationYear : year && !yearError(year) ? Number(year) : null,
+    language: edits.language === undefined ? fields.language : edits.language || null,
+  };
+}
+
+function yearError(value: string) {
+  const maxYear = new Date().getUTCFullYear();
+  return !!value && (!/^\d{4}$/.test(value) || Number(value) < 1400 || Number(value) > maxYear);
+}
+
+function languageName(code: string) {
+  try {
+    return new Intl.DisplayNames(["vi"], { type: "language" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
 }
 
 // ADR 0048: reads printed text from 1-3 photos. Every value is a suggestion
@@ -77,7 +125,7 @@ export function PhotoAutofill({
   const [error, setError] = useState<string>();
   const [canSkipIsbn, setCanSkipIsbn] = useState(false);
   const [readNotice, setReadNotice] = useState<string>();
-  const [edits, setEdits] = useState<CatalogSearchFields | null>(null);
+  const [edits, setEdits] = useState<Edits>({});
   const [result, setResult] = useState<AutofillSuggestion | null>(null);
   const [used, setUsed] = useState<AutofillField[]>([]);
   const [replace, setReplace] = useState<AutofillField[]>([]);
@@ -151,7 +199,7 @@ export function PhotoAutofill({
           setBarcodeIsbn(found.isbns.length === 1 ? found.isbns[0]! : "");
           setBarcodePhotos(files.map(item => item.file));
           setResult(null);
-          setEdits(null);
+          setEdits({});
           return;
         }
       }
@@ -162,7 +210,7 @@ export function PhotoAutofill({
       if (result && next.cached && !stale) return;
       setResult(next);
       setResultPhotos(files.map((item) => item.file));
-      setEdits(null);
+      setEdits({});
       setUsed([]);
     } catch (e) {
       setCanSkipIsbn(e instanceof IsbnLookupUnavailable);
@@ -176,16 +224,12 @@ export function PhotoAutofill({
       setReading(false);
     }
   }
-  const corrected = edits ? catalogHints(edits) : null;
-  const reviewed = result && corrected
-    ? { ...result.fields, title: corrected.title, authors: corrected.authors, isbn: corrected.isbn, edition: corrected.edition }
-    : result?.fields;
+  const reviewed = result ? reviewFields(result.fields, edits) : null;
+  const resultLocked = !!disabled || reading || stale;
 
-  function review(next: CatalogSearchFields) {
-    const before = edits ?? initialCatalogFields(result?.fields);
-    const changed = (Object.keys(next) as (keyof CatalogSearchFields)[]).filter((field) => next[field] !== before[field]);
-    setEdits(next);
-    setUsed((previous) => previous.filter((field) => !changed.some((key) => key === field)));
+  function edit(field: AutofillField, value: string) {
+    setEdits((previous) => ({ ...previous, [field]: value }));
+    setUsed((previous) => previous.filter((key) => key !== field));
   }
 
   function use(field: AutofillField) {
@@ -203,11 +247,68 @@ export function PhotoAutofill({
     if (changed.length) setReplace(fields);
     else fields.forEach(use);
   }
-  const readable = reviewed ? ORDER.filter((key) => shown(reviewed, key)) : [];
-  const unapplied = readable.filter((field) => !used.includes(field));
-  const revisedFields = result && reviewed && edits
-    ? unapplied.filter((field) => shown(reviewed, field) !== shown(result.fields, field))
+  const readFields = result ? ORDER.filter((key) => shown(result.fields, key)) : [];
+  const missingFields = ORDER.filter((key) => !readFields.includes(key));
+  const unapplied = reviewed
+    ? ORDER.filter((key) => shown(reviewed, key) && !used.includes(key))
     : [];
+  const hasEdits = !!result && !!reviewed &&
+    ORDER.some((key) => shown(reviewed, key) !== shown(result.fields, key));
+  const showPhotoGuide = (!result && !barcode) || stale || (!!barcode && barcodeStale);
+
+  function renderField(field: AutofillField, missing = false) {
+    if (!result || !reviewed) return null;
+    const value = edits[field] ?? shown(result.fields, field);
+    const done = used.includes(field);
+    const id = `photo-suggestion-${field}`;
+    const invalidYear = field === "publicationYear" && yearError(value);
+    const hint = invalidYear
+      ? `Nhập năm có 4 chữ số, từ 1400 đến ${new Date().getUTCFullYear()}.`
+      : field === "authors" && !missing ? "Ngăn cách nhiều tác giả bằng dấu chấm phẩy."
+      : missing ? PHOTO_HINT[field] : undefined;
+    return (
+      <div className={styles.fieldRow} key={field}>
+        <label htmlFor={id}>{LABELS[field]}<span className="sr-only"> từ ảnh</span></label>
+        {field === "language" ? (
+          <select id={id} value={value} disabled={resultLocked}
+            aria-describedby={hint ? `${id}-hint` : undefined}
+            onChange={(event) => edit(field, event.target.value)}>
+            <option value="">Chưa xác định</option>
+            {value && !languageOptions.some((option) => option.id === value) && (
+              <option value={value}>{languageName(value)}</option>
+            )}
+            {languageOptions.map((option) => (
+              <option key={option.id} value={option.id}>{option.label}</option>
+            ))}
+          </select>
+        ) : (
+          <input
+            id={id}
+            value={value}
+            maxLength={MAX_LENGTH[field]}
+            inputMode={field === "publicationYear" ? "numeric" : undefined}
+            disabled={resultLocked}
+            aria-invalid={invalidYear || undefined}
+            aria-describedby={hint ? `${id}-hint` : undefined}
+            onChange={(event) => edit(field, event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.preventDefault();
+            }}
+          />
+        )}
+        <button
+          className={styles.fieldUse}
+          type="button"
+          onClick={() => chooseFields([field])}
+          disabled={resultLocked || done || !shown(reviewed, field)}
+          aria-label={done ? `Đã dùng ${LABELS[field]}` : `Dùng ${LABELS[field]}`}
+        >
+          {done ? <Check size={15} aria-hidden="true" /> : "Dùng"}
+        </button>
+        {hint && <p id={`${id}-hint`} className={invalidYear ? styles.error : styles.help}>{hint}</p>}
+      </div>
+    );
+  }
 
   return (
     <section className={styles.panel} aria-labelledby="photo-autofill-title">
@@ -215,115 +316,143 @@ export function PhotoAutofill({
         <ScanText size={20} aria-hidden="true" />
         <h3 id="photo-autofill-title">Điền nhanh từ ảnh</h3>
       </div>
-      <p className={styles.help}>
-        Chọn bìa trước làm ảnh đầu. Thêm trang nhan đề hoặc trang in ấn nếu cần đọc tác giả, nhà xuất bản hay năm. Với tựa in rải trên bìa, chụp cận đủ cả chữ và số.
-      </p>
-      {reading ? <p role="status">{readPhase}</p> : null}
-      {barcode ? <div className={styles.recovery}>
-        <h4>Đối chiếu từ mã vạch ISBN</h4>
-        <p className={styles.help}>Thông tin đầu sách được lấy từ danh mục. Lượt đối chiếu này không gọi AI. Kiểm tra cuốn sách trước khi xác nhận chọn.</p>
-        {barcodeStale ? <p role="status">Ảnh đã đổi. Đọc lại trước khi chọn kết quả ISBN.</p> : null}
-        {barcode.status === 'Ambiguous' ? <><p>Có nhiều ISBN trên các ảnh. Chọn mã thuộc cuốn sách đang đăng.</p>{barcode.isbns.map(isbn => <button className={styles.useAll} type="button" key={isbn} disabled={disabled || reading || barcodeStale} onClick={() => setBarcodeIsbn(isbn)}>Đối chiếu ISBN {isbn}</button>)}</> : null}
-        {barcodeIsbn ? <CatalogRecovery key={barcodeIsbn} compact attempt={attempt} channel={channel} suggestion={null} initialHints={{ title: null, authors: [], isbn: barcodeIsbn, publisher: null, publicationYear: null, language: null, edition: null }} disabled={!!disabled || reading || barcodeStale} onPickBook={onPickBook} /> : null}
-        <button type="button" className={styles.useAll} disabled={disabled || reading || barcodeStale} onClick={() => void read(true)}>Đọc chữ bằng AI</button>
-      </div> : null}
-      <div className={styles.photos}>
-        {files.map((item, index) => (
-          <figure key={item.url} className={styles.thumb}>
-            <img src={item.url} alt={`Ảnh để đọc ${index + 1}`} />
-            <button
-              type="button"
-              className={styles.remove}
-              onClick={() => remove(item.url)}
-              disabled={disabled || reading}
-              aria-label={`Bỏ ảnh để đọc ${index + 1}`}
-            >
-              <X size={14} aria-hidden="true" />
+      <div className={styles.readDesk}>
+        <div className={styles.photoTray}>
+          <p className={styles.trayLabel}>Ảnh để đọc <span>{files.length}/{MAX_PHOTOS}</span></p>
+          <div className={styles.photos} data-empty={!files.length}>
+            {files.map((item, index) => (
+              <figure key={item.url} className={styles.thumb}>
+                <img src={item.url} alt={`Ảnh để đọc ${index + 1}`} />
+                <button
+                  type="button"
+                  className={styles.remove}
+                  onClick={() => remove(item.url)}
+                  disabled={disabled || reading}
+                  aria-label={`Bỏ ảnh để đọc ${index + 1}`}
+                >
+                  <X size={14} aria-hidden="true" />
+                </button>
+              </figure>
+            ))}
+            {files.length < MAX_PHOTOS && (
+              <label data-focus-surface className={styles.add} aria-disabled={disabled || reading}>
+                <Camera size={19} aria-hidden="true" />
+                <span>{files.length ? "Thêm ảnh" : "Chọn ảnh"}</span>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  onChange={choose}
+                  disabled={disabled || reading}
+                  className="sr-only"
+                />
+              </label>
+            )}
+          </div>
+          {onUseCover && files[0] ? (
+            <button type="button" className={styles.textAction} disabled={disabled || reading}
+              onClick={() => onUseCover(files[0]!.file)}>
+              <ImagePlus size={16} aria-hidden="true" />
+              Dùng ảnh đầu làm bìa bản sách
             </button>
-          </figure>
-        ))}
-        {files.length < MAX_PHOTOS && (
-          <label data-focus-surface className={styles.add} aria-disabled={disabled || reading}>
-            <Camera size={18} aria-hidden="true" />
-            <span>{files.length ? "Thêm ảnh" : "Chọn ảnh"}</span>
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              onChange={choose}
-              disabled={disabled || reading}
-              className="sr-only"
-            />
-          </label>
-        )}
-      </div>
-      {onUseCover && files[0] ? (
-        <button
-          type="button"
-          className={styles.useAll}
-          disabled={disabled || reading}
-          onClick={() => onUseCover(files[0]!.file)}
-        >
-          Dùng ảnh đầu làm bìa bản sách
-        </button>
-      ) : null}
-      <div className={styles.actions}>
-        <button
-          type="button"
-          className={styles.read}
-          onClick={() => void read()}
-          disabled={disabled || reading || !files.length}
-          aria-busy={reading}
-        >
-          {reading ? "Đang đọc…" : result ? "Đọc lại" : "Đọc thông tin"}
-        </button>
-        {files.length > 0 && !barcode && !result && !canSkipIsbn && (
-          <button type="button" className={styles.useAll} disabled={disabled || reading} onClick={() => void read(true)}>
-            Đọc chữ bằng AI
-          </button>
-        )}
-        <span className={styles.note}>
-          Tối đa {MAX_PHOTOS} ảnh · không gửi thông tin tài khoản
-        </span>
-      </div>
-      {files.length > 0 && !barcode && !result && !error && !reading && (
-        <p className={styles.help}>Đọc thông tin sẽ tra mã vạch trước. Với sách cũ, bạn có thể đọc chữ bằng AI ngay.</p>
-      )}
-      <p className="sr-only" role="status">
-        {reading
-          ? "Đang tải ảnh và đọc chữ trên sách."
-          : result
-            ? "Đã đọc xong ảnh."
-            : ""}
-      </p>
-      {error && (
-        <div className={styles.actions}>
-          <p className={styles.error} role="alert">{error}</p>
-          {canSkipIsbn && (
-            <button type="button" className={styles.useAll} disabled={disabled || reading} onClick={() => void read(true)}>
-              Đọc chữ bằng AI
-            </button>
+          ) : (
+            <p className={styles.help}>JPEG, PNG hoặc WebP · Tối đa 10 MB mỗi ảnh</p>
           )}
         </div>
+        <div className={styles.readControls}>
+          {showPhotoGuide && (
+            <p className={styles.guide}>
+              Chụp cận đủ chữ và số trên bìa. Thêm trang nhan đề hoặc trang bản quyền để đọc các mục còn thiếu.
+            </p>
+          )}
+          <div className={styles.actions}>
+            <button type="button" className={styles.read} onClick={() => void read()}
+              disabled={disabled || reading || !files.length} aria-busy={reading}>
+              {reading ? "Đang đọc…" : result || barcode ? "Đọc lại" : "Đọc thông tin"}
+            </button>
+            {files.length > 0 && (canSkipIsbn || barcode || !result || stale) && (
+              <button type="button" className={styles.useAll} disabled={disabled || reading}
+                onClick={() => void read(true)}>
+                Đọc chữ bằng AI
+              </button>
+            )}
+          </div>
+          {!result && !barcode && (
+            <p className={styles.help}>
+              Đọc thông tin tra mã vạch trước. Sách không có mã có thể đọc bằng AI ngay.
+              Ảnh đọc không kèm thông tin tài khoản.
+            </p>
+          )}
+          <p role="status" className={styles.readStatus}>
+            {reading ? readPhase
+              : stale || (barcode && barcodeStale) ? "Ảnh đã đổi. Đọc lại trước khi dùng kết quả."
+              : readNotice || (result && !error ? "Đã đọc xong ảnh." : "")}
+          </p>
+          {error && <p className={styles.error} role="alert">{error}</p>}
+        </div>
+      </div>
+      {result && reviewed && (
+        <section className={styles.result} aria-labelledby="photo-result-title">
+          <div className={styles.resultHead}>
+            <h4 id="photo-result-title">Thông tin đọc từ ảnh</h4>
+            <p>{readFields.length}/{ORDER.length} mục đọc được</p>
+          </div>
+          <p className={styles.help}>Sửa ngay tại đây nếu cần. Chọn Dùng để đưa thông tin vào bài đăng.</p>
+          {readFields.length > 0 && <div className={styles.fields}>{readFields.map((field) => renderField(field))}</div>}
+          {missingFields.length > 0 && (
+            <details className={styles.more}>
+              <summary>
+                <span>Bổ sung {missingFields.length} mục chưa đọc được</span>
+                <ChevronDown size={16} aria-hidden="true" />
+              </summary>
+              <div className={styles.fields}>{missingFields.map((field) => renderField(field, true))}</div>
+            </details>
+          )}
+          {result.missing.length > 0 && (
+            <ul className={styles.missing}>
+              {result.missing.map((hint) => <li key={hint}>{hint}</li>)}
+            </ul>
+          )}
+          {(readFields.length > 1 || hasEdits) && (
+            <button type="button" className={styles.read}
+              disabled={resultLocked || !unapplied.length || yearError(edits.publicationYear ?? "")}
+              onClick={() => chooseFields(unapplied)}>
+              {hasEdits ? "Dùng tất cả thông tin đã rà soát" : "Dùng tất cả thông tin đọc được"}
+            </button>
+          )}
+          <p className={styles.readStatus} role="status">
+            {used.length > 0 && !stale ? "Đã điền thông tin được chọn vào phần Tự nhập thông tin bên dưới." : ""}
+          </p>
+        </section>
       )}
-      {readNotice && <p className={styles.help} role="status">{readNotice}</p>}
-      {stale ? (
-        <p role="status" className={styles.help}>
-          Ảnh để đọc đã thay đổi. Đọc lại trước khi dùng gợi ý.
-        </p>
-      ) : null}
-      {result || error ? (
-        <CatalogRecovery
-          key={result?.id ?? attempt.id}
-          attempt={attempt}
-          channel={channel}
-          suggestion={result}
-          disabled={!!disabled || reading || stale}
-          onPickBook={onPickBook}
-          onFieldsChange={result ? review : undefined}
-          onUseReviewed={revisedFields.length ? () => chooseFields(revisedFields) : undefined}
-        />
-      ) : null}
+      {barcode ? (
+        <div className={styles.recovery}>
+          <h4>Đối chiếu từ mã vạch ISBN</h4>
+          <p className={styles.help}>Đối chiếu cuốn sách với thông tin danh mục trước khi chọn.</p>
+          {barcode.status === "Ambiguous" && (
+            <>
+              <p className={styles.help}>Có nhiều ISBN trên ảnh. Chọn mã thuộc cuốn sách đang đăng.</p>
+              <div className={styles.actions}>
+                {barcode.isbns.map((isbn) => (
+                  <button className={styles.useAll} type="button" key={isbn}
+                    disabled={disabled || reading || barcodeStale}
+                    aria-pressed={barcodeIsbn === isbn} onClick={() => setBarcodeIsbn(isbn)}>
+                    Đối chiếu ISBN {isbn}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {barcodeIsbn && (
+            <CatalogRecovery key={barcodeIsbn} attempt={attempt} channel={channel}
+              initialHints={{ title: null, authors: [], isbn: barcodeIsbn, publisher: null, publicationYear: null, language: null, edition: null }}
+              disabled={!!disabled || reading || barcodeStale} onPickBook={onPickBook} />
+          )}
+        </div>
+      ) : (result || error) && (
+        <CatalogRecovery key={result?.id ?? attempt.id} attempt={attempt} channel={channel}
+          reviewed={reviewed} disabled={resultLocked} onPickBook={onPickBook} />
+      )}
       <ConfirmDialog
         isOpen={replace.length > 0}
         onClose={() => setReplace([])}
@@ -335,59 +464,6 @@ export function PhotoAutofill({
           setReplace([]);
         }}
       />
-      {result && reviewed && (
-        <div className={styles.result}>
-          <p className={styles.stamp}>
-            {edits ? "Thông tin sau khi rà soát" : "Gợi ý từ ảnh — kiểm tra lại trước khi đăng"}
-          </p>
-          {readable.length > 0 ? (
-            <dl className={styles.fields}>
-              {readable.map((key) => {
-                const done = used.includes(key);
-                return (
-                  <div key={key}>
-                    <dt>{LABELS[key]}</dt>
-                    <dd>{shown(reviewed, key)}</dd>
-                    <button
-                      type="button"
-                      onClick={() => chooseFields([key])}
-                      disabled={disabled || reading || stale || done}
-                      aria-label={
-                        done ? `Đã dùng ${LABELS[key]}` : `Dùng ${LABELS[key]}`
-                      }
-                    >
-                      {done ? <Check size={16} aria-hidden="true" /> : null}
-                      {done ? "Đã dùng" : "Dùng"}
-                    </button>
-                  </div>
-                );
-              })}
-            </dl>
-          ) : null}
-          {readable.length > 1 && (
-            <button
-              type="button"
-              className={styles.useAll}
-              onClick={() => chooseFields(unapplied)}
-              disabled={
-                disabled ||
-                reading ||
-                stale ||
-                !unapplied.length
-              }
-            >
-              {edits ? "Dùng tất cả thông tin đã rà soát" : "Dùng tất cả thông tin đọc được"}
-            </button>
-          )}
-          {result.missing.length > 0 && (
-            <ul className={styles.missing}>
-              {result.missing.map((hint) => (
-                <li key={hint}>{hint}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
     </section>
   );
 }

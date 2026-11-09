@@ -103,8 +103,8 @@ try {
       await panel.locator('input[type=file]').setInputFiles({ name: 'qa-reading.png', mimeType: 'image/png', buffer: bytes });
       await panel.getByRole('button', { name: 'Đọc thông tin', exact: true }).click();
       await panel.getByText(/Chưa tìm thấy đầu sách phù hợp/).waitFor();
-      await panel.getByLabel('Tên sách để tìm').fill(title);
-      await panel.getByRole('button', { name: 'Dùng thông tin đã sửa' }).click();
+      await panel.getByLabel('Tên sách từ ảnh', { exact: true }).fill(title);
+      await panel.getByRole('button', { name: 'Dùng tất cả thông tin đã rà soát' }).click();
       await expect(titleInput).toHaveValue(title);
     } else {
       await titleInput.fill(title);

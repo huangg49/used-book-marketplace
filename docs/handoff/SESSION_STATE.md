@@ -15,14 +15,20 @@ tài khoản thật trong lượt này.
 Kiểm chứng Member web gồm typecheck/build, 6 unit và 20 ca Chromium ở 390/1440 px.
 Ca đọc trực tiếp ghi nhận 0 lượt ISBN và 1 lượt AI khi bấm liên tiếp.
 
-## Hướng chỉnh giao diện bước 1 Đăng sách
+## Bố cục bước 1 Đăng sách — 09/11/2026
 
-- Giữ nhận diện giấy và màu rượu vang. Gom ảnh, lệnh đọc và tiến độ cùng một chỗ.
-- Hiện kết quả đọc ngay sau ảnh. Dùng tên ngôn ngữ dễ hiểu, cho sửa ngay trên
-  gợi ý và chỉ rõ ảnh nào cần bổ sung cho trường chưa đọc được.
-- Đặt tra danh mục sau kết quả. Hiện ứng viên khi có và cho áp dụng thông tin
-  đã rà soát khi không có kết quả. Gọn các ô tìm thêm vào phần mở khi cần.
-- Đây là hướng thiết kế để xem lại sau. Chưa triển khai chỉnh bố cục.
+Trên `codex/autofill-listing-recovery-20261109`, sau khi đồng bộ main `0a420d5c`.
+Member web gom ảnh, lệnh đọc và tiến độ trên một mặt giấy. Kết quả ngay bên dưới
+cho sửa từng mục, hiện tên ngôn ngữ và hướng dẫn ảnh cần bổ sung. Đối chiếu danh
+mục dùng nội dung đã rà soát và chỉ hiện ứng viên khớp tiêu chí hiện tại. Có thể
+dùng gợi ý để tiếp tục nhập tay khi danh mục chưa có sách. Đổi ảnh khóa kết quả
+cũ, áp dụng lên dữ liệu đang nhập vẫn cần xác nhận. Thay đổi ở Member web.
+
+Kiểm chứng gồm build/typecheck Member web, 20 unit và 30 ca Chromium ở
+390/1440 px, gồm 12 ca đọc/đối chiếu, 8 ca vòng đời ảnh và 10 ca gửi duyệt
+giả lập. Ca gửi từ Autofill dùng đúng tựa đã sửa và mở đúng bài vừa gửi.
+Ảnh, API và kho ảnh trong các ca browser là dữ liệu thử. Chưa chạy lại với AI
+thật hoặc tài khoản người dùng. API demo chưa phản hồi tại thời điểm kiểm.
 
 # Autofill và phục hồi gửi bài trên Member web — 09/11/2026
 

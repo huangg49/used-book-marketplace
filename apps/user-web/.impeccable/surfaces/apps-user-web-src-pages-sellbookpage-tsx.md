@@ -2,10 +2,27 @@
 version: 1
 slug: "apps-user-web-src-pages-sellbookpage-tsx"
 primary_target: "apps/user-web/src/pages/SellBookPage.tsx"
-related_targets: ["apps/user-web/src/pages/SellBookPage.module.css", "apps/user-web/src/components/BookJourneyStates.tsx", "apps/user-web/src/components/BookJourneyStates.module.css", "apps/user-web/src/components/CatalogClassificationFields.tsx", "apps/user-web/src/components/CatalogBookPicker.tsx"]
+related_targets: ["apps/user-web/src/pages/SellBookPage.module.css", "apps/user-web/src/components/PhotoAutofill/index.tsx", "apps/user-web/src/components/PhotoAutofill/CatalogRecovery.tsx", "apps/user-web/src/components/PhotoAutofill/PhotoAutofill.module.css", "apps/user-web/src/components/BookJourneyStates.tsx", "apps/user-web/src/components/BookJourneyStates.module.css", "apps/user-web/src/components/CatalogClassificationFields.tsx", "apps/user-web/src/components/CatalogBookPicker.tsx"]
 ---
 
 # Đăng sách —11/10/2026
+
+## Điền nhanh từ ảnh ở bước 1 — 09/11/2026
+
+Cụm giấy màu kem đặt ảnh đọc, số ảnh, hai cách đọc và tiến độ trên cùng một mặt.
+Desktop chia khay ảnh và điều khiển thành hai cột, dưới 640px xếp dọc. Khay giữ
+trọn ảnh và có nút bỏ ảnh 44px. Khi chưa chọn ảnh, vùng chọn dùng cả chiều rộng
+của khay. Ảnh đầu có thể được dùng riêng làm bìa bản sách.
+
+Kết quả nằm ngay sau ảnh. Hiển thị số mục đọc được, tên ngôn ngữ tiếng Việt và
+ô sửa trực tiếp. Mục còn thiếu nằm trong phần mở khi cần, kèm hướng dẫn chụp
+theo từng trường. Dùng một mục hoặc dùng toàn bộ thông tin đã rà soát cần thao
+tác rõ ràng. Nếu thay nội dung đang nhập, xác nhận trước khi áp dụng.
+
+Tra danh mục nằm sau kết quả, dùng thông tin đã rà soát và chỉ cho chọn ứng viên
+của tiêu chí hiện tại. Ô tra bổ sung cho nhánh mã vạch hoặc lỗi đọc nằm trong
+phần mở khi cần. Tìm sách có sẵn và tự nhập vẫn là đường vào riêng. Khi đổi ảnh,
+khóa thao tác áp dụng kết quả cũ cho đến lượt đọc tiếp theo.
 
 ## Draft photo preview —19/10/2026
 
