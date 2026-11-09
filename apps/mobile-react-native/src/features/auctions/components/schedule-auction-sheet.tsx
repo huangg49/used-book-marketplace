@@ -6,7 +6,7 @@ import { AppText, Button, Chip, Notice, Sheet, colors, space } from "../../../co
 import { auctionReceipt } from "../contracts";
 import {
   AUCTION_OPEN_GRACE_MS,
-  AUCTION_START_CEILING_MS,
+  AUCTION_OPEN_CEILING_MS,
   DURATION_CHOICES,
   auctionErrorText,
   createScheduleCommand,
@@ -55,7 +55,7 @@ export function ScheduleAuctionSheet({
       : 24 * 3600;
   const lifecycle =
     target?.kind === "publish"
-      ? { ceiling: now + AUCTION_START_CEILING_MS }
+      ? { ceiling: now + AUCTION_OPEN_CEILING_MS }
       : target?.kind === "reschedule" && !target.live && target.latestStartAt
         ? { ceiling: Date.parse(target.latestStartAt) }
         : undefined;
@@ -161,7 +161,7 @@ export function ScheduleAuctionSheet({
         </AppText>
         <AppText kind="small" color={colors.muted}>
           {lifecycle
-            ? "Phiên chỉ mở khi đủ người đăng ký: đến giờ mở mà chưa đủ, phiên chờ thêm tối đa 24 giờ và mở ngay khi đủ; hết 24 giờ vẫn chưa đủ thì phiên bị hủy và hoàn cọc. Bạn đổi giờ mở tối đa 5 lần, trước giờ mở và không trong 30 phút cuối."
+            ? "Phiên chỉ mở khi đủ người đăng ký: đến giờ mở mà chưa đủ, phiên chờ thêm tối đa 24 giờ và mở ngay khi đủ; hết 24 giờ vẫn chưa đủ thì phiên bị hủy và hoàn cọc. Bạn đổi giờ mở tối đa 2 lần, trong 30 ngày kể từ lúc đăng, trước giờ mở và không trong 30 phút cuối."
             : "Bạn đổi được thời gian tối đa 5 lần, chỉ khi chưa có lượt trả giá. Sau lượt trả giá đầu tiên, thời gian phiên được giữ nguyên."}
         </AppText>
         {error && <Notice tone="error">{error}</Notice>}

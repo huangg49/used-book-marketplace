@@ -20687,7 +20687,7 @@ components:
             - "null"
           format: date-time
           description: Null starts now; otherwise 5 minutes to 7 days ahead. ADR 0081 registration
-            auctions - required (null is refused with 422), 5 minutes to 72 hours ahead; publishes
+            auctions - required (null is refused with 422), 5 minutes to 30 days ahead (ADR 0082); publishes
             ScheduledGrace with this time as opensAt. The auction opens there only when minBidders
             registered, otherwise as soon as they do within 24 h after it, and is cancelled after that.
         durationSeconds:
@@ -20715,8 +20715,9 @@ components:
           format: date-time
           description: Scheduled only; null starts now. Must be null once live. ADR 0081 registration
             auctions - the new opensAt, required while waiting and before the current open time, at most
-            publish + 72 h, and not in the last 30 minutes before the current open time; the auction
-            becomes ScheduledGrace. There is no open-now command.
+            publish + 30 days, at most 2 changes per auction (ADR 0082), and not in the last 30 minutes
+            before the current open time; the auction becomes ScheduledGrace. There is no open-now
+            command.
         durationSeconds:
           type: integer
           minimum: 3600
@@ -21394,14 +21395,14 @@ components:
             - "null"
           format: date-time
           description: ADR 0081. The seller's open time on a ScheduledGrace auction (at most publish +
-            72 h); null on other modes. Optional for older servers.
+            30 days, ADR 0082); null on other modes. Optional for older servers.
         latestStartAt:
           type:
             - string
             - "null"
           format: date-time
-          description: ADR 0079. Fixed ceiling for a rescheduled start (publish + 72 h); null without the
-            bounded lifecycle. Optional for older servers.
+          description: ADR 0079/0082. Fixed ceiling for a rescheduled open time (publish + 30 days); null
+            without the bounded lifecycle. Optional for older servers.
         holdExpiresAt:
           type:
             - string

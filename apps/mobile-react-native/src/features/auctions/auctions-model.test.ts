@@ -294,13 +294,19 @@ describe("ADR 0079 bounded registration lifecycle", () => {
     const publish = startChoices(now, { ceiling: now + 72 * H });
     expect(publish.some((c) => c.at === null)).toBe(false);
     expect(publish.every((c) => c.at! <= now + 72 * H)).toBe(true);
+    // ADR 0082: a month-long ceiling offers choices weeks ahead.
+    const month = startChoices(now, { ceiling: now + 30 * 24 * H });
+    expect(month.some((c) => c.at! > now + 20 * 24 * H)).toBe(true);
+    expect(month.every((c) => c.at! <= now + 30 * 24 * H)).toBe(true);
     const move = startChoices(now, { ceiling: now + 4 * H });
     expect(move.some((c) => c.at === null)).toBe(false);
     expect(move.every((c) => c.at! <= now + 4 * H)).toBe(true);
   });
   it("reschedule: only while waiting, under 5 changes and outside the last 30 minutes", () => {
     expect(canReschedule(waiting(), now)).toBe(true);
-    expect(canReschedule(waiting({ scheduleRevision: 5 }), now)).toBe(false);
+    // ADR 0082: the open time changes at most twice.
+    expect(canReschedule(waiting({ scheduleRevision: 1 }), now)).toBe(true);
+    expect(canReschedule(waiting({ scheduleRevision: 2 }), now)).toBe(false);
     expect(canReschedule(waiting({ startAt: new Date(now + 20 * 60_000).toISOString() }), now)).toBe(false);
     expect(canReschedule(waiting({ phase: "Live", startAt: new Date(now - H).toISOString() }), now)).toBe(false);
     // ADR 0081: the open time counts, not the deadline; past it there is no move.

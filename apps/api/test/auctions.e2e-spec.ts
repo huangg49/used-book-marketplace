@@ -5599,7 +5599,7 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
           phase: 'Scheduled',
           openMode: 'ScheduledGrace',
           opensAt: a.opensAt!.toISOString(),
-          latestStartAt: new Date(a.publishedAt.getTime() + 72 * H).toISOString(),
+          latestStartAt: new Date(a.publishedAt.getTime() + 30 * 24 * H).toISOString(),
           holdExpiresAt: null,
         });
         const x = await funded(500_000);
@@ -5638,9 +5638,12 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         expect((await doc(a._id)).version).toBe(after.version);
       });
 
-      it('ADR 0081: open time within 72 h; enough people open then; too few wait 24 h more, open on reaching it, else cancel', async () => {
+      it('ADR 0081/0082: open time within 30 days; enough people open then; too few wait 24 h more, open on reaching it, else cancel', async () => {
         const far = await passedIntake();
-        await publish(far.intakeId, far.seller, { startAt: new Date(Date.now() + 73 * H).toISOString() }).expect(422);
+        await publish(far.intakeId, far.seller, { startAt: new Date(Date.now() + 30 * 24 * H + H).toISOString() }).expect(422);
+        // ADR 0082: a month ahead is allowed.
+        const month = await passedIntake();
+        await publish(month.intakeId, month.seller, { startAt: new Date(Date.now() + 29 * 24 * H).toISOString() }).expect(200);
         const at = new Date(Date.now() + 3 * H);
         const { a } = await liveOf({}, { startAt: at.toISOString(), durationSeconds: 3600 });
         expect(a).toMatchObject({ openMode: 'ScheduledGrace', opensAt: at, startAt: new Date(at.getTime() + 24 * H) });
@@ -5681,17 +5684,17 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
         await noHolds(y);
       });
 
-      it('no open-now; rescheduling has a 5-change limit, a 30-minute freeze, the 72 h ceiling and stops once the open time passed', async () => {
+      it('no open-now; rescheduling has a 2-change limit, a 30-minute freeze, the 30-day ceiling and stops once the open time passed', async () => {
         const { seller, a } = await liveOf({}, { startAt: new Date(Date.now() + 2 * H).toISOString() });
         await cmd('post', `/auctions/${a._id}/open-now`, { expectedVersion: await v(a._id) }, seller).expect(404);
         const x = await funded(100_000);
         await register(a._id, x).expect(200);
-        await moveTo(a._id, seller, new Date(a.publishedAt.getTime() + 72 * H + 60_000), await v(a._id)).expect(422);
+        await moveTo(a._id, seller, new Date(a.publishedAt.getTime() + 30 * 24 * H + 60_000), await v(a._id)).expect(422);
         await cmd('post', `/auctions/${a._id}/schedule`, { expectedVersion: await v(a._id), startAt: null, durationSeconds: 3600 }, seller).expect(422);
-        for (let i = 1; i <= 5; i++)
+        for (let i = 1; i <= 2; i++)
           await moveTo(a._id, seller, new Date(Date.now() + 2 * H + i * 10 * 60_000), await v(a._id)).expect(200);
-        expect((await moveTo(a._id, seller, new Date(Date.now() + 4 * H), await v(a._id)).expect(409)).body.message).toMatch(/tối đa 5 lần/);
-        expect((await kinds(x, a._id)).filter((k) => k === 'AuctionRescheduled')).toHaveLength(5);
+        expect((await moveTo(a._id, seller, new Date(Date.now() + 4 * H), await v(a._id)).expect(409)).body.message).toMatch(/tối đa 2 lần/);
+        expect((await kinds(x, a._id)).filter((k) => k === 'AuctionRescheduled')).toHaveLength(2);
         const second = await liveOf({}, { startAt: new Date(Date.now() + 2 * H).toISOString() });
         await longSession(second.seller);
         pinClock(new Date(second.a.opensAt!.getTime() - 20 * 60_000));
@@ -5864,9 +5867,9 @@ describe('Auctions HTTP and MongoDB (FR-AU01–10)', () => {
           }
         }
         expect(committed).toBeGreaterThan(0);
-        // Longest possible life: open time ceiling 72 h + 24 h waiting +
+        // Longest possible life: open time ceiling 30 days + 24 h waiting +
         // 1 h auction + 24 h payment.
-        const bound = Math.max(...runs.map((r) => r.a.publishedAt.getTime())) + 121 * H;
+        const bound = Math.max(...runs.map((r) => r.a.publishedAt.getTime())) + (30 * 24 + 49) * H;
         await tickAt(new Date(bound));
         await tickAt(new Date(bound));
         for (const r of runs)

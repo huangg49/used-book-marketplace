@@ -7,11 +7,12 @@ import {
   AUCTION_MAX_SCHEDULE_EDITS,
   AUCTION_MIN_DURATION_MS,
   AUCTION_MIN_LEAD_MS,
+  AUCTION_MAX_OPEN_CHANGES,
   AUCTION_MIN_REMAINING_MS,
+  AUCTION_OPEN_CEILING_MS,
   AUCTION_OPEN_GRACE_MS,
   AUCTION_RESCHEDULE_FREEZE_MS,
   AUCTION_SCHEDULE_HORIZON_MS,
-  AUCTION_START_CEILING_MS,
   BUY_NOW_CHALLENGE_MS,
   BUY_NOW_RIVAL_CHALLENGE_MS,
 } from '../../database/mongo/migrations/auction-constants.js';
@@ -220,17 +221,18 @@ function ceilingStart(raw: string, now: Date, publishedAt: Date) {
       'startAt',
       'Hẹn giờ bắt đầu ít nhất 5 phút sau thời điểm hiện tại.',
     );
-  if (startAt.getTime() > publishedAt.getTime() + AUCTION_START_CEILING_MS)
+  // ADR 0082: up to a month ahead, counted from the fixed publish time.
+  if (startAt.getTime() > publishedAt.getTime() + AUCTION_OPEN_CEILING_MS)
     invalidField(
       'startAt',
-      'Giờ mở phải trong vòng 72 giờ kể từ lúc đăng phiên.',
+      'Giờ mở phải trong vòng 30 ngày kể từ lúc đăng phiên.',
     );
   return startAt;
 }
 
-/** The latest start a bounded-lifecycle auction can ever have. */
+/** The latest open time a waiting registration auction can be moved to. */
 export const latestStartAt = (a: Pick<AuctionDoc, 'publishedAt'>) =>
-  new Date(a.publishedAt.getTime() + AUCTION_START_CEILING_MS);
+  new Date(a.publishedAt.getTime() + AUCTION_OPEN_CEILING_MS);
 
 /** The seller acts on a waiting auction only before its fixed start. */
 export function requireWaiting(a: AuctionDoc, now: Date) {
@@ -255,8 +257,9 @@ export function lifecycleReschedule(
   now: Date,
 ) {
   requireWaiting(a, now);
-  if (a.scheduleRevision >= AUCTION_MAX_SCHEDULE_EDITS)
-    throw lifecycleError('Phiên này đã đổi thời gian tối đa 5 lần.');
+  // ADR 0082: the open time changes at most twice.
+  if (a.scheduleRevision >= AUCTION_MAX_OPEN_CHANGES)
+    throw lifecycleError('Phiên này đã đổi giờ mở tối đa 2 lần.');
   const openTime = openTimeOf(a);
   if (now >= openTime)
     throw lifecycleError(

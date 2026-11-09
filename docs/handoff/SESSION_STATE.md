@@ -78,6 +78,12 @@ Nhánh `feat/auction-buy-now-mode` từ main `563dc6e6`, ba commit theo ba gói:
   chứng: unit schedule 19, E2E nhóm đăng ký/vòng đời 33/33 (replica `_test`), Mongo 61, web 477,
   RN auctions 22, contract/routes PASS, lint không lỗi mới; trang phiên S10 xem qua trình duyệt
   trong app. Hộp đăng phiên chưa xem trên trình duyệt; full E2E auctions, native NOT RUN. Chưa push.
+- [ADR0082](../adr/0082-auction-open-month-two-changes.md) (09/11): giờ mở tới lúc đăng + 30 ngày,
+  đổi giờ mở tối đa 2 lần (phiên có đăng ký). Migration `0070-auction-open-month` (thay luật 7 ngày
+  của 0037 và 72 giờ của 0069 cho `ScheduledGrace`, thêm trần 2 lần đổi); contract chỉ đổi mô tả.
+  Web/RN cập nhật trần, số lần còn lại và chữ; RN thêm lựa chọn 1/2/4 tuần.
+  Kiểm chứng: unit schedule 19, E2E nhóm đăng ký/vòng đời 33/33, Mongo 61, web 477, RN auctions 22,
+  contract/routes PASS. Hộp hẹn giờ trên trình duyệt, full E2E, native NOT RUN. Chưa push.
 
 Kiểm chứng local trên QA replica set (`_test`): API unit 62 file auctions, E2E
 auctions 96, Mongo suite 61, contract check/routes 260 operations PASS; Member web

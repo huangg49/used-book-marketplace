@@ -13,7 +13,8 @@ giữ nguyên. Không đổi READINESS.
   (`openAuctionNow`) bị gỡ khỏi contract và API (404). Lựa chọn "Mở khi đủ người" khi đăng
   phiên cũng bị gỡ.
 - Đăng phiên có đăng ký **bắt buộc chọn giờ mở** (`startAt` khi publish), từ 5 phút tới tối
-  đa lúc đăng + 72 giờ; thiếu giờ trả 422. Phiên lưu chế độ mới `openMode = ScheduledGrace` và
+  đa lúc đăng + 72 giờ ([ADR0082](0082-auction-open-month-two-changes.md) nâng lên 30 ngày và giới
+  hạn 2 lần đổi giờ); thiếu giờ trả 422. Phiên lưu chế độ mới `openMode = ScheduledGrace` và
   giờ đã hẹn ở `opensAt`.
 - Phiên chỉ mở khi đủ số người đăng ký tối thiểu (`minBidders`, ít nhất 4 như ADR0079):
   - đủ người **trước** giờ hẹn: phiên mở đúng `opensAt`;

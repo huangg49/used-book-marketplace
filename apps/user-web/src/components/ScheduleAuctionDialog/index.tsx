@@ -6,7 +6,7 @@ import { commandError } from '../../lib/auction-errors'
 import { commandOutcomeUnknown, useIntentKey } from '../../hooks/useAuctionClock'
 import {
   AUCTION_MAX_DURATION_S, AUCTION_MIN_DURATION_S, AUCTION_MIN_LEAD_MS, AUCTION_OPEN_GRACE_MS, AUCTION_SCHEDULE_HORIZON_MS,
-  AUCTION_START_CEILING_MS, publishAuction, rescheduleAuction,
+  AUCTION_OPEN_CEILING_MS, publishAuction, rescheduleAuction,
   type ScheduleBody,
 } from '../../services/auctions'
 import { DateTimePicker } from '../DateTimePicker'
@@ -52,7 +52,7 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
   const intent = useIntentKey()
   const live = target.kind === 'reschedule' && target.live
   // ADR 0081: a registration auction always opens at a chosen time within
-  // 72 h of publishing, and only with enough registrants; there is no "open
+  // 30 days of publishing (ADR 0082), and only with enough registrants; there is no "open
   // now". A waiting auction moves to a new time.
   const lifecycle = target.kind === 'publish' || (target.kind === 'reschedule' && !target.live && !!target.latestStartAt)
   const fixedLater = lifecycle
@@ -69,7 +69,7 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
   const offset = serverTime ? Date.parse(serverTime) - Date.now() : 0
   const now = Date.now() + offset
   const horizon = target.kind === 'publish'
-    ? now + AUCTION_START_CEILING_MS
+    ? now + AUCTION_OPEN_CEILING_MS
     : lifecycle && target.kind === 'reschedule'
       ? Date.parse(target.latestStartAt!)
       : now + AUCTION_SCHEDULE_HORIZON_MS
@@ -113,7 +113,7 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
     ? endMs < now + MIN_REMAINING_MS ? 'Phiên đang mở phải còn ít nhất 1 giờ. Chọn thời lượng dài hơn.' : null
     : timed && Number.isNaN(startMs) ? 'Chọn ngày giờ mở phiên.'
       : timed && startMs < now + AUCTION_MIN_LEAD_MS ? 'Hẹn giờ mở ít nhất 5 phút sau bây giờ.'
-        : timed && startMs > horizon ? (lifecycle ? 'Giờ mở phải trong vòng 72 giờ kể từ lúc đăng phiên.' : 'Chỉ hẹn trong vòng 7 ngày tới.')
+        : timed && startMs > horizon ? (lifecycle ? 'Giờ mở phải trong vòng 30 ngày kể từ lúc đăng phiên.' : 'Chỉ hẹn trong vòng 7 ngày tới.')
           : null
 
   const submit = async () => {
@@ -202,7 +202,7 @@ export function ScheduleAuctionDialog({ isOpen, paused = false, onClose, onDone,
           <p className={styles.note}>
             <Info size={15} aria-hidden="true" />
             {lifecycle
-              ? <span>Người mua đăng ký và đặt cọc trước. Phiên <strong>chỉ mở khi đủ người</strong>: đến giờ mở mà chưa đủ, phiên chờ thêm tối đa 24 giờ và mở ngay khi đủ; hết 24 giờ vẫn chưa đủ thì phiên bị hủy và hoàn cọc. Bạn đổi giờ mở <strong>tối đa 5 lần</strong> trong 72 giờ kể từ lúc đăng, trước giờ mở và không trong 30 phút cuối; người đăng ký được báo mỗi lần đổi.</span>
+              ? <span>Người mua đăng ký và đặt cọc trước. Phiên <strong>chỉ mở khi đủ người</strong>: đến giờ mở mà chưa đủ, phiên chờ thêm tối đa 24 giờ và mở ngay khi đủ; hết 24 giờ vẫn chưa đủ thì phiên bị hủy và hoàn cọc. Bạn đổi giờ mở <strong>tối đa 2 lần</strong> trong 30 ngày kể từ lúc đăng, trước giờ mở và không trong 30 phút cuối; người đăng ký được báo mỗi lần đổi.</span>
               : <span>Bạn đổi được thời gian <strong>tối đa 5 lần</strong>, chỉ khi chưa có lượt trả giá. Sau lượt trả giá đầu tiên, thời gian phiên được giữ nguyên.</span>}
           </p>
           {error && <p role="alert" className={styles.error}>{error}</p>}

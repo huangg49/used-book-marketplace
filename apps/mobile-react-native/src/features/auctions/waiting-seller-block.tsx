@@ -5,7 +5,7 @@ import { useSession } from "../../core/session/session-provider";
 import { AppText, Button, ConfirmDialog, Notice, colors, space } from "../../core/ui";
 import { auctionReceipt, type PublicAuctionSummary } from "./contracts";
 import {
-  AUCTION_MAX_SCHEDULE_EDITS,
+  AUCTION_MAX_OPEN_CHANGES,
   AUCTION_MIN_BIDDERS_FLOOR,
   AUCTION_RESCHEDULE_FREEZE_MS,
   auctionErrorText,
@@ -24,8 +24,8 @@ const DONE: Record<SellerCommand["kind"], string> = {
 
 /**
  * ADR 0079/0081: the seller's controls while the auction waits for
- * registrants: move the open time (5 changes, before it and never in its last
- * 30 minutes, within publish + 72 h), lower the minimum (never below 4,
+ * registrants: move the open time (2 changes, before it and never in its last
+ * 30 minutes, within publish + 30 days), lower the minimum (never below 4,
  * locked once reached) and close before the start. There is no "open now":
  * the auction opens at its time once enough registered.
  */
@@ -48,7 +48,7 @@ export function WaitingSellerBlock({
   const frozen = Date.parse(openTime) - now <= AUCTION_RESCHEDULE_FREEZE_MS;
   // The sheet edits the open time and keeps the chosen length.
   const length = Date.parse(auction.endAt) - Date.parse(auction.startAt);
-  const editsLeft = AUCTION_MAX_SCHEDULE_EDITS - (auction.scheduleRevision ?? 0);
+  const editsLeft = AUCTION_MAX_OPEN_CHANGES - (auction.scheduleRevision ?? 0);
   const lowered = Math.max(AUCTION_MIN_BIDDERS_FLOOR, need - 1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,8 +106,8 @@ export function WaitingSellerBlock({
               : frozen
               ? "Không đổi giờ trong 30 phút cuối trước giờ mở."
               : editsLeft <= 0
-                ? "Đã đổi giờ tối đa 5 lần."
-                : `Còn ${editsLeft} lần đổi giờ, trong 72 giờ kể từ lúc đăng.`}
+                ? "Đã đổi giờ mở tối đa 2 lần."
+                : `Còn ${editsLeft} lần đổi giờ mở, trong 30 ngày kể từ lúc đăng.`}
           </AppText>
           {!reached && need > AUCTION_MIN_BIDDERS_FLOOR && (
             <Button

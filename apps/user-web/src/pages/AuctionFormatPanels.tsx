@@ -11,7 +11,7 @@ import { commandError } from '../lib/auction-errors'
 import { formatVnd, ROUTES } from '../lib/routes'
 import { getWalletSummary } from '../services/wallet'
 import {
-  AUCTION_MAX_SCHEDULE_EDITS, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_PRICE_DIGITS, AUCTION_RESCHEDULE_FREEZE_MS, acceptDutch,
+  AUCTION_MAX_OPEN_CHANGES, AUCTION_MIN_BIDDERS_FLOOR, AUCTION_PRICE_DIGITS, AUCTION_RESCHEDULE_FREEZE_MS, acceptDutch,
   closeAuctionBeforeStart, openRuleText, openTimeOf, placeSealedBid, registerForAuction, setAuctionMinBidders,
   withdrawAuctionRegistration, type AuctionParticipation, type AuctionSummary,
 } from '../services/auctions'
@@ -267,9 +267,9 @@ export function SealedPanel({ auction, me, onChanged }: PanelProps) {
 }
 
 /**
- * ADR 0079/0081: the seller's controls while the auction waits for
- * registrants: move the open time (5 changes, before it and never in its last
- * 30 minutes, within publish + 72 h), lower the minimum (never below 4,
+ * ADR 0079/0081/0082: the seller's controls while the auction waits for
+ * registrants: move the open time (2 changes, before it and never in its last
+ * 30 minutes, within publish + 30 days), lower the minimum (never below 4,
  * locked once reached) and close before the start. There is no "open now":
  * the auction opens at its time once enough registered.
  */
@@ -285,7 +285,7 @@ export function WaitingSellerControls({ auction, serverTime, onChanged, paused }
   const frozen = untilOpen <= AUCTION_RESCHEDULE_FREEZE_MS
   // The dialog edits the open time and keeps the chosen length.
   const length = Date.parse(auction.endAt) - Date.parse(auction.startAt)
-  const editsLeft = AUCTION_MAX_SCHEDULE_EDITS - (auction.scheduleRevision ?? 0)
+  const editsLeft = AUCTION_MAX_OPEN_CHANGES - (auction.scheduleRevision ?? 0)
   const [lower, setLower] = useState(Math.max(AUCTION_MIN_BIDDERS_FLOOR, need - 1))
   const [editing, setEditing] = useState(false)
   const [closing, setClosing] = useState(false)
@@ -314,7 +314,7 @@ export function WaitingSellerControls({ auction, serverTime, onChanged, paused }
           <p className={styles.muted}>
             {passed
               ? `Đã qua giờ mở nên không đổi giờ được nữa. Phiên mở ngay khi đủ ${need} người đăng ký.`
-              : frozen ? 'Không đổi giờ trong 30 phút cuối trước giờ mở.' : editsLeft <= 0 ? 'Đã đổi giờ tối đa 5 lần.' : `Còn ${editsLeft} lần đổi giờ, trong 72 giờ kể từ lúc đăng.`}
+              : frozen ? 'Không đổi giờ trong 30 phút cuối trước giờ mở.' : editsLeft <= 0 ? 'Đã đổi giờ mở tối đa 2 lần.' : `Còn ${editsLeft} lần đổi giờ mở, trong 30 ngày kể từ lúc đăng.`}
           </p>
           {canLower && (
             <div className={styles.lowerRow}>

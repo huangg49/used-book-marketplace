@@ -369,7 +369,10 @@ export const MIN_BIDDER_OPTIONS = [4, 5, 6, 8, 10] as const
 // ADR 0079 ceilings, mirrored for the forms; the server stays authoritative.
 // ADR 0081: past the open time a registration auction waits 24 h more.
 export const AUCTION_OPEN_GRACE_MS = 24 * 3_600_000
-export const AUCTION_START_CEILING_MS = 72 * 3_600_000
+// ADR 0082: a registration auction opens at most 30 days after publishing
+// and its open time changes at most twice.
+export const AUCTION_OPEN_CEILING_MS = 30 * 24 * 3_600_000
+export const AUCTION_MAX_OPEN_CHANGES = 2
 export const AUCTION_RESCHEDULE_FREEZE_MS = 30 * 60_000
 /** ADR 0077: the refundable deposit the server will ask for (10%, ≥ 10.000đ). */
 export const auctionDepositFor = (startPrice: number) => Math.max(10_000, Math.ceil(startPrice / 10 / 1000) * 1000)

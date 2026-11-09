@@ -207,7 +207,10 @@ export const AUCTION_MIN_BIDDERS_CAP = 1000;
 export const MIN_BIDDER_OPTIONS = [4, 5, 6, 8, 10] as const;
 // ADR 0081: past the open time a registration auction waits 24 h more.
 export const AUCTION_OPEN_GRACE_MS = 24 * 3_600_000;
-export const AUCTION_START_CEILING_MS = 72 * 3_600_000;
+// ADR 0082: a registration auction opens at most 30 days after publishing
+// and its open time changes at most twice.
+export const AUCTION_OPEN_CEILING_MS = 30 * 24 * 3_600_000;
+export const AUCTION_MAX_OPEN_CHANGES = 2;
 export const AUCTION_RESCHEDULE_FREEZE_MS = 30 * 60_000;
 const at = (ms: number) =>
   new Date(ms).toLocaleString("vi-VN", { weekday: "short", hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
@@ -322,7 +325,7 @@ export function canReschedule(auction: PublicAuctionSummary, now: number) {
     return (
       waitingForRegistrants(auction, now) &&
       auction.version != null &&
-      (auction.scheduleRevision ?? 0) < AUCTION_MAX_SCHEDULE_EDITS &&
+      (auction.scheduleRevision ?? 0) < AUCTION_MAX_OPEN_CHANGES &&
       Date.parse(openTimeOf(auction)) - now > AUCTION_RESCHEDULE_FREEZE_MS
     );
   if (auction.minBidders != null && (auction.registeredCount ?? 0) > 0) return false;
@@ -634,8 +637,8 @@ export function durationLabel(seconds: number) {
  */
 export function startChoices(
   now: number,
-  // ADR 0081: a registration auction always opens at a chosen time before
-  // its fixed ceiling (publish + 72 h); there is no "now".
+  // ADR 0081/0082: a registration auction always opens at a chosen time
+  // before its fixed ceiling (publish + 30 days); there is no "now".
   lifecycle?: { ceiling: number },
 ) {
   const choices: { label: string; at: number | null }[] = lifecycle ? [] : [{ label: "Mở ngay", at: null }];
@@ -648,6 +651,14 @@ export function startChoices(
     const label = days === 1 ? "9:00 ngày mai" : `9:00 ${d.toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" })}`;
     choices.push({ label, at: d.getTime() });
   }
+  // ADR 0082: registration auctions may open up to a month ahead.
+  if (lifecycle)
+    for (const [days, label] of [[7, "9:00 sau 1 tuần"], [14, "9:00 sau 2 tuần"], [28, "9:00 sau 4 tuần"]] as const) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + days);
+      d.setHours(9, 0, 0, 0);
+      choices.push({ label, at: d.getTime() });
+    }
   return choices.filter(
     (c) => c.at === null || (c.at >= now + AUCTION_MIN_LEAD_MS && c.at <= horizon),
   );

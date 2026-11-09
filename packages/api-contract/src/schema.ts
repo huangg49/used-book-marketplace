@@ -7012,7 +7012,7 @@ export interface components {
             expectedVersion: number;
             /**
              * Format: date-time
-             * @description Null starts now; otherwise 5 minutes to 7 days ahead. ADR 0081 registration auctions - required (null is refused with 422), 5 minutes to 72 hours ahead; publishes ScheduledGrace with this time as opensAt. The auction opens there only when minBidders registered, otherwise as soon as they do within 24 h after it, and is cancelled after that.
+             * @description Null starts now; otherwise 5 minutes to 7 days ahead. ADR 0081 registration auctions - required (null is refused with 422), 5 minutes to 30 days ahead (ADR 0082); publishes ScheduledGrace with this time as opensAt. The auction opens there only when minBidders registered, otherwise as soon as they do within 24 h after it, and is cancelled after that.
              */
             startAt: string | null;
             /** @description Session length in seconds, 1 hour to 7 days (ADR 0069). */
@@ -7023,7 +7023,7 @@ export interface components {
             expectedVersion: number;
             /**
              * Format: date-time
-             * @description Scheduled only; null starts now. Must be null once live. ADR 0081 registration auctions - the new opensAt, required while waiting and before the current open time, at most publish + 72 h, and not in the last 30 minutes before the current open time; the auction becomes ScheduledGrace. There is no open-now command.
+             * @description Scheduled only; null starts now. Must be null once live. ADR 0081 registration auctions - the new opensAt, required while waiting and before the current open time, at most publish + 30 days, at most 2 changes per auction (ADR 0082), and not in the last 30 minutes before the current open time; the auction becomes ScheduledGrace. There is no open-now command.
              */
             startAt: string | null;
             /** @description Session length in seconds, 1 hour to 7 days (ADR 0069). */
@@ -7273,12 +7273,12 @@ export interface components {
             openMode?: "WhenReady" | "Scheduled" | "ScheduledGrace" | null;
             /**
              * Format: date-time
-             * @description ADR 0081. The seller's open time on a ScheduledGrace auction (at most publish + 72 h); null on other modes. Optional for older servers.
+             * @description ADR 0081. The seller's open time on a ScheduledGrace auction (at most publish + 30 days, ADR 0082); null on other modes. Optional for older servers.
              */
             opensAt?: string | null;
             /**
              * Format: date-time
-             * @description ADR 0079. Fixed ceiling for a rescheduled start (publish + 72 h); null without the bounded lifecycle. Optional for older servers.
+             * @description ADR 0079/0082. Fixed ceiling for a rescheduled open time (publish + 30 days); null without the bounded lifecycle. Optional for older servers.
              */
             latestStartAt?: string | null;
             /**

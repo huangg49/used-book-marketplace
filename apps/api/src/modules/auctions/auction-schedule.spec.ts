@@ -212,7 +212,8 @@ describe('scheduled open with a 24 h grace', () => {
 
   it('publishing needs a time; the deadline is the open time + 24 h; the length is kept', () => {
     expect(code(() => lifecyclePublish({ startAt: null, durationSeconds: 3600 }, now))).toBe('VALIDATION_ERROR');
-    expect(code(() => lifecyclePublish({ startAt: at(73 * HOUR).toISOString(), durationSeconds: 3600 }, now))).toBe('VALIDATION_ERROR');
+    expect(code(() => lifecyclePublish({ startAt: at(30 * 24 * HOUR + 1).toISOString(), durationSeconds: 3600 }, now))).toBe('VALIDATION_ERROR');
+    expect(lifecyclePublish({ startAt: at(30 * 24 * HOUR).toISOString(), durationSeconds: 3600 }, now).opensAt).toEqual(at(30 * 24 * HOUR));
     const a = published();
     expect(a).toMatchObject({ openMode: 'ScheduledGrace', opensAt, startAt: at(26 * HOUR), plannedEndAt: at(29 * HOUR) });
   });
@@ -237,6 +238,11 @@ describe('scheduled open with a 24 h grace', () => {
     expect(code(() => lifecycleReschedule(a, { startAt: null, durationSeconds: 3600 }, now))).toBe('VALIDATION_ERROR');
     expect(code(() => lifecycleReschedule(a, { startAt: at(5 * HOUR).toISOString(), durationSeconds: 3600 }, at(2 * HOUR - 60_000)))).toBe('InvalidState');
     expect(code(() => lifecycleReschedule(a, { startAt: at(5 * HOUR).toISOString(), durationSeconds: 3600 }, at(3 * HOUR)))).toBe('InvalidState');
+    // ADR 0082: at most two changes, up to 30 days after publishing.
+    const move = { startAt: at(5 * HOUR).toISOString(), durationSeconds: 3600 };
+    expect(lifecycleReschedule({ ...a, scheduleRevision: 1 }, move, now).opensAt).toEqual(at(5 * HOUR));
+    expect(code(() => lifecycleReschedule({ ...a, scheduleRevision: 2 }, move, now))).toBe('InvalidState');
+    expect(code(() => lifecycleReschedule(a, { startAt: at(30 * 24 * HOUR + 1).toISOString(), durationSeconds: 3600 }, now))).toBe('VALIDATION_ERROR');
   });
 
   it('a Staff open waits for registrants from now', () => {

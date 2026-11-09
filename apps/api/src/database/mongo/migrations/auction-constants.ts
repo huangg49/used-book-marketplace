@@ -74,6 +74,10 @@ export const AUCTION_MIN_BIDDERS_CAP = 1000;
 export const AUCTION_READY_WINDOW_MS = 24 * HOUR_MS;
 // "Hẹn giờ mở": the start is at most publish + 72 h, rescheduling included.
 export const AUCTION_START_CEILING_MS = 72 * HOUR_MS;
+// ADR 0082: a registration auction's open time is at most publish + 30 days
+// and changes at most twice (the 72 h and 5 changes above stay for older rows).
+export const AUCTION_OPEN_CEILING_MS = 30 * 24 * HOUR_MS;
+export const AUCTION_MAX_OPEN_CHANGES = 2;
 // ADR 0081: a scheduled open waits at most 24 h more for registrants.
 export const AUCTION_OPEN_GRACE_MS = 24 * HOUR_MS;
 // No reschedule in the last 30 minutes before the start.

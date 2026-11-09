@@ -516,7 +516,7 @@ export function CreateAuctionPage() {
             </div>
             <p className={styles.stepHint}>
               Người mua đăng ký và đặt cọc {startPrice !== null ? formatVnd(auctionDepositFor(startPrice)) : '10% giá khởi điểm'} trước khi trả giá.
-              Phiên mở khi đủ {minBidders} người (ít nhất {AUCTION_MIN_BIDDERS_FLOOR}); không đủ trong 24 giờ, hoặc tới giờ mở bạn hẹn (tối đa 72 giờ), thì phiên bị hủy và hoàn cọc.
+              Bạn hẹn giờ mở (tối đa 30 ngày sau khi đăng, đổi được 2 lần). Phiên mở đúng giờ khi đủ {minBidders} người (ít nhất {AUCTION_MIN_BIDDERS_FLOOR}); chưa đủ thì chờ thêm 24 giờ và mở ngay khi đủ, hết hạn thì bị hủy và hoàn cọc.
               Phiên chỉ bán khi có ít nhất hai người trả giá.
             </p>
             <PriceInput id="auction-start" label={auctionType === 'Dutch' ? 'Giá sàn (thấp nhất)' : 'Giá khởi điểm'} value={startPrice} step={step} min={AUCTION_MIN_PRICE} disabled={locked}
