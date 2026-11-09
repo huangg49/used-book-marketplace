@@ -10,21 +10,21 @@
   gap: 12px;
   min-width: 0;
   padding: 14px;
-  border: 1px solid #e7b8b5;
+  border: 1px solid var(--category-detail-border, #e7b8b5);
   border-radius: 12px;
-  background: #fff1f0;
-  color: #592b2b;
+  background: var(--category-detail-background, #fff1f0);
+  color: var(--category-detail-ink, #592b2b);
 }
 .categoryDetails :is(label, summary, .label, .subcategory) {
-  color: #592b2b;
+  color: var(--category-detail-ink, #592b2b);
 }
 .categoryDetails :is(small, .context, p) {
-  color: #754848;
+  color: var(--category-detail-muted, #754848);
 }
 .categoryDetails :is(input:not([type="checkbox"]), select) {
   color: #34211c;
-  background: #fffaf8;
-  border-color: #d9a5a2;
+  background: var(--category-detail-input, #fffaf8);
+  border-color: var(--category-detail-control, #d9a5a2);
 }
 .categoryDetails input::placeholder {
   color: #806e67;

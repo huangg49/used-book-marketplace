@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type AriaAttributes, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { session } from "../services/api";
@@ -19,10 +19,14 @@ export function CatalogBookPicker({
   onSelect,
   label = "Chọn đầu sách đã có",
   compact = false,
+  feedback,
+  feedbackMessage,
 }: {
   onSelect: (book: PickedBook) => void;
   label?: string;
   compact?: boolean;
+  feedback?: Pick<AriaAttributes, "aria-invalid" | "aria-describedby">;
+  feedbackMessage?: ReactNode;
 }) {
   const [term, setTerm] = useState("");
   const [cursor, setCursor] = useState("");
@@ -49,7 +53,8 @@ export function CatalogBookPicker({
         <input
           id="sell-catalog-search"
           type="search"
-          placeholder="Nhập tên, tác giả hoặc ISBN…"
+          {...feedback}
+          placeholder={compact ? "Tên sách, tác giả, ISBN" : "Nhập tên, tác giả hoặc ISBN…"}
           value={term}
           onChange={(e) => {
             setTerm(e.target.value);
@@ -57,10 +62,11 @@ export function CatalogBookPicker({
           }}
         />
       </div>
-      {result.isFetching && <p role="status">Đang tìm trong catalog…</p>}
+      {feedbackMessage}
+      {result.isFetching && <p role="status">Đang tìm trong danh mục…</p>}
       {result.isError && (
         <p role="alert">
-          Chưa tải được catalog.{" "}
+          Chưa tải được danh mục.{" "}
           <button type="button" onClick={() => void result.refetch()}>
             Thử lại
           </button>
@@ -71,7 +77,7 @@ export function CatalogBookPicker({
         result.data?.items.length === 0 && (
           <p>
             {compact
-              ? "Chưa tìm thấy. Bạn có thể chọn Tự nhập thông tin."
+              ? "Chưa tìm thấy sách phù hợp."
               : "Chưa tìm thấy. Bạn có thể đề nghị đầu sách mới bên dưới."}
           </p>
         )}

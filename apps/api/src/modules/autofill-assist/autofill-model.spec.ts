@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 import { PriceModelError } from '../price-assist/price-model.js';
-import { MAX_INLINE_IMAGE_BYTES, shrinkForModel } from './autofill-images.js';
+import { AUTOFILL_IMAGE_PROFILE, MAX_INLINE_IMAGE_BYTES, prepareAutofillImages, shrinkForModel } from './autofill-images.js';
 import { autofillModelFromConfig, NvidiaAutofillModel } from './autofill-model.js';
 
 // Adapter-only tests with a stubbed fetch: no network, no real key.
@@ -74,19 +74,59 @@ describe('NVIDIA autofill adapter', () => {
     const on = autofillModelFromConfig(cfg({ AUTOFILL_ENABLED: 'true', AUTOFILL_API_KEY: 'k' }));
     expect(on?.model).toBe('nvidia/nemotron-3.5-super-vl-120b-a12b');
     expect(on?.fallback).toBeNull();
+    expect(on?.supportsDetail).toBe(true);
+    expect(autofillModelFromConfig(cfg({
+      AUTOFILL_ENABLED: 'true', AUTOFILL_API_KEY: 'k', AUTOFILL_MODEL: 'nvidia/custom-vision',
+    }))?.supportsDetail).toBe(false);
   });
 });
 
 describe('photo shrinking for the provider', () => {
-  it('produces a JPEG data URL under the inline limit from a large noisy photo', async () => {
+  it.each([undefined, AUTOFILL_IMAGE_PROFILE] as const)('produces a JPEG under the inline limit (%s)', async (profile) => {
     const raw = Buffer.alloc(1600 * 1600 * 3);
     for (let i = 0; i < raw.length; i++) raw[i] = (i * 2654435761) >>> 24;
     const webp = await sharp(raw, { raw: { width: 1600, height: 1600, channels: 3 } })
       .webp({ quality: 90 })
       .toBuffer();
-    const url = await shrinkForModel(webp);
+    const url = await shrinkForModel(webp, profile);
     expect(url.startsWith('data:image/jpeg;base64,')).toBe(true);
     const bytes = Buffer.from(url.slice(url.indexOf(',') + 1), 'base64');
     expect(bytes.length).toBeLessThanOrEqual(MAX_INLINE_IMAGE_BYTES);
   });
+
+  it('keeps more detail for interactive reading without changing moderation images', async () => {
+    const cover = await sharp({ create: { width: 1600, height: 901, channels: 3, background: '#eedfbf' } }).webp().toBuffer();
+    const width = async (url: string) => (await sharp(Buffer.from(url.split(',')[1]!, 'base64')).metadata()).width;
+    expect(await width(await shrinkForModel(cover, AUTOFILL_IMAGE_PROFILE))).toBe(1536);
+    expect(await width(await shrinkForModel(cover))).toBe(1024);
+  });
+
+  it('adds one enlarged detail from an isolated block, after all full photos', async () => {
+    const compact = await printedPage(5);
+    const prose = await printedPage(26);
+    const input = [prose, compact, compact];
+    const full = await prepareAutofillImages(input, false);
+    const enhanced = await prepareAutofillImages(input, true);
+    expect(enhanced.slice(0, 3)).toEqual(full);
+    expect(enhanced).toHaveLength(4);
+    const detail = Buffer.from(enhanced[3]!.split(',')[1]!, 'base64');
+    expect(detail.length).toBeLessThanOrEqual(MAX_INLINE_IMAGE_BYTES);
+    expect(await sharp(detail).metadata()).toMatchObject({ width: 640 });
+    expect(await prepareAutofillImages([prose], true)).toEqual(full.slice(0, 1));
+  });
 });
+
+function printedPage(lineCount: number) {
+  // Fixed glyph shapes avoid a dependency on installed fonts.
+  const letters = Array.from({ length: lineCount }, (_, row) =>
+    Array.from({ length: 18 }, (_, column) =>
+      `<path d="M${240 + column * 8} ${80 + row * 12}h5v7h-2v-4h-3z"/>`,
+    ).join(''),
+  ).join('');
+  return sharp(Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="520">
+      <rect width="720" height="520" fill="#f1dfbf"/>
+      <g fill="#231d12">${letters}</g>
+    </svg>`,
+  )).webp().toBuffer();
+}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ReactNode } from "react";
+import type { AriaAttributes, ReactNode } from "react";
 import {
   categories,
   categoryFor,
@@ -25,6 +25,8 @@ export function CatalogClassificationFields({
   clearable = false,
   collapseOptional = false,
   secondaryField,
+  categoryFeedback,
+  categoryMessage,
   renderSelect,
 }: {
   value: ClassificationValue;
@@ -34,6 +36,8 @@ export function CatalogClassificationFields({
   clearable?: boolean;
   collapseOptional?: boolean;
   secondaryField?: ReactNode;
+  categoryFeedback?: Pick<AriaAttributes, "aria-invalid" | "aria-describedby">;
+  categoryMessage?: ReactNode;
   renderSelect?: (props: FilterSelectProps) => ReactNode;
 }) {
   const [expanded, setExpanded] = useState<string[]>([]);
@@ -83,6 +87,7 @@ export function CatalogClassificationFields({
     ) : (
       <select
         id={props.id}
+        {...(props.id === `${id}-category` ? categoryFeedback : undefined)}
         value={props.value}
         onChange={(event) => props.onChange(event.target.value)}
       >
@@ -140,6 +145,7 @@ export function CatalogClassificationFields({
               })),
             ],
           })}
+          {categoryMessage}
         </div>
         {secondaryField}
       </div>

@@ -2,10 +2,42 @@
 version: 1
 slug: "apps-user-web-src-pages-sellbookpage-tsx"
 primary_target: "apps/user-web/src/pages/SellBookPage.tsx"
-related_targets: ["apps/user-web/src/pages/SellBookPage.module.css", "apps/user-web/src/components/BookJourneyStates.tsx", "apps/user-web/src/components/BookJourneyStates.module.css", "apps/user-web/src/components/CatalogClassificationFields.tsx", "apps/user-web/src/components/CatalogBookPicker.tsx"]
+related_targets: ["apps/user-web/src/pages/SellBookPage.module.css", "apps/user-web/src/components/PhotoAutofill/index.tsx", "apps/user-web/src/components/PhotoAutofill/CatalogRecovery.tsx", "apps/user-web/src/components/PhotoAutofill/PhotoAutofill.module.css", "apps/user-web/src/components/BookJourneyStates.tsx", "apps/user-web/src/components/BookJourneyStates.module.css", "apps/user-web/src/components/CatalogClassificationFields.tsx", "apps/user-web/src/components/CatalogBookPicker.tsx"]
 ---
 
 # Đăng sách —11/10/2026
+
+## Phân cấp thông tin ở bước 1 — 10/11/2026
+
+Member web giữ nền giấy, màu wine và năm bước. Bước 1 đặt lựa chọn sách lẻ/bộ
+sách trong một hàng gọn. Khi chưa có ảnh, Điền nhanh từ ảnh chỉ hiện mô tả ngắn và
+nút Chọn ảnh. Khi có ảnh mới hiện hai lệnh đọc, tiến độ và phần Chọn cách đọc có
+thể mở. Gợi ý chụp bổ sung nằm cùng phần mục chưa đọc được.
+
+Tên sách và tác giả có cùng kiểu ô nhập, xếp cạnh nhau trên màn rộng. Danh mục
+và ngôn ngữ nằm trước phần ấn bản tùy chọn. Giới hạn đăng bài mở riêng gần chân
+form. Lỗi ở bước này hiện cạnh ô, với viền lỗi và mô tả liên kết. Khi Tiếp tục
+thất bại, focus tới chỗ sửa đầu tiên, kể cả khi cần mở lại mục ấn bản. Ở nhánh
+tìm sách, người dùng có thể chọn kết quả hoặc chủ động chuyển sang nhập tay.
+
+## Điền nhanh từ ảnh ở bước 1 — 09/11/2026
+
+Cụm giấy màu kem đặt ảnh đọc, số ảnh, hai cách đọc và tiến độ trên cùng một mặt.
+Desktop chia khay ảnh và điều khiển thành hai cột, dưới 640px xếp dọc. Khay giữ
+trọn ảnh trên nền kem trong khung ngang 3:2, với nút bỏ ảnh 44px. Khi chưa chọn
+ảnh, vùng chọn dùng cả chiều rộng của khay. Sau khi đọc xong, thu gọn cụm điều
+khiển thành trạng thái và nút Đọc lại cạnh dải ảnh. Ảnh đầu có thể được dùng
+riêng làm bìa bản sách.
+
+Kết quả nằm ngay sau ảnh. Hiển thị số mục đọc được, tên ngôn ngữ tiếng Việt và
+ô sửa trực tiếp. Mục còn thiếu nằm trong phần mở khi cần, kèm hướng dẫn chụp
+theo từng trường. Dùng một mục hoặc dùng toàn bộ thông tin đã rà soát cần thao
+tác rõ ràng. Nếu thay nội dung đang nhập, xác nhận trước khi áp dụng.
+
+Tra danh mục nằm sau kết quả, dùng thông tin đã rà soát và chỉ cho chọn ứng viên
+của tiêu chí hiện tại. Ô tra bổ sung cho nhánh mã vạch hoặc lỗi đọc nằm trong
+phần mở khi cần. Tìm sách có sẵn và tự nhập vẫn là đường vào riêng. Khi đổi ảnh,
+khóa thao tác áp dụng kết quả cũ cho đến lượt đọc tiếp theo.
 
 ## Draft photo preview —19/10/2026
 

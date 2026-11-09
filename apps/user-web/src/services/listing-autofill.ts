@@ -1,4 +1,5 @@
 import {
+  ApiError,
   autofillSuggestion,
   findIsbnMatches,
   type AutofillSuggestion,
@@ -43,7 +44,7 @@ export function createAutofillRequest(
   attempt: DraftAttempt,
   channel?: "Auction",
 ) {
-  return async (files: File[]): Promise<AutofillSuggestion> => {
+  return async (files: File[], onReady?: () => void): Promise<AutofillSuggestion> => {
     if (!files.length || files.length > 3)
       throw new Error(
         "Chọn từ 1 đến 3 ảnh: bìa trước, gáy hoặc trang bản quyền.",
@@ -52,6 +53,7 @@ export function createAutofillRequest(
     const mediaIds: string[] = [];
     for (const file of files)
       mediaIds.push(await uploadOnce(attempt, draft, file));
+    onReady?.();
     return attempt.ask(
       `/listings/${draft.entityId}/autofill-suggestions`,
       autofillSuggestion,
@@ -60,11 +62,22 @@ export function createAutofillRequest(
   };
 }
 
+// Only the optional ISBN request is bypassable. Uploads, auth and draft
+// creation failures must still be handled before the photos can be read.
+export class IsbnLookupUnavailable extends Error {}
+
 export function createIsbnLookup(attempt: DraftAttempt, channel?: 'Auction') {
-  return async (files: File[]) => {
+  return async (files: File[], onReady?: () => void) => {
     if (!files.length || files.length > 3) throw new Error('Chọn từ 1 đến 3 ảnh để tìm ISBN.');
     const draft = await ensureDraft(attempt, channel), ids: string[] = [];
     for (const file of files) ids.push(await uploadOnce(attempt, draft, file));
-    return findIsbnMatches(session, draft.entityId, ids);
+    onReady?.();
+    try {
+      return await findIsbnMatches(session, draft.entityId, ids);
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 0 || error.status === 408 || error.status === 429 || error.status >= 500))
+        throw new IsbnLookupUnavailable("Chưa tra được mã vạch. Bạn có thể thử lại hoặc đọc chữ bằng AI.");
+      throw error;
+    }
   };
 }
