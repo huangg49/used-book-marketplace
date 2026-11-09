@@ -231,6 +231,8 @@ export type AuctionOperation =
   | 'withdrawAuctionRegistration'
   | 'setAuctionMinBidders'
   | 'closeAuctionBeforeStart'
+  | 'acceptAuctionSecondChance'
+  | 'declineAuctionSecondChance'
   | 'payPointOrder'
   | 'acceptPointOrderReport'
   | 'rejectPointOrderReport'

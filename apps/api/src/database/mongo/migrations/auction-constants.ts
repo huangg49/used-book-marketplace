@@ -65,6 +65,23 @@ export const AUCTION_DEFAULT_MIN_BIDDERS = 4;
 export const AUCTION_MAX_MIN_BIDDERS = 10;
 export const auctionDeposit = (startPrice: number) =>
   Math.max(AUCTION_MIN_PRICE, Math.ceil(startPrice / 10 / 1000) * 1000);
+// ADR 0087: the seller may raise the deposit, never lower it: from the 10%
+// default above up to half the start price, in whole 1.000đ (the start price
+// is the lowest possible winning price, so the deposit is always inside it).
+export const AUCTION_DEPOSIT_UNIT = 1000;
+export const AUCTION_DEPOSIT_MAX_PERCENT = 50;
+export const auctionDepositMax = (startPrice: number) =>
+  Math.max(
+    auctionDeposit(startPrice),
+    Math.floor((startPrice * AUCTION_DEPOSIT_MAX_PERCENT) / 100 / AUCTION_DEPOSIT_UNIT) *
+      AUCTION_DEPOSIT_UNIT,
+  );
+// ADR 0087: when a non-paying winner leaves the book unsold, the seller gets
+// this share of the forfeited deposit; the platform keeps the rest, so a
+// seller's own account winning and defaulting still costs them money.
+export const AUCTION_SELLER_DEPOSIT_SHARE_PERCENT = 50;
+export const sellerDepositShare = (forfeited: number) =>
+  Math.floor((forfeited * AUCTION_SELLER_DEPOSIT_SHARE_PERCENT) / 100);
 // ADR 0079: bounded registration lifecycle. Every waiting or held auction has a
 // fixed ceiling measured from a stored timestamp that never moves.
 export const AUCTION_MIN_BIDDERS_FLOOR = 4;
@@ -84,3 +101,21 @@ export const AUCTION_OPEN_GRACE_MS = 24 * HOUR_MS;
 export const AUCTION_RESCHEDULE_FREEZE_MS = 30 * 60_000;
 // OnHold auto-cancels 48 h after it was held.
 export const AUCTION_HOLD_MAX_MS = 48 * HOUR_MS;
+// ADR 0084: one pause model. All pauses of an auction together are bounded by
+// a budget; a resume gives the time back, at least 10 minutes of bidding.
+export const AUCTION_PAUSE_BUDGET_MS = 72 * HOUR_MS;
+export const AUCTION_RESUME_MIN_MS = 10 * 60_000;
+// ADR 0085: registration and deposits.
+// A full auction's registrants may still withdraw until 72 h before its open
+// time (it then waits for registrants again when below the minimum).
+export const AUCTION_FULL_WITHDRAW_MS = 72 * HOUR_MS;
+// Reaching the minimum after the open time opens the auction 10 minutes later,
+// moved to 07:00 when that falls between 23:00 and 07:00 (Vietnam time).
+export const AUCTION_REACHED_NOTICE_MS = 10 * 60_000;
+export const AUCTION_NIGHT_START_HOUR = 23;
+export const AUCTION_NIGHT_END_HOUR = 7;
+export const AUCTION_LOCAL_OFFSET_MS = 7 * HOUR_MS; // Asia/Ho_Chi_Minh, no DST
+// The longest delay that rule adds past the 24 h deadline (validator bound).
+export const AUCTION_NIGHT_ALLOWANCE_MS =
+  AUCTION_REACHED_NOTICE_MS +
+  (24 - AUCTION_NIGHT_START_HOUR + AUCTION_NIGHT_END_HOUR) * HOUR_MS;

@@ -3,15 +3,23 @@
 // so no worker has to open a scheduled auction and no opening can race.
 import type { AuctionDoc } from '../../database/mongo/documents.js';
 import {
+  AUCTION_FULL_WITHDRAW_MS,
+  AUCTION_LOCAL_OFFSET_MS,
   AUCTION_MAX_DURATION_MS,
   AUCTION_MAX_SCHEDULE_EDITS,
+  AUCTION_NIGHT_END_HOUR,
+  AUCTION_NIGHT_START_HOUR,
+  AUCTION_REACHED_NOTICE_MS,
   AUCTION_MIN_DURATION_MS,
   AUCTION_MIN_LEAD_MS,
   AUCTION_MAX_OPEN_CHANGES,
   AUCTION_MIN_REMAINING_MS,
   AUCTION_OPEN_CEILING_MS,
   AUCTION_OPEN_GRACE_MS,
+  AUCTION_HOLD_MAX_MS,
+  AUCTION_PAUSE_BUDGET_MS,
   AUCTION_RESCHEDULE_FREEZE_MS,
+  AUCTION_RESUME_MIN_MS,
   AUCTION_SCHEDULE_HORIZON_MS,
   BUY_NOW_CHALLENGE_MS,
   BUY_NOW_RIVAL_CHALLENGE_MS,
@@ -230,9 +238,14 @@ function ceilingStart(raw: string, now: Date, publishedAt: Date) {
   return startAt;
 }
 
+// ADR 0084: the fixed ceilings grow by the time resumes gave back.
+const ceilingBase = (a: Pick<AuctionDoc, 'publishedAt'> & Partial<Pick<AuctionDoc, 'pausedMs'>>) =>
+  new Date(a.publishedAt.getTime() + (a.pausedMs ?? 0));
+
 /** The latest open time a waiting registration auction can be moved to. */
-export const latestStartAt = (a: Pick<AuctionDoc, 'publishedAt'>) =>
-  new Date(a.publishedAt.getTime() + AUCTION_OPEN_CEILING_MS);
+export const latestStartAt = (
+  a: Pick<AuctionDoc, 'publishedAt'> & Partial<Pick<AuctionDoc, 'pausedMs'>>,
+) => new Date(ceilingBase(a).getTime() + AUCTION_OPEN_CEILING_MS);
 
 /** The seller acts on a waiting auction only before its fixed start. */
 export function requireWaiting(a: AuctionDoc, now: Date) {
@@ -257,10 +270,10 @@ export function lifecycleReschedule(
   now: Date,
 ) {
   requireWaiting(a, now);
-  // ADR 0082: the open time changes at most twice.
+  const openTime = openTimeOf(a);
+  const full = a.minBidders != null && a.registeredCount >= a.minBidders;
   if (a.scheduleRevision >= AUCTION_MAX_OPEN_CHANGES)
     throw lifecycleError('Phiên này đã đổi giờ mở tối đa 2 lần.');
-  const openTime = openTimeOf(a);
   if (now >= openTime)
     throw lifecycleError(
       'Đã qua giờ mở; phiên mở khi đủ người đăng ký hoặc tự hủy khi hết hạn chờ.',
@@ -271,7 +284,15 @@ export function lifecycleReschedule(
     );
   if (!input.startAt) invalidField('startAt', 'Chọn giờ mở mới.');
   const length = durationMs(input.durationSeconds);
-  return graceSchedule(ceilingStart(input.startAt, now, a.publishedAt), length);
+  const opensAt = ceilingStart(input.startAt, now, ceilingBase(a));
+  // ADR 0085 (H4): registrants of a full auction committed to this time; the
+  // seller may bring it forward, never push it back.
+  if (full && opensAt >= openTime)
+    invalidField(
+      'startAt',
+      'Phiên đã đủ người đăng ký nên chỉ dời giờ mở sớm hơn giờ hiện tại của phiên.',
+    );
+  return graceSchedule(opensAt, length);
 }
 
 /**
@@ -281,7 +302,144 @@ export function lifecycleReschedule(
  */
 export function reachedFields(a: AuctionDoc, now: Date) {
   const length = a.plannedEndAt.getTime() - a.startAt.getTime();
-  const start = a.opensAt && a.opensAt > now ? a.opensAt : now;
+  const start =
+    a.opensAt && a.opensAt > now
+      ? a.opensAt
+      : a.openMode === 'ScheduledGrace'
+        ? lateOpening(now)
+        : now;
   const end = new Date(start.getTime() + length);
   return { startAt: start, endAt: end, plannedEndAt: end, biddingOpenedAt: start };
+}
+
+const DAY_MS = 24 * 3_600_000;
+/**
+ * ADR 0085 (M3): the first moment at or after `at` outside the night hours
+ * 23:00-07:00, Vietnam time (UTC+7, no daylight saving).
+ */
+export function outsideNight(at: Date) {
+  const local = at.getTime() + AUCTION_LOCAL_OFFSET_MS;
+  const midnight = Math.floor(local / DAY_MS) * DAY_MS;
+  const hour = (local - midnight) / 3_600_000;
+  if (hour >= AUCTION_NIGHT_END_HOUR && hour < AUCTION_NIGHT_START_HOUR) return at;
+  const morning =
+    midnight +
+    (hour >= AUCTION_NIGHT_START_HOUR ? DAY_MS : 0) +
+    AUCTION_NIGHT_END_HOUR * 3_600_000;
+  return new Date(morning - AUCTION_LOCAL_OFFSET_MS);
+}
+
+/**
+ * ADR 0085 (M3): an auction that reaches its minimum after its open time opens
+ * 10 minutes later, so registrants hear the time first, and never at night.
+ */
+export const lateOpening = (now: Date) =>
+  outsideNight(new Date(now.getTime() + AUCTION_REACHED_NOTICE_MS));
+
+/**
+ * ADR 0085 (N1): registrants of a full ScheduledGrace auction may still
+ * withdraw until 72 h before its open time; null when that does not apply.
+ */
+export function fullWithdrawUntil(
+  a: Pick<AuctionDoc, 'state' | 'openMode' | 'opensAt' | 'minBidders' | 'registeredCount'>,
+) {
+  if (
+    a.state !== 'Active' ||
+    a.openMode !== 'ScheduledGrace' ||
+    !a.opensAt ||
+    a.minBidders == null ||
+    a.registeredCount < a.minBidders
+  )
+    return null;
+  return new Date(a.opensAt.getTime() - AUCTION_FULL_WITHDRAW_MS);
+}
+
+/**
+ * ADR 0085 (N1): a withdrawal took a full auction below its minimum before
+ * its open time; it waits for registrants again until opensAt + 24 h.
+ */
+export function unreachedFields(a: AuctionDoc) {
+  const length = a.plannedEndAt.getTime() - a.startAt.getTime();
+  const startAt = new Date(a.opensAt!.getTime() + AUCTION_OPEN_GRACE_MS);
+  const end = new Date(startAt.getTime() + length);
+  return { startAt, endAt: end, plannedEndAt: end, biddingOpenedAt: null };
+}
+
+// ------------------------------------------------------------------ pauses
+// ADR 0084: one pause model for both hold reasons. Each hold lasts at most
+// 48 h and all of an auction's pauses together at most 72 h (the budget,
+// counted as the time resumes gave back). A resume moves every stored time by
+// the same amount, so the bidding time, the Buy Now window, the Dutch clock
+// and a waiting auction's open time and deadline continue where they paused.
+
+/** When a hold that starts now auto-cancels. */
+export const holdUntilOf = (a: Pick<AuctionDoc, 'pausedMs'>, heldAt: Date) =>
+  new Date(
+    heldAt.getTime() +
+      Math.min(
+        AUCTION_HOLD_MAX_MS,
+        Math.max(0, AUCTION_PAUSE_BUDGET_MS - (a.pausedMs ?? 0)),
+      ),
+  );
+
+/** Budget left for further pauses. */
+export const pauseBudgetLeft = (a: Pick<AuctionDoc, 'pausedMs'>) =>
+  Math.max(0, AUCTION_PAUSE_BUDGET_MS - (a.pausedMs ?? 0));
+
+export function holdFields(
+  a: Pick<AuctionDoc, 'pausedMs'>,
+  now: Date,
+  reason: 'Eligibility' | 'Review',
+): Partial<AuctionDoc> {
+  return {
+    state: 'OnHold',
+    heldAt: now,
+    holdReason: reason,
+    holdUntil: holdUntilOf(a, now),
+  };
+}
+
+type Movable = Pick<
+  AuctionDoc,
+  | 'heldAt'
+  | 'pausedMs'
+  | 'startAt'
+  | 'endAt'
+  | 'plannedEndAt'
+  | 'opensAt'
+  | 'buyNowAt'
+  | 'biddingOpenedAt'
+>;
+
+/**
+ * Resuming at `now`: the time that was left when the auction was held comes
+ * back, at least 10 minutes when it was live (within the budget). An auction
+ * held at or after its end gets nothing back; the worker closes it next.
+ */
+export function resumeFields(a: Movable, now: Date): Partial<AuctionDoc> {
+  const base: Partial<AuctionDoc> = {
+    state: 'Active',
+    resumedAt: now,
+    holdReason: null,
+    holdUntil: null,
+  };
+  const heldAt = a.heldAt!;
+  const left = a.endAt.getTime() - heldAt.getTime();
+  if (left <= 0) return base;
+  const pause = Math.max(0, now.getTime() - heldAt.getTime());
+  const topUp = Math.max(0, AUCTION_RESUME_MIN_MS - left);
+  const delta = Math.min(pause + topUp, pauseBudgetLeft(a));
+  if (delta <= 0) return base;
+  const move = (d: Date) => new Date(d.getTime() + delta);
+  const nullable = (d: Date | null) => (d ? move(d) : null);
+  return {
+    ...base,
+    pausedMs: (a.pausedMs ?? 0) + delta,
+    startAt: move(a.startAt),
+    endAt: move(a.endAt),
+    plannedEndAt: move(a.plannedEndAt),
+    opensAt: nullable(a.opensAt),
+    buyNowAt: nullable(a.buyNowAt),
+    biddingOpenedAt: nullable(a.biddingOpenedAt),
+  };
 }

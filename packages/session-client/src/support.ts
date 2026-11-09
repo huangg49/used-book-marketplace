@@ -78,6 +78,8 @@ export const supportSummarySchema = z.object({
   version: z.number().int().positive(),
   createdAt: z.iso.datetime(),
   updatedAt: z.iso.datetime(),
+  // ADR 0083: operations reads only.
+  otherOpenOnTarget: z.number().int().nonnegative().optional(),
 });
 export const supportPageSchema = z.object({
   items: z.array(supportSummarySchema),

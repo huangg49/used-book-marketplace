@@ -6,6 +6,11 @@ import { createAuctionLifecycleMigration, withAuctionLifecycle } from './0067-au
 import { createAuctionResumeMigration, withAuctionResume } from './0068-auction-resume.js';
 import { createAuctionScheduledOpenMigration, withAuctionScheduledOpen } from './0069-auction-scheduled-open.js';
 import { createAuctionOpenMonthMigration, withAuctionOpenMonth } from './0070-auction-open-month.js';
+import { createSupportTargetIndexMigration, withSupportTargetIndex } from './0071-support-target-index.js';
+import { createAuctionPauseBudgetMigration, withAuctionPauseBudget } from './0072-auction-pause-budget.js';
+import { createAuctionReachedNoticeMigration, withAuctionReachedNotice } from './0073-auction-reached-notice.js';
+import { createAuctionSecondChanceMigration, withAuctionSecondChance } from './0074-auction-second-chance.js';
+import { createAuctionDepositShareMigration, withAuctionDepositShare } from './0075-auction-deposit-share.js';
 import { createAuctionBidHoldsMigration, withAuctionBidHolds } from './0064-auction-bid-holds.js';
 import { manualWithdrawalsMigration, withManualWithdrawals } from './0061-manual-wallet-withdrawals.js';
 import { createWithdrawalsMigration, withdrawalSpecs, withWithdrawals } from './0060-wallet-withdrawals.js';
@@ -564,7 +569,7 @@ const beforeWithdrawals = (): CollectionSpec[] => [
   demoCompletionSpec,
 ];
 
-export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
+export const currentCollections = (): CollectionSpec[] => [...beforeWithdrawals().map(withWithdrawals).map(withMessageSendLimits).map(withAuctionBidHolds).map(withAuctionRegistration).map(withAuctionLifecycle).map(withAuctionResume).map(withAuctionScheduledOpen).map(withAuctionOpenMonth).map(withSupportTargetIndex).map(withAuctionPauseBudget).map(withAuctionReachedNotice).map(withAuctionSecondChance).map(withAuctionDepositShare), ...withdrawalSpecs.map(withManualWithdrawals), registrationSpec];
 // Only the affected predecessor schemas are evaluated eagerly. Building the full
 // catalogue here would read its taxonomy while an import cycle is initializing.
 const withdrawalsMigration = createWithdrawalsMigration([
@@ -614,6 +619,37 @@ const scheduledOpenMigration = createAuctionScheduledOpenMigration(
 );
 migrations.push(scheduledOpenMigration);
 // ADR 0082: open up to 30 days ahead, at most two open-time changes.
+const openMonthMigration = createAuctionOpenMonthMigration(
+  scheduledOpenMigration.definition.collections,
+);
+migrations.push(openMonthMigration);
+// ADR 0083: open reports grouped and filtered by target, on the 0050 spec.
+migrations.push(createSupportTargetIndexMigration(supportSpecs));
+// ADR 0084: one pause model with a budget, on the 0070 auction snapshot.
+const pauseBudgetMigration = createAuctionPauseBudgetMigration(
+  openMonthMigration.definition.collections,
+);
+migrations.push(pauseBudgetMigration);
+// ADR 0085: a late-reached auction opens after a notice, never at night.
+const reachedNoticeMigration = createAuctionReachedNoticeMigration(
+  pauseBudgetMigration.definition.collections,
+);
+migrations.push(reachedNoticeMigration);
+// ADR 0086: runner-up offer and unpaid report cancel, on the 0073 auctions,
+// 0059 point_orders and 0068 member_notifications snapshots.
+const secondChanceMigration = createAuctionSecondChanceMigration([
+  ...reachedNoticeMigration.definition.collections,
+  ...auctionFreeShippingReconcileMigration.definition.collections,
+  ...resumeMigration.definition.collections.filter((s) => s.name === 'member_notifications'),
+]);
+migrations.push(secondChanceMigration);
+// ADR 0087: seller share of a forfeited deposit and a seller-set deposit, on
+// the 0074 auctions/member_notifications, 0067 auction_intakes and 0066
+// ledger_journals snapshots.
 migrations.push(
-  createAuctionOpenMonthMigration(scheduledOpenMigration.definition.collections),
+  createAuctionDepositShareMigration([
+    ...secondChanceMigration.definition.collections.filter((s) => s.name !== 'point_orders'),
+    ...lifecycleMigration.definition.collections.filter((s) => s.name === 'auction_intakes'),
+    ...registrationMigration.definition.collections.filter((s) => s.name === 'ledger_journals'),
+  ]),
 );

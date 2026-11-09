@@ -51,14 +51,20 @@ function SupportQueue({ owner }: { owner: string }) {
   const state = params.get("state") ?? "",
     kind = params.get("kind") ?? "",
     mine = params.get("mine") === "true";
+  // ADR 0083: every open report about one target, reached from a case.
+  const targetType = params.get("targetType") ?? "",
+    targetId = params.get("targetId") ?? "";
+  const byTarget =
+    targetType in supportTargets && /^[0-9a-f-]{36}$/i.test(targetId);
   const query = new URLSearchParams({
     limit: "20",
     ...(state ? { state } : {}),
     ...(kind ? { kind } : {}),
     ...(mine ? { assignedToMe: "true" } : {}),
+    ...(byTarget ? { targetType, targetId } : {}),
   });
   const result = useInfiniteQuery({
-    queryKey: ["operations-support", owner, state, kind, mine],
+    queryKey: ["operations-support", owner, state, kind, mine, byTarget ? `${targetType}:${targetId}` : ""],
     staleTime: 0,
     refetchOnMount: "always",
     initialPageParam: undefined as string | undefined,
@@ -132,6 +138,23 @@ function SupportQueue({ owner }: { owner: string }) {
           Cập nhật danh sách
         </Button>
       </div>
+      {byTarget ? (
+        <p className="muted" role="status">
+          Đang xem mọi hồ sơ về {supportTargets[targetType as keyof typeof supportTargets].toLowerCase()} mã{" "}
+          {targetId.slice(0, 8).toUpperCase()}.{" "}
+          <Button
+            onClick={() =>
+              setParams((p) => {
+                p.delete("targetType");
+                p.delete("targetId");
+                return p;
+              })
+            }
+          >
+            Bỏ lọc
+          </Button>
+        </p>
+      ) : null}
       {result.isPending ? <p role="status">Đang tải hồ sơ…</p> : null}
       {result.isError && !result.isFetchNextPageError ? (
         <Notice tone="error">
@@ -164,6 +187,7 @@ function SupportQueue({ owner }: { owner: string }) {
                       : "Admin khác đang phụ trách"
                     : "Chưa có người phụ trách"}
                 </p>
+                {!byTarget ? <SameTarget item={item} /> : null}
               </div>
               <span className={styles.status}>
                 {item.state === "AwaitingMember"
@@ -189,6 +213,19 @@ function SupportQueue({ owner }: { owner: string }) {
         onNextPage={() => void result.fetchNextPage({ cancelRefetch: false })}
         nextLabel="Xem thêm hồ sơ" />}
     </div>
+  );
+}
+// ADR 0083: other open reports about the same target, so Admins handle them
+// together. Only operations reads carry the count; members never see it.
+function SameTarget({ item }: { item: SupportCase }) {
+  if (!item.target || !item.otherOpenOnTarget) return null;
+  const to = `/support?${new URLSearchParams({ targetType: item.target.type, targetId: item.target.id })}`;
+  return (
+    <p className="muted">
+      Còn {item.otherOpenOnTarget} hồ sơ khác đang mở về cùng{" "}
+      {supportTargets[item.target.type].toLowerCase()}.{" "}
+      <Link to={to}>Xem cùng lúc</Link>
+    </p>
   );
 }
 export function SupportDetailPage() {
@@ -452,16 +489,32 @@ function SupportRecord({
           {data.canManage &&
           data.case.target?.type === "Auction" &&
           data.case.state !== "Closed" &&
-          (data.relatedState === "Active" || data.relatedState === "OnHold") ? (
-            <CloseReportedAuction
-              key={`${data.case.target.id}:${data.case.version}`}
-              data={data}
-              blocked={pending || busy || reviewPending}
-              refresh={async () => {
-                await query.refetch();
-                await cache.invalidateQueries({ queryKey: ["operations-support"] });
-              }}
-            />
+          // ADR 0086: also before the winner paid, or during a runner-up offer.
+          ["Active", "OnHold", "AwaitingWinnerPayment", "SecondChanceOffered"].includes(data.relatedState ?? "") ? (
+            <>
+              {data.relatedState === "Active" ? (
+                <CloseReportedAuction
+                  mode="freeze"
+                  key={`freeze:${data.case.target.id}:${data.case.version}`}
+                  data={data}
+                  blocked={pending || busy || reviewPending}
+                  refresh={async () => {
+                    await query.refetch();
+                    await cache.invalidateQueries({ queryKey: ["operations-support"] });
+                  }}
+                />
+              ) : null}
+              <CloseReportedAuction
+                mode="close"
+                key={`close:${data.case.target.id}:${data.case.version}`}
+                data={data}
+                blocked={pending || busy || reviewPending}
+                refresh={async () => {
+                  await query.refetch();
+                  await cache.invalidateQueries({ queryKey: ["operations-support"] });
+                }}
+              />
+            </>
           ) : null}
           {data.review ? (
             <ModerateReview
@@ -484,16 +537,21 @@ const auctionVersionSchema = z.object({
  * ADR 0079: the assigned Admin closes the reported auction with a message.
  * One server transaction cancels it, refunds every deposit and hold, returns
  * the book and answers this case; the message reaches every participant.
+ * ADR 0084: or freezes it for review (OnHold, nothing refunded or decided);
+ * an Admin then resumes it with the time back or closes it here.
  */
 function CloseReportedAuction({
+  mode,
   data,
   blocked,
   refresh,
 }: {
+  mode: "close" | "freeze";
   data: SupportDetail;
   blocked: boolean;
   refresh: () => Promise<unknown>;
 }) {
+  const freeze = mode === "freeze";
   const auctionId = data.case.target!.id;
   const auction = useQuery({
     queryKey: ["support-auction", auctionId],
@@ -501,7 +559,7 @@ function CloseReportedAuction({
     staleTime: 0,
     retry: false,
   });
-  const scope = `support-close-auction:${data.case.id}`;
+  const scope = `support-${mode}-auction:${data.case.id}`;
   const pending = pendingSupportIntent(session, scope);
   const [message, setMessage] = useState("");
   const [confirming, setConfirming] = useState(false);
@@ -516,7 +574,7 @@ function CloseReportedAuction({
       await sendSupportIntent(
         session,
         scope,
-        `/operations/support-cases/${data.case.id}/close-auction`,
+        `/operations/support-cases/${data.case.id}/${freeze ? "freeze" : "close"}-auction`,
         {
           expectedVersion: data.case.version,
           auctionVersion: auction.data?.auction.version ?? 0,
@@ -535,13 +593,27 @@ function CloseReportedAuction({
     }
   }
   return (
-    <section className={styles.actions} aria-labelledby="close-auction-title">
-      <h2 id="close-auction-title">Đóng phiên đấu giá</h2>
-      <p className="muted">
-        Hủy phiên{auction.data ? ` “${auction.data.auction.title}”` : ""} ngay. Mọi tiền cọc và khoản giữ được
-        hoàn, sách trả lại người bán, và lời nhắn dưới đây gửi tới người bán cùng mọi người tham gia. Hồ sơ
-        chuyển sang “Đã phản hồi”. Không hoàn tác được.
-      </p>
+    <section className={styles.actions} aria-labelledby={`${mode}-auction-title`}>
+      <h2 id={`${mode}-auction-title`}>{freeze ? "Tạm dừng phiên để xem xét" : "Đóng phiên đấu giá"}</h2>
+      {freeze ? (
+        <p className="muted">
+          Tạm dừng phiên{auction.data ? ` “${auction.data.auction.title}”` : ""} trong lúc xem xét. Lượt trả giá,
+          đăng ký và tiền cọc được giữ nguyên, không ai trả giá thêm. Sau đó tiếp tục phiên ở “Phiên đấu giá” (cộng
+          lại thời gian tạm dừng) hoặc đóng phiên tại đây; quá hạn tạm dừng thì phiên tự hủy. Mỗi phiên tạm dừng
+          tối đa 72 giờ. Lời nhắn gửi tới người bán và mọi người tham gia; hồ sơ vẫn mở.
+        </p>
+      ) : (
+        <p className="muted">
+          Hủy phiên{auction.data ? ` “${auction.data.auction.title}”` : ""} ngay. Mọi tiền cọc và khoản giữ được
+          hoàn, sách trả lại người bán, và lời nhắn dưới đây gửi tới người bán cùng mọi người tham gia. Hồ sơ
+          chuyển sang “Đã phản hồi”. Không hoàn tác được.
+          {data.relatedState === "AwaitingWinnerPayment"
+            ? " Người thắng chưa thanh toán: đơn nhận sách của họ bị hủy và tiền cọc được hoàn, không bị giữ lại."
+            : data.relatedState === "SecondChanceOffered"
+              ? " Lời mời mua đang gửi người trả giá cao thứ hai cũng chấm dứt."
+              : ""}
+        </p>
+      )}
       {error ? <Notice tone="error">{error}</Notice> : null}
       {auction.isError ? (
         <Notice tone="error">
@@ -550,7 +622,7 @@ function CloseReportedAuction({
       ) : null}
       {pending ? (
         <Notice tone="warning">
-          Kết quả đóng phiên chưa rõ. Thử lại gửi đúng yêu cầu đó, không đóng hai lần.{" "}
+          {freeze ? "Kết quả tạm dừng phiên chưa rõ. Thử lại gửi đúng yêu cầu đó." : "Kết quả đóng phiên chưa rõ. Thử lại gửi đúng yêu cầu đó, không đóng hai lần."}{" "}
           <Button busy={busy} onClick={() => void close()}>Thử lại yêu cầu đã gửi</Button>
         </Notice>
       ) : (
@@ -570,14 +642,14 @@ function CloseReportedAuction({
           <p className="muted">Ít nhất 10 ký tự. Nêu lý do đóng; không ghi thông tin cá nhân.</p>
           {confirming ? (
             <div className={styles.buttons}>
-              <Button variant="danger" busy={busy} disabled={blocked || short || !auction.data} onClick={() => void close()}>
-                Xác nhận đóng phiên
+              <Button variant={freeze ? undefined : "danger"} busy={busy} disabled={blocked || short || !auction.data} onClick={() => void close()}>
+                {freeze ? "Xác nhận tạm dừng" : "Xác nhận đóng phiên"}
               </Button>
               <Button disabled={busy} onClick={() => setConfirming(false)}>Thôi</Button>
             </div>
           ) : (
-            <Button variant="danger" disabled={blocked || short || !auction.data} onClick={() => setConfirming(true)}>
-              Đóng phiên với lời nhắn
+            <Button variant={freeze ? undefined : "danger"} disabled={blocked || short || !auction.data} onClick={() => setConfirming(true)}>
+              {freeze ? "Tạm dừng với lời nhắn" : "Đóng phiên với lời nhắn"}
             </Button>
           )}
         </div>
@@ -598,6 +670,7 @@ function Related({ data }: { data: SupportDetail }) {
     Member: `/users/${target.id}`,
   };
   return (
+    <>
     <p className="muted">
       {supportTargets[target.type]} · {target.id}
       {data.relatedState
@@ -610,6 +683,8 @@ function Related({ data }: { data: SupportDetail }) {
         </>
       ) : null}
     </p>
+    <SameTarget item={data.case} />
+    </>
   );
 }
 function ModerateReview({

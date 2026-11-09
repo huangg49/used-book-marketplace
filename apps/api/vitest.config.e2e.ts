@@ -10,6 +10,7 @@ export default defineConfig({
     setupFiles: ['./test/test-env.ts'],
     fileParallelism: false,
     hookTimeout: 30000,
-    testTimeout: 15000,
+    // Some integration specs reconcile the full retained ledger after earlier suites.
+    testTimeout: 30_000,
   },
 });

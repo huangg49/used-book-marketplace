@@ -84,10 +84,13 @@ export async function checkIntake(tx: Tx, intakeId: string) {
   )
     fail('intake auction mismatch');
   // A settled Order closes its intake Sold; nothing else does.
+  // ADR 0086: during a runner-up offer the book stays with the auction.
   if (
     order &&
     (orderClosed
-      ? i.state !== 'ReclaimRequired' && i.state !== 'Reclaimed'
+      ? auction?.state === 'SecondChanceOffered'
+        ? i.state !== 'Auctioning'
+        : i.state !== 'ReclaimRequired' && i.state !== 'Reclaimed'
       : order.state === 'Completed'
         ? i.state !== 'Sold'
         : i.state !== 'Auctioning')
@@ -137,11 +140,15 @@ export async function checkAuction(tx: Tx, auctionId: string) {
     registrations.some((r) => r.state === 'Registered')
   )
     fail('closed auction keeps a deposit');
-  // ADR 0047: a scheduled auction takes no bid before its start.
+  // ADR 0047: a scheduled auction takes no bid before its start. ADR 0084:
+  // a resume moves startAt later by the time it gives back, so bids placed
+  // before a pause may precede it by at most pausedMs.
   if (
     await tx.c.auction_bids.findOne({
       auctionId: a._id,
-      decidedAt: { $lt: a.startAt },
+      decidedAt: {
+        $lt: new Date(a.startAt.getTime() - (a.pausedMs ?? 0)),
+      },
     })
   )
     fail('auction bid before start');

@@ -4,12 +4,13 @@ import { randomUUID } from 'node:crypto';
 import type {
   AuctionBidderDoc,
   AuctionDoc,
+  AuctionRegistrationDoc,
   ReclaimReason,
 } from '../../database/mongo/documents.js';
 import {
-  AUCTION_HOLD_MAX_MS,
   AUCTION_PAYMENT_MS,
 } from '../../database/mongo/migrations/auction-constants.js';
+import { SECOND_CHANCE_MS } from '../../database/mongo/migrations/0074-auction-second-chance.js';
 import type { AuctionStep } from '../../database/mongo/migrations/auction-constants.js';
 import { MongoService } from '../../database/mongo/mongo.service.js';
 import { LedgerService } from '../wallet/ledger.service.js';
@@ -38,6 +39,7 @@ import {
   EngineError,
   MONEY_MAX,
   nextMinimumBid,
+  rank,
   type EngineAction,
 } from './auction-engine.js';
 import { checkAuction } from './auction-invariants.js';
@@ -51,11 +53,17 @@ import {
 import {
   notifyAuction,
   notifyAuctionFunds,
+  notifyDepositShare,
+  notifyBelowMinimum,
   type FundsReason,
 } from './auction-notifications.js';
 import { AuctionIntakesService } from './auction-intakes.service.js';
 import { HandoverPointsService } from './handover-points.service.js';
-import { recordViolation, requireUnrestricted } from './member-violations.js';
+import {
+  recordViolation,
+  requireUnrestricted,
+  restrictedUntil,
+} from './member-violations.js';
 import { PointOrdersService } from './point-orders.service.js';
 import { AuctionBookService } from './auction-book.service.js';
 import { MongoPageService } from '../commands/mongo-page.service.js';
@@ -68,19 +76,22 @@ import {
   phaseOf,
   reschedule,
   latestStartAt,
+  fullWithdrawUntil,
   lifecycleReschedule,
   reachedFields,
+  unreachedFields,
   registrationExpired,
   requireWaiting,
+  holdFields,
+  pauseBudgetLeft,
+  resumeFields,
 } from './auction-schedule.js';
 import { stepKey } from './system-key.js';
 
 const RATE_LIMIT_PER_MINUTE = 30;
-// ADR 0079: when an OnHold auction auto-cancels.
+// ADR 0079/0084: when an OnHold auction auto-cancels.
 const holdExpiry = (a: AuctionDoc) =>
-  a.state === 'OnHold' && a.heldAt
-    ? new Date(a.heldAt.getTime() + AUCTION_HOLD_MAX_MS).toISOString()
-    : null;
+  a.state === 'OnHold' && a.holdUntil ? a.holdUntil.toISOString() : null;
 const MAX_OPEN_PARTICIPATIONS = 5;
 const closed = () =>
   new DomainError(
@@ -363,6 +374,66 @@ export class AuctionBiddingService {
         429,
         'RATE_LIMITED',
         'Bạn đang dẫn giá hoặc chờ thanh toán ở tối đa 5 phiên đấu giá.',
+      );
+  }
+  // ADR 0083: registration takes the POL-41 limits bids already have. A
+  // standing registration (its deposit is held) counts as an open
+  // participation, with auctions led or won awaiting payment; registering and
+  // withdrawing share the per-minute limit; re-registering on the same
+  // auction waits a minute after a withdrawal.
+  private async checkRegistrationLimits(
+    tx: Tx,
+    userId: string,
+    auctionId: string,
+    own: AuctionRegistrationDoc | null,
+    now: Date,
+  ) {
+    const minuteAgo = new Date(now.getTime() - 60_000);
+    const tooFast = () =>
+      new DomainError(
+        429,
+        'RATE_LIMITED',
+        'Bạn thao tác đăng ký đấu giá quá nhanh. Hãy thử lại sau ít phút.',
+      );
+    if (own?.state === 'Withdrawn' && own.updatedAt > minuteAgo)
+      throw tooFast();
+    if (
+      (await tx.c.auction_registrations.countDocuments({
+        userId,
+        updatedAt: { $gt: minuteAgo },
+      })) >= RATE_LIMIT_PER_MINUTE
+    )
+      throw tooFast();
+    const registered = await tx.c.auction_registrations
+      .find(
+        { userId, state: 'Registered', auctionId: { $ne: auctionId } },
+        { projection: { auctionId: 1 } },
+      )
+      .toArray();
+    const engaged = await tx.c.auctions
+      .find(
+        {
+          _id: { $ne: auctionId },
+          $or: [
+            { leaderId: userId, state: { $in: ['Active', 'OnHold'] } },
+            {
+              winnerId: userId,
+              state: { $in: ['BuyNowPending', 'AwaitingWinnerPayment'] },
+            },
+          ],
+        },
+        { projection: { _id: 1 } },
+      )
+      .toArray();
+    const open = new Set([
+      ...registered.map((r) => r.auctionId),
+      ...engaged.map((a) => a._id),
+    ]);
+    if (open.size >= MAX_OPEN_PARTICIPATIONS)
+      throw new DomainError(
+        429,
+        'RATE_LIMITED',
+        'Bạn đang đăng ký, dẫn giá hoặc chờ thanh toán ở tối đa 5 phiên đấu giá.',
       );
   }
 
@@ -809,11 +880,11 @@ export class AuctionBiddingService {
   }
 
   /**
-   * ADR 0080: an independent Admin returns an OnHold auction to Active, once,
-   * before the 48 h hold ceiling and only when the seller and the leader are
-   * eligible again. Nothing moves: startAt, endAt, the Buy Now window and the
-   * Dutch clock keep their stored times, so the paused time is not given back
-   * and no ceiling grows. An auction whose end passed is closed next.
+   * ADR 0080/0084: an independent Admin returns an OnHold auction to Active
+   * before its hold auto-cancels, and only when the seller and the leader are
+   * eligible. Any number of resumes fit in the pause budget. The paused time
+   * comes back (at least 10 minutes of bidding): every stored time moves by
+   * the same amount. An auction held at or after its end is closed next.
    */
   resume(context: CommandContext, id: string, body: Wire['ResumeAuction']) {
     return this.commands.runAuction(context, 'resumeAuction', id, body, {
@@ -835,13 +906,9 @@ export class AuctionBiddingService {
         const reason = body.reason.trim();
         if (reason.length < 10)
           invalidField('reason', 'Hãy ghi lý do tiếp tục ít nhất 10 ký tự.');
-        if (a.resumedAt)
+        if (!a.heldAt || !a.holdUntil || now >= a.holdUntil)
           throw invalidState(
-            'Phiên đã được tiếp tục một lần; lần tạm dừng này chỉ có thể hủy.',
-          );
-        if (!a.heldAt || now.getTime() >= a.heldAt.getTime() + AUCTION_HOLD_MAX_MS)
-          throw invalidState(
-            'Phiên đã tạm dừng quá 48 giờ nên sẽ bị hủy, không tiếp tục được.',
+            'Phiên đã hết thời gian tạm dừng nên sẽ bị hủy, không tiếp tục được.',
           );
         if (!(await this.partiesEligible(tx, a)))
           throw invalidState(
@@ -850,7 +917,7 @@ export class AuctionBiddingService {
         const next = await this.update(
           tx,
           a,
-          { state: 'Active', resumedAt: now },
+          resumeFields(a, now),
           now,
         );
         const bidders = await tx.c.auction_bidders
@@ -866,6 +933,8 @@ export class AuctionBiddingService {
             ...(await this.registrantIds(tx, a)),
           ],
           now,
+          // ADR 0083: members learn why the Admin resumed the auction.
+          reason,
         );
         return this.change(next, now, 'AuctionResumed', actor._id, reason);
       },
@@ -882,11 +951,22 @@ export class AuctionBiddingService {
     closeReason: AuctionDoc['closeReason'],
     receiptId: string,
     now: Date,
+    extra: Partial<AuctionDoc> = {},
   ) {
     const next = await this.update(
       tx,
       a,
-      { state: 'Cancelled', closedAt: now, cancelReason: reason, closeReason },
+      {
+        ...extra,
+        state: 'Cancelled',
+        // ADR 0086: a winner's auction keeps the time it was decided.
+        closedAt: a.closedAt ?? now,
+        cancelReason: reason,
+        closeReason,
+        // ADR 0084: hold details exist only while OnHold.
+        holdReason: null,
+        holdUntil: null,
+      },
       now,
     );
     await this.intakes.requireReclaim(tx, a.intakeId, 'AuctionCancelled', now);
@@ -930,8 +1010,10 @@ export class AuctionBiddingService {
     return a;
   };
 
-  // ADR 0079: the seller only lowers the minimum (never below 4), while waiting
+  // ADR 0079: the seller lowers the minimum (never below 4), while waiting
   // and before it was reached; reaching it applies the gate at once.
+  // ADR 0085 (L5): raising it is allowed only while nobody is registered, so
+  // no registrant's terms change after they joined.
   setMinBidders(
     context: CommandContext,
     id: string,
@@ -952,10 +1034,15 @@ export class AuctionBiddingService {
           throw invalidState(
             'Phiên đã đủ người đăng ký nên số người tối thiểu được giữ nguyên.',
           );
-        if (body.minBidders >= a.minBidders)
+        if (body.minBidders === a.minBidders)
           invalidField(
             'minBidders',
-            `Chỉ giảm được số người tối thiểu (hiện là ${a.minBidders}).`,
+            `Số người tối thiểu đang là ${a.minBidders}.`,
+          );
+        if (body.minBidders > a.minBidders && a.registeredCount > 0)
+          invalidField(
+            'minBidders',
+            `Đã có người đăng ký nên chỉ giảm được số người tối thiểu (hiện là ${a.minBidders}).`,
           );
         const reached = a.registeredCount >= body.minBidders;
         const lowered = { ...a, minBidders: body.minBidders };
@@ -1042,31 +1129,118 @@ export class AuctionBiddingService {
     await tx.lock('users', [(await this.auction(tx, id)).sellerId]);
     await tx.lock('auctions', [id]);
     const a = await this.auction(tx, id);
+    await this.requireUninvolved(tx, a, actorId, 'đóng');
+    if (a.version !== version) throw conflict();
+    // ADR 0083: until the worker closes it (no winner or Order exists yet), an
+    // Active auction past its end can still be closed from the report, as
+    // the plain Admin cancel already allows; the auction lock decides a race
+    // with the close. ADR 0086: also after the close while the winner has not
+    // paid (their Order closes Cancelled without a payment and their deposit
+    // is refunded, not forfeited) and while a runner-up offer runs.
+    if (
+      a.state === 'AwaitingWinnerPayment' ||
+      a.state === 'SecondChanceOffered'
+    ) {
+      if (a.state === 'AwaitingWinnerPayment')
+        await this.orders.cancelUnpaid(tx, a.orderId!, now, receiptId);
+      await tx.c.auction_registrations.updateMany(
+        { auctionId: a._id, state: 'Applied' },
+        [
+          {
+            $set: {
+              state: 'Refunded',
+              updatedAt: now,
+              version: { $add: ['$version', 1] },
+            },
+          },
+        ],
+      );
+      return this.cancelNow(
+        tx,
+        a,
+        message,
+        'Reported',
+        receiptId,
+        now,
+        a.state === 'SecondChanceOffered' ? { runnerUpOutcome: 'Cancelled' } : {},
+      );
+    }
+    if (a.state !== 'OnHold' && a.state !== 'Active')
+      throw invalidState(
+        'Phiên đã được thanh toán hoặc đã kết thúc nên không còn đóng được từ báo cáo.',
+      );
+    return this.cancelNow(tx, a, message, 'Reported', receiptId, now);
+  }
+
+  // The Admin on a report is none of the seller, bidders or registrants.
+  private async requireUninvolved(
+    tx: Tx,
+    a: AuctionDoc,
+    actorId: string,
+    verb: string,
+  ) {
     if (
       actorId === a.sellerId ||
-      (await tx.c.auction_bidders.findOne({ _id: `${id}:${actorId}` })) ||
-      (await tx.c.auction_registrations.findOne({ _id: `${id}:${actorId}` }))
+      (await tx.c.auction_bidders.findOne({ _id: `${a._id}:${actorId}` })) ||
+      (await tx.c.auction_registrations.findOne({ _id: `${a._id}:${actorId}` }))
     )
       throw new DomainError(
         403,
         'SelfReviewForbidden',
-        'Bạn đang liên quan đến phiên này nên không được đóng.',
+        `Bạn đang liên quan đến phiên này nên không được ${verb}.`,
       );
+  }
+
+  /**
+   * ADR 0084 (H2): the assigned, independent Admin on a report freezes the
+   * auction for review, inside the support command's transaction. It is
+   * Active (waiting, live, or past its end until the worker closes it) and
+   * has pause budget left. The hold then follows the one pause model: an
+   * Admin resumes it (time given back) or closes it, or it auto-cancels.
+   */
+  async freezeReported(
+    tx: Tx,
+    id: string,
+    version: number,
+    actorId: string,
+    message: string,
+    now: Date,
+  ) {
+    await tx.lock('auctions', [id]);
+    const a = await this.auction(tx, id);
+    await this.requireUninvolved(tx, a, actorId, 'tạm dừng');
     if (a.version !== version) throw conflict();
-    // An Active auction past its end waits for the close (a winner may exist).
-    if (
-      !(a.state === 'OnHold' || (a.state === 'Active' && now < a.endAt))
-    )
+    if (a.state !== 'Active')
       throw invalidState(
-        'Phiên đã kết thúc hoặc đang chốt kết quả nên không còn đóng được.',
+        'Chỉ tạm dừng được phiên đang chờ người đăng ký hoặc đang diễn ra.',
       );
-    return this.cancelNow(tx, a, message, 'Reported', receiptId, now);
+    if (pauseBudgetLeft(a) <= 0)
+      throw invalidState(
+        'Phiên đã dùng hết 72 giờ tạm dừng; chỉ có thể đóng hoặc để phiên tiếp tục.',
+      );
+    const next = await this.update(tx, a, holdFields(a, now, 'Review'), now);
+    const bidders = await tx.c.auction_bidders
+      .find({ auctionId: a._id }, { projection: { bidderId: 1 } })
+      .toArray();
+    await notifyAuction(
+      tx,
+      next,
+      'AuctionOnHold',
+      [
+        a.sellerId,
+        ...bidders.map((b) => b.bidderId),
+        ...(await this.registrantIds(tx, a)),
+      ],
+      now,
+      message,
+    );
+    return next;
   }
 
   // ADR 0079 worker safety net: the start passed with too few registrants.
   // Keyed by the auction version, so a second run on the same row replays.
   expireRegistration(id: string, version: number) {
-    return this.commands.systemAuction('AuctionClose', stepKey(id, version), {
+    return this.commands.systemAuction('AuctionClose', stepKey(id, version, 'expireRegistration'), {
       discover: async (tx) => [(await this.auction(tx, id)).sellerId],
       authorize: (tx) => this.auction(tx, id),
       mutate: async (tx, _before, receiptId) => {
@@ -1088,9 +1262,10 @@ export class AuctionBiddingService {
     });
   }
 
-  // ADR 0079: OnHold never lasts more than 48 h; an Admin can cancel earlier.
+  // ADR 0079/0084: a hold ends at holdUntil (48 h, or less once the pause
+  // budget is nearly spent); an Admin can cancel earlier.
   expireHold(id: string, version: number) {
-    return this.commands.systemAuction('AuctionClose', stepKey(id, version), {
+    return this.commands.systemAuction('AuctionClose', stepKey(id, version, 'expireHold'), {
       discover: async (tx) => [(await this.auction(tx, id)).sellerId],
       authorize: (tx) => this.auction(tx, id),
       mutate: async (tx, _before, receiptId) => {
@@ -1100,14 +1275,14 @@ export class AuctionBiddingService {
         if (
           a.version !== version ||
           a.state !== 'OnHold' ||
-          !a.heldAt ||
-          now.getTime() < a.heldAt.getTime() + AUCTION_HOLD_MAX_MS
+          !a.holdUntil ||
+          now < a.holdUntil
         )
           throw invalidState();
         const next = await this.cancelNow(
           tx,
           a,
-          'Phiên tạm dừng quá 48 giờ mà chưa được xử lý.',
+          'Phiên hết thời gian tạm dừng mà chưa được xử lý.',
           'HoldExpired',
           receiptId,
           now,
@@ -1150,7 +1325,7 @@ export class AuctionBiddingService {
         const next = await this.update(
           tx,
           a,
-          { state: 'OnHold', heldAt: now },
+          holdFields(a, now, 'Eligibility'),
           now,
         );
         await notifyAuction(
@@ -1170,7 +1345,7 @@ export class AuctionBiddingService {
   // Payment deadline is endAt + 24h whenever the worker runs; a late worker
   // records the expiry.
   close(id: string, version: number) {
-    return this.commands.systemAuction('AuctionClose', stepKey(id, version), {
+    return this.commands.systemAuction('AuctionClose', stepKey(id, version, 'close'), {
       discover: async (tx) => {
         const a = await this.auction(tx, id);
         return [a.sellerId, ...(a.leaderId ? [a.leaderId] : [])];
@@ -1239,7 +1414,7 @@ export class AuctionBiddingService {
           const next = await this.update(
             tx,
             a,
-            { state: 'OnHold', heldAt: now },
+            holdFields(a, now, 'Eligibility'),
             now,
           );
           await notifyAuction(
@@ -1310,10 +1485,15 @@ export class AuctionBiddingService {
     });
   }
 
-  // FR-AU08: no automatic charge, runner-up or relist; the book is reclaimed.
-  expirePayment(id: string) {
-    return this.commands.systemAuction('AuctionPaymentExpiry', id, {
-      discover: async () => [],
+  // FR-AU08: no automatic charge or relist. ADR 0086: the first non-payment
+  // offers the book once to the runner-up (SecondChanceOffered) instead of
+  // reclaiming it; otherwise the book is reclaimed. Keyed by the Order, so the
+  // runner-up's own expiry later is a separate step (legacy: the auction id).
+  expirePayment(id: string, orderId?: string | null) {
+    const key = orderId ? stepKey(orderId, 0, 'expirePayment') : id;
+    return this.commands.systemAuction('AuctionPaymentExpiry', key, {
+      // ADR 0087: the seller's wallet may receive their deposit share.
+      discover: async (tx) => [(await this.auction(tx, id)).sellerId],
       authorize: (tx) => this.auction(tx, id),
       mutate: async (tx, _before, receiptId) => {
         await tx.lock('auctions', [id]);
@@ -1330,14 +1510,17 @@ export class AuctionBiddingService {
         await recordViolation(tx, {
           userId: a.winnerId!,
           kind: 'AuctionNonPayment',
-          sourceId: a._id,
+          // ADR 0086: one violation per (kind, source); a runner-up who
+          // accepted and did not pay is recorded against their own Order.
+          sourceId: a.runnerUpOutcome === 'Accepted' ? a.orderId! : a._id,
           recordedAt: now,
           receiptId,
         });
         const next = await this.update(tx, a, { state: 'PaymentExpired' }, now);
-        // ADR 0077: the winner's deposit goes to the platform (not the
-        // seller, so a seller's own account cannot win, default and recover
-        // it); the rest of their hold is released below.
+        // ADR 0077/0087: the winner's deposit goes to the platform; the
+        // seller gets half of it only if the book ends unsold (below and in
+        // endOffer), so a seller's own account that wins and defaults still
+        // costs them half. The rest of the winner's hold is released below.
         const forfeited = await this.forfeitDeposit(tx, next, receiptId, now);
         await this.releaseHolds(tx, next, null, 'Expired', receiptId, now);
         if (forfeited)
@@ -1348,6 +1531,41 @@ export class AuctionBiddingService {
             [a.winnerId],
             now,
           );
+        const runnerUp =
+          a.state === 'AwaitingWinnerPayment' && a.runnerUpOutcome === null
+            ? await this.runnerUp(tx, next, now)
+            : null;
+        if (runnerUp) {
+          const offered = await this.update(
+            tx,
+            next,
+            {
+              state: 'SecondChanceOffered',
+              runnerUpId: runnerUp.bidderId,
+              runnerUpPrice: runnerUp.level,
+              runnerUpOfferedAt: now,
+              runnerUpDeadline: new Date(now.getTime() + SECOND_CHANCE_MS),
+              runnerUpOutcome: 'Offered',
+              defaultedOrderId: a.orderId,
+            },
+            now,
+          );
+          await notifyAuction(
+            tx,
+            offered,
+            'AuctionPaymentExpired',
+            [a.winnerId, a.sellerId],
+            now,
+          );
+          await notifyAuction(
+            tx,
+            offered,
+            'AuctionSecondChanceOffered',
+            [runnerUp.bidderId],
+            now,
+          );
+          return this.change(offered, now, 'AuctionSecondChanceOffered', null);
+        }
         await this.reclaim(tx, a, 'PaymentExpired', now);
         await notifyAuction(
           tx,
@@ -1356,10 +1574,224 @@ export class AuctionBiddingService {
           [a.winnerId, a.sellerId],
           now,
         );
+        await this.payDepositShare(tx, next, now);
         return this.change(next, now, 'AuctionPaymentExpired', null);
       },
     });
   }
+  /**
+   * ADR 0086: the runner-up is the other bidder with the highest level (the
+   * English level or the sealed bid), offered at that level. None for Dutch
+   * (one acceptance), or when that member can no longer trade.
+   */
+  private async runnerUp(tx: Tx, a: AuctionDoc, now: Date) {
+    if (a.auctionType === 'Dutch' || !a.winnerId) return null;
+    const bidders = await tx.c.auction_bidders
+      .find({ auctionId: a._id })
+      .toArray();
+    const r = rank(bidders).find((b) => b.bidderId !== a.winnerId);
+    if (!r || r.level < a.startPrice || r.bidderId === a.sellerId) return null;
+    const user = await tx.c.users.findOne({ _id: r.bidderId });
+    if (
+      !user ||
+      user.status !== 'ACTIVE' ||
+      !user.emailVerifiedAt ||
+      (await restrictedUntil(tx, r.bidderId, now))
+    )
+      return null;
+    return r;
+  }
+
+  private async offerOf(tx: Tx, id: string, actorId: string) {
+    const a = await this.auction(tx, id);
+    if (a.runnerUpId !== actorId) throw notFound();
+    return a;
+  }
+
+  private async openOffer(
+    tx: Tx,
+    id: string,
+    version: number,
+    now: Date,
+  ) {
+    const a = await this.auction(tx, id);
+    if (a.version !== version) throw conflict();
+    if (a.state !== 'SecondChanceOffered' || a.runnerUpOutcome !== 'Offered')
+      throw invalidState('Lời mời mua này không còn hiệu lực.');
+    if (now >= a.runnerUpDeadline!)
+      throw invalidState('Lời mời mua đã hết hạn.');
+    return a;
+  }
+
+  /**
+   * ADR 0086: the runner-up accepts before the deadline. The auction returns
+   * to AwaitingWinnerPayment with them as winner at their own level, a second
+   * ViaPoint Order forms (24 h to pay) and the price is held, as for a winner.
+   */
+  acceptSecondChance(
+    context: CommandContext,
+    id: string,
+    body: Wire['AuctionVersionCommand'],
+  ) {
+    return this.commands.runAuction(
+      context,
+      'acceptAuctionSecondChance',
+      id,
+      body,
+      {
+        discover: async (tx) => [(await this.auction(tx, id)).sellerId],
+        authorize: (tx, actor) => {
+          member(actor);
+          return this.offerOf(tx, id, actor._id);
+        },
+        mutate: async (tx, actor, _before, receiptId) => {
+          requireActive(actor);
+          await tx.lock('auctions', [id]);
+          const now = await this.clock.decision(tx, context.auth);
+          const a = await this.openOffer(tx, id, body.expectedVersion, now);
+          await requireUnrestricted(tx, actor._id, now);
+          if (!(await this.partiesEligible(tx, { ...a, leaderId: null })))
+            throw invalidState(
+              'Người bán hiện không đủ điều kiện bán nên chưa nhận được lời mời này.',
+            );
+          await this.checkParticipationQuota(tx, actor._id, id);
+          const price = a.runnerUpPrice!;
+          if (this.fundsCheck) await this.requireFunds(tx, actor._id, id, price);
+          const deadline = new Date(now.getTime() + AUCTION_PAYMENT_MS);
+          const order = await this.orders.form(
+            tx,
+            a,
+            actor._id,
+            price,
+            deadline,
+            now,
+            receiptId,
+          );
+          const next = await this.update(
+            tx,
+            a,
+            {
+              state: 'AwaitingWinnerPayment',
+              winnerId: actor._id,
+              finalPrice: price,
+              paymentDeadline: deadline,
+              orderId: order._id,
+              runnerUpOutcome: 'Accepted',
+            },
+            now,
+          );
+          const delta = this.fundsCheck
+            ? await this.ledger.setAuctionHold(
+                tx,
+                a._id,
+                actor._id,
+                price,
+                receiptId,
+                now,
+              )
+            : 0;
+          await notifyAuctionFunds(tx, next, actor._id, delta, 'SecondChance', now);
+          await notifyAuction(tx, next, 'AuctionWon', [actor._id], now);
+          await notifyAuction(tx, next, 'AuctionSold', [a.sellerId], now);
+          return this.change(next, now, 'AuctionSecondChanceAccepted', actor._id);
+        },
+      },
+    );
+  }
+
+  /** ADR 0086: the runner-up declines; the auction ends, the book goes back. */
+  declineSecondChance(
+    context: CommandContext,
+    id: string,
+    body: Wire['AuctionVersionCommand'],
+  ) {
+    return this.commands.runAuction(
+      context,
+      'declineAuctionSecondChance',
+      id,
+      body,
+      {
+        discover: async (tx) => [(await this.auction(tx, id)).sellerId],
+        authorize: (tx, actor) => {
+          member(actor);
+          return this.offerOf(tx, id, actor._id);
+        },
+        mutate: async (tx, actor) => {
+          await tx.lock('auctions', [id]);
+          const now = await this.clock.decision(tx, context.auth);
+          const a = await this.openOffer(tx, id, body.expectedVersion, now);
+          const next = await this.endOffer(tx, a, 'Declined', now);
+          return this.change(next, now, 'AuctionSecondChanceDeclined', actor._id);
+        },
+      },
+    );
+  }
+
+  /** ADR 0086: the worker ends an unanswered offer at its deadline. */
+  expireSecondChance(id: string, version: number) {
+    return this.commands.systemAuction(
+      'AuctionPaymentExpiry',
+      stepKey(id, version, 'expireSecondChance'),
+      {
+        discover: async (tx) => [(await this.auction(tx, id)).sellerId],
+        authorize: (tx) => this.auction(tx, id),
+        mutate: async (tx) => {
+          await tx.lock('auctions', [id]);
+          const a = await this.auction(tx, id);
+          const now = await this.clock.now(tx);
+          if (
+            a.state !== 'SecondChanceOffered' ||
+            a.runnerUpOutcome !== 'Offered' ||
+            now < a.runnerUpDeadline!
+          )
+            throw invalidState();
+          const next = await this.endOffer(tx, a, 'Expired', now);
+          return this.change(next, now, 'AuctionSecondChanceExpired', null);
+        },
+      },
+    );
+  }
+
+  private async endOffer(
+    tx: Tx,
+    a: AuctionDoc,
+    outcome: 'Declined' | 'Expired',
+    now: Date,
+  ) {
+    const next = await this.update(
+      tx,
+      a,
+      { state: 'PaymentExpired', runnerUpOutcome: outcome },
+      now,
+    );
+    await this.reclaim(tx, a, 'PaymentExpired', now);
+    await notifyAuction(
+      tx,
+      next,
+      'AuctionPaymentExpired',
+      [a.sellerId, a.runnerUpId],
+      now,
+    );
+    await this.payDepositShare(tx, next, now);
+    return next;
+  }
+
+  /**
+   * ADR 0087: the book ended unsold after a non-paying winner, so the seller
+   * gets their share of the forfeited deposit (none if nothing was forfeited,
+   * e.g. a legacy auction without registration). Never on a sale or a
+   * report close.
+   */
+  private async payDepositShare(tx: Tx, a: AuctionDoc, now: Date) {
+    const paid = await this.ledger.payAuctionDepositShare(
+      tx,
+      a._id,
+      a.sellerId,
+      now,
+    );
+    if (paid > 0) await notifyDepositShare(tx, a, paid, now);
+  }
+
   // ADR 0075: release every hold on the auction except `keep` (the winner's
   // final price until payment). Each holder hears about their own release.
   private async releaseHolds(
@@ -1593,6 +2025,7 @@ export class AuctionBiddingService {
             'InvalidState',
             'Bạn đã đăng ký phiên này.',
           );
+        await this.checkRegistrationLimits(tx, actor._id, id, own, now);
         const delta = await this.ledger.setAuctionHold(
           tx,
           a._id,
@@ -1651,6 +2084,9 @@ export class AuctionBiddingService {
   }
   // ADR 0077: refund before bidding opens; afterwards the deposit stays
   // until the close, so the count that opened bidding cannot fall.
+  // ADR 0085 (N1): a full ScheduledGrace auction still refunds until 72 h
+  // before its open time; below the minimum it then waits for registrants
+  // again (deadline opensAt + 24 h) and everyone involved is told.
   withdrawRegistration(
     context: CommandContext,
     id: string,
@@ -1687,15 +2123,20 @@ export class AuctionBiddingService {
               'InvalidState',
               'Bạn không còn đăng ký ở phiên này.',
             );
-          if (
-            a.registeredCount >= a.minBidders! ||
-            (await tx.c.auction_bidders.findOne({ _id: `${id}:${actor._id}` }))
-          )
+          const full = a.registeredCount >= a.minBidders!;
+          const until = fullWithdrawUntil(a);
+          const bidder = await tx.c.auction_bidders.findOne({
+            _id: `${id}:${actor._id}`,
+          });
+          if (bidder || (full && !(until && now < until)))
             throw new DomainError(
               409,
               'InvalidState',
-              'Phiên đã mở trả giá; tiền cọc được giữ đến khi phiên kết thúc.',
+              !bidder && until && phaseOf(a, now) === 'Scheduled'
+                ? 'Phiên đã đủ người đăng ký và còn dưới 72 giờ tới giờ mở; tiền cọc được giữ đến khi phiên kết thúc.'
+                : 'Phiên đã mở trả giá; tiền cọc được giữ đến khi phiên kết thúc.',
             );
+          const drops = full && a.registeredCount - 1 < a.minBidders!;
           const delta = await this.ledger.setAuctionHold(
             tx,
             a._id,
@@ -1715,7 +2156,10 @@ export class AuctionBiddingService {
           const next = await this.update(
             tx,
             a,
-            { registeredCount: a.registeredCount - 1 },
+            {
+              registeredCount: a.registeredCount - 1,
+              ...(drops ? unreachedFields(a) : {}),
+            },
             now,
           );
           await notifyAuctionFunds(
@@ -1726,6 +2170,13 @@ export class AuctionBiddingService {
             'Withdrawn',
             now,
           );
+          if (drops)
+            await notifyBelowMinimum(
+              tx,
+              next,
+              [a.sellerId, ...(await this.registrantIds(tx, next))],
+              now,
+            );
           return this.change(
             next,
             now,
@@ -1898,6 +2349,13 @@ export class AuctionBiddingService {
       // deadline until the minimum is reached).
       opensAt: a.opensAt?.toISOString() ?? null,
       latestStartAt: a.openMode ? latestStartAt(a).toISOString() : null,
+      // ADR 0086: while the runner-up offer runs.
+      secondChanceDeadline:
+        a.state === 'SecondChanceOffered'
+          ? (a.runnerUpDeadline?.toISOString() ?? null)
+          : null,
+      // ADR 0085 (N1): a full auction still refunds a withdrawal until then.
+      fullWithdrawUntil: fullWithdrawUntil(a)?.toISOString() ?? null,
       holdExpiresAt: holdExpiry(a),
       // ADR 0076: a running sealed auction shows only the start and count.
       currentPrice: sealedLive ? null : a.currentPrice,
@@ -1996,6 +2454,9 @@ export class AuctionBiddingService {
           phase: phaseOf(a, now),
           holdExpiresAt: holdExpiry(a),
           resumedAt: a.resumedAt?.toISOString() ?? null,
+          // ADR 0084: why it is held and the pause time it may still use.
+          holdReason: a.state === 'OnHold' ? (a.holdReason ?? null) : null,
+          pauseBudgetLeftSeconds: Math.floor(pauseBudgetLeft(a) / 1000),
           title: String((item?.snapshot as { title?: string })?.title ?? ''),
           state: a.state as 'Active' | 'OnHold',
           startPrice: a.startPrice,
@@ -2238,6 +2699,16 @@ export class AuctionBiddingService {
         paymentDeadline: won
           ? (a.paymentDeadline?.toISOString() ?? null)
           : null,
+        // ADR 0086: the caller's runner-up offer, if any.
+        secondChance:
+          a.runnerUpId === actor._id
+            ? {
+                price: a.runnerUpPrice!,
+                offeredAt: a.runnerUpOfferedAt!.toISOString(),
+                deadline: a.runnerUpDeadline!.toISOString(),
+                outcome: a.runnerUpOutcome!,
+              }
+            : null,
         serverTime: now.toISOString(),
       };
     });
