@@ -1,12 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import type { Document } from 'mongodb';
 import {
   MongoCommandService,
   reviewer,
   type Actor,
 } from '../commands/mongo-command.service.js';
-import { invalidField, type Wire } from '../commands/domain-error.js';
+import { invalidField, notFound, type Wire } from '../commands/domain-error.js';
 import { PLATFORM_COMMISSION_ACCOUNT_ID } from '../../database/mongo/migrations/auction-constants.js';
+import { MediaStorage } from '../media/media-storage.js';
 
 const zone = 'Asia/Ho_Chi_Minh';
 const dayMs = 86_400_000;
@@ -93,7 +94,36 @@ export function revenueWindow(from: string, to: string) {
 
 @Injectable()
 export class OperationsDashboardService {
-  constructor(private readonly commands: MongoCommandService) {}
+  constructor(
+    private readonly commands: MongoCommandService,
+    @Optional() private readonly storage?: MediaStorage,
+  ) {}
+
+  async readUserAvatar(auth: Actor, userId: string) {
+    const storage = this.storage;
+    if (!storage) throw notFound();
+    const row = await this.commands.read(auth, async (tx, actor) => {
+      reviewer(actor);
+      const user = await tx.c.users.findOne({ _id: userId });
+      if (!user?.avatarId) throw notFound();
+      const avatar = await tx.c.profile_avatars.findOne({
+        _id: user.avatarId,
+        ownerId: userId,
+        state: { $in: ['Ready', 'Attached'] },
+      });
+      if (!avatar) throw notFound();
+      return avatar;
+    });
+    await storage.check();
+    const signed = await storage.signedRead(row.storageKey);
+    await this.commands.read(auth, async (tx, actor) => {
+      reviewer(actor);
+      const user = await tx.c.users.findOne({ _id: userId });
+      if (!user?.avatarId || user.avatarId !== row._id) throw notFound();
+      return true;
+    });
+    return signed;
+  }
   overview(
     auth: Actor,
     query: Record<string, string | number>,
@@ -309,6 +339,12 @@ export class OperationsDashboardService {
           { $limit: 10 },
         ])
         .toArray();
+      const insightOrderRows = await tx.c.ledger_journals
+        .aggregate<{ orderId: string | null }>([
+          ...transactionPipeline,
+          { $project: { orderId: 1 } },
+        ])
+        .toArray();
       for (const row of rows) {
         const day = daily.find((value) => value.date === row._id.date);
         if (!day) continue;
@@ -325,6 +361,215 @@ export class OperationsDashboardService {
         postedAt: row.postedAt.toISOString(),
         referenceId: row.orderId ?? row.listingFeeId,
       }));
+      const settledOrderIds = insightOrderRows
+        .map((row) => row.orderId)
+        .filter((id): id is string => Boolean(id));
+      const directOrders = settledOrderIds.length
+        ? await tx.c.direct_orders
+            .find({ _id: { $in: settledOrderIds } })
+            .toArray()
+        : [];
+      const pointOrders = settledOrderIds.length
+        ? await tx.c.point_orders
+            .find({ _id: { $in: settledOrderIds } })
+            .toArray()
+        : [];
+      const quotes = directOrders.length
+        ? await tx.c.sale_quotes
+            .find({ _id: { $in: directOrders.map((order) => order.quoteId) } })
+            .toArray()
+        : [];
+      const pointListings = pointOrders.length
+        ? await tx.c.listings
+            .find({ _id: { $in: pointOrders.map((order) => order.listingId) } })
+            .toArray()
+        : [];
+      const pointRevisions = pointListings.length
+        ? await tx.c.listing_revisions
+            .find({
+              _id: {
+                $in: pointListings
+                  .map((listing) => listing.currentRevisionId)
+                  .filter((id): id is string => Boolean(id)),
+              },
+            })
+            .toArray()
+        : [];
+      const saleCatalogRevisions = quotes.length
+        ? await tx.c.catalog_revisions
+            .find({ _id: { $in: quotes.map((quote) => quote.catalogRevisionId) } })
+            .toArray()
+        : [];
+      const pointBookIds = pointRevisions
+        .map((revision) => revision.bookId)
+        .filter((id): id is string => Boolean(id));
+      const pointCatalogBooks = pointBookIds.length
+        ? await tx.c.catalog_books
+            .find({ _id: { $in: pointBookIds } })
+            .toArray()
+        : [];
+      const pointCatalogRevisions = pointCatalogBooks.length
+        ? await tx.c.catalog_revisions
+            .find({
+              _id: {
+                $in: pointCatalogBooks
+                  .map((book) => book.currentRevisionId)
+                  .filter((id): id is string => Boolean(id)),
+              },
+            })
+            .toArray()
+        : [];
+      const exchanges = await tx.c.exchanges
+        .find({
+          status: 'Completed',
+          completedAt: { $gte: window.start, $lt: window.endExclusive },
+        })
+        .toArray();
+      const accountIds = Array.from(
+        new Set([
+          ...directOrders.map((order) => order.sellerId),
+          ...pointOrders.map((order) => order.sellerId),
+        ]),
+      );
+      const users = accountIds.length
+        ? await tx.c.users.find({ _id: { $in: accountIds } }).toArray()
+        : [];
+      const userNames = new Map(users.map((user) => [user._id, user.displayName]));
+      const listingIds = Array.from(
+        new Set([
+          ...quotes.map((quote) => quote.listingId),
+          ...pointOrders.map((order) => order.listingId),
+          ...exchanges.flatMap((exchange) => [
+            ...(exchange.agreement?.initiatorBooks ?? []).map((book) => book.listingId),
+            ...(exchange.agreement?.recipientBook
+              ? [exchange.agreement.recipientBook.listingId]
+              : []),
+          ]),
+        ]),
+      );
+      const listingMedia = listingIds.length
+        ? await tx.c.listing_media
+            .find({
+              listingId: { $in: listingIds },
+              status: 'Ready',
+              purgedAt: null,
+              derivativeKey: { $ne: null },
+            })
+            .sort({ createdAt: 1, _id: 1 })
+            .toArray()
+        : [];
+      const firstMediaByListing = new Map<string, string>();
+      for (const media of listingMedia) {
+        if (!firstMediaByListing.has(media.listingId))
+          firstMediaByListing.set(media.listingId, media._id);
+      }
+      const revenueByAccount = new Map<string, number>();
+      for (const order of directOrders) {
+        const quote = quotes.find((item) => item._id === order.quoteId);
+        if (quote)
+          revenueByAccount.set(
+            order.sellerId,
+            (revenueByAccount.get(order.sellerId) ?? 0) + quote.sellerProceeds,
+          );
+      }
+      for (const order of pointOrders) {
+        revenueByAccount.set(
+          order.sellerId,
+          (revenueByAccount.get(order.sellerId) ?? 0) + order.sellerProceeds,
+        );
+      }
+      const topAccount = [...revenueByAccount.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+      const bookCandidates: Array<{
+        type: 'Sale' | 'Exchange' | 'Auction';
+        label: string;
+        title: string;
+        amount: number;
+        sellerName: string;
+        referenceId: string;
+        listingId: string;
+        mediaId: string | null;
+      }> = [];
+      for (const order of directOrders) {
+        const quote = quotes.find((item) => item._id === order.quoteId);
+        const title = quote
+          ? saleCatalogRevisions.find(
+              (revision) => revision._id === quote.catalogRevisionId,
+            )?.title
+          : undefined;
+        const sellerName = userNames.get(order.sellerId);
+        if (quote && title && sellerName) {
+          bookCandidates.push({
+            type: 'Sale',
+            label: 'Mua bán',
+            title,
+            amount: quote.bookPrice,
+            sellerName,
+            referenceId: order._id,
+            listingId: quote.listingId,
+            mediaId: firstMediaByListing.get(quote.listingId) ?? null,
+          });
+        }
+      }
+      for (const order of pointOrders) {
+        const listing = pointListings.find((item) => item._id === order.listingId);
+        const revision = listing?.currentRevisionId
+          ? pointRevisions.find((item) => item._id === listing.currentRevisionId)
+          : undefined;
+        const book = revision?.bookId
+          ? pointCatalogBooks.find((item) => item._id === revision.bookId)
+          : undefined;
+        const title = book?.currentRevisionId
+          ? pointCatalogRevisions.find(
+              (item) => item._id === book.currentRevisionId,
+            )?.title
+          : undefined;
+        const sellerName = userNames.get(order.sellerId);
+        if (title && sellerName) {
+          bookCandidates.push({
+            type: 'Auction',
+            label: 'Đấu giá',
+            title,
+            amount: order.bookPrice,
+            sellerName,
+            referenceId: order._id,
+            listingId: order.listingId,
+            mediaId: firstMediaByListing.get(order.listingId) ?? null,
+          });
+        }
+      }
+      for (const exchange of exchanges) {
+        const books = [
+          ...(exchange.agreement?.initiatorBooks ?? []),
+          ...(exchange.agreement?.recipientBook
+            ? [exchange.agreement.recipientBook]
+            : []),
+        ];
+        for (const book of books) {
+          bookCandidates.push({
+            type: 'Exchange',
+            label: 'Trao đổi',
+            title: book.book.title,
+            amount: book.exchangeValue,
+            sellerName: book.ownerDisplayName,
+            referenceId: exchange._id,
+            listingId: book.listingId,
+            mediaId: book.mediaIds[0] ?? firstMediaByListing.get(book.listingId) ?? null,
+          });
+        }
+      }
+      const highestPricedBooks = (['Sale', 'Exchange', 'Auction'] as const)
+        .map(
+          (type) =>
+            bookCandidates
+              .filter((book) => book.type === type)
+              .sort(
+                (a, b) =>
+                  b.amount - a.amount ||
+                  a.referenceId.localeCompare(b.referenceId),
+              )[0],
+        )
+        .filter((book): book is (typeof bookCandidates)[number] => Boolean(book));
       return {
         from,
         to,
@@ -340,6 +585,15 @@ export class OperationsDashboardService {
         pageSize: 10,
         totalTransactions: transactionCount[0]?.count ?? 0,
         transactions,
+        topRevenueAccount: topAccount
+          ? {
+              accountId: topAccount[0],
+              displayName: userNames.get(topAccount[0]) ?? topAccount[0],
+              revenue: topAccount[1],
+              avatarId: users.find((user) => user._id === topAccount[0])?.avatarId ?? null,
+            }
+          : null,
+        highestPricedBooks,
       };
     });
   }
