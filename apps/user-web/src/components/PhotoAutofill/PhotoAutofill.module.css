@@ -41,6 +41,14 @@
   background: var(--shop-shelf);
 }
 
+.readDesk[data-read-complete="true"] {
+  grid-template-columns: minmax(0, 1fr) fit-content(20rem);
+  align-items: end;
+  gap: 8px 16px;
+  padding: 0;
+  background: transparent;
+}
+
 .photoTray,
 .readControls,
 .result,
@@ -71,7 +79,7 @@
 
 .photos {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 5.25rem));
+  grid-template-columns: repeat(3, minmax(0, 7rem));
   gap: 8px;
 }
 
@@ -92,10 +100,18 @@
 .add {
   position: relative;
   display: grid;
-  aspect-ratio: 4 / 5;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 3 / 2;
+  min-height: 64px;
   margin: 0;
   border-radius: 6px;
   background: var(--shop-paper);
+}
+
+.thumb {
+  background: var(--shop-shelf);
 }
 
 .thumb img {
@@ -111,10 +127,10 @@
   top: 0;
   right: 0;
   display: grid;
-  place-items: center;
+  place-items: start end;
   width: 44px;
   height: 44px;
-  padding: 0;
+  padding: 4px;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -133,7 +149,6 @@
   place-items: center;
   align-content: center;
   gap: 5px;
-  min-height: 68px;
   padding: 4px;
   border: 1px dashed var(--shop-control);
   color: var(--shop-wine);
@@ -187,11 +202,29 @@
   position: absolute;
 }
 
+.readStatus[data-read-done="true"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.readStatus[data-read-done="true"] svg {
+  flex: none;
+  color: var(--shop-wine);
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+.readDesk[data-read-complete="true"] .readControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .read,
@@ -375,8 +408,13 @@
 }
 
 @media (max-width: 640px) {
-  .readDesk {
+  .readDesk,
+  .readDesk[data-read-complete="true"] {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .readDesk[data-read-complete="true"] .readControls {
+    justify-content: flex-start;
   }
 }
 

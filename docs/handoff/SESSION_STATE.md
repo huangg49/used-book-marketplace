@@ -30,6 +30,9 @@ giả lập. Ca gửi từ Autofill dùng đúng tựa đã sửa và mở đún
 Ảnh, API và kho ảnh trong các ca browser là dữ liệu thử. Chưa chạy lại với AI
 thật hoặc tài khoản người dùng. API demo chưa phản hồi tại thời điểm kiểm.
 
+Tinh chỉnh theo ảnh phản hồi: dải ảnh ngang giữ trọn ảnh, trạng thái đọc xong
+nằm cạnh Đọc lại. Kiểm bố cục với đủ ba ảnh ngang ở 390/1440 px.
+
 # Autofill và phục hồi gửi bài trên Member web — 09/11/2026
 
 Gói `codex/autofill-listing-recovery-20261109` trên nền main local `c5c232bd`.

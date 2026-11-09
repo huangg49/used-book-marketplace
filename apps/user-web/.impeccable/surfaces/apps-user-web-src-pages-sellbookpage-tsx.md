@@ -11,8 +11,10 @@ related_targets: ["apps/user-web/src/pages/SellBookPage.module.css", "apps/user-
 
 Cụm giấy màu kem đặt ảnh đọc, số ảnh, hai cách đọc và tiến độ trên cùng một mặt.
 Desktop chia khay ảnh và điều khiển thành hai cột, dưới 640px xếp dọc. Khay giữ
-trọn ảnh và có nút bỏ ảnh 44px. Khi chưa chọn ảnh, vùng chọn dùng cả chiều rộng
-của khay. Ảnh đầu có thể được dùng riêng làm bìa bản sách.
+trọn ảnh trên nền kem trong khung ngang 3:2, với nút bỏ ảnh 44px. Khi chưa chọn
+ảnh, vùng chọn dùng cả chiều rộng của khay. Sau khi đọc xong, thu gọn cụm điều
+khiển thành trạng thái và nút Đọc lại cạnh dải ảnh. Ảnh đầu có thể được dùng
+riêng làm bìa bản sách.
 
 Kết quả nằm ngay sau ảnh. Hiển thị số mục đọc được, tên ngôn ngữ tiếng Việt và
 ô sửa trực tiếp. Mục còn thiếu nằm trong phần mở khi cần, kèm hướng dẫn chụp
